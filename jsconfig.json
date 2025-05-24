@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {"@/*": ["src/*"],
+      "@features/*": ["src/features/*"],
+      "@features/pos/*": ["src/features/pos/*"],
+      "@features/stock/*": ["src/features/stock/*"],
+      "@features/admin/*": ["src/features/admin/*"],
+      "@features/auth/*": ["src/features/auth/*"],
+      "@features/user/*": ["src/features/user/*"],
+      "@features/product/*": ["src/features/product/*"],
+      "@features/supplier/*": ["src/features/supplier/*"],
+      "@features/purchase/*": ["src/features/purchase/*"],
+      "@features/shared/*": ["src/features/shared/*"],
+      "@store/*": ["src/store/*"],
+      "@utils/*": ["src/utils/*"],
+      "@routes/*": ["src/routes/*"]
+    }
+  },
+  "exclude": [
+    "node_modules",
+    "dist"
+  ]
+}

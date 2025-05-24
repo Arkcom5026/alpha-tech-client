@@ -1,0 +1,113 @@
+// ProductTypeForm.jsx
+import { useEffect, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { getAllCategories } from '@/features/productTemplate/api/productTemplateApi';
+import AlertDialog from '@/components/shared/dialogs/AlertDialog';
+
+const schema = z.object({
+  name: z.string().min(1, 'กรุณาระบุชื่อประเภทสินค้า'),
+  categoryId: z.string().min(1, 'กรุณาเลือกหมวดหมู่สินค้า'),
+});
+
+const ProductTypeForm = ({ defaultValues = {}, onSubmit }) => {
+  const [categories, setCategories] = useState([]);
+  const [alert, setAlert] = useState({ open: false, title: '', description: '' });
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm({
+    resolver: zodResolver(schema),
+    defaultValues,
+  });
+
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
+  const fetchCategories = async () => {
+    try {
+      const data = await getAllCategories();
+      setCategories(data);
+    } catch (error) {
+      console.error('โหลดหมวดหมู่ไม่สำเร็จ', error);
+      setAlert({
+        open: true,
+        title: 'เกิดข้อผิดพลาด',
+        description: 'ไม่สามารถโหลดหมวดหมู่สินค้าได้',
+      });
+    }
+  };
+
+  const handleError = (message) => {
+    setAlert({
+      open: true,
+      title: 'ไม่สามารถบันทึกข้อมูลได้',
+      description: message,
+    });
+  };
+
+  const handleFormSubmit = async (data) => {
+    try {
+      await onSubmit(data);
+    } catch (error) {
+      const msg =
+        error?.response?.data?.error ??
+        (typeof error?.response?.data === 'string' ? error.response.data : null) ??
+        error?.message ??
+        'เกิดข้อผิดพลาดไม่ทราบสาเหตุ';
+      handleError(msg);
+    }
+  };
+
+  return (
+    <>
+      <AlertDialog
+        open={alert.open}
+        onOpenChange={(open) => setAlert((prev) => ({ ...prev, open }))}
+        title={alert.title}
+        description={alert.description}
+      />
+
+      <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
+        <div>
+          <label className="block mb-1">ชื่อประเภทสินค้า</label>
+          <input
+            type="text"
+            {...register('name')}
+            className="w-full border rounded px-3 py-2"
+          />
+          {errors.name && <p className="text-red-500 text-sm">{errors.name.message}</p>}
+        </div>
+
+        <div>
+          <label className="block mb-1">หมวดหมู่สินค้า</label>
+          <select
+            {...register('categoryId')}
+            className="w-full border rounded px-3 py-2"
+          >
+            <option value="">-- เลือกหมวดหมู่ --</option>
+            {categories.map((cat) => (
+              <option key={cat.id} value={cat.id}>
+                {cat.name}
+              </option>
+            ))}
+          </select>
+          {errors.categoryId && <p className="text-red-500 text-sm">{errors.categoryId.message}</p>}
+        </div>
+
+        <button
+          type="submit"
+          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+        >
+          บันทึก
+        </button>
+      </form>
+    </>
+  );
+};
+
+export default ProductTypeForm;

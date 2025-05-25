@@ -1,7 +1,7 @@
 // ✅ src/features/customer/store/customerStore.js
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import axios from 'axios';
+import apiClient from 'apiClient';
 
 const useCustomerStore = create(
   persist(
@@ -22,7 +22,7 @@ const useCustomerStore = create(
       
       actionLoginCustomer: async (form) => {
         try {
-          const res = await axios.post('http://localhost:5000/api/loginUser', form, {
+          const res = await apiClient.post('/api/loginUser', form, {
             headers: {
               'Content-Type': 'application/json',
             },
@@ -47,7 +47,7 @@ const useCustomerStore = create(
         if (!token) return;
           
         try {
-          const res = await axios.get('http://localhost:5000/api/current-user', {
+          const res = await apiClient.get('/api/current-user', {
             headers: {
               Authorization: `Bearer ${token}`,
             },

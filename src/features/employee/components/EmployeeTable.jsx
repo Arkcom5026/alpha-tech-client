@@ -16,7 +16,7 @@ const EmployeeTable = ({ employees, onRefresh }) => {
   const handleDelete = async (id) => {
     if (!confirm('คุณแน่ใจหรือไม่ว่าต้องการลบพนักงานคนนี้?')) return;
     try {
-      const res = await fetch(`http://localhost:5000/api/employees/${id}`, {
+      const res = await fetch(`/api/employees/${id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });

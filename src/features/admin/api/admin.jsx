@@ -1,9 +1,9 @@
-import axios from 'axios'
+import apiClient from '@/utils/apiClient'
 
 
 export const getOrdersAdmin = async (token) => {
     // code body
-    return axios.get('http://localhost:5000/api/admin/orders', {
+    return apiClient.get('/api/admin/orders', {
         headers: {
             Authorization: `Bearer ${token}`
         }
@@ -12,7 +12,7 @@ export const getOrdersAdmin = async (token) => {
 
 export const changeOrderStatus = async (token, orderId, orderStatus) => {
     // code body
-    return axios.put('http://localhost:5000/api/admin/order-status', { orderId, orderStatus }, {
+    return apiClient.put('/api/admin/order-status', { orderId, orderStatus }, {
         headers: {
             Authorization: `Bearer ${token}`
         }
@@ -21,7 +21,7 @@ export const changeOrderStatus = async (token, orderId, orderStatus) => {
 
 export const getListAllCustomer = async (token) => {
     // code body
-    return axios.get('http://localhost:5000/api/users', {
+    return apiClient.get('/api/users', {
         headers: {
             Authorization: `Bearer ${token}`
         }
@@ -30,7 +30,7 @@ export const getListAllCustomer = async (token) => {
 
 export const changeUserStatus = async (token,value) => {
     // code body
-    return axios.post('http://localhost:5000/api/user/chang-status',value, {
+    return apiClient.post('/api/user/chang-status',value, {
         headers: {
             Authorization: `Bearer ${token}`
         }
@@ -39,7 +39,7 @@ export const changeUserStatus = async (token,value) => {
 
 export const changeUserRole = async (token,value) => {
     // code body
-    return axios.post('http://localhost:5000/api/user/chang-role',value, {
+    return apiClient.post('/api/user/chang-role',value, {
         headers: {
             Authorization: `Bearer ${token}`
         }

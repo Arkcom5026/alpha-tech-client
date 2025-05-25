@@ -2,7 +2,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { loginEmployee } from '@/features/auth/api/authEmployee';
-import axios from 'axios';
+import apiClient from 'apiClient';
 
 const useEmployeeStore = create(
   persist(
@@ -52,7 +52,7 @@ const useEmployeeStore = create(
         if (!token) return;
 
         try {
-          const res = await axios.get('/api/current-employee', {
+          const res = await apiClient.get('/api/current-employee', {
             headers: {
               Authorization: `Bearer ${token}`,
             },

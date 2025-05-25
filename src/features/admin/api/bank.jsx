@@ -1,9 +1,9 @@
-import axios from 'axios'
+import apiClient from 'apiClient'
 
 
 export const createBank = async (token, form) => {
     // code body
-    return axios.post('http://localhost:5000/api/bank', form, {
+    return apiClient.post('/api/bank', form, {
         headers: {
             Authorization: `Bearer ${token}`
         }
@@ -12,14 +12,14 @@ export const createBank = async (token, form) => {
 
 export const listBank = async ( form) => {
     // code body
-    return axios.get('http://localhost:5000/api/bank', {
+    return apiClient.get('/api/bank', {
       
     })
 }
 
 export const removeBank = async (token, id) => {
     // code body
-    return axios.delete('http://localhost:5000/api/bank/'+id, {
+    return apiClient.delete('/api/bank/'+id, {
         headers: {
             Authorization: `Bearer ${token}`
         }

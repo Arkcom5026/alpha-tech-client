@@ -1,9 +1,9 @@
-import axios from 'axios'
+import apiClient from 'apiClient'
 
 
 export const createBranch = async (token, form) => {
     // code body
-    return axios.post('http://localhost:5000/api/branch', form, {
+    return apiClient.post('/api/branch', form, {
         headers: {
             Authorization: `Bearer ${token}`
         }
@@ -12,14 +12,14 @@ export const createBranch = async (token, form) => {
 
 export const listBranch = async (form) => {
     // code body
-    return axios.get('http://localhost:5000/api/branch', {
+    return apiClient.get('/api/branch', {
       
     })
 }
 
 export const removeBranch = async (token, id) => {
     // code body
-    return axios.delete('http://localhost:5000/api/branch/'+id, {
+    return apiClient.delete('/api/branch/'+id, {
         headers: {
             Authorization: `Bearer ${token}`
         }

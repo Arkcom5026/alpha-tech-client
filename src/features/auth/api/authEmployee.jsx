@@ -1,11 +1,11 @@
-import axios from 'axios';
+import apiClient from 'apiClient';
 import { toast } from 'react-toastify';
 
 
 // ✅ แก้ไขใน authEmployee.jsx
 export const loginEmployee = async (form) => {
     try {
-      const res = await axios.post('http://localhost:5000/api/loginemployee', form, {
+      const res = await apiClient.post('/api/loginemployee', form, {
         headers: {
           'Content-Type': 'application/json',
         },
@@ -22,14 +22,14 @@ export const loginEmployee = async (form) => {
 
 
 
-export const currentEmployee = async(token) => await axios.post('http://localhost:5000/api/current-employee',
+export const currentEmployee = async(token) => await apiClient.post('/api/current-employee',
     {}, {
     headers: {
         Authorization: `Bearer ${token}`
     }
 })
 
-export const currentAdminEmployee = async(token) => await axios.post('http://localhost:5000/api/current-admin-employee',
+export const currentAdminEmployee = async(token) => await apiClient.post('/api/current-admin-employee',
     {}, {
     headers: {
         Authorization: `Bearer ${token}`

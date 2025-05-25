@@ -63,7 +63,7 @@ const LoginPage = () => {
   };
 
   const handleOAuthLogin = (provider) => {
-    window.location.href = `http://localhost:5000/api/auth/oauth/${provider}`;
+    window.location.href = `/api/auth/oauth/${provider}`;
   };
 
   return (

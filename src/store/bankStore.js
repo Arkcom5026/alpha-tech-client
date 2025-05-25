@@ -1,6 +1,6 @@
 // ✅ src/features/bank/store/bankStore.js
 import { create } from 'zustand';
-import axios from 'axios';
+import apiClient from 'apiClient';
 
 const useBankStore = create((set) => ({
   banks: [],
@@ -10,7 +10,7 @@ const useBankStore = create((set) => ({
   fetchBanks: async (token) => {
     set({ loading: true });
     try {
-      const res = await axios.get('/api/bank', {
+      const res = await apiClient.get('/api/bank', {
         headers: {
           Authorization: `Bearer ${token}`,
         },

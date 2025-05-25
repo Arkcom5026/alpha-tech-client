@@ -28,8 +28,8 @@ const UnifiedMainNav = () => {
 
   const navClass = ({ isActive }) =>
     isActive
-      ? 'bg-blue-200 px-2 sm:px-3 py-1.5 sm:py-2 rounded-md text-xs sm:text-sm font-medium text-blue-700 border border-white/40 border-[1px]'
-      : 'px-2 sm:px-3 py-1.5 sm:py-2 rounded-md text-xs sm:text-sm font-medium text-white border border-white/40 border-[1px] hover:bg-blue-100/60';
+      ? 'bg-blue-200 px-2 sm:px-3 py-1 sm:py-2 rounded-md text-xs sm:text-sm font-medium text-blue-700 border border-white/40 border-[1px]'
+      : 'px-2 sm:px-3 py-1 sm:py-2 rounded-md text-xs sm:text-sm font-medium text-white border border-white/40 border-[1px] hover:bg-blue-100/60';
 
   return (
     <nav className="bg-blue-500">
@@ -56,8 +56,7 @@ const UnifiedMainNav = () => {
           <div className="flex items-center gap-3 sm:gap-4">
             {!customers && (
               <>
-                <NavLink to="/register" className={navClass}>Register</NavLink>
-                <NavLink to="/login" className={navClass}>Login</NavLink>
+                                <NavLink to="/login" className={navClass}>Login</NavLink>
               </>
             )}
 
@@ -65,7 +64,7 @@ const UnifiedMainNav = () => {
               <div className="relative" ref={dropdownRef}>
                 <button
                   onClick={toggleDropdown}
-                  className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 sm:py-2 text-white text-xs sm:text-sm hover:bg-blue-600 rounded-md"
+                  className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1 sm:py-2 text-white text-xs sm:text-sm hover:bg-blue-600 rounded-md"
                 >
                   <img
                     src="https://cdn.iconscout.com/icon/free/png-512/free-avatar-icon-download-in-svg-png-gif-file-formats--user-professor-avatars-flat-icons-pack-people-456317.png?f=webp&w=256"

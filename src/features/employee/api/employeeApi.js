@@ -1,11 +1,12 @@
 // ✅ @filename: employeeApi.js
 // ✅ @folder: src/features/employee/api/
-
 import apiClient from '@/utils/apiClient';
 
 export const getAllEmployees = async (token, branchId) => {
   try {
     const res = await apiClient.get(`/employees?branchId=${branchId}`);
+    
+    
     return res.data;
   } catch (err) {
     console.error('❌ getAllEmployees error:', err);

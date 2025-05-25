@@ -1,7 +1,7 @@
 // ✅ src/features/customer/store/customerStore.js
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import apiClient from 'apiClient';
+import apiClient from '@/utils/apiClient';
 
 const useCustomerStore = create(
   persist(

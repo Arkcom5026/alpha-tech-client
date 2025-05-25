@@ -1,7 +1,7 @@
 // ✅ API Utility: PO API (เชื่อมต่อ Backend จริง)
 // File: src/features/purchases/api/poApi.js
 
-import apiClient from 'apiClient';
+import apiClient from '@/utils/apiClient';
 
 export const createPO = async (data) => {
   const response = await apiClient.post('/api/po', data);

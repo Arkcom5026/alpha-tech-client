@@ -2,7 +2,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { loginEmployee } from '@/features/auth/api/authEmployee';
-import apiClient from 'apiClient';
+import apiClient from '@/utils/apiClient';
 
 const useEmployeeStore = create(
   persist(

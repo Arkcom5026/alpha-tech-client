@@ -2,7 +2,7 @@
 // File: src/features/purchases/hooks/useCreatePO.js
 import { useMutation } from '@tanstack/react-query';
 
-import apiClient from 'apiClient';
+import apiClient from '@/utils/apiClient';
 
 export const useCreatePO = () => {
   return useMutation({

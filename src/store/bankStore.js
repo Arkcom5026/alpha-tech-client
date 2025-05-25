@@ -1,6 +1,6 @@
 // ✅ src/features/bank/store/bankStore.js
 import { create } from 'zustand';
-import apiClient from 'apiClient';
+import apiClient from '@/utils/apiClient';
 
 const useBankStore = create((set) => ({
   banks: [],

@@ -1,4 +1,5 @@
 // ✅ src/features/productTemplate/api/productTemplateApi.js
+import apiClient from '@/utils/apiClient';
 
 export const getAllProductTypes = async () => {
   try {
@@ -20,7 +21,6 @@ export const getAllCategories = async () => {
   }
 };
 
-import apiClient from '@/utils/apiClient';
 
 export const getAllProductTemplates = async () => {
   try {

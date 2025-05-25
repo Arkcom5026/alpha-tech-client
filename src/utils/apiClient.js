@@ -1,12 +1,9 @@
-
-// ✅ src/utils/apiClient.js
 import axios from 'axios';
 
-// ฟังก์ชันดึง token จาก localStorage (หรือจากแหล่งอื่น เช่น cookie/store ได้)
+// ฟังก์ชันดึง token จาก localStorage
 function getToken() {
   try {
     const token = localStorage.getItem('token');
-    //console.log('🔐 แนบ Token:', token); // เพิ่มบรรทัดนี้
     return token ? `Bearer ${token}` : null;
   } catch (error) {
     console.error('❌ ไม่สามารถอ่าน token จาก localStorage:', error);
@@ -14,14 +11,13 @@ function getToken() {
   }
 }
 
-// ✅ ตั้งค่า axios instance
+// ✅ baseURL ใช้จาก .env (รองรับทุก environment)
 const apiClient = axios.create({
-  baseURL: 'http://localhost:5000/api',
+  baseURL: `${import.meta.env.VITE_API_URL}/api`, // <<<<<< จุดนี้สำคัญ!
   timeout: 10000,
-    },
-);
+});
 
-// ✅ Interceptor: ใส่ Authorization ทุกครั้งที่เรียก
+// Interceptor: แนบ Authorization token ทุก request ถ้ามี
 apiClient.interceptors.request.use(
   (config) => {
     const token = getToken();

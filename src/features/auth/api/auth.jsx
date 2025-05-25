@@ -13,3 +13,4 @@ export async function registerUser(data) {
     throw err; // ส่งให้ layer ด้านบนจัดการ error ตามมาตรฐาน
   }
 }
+

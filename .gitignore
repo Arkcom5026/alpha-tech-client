@@ -1,3 +1,14 @@
+# dotenv environment files
+.env
+.env.*
+!.env.example
+
+# Build output
+/dist
+/build
+/dist-ssr
+/.next
+
 # Logs
 logs
 *.log
@@ -8,8 +19,6 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
-dist
-dist-ssr
 *.local
 
 # Editor directories and files

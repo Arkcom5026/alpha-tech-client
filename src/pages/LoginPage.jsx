@@ -26,7 +26,7 @@ const LoginPage = () => {
     setError('');
     setLoading(true);
     try {
-      console.log(" --------------------------------------------------- > 🟢 ก่อน login:");
+      
       const res = await apiClient.post('/auth/login', { email, password });
       console.log("🟢 ผลลัพธ์ login:", res);
       console.log("📦 res.data:", res.data);

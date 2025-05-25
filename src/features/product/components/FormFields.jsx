@@ -1,168 +1,129 @@
-// ✅ ProductForm.jsx
-import { useForm, useWatch } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
+// src/features/product/components/FormFields.jsx
 
-import { useProductStore } from '../store/productStore';
-import useEmployeeStore from '@/store/employeeStore';
-import ImageManagerEnhanced from '@/components/shared/media/ImageManagerEnhanced';
+import CascadingDropdownGroup from '@/components/shared/form/CascadingDropdownGroup';
 
-import { useEffect, useState } from 'react';
-import { createProduct, updateProduct, getProductDropdowns } from '../api/productApi';
-import { createProductSchema, editProductSchema } from '../schema/createSchema';
-import FormFields from './FormFields';
-
-export default function ProductForm({ productId, defaultValues = {}, mode = 'create' }) {
-  const [dropdownLoading, setDropdownLoading] = useState(true);
-  const { templates, profiles, units, categories, productTypes } = useProductStore();
-
-  useEffect(() => {
-    const fetchDropdowns = async () => {
-      console.log('📦 ข้อมูล dropdown ------------------------------------------------> : fetchDropdowns');
-      try {
-        const res = await getProductDropdowns();
-        console.log('📦 ข้อมูล dropdown ------------------------------------------------> :', res);
-
-        const { categories, templates, profiles, units, productTypes } = res;
-        useProductStore.setState({ categories, templates, profiles, units, productTypes });
-        setDropdownLoading(false);
-      } catch (err) {
-        console.error('❌ โหลดข้อมูล dropdown ล้มเหลว:', err);
-        setDropdownLoading(false);
-      }
-    };
-    fetchDropdowns();
-  }, []);
-
-  const { branch } = useEmployeeStore();
-  console.log('📌 Branch Info:', branch);
-
-  const [oldImages, setOldImages] = useState(defaultValues.images || []);
-  const [previewUrls, setPreviewUrls] = useState([]);
-  const [captions, setCaptions] = useState(defaultValues.images?.map(img => img.caption || '') || []);
-  const [coverIndex, setCoverIndex] = useState(() => {
-    const found = defaultValues.images?.findIndex(img => img.isCover);
-    return found >= 0 ? found : null;
-  });
-  const [files, setFiles] = useState([]);
-
-  const {
-    register,
-    handleSubmit,
-    setValue,
-    control,
-    formState: { errors },
-  } = useForm({
-    resolver: zodResolver(mode === 'edit' ? editProductSchema : createProductSchema),
-    defaultValues: {
-      name: defaultValues.name || '',
-      code: defaultValues.code || '',
-      barcode: defaultValues.barcode || '',
-      price: defaultValues.price || 0,
-      stock: defaultValues.stock || 0,
-      productTemplateId: defaultValues.templateId || '',
-      productProfileId: defaultValues.profileId || '',
-      unitId: defaultValues.unitId || '',
-      categoryId: defaultValues.categoryId || '',
-      productTypeId: defaultValues.productTypeId || '',
-      isActive: defaultValues.isActive ?? true,
-    },
-  });
-
-  console.log('📌 Register Function:', register);
-  console.log('📌 Control:', control);
-
-  // ✅ useWatch เพื่อกรอง dropdown แบบสัมพันธ์กัน
-  const watchCategoryId = useWatch({ control, name: 'categoryId' });
-  const watchProductTypeId = useWatch({ control, name: 'productTypeId' });
-
-  console.log('📌 watchCategoryId:', watchCategoryId);
-  console.log('📌 watchProductTypeId:', watchProductTypeId);
-
-  const filteredTypes = (useProductStore.getState().productTypes || []).filter(
-    type => type.categoryId === watchCategoryId
-  );
-  const filteredTemplates = (templates || []).filter(
-    t => t.categoryId === watchCategoryId && t.productTypeId === watchProductTypeId
-  );
-
-  const onSubmit = async (data) => {
-    console.log('📤 ส่งข้อมูล:', data);
-    if (!branch?.id) {
-      console.error('branchId is undefined');
-      return;
-    }
-
-    const allImages = [
-      ...oldImages.map((img) => ({
-        url: img.url,
-        caption: img.caption || '',
-      })),
-      ...previewUrls.map((url, index) => ({
-        url,
-        caption: captions[oldImages.length + index] || '',
-      })),
-    ];
-
-    const payload = {
-      ...data,
-      branchId: branch.id,
-      images: allImages,
-      coverIndex,
-    };
-
-    console.log('📦 Payload เต็ม:', payload);
-
-    try {
-      const result = mode === 'edit'
-        ? await updateProduct(productId, payload)
-        : await createProduct(payload);
-      console.log('✅ บันทึกสินค้าเรียบร้อย:', result);
-    } catch (error) {
-      console.error('❌ เกิดข้อผิดพลาดในการบันทึกสินค้า:', error);
-    }
-  };
-
-  if (dropdownLoading) {
-    return <p className="text-center py-10 text-gray-500">กำลังโหลดข้อมูล...</p>;
-  }
-
-  const isDropdownReady = categories.length && productTypes.length && profiles.length && templates.length && units.length;
-
+export default function FormFields({ register, errors, dropdowns, control, setValue, isEditMode = false }) {
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-      {isDropdownReady && (
-        <FormFields
-          register={register}
-          errors={errors}
-          categories={categories}
-          productTypes={filteredTypes}
-          templates={filteredTemplates}
-          profiles={profiles}
-          units={units}
-          control={control}
-        />
-      )}
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <CascadingDropdownGroup
+        control={control}
+        register={register}
+        errors={errors}
+        setValue={setValue}
+        dropdowns={dropdowns}
+        isEditMode={isEditMode}
+        onSelectionChange={(data) => console.log('🧩 selection changed:', data)}
+      />
 
-      <div className="bg-gray-50 dark:bg-zinc-800 rounded-md p-4 shadow-sm">
-        <ImageManagerEnhanced
-          title="รูปภาพสินค้า"
-          oldImages={setOldImages}
-          setOldImages={setOldImages}
-          previewUrls={previewUrls}
-          setPreviewUrls={setPreviewUrls}
-          captions={captions}
-          setCaptions={setCaptions}
-          coverIndex={coverIndex}
-          setCoverIndex={setCoverIndex}
-          setFiles={setFiles}
+      <div>
+        <label className="block font-medium mb-1">ชื่อสินค้า</label>
+        <input
+          type="text"
+          {...register('title', { required: 'กรุณาระบุชื่อสินค้า' })}
+          className="w-full p-2 border rounded"
+        />
+        {errors.title && <p className="text-red-500 text-sm">{errors.title.message}</p>}
+      </div>
+
+      <div>
+        <label className="block font-medium mb-1">รายละเอียดสินค้า</label>
+        <textarea
+          {...register('description')}
+          className="w-full p-2 border rounded"
         />
       </div>
 
-      <div className="text-right">
-        <button type="submit" className="btn btn-primary px-6 py-2 text-base">
-          {mode === 'edit' ? '💾 แก้ไขสินค้า' : '➕ เพิ่มสินค้า'}
-        </button>
+      <div>
+        <label className="block font-medium mb-1">รายละเอียดสเปก</label>
+        <textarea
+          {...register('spec')}
+          className="w-full p-2 border rounded"
+        />
       </div>
-    </form>
+
+      <div>
+        <label className="block font-medium mb-1">ระยะเวลารับประกัน (เดือน)</label>
+        <input
+          type="number"
+          {...register('warranty', { valueAsNumber: true })}
+          className="w-full p-2 border rounded"
+        />
+      </div>
+
+      <div className="flex items-center space-x-2">
+        <input type="checkbox" {...register('noSN')} id="noSN" />
+        <label htmlFor="noSN">ไม่มี Serial Number</label>
+      </div>
+
+      <div>
+        <label className="block font-medium mb-1">ประเภทบาร์โค้ด</label>
+        <select
+          {...register('codeType')}
+          className="w-full p-2 border rounded"
+        >
+          <option value="D">D - Default</option>
+          <option value="S">S - Serial-based</option>
+        </select>
+      </div>
+
+      <div className="flex items-center space-x-2">
+        <input type="checkbox" {...register('active')} id="active" defaultChecked />
+        <label htmlFor="active">เปิดใช้งานสินค้า</label>
+      </div>
+
+      <div>
+        <label className="block font-medium mb-1">ราคาทุน</label>
+        <input
+          type="number"
+          step="0.01"
+          {...register('cost', { valueAsNumber: true })}
+          className="w-full p-2 border rounded"
+        />
+      </div>
+
+      <div>
+        <label className="block font-medium mb-1">จำนวนเริ่มต้น</label>
+        <input
+          type="number"
+          {...register('quantity', { valueAsNumber: true })}
+          className="w-full p-2 border rounded"
+        />
+      </div>
+
+      <div>
+        <label className="block font-medium mb-1">หน่วยนับ</label>
+        <select
+          {...register('unit')}
+          className="w-full p-2 border rounded"
+        >
+          <option value="">-- เลือกหน่วยนับ --</option>
+          {dropdowns.units.map((unit) => (
+            <option key={unit.id} value={unit.name}>
+              {unit.name}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div>
+        <label className="block font-medium mb-1">ราคาขายปลีก (ระดับ 1)</label>
+        <input
+          type="number"
+          step="0.01"
+          {...register('priceLevel1', { valueAsNumber: true })}
+          className="w-full p-2 border rounded"
+        />
+      </div>
+
+      <div>
+        <label className="block font-medium mb-1">ราคาขายส่ง (ระดับ 2)</label>
+        <input
+          type="number"
+          step="0.01"
+          {...register('priceLevel2', { valueAsNumber: true })}
+          className="w-full p-2 border rounded"
+        />
+      </div>
+    </div>
   );
 }

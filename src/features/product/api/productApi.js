@@ -1,64 +1,58 @@
-// ✅ @filename: src/features/product/api/productApi.js
+// ✅ src/features/product/api/productApi.js
 import apiClient from '@/utils/apiClient';
 
-export const createProduct = async (data) => {
+export const createProduct = async (payload) => {
   try {
-    const res = await apiClient.post('/products', data);
+    const res = await apiClient.post('/products', payload);
     return res.data;
-  } catch (err) {
-    console.error('❌ createProduct API error:', err);
-    throw err;
+  } catch (error) {
+    console.error('❌ createProduct error:', error);
+    throw error;
   }
 };
 
-export const getAllProducts = async () => {
+export const getAllProducts = async (branchId) => {
   try {
-    const res = await apiClient.get('/products');
+    const res = await apiClient.get('/products', {
+      params: { branchId },
+    });
     return res.data;
-  } catch (err) {
-    console.error('❌ getAllProducts API error:', err);
-    throw err;
+  } catch (error) {
+    console.error('❌ getAllProducts error:', error);
+    throw error;
   }
 };
 
-export const getProductById = async (id) => {
+export const getProductById = async (id, branchId) => {
   try {
-    const res = await apiClient.get(`/products/${id}`);
+    const res = await apiClient.get(`/products/${id}`, {
+      params: { branchId },
+    });
     return res.data;
-  } catch (err) {
-    console.error('❌ getProductById API error:', err);
-    throw err;
+  } catch (error) {
+    console.error('❌ getProductById error:', error);
+    throw error;
   }
 };
 
-export const updateProduct = async (id, data) => {
+export const updateProduct = async (id, payload) => {
   try {
-    const res = await apiClient.put(`/products/${id}`, data);
+    const res = await apiClient.put(`/products/${id}`, payload);
     return res.data;
-  } catch (err) {
-    console.error('❌ updateProduct API error:', err);
-    throw err;
+  } catch (error) {
+    console.error('❌ updateProduct error:', error);
+    throw error;
   }
 };
 
-export const deleteProduct = async (id) => {
+export const deleteProduct = async (id, branchId) => {
   try {
-    const res = await apiClient.delete(`/products/${id}`);
+    const res = await apiClient.delete(`/products/${id}`, {
+      data: { branchId },
+    });
     return res.data;
-  } catch (err) {
-    console.error('❌ deleteProduct API error:', err);
-    throw err;
-  }
-};
-
-
-export const getProductDropdowns = async () => {
-  try {
-    const res = await apiClient.get('/products/dropdowns');
-    console.log('✅ API response:', res);
-    return res.data; // <- ตรวจว่า res.data มีอะไร
-  } catch (err) {
-    console.error('❌ getProductDropdowns API error:', err);
-    throw err;
+  } catch (error) {
+    console.error('❌ deleteProduct error:', error);
+    throw error;
   }
 };

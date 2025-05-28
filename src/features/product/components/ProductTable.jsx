@@ -1,7 +1,7 @@
 // src/features/product/components/ProductTable.jsx
 import { Link } from 'react-router-dom';
 
-const ProductTable = ({ products, onDelete }) => {
+const ProductTable = ({ products, onDelete, deleting }) => {
   const getPrice = (p) => p.prices?.find((pr) => pr.level === 1)?.price || 0;
 
   return (
@@ -11,15 +11,15 @@ const ProductTable = ({ products, onDelete }) => {
           <th className="p-2 border">#</th>
           <th className="p-2 border">รูป</th>
           <th className="p-2 border">ชื่อสินค้า</th>
+          <th className="p-2 border">รายละเอียด</th>
           <th className="p-2 border">ราคาขาย</th>
-          <th className="p-2 border">สต๊อก</th>
-          <th className="p-2 border">สถานะ</th>
+          <th className="p-2 border">สต๊อก</th>          
           <th className="p-2 border">จัดการ</th>
         </tr>
       </thead>
       <tbody>
         {products.map((prod, index) => (
-          <tr key={prod.id} className="border-t">
+          <tr key={prod.id || index} className="border-t">
             <td className="p-2 border text-center">{index + 1}</td>
             <td className="p-2 border text-center">
               {prod.images?.length > 0 ? (
@@ -32,31 +32,42 @@ const ProductTable = ({ products, onDelete }) => {
                 <div className="w-12 h-12 bg-gray-200 rounded" />
               )}
             </td>
+
             <td className="p-2 border">{prod.title}</td>
+            
+            <td className="p-2 border">{prod.description}</td>
             <td className="p-2 border text-right">
               ฿{getPrice(prod).toLocaleString(undefined, {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2,
               })}
             </td>
-            <td className="p-2 border text-center">{prod.quantity ?? '-'}</td>
-            <td className="p-2 border text-center">
-              {prod.active ? '✅ เปิดใช้งาน' : '❌ ปิดใช้งาน'}
+
+            <td className="p-2 border text-right">
+              ฿{getPrice(prod).toLocaleString(undefined, {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}
             </td>
+                              
+
             <td className="p-2 border text-center space-x-2">
               <Link
-                to={`/pos/products/${prod.id}/edit`}
+                to={`/pos/stock/products/edit/${prod.id}`}
                 className="text-blue-600 hover:underline"
               >
                 ✏️ แก้ไข
               </Link>
               <button
                 onClick={() => onDelete(prod.id)}
-                className="text-red-600 hover:underline"
+                className="text-red-600 hover:underline disabled:opacity-50"
+                disabled={deleting}
               >
                 🗑️ ลบ
               </button>
             </td>
+
+
           </tr>
         ))}
       </tbody>

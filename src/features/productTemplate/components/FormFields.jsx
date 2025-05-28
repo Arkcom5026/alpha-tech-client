@@ -1,13 +1,9 @@
 // ✅ src/features/productTemplate/components/FormFields.jsx
 import React from 'react';
+import { useFormContext } from 'react-hook-form';
 
-const FormFields = ({
-  register,
-  profiles,
-  units,
-  defaultValues,
-}) => {
-  const { unitId = '', productProfileId = '' } = defaultValues || {};
+const FormFields = ({ profiles, units }) => {
+  const { register } = useFormContext();
 
   return (
     <>
@@ -23,9 +19,9 @@ const FormFields = ({
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
         <label className="font-medium md:col-span-1">หน่วย</label>
-        <select {...register('unitId')} defaultValue={unitId} className="input md:col-span-3 border border-gray-300 dark:border-gray-600 rounded px-3 py-2 bg-white dark:bg-zinc-800 text-black dark:text-white">
-          <option value="">-- เลือกหน่วย --</option>
-          {units?.map((u) => (
+        <select {...register('unitId')} className="form-select w-full border px-3 py-2 rounded">
+          <option value="">-- เลือกหน่วยนับ --</option>
+          {units.map((u) => (
             <option key={u.id} value={String(u.id)}>{u.name}</option>
           ))}
         </select>
@@ -38,9 +34,9 @@ const FormFields = ({
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
         <label className="font-medium md:col-span-1">ลักษณะสินค้า</label>
-        <select {...register('productProfileId')} defaultValue={productProfileId} className="input md:col-span-3 border border-gray-300 dark:border-gray-600 rounded px-3 py-2 bg-white dark:bg-zinc-800 text-black dark:text-white">
-          <option value="">-- เลือกลักษณะสินค้า --</option>
-          {(profiles || []).map((p) => (
+        <select {...register('productProfileId')} className="form-select w-full border px-3 py-2 rounded">
+          <option value="">-- เลือกคุณสมบัติ --</option>
+          {profiles.map((p) => (
             <option key={p.id} value={String(p.id)}>{p.name}</option>
           ))}
         </select>
@@ -64,3 +60,4 @@ const FormFields = ({
 };
 
 export default FormFields;
+

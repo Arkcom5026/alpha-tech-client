@@ -65,7 +65,7 @@ export const updateProductTemplate = async (id, payload) => {
 export const deleteProductTemplate = async (id, branchId) => {
   try {
     const res = await apiClient.delete(`/product-templates/${id}`, {
-      data: { createdByBranchId: branchId },
+      data: { branchId: branchId },
     });
     return res.data;
   } catch (error) {

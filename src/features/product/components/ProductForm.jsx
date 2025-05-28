@@ -1,10 +1,9 @@
 // src/features/product/components/ProductForm.jsx
 
 import { useForm, useWatch } from 'react-hook-form';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import FormFields from './FormFields';
 import apiClient from '@/utils/apiClient';
-import ImageManagerEnhanced from '@/components/shared/media/ImageManagerEnhanced';
 import { createProduct, updateProduct } from '../api/productApi';
 import { useNavigate } from 'react-router-dom';
 import useEmployeeStore from '@/store/employeeStore';
@@ -16,9 +15,9 @@ export default function ProductForm({ mode = 'create', defaultValues = {} }) {
     reset,
     formState: { errors },
     control,
-    setValue
+    setValue,
   } = useForm({
-    defaultValues: defaultValues,
+    defaultValues,
   });
 
   const navigate = useNavigate();
@@ -33,17 +32,12 @@ export default function ProductForm({ mode = 'create', defaultValues = {} }) {
   });
 
   const [loading, setLoading] = useState(true);
-  const imageRef = useRef();
-
-  const [oldImages, setOldImages] = useState([]);
-  const [previewUrls, setPreviewUrls] = useState([]);
-  const [captions, setCaptions] = useState([]);
-  const [files, setFiles] = useState([]);
-  const [coverIndex, setCoverIndex] = useState(null);
+  const [dropdownsReady, setDropdownsReady] = useState(false);
 
   const categoryId = useWatch({ control, name: 'categoryId' });
   const productTypeId = useWatch({ control, name: 'productTypeId' });
   const productProfileId = useWatch({ control, name: 'productProfileId' });
+  const templateId = useWatch({ control, name: 'templateId' });
 
   useEffect(() => {
     const fetchDropdowns = async () => {
@@ -56,6 +50,7 @@ export default function ProductForm({ mode = 'create', defaultValues = {} }) {
           productTypes: res.data.productTypes || [],
           productProfiles: res.data.productProfiles || [],
         });
+        setDropdownsReady(true);
         console.log('📦 dropdowns loaded:', res.data);
       } catch (err) {
         console.error('❌ Failed to load dropdowns:', err);
@@ -67,37 +62,66 @@ export default function ProductForm({ mode = 'create', defaultValues = {} }) {
   }, []);
 
   useEffect(() => {
-    console.log('🟡 categoryId:', categoryId);
-    console.log('🟡 productTypeId:', productTypeId);
-    console.log('🟡 productProfileId:', productProfileId);
-  }, [categoryId, productTypeId, productProfileId]);
+    if (mode === 'edit' && defaultValues && dropdownsReady) {
+      console.log('🔍 defaultValues (raw):', defaultValues);
+      const extracted = {
+        ...defaultValues,
+        priceLevel1: defaultValues.prices?.find(p => p.level === 1)?.price || '',
+        priceLevel2: defaultValues.prices?.find(p => p.level === 2)?.price || '',
+        templateId: defaultValues.template?.id,
+        productProfileId: defaultValues.template?.productProfile?.id,
+        productTypeId: defaultValues.template?.productProfile?.productType?.id,
+        categoryId: defaultValues.template?.productProfile?.productType?.categoryId,
+      };
+
+      const typeMatch = dropdowns.productTypes.some(
+        (p) => p.id === extracted.productTypeId && p.categoryId === extracted.categoryId
+      );
+
+      if (!typeMatch) {
+        extracted.productTypeId = '';
+        extracted.productProfileId = '';
+        extracted.templateId = '';
+      }
+
+      reset(extracted);
+    }
+  }, [mode, defaultValues, reset, dropdownsReady, dropdowns]);
 
   useEffect(() => {
-    if (mode === 'edit' && defaultValues) {
-      reset(defaultValues);
-      if (defaultValues.images) {
-        setOldImages(defaultValues.images);
-      }
+    if (!categoryId || dropdowns.productTypes.length === 0) return;
+    const validProductTypes = dropdowns.productTypes.filter(p => p.categoryId === Number(categoryId));
+    const validProductTypeIds = validProductTypes.map(p => p.id);
+    if (!validProductTypeIds.includes(Number(productTypeId))) {
+      setValue('productTypeId', '');
+      setValue('productProfileId', '');
+      setValue('templateId', '');
     }
-  }, [mode, defaultValues, reset]);
+  }, [categoryId, dropdowns.productTypes, productTypeId, setValue]);
+
+  useEffect(() => {
+    if (!productTypeId || dropdowns.productProfiles.length === 0) return;
+    const validProfiles = dropdowns.productProfiles.filter(p => p.productTypeId === Number(productTypeId));
+    const validProfileIds = validProfiles.map(p => p.id);
+    if (!validProfileIds.includes(Number(productProfileId))) {
+      setValue('productProfileId', '');
+      setValue('templateId', '');
+    }
+  }, [productTypeId, dropdowns.productProfiles, productProfileId, setValue]);
 
   const onSubmit = async (data) => {
     try {
-      const [uploadedImages, deleted] = await imageRef.current.upload();
-      data.images = uploadedImages;
-      data.imagesToDelete = deleted;
 
       if (mode === 'edit') {
         data.updatedByBranchId = branch.id;
         const res = await updateProduct(defaultValues.id, data);
         console.log('✅ Product updated:', res);
       } else {
-        data.createdByBranchId = branch.id;
+        data.branchId = branch.id;
         const res = await createProduct(data);
         console.log('✅ Product created:', res);
       }
-
-      navigate('/pos/products');
+      navigate('/pos/stock/products');
     } catch (err) {
       console.error('❌ submit error:', err);
     }
@@ -115,9 +139,22 @@ export default function ProductForm({ mode = 'create', defaultValues = {} }) {
     (template) => template.productProfileId === Number(productProfileId)
   );
 
-  console.log('✅ filteredProductTypes:', filteredProductTypes);
-  console.log('✅ filteredProductProfiles:', filteredProductProfiles);
-  console.log('✅ filteredTemplates:', filteredTemplates);
+  useEffect(() => {
+    if (filteredProductProfiles.length === 0) return;
+    const validIds = filteredProductProfiles.map(p => String(p.id));
+    if (!validIds.includes(String(productProfileId))) {
+      setValue('productProfileId', '');
+      setValue('templateId', '');
+    }
+  }, [filteredProductProfiles, productProfileId, setValue]);
+
+  useEffect(() => {
+    if (filteredTemplates.length === 0) return;
+    const validIds = filteredTemplates.map(t => String(t.id));
+    if (!validIds.includes(String(templateId))) {
+      setValue('templateId', '');
+    }
+  }, [filteredTemplates, templateId, setValue]);
 
   if (loading) return <p>กำลังโหลดข้อมูล...</p>;
 
@@ -136,27 +173,6 @@ export default function ProductForm({ mode = 'create', defaultValues = {} }) {
           filteredTemplates,
         }}
       />
-
-      <div className="mt-6">
-        <ImageManagerEnhanced
-          ref={imageRef}
-          oldImages={oldImages}
-          setOldImages={setOldImages}
-          previewUrls={previewUrls}
-          setPreviewUrls={setPreviewUrls}
-          captions={captions}
-          setCaptions={setCaptions}
-          coverIndex={coverIndex}
-          setCoverIndex={setCoverIndex}
-          files={files}
-          setFiles={setFiles}
-          onUploadComplete={(all, toDelete) => {
-            if (mode === 'edit') {
-              setOldImages(all);
-            }
-          }}
-        />
-      </div>
 
       <button
         type="submit"

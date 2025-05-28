@@ -1,17 +1,27 @@
-// src/features/productTemplate/pages/EditProductTemplatePage.jsx
+// ✅ src/features/productTemplate/pages/EditProductTemplatePage.jsx
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import ProductTemplateForm from '../components/ProductTemplateForm';
+import ProductTemplateImage from '../components/ProductTemplateImage';
 import { getProductTemplateById, updateProductTemplate } from '../api/productTemplateApi';
 import useEmployeeStore from '@/store/employeeStore';
+import apiClient from '@/utils/apiClient';
+import { uploadImagesTempFull } from '../api/productTemplateImagesApi';
 
 const EditProductTemplatePage = () => {
+  const [previewUrls, setPreviewUrls] = useState([]);
+  const [captions, setCaptions] = useState([]);
+  const [coverIndex, setCoverIndex] = useState(null);
   const { id } = useParams();
   const navigate = useNavigate();
   const branchId = useEmployeeStore((state) => state.branch?.id);
   const [template, setTemplate] = useState(null);
   const [error, setError] = useState('');
+  const [selectedFiles, setSelectedFiles] = useState([]);
   const imageRef = useRef();
+  const token = useEmployeeStore((state) => state.token);
+  const [oldImages, setOldImages] = useState([]);
+  const [imagesToDelete, setImagesToDelete] = useState([]);
 
   useEffect(() => {
     if (!branchId) {
@@ -23,14 +33,18 @@ const EditProductTemplatePage = () => {
       try {
         const data = await getProductTemplateById(id, branchId);
 
-        // ✅ แปลงข้อมูลให้อยู่ในรูปแบบที่ dropdown เข้าใจได้
         const mapped = {
           ...data,
           unitId: data.unitId?.toString() || '',
           productProfileId: data.productProfileId?.toString() || '',
         };
 
-        setTemplate(mapped);
+        setTemplate({
+          ...mapped,
+          images: Array.isArray(data.templateImages) ? data.templateImages : [],
+        });
+
+        setOldImages(Array.isArray(data.templateImages) ? data.templateImages : []);
       } catch (err) {
         console.error('โหลดข้อมูลรูปแบบสินค้าล้มเหลว:', err);
         setError('ไม่สามารถโหลดข้อมูลรูปแบบสินค้าได้');
@@ -41,8 +55,28 @@ const EditProductTemplatePage = () => {
   }, [id, branchId]);
 
   const handleUpdate = async (formData) => {
-    formData.createdByBranchId = branchId;
+    formData.branchId = branchId;
+
     try {
+      let uploadedImages = [];
+      if (selectedFiles.length > 0) {
+        uploadedImages = await uploadImagesTempFull(id, selectedFiles);
+      }
+
+      const finalImages = [...oldImages, ...uploadedImages];
+      formData.images = finalImages;
+      formData.imagesToDelete = imagesToDelete;
+
+      if (imagesToDelete.length > 0) {
+        for (const public_id of imagesToDelete) {
+          console.log('🗑️ กำลังลบภาพ public_id:', public_id);
+          await apiClient.delete(`/product-templates/${id}/images/delete`, {
+            params: { public_id },
+          });
+        }
+      }
+
+      console.log('📤 formData ที่จะส่งไปยัง backend:', formData);
       await updateProductTemplate(id, formData, branchId);
       navigate('/pos/stock/templates');
     } catch (err) {
@@ -57,11 +91,29 @@ const EditProductTemplatePage = () => {
   return (
     <div className="max-w-3xl mx-auto">
       <h2 className="text-xl font-bold mb-4">แก้ไขรูปแบบสินค้า</h2>
+
+      <div className="mb-6">
+        <ProductTemplateImage
+          ref={imageRef}
+          files={selectedFiles}
+          setFiles={setSelectedFiles}
+          previewUrls={previewUrls}
+          setPreviewUrls={setPreviewUrls}
+          captions={captions}
+          setCaptions={setCaptions}
+          coverIndex={coverIndex}
+          setCoverIndex={setCoverIndex}
+          oldImages={oldImages}
+          setOldImages={setOldImages}
+          imagesToDelete={imagesToDelete}
+          setImagesToDelete={setImagesToDelete}
+        />
+      </div>
+
       <ProductTemplateForm
         defaultValues={template}
         onSubmit={handleUpdate}
         mode="edit"
-        imageRef={imageRef}
       />
     </div>
   );

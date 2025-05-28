@@ -5,10 +5,12 @@ import { useNavigate } from 'react-router-dom';
 import { deleteProductTemplate } from '../api/productTemplateApi';
 import useEmployeeStore from '@/store/employeeStore';
 import ConfirmDeleteDialog from '@/components/shared/dialogs/ConfirmDeleteDialog';
+import AlertDialog from '@/components/shared/dialogs/AlertDialog';
 
 const ProductTemplateTable = ({ templates }) => {
   const navigate = useNavigate();
   const [confirmId, setConfirmId] = useState(null);
+  const [alert, setAlert] = useState({ open: false, message: '' });
 
   const handleDelete = async (id) => {
     try {
@@ -17,11 +19,11 @@ const ProductTemplateTable = ({ templates }) => {
       window.location.reload();
     } catch (error) {
       if (error.response?.status === 403) {
-        alert('ไม่มีสิทธิ์ลบรายการนี้');
+        setAlert({ open: true, message: 'ไม่มีสิทธิ์ลบรายการนี้' });
       } else if (error.response?.status === 409) {
-        alert('ไม่สามารถลบได้ เพราะมีการใช้งานแล้ว');
+        setAlert({ open: true, message: 'ไม่สามารถลบได้ เพราะมีการใช้งานแล้ว' });
       } else {
-        alert('เกิดข้อผิดพลาดในการลบ');
+        setAlert({ open: true, message: 'เกิดข้อผิดพลาดในการลบ' });
       }
     }
   };
@@ -62,6 +64,12 @@ const ProductTemplateTable = ({ templates }) => {
           onCancel={() => setConfirmId(null)}
         />
       )}
+      <AlertDialog
+        open={alert.open}
+        title="ไม่สามารถลบข้อมูลได้"
+        description={alert.message}
+        onClose={() => setAlert({ open: false, message: '' })}
+      />
     </div>
   );
 };

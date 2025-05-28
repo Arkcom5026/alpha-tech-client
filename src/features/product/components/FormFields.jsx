@@ -93,12 +93,12 @@ export default function FormFields({ register, errors, dropdowns, control, setVa
       <div>
         <label className="block font-medium mb-1">หน่วยนับ</label>
         <select
-          {...register('unit')}
+          {...register('unitId')}
           className="w-full p-2 border rounded"
         >
           <option value="">-- เลือกหน่วยนับ --</option>
           {dropdowns.units.map((unit) => (
-            <option key={unit.id} value={unit.name}>
+            <option key={unit.id} value={unit.id}>
               {unit.name}
             </option>
           ))}

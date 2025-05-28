@@ -2,7 +2,7 @@
 
 import React, { useImperativeHandle, forwardRef, useState, useRef } from 'react';
 import { X, Star, Trash2 } from 'lucide-react';
-import { uploadAllImages } from './api/uploadAllImages';
+import { uploadAllImages } from './utils/uploadAllImages';
 
 const ImageManagerEnhanced = forwardRef(({
   oldImages,
@@ -16,31 +16,42 @@ const ImageManagerEnhanced = forwardRef(({
   files,  
   setFiles,
   onUploadComplete,
+  uploadEndpoint = '/product-images',
 }, ref) => {
   const [imagesToDelete, setImagesToDelete] = useState([]);
   const isUploadingRef = useRef(false); // ✅ กันการอัปโหลดซ้ำ
 
   const handleDelete = (index) => {
+    console.log('🧹 ลบภาพ index:', index);
+
     const isOld = index < oldImages.length;
 
     if (isOld) {
       const imageToRemove = oldImages[index];
+      console.log('🗑️ ลบภาพเก่า:', imageToRemove);
       setImagesToDelete((prev) => [...prev, imageToRemove.public_id]);
       setOldImages((prev) => prev.filter((_, i) => i !== index));
     } else {
       const previewIndex = index - oldImages.length;
+      const previewImage = previewUrls[previewIndex];
+      console.log('🗑️ ลบภาพ preview:', previewImage);
       setPreviewUrls((prev) => prev.filter((_, i) => i !== previewIndex));
       setFiles((prev) => prev.filter((_, i) => i !== previewIndex));
     }
 
     setCaptions((prev) => {
       const updated = [...prev];
-      updated.splice(index, 1);
+      if (index >= 0 && index < updated.length) {
+        updated.splice(index, 1);
+      }
       return updated;
     });
 
-    if (coverIndex === index) setCoverIndex(null);
-    else if (index < coverIndex) setCoverIndex((i) => i - 1);
+    if (coverIndex === index) {
+      setCoverIndex(null);
+    } else if (typeof coverIndex === 'number' && index < coverIndex) {
+      setCoverIndex((i) => i - 1);
+    }
   };
 
   const handleCaptionChange = (index, text) => {
@@ -67,8 +78,14 @@ const ImageManagerEnhanced = forwardRef(({
         return [oldImages, imagesToDelete];
       }
 
-      const uploadedImages = await uploadAllImages(files);
-      const all = [...oldImages, ...uploadedImages];
+      const rawUploaded = await uploadAllImages(files, uploadEndpoint);
+      console.log('📤 rawUploaded (แบบละเอียด):', JSON.stringify(rawUploaded, null, 2)); // ✅ log ตรวจสอบ secure_url
+      const uploadedImages = rawUploaded.map(img => ({
+        url: img.url,
+        public_id: img.public_id,
+        secure_url: img.secure_url || img.url, // ✅ fallback ให้ไม่ขาด secure_url
+      }));
+      const all = uploadedImages;
       console.log('🖼️ อัปโหลดภาพทั้งหมดสำเร็จ:', all);
 
       // ✅ เคลียร์ preview หลังอัปโหลดสำเร็จ
@@ -90,7 +107,16 @@ const ImageManagerEnhanced = forwardRef(({
     upload,
   }));
 
-  const allImages = [...oldImages, ...previewUrls.map((url) => ({ url }))];
+  const previewObjs = previewUrls.map((url) => ({ url }));
+  const combined = [...oldImages, ...previewObjs];
+  const allImages = combined.filter(
+    (img, index, self) =>
+      (img?.url || img) &&
+      self.findIndex(o =>
+        (o.public_id && img.public_id && o.public_id === img.public_id) ||
+        (!o.public_id && !img.public_id && o.url === img.url)
+      ) === index
+  );
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -111,7 +137,7 @@ const ImageManagerEnhanced = forwardRef(({
       />
 
       {allImages.map((img, index) => (
-        <div key={index} className="relative border rounded p-2 bg-white dark:bg-zinc-900 border-gray-300 dark:border-gray-600">
+        <div key={img.public_id || img.url || index} className="relative border rounded p-2 bg-white dark:bg-zinc-900 border-gray-300 dark:border-gray-600">
           <img src={img.url || img} alt={`img-${index}`} className="w-full h-auto rounded bg-white dark:bg-zinc-800" />
 
           <button

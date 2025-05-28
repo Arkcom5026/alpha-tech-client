@@ -79,7 +79,7 @@ export default function ViewProductPage() {
 
       <div className="mt-6">
         <Link
-          to={`/pos/products/${product.id}/edit`}
+          to={`/pos/stock/products/edit/${product.id}`}
           className="text-blue-600 hover:underline"
         >
           แก้ไขสินค้า

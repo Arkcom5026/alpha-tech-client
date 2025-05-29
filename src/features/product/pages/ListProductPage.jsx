@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import ConfirmDeleteDialog from '@/components/shared/dialogs/ConfirmDeleteDialog';
 import useEmployeeStore from '@/store/employeeStore';
 import StandardActionButtons from '@/components/shared/buttons/StandardActionButtons';
-import CascadingFilterGroup from '@/components/shared/form/CascadingFilterGroup';
+// import CascadingFilterGroup from '@/components/shared/form/CascadingFilterGroup';
 import ProductTable from '../components/ProductTable';
 
 export default function ListProductPage() {
@@ -91,12 +91,11 @@ export default function ListProductPage() {
 
     const fetchData = async () => {
       try {
-        const [productsData, dropdownData] = await Promise.all([
-          getAllProducts(branchId),
-          getProductDropdowns(branchId)
+        const [productsData] = await Promise.all([
+          getAllProducts(branchId),          
         ]);
         setProducts(productsData);
-        setDropdowns(dropdownData);
+        
       } catch (error) {
         console.error('❌ ไม่สามารถโหลดสินค้าได้:', error);
       } finally {
@@ -137,7 +136,7 @@ export default function ListProductPage() {
         </select>
       </div>
 
-      <CascadingFilterGroup
+      {/* <CascadingFilterGroup
         value={filter}
         onChange={setFilter}
         dropdowns={dropdowns}
@@ -149,7 +148,7 @@ export default function ListProductPage() {
           productProfile: 'เลือกลักษณะสินค้า',
           template: 'เลือกรูปแบบสินค้า',
         }}
-      />
+      /> */}
 
       <ProductTable
         products={paginated}

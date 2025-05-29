@@ -1,8 +1,42 @@
 // src/features/product/components/FormFields.jsx
 
+import { useFormContext } from 'react-hook-form';
+import { useEffect } from 'react';
 import CascadingDropdownGroup from '@/components/shared/form/CascadingDropdownGroup';
 
 export default function FormFields({ register, errors, dropdowns, control, setValue, isEditMode = false }) {
+  const { watch } = useFormContext();
+
+  const categoryId = watch('categoryId');
+  const productTypeId = watch('productTypeId');
+  const productProfileId = watch('productProfileId');
+  const templateId = watch('templateId');
+
+  // ✅ เมื่อเปลี่ยนหมวดหมู่สินค้า → ถ้า type/profile/template ไม่สัมพันธ์ → เคลียร์
+  useEffect(() => {
+    const validTypes = dropdowns.productTypes.filter(pt => pt.categoryId === Number(categoryId)).map(pt => String(pt.id));
+    if (!validTypes.includes(String(productTypeId))) {
+      setValue('productTypeId', '');
+      setValue('productProfileId', '');
+      setValue('templateId', '');
+    }
+  }, [categoryId]);
+
+  useEffect(() => {
+    const validProfiles = dropdowns.productProfiles.filter(pf => pf.productTypeId === Number(productTypeId)).map(pf => String(pf.id));
+    if (!validProfiles.includes(String(productProfileId))) {
+      setValue('productProfileId', '');
+      setValue('templateId', '');
+    }
+  }, [productTypeId]);
+
+  useEffect(() => {
+    const validTemplates = dropdowns.templates.filter(t => t.productProfileId === Number(productProfileId)).map(t => String(t.id));
+    if (!validTemplates.includes(String(templateId))) {
+      setValue('templateId', '');
+    }
+  }, [productProfileId]);
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
       <CascadingDropdownGroup

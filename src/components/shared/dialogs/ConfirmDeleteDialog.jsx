@@ -10,7 +10,7 @@ import {
   import { Button } from '@/components/ui/button';
   
   const ConfirmDeleteDialog = ({ open, itemLabel, title, description, onCancel, onConfirm }) => {
-    console.log('🧩 ConfirmDeleteDialog Props:', { open, itemLabel });
+    
   
     return (
       <Dialog open={open} onOpenChange={onCancel}>

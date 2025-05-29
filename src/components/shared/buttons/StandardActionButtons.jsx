@@ -8,12 +8,7 @@ const StandardActionButtons = ({
   disableEdit = false,
   disableDelete = false,
 }) => {
-  console.log('🧩 StandardActionButtons Props:', {
-    hasAdd: !!onAdd,
-    hasEdit: !!onEdit,
-    hasDelete: !!onDelete,
-  });
-
+  
   return (
     <div className="flex gap-2">
       {onAdd && (

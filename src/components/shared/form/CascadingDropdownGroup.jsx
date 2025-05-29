@@ -11,69 +11,79 @@ export default function CascadingDropdownGroup({
   dropdowns,
   isEditMode = false,
   onSelectionChange = () => {},
+  defaultValues = {},
 }) {
-  const categoryId = useWatch({ control, name: 'categoryId' });
-  const productTypeId = useWatch({ control, name: 'productTypeId' });
-  const productProfileId = useWatch({ control, name: 'productProfileId' });
+  if (!control) return null; // ✅ ป้องกัน control เป็น null
+
+  const categoryId = useWatch({ control, name: 'categoryId' }) ?? '';
+  const productTypeId = useWatch({ control, name: 'productTypeId' }) ?? '';
+  const productProfileId = useWatch({ control, name: 'productProfileId' }) ?? '';
+
+  const filteredProductTypes = (dropdowns.productTypes || []).filter(
+    (type) => String(type.categoryId) === String(categoryId)
+  );
+
+  const filteredProductProfiles = (dropdowns.productProfiles || []).filter(
+    (profile) => String(profile.productTypeId) === String(productTypeId)
+  );
+
+  const filteredTemplates = (dropdowns.templates || []).filter(
+    (template) => String(template.productProfileId) === String(productProfileId)
+  );
 
   const firstRenderRef = useRef(true);
   const prevCategoryRef = useRef();
   const prevProductTypeRef = useRef();
   const prevProductProfileRef = useRef();
 
-  const filteredProductTypes = (dropdowns.productTypes || []).filter(
-    (type) => type.categoryId === Number(categoryId)
-  );
-
-  const filteredProductProfiles = (dropdowns.productProfiles || []).filter(
-    (profile) => profile.productTypeId === Number(productTypeId)
-  );
-
-  const filteredTemplates = (dropdowns.templates || []).filter(
-    (template) => template.productProfileId === Number(productProfileId)
-  );
-
   useEffect(() => {
-    onSelectionChange({ categoryId });
-
-    if (firstRenderRef.current) {
+    if (isEditMode && defaultValues?.categoryId && firstRenderRef.current) {
+      setValue('categoryId', String(defaultValues.categoryId));
+      setValue('productTypeId', String(defaultValues.productTypeId));
+      setValue('productProfileId', String(defaultValues.productProfileId));
+      setValue('templateId', String(defaultValues.templateId));
+      prevCategoryRef.current = String(defaultValues.categoryId);
+      prevProductTypeRef.current = String(defaultValues.productTypeId);
+      prevProductProfileRef.current = String(defaultValues.productProfileId);
       firstRenderRef.current = false;
-      prevCategoryRef.current = categoryId;
-      return;
     }
-
-    const shouldReset = !isEditMode && categoryId && categoryId !== prevCategoryRef.current;
-
-    if (shouldReset) {
-      setValue('productTypeId', '');
-      setValue('productProfileId', '');
-      setValue('templateId', '');
-      prevCategoryRef.current = categoryId;
-    }
-  }, [categoryId, isEditMode, setValue, onSelectionChange]);
+  }, [isEditMode, defaultValues, setValue]);
 
   useEffect(() => {
-    onSelectionChange({ productTypeId });
+    if (!firstRenderRef.current) {
+      onSelectionChange({ categoryId });
+      const shouldReset = categoryId !== prevCategoryRef.current;
+      if (shouldReset) {
+        setValue('productTypeId', '');
+        setValue('productProfileId', '');
+        setValue('templateId', '');
+      }
+      prevCategoryRef.current = categoryId;
+    }
+  }, [categoryId, setValue, onSelectionChange]);
 
-    const shouldReset = !isEditMode && productTypeId && productTypeId !== prevProductTypeRef.current;
-
-    if (shouldReset) {
-      setValue('productProfileId', '');
-      setValue('templateId', '');
+  useEffect(() => {
+    if (!firstRenderRef.current) {
+      onSelectionChange({ productTypeId });
+      const shouldReset = productTypeId !== prevProductTypeRef.current;
+      if (shouldReset) {
+        setValue('productProfileId', '');
+        setValue('templateId', '');
+      }
       prevProductTypeRef.current = productTypeId;
     }
-  }, [productTypeId, isEditMode, setValue, onSelectionChange]);
+  }, [productTypeId, setValue, onSelectionChange]);
 
   useEffect(() => {
-    onSelectionChange({ productProfileId });
-
-    const shouldReset = !isEditMode && productProfileId && productProfileId !== prevProductProfileRef.current;
-
-    if (shouldReset) {
-      setValue('templateId', '');
+    if (!firstRenderRef.current) {
+      onSelectionChange({ productProfileId });
+      const shouldReset = productProfileId !== prevProductProfileRef.current;
+      if (shouldReset) {
+        setValue('templateId', '');
+      }
       prevProductProfileRef.current = productProfileId;
     }
-  }, [productProfileId, isEditMode, setValue, onSelectionChange]);
+  }, [productProfileId, setValue, onSelectionChange]);
 
   return (
     <>
@@ -85,7 +95,7 @@ export default function CascadingDropdownGroup({
         >
           <option value="">-- เลือกหมวดหมู่สินค้า --</option>
           {(dropdowns.categories || []).map((cat) => (
-            <option key={cat.id} value={cat.id}>{cat.name}</option>
+            <option key={cat.id} value={String(cat.id)}>{cat.name}</option>
           ))}
         </select>
         {errors.categoryId && <p className="text-red-500 text-sm">{errors.categoryId.message}</p>}
@@ -100,7 +110,7 @@ export default function CascadingDropdownGroup({
         >
           <option value="">-- เลือกประเภทสินค้า --</option>
           {filteredProductTypes.map((type) => (
-            <option key={type.id} value={type.id}>{type.name}</option>
+            <option key={type.id} value={String(type.id)}>{type.name}</option>
           ))}
         </select>
         {errors.productTypeId && <p className="text-red-500 text-sm">{errors.productTypeId.message}</p>}
@@ -115,7 +125,7 @@ export default function CascadingDropdownGroup({
         >
           <option value="">-- เลือกลักษณะสินค้า --</option>
           {filteredProductProfiles.map((profile) => (
-            <option key={profile.id} value={profile.id}>{profile.name}</option>
+            <option key={profile.id} value={String(profile.id)}>{profile.name}</option>
           ))}
         </select>
         {errors.productProfileId && <p className="text-red-500 text-sm">{errors.productProfileId.message}</p>}
@@ -130,7 +140,7 @@ export default function CascadingDropdownGroup({
         >
           <option value="">-- เลือกรูปแบบสินค้า --</option>
           {filteredTemplates.map((template) => (
-            <option key={template.id} value={template.id}>{template.name}</option>
+            <option key={template.id} value={String(template.id)}>{template.name}</option>
           ))}
         </select>
         {errors.templateId && <p className="text-red-500 text-sm">{errors.templateId.message}</p>}

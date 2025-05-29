@@ -58,15 +58,6 @@ const EditProductTemplatePage = () => {
     formData.branchId = branchId;
 
     try {
-      let uploadedImages = [];
-      if (selectedFiles.length > 0) {
-        uploadedImages = await uploadImagesTempFull(id, selectedFiles);
-      }
-
-      const finalImages = [...oldImages, ...uploadedImages];
-      formData.images = finalImages;
-      formData.imagesToDelete = imagesToDelete;
-
       if (imagesToDelete.length > 0) {
         for (const public_id of imagesToDelete) {
           console.log('🗑️ กำลังลบภาพ public_id:', public_id);
@@ -75,6 +66,14 @@ const EditProductTemplatePage = () => {
           });
         }
       }
+
+      const safeCaptions = Array.isArray(captions) ? captions : selectedFiles.map(() => '');
+      const safeCoverIndex = Number.isInteger(coverIndex) ? coverIndex : 0;
+
+      const uploadedImages = await uploadImagesTempFull(id, selectedFiles, safeCaptions, safeCoverIndex);
+
+      formData.images = uploadedImages;
+      formData.imagesToDelete = imagesToDelete;
 
       console.log('📤 formData ที่จะส่งไปยัง backend:', formData);
       await updateProductTemplate(id, formData, branchId);

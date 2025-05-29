@@ -55,8 +55,8 @@ export const updateProduct = async (id, payload) => {
 export const deleteProduct = async (id, branchId) => {
   try {
     const res = await apiClient.delete(`/products/${id}`, {
-      data: { updatedByBranchId: branchId },
-    });
+      data: { branchId: branchId },
+    });       
     return res.data;
   } catch (error) {
     console.error('❌ deleteProduct error:', error);
@@ -67,20 +67,22 @@ export const deleteProduct = async (id, branchId) => {
 
 // ✅ src/features/product/api/productApi.js
 
-export const getProductDropdowns = async (branchId) => {
-  if (!branchId) {
-    throw new Error('Branch ID is required to fetch product dropdowns');
-  }
+export const getProductDropdowns = async (branchId, productId = null) => {
+  if (!branchId) throw new Error('Branch ID is required');
 
   try {
-    console.log('🔄 ---------------------------------------- Fetching product dropdowns for branch:', branchId); 
-    const res = await apiClient.get(`/products/dropdowns?branchId=${branchId}`);
+    const url = productId
+      ? `/products/dropdowns?branchId=${branchId}&productId=${productId}`
+      : `/products/dropdowns?branchId=${branchId}`;
+
+    const res = await apiClient.get(url);
     return res.data;
   } catch (error) {
     console.error('❌ getProductDropdowns error:', error);
     throw error;
   }
 };
+
 
 
 

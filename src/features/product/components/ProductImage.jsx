@@ -1,28 +1,38 @@
 // ✅ src/features/product/components/ProductImage.jsx
 
-import React, { useImperativeHandle, forwardRef, useState, useRef } from 'react';
+import React, { useImperativeHandle, forwardRef, useState, useRef, useEffect } from 'react';
 import { X, Star, Trash2 } from 'lucide-react';
+import { uploadImagesProductFull } from '../api/productImagesApi';
 
 const ProductImage = forwardRef(({
-  oldImages,
+  oldImages = [],
   setOldImages,
-  previewUrls,
+  previewUrls = [],
   setPreviewUrls,
   coverIndex,
   setCoverIndex,
-  captions,
+  captions = [],
   setCaptions,
-  files,
+  files = [],
   setFiles,
-  imagesToDelete,
-  setImagesToDelete,
+  onUploadComplete,
+  productId,
 }, ref) => {
+  const imagesToDeleteRef = useRef([]);
+  const isUploadingRef = useRef(false);
+  const oldImagesRef = useRef([]);
+
+  useEffect(() => {
+    oldImagesRef.current = oldImages;
+  }, [oldImages]);
+
   const handleDelete = (index) => {
+    console.log('🗑️ [Frontend] ผู้ใช้กดลบภาพ index:', index);
     const isOld = index < oldImages.length;
 
     if (isOld) {
       const imageToRemove = oldImages[index];
-      setImagesToDelete((prev) => [...prev, imageToRemove.public_id]);
+      imagesToDeleteRef.current.push(imageToRemove.public_id);
       setOldImages((prev) => prev.filter((_, i) => i !== index));
     } else {
       const previewIndex = index - oldImages.length;
@@ -42,23 +52,42 @@ const ProductImage = forwardRef(({
 
   const handleCaptionChange = (index, text) => {
     setCaptions((prev) => {
-      const newCaptions = [...prev];
-      newCaptions[index] = text;
-      return newCaptions;
+      const updated = [...prev];
+      updated[index] = text;
+      return updated;
     });
   };
 
   useImperativeHandle(ref, () => ({
-    getUploadState: () => ({
-      oldImages,
-      files,
-      imagesToDelete,
-      captions,
-      coverIndex,
-    })
+    upload: async () => {
+      if (isUploadingRef.current) return [[], []];
+      isUploadingRef.current = true;
+
+      try {
+        const safeCaptions = Array.isArray(captions) ? captions : files.map(() => '');
+        const safeCoverIndex = Number.isInteger(coverIndex) ? coverIndex : 0;
+
+        const uploadedImages = await uploadImagesProductFull(files, safeCaptions, safeCoverIndex);
+        console.log('📤 uploadImagesProductFull result:', uploadedImages);
+
+        if (typeof onUploadComplete === 'function') {
+          onUploadComplete(uploadedImages);
+        }
+
+        return [uploadedImages, imagesToDeleteRef.current];
+      } catch (error) {
+        console.error('❌ [ProductImage] upload() error:', error);
+        return [[], imagesToDeleteRef.current];
+      } finally {
+        isUploadingRef.current = false;
+      }
+    },
   }));
 
-  const allImages = [...oldImages, ...previewUrls.map((url) => ({ url }))];
+  const allImages = [
+    ...(Array.isArray(oldImages) ? oldImages.map((img) => ({ ...img, isOld: true })) : []),
+    ...(Array.isArray(previewUrls) ? previewUrls.map((url, i) => ({ url, isOld: false, fileIndex: i })) : [])
+  ];
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -80,7 +109,11 @@ const ProductImage = forwardRef(({
 
       {allImages.map((img, index) => (
         <div key={index} className="relative border rounded p-2 bg-white dark:bg-zinc-900 border-gray-300 dark:border-gray-600">
-          <img src={img.url || img} alt={`img-${index}`} className="w-full h-auto rounded bg-white dark:bg-zinc-800" />
+          <img
+            src={img.url}
+            alt={`img-${index}`}
+            className="w-full h-auto rounded bg-white dark:bg-zinc-800"
+          />
 
           <button
             type="button"

@@ -1,59 +1,60 @@
 // ✅ src/features/productType/pages/EditProductTypePage.jsx
-import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import PageHeader from '@/components/shared/layout/PageHeader';
+import React, { useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import ProductTypeForm from '../components/ProductTypeForm';
-import LoadingSpinner from '@/components/shared/display/LoadingSpinner';
-import EmptyState from '@/components/shared/display/EmptyState';
-import { getProductTypeById, updateProductType } from '../api/productTypeApi';
+import PageHeader from '@/components/shared/layout/PageHeader';
+import AlertDialog from '@/components/shared/dialogs/AlertDialog';
+import useProductTypeStore from '../Store/ProductTypeStore';
 
 
 const EditProductTypePage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [productType, setProductType] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [formData, setFormData] = useState(null);
+  const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const mode = 'edit';
+
+  const { updateProductType, getProductTypeById } = useProductTypeStore();
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const data = await getProductTypeById(id);
-        setProductType(data);
-      } catch (error) {
-        console.error('❌ ไม่สามารถโหลดข้อมูลประเภทสินค้า:', error);
-        setProductType(null);
-      } finally {
-        setLoading(false);
+        const result = await getProductTypeById(id);
+        setFormData(result);
+      } catch (err) {
+        console.error('❌ โหลดข้อมูลประเภทสินค้าไม่สำเร็จ:', err);
+        setError('ไม่สามารถโหลดข้อมูลประเภทสินค้าได้');
       }
     };
-
     fetchData();
-  }, [id]);
+  }, [id, getProductTypeById]);
 
   const handleSubmit = async (data) => {
+    setIsSubmitting(true);
     try {
       await updateProductType(id, data);
       navigate('/pos/stock/types');
-    } catch (error) {
-      const msg =
-        error?.response?.data?.error ??
-        (typeof error?.response?.data === 'string' ? error.response.data : null) ??
-        error?.message ??
-        'เกิดข้อผิดพลาดไม่ทราบสาเหตุ';
-      throw new Error(msg);
+    } catch (err) {
+      console.error('❌ อัปเดตประเภทสินค้าไม่สำเร็จ:', err);
+      setError('ไม่สามารถอัปเดตประเภทสินค้าได้');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="p-4">
+    <div className="p-4 space-y-6">
       <PageHeader title="แก้ไขประเภทสินค้า" />
-      {loading ? (
-        <LoadingSpinner />
-      ) : productType ? (
-        <ProductTypeForm defaultValues={productType} onSubmit={handleSubmit} />
-      ) : (
-        <EmptyState message="ไม่พบข้อมูลประเภทสินค้าที่ต้องการแก้ไข" />
+      {formData && (
+        <ProductTypeForm
+          mode={mode}
+          defaultValues={formData}
+          onSubmit={handleSubmit}
+          isSubmitting={isSubmitting}
+        />
       )}
+      <AlertDialog open={!!error} onClose={() => setError('')} message={error} />
     </div>
   );
 };

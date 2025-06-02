@@ -1,4 +1,4 @@
-import { useProductTypeStore } from '@/features/productType/store/productTypeStore';
+import { useProductTypeStore } from '@/features/productType/Store/ProductTypeStore';
 import useAuthStore from '@/features/auth/store/authStore';
 
 import React, { useState, useEffect } from 'react'

@@ -1,3 +1,4 @@
+
 // ✅ src/features/product/api/productImagesApi.js
 
 import apiClient from '@/utils/apiClient';
@@ -9,7 +10,7 @@ export const uploadImagesProduct = async (files = [], captions = [], coverIndex 
   formData.append('coverIndex', coverIndex);
 
   try {
-    const response = await apiClient.post('/product-images/upload', formData, {
+    const response = await apiClient.post('/product/upload', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
 
@@ -28,19 +29,20 @@ export const uploadImagesProductFull = async (productId, files = [], captions = 
 
     try {
       const formData = new FormData();
-      formData.append('files', file); // ✅ ต้องตรงกับ backend middleware
+      formData.append('files', file);
       formData.append('captions', captions[i] || '');
       formData.append('coverIndex', coverIndex);
 
       const response = await apiClient.post(
         `/products/${productId}/images/upload-full`,
+         
         formData,
         {
           headers: { 'Content-Type': 'multipart/form-data' },
         }
       );
 
-      console.log('📸 รูปที่ได้:', response.data);
+
 
       const uploadedArray = response.data?.images;
       if (Array.isArray(uploadedArray)) {
@@ -67,12 +69,35 @@ export const uploadImagesProductFull = async (productId, files = [], captions = 
   return results;
 };
 
-export const deleteImageProduct = async (public_id) => {
+
+
+export const deleteImageProduct = async (productId, public_id) => {
   try {
-    const response = await apiClient.post('/upload/delete', { public_id });
+    if (!public_id) throw new Error("❌ public_id is undefined");
+
+
+
+    const response = await apiClient.post(
+      `/products/${productId}/images/delete`,
+      { public_id }, // ✅ ส่ง JSON body
+      {
+        headers: {
+          "Content-Type": "application/json", // ✅ สำคัญมาก
+        },
+      }
+    );
+
     return response.data;
   } catch (error) {
-    console.error('❌ ลบภาพจากเซิร์ฟเวอร์ล้มเหลว:', error);
+    console.error("❌ ลบภาพแบบ POST ล้มเหลว:", error);
     throw error;
   }
 };
+
+
+
+
+
+
+
+

@@ -8,7 +8,6 @@ import Sidebar from './Sidebar';
 import { sidebarDashboardItems } from '@/features/dashboard/sidebar/sidebarDashboardItems';
 
 
-import sidebarPurchaseItems from '@/features/purchases/sidebar/sidebarPurchasesItems';
 import { sidebarServicesItems } from '@/features/services/sidebar/sidebarServicesItems';
 
 import sidebarEmployeeItems from '@/features/employee/sidebar/sidebarEmployeeItems';
@@ -17,6 +16,8 @@ import { sidebarFinanceItems } from '@/features/Finance/sidebar/sidebarFinanceIt
 import { sidebarReportsItems } from '@/features/reports/sidebar/sidebarReportsItem';
 import sidebarSalesItems from '@/features/sales/sidebar/sidebarSalesItems';
 import { sidebarStockItems } from '@/features/stock/sidebar/sidebarStockItems';
+import { sidebarPurchaseOrdertems } from '@/features/purchaseOrder/sidebar/sidebarPurchaseOrdertems';
+
 
 const pathMap = {
   '/pos/stock/templates': sidebarStockItems,
@@ -38,11 +39,11 @@ const pathMap = {
   '/pos/sales': sidebarSalesItems,
   '/pos/sales/quick-sale': sidebarSalesItems,
   
-  '/pos/purchases': sidebarPurchaseItems,
-  '/pos/purchases/dashboard': sidebarPurchaseItems,
-  '/pos/purchases/po': sidebarPurchaseItems,
-  '/pos/purchases/receiving': sidebarPurchaseItems,
-  '/pos/purchases/suppliers': sidebarPurchaseItems,
+  '/pos/purchases': sidebarPurchaseOrdertems,
+  '/pos/purchases/dashboard': sidebarPurchaseOrdertems,
+  '/pos/purchases/po': sidebarPurchaseOrdertems,
+  '/pos/purchases/receiving': sidebarPurchaseOrdertems,
+  '/pos/purchases/suppliers': sidebarPurchaseOrdertems,
   
   '/pos/services': sidebarServicesItems,
   

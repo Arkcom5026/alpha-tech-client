@@ -2,7 +2,7 @@
 import apiClient from '@/utils/apiClient';
 
 // ✅ GET: ดึงรายการหน่วยนับทั้งหมด
-export const fetchUnits = async () => {
+export const getAllUnits = async () => {
   try {
     const res = await apiClient.get('/units');
     return res.data;
@@ -13,12 +13,12 @@ export const fetchUnits = async () => {
 };
 
 // ✅ GET: ดึงหน่วยนับตาม id
-export const fetchUnitById = async (id) => {
+export const getUnitById = async (id) => {
   try {
     const res = await apiClient.get(`/units/${id}`);
     return res.data;
   } catch (err) {
-    console.error('fetchUnitById error:', err);
+    console.error('getUnitById error:', err);
     throw err;
   }
 };

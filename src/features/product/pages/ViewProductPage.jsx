@@ -1,22 +1,29 @@
 // ✅ src/features/product/pages/ViewProductPage.jsx
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { getProductById } from '../api/productApi';
 import useEmployeeStore from '@/store/employeeStore';
 import { Alert } from '@/components/ui/alert';
+import useProductStore from '../store/productStore';
 
 export default function ViewProductPage() {
   const { id } = useParams();
   const branch = useEmployeeStore((state) => state.branch);
-  const [product, setProduct] = useState(null);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [product, setProduct] = useState(null);
+  const { fetchProductById } = useProductStore();
 
   useEffect(() => {
     const fetchProduct = async () => {
-      if (!branch?.id || !id) return;
+      if (!id || isNaN(id)) {
+        console.error('❌ Product ID ไม่ถูกต้อง:', id);
+        return;
+      }
+
+      if (!branch?.id || !id || isNaN(id)) return;
+
       try {
-        const data = await getProductById(id, branch.id);
+        const data = await fetchProductById(id);
         setProduct(data);
       } catch (err) {
         setError('ไม่สามารถโหลดข้อมูลสินค้า');
@@ -25,7 +32,7 @@ export default function ViewProductPage() {
       }
     };
     fetchProduct();
-  }, [id, branch?.id]);
+  }, [id, branch?.id, fetchProductById]);
 
   if (loading) return <p>กำลังโหลดข้อมูลสินค้า...</p>;
   if (error) return <Alert variant="destructive">{error}</Alert>;

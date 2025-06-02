@@ -1,9 +1,9 @@
 // ✅ supplierApi.js
 import apiClient from '@/utils/apiClient';
 
-export const getAllSuppliers = async (branchId) => {
+export const getAllSuppliers = async () => {
   try {
-    const response = await apiClient.get(`/suppliers?branchId=${branchId}`);
+    const response = await apiClient.get('/suppliers');
     return response.data;
   } catch (error) {
     console.error('❌ getAllSuppliers error:', error);
@@ -11,12 +11,9 @@ export const getAllSuppliers = async (branchId) => {
   }
 };
 
-
-export const getSupplierById = async (token, id) => {
+export const getSupplierById = async (id) => {
   try {
-    const response = await apiClient.get(`/suppliers/${id}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const response = await apiClient.get(`/suppliers/${id}`);
     return response.data;
   } catch (error) {
     console.error('❌ getSupplierById error:', error);

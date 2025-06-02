@@ -1,16 +1,13 @@
-//  src/features/product/pages/ListProductPage.jsx
+// ✅ src/features/product/pages/ListProductPage.jsx
 import { useEffect, useState } from 'react';
-import { getAllProducts, deleteProduct, getProductDropdowns } from '../api/productApi';
 import { useNavigate } from 'react-router-dom';
 import ConfirmDeleteDialog from '@/components/shared/dialogs/ConfirmDeleteDialog';
 import useEmployeeStore from '@/store/employeeStore';
 import StandardActionButtons from '@/components/shared/buttons/StandardActionButtons';
-// import CascadingFilterGroup from '@/components/shared/form/CascadingFilterGroup';
 import ProductTable from '../components/ProductTable';
+import useProductStore from '../store/productStore';
 
 export default function ListProductPage() {
-  const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [sortOrder, setSortOrder] = useState('name-asc');
   const [filter, setFilter] = useState({
@@ -19,20 +16,20 @@ export default function ListProductPage() {
     productProfileId: '',
     templateId: '',
   });
-  const [dropdowns, setDropdowns] = useState({
-    categories: [],
-    productTypes: [],
-    productProfiles: [],
-    templates: [],
-  });
   const [currentPage, setCurrentPage] = useState(1);
   const [deleteTarget, setDeleteTarget] = useState(null);
-  const [deleting, setDeleting] = useState(false);
   const perPage = 10;
 
   const branch = useEmployeeStore((state) => state.branch);
   const branchId = branch?.id;
   const navigate = useNavigate();
+
+  const {
+    products,
+    isLoading,
+    fetchProducts,
+    deleteProduct,
+  } = useProductStore();
 
   const confirmDelete = (prodId) => {
     const target = products.find(p => p.id === prodId);
@@ -40,28 +37,25 @@ export default function ListProductPage() {
   };
 
   const handleDelete = async () => {
-    if (!deleteTarget?.id || !branch?.id) return;
-    setDeleting(true);
+    if (!deleteTarget?.id || !branchId) return;
     try {
-      await deleteProduct(deleteTarget.id, branch.id);
-      setProducts(prev => prev.filter(p => p.id !== deleteTarget.id));
+      await deleteProduct(deleteTarget.id);
       setDeleteTarget(null);
     } catch (error) {
       console.error('❌ ลบสินค้าไม่สำเร็จ:', error);
-    } finally {
-      setDeleting(false);
     }
   };
 
   const getPrice = (p) => p.prices?.find(pr => pr.level === 1)?.price || 0;
 
   const filtered = products.filter(p => {
+    const matchesBranch = p.branchId === branchId;
     const matchesSearch = (p.title || '').toLowerCase().includes((search || '').toLowerCase());
     const matchesCategory = filter.categoryId ? p.categoryId === parseInt(filter.categoryId) : true;
     const matchesType = filter.productTypeId ? p.productTypeId === parseInt(filter.productTypeId) : true;
     const matchesProfile = filter.productProfileId ? p.productProfileId === parseInt(filter.productProfileId) : true;
     const matchesTemplate = filter.templateId ? p.templateId === parseInt(filter.templateId) : true;
-    return matchesSearch && matchesCategory && matchesType && matchesProfile && matchesTemplate;
+    return matchesBranch && matchesSearch && matchesCategory && matchesType && matchesProfile && matchesTemplate;
   });
 
   const sorted = [...filtered].sort((a, b) => {
@@ -88,25 +82,17 @@ export default function ListProductPage() {
 
   useEffect(() => {
     if (!branchId) return;
+    fetchProducts({ branchId }).then(() => {
+      const state = useProductStore.getState();
 
-    const fetchData = async () => {
-      try {
-        const [productsData] = await Promise.all([
-          getAllProducts(branchId),          
-        ]);
-        setProducts(productsData);
-        
-      } catch (error) {
-        console.error('❌ ไม่สามารถโหลดสินค้าได้:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+      const filtered = state.products.filter(p => p.branchId === branchId);
 
-    fetchData();
+      const pageItems = filtered.slice((currentPage - 1) * perPage, currentPage * perPage);
+
+    });
   }, [branchId]);
 
-  if (loading) return <p>กำลังโหลดรายการสินค้า...</p>;
+  if (isLoading) return <p>กำลังโหลดรายการสินค้า...</p>;
 
   return (
     <div className="p-4 md:p-6 lg:p-8">
@@ -136,24 +122,10 @@ export default function ListProductPage() {
         </select>
       </div>
 
-      {/* <CascadingFilterGroup
-        value={filter}
-        onChange={setFilter}
-        dropdowns={dropdowns}
-        className="mb-4"
-        showReset
-        placeholders={{
-          category: 'เลือกหมวดหมู่',
-          productType: 'เลือกประเภท',
-          productProfile: 'เลือกลักษณะสินค้า',
-          template: 'เลือกรูปแบบสินค้า',
-        }}
-      /> */}
-
       <ProductTable
         products={paginated}
         onDelete={confirmDelete}
-        deleting={deleting}
+        deleting={false}
       />
 
       <div className="mt-4 flex justify-center gap-2">
@@ -179,4 +151,4 @@ export default function ListProductPage() {
       />
     </div>
   );
-}
+}  

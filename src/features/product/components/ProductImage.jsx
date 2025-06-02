@@ -2,7 +2,7 @@
 
 import React, { useImperativeHandle, forwardRef, useState, useRef, useEffect } from 'react';
 import { X, Star, Trash2 } from 'lucide-react';
-import { uploadImagesProductFull } from '../api/productImagesApi';
+import useProductStore from '../store/productStore';
 
 const ProductImage = forwardRef(({
   oldImages = [],
@@ -21,19 +21,20 @@ const ProductImage = forwardRef(({
   const imagesToDeleteRef = useRef([]);
   const isUploadingRef = useRef(false);
   const oldImagesRef = useRef([]);
+  const { uploadImagesFull } = useProductStore.getState();
 
   useEffect(() => {
     oldImagesRef.current = oldImages;
   }, [oldImages]);
 
   const handleDelete = (index) => {
-    console.log('🗑️ [Frontend] ผู้ใช้กดลบภาพ index:', index);
     const isOld = index < oldImages.length;
 
     if (isOld) {
       const imageToRemove = oldImages[index];
       imagesToDeleteRef.current.push(imageToRemove.public_id);
       setOldImages((prev) => prev.filter((_, i) => i !== index));
+
     } else {
       const previewIndex = index - oldImages.length;
       setPreviewUrls((prev) => prev.filter((_, i) => i !== previewIndex));
@@ -67,8 +68,8 @@ const ProductImage = forwardRef(({
         const safeCaptions = Array.isArray(captions) ? captions : files.map(() => '');
         const safeCoverIndex = Number.isInteger(coverIndex) ? coverIndex : 0;
 
-        const uploadedImages = await uploadImagesProductFull(files, safeCaptions, safeCoverIndex);
-        console.log('📤 uploadImagesProductFull result:', uploadedImages);
+        const uploadedImages = await uploadImagesFull(productId, files, safeCaptions, safeCoverIndex);
+
 
         if (typeof onUploadComplete === 'function') {
           onUploadComplete(uploadedImages);
@@ -97,7 +98,7 @@ const ProductImage = forwardRef(({
         className="col-span-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-zinc-800 text-black dark:text-white rounded px-3 py-2"
         onChange={(e) => {
           const fileList = Array.from(e.target.files);
-          console.log('📥 เลือกรูปภาพใหม่:', fileList);
+   
 
           const urls = fileList.map((file) => URL.createObjectURL(file));
           setPreviewUrls((prev) => [...prev, ...urls]);

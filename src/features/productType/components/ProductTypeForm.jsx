@@ -3,44 +3,57 @@ import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { getAllCategories } from '@/features/productTemplate/api/productTemplateApi';
+
 import AlertDialog from '@/components/shared/dialogs/AlertDialog';
+import { useCategoryStore } from '@/features/category/Store/CategoryStore';
 
 const schema = z.object({
   name: z.string().min(1, 'กรุณาระบุชื่อประเภทสินค้า'),
   categoryId: z.string().min(1, 'กรุณาเลือกหมวดหมู่สินค้า'),
 });
 
-const ProductTypeForm = ({ defaultValues = {}, onSubmit }) => {
-  const [categories, setCategories] = useState([]);
+const ProductTypeForm = ({ defaultValues = {}, onSubmit, mode = 'create', isSubmitting = false }) => {
   const [alert, setAlert] = useState({ open: false, title: '', description: '' });
+  const { categories, fetchCategories } = useCategoryStore();
 
   const {
     register,
     handleSubmit,
     formState: { errors },
+    reset,
   } = useForm({
     resolver: zodResolver(schema),
     defaultValues,
   });
 
+  // โหลดหมวดหมู่สินค้าเมื่อ categories ว่าง
   useEffect(() => {
-    fetchCategories();
-  }, []);
-
-  const fetchCategories = async () => {
-    try {
-      const data = await getAllCategories();
-      setCategories(data);
-    } catch (error) {
-      console.error('โหลดหมวดหมู่ไม่สำเร็จ', error);
-      setAlert({
-        open: true,
-        title: 'เกิดข้อผิดพลาด',
-        description: 'ไม่สามารถโหลดหมวดหมู่สินค้าได้',
+    if (categories.length === 0) {
+      fetchCategories().catch((error) => {
+        console.error('โหลดหมวดหมู่ไม่สำเร็จ', error);
+        setAlert({
+          open: true,
+          title: 'เกิดข้อผิดพลาด',
+          description: 'ไม่สามารถโหลดหมวดหมู่สินค้าได้',
+        });
       });
     }
-  };
+  }, [categories.length, fetchCategories]);
+
+  // เซตค่า default แค่ตอน defaultValues เปลี่ยนจริง พร้อมแปลง categoryId เป็น string
+  useEffect(() => {
+    if (defaultValues && Object.keys(defaultValues).length > 0) {
+      const fixedDefaults = {
+        ...defaultValues,
+        categoryId: String(defaultValues.categoryId ?? ''),
+      };
+
+      reset((prev) => {
+        const same = JSON.stringify(prev) === JSON.stringify(fixedDefaults);
+        return same ? prev : fixedDefaults;
+      });
+    }
+  }, [defaultValues, reset]);
 
   const handleError = (message) => {
     setAlert({
@@ -79,6 +92,7 @@ const ProductTypeForm = ({ defaultValues = {}, onSubmit }) => {
             type="text"
             {...register('name')}
             className="w-full border rounded px-3 py-2"
+            disabled={isSubmitting}
           />
           {errors.name && <p className="text-red-500 text-sm">{errors.name.message}</p>}
         </div>
@@ -88,10 +102,11 @@ const ProductTypeForm = ({ defaultValues = {}, onSubmit }) => {
           <select
             {...register('categoryId')}
             className="w-full border rounded px-3 py-2"
+            disabled={isSubmitting}
           >
             <option value="">-- เลือกหมวดหมู่ --</option>
             {categories.map((cat) => (
-              <option key={cat.id} value={cat.id}>
+              <option key={cat.id} value={String(cat.id)}>
                 {cat.name}
               </option>
             ))}
@@ -101,9 +116,10 @@ const ProductTypeForm = ({ defaultValues = {}, onSubmit }) => {
 
         <button
           type="submit"
+          disabled={isSubmitting}
           className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
         >
-          บันทึก
+          {mode === 'edit' ? 'อัปเดตประเภทสินค้า' : 'เพิ่มประเภทสินค้า'}
         </button>
       </form>
     </>

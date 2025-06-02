@@ -1,18 +1,18 @@
-// features/unit/pages/CreateUnitPage.jsx
+// ✅ src/features/unit/pages/CreateUnitPage.jsx
 import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
-import { createUnit } from '../api/unitApi';
 import UnitForm from '../components/UnitForm';
-
+import useUnitStore from '../store/unitStore';
 
 const CreateUnitPage = () => {
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { addUnit } = useUnitStore();
 
   const handleCreate = async (data) => {
     setIsSubmitting(true);
     try {
-      await createUnit(data);
+      await addUnit(data);
       navigate('/pos/stock/units/');
     } catch (err) {
       console.error('create unit error:', err);

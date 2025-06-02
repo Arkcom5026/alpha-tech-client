@@ -3,7 +3,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import ProductTemplateForm from '../components/ProductTemplateForm';
 import ProductTemplateImage from '../components/ProductTemplateImage';
-import { getProductTemplateById, updateProductTemplate } from '../api/productTemplateApi';
+import useProductTemplateStore from '../store/productTemplateStore';
 import useEmployeeStore from '@/store/employeeStore';
 import apiClient from '@/utils/apiClient';
 import { uploadImagesTempFull } from '../api/productTemplateImagesApi';
@@ -19,9 +19,10 @@ const EditProductTemplatePage = () => {
   const [error, setError] = useState('');
   const [selectedFiles, setSelectedFiles] = useState([]);
   const imageRef = useRef();
-  const token = useEmployeeStore((state) => state.token);
   const [oldImages, setOldImages] = useState([]);
   const [imagesToDelete, setImagesToDelete] = useState([]);
+
+  const { getTemplateById, updateTemplate } = useProductTemplateStore();
 
   useEffect(() => {
     if (!branchId) {
@@ -31,7 +32,7 @@ const EditProductTemplatePage = () => {
 
     const fetchData = async () => {
       try {
-        const data = await getProductTemplateById(id, branchId);
+        const data = await getTemplateById(id);
 
         const mapped = {
           ...data,
@@ -52,7 +53,7 @@ const EditProductTemplatePage = () => {
     };
 
     fetchData();
-  }, [id, branchId]);
+  }, [id, branchId, getTemplateById]);
 
   const handleUpdate = async (formData) => {
     formData.branchId = branchId;
@@ -76,7 +77,7 @@ const EditProductTemplatePage = () => {
       formData.imagesToDelete = imagesToDelete;
 
       console.log('📤 formData ที่จะส่งไปยัง backend:', formData);
-      await updateProductTemplate(id, formData, branchId);
+      await updateTemplate(id, formData);
       navigate('/pos/stock/templates');
     } catch (err) {
       console.error('อัปเดตข้อมูลรูปแบบสินค้าล้มเหลว:', err);

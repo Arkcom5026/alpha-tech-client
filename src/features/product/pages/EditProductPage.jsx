@@ -4,11 +4,9 @@ import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import ProductForm from '../components/ProductForm';
 import ProductImage from '../components/ProductImage';
-import { updateProduct } from '../api/productApi';
 import useEmployeeStore from '@/store/employeeStore';
-import apiClient from '@/utils/apiClient';
-import { uploadImagesProductFull } from '../api/productImagesApi';
-import { getProductDropdowns } from '../api/productApi';
+import useProductStore from '../store/productStore';
+import { deleteImageProduct } from '../api/productImagesApi';
 
 const EditProductPage = () => {
   const [previewUrls, setPreviewUrls] = useState([]);
@@ -23,16 +21,19 @@ const EditProductPage = () => {
   const imageRef = useRef();
   const [oldImages, setOldImages] = useState([]);
 
+  const { updateProduct, getProductById, deleteImage } = useProductStore();
+
   useEffect(() => {
-    if (!branchId) {
-      setError('ไม่พบ branchId โปรดล็อกอินใหม่');
-      return;
-    }
+    if (!branchId || !id) return;
 
     const fetchData = async () => {
       try {
-        const dropdownData = await getProductDropdowns(branchId, id);
-        const data = dropdownData.defaultValues;
+        const data = await getProductById(id);
+
+        if (!data) {
+          setError('ไม่พบข้อมูลสินค้า หรืออาจถูกลบไปแล้ว');
+          return;
+        }
 
         const mapped = {
           ...data,
@@ -64,23 +65,33 @@ const EditProductPage = () => {
     try {
       const [uploadedImages, imagesToDelete] = await imageRef.current.upload();
 
-      if (imagesToDelete.length > 0) {
-        for (const public_id of imagesToDelete) {
-          console.log('🗑️ กำลังลบภาพ public_id:', public_id);
-          await apiClient.delete(`/products/${id}/images/delete`, {
-          params: { public_id },
-        });
-        }
-      }
-
       formData.images = uploadedImages;
       formData.imagesToDelete = imagesToDelete;
 
-      console.log('📤 formData ที่จะส่งไปยัง backend:', formData);
+      // ✅ ลบภาพเก่าออกจากระบบ (Cloudinary + DB)
+      // for (const public_id of imagesToDelete) {
+      //   try {
+      //     console.log("🗑️ ลบภาพโดยตรง:", id, public_id); // ✅ ใช้ id ที่ถูกต้อง
+      //     await deleteImageProduct(id, public_id); // ✅ ไม่ใช้ productId ที่ไม่รู้จัก
+      //   } catch (err) {
+      //     console.warn("⚠️ ลบภาพไม่สำเร็จ:", err);
+      //   }
+      // }
 
-      await updateProduct(id, formData, branchId);
+      for (const img of imagesToDelete) {
+        if (!img.public_id) continue; // กัน null
+      
+        try {
+          await deleteImage({ productId: id, publicId: img.public_id });
+        } catch (err) {
+          console.warn("⚠️ ลบภาพไม่สำเร็จ:", err);
+        }
+      }
 
-      console.log('✅ อัปเดตข้อมูลสินค้าสำเร็จ:', uploadedImages);
+
+      await updateProduct(id, formData);
+
+
 
       navigate('/pos/stock/products');
     } catch (err) {
@@ -109,6 +120,8 @@ const EditProductPage = () => {
           setCoverIndex={setCoverIndex}
           oldImages={oldImages}
           setOldImages={setOldImages}
+          productId={product.id}
+          deleteImage={deleteImage}
         />
       </div>
 
@@ -123,5 +136,4 @@ const EditProductPage = () => {
 };
 
 export default EditProductPage;
-
-
+  

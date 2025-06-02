@@ -1,146 +1,172 @@
 // ✅ src/features/product/components/ProductForm.jsx
+
 import React, { useEffect, useState } from 'react';
 import { useForm, FormProvider } from 'react-hook-form';
+import ProductPriceFields from './ProductPriceFields';
+
+import { getProductDropdowns, getProductPrices, getProductById, getProductDropdownsByBranch } from '../api/productApi';
+import useProductStore from '../store/productStore';
+import CascadingDropdowns from '@/components/shared/form/CascadingDropdowns';
 import FormFields from './FormFields';
-import { getAllProducts, getProductDropdowns } from '@/features/product/api/productApi';
-import { fetchUnits } from '@/features/unit/api/unitApi';
 
-const ProductForm = ({ defaultValues = {}, onSubmit, mode, branchId }) => {
-  const [products, setProducts] = useState([]);
-  const [units, setUnits] = useState([]);
-  const [templates, setTemplates] = useState([]);
-  const [productTypes, setProductTypes] = useState([]);
-  const [categories, setCategories] = useState([]);
-  const [productProfiles, setProductProfiles] = useState([]);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const formMethods = useForm({
-    defaultValues: {
-      title: '',
-      description: '',
-      unitId: '',
-      spec: '',
-      cost: '',
-      sold: 0,
-      quantity: '',
-      warranty: '',
-      codeType: 'D',
-      active: true,
-      templateId: '',
-      noSN: false,
-      ...defaultValues,
-    },
+const ProductForm = ({ onSubmit, defaultValues, mode, branchId }) => {
+  const [dropdowns, setDropdowns] = useState({
+    categories: [],
+    productTypes: [],
+    productProfiles: [],
+    templates: [],
+    units: [],
   });
 
-  const { register } = formMethods;
+  const [localPrices, setLocalPrices] = useState([]);
+  const [loadedOnce, setLoadedOnce] = useState(false);
+  const [formSynced, setFormSynced] = useState(false);
+  const [internalDefaults, setInternalDefaults] = useState(defaultValues || null);
+
+  const methods = useForm({
+    defaultValues: {},
+    mode: 'onChange',
+  });
+
+  const {
+    handleSubmit,
+    register,
+    formState: { isSubmitting, errors },
+    control,
+    setValue,
+    getValues,
+    watch,
+    reset,
+  } = methods;
+
+  const prepareDefaults = (data) => ({
+    ...data,
+    categoryId: data?.categoryId ? String(data.categoryId) : '',
+    productTypeId: data?.productTypeId ? String(data.productTypeId) : '',
+    productProfileId: data?.productProfileId ? String(data.productProfileId) : '',
+    templateId: data?.templateId ? String(data.templateId) : '',
+  });
 
   useEffect(() => {
-    const fetchProducts = async () => {
-      if (!branchId) return;
-
+    const loadDropdowns = async () => {
       try {
-        const dataProducts = await getAllProducts(branchId);
-        const dataUnits = await fetchUnits();
-        const dropdownData = await getProductDropdowns(branchId);
+        let data;
+        if (mode === 'edit' && internalDefaults?.id) {
+          const productId = String(internalDefaults.id);
 
-        setTemplates(dropdownData.templates || []);
-        setProductTypes(dropdownData.productTypes || []);
-        setProductProfiles(dropdownData.productProfiles || []);
-        setCategories(dropdownData.categories || []);
-        setUnits(dropdownData.units || []);
+          data = await getProductDropdowns(productId);
+        } else if (branchId) {
 
-        setProducts(dataProducts);
+          data = await getProductDropdownsByBranch(branchId);
+        }
+
+
+        setDropdowns({
+          categories: data.categories || [],
+          productTypes: data.productTypes || [],
+          productProfiles: data.productProfiles || [],
+          templates: data.templates || [],
+          units: data.units || [],
+        });
+        setInternalDefaults(data.defaultValues || null);
       } catch (err) {
-        console.error('โหลดข้อมูลล้มเหลว:', err);
+        console.error('❌ [Form] โหลดข้อมูล dropdowns ไม่สำเร็จ:', err);
       }
     };
 
-    fetchProducts();
-  }, [branchId]);
+    if (!loadedOnce && branchId && (mode !== 'edit' || internalDefaults?.id)) {
+      loadDropdowns();
+      setLoadedOnce(true);
+    }
+  }, [branchId, mode, internalDefaults?.id, loadedOnce]);
 
   useEffect(() => {
-    console.log('🔍 defaultValues (raw):', defaultValues);
+    const loadPrices = async () => {
+      try {
+        if (mode === 'edit' && internalDefaults?.id) {
 
-    formMethods.reset({
-      ...formMethods.getValues(),
-      ...defaultValues,
-    });
+          const prices = await getProductPrices(internalDefaults.id);
 
-    if (
-      defaultValues.categoryId &&
-      defaultValues.productTypeId &&
-      defaultValues.productProfileId &&
-      defaultValues.templateId
-    ) {
-      console.log('🔁 extracted values for reset:', {
-        categoryId: defaultValues.categoryId,
-        productTypeId: defaultValues.productTypeId,
-        productProfileId: defaultValues.productProfileId,
-        templateId: defaultValues.templateId,
-      });
+          setLocalPrices(prices);
+        }
+      } catch (err) {
+        console.error('❌ [Form] โหลดราคาสินค้าไม่สำเร็จ:', err);
+      }
+    };
 
-      formMethods.setValue('categoryId', String(defaultValues.categoryId || ''));
-      formMethods.setValue('productTypeId', String(defaultValues.productTypeId || ''));
-      formMethods.setValue('productProfileId', String(defaultValues.productProfileId || ''));
-      formMethods.setValue('templateId', String(defaultValues.templateId || ''));
-    } else {
-      console.warn('⚠️ productTypeId ไม่ตรง categoryId → reset cascade Error');
+    if (mode === 'edit' && internalDefaults?.id) {
+      loadPrices();
     }
-  }, [defaultValues]);
+  }, [mode, internalDefaults?.id]);
 
-  const handleFormSubmit = async (formData) => {
-    if (isSubmitting) return;
-    setIsSubmitting(true);
+  useEffect(() => {
+    const readyToSync =
+      dropdowns.categories.length > 0 &&
+      dropdowns.productTypes.length > 0 &&
+      dropdowns.productProfiles.length > 0 &&
+      dropdowns.templates.length > 0 &&
+      dropdowns.units.length > 0;
 
-    try {
-      console.log('📋 formData เตรียมส่ง:', formData);
-      onSubmit(formData);
-    } finally {
-      setIsSubmitting(false);
+    if (mode === 'edit' && internalDefaults && readyToSync && !formSynced) {
+      reset(prepareDefaults(internalDefaults));
+      setFormSynced(true);
     }
+  }, [mode, internalDefaults, dropdowns, formSynced, reset]);
+
+  const handleFormSubmit = (data) => {
+    data.prices = localPrices;
+
+    onSubmit(data);
   };
 
-  if (!branchId) return <p>⛔ ไม่พบ branchId</p>;
-  if (units.length === 0 || products.length === 0) {
-    return <p className="text-gray-500">⏳ กำลังโหลดข้อมูล...</p>;
-  }
-
   return (
-    <FormProvider {...formMethods}>
-      <form
-        onSubmit={formMethods.handleSubmit(handleFormSubmit)}
-        className="space-y-6"
-      >
-        <FormFields
-          register={formMethods.register}
-          errors={formMethods.formState.errors}
-          control={formMethods.control}
-          setValue={formMethods.setValue}
-          products={products}
-          dropdowns={{
-            units: units || [],
-            templates: templates || [],
-            productTypes: productTypes || [],
-            categories: categories || [],
-            productProfiles: productProfiles || [],
-          }}
-        />
-
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
-          <label className="font-medium md:col-span-1">รับประกัน (วัน)</label>
-          <input {...register('warranty')} className="input md:col-span-3 border border-gray-300 dark:border-gray-600 rounded px-3 py-2 bg-white dark:bg-zinc-800 text-black dark:text-white" placeholder="จำนวนวัน เช่น 365" />
+    <FormProvider {...methods}>
+      <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <CascadingDropdowns
+            register={register}
+            errors={errors}
+            watch={watch}
+            dropdowns={dropdowns}
+            defaultValues={prepareDefaults(internalDefaults || {})}
+          />
         </div>
 
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className="mt-6 bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded"
-        >
-          {mode === 'edit' ? 'บันทึกการเปลี่ยนแปลง' : 'บันทึกรูปแบบสินค้า'}
-        </button>
+        <div>
+          <FormFields
+            register={register}
+            errors={errors}
+            control={control}
+            setValue={setValue}
+            dropdowns={dropdowns}
+            isEditMode={mode === 'edit'}
+            defaultValues={internalDefaults}
+          />
+        </div>
+        
+        <div>
+          <ProductPriceFields
+            localPrices={localPrices}
+            setLocalPrices={setLocalPrices}
+          />
+        </div>
+
+        <div className="pt-4">
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className={`px-4 py-2 rounded bg-blue-600 text-white font-semibold ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''
+              }`}
+          >
+            {isSubmitting ? 'กำลังบันทึก...' : mode === 'edit' ? 'บันทึกการแก้ไข' : 'เพิ่มสินค้า'}
+          </button>
+        </div>
       </form>
     </FormProvider>
   );
 };
 
 export default ProductForm;
+
+
+

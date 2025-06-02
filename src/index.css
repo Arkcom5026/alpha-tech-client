@@ -66,3 +66,26 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* ✅ Global Print Rules */
+@media print {
+  aside,
+  nav,
+  header,
+  .no-print,
+  .print-hidden {
+    display: none !important;
+  }
+
+  html, body {
+    background: white !important;
+    margin: 0;
+    padding: 0;
+    overflow: visible !important;
+  }
+
+  * {
+    box-shadow: none !important;
+    overflow: visible !important;
+  }
+}

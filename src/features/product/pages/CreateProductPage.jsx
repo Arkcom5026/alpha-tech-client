@@ -2,16 +2,15 @@
 
 import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-
-import { createProduct } from '../api/productApi';
-import { uploadImagesProduct } from '../api/productImagesApi';
 import useEmployeeStore from '@/store/employeeStore';
+import useProductStore from '../store/productStore';
 import ProductForm from '../components/ProductForm';
 import ProductImage from '../components/ProductImage';
 
 const CreateProductPage = () => {
   const navigate = useNavigate();
   const branchId = useEmployeeStore((state) => state.branch?.id);
+  const { saveProduct, uploadImages } = useProductStore();
   const [error, setError] = useState('');
 
   const imageRef = useRef();
@@ -29,19 +28,12 @@ const CreateProductPage = () => {
 
       delete formData.unit;
       delete formData.productImages;
-      console.log('📋 ตรวจสอบ formData ก่อนส่ง:', formData);
+
 
       const templateIdParsed = parseInt(formData.templateId);
-      const branchIdParsed = parseInt(branchId);
       const unitIdParsed = formData.unitId ? parseInt(formData.unitId) : null;
 
-      console.log('🧩 ตรวจสอบค่าที่แปลงแล้ว:', {
-        templateIdParsed,
-        branchIdParsed,
-        unitIdParsed,
-      });
-
-      if (isNaN(templateIdParsed) || isNaN(branchIdParsed)) {
+      if (isNaN(templateIdParsed)) {
         setError('ข้อมูลไม่ครบถ้วนหรือไม่ถูกต้อง');
         return;
       }
@@ -51,27 +43,28 @@ const CreateProductPage = () => {
         : selectedFiles.map(() => '');
       const safeCoverIndex = Number.isInteger(coverIndex) ? coverIndex : 0;
 
-      // ✅ อัปโหลดภาพก่อน แล้วแนบใน formData
-      const uploadedImages = await uploadImagesProduct(selectedFiles, safeCaptions, safeCoverIndex);
-      console.log('📤 uploadedImages (temp):', uploadedImages);
+      // ✅ เรียกอัปโหลดภาพผ่าน Store
+      const uploadedImages = await uploadImages(
+        selectedFiles,
+        safeCaptions,
+        safeCoverIndex
+      );
 
-      const newProduct = await createProduct({
+
+
+      const newProduct = await saveProduct({
         name: formData.name,
-        title: formData.title,
-        description: formData.description,
-        spec: formData.spec,
-        warranty: parseInt(formData.warranty),
+        description: formData.description || '',
+        spec: formData.spec || '',
+        warranty: formData.warranty ? parseInt(formData.warranty) : null,
         templateId: templateIdParsed,
         unitId: unitIdParsed,
-        codeType: formData.codeType,
-        noSN: formData.noSN,
-        branchId: branchIdParsed,
-        cost: parseFloat(formData.cost),
-        quantity: parseInt(formData.quantity),
-        priceLevel1: parseFloat(formData.priceLevel1),
-        priceLevel2: parseFloat(formData.priceLevel2),
+        codeType: formData.codeType || 'D',
+        noSN: formData.noSN ?? false,
+        active: formData.active ?? true,
+        cost: formData.cost ? parseFloat(formData.cost) : null,
         images: uploadedImages,
-        imagesToDelete: [],
+        prices: formData.prices || {}, // ✅ แนบราคาสินค้าแต่ละระดับ
       });
 
       navigate('/pos/stock/products');
@@ -80,6 +73,15 @@ const CreateProductPage = () => {
       setError('เกิดข้อผิดพลาดในการบันทึกข้อมูล');
     }
   };
+
+  if (!branchId) {
+    return (
+      <div className="max-w-4xl mx-auto">
+        <h2 className="text-xl font-bold mb-4">เพิ่มสินค้า</h2>
+        <p className="text-red-500 font-medium">กำลังโหลดข้อมูลสาขา...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -102,7 +104,26 @@ const CreateProductPage = () => {
         />
       </div>
 
-      <ProductForm onSubmit={handleCreate} mode="create" />
+      <ProductForm
+        onSubmit={handleCreate}
+        mode="create"
+        branchId={branchId}
+        defaultValues={{
+          name: '',
+          description: '',
+          spec: '',
+          warranty: '',
+          templateId: '',
+          unitId: '',
+          productProfileId: '',
+          productTypeId: '',
+          categoryId: '',
+          codeType: 'D',
+          noSN: false,
+          active: true,
+          cost: '',
+        }}
+      />
     </div>
   );
 };

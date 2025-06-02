@@ -3,11 +3,11 @@
 import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import { createProductTemplate } from '../api/productTemplateApi';
 import { uploadImagesTemp } from '../api/productTemplateImagesApi';
 import useEmployeeStore from '@/store/employeeStore';
 import ProductTemplateForm from '../components/ProductTemplateForm';
 import ProductTemplateImage from '../components/ProductTemplateImage';
+import useProductTemplateStore from '../store/productTemplateStore';
 
 const CreateProductTemplatePage = () => {
   const navigate = useNavigate();
@@ -19,6 +19,8 @@ const CreateProductTemplatePage = () => {
   const [previewUrls, setPreviewUrls] = useState([]);
   const [captions, setCaptions] = useState([]);
   const [coverIndex, setCoverIndex] = useState(null);
+
+  const { addTemplate } = useProductTemplateStore();
 
   const handleCreate = async (formData) => {
     try {
@@ -55,7 +57,7 @@ const CreateProductTemplatePage = () => {
       const uploadedImages = await uploadImagesTemp(selectedFiles, safeCaptions, safeCoverIndex);
       console.log('📤 uploadedImages (temp):', uploadedImages);
 
-      const newTemplate = await createProductTemplate({
+      const newTemplate = await addTemplate({
         name: formData.name,
         description: formData.description,
         spec: formData.spec,
@@ -65,11 +67,15 @@ const CreateProductTemplatePage = () => {
         codeType: formData.codeType,
         noSN: formData.noSN,
         branchId: branchIdParsed,
-        images: uploadedImages, // ✅ แนบรูปเข้าไปตรงนี้
+        images: uploadedImages,
         imagesToDelete: [],
       });
 
-      navigate('/pos/stock/templates');
+      if (newTemplate) {
+        navigate('/pos/stock/templates');
+      } else {
+        setError('ไม่สามารถเพิ่มรูปแบบสินค้าได้');
+      }
     } catch (err) {
       console.error('❌ บันทึกไม่สำเร็จ:', err);
       setError('เกิดข้อผิดพลาดในการบันทึกข้อมูล');

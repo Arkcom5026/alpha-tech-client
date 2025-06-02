@@ -11,12 +11,12 @@ const useSupplierStore = create((set) => ({
   suppliers: [],
   supplierError: null,
 
-  getSuppliers: async (token, branchId) => {
+  loadSuppliers: async () => {
     try {
-      const res = await getAllSuppliers(branchId);
+      const res = await getAllSuppliers();
       set({ suppliers: res });
     } catch (err) {
-      console.error('❌ getSuppliers error:', err);
+      console.error('❌ loadSuppliers error:', err);
       set({ supplierError: err.message });
     }
   },
@@ -57,5 +57,3 @@ const useSupplierStore = create((set) => ({
 }));
 
 export default useSupplierStore;
-
-

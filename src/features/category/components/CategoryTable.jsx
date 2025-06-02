@@ -1,12 +1,18 @@
-
 // ✅ src/features/category/components/CategoryTable.jsx
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import CategoryDeleteDialog from './CategoryDeleteDialog';
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from '@/components/ui/alert-dialog';
 
-import { deleteCategory } from '../api/categoryTypeApi';
+import { deleteCategory } from '../api/categoryApi';
 import { useCategoryStore } from '../Store/CategoryStore';
-
+import StandardActionButtons from '@/components/shared/buttons/StandardActionButtons';
 
 const CategoryTable = ({ data, onEdit }) => {
   const { fetchCategories } = useCategoryStore();
@@ -24,33 +30,44 @@ const CategoryTable = ({ data, onEdit }) => {
   };
 
   return (
-    <div className="border rounded-md overflow-hidden">
-      <table className="min-w-full text-sm text-left">
-        <thead className="bg-gray-100 dark:bg-zinc-800">
-          <tr>
-            <th className="px-4 py-2 border">ชื่อหมวดหมู่</th>
-            <th className="px-4 py-2 border text-right">การจัดการ</th>
-          </tr>
-        </thead>
-        <tbody>
-          {data.map((cat) => (
-            <tr key={cat.id} className="border-t">
-              <td className="px-4 py-2 border">{cat.name}</td>
-              <td className="px-4 py-2 border text-right space-x-2">
-                <Button size="sm" variant="outline" onClick={() => onEdit(cat)}>แก้ไข</Button>
-                <Button size="sm" variant="destructive" onClick={() => setSelectedCategory(cat)}>ลบ</Button>
-              </td>
+    <div className="w-full flex justify-center mt-4">
+      <div className="w-[900px] border rounded-md overflow-hidden">
+        <table className="min-w-full text-sm text-center">
+          <thead className="bg-gray-100 dark:bg-zinc-800">
+            <tr>
+              <th className="px-4 py-2 border text-center align-middle">ชื่อหมวดหมู่</th>
+              <th className="px-4 py-2 border text-center align-middle">การจัดการ</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
-
-      <CategoryDeleteDialog
-        open={!!selectedCategory}
-        category={selectedCategory}
-        onCancel={() => setSelectedCategory(null)}
-        onConfirm={handleDelete}
-      />
+          </thead>
+          <tbody>
+            {data.map((cat) => (
+              <tr key={cat.id} className="border-t text-center align-middle">
+                <td className="px-4 py-2 border text-center align-middle">{cat.name}</td>
+                <td className="px-4 py-2 border text-center align-middle">
+                  <div className="flex justify-center items-center gap-2">
+                    <StandardActionButtons
+                      onEdit={() => onEdit(cat)}
+                      onDelete={() => setSelectedCategory(cat)}
+                    />
+                  </div>
+                  <AlertDialog open={selectedCategory?.id === cat.id} onOpenChange={(open) => !open && setSelectedCategory(null)}>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>ยืนยันการลบหมวดหมู่</AlertDialogTitle>
+                      </AlertDialogHeader>
+                      <p>คุณแน่ใจว่าต้องการลบหมวดหมู่ "{selectedCategory?.name}" หรือไม่?</p>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => setSelectedCategory(null)}>ยกเลิก</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDelete}>ยืนยันลบ</AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 };

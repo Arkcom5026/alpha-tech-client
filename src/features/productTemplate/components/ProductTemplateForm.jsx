@@ -4,13 +4,14 @@ import React, { useEffect, useState } from 'react';
 import { useForm, FormProvider } from 'react-hook-form';
 import FormFields from './FormFields';
 
-import { getAllProductProfiles } from '@/features/productProfile/api/productProfileApi';
-import { fetchUnits } from '@/features/unit/api/unitApi';
+import useProductProfileStore from '@/features/productProfile/store/productProfileStore';
+import useUnitStore from '@/features/unit/store/unitStore';
 
 const ProductTemplateForm = ({ defaultValues = {}, onSubmit, mode }) => {
-  const [profiles, setProfiles] = useState([]);
-  const [units, setUnits] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const { profiles, fetchProfiles } = useProductProfileStore();
+  const { units, fetchUnits } = useUnitStore();
 
   const formMethods = useForm({
     defaultValues: {
@@ -27,19 +28,9 @@ const ProductTemplateForm = ({ defaultValues = {}, onSubmit, mode }) => {
   });
 
   useEffect(() => {
-    const fetchProfilesAndUnits = async () => {
-      try {
-        const dataProfiles = await getAllProductProfiles();
-        const dataUnits = await fetchUnits();
-        setProfiles(dataProfiles);
-        setUnits(dataUnits);
-      } catch (err) {
-        console.error('โหลดข้อมูลล้มเหลว:', err);
-      }
-    };
-
-    fetchProfilesAndUnits();
-  }, []);
+    fetchProfiles();
+    fetchUnits();
+  }, [fetchProfiles, fetchUnits]);
 
   useEffect(() => {
     if (units.length > 0 && profiles.length > 0) {

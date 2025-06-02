@@ -1,7 +1,6 @@
 // ✅ src/routes/stockRoutes.jsx
 import StockDashboardPage from "@/features/pos/pages/stock/StockDashboardPage";
 import ListProductPage from "@/features/product/pages/ListProductPage";
-import CategoryPage from "@/features/category/pages/CategoryPage"; // ✅ เพิ่มหมวดหมู่สินค้า
 import ListProductTemplatePage from '@/features/productTemplate/pages/ListProductTemplatePage';
 import CreateProductTemplatePage from '@/features/productTemplate/pages/CreateProductTemplatePage';
 import EditProductTemplatePage from '@/features/productTemplate/pages/EditProductTemplatePage';
@@ -17,6 +16,9 @@ import EditProductPage from "@/features/product/pages/EditProductPage";
 import ListUnitPage from "@/features/unit/pages/ListUnitPage";
 import CreateUnitPage from "@/features/unit/pages/CreateUnitPage";
 import EditUnitPage from "@/features/unit/pages/EditUnitPage";
+import ListCategoryPage from "@/features/category/pages/ListCategoryPage";
+import CreateCategoryPage from "@/features/category/pages/CreateCategoryPage";
+import EditCategoryPage from "@/features/category/pages/EditCategoryPage";
 
 
 const stockRoutes = {
@@ -38,9 +40,9 @@ const stockRoutes = {
     {
       path: 'categories',
       children: [
-        { index: true, element: <CategoryPage />, },
-        // { path: 'create', element: < />, },
-        // { path: 'edit/:id', element: < />, },
+        { index: true, element: <ListCategoryPage />, },
+         { path: 'create', element: <CreateCategoryPage />, },
+         { path: 'edit/:id', element: <EditCategoryPage />, },
       ]
     },
         

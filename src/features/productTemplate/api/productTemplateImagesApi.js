@@ -11,7 +11,7 @@ export const uploadImagesTemp = async (files = [], captions = [], coverIndex = 0
   formData.append('coverIndex', coverIndex);
 
   try {
-    const response = await apiClient.post('/product-templates/images/upload-temp', formData, {
+    const response = await apiClient.post('/products-templates/images/upload-temp', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
 
@@ -33,7 +33,7 @@ export const uploadImagesTempFull = async (templateId, files = []) => {
     try {
       const formData = new FormData();
       formData.append('images', file); // ซ้ำได้หลายภาพ      
-      const response = await apiClient.post(`/product-templates/${templateId}/images/upload-full`, formData, {
+      const response = await apiClient.post(`/products-templates/${templateId}/images/upload-full`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
 

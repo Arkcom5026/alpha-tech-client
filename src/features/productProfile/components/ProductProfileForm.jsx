@@ -1,10 +1,11 @@
+// ✅ src/features/productProfile/components/ProductProfileForm.jsx
 import { useForm, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { productProfileSchema } from '../schema/productProfileSchema';
-import { createProductProfile } from '../api/productProfileApi';
 import { useNavigate } from 'react-router-dom';
 import { useEffect } from 'react';
 import FormFields from './FormFields';
+import StandardActionButtons from '@/components/shared/buttons/StandardActionButtons';
 
 const ProductProfileForm = ({ mode = 'create', defaultValues = {}, onSubmit: onSubmitProp }) => {
   const navigate = useNavigate();
@@ -32,12 +33,7 @@ const ProductProfileForm = ({ mode = 'create', defaultValues = {}, onSubmit: onS
 
   const onSubmit = async (data) => {
     try {
-      if (mode === 'create') {
-        await createProductProfile(data);
-        navigate('/pos/stock/profiles');
-      } else {
-        await onSubmitProp(data);
-      }
+      await onSubmitProp(data);
     } catch (err) {
       console.error('เกิดข้อผิดพลาดในการบันทึก:', err);
     }
@@ -45,23 +41,21 @@ const ProductProfileForm = ({ mode = 'create', defaultValues = {}, onSubmit: onS
 
   return (
     <FormProvider {...methods}>
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 max-w-2xl mx-auto">
         <FormFields />
 
-        <button
-          type="submit"
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-        >
-          {mode === 'create' ? 'บันทึก' : 'อัปเดต'}
-        </button>
+        <div className="flex justify-end gap-2 pt-4 mt-6">
+          <StandardActionButtons
+            onCancel={() => navigate(-1)}
+            submitLabel={mode === 'create' ? 'บันทึก' : 'อัปเดต'}
+          />
 
-        <div className="pt-4">
+          {/* 🔒 ปุ่ม submit สำรอง กรณี StandardActionButtons ไม่มีปุ่ม submit ภายใน */}
           <button
-            type="button"
-            onClick={() => navigate(-1)}
-            className="text-sm text-blue-600 hover:underline"
+            type="submit"
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded shadow"
           >
-            ← กลับไปหน้ารายการรูปแบบสินค้า
+            {mode === 'create' ? 'บันทึก' : 'อัปเดต'}
           </button>
         </div>
       </form>

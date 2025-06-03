@@ -1,7 +1,7 @@
 // ✅ StockItemTable.jsx — แสดงรายการ SN ที่ยิงเข้าสต๊อก
 
 import React from 'react';
-import useStockItemStore from '../store/stockItemStore';
+import useStockItemStore from '../../stockItem/store/stockItemStore';
 import { Button } from '@/components/ui/button';
 
 const ReceivedSNTable = () => {

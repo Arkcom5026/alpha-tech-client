@@ -1,7 +1,6 @@
 // ✅ BarcodeRenderer.jsx — แสดง Barcode ด้วย JsBarcode แบบ Dynamic Import
 // 🔁 Path ใหม่: src/components/shared/barcode/BarcodeRenderer.jsx
 
-
 import React, { useEffect, useRef } from 'react';
 import JsBarcode from 'jsbarcode';
 
@@ -21,7 +20,11 @@ const BarcodeRenderer = ({ value, height = 30, width = 1.3 }) => {
     }
   }, [value, height, width]);
 
-  return <svg ref={svgRef} />;
+  return (
+    <div className="flex justify-center items-center">
+      <svg ref={svgRef} />
+    </div>
+  );
 };
 
 export default BarcodeRenderer;

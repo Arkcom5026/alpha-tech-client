@@ -1,28 +1,45 @@
-// ✅ receiptItemStore.js — จัดการสถานะ ReceiptItem (ก่อนเข้าสต๊อก)
-
-import { , getReceiptItemsByReceiptId, getReceiptItemsByReceiptIds } from '@/features/purchaseOrderReceiptItem/api/purchaseOrderReceiptItemApi';
+// ✅ stockItemStore.js — จัดการ SN ที่ยิงเข้าสต๊อก
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
+import { receiveStockItem } from '../api/stockItemApi';
+import {
+  getReceiptItemsByReceiptId,
+  getReceiptItemsByReceiptIds
+} from '@/features/purchaseOrderReceiptItem/api/purchaseOrderReceiptItemApi';
 
-const stockItemStore = create(
+const useStockItemStore = create(
   devtools((set, get) => ({
+    scannedList: [],
     receiptItems: [],
     loading: false,
     error: null,
 
-    // ✅ โหลด ReceiptItem จากใบเดียว
-    loadReceiptById : async (receiptId) => {
+    // ✅ ฟังก์ชันยิง SN เข้าสต๊อก
+    receiveSNAction: async ({ barcode, receiptItemId }) => {
+      set({ loading: true });
+
       try {
-        set({ loading: true });
-        const data = await getReceiptItemsByReceiptId(receiptId);
-        set({ receiptItems: data, loading: false });
+        const data = await receiveStockItem({ barcode, receiptItemId });
+        set((state) => ({
+          scannedList: [
+            ...state.scannedList,
+            { barcode, status: 'success', data },
+          ],
+          loading: false,
+        }));
       } catch (error) {
-        console.error('[loadReceiptById ]', error);
-        set({ error: error.message, loading: false });
+        console.error('[receiveSNAction]', error);
+        set((state) => ({
+          scannedList: [
+            ...state.scannedList,
+            { barcode, status: 'error', error: error.message },
+          ],
+          loading: false,
+        }));
       }
     },
 
-    // ✅ โหลด ReceiptItem จากหลายใบ
+    // ✅ โหลด receiptItems หลายใบพร้อมกัน
     loadReceiptItemsByReceiptIdsAction: async (receiptIds) => {
       try {
         set({ loading: true });
@@ -33,7 +50,10 @@ const stockItemStore = create(
         set({ error: error.message, loading: false });
       }
     },
+
+    // ✅ ฟังก์ชันล้างรายการ SN ที่ยิงแล้ว (ถ้าต้องการใช้)
+    clearScannedList: () => set({ scannedList: [] }),
   }))
 );
 
-export default stockItemStore;
+export default useStockItemStore;

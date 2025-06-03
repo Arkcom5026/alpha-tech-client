@@ -1,9 +1,11 @@
 // src/features/stockItem/components/BarcodePrintTable.jsx
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import useBarcodeStore from '@/features/barcode/store/barcodeStore';
 
 const BarcodePrintTable = ({ receipts }) => {
   const navigate = useNavigate();
+  const { generateBarcodesAction } = useBarcodeStore();
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [selectedIds, setSelectedIds] = useState([]);
 
@@ -30,6 +32,11 @@ const BarcodePrintTable = ({ receipts }) => {
     } else {
       setSelectedIds(filteredReceipts.map((r) => r.id));
     }
+  };
+
+  const handlePrintClick = async (receiptId) => {
+    await generateBarcodesAction(receiptId);
+    navigate(`/pos/purchases/barcodes/preview/${receiptId}`);
   };
 
   return (
@@ -86,7 +93,7 @@ const BarcodePrintTable = ({ receipts }) => {
                   </td>
                   <td className="border px-2 py-1 text-center">
                     <button
-                      onClick={() => navigate(`/pos/purchases/barcodes/items/${receipt.id}`)}
+                      onClick={() => handlePrintClick(receipt.id)}
                       className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
                     >
                       พิมพ์

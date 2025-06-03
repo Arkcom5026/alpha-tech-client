@@ -2,7 +2,7 @@
 import React, { useEffect } from 'react';
 import usePurchaseOrderReceiptStore from '@/features/purchaseOrderReceipt/store/purchaseOrderReceiptStore';
 
-import BarcodePrintTable from '../components/BarcodePrintTable';
+import BarcodePrintTable from '../controllers/BarcodePrintTable';
 
 const BarcodeReceiptListPage = () => {
   const { receiptBarcodeSummaries, loadReceiptBarcodeSummariesAction, loading, error } = usePurchaseOrderReceiptStore();

@@ -10,6 +10,16 @@ export const getReceiptItemsByReceiptId = async (receiptId) => {
   }
 };
 
+export const getReceiptItemsByReceiptIds = async (receiptIds) => {
+  try {
+    const res = await apiClient.post('/purchase-order-receipt-items/by-receipt-ids', { receiptIds });
+    return res.data;
+  } catch (error) {
+    console.error('❌ [getReceiptItemsByReceiptIds] error:', error);
+    throw error;
+  }
+};
+
 export const addReceiptItem = async (data) => {
   try {
     const res = await apiClient.post('/purchase-order-receipt-items', data);

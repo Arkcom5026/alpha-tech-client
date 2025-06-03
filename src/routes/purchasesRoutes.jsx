@@ -20,6 +20,7 @@ import PrintPurchaseOrderReceiptTemplate from '@/features/purchaseOrderReceipt/p
 import ListPrintReceiptsPage from '@/features/stockItem/pages/ListPrintReceiptsPage';
 import BarcodeReceiptListPage from '@/features/stockItem/pages/BarcodeReceiptListPage';
 import PreviewBarcodePage from '@/features/stockItem/pages/PreviewBarcodePage';
+import PreviewBarcodeMultiPage from '@/features/stockItem/pages/PreviewBarcodeMultiPage';
 
 
 const purchasesRoutes = {
@@ -60,10 +61,10 @@ const purchasesRoutes = {
       path: 'barcodes',
       children: [
         { index: true, element: <BarcodeReceiptListPage /> }, // รายการใบรับ
-        { path: 'items/:receiptId', element: <ListPrintReceiptsPage /> }, // รายการสินค้าแต่ละใบ
-
+        { path: 'items/:receiptId', element: <ListPrintReceiptsPage /> }, // รายการสินค้าแต่ละใบ        
+        { path: 'preview-barcode/:receiptId', element: <PreviewBarcodePage /> }, // หน้าพรีวิวก่อนพิมพ์
+        { path: 'print', element: <PreviewBarcodeMultiPage /> }, // หน้าพรีวิวก่อนพิมพ์
         
-        { path: 'preview-barcode', element: <PreviewBarcodePage /> }, // หน้าพรีวิวก่อนพิมพ์
       ]
     }, 
 

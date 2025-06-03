@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 const BarcodePrintTable = ({ receipts }) => {
   const navigate = useNavigate();
   const [statusFilter, setStatusFilter] = useState('ALL');
+  const [selectedIds, setSelectedIds] = useState([]);
 
   const filteredReceipts = receipts.filter((receipt) => {
     const isComplete = receipt.barcodeGenerated >= receipt.totalItems;
@@ -14,6 +15,22 @@ const BarcodePrintTable = ({ receipts }) => {
     if (statusFilter === 'COMPLETE') return isComplete;
     return true;
   });
+
+  const isAllSelected = filteredReceipts.length > 0 && filteredReceipts.every(r => selectedIds.includes(r.id));
+
+  const toggleSelect = (id) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  };
+
+  const toggleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(filteredReceipts.map((r) => r.id));
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -29,6 +46,9 @@ const BarcodePrintTable = ({ receipts }) => {
         <table className="min-w-full text-sm border border-gray-300">
           <thead className="bg-gray-100">
             <tr>
+              <th className="border px-2 py-1 text-center">
+                <input type="checkbox" onChange={toggleSelectAll} checked={isAllSelected} />
+              </th>
               <th className="border px-2 py-1 text-center">ลำดับ</th>
               <th className="border px-2 py-1">เลขใบสั่งซื้อ</th>
               <th className="border px-2 py-1">Supplier</th>
@@ -44,6 +64,13 @@ const BarcodePrintTable = ({ receipts }) => {
               const isComplete = receipt.barcodeGenerated >= receipt.totalItems;
               return (
                 <tr key={receipt.id} className="hover:bg-gray-50">
+                  <td className="border px-2 py-1 text-center">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.includes(receipt.id)}
+                      onChange={() => toggleSelect(receipt.id)}
+                    />
+                  </td>
                   <td className="border px-2 py-1 text-center">{index + 1}</td>
                   <td className="border px-2 py-1">{receipt.orderCode}</td>
                   <td className="border px-2 py-1">{receipt.supplierName}</td>
@@ -59,7 +86,7 @@ const BarcodePrintTable = ({ receipts }) => {
                   </td>
                   <td className="border px-2 py-1 text-center">
                     <button
-                       onClick={() => navigate(`/pos/purchases/barcodes/items/${receipt.id}`)}
+                      onClick={() => navigate(`/pos/purchases/barcodes/items/${receipt.id}`)}
                       className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
                     >
                       พิมพ์
@@ -71,6 +98,17 @@ const BarcodePrintTable = ({ receipts }) => {
           </tbody>
         </table>
       </div>
+
+      {selectedIds.length > 0 && (
+        <div className="mt-4">
+          <button
+            className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+            onClick={() => navigate(`/pos/purchases/barcodes/print?ids=${selectedIds.join(',')}`)}
+          >
+            พิมพ์รายการที่เลือก ({selectedIds.length})
+          </button>
+        </div>
+      )}
     </div>
   );
 };

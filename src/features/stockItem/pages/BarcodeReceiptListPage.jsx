@@ -24,3 +24,7 @@ const BarcodeReceiptListPage = () => {
 };
 
 export default BarcodeReceiptListPage;
+
+
+
+

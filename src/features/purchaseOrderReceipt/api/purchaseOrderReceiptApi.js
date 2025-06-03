@@ -1,3 +1,5 @@
+// ✅ purchaseOrderReceiptApi.js — จัดการ API ของใบรับสินค้า
+
 import apiClient from '@/utils/apiClient';
 
 export const getAllReceipts = async () => {
@@ -6,16 +8,6 @@ export const getAllReceipts = async () => {
     return res.data;
   } catch (error) {
     console.error('📛 [getAllReceipts] error:', error);
-    throw error;
-  }
-};
-
-export const getReceiptById = async (id) => {
-  try {
-    const res = await apiClient.get(`/purchase-order-receipts/${id}`);
-    return res.data;
-  } catch (error) {
-    console.error('📛 [getReceiptById] error:', error);
     throw error;
   }
 };
@@ -62,11 +54,8 @@ export const getEligiblePurchaseOrders = async () => {
 
 // ✅ GET รายละเอียด PO แบบเต็ม (พร้อม supplier + รายการสินค้า + receiptItem)
 export const getPurchaseOrderDetailById = async (poId) => {
-
-    console.log('📦 [getPurchaseOrderDetailById] >> >> >>  id:', poId);
-
+  console.log('📦 [getPurchaseOrderDetailById] >> >> >>  id:', poId);
   try {
-    
     const res = await apiClient.get(`/purchase-orders/${poId}`);
     return res.data;
   } catch (error) {
@@ -82,6 +71,28 @@ export const getReceiptBarcodeSummaries = async () => {
     return res.data;
   } catch (error) {
     console.error('📛 [getReceiptBarcodeSummaries] error:', error);
+    throw error;
+  }
+};
+
+// ✅ GET ใบรับสินค้ารายตัวตาม ID
+export const getReceiptById = async (id) => {
+  try {
+    const res = await apiClient.get(`/purchase-order-receipts/${id}`);
+    return res.data;
+  } catch (error) {
+    console.error('📛 [getReceiptById] error:', error);
+    throw error;
+  }
+};
+
+// ✅ GET รายการ receiptItems จาก receiptId
+export const getReceiptItemsByReceiptId = async (receiptId) => {
+  try {
+    const res = await apiClient.get(`/purchase-order-receipt-items/by-receipt/${receiptId}`);
+    return res.data;
+  } catch (error) {
+    console.error('📛 [getReceiptItemsByReceiptId] error:', error);
     throw error;
   }
 };

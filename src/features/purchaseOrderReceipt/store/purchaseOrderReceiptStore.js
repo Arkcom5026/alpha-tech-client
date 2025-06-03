@@ -1,4 +1,4 @@
-// usePurchaseOrderReceiptStore ใหม่
+// ✅ purchaseOrderReceiptStore.js — จัดการสถานะ Receipt + Items (ก่อนเข้าสต๊อก)
 
 import { create } from 'zustand';
 import {
@@ -7,14 +7,14 @@ import {
   getReceiptBarcodeSummaries,
   createReceipt,
   updateReceipt,
-  deleteReceipt
+  deleteReceipt,
+  getReceiptItemsByReceiptId
 } from '@/features/purchaseOrderReceipt/api/purchaseOrderReceiptApi';
 import { getEligiblePurchaseOrders, getPurchaseOrderDetailById } from '@/features/purchaseOrder/api/purchaseOrderApi';
 import {
   addReceiptItem,
   updateReceiptItem,
-  deleteReceiptItem,
-  getReceiptItemsByReceiptId
+  deleteReceiptItem
 } from '@/features/purchaseOrderReceiptItem/api/purchaseOrderReceiptItemApi';
 
 const usePurchaseOrderReceiptStore = create((set, get) => ({
@@ -24,6 +24,7 @@ const usePurchaseOrderReceiptStore = create((set, get) => ({
   currentReceipt: null,
   currentOrder: null,
   poItems: [],
+  receiptItems: [], // ✅ เก็บรายการสินค้าของ receipt โดยเฉพาะ
   loading: false,
   receiptBarcodeLoading: false,
   error: null,
@@ -32,16 +33,7 @@ const usePurchaseOrderReceiptStore = create((set, get) => ({
     try {
       set({ loading: true });
       const data = await getAllReceipts();
-
-      // ✅ โหลด items แยกตาม receiptId แต่ละใบ
-      const enriched = await Promise.all(
-        data.map(async (r) => {
-          const items = await getReceiptItemsByReceiptId(r.id);
-          return { ...r, items };
-        })
-      );
-
-      set({ receipts: enriched, loading: false });
+      set({ receipts: data, loading: false });
     } catch (error) {
       console.error('📛 loadReceipts error:', error);
       set({ error, loading: false });
@@ -52,12 +44,24 @@ const usePurchaseOrderReceiptStore = create((set, get) => ({
     try {
       set({ loading: true });
       const data = await getReceiptById(id);
-      const items = await getReceiptItemsByReceiptId(id);
-      const enrichedReceipt = { ...data, items };
-      set({ currentReceipt: enrichedReceipt, loading: false });
+      set({ currentReceipt: data, loading: false });
+      return data; // ✅ return ค่าที่โหลด เพื่อให้ Component ใช้งานต่อได้
     } catch (error) {
       console.error('📛 loadReceiptById error:', error);
       set({ error, loading: false });
+      return null;
+    }
+  },
+
+  loadReceiptItemsByReceiptId: async (receiptId) => {
+    try {
+      const items = await getReceiptItemsByReceiptId(receiptId);
+      set({ receiptItems: items });
+      return items;
+    } catch (error) {
+      console.error('📛 loadReceiptItemsByReceiptId error:', error);
+      set({ error });
+      return [];
     }
   },
 
@@ -164,21 +168,7 @@ const usePurchaseOrderReceiptStore = create((set, get) => ({
     }
   },
 
-  loadReceiptItemsByReceiptId: async (receiptId) => {
-    try {
-      const res = await getReceiptItemsByReceiptId(receiptId);
-      return res;
-    } catch (error) {
-      console.error('📛 loadReceiptItemsByReceiptId error:', error);
-      set({ error });
-      throw error;
-    }
-  },
-
   clearCurrentReceipt: () => set({ currentReceipt: null }),
 }));
 
 export default usePurchaseOrderReceiptStore;
-
-
-   

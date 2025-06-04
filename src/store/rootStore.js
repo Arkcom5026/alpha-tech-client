@@ -6,7 +6,8 @@ import useProductStore from '../features/product/store/productStore';
 
 import useSupplierStore from './supplierStore';
 import useBranchStore from './branchStore';
-import { useProductTypeStore } from '@/features/productType/Store/ProductTypeStore';
+import useProductTypeStore from '@/features/productType/Store/ProductTypeStore';
+
 
 
 const useRootStore = () => ({

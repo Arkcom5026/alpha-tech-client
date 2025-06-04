@@ -23,6 +23,7 @@ import BarcodeReceiptListPage from '@/features/barcode/pages/BarcodeReceiptListP
 import PreviewBarcodePage from '@/features/barcode/pages/PreviewBarcodePage';
 import ScanSNPage from '@/features/stockItem/pages/ScanSNPage';
 import ListReceiptItemsToScanPage from '@/features/stockItem/pages/ListReceiptItemsToScanPage';
+import ScanBarcodeListPage from '@/features/stockItem/pages/ScanBarcodeListPage';
 
 
 const purchasesRoutes = {
@@ -53,8 +54,9 @@ const purchasesRoutes = {
         { path: 'edit/:id', element: <EditPurchaseOrderReceiptPage />, },
         { path: 'view/:id', element: <ViewPurchaseOrderReceiptPage /> },
         { path: 'print/:id', element: <PrintPurchaseOrderReceiptTemplate /> },
-        { path: 'items', element: <ListReceiptItemsToScanPage />  },
-
+        { path: 'items', element: <ListReceiptItemsToScanPage />  },        
+        { path: 'items/scan/:receiptId', element: <ScanBarcodeListPage /> },
+         
        
       ]
     },

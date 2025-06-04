@@ -247,24 +247,12 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, deliveryNoteNumbe
 
       <div className="pt-4 text-right">
         <button
-          onClick={handleFinalizeReceipt}
+          onClick={handleConfirmFinalize}
           disabled={!allSaved}
           className="bg-purple-700 text-white px-4 py-2 rounded disabled:opacity-50"
         >
           บันทึกใบรับสินค้า
         </button>
-
-        {finalizeMode && (
-          <div className="mt-4 p-4 border rounded bg-gray-50 space-y-2 text-left">
-            <p className="font-medium">📦 ยืนยันการรับสินค้าทั้งหมด</p>
-            <button
-              onClick={handleConfirmFinalize}
-              className="mt-2 bg-green-600 text-white px-4 py-2 rounded"
-            >
-              ✅ ยืนยันการรับสินค้า
-            </button>
-          </div>
-        )}
       </div>
     </div>
   );

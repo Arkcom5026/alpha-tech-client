@@ -1,3 +1,5 @@
+
+// purchaseOrderApi.js
 import apiClient from '@/utils/apiClient';
 
 // ✅ ดึง Supplier ทั้งหมด
@@ -24,7 +26,7 @@ export const getPurchaseOrders = async ({ search, status } = {}) => {
       params.status = status;
     }
 
-    console.log('📤 ----------------------- getPurchaseOrders  params  :', params);
+    
     const res = await apiClient.get('/purchase-orders', { params });
     return res.data;
 
@@ -103,6 +105,18 @@ export const deletePurchaseOrder = async (id) => {
     return res.data;
   } catch (error) {
     console.error(`❌ deletePurchaseOrder(${id}) error:`, error);
+    throw error;
+  }
+};
+
+
+export const updatePurchaseOrderStatus = async ({ id, status }) => {
+  try {
+    console.log('✅ updatePurchaseOrderStatus:', { id, status });
+    const res = await apiClient.patch(`/purchase-orders/${id}/status`, { status });
+    return res.data;
+  } catch (error) {
+    console.error(`❌ updatePurchaseOrderStatus error:`, error);
     throw error;
   }
 };

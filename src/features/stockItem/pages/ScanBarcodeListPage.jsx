@@ -1,108 +1,86 @@
-// ✅ ScanBarcodeListPage.jsx — หน้ายิง SN จากรายการ BarcodeReceiptItem
-
+// ✅ ScanBarcodeListPage.jsx — แสดง PendingBarcodeTable + InStockBarcodeTable และ input สำหรับยิงบาร์โค้ด
 import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
-import { Input } from '@/components/ui/input';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
-import { receiveStockItem } from '../api/stockItemApi';
-import apiClient from '@/utils/apiClient';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+
+import PendingBarcodeTable from '../components/PendingBarcodeTable';
+import InStockBarcodeTable from '../components/InStockBarcodeTable';
+import useBarcodeStore from '@/features/barcode/store/barcodeStore';
 
 const ScanBarcodeListPage = () => {
-  const { receiptItemId } = useParams();
-  const [barcodeList, setBarcodeList] = useState([]); // จาก backend
-  const [scannedList, setScannedList] = useState([]); // SN ที่ยิงแล้ว
-  const [inputBarcode, setInputBarcode] = useState('');
-  const [loading, setLoading] = useState(false);
+  const { receiptId } = useParams();
+  const [searchParams] = useSearchParams();
+  const purchaseOrderCode = searchParams.get('code');
+  const [barcodeInput, setBarcodeInput] = useState('');
+  const [inputStartTime, setInputStartTime] = useState(null);
 
-  // โหลดรายการ barcode ทั้งหมดของ receiptItemId
+  const {
+    loadBarcodesAction,
+    loading,
+    barcodes,
+    receiveSNAction,
+  } = useBarcodeStore();
+
   useEffect(() => {
-    const fetchBarcodes = async () => {
-      try {
-        const res = await apiClient.get(`/barcode-receipt-items/by-receipt-item/${receiptItemId}`);
-        setBarcodeList(res.data || []);
-      } catch (err) {
-        console.error('❌ โหลดบาร์โค้ดล้มเหลว:', err);
-      }
-    };
-    if (receiptItemId) fetchBarcodes();
-  }, [receiptItemId]);
+    if (receiptId) {
+      loadBarcodesAction(receiptId);
+    }
+  }, [receiptId, loadBarcodesAction]);
 
-  const handleScan = async () => {
-    const found = barcodeList.find((b) => b.barcode === inputBarcode && !b.stockItemId);
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    const timeTaken = Date.now() - inputStartTime;
+    // 🔧 ชั่วคราว: ปิดการตรวจเวลาสำหรับใช้ copy/paste ระหว่างพัฒนา
+    // if (timeTaken > 500) {
+    //   alert('❌ กรุณาใช้เครื่องยิงบาร์โค้ด ห้ามพิมพ์เอง');
+    //   return;
+    // }
+
+    const barcode = barcodeInput.trim();
+    const found = barcodes.find((b) => b.barcode === barcode);
     if (!found) {
-      alert('❌ ไม่พบบาร์โค้ดนี้ หรืออาจยิงไปแล้ว');
-      setInputBarcode('');
+      alert('❌ ไม่พบบาร์โค้ดนี้ในรายการที่ต้องรับเข้าสต๊อก');
       return;
     }
 
-    try {
-      setLoading(true);
-      const result = await receiveStockItem({ barcode: inputBarcode, receiptItemId });
-
-      setScannedList((prev) => [...prev, found]);
-      setBarcodeList((prev) => prev.filter((b) => b.barcode !== inputBarcode));
-      setInputBarcode('');
-    } catch (err) {
-      console.error('[receiveStockItem]', err);
-      alert('เกิดข้อผิดพลาดในการยิง SN');
-    } finally {
-      setLoading(false);
-    }
+    await receiveSNAction(barcode);
+    setBarcodeInput('');
+    setInputStartTime(null);
+    await loadBarcodesAction(receiptId);
   };
 
   return (
     <div className="p-4 space-y-6">
-      <h1 className="text-xl font-bold">🎯 ยิง SN เข้าสต๊อก</h1>
+      <h1 className="text-xl font-bold">
+        📦 รายการสินค้าที่ต้องยิง SN (ใบสั่งซื้อ #{purchaseOrderCode || receiptId})
+      </h1>
 
-      <Input
-        placeholder="ยิงหรือกรอกบาร์โค้ดที่นี่"
-        value={inputBarcode}
-        onChange={(e) => setInputBarcode(e.target.value)}
-        onKeyDown={(e) => e.key === 'Enter' && handleScan()}
-        disabled={loading}
-      />
+      {/* ✅ Input ยิงบาร์โค้ด */}
+      <form onSubmit={handleSubmit} className="flex items-center gap-2">
+        <input
+          type="text"
+          autoFocus
+          className="border rounded px-4 py-2 w-80 font-mono"
+          placeholder="ยิงบาร์โค้ด..."
+          value={barcodeInput}
+          onChange={(e) => {
+            if (!inputStartTime) setInputStartTime(Date.now());
+            setBarcodeInput(e.target.value);
+          }}
+        />
+        <button
+          type="submit"
+          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+        >
+          ยิงเข้าสต๊อก
+        </button>
+      </form>
 
-      {/* รายการที่รอยิง */}
-      <div>
-        <h2 className="text-lg font-semibold mt-6">📋 รอยิง SN ({barcodeList.length})</h2>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>#</TableHead>
-              <TableHead>Barcode</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {barcodeList.map((item, index) => (
-              <TableRow key={item.id}>
-                <TableCell>{index + 1}</TableCell>
-                <TableCell>{item.barcode}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+      <PendingBarcodeTable loading={loading} />
 
-      {/* รายการที่ยิงแล้ว */}
-      <div>
-        <h2 className="text-lg font-semibold mt-6">✅ เข้าสต๊อกแล้ว ({scannedList.length})</h2>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>#</TableHead>
-              <TableHead>Barcode</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {scannedList.map((item, index) => (
-              <TableRow key={item.id}>
-                <TableCell>{index + 1}</TableCell>
-                <TableCell>{item.barcode}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+      <div className="pt-10">
+        <h2 className="text-lg font-semibold mb-2">✅ รายการที่ยิงเข้าสต๊อกแล้ว</h2>
+        <InStockBarcodeTable />
       </div>
     </div>
   );

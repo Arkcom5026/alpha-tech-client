@@ -1,54 +1,52 @@
-// ✅ ListReceiptItemsToScanPage.jsx — หน้ารวมรายการที่ยังไม่ยิง SN ครบ
+// ✅ ListReceiptItemsToScanPage.jsx — แสดงรายการใบตรวจรับที่พร้อมให้ยิงบาร์โค้ด
 
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import useStockItemStore from '../store/stockItemStore';
+
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import useBarcodeStore from '@/features/barcode/store/barcodeStore';
 
 const ListReceiptItemsToScanPage = () => {
   const navigate = useNavigate();
-  const { receiptItems, loadReceiptItemsByReceiptIdsAction, loading } = useStockItemStore();
+  const { receipts, loadReceiptsWithBarcodesAction, loading } = useBarcodeStore();
 
   useEffect(() => {
-    // 👇 ตัวอย่าง: ดึงจากหลาย receipt id (อาจต้องปรับในอนาคต)
-    loadReceiptItemsByReceiptIdsAction([1, 2, 3]); // TODO: ปรับให้ดึงรายการล่าสุดจาก backend จริง
-  }, []);
-
-  const getScannedCount = (item) => item.stockItems?.length || 0;
-
-  const isCompleted = (item) => getScannedCount(item) >= item.quantity;
+    loadReceiptsWithBarcodesAction();
+  }, [loadReceiptsWithBarcodesAction]);
 
   return (
     <div className="p-4 space-y-6">
-      <h1 className="text-xl font-bold">📦 รายการสินค้าที่ต้องยิง SN</h1>
+      <h1 className="text-xl font-bold text-blue-800">📄 ใบตรวจรับสินค้าที่พร้อมยิง SN</h1>
+
       {loading ? (
-        <p>กำลังโหลด...</p>
+        <p>กำลังโหลดข้อมูล...</p>
+      ) : !receipts || receipts.length === 0 ? (
+        <p className="text-gray-600">ยังไม่มีใบตรวจรับที่สร้างบาร์โค้ดแล้ว</p>
       ) : (
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>สินค้า</TableHead>
-              <TableHead>จำนวนที่รับ</TableHead>
+              <TableHead>เลขที่ใบสั่งซื้อ</TableHead>
+              <TableHead>วันที่</TableHead>
+              <TableHead>Supplier</TableHead>
+              <TableHead>จำนวนบาร์โค้ด</TableHead>
               <TableHead>ยิงแล้ว</TableHead>
-              <TableHead>สถานะ</TableHead>
-              <TableHead>การจัดการ</TableHead>
+              <TableHead className="text-right">การจัดการ</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {receiptItems.map((item) => (
-              <TableRow key={item.id}>
-                <TableCell>{item.product?.title || '-'}</TableCell>
-                <TableCell>{item.quantity}</TableCell>
-                <TableCell>{getScannedCount(item)}</TableCell>
-                <TableCell>
-                  {isCompleted(item) ? '✅ ครบแล้ว' : '🟡 รอยิง SN'}
-                </TableCell>
-                <TableCell>
+            {receipts.map((r) => (
+              <TableRow key={r.id}>
+                <TableCell>{r.purchaseOrderCode}</TableCell>
+                <TableCell>{new Date(r.createdAt).toLocaleDateString()}</TableCell>
+                <TableCell>{r.supplier}</TableCell>
+                <TableCell>{r.total}</TableCell>
+                <TableCell>{r.scanned}</TableCell>
+                <TableCell className="text-right">
                   <Button
                     size="sm"
-                    disabled={isCompleted(item)}
-                    onClick={() => navigate(`/pos/purchases/receipt/items/${item.id}`)}
+                    onClick={() => navigate(`/pos/purchases/receipt/items/scan/${r.id}?code=${r.purchaseOrderCode}`)}
                   >
                     🎯 ยิง SN
                   </Button>

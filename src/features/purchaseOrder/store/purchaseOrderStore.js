@@ -1,23 +1,21 @@
-// ✅ src/features/purchaseOrder/store/purchaseOrderStore.js
-
-import { create } from 'zustand';
-import {
-  getPurchaseOrderById,
-  updatePurchaseOrder,
-  deletePurchaseOrder,
-  createPurchaseOrder,
-  getPurchaseOrders,
-  getEligiblePurchaseOrders // ✅ ดึง PO ที่ยังตรวจรับไม่ครบ
-} from '../api/purchaseOrderApi';
-
 // ✅ import product loader
+import { create } from 'zustand';
 import { getProducts } from '@/features/product/api/productApi';
+import {
+  createPurchaseOrder,
+  deletePurchaseOrder,
+  getEligiblePurchaseOrders,
+  getPurchaseOrderById,
+  getPurchaseOrders,
+  updatePurchaseOrder,
+  updatePurchaseOrderStatus
+} from '../api/purchaseOrderApi';
 
 const usePurchaseOrderStore = create((set) => ({
   purchaseOrders: [],
   selectedPO: null,
   productList: [],
-  eligiblePOs: [], // ✅ สำหรับใบสั่งซื้อที่ตรวจรับได้
+  eligiblePOs: [],
   loading: false,
   error: null,
 
@@ -92,6 +90,28 @@ const usePurchaseOrderStore = create((set) => ({
       throw err;
     }
   },
+
+
+
+  updatePurchaseOrderStatusAction: async ({ id, status }) => {
+    try {
+      const updated = await updatePurchaseOrderStatus({ id, status });
+      set((state) => ({
+        purchaseOrders: state.purchaseOrders.map((po) =>
+          po.id === id ? updated : po
+        ),
+        selectedPO: state.selectedPO?.id === id ? updated : state.selectedPO,
+      }));
+      return updated;
+    } catch (err) {
+      console.error('❌ updatePurchaseOrderStatusAction error:', err);
+      throw err;
+    }
+  },
+
+
+
+
 
   removePurchaseOrder: async (id) => {
     try {

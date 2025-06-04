@@ -2,15 +2,10 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import { receiveStockItem } from '../api/stockItemApi';
-import {
-  getReceiptItemsByReceiptId,
-  getReceiptItemsByReceiptIds
-} from '@/features/purchaseOrderReceiptItem/api/purchaseOrderReceiptItemApi';
 
 const useStockItemStore = create(
   devtools((set, get) => ({
     scannedList: [],
-    receiptItems: [],
     loading: false,
     error: null,
 
@@ -36,18 +31,6 @@ const useStockItemStore = create(
           ],
           loading: false,
         }));
-      }
-    },
-
-    // ✅ โหลด receiptItems หลายใบพร้อมกัน
-    loadReceiptItemsByReceiptIdsAction: async (receiptIds) => {
-      try {
-        set({ loading: true });
-        const data = await getReceiptItemsByReceiptIds(receiptIds);
-        set({ receiptItems: data, loading: false });
-      } catch (error) {
-        console.error('[loadReceiptItemsByReceiptIdsAction]', error);
-        set({ error: error.message, loading: false });
       }
     },
 

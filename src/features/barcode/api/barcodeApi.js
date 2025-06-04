@@ -13,5 +13,20 @@ export const generateMissingBarcodes = async (receiptId) => {
 export const getBarcodesByReceiptId = async (receiptId) => {
   if (!receiptId) throw new Error('Missing receiptId');
   const res = await apiClient.get(`/barcodes/by-receipt/${receiptId}`);
+  return res.data;  
+};
+
+// ✅ GET: ดึงใบตรวจรับที่มีการสร้างบาร์โค้ดแล้วเท่านั้น
+export const getReceiptsWithBarcodes = async () => {
+  const res = await apiClient.get('/barcodes/with-barcodes');
   return res.data;
 };
+
+// ✅ ยิงบาร์โค้ดเพื่อรับสินค้าเข้าสต๊อก
+export const receiveStockItem = async (barcode) => {
+  if (!barcode) throw new Error('Missing barcode');
+  const res = await apiClient.post('/stock-items/receive-sn', { barcode });
+  return res.data;
+};
+
+

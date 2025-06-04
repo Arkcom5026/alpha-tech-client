@@ -8,9 +8,10 @@ import {
   createReceipt,
   updateReceipt,
   deleteReceipt,
-  getReceiptItemsByReceiptId
+  getReceiptItemsByReceiptId,
+  markReceiptAsCompleted
 } from '@/features/purchaseOrderReceipt/api/purchaseOrderReceiptApi';
-import { getEligiblePurchaseOrders, getPurchaseOrderDetailById } from '@/features/purchaseOrder/api/purchaseOrderApi';
+import { getEligiblePurchaseOrders, getPurchaseOrderDetailById, updatePurchaseOrderStatus } from '@/features/purchaseOrder/api/purchaseOrderApi';
 import {
   addReceiptItem,
   updateReceiptItem,
@@ -165,6 +166,30 @@ const usePurchaseOrderReceiptStore = create((set, get) => ({
       console.error('📛 deleteReceiptItem error:', error);
       set({ error });
       throw error;
+    }
+  },
+
+  markReceiptAsCompletedAction: async ({ receiptId }) => {
+    try {
+      const res = await markReceiptAsCompleted(receiptId);
+      set((state) => ({
+        receipts: state.receipts.map((r) => (r.id === receiptId ? res : r)),
+        currentReceipt: res,
+      }));
+      return res;
+    } catch (err) {
+      console.error('❌ markReceiptAsCompletedAction error:', err);
+      throw err;
+    }
+  },
+
+  updatePurchaseOrderStatusAction: async ({ id, status }) => {
+    try {
+      const res = await updatePurchaseOrderStatus({ id, status });
+      set({ currentOrder: res });
+      console.log('📦 อัปเดตสถานะใบสั่งซื้อสำเร็จ:', status);
+    } catch (err) {
+      console.error('❌ updatePurchaseOrderStatusAction error:', err);
     }
   },
 

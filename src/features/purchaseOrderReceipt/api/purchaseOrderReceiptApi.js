@@ -96,3 +96,14 @@ export const getReceiptItemsByReceiptId = async (receiptId) => {
     throw error;
   }
 };
+
+// ✅ PATCH เปลี่ยนสถานะใบรับสินค้าเป็น 'COMPLETED'
+export const markReceiptAsCompleted = async (receiptId) => {
+  try {
+    const res = await apiClient.patch(`/purchase-order-receipts/${receiptId}/complete`);
+    return res.data;
+  } catch (error) {
+    console.error('📛 [markReceiptAsCompleted] error:', error);
+    throw error;
+  }
+};

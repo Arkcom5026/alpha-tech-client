@@ -10,7 +10,7 @@ const FormPosition = () => {
     //Javascript code
     const token = useAuthStore((state) => state.token)
    // const [categorier, setCategories] = useState([])
-   const categorier = useProductTypeStore((state)=>state.categories)
+   
    const getProductType = useProductTypeStore((state)=>state.getProductType)
 
    const [name, setName] = useState('')

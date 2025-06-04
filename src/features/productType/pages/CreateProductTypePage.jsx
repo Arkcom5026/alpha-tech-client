@@ -4,7 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import ProductTypeForm from '../components/ProductTypeForm';
 import PageHeader from '@/components/shared/layout/PageHeader';
 import AlertDialog from '@/components/shared/dialogs/AlertDialog';
-import useProductTypeStore from '../Store/ProductTypeStore';
+import useProductTypeStore from '@/features/productType/Store/ProductTypeStore';
+
 
 
 

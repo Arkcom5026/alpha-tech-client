@@ -3,7 +3,7 @@
 import React from 'react';
 import ProductTypeTable from '../components/ProductTypeTable';
 import { useNavigate } from 'react-router-dom';
-import useProductTypeStore from '@/features/productType/Store/ProductTypeStore';
+import useProductTypeStore from '@/features/productType/Store/productTypeStore';
 import StandardActionButtons from '@/components/shared/buttons/StandardActionButtons';
 
 const ListProductTypePage = () => {

@@ -13,7 +13,7 @@ import {
 import { deleteProductType } from '../api/productTypeApi';
 
 import StandardActionButtons from '@/components/shared/buttons/StandardActionButtons';
-import useProductTypeStore from '@/features/productType/Store/ProductTypeStore';
+import useProductTypeStore from '@/features/productType/Store/productTypeStore';
 
 
 const ProductTypeTable = ({ data, onEdit }) => {

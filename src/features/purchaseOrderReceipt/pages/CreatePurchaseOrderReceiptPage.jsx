@@ -37,7 +37,7 @@ const CreatePurchaseOrderReceiptPage = () => {
   if (!currentOrder) return <p>📭 ยังไม่มีข้อมูลใบสั่งซื้อ</p>;
 
   return (
-    <div className="p-4 max-w-5xl mx-auto">
+    <div className="p-4 w-full mx-auto">
       <h1 className="text-2xl font-bold mb-4">สร้างใบรับสินค้าจากใบสั่งซื้อ</h1>
 
       <div className="bg-gray-50 border rounded p-4 mb-6">

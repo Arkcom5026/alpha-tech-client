@@ -1,10 +1,8 @@
-
-// ✅ Component ตารางพร้อมปุ่มตรวจรับ + filter แบบ radio ด้านขวาบน + ค้นหาชื่อ Supplier
 import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
+import StandardActionButtons from '@/components/shared/buttons/StandardActionButtons';
 
-const PurchaseOrderReceiptTable = ({ purchaseOrders }) => {
+const PurchaseOrderListTable = ({ purchaseOrders }) => {
   const navigate = useNavigate();
   const [searchText, setSearchText] = useState('');
 
@@ -12,6 +10,17 @@ const PurchaseOrderReceiptTable = ({ purchaseOrders }) => {
     const matchSupplier = po.supplier?.name?.toLowerCase().includes(searchText.toLowerCase());
     return matchSupplier;
   });
+
+  const handleEdit = (id) => {
+    navigate(`/pos/purchases/orders/edit/${id}`);
+  };
+
+  const handleDelete = (id) => {
+    // ใส่ฟังก์ชันลบจริงในภายหลัง
+    if (confirm('คุณต้องการลบใบสั่งซื้อนี้ใช่หรือไม่?')) {
+      console.log('ลบ ID:', id);
+    }
+  };
 
   return (
     <div className="border rounded-md">
@@ -45,13 +54,12 @@ const PurchaseOrderReceiptTable = ({ purchaseOrders }) => {
               <td className="px-4 py-2">{po.supplier?.name || '-'}</td>
               <td className="px-4 py-2">{po.status}</td>
               <td className="px-4 py-2">
-                <Button
-                  variant="default"
-                  size="sm"
-                  onClick={() => navigate(`/pos/purchases/receipt/create/${po.id}`)}
-                >
-                  ตรวจรับ
-                </Button>
+                <StandardActionButtons
+                  showEdit
+                  showDelete
+                  onEdit={() => handleEdit(po.id)}
+                  onDelete={() => handleDelete(po.id)}
+                />
               </td>
             </tr>
           ))}
@@ -61,4 +69,4 @@ const PurchaseOrderReceiptTable = ({ purchaseOrders }) => {
   );
 };
 
-export default PurchaseOrderReceiptTable;
+export default PurchaseOrderListTable;

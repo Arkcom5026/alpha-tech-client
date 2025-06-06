@@ -1,5 +1,8 @@
-import QuickSalePage from "@/features/pos/pages/sales/QuickSalePage";
 import SalesDashboardPage from "@/features/pos/pages/sales/SalesDashboardPage";
+import QuickSalePage from "@/features/sales/pages/QuickSalePage";
+
+
+
 
 const salesRoutes = {
   path: '/pos/sales',

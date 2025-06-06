@@ -19,10 +19,11 @@ const usePurchaseOrderStore = create((set) => ({
   loading: false,
   error: null,
 
-  fetchAllPurchaseOrders: async (branchId) => {
+  // ✅ อัปเดตใหม่: รองรับ search และ status filter
+  fetchAllPurchaseOrders: async ({ search = '', status = 'pending,partial', branchId }) => {
     set({ loading: true });
     try {
-      const data = await getPurchaseOrders(branchId);
+      const data = await getPurchaseOrders({ search, status, branchId });
       set({ purchaseOrders: data, loading: false });
     } catch (err) {
       console.error('❌ fetchAllPurchaseOrders error:', err);
@@ -91,8 +92,6 @@ const usePurchaseOrderStore = create((set) => ({
     }
   },
 
-
-
   updatePurchaseOrderStatusAction: async ({ id, status }) => {
     try {
       const updated = await updatePurchaseOrderStatus({ id, status });
@@ -108,10 +107,6 @@ const usePurchaseOrderStore = create((set) => ({
       throw err;
     }
   },
-
-
-
-
 
   removePurchaseOrder: async (id) => {
     try {

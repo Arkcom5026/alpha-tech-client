@@ -1,16 +1,14 @@
 import React, { useEffect } from 'react';
 
-
 import { Button } from '@/components/ui/button';
 import PurchaseOrderReceiptTable from '../components/purchaseOrderReceiptTable';
 import usePurchaseOrderStore from '@/features/purchaseOrder/store/purchaseOrderStore';
 
 const ListPurchaseOrderReceiptPage = () => {
-
   const { purchaseOrders, fetchAllPurchaseOrders, loading } = usePurchaseOrderStore();
 
   useEffect(() => {
-    fetchAllPurchaseOrders({ status: 'PENDING' });
+    fetchAllPurchaseOrders({ status: 'PENDING,PARTIAL' });
   }, [fetchAllPurchaseOrders]);
 
   return (

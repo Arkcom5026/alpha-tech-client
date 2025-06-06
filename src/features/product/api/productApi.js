@@ -30,7 +30,6 @@ export const getProductById = async (id) => {
   }
 };
 
-
 export const createProduct = async (payload) => {
   try {
     console.log('📤 [API] ส่งข้อมูลสร้างสินค้า:', payload); // ✅ เพิ่ม log นี้
@@ -42,8 +41,6 @@ export const createProduct = async (payload) => {
     throw error;
   }
 };
-
-
 
 export const updateProduct = async (id, payload) => {
   try {
@@ -66,12 +63,9 @@ export const deleteProduct = async (id) => {
 };
 
 export const getProductDropdowns = async (productId) => {
-
   const res = await apiClient.get(`/products/dropdowns/${productId}`);
-  
   return res.data;
 };
-
 
 export const getProductDropdownsByBranch = async ({ branchId }) => {
   const res = await apiClient.get('/products/dropdowns', {
@@ -79,7 +73,6 @@ export const getProductDropdownsByBranch = async ({ branchId }) => {
   });
   return res.data;
 };
-
 
 export const getProductPrices = async (productId) => {
   try {
@@ -114,7 +107,6 @@ export const addProductPrice = async (productId, priceData) => {
   }
 };
 
-
 export const deleteProductPrice = async (productId, priceId) => {
   try {
     const res = await apiClient.delete(`/products/${productId}/prices/${priceId}`);
@@ -124,4 +116,16 @@ export const deleteProductPrice = async (productId, priceId) => {
     throw error;
   }
 };
-  
+
+// ✅ เพิ่มฟังก์ชันค้นหาสินค้าแบบยืดหยุ่นสำหรับการขายหรือสั่งซื้อ
+export const searchProducts = async (query) => {
+  try {
+    const res = await apiClient.get('/products/search', {
+      params: { query }
+    });
+    return res.data;
+  } catch (error) {
+    console.error('❌ searchProducts error:', error);
+    return [];
+  }
+};

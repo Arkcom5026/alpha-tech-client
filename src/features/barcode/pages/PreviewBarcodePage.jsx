@@ -3,7 +3,7 @@
 import React, { useState, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import useBarcodeStore from '@/features/barcode/store/barcodeStore';
-import BarcodeRenderer from '@/components/shared/barcode/BarcodeRenderer';
+import BarcodeWithQRRenderer from '@/components/shared/barcode/BarcodeWithQRRenderer';
 
 const PreviewBarcodePage = () => {
   const { receiptId } = useParams();
@@ -67,7 +67,7 @@ const PreviewBarcodePage = () => {
             value={barcodeWidth}
             onChange={(e) => setBarcodeWidth(Number(e.target.value))}
             className="w-20 border rounded px-2 py-1"
-            min={1}
+            min={0.5}
             max={10}
             step={0.1}
           />
@@ -102,9 +102,13 @@ const PreviewBarcodePage = () => {
                 key={item.barcode || item.id}
                 className="border p-2 rounded-xl shadow text-center"
               >
-                <p className="text-xs font-medium text-gray-700 mb-1">{product?.title || 'ชื่อสินค้าไม่พบ'}</p>
-                {/* <BarcodeRenderer value={item.barcode} height={barcodeHeight} /> */}
-                <BarcodeRenderer value={item.barcode} height={barcodeHeight} width={barcodeWidth} />
+                <BarcodeWithQRRenderer
+                  barcodeValue={item.barcode}
+                  qrValue={item.barcode}
+                  productName={product?.title || 'ชื่อสินค้าไม่พบ'}
+                  barcodeHeight={barcodeHeight}
+                  barcodeWidth={barcodeWidth}
+                />
               </div>
             );
           })}

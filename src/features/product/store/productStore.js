@@ -12,6 +12,7 @@ import {
   updateProductPrices,
   addProductPrice,
   deleteProductPrice,
+  searchProducts
 } from '../api/productApi';
 import { uploadImagesProduct, uploadImagesProductFull ,deleteImageProduct } from '../api/productImagesApi';
 
@@ -26,6 +27,7 @@ const useProductStore = create((set) => ({
     units: [],
   },
   productPrices: [],
+  searchResults: [],
   isLoading: false,
   isLoadingPrices: false,
   priceError: null,
@@ -193,15 +195,20 @@ const useProductStore = create((set) => ({
     }
   },
 
-   
-
   deleteImage: async ({ productId, publicId }) => {
     if (!productId || !publicId) throw new Error("Missing data");
     return await deleteImageProduct(productId, publicId); // ✅ เรียกผ่าน API Layer
-  }
-  
-  
+  },
 
+  searchProductsAction: async (query, branchId) => {
+    try {
+      const res = await searchProducts(query, branchId);
+      set({ searchResults: res });
+    } catch (error) {
+      console.error('❌ searchProductsAction error:', error);
+      set({ searchResults: [] });
+    }
+  }
 
 }));
 

@@ -14,10 +14,15 @@ const salesRoutes = {
     },
     {
       path: 'quick-sale',
-      element: <QuickSalePage />,
-    }
-    // เพิ่ม children routes เพิ่มเติมได้ที่นี่
-  ],
+      children: [
+        { index: true, element: <QuickSalePage />, },
+ 
+       ]  
+    },
+  ]
 };
 
 export default salesRoutes;
+
+
+

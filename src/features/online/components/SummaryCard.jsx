@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState,  } from 'react'
 
 import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
 
-import { listUserCart, saveAddress } from '@/features/customer/api/user';
+
 import { numberFormat } from '@/utils/number';
 import { useAuthStore } from '@/features/auth/store/authStore';
 
@@ -19,35 +19,7 @@ const SummaryCard = () => {
 
   const navigate = useNavigate()
   
-  useEffect(() => {
-    handleUserCart(token)
-  }, [])
 
-  const handleUserCart = () => {
-    listUserCart(token)
-      .then((res) => {     
-        setProducts(res.data.products)
-        setcartTotal(res.data.cartTotal)
-      })
-      .catch((err) => {
-        console.log(err)
-      })
-
-  }
-
-  const handleSaveAddress = () => {
-    if (!address) {
-      return toast.warning('Please fill address')
-    }
-    saveAddress(token, address)
-      .then((res) => {       
-        toast.success(res.data.message)
-        setAddressSave(true)
-      })
-      .catch((err) => {
-        console.log(err)
-      })
-  }
 
   const handleGoToPayment = () => {
     if(!addressSave){
@@ -73,11 +45,7 @@ const SummaryCard = () => {
               className='w-full px-2 rounded-md'
             />
 
-            <button
-              onClick={handleSaveAddress}
-              className='bg-blue-500 text-white px-4 py-2 rounded-md shadow-md hover:bg-blue-700 hover:scale-105 hover:duration-200'>
-              Save Address
-            </button>
+
 
           </div>
         </div>

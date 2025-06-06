@@ -1,79 +1,42 @@
-// ✅ src/features/customer/store/customerStore.js
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-import apiClient from '@/utils/apiClient';
+import { getCustomerByPhone, createCustomer } from '../api/customerApi';
 
-const useCustomerStore = create(
-  persist(
-    (set, get) => ({
-      customer: null,
-      token: null,
-      isLoggedIn: false,
-      isCustomerLoaded: false,
+const useCustomerStore = create((set) => ({
+  customer: null,
+  loading: false,
+  error: null,
 
-      setCustomer: (data) => set({ customer: data, isLoggedIn: true, isCustomerLoaded: true }),
-      setToken: (token) => set({ token }),
-
-      logoutCustomer: () => {
-        sessionStorage.removeItem('customer-storage');
-        set({ customer: null, token: null, isLoggedIn: false, isCustomerLoaded: true });
-      },
-
-      
-      actionLoginCustomer: async (form) => {
-        try {
-          const res = await apiClient.post('/api/loginUser', form, {
-            headers: {
-              'Content-Type': 'application/json',
-            },
-          });
-
-          set({
-            customer: res.data.payload,
-            token: res.data.token,
-            isLoggedIn: true,
-            isCustomerLoaded: true,
-          });
-
-          return res;
-        } catch (err) {
-          console.error('Login Action Error:', err.response?.data);
-          throw err;
-        }
-      },
-
-      actionFetchCurrentCustomer: async () => {
-        const token = get().token;
-        if (!token) return;
-          
-        try {
-          const res = await apiClient.get('/api/current-user', {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          });
-
-          set({
-            customer: res.data,
-            isLoggedIn: true,
-            isCustomerLoaded: true,
-          });
-        } catch (err) {
-          console.error('Fetch Current Customer Error:', err.response?.data);
-          get().logoutCustomer();
-        }
-      },
-    }),
-    {
-      name: 'customer-storage',
-      storage: sessionStorage,
-      partialize: (state) => ({
-        token: state.token,
-        customer: state.customer,
-        isLoggedIn: state.isLoggedIn,
-      }),
+  // 🔍 ค้นหาลูกค้าจากเบอร์โทร
+  searchCustomerByPhoneAction: async (phone) => {
+    set({ loading: true, error: null });
+    try {
+      const data = await getCustomerByPhone(phone);
+      set({ customer: data });
+    } catch (err) {
+      set({ customer: null, error: 'ไม่พบลูกค้า' });
+    } finally {
+      set({ loading: false });
     }
-  )
-);
+  },
+
+  // 🆕 สร้างลูกค้าใหม่แบบด่วน
+  createCustomerAction: async (customerData) => {
+    set({ loading: true, error: null });
+    try {
+      const newCustomer = await createCustomer(customerData);
+      set({ customer: newCustomer });
+    } catch (err) {
+      console.error('[createCustomerAction] ❌', err);
+      set({ error: 'เกิดข้อผิดพลาดในการสร้างลูกค้า' });
+    } finally {
+      set({ loading: false });
+    }
+  },
+
+  // 🔄 รีเซ็ตข้อมูลลูกค้า (หากต้องการเริ่มใหม่)
+  resetCustomer: () => {
+    set({ customer: null, error: null });
+  }
+}));
 
 export default useCustomerStore;

@@ -22,8 +22,21 @@ const useEmployeeStore = create((set) => ({
   employeeError: null,
 
   // ✅ Session
-  setSession: ({ token, role, position, branch, employee }) =>
-    set({ token, role, position, branch, employee }),
+  setSession: ({ token, role, position, branch, employee }) => {
+    const fullBranch = branch
+      ? {
+          id: branch.id,
+          name: branch.name,
+          address: branch.address,
+          phone: branch.phone,
+          fax: branch.fax,
+          email: branch.email,
+          taxId: branch.taxId,
+          vatRate: branch.vatRate || 7,
+        }
+      : null;
+    set({ token, role, position, branch: fullBranch, employee });
+  },
   clearSession: () =>
     set({ token: '', role: '', position: '', branch: null, employee: null }),
 
@@ -70,3 +83,5 @@ const useEmployeeStore = create((set) => ({
 }));
 
 export default useEmployeeStore;
+
+

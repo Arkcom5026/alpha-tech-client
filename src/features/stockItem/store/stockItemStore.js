@@ -1,7 +1,7 @@
 // ✅ stockItemStore.js — จัดการ SN ที่ยิงเข้าสต๊อก
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
-import { receiveStockItem } from '../api/stockItemApi';
+import { markStockItemsAsSold, receiveStockItem } from '../api/stockItemApi';
 
 const useStockItemStore = create(
   devtools((set, get) => ({
@@ -33,6 +33,16 @@ const useStockItemStore = create(
         }));
       }
     },
+
+
+    updateStockItemsToSoldAction: async (saleId) => {
+      try {
+        await markStockItemsAsSold(saleId);
+      } catch (err) {
+        console.error('❌ อัปเดต stockItem ล้มเหลว:', err);
+      }
+    },
+
 
     // ✅ ฟังก์ชันล้างรายการ SN ที่ยิงแล้ว (ถ้าต้องการใช้)
     clearScannedList: () => set({ scannedList: [] }),

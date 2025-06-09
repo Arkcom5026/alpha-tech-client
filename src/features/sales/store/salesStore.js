@@ -1,7 +1,10 @@
 // 📁 FILE: features/sales/store/salesStore.js
 
 import { create } from 'zustand';
-import apiClient from '@/utils/apiClient';
+import { createSaleOrder, getAllSales, getSaleById, returnSale } from '../api/saleApi';
+
+import { searchStockItem } from '@/features/stockItem/api/stockItemApi';
+import { markSaleAsPaid } from '../api/saleApi';
 
 const useSalesStore = create((set, get) => ({
   saleItems: [],
@@ -21,6 +24,17 @@ const useSalesStore = create((set, get) => ({
     set({ saleItems: [], customerId: null });
   },
 
+  setCustomerIdAction: (id) => set({ customerId: id }),
+
+  markSalePaidAction: async (saleId) => {
+    try {
+      await markSaleAsPaid(saleId);
+    } catch (err) {
+      console.error('❌ [markSalePaidAction]', err);
+    }
+  },
+
+  
   confirmSaleOrderAction: async () => {
     const { saleItems, customerId } = get();
 
@@ -29,7 +43,6 @@ const useSalesStore = create((set, get) => ({
     }
 
     try {
-      // คำนวณยอดรวมก่อนส่ง
       const vatRate = 7;
       const totalBeforeDiscount = saleItems.reduce((sum, item) => sum + item.price, 0);
       const totalDiscount = saleItems.reduce((sum, item) => sum + (item.discount ?? 0), 0);
@@ -39,8 +52,6 @@ const useSalesStore = create((set, get) => ({
 
       const payload = {
         customerId,
-        employeeId: 'mock-employee-id', // TODO: ดึงจาก auth store จริง
-        branchId: 'mock-branch-id',     // TODO: ดึงจาก auth store จริง
         totalBeforeDiscount,
         totalDiscount,
         vat: vatAmount,
@@ -51,7 +62,7 @@ const useSalesStore = create((set, get) => ({
         note: '',
         items: saleItems.map((item) => ({
           stockItemId: item.stockItemId,
-          barcodeId: item.barcodeId, // ✅ เพิ่ม barcodeId เพื่อให้ backend ตรวจสอบได้
+          barcodeId: item.barcodeId,
           basePrice: item.price,
           vatAmount: Math.round(((item.price - (item.discount ?? 0)) * vatRate) / 100),
           price: item.price - (item.discount ?? 0),
@@ -60,20 +71,29 @@ const useSalesStore = create((set, get) => ({
         })),
       };
 
-      const res = await apiClient.post('/sale-orders', payload);
+      const data = await createSaleOrder(payload);
+
 
       set({ saleItems: [], customerId: null });
-      return { message: `✅ ขายสินค้าสำเร็จ: ${res.data.code}`, code: res.data.code };
+
+      return {
+        message: `✅ ขายสินค้าสำเร็จ: ${data.code}`,
+        code: data.code,
+        id: data.id,
+        stockItemIds: data.stockItemIds, // ส่งกลับไว้ใช้ภายหลัง
+      };
     } catch (err) {
       console.error('❌ [confirmSaleOrderAction]', err);
       return { error: 'เกิดข้อผิดพลาดในการขาย' };
     }
   },
 
+  
+
   searchStockItemAction: async (barcode) => {
     try {
-      const res = await apiClient.get(`/stock-items/search?barcode=${barcode}`);
-      const stockItem = res.data[0];
+      const results = await searchStockItem(barcode);
+      const stockItem = results[0];
       if (!stockItem) return null;
 
       return {
@@ -96,8 +116,8 @@ const useSalesStore = create((set, get) => ({
 
   loadSalesAction: async () => {
     try {
-      const res = await apiClient.get('/sale-orders');
-      set({ sales: res.data });
+      const data = await getAllSales();
+      set({ sales: data });
     } catch (err) {
       console.error('[loadSalesAction]', err);
     }
@@ -105,8 +125,8 @@ const useSalesStore = create((set, get) => ({
 
   getSaleByIdAction: async (id) => {
     try {
-      const res = await apiClient.get(`/sale-orders/${id}`);
-      set({ currentSale: res.data });
+      const data = await getSaleById(id);
+      set({ currentSale: data });
     } catch (err) {
       console.error('[getSaleByIdAction]', err);
     }
@@ -114,10 +134,8 @@ const useSalesStore = create((set, get) => ({
 
   returnSaleAction: async (saleOrderId, saleItemId) => {
     try {
-      const res = await apiClient.post(`/sale-orders/${saleOrderId}/return`, {
-        saleItemId,
-      });
-      return res.data;
+      const data = await returnSale(saleOrderId, saleItemId);
+      return data;
     } catch (err) {
       console.error('[returnSaleAction]', err);
       return { error: 'เกิดข้อผิดพลาดในการคืนสินค้า' };
@@ -125,5 +143,5 @@ const useSalesStore = create((set, get) => ({
   },
 
 }));
-   
+
 export default useSalesStore;

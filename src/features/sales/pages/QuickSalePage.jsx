@@ -4,11 +4,69 @@ import React, { useState, useEffect, useRef } from 'react';
 import InputMask from 'react-input-mask';
 import useSalesStore from '@/features/sales/store/salesStore';
 import useCustomerStore from '@/features/customer/store/customerStore';
+
 import SaleItemTable from '@/features/sales/components/SaleItemTable';
+
 import PaymentForm from '@/features/payment/components/PaymentForm';
 import { useNavigate } from 'react-router-dom';
+import usePaymentStore from '@/features/payment/store/paymentStore';
+import useStockItemStore from '@/features/stockItem/store/stockItemStore';
+
+const translatePaymentMethod = (method) => {
+  switch (method) {
+    case 'CASH':
+      return 'เงินสด';
+    case 'TRANSFER':
+      return 'โอนเงิน';
+    case 'QR':
+      return 'พร้อมเพย์ (QR)';
+    case 'CREDIT':
+      return 'บัตรเครดิต';
+    case 'GOVERNMENT':
+      return 'หน่วยงานราชการ';
+    case 'OTHER':
+      return 'อื่น ๆ';
+    default:
+      return method;
+  }
+};
 
 const QuickSalePage = () => {
+
+  const togglePaymentMethod = (method) => {
+    const isGov = method === 'GOVERNMENT';
+    const govSelected = paymentList.some((p) => p.method === 'GOVERNMENT');
+    const otherSelected = paymentList.some((p) => ['CASH', 'TRANSFER', 'CREDIT'].includes(p.method));
+
+    if (isGov) {
+      if (govSelected) {
+        usePaymentStore.setState({ paymentList: [] });
+      } else {
+        usePaymentStore.setState({ paymentList: [{ method: 'GOVERNMENT', amount: 0, note: '' }] });
+      }
+      return;
+    }
+
+    if (govSelected) {
+      usePaymentStore.setState({ paymentList: [] });
+    }
+
+    const exists = paymentList.find((p) => p.method === method);
+    if (exists) {
+      usePaymentStore.setState({ paymentList: paymentList.filter((p) => p.method !== method) });
+    } else {
+      usePaymentStore.setState({ paymentList: [...paymentList.filter((p) => p.method !== 'GOVERNMENT'), { method, amount: 0, note: '' }] });
+    }
+  };
+  const [showQR, setShowQR] = useState(false);
+
+  const handleTransferKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      const amt = parseFloat(e.target.value);
+      if (amt && amt > 0) setShowQR(true);
+    }
+  };
+
   const [paymentMethod, setPaymentMethod] = useState('CASH');
   const [saleOption, setSaleOption] = useState('NONE');
   const [formError, setFormError] = useState('');
@@ -32,21 +90,42 @@ const QuickSalePage = () => {
   const [slipImage, setSlipImage] = useState(null);
   const [govImage, setGovImage] = useState(null);
 
+  const {
+    paymentList,
+    setPaymentAmount,
+    setPaymentNote,
+    sumPaymentList,
+    submitMultiPaymentAction,
+  } = usePaymentStore();
+  
+  const {
+    updateStockItemsToSoldAction,
+  } = useStockItemStore();
+
+
+
   const handleCaptureImage = () => {
     const video = videoRef.current;
     const canvas = canvasRef.current;
     if (!video || !canvas) return;
+    if (video.readyState < 2) return;
+
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     const ctx = canvas.getContext('2d');
     ctx.drawImage(video, 0, 0);
     const imageData = canvas.toDataURL('image/png');
-    if (paymentMethod === 'TRANSFER') setSlipImage(imageData);
-    if (paymentMethod === 'GOVERNMENT') setGovImage(imageData);
+
+    if (paymentList.some(p => p.method === 'TRANSFER')) {
+      setSlipImage(imageData);
+    }
+    if (paymentList.some(p => p.method === 'GOVERNMENT')) {
+      setGovImage(imageData);
+    }
   };
 
   useEffect(() => {
-    if (paymentMethod === 'TRANSFER' || paymentMethod === 'GOVERNMENT') {
+    if (paymentList.some(p => p.method === 'TRANSFER' || p.method === 'GOVERNMENT')) {
       const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
       const videoConstraints = isMobile ? { facingMode: 'environment' } : true;
 
@@ -61,7 +140,7 @@ const QuickSalePage = () => {
           console.error('Camera access error:', err);
         });
     }
-  }, [paymentMethod]);
+  }, [paymentList]);
 
   const navigate = useNavigate();
 
@@ -77,8 +156,10 @@ const QuickSalePage = () => {
     saleItems,
     addSaleItemAction,
     removeSaleItemAction,
-    confirmSaleOrderAction,
+    confirmSaleOrderAction,    
     searchStockItemAction,
+    setCustomerIdAction,
+    
   } = useSalesStore();
 
   const rawPhone = phone.replace(/-/g, '');
@@ -108,22 +189,24 @@ const QuickSalePage = () => {
 
   const handleConfirmSale = async () => {
     setFormError('');
+  
     if (!customer?.id) {
       setFormError('กรุณายืนยันเบอร์ลูกค้าก่อนทำรายการขาย');
       return;
     }
-    if (paymentMethod === 'CASH' && receivedAmount < finalPrice) {
-      setFormError('ยอดที่รับต้องมากกว่าหรือเท่ากับยอดที่ต้องชำระ');
+    if (sumPaymentList() < finalPrice) {
+      setFormError('ยอดที่รับยังไม่ครบตามยอดที่ต้องชำระ');
       return;
     }
-    if (paymentMethod === 'TRANSFER' && !slipImage) {
+    if (paymentList.some((p) => p.method === 'TRANSFER') && !slipImage) {
       setFormError('กรุณาถ่ายภาพสลิปก่อนยืนยันการขาย');
       return;
     }
-    if (paymentMethod === 'CREDIT' && (!cardRef || cardRef.length < 15)) {
+    if (paymentList.some((p) => p.method === 'CREDIT') && (!cardRef || cardRef.length < 15)) {
       setFormError('กรุณากรอกเลขอ้างอิงการชำระเงินด้วยบัตรเครดิต (อย่างน้อย 15 หลัก)');
       return;
     }
+  
     const payload = {
       customerId: customer.id,
       totalBeforeDiscount: totalOriginalPrice,
@@ -131,7 +214,7 @@ const QuickSalePage = () => {
       vat: vatAmount,
       vatRate: 7,
       totalAmount: finalPrice,
-      paymentMethod,
+      paymentMethod: paymentMethod,
       paymentDetails: paymentMethod === 'CREDIT' ? { cardRef } : null,
       note: '',
       items: liveItems.map((item) => ({
@@ -144,15 +227,36 @@ const QuickSalePage = () => {
         remark: item.remark || '',
       })),
     };
+  
     const result = await confirmSaleOrderAction(payload);
     if (result?.error) {
       setFormError(result.error);
       return;
     }
+  
     if (result?.code) {
+      const cleanList = paymentList.map((p) => ({
+        saleId: result.id,
+        paymentMethod: p.method,
+        amount: parseFloat(p.amount),
+        note: p.note || '',
+      }));
+  
+      const success = await submitMultiPaymentAction(cleanList);
+      if (!success) {
+        setFormError('เกิดข้อผิดพลาดในการบันทึกการชำระเงิน กรุณาลองใหม่');
+        return;
+      }
+  
+      // ✅ อัปเดตสถานะ stockItem หลังชำระเงินสำเร็จ
+      await updateStockItemsToSoldAction(result.stockItemIds);
+  
       setConfirmedSaleId(result.code);
     }
   };
+  
+
+
 
   const handleBarcodeSearch = async (e) => {
     if (e.key === 'Enter') {
@@ -195,6 +299,12 @@ const QuickSalePage = () => {
     }
   }, [phone]);
 
+  useEffect(() => {
+    if (customer?.id) {
+      setCustomerIdAction(customer.id);
+    }
+  }, [customer]);
+
   const isConfirmEnabled = (() => {
     if (!liveItems.length) return false;
     if (paymentMethod === 'CASH') return receivedAmount >= finalPrice;
@@ -231,7 +341,7 @@ const QuickSalePage = () => {
 
   return (
     <div className="p-4 md:p-6 space-y-6 max-w-screen-md mx-auto">
-      
+
       <h1 className="text-xl font-bold text-center md:text-left">ขายสินค้า (Quick Sale)</h1>
 
       {/* เบอร์โทร + ตรวจสอบลูกค้า */}
@@ -337,73 +447,114 @@ const QuickSalePage = () => {
 
           <div className="space-y-4">
             <div>
-            <div className="text-sm text-left flex flex-wrap gap-4">
-                <label className="inline-flex items-center">
-                  <input type="radio" name="paymentMethod" value="CASH" className="mr-2" checked={paymentMethod === 'CASH'} onChange={(e) => setPaymentMethod(e.target.value)} /> เงินสด
-                </label>
-                <label className="inline-flex items-center">
-                  <input type="radio" name="paymentMethod" value="TRANSFER" className="mr-2" checked={paymentMethod === 'TRANSFER'} onChange={(e) => setPaymentMethod(e.target.value)} /> โอน
-                </label>
-                <label className="inline-flex items-center">
-                  <input type="radio" name="paymentMethod" value="CREDIT" className="mr-2" checked={paymentMethod === 'CREDIT'} onChange={(e) => setPaymentMethod(e.target.value)} /> บัตรเครดิต   
-                </label>
-                <label className="inline-flex items-center">
-                  <input type="radio" name="paymentMethod" value="GOVERNMENT" className="mr-2" checked={paymentMethod === 'GOVERNMENT'} onChange={(e) => setPaymentMethod(e.target.value)} /> เครดิต
-                </label>
+              <div className="text-sm text-left flex flex-wrap gap-4">
+                {['CASH', 'TRANSFER', 'CREDIT', 'GOVERNMENT'].map((method) => (
+                  <label key={method} className="inline-flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={paymentList.some((p) => p.method === method)}
+                      onChange={() => togglePaymentMethod(method)}
+                      className="mr-2"
+                    />
+                    {translatePaymentMethod(method)}
+                  </label>
+                ))}
               </div>
 
             </div>
-            {paymentMethod === 'CASH' && (<div className="grid grid-cols-2 gap-3 items-end">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">ยอดที่รับ:</label>
-                <input type="number" className="mt-1 w-full border rounded px-3 py-2" placeholder="0.00" value={receivedAmount} onChange={(e) => setReceivedAmount(parseFloat(e.target.value) || 0)} />
+            {paymentList.some(p => p.method === 'CASH') && (
+              <div className="grid grid-cols-2 gap-3 items-end">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">ยอดที่รับ (เงินสด):</label>
+                  <input
+                    type="number"
+                    className="mt-1 w-full border rounded px-3 py-2"
+                    placeholder="0.00"
+                    value={paymentList.find(p => p.method === 'CASH')?.amount || ''}
+                    onChange={(e) => setPaymentAmount('CASH', e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">เงินทอน:</label>
+                  <input
+                    type="text"
+                    className="mt-1 w-full border rounded px-3 py-2 bg-gray-100"
+                    value={changeAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    readOnly
+                  />
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">เงินทอน:</label>
-                <input type="text" className="mt-1 w-full border rounded px-3 py-2 bg-gray-100" value={changeAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })} readOnly />
-              </div>
-            </div>)}
+            )}
 
-            {paymentMethod === 'TRANSFER' && !slipImage && (
-              <div className="pt-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">📱 QR สำหรับโอนเงิน</label>
-                <img src={`https://promptpay.io/1234567890123/${finalPrice.toFixed(2)}`} alt="QR PromptPay" className="w-48 h-48 border rounded" />
-                <p className="text-sm text-gray-600 mt-1">กรุณาสแกนด้วยแอปธนาคารเพื่อโอนเข้าบัญชีบริษัท</p>
+
+
+
+            {paymentList.some(p => p.method === 'TRANSFER') && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700">ยอดที่โอน:</label>
+                <input
+                  type="number"
+                  className="mt-1 mb-3 w-full border rounded px-3 py-2"
+                  placeholder="0.00"
+                  value={paymentList.find(p => p.method === 'TRANSFER')?.amount || ''}
+                  onChange={(e) => setPaymentAmount('TRANSFER', e.target.value)}
+                  onKeyDown={handleTransferKeyDown}
+                />
+              </div>
+            )}
+
+            {paymentList.some(p => p.method === 'TRANSFER') && showQR && (
+              <div className="mt-4">
+                <p className="mb-2 font-medium">QR พร้อมเพย์</p>
+                <img
+                  src={`https://promptpay.io/1234567890123/${paymentList.find(p => p.method === 'TRANSFER')?.amount || 0}`}
+                  alt="QR PromptPay"
+                  className="w-48 h-48 mx-auto"
+                />
+
+                <div className="pt-4 space-y-4 border p-4 rounded bg-white shadow">
+                  <h3 className="font-semibold text-gray-700 mb-2">📸 ถ่ายภาพสลิปจากกล้อง</h3>
+
+                  {!slipImage ? (
+                    <div className="flex flex-col items-start gap-2">
+                      <video ref={videoRef} className="w-64 h-48 border rounded bg-black object-cover" />
+                      <button
+                        onClick={handleCaptureImage}
+                        className="px-3 py-1 bg-indigo-600 text-white rounded hover:bg-indigo-700"
+                      >📷 ถ่ายภาพ</button>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-start gap-2">
+                      <img src={slipImage} alt="Captured slip" className="w-64 h-48 border rounded object-cover" />
+                      <button
+                        onClick={() => setSlipImage(null)}
+                        className="px-3 py-1 bg-gray-500 text-white rounded hover:bg-gray-600"
+                      >🔁 ถ่ายใหม่</button>
+                    </div>
+                  )}
+
+                  <canvas ref={canvasRef} style={{ display: 'none' }} />
+                </div>
               </div>
             )}
 
 
-            {paymentMethod === 'TRANSFER' && (
-              <div className="pt-4 space-y-4 border p-4 rounded bg-white shadow">
-                <h3 className="font-semibold text-gray-700 mb-2">📸 ถ่ายภาพสลิปจากกล้อง</h3>
-
-                {!slipImage ? (
-                  <div className="flex flex-col items-start gap-2">
-                    <video ref={videoRef} className="w-64 h-48 border rounded bg-black object-cover" />
-                    <button
-                      onClick={handleCaptureImage}
-                      className="px-3 py-1 bg-indigo-600 text-white rounded hover:bg-indigo-700"
-                    >📷 ถ่ายภาพ</button>
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-start gap-2">
-                    <img src={slipImage} alt="Captured slip" className="w-64 h-48 border rounded object-cover" />
-                    <button
-                      onClick={() => setSlipImage(null)}
-                      className="px-3 py-1 bg-gray-500 text-white rounded hover:bg-gray-600"
-                    >🔁 ถ่ายใหม่</button>
-                  </div>
-                )}
-
-                <canvas ref={canvasRef} style={{ display: 'none' }} />
-              </div>
-            )}
 
 
 
             {/* ✅ Input reference number for credit card */}
-            {paymentMethod === 'CREDIT' && (
-              <div className="mt-2">
+            {paymentList.some(p => p.method === 'CREDIT') && (
+              <div className="mt-2 space-y-2">
+                <label className="block text-sm font-medium text-gray-700">ยอดบัตรเครดิต:</label>
+                <input
+                  type="number"
+                  className="mt-1 w-full border rounded px-3 py-2"
+                  placeholder="0.00"
+                  value={paymentList.find(p => p.method === 'CREDIT')?.amount || ''}
+                  onChange={(e) => setPaymentAmount('CREDIT', e.target.value)}
+                />
+
+                <label className="text-sm">เลขอ้างอิงบัตรเครดิต:</label>
                 <label className="text-sm">เลขอ้างอิงบัตรเครดิต:</label>
                 <input
                   type="text"
@@ -415,25 +566,33 @@ const QuickSalePage = () => {
                 />
               </div>
             )}
+
             <div className="space-y-4">
               <div className="text-sm text-left space-y-2">
                 <div className="pl-3 space-y-1">
                   <label className="inline-flex items-center mr-4"><input type="radio" value="NONE" checked={saleOption === 'NONE'} onChange={(e) => setSaleOption(e.target.value)} className="mr-2" /> 🚫 ไม่พิมพ์บิล</label>
                   <label className="inline-flex items-center"><input type="radio" value="RECEIPT" checked={saleOption === 'RECEIPT'} onChange={(e) => setSaleOption(e.target.value)} className="mr-2" /> ✅ พิมพ์บิล</label>
                   <label className="block"><input type="radio" value="TAX_INVOICE" checked={saleOption === 'TAX_INVOICE'} onChange={(e) => setSaleOption(e.target.value)} className="mr-2" /> 🧾 ขอใบกำกับภาษี</label>
-                 
+
                 </div>
               </div>
 
-              {paymentMethod === 'GOVERNMENT' && renderGovernmentCapture()}
+              {paymentList.some(p => p.method === 'GOVERNMENT') && renderGovernmentCapture()}
+
+              <div className="text-right mt-4">
+                <div className="text-gray-700 text-sm">ยอดรวมที่กรอก: {sumPaymentList().toLocaleString()} ฿</div>
+                <div className="text-sm text-green-600">
+                  {sumPaymentList() === finalPrice ? '✅ ยอดชำระตรงกับยอดขาย' : '⚠️ ยอดชำระยังไม่ตรง'}
+                </div>
+              </div>
 
               <div className="text-center pt-2">
                 <button
                   onClick={handleConfirmSale}
-                  disabled={!isConfirmEnabled}
+                  disabled={sumPaymentList() !== finalPrice || !liveItems.length || !customer?.id}
                   className="px-6 py-3 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
                 >
-                  {paymentMethod === 'GOVERNMENT' ? '📄 บันทึกรายการ' : '✅ ยืนยันการขาย'}
+                  ✅ ยืนยันการขาย
                 </button>
               </div>
 
@@ -442,10 +601,12 @@ const QuickSalePage = () => {
           </div>
         </div>
       </div>
+
+
     </div>
   );
 };
 
 export default QuickSalePage;
 
-
+ 

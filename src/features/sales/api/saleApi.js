@@ -1,4 +1,3 @@
-// SaleApi ใหม่
 // 📁 FILE: features/sales/api/saleApi.js
 
 import apiClient from '@/utils/apiClient';
@@ -39,6 +38,16 @@ export const returnSale = async (saleOrderId, saleItemId) => {
     return res.data;
   } catch (err) {
     console.error('❌ [returnSale]', err);
+    throw err;
+  }
+};
+
+export const markSaleAsPaid = async (saleId) => {
+  try {
+    const res = await apiClient.post(`/sale-orders/${saleId}/mark-paid`);
+    return res.data;
+  } catch (err) {
+    console.error('❌ [markSaleAsPaid]', err);
     throw err;
   }
 };

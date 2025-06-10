@@ -8,7 +8,7 @@ const PrintBillListPage = () => {
   const [search, setSearch] = useState('');
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
-  const [printFormat, setPrintFormat] = useState('quick');
+  const [printFormat, setPrintFormat] = useState('short');
 
   const { printablePayments, loadPrintablePaymentsAction } = usePaymentStore();
 
@@ -68,7 +68,6 @@ const PrintBillListPage = () => {
 
         <div className="ml-auto flex gap-4 items-center">
           <label className="text-sm font-medium">ประเภทใบเสร็จ:</label>
-          <label><input type="radio" name="format" value="quick" checked={printFormat === 'quick'} onChange={() => setPrintFormat('quick')} /> บิลด่วน</label>
           <label><input type="radio" name="format" value="short" checked={printFormat === 'short'} onChange={() => setPrintFormat('short')} /> ย่อ</label>
           <label><input type="radio" name="format" value="full" checked={printFormat === 'full'} onChange={() => setPrintFormat('full')} /> เต็มรูปแบบ</label>
         </div>
@@ -116,10 +115,7 @@ const PrintBillListPage = () => {
                 <td className="border px-2 py-1 text-center">
                   <button
                     onClick={() => {
-                      const path =
-                        printFormat === 'quick'
-                          ? `/pos/sales/bill/print/${p.saleId}`
-                          : printFormat === 'short'
+                      const path = printFormat === 'short'
                           ? `/pos/sales/bill/print-short/${p.saleId}`
                           : `/pos/sales/bill/print-full/${p.saleId}`;
                       navigate(path, { state: { payment: p } }); // ✅ ส่งข้อมูลไปพร้อม state
@@ -143,3 +139,6 @@ const PrintBillListPage = () => {
 };
 
 export default PrintBillListPage;
+
+
+

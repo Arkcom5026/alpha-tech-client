@@ -35,9 +35,9 @@ const useStockItemStore = create(
     },
 
 
-    updateStockItemsToSoldAction: async (saleId) => {
+    updateStockItemsToSoldAction: async (stockItemIds) => {
       try {
-        await markStockItemsAsSold(saleId);
+        await markStockItemsAsSold(stockItemIds); // ✅ ส่ง array ไปอย่างถูกต้อง
       } catch (err) {
         console.error('❌ อัปเดต stockItem ล้มเหลว:', err);
       }

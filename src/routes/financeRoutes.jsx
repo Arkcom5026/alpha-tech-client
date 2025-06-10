@@ -1,12 +1,21 @@
-import FinanceDashboardPage from "@/features/pos/pages/finance/FinanceDashboardPage";
 
+import FinanceDashboardPage from "@/features/pos/pages/finance/FinanceDashboardPage";
+import CreateRefundPage from "@/features/refund/pages/CreateRefundPage";
+import ListReturnsPage from "@/features/refund/pages/ListReturnsPage";
 
 const financeRoutes = {
   path: '/pos/finance',
-    children: [
+  children: [
     {
       index: true,
       element: <FinanceDashboardPage />, // ✅ หน้า Dashboard ของ Finance
+    },
+    {
+      path: 'refunds',
+      children: [
+        { index: true, element: <ListReturnsPage /> },
+        { path: 'create/:saleReturnId', element: <CreateRefundPage /> },
+      ],
     },
     // เพิ่ม children routes เพิ่มเติมได้ที่นี่
   ],

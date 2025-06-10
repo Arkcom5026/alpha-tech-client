@@ -25,6 +25,7 @@ export const getAllSales = async () => {
 export const getSaleById = async (id) => {
   try {
     const res = await apiClient.get(`/sale-orders/${id}`);
+    
     return res.data;
   } catch (err) {
     console.error('❌ [getSaleById]', err);
@@ -51,3 +52,15 @@ export const markSaleAsPaid = async (saleId) => {
     throw err;
   }
 };
+
+
+export const getSaleReturns = async () => {
+  try {
+    const res = await apiClient.get('/sale-orders/return');
+    return res.data;
+  } catch (error) {
+    console.error('❌ [getSaleReturns] error:', error);
+    throw error;
+  }
+};
+

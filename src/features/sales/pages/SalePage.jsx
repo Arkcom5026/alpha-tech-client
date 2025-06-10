@@ -31,7 +31,8 @@ const translatePaymentMethod = (method) => {
   }
 };
 
-const QuickSalePage = () => {
+const SalePage = () => {
+  const [isModified, setIsModified] = useState(false);
 
   const togglePaymentMethod = (method) => {
     const isGov = method === 'GOVERNMENT';
@@ -72,7 +73,6 @@ const QuickSalePage = () => {
   const [formError, setFormError] = useState('');
   const [phone, setPhone] = useState('');
   const [name, setName] = useState('');
-  const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [address, setAddress] = useState('');
   const [billDiscount, setBillDiscount] = useState(0);
@@ -81,9 +81,11 @@ const QuickSalePage = () => {
   const [pendingPhone, setPendingPhone] = useState('');
   const phoneInputRef = useRef(null);
   const [confirmedSaleId, setConfirmedSaleId] = useState(null);
+  const [originalCustomerData, setOriginalCustomerData] = useState(null);
   const [receivedAmount, setReceivedAmount] = useState(0);
   const [changeAmount, setChangeAmount] = useState(0);
   const [cardRef, setCardRef] = useState('');
+  const [customerType, setCustomerType] = useState('บุคคลทั่วไป');
 
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
@@ -97,7 +99,7 @@ const QuickSalePage = () => {
     sumPaymentList,
     submitMultiPaymentAction,
   } = usePaymentStore();
-  
+
   const {
     updateStockItemsToSoldAction,
   } = useStockItemStore();
@@ -148,6 +150,7 @@ const QuickSalePage = () => {
     customer,
     searchCustomerByPhoneAction,
     createCustomerAction,
+    updateCustomerAction,
     loading: customerLoading,
     error: customerError,
   } = useCustomerStore();
@@ -156,31 +159,45 @@ const QuickSalePage = () => {
     saleItems,
     addSaleItemAction,
     removeSaleItemAction,
-    confirmSaleOrderAction,    
+    confirmSaleOrderAction,
     searchStockItemAction,
     setCustomerIdAction,
-    
+
   } = useSalesStore();
 
   const rawPhone = phone.replace(/-/g, '');
 
   const handleVerifyPhone = async () => {
+    setOriginalCustomerData(null);
     setFormError('');
     if (!/^[0-9]{10}$/.test(rawPhone)) {
       setFormError('กรุณากรอกเบอร์โทรให้ครบ 10 หลัก');
       return;
     }
     const result = await searchCustomerByPhoneAction(rawPhone);
+    console.log('-result- :  ', result);
     setPendingPhone(result?.id ? '' : rawPhone);
+    if (result?.id) {
+      const nameParts = (result.name || '').split(' ');
+      setName(result.name || '');
+      setEmail(result.email || '');
+      setAddress(result.address || '');
+      setOriginalCustomerData({
+        name: result.name || '',
+        email: result.email || '',
+        address: result.address || ''
+      });
+    }
   };
 
   const handleConfirmCreateCustomer = async () => {
     if (!pendingPhone) return;
-    const fullName = `${name || 'ลูกค้าทั่วไป'}${lastName ? ' ' + lastName : ''}`;
+    const fullName = name || 'ลูกค้าทั่วไป';
     await createCustomerAction({ phone: pendingPhone, name: fullName, email: email || null, address: address || null });
     await handleVerifyPhone();
     setPendingPhone('');
-    setName(''); setLastName(''); setEmail(''); setAddress('');
+    // ❌ ไม่ต้อง clear input เพราะ handleVerifyPhone จะ set ค่าใหม่ให้อัตโนมัติ
+    // setName(''); setEmail(''); setAddress('');
   };
 
   const handleCancelCreateCustomer = () => {
@@ -188,8 +205,19 @@ const QuickSalePage = () => {
   };
 
   const handleConfirmSale = async () => {
+    if (customer?.id && originalCustomerData) {
+      const isChanged =
+        name !== originalCustomerData.name ||
+        email !== originalCustomerData.email ||
+        address !== originalCustomerData.address;
+
+      if (isChanged) {
+        setFormError('คุณได้แก้ไขข้อมูลลูกค้า แต่ยังไม่ได้กด "อัปเดตข้อมูล"');
+        return;
+      }
+    }
     setFormError('');
-  
+
     if (!customer?.id) {
       setFormError('กรุณายืนยันเบอร์ลูกค้าก่อนทำรายการขาย');
       return;
@@ -206,7 +234,7 @@ const QuickSalePage = () => {
       setFormError('กรุณากรอกเลขอ้างอิงการชำระเงินด้วยบัตรเครดิต (อย่างน้อย 15 หลัก)');
       return;
     }
-  
+
     const payload = {
       customerId: customer.id,
       totalBeforeDiscount: totalOriginalPrice,
@@ -227,13 +255,14 @@ const QuickSalePage = () => {
         remark: item.remark || '',
       })),
     };
-  
+
     const result = await confirmSaleOrderAction(payload);
+
     if (result?.error) {
       setFormError(result.error);
       return;
     }
-  
+
     if (result?.code) {
       const cleanList = paymentList.map((p) => ({
         saleId: result.id,
@@ -241,20 +270,36 @@ const QuickSalePage = () => {
         amount: parseFloat(p.amount),
         note: p.note || '',
       }));
-  
+
       const success = await submitMultiPaymentAction(cleanList);
       if (!success) {
         setFormError('เกิดข้อผิดพลาดในการบันทึกการชำระเงิน กรุณาลองใหม่');
         return;
       }
-  
+
       // ✅ อัปเดตสถานะ stockItem หลังชำระเงินสำเร็จ
       await updateStockItemsToSoldAction(result.stockItemIds);
-  
+
+      
       setConfirmedSaleId(result.code);
+
+      const paymentData = {
+        saleId: result.id,
+        paymentMethod: paymentList[0].method,
+        amount: parseFloat(paymentList[0].amount),
+        note: paymentList[0].note || '',
+        sale: result,
+      };
+
+      if (saleOption === 'RECEIPT') {
+        navigate('/pos/sales/bill/print-short/' + result.id, { state: { payment: paymentData } });
+      } else if (saleOption === 'TAX_INVOICE') {
+        navigate('/pos/sales/bill/print-full/' + result.id, { state: { payment: paymentData } });
+      }
     }
+
   };
-  
+
 
 
 
@@ -262,15 +307,22 @@ const QuickSalePage = () => {
     if (e.key === 'Enter') {
       const barcode = e.target.value.trim();
       if (!barcode) return;
+
       const item = await searchStockItemAction(barcode);
       if (!item) {
         setFormError('ไม่พบสินค้านี้ในระบบ');
         return;
       }
+
       addSaleItemAction(item);
+      setFormError(''); // ✅ ล้าง error เมื่อพบสินค้าใหม่
       e.target.value = '';
     }
   };
+
+
+
+
 
   const totalDiscountOnly = liveItems.reduce((sum, item) => sum + (item.discount || 0), 0);
   const totalDiscount = totalDiscountOnly + billDiscount;
@@ -282,6 +334,18 @@ const QuickSalePage = () => {
     const price = liveItems.reduce((sum, item) => sum + Math.max(0, item.price - (item.discount || 0) - (item.billShare || 0)), 0);
     setFinalPrice(price);
   }, [liveItems]);
+
+  useEffect(() => {
+    if (originalCustomerData) {
+      const changed =
+        name !== originalCustomerData.name ||
+        email !== originalCustomerData.email ||
+        address !== originalCustomerData.address;
+      setIsModified(changed);
+    } else {
+      setIsModified(false);
+    }
+  }, [name, email, address, originalCustomerData]);
 
   useEffect(() => {
     setChangeAmount(Math.max(0, receivedAmount - finalPrice));
@@ -339,15 +403,43 @@ const QuickSalePage = () => {
     </div>
   );
 
+
+  const handleUpdateCustomer = async () => {
+    if (!customer?.id) {
+      setFormError('ไม่พบข้อมูลลูกค้า');
+      return;
+    }
+
+    const updatedData = {
+      name: name.trim(),
+      email: email.trim(),
+      address: address.trim(),
+    };
+
+    try {
+      const result = await updateCustomerAction(customer.id, updatedData);
+      if (result) {
+        setOriginalCustomerData(updatedData);
+        setFormError('');
+      } else {
+        setFormError('อัปเดตข้อมูลไม่สำเร็จ');
+      }
+    } catch (err) {
+      console.error('❌ updateCustomerAction error:', err);
+      setFormError('เกิดข้อผิดพลาดระหว่างการอัปเดต');
+    }
+  };
+
   return (
     <div className="p-4 md:p-6 space-y-6 max-w-screen-md mx-auto">
 
-      <h1 className="text-xl font-bold text-center md:text-left">ขายสินค้า (Quick Sale)</h1>
+      <h1 className="text-2xl font-bold text-center md:text-left mb-1">ขายสินค้า</h1>
 
       {/* เบอร์โทร + ตรวจสอบลูกค้า */}
+      <h2 className="text-lg font-semibold text-gray-700">ข้อมูลลูกค้า</h2>
       <div className="flex flex-col md:flex-row items-start md:items-center gap-3 md:gap-4">
         <div className="w-full md:w-64">
-          <InputMask mask="099-999-9999" value={phone} onChange={(e) => setPhone(e.target.value)}>
+          <InputMask mask="099-999-9999" value={phone} onChange={(e) => setPhone(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleVerifyPhone()}>
             {(inputProps) => (
               <input
                 {...inputProps}
@@ -368,32 +460,100 @@ const QuickSalePage = () => {
           {customerLoading ? 'กำลังตรวจสอบ...' : 'ยืนยันเบอร์ลูกค้า'}
         </button>
 
-        {customer && <span className="text-green-600">📌 ลูกค้า: {customer.name}</span>}
+
       </div>
 
       {formError && (
         <div className="bg-red-100 text-red-700 border border-red-300 px-4 py-2 rounded text-sm">⚠️ {formError}</div>
       )}
 
-      {pendingPhone && !customer?.id && (
+      {(pendingPhone || customer?.id) && (
         <div className="mt-2 text-sm text-yellow-700 bg-yellow-100 border border-yellow-300 rounded px-3 py-2 space-y-3">
-          <p>📱 <strong>ไม่พบข้อมูลลูกค้าในระบบ</strong></p>
-          <p>เบอร์: <strong>{phone}</strong> ถูกต้องใช่ไหม?</p>
+          <p>📋 <strong>รายละเอียดลูกค้า</strong></p>
+          {customer?.id ? null : <p>เบอร์: <strong>{phone}</strong> ถูกต้องใช่ไหม?</p>}
 
           <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+            <div className="col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">ประเภทลูกค้า:</label>
+              <div className="flex gap-4 text-sm">
+                <label>
+                  <input
+                    type="radio"
+                    name="customerType"
+                    value="บุคคลทั่วไป"
+                    className="mr-1"
+                    checked={customerType === 'บุคคลทั่วไป'}
+                    onChange={() => setCustomerType('บุคคลทั่วไป')}
+                  /> บุคคลทั่วไป
+                </label>
+                <label>
+                  <input
+                    type="radio"
+                    name="customerType"
+                    value="นิติบุคคล"
+                    className="mr-1"
+                    checked={customerType === 'นิติบุคคล'}
+                    onChange={() => setCustomerType('นิติบุคคล')}
+                  /> นิติบุคคล
+                </label>
+              </div>
+            </div>
+            {customerType === 'นิติบุคคล' && (
+              <>
+                <input
+                  type="text"
+                  placeholder="ชื่อบริษัท / หน่วยงาน"
+                  className="border px-2 py-1 rounded col-span-2"
+                />
+                <input
+                  type="text"
+                  placeholder="เลขผู้เสียภาษี (ถ้ามี)"
+                  className="border px-2 py-1 rounded col-span-2"
+                />
+              </>
+            )}
             <input type="text" placeholder="ชื่อ" value={name} onChange={(e) => setName(e.target.value)} className="border px-2 py-1 rounded" />
-            <input type="text" placeholder="นามสกุล" value={lastName} onChange={(e) => setLastName(e.target.value)} className="border px-2 py-1 rounded" />
+
             <input type="email" placeholder="อีเมล (ถ้ามี)" value={email} onChange={(e) => setEmail(e.target.value)} className="border px-2 py-1 rounded col-span-2" />
+            {!email && (
+              <p className="text-xs text-gray-500 italic col-span-2">
+                * ลูกค้ารายนี้ยังไม่มีอีเมลในระบบ
+              </p>
+            )}
             <textarea placeholder="ที่อยู่ (ถ้ามี)" value={address} onChange={(e) => setAddress(e.target.value)} className="border px-2 py-1 rounded col-span-2" />
           </div>
 
           <div className="pt-2 flex gap-3">
-            <button onClick={handleConfirmCreateCustomer} className="px-4 py-1 bg-yellow-600 text-white rounded hover:bg-yellow-700">➕ สร้างข้อมูลลูกค้าใหม่</button>
-            <button onClick={handleCancelCreateCustomer} className="px-4 py-1 bg-gray-300 text-gray-800 rounded hover:bg-gray-400">🔁 แก้ไขเบอร์โทร</button>
+            {customer?.id ? (
+              <button
+                onClick={handleUpdateCustomer}
+                disabled={!isModified}
+                className={`px-4 py-1 text-white rounded hover:bg-blue-700 ${isModified ? 'bg-blue-500' : 'bg-gray-400 cursor-not-allowed'
+                  }`}
+              >
+                อัปเดตข้อมูล
+              </button>
+            ) : (
+              <div className="flex gap-3">
+                <button
+                  onClick={handleConfirmCreateCustomer}
+                  className="px-4 py-1 bg-green-600 text-white rounded hover:bg-green-700"
+                >
+                  ➕ บันทึกลูกค้าใหม่
+                </button>
+                <button
+                  onClick={handleCancelCreateCustomer}
+                  className="px-4 py-1 bg-gray-500 text-white rounded hover:bg-gray-600"
+                >
+                  ยกเลิก
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
 
+      <h2 className="text-lg font-semibold text-gray-700 mt-6">รายการสินค้า</h2>
       <div className="flex items-center gap-4">
         <input
           type="text"
@@ -402,6 +562,10 @@ const QuickSalePage = () => {
           className="border rounded px-3 py-2 w-full md:w-96"
         />
       </div>
+      {formError && (
+        <div className="mt-2 text-red-600 text-sm">⚠️ {formError}</div>
+      )}
+
 
       <SaleItemTable
         items={saleItems}
@@ -410,6 +574,8 @@ const QuickSalePage = () => {
         onChangeItems={setLiveItems}
       />
 
+
+      <h2 className="text-lg font-semibold text-gray-700 mt-6">การชำระเงิน</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
         <div className="bg-gray-50 border rounded shadow-sm p-4 space-y-3 text-base">
           <div className="grid grid-cols-[auto_1fr] gap-x-3 items-center">
@@ -442,8 +608,8 @@ const QuickSalePage = () => {
           </div>
         </div>
 
-        <div className="bg-gray-50 border rounded shadow-sm p-4 space-y-6">
 
+        <div className="bg-gray-50 border rounded shadow-sm p-4 space-y-6">
 
           <div className="space-y-4">
             <div>
@@ -462,6 +628,8 @@ const QuickSalePage = () => {
               </div>
 
             </div>
+
+
             {paymentList.some(p => p.method === 'CASH') && (
               <div className="grid grid-cols-2 gap-3 items-end">
                 <div>
@@ -502,6 +670,9 @@ const QuickSalePage = () => {
                 />
               </div>
             )}
+
+
+
 
             {paymentList.some(p => p.method === 'TRANSFER') && showQR && (
               <div className="mt-4">
@@ -555,7 +726,6 @@ const QuickSalePage = () => {
                 />
 
                 <label className="text-sm">เลขอ้างอิงบัตรเครดิต:</label>
-                <label className="text-sm">เลขอ้างอิงบัตรเครดิต:</label>
                 <input
                   type="text"
                   value={cardRef}
@@ -570,9 +740,11 @@ const QuickSalePage = () => {
             <div className="space-y-4">
               <div className="text-sm text-left space-y-2">
                 <div className="pl-3 space-y-1">
-                  <label className="inline-flex items-center mr-4"><input type="radio" value="NONE" checked={saleOption === 'NONE'} onChange={(e) => setSaleOption(e.target.value)} className="mr-2" /> 🚫 ไม่พิมพ์บิล</label>
-                  <label className="inline-flex items-center"><input type="radio" value="RECEIPT" checked={saleOption === 'RECEIPT'} onChange={(e) => setSaleOption(e.target.value)} className="mr-2" /> ✅ พิมพ์บิล</label>
-                  <label className="block"><input type="radio" value="TAX_INVOICE" checked={saleOption === 'TAX_INVOICE'} onChange={(e) => setSaleOption(e.target.value)} className="mr-2" /> 🧾 ขอใบกำกับภาษี</label>
+                  <label className="block"><input type="radio" value="NONE" checked={saleOption === 'NONE'} onChange={(e) => setSaleOption(e.target.value)} className="mr-2" /> ไม่พิมพ์บิล</label>
+
+                  <label className="block"><input type="radio" value="RECEIPT" checked={saleOption === 'RECEIPT'} onChange={(e) => setSaleOption(e.target.value)} className="mr-2" /> ใบกำกับภาษี อย่างย่อ</label>
+
+                  <label className="block"><input type="radio" value="TAX_INVOICE" checked={saleOption === 'TAX_INVOICE'} onChange={(e) => setSaleOption(e.target.value)} className="mr-2" /> ใบกำกับภาษี เต็มรูป</label>
 
                 </div>
               </div>
@@ -585,6 +757,7 @@ const QuickSalePage = () => {
                   {sumPaymentList() === finalPrice ? '✅ ยอดชำระตรงกับยอดขาย' : '⚠️ ยอดชำระยังไม่ตรง'}
                 </div>
               </div>
+
 
               <div className="text-center pt-2">
                 <button
@@ -600,6 +773,7 @@ const QuickSalePage = () => {
             </div>
           </div>
         </div>
+
       </div>
 
 
@@ -607,6 +781,6 @@ const QuickSalePage = () => {
   );
 };
 
-export default QuickSalePage;
+export default SalePage;
 
- 
+

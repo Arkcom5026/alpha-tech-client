@@ -1,31 +1,65 @@
-
 // -----------------------
 // PrintBillPageFullTax.jsx
 // -----------------------
-import { useLocation } from 'react-router-dom';
+import { useLocation, useParams } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { getSaleById } from '@/features/sales/api/saleApi';
 import BillLayoutFullTax from '../components/BillLayoutFullTax';
 
 const PrintBillPageFullTax = () => {
   const location = useLocation();
-  const payment = location.state?.payment;
+  const { id } = useParams();
+  const [sale, setSale] = useState(null);
+  const [payment, setPayment] = useState(null);
 
-  if (!payment) return <div>ไม่พบข้อมูลใบเสร็จ</div>;
+  useEffect(() => {
+    const statePayment = location.state?.payment;
 
-  const saleItems = (payment.sale.items || []).map((i) => ({
+    if (statePayment && statePayment.sale) {
+      setSale(statePayment.sale);
+      setPayment(statePayment);
+    } else {
+      getSaleById(id).then((res) => {
+        setSale(res);
+        setPayment({
+          saleId: res.id,
+          paymentMethod: res.paymentMethod,
+          amount: res.totalAmount,
+          note: res.note || '',
+          sale: res,
+        });
+      });
+    }
+  }, [location.state, id]);
+
+  if (!sale || !payment) return <div>⏳ กำลังโหลดข้อมูลใบเสร็จ...</div>;
+
+  const saleItems = (sale.items || []).map((i) => ({
     id: i.stockItem.id,
     productName: i.stockItem.product?.title || 'ไม่พบชื่อสินค้า',
     price: i.stockItem.sellPrice ?? 0,
     quantity: 1,
+    unit: i.stockItem.unitName || '-',
   }));
 
+  const branch = sale.branch || {};
+  const config = branch.receiptConfig || {};
+
+  const fullConfig = {
+    branchName: config.branchName || branch.name || '-',
+    address: config.address || branch.address || '-',
+    phone: config.phone || branch.phone || '-',
+    taxId: config.taxId || branch.taxId || '-',
+    footerNote: config.footerNote || '',
+    logoUrl: config.logoUrl || null,
+    vatRate: config.vatRate || 7,
+  };
+
   const saleData = {
-    sale: payment.sale,
+    sale,
     saleItems,
     payments: [payment],
-    config: {
-    branchName: payment.sale.branch?.name,
-    address: payment.sale.branch?.address,
-  },
+    config: fullConfig,
   };
 
   return <BillLayoutFullTax {...saleData} />;

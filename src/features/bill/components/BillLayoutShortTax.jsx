@@ -1,5 +1,5 @@
 // -----------------------
-// BillLayoutFullTax.jsx
+// BillLayoutShortTax.jsx (ปรับสมบูรณ์: รองรับพิมพ์จาก QuickSalePage + ListPage + Refresh)
 // -----------------------
 import React from 'react';
 
@@ -17,61 +17,76 @@ const BillLayoutShortTax = ({ sale, saleItems, payments, config }) => {
   const vatRate = typeof config.vatRate === 'number' ? config.vatRate : 7;
   const vatAmount = total - total / (1 + vatRate / 100);
   const beforeVat = total - vatAmount;
+  const formatCurrency = (val) => parseFloat(val || 0).toFixed(2);
+  const handlePrint = () => window.print();
 
   return (
-    <div className="w-full max-w-xl mx-auto text-sm">
-      <div className="text-center mb-2">
-        <h2 className="font-bold text-xl">{config.headerText}</h2>
-        {config.address && <p>{config.address}</p>}
-        {config.phone && <p>โทร. {config.phone}</p>}
-        <p className="mt-2">ใบกำกับภาษี (แบบย่อ)</p>
+    <div className="w-[80mm] min-h-[280mm] pt-6 pb-6 mx-auto text-base font-sans leading-relaxed">
+      <style>{`
+        @media print {
+          body {
+            margin: 0;
+            padding: 0;
+          }
+          @page {
+            size: 80mm auto;
+            margin: 0;
+          }
+        }
+      `}</style>
+
+      <div className="text-right print:hidden mb-4">
+        <button onClick={handlePrint} className="bg-blue-600 hover:bg-blue-700 text-white py-1 px-4 rounded text-sm">
+          พิมพ์บิล
+        </button>
       </div>
 
-      <div className="text-sm mb-2">
-        <p>เลขที่ใบเสร็จ: {sale.code}</p>
-        <p>วันที่: {new Date(sale.createdAt).toLocaleDateString('th-TH')}</p>
+      {/* Header */}
+      <div className="text-center border-b border-gray-300 pb-3 mb-4">
+        {config.logoUrl && <img src={config.logoUrl} alt="logo" className="h-10 mx-auto mb-2" />}
+        <h2 className="font-bold text-base leading-snug">{config.branchName}</h2>
+        <p className="text-sm whitespace-pre-line leading-tight">{config.address}</p>
+        {config.phone && <p className="text-sm">โทร. {config.phone}</p>}
+        {config.taxId && <p className="text-sm">เลขผู้เสียภาษี {config.taxId}</p>}
+      </div>
+
+      <div className="text-sm mb-4 space-y-1">
+        <p className="font-bold">ใบกำกับภาษีอย่างย่อ / ใบเสร็จรับเงิน</p>
+        <p>เลขที่: {sale.code}</p>
+        <p>วันที่: {new Date(sale.createdAt).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' })}</p>
+        <p>พนักงานขาย: {sale.employee?.name || '-'}</p>
         <p>ลูกค้า: {sale.customer?.name || '-'}</p>
-        <p>ที่อยู่: {sale.customer?.address || '-'}</p>
-        <p>เลขประจำตัวผู้เสียภาษี: {sale.customer?.taxId || '-'}</p>
       </div>
 
-      <table className="w-full text-xs mb-2 border-t border-b border-gray-300">
+      <table className="w-full text-sm border-t border-b border-gray-300 mb-4">
         <thead>
           <tr className="border-b">
-            <th className="text-left">สินค้า</th>
-            <th className="text-center">จำนวน</th>
-            <th className="text-right">ราคาต่อหน่วย</th>
-            <th className="text-right">รวม</th>
+            <th className="text-left py-1">สินค้า</th>
+            <th className="text-right py-1">จำนวน</th>
+            <th className="text-right py-1">ราคา</th>
           </tr>
         </thead>
         <tbody>
-          {saleItems.map(item => (
-            <tr key={item.id}>
-              <td>{item.productName}</td>
-              <td className="text-center">{item.quantity}</td>
-              <td className="text-right">
-                {typeof item.price === 'number' ? item.price.toFixed(2) : '0.00'}
-              </td>
-              <td className="text-right">
-                {typeof item.price === 'number' && typeof item.quantity === 'number'
-                  ? (item.price * item.quantity).toFixed(2)
-                  : '0.00'}
-              </td>
+          {saleItems.map((item) => (
+            <tr key={item.id} className="border-b border-dashed">
+              <td className="py-1">{item.productName}</td>
+              <td className="text-right py-1">{item.quantity}</td>
+              <td className="text-right py-1">{formatCurrency(item.price * item.quantity)} ฿</td>
             </tr>
           ))}
         </tbody>
       </table>
 
-      <div className="text-right text-xs">
-        <p>ยอดก่อนภาษี: {beforeVat.toFixed(2)} ฿</p>
-        <p>VAT {vatRate}%: {vatAmount.toFixed(2)} ฿</p>
-        <p>ส่วนลด: {discount.toFixed(2)} ฿</p>
-        <p className="font-bold">ยอดสุทธิ: {total.toFixed(2)} ฿</p>
+      <div className="text-sm text-right space-y-1">
+        <p>รวมก่อน VAT: {formatCurrency(beforeVat)} ฿</p>
+        <p>VAT {vatRate}%: {formatCurrency(vatAmount)} ฿</p>
+        <p className="font-bold text-base">รวมทั้งสิ้น: {formatCurrency(total)} ฿</p>
+        <p className="text-center mt-3 text-sm border-t border-dashed pt-2">VAT INCLUDED</p>
       </div>
 
-      <div className="mt-4 text-sm">
-        <p>วิธีชำระเงิน: {payments.map(p => `${p.paymentMethod}: ${parseFloat(p.amount).toFixed(2)} ฿`).join(', ')}</p>
-        <p className="text-center mt-4">{config.footerNote || 'ขอบคุณที่ใช้บริการ'}</p>
+      <div className="mt-6 text-sm space-y-1">
+        <p>ช่องทางชำระเงิน: {payments.map(p => `${p.paymentMethod}: ${formatCurrency(p.amount)} ฿`).join(', ')}</p>
+        {sale.note && <p>หมายเหตุ: {sale.note}</p>}
       </div>
     </div>
   );

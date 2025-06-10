@@ -34,7 +34,6 @@ const useSalesStore = create((set, get) => ({
     }
   },
 
-  
   confirmSaleOrderAction: async () => {
     const { saleItems, customerId } = get();
 
@@ -73,22 +72,14 @@ const useSalesStore = create((set, get) => ({
 
       const data = await createSaleOrder(payload);
 
-
       set({ saleItems: [], customerId: null });
 
-      return {
-        message: `✅ ขายสินค้าสำเร็จ: ${data.code}`,
-        code: data.code,
-        id: data.id,
-        stockItemIds: data.stockItemIds, // ส่งกลับไว้ใช้ภายหลัง
-      };
+      return data; // ✅ ส่งข้อมูลทั้งก้อนที่รวม branch, items, customer ฯลฯ
     } catch (err) {
       console.error('❌ [confirmSaleOrderAction]', err);
       return { error: 'เกิดข้อผิดพลาดในการขาย' };
     }
   },
-
-  
 
   searchStockItemAction: async (barcode) => {
     try {
@@ -126,7 +117,9 @@ const useSalesStore = create((set, get) => ({
   getSaleByIdAction: async (id) => {
     try {
       const data = await getSaleById(id);
-      set({ currentSale: data });
+
+      set({ selectedSale: data }); 
+    
     } catch (err) {
       console.error('[getSaleByIdAction]', err);
     }

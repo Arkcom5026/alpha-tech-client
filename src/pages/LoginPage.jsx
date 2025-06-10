@@ -15,8 +15,8 @@ const LoginPage = () => {
   const navigate = useNavigate();
   const login = useAuthStore((state) => state.login);
 
-  const [email, setEmail] = useState('admin@example.com');
-  const [password, setPassword] = useState('123456');
+  const [email, setEmail] = useState('advicebanphot@gmail.com');
+  const [password, setPassword] = useState('Arkcom-5026');
   const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);

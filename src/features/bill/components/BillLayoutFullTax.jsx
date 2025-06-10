@@ -26,27 +26,29 @@ const BillLayoutFullTax = ({ sale, saleItems, payments, config }) => {
 
   return (
     <>
-      <div className="w-full max-w-[794px] mx-auto mb-4 text-right">
+      <div className="w-full max-w-[794px] mx-auto mb-4 text-right ">
         <button onClick={handlePrint} className="bg-blue-600 hover:bg-blue-700 text-white py-1 px-4 rounded text-base print:hidden">
           พิมพ์บิล
         </button>
       </div>
 
-      <div className="w-full overflow-hidden mx-auto text-sm border border-black px-4 pt-4 pb-2 flex flex-col" style={{ width: '210mm', height: '297mm' }}>
-
+      <div
+        className="w-full overflow-hidden mx-auto text-sm border border-gray-600 px-4 pt-4 pb-2 flex flex-col rounded-md"
+        style={{ width: '210mm', height: '297mm', fontFamily: 'TH Sarabun New, sans-serif' }}
+      >
         {/* Header */}
         <div className="flex justify-between items-center border-b pb-2 mb-2">
           <div>
-
             <h2 className="font-bold text-sm">{config.branchName}</h2>
             <p>ที่อยู่: {config.address}</p>
             <p>โทร: {config.phone}</p>
             <p>เลขประจำตัวผู้เสียภาษี: {config.taxId}</p>          
           </div>
           
-          <div className="text-right">
-            <p className="border border-black px-2 py-1 font-bold">ต้นฉบับลูกค้า<br />CUSTOMER ORIGINAL</p>
+          <div className="text-right ">
+            <p className="border border-gray-600 px-2 py-1 font-bold rounded-md">ต้นฉบับลูกค้า<br />CUSTOMER ORIGINAL</p>
           </div>
+
         </div>
 
         <h3 className="text-center font-bold underline text-lg mb-4">ใบกำกับภาษี / ใบส่งสินค้า<br />TAX INVOICE ORIGINAL / DELIVERY ORDER</h3>
@@ -58,14 +60,12 @@ const BillLayoutFullTax = ({ sale, saleItems, payments, config }) => {
             <p><strong>ที่อยู่:</strong> {sale.customer?.address || '-'}</p>
             <p><strong>โทร:</strong> {sale.customer?.phone || '-'}</p>
             <p><strong>เลขประจำตัวผู้เสียภาษี:</strong> {sale.customer?.taxId || '-'}</p>
-            
           </div>
           <div className="border p-2 rounded-lg">
             <p><strong>วันที่:</strong> {new Date(sale.createdAt).toLocaleDateString('th-TH')}</p>
             <p><strong>เลขที่:</strong> {sale.code}</p>
             <p><strong>เงื่อนไขการชำระเงิน:</strong> {sale.paymentTerms || '-'}</p>
             <p><strong>วันที่ครบกำหนด:</strong> {sale.dueDate ? new Date(sale.dueDate).toLocaleDateString('th-TH') : '-'}</p>
-           
           </div>
         </div>
 
@@ -132,24 +132,21 @@ const BillLayoutFullTax = ({ sale, saleItems, payments, config }) => {
         </div>
 
         {/* Signatures */}
-        <div className="grid grid-cols-3 gap-4 text-sm mt-2 text-center pt-4">
-
+        <div className="grid grid-cols-3 gap-4 text-sm mt-2 text-center pt-4 ">
           <div>
-            <p className="border-t border-black pt-2">ผู้รับของ / RECEIVED BY</p>
+            <p className="border-t border-black pt-2 pb-4">ผู้รับของ / RECEIVED BY</p>
           </div>
           <div>
-            <p className="border-t border-black pt-2">ผู้ส่งของ / DELIVERED BY</p>
+            <p className="border-t border-black pt-2 pb-4">ผู้ส่งของ / DELIVERED BY</p>
           </div>
           <div>
-            <p className="border-t border-black pt-2">ผู้อนุมัติ / AUTHORIZED BY</p>
+            <p className="border-t border-black pt-2 pb-4">ผู้อนุมัติ / AUTHORIZED BY</p>
           </div>
         </div>
-
-
+        
       </div>
     </>
   );
 };
 
 export default BillLayoutFullTax;
-

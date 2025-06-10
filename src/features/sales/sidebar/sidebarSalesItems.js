@@ -4,8 +4,9 @@ const sidebarSalesItems = [
     label: 'การขาย',
     items: [
       { label: 'หน้าหลักการขาย', to: '/pos/sales'  },
-      { label: 'ขายด่วน', to: '/pos/sales/quick-sale', },
+      { label: 'ขายสินค้า', to: '/pos/sales/sale', },
       { label: 'พิมพ์ใบเสร็จ', to: '/pos/sales/bill', },
+      { label: 'คืนสินค้า', to: '/pos/sales/sale-return/', },
       { label: 'ออเดอร์', to: '/pos/sales/orders', },
     ],
   },

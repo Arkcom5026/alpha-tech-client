@@ -12,11 +12,12 @@ import { sidebarServicesItems } from '@/features/services/sidebar/sidebarService
 
 import sidebarEmployeeItems from '@/features/employee/sidebar/sidebarEmployeeItems';
 import { sidebarSupplierItems } from '@/features/supplier/sidebar/sidebarSupplierItems';
-import { sidebarFinanceItems } from '@/features/Finance/sidebar/sidebarFinanceItems';
+
 import { sidebarReportsItems } from '@/features/reports/sidebar/sidebarReportsItem';
 import sidebarSalesItems from '@/features/sales/sidebar/sidebarSalesItems';
 import { sidebarStockItems } from '@/features/stock/sidebar/sidebarStockItems';
 import { sidebarPurchaseOrdertems } from '@/features/purchaseOrder/sidebar/sidebarPurchaseOrdertems';
+import sidebarFinanceItems from '@/features/finance/sidebar/sidebarFinanceItems';
 
 
 const pathMap = {

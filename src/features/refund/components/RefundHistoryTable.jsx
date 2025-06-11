@@ -22,7 +22,7 @@ const RefundHistoryTable = ({ transactions }) => {
         <tbody>
           {transactions.map((rt) => (
             <tr key={rt.id}>
-              <td className="border px-2 py-1">{new Date(rt.createdAt).toLocaleDateString()}</td>
+              <td className="border px-2 py-1">{rt.refundedAt ? new Date(rt.refundedAt).toLocaleDateString() : '-'}</td>
               <td className="border px-2 py-1 text-right">{rt.amount.toFixed(2)} ฿</td>
               <td className="border px-2 py-1">{rt.method}</td>
               <td className="border px-2 py-1">{rt.note || '-'}</td>

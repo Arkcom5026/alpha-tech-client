@@ -1,24 +1,20 @@
 // refund/components/RefundForm.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import useRefundStore from '../store/refundStore';
 
 const RefundForm = ({ saleReturn }) => {
-  const remainingRefund = (saleReturn.totalRefund || 0) - (saleReturn.refundedAmount || 0);
+  const remainingRefund = (saleReturn.totalRefund || 0) - (saleReturn.refundedAmount || 0) - (saleReturn.deductedAmount || 0);
   const [deductAmount, setDeductAmount] = useState(0);
-  const [amount, setAmount] = useState(remainingRefund);
+  const [amount, setAmount] = useState(0);
   const [method, setMethod] = useState('CASH');
   const [note, setNote] = useState('');
 
   const { createRefundAction, loading, error } = useRefundStore();
 
-  useEffect(() => {
-    setAmount(Math.max(remainingRefund - deductAmount, 0));
-  }, [remainingRefund, deductAmount]);
-
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (amount > remainingRefund) {
-      alert('ยอดคืนเกินยอดคงเหลือที่สามารถคืนได้');
+    if (amount + deductAmount > remainingRefund) {
+      alert('ยอดคืนรวมกับยอดหัก เกินยอดคงเหลือที่สามารถคืนได้');
       return;
     }
     try {
@@ -58,8 +54,8 @@ const RefundForm = ({ saleReturn }) => {
         <input
           type="number"
           value={amount}
-          onChange={(e) => setAmount(parseFloat(e.target.value))}
-          max={remainingRefund - deductAmount}
+          onChange={(e) => setAmount(parseFloat(e.target.value) || 0)}
+          max={remainingRefund}
           className="w-full border px-3 py-2 rounded"
         />
       </div>

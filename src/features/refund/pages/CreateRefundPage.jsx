@@ -33,7 +33,8 @@ const CreateRefundPage = () => {
   if (!saleReturn) return <div className="p-4 text-red-600">❌ ไม่พบข้อมูลใบคืนสินค้า</div>;
 
   const refunded = saleReturn.refundedAmount || 0;
-  const remain = (saleReturn.totalRefund || 0) - refunded;
+  const deducted = saleReturn.deductedAmount || 0;
+  const remain = (saleReturn.totalRefund || 0) - refunded - deducted;
 
   return (
     <div className="min-h-screen flex justify-center items-center bg-gray-50 p-4">
@@ -47,6 +48,7 @@ const CreateRefundPage = () => {
           <p><span className="font-semibold">จำนวนสินค้าที่คืน:</span> {saleReturn.items?.length || 0} รายการ</p>
           <p><span className="font-semibold">ยอดคืนทั้งหมด:</span> {(saleReturn.totalRefund || 0).toFixed(2)} ฿</p>
           <p><span className="font-semibold">คืนแล้ว:</span> {refunded.toFixed(2)} ฿</p>
+          <p><span className="font-semibold">ยอดหักเงิน:</span> {deducted.toFixed(2)} ฿</p>
           <p><span className="font-semibold text-blue-700">ยอดคงเหลือ:</span> {remain.toFixed(2)} ฿</p>
         </div>
 

@@ -23,6 +23,7 @@ const useSaleReturnStore = create((set) => ({
     try {
       set({ loading: true });
       const data = await getAllSaleReturns();
+      console.log(' data : ',data)
       set({ saleReturns: data, loading: false });
     } catch (err) {
       console.error('❌ fetchSaleReturnsAction error:', err);

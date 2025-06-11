@@ -22,34 +22,42 @@ const ListReturnsPage = () => {
           <thead>
             <tr className="bg-gray-200">
               <th className="border px-2 py-1 w-[120px]">วันที่</th>
-              <th className="border px-2 py-1 w-[160px]">เลขที่ใบคืน</th>
+              <th className="border px-2 py-1 w-[160px]">เลขที่ใบคืนสินค้า</th>
               <th className="border px-2 py-1 w-[180px]">ลูกค้า</th>
-              <th className="border px-2 py-1 w-[120px] text-right">ยอดคืน</th>
+              <th className="border px-2 py-1 w-[120px] text-right">ยอดคืนแล้ว</th>
+              <th className="border px-2 py-1 w-[120px] text-right">ยอดคงเหลือ</th>
+              <th className="border px-2 py-1 w-[120px] text-right">ยอดคืนทั้งหมด</th>
               <th className="border px-2 py-1 w-[100px]">ประเภท</th>
               <th className="border px-2 py-1 w-[100px]">สถานะ</th>
               <th className="border px-2 py-1 w-[100px] text-center">Action</th>
             </tr>
           </thead>
           <tbody>
-            {saleReturns.map((sr) => (
-              <tr key={sr.id}>
-                <td className="border px-2 py-1">{new Date(sr.createdAt).toLocaleDateString()}</td>
-                <td className="border px-2 py-1">{sr.code}</td>
-                <td className="border px-2 py-1">{sr.sale?.customer?.name || '-'}</td>
-                <td className="border px-2 py-1 text-right">{(sr.totalRefund ?? 0).toFixed(2)} ฿</td>
-                <td className="border px-2 py-1">{sr.returnType}</td>
-                <td className="border px-2 py-1">{sr.status}</td>
-                <td className="border px-2 py-1 text-center">
-                  <button
-                    onClick={() => navigate(`/pos/finance/refunds/create/${sr.id}`)}
-                    
-                    className="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700"
-                  >
-                    คืนเงิน
-                  </button>
-                </td>
-              </tr>
-            ))}
+            {saleReturns.map((sr) => {
+              const totalRefund = sr.totalRefund || 0;
+              const refundedAmount = sr.refundedAmount || 0;
+              const remain = totalRefund - refundedAmount;
+              return (
+                <tr key={sr.id}>
+                  <td className="border px-2 py-1">{new Date(sr.createdAt).toLocaleDateString()}</td>
+                  <td className="border px-2 py-1">{sr.code}</td>
+                  <td className="border px-2 py-1">{sr.sale?.customer?.name || '-'}</td>
+                  <td className="border px-2 py-1 text-right">{refundedAmount.toFixed(2)} ฿</td>
+                  <td className="border px-2 py-1 text-right">{remain.toFixed(2)} ฿</td>
+                  <td className="border px-2 py-1 text-right">{totalRefund.toFixed(2)} ฿</td>
+                  <td className="border px-2 py-1">{sr.returnType}</td>
+                  <td className="border px-2 py-1">{sr.status}</td>
+                  <td className="border px-2 py-1 text-center">
+                    <button
+                      onClick={() => navigate(`/pos/finance/refunds/create/${sr.id}`)}
+                      className="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700"
+                    >
+                      คืนเงิน
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       )}

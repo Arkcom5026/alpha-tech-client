@@ -1,39 +1,65 @@
 // refund/components/RefundForm.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import useRefundStore from '../store/refundStore';
 
 const RefundForm = ({ saleReturn }) => {
-  const [amount, setAmount] = useState(saleReturn?.totalRefundAmount || 0);
+  const remainingRefund = (saleReturn.totalRefund || 0) - (saleReturn.refundedAmount || 0);
+  const [deductAmount, setDeductAmount] = useState(0);
+  const [amount, setAmount] = useState(remainingRefund);
   const [method, setMethod] = useState('CASH');
   const [note, setNote] = useState('');
 
   const { createRefundAction, loading, error } = useRefundStore();
 
+  useEffect(() => {
+    setAmount(Math.max(remainingRefund - deductAmount, 0));
+  }, [remainingRefund, deductAmount]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (amount > remainingRefund) {
+      alert('ยอดคืนเกินยอดคงเหลือที่สามารถคืนได้');
+      return;
+    }
     try {
       const refundData = {
         saleReturnId: saleReturn.id,
         amount,
         method,
         note,
+        deducted: deductAmount,
       };
       const result = await createRefundAction(refundData);
       console.log('✅ Refund created:', result);
-      // TODO: navigate, notify หรืออัปเดต state เพิ่มเติม
     } catch (err) {
       console.error('❌ Refund failed:', err);
     }
   };
 
+  if (remainingRefund <= 0) {
+    return <div className="text-green-600 font-semibold">✅ คืนเงินครบถ้วนแล้ว</div>;
+  }
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 max-w-md">
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <label className="block font-semibold mb-1">ยอดที่ต้องการหักออก (บาท)</label>
+        <input
+          type="number"
+          value={deductAmount}
+          onChange={(e) => setDeductAmount(parseFloat(e.target.value) || 0)}
+          max={remainingRefund}
+          className="w-full border px-3 py-2 rounded"
+        />
+      </div>
+
       <div>
         <label className="block font-semibold mb-1">ยอดเงินที่คืน (บาท)</label>
         <input
           type="number"
           value={amount}
           onChange={(e) => setAmount(parseFloat(e.target.value))}
+          max={remainingRefund - deductAmount}
           className="w-full border px-3 py-2 rounded"
         />
       </div>

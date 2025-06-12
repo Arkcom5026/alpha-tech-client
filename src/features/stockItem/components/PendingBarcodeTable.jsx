@@ -7,7 +7,6 @@ const PendingBarcodeTable = ({ loading }) => {
 
   // ✅ กรองรายการที่ยังไม่ถูกยิง SN โดยใช้ stockItemId
   const pendingList = barcodes.filter((b) => b.stockItemId == null);
-  console.log(pendingList)
   return (
     <div className="border rounded-md overflow-hidden">
       <table className="min-w-full text-sm">

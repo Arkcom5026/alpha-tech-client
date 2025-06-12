@@ -17,11 +17,8 @@ import CreatePurchaseOrderReceiptPage from '@/features/purchaseOrderReceipt/page
 import EditPurchaseOrderReceiptPage from '@/features/purchaseOrderReceipt/pages/EditPurchaseOrderReceiptPage';
 import ViewPurchaseOrderReceiptPage from '@/features/purchaseOrderReceipt/pages/ViewPurchaseOrderReceiptPage';
 import PrintPurchaseOrderReceiptTemplate from '@/features/purchaseOrderReceipt/pages/PrintPurchaseOrderReceiptTemplate';
-import ListPrintReceiptsPage from '@/features/barcode/pages/ListPrintReceiptsPage';
 import BarcodeReceiptListPage from '@/features/barcode/pages/BarcodeReceiptListPage';
-
 import PreviewBarcodePage from '@/features/barcode/pages/PreviewBarcodePage';
-import ScanSNPage from '@/features/stockItem/pages/ScanSNPage';
 import ListReceiptItemsToScanPage from '@/features/stockItem/pages/ListReceiptItemsToScanPage';
 import ScanBarcodeListPage from '@/features/stockItem/pages/ScanBarcodeListPage';
 
@@ -33,7 +30,6 @@ const purchasesRoutes = {
       index: true,
       element: <PurchaseDashboardPage />,
     },
-
     {
       path: 'orders',
       children: [
@@ -42,7 +38,6 @@ const purchasesRoutes = {
         { path: 'edit/:id', element: <EditPurchaseOrderPage />, },
         { path: 'view/:id', element: <PurchaseOrderDetailPage /> },
         { path: 'print/:id', element: <PrintPurchaseOrderPage /> }
-
       ]
     },
     {
@@ -55,25 +50,16 @@ const purchasesRoutes = {
         { path: 'view/:id', element: <ViewPurchaseOrderReceiptPage /> },
         { path: 'print/:id', element: <PrintPurchaseOrderReceiptTemplate /> },
         { path: 'items', element: <ListReceiptItemsToScanPage />  },        
-        { path: 'items/scan/:receiptId', element: <ScanBarcodeListPage /> },
-         
-       
+        { path: 'items/scan/:receiptId', element: <ScanBarcodeListPage /> },                
       ]
     },
-
-
     {
       path: 'barcodes',
       children: [
-        { index: true, element: <BarcodeReceiptListPage /> }, // รายการใบรับ
-        { path: 'items/:receiptId', element: <ListPrintReceiptsPage /> }, // รายการสินค้าแต่ละใบ               
-        { path: 'preview/:receiptId', element: <PreviewBarcodePage /> }, // หน้าพรีวิวก่อนพิมพ์
-        
+        { index: true, element: <BarcodeReceiptListPage /> }, // รายการใบรับ    
+        { path: 'preview/:receiptId', element: <PreviewBarcodePage /> }, // หน้าพรีวิวก่อนพิมพ์        
       ]
     }, 
-
-
-
     {
       path: 'suppliers',
       element: <SupplierListPage />,

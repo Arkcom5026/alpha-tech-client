@@ -30,3 +30,7 @@ export const receiveStockItem = async (barcode) => {
 };
 
 
+export const updateSerialNumber = async (barcode, serialNumber) => {
+  const res = await apiClient.patch(`/stock-items/update-sn/${barcode}`, { serialNumber });
+  return res.data;
+};

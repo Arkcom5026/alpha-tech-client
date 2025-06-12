@@ -5,9 +5,10 @@ import {
   getBarcodesByReceiptId,
   getReceiptsWithBarcodes,
   receiveStockItem,
+  updateSerialNumber,
 } from '../api/barcodeApi';
 
-const useBarcodeStore = create((set) => ({
+const useBarcodeStore = create((set, get) => ({
   barcodes: [],
   scannedList: [],
   receipts: [],
@@ -19,7 +20,21 @@ const useBarcodeStore = create((set) => ({
     set({ loading: true, error: null });
     try {
       const res = await getBarcodesByReceiptId(receiptId);
-      set({ barcodes: res.barcodes || [], loading: false });
+      set({
+        barcodes: (res.barcodes || []).map((b) => ({
+          ...b,
+          stockItem: b.stockItem
+            ? {
+                id: b.stockItem.id,
+                serialNumber: b.stockItem.serialNumber,
+                barcode: b.stockItem.barcode,
+                status: b.stockItem.status,
+              }
+            : null,
+        })),
+        loading: false,
+      });
+      console.log('res getBarcodesByReceiptId : ',res)
     } catch (err) {
       console.error('[loadBarcodesAction]', err);
       set({ error: err.message || 'โหลดบาร์โค้ดล้มเหลว', loading: false });
@@ -64,6 +79,56 @@ const useBarcodeStore = create((set) => ({
     }
   },
 
+  updateSerialNumberAction: async (barcode, serialNumber) => {
+    try {
+      const res = await updateSerialNumber(barcode, serialNumber);
+      console.log('SN อัปเดตสำเร็จ:', res);
+
+      const receiptId = res?.stockItem?.purchaseOrderReceiptItem?.receiptId;
+
+      // ✅ อัปเดต Store ชั่วคราวก่อน
+      set((state) => ({
+        barcodes: state.barcodes.map((item) =>
+          item.barcode === barcode
+            ? {
+                ...item,
+                stockItem: {
+                  ...(item.stockItem || {}),
+                  serialNumber: serialNumber,
+                },
+              }
+            : item
+        ),
+      }));
+      
+      if (receiptId) {
+        const { loadBarcodesAction } = get();
+        await loadBarcodesAction(receiptId);
+      }
+
+    } catch (err) {
+      console.error('❌ อัปเดต SN ล้มเหลว:', err);
+    }
+  },
+
+  deleteSerialNumberAction: async (barcode) => {
+    try {
+      const updated = await updateSerialNumber(barcode, null); // ✅ ลบ SN = set null
+      set((state) => ({
+        barcodes: state.barcodes.map((item) =>
+          item.barcode === barcode
+            ? { ...item, serialNumber: null } // ✅ clear SN ใน Store
+            : item
+        ),
+      }));
+      console.log('✅ SN ลบสำเร็จ:', updated);
+    } catch (error) {
+      console.error('❌ ลบ SN ล้มเหลว:', error);
+    }
+  },
+  
+
+
   // ✅ รีเซต
   clearAll: () =>
     set({
@@ -75,6 +140,3 @@ const useBarcodeStore = create((set) => ({
 }));
 
 export default useBarcodeStore;
-
-
-

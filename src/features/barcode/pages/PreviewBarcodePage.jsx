@@ -23,8 +23,7 @@ const PreviewBarcodePage = () => {
     setLoading(false);
     setLoaded(true);
 
-    const latestBarcodes = useBarcodeStore.getState().barcodes;
-    console.log('✅ barcodes (หลังโหลด):', latestBarcodes);
+        
   }, [receiptId, loading, loaded, loadBarcodesAction]);
 
   const handlePrint = () => {

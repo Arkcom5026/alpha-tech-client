@@ -1,11 +1,9 @@
 import apiClient from '@/utils/apiClient';
 
-// ✅ สร้างการชำระเงินให้ Supplier (พร้อมแนบไฟล์ได้)
-export const createSupplierPayment = async (formData) => {
+// ✅ สร้างการชำระเงินให้ Supplier (ไม่จำเป็นต้องผูก PO)
+export const createSupplierPayment = async (data) => {
   try {
-    const res = await apiClient.post('/purchase-order-payments', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
+    const res = await apiClient.post('/supplier-payments', data);
     return res.data;
   } catch (err) {
     console.error('❌ [createSupplierPayment] error:', err);
@@ -16,7 +14,7 @@ export const createSupplierPayment = async (formData) => {
 // ✅ ดึงการชำระเงินทั้งหมด (รายงานรวม)
 export const getAllSupplierPayments = async () => {
   try {
-    const res = await apiClient.get('/purchase-order-payments');
+    const res = await apiClient.get('/supplier-payments');
     return res.data;
   } catch (err) {
     console.error('❌ [getAllSupplierPayments] error:', err);
@@ -24,10 +22,10 @@ export const getAllSupplierPayments = async () => {
   }
 };
 
-// ✅ ดึงการชำระเงินของ PO รายการเดียว
+// ✅ ดึงการชำระเงินของ PO รายการเดียว (ถ้ามีการผูก PO)
 export const getSupplierPaymentsByPO = async (poId) => {
   try {
-    const res = await apiClient.get(`/purchase-order-payments/by-po/${poId}`);
+    const res = await apiClient.get(`/supplier-payments/by-po/${poId}`);
     return res.data;
   } catch (err) {
     console.error('❌ [getSupplierPaymentsByPO] error:', err);
@@ -38,10 +36,21 @@ export const getSupplierPaymentsByPO = async (poId) => {
 // ✅ ลบรายการการชำระเงิน
 export const deleteSupplierPayment = async (paymentId) => {
   try {
-    const res = await apiClient.delete(`/purchase-order-payments/${paymentId}`);
+    const res = await apiClient.delete(`/supplier-payments/${paymentId}`);
     return res.data;
   } catch (err) {
     console.error('❌ [deleteSupplierPayment] error:', err);
     throw err;
+  }
+};
+
+// ✅ ดึงยอดมัดจำที่ยังไม่ได้ผูกกับ PO
+export const getAdvancePaymentsBySupplier = async (supplierId) => {
+  try {
+    const res = await apiClient.get(`/supplier-payments/advance?supplierId=${supplierId}`);
+    return res.data;
+  } catch (error) {
+    console.error('❌ getAdvancePaymentsBySupplier error:', error);
+    return [];
   }
 };

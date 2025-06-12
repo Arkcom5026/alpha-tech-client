@@ -1,4 +1,3 @@
-
 // purchaseOrderApi.js
 import apiClient from '@/utils/apiClient';
 
@@ -26,10 +25,8 @@ export const getPurchaseOrders = async ({ search, status } = {}) => {
       params.status = status;
     }
 
-    
     const res = await apiClient.get('/purchase-orders', { params });
     return res.data;
-
   } catch (error) {
     console.error('❌ getPurchaseOrders error:', error);
     return [];
@@ -69,6 +66,17 @@ export const createPurchaseOrder = async (data) => {
   }
 };
 
+// ✅ สร้าง PO ใหม่
+export const createPurchaseOrderWithAdvance = async (data) => {
+  try {
+    const res = await apiClient.post('/purchase-orders/with-advance', data);
+    return res.data;
+  } catch (error) {
+    console.error('❌ createPurchaseOrderWithAdvance error:', error);
+    throw error;
+  }
+};
+
 // ✅ แก้ไข PO
 export const updatePurchaseOrder = async (id, data) => {
   try {
@@ -80,23 +88,16 @@ export const updatePurchaseOrder = async (id, data) => {
   }
 };
 
-
 // ✅ GET รายละเอียด PO แบบเต็ม (พร้อม supplier + รายการสินค้า + receiptItem)
 export const getPurchaseOrderDetailById = async (poId) => {
-
-
-
-try {
-  
-  const res = await apiClient.get(`/purchase-orders/${poId}`);
-  return res.data;
-} catch (error) {
-  console.error('📛 [getPurchaseOrderDetailById] error:', error);
-  throw error;
-}
+  try {
+    const res = await apiClient.get(`/purchase-orders/${poId}`);
+    return res.data;
+  } catch (error) {
+    console.error('📛 [getPurchaseOrderDetailById] error:', error);
+    throw error;
+  }
 };
-
-
 
 // ✅ ลบ PO
 export const deletePurchaseOrder = async (id) => {
@@ -109,7 +110,7 @@ export const deletePurchaseOrder = async (id) => {
   }
 };
 
-
+// ✅ เปลี่ยนสถานะ PO
 export const updatePurchaseOrderStatus = async ({ id, status }) => {
   try {
     console.log('✅ updatePurchaseOrderStatus:', { id, status });
@@ -118,5 +119,18 @@ export const updatePurchaseOrderStatus = async ({ id, status }) => {
   } catch (error) {
     console.error(`❌ updatePurchaseOrderStatus error:`, error);
     throw error;
+  }
+};
+
+// ✅ ดึง PO ตาม supplierId (ใช้ใน SupplierPaymentTabs)
+export const getPurchaseOrdersBySupplier = async (supplierId) => {
+  try {
+    const res = await apiClient.get(`/purchase-orders/by-supplier`, {
+      params: { supplierId },
+    });
+    return res.data;
+  } catch (error) {
+    console.error(`❌ getPurchaseOrdersBySupplier(${supplierId}) error:`, error);
+    return [];
   }
 };

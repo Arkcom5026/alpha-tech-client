@@ -12,6 +12,8 @@ import useSupplierStore from '@/features/supplier/store/supplierStore';
 import { useParams, useNavigate } from 'react-router-dom';
 import StandardActionButtons from '@/components/shared/buttons/StandardActionButtons';
 import PurchaseOrderTable from './PurchaseOrderTable';
+import { getAdvancePaymentsBySupplier } from '@/features/supplierPayment/api/supplierPaymentApi';
+
 
 const PurchaseOrderForm = ({ mode = 'create' }) => {
   const { id } = useParams();
@@ -22,6 +24,8 @@ const PurchaseOrderForm = ({ mode = 'create' }) => {
   const [note, setNote] = useState('');
   const [products, setProducts] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [advancePayments, setAdvancePayments] = useState([]);
+  const [selectedAdvanceIds, setSelectedAdvanceIds] = useState([]);
 
   const branchId = useEmployeeStore((state) => state.branch?.id);
   const {
@@ -29,6 +33,7 @@ const PurchaseOrderForm = ({ mode = 'create' }) => {
     loading,
     fetchPurchaseOrderById,
     createPurchaseOrder,
+    createPurchaseOrderWithAdvance,
     updatePurchaseOrder,
   } = usePurchaseOrderStore();
 
@@ -74,9 +79,15 @@ const PurchaseOrderForm = ({ mode = 'create' }) => {
     } else {
       setCreditHint(null);
     }
+
+    // ✅ โหลดยอดมัดจำเมื่อเลือก Supplier
+    const loadAdvance = async () => {
+      const data = await getAdvancePaymentsBySupplier(supplier.id);
+      setAdvancePayments(data);
+    };
+    loadAdvance();
   }, [supplier, supplierList]);
 
-  // ✅ debounce search
   useEffect(() => {
     const delayDebounce = setTimeout(() => {
       if (searchQuery.trim().length > 0) {
@@ -101,6 +112,7 @@ const PurchaseOrderForm = ({ mode = 'create' }) => {
         quantity: p.quantity,
         unitPrice: p.price || 0,
       })),
+      advancePaymentIds: selectedAdvanceIds, // ✅ ส่งไปผูกกับใบสั่งซื้อ
     };
 
     try {
@@ -109,7 +121,7 @@ const PurchaseOrderForm = ({ mode = 'create' }) => {
         console.log('✅ อัปเดตใบสั่งซื้อเรียบร้อย');
         navigate(`/pos/purchases/orders/print/${id}`);
       } else {
-        const created = await createPurchaseOrder(payload);
+        const created = await createPurchaseOrderWithAdvance(payload);
         console.log('✅ สร้างใบสั่งซื้อเรียบร้อย');
         navigate(`/pos/purchases/orders/print/${created.id}`);
       }
@@ -151,15 +163,30 @@ const PurchaseOrderForm = ({ mode = 'create' }) => {
         </div>
       </div>
 
-      <div>
-        <Label>หมายเหตุเพิ่มเติม</Label>
-        <Textarea
-          rows={3}
-          placeholder="เช่น เงื่อนไขการจัดส่งพิเศษ"
-          value={note}
-          onChange={(e) => setNote(e.target.value)}
-        />
-      </div>
+      {advancePayments.length > 0 && (
+        <div>
+          <Label>เลือกยอดมัดจำที่จะใช้กับใบสั่งซื้อนี้</Label>
+          <div className="space-y-1 mt-2">
+            {advancePayments.map((adv) => (
+              <div key={adv.id} className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={selectedAdvanceIds.includes(adv.id)}
+                  onChange={(e) => {
+                    const id = adv.id;
+                    setSelectedAdvanceIds((prev) =>
+                      e.target.checked ? [...prev, id] : prev.filter((i) => i !== id)
+                    );
+                  }}
+                />
+                <span>
+                  ยอดชำระล่วงหน้า: ฿{adv.debitAmount != null ? adv.debitAmount.toLocaleString() : 'ไม่ระบุ'} | วันที่: {adv.paidAt ? new Date(adv.paidAt).toLocaleDateString() : 'ไม่ระบุ'}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* SECTION 2: ค้นหาและเพิ่มสินค้า */}
       <div className="space-y-2">
@@ -193,3 +220,6 @@ const PurchaseOrderForm = ({ mode = 'create' }) => {
 };
 
 export default PurchaseOrderForm;
+
+
+  

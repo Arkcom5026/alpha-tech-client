@@ -1,11 +1,10 @@
-
-
 import { create } from 'zustand';
 import {
   createSupplierPayment,
   getSupplierPaymentsByPO,
   deleteSupplierPayment,
   getAllSupplierPayments,
+  getAdvancePaymentsBySupplier,
 } from '../api/supplierPaymentApi';
 
 const useSupplierPaymentStore = create((set, get) => ({
@@ -18,18 +17,7 @@ const useSupplierPaymentStore = create((set, get) => ({
   createSupplierPaymentAction: async (paymentData) => {
     set({ isSupplierPaymentSubmitting: true, supplierPaymentError: null });
     try {
-      const formData = new FormData();
-      for (const key in paymentData) {
-        if (paymentData[key] !== undefined && paymentData[key] !== null) {
-          if (key === 'attachmentFile' && paymentData[key] instanceof File) {
-            formData.append('attachment', paymentData[key]);
-          } else {
-            formData.append(key, paymentData[key]);
-          }
-        }
-      }
-
-      const response = await createSupplierPayment(formData);
+      const response = await createSupplierPayment(paymentData);
       set({ isSupplierPaymentSubmitting: false });
       return response;
     } catch (err) {
@@ -75,6 +63,18 @@ const useSupplierPaymentStore = create((set, get) => ({
       set({ supplierPaymentError: err.message || 'ลบข้อมูลไม่สำเร็จ' });
     }
   },
+
+
+
+  fetchAdvancePaymentsBySupplierAction: async (supplierId) => {
+    try {
+      const data = await getAdvancePaymentsBySupplier(supplierId);
+      set({ advancePayments: data });
+    } catch (err) {
+      console.error('❌ fetchAdvancePaymentsBySupplierAction error:', err);
+    }
+  },
 }));
+
 
 export default useSupplierPaymentStore;

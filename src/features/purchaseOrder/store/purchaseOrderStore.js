@@ -3,12 +3,14 @@ import { create } from 'zustand';
 import { getProducts } from '@/features/product/api/productApi';
 import {
   createPurchaseOrder,
+  createPurchaseOrderWithAdvance,
   deletePurchaseOrder,
   getEligiblePurchaseOrders,
   getPurchaseOrderById,
   getPurchaseOrders,
   updatePurchaseOrder,
-  updatePurchaseOrderStatus
+  updatePurchaseOrderStatus,
+  getPurchaseOrdersBySupplier
 } from '../api/purchaseOrderApi';
 
 const usePurchaseOrderStore = create((set) => ({
@@ -76,6 +78,17 @@ const usePurchaseOrderStore = create((set) => ({
     }
   },
 
+  createPurchaseOrderWithAdvance: async (poData) => {
+    try {
+      const newPO = await createPurchaseOrderWithAdvance(poData);
+      set((state) => ({ purchaseOrders: [newPO, ...state.purchaseOrders] }));
+      return newPO;
+    } catch (err) {
+      console.error('❌ createPurchaseOrderWithAdvance error:', err);
+      throw err;
+    }
+  },
+
   updatePurchaseOrder: async (id, poData) => {
     try {
       const updated = await updatePurchaseOrder(id, poData);
@@ -130,6 +143,19 @@ const usePurchaseOrderStore = create((set) => ({
       set({ error: err });
     }
   },
+
+  // ✅ ดึง PO ตาม supplierId (ใช้ใน SupplierPaymentTabs)
+  fetchPurchaseOrdersBySupplierAction: async (supplierId) => {
+    set({ loading: true });
+    try {
+      const data = await getPurchaseOrdersBySupplier(supplierId);
+      set({ purchaseOrders: data, loading: false });
+    } catch (err) {
+      console.error('❌ fetchPurchaseOrdersBySupplierAction error:', err);
+      set({ error: err, loading: false });
+    }
+  },
 }));
 
 export default usePurchaseOrderStore;
+

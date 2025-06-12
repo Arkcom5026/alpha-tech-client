@@ -9,11 +9,11 @@ import {
 import useSupplierStore from '@/features/supplier/store/supplierStore';
 
 const PurchaseOrderSupplierSelector = ({ value, onChange }) => {
-  const { suppliers, loading, loadSuppliers } = useSupplierStore();
+  const { suppliers, loading, fetchAllSuppliersAction  } = useSupplierStore();
 
   React.useEffect(() => {
-    loadSuppliers();
-  }, [loadSuppliers]);
+    fetchAllSuppliersAction ();
+  }, [fetchAllSuppliersAction]);
 
   return (
     <div className="w-full">

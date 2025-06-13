@@ -40,6 +40,7 @@ const useStockItemStore = create(
         await markStockItemsAsSold(stockItemIds); // ✅ ส่ง array ไปอย่างถูกต้อง
       } catch (err) {
         console.error('❌ อัปเดต stockItem ล้มเหลว:', err);
+        throw err;
       }
     },
 

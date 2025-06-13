@@ -108,6 +108,7 @@ const useBarcodeStore = create((set, get) => ({
 
     } catch (err) {
       console.error('❌ อัปเดต SN ล้มเหลว:', err);
+      throw err;
     }
   },
 

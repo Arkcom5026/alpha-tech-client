@@ -1,9 +1,10 @@
 // ✅ InStockBarcodeTable.jsx — แสดงรายการสินค้าที่ถูกยิง SN แล้ว (พร้อมขาย)
-import React from 'react';
+import React, { useState } from 'react';
 import useBarcodeStore from '@/features/barcode/store/barcodeStore';
 
 const InStockBarcodeTable = () => {
   const { barcodes, updateSerialNumberAction, deleteSerialNumberAction, loadBarcodesAction } = useBarcodeStore();
+  const [errorMessage, setErrorMessage] = useState('');
 
   const scannedList = barcodes.filter((b) => b.stockItemId != null);
 
@@ -11,7 +12,6 @@ const InStockBarcodeTable = () => {
     if (!window.confirm(`คุณต้องการลบ SN ของบาร์โค้ด ${barcode} ใช่หรือไม่?`)) return;
     await deleteSerialNumberAction(barcode);
 
-    // ✅ รีโหลดรายการ barcodes ทันทีหลังลบ SN
     const item = barcodes.find((b) => b.barcode === barcode);
     const receiptId = item?.receiptItem?.receiptId || item?.stockItem?.purchaseOrderReceiptItem?.receiptId;
     if (receiptId) loadBarcodesAction(receiptId);
@@ -20,17 +20,34 @@ const InStockBarcodeTable = () => {
   const handleAddSN = async (barcode) => {
     const newSN = prompt(`กรุณากรอก SN สำหรับบาร์โค้ด ${barcode}`);
     if (newSN) {
-      await updateSerialNumberAction(barcode, newSN);
+      try {
+        await updateSerialNumberAction(barcode, newSN);
 
-      // ✅ รีโหลดรายการ barcodes ทันทีหลังเพิ่ม SN
-      const item = barcodes.find((b) => b.barcode === barcode);
-      const receiptId = item?.receiptItem?.receiptId || item?.stockItem?.purchaseOrderReceiptItem?.receiptId;
-      if (receiptId) loadBarcodesAction(receiptId);
+        const item = barcodes.find((b) => b.barcode === barcode);
+        const receiptId = item?.receiptItem?.receiptId || item?.stockItem?.purchaseOrderReceiptItem?.receiptId;
+        if (receiptId) loadBarcodesAction(receiptId);
+       
+      } catch (err) {
+        const error = err?.response?.data?.error;
+        const msg = error?.toString?.() || 'ไม่สามารถบันทึก SN ได้';
+
+        if (msg.includes('SN นี้ถูกใช้ไปแล้ว')) {
+          setErrorMessage('❌ SN นี้ถูกใช้ไปแล้วในสินค้ารายการอื่น กรุณาตรวจสอบอีกครั้ง');
+        } else {
+          setErrorMessage(`เกิดข้อผิดพลาด: ${msg}`);
+          console.error('[handleAddSN] error:', err);
+        }
+      }
     }
   };
 
   return (
     <div className="border rounded-md overflow-hidden">
+      {errorMessage && (
+        <div key={errorMessage} className="bg-red-100 text-red-700 px-4 py-2 text-sm border-b border-red-300">
+          {errorMessage}
+        </div>
+      )}
       <table className="min-w-full text-sm">
         <thead className="bg-green-100">
           <tr>

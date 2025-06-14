@@ -29,7 +29,7 @@ const ReceivedSNTable = () => {
             <tr key={item.id}>
               <td className="px-4 py-2 text-sm">{item.barcode}</td>
               <td className="px-4 py-2 text-sm">{item.serial}</td>
-              <td className="px-4 py-2 text-sm">{item.buyPrice?.toLocaleString()} ฿</td>
+              <td className="px-4 py-2 text-sm">{item.costPrice?.toLocaleString()} ฿</td>
               <td className="px-4 py-2 text-sm">{new Date(item.receivedAt).toLocaleDateString()}</td>
               <td className="px-4 py-2 text-sm">{item.status}</td>
               <td className="px-4 py-2 text-center">

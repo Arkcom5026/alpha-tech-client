@@ -67,8 +67,8 @@ const PurchaseOrderDetailPage = () => {
                   <td className="py-2">{index + 1}</td>
                   <td>{item.product?.title || '-'}</td>
                   <td>{item.quantity}</td>
-                  <td>{item.price.toLocaleString()} ฿</td>
-                  <td>{(item.quantity * item.price).toLocaleString()} ฿</td>
+                  <td>{item.costPrice.toLocaleString()} ฿</td>
+                  <td>{(item.quantity * item.costPrice).toLocaleString()} ฿</td>
                 </tr>
               ))}
             </tbody>

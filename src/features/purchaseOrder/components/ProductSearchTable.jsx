@@ -6,20 +6,20 @@ import StandardActionButtons from '@/components/shared/buttons/StandardActionBut
 
 const ProductSearchTable = ({ results = [], onAdd }) => {
     const [quantities, setQuantities] = useState({});
-    const [prices, setPrices] = useState({});
+    const [costPrices, setCostPrices] = useState({});
     const [removedIds, setRemovedIds] = useState([]);
 
     const handleQuantityChange = (id, value) => {
         setQuantities((prev) => ({ ...prev, [id]: Number(value) || 0 }));
     };
 
-    const handlePriceChange = (id, value) => {
-        setPrices((prev) => ({ ...prev, [id]: Number(value) || 0 }));
+    const handleCostPriceChange = (id, value) => {
+        setCostPrices((prev) => ({ ...prev, [id]: Number(value) || 0 }));
     };
 
     const handleAdd = (product) => {
         const quantity = quantities[product.id] || 1;
-        const price = prices[product.id] || 0;
+        const costPrice = costPrices[product.id] || 0;
         onAdd({
             id: product.id,
             title: product.title,
@@ -27,7 +27,7 @@ const ProductSearchTable = ({ results = [], onAdd }) => {
             description: product.description,
             template: product.template,
             quantity,
-            price,
+            costPrice,
         });
         // ล้างข้อมูลออกทั้งแถวโดยลบ productId ออกจากผลการค้นหา
         setQuantities((prev) => {
@@ -35,7 +35,7 @@ const ProductSearchTable = ({ results = [], onAdd }) => {
             delete updated[product.id];
             return updated;
         });
-        setPrices((prev) => {
+        setCostPrices((prev) => {
             const updated = { ...prev };
             delete updated[product.id];
             return updated;
@@ -70,8 +70,8 @@ const ProductSearchTable = ({ results = [], onAdd }) => {
                     ) : (
                         visibleResults.map((product, index) => {
                             const qty = quantities[product.id] || 1;
-                            const price = prices[product.id] || 0;
-                            const total = qty * price;
+                            const costPrice = costPrices[product.id] || 0;
+                            const total = qty * costPrice;
                             return (
                                 <TableRow key={product.id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
                                     <TableCell className="text-center align-middle">{product.title}</TableCell>
@@ -90,9 +90,9 @@ const ProductSearchTable = ({ results = [], onAdd }) => {
                                         <input
                                             type="number"
                                             className="w-24 text-center border rounded p-1"
-                                            value={price}
+                                            value={costPrice}
                                             min={0}
-                                            onChange={(e) => handlePriceChange(product.id, e.target.value)}
+                                            onChange={(e) => handleCostPriceChange(product.id, e.target.value)}
                                         />
                                     </TableCell>
                                     <TableCell className="text-center align-middle">{total.toLocaleString()} ฿</TableCell>

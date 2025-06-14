@@ -15,6 +15,7 @@ const PurchaseOrderReceiptItemForm = ({ item }) => {
       await saveReceiptItem({
         purchaseOrderItemId: item.id,
         quantity: Number(quantityReceived),
+        costPrice: item.costPrice, // ✅ เพิ่ม costPrice ใน payload
       });
       setQuantityReceived('');
     } catch (err) {

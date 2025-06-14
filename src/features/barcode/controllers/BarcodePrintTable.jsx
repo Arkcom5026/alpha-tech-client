@@ -10,11 +10,9 @@ const BarcodePrintTable = ({ receipts }) => {
   const [selectedIds, setSelectedIds] = useState([]);
 
   const filteredReceipts = receipts.filter((receipt) => {
-    const isComplete = receipt.barcodeGenerated >= receipt.totalItems;
     if (statusFilter === 'ALL') return true;
-    if (statusFilter === 'PENDING') return receipt.barcodeGenerated === 0;
-    if (statusFilter === 'PARTIAL') return receipt.barcodeGenerated > 0 && !isComplete;
-    if (statusFilter === 'COMPLETE') return isComplete;
+    if (statusFilter === 'PENDING') return receipt.printed === false;
+    if (statusFilter === 'COMPLETE') return receipt.printed === true;
     return true;
   });
 
@@ -45,8 +43,7 @@ const BarcodePrintTable = ({ receipts }) => {
         <label className="font-medium">กรองสถานะบาร์โค้ด:</label>
         <label><input type="radio" name="status" value="ALL" checked={statusFilter === 'ALL'} onChange={(e) => setStatusFilter(e.target.value)} /> ทั้งหมด</label>
         <label><input type="radio" name="status" value="PENDING" checked={statusFilter === 'PENDING'} onChange={(e) => setStatusFilter(e.target.value)} /> ยังไม่ได้พิมพ์</label>
-        <label><input type="radio" name="status" value="PARTIAL" checked={statusFilter === 'PARTIAL'} onChange={(e) => setStatusFilter(e.target.value)} /> พิมพ์บางส่วน</label>
-        <label><input type="radio" name="status" value="COMPLETE" checked={statusFilter === 'COMPLETE'} onChange={(e) => setStatusFilter(e.target.value)} /> พิมพ์ครบแล้ว</label>
+        <label><input type="radio" name="status" value="COMPLETED" checked={statusFilter === 'COMPLETED'} onChange={(e) => setStatusFilter(e.target.value)} /> พิมพ์แล้ว</label>
       </div>
 
       <div className="overflow-x-auto">
@@ -67,41 +64,40 @@ const BarcodePrintTable = ({ receipts }) => {
             </tr>
           </thead>
           <tbody>
-            {filteredReceipts.map((receipt, index) => {
-              const isComplete = receipt.barcodeGenerated >= receipt.totalItems;
-              return (
-                <tr key={receipt.id} className="hover:bg-gray-50">
-                  <td className="border px-2 py-1 text-center">
-                    <input
-                      type="checkbox"
-                      checked={selectedIds.includes(receipt.id)}
-                      onChange={() => toggleSelect(receipt.id)}
-                    />
-                  </td>
-                  <td className="border px-2 py-1 text-center">{index + 1}</td>
-                  <td className="border px-2 py-1">{receipt.orderCode}</td>
-                  <td className="border px-2 py-1">{receipt.supplierName}</td>
-                  <td className="border px-2 py-1">
-                    {receipt.receivedAt && !isNaN(new Date(receipt.receivedAt))
-                      ? new Date(receipt.receivedAt).toLocaleDateString()
-                      : '-'}
-                  </td>
-                  <td className="border px-2 py-1 text-center">{receipt.totalItems}</td>
-                  <td className="border px-2 py-1 text-center">{receipt.barcodeGenerated}</td>
-                  <td className="border px-2 py-1 text-center">
-                    {isComplete ? 'พิมพ์ครบแล้ว' : (receipt.barcodeGenerated > 0 ? 'พิมพ์บางส่วน' : 'ยังไม่ได้พิมพ์')}
-                  </td>
-                  <td className="border px-2 py-1 text-center">
-                    <button
-                      onClick={() => handlePrintClick(receipt.id)}
-                      className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
-                    >
-                      พิมพ์
-                    </button>
-                  </td>
-                </tr>
-              );
-            })}
+            {filteredReceipts.map((receipt, index) => (
+              <tr key={receipt.id} className="hover:bg-gray-50">
+                <td className="border px-2 py-1 text-center">
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.includes(receipt.id)}
+                    onChange={() => toggleSelect(receipt.id)}
+                  />
+                </td>
+                <td className="border px-2 py-1 text-center">{index + 1}</td>
+                <td className="border px-2 py-1">{receipt.orderCode}</td>
+                <td className="border px-2 py-1">{receipt.supplierName}</td>
+                <td className="border px-2 py-1">
+                  {receipt.receivedAt && !isNaN(new Date(receipt.receivedAt))
+                    ? new Date(receipt.receivedAt).toLocaleDateString()
+                    : '-'}
+                </td>
+                <td className="border px-2 py-1 text-center">{receipt.totalItems}</td>
+                <td className="border px-2 py-1 text-center">{receipt.barcodeGenerated}</td>
+                <td className="border px-2 py-1 text-center">                  
+                  {receipt.status === 'COMPLETED' ? 'พิมพ์แล้ว' : 'ยังไม่ได้พิมพ์'}
+
+
+                </td>
+                <td className="border px-2 py-1 text-center">
+                  <button
+                    onClick={() => handlePrintClick(receipt.id)}
+                    className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
+                  >
+                    พิมพ์
+                  </button>
+                </td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>

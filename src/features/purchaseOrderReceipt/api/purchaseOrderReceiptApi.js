@@ -1,4 +1,4 @@
-// ✅ purchaseOrderReceiptApi.js — จัดการ API ของใบรับสินค้า
+// ✅ purchaseOrderReceiptApi.js — จัดการ API ของใบรับสินค้า + รายการในใบรับ
 
 import apiClient from '@/utils/apiClient';
 
@@ -104,6 +104,28 @@ export const markReceiptAsCompleted = async (receiptId) => {
     return res.data;
   } catch (error) {
     console.error('📛 [markReceiptAsCompleted] error:', error);
+    throw error;
+  }
+};
+
+// ✅ PATCH ตรวจสอบและ finalize ใบรับสินค้า (ใช้เมื่อยิง SN แล้ว)
+export const finalizeReceiptIfNeeded = async (receiptId) => {
+  try {
+    const res = await apiClient.patch(`/purchase-order-receipts/${receiptId}/finalize`);
+    return res.data;
+  } catch (error) {
+    console.error('📛 [finalizeReceiptIfNeeded] error:', error);
+    throw error;
+  }
+};
+
+// ✅ PATCH ระบุว่าใบรับสินค้านี้ "พิมพ์บาร์โค้ดแล้ว"
+export const markReceiptAsPrinted = async (receiptId) => {
+  try {
+    const res = await apiClient.patch(`/purchase-order-receipts/${receiptId}/printed`);
+    return res.data;
+  } catch (error) {
+    console.error('📛 [markReceiptAsPrinted] error:', error);
     throw error;
   }
 };

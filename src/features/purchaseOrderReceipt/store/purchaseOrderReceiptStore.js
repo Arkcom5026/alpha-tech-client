@@ -9,9 +9,12 @@ import {
   updateReceipt,
   deleteReceipt,
   getReceiptItemsByReceiptId,
-  markReceiptAsCompleted
+  markReceiptAsCompleted,
+  finalizeReceiptIfNeeded,
+  markReceiptAsPrinted
 } from '@/features/purchaseOrderReceipt/api/purchaseOrderReceiptApi';
 import { getEligiblePurchaseOrders, getPurchaseOrderDetailById, updatePurchaseOrderStatus } from '@/features/purchaseOrder/api/purchaseOrderApi';
+
 import {
   addReceiptItem,
   updateReceiptItem,
@@ -139,7 +142,13 @@ const usePurchaseOrderReceiptStore = create((set, get) => ({
 
   addReceiptItemAction: async (payload) => {
     try {
-      const added = await addReceiptItem(payload);
+      const adaptedPayload = {
+        ...payload,
+        purchaseOrderReceiptId: payload.receiptId, // ✅ เปลี่ยนชื่อ field
+      };
+      delete adaptedPayload.receiptId;
+
+      const added = await addReceiptItem(adaptedPayload);
       return added;
     } catch (error) {
       console.error('📛 addReceiptItem error:', error);
@@ -150,7 +159,7 @@ const usePurchaseOrderReceiptStore = create((set, get) => ({
 
   updateReceiptItemAction: async (payload) => {
     try {
-      const updated = await updateReceiptItem(payload);
+      const updated = await updateReceiptItem(payload.id, payload);
       return updated;
     } catch (error) {
       console.error('📛 updateReceiptItem error:', error);
@@ -158,7 +167,7 @@ const usePurchaseOrderReceiptStore = create((set, get) => ({
       throw error;
     }
   },
-
+  
   deleteReceiptItemAction: async (id) => {
     try {
       await deleteReceiptItem(id);
@@ -183,6 +192,31 @@ const usePurchaseOrderReceiptStore = create((set, get) => ({
     }
   },
 
+  markReceiptAsPrintedAction: async (receiptId) => {
+    try {
+      const res = await markReceiptAsPrinted(receiptId);
+      set((state) => ({
+        receipts: state.receipts.map((r) => (r.id === receiptId ? res : r)),
+        currentReceipt: res,
+      }));
+      return res;
+    } catch (err) {
+      console.error('❌ markReceiptAsPrintedAction error:', err);
+      throw err;
+    }
+  },
+
+  finalizeReceiptIfNeededAction: async (receiptId) => {
+    try {
+      const res = await finalizeReceiptIfNeeded(receiptId);
+      console.log('✅ Finalized receipt if needed:', res);
+      return res;
+    } catch (err) {
+      console.error('❌ finalizeReceiptIfNeededAction error:', err);
+      throw err;
+    }
+  },
+
   updatePurchaseOrderStatusAction: async ({ id, status }) => {
     try {
       const res = await updatePurchaseOrderStatus({ id, status });
@@ -195,5 +229,6 @@ const usePurchaseOrderReceiptStore = create((set, get) => ({
 
   clearCurrentReceipt: () => set({ currentReceipt: null }),
 }));
+
 
 export default usePurchaseOrderReceiptStore;

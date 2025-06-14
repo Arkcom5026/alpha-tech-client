@@ -14,7 +14,6 @@ import StandardActionButtons from '@/components/shared/buttons/StandardActionBut
 import PurchaseOrderTable from './PurchaseOrderTable';
 import { getAdvancePaymentsBySupplier } from '@/features/supplierPayment/api/supplierPaymentApi';
 
-
 const PurchaseOrderForm = ({ mode = 'create' }) => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -25,7 +24,7 @@ const PurchaseOrderForm = ({ mode = 'create' }) => {
   const [products, setProducts] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [advancePayments, setAdvancePayments] = useState([]);
-  const [selectedAdvanceIds, setSelectedAdvanceIds] = useState([]);
+  const [selectedAdvance, setSelectedAdvance] = useState([]);
 
   const branchId = useEmployeeStore((state) => state.branch?.id);
   const {
@@ -62,7 +61,7 @@ const PurchaseOrderForm = ({ mode = 'create' }) => {
         id: item.productId,
         title: item.product?.title || '',
         quantity: item.quantity,
-        price: item.price,
+        costPrice: item.costPrice, // ✅ ดึงจาก costPrice
       }));
       setProducts(enriched);
     }
@@ -73,14 +72,13 @@ const PurchaseOrderForm = ({ mode = 'create' }) => {
     const selected = supplierList.find((s) => s.id === supplier.id);
     if (selected) {
       setCreditHint({
-        used: selected.currentBalance || 0,
+        used: selected.creditBalance || 0,
         total: selected.creditLimit || 0,
       });
     } else {
       setCreditHint(null);
     }
 
-    // ✅ โหลดยอดมัดจำเมื่อเลือก Supplier
     const loadAdvance = async () => {
       const data = await getAdvancePaymentsBySupplier(supplier.id);
       setAdvancePayments(data);
@@ -110,9 +108,12 @@ const PurchaseOrderForm = ({ mode = 'create' }) => {
       items: products.map(p => ({
         productId: p.id,
         quantity: p.quantity,
-        unitPrice: p.price || 0,
+        costPrice: p.costPrice || 0, // ✅ ใช้ costPrice แทน unitPrice
       })),
-      advancePaymentIds: selectedAdvanceIds, // ✅ ส่งไปผูกกับใบสั่งซื้อ
+      advancePaymentsUsed: selectedAdvance.map((adv) => ({
+        paymentId: adv.id,
+        amount: adv.debitAmount || 0,
+      })),
     };
 
     try {
@@ -140,7 +141,6 @@ const PurchaseOrderForm = ({ mode = 'create' }) => {
 
   return (
     <form onSubmit={(e) => e.preventDefault()} className="space-y-6">
-      {/* SECTION 1: ข้อมูลทั่วไป */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <Label>เลือก Supplier</Label>
@@ -151,7 +151,6 @@ const PurchaseOrderForm = ({ mode = 'create' }) => {
             </p>
           )}
         </div>
-
         <div>
           <Label>วันที่สั่งซื้อ</Label>
           <Input
@@ -167,28 +166,33 @@ const PurchaseOrderForm = ({ mode = 'create' }) => {
         <div>
           <Label>เลือกยอดมัดจำที่จะใช้กับใบสั่งซื้อนี้</Label>
           <div className="space-y-1 mt-2">
-            {advancePayments.map((adv) => (
-              <div key={adv.id} className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={selectedAdvanceIds.includes(adv.id)}
-                  onChange={(e) => {
-                    const id = adv.id;
-                    setSelectedAdvanceIds((prev) =>
-                      e.target.checked ? [...prev, id] : prev.filter((i) => i !== id)
-                    );
-                  }}
-                />
-                <span>
-                  ยอดชำระล่วงหน้า: ฿{adv.debitAmount != null ? adv.debitAmount.toLocaleString() : 'ไม่ระบุ'} | วันที่: {adv.paidAt ? new Date(adv.paidAt).toLocaleDateString() : 'ไม่ระบุ'}
-                </span>
-              </div>
-            ))}
+            {advancePayments.map((adv) => {
+              const isSelected = selectedAdvance.some((s) => s.id === adv.id);
+              return (
+                <div key={adv.id} className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={isSelected}
+                    onChange={(e) => {
+                      setSelectedAdvance((prev) => {
+                        if (e.target.checked) {
+                          return [...prev, adv];
+                        } else {
+                          return prev.filter((p) => p.id !== adv.id);
+                        }
+                      });
+                    }}
+                  />
+                  <span>
+                    ยอดชำระล่วงหน้า: ฿{adv.debitAmount != null ? adv.debitAmount.toLocaleString() : 'ไม่ระบุ'} | วันที่: {adv.paidAt ? new Date(adv.paidAt).toLocaleDateString() : 'ไม่ระบุ'}
+                  </span>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
 
-      {/* SECTION 2: ค้นหาและเพิ่มสินค้า */}
       <div className="space-y-2">
         <Label>ค้นหาสินค้า</Label>
         <div className="flex gap-2 items-center">
@@ -199,27 +203,19 @@ const PurchaseOrderForm = ({ mode = 'create' }) => {
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
-
         <ProductSearchTable results={searchResults} onAdd={addProductToOrder} />
       </div>
 
-      {/* SECTION 3: รายการสินค้าในใบสั่งซื้อ */}
       <div>
         <h3 className="text-md font-semibold px-4 pt-3 pb-2 text-gray-700">รายการสินค้าที่สั่งซื้อ</h3>
         <PurchaseOrderTable products={products} setProducts={setProducts} editable={mode !== 'view'} />
       </div>
 
       <div className="flex justify-end">
-        <StandardActionButtons
-          onSave={handleSubmit}
-          onCancel={() => navigate(-1)}
-        />
+        <StandardActionButtons onSave={handleSubmit} onCancel={() => navigate(-1)} />
       </div>
     </form>
   );
 };
 
 export default PurchaseOrderForm;
-
-
-  

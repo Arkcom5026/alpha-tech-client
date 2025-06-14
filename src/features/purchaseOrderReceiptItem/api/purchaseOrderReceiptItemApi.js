@@ -30,15 +30,20 @@ export const addReceiptItem = async (data) => {
   }
 };
 
-export const updateReceiptItem = async (data) => {
+// ✅ UPDATE รายการสินค้าในใบรับ (PUT ตาม REST)
+export const updateReceiptItem = async (id, payload) => {
   try {
-    const res = await apiClient.put('/purchase-order-receipt-items/update', data);
+    const res = await  apiClient.put(`/purchase-order-receipt-items/${id}`, payload);
+
     return res.data;
   } catch (error) {
-    console.error('❌ [updateReceiptItem] error:', error);
+    console.error('📛 [updateReceiptItem] error:', error);
     throw error;
   }
 };
+
+
+
 
 export const deleteReceiptItem = async (id) => {
   try {

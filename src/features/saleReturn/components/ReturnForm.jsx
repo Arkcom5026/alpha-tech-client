@@ -78,7 +78,7 @@ const ReturnForm = ({ items = [], onSubmit, sale }) => {
                 {item.stockItem?.product?.description || '-'}
               </td>
               <td className="border px-2 py-1 text-right">
-                {item.price?.toLocaleString('th-TH', { minimumFractionDigits: 2 }) || '0.00'}
+                {item.costPrice?.toLocaleString('th-TH', { minimumFractionDigits: 2 }) || '0.00'}
               </td>
             </tr>
           ))}

@@ -8,9 +8,9 @@ export function cn(...inputs) {
 }
 
 // แปลงตัวเลขให้เป็นราคาไทย
-export const formatPrice = (price) => {
-  if (typeof price !== "number") return "-";
-  return price.toLocaleString("th-TH", {
+export const formatPrice = (costPrice) => {
+  if (typeof costPrice !== "number") return "-";
+  return costPrice.toLocaleString("th-TH", {
     style: "currency",
     currency: "THB",
     minimumFractionDigits: 2,

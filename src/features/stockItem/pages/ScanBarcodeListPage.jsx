@@ -5,6 +5,7 @@ import { useParams, useSearchParams } from 'react-router-dom';
 import PendingBarcodeTable from '../components/PendingBarcodeTable';
 import InStockBarcodeTable from '../components/InStockBarcodeTable';
 import useBarcodeStore from '@/features/barcode/store/barcodeStore';
+import { finalizeReceiptIfNeeded } from '@/features/purchaseOrderReceipt/api/purchaseOrderReceiptApi';
 
 const ScanBarcodeListPage = () => {
   const { receiptId } = useParams();
@@ -22,13 +23,16 @@ const ScanBarcodeListPage = () => {
     loading,
     barcodes,
     receiveSNAction,
+    currentReceipt,
+    loadReceiptWithSupplierAction,
   } = useBarcodeStore();
 
   useEffect(() => {
     if (receiptId) {
       loadBarcodesAction(receiptId);
+      loadReceiptWithSupplierAction(receiptId); // ✅ โหลดข้อมูล supplier
     }
-  }, [receiptId, loadBarcodesAction]);
+  }, [receiptId, loadBarcodesAction, loadReceiptWithSupplierAction]);
 
   useEffect(() => {
     if (keepSN && snInputRef.current) {
@@ -65,12 +69,15 @@ const ScanBarcodeListPage = () => {
     };
 
     await receiveSNAction(payload);
+    await finalizeReceiptIfNeeded(receiptId); // ✅ ตรวจสอบและอัปเดตเครดิต + มัดจำหากครบ
+    await loadBarcodesAction(receiptId); // ✅ โหลดรายการบาร์โค้ดใหม่
+    await loadReceiptWithSupplierAction(receiptId); // ✅ โหลดเครดิต supplier ใหม่
+
     setBarcodeInput('');
     setSnInput('');
     setInputStartTime(null);
     setSnError('');
     playBeep();
-    loadBarcodesAction(receiptId); // ✅ โหลดใหม่ทุกครั้งโดยไม่ต้องเช็คเงื่อนไข
   };
 
   return (
@@ -78,6 +85,17 @@ const ScanBarcodeListPage = () => {
       <h1 className="text-xl font-bold">
         📦 รายการสินค้าที่ต้องยิง SN (ใบสั่งซื้อ #{purchaseOrderCode || receiptId})
       </h1>
+
+      {/* ✅ แสดงข้อมูลเครดิตของ Supplier */}
+      {currentReceipt?.purchaseOrder?.supplier && (
+        <div className="bg-white border rounded p-4 shadow w-fit">
+          <p className="font-bold text-blue-700 mb-1">💳 เครดิตของ Supplier</p>
+          <p>ชื่อ: {currentReceipt.purchaseOrder.supplier.name}</p>
+          <p>วงเงินเครดิต: {currentReceipt.purchaseOrder.supplier.creditLimit?.toLocaleString()} บาท</p>
+          <p>ยอดคงเหลือ: {currentReceipt.purchaseOrder.supplier.creditBalance?.toLocaleString()} บาท</p>
+          <p>ยอดมัดจำ: {currentReceipt.purchaseOrder.supplier.debitAmount?.toLocaleString()} บาท</p>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-2">
         <div className="flex items-center gap-2">

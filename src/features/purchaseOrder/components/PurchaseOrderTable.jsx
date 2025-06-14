@@ -32,7 +32,7 @@ const PurchaseOrderTable = ({ products = [], setProducts = () => { }, loading = 
             <TableHead className="text-center w-[160px]">หมวดหมู่</TableHead>
             <TableHead className="text-center">รายละเอียด</TableHead>
             <TableHead className="text-center w-[100px]">จำนวน</TableHead>
-            <TableHead className="text-center w-[120px]">ราคาต่อหน่วย</TableHead>
+            <TableHead className="text-center w-[120px]">ราคาทุน</TableHead>
             <TableHead className="text-center w-[120px]">ราคารวม</TableHead>
             <TableHead className="text-center w-[120px]"></TableHead>
           </TableRow>
@@ -41,12 +41,12 @@ const PurchaseOrderTable = ({ products = [], setProducts = () => { }, loading = 
         <TableBody>
           {!loading && products.length > 0 ? (
             products.map((item, index) => {
-              const total = item.quantity * item.price;
+              const total = item.quantity * item.costPrice;
               const isLast = index === products.length - 1;
               return (
                 <TableRow key={item.id} ref={isLast ? lastRowRef : null}>
                   <TableCell className="text-center">{item.title || '-'}</TableCell>
-                   <TableCell className="text-center align-middle">{item.template?.name || 'ไม่มีหมวดหมู่'}</TableCell>
+                  <TableCell className="text-center align-middle">{item.template?.name || 'ไม่มีหมวดหมู่'}</TableCell>
                   <TableCell className="text-center">{item.description || '-'}</TableCell>
                   <TableCell className="text-center">
                     <input
@@ -60,9 +60,9 @@ const PurchaseOrderTable = ({ products = [], setProducts = () => { }, loading = 
                   <TableCell className="text-center">
                     <input
                       type="number"
-                      value={item.price}
+                      value={item.costPrice}
                       min={0}
-                      onChange={(e) => handleChange(item.id, 'price', e.target.value)}
+                      onChange={(e) => handleChange(item.id, 'costPrice', e.target.value)}
                       className="w-24 text-center border rounded p-1"
                     />
                   </TableCell>
@@ -72,7 +72,7 @@ const PurchaseOrderTable = ({ products = [], setProducts = () => { }, loading = 
                       <div className="flex justify-center">
                         <StandardActionButtons
                           onDelete={() => {
-                            if (window.confirm(`ต้องการลบรายการ ${item.title} ใช่หรือไม่?`)) {
+                            if (confirm(`ต้องการลบรายการ ${item.title} ใช่หรือไม่?`)) {
                               handleDelete(item.id);
                             }
                           }}

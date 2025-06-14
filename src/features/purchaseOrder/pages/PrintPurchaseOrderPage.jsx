@@ -47,7 +47,7 @@ const PrintPurchaseOrderPage = () => {
   if (loading) return <p className="p-4">กำลังโหลด...</p>;
   if (!po) return <p className="p-4 text-red-500">ไม่พบใบสั่งซื้อ</p>;
 
-  const total = po.items?.reduce((sum, item) => sum + item.quantity * item.price, 0) || 0;
+  const total = po.items?.reduce((sum, item) => sum + item.quantity * item.costPrice, 0) || 0;
 
   return (
     <div>
@@ -127,8 +127,8 @@ const PrintPurchaseOrderPage = () => {
                 <td className="border p-2 text-center">{idx + 1}</td>
                 <td className="border p-2">{item.product?.title || '-'}</td>
                 <td className="border p-2 text-center">{item.quantity}</td>
-                <td className="border p-2 text-right">{item.price.toLocaleString()} ฿</td>
-                <td className="border p-2 text-right">{(item.quantity * item.price).toLocaleString()} ฿</td>
+                <td className="border p-2 text-right">{item.costPrice.toLocaleString()} ฿</td>
+                <td className="border p-2 text-right">{(item.quantity * item.costPrice).toLocaleString()} ฿</td>
               </tr>
             ))}
             <tr className="font-semibold">

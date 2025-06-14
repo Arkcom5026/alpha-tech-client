@@ -32,6 +32,8 @@ const ListReceiptItemsToScanPage = () => {
               <TableHead>Supplier</TableHead>
               <TableHead>จำนวนบาร์โค้ด</TableHead>
               <TableHead>ยิงแล้ว</TableHead>
+              <TableHead>เครดิตใช้ได้</TableHead>
+              <TableHead>ยอดมัดจำ</TableHead>
               <TableHead className="text-right">การจัดการ</TableHead>
             </TableRow>
           </TableHeader>
@@ -43,6 +45,8 @@ const ListReceiptItemsToScanPage = () => {
                 <TableCell>{r.supplier}</TableCell>
                 <TableCell>{r.total}</TableCell>
                 <TableCell>{r.scanned}</TableCell>
+                <TableCell className="text-green-700">฿{r.creditAvailable?.toLocaleString() || '-'}</TableCell>
+                <TableCell className="text-blue-700">฿{r.debitAmount?.toLocaleString() || '-'}</TableCell>
                 <TableCell className="text-right">
                   <Button
                     size="sm"
@@ -61,3 +65,4 @@ const ListReceiptItemsToScanPage = () => {
 };
 
 export default ListReceiptItemsToScanPage;
+

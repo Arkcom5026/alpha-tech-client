@@ -31,8 +31,8 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, deliveryNoteNumbe
         const initTotals = {};
         currentOrder?.items?.forEach((item) => {
           initQuantities[item.id] = item.quantity || 0;
-          initPrices[item.id] = item.price || 0;
-          initTotals[item.id] = (item.quantity || 0) * (item.price || 0);
+          initPrices[item.id] = item.costPrice || 0;
+          initTotals[item.id] = (item.quantity || 0) * (item.costPrice || 0);
         });
         setReceiptQuantities(initQuantities);
         setReceiptPrices(initPrices);
@@ -42,10 +42,10 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, deliveryNoteNumbe
     }
   }, [poId]);
 
-  const calculateTotal = (itemId, quantity, price) => {
+  const calculateTotal = (itemId, quantity, costPrice) => {
     setReceiptTotals((prev) => ({
       ...prev,
-      [itemId]: quantity * price
+      [itemId]: quantity * costPrice
     }));
   };
 
@@ -81,13 +81,13 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, deliveryNoteNumbe
   };
 
   const handlePriceChange = (itemId, value) => {
-    const price = Number(value);
-    if (isNaN(price) || price < 0) return;
+    const costPrice = Number(value);
+    if (isNaN(costPrice) || costPrice < 0) return;
     setReceiptPrices((prev) => ({
       ...prev,
-      [itemId]: price
+      [itemId]: costPrice
     }));
-    calculateTotal(itemId, receiptQuantities[itemId] || 0, price);
+    calculateTotal(itemId, receiptQuantities[itemId] || 0, costPrice);
   };
 
   const handleBlurQuantity = (itemId) => {
@@ -102,6 +102,36 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, deliveryNoteNumbe
       const current = prev[itemId];
       return { ...prev, [itemId]: current === 0 ? '' : current };
     });
+  };
+
+  const handleSaveItem = async (item) => {
+    try {
+      setSaving((prev) => ({ ...prev, [item.id]: true }));
+
+      let newReceiptId = receiptId;
+      if (!newReceiptId) {
+        const newReceipt = await createReceiptAction({
+          purchaseOrderId: poId,
+          note: deliveryNoteNumber,
+        });
+        newReceiptId = newReceipt.id;
+        setReceiptId(newReceiptId);
+      }
+
+      const payload = {
+        quantity: receiptQuantities[item.id],
+        costPrice: receiptPrices[item.id],
+        receiptId: newReceiptId,
+        purchaseOrderItemId: item.id,
+      };
+
+      const res = await addReceiptItemAction(payload);
+      setSavedRows((prev) => ({ ...prev, [item.id]: true }));
+    } catch (error) {
+      console.error('❌ saveItem error:', error);
+    } finally {
+      setSaving((prev) => ({ ...prev, [item.id]: false }));
+    }
   };
 
   const handleConfirmFinalize = () => {
@@ -124,7 +154,6 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, deliveryNoteNumbe
   return (
     <div className="space-y-4 w-full">
       <h2 className="text-lg font-semibold">รายการสินค้าในใบสั่งซื้อ</h2>
-
       <div className="overflow-x-auto w-full">
         <table className="min-w-full border border-gray-300 text-sm">
           <thead className="bg-gray-100">
@@ -141,8 +170,6 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, deliveryNoteNumbe
             </tr>
           </thead>
           <tbody>
-
-
             {(currentOrder?.items || []).map((item) => {
               const received = Number(item.receivedQuantity || 0);
               const quantity = receiptQuantities[item.id] ?? 0;
@@ -163,7 +190,7 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, deliveryNoteNumbe
                   <td className="border px-2 py-1 text-center">{item.product?.template?.name || 'ไม่มีหมวดหมู่'}</td>
                   <td className="border px-2 py-1 text-center">{item.product?.description || '-'}</td>
                   <td className="border px-2 py-1 text-center">{item.quantity}</td>
-                  <td className="border px-2 py-1 text-center">{item.price}</td>
+                  <td className="border px-2 py-1 text-center">{item.costPrice}</td>
                   <td className="border px-2 py-1 text-center">
                     <input
                       type="number"
@@ -225,7 +252,7 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, deliveryNoteNumbe
                   <td className="border px-2 py-1 text-center space-x-1">
                     {!isSaved && (
                       <button
-                        onClick={() => handleSaveItem(item.id)}
+                        onClick={() => handleSaveItem(item)}
                         disabled={disableSave}
                         className="bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700 disabled:opacity-50"
                       >

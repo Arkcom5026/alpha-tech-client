@@ -16,7 +16,7 @@ const PODetailPage = () => {
     ],
   };
 
-  const total = po.items.reduce((sum, item) => sum + item.quantity * item.price, 0);
+  const total = po.items.reduce((sum, item) => sum + item.quantity * item.costPrice, 0);
   const vat = total * 0.07;
   const grandTotal = total + vat;
 
@@ -46,8 +46,8 @@ const PODetailPage = () => {
               <tr key={i}>
                 <td className="p-2 border">{item.name}</td>
                 <td className="p-2 border text-right">{item.quantity}</td>
-                <td className="p-2 border text-right">{item.price.toLocaleString()}</td>
-                <td className="p-2 border text-right">{(item.quantity * item.price).toLocaleString()}</td>
+                <td className="p-2 border text-right">{item.costPrice.toLocaleString()}</td>
+                <td className="p-2 border text-right">{(item.quantity * item.costPrice).toLocaleString()}</td>
               </tr>
             ))}
           </tbody>

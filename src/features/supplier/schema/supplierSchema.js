@@ -21,7 +21,7 @@ export const supplierSchema = z.object({
     .min(0, 'วงเงินเครดิตต้องไม่ต่ำกว่า 0')
     .optional(),
 
-  currentBalance: z.coerce.number({ invalid_type_error: 'ยอดค้างชำระต้องเป็นตัวเลข' })
+    creditBalance: z.coerce.number({ invalid_type_error: 'ยอดค้างชำระต้องเป็นตัวเลข' })
     .min(0, 'ยอดค้างชำระต้องไม่ต่ำกว่า 0')
     .optional(),
 

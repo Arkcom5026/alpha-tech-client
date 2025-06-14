@@ -4,16 +4,19 @@ import React, { useState, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import useBarcodeStore from '@/features/barcode/store/barcodeStore';
 import BarcodeWithQRRenderer from '@/components/shared/barcode/BarcodeWithQRRenderer';
+import usePurchaseOrderReceiptStore from '@/features/purchaseOrderReceipt/store/purchaseOrderReceiptStore';
 
 const PreviewBarcodePage = () => {
   const { receiptId } = useParams();
-  const { barcodes, loadBarcodesAction } = useBarcodeStore();
+  const { barcodes, loadBarcodesAction, markBarcodeAsPrintedAction  } = useBarcodeStore();
+  const {markReceiptAsPrintedAction  } = usePurchaseOrderReceiptStore();
+
   const [loading, setLoading] = useState(false);
   const [loaded, setLoaded] = useState(false);
 
   const [columns, setColumns] = useState(6);
   const [barcodeHeight, setBarcodeHeight] = useState(30);
-  const [barcodeWidth, setBarcodeWidth] = useState(2);
+  const [barcodeWidth, setBarcodeWidth] = useState(0.6);
 
   const handleLoadBarcodes = useCallback(async () => {
     if (!receiptId || loading || loaded) return;
@@ -22,12 +25,26 @@ const PreviewBarcodePage = () => {
     await loadBarcodesAction(receiptId);
     setLoading(false);
     setLoaded(true);
-
-        
   }, [receiptId, loading, loaded, loadBarcodesAction]);
 
-  const handlePrint = () => {
-    window.print();
+  const handlePrint = async () => {
+    try {
+      if (!receiptId || barcodes.length === 0) return;
+
+      const hasUnprinted = barcodes.some((b) => !b.printed);
+
+      if (hasUnprinted) {
+        console.log('[📦] Updating printed status for purchaseOrderReceiptId:', receiptId);
+        await markBarcodeAsPrintedAction({ purchaseOrderReceiptId: receiptId });
+      }
+
+      // ✅ อัปเดตสถานะใบรับสินค้าให้เป็น COMPLETE หลังพิมพ์ ผ่าน Store
+      await markReceiptAsPrintedAction(receiptId);
+
+      window.print();
+    } catch (error) {
+      console.error('❌ อัปเดตสถานะ printed ล้มเหลว:', error);
+    }
   };
 
   return (

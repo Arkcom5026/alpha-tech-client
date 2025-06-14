@@ -20,6 +20,7 @@ import { sidebarPurchaseOrdertems } from '@/features/purchaseOrder/sidebar/sideb
 import sidebarFinanceItems from '@/features/finance/sidebar/sidebarFinanceItems';
 
 
+
 const pathMap = {
   '/pos/stock/templates': sidebarStockItems,
   '/pos/stock/profiles': sidebarStockItems,

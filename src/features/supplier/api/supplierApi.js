@@ -1,3 +1,4 @@
+
 // ✅ supplierApi.js
 import apiClient from '@/utils/apiClient';
 
@@ -13,6 +14,7 @@ export const getAllSuppliers = async () => {
 
 export const getSupplierById = async (id) => {
   try {
+    console.log('id : ',id)
     const response = await apiClient.get(`/suppliers/${id}`);
     return response.data;
   } catch (error) {

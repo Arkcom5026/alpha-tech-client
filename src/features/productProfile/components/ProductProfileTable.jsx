@@ -23,23 +23,23 @@ const ProductProfileTable = ({ profiles, onReload }) => {
 
   return (
     <div className="w-full flex justify-center mt-4">
-      <div className="w-[1000px] border rounded-md overflow-hidden">
-        <table className="min-w-full text-sm text-center">
+      <div className="w-[1200px] border rounded-md overflow-hidden">
+        <table className="min-w-full text-sm text-left border-collapse">
           <thead className="bg-gray-100 dark:bg-zinc-800">
             <tr>
-              <th className="px-4 py-2 border text-center align-middle">ชื่อ</th>
-              <th className="px-4 py-2 border text-center align-middle">คำอธิบาย</th>
-              <th className="px-4 py-2 border text-center align-middle">ประเภทสินค้า</th>
-              <th className="px-4 py-2 border text-center align-middle">การจัดการ</th>
+              <th className="px-4 py-2 border">ชื่อ</th>
+              <th className="px-4 py-2 border w-[40%]">คำอธิบาย</th>
+              <th className="px-4 py-2 border">ประเภทสินค้า</th>
+              <th className="px-4 py-2 border text-center">การจัดการ</th>
             </tr>
           </thead>
           <tbody>
             {profiles.map((profile) => (
-              <tr key={profile.id} className="border-t text-center align-middle">
-                <td className="px-4 py-2 border align-middle">{profile.name}</td>
-                <td className="px-4 py-2 border align-middle">{profile.description || '-'}</td>
-                <td className="px-4 py-2 border align-middle">{profile.productType?.name || '-'}</td>
-                <td className="px-4 py-2 border align-middle">
+              <tr key={profile.id} className="border-t">
+                <td className="px-4 py-2 border align-top whitespace-pre-wrap">{profile.name}</td>
+                <td className="px-4 py-2 border align-top whitespace-pre-wrap">{profile.description || '-'}</td>
+                <td className="px-4 py-2 border align-top">{profile.productType?.name || '-'}</td>
+                <td className="px-4 py-2 border align-top">
                   <div className="flex justify-center items-center gap-2">
                     <StandardActionButtons
                       onEdit={() => navigate(`/pos/stock/profiles/edit/${profile.id}`)}

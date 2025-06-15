@@ -2,10 +2,8 @@
 
 import React, { useEffect, useState } from 'react';
 import { useForm, FormProvider } from 'react-hook-form';
-import ProductPriceFields from './ProductPriceFields';
 
-import { getProductDropdowns, getProductPrices, getProductById, getProductDropdownsByBranch } from '../api/productApi';
-import useProductStore from '../store/productStore';
+import { getProductDropdowns, getProductPrices, getProductDropdownsByBranch } from '../api/productApi';
 import CascadingDropdowns from '@/components/shared/form/CascadingDropdowns';
 import FormFields from './FormFields';
 
@@ -34,7 +32,6 @@ const ProductForm = ({ onSubmit, defaultValues, mode, branchId }) => {
     formState: { isSubmitting, errors },
     control,
     setValue,
-    getValues,
     watch,
     reset,
   } = methods;
@@ -53,13 +50,10 @@ const ProductForm = ({ onSubmit, defaultValues, mode, branchId }) => {
         let data;
         if (mode === 'edit' && internalDefaults?.id) {
           const productId = String(internalDefaults.id);
-
           data = await getProductDropdowns(productId);
         } else if (branchId) {
-
           data = await getProductDropdownsByBranch(branchId);
         }
-
 
         setDropdowns({
           categories: data.categories || [],
@@ -84,9 +78,7 @@ const ProductForm = ({ onSubmit, defaultValues, mode, branchId }) => {
     const loadPrices = async () => {
       try {
         if (mode === 'edit' && internalDefaults?.id) {
-
           const prices = await getProductPrices(internalDefaults.id);
-
           setLocalPrices(prices);
         }
       } catch (err) {
@@ -115,14 +107,14 @@ const ProductForm = ({ onSubmit, defaultValues, mode, branchId }) => {
 
   const handleFormSubmit = (data) => {
     data.prices = localPrices;
-
     onSubmit(data);
   };
 
   return (
     <FormProvider {...methods}>
-      <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
+        {/* 🔹 Form กลุ่มข้อมูลหลัก */}
+        <div className="grid grid-cols-2 gap-6">
           <CascadingDropdowns
             register={register}
             errors={errors}
@@ -132,7 +124,7 @@ const ProductForm = ({ onSubmit, defaultValues, mode, branchId }) => {
           />
         </div>
 
-        <div>
+        <div className="grid grid-cols-1 gap-6">
           <FormFields
             register={register}
             errors={errors}
@@ -143,20 +135,13 @@ const ProductForm = ({ onSubmit, defaultValues, mode, branchId }) => {
             defaultValues={internalDefaults}
           />
         </div>
-        
-        <div>
-          <ProductPriceFields
-            localPrices={localPrices}
-            setLocalPrices={setLocalPrices}
-          />
-        </div>
 
-        <div className="pt-4">
+        {/* 🔹 ปุ่มบันทึก */}
+        <div className="flex justify-end border-t pt-6">
           <button
             type="submit"
             disabled={isSubmitting}
-            className={`px-4 py-2 rounded bg-blue-600 text-white font-semibold ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''
-              }`}
+            className={`px-4 py-2 rounded bg-blue-600 text-white font-semibold ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
             {isSubmitting ? 'กำลังบันทึก...' : mode === 'edit' ? 'บันทึกการแก้ไข' : 'เพิ่มสินค้า'}
           </button>
@@ -167,6 +152,3 @@ const ProductForm = ({ onSubmit, defaultValues, mode, branchId }) => {
 };
 
 export default ProductForm;
-
-
-

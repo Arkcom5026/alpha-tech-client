@@ -16,7 +16,7 @@ const PreviewBarcodePage = () => {
 
   const [columns, setColumns] = useState(6);
   const [barcodeHeight, setBarcodeHeight] = useState(30);
-  const [barcodeWidth, setBarcodeWidth] = useState(0.6);
+  const [barcodeWidth, setBarcodeWidth] = useState(0.8);
 
   const handleLoadBarcodes = useCallback(async () => {
     if (!receiptId || loading || loaded) return;

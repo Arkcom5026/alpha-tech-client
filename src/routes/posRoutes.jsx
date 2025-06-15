@@ -11,7 +11,6 @@ import stockRoutes from './stockRoutes';
 import reportsRoutes from './reportsRoutes';
 import servicesRoutes from './servicesRoutes';
 import financeRoutes from './financeRoutes';
-import supplierRoutes from './supplierRoutes';
 
 const posRoutes = {
   path: '/pos',
@@ -25,7 +24,7 @@ const posRoutes = {
     reportsRoutes,
     servicesRoutes,
     financeRoutes,
-    supplierRoutes,    
+    
 
     {
       path: 'logout',

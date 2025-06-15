@@ -5,7 +5,6 @@ import { Navigate } from 'react-router-dom';
 
 
 
-import SupplierListPage from '@/features/supplier/pages/ListSupplierPage';
 import PurchaseOrderListPage from '@/features/purchaseOrder/pages/PurchaseOrderListPage';
 import PurchaseDashboardPage from '@/features/purchaseOrder/pages/PurchaseDashboardPage';
 import CreatePurchaseOrderPage from '@/features/purchaseOrder/pages/CreatePurchaseOrderPage';
@@ -21,6 +20,10 @@ import BarcodeReceiptListPage from '@/features/barcode/pages/BarcodeReceiptListP
 import PreviewBarcodePage from '@/features/barcode/pages/PreviewBarcodePage';
 import ListReceiptItemsToScanPage from '@/features/stockItem/pages/ListReceiptItemsToScanPage';
 import ScanBarcodeListPage from '@/features/stockItem/pages/ScanBarcodeListPage';
+import CreateSupplierPage from '@/features/supplier/pages/CreateSupplierPage';
+import EditSupplierPage from '@/features/supplier/pages/EditSupplierPage';
+import ViewSupplierPage from '@/features/supplier/pages/ViewSupplierPage';
+import ListSupplierPage from '@/features/supplier/pages/ListSupplierPage';
 
 
 const purchasesRoutes = {
@@ -41,7 +44,7 @@ const purchasesRoutes = {
       ]
     },
     {
-      path: 'receipt',   
+      path: 'receipt',
       children: [
         { index: true, element: <ListPurchaseOrderReceiptPage />, },
 
@@ -49,8 +52,8 @@ const purchasesRoutes = {
         { path: 'edit/:id', element: <EditPurchaseOrderReceiptPage />, },
         { path: 'view/:id', element: <ViewPurchaseOrderReceiptPage /> },
         { path: 'print/:id', element: <PrintPurchaseOrderReceiptTemplate /> },
-        { path: 'items', element: <ListReceiptItemsToScanPage />  },        
-        { path: 'items/scan/:receiptId', element: <ScanBarcodeListPage /> },                
+        { path: 'items', element: <ListReceiptItemsToScanPage /> },
+        { path: 'items/scan/:receiptId', element: <ScanBarcodeListPage /> },
       ]
     },
     {
@@ -59,14 +62,20 @@ const purchasesRoutes = {
         { index: true, element: <BarcodeReceiptListPage /> }, // รายการใบรับ    
         { path: 'preview/:receiptId', element: <PreviewBarcodePage /> }, // หน้าพรีวิวก่อนพิมพ์        
       ]
-    }, 
-    {
-      path: 'suppliers',
-      element: <SupplierListPage />,
     },
+    {
+      path: "suppliers",
+      children: [
+        { index: true, element: <ListSupplierPage  /> },        
+        { path: "create", element: <CreateSupplierPage /> },
+        { path: "edit/:id", element: <EditSupplierPage /> },
+        { path: 'view/:id', element: <ViewSupplierPage /> }
+      ],
+    },
+  ]
+}
 
-  ],
-};
+
 
 export default purchasesRoutes;
 //  /pos/purchases/orders/create

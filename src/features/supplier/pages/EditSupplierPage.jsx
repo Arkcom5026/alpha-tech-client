@@ -3,9 +3,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getSupplierById, deleteSupplier } from '../api/supplierApi';
 import useSupplierStore from '../store/supplierStore';
-import useEmployeeStore from '@/store/employeeStore';
 import { Button } from '@/components/ui/button';
-import { toast } from 'react-toastify';
 import SupplierForm from '../components/SupplierForm';
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogFooter } from '@/components/ui/dialog';
 import { Trash } from 'lucide-react';
@@ -19,8 +17,9 @@ import {
 const EditSupplierPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const token = useEmployeeStore((state) => state.token);
-  const updateSupplier = useSupplierStore((state) => state.updateSupplier);
+  
+  const { updateSupplierAction } = useSupplierStore();
+
   const [defaultValues, setDefaultValues] = useState(null);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
@@ -28,44 +27,47 @@ const EditSupplierPage = () => {
   useEffect(() => {
     const fetchSupplier = async () => {
       try {
-        const data = await getSupplierById(token, id);
+        const data = await getSupplierById(id);
+
+        // ✅ แปลง bankId ให้เป็น string เพื่อให้ default dropdown ทำงานถูกต้อง
+        if (data.bankId !== null && typeof data.bankId !== 'string') {
+          data.bankId = data.bankId.toString();
+          console.log('✅ bankId (string):', data.bankId);
+        }
         setDefaultValues(data);
       } catch (err) {
-        console.error('❌ โหลดข้อมูลผู้ขายล้มเหลว', err);
-        toast.error('โหลดข้อมูลไม่สำเร็จ');
+        console.error('❌ โหลดข้อมูลผู้ขายล้มเหลว', err);        
       } finally {
         setLoading(false);
       }
     };
 
-    if (token && id) fetchSupplier();
-  }, [token, id]);
+    if (id) fetchSupplier();
+  }, [id]);
 
   const handleSubmit = async (formData) => {
     try {
       const formatted = {
         ...formData,
         creditLimit: parseFloat(formData.creditLimit || 0),
-        creditTerm: parseInt(formData.creditTerm || 0),
+        creditBalance: parseFloat(formData.creditBalance || 0),
+        paymentTerms: parseInt(formData.paymentTerms || 0),
         notes: formData.notes || null,
       };
-      await updateSupplier(token, id, formatted);
-      toast.success('บันทึกข้อมูลผู้ขายเรียบร้อยแล้ว');
+      await updateSupplierAction(id, formatted);      
       navigate('/pos/purchases/suppliers');
     } catch (err) {
-      console.error('❌ อัปเดตผู้ขายล้มเหลว', err);
-      toast.error('ไม่สามารถบันทึกข้อมูลได้');
+      console.error('❌ อัปเดตผู้ขายล้มเหลว', err);      
     }
   };
 
   const handleDelete = async () => {
     try {
-      await deleteSupplier(token, id);
-      toast.success('ลบผู้ขายเรียบร้อยแล้ว');
+      await deleteSupplier(id);      
       navigate('/pos/purchases/suppliers');
     } catch (err) {
       console.error('❌ ลบผู้ขายล้มเหลว', err);
-      toast.error('ไม่สามารถลบผู้ขายได้');
+      
     }
   };
 
@@ -77,9 +79,6 @@ const EditSupplierPage = () => {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
         <h2 className="text-2xl font-bold text-zinc-800">แก้ไข Supplier</h2>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => navigate('/pos/purchases/suppliers')}>
-            ← ย้อนกลับ
-          </Button>
 
           <TooltipProvider>
             <Tooltip>
@@ -110,24 +109,7 @@ const EditSupplierPage = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6 p-4 bg-zinc-50 rounded-xl shadow-sm border">
-        <div>
-          <p className="text-sm text-zinc-600">วงเงินเครดิตสูงสุด</p>
-          <p className="text-lg font-semibold text-zinc-900">{defaultValues.creditLimit?.toLocaleString()} บาท</p>
-        </div>
-        <div>
-          <p className="text-sm text-zinc-600">ระยะเวลาผ่อนชำระ (วัน)</p>
-          <p className="text-lg font-semibold text-zinc-900">{defaultValues.creditTerm} วัน</p>
-        </div>
-        <div>
-          <p className="text-sm text-zinc-600">ยอดค้างชำระ</p>
-          <p className="text-lg font-bold text-red-600">{defaultValues.outstandingDebt?.toLocaleString()} บาท</p>
-        </div>
-        <div>
-          <p className="text-sm text-zinc-600">หมายเหตุ</p>
-          <p className="text-zinc-900 whitespace-pre-wrap">{defaultValues.notes || '-'}</p>
-        </div>
-      </div>
+
 
       <div className="p-4 rounded-xl bg-white shadow-md border">
         <SupplierForm
@@ -142,3 +124,5 @@ const EditSupplierPage = () => {
 };
 
 export default EditSupplierPage;
+
+

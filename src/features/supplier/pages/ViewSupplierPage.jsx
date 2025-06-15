@@ -15,7 +15,7 @@ const ViewSupplierPage = () => {
   useEffect(() => {
     const fetchSupplier = async () => {
       try {
-        const data = await getSupplierById(token, id);
+        const data = await getSupplierById(id);
         setSupplier(data);
       } catch (err) {
         console.error('ไม่สามารถโหลดข้อมูลผู้ขายได้', err);
@@ -95,11 +95,7 @@ const ViewSupplierPage = () => {
           </div>
         </div>
 
-        <div className="mt-8 flex justify-end">
-          <Button variant="outline" onClick={() => navigate('/pos/purchases/suppliers')}>
-            ← ย้อนกลับ
-          </Button>
-        </div>
+
       </div>
     </div>
   );

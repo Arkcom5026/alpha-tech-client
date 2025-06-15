@@ -10,7 +10,7 @@ export const sidebarStockItems = [
       { label: 'ลักษณะสินค้า', to: '/pos/stock/profiles' },    
       { label: 'รูปแบบสินค้า', to: '/pos/stock/templates' },           
       { label: 'จัดการหน่วยนับ', to: '/pos/stock/units' },
-      { label: 'บาร์โค้ดสินค้า', to: '/pos/stock/barcodes' },
+
       
     ],
   },

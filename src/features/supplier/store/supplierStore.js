@@ -28,9 +28,14 @@ const useSupplierStore = create((set) => ({
 
   // ✅ โหลด supplier รายตัว (ใช้ในหน้า detail/payment)
   fetchSupplierByIdAction: async (id) => {
+    const parsedId = Number(id);
+    if (isNaN(parsedId)) {
+      console.error('❌ [fetchSupplierByIdAction] error: invalid id', id);
+      return set({ supplierError: 'ID ไม่ถูกต้อง' });
+    }
     try {
-      const res = await getSupplierById(id);
-      console.log('fetchSupplierByIdAction : ',res)
+      const res = await getSupplierById(parsedId);
+      console.log('fetchSupplierByIdAction : ', res);
       set({ selectedSupplier: res });
     } catch (err) {
       console.error('❌ [fetchSupplierByIdAction] error:', err);
@@ -51,10 +56,15 @@ const useSupplierStore = create((set) => ({
 
   // ✅ แก้ไขข้อมูล supplier
   updateSupplierAction: async (id, form) => {
+    const parsedId = Number(id);
+    if (isNaN(parsedId)) {
+      console.error('❌ [updateSupplierAction] error: invalid id', id);
+      return set({ supplierError: 'ID ไม่ถูกต้อง' });
+    }
     try {
-      const updated = await updateSupplier(id, form);
+      const updated = await updateSupplier(parsedId, form);
       set((state) => ({
-        suppliers: state.suppliers.map((s) => (s.id === id ? updated : s)),
+        suppliers: state.suppliers.map((s) => (s.id === parsedId ? updated : s)),
       }));
     } catch (err) {
       console.error('❌ [updateSupplierAction] error:', err);
@@ -64,10 +74,15 @@ const useSupplierStore = create((set) => ({
 
   // ✅ ลบ supplier
   deleteSupplierAction: async (id) => {
+    const parsedId = Number(id);
+    if (isNaN(parsedId)) {
+      console.error('❌ [deleteSupplierAction] error: invalid id', id);
+      return set({ supplierError: 'ID ไม่ถูกต้อง' });
+    }
     try {
-      await deleteSupplier(id);
+      await deleteSupplier(parsedId);
       set((state) => ({
-        suppliers: state.suppliers.filter((s) => s.id !== id),
+        suppliers: state.suppliers.filter((s) => s.id !== parsedId),
       }));
     } catch (err) {
       console.error('❌ [deleteSupplierAction] error:', err);

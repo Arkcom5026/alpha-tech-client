@@ -15,14 +15,16 @@ const ListReceiptItemsToScanPage = () => {
     loadReceiptsWithBarcodesAction();
   }, [loadReceiptsWithBarcodesAction]);
 
+  const filteredReceipts = receipts.filter((r) => r.total > r.scanned);
+
   return (
     <div className="p-4 space-y-6">
       <h1 className="text-xl font-bold text-blue-800">📄 ใบตรวจรับสินค้าที่พร้อมยิง SN</h1>
 
       {loading ? (
         <p>กำลังโหลดข้อมูล...</p>
-      ) : !receipts || receipts.length === 0 ? (
-        <p className="text-gray-600">ยังไม่มีใบตรวจรับที่สร้างบาร์โค้ดแล้ว</p>
+      ) : !filteredReceipts || filteredReceipts.length === 0 ? (
+        <p className="text-gray-600">ยังไม่มีใบตรวจรับที่รอยิงบาร์โค้ด</p>
       ) : (
         <Table>
           <TableHeader>
@@ -38,7 +40,7 @@ const ListReceiptItemsToScanPage = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {receipts.map((r) => (
+            {filteredReceipts.map((r) => (
               <TableRow key={r.id}>
                 <TableCell>{r.purchaseOrderCode}</TableCell>
                 <TableCell>{new Date(r.createdAt).toLocaleDateString()}</TableCell>
@@ -65,4 +67,3 @@ const ListReceiptItemsToScanPage = () => {
 };
 
 export default ListReceiptItemsToScanPage;
-

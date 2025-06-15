@@ -1,5 +1,5 @@
 
-const sidebarFinanceItems = [
+export const sidebarFinanceItems = [
   {
     label: 'การเงิน',
     items: [
@@ -11,6 +11,6 @@ const sidebarFinanceItems = [
   },
 ];
 
-export default sidebarFinanceItems;
+
 
 

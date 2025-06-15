@@ -6,59 +6,26 @@ import { useLocation } from 'react-router-dom';
 import useEmployeeStore from '@/store/employeeStore';
 import Sidebar from './Sidebar';
 import { sidebarDashboardItems } from '@/features/dashboard/sidebar/sidebarDashboardItems';
-
-
 import { sidebarServicesItems } from '@/features/services/sidebar/sidebarServicesItems';
-
-import sidebarEmployeeItems from '@/features/employee/sidebar/sidebarEmployeeItems';
 import { sidebarSupplierItems } from '@/features/supplier/sidebar/sidebarSupplierItems';
-
 import { sidebarReportsItems } from '@/features/reports/sidebar/sidebarReportsItem';
-import sidebarSalesItems from '@/features/sales/sidebar/sidebarSalesItems';
 import { sidebarStockItems } from '@/features/stock/sidebar/sidebarStockItems';
 import { sidebarPurchaseOrdertems } from '@/features/purchaseOrder/sidebar/sidebarPurchaseOrdertems';
-import sidebarFinanceItems from '@/features/finance/sidebar/sidebarFinanceItems';
+import { sidebarFinanceItems } from '@/features/finance/sidebar/sidebarFinanceItems';
+import { sidebarSalesItems } from '@/features/sales/sidebar/sidebarSalesItems';
+import { sidebarEmployeeItems } from '@/features/employee/sidebar/sidebarEmployeeItems';
 
-
-
-const pathMap = {
-  '/pos/stock/templates': sidebarStockItems,
-  '/pos/stock/profiles': sidebarStockItems,
-  '/pos/stock/categories': sidebarStockItems,
-  '/pos/stock/units': sidebarStockItems,
-  '/pos/stock': sidebarStockItems,
-  '/pos/stock/create': sidebarStockItems,
-  '/pos/stock/barcodes': sidebarStockItems,  
-  '/pos/stock/dashboard': sidebarStockItems,
-  '/pos/stock/stock-report': sidebarStockItems,
-  
-  '/pos/dashboard': sidebarDashboardItems,
-  '/pos/dashboard/sales-summary': sidebarDashboardItems,
-  '/pos/dashboard/pending-payments': sidebarDashboardItems,
-  '/pos/dashboard/customers': sidebarDashboardItems,
-  '/pos/dashboard/notifications': sidebarDashboardItems,
-  
-  '/pos/sales': sidebarSalesItems,
-  '/pos/sales/quick-sale': sidebarSalesItems,
-  
-  '/pos/purchases': sidebarPurchaseOrdertems,
-  '/pos/purchases/dashboard': sidebarPurchaseOrdertems,
-  '/pos/purchases/po': sidebarPurchaseOrdertems,
-  '/pos/purchases/receiving': sidebarPurchaseOrdertems,
-  '/pos/purchases/suppliers': sidebarPurchaseOrdertems,
-  
-  '/pos/services': sidebarServicesItems,
-  
-  '/pos/reports': sidebarReportsItems,
-  
-  '/pos/finance': sidebarFinanceItems,
-  
-  '/pos/employees': sidebarEmployeeItems,
-  '/pos/employees/positions': sidebarEmployeeItems,
-  '/pos/employees/roles': sidebarEmployeeItems,
-  
-  '/pos/suppliers': sidebarSupplierItems,
-};
+const pathGroups = [
+  { prefix: '/pos/stock', sidebar: sidebarStockItems },
+  { prefix: '/pos/dashboard', sidebar: sidebarDashboardItems },
+  { prefix: '/pos/sales', sidebar: sidebarSalesItems },
+  { prefix: '/pos/purchases', sidebar: sidebarPurchaseOrdertems },
+  { prefix: '/pos/services', sidebar: sidebarServicesItems },
+  { prefix: '/pos/reports', sidebar: sidebarReportsItems },
+  { prefix: '/pos/finance', sidebar: sidebarFinanceItems },
+  { prefix: '/pos/employees', sidebar: sidebarEmployeeItems },
+  { prefix: '/pos/suppliers', sidebar: sidebarSupplierItems },
+];
 
 export default function SidebarLoader() {
   const { pathname } = useLocation();
@@ -66,12 +33,12 @@ export default function SidebarLoader() {
   const position = useEmployeeStore((s) => s.position);
   const rbacEnabled = useEmployeeStore((s) => s.branch?.RBACEnabled ?? true);
 
-  const sortedEntries = Object.entries(pathMap).sort((a, b) => b[0].length - a[0].length);
-  const items = sortedEntries.find(([key]) => pathname.startsWith(key));
+  const sortedGroups = pathGroups.sort((a, b) => b.prefix.length - a.prefix.length);
+  const matchedGroup = sortedGroups.find(({ prefix }) => pathname.startsWith(prefix));
 
   const safePosition = position || '__NO_POSITION__';
 
-  const sidebarItems = (items ? items[1] : [])
+  const sidebarItems = (matchedGroup ? matchedGroup.sidebar : [])
     .flatMap((group) => group.items || [])
     .filter((item) => {
       if (!item.role) return true;
@@ -90,4 +57,3 @@ export default function SidebarLoader() {
     </div>
   );
 }
-

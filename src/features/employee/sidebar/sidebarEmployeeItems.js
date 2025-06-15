@@ -12,5 +12,5 @@ export const sidebarEmployeeItems = [
     },
   ];
   
-  export default sidebarEmployeeItems;
+
   

@@ -1,5 +1,5 @@
 // 6. sidebarSalesItems.js
-const sidebarSalesItems = [
+export const sidebarSalesItems = [
   {
     label: 'การขาย',
     items: [
@@ -12,7 +12,7 @@ const sidebarSalesItems = [
   },
 ];
 
-export default sidebarSalesItems;
+
 
 
 

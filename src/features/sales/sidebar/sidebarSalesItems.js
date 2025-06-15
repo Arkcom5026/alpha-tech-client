@@ -7,7 +7,7 @@ export const sidebarSalesItems = [
       { label: 'ขายสินค้า', to: '/pos/sales/sale', },
       { label: 'พิมพ์ใบเสร็จ', to: '/pos/sales/bill', },
       { label: 'คืนสินค้า', to: '/pos/sales/sale-return/', },
-      { label: 'ออเดอร์', to: '/pos/sales/orders', },
+
     ],
   },
 ];

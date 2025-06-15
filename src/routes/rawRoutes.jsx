@@ -19,10 +19,12 @@ const rawRoutes = [
   {
     path: '/',
     element: <NoLayout />, // ✅ ไม่มี Header/Nav/Footer
-    children: [
     
+    children: [
+      
       { path: '/login', element: <LoginPage /> },
       { path: '/register', element: <RegisterPage /> },
+      
     ]
   },
 

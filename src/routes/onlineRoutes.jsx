@@ -2,22 +2,27 @@
 import React from 'react';
 
 
-
+//import ProductOnlineListPage from '@/features/online/productOnline/pages/ProductOnlineListPage';
+import OnlineLayout from '@/features/online/layout/OnlineLayout';
 import HomeOnline from '@/features/online/pages/HomeOnline';
+import ProductOnlineListPage from '@/features/online/productOnline/pages/ProductOnlineListPage';
+import ProductOnlineDetailPage from '@/features/online/productOnline/pages/ProductOnlineDetailPage';
 
-import Checkout from '@/features/pos/purchase/pages/CheckoutPage';
-import LayoutOnline from '@/layouts/online/LayoutOnline';
 
 const onlineRoutes = {
+
   path: '/',
-  element: <LayoutOnline />, // layout หลักของฝั่งลูกค้า
+  element: <OnlineLayout />,
   children: [
     { index: true, element: <HomeOnline /> },
 
-    { path: 'checkout', element: <Checkout /> },
-    
-
+     { path: 'shop', element: <ProductOnlineListPage /> },   
+     { path: 'shop/product/:id', element: <ProductOnlineDetailPage /> },
+              
+     
   ],
 };
 
 export default onlineRoutes;
+
+

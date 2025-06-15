@@ -3,11 +3,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import { ChevronDown } from 'lucide-react';
-import useCartStore from '@/features/online/store/cartStore';
+
 import useCustomerStore from '@/features/customer/store/customerStore';
 
 const UnifiedMainNav = () => {
-  const carts = useCartStore((state) => state.carts);
+  
   const customers = useCustomerStore((state) => state.customers);
   const logout = useCustomerStore((state) => state.logout);
 
@@ -44,11 +44,7 @@ const UnifiedMainNav = () => {
             <NavLink to="/shop" className={navClass}>Shop</NavLink>
             <NavLink to="/cart" className={navClass}>
               Cart
-              {carts.length > 0 && (
-                <span className="ml-1 text-[10px] sm:text-xs bg-white text-blue-700 font-bold px-1.5 py-0.5 rounded-full">
-                  {carts.length}
-                </span>
-              )}
+             
             </NavLink>
           </div>
 

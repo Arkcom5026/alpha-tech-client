@@ -13,14 +13,12 @@ import { sidebarStockItems } from '@/features/stock/sidebar/sidebarStockItems.js
 import { sidebarFinanceItems } from '@/features/finance/sidebar/sidebarFinanceItems.js';
 import { sidebarSalesItems } from '@/features/sales/sidebar/sidebarSalesItems.js';
 import { sidebarEmployeeItems } from '@/features/employee/sidebar/sidebarEmployeeItems.js';
-import { sidebarPurchaseOrdertems } from '@/features/purchaseOrder/sidebar/sidebarPurchaseOrdertems';
-
 
 const pathGroups = [
   { prefix: '/pos/stock', sidebar: sidebarStockItems },
   { prefix: '/pos/dashboard', sidebar: sidebarDashboardItems },
   { prefix: '/pos/sales', sidebar: sidebarSalesItems },
-  { prefix: '/pos/purchases', sidebar: sidebarPurchaseOrdertems },
+  
   { prefix: '/pos/services', sidebar: sidebarServicesItems },
   { prefix: '/pos/reports', sidebar: sidebarReportsItems },
   { prefix: '/pos/finance', sidebar: sidebarFinanceItems },
@@ -58,6 +56,3 @@ export default function SidebarLoader() {
     </div>
   );
 }
-
-
-

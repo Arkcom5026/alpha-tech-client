@@ -5,17 +5,16 @@
 import { useLocation } from 'react-router-dom';
 import useEmployeeStore from '@/store/employeeStore';
 import Sidebar from './Sidebar';
-import { sidebarDashboardItems } from '@/features/dashboard/sidebar/sidebarDashboardItems';
-import { sidebarServicesItems } from '@/features/services/sidebar/sidebarServicesItems';
-import { sidebarSupplierItems } from '@/features/supplier/sidebar/sidebarSupplierItems';
-import { sidebarReportsItems } from '@/features/reports/sidebar/sidebarReportsItem';
-import { sidebarStockItems } from '@/features/stock/sidebar/sidebarStockItems';
+import { sidebarDashboardItems } from '@/features/dashboard/sidebar/sidebarDashboardItems.js';
+import { sidebarServicesItems } from '@/features/services/sidebar/sidebarServicesItems.js';
+import { sidebarSupplierItems } from '@/features/supplier/sidebar/sidebarSupplierItems.js';
+import { sidebarReportsItems } from '@/features/reports/sidebar/sidebarReportsItem.js';
+import { sidebarStockItems } from '@/features/stock/sidebar/sidebarStockItems.js';
+import { sidebarFinanceItems } from '@/features/finance/sidebar/sidebarFinanceItems.js';
+import { sidebarSalesItems } from '@/features/sales/sidebar/sidebarSalesItems.js';
+import { sidebarEmployeeItems } from '@/features/employee/sidebar/sidebarEmployeeItems.js';
 import { sidebarPurchaseOrdertems } from '@/features/purchaseOrder/sidebar/sidebarPurchaseOrdertems';
-import { sidebarFinanceItems } from '@/features/finance/sidebar/sidebarFinanceItems';
-    
-         
-import { sidebarSalesItems } from '@/features/sales/sidebar/sidebarSalesItems';
-import { sidebarEmployeeItems } from '@/features/employee/sidebar/sidebarEmployeeItems';
+
 
 const pathGroups = [
   { prefix: '/pos/stock', sidebar: sidebarStockItems },
@@ -59,3 +58,6 @@ export default function SidebarLoader() {
     </div>
   );
 }
+
+
+

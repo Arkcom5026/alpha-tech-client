@@ -1,4 +1,3 @@
-
 import apiClient from '@/utils/apiClient';
 
 // ✅ @filename: authApi.js
@@ -14,3 +13,12 @@ export async function registerUser(data) {
   }
 }
 
+export async function loginUser(data) {
+  try {
+    const res = await apiClient.post('/auth/login', data);
+    return res;
+  } catch (err) {
+    console.error('🔴 loginUser error:', err);
+    throw err;
+  }
+}

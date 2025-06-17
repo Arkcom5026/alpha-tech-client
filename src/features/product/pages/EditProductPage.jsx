@@ -6,7 +6,6 @@ import ProductForm from '../components/ProductForm';
 import ProductImage from '../components/ProductImage';
 import useEmployeeStore from '@/store/employeeStore';
 import useProductStore from '../store/productStore';
-import { deleteImageProduct } from '../api/productImagesApi';
 
 const EditProductPage = () => {
   const [previewUrls, setPreviewUrls] = useState([]);
@@ -58,39 +57,33 @@ const EditProductPage = () => {
 
     fetchData();
   }, [id, branchId]);
+  
 
   const handleUpdate = async (formData) => {
     formData.branchId = branchId;
-
+   
     try {
       const [uploadedImages, imagesToDelete] = await imageRef.current.upload();
-
+     
       formData.images = uploadedImages;
       formData.imagesToDelete = imagesToDelete;
 
-      // ✅ ลบภาพเก่าออกจากระบบ (Cloudinary + DB)
-      // for (const public_id of imagesToDelete) {
-      //   try {
-      //     console.log("🗑️ ลบภาพโดยตรง:", id, public_id); // ✅ ใช้ id ที่ถูกต้อง
-      //     await deleteImageProduct(id, public_id); // ✅ ไม่ใช้ productId ที่ไม่รู้จัก
-      //   } catch (err) {
-      //     console.warn("⚠️ ลบภาพไม่สำเร็จ:", err);
-      //   }
-      // }
-
       for (const img of imagesToDelete) {
-        if (!img.public_id) continue; // กัน null
-      
+
+        
+
+         if (!img) continue; // กัน null
+
+         console.log('imagesToDelete : ',imagesToDelete)
+
         try {
-          await deleteImage({ productId: id, publicId: img.public_id });
+          await deleteImage({ productId: id, publicId: img });
         } catch (err) {
           console.warn("⚠️ ลบภาพไม่สำเร็จ:", err);
         }
       }
 
-
       await updateProduct(id, formData);
-
 
 
       navigate('/pos/stock/products');

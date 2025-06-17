@@ -1,30 +1,14 @@
 // ✅ src/features/productTemplate/api/productTemplateApi.js
 import apiClient from '@/utils/apiClient';
 
-export const getAllProductTypes = async () => {
-  try {
-    const res = await apiClient.get('/product-types');
-    return res.data;
-  } catch (error) {
-    console.error('❌ getAllProductTypes error:', error);
-    throw error;
-  }
-};
 
-export const getAllCategories = async () => {
-  try {
-    const res = await apiClient.get('/categories');
-    return res.data;
-  } catch (error) {
-    console.error('❌ getAllCategories error:', error);
-    throw error;
-  }
-};
+
 
 
 export const getAllProductTemplates = async () => {
   try {
     const res = await apiClient.get('/product-templates');
+    console.log('getAllProductTemplates : ',res)
     return res.data;
   } catch (error) {
     console.error('❌ getAllProductTemplates error:', error);

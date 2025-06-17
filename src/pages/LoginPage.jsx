@@ -9,8 +9,6 @@ import { FaGoogle, FaFacebook, FaLock } from 'react-icons/fa';
 import useEmployeeStore from '@/store/employeeStore';
 import apiClient from '@/utils/apiClient';
 
-
-
 const LoginPage = () => {
   const navigate = useNavigate();
   const login = useAuthStore((state) => state.login);
@@ -26,8 +24,10 @@ const LoginPage = () => {
     setError('');
     setLoading(true);
     try {
-      
-      const res = await apiClient.post('/auth/login', { email, password });
+      const res = await apiClient.post('/auth/login', {
+        emailOrPhone: email,
+        password,
+      });
       console.log("🟢 ผลลัพธ์ login:", res);
       console.log("📦 res.data:", res.data);
 
@@ -106,8 +106,8 @@ const LoginPage = () => {
 
         <form onSubmit={handleLogin} autoComplete="off" className="space-y-4">
           <input
-            type="email"
-            placeholder="example@yourdomain.com"
+            type="text"
+            placeholder="อีเมลหรือเบอร์โทรศัพท์"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             autoComplete="off"

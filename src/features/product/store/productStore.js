@@ -6,15 +6,12 @@ import {
   deleteProduct,
   getProductById,
   getProductDropdowns,
-  getProductPrices,
+
   getProducts,
   updateProduct,
-  updateProductPrices,
-  addProductPrice,
-  deleteProductPrice,
   searchProducts
 } from '../api/productApi';
-import { uploadImagesProduct, uploadImagesProductFull ,deleteImageProduct } from '../api/productImagesApi';
+import { uploadImagesProduct, uploadImagesProductFull, deleteImageProduct } from '../api/productImagesApi';
 
 const useProductStore = create((set) => ({
   products: [],
@@ -26,11 +23,10 @@ const useProductStore = create((set) => ({
     templates: [],
     units: [],
   },
-  productPrices: [],
+
   searchResults: [],
   isLoading: false,
-  isLoadingPrices: false,
-  priceError: null,
+
   error: null,
 
   fetchProducts: async (filters = {}) => {
@@ -120,59 +116,6 @@ const useProductStore = create((set) => ({
     }
   },
 
-  loadProductPrices: async (productId) => {
-    set({ isLoadingPrices: true, priceError: null });
-    try {
-      const prices = await getProductPrices(productId);
-      set({ productPrices: prices, isLoadingPrices: false });
-    } catch (error) {
-      console.error('❌ โหลดราคาสินค้าไม่สำเร็จใน Store:', error);
-      set({ priceError: error, isLoadingPrices: false });
-    }
-  },
-
-  updateProductPrices: async (productId, prices) => {
-    try {
-      const res = await updateProductPrices(productId, prices);
-      set({ productPrices: res });
-      return res;
-    } catch (error) {
-      console.error('❌ updateProductPrices error:', error);
-      throw error;
-    }
-  },
-
-  addProductPrice: async (productId, priceData) => {
-    try {
-      console.log('📤 [Store] เพิ่มราคาสินค้า:', { productId, priceData });
-      const newPrice = await addProductPrice(productId, priceData);
-      set((state) => ({
-        productPrices: [...state.productPrices, newPrice],
-      }));
-      console.log('✅ [Store] เพิ่มราคาสำเร็จ:', newPrice);
-      return newPrice;
-    } catch (error) {
-      console.error('❌ [Store] addProductPrice error:', error);
-      throw error;
-    }
-  },
-
-  deleteProductPrice: async (productId, priceId) => {
-    try {
-      await deleteProductPrice(productId, priceId);
-      set((state) => ({
-        productPrices: state.productPrices.filter((p) => p.id !== priceId),
-      }));
-    } catch (error) {
-      console.error('❌ deleteProductPrice error:', error);
-      throw error;
-    }
-  },
-
-  clearProductPrices: () => {
-    set({ productPrices: [], priceError: null });
-  },
-
   uploadImages: async (files, captions, coverIndex) => {
     try {
       console.log('📤 [Store] กำลังอัปโหลดภาพ:', { count: files.length, captions, coverIndex });
@@ -187,7 +130,9 @@ const useProductStore = create((set) => ({
 
   uploadImagesFull: async (productId, files, captions, coverIndex) => {
     try {
+    
       const uploaded = await uploadImagesProductFull(productId, files, captions, coverIndex);
+
       return uploaded;
     } catch (error) {
       console.error('❌ uploadImagesFull error:', error);
@@ -195,7 +140,9 @@ const useProductStore = create((set) => ({
     }
   },
 
+
   deleteImage: async ({ productId, publicId }) => {
+    console.log('uploadImagesFull productId : ',productId)
     if (!productId || !publicId) throw new Error("Missing data");
     return await deleteImageProduct(productId, publicId); // ✅ เรียกผ่าน API Layer
   },

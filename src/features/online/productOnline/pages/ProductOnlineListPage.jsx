@@ -1,29 +1,23 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { useProductOnlineStore } from '../store/productOnlineStore';
 import ProductCardOnline from '../components/ProductCardOnline';
 
 const ProductOnlineListPage = () => {
   const products = useProductOnlineStore((state) => state.products);
-  const loadProducts = useProductOnlineStore((state) => state.loadProductsAction);
-
-  useEffect(() => {
-    loadProducts();
-  }, [loadProducts]);
 
   return (
     <div className="p-4">
-      <h1 className="text-2xl font-bold mb-4">สินค้าออนไลน์</h1>
-
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-        {products && products.length > 0 ? (
-          products.map((item) => <ProductCardOnline key={item.id} item={item} />)
-        ) : (
-          <p className="text-gray-500">ไม่มีสินค้าออนไลน์</p>
-        )}
-      </div>
+            {products && products.length > 0 ? (
+        <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 mt-4">
+          {products.map((item) => (
+            <ProductCardOnline key={item.id} item={item} />
+          ))}
+        </div>
+      ) : (
+        <p className="text-gray-500 mt-4">ไม่มีสินค้าออนไลน์</p>
+      )}
     </div>
   );
 };
 
 export default ProductOnlineListPage;
-

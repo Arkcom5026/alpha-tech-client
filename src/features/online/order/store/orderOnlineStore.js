@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { createOrder } from "../api/orderOnlineApi";
-import { useCartStore } from "@/features/online/cart/cartStore";
+import { useCartStore } from "../../cart/store/cartStore";
+
 
 export const useOrderOnlineStore = create((set, get) => ({
   isSubmitting: false,

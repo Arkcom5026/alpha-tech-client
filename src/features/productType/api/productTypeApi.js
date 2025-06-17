@@ -1,5 +1,17 @@
 import apiClient from '@/utils/apiClient';
 
+
+export const getAllProductTypes = async () => {
+  try {
+    const res = await apiClient.get('/product-types');
+    console.log('getAllProductTypes : ',res)
+    return res.data;
+  } catch (error) {
+    console.error('❌ getAllProductTypes error:', error);
+    throw error;
+  }
+};
+
 export const createProductType = async (data) => {
   try {
     const res = await apiClient.post('/product-types', data);

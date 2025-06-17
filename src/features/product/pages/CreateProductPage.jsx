@@ -64,7 +64,7 @@ const CreateProductPage = () => {
         active: formData.active ?? true,
         cost: formData.cost ? parseFloat(formData.cost) : null,
         images: uploadedImages,
-        prices: formData.prices || {}, // ✅ แนบราคาสินค้าแต่ละระดับ
+
       });
 
       navigate('/pos/stock/products');

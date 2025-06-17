@@ -12,6 +12,7 @@ export const getProducts = async ({ search, status } = {}) => {
     }
 
     const res = await apiClient.get('/products', { params });
+    console.log('getProducts : ',res)
 
     return res.data;
   } catch (error) {

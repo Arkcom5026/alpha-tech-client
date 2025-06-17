@@ -1,9 +1,11 @@
+// ✅ อัปเดตฟังก์ชันใน Store ให้รับ filters
+
 import { create } from 'zustand';
 import {
-  getAllOnlineProducts,
-  getProductById,
-  searchOnlineProducts,
-  clearOnlineProductCache
+  getProductsForOnline,
+  getProductOnlineById,
+  clearOnlineProductCache,
+  getProductDropdownsForOnline,
 } from '../api/productOnlineApi';
 
 export const useProductOnlineStore = create((set, get) => ({
@@ -11,12 +13,12 @@ export const useProductOnlineStore = create((set, get) => ({
   selectedProduct: null,
   isLoading: false,
   error: null,
+  dropdowns: null,
 
-  loadProductsAction: async () => {
+  loadProductsAction: async (filters = {}) => {
     set({ isLoading: true, error: null });
     try {
-      const data = await getAllOnlineProducts();
-      console.log('loadProductsAction : ', data)
+      const data = await getProductsForOnline(filters); // ✅ ใช้ filters จริง
       set({ products: data, isLoading: false });
     } catch (err) {
       console.error('❌ โหลดสินค้าออนไลน์ล้มเหลว:', err);
@@ -27,7 +29,7 @@ export const useProductOnlineStore = create((set, get) => ({
   getProductByIdAction: async (id) => {
     set({ isLoading: true, error: null });
     try {
-      const data = await getProductById(id);
+      const data = await getProductOnlineById(Number(id));
       set({ selectedProduct: data, isLoading: false });
     } catch (err) {
       console.error('❌ โหลดสินค้ารายการเดียวล้มเหลว:', err);
@@ -35,14 +37,23 @@ export const useProductOnlineStore = create((set, get) => ({
     }
   },
 
-  searchProductsAction: async (query) => {
+  searchProductsAction: async (filters) => {
     set({ isLoading: true, error: null });
     try {
-      const data = await searchOnlineProducts(query);
+      const data = await getProductsForOnline(filters);
       set({ products: data, isLoading: false });
     } catch (err) {
       console.error('❌ ค้นหาสินค้าออนไลน์ล้มเหลว:', err);
       set({ error: 'ไม่สามารถค้นหาสินค้าได้', isLoading: false });
+    }
+  },
+
+  loadDropdownsAction: async () => {
+    try {
+      const dropdowns = await getProductDropdownsForOnline();
+      set({ dropdowns });
+    } catch (err) {
+      console.error('❌ โหลด dropdowns สินค้าออนไลน์ล้มเหลว:', err);
     }
   },
 
@@ -55,5 +66,5 @@ export const useProductOnlineStore = create((set, get) => ({
     } catch (err) {
       console.error('❌ ล้างแคชสินค้าล้มเหลว:', err);
     }
-  }
+  },
 }));

@@ -11,18 +11,19 @@ import {
 } from '@/components/ui/alert-dialog';
 
 import { deleteCategory } from '../api/categoryApi';
-import { useCategoryStore } from '../Store/CategoryStore';
+
 import StandardActionButtons from '@/components/shared/buttons/StandardActionButtons';
+import { useCategoryStore } from '../Store/CategoryStore';
 
 const CategoryTable = ({ data, onEdit }) => {
-  const { fetchCategories } = useCategoryStore();
+  const { loadCategoriesAction } = useCategoryStore();
   const [selectedCategory, setSelectedCategory] = useState(null);
 
   const handleDelete = async () => {
     if (!selectedCategory) return;
     try {
       await deleteCategory(selectedCategory.id);
-      await fetchCategories();
+      await loadCategoriesAction();
       setSelectedCategory(null);
     } catch (err) {
       console.error('❌ ลบหมวดหมู่ไม่สำเร็จ:', err);

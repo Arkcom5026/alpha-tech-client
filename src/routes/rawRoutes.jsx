@@ -10,6 +10,7 @@ import LoginPage from '@/pages/LoginPage';
 import RegisterPage from '@/pages/RegisterPage';
 import NoLayout from '@/layouts/NoLayout';
 import ProtectRoute from '@/components/ProtectedRoute';
+import publicRoutes from './publicRoutes';
 
 
 // ✅ rawRoutes.jsx — รวมเส้นทางทั้งหมดของระบบ
@@ -27,7 +28,7 @@ const rawRoutes = [
       
     ]
   },
-
+  publicRoutes,
   onlineRoutes,
   posRoutes,
   

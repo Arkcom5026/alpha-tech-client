@@ -1,37 +1,44 @@
+// src/layouts/OnlineLayout.jsx
+
 import UnifiedMainNav from "@/components/common/UnifiedMainNav";
-import { Outlet } from "react-router-dom";
 import SidebarOnline from "../components/SidebarOnline";
-import CartPanel from "../components/CartPanel";
+import { Outlet, useLocation } from "react-router-dom";
+import CartPanel from "../cart/components/CartPanel";
 
 const OnlineLayout = () => {
+  const { pathname } = useLocation();
+  const isHome = pathname === "/";
+
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen bg-gray-50">
+      {/* Navbar ด้านบน */}
       <UnifiedMainNav />
 
-      {/* Main Content: 3 Columns */}
-      <main className="flex-1 bg-gray-50 px-4 py-6">
-        <div className="grid grid-cols-1 md:grid-cols-[220px_1fr_280px] gap-4">
-          {/* Sidebar ซ้าย */}
-          <aside>
-            <SidebarOnline />
-          </aside>
+      {/* Layout ปรับตามหน้าปัจจุบัน */}
+      <div
+        className={`grid min-h-[calc(100vh-64px)] ${
+          isHome ? "grid-cols-[260px_1fr_260px]" : "grid-cols-1 md:grid-cols-[260px_1fr_320px]"
+        }`}
+      >
+        {/* Sidebar ซ้าย */}
+        <aside className="bg-white border-r border-gray-200 p-4 md:p-6">
+              <h2 className="text-lg font-semibold mb-4">ค้นหาสินค้า</h2>
+              <SidebarOnline />
+          
+        </aside>
 
-          {/* Content ตรงกลาง */}
-          <section>
-            <Outlet />
-          </section>
+        {/* เนื้อหาหลัก แสดงสินค้า */}
+        <main className="p-4 md:p-6 overflow-y-auto">
+          <div className="max-w-6xl mx-auto">
+            <Outlet /> {/* ✅ สำหรับ render page เช่น ProductOnlineListPage, ProductOnlineDetailPage */}
+          </div>
+        </main>
 
-          {/* ตะกร้าสินค้า ขวาสุด */}
-          <aside>
-            <CartPanel />
-          </aside>
-        </div>
-      </main>
-
-      {/* Footer */}
-      <footer className="bg-gray-100 text-center text-sm py-3 text-gray-600">
-        © 2025 AlphaTech Online. All rights reserved.
-      </footer>
+        {/* ตะกร้าสินค้า / หรือ sidebar ขวา */}
+        <aside className="bg-white border-l border-gray-200 p-4 md:p-6">
+          <CartPanel />
+        </aside>
+      </div>
     </div>
   );
 };

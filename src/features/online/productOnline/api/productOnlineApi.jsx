@@ -1,27 +1,29 @@
 import apiClient from '@/utils/apiClient';
 
-export const getAllOnlineProducts = async () => {
+// ✅ ค้นหาสินค้าออนไลน์ (ใช้ใน Sidebar / Filter)
+export const getProductsForOnline = async (filters) => {
   try {
-    const res = await apiClient.get('/products/online');
-    //console.log('getAllOnlineProducts : ',res)
+    const res = await apiClient.get('/products/online/search', { params: filters });
     return res.data;
   } catch (err) {
-    console.error('❌ getAllOnlineProducts error:', err);
+    console.error('❌ getProductsForOnline error:', err);
     throw err;
   }
 };
 
-export const getProductById = async (id) => {
+// ✅ ดูรายละเอียดสินค้าออนไลน์รายตัว
+export const getProductOnlineById = async (id) => {
   try {
-    const res = await apiClient.get(`/products/online/${id}`);
-    console.log('getProductById : ',res)
+    const res = await apiClient.get(`/products/online/detail/${id}`);
+    console.log('getProductOnlineById : ', res);
     return res.data;
   } catch (err) {
-    console.error(`❌ getProductById error (id: ${id}):`, err);
+    console.error(`❌ getProductOnlineById error (id: ${id}):`, err);
     throw err;
   }
 };
 
+// ✅ (Deprecated) — ไม่ใช้แล้ว แนะนำให้ใช้ getProductsForOnline แทน
 export const searchOnlineProducts = async (query) => {
   try {
     const res = await apiClient.get(`/products/online/search?query=${encodeURIComponent(query)}`);
@@ -32,12 +34,25 @@ export const searchOnlineProducts = async (query) => {
   }
 };
 
+// ✅ เคลียร์ cache สินค้าออนไลน์ (ถ้ามี)
 export const clearOnlineProductCache = async () => {
   try {
     const res = await apiClient.post('/products/online/clear-cache');
     return res.data;
   } catch (err) {
     console.error('❌ clearOnlineProductCache error:', err);
+    throw err;
+  }
+};
+
+// ✅ ดึง dropdown สำหรับกรองสินค้าออนไลน์
+export const getProductDropdownsForOnline = async () => {
+  try {
+    const res = await apiClient.get('/products/online/dropdowns');
+    console.log('getProductDropdownsForOnline : ',res)
+    return res.data;
+  } catch (err) {
+    console.error('❌ getProductDropdownsForOnline error:', err);
     throw err;
   }
 };

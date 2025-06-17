@@ -5,8 +5,9 @@ import {
   deleteProductType,
   updateProductType,
   getProductTypeById,
+  getAllProductTypes,
 } from '../api/productTypeApi';
-import { getAllProductTypes } from '@/features/productTemplate/api/productTemplateApi';
+
 
 const useProductTypeStore = create(
   devtools((set, get) => ({

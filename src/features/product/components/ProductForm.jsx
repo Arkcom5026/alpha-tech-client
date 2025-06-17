@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useForm, FormProvider } from 'react-hook-form';
 
-import { getProductDropdowns, getProductPrices, getProductDropdownsByBranch } from '../api/productApi';
+import { getProductDropdowns, getProductDropdownsByBranch } from '../api/productApi';
 import CascadingDropdowns from '@/components/shared/form/CascadingDropdowns';
 import FormFields from './FormFields';
 
@@ -16,7 +16,7 @@ const ProductForm = ({ onSubmit, defaultValues, mode, branchId }) => {
     units: [],
   });
 
-  const [localPrices, setLocalPrices] = useState([]);
+
   const [loadedOnce, setLoadedOnce] = useState(false);
   const [formSynced, setFormSynced] = useState(false);
   const [internalDefaults, setInternalDefaults] = useState(defaultValues || null);
@@ -74,23 +74,7 @@ const ProductForm = ({ onSubmit, defaultValues, mode, branchId }) => {
     }
   }, [branchId, mode, internalDefaults?.id, loadedOnce]);
 
-  useEffect(() => {
-    const loadPrices = async () => {
-      try {
-        if (mode === 'edit' && internalDefaults?.id) {
-          const prices = await getProductPrices(internalDefaults.id);
-          setLocalPrices(prices);
-        }
-      } catch (err) {
-        console.error('❌ [Form] โหลดราคาสินค้าไม่สำเร็จ:', err);
-      }
-    };
-
-    if (mode === 'edit' && internalDefaults?.id) {
-      loadPrices();
-    }
-  }, [mode, internalDefaults?.id]);
-
+  
   useEffect(() => {
     const readyToSync =
       dropdowns.categories.length > 0 &&
@@ -106,7 +90,6 @@ const ProductForm = ({ onSubmit, defaultValues, mode, branchId }) => {
   }, [mode, internalDefaults, dropdowns, formSynced, reset]);
 
   const handleFormSubmit = (data) => {
-    data.prices = localPrices;
     onSubmit(data);
   };
 

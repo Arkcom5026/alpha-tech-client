@@ -10,21 +10,22 @@ import { sidebarServicesItems } from '@/features/services/sidebar/sidebarService
 import { sidebarSupplierItems } from '@/features/supplier/sidebar/sidebarSupplierItems.js';
 import { sidebarReportsItems } from '@/features/reports/sidebar/sidebarReportsItem.js';
 import { sidebarStockItems } from '@/features/stock/sidebar/sidebarStockItems.js';
-
 import { sidebarSalesItems } from '@/features/sales/sidebar/sidebarSalesItems.js';
 import { sidebarEmployeeItems } from '@/features/employee/sidebar/sidebarEmployeeItems.js';
 import { sidebarFinanceItems } from '@/features/finance/sidebar/sidebarFinanceItems';
+import { sidebarPurchaseOrdertems } from '@/features/purchaseOrder/sidebar/sidebarPurchaseOrdertems';
 
 const pathGroups = [
   { prefix: '/pos/stock', sidebar: sidebarStockItems },
   { prefix: '/pos/dashboard', sidebar: sidebarDashboardItems },
   { prefix: '/pos/sales', sidebar: sidebarSalesItems },
-  
   { prefix: '/pos/services', sidebar: sidebarServicesItems },
   { prefix: '/pos/reports', sidebar: sidebarReportsItems },
   { prefix: '/pos/finance', sidebar: sidebarFinanceItems },
   { prefix: '/pos/employees', sidebar: sidebarEmployeeItems },
   { prefix: '/pos/suppliers', sidebar: sidebarSupplierItems },
+  { prefix: '/pos/purchases', sidebar: sidebarPurchaseOrdertems },
+
 ];
 
 export default function SidebarLoader() {

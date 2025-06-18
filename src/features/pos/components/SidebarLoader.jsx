@@ -10,9 +10,10 @@ import { sidebarServicesItems } from '@/features/services/sidebar/sidebarService
 import { sidebarSupplierItems } from '@/features/supplier/sidebar/sidebarSupplierItems.js';
 import { sidebarReportsItems } from '@/features/reports/sidebar/sidebarReportsItem.js';
 import { sidebarStockItems } from '@/features/stock/sidebar/sidebarStockItems.js';
-import { sidebarFinanceItems } from '@/features/finance/sidebar/temp.js';
+
 import { sidebarSalesItems } from '@/features/sales/sidebar/sidebarSalesItems.js';
 import { sidebarEmployeeItems } from '@/features/employee/sidebar/sidebarEmployeeItems.js';
+import { sidebarFinanceItems } from '@/features/finance/sidebar/sidebarFinanceItems';
 
 const pathGroups = [
   { prefix: '/pos/stock', sidebar: sidebarStockItems },

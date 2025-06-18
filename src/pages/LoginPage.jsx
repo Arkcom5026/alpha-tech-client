@@ -1,15 +1,18 @@
 // ✅ @filename: LoginPage.jsx
 // ✅ @folder: src/pages/
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/features/auth/store/authStore';
 import { FaGoogle, FaFacebook, FaLock } from 'react-icons/fa';
-import apiClient from '@/utils/apiClient';
 
 const LoginPage = () => {
   const navigate = useNavigate();
-  const login = useAuthStore((state) => state.login);
+
+  // ✅ ป้องกัน Infinite Loop ด้วยการแยกเรียก zustand แต่ละตัว
+  const loginAction = useAuthStore((state) => state.loginAction);
+  const token = useAuthStore((state) => state.token);
+  const role = useAuthStore((state) => state.role);
 
   const [email, setEmail] = useState('advicebanphot@gmail.com');
   const [password, setPassword] = useState('Arkcom-5026');
@@ -17,25 +20,24 @@ const LoginPage = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  const isLoggedIn = !!token;
+
+  useEffect(() => {
+    if (!isLoggedIn) return;
+
+    const currentPath = window.location.pathname;
+
+    if (role === 'admin' && currentPath !== '/admin') navigate('/admin');
+    else if (role === 'employee' && currentPath !== '/pos/dashboard') navigate('/pos/dashboard');
+    else if (role === 'customer' && currentPath !== '/') navigate('/');
+  }, [isLoggedIn, role, navigate]);
+
   const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
     try {
-      const res = await apiClient.post('/auth/login', {
-        emailOrPhone: email,
-        password,
-      });
-      console.log("🟢 ผลลัพธ์ login:", res);
-      console.log("📦 res.data:", res.data);
-
-      const { token, role, profile } = res.data;
-      login({ token, role, profile }); // ✅ บันทึกผ่าน authStore อย่างเดียว
-
-      if (role === 'admin') return navigate('/admin');
-      else if (role === 'employee') return navigate('/pos/dashboard');
-      else if (role === 'customer') return navigate('/');
-      else return navigate('/');
+      await loginAction({ emailOrPhone: email, password });
     } catch (err) {
       console.error("🔴 Login Error:", err);
       const message = err?.response?.data?.message || err?.message || 'เกิดข้อผิดพลาด';

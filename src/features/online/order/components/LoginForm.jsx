@@ -24,7 +24,7 @@ const LoginForm = ({ onSuccess, setShowRegister }) => {
     setLoading(true);
     try {
       console.log("🟡 เริ่ม login...");
-      const { token, role, profile } = await loginAction({
+      const { token, role, profile, profileType } = await loginAction({
         emailOrPhone: credential,
         password,
       });
@@ -32,20 +32,21 @@ const LoginForm = ({ onSuccess, setShowRegister }) => {
       console.log("🟢 login สำเร็จ → token:", token);
       console.log("👤 profile:", profile);
 
-      const rawPosition = profile?.position?.name;
-      const mappedPosition =
-        rawPosition === "employee" ? "ผู้ดูแลระบบ" : rawPosition;
+      if (role === "employee" && profile?.position && profile?.branch) {
+        const rawPosition = profile.position.name;
+        const mappedPosition =
+          rawPosition === "employee" ? "ผู้ดูแลระบบ" : rawPosition;
 
-      useEmployeeStore.setState({
-        token,
-        role,
-        position: mappedPosition || "__NO_POSITION__",
-        branch: profile?.branch || null,
-        employee: profile || null,
-      });
+        useEmployeeStore.setState({
+          token,
+          role,
+          position: mappedPosition || "__NO_POSITION__",
+          branch: profile.branch,
+          employee: profile,
+        });
+      }
 
       login({ token, role, profile });
-
       console.log("🔐 login() บันทึกที่ authStore เรียบร้อย");
 
       // ✅ รอให้ authStore sync ค่า token ก่อนเรียก API ต่อ

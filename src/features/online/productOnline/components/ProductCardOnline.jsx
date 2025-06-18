@@ -11,7 +11,7 @@ const ProductCardOnline = ({ item }) => {
   const cartItems = useCartStore((state) => state.cartItems);
   const navigate = useNavigate();
 
-  const title = item.title || 'ไม่พบชื่อสินค้า';
+  const name = item.name || 'ไม่พบชื่อสินค้า';
   const description = item.description || '-';
   const imageUrl = item.imageUrl || null;
   const price = item.price || 0;
@@ -42,7 +42,7 @@ const ProductCardOnline = ({ item }) => {
             <img
               src={imageUrl}
               className="object-contain w-full h-[120px]"
-              alt={title}
+              alt={name}
             />
           ) : (
             <div className="text-gray-400 text-sm">No Image</div>
@@ -51,7 +51,7 @@ const ProductCardOnline = ({ item }) => {
 
         <div className="flex-1 p-3 space-y-1 text-sm bg-blue-50">
           <h3 className="font-semibold text-gray-800 text-sm leading-tight line-clamp-2">
-            {title}
+            {name}
           </h3>
           <ul className="text-xs text-gray-600 list-disc pl-4 space-y-0.5 break-words max-w-[180px] h-[60px] overflow-hidden">
             <li>{category}</li>

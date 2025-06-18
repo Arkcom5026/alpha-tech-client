@@ -36,7 +36,7 @@ const PrintBillPageFullTax = () => {
 
   const saleItems = (sale.items || []).map((i) => ({
     id: i.stockItem.id,
-    productName: i.stockItem.product?.title || 'ไม่พบชื่อสินค้า',
+    productName: i.stockItem.product?.name || 'ไม่พบชื่อสินค้า',
     price: i.stockItem.sellPrice ?? 0,
     quantity: 1,
     unit: i.stockItem.unitName || '-',

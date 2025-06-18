@@ -90,7 +90,7 @@ const useSalesStore = create((set, get) => ({
       return {
         barcode: stockItem.barcode,
         barcodeId: stockItem.id,
-        productName: stockItem.product?.title || 'ไม่พบชื่อสินค้า',
+        productName: stockItem.product?.name || 'ไม่พบชื่อสินค้า',
         price: stockItem.sellPrice ?? 0,
         productId: stockItem.productId,
         stockItemId: stockItem.id,

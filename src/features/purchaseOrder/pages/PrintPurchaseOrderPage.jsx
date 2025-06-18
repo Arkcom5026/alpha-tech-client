@@ -125,7 +125,7 @@ const PrintPurchaseOrderPage = () => {
             {po.items.map((item, idx) => (
               <tr key={idx} className="border">
                 <td className="border p-2 text-center">{idx + 1}</td>
-                <td className="border p-2">{item.product?.title || '-'}</td>
+                <td className="border p-2">{item.product?.name || '-'}</td>
                 <td className="border p-2 text-center">{item.quantity}</td>
                 <td className="border p-2 text-right">{item.costPrice.toLocaleString()} ฿</td>
                 <td className="border p-2 text-right">{(item.quantity * item.costPrice).toLocaleString()} ฿</td>

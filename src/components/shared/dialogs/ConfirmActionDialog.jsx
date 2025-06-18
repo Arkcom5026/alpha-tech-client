@@ -10,14 +10,14 @@ import {
   } from '@/components/ui/dialog';
   import { Button } from '@/components/ui/button';
   
-  const ConfirmActionDialog = ({ open, title, description, onCancel, onConfirm }) => {
+  const ConfirmActionDialog = ({ open, name, description, onCancel, onConfirm }) => {
     console.log('🧩 ConfirmActionDialog Props:', { open });
   
     return (
       <Dialog open={open} onOpenChange={onCancel}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{title || 'ยืนยันการดำเนินการ'}</DialogTitle>
+            <DialogTitle>{name || 'ยืนยันการดำเนินการ'}</DialogTitle>
             <DialogDescription>
               {description || 'โปรดตรวจสอบความถูกต้องก่อนดำเนินการนี้'}
             </DialogDescription>

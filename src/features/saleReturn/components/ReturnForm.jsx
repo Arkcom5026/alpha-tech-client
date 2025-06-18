@@ -73,7 +73,7 @@ const ReturnForm = ({ items = [], onSubmit, sale }) => {
                 />
               </td>
               <td className="border px-2 py-1">{item.stockItem?.barcode || '-'}</td>
-              <td className="border px-2 py-1">{item.stockItem?.product?.title || '-'}</td>
+              <td className="border px-2 py-1">{item.stockItem?.product?.name || '-'}</td>
               <td className="border px-2 py-1 whitespace-pre-wrap text-xs">
                 {item.stockItem?.product?.description || '-'}
               </td>

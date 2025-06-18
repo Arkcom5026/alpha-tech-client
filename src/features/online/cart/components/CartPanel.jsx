@@ -1,7 +1,8 @@
-// ✅ CartPanel.jsx (ปรับ UI ตะกร้าให้ดูดียิ่งขึ้น พร้อมแสดงชื่อ/ภาพ/จำนวน/ราคาต่อชิ้น)
+// ✅ CartPanel.jsx (แสดงภาพ/ชื่อ/ราคา + กดเพิ่ม-ลด-ลบสินค้า พร้อมตรวจ login)
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { useCartStore } from "../store/cartStore";
+import { useAuthStore } from "@/features/auth/store/authStore";
 
 const CartPanel = () => {
   const cartItems = useCartStore((state) => state.cartItems);
@@ -11,6 +12,29 @@ const CartPanel = () => {
   const total = useCartStore((state) => state.totalAmount)();
   const navigate = useNavigate();
 
+  const token = useAuthStore((state) => state.token);
+  const profile = useAuthStore((state) => state.profile);
+  const isLoggedIn = !!token && !!profile;
+
+  const handleIncrease = (id) => {
+    increaseQty(id); // ✅ เพิ่มจำนวนใน store เสมอ
+  };
+
+  const handleDecrease = (id) => {
+    decreaseQty(id); // ✅ ลดจำนวนใน store เสมอ
+  };
+
+  const handleRemove = (id) => {
+    if (isLoggedIn) {
+      removeFromCart(id); // ✅ ลบจริงจาก DB เมื่อ login แล้ว
+    } else {
+      useCartStore.setState((state) => ({
+        cartItems: state.cartItems.filter((item) => item.id !== id),
+        selectedItems: state.selectedItems.filter((itemId) => itemId !== id),
+      }));
+    }
+  };
+
   return (
     <div className="bg-white border rounded-xl p-4 text-sm flex flex-col h-full shadow-sm">
       <h1 className="text-lg font-semibold mb-4">ตะกร้าสินค้า</h1>
@@ -19,52 +43,58 @@ const CartPanel = () => {
         {cartItems.length === 0 ? (
           <div className="text-gray-400 text-center mt-8">ไม่มีสินค้าที่เลือก</div>
         ) : (
-          cartItems.map((item) => (
-            <div key={item.id} className="flex gap-3 items-start border-b pb-3">
-              <img
-                src={item.imageUrl || '/no-image.png'}
-                alt={item.title || item.name || 'ไม่มีชื่อสินค้า'}
-                className="w-16 h-16 object-contain border rounded"
-              />
+          cartItems.map((item) => {
+            const imageUrl = item.product?.productImages?.[0]?.secure_url || item.imageUrl || '/no-image.png';
+            const name = item.product?.name || item.name || 'ไม่มีชื่อสินค้า';
+            const price = item.priceAtThatTime || item.price || 0;
 
-              <div className="flex-1">
-                <div className="font-medium text-gray-800 text-sm leading-snug line-clamp-2">
-                  {item.title || item.name || 'ไม่มีชื่อสินค้า'}
-                </div>
-                <div className="text-xs text-gray-500">
-                  {Number(item.price || 0).toLocaleString()} ฿ / ชิ้น
+            return (
+              <div key={item.id} className="flex gap-3 items-start border-b pb-3">
+                <img
+                  src={imageUrl}
+                  alt={name}
+                  className="w-16 h-16 object-contain border rounded"
+                />
+
+                <div className="flex-1">
+                  <div className="font-medium text-gray-800 text-sm leading-snug line-clamp-2">
+                    {name}
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    {Number(price).toLocaleString()} ฿ / ชิ้น
+                  </div>
+
+                  <div className="flex items-center gap-2 mt-1 text-xs text-gray-600">
+                    <button
+                      onClick={() => handleDecrease(item.id)}
+                      className="px-2 py-0.5 border rounded hover:bg-gray-100"
+                    >
+                      -
+                    </button>
+                    <span className="min-w-[20px] text-center">{item.quantity}</span>
+                    <button
+                      onClick={() => handleIncrease(item.id)}
+                      className="px-2 py-0.5 border rounded hover:bg-gray-100"
+                    >
+                      +
+                    </button>
+                    <button
+                      onClick={() => handleRemove(item.id)}
+                      className="text-red-500 hover:underline ml-2"
+                    >
+                      ลบ
+                    </button>
+                  </div>
                 </div>
 
-                <div className="flex items-center gap-2 mt-1 text-xs text-gray-600">
-                  <button
-                    onClick={() => decreaseQty(item.id)}
-                    className="px-2 py-0.5 border rounded hover:bg-gray-100"
-                  >
-                    -
-                  </button>
-                  <span className="min-w-[20px] text-center">{item.quantity}</span>
-                  <button
-                    onClick={() => increaseQty(item.id)}
-                    className="px-2 py-0.5 border rounded hover:bg-gray-100"
-                  >
-                    +
-                  </button>
-                  <button
-                    onClick={() => removeFromCart(item.id)}
-                    className="text-red-500 hover:underline ml-2"
-                  >
-                    ลบ
-                  </button>
+                <div className="text-right whitespace-nowrap pt-1">
+                  <div className="text-sm text-gray-700 font-medium">
+                    {(item.quantity * price).toLocaleString()} ฿
+                  </div>
                 </div>
               </div>
-
-              <div className="text-right whitespace-nowrap pt-1">
-                <div className="text-sm text-gray-700 font-medium">
-                  {(item.quantity * (item.price || 0)).toLocaleString()} ฿
-                </div>
-              </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
 
@@ -73,12 +103,21 @@ const CartPanel = () => {
           <span>รวมทั้งหมด</span>
           <span>{Number(total || 0).toLocaleString()} ฿</span>
         </div>
-        <button
-          className="w-full bg-blue-600 text-white rounded-md py-2 hover:bg-blue-700 transition font-medium"
-          onClick={() => navigate("/checkout")}
-        >
-          ไปชำระเงิน
-        </button>
+
+        <div className="flex gap-2">
+          <button
+            onClick={() => navigate("/cart")}
+            className="w-1/2 border border-blue-500 text-blue-600 rounded-md py-2 hover:bg-blue-50 transition font-medium"
+          >
+            ดูสินค้าในตะกร้า
+          </button>
+          <button
+            className="w-1/2 bg-blue-600 text-white rounded-md py-2 hover:bg-blue-700 transition font-medium"
+            onClick={() => navigate("/checkout")}
+          >
+            ไปชำระเงิน
+          </button>
+        </div>
       </div>
     </div>
   );

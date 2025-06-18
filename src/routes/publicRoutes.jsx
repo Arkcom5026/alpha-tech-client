@@ -1,3 +1,4 @@
+import CartPage from "@/features/online/cart/pages/CartPage";
 import PublicLayout from "@/features/online/layout/PublicLayout";
 import CheckoutPage from "@/features/online/order/pages/CheckoutPage";
 import HomeOnline from "@/features/online/pages/HomeOnline";
@@ -8,6 +9,9 @@ const publicRoutes = {
   children: [
     { index: true, element: <HomeOnline /> },
     { path: 'checkout', element: <CheckoutPage /> },
+    { path: 'cart', element: <CartPage /> },
+    
+
   ],
 };
 

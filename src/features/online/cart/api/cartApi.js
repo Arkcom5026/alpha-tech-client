@@ -1,13 +1,13 @@
 // src/features/cart/api/cartApi.js
 import apiClient from '@/utils/apiClient';
 
-// ✅ Sync cart items from local to server
-export const syncCartToServer = async (cartItems) => {
+// ✅ Merge local cart with server cart (called after login)
+export const mergeCartToServer = async (cartItems) => {
   try {
-    const response = await apiClient.post('/cart-sync/sync', { items: cartItems });
+    const response = await apiClient.post('/cart/merge', { items: cartItems });
     return response.data;
   } catch (error) {
-    console.error('❌ syncCartToServer error:', error);
+    console.error('❌ mergeCartToServer error:', error);
     throw error;
   }
 };
@@ -15,7 +15,8 @@ export const syncCartToServer = async (cartItems) => {
 // ✅ Fetch cart items from server to local
 export const fetchCartFromServer = async () => {
   try {
-    const response = await apiClient.get('/cart-sync/user');
+    const response = await apiClient.get('/cart');
+    console.log('fetchCartFromServer response : ',response)
     return response.data.cartItems || [];
   } catch (error) {
     console.error('❌ fetchCartFromServer error:', error);
@@ -26,7 +27,7 @@ export const fetchCartFromServer = async () => {
 // ✅ Clear server-side cart (after order confirmed or manually)
 export const clearServerCart = async () => {
   try {
-    const response = await apiClient.delete('/cart-sync/clear');
+    const response = await apiClient.delete('/cart');
     return response.data;
   } catch (error) {
     console.error('❌ clearServerCart error:', error);
@@ -37,7 +38,7 @@ export const clearServerCart = async () => {
 // ✅ Remove single item from server-side cart
 export const removeCartItemFromServer = async (productId) => {
   try {
-    const response = await apiClient.delete(`/cart-sync/item/${productId}`);
+    const response = await apiClient.delete(`/cart/items/${productId}`);
     return response.data;
   } catch (error) {
     console.error('❌ removeCartItemFromServer error:', error);
@@ -48,7 +49,7 @@ export const removeCartItemFromServer = async (productId) => {
 // ✅ Update quantity for specific item in server-side cart
 export const updateCartItemQuantity = async (productId, quantity) => {
   try {
-    const response = await apiClient.patch(`/cart-sync/item/${productId}`, { quantity });
+    const response = await apiClient.patch(`/cart/item/${productId}`, { quantity });
     return response.data;
   } catch (error) {
     console.error('❌ updateCartItemQuantity error:', error);
@@ -56,3 +57,13 @@ export const updateCartItemQuantity = async (productId, quantity) => {
   }
 };
 
+// ✅ Delete selected items from server-side cart (batch delete)
+export const deleteSelectedCartItems = async (cartItemIds) => {
+  try {
+    const response = await apiClient.post('/cart/delete-many', { cartItemIds });
+    return response.data;
+  } catch (error) {
+    console.error('❌ deleteSelectedCartItems error:', error);
+    throw error;
+  }
+};

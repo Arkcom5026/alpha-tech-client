@@ -65,7 +65,7 @@ const PurchaseOrderDetailPage = () => {
               {po.items.map((item, index) => (
                 <tr key={index} className="border-b">
                   <td className="py-2">{index + 1}</td>
-                  <td>{item.product?.title || '-'}</td>
+                  <td>{item.product?.name || '-'}</td>
                   <td>{item.quantity}</td>
                   <td>{item.costPrice.toLocaleString()} ฿</td>
                   <td>{(item.quantity * item.costPrice).toLocaleString()} ฿</td>

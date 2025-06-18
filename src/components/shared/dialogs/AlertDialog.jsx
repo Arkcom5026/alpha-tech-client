@@ -6,12 +6,12 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 
-const AlertDialog = ({ open, title = 'แจ้งเตือน', message, onClose }) => {
+const AlertDialog = ({ open, name = 'แจ้งเตือน', message, onClose }) => {
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent aria-describedby="alert-dialog-description">
         <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
+          <DialogTitle>{name}</DialogTitle>
         </DialogHeader>
         <div id="alert-dialog-description" className="py-2">
           {message}

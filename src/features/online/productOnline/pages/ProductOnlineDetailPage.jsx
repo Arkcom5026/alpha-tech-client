@@ -26,7 +26,7 @@ const ProductOnlineDetailPage = () => {
 
   const {
     id: productId,
-    title,
+    name,
     description,
     imageUrl,
     price,
@@ -48,7 +48,7 @@ const ProductOnlineDetailPage = () => {
         <div className="lg:col-span-5">
           <div className="bg-white rounded-md overflow-hidden shadow-sm">
             {mainImage ? (
-              <img src={mainImage} alt={title} className="w-full aspect-square sm:aspect-video object-contain" />
+              <img src={mainImage} alt={name} className="w-full aspect-square sm:aspect-video object-contain" />
             ) : (
               <div className="w-full h-80 bg-gray-100 flex items-center justify-center text-gray-400">
                 No Image
@@ -77,7 +77,7 @@ const ProductOnlineDetailPage = () => {
         {/* ข้อมูลสินค้า */}
         <div className="lg:col-span-7 flex flex-col justify-between">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">{title || 'ไม่พบชื่อสินค้า'}</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">{name || 'ไม่พบชื่อสินค้า'}</h1>
             <p className="text-gray-600 mb-4 text-sm sm:text-base leading-relaxed">{description || '-'}</p>
             <div className="text-xl sm:text-2xl font-bold text-blue-600 mb-6">
               {numberFormat(price || 0)} บาท
@@ -87,7 +87,7 @@ const ProductOnlineDetailPage = () => {
               onClick={() =>
                 actionAddtoCart({
                   id: productId,
-                  title,
+                  name,
                   description,
                   imageUrl: mainImage,
                   price,

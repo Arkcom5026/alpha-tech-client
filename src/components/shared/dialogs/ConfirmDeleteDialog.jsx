@@ -9,14 +9,14 @@ import {
   } from '@/components/ui/dialog';
   import { Button } from '@/components/ui/button';
   
-  const ConfirmDeleteDialog = ({ open, itemLabel, title, description, onCancel, onConfirm }) => {
+  const ConfirmDeleteDialog = ({ open, itemLabel, name, description, onCancel, onConfirm }) => {
     
   
     return (
       <Dialog open={open} onOpenChange={onCancel}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{title || 'ยืนยันการลบ'}</DialogTitle>
+            <DialogTitle>{name || 'ยืนยันการลบ'}</DialogTitle>
             <DialogDescription>
               {description || 'โปรดตรวจสอบความถูกต้องก่อนยืนยันการลบข้อมูล'}
             </DialogDescription>

@@ -121,7 +121,7 @@ const PreviewBarcodePage = () => {
                 <BarcodeWithQRRenderer
                   barcodeValue={item.barcode}
                   qrValue={item.barcode}
-                  productName={product?.title || 'ชื่อสินค้าไม่พบ'}
+                  productName={product?.name || 'ชื่อสินค้าไม่พบ'}
                   barcodeHeight={barcodeHeight}
                   barcodeWidth={barcodeWidth}
                 />

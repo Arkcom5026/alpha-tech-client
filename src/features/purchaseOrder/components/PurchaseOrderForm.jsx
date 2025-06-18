@@ -59,7 +59,7 @@ const PurchaseOrderForm = ({ mode = 'create' }) => {
       setNote(purchaseOrder.note || '');
       const enriched = purchaseOrder.items.map((item) => ({
         id: item.productId,
-        title: item.product?.title || '',
+        name: item.product?.name || '',
         quantity: item.quantity,
         costPrice: item.costPrice, // ✅ ดึงจาก costPrice
       }));

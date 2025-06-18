@@ -68,7 +68,7 @@ const InStockBarcodeTable = () => {
             scannedList.map((item, index) => (
               <tr key={item.barcode + (item.serialNumber || '')} className="border-t hover:bg-green-50">
                 <td className="px-4 py-2">{index + 1}</td>
-                <td className="px-4 py-2">{item.product?.title || '-'}</td>
+                <td className="px-4 py-2">{item.product?.name || '-'}</td>
                 <td className="px-4 py-2 font-mono text-green-700">{item.barcode || item.stockItem?.barcode || '-'}</td>
                 <td className="px-4 py-2 font-mono text-gray-700">{item.serialNumber || '-'}</td>
                 <td className="px-4 py-2 text-green-600">✅ พร้อมขาย</td>

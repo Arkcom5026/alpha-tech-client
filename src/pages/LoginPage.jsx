@@ -5,8 +5,6 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/features/auth/store/authStore';
 import { FaGoogle, FaFacebook, FaLock } from 'react-icons/fa';
-
-import useEmployeeStore from '@/store/employeeStore';
 import apiClient from '@/utils/apiClient';
 
 const LoginPage = () => {
@@ -32,26 +30,7 @@ const LoginPage = () => {
       console.log("📦 res.data:", res.data);
 
       const { token, role, profile } = res.data;
-
-      console.log('✅ ตำแหน่งที่ได้จาก backend:', profile?.position);
-
-      // ✅ ทำ mapping ตำแหน่งให้ตรงกับ RBAC
-      const rawPosition = profile?.position?.name;
-      const mappedPosition =
-        rawPosition === 'employee' ? 'ผู้ดูแลระบบ' : rawPosition;
-
-      useEmployeeStore.setState({
-        token,
-        role,
-        position: mappedPosition || '__NO_POSITION__',
-        branch: profile?.branch || null,
-        employee: profile || null,
-      });
-
-      await Promise.resolve();
-
-      login({ token, role, profile });
-      localStorage.setItem('token', token);
+      login({ token, role, profile }); // ✅ บันทึกผ่าน authStore อย่างเดียว
 
       if (role === 'admin') return navigate('/admin');
       else if (role === 'employee') return navigate('/pos/dashboard');

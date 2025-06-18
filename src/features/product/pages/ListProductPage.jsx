@@ -50,7 +50,7 @@ export default function ListProductPage() {
 
   const filtered = products.filter(p => {
     const matchesBranch = p.branchId === branchId;
-    const matchesSearch = (p.title || '').toLowerCase().includes((search || '').toLowerCase());
+    const matchesSearch = (p.name || '').toLowerCase().includes((search || '').toLowerCase());
     const matchesCategory = filter.categoryId ? p.categoryId === parseInt(filter.categoryId) : true;
     const matchesType = filter.productTypeId ? p.productTypeId === parseInt(filter.productTypeId) : true;
     const matchesProfile = filter.productProfileId ? p.productProfileId === parseInt(filter.productProfileId) : true;
@@ -61,9 +61,9 @@ export default function ListProductPage() {
   const sorted = [...filtered].sort((a, b) => {
     switch (sortOrder) {
       case 'name-asc':
-        return (a.title || '').localeCompare(b.title || '');
+        return (a.name || '').localeCompare(b.name || '');
       case 'name-desc':
-        return (b.title || '').localeCompare(a.title || '');
+        return (b.name || '').localeCompare(a.name || '');
       case 'price-asc':
         return getPrice(a) - getPrice(b);
       case 'price-desc':
@@ -146,8 +146,8 @@ export default function ListProductPage() {
         open={!!deleteTarget}
         onClose={() => setDeleteTarget(null)}
         onConfirm={handleDelete}
-        title="ยืนยันการลบสินค้า"
-        description={`คุณแน่ใจว่าต้องการลบ “${deleteTarget?.title}” หรือไม่?`}
+        name="ยืนยันการลบสินค้า"
+        description={`คุณแน่ใจว่าต้องการลบ “${deleteTarget?.name}” หรือไม่?`}
       />
     </div>
   );

@@ -13,7 +13,9 @@ const LoginForm = ({ onSuccess, setShowRegister }) => {
 
   const login = useAuthStore((state) => state.login);
   const cartItems = useCartStore((state) => state.cartItems);
-  const syncCartAction = useCartStore((state) => state.syncCartAction);
+  const clearCart = useCartStore((state) => state.clearCart);
+  const fetchCartAction = useCartStore((state) => state.fetchCartAction);
+  const mergeCartAction = useCartStore((state) => state.mergeCartAction);
   const loginAction = useAuthStore((state) => state.loginAction);
 
   const handleSubmit = async (e) => {
@@ -21,11 +23,14 @@ const LoginForm = ({ onSuccess, setShowRegister }) => {
     setError("");
     setLoading(true);
     try {
+      console.log("🟡 เริ่ม login...");
       const { token, role, profile } = await loginAction({
         emailOrPhone: credential,
         password,
-        cartItems,
       });
+
+      console.log("🟢 login สำเร็จ → token:", token);
+      console.log("👤 profile:", profile);
 
       const rawPosition = profile?.position?.name;
       const mappedPosition =
@@ -40,12 +45,28 @@ const LoginForm = ({ onSuccess, setShowRegister }) => {
       });
 
       login({ token, role, profile });
-      localStorage.setItem("token", token);
 
-      // ✅ เรียก sync cart หลัง login สำเร็จ
-      if (cartItems.length > 0) {
-        await syncCartAction(cartItems);
+      console.log("🔐 login() บันทึกที่ authStore เรียบร้อย");
+
+      // ✅ รอให้ authStore sync ค่า token ก่อนเรียก API ต่อ
+      await Promise.resolve();
+
+      try {
+        if (cartItems.length > 0) {
+          console.log("🛒 mergeCartAction เริ่มทำงาน...", cartItems);
+          await mergeCartAction();
+          console.log("✅ mergeCartAction สำเร็จ");
+        }
+      } catch (mergeErr) {
+        console.warn("⚠️ mergeCartAction ล้มเหลว (แต่ปล่อยผ่านได้):", mergeErr);
       }
+
+      console.log("📦 fetchCartAction เริ่มทำงาน...");
+      await fetchCartAction();
+      console.log("✅ fetchCartAction สำเร็จ");
+
+      clearCart();
+      console.log("🧹 เคลียร์ cartItems ชั่วคราวเรียบร้อย");
 
       if (onSuccess) onSuccess(role);
     } catch (err) {

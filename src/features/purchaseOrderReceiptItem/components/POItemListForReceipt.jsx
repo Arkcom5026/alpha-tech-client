@@ -186,7 +186,7 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, deliveryNoteNumbe
 
               return (
                 <tr key={item.id} className={isSaved ? 'bg-blue-100' : ''}>
-                  <td className="border px-2 py-1">{item.product?.title || '-'}</td>
+                  <td className="border px-2 py-1">{item.product?.name || '-'}</td>
                   <td className="border px-2 py-1 text-center">{item.product?.template?.name || 'ไม่มีหมวดหมู่'}</td>
                   <td className="border px-2 py-1 text-center">{item.product?.description || '-'}</td>
                   <td className="border px-2 py-1 text-center">{item.quantity}</td>

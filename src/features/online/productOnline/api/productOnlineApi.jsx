@@ -14,8 +14,7 @@ export const getProductsForOnline = async (filters) => {
 // ✅ ดูรายละเอียดสินค้าออนไลน์รายตัว
 export const getProductOnlineById = async (id) => {
   try {
-    const res = await apiClient.get(`/products/online/detail/${id}`);
-    console.log('getProductOnlineById : ', res);
+    const res = await apiClient.get(`/products/online/detail/${id}`);    
     return res.data;
   } catch (err) {
     console.error(`❌ getProductOnlineById error (id: ${id}):`, err);
@@ -48,8 +47,7 @@ export const clearOnlineProductCache = async () => {
 // ✅ ดึง dropdown สำหรับกรองสินค้าออนไลน์
 export const getProductDropdownsForOnline = async () => {
   try {
-    const res = await apiClient.get('/products/online/dropdowns');
-    console.log('getProductDropdownsForOnline : ',res)
+    const res = await apiClient.get('/products/online/dropdowns');    
     return res.data;
   } catch (err) {
     console.error('❌ getProductDropdownsForOnline error:', err);

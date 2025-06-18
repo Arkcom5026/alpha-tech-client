@@ -45,7 +45,7 @@ const PurchaseOrderTable = ({ products = [], setProducts = () => { }, loading = 
               const isLast = index === products.length - 1;
               return (
                 <TableRow key={item.id} ref={isLast ? lastRowRef : null}>
-                  <TableCell className="text-center">{item.title || '-'}</TableCell>
+                  <TableCell className="text-center">{item.name || '-'}</TableCell>
                   <TableCell className="text-center align-middle">{item.template?.name || 'ไม่มีหมวดหมู่'}</TableCell>
                   <TableCell className="text-center">{item.description || '-'}</TableCell>
                   <TableCell className="text-center">
@@ -72,7 +72,7 @@ const PurchaseOrderTable = ({ products = [], setProducts = () => { }, loading = 
                       <div className="flex justify-center">
                         <StandardActionButtons
                           onDelete={() => {
-                            if (confirm(`ต้องการลบรายการ ${item.title} ใช่หรือไม่?`)) {
+                            if (confirm(`ต้องการลบรายการ ${item.name} ใช่หรือไม่?`)) {
                               handleDelete(item.id);
                             }
                           }}

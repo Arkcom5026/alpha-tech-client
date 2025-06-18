@@ -27,7 +27,7 @@ const PurchaseOrderReceiptItemForm = ({ item }) => {
 
   return (
     <form onSubmit={handleSubmit} className="flex items-center space-x-2">
-      <span>{item.product?.title || 'ไม่พบชื่อสินค้า'}</span>
+      <span>{item.product?.name || 'ไม่พบชื่อสินค้า'}</span>
       <input
         type="number"
         min="0"

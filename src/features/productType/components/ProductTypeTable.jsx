@@ -4,17 +4,16 @@ import {
   AlertDialog,
   AlertDialogContent,
   AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogFooter,
+    AlertDialogFooter,
   AlertDialogCancel,
   AlertDialogAction,
+  AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 
 import { deleteProductType } from '../api/productTypeApi';
 
 import StandardActionButtons from '@/components/shared/buttons/StandardActionButtons';
 import useProductTypeStore from '@/features/productType/Store/productTypeStore';
-
 
 const ProductTypeTable = ({ data, onEdit }) => {
   const { fetchProductTypes } = useProductTypeStore();

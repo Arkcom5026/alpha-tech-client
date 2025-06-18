@@ -164,9 +164,7 @@ const CheckoutPage = () => {
       <div className="bg-white p-6 rounded-xl shadow-md h-fit">
         {!token || !profile ? (
           <>
-            <h2 className="text-lg font-semibold mb-4 text-center">
-              กรุณาเข้าสู่ระบบก่อนสั่งซื้อสินค้า
-            </h2>
+
             {showRegister ? (
               <RegisterForm setShowRegister={setShowRegister} />
             ) : (

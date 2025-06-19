@@ -1,14 +1,14 @@
 // ✅ src/features/supplier/pages/ListSupplierPage.jsx
 import { useEffect, useState } from 'react';
 import { getAllSuppliers } from '../api/supplierApi';
-import useEmployeeStore from '@/store/employeeStore';
-import SupplierTable from '../components/SupplierTable';
 
+import SupplierTable from '../components/SupplierTable';
+import { useAuthStore } from '@/features/auth/store/authStore';
 
 const ListSupplierPage = () => {
   const [suppliers, setSuppliers] = useState([]);
   const [loading, setLoading] = useState(true);  
-  const token = useEmployeeStore((state) => state.token);
+  const token = useAuthStore((state) => state.token);
 
   const fetchSuppliers = async () => {
     try {
@@ -52,5 +52,3 @@ const ListSupplierPage = () => {
 };
 
 export default ListSupplierPage;
-
-

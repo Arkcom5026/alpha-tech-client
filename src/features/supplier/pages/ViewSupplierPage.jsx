@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getSupplierById } from '../api/supplierApi';
-import useEmployeeStore from '@/store/employeeStore';
+import useAuthStore from '@/store/employeeStore';
 import { Button } from '@/components/ui/button';
 
 const ViewSupplierPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const token = useEmployeeStore((state) => state.token);
+  const token = useAuthStore((state) => state.token);
   const [supplier, setSupplier] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);

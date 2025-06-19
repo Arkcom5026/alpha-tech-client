@@ -3,13 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import SupplierForm from '../components/SupplierForm';
 import { createSupplier } from '../api/supplierApi';
-import useEmployeeStore from '@/store/employeeStore';
+import { useAuthStore } from '@/features/auth/store/authStore';
 
 const CreateSupplierPage = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const token = useEmployeeStore((state) => state.token);
-  const branch = useEmployeeStore((state) => state.branch);
+  const token = useAuthStore((state) => state.token);
+  const branch = useAuthStore((state) => state.branch);
 
   const handleCreateSupplier = async (formData) => {
     try {

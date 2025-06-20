@@ -1,4 +1,4 @@
-// ✅ อัปเดตฟังก์ชันใน Store ให้รับ filters
+// ✅ อัปเดตฟังก์ชันใน Store ให้รับ filters และ branchId
 
 import { create } from 'zustand';
 import {
@@ -18,7 +18,7 @@ export const useProductOnlineStore = create((set, get) => ({
   loadProductsAction: async (filters = {}) => {
     set({ isLoading: true, error: null });
     try {
-      const data = await getProductsForOnline(filters); // ✅ ใช้ filters จริง
+      const data = await getProductsForOnline(filters);
       set({ products: data, isLoading: false });
     } catch (err) {
       console.error('❌ โหลดสินค้าออนไลน์ล้มเหลว:', err);
@@ -26,10 +26,15 @@ export const useProductOnlineStore = create((set, get) => ({
     }
   },
 
-  getProductByIdAction: async (id) => {
+  getProductByIdAction: async (id, branchId) => {
+    const parsedBranchId = Number(branchId);
+    if (isNaN(parsedBranchId) || parsedBranchId <= 0) {
+      console.warn('❗ ไม่พบ branchId หรือไม่ถูกต้อง:', branchId);
+      return;
+    }
     set({ isLoading: true, error: null });
     try {
-      const data = await getProductOnlineById(Number(id));
+      const data = await getProductOnlineById(Number(id), parsedBranchId);
       set({ selectedProduct: data, isLoading: false });
     } catch (err) {
       console.error('❌ โหลดสินค้ารายการเดียวล้มเหลว:', err);
@@ -67,4 +72,8 @@ export const useProductOnlineStore = create((set, get) => ({
       console.error('❌ ล้างแคชสินค้าล้มเหลว:', err);
     }
   },
+
+  // ✅ เพิ่ม branchId สำหรับ context ใน Store
+  selectedBranchId: null,
+  setSelectedBranchId: (id) => set({ selectedBranchId: id }),
 }));

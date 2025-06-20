@@ -1,9 +1,17 @@
 import apiClient from '@/utils/apiClient';
 
 // ✅ ค้นหาสินค้าออนไลน์ (ใช้ใน Sidebar / Filter)
-export const getProductsForOnline = async (filters) => {
+export const getProductsForOnline = async (filters = {}) => {
   try {
-    const res = await apiClient.get('/products/online/search', { params: filters });
+    const params = {};
+    if (filters.branchId) params.branchId = filters.branchId; // ✅ เพิ่ม branchId
+    if (filters.categoryId) params.categoryId = filters.categoryId;
+    if (filters.productTypeId) params.productTypeId = filters.productTypeId;
+    if (filters.productProfileId) params.productProfileId = filters.productProfileId;
+    if (filters.templateId) params.templateId = filters.templateId;
+    if (filters.searchText) params.searchText = filters.searchText;
+
+    const res = await apiClient.get('/products/online/search', { params });
     return res.data;
   } catch (err) {
     console.error('❌ getProductsForOnline error:', err);
@@ -11,10 +19,14 @@ export const getProductsForOnline = async (filters) => {
   }
 };
 
-// ✅ ดูรายละเอียดสินค้าออนไลน์รายตัว
-export const getProductOnlineById = async (id) => {
+
+// ✅ ดูรายละเอียดสินค้าออนไลน์รายตัว (ส่ง branchId)
+export const getProductOnlineById = async (id, branchId) => {
   try {
-    const res = await apiClient.get(`/products/online/detail/${id}`);    
+    if (!branchId) throw new Error('branchId is required');
+    const res = await apiClient.get(`/products/online/detail/${id}`, {
+      params: { branchId },
+    });
     return res.data;
   } catch (err) {
     console.error(`❌ getProductOnlineById error (id: ${id}):`, err);
@@ -22,16 +34,6 @@ export const getProductOnlineById = async (id) => {
   }
 };
 
-// ✅ (Deprecated) — ไม่ใช้แล้ว แนะนำให้ใช้ getProductsForOnline แทน
-export const searchOnlineProducts = async (query) => {
-  try {
-    const res = await apiClient.get(`/products/online/search?query=${encodeURIComponent(query)}`);
-    return res.data;
-  } catch (err) {
-    console.error(`❌ searchOnlineProducts error (query: ${query}):`, err);
-    throw err;
-  }
-};
 
 // ✅ เคลียร์ cache สินค้าออนไลน์ (ถ้ามี)
 export const clearOnlineProductCache = async () => {
@@ -47,7 +49,8 @@ export const clearOnlineProductCache = async () => {
 // ✅ ดึง dropdown สำหรับกรองสินค้าออนไลน์
 export const getProductDropdownsForOnline = async () => {
   try {
-    const res = await apiClient.get('/products/online/dropdowns');    
+    const res = await apiClient.get('/products/online/dropdowns');
+    console.log('getProductDropdownsForOnline : ',res)
     return res.data;
   } catch (err) {
     console.error('❌ getProductDropdownsForOnline error:', err);

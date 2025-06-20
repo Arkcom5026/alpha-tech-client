@@ -1,4 +1,3 @@
-
 // ✅ src/routes/onlineRoutes.js
 import React from 'react';
 
@@ -8,14 +7,11 @@ import ProductOnlineDetailPage from '@/features/online/productOnline/pages/Produ
 
 const onlineRoutes = {    
   path: 'shop',
-  element: <OnlineLayout />,
+  element: <OnlineLayout />, // ✅ layout สำหรับหน้า shop ทั้งหมด
   children: [    
     { index: true, element: <ProductOnlineListPage /> },    
-    { path: 'product/:id', element: <ProductOnlineDetailPage /> },
+    { path: 'product/:id', element: <ProductOnlineDetailPage /> }, // ✅ รองรับ query เช่น ?branchId=2
   ],
-
-
 };
-
 
 export default onlineRoutes;

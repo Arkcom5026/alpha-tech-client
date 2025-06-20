@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 
 import { toast } from 'react-toastify';
 
-import { createBranch } from '../api/branch';
+import { createBranch } from '../../branch/api/branchApi';
 import { useAuthStore } from '@/features/auth/store/authStore';
 
 

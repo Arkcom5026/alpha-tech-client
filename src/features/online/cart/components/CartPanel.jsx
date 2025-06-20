@@ -1,5 +1,5 @@
 // ✅ CartPanel.jsx (แสดงภาพ/ชื่อ/ราคา + กดเพิ่ม-ลด-ลบสินค้า พร้อมตรวจ login)
-import React from "react";
+import React, { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useCartStore } from "../store/cartStore";
 import { useAuthStore } from "@/features/auth/store/authStore";
@@ -9,7 +9,6 @@ const CartPanel = () => {
   const removeFromCart = useCartStore((state) => state.removeFromCart);
   const increaseQty = useCartStore((state) => state.increaseQuantity);
   const decreaseQty = useCartStore((state) => state.decreaseQuantity);
-  const total = useCartStore((state) => state.totalAmount)();
   const navigate = useNavigate();
 
   const token = useAuthStore((state) => state.token);
@@ -35,6 +34,13 @@ const CartPanel = () => {
     }
   };
 
+  const total = useMemo(() => {
+    return cartItems.reduce((sum, item) => {
+      const price = item.priceAtThatTime || item.price || 0;
+      return sum + price * item.quantity;
+    }, 0);
+  }, [cartItems]);
+
   return (
     <div className="bg-white border rounded-xl p-4 text-sm flex flex-col h-full shadow-sm">
       <h1 className="text-lg font-semibold mb-4">ตะกร้าสินค้า</h1>
@@ -56,7 +62,7 @@ const CartPanel = () => {
                   className="w-16 h-16 object-contain border rounded"
                 />
 
-                <div className="flex-1">
+                <div className="flex-1 min-w-0">
                   <div className="font-medium text-gray-800 text-sm leading-snug line-clamp-2">
                     {name}
                   </div>
@@ -64,24 +70,15 @@ const CartPanel = () => {
                     {Number(price).toLocaleString()} ฿ / ชิ้น
                   </div>
 
-                  <div className="flex items-center gap-2 mt-1 text-xs text-gray-600">
-                    <button
-                      onClick={() => handleDecrease(item.id)}
-                      className="px-2 py-0.5 border rounded hover:bg-gray-100"
-                    >
+                  <div className="flex items-center gap-2 mt-1 text-xs text-gray-600 flex-wrap">
+                    <button onClick={() => handleDecrease(item.id)} className="px-2 py-0.5 border rounded hover:bg-gray-100">
                       -
                     </button>
                     <span className="min-w-[20px] text-center">{item.quantity}</span>
-                    <button
-                      onClick={() => handleIncrease(item.id)}
-                      className="px-2 py-0.5 border rounded hover:bg-gray-100"
-                    >
+                    <button onClick={() => handleIncrease(item.id)} className="px-2 py-0.5 border rounded hover:bg-gray-100">
                       +
                     </button>
-                    <button
-                      onClick={() => handleRemove(item.id)}
-                      className="text-red-500 hover:underline ml-2"
-                    >
+                    <button onClick={() => handleRemove(item.id)} className="text-red-500 hover:underline ml-2">
                       ลบ
                     </button>
                   </div>

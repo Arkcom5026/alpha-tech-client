@@ -1,20 +1,40 @@
 import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useLocation } from 'react-router-dom';
 import { useProductOnlineStore } from '../store/productOnlineStore';
 import { numberFormat } from '@/utils/number';
 import { useCartStore } from '../../cart/store/cartStore';
+import { useBranchStore } from '@/features/branch/store/branchStore';
 
 const ProductOnlineDetailPage = () => {
   const { id } = useParams();
+  const location = useLocation();
+  const query = new URLSearchParams(location.search);
+  const branchIdFromQuery = query.get('branchId');
+
+  const branchId = useBranchStore((state) => state.selectedBranchId);
+  const setSelectedBranchId = useBranchStore((state) => state.setSelectedBranchId);
+
   const selectedProduct = useProductOnlineStore((state) => state.selectedProduct);
   const getProductByIdAction = useProductOnlineStore((state) => state.getProductByIdAction);
-  const actionAddtoCart = useCartStore((state) => state.actionAddtoCart);
+  const addToCart = useCartStore((state) => state.addToCart);
+
   const [activeTab, setActiveTab] = useState('spec');
   const [mainImage, setMainImage] = useState(null);
 
+  // ✅ ตั้งค่า branchId จาก query → store
   useEffect(() => {
-    if (id) getProductByIdAction(id);
-  }, [id, getProductByIdAction]);
+    if (branchIdFromQuery) {
+      setSelectedBranchId(Number(branchIdFromQuery));
+    }
+  }, [branchIdFromQuery]);
+
+  // ✅ ดึงข้อมูลสินค้าเมื่อ id + branchId พร้อมแล้ว
+  useEffect(() => {
+    console.log('ProductOnlineDetailPage id : ', id);
+    console.log('ProductOnlineDetailPage branchId : ', branchId);
+
+    if (id && branchId) getProductByIdAction(id, branchId);
+  }, [id, branchId, getProductByIdAction]);
 
   useEffect(() => {
     if (selectedProduct?.productImages?.length > 0) {
@@ -39,6 +59,7 @@ const ProductOnlineDetailPage = () => {
     quantity,
     warranty,
     productImages = [],
+    isReady,
   } = selectedProduct;
 
   return (
@@ -79,13 +100,14 @@ const ProductOnlineDetailPage = () => {
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">{name || 'ไม่พบชื่อสินค้า'}</h1>
             <p className="text-gray-600 mb-4 text-sm sm:text-base leading-relaxed">{description || '-'}</p>
-            <div className="text-xl sm:text-2xl font-bold text-blue-600 mb-6">
+            <div className="text-xl sm:text-2xl font-bold text-blue-600 mb-2">
               {numberFormat(price || 0)} บาท
             </div>
+            {isReady && <div className="text-green-600 text-sm font-medium mb-4">✅ พร้อมรับที่สาขา</div>}
 
             <button
               onClick={() =>
-                actionAddtoCart({
+                addToCart({
                   id: productId,
                   name,
                   description,

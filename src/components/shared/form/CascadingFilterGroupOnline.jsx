@@ -5,7 +5,7 @@ import { useMemo, useState } from 'react';
 export default function CascadingFilterGroupOnline({
   value,
   onChange,
-  dropdowns = {},
+  dropdowns = {},  
   hiddenFields = [],
   className = '',
   placeholders = {
@@ -29,9 +29,10 @@ export default function CascadingFilterGroupOnline({
   const filteredProductTypes = useMemo(() => {
     return value.categoryId
       ? productTypes.filter((t) => `${t.categoryId}` === `${value.categoryId}`)
-      : [];
+      : productTypes;
   }, [productTypes, value.categoryId]);
 
+  
   const filteredProductProfiles = useMemo(() => {
     return productProfiles.filter((p) => {
       const typeMatch = value.productTypeId
@@ -102,7 +103,7 @@ export default function CascadingFilterGroupOnline({
           <select
             value={value.categoryId || ''}
             onChange={(e) => update('categoryId', e.target.value)}
-            className="border px-3 py-2 rounded w-full"
+            className="border px-3 py-2 rounded w-full text-sm"
           >
             <option value="">{placeholders.category}</option>
             {categories.map((cat) => (
@@ -115,7 +116,7 @@ export default function CascadingFilterGroupOnline({
           <select
             value={value.productTypeId || ''}
             onChange={(e) => update('productTypeId', e.target.value)}
-            className="border px-3 py-2 rounded w-full"
+            className="border px-3 py-2 rounded w-full text-sm"
           >
             <option value="">{placeholders.productType}</option>
             {filteredProductTypes.length === 0 && <option disabled value="">ไม่มีข้อมูล</option>}
@@ -129,7 +130,7 @@ export default function CascadingFilterGroupOnline({
           <select
             value={value.productProfileId || ''}
             onChange={(e) => update('productProfileId', e.target.value)}
-            className="border px-3 py-2 rounded w-full"
+            className="border px-3 py-2 rounded w-full text-sm"
           >
             <option value="">{placeholders.productProfile}</option>
             {filteredProductProfiles.length === 0 && <option disabled value="">ไม่มีข้อมูล</option>}
@@ -143,7 +144,7 @@ export default function CascadingFilterGroupOnline({
           <select
             value={value.templateId || ''}
             onChange={(e) => update('templateId', e.target.value)}
-            className="border px-3 py-2 rounded w-full"
+            className="border px-3 py-2 rounded w-full text-sm"
           >
             <option value="">{placeholders.template}</option>
             {filteredTemplates.length === 0 && <option disabled value="">ไม่มีข้อมูล</option>}

@@ -1,27 +1,39 @@
-// ✅ CheckoutPage.jsx (แสดงข้อมูลสินค้า + ฟอร์ม Login/Register หรือ Customer Info ถ้ายังไม่ได้ login)
+// ✅ CheckoutPage.jsx (เชื่อม CustomerInfoForm จริงแทน mock payload)
 import React, { useState, useEffect } from "react";
 import { useCartStore } from "../../cart/store/cartStore";
 import { useAuthStore } from "@/features/auth/store/authStore";
+import { useOrderOnlineStore } from "../store/orderOnlineStore";
+import { useBranchStore } from "@/features/branch/store/branchStore";
 import LoginForm from "../components/LoginForm";
 import RegisterForm from "../components/RegisterForm";
 import CustomerInfoForm from "../components/CustomerInfoForm";
-import apiClient from "@/utils/apiClient";
 import { useNavigate } from "react-router-dom";
 
 const CheckoutPage = () => {
   const cartItems = useCartStore((state) => state.cartItems);
-  const total = useCartStore((state) => state.totalAmount)();
-  const clearCart = useCartStore((state) => state.clearCart);
   const fetchCartAction = useCartStore((state) => state.fetchCartAction);
   const increaseQuantity = useCartStore((state) => state.increaseQuantity);
   const decreaseQuantity = useCartStore((state) => state.decreaseQuantity);
-  const updateCartItemAction = useCartStore((state) => state.updateCartItemAction);
 
   const token = useAuthStore((state) => state.token);
   const profile = useAuthStore((state) => state.profile);
+  const selectedBranchId = useBranchStore((state) => state.selectedBranchId);
+
   const [showRegister, setShowRegister] = useState(false);
   const [selectedItems, setSelectedItems] = useState([]);
+  const [calculatedTotal, setCalculatedTotal] = useState(0);
+  const [customerInfo, setCustomerInfo] = useState({
+    fullName: "",
+    phone: "",
+    email: "",
+    address: "",
+    district: "",
+    province: "",
+    postalCode: "",
+  });
+
   const navigate = useNavigate();
+  const submitOrderAction = useOrderOnlineStore((state) => state.submitOrderAction);
 
   const handleLoginSuccess = async () => {
     await fetchCartAction();
@@ -40,6 +52,21 @@ const CheckoutPage = () => {
     loadCart();
   }, [token, profile]);
 
+  useEffect(() => {
+    if (cartItems.length > 0 && selectedItems.length === 0) {
+      setSelectedItems(cartItems.map(item => item.id));
+    }
+  }, [cartItems]);
+
+  useEffect(() => {
+    const selectedCartItems = cartItems.filter((item) => selectedItems.includes(item.id));
+    const sum = selectedCartItems.reduce((acc, item) => {
+      const price = item.priceAtThatTime || item.price || 0;
+      return acc + price * item.quantity;
+    }, 0);
+    setCalculatedTotal(sum);
+  }, [cartItems, selectedItems]);
+
   const toggleSelection = (id) => {
     setSelectedItems((prev) =>
       prev.includes(id) ? prev.filter((itemId) => itemId !== id) : [...prev, id]
@@ -56,10 +83,7 @@ const CheckoutPage = () => {
 
   const submitOrder = async () => {
     try {
-      if (!token) return;
-
-      const customerRes = await apiClient.get("/customers/me");
-      const customer = customerRes.data;
+      if (!token || !profile || !selectedBranchId) return;
 
       const selectedCartItems = cartItems.filter((item) => selectedItems.includes(item.id));
 
@@ -69,16 +93,29 @@ const CheckoutPage = () => {
       }
 
       const payload = {
-        customerId: customer.id,
+        customerId: profile.customerProfileId,
+        branchId: selectedBranchId,
+        note: "คำสั่งซื้อจากลูกค้าออนไลน์",
+
+        fullName: customerInfo.fullName,
+        phone: customerInfo.phone,
+        email: customerInfo.email,
+        address: customerInfo.address,
+        district: customerInfo.district,
+        province: customerInfo.province,
+        postalCode: customerInfo.postalCode,
+
         items: selectedCartItems.map((item) => ({
-          productId: item.id,
+          productId: item.productId,
           quantity: item.quantity,
+          price: item.priceAtThatTime || item.price || 0,
         })),
       };
-
-      const res = await apiClient.post("/sale-orders", payload);
-      clearCart();
-      navigate(`/order-success/${res.data.id}`);
+      console.log('payload : ',payload)
+      const result = await submitOrderAction(payload);
+      if (result?.order?.id) {
+        navigate(`/order-success/${result.order.id}`);
+      }
     } catch (err) {
       console.error("❌ submitOrder error:", err);
       alert("ไม่สามารถยืนยันคำสั่งซื้อได้");
@@ -87,10 +124,8 @@ const CheckoutPage = () => {
 
   return (
     <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6 p-6">
-      {/* 🔵 ฝั่งซ้าย: รายการสินค้า */}
       <div className="bg-white p-6 rounded-xl shadow-md">
         <h1 className="text-xl font-semibold mb-4">ยืนยันคำสั่งซื้อ</h1>
-
         {cartItems.length === 0 ? (
           <div className="text-gray-500">ไม่มีสินค้าที่เลือก</div>
         ) : (
@@ -99,7 +134,6 @@ const CheckoutPage = () => {
               const imageUrl = item.product?.productImages?.[0]?.secure_url || item.imageUrl || '/no-image.png';
               const name = item.product?.name || item.name || 'ไม่มีชื่อ';
               const price = item.priceAtThatTime || item.price || 0;
-
               return (
                 <div key={item.id} className="flex gap-4 items-start border-b pb-3">
                   <input
@@ -108,46 +142,25 @@ const CheckoutPage = () => {
                     onChange={() => toggleSelection(item.id)}
                     className="mt-2"
                   />
-
-                  <img
-                    src={imageUrl}
-                    alt={name}
-                    className="w-16 h-16 object-contain border rounded"
-                  />
-
+                  <img src={imageUrl} alt={name} className="w-16 h-16 object-contain border rounded" />
                   <div className="flex-1">
-                    <div className="font-medium text-gray-800">
-                      {name}
-                    </div>
+                    <div className="font-medium text-gray-800">{name}</div>
                     <div className="flex items-center gap-2 mt-1 text-xs text-gray-500">
-                      <button
-                        onClick={() => handleDecrease(item)}
-                        className="px-2 py-0.5 border rounded hover:bg-gray-100"
-                      >
-                        -
-                      </button>
+                      <button onClick={() => handleDecrease(item)} className="px-2 py-0.5 border rounded hover:bg-gray-100">-</button>
                       <span className="min-w-[20px] text-center">{item.quantity}</span>
-                      <button
-                        onClick={() => handleIncrease(item)}
-                        className="px-2 py-0.5 border rounded hover:bg-gray-100"
-                      >
-                        +
-                      </button>
+                      <button onClick={() => handleIncrease(item)} className="px-2 py-0.5 border rounded hover:bg-gray-100">+</button>
                       <span className="ml-2">× {Number(price).toLocaleString()} ฿</span>
                     </div>
                   </div>
-
                   <div className="text-sm font-medium text-gray-700 whitespace-nowrap">
                     {(item.quantity * price).toLocaleString()} ฿
                   </div>
                 </div>
               );
             })}
-
             <div className="pt-4 border-t text-right text-base font-semibold">
-              รวมทั้งหมด: {Number(total || 0).toLocaleString()} ฿
+              รวมทั้งหมด: {Number(calculatedTotal || 0).toLocaleString()} ฿
             </div>
-
             {token && profile && (
               <button
                 onClick={submitOrder}
@@ -160,11 +173,9 @@ const CheckoutPage = () => {
         )}
       </div>
 
-      {/* 🟢 ฝั่งขวา: ฟอร์มเข้าสู่ระบบ หรือ สมัครสมาชิก หรือ ข้อมูลลูกค้า */}
       <div className="bg-white p-6 rounded-xl shadow-md h-fit">
         {!token || !profile ? (
           <>
-
             {showRegister ? (
               <RegisterForm setShowRegister={setShowRegister} />
             ) : (
@@ -172,7 +183,7 @@ const CheckoutPage = () => {
             )}
           </>
         ) : (
-          <CustomerInfoForm />
+          <CustomerInfoForm value={customerInfo} onChange={setCustomerInfo} />
         )}
       </div>
     </div>

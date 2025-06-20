@@ -19,7 +19,7 @@ import EditUnitPage from "@/features/unit/pages/EditUnitPage";
 import ListCategoryPage from "@/features/category/pages/ListCategoryPage";
 import CreateCategoryPage from "@/features/category/pages/CreateCategoryPage";
 import EditCategoryPage from "@/features/category/pages/EditCategoryPage";
-import ManageBranchPricePage from "@/features/ิbranchPrice/pages/ManageBranchPricePage";
+import ManageBranchPricePage from "@/features/branchPrice/pages/ManageBranchPricePage";
 
 
 const stockRoutes = {

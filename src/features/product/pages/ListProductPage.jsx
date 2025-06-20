@@ -2,10 +2,11 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ConfirmDeleteDialog from '@/components/shared/dialogs/ConfirmDeleteDialog';
-import useEmployeeStore from '@/store/employeeStore';
+
 import StandardActionButtons from '@/components/shared/buttons/StandardActionButtons';
 import ProductTable from '../components/ProductTable';
 import useProductStore from '../store/productStore';
+import useEmployeeStore from '@/features/employee/store/employeeStore';
 
 export default function ListProductPage() {
   const [search, setSearch] = useState('');

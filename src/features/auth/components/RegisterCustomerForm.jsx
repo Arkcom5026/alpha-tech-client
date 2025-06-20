@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
-import useEmployeeStore from "@/store/employeeStore";
+import useEmployeeStore from '@/features/employee/store/employeeStore';
 
 
 const RegisterCustomerForm = () => {

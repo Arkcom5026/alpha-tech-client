@@ -3,7 +3,7 @@
 // src/features/pos/components/SidebarLoader.jsx
 
 import { useLocation } from 'react-router-dom';
-import useEmployeeStore from '@/store/employeeStore';
+
 import Sidebar from './Sidebar';
 import { sidebarDashboardItems } from '@/features/dashboard/sidebar/sidebarDashboardItems.js';
 import { sidebarServicesItems } from '@/features/services/sidebar/sidebarServicesItems.js';
@@ -14,6 +14,7 @@ import { sidebarSalesItems } from '@/features/sales/sidebar/sidebarSalesItems.js
 import { sidebarEmployeeItems } from '@/features/employee/sidebar/sidebarEmployeeItems.js';
 import { sidebarFinanceItems } from '@/features/finance/sidebar/sidebarFinanceItems';
 import { sidebarPurchaseOrdertems } from '@/features/purchaseOrder/sidebar/sidebarPurchaseOrdertems';
+import useEmployeeStore from '@/features/employee/store/employeeStore';
 
 const pathGroups = [
   { prefix: '/pos/stock', sidebar: sidebarStockItems },

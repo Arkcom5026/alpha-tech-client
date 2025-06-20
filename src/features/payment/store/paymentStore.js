@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import { submitPayment, submitPayments, cancelPayment, searchPrintablePayments } from '../api/paymentApi';
 
-import useEmployeeStore from '@/store/employeeStore';
+import useEmployeeStore from '@/features/employee/store/employeeStore';
 import { useBranchStore } from '@/features/branch/store/branchStore';
 
 

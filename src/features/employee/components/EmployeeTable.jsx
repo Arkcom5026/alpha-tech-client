@@ -5,7 +5,7 @@
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import useEmployeeStore from '@/store/employeeStore';
+import useEmployeeStore from '@/features/employee/store/employeeStore';
 
 const EmployeeTable = ({ employees, onRefresh }) => {
   const [searchTerm, setSearchTerm] = useState('');

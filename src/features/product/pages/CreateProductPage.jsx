@@ -2,7 +2,7 @@
 
 import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import useEmployeeStore from '@/store/employeeStore';
+import useEmployeeStore from '@/features/employee/store/employeeStore';
 import useProductStore from '../store/productStore';
 import ProductForm from '../components/ProductForm';
 import ProductImage from '../components/ProductImage';

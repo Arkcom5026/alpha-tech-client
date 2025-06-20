@@ -6,8 +6,8 @@ import onlineRoutes from './onlineRoutes';
 
 import posRoutes from './posRoutes';
 import NotFound from '@/pages/NotFound';
-import LoginPage from '@/pages/LoginPage';
-import RegisterPage from '@/pages/RegisterPage';
+import LoginPage from '@/features/auth/pages/LoginPage';
+import RegisterPage from '@/features/auth/pages/RegisterPage';
 import NoLayout from '@/layouts/NoLayout';
 import ProtectRoute from '@/components/ProtectedRoute';
 import publicRoutes from './publicRoutes';

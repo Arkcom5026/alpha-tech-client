@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
 import apiClient from '@/utils/apiClient';
-import useEmployeeStore from '@/store/employeeStore';
+import useEmployeeStore from '@/features/employee/store/employeeStore';
 
 const EmployeeForm = ({ defaultValues = {}, onSubmit, loading }) => {
   const [userSuggestions, setUserSuggestions] = useState([]);

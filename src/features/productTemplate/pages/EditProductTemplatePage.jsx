@@ -4,7 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import ProductTemplateForm from '../components/ProductTemplateForm';
 import ProductTemplateImage from '../components/ProductTemplateImage';
 import useProductTemplateStore from '../store/productTemplateStore';
-import useEmployeeStore from '@/store/employeeStore';
+import useEmployeeStore from '@/features/employee/store/employeeStore';
 import apiClient from '@/utils/apiClient';
 import { uploadImagesTempFull } from '../api/productTemplateImagesApi';
 

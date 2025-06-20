@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import StandardActionButtons from '@/components/shared/buttons/StandardActionButtons';
-import useEmployeeStore from '@/store/employeeStore';
+import useEmployeeStore from '@/features/employee/store/employeeStore';
 import ConfirmDeleteDialog from '@/components/shared/dialogs/ConfirmDeleteDialog';
 import AlertDialog from '@/components/shared/dialogs/AlertDialog';
 import useProductTemplateStore from '../store/productTemplateStore';

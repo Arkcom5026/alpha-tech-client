@@ -1,7 +1,7 @@
 // ✅ src/features/product/pages/ViewProductPage.jsx
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import useEmployeeStore from '@/store/employeeStore';
+import useEmployeeStore from '@/features/employee/store/employeeStore';
 import { Alert } from '@/components/ui/alert';
 import useProductStore from '../store/productStore';
 

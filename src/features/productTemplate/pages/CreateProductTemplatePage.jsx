@@ -4,10 +4,11 @@ import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { uploadImagesTemp } from '../api/productTemplateImagesApi';
-import useEmployeeStore from '@/store/employeeStore';
+
 import ProductTemplateForm from '../components/ProductTemplateForm';
 import ProductTemplateImage from '../components/ProductTemplateImage';
 import useProductTemplateStore from '../store/productTemplateStore';
+import useEmployeeStore from '@/features/employee/store/employeeStore';
 
 const CreateProductTemplatePage = () => {
   const navigate = useNavigate();

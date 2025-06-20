@@ -1,7 +1,7 @@
 // ✅ @filename: employeeAccess.js
 // ✅ @folder: src/features/employee/
 
-import useEmployeeStore from '@/store/employeeStore';
+import useEmployeeStore from '@/features/employee/store/employeeStore';
 
 export const hasEmployeeAccess = () => {
   const role = useEmployeeStore.getState().role;

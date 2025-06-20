@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { getPurchaseOrderById } from '../api/purchaseOrderApi';
-import useEmployeeStore from '@/store/employeeStore';
+import useEmployeeStore from '@/features/employee/store/employeeStore';
 
 const PrintPurchaseOrderPage = () => {
   const { id } = useParams();

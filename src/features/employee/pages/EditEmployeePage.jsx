@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getEmployeeById, updateEmployee } from '../api/employeeApi';
 import EmployeeForm from '../components/EmployeeForm';
-import useEmployeeStore from '@/store/employeeStore';
+import useEmployeeStore from '@/features/employee/store/employeeStore';
 
 const EditEmployeePage = () => {
   const { id } = useParams();

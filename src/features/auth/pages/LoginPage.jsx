@@ -4,12 +4,13 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/features/auth/store/authStore';
+import useEmployeeStore from '@/features/employee/store/employeeStore';
+
 import { FaGoogle, FaFacebook, FaLock } from 'react-icons/fa';
+import { useBranchStore } from '@/features/branch/store/branchStore';
 
 const LoginPage = () => {
   const navigate = useNavigate();
-
-  // ✅ ป้องกัน Infinite Loop ด้วยการแยกเรียก zustand แต่ละตัว
   const loginAction = useAuthStore((state) => state.loginAction);
   const token = useAuthStore((state) => state.token);
   const role = useAuthStore((state) => state.role);
@@ -37,7 +38,22 @@ const LoginPage = () => {
     setError('');
     setLoading(true);
     try {
-      await loginAction({ emailOrPhone: email, password });
+      const { token, role, profile } = await loginAction({ emailOrPhone: email, password });
+
+      if (role === 'employee' && profile?.position && profile?.branch) {
+        const rawPosition = profile.position.name;
+        const mappedPosition = rawPosition === 'employee' ? 'ผู้ดูแลระบบ' : rawPosition;
+
+        useEmployeeStore.setState({
+          token,
+          role,
+          position: mappedPosition || '__NO_POSITION__',
+          branch: profile.branch,
+          employee: profile,
+        });
+
+        useBranchStore.getState().setCurrentBranch(profile.branch);
+      }
     } catch (err) {
       console.error("🔴 Login Error:", err);
       const message = err?.response?.data?.message || err?.message || 'เกิดข้อผิดพลาด';

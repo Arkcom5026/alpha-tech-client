@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import EmployeeForm from '../components/EmployeeForm';
 import { createEmployee } from '../api/employeeApi';
-import useEmployeeStore from '@/store/employeeStore';
+import useEmployeeStore from '@/features/employee/store/employeeStore';
 
 const EmployeeFormPage = () => {
   const [loading, setLoading] = useState(false);

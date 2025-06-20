@@ -2,7 +2,8 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import useSaleReturnStore from '@/features/saleReturn/store/saleReturnStore';
-import useEmployeeStore from '@/store/employeeStore';
+import useEmployeeStore from '@/features/employee/store/employeeStore';
+
 
 const PrintRefundReceiptPage = () => {
   const { saleReturnId } = useParams();

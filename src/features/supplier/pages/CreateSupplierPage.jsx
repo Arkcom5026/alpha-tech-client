@@ -3,19 +3,19 @@ import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import SupplierForm from '../components/SupplierForm';
 import { createSupplier } from '../api/supplierApi';
-import { useAuthStore } from '@/features/auth/store/authStore';
+import { useBranchStore } from '@/features/branch/store/branchStore';
+
 
 const CreateSupplierPage = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const token = useAuthStore((state) => state.token);
-  const branch = useAuthStore((state) => state.branch);
+  const branch = useBranchStore((state) => state.currentBranch);
 
   const handleCreateSupplier = async (formData) => {
     try {
       if (!branch?.id) throw new Error('ยังไม่ได้เลือกสาขา');
       setLoading(true);
-      await createSupplier(formData); // ✅ ไม่ส่ง branchId
+      await createSupplier(formData); // ✅ ไม่ส่ง branchId จากหน้า – ให้ backend ดึงจาก token
       navigate('/pos/purchases/suppliers');
     } catch (error) {
       console.error('❌ Create supplier failed:', error);

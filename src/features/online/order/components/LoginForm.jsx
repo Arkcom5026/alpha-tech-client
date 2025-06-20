@@ -2,8 +2,11 @@
 import React, { useState } from "react";
 import { useCartStore } from "../../cart/store/cartStore";
 import { useAuthStore } from "@/features/auth/store/authStore";
-import useEmployeeStore from "@/store/employeeStore";
+
+
 import { FaGoogle, FaFacebookF } from "react-icons/fa";
+import useEmployeeStore from "@/features/employee/store/employeeStore";
+import { useBranchStore } from "@/features/branch/store/branchStore";
 
 const LoginForm = ({ onSuccess, setShowRegister }) => {
   const [credential, setCredential] = useState("");
@@ -44,6 +47,9 @@ const LoginForm = ({ onSuccess, setShowRegister }) => {
           branch: profile.branch,
           employee: profile,
         });
+
+        // ✅ เซต currentBranch หลัง login สำหรับระบบ POS
+        useBranchStore.getState().setCurrentBranch(profile.branch);
       }
 
       login({ token, role, profile });

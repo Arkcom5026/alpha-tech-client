@@ -4,9 +4,9 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { FaSignOutAlt } from 'react-icons/fa';
 import { Sun, Moon } from 'lucide-react';
-import useEmployeeStore from '@/store/employeeStore';
-import useThemeStore from '@/store/themeStore';
 import { Button } from '@/components/ui/button';
+import useEmployeeStore from '@/features/employee/store/employeeStore';
+import useThemeStore from '@/store/themeStore';
 
 const HeaderPos = () => {
   const navigate = useNavigate();

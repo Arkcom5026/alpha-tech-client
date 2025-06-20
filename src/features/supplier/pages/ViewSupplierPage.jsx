@@ -1,13 +1,16 @@
+// ✅ src/features/supplier/pages/ViewSupplierPage.jsx
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getSupplierById } from '../api/supplierApi';
-import useAuthStore from '@/store/employeeStore';
+
 import { Button } from '@/components/ui/button';
+import { useBranchStore } from '@/features/branch/store/branchStore';
 
 const ViewSupplierPage = () => {
   const { id } = useParams();
-  const navigate = useNavigate();
-  const token = useAuthStore((state) => state.token);
+  
+  const branch = useBranchStore((state) => state.currentBranch);
+
   const [supplier, setSupplier] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -25,8 +28,12 @@ const ViewSupplierPage = () => {
       }
     };
 
-    if (id && token) fetchSupplier();
-  }, [id, token]);
+    if (id && branch?.id) fetchSupplier();
+  }, [id, branch]);
+
+  if (!branch?.id) {
+    return <p className="text-center text-gray-500">ยังไม่ได้เลือกสาขา</p>;
+  }
 
   if (loading) return <p className="text-center py-10">กำลังโหลดข้อมูล...</p>;
   if (error) {
@@ -95,11 +102,9 @@ const ViewSupplierPage = () => {
           </div>
         </div>
 
-
       </div>
     </div>
   );
 };
 
 export default ViewSupplierPage;
-

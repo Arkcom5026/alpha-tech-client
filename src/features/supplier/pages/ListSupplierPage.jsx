@@ -4,15 +4,19 @@ import { getAllSuppliers } from '../api/supplierApi';
 
 import SupplierTable from '../components/SupplierTable';
 import { useAuthStore } from '@/features/auth/store/authStore';
+import { useBranchStore } from '@/features/branch/store/branchStore';
+
 
 const ListSupplierPage = () => {
   const [suppliers, setSuppliers] = useState([]);
-  const [loading, setLoading] = useState(true);  
+  const [loading, setLoading] = useState(true);
   const token = useAuthStore((state) => state.token);
+  const branch = useBranchStore((state) => state.currentBranch);
 
   const fetchSuppliers = async () => {
     try {
-      const data = await getAllSuppliers(token);
+      if (!branch?.id) throw new Error('ยังไม่ได้เลือกสาขา');
+      const data = await getAllSuppliers(token); // ✅ ไม่ส่ง branchId ให้ backend จะใช้จาก token
       setSuppliers(data);
     } catch (error) {
       console.error('❌ โหลดรายชื่อผู้ขายล้มเหลว:', error);
@@ -35,8 +39,12 @@ const ListSupplierPage = () => {
   };
 
   useEffect(() => {
-    if (token) fetchSuppliers();
-  }, [token]);
+    if (token && branch?.id) fetchSuppliers();
+  }, [token, branch]);
+
+  if (!branch?.id) {
+    return <p className="text-center text-gray-500">ยังไม่ได้เลือกสาขา</p>;
+  }
 
   return (
     <div className="p-4">

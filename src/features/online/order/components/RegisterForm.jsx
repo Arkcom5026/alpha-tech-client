@@ -1,4 +1,4 @@
-import { registerUser } from "@/features/auth/api/auth";
+import { registerUser } from "@/features/auth/api/authApi";
 import React, { useState } from "react";
 
 

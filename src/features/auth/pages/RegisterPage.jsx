@@ -7,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { registerSchema } from '@/features/auth/schema/registerSchema';
 
 
-import { registerUser } from '@/features/auth/api/auth';
+import { registerUser } from '@/features/auth/api/authApi';
 
 const RegisterPage = () => {
   const {

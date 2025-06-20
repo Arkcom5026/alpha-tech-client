@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import POSupplierSelector from './PurchaseOrderSupplierSelector';
 import ProductSearchTable from './ProductSearchTable';
 import usePurchaseOrderStore from '../store/purchaseOrderStore';
-import useEmployeeStore from '@/store/employeeStore';
+import useEmployeeStore from '@/features/employee/store/employeeStore';
 import useProductStore from '@/features/product/store/productStore';
 import useSupplierStore from '@/features/supplier/store/supplierStore';
 import { useParams, useNavigate } from 'react-router-dom';

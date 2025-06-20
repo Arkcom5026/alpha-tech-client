@@ -4,7 +4,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getEmployeeById } from '../api/employeeApi';
-import useEmployeeStore from '@/store/employeeStore';
+import useEmployeeStore from '@/features/employee/store/employeeStore';
 
 const ViewEmployeePage = () => {
   const { id } = useParams();

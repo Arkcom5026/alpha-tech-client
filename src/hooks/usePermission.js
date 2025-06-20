@@ -1,6 +1,6 @@
 // ✅ src/hooks/usePermission.js — ตรวจ role/permission แบบปลอดภัยจาก ESLint เตือนทุกกรณี
 import { useMemo } from 'react';
-import useEmployeeStore from '@/store/employeeStore';
+import useEmployeeStore from '@/features/employee/store/employeeStore';
 import useCustomerStore from '@/features/customer/store/customerStore';
 
 export default function usePermission() {

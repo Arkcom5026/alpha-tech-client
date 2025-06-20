@@ -18,7 +18,7 @@ const useSupplierStore = create((set) => ({
   fetchSuppliersAction: async () => {
     set({ isSupplierLoading: true });
     try {
-      const res = await getAllSuppliers();
+      const res = await getAllSuppliers();      
       set({ suppliers: res, isSupplierLoading: false });
     } catch (err) {
       console.error('❌ [fetchSuppliersAction] error:', err);

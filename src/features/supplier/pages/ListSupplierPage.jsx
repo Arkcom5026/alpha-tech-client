@@ -8,7 +8,7 @@ import useSupplierStore from '../store/supplierStore';
 const ListSupplierPage = () => {
   const [loading, setLoading] = useState(true);
   const token = useAuthStore((state) => state.token);
-  const branch = useBranchStore((state) => state.currentBranch);
+  const selectedBranchId = useBranchStore((state) => state.selectedBranchId);
   const { suppliers, fetchSuppliersAction, deleteSupplierAction } = useSupplierStore();
 
   const handleDeleteSupplier = async (id) => {
@@ -22,8 +22,9 @@ const ListSupplierPage = () => {
 
   useEffect(() => {
     const init = async () => {
-      try {        
-        if (!branch?.id || !token) return;
+      console.log('✅ suppliers after fetch selectedBranchId :', selectedBranchId);
+      try {
+        if (!selectedBranchId || !token) return;
         await fetchSuppliersAction();
       } catch (err) {
         console.error('❌ โหลดผู้ขายล้มเหลว:', err);
@@ -32,9 +33,11 @@ const ListSupplierPage = () => {
       }
     };
     init();
-  }, [token, branch]);
+  }, [token, selectedBranchId]);
 
-  if (!branch?.id) {
+
+
+  if (!selectedBranchId) {
     return <p className="text-center text-gray-500">ยังไม่ได้เลือกสาขา</p>;
   }
 

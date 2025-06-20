@@ -32,19 +32,19 @@ const CategoryTable = ({ data, onEdit }) => {
 
   return (
     <div className="w-full flex justify-center mt-4">
-      <div className="w-[900px] border rounded-md overflow-hidden">
-        <table className="min-w-full text-sm text-center">
+      <div className="w-[630px] border rounded-md overflow-hidden">
+        <table className="min-w-full text-sm ">
           <thead className="bg-gray-100 dark:bg-zinc-800">
             <tr>
-              <th className="px-4 py-2 border text-center align-middle">ชื่อหมวดหมู่</th>
-              <th className="px-4 py-2 border text-center align-middle">การจัดการ</th>
+              <th className="px-4 py-2 border  align-middle">ชื่อหมวดหมู่</th>
+              <th className="px-4 py-2 border  align-middle">การจัดการ</th>
             </tr>
           </thead>
           <tbody>
             {data.map((cat) => (
-              <tr key={cat.id} className="border-t text-center align-middle">
-                <td className="px-4 py-2 border text-center align-middle">{cat.name}</td>
-                <td className="px-4 py-2 border text-center align-middle">
+              <tr key={cat.id} className="border-t  align-middle">
+                <td className="px-4 py-2 border  align-middle min-w-[400px] ">{cat.name}</td>
+                <td className="px-4 py-2 border text-center align-middle min-w-[230px] ">
                   <div className="flex justify-center items-center gap-2">
                     <StandardActionButtons
                       onEdit={() => onEdit(cat)}

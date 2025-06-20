@@ -1,15 +1,18 @@
-
-// ✅ แก้ไข SupplierForm: เพิ่ม field จาก model Supplier ให้ครบถ้วน
+// ✅ แก้ไข SupplierForm: เพิ่ม field จาก model Supplier ให้ครบถ้วน และแนบ branchId
 import { useForm } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
 import { useEffect, useState } from 'react';
 import { getAllBanks } from '@/features/bank/api/bankApi';
+import { useBranchStore } from '@/features/branch/store/branchStore';
+
 
 const SupplierForm = ({ defaultValues = {}, onSubmit, isEdit = false, showCreditFields = false }) => {
   const [banks, setBanks] = useState([]);
   const [internalDefaults, setInternalDefaults] = useState(defaultValues || null);
   const [formSynced, setFormSynced] = useState(false);
-    const {
+  const selectedBranchId = useBranchStore((state) => state.selectedBranchId);
+
+  const {
     register,
     handleSubmit,
     reset,
@@ -18,19 +21,15 @@ const SupplierForm = ({ defaultValues = {}, onSubmit, isEdit = false, showCredit
 
   useEffect(() => {
     if (internalDefaults && Object.keys(internalDefaults).length > 0 && banks.length > 0 && !formSynced) {
-      console.log('✅ reset with:', internalDefaults);
       reset({ ...internalDefaults });
       setFormSynced(true);
     }
   }, [internalDefaults, banks, reset, formSynced]);
 
-
-
   useEffect(() => {
     const loadBanks = async () => {
       try {
         const data = await getAllBanks();
-
         setBanks(data);
         setInternalDefaults(defaultValues || null);
         setFormSynced(false);
@@ -44,6 +43,8 @@ const SupplierForm = ({ defaultValues = {}, onSubmit, isEdit = false, showCredit
   return (
     <div className="bg-white p-6 rounded-lg shadow-lg max-w-4xl w-full mx-auto">
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        <input type="hidden" value={selectedBranchId} {...register('branchId')} />
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -124,7 +125,6 @@ const SupplierForm = ({ defaultValues = {}, onSubmit, isEdit = false, showCredit
             />
           </div>
 
-          {/* ✅ เพิ่ม dropdown เลือกธนาคาร */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">ธนาคาร</label>
             <select
@@ -133,14 +133,10 @@ const SupplierForm = ({ defaultValues = {}, onSubmit, isEdit = false, showCredit
             >
               <option value="">-- เลือกธนาคาร --</option>
               {banks.map((bank) => (
-                <option key={bank.id} value={bank.id.toString()}>
-                  {bank.name}
-                </option>
+                <option key={bank.id} value={bank.id.toString()}>{bank.name}</option>
               ))}
             </select>
           </div>
-
-          
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">เลขที่บัญชี</label>
@@ -219,8 +215,3 @@ const SupplierForm = ({ defaultValues = {}, onSubmit, isEdit = false, showCredit
 };
 
 export default SupplierForm;
-
-  
-
-
-

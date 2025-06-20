@@ -4,8 +4,9 @@ import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import ProductForm from '../components/ProductForm';
 import ProductImage from '../components/ProductImage';
-import useEmployeeStore from '@/features/employee/store/employeeStore';
+
 import useProductStore from '../store/productStore';
+import { useBranchStore } from '@/features/branch/store/branchStore';
 
 const EditProductPage = () => {
   const [previewUrls, setPreviewUrls] = useState([]);
@@ -13,7 +14,7 @@ const EditProductPage = () => {
   const [coverIndex, setCoverIndex] = useState(null);
   const { id } = useParams();
   const navigate = useNavigate();
-  const branchId = useEmployeeStore((state) => state.branch?.id);
+  const branchId = useBranchStore((state) => state.selectedBranchId);
   const [product, setProduct] = useState(null);
   const [error, setError] = useState('');
   const [selectedFiles, setSelectedFiles] = useState([]);
@@ -57,34 +58,29 @@ const EditProductPage = () => {
 
     fetchData();
   }, [id, branchId]);
-  
 
   const handleUpdate = async (formData) => {
     formData.branchId = branchId;
-   
+
     try {
       const [uploadedImages, imagesToDelete] = await imageRef.current.upload();
-     
+
       formData.images = uploadedImages;
       formData.imagesToDelete = imagesToDelete;
 
       for (const img of imagesToDelete) {
+        if (!img) continue; // กัน null
 
-        
-
-         if (!img) continue; // กัน null
-
-         console.log('imagesToDelete : ',imagesToDelete)
+        console.log('imagesToDelete : ', imagesToDelete);
 
         try {
           await deleteImage({ productId: id, publicId: img });
         } catch (err) {
-          console.warn("⚠️ ลบภาพไม่สำเร็จ:", err);
+          console.warn('⚠️ ลบภาพไม่สำเร็จ:', err);
         }
       }
 
       await updateProduct(id, formData);
-
 
       navigate('/pos/stock/products');
     } catch (err) {
@@ -129,4 +125,3 @@ const EditProductPage = () => {
 };
 
 export default EditProductPage;
-  

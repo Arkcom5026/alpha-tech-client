@@ -83,7 +83,7 @@ return (
                       {
                         item.products?.map((product, index) => (
                           <li key={index}>
-                            {product.product.title} {"  "}
+                            {product.product.name} {"  "}
                             <span className='text-sm'> {product.count} x {numberFormat(product.product.retailPrice)} </span>
                           </li>
                         )

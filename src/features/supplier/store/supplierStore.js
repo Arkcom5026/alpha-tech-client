@@ -7,6 +7,7 @@ import {
   updateSupplier,
   getSupplierById,
 } from '../api/supplierApi';
+import { useBranchStore } from '@/features/branch/store/branchStore';
 
 const useSupplierStore = create((set) => ({
   suppliers: [],
@@ -16,13 +17,16 @@ const useSupplierStore = create((set) => ({
 
   // ✅ โหลด supplier ทั้งหมด
   fetchSuppliersAction: async () => {
-    set({ isSupplierLoading: true });
+    const branchId = useBranchStore.getState().selectedBranchId;
+    if (!branchId) return;
     try {
-      const res = await getAllSuppliers();      
-      set({ suppliers: res, isSupplierLoading: false });
+      const data = await getAllSuppliers({ branchId });
+      // ✅ เรียงตามตัวอักษร A-Z
+      const sorted = [...data].sort((a, b) => a.name.localeCompare(b.name));
+      set({ suppliers: sorted });
     } catch (err) {
-      console.error('❌ [fetchSuppliersAction] error:', err);
-      set({ supplierError: err.message, isSupplierLoading: false });
+      console.error('❌ fetchAllSuppliersAction error:', err);
+      set({ error: err });
     }
   },
 

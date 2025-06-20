@@ -32,22 +32,25 @@ const ProductTypeTable = ({ data, onEdit }) => {
 
   return (
     <div className="w-full flex justify-center mt-4">
-      <div className="w-[900px] border rounded-md overflow-hidden">
-        <table className="min-w-full text-sm text-center">
+      <div className=" border rounded-md overflow-hidden">
+        <table className="min-w-full text-sm ">
           <thead className="bg-gray-100 dark:bg-zinc-800">
             <tr>
-              <th className="px-4 py-2 border text-center align-middle">ชื่อประเภทสินค้า</th>
-              <th className="px-4 py-2 border text-center align-middle">หมวดหมู่สินค้า</th>
-              <th className="px-4 py-2 border text-center align-middle">การจัดการ</th>
+              <th className="px-4 py-2 border  align-middle">ชื่อประเภทสินค้า</th>
+              <th className="px-4 py-2 border  align-middle">หมวดหมู่สินค้า</th>
+              <th className="px-4 py-2 border  align-middle">การจัดการ</th>
             </tr>
           </thead>
           <tbody>
             {data.map((type) => (
-              <tr key={type.id} className="border-t text-center align-middle">
-                <td className="px-4 py-2 border text-center align-middle">{type.name}</td>
-                <td className="px-4 py-2 border text-center align-middle">{type.category?.name || '-'}</td>
-                <td className="px-4 py-2 border text-center align-middle">
-                  <div className="flex justify-center items-center gap-2">
+              <tr key={type.id} className="border-t  align-middle">
+                <td className="px-4 py-2 border  ">{type.name}</td>
+                <td className="px-4 py-2 border  min-w-[300px]">{type.category?.name || '-'}</td>                
+                 
+                 
+                 <td className="px-4 py-2 border align-top min-w-[230px] ">
+
+                  <div className="flex justify-center items-center gap-2  ">
                     <StandardActionButtons
                       onEdit={() => onEdit(type)}
                       onDelete={() => setSelectedType(type)}

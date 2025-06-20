@@ -4,9 +4,10 @@ import { useParams, useNavigate } from 'react-router-dom';
 import ProductTemplateForm from '../components/ProductTemplateForm';
 import ProductTemplateImage from '../components/ProductTemplateImage';
 import useProductTemplateStore from '../store/productTemplateStore';
-import useEmployeeStore from '@/features/employee/store/employeeStore';
+
 import apiClient from '@/utils/apiClient';
 import { uploadImagesTempFull } from '../api/productTemplateImagesApi';
+import { useBranchStore } from '@/features/branch/store/branchStore';
 
 const EditProductTemplatePage = () => {
   const [previewUrls, setPreviewUrls] = useState([]);
@@ -14,7 +15,7 @@ const EditProductTemplatePage = () => {
   const [coverIndex, setCoverIndex] = useState(null);
   const { id } = useParams();
   const navigate = useNavigate();
-  const branchId = useEmployeeStore((state) => state.branch?.id);
+  const selectedBranchId = useBranchStore((state) => state.selectedBranchId);
   const [template, setTemplate] = useState(null);
   const [error, setError] = useState('');
   const [selectedFiles, setSelectedFiles] = useState([]);
@@ -25,8 +26,8 @@ const EditProductTemplatePage = () => {
   const { getTemplateById, updateTemplate } = useProductTemplateStore();
 
   useEffect(() => {
-    if (!branchId) {
-      setError('ไม่พบ branchId โปรดล็อกอินใหม่');
+    if (!selectedBranchId) {
+      setError('ไม่พบสาขา กรุณาเข้าสู่ระบบใหม่');
       return;
     }
 
@@ -53,12 +54,17 @@ const EditProductTemplatePage = () => {
     };
 
     fetchData();
-  }, [id, branchId, getTemplateById]);
+  }, [id, selectedBranchId, getTemplateById]);
 
   const handleUpdate = async (formData) => {
-    formData.branchId = branchId;
-
     try {
+      const branchIdParsed = parseInt(selectedBranchId);
+      if (isNaN(branchIdParsed)) {
+        setError('ไม่พบรหัสสาขา');
+        return;
+      }
+      formData.branchId = branchIdParsed;
+
       if (imagesToDelete.length > 0) {
         for (const public_id of imagesToDelete) {
           console.log('🗑️ กำลังลบภาพ public_id:', public_id);

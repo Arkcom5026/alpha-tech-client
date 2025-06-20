@@ -10,7 +10,7 @@ const Sidebar = ({ items = [] }) => {
       <div className='h-72 px-5 py-4 w-48 '>
         <nav className="space-y-1 pb-4">
           {items.map((item, index) => {
-            const label = item.label || item.title;
+            const label = item.label || item.name;
             const linkTo = item.path || item.to;
             const isSubItem = item?.level === 'sub';
 

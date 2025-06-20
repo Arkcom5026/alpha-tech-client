@@ -8,7 +8,7 @@ import { useBranchStore } from '@/stores/branchStore';
 const UpdateSupplierPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const branch = useBranchStore((state) => state.currentBranch);
+  const selectedBranchId = useBranchStore((state) => state.selectedBranchId);
 
   const [supplier, setSupplier] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -28,12 +28,12 @@ const UpdateSupplierPage = () => {
         console.error('❌ โหลดข้อมูลผู้ขายล้มเหลว:', error);
       }
     };
-    if (id) fetchSupplier();
-  }, [id]);
+    if (id && selectedBranchId) fetchSupplier();
+  }, [id, selectedBranchId]);
 
   const handleUpdate = async (formData) => {
     try {
-      if (!branch?.id) throw new Error('ยังไม่ได้เลือกสาขา');
+      if (!selectedBranchId) throw new Error('ยังไม่ได้เลือกสาขา');
       setLoading(true);
 
       const cleanedForm = { ...formData };
@@ -50,7 +50,7 @@ const UpdateSupplierPage = () => {
     }
   };
 
-  if (!branch?.id) {
+  if (!selectedBranchId) {
     return <p className="text-center text-gray-500">ยังไม่ได้เลือกสาขา</p>;
   }
 

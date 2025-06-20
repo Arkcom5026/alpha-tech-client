@@ -9,7 +9,8 @@ import {
 
   getProducts,
   updateProduct,
-  searchProducts
+  searchProducts,
+  getProductsForPos
 } from '../api/productApi';
 import { uploadImagesProduct, uploadImagesProductFull, deleteImageProduct } from '../api/productImagesApi';
 
@@ -110,6 +111,7 @@ const useProductStore = create((set) => ({
   fetchDropdowns: async (productId = null) => {
     try {
       const data = await getProductDropdowns(productId);
+      
       set({ dropdowns: data });
     } catch (error) {
       console.error('❌ fetchDropdowns error:', error);
@@ -155,8 +157,21 @@ const useProductStore = create((set) => ({
       console.error('❌ searchProductsAction error:', error);
       set({ searchResults: [] });
     }
+  },
+  
+  fetchProductsAction: async (filters = {}) => {
+  set({ isLoading: true, error: null });
+  try {
+    const data = await getProductsForPos(filters); // ✅ สำหรับ POS
+    set({ products: data, isLoading: false });
+  } catch (error) {
+    console.error('❌ fetchProductsAction error:', error);
+    set({ error, isLoading: false });
   }
+},
+  
 
 }));
 
 export default useProductStore;
+  

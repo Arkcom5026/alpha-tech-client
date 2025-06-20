@@ -7,13 +7,18 @@ import {
   SelectItem,
 } from '@/components/ui/select';
 import useSupplierStore from '@/features/supplier/store/supplierStore';
+import { useBranchStore } from '@/features/branch/store/branchStore';
+
 
 const PurchaseOrderSupplierSelector = ({ value, onChange }) => {
-  const { suppliers, loading, fetchAllSuppliersAction  } = useSupplierStore();
+  const { suppliers, loading,fetchSuppliersAction  } = useSupplierStore();
+  const { selectedBranchId } = useBranchStore();
 
   React.useEffect(() => {
-    fetchAllSuppliersAction ();
-  }, [fetchAllSuppliersAction]);
+    if (selectedBranchId) {
+      fetchSuppliersAction(selectedBranchId);
+    }
+  }, [fetchSuppliersAction, selectedBranchId]);
 
   return (
     <div className="w-full">

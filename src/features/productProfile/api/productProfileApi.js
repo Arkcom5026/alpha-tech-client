@@ -21,7 +21,7 @@ export const createProductProfile = async (data) => {
 export const getAllProductProfiles = async () => {
   try {
     const res = await apiClient.get('/product-profiles');
-    console.log('getAllProductProfiles : ',res)
+    
     return res.data;
   } catch (err) {
     console.error('getAllProductProfiles error:', err);

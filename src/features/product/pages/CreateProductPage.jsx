@@ -2,14 +2,14 @@
 
 import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import useEmployeeStore from '@/features/employee/store/employeeStore';
+import { useBranchStore } from '@/features/branch/store/branchStore';
 import useProductStore from '../store/productStore';
 import ProductForm from '../components/ProductForm';
 import ProductImage from '../components/ProductImage';
 
 const CreateProductPage = () => {
   const navigate = useNavigate();
-  const branchId = useEmployeeStore((state) => state.branch?.id);
+  const branchId = useBranchStore((state) => state.selectedBranchId);
   const { saveProduct, uploadImages } = useProductStore();
   const [error, setError] = useState('');
 
@@ -28,7 +28,6 @@ const CreateProductPage = () => {
 
       delete formData.unit;
       delete formData.productImages;
-
 
       const templateIdParsed = parseInt(formData.templateId);
       const unitIdParsed = formData.unitId ? parseInt(formData.unitId) : null;
@@ -50,8 +49,6 @@ const CreateProductPage = () => {
         safeCoverIndex
       );
 
-
-
       const newProduct = await saveProduct({
         name: formData.name,
         description: formData.description || '',
@@ -64,7 +61,6 @@ const CreateProductPage = () => {
         active: formData.active ?? true,
         cost: formData.cost ? parseFloat(formData.cost) : null,
         images: uploadedImages,
-
       });
 
       navigate('/pos/stock/products');

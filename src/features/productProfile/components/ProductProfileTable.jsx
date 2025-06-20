@@ -23,23 +23,25 @@ const ProductProfileTable = ({ profiles, onReload }) => {
 
   return (
     <div className="w-full flex justify-center mt-4">
-      <div className="w-[1200px] border rounded-md overflow-hidden">
-        <table className="min-w-full text-sm text-left border-collapse">
+      <div className="w-[1300px] border rounded-md overflow-hidden">
+        <table className="min-w-full text-sm text-left border-collapse table-auto">
           <thead className="bg-gray-100 dark:bg-zinc-800">
             <tr>
               <th className="px-4 py-2 border">ชื่อ</th>
-              <th className="px-4 py-2 border w-[40%]">คำอธิบาย</th>
+              <th className="px-4 py-2 border w-[40%] max-w-[400px] truncate">คำอธิบาย</th>
               <th className="px-4 py-2 border">ประเภทสินค้า</th>
-              <th className="px-4 py-2 border text-center">การจัดการ</th>
+              <th className="px-4 py-2 border text-center ">การจัดการ</th>
             </tr>
           </thead>
           <tbody>
             {profiles.map((profile) => (
               <tr key={profile.id} className="border-t">
-                <td className="px-4 py-2 border align-top whitespace-pre-wrap">{profile.name}</td>
-                <td className="px-4 py-2 border align-top whitespace-pre-wrap">{profile.description || '-'}</td>
-                <td className="px-4 py-2 border align-top">{profile.productType?.name || '-'}</td>
-                <td className="px-4 py-2 border align-top">
+                <td className="px-4 py-2 border align-top  min-w-[280px] whitespace-pre-wrap">{profile.name}</td>
+                <td className="px-4 py-2 border align-top overflow-hidden  max-w-[400px]">
+                  {profile.description || '-'}
+                </td>
+                <td className="px-4 py-2 border align-top min-w-[200px]">{profile.productType?.name || '-'}</td>
+                <td className="px-4 py-2 border align-top min-w-[230px]">
                   <div className="flex justify-center items-center gap-2">
                     <StandardActionButtons
                       onEdit={() => navigate(`/pos/stock/profiles/edit/${profile.id}`)}

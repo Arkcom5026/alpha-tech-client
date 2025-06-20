@@ -10,19 +10,27 @@ import {
   getPurchaseOrders,
   updatePurchaseOrder,
   updatePurchaseOrderStatus,
-  getPurchaseOrdersBySupplier
+  getPurchaseOrdersBySupplier,
+
 } from '../api/purchaseOrderApi';
 
-const usePurchaseOrderStore = create((set) => ({
+
+import { useBranchStore } from '@/features/branch/store/branchStore';
+import { getAllSuppliers } from '@/features/supplier/api/supplierApi';
+
+const usePurchaseOrderStore = create((set, get) => ({
   purchaseOrders: [],
   selectedPO: null,
   productList: [],
   eligiblePOs: [],
+  suppliers: [],
   loading: false,
   error: null,
 
   // ✅ อัปเดตใหม่: รองรับ search และ status filter
-  fetchAllPurchaseOrders: async ({ search = '', status = 'pending,partial', branchId }) => {
+  fetchAllPurchaseOrders: async ({ search = '', status = 'pending,partial' } = {}) => {
+    const branchId = useBranchStore.getState().selectedBranchId;
+    if (!branchId) return;
     set({ loading: true });
     try {
       const data = await getPurchaseOrders({ search, status, branchId });
@@ -33,7 +41,9 @@ const usePurchaseOrderStore = create((set) => ({
     }
   },
 
-  fetchEligiblePurchaseOrders: async (branchId) => {
+  fetchEligiblePurchaseOrders: async () => {
+    const branchId = useBranchStore.getState().selectedBranchId;
+    if (!branchId) return;
     set({ loading: true });
     try {
       const data = await getEligiblePurchaseOrders(branchId);
@@ -155,7 +165,8 @@ const usePurchaseOrderStore = create((set) => ({
       set({ error: err, loading: false });
     }
   },
+
+
 }));
 
 export default usePurchaseOrderStore;
-

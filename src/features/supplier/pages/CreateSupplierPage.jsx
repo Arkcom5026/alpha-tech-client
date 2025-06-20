@@ -5,15 +5,14 @@ import SupplierForm from '../components/SupplierForm';
 import { createSupplier } from '../api/supplierApi';
 import { useBranchStore } from '@/features/branch/store/branchStore';
 
-
 const CreateSupplierPage = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const branch = useBranchStore((state) => state.currentBranch);
+  const selectedBranchId = useBranchStore((state) => state.selectedBranchId);
 
   const handleCreateSupplier = async (formData) => {
     try {
-      if (!branch?.id) throw new Error('ยังไม่ได้เลือกสาขา');
+      if (!selectedBranchId) throw new Error('ยังไม่ได้เลือกสาขา');
       setLoading(true);
       await createSupplier(formData); // ✅ ไม่ส่ง branchId จากหน้า – ให้ backend ดึงจาก token
       navigate('/pos/purchases/suppliers');
@@ -24,7 +23,7 @@ const CreateSupplierPage = () => {
     }
   };
 
-  if (!branch?.id) {
+  if (!selectedBranchId) {
     return <p className="text-center text-gray-500">ยังไม่ได้เลือกสาขา</p>;
   }
 

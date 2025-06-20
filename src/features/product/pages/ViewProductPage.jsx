@@ -1,13 +1,13 @@
 // ✅ src/features/product/pages/ViewProductPage.jsx
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import useEmployeeStore from '@/features/employee/store/employeeStore';
+import { useBranchStore } from '@/features/branch/store/branchStore';
 import { Alert } from '@/components/ui/alert';
 import useProductStore from '../store/productStore';
 
 export default function ViewProductPage() {
   const { id } = useParams();
-  const branch = useEmployeeStore((state) => state.branch);
+  const branchId = useBranchStore((state) => state.selectedBranchId);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
   const [product, setProduct] = useState(null);
@@ -20,7 +20,7 @@ export default function ViewProductPage() {
         return;
       }
 
-      if (!branch?.id || !id || isNaN(id)) return;
+      if (!branchId) return;
 
       try {
         const data = await fetchProductById(id);
@@ -32,7 +32,7 @@ export default function ViewProductPage() {
       }
     };
     fetchProduct();
-  }, [id, branch?.id, fetchProductById]);
+  }, [id, branchId, fetchProductById]);
 
   if (loading) return <p>กำลังโหลดข้อมูลสินค้า...</p>;
   if (error) return <Alert variant="destructive">{error}</Alert>;
@@ -45,7 +45,7 @@ export default function ViewProductPage() {
       <div className="grid md:grid-cols-2 gap-6">
         <div>
           <p className="font-medium">ชื่อสินค้า:</p>
-          <p className="mb-4">{product.title}</p>
+          <p className="mb-4">{product.name}</p>
 
           <p className="font-medium">รายละเอียด:</p>
           <p className="mb-4">{product.description || '-'}</p>

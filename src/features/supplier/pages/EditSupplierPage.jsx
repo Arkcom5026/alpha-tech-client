@@ -15,12 +15,11 @@ import {
 } from '@/components/ui/tooltip';
 import { useBranchStore } from '@/features/branch/store/branchStore';
 
-
 const EditSupplierPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { updateSupplierAction } = useSupplierStore();
-  const branch = useBranchStore((state) => state.currentBranch);
+  const selectedBranchId = useBranchStore((state) => state.selectedBranchId);
 
   const [defaultValues, setDefaultValues] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -44,12 +43,12 @@ const EditSupplierPage = () => {
       }
     };
 
-    if (id) fetchSupplier();
-  }, [id]);
+    if (id && selectedBranchId) fetchSupplier();
+  }, [id, selectedBranchId]);
 
   const handleSubmit = async (formData) => {
     try {
-      if (!branch?.id) throw new Error('ยังไม่ได้เลือกสาขา');
+      if (!selectedBranchId) throw new Error('ยังไม่ได้เลือกสาขา');
       const formatted = {
         ...formData,
         creditLimit: parseFloat(formData.creditLimit || 0),
@@ -76,7 +75,7 @@ const EditSupplierPage = () => {
 
   if (loading) return <p className="text-center py-10">กำลังโหลดข้อมูล...</p>;
   if (!defaultValues) return <p className="text-center text-red-500">ไม่พบข้อมูลผู้ขาย</p>;
-  if (!branch?.id) return <p className="text-center text-gray-500">ยังไม่ได้เลือกสาขา</p>;
+  if (!selectedBranchId) return <p className="text-center text-gray-500">ยังไม่ได้เลือกสาขา</p>;
 
   return (
     <div className="p-4 max-w-5xl mx-auto">

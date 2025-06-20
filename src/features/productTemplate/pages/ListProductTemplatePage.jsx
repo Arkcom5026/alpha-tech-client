@@ -6,14 +6,19 @@ import ProductTemplateTable from '../components/ProductTemplateTable';
 
 import useProductTemplateStore from '../store/productTemplateStore';
 import StandardActionButtons from '@/components/shared/buttons/StandardActionButtons';
+import { useBranchStore } from '@/features/branch/store/branchStore';
+
 
 const ListProductTemplatePage = () => {
   const { templates, fetchTemplates } = useProductTemplateStore();
+  const selectedBranchId = useBranchStore((state) => state.selectedBranchId);
   const navigate = useNavigate();
 
   useEffect(() => {
-    fetchTemplates();
-  }, [fetchTemplates]);
+    if (selectedBranchId) {
+      fetchTemplates(selectedBranchId);
+    }
+  }, [fetchTemplates, selectedBranchId]);
 
   return (
     <div className="p-6 w-full flex flex-col items-center">

@@ -8,8 +8,8 @@ import { useBranchStore } from '@/features/branch/store/branchStore';
 
 const ViewSupplierPage = () => {
   const { id } = useParams();
-  
-  const branch = useBranchStore((state) => state.currentBranch);
+
+  const selectedBranchId = useBranchStore((state) => state.selectedBranchId);
 
   const [supplier, setSupplier] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -28,10 +28,10 @@ const ViewSupplierPage = () => {
       }
     };
 
-    if (id && branch?.id) fetchSupplier();
-  }, [id, branch]);
+    if (id && selectedBranchId) fetchSupplier();
+  }, [id, selectedBranchId]);
 
-  if (!branch?.id) {
+  if (!selectedBranchId) {
     return <p className="text-center text-gray-500">ยังไม่ได้เลือกสาขา</p>;
   }
 

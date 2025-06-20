@@ -22,7 +22,7 @@ const ListSupplierPage = () => {
 
   useEffect(() => {
     const init = async () => {
-      console.log('✅ suppliers after fetch selectedBranchId :', selectedBranchId);
+      
       try {
         if (!selectedBranchId || !token) return;
         await fetchSuppliersAction();

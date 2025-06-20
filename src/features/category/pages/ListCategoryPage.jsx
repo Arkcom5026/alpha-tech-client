@@ -24,7 +24,7 @@ const ListCategoryPage = () => {
 
   return (
     <div className="p-6 w-full flex flex-col items-center">
-      <div className="w-full max-w-4xl">
+      <div className=" max-w-4xl">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-bold text-zinc-800 dark:text-white">รายการหมวดหมู่สินค้า</h2>
           <StandardActionButtons onAdd={() => navigate('create')} />
@@ -35,7 +35,7 @@ const ListCategoryPage = () => {
           placeholder="ค้นหาหมวดหมู่..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="border px-3 py-2 rounded w-full mb-4"
+          className="border px-3 py-2 rounded min-w-[300px] mb-4"
         />
 
         <CategoryTable data={filtered} onEdit={handleEdit} />

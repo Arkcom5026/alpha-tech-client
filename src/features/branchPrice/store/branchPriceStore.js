@@ -2,8 +2,10 @@
 import { create } from 'zustand';
 import {
   getBranchPricesByBranch,
-    getAllProductsWithBranchPrice,  
+  getAllProductsWithBranchPrice,
   upsertBranchPrice,
+  getBranchPricesByBranchId,
+  getAllProductsWithBranchPriceByBranchId,
 } from '../api/branchPriceApi';
 
 const useBranchPriceStore = create((set) => ({
@@ -41,11 +43,10 @@ const useBranchPriceStore = create((set) => ({
   },
 
   // ✅ โหลดสินค้าทั้งหมดพร้อมราคาจาก token context (POS)
-  fetchAllProductsWithPriceByTokenAction: async () => {
+  fetchAllProductsWithPriceByTokenAction: async (filters = {}) => {
     set({ loading: true, error: null });
     try {
-      const res = await getAllProductsWithBranchPrice();
-      console.log('fetchAllProductsWithPriceByTokenAction res :', res);
+      const res = await getAllProductsWithBranchPrice(filters); // ✅ ส่ง filters ไปด้วย
       set({ allProductsWithPrice: res.data });
     } catch (err) {
       console.error('❌ fetchAllProductsWithPriceByTokenAction error:', err);
@@ -60,7 +61,6 @@ const useBranchPriceStore = create((set) => ({
     set({ loading: true, error: null });
     try {
       const res = await getAllProductsWithBranchPriceByBranchId(branchId);
-      console.log('fetchAllProductsWithPriceByIdAction res :', res);
       set({ allProductsWithPrice: res.data });
     } catch (err) {
       console.error('❌ fetchAllProductsWithPriceByIdAction error:', err);

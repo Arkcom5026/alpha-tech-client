@@ -31,26 +31,28 @@ const ProductTemplateTable = ({ templates }) => {
 
   return (
     <div className="w-full flex justify-center mt-4">
-      <div className="w-[1100px] border rounded-md overflow-hidden">
-        <table className="min-w-full text-sm text-center">
+      <div className="w-full border rounded-md overflow-hidden">
+        <table className="min-w-full text-sm ">
           <thead className="bg-gray-100 dark:bg-zinc-800">
             <tr>
-              <th className="px-4 py-2 border text-center align-middle">รูปแบบสินค้า</th>
-              <th className="px-4 py-2 border text-center align-middle">ลักษณะสินค้า</th>
-              <th className="px-4 py-2 border text-center align-middle">รายละเอียด</th>
-              <th className="px-4 py-2 border text-center align-middle">รับประกัน (วัน)</th>
-              <th className="px-4 py-2 border text-center align-middle">การจัดการ</th>
+              <th className="px-4 py-2 border  align-middle">รูปแบบสินค้า</th>
+              <th className="px-4 py-2 border  align-middle">ลักษณะสินค้า</th>
+              <th className="px-4 py-2 border  align-middle">รายละเอียด</th>
+              <th className="px-4 py-2 border  align-middle">รับประกัน (วัน)</th>
+              <th className="px-4 py-2 border  align-middle">การจัดการ</th>
             </tr>
           </thead>
           <tbody>
             {templates.map((tpl) => (
-              <tr key={tpl.id} className="border-t text-center align-middle">
-                <td className="px-4 py-2 border text-center align-middle">{tpl.name}</td>
-                <td className="px-4 py-2 border text-center align-middle">{tpl.productProfileName || '-'}</td>
-                <td className="px-4 py-2 border text-center align-middle">{tpl.description || '-'}</td>
-                <td className="px-4 py-2 border text-center align-middle">{tpl.warranty ?? '-'}</td>
-                <td className="px-4 py-2 border text-center align-middle">
-                  <div className="flex justify-center items-center gap-2">
+              <tr key={tpl.id} className="border-t  align-middle">
+                <td className="px-4 py-2 border  align-middle">{tpl.name}</td>
+                <td className="px-4 py-2 border align-middle">{tpl.productProfileName || '-'}</td>
+                <td className="px-4 py-2 border align-middle">{tpl.description || '-'}</td>
+                <td className="px-4 py-2 border text-center min-w-[130px] align-middle">{tpl.warranty ?? '-'}</td>
+                
+                <td className="px-4 py-2 border align-top min-w-[230px] ">
+
+                <div className="flex justify-center items-center gap-1">
                     <StandardActionButtons
                       onEdit={() => navigate(`/pos/stock/templates/edit/${tpl.id}`)}
                       onDelete={() => setConfirmId(tpl.id)}

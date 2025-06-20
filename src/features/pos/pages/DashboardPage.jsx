@@ -42,7 +42,7 @@ const DashboardPage = () => {
             <CardContent className="flex items-center gap-4">
               <div className="p-3 rounded-full bg-white/50 dark:bg-black/30">{item.icon}</div>
               <div>
-                <p className="text-sm text-muted-foreground">{item.title}</p>
+                <p className="text-sm text-muted-foreground">{item.name}</p>
                 <h2 className="text-2xl font-bold text-foreground">{item.value}</h2>
               </div>
             </CardContent>

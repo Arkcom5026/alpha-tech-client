@@ -1,6 +1,6 @@
 // ✅ src/features/productTemplate/pages/CreateProductTemplatePage.jsx
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { uploadImagesTemp } from '../api/productTemplateImagesApi';
@@ -8,11 +8,12 @@ import { uploadImagesTemp } from '../api/productTemplateImagesApi';
 import ProductTemplateForm from '../components/ProductTemplateForm';
 import ProductTemplateImage from '../components/ProductTemplateImage';
 import useProductTemplateStore from '../store/productTemplateStore';
-import useEmployeeStore from '@/features/employee/store/employeeStore';
+import { useBranchStore } from '@/features/branch/store/branchStore';
+
 
 const CreateProductTemplatePage = () => {
   const navigate = useNavigate();
-  const branchId = useEmployeeStore((state) => state.branch?.id);
+  const selectedBranchId = useBranchStore((state) => state.selectedBranchId);
   const [error, setError] = useState('');
 
   const imageRef = useRef();
@@ -25,8 +26,8 @@ const CreateProductTemplatePage = () => {
 
   const handleCreate = async (formData) => {
     try {
-      if (!branchId) {
-        setError('ไม่พบ branchId โปรดลองล็อกอินใหม่');
+      if (!selectedBranchId) {
+        setError('ไม่พบสาขา กรุณาเลือกสาขาหรือเข้าสู่ระบบใหม่');
         return;
       }
 
@@ -35,7 +36,7 @@ const CreateProductTemplatePage = () => {
       console.log('📋 ตรวจสอบ formData ก่อนส่ง:', formData);
 
       const productProfileIdParsed = parseInt(formData.productProfileId);
-      const branchIdParsed = parseInt(branchId);
+      const branchIdParsed = parseInt(selectedBranchId);
       const unitIdParsed = formData.unitId ? parseInt(formData.unitId) : null;
 
       console.log('🧩 ตรวจสอบค่าที่แปลงแล้ว:', {

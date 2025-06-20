@@ -1,148 +1,108 @@
-// src/components/shared/form/CascadingFilterGroupOnline.jsx
+// src/features/product/components/FormFields.jsx
 
-import { useMemo } from 'react';
 
-export default function CascadingFilterGroupOnline({
-  value,
-  onChange,
-  dropdowns = {},
-  hiddenFields = [],
-  className = '',
-  placeholders = {
-    category: '-- เลือกหมวดหมู่สินค้า --',
-    productType: '-- เลือกประเภทสินค้า --',
-    productProfile: '-- เลือกลักษณะสินค้า --',
-    template: '-- เลือกรูปแบบสินค้า --',
-  },
-  showReset = false,
-  direction = 'column',
-}) {
-  const { categories = [], productTypes = [], productProfiles = [], templates = [] } = dropdowns;
-
-  const filteredProductTypes = useMemo(
-    () => value.categoryId
-      ? productTypes.filter((t) => `${t.categoryId}` === `${value.categoryId}`)
-      : productTypes,
-    [productTypes, value.categoryId]
-  );
-
-  const filteredProductProfiles = useMemo(
-    () => {
-      if (value.categoryId && value.productTypeId) {
-        return productProfiles.filter((p) =>
-          `${p.productTypeId}` === `${value.productTypeId}` &&
-          `${p.productType?.categoryId}` === `${value.categoryId}`
-        );
-      }
-      if (value.productTypeId) {
-        return productProfiles.filter((p) =>
-          `${p.productTypeId}` === `${value.productTypeId}`
-        );
-      }
-      return productProfiles;
-    },
-    [productProfiles, value.categoryId, value.productTypeId]
-  );
-
-  const filteredTemplates = useMemo(
-    () => value.productProfileId
-      ? templates.filter((t) => `${t.productProfileId}` === `${value.productProfileId}`)
-      : templates,
-    [templates, value.productProfileId]
-  );
-
-  const update = (field, val) => {
-    const next = { ...value, [field]: val };
-    if (field === 'categoryId') {
-      next.productTypeId = '';
-      next.productProfileId = '';
-      next.templateId = '';
-    } else if (field === 'productTypeId') {
-      next.productProfileId = '';
-      next.templateId = '';
-    } else if (field === 'productProfileId') {
-      next.templateId = '';
-    }
-    onChange(next);
-  };
-
-  const handleReset = () => {
-    onChange({
-      categoryId: '',
-      productTypeId: '',
-      productProfileId: '',
-      templateId: '',
-    });
-  };
-
+export default function FormFields({ register, errors, dropdowns, control, setValue, isEditMode = false }) {
   return (
-    <div className={`space-y-2 ${className}`}>
-      <div className={direction === 'column' ? 'space-y-2' : 'grid grid-cols-1 md:grid-cols-4 gap-4'}>
-        {!hiddenFields.includes('category') && (
-          <select
-            value={value.categoryId || ''}
-            onChange={(e) => update('categoryId', e.target.value)}
-            className="border px-3 py-2 rounded w-full"
-          >
-            <option value="">{placeholders.category}</option>
-            {categories.map((cat) => (
-              <option key={cat.id} value={cat.id}>{cat.name}</option>
-            ))}
-          </select>
-        )}
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
-        {!hiddenFields.includes('productType') && (
-          <select
-            value={value.productTypeId || ''}
-            onChange={(e) => update('productTypeId', e.target.value)}
-            className="border px-3 py-2 rounded w-full"
-          >
-            <option value="">{placeholders.productType}</option>
-            {filteredProductTypes.map((type) => (
-              <option key={type.id} value={type.id}>{type.name}</option>
-            ))}
-          </select>
-        )}
-
-        {!hiddenFields.includes('productProfile') && (
-          <select
-            value={value.productProfileId || ''}
-            onChange={(e) => update('productProfileId', e.target.value)}
-            className="border px-3 py-2 rounded w-full"
-          >
-            <option value="">{placeholders.productProfile}</option>
-            {filteredProductProfiles.map((profile) => (
-              <option key={profile.id} value={profile.id}>{profile.name}</option>
-            ))}
-          </select>
-        )}
-
-        {!hiddenFields.includes('template') && (
-          <select
-            value={value.templateId || ''}
-            onChange={(e) => update('templateId', e.target.value)}
-            className="border px-3 py-2 rounded w-full"
-          >
-            <option value="">{placeholders.template}</option>
-            {filteredTemplates.map((temp) => (
-              <option key={temp.id} value={temp.id}>{temp.name}</option>
-            ))}
-          </select>
-        )}
+      <div>
+        <label className="block font-medium mb-1">ชื่อสินค้า</label>
+        <input
+          type="text"
+          {...register('name', { required: 'กรุณาระบุชื่อสินค้า' })}
+          className="w-full p-2 border rounded"
+        />
+        {errors.name && <p className="text-red-500 text-sm">{errors.name.message}</p>}
       </div>
 
-      {showReset && (
-        <div className="text-right">
-          <button
-            onClick={handleReset}
-            className="text-sm text-blue-600 hover:underline"
-          >
-            ล้างตัวกรอง
-          </button>
-        </div>
-      )}
+      <div>
+        <label className="block font-medium mb-1">รายละเอียดสินค้า</label>
+        <textarea
+          {...register('description')}
+          className="w-full p-2 border rounded"
+        />
+      </div>
+
+      <div>
+        <label className="block font-medium mb-1">รายละเอียดสเปก</label>
+        <textarea
+          {...register('spec')}
+          className="w-full p-2 border rounded"
+        />
+      </div>
+
+      <div>
+        <label className="block font-medium mb-1">ระยะเวลารับประกัน (เดือน)</label>
+        <input
+          type="number"
+          {...register('warranty', { valueAsNumber: true })}
+          className="w-full p-2 border rounded"
+        />
+      </div>
+
+      <div className="flex items-center space-x-2">
+        <input type="checkbox" {...register('noSN')} id="noSN" />
+        <label htmlFor="noSN">ไม่มี Serial Number</label>
+      </div>
+
+      <div>
+        <label className="block font-medium mb-1">ประเภทบาร์โค้ด</label>
+        <select
+          {...register('codeType')}
+          className="w-full p-2 border rounded"
+        >
+          <option value="D">D - Default</option>
+          <option value="S">S - Serial-based</option>
+        </select>
+      </div>
+
+      <div>
+        <label className="block font-medium mb-1">สีของสินค้า</label>
+        <input
+          type="text"
+          {...register('color')}
+          className="w-full p-2 border rounded"
+        />
+      </div>
+
+      <div>
+        <label className="block font-medium mb-1">บาร์โค้ดสินค้า</label>
+        <input
+          type="text"
+          {...register('barcode')}
+          className="w-full p-2 border rounded"
+        />
+      </div>
+
+      <div className="flex items-center space-x-2">
+        <input type="checkbox" {...register('active')} id="active" defaultChecked />
+        <label htmlFor="active">เปิดใช้งานสินค้า</label>
+      </div>
+
+      <div>
+        <label className="block font-medium mb-1">ราคาทุน</label>
+        <input
+          type="number"
+          step="0.01"
+          {...register('cost', { valueAsNumber: true })}
+          className="w-full p-2 border rounded"
+        />
+      </div>
+
+      <div>
+        <label className="block font-medium mb-1">หน่วยนับ</label>
+        <select
+          {...register('unit')}
+          className="w-full p-2 border rounded"
+        >
+          <option value="">-- เลือกหน่วยนับ --</option>
+          {dropdowns.units.map((unit) => (
+            <option key={unit.id} value={unit.name}>
+              {unit.name}
+            </option>
+          ))}
+        </select>
+      </div>
     </div>
   );
 }
-
-

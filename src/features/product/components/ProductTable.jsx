@@ -11,10 +11,9 @@ const ProductTable = ({ products, onDelete, deleting }) => {
     <table className="w-full border text-sm">
       <thead>
         <tr className="bg-gray-100 dark:bg-zinc-800">
-          <th className="p-2 border">#</th>
-          <th className="p-2 border">ชื่อสินค้า</th>
+          <th className="p-2 border">#</th>          
+          <th className="p-2 border">ชื่อสินค้า</th>          
           <th className="p-2 border">รายละเอียด</th>
-
           <th className="p-2 border">จัดการ</th>
         </tr>
       </thead>
@@ -31,9 +30,8 @@ const ProductTable = ({ products, onDelete, deleting }) => {
               <td className="p-2 border text-center align-middle">{index + 1}</td>
 
 
-              <td className="p-2 border align-middle">{prod.title}</td>
-              <td className="p-2 border align-middle">{prod.description}</td>
-
+              <td className="p-2 border align-middle">{prod.name}</td>              
+              <td className="p-2 border align-middle">{prod.description || '-'}</td>
 
               <td className="p-2 border text-center align-middle">
                 <div className="flex justify-center items-center gap-2">

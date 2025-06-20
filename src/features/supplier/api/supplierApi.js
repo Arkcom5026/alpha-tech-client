@@ -1,13 +1,14 @@
-
 // ✅ supplierApi.js
 import apiClient from '@/utils/apiClient';
 
-export const getAllSuppliers = async () => {
+export const getAllSuppliers = async ({ branchId }) => {
   try {
-    const response = await apiClient.get('/suppliers');    
+    const response = await apiClient.get('/suppliers', {
+      params: { branchId },
+    });    
     return response.data;
   } catch (error) {
-    console.error('❌ getAllSuppliers error:', error);
+    console.error('❌ fetchSuppliers error:', error);
     throw error;
   }
 };
@@ -17,7 +18,7 @@ export const getSupplierById = async (id) => {
     const response = await apiClient.get(`/suppliers/${id}`);
     return response.data;
   } catch (error) {
-    console.error('❌ getSupplierById error:', error);
+    console.error('❌ fetchSupplierById error:', error);
     throw error;
   }
 };

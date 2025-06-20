@@ -81,7 +81,7 @@ const ProductTypeForm = ({ defaultValues = {}, onSubmit, mode = 'create', isSubm
       <AlertDialog
         open={alert.open}
         onOpenChange={(open) => setAlert((prev) => ({ ...prev, open }))}
-        title={alert.title}
+        title={alert.name}
         description={alert.description}
       />
 

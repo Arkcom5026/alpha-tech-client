@@ -12,7 +12,6 @@ export const getProducts = async ({ search, status } = {}) => {
     }
 
     const res = await apiClient.get('/products', { params });
-    console.log('getProducts : ',res)
 
     return res.data;
   } catch (error) {
@@ -78,7 +77,6 @@ export const getProductDropdownsByBranch = async ({ branchId }) => {
 export const getProductPrices = async (productId) => {
   try {
     const res = await apiClient.get(`/products/${productId}/prices`);
-
     return res.data;
   } catch (error) {
     console.error('❌ getProductPrices error:', error);
@@ -127,6 +125,17 @@ export const searchProducts = async (query) => {
     return res.data;
   } catch (error) {
     console.error('❌ searchProducts error:', error);
+    return [];
+  }
+};
+
+// ✅ สำหรับระบบ POS
+export const getProductsForPos = async (filters) => {
+  try {
+    const res = await apiClient.get('/products/pos/search', { params: filters });
+    return res.data;
+  } catch (error) {
+    console.error('❌ getProductsForPos error:', error);
     return [];
   }
 };

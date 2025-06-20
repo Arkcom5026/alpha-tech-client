@@ -22,7 +22,7 @@ const ProductSearchTable = ({ results = [], onAdd }) => {
         const costPrice = costPrices[product.id] || 0;
         onAdd({
             id: product.id,
-            title: product.title,
+            title: product.name,
             productType: product.productType,
             description: product.description,
             template: product.template,
@@ -74,7 +74,7 @@ const ProductSearchTable = ({ results = [], onAdd }) => {
                             const total = qty * costPrice;
                             return (
                                 <TableRow key={product.id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                                    <TableCell className="text-center align-middle">{product.title}</TableCell>
+                                    <TableCell className="text-center align-middle">{product.name}</TableCell>
                                     <TableCell className="text-center align-middle">{product.template?.name || 'ไม่มีหมวดหมู่'}</TableCell>
                                     <TableCell className="text-center align-middle">{product.description || '-'}</TableCell>
                                     <TableCell className="text-center align-middle">

@@ -6,7 +6,7 @@ import ConfirmDeleteDialog from '@/components/shared/dialogs/ConfirmDeleteDialog
 import StandardActionButtons from '@/components/shared/buttons/StandardActionButtons';
 import ProductTable from '../components/ProductTable';
 import useProductStore from '../store/productStore';
-import useEmployeeStore from '@/features/employee/store/employeeStore';
+import { useBranchStore } from '@/features/branch/store/branchStore';
 
 export default function ListProductPage() {
   const [search, setSearch] = useState('');
@@ -21,8 +21,7 @@ export default function ListProductPage() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const perPage = 10;
 
-  const branch = useEmployeeStore((state) => state.branch);
-  const branchId = branch?.id;
+  const branchId = useBranchStore((state) => state.selectedBranchId);
   const navigate = useNavigate();
 
   const {
@@ -85,11 +84,8 @@ export default function ListProductPage() {
     if (!branchId) return;
     fetchProducts({ branchId }).then(() => {
       const state = useProductStore.getState();
-
       const filtered = state.products.filter(p => p.branchId === branchId);
-
       const pageItems = filtered.slice((currentPage - 1) * perPage, currentPage * perPage);
-
     });
   }, [branchId]);
 
@@ -152,4 +148,4 @@ export default function ListProductPage() {
       />
     </div>
   );
-}  
+}

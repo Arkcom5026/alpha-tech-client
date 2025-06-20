@@ -1,7 +1,13 @@
 // ✅ src/features/productTemplate/store/productTemplateStore.js
 
 import { create } from 'zustand';
-import { getAllProductTemplates, createProductTemplate, updateProductTemplate, deleteProductTemplate, getProductTemplateById } from '../api/productTemplateApi';
+import {
+  getAllProductTemplates,
+  createProductTemplate,
+  updateProductTemplate,
+  deleteProductTemplate,
+  getProductTemplateById,
+} from '../api/productTemplateApi';
 
 const useProductTemplateStore = create((set) => ({
   templates: [],
@@ -9,10 +15,10 @@ const useProductTemplateStore = create((set) => ({
   isLoading: false,
   error: null,
 
-  fetchTemplates: async () => {
+  fetchTemplates: async (branchId) => {
     set({ isLoading: true, error: null });
     try {
-      const templates = await getAllProductTemplates();
+      const templates = await getAllProductTemplates(branchId);
       set({ templates, isLoading: false });
     } catch (error) {
       console.error('❌ fetchTemplates error:', error);

@@ -5,6 +5,7 @@ import apiClient from '@/utils/apiClient';
 export const getAllSuppliers = async () => {
   try {
     const response = await apiClient.get('/suppliers');
+    
     return response.data;
   } catch (error) {
     console.error('❌ getAllSuppliers error:', error);
@@ -13,8 +14,7 @@ export const getAllSuppliers = async () => {
 };
 
 export const getSupplierById = async (id) => {
-  try {
-    console.log('id : ',id)
+  try {    
     const response = await apiClient.get(`/suppliers/${id}`);
     return response.data;
   } catch (error) {

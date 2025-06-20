@@ -22,7 +22,7 @@ const ListSupplierPage = () => {
 
   useEffect(() => {
     const init = async () => {
-      try {
+      try {        
         if (!branch?.id || !token) return;
         await fetchSuppliersAction();
       } catch (err) {

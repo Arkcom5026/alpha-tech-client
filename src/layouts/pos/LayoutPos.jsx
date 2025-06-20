@@ -1,9 +1,26 @@
+import { useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 
 import HeaderPos from '@/features/pos/components/header/HeaderPos';
 import SidebarLoader from '@/features/pos/components/SidebarLoader';
+import { useBranchStore } from '@/features/branch/store/branchStore';
+
 
 const LayoutPos = () => {
+  const {
+    selectedBranchId,
+    currentBranch,
+    branches,
+    setCurrentBranch,
+  } = useBranchStore();
+
+  useEffect(() => {
+    if (!currentBranch && selectedBranchId && branches.length > 0) {
+      const found = branches.find((b) => b.id === selectedBranchId);
+      if (found) setCurrentBranch(found);
+    }
+  }, [currentBranch, selectedBranchId, branches, setCurrentBranch]);
+
   return (
     <div className="flex h-screen">
       {/* Sidebar ย่อยสำหรับโมดูลสต๊อกสินค้า */}

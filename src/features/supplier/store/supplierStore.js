@@ -15,13 +15,13 @@ const useSupplierStore = create((set) => ({
   isSupplierLoading: false,
 
   // ✅ โหลด supplier ทั้งหมด
-  fetchAllSuppliersAction: async () => {
+  fetchSuppliersAction: async () => {
     set({ isSupplierLoading: true });
     try {
       const res = await getAllSuppliers();
       set({ suppliers: res, isSupplierLoading: false });
     } catch (err) {
-      console.error('❌ [fetchAllSuppliersAction] error:', err);
+      console.error('❌ [fetchSuppliersAction] error:', err);
       set({ supplierError: err.message, isSupplierLoading: false });
     }
   },
@@ -89,6 +89,14 @@ const useSupplierStore = create((set) => ({
       set({ supplierError: err.message });
     }
   },
+
+  // ✅ reset state (optional สำหรับ logout/staging)
+  resetSupplierState: () => set({
+    suppliers: [],
+    selectedSupplier: null,
+    supplierError: null,
+    isSupplierLoading: false,
+  }),
 }));
 
 export default useSupplierStore;

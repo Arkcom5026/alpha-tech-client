@@ -26,7 +26,17 @@ export const useBranchStore = create(
         }
       },
 
-      setCurrentBranch: (branch) => set({ currentBranch: branch }),
+      setCurrentBranch: (branch) => {
+        if (!branch || !branch.id) {
+          set({ currentBranch: null, selectedBranchId: null });
+        } else {
+          set({
+            currentBranch: branch,
+            selectedBranchId: branch.id,
+          });
+        }
+      },
+
       setSelectedBranchId: (id) => set({ selectedBranchId: id }),
 
       getBranchNameById: (id) => {
@@ -52,7 +62,10 @@ export const useBranchStore = create(
                 console.log('🏬 [DEBUG] สาขาใกล้ที่สุด:', nearest);
 
                 if (nearest) {
-                  setSelectedBranchId(nearest.id);
+                  set({
+                    currentBranch: nearest,
+                    selectedBranchId: nearest.id,
+                  });
                   console.log('✅ [DEBUG] ตั้งค่าสาขา:', nearest.id);
                   resolve(true);
                 } else {

@@ -2,11 +2,8 @@
 import React, { useState } from "react";
 import { useCartStore } from "../../cart/store/cartStore";
 import { useAuthStore } from "@/features/auth/store/authStore";
-
-
-import { FaGoogle, FaFacebookF } from "react-icons/fa";
-import useEmployeeStore from "@/features/employee/store/employeeStore";
 import { useBranchStore } from "@/features/branch/store/branchStore";
+import { FaGoogle, FaFacebookF } from "react-icons/fa";
 
 const LoginForm = ({ onSuccess, setShowRegister }) => {
   const [credential, setCredential] = useState("");
@@ -14,12 +11,14 @@ const LoginForm = ({ onSuccess, setShowRegister }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const login = useAuthStore((state) => state.login);
+  const loginAction = useAuthStore((state) => state.loginAction);
+
   const cartItems = useCartStore((state) => state.cartItems);
   const clearCart = useCartStore((state) => state.clearCart);
   const fetchCartAction = useCartStore((state) => state.fetchCartAction);
   const mergeCartAction = useCartStore((state) => state.mergeCartAction);
-  const loginAction = useAuthStore((state) => state.loginAction);
+
+  const setCurrentBranch = useBranchStore((state) => state.setCurrentBranch);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -27,7 +26,7 @@ const LoginForm = ({ onSuccess, setShowRegister }) => {
     setLoading(true);
     try {
       console.log("🟡 เริ่ม login...");
-      const { token, role, profile, profileType } = await loginAction({
+      const { token, role, profile } = await loginAction({
         emailOrPhone: credential,
         password,
       });
@@ -35,27 +34,10 @@ const LoginForm = ({ onSuccess, setShowRegister }) => {
       console.log("🟢 login สำเร็จ → token:", token);
       console.log("👤 profile:", profile);
 
-      if (role === "employee" && profile?.position && profile?.branch) {
-        const rawPosition = profile.position.name;
-        const mappedPosition =
-          rawPosition === "employee" ? "ผู้ดูแลระบบ" : rawPosition;
-
-        useEmployeeStore.setState({
-          token,
-          role,
-          position: mappedPosition || "__NO_POSITION__",
-          branch: profile.branch,
-          employee: profile,
-        });
-
-        // ✅ เซต currentBranch หลัง login สำหรับระบบ POS
-        useBranchStore.getState().setCurrentBranch(profile.branch);
+      if (role === "employee" && profile?.branch) {
+        setCurrentBranch(profile.branch);
       }
 
-      login({ token, role, profile });
-      console.log("🔐 login() บันทึกที่ authStore เรียบร้อย");
-
-      // ✅ รอให้ authStore sync ค่า token ก่อนเรียก API ต่อ
       await Promise.resolve();
 
       try {
@@ -76,6 +58,7 @@ const LoginForm = ({ onSuccess, setShowRegister }) => {
       console.log("🧹 เคลียร์ cartItems ชั่วคราวเรียบร้อย");
 
       if (onSuccess) onSuccess(role);
+
     } catch (err) {
       console.error("🔴 Login Error:", err);
       const message = err?.message || "เกิดข้อผิดพลาด";

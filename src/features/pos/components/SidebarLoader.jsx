@@ -11,10 +11,10 @@ import { sidebarSupplierItems } from '@/features/supplier/sidebar/sidebarSupplie
 import { sidebarReportsItems } from '@/features/reports/sidebar/sidebarReportsItem.js';
 import { sidebarStockItems } from '@/features/stock/sidebar/sidebarStockItems.js';
 import { sidebarSalesItems } from '@/features/sales/sidebar/sidebarSalesItems.js';
-import { sidebarEmployeeItems } from '@/features/employee/sidebar/sidebarEmployeeItems.js';
 import { sidebarFinanceItems } from '@/features/finance/sidebar/sidebarFinanceItems';
 import { sidebarPurchaseOrdertems } from '@/features/purchaseOrder/sidebar/sidebarPurchaseOrdertems';
 import useEmployeeStore from '@/features/employee/store/employeeStore';
+import { sidebarSettingsItems } from '@/features/settings/sidebar/sidebarSettingsItems';
 
 const pathGroups = [
   { prefix: '/pos/stock', sidebar: sidebarStockItems },
@@ -23,7 +23,7 @@ const pathGroups = [
   { prefix: '/pos/services', sidebar: sidebarServicesItems },
   { prefix: '/pos/reports', sidebar: sidebarReportsItems },
   { prefix: '/pos/finance', sidebar: sidebarFinanceItems },
-  { prefix: '/pos/employees', sidebar: sidebarEmployeeItems },
+  { prefix: '/pos/settings', sidebar: sidebarSettingsItems },
   { prefix: '/pos/suppliers', sidebar: sidebarSupplierItems },
   { prefix: '/pos/purchases', sidebar: sidebarPurchaseOrdertems },
 

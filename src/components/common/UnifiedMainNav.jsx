@@ -1,18 +1,24 @@
-// UnifiedMainNav.jsx (Responsive with smaller text on small screens)
+// UnifiedMainNav.jsx (อัปเดตการแสดงผล Avatar ให้เหมือน LoginForm.jsx)
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Link, NavLink } from 'react-router-dom';
-import { ChevronDown } from 'lucide-react';
+import { Link, NavLink, useNavigate } from 'react-router-dom';
+import { ChevronDown, UserCircle } from 'lucide-react';
 
-import useCustomerStore from '@/features/customer/store/customerStore';
+import { useAuthStore } from '@/features/auth/store/authStore';
+import { useCartStore } from '@/features/online/cart/store/cartStore';
+import { useBranchStore } from '@/features/branch/store/branchStore';
 
 const UnifiedMainNav = () => {
-  
-  const customers = useCustomerStore((state) => state.customers);
-  const logout = useCustomerStore((state) => state.logout);
+  const customer = useAuthStore((state) => state.customer);
+  const role = useAuthStore((state) => state.role);
+  const logout = useAuthStore((state) => state.logout);
+  const clearAuthStorage = useAuthStore((state) => state.clearStorage);
+  const clearCart = useCartStore((state) => state.clearCart);
+  const clearBranchStorage = useBranchStore((state) => state.clearStorage);
 
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
+  const navigate = useNavigate();
 
   const toggleDropdown = () => setIsOpen((prev) => !prev);
 
@@ -31,6 +37,19 @@ const UnifiedMainNav = () => {
       ? 'bg-blue-200 px-2 sm:px-3 py-1 sm:py-2 rounded-md text-xs sm:text-sm font-medium text-blue-700 border border-white/40 border-[1px]'
       : 'px-2 sm:px-3 py-1 sm:py-2 rounded-md text-xs sm:text-sm font-medium text-white border border-white/40 border-[1px] hover:bg-blue-100/60';
 
+  const handleLogout = () => {
+    logout();
+    clearAuthStorage();
+    clearCart();
+    clearBranchStorage();
+
+    localStorage.removeItem('auth-storage');
+    localStorage.removeItem('cart-storage');
+    localStorage.removeItem('branch-storage');
+
+    navigate('/');
+  };
+
   return (
     <nav className="bg-blue-500">
       <div className="mx-auto px-4">
@@ -42,37 +61,31 @@ const UnifiedMainNav = () => {
             </Link>
             <NavLink to="/" className={navClass}>Home</NavLink>
             <NavLink to="/shop" className={navClass}>Shop</NavLink>
-            <NavLink to="/cart" className={navClass}>
-              Cart
-             
-            </NavLink>
+            <NavLink to="/cart" className={navClass}>Cart</NavLink>
           </div>
 
           {/* Right Section: Auth / Avatar */}
           <div className="flex items-center gap-3 sm:gap-4">
-            {!customers && (
-              <>
-                                <NavLink to="/login" className={navClass}>Login</NavLink>
-              </>
+            {!customer && (
+              <NavLink to="/login" className={navClass}>Login</NavLink>
             )}
 
-            {customers && (
+            {customer && (
               <div className="relative" ref={dropdownRef}>
                 <button
                   onClick={toggleDropdown}
-                  className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1 sm:py-2 text-white text-xs sm:text-sm hover:bg-blue-600 rounded-md"
+                  className="flex items-center gap-2 px-3 py-1 sm:py-2 text-white hover:bg-blue-600 rounded-full bg-blue-700"
                 >
-                  <img
-                    src="https://cdn.iconscout.com/icon/free/png-512/free-avatar-icon-download-in-svg-png-gif-file-formats--user-professor-avatars-flat-icons-pack-people-456317.png?f=webp&w=256"
-                    className="w-6 sm:w-8 h-6 sm:h-8 rounded-full"
-                    alt="avatar"
-                  />
-                  <ChevronDown size={16} className="sm:hidden" />
+         
+                  <UserCircle className="w-5 h-5" />
+                  <span className="font-semibold text-xs sm:text-sm text-white">{customer?.name}</span>
                 </button>
                 {isOpen && (
                   <div className="absolute right-0 mt-2 w-40 sm:w-48 bg-white shadow-md rounded-md z-50 text-sm">
-                    <Link to="/customers/history" className="block px-4 py-2 hover:bg-gray-100">History</Link>
-                    <button onClick={logout} className="block w-full text-left px-4 py-2 hover:bg-gray-100">Logout</button>
+                    <div className="px-4 py-2 text-gray-700 border-b font-semibold">{customer?.name}</div>
+                    <Link to="/customers/profile" className="block px-4 py-2 hover:bg-gray-100">โปรไฟล์ของฉัน</Link>
+                    <Link to="/customers/history" className="block px-4 py-2 hover:bg-gray-100">ประวัติการสั่งซื้อ</Link>
+                    <button onClick={handleLogout} className="block w-full text-left px-4 py-2 hover:bg-gray-100">ออกจากระบบ</button>
                   </div>
                 )}
               </div>

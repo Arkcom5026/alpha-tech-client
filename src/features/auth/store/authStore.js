@@ -1,47 +1,87 @@
-// ✅ src/features/auth/store/authStore.js
 
+// authStore.js
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { loginUser } from '../api/authApi';
 import { useBranchStore } from '@/features/branch/store/branchStore';
-
 
 export const useAuthStore = create(
   persist(
     (set) => ({
       token: null,
       role: null,
-      profile: null,
+      employee: null,
+      customer: null,
 
-      login: ({ token, role, profile }) => set({ token, role, profile }),
+      setUser: ({ token, role, employee, customer }) => set({ token, role, employee, customer }),
 
-      logout: () => set({ token: null, role: null, profile: null }),
+      logout: () => set({ token: null, role: null, employee: null, customer: null }),
+
+      logoutAction: () => {
+        set({ token: null, role: null, employee: null, customer: null });
+        localStorage.removeItem('auth-storage');
+      },
+
+      clearStorage: () => {
+        set({ token: null, role: null, employee: null, customer: null });
+      },
 
       isLoggedIn: () => {
         const state = useAuthStore.getState();
         return !!state.token;
       },
 
-      // ✅ login พร้อมบันทึก token และ profile และตั้งค่าสาขาใน branchStore
       loginAction: async (credentials) => {
         try {
           const res = await loginUser(credentials);
           console.log("✅ loginUser response:", res);
 
-          set({
-            token: res.data.token,
-            role: res.data.role,
-            profile: res.data.profile,
-          });
+          const profile = res.data.profile;
+          const role = res.data.role;
 
-          // ✅ เซตสาขาให้ branchStore ทันทีหลัง login
-          const branch = res.data.branch;
-          if (branch) {
-            useBranchStore.getState().setCurrentBranch(branch);
+          let branchFull = null;
+          let employee = null;
+          let customer = null;
+
+          if (role === 'employee' && profile?.branch) {
+            const rawPosition = profile.position?.name;
+            const mappedPosition = rawPosition === 'employee' ? 'ผู้ดูแลระบบ' : rawPosition;
+
+            branchFull = await useBranchStore.getState().loadAndSetBranchById(profile.branch.id);
+
+            employee = {
+              id: profile.id,
+              name: profile.name,
+              phone: profile.phone,
+              email: profile.email,
+              positionName: mappedPosition || '__NO_POSITION__',
+              branchId: profile.branch.id,
+            };
           }
 
-          console.log('loginAction res.data;', res.data);
-          return res.data; // ✅ สำคัญมาก เพื่อให้ LoginForm ได้ token จริง
+          if (role === 'customer') {
+            customer = {
+              id: profile.id,
+              name: profile.name,
+              phone: profile.phone,
+              email: profile.email,
+            };
+          }
+
+          set({
+            token: res.data.token,
+            role,
+            employee,
+            customer,
+          });
+
+          console.log('✅ loginAction success:', { profile, branchFull });
+
+          return {
+            token: res.data.token,
+            role,
+            profile,
+          };
         } catch (err) {
           console.error("❌ loginAction error:", err);
           throw err;
@@ -49,7 +89,7 @@ export const useAuthStore = create(
       },
     }),
     {
-      name: 'auth-storage', // 🔐 key ใน localStorage
+      name: 'auth-storage',
     }
   )
 );

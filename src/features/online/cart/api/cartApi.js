@@ -16,7 +16,7 @@ export const mergeCartToServer = async (cartItems) => {
 export const fetchCartFromServer = async () => {
   try {
     const response = await apiClient.get('/cart');
-    console.log('fetchCartFromServer response : ',response)
+    
     return response.data.cartItems || [];
   } catch (error) {
     console.error('❌ fetchCartFromServer error:', error);

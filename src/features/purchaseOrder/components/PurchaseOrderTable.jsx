@@ -23,18 +23,24 @@ const PurchaseOrderTable = ({ products = [], setProducts = () => { }, loading = 
     }
   }, [products.length]);
 
+  
+
   return (
     <div className="rounded-md border overflow-x-auto">
+       <h3 className="text-md font-semibold px-4 pt-3 pb-2 text-gray-700">รายการสินค้าที่สั่งซื้อ</h3>
       <Table>
-        <TableHeader>
+        <TableHeader className="bg-blue-100">
           <TableRow>
-            <TableHead className="text-center w-[200px]">ชื่อสินค้า</TableHead>
-            <TableHead className="text-center w-[160px]">หมวดหมู่</TableHead>
+            <TableHead className="text-center w-[120px]">ชื่อสินค้า</TableHead>
+            <TableHead className="text-center w-[150px]">หมวดหมู่</TableHead>
+            <TableHead className="text-center w-[130px]">ประเภท</TableHead>
+            <TableHead className="text-center w-[130px]">ลักษณะ</TableHead>
+            <TableHead className="text-center w-[130px]">รูปแบบ</TableHead>
             <TableHead className="text-center">รายละเอียด</TableHead>
-            <TableHead className="text-center w-[100px]">จำนวน</TableHead>
-            <TableHead className="text-center w-[120px]">ราคาทุน</TableHead>
-            <TableHead className="text-center w-[120px]">ราคารวม</TableHead>
-            <TableHead className="text-center w-[120px]"></TableHead>
+            <TableHead className="text-center w-[60px]">จำนวน</TableHead>
+            <TableHead className="text-center w-[80px]">ราคาทุน</TableHead>
+            <TableHead className="text-center w-[100px]">ราคารวม</TableHead>
+            <TableHead className="text-center w-[100px]">จัดการ</TableHead>
           </TableRow>
         </TableHeader>
 
@@ -45,9 +51,12 @@ const PurchaseOrderTable = ({ products = [], setProducts = () => { }, loading = 
               const isLast = index === products.length - 1;
               return (
                 <TableRow key={item.id} ref={isLast ? lastRowRef : null}>
-                  <TableCell className="text-center">{item.name || '-'}</TableCell>
-                  <TableCell className="text-center align-middle">{item.template?.name || 'ไม่มีหมวดหมู่'}</TableCell>
-                  <TableCell className="text-center">{item.description || '-'}</TableCell>
+                  <TableCell>{item.name || '-'}</TableCell>
+                  <TableCell>{item.category || '-'}</TableCell>
+                  <TableCell>{item.productType || '-'}</TableCell>
+                  <TableCell>{item.productProfile || '-'}</TableCell>
+                  <TableCell>{item.productTemplate || '-'}</TableCell>
+                  <TableCell>{item.description || '-'}</TableCell>
                   <TableCell className="text-center">
                     <input
                       type="number"
@@ -70,13 +79,7 @@ const PurchaseOrderTable = ({ products = [], setProducts = () => { }, loading = 
                   {editable && (
                     <TableCell className="text-center">
                       <div className="flex justify-center">
-                        <StandardActionButtons
-                          onDelete={() => {
-                            if (confirm(`ต้องการลบรายการ ${item.name} ใช่หรือไม่?`)) {
-                              handleDelete(item.id);
-                            }
-                          }}
-                        />
+                        <StandardActionButtons onDelete={() => handleDelete(item.id)} />
                       </div>
                     </TableCell>
                   )}
@@ -85,7 +88,7 @@ const PurchaseOrderTable = ({ products = [], setProducts = () => { }, loading = 
             })
           ) : (
             <TableRow>
-              <TableCell colSpan={editable ? 7 : 6} className="text-center text-muted-foreground">
+              <TableCell colSpan={10} className="text-center text-muted-foreground">
                 {loading ? 'กำลังโหลดข้อมูล...' : 'ยังไม่มีรายการสินค้าในใบสั่งซื้อ'}
               </TableCell>
             </TableRow>

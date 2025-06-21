@@ -1,33 +1,36 @@
-// ✅ @filename: HeaderPos.jsx
-// ✅ @folder: src/features/pos/components/header/
-
 import { NavLink, useNavigate } from 'react-router-dom';
 import { FaSignOutAlt } from 'react-icons/fa';
-import { Sun, Moon } from 'lucide-react';
+import { Sun, Moon, UserCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import useEmployeeStore from '@/features/employee/store/employeeStore';
 import useThemeStore from '@/store/themeStore';
+
+import { useAuthStore } from '@/features/auth/store/authStore';
+import { useBranchStore } from '@/features/branch/store/branchStore';
+import { useState } from 'react';
 
 const HeaderPos = () => {
   const navigate = useNavigate();
-  const branchName = useEmployeeStore((state) => state.branchName);
-  const employee = useEmployeeStore((state) => state.employee);
-  const logoutEmployee = useEmployeeStore((state) => state.logoutEmployee);
+  const employee = useAuthStore((state) => state.employee);
+  const logoutAction = useAuthStore((state) => state.logoutAction);
+  const branchName = useBranchStore((state) => state.currentBranch?.name);
+  const clearBranch = useBranchStore((state) => state.clearBranch);
   const { isDark, toggleTheme } = useThemeStore();
+  const [showMenu, setShowMenu] = useState(false);
 
   const handleLogout = () => {
-    logoutEmployee();
+    clearBranch();
+    logoutAction();
     navigate('/');
   };
 
   const navLinkClass = ({ isActive }) =>
-  `px-5 py-2 rounded-md text-base font-medium transition-all duration-200 whitespace-nowrap border border-white/20 shadow-sm ${
-    isActive ? 'bg-white text-blue-800' : 'text-white/80 hover:bg-blue-600'
-  }`;
+    `px-5 py-2 rounded-md text-base font-medium transition-all duration-200 whitespace-nowrap border border-white/20 shadow-sm ${
+      isActive ? 'bg-white text-blue-800' : 'text-white/80 hover:bg-blue-600'
+    }`;
 
   return (
     <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 px-4 py-3 bg-blue-700 text-white shadow-md dark:bg-slate-900 dark:text-white">
-      {/* ✅ Responsive Menu: Dropdown on small screens */}
+      {/* Responsive Dropdown Menu */}
       <div className="block md:hidden">
         <select
           onChange={(e) => navigate(e.target.value)}
@@ -46,7 +49,6 @@ const HeaderPos = () => {
         </select>
       </div>
 
-      {/* ✅ Horizontal Menu for md+ screens */}
       <nav className="hidden md:flex flex-wrap gap-2 max-w-full overflow-x-auto scrollbar-thin">
         <NavLink to="/pos" className={navLinkClass}>หน้าหลัก</NavLink>
         <NavLink to="/pos/purchases" className={navLinkClass}>จัดซื้อ</NavLink>
@@ -55,10 +57,10 @@ const HeaderPos = () => {
         <NavLink to="/pos/stock" className={navLinkClass}>สต๊อก</NavLink>
         <NavLink to="/pos/reports" className={navLinkClass}>รายงาน</NavLink>
         <NavLink to="/pos/finance" className={navLinkClass}>การเงิน</NavLink>
-        <NavLink to="/pos/employees" className={navLinkClass}>พนักงาน</NavLink>
+        <NavLink to="/pos/settings" className={navLinkClass}>ตั้งค่าระบบ</NavLink>
       </nav>
 
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-end gap-3 w-full md:w-auto">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-end gap-3 w-full md:w-auto relative">
         <Button
           variant="ghost"
           className="text-white/80 hover:text-white"
@@ -68,35 +70,41 @@ const HeaderPos = () => {
         </Button>
 
         {branchName && (
-          <div className="text-sm font-medium bg-blue-600/60 px-3 py-1 rounded-full dark:bg-slate-700 max-w-[160px] truncate">
+          <div className="text-sm font-medium bg-blue-600/60 px-3 py-1 rounded-full dark:bg-slate-700 max-w-[250px] truncate">
             สาขา: {branchName}
           </div>
         )}
 
         {employee?.name && (
-          <div className="text-sm text-white/90 dark:text-white max-w-[160px] break-words">
-            👤 {employee.name}
+          <div className="relative">
+            <button
+              className="flex items-center gap-2 px-3 py-1 bg-blue-600/80 hover:bg-blue-700 rounded-full text-sm"
+              onClick={() => setShowMenu(!showMenu)}
+            >
+              <UserCircle className="w-5 h-5" />
+              <span className="truncate max-w-[150px]">{employee.name}</span>
+            </button>
+            {showMenu && (
+              <div className="absolute right-0 mt-2 w-40 bg-white text-black rounded shadow-md z-50">
+                <button
+                  onClick={() => navigate('/profile')}
+                  className="w-full text-left px-4 py-2 hover:bg-gray-100"
+                >
+                  ดูโปรไฟล์
+                </button>
+                <button
+                  onClick={handleLogout}
+                  className="w-full text-left px-4 py-2 text-red-600 hover:bg-gray-100"
+                >
+                  ออกจากระบบ
+                </button>
+              </div>
+            )}
           </div>
         )}
-
-        <div className="flex gap-2">
-          <button
-            onClick={handleLogout}
-            className="hidden md:flex items-center gap-2 bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg text-white text-sm shadow"
-          >
-            <FaSignOutAlt /> ออกจากระบบ
-          </button>
-          <button
-            onClick={handleLogout}
-            className="md:hidden flex items-center justify-center bg-red-600 hover:bg-red-700 p-2 rounded-lg text-white text-sm shadow"
-          >
-            <FaSignOutAlt />
-          </button>
-        </div>
       </div>
     </header>
   );
-
 };
 
 export default HeaderPos;

@@ -1,36 +1,33 @@
 // ✅ @filename: LoginPage.jsx
-// ✅ @folder: src/pages/
 
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '@/features/auth/store/authStore';
-import useEmployeeStore from '@/features/employee/store/employeeStore';
-
 import { FaGoogle, FaFacebook, FaLock } from 'react-icons/fa';
 import { useBranchStore } from '@/features/branch/store/branchStore';
+import { useCartStore } from '@/features/online/cart/store/cartStore';
 
 const LoginPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const loginAction = useAuthStore((state) => state.loginAction);
   const token = useAuthStore((state) => state.token);
   const role = useAuthStore((state) => state.role);
 
-  const [email, setEmail] = useState('advicebanphot@gmail.com');
-  const [password, setPassword] = useState('Arkcom-5026');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   const isLoggedIn = !!token;
+  const { cartItems, fetchCartAction, mergeCartAction, clearCart } = useCartStore();
 
   useEffect(() => {
     if (!isLoggedIn) return;
-
     const currentPath = window.location.pathname;
-
     if (role === 'admin' && currentPath !== '/admin') navigate('/admin');
     else if (role === 'employee' && currentPath !== '/pos/dashboard') navigate('/pos/dashboard');
-    else if (role === 'customer' && currentPath !== '/') navigate('/');
   }, [isLoggedIn, role, navigate]);
 
   const handleLogin = async (e) => {
@@ -44,18 +41,53 @@ const LoginPage = () => {
         const rawPosition = profile.position.name;
         const mappedPosition = rawPosition === 'employee' ? 'ผู้ดูแลระบบ' : rawPosition;
 
-        useEmployeeStore.setState({
+        const branchFull = await useBranchStore.getState().loadAndSetBranchByIdAction(profile.branch.id);
+
+        useAuthStore.getState().setUser({
           token,
           role,
-          position: mappedPosition || '__NO_POSITION__',
-          branch: profile.branch,
-          employee: profile,
+          employee: {
+            id: profile.id,
+            name: profile.name,
+            phone: profile.phone,
+            email: profile.email,
+            positionName: mappedPosition || '__NO_POSITION__',
+            branchId: profile.branch.id,
+          },
         });
 
-        useBranchStore.getState().setCurrentBranch(profile.branch);
+        useBranchStore.getState().setCurrentBranch(branchFull);
+        navigate('/pos/dashboard', { replace: true });
       }
+
+      if (role === 'customer') {
+        useAuthStore.getState().setUser({
+          token,
+          role,
+          customer: {
+            id: profile.id,
+            name: profile.name,
+            phone: profile.phone,
+            email: profile.email,
+          },
+        });
+
+        try {
+          if (cartItems.length > 0) {
+            await mergeCartAction();
+            clearCart();
+          }
+          await fetchCartAction();
+        } catch (mergeErr) {
+          console.warn('⚠️ mergeCartAction หรือ fetchCartAction ล้มเหลว:', mergeErr);
+        }
+
+        const fromPath = location.state?.from?.pathname || '/';
+        navigate(fromPath, { replace: true });
+      }
+
     } catch (err) {
-      console.error("🔴 Login Error:", err);
+      console.error('🔴 Login Error:', err);
       const message = err?.response?.data?.message || err?.message || 'เกิดข้อผิดพลาด';
       setError(message);
     } finally {
@@ -136,7 +168,11 @@ const LoginPage = () => {
             </a>
           </div>
 
-          {error && <div className="text-red-600 text-sm bg-red-50 border border-red-200 p-2 rounded">{error}</div>}
+          {error && (
+            <div className="text-red-600 text-sm bg-red-50 border border-red-200 p-2 rounded">
+              {error}
+            </div>
+          )}
 
           <button
             type="submit"
@@ -148,7 +184,10 @@ const LoginPage = () => {
         </form>
 
         <p className="text-center text-sm text-gray-500">
-          ยังไม่มีบัญชี? <a href="/register" className="text-blue-600 hover:underline">สมัครสมาชิก</a>
+          ยังไม่มีบัญชี?{' '}
+          <a href="/register" className="text-blue-600 hover:underline">
+            สมัครสมาชิก
+          </a>
         </p>
       </div>
     </div>

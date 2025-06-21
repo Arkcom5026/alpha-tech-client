@@ -162,7 +162,7 @@ const useProductStore = create((set) => ({
   fetchProductsAction: async (filters = {}) => {
   set({ isLoading: true, error: null });
   try {
-    const data = await getProductsForPos(filters); // ✅ สำหรับ POS
+    const data = await getProductsForPos(filters); // ✅ สำหรับ POS    
     set({ products: data, isLoading: false });
   } catch (error) {
     console.error('❌ fetchProductsAction error:', error);

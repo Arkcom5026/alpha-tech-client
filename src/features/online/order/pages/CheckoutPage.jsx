@@ -1,13 +1,12 @@
-// ✅ CheckoutPage.jsx (เชื่อม CustomerInfoForm จริงแทน mock payload)
+// ✅ CheckoutPage.jsx 
 import React, { useState, useEffect } from "react";
 import { useCartStore } from "../../cart/store/cartStore";
 import { useAuthStore } from "@/features/auth/store/authStore";
 import { useOrderOnlineStore } from "../store/orderOnlineStore";
 import { useBranchStore } from "@/features/branch/store/branchStore";
-import LoginForm from "../components/LoginForm";
 import RegisterForm from "../components/RegisterForm";
 import CustomerInfoForm from "../components/CustomerInfoForm";
-import { useNavigate } from "react-router-dom";
+import LoginForm from "../components/LoginForm";
 
 const CheckoutPage = () => {
   const cartItems = useCartStore((state) => state.cartItems);
@@ -16,7 +15,7 @@ const CheckoutPage = () => {
   const decreaseQuantity = useCartStore((state) => state.decreaseQuantity);
 
   const token = useAuthStore((state) => state.token);
-  const profile = useAuthStore((state) => state.profile);
+  const customer = useAuthStore((state) => state.customer); // ✅ เปลี่ยนจาก profile เป็น customer
   const selectedBranchId = useBranchStore((state) => state.selectedBranchId);
 
   const [showRegister, setShowRegister] = useState(false);
@@ -32,25 +31,44 @@ const CheckoutPage = () => {
     postalCode: "",
   });
 
-  const navigate = useNavigate();
   const submitOrderAction = useOrderOnlineStore((state) => state.submitOrderAction);
 
   const handleLoginSuccess = async () => {
     await fetchCartAction();
     const items = useCartStore.getState().cartItems;
     setSelectedItems(items.map(item => item.id));
+
+    const user = useAuthStore.getState().customer;
+    if (user) {
+      setCustomerInfo((prev) => ({
+        ...prev,
+        fullName: user.name || "",
+        phone: user.phone || "",
+        email: user.email || "",
+      }));
+    }
   };
 
   useEffect(() => {
     const loadCart = async () => {
-      if (token && profile) {
+      const storedCustomer = useAuthStore.getState().customer;
+      const storedToken = useAuthStore.getState().token;
+
+      if (storedToken && storedCustomer) {
         await fetchCartAction();
         const items = useCartStore.getState().cartItems;
         setSelectedItems(items.map(item => item.id));
+
+        setCustomerInfo((prev) => ({
+          ...prev,
+          fullName: storedCustomer.name || "",
+          phone: storedCustomer.phone || "",
+          email: storedCustomer.email || "",
+        }));
       }
     };
     loadCart();
-  }, [token, profile]);
+  }, []);
 
   useEffect(() => {
     if (cartItems.length > 0 && selectedItems.length === 0) {
@@ -83,7 +101,7 @@ const CheckoutPage = () => {
 
   const submitOrder = async () => {
     try {
-      if (!token || !profile || !selectedBranchId) return;
+      if (!token || !customer || !selectedBranchId) return;
 
       const selectedCartItems = cartItems.filter((item) => selectedItems.includes(item.id));
 
@@ -93,7 +111,7 @@ const CheckoutPage = () => {
       }
 
       const payload = {
-        customerId: profile.customerProfileId,
+        customerId: customer.id,
         branchId: selectedBranchId,
         note: "คำสั่งซื้อจากลูกค้าออนไลน์",
 
@@ -111,10 +129,10 @@ const CheckoutPage = () => {
           price: item.priceAtThatTime || item.price || 0,
         })),
       };
-      console.log('payload : ',payload)
+      console.log('payload : ', payload);
       const result = await submitOrderAction(payload);
       if (result?.order?.id) {
-        navigate(`/order-success/${result.order.id}`);
+        window.location.href = `/order-success/${result.order.id}`;
       }
     } catch (err) {
       console.error("❌ submitOrder error:", err);
@@ -161,7 +179,7 @@ const CheckoutPage = () => {
             <div className="pt-4 border-t text-right text-base font-semibold">
               รวมทั้งหมด: {Number(calculatedTotal || 0).toLocaleString()} ฿
             </div>
-            {token && profile && (
+            {token && customerInfo.fullName && (
               <button
                 onClick={submitOrder}
                 className="mt-6 w-full bg-green-600 text-white py-2 rounded-md hover:bg-green-700 transition"
@@ -174,16 +192,12 @@ const CheckoutPage = () => {
       </div>
 
       <div className="bg-white p-6 rounded-xl shadow-md h-fit">
-        {!token || !profile ? (
-          <>
-            {showRegister ? (
-              <RegisterForm setShowRegister={setShowRegister} />
-            ) : (
-              <LoginForm showRegister={showRegister} setShowRegister={setShowRegister} onSuccess={handleLoginSuccess} />
-            )}
-          </>
-        ) : (
+        {(token && customerInfo.fullName) ? (
           <CustomerInfoForm value={customerInfo} onChange={setCustomerInfo} />
+        ) : showRegister ? (
+          <RegisterForm setShowRegister={setShowRegister} />
+        ) : (
+          <LoginForm setShowRegister={setShowRegister} onSuccess={handleLoginSuccess} />
         )}
       </div>
     </div>

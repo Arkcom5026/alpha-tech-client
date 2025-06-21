@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
+
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import StandardActionButtons from '@/components/shared/buttons/StandardActionButtons';
 
@@ -22,28 +21,36 @@ const ProductSearchTable = ({ results = [], onAdd }) => {
         const costPrice = costPrices[product.id] || 0;
         onAdd({
             id: product.id,
-            title: product.name,
+            name: product.name,
+            category: product.category,
             productType: product.productType,
+            productProfile: product.productProfile,
+            productTemplate: product.productTemplate,
             description: product.description,
-            template: product.template,
             quantity,
             costPrice,
+            totalPrice: quantity * costPrice,
         });
-        // ล้างข้อมูลออกทั้งแถวโดยลบ productId ออกจากผลการค้นหา
+
         setQuantities((prev) => {
             const updated = { ...prev };
             delete updated[product.id];
             return updated;
         });
+
         setCostPrices((prev) => {
             const updated = { ...prev };
             delete updated[product.id];
             return updated;
         });
+
         setRemovedIds((prev) => [...prev, product.id]);
+        
     };
 
     const visibleResults = results.filter((p) => !removedIds.includes(p.id));
+
+  
 
     return (
         <div className="rounded-md border overflow-x-auto mt-6 shadow-sm">
@@ -51,13 +58,16 @@ const ProductSearchTable = ({ results = [], onAdd }) => {
             <Table>
                 <TableHeader className="bg-blue-100">
                     <TableRow>
-                        <TableHead className="text-center w-[200px]">ชื่อสินค้า</TableHead>
-                        <TableHead className="text-center w-[160px]">หมวดหมู่</TableHead>
+                        <TableHead className="text-center w-[120px]">ชื่อสินค้า</TableHead>                        
+                        <TableHead className="text-center w-[150px]">หมวดหมู่</TableHead>                        
+                        <TableHead className="text-center w-[130px]">ประเภท</TableHead>                        
+                        <TableHead className="text-center w-[130px]">ลักษณะ</TableHead>                        
+                        <TableHead className="text-center w-[130px]">รูปแบบ</TableHead>                        
                         <TableHead className="text-center">รายละเอียด</TableHead>
-                        <TableHead className="text-center w-[100px]">จำนวน</TableHead>
-                        <TableHead className="text-center w-[120px]">ราคาต่อหน่วย</TableHead>
-                        <TableHead className="text-center w-[120px]">ราคารวม</TableHead>
-                        <TableHead className="text-center w-[120px]"></TableHead>
+                        <TableHead className="text-center w-[60px]">จำนวน</TableHead>
+                        <TableHead className="text-center w-[60px]">ราคา</TableHead>
+                        <TableHead className="text-center w-[80px]">ราคารวม</TableHead>
+                        <TableHead className="text-center w-[100px]">จัดการ</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -74,16 +84,22 @@ const ProductSearchTable = ({ results = [], onAdd }) => {
                             const total = qty * costPrice;
                             return (
                                 <TableRow key={product.id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                                    <TableCell className="text-center align-middle">{product.name}</TableCell>
-                                    <TableCell className="text-center align-middle">{product.template?.name || 'ไม่มีหมวดหมู่'}</TableCell>
-                                    <TableCell className="text-center align-middle">{product.description || '-'}</TableCell>
-                                    <TableCell className="text-center align-middle">
+                                    <TableCell className=" align-middle">{product.name}</TableCell>                                    
+                                    <TableCell className=" align-middle">{product.category}</TableCell>                                    
+                                    <TableCell className=" align-middle">{product.productType}</TableCell>                                    
+                                    <TableCell className=" align-middle">{product.productProfile}</TableCell>                                    
+                                    <TableCell className=" align-middle">{product.productTemplate}</TableCell>                                    
+                                    <TableCell className=" align-middle">{product.description || '-'}</TableCell>
+                                    <TableCell className=" align-middle">
                                         <input
                                             type="number"
                                             className="w-20 text-center border rounded p-1"
                                             value={qty}
                                             min={1}
                                             onChange={(e) => handleQuantityChange(product.id, e.target.value)}
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter') e.preventDefault();
+                                            }}
                                         />
                                     </TableCell>
                                     <TableCell className="text-center align-middle">
@@ -93,6 +109,9 @@ const ProductSearchTable = ({ results = [], onAdd }) => {
                                             value={costPrice}
                                             min={0}
                                             onChange={(e) => handleCostPriceChange(product.id, e.target.value)}
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter') e.preventDefault();
+                                            }}
                                         />
                                     </TableCell>
                                     <TableCell className="text-center align-middle">{total.toLocaleString()} ฿</TableCell>

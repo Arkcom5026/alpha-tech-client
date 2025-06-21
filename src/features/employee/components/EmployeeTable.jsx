@@ -6,6 +6,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useEmployeeStore from '@/features/employee/store/employeeStore';
+import StandardActionButtons from '@/components/shared/buttons/StandardActionButtons';
 
 const EmployeeTable = ({ employees, onRefresh }) => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -60,6 +61,11 @@ const EmployeeTable = ({ employees, onRefresh }) => {
         </select>
       </div>
 
+      <StandardActionButtons
+        onAdd={() => navigate('/pos/employees/create')}
+        className="mb-4"
+      />
+
       <table className="min-w-full text-sm border">
         <thead className="bg-gray-100">
           <tr>
@@ -78,25 +84,25 @@ const EmployeeTable = ({ employees, onRefresh }) => {
               <td className="p-2 border">{e.user?.email || '-'}</td>
               <td className="p-2 border">{e.position?.name || '-'}</td>
               <td className="p-2 border space-x-1">
-  <button
-    onClick={() => navigate(`/pos/employees/view/${e.id}`)}
-    className="text-blue-600 hover:underline text-xs"
-  >
-    👁️ ดู
-  </button>
-  <button
-    onClick={() => navigate(`/pos/employees/edit/${e.id}`)}
-    className="text-yellow-600 hover:underline text-xs"
-  >
-    ✏️ แก้ไข
-  </button>
-  <button
-    onClick={() => handleDelete(e.id)}
-    className="text-red-600 hover:underline text-xs"
-  >
-    🗑️ ลบ
-  </button>
-</td>
+                <button
+                  onClick={() => navigate(`/pos/employees/view/${e.id}`)}
+                  className="text-blue-600 hover:underline text-xs"
+                >
+                  👁️ ดู
+                </button>
+                <button
+                  onClick={() => navigate(`/pos/employees/edit/${e.id}`)}
+                  className="text-yellow-600 hover:underline text-xs"
+                >
+                  ✏️ แก้ไข
+                </button>
+                <button
+                  onClick={() => handleDelete(e.id)}
+                  className="text-red-600 hover:underline text-xs"
+                >
+                  🗑️ ลบ
+                </button>
+              </td>
             </tr>
           ))}
         </tbody>
@@ -106,4 +112,3 @@ const EmployeeTable = ({ employees, onRefresh }) => {
 };
 
 export default EmployeeTable;
-

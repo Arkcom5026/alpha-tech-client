@@ -1,4 +1,5 @@
-// stores/branchStore.js
+// branchStore.js
+
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import haversine from 'haversine-distance';
@@ -34,6 +35,31 @@ export const useBranchStore = create(
             currentBranch: branch,
             selectedBranchId: branch.id,
           });
+        }
+      },
+
+      clearBranch: () => {
+        set({ currentBranch: null, selectedBranchId: null });
+        localStorage.removeItem('branch-storage');
+      },
+
+      clearStorage: () => {
+        set({ currentBranch: null, selectedBranchId: null });
+        localStorage.removeItem('branch-storage');
+      },
+
+      loadAndSetBranchById: async (branchId) => {
+        try {
+          const branch = await getBranchById(branchId);
+          console.log('loadAndSetBranchById : ', branch);
+          set({
+            currentBranch: branch,
+            selectedBranchId: branch.id,
+          });
+          return branch;
+        } catch (err) {
+          console.error('❌ loadAndSetBranchById error:', err);
+          return null;
         }
       },
 
@@ -161,7 +187,7 @@ export const useBranchStore = create(
     {
       name: 'branch-storage',
       partialize: (state) => ({
-        selectedBranchId: state.selectedBranchId,
+        currentBranch: state.currentBranch,
       }),
     }
   )

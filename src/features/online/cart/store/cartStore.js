@@ -73,7 +73,7 @@ export const useCartStore = create(
       decreaseQuantity: async (id) => {
         const { cartItems } = get();
 
-        const removed = cartItems.find(item => item.id === id); // ✅ จับข้อมูลก่อนถูกลบ
+        const removed = cartItems.find(item => item.id === id);
         const updated = cartItems
           .map(item =>
             item.id === id ? { ...item, quantity: item.quantity - 1 } : item
@@ -94,14 +94,13 @@ export const useCartStore = create(
             }
           } else {
             try {
-              await removeCartItemFromServer(removed?.productId); // ✅ ใช้ productId ที่ถูกต้อง
+              await removeCartItemFromServer(removed?.productId);
             } catch (err) {
               console.error('❌ decreaseQuantity delete sync error:', err);
             }
           }
         }
       },
-
 
       toggleSelectItem: (id) => {
         const { selectedItems } = get();
@@ -185,6 +184,12 @@ export const useCartStore = create(
         }
       },
 
+      clearStorage: () => {
+        if (typeof localStorage !== 'undefined') {
+          localStorage.removeItem('cart-storage');
+        }
+        set({ cartItems: [], selectedItems: [] });
+      },
     }),
     {
       name: 'cart-storage',

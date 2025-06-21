@@ -21,7 +21,7 @@ const PurchaseOrderSupplierSelector = ({ value, onChange }) => {
   }, [fetchSuppliersAction, selectedBranchId]);
 
   return (
-    <div className="w-full">
+    <div>
       <Select
         value={value?.id?.toString() || ''}
         onValueChange={(val) => {
@@ -30,7 +30,7 @@ const PurchaseOrderSupplierSelector = ({ value, onChange }) => {
         }}
         disabled={loading}
       >
-        <SelectTrigger className="w-full">
+        <SelectTrigger >
           <SelectValue placeholder="เลือก Supplier" />
         </SelectTrigger>
 

@@ -50,7 +50,7 @@ export const clearOnlineProductCache = async () => {
 export const getProductDropdownsForOnline = async () => {
   try {
     const res = await apiClient.get('/products/online/dropdowns');
-    console.log('getProductDropdownsForOnline : ',res)
+    
     return res.data;
   } catch (err) {
     console.error('❌ getProductDropdownsForOnline error:', err);

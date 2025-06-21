@@ -1,18 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import POSupplierSelector from './PurchaseOrderSupplierSelector';
 import ProductSearchTable from './ProductSearchTable';
 import usePurchaseOrderStore from '../store/purchaseOrderStore';
-import useEmployeeStore from '@/features/employee/store/employeeStore';
 import useProductStore from '@/features/product/store/productStore';
 import useSupplierStore from '@/features/supplier/store/supplierStore';
 import { useParams, useNavigate } from 'react-router-dom';
 import StandardActionButtons from '@/components/shared/buttons/StandardActionButtons';
 import PurchaseOrderTable from './PurchaseOrderTable';
 import { getAdvancePaymentsBySupplier } from '@/features/supplierPayment/api/supplierPaymentApi';
+import { useBranchStore } from '@/features/branch/store/branchStore';
+import CascadingFilterGroup from '@/components/shared/form/CascadingFilterGroup';
+import PurchaseOrderSupplierSelector from './PurchaseOrderSupplierSelector';
 
 const PurchaseOrderForm = ({ mode = 'create' }) => {
   const { id } = useParams();
@@ -22,50 +21,26 @@ const PurchaseOrderForm = ({ mode = 'create' }) => {
   const [orderDate, setOrderDate] = useState(new Date().toISOString().substring(0, 10));
   const [note, setNote] = useState('');
   const [products, setProducts] = useState([]);
-  const [searchQuery, setSearchQuery] = useState('');
   const [advancePayments, setAdvancePayments] = useState([]);
   const [selectedAdvance, setSelectedAdvance] = useState([]);
+  const { suppliers: supplierList } = useSupplierStore();
+  const { selectedBranchId } = useBranchStore();
+  const [shouldPrint, setShouldPrint] = useState(true);
 
-  const branchId = useEmployeeStore((state) => state.branch?.id);
   const {
     purchaseOrder,
     loading,
     fetchPurchaseOrderById,
-    createPurchaseOrder,
     createPurchaseOrderWithAdvance,
     updatePurchaseOrder,
   } = usePurchaseOrderStore();
 
   const {
-    searchResults,
-    searchProductsAction
+    fetchProductsAction,
+    products: fetchedProducts,
+    dropdowns,
+    fetchDropdowns
   } = useProductStore();
-
-  const { suppliers: supplierList } = useSupplierStore();
-
-  useEffect(() => {
-    if (mode === 'edit' && id) {
-      const load = async () => {
-        await fetchPurchaseOrderById(id);
-      };
-      load();
-    }
-  }, [mode, id, fetchPurchaseOrderById]);
-
-  useEffect(() => {
-    if (mode === 'edit' && purchaseOrder) {
-      setSupplier(purchaseOrder.supplier);
-      setOrderDate(purchaseOrder.date?.substring(0, 10));
-      setNote(purchaseOrder.note || '');
-      const enriched = purchaseOrder.items.map((item) => ({
-        id: item.productId,
-        name: item.product?.name || '',
-        quantity: item.quantity,
-        costPrice: item.costPrice, // ✅ ดึงจาก costPrice
-      }));
-      setProducts(enriched);
-    }
-  }, [mode, purchaseOrder]);
 
   useEffect(() => {
     if (!supplier?.id) return;
@@ -86,14 +61,92 @@ const PurchaseOrderForm = ({ mode = 'create' }) => {
     loadAdvance();
   }, [supplier, supplierList]);
 
+  const [filter, setFilter] = useState({
+    categoryId: '',
+    productTypeId: '',
+    productProfileId: '',
+    templateId: '',
+  });
+
+  const [searchText, setSearchText] = useState('');
+  const [committedSearchText, setCommittedSearchText] = useState('');
+
   useEffect(() => {
-    const delayDebounce = setTimeout(() => {
-      if (searchQuery.trim().length > 0) {
-        searchProductsAction(searchQuery);
+    if (mode === 'edit' && id) {
+      const load = async () => {
+        await fetchPurchaseOrderById(id);
+      };
+      load();
+    }
+  }, [mode, id, fetchPurchaseOrderById]);
+
+  useEffect(() => {
+    if (mode === 'edit' && purchaseOrder) {
+      setSupplier(purchaseOrder.supplier);
+      setOrderDate(purchaseOrder.date?.substring(0, 10));
+      setNote(purchaseOrder.note || '');
+      const enriched = purchaseOrder.items.map((item) => ({
+        id: item.productId,
+        name: item.product?.name || '-',
+        description: item.product?.description || '-',
+        category: item.product?.category || '-',
+        productType: item.product?.productType || '-',
+        productProfile: item.product?.productProfile || '-',
+        productTemplate: item.product?.productTemplate || '-',
+        quantity: item.quantity,
+        costPrice: item.costPrice,
+      }));
+      setProducts(enriched);
+    }
+  }, [mode, purchaseOrder]);
+
+  useEffect(() => {
+    if (selectedBranchId) {
+      fetchDropdowns(selectedBranchId);
+    }
+  }, [selectedBranchId]);
+
+  useEffect(() => {
+    if (
+      selectedBranchId &&
+      (filter.categoryId || filter.productTypeId || filter.productProfileId || filter.templateId || committedSearchText)
+    ) {
+      const transformedFilter = {
+        categoryId: filter.categoryId ? Number(filter.categoryId) : undefined,
+        productTypeId: filter.productTypeId ? Number(filter.productTypeId) : undefined,
+        productProfileId: filter.productProfileId ? Number(filter.productProfileId) : undefined,
+        templateId: filter.templateId ? Number(filter.templateId) : undefined,
+        searchText: committedSearchText?.trim() || undefined,
+      };
+
+      fetchProductsAction(transformedFilter);
+    }
+  }, [selectedBranchId, filter, committedSearchText]);
+
+  const handleSearchKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const trimmed = searchText.trim();
+      setCommittedSearchText(trimmed.length > 0 ? trimmed : '');
+    }
+  };
+
+  const handleFilterChange = (newFilter) => {
+    setFilter((prev) => {
+      const updated = { ...prev, ...newFilter };
+      if (newFilter.categoryId && newFilter.categoryId !== prev.categoryId) {
+        updated.productTypeId = '';
+        updated.productProfileId = '';
+        updated.templateId = '';
+      } else if (newFilter.productTypeId && newFilter.productTypeId !== prev.productTypeId) {
+        updated.productProfileId = '';
+        updated.templateId = '';
+      } else if (newFilter.productProfileId && newFilter.productProfileId !== prev.productProfileId) {
+        updated.templateId = '';
       }
-    }, 500);
-    return () => clearTimeout(delayDebounce);
-  }, [searchQuery]);
+      return updated;
+    });
+  };
 
   const handleSubmit = async () => {
     if (!supplier || products.length === 0) {
@@ -107,8 +160,14 @@ const PurchaseOrderForm = ({ mode = 'create' }) => {
       note,
       items: products.map(p => ({
         productId: p.id,
+        name: p.name,
+        category: p.category,
+        productType: p.productType,
+        productProfile: p.productProfile,
+        productTemplate: p.productTemplate,
+        description: p.description,
         quantity: p.quantity,
-        costPrice: p.costPrice || 0, // ✅ ใช้ costPrice แทน unitPrice
+        costPrice: p.costPrice || 0,
       })),
       advancePaymentsUsed: selectedAdvance.map((adv) => ({
         paymentId: adv.id,
@@ -120,11 +179,13 @@ const PurchaseOrderForm = ({ mode = 'create' }) => {
       if (mode === 'edit') {
         await updatePurchaseOrder(id, payload);
         console.log('✅ อัปเดตใบสั่งซื้อเรียบร้อย');
-        navigate(`/pos/purchases/orders/print/${id}`);
+        if (shouldPrint) navigate(`/pos/purchases/orders/print/${id}`);
+        else navigate(`/pos/purchases/orders`);
       } else {
         const created = await createPurchaseOrderWithAdvance(payload);
         console.log('✅ สร้างใบสั่งซื้อเรียบร้อย');
-        navigate(`/pos/purchases/orders/print/${created.id}`);
+        if (shouldPrint) navigate(`/pos/purchases/orders/print/${created.id}`);
+        else navigate(`/pos/purchases/orders`);
       }
     } catch (err) {
       console.error('❌ เกิดข้อผิดพลาด:', err);
@@ -134,24 +195,39 @@ const PurchaseOrderForm = ({ mode = 'create' }) => {
   const addProductToOrder = (product) => {
     const exists = products.find((p) => p.id === product.id);
     if (exists) return;
-    setProducts([...products, product]);
+
+    setProducts((prev) => [
+      ...prev,
+      {
+        id: product.id,
+        name: product.name || '-',
+        category: product.category || '-',
+        productType: product.productType || '-',
+        productProfile: product.productProfile || '-',
+        productTemplate: product.productTemplate || '-',
+        description: product.description || '-',
+        quantity: product.quantity || 1,
+        costPrice: product.costPrice || 0,
+      },
+    ]);
   };
 
   if (loading) return <p className="p-4">กำลังโหลดข้อมูล...</p>;
 
   return (
     <form onSubmit={(e) => e.preventDefault()} className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
+      <div className='flex gap-6 flex-wrap'>
+        <div className='w-[300px]'>
           <Label>เลือก Supplier</Label>
-          <POSupplierSelector value={supplier} onChange={setSupplier} disabled={mode === 'edit'} />
+          <PurchaseOrderSupplierSelector value={supplier} onChange={setSupplier} disabled={mode === 'edit'} />
           {creditHint && (
             <p className="text-sm text-muted-foreground mt-1">
               เครดิตโดยประมาณ: ฿{creditHint.total.toLocaleString()} / ใช้ไปแล้ว: ฿{creditHint.used.toLocaleString()}
             </p>
           )}
         </div>
-        <div>
+
+        <div className='w-[300px]'>
           <Label>วันที่สั่งซื้อ</Label>
           <Input
             type="date"
@@ -193,26 +269,44 @@ const PurchaseOrderForm = ({ mode = 'create' }) => {
         </div>
       )}
 
-      <div className="space-y-2">
+      <div className='p-2'>
         <Label>ค้นหาสินค้า</Label>
-        <div className="flex gap-2 items-center">
-          <Input
-            className="max-w-[400px]"
-            placeholder="พิมพ์ชื่อสินค้า หรือบาร์โค้ด"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
-        <ProductSearchTable results={searchResults} onAdd={addProductToOrder} />
+        <CascadingFilterGroup
+          value={filter}
+          onChange={handleFilterChange}
+          dropdowns={dropdowns}
+        />
+        <input
+          type="text"
+          placeholder="ค้นหาด้วยชื่อสินค้า หรือบาร์โค้ด"
+          value={searchText}
+          onChange={(e) => setSearchText(e.target.value)}
+          onKeyDown={handleSearchKeyDown}
+          className="border px-3 py-2 rounded  w-[300px] mt-4"
+        />
       </div>
 
       <div>
-        <h3 className="text-md font-semibold px-4 pt-3 pb-2 text-gray-700">รายการสินค้าที่สั่งซื้อ</h3>
+        <ProductSearchTable results={fetchedProducts} onAdd={addProductToOrder} />
+      </div>
+
+      <div>
         <PurchaseOrderTable products={products} setProducts={setProducts} editable={mode !== 'view'} />
       </div>
 
-      <div className="flex justify-end">
-        <StandardActionButtons onSave={handleSubmit} onCancel={() => navigate(-1)} />
+      <div className="flex flex-col items-end px-4 gap-2">
+        <label className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            checked={shouldPrint}
+            onChange={(e) => setShouldPrint(e.target.checked)}
+          />
+          <span className="text-sm text-gray-700">พิมพ์ใบสั่งซื้อ</span>
+        </label>
+
+        <div className="flex items-center gap-4">
+          <StandardActionButtons onSave={handleSubmit} onCancel={() => navigate(-1)} />
+        </div>
       </div>
     </form>
   );

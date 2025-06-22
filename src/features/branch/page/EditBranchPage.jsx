@@ -64,7 +64,7 @@ const EditBranchPage = () => {
         latitude: formData.latitude ? parseFloat(formData.latitude) : null,
         longitude: formData.longitude ? parseFloat(formData.longitude) : null,
       });
-      navigate("/settings/branches");
+      navigate("/pos/settings/branches");                
     } catch (err) {
       console.error("❌ updateBranch error", err);
     }

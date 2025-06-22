@@ -42,7 +42,7 @@ const provinceToRegion = (province) => {
   return "กลาง";
 };
 
-const BranchForm = ({ formData, setFormData, onSubmit, isEdit = false, submitLabel = "บันทึก" }) => {
+const BranchForm = ({ formData, setFormData, onSubmit, isEdit = false, allowLocationDetect = false, submitLabel = "บันทึก" }) => {
   const handleDetectLocation = () => {
     if (!navigator.geolocation) {
       alert("เบราว์เซอร์นี้ไม่รองรับการระบุตำแหน่ง");
@@ -106,6 +106,7 @@ const BranchForm = ({ formData, setFormData, onSubmit, isEdit = false, submitLab
           onChange={(e) => setFormData({ ...formData, name: e.target.value })}
           required
           className="w-full border rounded px-3 py-2"
+          disabled={isEdit} // ✅ แยกเงื่อนไขโหมด Edit
         />
       </div>
 
@@ -174,7 +175,7 @@ const BranchForm = ({ formData, setFormData, onSubmit, isEdit = false, submitLab
             value={formData.latitude}
             onChange={(e) => setFormData({ ...formData, latitude: e.target.value })}
             className="w-full border rounded px-3 py-2"
-            disabled={isEdit}
+            disabled={!allowLocationDetect}
           />
         </div>
         <div className="flex gap-2 items-end">
@@ -185,11 +186,11 @@ const BranchForm = ({ formData, setFormData, onSubmit, isEdit = false, submitLab
               value={formData.longitude}
               onChange={(e) => setFormData({ ...formData, longitude: e.target.value })}
               className="w-full border rounded px-3 py-2"
-              disabled={isEdit}
+              disabled={!allowLocationDetect}
             />
           </div>
 
-          {!isEdit && (
+          {allowLocationDetect && (
             <button
               type="button"
               onClick={handleDetectLocation}

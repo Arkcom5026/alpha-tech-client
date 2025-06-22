@@ -23,8 +23,20 @@ const EditBranchPage = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    console.log("🧭 useEffect called (EditBranchPage)");
+    console.log("🆔 PARAM ID:", id, "→ typeof:", typeof id);
+    console.log('EditBranchPage : ----------------------')
+    if (!id || isNaN(Number(id))) {
+      console.warn("❌ ไม่มีค่า id ที่ถูกต้องใน URL");
+      return;
+    }
+
     const load = async () => {
+      console.log("🚀 useEffect started (EditBranchPage)");
       const branch = await getBranchByIdAction(Number(id));
+      console.log("📦 branch loaded:", branch);
+       // ✅ เพิ่ม log เพื่อตรวจสอบข้อมูล
+
       if (branch) {
         setFormData({
           name: branch.name || "",
@@ -38,6 +50,7 @@ const EditBranchPage = () => {
           RBACEnabled: branch.RBACEnabled || false,
         });
       }
+            console.log("✅ Finished loading and setFormData (if applicable)");
       setLoading(false);
     };
     load();
@@ -67,10 +80,11 @@ const EditBranchPage = () => {
         onSubmit={handleSubmit}
         submitLabel="บันทึกการเปลี่ยนแปลง"
         isEdit={true}
-        allowLocationDetect={true} // ✅ เปิดใช้ปุ่มใช้พิกัดในหน้าแก้ไข
+        allowLocationDetect={true}
       />
     </div>
   );
 };
 
 export default EditBranchPage;
+

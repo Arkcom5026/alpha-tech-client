@@ -188,9 +188,11 @@ export const useBranchStore = create(
       name: 'branch-storage',
       partialize: (state) => ({
         currentBranch: state.currentBranch,
+        selectedBranchId: state.selectedBranchId,
       }),
     }
   )
 );
+
 
 

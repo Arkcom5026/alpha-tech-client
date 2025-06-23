@@ -15,6 +15,7 @@ const ListProductTemplatePage = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    console.log('ListProductTemplatePage mounted selectedBranchId:', selectedBranchId);
     if (selectedBranchId) {
       fetchTemplates(selectedBranchId);
     }

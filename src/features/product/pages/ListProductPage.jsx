@@ -7,9 +7,11 @@ import StandardActionButtons from '@/components/shared/buttons/StandardActionBut
 import ProductTable from '../components/ProductTable';
 import useProductStore from '../store/productStore';
 import { useBranchStore } from '@/features/branch/store/branchStore';
+import CascadingFilterGroup from '@/components/shared/form/CascadingFilterGroup';
 
 export default function ListProductPage() {
-  const [search, setSearch] = useState('');
+  const [searchText, setSearchText] = useState('');
+  const [committedSearchText, setCommittedSearchText] = useState('');
   const [sortOrder, setSortOrder] = useState('name-asc');
   const [filter, setFilter] = useState({
     categoryId: '',
@@ -19,6 +21,7 @@ export default function ListProductPage() {
   });
   const [currentPage, setCurrentPage] = useState(1);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [hasFiltered, setHasFiltered] = useState(false);
   const perPage = 10;
 
   const branchId = useBranchStore((state) => state.selectedBranchId);
@@ -27,8 +30,10 @@ export default function ListProductPage() {
   const {
     products,
     isLoading,
-    fetchProducts,
+    fetchProductsAction,
     deleteProduct,
+    dropdowns,
+    fetchDropdowns,
   } = useProductStore();
 
   const confirmDelete = (prodId) => {
@@ -48,15 +53,7 @@ export default function ListProductPage() {
 
   const getPrice = (p) => p.prices?.find(pr => pr.level === 1)?.price || 0;
 
-  const filtered = products.filter(p => {
-    const matchesBranch = p.branchId === branchId;
-    const matchesSearch = (p.name || '').toLowerCase().includes((search || '').toLowerCase());
-    const matchesCategory = filter.categoryId ? p.categoryId === parseInt(filter.categoryId) : true;
-    const matchesType = filter.productTypeId ? p.productTypeId === parseInt(filter.productTypeId) : true;
-    const matchesProfile = filter.productProfileId ? p.productProfileId === parseInt(filter.productProfileId) : true;
-    const matchesTemplate = filter.templateId ? p.templateId === parseInt(filter.templateId) : true;
-    return matchesBranch && matchesSearch && matchesCategory && matchesType && matchesProfile && matchesTemplate;
-  });
+  const filtered = products;
 
   const sorted = [...filtered].sort((a, b) => {
     switch (sortOrder) {
@@ -82,12 +79,33 @@ export default function ListProductPage() {
 
   useEffect(() => {
     if (!branchId) return;
-    fetchProducts({ branchId }).then(() => {
-      const state = useProductStore.getState();
-      const filtered = state.products.filter(p => p.branchId === branchId);
-      const pageItems = filtered.slice((currentPage - 1) * perPage, currentPage * perPage);
-    });
+    fetchDropdowns(branchId);
   }, [branchId]);
+
+  useEffect(() => {
+    if (!branchId || !hasFiltered) return;
+    const filters = {
+      branchId,
+      categoryId: filter.categoryId || undefined,
+      productTypeId: filter.productTypeId || undefined,
+      productProfileId: filter.productProfileId || undefined,
+      templateId: filter.templateId || undefined,
+      search: committedSearchText || undefined,
+    };
+    fetchProductsAction(filters);
+  }, [branchId, filter, committedSearchText, hasFiltered]);
+
+  const handleSearchKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      setCommittedSearchText(searchText);
+      setHasFiltered(true);
+    }
+  };
+
+  const handleFilterChange = (newFilter) => {
+    setFilter(newFilter);
+    setHasFiltered(true);
+  };
 
   if (isLoading) return <p>กำลังโหลดรายการสินค้า...</p>;
 
@@ -102,8 +120,9 @@ export default function ListProductPage() {
         <input
           type="text"
           placeholder="ค้นหาชื่อสินค้า..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          value={searchText}
+          onChange={(e) => setSearchText(e.target.value)}
+          onKeyDown={handleSearchKeyDown}
           className="border px-3 py-2 rounded w-full"
         />
 
@@ -118,6 +137,12 @@ export default function ListProductPage() {
           <option value="price-desc">ราคามาก → น้อย</option>
         </select>
       </div>
+
+      <CascadingFilterGroup
+        value={filter}
+        onChange={handleFilterChange}
+        dropdowns={dropdowns}
+      />
 
       <ProductTable
         products={paginated}

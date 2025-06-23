@@ -7,6 +7,7 @@ import ProductImage from '../components/ProductImage';
 
 import useProductStore from '../store/productStore';
 import { useBranchStore } from '@/features/branch/store/branchStore';
+import useUnitStore from '@/features/unit/store/unitStore'; // ✅ เพิ่ม import useUnitStore
 
 const EditProductPage = () => {
   const [previewUrls, setPreviewUrls] = useState([]);
@@ -22,6 +23,11 @@ const EditProductPage = () => {
   const [oldImages, setOldImages] = useState([]);
 
   const { updateProduct, getProductById, deleteImage } = useProductStore();
+  const { fetchUnits, units } = useUnitStore();
+
+  useEffect(() => {
+    fetchUnits();
+  }, [fetchUnits]);
 
   useEffect(() => {
     if (!branchId || !id) return;
@@ -69,10 +75,7 @@ const EditProductPage = () => {
       formData.imagesToDelete = imagesToDelete;
 
       for (const img of imagesToDelete) {
-        if (!img) continue; // กัน null
-
-        console.log('imagesToDelete : ', imagesToDelete);
-
+        if (!img) continue;
         try {
           await deleteImage({ productId: id, publicId: img });
         } catch (err) {
@@ -119,6 +122,7 @@ const EditProductPage = () => {
         onSubmit={handleUpdate}
         mode="edit"
         branchId={branchId}
+        units={units}
       />
     </div>
   );

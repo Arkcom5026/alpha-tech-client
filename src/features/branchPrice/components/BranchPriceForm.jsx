@@ -60,9 +60,10 @@ const BranchPriceForm = ({ productId, defaultValues = {}, rawCosts = [], rawPric
             {renderSalePriceRadios('ราคาทุนเฉลี่ย', avgCostPrice)}
             {latestItem && (
               <>
-                {renderSalePriceRadios('ราคาขายส่ง', latestItem.salePrice1)}
-                {renderSalePriceRadios('ราคาช่าง', latestItem.salePrice2)}
-                {renderSalePriceRadios('ราคาขายปลีก', latestItem.salePrice3)}
+                {renderSalePriceRadios('ราคาทุน', latestItem.costPrice)}
+                {renderSalePriceRadios('ราคาขายส่ง', latestItem.priceWholesale)}
+                {renderSalePriceRadios('ราคาช่าง', latestItem.priceTechnician)}
+                {renderSalePriceRadios('ราคาขายปลีก', latestItem.priceRetail)}
               </>
             )}
             {(!latestItem && latestCostPrice === null && avgCostPrice === null) && (

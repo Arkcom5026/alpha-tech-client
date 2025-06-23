@@ -1,52 +1,78 @@
 // ✅ src/features/product/components/ProductTable.jsx
 import { Link, useNavigate } from 'react-router-dom';
 import StandardActionButtons from '@/components/shared/buttons/StandardActionButtons';
+import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 
 const ProductTable = ({ products, onDelete, deleting }) => {
   const navigate = useNavigate();
 
-  const getPrice = (p) => p.prices?.find((pr) => pr.level === 1)?.price || 0;
-
   return (
-    <table className="w-full border text-sm">
-      <thead>
-        <tr className="bg-gray-100 dark:bg-zinc-800">
-          <th className="p-2 border">#</th>          
-          <th className="p-2 border">ชื่อสินค้า</th>          
-          <th className="p-2 border">รายละเอียด</th>
-          <th className="p-2 border">จัดการ</th>
-        </tr>
-      </thead>
-      <tbody>
-        {products.length === 0 ? (
-          <tr>
-            <td colSpan={7} className="p-4 text-center text-gray-500">
-              ไม่มีรายการสินค้า
-            </td>
-          </tr>
-        ) : (
-          products.map((prod, index) => (
-            <tr key={prod.id || index} className="border-t">
-              <td className="p-2 border text-center align-middle">{index + 1}</td>
+    <div className="rounded-md border overflow-x-auto">
+      <h3 className="text-md font-semibold px-4 pt-3 pb-2 text-gray-700">รายการสินค้าที่สั่งซื้อ</h3>
+      <Table>
+        <TableHeader className="bg-blue-100">
+          <TableRow>
+            <TableHead className="text-center w-[120px]">ชื่อสินค้า</TableHead>
+            <TableHead className="text-center w-[150px]">หมวดหมู่</TableHead>
+            <TableHead className="text-center w-[130px]">ประเภท</TableHead>
+            <TableHead className="text-center w-[130px]">ลักษณะ</TableHead>
+            <TableHead className="text-center w-[130px]">รูปแบบ</TableHead>            
+            <TableHead className="text-center w-[80px]">ราคาทุน</TableHead>
+            <TableHead className="text-center w-[100px]">ราคาส่ง</TableHead>
+            <TableHead className="text-center w-[100px]">ราคาช่าง</TableHead>
+            <TableHead className="text-center w-[100px]">ราคาปลีก</TableHead>
+            <TableHead className="text-center w-[100px]">ราคาออนไลน์</TableHead>
+            <TableHead className="text-center w-[120px]">จัดการ</TableHead>
+          </TableRow>
+        </TableHeader>
 
-
-              <td className="p-2 border align-middle">{prod.name}</td>              
-              <td className="p-2 border align-middle">{prod.description || '-'}</td>
-
-              <td className="p-2 border text-center align-middle">
-                <div className="flex justify-center items-center gap-2">
-                  <StandardActionButtons
-                    onEdit={() => navigate(`/pos/stock/products/edit/${prod.id}`)}
-                    onDelete={() => onDelete(prod.id)}
-                    disabled={deleting}
-                  />
-                </div>
-              </td>
-            </tr>
-          ))
-        )}
-      </tbody>
-    </table>
+        <TableBody>
+          {products.length > 0 ? (
+            products.map((item, index) => {
+              const isLast = index === products.length - 1;
+              return (
+                <TableRow key={item.id}>
+                  <TableCell>{item.name || '-'}</TableCell>
+                  <TableCell>{item.category || '-'}</TableCell>
+                  <TableCell>{item.productType || '-'}</TableCell>
+                  <TableCell>{item.productProfile || '-'}</TableCell>
+                  <TableCell>{item.productTemplate || '-'}</TableCell>                  
+                  <TableCell className="text-center">
+                    {item.costPrice?.toLocaleString() || '-'}
+                  </TableCell>
+                  <TableCell className="text-center">
+                    {item.priceWholesale?.toLocaleString() || '-'}
+                  </TableCell>
+                  <TableCell className="text-center">
+                    {item.priceTechnician?.toLocaleString() || '-'}
+                  </TableCell>
+                  <TableCell className="text-center">
+                    {item.priceRetail?.toLocaleString() || '-'}
+                  </TableCell>
+                  <TableCell className="text-center">
+                    {item.priceOnline?.toLocaleString() || '-'}
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <StandardActionButtons
+                      id={item.id}
+                      onDelete={onDelete}
+                      deleting={deleting}
+                      onEdit={() => navigate(`/pos/stock/products/edit/${item.id}`)}
+                    />
+                  </TableCell>
+                </TableRow>
+              );
+            })
+          ) : (
+            <TableRow>
+              <TableCell colSpan={11} className="text-center text-muted-foreground">
+                ไม่พบข้อมูลสินค้า
+              </TableCell>
+            </TableRow>
+          )}
+        </TableBody>
+      </Table>
+    </div>
   );
 };
 

@@ -14,6 +14,8 @@ const useUnitStore = create((set) => ({
     try {
       const data = await getAllUnits();
       set({ units: data, isLoading: false });
+      
+
     } catch (err) {
       console.error('❌ fetchUnits error:', err);
       set({ error: 'โหลดหน่วยไม่สำเร็จ', isLoading: false });

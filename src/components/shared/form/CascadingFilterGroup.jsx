@@ -66,6 +66,8 @@ export default function CascadingFilterGroup({
   }, [templates, value]);
 
   const update = (field, val) => {
+    if (value[field] === val) return;
+
     setLoading(true);
     const next = { ...value, [field]: val };
 
@@ -82,7 +84,7 @@ export default function CascadingFilterGroup({
       next.templateId = '';
     }
 
-    onChange(value[field] === val ? { ...next } : next);
+    onChange(next);
     setTimeout(() => setLoading(false), 200);
   };
 

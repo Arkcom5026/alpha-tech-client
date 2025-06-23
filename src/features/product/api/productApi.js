@@ -23,6 +23,7 @@ export const getProducts = async ({ search, status } = {}) => {
 export const getProductById = async (id) => {
   try {
     const res = await apiClient.get(`/products/${id}`);
+    console.log('📥 [API] ผลลัพธ์จาก getProductById:', res.data); // ✅ เพิ่ม log นี้
     return res.data;
   } catch (error) {
     console.error('❌ getProductById error:', error);
@@ -64,13 +65,12 @@ export const deleteProduct = async (id) => {
 
 export const getProductDropdowns = async (productId) => {
   const res = await apiClient.get(`/products/dropdowns/${productId}`);
+
   return res.data;
 };
 
-export const getProductDropdownsByBranch = async ({ branchId }) => {
-  const res = await apiClient.get('/products/dropdowns', {
-    params: { branchId },
-  });
+export const getProductDropdownsByToken = async () => {
+  const res = await apiClient.get('/products/dropdowns');
   return res.data;
 };
 
@@ -97,8 +97,7 @@ export const updateProductPrices = async (productId, prices) => {
 export const addProductPrice = async (productId, priceData) => {
   try {
     console.log('📤 [API] เพิ่มราคาสินค้า:', { productId, priceData }); // ✅ เพิ่ม log นี้
-    const res = await apiClient.post(`/products/${productId}/prices`, priceData);
-    console.log('📥 [API] ผลลัพธ์จาก addProductPrice:', res.data);
+    const res = await apiClient.post(`/products/${productId}/prices`, priceData);    
     return res.data;
   } catch (error) {
     console.error('❌ addProductPrice error:', error);
@@ -113,19 +112,6 @@ export const deleteProductPrice = async (productId, priceId) => {
   } catch (error) {
     console.error('❌ deleteProductPrice error:', error);
     throw error;
-  }
-};
-
-// ✅ เพิ่มฟังก์ชันค้นหาสินค้าแบบยืดหยุ่นสำหรับการขายหรือสั่งซื้อ
-export const searchProducts = async (query) => {
-  try {
-    const res = await apiClient.get('/products/search', {
-      params: { query }
-    });
-    return res.data;
-  } catch (error) {
-    console.error('❌ searchProducts error:', error);
-    return [];
   }
 };
 

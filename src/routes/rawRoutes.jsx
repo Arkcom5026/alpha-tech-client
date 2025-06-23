@@ -6,10 +6,7 @@ import onlineRoutes from './onlineRoutes';
 
 import posRoutes from './posRoutes';
 import NotFound from '@/pages/NotFound';
-import LoginPage from '@/features/auth/pages/LoginPage';
-import RegisterPage from '@/features/auth/pages/RegisterPage';
 import NoLayout from '@/layouts/NoLayout';
-import ProtectRoute from '@/components/ProtectedRoute';
 import publicRoutes from './publicRoutes';
 
 
@@ -19,15 +16,9 @@ const rawRoutes = [
     // ✅ หน้าสาธารณะ
   {
     path: '/',
-    element: <NoLayout />, // ✅ ไม่มี Header/Nav/Footer
-    
-    children: [
-      
-      { path: '/login', element: <LoginPage /> },
-      { path: '/register', element: <RegisterPage /> },
-      
-    ]
+    element: <NoLayout />, // ✅ ไม่มี Header/Nav/Footer    
   },
+
   publicRoutes,
   onlineRoutes,
   posRoutes,

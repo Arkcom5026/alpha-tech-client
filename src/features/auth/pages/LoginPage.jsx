@@ -14,8 +14,8 @@ const LoginPage = () => {
   const token = useAuthStore((state) => state.token);
   const role = useAuthStore((state) => state.role);
 
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState(() => sessionStorage.getItem('lastUsedEmail') || 'advicebanphot@gmail.com');
+  const [password, setPassword] = useState('Arkcom-5026');
   const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -35,6 +35,7 @@ const LoginPage = () => {
     setError('');
     setLoading(true);
     try {
+      sessionStorage.setItem('lastUsedEmail', email);
       const { token, role, profile } = await loginAction({ emailOrPhone: email, password });
 
       if (role === 'employee' && profile?.position && profile?.branch) {

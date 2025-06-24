@@ -108,7 +108,7 @@ export default function CascadingDropdowns({ dropdowns, errors, defaultValues })
         {errors.productProfileId && <p className="text-red-500 text-sm">{errors.productProfileId.message}</p>}
       </div>
 
-      {/* รูปแบบสินค้า */}
+      {/* สินค้า */}
       <div>
         <label className="block font-medium mb-1">รูปแบบสินค้า</label>
         <select

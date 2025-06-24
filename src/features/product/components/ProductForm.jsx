@@ -31,6 +31,7 @@ const ProductForm = ({ onSubmit, defaultValues, mode, branchId }) => {
       productProfileId: data?.productProfileId ? String(data.productProfileId) : '',
       templateId: data?.templateId ? String(data.templateId) : '',
       unitId: data?.unitId !== undefined ? String(data.unitId) : '',
+      model: data?.model || '',
       branchPrice: {
         costPrice: branchPrice.costPrice ?? '',
         priceWholesale: branchPrice.priceWholesale ?? '',

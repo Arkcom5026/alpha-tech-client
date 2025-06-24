@@ -125,3 +125,6 @@ export const getProductsForPos = async (filters) => {
     return [];
   }
 };
+
+
+

@@ -22,12 +22,13 @@ const EditProductPage = () => {
   const imageRef = useRef();
   const [oldImages, setOldImages] = useState([]);
 
-  const { updateProduct, getProductById, deleteImage } = useProductStore();
+  const { updateProduct, getProductById, deleteImage, fetchDropdowns } = useProductStore();
   const { fetchUnits, units } = useUnitStore();
 
   useEffect(() => {
     fetchUnits();
-  }, [fetchUnits]);
+    fetchDropdowns();
+  }, [fetchUnits, fetchDropdowns]);
 
   useEffect(() => {
     if (!branchId || !id) return;
@@ -85,7 +86,7 @@ const EditProductPage = () => {
 
       await updateProduct(id, formData);
 
-      navigate('/pos/stock/products');
+      navigate('/pos/stock/products?refresh=1');
     } catch (err) {
       console.error('อัปเดตข้อมูลสินค้าล้มเหลว:', err);
       setError('เกิดข้อผิดพลาดในการบันทึกข้อมูล');

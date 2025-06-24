@@ -1,5 +1,6 @@
 // ✅ src/features/product/pages/ListProductPage.jsx
 import { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useNavigate } from 'react-router-dom';
 import ConfirmDeleteDialog from '@/components/shared/dialogs/ConfirmDeleteDialog';
 
@@ -26,6 +27,7 @@ export default function ListProductPage() {
 
   const branchId = useBranchStore((state) => state.selectedBranchId);
   const navigate = useNavigate();
+  const location = useLocation();
 
   const {
     products,
@@ -34,6 +36,7 @@ export default function ListProductPage() {
     deleteProduct,
     dropdowns,
     fetchDropdowns,
+    refreshProductList,
   } = useProductStore();
 
   const confirmDelete = (prodId) => {
@@ -81,6 +84,25 @@ export default function ListProductPage() {
     if (!branchId) return;
     fetchDropdowns(branchId);
   }, [branchId]);
+
+  // ✅ ตรวจ refresh=1 เพื่อ reload
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const refresh = params.get('refresh');
+    if (refresh && branchId) {
+      const filters = {
+        branchId,
+        categoryId: filter.categoryId || undefined,
+        productTypeId: filter.productTypeId || undefined,
+        productProfileId: filter.productProfileId || undefined,
+        templateId: filter.templateId || undefined,
+        search: committedSearchText || undefined,
+      };
+      refreshProductList(filters);
+      params.delete('refresh');
+      navigate({ pathname: location.pathname, search: params.toString() }, { replace: true });
+    }
+  }, [location, branchId]);
 
   useEffect(() => {
     if (!branchId || !hasFiltered) return;
@@ -168,9 +190,11 @@ export default function ListProductPage() {
         open={!!deleteTarget}
         onClose={() => setDeleteTarget(null)}
         onConfirm={handleDelete}
+        itemLabel={deleteTarget?.name}
         name="ยืนยันการลบสินค้า"
         description={`คุณแน่ใจว่าต้องการลบ “${deleteTarget?.name}” หรือไม่?`}
       />
+
     </div>
   );
 }

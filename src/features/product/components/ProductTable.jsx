@@ -1,3 +1,4 @@
+
 // ✅ src/features/product/components/ProductTable.jsx
 import { Link, useNavigate } from 'react-router-dom';
 import StandardActionButtons from '@/components/shared/buttons/StandardActionButtons';
@@ -12,11 +13,13 @@ const ProductTable = ({ products, onDelete, deleting }) => {
       <Table>
         <TableHeader className="bg-blue-100">
           <TableRow>
-            <TableHead className="text-center w-[120px]">ชื่อสินค้า</TableHead>
+            
             <TableHead className="text-center w-[150px]">หมวดหมู่</TableHead>
             <TableHead className="text-center w-[130px]">ประเภท</TableHead>
             <TableHead className="text-center w-[130px]">ลักษณะ</TableHead>
             <TableHead className="text-center w-[130px]">รูปแบบ</TableHead>            
+            <TableHead className="text-center w-[120px]">ชื่อ</TableHead>
+            <TableHead className="text-center w-[120px]">รุ่น</TableHead>
             <TableHead className="text-center w-[80px]">ราคาทุน</TableHead>
             <TableHead className="text-center w-[100px]">ราคาส่ง</TableHead>
             <TableHead className="text-center w-[100px]">ราคาช่าง</TableHead>
@@ -31,12 +34,13 @@ const ProductTable = ({ products, onDelete, deleting }) => {
             products.map((item, index) => {
               const isLast = index === products.length - 1;
               return (
-                <TableRow key={item.id}>
-                  <TableCell>{item.name || '-'}</TableCell>
+                <TableRow key={item.id}>                  
                   <TableCell>{item.category || '-'}</TableCell>
                   <TableCell>{item.productType || '-'}</TableCell>
                   <TableCell>{item.productProfile || '-'}</TableCell>
                   <TableCell>{item.productTemplate || '-'}</TableCell>                  
+                  <TableCell>{item.name || '-'}</TableCell>
+                  <TableCell>{item.model || '-'}</TableCell>
                   <TableCell className="text-center">
                     {item.costPrice?.toLocaleString() || '-'}
                   </TableCell>
@@ -54,8 +58,7 @@ const ProductTable = ({ products, onDelete, deleting }) => {
                   </TableCell>
                   <TableCell className="text-center">
                     <StandardActionButtons
-                      id={item.id}
-                      onDelete={onDelete}
+                      onDelete={() => onDelete(item.id)}
                       deleting={deleting}
                       onEdit={() => navigate(`/pos/stock/products/edit/${item.id}`)}
                     />
@@ -77,3 +80,7 @@ const ProductTable = ({ products, onDelete, deleting }) => {
 };
 
 export default ProductTable;
+
+
+
+

@@ -8,7 +8,7 @@ const FormFields = ({ profiles, units }) => {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
-        <label className="font-medium md:col-span-1">ชื่อสินค้า</label>
+        <label className="font-medium md:col-span-1">ชื่อรูปแบบสินค้า</label>
         <input {...register('name')} className="input md:col-span-3 border border-gray-300 dark:border-gray-600 rounded px-3 py-2 bg-white dark:bg-zinc-800 text-black dark:text-white" placeholder="เช่น Asus Vivobook" />
       </div>
 

@@ -158,6 +158,20 @@ const useProductStore = create((set) => ({
     }
   },
 
+  refreshProductList: async (filters = {}) => {
+    set({ isLoading: true, error: null });
+    try {
+      const [products, dropdowns] = await Promise.all([
+        getProductsForPos(filters),
+        getProductDropdownsByToken()
+      ]);
+      set({ products, dropdowns, isLoading: false });
+    } catch (error) {
+      console.error('❌ refreshProductList error:', error);
+      set({ error, isLoading: false });
+    }
+  },
+
 }));
 
 export default useProductStore;

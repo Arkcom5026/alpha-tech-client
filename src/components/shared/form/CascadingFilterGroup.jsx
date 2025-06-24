@@ -12,7 +12,7 @@ export default function CascadingFilterGroup({
     category: '-- เลือกหมวดหมู่สินค้า --',
     productType: '-- เลือกประเภทสินค้า --',
     productProfile: '-- เลือลักษณะสินค้า --',
-    template: '-- เลือกรูปแบบสินค้า --',
+    template: '-- เลือกสินค้า --',
   },
   showReset = false,
   direction = 'row',

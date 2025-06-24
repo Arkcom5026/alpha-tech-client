@@ -1,3 +1,4 @@
+
 // ✅ src/features/product/pages/CreateProductPage.jsx
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -77,6 +78,13 @@ const CreateProductPage = () => {
         active: formData.active ?? true,
         cost: formData.cost ? parseFloat(formData.cost) : null,
         images: uploadedImages,
+        branchPrice: {
+          costPrice: formData.branchPrice?.costPrice ?? 0,
+          priceWholesale: formData.branchPrice?.priceWholesale ?? 0,
+          priceTechnician: formData.branchPrice?.priceTechnician ?? 0,
+          priceRetail: formData.branchPrice?.priceRetail ?? 0,
+          priceOnline: formData.branchPrice?.priceOnline ?? 0,
+        },
       });
 
       navigate('/pos/stock/products');

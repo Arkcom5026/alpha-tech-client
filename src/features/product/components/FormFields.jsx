@@ -6,14 +6,24 @@ export default function FormFields({ register, errors, dropdowns, control, setVa
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
         <div>
-          <label className="block font-medium mb-1">ชื่อสินค้า</label>
-          <input
-            type="text"
-            {...register('name', { required: 'กรุณาระบุชื่อสินค้า' })}
-            className="w-full p-2 border rounded"
-          />
-          {errors.name && <p className="text-red-500 text-sm">{errors.name.message}</p>}
-        </div>
+  <label className="block font-medium mb-1">ชื่อสินค้า</label>
+  <input
+    type="text"
+    {...register('name', { required: 'กรุณาระบุชื่อสินค้า' })}
+    className="w-full p-2 border rounded"
+  />
+  {errors.name && <p className="text-red-500 text-sm">{errors.name.message}</p>}
+</div>
+
+<div>
+  <label className="block font-medium mb-1">รุ่นสินค้า</label>
+  <input
+    type="text"
+    {...register('model')}
+    className="w-full p-2 border rounded"
+    placeholder="เช่น K617, NKM637, A32-B"
+  />
+</div>
 
         <div>
           <label className="block font-medium mb-1">ระยะเวลารับประกัน (เดือน)</label>
@@ -37,11 +47,18 @@ export default function FormFields({ register, errors, dropdowns, control, setVa
 
         <div>
           <label className="block font-medium mb-1">สีของสินค้า</label>
-          <input
-            type="text"
-            {...register('color')}
-            className="w-full p-2 border rounded"
-          />
+          <select {...register('color')} className="w-full p-2 border rounded">
+            <option value="">-- เลือกสีสินค้า --</option>
+            <option value="ดำ">ดำ</option>
+            <option value="ขาว">ขาว</option>
+            <option value="แดง">แดง</option>
+            <option value="น้ำเงิน">น้ำเงิน</option>
+            <option value="เทา">เทา</option>
+            <option value="ชมพู">ชมพู</option>
+            <option value="ทอง">ทอง</option>
+            <option value="เงิน">เงิน</option>
+            <option value="เขียว">เขียว</option>
+          </select>
         </div>
 
         <div>
@@ -118,25 +135,30 @@ export default function FormFields({ register, errors, dropdowns, control, setVa
         </div>
 
       </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-1 gap-6">
-        <div>
-          <label className="block font-medium mb-1">รายละเอียดสินค้า</label>
-          <textarea
-            {...register('description')}
-            className="w-full p-3 border rounded"
-          />
-        </div>
-
-        <div>
-          <label className="block font-medium mb-1">รายละเอียดสเปก</label>
-          <textarea
-            {...register('spec')}
-            className="w-full p-6 border rounded"
-          />
-        </div>
-
+      <div>
+        <label className="block font-medium mb-1">รายละเอียดสินค้า</label>
+        <textarea
+          {...register('description')}
+          rows={3}
+          placeholder="แนะนำสินค้าโดยย่อ เช่น ขนาด น้ำหนัก ความสามารถ"
+          className="w-full p-3 border rounded"
+        />
       </div>
+
+      <div>
+        <label className="block font-medium mb-1">รายละเอียดสเปก</label>
+        <textarea
+          {...register('spec')}
+          rows={6}
+          placeholder={`รายละเอียดเชิงเทคนิค เช่น CPU, RAM, ความจุ, จอภาพ`}
+          className="w-full p-3 border rounded font-mono"
+        />
+      </div>
+
+
     </div>
   );
 }
+
+
+

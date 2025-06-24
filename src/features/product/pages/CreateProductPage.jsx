@@ -1,56 +1,41 @@
-
 // ✅ src/features/product/pages/CreateProductPage.jsx
 
-import React, { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useRef } from 'react';
 import { useBranchStore } from '@/features/branch/store/branchStore';
 import useProductStore from '../store/productStore';
 import ProductForm from '../components/ProductForm';
 import ProductImage from '../components/ProductImage';
-import useUnitStore from '@/features/unit/store/unitStore'; // ✅ เพิ่ม import
+import ProcessingDialog from '@/components/shared/dialogs/ProcessingDialog';
 
 const CreateProductPage = () => {
-  const navigate = useNavigate();
   const branchId = useBranchStore((state) => state.selectedBranchId);
   const { saveProduct, uploadImages } = useProductStore();
-  const { fetchUnits, units } = useUnitStore(); // ✅ ดึงข้อมูลหน่วยพร้อม state
   const [error, setError] = useState('');
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const imageRef = useRef();
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [previewUrls, setPreviewUrls] = useState([]);
   const [captions, setCaptions] = useState([]);
   const [coverIndex, setCoverIndex] = useState(null);
-  const [defaultUnitId, setDefaultUnitId] = useState('');
-
-  // ✅ โหลดหน่วยสินค้าทันทีเมื่อเปิดหน้า Create
-  useEffect(() => {
-    fetchUnits();
-  }, [fetchUnits]);
-
-  // ✅ เซตค่า default unitId ทันทีที่โหลด units เสร็จ
-  useEffect(() => {
-    if (units.length > 0) {
-      setDefaultUnitId(String(units[0].id));
-    }
-  }, [units]);
 
   const handleCreate = async (formData) => {
     try {
       if (!branchId) {
-        console.log('✅ Default units A :', units);
         setError('ไม่พบ branchId โปรดลองล็อกอินใหม่');
         return;
       }
+
+      setIsProcessing(true);
 
       delete formData.unit;
       delete formData.productImages;
 
       const templateIdParsed = parseInt(formData.templateId);
-      const unitIdParsed = formData.unitId ? parseInt(formData.unitId) : null;
 
       if (isNaN(templateIdParsed)) {
         setError('ข้อมูลไม่ครบถ้วนหรือไม่ถูกต้อง');
+        setIsProcessing(false);
         return;
       }
 
@@ -66,13 +51,13 @@ const CreateProductPage = () => {
         safeCoverIndex
       );
 
-      const newProduct = await saveProduct({
+      await saveProduct({
         name: formData.name,
+        model: formData.model || '',
         description: formData.description || '',
         spec: formData.spec || '',
         warranty: formData.warranty ? parseInt(formData.warranty) : null,
         templateId: templateIdParsed,
-        unitId: unitIdParsed,
         codeType: formData.codeType || 'D',
         noSN: formData.noSN ?? false,
         active: formData.active ?? true,
@@ -87,10 +72,11 @@ const CreateProductPage = () => {
         },
       });
 
-      navigate('/pos/stock/products');
+      setIsProcessing(false);
     } catch (err) {
       console.error('❌ บันทึกไม่สำเร็จ:', err);
       setError('เกิดข้อผิดพลาดในการบันทึกข้อมูล');
+      setIsProcessing(false);
     }
   };
 
@@ -128,14 +114,12 @@ const CreateProductPage = () => {
         onSubmit={handleCreate}
         mode="create"
         branchId={branchId}
-        units={units} // ✅ ส่งหน่วยสินค้าให้ถูกต้อง
         defaultValues={{
           name: '',
           description: '',
           spec: '',
           warranty: '',
           templateId: '',
-          unitId: defaultUnitId, // ✅ ใช้ default หน่วยสินค้า
           productProfileId: '',
           productTypeId: '',
           categoryId: '',
@@ -145,6 +129,8 @@ const CreateProductPage = () => {
           cost: '',
         }}
       />
+
+      {isProcessing && <ProcessingDialog title="กำลังบันทึกสินค้า..." />}
     </div>
   );
 };

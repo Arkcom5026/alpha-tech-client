@@ -64,8 +64,12 @@ const useProductStore = create((set) => ({
 
   saveProduct: async (payload) => {
     set({ isLoading: true, error: null });
-    try {      
-      const data = await createProduct(payload);      
+    try {
+      const cleanedPayload = { ...payload };
+      delete cleanedPayload.unit;
+      delete cleanedPayload.unitId;
+
+      const data = await createProduct(cleanedPayload);
       set({ isLoading: false });
       return data;
     } catch (error) {
@@ -78,7 +82,11 @@ const useProductStore = create((set) => ({
   updateProduct: async (id, payload) => {
     set({ isLoading: true, error: null });
     try {
-      const data = await updateProduct(id, payload);
+      const cleanedPayload = { ...payload };
+      delete cleanedPayload.unit;
+      delete cleanedPayload.unitId;
+
+      const data = await updateProduct(id, cleanedPayload);
       set({ isLoading: false });
       return data;
     } catch (error) {
@@ -106,7 +114,7 @@ const useProductStore = create((set) => ({
 
   fetchDropdowns: async (productId = null) => {
     try {
-      const data = await getProductDropdowns(productId);      
+      const data = await getProductDropdowns(productId);
       set({ dropdowns: data });
     } catch (error) {
       console.error('❌ fetchDropdowns error:', error);
@@ -124,7 +132,7 @@ const useProductStore = create((set) => ({
 
   uploadImages: async (files, captions, coverIndex) => {
     try {
-      const uploaded = await uploadImagesProduct(files, captions, coverIndex);      
+      const uploaded = await uploadImagesProduct(files, captions, coverIndex);
       return uploaded;
     } catch (error) {
       console.error('❌ [Store] uploadImages ล้มเหลว:', error);

@@ -1,5 +1,5 @@
 // ✅ CheckoutPage.jsx 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useCartStore } from "../../cart/store/cartStore";
 import { useAuthStore } from "@/features/auth/store/authStore";
 import { useOrderOnlineStore } from "../store/orderOnlineStore";
@@ -11,11 +11,12 @@ import LoginForm from "../components/LoginForm";
 const CheckoutPage = () => {
   const cartItems = useCartStore((state) => state.cartItems);
   const fetchCartAction = useCartStore((state) => state.fetchCartAction);
+  const fetchCartBranchPricesAction = useCartStore((state) => state.fetchCartBranchPricesAction);
   const increaseQuantity = useCartStore((state) => state.increaseQuantity);
   const decreaseQuantity = useCartStore((state) => state.decreaseQuantity);
 
   const token = useAuthStore((state) => state.token);
-  const customer = useAuthStore((state) => state.customer); // ✅ เปลี่ยนจาก profile เป็น customer
+  const customer = useAuthStore((state) => state.customer);
   const selectedBranchId = useBranchStore((state) => state.selectedBranchId);
 
   const [showRegister, setShowRegister] = useState(false);
@@ -35,10 +36,13 @@ const CheckoutPage = () => {
 
   const handleLoginSuccess = async () => {
     await fetchCartAction();
+    await fetchCartBranchPricesAction();
+
     const items = useCartStore.getState().cartItems;
-    setSelectedItems(items.map(item => item.id));
+    setSelectedItems(items.map((item) => item.id));
 
     const user = useAuthStore.getState().customer;
+    console.log("✅ customer after login:", user);
     if (user) {
       setCustomerInfo((prev) => ({
         ...prev,
@@ -51,13 +55,15 @@ const CheckoutPage = () => {
 
   useEffect(() => {
     const loadCart = async () => {
-      const storedCustomer = useAuthStore.getState().customer;
+      await fetchCartAction();
+
       const storedToken = useAuthStore.getState().token;
+      const storedCustomer = useAuthStore.getState().customer;
 
       if (storedToken && storedCustomer) {
-        await fetchCartAction();
+        await fetchCartBranchPricesAction();
         const items = useCartStore.getState().cartItems;
-        setSelectedItems(items.map(item => item.id));
+        setSelectedItems(items.map((item) => item.id));
 
         setCustomerInfo((prev) => ({
           ...prev,
@@ -72,18 +78,21 @@ const CheckoutPage = () => {
 
   useEffect(() => {
     if (cartItems.length > 0 && selectedItems.length === 0) {
-      setSelectedItems(cartItems.map(item => item.id));
+      setSelectedItems(cartItems.map((item) => item.id));
     }
   }, [cartItems]);
 
+  const selectedCartItemsWithPrice = useMemo(() => {
+    return cartItems.filter((item) => selectedItems.includes(item.id));
+  }, [cartItems, selectedItems]);
+
   useEffect(() => {
-    const selectedCartItems = cartItems.filter((item) => selectedItems.includes(item.id));
-    const sum = selectedCartItems.reduce((acc, item) => {
-      const price = item.priceAtThatTime || item.price || 0;
+    const sum = selectedCartItemsWithPrice.reduce((acc, item) => {
+      const price = item.branchPrice?.price || item.priceOnline || item.price || item.priceAtThatTime || 0;
       return acc + price * item.quantity;
     }, 0);
     setCalculatedTotal(sum);
-  }, [cartItems, selectedItems]);
+  }, [selectedCartItemsWithPrice]);
 
   const toggleSelection = (id) => {
     setSelectedItems((prev) =>
@@ -103,9 +112,7 @@ const CheckoutPage = () => {
     try {
       if (!token || !customer || !selectedBranchId) return;
 
-      const selectedCartItems = cartItems.filter((item) => selectedItems.includes(item.id));
-
-      if (!selectedCartItems.length) {
+      if (!selectedCartItemsWithPrice.length) {
         alert("กรุณาเลือกสินค้าก่อนทำรายการ");
         return;
       }
@@ -123,13 +130,13 @@ const CheckoutPage = () => {
         province: customerInfo.province,
         postalCode: customerInfo.postalCode,
 
-        items: selectedCartItems.map((item) => ({
+        items: selectedCartItemsWithPrice.map((item) => ({
           productId: item.productId,
           quantity: item.quantity,
-          price: item.priceAtThatTime || item.price || 0,
+          price: item.branchPrice?.price || item.priceOnline || item.price || item.priceAtThatTime || 0,
         })),
       };
-      console.log('payload : ', payload);
+      console.log("payload : ", payload);
       const result = await submitOrderAction(payload);
       if (result?.order?.id) {
         window.location.href = `/order-success/${result.order.id}`;
@@ -149,9 +156,9 @@ const CheckoutPage = () => {
         ) : (
           <div className="space-y-4">
             {cartItems.map((item) => {
-              const imageUrl = item.product?.productImages?.[0]?.secure_url || item.imageUrl || '/no-image.png';
-              const name = item.product?.name || item.name || 'ไม่มีชื่อ';
-              const price = item.priceAtThatTime || item.price || 0;
+              const imageUrl = item.product?.productImages?.[0]?.secure_url || item.imageUrl || "/no-image.png";
+              const name = item.product?.name || item.name || "ไม่มีชื่อ";
+              const price = item.branchPrice?.price || item.priceOnline || item.price || item.priceAtThatTime || 0;
               return (
                 <div key={item.id} className="flex gap-4 items-start border-b pb-3">
                   <input
@@ -179,7 +186,7 @@ const CheckoutPage = () => {
             <div className="pt-4 border-t text-right text-base font-semibold">
               รวมทั้งหมด: {Number(calculatedTotal || 0).toLocaleString()} ฿
             </div>
-            {token && customerInfo.fullName && (
+            {token && customer && (
               <button
                 onClick={submitOrder}
                 className="mt-6 w-full bg-green-600 text-white py-2 rounded-md hover:bg-green-700 transition"
@@ -192,7 +199,7 @@ const CheckoutPage = () => {
       </div>
 
       <div className="bg-white p-6 rounded-xl shadow-md h-fit">
-        {(token && customerInfo.fullName) ? (
+        {(token && customer) ? (
           <CustomerInfoForm value={customerInfo} onChange={setCustomerInfo} />
         ) : showRegister ? (
           <RegisterForm setShowRegister={setShowRegister} />

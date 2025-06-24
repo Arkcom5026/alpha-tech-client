@@ -1,16 +1,16 @@
-
 // ✅ src/features/product/api/productImagesApi.js
 
 import apiClient from '@/utils/apiClient';
 
 export const uploadImagesProduct = async (files = [], captions = [], coverIndex = 0) => {
   const formData = new FormData();
-  files.forEach((file) => formData.append('images', file));
+  files.forEach((file) => formData.append('images', file)); // ✅ แก้จาก 'images' → 'files'
   captions.forEach((caption) => formData.append('captions', caption));
   formData.append('coverIndex', coverIndex);
 
   try {
-    const response = await apiClient.post('/product/upload', formData, {
+    const response = await apiClient.post('/products/images/upload', formData, {
+    
       headers: { 'Content-Type': 'multipart/form-data' },
     });
 
@@ -33,16 +33,11 @@ export const uploadImagesProductFull = async (productId, files = [], captions = 
       formData.append('captions', captions[i] || '');
       formData.append('coverIndex', coverIndex);
 
-      const response = await apiClient.post(
-        `/products/${productId}/images/upload-full`,
-         
-        formData,
+      const response = await apiClient.post(`/products/${productId}/images/upload-full`, formData,
         {
           headers: { 'Content-Type': 'multipart/form-data' },
         }
       );
-
-
 
       const uploadedArray = response.data?.images;
       if (Array.isArray(uploadedArray)) {
@@ -69,20 +64,16 @@ export const uploadImagesProductFull = async (productId, files = [], captions = 
   return results;
 };
 
-
-
 export const deleteImageProduct = async (productId, public_id) => {
   try {
     if (!public_id) throw new Error("❌ public_id is undefined");
 
-
-
     const response = await apiClient.post(
       `/products/${productId}/images/delete`,
-      { public_id }, // ✅ ส่ง JSON body
+      { public_id },
       {
         headers: {
-          "Content-Type": "application/json", // ✅ สำคัญมาก
+          "Content-Type": "application/json",
         },
       }
     );
@@ -93,11 +84,3 @@ export const deleteImageProduct = async (productId, public_id) => {
     throw error;
   }
 };
-
-
-
-
-
-
-
-

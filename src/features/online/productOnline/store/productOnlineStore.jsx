@@ -15,7 +15,16 @@ export const useProductOnlineStore = create((set, get) => ({
   error: null,
   dropdowns: null,
 
+  filters: {
+    categoryId: '',
+    productTypeId: '',
+    productProfileId: '',
+    templateId: '',
+  },
+  setFilters: (newFilters) => set({ filters: newFilters }),
+
   loadProductsAction: async (filters = {}) => {
+    console.log('[STORE] 🔄 loadProductsAction called with filters:', filters);
     set({ isLoading: true, error: null });
     try {
       const data = await getProductsForOnline(filters);

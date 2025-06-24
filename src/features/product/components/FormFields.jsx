@@ -6,24 +6,24 @@ export default function FormFields({ register, errors, dropdowns, control, setVa
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
         <div>
-  <label className="block font-medium mb-1">ชื่อสินค้า</label>
-  <input
-    type="text"
-    {...register('name', { required: 'กรุณาระบุชื่อสินค้า' })}
-    className="w-full p-2 border rounded"
-  />
-  {errors.name && <p className="text-red-500 text-sm">{errors.name.message}</p>}
-</div>
+          <label className="block font-medium mb-1">ชื่อสินค้า</label>
+          <input
+            type="text"
+            {...register('name', { required: 'กรุณาระบุชื่อสินค้า' })}
+            className="w-full p-2 border rounded"
+          />
+          {errors.name && <p className="text-red-500 text-sm">{errors.name.message}</p>}
+        </div>
 
-<div>
-  <label className="block font-medium mb-1">รุ่นสินค้า</label>
-  <input
-    type="text"
-    {...register('model')}
-    className="w-full p-2 border rounded"
-    placeholder="เช่น K617, NKM637, A32-B"
-  />
-</div>
+        <div>
+          <label className="block font-medium mb-1">รุ่นสินค้า</label>
+          <input
+            type="text"
+            {...register('model')}
+            className="w-full p-2 border rounded"
+            placeholder="เช่น K617, NKM637, A32-B"
+          />
+        </div>
 
         <div>
           <label className="block font-medium mb-1">ระยะเวลารับประกัน (เดือน)</label>
@@ -43,45 +43,6 @@ export default function FormFields({ register, errors, dropdowns, control, setVa
             <option value="D">D - Default</option>
             <option value="S">S - Serial-based</option>
           </select>
-        </div>
-
-        <div>
-          <label className="block font-medium mb-1">สีของสินค้า</label>
-          <select {...register('color')} className="w-full p-2 border rounded">
-            <option value="">-- เลือกสีสินค้า --</option>
-            <option value="ดำ">ดำ</option>
-            <option value="ขาว">ขาว</option>
-            <option value="แดง">แดง</option>
-            <option value="น้ำเงิน">น้ำเงิน</option>
-            <option value="เทา">เทา</option>
-            <option value="ชมพู">ชมพู</option>
-            <option value="ทอง">ทอง</option>
-            <option value="เงิน">เงิน</option>
-            <option value="เขียว">เขียว</option>
-          </select>
-        </div>
-
-        <div>
-          <label className="block font-medium mb-1">หน่วยนับ</label>
-          <select
-            {...register('unitId')}
-            className="w-full p-2 border rounded"
-          >
-            <option value="">-- เลือกหน่วยนับ --</option>
-            {dropdowns.units?.map((unit) => (
-              <option key={unit.id} value={String(unit.id)}>
-                {unit.name}
-              </option>
-            ))}
-          </select>
-          {errors.unitId && <p className="text-red-500 text-sm">{errors.unitId.message}</p>}
-        </div>
-
-        <div className="flex items-center space-x-2">
-          <input type="checkbox" {...register('active')} id="active" defaultChecked />
-          <label htmlFor="active"> เปิดใช้งานสินค้า</label>
-          <input type="checkbox" {...register('noSN')} id="noSN" />
-          <label htmlFor="noSN">ไม่มี Serial Number </label>
         </div>
 
         <div>
@@ -134,7 +95,15 @@ export default function FormFields({ register, errors, dropdowns, control, setVa
           />
         </div>
 
+        <div className="flex items-center space-x-2">
+          <input type="checkbox" {...register('active')} id="active" defaultChecked />
+          <label htmlFor="active"> เปิดใช้งานสินค้า</label>
+          <input type="checkbox" {...register('noSN')} id="noSN" />
+          <label htmlFor="noSN">ไม่มี Serial Number </label>
+        </div>
+
       </div>
+
       <div>
         <label className="block font-medium mb-1">รายละเอียดสินค้า</label>
         <textarea
@@ -155,10 +124,6 @@ export default function FormFields({ register, errors, dropdowns, control, setVa
         />
       </div>
 
-
     </div>
   );
 }
-
-
-

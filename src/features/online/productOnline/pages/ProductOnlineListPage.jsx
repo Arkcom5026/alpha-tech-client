@@ -1,21 +1,36 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { useProductOnlineStore } from '../store/productOnlineStore';
 import ProductCardOnline from '../components/ProductCardOnline';
 import { useBranchStore } from '@/features/branch/store/branchStore';
 
 const ProductOnlineListPage = () => {
-  const products = useProductOnlineStore((state) => state.products);
+  const rawProducts = useProductOnlineStore((state) => state.products);
   const loadProductsAction = useProductOnlineStore((state) => state.loadProductsAction);
+  const loadDropdownsAction = useProductOnlineStore((state) => state.loadDropdownsAction);
+  const filters = useProductOnlineStore((state) => state.filters);
 
   const selectedBranchId = useBranchStore((state) => state.selectedBranchId); 
   const autoDetectAndSetBranchByGeo = useBranchStore((state) => state.autoDetectAndSetBranchByGeo);
   const loadAllBranchesAction = useBranchStore((state) => state.loadAllBranchesAction);
   const setSelectedBranchId = useBranchStore((state) => state.setSelectedBranchId);
   const branches = useBranchStore((state) => state.branches);
+
   const [autoSelectTried, setAutoSelectTried] = useState(false);
   const [branchesLoaded, setBranchesLoaded] = useState(false);
+  const [productsLoaded, setProductsLoaded] = useState(false);
+  const loadCountRef = useRef(0);
+  const hasLoadedOnceRef = useRef(false);
 
-  // ✅ STEP 1: โหลดรายชื่อสาขาทั้งหมดก่อน
+  const products = useMemo(() => {
+    const result = rawProducts.map((p) => {
+      const branchPriceMatch = p.branchPrice?.find((bp) => bp.branchId === selectedBranchId);
+      const priceOnline = branchPriceMatch?.priceOnline ?? p.priceOnline ?? 0;
+      return { ...p, priceOnline };
+    });
+    console.log(`[PRODUCT MAP ✅] mapped ${result.length} รายการพร้อม priceOnline`);
+    return result;
+  }, [rawProducts, selectedBranchId]);
+
   useEffect(() => {
     const init = async () => {
       try {
@@ -28,7 +43,6 @@ const ProductOnlineListPage = () => {
     init();
   }, []);
 
-  // ✅ STEP 2: เมื่อโหลดเสร็จแล้วและยังไม่มีสาขา → ตรวจหาจากพิกัด
   useEffect(() => {
     if (branchesLoaded && !selectedBranchId) {
       const detect = async () => {
@@ -39,12 +53,35 @@ const ProductOnlineListPage = () => {
     }
   }, [branchesLoaded, selectedBranchId]);
 
-  // ✅ STEP 3: เมื่อเลือกสาขาได้แล้ว → ค่อยโหลดสินค้า
+  useEffect(() => {
+    const loadProducts = async () => {
+      loadCountRef.current++;
+      console.log(`[LOAD #${loadCountRef.current}] 🛒 เรียกโหลดสินค้าจากสาขา ${selectedBranchId}`);
+      await loadProductsAction({ branchId: selectedBranchId });
+      setProductsLoaded(true);
+    };
+
+    if (
+      selectedBranchId &&
+      !productsLoaded &&
+      rawProducts.length === 0 &&
+      !hasLoadedOnceRef.current
+    ) {
+      hasLoadedOnceRef.current = true;
+      loadProducts();
+    }
+  }, [selectedBranchId, productsLoaded, rawProducts]);
+
+  useEffect(() => {
+    loadDropdownsAction();
+  }, []);
+
   useEffect(() => {
     if (selectedBranchId) {
-      loadProductsAction({ branchId: selectedBranchId });
+      console.log("[FILTERS] 🔄 โหลดสินค้าใหม่ตาม filter", filters);
+      loadProductsAction({ branchId: selectedBranchId, ...filters });
     }
-  }, [selectedBranchId]);
+  }, [filters, selectedBranchId]);
 
   if (!selectedBranchId && autoSelectTried) {
     return (
@@ -68,9 +105,9 @@ const ProductOnlineListPage = () => {
   }
 
   return (
-    <div className="p-4">
+    <div className="w-full">
       {products && products.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 mt-4">
+        <div className="flex flex-wrap gap-6 justify-start mt-4">
           {products.map((item) => (
             <ProductCardOnline key={item.id} item={item} />
           ))}
@@ -83,5 +120,3 @@ const ProductOnlineListPage = () => {
 };
 
 export default ProductOnlineListPage;
-
-

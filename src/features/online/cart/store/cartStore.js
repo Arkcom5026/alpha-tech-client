@@ -39,12 +39,12 @@ export const useCartStore = create(
         });
 
         const { token } = useAuthStore.getState();
-        if (token) {
-          try {
-            await removeCartItemFromServer(id);
-          } catch (err) {
-            console.error('❌ removeFromCart sync error:', err);
-          }
+        if (!token || !id) return;
+
+        try {
+          await removeCartItemFromServer(id);
+        } catch (err) {
+          console.error('❌ removeFromCart sync error:', err);
         }
       },
 
@@ -85,19 +85,19 @@ export const useCartStore = create(
         const { token } = useAuthStore.getState();
         const found = updated.find(item => item.id === id);
 
-        if (token) {
-          if (found) {
-            try {
-              await updateCartItemQuantity(found.productId, found.quantity);
-            } catch (err) {
-              console.error('❌ decreaseQuantity sync error:', err);
-            }
-          } else {
-            try {
-              await removeCartItemFromServer(removed?.productId);
-            } catch (err) {
-              console.error('❌ decreaseQuantity delete sync error:', err);
-            }
+        if (!token || !id) return;
+
+        if (found) {
+          try {
+            await updateCartItemQuantity(found.productId, found.quantity);
+          } catch (err) {
+            console.error('❌ decreaseQuantity sync error:', err);
+          }
+        } else if (removed?.productId) {
+          try {
+            await removeCartItemFromServer(removed.productId);
+          } catch (err) {
+            console.error('❌ decreaseQuantity delete sync error:', err);
           }
         }
       },
@@ -119,7 +119,10 @@ export const useCartStore = create(
         const { cartItems, selectedItems } = get();
         return cartItems
           .filter(item => selectedItems.includes(item.id))
-          .reduce((sum, item) => sum + (item.price || 0) * item.quantity, 0);
+          .reduce((sum, item) => {
+            const price = item.priceAtThatTime || item.priceOnline || item.price || 0;
+            return sum + price * item.quantity;
+          }, 0);
       },
 
       totalQuantity: () => {
@@ -141,7 +144,7 @@ export const useCartStore = create(
             .map(item => ({
               productId: item.id,
               quantity: item.quantity,
-              priceAtThatTime: item.price || 0,
+              priceAtThatTime: item.priceAtThatTime || item.priceOnline || item.price || 0,
             }));
           await mergeCartToServer(mappedItems);
         } catch (err) {
@@ -151,6 +154,12 @@ export const useCartStore = create(
 
       fetchCartAction: async () => {
         try {
+          const token = useAuthStore.getState().token;
+          if (!token) {
+            // ✅ ยังไม่ login → ใช้ค่าใน localStorage (ไม่ fetch server)
+            return;
+          }
+      
           const items = await fetchCartFromServer();
           set({ cartItems: items });
         } catch (err) {

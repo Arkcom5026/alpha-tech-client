@@ -3,7 +3,7 @@
 import { useFormContext } from 'react-hook-form';
 import { useEffect, useRef } from 'react';
 
-export default function CascadingDropdowns({ dropdowns, errors, defaultValues }) {
+export default function CascadingDropdowns({ dropdowns, errors, defaultValues, onCascadeReady }) {
   const { watch, setValue } = useFormContext();
 
   const categoryId = watch('categoryId') || '';
@@ -30,14 +30,22 @@ export default function CascadingDropdowns({ dropdowns, errors, defaultValues })
       dropdowns &&
       dropdowns.templates?.length > 0 &&
       !loadedRef.current &&
-      templateId === '' &&
+      
       defaultValues?.templateId
     ) {
+      console.log('🔽 [CascadingDropdowns] Applying default dropdown values:', defaultValues);
+
       setValue('categoryId', String(defaultValues.categoryId));
       setValue('productTypeId', String(defaultValues.productTypeId));
       setValue('productProfileId', String(defaultValues.productProfileId));
       setValue('templateId', String(defaultValues.templateId));
+
       loadedRef.current = true;
+
+      if (onCascadeReady) {
+        console.log('✅ [CascadingDropdowns] cascadeReady = true (triggered)');
+        onCascadeReady(true);
+      }
     }
   }, [dropdowns, defaultValues]);
 

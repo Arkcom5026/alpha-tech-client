@@ -1,4 +1,4 @@
-// ✅ ปรับ ProductCardOnline: รับ item โดยตรงจาก props ไม่ค้นหาใน store แล้ว
+// ✅ ปรับ ProductCardOnline: ใส่กรอบให้รูปภาพ และจัด layout คงที่ สวยงาม
 import React from 'react';
 import { ShoppingCart } from 'lucide-react';
 import { numberFormat } from '@/utils/number';
@@ -16,7 +16,8 @@ const ProductCardOnline = ({ item }) => {
   const name = item.name || 'ไม่พบชื่อสินค้า';
   const description = item.description || '-';
   const imageUrl = item.imageUrl || null;
-  const price = item.price || 0;
+  const rawPriceOnline = item?.branchPrice?.priceOnline ?? item.priceOnline ?? 0;
+  const priceOnline = typeof rawPriceOnline === 'number' ? rawPriceOnline : 0;
   const category = item.category || '-';
   const productType = item.productType || '-';
   const productProfile = item.productProfile || '-';
@@ -33,34 +34,38 @@ const ProductCardOnline = ({ item }) => {
       transition={{ duration: 0.15 }}
       className="w-full sm:w-auto max-w-[240px] min-w-[240px]"
     >
-      <div className="border rounded-xl shadow bg-white hover:shadow-xl hover:scale-[1.01] transition-all flex flex-col h-[380px] overflow-hidden relative">
+      <div className="border rounded-xl shadow bg-white hover:shadow-xl hover:scale-[1.01] transition-all flex flex-col h-[430px] overflow-hidden relative">
         {highlight && (
           <span className="absolute top-2 left-2 bg-red-500 text-white text-[10px] px-2 py-0.5 rounded shadow">
             Best Price
           </span>
         )}
 
-        <div className="h-[130px] flex items-center justify-center bg-white overflow-hidden">
-          {imageUrl ? (
-            <img
-              src={imageUrl}
-              className="object-contain w-full h-[120px]"
-              alt={name}
-            />
-          ) : (
-            <div className="text-gray-400 text-sm">No Image</div>
-          )}
+        <div className="w-full aspect-[1/1] bg-white flex items-center justify-center border-b border-gray-200">
+          <div className="w-[90%] h-[90%] border border-gray-300 rounded-md flex items-center justify-center overflow-hidden">
+            {imageUrl ? (
+              <img
+                src={imageUrl}
+                alt={name}
+                className="object-contain w-full h-full max-h-full max-w-full"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-400 text-sm">
+                No Image
+              </div>
+            )}
+          </div>
         </div>
 
-        <div className="flex-1 p-3 space-y-1 text-sm bg-blue-50">
-          <h3 className="font-semibold text-gray-800 text-sm leading-tight line-clamp-2">
+        <div className="flex-1 p-3 text-sm bg-blue-50 flex flex-col justify-start">
+          <h3 className="font-semibold text-gray-800 text-sm leading-tight line-clamp-2 min-h-[25px]">
             {name}
           </h3>
-          <ul className="text-xs text-gray-600 list-disc pl-4 space-y-0.5 break-words max-w-[180px]">
-            <li>{category}</li>
-            <li>{productType}</li>
-            <li>{productTemplate}</li>
-            <li>{description}</li>
+          <ul className="text-xs text-gray-600 list-disc pl-4 space-y-0.5 break-words max-w-[200px] min-h-[80px]">
+            <li className="truncate">{category}</li>
+            <li className="truncate">{productType}</li>
+            <li className="truncate">{productTemplate}</li>
+            <li className="truncate">{description}</li>
           </ul>
 
           {isReady && (
@@ -71,7 +76,7 @@ const ProductCardOnline = ({ item }) => {
         <div className="p-3 pt-1 mt-auto">
           <div className="flex justify-between items-center">
             <div className="text-blue-700 text-base font-bold">
-              {numberFormat(price)} บาท
+              {numberFormat(priceOnline)} บาท
             </div>
 
             <button
@@ -85,7 +90,7 @@ const ProductCardOnline = ({ item }) => {
 
           <button
             onClick={() => navigate(`/shop/product/${item.id}?branchId=${branchId}`)}
-            className="text-blue-500 text-[13px] hover:underline mt-1"
+            className="text-blue-500 text-[13px] hover:underline mt-1 text-left"
           >
             ดูรายละเอียด
           </button>
@@ -96,3 +101,5 @@ const ProductCardOnline = ({ item }) => {
 };
 
 export default ProductCardOnline;
+
+

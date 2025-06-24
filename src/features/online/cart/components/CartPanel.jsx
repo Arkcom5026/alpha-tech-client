@@ -36,7 +36,7 @@ const CartPanel = () => {
 
   const total = useMemo(() => {
     return cartItems.reduce((sum, item) => {
-      const price = item.priceAtThatTime || item.price || 0;
+      const price = item.priceAtThatTime || item.priceOnline || item.price || 0;
       return sum + price * item.quantity;
     }, 0);
   }, [cartItems]);
@@ -52,7 +52,7 @@ const CartPanel = () => {
           cartItems.map((item) => {
             const imageUrl = item.product?.productImages?.[0]?.secure_url || item.imageUrl || '/no-image.png';
             const name = item.product?.name || item.name || 'ไม่มีชื่อสินค้า';
-            const price = item.priceAtThatTime || item.price || 0;
+            const price = item.priceAtThatTime || item.priceOnline || item.price || 0;
 
             return (
               <div key={item.id} className="flex gap-3 items-start border-b pb-3">

@@ -2,18 +2,19 @@
 
 import React, { useEffect, useState, useRef } from 'react';
 import { useForm, FormProvider } from 'react-hook-form';
+import _ from 'lodash';
 
 import { getProductDropdowns } from '../api/productApi';
 import CascadingDropdowns from '@/components/shared/form/CascadingDropdowns';
 import FormFields from './FormFields';
+import ProcessingDialog from '@/components/shared/dialogs/ProcessingDialog';
 
-const ProductForm = ({ onSubmit, defaultValues, mode, branchId }) => {
+const ProductForm = ({ onSubmit, defaultValues, mode, branchId, cascadeReady, setCascadeReady }) => {
   const [dropdowns, setDropdowns] = useState({
     categories: [],
     productTypes: [],
     productProfiles: [],
     templates: [],
-    units: [],
   });
 
   const [internalDefaults, setInternalDefaults] = useState(defaultValues || null);
@@ -21,6 +22,7 @@ const ProductForm = ({ onSubmit, defaultValues, mode, branchId }) => {
   const hasLoadedDropdowns = useRef(false);
   const prevDefaults = useRef(null);
   const hasTriggeredLoad = useRef(false);
+  const [showDialog, setShowDialog] = useState(false);
 
   const prepareDefaults = (data) => {
     const branchPrice = data?.branchPrice?.[0] || data?.branchPrice || {};
@@ -30,7 +32,6 @@ const ProductForm = ({ onSubmit, defaultValues, mode, branchId }) => {
       productTypeId: data?.productTypeId ? String(data.productTypeId) : '',
       productProfileId: data?.productProfileId ? String(data.productProfileId) : '',
       templateId: data?.templateId ? String(data.templateId) : '',
-      unitId: data?.unitId !== undefined ? String(data.unitId) : '',
       model: data?.model || '',
       branchPrice: {
         costPrice: branchPrice.costPrice ?? '',
@@ -77,7 +78,6 @@ const ProductForm = ({ onSubmit, defaultValues, mode, branchId }) => {
           productTypes: data.productTypes || [],
           productProfiles: data.productProfiles || [],
           templates: data.templates || [],
-          units: data.units || [],
         });
 
         hasLoadedDropdowns.current = true;
@@ -88,7 +88,9 @@ const ProductForm = ({ onSubmit, defaultValues, mode, branchId }) => {
           JSON.stringify(data.defaultValues) !== JSON.stringify(internalDefaults)
         ) {
           const merged = {
-            ...data.defaultValues,
+              ...internalDefaults,
+              model: internalDefaults.model,
+              ...data.defaultValues,
             branchPrice: data.defaultValues.branchPrice || internalDefaults.branchPrice,
           };
 
@@ -106,22 +108,62 @@ const ProductForm = ({ onSubmit, defaultValues, mode, branchId }) => {
   }, [branchId, mode, internalDefaults?.id]);
 
   useEffect(() => {
-    if (mode === 'edit' && internalDefaults?.branchPrice && !hasReset.current) {
-      const prepared = prepareDefaults(internalDefaults);
-      const stringifyCurrent = JSON.stringify(prepared);
-      const stringifyPrev = JSON.stringify(prevDefaults.current);
+    const timestamp = new Date().toLocaleTimeString();
+    console.log(`🟡 [${timestamp}] Check Reset Conditions →`, {
+      mode,
+      hasReset: hasReset.current,
+      cascadeReady,
+      internalDefaults,
+    });
 
-      if (stringifyCurrent !== stringifyPrev) {
+    if (
+      mode === 'edit' &&
+      internalDefaults?.branchPrice &&
+      cascadeReady &&
+      !hasReset.current
+    ) {
+      const prepared = prepareDefaults(internalDefaults);
+      const logHeader = `📌 [${timestamp}] ProductForm reset triggered`;
+
+      if (!_.isEqual(prepared, prevDefaults.current)) {
         reset(prepared);
         prevDefaults.current = prepared;
         hasReset.current = true;
+
+        console.groupCollapsed(logHeader);
         console.log('✅ Reset with prepared:', prepared);
+        console.log('🧩 cascadeReady:', cascadeReady);
+        console.log('🧾 prevDefaults:', prevDefaults.current);
+        console.log('📦 currentPrepared:', prepared);
+        console.groupEnd();
+      } else {
+        console.log(`⚠️ [${timestamp}] Skip reset: defaultValues are identical`);
       }
     }
-  }, [internalDefaults]);
+  }, [internalDefaults, cascadeReady]);
 
-  const handleFormSubmit = (data) => {
-    onSubmit(data);
+  useEffect(() => {
+    if (mode !== 'create') return; // ✅ ป้องกันคำนวณซ้ำในโหมดแก้ไข
+  
+    const timeout = setTimeout(() => {
+      const cost = parseFloat(watch('branchPrice.costPrice'));
+      if (!isNaN(cost)) {
+        const technician = parseFloat((cost * 1.10).toFixed(2));
+        setValue('branchPrice.priceWholesale', (cost * 1.05).toFixed(2));
+        setValue('branchPrice.priceTechnician', technician);
+        setValue('branchPrice.priceRetail', (cost * 1.15).toFixed(2));
+        setValue('branchPrice.priceOnline', technician);
+      }
+    }, 300);
+  
+    return () => clearTimeout(timeout);
+  }, [watch('branchPrice.costPrice'), mode]); // ✅ เพิ่ม mode เป็น dependency
+  
+
+  const handleFormSubmit = async (data) => {
+    setShowDialog(true);
+    await onSubmit(data);
+    setShowDialog(false);
   };
 
   return (
@@ -134,6 +176,7 @@ const ProductForm = ({ onSubmit, defaultValues, mode, branchId }) => {
             watch={watch}
             dropdowns={dropdowns}
             defaultValues={prepareDefaults(internalDefaults || {})}
+            onCascadeReady={setCascadeReady}
           />
         </div>
 
@@ -159,8 +202,11 @@ const ProductForm = ({ onSubmit, defaultValues, mode, branchId }) => {
           </button>
         </div>
       </form>
+
+      {showDialog && <ProcessingDialog message="กำลังบันทึกข้อมูลสินค้า..." />}
     </FormProvider>
   );
 };
 
 export default ProductForm;
+

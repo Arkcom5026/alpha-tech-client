@@ -25,7 +25,8 @@ export const useOrderOnlineStore = create((set, get) => ({
         items: cartItems.map((item) => ({
           productId: item.productId,
           quantity: item.quantity,
-          price: item.priceAtThatTime || item.price || 0,
+          price:
+            item.branchPrice?.price || item.priceAtThatTime || item.price || 0,
         })),
         ...userInputData,
       };

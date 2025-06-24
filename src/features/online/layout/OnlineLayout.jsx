@@ -15,27 +15,20 @@ const OnlineLayout = () => {
       <UnifiedMainNav />
 
       {/* Layout ปรับตามหน้าปัจจุบัน */}
-      <div
-        className={`grid min-h-[calc(100vh-64px)] ${
-          isHome ? "grid-cols-[260px_1fr_260px]" : "grid-cols-1 md:grid-cols-[260px_1fr_320px]"
-        }`}
-      >
+      <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr_320px] min-h-[calc(100vh-64px)]">
         {/* Sidebar ซ้าย */}
         <aside className="bg-white border-r border-gray-200 p-4 md:p-6">
-              <h2 className="text-lg font-semibold mb-4">ค้นหาสินค้า</h2>
-              <SidebarOnline />
-          
+          <h2 className="text-lg font-semibold mb-4">ค้นหาสินค้า</h2>
+          <SidebarOnline />
         </aside>
 
         {/* เนื้อหาหลัก แสดงสินค้า */}
-        <main className="p-4 md:p-6 overflow-y-auto">
-          <div className="max-w-6xl mx-auto">
-            <Outlet /> {/* ✅ สำหรับ render page เช่น ProductOnlineListPage, ProductOnlineDetailPage */}
-          </div>
+        <main className="px-2 sm:px-4 py-6 overflow-y-auto">
+          <Outlet />
         </main>
 
         {/* ตะกร้าสินค้า / หรือ sidebar ขวา */}
-        <aside className="bg-white border-l border-gray-200 p-4 md:p-6">
+        <aside className="bg-white border-t lg:border-t-0 lg:border-l border-gray-200 p-4 md:p-6">
           <CartPanel />
         </aside>
       </div>

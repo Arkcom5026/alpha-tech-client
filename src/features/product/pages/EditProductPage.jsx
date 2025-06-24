@@ -1,26 +1,30 @@
 // ✅ src/features/product/pages/EditProductPage.jsx
 
-import { useEffect, useState, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useEffect, useState, useRef, useMemo } from 'react';
+import { useParams } from 'react-router-dom';
 import ProductForm from '../components/ProductForm';
 import ProductImage from '../components/ProductImage';
 
 import useProductStore from '../store/productStore';
 import { useBranchStore } from '@/features/branch/store/branchStore';
-import useUnitStore from '@/features/unit/store/unitStore'; // ✅ เพิ่ม import useUnitStore
+import useUnitStore from '@/features/unit/store/unitStore';
+import ProcessingDialog from '@/components/shared/dialogs/ProcessingDialog';
 
 const EditProductPage = () => {
   const [previewUrls, setPreviewUrls] = useState([]);
   const [captions, setCaptions] = useState([]);
   const [coverIndex, setCoverIndex] = useState(null);
   const { id } = useParams();
-  const navigate = useNavigate();
   const branchId = useBranchStore((state) => state.selectedBranchId);
   const [product, setProduct] = useState(null);
   const [error, setError] = useState('');
   const [selectedFiles, setSelectedFiles] = useState([]);
   const imageRef = useRef();
   const [oldImages, setOldImages] = useState([]);
+  const hasFetched = useRef(false);
+  const [cascadeReady, setCascadeReady] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
 
   const { updateProduct, getProductById, deleteImage, fetchDropdowns } = useProductStore();
   const { fetchUnits, units } = useUnitStore();
@@ -31,7 +35,8 @@ const EditProductPage = () => {
   }, [fetchUnits, fetchDropdowns]);
 
   useEffect(() => {
-    if (!branchId || !id) return;
+    if (!branchId || !id || hasFetched.current) return;
+    hasFetched.current = true;
 
     const fetchData = async () => {
       try {
@@ -42,17 +47,8 @@ const EditProductPage = () => {
           return;
         }
 
-        const mapped = {
-          ...data,
-          unitId: data.unitId?.toString() || '',
-          productProfileId: data.productProfileId?.toString() || '',
-          categoryId: data.categoryId?.toString() || '',
-          productTypeId: data.productTypeId?.toString() || '',
-          templateId: data.templateId?.toString() || '',
-        };
-
         setProduct({
-          ...mapped,
+          ...data,
           images: Array.isArray(data.productImages) ? data.productImages : [],
         });
 
@@ -66,8 +62,21 @@ const EditProductPage = () => {
     fetchData();
   }, [id, branchId]);
 
+  const mappedProduct = useMemo(() => {
+    if (!product) return null;
+    return {
+      ...product,
+      unitId: product.unitId?.toString() || '',
+      productProfileId: product.productProfileId?.toString() || '',
+      categoryId: product.categoryId?.toString() || '',
+      productTypeId: product.productTypeId?.toString() || '',
+      templateId: product.templateId?.toString() || '',
+    };
+  }, [product]);
+
   const handleUpdate = async (formData) => {
     formData.branchId = branchId;
+    setIsUpdating(true);
 
     try {
       const [uploadedImages, imagesToDelete] = await imageRef.current.upload();
@@ -85,16 +94,18 @@ const EditProductPage = () => {
       }
 
       await updateProduct(id, formData);
-
-      navigate('/pos/stock/products?refresh=1');
+      setShowSuccess(true);
+      setTimeout(() => setShowSuccess(false), 3000);
     } catch (err) {
       console.error('อัปเดตข้อมูลสินค้าล้มเหลว:', err);
       setError('เกิดข้อผิดพลาดในการบันทึกข้อมูล');
+    } finally {
+      setIsUpdating(false);
     }
   };
 
   if (error) return <p className="text-red-500 font-medium">{error}</p>;
-  if (!product) return <p>กำลังโหลดข้อมูล...</p>;
+  if (!mappedProduct) return <p>กำลังโหลดข้อมูล...</p>;
 
   return (
     <div className="max-w-3xl mx-auto">
@@ -113,20 +124,30 @@ const EditProductPage = () => {
           setCoverIndex={setCoverIndex}
           oldImages={oldImages}
           setOldImages={setOldImages}
-          productId={product.id}
+          productId={product?.id}
           deleteImage={deleteImage}
         />
       </div>
 
       <ProductForm
-        defaultValues={product}
+        defaultValues={mappedProduct}
         onSubmit={handleUpdate}
         mode="edit"
         branchId={branchId}
         units={units}
+        cascadeReady={cascadeReady}
+        setCascadeReady={setCascadeReady}
+      />
+
+      <ProcessingDialog
+        open={isUpdating || showSuccess}
+        isLoading={isUpdating}
+        message={isUpdating ? 'ระบบกำลังอัปเดตข้อมูล กรุณารอสักครู่...' : '✅ บันทึกข้อมูลเรียบร้อยแล้ว'}
+        onClose={() => setShowSuccess(false)}
       />
     </div>
   );
 };
 
 export default EditProductPage;
+

@@ -1,12 +1,9 @@
 // ✅ src/features/productTemplate/api/productTemplateApi.js
 import apiClient from '@/utils/apiClient';
 
-export const getAllProductTemplates = async (branchId) => {
+export const getAllProductTemplates = async () => {
   try {
-    const res = await apiClient.get('/product-templates', {
-      params: { branchId },
-    });
-    
+    const res = await apiClient.get('/product-templates');
     return res.data;
   } catch (error) {
     console.error('❌ getAllProductTemplates error:', error);
@@ -44,11 +41,9 @@ export const updateProductTemplate = async (id, payload) => {
   }
 };
 
-export const deleteProductTemplate = async (id, branchId) => {
+export const deleteProductTemplate = async (id) => {
   try {
-    const res = await apiClient.delete(`/product-templates/${id}`, {
-      data: { branchId },
-    });
+    const res = await apiClient.delete(`/product-templates/${id}`);
     return res.data;
   } catch (error) {
     console.error('❌ deleteProductTemplate error:', error);

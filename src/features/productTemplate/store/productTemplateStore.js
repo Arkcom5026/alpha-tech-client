@@ -1,3 +1,4 @@
+
 // ✅ src/features/productTemplate/store/productTemplateStore.js
 
 import { create } from 'zustand';
@@ -15,10 +16,10 @@ const useProductTemplateStore = create((set) => ({
   isLoading: false,
   error: null,
 
-  fetchTemplates: async (branchId) => {
+  fetchTemplates: async () => {
     set({ isLoading: true, error: null });
     try {
-      const templates = await getAllProductTemplates(branchId);
+      const templates = await getAllProductTemplates();
       set({ templates, isLoading: false });
     } catch (error) {
       console.error('❌ fetchTemplates error:', error);

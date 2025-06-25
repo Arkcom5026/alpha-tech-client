@@ -81,15 +81,12 @@ export default function ListProductPage() {
 
   const totalPages = Math.ceil(filtered.length / perPage);
 
-  
-
   // ✅ ตรวจ refresh=1 เพื่อ reload
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const refresh = params.get('refresh');
     if (refresh && branchId) {
       const filters = {
-        branchId,
         categoryId: filter.categoryId || undefined,
         productTypeId: filter.productTypeId || undefined,
         productProfileId: filter.productProfileId || undefined,
@@ -105,7 +102,6 @@ export default function ListProductPage() {
   useEffect(() => {
     if (!branchId || !hasFiltered) return;
     const filters = {
-      branchId,
       categoryId: filter.categoryId || undefined,
       productTypeId: filter.productTypeId || undefined,
       productProfileId: filter.productProfileId || undefined,
@@ -192,9 +188,6 @@ export default function ListProductPage() {
         name="ยืนยันการลบสินค้า"
         description={`คุณแน่ใจว่าต้องการลบ “${deleteTarget?.name}” หรือไม่?`}
       />
-
     </div>
   );
 }
-
-

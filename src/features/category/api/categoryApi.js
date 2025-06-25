@@ -50,3 +50,13 @@ export const deleteCategory = async (id) => {
     throw err;
   }
 };
+
+export const getCategoryDropdowns = async () => {
+  try {
+    const res = await apiClient.get('/categories/dropdowns');
+    return res.data;
+  } catch (err) {
+    console.error('❌ getCategoryDropdowns error:', err);
+    throw err;
+  }
+};

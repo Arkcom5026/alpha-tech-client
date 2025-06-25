@@ -14,6 +14,8 @@ export const getAllProductTemplates = async () => {
 export const getProductTemplateById = async (id) => {
   try {
     const res = await apiClient.get(`/product-templates/${id}`);
+    console.log('📦 getProductTemplateById response:-------------------------------- ', res.data);
+    
     return res.data;
   } catch (error) {
     console.error('❌ getProductTemplateById error:', error);

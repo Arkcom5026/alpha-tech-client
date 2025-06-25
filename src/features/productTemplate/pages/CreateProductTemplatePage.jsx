@@ -1,26 +1,16 @@
 // ✅ src/features/productTemplate/pages/CreateProductTemplatePage.jsx
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import { uploadImagesTemp } from '../api/productTemplateImagesApi';
-
 import ProductTemplateForm from '../components/ProductTemplateForm';
-import ProductTemplateImage from '../components/ProductTemplateImage';
 import useProductTemplateStore from '../store/productTemplateStore';
 import { useBranchStore } from '@/features/branch/store/branchStore';
-
 
 const CreateProductTemplatePage = () => {
   const navigate = useNavigate();
   const selectedBranchId = useBranchStore((state) => state.selectedBranchId);
   const [error, setError] = useState('');
-
-  const imageRef = useRef();
-  const [selectedFiles, setSelectedFiles] = useState([]);
-  const [previewUrls, setPreviewUrls] = useState([]);
-  const [captions, setCaptions] = useState([]);
-  const [coverIndex, setCoverIndex] = useState(null);
 
   const { addTemplate } = useProductTemplateStore();
 
@@ -50,15 +40,6 @@ const CreateProductTemplatePage = () => {
         return;
       }
 
-      const safeCaptions = Array.isArray(captions)
-        ? captions
-        : selectedFiles.map(() => '');
-      const safeCoverIndex = Number.isInteger(coverIndex) ? coverIndex : 0;
-
-      // ✅ อัปโหลดภาพก่อน แล้วแนบใน formData
-      const uploadedImages = await uploadImagesTemp(selectedFiles, safeCaptions, safeCoverIndex);
-      console.log('📤 uploadedImages (temp):', uploadedImages);
-
       const newTemplate = await addTemplate({
         name: formData.name,
         description: formData.description,
@@ -69,8 +50,6 @@ const CreateProductTemplatePage = () => {
         codeType: formData.codeType,
         noSN: formData.noSN,
         branchId: branchIdParsed,
-        images: uploadedImages,
-        imagesToDelete: [],
       });
 
       if (newTemplate) {
@@ -88,23 +67,6 @@ const CreateProductTemplatePage = () => {
     <div className="max-w-4xl mx-auto">
       <h2 className="text-xl font-bold mb-4">เพิ่มรูปแบบสินค้า</h2>
       {error && <p className="text-red-500 font-medium mb-2">{error}</p>}
-
-      <div className="mb-6">
-        <ProductTemplateImage
-          ref={imageRef}
-          files={selectedFiles}
-          setFiles={setSelectedFiles}
-          previewUrls={previewUrls}
-          setPreviewUrls={setPreviewUrls}
-          captions={captions}
-          setCaptions={setCaptions}
-          coverIndex={coverIndex}
-          setCoverIndex={setCoverIndex}
-          oldImages={[]}
-          setOldImages={() => {}}
-        />
-      </div>
-
       <ProductTemplateForm onSubmit={handleCreate} mode="create" />
     </div>
   );

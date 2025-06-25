@@ -32,6 +32,7 @@ const useProductTemplateStore = create((set) => ({
     try {
       const template = await getProductTemplateById(id);
       set({ currentTemplate: template, isLoading: false });
+      console.log('📦 getTemplateById response------------------------------- :', template);
       return template;
     } catch (error) {
       console.error('❌ getTemplateById error:', error);

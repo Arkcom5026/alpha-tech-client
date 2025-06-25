@@ -111,7 +111,6 @@ const CreateProductPage = () => {
       <ProductForm
         onSubmit={handleCreate}
         mode="create"
-        branchId={branchId}
         defaultValues={{
           name: '',
           description: '',
@@ -132,4 +131,3 @@ const CreateProductPage = () => {
 };
 
 export default CreateProductPage;
-

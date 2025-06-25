@@ -3,7 +3,7 @@
 import { useFormContext } from 'react-hook-form';
 import { useEffect, useRef } from 'react';
 
-export default function CascadingDropdowns({ dropdowns, errors, defaultValues, onCascadeReady }) {
+export default function CascadingDropdowns({ dropdowns, errors, defaultValues, onCascadeReady, hideTemplateDropdown = false }) {
   const { watch, setValue, register } = useFormContext();
 
   const categoryId = watch('categoryId') || '';
@@ -129,26 +129,28 @@ export default function CascadingDropdowns({ dropdowns, errors, defaultValues, o
         {errors.productProfileId && <p className="text-red-500 text-sm">{errors.productProfileId.message}</p>}
       </div>
 
-      {/* สินค้า */}
-      <div>
-        <label className="block font-medium mb-1">รูปแบบสินค้า</label>
-        <select
-          {...register('templateId')}
-          value={templateId}
-          onChange={(e) => {
-            const newVal = e.target.value;
-            setValue('templateId', newVal);
-          }}
-          disabled={!productProfileId || filteredTemplates.length === 0}
-          className="w-full p-2 border rounded bg-gray-100 disabled:opacity-70"
-        >
-          <option value="">-- เลือกรูปแบบสินค้า --</option>
-          {filteredTemplates.map((tpl) => (
-            <option key={tpl.id} value={String(tpl.id)}>{tpl.name}</option>
-          ))}
-        </select>
-        {errors.templateId && <p className="text-red-500 text-sm">{errors.templateId.message}</p>}
-      </div>
+      {/* รูปแบบสินค้า */}
+      {!hideTemplateDropdown && (
+        <div>
+          <label className="block font-medium mb-1">รูปแบบสินค้า</label>
+          <select
+            {...register('templateId')}
+            value={templateId}
+            onChange={(e) => {
+              const newVal = e.target.value;
+              setValue('templateId', newVal);
+            }}
+            disabled={!productProfileId || filteredTemplates.length === 0}
+            className="w-full p-2 border rounded bg-gray-100 disabled:opacity-70"
+          >
+            <option value="">-- เลือกรูปแบบสินค้า --</option>
+            {filteredTemplates.map((tpl) => (
+              <option key={tpl.id} value={String(tpl.id)}>{tpl.name}</option>
+            ))}
+          </select>
+          {errors.templateId && <p className="text-red-500 text-sm">{errors.templateId.message}</p>}
+        </div>
+      )}
     </>
   );
 }

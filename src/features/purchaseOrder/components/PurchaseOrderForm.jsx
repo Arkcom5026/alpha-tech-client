@@ -39,7 +39,7 @@ const PurchaseOrderForm = ({ mode = 'create' }) => {
     fetchProductsAction,
     products: fetchedProducts,
     dropdowns,
-    fetchDropdowns
+    fetchDropdownsAction
   } = useProductStore();
 
   useEffect(() => {
@@ -102,7 +102,7 @@ const PurchaseOrderForm = ({ mode = 'create' }) => {
 
   useEffect(() => {
     if (selectedBranchId) {
-      fetchDropdowns(selectedBranchId);
+      fetchDropdownsAction(selectedBranchId);
     }
   }, [selectedBranchId]);
 

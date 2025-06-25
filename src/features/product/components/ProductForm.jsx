@@ -8,7 +8,7 @@ import CascadingDropdowns from '@/components/shared/form/CascadingDropdowns';
 import FormFields from './FormFields';
 import ProcessingDialog from '@/components/shared/dialogs/ProcessingDialog';
 
-const ProductForm = ({ onSubmit, defaultValues, mode, branchId, cascadeReady, setCascadeReady }) => {
+const ProductForm = ({ onSubmit, defaultValues, mode, cascadeReady, setCascadeReady }) => {
   const { dropdowns } = useProductStore();
 
   const [internalDefaults, setInternalDefaults] = React.useState(defaultValues || null);

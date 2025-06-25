@@ -42,7 +42,7 @@ const CartPanel = () => {
   }, [cartItems]);
 
   return (
-    <div className="bg-white border rounded-xl p-4 text-sm flex flex-col h-full shadow-sm">
+    <div className="bg-white border rounded-xl p-4 text-sm flex   max-h-[90vh] flex-col h-full shadow-sm">
       <h1 className="text-lg font-semibold mb-4">ตะกร้าสินค้า</h1>
 
       <div className="flex-1 space-y-4 overflow-y-auto pr-1">

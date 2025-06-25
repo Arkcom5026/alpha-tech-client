@@ -37,22 +37,16 @@ const ProductTemplateTable = ({ templates }) => {
             <tr>
               <th className="px-4 py-2 border  align-middle">รูปแบบสินค้า</th>
               <th className="px-4 py-2 border  align-middle">ลักษณะสินค้า</th>
-              <th className="px-4 py-2 border  align-middle">รายละเอียด</th>
-              <th className="px-4 py-2 border  align-middle">รับประกัน (วัน)</th>
               <th className="px-4 py-2 border  align-middle">การจัดการ</th>
             </tr>
           </thead>
           <tbody>
-            {templates.map((tpl) => (
+            {Array.isArray(templates) && templates.map((tpl) => (
               <tr key={tpl.id} className="border-t  align-middle">
                 <td className="px-4 py-2 border  align-middle">{tpl.name}</td>
                 <td className="px-4 py-2 border align-middle">{tpl.productProfileName || '-'}</td>
-                <td className="px-4 py-2 border align-middle">{tpl.description || '-'}</td>
-                <td className="px-4 py-2 border text-center min-w-[130px] align-middle">{tpl.warranty ?? '-'}</td>
-                
                 <td className="px-4 py-2 border align-top min-w-[230px] ">
-
-                <div className="flex justify-center items-center gap-1">
+                  <div className="flex justify-center items-center gap-1">
                     <StandardActionButtons
                       onEdit={() => navigate(`/pos/stock/templates/edit/${tpl.id}`)}
                       onDelete={() => setConfirmId(tpl.id)}

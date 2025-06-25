@@ -6,6 +6,7 @@ import {
   createCategory,
   updateCategory,
   deleteCategory,
+  getCategoryDropdowns,
 } from '../api/categoryApi';
 
 export const useCategoryStore = create((set, get) => ({
@@ -17,13 +18,21 @@ export const useCategoryStore = create((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const data = await getCategories();
-
       set({ categories: data });
     } catch (err) {
       console.error('❌ โหลดหมวดหมู่ไม่สำเร็จ:', err);
       set({ error: err });
     } finally {
       set({ isLoading: false });
+    }
+  },
+
+  fetchDropdowns: async () => {
+    try {
+      const data = await getCategoryDropdowns();
+      set({ categories: data });
+    } catch (err) {
+      console.error('❌ ดึง dropdown หมวดหมู่ล้มเหลว:', err);
     }
   },
 

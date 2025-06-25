@@ -75,7 +75,6 @@ const EditProductPage = () => {
   }, [product]);
 
   const handleUpdate = async (formData) => {
-    formData.branchId = branchId;
     setIsUpdating(true);
 
     try {
@@ -133,9 +132,7 @@ const EditProductPage = () => {
         defaultValues={mappedProduct}
         onSubmit={handleUpdate}
         mode="edit"
-        branchId={branchId}
-        units={[]}
-        cascadeReady={cascadeReady && dropdownsLoaded} // ✅ ป้องกัน reset เร็วเกินไป
+        cascadeReady={cascadeReady && dropdownsLoaded}
         setCascadeReady={setCascadeReady}
       />
 

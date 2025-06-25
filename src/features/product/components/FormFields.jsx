@@ -24,26 +24,9 @@ export default function FormFields({ register, errors, dropdowns, control, setVa
             placeholder="เช่น K617, NKM637, A32-B"
           />
         </div>
-
-        <div>
-          <label className="block font-medium mb-1">ระยะเวลารับประกัน (เดือน)</label>
-          <input
-            type="number"
-            {...register('warranty', { valueAsNumber: true })}
-            className="w-full p-2 border rounded"
-          />
         </div>
 
-        <div>
-          <label className="block font-medium mb-1">ประเภทบาร์โค้ด</label>
-          <select
-            {...register('codeType')}
-            className="w-full p-2 border rounded"
-          >
-            <option value="D">D - Default</option>
-            <option value="S">S - Serial-based</option>
-          </select>
-        </div>
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mt-4 ">
 
         <div>
           <label className="block font-medium mb-1">ราคาทุน</label>
@@ -51,7 +34,7 @@ export default function FormFields({ register, errors, dropdowns, control, setVa
             type="number"
             step="0.01"
             {...register('branchPrice.costPrice', { valueAsNumber: true })}
-            className="w-full p-2 border rounded"
+            className="w-full p-2 border rounded text-right"
           />
         </div>
 
@@ -61,7 +44,7 @@ export default function FormFields({ register, errors, dropdowns, control, setVa
             type="number"
             step="0.01"
             {...register('branchPrice.priceWholesale', { valueAsNumber: true })}
-            className="w-full p-2 border rounded"
+            className="w-full p-2 border rounded text-right"
           />
         </div>
 
@@ -71,7 +54,7 @@ export default function FormFields({ register, errors, dropdowns, control, setVa
             type="number"
             step="0.01"
             {...register('branchPrice.priceTechnician', { valueAsNumber: true })}
-            className="w-full p-2 border rounded"
+            className="w-full p-2 border rounded text-right"
           />
         </div>
 
@@ -81,7 +64,7 @@ export default function FormFields({ register, errors, dropdowns, control, setVa
             type="number"
             step="0.01"
             {...register('branchPrice.priceRetail', { valueAsNumber: true })}
-            className="w-full p-2 border rounded"
+            className="w-full p-2 border rounded text-right"
           />
         </div>
 
@@ -91,38 +74,37 @@ export default function FormFields({ register, errors, dropdowns, control, setVa
             type="number"
             step="0.01"
             {...register('branchPrice.priceOnline', { valueAsNumber: true })}
-            className="w-full p-2 border rounded"
+            className="w-full p-2 border rounded text-right"
           />
         </div>
 
-        <div className="flex items-center space-x-2">
-          <input type="checkbox" {...register('active')} id="active" defaultChecked />
-          <label htmlFor="active"> เปิดใช้งานสินค้า</label>
-          <input type="checkbox" {...register('noSN')} id="noSN" />
-          <label htmlFor="noSN">ไม่มี Serial Number </label>
-        </div>
+
 
       </div>
 
-      <div>
+      <div className="mt-4">
         <label className="block font-medium mb-1">รายละเอียดสินค้า</label>
         <textarea
           {...register('description')}
-          rows={3}
+          rows={2}
           placeholder="แนะนำสินค้าโดยย่อ เช่น ขนาด น้ำหนัก ความสามารถ"
           className="w-full p-3 border rounded"
         />
       </div>
 
-      <div>
+      <div className="mt-4">
         <label className="block font-medium mb-1">รายละเอียดสเปก</label>
         <textarea
           {...register('spec')}
-          rows={6}
+          rows={3}
           placeholder={`รายละเอียดเชิงเทคนิค เช่น CPU, RAM, ความจุ, จอภาพ`}
           className="w-full p-3 border rounded font-mono"
         />
       </div>
+      <div className="flex items-center space-x-2  p-2">
+          <input type="checkbox" {...register('active')} id="active" defaultChecked />
+          <label htmlFor="active"> เปิดใช้งานสินค้า</label>          
+        </div>
 
     </div>
   );

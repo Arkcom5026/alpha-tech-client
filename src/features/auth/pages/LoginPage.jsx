@@ -41,8 +41,7 @@ const LoginPage = () => {
       if (role === 'employee' && profile?.position && profile?.branch) {
         const rawPosition = profile.position.name;
         const mappedPosition = rawPosition === 'employee' ? 'ผู้ดูแลระบบ' : rawPosition;
-
-        const branchFull = await useBranchStore.getState().loadAndSetBranchByIdAction(profile.branch.id);
+       
 
         useAuthStore.getState().setUser({
           token,
@@ -56,8 +55,7 @@ const LoginPage = () => {
             branchId: profile.branch.id,
           },
         });
-
-        useBranchStore.getState().setCurrentBranch(branchFull);
+        
         navigate('/pos/dashboard', { replace: true });
       }
 
@@ -196,3 +194,4 @@ const LoginPage = () => {
 };
 
 export default LoginPage;
+

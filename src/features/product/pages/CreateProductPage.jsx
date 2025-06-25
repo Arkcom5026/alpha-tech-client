@@ -44,7 +44,6 @@ const CreateProductPage = () => {
         : selectedFiles.map(() => '');
       const safeCoverIndex = Number.isInteger(coverIndex) ? coverIndex : 0;
 
-      // ✅ เรียกอัปโหลดภาพผ่าน Store
       const uploadedImages = await uploadImages(
         selectedFiles,
         safeCaptions,
@@ -57,8 +56,7 @@ const CreateProductPage = () => {
         description: formData.description || '',
         spec: formData.spec || '',
         warranty: formData.warranty ? parseInt(formData.warranty) : null,
-        templateId: templateIdParsed,
-        codeType: formData.codeType || 'D',
+        templateId: templateIdParsed,        
         noSN: formData.noSN ?? false,
         active: formData.active ?? true,
         cost: formData.cost ? parseFloat(formData.cost) : null,
@@ -118,12 +116,10 @@ const CreateProductPage = () => {
           name: '',
           description: '',
           spec: '',
-          warranty: '',
           templateId: '',
           productProfileId: '',
           productTypeId: '',
-          categoryId: '',
-          codeType: 'D',
+          categoryId: '',          
           noSN: false,
           active: true,
           cost: '',
@@ -136,3 +132,4 @@ const CreateProductPage = () => {
 };
 
 export default CreateProductPage;
+

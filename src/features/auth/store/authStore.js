@@ -1,9 +1,10 @@
-
 // authStore.js
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { loginUser } from '../api/authApi';
 import { useBranchStore } from '@/features/branch/store/branchStore';
+import useProductStore from '@/features/product/store/productStore';
+
 
 export const useAuthStore = create(
   persist(
@@ -43,11 +44,19 @@ export const useAuthStore = create(
           let employee = null;
           let customer = null;
 
+          // ✅ ตั้งค่าก่อนเรียก API อื่น
+          set({
+            token: res.data.token,
+            role,
+          });
+
           if (role === 'employee' && profile?.branch) {
             const rawPosition = profile.position?.name;
             const mappedPosition = rawPosition === 'employee' ? 'ผู้ดูแลระบบ' : rawPosition;
 
             branchFull = await useBranchStore.getState().loadAndSetBranchById(profile.branch.id);
+
+            await useProductStore.getState().fetchDropdownsAction(profile.branch.id);
 
             employee = {
               id: profile.id,
@@ -68,12 +77,12 @@ export const useAuthStore = create(
             };
           }
 
-          set({
-            token: res.data.token,
-            role,
+          // ✅ ตั้งค่าเพิ่มเติมหลังโหลดข้อมูลเรียบร้อย
+          set((state) => ({
+            ...state,
             employee,
             customer,
-          });
+          }));
 
           console.log('✅ loginAction success:', { profile, branchFull });
 

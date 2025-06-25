@@ -5,7 +5,6 @@ import {
   createProduct,
   deleteProduct,
   getProductById,
-  getProductDropdowns,
   getProductDropdownsByToken,
   getProducts,
   updateProduct,
@@ -13,16 +12,16 @@ import {
 } from '../api/productApi';
 import { uploadImagesProduct, uploadImagesProductFull, deleteImageProduct } from '../api/productImagesApi';
 
-const useProductStore = create((set) => ({
+const useProductStore = create((set,get) => ({
   products: [],
   currentProduct: null,
   dropdowns: {
     categories: [],
     productTypes: [],
     productProfiles: [],
-    templates: [],
-    units: [],
+    templates: []
   },
+  dropdownsLoaded: false,
 
   searchResults: [],
   isLoading: false,
@@ -112,21 +111,13 @@ const useProductStore = create((set) => ({
     }
   },
 
-  fetchDropdowns: async (productId = null) => {
-    try {
-      const data = await getProductDropdowns(productId);
-      set({ dropdowns: data });
-    } catch (error) {
-      console.error('❌ fetchDropdowns error:', error);
-    }
-  },
-
-  fetchDropdownsByToken: async () => {
+  fetchDropdownsAction: async () => {
+    if (get().dropdownsLoaded) return;
     try {
       const data = await getProductDropdownsByToken();
-      set({ dropdowns: data });
+      set({ dropdowns: data, dropdownsLoaded: true });
     } catch (error) {
-      console.error('❌ fetchDropdownsByToken error:', error);
+      console.error('❌ fetchDropdownsAction error:', error);
     }
   },
 
@@ -179,6 +170,16 @@ const useProductStore = create((set) => ({
       set({ error, isLoading: false });
     }
   },
+
+  resetDropdowns: () => set({
+    dropdowns: {
+      categories: [],
+      productTypes: [],
+      productProfiles: [],
+      templates: []
+    },
+    dropdownsLoaded: false
+  }),
 
 }));
 

@@ -6,6 +6,7 @@ import {
   createProductProfile,
   updateProductProfile,
   deleteProductProfile,
+  getProductProfilesByCategory, // ✅ ใช้ API module แทน fetch ตรง
 } from '../api/productProfileApi';
 
 const useProductProfileStore = create((set, get) => ({
@@ -21,6 +22,17 @@ const useProductProfileStore = create((set, get) => ({
       set({ profiles: data, isLoading: false });
     } catch (error) {
       console.error('❌ fetchProfiles error:', error);
+      set({ error, isLoading: false });
+    }
+  },
+
+  fetchProfilesByCategory: async (categoryId) => {
+    set({ isLoading: true, error: null });
+    try {
+      const data = await getProductProfilesByCategory(categoryId);
+      set({ profiles: data, isLoading: false });
+    } catch (error) {
+      console.error('❌ fetchProfilesByCategory error:', error);
       set({ error, isLoading: false });
     }
   },

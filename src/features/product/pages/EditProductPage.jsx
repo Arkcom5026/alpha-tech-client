@@ -7,7 +7,6 @@ import ProductImage from '../components/ProductImage';
 
 import useProductStore from '../store/productStore';
 import { useBranchStore } from '@/features/branch/store/branchStore';
-import useUnitStore from '@/features/unit/store/unitStore';
 import ProcessingDialog from '@/components/shared/dialogs/ProcessingDialog';
 
 const EditProductPage = () => {
@@ -26,13 +25,13 @@ const EditProductPage = () => {
   const [isUpdating, setIsUpdating] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
 
-  const { updateProduct, getProductById, deleteImage, fetchDropdowns } = useProductStore();
-  const { fetchUnits, units } = useUnitStore();
+  const { updateProduct, getProductById, deleteImage, fetchDropdownsAction, dropdownsLoaded } = useProductStore();
 
   useEffect(() => {
-    fetchUnits();
-    fetchDropdowns();
-  }, [fetchUnits, fetchDropdowns]);
+    if (!dropdownsLoaded && branchId) {
+      fetchDropdownsAction(branchId);
+    }
+  }, [branchId, dropdownsLoaded]);
 
   useEffect(() => {
     if (!branchId || !id || hasFetched.current) return;
@@ -53,6 +52,7 @@ const EditProductPage = () => {
         });
 
         setOldImages(Array.isArray(data.productImages) ? data.productImages : []);
+        setCascadeReady(true); // ✅ เพิ่มบรรทัดนี้เพื่อให้ฟอร์ม reset dropdown
       } catch (err) {
         console.error('โหลดข้อมูลสินค้าล้มเหลว:', err);
         setError('ไม่สามารถโหลดข้อมูลสินค้าได้');
@@ -134,8 +134,8 @@ const EditProductPage = () => {
         onSubmit={handleUpdate}
         mode="edit"
         branchId={branchId}
-        units={units}
-        cascadeReady={cascadeReady}
+        units={[]}
+        cascadeReady={cascadeReady && dropdownsLoaded} // ✅ ป้องกัน reset เร็วเกินไป
         setCascadeReady={setCascadeReady}
       />
 
@@ -150,4 +150,3 @@ const EditProductPage = () => {
 };
 
 export default EditProductPage;
-

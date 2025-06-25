@@ -23,6 +23,7 @@ const FormFields = () => {
 
   return (
     <>
+
       <div>
         <label className="block font-medium">ชื่อรูปแบบสินค้า</label>
         <input
@@ -44,23 +45,7 @@ const FormFields = () => {
         )}
       </div>
 
-      <div>
-        <label className="block font-medium">ประเภทสินค้า</label>
-        <select
-          {...register('productTypeId')}
-          value={selectedType || ''}
-          onChange={(e) => setValue('productTypeId', e.target.value)}
-          className="w-full p-2 border rounded"
-        >
-          <option value="">-- เลือกประเภทสินค้า --</option>
-          {productTypes.map((type) => (
-            <option key={type.id} value={String(type.id)}>{type.name}</option>
-          ))}
-        </select>
-        {errors?.productTypeId && (
-          <p className="text-red-500">{errors.productTypeId.message}</p>
-        )}
-      </div>
+
     </>
   );
 };

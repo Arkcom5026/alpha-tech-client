@@ -1,38 +1,31 @@
 // ✅ src/features/product/components/ProductForm.jsx
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useForm, FormProvider } from 'react-hook-form';
 import _ from 'lodash';
-
-import { getProductDropdowns } from '../api/productApi';
+import useProductStore from '../store/productStore';
 import CascadingDropdowns from '@/components/shared/form/CascadingDropdowns';
 import FormFields from './FormFields';
 import ProcessingDialog from '@/components/shared/dialogs/ProcessingDialog';
 
 const ProductForm = ({ onSubmit, defaultValues, mode, branchId, cascadeReady, setCascadeReady }) => {
-  const [dropdowns, setDropdowns] = useState({
-    categories: [],
-    productTypes: [],
-    productProfiles: [],
-    templates: [],
-  });
+  const { dropdowns } = useProductStore();
 
-  const [internalDefaults, setInternalDefaults] = useState(defaultValues || null);
+  const [internalDefaults, setInternalDefaults] = React.useState(defaultValues || null);
   const hasReset = useRef(false);
-  const hasLoadedDropdowns = useRef(false);
   const prevDefaults = useRef(null);
-  const hasTriggeredLoad = useRef(false);
-  const [showDialog, setShowDialog] = useState(false);
+  const [showDialog, setShowDialog] = React.useState(false);
 
   const prepareDefaults = (data) => {
     const branchPrice = data?.branchPrice?.[0] || data?.branchPrice || {};
     return {
       ...data,
+      name: data?.name || '',
+      model: data?.model || '',
       categoryId: data?.categoryId ? String(data.categoryId) : '',
       productTypeId: data?.productTypeId ? String(data.productTypeId) : '',
       productProfileId: data?.productProfileId ? String(data.productProfileId) : '',
       templateId: data?.templateId ? String(data.templateId) : '',
-      model: data?.model || '',
       branchPrice: {
         costPrice: branchPrice.costPrice ?? '',
         priceWholesale: branchPrice.priceWholesale ?? '',
@@ -43,11 +36,7 @@ const ProductForm = ({ onSubmit, defaultValues, mode, branchId, cascadeReady, se
     };
   };
 
-  const methods = useForm({
-    mode: 'onChange',
-    defaultValues: {},
-  });
-
+  const methods = useForm({ mode: 'onChange', defaultValues: {} });
   const {
     handleSubmit,
     register,
@@ -57,55 +46,6 @@ const ProductForm = ({ onSubmit, defaultValues, mode, branchId, cascadeReady, se
     watch,
     reset,
   } = methods;
-
-  useEffect(() => {
-    if (hasTriggeredLoad.current) return;
-    hasTriggeredLoad.current = true;
-
-    const loadDropdowns = async () => {
-      try {
-        console.log('🔄 Loading dropdowns for mode:', mode);
-        let data;
-        if (mode === 'edit' && internalDefaults?.id) {
-          const productId = String(internalDefaults.id);
-          data = await getProductDropdowns(productId);
-        } else {
-          data = await getProductDropdowns();
-        }
-
-        setDropdowns({
-          categories: data.categories || [],
-          productTypes: data.productTypes || [],
-          productProfiles: data.productProfiles || [],
-          templates: data.templates || [],
-        });
-
-        hasLoadedDropdowns.current = true;
-
-        if (
-          mode === 'edit' &&
-          data.defaultValues &&
-          JSON.stringify(data.defaultValues) !== JSON.stringify(internalDefaults)
-        ) {
-          const merged = {
-              ...internalDefaults,
-              model: internalDefaults.model,
-              ...data.defaultValues,
-            branchPrice: data.defaultValues.branchPrice || internalDefaults.branchPrice,
-          };
-
-          if (JSON.stringify(merged) !== JSON.stringify(internalDefaults)) {
-            setInternalDefaults(merged);
-            hasReset.current = false;
-          }
-        }
-      } catch (err) {
-        console.error('❌ [Form] โหลดข้อมูล dropdowns ไม่สำเร็จ:', err);
-      }
-    };
-
-    loadDropdowns();
-  }, [branchId, mode, internalDefaults?.id]);
 
   useEffect(() => {
     const timestamp = new Date().toLocaleTimeString();
@@ -143,8 +83,7 @@ const ProductForm = ({ onSubmit, defaultValues, mode, branchId, cascadeReady, se
   }, [internalDefaults, cascadeReady]);
 
   useEffect(() => {
-    if (mode !== 'create') return; // ✅ ป้องกันคำนวณซ้ำในโหมดแก้ไข
-  
+    if (mode !== 'create') return;
     const timeout = setTimeout(() => {
       const cost = parseFloat(watch('branchPrice.costPrice'));
       if (!isNaN(cost)) {
@@ -155,10 +94,9 @@ const ProductForm = ({ onSubmit, defaultValues, mode, branchId, cascadeReady, se
         setValue('branchPrice.priceOnline', technician);
       }
     }, 300);
-  
+
     return () => clearTimeout(timeout);
-  }, [watch('branchPrice.costPrice'), mode]); // ✅ เพิ่ม mode เป็น dependency
-  
+  }, [watch('branchPrice.costPrice'), mode]);
 
   const handleFormSubmit = async (data) => {
     setShowDialog(true);
@@ -209,4 +147,3 @@ const ProductForm = ({ onSubmit, defaultValues, mode, branchId, cascadeReady, se
 };
 
 export default ProductForm;
-

@@ -35,7 +35,8 @@ export default function ListProductPage() {
     fetchProductsAction,
     deleteProduct,
     dropdowns,
-    fetchDropdowns,
+    dropdownsLoaded,
+    fetchDropdownsAction,
     refreshProductList,
   } = useProductStore();
 
@@ -80,10 +81,7 @@ export default function ListProductPage() {
 
   const totalPages = Math.ceil(filtered.length / perPage);
 
-  useEffect(() => {
-    if (!branchId) return;
-    fetchDropdowns(branchId);
-  }, [branchId]);
+  
 
   // ✅ ตรวจ refresh=1 เพื่อ reload
   useEffect(() => {
@@ -198,3 +196,5 @@ export default function ListProductPage() {
     </div>
   );
 }
+
+

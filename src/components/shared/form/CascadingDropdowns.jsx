@@ -4,7 +4,7 @@ import { useFormContext } from 'react-hook-form';
 import { useEffect, useRef } from 'react';
 
 export default function CascadingDropdowns({ dropdowns, errors, defaultValues, onCascadeReady }) {
-  const { watch, setValue } = useFormContext();
+  const { watch, setValue, register } = useFormContext();
 
   const categoryId = watch('categoryId') || '';
   const productTypeId = watch('productTypeId') || '';
@@ -25,15 +25,25 @@ export default function CascadingDropdowns({ dropdowns, errors, defaultValues, o
 
   const loadedRef = useRef(false);
 
+  const dropdownsReady = (
+    dropdowns.categories?.length > 0 &&
+    dropdowns.productTypes?.length > 0 &&
+    dropdowns.productProfiles?.length > 0 &&
+    dropdowns.templates?.length > 0
+  );
+
   useEffect(() => {
     if (
-      dropdowns &&
-      dropdowns.templates?.length > 0 &&
+      dropdownsReady &&
       !loadedRef.current &&
-      
       defaultValues?.templateId
     ) {
       console.log('🔽 [CascadingDropdowns] Applying default dropdown values:', defaultValues);
+
+      console.log('🔍 [CascadingDropdowns] options.categories:', dropdowns.categories);
+      console.log('🔍 [CascadingDropdowns] options.productTypes:', dropdowns.productTypes);
+      console.log('🔍 [CascadingDropdowns] options.productProfiles:', dropdowns.productProfiles);
+      console.log('🔍 [CascadingDropdowns] options.templates:', dropdowns.templates);
 
       setValue('categoryId', String(defaultValues.categoryId));
       setValue('productTypeId', String(defaultValues.productTypeId));
@@ -47,7 +57,7 @@ export default function CascadingDropdowns({ dropdowns, errors, defaultValues, o
         onCascadeReady(true);
       }
     }
-  }, [dropdowns, defaultValues]);
+  }, [dropdownsReady, defaultValues]);
 
   return (
     <>
@@ -55,6 +65,7 @@ export default function CascadingDropdowns({ dropdowns, errors, defaultValues, o
       <div>
         <label className="block font-medium mb-1">หมวดหมู่สินค้า</label>
         <select
+          {...register('categoryId')}
           value={categoryId}
           onChange={(e) => {
             const newVal = e.target.value;
@@ -77,6 +88,7 @@ export default function CascadingDropdowns({ dropdowns, errors, defaultValues, o
       <div>
         <label className="block font-medium mb-1">ประเภทสินค้า</label>
         <select
+          {...register('productTypeId')}
           value={productTypeId}
           onChange={(e) => {
             const newVal = e.target.value;
@@ -99,6 +111,7 @@ export default function CascadingDropdowns({ dropdowns, errors, defaultValues, o
       <div>
         <label className="block font-medium mb-1">ลักษณะสินค้า</label>
         <select
+          {...register('productProfileId')}
           value={productProfileId}
           onChange={(e) => {
             const newVal = e.target.value;
@@ -120,6 +133,7 @@ export default function CascadingDropdowns({ dropdowns, errors, defaultValues, o
       <div>
         <label className="block font-medium mb-1">รูปแบบสินค้า</label>
         <select
+          {...register('templateId')}
           value={templateId}
           onChange={(e) => {
             const newVal = e.target.value;

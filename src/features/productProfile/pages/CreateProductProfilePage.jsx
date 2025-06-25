@@ -25,3 +25,4 @@ const CreateProductProfilePage = () => {
 };
 
 export default CreateProductProfilePage;
+

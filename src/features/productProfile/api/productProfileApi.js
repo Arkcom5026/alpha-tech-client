@@ -1,14 +1,10 @@
 // ✅ src/features/productProfile/api/productProfileApi.js
 import apiClient from '@/utils/apiClient';
 
-
-
-
 // 🔹 CREATE
 export const createProductProfile = async (data) => {
   try {
     const res = await apiClient.post('/product-profiles', data);
-    
     return res.data;
   } catch (err) {
     console.error('createProductProfile error:', err);
@@ -16,12 +12,10 @@ export const createProductProfile = async (data) => {
   }
 };
 
-
 // 🔹 READ (get all)
 export const getAllProductProfiles = async () => {
   try {
     const res = await apiClient.get('/product-profiles');
-    
     return res.data;
   } catch (err) {
     console.error('getAllProductProfiles error:', err);
@@ -29,6 +23,16 @@ export const getAllProductProfiles = async () => {
   }
 };
 
+// 🔹 READ (get by categoryId)
+export const getProductProfilesByCategory = async (categoryId) => {
+  try {
+    const res = await apiClient.get(`/product-profiles/category/${categoryId}`);
+    return res.data;
+  } catch (err) {
+    console.error('getProductProfilesByCategory error:', err);
+    throw err;
+  }
+};
 
 // 🔹 READ (get by id)
 export const getProductProfileById = async (id) => {

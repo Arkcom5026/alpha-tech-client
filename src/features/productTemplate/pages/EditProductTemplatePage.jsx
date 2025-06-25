@@ -1,23 +1,3 @@
-useEffect(() => {
-  const ready =
-    dropdowns?.categories?.length &&
-    dropdowns?.productTypes?.length &&
-    dropdowns?.productProfiles?.length &&
-    defaultValues?.categoryId &&
-    defaultValues?.productTypeId &&
-    defaultValues?.productProfileId;
-
-  console.log('🔍 ตรวจสอบ ready:', {
-    categories: dropdowns?.categories?.length,
-    productTypes: dropdowns?.productTypes?.length,
-    productProfiles: dropdowns?.productProfiles?.length,
-    defaultCategory: defaultValues?.categoryId,
-    defaultType: defaultValues?.productTypeId,
-    defaultProfile: defaultValues?.productProfileId,
-    isCascadeReadyTriggered,
-    ready,
-  });
-}, [dropdowns, defaultValues, isCascadeReadyTriggered]);
 
 // ✅ src/features/productTemplate/pages/EditProductTemplatePage.jsx
 import { useEffect, useState } from 'react';

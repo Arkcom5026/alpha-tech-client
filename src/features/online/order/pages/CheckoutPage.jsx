@@ -59,9 +59,10 @@ const CheckoutPage = () => {
 
       const storedToken = useAuthStore.getState().token;
       const storedCustomer = useAuthStore.getState().customer;
+      const currentBranch = useBranchStore.getState().currentBranch;
 
-      if (storedToken && storedCustomer) {
-        await fetchCartBranchPricesAction();
+      if (storedToken && storedCustomer && currentBranch?.id) {
+        await fetchCartBranchPricesAction(currentBranch.id);
         const items = useCartStore.getState().cartItems;
         setSelectedItems(items.map((item) => item.id));
 
@@ -75,6 +76,7 @@ const CheckoutPage = () => {
     };
     loadCart();
   }, []);
+
 
   useEffect(() => {
     if (cartItems.length > 0 && selectedItems.length === 0) {

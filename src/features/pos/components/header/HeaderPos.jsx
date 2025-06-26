@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { FaSignOutAlt } from 'react-icons/fa';
 import { Sun, Moon, UserCircle } from 'lucide-react';
@@ -6,14 +7,22 @@ import useThemeStore from '@/store/themeStore';
 
 import { useAuthStore } from '@/features/auth/store/authStore';
 import { useBranchStore } from '@/features/branch/store/branchStore';
-import { useState } from 'react';
+import useProductStore from '@/features/product/store/productStore';
 
 const HeaderPos = () => {
   const navigate = useNavigate();
   const employee = useAuthStore((state) => state.employee);
   const logoutAction = useAuthStore((state) => state.logoutAction);
+  const token = useAuthStore((state) => state.token);
+  const role = useAuthStore((state) => state.role);
+
   const branchName = useBranchStore((state) => state.currentBranch?.name);
+  const selectedBranchId = useBranchStore((state) => state.selectedBranchId);
   const clearBranch = useBranchStore((state) => state.clearBranch);
+  const loadAndSetBranchById = useBranchStore((state) => state.loadAndSetBranchById);
+
+  const fetchDropdownsAction = useProductStore((state) => state.fetchDropdownsAction);
+
   const { isDark, toggleTheme } = useThemeStore();
   const [showMenu, setShowMenu] = useState(false);
 
@@ -22,6 +31,13 @@ const HeaderPos = () => {
     logoutAction();
     navigate('/');
   };
+
+  useEffect(() => {
+    if (token && role === 'employee' && employee?.branchId && selectedBranchId) {
+      loadAndSetBranchById(selectedBranchId);
+      fetchDropdownsAction(selectedBranchId);
+    }
+  }, [token, role, employee, selectedBranchId]);
 
   const navLinkClass = ({ isActive }) =>
     `px-5 py-2 rounded-md text-base font-medium transition-all duration-200 whitespace-nowrap border border-white/20 shadow-sm ${

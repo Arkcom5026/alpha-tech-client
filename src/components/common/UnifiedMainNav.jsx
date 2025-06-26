@@ -7,14 +7,20 @@ import { ChevronDown, UserCircle } from 'lucide-react';
 import { useAuthStore } from '@/features/auth/store/authStore';
 import { useCartStore } from '@/features/online/cart/store/cartStore';
 import { useBranchStore } from '@/features/branch/store/branchStore';
+import useProductStore from '@/features/product/store/productStore';
+
 
 const UnifiedMainNav = () => {
   const customer = useAuthStore((state) => state.customer);
   const role = useAuthStore((state) => state.role);
+  const token = useAuthStore((state) => state.token);
   const logout = useAuthStore((state) => state.logout);
   const clearAuthStorage = useAuthStore((state) => state.clearStorage);
+
   const clearCart = useCartStore((state) => state.clearCart);
   const clearBranchStorage = useBranchStore((state) => state.clearStorage);
+  const selectedBranchId = useBranchStore((state) => state.selectedBranchId);
+  const fetchDropdownsAction = useProductStore((state) => state.fetchDropdownsAction);
 
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
@@ -31,6 +37,12 @@ const UnifiedMainNav = () => {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  useEffect(() => {
+    if (token && role === 'customer' && selectedBranchId) {
+      fetchDropdownsAction(selectedBranchId);
+    }
+  }, [token, role, selectedBranchId]);
 
   const navClass = ({ isActive }) =>
     isActive
@@ -76,7 +88,6 @@ const UnifiedMainNav = () => {
                   onClick={toggleDropdown}
                   className="flex items-center gap-2 px-3 py-1 sm:py-2 text-white hover:bg-blue-600 rounded-full bg-blue-700"
                 >
-         
                   <UserCircle className="w-5 h-5" />
                   <span className="font-semibold text-xs sm:text-sm text-white">{customer?.name}</span>
                 </button>

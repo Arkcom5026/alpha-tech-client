@@ -34,7 +34,7 @@ const ProductCardOnline = ({ item }) => {
       transition={{ duration: 0.15 }}
       className="w-full sm:w-auto max-w-[240px] min-w-[240px]"
     >
-      <div className="border rounded-xl shadow bg-white hover:shadow-xl hover:scale-[1.01] transition-all flex flex-col h-[430px] overflow-hidden relative">
+      <div className="border rounded-xl shadow bg-white hover:shadow-xl hover:scale-[1.01] transition-all flex flex-col h-[440px] overflow-hidden relative">
         {highlight && (
           <span className="absolute top-2 left-2 bg-red-500 text-white text-[10px] px-2 py-0.5 rounded shadow">
             Best Price
@@ -68,9 +68,25 @@ const ProductCardOnline = ({ item }) => {
             <li className="truncate">{description}</li>
           </ul>
 
-          {isReady && (
-            <div className="text-green-600 text-[12px] font-medium pt-1">✅ พร้อมรับที่สาขา</div>
-          )}
+          <div className="text-xs text-gray-500 mt-1">
+            <div className="flex justify-between w-full items-start">
+              {isReady ? (
+                <div className="text-green-600 text-[12px] font-medium pt-1">
+                  ✅ พร้อมรับที่สาขา
+                </div>
+              ) : (
+                <div />
+              )}
+
+              <button
+                onClick={() => navigate(`/shop/product/${item.id}?branchId=${branchId}`)}
+                className="text-blue-500 text-[13px] hover:underline mt-1 text-right"
+              >
+                ดูรายละเอียด
+              </button>
+            </div>
+          </div>
+
         </div>
 
         <div className="p-3 pt-1 mt-auto">
@@ -79,21 +95,21 @@ const ProductCardOnline = ({ item }) => {
               {numberFormat(priceOnline)} บาท
             </div>
 
-            <button
-              onClick={() => addToCart(item)}
-              className={`rounded-md px-3 py-1.5 transition text-sm flex items-center gap-1
-                ${isInCart ? 'bg-green-500 text-white hover:bg-green-600' : 'bg-blue-400 text-white hover:bg-blue-500'}`}
-            >
-              <ShoppingCart size={16} /> {isInCart ? 'เพิ่มอีก' : 'ตะกร้า'}
-            </button>
+            <div className="my-1">
+              <button
+                onClick={() => addToCart(item)}
+                className={`rounded-md px-3 py-1.5 transition text-sm flex items-center gap-1
+                  ${isInCart ? 'bg-green-500 text-white hover:bg-green-600' : 'bg-blue-400 text-white hover:bg-blue-500 '}`}
+              >
+                <ShoppingCart size={16} /> {isInCart ? 'เพิ่มอีก' : 'ตะกร้า'}
+              </button>
+            </div>
+
+
+
           </div>
 
-          <button
-            onClick={() => navigate(`/shop/product/${item.id}?branchId=${branchId}`)}
-            className="text-blue-500 text-[13px] hover:underline mt-1 text-left"
-          >
-            ดูรายละเอียด
-          </button>
+
         </div>
       </div>
     </motion.div>

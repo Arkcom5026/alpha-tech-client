@@ -7,7 +7,8 @@ import {
   mergeCartToServer,
   updateCartItemQuantity,
   removeCartItemFromServer,
-  deleteSelectedCartItems
+  deleteSelectedCartItems,
+  getBranchPrices,
 } from '../api/cartApi';
 import { useAuthStore } from '@/features/auth/store/authStore';
 
@@ -16,6 +17,7 @@ export const useCartStore = create(
     (set, get) => ({
       cartItems: [],
       selectedItems: [],
+      branchPrices: [],
 
       setCart: (items) => {
         set({ cartItems: items });
@@ -31,6 +33,16 @@ export const useCartStore = create(
           set({ cartItems: [...cartItems, newItem] });
         }
       },
+
+      fetchCartBranchPricesAction: async (branchId) => {
+        try {
+          const res = await getBranchPrices(branchId);
+          set({ branchPrices: res });
+        } catch (err) {
+          console.error('❌ fetchCartBranchPricesAction error:', err);
+        }
+      },
+
 
       removeFromCart: async (id) => {
         set({

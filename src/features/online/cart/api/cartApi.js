@@ -16,7 +16,6 @@ export const mergeCartToServer = async (cartItems) => {
 export const fetchCartFromServer = async () => {
   try {
     const response = await apiClient.get('/cart');
-    
     return response.data.cartItems || [];
   } catch (error) {
     console.error('❌ fetchCartFromServer error:', error);
@@ -64,6 +63,17 @@ export const deleteSelectedCartItems = async (cartItemIds) => {
     return response.data;
   } catch (error) {
     console.error('❌ deleteSelectedCartItems error:', error);
+    throw error;
+  }
+};
+
+// ✅ Fetch branch-specific selling prices (used in CheckoutPage)
+export const getBranchPrices  = async (branchId) => {
+  try {
+    const response = await apiClient.get(`/cart/branch-prices/${branchId}`);
+    return response.data;
+  } catch (error) {
+    console.error('❌ fetchBranchPrices error:', error);
     throw error;
   }
 };

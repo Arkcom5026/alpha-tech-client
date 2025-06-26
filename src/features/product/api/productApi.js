@@ -63,13 +63,7 @@ export const deleteProduct = async (id) => {
   }
 };
 
-export const getProductDropdowns = async (productId) => {
-  const res = await apiClient.get(`/products/dropdowns/${productId}`);
-
-  return res.data;
-};
-
-export const getProductDropdownsByToken = async () => {
+export const getProductDropdownsPublic = async () => {
   const res = await apiClient.get('/products/dropdowns');
   return res.data;
 };
@@ -115,7 +109,6 @@ export const deleteProductPrice = async (productId, priceId) => {
   }
 };
 
-// ✅ สำหรับระบบ POS
 export const getProductsForPos = async (filters) => {
   try {
     const res = await apiClient.get('/products/pos/search', { params: filters });
@@ -125,6 +118,8 @@ export const getProductsForPos = async (filters) => {
     return [];
   }
 };
+
+
 
 
 

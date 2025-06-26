@@ -12,6 +12,7 @@ const CreateProductPage = () => {
   const { saveProduct, uploadImages } = useProductStore();
   const [error, setError] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
 
   const imageRef = useRef();
   const [selectedFiles, setSelectedFiles] = useState([]);
@@ -56,7 +57,7 @@ const CreateProductPage = () => {
         description: formData.description || '',
         spec: formData.spec || '',
         warranty: formData.warranty ? parseInt(formData.warranty) : null,
-        templateId: templateIdParsed,        
+        templateId: templateIdParsed,
         noSN: formData.noSN ?? false,
         active: formData.active ?? true,
         cost: formData.cost ? parseFloat(formData.cost) : null,
@@ -70,7 +71,11 @@ const CreateProductPage = () => {
         },
       });
 
-      setIsProcessing(false);
+      setShowSuccess(true);
+      setTimeout(() => {
+        setShowSuccess(false);
+        setIsProcessing(false);
+      }, 2000);
     } catch (err) {
       console.error('❌ บันทึกไม่สำเร็จ:', err);
       setError('เกิดข้อผิดพลาดในการบันทึกข้อมูล');
@@ -118,14 +123,19 @@ const CreateProductPage = () => {
           templateId: '',
           productProfileId: '',
           productTypeId: '',
-          categoryId: '',          
+          categoryId: '',
           noSN: false,
           active: true,
           cost: '',
         }}
       />
 
-      {isProcessing && <ProcessingDialog title="กำลังบันทึกสินค้า..." />}
+      <ProcessingDialog
+        open={isProcessing || showSuccess}
+        isLoading={isProcessing}
+        message={isProcessing ? 'ระบบกำลังบันทึกข้อมูล กรุณารอสักครู่...' : '✅ บันทึกข้อมูลเรียบร้อยแล้ว'}
+        onClose={() => setShowSuccess(false)}
+      />
     </div>
   );
 };

@@ -3,12 +3,13 @@ import { create } from 'zustand';
 
 import {
   createProduct,
+  updateProduct,
   deleteProduct,
   getProductById,
-  getProductDropdownsByToken,
   getProducts,
-  updateProduct,
-  getProductsForPos
+  getProductsForPos,
+  getProductDropdownsPublic,
+
 } from '../api/productApi';
 import { uploadImagesProduct, uploadImagesProductFull, deleteImageProduct } from '../api/productImagesApi';
 
@@ -114,7 +115,7 @@ const useProductStore = create((set,get) => ({
   fetchDropdownsAction: async () => {
     if (get().dropdownsLoaded) return;
     try {
-      const data = await getProductDropdownsByToken();
+      const data = await getProductDropdownsPublic();
       set({ dropdowns: data, dropdownsLoaded: true });
     } catch (error) {
       console.error('❌ fetchDropdownsAction error:', error);

@@ -18,7 +18,7 @@ const ProductSearchTable = ({ results = [], onAdd }) => {
 
     const handleAdd = (product) => {
         const quantity = quantities[product.id] || 1;
-        const costPrice = costPrices[product.id] || 0;
+        const costPrice = costPrices[product.id] ?? product.costPrice ?? 0;
         onAdd({
             id: product.id,
             name: product.name,
@@ -80,7 +80,7 @@ const ProductSearchTable = ({ results = [], onAdd }) => {
                     ) : (
                         visibleResults.map((product, index) => {
                             const qty = quantities[product.id] || 1;
-                            const costPrice = costPrices[product.id] || 0;
+                            const costPrice = costPrices[product.id] ?? product.costPrice ?? 0;
                             const total = qty * costPrice;
                             return (
                                 <TableRow key={product.id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
@@ -106,7 +106,7 @@ const ProductSearchTable = ({ results = [], onAdd }) => {
                                         <input
                                             type="number"
                                             className="w-24 text-center border rounded p-1"
-                                            value={costPrice}
+                                            value={costPrices[product.id] ?? product.costPrice ?? 0}
                                             min={0}
                                             onChange={(e) => handleCostPriceChange(product.id, e.target.value)}
                                             onKeyDown={(e) => {

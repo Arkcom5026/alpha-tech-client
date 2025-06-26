@@ -62,9 +62,9 @@ export const useProductOnlineStore = create((set, get) => ({
     }
   },
 
-  loadDropdownsAction: async () => {
+  loadDropdownsAction: async (filters = {}) => {
     try {
-      const dropdowns = await getProductDropdownsForOnline();
+      const dropdowns = await getProductDropdownsForOnline(filters);
       set({ dropdowns });
     } catch (err) {
       console.error('❌ โหลด dropdowns สินค้าออนไลน์ล้มเหลว:', err);
@@ -86,3 +86,5 @@ export const useProductOnlineStore = create((set, get) => ({
   selectedBranchId: null,
   setSelectedBranchId: (id) => set({ selectedBranchId: id }),
 }));
+
+

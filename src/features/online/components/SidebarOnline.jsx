@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import haversine from 'haversine-distance';
 import { useProductOnlineStore } from '../productOnline/store/productOnlineStore';
 import { useBranchStore } from '@/features/branch/store/branchStore';

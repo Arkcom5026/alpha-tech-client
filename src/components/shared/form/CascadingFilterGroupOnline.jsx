@@ -11,7 +11,7 @@ export default function CascadingFilterGroupOnline({
   placeholders = {
     category: '-- เลือกหมวดหมู่สินค้า --',
     productType: '-- เลือกประเภทสินค้า --',
-    productProfile: '-- เลกลักษณะสินค้า --',
+    productProfile: '-- เลือกลักษณะสินค้า --',
     template: '-- เลือกรูปแบบสินค้า --',
   },
   showReset = false,
@@ -32,7 +32,6 @@ export default function CascadingFilterGroupOnline({
       : productTypes;
   }, [productTypes, value.categoryId]);
 
-  
   const filteredProductProfiles = useMemo(() => {
     return productProfiles.filter((p) => {
       const typeMatch = value.productTypeId
@@ -71,16 +70,16 @@ export default function CascadingFilterGroupOnline({
     const next = { ...value, [field]: val };
 
     if (field === 'categoryId') {
-      next.productTypeId = '';
-      next.productProfileId = '';
-      next.templateId = '';
+      next.productTypeId = undefined;
+      next.productProfileId = undefined;
+      next.templateId = undefined;
     }
     if (field === 'productTypeId') {
-      next.productProfileId = '';
-      next.templateId = '';
+      next.productProfileId = undefined;
+      next.templateId = undefined;
     }
     if (field === 'productProfileId') {
-      next.templateId = '';
+      next.templateId = undefined;
     }
 
     onChange(value[field] === val ? { ...next } : next);
@@ -89,10 +88,10 @@ export default function CascadingFilterGroupOnline({
 
   const handleReset = () => {
     onChange({
-      categoryId: '',
-      productTypeId: '',
-      productProfileId: '',
-      templateId: '',
+      categoryId: undefined,
+      productTypeId: undefined,
+      productProfileId: undefined,
+      templateId: undefined,
     });
   };
 

@@ -27,6 +27,10 @@ export const useBranchStore = create(
         }
       },
 
+      fetchBranchesAction: async () => {
+        await get().loadAllBranchesAction();
+      },
+
       setCurrentBranch: (branch) => {
         if (!branch || !branch.id) {
           set({ currentBranch: null, selectedBranchId: null });
@@ -152,6 +156,18 @@ export const useBranchStore = create(
         try {
           const newBranch = await createBranch(data);
           set((state) => ({ branches: [...state.branches, newBranch] }));
+
+          try {
+            await fetch('/api/branch-prices/clone', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ sourceBranchId: 2, targetBranchId: newBranch.id }),
+            });
+            console.log('✅ Clone ราคาสำเร็จจากสาขาหลัก');
+          } catch (cloneErr) {
+            console.warn('⚠️ Clone BranchPrice ล้มเหลว:', cloneErr);
+          }
+
           return newBranch;
         } catch (err) {
           console.error('❌ createBranchAction error:', err);
@@ -193,6 +209,3 @@ export const useBranchStore = create(
     }
   )
 );
-
-
-

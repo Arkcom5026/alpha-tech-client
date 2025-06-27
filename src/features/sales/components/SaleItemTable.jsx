@@ -32,11 +32,14 @@ const SaleItemTable = ({ items = [], onRemove, billDiscount = 0, onChangeItems }
         const share = billDiscount > 0 ? Math.round(billDiscount * ratio) : 0;
         return { ...item, billShare: share };
       });
-      setLocalItems(updated);
+
+      if (JSON.stringify(localItems) !== JSON.stringify(updated)) {
+        setLocalItems(updated);
+      }
     }, 300);
 
     return () => clearTimeout(timeout);
-  }, [billDiscount]);
+  }, [billDiscount, localItems]);
 
   useEffect(() => {
     if (typeof onChangeItems === 'function') {

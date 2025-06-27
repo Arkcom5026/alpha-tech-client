@@ -167,6 +167,7 @@ const BranchForm = ({ formData, setFormData, onSubmit, isEdit = false, allowLoca
         </select>
       </div>
 
+
       <div className="grid grid-cols-2 gap-4 items-end">
         <div>
           <label className="block text-sm font-medium mb-1">Latitude</label>
@@ -178,42 +179,44 @@ const BranchForm = ({ formData, setFormData, onSubmit, isEdit = false, allowLoca
             disabled={!allowLocationDetect}
           />
         </div>
-        <div className="flex gap-2 items-end">
-          <div className="w-full">
-            <label className="block text-sm font-medium mb-1">Longitude</label>
-            <input
-              type="number"
-              value={formData.longitude}
-              onChange={(e) => setFormData({ ...formData, longitude: e.target.value })}
-              className="w-full border rounded px-3 py-2"
-              disabled={!allowLocationDetect}
-            />
-          </div>
+        <div>
+          <label className="block text-sm font-medium mb-1">Longitude</label>
+          <input
+            type="number"
+            value={formData.longitude}
+            onChange={(e) => setFormData({ ...formData, longitude: e.target.value })}
+            className="w-full border rounded px-3 py-2"
+            disabled={!allowLocationDetect}
+          />
 
-          {allowLocationDetect && (
+          
+        </div>
+        
+        <div className="flex items-center space-x-2 ">
+          <input
+            type="checkbox"
+            id="rbac-toggle"
+            checked={formData.RBACEnabled}
+            onChange={(e) => setFormData({ ...formData, RBACEnabled: e.target.checked })}
+          />
+          <label htmlFor="rbac-toggle" className="text-sm">
+            เปิดใช้งานระบบ RBAC (สิทธิ์เฉพาะสาขา)
+          </label>
+        </div>
+
+        {allowLocationDetect && (
+          <div className="flex items-end ">
             <button
               type="button"
               onClick={handleDetectLocation}
-              className="text-sm text-green-600 px-6 py-2 border border-green-600 rounded hover:bg-green-50 min-w-[110px]"
+              className="text-sm text-green-600 px-6 py-2 border border-green-600 rounded hover:bg-green-50 min-w-[100px] "
             >
-              📍  ใช้พิกัด
+              📍 ใช้พิกัด
             </button>
-          )}
-        </div>
-      </div>
+          </div>
+        )}
 
-      <div className="flex items-center space-x-2">
-        <input
-          type="checkbox"
-          id="rbac-toggle"
-          checked={formData.RBACEnabled}
-          onChange={(e) => setFormData({ ...formData, RBACEnabled: e.target.checked })}
-        />
-        <label htmlFor="rbac-toggle" className="text-sm">
-          เปิดใช้งานระบบ RBAC (สิทธิ์เฉพาะสาขา)
-        </label>
       </div>
-
       <div className="text-right">
         <button
           type="submit"

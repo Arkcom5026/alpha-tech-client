@@ -9,7 +9,7 @@ export const sidebarStockItems = [
       { label: 'ประเภทสินค้า', to: '/pos/stock/types' },
       { label: 'ลักษณะสินค้า', to: '/pos/stock/profiles' },    
       { label: 'รูปแบบสินค้า', to: '/pos/stock/templates' },           
-      { label: 'ราคาขายออนไลน์', to: '/pos/stock/branch-prices' },  
+      { label: 'กำหนดราคา', to: '/pos/stock/branch-prices' },  
       { label: 'จัดการหน่วยนับ', to: '/pos/stock/units' },
 
       

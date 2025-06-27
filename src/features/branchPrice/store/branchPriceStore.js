@@ -48,6 +48,7 @@ const useBranchPriceStore = create((set) => ({
     try {
       const res = await getAllProductsWithBranchPrice(filters); // ✅ ส่ง filters ไปด้วย
       set({ allProductsWithPrice: res.data });
+      console.log('fetchAllProductsWithPriceByTokenAction',res)
     } catch (err) {
       console.error('❌ fetchAllProductsWithPriceByTokenAction error:', err);
       set({ error: 'ไม่สามารถโหลดข้อมูลสินค้าได้' });
@@ -90,6 +91,37 @@ const useBranchPriceStore = create((set) => ({
       set({ loading: false });
     }
   },
+
+
+  // ✅ อัปเดตราคาหลายรายการพร้อมกัน (bulk update)
+  updateMultipleBranchPricesAction: async (updatedList) => {
+    set({ loading: true, error: null });
+    try {
+      const res = await import('../api/branchPriceApi').then((mod) =>
+        mod.updateMultipleBranchPrices(updatedList)
+      );
+
+      set((state) => ({
+        allProductsWithPrice: state.allProductsWithPrice.map((item) => {
+          const updated = updatedList.find((u) => u.productId === item.product.id);
+          return updated
+            ? {
+                ...item,
+                branchPrice: {
+                  ...item.branchPrice,
+                  ...updated,
+                },
+              }
+            : item;
+        }),
+      }));
+    } catch (err) {
+      console.error('❌ updateMultipleBranchPricesAction error:', err);
+      set({ error: 'ไม่สามารถอัปเดตราคาได้' });
+    } finally {
+      set({ loading: false });
+    }
+  }
 }));
 
 export default useBranchPriceStore;

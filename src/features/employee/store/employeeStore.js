@@ -7,11 +7,14 @@ import {
   deleteEmployee,
   getAllEmployees,
   updateEmployee,
+  getPositions,
+  approveEmployee,
+  findUserByEmail,
 } from '../api/employeeApi';
 
 const useEmployeeStore = create(
   persist(
-    (set) => ({
+    (set, get) => ({
       // 🔐 สำหรับ session และ RBAC
       employee: null,
       branch: null,
@@ -22,6 +25,38 @@ const useEmployeeStore = create(
       // 🔁 CRUD พนักงาน
       employees: [],
       employeeError: null,
+
+      // ✅ ตำแหน่งพนักงาน
+      positions: [],
+      fetchPositionsAction: async () => {
+        try {
+          const res = await getPositions();
+          set({ positions: res });
+        } catch (err) {
+          console.error('โหลดตำแหน่งไม่สำเร็จ', err);
+        }
+      },
+
+      // ✅ อนุมัติพนักงานใหม่
+      approveEmployeeAction: async (payload) => {
+        try {
+          await approveEmployee(payload);
+        } catch (err) {
+          console.error('❌ approveEmployeeAction error:', err);
+          throw err;
+        }
+      },
+
+      // ✅ ค้นหาผู้ใช้เพื่ออนุมัติ
+      findUserByEmailAction: async (email) => {
+        try {
+          const user = await findUserByEmail(email);
+          return user;
+        } catch (err) {
+          console.error('❌ findUserByEmailAction error:', err);
+          throw err;
+        }
+      },
 
       // ✅ Session
       setSession: ({ token, role, position, branch, employee }) => {
@@ -55,18 +90,20 @@ const useEmployeeStore = create(
       // ✅ Setter สำหรับ employee โดยตรง (ใช้หลัง F5 reload)
       setEmployee: (employee) => set({ employee }),
 
-      // ✅ CRUD พนักงาน
-      getEmployees: async (token, branchId) => {
+      // ✅ CRUD พนักงาน (ดึง token/branchId จาก store โดยตรง)
+      getEmployees: async () => {
         try {
-          const res = await getAllEmployees(token, branchId);
+          const { token, branch } = get();
+          const res = await getAllEmployees(token, branch.id);
           set({ employees: res });
         } catch (err) {
           set({ employeeError: err.message });
         }
       },
 
-      addEmployee: async (token, form) => {
+      addEmployee: async (form) => {
         try {
+          const { token } = get();
           const res = await createEmployee(token, form);
           set((state) => ({ employees: [...state.employees, res] }));
         } catch (err) {
@@ -74,8 +111,9 @@ const useEmployeeStore = create(
         }
       },
 
-      updateEmployee: async (token, id, form) => {
+      updateEmployee: async (id, form) => {
         try {
+          const { token } = get();
           const updated = await updateEmployee(token, id, form);
           set((state) => ({
             employees: state.employees.map((e) => (e.id === id ? updated : e)),
@@ -85,8 +123,9 @@ const useEmployeeStore = create(
         }
       },
 
-      removeEmployee: async (token, id) => {
+      removeEmployee: async (id) => {
         try {
+          const { token } = get();
           await deleteEmployee(token, id);
           set((state) => ({
             employees: state.employees.filter((e) => e.id !== id),

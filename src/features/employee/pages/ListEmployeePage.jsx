@@ -47,7 +47,7 @@ const ListEmployeePage = () => {
     <div className="p-4">
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-xl font-semibold">รายชื่อพนักงาน</h1>
-        <StandardActionButtons onCreate={() => navigate('/pos/employees/create')} />
+        <StandardActionButtons onCreate={() => navigate('/pos/employees/approve')} />
       </div>
       {loading ? <p>กำลังโหลด...</p> : <EmployeeTable employees={employees} />}
     </div>

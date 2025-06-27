@@ -51,3 +51,18 @@ export const deleteBranch = async (id) => {
     throw err;
   }
 };
+
+export const cloneBranchPrice = async ({ sourceBranchId, targetBranchId }) => {
+  try {
+    const res = await apiClient.post('/branch-prices/clone', {
+      sourceBranchId,
+      targetBranchId,
+    });
+    return res.data;
+  } catch (err) {
+    console.error('❌ cloneBranchPrice error:', err);
+    throw err;
+  }
+};  
+
+

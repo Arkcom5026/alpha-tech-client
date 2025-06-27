@@ -1,5 +1,3 @@
-// ✅ @filename: ViewEmployeePage.jsx
-
 // ✅ @filename: EmployeeTable.jsx
 // ✅ @folder: src/features/employee/components/
 
@@ -17,7 +15,7 @@ const EmployeeTable = ({ employees, onRefresh }) => {
   const handleDelete = async (id) => {
     if (!confirm('คุณแน่ใจหรือไม่ว่าต้องการลบพนักงานคนนี้?')) return;
     try {
-      const res = await fetch(`/api/employees/${id}`, {
+      const res = await fetch(`/api/settings/employees/${id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -62,7 +60,7 @@ const EmployeeTable = ({ employees, onRefresh }) => {
       </div>
 
       <StandardActionButtons
-        onAdd={() => navigate('/pos/employees/create')}
+        onAdd={() => navigate('/pos/settings/employee/approve')}
         className="mb-4"
       />
 
@@ -83,25 +81,13 @@ const EmployeeTable = ({ employees, onRefresh }) => {
               <td className="p-2 border">{e.phone || '-'}</td>
               <td className="p-2 border">{e.user?.email || '-'}</td>
               <td className="p-2 border">{e.position?.name || '-'}</td>
-              <td className="p-2 border space-x-1">
-                <button
-                  onClick={() => navigate(`/pos/employees/view/${e.id}`)}
-                  className="text-blue-600 hover:underline text-xs"
-                >
-                  👁️ ดู
-                </button>
-                <button
-                  onClick={() => navigate(`/pos/employees/edit/${e.id}`)}
-                  className="text-yellow-600 hover:underline text-xs"
-                >
-                  ✏️ แก้ไข
-                </button>
-                <button
-                  onClick={() => handleDelete(e.id)}
-                  className="text-red-600 hover:underline text-xs"
-                >
-                  🗑️ ลบ
-                </button>
+              <td className="p-2 border">
+                <StandardActionButtons
+                  onViewLink={`/pos/settings/employee/view/${e.id}`}
+                  onEditLink={`/pos/settings/employee/edit/${e.id}`}
+                  onDelete={() => handleDelete(e.id)}
+                  size="xs"
+                />
               </td>
             </tr>
           ))}

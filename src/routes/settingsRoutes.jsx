@@ -5,18 +5,27 @@ import ListEmployeePage from '@/features/employee/pages/ListEmployeePage';
 import EditBranchPage from '@/features/branch/page/EditBranchPage';
 import ListBranchPage from '@/features/branch/page/ListBranchPage';
 import CreateBranchPage from '@/features/branch/page/CreateBranchPage';
+import EditEmployeePage from '@/features/employee/pages/EditEmployeePage';
+import ApproveEmployeePage from '@/features/employee/pages/ApproveEmployeePage';
 
 
 const settingsRoutes = {
-  path: '/pos',
+  path: '/pos/settings',
   children: [
     {
-      path: 'settings',
+      path: 'branches',
+      children: [
+        { index: true, element: <ListBranchPage /> },
+        { path: 'create', element: <CreateBranchPage /> },
+        { path: 'edit/:id', element: <EditBranchPage /> },
+      ],
+    },
+    {
+      path: 'employee',
       children: [
         { index: true, element: <ListEmployeePage /> },
-        { path: 'branches', element: <ListBranchPage /> },
-        { path: 'branches/create', element: <CreateBranchPage /> },
-        { path: 'branches/edit/:id', element: <EditBranchPage /> },
+         { path: 'approve', element: <ApproveEmployeePage /> },
+         { path: 'edit/:id', element: <EditEmployeePage /> },
       ],
     },
   ],

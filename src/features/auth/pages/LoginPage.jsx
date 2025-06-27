@@ -26,7 +26,7 @@ const LoginPage = () => {
   useEffect(() => {
     if (!isLoggedIn) return;
     const currentPath = window.location.pathname;
-    if (role === 'admin' && currentPath !== '/admin') navigate('/admin');
+    if (role === 'admin' && currentPath !== '/pos/dashboard') navigate('/pos/dashboard');
     else if (role === 'employee' && currentPath !== '/pos/dashboard') navigate('/pos/dashboard');
   }, [isLoggedIn, role, navigate]);
 

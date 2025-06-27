@@ -31,7 +31,7 @@ const translatePaymentMethod = (method) => {
   }
 };
 
-const SalePage = () => {
+const QuickSalePage = () => {
   const [isModified, setIsModified] = useState(false);
 
   const togglePaymentMethod = (method) => {
@@ -90,6 +90,7 @@ const SalePage = () => {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const [slipImage, setSlipImage] = useState(null);
+const [skipSlip, setSkipSlip] = useState(false);
   const [govImage, setGovImage] = useState(null);
 
   const {
@@ -196,8 +197,7 @@ const SalePage = () => {
     await createCustomerAction({ phone: pendingPhone, name: fullName, email: email || null, address: address || null });
     await handleVerifyPhone();
     setPendingPhone('');
-    // ❌ ไม่ต้อง clear input เพราะ handleVerifyPhone จะ set ค่าใหม่ให้อัตโนมัติ
-    // setName(''); setEmail(''); setAddress('');
+
   };
 
   const handleCancelCreateCustomer = () => {
@@ -226,10 +226,10 @@ const SalePage = () => {
       setFormError('ยอดที่รับยังไม่ครบตามยอดที่ต้องชำระ');
       return;
     }
-    if (paymentList.some((p) => p.method === 'TRANSFER') && !slipImage) {
-      setFormError('กรุณาถ่ายภาพสลิปก่อนยืนยันการขาย');
-      return;
-    }
+    if (paymentList.some((p) => p.method === 'TRANSFER') && !slipImage && !skipSlip) {
+    setFormError('กรุณาถ่ายภาพสลิปก่อนยืนยันการขาย หรือเลือกข้ามการแนบสลิป');
+    return;
+  }
     if (paymentList.some((p) => p.method === 'CREDIT') && (!cardRef || cardRef.length < 15)) {
       setFormError('กรุณากรอกเลขอ้างอิงการชำระเงินด้วยบัตรเครดิต (อย่างน้อย 15 หลัก)');
       return;
@@ -280,7 +280,7 @@ const SalePage = () => {
       // ✅ อัปเดตสถานะ stockItem หลังชำระเงินสำเร็จ
       await updateStockItemsToSoldAction(result.stockItemIds);
 
-      
+
       setConfirmedSaleId(result.code);
 
       const paymentData = {
@@ -370,13 +370,20 @@ const SalePage = () => {
   }, [customer]);
 
   const isConfirmEnabled = (() => {
-    if (!liveItems.length) return false;
-    if (paymentMethod === 'CASH') return receivedAmount >= finalPrice;
-    if (paymentMethod === 'TRANSFER') return !!slipImage;
-    if (paymentMethod === 'CREDIT') return !!cardRef && cardRef.length >= 15;
-    if (paymentMethod === 'GOVERNMENT') return true; // ✅ อนุญาตให้กดยืนยันได้แม้ไม่มีภาพถ่าย
-    return false;
-  })();
+  if (!liveItems.length) return false;
+
+  const cash = paymentList.find(p => p.method === 'CASH');
+  const transfer = paymentList.find(p => p.method === 'TRANSFER');
+  const credit = paymentList.find(p => p.method === 'CREDIT');
+  const government = paymentList.find(p => p.method === 'GOVERNMENT');
+
+  if (cash) return receivedAmount >= finalPrice;
+  if (transfer) return !!slipImage || skipSlip;
+  if (credit) return !!cardRef && cardRef.length >= 15;
+  if (government) return true;
+
+  return false;
+})();
 
   const renderGovernmentCapture = () => (
     <div className="pt-4 space-y-4 border p-4 rounded bg-white shadow">
@@ -639,20 +646,22 @@ const SalePage = () => {
                     className="mt-1 w-full border rounded px-3 py-2"
                     placeholder="0.00"
                     value={paymentList.find(p => p.method === 'CASH')?.amount || ''}
-                    onChange={(e) => setPaymentAmount('CASH', e.target.value)}
+                    onChange={(e) => {
+                      setPaymentAmount('CASH', e.target.value);
+                      setReceivedAmount(parseFloat(e.target.value) || 0); // ✅ sync กับเงินทอน
+                    }}
                   />
                 </div>
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700">เงินทอน:</label>
-                  <input
-                    type="text"
-                    className="mt-1 w-full border rounded px-3 py-2 bg-gray-100"
-                    value={changeAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                    readOnly
-                  />
+                  <div className="mt-1 w-full border rounded px-3 py-2 bg-gray-100 text-right">
+                    {changeAmount.toLocaleString()} ฿
+                  </div>
                 </div>
               </div>
             )}
+
 
 
 
@@ -713,7 +722,14 @@ const SalePage = () => {
 
 
 
-            {/* ✅ Input reference number for credit card */}
+            <div className="mt-2 text-sm text-gray-700">
+  <label className="inline-flex items-center">
+    <input type="checkbox" checked={skipSlip} onChange={() => setSkipSlip(!skipSlip)} className="mr-2" />
+      ไม่ถ่ายภาพสลิป
+  </label>
+</div>
+
+{/* ✅ Input reference number for credit card */}
             {paymentList.some(p => p.method === 'CREDIT') && (
               <div className="mt-2 space-y-2">
                 <label className="block text-sm font-medium text-gray-700">ยอดบัตรเครดิต:</label>
@@ -762,12 +778,13 @@ const SalePage = () => {
               <div className="text-center pt-2">
                 <button
                   onClick={handleConfirmSale}
-                  disabled={sumPaymentList() !== finalPrice || !liveItems.length || !customer?.id}
+                  disabled={!isConfirmEnabled || !liveItems.length || !customer?.id}
                   className="px-6 py-3 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
                 >
                   ✅ ยืนยันการขาย
                 </button>
               </div>
+
 
 
             </div>
@@ -781,6 +798,17 @@ const SalePage = () => {
   );
 };
 
-export default SalePage;
+export default QuickSalePage;
+
+
+
+
+
+
+
+
+
+
+
 
 

@@ -86,5 +86,3 @@ export const useProductOnlineStore = create((set, get) => ({
   selectedBranchId: null,
   setSelectedBranchId: (id) => set({ selectedBranchId: id }),
 }));
-
-

@@ -63,7 +63,7 @@ const purchasesRoutes = {
         { path: 'preview/:receiptId', element: <PreviewBarcodePage /> }, // หน้าพรีวิวก่อนพิมพ์        
       ]
     },
-    {
+    { 
       path: "suppliers",
       children: [
         { index: true, element: <ListSupplierPage  /> },        

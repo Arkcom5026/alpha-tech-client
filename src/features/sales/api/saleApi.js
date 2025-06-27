@@ -25,7 +25,6 @@ export const getAllSales = async () => {
 export const getSaleById = async (id) => {
   try {
     const res = await apiClient.get(`/sale-orders/${id}`);
-    
     return res.data;
   } catch (err) {
     console.error('❌ [getSaleById]', err);
@@ -53,7 +52,6 @@ export const markSaleAsPaid = async (saleId) => {
   }
 };
 
-
 export const getSaleReturns = async () => {
   try {
     const res = await apiClient.get('/sale-orders/return');
@@ -64,3 +62,13 @@ export const getSaleReturns = async () => {
   }
 };
 
+// ✅ New: Update customer profile via token (no :id in URL)
+export const updateCustomer = async (data) => {
+  try {
+    const res = await apiClient.put('/api/customers/profile', data);
+    return res.data;
+  } catch (err) {
+    console.error('❌ [updateCustomer]', err);
+    throw err;
+  }
+};

@@ -13,7 +13,7 @@ import { useBranchStore } from '@/features/branch/store/branchStore';
 import CascadingFilterGroup from '@/components/shared/form/CascadingFilterGroup';
 import PurchaseOrderSupplierSelector from './PurchaseOrderSupplierSelector';
 
-const PurchaseOrderForm = ({ mode = 'create' }) => {
+const PurchaseOrderForm = ({ mode = 'create', searchText, onSearchTextChange, onSearchEnter }) => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [supplier, setSupplier] = useState(null);
@@ -68,7 +68,6 @@ const PurchaseOrderForm = ({ mode = 'create' }) => {
     templateId: '',
   });
 
-  const [searchText, setSearchText] = useState('');
   const [committedSearchText, setCommittedSearchText] = useState('');
 
   useEffect(() => {
@@ -128,6 +127,7 @@ const PurchaseOrderForm = ({ mode = 'create' }) => {
       e.preventDefault();
       const trimmed = searchText.trim();
       setCommittedSearchText(trimmed.length > 0 ? trimmed : '');
+      if (onSearchEnter) onSearchEnter(trimmed);
     }
   };
 
@@ -161,11 +161,11 @@ const PurchaseOrderForm = ({ mode = 'create' }) => {
       items: products.map(p => ({
         productId: p.id,
         name: p.name,
+        model: p.model || '-',
         category: p.category,
         productType: p.productType,
         productProfile: p.productProfile,
         productTemplate: p.productTemplate,
-        description: p.description,
         quantity: p.quantity,
         costPrice: p.costPrice || 0,
       })),
@@ -201,11 +201,11 @@ const PurchaseOrderForm = ({ mode = 'create' }) => {
       {
         id: product.id,
         name: product.name || '-',
+        model: product.model || '-',
         category: product.category || '-',
         productType: product.productType || '-',
         productProfile: product.productProfile || '-',
         productTemplate: product.productTemplate || '-',
-        description: product.description || '-',
         quantity: product.quantity || 1,
         costPrice: product.costPrice || 0,
       },
@@ -275,14 +275,12 @@ const PurchaseOrderForm = ({ mode = 'create' }) => {
           value={filter}
           onChange={handleFilterChange}
           dropdowns={dropdowns}
-        />
-        <input
-          type="text"
-          placeholder="ค้นหาด้วยชื่อสินค้า หรือบาร์โค้ด"
-          value={searchText}
-          onChange={(e) => setSearchText(e.target.value)}
-          onKeyDown={handleSearchKeyDown}
-          className="border px-3 py-2 rounded  w-[300px] mt-4"
+          searchText={searchText}
+          onSearchTextChange={onSearchTextChange}
+          onSearchCommit={(text) => {
+            const trimmed = text.trim();
+            setCommittedSearchText(trimmed.length > 0 ? trimmed : '');
+          }}
         />
       </div>
 

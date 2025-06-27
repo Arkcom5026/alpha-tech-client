@@ -22,13 +22,14 @@ export const createCustomer = async (data) => {
   }
 };
 
-// ✅ อัปเดตข้อมูลลูกค้า (name, address, email)
-export const updateCustomer = async (id, data) => {
+// ✅ อัปเดตข้อมูลลูกค้า (name, address, email) แบบใหม่จาก token
+export const updateCustomer = async (data) => {
   try {
-    const res = await apiClient.put(`/customers/${id}`, data);
+    const res = await apiClient.put('/customers/profile', data);
     return res.data;
   } catch (error) {
     console.error('❌ [updateCustomer] error:', error);
     throw error;
   }
 };
+

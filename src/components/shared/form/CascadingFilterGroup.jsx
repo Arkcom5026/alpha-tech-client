@@ -16,6 +16,9 @@ export default function CascadingFilterGroup({
   },
   showReset = false,
   direction = 'row',
+  searchText = '',
+  onSearchTextChange = () => {},
+  onSearchCommit = () => {},
 }) {
   const {
     categories = [],
@@ -154,6 +157,22 @@ export default function CascadingFilterGroup({
             ))}
           </select>
         )}
+      </div>
+
+      <div className="mt-2">
+        <input
+          type="text"
+          placeholder="ค้นหาด้วยชื่อสินค้า / บาร์โค้ด"
+          value={searchText}
+          onChange={(e) => onSearchTextChange(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              onSearchCommit(searchText.trim());
+            }
+          }}
+          className="border px-3 py-2 rounded w-full text-sm"
+        />
       </div>
 
       {showReset && (

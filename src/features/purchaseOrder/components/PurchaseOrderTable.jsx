@@ -23,23 +23,24 @@ const PurchaseOrderTable = ({ products = [], setProducts = () => { }, loading = 
     }
   }, [products.length]);
 
-  
+
 
   return (
     <div className="rounded-md border overflow-x-auto">
-       <h3 className="text-md font-semibold px-4 pt-3 pb-2 text-gray-700">รายการสินค้าที่สั่งซื้อ</h3>
+      <h3 className="text-md font-semibold px-4 pt-3 pb-2 text-gray-700">รายการสินค้าที่สั่งซื้อ</h3>
       <Table>
         <TableHeader className="bg-blue-100">
           <TableRow>
-            <TableHead className="text-center w-[120px]">ชื่อสินค้า</TableHead>
+
             <TableHead className="text-center w-[150px]">หมวดหมู่</TableHead>
             <TableHead className="text-center w-[130px]">ประเภท</TableHead>
             <TableHead className="text-center w-[130px]">ลักษณะ</TableHead>
             <TableHead className="text-center w-[130px]">รูปแบบ</TableHead>
-            <TableHead className="text-center">รายละเอียด</TableHead>
+            <TableHead className="text-center w-[120px]">ชื่อสินค้า</TableHead>
+            <TableHead className="text-center w-[120px]">รุ่น</TableHead>
             <TableHead className="text-center w-[60px]">จำนวน</TableHead>
-            <TableHead className="text-center w-[80px]">ราคาทุน</TableHead>
-            <TableHead className="text-center w-[100px]">ราคารวม</TableHead>
+            <TableHead className="text-center w-[60px]">ราคา</TableHead>
+            <TableHead className="text-center w-[80px]">ราคารวม</TableHead>
             <TableHead className="text-center w-[100px]">จัดการ</TableHead>
           </TableRow>
         </TableHeader>
@@ -51,12 +52,12 @@ const PurchaseOrderTable = ({ products = [], setProducts = () => { }, loading = 
               const isLast = index === products.length - 1;
               return (
                 <TableRow key={item.id} ref={isLast ? lastRowRef : null}>
-                  <TableCell>{item.name || '-'}</TableCell>
                   <TableCell>{item.category || '-'}</TableCell>
                   <TableCell>{item.productType || '-'}</TableCell>
                   <TableCell>{item.productProfile || '-'}</TableCell>
                   <TableCell>{item.productTemplate || '-'}</TableCell>
-                  <TableCell>{item.description || '-'}</TableCell>
+                  <TableCell>{item.name || '-'}</TableCell>
+                  <TableCell>{item.model || '-'}</TableCell>
                   <TableCell className="text-center">
                     <input
                       type="number"

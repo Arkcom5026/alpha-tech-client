@@ -1,7 +1,7 @@
 // 📁 FILE: features/sales/store/salesStore.js
 
 import { create } from 'zustand';
-import { createSaleOrder, getAllSales, getSaleById, returnSale } from '../api/saleApi';
+import { createSaleOrder, getAllSales, getSaleById, returnSale, updateCustomer } from '../api/saleApi';
 
 import { searchStockItem } from '@/features/stockItem/api/stockItemApi';
 import { markSaleAsPaid } from '../api/saleApi';
@@ -24,7 +24,15 @@ const useSalesStore = create((set, get) => ({
     set({ saleItems: [], customerId: null });
   },
 
-  setCustomerIdAction: (id) => set({ customerId: id }),
+  updateCustomerProfileAction: async (data) => {
+    try {
+      const updated = await updateCustomer(data);
+      return updated;
+    } catch (err) {
+      console.error('❌ [updateCustomerProfileAction]', err);
+      return null;
+    }
+  },
 
   markSalePaidAction: async (saleId) => {
     try {
@@ -74,7 +82,7 @@ const useSalesStore = create((set, get) => ({
 
       set({ saleItems: [], customerId: null });
 
-      return data; // ✅ ส่งข้อมูลทั้งก้อนที่รวม branch, items, customer ฯลฯ
+      return data;
     } catch (err) {
       console.error('❌ [confirmSaleOrderAction]', err);
       return { error: 'เกิดข้อผิดพลาดในการขาย' };
@@ -117,9 +125,7 @@ const useSalesStore = create((set, get) => ({
   getSaleByIdAction: async (id) => {
     try {
       const data = await getSaleById(id);
-
-      set({ selectedSale: data }); 
-    
+      set({ selectedSale: data });
     } catch (err) {
       console.error('[getSaleByIdAction]', err);
     }

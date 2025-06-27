@@ -26,6 +26,7 @@ const ProductSearchTable = ({ results = [], onAdd }) => {
             productType: product.productType,
             productProfile: product.productProfile,
             productTemplate: product.productTemplate,
+            model: product.model,
             description: product.description,
             quantity,
             costPrice,
@@ -58,12 +59,13 @@ const ProductSearchTable = ({ results = [], onAdd }) => {
             <Table>
                 <TableHeader className="bg-blue-100">
                     <TableRow>
-                        <TableHead className="text-center w-[120px]">ชื่อสินค้า</TableHead>                        
+                                   
                         <TableHead className="text-center w-[150px]">หมวดหมู่</TableHead>                        
                         <TableHead className="text-center w-[130px]">ประเภท</TableHead>                        
                         <TableHead className="text-center w-[130px]">ลักษณะ</TableHead>                        
                         <TableHead className="text-center w-[130px]">รูปแบบ</TableHead>                        
-                        <TableHead className="text-center">รายละเอียด</TableHead>
+                        <TableHead className="text-center w-[120px]">ชื่อสินค้า</TableHead>            
+                        <TableHead className="text-center w-[120px]">รุ่น</TableHead>            
                         <TableHead className="text-center w-[60px]">จำนวน</TableHead>
                         <TableHead className="text-center w-[60px]">ราคา</TableHead>
                         <TableHead className="text-center w-[80px]">ราคารวม</TableHead>
@@ -84,12 +86,14 @@ const ProductSearchTable = ({ results = [], onAdd }) => {
                             const total = qty * costPrice;
                             return (
                                 <TableRow key={product.id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                                    <TableCell className=" align-middle">{product.name}</TableCell>                                    
+                                                                    
                                     <TableCell className=" align-middle">{product.category}</TableCell>                                    
                                     <TableCell className=" align-middle">{product.productType}</TableCell>                                    
                                     <TableCell className=" align-middle">{product.productProfile}</TableCell>                                    
-                                    <TableCell className=" align-middle">{product.productTemplate}</TableCell>                                    
-                                    <TableCell className=" align-middle">{product.description || '-'}</TableCell>
+                                    <TableCell className=" align-middle">{product.productTemplate}</TableCell>     
+                                    <TableCell className=" align-middle">{product.name}</TableCell>    
+                                    <TableCell className=" align-middle">{product.model}</TableCell>    
+
                                     <TableCell className=" align-middle">
                                         <input
                                             type="number"

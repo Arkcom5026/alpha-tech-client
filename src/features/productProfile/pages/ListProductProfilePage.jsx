@@ -61,15 +61,14 @@ const ListProductProfilePage = () => {
     }
   };
 
-  const handleSearch = () => {
-    console.log('🔍 กดค้นหาด้วยข้อความ:', searchInput);
-    setSearchText(searchInput);
+  const handleSearchTextChange = (text) => {
+    setSearchInput(text);
   };
 
-  useEffect(() => {
-    console.log('🎯 useEffect กรองอัตโนมัติ:', { selectedCategoryId, selectedProductTypeId });
-    setSearchText(searchInput);
-  }, [selectedCategoryId, selectedProductTypeId]);
+  const handleSearchCommit = (text) => {
+    console.log('🔍 กด Enter เพื่อค้นหา:', text);
+    setSearchText(text);
+  };
 
   const filteredProfiles = useMemo(() => {
     const result = profiles?.filter((p) => {
@@ -109,26 +108,13 @@ const ListProductProfilePage = () => {
             }}
             hiddenFields={['template', 'profile', 'productProfile']}
             showReset
+            searchText={searchInput}
+            onSearchTextChange={handleSearchTextChange}
+            onSearchCommit={handleSearchCommit}
           />
-
-          <div className="flex gap-2 max-w-md">
-            <input
-              type="text"
-              placeholder="ค้นหาด้วยชื่อ..."
-              className="border rounded px-3 py-2 flex-1"
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-            />
-            <button
-              onClick={handleSearch}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
-            >
-              ค้นหา
-            </button>
-          </div>
         </div>
 
-        <ProductProfileTable profiles={filteredProfiles} onReload={() => handleSearch()} />
+        <ProductProfileTable profiles={filteredProfiles} onReload={() => setSearchText(searchInput)} />
       </div>
     </div>
   );

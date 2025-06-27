@@ -46,7 +46,12 @@ const ListSupplierPage = () => {
       {loading ? (
         <p>กำลังโหลดข้อมูล...</p>
       ) : suppliers.length === 0 ? (
-        <p className="text-gray-500">ยังไม่มีผู้ขายในระบบ</p>
+        <div className="text-center text-gray-500 space-y-4">
+          <p>ยังไม่มีผู้ขายในระบบ</p>
+          <a href="/pos/purchases/suppliers/create" className="inline-block px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+            ➕ เพิ่มผู้ขาย
+          </a>
+        </div>
       ) : (
         <SupplierTable suppliers={suppliers} onDelete={handleDeleteSupplier} />
       )}
@@ -55,3 +60,6 @@ const ListSupplierPage = () => {
 };
 
 export default ListSupplierPage;
+
+
+

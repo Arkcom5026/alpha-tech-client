@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import PurchaseOrderForm from '../components/PurchaseOrderForm';
 
 const CreatePurchaseOrderPage = () => {
+  const [searchText, setSearchText] = useState('');
+
   return (
     <div className="p-4 space-y-4">
       <div className="flex justify-between items-center">
@@ -15,7 +17,10 @@ const CreatePurchaseOrderPage = () => {
 
       <Card>
         <CardContent className="p-4">
-          <PurchaseOrderForm />
+          <PurchaseOrderForm
+            searchText={searchText}
+            onSearchTextChange={setSearchText}
+          />
         </CardContent>
       </Card>
     </div>

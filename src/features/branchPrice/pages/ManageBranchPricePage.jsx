@@ -30,13 +30,13 @@ const ManageBranchPricePage = () => {
     productTypeId: '',
     productProfileId: '',
     templateId: '',
+    searchText: '',
   });
 
-  const [searchText, setSearchText] = useState('');
   const [committedSearchText, setCommittedSearchText] = useState('');
 
   const [editablePrices, setEditablePrices] = useState({});
-  const [pendingList, setPendingList] = useState([]); // ⬅️ รายการที่รอการยืนยัน
+  const [pendingList, setPendingList] = useState([]); // ⬆️ รายการที่รอการยืนยืน
   const [filteredEntries, setFilteredEntries] = useState([]);
 
   useEffect(() => {
@@ -73,13 +73,6 @@ const ManageBranchPricePage = () => {
       setFilteredEntries(allProductsWithPrice);
     }
   }, [allProductsWithPrice]);
-
-  const handleSearchKeyDown = (e) => {
-    if (e.key === 'Enter') {
-      console.log('🔍 handleSearchKeyDown: committedSearchText =', searchText);
-      setCommittedSearchText(searchText);
-    }
-  };
 
   const handleCommitChanges = () => {
     const updatedItems = Object.entries(editablePrices).map(([productId, prices]) => {
@@ -129,7 +122,7 @@ const ManageBranchPricePage = () => {
           priceOnline: item.priceOnline,
         }));
 
-        console.log('💾 handleSaveAll: กำลังส่งข้อมูลไปอัปเดต →', updates);
+        console.log('📂 handleSaveAll: กำลังส่งข้อมูไปอัปเดต →', updates);
 
         await updateMultipleBranchPricesAction(updates);
         console.log('✅ handleSaveAll: บันทึกสำเร็จ ล้าง pendingList และรีโหลด');
@@ -155,17 +148,14 @@ const ManageBranchPricePage = () => {
       <div className='p-2'>
         <CascadingFilterGroup
           value={filter}
-          onChange={setFilter}
+          onChange={(next) => {
+            setFilter(next);
+            setCommittedSearchText('');
+          }}
           dropdowns={dropdowns}
-        />
-
-        <input
-          type="text"
-          placeholder="ค้นหาด้วยชื่อสินค้า หรือบาร์โค้ด"
-          value={searchText}
-          onChange={(e) => setSearchText(e.target.value)}
-          onKeyDown={handleSearchKeyDown}
-          className="border px-3 py-2 rounded w-full mt-4"
+          searchText={filter.searchText}
+          onSearchTextChange={(text) => setFilter({ ...filter, searchText: text })}
+          onSearchCommit={(text) => setCommittedSearchText(text)}
         />
       </div>
 
@@ -193,11 +183,11 @@ const ManageBranchPricePage = () => {
             onRemove={handleRemoveOne}
           />
           <div className="flex justify-end mt-3">
-          <button className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
-            onClick={handleSaveAll}
-          >
-            บันทึกการเปลี่ยนราคา
-          </button>
+            <button className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+              onClick={handleSaveAll}
+            >
+              บันทึกการเปลี่ยนราคา
+            </button>
           </div>
         </div>
       </div>
@@ -206,5 +196,3 @@ const ManageBranchPricePage = () => {
 };
 
 export default ManageBranchPricePage;
-
-

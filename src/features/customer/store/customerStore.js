@@ -40,15 +40,15 @@ const useCustomerStore = create((set) => ({
     }
   },
 
-  // ✏️ อัปเดตข้อมูลลูกค้า
-  updateCustomerAction: async (id, updatedData) => {        
+  // ✏️ อัปเดตข้อมูลลูกค้า (ใหม่: ไม่มี id แล้ว)
+  updateCustomerProfileAction: async (updatedData) => {
     set({ loading: true, error: null });
     try {
-      const updatedCustomer = await updateCustomer(id, updatedData);
+      const updatedCustomer = await updateCustomer(updatedData); // ✅ ไม่มี id
       set({ customer: updatedCustomer });
       return updatedCustomer;
     } catch (err) {
-      console.error('[updateCustomerAction] ❌', err);
+      console.error('[updateCustomerProfileAction] ❌', err);
       set({ error: 'เกิดข้อผิดพลาดในการอัปเดตลูกค้า' });
       return null;
     } finally {

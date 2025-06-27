@@ -14,6 +14,7 @@ const ProductCardOnline = ({ item }) => {
   const branchId = useBranchStore((state) => state.selectedBranchId);
 
   const name = item.name || 'ไม่พบชื่อสินค้า';
+  const model = item.model || '';
   const description = item.description || '-';
   const imageUrl = item.imageUrl || null;
   const rawPriceOnline = item?.branchPrice?.priceOnline ?? item.priceOnline ?? 0;
@@ -59,8 +60,9 @@ const ProductCardOnline = ({ item }) => {
 
         <div className="flex-1 p-3 text-sm bg-blue-50 flex flex-col justify-start">
           <h3 className="font-semibold text-gray-800 text-sm leading-tight line-clamp-2 min-h-[25px]">
-            {name}
+            {model ? `${name} (${model})` : name}
           </h3>
+          
           <ul className="text-xs text-gray-600 list-disc pl-4 space-y-0.5 break-words max-w-[200px] min-h-[80px]">
             <li className="truncate">{category}</li>
             <li className="truncate">{productType}</li>
@@ -105,11 +107,7 @@ const ProductCardOnline = ({ item }) => {
               </button>
             </div>
 
-
-
           </div>
-
-
         </div>
       </div>
     </motion.div>
@@ -117,5 +115,3 @@ const ProductCardOnline = ({ item }) => {
 };
 
 export default ProductCardOnline;
-
-

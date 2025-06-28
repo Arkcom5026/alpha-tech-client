@@ -7,6 +7,8 @@ import PrintBillPageFullTax from "@/features/bill/pages/PrintBillPageFullTax";
 import ReturnSearchPage from "@/features/saleReturn/pages/ReturnSearchPage";
 import CreateReturnPage from "@/features/saleReturn/pages/CreateReturnPage";
 import SalePage from "@/features/sales/pages/SalePage";
+import QuickSalePage from "@/features/sales/pages/QuickSalePage";
+
 
 // import ReturnListPage from "@/features/saleReturn/pages/ReturnListPage"; // ถ้ายังไม่สร้าง ให้ comment ไว้ก่อน
 
@@ -23,6 +25,8 @@ const salesRoutes = {
       path: 'sale',
       children: [
         { index: true, element: <SalePage /> },
+        { path: 'layout', element: <QuickSalePage /> },
+        
         
       ],
     },

@@ -1,6 +1,6 @@
 // ✅ Store (เพิ่ม return ให้ action + try...catch ครบทุกฟังก์ชัน)
 import { create } from 'zustand';
-import { getCustomerByPhone, createCustomer, updateCustomer } from '../api/customerApi';
+import { getCustomerByPhone, createCustomer, updateCustomer, getCustomerByName } from '../api/customerApi';
 
 const useCustomerStore = create((set) => ({
   customer: null,
@@ -18,6 +18,23 @@ const useCustomerStore = create((set) => ({
     } catch (err) {
       console.error('[searchCustomerByPhoneAction] ❌', err);
       set({ customer: null, error: 'ไม่พบลูกค้า' });
+      return null;
+    } finally {
+      set({ loading: false });
+    }
+  },
+
+  // 🔍 ค้นหาลูกค้าจากชื่อหรือนามสกุล
+  searchCustomerByNameAction: async (name) => {
+    set({ loading: true, error: null });
+    try {
+      const data = await getCustomerByName(name);
+      console.log('-data (by name)- : ', data);
+      set({ customer: data });
+      return data;
+    } catch (err) {
+      console.error('[searchCustomerByNameAction] ❌', err);
+      set({ customer: null, error: 'ไม่พบลูกค้าจากชื่อ' });
       return null;
     } finally {
       set({ loading: false });

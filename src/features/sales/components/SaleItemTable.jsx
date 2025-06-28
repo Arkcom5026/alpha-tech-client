@@ -1,16 +1,17 @@
 // 📁 FILE: pages/pos/sales/QuickSalePage.jsx
-// ✅ COMMENT: เพิ่ม callback onChangeItems ให้ส่ง localItems กลับขึ้น QuickSalePage เมื่อมีการเปลี่ยน
+// ✅ COMMENT: เพิ่ม callback onChangeItems ให้ส่ง localItems กลับขึ้น QuickSalePage เมื่อมีการเปลี่ยน และเปลี่ยน key จาก barcodeId → stockItemId
 
 import React, { useState, useEffect } from 'react';
 import useSalesStore from '@/features/sales/store/salesStore';
 
 const SaleItemTable = ({ items = [], onRemove, billDiscount = 0, onChangeItems }) => {
   const [localItems, setLocalItems] = useState(items);
+  const { sharedBillDiscountPerItem, setSharedBillDiscountPerItem } = useSalesStore();
 
   useEffect(() => {
     setLocalItems((prev) => {
       const merged = items.map((item) => {
-        const existing = prev.find((p) => p.barcodeId === item.barcodeId);
+        const existing = prev.find((p) => p.stockItemId === item.stockItemId);
         return {
           ...item,
           discount: existing?.discount ?? 0,
@@ -24,14 +25,18 @@ const SaleItemTable = ({ items = [], onRemove, billDiscount = 0, onChangeItems }
   useEffect(() => {
     const timeout = setTimeout(() => {
       if (!Array.isArray(localItems) || localItems.length === 0) return;
-      const total = localItems.reduce((sum, item) => sum + item.price, 0);
+      const total = localItems.reduce((sum, item) => sum + (typeof item.price === 'number' ? item.price : 0), 0);
       if (total === 0) return;
 
       const updated = localItems.map((item) => {
-        const ratio = item.price / total;
+        const safePrice = typeof item.price === 'number' ? item.price : 0;
+        const ratio = safePrice / total;
         const share = billDiscount > 0 ? Math.round(billDiscount * ratio) : 0;
         return { ...item, billShare: share };
       });
+
+      const sharedPerItem = Math.floor(billDiscount / localItems.length);
+      setSharedBillDiscountPerItem(sharedPerItem);
 
       if (JSON.stringify(localItems) !== JSON.stringify(updated)) {
         setLocalItems(updated);
@@ -49,7 +54,7 @@ const SaleItemTable = ({ items = [], onRemove, billDiscount = 0, onChangeItems }
 
   const handleDiscountChange = (itemId, value) => {
     const updated = localItems.map((item) => {
-      if (item.barcodeId === itemId) {
+      if (item.stockItemId === itemId) {
         const discount = isNaN(value) ? 0 : value;
         return { ...item, discount };
       }
@@ -65,6 +70,7 @@ const SaleItemTable = ({ items = [], onRemove, billDiscount = 0, onChangeItems }
           <tr>
             <th className="p-2 border">ลำดับ</th>
             <th className="p-2 border">ชื่อสินค้า</th>
+            <th className="p-2 border">รุ่น</th>
             <th className="p-2 border">บาร์โค้ด</th>
             <th className="p-2 border">ราคา</th>
             <th className="p-2 border">ส่วนลด</th>
@@ -75,7 +81,7 @@ const SaleItemTable = ({ items = [], onRemove, billDiscount = 0, onChangeItems }
         </thead>
         <tbody>
           <tr>
-            <td colSpan="8" className="p-4 text-center text-gray-500">
+            <td colSpan="9" className="p-4 text-center text-gray-500">
               ยังไม่มีสินค้าที่จะขาย
             </td>
           </tr>
@@ -90,10 +96,11 @@ const SaleItemTable = ({ items = [], onRemove, billDiscount = 0, onChangeItems }
         <tr>
           <th className="p-2 border">ลำดับ</th>
           <th className="p-2 border">ชื่อสินค้า</th>
+          <th className="p-2 border">รุ่น</th>
           <th className="p-2 border">บาร์โค้ด</th>
           <th className="p-2 border">ราคา</th>
           <th className="p-2 border">ส่วนลด</th>
-          <th className="p-2 border">ส่วนลดท้ายบิล</th>
+          <th className="p-2 border">ลดท้ายบิล</th>
           <th className="p-2 border">สุทธิ</th>
           <th className="p-2 border">จัดการ</th>
         </tr>
@@ -101,29 +108,30 @@ const SaleItemTable = ({ items = [], onRemove, billDiscount = 0, onChangeItems }
       <tbody>
         {localItems.map((item, index) => {
           const discount = item.discount || 0;
-          const billShare = item.billShare || 0;
-          const net = Math.max(0, item.price - discount - billShare);
+          const billShare = item.billShare || sharedBillDiscountPerItem || 0;
+          const safePrice = typeof item.price === 'number' ? item.price : 0;
+          const net = safePrice - discount - billShare;
           return (
-            <tr key={item.barcodeId}>
-              <td className="p-2 border">{index + 1}</td>
-              <td className="p-2 border">{item.productName}</td>
-              <td className="p-2 border">{item.barcode}</td>
-              <td className="p-2 border">{item.price.toFixed(2)}</td>
-              <td className="p-2 border">
+            <tr key={item.stockItemId}>
+              <td className="p-2 border  min-w-[40px]">{index + 1}</td>
+              <td className="p-2 border min-w-[130px]">{item.productName}</td>
+              <td className="p-2 border min-w-[130px]">{item.model}</td>
+              <td className="p-2 border min-w-[100px]">{item.barcode}</td>
+              <td className="p-2 border min-w-[80px]">{safePrice.toFixed(2)}</td>
+              <td className="p-2 border min-w-[80px]">
                 <input
                   type="number"
-                  min="0"
-                  className="w-24 px-2 py-1 border rounded text-right"
+                  className={`w-20 px-2 py-1 border rounded text-right ${discount < 0 ? 'text-red-600' : ''}`}
                   value={discount}
-                  onChange={(e) => handleDiscountChange(item.barcodeId, parseFloat(e.target.value))}
+                  onChange={(e) => handleDiscountChange(item.stockItemId, parseFloat(e.target.value))}
                 />
               </td>
-              <td className="p-2 border text-right">{billShare.toLocaleString()}</td>
-              <td className="p-2 border text-right">{net.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-              <td className="p-2 border">
+              <td className="p-2  border text-right min-w-[40px] ">{billShare.toLocaleString()}</td>
+              <td className="p-2 border text-right min-w-[80px]">{net.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+              <td className="p-2 border ">
                 <button
-                  className="text-red-500 hover:underline"
-                  onClick={() => onRemove(item.barcodeId)}
+                  className="text-red-500 hover:underline  "
+                  onClick={() => onRemove(item.stockItemId)}
                 >
                   ลบ
                 </button>

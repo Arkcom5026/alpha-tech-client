@@ -1,43 +1,69 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Trash2 } from 'lucide-react';
-import useSaleStore from '@/features/bill/store/saleStore';
+import useSalesStore from '@/features/sales/store/salesStore';
 import useCustomerStore from '@/features/customer/store/customerStore';
+import useStockItemStore from '@/features/stockItem/store/stockItemStore';
+
 import CustomerSection from '../components/CustomerSection';
 import PaymentSection from '../components/PaymentSection';
+import SaleItemTable from '../components/SaleItemTable';
+
 
 const QuickSaleLayout = () => {
   const barcodeInputRef = useRef(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedPriceType, setSelectedPriceType] = useState('retail');
 
   const {
     saleItems,
     addSaleItemAction,
-    searchStockItemAction,
-    confirmSaleAction,
-  } = useSaleStore();
+    removeSaleItemAction,
+    confirmSaleOrderAction,
+  } = useSalesStore();
 
-  const {
-    customer,
-  } = useCustomerStore();
+  const { searchStockItemAction } = useStockItemStore();
+  const { customer } = useCustomerStore();
 
-  const netTotal = Array.isArray(saleItems) ? saleItems.reduce((sum, item) => sum + item.price, 0) : 0;
+  const netTotalRaw = Array.isArray(saleItems)
+    ? saleItems.reduce((sum, item) => sum + ((item.price || 0) - (item.discount || 0) - (item.billShare || 0)), 0)
+    : 0;
+  const netTotal = typeof netTotalRaw === 'number' && !isNaN(netTotalRaw) ? netTotalRaw : 0;
 
   useEffect(() => {
     barcodeInputRef.current?.focus();
   }, []);
+
+  useEffect(() => {
+    if (customer?.priceLevel) {
+      setSelectedPriceType(customer.priceLevel);
+    }
+  }, [customer]);
 
   const handleBarcodeSearch = async (e) => {
     if (e.key === 'Enter') {
       const barcode = e.target.value.trim();
       if (!barcode) return;
       try {
-        const foundItem = await searchStockItemAction(barcode);
+        const results = await searchStockItemAction(barcode);
+        console.log('📦 ผลลัพธ์จาก searchStockItemAction:', results);
+        const foundItem = Array.isArray(results) ? results[0] : results;
         if (foundItem) {
-          addSaleItemAction(foundItem);
+          const preparedItem = {
+            barcode: foundItem.barcode,
+            productName: foundItem.product?.name || '',
+            model: foundItem.product?.model || '',
+            price: foundItem.prices?.[selectedPriceType] || 0,
+            stockItemId: foundItem.id,
+            discount: 0,
+            billShare: 0,
+          };
+          console.log('✅ กำลังเพิ่มสินค้าเข้าสู่รายการขาย:', preparedItem);
+          addSaleItemAction(preparedItem);
+        } else {
+          console.warn('⚠️ ไม่พบสินค้าในระบบสำหรับบาร์โค้ด:', barcode);
         }
         e.target.value = '';
       } catch (error) {
-        console.error('ค้นหาสินค้าไม่สำเร็จ:', error);
+        console.error('❌ ค้นหาสินค้าไม่สำเร็จ:', error);
       }
     }
   };
@@ -46,7 +72,7 @@ const QuickSaleLayout = () => {
     if (!customer || saleItems.length === 0 || isSubmitting) return;
     try {
       setIsSubmitting(true);
-      await confirmSaleAction();
+      await confirmSaleOrderAction();
       // TODO: แสดงข้อความสำเร็จ / redirect หรือ reset
     } catch (err) {
       console.error('❌ ยืนยันการขายล้มเหลว:', err);
@@ -56,11 +82,22 @@ const QuickSaleLayout = () => {
   };
 
   return (
-    <div className="p-4 grid grid-cols-12 gap-4 bg-gray-50 min-h-screen">
+    // <div className="p-4 grid grid-cols-12 gap-4 bg-gray-50 min-h-screen">
+    <div className="p-4 bg-white rounded-xl shadow-lg mt-4 min-w-[1600px]">
+    <div className="bg-blue-100 p-4 rounded-xl shadow  flex flex-col-2 gap-4 min-w-[600px]">
+      {/* ด้านซ้าย: ลูกค้า */}              
+          <CustomerSection />      
+
       {/* ด้านขวา: รายการสินค้า */}
-      <div className="col-span-12 lg:col-span-8 space-y-4">
+      <div className="col-span-12 lg:col-span-8 space-y-4  ">
         {/* ช่องสแกนบาร์โค้ด */}
-        <div className="bg-white p-4 rounded-xl shadow">
+        <div className="bg-white p-4 rounded-xl shadow ">
+        <h2 className="text-lg font-bold text-black">เลือกราคาขาย:</h2>         
+          <div className="mb-2 flex gap-4  min-w-[1100px]">                                    
+            <label><input type="radio" value="wholesale" checked={selectedPriceType === 'wholesale'} onChange={(e) => setSelectedPriceType(e.target.value)} /> ราคาส่ง</label>
+            <label><input type="radio" value="technician" checked={selectedPriceType === 'technician'} onChange={(e) => setSelectedPriceType(e.target.value)} /> ราคาช่าง</label>
+            <label><input type="radio" value="retail" checked={selectedPriceType === 'retail'} onChange={(e) => setSelectedPriceType(e.target.value)} /> ราคาปลีก</label>
+          </div>
           <input
             ref={barcodeInputRef}
             type="text"
@@ -71,51 +108,25 @@ const QuickSaleLayout = () => {
         </div>
 
         {/* รายการสินค้า */}
-        <div className="bg-white p-4 rounded-xl shadow">
+        <div className="bg-white p-4 rounded-xl shadow min-h-[390px]">
           <h2 className="text-lg font-semibold mb-2">รายการสินค้า</h2>
           <div className="overflow-x-auto">
-            <table className="table-auto w-full text-left border-t">
-              <thead>
-                <tr>
-                  <th className="px-2 py-1">ลำดับ</th>
-                  <th className="px-2 py-1">ชื่อสินค้า</th>
-                  <th className="px-2 py-1">บาร์โค้ด</th>
-                  <th className="px-2 py-1">ราคา</th>
-                  <th className="px-2 py-1">ลบ</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(Array.isArray(saleItems) ? saleItems : []).map((item, index) => (
-                  <tr key={item.id}>
-                    <td className="px-2 py-1">{index + 1}</td>
-                    <td className="px-2 py-1">{item.name}</td>
-                    <td className="px-2 py-1">{item.barcode}</td>
-                    <td className="px-2 py-1">{item.price} ฿</td>
-                    <td className="px-2 py-1">
-                      <button className="text-red-600"><Trash2 size={16} /></button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <SaleItemTable
+              items={saleItems}
+              onRemove={removeSaleItemAction}
+            />
           </div>
         </div>
-
-        {/* สรุปการขาย */}
-        <div className="bg-white p-4 rounded-xl shadow">
-          <h2 className="text-lg font-semibold mb-2">สรุปการขาย</h2>
-          <p>ภาษี VAT (7%): <strong>0 ฿</strong></p>
-          <p>ยอดสุทธิ (Net): <strong>{netTotal} ฿</strong></p>
-          <p className="text-green-600 text-xl mt-2 bg-green-100 p-2 rounded">
-            ยอดที่ต้องชำระ: <strong>{netTotal} ฿</strong>
-          </p>
-        </div>
       </div>
+    </div>
 
-      {/* ด้านซ้าย: ลูกค้าและชำระเงิน */}
-      <div className="col-span-12 lg:col-span-4 space-y-4">
-        <CustomerSection />
-        <PaymentSection netTotal={netTotal} onConfirm={handleConfirmSale} isSubmitting={isSubmitting} />
+      {/* PaymentSection เต็มจอ */}
+      <div className="col-span-12 py-4">
+        <PaymentSection
+          netTotal={netTotal}
+          onConfirm={handleConfirmSale}
+          isSubmitting={isSubmitting}
+        />
       </div>
     </div>
   );

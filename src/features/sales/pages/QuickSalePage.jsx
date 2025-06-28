@@ -90,7 +90,7 @@ const QuickSalePage = () => {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const [slipImage, setSlipImage] = useState(null);
-const [skipSlip, setSkipSlip] = useState(false);
+  const [skipSlip, setSkipSlip] = useState(false);
   const [govImage, setGovImage] = useState(null);
 
   const {
@@ -227,9 +227,9 @@ const [skipSlip, setSkipSlip] = useState(false);
       return;
     }
     if (paymentList.some((p) => p.method === 'TRANSFER') && !slipImage && !skipSlip) {
-    setFormError('กรุณาถ่ายภาพสลิปก่อนยืนยันการขาย หรือเลือกข้ามการแนบสลิป');
-    return;
-  }
+      setFormError('กรุณาถ่ายภาพสลิปก่อนยืนยันการขาย หรือเลือกข้ามการแนบสลิป');
+      return;
+    }
     if (paymentList.some((p) => p.method === 'CREDIT') && (!cardRef || cardRef.length < 15)) {
       setFormError('กรุณากรอกเลขอ้างอิงการชำระเงินด้วยบัตรเครดิต (อย่างน้อย 15 หลัก)');
       return;
@@ -370,20 +370,20 @@ const [skipSlip, setSkipSlip] = useState(false);
   }, [customer]);
 
   const isConfirmEnabled = (() => {
-  if (!liveItems.length) return false;
+    if (!liveItems.length) return false;
 
-  const cash = paymentList.find(p => p.method === 'CASH');
-  const transfer = paymentList.find(p => p.method === 'TRANSFER');
-  const credit = paymentList.find(p => p.method === 'CREDIT');
-  const government = paymentList.find(p => p.method === 'GOVERNMENT');
+    const cash = paymentList.find(p => p.method === 'CASH');
+    const transfer = paymentList.find(p => p.method === 'TRANSFER');
+    const credit = paymentList.find(p => p.method === 'CREDIT');
+    const government = paymentList.find(p => p.method === 'GOVERNMENT');
 
-  if (cash) return receivedAmount >= finalPrice;
-  if (transfer) return !!slipImage || skipSlip;
-  if (credit) return !!cardRef && cardRef.length >= 15;
-  if (government) return true;
+    if (cash) return receivedAmount >= finalPrice;
+    if (transfer) return !!slipImage || skipSlip;
+    if (credit) return !!cardRef && cardRef.length >= 15;
+    if (government) return true;
 
-  return false;
-})();
+    return false;
+  })();
 
   const renderGovernmentCapture = () => (
     <div className="pt-4 space-y-4 border p-4 rounded bg-white shadow">
@@ -442,123 +442,123 @@ const [skipSlip, setSkipSlip] = useState(false);
 
       <h1 className="text-2xl font-bold text-center md:text-left mb-1">ขายสินค้า</h1>
 
-        {/* เบอร์โทร + ตรวจสอบลูกค้า */}
-        <h2 className="text-lg font-semibold text-gray-700">ข้อมูลลูกค้า</h2>
-        <div className="flex flex-col md:flex-row items-start md:items-center gap-3 md:gap-4">
-          <div className="w-full md:w-64">
-            <InputMask mask="099-999-9999" value={phone} onChange={(e) => setPhone(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleVerifyPhone()}>
-              {(inputProps) => (
-                <input
-                  {...inputProps}
-                  ref={phoneInputRef}
-                  type="tel"
-                  placeholder="เบอร์โทรลูกค้า (0xx-xxx-xxxx)"
-                  className="border rounded px-3 py-2 w-full"
-                />
-              )}
-            </InputMask>
-          </div>
-
-          <button
-            onClick={handleVerifyPhone}
-            disabled={customerLoading || !/^[0-9]{10}$/.test(rawPhone)}
-            className="w-full md:w-auto px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
-          >
-            {customerLoading ? 'กำลังตรวจสอบ...' : 'ยืนยันเบอร์ลูกค้า'}
-          </button>
-
-
+      {/* เบอร์โทร + ตรวจสอบลูกค้า */}
+      <h2 className="text-lg font-semibold text-gray-700">ข้อมูลลูกค้า</h2>
+      <div className="flex flex-col md:flex-row items-start md:items-center gap-3 md:gap-4">
+        <div className="w-full md:w-64">
+          <InputMask mask="099-999-9999" value={phone} onChange={(e) => setPhone(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleVerifyPhone()}>
+            {(inputProps) => (
+              <input
+                {...inputProps}
+                ref={phoneInputRef}
+                type="tel"
+                placeholder="เบอร์โทรลูกค้า (0xx-xxx-xxxx)"
+                className="border rounded px-3 py-2 w-full"
+              />
+            )}
+          </InputMask>
         </div>
 
-        {formError && (
-          <div className="bg-red-100 text-red-700 border border-red-300 px-4 py-2 rounded text-sm">⚠️ {formError}</div>
-        )}
+        <button
+          onClick={handleVerifyPhone}
+          disabled={customerLoading || !/^[0-9]{10}$/.test(rawPhone)}
+          className="w-full md:w-auto px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+        >
+          {customerLoading ? 'กำลังตรวจสอบ...' : 'ยืนยันเบอร์ลูกค้า'}
+        </button>
 
-        {(pendingPhone || customer?.id) && (
-          <div className="mt-2 text-sm text-yellow-700 bg-yellow-100 border border-yellow-300 rounded px-3 py-2 space-y-3">
-            <p>📋 <strong>รายละเอียดลูกค้า</strong></p>
-            {customer?.id ? null : <p>เบอร์: <strong>{phone}</strong> ถูกต้องใช่ไหม?</p>}
 
-            <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-              <div className="col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">ประเภทลูกค้า:</label>
-                <div className="flex gap-4 text-sm">
-                  <label>
-                    <input
-                      type="radio"
-                      name="customerType"
-                      value="บุคคลทั่วไป"
-                      className="mr-1"
-                      checked={customerType === 'บุคคลทั่วไป'}
-                      onChange={() => setCustomerType('บุคคลทั่วไป')}
-                    /> บุคคลทั่วไป
-                  </label>
-                  <label>
-                    <input
-                      type="radio"
-                      name="customerType"
-                      value="นิติบุคคล"
-                      className="mr-1"
-                      checked={customerType === 'นิติบุคคล'}
-                      onChange={() => setCustomerType('นิติบุคคล')}
-                    /> นิติบุคคล
-                  </label>
-                </div>
+      </div>
+
+      {formError && (
+        <div className="bg-red-100 text-red-700 border border-red-300 px-4 py-2 rounded text-sm">⚠️ {formError}</div>
+      )}
+
+      {(pendingPhone || customer?.id) && (
+        <div className="mt-2 text-sm text-yellow-700 bg-yellow-100 border border-yellow-300 rounded px-3 py-2 space-y-3">
+          <p>📋 <strong>รายละเอียดลูกค้า</strong></p>
+          {customer?.id ? null : <p>เบอร์: <strong>{phone}</strong> ถูกต้องใช่ไหม?</p>}
+
+          <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+            <div className="col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">ประเภทลูกค้า:</label>
+              <div className="flex gap-4 text-sm">
+                <label>
+                  <input
+                    type="radio"
+                    name="customerType"
+                    value="บุคคลทั่วไป"
+                    className="mr-1"
+                    checked={customerType === 'บุคคลทั่วไป'}
+                    onChange={() => setCustomerType('บุคคลทั่วไป')}
+                  /> บุคคลทั่วไป
+                </label>
+                <label>
+                  <input
+                    type="radio"
+                    name="customerType"
+                    value="นิติบุคคล"
+                    className="mr-1"
+                    checked={customerType === 'นิติบุคคล'}
+                    onChange={() => setCustomerType('นิติบุคคล')}
+                  /> นิติบุคคล
+                </label>
               </div>
-              {customerType === 'นิติบุคคล' && (
-                <>
-                  <input
-                    type="text"
-                    placeholder="ชื่อบริษัท / หน่วยงาน"
-                    className="border px-2 py-1 rounded col-span-2"
-                  />
-                  <input
-                    type="text"
-                    placeholder="เลขผู้เสียภาษี (ถ้ามี)"
-                    className="border px-2 py-1 rounded col-span-2"
-                  />
-                </>
-              )}
-              <input type="text" placeholder="ชื่อ" value={name} onChange={(e) => setName(e.target.value)} className="border px-2 py-1 rounded" />
-
-              <input type="email" placeholder="อีเมล (ถ้ามี)" value={email} onChange={(e) => setEmail(e.target.value)} className="border px-2 py-1 rounded col-span-2" />
-              {!email && (
-                <p className="text-xs text-gray-500 italic col-span-2">
-                  * ลูกค้ารายนี้ยังไม่มีอีเมลในระบบ
-                </p>
-              )}
-              <textarea placeholder="ที่อยู่ (ถ้ามี)" value={address} onChange={(e) => setAddress(e.target.value)} className="border px-2 py-1 rounded col-span-2" />
             </div>
+            {customerType === 'นิติบุคคล' && (
+              <>
+                <input
+                  type="text"
+                  placeholder="ชื่อบริษัท / หน่วยงาน"
+                  className="border px-2 py-1 rounded col-span-2"
+                />
+                <input
+                  type="text"
+                  placeholder="เลขผู้เสียภาษี (ถ้ามี)"
+                  className="border px-2 py-1 rounded col-span-2"
+                />
+              </>
+            )}
+            <input type="text" placeholder="ชื่อ" value={name} onChange={(e) => setName(e.target.value)} className="border px-2 py-1 rounded" />
 
-            <div className="pt-2 flex gap-3">
-              {customer?.id ? (
-                <button
-                  onClick={handleUpdateCustomer}
-                  disabled={!isModified}
-                  className={`px-4 py-1 text-white rounded hover:bg-blue-700 ${isModified ? 'bg-blue-500' : 'bg-gray-400 cursor-not-allowed'
-                    }`}
-                >
-                  อัปเดตข้อมูล
-                </button>
-              ) : (
-                <div className="flex gap-3">
-                  <button
-                    onClick={handleConfirmCreateCustomer}
-                    className="px-4 py-1 bg-green-600 text-white rounded hover:bg-green-700"
-                  >
-                    ➕ บันทึกลูกค้าใหม่
-                  </button>
-                  <button
-                    onClick={handleCancelCreateCustomer}
-                    className="px-4 py-1 bg-gray-500 text-white rounded hover:bg-gray-600"
-                  >
-                    ยกเลิก
-                  </button>
-                </div>
-              )}
-            </div>
+            <input type="email" placeholder="อีเมล (ถ้ามี)" value={email} onChange={(e) => setEmail(e.target.value)} className="border px-2 py-1 rounded col-span-2" />
+            {!email && (
+              <p className="text-xs text-gray-500 italic col-span-2">
+                * ลูกค้ารายนี้ยังไม่มีอีเมลในระบบ
+              </p>
+            )}
+            <textarea placeholder="ที่อยู่ (ถ้ามี)" value={address} onChange={(e) => setAddress(e.target.value)} className="border px-2 py-1 rounded col-span-2" />
           </div>
-        )}
+
+          <div className="pt-2 flex gap-3">
+            {customer?.id ? (
+              <button
+                onClick={handleUpdateCustomer}
+                disabled={!isModified}
+                className={`px-4 py-1 text-white rounded hover:bg-blue-700 ${isModified ? 'bg-blue-500' : 'bg-gray-400 cursor-not-allowed'
+                  }`}
+              >
+                อัปเดตข้อมูล
+              </button>
+            ) : (
+              <div className="flex gap-3">
+                <button
+                  onClick={handleConfirmCreateCustomer}
+                  className="px-4 py-1 bg-green-600 text-white rounded hover:bg-green-700"
+                >
+                  ➕ บันทึกลูกค้าใหม่
+                </button>
+                <button
+                  onClick={handleCancelCreateCustomer}
+                  className="px-4 py-1 bg-gray-500 text-white rounded hover:bg-gray-600"
+                >
+                  ยกเลิก
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       <h2 className="text-lg font-semibold text-gray-700 mt-6">รายการสินค้า</h2>
       <div className="flex items-center gap-4">
@@ -583,6 +583,7 @@ const [skipSlip, setSkipSlip] = useState(false);
 
 
       <h2 className="text-lg font-semibold text-gray-700 mt-6">การชำระเงิน</h2>
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
         <div className="bg-gray-50 border rounded shadow-sm p-4 space-y-3 text-base">
           <div className="grid grid-cols-[auto_1fr] gap-x-3 items-center">
@@ -723,13 +724,13 @@ const [skipSlip, setSkipSlip] = useState(false);
 
 
             <div className="mt-2 text-sm text-gray-700">
-  <label className="inline-flex items-center">
-    <input type="checkbox" checked={skipSlip} onChange={() => setSkipSlip(!skipSlip)} className="mr-2" />
-      ไม่ถ่ายภาพสลิป
-  </label>
-</div>
+              <label className="inline-flex items-center">
+                <input type="checkbox" checked={skipSlip} onChange={() => setSkipSlip(!skipSlip)} className="mr-2" />
+                ไม่ถ่ายภาพสลิป
+              </label>
+            </div>
 
-{/* ✅ Input reference number for credit card */}
+            {/* ✅ Input reference number for credit card */}
             {paymentList.some(p => p.method === 'CREDIT') && (
               <div className="mt-2 space-y-2">
                 <label className="block text-sm font-medium text-gray-700">ยอดบัตรเครดิต:</label>
@@ -799,7 +800,6 @@ const [skipSlip, setSkipSlip] = useState(false);
 };
 
 export default QuickSalePage;
-
 
 
 

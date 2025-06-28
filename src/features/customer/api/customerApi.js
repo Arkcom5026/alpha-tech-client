@@ -33,3 +33,15 @@ export const updateCustomer = async (data) => {
   }
 };
 
+// 🔍 ค้นหาลูกค้าด้วยชื่อหรือนามสกุล
+export const getCustomerByName = async (keyword) => {
+  try {
+    const res = await apiClient.get(`/customers/by-name`, {
+      params: { q: keyword }
+    });
+    return res.data;
+  } catch (error) {
+    console.error('❌ [getCustomerByName] error:', error);
+    throw error;
+  }
+};

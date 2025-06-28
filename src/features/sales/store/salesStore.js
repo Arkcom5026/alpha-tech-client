@@ -2,8 +2,6 @@
 
 import { create } from 'zustand';
 import { createSaleOrder, getAllSales, getSaleById, returnSale, updateCustomer } from '../api/saleApi';
-
-import { searchStockItem } from '@/features/stockItem/api/stockItemApi';
 import { markSaleAsPaid } from '../api/saleApi';
 
 const useSalesStore = create((set, get) => ({
@@ -12,26 +10,87 @@ const useSalesStore = create((set, get) => ({
   sales: [],
   currentSale: null,
 
-  addSaleItemAction: (item) => {
-    set((state) => ({ saleItems: [...state.saleItems, item] }));
+  // 💵 การรับชำระเงิน
+  paymentList: [
+    { method: 'CASH', amount: 0 },
+    { method: 'TRANSFER', amount: 0 },
+    { method: 'CREDIT', amount: 0 },
+  ],
+  cardRef: '',
+  billDiscount: 0,
+  sharedBillDiscountPerItem: 0,
+
+  setPaymentAmount: (method, amount) => {
+    set((state) => ({
+      paymentList: state.paymentList.map((p) =>
+        p.method === method ? { ...p, amount: Number(amount) || 0 } : p
+      ),
+    }));
   },
 
-  removeSaleItemAction: (barcode) => {
-    set((state) => ({ saleItems: state.saleItems.filter(i => i.barcode !== barcode) }));
+  setBillDiscount: (amount) => {
+    const discount = Number(amount) || 0;
+    const { saleItems } = get();
+    const totalPrice = saleItems.reduce((sum, i) => sum + i.price, 0);
+
+    const newItems = saleItems.map((item) => {
+      const ratio = item.price / totalPrice;
+      const proportionalDiscount = Math.round(discount * ratio);
+      return {
+        ...item,
+        discount: proportionalDiscount,
+      };
+    });
+
+    const shared = saleItems.length > 0 ? Math.floor(discount / saleItems.length) : 0;
+
+    set({ billDiscount: discount, saleItems: newItems, sharedBillDiscountPerItem: shared });
+  },
+
+  setSharedBillDiscountPerItem: () => {
+    const { billDiscount, saleItems } = get();
+    const shared = saleItems.length > 0 ? Math.floor(billDiscount / saleItems.length) : 0;
+    set({ sharedBillDiscountPerItem: shared });
+  },
+
+  sumPaymentList: () => {
+    const list = get().paymentList || [];
+    return list.reduce((sum, p) => sum + Number(p.amount || 0), 0);
+  },
+
+  finalPrice: () => {
+    const base = get().saleItems.reduce((sum, i) => sum + i.price - (i.discount ?? 0), 0);
+    return Math.max(base - (get().billDiscount || 0), 0);
+  },
+
+  receivedAmount: () => {
+    return get().sumPaymentList();
+  },
+
+  changeAmount: () => {
+    const totalPaid = get().sumPaymentList();
+    const final = get().finalPrice();
+    return Math.max(totalPaid - final, 0);
+  },
+
+  setCardRef: (val) => set({ cardRef: val }),
+
+  addSaleItemAction: (item) => {
+    set((state) => {
+      const exists = state.saleItems.some((i) => i.stockItemId === item.stockItemId);
+      if (exists) return state;
+      return { saleItems: [...state.saleItems, item] };
+    });
+  },
+
+  removeSaleItemAction: (stockItemId) => {
+    set((state) => ({
+      saleItems: state.saleItems.filter((i) => i.stockItemId !== stockItemId),
+    }));
   },
 
   clearSaleItemsAction: () => {
     set({ saleItems: [], customerId: null });
-  },
-
-  updateCustomerProfileAction: async (data) => {
-    try {
-      const updated = await updateCustomer(data);
-      return updated;
-    } catch (err) {
-      console.error('❌ [updateCustomerProfileAction]', err);
-      return null;
-    }
   },
 
   markSalePaidAction: async (saleId) => {
@@ -89,30 +148,6 @@ const useSalesStore = create((set, get) => ({
     }
   },
 
-  searchStockItemAction: async (barcode) => {
-    try {
-      const results = await searchStockItem(barcode);
-      const stockItem = results[0];
-      if (!stockItem) return null;
-
-      return {
-        barcode: stockItem.barcode,
-        barcodeId: stockItem.id,
-        productName: stockItem.product?.name || 'ไม่พบชื่อสินค้า',
-        price: stockItem.sellPrice ?? 0,
-        productId: stockItem.productId,
-        stockItemId: stockItem.id,
-        status: stockItem.status,
-        categoryId: stockItem.product?.categoryId ?? null,
-        templateId: stockItem.product?.templateId ?? null,
-        warrantyDays: stockItem.warrantyDays ?? null,
-      };
-    } catch (err) {
-      console.error('[searchStockItemAction]', err);
-      return null;
-    }
-  },
-
   loadSalesAction: async () => {
     try {
       const data = await getAllSales();
@@ -140,7 +175,6 @@ const useSalesStore = create((set, get) => ({
       return { error: 'เกิดข้อผิดพลาดในการคืนสินค้า' };
     }
   },
-
 }));
 
 export default useSalesStore;

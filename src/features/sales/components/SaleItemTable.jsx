@@ -1,12 +1,16 @@
-// 📁 FILE: pages/pos/sales/QuickSalePage.jsx
-// ✅ COMMENT: เพิ่ม callback onChangeItems ให้ส่ง localItems กลับขึ้น QuickSalePage เมื่อมีการเปลี่ยน และเปลี่ยน key จาก barcodeId → stockItemId
+
+// 📁 FILE: components/SaleItemTable.jsx
 
 import React, { useState, useEffect } from 'react';
 import useSalesStore from '@/features/sales/store/salesStore';
 
-const SaleItemTable = ({ items = [], onRemove, billDiscount = 0, onChangeItems }) => {
+const SaleItemTable = ({ items = [], onRemove, billDiscount = 0 }) => {
   const [localItems, setLocalItems] = useState(items);
-  const { sharedBillDiscountPerItem, setSharedBillDiscountPerItem } = useSalesStore();
+  const {
+    sharedBillDiscountPerItem,
+    setSharedBillDiscountPerItem,
+    updateSaleItemAction,
+  } = useSalesStore();
 
   useEffect(() => {
     setLocalItems((prev) => {
@@ -46,17 +50,16 @@ const SaleItemTable = ({ items = [], onRemove, billDiscount = 0, onChangeItems }
     return () => clearTimeout(timeout);
   }, [billDiscount, localItems]);
 
-  useEffect(() => {
-    if (typeof onChangeItems === 'function') {
-      onChangeItems(localItems);
-    }
-  }, [localItems, onChangeItems]);
-
   const handleDiscountChange = (itemId, value) => {
     const updated = localItems.map((item) => {
       if (item.stockItemId === itemId) {
-        const discount = isNaN(value) ? 0 : value;
-        return { ...item, discount };
+        const discountWithoutBill = isNaN(value) ? 0 : value;
+        const newDiscount = discountWithoutBill + (item.billShare || 0);
+        updateSaleItemAction(itemId, {
+          discountWithoutBill,
+          discount: newDiscount,
+        });
+        return { ...item, discountWithoutBill, discount: newDiscount };
       }
       return item;
     });
@@ -108,31 +111,29 @@ const SaleItemTable = ({ items = [], onRemove, billDiscount = 0, onChangeItems }
       <tbody>
         {localItems.map((item, index) => {
           const discount = item.discount || 0;
+          const discountWithoutBill = item.discountWithoutBill || 0;
           const billShare = item.billShare || sharedBillDiscountPerItem || 0;
           const safePrice = typeof item.price === 'number' ? item.price : 0;
-          const net = safePrice - discount - billShare;
+          const net = safePrice - discount;
           return (
             <tr key={item.stockItemId}>
-              <td className="p-2 border  min-w-[40px]">{index + 1}</td>
-              <td className="p-2 border min-w-[130px]">{item.productName}</td>
-              <td className="p-2 border min-w-[130px]">{item.model}</td>
-              <td className="p-2 border min-w-[100px]">{item.barcode}</td>
-              <td className="p-2 border min-w-[80px]">{safePrice.toFixed(2)}</td>
-              <td className="p-2 border min-w-[80px]">
+              <td className="p-2 border">{index + 1}</td>
+              <td className="p-2 border">{item.productName}</td>
+              <td className="p-2 border">{item.model}</td>
+              <td className="p-2 border">{item.barcode}</td>
+              <td className="p-2 border">{safePrice.toFixed(2)}</td>
+              <td className="p-2 border">
                 <input
                   type="number"
-                  className={`w-20 px-2 py-1 border rounded text-right ${discount < 0 ? 'text-red-600' : ''}`}
-                  value={discount}
+                  className="w-20 px-2 py-1 border rounded text-right"
+                  value={discountWithoutBill}
                   onChange={(e) => handleDiscountChange(item.stockItemId, parseFloat(e.target.value))}
                 />
               </td>
-              <td className="p-2  border text-right min-w-[40px] ">{billShare.toLocaleString()}</td>
-              <td className="p-2 border text-right min-w-[80px]">{net.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-              <td className="p-2 border ">
-                <button
-                  className="text-red-500 hover:underline  "
-                  onClick={() => onRemove(item.stockItemId)}
-                >
+              <td className="p-2 border text-right">{billShare.toLocaleString()}</td>
+              <td className="p-2 border text-right">{net.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+              <td className="p-2 border">
+                <button className="text-red-500 hover:underline" onClick={() => onRemove(item.stockItemId)}>
                   ลบ
                 </button>
               </td>

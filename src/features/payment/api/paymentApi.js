@@ -25,6 +25,23 @@ export const submitPayments = async (paymentArray) => {
   }
 };
 
+// ✅ 1.2 สำหรับ frontend: สร้าง payments หลายช่องทาง โดยระบุ saleId และ paymentList
+export const createPayments = async (saleId, paymentList) => {
+  try {
+    const payload = paymentList.map((p) => ({
+      saleId,
+      paymentMethod: p.method,
+      amount: parseFloat(p.amount),
+      note: p.note || '',
+    }));
+    const res = await apiClient.post('/payments', payload);
+    return res.data;
+  } catch (err) {
+    console.error('❌ [createPayments] error:', err);
+    throw err.response?.data || { message: 'ไม่สามารถสร้างรายการชำระเงินได้' };
+  }
+};
+
 // ✅ 2. ดึงรายการชำระเงินทั้งหมดของใบขาย
 export const getPaymentsBySaleId = async (saleId) => {
   try {
@@ -66,4 +83,3 @@ export const searchPrintablePayments = async (query = {}) => {
     throw err.response?.data || { message: 'ไม่สามารถค้นหารายการพิมพ์บิลได้' };
   }
 };
-

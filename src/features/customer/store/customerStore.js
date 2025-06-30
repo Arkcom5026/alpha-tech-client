@@ -7,7 +7,6 @@ const useCustomerStore = create((set) => ({
   loading: false,
   error: null,
 
-  // 🔍 ค้นหาลูกค้าจากเบอร์โทร
   searchCustomerByPhoneAction: async (phone) => {
     set({ loading: true, error: null });
     try {
@@ -24,7 +23,6 @@ const useCustomerStore = create((set) => ({
     }
   },
 
-  // 🔍 ค้นหาลูกค้าจากชื่อหรือนามสกุล
   searchCustomerByNameAction: async (name) => {
     set({ loading: true, error: null });
     try {
@@ -41,7 +39,6 @@ const useCustomerStore = create((set) => ({
     }
   },
 
-  // 🆕 สร้างลูกค้าใหม่แบบด่วน
   createCustomerAction: async (customerData) => {
     set({ loading: true, error: null });
     try {
@@ -57,11 +54,10 @@ const useCustomerStore = create((set) => ({
     }
   },
 
-  // ✏️ อัปเดตข้อมูลลูกค้า (ใหม่: ไม่มี id แล้ว)
   updateCustomerProfileAction: async (updatedData) => {
     set({ loading: true, error: null });
     try {
-      const updatedCustomer = await updateCustomer(updatedData); // ✅ ไม่มี id
+      const updatedCustomer = await updateCustomer(updatedData);
       set({ customer: updatedCustomer });
       return updatedCustomer;
     } catch (err) {
@@ -73,10 +69,11 @@ const useCustomerStore = create((set) => ({
     }
   },
 
-  // 🔄 รีเซ็ตข้อมูลลูกค้า (หากต้องการเริ่มใหม่)
   resetCustomer: () => {
     set({ customer: null, error: null });
-  }
+  },
+
+  setCustomer: (customer) => set({ customer }),
 }));
 
 export default useCustomerStore;

@@ -10,7 +10,7 @@ const useSalesStore = create((set, get) => ({
   sales: [],
   currentSale: null,
 
-  // 💵 การรับชำระเงิน
+  // 💵 💳 💸 💶 💲 💴 💰 💷
   paymentList: [
     { method: 'CASH', amount: 0 },
     { method: 'TRANSFER', amount: 0 },
@@ -21,11 +21,16 @@ const useSalesStore = create((set, get) => ({
   sharedBillDiscountPerItem: 0,
 
   setPaymentAmount: (method, amount) => {
-    set((state) => ({
-      paymentList: state.paymentList.map((p) =>
-        p.method === method ? { ...p, amount: Number(amount) || 0 } : p
-      ),
-    }));
+    set((state) => {
+      const exists = state.paymentList.some(p => p.method === method);
+      const newList = exists
+        ? state.paymentList.map((p) =>
+            p.method === method ? { ...p, amount: Number(amount) || 0 } : p
+          )
+        : [...state.paymentList, { method, amount: Number(amount) || 0, note: '' }];
+
+      return { paymentList: newList };
+    });
   },
 
   setBillDiscount: (amount) => {
@@ -34,17 +39,25 @@ const useSalesStore = create((set, get) => ({
     const totalPrice = saleItems.reduce((sum, i) => sum + i.price, 0);
 
     const newItems = saleItems.map((item) => {
+      const baseDiscount = item.discountWithoutBill ?? item.discount ?? 0;
       const ratio = item.price / totalPrice;
-      const proportionalDiscount = Math.round(discount * ratio);
+      const billShare = Math.round(discount * ratio);
+
       return {
         ...item,
-        discount: proportionalDiscount,
+        discount: baseDiscount + billShare,
+        discountWithoutBill: baseDiscount,
+        billShare: billShare,
       };
     });
 
     const shared = saleItems.length > 0 ? Math.floor(discount / saleItems.length) : 0;
 
-    set({ billDiscount: discount, saleItems: newItems, sharedBillDiscountPerItem: shared });
+    set({
+      billDiscount: discount,
+      saleItems: newItems,
+      sharedBillDiscountPerItem: shared,
+    });
   },
 
   setSharedBillDiscountPerItem: () => {
@@ -60,7 +73,7 @@ const useSalesStore = create((set, get) => ({
 
   finalPrice: () => {
     const base = get().saleItems.reduce((sum, i) => sum + i.price - (i.discount ?? 0), 0);
-    return Math.max(base - (get().billDiscount || 0), 0);
+    return Math.max(base, 0);
   },
 
   receivedAmount: () => {
@@ -74,6 +87,8 @@ const useSalesStore = create((set, get) => ({
   },
 
   setCardRef: (val) => set({ cardRef: val }),
+
+  setCustomerIdAction: (id) => set({ customerId: id }),
 
   addSaleItemAction: (item) => {
     set((state) => {
@@ -91,6 +106,26 @@ const useSalesStore = create((set, get) => ({
 
   clearSaleItemsAction: () => {
     set({ saleItems: [], customerId: null });
+  },
+
+  updateItemDiscountAction: (stockItemId, discount) => {
+    set((state) => ({
+      saleItems: state.saleItems.map((item) =>
+        item.stockItemId === stockItemId
+          ? { ...item, discount: Number(discount) || 0 }
+          : item
+      ),
+    }));
+  },
+
+  updateSaleItemAction: (stockItemId, newData) => {
+    set((state) => ({
+      saleItems: state.saleItems.map((item) =>
+        item.stockItemId === stockItemId
+          ? { ...item, ...newData }
+          : item
+      ),
+    }));
   },
 
   markSalePaidAction: async (saleId) => {

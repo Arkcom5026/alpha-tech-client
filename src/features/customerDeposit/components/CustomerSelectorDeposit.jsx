@@ -1,10 +1,10 @@
+// CustomerSelectorDeposit.jsx
+
 import React, { useEffect, useRef, useState } from 'react';
 import InputMask from 'react-input-mask';
 import useCustomerStore from '@/features/customer/store/customerStore';
-import useCustomerDepositStore from '@/features/customerDeposit/store/customerDepositStore';
-import useSalesStore from '@/features/sales/store/salesStore';
 
-const CustomerSection = () => {
+const CustomerSelectorDeposit = () => {
   const phoneInputRef = useRef(null);
   const [phone, setPhone] = useState('');
   const [rawPhone, setRawPhone] = useState('');
@@ -14,8 +14,6 @@ const CustomerSection = () => {
   const [email, setEmail] = useState('');
   const [address, setAddress] = useState('');
   const [customerType, setCustomerType] = useState('บุคคลทั่วไป');
-  const [companyName, setCompanyName] = useState('');
-  const [taxId, setTaxId] = useState('');
   const [customerLoading, setCustomerLoading] = useState(false);
   const [formError, setFormError] = useState('');
   const [pendingPhone, setPendingPhone] = useState(false);
@@ -29,26 +27,18 @@ const CustomerSection = () => {
     searchCustomerByNameAction,
     createCustomerAction,
     updateCustomerProfileAction,
+    setCustomer: setCustomerToStore,
   } = useCustomerStore();
 
-  const {
-    setCustomerDepositAmount,
-    searchCustomerByPhoneAndDepositAction,
-  } = useCustomerDepositStore();
-
-  const { setCustomerIdAction } = useSalesStore();
-
   useEffect(() => {
-    const data = selectedCustomer || customer;
-    if (data?.id) {
-      setName(data.name || '');
-      setEmail(data.email || '');
-      setAddress(data.address || '');
-      setCustomerType(data.customerType || 'บุคคลทั่วไป');
-      setCompanyName(data.companyName || '');
-      setTaxId(data.taxId || '');
+    if (customer?.id) {
+      setName(customer.name || '');
+      setEmail(customer.email || '');
+      setAddress(customer.address || '');
+      setCustomerType(customer.customerType || 'บุคคลทั่วไป');
+      setCustomerToStore(customer);
     }
-  }, [customer, selectedCustomer]);
+  }, [customer]);
 
   const handleVerifyCustomer = async () => {
     setFormError('');
@@ -62,11 +52,7 @@ const CustomerSection = () => {
           return;
         }
         setRawPhone(cleanPhone);
-        const found = await searchCustomerByPhoneAndDepositAction(cleanPhone);
-        if (found) {
-          setSelectedCustomer(found);
-          setCustomerIdAction(found.id);
-        }
+        await searchCustomerByPhoneAction(cleanPhone);
         setSearchResults([]);
         setPendingPhone(true);
       } else {
@@ -84,17 +70,28 @@ const CustomerSection = () => {
     }
   };
 
+  const handleSelectCustomer = (cust) => {
+    setSelectedCustomer(cust);
+    setCustomerToStore(cust);
+    setSearchResults([]);
+    setName(cust.name || '');
+    setEmail(cust.email || '');
+    setAddress(cust.address || '');
+    setCustomerType(cust.customerType || 'บุคคลทั่วไป');
+    setPhone(cust.phone || '');
+    setRawPhone(cust.phone || '');
+  };
+
   const handleConfirmCreateCustomer = async () => {
     try {
-      await createCustomerAction({
+      const newCustomer = await createCustomerAction({
         name,
         phone: rawPhone,
         email,
         address,
         customerType,
-        companyName,
-        taxId,
       });
+      setCustomerToStore(newCustomer);
     } catch (error) {
       console.error('เพิ่มลูกค้าไม่สำเร็จ:', error);
     }
@@ -107,8 +104,6 @@ const CustomerSection = () => {
         email,
         address,
         customerType,
-        companyName,
-        taxId,
       });
       setIsModified(false);
     } catch (error) {
@@ -125,7 +120,6 @@ const CustomerSection = () => {
     setNameSearch('');
     setSearchResults([]);
     setSelectedCustomer(null);
-    setCustomerDepositAmount(0);
   };
 
   const isSearchDisabled =
@@ -138,9 +132,8 @@ const CustomerSection = () => {
     (searchMode === 'phone' && !searchResults.length) || selectedCustomer;
 
   return (
-    <div className="bg-white p-4 rounded-xl shadow min-w-[390px]">
+    <div className="bg-white p-4 rounded-xl shadow  min-w-[1080px] ">
       <h2 className="text-xl font-bold text-black">ข้อมูลลูกค้า</h2>
-
       <div className="flex gap-4 py-2">
         <label className="p-2 text-black text-sm">
           <input
@@ -148,8 +141,7 @@ const CustomerSection = () => {
             name="searchMode"
             checked={searchMode === 'name'}
             onChange={() => setSearchMode('name')}
-          />{' '}
-          ค้นหาจากชื่อ
+          />{' '}ค้นหาจากชื่อ
         </label>
         <label className="p-2 text-black text-sm">
           <input
@@ -157,8 +149,7 @@ const CustomerSection = () => {
             name="searchMode"
             checked={searchMode === 'phone'}
             onChange={() => setSearchMode('phone')}
-          />{' '}
-          ค้นหาจากเบอร์โทร
+          />{' '}ค้นหาจากเบอร์โทร
         </label>
       </div>
 
@@ -196,7 +187,7 @@ const CustomerSection = () => {
           disabled={isSearchDisabled}
           className="w-full md:w-auto px-4 py-2 bg-green-500 text-blue-900 rounded hover:bg-green-700 disabled:opacity-50 text-lg"
         >
-          {customerLoading ? 'ค้นหา...' : 'ค้นหา'}
+          {customerLoading ? 'กำลังค้นหา...' : 'ค้นหา'}
         </button>
       </div>
 
@@ -205,7 +196,6 @@ const CustomerSection = () => {
           ⚠️ {formError}
         </div>
       )}
-
 
       {searchMode === 'name' && searchResults.length > 0 && (
         <div className="mt-4 border border-gray-300 rounded p-3 text-black">
@@ -223,6 +213,8 @@ const CustomerSection = () => {
           </ul>
         </div>
       )}
+
+
 
       {shouldShowCustomerDetails && (
         <div className="mt-2 text-lg text-black bg-white border rounded px-3 py-2 space-y-3">
@@ -246,8 +238,6 @@ const CustomerSection = () => {
                     onChange={() => setCustomerType('บุคคลทั่วไป')}
                   /> บุคคลทั่วไป
                 </label>
-
-
                 <label>
                   <input
                     type="radio"
@@ -266,22 +256,15 @@ const CustomerSection = () => {
                 <input
                   type="text"
                   placeholder="ชื่อบริษัท / หน่วยงาน"
-                  value={companyName}
-                  onChange={(e) => { setCompanyName(e.target.value); setIsModified(true); }}
                   className="border px-2 py-1 rounded col-span-2 text-black text-sm"
                 />
                 <input
                   type="text"
                   placeholder="เลขผู้เสียภาษี (ถ้ามี)"
-                  value={taxId}
-                  onChange={(e) => { setTaxId(e.target.value); setIsModified(true); }}
                   className="border px-2 py-1 rounded col-span-2 text-black text-sm"
                 />
               </>
             )}
-
-
-
 
             <input
               type="text"
@@ -347,4 +330,5 @@ const CustomerSection = () => {
   );
 };
 
-export default CustomerSection;
+export default CustomerSelectorDeposit;
+

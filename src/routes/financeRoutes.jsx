@@ -1,4 +1,6 @@
 
+import CreateCustomerDepositPage from "@/features/customerDeposit/pages/CreateCustomerDepositPage";
+import ListCustomerDepositPage from "@/features/customerDeposit/pages/ListCustomerDepositPage";
 import FinanceDashboardPage from "@/features/pos/pages/finance/FinanceDashboardPage";
 import CreateRefundPage from "@/features/refund/pages/CreateRefundPage";
 import ListReturnsPage from "@/features/refund/pages/ListReturnsPage";
@@ -14,28 +16,38 @@ const financeRoutes = {
     {
       index: true,
       element: <FinanceDashboardPage />, // ✅ หน้า Dashboard ของ Finance
-      
+
     },
     {
       path: 'refunds',
       children: [
         { index: true, element: <ListReturnsPage /> },
         { path: 'create/:saleReturnId', element: <CreateRefundPage /> },
-        { path: 'print/:saleReturnId', element: <PrintRefundReceiptPage /> },                
+        { path: 'print/:saleReturnId', element: <PrintRefundReceiptPage /> },
       ],
     },
 
-        {
+    {
       path: 'po-payments',
       children: [
-        { index: true,element: <ListSuppliersForPaymentPage />, }, // ✅ เส้นทางใหม่: รายการชำระหนี้ PO
-        { path: 'supplier/:supplierId', element: <SupplierPaymentDetailPage /> },   
-        { path: 'supplier/:supplierId/create-payment', element: <CreateSupplierPaymentPage /> },   
-      
+        { index: true, element: <ListSuppliersForPaymentPage />, }, // ✅ เส้นทางใหม่: รายการชำระหนี้ PO
+        { path: 'supplier/:supplierId', element: <SupplierPaymentDetailPage /> },
+        { path: 'supplier/:supplierId/create-payment', element: <CreateSupplierPaymentPage /> },
+
 
       ]
     },
-    
+    {
+      path: 'deposit',
+      children: [
+        { index: true, element: <ListCustomerDepositPage />, }, // ✅ เส้นทางใหม่: รับเงินมัดจำ
+        { path: 'create', element: <CreateCustomerDepositPage /> },
+        
+
+
+      ]
+    },
+
     // เพิ่ม children routes เพิ่มเติมได้ที่นี่
   ],
 };

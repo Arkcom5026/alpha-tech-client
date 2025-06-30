@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import useSalesStore from '@/features/sales/store/salesStore';
 import useCustomerStore from '@/features/customer/store/customerStore';
 import useCustomerDepositStore from '@/features/customerDeposit/store/customerDepositStore';
-import usePaymentStore from '@/features/payment/store/paymentStore';
 
 const PaymentSection = ({ saleItems }) => {
   const {
@@ -16,12 +15,10 @@ const PaymentSection = ({ saleItems }) => {
     sumPaymentList,
   } = useSalesStore();
 
-  const { submitMultiPaymentAction } = usePaymentStore();
-
   const { customer } = useCustomerStore();
-
   const {
     customerDepositAmount,
+    fetchCustomerDepositAction,
     setCustomerDepositAmount,
     selectedCustomer,
   } = useCustomerDepositStore();
@@ -33,7 +30,14 @@ const PaymentSection = ({ saleItems }) => {
     credit: false,
   });
 
-  const effectiveCustomer = selectedCustomer || customer || { id: null, name: 'ลูกค้าทั่วไป' };
+  useEffect(() => {
+    const fetchDeposit = async () => {
+      if (!selectedCustomer?.id) return;
+      const deposit = await fetchCustomerDepositAction(selectedCustomer.id);
+      setCustomerDepositAmount(deposit || 0);
+    };
+    fetchDeposit();
+  }, [selectedCustomer?.id]);
 
   useEffect(() => {
     console.log('📌 selectedCustomer in PaymentSection:', selectedCustomer);
@@ -47,19 +51,19 @@ const PaymentSection = ({ saleItems }) => {
     }));
   };
 
-  const handleAmountChange = (method, value) => {
-    const amount = parseFloat(value) || 0;
-    setPaymentAmount(method, amount);
-    console.log(`🟢 updated ${method} payment:`, amount);
-  };
+  const totalOriginalPrice = Array.isArray(saleItems)
+    ? saleItems.reduce((sum, item) => sum + (item.price || 0), 0)
+    : 0;
 
-  const validSaleItems = Array.isArray(saleItems) ? saleItems : [];
-  const totalOriginalPrice = validSaleItems.reduce((sum, item) => sum + (item.price || 0), 0);
-  const totalDiscountOnly = validSaleItems.reduce((sum, item) => sum + (item.discountWithoutBill || 0), 0);
+  const totalDiscountOnly = Array.isArray(saleItems)
+    ? saleItems.reduce((sum, item) => sum + (item.discountWithoutBill || 0), 0)
+    : 0;
 
   const safeBillDiscount = typeof billDiscount === 'number' && !isNaN(billDiscount) ? billDiscount : 0;
   const totalDiscount = totalDiscountOnly + safeBillDiscount;
-  const totalPriceAfterDiscount = validSaleItems.reduce((sum, item) => sum + ((item.price || 0) - (item.discount || 0)), 0);
+  const totalPriceAfterDiscount = Array.isArray(saleItems)
+    ? saleItems.reduce((sum, item) => sum + ((item.price || 0) - (item.discount || 0)), 0)
+    : 0;
 
   const safeFinalPrice = Math.max(totalPriceAfterDiscount - safeBillDiscount, 0);
   const priceBeforeVat = safeFinalPrice / 1.07;
@@ -81,44 +85,23 @@ const PaymentSection = ({ saleItems }) => {
   const totalPaidNet = totalPaid - safeChangeAmount;
 
   const handleConfirm = async () => {
-    const customerIdToUse = effectiveCustomer?.id;
-
-
-
-
-    if (!customerIdToUse || !validSaleItems.length || isSubmitting) {
+    const customerIdToUse = selectedCustomer?.id || customer?.id;
+    if (!customerIdToUse || !saleItems.length || isSubmitting) {
       console.warn('⛔ ไม่สามารถยืนยันการขายได้ เพราะขาดข้อมูล');
       return;
     }
     try {
       setIsSubmitting(true);
-      const confirmedSale = await confirmSaleOrderAction();
-      console.log('✅ ยืนยันการขายสำเร็จ saleId:', confirmedSale?.id);
-
-
-      if (confirmedSale?.id) {
-        console.log('📤 เริ่มส่งข้อมูลการชำระเงิน...');
-
-        await submitMultiPaymentAction({
-          saleId: confirmedSale.id,
-          netPaid: totalPaidNet,
-          paymentList,
-        });
-        console.log('✅ ส่งข้อมูลชำระเงินสำเร็จ');
-      } else {
-        console.error('❌ ไม่พบ ID ของรายการขายหลังจากยืนยัน');
-      }
+      await confirmSaleOrderAction();
     } catch (err) {
       console.error('❌ ยืนยันการขายล้มเหลว:', err);
     } finally {
       setIsSubmitting(false);
     }
+  };
 
-  }
-
-
-  const hasValidCustomerId = !!effectiveCustomer?.id;
-  const isConfirmEnabled = totalPaid >= totalToPay && hasValidCustomerId && validSaleItems.length > 0;
+  const hasValidCustomerId = !!selectedCustomer?.id || !!customer?.id;
+  const isConfirmEnabled = totalPaid >= totalToPay && hasValidCustomerId && saleItems.length > 0;
 
   const handleBillDiscountChange = (e) => {
     const newDiscount = Number(e.target.value) || 0;
@@ -126,9 +109,6 @@ const PaymentSection = ({ saleItems }) => {
       setBillDiscount(newDiscount);
     }
   };
-
-
-
 
   return (
     <div className='font-bold'>
@@ -213,27 +193,27 @@ const PaymentSection = ({ saleItems }) => {
         {paymentMethods.cash && (
           <div className="mb-4 min-w-[250px] bg-green-100 p-4 rounded-md">
             <h2 className="text-lg font-semibold mb-2 ">เงินสด</h2>
-            <hr />
-            <div className='py-4'>
-              <label className="block text-sm font-bold text-gray-700">ยอดที่รับ (เงินสด):</label>
-              <input
-                type="number"
-                className="mt-2 w-[140px] h-[45px] border rounded px-1 py-1 text-lg text-right"
-                placeholder="0.00"
-                value={paymentList.find(p => p.method === 'CASH')?.amount || ''}
-                onChange={(e) => setPaymentAmount('CASH', e.target.value)}
-              />
-            </div>
-            <div className='py-4'>
-              <label className="block text-sm font-bold text-gray-700">เงินทอน:</label>
-              <div className="mt-2 w-[140px] h-[45px]  border rounded px-4 py-2 bg-gray-100 text-right">
-                {safeChangeAmount.toLocaleString()} ฿
+            <hr />            
+              <div className='py-4'>
+                <label className="block text-sm font-bold text-gray-700">ยอดที่รับ (เงินสด):</label>
+                <input
+                  type="number"
+                  className="mt-2 w-[140px] h-[45px] border rounded px-1 py-1 text-lg text-right"
+                  placeholder="0.00"
+                  value={paymentList.find(p => p.method === 'CASH')?.amount || ''}
+                  onChange={(e) => setPaymentAmount('CASH', e.target.value)}
+                />
               </div>
-            </div>
-            <div className="text-sm text-gray-700 font-bold">
-              ต้องรับเงินสดอย่างน้อย: {remainingToPay.toLocaleString()} ฿
-            </div>
-
+              <div className='py-4'>
+                <label className="block text-sm font-bold text-gray-700">เงินทอน:</label>
+                <div className="mt-2 w-[140px] h-[45px]  border rounded px-4 py-2 bg-gray-100 text-right">
+                  {safeChangeAmount.toLocaleString()} ฿
+                </div>
+              </div>
+              <div className="text-sm text-gray-700 font-bold">
+                ต้องรับเงินสดอย่างน้อย: {remainingToPay.toLocaleString()} ฿
+              </div>
+            
           </div>
         )}
 
@@ -242,14 +222,14 @@ const PaymentSection = ({ saleItems }) => {
             <h2 className="text-lg font-semibold mb-2">เงินโอน</h2>
             <hr />
             <div className='py-4'>
-              <label className="block text-sm font-bold text-gray-700 ">ยอดรวมเงินโอน:</label>
-              <input
-                type="number"
-                className="mt-1 w-[140px] h-[45px] border rounded py-2  text-right"
-                placeholder="0.00"
-                value={paymentList.find(p => p.method === 'TRANSFER')?.amount || ''}
-                onChange={(e) => setPaymentAmount('TRANSFER', e.target.value)}
-              />
+            <label className="block text-sm font-bold text-gray-700 ">ยอดรวมเงินโอน:</label>
+            <input
+              type="number"
+              className="mt-1 w-[140px] h-[45px] border rounded py-2  text-right"
+              placeholder="0.00"
+              value={paymentList.find(p => p.method === 'TRANSFER')?.amount || ''}
+              onChange={(e) => setPaymentAmount('TRANSFER', e.target.value)}
+            />
             </div>
           </div>
         )}
@@ -259,25 +239,25 @@ const PaymentSection = ({ saleItems }) => {
             <h2 className="text-lg font-semibold mb-2">บัตรเครดิต</h2>
             <hr />
             <div className='py-4'>
-              <label className="block text-sm font-bold text-gray-700">ยอดบัตรเครดิต:</label>
-              <input
-                type="number"
-                className="mt-1 border rounded text-right w-[140px] h-[45px]"
-                placeholder="0.00"
-                value={paymentList.find(p => p.method === 'CREDIT')?.amount || ''}
-                onChange={(e) => setPaymentAmount('CREDIT', e.target.value)}
-              />
+            <label className="block text-sm font-bold text-gray-700">ยอดบัตรเครดิต:</label>
+            <input
+              type="number"
+              className="mt-1 border rounded text-right w-[140px] h-[45px]"
+              placeholder="0.00"
+              value={paymentList.find(p => p.method === 'CREDIT')?.amount || ''}
+              onChange={(e) => setPaymentAmount('CREDIT', e.target.value)}
+            />
             </div>
             <div className='py-4'>
-              <label className="text-sm mt-2 block font-bold">เลขอ้างอิงบัตรเครดิต:</label>
-              <input
-                type="text"
-                value={cardRef}
-                onChange={(e) => setCardRef(e.target.value)}
-                className="border rounded p-1 w-full mt-1 text-sm  h-[45px]"
-                placeholder="กรอกเลขอ้างอิงจากเครื่องรูดบัตร"
-                maxLength={24}
-              />
+            <label className="text-sm mt-2 block font-bold">เลขอ้างอิงบัตรเครดิต:</label>
+            <input
+              type="text"
+              value={cardRef}
+              onChange={(e) => setCardRef(e.target.value)}
+              className="border rounded p-1 w-full mt-1 text-sm  h-[45px]"
+              placeholder="กรอกเลขอ้างอิงจากเครื่องรูดบัตร"
+              maxLength={24}
+            />
             </div>
           </div>
         )}
@@ -317,24 +297,23 @@ const PaymentSection = ({ saleItems }) => {
               <hr />
               <br />
 
-
               <div className="flex justify-between font-semibold text-base">
                 <span className='font-bold'>รวมยอดทั้งหมด:</span>
-                <span className={totalPaidNet >= totalToPay ? 'text-green-600' : 'text-red-600'}>
-                  {totalPaidNet.toLocaleString(undefined, { maximumFractionDigits: 2 })} ฿
+                <span className={totalPaid >= safeFinalPrice ? 'text-green-600' : 'text-red-600'}>
+                  {totalPaid.toLocaleString(undefined, { maximumFractionDigits: 2 })} ฿
                 </span>
               </div>
 
-              <div
+              {console.log('totalPaid :',totalPaid)}
+              {console.log('safeFinalPrice :',safeFinalPrice)}
+              <div                            
                 className={`mt-2 p-2 rounded text-center font-semibold
-        ${totalPaidNet >= totalToPay ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}
+                ${totalPaid >= safeFinalPrice ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}
               >
-                {totalPaidNet >= totalToPay ? '✅ ยอดชำระตรงกับยอดขาย' : '❌ ยอดชำระไม่ครบหรือข้อมูลผิดพลาด'}
+                {totalPaid >= safeFinalPrice ? '✅ ยอดชำระตรงกับยอดขาย' : '❌ ยอดชำระไม่ครบหรือข้อมูลผิดพลาด'}
               </div>
-
-
             </div>
-
+           
 
             <div className="text-center pt-4 mt-auto">
               <button
@@ -353,4 +332,3 @@ const PaymentSection = ({ saleItems }) => {
 };
 
 export default PaymentSection;
-

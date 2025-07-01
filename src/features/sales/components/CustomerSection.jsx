@@ -4,8 +4,7 @@ import useCustomerStore from '@/features/customer/store/customerStore';
 import useCustomerDepositStore from '@/features/customerDeposit/store/customerDepositStore';
 import useSalesStore from '@/features/sales/store/salesStore';
 
-const CustomerSection = () => {
-  const phoneInputRef = useRef(null);
+const CustomerSection = ({ productSearchRef }) => {
   const [phone, setPhone] = useState('');
   const [rawPhone, setRawPhone] = useState('');
   const [searchMode, setSearchMode] = useState('phone');
@@ -22,6 +21,8 @@ const CustomerSection = () => {
   const [isModified, setIsModified] = useState(false);
   const [searchResults, setSearchResults] = useState([]);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
+
+  const phoneInputRef = useRef(null);
 
   const {
     customer,
@@ -50,6 +51,12 @@ const CustomerSection = () => {
     }
   }, [customer, selectedCustomer]);
 
+  useEffect(() => {
+    setTimeout(() => {
+      phoneInputRef.current?.focus();
+    }, 100);
+  }, []);
+
   const handleVerifyCustomer = async () => {
     setFormError('');
     try {
@@ -66,6 +73,11 @@ const CustomerSection = () => {
         if (found) {
           setSelectedCustomer(found);
           setCustomerIdAction(found.id);
+
+          // 🔍 โฟกัสช่องค้นหาสินค้า หลังจากเจอลูกค้า
+          setTimeout(() => {
+            productSearchRef?.current?.focus();
+          }, 100);
         }
         setSearchResults([]);
         setPendingPhone(true);
@@ -200,11 +212,14 @@ const CustomerSection = () => {
         </button>
       </div>
 
+
+
       {formError && (
         <div className="bg-red-100 text-red-700 border border-red-300 px-4 py-2 rounded text-lg mt-2">
           ⚠️ {formError}
         </div>
       )}
+
 
 
       {searchMode === 'name' && searchResults.length > 0 && (
@@ -329,7 +344,7 @@ const CustomerSection = () => {
                     onClick={handleConfirmCreateCustomer}
                     className="px-4 py-1 bg-green-600 text-white rounded hover:bg-green-700 text-lg"
                   >
-                    ➕ บันทึกลูกค้าใหม่
+                    บันทึก
                   </button>
                   <button
                     onClick={handleCancelCreateCustomer}
@@ -348,3 +363,7 @@ const CustomerSection = () => {
 };
 
 export default CustomerSection;
+
+
+
+

@@ -123,12 +123,15 @@ const SaleItemTable = ({ items = [], onRemove, billDiscount = 0 }) => {
               <td className="p-2 border">{item.barcode}</td>
               <td className="p-2 border">{safePrice.toFixed(2)}</td>
               <td className="p-2 border">
+
                 <input
                   type="number"
                   className="w-20 px-2 py-1 border rounded text-right"
-                  value={discountWithoutBill}
+                  placeholder="0.00"
+                  value={discountWithoutBill === 0 ? '' : discountWithoutBill}
                   onChange={(e) => handleDiscountChange(item.stockItemId, parseFloat(e.target.value))}
                 />
+
               </td>
               <td className="p-2 border text-right">{billShare.toLocaleString()}</td>
               <td className="p-2 border text-right">{net.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>

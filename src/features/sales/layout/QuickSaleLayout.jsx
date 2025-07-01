@@ -11,6 +11,7 @@ import SaleItemTable from '../components/SaleItemTable';
 
 const QuickSaleLayout = () => {
   const barcodeInputRef = useRef(null);
+  const phoneInputRef = useRef(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedPriceType, setSelectedPriceType] = useState('retail');
 
@@ -27,7 +28,7 @@ const QuickSaleLayout = () => {
   const { customer } = useCustomerStore();
 
   useEffect(() => {
-    barcodeInputRef.current?.focus();
+    phoneInputRef.current?.focus();
   }, []);
 
   useEffect(() => {
@@ -78,7 +79,7 @@ const QuickSaleLayout = () => {
   return (
     <div className="p-4 bg-white rounded-xl shadow-lg mt-4 min-w-[1600px]">
       <div className="bg-blue-100 p-4 rounded-xl shadow flex flex-col-2 gap-4 min-w-[600px]">
-        <CustomerSection />
+        <CustomerSection phoneInputRef={phoneInputRef} productSearchRef={barcodeInputRef} />
         <div className="col-span-12 lg:col-span-8 space-y-4">
           <div className="bg-white p-4 rounded-xl shadow">
             <h2 className="text-lg font-bold text-black">เลือกราคาขาย:</h2>
@@ -122,3 +123,6 @@ const QuickSaleLayout = () => {
 };
 
 export default QuickSaleLayout;
+
+
+

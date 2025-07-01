@@ -15,6 +15,7 @@ const useSalesStore = create((set, get) => ({
     { method: 'CASH', amount: 0 },
     { method: 'TRANSFER', amount: 0 },
     { method: 'CREDIT', amount: 0 },
+    { method: 'DEPOSIT', amount: 0 },
   ],
   cardRef: '',
   billDiscount: 0,
@@ -158,8 +159,6 @@ const useSalesStore = create((set, get) => ({
         vat: vatAmount,
         vatRate,
         totalAmount,
-        paymentMethod: 'CASH',
-        paymentDetails: '',
         note: '',
         items: saleItems.map((item) => ({
           stockItemId: item.stockItemId,
@@ -182,6 +181,7 @@ const useSalesStore = create((set, get) => ({
       return { error: 'เกิดข้อผิดพลาดในการขาย' };
     }
   },
+
 
   loadSalesAction: async () => {
     try {
@@ -213,3 +213,5 @@ const useSalesStore = create((set, get) => ({
 }));
 
 export default useSalesStore;
+
+

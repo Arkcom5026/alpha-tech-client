@@ -72,3 +72,13 @@ export const getCustomerAndDepositByPhone = async (phone) => {
     throw error;
   }
 };
+
+export const applyDepositUsage = async (data) => {
+  try {
+    const res = await apiClient.post('/deposit-usage', data);
+    return res.data;
+  } catch (error) {
+    console.error('applyDepositUsage error:', error);
+    throw error;
+  }
+};

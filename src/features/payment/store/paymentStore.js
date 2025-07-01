@@ -102,7 +102,7 @@ const usePaymentStore = create(devtools((set, get) => ({
     }
   },
 
-  submitMultiPaymentAction: async ({ saleId, netPaid, paymentList, note }) => {
+  submitMultiPaymentAction: async ({ saleId, paymentList, note }) => {
     try {
       set({ isSubmitting: true, error: null });
 
@@ -118,15 +118,9 @@ const usePaymentStore = create(devtools((set, get) => ({
         return;
       }
 
-      const nonCashPaid = filteredPayments
-        .filter(p => p.method !== 'CASH')
-        .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
-
-      const cashAmount = Math.max(netPaid - nonCashPaid, 0);
-
       const paymentItems = filteredPayments.map((p) => ({
         paymentMethod: p.method,
-        amount: p.method === 'CASH' ? cashAmount : parseFloat(p.amount),
+        amount: parseFloat(p.amount),
         note: p.note || '',
         slipImage: p.slipImage || null,
         cardRef: p.cardRef || null,

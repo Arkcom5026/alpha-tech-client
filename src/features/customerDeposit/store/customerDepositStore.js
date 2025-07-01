@@ -7,9 +7,9 @@ import {
   getCustomerDepositById,
   getCustomerDeposits,
   getCustomerDepositTotal,
-  updateCustomerDeposit
+  updateCustomerDeposit,
+  applyDepositUsage
 } from '../api/customerDepositApi';
-
 
 const useCustomerDepositStore = create((set, get) => ({
   isSubmitting: false,
@@ -20,8 +20,10 @@ const useCustomerDepositStore = create((set, get) => ({
   selectedDeposit: null,
   selectedCustomer: null,
   customerDepositAmount: 0,
+  depositUsed: 0,
 
   setCustomerDepositAmount: (amount) => set({ customerDepositAmount: amount }),
+  setDepositUsed: (value) => set({ depositUsed: value }),
   setSelectedDeposit: (deposit) => set({ selectedDeposit: deposit }),
   setDeposits: (list) => set({ deposits: list }),
   clearSelectedDeposit: () => set({ selectedDeposit: null }),
@@ -129,6 +131,18 @@ const useCustomerDepositStore = create((set, get) => ({
       console.error('❌ searchCustomerByPhoneAndDepositAction error:', err);
       set({ error: err });
       return null;
+    }
+  },
+
+  // ACTION: Apply Deposit Usage
+  applyDepositUsageAction: async ({ customerDepositId, saleId, amountUsed }) => {
+    try {
+      const res = await applyDepositUsage({ customerDepositId, saleId, amountUsed });
+      return res; // return usage + remainingBalance
+    } catch (err) {
+      console.error('❌ applyDepositUsageAction error:', err);
+      set({ error: err });
+      throw err;
     }
   },
 

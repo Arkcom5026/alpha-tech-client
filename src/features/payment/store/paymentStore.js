@@ -125,6 +125,9 @@ const usePaymentStore = create(devtools((set, get) => ({
         slipImage: p.slipImage || null,
         cardRef: p.cardRef || null,
         govImage: p.govImage || null,
+        ...(p.method === 'DEPOSIT' && p.customerDepositId
+          ? { customerDepositId: p.customerDepositId }
+          : {}),
       }));
 
       const payload = {

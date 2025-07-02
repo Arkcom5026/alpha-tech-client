@@ -5,7 +5,6 @@ import useCustomerDepositStore from '@/features/customerDeposit/store/customerDe
 import usePaymentStore from '@/features/payment/store/paymentStore';
 import { Navigate } from 'react-router-dom';
 
-
 const PaymentSection = ({ saleItems }) => {
   const {
     billDiscount,
@@ -15,8 +14,10 @@ const PaymentSection = ({ saleItems }) => {
     confirmSaleOrderAction,
     cardRef,
     setCardRef,
+    resetSaleOrderAction,
   } = useSalesStore();
 
+  const { clearCustomer } = useCustomerStore();
   const { submitMultiPaymentAction } = usePaymentStore();
   const { customer } = useCustomerStore();
   const {
@@ -25,6 +26,11 @@ const PaymentSection = ({ saleItems }) => {
     selectedDeposit,
     depositUsed,
     setDepositUsed,
+    applyDepositUsageAction,
+    setSelectedCustomer,
+    setCustomerDepositAmount,
+    setSelectedDeposit,
+    setDeposits,
   } = useCustomerDepositStore();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -70,7 +76,6 @@ const PaymentSection = ({ saleItems }) => {
   const transferAmount = Number(paymentList.find(p => p.method === 'TRANSFER')?.amount || 0);
   const creditAmount = Number(paymentList.find(p => p.method === 'CREDIT')?.amount || 0);
 
-
   const totalPaid = paymentList.reduce((sum, p) => {
     const amount = parseFloat(p.amount);
     return sum + (isNaN(amount) ? 0 : amount);
@@ -83,6 +88,8 @@ const PaymentSection = ({ saleItems }) => {
   const grandTotalPaid = totalPaidNet + safeDepositUsed;
 
   const handleConfirm = async () => {
+    console.log('🔍 safeDepositUsed:', safeDepositUsed);
+    console.log('🔍 selectedDeposit?.id:', selectedDeposit?.id);
     const customerIdToUse = effectiveCustomer?.id;
     if (!customerIdToUse || !validSaleItems.length || isSubmitting) {
       console.warn('⛔ ไม่สามารถยืนยันการขายได้ เพราะขาดข้อมูล');
@@ -97,7 +104,7 @@ const PaymentSection = ({ saleItems }) => {
         const updatedPayments = [...paymentList];
 
         if (safeDepositUsed > 0 && selectedDeposit?.id) {
-          updatedPayments.push({ method: 'DEPOSIT', amount: safeDepositUsed });
+          updatedPayments.push({ method: 'DEPOSIT', amount: safeDepositUsed, customerDepositId: selectedDeposit.id });
           console.log('✅ เพิ่มรายการชำระแบบ DEPOSIT ลงใน paymentList');
         }
 
@@ -115,6 +122,15 @@ const PaymentSection = ({ saleItems }) => {
         });
         console.log('✅ ส่งข้อมูลชำระเงินสำเร็จ');
 
+        if (safeDepositUsed > 0 && selectedDeposit?.id) {
+          await applyDepositUsageAction({
+            depositId: selectedDeposit.id,
+            amountUsed: safeDepositUsed,
+            saleId: confirmedSale.id,
+          });
+          console.log('✅ อัปเดตสถานะการใช้เงินมัดจำเรียบร้อย');
+        }
+
         if (saleOption === 'RECEIPT') {
           Navigate('/pos/sales/bill/print-short/' + confirmedSale.id, {
             state: { payment: updatedPayments }
@@ -130,7 +146,25 @@ const PaymentSection = ({ saleItems }) => {
     } catch (err) {
       console.error('❌ ยืนยันการขายล้มเหลว:', err);
     } finally {
+      setTimeout(() => {
+        const phoneInput = document.getElementById('customer-phone-input');
+        if (phoneInput) {
+          phoneInput.focus();
+          phoneInput.select();
+        }
+      }, 100);
+
       setIsSubmitting(false);
+      setDepositUsed(0);
+      setCardRef('');
+      setBillDiscount(0);
+      resetSaleOrderAction?.();
+      clearCustomer?.();
+      setSelectedCustomer(null);
+      setCustomerDepositAmount(0);
+      setSelectedDeposit(null);
+      setDeposits([]);
+      console.log('🧹 เคลียร์หน้าจอเตรียมขายรอบใหม่แล้ว');
     }
   };
 
@@ -145,11 +179,10 @@ const PaymentSection = ({ saleItems }) => {
     }
   };
 
-
-
-
   return (
     <div className='font-bold'>
+
+       {/* เลือกการชำระ */}
       <div className='flex justify-center'>
         <div className="col-span-4 mb-4 flex gap-6">
           <label className="inline-flex items-center gap-2">
@@ -177,6 +210,8 @@ const PaymentSection = ({ saleItems }) => {
       </div>
 
       <div className="bg-white p-4 rounded-xl shadow min-w-[850px] flex flex-col-4 justify-center gap-4">
+        
+         {/* รายละเอียด */}
         <div className="mb-2 bg-slate-100 min-w-[350px] p-4 rounded-md space-y-1">
           <h2 className="text-lg font-semibold mb-2">รายละเอียด</h2>
           <hr />
@@ -244,8 +279,7 @@ const PaymentSection = ({ saleItems }) => {
           <hr />
         </div>
 
-
-
+        {/* เงินสด */}
         {paymentMethods.cash && (
           <div className="mb-4 min-w-[250px] bg-green-100 p-4 rounded-md">
             <h2 className="text-lg font-semibold mb-2 ">เงินสด</h2>
@@ -277,6 +311,7 @@ const PaymentSection = ({ saleItems }) => {
           </div>
         )}
 
+        {/* เงินโอน */}
         {paymentMethods.transfer && (
           <div className="mb-4 min-w-[250px] bg-sky-200 p-4 rounded-md">
             <h2 className="text-lg font-semibold mb-2">เงินโอน</h2>
@@ -294,6 +329,7 @@ const PaymentSection = ({ saleItems }) => {
           </div>
         )}
 
+        {/* บัตรเครดิต */}
         {paymentMethods.credit && (
           <div className="mb-4 min-w-[250px] bg-yellow-100 p-4 rounded-md ">
             <h2 className="text-lg font-semibold mb-2">บัตรเครดิต</h2>
@@ -322,7 +358,6 @@ const PaymentSection = ({ saleItems }) => {
           </div>
         )}
 
-
         {/* สรุปยอด + ปุ่มยืนยัน */}
         <div className="mb-4 min-w-[300px] bg-lime-100 p-3 rounded flex flex-col justify-between h-full">
           <div>
@@ -334,7 +369,7 @@ const PaymentSection = ({ saleItems }) => {
                 <span className="text-blue-600 text-lg">{totalToPay.toLocaleString()} ฿</span>
               </div>
               <hr />
-        
+
 
               <div className="flex justify-between py-1">
                 <span className="text-base text-green-700">เงินสด</span>
@@ -367,7 +402,7 @@ const PaymentSection = ({ saleItems }) => {
 
             </div>
             <hr />
-    
+
             <div className="space-y-4 py-3">
               <div className="text-sm text-left space-y-2">
                 <div className="pl-3 space-y-1">
@@ -390,13 +425,9 @@ const PaymentSection = ({ saleItems }) => {
           </div>
         </div>
 
-
-
-
       </div>
     </div>
   );
 };
 
 export default PaymentSection;
-

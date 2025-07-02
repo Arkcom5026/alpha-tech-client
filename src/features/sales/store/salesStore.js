@@ -21,6 +21,9 @@ const useSalesStore = create((set, get) => ({
   billDiscount: 0,
   sharedBillDiscountPerItem: 0,
 
+  saleCompleted: false,
+  setSaleCompleted: (val) => set({ saleCompleted: val }),
+
   setPaymentAmount: (method, amount) => {
     set((state) => {
       const exists = state.paymentList.some(p => p.method === method);
@@ -182,7 +185,6 @@ const useSalesStore = create((set, get) => ({
     }
   },
 
-
   loadSalesAction: async () => {
     try {
       const data = await getAllSales();
@@ -210,8 +212,22 @@ const useSalesStore = create((set, get) => ({
       return { error: 'เกิดข้อผิดพลาดในการคืนสินค้า' };
     }
   },
+
+  resetSaleOrderAction: () => {
+    set({
+      saleItems: [],
+      paymentList: [
+        { method: 'CASH', amount: 0 },
+        { method: 'TRANSFER', amount: 0 },
+        { method: 'CREDIT', amount: 0 },
+        { method: 'DEPOSIT', amount: 0 },
+      ],
+      billDiscount: 0,
+      sharedBillDiscountPerItem: 0,
+      cardRef: '',
+      customerId: null,
+    });
+  },
 }));
 
 export default useSalesStore;
-
-

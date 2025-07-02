@@ -11,7 +11,7 @@ import {
   applyDepositUsage
 } from '../api/customerDepositApi';
 
-const useCustomerDepositStore = create((set, get) => ({
+const useCustomerDepositStore = create((set) => ({
   isSubmitting: false,
   isLoading: false,
   isLoadingDetail: false,
@@ -25,8 +25,18 @@ const useCustomerDepositStore = create((set, get) => ({
   setCustomerDepositAmount: (amount) => set({ customerDepositAmount: amount }),
   setDepositUsed: (value) => set({ depositUsed: value }),
   setSelectedDeposit: (deposit) => set({ selectedDeposit: deposit }),
+  setSelectedCustomer: (customer) => set({ selectedCustomer: customer }),
   setDeposits: (list) => set({ deposits: list }),
   clearSelectedDeposit: () => set({ selectedDeposit: null }),
+  clearCustomer: () => set({ selectedCustomer: null }),
+  clearCustomerDeposit: () => set({ selectedDeposit: null, customerDepositAmount: 0, depositUsed: 0 }),
+
+  clearCustomerAndDeposit: () => set({
+    selectedCustomer: null,
+    selectedDeposit: null,
+    customerDepositAmount: 0,
+    depositUsed: 0,
+  }),
 
   // ACTION: Create
   createCustomerDepositAction: async (data) => {
@@ -118,10 +128,12 @@ const useCustomerDepositStore = create((set, get) => ({
       const res = await getCustomerAndDepositByPhone(phone);
       const customer = res?.customer;
       const deposit = res?.totalDeposit || 0;
+      const deposits = res?.deposits || [];
       if (customer) {
         set({
           selectedCustomer: customer,
           customerDepositAmount: deposit,
+          selectedDeposit: deposits.length > 0 ? deposits[0] : null,
         });
         return customer;
       } else {
@@ -135,9 +147,9 @@ const useCustomerDepositStore = create((set, get) => ({
   },
 
   // ACTION: Apply Deposit Usage
-  applyDepositUsageAction: async ({ customerDepositId, saleId, amountUsed }) => {
+  applyDepositUsageAction: async ({ depositId, saleId, amountUsed }) => {
     try {
-      const res = await applyDepositUsage({ customerDepositId, saleId, amountUsed });
+      const res = await applyDepositUsage({ depositId, saleId, amountUsed });
       return res; // return usage + remainingBalance
     } catch (err) {
       console.error('❌ applyDepositUsageAction error:', err);
@@ -145,6 +157,19 @@ const useCustomerDepositStore = create((set, get) => ({
       throw err;
     }
   },
+
+  // ACTION: Reset All
+  resetAllDepositState: () => set({
+    isSubmitting: false,
+    isLoading: false,
+    isLoadingDetail: false,
+    error: null,
+    deposits: [],
+    selectedDeposit: null,
+    selectedCustomer: null,
+    customerDepositAmount: 0,
+    depositUsed: 0,
+  }),
 
 }));
 

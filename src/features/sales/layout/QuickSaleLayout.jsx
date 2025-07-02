@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import useSalesStore from '@/features/sales/store/salesStore';
 import useCustomerStore from '@/features/customer/store/customerStore';
+import useCustomerDepositStore from '@/features/customerDeposit/store/customerDepositStore';
 import useStockItemStore from '@/features/stockItem/store/stockItemStore';
 
 import CustomerSection from '../components/CustomerSection';
@@ -14,6 +15,7 @@ const QuickSaleLayout = () => {
   const phoneInputRef = useRef(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedPriceType, setSelectedPriceType] = useState('retail');
+  const [clearPhoneTrigger, setClearPhoneTrigger] = useState(false);
 
   const {
     saleItems,
@@ -22,10 +24,13 @@ const QuickSaleLayout = () => {
     confirmSaleOrderAction,
     sharedBillDiscountPerItem,
     billDiscount,
+    saleCompleted,
+    setSaleCompleted,
   } = useSalesStore();
 
   const { searchStockItemAction } = useStockItemStore();
-  const { customer } = useCustomerStore();
+  const { customer, clearCustomer } = useCustomerStore();
+  const { clearCustomer: clearDepositCustomer, clearSelectedDeposit } = useCustomerDepositStore();
 
   useEffect(() => {
     phoneInputRef.current?.focus();
@@ -36,6 +41,16 @@ const QuickSaleLayout = () => {
       setSelectedPriceType(customer.priceLevel);
     }
   }, [customer]);
+
+  useEffect(() => {
+    if (saleCompleted) {
+      clearCustomer?.();
+      clearDepositCustomer?.();
+      clearSelectedDeposit?.();
+      setSaleCompleted(false);
+      setClearPhoneTrigger(true);
+    }
+  }, [saleCompleted, clearCustomer, clearDepositCustomer, clearSelectedDeposit, setSaleCompleted]);
 
   const handleBarcodeSearch = async (e) => {
     if (e.key === 'Enter') {
@@ -79,7 +94,12 @@ const QuickSaleLayout = () => {
   return (
     <div className="p-4 bg-white rounded-xl shadow-lg mt-4 min-w-[1600px]">
       <div className="bg-blue-100 p-4 rounded-xl shadow flex flex-col-2 gap-4 min-w-[600px]">
-        <CustomerSection phoneInputRef={phoneInputRef} productSearchRef={barcodeInputRef} />
+        <CustomerSection
+          phoneInputRef={phoneInputRef}
+          productSearchRef={barcodeInputRef}
+          clearTrigger={clearPhoneTrigger}
+          onClearFinish={() => setClearPhoneTrigger(false)}
+        />
         <div className="col-span-12 lg:col-span-8 space-y-4">
           <div className="bg-white p-4 rounded-xl shadow">
             <h2 className="text-lg font-bold text-black">เลือกราคาขาย:</h2>
@@ -123,6 +143,3 @@ const QuickSaleLayout = () => {
 };
 
 export default QuickSaleLayout;
-
-
-

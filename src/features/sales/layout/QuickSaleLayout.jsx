@@ -1,8 +1,5 @@
-// ✅ อัปเดต Discount Logic ให้ถูกต้องตาม flow
-
 import React, { useEffect, useRef, useState } from 'react';
 import useSalesStore from '@/features/sales/store/salesStore';
-import useCustomerStore from '@/features/customer/store/customerStore';
 import useCustomerDepositStore from '@/features/customerDeposit/store/customerDepositStore';
 import useStockItemStore from '@/features/stockItem/store/stockItemStore';
 
@@ -15,7 +12,8 @@ const QuickSaleLayout = () => {
   const phoneInputRef = useRef(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedPriceType, setSelectedPriceType] = useState('retail');
-  const [clearPhoneTrigger, setClearPhoneTrigger] = useState(false);
+  const [clearPhoneTrigger, setClearPhoneTrigger] = useState(null);
+  const [hideCustomerDetails, setHideCustomerDetails] = useState(false);
 
   const {
     saleItems,
@@ -29,28 +27,24 @@ const QuickSaleLayout = () => {
   } = useSalesStore();
 
   const { searchStockItemAction } = useStockItemStore();
-  const { customer, clearCustomer } = useCustomerStore();
-  const { clearCustomer: clearDepositCustomer, clearSelectedDeposit } = useCustomerDepositStore();
+  const { clearCustomerAndDeposit, setCustomerIdAction } = useCustomerDepositStore();
 
   useEffect(() => {
     phoneInputRef.current?.focus();
   }, []);
 
   useEffect(() => {
-    if (customer?.priceLevel) {
-      setSelectedPriceType(customer.priceLevel);
-    }
-  }, [customer]);
-
-  useEffect(() => {
     if (saleCompleted) {
-      clearCustomer?.();
-      clearDepositCustomer?.();
-      clearSelectedDeposit?.();
+      console.log('✅ เคลียร์ข้อมูลลูกค้าและมัดจำ...');
+      clearCustomerAndDeposit();
+      setCustomerIdAction(null);
       setSaleCompleted(false);
-      setClearPhoneTrigger(true);
+      setClearPhoneTrigger(Date.now());
+      setTimeout(() => {
+        setHideCustomerDetails(true); // ✅ ต้องเป็น true เพื่อให้ซ่อนหลังขาย
+      }, 200);
     }
-  }, [saleCompleted, clearCustomer, clearDepositCustomer, clearSelectedDeposit, setSaleCompleted]);
+  }, [saleCompleted, clearCustomerAndDeposit, setCustomerIdAction, setSaleCompleted]);
 
   const handleBarcodeSearch = async (e) => {
     if (e.key === 'Enter') {
@@ -79,11 +73,22 @@ const QuickSaleLayout = () => {
     }
   };
 
+  const handleSaleConfirmed = () => {
+    setHideCustomerDetails(false); // ✅ แสดงรายละเอียดใหม่หลังยืนยัน
+  };
+
   const handleConfirmSale = async () => {
-    if (!customer || saleItems.length === 0 || isSubmitting) return;
+    if (saleItems.length === 0 || isSubmitting) return;
     try {
       setIsSubmitting(true);
       await confirmSaleOrderAction();
+      console.log('✅ ยืนยันการขายเสร็จแล้ว → เคลียร์ข้อมูลลูกค้า');
+      clearCustomerAndDeposit();
+      setCustomerIdAction(null);
+      setClearPhoneTrigger(Date.now());
+      setTimeout(() => {
+        setHideCustomerDetails(true); // ✅ ต้องเป็น true เช่นเดียวกันตรงนี้
+      }, 200);
     } catch (err) {
       console.error('❌ ยืนยันการขายล้มเหลว:', err);
     } finally {
@@ -98,7 +103,9 @@ const QuickSaleLayout = () => {
           phoneInputRef={phoneInputRef}
           productSearchRef={barcodeInputRef}
           clearTrigger={clearPhoneTrigger}
-          onClearFinish={() => setClearPhoneTrigger(false)}
+          onClearFinish={() => setClearPhoneTrigger(null)}
+          key={clearPhoneTrigger}
+          hideCustomerDetails={hideCustomerDetails}
         />
         <div className="col-span-12 lg:col-span-8 space-y-4">
           <div className="bg-white p-4 rounded-xl shadow">
@@ -136,6 +143,8 @@ const QuickSaleLayout = () => {
           saleItems={saleItems}
           onConfirm={handleConfirmSale}
           isSubmitting={isSubmitting}
+          onSaleConfirmed={handleSaleConfirmed}
+          setClearPhoneTrigger={setClearPhoneTrigger}
         />
       </div>
     </div>

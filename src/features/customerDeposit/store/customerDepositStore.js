@@ -4,6 +4,7 @@ import { create } from 'zustand';
 import {
   createCustomerDeposit,
   getCustomerAndDepositByPhone,
+  getCustomerAndDepositByName,
   getCustomerDepositById,
   getCustomerDeposits,
   getCustomerDepositTotal,
@@ -63,6 +64,7 @@ const useCustomerDepositStore = create((set) => ({
         },
         where: { status: 'ACTIVE' },
       });
+      console.log('fetchCustomerDepositsAction data :', data);
       set({ deposits: data });
     } catch (err) {
       console.error('❌ fetchCustomerDepositsAction error:', err);
@@ -141,6 +143,36 @@ const useCustomerDepositStore = create((set) => ({
       }
     } catch (err) {
       console.error('❌ searchCustomerByPhoneAndDepositAction error:', err);
+      set({ error: err });
+      return null;
+    }
+  },
+
+  // ACTION: Search by Name
+  searchCustomerByNameAndDepositAction: async (name) => {
+    try {
+      const res = await getCustomerAndDepositByName(name);
+
+      console.log('✅ res จาก getCustomerAndDepositByName', res);
+
+      const customer = res?.customer;
+      const deposit = res?.totalDeposit || 0;
+      const deposits = res?.deposits || [];
+
+      if (!customer) {
+        throw new Error('ไม่พบลูกค้า');
+      }
+
+      set({
+        selectedCustomer: customer,
+        customerDepositAmount: deposit,
+        selectedDeposit: deposits.length > 0 ? deposits[0] : null,
+        customerDeposits: deposits,
+      });
+
+      return customer;
+    } catch (err) {
+      console.error('❌ searchCustomerByNameAndDepositAction error:', err);
       set({ error: err });
       return null;
     }

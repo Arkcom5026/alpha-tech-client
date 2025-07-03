@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import useSalesStore from '@/features/sales/store/salesStore';
-import useCustomerStore from '@/features/customer/store/customerStore';
 import useCustomerDepositStore from '@/features/customerDeposit/store/customerDepositStore';
 import usePaymentStore from '@/features/payment/store/paymentStore';
-import { Navigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
-const PaymentSection = ({ saleItems }) => {
+const PaymentSection = ({ saleItems, onSaleConfirmed, setClearPhoneTrigger }) => {
+  const navigate = useNavigate();
+
   const {
     billDiscount,
     setBillDiscount,
@@ -15,11 +16,10 @@ const PaymentSection = ({ saleItems }) => {
     cardRef,
     setCardRef,
     resetSaleOrderAction,
+    setCustomerIdAction,
   } = useSalesStore();
 
-  const { clearCustomer } = useCustomerStore();
   const { submitMultiPaymentAction } = usePaymentStore();
-  const { customer } = useCustomerStore();
   const {
     customerDepositAmount,
     selectedCustomer,
@@ -27,10 +27,7 @@ const PaymentSection = ({ saleItems }) => {
     depositUsed,
     setDepositUsed,
     applyDepositUsageAction,
-    setSelectedCustomer,
-    setCustomerDepositAmount,
-    setSelectedDeposit,
-    setDeposits,
+    clearCustomerAndDeposit,
   } = useCustomerDepositStore();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -48,7 +45,7 @@ const PaymentSection = ({ saleItems }) => {
     }));
   };
 
-  const effectiveCustomer = selectedCustomer || customer || { id: null, name: 'ลูกค้าทั่วไป' };
+  const effectiveCustomer = selectedCustomer || { id: null, name: 'ลูกค้าทั่วไป' };
   const validSaleItems = Array.isArray(saleItems) ? saleItems : [];
   const totalOriginalPrice = validSaleItems.reduce((sum, item) => sum + (item.price || 0), 0);
   const totalDiscountOnly = validSaleItems.reduce((sum, item) => sum + (item.discountWithoutBill || 0), 0);
@@ -132,13 +129,17 @@ const PaymentSection = ({ saleItems }) => {
         }
 
         if (saleOption === 'RECEIPT') {
-          Navigate('/pos/sales/bill/print-short/' + confirmedSale.id, {
+          navigate('/pos/sales/bill/print-short/' + confirmedSale.id, {
             state: { payment: updatedPayments }
           });
         } else if (saleOption === 'TAX_INVOICE') {
-          Navigate('/pos/sales/bill/print-full/' + confirmedSale.id, {
+          navigate('/pos/sales/bill/print-full/' + confirmedSale.id, {
             state: { payment: updatedPayments }
           });
+        }
+
+        if (typeof onSaleConfirmed === 'function') {
+          onSaleConfirmed();
         }
       } else {
         console.error('❌ ไม่พบ ID ของรายการขายหลังจากยืนยัน');
@@ -159,15 +160,13 @@ const PaymentSection = ({ saleItems }) => {
       setCardRef('');
       setBillDiscount(0);
       resetSaleOrderAction?.();
-      clearCustomer?.();
-      setSelectedCustomer(null);
-      setCustomerDepositAmount(0);
-      setSelectedDeposit(null);
-      setDeposits([]);
+      clearCustomerAndDeposit();
+      setCustomerIdAction(null);
+      useCustomerDepositStore.getState().setShouldShowCustomerDetails?.(false);
+      setClearPhoneTrigger?.(Date.now());
       console.log('🧹 เคลียร์หน้าจอเตรียมขายรอบใหม่แล้ว');
     }
   };
-
 
   const hasValidCustomerId = !!effectiveCustomer?.id;
   const isConfirmEnabled = totalPaid + safeDepositUsed >= totalToPay && safeDepositUsed <= safeFinalPrice && hasValidCustomerId && validSaleItems.length > 0;
@@ -179,10 +178,13 @@ const PaymentSection = ({ saleItems }) => {
     }
   };
 
+
+
+
   return (
     <div className='font-bold'>
 
-       {/* เลือกการชำระ */}
+      {/* เลือกการชำระ */}
       <div className='flex justify-center'>
         <div className="col-span-4 mb-4 flex gap-6">
           <label className="inline-flex items-center gap-2">
@@ -210,8 +212,8 @@ const PaymentSection = ({ saleItems }) => {
       </div>
 
       <div className="bg-white p-4 rounded-xl shadow min-w-[850px] flex flex-col-4 justify-center gap-4">
-        
-         {/* รายละเอียด */}
+
+        {/* รายละเอียด */}
         <div className="mb-2 bg-slate-100 min-w-[350px] p-4 rounded-md space-y-1">
           <h2 className="text-lg font-semibold mb-2">รายละเอียด</h2>
           <hr />
@@ -431,3 +433,6 @@ const PaymentSection = ({ saleItems }) => {
 };
 
 export default PaymentSection;
+
+
+

@@ -65,10 +65,21 @@ export const getCustomerDepositTotal = async (customerId) => {
 export const getCustomerAndDepositByPhone = async (phone) => {
   try {
     const res = await apiClient.get(`/customer-deposits/by-phone/${phone}`);
-    console.log('getCustomerAndDepositByPhone res :',res)
+    console.log('getCustomerAndDepositByPhone res :', res);
     return res.data;
   } catch (error) {
     console.error('getCustomerAndDepositByPhone error:', error);
+    throw error;
+  }
+};
+
+export const getCustomerAndDepositByName = async (name) => {
+  try {
+    const res = await apiClient.get(`/customer-deposits/by-name`, { params: { q: name } });
+    console.log('getCustomerAndDepositByName res : ',res)
+    return res.data;
+  } catch (error) {
+    console.error('getCustomerAndDepositByName error:', error);
     throw error;
   }
 };

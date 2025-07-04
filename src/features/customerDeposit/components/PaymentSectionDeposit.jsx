@@ -66,9 +66,6 @@ const PaymentSectionDeposit = () => {
 
       {/* เงินโอน */}
       <div className="mb-4 min-w-[250px] bg-sky-200 p-4 rounded-md">
-        <h2 className="text-lg font-semibold mb-2">เงินโอน</h2>
-        <hr />
-        <label className="block text-sm font-bold text-gray-700">ยอดรวมเงินโอน:</label>
         <input
           type="number"
           className="mt-1 w-full border rounded px-3 py-2"

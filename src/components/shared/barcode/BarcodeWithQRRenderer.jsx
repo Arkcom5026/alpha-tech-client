@@ -1,27 +1,27 @@
+
+// ✅ BarcodeWithQRRenderer (ปรับขนาดตัวอักษร และลดช่องว่างด้านบน)
 import React from "react";
 import QRCode from "react-qr-code";
 import BarcodeRenderer from "@/components/shared/barcode/BarcodeRenderer";
 
-const BarcodeWithQRRenderer = ({ barcodeValue, qrValue, productName, barcodeHeight = 60, barcodeWidth = 1.8 }) => {
+const BarcodeWithQRRenderer = ({ barcodeValue, qrValue, productName, barcodeHeight = 20, barcodeWidth = 1.8, fontSize = 10, marginTopText = 2 }) => {
   if (!barcodeValue && !qrValue) return null;
 
   return (
-    <div className="flex flex-col items-center justify-center p-4 border border-gray-300 rounded shadow-md w-full max-w-xs">
-      <div className="text-sm font-medium mb-1 text-center truncate w-full">
+    <div className="w-full h-full flex flex-col items-center justify-center"> {/* <--- ลบ padding และ border ออก */}
+      <div className="text-xs font-medium text-center truncate w-full" style={{ marginBottom: `${marginTopText}px`, fontSize: `${fontSize}px` }}>
         {productName || "-"}
       </div>
 
-      {/* Barcode section */}
       {barcodeValue && (
-        <div className="my-2">
-          <BarcodeRenderer value={barcodeValue} height={barcodeHeight} width={barcodeWidth} />
+        <div className="my-1">
+          <BarcodeRenderer value={barcodeValue} height={barcodeHeight} width={barcodeWidth} fontSize={fontSize} />
         </div>
       )}
 
-      {/* QR Code section */}
       {qrValue && (
-        <div className="mt-2">
-          <QRCode value={qrValue} size={100} />
+        <div className="my-1">
+          <QRCode value={qrValue} size={60} />
         </div>
       )}
     </div>

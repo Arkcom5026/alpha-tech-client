@@ -5,13 +5,11 @@ import BillPrintOptions from './BillPrintOptions'; // Import BillPrintOptions
 const PaymentSummary = ({ totalToPay, grandTotalPaid, safeChangeAmount, isConfirmEnabled, isSubmitting, onConfirm, paymentError, saleOption, setSaleOption }) => {
   return (
     <div className="flex-1 min-w-[300px] max-w-[400px] bg-lime-50 p-6 rounded-xl flex flex-col justify-between shadow-lg border border-lime-100">
-      <div>
-        <h2 className="text-2xl font-bold text-gray-800 mb-4">สรุปยอดรวม</h2>
-        <hr className="border-gray-200" />
+      <div>                
         <div className="text-lg text-gray-700 mt-4">
           <div className="flex justify-between items-center mb-3">
-            <span className="text-3xl font-bold text-gray-900">ยอดสุทธิที่ต้องชำระ</span>
-            <span className="text-4xl font-extrabold text-blue-700">{totalToPay.toLocaleString(undefined, { maximumFractionDigits: 2 })} ฿</span>
+            <span className="text-2xl font-bold text-gray-900">ยอดสุทธิที่ต้องชำระ</span>
+            <span className="text-3xl font-extrabold text-blue-700">{totalToPay.toLocaleString(undefined, { maximumFractionDigits: 2 })} ฿</span>
           </div>
           <hr className="border-gray-200 my-3" />
 

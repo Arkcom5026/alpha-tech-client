@@ -284,7 +284,7 @@ const PaymentSection = ({ saleItems, onConfirm, isSubmitting, setIsSubmitting, o
           {paymentMethods.cash && (
             <PaymentMethodInput
               method="CASH"
-              label="ยอดที่รับ (เงินสด)"
+              label="เงินสด"
               value={paymentList.find(p => p.method === 'CASH')?.amount || ''}
               onChange={(e) => setPaymentAmount('CASH', e.target.value)}
               colorClass="green"
@@ -294,7 +294,7 @@ const PaymentSection = ({ saleItems, onConfirm, isSubmitting, setIsSubmitting, o
           {paymentMethods.transfer && (
             <PaymentMethodInput
               method="TRANSFER"
-              label="ยอดรวมเงินโอน"
+              label="เงินโอน"
               value={paymentList.find(p => p.method === 'TRANSFER')?.amount || ''}
               onChange={(e) => setPaymentAmount('TRANSFER', e.target.value)}
               colorClass="sky"
@@ -303,7 +303,7 @@ const PaymentSection = ({ saleItems, onConfirm, isSubmitting, setIsSubmitting, o
           {paymentMethods.credit && (
             <PaymentMethodInput
               method="CREDIT"
-              label="ยอดบัตรเครดิต"
+              label="บัตรเครดิต"
               value={paymentList.find(p => p.method === 'CREDIT')?.amount || ''}
               onChange={(e) => setPaymentAmount('CREDIT', e.target.value)}
               colorClass="yellow"

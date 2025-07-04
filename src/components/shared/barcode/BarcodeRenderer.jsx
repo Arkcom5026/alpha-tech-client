@@ -4,7 +4,7 @@
 import React, { useEffect, useRef } from 'react';
 import JsBarcode from 'jsbarcode';
 
-const BarcodeRenderer = ({ value, height = 30, width = 1.3 }) => {
+const BarcodeRenderer = ({ value, height = 20, width = 0.8 }) => {
   const svgRef = useRef(null);
 
   useEffect(() => {
@@ -14,7 +14,7 @@ const BarcodeRenderer = ({ value, height = 30, width = 1.3 }) => {
         displayValue: true,
         height: parseFloat(height),
         width: parseFloat(width),
-        fontSize: 12,
+        fontSize: 6,         
         margin: 0,
       });
     }

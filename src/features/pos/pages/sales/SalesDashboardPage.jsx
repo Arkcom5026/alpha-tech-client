@@ -40,11 +40,11 @@ const SalesDashboardPage = () => {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         {/* ✅ ปุ่มขายด่วน พร้อมลิงก์ */}
         <div
-          onClick={() => navigate('/pos/sales/quick-sale')}
+          onClick={() => navigate('/pos/sales/sale')}
           className="cursor-pointer bg-white dark:bg-zinc-800 p-4 rounded-xl border border-border shadow hover:bg-zinc-50 dark:hover:bg-zinc-700 transition"
         >
           <FaBolt className="text-yellow-500 mb-2" size={24} />
-          <p>ขายด่วน</p>
+          <p>ขายสินค้า</p>
         </div>
 
         {/* ปุ่มอื่นๆ */}

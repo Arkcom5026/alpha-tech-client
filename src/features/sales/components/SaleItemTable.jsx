@@ -5,68 +5,75 @@ import React, { useState, useEffect } from 'react';
 import useSalesStore from '@/features/sales/store/salesStore';
 
 const SaleItemTable = ({ items = [], onRemove, billDiscount = 0 }) => {
-  const [localItems, setLocalItems] = useState(items);
+  // ไม่จำเป็นต้องใช้ localItems state แล้ว เพราะจะอัปเดตผ่าน useSalesStore โดยตรง
+  // const [localItems, setLocalItems] = useState(items);
   const {
-    sharedBillDiscountPerItem,
+    sharedBillDiscountPerItem, // ยังคงใช้สำหรับแสดงผลเฉลี่ย
     setSharedBillDiscountPerItem,
     updateSaleItemAction,
   } = useSalesStore();
 
+  // useEffect นี้จะทำงานเมื่อ items หรือ billDiscount เปลี่ยนแปลง
   useEffect(() => {
-    setLocalItems((prev) => {
-      const merged = items.map((item) => {
-        const existing = prev.find((p) => p.stockItemId === item.stockItemId);
-        return {
-          ...item,
-          discount: existing?.discount ?? 0,
-          billShare: existing?.billShare ?? 0,
-        };
-      });
-      return merged;
-    });
-  }, [items]);
-
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      if (!Array.isArray(localItems) || localItems.length === 0) return;
-      const total = localItems.reduce((sum, item) => sum + (typeof item.price === 'number' ? item.price : 0), 0);
-      if (total === 0) return;
-
-      const updated = localItems.map((item) => {
-        const safePrice = typeof item.price === 'number' ? item.price : 0;
-        const ratio = safePrice / total;
-        const share = billDiscount > 0 ? Math.round(billDiscount * ratio) : 0;
-        return { ...item, billShare: share };
-      });
-
-      const sharedPerItem = Math.floor(billDiscount / localItems.length);
-      setSharedBillDiscountPerItem(sharedPerItem);
-
-      if (JSON.stringify(localItems) !== JSON.stringify(updated)) {
-        setLocalItems(updated);
+    // ใช้ setTimeout เพื่อ debounce การอัปเดต store ป้องกันการ re-render ถี่เกินไป
+    const handler = setTimeout(() => {
+      if (!Array.isArray(items) || items.length === 0) {
+        // หากไม่มีรายการสินค้า ให้รีเซ็ต sharedBillDiscountPerItem
+        if (sharedBillDiscountPerItem !== 0) {
+          setSharedBillDiscountPerItem(0);
+        }
+        return;
       }
-    }, 300);
 
-    return () => clearTimeout(timeout);
-  }, [billDiscount, localItems]);
+      const totalSaleItemsPrice = items.reduce((sum, item) => sum + (typeof item.price === 'number' ? item.price : 0), 0);
+
+      // คำนวณ billShare สำหรับแต่ละรายการและอัปเดต 'discount' ใน store
+      items.forEach(item => {
+        const safePrice = typeof item.price === 'number' ? item.price : 0;
+        const ratio = totalSaleItemsPrice > 0 ? safePrice / totalSaleItemsPrice : 0; // ป้องกันการหารด้วยศูนย์
+        const calculatedBillShare = billDiscount > 0 ? Math.round(billDiscount * ratio) : 0;
+
+        // ตรวจสอบให้แน่ใจว่า discountWithoutBill ถูกเก็บไว้และเพิ่ม calculatedBillShare เข้าไป
+        const currentDiscountWithoutBill = item.discountWithoutBill || 0;
+        const newTotalDiscount = currentDiscountWithoutBill + calculatedBillShare;
+
+        // อัปเดตเฉพาะเมื่อมีการเปลี่ยนแปลงเพื่อป้องกันการ re-render/store update ที่ไม่จำเป็น
+        if (item.billShare !== calculatedBillShare || item.discount !== newTotalDiscount) {
+          updateSaleItemAction(item.stockItemId, {
+            billShare: calculatedBillShare,
+            discount: newTotalDiscount,
+          });
+        }
+      });
+
+      // บรรทัดนี้ใช้สำหรับแสดงผลส่วนลดเฉลี่ยต่อรายการเท่านั้น ไม่ใช่การคำนวณส่วนลดจริง
+      setSharedBillDiscountPerItem(Math.floor(billDiscount / items.length));
+
+    }, 100); // กำหนด debounce time (100ms)
+
+    return () => {
+      clearTimeout(handler); // เคลียร์ timeout เมื่อ component unmount หรือ effect ทำงานซ้ำ
+    };
+  }, [billDiscount, items, updateSaleItemAction, setSharedBillDiscountPerItem]); // กำหนด dependencies
 
   const handleDiscountChange = (itemId, value) => {
-    const updated = localItems.map((item) => {
-      if (item.stockItemId === itemId) {
-        const discountWithoutBill = isNaN(value) ? 0 : value;
-        const newDiscount = discountWithoutBill + (item.billShare || 0);
-        updateSaleItemAction(itemId, {
-          discountWithoutBill,
-          discount: newDiscount,
-        });
-        return { ...item, discountWithoutBill, discount: newDiscount };
-      }
-      return item;
+    const newDiscountWithoutBill = isNaN(value) ? 0 : value;
+
+    // ค้นหารายการที่กำลังแก้ไข
+    const itemToUpdate = items.find(item => item.stockItemId === itemId);
+    if (!itemToUpdate) return;
+
+    // คำนวณส่วนลดรวมใหม่: ส่วนลดที่กรอก + ส่วนลดท้ายบิลที่เฉลี่ย
+    const newTotalDiscount = newDiscountWithoutBill + (itemToUpdate.billShare || 0);
+
+    // อัปเดต SaleItem ใน store
+    updateSaleItemAction(itemId, {
+      discountWithoutBill: newDiscountWithoutBill,
+      discount: newTotalDiscount,
     });
-    setLocalItems(updated);
   };
 
-  if (!Array.isArray(localItems) || localItems.length === 0) {
+  if (!Array.isArray(items) || items.length === 0) {
     return (
       <table className="w-full text-left border">
         <thead className="bg-gray-100">
@@ -77,7 +84,7 @@ const SaleItemTable = ({ items = [], onRemove, billDiscount = 0 }) => {
             <th className="p-2 border">บาร์โค้ด</th>
             <th className="p-2 border">ราคา</th>
             <th className="p-2 border">ส่วนลด</th>
-            <th className="p-2 border">ส่วนลดท้ายบิล</th>
+            <th className="p-2 border">ลดท้ายบิล</th>
             <th className="p-2 border">สุทธิ</th>
             <th className="p-2 border">จัดการ</th>
           </tr>
@@ -109,12 +116,12 @@ const SaleItemTable = ({ items = [], onRemove, billDiscount = 0 }) => {
         </tr>
       </thead>
       <tbody>
-        {localItems.map((item, index) => {
+        {items.map((item, index) => { // ใช้ items โดยตรงจาก props
           const discount = item.discount || 0;
           const discountWithoutBill = item.discountWithoutBill || 0;
-          const billShare = item.billShare || sharedBillDiscountPerItem || 0;
+          const billShare = item.billShare || 0; // ใช้ item.billShare โดยตรง
           const safePrice = typeof item.price === 'number' ? item.price : 0;
-          const net = safePrice - discount;
+          const net = safePrice - discount; // net จะคำนวณจาก discount ที่รวม billShare แล้ว
           return (
             <tr key={item.stockItemId}>
               <td className="p-2 border">{index + 1}</td>

@@ -35,6 +35,12 @@ const QuickSaleLayout = () => {
   }, []);
 
   useEffect(() => {
+    if (clearPhoneTrigger) {
+      setHideCustomerDetails(false); // ✅ เปิดให้แสดงฟอร์มใหม่เมื่อค้นหาเบอร์ใหม่
+    }
+  }, [clearPhoneTrigger]);
+
+  useEffect(() => {
     // เมื่อการขายเสร็จสมบูรณ์ ให้เคลียร์ข้อมูลลูกค้าและตั้งค่าการซ่อนรายละเอียด
     if (saleCompleted) {
       console.log('✅ เคลียร์ข้อมูลลูกค้าและมัดจำ...');

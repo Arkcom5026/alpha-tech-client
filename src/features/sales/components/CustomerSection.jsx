@@ -48,11 +48,12 @@ const CustomerSection = ({ productSearchRef, clearTrigger, hideCustomerDetails }
   const { setCustomerIdAction } = useSalesStore();
 
   const shouldShowCustomerDetails = useMemo(() => {
-    // แสดงรายละเอียดลูกค้าเมื่อมีลูกค้าถูกเลือกและไม่ได้อยู่ในสถานะกำลังล้างข้อมูล
-    const result = Boolean(selectedCustomer?.id) && !isClearing && _shouldShowDetails;
+    const result = (!isClearing && (_shouldShowDetails || pendingPhone));
+  
     console.log('🧮 [COMPUTE] shouldShowCustomerDetails (no hide flag):', result);
     return result;
   }, [selectedCustomer, isClearing, _shouldShowDetails]);
+
 
   useEffect(() => {
     // กำหนด focus ไปที่ช่องเบอร์โทรศัพท์เมื่อ Component โหลดครั้งแรก

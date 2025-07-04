@@ -7,6 +7,7 @@ import {
   clearOnlineProductCache,
   getProductDropdownsForOnline,
 } from '../api/productOnlineApi';
+import { useBranchStore } from '@/features/branch/store/branchStore';
 
 export const useProductOnlineStore = create((set, get) => ({
   products: [],
@@ -24,10 +25,12 @@ export const useProductOnlineStore = create((set, get) => ({
   setFilters: (newFilters) => set({ filters: newFilters }),
 
   loadProductsAction: async (filters = {}) => {
-    console.log('[STORE] 🔄 loadProductsAction called with filters:', filters);
+    const finalBranchId = filters.branchId || useBranchStore.getState().selectedBranchId;
+    const filtersWithBranch = { ...filters, branchId: finalBranchId };
+    console.log('[STORE] 🔄 loadProductsAction called with:', filtersWithBranch);
     set({ isLoading: true, error: null });
     try {
-      const data = await getProductsForOnline(filters);
+      const data = await getProductsForOnline(filtersWithBranch);
       set({ products: data, isLoading: false });
     } catch (err) {
       console.error('❌ โหลดสินค้าออนไลน์ล้มเหลว:', err);
@@ -51,10 +54,12 @@ export const useProductOnlineStore = create((set, get) => ({
     }
   },
 
-  searchProductsAction: async (filters) => {
+  searchProductsAction: async (filters = {}) => {
+    const finalBranchId = filters.branchId || useBranchStore.getState().selectedBranchId;
+    const filtersWithBranch = { ...filters, branchId: finalBranchId };
     set({ isLoading: true, error: null });
     try {
-      const data = await getProductsForOnline(filters);
+      const data = await getProductsForOnline(filtersWithBranch);
       set({ products: data, isLoading: false });
     } catch (err) {
       console.error('❌ ค้นหาสินค้าออนไลน์ล้มเหลว:', err);
@@ -81,8 +86,4 @@ export const useProductOnlineStore = create((set, get) => ({
       console.error('❌ ล้างแคชสินค้าล้มเหลว:', err);
     }
   },
-
-  // ✅ เพิ่ม branchId สำหรับ context ใน Store
-  selectedBranchId: null,
-  setSelectedBranchId: (id) => set({ selectedBranchId: id }),
 }));

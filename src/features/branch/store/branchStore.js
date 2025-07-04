@@ -17,6 +17,7 @@ export const useBranchStore = create(
       branches: [],
       currentBranch: null,
       selectedBranchId: null,
+      version: 0,
 
       loadAllBranchesAction: async () => {
         try {
@@ -67,7 +68,11 @@ export const useBranchStore = create(
         }
       },
 
-      setSelectedBranchId: (id) => set({ selectedBranchId: id }),
+      setSelectedBranchId: (id) =>
+        set((state) => ({
+          selectedBranchId: id,
+          version: (state.version || 0) + 1,
+        })),
 
       getBranchNameById: (id) => {
         const { branches } = get();
@@ -205,6 +210,7 @@ export const useBranchStore = create(
       partialize: (state) => ({
         currentBranch: state.currentBranch,
         selectedBranchId: state.selectedBranchId,
+        version: state.version,
       }),
     }
   )

@@ -1,0 +1,85 @@
+// CalculationDetails.jsx (New Component)
+import React from 'react';
+
+const CalculationDetails = ({
+  totalOriginalPrice,
+  totalDiscountOnly,
+  billDiscount,
+  setBillDiscount,
+  totalDiscount,
+  priceBeforeVat,
+  vatAmount,
+  customerDepositAmount,
+  depositUsed,
+  handleDepositUsedChange,
+}) => {
+  const safeBillDiscount = typeof billDiscount === 'number' && !isNaN(billDiscount) ? billDiscount : 0;
+
+  return (
+    <div className="flex-1 min-w-[350px] max-w-[400px] bg-slate-50 p-4 rounded-xl space-y-2 shadow-sm border border-slate-100">
+      <h2 className="text-xl font-bold text-gray-800 mb-3">รายละเอียดการคำนวณ</h2>
+      <hr className="border-gray-200" />
+      <div className="flex justify-between px-2 py-1 text-lg text-gray-700">
+        <span>ยอดรวมราคาสินค้า</span>
+        <span className="font-semibold">{totalOriginalPrice.toLocaleString()} ฿</span>
+      </div>
+      <div className="flex justify-between px-4 text-base text-orange-700">
+        <span>ส่วนลดต่อรายการ</span>
+        <span className="font-medium">{totalDiscountOnly.toLocaleString()} ฿</span>
+      </div>
+
+      <div className="flex justify-between items-center gap-2 px-4 text-base text-orange-700">
+        <span>ส่วนลดท้ายบิล</span>
+        <input
+          type="number"
+          className={`w-[120px] h-[45px] border rounded-md px-2 text-lg text-right focus:ring-2 shadow-sm ${safeBillDiscount > totalOriginalPrice ? 'border-red-500 focus:ring-red-400' : 'border-gray-300 focus:ring-orange-400'}`}
+          placeholder="0.00"
+          value={safeBillDiscount === 0 ? '' : safeBillDiscount}
+          onChange={setBillDiscount} // Pass event directly
+        />
+      </div>
+
+      {safeBillDiscount > totalOriginalPrice && (
+        <div className="text-red-600 text-sm mt-1 text-right px-2">
+          ⚠️ ส่วนลดท้ายบิลห้ามเกินยอดรวมสินค้า ({totalOriginalPrice.toLocaleString()} ฿)
+        </div>
+      )}
+
+      <div className="flex justify-between px-4 text-base text-orange-700">
+        <span>รวมส่วนลดทั้งหมด</span>
+        <span className="font-medium">{totalDiscount.toLocaleString()} ฿</span>
+      </div>
+      <hr className="border-gray-200" />
+      <div className="flex justify-between text-lg px-2 py-2 text-gray-700">
+        <span>ยอดก่อนภาษี (Net)</span>
+        <span className="font-semibold">{priceBeforeVat.toLocaleString(undefined, { maximumFractionDigits: 2 })} ฿</span>
+      </div>
+      <div className="flex justify-between text-base px-2 text-red-600">
+        <span>Vat 7%</span>
+        <span className="font-medium">{vatAmount.toLocaleString(undefined, { maximumFractionDigits: 2 })} ฿</span>
+      </div>
+      <hr className="border-gray-200" />
+
+      {customerDepositAmount > 0 && (
+        <div className="flex justify-between items-center px-2 py-1">
+          <span className="text-blue-700 text-lg">ใช้มัดจำ</span>
+          <input
+            type="number"
+            placeholder="0.00"
+            className="w-[120px] h-[40px] border border-blue-300 rounded-md px-2 text-right text-blue-800 text-lg focus:ring-2 focus:ring-blue-400 shadow-sm"
+            value={depositUsed === 0 ? '' : depositUsed}
+            onChange={handleDepositUsedChange}
+          />
+        </div>
+      )}
+
+      <div className="flex justify-between px-2 pt-1 text-blue-700 text-lg">
+        <span>มัดจำคงเหลือ:</span>
+        <span className="font-bold text-blue-600">{customerDepositAmount.toLocaleString()} ฿</span>
+      </div>
+      <hr className="border-gray-200" />
+    </div>
+  );
+};
+
+export default CalculationDetails;

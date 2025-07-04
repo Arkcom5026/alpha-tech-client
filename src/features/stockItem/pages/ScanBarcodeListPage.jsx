@@ -64,7 +64,7 @@ const ScanBarcodeListPage = () => {
 
     const payload = {
       barcode,
-      serialNumber: keepSN ? snInput.trim() : barcode,
+      serialNumber: keepSN ? snInput.trim() : null,
       keepSN,
     };
 
@@ -172,3 +172,5 @@ const ScanBarcodeListPage = () => {
 };
 
 export default ScanBarcodeListPage;
+
+

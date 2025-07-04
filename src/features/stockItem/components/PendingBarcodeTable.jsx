@@ -44,3 +44,4 @@ const PendingBarcodeTable = ({ loading }) => {
 };
 
 export default PendingBarcodeTable;
+

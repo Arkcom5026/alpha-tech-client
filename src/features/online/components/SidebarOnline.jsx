@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import haversine from 'haversine-distance';
 import { useProductOnlineStore } from '../productOnline/store/productOnlineStore';
 import { useBranchStore } from '@/features/branch/store/branchStore';
@@ -55,6 +55,22 @@ const SidebarOnline = () => {
     distanceInKm = (distance / 1000).toFixed(2);
   }
 
+  // ✅ Trigger persist manually when selectedBranchId changes
+  useEffect(() => {
+    const branch = useBranchStore.getState();
+    localStorage.setItem(
+      'branch-storage',
+      JSON.stringify({
+        state: {
+          currentBranch: branch.currentBranch,
+          selectedBranchId: branch.selectedBranchId,
+          version: branch.version,
+        },
+        version: 0,
+      })
+    );
+  }, [selectedBranchId]);
+
   return (
     <div className="space-y-2 px-2 py-2">
       <div className="bg-green-50 border border-green-300 text-green-800 px-3 py-2 rounded text-sm">
@@ -63,7 +79,17 @@ const SidebarOnline = () => {
         <div className="mt-2">
           <select
             value={selectedBranchId || ''}
-            onChange={(e) => setSelectedBranchId(Number(e.target.value))}
+            onChange={(e) => {
+              const newId = Number(e.target.value);
+              const newBranch = branches.find((b) => b.id === newId);
+              if (newBranch) {
+                useBranchStore.setState({
+                  selectedBranchId: newBranch.id,
+                  currentBranch: newBranch,
+                  version: useBranchStore.getState().version + 1,
+                });
+              }
+            }}
             className="w-full border border-gray-300 rounded px-2 py-1"
           >
             <option value="">-- เลือกสาขาอื่น --</option>

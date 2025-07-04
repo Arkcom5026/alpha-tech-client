@@ -1,10 +1,17 @@
-import React, { useState, useEffect } from 'react';
+// PaymentSection component (Refactored to use sub-components)
+import React, { useState, useEffect, useCallback } from 'react';
 import useSalesStore from '@/features/sales/store/salesStore';
 import useCustomerDepositStore from '@/features/customerDeposit/store/customerDepositStore';
 import usePaymentStore from '@/features/payment/store/paymentStore';
 import { useNavigate } from 'react-router-dom';
 
-const PaymentSection = ({ saleItems, onSaleConfirmed, setClearPhoneTrigger }) => {
+// Import Components ย่อยๆ ที่สร้างขึ้นใหม่
+import PaymentSummary from './PaymentSummary';
+import PaymentMethodInput from './PaymentMethodInput';
+import CalculationDetails from './CalculationDetails';
+import BillPrintOptions from './BillPrintOptions';
+
+const PaymentSection = ({ saleItems, onConfirm, isSubmitting, onSaleConfirmed, setClearPhoneTrigger }) => {
   const navigate = useNavigate();
 
   const {
@@ -30,23 +37,25 @@ const PaymentSection = ({ saleItems, onSaleConfirmed, setClearPhoneTrigger }) =>
     clearCustomerAndDeposit,
   } = useCustomerDepositStore();
 
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [saleOption, setSaleOption] = useState('NONE');
+  const [saleOption, setSaleOption] = useState('NONE'); // ตัวเลือกการพิมพ์บิล
   const [paymentMethods, setPaymentMethods] = useState({
     cash: true,
     transfer: false,
     credit: false,
   });
+  const [paymentError, setPaymentError] = useState(''); // State สำหรับข้อความ Error การชำระเงิน
 
-  const handleToggle = (method) => {
+  const handleToggle = useCallback((method) => {
+    // สลับสถานะของช่องทางการชำระเงิน
     setPaymentMethods(prev => ({
       ...prev,
       [method]: !prev[method],
     }));
-  };
+  }, []);
 
-  const effectiveCustomer = selectedCustomer || { id: null, name: 'ลูกค้าทั่วไป' };
-  const validSaleItems = Array.isArray(saleItems) ? saleItems : [];
+  const effectiveCustomer = selectedCustomer || { id: null, name: 'ลูกค้าทั่วไป' }; // ลูกค้าปัจจุบัน
+  const validSaleItems = Array.isArray(saleItems) ? saleItems : []; // ตรวจสอบว่าเป็น Array
+  // คำนวณยอดรวมต่างๆ
   const totalOriginalPrice = validSaleItems.reduce((sum, item) => sum + (item.price || 0), 0);
   const totalDiscountOnly = validSaleItems.reduce((sum, item) => sum + (item.discountWithoutBill || 0), 0);
   const safeBillDiscount = typeof billDiscount === 'number' && !isNaN(billDiscount) ? billDiscount : 0;
@@ -54,47 +63,74 @@ const PaymentSection = ({ saleItems, onSaleConfirmed, setClearPhoneTrigger }) =>
   const safeFinalPrice = Math.max(totalOriginalPrice - totalDiscountOnly - safeBillDiscount, 0);
 
   useEffect(() => {
+    // คำนวณยอดเงินมัดจำที่แนะนำให้ใช้
     const suggested = Math.min(customerDepositAmount, safeFinalPrice);
     setDepositUsed(suggested);
-  }, [customerDepositAmount, safeFinalPrice]);
+  }, [customerDepositAmount, safeFinalPrice, setDepositUsed]); // เพิ่ม setDepositUsed ใน dependency array
 
-  const handleDepositUsedChange = (value) => {
-    const amount = parseFloat(value) || 0;
+  const handleDepositUsedChange = useCallback((e) => {
+    // จัดการการเปลี่ยนแปลงยอดเงินมัดจำที่ใช้
+    const amount = parseFloat(e.target.value) || 0;
     const safeAmount = Math.min(amount, customerDepositAmount);
     setDepositUsed(safeAmount);
-  };
+  }, [customerDepositAmount, setDepositUsed]); // เพิ่ม setDepositUsed ใน dependency array
 
-  const priceBeforeVat = safeFinalPrice / 1.07;
-  const vatAmount = safeFinalPrice - priceBeforeVat;
-  const safeDepositUsed = Math.min(depositUsed, safeFinalPrice);
-  const totalToPay = safeFinalPrice;
+  const priceBeforeVat = safeFinalPrice / 1.07; // คำนวณราคาก่อนภาษี
+  const vatAmount = safeFinalPrice - priceBeforeVat; // คำนวณภาษีมูลค่าเพิ่ม
+  const safeDepositUsed = Math.min(depositUsed, safeFinalPrice); // ยอดมัดจำที่ใช้จริง (ไม่เกินยอดที่ต้องชำระ)
+  const totalToPay = safeFinalPrice; // ยอดรวมที่ต้องชำระ
 
+  // ยอดเงินที่รับมาในแต่ละช่องทาง
   const cashAmount = Number(paymentList.find(p => p.method === 'CASH')?.amount || 0);
   const transferAmount = Number(paymentList.find(p => p.method === 'TRANSFER')?.amount || 0);
   const creditAmount = Number(paymentList.find(p => p.method === 'CREDIT')?.amount || 0);
 
+  // ยอดรวมที่ชำระแล้ว (ไม่รวมเงินทอน)
   const totalPaid = paymentList.reduce((sum, p) => {
     const amount = parseFloat(p.amount);
     return sum + (isNaN(amount) ? 0 : amount);
   }, 0);
 
-  const paidByOther = totalPaid - cashAmount;
-  const remainingToPay = Math.max(totalToPay - paidByOther - safeDepositUsed, 0);
-  const safeChangeAmount = Math.max(cashAmount - remainingToPay, 0);
-  const totalPaidNet = totalPaid - safeChangeAmount;
-  const grandTotalPaid = totalPaidNet + safeDepositUsed;
+  const paidByOther = totalPaid - cashAmount; // ยอดที่ชำระด้วยช่องทางอื่นที่ไม่ใช่เงินสด
+  const remainingToPay = Math.max(totalToPay - paidByOther - safeDepositUsed, 0); // ยอดที่เหลือต้องชำระด้วยเงินสด
+  const safeChangeAmount = Math.max(cashAmount - remainingToPay, 0); // เงินทอน
+  const totalPaidNet = totalPaid - safeChangeAmount; // ยอดเงินที่รับสุทธิ (ไม่รวมเงินทอน)
+  const grandTotalPaid = totalPaidNet + safeDepositUsed; // ยอดรวมที่ชำระทั้งหมด (รวมมัดจำ)
 
-  const handleConfirm = async () => {
+  // เงื่อนไขในการเปิดใช้งานปุ่มยืนยันการขาย
+  const hasValidCustomerId = !!effectiveCustomer?.id; // ย้ายมาประกาศก่อน handleConfirm
+  const isConfirmEnabled = totalPaid + safeDepositUsed >= totalToPay && safeDepositUsed <= safeFinalPrice && hasValidCustomerId && validSaleItems.length > 0; // ย้ายมาประกาศก่อน handleConfirm
+
+  const handleConfirm = useCallback(async () => {
+    setPaymentError(''); // ล้างข้อความ Error ก่อนยืนยัน
     console.log('🔍 safeDepositUsed:', safeDepositUsed);
     console.log('🔍 selectedDeposit?.id:', selectedDeposit?.id);
     const customerIdToUse = effectiveCustomer?.id;
-    if (!customerIdToUse || !validSaleItems.length || isSubmitting) {
-      console.warn('⛔ ไม่สามารถยืนยันการขายได้ เพราะขาดข้อมูล');
+
+    if (!hasValidCustomerId) {
+      setPaymentError('กรุณาเลือกหรือสร้างข้อมูลลูกค้าก่อนยืนยันการขาย');
       return;
     }
+    if (validSaleItems.length === 0) {
+      setPaymentError('กรุณาเพิ่มรายการสินค้าก่อนยืนยันการขาย');
+      return;
+    }
+    if (isSubmitting) {
+      setPaymentError('กำลังดำเนินการ กรุณารอสักครู่');
+      return;
+    }
+    if (totalPaid + safeDepositUsed < totalToPay) {
+        setPaymentError('ยอดเงินที่ชำระยังไม่เพียงพอ');
+        return;
+    }
+    if (safeBillDiscount > totalOriginalPrice) {
+        setPaymentError('ส่วนลดท้ายบิลห้ามเกินยอดรวมราคาสินค้า');
+        return;
+    }
+
     try {
-      setIsSubmitting(true);
-      const confirmedSale = await confirmSaleOrderAction();
+      setIsSubmitting(true); // ตั้งค่าสถานะกำลังส่งข้อมูล
+      const confirmedSale = await confirmSaleOrderAction(); // ยืนยันคำสั่งขาย
       console.log('✅ ยืนยันการขายสำเร็จ saleId:', confirmedSale?.id);
 
       if (confirmedSale?.id) {
@@ -107,7 +143,7 @@ const PaymentSection = ({ saleItems, onSaleConfirmed, setClearPhoneTrigger }) =>
 
         const validPayments = updatedPayments.filter(p => parseFloat(p.amount) > 0);
         if (validPayments.length === 0) {
-          console.warn("⚠️ ไม่มีรายการชำระเงินที่มีจำนวนเงินที่มากกว่า 0");
+          setPaymentError("⚠️ ไม่มีรายการชำระเงินที่มีจำนวนเงินที่มากกว่า 0");
           return;
         }
 
@@ -128,6 +164,7 @@ const PaymentSection = ({ saleItems, onSaleConfirmed, setClearPhoneTrigger }) =>
           console.log('✅ อัปเดตสถานะการใช้เงินมัดจำเรียบร้อย');
         }
 
+        // นำทางไปยังหน้าพิมพ์บิลตามตัวเลือก
         if (saleOption === 'RECEIPT') {
           navigate('/pos/sales/bill/print-short/' + confirmedSale.id, {
             state: { payment: updatedPayments }
@@ -142,11 +179,13 @@ const PaymentSection = ({ saleItems, onSaleConfirmed, setClearPhoneTrigger }) =>
           onSaleConfirmed();
         }
       } else {
-        console.error('❌ ไม่พบ ID ของรายการขายหลังจากยืนยัน');
+        setPaymentError('❌ ไม่พบ ID ของรายการขายหลังจากยืนยัน');
       }
     } catch (err) {
       console.error('❌ ยืนยันการขายล้มเหลว:', err);
+      setPaymentError('❌ ยืนยันการขายล้มเหลว: ' + (err.message || 'เกิดข้อผิดพลาด'));
     } finally {
+      // เคลียร์ข้อมูลและรีเซ็ตสถานะหลังจากยืนยันการขาย
       setTimeout(() => {
         const phoneInput = document.getElementById('customer-phone-input');
         if (phoneInput) {
@@ -162,270 +201,144 @@ const PaymentSection = ({ saleItems, onSaleConfirmed, setClearPhoneTrigger }) =>
       resetSaleOrderAction?.();
       clearCustomerAndDeposit();
       setCustomerIdAction(null);
-      useCustomerDepositStore.getState().setShouldShowCustomerDetails?.(false);
       setClearPhoneTrigger?.(Date.now());
       console.log('🧹 เคลียร์หน้าจอเตรียมขายรอบใหม่แล้ว');
     }
-  };
+  }, [
+    hasValidCustomerId, validSaleItems.length, isSubmitting, totalPaid, safeDepositUsed, totalToPay, safeBillDiscount, totalOriginalPrice,
+    confirmSaleOrderAction, paymentList, selectedDeposit?.id, submitMultiPaymentAction, grandTotalPaid, applyDepositUsageAction,
+    saleOption, navigate, onSaleConfirmed, setDepositUsed, setCardRef, setBillDiscount, resetSaleOrderAction, clearCustomerAndDeposit,
+    setCustomerIdAction, setClearPhoneTrigger, effectiveCustomer?.id, effectiveCustomer // เพิ่ม effectiveCustomer ใน dependency array ด้วย
+  ]);
 
-  const hasValidCustomerId = !!effectiveCustomer?.id;
-  const isConfirmEnabled = totalPaid + safeDepositUsed >= totalToPay && safeDepositUsed <= safeFinalPrice && hasValidCustomerId && validSaleItems.length > 0;
 
-  const handleBillDiscountChange = (e) => {
+  const handleBillDiscountChange = useCallback((e) => {
+    // จัดการการเปลี่ยนแปลงส่วนลดท้ายบิล
     const newDiscount = Number(e.target.value) || 0;
-    if (newDiscount <= totalOriginalPrice) {
+    // อนุญาตให้ส่วนลดเป็น 0 หรือค่าบวกที่ไม่เกินราคาสินค้า
+    if (newDiscount >= 0 && newDiscount <= totalOriginalPrice) {
       setBillDiscount(newDiscount);
+    } else if (newDiscount < 0) {
+      setBillDiscount(0); // ไม่ให้ส่วนลดติดลบ
     }
-  };
-
-
-
+    // ไม่ต้อง setBillDiscount ถ้าเกิน totalOriginalPrice เพราะจะแสดง error message แทน
+  }, [setBillDiscount, totalOriginalPrice]); // เพิ่ม setBillDiscount ใน dependency array
 
   return (
     <div className='font-bold'>
-
       {/* เลือกการชำระ */}
-      <div className='flex justify-center'>
-        <div className="col-span-4 mb-4 flex gap-6">
-          <label className="inline-flex items-center gap-2">
+      <div className='flex justify-center mb-6'>
+        <div className="flex gap-6 p-3 bg-white rounded-xl shadow-md">
+          <label className="inline-flex items-center gap-2 text-gray-700 text-lg">
             <input
               type="checkbox"
               checked={paymentMethods.cash}
               onChange={() => handleToggle('cash')}
-            /> เงินสด
+              className="form-checkbox h-5 w-5 text-green-600 rounded"
+            />
+            เงินสด
           </label>
-          <label className="inline-flex items-center gap-2">
+          <label className="inline-flex items-center gap-2 text-gray-700 text-lg">
             <input
               type="checkbox"
               checked={paymentMethods.transfer}
               onChange={() => handleToggle('transfer')}
-            /> เงินโอน
+              className="form-checkbox h-5 w-5 text-blue-600 rounded"
+            />
+            เงินโอน
           </label>
-          <label className="inline-flex items-center gap-2">
+          <label className="inline-flex items-center gap-2 text-gray-700 text-lg">
             <input
               type="checkbox"
               checked={paymentMethods.credit}
               onChange={() => handleToggle('credit')}
-            /> บัตรเครดิต
+              className="form-checkbox h-5 w-5 text-yellow-600 rounded"
+            />
+            บัตรเครดิต
           </label>
         </div>
       </div>
 
-      <div className="bg-white p-4 rounded-xl shadow min-w-[850px] flex flex-col-4 justify-center gap-4">
+      <div className="bg-white p-4 rounded-xl shadow min-w-[850px] flex flex-wrap justify-center gap-4">
 
-        {/* รายละเอียด */}
-        <div className="mb-2 bg-slate-100 min-w-[350px] p-4 rounded-md space-y-1">
-          <h2 className="text-lg font-semibold mb-2">รายละเอียด</h2>
-          <hr />
-          <div className="flex justify-between px-2 py-1">
-            <span className='text-lg'>ยอดรวมราคาสินค้า</span>
-            <span>{totalOriginalPrice.toLocaleString()} ฿</span>
-          </div>
-          <div className="flex justify-between  px-4 ">
-            <span className='text-orange-700  text-base'>ส่วนลดต่อรายการ</span>
-            <span className="text-orange-500  text-base">{totalDiscountOnly.toLocaleString()} ฿</span>
-          </div>
+        {/* คอลัมน์ที่ 3: รายละเอียดการคำนวณ - ย้ายมาอยู่ก่อน PaymentSummary */}
+        <CalculationDetails
+          totalOriginalPrice={totalOriginalPrice}
+          totalDiscountOnly={totalDiscountOnly}
+          billDiscount={billDiscount}
+          setBillDiscount={handleBillDiscountChange} // ส่ง handleBillDiscountChange ที่ใช้ useCallback
+          totalDiscount={totalDiscount}
+          priceBeforeVat={priceBeforeVat}
+          vatAmount={vatAmount}
+          customerDepositAmount={customerDepositAmount}
+          depositUsed={depositUsed}
+          handleDepositUsedChange={handleDepositUsedChange} // ส่ง handleDepositUsedChange ที่ใช้ useCallback
+        />
 
-          <div className="flex justify-between items-center gap-2 px-4 ">
-            <span className='text-orange-700  text-base'>ส่วนลดท้ายบิล</span>
+       
 
-            <input
-              type="number"
-              className="mt-2 w-[120px] h-[45px] border rounded px-1 text-lg text-right"
-              placeholder="0.00"
-              value={safeBillDiscount === 0 ? '' : safeBillDiscount}
-              onChange={handleBillDiscountChange}
+        {/* คอลัมน์ที่ 2: ช่องทางการชำระเงิน (แยกตามประเภท) */}
+        <div className="flex-1 min-w-[300px] max-w-[450px] space-y-4">
+          {/* Payment Method Toggles (ย้ายมาไว้ที่นี่เพื่อให้ใกล้กับช่องกรอก) */}
+          {/* ส่วนนี้ยังคงใช้ Checkbox เหมือนเดิมตามโค้ดเดิม แต่ถ้าต้องการเปลี่ยนเป็นปุ่ม Toggle ตามคำแนะนำก่อนหน้า สามารถปรับได้ที่นี่ */}
+          {paymentMethods.cash && (
+            <PaymentMethodInput
+              method="CASH"
+              label="ยอดที่รับ (เงินสด)"
+              value={paymentList.find(p => p.method === 'CASH')?.amount || ''}
+              onChange={(e) => setPaymentAmount('CASH', e.target.value)}
+              colorClass="green"
+              // ลบ additionalInfo และ bottomContent ออกจากตรงนี้
             />
-
-          </div>
-
-          {safeBillDiscount > totalOriginalPrice && (
-            <div className="text-red-600 text-sm mt-1 text-right px-2 ">
-              ⚠️ ส่วนลดท้ายบิลห้ามเกินยอดรวมสินค้า ({totalOriginalPrice.toLocaleString()} ฿)
-            </div>
           )}
-
-          <div className="flex justify-between  px-4 ">
-            <span className='text-orange-700  text-base'>รวมส่วนลดทั้งหมด</span>
-            <span className="text-orange-700  text-base">{totalDiscount.toLocaleString()} ฿</span>
-          </div>
-          <hr />
-          <div className="flex justify-between  text-base px-2 py-2">
-            <span>ยอดก่อนภาษี (Net)</span>
-            <span>{priceBeforeVat.toLocaleString(undefined, { maximumFractionDigits: 2 })} ฿</span>
-          </div>
-          <div className="flex justify-between text-sm px-2 ">
-            <span className=' text-base'>Vat 7%</span>
-            <span className="text-red-600">{vatAmount.toLocaleString(undefined, { maximumFractionDigits: 2 })} ฿</span>
-          </div>
-          <hr />
-
-          {/* 💰 มัดจำ */}
-          {customerDepositAmount > 0 && (
-            <div className="flex justify-between items-center  ">
-              <span className="text-blue-700 px-2 text-base">ใช้มัดจำ</span>
-              <input
-                type="number"
-                placeholder="0.00"
-                className="w-[120px] h-[40px] border rounded  text-right text-blue-800"
-                value={depositUsed === 0 ? '' : depositUsed}
-                onChange={(e) => handleDepositUsedChange(e.target.value)}
-              />
-            </div>
+          {paymentMethods.transfer && (
+            <PaymentMethodInput
+              method="TRANSFER"
+              label="ยอดรวมเงินโอน"
+              value={paymentList.find(p => p.method === 'TRANSFER')?.amount || ''}
+              onChange={(e) => setPaymentAmount('TRANSFER', e.target.value)}
+              colorClass="sky"
+            />
           )}
-
-          <div className="flex justify-between px-2 pt-1">
-            <span className='text-blue-700  text-base'>มัดจำคงเหลือ:</span>
-            <span className="font-semibold text-blue-600  text-base">{customerDepositAmount.toLocaleString()} ฿</span>
-          </div>
-          <hr />
-        </div>
-
-        {/* เงินสด */}
-        {paymentMethods.cash && (
-          <div className="mb-4 min-w-[250px] bg-green-100 p-4 rounded-md">
-            <h2 className="text-lg font-semibold mb-2 ">เงินสด</h2>
-            <hr />
-
-            <div className='py-4'>
-              <label className="block text-sm font-bold text-gray-700">ยอดที่รับ (เงินสด)</label>
-
-              <input
-                type="number"
-                className="mt-2 w-[140px] h-[45px] border rounded px-1 py-1 text-lg text-right"
-                placeholder="0.00"
-                value={paymentList.find(p => p.method === 'CASH')?.amount || ''}
-                onChange={(e) => setPaymentAmount('CASH', e.target.value)}
-              />
-
-            </div>
-
-            <div className='py-4'>
-              <label className="block text-sm font-bold text-gray-700">เงินทอน</label>
-              <div className="mt-2 w-[140px] h-[45px]  border rounded px-4 py-2 bg-gray-100 text-right">
-                {safeChangeAmount.toLocaleString()} ฿
-              </div>
-            </div>
-            <div className="text-sm text-gray-700 font-bold">
-              ต้องรับเงินสดอย่างน้อย: {remainingToPay.toLocaleString()} ฿
-            </div>
-
-          </div>
-        )}
-
-        {/* เงินโอน */}
-        {paymentMethods.transfer && (
-          <div className="mb-4 min-w-[250px] bg-sky-200 p-4 rounded-md">
-            <h2 className="text-lg font-semibold mb-2">เงินโอน</h2>
-            <hr />
-            <div className='py-4'>
-              <label className="block text-sm font-bold text-gray-700 ">ยอดรวมเงินโอน</label>
-              <input
-                type="number"
-                className="mt-1 w-[140px] h-[45px] border rounded py-2  text-right"
-                placeholder="0.00"
-                value={paymentList.find(p => p.method === 'TRANSFER')?.amount || ''}
-                onChange={(e) => setPaymentAmount('TRANSFER', e.target.value)}
-              />
-            </div>
-          </div>
-        )}
-
-        {/* บัตรเครดิต */}
-        {paymentMethods.credit && (
-          <div className="mb-4 min-w-[250px] bg-yellow-100 p-4 rounded-md ">
-            <h2 className="text-lg font-semibold mb-2">บัตรเครดิต</h2>
-            <hr />
-            <div className='py-4'>
-              <label className="block text-sm font-bold text-gray-700">ยอดบัตรเครดิต</label>
-              <input
-                type="number"
-                className="mt-1 border rounded text-right w-[140px] h-[45px]"
-                placeholder="0.00"
-                value={paymentList.find(p => p.method === 'CREDIT')?.amount || ''}
-                onChange={(e) => setPaymentAmount('CREDIT', e.target.value)}
-              />
-            </div>
-            <div className='py-4'>
-              <label className="text-sm mt-2 block font-bold">เลขอ้างอิงบัตรเครดิต</label>
-              <input
-                type="text"
-                value={cardRef}
-                onChange={(e) => setCardRef(e.target.value)}
-                className="border rounded p-1 w-full mt-1 text-sm  h-[45px]"
-                placeholder="กรอกเลขอ้างอิงจากเครื่องรูดบัตร"
-                maxLength={24}
-              />
-            </div>
-          </div>
-        )}
-
-        {/* สรุปยอด + ปุ่มยืนยัน */}
-        <div className="mb-4 min-w-[300px] bg-lime-100 p-3 rounded flex flex-col justify-between h-full">
-          <div>
-            <h2 className="text-lg font-semibold mb-2">สรุปยอด</h2>
-            <hr />
-            <div className="text-sm text-gray-700 mt-2">
-              <div className="flex justify-between">
-                <span className="text-lg">ยอดสุทธิที่ต้องชำระ</span>
-                <span className="text-blue-600 text-lg">{totalToPay.toLocaleString()} ฿</span>
-              </div>
-              <hr />
-
-
-              <div className="flex justify-between py-1">
-                <span className="text-base text-green-700">เงินสด</span>
-                <span className="text-green-600">{cashAmount.toLocaleString()} ฿</span>
-              </div>
-
-              <div className="flex justify-between">
-                <span className="text-base text-cyan-800">เงินโอน</span>
-                <span className="text-cyan-800">{transferAmount.toLocaleString()} ฿</span>
-              </div>
-
-              <div className="flex justify-between">
-                <span className="text-base text-amber-700">บัตรเครดิต</span>
-                <span className="text-amber-500">{creditAmount.toLocaleString()} ฿</span>
-              </div>
-
-              <div className="flex justify-between">
-                <span className="text-base text-purple-700">เงินมัดจำ</span>
-                <span className="text-purple-600">{safeDepositUsed.toLocaleString()} ฿</span>
-              </div>
-
-              <hr />
-
-              <div className="flex justify-between font-semibold text-base py-1">
-                <span className="font-bold text-lg">รวมยอดทั้งหมด</span>
-                <span className={grandTotalPaid >= totalToPay ? 'text-green-600 text-lg' : 'text-red-600 text-lg'}>
-                  {grandTotalPaid.toLocaleString(undefined, { maximumFractionDigits: 2 })} ฿
-                </span>
-              </div>
-
-            </div>
-            <hr />
-
-            <div className="space-y-4 py-3">
-              <div className="text-sm text-left space-y-2">
-                <div className="pl-3 space-y-1">
-                  <label className="block"><input type="radio" value="NONE" checked={saleOption === 'NONE'} onChange={(e) => setSaleOption(e.target.value)} className="mr-2" /> ไม่พิมพ์บิล</label>
-                  <label className="block"><input type="radio" value="RECEIPT" checked={saleOption === 'RECEIPT'} onChange={(e) => setSaleOption(e.target.value)} className="mr-2" /> ใบกำกับภาษี อย่างย่อ</label>
-                  <label className="block"><input type="radio" value="TAX_INVOICE" checked={saleOption === 'TAX_INVOICE'} onChange={(e) => setSaleOption(e.target.value)} className="mr-2" /> ใบกำกับภาษี เต็มรูป</label>
+          
+          {paymentMethods.credit && (
+            <PaymentMethodInput
+              method="CREDIT"
+              label="ยอดบัตรเครดิต"
+              value={paymentList.find(p => p.method === 'CREDIT')?.amount || ''}
+              onChange={(e) => setPaymentAmount('CREDIT', e.target.value)}
+              colorClass="yellow"
+              bottomContent={
+                <div className='py-4'>
+                  <label className="text-base mt-2 block font-bold text-gray-700 mb-1">เลขอ้างอิงบัตรเครดิต</label>
+                  <input
+                    type="text"
+                    value={cardRef}
+                    onChange={(e) => setCardRef(e.target.value)}
+                    className="border border-gray-300 rounded-md px-3 py-2 w-full text-base text-gray-800 h-[45px] focus:ring-2 focus:ring-yellow-500 shadow-sm"
+                    placeholder="กรอกเลขอ้างอิงจากเครื่องรูดบัตร"
+                    maxLength={24}
+                  />
                 </div>
-              </div>
-            </div>
+              }
+            />
+          )}
 
-            <div className="text-center  mt-auto py-2">
-              <button
-                onClick={handleConfirm}
-                disabled={!isConfirmEnabled}
-                className="px-6 py-3 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
-              >
-                ✅ ยืนยันการขาย
-              </button>
-            </div>
-          </div>
+          
         </div>
+ {/* คอลัมน์ที่ 1: สรุปยอดรวม (เด่นที่สุด) - ย้ายมาอยู่หลัง CalculationDetails */}
+ <PaymentSummary
+          totalToPay={totalToPay}
+          grandTotalPaid={grandTotalPaid}
+          safeChangeAmount={safeChangeAmount}
+          isConfirmEnabled={isConfirmEnabled}
+          isSubmitting={isSubmitting}
+          onConfirm={handleConfirm}
+          paymentError={paymentError}
+          // ส่ง props สำหรับ BillPrintOptions ไปยัง PaymentSummary
+          saleOption={saleOption}
+          setSaleOption={setSaleOption}
+        />
 
       </div>
     </div>
@@ -433,6 +346,3 @@ const PaymentSection = ({ saleItems, onSaleConfirmed, setClearPhoneTrigger }) =>
 };
 
 export default PaymentSection;
-
-
-

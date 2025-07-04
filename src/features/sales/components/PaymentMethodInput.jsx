@@ -35,7 +35,6 @@ const PaymentMethodInput = ({ method, label, value, onChange, colorClass, additi
         />
       </div>
 
-
     </div>
   );
 };

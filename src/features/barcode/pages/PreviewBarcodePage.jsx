@@ -18,6 +18,9 @@ const PreviewBarcodePage = () => {
   const [barcodeHeight, setBarcodeHeight] = useState(30);
   const [barcodeWidth, setBarcodeWidth] = useState(0.8);
 
+  const [showBarcode, setShowBarcode] = useState(true);
+  const [showQR, setShowQR] = useState(true);
+
   const handleLoadBarcodes = useCallback(async () => {
     if (!receiptId || loading || loaded) return;
 
@@ -51,7 +54,7 @@ const PreviewBarcodePage = () => {
     <div className="p-6 space-y-6">
       <h1 className="text-xl font-bold print:hidden">พรีวิวบาร์โค้ด</h1>
 
-      <div className="flex gap-4 items-center print:hidden">
+      <div className="flex gap-4 items-center flex-wrap print:hidden">
         <button
           onClick={handleLoadBarcodes}
           className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
@@ -98,6 +101,15 @@ const PreviewBarcodePage = () => {
             className="w-20 border rounded px-2 py-1"
           />
         </label>
+
+        <label className="flex items-center gap-2">
+          <input type="checkbox" checked={showBarcode} onChange={(e) => setShowBarcode(e.target.checked)} />
+          แสดง Barcode
+        </label>
+        <label className="flex items-center gap-2">
+          <input type="checkbox" checked={showQR} onChange={(e) => setShowQR(e.target.checked)} />
+          แสดง QR Code
+        </label>
       </div>
 
       {!loaded ? (
@@ -119,8 +131,8 @@ const PreviewBarcodePage = () => {
                 className="border p-2 rounded-xl shadow text-center"
               >
                 <BarcodeWithQRRenderer
-                  barcodeValue={item.barcode}
-                  qrValue={item.barcode}
+                  barcodeValue={showBarcode ? item.barcode : null}
+                  qrValue={showQR ? item.barcode : null}
                   productName={product?.name || 'ชื่อสินค้าไม่พบ'}
                   barcodeHeight={barcodeHeight}
                   barcodeWidth={barcodeWidth}

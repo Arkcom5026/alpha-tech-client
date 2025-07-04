@@ -11,7 +11,7 @@ import PaymentMethodInput from './PaymentMethodInput';
 import CalculationDetails from './CalculationDetails';
 import BillPrintOptions from './BillPrintOptions';
 
-const PaymentSection = ({ saleItems, onConfirm, isSubmitting, onSaleConfirmed, setClearPhoneTrigger }) => {
+const PaymentSection = ({ saleItems, onConfirm, isSubmitting, setIsSubmitting, onSaleConfirmed, setClearPhoneTrigger }) => { // <--- รับ setIsSubmitting เข้ามา
   const navigate = useNavigate();
 
   const {
@@ -98,8 +98,8 @@ const PaymentSection = ({ saleItems, onConfirm, isSubmitting, onSaleConfirmed, s
   const grandTotalPaid = totalPaidNet + safeDepositUsed; // ยอดรวมที่ชำระทั้งหมด (รวมมัดจำ)
 
   // เงื่อนไขในการเปิดใช้งานปุ่มยืนยันการขาย
-  const hasValidCustomerId = !!effectiveCustomer?.id; // ย้ายมาประกาศก่อน handleConfirm
-  const isConfirmEnabled = totalPaid + safeDepositUsed >= totalToPay && safeDepositUsed <= safeFinalPrice && hasValidCustomerId && validSaleItems.length > 0; // ย้ายมาประกาศก่อน handleConfirm
+  const hasValidCustomerId = !!effectiveCustomer?.id;
+  const isConfirmEnabled = totalPaid + safeDepositUsed >= totalToPay && safeDepositUsed <= safeFinalPrice && hasValidCustomerId && validSaleItems.length > 0;
 
   const handleConfirm = useCallback(async () => {
     setPaymentError(''); // ล้างข้อความ Error ก่อนยืนยัน
@@ -129,7 +129,7 @@ const PaymentSection = ({ saleItems, onConfirm, isSubmitting, onSaleConfirmed, s
     }
 
     try {
-      setIsSubmitting(true); // ตั้งค่าสถานะกำลังส่งข้อมูล
+      setIsSubmitting(true); // <--- เรียกใช้ setIsSubmitting ที่ได้รับมา
       const confirmedSale = await confirmSaleOrderAction(); // ยืนยันคำสั่งขาย
       console.log('✅ ยืนยันการขายสำเร็จ saleId:', confirmedSale?.id);
 
@@ -194,7 +194,7 @@ const PaymentSection = ({ saleItems, onConfirm, isSubmitting, onSaleConfirmed, s
         }
       }, 100);
 
-      setIsSubmitting(false);
+      setIsSubmitting(false); // <--- เรียกใช้ setIsSubmitting ที่ได้รับมา
       setDepositUsed(0);
       setCardRef('');
       setBillDiscount(0);
@@ -208,7 +208,7 @@ const PaymentSection = ({ saleItems, onConfirm, isSubmitting, onSaleConfirmed, s
     hasValidCustomerId, validSaleItems.length, isSubmitting, totalPaid, safeDepositUsed, totalToPay, safeBillDiscount, totalOriginalPrice,
     confirmSaleOrderAction, paymentList, selectedDeposit?.id, submitMultiPaymentAction, grandTotalPaid, applyDepositUsageAction,
     saleOption, navigate, onSaleConfirmed, setDepositUsed, setCardRef, setBillDiscount, resetSaleOrderAction, clearCustomerAndDeposit,
-    setCustomerIdAction, setClearPhoneTrigger, effectiveCustomer?.id, effectiveCustomer // เพิ่ม effectiveCustomer ใน dependency array ด้วย
+    setCustomerIdAction, setClearPhoneTrigger, effectiveCustomer?.id, effectiveCustomer, setIsSubmitting // <--- เพิ่ม setIsSubmitting ใน dependency array
   ]);
 
 
@@ -261,7 +261,7 @@ const PaymentSection = ({ saleItems, onConfirm, isSubmitting, onSaleConfirmed, s
 
       <div className="bg-white p-4 rounded-xl shadow min-w-[850px] flex flex-wrap justify-center gap-4">
 
-        {/* คอลัมน์ที่ 3: รายละเอียดการคำนวณ - ย้ายมาอยู่ก่อน PaymentSummary */}
+        {/* คอลัมน์ที่ 1: รายละเอียดการคำนวณ - ย้ายมาอยู่ก่อน PaymentSummary */}
         <CalculationDetails
           totalOriginalPrice={totalOriginalPrice}
           totalDiscountOnly={totalDiscountOnly}
@@ -275,7 +275,7 @@ const PaymentSection = ({ saleItems, onConfirm, isSubmitting, onSaleConfirmed, s
           handleDepositUsedChange={handleDepositUsedChange} // ส่ง handleDepositUsedChange ที่ใช้ useCallback
         />
 
-       
+
 
         {/* คอลัมน์ที่ 2: ช่องทางการชำระเงิน (แยกตามประเภท) */}
         <div className="flex-1 min-w-[300px] max-w-[450px] space-y-4">
@@ -300,7 +300,6 @@ const PaymentSection = ({ saleItems, onConfirm, isSubmitting, onSaleConfirmed, s
               colorClass="sky"
             />
           )}
-          
           {paymentMethods.credit && (
             <PaymentMethodInput
               method="CREDIT"
@@ -323,11 +322,10 @@ const PaymentSection = ({ saleItems, onConfirm, isSubmitting, onSaleConfirmed, s
               }
             />
           )}
-
-          
         </div>
- {/* คอลัมน์ที่ 1: สรุปยอดรวม (เด่นที่สุด) - ย้ายมาอยู่หลัง CalculationDetails */}
- <PaymentSummary
+
+        {/* คอลัมน์ที่ 3: สรุปยอดรวม (เด่นที่สุด) - ย้ายมาอยู่หลัง CalculationDetails */}
+        <PaymentSummary
           totalToPay={totalToPay}
           grandTotalPaid={grandTotalPaid}
           safeChangeAmount={safeChangeAmount}

@@ -5,13 +5,13 @@ const CalculationDetails = ({
   totalOriginalPrice,
   totalDiscountOnly,
   billDiscount,
-  setBillDiscount,
+  setBillDiscount, // นี่คือ handleBillDiscountChange ที่ถูกส่งมา
   totalDiscount,
   priceBeforeVat,
   vatAmount,
   customerDepositAmount,
   depositUsed,
-  handleDepositUsedChange,
+  handleDepositUsedChange, // นี่คือ handleDepositUsedChange ที่ถูกส่งมา
 }) => {
   const safeBillDiscount = typeof billDiscount === 'number' && !isNaN(billDiscount) ? billDiscount : 0;
 

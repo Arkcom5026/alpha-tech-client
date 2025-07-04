@@ -10,7 +10,7 @@ import SaleItemTable from '../components/SaleItemTable';
 const QuickSaleLayout = () => {
   const barcodeInputRef = useRef(null);
   const phoneInputRef = useRef(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false); // State นี้ถูกประกาศที่นี่
   const [selectedPriceType, setSelectedPriceType] = useState('retail');
   const [clearPhoneTrigger, setClearPhoneTrigger] = useState(null);
   const [hideCustomerDetails, setHideCustomerDetails] = useState(false);
@@ -33,12 +33,6 @@ const QuickSaleLayout = () => {
     // กำหนด focus ไปที่ช่องเบอร์โทรศัพท์เมื่อ Component โหลดครั้งแรก
     phoneInputRef.current?.focus();
   }, []);
-
-  useEffect(() => {
-    if (clearPhoneTrigger) {
-      setHideCustomerDetails(false); // ✅ เปิดให้แสดงฟอร์มใหม่เมื่อค้นหาเบอร์ใหม่
-    }
-  }, [clearPhoneTrigger]);
 
   useEffect(() => {
     // เมื่อการขายเสร็จสมบูรณ์ ให้เคลียร์ข้อมูลลูกค้าและตั้งค่าการซ่อนรายละเอียด
@@ -172,6 +166,7 @@ const QuickSaleLayout = () => {
           saleItems={saleItems}
           onConfirm={handleConfirmSale} // ส่งฟังก์ชันยืนยันการขายจาก QuickSaleLayout
           isSubmitting={isSubmitting}
+          setIsSubmitting={setIsSubmitting} // <--- เพิ่ม prop นี้
           onSaleConfirmed={handleSaleConfirmed}
           setClearPhoneTrigger={setClearPhoneTrigger}
         />

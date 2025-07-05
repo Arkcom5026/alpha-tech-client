@@ -158,12 +158,21 @@ const usePurchaseOrderStore = create((set, get) => ({
     set({ loading: true });
     try {
       const data = await getPurchaseOrdersBySupplier(supplierId);
-      set({ purchaseOrders: data, loading: false });
+      
+      // ✅ กรองเฉพาะ PO ที่ยังไม่จ่ายครบ
+      console.log('fetchPurchaseOrdersBySupplierAction data :',data)
+      const unpaidPOs = data.filter((po) =>
+        po.paymentStatus !== 'PAID' &&
+        po.paymentStatus !== 'CANCELLED' // ป้องกันกรณียกเลิก
+      );
+  
+      set({ purchaseOrders: unpaidPOs, loading: false });
     } catch (err) {
       console.error('❌ fetchPurchaseOrdersBySupplierAction error:', err);
       set({ error: err, loading: false });
     }
   },
+  
 
 
 }));

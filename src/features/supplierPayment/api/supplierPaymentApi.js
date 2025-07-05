@@ -1,9 +1,19 @@
 import apiClient from '@/utils/apiClient';
 
-// ✅ สร้างการชำระเงินให้ Supplier (ไม่จำเป็นต้องผูก PO)
+// ✅ สร้างการชำระเงินให้ Supplier (รองรับการผูก PO)
 export const createSupplierPayment = async (data) => {
   try {
-    const res = await apiClient.post('/supplier-payments', data);
+    const res = await apiClient.post('/supplier-payments', {
+      supplierId: data.supplierId,
+      paymentDate: data.paymentDate,
+      amount: data.amount,
+      method: data.method,
+      paymentType: data.paymentType,
+      note: data.note,
+      debitAmount: data.debitAmount,
+      creditAmount: data.creditAmount,
+      pos: data.pos || [], // ✅ เพิ่มการส่ง pos ให้รองรับ PO BASED
+    });
     return res.data;
   } catch (err) {
     console.error('❌ [createSupplierPayment] error:', err);

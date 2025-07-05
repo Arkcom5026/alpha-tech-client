@@ -11,7 +11,8 @@ import {
   getReceiptItemsByReceiptId,
   markReceiptAsCompleted,
   finalizeReceiptIfNeeded,
-  markReceiptAsPrinted
+  markReceiptAsPrinted,
+  getReceiptsReadyToPay // ✅ เพิ่มใหม่
 } from '@/features/purchaseOrderReceipt/api/purchaseOrderReceiptApi';
 import { getEligiblePurchaseOrders, getPurchaseOrderDetailById, updatePurchaseOrderStatus } from '@/features/purchaseOrder/api/purchaseOrderApi';
 
@@ -25,6 +26,7 @@ const usePurchaseOrderReceiptStore = create((set, get) => ({
   receipts: [],
   receiptBarcodeSummaries: [],
   purchaseOrdersForReceipt: [],
+  receiptsReadyToPay: [], // ✅ เก็บใบรับสินค้าที่พร้อมชำระ
   currentReceipt: null,
   currentOrder: null,
   poItems: [],
@@ -40,6 +42,25 @@ const usePurchaseOrderReceiptStore = create((set, get) => ({
       set({ receipts: data, loading: false });
     } catch (error) {
       console.error('📛 loadReceipts error:', error);
+      set({ error, loading: false });
+    }
+  },
+
+  loadReceiptsReadyToPayAction: async (filters = {}) => {
+    try {
+      const { supplierId, startDate, endDate } = filters;
+
+      if (!supplierId || !startDate || !endDate) {
+        console.warn('[⏸ SKIP LOAD] Missing required filters:', { supplierId, startDate, endDate });
+        return;
+      }
+
+      set({ loading: true });
+      console.log('[🔍 LOAD RECEIPTS READY TO PAY]', filters);
+      const data = await getReceiptsReadyToPay(filters);
+      set({ receiptsReadyToPay: data, loading: false });
+    } catch (error) {
+      console.error('📛 loadReceiptsReadyToPayAction error:', error);
       set({ error, loading: false });
     }
   },
@@ -167,7 +188,7 @@ const usePurchaseOrderReceiptStore = create((set, get) => ({
       throw error;
     }
   },
-  
+
   deleteReceiptItemAction: async (id) => {
     try {
       await deleteReceiptItem(id);
@@ -230,5 +251,8 @@ const usePurchaseOrderReceiptStore = create((set, get) => ({
   clearCurrentReceipt: () => set({ currentReceipt: null }),
 }));
 
-
 export default usePurchaseOrderReceiptStore;
+
+
+
+

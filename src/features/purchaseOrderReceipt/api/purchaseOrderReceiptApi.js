@@ -52,7 +52,6 @@ export const getEligiblePurchaseOrders = async () => {
   }
 };
 
-// ✅ GET รายละเอียด PO แบบเต็ม (พร้อม supplier + รายการสินค้า + receiptItem)
 export const getPurchaseOrderDetailById = async (poId) => {
   console.log('📦 [getPurchaseOrderDetailById] >> >> >>  id:', poId);
   try {
@@ -64,7 +63,6 @@ export const getPurchaseOrderDetailById = async (poId) => {
   }
 };
 
-// ✅ GET ใบรับสินค้าพร้อมสรุปสถานะการยิง SN
 export const getReceiptBarcodeSummaries = async () => {
   try {
     const res = await apiClient.get('/purchase-order-receipts/with-barcode-status');
@@ -75,7 +73,6 @@ export const getReceiptBarcodeSummaries = async () => {
   }
 };
 
-// ✅ GET ใบรับสินค้ารายตัวตาม ID
 export const getReceiptById = async (id) => {
   try {
     const res = await apiClient.get(`/purchase-order-receipts/${id}`);
@@ -86,7 +83,6 @@ export const getReceiptById = async (id) => {
   }
 };
 
-// ✅ GET รายการ receiptItems จาก receiptId
 export const getReceiptItemsByReceiptId = async (receiptId) => {
   try {
     const res = await apiClient.get(`/purchase-order-receipt-items/by-receipt/${receiptId}`);
@@ -97,7 +93,6 @@ export const getReceiptItemsByReceiptId = async (receiptId) => {
   }
 };
 
-// ✅ PATCH เปลี่ยนสถานะใบรับสินค้าเป็น 'COMPLETED'
 export const markReceiptAsCompleted = async (receiptId) => {
   try {
     const res = await apiClient.patch(`/purchase-order-receipts/${receiptId}/complete`);
@@ -108,7 +103,6 @@ export const markReceiptAsCompleted = async (receiptId) => {
   }
 };
 
-// ✅ PATCH ตรวจสอบและ finalize ใบรับสินค้า (ใช้เมื่อยิง SN แล้ว)
 export const finalizeReceiptIfNeeded = async (receiptId) => {
   try {
     const res = await apiClient.patch(`/purchase-order-receipts/${receiptId}/finalize`);
@@ -119,13 +113,27 @@ export const finalizeReceiptIfNeeded = async (receiptId) => {
   }
 };
 
-// ✅ PATCH ระบุว่าใบรับสินค้านี้ "พิมพ์บาร์โค้ดแล้ว"
 export const markReceiptAsPrinted = async (receiptId) => {
   try {
     const res = await apiClient.patch(`/purchase-order-receipts/${receiptId}/printed`);
     return res.data;
   } catch (error) {
     console.error('📛 [markReceiptAsPrinted] error:', error);
+    throw error;
+  }
+};
+
+export const getReceiptsReadyToPay = async (filters = {}) => {
+  try {
+    const params = new URLSearchParams();
+    if (filters.startDate) params.append('startDate', filters.startDate);
+    if (filters.endDate) params.append('endDate', filters.endDate);
+    if (filters.limit) params.append('limit', filters.limit);
+
+    const res = await apiClient.get(`/purchase-order-receipts/ready-to-pay?${params.toString()}`);
+    return res.data;
+  } catch (error) {
+    console.error('📛 [getReceiptsReadyToPay] error:', error);
     throw error;
   }
 };

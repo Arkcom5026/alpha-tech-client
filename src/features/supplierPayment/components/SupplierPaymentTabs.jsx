@@ -6,15 +6,11 @@ const SupplierPaymentTabs = ({ supplierId, supplier }) => {
   const [activeTab, setActiveTab] = useState('payments');
 
   const { supplierPayments, fetchAllSupplierPaymentsAction } = useSupplierPaymentStore();
-  const { purchaseOrders, fetchPurchaseOrdersBySupplierAction } = usePurchaseOrderStore();
+  const { purchaseOrders } = usePurchaseOrderStore();
 
   useEffect(() => {
- 
     if (supplierId) {
-
       fetchAllSupplierPaymentsAction();
-    
-      fetchPurchaseOrdersBySupplierAction(supplierId);
     }
   }, [supplierId]);
 
@@ -23,15 +19,13 @@ const SupplierPaymentTabs = ({ supplierId, supplier }) => {
 
   const advanceTotal = filteredPayments
     .filter(p => p.paymentType === 'ADVANCE')
-    .reduce((sum, p) => sum + p.amount, 0);
+    .reduce((sum, p) => sum + (p.debitAmount || p.creditAmount || 0), 0);
 
   const creditUsed = filteredPayments
     .filter(p => p.paymentType === 'PO_BASED')
-    .reduce((sum, p) => sum + p.amount, 0);
+    .reduce((sum, p) => sum + (p.debitAmount || p.creditAmount || 0), 0);
 
   const creditRemaining = (supplier?.creditLimit ?? 0) - (creditUsed ?? 0);
-
- 
 
   return (
     <div>
@@ -73,20 +67,37 @@ const SupplierPaymentTabs = ({ supplierId, supplier }) => {
           <table className="w-full border">
             <thead className="bg-gray-100">
               <tr>
+                <th className="border px-2 py-1">รหัส</th>
                 <th className="border px-2 py-1">วันที่</th>
+                <th className="border px-2 py-1">ประเภท</th>
                 <th className="border px-2 py-1">จำนวนเงิน</th>
                 <th className="border px-2 py-1">วิธี</th>
+                <th className="border px-2 py-1">หมายเหตุ</th>
                 <th className="border px-2 py-1">ผู้บันทึก</th>
               </tr>
             </thead>
             <tbody>
               {filteredPayments.map((p) => (
                 <tr key={String(p.id)} className="text-center">
-                  <td className="border px-2 py-1">{p.paidAt?.split('T')[0]}</td>
                   <td className="border px-2 py-1">
-                    {(p.amount || p.creditAmount || p.debitAmount)?.toLocaleString() || '-'}
+                    {p.code || '-'}
+                    {p.pos?.length > 0 && (
+                      <div className="text-xs text-gray-500 mt-1">
+                        {p.pos.map(po => po.code).join(', ')}
+                      </div>
+                    )}
+                  </td>
+                  <td className="border px-2 py-1">{p.paidAt?.split('T')[0]}</td>
+                  <td className="border px-2 py-1">{p.paymentType === 'ADVANCE' ? 'ชำระล่วงหน้า' : 'ตามใบสั่งซื้อ'}</td>
+                  <td className="border px-2 py-1">
+                    {p.debitAmount > 0
+                      ? p.debitAmount.toLocaleString()
+                      : p.creditAmount > 0
+                      ? `-${p.creditAmount.toLocaleString()}`
+                      : '-'}
                   </td>
                   <td className="border px-2 py-1">{p.method}</td>
+                  <td className="border px-2 py-1">{p.note || '-'}</td>
                   <td className="border px-2 py-1">{p.employee?.name || '-'}</td>
                 </tr>
               ))}
@@ -111,5 +122,3 @@ const SupplierPaymentTabs = ({ supplierId, supplier }) => {
 };
 
 export default SupplierPaymentTabs;
-
-

@@ -7,7 +7,7 @@ import ListReturnsPage from "@/features/refund/pages/ListReturnsPage";
 import PrintRefundReceiptPage from "@/features/refund/pages/PrintRefundReceiptPage";
 import { CreateSupplierPaymentPage } from "@/features/supplierPayment/pages/CreateSupplierPaymentPage";
 
-import ListSuppliersForPaymentPage from "@/features/supplierPayment/pages/ListSuppliersForPaymentPage";
+import ListSuppliersPaymentPage from "@/features/supplierPayment/pages/ListSuppliersPaymentPage";
 import SupplierPaymentDetailPage from "@/features/supplierPayment/pages/SupplierPaymentDetailPage";
 
 const financeRoutes = {
@@ -30,7 +30,7 @@ const financeRoutes = {
     {
       path: 'po-payments',
       children: [
-        { index: true, element: <ListSuppliersForPaymentPage />, }, // ✅ เส้นทางใหม่: รายการชำระหนี้ PO
+        { index: true, element: <ListSuppliersPaymentPage />, }, // ✅ เส้นทางใหม่: รายการชำระหนี้ PO
         { path: 'supplier/:supplierId', element: <SupplierPaymentDetailPage /> },
         { path: 'supplier/:supplierId/create-payment', element: <CreateSupplierPaymentPage /> },
 

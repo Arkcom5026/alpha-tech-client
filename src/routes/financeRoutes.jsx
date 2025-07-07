@@ -5,9 +5,11 @@ import FinanceDashboardPage from "@/features/pos/pages/finance/FinanceDashboardP
 import CreateRefundPage from "@/features/refund/pages/CreateRefundPage";
 import ListReturnsPage from "@/features/refund/pages/ListReturnsPage";
 import PrintRefundReceiptPage from "@/features/refund/pages/PrintRefundReceiptPage";
+import AdvancePaymentsSupplierPage from "@/features/supplierPayment/pages/AdvancePaymentsSupplierPage";
 import { CreateSupplierPaymentPage } from "@/features/supplierPayment/pages/CreateSupplierPaymentPage";
 
 import ListSuppliersPaymentPage from "@/features/supplierPayment/pages/ListSuppliersPaymentPage";
+import RePaymentsSupplierPage from "@/features/supplierPayment/pages/RePaymentsSupplierPage";
 import SupplierPaymentDetailPage from "@/features/supplierPayment/pages/SupplierPaymentDetailPage";
 
 const financeRoutes = {
@@ -28,11 +30,13 @@ const financeRoutes = {
     },
 
     {
-      path: 'po-payments',
+      path: 'payments',
       children: [
-        { index: true, element: <ListSuppliersPaymentPage />, }, // ✅ เส้นทางใหม่: รายการชำระหนี้ PO
-        { path: 'supplier/:supplierId', element: <SupplierPaymentDetailPage /> },
-        { path: 'supplier/:supplierId/create-payment', element: <CreateSupplierPaymentPage /> },
+        { path: 'receipt', element: <RePaymentsSupplierPage />, }, // ✅ เส้นทางใหม่: รายการชำระหนี้ PO        
+        { path: 'advance', element: <AdvancePaymentsSupplierPage /> },
+        { path: 'list', element: <ListSuppliersPaymentPage /> },
+        { path: 'detail/:supplierId', element: <SupplierPaymentDetailPage /> },
+        { path: 'supplier/:supplierId/create', element: <CreateSupplierPaymentPage /> },
 
 
       ]

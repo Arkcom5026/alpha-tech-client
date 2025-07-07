@@ -1,22 +1,36 @@
+
+
+// SupplierPaymentDetailPage.js
 import React, { useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import useSupplierStore from '@/features/supplier/store/supplierStore';
-import SupplierPaymentTabs from '../components/SupplierPaymentTabs';
+import { useParams } from 'react-router-dom';
+
+import SupplierPaymentTable from '../components/SupplierPaymentTable';
+import useSupplierPaymentStore from '../store/supplierPaymentStore';
 
 const SupplierPaymentDetailPage = () => {
   const { supplierId } = useParams();
-  const navigate = useNavigate();
-  const { selectedSupplier, fetchSupplierByIdAction } = useSupplierStore();
+
+  const {
+    selectedSupplier,
+    advancePayments,
+    fetchAdvancePaymentsBySupplierAction,
+    // setSelectedSupplier ไม่จำเป็นต้องดึงมาตรงๆ จาก store หาก action จัดการแล้ว
+    // หรือถ้าจำเป็นต้องใช้ ควรมาจาก action ที่ถูกประกาศใน store อย่างชัดเจน
+  } = useSupplierPaymentStore();
 
   useEffect(() => {
     if (supplierId) {
-      fetchSupplierByIdAction(supplierId);
+      // เรียก action เพื่อดึงข้อมูลและให้ action จัดการการตั้งค่า selectedSupplier ใน store
+      fetchAdvancePaymentsBySupplierAction(supplierId);
     }
-  }, [supplierId]);
+  }, [supplierId, fetchAdvancePaymentsBySupplierAction]); // เพิ่ม dependencies ให้ครบถ้วน
+
+  console.log('selectedSupplier?.name : ', selectedSupplier?.name);
+  console.log('advancePayments for table : ', advancePayments); // เพิ่ม log เพื่อตรวจสอบ
 
   return (
     <div className="px-4 py-6 max-w-5xl mx-auto">
-      <h1 className="text-2xl font-bold mb-6 text-center">ข้อมูล Supplier</h1>
+      <h1 className="text-2xl font-bold mb-6 text-center">ข้อมูลการชำระเงิน Supplier</h1>
 
       <div className="bg-white border shadow rounded p-4 mb-6 text-sm">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -29,23 +43,15 @@ const SupplierPaymentDetailPage = () => {
           <div>
             <span className="font-semibold">วงเงินเครดิต:</span> {selectedSupplier?.creditLimit?.toLocaleString() || '0'} บาท
           </div>
-          <div>
-            <span className="font-semibold">เครดิตคงเหลือ:</span> {selectedSupplier?.creditRemaining?.toLocaleString() || '0'} บาท
-          </div>
         </div>
       </div>
 
-      <div className="flex justify-end mb-4">
-        <button
-          onClick={() => navigate(`/pos/finance/po-payments/supplier/${supplierId}/create-payment`)}
-          className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
-        >
-          + ชำระเงิน
-        </button>
-      </div>
-
       <div className="bg-white border shadow rounded p-4">
-        <SupplierPaymentTabs supplierId={supplierId} supplier={selectedSupplier} />
+        <SupplierPaymentTable
+          supplierId={supplierId}
+          supplier={selectedSupplier}
+          payments={advancePayments}
+        />
       </div>
     </div>
   );

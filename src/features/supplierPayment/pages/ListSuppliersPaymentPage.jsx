@@ -10,8 +10,12 @@ const ListSuppliersPaymentPage = () => {
     fetchSuppliersAction();
   }, []);
 
-  const handleSelectSupplier = (supplierId) => {
-    navigate(`/pos/finance/po-payments/supplier/${supplierId}`);
+  const handleNavigate = (supplierId, type) => {
+    if (type === 'advance') {
+      navigate(`/pos/finance/advance-payments/supplier/${supplierId}`);
+    } else {
+      navigate(`/pos/finance/payments/detail/${supplierId}`);
+    }
   };
 
   return (
@@ -29,7 +33,8 @@ const ListSuppliersPaymentPage = () => {
                 <th className="border px-4 py-2 text-center">เบอร์โทร</th>
                 <th className="border px-4 py-2 text-center">เครดิตทั้งหมด</th>
                 <th className="border px-4 py-2 text-center">เครดิตคงเหลือ</th>
-                <th className="border px-4 py-2 text-center">จัดการ</th>
+                <th className="border px-4 py-2 text-center">จ่ายล่วงหน้า</th>
+                <th className="border px-4 py-2 text-center">ชำระเครดิต</th>
               </tr>
             </thead>
             <tbody>
@@ -41,10 +46,18 @@ const ListSuppliersPaymentPage = () => {
                   <td className="border px-4 py-2 text-center">{s.creditRemaining.toLocaleString()}</td>
                   <td className="border px-4 py-2 text-center">
                     <button
-                      onClick={() => handleSelectSupplier(s.id)}
-                      className="bg-blue-600 text-white px-4 py-1.5 rounded hover:bg-blue-700 transition"
+                      onClick={() => handleNavigate(s.id, 'advance')}
+                      className="bg-yellow-500 text-white px-3 py-1.5 rounded hover:bg-yellow-600 transition"
                     >
-                      ดูรายละเอียด
+                      จ่ายล่วงหน้า
+                    </button>
+                  </td>
+                  <td className="border px-4 py-2 text-center">
+                    <button
+                      onClick={() => handleNavigate(s.id, 'credit')}
+                      className="bg-blue-600 text-white px-3 py-1.5 rounded hover:bg-blue-700 transition"
+                    >
+                      ชำระเครดิต
                     </button>
                   </td>
                 </tr>

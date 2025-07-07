@@ -12,12 +12,16 @@ const useSupplierPaymentStore = create((set, get) => ({
   isSupplierPaymentLoading: false,
   isSupplierPaymentSubmitting: false,
   supplierPaymentError: null,
+  selectedSupplier: null,
+  advancePayments: [], // ✅ เพิ่ม state สำหรับเก็บรายการชำระเงินล่วงหน้า
 
-  // ✅ สร้างการชำระเงินให้ Supplier
+  setSelectedSupplier: (supplier) => set({ selectedSupplier: supplier }),
+
+  // ✅ สร้างการชำระเงินให้ Supplier (Action)
   createSupplierPaymentAction: async (paymentData) => {
     set({ isSupplierPaymentSubmitting: true, supplierPaymentError: null });
     try {
-      const response = await createSupplierPayment(paymentData);
+      const response = await createSupplierPayment(paymentData); // ✅ ส่งตรง receiptItems
       set({ isSupplierPaymentSubmitting: false });
       return response;
     } catch (err) {
@@ -64,20 +68,20 @@ const useSupplierPaymentStore = create((set, get) => ({
     }
   },
 
-
-
+  // ✅ ดึงข้อมูลการชำระเงินล่วงหน้าตาม Supplier พร้อมตั้งค่า Supplier ด้วย
   fetchAdvancePaymentsBySupplierAction: async (supplierId) => {
     try {
       const data = await getAdvancePaymentsBySupplier(supplierId);
-      set({ advancePayments: data });
+      console.log('fetchAdvancePaymentsBySupplierAction data : ', data);
+      if (data?.length > 0) {
+        set({ advancePayments: data, selectedSupplier: data[0].supplier });
+      } else {
+        set({ advancePayments: [], selectedSupplier: null });
+      }
     } catch (err) {
       console.error('❌ fetchAdvancePaymentsBySupplierAction error:', err);
     }
   },
-
-
-  
 }));
-
 
 export default useSupplierPaymentStore;

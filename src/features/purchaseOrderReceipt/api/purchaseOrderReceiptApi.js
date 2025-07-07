@@ -131,7 +131,20 @@ export const getReceiptsReadyToPay = async (filters = {}) => {
     if (filters.limit) params.append('limit', filters.limit);
 
     const res = await apiClient.get(`/purchase-order-receipts/ready-to-pay?${params.toString()}`);
-    return res.data;
+
+    // ✅ ตรวจสอบข้อมูลที่ส่งกลับมาว่ามี paidAmount, totalAmount และ statusPayment
+    const updatedData = res.data.map((receipt) => {
+      const total = receipt.totalAmount || 0;
+      const paid = receipt.paidAmount || 0;
+      return {
+        ...receipt,
+        paidAmount: paid,
+        totalAmount: total,
+        remainingAmount: total - paid,
+      };
+    });
+
+    return updatedData;
   } catch (error) {
     console.error('📛 [getReceiptsReadyToPay] error:', error);
     throw error;

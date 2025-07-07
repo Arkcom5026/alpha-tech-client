@@ -49,21 +49,26 @@ const usePurchaseOrderReceiptStore = create((set, get) => ({
   loadReceiptsReadyToPayAction: async (filters = {}) => {
     try {
       const { supplierId, startDate, endDate } = filters;
-
+  
       if (!supplierId || !startDate || !endDate) {
         console.warn('[⏸ SKIP LOAD] Missing required filters:', { supplierId, startDate, endDate });
         return;
       }
-
+  
       set({ loading: true });
       console.log('[🔍 LOAD RECEIPTS READY TO PAY]', filters);
       const data = await getReceiptsReadyToPay(filters);
+  
+      // ✅ ตรวจสอบ log เพิ่มเติม
+      console.log('[✅ RECEIPTS LOADED]', data);
+  
       set({ receiptsReadyToPay: data, loading: false });
     } catch (error) {
       console.error('📛 loadReceiptsReadyToPayAction error:', error);
       set({ error, loading: false });
     }
   },
+  
 
   loadReceiptById: async (id) => {
     try {

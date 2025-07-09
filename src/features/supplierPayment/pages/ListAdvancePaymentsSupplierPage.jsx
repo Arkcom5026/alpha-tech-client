@@ -1,34 +1,48 @@
-import React, { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+// ✅ FIX: Added useParams to the import from react-router-dom
+import { useNavigate, useParams } from 'react-router-dom';
 import useSupplierStore from '@/features/supplier/store/supplierStore';
+import useSupplierPaymentStore from '../store/supplierPaymentStore';
+import dayjs from 'dayjs';
+import 'dayjs/locale/th';
+dayjs.locale('th');
 
-const RePaymentsSupplierPage = () => {
+
+// Page to list suppliers eligible for advance payment
+const ListAdvancePaymentsSupplierPage = () => {
   const navigate = useNavigate();
   const { suppliers, fetchSuppliersAction, isSupplierLoading } = useSupplierStore();
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     fetchSuppliersAction();
-  }, []);
+  }, [fetchSuppliersAction]);
 
   const handleNavigate = (supplierId) => {
-    navigate('/pos/finance/payments/supplier/' + supplierId + '/create', {
-      state: { supplierId },
-    });
+    navigate(`/pos/finance/payments/advance/supplier/${supplierId}`);
   };
-  
 
-  const filteredSuppliers = suppliers.filter((s) => {
-    const creditLimit = Number(s.creditLimit || 0);
-    const creditBalance = Number(s.creditBalance || 0);
-    return creditLimit > 0 && creditBalance > 0;
-  });
+  // Filter for suppliers who do not offer credit (creditLimit is 0)
+  const nonCreditSuppliers = suppliers.filter(
+    (s) => Number(s.creditLimit || 0) === 0
+  );
+
+  const filteredSuppliers = nonCreditSuppliers.filter((supplier) =>
+    supplier.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
     <div className="p-6 max-w-6xl mx-auto">
-      <h1 className="text-2xl font-bold mb-6 text-center">
-        ชำระเครดิตให้ Supplier
-      </h1>
-
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">จ่ายเงินล่วงหน้าให้ Supplier</h1>
+        <input
+          type="text"
+          placeholder="ค้นหาชื่อผู้ขาย..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="border border-gray-300 rounded-md px-3 py-1.5 w-full md:w-72 focus:outline-none focus:ring focus:ring-blue-200 text-sm"
+        />
+      </div>
       {isSupplierLoading ? (
         <p className="text-center text-gray-600">กำลังโหลดข้อมูล...</p>
       ) : (
@@ -38,15 +52,13 @@ const RePaymentsSupplierPage = () => {
               <tr>
                 <th className="border px-4 py-2 text-left">ชื่อ Supplier</th>
                 <th className="border px-4 py-2 text-center">เบอร์โทร</th>
-                <th className="border px-4 py-2 text-center">เครดิตทั้งหมด</th>
-                <th className="border px-4 py-2 text-center">เครดิตคงเหลือ</th>
                 <th className="border px-4 py-2 text-center">จัดการ</th>
               </tr>
             </thead>
             <tbody>
               {filteredSuppliers.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="text-center py-4 text-gray-500">
+                  <td colSpan={3} className="text-center py-4 text-gray-500">
                     ไม่พบข้อมูล Supplier ที่ตรงเงื่อนไข
                   </td>
                 </tr>
@@ -56,17 +68,11 @@ const RePaymentsSupplierPage = () => {
                     <td className="border px-4 py-2">{s.name}</td>
                     <td className="border px-4 py-2 text-center">{s.phone}</td>
                     <td className="border px-4 py-2 text-center">
-                      {s.creditLimit != null ? s.creditLimit.toLocaleString() : '-'}
-                    </td>
-                    <td className="border px-4 py-2 text-center">
-                      {s.creditRemaining != null ? s.creditRemaining.toLocaleString() : '-'}
-                    </td>
-                    <td className="border px-4 py-2 text-center">
                       <button
                         onClick={() => handleNavigate(s.id)}
-                        className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded transition"
+                        className="bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded transition"
                       >
-                        ชำระเงิน
+                        จ่ายเงินล่วงหน้า
                       </button>
                     </td>
                   </tr>
@@ -80,4 +86,4 @@ const RePaymentsSupplierPage = () => {
   );
 };
 
-export default RePaymentsSupplierPage;
+export default ListAdvancePaymentsSupplierPage;

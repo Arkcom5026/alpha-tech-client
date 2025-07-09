@@ -36,7 +36,7 @@ export const getPurchaseOrders = async ({ search, status } = {}) => {
 // ✅ ดึง PO ที่ยังตรวจรับไม่ครบ (ใช้ในหน้า “ตรวจรับสินค้า”)
 export const getEligiblePurchaseOrders = async () => {
   try {
-    const res = await apiClient.get('/purchase-orders?status=PENDING,PARTIAL');
+    const res = await apiClient.get('/purchase-orders?status=PENDING,PARTIALLY_RECEIVED');
     return res.data;
   } catch (error) {
     console.error('❌ getEligiblePurchaseOrders error:', error);

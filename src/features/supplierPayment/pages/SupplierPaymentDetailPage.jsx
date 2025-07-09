@@ -4,8 +4,9 @@
 import React, { useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 
-import SupplierPaymentTable from '../components/SupplierPaymentTable';
+
 import useSupplierPaymentStore from '../store/supplierPaymentStore';
+
 
 const SupplierPaymentDetailPage = () => {
   const { supplierId } = useParams();
@@ -47,7 +48,7 @@ const SupplierPaymentDetailPage = () => {
       </div>
 
       <div className="bg-white border shadow rounded p-4">
-        <SupplierPaymentTable
+        <SupplierPaymentHistoryTable
           supplierId={supplierId}
           supplier={selectedSupplier}
           payments={advancePayments}

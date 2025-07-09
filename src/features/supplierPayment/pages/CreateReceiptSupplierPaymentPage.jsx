@@ -1,11 +1,20 @@
+/*
+* =================================================================
+* 📁 src/features/supplierPayment/pages/CreateReceiptSupplierPaymentPage.jsx
+* =================================================================
+* คำอธิบาย:
+* - ไฟล์นี้คือหน้าสำหรับสร้างรายการชำระเงิน (Wrapper Page)
+* - แก้ไขการ import ให้ถูกต้อง
+*/
 import React, { useEffect } from 'react';
-import { useParams, useLocation } from 'react-router-dom'; // ⬅ เพิ่ม useLocation
+import { useParams, useLocation } from 'react-router-dom';
 import useSupplierStore from '@/features/supplier/store/supplierStore';
-import SupplierPaymentForm from '../components/SupplierPaymentForm';
+// ✅ FIX: Import the default export from the form component file
+import SupplierReceiptPaymentForm from '../components/SupplierReceiptPaymentForm';
 
-export const CreateSupplierPaymentPage = () => {
+export const CreateReceiptSupplierPaymentPage = () => {
   const { supplierId: supplierIdFromParams } = useParams();
-  const location = useLocation(); // ⬅ ใช้เพื่อรับ state
+  const location = useLocation();
   const supplierId = location.state?.supplierId || supplierIdFromParams;
 
   const { selectedSupplier, fetchSupplierByIdAction } = useSupplierStore();
@@ -32,7 +41,7 @@ export const CreateSupplierPaymentPage = () => {
         บันทึกการชำระเงินให้ <span className="text-blue-700">{selectedSupplier.name}</span>
       </h1>
       <div className="bg-white border border-gray-200 shadow-xl rounded-xl p-8">
-        <SupplierPaymentForm supplier={selectedSupplier} />
+        <SupplierReceiptPaymentForm supplier={selectedSupplier} />
       </div>
     </div>
   );

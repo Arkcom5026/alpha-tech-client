@@ -43,17 +43,7 @@ const useSupplierPaymentStore = create((set, get) => ({
     }
   },
 
-  // ✅ ดึงรายการชำระเงินของ PO ใด PO หนึ่ง
-  fetchSupplierPaymentsByPOAction: async (poId) => {
-    set({ isSupplierPaymentLoading: true, supplierPaymentError: null });
-    try {
-      const data = await getSupplierPaymentsByPO(poId);
-      set({ supplierPayments: data, isSupplierPaymentLoading: false });
-    } catch (err) {
-      console.error('❌ [fetchSupplierPaymentsByPOAction] error:', err);
-      set({ isSupplierPaymentLoading: false, supplierPaymentError: err.message || 'ไม่สามารถโหลดข้อมูล PO นี้ได้' });
-    }
-  },
+
 
   // ✅ ลบรายการชำระเงิน
   deleteSupplierPaymentAction: async (paymentId) => {

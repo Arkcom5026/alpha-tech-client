@@ -60,7 +60,7 @@ export const getAdvancePaymentsBySupplier = async (supplierId) => {
   try {
    
     const res = await apiClient.get(`/supplier-payments/advance?supplierId=${supplierId}`);
-     console.log('res : ',res)
+    console.log('getAdvancePaymentsBySupplier res : ',res)
     return res.data;
   } catch (error) {
     console.error('❌ getAdvancePaymentsBySupplier error:', error);

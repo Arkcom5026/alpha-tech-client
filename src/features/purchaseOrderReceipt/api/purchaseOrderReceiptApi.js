@@ -44,7 +44,7 @@ export const deleteReceipt = async (id) => {
 
 export const getEligiblePurchaseOrders = async () => {
   try {
-    const res = await apiClient.get('/purchase-order-receipts?status=PENDING,PARTIAL');
+    const res = await apiClient.get('/purchase-order-receipts?status=PENDING,PARTIALLY_RECEIVED');
     return res.data;
   } catch (error) {
     console.error('📛 [getEligiblePurchaseOrders] error:', error);

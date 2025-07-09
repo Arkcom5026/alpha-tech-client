@@ -5,11 +5,14 @@ import FinanceDashboardPage from "@/features/pos/pages/finance/FinanceDashboardP
 import CreateRefundPage from "@/features/refund/pages/CreateRefundPage";
 import ListReturnsPage from "@/features/refund/pages/ListReturnsPage";
 import PrintRefundReceiptPage from "@/features/refund/pages/PrintRefundReceiptPage";
-import AdvancePaymentsSupplierPage from "@/features/supplierPayment/pages/AdvancePaymentsSupplierPage";
-import { CreateSupplierPaymentPage } from "@/features/supplierPayment/pages/CreateSupplierPaymentPage";
 
-import ListSuppliersPaymentPage from "@/features/supplierPayment/pages/ListSuppliersPaymentPage";
-import RePaymentsSupplierPage from "@/features/supplierPayment/pages/RePaymentsSupplierPage";
+import ListAdvancePaymentsSupplierPage from "@/features/supplierPayment/pages/ListAdvancePaymentsSupplierPage";
+import ListReceiptPaymentsSupplierPage from "@/features/supplierPayment/pages/ListReceiptPaymentsSupplierPage";
+
+import { CreateAdvanceSupplierPaymentPage } from "@/features/supplierPayment/pages/CreateAdvanceSupplierPaymentPage";
+import { CreateReceiptSupplierPaymentPage } from "@/features/supplierPayment/pages/CreateReceiptSupplierPaymentPage";
+
+
 import SupplierPaymentDetailPage from "@/features/supplierPayment/pages/SupplierPaymentDetailPage";
 
 const financeRoutes = {
@@ -31,12 +34,12 @@ const financeRoutes = {
 
     {
       path: 'payments',
-      children: [
-        { path: 'receipt', element: <RePaymentsSupplierPage />, }, // ✅ เส้นทางใหม่: รายการชำระหนี้ PO        
-        { path: 'advance', element: <AdvancePaymentsSupplierPage /> },
-        { path: 'list', element: <ListSuppliersPaymentPage /> },
-        { path: 'detail/:supplierId', element: <SupplierPaymentDetailPage /> },
-        { path: 'supplier/:supplierId/create', element: <CreateSupplierPaymentPage /> },
+      children: [        
+        { path: 'advance', element: <ListAdvancePaymentsSupplierPage /> },     
+        { path: 'receipt', element: <ListReceiptPaymentsSupplierPage />, },   
+        { path: 'detail/:supplierId', element: <SupplierPaymentDetailPage /> },        
+        { path: 'advance/supplier/:supplierId', element: <CreateAdvanceSupplierPaymentPage /> },
+        { path: 'receipt/supplier/:supplierId', element: <CreateReceiptSupplierPaymentPage />, },
 
 
       ]

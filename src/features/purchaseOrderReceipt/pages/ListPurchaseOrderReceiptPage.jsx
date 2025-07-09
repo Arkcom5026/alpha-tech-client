@@ -8,7 +8,7 @@ const ListPurchaseOrderReceiptPage = () => {
   const { purchaseOrders, fetchAllPurchaseOrders, loading } = usePurchaseOrderStore();
 
   useEffect(() => {
-    fetchAllPurchaseOrders({ status: 'PENDING,PARTIAL' });
+    fetchAllPurchaseOrders({ status: 'PENDING,PARTIALLY_RECEIVED' });
   }, [fetchAllPurchaseOrders]);
 
   return (

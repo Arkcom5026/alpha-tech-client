@@ -1,4 +1,5 @@
 // CalculationDetails.jsx (New Component)
+import PaymentInput from '@/components/shared/input/PaymentInput';
 import React from 'react';
 
 const CalculationDetails = ({
@@ -62,13 +63,13 @@ const CalculationDetails = ({
 
       {customerDepositAmount > 0 && (
         <div className="flex justify-between items-center px-2 py-1">
-          <span className="text-blue-700 text-lg">ใช้มัดจำ</span>
-          <input
-            type="number"
+          {/* เปลี่ยน input สำหรับ "ใช้มัดจำ" เป็น PaymentInput */}
+          <PaymentInput
+            title="ใช้มัดจำ"
+            value={depositUsed}
+            onChange={handleDepositUsedChange} // PaymentInput's onChange expects value directly
             placeholder="0.00"
-            className="w-[120px] h-[40px] border border-blue-300 rounded-md px-2 text-right text-blue-800 text-lg focus:ring-2 focus:ring-blue-400 shadow-sm"
-            value={depositUsed === 0 ? '' : depositUsed}
-            onChange={handleDepositUsedChange}
+            color="blue" // กำหนดสีให้เข้ากับธีม
           />
         </div>
       )}

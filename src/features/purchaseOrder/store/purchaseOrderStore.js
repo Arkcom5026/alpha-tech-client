@@ -27,7 +27,7 @@ const usePurchaseOrderStore = create((set, get) => ({
   error: null,
 
   // ✅ อัปเดตใหม่: รองรับ search และ status filter
-  fetchAllPurchaseOrders: async ({ search = '', status = 'pending,partial' } = {}) => {
+  fetchAllPurchaseOrders: async ({ search = '', status = 'pending,partially_received' } = {}) => {
     const branchId = useBranchStore.getState().selectedBranchId;
     if (!branchId) return;
     set({ loading: true });

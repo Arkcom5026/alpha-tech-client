@@ -56,8 +56,8 @@ export const PurchaseReportFilters = ({ filters, onFiltersChange, onGenerateRepo
   return (
     <Grid container spacing={2} alignItems="center">
       {/* Filter: Date From */}
-      {/* ✨ ปรับความกว้างจาก 3 เป็น 2 */}
-      <Grid item xs={12} sm={6} md={2}>
+      {/* ✨ ปรับแก้ Grid ให้มีขนาดคงที่สำหรับจอ Tablet ขึ้นไป */}
+      <Grid item xs={12} sm={2} md={2}>
         <TextField
           label="ตั้งแต่วันที่"
           type="date"
@@ -70,8 +70,7 @@ export const PurchaseReportFilters = ({ filters, onFiltersChange, onGenerateRepo
       </Grid>
 
       {/* Filter: Date To */}
-      {/* ✨ ปรับความกว้างจาก 3 เป็น 2 */}
-      <Grid item xs={12} sm={6} md={2}>
+      <Grid item xs={12} sm={2} md={2}>
         <TextField
           label="ถึงวันที่"
           type="date"
@@ -84,11 +83,9 @@ export const PurchaseReportFilters = ({ filters, onFiltersChange, onGenerateRepo
       </Grid>
 
       {/* Filter: Supplier */}
-      {/* ✨ ปรับความกว้างจาก 3 เป็น 4 */}
-      <Grid item xs={12} sm={6} md={4}>
+      <Grid item xs={12} sm={5} md={5}>
         <FormControl fullWidth>
           <InputLabel>ผู้ขาย (Supplier)</InputLabel>
-          {/* ✅ 4. ใช้ isSupplierLoading และ suppliers จาก store */}
           <Select
             label="ผู้ขาย (Supplier)"
             name="supplierId"
@@ -108,8 +105,7 @@ export const PurchaseReportFilters = ({ filters, onFiltersChange, onGenerateRepo
       </Grid>
 
       {/* Filter: Status */}
-      {/* ✨ ปรับความกว้างจาก 3 เป็น 4 */}
-      <Grid item xs={12} sm={6} md={4}>
+      <Grid item xs={12} sm={3} md={3}>
         <FormControl fullWidth>
           <InputLabel>สถานะ</InputLabel>
           <Select
@@ -126,7 +122,6 @@ export const PurchaseReportFilters = ({ filters, onFiltersChange, onGenerateRepo
       </Grid>
 
       {/* Action Buttons */}
-      {/* ✨ ปรับ Layout ของปุ่มให้อยู่บรรทัดใหม่เสมอ */}
       <Grid item xs={12} container spacing={2} justifyContent="flex-start">
          <Grid item>
             <Button

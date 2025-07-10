@@ -57,8 +57,7 @@ export const PurchaseReportTable = ({ data, summary, isLoading }) => {
             <TableCell>วันที่รับ</TableCell>
             <TableCell>เลขที่ใบรับ</TableCell>
             <TableCell>สินค้า</TableCell>
-            <TableCell>ผู้ขาย</TableCell>
-            <TableCell>สาขา</TableCell>
+            <TableCell>ผู้ขาย</TableCell>            
             <TableCell align="right">จำนวน</TableCell>
             <TableCell>หน่วย</TableCell>
             <TableCell align="right">ราคา/หน่วย (ทุน)</TableCell>
@@ -73,8 +72,7 @@ export const PurchaseReportTable = ({ data, summary, isLoading }) => {
               </TableCell>
               <TableCell>{row.receiptCode}</TableCell>
               <TableCell>{row.productName}</TableCell>
-              <TableCell>{row.supplierName}</TableCell>
-              <TableCell>{row.branchName}</TableCell>
+              <TableCell>{row.supplierName}</TableCell>              
               <TableCell align="right">{row.quantity}</TableCell>
               <TableCell>{row.unitName}</TableCell>
               <TableCell align="right">{formatNumber(row.costPrice)}</TableCell>

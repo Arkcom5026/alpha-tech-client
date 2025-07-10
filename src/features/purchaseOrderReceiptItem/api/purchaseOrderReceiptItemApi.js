@@ -22,6 +22,7 @@ export const getReceiptItemsByReceiptIds = async (receiptIds) => {
 
 export const addReceiptItem = async (data) => {
   try {
+    console.log('addReceiptItem : ',data)
     const res = await apiClient.post('/purchase-order-receipt-items', data);
     return res.data;
   } catch (error) {

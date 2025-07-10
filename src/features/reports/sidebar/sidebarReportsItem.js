@@ -5,6 +5,8 @@ export const sidebarReportsItems = [
     items: [
       { label: 'รายงานภาพรวม', to: '/pos/reports' },
       { label: 'รายงานการจัดซื้อ', to: '/pos/reports/purchase' },
+      { label: 'รายงานภาษีซื้อ', to: '/pos/reports/inputtax' },
+      
       
     ],
   },

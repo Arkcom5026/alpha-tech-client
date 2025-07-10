@@ -13,7 +13,7 @@ import PurchaseOrderDetailPage from '@/features/purchaseOrder/pages/PurchaseOrde
 import PrintPurchaseOrderPage from '@/features/purchaseOrder/pages/PrintPurchaseOrderPage';
 import ListPurchaseOrderReceiptPage from '@/features/purchaseOrderReceipt/pages/ListPurchaseOrderReceiptPage';
 import CreatePurchaseOrderReceiptPage from '@/features/purchaseOrderReceipt/pages/CreatePurchaseOrderReceiptPage';
-import EditPurchaseOrderReceiptPage from '@/features/purchaseOrderReceipt/pages/EditPurchaseOrderReceiptPage';
+
 import ViewPurchaseOrderReceiptPage from '@/features/purchaseOrderReceipt/pages/ViewPurchaseOrderReceiptPage';
 import PrintPurchaseOrderReceiptTemplate from '@/features/purchaseOrderReceipt/pages/PrintPurchaseOrderReceiptTemplate';
 import BarcodeReceiptListPage from '@/features/barcode/pages/BarcodeReceiptListPage';
@@ -48,8 +48,7 @@ const purchasesRoutes = {
       children: [
         { index: true, element: <ListPurchaseOrderReceiptPage />, },
 
-        { path: 'create/:poId', element: <CreatePurchaseOrderReceiptPage />, },
-        { path: 'edit/:id', element: <EditPurchaseOrderReceiptPage />, },
+        { path: 'create/:poId', element: <CreatePurchaseOrderReceiptPage />, },        
         { path: 'view/:id', element: <ViewPurchaseOrderReceiptPage /> },
         { path: 'print/:id', element: <PrintPurchaseOrderReceiptTemplate /> },
         { path: 'items', element: <ListReceiptItemsToScanPage /> },

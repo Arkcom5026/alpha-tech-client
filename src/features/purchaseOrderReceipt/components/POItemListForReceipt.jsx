@@ -1,12 +1,14 @@
-import React, { useEffect, useState } from 'react';
-import usePurchaseOrderReceiptStore from '../../purchaseOrderReceipt/store/purchaseOrderReceiptStore';
+import React, { useEffect, useState, useCallback } from 'react';
+import usePurchaseOrderReceiptStore from '../store/purchaseOrderReceiptStore';
+import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 const POItemListForReceipt = ({ poId, receiptId, setReceiptId, deliveryNoteNumber }) => {
   const {
     loadOrderById,
     currentOrder,
     loading,
-    updateReceiptItemAction,
     addReceiptItemAction,
     createReceiptAction,
     updatePurchaseOrderStatusAction,
@@ -22,25 +24,45 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, deliveryNoteNumbe
   const [finalizeMode, setFinalizeMode] = useState(false);
   const [itemStatus, setItemStatus] = useState({});
   const [statusPromptShown, setStatusPromptShown] = useState({});
+  
+  // ✨ 1. เพิ่ม State เพื่อใช้เป็นตัวตรวจสอบว่าข้อมูลเริ่มต้นถูกตั้งค่าแล้วหรือยัง
+  const [isInitialized, setIsInitialized] = useState(false);
 
+  // ✨ 2. useEffect นี้จะทำหน้าที่แค่ "สั่ง" ให้ Store โหลดข้อมูล และ "รีเซ็ต" สถานะเมื่อ poId เปลี่ยน
   useEffect(() => {
     if (poId) {
-      loadOrderById(poId).then(() => {
-        const initQuantities = {};
-        const initPrices = {};
-        const initTotals = {};
-        currentOrder?.items?.forEach((item) => {
-          initQuantities[item.id] = item.quantity || 0;
-          initPrices[item.id] = item.costPrice || 0;
-          initTotals[item.id] = (item.quantity || 0) * (item.costPrice || 0);
-        });
-        setReceiptQuantities(initQuantities);
-        setReceiptPrices(initPrices);
-        setReceiptTotals(initTotals);
-        console.log(currentOrder);
-      });
+      setIsInitialized(false); // รีเซ็ตสถานะทุกครั้งที่เปลี่ยนใบสั่งซื้อ
+      loadOrderById(poId);
     }
-  }, [poId]);
+  }, [poId, loadOrderById]);
+
+  // ✨ 3. useEffect นี้จะ "รอฟัง" การเปลี่ยนแปลงของ currentOrder จาก Store
+  // และจะตั้งค่าเริ่มต้นเพียงครั้งเดียวต่อการโหลด 1 ใบสั่งซื้อ
+  useEffect(() => {
+    // ทำงานเมื่อ: currentOrder มีข้อมูล, ตรงกับ poId ปัจจุบัน, และยังไม่เคยถูกตั้งค่ามาก่อน
+    if (currentOrder && currentOrder.id === parseInt(poId, 10) && !isInitialized) {
+      const initQuantities = {};
+      const initPrices = {};
+      const initTotals = {};
+
+      currentOrder.items.forEach((item) => {
+        const remainingQty = item.quantity - item.receivedQuantity;
+        const qtyToSet = remainingQty > 0 ? remainingQty : 0;
+        const priceToSet = item.costPrice || 0;
+
+        initQuantities[item.id] = qtyToSet;
+        initPrices[item.id] = priceToSet;
+        initTotals[item.id] = qtyToSet * priceToSet;
+      });
+
+      setReceiptQuantities(initQuantities);
+      setReceiptPrices(initPrices);
+      setReceiptTotals(initTotals);
+      
+      // ✨ 4. ตั้งค่าสถานะว่าข้อมูลเริ่มต้นพร้อมแล้ว เพื่อป้องกันการทำงานซ้ำ
+      setIsInitialized(true);
+    }
+  }, [currentOrder, poId, isInitialized]);
 
   const calculateTotal = (itemId, quantity, costPrice) => {
     setReceiptTotals((prev) => ({
@@ -64,13 +86,11 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, deliveryNoteNumbe
       [itemId]: num,
     }));
 
-    calculateTotal(itemId, num, receiptPrices[item.id] || 0);
+    const price = receiptPrices[itemId] ?? item.costPrice ?? 0;
+    calculateTotal(itemId, num, price);
 
     if ((num === 0 || isIncomplete || shouldWarn) && !statusPromptShown[itemId]) {
-      setStatusPromptShown((prev) => ({
-        ...prev,
-        [itemId]: true,
-      }));
+      setStatusPromptShown((prev) => ({ ...prev, [itemId]: true, }));
     } else if (!isIncomplete && !shouldWarn && statusPromptShown[itemId]) {
       setStatusPromptShown((prev) => {
         const newShown = { ...prev };
@@ -83,11 +103,14 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, deliveryNoteNumbe
   const handlePriceChange = (itemId, value) => {
     const costPrice = Number(value);
     if (isNaN(costPrice) || costPrice < 0) return;
+
     setReceiptPrices((prev) => ({
       ...prev,
       [itemId]: costPrice
     }));
-    calculateTotal(itemId, receiptQuantities[itemId] || 0, costPrice);
+
+    const quantity = receiptQuantities[itemId] ?? 0;
+    calculateTotal(itemId, quantity, costPrice);
   };
 
   const handleBlurQuantity = (itemId) => {
@@ -125,7 +148,7 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, deliveryNoteNumbe
         purchaseOrderItemId: item.id,
       };
 
-      const res = await addReceiptItemAction(payload);
+      await addReceiptItemAction(payload);
       setSavedRows((prev) => ({ ...prev, [item.id]: true }));
     } catch (error) {
       console.error('❌ saveItem error:', error);
@@ -148,50 +171,59 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, deliveryNoteNumbe
     setFinalizeMode(false);
   };
 
-  if (loading) return <p>กำลังโหลดรายการสินค้า...</p>;
+  // ✨ 5. ปรับปรุงเงื่อนไขการแสดงผล Loading ให้รอจนกว่าข้อมูลจะพร้อม
+  if (loading || !isInitialized) return <p>กำลังโหลดรายการสินค้า...</p>;
   const allSaved = currentOrder?.items?.every((item) => savedRows[item.id]);
 
   return (
     <div className="space-y-4 w-full">
       <h2 className="text-lg font-semibold">รายการสินค้าในใบสั่งซื้อ</h2>
       <div className="overflow-x-auto w-full">
-        <table className="min-w-full border border-gray-300 text-sm">
-          <thead className="bg-gray-100">
-            <tr>
-              <th className="text-center px-2 py-1">ชื่อสินค้า</th>
-              <th className="text-center px-2 py-1">หมวดหมู่</th>
-              <th className="text-center px-2 py-1">รายละเอียด</th>
-              <th className="text-center px-2 py-1">จำนวนสั่งซื้อ</th>
-              <th className="text-center px-2 py-1">ราคาสั่งซื้อ</th>
-              <th className="text-center px-2 py-1">จำนวนตรวจรับ</th>
-              <th className="text-center px-2 py-1">ราคาตรวจรับ</th>
-              <th className="text-center px-2 py-1">ยอดรวม</th>
-              <th className="text-center px-2 py-1">จัดการ</th>
-            </tr>
-          </thead>
-          <tbody>
+        <Table>
+          <TableHeader className="bg-blue-100">
+            
+            <TableRow>            
+              <TableHead className="text-center w-[150px]">หมวดหมู่</TableHead>
+              <TableHead className="text-center w-[130px]">ประเภท</TableHead>
+              <TableHead className="text-center w-[130px]">ลักษณะ</TableHead>
+              <TableHead className="text-center w-[130px]">รูปแบบ</TableHead>
+              <TableHead className="text-center w-[120px]">ชื่อ</TableHead>
+              <TableHead className="text-center w-[120px]">รุ่น</TableHead>
+              <TableHead className="text-center w-[80px]">จำนวนที่สั่ง</TableHead>
+              <TableHead className="text-center w-[100px]">ราคาที่สั่ง</TableHead>
+              <TableHead className="text-center w-[100px]">จำนวนที่รับ</TableHead>
+              <TableHead className="text-center w-[100px]">ราคาที่รับ</TableHead>
+              <TableHead className="text-center w-[100px]">รวม</TableHead>
+              <TableHead className="text-center w-[120px]">จัดการ</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {(currentOrder?.items || []).map((item) => {
               const received = Number(item.receivedQuantity || 0);
-              const quantity = receiptQuantities[item.id] ?? 0;
-              const total = quantity + received;
+              const quantity = receiptQuantities[item.id] ?? '';
+              const price = receiptPrices[item.id] ?? '';
+              const total = receiptTotals[item.id] ?? 0;
               const isSaved = savedRows[item.id];
               const isEditing = editMode[item.id];
-              const isOver = total > item.quantity;
-              const isIncomplete = total < item.quantity;
+              const isOver = (Number(quantity) + received) > item.quantity;
+              const isIncomplete = (Number(quantity) + received) < item.quantity;
               const showStatusPrompt = statusPromptShown[item.id];
               const isStatusSelected = itemStatus[item.id] === 'done' || itemStatus[item.id] === 'pending';
-              const disableSave = saving[item.id] || quantity == null ||
-                ((statusPromptShown[item.id] && !isStatusSelected) ||
+              const disableSave = saving[item.id] || quantity === '' ||
+                ((showStatusPrompt && !isStatusSelected) ||
                   (isOver && !forceAccept[item.id]));
 
               return (
-                <tr key={item.id} className={isSaved ? 'bg-blue-100' : ''}>
-                  <td className="border px-2 py-1">{item.product?.name || '-'}</td>
-                  <td className="border px-2 py-1 text-center">{item.product?.template?.name || 'ไม่มีหมวดหมู่'}</td>
-                  <td className="border px-2 py-1 text-center">{item.product?.description || '-'}</td>
-                  <td className="border px-2 py-1 text-center">{item.quantity}</td>
-                  <td className="border px-2 py-1 text-center">{item.costPrice}</td>
-                  <td className="border px-2 py-1 text-center">
+                <TableRow key={item.id}>
+                  <TableCell>{item.product?.category || '-'}</TableCell>
+                  <TableCell>{item.product?.productType || '-'}</TableCell>
+                  <TableCell>{item.product?.productProfile || '-'}</TableCell>
+                  <TableCell>{item.product?.productTemplate || '-'}</TableCell>                  
+                  <TableCell>{item.product?.name || '-'}</TableCell>
+                  <TableCell>{item.product?.model || '-'}</TableCell>                  
+                  <TableCell className="text-center px-2 py-1">{item.quantity}</TableCell>
+                  <TableCell className="text-center px-2 py-1">{item.costPrice}</TableCell>
+                  <TableCell className="px-2 py-1">
                     <input
                       type="number"
                       min="0"
@@ -237,26 +269,26 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, deliveryNoteNumbe
                         </label>
                       </div>
                     )}
-                  </td>
-                  <td className="border px-2 py-1 text-center">
+                  </TableCell>
+                  <TableCell className="px-2 py-1">
                     <input
                       type="number"
                       min="0"
                       className="w-24 text-center border rounded px-1 py-0.5"
-                      value={receiptPrices[item.id] ?? 0}
+                      value={price}
                       onChange={(e) => handlePriceChange(item.id, e.target.value)}
                       disabled={isSaved && !isEditing}
                     />
-                  </td>
-                  <td className="border px-2 py-1 text-center">{receiptTotals[item.id]?.toFixed(2)}</td>
-                  <td className="border px-2 py-1 text-center space-x-1">
+                  </TableCell>
+                  <TableCell className="text-right px-2 py-1">{total.toFixed(2)}</TableCell>
+                  <TableCell className="text-center px-2 py-1">
                     {!isSaved && (
                       <button
                         onClick={() => handleSaveItem(item)}
                         disabled={disableSave}
                         className="bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700 disabled:opacity-50"
                       >
-                        {saving[item.id] ? 'กำลังบันทึก...' : 'บันทึก'}
+                        {saving[item.id] ? '...' : 'บันทึก'}
                       </button>
                     )}
                     {isSaved && (
@@ -267,12 +299,12 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, deliveryNoteNumbe
                         แก้ไข
                       </button>
                     )}
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               );
             })}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
 
       <div className="pt-4 text-right">

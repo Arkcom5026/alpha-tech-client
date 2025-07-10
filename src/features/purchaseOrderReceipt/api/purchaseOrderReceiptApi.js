@@ -150,3 +150,15 @@ export const getReceiptsReadyToPay = async (filters = {}) => {
     throw error;
   }
 };
+
+
+export const getReceiptsMissingTaxInfo = async () => {
+ try {
+   // เรียก API ไปยัง endpoint ใหม่ (ต้องสร้างที่ Backend ต่อไป)
+   const response = await apiClient.get('/purchase-order-receipts/missing-tax-info');
+   return response.data;
+ } catch (error) {
+   console.error('❌ [getReceiptsMissingTaxInfo] error:', error);
+   throw error;
+ }
+};

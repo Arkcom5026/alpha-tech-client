@@ -66,6 +66,9 @@ export const getPurchaseOrderDetailById = async (poId) => {
 export const getReceiptBarcodeSummaries = async () => {
   try {
     const res = await apiClient.get('/purchase-order-receipts/with-barcode-status');
+    
+    console.log('getReceiptBarcodeSummaries : ', res)
+
     return res.data;
   } catch (error) {
     console.error('📛 [getReceiptBarcodeSummaries] error:', error);

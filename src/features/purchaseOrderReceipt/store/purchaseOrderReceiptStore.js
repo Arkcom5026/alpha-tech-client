@@ -99,6 +99,7 @@ const usePurchaseOrderReceiptStore = create((set, get) => ({
     try {
       set({ receiptBarcodeLoading: true });
       const data = await getReceiptBarcodeSummaries();
+      console.log('loadReceiptBarcodeSummariesAction ', data )
       set({ receiptBarcodeSummaries: data, receiptBarcodeLoading: false });
     } catch (error) {
       console.error('📛 loadReceiptBarcodeSummariesAction error:', error);

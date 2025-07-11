@@ -1,4 +1,5 @@
 // src/features/stockItem/components/BarcodePrintTable.jsx
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useBarcodeStore from '@/features/barcode/store/barcodeStore';
@@ -6,13 +7,15 @@ import useBarcodeStore from '@/features/barcode/store/barcodeStore';
 const BarcodePrintTable = ({ receipts }) => {
   const navigate = useNavigate();
   const { generateBarcodesAction } = useBarcodeStore();
-  const [statusFilter, setStatusFilter] = useState('ALL');
+  // ✨ CHANGED: เปลี่ยนค่าเริ่มต้นเป็น PENDING
+  const [statusFilter, setStatusFilter] = useState('PENDING');
   const [selectedIds, setSelectedIds] = useState([]);
 
+  // ✨ FIXED: แก้ไข Logic การกรองให้ตรงกับข้อมูลและค่าที่ส่งมา
   const filteredReceipts = receipts.filter((receipt) => {
     if (statusFilter === 'ALL') return true;
-    if (statusFilter === 'PENDING') return receipt.printed === false;
-    if (statusFilter === 'COMPLETE') return receipt.printed === true;
+    if (statusFilter === 'PENDING') return receipt.status !== 'COMPLETED';
+    if (statusFilter === 'COMPLETED') return receipt.status === 'COMPLETED';
     return true;
   });
 
@@ -43,9 +46,9 @@ const BarcodePrintTable = ({ receipts }) => {
         <label className="font-medium">กรองสถานะบาร์โค้ด:</label>
         <label><input type="radio" name="status" value="ALL" checked={statusFilter === 'ALL'} onChange={(e) => setStatusFilter(e.target.value)} /> ทั้งหมด</label>
         <label><input type="radio" name="status" value="PENDING" checked={statusFilter === 'PENDING'} onChange={(e) => setStatusFilter(e.target.value)} /> ยังไม่ได้พิมพ์</label>
+        {/* ✨ FIXED: แก้ไขค่าใน Radio Button ให้ตรงกับ Logic ที่ใช้ */}
         <label><input type="radio" name="status" value="COMPLETED" checked={statusFilter === 'COMPLETED'} onChange={(e) => setStatusFilter(e.target.value)} /> พิมพ์แล้ว</label>
       </div>
-
       <div className="overflow-x-auto">
         <table className="min-w-full text-sm border border-gray-300">
           <thead className="bg-gray-100">
@@ -55,6 +58,8 @@ const BarcodePrintTable = ({ receipts }) => {
               </th>
               <th className="border px-2 py-1 text-center">ลำดับ</th>
               <th className="border px-2 py-1">เลขใบสั่งซื้อ</th>
+              <th className="border px-2 py-1">เลขใบตรวจรับ</th>
+              <th className="border px-2 py-1">เลขที่ใบกำกับภาษี</th>
               <th className="border px-2 py-1">Supplier</th>
               <th className="border px-2 py-1">วันที่รับ</th>
               <th className="border px-2 py-1 text-center">จำนวนที่รับ</th>
@@ -75,6 +80,8 @@ const BarcodePrintTable = ({ receipts }) => {
                 </td>
                 <td className="border px-2 py-1 text-center">{index + 1}</td>
                 <td className="border px-2 py-1">{receipt.orderCode}</td>
+                <td className="border px-2 py-1">{receipt.code}</td>
+                <td className="border px-2 py-1">{receipt.tax}</td>
                 <td className="border px-2 py-1">{receipt.supplierName}</td>
                 <td className="border px-2 py-1">
                   {receipt.receivedAt && !isNaN(new Date(receipt.receivedAt))
@@ -83,10 +90,8 @@ const BarcodePrintTable = ({ receipts }) => {
                 </td>
                 <td className="border px-2 py-1 text-center">{receipt.totalItems}</td>
                 <td className="border px-2 py-1 text-center">{receipt.barcodeGenerated}</td>
-                <td className="border px-2 py-1 text-center">                  
+                <td className="border px-2 py-1 text-center">
                   {receipt.status === 'COMPLETED' ? 'พิมพ์แล้ว' : 'ยังไม่ได้พิมพ์'}
-
-
                 </td>
                 <td className="border px-2 py-1 text-center">
                   <button
@@ -101,7 +106,6 @@ const BarcodePrintTable = ({ receipts }) => {
           </tbody>
         </table>
       </div>
-
       {selectedIds.length > 0 && (
         <div className="mt-4">
           <button

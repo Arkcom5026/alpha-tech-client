@@ -7,6 +7,13 @@ const currentDate = new Date();
 const currentMonth = currentDate.getMonth() + 1; // getMonth() คืนค่า 0-11
 const currentYear = currentDate.getFullYear();
 
+// ✨ FIXED: แก้ไข State ใน Store ให้ถูกต้อง
+const initialState = {
+  totalAmount: 0,
+  vatAmount: 0,
+  grandTotal: 0,
+};
+
 export const useInputTaxReportStore = create((set, get) => ({
   // =================================================================
   // STATE (สถานะ)
@@ -16,10 +23,7 @@ export const useInputTaxReportStore = create((set, get) => ({
     taxYear: currentYear,
   },
   reportData: [],
-  summary: {
-    totalBaseAmount: 0,
-    totalVatAmount: 0,
-  },
+  summary: initialState, // ใช้ค่าเริ่มต้นที่ถูกต้อง
   isLoading: false,
   error: null,
 
@@ -51,7 +55,7 @@ export const useInputTaxReportStore = create((set, get) => ({
       // อัปเดต state ด้วยข้อมูลที่ได้รับจาก API
       set({
         reportData: response.data || [],
-        summary: response.summary || { totalBaseAmount: 0, totalVatAmount: 0 },
+        summary: response.summary || initialState, // ใช้ค่าเริ่มต้นที่ถูกต้อง
         isLoading: false,
       });
     } catch (err) {
@@ -61,8 +65,9 @@ export const useInputTaxReportStore = create((set, get) => ({
         isLoading: false,
         error: 'ไม่สามารถดึงข้อมูลรายงานภาษีซื้อได้',
         reportData: [], // เคลียร์ข้อมูลเก่าออก
-        summary: { totalBaseAmount: 0, totalVatAmount: 0 },
+        summary: initialState, // ใช้ค่าเริ่มต้นที่ถูกต้อง
       });
     }
   },
 }));
+

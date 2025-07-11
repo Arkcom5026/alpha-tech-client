@@ -1,85 +1,87 @@
 // src/features/inputTaxReport/pages/ListInputTaxReportPage.jsx
-import React, { useEffect, useCallback } from 'react';
+
+import React, { useEffect, useCallback, useRef } from 'react';
 import { Box, Typography, Card, CardContent, CardHeader, Button } from '@mui/material';
+import { useReactToPrint } from 'react-to-print';
 
 // ✨ นำเข้า components และ store
 import { InputTaxReportTable } from '../components/InputTaxReportTable';
 import { InputTaxReportFilters } from '../components/InputTaxReportFilters';
 import { useInputTaxReportStore } from '../store/inputTaxReporStore';
+import { useAuthStore } from '../../auth/store/authStore'; // ❗️ หมายเหตุ: คุณต้องเปลี่ยน path นี้ให้ตรงกับ auth store ของคุณ
+import { Link } from 'react-router-dom';
 
+// Helper function เพื่อแปลงเลขเดือนเป็นชื่อเดือนภาษาไทย
+const getThaiMonthName = (monthNumber) => {
+    const months = [
+        'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+        'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
+    ];
+    return months[monthNumber - 1] || '';
+};
 
 /**
  * หน้าหลักสำหรับแสดงรายงานภาษีซื้อ
  */
 export const ListInputTaxReportPage = () => {
-  // เชื่อมต่อกับ store
-  const {
-    filters,
-    setFilters,
-    reportData,
-    summary,
-    isLoading,
-    fetchInputTaxReport,
-  } = useInputTaxReportStore();
+    const {
+        filters,
+        setFilters,
+        reportData,
+        summary,
+        isLoading,
+        fetchInputTaxReport,
+    } = useInputTaxReportStore();
 
-  // ฟังก์ชันสำหรับสั่งให้ดึงข้อมูล
-  const handleGenerateReport = useCallback(() => {
-    fetchInputTaxReport();
-  }, [fetchInputTaxReport]);
+    const handleGenerateReport = useCallback(() => {
+        fetchInputTaxReport();
+    }, [fetchInputTaxReport]);
 
-  // ดึงข้อมูลครั้งแรกเมื่อเปิดหน้า
-  useEffect(() => {
-    handleGenerateReport();
-  }, [handleGenerateReport]);
+    useEffect(() => {
+        handleGenerateReport();
+    }, [handleGenerateReport]);
 
-  const handleExportExcel = () => {
-    // TODO: พัฒนาฟังก์ชันสำหรับ Export ข้อมูลเป็น Excel
-    alert("ฟังก์ชัน Export to Excel ยังไม่เปิดใช้งาน");
-  };
+    return (
+        <Box sx={{ p: { xs: 1, sm: 2, md: 3 } }}>
+            <Typography variant="h4" component="h1" gutterBottom>
+                รายงานภาษีซื้อ
+            </Typography>
+            <Card sx={{ mb: 3 }}>
+                <CardContent>
+                    <InputTaxReportFilters
+                        filters={filters}
+                        onFiltersChange={setFilters}
+                        onGenerateReport={handleGenerateReport}
+                        isGenerating={isLoading}
+                    />
+                </CardContent>
+            </Card>
 
-  return (
-    <Box sx={{ p: { xs: 1, sm: 2, md: 3 } }}>
-      <Typography variant="h4" component="h1" gutterBottom>
-        รายงานภาษีซื้อ
-      </Typography>
-
-      {/* ส่วนสำหรับกรองข้อมูล */}
-      <Card sx={{ mb: 3 }}>
-        <CardContent>
-          <InputTaxReportFilters
-            filters={filters}
-            onFiltersChange={setFilters}
-            onGenerateReport={handleGenerateReport}
-            isGenerating={isLoading}
-          />
-        </CardContent>
-      </Card>
-
-      {/* ส่วนตารางแสดงผลลัพธ์ */}
-      <Card>
-        <CardHeader
-          title="ผลลัพธ์รายงาน"
-          action={
-            <Button
-              variant="contained"
-              color="success"
-              onClick={handleExportExcel}
-              disabled={isLoading || !reportData || reportData.length === 0}
-            >
-              Export to Excel
-            </Button>
-          }
-        />
-        <CardContent>
-          <InputTaxReportTable
-            data={reportData}
-            summary={summary}
-            isLoading={isLoading}
-          />
-        </CardContent>
-      </Card>
-    </Box>
-  );
+            <Card>
+                <CardHeader
+                    title="ผลลัพธ์รายงาน"
+                    action={
+                        <Button
+                            component={Link}
+                            to="/pos/reports/taxprint"                              
+                            
+                            variant="contained"
+                            color="primary"
+                        >
+                            แสดงหน้าก่อนพิมพ์
+                        </Button>
+                    }
+                />
+                <CardContent>
+                    <InputTaxReportTable
+                        data={reportData}
+                        summary={summary}
+                        isLoading={isLoading}
+                    />
+                </CardContent>
+            </Card>
+        </Box>
+    );
 };
 
 export default ListInputTaxReportPage;

@@ -4,7 +4,8 @@ import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
-const POItemListForReceipt = ({ poId, receiptId, setReceiptId, deliveryNoteNumber }) => {
+// ✨ CHANGED: รับ formData เข้ามาเพื่อเอาค่าจากฟอร์มด้านบน
+const POItemListForReceipt = ({ poId, receiptId, setReceiptId, formData }) => {
   const {
     loadOrderById,
     currentOrder,
@@ -25,41 +26,32 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, deliveryNoteNumbe
   const [itemStatus, setItemStatus] = useState({});
   const [statusPromptShown, setStatusPromptShown] = useState({});
   
-  // ✨ 1. เพิ่ม State เพื่อใช้เป็นตัวตรวจสอบว่าข้อมูลเริ่มต้นถูกตั้งค่าแล้วหรือยัง
   const [isInitialized, setIsInitialized] = useState(false);
 
-  // ✨ 2. useEffect นี้จะทำหน้าที่แค่ "สั่ง" ให้ Store โหลดข้อมูล และ "รีเซ็ต" สถานะเมื่อ poId เปลี่ยน
   useEffect(() => {
     if (poId) {
-      setIsInitialized(false); // รีเซ็ตสถานะทุกครั้งที่เปลี่ยนใบสั่งซื้อ
+      setIsInitialized(false);
       loadOrderById(poId);
     }
   }, [poId, loadOrderById]);
 
-  // ✨ 3. useEffect นี้จะ "รอฟัง" การเปลี่ยนแปลงของ currentOrder จาก Store
-  // และจะตั้งค่าเริ่มต้นเพียงครั้งเดียวต่อการโหลด 1 ใบสั่งซื้อ
   useEffect(() => {
-    // ทำงานเมื่อ: currentOrder มีข้อมูล, ตรงกับ poId ปัจจุบัน, และยังไม่เคยถูกตั้งค่ามาก่อน
     if (currentOrder && currentOrder.id === parseInt(poId, 10) && !isInitialized) {
       const initQuantities = {};
       const initPrices = {};
       const initTotals = {};
-
       currentOrder.items.forEach((item) => {
         const remainingQty = item.quantity - item.receivedQuantity;
         const qtyToSet = remainingQty > 0 ? remainingQty : 0;
         const priceToSet = item.costPrice || 0;
-
         initQuantities[item.id] = qtyToSet;
         initPrices[item.id] = priceToSet;
         initTotals[item.id] = qtyToSet * priceToSet;
       });
-
       setReceiptQuantities(initQuantities);
       setReceiptPrices(initPrices);
       setReceiptTotals(initTotals);
       
-      // ✨ 4. ตั้งค่าสถานะว่าข้อมูลเริ่มต้นพร้อมแล้ว เพื่อป้องกันการทำงานซ้ำ
       setIsInitialized(true);
     }
   }, [currentOrder, poId, isInitialized]);
@@ -79,13 +71,14 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, deliveryNoteNumbe
     const received = Number(item.receivedQuantity || 0);
     const total = num + received;
     const isIncomplete = total < item.quantity;
+    
+    // This logic seems specific, keeping it as is.
     const shouldWarn = item.quantity > 10 && value.toString().startsWith("1");
 
     setReceiptQuantities((prev) => ({
       ...prev,
       [itemId]: num,
     }));
-
     const price = receiptPrices[itemId] ?? item.costPrice ?? 0;
     calculateTotal(itemId, num, price);
 
@@ -103,12 +96,10 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, deliveryNoteNumbe
   const handlePriceChange = (itemId, value) => {
     const costPrice = Number(value);
     if (isNaN(costPrice) || costPrice < 0) return;
-
     setReceiptPrices((prev) => ({
       ...prev,
       [itemId]: costPrice
     }));
-
     const quantity = receiptQuantities[itemId] ?? 0;
     calculateTotal(itemId, quantity, costPrice);
   };
@@ -130,12 +121,15 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, deliveryNoteNumbe
   const handleSaveItem = async (item) => {
     try {
       setSaving((prev) => ({ ...prev, [item.id]: true }));
-
       let newReceiptId = receiptId;
+
       if (!newReceiptId) {
+        // ✨ CHANGED: ส่งข้อมูลจากฟอร์มเข้าไปใน action เพื่อสร้างใบรับของ
         const newReceipt = await createReceiptAction({
           purchaseOrderId: poId,
-          note: deliveryNoteNumber,
+          note: formData.note,
+          supplierTaxInvoiceNumber: formData.supplierTaxInvoiceNumber,
+          supplierTaxInvoiceDate: formData.supplierTaxInvoiceDate,
         });
         newReceiptId = newReceipt.id;
         setReceiptId(newReceiptId);
@@ -147,7 +141,6 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, deliveryNoteNumbe
         receiptId: newReceiptId,
         purchaseOrderItemId: item.id,
       };
-
       await addReceiptItemAction(payload);
       setSavedRows((prev) => ({ ...prev, [item.id]: true }));
     } catch (error) {
@@ -165,14 +158,13 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, deliveryNoteNumbe
       const status = itemStatus[item.id];
       return status === 'done' || (item.receivedQuantity || 0) >= item.quantity;
     });
-
     const statusToSet = allDone ? 'COMPLETED' : 'PARTIAL';
     updatePurchaseOrderStatusAction({ id: currentOrder.id, status: statusToSet });
     setFinalizeMode(false);
   };
 
-  // ✨ 5. ปรับปรุงเงื่อนไขการแสดงผล Loading ให้รอจนกว่าข้อมูลจะพร้อม
   if (loading || !isInitialized) return <p>กำลังโหลดรายการสินค้า...</p>;
+
   const allSaved = currentOrder?.items?.every((item) => savedRows[item.id]);
 
   return (
@@ -181,8 +173,7 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, deliveryNoteNumbe
       <div className="overflow-x-auto w-full">
         <Table>
           <TableHeader className="bg-blue-100">
-            
-            <TableRow>            
+            <TableRow>              
               <TableHead className="text-center w-[150px]">หมวดหมู่</TableHead>
               <TableHead className="text-center w-[130px]">ประเภท</TableHead>
               <TableHead className="text-center w-[130px]">ลักษณะ</TableHead>
@@ -206,13 +197,12 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, deliveryNoteNumbe
               const isSaved = savedRows[item.id];
               const isEditing = editMode[item.id];
               const isOver = (Number(quantity) + received) > item.quantity;
-              const isIncomplete = (Number(quantity) + received) < item.quantity;
               const showStatusPrompt = statusPromptShown[item.id];
               const isStatusSelected = itemStatus[item.id] === 'done' || itemStatus[item.id] === 'pending';
               const disableSave = saving[item.id] || quantity === '' ||
                 ((showStatusPrompt && !isStatusSelected) ||
                   (isOver && !forceAccept[item.id]));
-
+              
               return (
                 <TableRow key={item.id}>
                   <TableCell>{item.product?.category || '-'}</TableCell>
@@ -306,7 +296,6 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, deliveryNoteNumbe
           </TableBody>
         </Table>
       </div>
-
       <div className="pt-4 text-right">
         <button
           onClick={handleConfirmFinalize}

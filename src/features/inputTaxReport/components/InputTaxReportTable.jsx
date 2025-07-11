@@ -1,108 +1,108 @@
-// src/features/inputTaxReport/components/InputTaxReportTable.jsx
 import React from 'react';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  Box,
-  CircularProgress,
-  Typography,
+    Table,
+    TableBody,
+    TableCell,
+    TableContainer,
+    TableHead,
+    TableRow,
+    Paper,
+    Box,
+    Typography,
+    CircularProgress,
+    TableFooter,
 } from '@mui/material';
 
-/**
- * ฟังก์ชันสำหรับจัดรูปแบบตัวเลขให้มี comma
- * @param {number | null | undefined} num - ตัวเลข
- * @returns {string} - ตัวเลขที่จัดรูปแบบแล้ว
- */
-const formatNumber = (num) => {
-  if (typeof num !== 'number') return '0.00';
-  return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+// ฟังก์ชันสำหรับจัดรูปแบบตัวเลข
+const formatNumber = (value) => {
+    const num = Number(value);
+    if (isNaN(num)) {
+        return '0.00';
+    }
+    return num.toLocaleString('th-TH', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    });
 };
 
 /**
- * ฟังก์ชันสำหรับแปลงรหัสสาขาเป็นข้อความที่อ่านง่าย
- * @param {string | null | undefined} code - รหัสสาขา
- * @returns {string} - ข้อความที่อ่านง่าย
- */
-const formatBranchCode = (code) => {
-    if (!code) return 'N/A';
-    if (code === '00000') return 'สำนักงานใหญ่';
-    return `สาขาที่ ${code}`;
-}
-
-/**
- * Component ตารางสำหรับแสดงผลรายงานภาษีซื้อ
+ * คอมโพเนนต์สำหรับแสดงผลข้อมูลรายงานภาษีซื้อในรูปแบบตาราง
  * @param {object} props
- * @param {Array} props.data - ข้อมูลรายงาน
+ * @param {Array} props.data - ข้อมูลรายงานที่จะแสดง
  * @param {object} props.summary - ข้อมูลสรุปยอดรวม
- * @param {boolean} props.isLoading - สถานะกำลังโหลด
+ * @param {boolean} props.isLoading - สถานะกำลังโหลดข้อมูล
  */
 export const InputTaxReportTable = ({ data, summary, isLoading }) => {
-  if (isLoading) {
+    // แสดงสถานะกำลังโหลด
+    if (isLoading) {
+        return (
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 200 }}>
+                <CircularProgress />
+                <Typography sx={{ ml: 2 }}>กำลังโหลดข้อมูล...</Typography>
+            </Box>
+        );
+    }
+
+    // แสดงเมื่อไม่พบข้อมูล
+    if (!data || data.length === 0) {
+        return (
+            <Box sx={{ textAlign: 'center', height: 200, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                <Typography variant="body1" color="text.secondary">
+                    ไม่พบข้อมูล กรุณาเลือกเดือนและปีกด "แสดงรายงาน"
+                </Typography>
+            </Box>
+        );
+    }
+
+    // ✅ หัวตารางที่นำคอลัมน์ "สาขา" ออกแล้ว
+    const headers = [
+        'วัน เดือน ปี',
+        'เลขที่ใบกำกับภาษี',
+        'ชื่อผู้ขาย',
+        'เลขประจำตัวผู้เสียภาษีอากร',
+        'มูลค่าสินค้าหรือบริการ',
+        'ภาษีมูลค่าเพิ่ม',
+        'รวม',
+    ];
+
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 200 }}>
-        <CircularProgress />
-      </Box>
+        <TableContainer component={Paper}>
+            <Table sx={{ minWidth: 650 }} aria-label="input tax report table">
+                <TableHead>
+                    <TableRow>
+                        {headers.map((header) => (
+                            <TableCell key={header} align={['มูลค่าสินค้าหรือบริการ', 'ภาษีมูลค่าเพิ่ม', 'รวม'].includes(header) ? 'right' : 'left'}>
+                                {header}
+                            </TableCell>
+                        ))}
+                    </TableRow>
+                </TableHead>
+                <TableBody>
+                    {data.map((item) => (
+                        <TableRow key={item.id}>
+                            <TableCell>{item.supplierTaxInvoiceDate ? new Date(item.supplierTaxInvoiceDate).toLocaleDateString('th-TH') : '-'}</TableCell>
+                            <TableCell>{item.supplierTaxInvoiceNumber || '-'}</TableCell>
+                            <TableCell>{item.supplierName || 'N/A'}</TableCell>
+                            <TableCell>{item.supplierTaxId || 'N/A'}</TableCell>
+                            {/* ✅ ข้อมูลที่นำคอลัมน์ "สาขา" ออกแล้ว */}
+                            <TableCell align="right">{formatNumber(item.totalAmount)}</TableCell>
+                            <TableCell align="right">{formatNumber(item.vatAmount)}</TableCell>
+                            <TableCell align="right">{formatNumber(item.grandTotal)}</TableCell>
+                        </TableRow>
+                    ))}
+                </TableBody>
+                <TableFooter>
+                    <TableRow sx={{ '& > *': { fontWeight: 'bold' } }}>
+                        {/* ✅ ปรับ colSpan ให้ถูกต้องหลังจากลบคอลัมน์ */}
+                        <TableCell colSpan={4} align="right">
+                            ยอดรวม
+                        </TableCell>
+                        <TableCell align="right">{formatNumber(summary.totalAmount)}</TableCell>
+                        <TableCell align="right">{formatNumber(summary.vatAmount)}</TableCell>
+                        <TableCell align="right">{formatNumber(summary.grandTotal)}</TableCell>
+                    </TableRow>
+                </TableFooter>
+            </Table>
+        </TableContainer>
     );
-  }
-
-  if (!data || data.length === 0) {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 200 }}>
-        <Typography variant="h6" color="text.secondary">
-          ไม่พบข้อมูลสำหรับรายงานภาษีซื้อในเดือนที่เลือก
-        </Typography>
-      </Box>
-    );
-  }
-
-  return (
-    <TableContainer component={Paper}>
-      <Table sx={{ minWidth: 650 }} aria-label="input tax report table">
-        <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
-          <TableRow>
-            <TableCell>วัน เดือน ปี</TableCell>
-            <TableCell>เลขที่ใบกำกับภาษี</TableCell>
-            <TableCell>ชื่อผู้ขาย</TableCell>
-            <TableCell>เลขประจำตัวผู้เสียภาษีฯ</TableCell>
-            <TableCell>สถานประกอบการ</TableCell>
-            <TableCell align="right">มูลค่าสินค้า/บริการ</TableCell>
-            <TableCell align="right">จำนวนเงินภาษีฯ</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {data.map((row) => (
-            <TableRow key={row.id} sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
-              <TableCell component="th" scope="row">
-                {new Date(row.taxInvoiceDate).toLocaleDateString('th-TH')}
-              </TableCell>
-              <TableCell>{row.taxInvoiceNumber}</TableCell>
-              <TableCell>{row.supplierName}</TableCell>
-              <TableCell>{row.supplierTaxId}</TableCell>
-              <TableCell>{formatBranchCode(row.supplierTaxBranchCode)}</TableCell>
-              <TableCell align="right">{formatNumber(row.baseAmount)}</TableCell>
-              <TableCell align="right">{formatNumber(row.vatAmount)}</TableCell>
-            </TableRow>
-          ))}
-
-          {/* Summary Row */}
-          <TableRow sx={{ backgroundColor: '#f5f5f5', fontWeight: 'bold' }}>
-            <TableCell colSpan={5} align="right">
-                <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>ยอดรวม</Typography>
-            </TableCell>
-            <TableCell align="right">
-                <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>{formatNumber(summary.totalBaseAmount)}</Typography>
-            </TableCell>
-            <TableCell align="right">
-                <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>{formatNumber(summary.totalVatAmount)}</Typography>
-            </TableCell>
-          </TableRow>
-        </TableBody>
-      </Table>
-    </TableContainer>
-  );
 };

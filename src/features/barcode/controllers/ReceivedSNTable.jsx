@@ -31,7 +31,7 @@ const ReceivedSNTable = () => {
               <td className="px-4 py-2 text-sm">{item.serial}</td>
               <td className="px-4 py-2 text-sm">{item.costPrice?.toLocaleString()} ฿</td>
               <td className="px-4 py-2 text-sm">{new Date(item.receivedAt).toLocaleDateString()}</td>
-              <td className="px-4 py-2 text-sm">{item.status}</td>
+              <td className="px-4 py-2 text-sm">{item.statusReceipt}</td>
               <td className="px-4 py-2 text-center">
                 <Button
                   variant="destructive"

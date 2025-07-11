@@ -8,7 +8,7 @@ import apiClient from '@/utils/apiClient';
  * @returns {Promise<object>} - Promise ที่จะ resolve เป็น object ที่มี data และ summary จาก API
  */
 export const getInputTaxReport = async (filters) => {
-  console.log('Fetching input tax report from backend with filters:', filters);
+  
   try {
     // 1. สร้าง object สำหรับ params โดยคัดลอกเฉพาะค่าที่มีอยู่จริง
     const validFilters = {};

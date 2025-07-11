@@ -30,11 +30,13 @@ const ListReceiptItemsToScanPage = () => {
           <TableHeader>
             <TableRow>
               <TableHead>เลขที่ใบสั่งซื้อ</TableHead>
+              <TableHead>เลขที่ใบตรวจรับ</TableHead>
+              <TableHead>เลขที่ใบกำกับภาษี</TableHead>
               <TableHead>วันที่</TableHead>
               <TableHead>Supplier</TableHead>
               <TableHead>จำนวนบาร์โค้ด</TableHead>
               <TableHead>ยิงแล้ว</TableHead>
-              <TableHead>เครดิตใช้ได้</TableHead>
+              
               <TableHead>ยอดมัดจำ</TableHead>
               <TableHead className="text-right">การจัดการ</TableHead>
             </TableRow>
@@ -43,11 +45,13 @@ const ListReceiptItemsToScanPage = () => {
             {filteredReceipts.map((r) => (
               <TableRow key={r.id}>
                 <TableCell>{r.purchaseOrderCode}</TableCell>
+                <TableCell>{r.code}</TableCell>
+                <TableCell>{r.tax}</TableCell>
                 <TableCell>{new Date(r.createdAt).toLocaleDateString()}</TableCell>
                 <TableCell>{r.supplier}</TableCell>
                 <TableCell>{r.total}</TableCell>
                 <TableCell>{r.scanned}</TableCell>
-                <TableCell className="text-green-700">฿{r.creditAvailable?.toLocaleString() || '-'}</TableCell>
+                
                 <TableCell className="text-blue-700">฿{r.debitAmount?.toLocaleString() || '-'}</TableCell>
                 <TableCell className="text-right">
                   <Button

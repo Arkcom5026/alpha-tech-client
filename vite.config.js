@@ -23,6 +23,7 @@ export default defineConfig({
       '@utils': path.resolve(__dirname, './src/utils'),
       '@layouts': path.resolve(__dirname, './src/layouts'),
       '@routes': path.resolve(__dirname, './src/routes'),
+      'react': path.resolve(__dirname, './node_modules/react'),
       
     }
   },

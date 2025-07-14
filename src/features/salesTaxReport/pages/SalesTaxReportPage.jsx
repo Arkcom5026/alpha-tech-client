@@ -1,9 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import useSalesTaxReportStore from '../store/salesTaxReportStore';
 
-// ในโปรเจกต์จริงของคุณ ให้ใช้ import นี้
-// import useSalesTaxReportStore from '../store/salesTaxReportStore';
-
 // --- ไอคอน (ใช้ SVG แบบ inline เพื่อความสะดวก) ---
 const CalendarIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
@@ -18,6 +15,14 @@ const SearchIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
         <circle cx="11" cy="11" r="8"></circle>
         <line x1="21" x2="16.65" y1="21" y2="16.65"></line>
+    </svg>
+);
+
+const PrintIcon = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
+        <polyline points="6 9 6 2 18 2 18 9"></polyline>
+        <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+        <rect width="12" height="8" x="6" y="14"></rect>
     </svg>
 );
 
@@ -45,7 +50,7 @@ export default function SalesTaxReportPage() {
   
   const [startDate, setStartDate] = useState(new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0]);
   const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
-  
+
   useEffect(() => {
     return () => {
       clearReport();
@@ -56,6 +61,30 @@ export default function SalesTaxReportPage() {
     const token = typeof localStorage !== 'undefined' ? localStorage.getItem('authToken') : null;
     getReport(startDate, endDate, token);
   };
+
+  const handleShowPrintPreview = () => {
+    window.location.href = `/pos/reports/saletaxprint?startDate=${startDate}&endDate=${endDate}`;
+  };
+
+  // ✅ แก้ไข: เพิ่มคอลัมน์ "รวม" ใน Headers
+  const salesHeaders = [
+      { key: 'date', label: 'วันที่', isDate: true },
+      { key: 'invoiceNumber', label: 'เลขที่เอกสาร' },
+      { key: 'customerName', label: 'ชื่อผู้ซื้อ' },
+      { key: 'customerTaxId', label: 'เลขประจำตัวผู้เสียภาษี' },
+      { key: 'value', label: 'มูลค่า', align: 'right', isCurrency: true },
+      { key: 'vat', label: 'ภาษี (VAT)', align: 'right', isCurrency: true },
+      { key: 'total', label: 'รวม', align: 'right', isCurrency: true },
+  ];
+
+  const returnsHeaders = [
+      { key: 'date', label: 'วันที่', isDate: true },
+      { key: 'creditNoteNumber', label: 'เลขที่ใบลดหนี้' },
+      { key: 'originalInvoiceNumber', label: 'อ้างอิงใบกำกับ' },
+      { key: 'value', label: 'มูลค่า', align: 'right', isCurrency: true },
+      { key: 'vat', label: 'ภาษี (VAT)', align: 'right', isCurrency: true },
+      { key: 'total', label: 'รวม', align: 'right', isCurrency: true },
+  ];
 
   const { totalSalesValue, totalSalesVat, totalReturnsValue, totalReturnsVat, netValue, netVat } = useMemo(() => {
     if (!data) return { totalSalesValue: 0, totalSalesVat: 0, totalReturnsValue: 0, totalReturnsVat: 0, netValue: 0, netVat: 0 };
@@ -70,8 +99,8 @@ export default function SalesTaxReportPage() {
         totalSalesVat,
         totalReturnsValue,
         totalReturnsVat,
-        netValue: totalSalesValue + totalReturnsValue,
-        netVat: totalSalesVat + totalReturnsVat,
+        netValue: totalSalesValue - totalReturnsValue,
+        netVat: totalSalesVat - totalReturnsVat,
     };
   }, [data]);
 
@@ -92,11 +121,24 @@ export default function SalesTaxReportPage() {
                 <tbody className="bg-white divide-y divide-gray-200">
                     {items && items.length > 0 ? items.map((item, index) => (
                         <tr key={`${type}-${index}`} className={`hover:${type === 'sales' ? 'bg-gray-50' : 'bg-red-50'}`}>
-                            {headers.map(header => (
-                                <td key={`${header.key}-${index}`} className={`px-4 py-3 whitespace-nowrap text-sm ${header.align === 'right' ? 'text-right' : 'text-left'} ${header.isCurrency ? 'font-mono' : ''} ${type === 'returns' ? 'text-red-600' : 'text-gray-700'}`}>
-                                    {header.isCurrency ? formatCurrency(item[header.key]) : header.isDate ? formatDate(item[header.key]) : item[header.key]}
-                                </td>
-                            ))}
+                            {/* ✅ แก้ไข: เพิ่มการแสดงผลสำหรับคอลัมน์ "รวม" */}
+                            {headers.map(header => {
+                                let cellContent;
+                                if (header.key === 'total') {
+                                    cellContent = formatCurrency(item.value + item.vat);
+                                } else if (header.isCurrency) {
+                                    cellContent = formatCurrency(item[header.key]);
+                                } else if (header.isDate) {
+                                    cellContent = formatDate(item[header.key]);
+                                } else {
+                                    cellContent = item[header.key];
+                                }
+                                return (
+                                    <td key={`${header.key}-${index}`} className={`px-4 py-3 whitespace-nowrap text-sm ${header.align === 'right' ? 'text-right' : 'text-left'} ${header.isCurrency ? 'font-mono' : ''} ${type === 'returns' ? 'text-red-600' : 'text-gray-700'}`}>
+                                        {cellContent}
+                                    </td>
+                                );
+                            })}
                         </tr>
                     )) : (
                         <tr><td colSpan={headers.length} className="text-center py-4 text-gray-500">ไม่พบข้อมูล</td></tr>
@@ -108,6 +150,10 @@ export default function SalesTaxReportPage() {
                             <td colSpan={headers.findIndex(h => h.key === 'value')} className="px-4 py-3 text-right text-sm text-gray-800">ยอดรวม</td>
                             <td className="px-4 py-3 text-right text-sm text-gray-800 font-mono">{formatCurrency(type === 'sales' ? totalSalesValue : totalReturnsValue)}</td>
                             <td className="px-4 py-3 text-right text-sm text-gray-800 font-mono">{formatCurrency(type === 'sales' ? totalSalesVat : totalReturnsVat)}</td>
+                            {/* ✅ แก้ไข: เพิ่มยอดรวมของคอลัมน์ "รวม" */}
+                            <td className="px-4 py-3 text-right text-sm text-gray-800 font-mono">
+                                {formatCurrency(type === 'sales' ? totalSalesValue + totalSalesVat : totalReturnsValue + totalReturnsVat)}
+                            </td>
                         </tr>
                     </tfoot>
                 )}
@@ -115,23 +161,6 @@ export default function SalesTaxReportPage() {
         </div>
     </div>
   );
-  
-  const salesHeaders = [
-      { key: 'date', label: 'วันที่', isDate: true },
-      { key: 'invoiceNumber', label: 'เลขที่เอกสาร' },
-      { key: 'customerName', label: 'ชื่อผู้ซื้อ' },
-      { key: 'customerTaxId', label: 'เลขประจำตัวผู้เสียภาษี' },
-      { key: 'value', label: 'มูลค่า', align: 'right', isCurrency: true },
-      { key: 'vat', label: 'ภาษี (VAT)', align: 'right', isCurrency: true },
-  ];
-
-  const returnsHeaders = [
-      { key: 'date', label: 'วันที่', isDate: true },
-      { key: 'creditNoteNumber', label: 'เลขที่ใบลดหนี้' },
-      { key: 'originalInvoiceNumber', label: 'อ้างอิงใบกำกับ' },
-      { key: 'value', label: 'มูลค่า', align: 'right', isCurrency: true },
-      { key: 'vat', label: 'ภาษี (VAT)', align: 'right', isCurrency: true },
-  ];
 
   return (
     <div className="bg-gray-50 min-h-screen p-4 sm:p-6 lg:p-8 font-sans">
@@ -160,13 +189,20 @@ export default function SalesTaxReportPage() {
                     </div>
                 </div>
                 
-                <div className="md:col-start-3">
+                <div className="md:col-start-3 flex gap-2">
                     <button
                         onClick={handleFetchReport}
                         disabled={loading}
-                        className="w-full h-10 flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-indigo-400 transition-colors"
+                        className="flex-1 h-10 flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-indigo-400 transition-colors"
                     >
                         {loading ? 'กำลังโหลด...' : <><SearchIcon /><span>ค้นหารายงาน</span></>}
+                    </button>
+                    <button
+                        onClick={handleShowPrintPreview}
+                        disabled={!data || loading}
+                        className="flex-1 h-10 flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                        <PrintIcon /><span>พิมพ์รายงาน</span>
                     </button>
                 </div>
             </div>
@@ -176,14 +212,14 @@ export default function SalesTaxReportPage() {
             {loading && <div className="text-center py-10 text-gray-500">กำลังดึงข้อมูลรายงาน...</div>}
             {error && <div className="text-center py-10 text-red-600 bg-red-50 p-4 rounded-md">{`เกิดข้อผิดพลาด: ${error}`}</div>}
             
-            {data && !loading && !error && (
+            {data && !loading && !error ? (
                 <>
                     {renderTable('รายการขาย (ใบกำกับภาษี)', salesHeaders, data.sales, 'sales')}
                     {renderTable('รายการคืน (ใบลดหนี้)', returnsHeaders, data.returns, 'returns')}
 
-                    <div className="mt-8 pt-6 border-t-2 border-gray-200">
+                    <div className="mt-8 pt-6 border-t-2 border-gray-200 summary-box">
                         <h3 className="text-xl font-semibold text-gray-800 mb-4">สรุปยอดสุทธิ</h3>
-                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 summary-grid">
                             <div className="bg-gray-100 p-4 rounded-lg text-center">
                                 <p className="text-sm text-gray-600">มูลค่ารวม (สุทธิ)</p>
                                 <p className="text-2xl font-semibold text-gray-800 font-mono">{formatCurrency(netValue)}</p>
@@ -199,12 +235,12 @@ export default function SalesTaxReportPage() {
                         </div>
                     </div>
                 </>
-            )}
-            
-            {!loading && !data && !error && (
-                <div className="text-center py-10 text-gray-500">
-                    <p>กรุณาเลือกช่วงวันที่และกด "ค้นหารายงาน" เพื่อแสดงข้อมูล</p>
-                </div>
+            ) : (
+                !loading && !error && (
+                    <div className="text-center py-10 text-gray-500">
+                        <p>กรุณาเลือกช่วงวันที่และกด "ค้นหารายงาน" เพื่อแสดงข้อมูล</p>
+                    </div>
+                )
             )}
         </div>
       </div>

@@ -3,17 +3,19 @@ import ListInputTaxReportPage from '@/features/inputTaxReport/pages/ListInputTax
 import PrintInputTaxReportPage from '@/features/inputTaxReport/pages/PrintInputTaxReportPage';
 import ListPurchaseReportPage from '@/features/purchaseReport/pages/ListPurchaseReportPage';
 import ReportsDashboardPage from '@/features/reports/pages/ReportsDashboardPage';
+import PrintSalesTaxReportPage from '@/features/salesTaxReport/pages/PrintSalesTaxReportPage';
 import SalesTaxReportPage from '@/features/salesTaxReport/pages/SalesTaxReportPage';
 
 
 const reportsRoutes = {
-  path: '/pos/reports',
+  path: '/pos/reports/',
   children: [
     { index: true, element: <ReportsDashboardPage /> },
     { path: 'purchase', element: <ListPurchaseReportPage /> },
     { path: 'inputtax', element: <ListInputTaxReportPage /> },
     { path: 'salestax', element: <SalesTaxReportPage /> },
     { path: 'taxprint', element: <PrintInputTaxReportPage /> },
+    { path: 'saletaxprint', element: <PrintSalesTaxReportPage /> },
     
 
   ],

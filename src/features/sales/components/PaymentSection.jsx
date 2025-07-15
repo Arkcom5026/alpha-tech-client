@@ -11,13 +11,14 @@ import PaymentMethodInput from './PaymentMethodInput';
 import CalculationDetails from './CalculationDetails';
 import BillPrintOptions from './BillPrintOptions';
 
-const PaymentSection = ({ saleItems, onConfirm, isSubmitting, setIsSubmitting, onSaleConfirmed, setClearPhoneTrigger }) => { // <--- รับ setIsSubmitting เข้ามา
+// ✨ รับ onSaleModeChange และ currentSaleMode เข้ามา
+const PaymentSection = ({ saleItems, onConfirm, isSubmitting, setIsSubmitting, onSaleConfirmed, setClearPhoneTrigger, onSaleModeChange, currentSaleMode }) => {
   const navigate = useNavigate();
 
   const {
     billDiscount,
     setBillDiscount,
-    setPaymentAmount,
+    setPaymentAmount, // ✨ ต้องใช้ setPaymentAmount จาก useSalesStore
     paymentList,
     confirmSaleOrderAction,
     cardRef,
@@ -42,16 +43,41 @@ const PaymentSection = ({ saleItems, onConfirm, isSubmitting, setIsSubmitting, o
     cash: true,
     transfer: false,
     credit: false,
+    agencyCredit: false, // ✨ เพิ่มตัวเลือกเครดิต/หน่วยงาน
   });
   const [paymentError, setPaymentError] = useState(''); // State สำหรับข้อความ Error การชำระเงิน
 
   const handleToggle = useCallback((method) => {
-    // สลับสถานะของช่องทางการชำระเงิน
-    setPaymentMethods(prev => ({
-      ...prev,
-      [method]: !prev[method],
-    }));
-  }, []);
+    setPaymentMethods(prev => {
+      const newState = { ...prev, [method]: !prev[method] };
+
+      if (method === 'agencyCredit') {
+        if (newState.agencyCredit) {
+          // ถ้าเลือกเครดิต/หน่วยงาน ให้ตั้งค่า saleMode เป็น CREDIT และเคลียร์ช่องทางการชำระเงินอื่น
+          onSaleModeChange('CREDIT');
+          setPaymentAmount('CASH', 0); // เคลียร์เงินสด
+          setPaymentAmount('TRANSFER', 0); // เคลียร์เงินโอน
+          setPaymentAmount('CREDIT', 0); // เคลียร์บัตรเครดิต
+          setCardRef(''); // เคลียร์เลขอ้างอิงบัตร
+          return { cash: false, transfer: false, credit: false, agencyCredit: true };
+        } else {
+          // ถ้าไม่เลือกเครดิต/หน่วยงาน ให้กลับไปที่ CASH mode และเปิดใช้งานเงินสดเป็นค่าเริ่มต้น
+          onSaleModeChange('CASH');
+          return { cash: true, transfer: false, credit: false, agencyCredit: false };
+        }
+      } else {
+        // ถ้าเลือกช่องทางการชำระเงินอื่น
+        if (newState[method]) { // ถ้าช่องทางนี้ถูกเปิดใช้งาน
+          // ปิดเครดิต/หน่วยงาน และตั้งค่า saleMode เป็น CASH
+          if (newState.agencyCredit) {
+            newState.agencyCredit = false;
+            onSaleModeChange('CASH');
+          }
+        }
+        return newState;
+      }
+    });
+  }, [onSaleModeChange, setPaymentAmount, setCardRef]); // ✨ เพิ่ม setPaymentAmount, setCardRef ใน dependency array
 
   const effectiveCustomer = selectedCustomer || { id: null, name: 'ลูกค้าทั่วไป' }; // ลูกค้าปัจจุบัน
   const validSaleItems = Array.isArray(saleItems) ? saleItems : []; // ตรวจสอบว่าเป็น Array
@@ -99,7 +125,11 @@ const PaymentSection = ({ saleItems, onConfirm, isSubmitting, setIsSubmitting, o
 
   // เงื่อนไขในการเปิดใช้งานปุ่มยืนยันการขาย
   const hasValidCustomerId = !!effectiveCustomer?.id;
-  const isConfirmEnabled = totalPaid + safeDepositUsed >= totalToPay && safeDepositUsed <= safeFinalPrice && hasValidCustomerId && validSaleItems.length > 0;
+  // ✨ ปรับเงื่อนไขการยืนยันการขายตาม saleMode
+  const isConfirmEnabled =
+    (currentSaleMode === 'CASH' && totalPaid + safeDepositUsed >= totalToPay && safeDepositUsed <= safeFinalPrice && hasValidCustomerId && validSaleItems.length > 0) ||
+    (currentSaleMode === 'CREDIT' && hasValidCustomerId && validSaleItems.length > 0);
+
 
   const handleConfirm = useCallback(async () => {
     setPaymentError(''); // ล้างข้อความ Error ก่อนยืนยัน
@@ -119,7 +149,8 @@ const PaymentSection = ({ saleItems, onConfirm, isSubmitting, setIsSubmitting, o
       setPaymentError('กำลังดำเนินการ กรุณารอสักครู่');
       return;
     }
-    if (totalPaid + safeDepositUsed < totalToPay) {
+    // ✨ ตรวจสอบยอดเงินที่ชำระเฉพาะในโหมด CASH
+    if (currentSaleMode === 'CASH' && totalPaid + safeDepositUsed < totalToPay) {
         setPaymentError('ยอดเงินที่ชำระยังไม่เพียงพอ');
         return;
     }
@@ -141,16 +172,20 @@ const PaymentSection = ({ saleItems, onConfirm, isSubmitting, setIsSubmitting, o
           console.log('✅ เพิ่มรายการชำระแบบ DEPOSIT ลงใน paymentList');
         }
 
-        const validPayments = updatedPayments.filter(p => parseFloat(p.amount) > 0);
-        if (validPayments.length === 0) {
-          setPaymentError("⚠️ ไม่มีรายการชำระเงินที่มีจำนวนเงินที่มากกว่า 0");
-          return;
+        // ✨ ตรวจสอบ validPayments เฉพาะในโหมด CASH
+        if (currentSaleMode === 'CASH') {
+          const validPayments = updatedPayments.filter(p => parseFloat(p.amount) > 0);
+          if (validPayments.length === 0 && safeDepositUsed === 0) { // ต้องมี payment หรือ deposit ถ้าเป็น CASH
+            setPaymentError("⚠️ ไม่มีรายการชำระเงินที่มีจำนวนเงินที่มากกว่า 0 หรือใช้มัดจำ");
+            return;
+          }
         }
+
 
         console.log('📤 เริ่มส่งข้อมูลการชำระเงิน...');
         await submitMultiPaymentAction({
           saleId: confirmedSale.id,
-          netPaid: grandTotalPaid,
+          netPaid: grandTotalPaid, // netPaid อาจจะต้องปรับถ้าเป็น CREDIT sale
           paymentList: updatedPayments,
         });
         console.log('✅ ส่งข้อมูลชำระเงินสำเร็จ');
@@ -173,7 +208,11 @@ const PaymentSection = ({ saleItems, onConfirm, isSubmitting, setIsSubmitting, o
           navigate('/pos/sales/bill/print-full/' + confirmedSale.id, {
             state: { payment: updatedPayments }
           });
+        } else if (saleOption === 'NONE' && currentSaleMode === 'CREDIT') {
+          // ถ้าเป็นเครดิต/หน่วยงาน และไม่เลือกพิมพ์บิล ก็ให้กลับไปหน้าหลัก
+          navigate('/pos/sale'); // หรือหน้าที่เหมาะสม
         }
+
 
         if (typeof onSaleConfirmed === 'function') {
           onSaleConfirmed();
@@ -202,13 +241,14 @@ const PaymentSection = ({ saleItems, onConfirm, isSubmitting, setIsSubmitting, o
       clearCustomerAndDeposit();
       setCustomerIdAction(null);
       setClearPhoneTrigger?.(Date.now());
+      onSaleModeChange('CASH'); // ✨ รีเซ็ต saleMode กลับเป็น CASH
       console.log('🧹 เคลียร์หน้าจอเตรียมขายรอบใหม่แล้ว');
     }
   }, [
     hasValidCustomerId, validSaleItems.length, isSubmitting, totalPaid, safeDepositUsed, totalToPay, safeBillDiscount, totalOriginalPrice,
     confirmSaleOrderAction, paymentList, selectedDeposit?.id, submitMultiPaymentAction, grandTotalPaid, applyDepositUsageAction,
     saleOption, navigate, onSaleConfirmed, setDepositUsed, setCardRef, setBillDiscount, resetSaleOrderAction, clearCustomerAndDeposit,
-    setCustomerIdAction, setClearPhoneTrigger, effectiveCustomer?.id, effectiveCustomer, setIsSubmitting // <--- เพิ่ม setIsSubmitting ใน dependency array
+    setCustomerIdAction, setClearPhoneTrigger, effectiveCustomer?.id, effectiveCustomer, setIsSubmitting, currentSaleMode, onSaleModeChange
   ]);
 
 
@@ -256,6 +296,16 @@ const PaymentSection = ({ saleItems, onConfirm, isSubmitting, setIsSubmitting, o
             />
             บัตรเครดิต
           </label>
+          {/* ✨ เพิ่มตัวเลือกเครดิต/หน่วยงาน */}
+          <label className="inline-flex items-center gap-2 text-gray-700 text-lg">
+            <input
+              type="checkbox"
+              checked={paymentMethods.agencyCredit}
+              onChange={() => handleToggle('agencyCredit')}
+              className="form-checkbox h-5 w-5 text-purple-600 rounded"
+            />
+            เครดิต/หน่วยงาน
+          </label>
         </div>
       </div>
 
@@ -276,53 +326,51 @@ const PaymentSection = ({ saleItems, onConfirm, isSubmitting, setIsSubmitting, o
         />
 
 
-
-        {/* คอลัมน์ที่ 2: ช่องทางการชำระเงิน (แยกตามประเภท) */}
-        <div className="flex-1 min-w-[300px] max-w-[450px] space-y-4">
-          {/* Payment Method Toggles (ย้ายมาไว้ที่นี่เพื่อให้ใกล้กับช่องกรอก) */}
-          {/* ส่วนนี้ยังคงใช้ Checkbox เหมือนเดิมตามโค้ดเดิม แต่ถ้าต้องการเปลี่ยนเป็นปุ่ม Toggle ตามคำแนะนำก่อนหน้า สามารถปรับได้ที่นี่ */}
-          {paymentMethods.cash && (
-            <PaymentMethodInput
-              method="CASH"
-              label="เงินสด"
-              value={paymentList.find(p => p.method === 'CASH')?.amount || ''}
-              onChange={(e) => setPaymentAmount('CASH', e.target.value)}
-              colorClass="green"
-              // ลบ additionalInfo และ bottomContent ออกจากตรงนี้
-            />
-          )}
-          {paymentMethods.transfer && (
-            <PaymentMethodInput
-              method="TRANSFER"
-              label="เงินโอน"
-              value={paymentList.find(p => p.method === 'TRANSFER')?.amount || ''}
-              onChange={(e) => setPaymentAmount('TRANSFER', e.target.value)}
-              colorClass="sky"
-            />
-          )}
-          {paymentMethods.credit && (
-            <PaymentMethodInput
-              method="CREDIT"
-              label="บัตรเครดิต"
-              value={paymentList.find(p => p.method === 'CREDIT')?.amount || ''}
-              onChange={(e) => setPaymentAmount('CREDIT', e.target.value)}
-              colorClass="yellow"
-              bottomContent={
-                <div className='py-4'>
-                  <label className="text-base mt-2 block font-bold text-gray-700 mb-1">เลขอ้างอิงบัตรเครดิต</label>
-                  <input
-                    type="text"
-                    value={cardRef}
-                    onChange={(e) => setCardRef(e.target.value)}
-                    className="border border-gray-300 rounded-md px-3 py-2 w-full text-base text-gray-800 h-[45px] focus:ring-2 focus:ring-yellow-500 shadow-sm"
-                    placeholder="กรอกเลขอ้างอิงจากเครื่องรูดบัตร"
-                    maxLength={24}
-                  />
-                </div>
-              }
-            />
-          )}
-        </div>
+        {/* คอลัมน์ที่ 2: ช่องทางการชำระเงิน (แยกตามประเภท) - แสดงเฉพาะในโหมด CASH */}
+        {currentSaleMode === 'CASH' && (
+          <div className="flex-1 min-w-[300px] max-w-[450px] space-y-4">
+            {paymentMethods.cash && (
+              <PaymentMethodInput
+                method="CASH"
+                label="เงินสด"
+                value={paymentList.find(p => p.method === 'CASH')?.amount || ''}
+                onChange={(e) => setPaymentAmount('CASH', e.target.value)}
+                colorClass="green"
+              />
+            )}
+            {paymentMethods.transfer && (
+              <PaymentMethodInput
+                method="TRANSFER"
+                label="เงินโอน"
+                value={paymentList.find(p => p.method === 'TRANSFER')?.amount || ''}
+                onChange={(e) => setPaymentAmount('TRANSFER', e.target.value)}
+                colorClass="sky"
+              />
+            )}
+            {paymentMethods.credit && (
+              <PaymentMethodInput
+                method="CREDIT"
+                label="บัตรเครดิต"
+                value={paymentList.find(p => p.method === 'CREDIT')?.amount || ''}
+                onChange={(e) => setPaymentAmount('CREDIT', e.target.value)}
+                colorClass="yellow"
+                bottomContent={
+                  <div className='py-4'>
+                    <label className="text-base mt-2 block font-bold text-gray-700 mb-1">เลขอ้างอิงบัตรเครดิต</label>
+                    <input
+                      type="text"
+                      value={cardRef}
+                      onChange={(e) => setCardRef(e.target.value)}
+                      className="border border-gray-300 rounded-md px-3 py-2 w-full text-base text-gray-800 h-[45px] focus:ring-2 focus:ring-yellow-500 shadow-sm"
+                      placeholder="กรอกเลขอ้างอิงจากเครื่องรูดบัตร"
+                      maxLength={24}
+                    />
+                  </div>
+                }
+              />
+            )}
+          </div>
+        )}
 
         {/* คอลัมน์ที่ 3: สรุปยอดรวม (เด่นที่สุด) - ย้ายมาอยู่หลัง CalculationDetails */}
         <PaymentSummary
@@ -336,6 +384,7 @@ const PaymentSection = ({ saleItems, onConfirm, isSubmitting, setIsSubmitting, o
           // ส่ง props สำหรับ BillPrintOptions ไปยัง PaymentSummary
           saleOption={saleOption}
           setSaleOption={setSaleOption}
+          currentSaleMode={currentSaleMode} // ✨ ส่ง currentSaleMode ไปยัง PaymentSummary
         />
 
       </div>

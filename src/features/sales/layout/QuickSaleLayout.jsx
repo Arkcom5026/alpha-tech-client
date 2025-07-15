@@ -4,16 +4,19 @@ import useCustomerDepositStore from '@/features/customerDeposit/store/customerDe
 import useStockItemStore from '@/features/stockItem/store/stockItemStore';
 
 import CustomerSection from '../components/CustomerSection';
-import PaymentSection from '../components/PaymentSection'; // PaymentSection ที่จะถูก Refactor
+import PaymentSection from '../components/PaymentSection';
 import SaleItemTable from '../components/SaleItemTable';
 
 const QuickSaleLayout = () => {
   const barcodeInputRef = useRef(null);
   const phoneInputRef = useRef(null);
-  const [isSubmitting, setIsSubmitting] = useState(false); // State นี้ถูกประกาศที่นี่
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedPriceType, setSelectedPriceType] = useState('retail');
   const [clearPhoneTrigger, setClearPhoneTrigger] = useState(null);
   const [hideCustomerDetails, setHideCustomerDetails] = useState(false);
+
+  // ✨ 1. สร้าง State ใหม่เพื่อเก็บ "โหมดการขาย" ('CASH' หรือ 'CREDIT')
+  const [saleMode, setSaleMode] = useState('CASH');
 
   const {
     saleItems,
@@ -30,34 +33,31 @@ const QuickSaleLayout = () => {
   const { clearCustomerAndDeposit, setCustomerIdAction } = useCustomerDepositStore();
 
   useEffect(() => {
-    // กำหนด focus ไปที่ช่องเบอร์โทรศัพท์เมื่อ Component โหลดครั้งแรก
     phoneInputRef.current?.focus();
   }, []);
 
   useEffect(() => {
-    // เมื่อการขายเสร็จสมบูรณ์ ให้เคลียร์ข้อมูลลูกค้าและตั้งค่าการซ่อนรายละเอียด
     if (saleCompleted) {
       console.log('✅ เคลียร์ข้อมูลลูกค้าและมัดจำ...');
       clearCustomerAndDeposit();
       setCustomerIdAction(null);
       setSaleCompleted(false);
-      setClearPhoneTrigger(Date.now()); // ทริกเกอร์การล้างข้อมูลใน CustomerSection
+      setClearPhoneTrigger(Date.now());
+      setSaleMode('CASH'); // ✨ รีเซ็ตโหมดการขายเป็นขายสดเสมอ
       setTimeout(() => {
-        setHideCustomerDetails(true); // ซ่อนรายละเอียดลูกค้าหลังจากเคลียร์ข้อมูล
+        setHideCustomerDetails(true);
       }, 200);
     }
   }, [saleCompleted, clearCustomerAndDeposit, setCustomerIdAction, setSaleCompleted]);
 
   const handleBarcodeSearch = async (e) => {
-    // เมื่อกด Enter ในช่องบาร์โค้ด
     if (e.key === 'Enter') {
       const barcode = e.target.value.trim();
-      if (!barcode) return; // ไม่ทำอะไรถ้าบาร์โค้ดว่างเปล่า
+      if (!barcode) return;
       try {
-        const results = await searchStockItemAction(barcode); // ค้นหาสินค้าจากบาร์โค้ด
-        const foundItem = Array.isArray(results) ? results[0] : results; // เลือกสินค้าตัวแรกหากมีหลายรายการ
+        const results = await searchStockItemAction(barcode);
+        const foundItem = Array.isArray(results) ? results[0] : results;
         if (foundItem) {
-          // เตรียมข้อมูลสินค้าเพื่อเพิ่มเข้าในรายการขาย
           const preparedItem = {
             barcode: foundItem.barcode,
             productName: foundItem.product?.name || '',
@@ -68,9 +68,9 @@ const QuickSaleLayout = () => {
             discountWithoutBill: 0,
             billShare: 0,
           };
-          addSaleItemAction(preparedItem); // เพิ่มสินค้าลงในรายการขาย
+          addSaleItemAction(preparedItem);
         }
-        e.target.value = ''; // ล้างช่องบาร์โค้ดหลังจากเพิ่มสินค้า
+        e.target.value = '';
       } catch (error) {
         console.error('❌ ค้นหาสินค้าไม่สำเร็จ:', error);
       }
@@ -78,21 +78,20 @@ const QuickSaleLayout = () => {
   };
 
   const handleSaleConfirmed = () => {
-    // เมื่อการขายได้รับการยืนยัน ให้แสดงรายละเอียดลูกค้าอีกครั้ง (ถ้ามี)
     setHideCustomerDetails(false);
   };
 
   const handleConfirmSale = async () => {
-    // ยืนยันการขาย (Logic นี้จะถูกย้ายไปอยู่ใน PaymentSection ที่ Refactor แล้ว)
-    // แต่ยังคงอยู่ใน QuickSaleLayout เพื่อให้ PaymentSection สามารถเรียกใช้ได้
     if (saleItems.length === 0 || isSubmitting) return;
     try {
       setIsSubmitting(true);
-      await confirmSaleOrderAction();
+      // ✨ 2. ส่ง saleMode เข้าไปใน Action เพื่อให้ Backend รู้ว่าเป็นการขายสดหรือเครดิต
+      await confirmSaleOrderAction(saleMode); 
       console.log('✅ ยืนยันการขายเสร็จแล้ว → เคลียร์ข้อมูลลูกค้า');
       clearCustomerAndDeposit();
       setCustomerIdAction(null);
       setClearPhoneTrigger(Date.now());
+      setSaleMode('CASH'); // ✨ รีเซ็ตโหมดการขาย
       setTimeout(() => {
         setHideCustomerDetails(true);
       }, 200);
@@ -106,7 +105,6 @@ const QuickSaleLayout = () => {
   return (
     <div className="p-4 bg-white rounded-xl shadow-lg mt-4 min-w-[1600px]">
       <div className="bg-blue-100 p-4 rounded-xl shadow flex flex-col-2 gap-4 min-w-[600px]">
-        {/* ส่วนข้อมูลลูกค้า */}
         <CustomerSection
           phoneInputRef={phoneInputRef}
           productSearchRef={barcodeInputRef}
@@ -114,9 +112,10 @@ const QuickSaleLayout = () => {
           onClearFinish={() => setClearPhoneTrigger(null)}
           key={clearPhoneTrigger}
           hideCustomerDetails={hideCustomerDetails}
+          // ✨ 3. ส่งฟังก์ชัน setSaleMode เข้าไปใน CustomerSection
+          onSaleModeSelect={setSaleMode}
         />
         <div className="col-span-12 lg:col-span-8 space-y-4">
-          {/* ส่วนเลือกราคาขายและค้นหาสินค้า */}
           <div className="bg-white p-4 rounded-xl shadow">
             <h2 className="text-lg font-bold text-gray-800">เลือกราคาขาย:</h2>
             <div className="mb-2 flex gap-4 min-w-[1100px]">
@@ -142,7 +141,6 @@ const QuickSaleLayout = () => {
             />
           </div>
 
-          {/* ตารางรายการสินค้า */}
           <div className="bg-white p-4 rounded-xl shadow min-h-[390px]">
             <h2 className="text-lg font-semibold mb-2 text-gray-800">รายการสินค้า</h2>
             <div className="overflow-x-auto">
@@ -160,15 +158,17 @@ const QuickSaleLayout = () => {
         </div>
       </div>
 
-      {/* ส่วนการชำระเงิน - ใช้ PaymentSection ที่ Refactor แล้ว */}
       <div className="col-span-12 py-4">
         <PaymentSection
           saleItems={saleItems}
-          onConfirm={handleConfirmSale} // ส่งฟังก์ชันยืนยันการขายจาก QuickSaleLayout
+          onConfirm={handleConfirmSale}
           isSubmitting={isSubmitting}
-          setIsSubmitting={setIsSubmitting} // <--- เพิ่ม prop นี้
+          setIsSubmitting={setIsSubmitting}
           onSaleConfirmed={handleSaleConfirmed}
           setClearPhoneTrigger={setClearPhoneTrigger}
+          // ✨ 4. ส่ง saleMode ปัจจุบันและ setter ไปยัง PaymentSection
+          onSaleModeChange={setSaleMode}
+          currentSaleMode={saleMode}
         />
       </div>
     </div>

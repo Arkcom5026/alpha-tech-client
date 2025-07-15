@@ -65,10 +65,21 @@ export const getSaleReturns = async () => {
 // ✅ New: Update customer profile via token (no :id in URL)
 export const updateCustomer = async (data) => {
   try {
-    const res = await apiClient.put('/api/customers/profile', data);
+    const res = await apiClient.put('/customers/profile', data);
     return res.data;
   } catch (err) {
     console.error('❌ [updateCustomer]', err);
     throw err;
+  }
+};
+
+// ✅ New: Function to search printable sales with filters
+export const searchPrintableSales = async (params) => {
+  try {
+    const res = await apiClient.get('/sale-orders/printable-sales', { params });
+    return res.data;
+  } catch (error) {
+    console.error('❌ [searchPrintableSales] error:', error);
+    throw error;
   }
 };

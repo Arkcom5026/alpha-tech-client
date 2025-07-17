@@ -2,7 +2,6 @@ import useSalesStore from '@/features/sales/store/salesStore';
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-
 const PrintDeliveryNoteListPage = () => {
   const navigate = useNavigate();
 
@@ -18,9 +17,8 @@ const PrintDeliveryNoteListPage = () => {
     return lastDayOfMonth.toISOString().split('T')[0];
   });
 
-  // ✅ ลบ printFormat state ออก เนื่องจากใบส่งของไม่มีแบบย่อ/เต็ม
-  // const [printFormat, setPrintFormat] = useState('short'); 
   const [limit, setLimit] = useState(100);
+  const [showCompanyColumn, setShowCompanyColumn] = useState(false);
 
   const saleStore = useSalesStore();
   const printableSales = saleStore.printableSales;
@@ -32,18 +30,58 @@ const PrintDeliveryNoteListPage = () => {
       toDate: toDate,
       limit: limit,
     };
-    await saleStore.loadPrintableSalesAction(params); 
+    await saleStore.loadPrintableSalesAction(params);
   }, [search, fromDate, toDate, limit, saleStore]);
+
+  // useEffect สำหรับโหลดข้อมูลครั้งแรก
+  useEffect(() => {
+    handleSearch();
+  }, [handleSearch]);
+
+  // ✅ New useEffect to determine if company column should be shown
+  useEffect(() => {
+    const hasCompanyCustomer = (Array.isArray(printableSales) ? printableSales : []).some(s =>
+      (s.customer?.type === 'ORGANIZATION' || s.customer?.type === 'GOVERNMENT') && s.customer?.companyName
+    );
+    setShowCompanyColumn(hasCompanyCustomer);
+  }, [printableSales]); // Re-run this effect only when printableSales changes
 
   const filteredSales = (Array.isArray(printableSales) ? printableSales : []).filter((s) => {
     const query = search.toLowerCase();
-    return (
+    let matchSearch = false;
+
+    // Logic for determining showCompanyColumn is now in useEffect above
+    // Removed setShowCompanyColumn(true) from here.
+
+    matchSearch =
       !search ||
       (s.customer?.name?.toLowerCase().includes(query) ?? false) ||
       (s.customer?.phone?.toLowerCase().includes(query) ?? false) ||
-      (s.code?.toLowerCase().includes(query) ?? false)
-    );
+      (s.code?.toLowerCase().includes(query) ?? false);
+
+    // ✅ เพิ่มการค้นหาด้วย companyName ถ้าคอลัมน์ถูกแสดง
+    if (s.customer?.companyName) { // Check companyName existence for search, not for column visibility state
+      matchSearch = matchSearch || (s.customer.companyName.toLowerCase().includes(query) ?? false);
+    }
+
+    return matchSearch;
   });
+
+  // Helper function เพื่อสร้างหัวตารางแบบมีเงื่อนไข
+  const getTableHeaders = () => {
+    return (
+      <tr>
+        <th className="border px-2 py-1 text-left">เลขที่ใบขาย</th>
+        {showCompanyColumn && <th className="border px-2 py-1">หน่วยงาน</th>}
+        <th className="border px-2 py-1">ลูกค้า/ผู้ติดต่อ</th>
+        <th className="border px-2 py-1">เบอร์โทร</th>
+        <th className="border px-2 py-1">ยอดรวม</th>
+        <th className="border px-2 py-1">วันที่ขาย</th>
+        <th className="border px-2 py-1">พนักงานขาย</th>
+        <th className="border px-2 py-1" colSpan={2}>การดำเนินการ</th>
+      </tr>
+    );
+  };
 
   return (
     <div className="p-4">
@@ -83,38 +121,18 @@ const PrintDeliveryNoteListPage = () => {
         >
           ค้นหา
         </button>
-
-        {/* ✅ ลบส่วนรูปแบบการพิมพ์ออก */}
-        {/* <div className="ml-auto flex gap-4 items-center">
-          <label className="text-sm font-medium">รูปแบบการพิมพ์:</label>
-          <label className="flex items-center gap-1">
-            <input type="radio" name="format" value="short" checked={printFormat === 'short'} onChange={() => setPrintFormat('short')} />
-            ย่อ
-          </label>
-          <label className="flex items-center gap-1">
-            <input type="radio" name="format" value="full" checked={printFormat === 'full'} onChange={() => setPrintFormat('full')} />
-            เต็มรูปแบบ
-          </label>
-        </div> */}
       </div>
 
       <table className="w-full text-sm border-collapse">
         <thead className="bg-gray-100">
-          <tr>
-            <th className="border px-2 py-1 text-left">เลขที่ใบขาย</th>
-            <th className="border px-2 py-1">ลูกค้า</th>
-            <th className="border px-2 py-1">เบอร์โทร</th>
-            <th className="border px-2 py-1">ยอดรวม</th>
-            <th className="border px-2 py-1">วันที่ขาย</th>
-            <th className="border px-2 py-1">พนักงานขาย</th>
-            <th className="border px-2 py-1" colSpan={2}>การดำเนินการ</th>
-          </tr>
+          {getTableHeaders()}
         </thead>
         <tbody>
           {filteredSales.length > 0 ? (
             filteredSales.map((s) => (
               <tr key={s.id} className="border-t">
                 <td className="border px-2 py-1">{s.code || '-'}</td>
+                {showCompanyColumn && <td className="border px-2 py-1">{s.customer?.companyName || '-'}</td>}
                 <td className="border px-2 py-1">{s.customer?.name || '-'}</td>
                 <td className="border px-2 py-1">{s.customer?.phone || '-'}</td>
                 <td className="border px-2 py-1 text-right">
@@ -140,8 +158,7 @@ const PrintDeliveryNoteListPage = () => {
                 <td className="border px-2 py-1 text-center">
                   <button
                     onClick={() => {
-                      // ✅ แก้ไข: ไม่ต้องมีเงื่อนไข short/full แล้ว เพราะใบส่งของมีแค่แบบเดียว
-                      const path = `/pos/sales/delivery-note/print/${s.id}`; 
+                      const path = `/pos/sales/delivery-note/print/${s.id}`;
                       navigate(path, { state: { sale: s } });
                     }}
                     className="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700"
@@ -153,7 +170,7 @@ const PrintDeliveryNoteListPage = () => {
             ))
           ) : (
             <tr>
-              <td colSpan={8} className="text-center py-4">ไม่พบข้อมูล</td>
+              <td colSpan={showCompanyColumn ? 9 : 8} className="text-center py-4">ไม่พบข้อมูล</td>
             </tr>
           )}
         </tbody>

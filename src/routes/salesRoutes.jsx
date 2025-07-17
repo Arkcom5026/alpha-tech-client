@@ -10,6 +10,7 @@ import SalePage from "@/features/sales/pages/SalePage";
 import QuickSalePage from "@/features/sales/pages/QuickSalePage";
 import PrintDeliveryNoteListPage from "@/features/payment/pages/PrintDeliveryNoteListPage";
 import PrintDeliveryNotePage from "@/features/payment/pages/PrintDeliveryNotePage";
+import CombinedBillingPage from "@/features/combinedBilling/pages/CombinedBillingPage";
 
 
 // import ReturnListPage from "@/features/saleReturn/pages/ReturnListPage"; // ถ้ายังไม่สร้าง ให้ comment ไว้ก่อน
@@ -57,8 +58,18 @@ const salesRoutes = {
         { index: true, element: <PrintDeliveryNoteListPage /> },
         { path: 'print/:saleId', element: <PrintDeliveryNotePage /> },
         
-      ],
+      ],      
     },
+    {
+      path: 'combined-billing',
+      children: [
+        { index: true, element: <CombinedBillingPage /> },
+       // { path: 'print/:saleId', element: <PrintDeliveryNotePage /> },
+        
+      ],      
+    },
+
+
   ],
 };
 

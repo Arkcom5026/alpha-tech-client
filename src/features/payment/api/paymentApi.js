@@ -77,6 +77,7 @@ export const cancelPayment = async (paymentId, note = '') => {
 export const searchPrintablePayments = async (query = {}) => {
   try {
     const res = await apiClient.get('/payments/printable', { params: query });
+    console.log('searchPrintablePayments : ',res)
     return res.data;
   } catch (err) {
     console.error('❌ [searchPrintablePayments] error:', err);

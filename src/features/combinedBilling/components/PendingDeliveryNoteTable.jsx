@@ -12,7 +12,8 @@ const PendingDeliveryNoteTable = () => {
   const [localSales, setLocalSales] = useState([]);
 
   useEffect(() => {
-    if (customer?.sales?.length > 0) {
+    console.log('PendingDeliveryNoteTable useEffect customer?.sales?.length :', customer?.sales?.length);
+    if (Array.isArray(customer?.sales) && customer.sales.length > 0) {
       setLocalSales(customer.sales);
       setSelectedSaleIds([]);
     } else {
@@ -33,12 +34,10 @@ const PendingDeliveryNoteTable = () => {
     createCombinedBillingAction(selectedSaleIds);
   };
 
-  if (!customer) return null;
-
   return (
     <div className="mt-6 bg-white p-6 rounded-xl shadow-lg border w-full">
       <h2 className="text-2xl font-bold text-black mb-4">
-        ใบส่งของค้างของลูกค้า: {customer.name}
+        {customer ? `ใบส่งของค้างของลูกค้า: ${customer.companyName}` : 'ใบส่งของค้างของลูกค้า'}
       </h2>
       <table className="min-w-full table-auto border border-gray-300">
         <thead className="bg-gray-100 text-left text-sm">
@@ -71,19 +70,21 @@ const PendingDeliveryNoteTable = () => {
           {localSales.length === 0 && (
             <tr>
               <td colSpan="5" className="text-center text-gray-600 py-4">
-                ไม่พบใบส่งของที่ค้างของลูกค้ารายนี้
+                {customer ? 'ไม่พบใบส่งของที่ค้างของลูกค้ารายนี้' : 'กรุณาค้นหาลูกค้าเพื่อแสดงข้อมูลใบส่งของ'}
               </td>
             </tr>
           )}
         </tbody>
       </table>
-      <button
-        className="mt-4 bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 disabled:opacity-50"
-        disabled={selectedSaleIds.length === 0}
-        onClick={handleCombineBilling}
-      >
-        ยืนยันการรวมบิล
-      </button>
+      {customer && (
+        <button
+          className="mt-4 bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 disabled:opacity-50"
+          disabled={selectedSaleIds.length === 0}
+          onClick={handleCombineBilling}
+        >
+          ยืนยันการรวมบิล
+        </button>
+      )}
     </div>
   );
 };

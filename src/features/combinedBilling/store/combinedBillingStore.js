@@ -10,6 +10,7 @@ const useCombinedBillingStore = create((set) => ({
   combinableSales: [],
   combinedBilling: null,
   customersWithPendingSales: [],
+  customer: null,
   loading: false,
   error: null,
 
@@ -66,6 +67,9 @@ const useCombinedBillingStore = create((set) => ({
       set({ loading: false });
     }
   },
+
+  // ✅ ตั้งค่าลูกค้าที่ถูกเลือก
+  setCustomer: (customer) => set({ customer }),
 }));
 
 export default useCombinedBillingStore;

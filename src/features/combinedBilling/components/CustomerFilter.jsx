@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import useCombinedBillingStore from '@/features/combinedBilling/store/combinedBillingStore';
 
 const CustomerFilter = ({ onSelect }) => {
@@ -13,17 +13,32 @@ const CustomerFilter = ({ onSelect }) => {
     customer,
   } = useCombinedBillingStore();
 
-  const handleSearch = async () => {
-    try {
-      await loadCustomersWithPendingSalesAction();
-    } catch (err) {
-      setError('เกิดข้อผิดพลาดในการค้นหาข้อมูลลูกค้า');
-    }
-  };
-
   const handleSelect = (cust) => {
     setCustomer(cust);
     if (onSelect) onSelect(cust);
+  };
+
+  const handleSearch = async () => {
+    try {
+      await loadCustomersWithPendingSalesAction();
+
+      const filtered = customersWithPendingSales.filter((c) => {
+        const lower = searchText.toLowerCase();
+        return (
+          (c.name && c.name.toLowerCase().includes(lower)) ||
+          (c.phone && c.phone.includes(lower)) ||
+          (c.companyName && c.companyName.toLowerCase().includes(lower))
+        );
+      });
+
+      setFilteredCustomers(filtered);
+
+      if (filtered.length === 1) {
+        handleSelect(filtered[0]);
+      }
+    } catch (err) {
+      setError('เกิดข้อผิดพลาดในการค้นหาข้อมูลลูกค้า');
+    }
   };
 
   const handleClear = () => {
@@ -32,20 +47,11 @@ const CustomerFilter = ({ onSelect }) => {
     setFilteredCustomers([]);
   };
 
-  React.useEffect(() => {
-    if (!searchText.trim()) {
-      setFilteredCustomers(customersWithPendingSales);
-    } else {
-      const lower = searchText.toLowerCase();
-      setFilteredCustomers(
-        customersWithPendingSales.filter(
-          (c) =>
-            (c.name && c.name.toLowerCase().includes(lower)) ||
-            (c.phone && c.phone.includes(lower))
-        )
-      );
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      handleSearch();
     }
-  }, [searchText, customersWithPendingSales]);
+  };
 
   return (
     <div className="bg-white p-6 rounded-xl shadow-lg border w-full">
@@ -53,9 +59,10 @@ const CustomerFilter = ({ onSelect }) => {
       <div className="flex gap-3 items-center mb-4">
         <input
           type="text"
-          placeholder="ค้นหาชื่อลูกค้าหรือเบอร์โทร"
+          placeholder="ค้นหาชื่อลูกค้า เบอร์โทร หรือหน่วยงาน"
           value={searchText}
           onChange={(e) => setSearchText(e.target.value)}
+          onKeyDown={handleKeyDown}
           className="border rounded-md px-4 py-2 w-full text-lg"
         />
         <button
@@ -80,6 +87,7 @@ const CustomerFilter = ({ onSelect }) => {
             onClick={() => handleSelect(cust)}
             className="border border-gray-300 rounded p-3 cursor-pointer hover:bg-blue-50"
           >
+            <p><strong>หน่วยงาน:</strong> {cust.companyName}</p>
             <p><strong>ชื่อ:</strong> {cust.name}</p>
             <p><strong>เบอร์:</strong> {cust.phone}</p>
             <p><strong>ประเภท:</strong> {cust.customerType}</p>

@@ -1,3 +1,4 @@
+// ✅ apiClient.js ถูก import ด้วย alias @ อย่างถูกต้องแล้ว
 import apiClient from '@/utils/apiClient';
 
 // ✅ 1. เพิ่มการชำระเงินใหม่ (แบบเดี่ยว)
@@ -22,23 +23,6 @@ export const submitPayments = async (paymentArray) => {
   } catch (err) {
     console.error('❌ [submitPayments] error:', err);
     throw err.response?.data || { message: 'ไม่สามารถบันทึกการชำระเงินแบบหลายช่องทางได้' };
-  }
-};
-
-// ✅ 1.2 สำหรับ frontend: สร้าง payments หลายช่องทาง โดยระบุ saleId และ paymentList
-export const createPayments = async (saleId, paymentList) => {
-  try {
-    const payload = paymentList.map((p) => ({
-      saleId,
-      paymentMethod: p.method,
-      amount: parseFloat(p.amount),
-      note: p.note || '',
-    }));
-    const res = await apiClient.post('/payments', payload);
-    return res.data;
-  } catch (err) {
-    console.error('❌ [createPayments] error:', err);
-    throw err.response?.data || { message: 'ไม่สามารถสร้างรายการชำระเงินได้' };
   }
 };
 
@@ -77,7 +61,9 @@ export const cancelPayment = async (paymentId, note = '') => {
 export const searchPrintablePayments = async (query = {}) => {
   try {
     const res = await apiClient.get('/payments/printable', { params: query });
-    console.log('searchPrintablePayments : ',res)
+    if (process.env.NODE_ENV === 'development') {
+      console.log('searchPrintablePayments : ', res);
+    }
     return res.data;
   } catch (err) {
     console.error('❌ [searchPrintablePayments] error:', err);

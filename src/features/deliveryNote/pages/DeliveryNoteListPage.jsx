@@ -2,7 +2,7 @@ import useSalesStore from '@/features/sales/store/salesStore';
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-const PrintDeliveryNoteListPage = () => {
+const DeliveryNoteListPage = () => {
   const navigate = useNavigate();
 
   const [search, setSearch] = useState('');
@@ -95,22 +95,20 @@ const PrintDeliveryNoteListPage = () => {
           className="border px-2 py-1 w-72 rounded"
         />
         <input
-          type="date"
-          value={fromDate}
+          type="date" value={fromDate} max={new Date().toISOString().split('T')[0]}
           onChange={(e) => setFromDate(e.target.value)}
           className="border px-2 py-1 rounded"
         />
         <span>ถึง</span>
         <input
-          type="date"
-          value={toDate}
+          type="date" value={toDate} max={new Date().toISOString().split('T')[0]}
           onChange={(e) => setToDate(e.target.value)}
           className="border px-2 py-1 rounded"
         />
         <input
           type="number"
           value={limit}
-          onChange={(e) => setLimit(parseInt(e.target.value, 10) || 0)}
+          onChange={(e) => setLimit(parseInt(e.target.value, 10) || 100)}
           placeholder="จำนวน"
           className="border px-2 py-1 w-24 rounded"
           min="1"
@@ -149,7 +147,7 @@ const PrintDeliveryNoteListPage = () => {
                 <td className="border px-2 py-1">{s.employee?.name || '-'}</td>
                 <td className="border px-2 py-1 text-center">
                   <button
-                    onClick={() => navigate(`/sale-detail/${s.id}`)}
+                    onClick={() => navigate(`/pos/sales/detail/${s.id}`)}
                     className="bg-gray-500 text-white px-3 py-1 rounded hover:bg-gray-600"
                   >
                     รายละเอียด
@@ -179,4 +177,4 @@ const PrintDeliveryNoteListPage = () => {
   );
 };
 
-export default PrintDeliveryNoteListPage;
+export default DeliveryNoteListPage;

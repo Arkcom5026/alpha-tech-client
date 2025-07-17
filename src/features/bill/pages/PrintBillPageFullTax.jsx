@@ -34,7 +34,9 @@ const PrintBillPageFullTax = () => {
     }
   }, [location.state, id]);
 
-  if (!sale || !payment) return <div>⏳ กำลังโหลดข้อมูลใบเสร็จ...</div>;
+  if (!sale || !sale.items || !payment) {
+    return <div className="text-center p-6 text-gray-700">⏳ กำลังโหลดข้อมูลใบเสร็จ...</div>;
+  }
 
   // Map sale items to the format expected by BillLayoutFullTax
   const saleItems = (sale.items || []).map((i) => ({

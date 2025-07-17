@@ -12,6 +12,7 @@ import { Pagination, Autoplay, Navigation } from "swiper/modules";
 
 const ContentCarousel = () => {
   const [data, setData] = useState([])
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     handleGetImage()
@@ -23,7 +24,17 @@ const ContentCarousel = () => {
       setData(res.data)
     } catch (err) {
       console.log('handleGetImage error --> ', err)
+    } finally {
+      setIsLoading(false);
     }
+  }
+
+  if (isLoading) {
+    return <div className="text-center p-6 text-gray-700">⏳ กำลังโหลดข้อมูลภาพ...</div>;
+  }
+
+  if (!Array.isArray(data) || data.length === 0) {
+    return <div className="text-center p-6 text-red-600">🚫 ไม่พบข้อมูลภาพแสดงผล</div>;
   }
 
   return (
@@ -39,7 +50,7 @@ const ContentCarousel = () => {
         loop={data.length > 1}
         className="mySwiper h-80 object-cover rounded-md mb-4"
       >
-        {data?.map((item) => (
+        {data.map((item) => (
           <SwiperSlide key={item.id} className="relative group">
             <img
               src={item.download_url}
@@ -71,7 +82,7 @@ const ContentCarousel = () => {
         loop={data.length > 5}
         className="mySwiper object-cover rounded-md"
       >
-        {data?.map((item) => (
+        {data.map((item) => (
           <SwiperSlide key={item.id} className="relative group">
             <img
               className='rounded-md w-full h-40 object-cover'

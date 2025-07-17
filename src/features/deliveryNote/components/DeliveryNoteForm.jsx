@@ -1,7 +1,7 @@
 import React from 'react';
 
 // PrintDeliveryNoteForm component รับ props 'sale', 'saleItems', 'payments', 'config'
-const PrintDeliveryNoteForm = ({ sale, saleItems, payments, config }) => {
+const DeliveryNoteForm = ({ sale, saleItems, payments, config }) => {
   // ตรวจสอบว่า props ที่จำเป็นมีข้อมูลหรือไม่
   if (!sale || !saleItems || !config) {
     return <div className="p-4 text-center text-gray-600">ไม่พบข้อมูลใบส่งของ</div>;
@@ -170,4 +170,4 @@ const PrintDeliveryNoteForm = ({ sale, saleItems, payments, config }) => {
   );
 };
 
-export default PrintDeliveryNoteForm;
+export default DeliveryNoteForm;

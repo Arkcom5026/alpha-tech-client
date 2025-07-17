@@ -4,6 +4,7 @@ import UnifiedMainNav from "@/components/common/UnifiedMainNav";
 import SidebarOnline from "../components/SidebarOnline";
 import { Outlet, useLocation } from "react-router-dom";
 import CartPanel from "../cart/components/CartPanel";
+import ErrorBoundary from "@/components/shared/error/ErrorBoundary"; // ✅ เพิ่ม ErrorBoundary
 
 const OnlineLayout = () => {
   const { pathname } = useLocation();
@@ -26,7 +27,9 @@ const OnlineLayout = () => {
         {/* เนื้อหาหลัก + ตะกร้าสินค้า */}
         <div className="flex flex-col lg:flex-row w-full gap-6 px-4 py-6">
           <main className="flex-1 px-2 sm:px-4 py-6 overflow-y-auto">            
-            <Outlet />
+            <ErrorBoundary>
+              <Outlet />
+            </ErrorBoundary>
           </main>
 
           {/* ตะกร้าสินค้า */}

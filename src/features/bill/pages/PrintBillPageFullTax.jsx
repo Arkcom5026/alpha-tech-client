@@ -42,6 +42,7 @@ const PrintBillPageFullTax = () => {
   const saleItems = (sale.items || []).map((i) => ({
     id: i.id, // Use SaleItem's own ID
     productName: i.stockItem.product?.name || 'ไม่พบชื่อสินค้า',
+    productModel: i.stockItem.product?.model || 'ไม่รุ่นชื่อสินค้า',
     // Corrected: Use 'price' field from SaleItem (i.price) as unit price
     amount: i.price ?? 0,
     quantity: 1, // Confirmed: quantity is always 1 per SaleItem

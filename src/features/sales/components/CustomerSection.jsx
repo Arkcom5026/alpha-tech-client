@@ -226,13 +226,14 @@ const CustomerSection = ({ productSearchRef, clearTrigger, hideCustomerDetails, 
         phone: rawPhone,
         email,
         address,
-        type: customerType, // ✨ ส่งค่า type ที่ถูกต้อง
+        type: customerType,
         companyName,
         taxId,
       });
       if (newCustomer?.id) {
         setSelectedCustomer(newCustomer);
         setCustomerIdAction(newCustomer.id);
+        setCustomer(newCustomer); // ✅ เพิ่มบรรทัดนี้ เพื่อ set ค่า customer ใน store
         alert('สร้างลูกค้าใหม่สำเร็จ!');
         setShouldShowDetails(true);
         setTimeout(() => {
@@ -245,6 +246,7 @@ const CustomerSection = ({ productSearchRef, clearTrigger, hideCustomerDetails, 
     }
   };
 
+  
 
   const handleCancelCreateCustomer = () => {
     setSelectedCustomer(null);
@@ -518,3 +520,5 @@ const CustomerSection = ({ productSearchRef, clearTrigger, hideCustomerDetails, 
 };
 
 export default CustomerSection;
+
+

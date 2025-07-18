@@ -59,11 +59,12 @@ const QuickSaleLayout = () => {
         const foundItem = Array.isArray(results) ? results[0] : results;
         if (foundItem) {
           const preparedItem = {
+            barcodeId: foundItem.id,
             barcode: foundItem.barcode,
+            stockItemId: foundItem.id,
             productName: foundItem.product?.name || '',
             model: foundItem.product?.model || '',
             price: foundItem.prices?.[selectedPriceType] || 0,
-            stockItemId: foundItem.id,
             discount: 0,
             discountWithoutBill: 0,
             billShare: 0,
@@ -176,3 +177,7 @@ const QuickSaleLayout = () => {
 };
 
 export default QuickSaleLayout;
+
+
+
+

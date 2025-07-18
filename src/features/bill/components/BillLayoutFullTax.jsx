@@ -6,31 +6,70 @@ import React from 'react';
 const BillLayoutFullTax = ({ sale, saleItems, payments, config }) => {
   if (!sale || !saleItems || !payments || !config) return null;
 
-  // Debugging log to check incoming saleItems data
   console.log('BillLayoutFullTax: Incoming saleItems:', saleItems);
   saleItems.forEach((item, index) => {
-    // Modified to log item.amount instead of item.price
-    console.log(`Item ${index}: productName=${item.productName}, amount=${item.amount}, quantity=${item.quantity}, typeOfAmount=${typeof item.amount}, typeOfQuantity=${typeof item.quantity}`);
+    console.log(`Item ${index}: productName=${item.productName}, model=${item.productModel}, amount=${item.amount}, quantity=${item.quantity}, typeOfAmount=${typeof item.amount}, typeOfQuantity=${typeof item.quantity}`);
   });
 
-  const discount = typeof sale.totalDiscount === 'number' ? sale.totalDiscount : 0;
-  const computedTotal = saleItems.reduce((sum, item) => {
-    // Changed from item.price to item.amount for price per unit
-    const pricePerUnit = typeof item.amount === 'number' ? item.amount : 0;
-    const quantity = typeof item.quantity === 'number' ? item.quantity : 0;
-    return sum + pricePerUnit * quantity;
-  }, 0);
-
-  const total = computedTotal - discount;
   const vatRate = typeof config.vatRate === 'number' ? config.vatRate : 7;
-  const vatAmount = total - total / (1 + vatRate / 100);
-  const beforeVat = total - vatAmount;
+
+  // ✅ คำนวณจากยอดที่รวม VAT แล้วทั้งหมด (รวมจาก item.amount)
+  const total = saleItems.reduce((sum, item) => sum + (item.amount || 0), 0);
+  const beforeVat = total / (1 + vatRate / 100);
+  const vatAmount = total - beforeVat;
+
+  const saleItemsExVat = saleItems.map((item) => {
+    const quantity = typeof item.quantity === 'number' ? item.quantity : 0;
+    const totalAmount = typeof item.amount === 'number' ? item.amount : 0;
+    const unitPriceVatIncl = quantity !== 0 ? totalAmount / quantity : 0;
+    const unitPriceExVat = unitPriceVatIncl / (1 + vatRate / 100);
+    const totalExVat = unitPriceExVat * quantity;
+    return {
+      ...item,
+      unitPriceExVat,
+      totalExVat,
+    };
+  });
+
+  console.log('saleItemsExVat : ', saleItemsExVat);
+  console.log('beforeVat : ', beforeVat);
+  console.log('vatAmount : ', vatAmount);
+  console.log('total : ', total);
 
   const formatCurrency = (val) => parseFloat(val || 0).toFixed(2);
+
+  const formatThaiDate = (dateString) => {
+    const thMonths = [
+      '',
+      'มกราคม',
+      'กุมภาพันธ์',
+      'มีนาคม',
+      'เมษายน',
+      'พฤษภาคม',
+      'มิถุนายน',
+      'กรกฎาคม',
+      'สิงหาคม',
+      'กันยายน',
+      'ตุลาคม',
+      'พฤศจิกายน',
+      'ธันวาคม',
+    ];
+    const date = new Date(dateString);
+    const day = date.getDate();
+    const month = date.getMonth() + 1;
+    const year = date.getFullYear() + 543;
+    return `${day} ${thMonths[month]} ${year}`;
+  };
 
   const maxRowCount = 20;
   const emptyRowCount = Math.max(maxRowCount - saleItems.length, 0);
   const handlePrint = () => window.print();
+
+  const getDisplayCustomerName = (customer) => {
+    if (!customer) return '-';
+    if (['GOVERNMENT', 'ORGANIZATION'].includes(customer.type)) return customer.companyName || '-';
+    return customer.name || '-';
+  };
 
   return (
     <>
@@ -56,58 +95,59 @@ const BillLayoutFullTax = ({ sale, saleItems, payments, config }) => {
           <div className="text-right ">
             <p className="border border-gray-600 px-2 py-1 font-bold rounded-md">ต้นฉบับลูกค้า<br />CUSTOMER ORIGINAL</p>
           </div>
-
         </div>
 
         <h3 className="text-center font-bold underline text-lg mb-4">ใบกำกับภาษี / ใบส่งสินค้า<br />TAX INVOICE ORIGINAL / DELIVERY ORDER</h3>
 
         {/* Customer & Sale Info */}
         <div className="grid grid-cols-2 gap-4 text-sm mb-4">
-          <div className="border border-black p-2 rounded-lg"> {/* ✅ ปรับความเข้มของเส้นขอบเป็น border-black */}
-            <p>ลูกค้า: {sale.customer?.name || '-'}</p>
+          <div className="border border-black p-2 rounded-lg">
+            <p>ลูกค้า: {getDisplayCustomerName(sale.customer)}</p>
             <p>ที่อยู่: {sale.customer?.address || '-'}</p>
             <p>โทร: {sale.customer?.phone || '-'}</p>
             <p>เลขประจำตัวผู้เสียภาษี: {sale.customer?.taxId || '-'}</p>
           </div>
-          <div className="border border-black p-2 rounded-lg"> {/* ✅ ปรับความเข้มของเส้นขอบเป็น border-black */}
-            <p>วันที่: {new Date(sale.createdAt).toLocaleDateString('th-TH')}</p>
+          <div className="border border-black p-2 rounded-lg">
+            <p>วันที่: {formatThaiDate(sale.createdAt)}</p>
             <p>เลขที่: {sale.code}</p>
             <p>เงื่อนไขการชำระเงิน: {sale.paymentTerms || '-'}</p>
-            <p>วันที่ครบกำหนด: {sale.dueDate ? new Date(sale.dueDate).toLocaleDateString('th-TH') : '-'}</p>
+            <p>วันที่ครบกำหนด: {sale.dueDate ? formatThaiDate(sale.dueDate) : '-'}</p>
           </div>
         </div>
 
         {/* Table */}
-        <table className="w-full text-xs mb-2 border border-black"> {/* ✅ ปรับความเข้มของเส้นขอบเป็น border-black */}
+        <table className="w-full text-xs mb-2 border border-black">
           <thead className="bg-gray-100">
-            <tr className="border-b border-black"> {/* ✅ ปรับความเข้มของเส้นขอบเป็น border-black */}
-              <th className="border border-black px-1 h-[28px]">ลำดับ<br />ITEM</th> {/* ✅ ปรับความเข้มของเส้นขอบเป็น border-black */}
-              <th className="border border-black px-1 h-[28px]">รายการ<br />DESCRIPTION</th> {/* ✅ ปรับความเข้มของเส้นขอบเป็น border-black */}
-              <th className="border border-black px-1 h-[28px]">จำนวน<br />QTY</th> {/* ✅ ปรับความเข้มของเส้นขอบเป็น border-black */}
-              <th className="border border-black px-1 h-[28px]">หน่วย<br />UNIT</th> {/* ✅ ปรับความเข้มของเส้นขอบเป็น border-black */}
-              <th className="border border-black px-1 h-[28px]">ราคาต่อหน่วย<br />UNIT PRICE</th> {/* ✅ ปรับความเข้มของเส้นขอบเป็น border-black */}
-              <th className="border border-black px-1 h-[28px]">จำนวนเงิน<br />AMOUNT</th> {/* ✅ ปรับความเข้มของเส้นขอบเป็น border-black */}
+            <tr className="border-b border-black">
+              <th className="border border-black px-1 h-[28px]">ลำดับ<br />ITEM</th>
+              <th className="border border-black px-1 h-[28px]">รายการ<br />DESCRIPTION</th>
+              <th className="border border-black px-1 h-[28px]">จำนวน<br />QTY</th>
+              <th className="border border-black px-1 h-[28px]">หน่วย<br />UNIT</th>
+              <th className="border border-black px-1 h-[28px]">ราคาต่อหน่วย<br />UNIT PRICE</th>
+              <th className="border border-black px-1 h-[28px]">จำนวนเงิน<br />AMOUNT</th>
             </tr>
           </thead>
           <tbody>
-            {saleItems.map((item, index) => (
+            {saleItemsExVat.map((item, index) => (
               <tr key={item.id}>
-                <td className="border border-black px-1 text-center h-[28px]">{index + 1}</td> {/* ✅ ปรับความเข้มของเส้นขอบเป็น border-black */}
-                <td className="border border-black px-1 h-[28px]">{item.productName}</td> {/* ✅ ปรับความเข้มของเส้นขอบเป็น border-black */}
-                <td className="border border-black px-1 text-center h-[28px]">{item.quantity}</td> {/* ✅ ปรับความเข้มของเส้นขอบเป็น border-black */}
-                <td className="border border-black px-1 text-center h-[28px]">{item.unit || '-'}</td> {/* ✅ ปรับความเข้มของเส้นขอบเป็น border-black */}
-                <td className="border border-black px-1 text-right h-[28px]">{formatCurrency(item.amount)}</td> {/* Changed from item.price to item.amount */}
-                <td className="border border-black px-1 text-right h-[28px]">{formatCurrency(item.amount * item.quantity)}</td> {/* Changed from item.price to item.amount */}
+                <td className="border border-black px-1 text-center h-[28px]">{index + 1}</td>
+                <td className="border border-black px-1 h-[28px]">
+                  {item.productName} {item.productModel ? `(${item.productModel})` : ''}
+                </td>
+                <td className="border border-black px-1 text-center h-[28px]">{item.quantity}</td>
+                <td className="border border-black px-1 text-center h-[28px]">{item.unit || '-'}</td>
+                <td className="border border-black px-1 text-right h-[28px]">{formatCurrency(item.unitPriceExVat)}</td>
+                <td className="border border-black px-1 text-right h-[28px]">{formatCurrency(item.totalExVat)}</td>
               </tr>
             ))}
             {[...Array(emptyRowCount)].map((_, idx) => (
               <tr key={`empty-${idx}`}>
-                <td className="border border-black px-1 text-center h-[28px]">&nbsp;</td> {/* ✅ ปรับความเข้มของเส้นขอบเป็น border-black */}
-                <td className="border border-black px-1 h-[28px]">&nbsp;</td> {/* ✅ ปรับความเข้มของเส้นขอบเป็น border-black */}
-                <td className="border border-black px-1 text-center h-[28px]">&nbsp;</td> {/* ✅ ปรับความเข้มของเส้นขอบเป็น border-black */}
-                <td className="border border-black px-1 text-center h-[28px]">&nbsp;</td> {/* ✅ ปรับความเข้มของเส้นขอบเป็น border-black */}
-                <td className="border border-black px-1 text-right h-[28px]">&nbsp;</td> {/* ✅ ปรับความเข้มของเส้นขอบเป็น border-black */}
-                <td className="border border-black px-1 text-right h-[28px]">&nbsp;</td> {/* ✅ ปรับความเข้มของเส้นขอบเป็น border-black */}
+                <td className="border border-black px-1 text-center h-[28px]">&nbsp;</td>
+                <td className="border border-black px-1 h-[28px]">&nbsp;</td>
+                <td className="border border-black px-1 text-center h-[28px]">&nbsp;</td>
+                <td className="border border-black px-1 text-center h-[28px]">&nbsp;</td>
+                <td className="border border-black px-1 text-right h-[28px]">&nbsp;</td>
+                <td className="border border-black px-1 text-right h-[28px]">&nbsp;</td>
               </tr>
             ))}
           </tbody>
@@ -124,15 +164,15 @@ const BillLayoutFullTax = ({ sale, saleItems, payments, config }) => {
             </ul>
           </div>
           <div>
-            <p className="flex justify-between border-t border-black border-b py-1"> {/* ✅ ปรับความเข้มของเส้นขอบเป็น border-black */}
+            <p className="flex justify-between border-t border-black border-b py-1">
               <span>รวมเงิน / SUB TOTAL</span>
               <span>{formatCurrency(beforeVat)} ฿</span>
             </p>
-            <p className="flex justify-between border-b border-black py-1"> {/* ✅ ปรับความเข้มของเส้นขอบเป็น border-black */}
+            <p className="flex justify-between border-b border-black py-1">
               <span>ภาษีมูลค่าเพิ่ม / VAT</span>
               <span>{formatCurrency(vatAmount)} ฿</span>
             </p>
-            <p className="flex justify-between border-b border-black font-bold py-1"> {/* ✅ ปรับความเข้มของเส้นขอบเป็น border-black */}
+            <p className="flex justify-between border-b border-black font-bold py-1">
               <span>จำนวนเงินรวมทั้งสิ้น / TOTAL AMOUNT</span>
               <span>{formatCurrency(total)} ฿</span>
             </p>
@@ -142,19 +182,17 @@ const BillLayoutFullTax = ({ sale, saleItems, payments, config }) => {
         {/* Signatures */}
         <div className="grid grid-cols-3 gap-4 text-sm mt-2 text-center pt-4 ">
           <div>
-            <p className="border-t border-black pt-2 pb-4">ผู้รับของ / RECEIVED BY</p> {/* ✅ ปรับความเข้มของเส้นขอบเป็น border-black */}
+            <p className="border-t border-black pt-2 pb-4">ผู้รับของ / RECEIVED BY</p>
           </div>
           <div>
-            <p className="border-t border-black pt-2 pb-4">ผู้ส่งของ / DELIVERED BY</p> {/* ✅ ปรับความเข้มของเส้นขอบเป็น border-black */}
+            <p className="border-t border-black pt-2 pb-4">ผู้ส่งของ / DELIVERED BY</p>
           </div>
           <div>
-            <p className="border-t border-black pt-2 pb-4">ผู้อนุมัติ / AUTHORIZED BY</p> {/* ✅ ปรับความเข้มของเส้นขอบเป็น border-black */}
+            <p className="border-t border-black pt-2 pb-4">ผู้อนุมัติ / AUTHORIZED BY</p>
           </div>
         </div>
       </div>
     </>
-
-
   );
 };
 

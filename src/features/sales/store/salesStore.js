@@ -156,6 +156,7 @@ setCardRef: (val) => set({ cardRef: val }),
 
 setCustomerIdAction: (id) => set({ customerId: id }),
 
+
 addSaleItemAction: (item) => {
 
 set((state) => {
@@ -236,91 +237,96 @@ try {
 
 },
 
+
 // ✨ แก้ไข: เพิ่ม saleMode ('CASH' หรือ 'CREDIT') เข้ามาเป็นพารามิเตอร์
 
 confirmSaleOrderAction: async (saleMode) => {
 
-const { saleItems, customerId } = get();
+  const { saleItems, customerId } = get();
+  
+  if (saleMode === 'CREDIT' && !customerId) {
+    return { error: 'การขายแบบเครดิตต้องเลือกชื่อลูกค้าก่อน' };
+  }
+  
+  if (saleItems.length === 0) {
+  
+    return { error: 'ยังไม่มีรายการสินค้า' };
+  
+  }
+  
+  try {
+    console.log('[🔍 DEBUG] saleItems', saleItems);
+    console.log('[🔍 DEBUG] barcodeId ในแต่ละรายการ', saleItems.map(i => i.barcodeId));
+  
+    const vatRate = 7;
+  
+    const totalBeforeDiscount = saleItems.reduce((sum, item) => sum + item.price, 0);
+  
+    const totalDiscount = saleItems.reduce((sum, item) => sum + (item.discount ?? 0), 0);
+  
+    const totalNet = totalBeforeDiscount - totalDiscount;
+  
+    const vatAmount = Math.round((totalNet * vatRate) / 100);
+  
+    const totalAmount = totalNet + vatAmount;
+  
+    const payload = {
+  
+      customerId,
+  
+      totalBeforeDiscount,
+  
+      totalDiscount,
+  
+      vat: vatAmount,
+  
+      vatRate,
+  
+      totalAmount,
+  
+      note: '',
+  
+      items: saleItems
+        .filter(item => !!item.stockItemId && !!item.barcodeId) // ✅ กรองรายการที่ไม่สมบูรณ์
+        .map((item) => ({
+          stockItemId: item.stockItemId,
+          barcodeId: item.barcodeId,
+          basePrice: item.price,
+          vatAmount: Math.round(((item.price - (item.discount ?? 0)) * vatRate) / 100),
+          price: item.price - (item.discount ?? 0),
+          discount: item.discount ?? 0,
+          remark: '',
+        })),
+  
+      // ✨ เพิ่มข้อมูลสำคัญสำหรับแยกประเภทการขาย
+  
+      isCredit: saleMode === 'CREDIT',
+  
+      status: saleMode === 'CREDIT' ? 'DELIVERED' : 'COMPLETED',
+  
+      paid: saleMode !== 'CREDIT',
+  
+    };
+  
+    const data = await createSaleOrder(payload);
+  
+    set({ saleItems: [], customerId: null });
+  
+    return data;
+  
+  } catch (err) {
+  
+    console.error('❌ [confirmSaleOrderAction]', err);
+  
+    return { error: 'เกิดข้อผิดพลาดในการขาย' };
+  
+  }
+  
+  },
+  
+      
+  
 
-if (saleItems.length === 0) {
-
-  return { error: 'ยังไม่มีรายการสินค้า' };
-
-}
-
-try {
-
-  const vatRate = 7;
-
-  const totalBeforeDiscount = saleItems.reduce((sum, item) => sum + item.price, 0);
-
-  const totalDiscount = saleItems.reduce((sum, item) => sum + (item.discount ?? 0), 0);
-
-  const totalNet = totalBeforeDiscount - totalDiscount;
-
-  const vatAmount = Math.round((totalNet * vatRate) / 100);
-
-  const totalAmount = totalNet + vatAmount;
-
-  const payload = {
-
-    customerId,
-
-    totalBeforeDiscount,
-
-    totalDiscount,
-
-    vat: vatAmount,
-
-    vatRate,
-
-    totalAmount,
-
-    note: '',
-
-    items: saleItems.map((item) => ({
-
-      stockItemId: item.stockItemId,
-
-      barcodeId: item.barcodeId,
-
-      basePrice: item.price,
-
-      vatAmount: Math.round(((item.price - (item.discount ?? 0)) * vatRate) / 100),
-
-      price: item.price - (item.discount ?? 0),
-
-      discount: item.discount ?? 0,
-
-      remark: '',
-
-    })),
-
-    // ✨ เพิ่มข้อมูลสำคัญสำหรับแยกประเภทการขาย
-
-    isCredit: saleMode === 'CREDIT',
-
-    status: saleMode === 'CREDIT' ? 'DELIVERED' : 'COMPLETED',
-
-    paid: saleMode !== 'CREDIT',
-
-  };
-
-  const data = await createSaleOrder(payload);
-
-  set({ saleItems: [], customerId: null });
-
-  return data;
-
-} catch (err) {
-
-  console.error('❌ [confirmSaleOrderAction]', err);
-
-  return { error: 'เกิดข้อผิดพลาดในการขาย' };
-
-}
-
-},
 
 loadSalesAction: async () => {
 
@@ -340,6 +346,7 @@ try {
 
 // ✅ เพิ่ม action นี้เพื่อตั้งค่า currentSale โดยตรง
 setCurrentSale: (saleData) => set({ currentSale: saleData }),
+
 
 getSaleByIdAction: async (id) => {
 
@@ -407,7 +414,6 @@ set({
 
 },
 
-// ✅ New: Action to load printable sales with filters
 
 loadPrintableSalesAction: async (params) => {
 
@@ -434,3 +440,5 @@ try {
 }));
 
 export default useSalesStore;
+
+

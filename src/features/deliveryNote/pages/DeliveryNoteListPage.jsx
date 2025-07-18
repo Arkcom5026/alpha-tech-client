@@ -21,22 +21,30 @@ const DeliveryNoteListPage = () => {
   const [showCompanyColumn, setShowCompanyColumn] = useState(false);
 
   const saleStore = useSalesStore();
+
+const handleSearch = () => {
+  const params = {
+    keyword: search,
+    fromDate,
+    toDate,
+    limit,
+  };
+  saleStore.loadPrintableSalesAction(params);
+};
   const printableSales = saleStore.printableSales;
 
-  const handleSearch = useCallback(async () => {
-    const params = {
-      keyword: search,
-      fromDate: fromDate,
-      toDate: toDate,
-      limit: limit,
-    };
-    await saleStore.loadPrintableSalesAction(params);
-  }, [search, fromDate, toDate, limit, saleStore]);
-
+  
+  
   // useEffect สำหรับโหลดข้อมูลครั้งแรก
   useEffect(() => {
-    handleSearch();
-  }, [handleSearch]);
+  const params = {
+    keyword: search,
+    fromDate,
+    toDate,
+    limit,
+  };
+  saleStore.loadPrintableSalesAction(params);
+}, [search, fromDate, toDate, limit]);
 
   // ✅ New useEffect to determine if company column should be shown
   useEffect(() => {
@@ -178,3 +186,7 @@ const DeliveryNoteListPage = () => {
 };
 
 export default DeliveryNoteListPage;
+
+
+
+

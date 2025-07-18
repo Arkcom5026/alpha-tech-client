@@ -1,10 +1,13 @@
+
 // -----------------------
 // BillLayoutFullTax.jsx
 // -----------------------
-import React from 'react';
+import React, { useState } from 'react';
 
 const BillLayoutFullTax = ({ sale, saleItems, payments, config }) => {
   if (!sale || !saleItems || !payments || !config) return null;
+
+  const [hideDate, setHideDate] = useState(config?.hideDate || false);
 
   console.log('BillLayoutFullTax: Incoming saleItems:', saleItems);
   saleItems.forEach((item, index) => {
@@ -12,8 +15,6 @@ const BillLayoutFullTax = ({ sale, saleItems, payments, config }) => {
   });
 
   const vatRate = typeof config.vatRate === 'number' ? config.vatRate : 7;
-
-  // ✅ คำนวณจากยอดที่รวม VAT แล้วทั้งหมด (รวมจาก item.amount)
   const total = saleItems.reduce((sum, item) => sum + (item.amount || 0), 0);
   const beforeVat = total / (1 + vatRate / 100);
   const vatAmount = total - beforeVat;
@@ -73,8 +74,20 @@ const BillLayoutFullTax = ({ sale, saleItems, payments, config }) => {
 
   return (
     <>
-      <div className="w-full max-w-[794px] mx-auto mb-4 text-right ">
-        <button onClick={handlePrint} className="bg-blue-600 hover:bg-blue-700 text-white py-1 px-4 rounded text-base print:hidden">
+      <div className="w-full max-w-[794px] mx-auto mb-4 text-right print:hidden">
+        <label className="inline-flex items-center gap-2 px-5 text-sm">
+          <input
+            type="checkbox"
+            checked={hideDate}
+            onChange={(e) => setHideDate(e.target.checked)}
+            className="w-5 h-5"
+          />
+          <span className="text-base ml-2">ไม่แสดงวันที่ในเอกสาร</span>
+        </label>
+        <button
+          onClick={handlePrint}
+          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 ml-4"
+        >
           พิมพ์บิล
         </button>
       </div>
@@ -91,29 +104,38 @@ const BillLayoutFullTax = ({ sale, saleItems, payments, config }) => {
             <p>โทร: {config.phone}</p>
             <p>เลขประจำตัวผู้เสียภาษี: {config.taxId}</p>
           </div>
-
           <div className="text-right ">
             <p className="border border-gray-600 px-2 py-1 font-bold rounded-md">ต้นฉบับลูกค้า<br />CUSTOMER ORIGINAL</p>
           </div>
         </div>
 
-        <h3 className="text-center font-bold underline text-lg mb-4">ใบกำกับภาษี / ใบส่งสินค้า<br />TAX INVOICE ORIGINAL / DELIVERY ORDER</h3>
+        <h3 className="text-center font-bold underline text-lg mb-4">ใบเสร็จรับเงิน / ใบกำกับภาษี<br />TAX INVOICE ORIGINAL / DELIVERY ORDER</h3>
 
         {/* Customer & Sale Info */}
-        <div className="grid grid-cols-2 gap-4 text-sm mb-4">
-          <div className="border border-black p-2 rounded-lg">
-            <p>ลูกค้า: {getDisplayCustomerName(sale.customer)}</p>
+        <div className="grid grid-cols-[4fr_1.5fr] gap-4  mb-4">
+          <div className="border border-black  p-2 rounded-lg">
+            <p className='text-base'>ลูกค้า: {getDisplayCustomerName(sale.customer)}</p>
             <p>ที่อยู่: {sale.customer?.address || '-'}</p>
             <p>โทร: {sale.customer?.phone || '-'}</p>
             <p>เลขประจำตัวผู้เสียภาษี: {sale.customer?.taxId || '-'}</p>
           </div>
-          <div className="border border-black p-2 rounded-lg">
-            <p>วันที่: {formatThaiDate(sale.createdAt)}</p>
+
+          <div className="border border-black p-2 rounded-lg space-y-1">
+            <p>
+              วันที่: {hideDate ? (
+                <span className="inline-block border-b border-black w-[120px] h-[18px] align-bottom" />
+              ) : formatThaiDate(sale.soldAt)}
+            </p>
+            
             <p>เลขที่: {sale.code}</p>
             <p>เงื่อนไขการชำระเงิน: {sale.paymentTerms || '-'}</p>
             <p>วันที่ครบกำหนด: {sale.dueDate ? formatThaiDate(sale.dueDate) : '-'}</p>
           </div>
+
+
         </div>
+
+
 
         {/* Table */}
         <table className="w-full text-xs mb-2 border border-black">
@@ -197,3 +219,9 @@ const BillLayoutFullTax = ({ sale, saleItems, payments, config }) => {
 };
 
 export default BillLayoutFullTax;
+
+
+
+
+
+

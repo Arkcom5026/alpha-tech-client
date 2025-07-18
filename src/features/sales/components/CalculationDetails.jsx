@@ -17,9 +17,8 @@ const CalculationDetails = ({
   const safeBillDiscount = typeof billDiscount === 'number' && !isNaN(billDiscount) ? billDiscount : 0;
 
   return (
-    <div className="flex-1 min-w-[350px] max-w-[400px] bg-slate-50 p-4 rounded-xl space-y-2 shadow-sm border border-slate-100">
-      <h2 className="text-xl font-bold text-gray-800 mb-3">รายละเอียดการคำนวณ</h2>
-      <hr className="border-gray-200" />
+    <div className="flex-1 min-w-[350px] max-w-[400px] bg-slate-50 p-4 rounded-xl space-y-2 shadow-sm border border-slate-100">    
+     
       <div className="flex justify-between px-2 py-1 text-lg text-gray-700">
         <span>ยอดรวมราคาสินค้า</span>
         <span className="font-semibold">{totalOriginalPrice.toLocaleString()} ฿</span>

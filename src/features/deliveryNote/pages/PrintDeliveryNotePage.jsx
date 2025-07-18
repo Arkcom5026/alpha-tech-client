@@ -3,8 +3,7 @@ import { useParams, useLocation } from 'react-router-dom';
 import useSalesStore from '@/features/sales/store/salesStore';
 import DeliveryNoteForm from '../components/DeliveryNoteForm';
 
-
-const PrintDeliveryNotePage = () => { // เปลี่ยนชื่อ Component ตรงนี้
+const PrintDeliveryNotePage = () => {
   const { saleId } = useParams();
   const location = useLocation();
 
@@ -12,39 +11,35 @@ const PrintDeliveryNotePage = () => { // เปลี่ยนชื่อ Compo
   const { getSaleByIdAction, currentSale, setCurrentSale } = saleStore;
 
   const [isLoading, setIsLoading] = useState(true);
+  const [hideDate, setHideDate] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
-      setIsLoading(true); // เริ่มโหลด
+      setIsLoading(true);
       const saleFromState = location.state?.sale;
 
       if (saleFromState && String(saleFromState.id) === saleId) {
-        // ถ้ามีข้อมูล sale ใน state และ ID ตรงกัน ให้ใช้ข้อมูลนั้นเลย
         setCurrentSale(saleFromState);
         console.log("Using sale data from navigation state:", saleFromState);
       } else {
-        // ถ้าไม่มีข้อมูลใน state หรือ ID ไม่ตรงกัน ค่อยไปดึงจาก Backend
         console.log("Fetching sale data from backend for saleId:", saleId);
-        await getSaleByIdAction(saleId); // รอให้ action ทำงานเสร็จ
+        await getSaleByIdAction(saleId);
       }
     };
 
     if (saleId) {
       fetchData();
     } else {
-      setIsLoading(false); // ถ้าไม่มี saleId ก็ไม่ต้องโหลด
+      setIsLoading(false);
     }
   }, [saleId, location.state, getSaleByIdAction, setCurrentSale]);
 
-  // คอยตรวจสอบ currentSale และ saleId เพื่อตั้งค่า isLoading
   useEffect(() => {
     if (currentSale && String(currentSale.id) === saleId) {
-      setIsLoading(false); // เมื่อ currentSale มีข้อมูลและ ID ตรงกัน ให้หยุดโหลด
+      setIsLoading(false);
     }
   }, [currentSale, saleId]);
 
-
-  // แสดงข้อความโหลดเมื่อ isLoading เป็น true เท่านั้น
   if (isLoading) {
     return <div className="p-4 text-center text-gray-600">กำลังโหลดข้อมูลใบส่งของ...</div>;
   }
@@ -53,42 +48,38 @@ const PrintDeliveryNotePage = () => { // เปลี่ยนชื่อ Compo
     return <div className="p-4 text-center text-red-600">ไม่พบข้อมูลใบส่งของ หรือข้อมูลไม่ถูกต้อง</div>;
   }
 
-  // เตรียมข้อมูล saleItems ให้เหมือน PrintBillPageFullTax
   const preparedSaleItems = (currentSale.items || []).map((item) => ({
-    id: item.id, // ใช้ ID ของ SaleItem
+    id: item.id,
     productName: item.stockItem?.product?.name || 'ไม่พบชื่อสินค้า',
-    price: item.basePrice ?? 0, // ใช้ basePrice จาก SaleItem
-    quantity: 1, // สมมติว่าแต่ละ SaleItem คือ 1 ชิ้น
-    unit: item.stockItem?.product?.template?.unit?.name || '-', // ต้องมีการ include product.template.unit ใน Backend
-    discount: item.discount ?? 0, // ส่วนลดต่อชิ้น
-    // สามารถเพิ่ม barcode หรือ serialNumber ได้ถ้าต้องการ
+    productModel: item.stockItem?.product?.model || 'ไม่พบชื่อสินค้า',
+    price: item.basePrice ?? 0,
+    quantity: 1,
+    unit: item.stockItem?.product?.template?.unit?.name || '-',
+    discount: item.discount ?? 0,
     barcode: item.stockItem?.barcode || '-',
     serialNumber: item.stockItem?.serialNumber || '-',
   }));
 
-  // เตรียมข้อมูล config จาก branch ของ Sale
   const branch = currentSale.branch || {};
   const preparedConfig = {
     branchName: branch.name || '-',
     address: branch.address || '-',
     phone: branch.phone || '-',
-    taxId: branch.taxId || '-', // สมมติว่า Branch มี taxId
-    // สามารถเพิ่ม logoUrl หรือ footerNote ได้ถ้าต้องการ
+    taxId: branch.taxId || '-',
   };
 
   return (
-    <div className="p-4">
-      {/* ✅ ซ่อนข้อความ "รายละเอียดใบส่งของ" โดยเพิ่ม Tailwind class "print:hidden" */}
-      <h1 className="text-xl font-semibold mb-4 print:hidden">รายละเอียดใบส่งของ</h1>
-      {/* ส่ง props ที่เตรียมไว้ให้ PrintDeliveryNoteForm */}
+    <div className="p-4 space-y-4">
       <DeliveryNoteForm
         sale={currentSale}
+        hideDate={hideDate}
+        setHideDate={setHideDate}
         saleItems={preparedSaleItems}
         config={preparedConfig}
+        showDateLine={true} // เพิ่ม flag เพื่อให้มีเส้นใต้แม้ไม่แสดงวันที่
       />
     </div>
   );
 };
 
-export default PrintDeliveryNotePage; 
-
+export default PrintDeliveryNotePage;

@@ -104,8 +104,10 @@ const QuickSaleLayout = () => {
   };
 
   return (
-    <div className="p-4 bg-white rounded-xl shadow-lg mt-4 min-w-[1600px]">
-      <div className="bg-blue-100 p-4 rounded-xl shadow flex flex-col-2 gap-4 min-w-[600px]">
+    <>
+    {/* <div className="p-4 bg-white rounded-xl shadow-lg mt-4 min-w-[1600px]"> */}
+      <div className="flex flex-col-2 gap-2">
+
         <CustomerSection
           phoneInputRef={phoneInputRef}
           productSearchRef={barcodeInputRef}
@@ -116,8 +118,9 @@ const QuickSaleLayout = () => {
           // ✨ 3. ส่งฟังก์ชัน setSaleMode เข้าไปใน CustomerSection
           onSaleModeSelect={setSaleMode}
         />
-        <div className="col-span-12 lg:col-span-8 space-y-4">
-          <div className="bg-white p-4 rounded-xl shadow">
+        
+        <div className="col-span-12 lg:col-span-8 ">
+          <div className="bg-white p-4 ">
             <h2 className="text-lg font-bold text-gray-800">เลือกราคาขาย:</h2>
             <div className="mb-2 flex gap-4 min-w-[1100px]">
               <label className="flex items-center space-x-2 text-gray-700">
@@ -142,7 +145,7 @@ const QuickSaleLayout = () => {
             />
           </div>
 
-          <div className="bg-white p-4 rounded-xl shadow min-h-[390px]">
+          <div className="bg-white p-4 min-h-[490px]">
             <h2 className="text-lg font-semibold mb-2 text-gray-800">รายการสินค้า</h2>
             <div className="overflow-x-auto">
               <SaleItemTable
@@ -157,9 +160,10 @@ const QuickSaleLayout = () => {
             </div>
           </div>
         </div>
+
       </div>
 
-      <div className="col-span-12 py-4">
+      <div className="col-span-12 py-4 ">
         <PaymentSection
           saleItems={saleItems}
           onConfirm={handleConfirmSale}
@@ -172,7 +176,8 @@ const QuickSaleLayout = () => {
           currentSaleMode={saleMode}
         />
       </div>
-    </div>
+    {/* </div> */}
+    </>
   );
 };
 

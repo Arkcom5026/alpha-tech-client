@@ -151,12 +151,12 @@ const PaymentSection = ({ saleItems, onConfirm, isSubmitting, setIsSubmitting, o
     }
     // ✨ ตรวจสอบยอดเงินที่ชำระเฉพาะในโหมด CASH
     if (currentSaleMode === 'CASH' && totalPaid + safeDepositUsed < totalToPay) {
-        setPaymentError('ยอดเงินที่ชำระยังไม่เพียงพอ');
-        return;
+      setPaymentError('ยอดเงินที่ชำระยังไม่เพียงพอ');
+      return;
     }
     if (safeBillDiscount > totalOriginalPrice) {
-        setPaymentError('ส่วนลดท้ายบิลห้ามเกินยอดรวมราคาสินค้า');
-        return;
+      setPaymentError('ส่วนลดท้ายบิลห้ามเกินยอดรวมราคาสินค้า');
+      return;
     }
 
     try {
@@ -267,8 +267,8 @@ const PaymentSection = ({ saleItems, onConfirm, isSubmitting, setIsSubmitting, o
   return (
     <div className='font-bold'>
       {/* เลือกการชำระ */}
-      <div className='flex justify-center mb-6'>
-        <div className="flex gap-6 p-3 bg-white rounded-xl shadow-md">
+      <div className='flex justify-center mb-2 '>
+        <div className="flex gap-4 p-3 bg-white   ">
           <label className="inline-flex items-center gap-2 text-gray-700 text-lg">
             <input
               type="checkbox"
@@ -309,85 +309,88 @@ const PaymentSection = ({ saleItems, onConfirm, isSubmitting, setIsSubmitting, o
         </div>
       </div>
 
-      <div className="bg-white p-4 rounded-xl shadow min-w-[850px] flex flex-wrap justify-center gap-4">
 
-        {/* คอลัมน์ที่ 1: รายละเอียดการคำนวณ - ย้ายมาอยู่ก่อน PaymentSummary */}
-        <CalculationDetails
-          totalOriginalPrice={totalOriginalPrice}
-          totalDiscountOnly={totalDiscountOnly}
-          billDiscount={billDiscount}
-          setBillDiscount={handleBillDiscountChange} // ส่ง handleBillDiscountChange ที่ใช้ useCallback
-          totalDiscount={totalDiscount}
-          priceBeforeVat={priceBeforeVat}
-          vatAmount={vatAmount}
-          customerDepositAmount={customerDepositAmount}
-          depositUsed={depositUsed}
-          handleDepositUsedChange={handleDepositUsedChange} // ส่ง handleDepositUsedChange ที่ใช้ useCallback
-        />
+        <div className="bg-white  flex justify-center gap-4 py-4">
+
+          {/* คอลัมน์ที่ 1: รายละเอียดการคำนวณ - ย้ายมาอยู่ก่อน PaymentSummary */}
+          <CalculationDetails
+            totalOriginalPrice={totalOriginalPrice}
+            totalDiscountOnly={totalDiscountOnly}
+            billDiscount={billDiscount}
+            setBillDiscount={handleBillDiscountChange} // ส่ง handleBillDiscountChange ที่ใช้ useCallback
+            totalDiscount={totalDiscount}
+            priceBeforeVat={priceBeforeVat}
+            vatAmount={vatAmount}
+            customerDepositAmount={customerDepositAmount}
+            depositUsed={depositUsed}
+            handleDepositUsedChange={handleDepositUsedChange} // ส่ง handleDepositUsedChange ที่ใช้ useCallback
+          />
 
 
-        {/* คอลัมน์ที่ 2: ช่องทางการชำระเงิน (แยกตามประเภท) - แสดงเฉพาะในโหมด CASH */}
-        {currentSaleMode === 'CASH' && (
-          <div className="flex-1 min-w-[300px] max-w-[450px] space-y-4">
-            {paymentMethods.cash && (
-              <PaymentMethodInput
-                method="CASH"
-                label="เงินสด"
-                value={paymentList.find(p => p.method === 'CASH')?.amount || ''}
-                onChange={(e) => setPaymentAmount('CASH', e.target.value)}
-                colorClass="green"
-              />
-            )}
-            {paymentMethods.transfer && (
-              <PaymentMethodInput
-                method="TRANSFER"
-                label="เงินโอน"
-                value={paymentList.find(p => p.method === 'TRANSFER')?.amount || ''}
-                onChange={(e) => setPaymentAmount('TRANSFER', e.target.value)}
-                colorClass="sky"
-              />
-            )}
-            {paymentMethods.credit && (
-              <PaymentMethodInput
-                method="CREDIT"
-                label="บัตรเครดิต"
-                value={paymentList.find(p => p.method === 'CREDIT')?.amount || ''}
-                onChange={(e) => setPaymentAmount('CREDIT', e.target.value)}
-                colorClass="yellow"
-                bottomContent={
-                  <div className='py-4'>
-                    <label className="text-base mt-2 block font-bold text-gray-700 mb-1">เลขอ้างอิงบัตรเครดิต</label>
-                    <input
-                      type="text"
-                      value={cardRef}
-                      onChange={(e) => setCardRef(e.target.value)}
-                      className="border border-gray-300 rounded-md px-3 py-2 w-full text-base text-gray-800 h-[45px] focus:ring-2 focus:ring-yellow-500 shadow-sm"
-                      placeholder="กรอกเลขอ้างอิงจากเครื่องรูดบัตร"
-                      maxLength={24}
-                    />
-                  </div>
-                }
-              />
-            )}
-          </div>
-        )}
+          {/* คอลัมน์ที่ 2: ช่องทางการชำระเงิน (แยกตามประเภท) - แสดงเฉพาะในโหมด CASH */}
+          {currentSaleMode === 'CASH' && (
+            <div className="flex-1 min-w-[300px] max-w-[300px] space-y-4">
+              {paymentMethods.cash && (
+                <PaymentMethodInput
+                  method="CASH"
+                  label="เงินสด"
+                  value={paymentList.find(p => p.method === 'CASH')?.amount || ''}
+                  onChange={(e) => setPaymentAmount('CASH', e.target.value)}
+                  colorClass="green"
+                />
+              )}
+              {paymentMethods.transfer && (
+                <PaymentMethodInput
+                  method="TRANSFER"
+                  label="เงินโอน"
+                  value={paymentList.find(p => p.method === 'TRANSFER')?.amount || ''}
+                  onChange={(e) => setPaymentAmount('TRANSFER', e.target.value)}
+                  colorClass="sky"
+                />
+              )}
+              {paymentMethods.credit && (
+                <PaymentMethodInput
+                  method="CREDIT"
+                  label="บัตรเครดิต"
+                  value={paymentList.find(p => p.method === 'CREDIT')?.amount || ''}
+                  onChange={(e) => setPaymentAmount('CREDIT', e.target.value)}
+                  colorClass="yellow"
+                  bottomContent={
+                    <div className='py-4'>
+                      <label className="text-base mt-2 block font-bold text-gray-700 mb-1">เลขอ้างอิงบัตรเครดิต</label>
+                      <input
+                        type="text"
+                        value={cardRef}
+                        onChange={(e) => setCardRef(e.target.value)}
+                        className="border border-gray-300 rounded-md px-3 py-2 w-full text-base text-gray-800 h-[45px] focus:ring-2 focus:ring-yellow-500 shadow-sm"
+                        placeholder="กรอกเลขอ้างอิงจากเครื่องรูดบัตร"
+                        maxLength={24}
+                      />
+                    </div>
+                  }
+                />
+              )}
+            </div>
+          )}
 
-        {/* คอลัมน์ที่ 3: สรุปยอดรวม (เด่นที่สุด) - ย้ายมาอยู่หลัง CalculationDetails */}
-        <PaymentSummary
-          totalToPay={totalToPay}
-          grandTotalPaid={grandTotalPaid}
-          safeChangeAmount={safeChangeAmount}
-          isConfirmEnabled={isConfirmEnabled}
-          isSubmitting={isSubmitting}
-          onConfirm={handleConfirm}
-          paymentError={paymentError}
-          // ส่ง props สำหรับ BillPrintOptions ไปยัง PaymentSummary
-          saleOption={saleOption}
-          setSaleOption={setSaleOption}
-          currentSaleMode={currentSaleMode} // ✨ ส่ง currentSaleMode ไปยัง PaymentSummary
-        />
+          {/* คอลัมน์ที่ 3: สรุปยอดรวม (เด่นที่สุด) - ย้ายมาอยู่หลัง CalculationDetails */}
+          <PaymentSummary
+            totalToPay={totalToPay}
+            grandTotalPaid={grandTotalPaid}
+            safeChangeAmount={safeChangeAmount}
+            isConfirmEnabled={isConfirmEnabled}
+            isSubmitting={isSubmitting}
+            onConfirm={handleConfirm}
+            paymentError={paymentError}
+            // ส่ง props สำหรับ BillPrintOptions ไปยัง PaymentSummary
+            saleOption={saleOption}
+            setSaleOption={setSaleOption}
+            currentSaleMode={currentSaleMode} // ✨ ส่ง currentSaleMode ไปยัง PaymentSummary
+          />
 
-      </div>
+        </div>
+
+
     </div>
   );
 };

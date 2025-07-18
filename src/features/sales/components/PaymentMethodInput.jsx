@@ -1,7 +1,7 @@
 // PaymentMethodInput.jsx (New Component)
 import React from 'react';
 
-const PaymentMethodInput = ({ method, label, value, onChange, colorClass, additionalInfo, bottomContent }) => {
+const PaymentMethodInput = ({ label, value, onChange, colorClass }) => {
   const bgColor = {
     cash: 'bg-green-50',
     transfer: 'bg-sky-50',
@@ -21,10 +21,9 @@ const PaymentMethodInput = ({ method, label, value, onChange, colorClass, additi
   }[colorClass];
 
   return (
-    <div className={`min-w-[250px] bg-white p-4 rounded-xl shadow-sm border ${bgColor} ${borderColor}`}>
-      <h3 className="text-xl font-bold text-gray-800 mb-3">{label.split(' ')[0]}</h3> {/* Extract "เงินสด", "เงินโอน", "บัตรเครดิต" */}
-      <hr className="border-gray-200" />
-      <div className='py-4'>
+    <div className={`min-w-[250px] bg-white p-3 rounded-xl shadow-sm border ${bgColor} ${borderColor}`}>
+      <h3 className="text-base font-bold text-gray-800 mb-1">{label.split(' ')[0]}</h3> {/* Extract "เงินสด", "เงินโอน", "บัตรเครดิต" */}      
+      <div className=''>
         {/* <label className="block text-base font-bold text-gray-700 mb-1">{label}</label> */}
         <input
           type="number"

@@ -67,7 +67,7 @@ const CustomerSection = ({ productSearchRef, clearTrigger, hideCustomerDetails, 
   useEffect(() => {
     // เมื่อมีการทริกเกอร์การล้างข้อมูล
     if (clearTrigger) {
-      console.log('🧹 [CLEAR_TRIGGER] เริ่มล้างข้อมูลลูกค้า');
+
       setIsClearing(true);
       setClearKey(Date.now());
       setPhone('');
@@ -178,7 +178,18 @@ const CustomerSection = ({ productSearchRef, clearTrigger, hideCustomerDetails, 
           setSearchResults([result]);
         } else {
           setSearchResults([]);
-          setFormError('ไม่พบลูกค้าด้วยชื่อนี้');
+          setPendingPhone(true);
+          setShouldShowDetails(true);
+          setName('');
+          setEmail('');
+          setAddress('');
+          setCompanyName('');
+          setTaxId('');
+          setCustomerType('INDIVIDUAL');
+          setTimeout(() => {
+            const nameInput = document.getElementById('customer-name-input');
+            if (nameInput) nameInput.focus();
+          }, 100);
         }
       }
     } catch (error) {
@@ -267,9 +278,17 @@ const CustomerSection = ({ productSearchRef, clearTrigger, hideCustomerDetails, 
   };
 
   return (
-    <div className="bg-white p-4 rounded-xl shadow min-w-[390px] relative">
-      <h2 className="text-xl font-bold text-gray-800 mb-4">ข้อมูลลูกค้า</h2>
-      <div className="flex gap-4 py-2 mb-4">
+    <div className="bg-white p-4  min-w-[390px] relative">
+      <h2 className="text-xl font-bold text-gray-800 mb-4">
+  {(customerType === 'ORGANIZATION' || customerType === 'GOVERNMENT') && companyName
+  
+    ? 'หน่วยงาน'  
+    : 'ข้อมูลลูกค้า'}
+     {/* `หน่วยงาน : ${companyName}` */}
+
+   
+</h2>
+      <div className="flex gap-4 mb-4">
         <label className="flex items-center space-x-2 text-gray-700">
           <input
             type="radio"
@@ -361,7 +380,7 @@ const CustomerSection = ({ productSearchRef, clearTrigger, hideCustomerDetails, 
                 onClick={() => handleSelectCustomer(cust)}
                 className="block w-full text-left px-4 py-2 border-b border-gray-200 last:border-b-0 text-gray-700 hover:bg-blue-100 rounded-sm transition-colors duration-200"
               >
-                {cust.name} ({cust.phone})
+                {(cust.type === 'ORGANIZATION' || cust.type === 'GOVERNMENT') ? cust.companyName : cust.name} ({cust.phone})
               </button>
             ))}
           </ul>
@@ -370,12 +389,7 @@ const CustomerSection = ({ productSearchRef, clearTrigger, hideCustomerDetails, 
 
       {shouldShowCustomerDetails && !hideCustomerDetails && (
         <div className="mt-4 text-lg text-gray-800 bg-blue-50 border border-blue-200 rounded-xl p-4 space-y-3 shadow-md">
-          <p className="font-bold text-blue-800 flex items-center">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h10a2 2 0 002-2V8m-2 0V5a2 2 0 00-2-2H9a2 2 0 00-2 2v3m-2 0h7m-5 0h5M6 12h9M6 16h9" />
-            </svg>
-            รายละเอียดลูกค้า
-          </p>
+        
 
           {searchMode === 'phone' && !selectedCustomer?.id && pendingPhone && (
             <p className="text-orange-700 bg-orange-100 p-2 rounded-md border border-orange-200">
@@ -385,7 +399,7 @@ const CustomerSection = ({ productSearchRef, clearTrigger, hideCustomerDetails, 
 
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             <div className="col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">ประเภทลูกค้า:</label>
+              <label className="block text-base font-bold text-gray-700 mb-1">ประเภทลูกค้า:</label>
               <div className="flex gap-4 text-sm text-gray-800">
                 <label className="flex items-center space-x-2">
                   <input
@@ -460,12 +474,6 @@ const CustomerSection = ({ productSearchRef, clearTrigger, hideCustomerDetails, 
               className="border border-gray-300 px-3 py-2 rounded-md col-span-2 text-gray-800 text-base focus:ring-2 focus:ring-blue-500 shadow-sm"
             />
 
-            {!email && (
-              <p className="text-sm text-gray-500 italic col-span-2">
-                * ลูกค้ารายนี้ยังไม่มีอีเมลในระบบ
-              </p>
-            )}
-
             <textarea
               placeholder="ที่อยู่ (ถ้ามี)"
               value={address}
@@ -482,31 +490,24 @@ const CustomerSection = ({ productSearchRef, clearTrigger, hideCustomerDetails, 
                 className={`px-5 py-2 rounded-md text-white font-semibold transition-colors duration-200 shadow-md ${isModified ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-400 cursor-not-allowed'}`}
               >
                 <span className="flex items-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                    <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.38-2.827-2.828z" />
-                  </svg>
                   อัปเดตข้อมูล
                 </span>
               </button>
             ) : (
-              searchMode === 'phone' && pendingPhone && (
+              !selectedCustomer && pendingPhone && (
                 <div className="flex gap-3">
                   <button
                     onClick={handleConfirmCreateCustomer}
-                    className="px-5 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 font-semibold transition-colors duration-200 shadow-md flex items-center"
+                    className="px-5 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors duration-200 shadow-md flex items-center"
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clipRule="evenodd" />
-                    </svg>
+                 
                     บันทึกลูกค้าใหม่
                   </button>
                   <button
                     onClick={handleCancelCreateCustomer}
-                    className="px-5 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 font-semibold transition-colors duration-200 shadow-md flex items-center"
+                    className="px-5 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600  transition-colors duration-200 shadow-md flex items-center"
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M9.707 10l-4.146 4.146a1 1 0 001.414 1.414L11.414 11l4.146 4.146a1 1 0 001.414-1.414L12.828 10l4.146-4.146a1 1 0 00-1.414-1.414L11.414 9l-4.146-4.146a1 1 0 00-1.414 1.414L9.707 10z" clipRule="evenodd" />
-                    </svg>
+                  
                     ยกเลิก
                   </button>
                 </div>
@@ -520,5 +521,8 @@ const CustomerSection = ({ productSearchRef, clearTrigger, hideCustomerDetails, 
 };
 
 export default CustomerSection;
+
+
+
 
 

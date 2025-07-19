@@ -370,6 +370,8 @@ const CustomerSection = ({ productSearchRef, clearTrigger, hideCustomerDetails, 
         <p className="text-red-600 text-sm mt-2 p-2 bg-red-100 rounded-md border border-red-200">{formError}</p>
       )}
 
+
+     
       {searchMode === 'name' && searchResults.length > 0 && (
         <div className="mt-4 border border-gray-300 rounded-md p-3 bg-gray-50 shadow-sm">
           <p className="font-semibold mb-2 text-gray-800">ผลการค้นหา:</p>
@@ -380,12 +382,14 @@ const CustomerSection = ({ productSearchRef, clearTrigger, hideCustomerDetails, 
                 onClick={() => handleSelectCustomer(cust)}
                 className="block w-full text-left px-4 py-2 border-b border-gray-200 last:border-b-0 text-gray-700 hover:bg-blue-100 rounded-sm transition-colors duration-200"
               >
+           
                 {(cust.type === 'ORGANIZATION' || cust.type === 'GOVERNMENT') ? cust.companyName : cust.name} ({cust.phone})
               </button>
             ))}
           </ul>
         </div>
       )}
+
 
       {shouldShowCustomerDetails && !hideCustomerDetails && (
         <div className="mt-4 text-lg text-gray-800 bg-blue-50 border border-blue-200 rounded-xl p-4 space-y-3 shadow-md">

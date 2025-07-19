@@ -1,206 +1,521 @@
-import React, { useEffect, useRef, useState } from 'react';
+// CustomerSelectorDeposit component
+import React, { useEffect, useRef, useState, useMemo } from 'react';
 import InputMask from 'react-input-mask';
+import useSalesStore from '@/features/sales/store/salesStore';
+import useCustomerDepositStore from '@/features/customerDeposit/store/customerDepositStore';
 import useCustomerStore from '@/features/customer/store/customerStore';
 
-/**
- * Component: CustomerSelectorDeposit
- * วัตถุประสงค์: จัดการการค้นหาและสร้างข้อมูลลูกค้าใหม่
- * โค้ดนี้ได้รับการแก้ไขให้การค้นหาจากชื่อทำงานได้อย่างถูกต้อง และปรับปรุงการจัดการ State ให้มีเสถียรภาพ
- * ฟังก์ชันการอัปเดตข้อมูลลูกค้าถูกตัดออกตามคำขอ
- */
-const CustomerSelectorDeposit = () => {
-  const phoneInputRef = useRef(null);
-  const [searchMode, setSearchMode] = useState('phone');
+// ✨ รับ Prop onSaleModeSelect เพิ่มเข้ามา
+const CustomerSelectorDeposit = ({ productSearchRef, clearTrigger, hideCustomerDetails, onSaleModeSelect }) => {
   const [phone, setPhone] = useState('');
+  const [rawPhone, setRawPhone] = useState('');
+  const [searchMode, setSearchMode] = useState('phone');
   const [nameSearch, setNameSearch] = useState('');
-  const [rawPhone, setRawPhone] = useState(''); // สำหรับเก็บเบอร์โทรเพื่อสร้างลูกค้าใหม่
-
-  const [customerInfo, setCustomerInfo] = useState({ name: '', email: '', address: '', customerType: 'บุคคลทั่วไป' });
-  // const [isModified, setIsModified] = useState(false); // ไม่จำเป็นต้องใช้แล้วเมื่อตัดฟังก์ชันอัปเดต
-
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [address, setAddress] = useState('');
+  // ✨ เปลี่ยนการจัดการ customerType ให้ใช้ค่าที่ตรงกับ Prisma
+  // เพิ่ม 'GOVERNMENT' เข้ามาในตัวเลือก
+  const [customerType, setCustomerType] = useState('INDIVIDUAL'); // 'INDIVIDUAL' | 'ORGANIZATION' | 'GOVERNMENT'
+  const [companyName, setCompanyName] = useState('');
+  const [taxId, setTaxId] = useState('');
+  const [customerLoading, setCustomerLoading] = useState(false);
+  const [formError, setFormError] = useState('');
+  const [pendingPhone, setPendingPhone] = useState(false);
+  const [isModified, setIsModified] = useState(false);
   const [searchResults, setSearchResults] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [selectedCustomer, setSelectedCustomer] = useState(null);
+  const [clearKey, setClearKey] = useState(Date.now());
+  const [isClearing, setIsClearing] = useState(false);
+  const [_shouldShowDetails, _setShouldShowDetails] = useState(false);
+  const phoneInputRef = useRef(null);
+
+  const setShouldShowDetails = (val) => {
+    console.log('🛠️ setShouldShowDetails:', val);
+    _setShouldShowDetails(val);
+  };
 
   const {
-    customer, // customer ที่ถูกเลือกและอยู่ใน store
-    searchCustomerByPhoneAction,
-    searchCustomerByNameAction,
-    createCustomerAction,
-    // updateCustomerProfileAction, // ไม่จำเป็นต้องใช้แล้วเมื่อตัดฟังก์ชันอัปเดต
-    setCustomer: setCustomerToStore,
+    setCustomerDepositAmount,
+    searchCustomerByPhoneAndDepositAction,
+    searchCustomerByNameAndDepositAction,
+    setSelectedDeposit,
+    clearCustomerAndDeposit,
+  } = useCustomerDepositStore();
+
+  const {
+    updateCustomerProfileAction,
+    createCustomerAction
   } = useCustomerStore();
 
-  // Effect นี้จะทำงานเมื่อ customer ใน store เปลี่ยนแปลง
+  const { setCustomerIdAction } = useSalesStore();
+
+  const shouldShowCustomerDetails = useMemo(() => {
+    const result = (!isClearing && (_shouldShowDetails || pendingPhone));
+    console.log('🧮 [COMPUTE] shouldShowCustomerDetails (no hide flag):', result);
+    return result;
+  }, [selectedCustomer, isClearing, _shouldShowDetails]);
+
   useEffect(() => {
-    if (customer) {
-      // ถ้ามี customer ใน store, ให้อัปเดตข้อมูลในฟอร์ม
-      setCustomerInfo({
-        name: customer.name || '',
-        email: customer.email || '',
-        address: customer.address || '',
-        customerType: customer.customerType || 'บุคคลทั่วไป',
-      });
-      setPhone(customer.phone || '');
-      // setIsModified(false); // ไม่จำเป็นต้องใช้แล้ว
-    } else {
-      // ถ้าไม่มี (เช่น กดล้างข้อมูล), ให้รีเซ็ตฟอร์ม
-      setCustomerInfo({ name: '', email: '', address: '', customerType: 'บุคคลทั่วไป' });
+    // กำหนด focus ไปที่ช่องเบอร์โทรศัพท์เมื่อ Component โหลดครั้งแรก
+    const timer = setTimeout(() => {
+      phoneInputRef.current?.focus();
+    }, 300);
+    return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    // เมื่อมีการทริกเกอร์การล้างข้อมูล
+    if (clearTrigger) {
+
+      setIsClearing(true);
+      setClearKey(Date.now());
       setPhone('');
+      setRawPhone('');
+      setName('');
+      setEmail('');
+      setAddress('');
+      setCompanyName('');
+      setTaxId('');
+      setCustomerType('INDIVIDUAL'); // ✨ รีเซ็ตเป็นค่าเริ่มต้น
       setNameSearch('');
       setSearchResults([]);
+      setSelectedCustomer(null);
+      setCustomerDepositAmount(0);
+      setSelectedDeposit(null);
+      setIsModified(false);
+      setFormError('');
+      setPendingPhone(false);
+      setCustomerIdAction(null);
+      clearCustomerAndDeposit();
+      setShouldShowDetails(false);
+      const delay = setTimeout(() => {
+        phoneInputRef.current?.focus();
+        phoneInputRef.current?.select();
+        console.log('🎯 [CLEAR_TRIGGER] Focus เบอร์โทรแล้ว');
+        setIsClearing(false);
+      }, 300);
+      return () => clearTimeout(delay);
     }
-  }, [customer]);
+  }, [clearTrigger, setCustomerIdAction, clearCustomerAndDeposit, setCustomerDepositAmount, setSelectedDeposit]);
 
-  const handleSearch = async () => {
-    setError('');
-    setIsLoading(true);
+  useEffect(() => {
+    if (selectedCustomer && !isClearing) {
+      console.log('📲 [SET_PHONE] กำหนดเบอร์:', selectedCustomer.phone);
+      setPhone(selectedCustomer.phone);
+      setName(selectedCustomer.name || '');
+      setEmail(selectedCustomer.email || '');
+    }
+  }, [selectedCustomer, isClearing]);
+
+  useEffect(() => {
+    if (selectedCustomer && Object.keys(selectedCustomer).length > 0 && !isClearing) {
+      console.log('👁️ [SET_DETAIL_TRUE] แสดงข้อมูลลูกค้า');
+      setShouldShowDetails(true);
+    }
+  }, [selectedCustomer, isClearing]);
+
+  const processSelectedCustomer = (customer) => {
+    setSelectedCustomer(customer);
+    setCustomerIdAction(customer.id);
+    setName(customer.name || '');
+    setEmail(customer.email || '');
+    setAddress(customer.address || '');
+    setCustomerType(customer.type || 'INDIVIDUAL'); // ✨ ใช้ค่า type จาก DB โดยตรง
+    setCompanyName(customer.companyName || ''); // ✨ ดึงข้อมูล companyName
+    setTaxId(customer.taxId || '');
+    setIsModified(false);
+    setIsClearing(false);
     setSearchResults([]);
+    setShouldShowDetails(true);
 
+    // ✨ ปรับ logic ให้เรียก onSaleModeSelect('CASH') ทันที
+    if (typeof onSaleModeSelect === 'function') {
+  onSaleModeSelect('CASH');
+}
+    setTimeout(() => {
+      productSearchRef?.current?.focus();
+    }, 100);
+  };
+
+  const handleVerifyCustomer = async () => {
+    setFormError('');
     try {
+      setCustomerLoading(true);
+      setSelectedCustomer(null);
       if (searchMode === 'phone') {
         const cleanPhone = phone.replace(/-/g, '');
         if (!/^[0-9]{10}$/.test(cleanPhone)) {
-          setError('กรุณากรอกเบอร์โทรให้ถูกต้อง (10 หลัก)');
-          setIsLoading(false);
+          setFormError('กรุณากรอกเบอร์โทรให้ถูกต้อง (10 หลัก)');
+          setCustomerLoading(false);
           return;
         }
         setRawPhone(cleanPhone);
-        await searchCustomerByPhoneAction(cleanPhone);
+        const found = await searchCustomerByPhoneAndDepositAction(cleanPhone);
+        if (found) {
+          processSelectedCustomer(found);
+        } else {
+          setPendingPhone(true);
+          setShouldShowDetails(true);
+          setName('');
+          setEmail('');
+          setAddress('');
+          setCompanyName('');
+          setTaxId('');
+          setCustomerType('INDIVIDUAL'); // ✨ รีเซ็ตเป็นค่าเริ่มต้น
+          setTimeout(() => {
+            const nameInput = document.getElementById('customer-name-input');
+            if (nameInput) nameInput.focus();
+          }, 100);
+        }
+        setSearchResults([]);
       } else {
         if (!nameSearch.trim()) {
-          setError('กรุณากรอกชื่อหรือนามสกุลเพื่อค้นหา');
-          setIsLoading(false);
+          setFormError('กรุณากรอกชื่อหรือนามสกุลเพื่อค้นหา');
+          setCustomerLoading(false);
           return;
         }
-        const results = await searchCustomerByNameAction(nameSearch);
-        setSearchResults(results || []);
-        if (!results || results.length === 0) {
-          setError('ไม่พบลูกค้าด้วยชื่อนี้');
+        const result = await searchCustomerByNameAndDepositAction(nameSearch);
+        if (result) {
+          setSearchResults([result]);
+        } else {
+          setSearchResults([]);
+          setPendingPhone(true);
+          setShouldShowDetails(true);
+          setName('');
+          setEmail('');
+          setAddress('');
+          setCompanyName('');
+          setTaxId('');
+          setCustomerType('INDIVIDUAL');
+          setTimeout(() => {
+            const nameInput = document.getElementById('customer-name-input');
+            if (nameInput) nameInput.focus();
+          }, 100);
         }
       }
-    } catch (err) {
-      setError('เกิดข้อผิดพลาดในการค้นหา');
-      console.error(err);
+    } catch (error) {
+      console.error('ค้นหาลูกค้าไม่สำเร็จ:', error);
+      setFormError('เกิดข้อผิดพลาดในการค้นหาลูกค้า');
     } finally {
-      setIsLoading(false);
+      setCustomerLoading(false);
     }
   };
 
-  const handleSelectCustomer = (cust) => {
-    setCustomerToStore(cust); // ตั้งค่า customer ที่เลือกใน store
-    setSearchResults([]); // เคลียร์ผลการค้นหา
+
+  const handleSelectCustomer = (customer) => {
+    processSelectedCustomer(customer);
   };
 
-  const handleSave = async () => {
-    const payload = { ...customerInfo };
-    // ตัด Logic การอัปเดตออกไป เหลือเพียงการสร้างลูกค้าใหม่
-    // if (customer?.id) { // อัปเดตลูกค้าเดิม
-    //   await updateCustomerProfileAction({ id: customer.id, ...payload });
-    //   alert('อัปเดตข้อมูลลูกค้าสำเร็จ!');
-    //   setIsModified(false);
-    // } else { // สร้างลูกค้าใหม่
-    const newCustomer = await createCustomerAction({ ...payload, phone: rawPhone });
-    if (newCustomer) {
-      setCustomerToStore(newCustomer); // ตั้งค่าลูกค้าใหม่ใน store
-      alert('สร้างลูกค้าใหม่สำเร็จ!');
+  const handleUpdateCustomer = async () => {
+    try {
+      if (!selectedCustomer?.id) return;
+      await updateCustomerProfileAction({
+        id: selectedCustomer.id,
+        name,
+        email,
+        address,
+        type: customerType, // ✨ ส่งค่า type ที่ถูกต้อง
+        companyName,
+        taxId,
+      });
+      setIsModified(false);
+      alert('อัปเดตข้อมูลลูกค้าสำเร็จ!');
+    } catch (error) {
+      console.error('อัปเดตข้อมูลไม่สำเร็จ:', error);
+      alert('อัปเดตข้อมูลลูกค้าไม่สำเร็จ!');
     }
-    // }
   };
 
-  const handleInfoChange = (e) => {
-    const { name, value } = e.target;
-    setCustomerInfo(prev => ({ ...prev, [name]: value }));
-    // setIsModified(true); // ไม่จำเป็นต้องใช้แล้ว
+  const handleConfirmCreateCustomer = async () => {
+    setFormError('');
+    if (!name.trim()) {
+      setFormError('กรุณากรอกชื่อลูกค้า');
+      return;
+    }
+    try {
+      const newCustomer = await createCustomerAction({
+        name,
+        phone: rawPhone,
+        email,
+        address,
+        type: customerType,
+        companyName,
+        taxId,
+      });
+      if (newCustomer?.id) {
+        setSelectedCustomer(newCustomer);
+        setCustomerIdAction(newCustomer.id);
+        setCustomer(newCustomer); // ✅ เพิ่มบรรทัดนี้ เพื่อ set ค่า customer ใน store
+        alert('สร้างลูกค้าใหม่สำเร็จ!');
+        setShouldShowDetails(true);
+        setTimeout(() => {
+          productSearchRef?.current?.focus();
+        }, 100);
+      }
+    } catch (error) {
+      console.error('สร้างลูกค้าไม่สำเร็จ:', error);
+      setFormError('สร้างลูกค้าไม่สำเร็จ: ' + (error.message || 'เกิดข้อผิดพลาด'));
+    }
   };
 
-  const handleModeChange = (mode) => {
-    setSearchMode(mode);
+  
+
+  const handleCancelCreateCustomer = () => {
+    setSelectedCustomer(null);
+    setCustomerIdAction(null);
     setPhone('');
-    setNameSearch('');
-    setError('');
-    setSearchResults([]);
-  };
-
-  const handleClear = () => {
-    // 1. ล้าง State ภายใน Component นี้ทั้งหมด เช่น ช่องค้นหา, ข้อความ error
-    setPhone('');
-    setNameSearch('');
     setRawPhone('');
-    setSearchResults([]);
-    setError('');
-    // setIsModified(false); // ไม่จำเป็นต้องใช้แล้ว
-    // 2. เรียกใช้ Action เพื่อล้าง State ใน Store กลาง
-    setCustomerToStore(null); // Set customer to null to clear it from the store
+    setName('');
+    setEmail('');
+    setAddress('');
+    setCompanyName('');
+    setTaxId('');
+    setCustomerType('INDIVIDUAL'); // ✨ รีเซ็ตเป็นค่าเริ่มต้น
+    setFormError('');
+    setIsModified(false);
+    setPendingPhone(false);
+    setShouldShowDetails(false);
+    phoneInputRef.current?.focus();
   };
 
   return (
-    <div className="bg-white p-6 rounded-xl shadow-lg border w-full">
-      <h2 className="text-2xl font-bold text-black mb-4">ข้อมูลลูกค้า</h2>
-      <div className="flex items-center gap-6 py-2">
-        <label className="p-2 text-black text-lg cursor-pointer">
-          <input type="radio" name="searchMode" checked={searchMode === 'phone'} onChange={() => handleModeChange('phone')} className="mr-2" />
-          ค้นหาจากเบอร์โทร
+    <div className="bg-white p-4  min-w-[390px] relative">
+      <h2 className="text-xl font-bold text-gray-800 mb-4">
+  {(customerType === 'ORGANIZATION' || customerType === 'GOVERNMENT') && companyName
+    ? `หน่วยงาน: ${companyName}`
+    : 'ข้อมูลลูกค้า'}
+</h2>
+      <div className="flex gap-4 mb-4">
+        <label className="flex items-center space-x-2 text-gray-700">
+          <input
+            type="radio"
+            name="searchMode"
+            checked={searchMode === 'name'}
+            onChange={() => setSearchMode('name')}
+            className="form-radio text-blue-600"
+          />
+          <span>ค้นหาจากชื่อ</span>
         </label>
-        <label className="p-2 text-black text-lg cursor-pointer">
-          <input type="radio" name="searchMode" checked={searchMode === 'name'} onChange={() => handleModeChange('name')} className="mr-2" />
-          ค้นหาจากชื่อ
+        <label className="flex items-center space-x-2 text-gray-700">
+          <input
+            type="radio"
+            name="searchMode"
+            checked={searchMode === 'phone'}
+            onChange={() => setSearchMode('phone')}
+            className="form-radio text-blue-600"
+          />
+          <span>ค้นหาจากเบอร์โทร</span>
         </label>
       </div>
-      <div className="flex flex-wrap items-start gap-3">
-        <div className="flex-grow min-w-[250px]">
-          {searchMode === 'phone' ? (
-            <InputMask mask="099-999-9999" value={phone} onChange={(e) => setPhone(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSearch()}>
-              {(inputProps) => <input {...inputProps} ref={phoneInputRef} type="tel" placeholder="เบอร์โทรลูกค้า (0xx-xxx-xxxx)" className="border rounded-md px-3 py-2 w-full text-black text-lg" />}
-            </InputMask>
+
+      <div className="flex flex-col md:flex-row items-start md:items-center gap-3 md:gap-4 mb-4">
+        {searchMode === 'phone' ? (
+          <InputMask
+            key={clearKey}
+            mask="099-999-9999"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleVerifyCustomer()}
+          >
+            {(inputProps) => (
+              <input
+                {...inputProps}
+                ref={phoneInputRef}
+                id="customer-phone-input"
+                type="tel"
+                placeholder="เบอร์โทรลูกค้า (0xx-xxx-xxxx)"
+                className="border border-gray-300 rounded-md px-3 py-2 w-full text-gray-800 text-lg focus:ring-2 focus:ring-blue-500 shadow-sm"
+              />
+            )}
+          </InputMask>
+        ) : (
+          <input
+            type="text"
+            placeholder="ค้นหาชื่อลูกค้าหรือนามสกุล"
+            value={nameSearch}
+            onChange={(e) => setNameSearch(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleVerifyCustomer()}
+            className="border border-gray-300 rounded-md px-3 py-2 w-full text-gray-800 text-base focus:ring-2 focus:ring-blue-500 shadow-sm"
+          />
+        )}
+        <button
+          onClick={handleVerifyCustomer}
+          disabled={
+            (searchMode === 'phone' && !phone) ||
+            (searchMode === 'name' && !nameSearch.trim()) ||
+            customerLoading
+          }
+          className="w-full md:w-auto px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-lg shadow-md flex items-center justify-center"
+        >
+          {customerLoading ? (
+            <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
           ) : (
-            <input type="text" placeholder="ค้นหาชื่อลูกค้าหรือนามสกุล" value={nameSearch} onChange={(e) => setNameSearch(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSearch()} className="border rounded-md px-3 py-2 w-full text-black text-lg" />
+            <>
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 002 8z" clipRule="evenodd" />
+              </svg>
+              ค้นหา
+            </>
           )}
-        </div>
-        <button onClick={handleSearch} disabled={isLoading} className="px-6 py-2 bg-green-500 text-blue-900 font-semibold rounded-md hover:bg-green-600 disabled:opacity-50 text-lg flex-shrink-0">
-          {isLoading ? 'กำลังค้นหา...' : 'ค้นหา'}
-        </button>
-        <button onClick={handleClear} className="px-6 py-2 bg-gray-300 text-black font-semibold rounded-md hover:bg-gray-400 text-lg flex-shrink-0">
-          ล้างข้อมูล
         </button>
       </div>
-      {error && <div className="bg-red-100 text-red-700 border border-red-300 px-4 py-2 rounded text-lg mt-4">⚠️ {error}</div>}
-      
-      {searchResults.length > 0 && (
-        <div className="mt-4 border border-gray-300 rounded-lg p-3 text-black bg-gray-50">
-          <p className="font-semibold mb-2">ผลการค้นหา:</p>
+
+      {formError && (
+        <p className="text-red-600 text-sm mt-2 p-2 bg-red-100 rounded-md border border-red-200">{formError}</p>
+      )}
+
+
+     
+      {searchMode === 'name' && searchResults.length > 0 && (
+        <div className="mt-4 border border-gray-300 rounded-md p-3 bg-gray-50 shadow-sm">
+          <p className="font-semibold mb-2 text-gray-800">ผลการค้นหา:</p>
           <ul className="space-y-1">
             {searchResults.map((cust) => (
-              <li key={cust.id} onClick={() => handleSelectCustomer(cust)} className="cursor-pointer hover:bg-blue-100 p-2 rounded-md">
-                {cust.name} ({cust.phone})
-              </li>
+              <button
+                key={cust.id}
+                onClick={() => handleSelectCustomer(cust)}
+                className="block w-full text-left px-4 py-2 border-b border-gray-200 last:border-b-0 text-gray-700 hover:bg-blue-100 rounded-sm transition-colors duration-200"
+              >
+           
+                {(cust.type === 'ORGANIZATION' || cust.type === 'GOVERNMENT') ? cust.companyName : cust.name} ({cust.phone})
+              </button>
             ))}
           </ul>
         </div>
       )}
-      {/* แสดงฟอร์มสร้างลูกค้าใหม่เมื่อยังไม่มีลูกค้าถูกเลือก หรือเมื่อมีการค้นหาเบอร์โทรแล้วไม่พบ */}
-      {(!customer || (customer && !customer.id)) && (
-          <div className="mt-6 pt-4 border-t-2 border-dashed text-lg text-black bg-white space-y-4">
-            <p className="text-xl font-bold text-gray-800">📋 <strong>สร้างลูกค้าใหม่ (เบอร์: {rawPhone || 'ยังไม่มี'})</strong></p>
-            <input type="text" placeholder="ชื่อ" name="name" value={customerInfo.name} onChange={handleInfoChange} className="border px-3 py-2 rounded-md w-full text-black text-base" />
-            <input type="email" placeholder="อีเมล (ถ้ามี)" name="email" value={customerInfo.email} onChange={handleInfoChange} className="border px-3 py-2 rounded-md w-full text-black text-base" />
-            <textarea placeholder="ที่อยู่ (ถ้ามี)" name="address" value={customerInfo.address} onChange={handleInfoChange} className="border px-3 py-2 rounded-md w-full text-black text-base" rows="3" />
-            <div className="pt-2 flex justify-end">
-              <button onClick={handleSave} disabled={!rawPhone || !customerInfo.name} className={`px-6 py-2 text-white font-semibold rounded-lg text-lg transition-colors ${rawPhone && customerInfo.name ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-400 cursor-not-allowed'}`}>
-                บันทึกลูกค้าใหม่
-              </button>
+
+
+      {shouldShowCustomerDetails && !hideCustomerDetails && (
+        <div className="mt-4 text-lg text-gray-800 bg-blue-50 border border-blue-200 rounded-xl p-4 space-y-3 shadow-md">
+        
+
+          {searchMode === 'phone' && !selectedCustomer?.id && pendingPhone && (
+            <p className="text-orange-700 bg-orange-100 p-2 rounded-md border border-orange-200">
+              ไม่พบลูกค้าด้วยเบอร์: <strong>{phone}</strong> คุณต้องการสร้างลูกค้าใหม่หรือไม่?
+            </p>
+          )}
+
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            <div className="col-span-2">
+              <label className="block text-base font-bold text-gray-700 mb-1">ประเภทลูกค้า:</label>
+              <div className="flex gap-4 text-sm text-gray-800">
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="radio"
+                    name="customerType"
+                    value="INDIVIDUAL"
+                    className="form-radio text-blue-600"
+                    checked={customerType === 'INDIVIDUAL'}
+                    onChange={() => setCustomerType('INDIVIDUAL')}
+                  />
+                  <span>บุคคลทั่วไป</span>
+                </label>
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="radio"
+                    name="customerType"
+                    value="ORGANIZATION"
+                    className="form-radio text-blue-600"
+                    checked={customerType === 'ORGANIZATION'}
+                    onChange={() => setCustomerType('ORGANIZATION')}
+                  />
+                  <span>นิติบุคคล</span>
+                </label>
+                {/* ✨ เพิ่มตัวเลือก "หน่วยงาน" เข้ามา */}
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="radio"
+                    name="customerType"
+                    value="GOVERNMENT"
+                    className="form-radio text-blue-600"
+                    checked={customerType === 'GOVERNMENT'}
+                    onChange={() => setCustomerType('GOVERNMENT')}
+                  />
+                  <span>หน่วยงาน</span>
+                </label>
+              </div>
             </div>
+
+            {(customerType === 'ORGANIZATION' || customerType === 'GOVERNMENT') && (
+              <>
+                <input
+                  type="text"
+                  placeholder="ชื่อบริษัท / หน่วยงาน"
+                  value={companyName}
+                  onChange={(e) => { setCompanyName(e.target.value); setIsModified(true); }}
+                  className="border border-gray-300 px-3 py-2 rounded-md col-span-2 text-gray-800 text-base focus:ring-2 focus:ring-blue-500 shadow-sm"
+                />
+                <input
+                  type="text"
+                  placeholder="เลขผู้เสียภาษี (ถ้ามี)"
+                  value={taxId}
+                  onChange={(e) => { setTaxId(e.target.value); setIsModified(true); }}
+                  className="border border-gray-300 px-3 py-2 rounded-md col-span-2 text-gray-800 text-base focus:ring-2 focus:ring-blue-500 shadow-sm"
+                />
+              </>
+            )}
+
+            <input
+              type="text"
+              id="customer-name-input"
+              placeholder="ชื่อลูกค้า / ผู้ติดต่อ"
+              value={name}
+              onChange={(e) => { setName(e.target.value); setIsModified(true); }}
+              className="border border-gray-300 px-3 py-2 rounded-md col-span-2 text-gray-800 text-base focus:ring-2 focus:ring-blue-500 shadow-sm"
+            />
+
+            <input
+              type="email"
+              placeholder="อีเมล (ถ้ามี)"
+              value={email}
+              onChange={(e) => { setEmail(e.target.value); setIsModified(true); }}
+              className="border border-gray-300 px-3 py-2 rounded-md col-span-2 text-gray-800 text-base focus:ring-2 focus:ring-blue-500 shadow-sm"
+            />
+
+            <textarea
+              placeholder="ที่อยู่ (ถ้ามี)"
+              value={address}
+              onChange={(e) => { setAddress(e.target.value); setIsModified(true); }}
+              className="border border-gray-300 px-3 py-2 rounded-md col-span-2 text-gray-800 text-base focus:ring-2 focus:ring-blue-500 shadow-sm min-h-[80px]"
+            />
           </div>
-      )}
-      {/* แสดงรายละเอียดลูกค้าที่ถูกเลือก หากมี */}
-      {customer && customer.id && (
-        <div className="mt-6 pt-4 border-t-2 border-dashed text-lg text-black bg-white space-y-4">
-          <p className="text-xl font-bold text-gray-800">📋 <strong>รายละเอียดลูกค้า</strong></p>
-          <p><strong>ชื่อ:</strong> {customer.name}</p>
-          <p><strong>เบอร์โทร:</strong> {customer.phone}</p>
-          <p><strong>อีเมล:</strong> {customer.email || '-'}</p>
-          <p><strong>ที่อยู่:</strong> {customer.address || '-'}</p>
-          <p><strong>ประเภทลูกค้า:</strong> {customer.customerType || 'บุคคลทั่วไป'}</p>
+
+          <div className="pt-2 flex gap-3 justify-end">
+            {selectedCustomer ? (
+              <button
+                onClick={handleUpdateCustomer}
+                disabled={!isModified}
+                className={`px-5 py-2 rounded-md text-white font-semibold transition-colors duration-200 shadow-md ${isModified ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-400 cursor-not-allowed'}`}
+              >
+                <span className="flex items-center">
+                  อัปเดตข้อมูล
+                </span>
+              </button>
+            ) : (
+              !selectedCustomer && pendingPhone && (
+                <div className="flex gap-3">
+                  <button
+                    onClick={handleConfirmCreateCustomer}
+                    className="px-5 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors duration-200 shadow-md flex items-center"
+                  >
+                 
+                    บันทึกลูกค้าใหม่
+                  </button>
+                  <button
+                    onClick={handleCancelCreateCustomer}
+                    className="px-5 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600  transition-colors duration-200 shadow-md flex items-center"
+                  >
+                  
+                    ยกเลิก
+                  </button>
+                </div>
+              )
+            )}
+          </div>
         </div>
       )}
     </div>
@@ -208,3 +523,11 @@ const CustomerSelectorDeposit = () => {
 };
 
 export default CustomerSelectorDeposit;
+
+
+
+
+
+
+
+

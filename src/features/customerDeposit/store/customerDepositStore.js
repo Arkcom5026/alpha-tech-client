@@ -190,6 +190,27 @@ const useCustomerDepositStore = create((set) => ({
     }
   },
 
+  // ACTION: Load by Phone
+  loadCustomerDepositByPhoneAction: async (phone) => {
+    try {
+      const res = await getCustomerAndDepositByPhone(phone);
+      const customer = res?.customer;
+      const deposit = res?.totalDeposit || 0;
+      const deposits = res?.deposits || [];
+      if (customer) {
+        set({
+          selectedCustomer: customer,
+          customerDepositAmount: deposit,
+          selectedDeposit: deposits.length > 0 ? deposits[0] : null,
+          deposits,
+        });
+      }
+    } catch (err) {
+      console.error('❌ loadCustomerDepositByPhoneAction error:', err);
+      set({ error: err });
+    }
+  },
+
   // ACTION: Reset All
   resetAllDepositState: () => set({
     isSubmitting: false,
@@ -206,3 +227,5 @@ const useCustomerDepositStore = create((set) => ({
 }));
 
 export default useCustomerDepositStore;
+
+

@@ -65,7 +65,7 @@ export const getSaleReturns = async () => {
 // ✅ New: Update customer profile via token (no :id in URL)
 export const updateCustomer = async (data) => {
   try {
-    const res = await apiClient.put('/customers/profile', data);
+    const res = await apiClient.patch('/customers/me', data);
     return res.data;
   } catch (err) {
     console.error('❌ [updateCustomer]', err);

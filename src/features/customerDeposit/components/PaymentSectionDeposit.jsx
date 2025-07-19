@@ -44,7 +44,7 @@ const PaymentSectionDeposit = () => {
   // State สำหรับจัดการข้อผิดพลาดในการส่งข้อมูล
   const [submitError, setSubmitError] = useState('');
 
-  const { customer } = useCustomerStore();
+  const { selectedCustomer: customer } = useCustomerDepositStore();
   const { createCustomerDepositAction, isSubmitting } = useCustomerDepositStore();
 
   // คำนวณยอดรวมทั้งหมด
@@ -67,6 +67,11 @@ const PaymentSectionDeposit = () => {
 
     try {
       await createCustomerDepositAction({
+        paymentMethod: {
+          cash: isCashEnabled,
+          transfer: isTransferEnabled,
+          card: isCardEnabled,
+        },
         customerId: customer.id,
         cashAmount: isCashEnabled ? (Number(cashAmount) || 0) : 0,
         transferAmount: isTransferEnabled ? (Number(transferAmount) || 0) : 0,
@@ -80,7 +85,12 @@ const PaymentSectionDeposit = () => {
       setIsCashEnabled(true);
       setIsTransferEnabled(false);
       setIsCardEnabled(false);
-      alert('บันทึกเงินมัดจำสำเร็จ!'); // แจ้งเตือนผู้ใช้
+      // โหลดข้อมูลใหม่หลังบันทึก เพื่อให้ยอดอัปเดต
+      if (customer?.phone) {
+        const { loadCustomerDepositByPhoneAction } = useCustomerDepositStore.getState();
+        loadCustomerDepositByPhoneAction(customer.phone);
+      }
+      setSubmitError('✅ บันทึกเงินมัดจำสำเร็จ!'); // แจ้งเตือนผู้ใช้
     } catch (error) {
       console.error('Failed to submit deposit:', error);
       setSubmitError('เกิดข้อผิดพลาดในการบันทึกเงินมัดจำ กรุณาลองอีกครั้ง'); // แสดงข้อผิดพลาดที่เข้าใจง่าย
@@ -95,31 +105,17 @@ const PaymentSectionDeposit = () => {
 
   return (
     <div className="bg-white p-6 rounded-xl shadow-lg border w-full">
-      <h2 className="text-2xl font-bold text-gray-800 mb-4">ระบุยอดเงินมัดจำ</h2>
       
       {/* Checkbox Controls สำหรับเปิด/ปิดช่องทางการชำระเงิน */}
-      <div className="flex items-center gap-6 border-b pb-4 mb-4 text-gray-700">
-        <label className="flex items-center text-lg cursor-pointer">
-          <input type="checkbox" checked={isCashEnabled} onChange={() => setIsCashEnabled(!isCashEnabled)} className="form-checkbox h-5 w-5 mr-2" />
-          เงินสด
-        </label>
-        <label className="flex items-center text-lg cursor-pointer">
-          <input type="checkbox" checked={isTransferEnabled} onChange={() => setIsTransferEnabled(!isTransferEnabled)} className="form-checkbox h-5 w-5 mr-2" />
-          เงินโอน
-        </label>
-        <label className="flex items-center text-lg cursor-pointer">
-          <input type="checkbox" checked={isCardEnabled} onChange={() => setIsCardEnabled(!isCardEnabled)} className="form-checkbox h-5 w-5 mr-2" />
-          บัตรเครดิต
-        </label>
-      </div>
+      
 
       {/* Grid Layout สำหรับช่องกรอกเงินและสรุปยอด */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         {/* Payment Inputs Area (ส่วนกรอกจำนวนเงิน) */}
         <div className="space-y-4">
-          {isCashEnabled && <PaymentMethodInput title="เงินสด" value={cashAmount} onChange={setCashAmount} placeholder="0.00" />}
-          {isTransferEnabled && <PaymentMethodInput title="เงินโอน" value={transferAmount} onChange={setTransferAmount} placeholder="0.00" />}
-          {isCardEnabled && <PaymentMethodInput title="บัตรเครดิต" value={cardAmount} onChange={setCardAmount} placeholder="0.00" />}
+          <PaymentMethodInput title="เงินสด" value={cashAmount} onChange={setCashAmount} placeholder="0.00" />
+          <PaymentMethodInput title="เงินโอน" value={transferAmount} onChange={setTransferAmount} placeholder="0.00" />
+          <PaymentMethodInput title="บัตรเครดิต" value={cardAmount} onChange={setCardAmount} placeholder="0.00" />
         </div>
 
         {/* Summary and Submit Area (ส่วนสรุปยอดและปุ่มบันทึก) */}
@@ -127,9 +123,9 @@ const PaymentSectionDeposit = () => {
           <div>
             <h3 className="text-xl font-bold text-gray-900 mb-3">สรุปยอด</h3>
             <div className="space-y-2 text-gray-700 text-lg">
-              {isCashEnabled && <div className="flex justify-between"><span>เงินสด:</span> <span className="font-semibold">{formatNumber(cashAmount)}</span></div>}
-              {isTransferEnabled && <div className="flex justify-between"><span>เงินโอน:</span> <span className="font-semibold">{formatNumber(transferAmount)}</span></div>}
-              {isCardEnabled && <div className="flex justify-between"><span>บัตรเครดิต:</span> <span className="font-semibold">{formatNumber(cardAmount)}</span></div>}
+              <div className="flex justify-between"><span>เงินสด:</span> <span className="font-semibold">{formatNumber(cashAmount)}</span></div>
+              <div className="flex justify-between"><span>เงินโอน:</span> <span className="font-semibold">{formatNumber(transferAmount)}</span></div>
+              <div className="flex justify-between"><span>บัตรเครดิต:</span> <span className="font-semibold">{formatNumber(cardAmount)}</span></div>
             </div>
             <hr className="my-4" />
             <div className="flex justify-between items-center text-2xl font-bold text-blue-600">
@@ -148,7 +144,7 @@ const PaymentSectionDeposit = () => {
               onClick={handleSubmit}
               className="w-full mt-6 px-4 py-4 bg-blue-600 text-white font-bold text-lg rounded-lg hover:bg-blue-700 disabled:bg-gray-400 transition-all"
           >
-              {isSubmitting ? 'กำลังบันทึก...' : '💾 บันทึกเงินมัดจำ'}
+              {isSubmitting ? 'กำลังบันทึก...' : 'บันทึกเงินมัดจำ'}
           </button>
         </div>
       </div>
@@ -157,3 +153,7 @@ const PaymentSectionDeposit = () => {
 };
 
 export default PaymentSectionDeposit;
+
+
+
+

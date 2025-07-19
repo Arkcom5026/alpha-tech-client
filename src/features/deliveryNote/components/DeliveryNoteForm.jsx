@@ -1,4 +1,5 @@
 // ✅ DeliveryNoteForm ปรับโครงสร้างให้ตรงกับ BillLayoutFullTax 100%
+import { concat } from 'lodash';
 import React from 'react';
 
 const DeliveryNoteForm = ({ sale, saleItems, payments, config, hideDate, setHideDate, showDateLine }) => {
@@ -15,18 +16,25 @@ const DeliveryNoteForm = ({ sale, saleItems, payments, config, hideDate, setHide
     return `${day} ${thMonths[month]} ${year}`;
   };
 
-  const formatCurrency = (val) => parseFloat(val || 0).toFixed(2);
+  const formatCurrency = (val) => {
+    const num = parseFloat(val || 0);
+    return num.toFixed(2);
+  };
 
-  const discount = typeof sale.totalDiscount === 'number' ? sale.totalDiscount : 0;
+  const vatRate = typeof sale.vatRate === 'number' ? sale.vatRate : 7;
+
+  // ✅ รวมราคาสินค้าหลังหักส่วนลดแต่ละรายการ
   const computedTotal = saleItems.reduce((sum, item) => {
     const price = typeof item.price === 'number' ? item.price : 0;
+    const discount = typeof item.discount === 'number' ? item.discount : 0;
     const quantity = typeof item.quantity === 'number' ? item.quantity : 0;
-    return sum + price * quantity;
+    const netUnitPrice = price - discount;
+    return sum + netUnitPrice * quantity;
   }, 0);
-  const total = computedTotal - discount;
-  const vatRate = typeof sale.vatRate === 'number' ? sale.vatRate : 7;
-  const vatAmount = typeof sale.vat === 'number' ? sale.vat : (total - total / (1 + vatRate / 100));
-  const beforeVat = total - vatAmount;
+
+  const total = computedTotal;
+  const beforeVat = total / (1 + vatRate / 100);
+  const vatAmount = total - beforeVat;
 
   const maxRowCount = 20;
   const emptyRowCount = Math.max(maxRowCount - saleItems.length, 0);
@@ -40,7 +48,6 @@ const DeliveryNoteForm = ({ sale, saleItems, payments, config, hideDate, setHide
 
   return (
     <>
-      
       <div className="w-full max-w-[794px] mx-auto mb-4 text-right print:hidden">
         <label className="inline-flex items-center gap-2 px-5 text-sm">
           <input
@@ -86,19 +93,18 @@ const DeliveryNoteForm = ({ sale, saleItems, payments, config, hideDate, setHide
             <p>โทร: {sale.customer?.phone || '-'}</p>
             <p>เลขประจำตัวผู้เสียภาษี: {sale.customer?.taxId || '-'}</p>
           </div>
-        
+
           <div className="border border-black p-2 rounded-lg space-y-1">
             <p>
               วันที่: {hideDate ? (
                 <span className="inline-block border-b border-black w-[120px] h-[18px] align-bottom" />
               ) : formatThaiDate(sale.soldAt)}
             </p>
-            
+
             <p>เลขที่: {sale.code}</p>
             <p>เงื่อนไขการชำระเงิน: {sale.paymentTerms || '-'}</p>
             <p>วันที่ครบกำหนด: {sale.dueDate ? formatThaiDate(sale.dueDate) : '-'}</p>
           </div>
-          
         </div>
 
         {/* Table */}
@@ -114,18 +120,26 @@ const DeliveryNoteForm = ({ sale, saleItems, payments, config, hideDate, setHide
             </tr>
           </thead>
           <tbody>
-            {saleItems.map((item, index) => (
-              <tr key={item.id}>
-                <td className="border border-black px-1 text-center h-[28px]">{index + 1}</td>
-                <td className="border border-black px-1 h-[28px]">
-                  {item.productName} {item.productModel ? `(${item.productModel})` : ''}
-                </td>
-                <td className="border border-black px-1 text-center h-[28px]">{item.quantity}</td>
-                <td className="border border-black px-1 text-center h-[28px]">{item.unit || '-'}</td>
-                <td className="border border-black px-1 text-right h-[28px]">{formatCurrency(item.price)}</td>
-                <td className="border border-black px-1 text-right h-[28px]">{formatCurrency(item.price * item.quantity)}</td>
-              </tr>
-            ))}
+            {saleItems.map((item, index) => {
+              const price = typeof item.price === 'number' ? item.price : 0;
+              const discount = typeof item.discount === 'number' ? item.discount : 0;
+              const quantity = typeof item.quantity === 'number' ? item.quantity : 0;
+              const netUnitPrice = price - discount;
+              const unitPriceBeforeVat = netUnitPrice / (1 + vatRate / 100);
+              const amountBeforeVat = unitPriceBeforeVat * quantity;
+              return (
+                <tr key={item.id}>
+                  <td className="border border-black px-1 text-center h-[28px]">{index + 1}</td>
+                  <td className="border border-black px-1 h-[28px]">
+                    {item.productName} {item.productModel ? `(${item.productModel})` : ''}
+                  </td>
+                  <td className="border border-black px-1 text-center h-[28px]">{quantity}</td>
+                  <td className="border border-black px-1 text-center h-[28px]">{item.unit || '-'}</td>
+                  <td className="border border-black px-1 text-right h-[28px]">{formatCurrency(unitPriceBeforeVat)}</td>
+                  <td className="border border-black px-1 text-right h-[28px]">{formatCurrency(amountBeforeVat)}</td>
+                </tr>
+              );
+            })}
             {[...Array(emptyRowCount)].map((_, idx) => (
               <tr key={`empty-${idx}`}>
                 <td className="border border-black px-1 text-center h-[28px]">&nbsp;</td>

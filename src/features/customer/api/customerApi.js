@@ -25,7 +25,7 @@ export const createCustomer = async (data) => {
 // ✅ อัปเดตข้อมูลลูกค้า (name, address, email) แบบใหม่จาก token
 export const updateCustomer = async (data) => {
   try {
-    const res = await apiClient.put('/customers/profile', data);
+    const res = await apiClient.patch('/customers/me', data);
     return res.data;
   } catch (error) {
     console.error('❌ [updateCustomer] error:', error);

@@ -35,6 +35,7 @@ const PaymentSummary = ({ totalToPay, grandTotalPaid, safeChangeAmount, isConfir
           <div className="text-center py-0">
             <p className="text-3xl font-bold text-purple-700 mb-4">ยอดเครดิต/หน่วยงาน</p>
             <p className="text-xl text-gray-600">ยอดรวม: {totalToPay.toLocaleString(undefined, { maximumFractionDigits: 2 })} ฿</p>
+            <p className='py-8'></p>
           </div>
         )}
       </div>
@@ -51,7 +52,7 @@ const PaymentSummary = ({ totalToPay, grandTotalPaid, safeChangeAmount, isConfir
           type="checkbox"
           checked={currentSaleMode === 'CREDIT'}
           onChange={(e) => setCurrentSaleMode(e.target.checked ? 'CREDIT' : 'CASH')}
-          className="form-checkbox h-5 w-5 text-purple-600 rounded"
+          className="form-checkbox h-4 w-4 text-purple-600 rounded"
         />
         เครดิต/หน่วยงาน
       </label>
@@ -61,17 +62,18 @@ const PaymentSummary = ({ totalToPay, grandTotalPaid, safeChangeAmount, isConfir
         {currentSaleMode === 'CASH' && ( // ✨ ซ่อน BillPrintOptions เมื่อเป็น CREDIT
           <BillPrintOptions saleOption={saleOption} setSaleOption={setSaleOption} hideNoneOption={true} />
         )}
+        
         {currentSaleMode === 'CREDIT' && ( // ✨ แสดงตัวเลือกการพิมพ์สำหรับ CREDIT
 
-          <div className="p-0 rounded-xl shadow-sm flex items-center space-x-6">
-            <label className="flex items-center space-x-2">
+          <div className="flex justify-center space-x-6">
+            <label className="flex items-center space-x-2 ">
               <input
                 type="radio"
                 name="saleOptionCredit"
                 value="NONE"
                 checked={saleOption === 'NONE'}
                 onChange={() => setSaleOption('NONE')}
-                className="form-radio text-gray-600 w-5 h-5"
+                className="form-radio text-gray-600 w-4 h-4"
               />
               <span>ไม่พิมพ์เอกสาร</span>
             </label>
@@ -83,7 +85,7 @@ const PaymentSummary = ({ totalToPay, grandTotalPaid, safeChangeAmount, isConfir
                 value="DELIVERY_NOTE"
                 checked={saleOption === 'DELIVERY_NOTE'}
                 onChange={() => setSaleOption('DELIVERY_NOTE')}
-                className="form-radio text-blue-600 w-5 h-5"
+                className="form-radio text-blue-600 w-4 h-4"
               />
               <span>พิมพ์ใบส่งสินค้า</span>
             </label>

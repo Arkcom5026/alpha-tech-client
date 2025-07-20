@@ -15,6 +15,7 @@ const useSupplierStore = create((set) => ({
   supplierError: null,
   isSupplierLoading: false,
 
+
   // ✅ โหลด supplier ทั้งหมด
   fetchSuppliersAction: async () => {
     const branchId = useBranchStore.getState().selectedBranchId;
@@ -22,13 +23,16 @@ const useSupplierStore = create((set) => ({
     try {
       const data = await getAllSuppliers({ branchId });
       // ✅ เรียงตามตัวอักษร A-Z
+      
       const sorted = [...data].sort((a, b) => a.name.localeCompare(b.name));
+      console.log('fetchSuppliersAction : ',sorted)
       set({ suppliers: sorted });
     } catch (err) {
       console.error('❌ fetchAllSuppliersAction error:', err);
       set({ error: err });
     }
   },
+
 
   // ✅ โหลด supplier รายตัว (ใช้ในหน้า detail/payment)
   fetchSupplierByIdAction: async (id) => {

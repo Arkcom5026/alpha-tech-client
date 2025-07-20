@@ -16,15 +16,10 @@ const ListReceiptPaymentsSupplierPage = () => {
     });
   };
 
-  // ✅ FIX: Updated filtering logic with new condition
+  // ✅ เงื่อนไขใหม่: แสดงเฉพาะ Supplier ที่ creditBalance > 0
   const filteredSuppliers = suppliers.filter((s) => {
-    const creditLimit = Number(s.creditLimit || 0);
-    const creditRemaining = Number(s.creditRemaining || 0);
-    // เงื่อนไข:
-    // 1. เครดิตทั้งหมด (creditLimit) > 0
-    // 2. เครดิตคงเหลือ (creditRemaining) > 0
-    // 3. ยอดที่ใช้ไป (creditLimit - creditRemaining) > 0 ซึ่งหมายถึงมียอดค้างชำระ
-    return creditLimit > 0 && creditRemaining > 0 && (creditLimit - creditRemaining > 0);
+    const creditBalance = Number(s.creditBalance ?? 0);
+    return creditBalance > 0;
   });
 
   return (
@@ -59,10 +54,10 @@ const ListReceiptPaymentsSupplierPage = () => {
                     <td className="border px-4 py-2">{s.name}</td>
                     <td className="border px-4 py-2 text-center">{s.phone}</td>
                     <td className="border px-4 py-2 text-right">
-                      {s.creditLimit != null ? s.creditLimit.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}
+                      {s.creditLimit != null ? Number(s.creditLimit).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}
                     </td>
-                    <td className="border px-4 py-2 text-right text-red-600 font-semibold">
-                      {s.creditRemaining != null ? s.creditRemaining.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}
+                    <td className={`border px-4 py-2 text-right font-semibold ${Number(s.creditBalance) < 0 ? 'text-red-600' : ''}`}>
+                      {s.creditBalance != null ? Number(s.creditBalance).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}
                     </td>
                     <td className="border px-4 py-2 text-center">
                       <button

@@ -1,22 +1,21 @@
-// -----------------------
-// BillLayoutShortTax.jsx (ปรับสมบูรณ์: รองรับพิมพ์จาก QuickSalePage + ListPage + Refresh)
-// -----------------------
 import React from 'react';
 
-const BillLayoutShortTax = ({ sale, saleItems, payments, config }) => {
+const BillLayoutShortTax = ({ sale, saleItems, payments, config, hideContactName }) => {
   if (!sale || !saleItems || !payments || !config) return null;
 
-  const discount = typeof sale.totalDiscount === 'number' ? sale.totalDiscount : 0;
   const computedTotal = saleItems.reduce((sum, item) => {
     const price = typeof item.price === 'number' ? item.price : 0;
     const quantity = typeof item.quantity === 'number' ? item.quantity : 0;
     return sum + price * quantity;
   }, 0);
 
-  const total = computedTotal - discount;
+  // ✅ ราคาสินค้ารวม VAT แล้ว → ไม่ต้องลบส่วนลดอีก
+  const total = computedTotal;
   const vatRate = typeof config.vatRate === 'number' ? config.vatRate : 7;
-  const vatAmount = total - total / (1 + vatRate / 100);
-  const beforeVat = total - vatAmount;
+
+  const beforeVat = total / (1 + vatRate / 100);
+  const vatAmount = total - beforeVat;
+
   const formatCurrency = (val) => parseFloat(val || 0).toFixed(2);
   const handlePrint = () => window.print();
 
@@ -55,7 +54,8 @@ const BillLayoutShortTax = ({ sale, saleItems, payments, config }) => {
         <p>เลขที่: {sale.code}</p>
         <p>วันที่: {new Date(sale.createdAt).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' })}</p>
         <p>พนักงานขาย: {sale.employee?.name || '-'}</p>
-        <p>ลูกค้า: {sale.customer?.name || '-'}</p>
+        <p>หน่วยงาน: {sale.customer?.companyName || '-'}</p>
+        {!hideContactName && <p>ลูกค้า: {sale.customer?.name || '-'}</p>}
       </div>
 
       <table className="w-full text-sm border-t border-b border-gray-300 mb-4">
@@ -69,7 +69,10 @@ const BillLayoutShortTax = ({ sale, saleItems, payments, config }) => {
         <tbody>
           {saleItems.map((item) => (
             <tr key={item.id} className="border-b border-dashed">
-              <td className="py-1">{item.productName}</td>
+              <td className="py-1">
+                {item.productName}
+                {item.model && <span className="text-xs text-gray-800"> ({item.model})</span>}
+              </td>
               <td className="text-right py-1">{item.quantity}</td>
               <td className="text-right py-1">{formatCurrency(item.price * item.quantity)} ฿</td>
             </tr>
@@ -85,7 +88,6 @@ const BillLayoutShortTax = ({ sale, saleItems, payments, config }) => {
       </div>
 
       <div className="mt-6 text-sm space-y-1">
-        <p>ช่องทางชำระเงิน: {payments.map(p => `${p.paymentMethod}: ${formatCurrency(p.amount)} ฿`).join(', ')}</p>
         {sale.note && <p>หมายเหตุ: {sale.note}</p>}
       </div>
     </div>

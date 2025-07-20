@@ -1,3 +1,5 @@
+// supplierPaymentApi.js
+
 import apiClient from '@/utils/apiClient';
 
   // ✅ สร้างการชำระเงินให้ Supplier
@@ -52,6 +54,17 @@ export const deleteSupplierPayment = async (paymentId) => {
   } catch (err) {
     console.error('❌ [deleteSupplierPayment] error:', err);
     throw err;
+  }
+};
+
+// ✅ ดึงการชำระเงินทั้งหมดของ Supplier รายใดรายหนึ่ง
+export const getSupplierPaymentsBySupplier = async (supplierId) => {
+  try {
+    const res = await apiClient.get(`/supplier-payments/by-supplier/${supplierId}`);
+    return res.data;
+  } catch (error) {
+    console.error('❌ getSupplierPaymentsBySupplier error:', error);
+    return [];
   }
 };
 

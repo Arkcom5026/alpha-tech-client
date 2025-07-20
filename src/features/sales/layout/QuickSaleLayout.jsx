@@ -145,7 +145,7 @@ const QuickSaleLayout = () => {
             />
           </div>
 
-          <div className="bg-white p-4 min-h-[490px]">
+          <div className="bg-white p-4 min-h-[400px]">
             <h2 className="text-lg font-semibold mb-2 text-gray-800">รายการสินค้า</h2>
             <div className="overflow-x-auto">
               <SaleItemTable

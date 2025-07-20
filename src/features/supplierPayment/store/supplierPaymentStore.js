@@ -1,3 +1,5 @@
+// supplierPaymentStore.js
+
 import { create } from 'zustand';
 import {
   createSupplierPayment,
@@ -5,6 +7,7 @@ import {
   deleteSupplierPayment,
   getAllSupplierPayments,
   getAdvancePaymentsBySupplier,
+  getSupplierPaymentsBySupplier,
 } from '../api/supplierPaymentApi';
 
 const useSupplierPaymentStore = create((set, get) => ({
@@ -58,6 +61,21 @@ const useSupplierPaymentStore = create((set, get) => ({
     }
   },
 
+  // ✅ ดึงข้อมูลการชำระเงินทั้งหมดของ Supplier รายใดรายหนึ่ง
+  fetchSupplierPaymentsBySupplierIdAction: async (supplierId) => {
+    try {
+      const data = await getSupplierPaymentsBySupplier(supplierId);
+      console.log('✅ supplierPayments for supplierId:', supplierId, data);
+      if (data?.length > 0) {
+        set({ supplierPayments: data, selectedSupplier: data[0].supplier });
+      } else {
+        set({ supplierPayments: [], selectedSupplier: null });
+      }
+    } catch (err) {
+      console.error('❌ fetchSupplierPaymentsBySupplierIdAction error:', err);
+    }
+  },
+
   // ✅ ดึงข้อมูลการชำระเงินล่วงหน้าตาม Supplier พร้อมตั้งค่า Supplier ด้วย
   fetchAdvancePaymentsBySupplierAction: async (supplierId) => {
     try {
@@ -75,3 +93,4 @@ const useSupplierPaymentStore = create((set, get) => ({
 }));
 
 export default useSupplierPaymentStore;
+

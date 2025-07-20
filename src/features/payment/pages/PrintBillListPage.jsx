@@ -103,6 +103,7 @@ const PrintBillListPage = () => {
         <thead className="bg-gray-100">
           <tr>
             <th className="border px-2 py-1 text-left">เลขที่</th>
+            <th className="border px-2 py-1">หน่วยงาน</th>
             <th className="border px-2 py-1">ลูกค้า</th>
             <th className="border px-2 py-1">เบอร์โทร</th>
             <th className="border px-2 py-1">ยอดที่ชำระ</th>
@@ -117,6 +118,7 @@ const PrintBillListPage = () => {
             filteredPayments.map((p) => (
               <tr key={p.id} className="border-t">
                 <td className="border px-2 py-1">{p.sale?.code || '-'}</td>
+                <td className="border px-2 py-1">{p.sale?.customer?.companyName || '-'}</td>
                 <td className="border px-2 py-1">{p.sale?.customer?.name || '-'}</td>
                 <td className="border px-2 py-1">{p.sale?.customer?.phone || '-'}</td>
                 <td className="border px-2 py-1 text-right">
@@ -146,7 +148,14 @@ const PrintBillListPage = () => {
                       const path = printFormat === 'short'
                           ? `/pos/sales/bill/print-short/${p.saleId}`
                           : `/pos/sales/bill/print-full/${p.saleId}`;
-                      navigate(path, { state: { payment: p } });
+                      navigate(path, { state: { payment: {
+                        sale: p.sale,
+                        payments: p.sale?.payments || [],
+                        amount: p.amount,
+                        paymentMethod: p.paymentMethod,
+                        receivedAt: p.receivedAt,
+                        note: p.sale?.note || '',
+                      } } });
                     }}
                     className="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700"
                   >
@@ -157,7 +166,7 @@ const PrintBillListPage = () => {
             ))
           ) : (
             <tr>
-              <td colSpan={9} className="text-center py-4">ไม่พบข้อมูล</td>
+              <td colSpan={10} className="text-center py-4">ไม่พบข้อมูล</td>
             </tr>
           )}
         </tbody>

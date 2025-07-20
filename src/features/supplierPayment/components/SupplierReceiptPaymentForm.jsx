@@ -72,6 +72,7 @@ const SupplierReceiptPaymentForm = ({ supplier, supplierId: overrideSupplierId }
     });
   }, [supplierId, loadReceiptsReadyToPayAction]);
 
+
   useEffect(() => {
     if (formData.paymentType === 'RECEIPT_BASED') {
       const desiredAmount = parseFloat(formData.amount.replace(/,/g, ''));
@@ -82,40 +83,43 @@ const SupplierReceiptPaymentForm = ({ supplier, supplierId: overrideSupplierId }
 
       let currentSum = 0;
       const newSelectedReceipts = [];
+
       const sortedReceipts = [...receiptsReadyToPay].sort((a, b) =>
-        dayjs(a.receivedDate).diff(dayjs(b.receivedDate))
+        new Date(a.receivedDate) - new Date(b.receivedDate)
       );
 
       for (const receipt of sortedReceipts) {
-        const remaining = (receipt.totalAmount || 0) - (receipt.paidAmount || 0);
+        const total = Number(receipt.totalAmount || 0);
+        const paid = Number(receipt.paidAmount || 0);
+        const remaining = Math.max(0, total - paid);
         if (remaining <= 0) continue;
 
-        if (currentSum + remaining <= desiredAmount) {
-          newSelectedReceipts.push({ receiptId: receipt.id, amountPaid: remaining });
-          currentSum += remaining;
-        } else {
-          const amountToPay = desiredAmount - currentSum;
-          if (amountToPay > 0) {
-            newSelectedReceipts.push({ receiptId: receipt.id, amountPaid: amountToPay });
-            currentSum += amountToPay;
-          }
-          break;
+        const canUse = Math.min(remaining, desiredAmount - currentSum);
+        if (canUse > 0) {
+          newSelectedReceipts.push({ receiptId: receipt.id, amountPaid: canUse });
+          currentSum += canUse;
         }
+
+        if (currentSum >= desiredAmount) break;
       }
+
       setFormData(prev => ({ ...prev, receipts: newSelectedReceipts }));
     }
   }, [formData.amount, formData.paymentType, receiptsReadyToPay]);
 
+
+
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     if (name.startsWith('chequeDetails.')) {
-        const key = name.split('.')[1];
-        setFormData(prev => ({
-            ...prev,
-            chequeDetails: { ...prev.chequeDetails, [key]: value }
-        }));
+      const key = name.split('.')[1];
+      setFormData(prev => ({
+        ...prev,
+        chequeDetails: { ...prev.chequeDetails, [key]: value }
+      }));
     } else {
-        setFormData({ ...formData, [name]: value });
+      setFormData({ ...formData, [name]: value });
     }
   };
 
@@ -203,10 +207,10 @@ const SupplierReceiptPaymentForm = ({ supplier, supplierId: overrideSupplierId }
       setError('เกิดข้อผิดพลาดในการบันทึกข้อมูล: ' + (err.message || 'Unknown error'));
     }
   };
-  
+
   const handlePrintVoucher = () => {
-      alert(`กำลังพิมพ์ใบสำคัญจ่ายสำหรับรายการ: ${successPayload.id}`);
-      navigate(-1);
+    alert(`กำลังพิมพ์ใบสำคัญจ่ายสำหรับรายการ: ${successPayload.id}`);
+    navigate(-1);
   };
 
 
@@ -218,7 +222,7 @@ const SupplierReceiptPaymentForm = ({ supplier, supplierId: overrideSupplierId }
 
   const parsedAmountForValidation = parseFloat(formData.amount.replace(/,/g, ''));
   const isAmountMismatch = formData.paymentType === 'RECEIPT_BASED' &&
-                           Math.abs(parsedAmountForValidation - selectedReceiptsTotal) > 0.01;
+    Math.abs(parsedAmountForValidation - selectedReceiptsTotal) > 0.01;
   const isSubmitButtonDisabled = isNaN(parsedAmountForValidation) || parsedAmountForValidation <= 0 || error !== null || isAmountMismatch;
 
   if (successPayload) {
@@ -227,12 +231,12 @@ const SupplierReceiptPaymentForm = ({ supplier, supplierId: overrideSupplierId }
         <strong className="font-bold text-xl block">บันทึกการชำระเงินสำเร็จ!</strong>
         <p className="mt-2">ยอดชำระจำนวน {successPayload.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })} บาท ได้ถูกบันทึกเรียบร้อย</p>
         <div className="mt-6 flex justify-center gap-4">
-            <button onClick={() => navigate(-1)} className="bg-gray-500 text-white font-semibold px-6 py-2 rounded-lg hover:bg-gray-600">
-                กลับไปที่รายการ
-            </button>
-            <button onClick={handlePrintVoucher} className="bg-blue-600 text-white font-semibold px-6 py-2 rounded-lg hover:bg-blue-700">
-                พิมพ์ใบสำคัญจ่าย
-            </button>
+          <button onClick={() => navigate(-1)} className="bg-gray-500 text-white font-semibold px-6 py-2 rounded-lg hover:bg-gray-600">
+            กลับไปที่รายการ
+          </button>
+          <button onClick={handlePrintVoucher} className="bg-blue-600 text-white font-semibold px-6 py-2 rounded-lg hover:bg-blue-700">
+            พิมพ์ใบสำคัญจ่าย
+          </button>
         </div>
       </div>
     );
@@ -244,12 +248,12 @@ const SupplierReceiptPaymentForm = ({ supplier, supplierId: overrideSupplierId }
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
           <div>
             <label htmlFor="paymentDate" className="block text-sm font-medium text-gray-700 mb-1">วันที่ชำระ</label>
-            <input type="date" 
-                   id="paymentDate" 
-                   name="paymentDate" 
-                   value={formData.paymentDate} 
-                   onChange={handleChange}                   
-                   className="w-full border-gray-300 rounded-md shadow-sm h-[42px] px-3"/>
+            <input type="date"
+              id="paymentDate"
+              name="paymentDate"
+              value={formData.paymentDate}
+              onChange={handleChange}
+              className="w-full border-gray-300 rounded-md shadow-sm h-[42px] px-3" />
           </div>
           <div>
             <label htmlFor="method" className="block text-sm font-medium text-gray-700 mb-1">วิธีชำระเงิน</label>
@@ -271,20 +275,20 @@ const SupplierReceiptPaymentForm = ({ supplier, supplierId: overrideSupplierId }
         </div>
 
         {formData.method === 'CHEQUE' && (
-            <div className="p-4 border border-blue-200 rounded-lg bg-blue-50 grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">เลขที่เช็ค</label>
-                    <input type="text" name="chequeDetails.number" value={formData.chequeDetails.number} onChange={handleChange} className="w-full border-gray-300 rounded-md shadow-sm"/>
-                </div>
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">ธนาคาร</label>
-                    <input type="text" name="chequeDetails.bank" value={formData.chequeDetails.bank} onChange={handleChange} className="w-full border-gray-300 rounded-md shadow-sm"/>
-                </div>
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">วันที่บนเช็ค</label>
-                    <input type="date" name="chequeDetails.dueDate" value={formData.chequeDetails.dueDate} onChange={handleChange} className="w-full border-gray-300 rounded-md shadow-sm"/>
-                </div>
+          <div className="p-4 border border-blue-200 rounded-lg bg-blue-50 grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">เลขที่เช็ค</label>
+              <input type="text" name="chequeDetails.number" value={formData.chequeDetails.number} onChange={handleChange} className="w-full border-gray-300 rounded-md shadow-sm" />
             </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">ธนาคาร</label>
+              <input type="text" name="chequeDetails.bank" value={formData.chequeDetails.bank} onChange={handleChange} className="w-full border-gray-300 rounded-md shadow-sm" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">วันที่บนเช็ค</label>
+              <input type="date" name="chequeDetails.dueDate" value={formData.chequeDetails.dueDate} onChange={handleChange} className="w-full border-gray-300 rounded-md shadow-sm" />
+            </div>
+          </div>
         )}
 
         {formData.paymentType === 'RECEIPT_BASED' && (
@@ -303,7 +307,7 @@ const SupplierReceiptPaymentForm = ({ supplier, supplierId: overrideSupplierId }
 
         <div>
           <label htmlFor="note" className="block text-sm font-medium text-gray-700 mb-1">หมายเหตุ (ถ้ามี)</label>
-          <textarea id="note" name="note" value={formData.note} onChange={handleChange} className="w-full border-gray-300 rounded-md shadow-sm" rows="2"/>
+          <textarea id="note" name="note" value={formData.note} onChange={handleChange} className="w-full border-gray-300 rounded-md shadow-sm" rows="2" />
         </div>
 
         {error && (

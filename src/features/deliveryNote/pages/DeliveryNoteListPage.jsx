@@ -1,5 +1,5 @@
 import useSalesStore from '@/features/sales/store/salesStore';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 const DeliveryNoteListPage = () => {
@@ -18,69 +18,36 @@ const DeliveryNoteListPage = () => {
   });
 
   const [limit, setLimit] = useState(100);
-  const [showCompanyColumn, setShowCompanyColumn] = useState(false);
 
   const saleStore = useSalesStore();
 
-const handleSearch = () => {
-  const params = {
-    keyword: search,
-    fromDate,
-    toDate,
-    limit,
+  const handleSearch = () => {
+    const params = {
+      keyword: search,
+      fromDate,
+      toDate,
+      limit,
+    };
+    saleStore.loadPrintableSalesAction(params);
   };
-  saleStore.loadPrintableSalesAction(params);
-};
+
   const printableSales = saleStore.printableSales;
-
-  
-  
-  // useEffect สำหรับโหลดข้อมูลครั้งแรก
-  useEffect(() => {
-  const params = {
-    keyword: search,
-    fromDate,
-    toDate,
-    limit,
-  };
-  saleStore.loadPrintableSalesAction(params);
-}, [search, fromDate, toDate, limit]);
-
-  // ✅ New useEffect to determine if company column should be shown
-  useEffect(() => {
-    const hasCompanyCustomer = (Array.isArray(printableSales) ? printableSales : []).some(s =>
-      (s.customer?.type === 'ORGANIZATION' || s.customer?.type === 'GOVERNMENT') && s.customer?.companyName
-    );
-    setShowCompanyColumn(hasCompanyCustomer);
-  }, [printableSales]); // Re-run this effect only when printableSales changes
 
   const filteredSales = (Array.isArray(printableSales) ? printableSales : []).filter((s) => {
     const query = search.toLowerCase();
-    let matchSearch = false;
-
-    // Logic for determining showCompanyColumn is now in useEffect above
-    // Removed setShowCompanyColumn(true) from here.
-
-    matchSearch =
-      !search ||
-      (s.customer?.name?.toLowerCase().includes(query) ?? false) ||
-      (s.customer?.phone?.toLowerCase().includes(query) ?? false) ||
-      (s.code?.toLowerCase().includes(query) ?? false);
-
-    // ✅ เพิ่มการค้นหาด้วย companyName ถ้าคอลัมน์ถูกแสดง
-    if (s.customer?.companyName) { // Check companyName existence for search, not for column visibility state
-      matchSearch = matchSearch || (s.customer.companyName.toLowerCase().includes(query) ?? false);
-    }
-
-    return matchSearch;
+    if (!search) return true;
+    return (
+      s.customer?.companyName?.toLowerCase().includes(query) ||
+      s.customer?.name?.toLowerCase().includes(query) ||
+      s.customer?.phone?.toLowerCase().includes(query)
+    );
   });
 
-  // Helper function เพื่อสร้างหัวตารางแบบมีเงื่อนไข
   const getTableHeaders = () => {
     return (
       <tr>
         <th className="border px-2 py-1 text-left">เลขที่ใบขาย</th>
-        {showCompanyColumn && <th className="border px-2 py-1">หน่วยงาน</th>}
+        <th className="border px-2 py-1">หน่วยงาน</th>
         <th className="border px-2 py-1">ลูกค้า/ผู้ติดต่อ</th>
         <th className="border px-2 py-1">เบอร์โทร</th>
         <th className="border px-2 py-1">ยอดรวม</th>
@@ -99,7 +66,7 @@ const handleSearch = () => {
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="ค้นหาชื่อลูกค้า, เบอร์โทร, หรือรหัส..."
+          placeholder="ค้นหาชื่อหน่วยงาน..."
           className="border px-2 py-1 w-72 rounded"
         />
         <input
@@ -138,7 +105,7 @@ const handleSearch = () => {
             filteredSales.map((s) => (
               <tr key={s.id} className="border-t">
                 <td className="border px-2 py-1">{s.code || '-'}</td>
-                {showCompanyColumn && <td className="border px-2 py-1">{s.customer?.companyName || '-'}</td>}
+                <td className="border px-2 py-1">{s.customer?.companyName || '-'}</td>
                 <td className="border px-2 py-1">{s.customer?.name || '-'}</td>
                 <td className="border px-2 py-1">{s.customer?.phone || '-'}</td>
                 <td className="border px-2 py-1 text-right">
@@ -175,8 +142,10 @@ const handleSearch = () => {
               </tr>
             ))
           ) : (
-            <tr>
-              <td colSpan={showCompanyColumn ? 9 : 8} className="text-center py-4">ไม่พบข้อมูล</td>
+            <tr className="border-t">
+              <td className="border px-2 py-1" colSpan={9}>
+                <div className="text-center py-2">ไม่พบข้อมูล</div>
+              </td>
             </tr>
           )}
         </tbody>
@@ -186,7 +155,3 @@ const handleSearch = () => {
 };
 
 export default DeliveryNoteListPage;
-
-
-
-

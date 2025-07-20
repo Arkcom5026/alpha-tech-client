@@ -1,11 +1,12 @@
 
-
 // SupplierPaymentDetailPage.js
+
 import React, { useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 
 
 import useSupplierPaymentStore from '../store/supplierPaymentStore';
+import SupplierPaymentHistoryTable from '../components/SupplierPaymentHistoryTable';
 
 
 const SupplierPaymentDetailPage = () => {
@@ -13,8 +14,8 @@ const SupplierPaymentDetailPage = () => {
 
   const {
     selectedSupplier,
-    advancePayments,
-    fetchAdvancePaymentsBySupplierAction,
+    supplierPayments,
+    fetchSupplierPaymentsBySupplierIdAction,
     // setSelectedSupplier ไม่จำเป็นต้องดึงมาตรงๆ จาก store หาก action จัดการแล้ว
     // หรือถ้าจำเป็นต้องใช้ ควรมาจาก action ที่ถูกประกาศใน store อย่างชัดเจน
   } = useSupplierPaymentStore();
@@ -22,12 +23,12 @@ const SupplierPaymentDetailPage = () => {
   useEffect(() => {
     if (supplierId) {
       // เรียก action เพื่อดึงข้อมูลและให้ action จัดการการตั้งค่า selectedSupplier ใน store
-      fetchAdvancePaymentsBySupplierAction(supplierId);
+      fetchSupplierPaymentsBySupplierIdAction(supplierId);
     }
-  }, [supplierId, fetchAdvancePaymentsBySupplierAction]); // เพิ่ม dependencies ให้ครบถ้วน
+  }, [supplierId, fetchSupplierPaymentsBySupplierIdAction]); // เพิ่ม dependencies ให้ครบถ้วน
 
   console.log('selectedSupplier?.name : ', selectedSupplier?.name);
-  console.log('advancePayments for table : ', advancePayments); // เพิ่ม log เพื่อตรวจสอบ
+  console.log('supplierPayments for table : ', supplierPayments); // เพิ่ม log เพื่อตรวจสอบ
 
   return (
     <div className="px-4 py-6 max-w-5xl mx-auto">
@@ -42,7 +43,12 @@ const SupplierPaymentDetailPage = () => {
             <span className="font-semibold">เบอร์โทร:</span> {selectedSupplier?.phone || '-'}
           </div>
           <div>
-            <span className="font-semibold">วงเงินเครดิต:</span> {selectedSupplier?.creditLimit?.toLocaleString() || '0'} บาท
+            <div>
+            <span className="font-semibold">วงเงินเครดิต:</span> {selectedSupplier?.creditLimit?.toLocaleString(undefined, { minimumFractionDigits: 2 }) || '0.00'} บาท
+          </div>
+          <div>
+            <span className="font-semibold">ยอดเครดิตคงเหลือ:</span> {selectedSupplier?.creditBalance?.toLocaleString(undefined, { minimumFractionDigits: 2 }) || '0.00'} บาท
+          </div>
           </div>
         </div>
       </div>
@@ -51,7 +57,7 @@ const SupplierPaymentDetailPage = () => {
         <SupplierPaymentHistoryTable
           supplierId={supplierId}
           supplier={selectedSupplier}
-          payments={advancePayments}
+          payments={supplierPayments}
         />
       </div>
     </div>
@@ -59,3 +65,5 @@ const SupplierPaymentDetailPage = () => {
 };
 
 export default SupplierPaymentDetailPage;
+
+

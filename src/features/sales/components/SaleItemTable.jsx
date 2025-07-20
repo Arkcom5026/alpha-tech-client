@@ -76,17 +76,17 @@ const SaleItemTable = ({ items = [], onRemove, billDiscount = 0 }) => {
   if (!Array.isArray(items) || items.length === 0) {
     return (
       <table className="w-full text-left border">
-        <thead className="bg-gray-100">
+        <thead className="bg-gray-100 text-center">
           <tr>
-            <th className="p-2 border">ลำดับ</th>
-            <th className="p-2 border">ชื่อสินค้า</th>
-            <th className="p-2 border">รุ่น</th>
-            <th className="p-2 border">บาร์โค้ด</th>
-            <th className="p-2 border">ราคา</th>
-            <th className="p-2 border">ส่วนลด</th>
-            <th className="p-2 border">ลดท้ายบิล</th>
-            <th className="p-2 border">สุทธิ</th>
-            <th className="p-2 border">จัดการ</th>
+            <th className="p-2 border ">ลำดับ</th>
+            <th className="p-2 border ">ชื่อสินค้า</th>
+            <th className="p-2 border ">รุ่น</th>
+            <th className="p-2 border ">บาร์โค้ด</th>
+            <th className="p-2 border ">ราคา</th>
+            <th className="p-2 border ">ส่วนลด</th>
+            <th className="p-2 border ">ลดท้ายบิล</th>
+            <th className="p-2 border ">สุทธิ</th>
+            <th className="p-2 border ">จัดการ</th>
           </tr>
         </thead>
         <tbody>
@@ -102,17 +102,17 @@ const SaleItemTable = ({ items = [], onRemove, billDiscount = 0 }) => {
 
   return (
     <table className="w-full text-left border">
-      <thead className="bg-gray-100">
+      <thead className="bg-gray-100 text-center">
         <tr>
-          <th className="p-2 border">ลำดับ</th>
-          <th className="p-2 border">ชื่อสินค้า</th>
-          <th className="p-2 border">รุ่น</th>
-          <th className="p-2 border">บาร์โค้ด</th>
-          <th className="p-2 border">ราคา</th>
-          <th className="p-2 border">ส่วนลด</th>
-          <th className="p-2 border">ลดท้ายบิล</th>
-          <th className="p-2 border">สุทธิ</th>
-          <th className="p-2 border">จัดการ</th>
+          <th className="p-2 border w-12">ลำดับ</th>
+          <th className="p-2 border w-[200px]">ชื่อสินค้า</th>
+          <th className="p-2 border w-[140px]">รุ่น</th>
+          <th className="p-2 border w-[100px]">บาร์โค้ด</th>
+          <th className="p-2 border w-24">ราคา</th>
+          <th className="p-2 border w-24">ส่วนลด</th>
+          <th className="p-2 border w-24">ลดท้ายบิล</th>
+          <th className="p-2 border w-24">สุทธิ</th>
+          <th className="p-2 border w-20">จัดการ</th>
         </tr>
       </thead>
       <tbody>
@@ -127,13 +127,13 @@ const SaleItemTable = ({ items = [], onRemove, billDiscount = 0 }) => {
               <td className="p-2 border">{index + 1}</td>
               <td className="p-2 border">{item.productName}</td>
               <td className="p-2 border">{item.model}</td>
-              <td className="p-2 border">{item.barcode}</td>
-              <td className="p-2 border">{safePrice.toFixed(2)}</td>
-              <td className="p-2 border">
+              <td className="p-2 border text-center">{item.barcode}</td>
+              <td className="p-2 border text-right">{safePrice.toFixed(2)}</td>
+              <td className="p-2 border text-right">
 
                 <input
                   type="number"
-                  className="w-20 px-2 py-1 border rounded text-right"
+                  className="w-20  py-0 border rounded text-right"
                   placeholder="0.00"
                   value={discountWithoutBill === 0 ? '' : discountWithoutBill}
                   onChange={(e) => handleDiscountChange(item.stockItemId, parseFloat(e.target.value))}
@@ -142,8 +142,8 @@ const SaleItemTable = ({ items = [], onRemove, billDiscount = 0 }) => {
               </td>
               <td className="p-2 border text-right">{billShare.toLocaleString()}</td>
               <td className="p-2 border text-right">{net.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-              <td className="p-2 border">
-                <button className="text-red-500 hover:underline" onClick={() => onRemove(item.stockItemId)}>
+              <td className="p-2 border text-center">
+                <button className="text-red-500 hover:underline " onClick={() => onRemove(item.stockItemId)}>
                   ลบ
                 </button>
               </td>

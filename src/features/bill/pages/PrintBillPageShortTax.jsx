@@ -1,48 +1,44 @@
-// -----------------------
-// PrintBillPageFullTax.jsx
-// -----------------------
-import { useLocation, useParams } from 'react-router-dom';
+import { useParams, useLocation } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { getSaleById } from '@/features/sales/api/saleApi';
-import BillLayoutFullTax from '../components/BillLayoutFullTax';
+import BillLayoutShortTax from '../components/BillLayoutShortTax';
 
-const PrintBillPageFullTax = () => {
-  const location = useLocation();
+const PrintBillPageShortTax = () => {
   const { id } = useParams();
+  const location = useLocation();
   const [sale, setSale] = useState(null);
-  const [payment, setPayment] = useState(null);
 
   useEffect(() => {
-    const statePayment = location.state?.payment;
-
-    if (statePayment && statePayment.sale) {
-      setSale(statePayment.sale);
-      setPayment(statePayment);
-    } else {
-      // If payment data is not passed via state, fetch sale details by ID
-      getSaleById(id).then((res) => {
-        setSale(res);
-        // Create a basic payment object for BillLayoutFullTax
-        setPayment({
-          saleId: res.id,
-          paymentMethod: res.paymentMethod,
-          amount: res.totalAmount,
-          note: res.note || '',
-          sale: res,
-        });
-      });
+    const stateSale = location.state?.payment?.sale;
+    if (stateSale) {
+      setSale(stateSale);
+      return;
     }
-  }, [location.state, id]);
 
-  if (!sale || !sale.items || !payment) {
-    return <div className="text-center p-6 text-gray-700">⏳ กำลังโหลดข้อมูลใบเสร็จ...</div>;
+    if (typeof id !== 'string' || isNaN(Number(id))) {
+      console.warn('🛑 Invalid sale ID:', id);
+      return;
+    }
+
+    (async () => {
+      try {
+        const res = await getSaleById(id);
+        setSale(res);
+      } catch (err) {
+        console.error('❌ Error loading sale:', err);
+      }
+    })();
+  }, [id, location.state]);
+
+  if (!sale || !sale.items) {
+    return <div className="text-center p-6 text-gray-700">⼻ กำลังโหลดข้อมูลใบเสร็จ...</div>;
   }
 
   const saleItems = (sale.items || []).map((i) => ({
     id: i.id,
     productName: i.stockItem.product?.name || 'ไม่พบชื่อสินค้า',
-    productModel: i.stockItem.product?.model || 'ไม่รุ่นชื่อสินค้า',
-    amount: i.price ?? 0,
+    model: i.stockItem.product?.model || null,
+    price: i.price ?? 0,
     quantity: 1,
     unit: i.stockItem.product?.template?.unit?.name || '-',
   }));
@@ -58,17 +54,21 @@ const PrintBillPageFullTax = () => {
     footerNote: config.footerNote || '',
     logoUrl: config.logoUrl || null,
     vatRate: config.vatRate || 7,
-    hideDate: true, // ✅ เพิ่มเพื่อซ่อนไม่ให้แสดงวันที่
+    hideDate: true,
   };
+
+  const customerType = sale.customer?.type || 'PERSON';
+  const hideContactName = customerType === 'ORGANIZATION' || customerType === 'GOVERNMENT';
 
   const saleData = {
     sale,
     saleItems,
-    payments: [payment],
+    payments: sale.payments || [],
     config: fullConfig,
+    hideContactName, // ✅ ซ่อนชื่อผู้ติดต่อเมื่อเป็นหน่วยงาน
   };
 
-  return <BillLayoutFullTax {...saleData} />;
+  return <BillLayoutShortTax {...saleData} />;
 };
 
-export default PrintBillPageFullTax;
+export default PrintBillPageShortTax;

@@ -403,7 +403,7 @@ const CustomerSection = ({ productSearchRef, clearTrigger, hideCustomerDetails, 
 
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             <div className="col-span-2">
-              <label className="block text-base font-bold text-gray-700 mb-1">ประเภทลูกค้า:</label>
+              {/* <label className="block text-base font-bold text-gray-700 mb-1">ประเภทลูกค้า:</label> */}
               <div className="flex gap-4 text-sm text-gray-800">
                 <label className="flex items-center space-x-2">
                   <input
@@ -449,14 +449,14 @@ const CustomerSection = ({ productSearchRef, clearTrigger, hideCustomerDetails, 
                   placeholder="ชื่อบริษัท / หน่วยงาน"
                   value={companyName}
                   onChange={(e) => { setCompanyName(e.target.value); setIsModified(true); }}
-                  className="border border-gray-300 px-3 py-2 rounded-md col-span-2 text-gray-800 text-base focus:ring-2 focus:ring-blue-500 shadow-sm"
+                  className="border border-gray-300 px-3 py-1 rounded-md col-span-2 text-gray-800 text-base focus:ring-2 focus:ring-blue-500 shadow-sm"
                 />
                 <input
                   type="text"
                   placeholder="เลขผู้เสียภาษี (ถ้ามี)"
                   value={taxId}
                   onChange={(e) => { setTaxId(e.target.value); setIsModified(true); }}
-                  className="border border-gray-300 px-3 py-2 rounded-md col-span-2 text-gray-800 text-base focus:ring-2 focus:ring-blue-500 shadow-sm"
+                  className="border border-gray-300 px-3 py-1 rounded-md col-span-2 text-gray-800 text-base focus:ring-2 focus:ring-blue-500 shadow-sm"
                 />
               </>
             )}
@@ -467,7 +467,7 @@ const CustomerSection = ({ productSearchRef, clearTrigger, hideCustomerDetails, 
               placeholder="ชื่อลูกค้า / ผู้ติดต่อ"
               value={name}
               onChange={(e) => { setName(e.target.value); setIsModified(true); }}
-              className="border border-gray-300 px-3 py-2 rounded-md col-span-2 text-gray-800 text-base focus:ring-2 focus:ring-blue-500 shadow-sm"
+              className="border border-gray-300 px-3 py-1 rounded-md col-span-2 text-gray-800 text-base focus:ring-2 focus:ring-blue-500 shadow-sm"
             />
 
             <input
@@ -475,23 +475,23 @@ const CustomerSection = ({ productSearchRef, clearTrigger, hideCustomerDetails, 
               placeholder="อีเมล (ถ้ามี)"
               value={email}
               onChange={(e) => { setEmail(e.target.value); setIsModified(true); }}
-              className="border border-gray-300 px-3 py-2 rounded-md col-span-2 text-gray-800 text-base focus:ring-2 focus:ring-blue-500 shadow-sm"
+              className="border border-gray-300 px-3 py-1 rounded-md col-span-2 text-gray-800 text-base focus:ring-2 focus:ring-blue-500 shadow-sm"
             />
 
             <textarea
               placeholder="ที่อยู่ (ถ้ามี)"
               value={address}
               onChange={(e) => { setAddress(e.target.value); setIsModified(true); }}
-              className="border border-gray-300 px-3 py-2 rounded-md col-span-2 text-gray-800 text-base focus:ring-2 focus:ring-blue-500 shadow-sm min-h-[80px]"
+              className="border border-gray-300 px-3 py-1 rounded-md col-span-2 text-gray-800 text-base focus:ring-2 focus:ring-blue-500 shadow-sm min-h-[60px]"
             />
           </div>
 
-          <div className="pt-2 flex gap-3 justify-end">
+          <div className=" flex gap-3 justify-end">
             {selectedCustomer ? (
               <button
                 onClick={handleUpdateCustomer}
                 disabled={!isModified}
-                className={`px-5 py-2 rounded-md text-white font-semibold transition-colors duration-200 shadow-md ${isModified ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-400 cursor-not-allowed'}`}
+                className={`px-4 py-1 rounded-md text-white font-semibold transition-colors duration-200 shadow-md ${isModified ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-400 cursor-not-allowed'}`}
               >
                 <span className="flex items-center">
                   อัปเดตข้อมูล

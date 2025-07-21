@@ -44,6 +44,7 @@
     "dotenv": "16.5.0",
     "framer-motion": "12.9.4",
     "haversine-distance": "^1.2.4",
+    "html2pdf.js": "^0.10.3",
     "jquery": "^3.7.1",
     "jsbarcode": "^3.11.6",
     "lodash": "4.17.21",

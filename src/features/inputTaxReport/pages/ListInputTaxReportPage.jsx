@@ -1,87 +1,69 @@
 // src/features/inputTaxReport/pages/ListInputTaxReportPage.jsx
 
-import React, { useEffect, useCallback, useRef } from 'react';
-import { Box, Typography, Card, CardContent, CardHeader, Button } from '@mui/material';
-import { useReactToPrint } from 'react-to-print';
+import React, { useEffect } from 'react';
 
-// ✨ นำเข้า components และ store
-import { InputTaxReportTable } from '../components/InputTaxReportTable';
-import { InputTaxReportFilters } from '../components/InputTaxReportFilters';
+import { useBranchStore } from '@/features/branch/store/branchStore';
 import { useInputTaxReportStore } from '../store/inputTaxReporStore';
-import { useAuthStore } from '../../auth/store/authStore'; // ❗️ หมายเหตุ: คุณต้องเปลี่ยน path นี้ให้ตรงกับ auth store ของคุณ
-import { Link } from 'react-router-dom';
 
-// Helper function เพื่อแปลงเลขเดือนเป็นชื่อเดือนภาษาไทย
-const getThaiMonthName = (monthNumber) => {
-    const months = [
-        'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
-        'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
-    ];
-    return months[monthNumber - 1] || '';
-};
+import { useNavigate } from 'react-router-dom';
+import { InputTaxReportFilters } from '../components/InputTaxReportFilters';
+import { InputTaxReportTable } from '../components/InputTaxReportTable';
 
-/**
- * หน้าหลักสำหรับแสดงรายงานภาษีซื้อ
- */
-export const ListInputTaxReportPage = () => {
+const ListInputTaxReportPage = () => {
+    const navigate = useNavigate();
+    const { branchId } = useBranchStore();
+
     const {
         filters,
         setFilters,
         reportData,
         summary,
         isLoading,
-        fetchInputTaxReport,
+        fetchInputTaxReportAction,
     } = useInputTaxReportStore();
 
-    const handleGenerateReport = useCallback(() => {
-        fetchInputTaxReport();
-    }, [fetchInputTaxReport]);
-
     useEffect(() => {
-        handleGenerateReport();
-    }, [handleGenerateReport]);
+        fetchInputTaxReportAction(branchId);
+    }, [branchId, fetchInputTaxReportAction]);
 
     return (
-        <Box sx={{ p: { xs: 1, sm: 2, md: 3 } }}>
-            <Typography variant="h4" component="h1" gutterBottom>
-                รายงานภาษีซื้อ
-            </Typography>
-            <Card sx={{ mb: 3 }}>
-                <CardContent>
-                    <InputTaxReportFilters
-                        filters={filters}
-                        onFiltersChange={setFilters}
-                        onGenerateReport={handleGenerateReport}
-                        isGenerating={isLoading}
-                    />
-                </CardContent>
-            </Card>
+        <div className="p-4 space-y-4">
 
-            <Card>
-                <CardHeader
-                    title="ผลลัพธ์รายงาน"
-                    action={
-                        <Button
-                            component={Link}
-                            to="/pos/reports/taxprint"                              
-                            
-                            variant="contained"
-                            color="primary"
-                        >
-                            แสดงหน้าก่อนพิมพ์
-                        </Button>
-                    }
+
+            {/* Filters Section */}
+            <div className="max-w-5xl mx-auto">
+                <h1 className="text-2xl font-bold">รายงานภาษีซื้อ</h1>
+                <div className='py-6'>
+                <InputTaxReportFilters
+                    filters={{ taxMonth: filters.month, taxYear: filters.year }}
+                    onFiltersChange={(newFilters) => setFilters({ ...filters, month: newFilters.taxMonth, year: newFilters.taxYear })}
+                    onGenerateReport={() => fetchInputTaxReportAction(branchId)}
+                    isGenerating={isLoading}
                 />
-                <CardContent>
-                    <InputTaxReportTable
-                        data={reportData}
-                        summary={summary}
-                        isLoading={isLoading}
-                    />
-                </CardContent>
-            </Card>
-        </Box>
+                </div>
+
+            </div>
+
+            <div className="flex justify-end max-w-5xl mx-auto">
+                <button
+                    onClick={() => navigate('/pos/reports/taxprint')}
+                    className="bg-green-600 text-white px-4 py-1 rounded hover:bg-green-700"
+                >
+                    พิมพ์รายงาน
+                </button>
+            </div>
+
+            <InputTaxReportTable
+                data={reportData}
+                summary={summary}
+                isLoading={isLoading}
+            />
+        </div>
     );
 };
 
 export default ListInputTaxReportPage;
+
+
+
+

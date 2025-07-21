@@ -41,7 +41,7 @@ export const InputTaxReportFilters = ({ filters, onFiltersChange, onGenerateRepo
   return (
     <Grid container spacing={2} alignItems="center">
       {/* Filter: Tax Month */}
-      <Grid item xs={12} sm={4}>
+      <Grid item xs={12} sm={6} md={6}>
         <FormControl fullWidth>
           <InputLabel>เดือนภาษี</InputLabel>
           <Select
@@ -58,7 +58,7 @@ export const InputTaxReportFilters = ({ filters, onFiltersChange, onGenerateRepo
       </Grid>
 
       {/* Filter: Tax Year */}
-      <Grid item xs={12} sm={4}>
+      <Grid item xs={12} sm={6} md={4}>
         <FormControl fullWidth>
           <InputLabel>ปีภาษี (พ.ศ.)</InputLabel>
           <Select
@@ -89,3 +89,4 @@ export const InputTaxReportFilters = ({ filters, onFiltersChange, onGenerateRepo
     </Grid>
   );
 };
+

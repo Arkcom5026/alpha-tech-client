@@ -1,3 +1,5 @@
+// InputTaxReportTable.jsx 
+
 import React from 'react';
 import {
     Table,
@@ -13,7 +15,7 @@ import {
     TableFooter,
 } from '@mui/material';
 
-// ฟังก์ชันสำหรับจัดรูปแบบตัวเลข
+
 const formatNumber = (value) => {
     const num = Number(value);
     if (isNaN(num)) {
@@ -25,15 +27,9 @@ const formatNumber = (value) => {
     });
 };
 
-/**
- * คอมโพเนนต์สำหรับแสดงผลข้อมูลรายงานภาษีซื้อในรูปแบบตาราง
- * @param {object} props
- * @param {Array} props.data - ข้อมูลรายงานที่จะแสดง
- * @param {object} props.summary - ข้อมูลสรุปยอดรวม
- * @param {boolean} props.isLoading - สถานะกำลังโหลดข้อมูล
- */
+
 export const InputTaxReportTable = ({ data, summary, isLoading }) => {
-    // แสดงสถานะกำลังโหลด
+
     if (isLoading) {
         return (
             <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 200 }}>
@@ -43,7 +39,7 @@ export const InputTaxReportTable = ({ data, summary, isLoading }) => {
         );
     }
 
-    // แสดงเมื่อไม่พบข้อมูล
+
     if (!data || data.length === 0) {
         return (
             <Box sx={{ textAlign: 'center', height: 200, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
@@ -54,7 +50,6 @@ export const InputTaxReportTable = ({ data, summary, isLoading }) => {
         );
     }
 
-    // ✅ หัวตารางที่นำคอลัมน์ "สาขา" ออกแล้ว
     const headers = [
         'วัน เดือน ปี',
         'เลขที่ใบกำกับภาษี',
@@ -66,43 +61,43 @@ export const InputTaxReportTable = ({ data, summary, isLoading }) => {
     ];
 
     return (
-        <TableContainer component={Paper}>
-            <Table sx={{ minWidth: 650 }} aria-label="input tax report table">
-                <TableHead>
-                    <TableRow>
-                        {headers.map((header) => (
-                            <TableCell key={header} align={['มูลค่าสินค้าหรือบริการ', 'ภาษีมูลค่าเพิ่ม', 'รวม'].includes(header) ? 'right' : 'left'}>
-                                {header}
-                            </TableCell>
-                        ))}
-                    </TableRow>
-                </TableHead>
-                <TableBody>
-                    {data.map((item) => (
-                        <TableRow key={item.id}>
-                            <TableCell>{item.supplierTaxInvoiceDate ? new Date(item.supplierTaxInvoiceDate).toLocaleDateString('th-TH') : '-'}</TableCell>
-                            <TableCell>{item.supplierTaxInvoiceNumber || '-'}</TableCell>
-                            <TableCell>{item.supplierName || 'N/A'}</TableCell>
-                            <TableCell>{item.supplierTaxId || 'N/A'}</TableCell>
-                            {/* ✅ ข้อมูลที่นำคอลัมน์ "สาขา" ออกแล้ว */}
-                            <TableCell align="right">{formatNumber(item.totalAmount)}</TableCell>
-                            <TableCell align="right">{formatNumber(item.vatAmount)}</TableCell>
-                            <TableCell align="right">{formatNumber(item.grandTotal)}</TableCell>
-                        </TableRow>
-                    ))}
-                </TableBody>
-                <TableFooter>
-                    <TableRow sx={{ '& > *': { fontWeight: 'bold' } }}>
-                        {/* ✅ ปรับ colSpan ให้ถูกต้องหลังจากลบคอลัมน์ */}
-                        <TableCell colSpan={4} align="right">
-                            ยอดรวม
-                        </TableCell>
-                        <TableCell align="right">{formatNumber(summary.totalAmount)}</TableCell>
-                        <TableCell align="right">{formatNumber(summary.vatAmount)}</TableCell>
-                        <TableCell align="right">{formatNumber(summary.grandTotal)}</TableCell>
-                    </TableRow>
-                </TableFooter>
-            </Table>
-        </TableContainer>
+        <div className="overflow-x-auto mt-4 max-w-5xl mx-auto">
+  <table className="w-full border border-black text-sm">
+    <thead>
+      <tr className="bg-gray-100">
+        <th className="border border-black font-bold px-2 py-1">วัน เดือน ปี</th>
+        <th className="border border-black font-bold px-2 py-1">เลขที่ใบกำกับภาษี</th>
+        <th className="border border-black font-bold px-2 py-1">ชื่อผู้ขาย</th>
+        <th className="border border-black font-bold px-2 py-1">เลขประจำตัวผู้เสียภาษีอากร</th>
+        <th className="border border-black font-bold px-2 py-1 text-right">มูลค่าสินค้าหรือบริการ</th>
+        <th className="border border-black font-bold px-2 py-1 text-right">ภาษีมูลค่าเพิ่ม</th>
+        <th className="border border-black font-bold px-2 py-1 text-right">รวม</th>
+      </tr>
+    </thead>
+    <tbody>
+      {data.map((item) => (
+        <tr key={item.id}>
+          <td className="border border-black px-2 py-1">{item.supplierTaxInvoiceDate ? new Date(item.supplierTaxInvoiceDate).toLocaleDateString('th-TH') : '-'}</td>
+          <td className="border border-black px-2 py-1">{item.supplierTaxInvoiceNumber || '-'}</td>
+          <td className="border border-black px-2 py-1">{item.supplierName || 'N/A'}</td>
+          <td className="border border-black px-2 py-1">{item.supplierTaxId || 'N/A'}</td>
+          <td className="border border-black px-2 py-1 text-right">{formatNumber(item.totalAmount)}</td>
+          <td className="border border-black px-2 py-1 text-right">{formatNumber(item.vatAmount)}</td>
+          <td className="border border-black px-2 py-1 text-right">{formatNumber(item.grandTotal)}</td>
+        </tr>
+      ))}
+    </tbody>
+    <tfoot>
+      <tr className="font-bold">
+        <td colSpan={4} className="border border-black px-2 py-1 text-right">ยอดรวม</td>
+        <td className="border border-black px-2 py-1 text-right">{formatNumber(summary.totalAmount)}</td>
+        <td className="border border-black px-2 py-1 text-right">{formatNumber(summary.vatAmount)}</td>
+        <td className="border border-black px-2 py-1 text-right">{formatNumber(summary.grandTotal)}</td>
+      </tr>
+    </tfoot>
+  </table>
+</div>
     );
 };
+
+

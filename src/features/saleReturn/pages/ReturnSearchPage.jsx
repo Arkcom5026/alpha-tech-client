@@ -22,6 +22,7 @@ const ReturnSearchPage = () => {
     const matchSearch =
       !search ||
       (sale.code?.toLowerCase().includes(query) ?? false) ||
+      (sale.customer?.companyName?.toLowerCase().includes(query) ?? false) ||
       (sale.customer?.name?.toLowerCase().includes(query) ?? false) ||
       (sale.customer?.phone?.includes(query) ?? false);
 
@@ -63,6 +64,7 @@ const ReturnSearchPage = () => {
         <thead className="bg-gray-100">
           <tr>
             <th className="border px-2 py-1 text-left">เลขที่</th>
+            <th className="border px-2 py-1">หน่วยงาน</th>
             <th className="border px-2 py-1">ลูกค้า</th>
             <th className="border px-2 py-1">เบอร์โทร</th>
             <th className="border px-2 py-1">ยอดรวม</th>
@@ -75,6 +77,7 @@ const ReturnSearchPage = () => {
             filteredSales.map((sale) => (
               <tr key={sale.id} className="border-t">
                 <td className="border px-2 py-1">{sale.code || '-'}</td>
+                <td className="border px-2 py-1">{sale.customer?.companyName || '-'}</td>
                 <td className="border px-2 py-1">{sale.customer?.name || '-'}</td>
                 <td className="border px-2 py-1">{sale.customer?.phone || '-'}</td>
                 <td className="border px-2 py-1 text-right">

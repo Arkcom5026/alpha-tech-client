@@ -108,8 +108,7 @@ const PrintBillListPage = () => {
             <th className="border px-2 py-1">เบอร์โทร</th>
             <th className="border px-2 py-1">ยอดที่ชำระ</th>
             <th className="border px-2 py-1">วันที่รับเงิน</th>
-            <th className="border px-2 py-1">ผู้รับเงิน</th>
-            <th className="border px-2 py-1">รุ่นสินค้า</th>
+            <th className="border px-2 py-1">ผู้รับเงิน</th>            
             <th className="border px-2 py-1" colSpan={2}>การดำเนินการ</th>
           </tr>
         </thead>
@@ -132,8 +131,7 @@ const PrintBillListPage = () => {
                     timeStyle: 'short',
                   })}
                 </td>
-                <td className="border px-2 py-1">{p.employeeProfile?.name || '-'}</td>
-                <td className="border px-2 py-1">{p.sale?.items?.[0]?.stockItem?.product?.model || '-'}</td>
+                <td className="border px-2 py-1">{p.employeeProfile?.name || '-'}</td>                
                 <td className="border px-2 py-1 text-center">
                   <button
                     onClick={() => navigate(`/sale-detail/${p.saleId}`)}

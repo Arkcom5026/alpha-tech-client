@@ -2,6 +2,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import {
+  addToServerCartItem,
   clearServerCart,
   fetchCartFromServer,
   mergeCartToServer,
@@ -23,14 +24,34 @@ export const useCartStore = create(
         set({ cartItems: items });
       },
 
-      addToCart: (product) => {
+      addToCart: async (product) => {
+        console.log('🛒 addToCart:', product);
         const { cartItems } = get();
         const existing = cartItems.find(item => item.id === product.id);
-        if (existing) {
-          get().increaseQuantity(product.id);
+
+        const { token } = useAuthStore.getState();
+
+        if (token) {
+          try {
+            if (existing) {
+              await updateCartItemQuantity(product.productId || product.id, existing.quantity + 1);
+            } else {
+              console.log('🔁 POST to /cart/items/' + product.id);
+              await addToServerCartItem(product.productId || product.id, 1);
+              await new Promise(resolve => setTimeout(resolve, 200));
+              await updateCartItemQuantity(product.productId || product.id, 1);
+            }
+            await get().fetchCartAction();
+          } catch (err) {
+            console.error('❌ addToCart sync error:', err);
+          }
         } else {
-          const newItem = { ...product, quantity: 1 };
-          set({ cartItems: [...cartItems, newItem] });
+          if (existing) {
+            get().increaseQuantity(product.id);
+          } else {
+            const newItem = { ...product, quantity: 1 };
+            set({ cartItems: [...cartItems, newItem] });
+          }
         }
       },
 
@@ -42,7 +63,6 @@ export const useCartStore = create(
           console.error('❌ fetchCartBranchPricesAction error:', err);
         }
       },
-
 
       removeFromCart: async (id) => {
         set({
@@ -168,10 +188,9 @@ export const useCartStore = create(
         try {
           const token = useAuthStore.getState().token;
           if (!token) {
-            // ✅ ยังไม่ login → ใช้ค่าใน localStorage (ไม่ fetch server)
             return;
           }
-      
+
           const items = await fetchCartFromServer();
           set({ cartItems: items });
         } catch (err) {

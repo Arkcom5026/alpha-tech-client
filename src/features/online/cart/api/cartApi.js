@@ -67,13 +67,23 @@ export const deleteSelectedCartItems = async (cartItemIds) => {
   }
 };
 
-// ✅ Fetch branch-specific selling prices (used in CheckoutPage)
-export const getBranchPrices  = async (branchId) => {
+// ✅ Add new item to server-side cart
+export const addToServerCartItem = async (productId, quantity) => {
+  try {
+    const response = await apiClient.post('/cart/items', { productId, quantity });
+    return response.data;
+  } catch (error) {
+    console.error('❌ addToServerCartItem error:', error);
+    throw error;
+  }
+};
+
+export const getBranchPrices = async (branchId) => {
   try {
     const response = await apiClient.get(`/cart/branch-prices/${branchId}`);
     return response.data;
   } catch (error) {
-    console.error('❌ fetchBranchPrices error:', error);
-    throw error;
+    console.error('❌ getBranchPrices error:', error);
+    return [];
   }
 };

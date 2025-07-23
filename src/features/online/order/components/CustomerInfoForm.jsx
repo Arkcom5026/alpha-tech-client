@@ -45,7 +45,7 @@ const CustomerInfoForm = ({ onSubmit }) => {
     e.preventDefault();
     setStatus("saving");
     try {
-      const res = await apiClient.patch("/customers/me", form);
+      const res = await apiClient.patch("/customers/me-online", form);
       if (onSubmit) onSubmit(form);
       setStatus("saved");
     } catch (err) {

@@ -22,13 +22,46 @@ export const createCustomer = async (data) => {
   }
 };
 
-// ✅ อัปเดตข้อมูลลูกค้า (name, address, email) แบบใหม่จาก token
-export const updateCustomer = async (data) => {
+// ✅ อัปเดตข้อมูลลูกค้า (Online)
+export const updateCustomerProfileOnline = async (data) => {
   try {
-    const res = await apiClient.patch('/customers/me', data);
+    const res = await apiClient.patch('/customers/me-online', data);
     return res.data;
   } catch (error) {
-    console.error('❌ [updateCustomer] error:', error);
+    console.error('❌ [updateCustomerProfileOnline] error:', error);
+    throw error;
+  }
+};
+
+// ✅ อัปเดตข้อมูลลูกค้า (POS)
+export const updateCustomerProfilePos = async (data) => {
+  try {
+    const res = await apiClient.patch('/customers/me-pos', data);
+    return res.data;
+  } catch (error) {
+    console.error('❌ [updateCustomerProfilePos] error:', error);
+    throw error;
+  }
+};
+
+// ✅ ดึงข้อมูลลูกค้าที่ login (Online)
+export const getMyCustomerProfileOnline = async () => {
+  try {
+    const res = await apiClient.get('/customers/me-online');
+    return res.data;
+  } catch (error) {
+    console.error('❌ [getMyCustomerProfileOnline] error:', error);
+    throw error;
+  }
+};
+
+// ✅ ดึงข้อมูลลูกค้าที่ login (POS)
+export const getMyCustomerProfilePos = async () => {
+  try {
+    const res = await apiClient.get('/customers/me-pos');
+    return res.data;
+  } catch (error) {
+    console.error('❌ [getMyCustomerProfilePos] error:', error);
     throw error;
   }
 };

@@ -1,9 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { useAuthStore } from "@/features/auth/store/authStore";
-import apiClient from "@/utils/apiClient";
+import useCustomerStore from "@/features/customer/store/customerStore";
 
 const CustomerInfoForm = ({ onSubmit }) => {
   const profile = useAuthStore((state) => state.profile);
+  const customer = useCustomerStore((state) => state.customer);
+  const getMyCustomerProfileOnline = useCustomerStore((state) => state.getMyCustomerProfileOnline);
+  const updateCustomerProfileAction = useCustomerStore((state) => state.updateCustomerProfileAction);
 
   const [form, setForm] = useState({
     name: "",
@@ -14,42 +17,49 @@ const CustomerInfoForm = ({ onSubmit }) => {
     postalCode: "",
   });
 
-  const [status, setStatus] = useState("idle"); // idle | saving | saved | error
+  const [status, setStatus] = useState("idle");
+  const [hasChanged, setHasChanged] = useState(false);
 
+  // โหลดโปรไฟล์เมื่อตอน mount
   useEffect(() => {
-    const loadCustomer = async () => {
-      try {
-        const res = await apiClient.get("/customers/me");
-        const data = res.data;
-        setForm({
-          name: data.name || "",
-          phone: data.phone || "",
-          address: data.address || "",
-          district: data.district || "",
-          province: data.province || "",
-          postalCode: data.postalCode || "",
-        });
-      } catch (err) {
-        console.error("❌ load customer profile failed:", err);
-      }
-    };
-
-    loadCustomer();
+    getMyCustomerProfileOnline();
   }, []);
 
+  // อัปเดต form เมื่อ customer store มีข้อมูลใหม่
+  useEffect(() => {
+    if (customer) {
+      const initialForm = {
+        name: customer.name || "",
+        phone: customer.phone || "",
+        address: customer.address || "",
+        district: customer.district || "",
+        province: customer.province || "",
+        postalCode: customer.postalCode || "",
+      };
+      setForm(initialForm);
+      setHasChanged(false);
+    }
+  }, [customer]);
+
   const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    const updated = { ...form, [e.target.name]: e.target.value };
+    setForm(updated);
+    setHasChanged(true);
+    if (typeof onChange === 'function') {
+      onChange(updated);
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setStatus("saving");
     try {
-      const res = await apiClient.patch("/customers/me-online", form);
+      await updateCustomerProfileAction(form, "online");
       if (onSubmit) onSubmit(form);
       setStatus("saved");
+      setHasChanged(false);
     } catch (err) {
-      console.error("❌ update customer failed:", err);
+      console.error("❌ update customer failed via store:", err);
       setStatus("error");
     }
   };
@@ -130,8 +140,8 @@ const CustomerInfoForm = ({ onSubmit }) => {
 
         <button
           type="submit"
-          className="w-full bg-blue-500 hover:bg-blue-700 text-white py-2 rounded font-medium"
-          disabled={status === "saving"}
+          className="w-full bg-blue-500 hover:bg-blue-700 text-white py-2 rounded font-medium disabled:opacity-50"
+          disabled={status === "saving" || !hasChanged}
         >
           {status === "saving" ? "กำลังบันทึก..." : "บันทึกข้อมูล"}
         </button>
@@ -141,3 +151,5 @@ const CustomerInfoForm = ({ onSubmit }) => {
 };
 
 export default CustomerInfoForm;
+
+

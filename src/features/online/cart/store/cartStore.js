@@ -233,6 +233,14 @@ export const useCartStore = create(
     }),
     {
       name: 'cart-storage',
+      partialize: (state) => ({
+        cartItems: state.cartItems,
+        selectedItems: state.selectedItems,
+        // ❌ ไม่รวม branchPrices
+      }),
     }
+
   )
 );
+
+

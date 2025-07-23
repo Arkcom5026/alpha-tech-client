@@ -5,13 +5,15 @@ import { useAuthStore } from "@/features/auth/store/authStore";
 import { useOrderOnlineStore } from "../store/orderOnlineStore";
 import { useBranchStore } from "@/features/branch/store/branchStore";
 import RegisterForm from "../components/RegisterForm";
-import CustomerInfoForm from "../components/CustomerInfoForm";
 import LoginForm from "../components/LoginForm";
+import CustomerInfoForm from "../components/CustomerInfoForm";
 
 const CheckoutPage = () => {
   const cartItems = useCartStore((state) => state.cartItems);
   const fetchCartAction = useCartStore((state) => state.fetchCartAction);
-  const fetchCartBranchPricesAction = useCartStore((state) => state.fetchCartBranchPricesAction);
+  const fetchCartBranchPricesAction = useCartStore(
+    (state) => state.fetchCartBranchPricesAction
+  );
   const increaseQuantity = useCartStore((state) => state.increaseQuantity);
   const decreaseQuantity = useCartStore((state) => state.decreaseQuantity);
 
@@ -22,41 +24,21 @@ const CheckoutPage = () => {
   const [showRegister, setShowRegister] = useState(false);
   const [selectedItems, setSelectedItems] = useState([]);
   const [calculatedTotal, setCalculatedTotal] = useState(0);
-  const [customerInfo, setCustomerInfo] = useState({
-    fullName: "",
-    phone: "",
-    email: "",
-    address: "",
-    district: "",
-    province: "",
-    postalCode: "",
-  });
 
-  const submitOrderAction = useOrderOnlineStore((state) => state.submitOrderAction);
+  const submitOrderAction = useOrderOnlineStore(
+    (state) => state.submitOrderAction
+  );
 
   const handleLoginSuccess = async () => {
     await fetchCartAction();
     await fetchCartBranchPricesAction();
-
     const items = useCartStore.getState().cartItems;
     setSelectedItems(items.map((item) => item.id));
-
-    const user = useAuthStore.getState().customer;
-    console.log("✅ customer after login:", user);
-    if (user) {
-      setCustomerInfo((prev) => ({
-        ...prev,
-        fullName: user.name || "",
-        phone: user.phone || "",
-        email: user.email || "",
-      }));
-    }
   };
 
   useEffect(() => {
     const loadCart = async () => {
       await fetchCartAction();
-
       const storedToken = useAuthStore.getState().token;
       const storedCustomer = useAuthStore.getState().customer;
       const currentBranch = useBranchStore.getState().currentBranch;
@@ -65,18 +47,10 @@ const CheckoutPage = () => {
         await fetchCartBranchPricesAction(currentBranch.id);
         const items = useCartStore.getState().cartItems;
         setSelectedItems(items.map((item) => item.id));
-
-        setCustomerInfo((prev) => ({
-          ...prev,
-          fullName: storedCustomer.name || "",
-          phone: storedCustomer.phone || "",
-          email: storedCustomer.email || "",
-        }));
       }
     };
     loadCart();
   }, []);
-
 
   useEffect(() => {
     if (cartItems.length > 0 && selectedItems.length === 0) {
@@ -90,7 +64,12 @@ const CheckoutPage = () => {
 
   useEffect(() => {
     const sum = selectedCartItemsWithPrice.reduce((acc, item) => {
-      const price = item.branchPrice?.price || item.priceOnline || item.price || item.priceAtThatTime || 0;
+      const price =
+        item.branchPrice?.price ||
+        item.priceOnline ||
+        item.price ||
+        item.priceAtThatTime ||
+        0;
       return acc + price * item.quantity;
     }, 0);
     setCalculatedTotal(sum);
@@ -98,7 +77,9 @@ const CheckoutPage = () => {
 
   const toggleSelection = (id) => {
     setSelectedItems((prev) =>
-      prev.includes(id) ? prev.filter((itemId) => itemId !== id) : [...prev, id]
+      prev.includes(id)
+        ? prev.filter((itemId) => itemId !== id)
+        : [...prev, id]
     );
   };
 
@@ -112,7 +93,14 @@ const CheckoutPage = () => {
 
   const submitOrder = async () => {
     try {
-      if (!token || !customer || !selectedBranchId) return;
+      if (!token || !customer || !selectedBranchId) {
+        console.warn("❌ token/customer/branchId missing", {
+          token,
+          customer,
+          selectedBranchId,
+        });
+        return;
+      }
 
       if (!selectedCartItemsWithPrice.length) {
         alert("กรุณาเลือกสินค้าก่อนทำรายการ");
@@ -123,22 +111,20 @@ const CheckoutPage = () => {
         customerId: customer.id,
         branchId: selectedBranchId,
         note: "คำสั่งซื้อจากลูกค้าออนไลน์",
-
-        fullName: customerInfo.fullName,
-        phone: customerInfo.phone,
-        email: customerInfo.email,
-        address: customerInfo.address,
-        district: customerInfo.district,
-        province: customerInfo.province,
-        postalCode: customerInfo.postalCode,
-
         items: selectedCartItemsWithPrice.map((item) => ({
           productId: item.productId,
           quantity: item.quantity,
-          price: item.branchPrice?.price || item.priceOnline || item.price || item.priceAtThatTime || 0,
+          price:
+            item.branchPrice?.price ||
+            item.priceOnline ||
+            item.price ||
+            item.priceAtThatTime ||
+            0,
         })),
       };
-      console.log("payload : ", payload);
+
+      console.log("📦 Submitting order payload:", payload);
+
       const result = await submitOrderAction(payload);
       if (result?.order?.id) {
         window.location.href = `/order-success/${result.order.id}`;
@@ -158,25 +144,54 @@ const CheckoutPage = () => {
         ) : (
           <div className="space-y-4">
             {cartItems.map((item) => {
-              const imageUrl = item.product?.productImages?.[0]?.secure_url || item.imageUrl || "/no-image.png";
+              const imageUrl =
+                item.product?.productImages?.[0]?.secure_url ||
+                item.imageUrl ||
+                "/no-image.png";
               const name = item.product?.name || item.name || "ไม่มีชื่อ";
-              const price = item.branchPrice?.price || item.priceOnline || item.price || item.priceAtThatTime || 0;
+              const price =
+                item.branchPrice?.price ||
+                item.priceOnline ||
+                item.price ||
+                item.priceAtThatTime ||
+                0;
               return (
-                <div key={item.id} className="flex gap-4 items-start border-b pb-3">
+                <div
+                  key={item.id}
+                  className="flex gap-4 items-start border-b pb-3"
+                >
                   <input
                     type="checkbox"
                     checked={selectedItems.includes(item.id)}
                     onChange={() => toggleSelection(item.id)}
                     className="mt-2"
                   />
-                  <img src={imageUrl} alt={name} className="w-16 h-16 object-contain border rounded" />
+                  <img
+                    src={imageUrl}
+                    alt={name}
+                    className="w-16 h-16 object-contain border rounded"
+                  />
                   <div className="flex-1">
                     <div className="font-medium text-gray-800">{name}</div>
                     <div className="flex items-center gap-2 mt-1 text-xs text-gray-500">
-                      <button onClick={() => handleDecrease(item)} className="px-2 py-0.5 border rounded hover:bg-gray-100">-</button>
-                      <span className="min-w-[20px] text-center">{item.quantity}</span>
-                      <button onClick={() => handleIncrease(item)} className="px-2 py-0.5 border rounded hover:bg-gray-100">+</button>
-                      <span className="ml-2">× {Number(price).toLocaleString()} ฿</span>
+                      <button
+                        onClick={() => handleDecrease(item)}
+                        className="px-2 py-0.5 border rounded hover:bg-gray-100"
+                      >
+                        -
+                      </button>
+                      <span className="min-w-[20px] text-center">
+                        {item.quantity}
+                      </span>
+                      <button
+                        onClick={() => handleIncrease(item)}
+                        className="px-2 py-0.5 border rounded hover:bg-gray-100"
+                      >
+                        +
+                      </button>
+                      <span className="ml-2">
+                        × {Number(price).toLocaleString()} ฿
+                      </span>
                     </div>
                   </div>
                   <div className="text-sm font-medium text-gray-700 whitespace-nowrap">
@@ -201,12 +216,15 @@ const CheckoutPage = () => {
       </div>
 
       <div className="bg-white p-6 rounded-xl shadow-md h-fit">
-        {(token && customer) ? (
-          <CustomerInfoForm value={customerInfo} onChange={setCustomerInfo} />
+        {token && customer ? (
+          <CustomerInfoForm />
         ) : showRegister ? (
           <RegisterForm setShowRegister={setShowRegister} />
         ) : (
-          <LoginForm setShowRegister={setShowRegister} onSuccess={handleLoginSuccess} />
+          <LoginForm
+            setShowRegister={setShowRegister}
+            onSuccess={handleLoginSuccess}
+          />
         )}
       </div>
     </div>

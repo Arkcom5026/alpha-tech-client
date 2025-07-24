@@ -4,6 +4,9 @@ import CartPage from "@/features/online/cart/pages/CartPage";
 import PublicLayout from "@/features/online/layout/PublicLayout";
 import CheckoutPage from "@/features/online/order/pages/CheckoutPage";
 import HomeOnline from "@/features/online/pages/HomeOnline";
+import ListOrderOnlinePage from "@/features/orderOnline/pages/ListOrderOnlinePage";
+import OrderOnlineDetailPage from "@/features/orderOnline/pages/OrderOnlineDetailPage";
+import PaymentOnlinePage from "@/features/paymentOnline/pages/PaymentOnlinePage";
 
 const publicRoutes = {
   path: '/',
@@ -14,7 +17,9 @@ const publicRoutes = {
     { path: 'cart', element: <CartPage /> },
     { path: '/login', element: <LoginPage /> },
     { path: '/register', element: <RegisterPage /> },
-
+    { path: 'customers/orders', element: <ListOrderOnlinePage /> },
+    { path: 'customers/orders/:id', element: <OrderOnlineDetailPage /> },
+    { path: 'customers/payment/:id', element: <PaymentOnlinePage /> },
   ],
 };
 

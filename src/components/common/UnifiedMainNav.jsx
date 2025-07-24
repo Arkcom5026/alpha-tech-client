@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
-import { ChevronDown, UserCircle } from 'lucide-react';
+import { ChevronDown, UserCircle, Package, LogOut, User } from 'lucide-react';
 
 import { useAuthStore } from '@/features/auth/store/authStore';
 import { useCartStore } from '@/features/online/cart/store/cartStore';
@@ -94,9 +94,15 @@ const UnifiedMainNav = () => {
                 {isOpen && (
                   <div className="absolute right-0 mt-2 w-40 sm:w-48 bg-white shadow-md rounded-md z-50 text-sm">
                     <div className="px-4 py-2 text-gray-700 border-b font-semibold">{customer?.name}</div>
-                    <Link to="/customers/profile" className="block px-4 py-2 hover:bg-gray-100">โปรไฟล์ของฉัน</Link>
-                    <Link to="/customers/history" className="block px-4 py-2 hover:bg-gray-100">ประวัติการสั่งซื้อ</Link>
-                    <button onClick={handleLogout} className="block w-full text-left px-4 py-2 hover:bg-gray-100">ออกจากระบบ</button>
+                    <Link to="/customers/profile" className="block px-4 py-2 hover:bg-gray-100 flex items-center gap-2">
+                      <User className="w-4 h-4 text-gray-500" /> โปรไฟล์ของฉัน
+                    </Link>
+                    <Link to="/customers/orders" className="block px-4 py-2 hover:bg-gray-100 flex items-center gap-2">
+                      <Package className="w-4 h-4 text-gray-500" /> คำสั่งซื้อของฉัน
+                    </Link>
+                    <button onClick={handleLogout} className="block w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center gap-2">
+                      <LogOut className="w-4 h-4 text-gray-500" /> ออกจากระบบ
+                    </button>
                   </div>
                 )}
               </div>

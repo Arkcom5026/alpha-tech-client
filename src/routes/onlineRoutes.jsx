@@ -11,6 +11,7 @@ const onlineRoutes = {
   children: [    
     { index: true, element: <ProductOnlineListPage /> },    
     { path: 'product/:id', element: <ProductOnlineDetailPage /> }, // ✅ รองรับ query เช่น ?branchId=2
+
   ],
 };
 

@@ -9,6 +9,7 @@ export const sidebarSalesItems = [
       { label: 'พิมพ์ใบส่งสินค้า', to: '/pos/sales/delivery-note', },
       { label: 'ออกบิลใบส่งของ', to: '/pos/sales/combined-billing', },
       { label: 'คืนสินค้า', to: '/pos/sales/sale-return/', },
+      { label: 'คำสั่งซื้อออนไลน์', to: '/pos/sales/order-online/', },
 
     ],
   },

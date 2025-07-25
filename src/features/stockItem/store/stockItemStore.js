@@ -4,7 +4,8 @@ import { devtools } from 'zustand/middleware';
 import {
   markStockItemsAsSold,
   receiveStockItem,
-  searchStockItem
+  searchStockItem,
+  getAvailableStockItemsByProduct
 } from '../api/stockItemApi';
 
 const useStockItemStore = create(
@@ -57,6 +58,17 @@ const useStockItemStore = create(
       } catch (err) {
         console.error('❌ ไม่พบสินค้า:', err);
         return null;
+      }
+    },
+
+    // ✅ ฟังก์ชันโหลด stockItem ที่พร้อมขายตาม productId
+    loadAvailableStockItemsAction: async (productId) => {
+      try {
+        const data = await getAvailableStockItemsByProduct(productId);
+        return data;
+      } catch (err) {
+        console.error('❌ ดึง stockItem ที่พร้อมขายล้มเหลว:', err);
+        return [];
       }
     },
 

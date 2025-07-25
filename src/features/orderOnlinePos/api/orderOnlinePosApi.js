@@ -14,7 +14,12 @@ export const getOrderOnlinePosList = async () => {
 
 export const getOrderOnlinePosById = async (id) => {
   try {
-    const response = await apiClient.get(`/order-online/${id}`);
+    const response = await apiClient.get(`/order-online/${id}`, {
+      params: {
+        includeDetails: true,
+      },
+    });
+    console.log('📦 getOrderOnlinePosById response:', response);
     return response.data;
   } catch (error) {
     console.error(`📦 getOrderOnlinePosById (${id}) error:`, error);
@@ -60,6 +65,17 @@ export const deleteOrderOnline = async (id) => {
     return response.data;
   } catch (error) {
     console.error(`📦 deleteOrderOnline (${id}) error:`, error);
+    throw error;
+  }
+};
+
+export const getOrderOnlineSummary = async (id) => {
+  try {
+    const response = await apiClient.get(`/order-online/${id}/summary`);
+    console.log('📦 getOrderOnlineSummary response:', response);
+    return response.data;
+  } catch (error) {
+    console.error(`📦 getOrderOnlineSummary (${id}) error:`, error);
     throw error;
   }
 };

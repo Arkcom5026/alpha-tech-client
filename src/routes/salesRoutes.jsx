@@ -13,6 +13,7 @@ import CombinedBillingPage from "@/features/combinedBilling/pages/CombinedBillin
 import DeliveryNoteListPage from "@/features/deliveryNote/pages/DeliveryNoteListPage";
 import ListOrderOnlinePosPage from "@/features/orderOnlinePos/pages/ListOrderOnlinePosPage";
 import OrderOnlinePosDetailPage from "@/features/orderOnlinePos/pages/OrderOnlinePosDetailPage";
+import OnlineConvertOrderPage from "@/features/orderOnlinePos/pages/OnlineConvertOrderPage";
 
 
 // import ReturnListPage from "@/features/saleReturn/pages/ReturnListPage"; // ถ้ายังไม่สร้าง ให้ comment ไว้ก่อน
@@ -75,6 +76,8 @@ const salesRoutes = {
       children: [
         { index: true, element: <ListOrderOnlinePosPage /> },
         { path: ':id', element: <OrderOnlinePosDetailPage /> },
+        { path: 'convert/:id', element: <OnlineConvertOrderPage /> },
+        
         
       ],      
     },

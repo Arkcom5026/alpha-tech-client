@@ -24,6 +24,11 @@ const ListOrderOnlinePosPage = () => {
     return true;
   });
 
+  const handleConvertClick = (orderId) => {
+    if (!orderId) return;
+    window.location.href = `/pos/sales/order-online/convert/${orderId}`;
+  };
+
   return (
     <div className="px-6 pt-4 pb-6">
       <div className="flex items-center justify-between mb-4">
@@ -32,7 +37,9 @@ const ListOrderOnlinePosPage = () => {
         </h1>
         <button
           className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded shadow"
-          onClick={loadOrderOnlinePosListAction}
+          onClick={() => {
+            loadOrderOnlinePosListAction();
+          }}
         >
           🔄 โหลดใหม่
         </button>
@@ -125,12 +132,12 @@ const ListOrderOnlinePosPage = () => {
                   </td>
                   <td className="px-3 py-2 border border-gray-200 dark:border-zinc-700">
                     {order.paymentSlipStatus === 'APPROVED' ? (
-                      <a
-                        href={`/pos/reservations/create?orderOnlineId=${order.id}`}
+                      <button
+                        onClick={() => handleConvertClick(order.id)}
                         className="px-3 py-1 text-sm bg-green-100 text-green-800 rounded hover:bg-green-200"
                       >
                         สร้างใบจอง
-                      </a>
+                      </button>
                     ) : (
                       <a
                         href={`/pos/sales/order-online/${order.id}`}

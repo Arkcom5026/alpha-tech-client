@@ -3,7 +3,6 @@ import {
   getOrderOnlineList,
   getOrderOnlineListByCustomer,
   getOrderOnlineByIdForCustomer,
-  getOrderOnlineByIdForEmployee,
 } from '../api/orderOnlineApi';
 
 export const useOrderOnlineStore = create((set, get) => ({
@@ -47,18 +46,6 @@ export const useOrderOnlineStore = create((set, get) => ({
       set({ selectedOrderOnline: response.data });
     } catch (error) {
       console.error('❌ loadOrderOnlineByIdForCustomerAction error:', error);
-    } finally {
-      set({ isLoading: false });
-    }
-  },
-
-  loadOrderOnlineByIdForEmployeeAction: async (id) => {
-    try {
-      set({ isLoading: true });
-      const response = await getOrderOnlineByIdForEmployee(id);
-      set({ selectedOrderOnline: response.data });
-    } catch (error) {
-      console.error('❌ loadOrderOnlineByIdForEmployeeAction error:', error);
     } finally {
       set({ isLoading: false });
     }

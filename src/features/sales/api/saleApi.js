@@ -83,3 +83,16 @@ export const searchPrintableSales = async (params) => {
     throw error;
   }
 };
+
+// ✅ New: Convert OrderOnline to Sale
+export const convertOrderOnlineToSale = async (orderOnlineId, stockSelections) => {
+  try {
+    const res = await apiClient.post(`/order-online/${orderOnlineId}/convert-to-sale`, {
+      stockSelections,
+    });
+    return res.data;
+  } catch (err) {
+    console.error('❌ [convertOrderOnlineToSale]', err);
+    throw err;
+  }
+};

@@ -43,4 +43,17 @@ export const markStockItemsAsSold = async (stockItemIds) => {
   }
 };
 
+// ✅ ดึง stock item ที่พร้อมขาย (IN_STOCK) ตาม productId
+export const getAvailableStockItemsByProduct = async (productId) => {
+  try {
+    if (!productId) throw new Error('productId ต้องไม่ว่าง');
 
+    const res = await apiClient.get(`/stock-items/available`, {
+      params: { productId },
+    });
+    return res.data;
+  } catch (err) {
+    console.error('❌ getAvailableStockItemsByProduct error:', err);
+    throw err;
+  }
+};

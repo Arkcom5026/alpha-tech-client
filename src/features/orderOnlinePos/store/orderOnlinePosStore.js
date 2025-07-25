@@ -6,11 +6,13 @@ import {
   approveOrderOnlineSlip,
   rejectOrderOnlineSlip,
   deleteOrderOnline,
+  getOrderOnlineSummary,
 } from '../api/orderOnlinePosApi';
 
 export const useOrderOnlinePosStore = create((set, get) => ({
   orderList: [],
   selectedOrder: null,
+  summary: null,
   isLoading: false,
   error: null,
 
@@ -31,6 +33,16 @@ export const useOrderOnlinePosStore = create((set, get) => ({
       set({ selectedOrder: data, isLoading: false });
     } catch (err) {
       set({ error: err.message || 'ไม่สามารถโหลดคำสั่งซื้อได้', isLoading: false });
+    }
+  },
+
+  loadOrderOnlineSummaryAction: async (id) => {
+    set({ isLoading: true, error: null });
+    try {
+      const summary = await getOrderOnlineSummary(id);
+      set({ summary, isLoading: false });
+    } catch (err) {
+      set({ error: err.message || 'ไม่สามารถโหลดข้อมูลสรุปได้', isLoading: false });
     }
   },
 
@@ -99,4 +111,6 @@ export const useOrderOnlinePosStore = create((set, get) => ({
 
     return { subtotal, vat, total };
   },
+
+  
 }));

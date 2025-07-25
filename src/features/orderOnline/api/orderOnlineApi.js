@@ -32,13 +32,3 @@ export const getOrderOnlineByIdForCustomer = async (id) => {
     throw error;
   }
 };
-
-export const getOrderOnlineByIdForEmployee = async (id) => {
-  try {
-    const res = await apiClient.get(`/order-online/${id}`);
-    return res;
-  } catch (error) {
-    console.error('❌ getOrderOnlineByIdForEmployee error:', error);
-    throw error;
-  }
-};

@@ -47,7 +47,7 @@ export const updateCustomerProfilePos = async (data) => {
 // ✅ ดึงข้อมูลลูกค้าที่ login (Online)
 export const getMyCustomerProfileOnline = async () => {
   try {
-    const res = await apiClient.get('/customers/me-online');
+    const res = await apiClient.get('/customers/me');
     return res.data;
   } catch (error) {
     console.error('❌ [getMyCustomerProfileOnline] error:', error);
@@ -58,7 +58,7 @@ export const getMyCustomerProfileOnline = async () => {
 // ✅ ดึงข้อมูลลูกค้าที่ login (POS)
 export const getMyCustomerProfilePos = async () => {
   try {
-    const res = await apiClient.get('/customers/me-pos');
+    const res = await apiClient.get('/customers/me');
     return res.data;
   } catch (error) {
     console.error('❌ [getMyCustomerProfilePos] error:', error);

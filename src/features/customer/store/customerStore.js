@@ -1,12 +1,13 @@
+
 import { create } from 'zustand';
 import {
   getCustomerByPhone,
   createCustomer,
-  updateCustomerProfileOnline,
-  updateCustomerProfilePos,
+  updateCustomerProfileOnline as updateCustomerProfileOnlineApi,
+  updateCustomerProfilePos as updateCustomerProfilePosApi,
   getCustomerByName,
-  getMyCustomerProfileOnline,
-  getMyCustomerProfilePos,
+  getMyCustomerProfileOnline as getMyCustomerProfileOnlineApi,
+  getMyCustomerProfilePos as getMyCustomerProfilePosApi,
 } from '../api/customerApi';
 
 const useCustomerStore = create((set) => ({
@@ -18,6 +19,7 @@ const useCustomerStore = create((set) => ({
   isSearching: false,
   searchError: null,
 
+  // 🔎 Search
   searchCustomers: async (query) => {
     set({ isSearching: true, searchError: null });
     try {
@@ -25,7 +27,6 @@ const useCustomerStore = create((set) => ({
       set({ searchedCustomers: data });
       return data;
     } catch (err) {
-      console.error('[searchCustomers] ❌', err);
       set({ searchedCustomers: [], searchError: 'ไม่สามารถค้นหาลูกค้าได้' });
       throw err;
     } finally {
@@ -37,6 +38,7 @@ const useCustomerStore = create((set) => ({
     set({ searchedCustomers: [], searchError: null });
   },
 
+  // ☎️ Lookup by phone (POS scope)
   getCustomerByPhone: async (phone) => {
     set({ isLoading: true, error: null });
     try {
@@ -44,7 +46,6 @@ const useCustomerStore = create((set) => ({
       set({ customer: data });
       return data;
     } catch (err) {
-      console.error('[getCustomerByPhone] ❌', err);
       set({ customer: null, error: 'ไม่พบลูกค้า' });
       throw err;
     } finally {
@@ -52,6 +53,7 @@ const useCustomerStore = create((set) => ({
     }
   },
 
+  // ➕ Create
   createCustomer: async (customerData) => {
     set({ isLoading: true, error: null });
     try {
@@ -59,7 +61,6 @@ const useCustomerStore = create((set) => ({
       set({ customer: newCustomer });
       return newCustomer;
     } catch (err) {
-      console.error('[createCustomer] ❌', err);
       set({ error: 'เกิดข้อผิดพลาดในการสร้างลูกค้า' });
       throw err;
     } finally {
@@ -67,14 +68,14 @@ const useCustomerStore = create((set) => ({
     }
   },
 
-  updateCustomerProfileOnline: async (data) => {
+  // ✏️ Update (Online)
+  updateCustomerProfileOnlineAction: async (data) => {
     set({ isLoading: true, error: null });
     try {
-      const updatedCustomer = await updateCustomerProfileOnline(data);
+      const updatedCustomer = await updateCustomerProfileOnlineApi(data);
       set({ customer: updatedCustomer });
       return updatedCustomer;
     } catch (err) {
-      console.error('[updateCustomerProfileOnline] ❌', err);
       set({ error: 'เกิดข้อผิดพลาดในการอัปเดตลูกค้า (Online)' });
       throw err;
     } finally {
@@ -82,14 +83,14 @@ const useCustomerStore = create((set) => ({
     }
   },
 
-  updateCustomerProfilePos: async (data) => {
+  // ✏️ Update (POS)
+  updateCustomerProfilePosAction: async (data) => {
     set({ isLoading: true, error: null });
     try {
-      const updatedCustomer = await updateCustomerProfilePos(data);
+      const updatedCustomer = await updateCustomerProfilePosApi(data);
       set({ customer: updatedCustomer });
       return updatedCustomer;
     } catch (err) {
-      console.error('[updateCustomerProfilePos] ❌', err);
       set({ error: 'เกิดข้อผิดพลาดในการอัปเดตลูกค้า (POS)' });
       throw err;
     } finally {
@@ -97,14 +98,14 @@ const useCustomerStore = create((set) => ({
     }
   },
 
-  getMyCustomerProfileOnline: async () => {
+  // 👤 Get my profile (Online/Customer self)
+  getMyCustomerProfileOnlineAction: async () => {
     set({ isLoading: true, error: null });
     try {
-      const data = await getMyCustomerProfileOnline();
+      const data = await getMyCustomerProfileOnlineApi();
       set({ customer: data });
       return data;
     } catch (err) {
-      console.error('[getMyCustomerProfileOnline] ❌', err);
       set({ customer: null, error: 'โหลดข้อมูลลูกค้าไม่สำเร็จ (Online)' });
       throw err;
     } finally {
@@ -112,14 +113,14 @@ const useCustomerStore = create((set) => ({
     }
   },
 
-  getMyCustomerProfilePos: async () => {
+  // 👤 Get my profile (POS/staff viewing)
+  getMyCustomerProfilePosAction: async () => {
     set({ isLoading: true, error: null });
     try {
-      const data = await getMyCustomerProfilePos();
+      const data = await getMyCustomerProfilePosApi();
       set({ customer: data });
       return data;
     } catch (err) {
-      console.error('[getMyCustomerProfilePos] ❌', err);
       set({ customer: null, error: 'โหลดข้อมูลลูกค้าไม่สำเร็จ (POS)' });
       throw err;
     } finally {
@@ -127,23 +128,25 @@ const useCustomerStore = create((set) => ({
     }
   },
 
+  // 🧰 Setters
   setCustomer: (customer) => set({ customer }),
+  resetCustomer: () => set({ customer: null, error: null }),
 
-  resetCustomer: () => {
-    set({ customer: null, error: null });
-  },
-
-  // ✅ alias สำหรับ compatibility
+  // 🔁 Backward-compatible aliases (ถ้าคอมโพเนนต์เดิมยังเรียกชื่อเก่าอยู่)
   createCustomerAction: async (data) => {
     return await useCustomerStore.getState().createCustomer(data);
   },
-
   updateCustomerProfileAction: async (data, mode = 'online') => {
     if (mode === 'pos') {
-      return await useCustomerStore.getState().updateCustomerProfilePos(data);
-    } else {
-      return await useCustomerStore.getState().updateCustomerProfileOnline(data);
+      return await useCustomerStore.getState().updateCustomerProfilePosAction(data);
     }
+    return await useCustomerStore.getState().updateCustomerProfileOnlineAction(data);
+  },
+  getMyCustomerProfileOnline: async () => {
+    return await useCustomerStore.getState().getMyCustomerProfileOnlineAction();
+  },
+  getMyCustomerProfilePos: async () => {
+    return await useCustomerStore.getState().getMyCustomerProfilePosAction();
   },
 }));
 

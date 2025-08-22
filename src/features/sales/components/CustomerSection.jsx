@@ -14,8 +14,6 @@ const CustomerSection = ({ productSearchRef, clearTrigger, hideCustomerDetails, 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [address, setAddress] = useState('');
-  // ✨ เปลี่ยนการจัดการ customerType ให้ใช้ค่าที่ตรงกับ Prisma
-  // เพิ่ม 'GOVERNMENT' เข้ามาในตัวเลือก
   const [customerType, setCustomerType] = useState('INDIVIDUAL'); // 'INDIVIDUAL' | 'ORGANIZATION' | 'GOVERNMENT'
   const [companyName, setCompanyName] = useState('');
   const [taxId, setTaxId] = useState('');
@@ -31,7 +29,6 @@ const CustomerSection = ({ productSearchRef, clearTrigger, hideCustomerDetails, 
   const phoneInputRef = useRef(null);
 
   const setShouldShowDetails = (val) => {
-    console.log('🛠️ setShouldShowDetails:', val);
     _setShouldShowDetails(val);
   };
 
@@ -44,20 +41,17 @@ const CustomerSection = ({ productSearchRef, clearTrigger, hideCustomerDetails, 
   } = useCustomerDepositStore();
 
   const {
-    updateCustomerProfileAction,
-    createCustomerAction
+    updateCustomerProfilePosAction, // ✅ ใช้ endpoint ฝั่ง POS โดยตรง
+    createCustomerAction,
   } = useCustomerStore();
 
   const { setCustomerIdAction } = useSalesStore();
 
   const shouldShowCustomerDetails = useMemo(() => {
-    const result = (!isClearing && (_shouldShowDetails || pendingPhone));
-    console.log('🧮 [COMPUTE] shouldShowCustomerDetails (no hide flag):', result);
-    return result;
-  }, [selectedCustomer, isClearing, _shouldShowDetails]);
+    return !isClearing && (_shouldShowDetails || pendingPhone);
+  }, [isClearing, _shouldShowDetails, pendingPhone]);
 
   useEffect(() => {
-    // กำหนด focus ไปที่ช่องเบอร์โทรศัพท์เมื่อ Component โหลดครั้งแรก
     const timer = setTimeout(() => {
       phoneInputRef.current?.focus();
     }, 300);
@@ -65,9 +59,7 @@ const CustomerSection = ({ productSearchRef, clearTrigger, hideCustomerDetails, 
   }, []);
 
   useEffect(() => {
-    // เมื่อมีการทริกเกอร์การล้างข้อมูล
     if (clearTrigger) {
-
       setIsClearing(true);
       setClearKey(Date.now());
       setPhone('');
@@ -77,7 +69,7 @@ const CustomerSection = ({ productSearchRef, clearTrigger, hideCustomerDetails, 
       setAddress('');
       setCompanyName('');
       setTaxId('');
-      setCustomerType('INDIVIDUAL'); // ✨ รีเซ็ตเป็นค่าเริ่มต้น
+      setCustomerType('INDIVIDUAL');
       setNameSearch('');
       setSearchResults([]);
       setSelectedCustomer(null);
@@ -92,7 +84,6 @@ const CustomerSection = ({ productSearchRef, clearTrigger, hideCustomerDetails, 
       const delay = setTimeout(() => {
         phoneInputRef.current?.focus();
         phoneInputRef.current?.select();
-        console.log('🎯 [CLEAR_TRIGGER] Focus เบอร์โทรแล้ว');
         setIsClearing(false);
       }, 300);
       return () => clearTimeout(delay);
@@ -101,7 +92,6 @@ const CustomerSection = ({ productSearchRef, clearTrigger, hideCustomerDetails, 
 
   useEffect(() => {
     if (selectedCustomer && !isClearing) {
-      console.log('📲 [SET_PHONE] กำหนดเบอร์:', selectedCustomer.phone);
       setPhone(selectedCustomer.phone);
       setName(selectedCustomer.name || '');
       setEmail(selectedCustomer.email || '');
@@ -110,7 +100,6 @@ const CustomerSection = ({ productSearchRef, clearTrigger, hideCustomerDetails, 
 
   useEffect(() => {
     if (selectedCustomer && Object.keys(selectedCustomer).length > 0 && !isClearing) {
-      console.log('👁️ [SET_DETAIL_TRUE] แสดงข้อมูลลูกค้า');
       setShouldShowDetails(true);
     }
   }, [selectedCustomer, isClearing]);
@@ -121,15 +110,14 @@ const CustomerSection = ({ productSearchRef, clearTrigger, hideCustomerDetails, 
     setName(customer.name || '');
     setEmail(customer.email || '');
     setAddress(customer.address || '');
-    setCustomerType(customer.type || 'INDIVIDUAL'); // ✨ ใช้ค่า type จาก DB โดยตรง
-    setCompanyName(customer.companyName || ''); // ✨ ดึงข้อมูล companyName
+    setCustomerType(customer.type || 'INDIVIDUAL');
+    setCompanyName(customer.companyName || '');
     setTaxId(customer.taxId || '');
     setIsModified(false);
     setIsClearing(false);
     setSearchResults([]);
     setShouldShowDetails(true);
 
-    // ✨ ปรับ logic ให้เรียก onSaleModeSelect('CASH') ทันที
     onSaleModeSelect('CASH');
     setTimeout(() => {
       productSearchRef?.current?.focus();
@@ -160,7 +148,7 @@ const CustomerSection = ({ productSearchRef, clearTrigger, hideCustomerDetails, 
           setAddress('');
           setCompanyName('');
           setTaxId('');
-          setCustomerType('INDIVIDUAL'); // ✨ รีเซ็ตเป็นค่าเริ่มต้น
+          setCustomerType('INDIVIDUAL');
           setTimeout(() => {
             const nameInput = document.getElementById('customer-name-input');
             if (nameInput) nameInput.focus();
@@ -192,14 +180,10 @@ const CustomerSection = ({ productSearchRef, clearTrigger, hideCustomerDetails, 
           }, 100);
         }
       }
-    } catch (error) {
-      console.error('ค้นหาลูกค้าไม่สำเร็จ:', error);
-      setFormError('เกิดข้อผิดพลาดในการค้นหาลูกค้า');
     } finally {
       setCustomerLoading(false);
     }
   };
-
 
   const handleSelectCustomer = (customer) => {
     processSelectedCustomer(customer);
@@ -208,19 +192,18 @@ const CustomerSection = ({ productSearchRef, clearTrigger, hideCustomerDetails, 
   const handleUpdateCustomer = async () => {
     try {
       if (!selectedCustomer?.id) return;
-      await updateCustomerProfileAction({
+      await updateCustomerProfilePosAction({
         id: selectedCustomer.id,
         name,
         email,
         address,
-        type: customerType, // ✨ ส่งค่า type ที่ถูกต้อง
+        type: customerType,
         companyName,
         taxId,
       });
       setIsModified(false);
       alert('อัปเดตข้อมูลลูกค้าสำเร็จ!');
-    } catch (error) {
-      console.error('อัปเดตข้อมูลไม่สำเร็จ:', error);
+    } catch {
       alert('อัปเดตข้อมูลลูกค้าไม่สำเร็จ!');
     }
   };
@@ -244,20 +227,16 @@ const CustomerSection = ({ productSearchRef, clearTrigger, hideCustomerDetails, 
       if (newCustomer?.id) {
         setSelectedCustomer(newCustomer);
         setCustomerIdAction(newCustomer.id);
-        setCustomer(newCustomer); // ✅ เพิ่มบรรทัดนี้ เพื่อ set ค่า customer ใน store
         alert('สร้างลูกค้าใหม่สำเร็จ!');
         setShouldShowDetails(true);
         setTimeout(() => {
           productSearchRef?.current?.focus();
         }, 100);
       }
-    } catch (error) {
-      console.error('สร้างลูกค้าไม่สำเร็จ:', error);
-      setFormError('สร้างลูกค้าไม่สำเร็จ: ' + (error.message || 'เกิดข้อผิดพลาด'));
+    } catch (err) {
+      setFormError('สร้างลูกค้าไม่สำเร็จ: ' + (err.message || 'เกิดข้อผิดพลาด'));
     }
   };
-
-  
 
   const handleCancelCreateCustomer = () => {
     setSelectedCustomer(null);
@@ -269,7 +248,7 @@ const CustomerSection = ({ productSearchRef, clearTrigger, hideCustomerDetails, 
     setAddress('');
     setCompanyName('');
     setTaxId('');
-    setCustomerType('INDIVIDUAL'); // ✨ รีเซ็ตเป็นค่าเริ่มต้น
+    setCustomerType('INDIVIDUAL');
     setFormError('');
     setIsModified(false);
     setPendingPhone(false);
@@ -280,14 +259,11 @@ const CustomerSection = ({ productSearchRef, clearTrigger, hideCustomerDetails, 
   return (
     <div className="bg-white p-4  min-w-[390px] relative">
       <h2 className="text-xl font-bold text-gray-800 mb-4">
-  {(customerType === 'ORGANIZATION' || customerType === 'GOVERNMENT') && companyName
-  
-    ? 'หน่วยงาน'  
-    : 'ข้อมูลลูกค้า'}
-     {/* `หน่วยงาน : ${companyName}` */}
+        {(customerType === 'ORGANIZATION' || customerType === 'GOVERNMENT') && companyName
+          ? 'หน่วยงาน'
+          : 'ข้อมูลลูกค้า'}
+      </h2>
 
-   
-</h2>
       <div className="flex gap-4 mb-4">
         <label className="flex items-center space-x-2 text-gray-700">
           <input
@@ -370,8 +346,6 @@ const CustomerSection = ({ productSearchRef, clearTrigger, hideCustomerDetails, 
         <p className="text-red-600 text-sm mt-2 p-2 bg-red-100 rounded-md border border-red-200">{formError}</p>
       )}
 
-
-     
       {searchMode === 'name' && searchResults.length > 0 && (
         <div className="mt-4 border border-gray-300 rounded-md p-3 bg-gray-50 shadow-sm">
           <p className="font-semibold mb-2 text-gray-800">ผลการค้นหา:</p>
@@ -382,7 +356,6 @@ const CustomerSection = ({ productSearchRef, clearTrigger, hideCustomerDetails, 
                 onClick={() => handleSelectCustomer(cust)}
                 className="block w-full text-left px-4 py-2 border-b border-gray-200 last:border-b-0 text-gray-700 hover:bg-blue-100 rounded-sm transition-colors duration-200"
               >
-           
                 {(cust.type === 'ORGANIZATION' || cust.type === 'GOVERNMENT') ? cust.companyName : cust.name} ({cust.phone})
               </button>
             ))}
@@ -390,11 +363,8 @@ const CustomerSection = ({ productSearchRef, clearTrigger, hideCustomerDetails, 
         </div>
       )}
 
-
       {shouldShowCustomerDetails && !hideCustomerDetails && (
         <div className="mt-4 text-lg text-gray-800 bg-blue-50 border border-blue-200 rounded-xl p-4 space-y-3 shadow-md">
-        
-
           {searchMode === 'phone' && !selectedCustomer?.id && pendingPhone && (
             <p className="text-orange-700 bg-orange-100 p-2 rounded-md border border-orange-200">
               ไม่พบลูกค้าด้วยเบอร์: <strong>{phone}</strong> คุณต้องการสร้างลูกค้าใหม่หรือไม่?
@@ -403,7 +373,6 @@ const CustomerSection = ({ productSearchRef, clearTrigger, hideCustomerDetails, 
 
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             <div className="col-span-2">
-              {/* <label className="block text-base font-bold text-gray-700 mb-1">ประเภทลูกค้า:</label> */}
               <div className="flex gap-4 text-sm text-gray-800">
                 <label className="flex items-center space-x-2">
                   <input
@@ -427,7 +396,6 @@ const CustomerSection = ({ productSearchRef, clearTrigger, hideCustomerDetails, 
                   />
                   <span>นิติบุคคล</span>
                 </label>
-                {/* ✨ เพิ่มตัวเลือก "หน่วยงาน" เข้ามา */}
                 <label className="flex items-center space-x-2">
                   <input
                     type="radio"
@@ -504,14 +472,12 @@ const CustomerSection = ({ productSearchRef, clearTrigger, hideCustomerDetails, 
                     onClick={handleConfirmCreateCustomer}
                     className="px-5 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors duration-200 shadow-md flex items-center"
                   >
-                 
                     บันทึกลูกค้าใหม่
                   </button>
                   <button
                     onClick={handleCancelCreateCustomer}
                     className="px-5 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600  transition-colors duration-200 shadow-md flex items-center"
                   >
-                  
                     ยกเลิก
                   </button>
                 </div>
@@ -525,8 +491,3 @@ const CustomerSection = ({ productSearchRef, clearTrigger, hideCustomerDetails, 
 };
 
 export default CustomerSection;
-
-
-
-
-

@@ -1,6 +1,6 @@
 // =============================
 // client/src/features/stockAudit/pages/ReadyToSellAuditPage.jsx
-// ปรับ classifyScanResult ให้รองรับ response { ok:false, error:... } จาก backend
+// ปรับ layout: ย้ายปุ่มบันทึก/ปิดรอบไปอยู่แถวเดียวกับแถบ Session summary
 
 import React, { useEffect, useRef, useState } from 'react'
 import useStockAuditStore from '../store/stockAuditStore'
@@ -251,15 +251,15 @@ const ReadyToSellAuditPage = () => {
 
 
   const doConfirmLost = async () => {
-    if (!sessionId) return
     try {
-      const result = await confirmAuditAction('MARK_LOST')
-      if (result?.ok || result === true) await playSuccess()
+      const res = await confirmAuditAction('MARK_LOST')
+      if (res?.ok) await playSuccess()
       await loadOverviewAction(sessionId)
       await loadItemsAction({ scanned: 0, q: '', page: 1, pageSize: expectedPageSize })
       await loadItemsAction({ scanned: 1, q: '', page: 1, pageSize: scannedPageSize })
-    } catch (err) {
-      console.error('Confirm lost error:', err)
+    } catch (e) {
+      console.error('confirm lost error', e)
+      await playError()
     } finally {
       setOpenConfirmLost(false)
       focusScan()
@@ -267,15 +267,15 @@ const ReadyToSellAuditPage = () => {
   }
 
   const doConfirmPending = async () => {
-    if (!sessionId) return
     try {
-      const result = await confirmAuditAction('MARK_PENDING')
-      if (result?.ok || result === true) await playSuccess()
+      const res = await confirmAuditAction('MARK_PENDING')
+      if (res?.ok) await playSuccess()
       await loadOverviewAction(sessionId)
       await loadItemsAction({ scanned: 0, q: '', page: 1, pageSize: expectedPageSize })
       await loadItemsAction({ scanned: 1, q: '', page: 1, pageSize: scannedPageSize })
-    } catch (err) {
-      console.error('Confirm pending error:', err)
+    } catch (e) {
+      console.error('confirm pending error', e)
+      await playError()
     } finally {
       setOpenConfirmPending(false)
       focusScan()
@@ -285,38 +285,43 @@ const ReadyToSellAuditPage = () => {
   // ---------- render ----------
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-3 text-sm">
-        <span className="font-medium">Session:</span>
-        <span>{sessionId ?? '-'}</span>
-        <span className="ml-4">Expected: <b>{expectedCount}</b></span>
-        <span>Scanned: <b>{scannedCount}</b></span>
-        <span>Missing: <b>{missingCount}</b></span>
-        <span className="ml-4 text-gray-600">(F2 โฟกัสช่องสแกน · F3 สลับโหมด)</span>
+      {/* HEADER ROW: stats + actions in the same row */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        {/* left: session & counters */}
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+          <span className="font-medium">Session:</span>
+          <span>{sessionId ?? '-'}</span>
+          <span>Expected: <b>{expectedCount}</b></span>
+          <span>Scanned: <b>{scannedCount}</b></span>
+          <span>Missing: <b>{missingCount}</b></span>
+          <span className="text-gray-500">(F2 โฟกัสช่องสแกน · F3 สลับโหมด)</span>
+        </div>
+        {/* right: actions */}
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            className={`px-4 py-2 rounded-lg text-white ${isConfirming ? 'bg-blue-500 opacity-60 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}
+            onClick={() => setOpenConfirmLost(true)}
+            disabled={isConfirming}
+            title="บันทึกสินค้าที่ไม่ถูกสแกนเป็นสูญหาย และปิดรอบ"
+          >
+            บันทึกสินค้าสูญหาย
+          </button>
+          <button
+            type="button"
+            className={`px-4 py-2 rounded-lg text-white ${isConfirming ? 'bg-amber-500 opacity-60 cursor-not-allowed' : 'bg-amber-500 hover:bg-amber-600'}`}
+            onClick={() => setOpenConfirmPending(true)}
+            disabled={isConfirming}
+            title="ปิดรอบ (ค้างตรวจ): สินค้าที่ไม่ถูกสแกนจะเป็นค้างตรวจ"
+          >
+            ปิดรอบ (ค้างตรวจ)
+          </button>
+        </div>
       </div>
 
-      <div className="flex justify-center gap-3">
-        <button
-          type="button"
-          className={`px-5 py-2.5 rounded-lg text-white ${(isConfirming || expectedTotal === 0) ? 'bg-blue-500 opacity-60 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-700'}`}
-          disabled={isConfirming || expectedTotal === 0}
-          onClick={() => setOpenConfirmLost(true)}
-          title="บันทึกสินค้าที่ไม่ถูกสแกนเป็นสูญหาย และปิดรอบ"
-        >
-          บันทึกสินค้าสูญหาย
-        </button>
-
-        <button
-          type="button"
-          className={`px-5 py-2.5 rounded-lg text-white ${(isConfirming || expectedTotal === 0) ? 'bg-amber-400 opacity-60 cursor-not-allowed' : 'bg-amber-400 hover:bg-amber-600'}`}
-          disabled={isConfirming || expectedTotal === 0}
-          onClick={() => setOpenConfirmPending(true)}
-          title="ปิดรอบ (ค้างตรวจ): สินค้าที่ไม่ถูกสแกนจะถูกบันทึกเป็นค้างตรวจ"
-        >
-          ปิดรอบ (ค้างตรวจ)
-        </button>
-      </div>
-
-      {errorMessage && <div className="text-red-600 text-sm">{errorMessage}</div>}
+      {errorMessage && (
+        <div className="text-red-600 text-sm">{errorMessage}</div>
+      )}
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
         {/* Expected (left) */}
@@ -391,28 +396,21 @@ const ReadyToSellAuditPage = () => {
       {/* Confirm dialogs */}
       <ConfirmActionDialog
         open={openConfirmLost}
-        title="ยืนยันบันทึกสินค้าสูญหาย"
+        name="ยืนยันบันทึกสินค้าสูญหาย"
         description={'จะบันทึกสินค้าที่ "ยังไม่ถูกสแกน" ทั้งหมดเป็นสถานะสูญหาย และปิดรอบทันที'}
-        confirmText="ยืนยันบันทึกสูญหาย"
         onCancel={() => setOpenConfirmLost(false)}
         onConfirm={doConfirmLost}
-        isLoading={isConfirming}
       />
 
       <ConfirmActionDialog
         open={openConfirmPending}
-        title="ปิดรอบ (ค้างตรวจ)"
+        name="ปิดรอบ (ค้างตรวจ)"
         description={'จะปิดรอบนี้ และบันทึกสินค้าที่ไม่ถูกสแกนทั้งหมดเป็นค้างตรวจ (Pending)'}
-        confirmText="ยืนยันปิดรอบ"
         onCancel={() => setOpenConfirmPending(false)}
         onConfirm={doConfirmPending}
-        isLoading={isConfirming}
       />
     </div>
   )
 }
 
 export default ReadyToSellAuditPage
-
-
-

@@ -136,7 +136,8 @@ export default function ReadyToSellAuditPage() {
                 placeholder="แสกนบาร์โค้ด"
                 autoSubmit
                 delay={180}
-                className="w-80 md:w-96 h-11 text-base"
+                //className="w-80 md:w-96 h-11 text-base"
+                className="border border-black rounded px-3 py-2 w-80 md:w-96"
               />
               <button
                 className="btn btn-sm"

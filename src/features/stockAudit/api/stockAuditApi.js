@@ -3,6 +3,7 @@
 // - ใช้ apiClient ตรง ๆ แล้วคืนค่า res.data
 // - ไม่ prefix '/api' (เพราะ apiClient.baseURL = '/api')
 // - ใช้ axios params สำหรับ query แทนการประกอบ URL เอง
+// - เพิ่มรองรับการสแกน **SN** โดยตรง (scanAuditSn)
 
 import apiClient from '@/utils/apiClient'
 
@@ -36,15 +37,31 @@ export const getAuditOverview = async (sessionId) => {
 }
 
 // ยิงบาร์โค้ดใน Session
-export const scanAuditBarcode = async (sessionId, barcode) => {
+export const scanAuditBarcode = async (sessionId, barcode, opts = {}) => {
   try {
-    const res = await apiClient.post(`/stock-audit/${sessionId}/scan`, { barcode })
+    const res = await apiClient.post(`/stock-audit/${sessionId}/scan`, {
+      barcode,
+      // เผื่อ backend รองรับ mode (เช่น 'BARCODE' | 'SN')
+      ...(opts?.mode ? { mode: opts.mode } : {}),
+    })
     return res.data
   } catch (error) {
     console.error('❌ [scanAuditBarcode] error:', error)
     throw error
   }
 }
+
+// สแกนด้วย Serial Number โดยตรง (ถ้า backend เปิด endpoint นี้)
+export const scanAuditSn = async (sessionId, sn) => {
+  try {
+    const res = await apiClient.post(`/stock-audit/${sessionId}/scan-sn`, { sn })
+    return res.data
+  } catch (error) {
+    console.error('❌ [scanAuditSn] error:', error)
+    throw error
+  }
+}
+
 
 // ยืนยันผลการเช็ค (MARK_PENDING | MARK_LOST)
 export const confirmAudit = async (sessionId, strategy = 'MARK_PENDING') => {

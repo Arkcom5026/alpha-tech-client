@@ -5,7 +5,7 @@
 // - โหลดทั้ง 2 ตารางหลังเริ่มรอบ
 // - รองรับสแกนแล้วรีเฟรชทั้ง 2 ตาราง
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import useStockAuditStore from '../store/stockAuditStore'
 import ScanInput from '../components/ScanInput'
 import AuditTable from '../components/AuditTable'
@@ -23,9 +23,35 @@ export default function ReadyToSellAuditPage() {
     scannedItems, scannedTotal, scannedPage, scannedPageSize,
 
     // actions
-    startReadyAuditAction, loadItemsAction, scanBarcodeAction, confirmAuditAction, loadOverviewAction,
+    startReadyAuditAction, loadItemsAction, scanBarcodeAction, confirmAuditAction, loadOverviewAction, scanSnAction,
     isStarting, isScanning, isConfirming, errorMessage,
   } = useStockAuditStore()
+
+  // เพิ่ม state สำหรับโหมดสแกน (BARCODE | SN)
+  const [scanMode, setScanMode] = useState('BARCODE')
+
+  // 🔊 Success sound (Web Audio API)
+  const audioCtxRef = useRef(null)
+  const playSuccess = async () => {
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext
+      if (!AC) return
+      if (!audioCtxRef.current) audioCtxRef.current = new AC()
+      const ctx = audioCtxRef.current
+      if (ctx.state === 'suspended' && ctx.resume) await ctx.resume()
+      const now = ctx.currentTime
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc.type = 'sine'
+      osc.frequency.setValueAtTime(880, now) // A5
+      gain.gain.setValueAtTime(0.0001, now)
+      gain.gain.exponentialRampToValueAtTime(0.08, now + 0.02)
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.18)
+      osc.connect(gain).connect(ctx.destination)
+      osc.start(now)
+      osc.stop(now + 0.2)
+    } catch { /* no-op */ }
+  }
 
   useEffect(() => {
     ;(async () => {
@@ -38,14 +64,17 @@ export default function ReadyToSellAuditPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // กด F2 เพื่อโฟกัสช่องยิงบาร์โค้ดทันที
+  // กด F2 เพื่อโฟกัสช่องสแกนทันที และกด F3 เพื่อสลับโหมด (BARCODE ↔ SN)
   useEffect(() => {
     const onKey = (e) => {
       if (e.key === 'F2') {
         e.preventDefault()
         if (scanRef.current && typeof scanRef.current.focus === 'function') {
-        scanRef.current.focus()
-      }
+          scanRef.current.focus()
+        }
+      } else if (e.key === 'F3') {
+        e.preventDefault()
+        setScanMode((m) => (m === 'BARCODE' ? 'SN' : 'BARCODE'))
       }
     }
     window.addEventListener('keydown', onKey)
@@ -54,7 +83,19 @@ export default function ReadyToSellAuditPage() {
 
   const handleScan = async (value) => {
     if (!value) return
-    await scanBarcodeAction(value)
+    const input = String(value).trim()
+
+    let result
+    if (scanMode === 'SN' && typeof scanSnAction === 'function') {
+      result = await scanSnAction(input)
+    } else {
+      result = await scanBarcodeAction(input, { mode: scanMode })
+    }
+
+    // เล่นเสียงเมื่อสำเร็จ (รองรับทั้งรูปแบบ boolean หรือ { ok: true })
+    const ok = typeof result === 'object' ? !!result?.ok : result !== false
+    if (ok) await playSuccess()
+
     await loadItemsAction({ scanned: 0, q: '', page: expectedPage, pageSize: expectedPageSize })
     await loadItemsAction({ scanned: 1, q: '', page: scannedPage, pageSize: scannedPageSize })
   }
@@ -62,9 +103,10 @@ export default function ReadyToSellAuditPage() {
 
   const handleConfirmPending = async () => {
     if (!sessionId) return
-    const ok = window.confirm('ยืนยัน “ปิดรอบ (ค้างตรวจ)” หรือไม่? สินค้าที่ไม่ถูกสแกนจะถูกบันทึกเป็นค้างตรวจ (Pending)')
-    if (!ok) return
-    await confirmAuditAction('MARK_PENDING')
+    const okConfirm = window.confirm('ยืนยัน “ปิดรอบ (ค้างตรวจ)” หรือไม่? สินค้าที่ไม่ถูกสแกนจะถูกบันทึกเป็นค้างตรวจ (Pending)')
+    if (!okConfirm) return
+    const result = await confirmAuditAction('MARK_PENDING')
+    if (result?.ok || result === true) await playSuccess()
     await loadOverviewAction(sessionId)
     await loadItemsAction({ scanned: 0, q: '', page: 1, pageSize: expectedPageSize })
     await loadItemsAction({ scanned: 1, q: '', page: 1, pageSize: scannedPageSize })
@@ -73,9 +115,10 @@ export default function ReadyToSellAuditPage() {
 
   const handleConfirmLost = async () => {
     if (!sessionId) return
-    const ok = window.confirm('ยืนยันบันทึก "สูญหาย" สำหรับสินค้าที่ "ยังไม่ถูกสแกน" ทั้งหมดหรือไม่?')
-    if (!ok) return
-    await confirmAuditAction('MARK_LOST')
+    const okConfirm = window.confirm('ยืนยันบันทึก "สูญหาย" สำหรับสินค้าที่ "ยังไม่ถูกสแกน" ทั้งหมดหรือไม่?')
+    if (!okConfirm) return
+    const result = await confirmAuditAction('MARK_LOST')
+    if (result?.ok || result === true) await playSuccess()
     await loadOverviewAction(sessionId)
     await loadItemsAction({ scanned: 0, q: '', page: 1, pageSize: expectedPageSize })
     await loadItemsAction({ scanned: 1, q: '', page: 1, pageSize: scannedPageSize })
@@ -91,7 +134,7 @@ export default function ReadyToSellAuditPage() {
         <span>{sessionId ?? '-'}</span>
         <span className="ml-4">Expected: <b>{expectedCount}</b></span>
         <span>Scanned: <b>{scannedCount}</b></span>
-        <span>Missing: <b>{missingCount}</b></span>
+        <span>Missing: <b>{missingCount}</b></span><span className="ml-4 text-gray-600">(F2 โฟกัสช่องสแกน · F3 สลับโหมด)</span>
       </div>
 
       {/* Action buttons centered */}
@@ -133,12 +176,29 @@ export default function ReadyToSellAuditPage() {
                 ref={scanRef}
                 onSubmit={handleScan}
                 disabled={isScanning}
-                placeholder="แสกนบาร์โค้ด"
+                placeholder={scanMode === 'SN' ? 'สแกน/พิมพ์ SN (F3 สลับโหมด)' : 'สแกนบาร์โค้ด (F3 สลับโหมด)'}
                 autoSubmit
-                delay={180}
-                //className="w-80 md:w-96 h-11 text-base"
+                delay={140}
                 className="border border-black rounded px-3 py-2 w-80 md:w-96"
               />
+              {/* ปุ่มสลับโหมดสแกน */}
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-600">โหมด:</span>
+                <div className="inline-flex rounded-lg overflow-hidden border">
+                  <button
+                    type="button"
+                    onClick={() => setScanMode('BARCODE')}
+                    className={`px-3 py-2 text-sm ${scanMode === 'BARCODE' ? 'bg-black text-white' : 'bg-white text-black'}`}
+                    title="สแกนด้วยบาร์โค้ด (F3 สลับ)"
+                  >บาร์โค้ด</button>
+                  <button
+                    type="button"
+                    onClick={() => setScanMode('SN')}
+                    className={`px-3 py-2 text-sm ${scanMode === 'SN' ? 'bg-black text-white' : 'bg-white text-black'}`}
+                    title="สแกนด้วย SN (F3 สลับ)"
+                  >SN</button>
+                </div>
+              </div>
               <button
                 className="btn btn-sm"
                 disabled={isStarting}
@@ -183,6 +243,7 @@ export default function ReadyToSellAuditPage() {
     </div>
   )
 }
+
 
 
 

@@ -6,13 +6,7 @@
 // - มี guard ป้องกันยิงซ้ำ และข้อความ error/info ให้ UI ใช้แสดง
 
 import { create } from 'zustand'
-import {
-  startReadyAudit,
-  getAuditOverview,
-  scanAuditBarcode,
-  confirmAudit,
-  getAuditItems,
-} from '@/features/stockAudit/api/stockAuditApi'
+import * as stockAuditApi from '@/features/stockAudit/api/stockAuditApi'
 
 // helper ดึงข้อความผิดพลาดจาก axios/backend
 const getApiMessage = (err, fallback) =>
@@ -105,7 +99,7 @@ const useStockAuditStore = create((set, get) => ({
       return { ok: true, sessionId: existId }
     }
     try {
-      const res = await startReadyAudit()
+      const res = await stockAuditApi.startReadyAudit()
       const sessionId = res.sessionId
       set({ sessionId, expectedCount: res.expectedCount })
       await get().loadOverviewAction(sessionId)
@@ -137,7 +131,7 @@ const useStockAuditStore = create((set, get) => ({
     if (!sessionId) return { ok: false, error: 'sessionId required' }
     set({ isLoadingOverview: true, errorMessage: '' })
     try {
-      const res = await getAuditOverview(sessionId)
+      const res = await stockAuditApi.getAuditOverview(sessionId)
       const s = res?.session || {}
       const expectedCount = Number(s.expectedCount || 0)
       const scannedCount  = Number(s.scannedCount  || 0)
@@ -158,7 +152,7 @@ const useStockAuditStore = create((set, get) => ({
     if (!sessionId) return { ok: false, error: 'sessionId required' }
     set({ isLoadingItems: true, errorMessage: '' })
     try {
-      const res = await getAuditItems(sessionId, { scanned, q, page, pageSize })
+      const res = await stockAuditApi.getAuditItems(sessionId, { scanned, q, page, pageSize })
       if (Number(scanned) === 0) {
         set({
           expectedItems: res.items || [],
@@ -200,16 +194,34 @@ const useStockAuditStore = create((set, get) => ({
     }
   },
 
-  scanBarcodeAction: async (barcode) => {
-    const { sessionId, isScanning, expectedPage, expectedPageSize, scannedPage, scannedPageSize, expectedQuery, scannedQuery } = get()
+  scanBarcodeAction: async (barcode, opts = {}) => {
+    const {
+      sessionId,
+      isScanning,
+      expectedPage,
+      expectedPageSize,
+      scannedPage,
+      scannedPageSize,
+      expectedQuery,
+      scannedQuery,
+    } = get()
     if (!sessionId) return { ok: false, error: 'sessionId required' }
-    if (!barcode || String(barcode).trim() === '') return { ok: false, error: 'barcode required' }
+    const input = String(barcode || '').trim()
+    if (!input) return { ok: false, error: 'barcode required' }
     if (isScanning) return { ok: false, error: 'Scanning in progress' }
 
     set({ isScanning: true, errorMessage: '' })
     try {
-      const res = await scanAuditBarcode(sessionId, String(barcode).trim())
-      if (res.scanned !== true) throw new Error('Scan failed')
+      let res
+      // ถ้า component ส่ง mode=SN มา และมี API สำหรับ SN ให้เรียกใช้โดยตรง
+      if (opts?.mode === 'SN' && typeof stockAuditApi.scanAuditSn === 'function') {
+        res = await stockAuditApi.scanAuditSn(sessionId, input)
+      } else {
+        // โหมด BARCODE หรือ fallback → ใช้ endpoint เดิม (บางระบบ backend อาจ auto-detect ได้)
+        res = await stockAuditApi.scanAuditBarcode(sessionId, input, opts)
+      }
+
+      if (res?.scanned !== true && res?.ok !== true) throw new Error('Scan failed')
       await get().loadOverviewAction(sessionId)
       // รีโหลดทั้ง 2 ตารางเพื่อให้ซ้าย/ขวาอัปเดตพร้อมกัน
       await get().loadItemsAction({ scanned: 0, q: expectedQuery.q, page: expectedPage, pageSize: expectedPageSize })
@@ -224,15 +236,60 @@ const useStockAuditStore = create((set, get) => ({
     }
   },
 
+  // ✅ สแกนด้วย Serial Number โดยตรง (ถ้ามี API รองรับ) — ถ้าไม่มีจะ fallback ไป endpoint เดิม
+  scanSnAction: async (sn) => {
+    const {
+      sessionId,
+      isScanning,
+      expectedPage,
+      expectedPageSize,
+      scannedPage,
+      scannedPageSize,
+      expectedQuery,
+      scannedQuery,
+    } = get()
+    if (!sessionId) return { ok: false, error: 'sessionId required' }
+    const input = String(sn || '').trim()
+    if (!input) return { ok: false, error: 'sn required' }
+    if (isScanning) return { ok: false, error: 'Scanning in progress' }
+
+    set({ isScanning: true, errorMessage: '' })
+    try {
+      let res
+      if (typeof stockAuditApi.scanAuditSn === 'function') {
+        res = await stockAuditApi.scanAuditSn(sessionId, input)
+      } else {
+        // fallback: ใช้ endpoint เดิม พร้อมส่ง hint ว่าเป็น SN
+        res = await stockAuditApi.scanAuditBarcode(sessionId, input, { mode: 'SN' })
+      }
+      if (res?.scanned !== true && res?.ok !== true) throw new Error('Scan failed')
+
+      await get().loadOverviewAction(sessionId)
+      await get().loadItemsAction({ scanned: 0, q: expectedQuery.q, page: expectedPage, pageSize: expectedPageSize })
+      await get().loadItemsAction({ scanned: 1, q: scannedQuery.q, page: scannedPage, pageSize: scannedPageSize })
+      return { ok: true }
+    } catch (err) {
+      const message = getApiMessage(err, 'Scan SN failed')
+      set({ errorMessage: message })
+      return { ok: false, error: message }
+    } finally {
+      set({ isScanning: false })
+    }
+  }, 
+  
+  
+
   confirmAuditAction: async (strategy = 'MARK_PENDING') => {
-    const { sessionId, pageSize } = get()
+    const { sessionId, expectedPageSize, scannedPageSize } = get()
     if (!sessionId) return { ok: false, error: 'sessionId required' }
     set({ isConfirming: true, errorMessage: '' })
     try {
-      const res = await confirmAudit(sessionId, strategy)
+      const res = await stockAuditApi.confirmAudit(sessionId, strategy)
       if (res.confirmed !== true) throw new Error('Confirm failed')
       await get().loadOverviewAction(sessionId)
-      await get().loadItemsAction({ scanned: 0, q: '', page: 1, pageSize })
+      // ✅ รีโหลดทั้ง 2 ตารางให้สอดคล้องกับ flow ของการสแกน
+      await get().loadItemsAction({ scanned: 0, q: '', page: 1, pageSize: expectedPageSize })
+      await get().loadItemsAction({ scanned: 1, q: '', page: 1, pageSize: scannedPageSize })
       
       return { ok: true }
     } catch (err) {
@@ -246,4 +303,3 @@ const useStockAuditStore = create((set, get) => ({
 }))
 
 export default useStockAuditStore
-

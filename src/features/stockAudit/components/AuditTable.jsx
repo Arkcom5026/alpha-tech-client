@@ -29,7 +29,7 @@ const AuditTable = ({
         <input
           type="text"
           className="border rounded px-3 py-2 w-80 md:w-96"
-          placeholder="ค้นหา: barcode / ชื่อสินค้า / รุ่น"
+          placeholder="ค้นหา: barcode / SN / ชื่อสินค้า / รุ่น"
           value={localQ}
           onChange={(e) => { const v = e.target.value; setLocalQ(v); onSearch?.(v); }}
         />
@@ -42,6 +42,7 @@ const AuditTable = ({
             <tr>
               <th className="text-left p-2 border-b">#</th>
               <th className="text-left p-2 border-b">Barcode</th>
+              <th className="text-left p-2 border-b">SN</th>
               <th className="text-left p-2 border-b">สินค้า</th>
               {scanned && <th className="text-left p-2 border-b">Scanned At</th>}
             </tr>
@@ -49,17 +50,18 @@ const AuditTable = ({
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={scanned ? 4 : 3} className="p-3 text-center text-gray-500">กำลังโหลด...</td>
+                <td colSpan={scanned ? 5 : 4} className="p-3 text-center text-gray-500">กำลังโหลด...</td>
               </tr>
             ) : items.length === 0 ? (
               <tr>
-                <td colSpan={scanned ? 4 : 3} className="p-3 text-center text-gray-400">ไม่มีรายการ</td>
+                <td colSpan={scanned ? 5 : 4} className="p-3 text-center text-gray-400">ไม่มีรายการ</td>
               </tr>
             ) : (
               items.map((it, idx) => (
                 <tr key={it.id} className="odd:bg-white even:bg-gray-50">
                   <td className="p-2 border-b">{(page - 1) * pageSize + idx + 1}</td>
                   <td className="p-2 border-b font-mono">{it.barcode}</td>
+                  <td className="p-2 border-b font-mono">{it.serialNumber || it.sn || it.serialNo || '-'}</td>
                   <td className="p-2 border-b">{it.product?.name}{it.product?.model ? ` (${it.product.model})` : ''}</td>
                   {scanned && <td className="p-2 border-b">{it.scannedAt ? new Date(it.scannedAt).toLocaleString() : '-'}</td>}
                 </tr>
@@ -82,5 +84,6 @@ const AuditTable = ({
 };
 
 export default AuditTable;
+
 
 

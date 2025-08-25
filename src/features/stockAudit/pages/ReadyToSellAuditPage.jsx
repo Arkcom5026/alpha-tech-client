@@ -30,6 +30,23 @@ export default function ReadyToSellAuditPage() {
   // เพิ่ม state สำหรับโหมดสแกน (BARCODE | SN)
   const [scanMode, setScanMode] = useState('BARCODE')
 
+  // helper: โฟกัสช่องสแกนทุกครั้งหลังจบการทำงาน
+  const focusScan = () => {
+    const el = scanRef.current
+    if (!el) return
+    const fn = () => {
+      try {
+        el.focus?.()
+        el.select?.()
+      } catch { /* no-op */ }
+    }
+    if (typeof window !== 'undefined' && 'requestAnimationFrame' in window) {
+      window.requestAnimationFrame(fn)
+    } else {
+      setTimeout(fn, 0)
+    }
+  }
+
   // 🔊 Success sound (Web Audio API)
   const audioCtxRef = useRef(null)
   const playSuccess = async () => {
@@ -61,6 +78,7 @@ export default function ReadyToSellAuditPage() {
         await loadItemsAction({ scanned: 1, q: '', page: 1, pageSize: scannedPageSize })
       }
     })()
+    if (scanRef.current) focusScan()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -69,9 +87,7 @@ export default function ReadyToSellAuditPage() {
     const onKey = (e) => {
       if (e.key === 'F2') {
         e.preventDefault()
-        if (scanRef.current && typeof scanRef.current.focus === 'function') {
-          scanRef.current.focus()
-        }
+        focusScan()
       } else if (e.key === 'F3') {
         e.preventDefault()
         setScanMode((m) => (m === 'BARCODE' ? 'SN' : 'BARCODE'))
@@ -81,47 +97,62 @@ export default function ReadyToSellAuditPage() {
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
+  // เมื่อสลับโหมดสแกน ให้โฟกัสช่องสแกนเสมอ
+  useEffect(() => { focusScan() }, [scanMode])
+
   const handleScan = async (value) => {
-    if (!value) return
+    if (!value) { focusScan(); return }
     const input = String(value).trim()
 
-    let result
-    if (scanMode === 'SN' && typeof scanSnAction === 'function') {
-      result = await scanSnAction(input)
-    } else {
-      result = await scanBarcodeAction(input, { mode: scanMode })
+    try {
+      let result
+      if (scanMode === 'SN' && typeof scanSnAction === 'function') {
+        result = await scanSnAction(input)
+      } else {
+        result = await scanBarcodeAction(input, { mode: scanMode })
+      }
+
+      // เล่นเสียงเมื่อสำเร็จ (รองรับทั้งรูปแบบ boolean หรือ { ok: true })
+      const ok = typeof result === 'object' ? !!result?.ok : result !== false
+      if (ok) await playSuccess()
+
+      await loadItemsAction({ scanned: 0, q: '', page: expectedPage, pageSize: expectedPageSize })
+      await loadItemsAction({ scanned: 1, q: '', page: scannedPage, pageSize: scannedPageSize })
+    } finally {
+      focusScan()
     }
-
-    // เล่นเสียงเมื่อสำเร็จ (รองรับทั้งรูปแบบ boolean หรือ { ok: true })
-    const ok = typeof result === 'object' ? !!result?.ok : result !== false
-    if (ok) await playSuccess()
-
-    await loadItemsAction({ scanned: 0, q: '', page: expectedPage, pageSize: expectedPageSize })
-    await loadItemsAction({ scanned: 1, q: '', page: scannedPage, pageSize: scannedPageSize })
   }
 
 
   const handleConfirmPending = async () => {
     if (!sessionId) return
-    const okConfirm = window.confirm('ยืนยัน “ปิดรอบ (ค้างตรวจ)” หรือไม่? สินค้าที่ไม่ถูกสแกนจะถูกบันทึกเป็นค้างตรวจ (Pending)')
-    if (!okConfirm) return
-    const result = await confirmAuditAction('MARK_PENDING')
-    if (result?.ok || result === true) await playSuccess()
-    await loadOverviewAction(sessionId)
-    await loadItemsAction({ scanned: 0, q: '', page: 1, pageSize: expectedPageSize })
-    await loadItemsAction({ scanned: 1, q: '', page: 1, pageSize: scannedPageSize })
+    try {
+      const okConfirm = window.confirm('ยืนยัน “ปิดรอบ (ค้างตรวจ)” หรือไม่? สินค้าที่ไม่ถูกสแกนจะถูกบันทึกเป็นค้างตรวจ (Pending)')
+      if (!okConfirm) return
+      const result = await confirmAuditAction('MARK_PENDING')
+      if (result?.ok || result === true) await playSuccess()
+      await loadOverviewAction(sessionId)
+      await loadItemsAction({ scanned: 0, q: '', page: 1, pageSize: expectedPageSize })
+      await loadItemsAction({ scanned: 1, q: '', page: 1, pageSize: scannedPageSize })
+    } finally {
+      focusScan()
+    }
   }
 
 
   const handleConfirmLost = async () => {
     if (!sessionId) return
-    const okConfirm = window.confirm('ยืนยันบันทึก "สูญหาย" สำหรับสินค้าที่ "ยังไม่ถูกสแกน" ทั้งหมดหรือไม่?')
-    if (!okConfirm) return
-    const result = await confirmAuditAction('MARK_LOST')
-    if (result?.ok || result === true) await playSuccess()
-    await loadOverviewAction(sessionId)
-    await loadItemsAction({ scanned: 0, q: '', page: 1, pageSize: expectedPageSize })
-    await loadItemsAction({ scanned: 1, q: '', page: 1, pageSize: scannedPageSize })
+    try {
+      const okConfirm = window.confirm('ยืนยันบันทึก "สูญหาย" สำหรับสินค้าที่ "ยังไม่ถูกสแกน" ทั้งหมดหรือไม่?')
+      if (!okConfirm) return
+      const result = await confirmAuditAction('MARK_LOST')
+      if (result?.ok || result === true) await playSuccess()
+      await loadOverviewAction(sessionId)
+      await loadItemsAction({ scanned: 0, q: '', page: 1, pageSize: expectedPageSize })
+      await loadItemsAction({ scanned: 1, q: '', page: 1, pageSize: scannedPageSize })
+    } finally {
+      focusScan()
+    }
   }
 
 
@@ -202,7 +233,7 @@ export default function ReadyToSellAuditPage() {
               <button
                 className="btn btn-sm"
                 disabled={isStarting}
-                onClick={() => loadItemsAction({ scanned: 0, q: '', page: 1, pageSize: expectedPageSize })}
+                onClick={async () => { await loadItemsAction({ scanned: 0, q: '', page: 1, pageSize: expectedPageSize }); focusScan(); }}
               >
                 รีโหลด
               </button>
@@ -225,7 +256,7 @@ export default function ReadyToSellAuditPage() {
             <h3 className="font-semibold">Scanned (สแกนแล้ว) {scannedTotal}</h3>
             <button
               className="btn btn-sm"
-              onClick={() => loadItemsAction({ scanned: 1, q: '', page: 1, pageSize: scannedPageSize })}
+              onClick={async () => { await loadItemsAction({ scanned: 1, q: '', page: 1, pageSize: scannedPageSize }); focusScan(); }}
             >
               รีโหลด
             </button>
@@ -243,6 +274,7 @@ export default function ReadyToSellAuditPage() {
     </div>
   )
 }
+
 
 
 

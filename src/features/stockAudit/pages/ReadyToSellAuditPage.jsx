@@ -93,8 +93,9 @@ const ReadyToSellAuditPage = () => {
   }
 
   const playSuccess = async () => {
-    await playBeep({ freq: 900, duration: 0.15, type: 'triangle', volume: 0.6 })
-    await playBeep({ freq: 1500, duration: 0.15, type: 'triangle', volume: 0.6 })
+    // ปรับเพิ่ม volume และ duration ให้ดังและยาวขึ้น
+    await playBeep({ freq: 900, duration: 0.2, type: 'triangle', volume: 1 })
+    await playBeep({ freq: 1500, duration: 0.2, type: 'triangle', volume: 1 })
   }
 
   const playDuplicate = async () => {  

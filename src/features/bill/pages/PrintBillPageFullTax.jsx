@@ -1,77 +1,52 @@
-// -----------------------
-// PrintBillPageFullTax.jsx
-// -----------------------
+// ===============================
+// features/bill/pages/PrintBillPageFullTax.jsx
+// ===============================
+import { useEffect } from 'react';
 import { useLocation, useParams } from 'react-router-dom';
-import { useEffect, useState } from 'react';
-import { getSaleById } from '@/features/sales/api/saleApi';
-import BillLayoutFullTax from '../components/BillLayoutFullTax';
+import BillLayoutFullTax from '@/features/bill/components/BillLayoutFullTax';
+import { useBillStore } from '@/features/bill/store/BillStore';
 
 const PrintBillPageFullTax = () => {
-  const location = useLocation();
   const { id } = useParams();
-  const [sale, setSale] = useState(null);
-  const [payment, setPayment] = useState(null);
+  const location = useLocation();
+  const { sale, payment, saleItems, config, loading, error, loadSaleByIdAction, resetAction } = useBillStore();
 
   useEffect(() => {
+    let mounted = true;
+
+    // If the route provided a payment object with sale, prefer it (e.g., after checkout)
     const statePayment = location.state?.payment;
+    const run = async () => {
+      try {
+        if (statePayment?.sale) {
+          // preload from state then still normalize via store (ensures consistent rounding)
+          await loadSaleByIdAction(statePayment.sale.id);
+        } else if (id) {
+          await loadSaleByIdAction(id);
+        }
+      } catch {
+        // error is handled in store
+      }
+    };
 
-    if (statePayment && statePayment.sale) {
-      setSale(statePayment.sale);
-      setPayment(statePayment);
-    } else {
-      // If payment data is not passed via state, fetch sale details by ID
-      getSaleById(id).then((res) => {
-        setSale(res);
-        // Create a basic payment object for BillLayoutFullTax
-        setPayment({
-          saleId: res.id,
-          paymentMethod: res.paymentMethod, // Assuming sale has a paymentMethod field
-          amount: res.totalAmount,
-          note: res.note || '',
-          sale: res,
-        });
-      });
-    }
-  }, [location.state, id]);
+    if (mounted) run();
+    return () => {
+      mounted = false;
+      resetAction();
+    };
+  }, [id, location.state, loadSaleByIdAction, resetAction]);
 
-  if (!sale || !sale.items || !payment) {
+  if (loading) {
     return <div className="text-center p-6 text-gray-700">⏳ กำลังโหลดข้อมูลใบเสร็จ...</div>;
   }
+  if (error) {
+    return <div className="text-center p-6 text-red-600">เกิดข้อผิดพลาด: {error}</div>;
+  }
+  if (!sale || !saleItems?.length || !payment || !config) {
+    return <div className="text-center p-6 text-gray-700">ไม่พบข้อมูลใบเสร็จ</div>;
+  }
 
-  // Map sale items to the format expected by BillLayoutFullTax
-  const saleItems = (sale.items || []).map((i) => ({
-    id: i.id, // Use SaleItem's own ID
-    productName: i.stockItem.product?.name || 'ไม่พบชื่อสินค้า',
-    productModel: i.stockItem.product?.model || 'ไม่รุ่นชื่อสินค้า',
-    // Corrected: Use 'price' field from SaleItem (i.price) as unit price
-    amount: i.price ?? 0,
-    quantity: 1, // Confirmed: quantity is always 1 per SaleItem
-    unit: i.stockItem.product?.template?.unit?.name || '-', // Get unit name from product template
-  }));
-
-  const branch = sale.branch || {};
-  const config = branch.receiptConfig || {};
-
-  // Construct full configuration object for the bill layout
-  const fullConfig = {
-    branchName: config.branchName || branch.name || '-',
-    address: config.address || branch.address || '-',
-    phone: config.phone || branch.phone || '-',
-    taxId: config.taxId || branch.taxId || '-',
-    footerNote: config.footerNote || '',
-    logoUrl: config.logoUrl || null,
-    vatRate: config.vatRate || 7, // Default VAT rate if not specified
-  };
-
-  // Prepare all data required by BillLayoutFullTax
-  const saleData = {
-    sale,
-    saleItems,
-    payments: [payment], // Assuming only one payment object is needed for the layout
-    config: fullConfig,
-  };
-
-  return <BillLayoutFullTax {...saleData} />;
+  return <BillLayoutFullTax sale={sale} saleItems={saleItems} payments={[payment]} config={config} />;
 };
 
 export default PrintBillPageFullTax;

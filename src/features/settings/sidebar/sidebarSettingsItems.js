@@ -11,7 +11,9 @@ export const sidebarSettingsItems = [
         { label: 'จัดการตำแหน่งงาน', to: '/pos/settings/positions' },
         { label: 'กำหนดสิทธิ์', to: '/pos/settings/roles' },
         { label: 'จัดการสาขา', to: '/pos/settings/branches' },
-        { label: "ตั้งค่าภาษี/ใบเสร็จ", path: "/pos/settings/tax" }
+        { label: "ตั้งค่าภาษี/ใบเสร็จ", to: "/pos/settings/tax" },
+        { label: "จัดการธนาคาร", to: "/pos/settings/bank" }
+                                        
       ],
     },
   ];

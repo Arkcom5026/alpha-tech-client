@@ -8,6 +8,10 @@ import ListBranchPage from '@/features/branch/page/ListBranchPage';
 import CreateBranchPage from '@/features/branch/page/CreateBranchPage';
 import EditEmployeePage from '@/features/employee/pages/EditEmployeePage';
 import ApproveEmployeePage from '@/features/employee/pages/ApproveEmployeePage';
+import ListBankPage from '@/features/bank/page/ListBankPage';
+import { CreateBankPage } from '@/features/bank/page/CreateBankPage';
+import { EditBankPage } from '@/features/bank/page/EditBankPage';
+
 
 const settingsRoutes = {
   path: '/pos/settings',
@@ -27,6 +31,14 @@ const settingsRoutes = {
         { index: true, element: <ListEmployeePage /> },
          { path: 'approve', element: <ApproveEmployeePage /> },
          { path: 'edit/:id', element: <EditEmployeePage /> },
+      ],
+    },
+    {
+      path: 'bank',
+      children: [
+        { index: true, element: <ListBankPage /> },
+        { path: 'create', element: <CreateBankPage /> },
+        { path: 'edit/:id', element: <EditBankPage /> },
       ],
     },
   ],

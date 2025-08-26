@@ -375,7 +375,7 @@ const ReadyToSellAuditPage = () => {
 
         {/* Scanned (right) */}
         <div className="rounded-xl border p-3">
-          <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center justify-between mb-2 py-2">
             <h3 className="font-semibold">Scanned (สแกนแล้ว) {scannedTotal}</h3>
             <button
               className="btn btn-sm"
@@ -414,3 +414,7 @@ const ReadyToSellAuditPage = () => {
 }
 
 export default ReadyToSellAuditPage
+
+
+
+

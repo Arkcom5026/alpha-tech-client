@@ -1,4 +1,4 @@
-// src/features/stockItem/pages/PrintAllBarcodePage.jsx
+// src/features/stockItem/pages/BarcodeReceiptListPage.jsx
 import React, { useEffect } from 'react';
 import usePurchaseOrderReceiptStore from '@/features/purchaseOrderReceipt/store/purchaseOrderReceiptStore';
 
@@ -13,8 +13,8 @@ const BarcodeReceiptListPage = () => {
   } = usePurchaseOrderReceiptStore();
 
   useEffect(() => {
-    // โหลดรายการทันทีที่เข้าเพจ
-    loadReceiptBarcodeSummariesAction();
+    // โหลดรายการทันทีที่เข้าเพจ (เฉพาะยังไม่ได้พิมพ์)
+    loadReceiptBarcodeSummariesAction({ printed: false });
   }, [loadReceiptBarcodeSummariesAction]);
 
   const hasData = Array.isArray(receiptBarcodeSummaries) && receiptBarcodeSummaries.length > 0;
@@ -32,7 +32,7 @@ const BarcodeReceiptListPage = () => {
           <button
             type="button"
             className="ml-2 px-3 py-1 rounded bg-blue-600 text-white hover:bg-blue-700"
-            onClick={() => loadReceiptBarcodeSummariesAction()}
+            onClick={() => loadReceiptBarcodeSummariesAction({ printed: false })}
           >
             ลองอีกครั้ง
           </button>

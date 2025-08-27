@@ -1,7 +1,6 @@
 // pages/FullSalePage.jsx
 import React, { useState } from 'react';
 import useSalesStore from '@/features/sales/store/salesStore';
-import useCustomerStore from '@/features/customers/store/customerStore';
 import ProductSearchBox from '@/components/pos/ProductSearchBox';
 import SaleItemTable from '@/components/pos/SaleItemTable';
 import CustomerSelector from '@/components/pos/CustomerSelector';

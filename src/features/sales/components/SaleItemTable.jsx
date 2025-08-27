@@ -1,7 +1,8 @@
 
+
 // 📁 FILE: components/SaleItemTable.jsx
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import useSalesStore from '@/features/sales/store/salesStore';
 
 const SaleItemTable = ({ items = [], onRemove, billDiscount = 0 }) => {
@@ -54,7 +55,7 @@ const SaleItemTable = ({ items = [], onRemove, billDiscount = 0 }) => {
     return () => {
       clearTimeout(handler); // เคลียร์ timeout เมื่อ component unmount หรือ effect ทำงานซ้ำ
     };
-  }, [billDiscount, items, updateSaleItemAction, setSharedBillDiscountPerItem]); // กำหนด dependencies
+  }, [billDiscount, items, updateSaleItemAction, setSharedBillDiscountPerItem, sharedBillDiscountPerItem]); // กำหนด dependencies
 
   const handleDiscountChange = (itemId, value) => {
     const newDiscountWithoutBill = isNaN(value) ? 0 : value;

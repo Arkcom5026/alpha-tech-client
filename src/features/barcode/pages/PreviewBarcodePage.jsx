@@ -1,6 +1,6 @@
 // src/pages/pos/barcode/PreviewBarcodePage.jsx
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import useBarcodeStore from '@/features/barcode/store/barcodeStore';
 import BarcodeWithQRRenderer from '@/components/shared/barcode/BarcodeWithQRRenderer';
@@ -19,92 +19,69 @@ const PreviewBarcodePage = () => {
   const [barcodeWidth, setBarcodeWidth] = useState(0.8);
   const [columns, setColumns] = useState(10);
 
-
   const [showBarcode, setShowBarcode] = useState(true);
   const [showQR, setShowQR] = useState(false);
 
+  // โหลดข้อมูลอัตโนมัติครั้งแรก และกันกดซ้ำ
   const handleLoadBarcodes = useCallback(async () => {
-    if (!receiptId || loading || loaded) return;
-
+    if (!receiptId || loading || loaded) return; // กัน double click/โหลดซ้ำ
     setLoading(true);
-    await loadBarcodesAction(receiptId);
-    setLoading(false);
-    setLoaded(true);
+    try {
+      await loadBarcodesAction(receiptId);
+      setLoaded(true);
+    } finally {
+      setLoading(false);
+    }
   }, [receiptId, loading, loaded, loadBarcodesAction]);
 
+  useEffect(() => {
+    if (!loaded && !loading && receiptId) {
+      handleLoadBarcodes();
+    }
+  }, [receiptId, loaded, loading, handleLoadBarcodes]);
+
+  // ปุ่มพิมพ์: พิมพ์อย่างเดียว
   const handlePrint = async () => {
+    if (!loaded || barcodes.length === 0) return;
+    window.print();
+  };
+
+  // ปุ่มยืนยันพิมพ์แล้ว: ค่อย mark printed
+  const handleConfirmPrinted = async () => {
     try {
       if (!receiptId || barcodes.length === 0) return;
-
       const hasUnprinted = barcodes.some((b) => !b.printed);
-
       if (hasUnprinted) {
-        console.log('[📦] Updating printed status for purchaseOrderReceiptId:', receiptId);
         await markBarcodeAsPrintedAction({ purchaseOrderReceiptId: receiptId });
       }
-
       await markReceiptAsPrintedAction(receiptId);
-      window.print();
     } catch (error) {
       console.error('❌ อัปเดตสถานะ printed ล้มเหลว:', error);
     }
   };
 
+  const gridStyle = useMemo(() => ({
+    gridTemplateColumns: `repeat(${columns}, auto)`
+  }), [columns]);
+
   return (
     <>
       <style>{`
         @media print {
-          body {
-            margin: 0;
-            padding: 0;
-            background: white;
-          }
-
-          .print-area {
-            padding: 0;
-            margin: 0;
-          }
-
-          .print-area .shadow,
-          .print-area .border,
-          .print-area .rounded-xl {
-            box-shadow: none !important;
-            border: none !important;
-            border-radius: 0 !important;
-          }
-
-          .print-area .p-1 {
-            padding: 0 !important;
-          }
-
-          /* ปรับ margin-bottom และ padding สำหรับกรอบบาร์โค้ดตอนพิมพ์ให้มีระยะห่างเล็กน้อย */
-          .print-area .barcode-cell {
-            margin-bottom: 0.1mm !important;
-            padding: 0.5mm !important;
-            border: 1px solid #ccc !important; /* ยังคงกรอบไว้เพื่อให้เห็นระยะ */
-          }
-
-          @page {
-            margin: 4mm;
-            size: A4;
-          }
-
-          header,
-          footer,
-          nav,
-          .print-hidden {
-            display: none !important;
-          }
+          body { margin: 0; padding: 0; background: white; }
+          .print-area { padding: 0; margin: 0; }
+          .print-area .shadow, .print-area .border, .print-area .rounded-xl { box-shadow: none !important; border: none !important; border-radius: 0 !important; }
+          .print-area .p-1 { padding: 0 !important; }
+          .print-area .barcode-cell { margin-bottom: 0.1mm !important; padding: 0.5mm !important; border: 1px solid #ccc !important; }
+          @page { margin: 4mm; size: A4; }
+          header, footer, nav, .print-hidden { display: none !important; }
         }
       `}</style>
 
       <div className="p-6 space-y-6">
-
         <h1 className="text-xl font-bold print:hidden">พรีวิวบาร์โค้ด</h1>
         <div className='flex justify-center'>
           <div className="flex gap-4 items-center flex-wrap print:hidden">
-
-
             <label className="flex items-center gap-1">
               ความสูง:
               <input
@@ -112,6 +89,9 @@ const PreviewBarcodePage = () => {
                 value={barcodeHeight}
                 onChange={(e) => setBarcodeHeight(Number(e.target.value))}
                 className="w-20 border rounded px-2 py-1"
+                min={10}
+                max={60}
+                step={1}
               />
             </label>
             <label className="flex items-center gap-2">
@@ -134,6 +114,9 @@ const PreviewBarcodePage = () => {
                 value={columns}
                 onChange={(e) => setColumns(Number(e.target.value))}
                 className="w-20 border rounded px-2 py-1"
+                min={1}
+                max={12}
+                step={1}
               />
             </label>
 
@@ -150,7 +133,7 @@ const PreviewBarcodePage = () => {
               onClick={handleLoadBarcodes}
               className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
             >
-              {loading ? 'กำลังโหลด...' : 'แสดงบาร์โค้ด'}
+              {loading ? 'กำลังโหลด...' : (loaded ? 'โหลดอีกครั้ง' : 'แสดงบาร์โค้ด')}
             </button>
 
             <button
@@ -161,29 +144,28 @@ const PreviewBarcodePage = () => {
               พิมพ์บาร์โค้ด
             </button>
 
+            <button
+              onClick={handleConfirmPrinted}
+              className="px-4 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700"
+              disabled={!loaded || barcodes.length === 0}
+            >
+              ยืนยันพิมพ์แล้ว
+            </button>
           </div>
         </div>
         <hr />
 
-
-
         {!loaded ? (
-          <p className="text-gray-500 mt-4 print:hidden">กรุณากดปุ่ม "แสดงบาร์โค้ด" เพื่อโหลดข้อมูล</p>
+          <p className="text-gray-500 mt-4 print:hidden">กำลังเตรียมข้อมูลบาร์โค้ด...</p>
         ) : barcodes.length === 0 ? (
           <p className="text-red-500 mt-4 print:hidden">ไม่พบบาร์โค้ดจากใบรับสินค้านี้</p>
         ) : (
-          <div
-            className="grid gap-y-[0.1mm] gap-x-1 mt-4 print-area justify-center"
-            style={{
-              gridTemplateColumns: `repeat(${columns}, auto)`
-            }}
-          >
+          <div className="grid gap-y-[0.1mm] gap-x-1 mt-4 print-area justify-center" style={gridStyle}>
             {barcodes.map((item) => {
               const product = item?.product;
               return (
                 <div
                   key={item.barcode || item.id}
-                  // ใช้ Tailwind border สำหรับหน้าจอแสดงผล และ Print CSS จะจัดการ border ตอนพิมพ์
                   className="barcode-cell border p-0.5 rounded text-center flex flex-col items-center justify-center"
                 >
                   <BarcodeWithQRRenderer

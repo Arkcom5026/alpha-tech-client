@@ -1,4 +1,4 @@
-// ✅ StockItemTable.jsx — แสดงรายการ SN ที่ยิงเข้าสต๊อก
+// ✅ ReceivedSNTable.jsx — แสดงรายการ SN ที่ยิงเข้าสต๊อก
 
 import React from 'react';
 import useStockItemStore from '../../stockItem/store/stockItemStore';
@@ -50,4 +50,3 @@ const ReceivedSNTable = () => {
 };
 
 export default ReceivedSNTable;
-  

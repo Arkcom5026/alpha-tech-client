@@ -90,11 +90,12 @@ const usePurchaseOrderReceiptStore = create((set) => ({
     }
   },
 
-  loadReceiptBarcodeSummariesAction: async () => {
+  // ✅ ปรับให้ default โหลดเฉพาะที่ยังไม่ได้พิมพ์
+  loadReceiptBarcodeSummariesAction: async (opts = {}) => {
     try {
       set({ loading: true, receiptBarcodeLoading: true, error: null });
-      const data = await getReceiptBarcodeSummaries();
-      console.log('loadReceiptBarcodeSummariesAction ', data);
+      const params = { printed: opts.printed ?? false };
+      const data = await getReceiptBarcodeSummaries(params);
       set({ receiptBarcodeSummaries: data, loading: false, receiptBarcodeLoading: false, error: null });
       return data;
     } catch (error) {
@@ -233,6 +234,10 @@ const usePurchaseOrderReceiptStore = create((set) => ({
       set((state) => ({
         receipts: state.receipts.map((r) => (r.id === receiptId ? res : r)),
         currentReceipt: res,
+        // ✅ อัปเดตสรุปรายการให้สะท้อน printed=true
+        receiptBarcodeSummaries: state.receiptBarcodeSummaries.map((s) =>
+          s.id === receiptId ? { ...s, printed: true } : s
+        ),
         error: null,
       }));
       return res;

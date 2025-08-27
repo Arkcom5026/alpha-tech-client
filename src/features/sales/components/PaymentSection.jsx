@@ -1,5 +1,5 @@
 // PaymentSection component (Refactored to use sub-components)
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import useSalesStore from '@/features/sales/store/salesStore';
 import useCustomerDepositStore from '@/features/customerDeposit/store/customerDepositStore';
 import usePaymentStore from '@/features/payment/store/paymentStore';
@@ -9,7 +9,6 @@ import { useNavigate } from 'react-router-dom';
 import PaymentSummary from './PaymentSummary';
 import PaymentMethodInput from './PaymentMethodInput';
 import CalculationDetails from './CalculationDetails';
-import BillPrintOptions from './BillPrintOptions';
 
 const PaymentSection = ({
   saleItems,
@@ -48,6 +47,13 @@ const PaymentSection = ({
   const [paymentError, setPaymentError] = useState('');
   const [currentSaleMode, setCurrentSaleMode] = useState('CASH');
 
+  // 🔄 Sync sale mode to parent when toggled here
+  useEffect(() => {
+    if (typeof onSaleModeChange === 'function') {
+      onSaleModeChange(currentSaleMode);
+    }
+  }, [currentSaleMode, onSaleModeChange]);
+
   const effectiveCustomer = selectedCustomer || { id: null, name: 'ลูกค้าทั่วไป' };
   const validSaleItems = Array.isArray(saleItems) ? saleItems : [];
   const totalOriginalPrice = validSaleItems.reduce((sum, item) => sum + (item.price || 0), 0);
@@ -70,24 +76,27 @@ const PaymentSection = ({
   const priceBeforeVat = safeFinalPrice / 1.07;
   const vatAmount = safeFinalPrice - priceBeforeVat;
   const safeDepositUsed = Math.min(depositUsed, safeFinalPrice);
-  const totalToPay = safeFinalPrice;
 
-  const cashAmount = Number(paymentList.find(p => p.method === 'CASH')?.amount || 0);
+  const calc = useMemo(() => {
+    const cashAmount = Number(paymentList.find(p => p.method === 'CASH')?.amount || 0);
 
-  const totalPaid = paymentList.reduce((sum, p) => {
-    const amount = parseFloat(p.amount);
-    return sum + (isNaN(amount) ? 0 : amount);
-  }, 0);
+    const totalPaid = paymentList.reduce((sum, p) => {
+      const amount = parseFloat(p.amount);
+      return sum + (isNaN(amount) ? 0 : amount);
+    }, 0);
 
-  const paidByOther = totalPaid - cashAmount;
-  const remainingToPay = Math.max(totalToPay - paidByOther - safeDepositUsed, 0);
-  const safeChangeAmount = Math.max(cashAmount - remainingToPay, 0);
-  const totalPaidNet = totalPaid - safeChangeAmount;
-  const grandTotalPaid = totalPaidNet + safeDepositUsed;
+    const paidByOther = totalPaid - cashAmount;
+    const remainingToPay = Math.max(safeFinalPrice - paidByOther - safeDepositUsed, 0);
+    const safeChangeAmount = Math.max(cashAmount - remainingToPay, 0);
+    const totalPaidNet = totalPaid - safeChangeAmount;
+    const grandTotalPaid = totalPaidNet + safeDepositUsed;
+
+    return { cashAmount, totalPaid, paidByOther, remainingToPay, safeChangeAmount, totalPaidNet, grandTotalPaid, totalToPay: safeFinalPrice };
+  }, [paymentList, safeFinalPrice, safeDepositUsed]);
 
   const hasValidCustomerId = !!effectiveCustomer?.id;
   const isConfirmEnabled =
-    (currentSaleMode === 'CASH' && totalPaid + safeDepositUsed >= totalToPay && safeDepositUsed <= safeFinalPrice && hasValidCustomerId && validSaleItems.length > 0) ||
+    (currentSaleMode === 'CASH' && calc.totalPaid + safeDepositUsed >= calc.totalToPay && safeDepositUsed <= safeFinalPrice && hasValidCustomerId && validSaleItems.length > 0) ||
     (currentSaleMode === 'CREDIT' && hasValidCustomerId && validSaleItems.length > 0);
 
   const handleConfirm = useCallback(async () => {
@@ -105,7 +114,7 @@ const PaymentSection = ({
       setPaymentError('กำลังดำเนินการ กรุณารอสักครู่');
       return;
     }
-    if (currentSaleMode === 'CASH' && totalPaid + safeDepositUsed < totalToPay) {
+    if (currentSaleMode === 'CASH' && calc.totalPaid + safeDepositUsed < calc.totalToPay) {
       setPaymentError('ยอดเงินที่ชำระยังไม่เพียงพอ');
       return;
     }
@@ -134,7 +143,7 @@ const PaymentSection = ({
 
         await submitMultiPaymentAction({
           saleId: confirmedSale.id,
-          netPaid: grandTotalPaid,
+          netPaid: calc.grandTotalPaid,
           paymentList: updatedPayments,
         });
 
@@ -182,10 +191,31 @@ const PaymentSection = ({
       onSaleModeChange('CASH');
     }
   }, [
-    hasValidCustomerId, validSaleItems.length, isSubmitting, totalPaid, safeDepositUsed, totalToPay, safeBillDiscount, totalOriginalPrice,
-    confirmSaleOrderAction, paymentList, selectedDeposit?.id, submitMultiPaymentAction, grandTotalPaid, applyDepositUsageAction,
-    saleOption, navigate, onSaleConfirmed, setDepositUsed, setCardRef, setBillDiscount, resetSaleOrderAction, clearCustomerAndDeposit,
-    setCustomerIdAction, setClearPhoneTrigger, effectiveCustomer?.id, effectiveCustomer, setIsSubmitting, currentSaleMode, onSaleModeChange
+    hasValidCustomerId,
+    validSaleItems.length,
+    isSubmitting,
+    safeDepositUsed,
+    safeBillDiscount,
+    totalOriginalPrice,
+    confirmSaleOrderAction,
+    paymentList,
+    selectedDeposit?.id,
+    submitMultiPaymentAction,
+    applyDepositUsageAction,
+    saleOption,
+    navigate,
+    onSaleConfirmed,
+    setDepositUsed,
+    setCardRef,
+    setBillDiscount,
+    resetSaleOrderAction,
+    clearCustomerAndDeposit,
+    setCustomerIdAction,
+    setClearPhoneTrigger,
+    setIsSubmitting,
+    currentSaleMode,
+    onSaleModeChange,
+    calc
   ]);
 
   const handleBillDiscountChange = useCallback((e) => {
@@ -225,9 +255,9 @@ const PaymentSection = ({
         />
 
         <PaymentSummary
-          totalToPay={totalToPay}
-          grandTotalPaid={grandTotalPaid}
-          safeChangeAmount={safeChangeAmount}
+          totalToPay={calc.totalToPay}
+          grandTotalPaid={calc.grandTotalPaid}
+          safeChangeAmount={calc.safeChangeAmount}
           isConfirmEnabled={isConfirmEnabled}
           isSubmitting={isSubmitting}
           onConfirm={handleConfirm}

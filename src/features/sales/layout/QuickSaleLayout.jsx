@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import useSalesStore from '@/features/sales/store/salesStore';
 import useCustomerDepositStore from '@/features/customerDeposit/store/customerDepositStore';
 import useStockItemStore from '@/features/stockItem/store/stockItemStore';

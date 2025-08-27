@@ -63,12 +63,10 @@ export const getPurchaseOrderDetailById = async (poId) => {
   }
 };
 
-export const getReceiptBarcodeSummaries = async () => {
+// ✅ ใช้ default เป็น printed=false เสมอ เว้นแต่จะส่งพารามิเตอร์อื่นมา
+export const getReceiptBarcodeSummaries = async (params = { printed: false }) => {
   try {
-    const res = await apiClient.get('/purchase-order-receipts/with-barcode-status');
-    
-    console.log('getReceiptBarcodeSummaries : ', res)
-
+    const res = await apiClient.get('/barcodes/with-barcodes', { params });
     return res.data;
   } catch (error) {
     console.error('📛 [getReceiptBarcodeSummaries] error:', error);
@@ -154,14 +152,13 @@ export const getReceiptsReadyToPay = async (filters = {}) => {
   }
 };
 
-
 export const getReceiptsMissingTaxInfo = async () => {
- try {
-   // เรียก API ไปยัง endpoint ใหม่ (ต้องสร้างที่ Backend ต่อไป)
-   const response = await apiClient.get('/purchase-order-receipts/missing-tax-info');
-   return response.data;
- } catch (error) {
-   console.error('❌ [getReceiptsMissingTaxInfo] error:', error);
-   throw error;
- }
+  try {
+    // เรียก API ไปยัง endpoint ใหม่ (ต้องสร้างที่ Backend ต่อไป)
+    const response = await apiClient.get('/purchase-order-receipts/missing-tax-info');
+    return response.data;
+  } catch (error) {
+    console.error('❌ [getReceiptsMissingTaxInfo] error:', error);
+    throw error;
+  }
 };

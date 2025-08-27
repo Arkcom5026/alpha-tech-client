@@ -31,7 +31,3 @@ const BillPrintOptions = ({ saleOption, setSaleOption, hideNoneOption = false })
 };
 
 export default BillPrintOptions;
-
-
-
-

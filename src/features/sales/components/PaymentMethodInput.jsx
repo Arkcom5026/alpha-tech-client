@@ -1,7 +1,7 @@
 // PaymentMethodInput.jsx (Refactored to include 3 static inputs)
 import React from 'react';
 
-const PaymentMethodInput = ({ cash, transfer, credit, onCashChange, onTransferChange, onCreditChange }) => {
+const PaymentMethodInput = ({ cash, transfer, credit, onCashChange, onTransferChange, onCreditChange, cardRef, onCardRefChange }) => {
   return (
     <div className=" gap-4 ">
       {/* เงินสด */}
@@ -44,18 +44,17 @@ const PaymentMethodInput = ({ cash, transfer, credit, onCashChange, onTransferCh
 
         {/* เลขอ้างอิงบัตรเครดิต */}
         <div className='py-1'>
-
           <input
             type="text"
             className="w-full h-[50px] border border-gray-300 rounded-md px-3 py-2 text-xl text-right font-medium text-gray-700 focus:ring-2 focus:ring-yellow-400 shadow-sm"
             placeholder="กรอกเลขอ้างอิง..."
+            value={cardRef || ''}
+            onChange={onCardRefChange}
           />
         </div>
-      </div>
-    </div>
+        </div>
+      </div>  
   );
 };
 
 export default PaymentMethodInput;
-
-

@@ -1,4 +1,3 @@
-
 // PaymentSummary.jsx (New Component - Updated to include BillPrintOptions)
 import React from 'react';
 import BillPrintOptions from './BillPrintOptions'; // Import BillPrintOptions
@@ -109,4 +108,3 @@ const PaymentSummary = ({ totalToPay, grandTotalPaid, safeChangeAmount, isConfir
 };
 
 export default PaymentSummary;
-

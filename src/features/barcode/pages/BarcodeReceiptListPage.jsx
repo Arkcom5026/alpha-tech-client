@@ -1,24 +1,25 @@
 // src/features/stockItem/pages/BarcodeReceiptListPage.jsx
 import React, { useEffect } from 'react';
 import usePurchaseOrderReceiptStore from '@/features/purchaseOrderReceipt/store/purchaseOrderReceiptStore';
-
 import BarcodePrintTable from '../controllers/BarcodePrintTable';
+
+
 
 const BarcodeReceiptListPage = () => {
   const {
-    receiptBarcodeSummaries,
-    loadReceiptBarcodeSummariesAction,
+    // ใช้ข้อมูลสรุปจาก "ใบรับสินค้า" โดยตรง
+    receiptSummaries,
+    loadReceiptSummariesAction,
     loading,
     error,
   } = usePurchaseOrderReceiptStore();
 
   useEffect(() => {
-    // โหลดรายการทันทีที่เข้าเพจ (เฉพาะยังไม่ได้พิมพ์)
-    loadReceiptBarcodeSummariesAction({ printed: false });
-  }, [loadReceiptBarcodeSummariesAction]);
+    loadReceiptSummariesAction({ printed: false });
+  }, [loadReceiptSummariesAction]);
 
-  const hasData = Array.isArray(receiptBarcodeSummaries) && receiptBarcodeSummaries.length > 0;
-  const showError = !loading && error && !hasData; // ❗ แสดง error เฉพาะกรณีที่ไม่มีข้อมูลเลยเท่านั้น
+  const hasData = Array.isArray(receiptSummaries) && receiptSummaries.length > 0;
+  const showError = !loading && error && !hasData;
 
   return (
     <div className="p-4">
@@ -32,7 +33,7 @@ const BarcodeReceiptListPage = () => {
           <button
             type="button"
             className="ml-2 px-3 py-1 rounded bg-blue-600 text-white hover:bg-blue-700"
-            onClick={() => loadReceiptBarcodeSummariesAction({ printed: false })}
+            onClick={() => loadReceiptSummariesAction({ printed: false })}
           >
             ลองอีกครั้ง
           </button>
@@ -40,7 +41,7 @@ const BarcodeReceiptListPage = () => {
       )}
 
       {!loading && (hasData || !error) && (
-        <BarcodePrintTable receipts={receiptBarcodeSummaries || []} />
+        <BarcodePrintTable receipts={receiptSummaries || []} />
       )}
     </div>
   );

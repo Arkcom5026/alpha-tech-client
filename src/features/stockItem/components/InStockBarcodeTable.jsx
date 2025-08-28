@@ -1,43 +1,84 @@
-// ✅ InStockBarcodeTable.jsx — แสดงรายการสินค้าที่ถูกยิง SN แล้ว (พร้อมขาย)
-import React, { useState } from 'react';
-import useBarcodeStore from '@/features/barcode/store/barcodeStore';
 
-const InStockBarcodeTable = () => {
-  const { barcodes, updateSerialNumberAction, deleteSerialNumberAction, loadBarcodesAction } = useBarcodeStore();
+// ✅ InStockBarcodeTable.jsx — รับ props.items และ fallback ไปที่ store
+import React, { useMemo, useState } from 'react';
+import useBarcodeStore from '@/features/barcode/store/barcodeStore';
+import ConfirmActionDialog from '@/components/shared/dialogs/ConfirmActionDialog';
+
+const InStockBarcodeTable = ({ items }) => {
+  const { barcodes, loadBarcodesAction, deleteSerialNumberAction, updateSerialNumberAction } = useBarcodeStore();
+  const [openDelete, setOpenDelete] = useState(false);
+  const [openAdd, setOpenAdd] = useState(false);
+  const [targetBarcode, setTargetBarcode] = useState('');
+  const [newSN, setNewSN] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
 
-  const scannedList = barcodes.filter((b) => b.stockItemId != null);
+  // ใช้ props.items ถ้ามี ไม่งั้น fallback ไปที่ store
+  const source = Array.isArray(items) ? items : barcodes;
 
-  const handleDeleteSN = async (barcode) => {
-    if (!window.confirm(`คุณต้องการลบ SN ของบาร์โค้ด ${barcode} ใช่หรือไม่?`)) return;
-    await deleteSerialNumberAction(barcode);
+  // ✅ รองรับทั้งกรณีมี stockItemId (scalar) และ stockItem (object)
+  const isScanned = (b) => b?.stockItemId != null || b?.stockItem?.id != null;
 
+  const scannedList = useMemo(
+    () => (source || []).filter(isScanned),
+    [source]
+  );
+
+  const refreshByBarcode = (barcode) => {
     const item = barcodes.find((b) => b.barcode === barcode);
-    const receiptId = item?.receiptItem?.receiptId || item?.stockItem?.purchaseOrderReceiptItem?.receiptId;
+    const receiptId =
+      item?.receiptId ||
+      item?.receiptItem?.receiptId ||
+      item?.stockItem?.purchaseOrderReceiptItem?.receiptId;
     if (receiptId) loadBarcodesAction(receiptId);
   };
 
-  const handleAddSN = async (barcode) => {
-    const newSN = prompt(`กรุณากรอก SN สำหรับบาร์โค้ด ${barcode}`);
-    if (newSN) {
-      try {
-        await updateSerialNumberAction(barcode, newSN);
+  const onAskDelete = (barcode) => {
+    setTargetBarcode(barcode);
+    setOpenDelete(true);
+  };
 
-        const item = barcodes.find((b) => b.barcode === barcode);
-        const receiptId = item?.receiptItem?.receiptId || item?.stockItem?.purchaseOrderReceiptItem?.receiptId;
-        if (receiptId) loadBarcodesAction(receiptId);
-       
-      } catch (err) {
-        const error = err?.response?.data?.error;
-        const msg = error?.toString?.() || 'ไม่สามารถบันทึก SN ได้';
+  const onConfirmDelete = async () => {
+    try {
+      await deleteSerialNumberAction(targetBarcode);
+      refreshByBarcode(targetBarcode);
+      setErrorMessage('');
+    } catch (err) {
+      const msg = err?.response?.data?.error?.toString?.() || 'ไม่สามารถลบ SN ได้';
+      setErrorMessage(`เกิดข้อผิดพลาด: ${msg}`);
+    } finally {
+      setOpenDelete(false);
+      setTargetBarcode('');
+    }
+  };
 
-        if (msg.includes('SN นี้ถูกใช้ไปแล้ว')) {
-          setErrorMessage('❌ SN นี้ถูกใช้ไปแล้วในสินค้ารายการอื่น กรุณาตรวจสอบอีกครั้ง');
-        } else {
-          setErrorMessage(`เกิดข้อผิดพลาด: ${msg}`);
-          console.error('[handleAddSN] error:', err);
-        }
+  const onAskAdd = (barcode, currentSN) => {
+    setTargetBarcode(barcode);
+    setNewSN(currentSN || '');
+    setOpenAdd(true);
+  };
+
+  const onConfirmAdd = async () => {
+    if (!newSN.trim()) {
+      setErrorMessage('กรุณากรอก SN ก่อนบันทึก');
+      return;
+    }
+    try {
+      await updateSerialNumberAction(targetBarcode, newSN.trim());
+      refreshByBarcode(targetBarcode);
+      setErrorMessage('');
+    } catch (err) {
+      const error = err?.response?.data?.error;
+      const msg = error?.toString?.() || 'ไม่สามารถบันทึก SN ได้';
+      if (msg.includes('SN นี้ถูกใช้ไปแล้ว')) {
+        setErrorMessage('❌ SN นี้ถูกใช้ไปแล้วในสินค้ารายการอื่น กรุณาตรวจสอบอีกครั้ง');
+      } else {
+        setErrorMessage(`เกิดข้อผิดพลาด: ${msg}`);
+        console.error('[onConfirmAdd] error:', err);
       }
+    } finally {
+      setOpenAdd(false);
+      setTargetBarcode('');
+      setNewSN('');
     }
   };
 
@@ -48,6 +89,39 @@ const InStockBarcodeTable = () => {
           {errorMessage}
         </div>
       )}
+
+      {/* Delete dialog */}
+      <ConfirmActionDialog
+        open={openDelete}
+        onOpenChange={setOpenDelete}
+        title="ยืนยันการลบ SN"
+        description={`คุณต้องการลบ SN ของบาร์โค้ด ${targetBarcode} ใช่หรือไม่?`}
+        confirmText="ลบ"
+        cancelText="ยกเลิก"
+        onConfirm={onConfirmDelete}
+      />
+
+      {/* Add/Edit SN dialog */}
+      <ConfirmActionDialog
+        open={openAdd}
+        onOpenChange={setOpenAdd}
+        title="เพิ่ม/แก้ไข SN"
+        description={`กรอก SN สำหรับบาร์โค้ด ${targetBarcode}`}
+        confirmText="บันทึก"
+        cancelText="ยกเลิก"
+        onConfirm={onConfirmAdd}
+      >
+        <div className="pt-2">
+          <input
+            className="border rounded px-3 py-2 w-full font-mono"
+            placeholder="ระบุ SN ..."
+            value={newSN}
+            onChange={(e) => setNewSN(e.target.value)}
+          />
+          <div className="text-xs text-gray-500 mt-1">* SN ต้องไม่ซ้ำกับสินค้าอื่นในระบบ</div>
+        </div>
+      </ConfirmActionDialog>
+
       <table className="min-w-full text-sm">
         <thead className="bg-green-100">
           <tr>
@@ -62,25 +136,38 @@ const InStockBarcodeTable = () => {
         <tbody>
           {scannedList.length === 0 ? (
             <tr>
-              <td colSpan="6" className="text-center p-4 text-gray-500">ยังไม่มีสินค้าที่ถูกยิง</td>
+              <td colSpan={6} className="text-center p-4 text-gray-500">ยังไม่มีสินค้าที่ถูกยิง</td>
             </tr>
           ) : (
             scannedList.map((item, index) => (
-              <tr key={item.barcode + (item.serialNumber || '')} className="border-t hover:bg-green-50">
+              <tr
+                key={item.barcode + (item.serialNumber || item.stockItem?.serialNumber || '')}
+                className="border-t hover:bg-green-50"
+              >
                 <td className="px-4 py-2">{index + 1}</td>
-                <td className="px-4 py-2">{item.product?.name || '-'}</td>
-                <td className="px-4 py-2 font-mono text-green-700">{item.barcode || item.stockItem?.barcode || '-'}</td>
-                <td className="px-4 py-2 font-mono text-gray-700">{item.serialNumber || '-'}</td>
-                <td className="px-4 py-2 text-green-600">✅ พร้อมขาย</td>
+                <td className="px-4 py-2">{item.productName ?? item.stockItem?.productName ?? '-'}</td>
+                <td className="px-4 py-2 font-mono text-green-700">{item.barcode || '-'}</td>
+                <td className="px-4 py-2 font-mono text-gray-700">
+                  {item.serialNumber ?? item.stockItem?.serialNumber ?? '-'}
+                </td>
+                <td className="px-4 py-2 text-green-600">
+                  {isScanned(item) ? '✅ พร้อมขาย' : '-'}
+                </td>
                 <td className="px-4 py-2 space-x-2">
                   <button
-                    onClick={() => handleDeleteSN(item.barcode)}
+                    onClick={() => onAskDelete(item.barcode)}
                     className="text-red-600 underline hover:text-red-800"
-                  >ลบ SN</button>
+                  >
+                    ลบ SN
+                  </button>
                   <button
-                    onClick={() => handleAddSN(item.barcode)}
+                    onClick={() =>
+                      onAskAdd(item.barcode, item.serialNumber ?? item.stockItem?.serialNumber)
+                    }
                     className="text-blue-600 underline hover:text-blue-800"
-                  >เพิ่ม SN</button>
+                  >
+                    เพิ่ม/แก้ไข SN
+                  </button>
                 </td>
               </tr>
             ))
@@ -92,3 +179,4 @@ const InStockBarcodeTable = () => {
 };
 
 export default InStockBarcodeTable;
+

@@ -3,36 +3,30 @@
 import { create } from 'zustand';
 import {
   getAllReceipts,
-  getReceiptById,
   getReceiptBarcodeSummaries,
   createReceipt,
   updateReceipt,
   deleteReceipt,
-  getReceiptItemsByReceiptId,
   markReceiptAsCompleted,
   finalizeReceiptIfNeeded,
-  markReceiptAsPrinted,
-  getReceiptsReadyToPay // ✅ ใช้งานจริง
+  markReceiptAsPrinted
 } from '@/features/purchaseOrderReceipt/api/purchaseOrderReceiptApi';
 import { getEligiblePurchaseOrders, getPurchaseOrderDetailById, updatePurchaseOrderStatus } from '@/features/purchaseOrder/api/purchaseOrderApi';
-
-import {
-  addReceiptItem,
-  updateReceiptItem,
-  deleteReceiptItem
-} from '@/features/purchaseOrderReceiptItem/api/purchaseOrderReceiptItemApi';
+import { addReceiptItem, updateReceiptItem, deleteReceiptItem } from '@/features/purchaseOrderReceiptItem/api/purchaseOrderReceiptItemApi';
 
 const usePurchaseOrderReceiptStore = create((set) => ({
   receipts: [],
   receiptBarcodeSummaries: [],
+  receiptSummaries: [], // ✅ เก็บ summary ของใบรับสินค้าโดยตรง
   purchaseOrdersForReceipt: [],
-  receiptsReadyToPay: [], // ✅ เก็บใบรับสินค้าที่พร้อมชำระ
+  receiptsReadyToPay: [],
   currentReceipt: null,
   currentOrder: null,
   poItems: [],
-  receiptItems: [], // ✅ เก็บรายการสินค้าของ receipt โดยเฉพาะ
+  receiptItems: [],
   loading: false,
   receiptBarcodeLoading: false,
+  receiptSummariesLoading: false,
   error: null,
 
   loadReceipts: async () => {
@@ -46,51 +40,38 @@ const usePurchaseOrderReceiptStore = create((set) => ({
     }
   },
 
-  loadReceiptsReadyToPayAction: async (filters = {}) => {
+  loadReceiptSummariesAction: async (opts = {}) => {
     try {
-      const { supplierId, startDate, endDate } = filters;
-      if (!supplierId || !startDate || !endDate) {
-        console.warn('[⏸ SKIP LOAD] Missing required filters:', { supplierId, startDate, endDate });
-        return;
-      }
-      set({ loading: true, error: null });
-      console.log('[🔍 LOAD RECEIPTS READY TO PAY]', filters);
-      const data = await getReceiptsReadyToPay(filters);
-      console.log('[✅ RECEIPTS LOADED]', data);
-      set({ receiptsReadyToPay: data, loading: false, error: null });
-    } catch (error) {
-      console.error('📛 loadReceiptsReadyToPayAction error:', error);
-      set({ error, loading: false });
-    }
-  },
+      const wantPrinted = opts.printed ?? undefined;
+      set({ loading: true, receiptSummariesLoading: true, error: null });
+      const all = await getAllReceipts();
 
-  loadReceiptById: async (id) => {
-    try {
-      set({ loading: true, error: null });
-      const data = await getReceiptById(id);
-      set({ currentReceipt: data, loading: false, error: null });
-      return data;
-    } catch (error) {
-      console.error('📛 loadReceiptById error:', error);
-      set({ error, loading: false });
-      return null;
-    }
-  },
+      const normalized = (all || []).map((r) => ({
+        id: r.id,
+        code: r.code || r.receiptCode || r.purchaseOrderReceiptCode || r.poReceiptCode,
+        purchaseOrderCode: r.purchaseOrderCode || r.orderCode || r.poCode || r.purchaseOrder?.code,
+        supplier: r.supplier || r.supplierName || r.supplier?.name,
+        taxInvoiceNo: r.tax || r.taxInvoiceNo || r.taxInvoiceNumber || r.taxNumber,
+        receivedAt: r.receivedAt || r.createdAt || r.date,
+        totalItems: r.total || r.totalItems || r.itemsCount || r.receivedQty || 0,
+        scannedCount: r.scanned || r.scannedCount || r.generatedCount || 0,
+        printed: Boolean(r.printed ?? r.isPrinted ?? false),
+      }));
 
-  loadReceiptItemsByReceiptId: async (receiptId) => {
-    try {
-      set({ error: null });
-      const items = await getReceiptItemsByReceiptId(receiptId);
-      set({ receiptItems: items, error: null });
-      return items;
+      const filtered =
+        typeof wantPrinted === 'boolean'
+          ? normalized.filter((x) => x.printed === wantPrinted)
+          : normalized;
+
+      set({ receiptSummaries: filtered, loading: false, receiptSummariesLoading: false, error: null });
+      return filtered;
     } catch (error) {
-      console.error('📛 loadReceiptItemsByReceiptId error:', error);
-      set({ error });
+      console.error('📛 loadReceiptSummariesAction error:', error);
+      set({ error, loading: false, receiptSummariesLoading: false });
       return [];
     }
   },
 
-  // ✅ ปรับให้ default โหลดเฉพาะที่ยังไม่ได้พิมพ์
   loadReceiptBarcodeSummariesAction: async (opts = {}) => {
     try {
       set({ loading: true, receiptBarcodeLoading: true, error: null });
@@ -238,6 +219,9 @@ const usePurchaseOrderReceiptStore = create((set) => ({
         receiptBarcodeSummaries: state.receiptBarcodeSummaries.map((s) =>
           s.id === receiptId ? { ...s, printed: true } : s
         ),
+        receiptSummaries: (state.receiptSummaries || []).map((s) =>
+          s.id === receiptId ? { ...s, printed: true } : s
+        ),
         error: null,
       }));
       return res;
@@ -281,3 +265,5 @@ const usePurchaseOrderReceiptStore = create((set) => ({
 }));
 
 export default usePurchaseOrderReceiptStore;
+
+

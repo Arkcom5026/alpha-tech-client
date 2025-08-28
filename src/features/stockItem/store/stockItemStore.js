@@ -9,7 +9,7 @@ import {
 } from '../api/stockItemApi';
 
 const useStockItemStore = create(
-  devtools((set, get) => ({
+  devtools((set) => ({
     scannedList: [],
     loading: false,
     error: null,

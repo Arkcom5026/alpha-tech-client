@@ -1,9 +1,8 @@
 // ✅ src/features/productTemplate/pages/ListProductTemplatePage.jsx
 
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ProductTemplateTable from '../components/ProductTemplateTable';
-
 import useProductTemplateStore from '../store/productTemplateStore';
 import StandardActionButtons from '@/components/shared/buttons/StandardActionButtons';
 import { useBranchStore } from '@/features/branch/store/branchStore';
@@ -14,7 +13,20 @@ const ListProductTemplatePage = () => {
   const { templates, fetchTemplates } = useProductTemplateStore();
   const selectedBranchId = useBranchStore((state) => state.selectedBranchId);
   const { dropdowns } = useProductStore();
-  const { categories, productTypes, productProfiles } = dropdowns;
+  const { categories, productTypes, productProfiles } = dropdowns || {};
+
+  // แปลง dropdowns -> แผนที่ id -> ชื่อ สำหรับแสดงในตาราง
+  const categoriesMap = useMemo(() => {
+    const map = {};
+    (categories || []).forEach((c) => { map[String(c.id)] = c.name; });
+    return map;
+  }, [categories]);
+
+  const productTypesMap = useMemo(() => {
+    const map = {};
+    (productTypes || []).forEach((pt) => { map[String(pt.id)] = pt.name; });
+    return map;
+  }, [productTypes]);
 
   const [filter, setFilter] = useState({ categoryId: '', productTypeId: '', productProfileId: '' });
   const [searchInput, setSearchInput] = useState('');
@@ -84,10 +96,15 @@ const ListProductTemplatePage = () => {
           />
         </div>
 
-        <ProductTemplateTable templates={filteredTemplates} />
+        <ProductTemplateTable
+          templates={filteredTemplates}
+          categoriesMap={categoriesMap}
+          productTypesMap={productTypesMap}
+        />
       </div>
     </div>
   );
 };
 
 export default ListProductTemplatePage;
+

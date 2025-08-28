@@ -7,48 +7,43 @@ import useBarcodeStore from '@/features/barcode/store/barcodeStore';
 const BarcodePrintTable = ({ receipts }) => {
   const navigate = useNavigate();
   const { generateBarcodesAction, reprintBarcodesAction, searchReprintReceiptsAction } = useBarcodeStore();
-  
-  // โหมดหน้า: แสดง "ยังไม่ได้พิมพ์" หรือ "พิมพ์ซ้ำ"
-  const [statusFilter, setStatusFilter] = useState('PENDING'); // PENDING | REPRINT
 
-  // สำหรับพิมพ์ชุด (ยังไม่ได้พิมพ์)
+  const [statusFilter, setStatusFilter] = useState('PENDING');
   const [selectedIds, setSelectedIds] = useState([]);
-
-  // สำหรับพิมพ์ซ้ำ: วิธีค้นหา + คำค้น + ผลลัพธ์จาก BE + สถานะ
-  const [searchMode, setSearchMode] = useState('RC'); // RC | PO
+  const [searchMode, setSearchMode] = useState('RC');
   const [query, setQuery] = useState('');
   const [reprintResults, setReprintResults] = useState([]);
   const [reprintLoading, setReprintLoading] = useState(false);
   const [reprintError, setReprintError] = useState('');
-  const [hasSearched, setHasSearched] = useState(false); // ใช้ควบคุมการแสดง "ไม่พบข้อมูล" ให้ขึ้นหลังจากกดค้นหาเท่านั้น
+  const [hasSearched, setHasSearched] = useState(false);
 
-  // ฟังก์ชันช่วยแปลงวันที่ให้ปลอดภัย
   const formatDate = (value) => {
     const d = new Date(value);
     return !isNaN(d.getTime()) ? d.toLocaleDateString() : '-';
   };
 
-  // สร้างฟิลด์เสริมสำหรับตารางจาก summary ที่ได้จาก API (ฝั่ง PENDING)
-  const enhancedReceipts = useMemo(
+  // ✅ ปรับ mapping supplier ให้แน่นอน ใช้ r.supplier?.name ถ้า r.supplier เป็น object
+  const normalizedReceipts = useMemo(
     () =>
       (receipts || []).map((r) => ({
-        ...r,
-        orderCode: r.purchaseOrderCode,
-        supplierName: r.supplier,
-        receivedAt: r.createdAt,
-        totalItems: r.total,
-        barcodeGenerated: r.scanned,
-        printed: !!r.printed,
-        status: r.printed ? 'COMPLETED' : 'PENDING',
+        id: r.id,
+        purchaseOrderCode: r.purchaseOrderCode ?? r.orderCode ?? r.poCode ?? r.purchaseOrder?.code ?? '-',
+        code: r.code ?? r.receiptCode ?? r.purchaseOrderReceiptCode ?? r.poReceiptCode ?? '-',
+        taxInvoiceNo: r.taxInvoiceNo ?? r.tax ?? r.taxNumber ?? '',
+        supplier:
+          typeof r.supplier === 'object'
+            ? r.supplier?.name ?? '-'
+            : r.supplier ?? r.supplierName ?? '-',
+        receivedAt: r.receivedAt ?? r.createdAt ?? r.date ?? null,
+        printed: Boolean(r.printed ?? r.isPrinted ?? false),
       })),
     [receipts]
   );
 
-  // แสดงเฉพาะยังไม่ได้พิมพ์ในโหมด PENDING
   const filteredReceipts = useMemo(
     () =>
-      enhancedReceipts.filter((receipt) => (statusFilter === 'PENDING' ? !receipt.printed : false)),
-    [enhancedReceipts, statusFilter]
+      normalizedReceipts.filter((receipt) => (statusFilter === 'PENDING' ? !receipt.printed : false)),
+    [normalizedReceipts, statusFilter]
   );
 
   const isAllSelected =
@@ -65,7 +60,6 @@ const BarcodePrintTable = ({ receipts }) => {
     navigate(`/pos/purchases/barcodes/preview/${receiptId}`);
   };
 
-  // 🔁 พิมพ์ซ้ำ: ดึงบาร์โค้ดเดิม (ไม่ generate ใหม่) แล้วไปหน้า preview
   const handleReprintClick = async (receiptId) => {
     if (!receiptId) return;
     await reprintBarcodesAction(receiptId);
@@ -74,16 +68,13 @@ const BarcodePrintTable = ({ receipts }) => {
 
   const placeholder = useMemo(
     () =>
-      (
-        {
-          RC: 'กรอกเลขใบตรวจรับ (RC-xxxxxx-xxxx) เพื่อค้นหาพิมพ์ซ้ำ',
-          PO: 'กรอกเลขใบสั่งซื้อ (PO-xxxxxx-xxxx) เพื่อค้นหาพิมพ์ซ้ำ',
-        }[searchMode]
-      ),
+      ({
+        RC: 'กรอกเลขใบตรวจรับ (RC-xxxxxx-xxxx) เพื่อค้นหาพิมพ์ซ้ำ',
+        PO: 'กรอกเลขใบสั่งซื้อ (PO-xxxxxx-xxxx) เพื่อค้นหาพิมพ์ซ้ำ',
+      }[searchMode]),
     [searchMode]
   );
 
-  // Mask helpers for RC/PO codes: RC-xxxxxx-xxxx / PO-xxxxxx-xxxx
   const maskCode = (mode, raw) => {
     const prefix = mode === 'PO' ? 'PO-' : 'RC-';
     const digits = String(raw || '').replace(/[^0-9]/g, '');
@@ -106,7 +97,6 @@ const BarcodePrintTable = ({ receipts }) => {
     setQuery(maskCode(searchMode, raw));
   };
 
-  // เมื่อเข้าสู่โหมด REPRINT ให้ล้างผลลัพธ์เก่า และ reset hasSearched
   useEffect(() => {
     if (statusFilter === 'REPRINT') {
       setReprintResults([]);
@@ -115,25 +105,25 @@ const BarcodePrintTable = ({ receipts }) => {
     }
   }, [statusFilter]);
 
-  // ปุ่มค้นหาในโหมด REPRINT (เรียก BE ทุกครั้ง)
+  useEffect(() => {
+    setSelectedIds([]);
+  }, [statusFilter, receipts]);
+
   const handleReprintSearch = async (e) => {
     e.preventDefault();
     const q = (query || '').trim();
-    if (!q) return; // ไม่ค้นหาถ้ายังไม่พิมพ์คำค้น
+    if (!q) return;
 
     setHasSearched(true);
     setReprintError('');
     setReprintLoading(true);
     try {
-      // เรียก Store → ไป BE ทุกครั้ง พร้อมเงื่อนไข (ให้ฝั่ง Store/BE รับ param ทั้ง mode & query)
       const data = await searchReprintReceiptsAction({ mode: searchMode, query: q });
-
-      // ปรับฟอร์แมตผลลัพธ์ให้ตรงตาราง
       const normalized = (data || []).map((r) => ({
         id: r.id,
-        orderCode: r.purchaseOrderCode || r.orderCode || '-',
+        purchaseOrderCode: r.purchaseOrderCode || r.orderCode || '-',
         code: r.code,
-        supplierName: r.supplier || r.supplierName || '-',
+        supplier: typeof r.supplier === 'object' ? r.supplier?.name ?? '-' : r.supplier ?? r.supplierName ?? '-',
         receivedAt: r.createdAt || r.receivedAt,
       }));
       setReprintResults(normalized);
@@ -146,7 +136,7 @@ const BarcodePrintTable = ({ receipts }) => {
     }
   };
 
-  const isSearchDisabled = reprintLoading || !query.trim();
+  const isSearchDisabled = reprintLoading || String(query).replace(/[^0-9]/g, '').length < 10;
 
   return (
     <div className="space-y-4">
@@ -225,36 +215,28 @@ const BarcodePrintTable = ({ receipts }) => {
                 <th className="border px-2 py-1">เลขที่ใบกำกับภาษี</th>
                 <th className="border px-2 py-1">Supplier</th>
                 <th className="border px-2 py-1">วันที่รับ</th>
-                <th className="border px-2 py-1 text-center">จำนวนที่รับ</th>
-                <th className="border px-2 py-1 text-center">ยิง SN แล้ว</th>
-                <th className="border px-2 py-1 text-center">สถานะ</th>
                 <th className="border px-2 py-1 text-center">การพิมพ์</th>
               </tr>
             </thead>
             <tbody>
-              {filteredReceipts.map((receipt, index) => (
-                <tr key={receipt.id} className="hover:bg-gray-50">
+              {filteredReceipts.map((r, index) => (
+                <tr key={r.id} className="hover:bg-gray-50">
                   <td className="border px-2 py-1 text-center">
                     <input
                       type="checkbox"
-                      checked={selectedIds.includes(receipt.id)}
-                      onChange={() => toggleSelect(receipt.id)}
+                      checked={selectedIds.includes(r.id)}
+                      onChange={() => toggleSelect(r.id)}
                     />
                   </td>
                   <td className="border px-2 py-1 text-center">{index + 1}</td>
-                  <td className="border px-2 py-1">{receipt.orderCode}</td>
-                  <td className="border px-2 py-1">{receipt.code}</td>
-                  <td className="border px-2 py-1">{receipt.tax}</td>
-                  <td className="border px-2 py-1">{receipt.supplierName}</td>
-                  <td className="border px-2 py-1">{formatDate(receipt.receivedAt)}</td>
-                  <td className="border px-2 py-1 text-center">{receipt.totalItems}</td>
-                  <td className="border px-2 py-1 text-center">{receipt.barcodeGenerated}</td>
-                  <td className="border px-2 py-1 text-center">
-                    {receipt.status === 'COMPLETED' ? 'พิมพ์แล้ว' : 'ยังไม่ได้พิมพ์'}
-                  </td>
+                  <td className="border px-2 py-1">{r.purchaseOrderCode}</td>
+                  <td className="border px-2 py-1">{r.code}</td>
+                  <td className="border px-2 py-1">{r.taxInvoiceNo || '-'}</td>
+                  <td className="border px-2 py-1">{r.supplier}</td>
+                  <td className="border px-2 py-1">{formatDate(r.receivedAt)}</td>
                   <td className="border px-2 py-1 text-center">
                     <button
-                      onClick={() => handlePrintClick(receipt.id)}
+                      onClick={() => handlePrintClick(r.id)}
                       className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700"
                     >
                       พิมพ์
@@ -264,7 +246,7 @@ const BarcodePrintTable = ({ receipts }) => {
               ))}
               {filteredReceipts.length === 0 && (
                 <tr>
-                  <td colSpan={11} className="text-center text-gray-500 p-4">
+                  <td colSpan={8} className="text-center text-gray-500 p-4">
                     ไม่มีรายการรอพิมพ์
                   </td>
                 </tr>
@@ -306,16 +288,16 @@ const BarcodePrintTable = ({ receipts }) => {
               )}
 
               {!reprintLoading && reprintResults.length > 0 &&
-                reprintResults.map((receipt, index) => (
-                  <tr key={receipt.id || `${receipt.code}-${index}`} className="hover:bg-gray-50">
+                reprintResults.map((r, index) => (
+                  <tr key={r.id || `${r.code}-${index}`} className="hover:bg-gray-50">
                     <td className="border px-2 py-1 text-center">{index + 1}</td>
-                    <td className="border px-2 py-1">{receipt.orderCode}</td>
-                    <td className="border px-2 py-1">{receipt.code}</td>
-                    <td className="border px-2 py-1">{receipt.supplierName}</td>
-                    <td className="border px-2 py-1">{formatDate(receipt.receivedAt)}</td>
+                    <td className="border px-2 py-1">{r.purchaseOrderCode}</td>
+                    <td className="border px-2 py-1">{r.code}</td>
+                    <td className="border px-2 py-1">{r.supplier}</td>
+                    <td className="border px-2 py-1">{formatDate(r.receivedAt)}</td>
                     <td className="border px-2 py-1 text-center">
                       <button
-                        onClick={() => handleReprintClick(receipt.id)}
+                        onClick={() => handleReprintClick(r.id)}
                         disabled={reprintLoading}
                         className={`px-3 py-1 text-white rounded ${reprintLoading ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}
                       >

@@ -1,5 +1,5 @@
 // ✅ src/features/productProfile/pages/ListProductProfilePage.jsx
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ProductProfileTable from '../components/ProductProfileTable';
 import useProductProfileStore from '../store/productProfileStore';
@@ -21,12 +21,30 @@ const ListProductProfilePage = () => {
   const [searchInput, setSearchInput] = useState('');
   const [searchText, setSearchText] = useState('');
 
+  const didFetchRef = useRef(false);
+
   useEffect(() => {
-    console.log('🔄 เรียก fetchDropdownsAction()');
-    fetchDropdownsAction().then(() => {
-      console.log('📥 dropdowns:', dropdowns);
+    if (didFetchRef.current) return;
+    didFetchRef.current = true;
+    fetchDropdownsAction().catch((e) => {
+      console.error('fetchDropdownsAction failed:', e);
     });
-  }, []);
+  }, [fetchDropdownsAction]);
+
+  useEffect(() => {
+    if (dropdowns) {
+      console.log('📥 dropdowns:', dropdowns);
+    }
+  }, [dropdowns]);
+
+  // แผนที่ id -> ชื่อหมวดหมู่ สำหรับแสดงคอลัมน์ "หมวดหมู่"
+  const categoriesMap = useMemo(() => {
+    const map = {};
+    (dropdowns?.categories || []).forEach((c) => {
+      map[String(c.id)] = c.name;
+    });
+    return map;
+  }, [dropdowns?.categories]);
 
   const handleFilterChange = ({ categoryId, productTypeId }) => {
     console.log('📌 handleFilterChange:', { categoryId, productTypeId });
@@ -114,7 +132,11 @@ const ListProductProfilePage = () => {
           />
         </div>
 
-        <ProductProfileTable profiles={filteredProfiles} onReload={() => setSearchText(searchInput)} />
+        <ProductProfileTable
+          profiles={filteredProfiles}
+          categoriesMap={categoriesMap}
+          onReload={() => setSearchText(searchInput)}
+        />
       </div>
     </div>
   );

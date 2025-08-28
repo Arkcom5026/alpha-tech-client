@@ -1,164 +1,132 @@
-// ✅ purchaseOrderReceiptApi.js — จัดการ API ของใบรับสินค้า + รายการในใบรับ
-
+// ✅ purchaseOrderReceiptApi.js — API ฝั่งใบรับสินค้า (ESM)
 import apiClient from '@/utils/apiClient';
 
-export const getAllReceipts = async () => {
+// 🔎 ดึงใบรับสินค้าทั้งหมด (รองรับกรอง printed แบบ optional)
+export const getAllReceipts = async (params = {}) => {
   try {
-    const res = await apiClient.get('/purchase-order-receipts');
-    return res.data;
+    const { data } = await apiClient.get('/purchase-order-receipts', { params });
+    console.log("getAllReceipts :",data )
+    return data;
   } catch (error) {
-    console.error('📛 [getAllReceipts] error:', error);
-    throw error;
-  }
-};
-
-export const createReceipt = async (data) => {
-  try {
-    const res = await apiClient.post('/purchase-order-receipts', data);
-    return res.data;
-  } catch (error) {
-    console.error('📛 [createReceipt] error:', error);
-    throw error;
-  }
-};
-
-export const updateReceipt = async (id, data) => {
-  try {
-    const res = await apiClient.put(`/purchase-order-receipts/${id}`, data);
-    return res.data;
-  } catch (error) {
-    console.error('📛 [updateReceipt] error:', error);
-    throw error;
-  }
-};
-
-export const deleteReceipt = async (id) => {
-  try {
-    const res = await apiClient.delete(`/purchase-order-receipts/${id}`);
-    return res.data;
-  } catch (error) {
-    console.error('📛 [deleteReceipt] error:', error);
-    throw error;
-  }
-};
-
-export const getEligiblePurchaseOrders = async () => {
-  try {
-    const res = await apiClient.get('/purchase-order-receipts?status=PENDING,PARTIALLY_RECEIVED');
-    return res.data;
-  } catch (error) {
-    console.error('📛 [getEligiblePurchaseOrders] error:', error);
-    throw error;
-  }
-};
-
-export const getPurchaseOrderDetailById = async (poId) => {
-  console.log('📦 [getPurchaseOrderDetailById] >> >> >>  id:', poId);
-  try {
-    const res = await apiClient.get(`/purchase-orders/${poId}`);
-    return res.data;
-  } catch (error) {
-    console.error('📛 [getPurchaseOrderDetailById] error:', error);
-    throw error;
-  }
-};
-
-// ✅ ใช้ default เป็น printed=false เสมอ เว้นแต่จะส่งพารามิเตอร์อื่นมา
-export const getReceiptBarcodeSummaries = async (params = { printed: false }) => {
-  try {
-    const res = await apiClient.get('/barcodes/with-barcodes', { params });
-    return res.data;
-  } catch (error) {
-    console.error('📛 [getReceiptBarcodeSummaries] error:', error);
+    console.error('❌ getAllReceipts error:', error);
     throw error;
   }
 };
 
 export const getReceiptById = async (id) => {
   try {
-    const res = await apiClient.get(`/purchase-order-receipts/${id}`);
-    return res.data;
+    const { data } = await apiClient.get(`/purchase-order-receipts/${id}`);
+    return data;
   } catch (error) {
-    console.error('📛 [getReceiptById] error:', error);
+    console.error('❌ getReceiptById error:', error);
     throw error;
   }
 };
 
 export const getReceiptItemsByReceiptId = async (receiptId) => {
   try {
-    const res = await apiClient.get(`/purchase-order-receipt-items/by-receipt/${receiptId}`);
-    return res.data;
+    const { data } = await apiClient.get(`/purchase-order-receipts/${receiptId}/items`);
+    return data;
   } catch (error) {
-    console.error('📛 [getReceiptItemsByReceiptId] error:', error);
+    console.error('❌ getReceiptItemsByReceiptId error:', error);
     throw error;
   }
 };
 
+export const createReceipt = async (payload) => {
+  try {
+    const { data } = await apiClient.post('/purchase-order-receipts', payload);
+    return data;
+  } catch (error) {
+    console.error('❌ createReceipt error:', error);
+    throw error;
+  }
+};
+
+export const updateReceipt = async (id, payload) => {
+  try {
+    const { data } = await apiClient.patch(`/purchase-order-receipts/${id}`, payload);
+    return data;
+  } catch (error) {
+    console.error('❌ updateReceipt error:', error);
+    throw error;
+  }
+};
+
+export const deleteReceipt = async (id) => {
+  try {
+    const { data } = await apiClient.delete(`/purchase-order-receipts/${id}`);
+    return data;
+  } catch (error) {
+    console.error('❌ deleteReceipt error:', error);
+    throw error;
+  }
+};
+
+// 🚦 สรุปบาร์โค้ดตามใบรับ (ใช้ในโหมดพิมพ์แบบเก่า)
+export const getReceiptBarcodeSummaries = async (params = {}) => {
+  try {
+    const { data } = await apiClient.get('/purchase-order-receipts/receipt-barcode-summaries', { params });
+    return data;
+  } catch (error) {
+    console.error('❌ getReceiptBarcodeSummaries error:', error);
+    throw error;
+  }
+};
+
+// 🧾 ใบรับสินค้าที่พร้อมชำระ
+export const getReceiptsReadyToPay = async (params = {}) => {
+  try {
+    const { data } = await apiClient.get('/purchase-order-receipts/ready-to-pay', { params });
+    return data;
+  } catch (error) {
+    console.error('❌ getReceiptsReadyToPay error:', error);
+    throw error;
+  }
+};
+
+// ✅ ทำเครื่องหมายว่ารับของครบ/จบใบรับ
 export const markReceiptAsCompleted = async (receiptId) => {
   try {
-    const res = await apiClient.patch(`/purchase-order-receipts/${receiptId}/complete`);
-    return res.data;
+    const { data } = await apiClient.patch(`/purchase-order-receipts/${receiptId}/complete`);
+    return data;
   } catch (error) {
-    console.error('📛 [markReceiptAsCompleted] error:', error);
+    console.error('❌ markReceiptAsCompleted error:', error);
     throw error;
   }
 };
 
+// ✅ Finalize ถ้าจำเป็น (เช็คและปิดสถานะ)
 export const finalizeReceiptIfNeeded = async (receiptId) => {
   try {
-    const res = await apiClient.patch(`/purchase-order-receipts/${receiptId}/finalize`);
-    return res.data;
+    const { data } = await apiClient.patch(`/purchase-order-receipts/${receiptId}/finalize`);
+    return data;
   } catch (error) {
-    console.error('📛 [finalizeReceiptIfNeeded] error:', error);
+    console.error('❌ finalizeReceiptIfNeeded error:', error);
     throw error;
   }
 };
 
+// 🖨️ ทำเครื่องหมายว่า "พิมพ์แล้ว"
 export const markReceiptAsPrinted = async (receiptId) => {
   try {
-    const res = await apiClient.patch(`/purchase-order-receipts/${receiptId}/printed`);
-    return res.data;
+    const { data } = await apiClient.patch(`/purchase-order-receipts/${receiptId}/printed`);
+    return data;
   } catch (error) {
-    console.error('📛 [markReceiptAsPrinted] error:', error);
+    console.error('❌ markReceiptAsPrinted error:', error);
     throw error;
   }
 };
 
-export const getReceiptsReadyToPay = async (filters = {}) => {
+// 🧮 (ออปชัน) ดึง "สรุปใบรับ" โดยตรงจาก API หากมี endpoint พร้อม
+// หาก Back-end รองรับ endpoint นี้ คุณสามารถสลับ Store มาใช้ตัวนี้แทนการ normalize ฝั่ง FE ได้ทันที
+export const getReceiptSummaries = async (params = {}) => {
   try {
-    const params = new URLSearchParams();
-    if (filters.startDate) params.append('startDate', filters.startDate);
-    if (filters.endDate) params.append('endDate', filters.endDate);
-    if (filters.limit) params.append('limit', filters.limit);
-
-    const res = await apiClient.get(`/purchase-order-receipts/ready-to-pay?${params.toString()}`);
-
-    // ✅ ตรวจสอบข้อมูลที่ส่งกลับมาว่ามี paidAmount, totalAmount และ statusPayment
-    const updatedData = res.data.map((receipt) => {
-      const total = receipt.totalAmount || 0;
-      const paid = receipt.paidAmount || 0;
-      return {
-        ...receipt,
-        paidAmount: paid,
-        totalAmount: total,
-        remainingAmount: total - paid,
-      };
-    });
-
-    return updatedData;
+    const { data } = await apiClient.get('/purchase-order-receipts/summaries', { params });
+    // คาดหวังรูปแบบ: [{id, code, purchaseOrderCode, supplier, taxInvoiceNo, receivedAt, totalItems, scannedCount, printed}]
+    return data;
   } catch (error) {
-    console.error('📛 [getReceiptsReadyToPay] error:', error);
-    throw error;
-  }
-};
-
-export const getReceiptsMissingTaxInfo = async () => {
-  try {
-    // เรียก API ไปยัง endpoint ใหม่ (ต้องสร้างที่ Backend ต่อไป)
-    const response = await apiClient.get('/purchase-order-receipts/missing-tax-info');
-    return response.data;
-  } catch (error) {
-    console.error('❌ [getReceiptsMissingTaxInfo] error:', error);
+    console.error('❌ getReceiptSummaries error:', error);
     throw error;
   }
 };

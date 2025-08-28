@@ -1,14 +1,13 @@
 // ✅ src/features/productTemplate/components/ProductTemplateTable.jsx
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import StandardActionButtons from '@/components/shared/buttons/StandardActionButtons';
-import useEmployeeStore from '@/features/employee/store/employeeStore';
 import ConfirmDeleteDialog from '@/components/shared/dialogs/ConfirmDeleteDialog';
 import AlertDialog from '@/components/shared/dialogs/AlertDialog';
 import useProductTemplateStore from '../store/productTemplateStore';
 
-const ProductTemplateTable = ({ templates }) => {
+const ProductTemplateTable = ({ templates, categoriesMap = {}, productTypesMap = {} }) => {
   const navigate = useNavigate();
   const [confirmId, setConfirmId] = useState(null);
   const [alert, setAlert] = useState({ open: false, message: '' });
@@ -35,9 +34,11 @@ const ProductTemplateTable = ({ templates }) => {
         <table className="min-w-full text-sm ">
           <thead className="bg-gray-100 dark:bg-zinc-800">
             <tr>
-              <th className="px-4 py-2 border  align-middle">รูปแบบสินค้า</th>
-              <th className="px-4 py-2 border  align-middle">ลักษณะสินค้า</th>
-              <th className="px-4 py-2 border  align-middle">การจัดการ</th>
+              <th className="px-4 py-2 border align-middle">รูปแบบสินค้า</th>
+              <th className="px-4 py-2 border align-middle">ลักษณะสินค้า</th>
+              <th className="px-4 py-2 border align-middle">ประเภทสินค้า</th>
+              <th className="px-4 py-2 border align-middle">หมวดหมู่</th>
+              <th className="px-4 py-2 border align-middle">การจัดการ</th>
             </tr>
           </thead>
           <tbody>
@@ -45,6 +46,8 @@ const ProductTemplateTable = ({ templates }) => {
               <tr key={tpl.id} className="border-t  align-middle">
                 <td className="px-4 py-2 border  align-middle">{tpl.name}</td>
                 <td className="px-4 py-2 border align-middle">{tpl.productProfileName || '-'}</td>
+                <td className="px-4 py-2 border align-middle">{productTypesMap[String(tpl.productTypeId)] || tpl.productTypeId || '-'}</td>
+                <td className="px-4 py-2 border align-middle">{categoriesMap[String(tpl.categoryId)] || tpl.categoryId || '-'}</td>
                 <td className="px-4 py-2 border align-top min-w-[230px] ">
                   <div className="flex justify-center items-center gap-1">
                     <StandardActionButtons
@@ -77,3 +80,5 @@ const ProductTemplateTable = ({ templates }) => {
 };
 
 export default ProductTemplateTable;
+
+

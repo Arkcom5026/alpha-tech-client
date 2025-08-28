@@ -1,5 +1,5 @@
-// ✅ ScanBarcodeListPage.jsx — แสดง PendingBarcodeTable + InStockBarcodeTable และ input สำหรับยิงบาร์โค้ด
-import React, { useEffect, useState, useRef } from 'react';
+// ✅ ScanBarcodeListPage.jsx — ปรับเงื่อนไขการนับ scanned/pending ให้ตรงกับ API (stockItemObj)
+import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 
 import PendingBarcodeTable from '../components/PendingBarcodeTable';
@@ -16,7 +16,9 @@ const ScanBarcodeListPage = () => {
   const [keepSN, setKeepSN] = useState(false);
   const [inputStartTime, setInputStartTime] = useState(null);
   const [snError, setSnError] = useState('');
+  const [pageMessage, setPageMessage] = useState(null);
   const snInputRef = useRef(null);
+  const barcodeInputRef = useRef(null);
 
   const {
     loadBarcodesAction,
@@ -30,14 +32,12 @@ const ScanBarcodeListPage = () => {
   useEffect(() => {
     if (receiptId) {
       loadBarcodesAction(receiptId);
-      loadReceiptWithSupplierAction(receiptId); // ✅ โหลดข้อมูล supplier
+      loadReceiptWithSupplierAction(receiptId);
     }
   }, [receiptId, loadBarcodesAction, loadReceiptWithSupplierAction]);
 
   useEffect(() => {
-    if (keepSN && snInputRef.current) {
-      snInputRef.current.focus();
-    }
+    if (keepSN && snInputRef.current) snInputRef.current.focus();
   }, [keepSN]);
 
   const playBeep = () => {
@@ -50,127 +50,239 @@ const ScanBarcodeListPage = () => {
     oscillator.stop(audioCtx.currentTime + 0.1);
   };
 
+  // ✅ รองรับทั้ง stockItemId และ stockItem object
+  const isScanned = (b) => b?.stockItemId != null || b?.stockItem?.id != null;
+
+  const scannedList = useMemo(() => barcodes.filter(isScanned), [barcodes]);
+    const pendingList = useMemo(() => barcodes.filter((b) => !isScanned(b)), [barcodes]);
+
+  const pendingCount = pendingList.length;
+  const scannedCount = scannedList.length;
+  const totalCount = barcodes.length;
+
+  // 🔄 Debounced refresh หลังยิงสำเร็จ (ลด GET ซ้ำซ้อน)
+  const refreshBarcodesDebounced = useMemo(() => {
+    let t;
+    const fn = () => loadBarcodesAction(receiptId);
+    return () => { clearTimeout(t); t = setTimeout(fn, 600); };
+  }, [loadBarcodesAction, receiptId]);
+
+  // 🔒 กันยิงซ้ำ & ล็อกปุ่มระหว่างส่ง
+  const [submitting, setSubmitting] = useState(false);
+  const [lastSubmit, setLastSubmit] = useState({ barcode: '', at: 0 });
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (submitting) return;
+    setPageMessage(null);
 
-    const barcode = barcodeInput.trim();
+    const barcode = (barcodeInput || '').trim();
     if (!barcode) return;
 
-    const found = barcodes.find((b) => b.barcode === barcode);
-    if (!found) {
-      alert('❌ ไม่พบบาร์โค้ดนี้ในรายการที่ต้องรับเข้าสต๊อก');
+    const now = Date.now();
+    if (lastSubmit.barcode === barcode && now - lastSubmit.at < 800) {
+      setPageMessage({ type: 'info', text: 'ℹ️ ข้ามการยิงซ้ำ (ภายใน 0.8 วินาที)' });
       return;
     }
 
-    const payload = {
-      barcode,
-      serialNumber: keepSN ? snInput.trim() : null,
-      keepSN,
-    };
+    const found = barcodes.find((b) => b.barcode === barcode);
+    if (!found) {
+      setPageMessage({ type: 'error', text: '❌ ไม่พบบาร์โค้ดนี้ในรายการที่ต้องรับเข้าสต๊อก' });
+      return;
+    }
 
-    await receiveSNAction(payload);
-    await finalizeReceiptIfNeeded(receiptId); // ✅ ตรวจสอบและอัปเดตเครดิต + มัดจำหากครบ
-    await loadBarcodesAction(receiptId); // ✅ โหลดรายการบาร์โค้ดใหม่
-    await loadReceiptWithSupplierAction(receiptId); // ✅ โหลดเครดิต supplier ใหม่
+    if (keepSN && !snInput.trim()) {
+      setSnError('กรุณายิง/กรอก SN ก่อนยืนยัน');
+      return;
+    }
 
-    setBarcodeInput('');
-    setSnInput('');
-    setInputStartTime(null);
-    setSnError('');
-    playBeep();
+    const payload = { barcode, serialNumber: keepSN ? snInput.trim() : null, keepSN };
+
+    let success = false;
+    try {
+      setSubmitting(true);
+      setLastSubmit({ barcode, at: now });
+
+      await receiveSNAction(payload);
+      // Refresh (debounced) แทนการ GET ทุกนัด
+      refreshBarcodesDebounced();
+
+      setBarcodeInput('');
+      setSnInput('');
+      setInputStartTime(null);
+      setSnError('');
+      setPageMessage({ type: 'success', text: '✅ บันทึกการรับเข้าสต๊อกสำเร็จ' });
+      playBeep();
+      success = true;
+    } catch (err) {
+      const msg = err?.response?.data?.error?.toString?.() || 'เกิดข้อผิดพลาดระหว่างบันทึกเข้าสต๊อก';
+      setPageMessage({ type: 'error', text: `❌ ${msg}` });
+    } finally {
+      setSubmitting(false);
+      if (success && barcodeInputRef?.current) {
+        // ตั้งโฟกัสกลับไปที่ช่องยิงบาร์โค้ดทุกครั้งที่บันทึกสำเร็จ
+        barcodeInputRef.current.focus();
+        if (typeof barcodeInputRef.current.select === 'function') {
+          barcodeInputRef.current.select();
+        }
+      }
+    }
+  };
+  // Finalize ใบรับครั้งเดียวตอนจบงาน
+  const handleFinalize = async () => {
+    if (!receiptId) return;
+    setSubmitting(true);
+    try {
+      await finalizeReceiptIfNeeded(receiptId);
+      await Promise.all([
+        loadBarcodesAction(receiptId),
+        loadReceiptWithSupplierAction(receiptId),
+      ]);
+      setPageMessage({ type: 'success', text: '✅ Finalize ใบรับสำเร็จ' });
+      playBeep();
+    } catch {
+      setPageMessage({ type: 'error', text: '❌ Finalize ไม่สำเร็จ' });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
-    <div className="p-4 space-y-6">
-      <h1 className="text-xl font-bold">
-        📦 รายการสินค้าที่ต้องยิง SN (ใบสั่งซื้อ #{purchaseOrderCode || receiptId})
-      </h1>
+    <div className="p-4 space-y-4">
+      {/* HEADER */}
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-bold">📦 รับสินค้าเข้าสต๊อก (PO #{purchaseOrderCode || receiptId})</h1>
+        <div className="flex items-center gap-3 text-sm">
+          <span className="px-3 py-1 rounded bg-gray-100">รวม: <b>{totalCount}</b></span>
+          <span className="px-3 py-1 rounded bg-yellow-100 text-yellow-800">ค้างรับ: <b>{pendingCount}</b></span>
+          <span className="px-3 py-1 rounded bg-green-100 text-green-700">รับแล้ว: <b>{scannedCount}</b></span>
+        </div>
+      </div>
 
-      {/* ✅ แสดงข้อมูลเครดิตของ Supplier */}
-      {currentReceipt?.purchaseOrder?.supplier && (
-        <div className="bg-white border rounded p-4 shadow w-fit">
-          <p className="font-bold text-blue-700 mb-1">💳 เครดิตของ Supplier</p>
-          <p>ชื่อ: {currentReceipt.purchaseOrder.supplier.name}</p>
-          <p>วงเงินเครดิต: {currentReceipt.purchaseOrder.supplier.creditLimit?.toLocaleString()} บาท</p>
-          <p>ยอดคงเหลือ: {currentReceipt.purchaseOrder.supplier.creditBalance?.toLocaleString()} บาท</p>
-          <p>ยอดมัดจำ: {currentReceipt.purchaseOrder.supplier.debitAmount?.toLocaleString()} บาท</p>
+      {pageMessage && (
+        <div
+          key={pageMessage.text}
+          className={`px-4 py-2 text-sm border rounded ${
+            pageMessage.type === 'error' ? 'bg-red-100 text-red-700 border-red-300' :
+            pageMessage.type === 'success' ? 'bg-green-100 text-green-700 border-green-300' :
+            'bg-blue-100 text-blue-700 border-blue-300'
+          }`}
+        >
+          {pageMessage.text}
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-2">
-        <div className="flex items-center gap-2">
-          <input
-            type="text"
-            autoFocus
-            className="border rounded px-4 py-2 w-80 font-mono"
-            placeholder="ยิงบาร์โค้ด..."
-            value={barcodeInput}
-            onChange={(e) => {
-              if (!inputStartTime) setInputStartTime(Date.now());
-              setBarcodeInput(e.target.value);
-            }}
-          />
-          <button
-            type="submit"
-            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-          >
-            ยิงเข้าสต๊อก
-          </button>
-        </div>
-
-        <div className="flex gap-6 pt-1 pl-1">
-          <label>
-            <input
-              type="radio"
-              name="keepSN"
-              value="false"
-              checked={!keepSN}
-              onChange={() => setKeepSN(false)}
-            />{' '}
-            ไม่เก็บ SN
-          </label>
-          <label>
-            <input
-              type="radio"
-              name="keepSN"
-              value="true"
-              checked={keepSN}
-              onChange={() => setKeepSN(true)}
-            />{' '}
-            ต้องเก็บ SN (ยิง SN ถัดไป)
-          </label>
-        </div>
-
-        {keepSN && (
-          <div className="pt-2 pl-1 space-y-1">
-            <input
-              ref={snInputRef}
-              type="text"
-              placeholder="ยิง SN..."
-              className="border rounded px-4 py-2 w-80 font-mono"
-              value={snInput}
-              onChange={(e) => setSnInput(e.target.value)}
-            />
-            {snError && <div className="text-red-600 text-sm pl-1">{snError}</div>}
-            {!snError && (
-              <div className="text-gray-500 text-sm pl-1">
-                * โปรดยิง SN จริงของสินค้านี้ก่อนกดยืนยัน เพื่อบันทึกเข้าสต๊อก
+      {/* Controls row */}
+      <div className="grid grid-cols-12 gap-4">
+        {/* Scan bar (left) */}
+        <section className="col-span-12 lg:col-span-4">
+          <div className="bg-white border rounded p-3 h-full">
+            <form id="scan-form" onSubmit={handleSubmit} className="space-y-2">
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  autoFocus
+                  ref={barcodeInputRef}
+                  className="border rounded px-4 py-2 font-mono w-[360px] md:w-[420px] max-w-full"
+                  placeholder="ยิงบาร์โค้ด... (F2 โฟกัสช่องสแกน)"
+                  value={barcodeInput}
+                  disabled={submitting}
+                  onChange={(e) => {
+                    if (!inputStartTime) setInputStartTime(Date.now());
+                    setBarcodeInput(e.target.value);
+                  }}
+                />
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {submitting ? 'กำลังบันทึก...' : 'ยิงเข้าสต๊อก'}
+                </button>
               </div>
-            )}
+              <div className="flex items-center gap-6">
+                <label className="text-sm">
+                  <input type="radio" name="keepSN" value="false" checked={!keepSN} onChange={() => setKeepSN(false)} disabled={submitting}/> ไม่เก็บ SN
+                </label>
+                <label className="text-sm">
+                  <input type="radio" name="keepSN" value="true" checked={keepSN} onChange={() => setKeepSN(true)} disabled={submitting}/> ต้องเก็บ SN (ยิง SN ถัดไป)
+                </label>
+              </div>
+              {keepSN && (
+                <div className="pt-1 space-y-1">
+                  <input
+                    ref={snInputRef}
+                    type="text"
+                    placeholder="ยิง SN..."
+                    className="border rounded px-4 py-2 w-80 font-mono"
+                    value={snInput}
+                    disabled={submitting}
+                    onChange={(e) => { setSnInput(e.target.value); if (snError) setSnError(''); }}
+                  />
+                  {snError ? (
+                    <div className="text-red-600 text-sm">{snError}</div>
+                  ) : (
+                    <div className="text-gray-500 text-xs">* โปรดยิง SN จริงก่อนกดยืนยัน</div>
+                  )}
+                </div>
+              )}
+            </form>
+            <div className="pt-3">
+              <button
+                type="button"
+                onClick={handleFinalize}
+                disabled={submitting}
+                className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                Finalize ใบรับ
+              </button>
+            </div>
           </div>
-        )}
-      </form>
+        </section>
 
-      <PendingBarcodeTable loading={loading} />
+        {/* Supplier card (right) */}
+        <aside className="col-span-12 lg:col-span-8">
+          {currentReceipt?.purchaseOrder?.supplier && (
+            <div className="bg-white border rounded p-4 shadow-sm h-full">
+              <div className="text-blue-700 font-semibold mb-2">💳 เครดิตของ Supplier</div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
+                <div>ชื่อ: {currentReceipt.purchaseOrder.supplier.name}</div>
+                <div>วงเงิน: {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(currentReceipt.purchaseOrder.supplier.creditLimit || 0)}</div>
+                <div>คงเหลือ: {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(currentReceipt.purchaseOrder.supplier.creditBalance || 0)}</div>
+                <div>มัดจำ: {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(currentReceipt.purchaseOrder.supplier.debitAmount || 0)}</div>
+              </div>
+            </div>
+          )}
+        </aside>
+      </div>
 
-      <div className="pt-10">
-        <h2 className="text-lg font-semibold mb-2">✅ รายการที่ยิงเข้าสต๊อกแล้ว</h2>
-        <InStockBarcodeTable />
+      {/* Tables row */}
+      <div className="grid grid-cols-12 gap-4">
+        <div className="col-span-12 lg:col-span-4">
+          <h2 className="text-base font-semibold mb-2">Expected (ยังไม่ยิง) {pendingCount}</h2>
+          <div className="overflow-visible">
+            <PendingBarcodeTable loading={!pendingList.length && loading} items={pendingList} />
+          </div>
+        </div>
+
+        <div className="col-span-12 lg:col-span-8">
+          <h2 className="text-base font-semibold mb-2">Scanned (รับแล้ว) {scannedCount}</h2>
+          <div className="overflow-visible">
+            <InStockBarcodeTable items={scannedList} />
+          </div>
+        </div>
       </div>
     </div>
   );
 };
 
 export default ScanBarcodeListPage;
+
+
+
+
+
+
+
 
 

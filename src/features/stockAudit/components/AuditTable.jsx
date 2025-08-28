@@ -1,4 +1,3 @@
-
 // =============================
 // features/stockAudit/components/AuditTable.jsx
 // ✅ ตารางใช้ร่วม (Expected/Scanned)
@@ -33,10 +32,14 @@ const AuditTable = ({
           value={localQ}
           onChange={(e) => { const v = e.target.value; setLocalQ(v); onSearch?.(v); }}
         />
-        <div className="text-xs text-gray-500">{total} รายการ</div>
+        <div className="flex items-center gap-2 text-xs">
+          <div className="text-gray-500">{total} รายการ</div>
+          {loading && <span className="text-blue-600 animate-pulse">กำลังโหลด...</span>}
+        </div>
       </div>
 
       <div className="border rounded">
+        {loading && <div className="p-2 text-sm text-blue-600">กำลังโหลด...</div>}
         <table className="w-full text-sm">
           <thead className="bg-gray-50">
             <tr>
@@ -84,6 +87,3 @@ const AuditTable = ({
 };
 
 export default AuditTable;
-
-
-

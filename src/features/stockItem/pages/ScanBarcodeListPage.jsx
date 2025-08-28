@@ -50,6 +50,16 @@ const ScanBarcodeListPage = () => {
     oscillator.stop(audioCtx.currentTime + 0.1);
   };
 
+  const playErrorBeep = () => {
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const oscillator = audioCtx.createOscillator();
+    oscillator.type = 'square';
+    oscillator.frequency.setValueAtTime(300, audioCtx.currentTime);
+    oscillator.connect(audioCtx.destination);
+    oscillator.start();
+    oscillator.stop(audioCtx.currentTime + 0.12);
+  };
+
   // ✅ รองรับทั้ง stockItemId และ stockItem object
   const isScanned = (b) => b?.stockItemId != null || b?.stockItem?.id != null;
 
@@ -61,15 +71,59 @@ const ScanBarcodeListPage = () => {
   const totalCount = barcodes.length;
 
   // 🔄 Debounced refresh หลังยิงสำเร็จ (ลด GET ซ้ำซ้อน)
-  const refreshBarcodesDebounced = useMemo(() => {
-    let t;
-    const fn = () => loadBarcodesAction(receiptId);
-    return () => { clearTimeout(t); t = setTimeout(fn, 600); };
-  }, [loadBarcodesAction, receiptId]);
+  const refreshTimeoutRef = useRef(null);
+  const refreshBarcodesDebounced = () => {
+    if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current);
+    refreshTimeoutRef.current = setTimeout(() => {
+      if (receiptId) loadBarcodesAction(receiptId);
+    }, 600);
+  };
+  useEffect(() => {
+    return () => {
+      if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current);
+    };
+  }, []);
 
-  // 🔒 กันยิงซ้ำ & ล็อกปุ่มระหว่างส่ง
+  // 🔒 กันยิงซ้ำ & ล็อกปุ่มระหว่างส่ง & ล็อกปุ่มระหว่างส่ง
   const [submitting, setSubmitting] = useState(false);
   const [lastSubmit, setLastSubmit] = useState({ barcode: '', at: 0 });
+
+  // ⌨️ คีย์ลัด F2/F3/F4
+  useEffect(() => {
+    const onKeyDown = (e) => {
+      if (e.key === 'F2') {
+        e.preventDefault();
+        if (barcodeInputRef?.current) {
+          barcodeInputRef.current.focus();
+          barcodeInputRef.current.select?.();
+        }
+      } else if (e.key === 'F3') {
+        e.preventDefault();
+        setKeepSN((v) => !v);
+        setTimeout(() => {
+          if (!keepSN) snInputRef.current?.focus();
+          else barcodeInputRef.current?.focus();
+        }, 0);
+      } else if (e.key === 'F4') {
+        e.preventDefault();
+        if (!receiptId) return;
+        setSubmitting(true);
+        finalizeReceiptIfNeeded(receiptId)
+          .then(async () => {
+            await Promise.all([
+              loadBarcodesAction(receiptId),
+              loadReceiptWithSupplierAction(receiptId),
+            ]);
+            setPageMessage({ type: 'success', text: '✅ Finalize ใบรับสำเร็จ' });
+            playBeep();
+          })
+          .catch(() => setPageMessage({ type: 'error', text: '❌ Finalize ไม่สำเร็จ' }))
+          .finally(() => setSubmitting(false));
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [receiptId, keepSN, loadBarcodesAction, loadReceiptWithSupplierAction]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -88,6 +142,19 @@ const ScanBarcodeListPage = () => {
     const found = barcodes.find((b) => b.barcode === barcode);
     if (!found) {
       setPageMessage({ type: 'error', text: '❌ ไม่พบบาร์โค้ดนี้ในรายการที่ต้องรับเข้าสต๊อก' });
+      playErrorBeep();
+      return;
+    }
+
+    // กันยิงซ้ำ: ถ้าบาร์โค้ดนี้รับเข้าสต๊อกแล้ว ให้ข้าม
+    if (isScanned(found)) {
+      setPageMessage({ type: 'info', text: 'ℹ️ บาร์โค้ดนี้รับเข้าสต๊อกแล้ว' });
+      playErrorBeep();
+      setBarcodeInput('');
+      if (barcodeInputRef?.current) {
+        barcodeInputRef.current.focus();
+        barcodeInputRef.current.select?.();
+      }
       return;
     }
 
@@ -208,6 +275,7 @@ const ScanBarcodeListPage = () => {
                   <input type="radio" name="keepSN" value="true" checked={keepSN} onChange={() => setKeepSN(true)} disabled={submitting}/> ต้องเก็บ SN (ยิง SN ถัดไป)
                 </label>
               </div>
+              <div className="text-xs text-gray-500">F2 โฟกัสช่องสแกน · F3 สลับโหมด SN · F4 Finalize</div>
               {keepSN && (
                 <div className="pt-1 space-y-1">
                   <input
@@ -286,3 +354,4 @@ export default ScanBarcodeListPage;
 
 
 
+ 

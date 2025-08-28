@@ -1,6 +1,6 @@
 // =============================
 // client/src/features/stockAudit/pages/ReadyToSellAuditPage.jsx
-// ปรับ layout: ย้ายปุ่มบันทึก/ปิดรอบไปอยู่แถวเดียวกับแถบ Session summary
+// ปรับเพิ่มการรองรับ "พบของค้างตรวจ" (Resolved Pending) + loading indicator ในตาราง
 
 import React, { useEffect, useRef, useState } from 'react'
 import useStockAuditStore from '../store/stockAuditStore'
@@ -17,12 +17,13 @@ const ReadyToSellAuditPage = () => {
     expectedItems, expectedTotal, expectedPage, expectedPageSize,
     scannedItems, scannedTotal, scannedPage, scannedPageSize,
     startReadyAuditAction, loadItemsAction, scanBarcodeAction, confirmAuditAction, loadOverviewAction, scanSnAction,
-    isStarting, isScanning, isConfirming, errorMessage,
+    isScanning, isConfirming, errorMessage, isLoadingItems,
   } = useStockAuditStore()
 
   const [scanMode, setScanMode] = useState('BARCODE')
   const [openConfirmLost, setOpenConfirmLost] = useState(false)
   const [openConfirmPending, setOpenConfirmPending] = useState(false)
+  const [bannerMessage, setBannerMessage] = useState('')
 
   const focusScan = () => {
     const el = scanRef.current
@@ -93,7 +94,6 @@ const ReadyToSellAuditPage = () => {
   }
 
   const playSuccess = async () => {
-    // ปรับเพิ่ม volume และ duration ให้ดังและยาวขึ้น
     await playBeep({ freq: 900, duration: 0.2, type: 'triangle', volume: 1 })
     await playBeep({ freq: 1500, duration: 0.2, type: 'triangle', volume: 1 })
   }
@@ -188,6 +188,7 @@ const ReadyToSellAuditPage = () => {
       ok: !!(result && (result.ok === true || result === true)),
       duplicate: false,
       notFound: false,
+      resolvedPending: false,
     }
 
     // HTTP code hints first
@@ -197,16 +198,17 @@ const ReadyToSellAuditPage = () => {
     // Code / reason tokens from backend
     const dupTokens = ['DUPLICATE','ALREADY','ALREADY_SCANNED']
     const nfTokens  = ['NOT_FOUND','NOT_IN_EXPECTED','UNEXPECTED','UNKNOWN_ITEM']
+    const rpTokens  = ['RESOLVED_PENDING','PENDING_RESOLVED']
     if (dupTokens.some(t => code.includes(t))) flags.duplicate = true
     if (nfTokens.some(t => code.includes(t)))  flags.notFound = true
+    if (rpTokens.some(t => code.includes(t)))  flags.resolvedPending = true
 
-    // Heuristics from message (support TH/EN)
-    const dupMsg = /สแกน.*แล้ว|ถูกสแกนไปแล้ว|already|duplicate/i.test(message)
-    const nfMsg  = /ไม่อยู่ในชุดคาดหวัง|ไม่พบ|not\s*found|unexpected/i.test(message)
-    if (dupMsg) flags.duplicate = true
-    if (nfMsg)  flags.notFound = true
+    // Heuristics from message (simple includes, TH/EN)
+    const m = message
+    if (m.includes('duplicate') || (m.includes('สแกน') && m.includes('แล้ว'))) flags.duplicate = true
+    if (m.includes('ไม่พบ') || m.includes('not found') || m.includes('unexpected') || m.includes('ไม่อยู่ในชุดคาดหวัง')) flags.notFound = true
+    if (m.includes('ค้างตรวจ') || (m.includes('pending') && m.includes('resolved'))) flags.resolvedPending = true
 
-    // Prefer duplicate if both true
     if (flags.duplicate && flags.notFound) flags.notFound = false
     return flags
   }
@@ -221,8 +223,18 @@ const ReadyToSellAuditPage = () => {
       } else {
         result = await scanBarcodeAction(input, { mode: scanMode })
       }
-      const { ok, duplicate, notFound } = classifyScanResult(result)
-      if (ok) {
+
+      // รับผลลัพธ์แบบรวมก่อน แล้วค่อยดึง flag ออกมา
+      const flags = classifyScanResult(result)
+      const { ok, duplicate, notFound, resolvedPending } = flags
+
+      if (resolvedPending) {
+        await playSuccess()
+        setBannerMessage('พบของค้างตรวจ – เคลียร์ให้แล้ว')
+        setTimeout(() => setBannerMessage(''), 2500)
+        await loadItemsAction({ scanned: 0, q: '', page: expectedPage, pageSize: expectedPageSize })
+        await loadItemsAction({ scanned: 1, q: '', page: scannedPage, pageSize: scannedPageSize })
+      } else if (ok) {
         await playSuccess()
         await loadItemsAction({ scanned: 0, q: '', page: expectedPage, pageSize: expectedPageSize })
         await loadItemsAction({ scanned: 1, q: '', page: scannedPage, pageSize: scannedPageSize })
@@ -235,8 +247,13 @@ const ReadyToSellAuditPage = () => {
         await playError()
       }
     } catch (err) {
-      const { duplicate, notFound } = classifyScanResult(null, err)
-      if (duplicate) {
+      const flags = classifyScanResult(null, err)
+      const { duplicate, notFound, resolvedPending } = flags
+      if (resolvedPending) {
+        await playSuccess()
+        setBannerMessage('พบของค้างตรวจ – เคลียร์ให้แล้ว')
+        setTimeout(() => setBannerMessage(''), 2500)
+      } else if (duplicate) {
         await playDuplicate()
       } else if (notFound) {
         await playError()
@@ -248,7 +265,6 @@ const ReadyToSellAuditPage = () => {
       focusScan()
     }
   }
-
 
   const doConfirmLost = async () => {
     try {
@@ -282,12 +298,9 @@ const ReadyToSellAuditPage = () => {
     }
   }
 
-  // ---------- render ----------
   return (
     <div className="space-y-4">
-      {/* HEADER ROW: stats + actions in the same row */}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        {/* left: session & counters */}
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
           <span className="font-medium">Session:</span>
           <span>{sessionId ?? '-'}</span>
@@ -296,7 +309,6 @@ const ReadyToSellAuditPage = () => {
           <span>Missing: <b>{missingCount}</b></span>
           <span className="text-gray-500">(F2 โฟกัสช่องสแกน · F3 สลับโหมด)</span>
         </div>
-        {/* right: actions */}
         <div className="flex items-center gap-2">
           <button
             type="button"
@@ -319,12 +331,15 @@ const ReadyToSellAuditPage = () => {
         </div>
       </div>
 
-      {errorMessage && (
-        <div className="text-red-600 text-sm">{errorMessage}</div>
+      {(errorMessage || bannerMessage) && (
+        <div className="text-sm">
+          {errorMessage && <span className="text-red-600">{errorMessage}</span>}
+          {bannerMessage && <span className="ml-3 px-2 py-1 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">{bannerMessage}</span>}
+        </div>
       )}
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-        {/* Expected (left) */}
+        {/* Expected (ยังไม่สแกน) */}
         <div className="rounded-xl border p-3">
           <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
             <h3 className="font-semibold">Expected (ยังไม่สแกน) {expectedTotal}</h3>
@@ -343,23 +358,18 @@ const ReadyToSellAuditPage = () => {
                 <div className="inline-flex rounded-lg overflow-hidden border">
                   <button
                     type="button"
+                    className={`px-3 py-1 text-xs ${scanMode === 'BARCODE' ? 'bg-gray-900 text-white' : 'bg-white hover:bg-gray-50'}`}
                     onClick={() => setScanMode('BARCODE')}
-                    className={`px-3 py-2 text-sm ${scanMode === 'BARCODE' ? 'bg-black text-white' : 'bg-white text-black'}`}
-                    title="สแกนด้วยบาร์โค้ด (F3 สลับ)"
-                  >บาร์โค้ด</button>
+                    title="สแกน Barcode"
+                  >BARCODE</button>
                   <button
                     type="button"
+                    className={`px-3 py-1 text-xs ${scanMode === 'SN' ? 'bg-gray-900 text-white' : 'bg-white hover:bg-gray-50'}`}
                     onClick={() => setScanMode('SN')}
-                    className={`px-3 py-2 text-sm ${scanMode === 'SN' ? 'bg-black text-white' : 'bg-white text-black'}`}
-                    title="สแกนด้วย SN (F3 สลับ)"
+                    title="สแกน Serial Number"
                   >SN</button>
                 </div>
               </div>
-              <button
-                className="btn btn-sm"
-                disabled={isStarting}
-                onClick={async () => { await loadItemsAction({ scanned: 0, q: '', page: 1, pageSize: expectedPageSize }); focusScan(); }}
-              >รีโหลด</button>
             </div>
           </div>
 
@@ -368,53 +378,55 @@ const ReadyToSellAuditPage = () => {
             total={expectedTotal}
             page={expectedPage}
             pageSize={expectedPageSize}
+            loading={isLoadingItems}
             onSearch={(q) => loadItemsAction({ scanned: 0, q, page: 1, pageSize: expectedPageSize })}
             onPageChange={(page) => loadItemsAction({ scanned: 0, q: '', page, pageSize: expectedPageSize })}
           />
         </div>
 
-        {/* Scanned (right) */}
+        {/* Scanned */}
         <div className="rounded-xl border p-3">
           <div className="flex items-center justify-between mb-2 py-2">
-            <h3 className="font-semibold">Scanned (สแกนแล้ว) {scannedTotal}</h3>
-            <button
-              className="btn btn-sm"
-              onClick={async () => { await loadItemsAction({ scanned: 1, q: '', page: 1, pageSize: scannedPageSize }); focusScan(); }}
-            >รีโหลด</button>
+            <h3 className="font-semibold">Scanned {scannedTotal}</h3>
           </div>
+
           <AuditTable
             items={scannedItems}
             total={scannedTotal}
             page={scannedPage}
             pageSize={scannedPageSize}
+            scanned={true}
+            loading={isLoadingItems}
             onSearch={(q) => loadItemsAction({ scanned: 1, q, page: 1, pageSize: scannedPageSize })}
             onPageChange={(page) => loadItemsAction({ scanned: 1, q: '', page, pageSize: scannedPageSize })}
           />
         </div>
       </div>
 
-      {/* Confirm dialogs */}
+      {/* Dialogs */}
       <ConfirmActionDialog
         open={openConfirmLost}
-        name="ยืนยันบันทึกสินค้าสูญหาย"
-        description={'จะบันทึกสินค้าที่ "ยังไม่ถูกสแกน" ทั้งหมดเป็นสถานะสูญหาย และปิดรอบทันที'}
-        onCancel={() => setOpenConfirmLost(false)}
+        onOpenChange={setOpenConfirmLost}
+        title="บันทึกสินค้าสูญหาย"
+        description="ของที่ยังไม่ถูกสแกนจะถูกบันทึกเป็นสูญหาย และปิดรอบตรวจทันที"
+        confirmText={isConfirming ? 'กำลังบันทึก...' : 'ยืนยันบันทึกสูญหาย'}
+        confirmVariant="primary"
         onConfirm={doConfirmLost}
+        disabled={isConfirming}
       />
 
       <ConfirmActionDialog
         open={openConfirmPending}
-        name="ปิดรอบ (ค้างตรวจ)"
-        description={'จะปิดรอบนี้ และบันทึกสินค้าที่ไม่ถูกสแกนทั้งหมดเป็นค้างตรวจ (Pending)'}
-        onCancel={() => setOpenConfirmPending(false)}
+        onOpenChange={setOpenConfirmPending}
+        title="ปิดรอบ (ค้างตรวจ)"
+        description="ปิดรอบโดยยังไม่สรุปเป็นสูญหาย ของที่ยังไม่ถูกสแกนจะถูกทำเครื่องหมายเป็นค้างตรวจ"
+        confirmText={isConfirming ? 'กำลังบันทึก...' : 'ยืนยันปิดรอบ (ค้างตรวจ)'}
+        confirmVariant="warning"
         onConfirm={doConfirmPending}
+        disabled={isConfirming}
       />
     </div>
   )
 }
 
 export default ReadyToSellAuditPage
-
-
-
-

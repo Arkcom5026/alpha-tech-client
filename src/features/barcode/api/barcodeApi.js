@@ -11,7 +11,7 @@ import apiClient from '@/utils/apiClient';
 export const generateMissingBarcodes = async (receiptId) => {
   if (!receiptId) throw new Error('Missing receiptId');
   try {
-    const res = await apiClient.post(`/barcodes/generate-missing/${receiptId}`);
+    const res = await apiClient.post(`/barcodes/generate-missing/${receiptId}`);    
     return res.data;
   } catch (err) {
     console.error('❌ generateMissingBarcodes error:', err);

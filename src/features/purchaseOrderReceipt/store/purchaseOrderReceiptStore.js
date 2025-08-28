@@ -40,13 +40,25 @@ const usePurchaseOrderReceiptStore = create((set) => ({
     }
   },
 
+
   loadReceiptSummariesAction: async (opts = {}) => {
     try {
       const wantPrinted = opts.printed ?? undefined;
       set({ loading: true, receiptSummariesLoading: true, error: null });
-      const all = await getAllReceipts();
 
-      const normalized = (all || []).map((r) => ({
+      const all = await getAllReceipts();
+      // รองรับผลลัพธ์ได้หลายรูปแบบ: [..] หรือ { items:[..] } หรือ { data:[..] } หรือ { results:[..] }
+      const list = Array.isArray(all)
+        ? all
+        : Array.isArray(all?.items)
+          ? all.items
+          : Array.isArray(all?.data)
+            ? all.data
+            : Array.isArray(all?.results)
+              ? all.results
+              : [];
+
+      const normalized = list.map((r) => ({
         id: r.id,
         code: r.code || r.receiptCode || r.purchaseOrderReceiptCode || r.poReceiptCode,
         purchaseOrderCode: r.purchaseOrderCode || r.orderCode || r.poCode || r.purchaseOrder?.code,
@@ -72,6 +84,7 @@ const usePurchaseOrderReceiptStore = create((set) => ({
     }
   },
 
+    
   loadReceiptBarcodeSummariesAction: async (opts = {}) => {
     try {
       set({ loading: true, receiptBarcodeLoading: true, error: null });
@@ -208,6 +221,7 @@ const usePurchaseOrderReceiptStore = create((set) => ({
     }
   },
 
+  
   markReceiptAsPrintedAction: async (receiptId) => {
     try {
       set({ error: null });

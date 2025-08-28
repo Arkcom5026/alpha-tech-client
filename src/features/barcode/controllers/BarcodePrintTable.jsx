@@ -212,7 +212,6 @@ const BarcodePrintTable = ({ receipts }) => {
                 <th className="border px-2 py-1 text-center">ลำดับ</th>
                 <th className="border px-2 py-1">เลขใบสั่งซื้อ</th>
                 <th className="border px-2 py-1">เลขใบตรวจรับ</th>
-                <th className="border px-2 py-1">เลขที่ใบกำกับภาษี</th>
                 <th className="border px-2 py-1">Supplier</th>
                 <th className="border px-2 py-1">วันที่รับ</th>
                 <th className="border px-2 py-1 text-center">การพิมพ์</th>
@@ -231,7 +230,6 @@ const BarcodePrintTable = ({ receipts }) => {
                   <td className="border px-2 py-1 text-center">{index + 1}</td>
                   <td className="border px-2 py-1">{r.purchaseOrderCode}</td>
                   <td className="border px-2 py-1">{r.code}</td>
-                  <td className="border px-2 py-1">{r.taxInvoiceNo || '-'}</td>
                   <td className="border px-2 py-1">{r.supplier}</td>
                   <td className="border px-2 py-1">{formatDate(r.receivedAt)}</td>
                   <td className="border px-2 py-1 text-center">
@@ -246,7 +244,7 @@ const BarcodePrintTable = ({ receipts }) => {
               ))}
               {filteredReceipts.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="text-center text-gray-500 p-4">
+                  <td colSpan={7} className="text-center text-gray-500 p-4">
                     ไม่มีรายการรอพิมพ์
                   </td>
                 </tr>
@@ -342,3 +340,6 @@ const BarcodePrintTable = ({ receipts }) => {
 };
 
 export default BarcodePrintTable;
+
+
+

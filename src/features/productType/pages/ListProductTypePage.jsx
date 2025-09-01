@@ -2,13 +2,13 @@
 
 import React from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import ProductTypeTable from '../components/ProductTypeTable';
+import ProductTypeTable from '../components/ProductTypeTable.js';
 
 import StandardActionButtons from '@/components/shared/buttons/StandardActionButtons';
-import useProductTypeStore from '../store/productTypeStore';
-import useProductStore from '@/features/product/store/productStore';
-import CascadingFilterGroup from '@/components/shared/form/CascadingFilterGroup';
-import { useAuthStore } from '@/features/auth/store/authStore';
+import useProductTypeStore from '../store/productTypeStore.js';
+import useProductStore from '@/features/product/store/productStore.js';
+import CascadingFilterGroup from '@/components/shared/form/CascadingFilterGroup.js';
+import { useAuthStore } from '@/features/auth/store/authStore.js';
 
 const ListProductTypePage = () => {
   const navigate = useNavigate();

@@ -1,12 +1,7 @@
 // ✅ src/features/productType/components/ProductTypeTable.jsx
 import React, { useMemo, useState } from 'react';
-import useProductTypeStore from '@/features/productType/store/productTypeStore';
-
-// ใช้แนวทางสไตล์เดียวกับ CategoryTable
-const roleIsAdminOrSuper = () => {
-  const role = (localStorage.getItem('role') || '').toLowerCase();
-  return role === 'admin' || role === 'supperadmin' || role === 'superadmin';
-};
+import useProductTypeStore from '@/features/productType/store/productTypeStore.js';
+import { useAuthStore } from '@/features/auth/store/authStore.js';
 
 const Badge = ({ children, className = '' }) => (
   <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${className}`}>{children}</span>
@@ -23,12 +18,13 @@ const ActionButton = ({ children, className = '', ...rest }) => (
 
 /**
  * ProductTypeTable
- * - โทนสี/เลย์เอาต์ตาม CategoryTable
- * - ยืนยันด้วย confirm bar (ไม่ใช้ dialog)
+ * - RBAC: Admin + SuperAdmin จัดการได้เต็มที่
+ * - ใช้ confirm bar (ไม่ใช้ dialog)
  */
 const ProductTypeTable = ({ data = [], loading, error, page = 1, limit = 20, onEdit }) => {
   const { archiveProductTypeAction, restoreProductTypeAction, isSubmitting } = useProductTypeStore();
-  const isAdmin = roleIsAdminOrSuper();
+  const { isSuperAdmin, canManageProductOrdering } = useAuthStore();
+  const canManage = isSuperAdmin || canManageProductOrdering;
 
   const rows = useMemo(() => (Array.isArray(data) ? data : []), [data]);
   const [confirm, setConfirm] = useState(null); // { type: 'archive'|'restore', row }
@@ -46,15 +42,14 @@ const ProductTypeTable = ({ data = [], loading, error, page = 1, limit = 20, onE
   return (
     <div className="w-full flex justify-center mt-4">
       <div className="w-[1100px] bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm rounded-xl overflow-hidden">
-        {/* table header (sticky) */}
-        <div className="px-4 py-3 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-800/60 backdrop-blur supports-[backdrop-filter]:bg-zinc-50/60 sticky top-0 z-10">
+        {/* table header */}
+        <div className="px-4 py-3 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-800/60 sticky top-0 z-10">
           <div className="flex items-center justify-between">
             <div className="text-sm text-zinc-600 dark:text-zinc-300">รายการ</div>
             <div className="text-xs text-zinc-500">ทั้งหมด {rows.length} รายการ</div>
           </div>
         </div>
 
-        {/* Error block */}
         {error && (
           <div className="px-4 py-2 text-sm text-red-600 dark:text-red-400">{String(error)}</div>
         )}
@@ -78,18 +73,18 @@ const ProductTypeTable = ({ data = [], loading, error, page = 1, limit = 20, onE
 
             {rows.map((row, idx) => {
               const isActive = !!row.active;
-              const isSystem = !!row.isSystem; // เผื่อรองรับกรณี lock จากระบบ
-              const canEdit = isAdmin && !isSystem && isActive;
-              const canArchive = isAdmin && !isSystem && isActive;
-              const canRestore = isAdmin && !isSystem && !isActive;
+              const isSystem = !!row.isSystem;
+              const canEdit = canManage && !isSystem && isActive;
+              const canArchive = canManage && !isSystem && isActive;
+              const canRestore = canManage && !isSystem && !isActive;
 
               return (
                 <tr
                   key={row.id}
-                  className={`border-b border-zinc-100 dark:border-zinc-800 transition-colors hover:bg-zinc-50/60 dark:hover:bg-zinc-800/50 ${idx % 2 === 1 ? 'bg-white dark:bg-zinc-900' : 'bg-zinc-50/40 dark:bg-zinc-900/40'}`}
+                  className={`border-b border-zinc-100 dark:border-zinc-800 hover:bg-zinc-50/60 dark:hover:bg-zinc-800/50 ${idx % 2 === 1 ? 'bg-white dark:bg-zinc-900' : 'bg-zinc-50/40 dark:bg-zinc-900/40'}`}
                 >
-                  <td className="px-4 py-3 text-center align-middle">{(page - 1) * limit + idx + 1}</td>
-                  <td className="px-4 py-3 align-middle">
+                  <td className="px-4 py-3 text-center">{(page - 1) * limit + idx + 1}</td>
+                  <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
                       <span className="font-medium text-zinc-800 dark:text-zinc-100">{row.name}</span>
                       {isSystem && (
@@ -97,21 +92,21 @@ const ProductTypeTable = ({ data = [], loading, error, page = 1, limit = 20, onE
                       )}
                     </div>
                   </td>
-                  <td className="px-4 py-3 align-middle">{row.category?.name || '-'}</td>
-                  <td className="px-4 py-3 text-center align-middle">
+                  <td className="px-4 py-3">{row.category?.name || '-'}</td>
+                  <td className="px-4 py-3 text-center">
                     {isActive ? (
                       <Badge className="bg-emerald-50 text-emerald-700 ring-emerald-600/20 dark:bg-emerald-900/30 dark:text-emerald-300 dark:ring-emerald-400/30">ใช้งาน</Badge>
                     ) : (
                       <Badge className="bg-zinc-200 text-zinc-800 ring-zinc-400/40 dark:bg-zinc-700 dark:text-zinc-200 dark:ring-zinc-500/40">ปิดใช้งาน</Badge>
                     )}
                   </td>
-                  <td className="px-4 py-3 align-middle text-right">
+                  <td className="px-4 py-3 text-right">
                     <div className="inline-flex items-center gap-2">
                       <ActionButton
                         className="border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:cursor-not-allowed"
                         disabled={!canEdit}
                         onClick={() => onEdit?.(row)}
-                        title={!isAdmin ? 'สำหรับผู้ดูแลระบบเท่านั้น' : isSystem ? 'ประเภทระบบถูกล็อก' : !isActive ? 'ต้องเป็นสถานะใช้งาน' : 'แก้ไข'}
+                        title={!canManage ? 'สำหรับผู้มีสิทธิ์เท่านั้น' : isSystem ? 'ประเภทระบบถูกล็อก' : !isActive ? 'ต้องเป็นสถานะใช้งาน' : 'แก้ไข'}
                       >
                         แก้ไข
                       </ActionButton>
@@ -149,7 +144,6 @@ const ProductTypeTable = ({ data = [], loading, error, page = 1, limit = 20, onE
           </tbody>
         </table>
 
-        {/* Confirm bar (ไม่ใช้ dialog) */}
         {confirm && (
           <div className="px-4 py-3 flex items-center justify-between bg-amber-50/90 dark:bg-amber-900/30 border-t border-amber-200 dark:border-amber-800">
             <div className="text-sm text-amber-900 dark:text-amber-200">

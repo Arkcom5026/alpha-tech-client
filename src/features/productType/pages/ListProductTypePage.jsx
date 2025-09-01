@@ -1,19 +1,19 @@
-// ✅ src/features/productType/pages/ListProductTypePage.jsx
-
+// ✅ Fix import path ใน ListProductTypePage.jsx ให้ตรงกับไฟล์จริง (ProductTypeTable.jsx)
 import React from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import ProductTypeTable from '../components/ProductTypeTable.js';
+import ProductTypeTable from '../components/ProductTypeTable.jsx';
 
-import StandardActionButtons from '@/components/shared/buttons/StandardActionButtons';
+import StandardActionButtons from '@/components/shared/buttons/StandardActionButtons.jsx';
 import useProductTypeStore from '../store/productTypeStore.js';
 import useProductStore from '@/features/product/store/productStore.js';
-import CascadingFilterGroup from '@/components/shared/form/CascadingFilterGroup.js';
+import CascadingFilterGroup from '@/components/shared/form/CascadingFilterGroup.jsx';
 import { useAuthStore } from '@/features/auth/store/authStore.js';
 
 const ListProductTypePage = () => {
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const { canManageProductOrdering, isSuperAdmin } = useAuthStore();
+  const canManage = isSuperAdmin || canManageProductOrdering;
 
   const {
     items,
@@ -33,11 +33,9 @@ const ListProductTypePage = () => {
     fetchListAction,
   } = useProductTypeStore();
 
-  // ✅ ใช้ pattern เดียวกับ ListProductProfilePage: โหลด dropdowns ผ่าน productStore
   const { dropdowns, ensureDropdownsAction } = useProductStore();
   React.useEffect(() => { ensureDropdownsAction(); }, [ensureDropdownsAction]);
 
-  // --- Sync URL <-> Store (page, search, includeInactive, categoryId)
   React.useEffect(() => {
     const p = Number(params.get('page') || 1);
     const s = params.get('search') || '';
@@ -50,7 +48,6 @@ const ListProductTypePage = () => {
     setCategoryFilterAction(cat ? Number(cat) : null);
   }, [params, setPageAction, setSearchAction, setIncludeInactiveAction, setCategoryFilterAction]);
 
-  // --- Fetch list whenever filters change
   React.useEffect(() => {
     fetchListAction();
     const next = new URLSearchParams(params);
@@ -67,25 +64,19 @@ const ListProductTypePage = () => {
   const onPrev = () => page > 1 && setPageAction(page - 1);
   const onNext = () => page < totalPages && setPageAction(page + 1);
 
-  // ✅ ใช้รูปแบบเดียวกับ ListProductProfilePage ในการใช้ CascadingFilterGroup
   const onCascadeChange = ({ categoryId: catId }) => {
     setCategoryFilterAction(catId ? Number(catId) : null);
     setPageAction(1);
   };
 
-  const canManage = isSuperAdmin || canManageProductOrdering;
-
   return (
     <div className="p-6 w-full flex flex-col items-center">
       <div className="w-full max-w-6xl">
-        {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-xl font-semibold text-zinc-800 dark:text-white">จัดการประเภทสินค้า</h1>
-          {/* ✅ แสดงปุ่มเพิ่มทั้ง Admin และ SuperAdmin */}
           {canManage && <StandardActionButtons onAdd={handleCreate} />}
         </div>
 
-        {/* Filters */}
         <div className="flex flex-col gap-3 mb-4">
           <CascadingFilterGroup
             value={{ categoryId }}
@@ -95,7 +86,6 @@ const ListProductTypePage = () => {
             showReset
           />
 
-          {/* Include Inactive toggle + Page size */}
           <div className="flex flex-wrap items-center gap-3">
             <label className="inline-flex items-center gap-2 text-sm text-zinc-700 dark:text-zinc-300">
               <input
@@ -125,7 +115,6 @@ const ListProductTypePage = () => {
           </div>
         </div>
 
-        {/* Table */}
         <div className="border rounded-xl p-3 shadow-sm bg-white dark:bg-zinc-900">
           <ProductTypeTable
             data={items}
@@ -137,7 +126,6 @@ const ListProductTypePage = () => {
           />
         </div>
 
-        {/* Pagination */}
         <div className="flex items-center justify-between mt-4">
           <div className="text-sm text-zinc-600 dark:text-zinc-400">
             หน้า {page} / {Math.max(totalPages || 1, 1)}

@@ -1,62 +1,83 @@
-// ✅ src/features/category/api/categoryApi.js
+// src/features/category/api/categoryApi.js
 import apiClient from '@/utils/apiClient';
 
-export const getCategories = async () => {
+const withParams = (params = {}) => ({ params });
+
+export const parseApiError = (error) => {
+  const fallback = { code: 'UNKNOWN', message: 'เกิดข้อผิดพลาดที่ไม่คาดคิด' };
+  const res = error?.response;
+  const code = res?.data?.code || fallback.code;
+  const messageFromServer = res?.data?.message;
+  const map = {
+    HAS_REFERENCES: 'ไม่สามารถดำเนินการได้ เนื่องจากมีข้อมูลที่เชื่อมโยงอยู่',
+    PARENT_INACTIVE: 'ไม่สามารถทำรายการได้ เพราะอยู่ภายใต้หมวดหลักที่ปิดใช้งาน',
+    IS_SYSTEM_LOCKED: 'ไม่สามารถแก้ไข/ปิดใช้งานได้ เนื่องจากเป็นหมวดระบบ (ล็อก)',
+    DUPLICATE: 'มีข้อมูลชื่อ/slug ซ้ำในระบบ',
+  };
+  return { code, message: map[code] || messageFromServer || fallback.message };
+};
+
+export const getCategories = async (params = {}) => {
   try {
-    const res = await apiClient.get('/categories');
-    return res.data;
-  } catch (err) {
-    console.error('❌ getCategories error:', err);
-    throw err;
+    // กัน cache 304 โดยเติม cache-buster param แทนการส่ง header เพื่อลดปัญหา CORS
+    const merged = { ...params, _ts: Date.now() };
+    const { data } = await apiClient.get('categories', { params: merged });
+    return data; // { items, total, page, limit } หรือ array
+  } catch (error) {
+    throw parseApiError(error);
   }
 };
 
 export const getCategoryById = async (id) => {
   try {
-    const res = await apiClient.get(`/categories/${id}`);
-    return res.data;
-  } catch (err) {
-    console.error('❌ getCategoryById error:', err);
-    throw err;
+    const { data } = await apiClient.get(`categories/${id}`);
+    return data;
+  } catch (error) {
+    throw parseApiError(error);
   }
 };
 
-export const createCategory = async (data) => {
+export const createCategory = async (payload) => {
   try {
-    const res = await apiClient.post('/categories', data);
-    return res.data;
-  } catch (err) {
-    console.error('❌ createCategory error:', err);
-    throw err;
+    const { data } = await apiClient.post('categories', payload);
+    return data;
+  } catch (error) {
+    throw parseApiError(error);
   }
 };
 
-export const updateCategory = async (id, data) => {
+export const updateCategory = async (id, payload) => {
   try {
-    const res = await apiClient.put(`/categories/${id}`, data);
-    return res.data;
-  } catch (err) {
-    console.error('❌ updateCategory error:', err);
-    throw err;
+    const { data } = await apiClient.patch(`categories/${id}`, payload);
+    return data;
+  } catch (error) {
+    throw parseApiError(error);
   }
 };
 
-export const deleteCategory = async (id) => {
+export const archiveCategory = async (id) => {
   try {
-    const res = await apiClient.delete(`/categories/${id}`);
-    return res.data;
-  } catch (err) {
-    console.error('❌ deleteCategory error:', err);
-    throw err;
+    const { data } = await apiClient.patch(`categories/${id}/archive`);
+    return data;
+  } catch (error) {
+    throw parseApiError(error);
   }
 };
 
-export const getCategoryDropdowns = async () => {
+export const restoreCategory = async (id) => {
   try {
-    const res = await apiClient.get('/categories/dropdowns');
-    return res.data;
-  } catch (err) {
-    console.error('❌ getCategoryDropdowns error:', err);
-    throw err;
+    const { data } = await apiClient.patch(`categories/${id}/restore`);
+    return data;
+  } catch (error) {
+    throw parseApiError(error);
+  }
+};
+
+export const getCategoryDropdowns = async (opts = { active: true }) => {
+  try {
+    const { data } = await apiClient.get('categories/dropdowns', withParams({ active: opts.active !== false }));
+    return data;
+  } catch (error) {
+    throw parseApiError(error);
   }
 };

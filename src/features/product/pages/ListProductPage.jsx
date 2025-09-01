@@ -35,10 +35,14 @@ export default function ListProductPage() {
     fetchProductsAction,
     deleteProduct,
     dropdowns,
-    dropdownsLoaded,
-    fetchDropdownsAction,
+    ensureDropdownsAction,
     refreshProductList,
   } = useProductStore();
+
+  // โหลด dropdowns ครั้งเดียวเมื่อเข้าหน้า
+  useEffect(() => {
+    ensureDropdownsAction();
+  }, [ensureDropdownsAction]);
 
   const confirmDelete = (prodId) => {
     const target = products.find(p => p.id === prodId);
@@ -46,7 +50,7 @@ export default function ListProductPage() {
   };
 
   const handleDelete = async () => {
-    if (!deleteTarget?.id || !branchId) return;
+    if (!deleteTarget?.id) return; // 🧹 ตัดการเช็ค branch ตามที่ตกลง
     try {
       await deleteProduct(deleteTarget.id);
       setDeleteTarget(null);
@@ -97,7 +101,7 @@ export default function ListProductPage() {
       params.delete('refresh');
       navigate({ pathname: location.pathname, search: params.toString() }, { replace: true });
     }
-  }, [location, branchId]);
+  }, [location.search, location.pathname, branchId, filter, committedSearchText, refreshProductList, navigate]);
 
   useEffect(() => {
     if (!branchId || !hasFiltered) return;
@@ -109,18 +113,20 @@ export default function ListProductPage() {
       search: committedSearchText || undefined,
     };
     fetchProductsAction(filters);
-  }, [branchId, filter, committedSearchText, hasFiltered]);
+  }, [branchId, filter, committedSearchText, hasFiltered, fetchProductsAction]);
 
   const handleSearchKeyDown = (e) => {
     if (e.key === 'Enter') {
       setCommittedSearchText(searchText);
       setHasFiltered(true);
+      setCurrentPage(1);
     }
   };
 
   const handleFilterChange = (newFilter) => {
     setFilter(newFilter);
     setHasFiltered(true);
+    setCurrentPage(1);
   };
 
   if (isLoading) return <p>กำลังโหลดรายการสินค้า...</p>;
@@ -191,3 +197,6 @@ export default function ListProductPage() {
     </div>
   );
 }
+
+
+

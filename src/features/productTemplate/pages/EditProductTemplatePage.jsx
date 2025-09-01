@@ -1,11 +1,13 @@
 // ✅ src/features/productTemplate/pages/EditProductTemplatePage.jsx
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import ProductTemplateForm from '../components/ProductTemplateForm';
 import useProductTemplateStore from '../store/productTemplateStore';
+import useProductStore from '@/features/product/store/productStore';
 
 import { useBranchStore } from '@/features/branch/store/branchStore';
 import ProcessingDialog from '@/components/shared/dialogs/ProcessingDialog';
+import PageHeader from '@/components/shared/layout/PageHeader';
 
 const EditProductTemplatePage = () => {
   const { id } = useParams();
@@ -16,7 +18,11 @@ const EditProductTemplatePage = () => {
   const [isUpdating, setIsUpdating] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
 
-  const { getTemplateById, updateTemplate } = useProductTemplateStore();
+  const { getTemplateByIdAction: getTemplateById, updateTemplateAction: updateTemplate } = useProductTemplateStore();
+
+  // dropdowns from productStore (single source of truth)
+  const { ensureDropdownsAction, dropdowns, dropdownsLoaded } = useProductStore();
+  const isDropdownLoading = !dropdownsLoaded;
 
   useEffect(() => {
     if (!selectedBranchId) {
@@ -45,6 +51,11 @@ const EditProductTemplatePage = () => {
 
     fetchData();
   }, [id, selectedBranchId, getTemplateById]);
+
+  // ensure dropdowns are loaded for the cascading selects
+  useEffect(() => {
+    try { ensureDropdownsAction?.(); } catch { /* noop */ }
+  }, [ensureDropdownsAction]);
 
   const handleUpdate = async (formData) => {
     try {
@@ -76,10 +87,15 @@ const EditProductTemplatePage = () => {
 
   return (
     <div className="max-w-3xl mx-auto">
-      <h2 className="text-xl font-bold mb-4">แก้ไขรูปแบบสินค้า</h2>
+      <PageHeader title={`แก้ไขรูปแบบสินค้า #${id}`} />
+      <div className="mb-3">
+        <Link to="/pos/stock/templates" className="text-sm text-blue-600 hover:underline">ย้อนกลับ</Link>
+      </div>
 
       <ProductTemplateForm
         defaultValues={template}
+        dropdowns={dropdowns}
+        isDropdownLoading={isDropdownLoading}
         onSubmit={handleUpdate}
         mode="edit"
       />

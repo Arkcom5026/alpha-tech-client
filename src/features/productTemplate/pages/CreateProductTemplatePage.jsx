@@ -91,3 +91,4 @@ const CreateProductTemplatePage = () => {
 };
 
 export default CreateProductTemplatePage;
+

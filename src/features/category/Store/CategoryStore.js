@@ -5,76 +5,123 @@ import {
   getCategoryById,
   createCategory,
   updateCategory,
-  deleteCategory,
-  getCategoryDropdowns,
+  archiveCategory,
+  restoreCategory,
 } from '../api/categoryApi';
+import { parseApiError } from '@/utils/uiHelpers';
+
+const initialState = {
+  items: [],
+  total: 0,
+  page: 1,
+  limit: 20,
+  search: '',
+  includeInactive: true,
+  loading: false,
+  submitting: false,
+  error: null,
+  };
 
 export const useCategoryStore = create((set, get) => ({
-  categories: [],
-  isLoading: false,
-  error: null,
+  ...initialState,
 
-  fetchCategories: async () => {
-    set({ isLoading: true, error: null });
+  // UI States
+  setSearchAction: (search) => set({ search, page: 1 }),
+  setPageAction: (page) => set({ page }),
+  setLimitAction: (limit) => set({ limit, page: 1 }),
+  setIncludeInactiveAction: (includeInactive) => set({ includeInactive, page: 1 }),
+
+  // List + Dropdowns
+  fetchListAction: async () => {
+    const { page, limit, search, includeInactive } = get();
     try {
-      const data = await getCategories();
-      set({ categories: data });
+      set({ loading: true, error: null });
+      const data = await getCategories({ page, limit, search, includeInactive });
+      set({ items: data.items || [], total: data.total || 0 });
     } catch (err) {
-      console.error('❌ โหลดหมวดหมู่ไม่สำเร็จ:', err);
-      set({ error: err });
+      const message = parseApiError(err);
+      set({ error: message, items: [], total: 0 });
     } finally {
-      set({ isLoading: false });
+      set({ loading: false });
     }
   },
 
-  fetchDropdowns: async () => {
-    try {
-      const data = await getCategoryDropdowns();
-      set({ categories: data });
-    } catch (err) {
-      console.error('❌ ดึง dropdown หมวดหมู่ล้มเหลว:', err);
-    }
+  refreshAction: async () => {
+    await get().fetchListAction();
   },
 
-  getCategory: async (id) => {
+    // Read single
+  getCategoryAction: async (id) => {
     try {
       return await getCategoryById(id);
     } catch (err) {
-      console.error('❌ ไม่สามารถดึงหมวดหมู่ id:', id, err);
+      const message = parseApiError(err);
+      set({ error: message });
       return null;
     }
   },
 
-  addCategory: async (data) => {
+  // Create/Update
+  createAction: async (payload) => {
     try {
-      console.log('📤 ส่งข้อมูลเพิ่มหมวดหมู่:', data);
-      const created = await createCategory(data);
-      console.log('✅ หมวดหมู่ที่สร้าง:', created);
-      await get().fetchCategories();
-      return created;
+      set({ submitting: true, error: null });
+      await createCategory(payload);
+      await get().fetchListAction();
+      return { ok: true };
     } catch (err) {
-      console.error('❌ เพิ่มหมวดหมู่ไม่สำเร็จ:', err);
-      throw err;
+      const message = parseApiError(err);
+      set({ error: message });
+      return { ok: false, message };
+    } finally {
+      set({ submitting: false });
     }
   },
 
-  editCategory: async (id, data) => {
+  updateAction: async (id, patch) => {
     try {
-      await updateCategory(id, data);
-      await get().fetchCategories();
+      set({ submitting: true, error: null });
+      await updateCategory(id, patch);
+      await get().fetchListAction();
+      return { ok: true };
     } catch (err) {
-      console.error('❌ อัปเดตหมวดหมู่ไม่สำเร็จ:', err);
-      throw err;
+      const message = parseApiError(err);
+      set({ error: message });
+      return { ok: false, message };
+    } finally {
+      set({ submitting: false });
     }
   },
 
-  removeCategory: async (id) => {
+  // Archive/Restore (แทนลบถาวร)
+  archiveAction: async (id) => {
     try {
-      await deleteCategory(id);
-      await get().fetchCategories();
+      set({ submitting: true, error: null });
+      await archiveCategory(id);
+      await get().fetchListAction();
+      return { ok: true };
     } catch (err) {
-      console.error('❌ ลบหมวดหมู่ไม่สำเร็จ:', err);
-      throw err;
+      const message = parseApiError(err);
+      set({ error: message });
+      return { ok: false, message };
+    } finally {
+      set({ submitting: false });
+    }
+  },
+
+  restoreAction: async (id) => {
+    try {
+      set({ submitting: true, error: null });
+      await restoreCategory(id);
+      await get().fetchListAction();
+      return { ok: true };
+    } catch (err) {
+      const message = parseApiError(err);
+      set({ error: message });
+      return { ok: false, message };
+    } finally {
+      set({ submitting: false });
     }
   },
 }));
+
+

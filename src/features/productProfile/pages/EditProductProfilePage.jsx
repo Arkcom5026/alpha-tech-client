@@ -1,67 +1,72 @@
-// ✅ src/features/productProfile/pages/EditProductProfilePage.jsx
-import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import ProductProfileForm from '../components/ProductProfileForm';
+
+// src/features/productProfile/pages/EditProductProfilePage.jsx
+import React, { useEffect } from 'react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import useProductProfileStore from '../store/productProfileStore';
-import ProcessingDialog from '@/components/shared/dialogs/ProcessingDialog';
+import useProductStore from '@/features/product/store/productStore';
+import ProductProfileForm from '../components/ProductProfileForm';
+
+const LIST_PATH = '/pos/stock/profiles';
 
 const EditProductProfilePage = () => {
-  const navigate = useNavigate();
   const { id } = useParams();
+  const navigate = useNavigate();
+
   const {
-    selectedProfile,
+    current,
+    isLoadingCurrent,
+    error,
     fetchProfileById,
     updateProfile,
-    isLoading,
+    clearCurrentAction,
   } = useProductProfileStore();
+  const { ensureDropdownsAction, dropdowns, dropdownsLoaded } = useProductStore();
+  const isDropdownLoading = !dropdownsLoaded;
 
-  const [isUpdating, setIsUpdating] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
-  const [error, setError] = useState('');
+  useEffect(() => { ensureDropdownsAction?.(); }, [ensureDropdownsAction]);
 
   useEffect(() => {
-    if (id) fetchProfileById(id);
-  }, [id, fetchProfileById]);
+    if (!id) return;
+    (async () => {
+      try {
+        const e = await fetchProfileById(Number(id));
+        console.log('[EditProfile] entity =', e);
+        if (!e) navigate(LIST_PATH);
+      } catch (e) {
+        console.error('[EditProfile] fetch error', e);
+        navigate(LIST_PATH);
+      }
+    })();
+    return () => clearCurrentAction();
+  }, [id, fetchProfileById, clearCurrentAction, navigate]);
 
-  const handleUpdate = async (data) => {
-    try {
-      setIsUpdating(true);
-      await updateProfile(id, data);
-      setIsUpdating(false);
-      setShowSuccess(true);
-
-      setTimeout(() => {
-        setShowSuccess(false);
-        navigate('/pos/stock/profiles');
-      }, 2000);
-    } catch (err) {
-      console.error('ไม่สามารถอัปเดตข้อมูลได้:', err);
-      setError('เกิดข้อผิดพลาดในการบันทึกข้อมูล');
-      setIsUpdating(false);
-    }
+  const handleCancel = () => navigate(LIST_PATH);
+  const handleSubmit = async (values) => {
+    await updateProfile(Number(id), values);
+    navigate(LIST_PATH);
   };
 
-  if (isLoading || !selectedProfile) return <div className="p-4">กำลังโหลด...</div>;
-  if (error) return <p className="text-red-500 font-medium">{error}</p>;
+  if (isLoadingCurrent && !current) return <div className="p-4">กำลังโหลด...</div>;
+  if (error) return <div className="p-4 text-red-600">{String(error)}</div>;
+  if (!current) return <div className="p-4">ไม่พบข้อมูล</div>;
 
   return (
-    <div className="max-w-3xl mx-auto p-4 bg-white dark:bg-zinc-900 shadow rounded-2xl">
-      <h1 className="text-2xl font-bold mb-4">แก้ไขลักษณะสินค้า</h1>
-      <ProductProfileForm
-        mode="edit"
-        defaultValues={{
-          ...selectedProfile,
-          productTypeId: String(selectedProfile.productTypeId),
-        }}
-        onSubmit={handleUpdate}
-      />
+    <div className="p-6">
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="text-xl font-semibold">แก้ไขลักษณะสินค้า #{id}</h1>
+        <Link to={LIST_PATH} className="btn btn-outline">ย้อนกลับ</Link>
+      </div>
 
-      <ProcessingDialog
-        open={isUpdating || showSuccess}
-        isLoading={isUpdating}
-        message={isUpdating ? 'ระบบกำลังอัปเดตข้อมูล กรุณารอสักครู่...' : '✅ บันทึกข้อมูลเรียบร้อยแล้ว'}
-        onClose={() => setShowSuccess(false)}
-      />
+      <div className="bg-white dark:bg-zinc-900 shadow rounded-2xl p-4">
+        <ProductProfileForm
+          mode="edit"
+          defaultValues={current}
+          dropdowns={dropdowns}
+          isDropdownLoading={isDropdownLoading}
+          onSubmit={handleSubmit}
+          onCancel={handleCancel}
+        />
+      </div>
     </div>
   );
 };

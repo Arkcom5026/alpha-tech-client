@@ -1,13 +1,11 @@
 import { useEffect, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { FaSignOutAlt } from 'react-icons/fa';
 import { Sun, Moon, UserCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import useThemeStore from '@/store/themeStore';
 
 import { useAuthStore } from '@/features/auth/store/authStore';
 import { useBranchStore } from '@/features/branch/store/branchStore';
-import useProductStore from '@/features/product/store/productStore';
 
 const HeaderPos = () => {
   const navigate = useNavigate();
@@ -21,9 +19,7 @@ const HeaderPos = () => {
   const clearBranch = useBranchStore((state) => state.clearBranch);
   const loadAndSetBranchById = useBranchStore((state) => state.loadAndSetBranchById);
 
-  const fetchDropdownsAction = useProductStore((state) => state.fetchDropdownsAction);
-
-  const { isDark, toggleTheme } = useThemeStore();
+    const { isDark, toggleTheme } = useThemeStore();
   const [showMenu, setShowMenu] = useState(false);
 
   const handleLogout = () => {
@@ -35,9 +31,8 @@ const HeaderPos = () => {
   useEffect(() => {
     if (token && role === 'employee' && employee?.branchId && selectedBranchId) {
       loadAndSetBranchById(selectedBranchId);
-      fetchDropdownsAction(selectedBranchId);
     }
-  }, [token, role, employee, selectedBranchId]);
+  }, [token, role, employee?.branchId, selectedBranchId, loadAndSetBranchById]);
 
   const navLinkClass = ({ isActive }) =>
     `px-5 py-2 rounded-md text-base font-medium transition-all duration-200 whitespace-nowrap border border-white/20 shadow-sm ${
@@ -103,12 +98,14 @@ const HeaderPos = () => {
             {showMenu && (
               <div className="absolute right-0 mt-2 w-40 bg-white text-black rounded shadow-md z-50">
                 <button
+                  type="button"
                   onClick={() => navigate('/profile')}
                   className="w-full text-left px-4 py-2 hover:bg-gray-100"
                 >
                   ดูโปรไฟล์
                 </button>
                 <button
+                  type="button"
                   onClick={handleLogout}
                   className="w-full text-left px-4 py-2 text-red-600 hover:bg-gray-100"
                 >
@@ -124,3 +121,5 @@ const HeaderPos = () => {
 };
 
 export default HeaderPos;
+
+

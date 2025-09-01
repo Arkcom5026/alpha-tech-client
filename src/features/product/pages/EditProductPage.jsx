@@ -6,7 +6,6 @@ import ProductForm from '../components/ProductForm';
 import ProductImage from '../components/ProductImage';
 
 import useProductStore from '../store/productStore';
-import { useBranchStore } from '@/features/branch/store/branchStore';
 import ProcessingDialog from '@/components/shared/dialogs/ProcessingDialog';
 
 const EditProductPage = () => {
@@ -14,8 +13,7 @@ const EditProductPage = () => {
   const [captions, setCaptions] = useState([]);
   const [coverIndex, setCoverIndex] = useState(null);
   const { id } = useParams();
-  const branchId = useBranchStore((state) => state.selectedBranchId);
-  const [product, setProduct] = useState(null);
+    const [product, setProduct] = useState(null);
   const [error, setError] = useState('');
   const [selectedFiles, setSelectedFiles] = useState([]);
   const imageRef = useRef();
@@ -25,16 +23,16 @@ const EditProductPage = () => {
   const [isUpdating, setIsUpdating] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
 
-  const { updateProduct, getProductById, deleteImage, fetchDropdownsAction, dropdownsLoaded } = useProductStore();
+  const { updateProduct, getProductById, deleteImage, ensureDropdownsAction, dropdownsLoaded } = useProductStore();
 
   useEffect(() => {
-    if (!dropdownsLoaded && branchId) {
-      fetchDropdownsAction(branchId);
+    if (!dropdownsLoaded) {
+      ensureDropdownsAction();
     }
-  }, [branchId, dropdownsLoaded]);
+  }, [dropdownsLoaded, ensureDropdownsAction]);
 
   useEffect(() => {
-    if (!branchId || !id || hasFetched.current) return;
+    if (!id || hasFetched.current) return;
     hasFetched.current = true;
 
     const fetchData = async () => {
@@ -60,7 +58,7 @@ const EditProductPage = () => {
     };
 
     fetchData();
-  }, [id, branchId]);
+  }, [id, getProductById]);
 
   const mappedProduct = useMemo(() => {
     if (!product) return null;
@@ -147,3 +145,4 @@ const EditProductPage = () => {
 };
 
 export default EditProductPage;
+

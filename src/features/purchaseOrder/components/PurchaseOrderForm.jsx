@@ -9,11 +9,10 @@ import { useParams, useNavigate } from 'react-router-dom';
 import StandardActionButtons from '@/components/shared/buttons/StandardActionButtons';
 import PurchaseOrderTable from './PurchaseOrderTable';
 import { getAdvancePaymentsBySupplier } from '@/features/supplierPayment/api/supplierPaymentApi';
-import { useBranchStore } from '@/features/branch/store/branchStore';
 import CascadingFilterGroup from '@/components/shared/form/CascadingFilterGroup';
 import PurchaseOrderSupplierSelector from './PurchaseOrderSupplierSelector';
 
-const PurchaseOrderForm = ({ mode = 'create', searchText, onSearchTextChange, onSearchEnter }) => {
+const PurchaseOrderForm = ({ mode = 'create', searchText, onSearchTextChange }) => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [supplier, setSupplier] = useState(null);
@@ -24,8 +23,7 @@ const PurchaseOrderForm = ({ mode = 'create', searchText, onSearchTextChange, on
   const [advancePayments, setAdvancePayments] = useState([]);
   const [selectedAdvance, setSelectedAdvance] = useState([]);
   const { suppliers: supplierList } = useSupplierStore();
-  const { selectedBranchId } = useBranchStore();
-  const [shouldPrint, setShouldPrint] = useState(true);
+    const [shouldPrint, setShouldPrint] = useState(true);
 
   const {
     purchaseOrder,
@@ -39,7 +37,7 @@ const PurchaseOrderForm = ({ mode = 'create', searchText, onSearchTextChange, on
     fetchProductsAction,
     products: fetchedProducts,
     dropdowns,
-    fetchDropdownsAction
+    ensureDropdownsAction
   } = useProductStore();
 
   useEffect(() => {
@@ -100,15 +98,12 @@ const PurchaseOrderForm = ({ mode = 'create', searchText, onSearchTextChange, on
   }, [mode, purchaseOrder]);
 
   useEffect(() => {
-    if (selectedBranchId) {
-      fetchDropdownsAction(selectedBranchId);
-    }
-  }, [selectedBranchId]);
+    ensureDropdownsAction();
+  }, [ensureDropdownsAction]);
 
   useEffect(() => {
     if (
-      selectedBranchId &&
-      (filter.categoryId || filter.productTypeId || filter.productProfileId || filter.templateId || committedSearchText)
+      filter.categoryId || filter.productTypeId || filter.productProfileId || filter.templateId || committedSearchText
     ) {
       const transformedFilter = {
         categoryId: filter.categoryId ? Number(filter.categoryId) : undefined,
@@ -117,19 +112,9 @@ const PurchaseOrderForm = ({ mode = 'create', searchText, onSearchTextChange, on
         templateId: filter.templateId ? Number(filter.templateId) : undefined,
         searchText: committedSearchText?.trim() || undefined,
       };
-
       fetchProductsAction(transformedFilter);
     }
-  }, [selectedBranchId, filter, committedSearchText]);
-
-  const handleSearchKeyDown = (e) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      const trimmed = searchText.trim();
-      setCommittedSearchText(trimmed.length > 0 ? trimmed : '');
-      if (onSearchEnter) onSearchEnter(trimmed);
-    }
-  };
+  }, [filter, committedSearchText, fetchProductsAction]);
 
   const handleFilterChange = (newFilter) => {
     setFilter((prev) => {
@@ -275,6 +260,7 @@ const PurchaseOrderForm = ({ mode = 'create', searchText, onSearchTextChange, on
           value={filter}
           onChange={handleFilterChange}
           dropdowns={dropdowns}
+          showSearch
           searchText={searchText}
           onSearchTextChange={onSearchTextChange}
           onSearchCommit={(text) => {
@@ -311,3 +297,7 @@ const PurchaseOrderForm = ({ mode = 'create', searchText, onSearchTextChange, on
 };
 
 export default PurchaseOrderForm;
+
+
+
+

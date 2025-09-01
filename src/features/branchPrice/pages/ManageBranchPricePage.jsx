@@ -5,7 +5,6 @@ import useBranchPriceStore from '../store/branchPriceStore';
 
 import CascadingFilterGroup from '@/components/shared/form/CascadingFilterGroup';
 import useProductStore from '@/features/product/store/productStore';
-import { useBranchStore } from '@/features/branch/store/branchStore';
 import BranchPriceEditTable from '../components/BranchPriceEditTable.jsx';
 import BranchPriceReadyTable from '../components/BranchPriceReadyTable.jsx';
 
@@ -20,94 +19,71 @@ const ManageBranchPricePage = () => {
 
   const {
     dropdowns,
-    fetchDropdownsAction,
+    ensureDropdownsAction,
   } = useProductStore();
 
-  const { selectedBranchId } = useBranchStore();
+
+  // ensure dropdowns are loaded once on mount
+  useEffect(() => {
+    ensureDropdownsAction();
+  }, [ensureDropdownsAction]);
 
   const [filter, setFilter] = useState({
     categoryId: '',
     productTypeId: '',
     productProfileId: '',
-    templateId: '',
+    productTemplateId: '',
     searchText: '',
   });
 
   const [committedSearchText, setCommittedSearchText] = useState('');
 
   const [editablePrices, setEditablePrices] = useState({});
-  const [pendingList, setPendingList] = useState([]); // ⬆️ รายการที่รอการยืนยืน
+  const [pendingList, setPendingList] = useState([]);
   const [filteredEntries, setFilteredEntries] = useState([]);
 
-  useEffect(() => {
-    if (selectedBranchId) {
-      console.log('📌 useEffect: โหลด dropdowns สำหรับ selectedBranchId →', selectedBranchId);
-      fetchDropdownsAction(selectedBranchId);
-    }
-  }, [selectedBranchId]);
+  // ใช้ id ให้สม่ำเสมอทั้ง object ที่อาจอยู่ใต้ product หรือบน root
+  const pid = (x) => Number(x?.product?.id ?? x?.id);
 
   useEffect(() => {
-    if (
-      selectedBranchId &&
-      (filter.categoryId || filter.productTypeId || filter.productProfileId || filter.templateId || committedSearchText)
-    ) {
-      console.log('📌 useEffect: โหลด products ตาม filter →', {
-        selectedBranchId,
-        filter,
-        committedSearchText,
-      });
-      fetchAllProductsWithPriceByTokenAction({
-        categoryId: filter.categoryId || undefined,
-        productTypeId: filter.productTypeId || undefined,
-        productProfileId: filter.productProfileId || undefined,
-        templateId: filter.templateId || undefined,
-        searchText: committedSearchText?.trim() || undefined,
-      });
-    }
-  }, [selectedBranchId, filter, committedSearchText]);
-
-  useEffect(() => {
-    const shouldReset = committedSearchText || filter.categoryId || filter.productTypeId || filter.productProfileId || filter.templateId;
-    if (shouldReset) {
-      console.log('📌 useEffect: ตั้งค่า filteredEntries จาก allProductsWithPrice →', allProductsWithPrice);
-      setFilteredEntries(allProductsWithPrice);
-    }
+    setFilteredEntries(allProductsWithPrice ?? []);
   }, [allProductsWithPrice]);
 
-  const handleCommitChanges = () => {
-    const updatedItems = Object.entries(editablePrices).map(([productId, prices]) => {
-      const original = allProductsWithPrice.find((p) => p.id === parseInt(productId));
-      return {
-        ...original,
-        ...prices,
-      };
+
+  // (removed) ดึงครั้งแรกซ้ำกับ useEffect ด้านล่างที่ผูกกับ filter + committedSearchText
+
+  // โหลดข้อมูลใหม่เมื่อ filter หรือ committedSearchText เปลี่ยน
+  useEffect(() => {
+    fetchAllProductsWithPriceByTokenAction({
+      categoryId: filter.categoryId || undefined,
+      productTypeId: filter.productTypeId || undefined,
+      productProfileId: filter.productProfileId || undefined,
+      productTemplateId: filter.productTemplateId || undefined,
+      searchText: committedSearchText?.trim() || undefined,
     });
-
-    console.log('📝 handleCommitChanges: รายการที่จะเพิ่มเข้าสู่ pendingList →', updatedItems);
-
-    setPendingList((prev) => [...prev, ...updatedItems]);
-    setEditablePrices({});
-  };
+  }, [filter.categoryId, filter.productTypeId, filter.productProfileId, filter.productTemplateId, committedSearchText, fetchAllProductsWithPriceByTokenAction]);
 
   const handleConfirmOne = (productId, newEntry) => {
     console.log('✅ handleConfirmOne: เพิ่มไปยัง pendingList →', newEntry);
-    setPendingList((prev) => [...prev, newEntry]);
-
-    setEditablePrices((prev) => {
-      const newState = { ...prev };
-      delete newState[productId];
-      console.log('🧹 handleConfirmOne: ลบ editablePrices ของ productId →', productId);
-      return newState;
+    setPendingList((prev) => {
+      const id = Number(productId);
+      const exists = prev.some((it) => pid(it) === id);
+      return exists ? prev.map((it) => (pid(it) === id ? newEntry : it)) : [...prev, newEntry];
     });
 
-    const filtered = filteredEntries.filter((p) => p.product?.id !== productId);
-    console.log('🧹 handleConfirmOne: ลบแถวจาก filteredEntries →', filtered);
-    setFilteredEntries(filtered);
+    setEditablePrices((prev) => {
+      const next = { ...prev };
+      delete next[productId];
+      console.log('🧹 handleConfirmOne: ลบ editablePrices ของ productId →', productId);
+      return next;
+    });
+
+    setFilteredEntries((prev) => prev.filter((p) => pid(p) !== Number(productId)));
   };
 
   const handleRemoveOne = (productId) => {
     console.log('❌ handleRemoveOne: ลบรายการออกจาก pendingList →', productId);
-    setPendingList((prev) => prev.filter((item) => item.product?.id !== productId));
+    setPendingList((prev) => prev.filter((item) => pid(item) !== Number(productId)));
   };
 
   const handleSaveAll = async () => {
@@ -132,7 +108,7 @@ const ManageBranchPricePage = () => {
           categoryId: filter.categoryId || undefined,
           productTypeId: filter.productTypeId || undefined,
           productProfileId: filter.productProfileId || undefined,
-          templateId: filter.templateId || undefined,
+          productTemplateId: filter.productTemplateId || undefined,
           searchText: committedSearchText?.trim() || undefined,
         });
       } catch (error) {
@@ -153,6 +129,7 @@ const ManageBranchPricePage = () => {
             setCommittedSearchText('');
           }}
           dropdowns={dropdowns}
+          showSearch
           searchText={filter.searchText}
           onSearchTextChange={(text) => setFilter({ ...filter, searchText: text })}
           onSearchCommit={(text) => setCommittedSearchText(text)}
@@ -162,7 +139,7 @@ const ManageBranchPricePage = () => {
       {loading && <p>กำลังโหลด...</p>}
       {error && <p className="text-red-500">{error}</p>}
 
-      {!loading && allProductsWithPrice.length === 0 && (
+      {!loading && ((allProductsWithPrice?.length ?? 0) === 0) && (
         <p className="text-gray-500">ไม่พบสินค้าที่ตรงกับตัวกรอง</p>
       )}
 
@@ -183,8 +160,9 @@ const ManageBranchPricePage = () => {
             onRemove={handleRemoveOne}
           />
           <div className="flex justify-end mt-3">
-            <button className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+            <button className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-60 disabled:cursor-not-allowed"
               onClick={handleSaveAll}
+              disabled={!pendingList.length}
             >
               บันทึกการเปลี่ยนราคา
             </button>
@@ -196,3 +174,6 @@ const ManageBranchPricePage = () => {
 };
 
 export default ManageBranchPricePage;
+
+
+

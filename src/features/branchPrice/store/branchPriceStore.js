@@ -9,6 +9,7 @@ import {
 } from '../api/branchPriceApi';
 
 const useBranchPriceStore = create((set) => ({
+  __lastFetchKey: null,
   branchPrices: [],
   allProductsWithPrice: [],
   loading: false,
@@ -46,12 +47,39 @@ const useBranchPriceStore = create((set) => ({
   fetchAllProductsWithPriceByTokenAction: async (filters = {}) => {
     set({ loading: true, error: null });
     try {
-      const res = await getAllProductsWithBranchPrice(filters); // ✅ ส่ง filters ไปด้วย
+      // 🧹 Sanitize filters (centralized)
+      const toNum = (v) => (v === '' || v === null || v === undefined ? undefined : Number(v));
+      const params = {
+        categoryId: toNum(filters.categoryId),
+        productTypeId: toNum(filters.productTypeId),
+        productProfileId: toNum(filters.productProfileId),
+        productTemplateId: toNum(filters.productTemplateId),
+        searchText: (filters.searchText || '').trim() || undefined,
+        includeInactive: filters.includeInactive ?? false,
+        page: filters.page ?? undefined,
+        limit: filters.limit ?? undefined,
+      };
+
+      // 🛑 Skip duplicate requests with same params
+      set((state) => {
+        const nextKey = JSON.stringify(params);
+        if (state.__lastFetchKey === nextKey) {
+          // same params, no need to hit API again
+          throw { __skip: true };
+        }
+        return { __lastFetchKey: nextKey };
+      });
+
+      console.log('🔎 [branchPriceStore] fetchAllProductsWithPrice params →', params);
+      const res = await getAllProductsWithBranchPrice(params);
       set({ allProductsWithPrice: res.data });
-      console.log('fetchAllProductsWithPriceByTokenAction',res)
     } catch (err) {
-      console.error('❌ fetchAllProductsWithPriceByTokenAction error:', err);
-      set({ error: 'ไม่สามารถโหลดข้อมูลสินค้าได้' });
+      if (err && err.__skip) {
+        // skipped duplicate fetch silently
+      } else {
+        console.error('❌ fetchAllProductsWithPriceByTokenAction error:', err);
+        set({ error: 'ไม่สามารถโหลดข้อมูลสินค้าได้' });
+      }
     } finally {
       set({ loading: false });
     }
@@ -97,7 +125,7 @@ const useBranchPriceStore = create((set) => ({
   updateMultipleBranchPricesAction: async (updatedList) => {
     set({ loading: true, error: null });
     try {
-      const res = await import('../api/branchPriceApi').then((mod) =>
+      await import('../api/branchPriceApi').then((mod) =>
         mod.updateMultipleBranchPrices(updatedList)
       );
 
@@ -121,7 +149,18 @@ const useBranchPriceStore = create((set) => ({
     } finally {
       set({ loading: false });
     }
-  }
+  },
+
+  // 🧰 Utilities
+  clearLastFetchKey: () => set({ __lastFetchKey: null }),
+  resetError: () => set({ error: null }),
+  resetState: () => set({
+    __lastFetchKey: null,
+    branchPrices: [],
+    allProductsWithPrice: [],
+    loading: false,
+    error: null,
+  }),
 }));
 
 export default useBranchPriceStore;

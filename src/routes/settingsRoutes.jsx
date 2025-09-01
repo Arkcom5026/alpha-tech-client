@@ -1,4 +1,4 @@
-// ✅ src/routes/onlineRoutes.js
+// ✅ src/routes/settingsRoutes.js (โครงสร้างแบบ A — แบน ลดโอกาส Active ซ้อน)
 import React from 'react';
 import { Outlet } from 'react-router-dom';
 
@@ -11,12 +11,45 @@ import ApproveEmployeePage from '@/features/employee/pages/ApproveEmployeePage';
 import ListBankPage from '@/features/bank/page/ListBankPage';
 import { CreateBankPage } from '@/features/bank/page/CreateBankPage';
 import { EditBankPage } from '@/features/bank/page/EditBankPage';
+import ListPositionPage from '@/features/position/pages/ListPositionPage';
+import CreatePositionPage from '@/features/position/pages/CreatePositionPage';
+import EditPositionPage from '@/features/position/pages/EditPositionPage';
+import SettingsDashboardPage from '@/features/settings/page/SettingsDashboardPage';
 
-
+// ⚙️ ROUTES: Dashboard เป็น index ของ "/pos/settings" และกระจายเมนูย่อยระดับเดียวกัน
+// - รายชื่อพนักงาน:         /pos/settings/employee
+// - อนุมัติพนักงานใหม่:     /pos/settings/approve        (ย้ายออกจากใต้ employee)
+// - จัดการตำแหน่งงาน:      /pos/settings/positions      (ย้ายออกจากใต้ employee)
+// โครงนี้ช่วยลดโอกาส active ซ้อน เพราะ path ไม่ซ้ำพาเรนต์เดียวกัน
 const settingsRoutes = {
   path: '/pos/settings',
-  element: <Outlet />, // ✅ เพิ่ม element ให้ path หลัก
+  element: <Outlet />, // ✅ Layout ของ Settings
   children: [
+    { index: true, element: <SettingsDashboardPage /> }, // ⬅️ Dashboard (exact index)
+
+    // พนักงาน (เฉพาะ list + edit)
+    {
+      path: 'employee',
+      children: [
+        { index: true, element: <ListEmployeePage /> },
+        { path: 'edit/:id', element: <EditEmployeePage /> },
+      ],
+    },
+
+    // อนุมัติพนักงานใหม่ (ย้ายมาอยู่ระดับเดียวกับ employee)
+    { path: 'approve', element: <ApproveEmployeePage /> },
+
+    // ตำแหน่งงาน (ย้ายมาอยู่ระดับเดียวกับ employee)
+    {
+      path: 'positions',
+      children: [
+        { index: true, element: <ListPositionPage /> },
+        { path: 'create', element: <CreatePositionPage /> },
+        { path: 'edit/:id', element: <EditPositionPage /> },
+      ],
+    },
+
+    // สาขา
     {
       path: 'branches',
       children: [
@@ -25,14 +58,8 @@ const settingsRoutes = {
         { path: 'edit/:id', element: <EditBranchPage /> },
       ],
     },
-    {
-      path: 'employee',
-      children: [
-        { index: true, element: <ListEmployeePage /> },
-         { path: 'approve', element: <ApproveEmployeePage /> },
-         { path: 'edit/:id', element: <EditEmployeePage /> },
-      ],
-    },
+
+    // ธนาคาร
     {
       path: 'bank',
       children: [

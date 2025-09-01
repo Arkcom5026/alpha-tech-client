@@ -1,73 +1,93 @@
+// src/features/productType/api/productTypeApi.js
 import apiClient from '@/utils/apiClient';
 
+const withParams = (params = {}) => ({ params });
 
-export const getAllProductTypes = async () => {
+// ให้ข้อความ error อ่านง่ายเหมือน categoryApi
+export const parseApiError = (error) => {
+  const fallback = { code: 'UNKNOWN', message: 'เกิดข้อผิดพลาดที่ไม่คาดคิด' };
+  const res = error?.response;
+  const code = res?.data?.code || fallback.code;
+  const messageFromServer = res?.data?.message;
+  const map = {
+    HAS_REFERENCES: 'ไม่สามารถดำเนินการได้ เนื่องจากมีข้อมูลที่เชื่อมโยงอยู่',
+    IS_SYSTEM_LOCKED: 'ไม่สามารถแก้ไข/ปิดใช้งานได้ เนื่องจากเป็นข้อมูลระบบ (ล็อก)',
+    DUPLICATE: 'มีข้อมูลชื่อ/slug ซ้ำในระบบ',
+  };
+  return { code, message: map[code] || messageFromServer || fallback.message };
+};
+
+// LIST
+export const getProductTypes = async (params = {}) => {
   try {
-    const res = await apiClient.get('/product-types');
-    
-    return res.data;
+    // กัน cache 304 ด้วย cache-buster เหมือน categoryApi
+    const merged = { ...params, _ts: Date.now() };
+    const { data } = await apiClient.get('product-types', { params: merged });
+    return data; // { items, total, page, limit } หรือ array
   } catch (error) {
-    console.error('❌ getAllProductTypes error:', error);
-    throw error;
+    throw parseApiError(error);
   }
 };
 
-export const createProductType = async (data) => {
-  try {
-    const res = await apiClient.post('/product-types', data);
-    return res.data;
-  } catch (err) {
-    console.error('❌ createProductType ล้มเหลว:', err);
-    throw err;
-  }
-};
-
-export const updateProductType = async (id, data) => {
-  try {
-    const res = await apiClient.patch(`/product-types/${id}`, data);
-    return res.data;
-  } catch (err) {
-    console.error('❌ updateProductType ล้มเหลว:', err);
-    throw err;
-  }
-};
-
-export const deleteProductType = async (id) => {
-  try {
-    const res = await apiClient.delete(`/product-types/${id}`);
-    return res.data;
-  } catch (err) {
-    console.error('❌ deleteProductType ล้มเหลว:', err);
-    throw err;
-  }
-};
-
-export const getProductTypes = async () => {
-  try {
-    const res = await apiClient.get('/product-types');
-    return res.data;
-  } catch (err) {
-    console.error('❌ getProductTypes ล้มเหลว:', err);
-    throw err;
-  }
-};
-
+// GET BY ID
 export const getProductTypeById = async (id) => {
   try {
-    const res = await apiClient.get(`/product-types/${id}`);
-    return res.data;
-  } catch (err) {
-    console.error('❌ getProductTypeById ล้มเหลว:', err);
-    throw err;
+    const { data } = await apiClient.get(`product-types/${id}`);
+    return data;
+  } catch (error) {
+    throw parseApiError(error);
   }
 };
 
-export const getProductTypeDropdowns = async () => {
+// CREATE
+export const createProductType = async (payload) => {
   try {
-    const res = await apiClient.get('/product-types/dropdowns');
-    return res.data; // expected format: [{ id: 1, name: 'Notebook' }, ...]
-  } catch (err) {
-    console.error('❌ getProductTypeDropdowns ล้มเหลว:', err);
-    return [];
+    const { data } = await apiClient.post('product-types', payload);
+    return data;
+  } catch (error) {
+    throw parseApiError(error);
+  }
+};
+
+// UPDATE (PATCH เหมือน categoryApi)
+export const updateProductType = async (id, payload) => {
+  try {
+    const { data } = await apiClient.patch(`product-types/${id}`, payload);
+    return data;
+  } catch (error) {
+    throw parseApiError(error);
+  }
+};
+
+// ARCHIVE / RESTORE
+export const archiveProductType = async (id) => {
+  try {
+    const { data } = await apiClient.patch(`product-types/${id}/archive`);
+    return data;
+  } catch (error) {
+    throw parseApiError(error);
+  }
+};
+
+export const restoreProductType = async (id) => {
+  try {
+    const { data } = await apiClient.patch(`product-types/${id}/restore`);
+    return data;
+  } catch (error) {
+    throw parseApiError(error);
+  }
+};
+
+// DROPDOWNS (รองรับ active + filter ตามหมวด เช่น categoryId)
+export const getProductTypeDropdowns = async (opts = { active: true, categoryId: undefined }) => {
+  try {
+    const params = {
+      active: opts.active !== false,
+      ...(opts.categoryId ? { categoryId: opts.categoryId } : {}),
+    };
+    const { data } = await apiClient.get('product-types/dropdowns', withParams(params));
+    return data;
+  } catch (error) {
+    throw parseApiError(error);
   }
 };

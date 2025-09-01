@@ -22,7 +22,6 @@ import EditCategoryPage from "@/features/category/pages/EditCategoryPage";
 import ManageBranchPricePage from "@/features/branchPrice/pages/ManageBranchPricePage";
 import ReadyToSellAuditPage from "@/features/stockAudit/pages/ReadyToSellAuditPage";
 
-
 const stockRoutes = {
   path: '/pos/stock',
   children: [
@@ -43,11 +42,11 @@ const stockRoutes = {
       path: 'categories',
       children: [
         { index: true, element: <ListCategoryPage />, },
-         { path: 'create', element: <CreateCategoryPage />, },
-         { path: 'edit/:id', element: <EditCategoryPage />, },
+        { path: 'create', element: <CreateCategoryPage />, },
+        { path: 'edit/:id', element: <EditCategoryPage />, },
       ]
     },
-        
+
     {
       path: 'types',
       children: [
@@ -57,7 +56,7 @@ const stockRoutes = {
       ]
     },
     {
-      path: 'profiles',
+      path: 'profiles',      
       children: [
         { index: true, element: <ListProductProfilePage /> },
         { path: 'create', element: <CreateProductProfilePage /> },
@@ -72,23 +71,19 @@ const stockRoutes = {
         { path: 'edit/:id', element: <EditProductTemplatePage />, },
       ]
     },
-    {   
+    {
       path: 'branch-prices',
       children: [
         { index: true, element: <ManageBranchPricePage />, },
-        // { path: 'create', element: <CreateProductTemplatePage />, },
-        // { path: 'edit/:id', element: <EditProductTemplatePage />, },
       ]
     },
-
-
 
     {
       path: 'units',
       children: [
         { index: true, element: <ListUnitPage />, },
         { path: 'create', element: <CreateUnitPage />, },
-        { path: 'edit/:id', element: <EditUnitPage />, },        
+        { path: 'edit/:id', element: <EditUnitPage />, },
       ]
     },
 
@@ -96,8 +91,6 @@ const stockRoutes = {
       path: 'stock-adit',
       children: [
         { index: true, element: <ReadyToSellAuditPage />, },
-      //  { path: 'create', element: <CreateUnitPage />, },
-      //  { path: 'edit/:id', element: <EditUnitPage />, },        
       ]
     },
 
@@ -105,5 +98,3 @@ const stockRoutes = {
 };
 
 export default stockRoutes;
-
-

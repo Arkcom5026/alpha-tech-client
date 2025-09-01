@@ -3,71 +3,87 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import ProductTypeForm from '../components/ProductTypeForm';
 import PageHeader from '@/components/shared/layout/PageHeader';
-import AlertDialog from '@/components/shared/dialogs/AlertDialog';
-import ProcessingDialog from '@/components/shared/dialogs/ProcessingDialog';
-import useProductTypeStore from '@/features/productType/Store/productTypeStore';
+
+import { parseApiError } from '@/utils/uiHelpers';
+import useProductTypeStore from '../store/productTypeStore';
+
+// มาตรฐานระบบ:
+// - ห้ามใช้ dialog alert/processing (Standard #70) → แสดงข้อความในหน้าเพจเท่านั้น
+// - เรียก API ผ่าน Store เท่านั้น (Standard #61)
+// - ครอบ try...catch ทุกการทำงาน และใช้ parseApiError
 
 const EditProductTypePage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [errorMsg, setErrorMsg] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
   const [formData, setFormData] = useState(null);
-  const [error, setError] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
-  const mode = 'edit';
+  const [isFetching, setIsFetching] = useState(true);
 
-  const { updateProductType, getProductTypeById } = useProductTypeStore();
+  const { fetchByIdAction, updateProductTypeAction, isSubmitting } = useProductTypeStore();
 
+  // Load current data
   useEffect(() => {
-    const fetchData = async () => {
+    let mounted = true;
+    (async () => {
+      setIsFetching(true);
+      setErrorMsg('');
       try {
-        const result = await getProductTypeById(id);
-        setFormData(result);
+        const data = await fetchByIdAction(Number(id));
+        if (mounted) setFormData(data);
       } catch (err) {
-        console.error('❌ โหลดข้อมูลประเภทสินค้าไม่สำเร็จ:', err);
-        setError('ไม่สามารถโหลดข้อมูลประเภทสินค้าได้');
+        if (mounted) setErrorMsg(parseApiError(err) || 'ไม่สามารถโหลดข้อมูลประเภทสินค้าได้');
+      } finally {
+        if (mounted) setIsFetching(false);
       }
-    };
-    fetchData();
-  }, [id, getProductTypeById]);
+    })();
+    return () => { mounted = false; };
+  }, [id, fetchByIdAction]);
 
-  const handleSubmit = async (data) => {
-    setIsSubmitting(true);
+  const handleSubmit = async (payload) => {
+    setErrorMsg('');
+    setSuccessMsg('');
     try {
-      await updateProductType(id, data);
-      setShowSuccess(true);
-      setTimeout(() => {
-        setShowSuccess(false);
-        navigate('/pos/stock/types');
-      }, 2000);
+      await updateProductTypeAction(Number(id), payload);
+      setSuccessMsg('อัปเดตประเภทสินค้าเรียบร้อยแล้ว');
+      setTimeout(() => navigate('/pos/stock/types'), 600);
     } catch (err) {
-      console.error('❌ อัปเดตประเภทสินค้าไม่สำเร็จ:', err);
-      setError('ไม่สามารถอัปเดตประเภทสินค้าได้');
-    } finally {
-      setIsSubmitting(false);
+      setErrorMsg(parseApiError(err) || 'ไม่สามารถอัปเดตประเภทสินค้าได้');
     }
   };
 
   return (
-    <div className="p-4 space-y-6">
-      <PageHeader title="แก้ไขประเภทสินค้า" />
-      {formData && (
-        <ProductTypeForm
-          mode={mode}
-          defaultValues={formData}
-          onSubmit={handleSubmit}
-          isSubmitting={isSubmitting}
-        />
-      )}
+    <div className="p-6 w-full flex flex-col items-center">
+      <div className="w-full max-w-3xl">
+        <PageHeader title="แก้ไขประเภทสินค้า" />
 
-      <ProcessingDialog
-        open={isSubmitting || showSuccess}
-        isLoading={isSubmitting}
-        message={isSubmitting ? 'ระบบกำลังอัปเดตข้อมูล กรุณารอสักครู่...' : '✅ บันทึกข้อมูลเรียบร้อยแล้ว'}
-        onClose={() => setShowSuccess(false)}
-      />
+        {/* Status Blocks */}
+        {errorMsg && (
+          <div className="mt-3 mb-4 rounded-lg border border-red-300 bg-red-50 px-4 py-2 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300">
+            {String(errorMsg)}
+          </div>
+        )}
+        {successMsg && (
+          <div className="mt-3 mb-4 rounded-lg border border-emerald-300 bg-emerald-50 px-4 py-2 text-sm text-emerald-700 dark:border-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-300">
+            {successMsg}
+          </div>
+        )}
 
-      <AlertDialog open={!!error} onClose={() => setError('')} message={error} />
+        <div className="border rounded-xl p-4 shadow-sm bg-white dark:bg-zinc-900">
+          {isFetching && (
+            <div className="text-sm text-zinc-600 dark:text-zinc-300">กำลังโหลดข้อมูล...</div>
+          )}
+
+          {!isFetching && formData && (
+            <ProductTypeForm
+              mode="edit"
+              defaultValues={formData}
+              onSubmit={handleSubmit}
+              isSubmitting={isSubmitting}
+            />
+          )}
+        </div>
+      </div>
     </div>
   );
 };

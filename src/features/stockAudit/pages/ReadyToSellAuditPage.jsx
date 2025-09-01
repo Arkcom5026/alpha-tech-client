@@ -25,6 +25,9 @@ const ReadyToSellAuditPage = () => {
   const [openConfirmPending, setOpenConfirmPending] = useState(false)
   const [bannerMessage, setBannerMessage] = useState('')
 
+  // 🔒 guard เพื่อกัน useEffect เรียกซ้ำจาก React StrictMode (dev)
+  const initRef = useRef(false)
+
   const focusScan = () => {
     const el = scanRef.current
     if (!el) return
@@ -141,23 +144,23 @@ const ReadyToSellAuditPage = () => {
   }
 
   useEffect(() => {
+    // กันซ้ำ (React 18 StrictMode จะ mount/unmount ซ้ำใน dev)
+    if (initRef.current) return;
+    initRef.current = true;
+
     (async () => {
       try {
-        const res = await startReadyAuditAction()
+        const res = await startReadyAuditAction();
+        // เคสนี้ให้เพียง "เริ่มรอบ" เท่านั้น ปล่อยให้ AuditTable เป็นผู้โหลดข้อมูลรอบแรกเอง
         if (res?.ok || res?.status === 409) {
-          await loadItemsAction({ scanned: 0, q: '', page: 1, pageSize: expectedPageSize })
-          await loadItemsAction({ scanned: 1, q: '', page: 1, pageSize: scannedPageSize })
+          // (no-op) — AuditTable จะเป็นคนเรียก loadItemsAction รอบแรก
         }
       } catch (err) {
-        if (err?.response?.status === 409) {
-          await loadItemsAction({ scanned: 0, q: '', page: 1, pageSize: expectedPageSize })
-          await loadItemsAction({ scanned: 1, q: '', page: 1, pageSize: scannedPageSize })
-        } else {
-          console.error('startReadyAuditAction error:', err)
-        }
+        console.error('startReadyAuditAction error:', err);
       }
-    })()
-    if (scanRef.current) focusScan()
+    })();
+
+    if (scanRef.current) focusScan();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 

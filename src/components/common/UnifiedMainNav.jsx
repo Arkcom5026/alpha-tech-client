@@ -1,49 +1,30 @@
 // UnifiedMainNav.jsx (อัปเดตการแสดงผล Avatar ให้เหมือน LoginForm.jsx)
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
-import { ChevronDown, UserCircle, Package, LogOut, User } from 'lucide-react';
+import { UserCircle, Package, LogOut, User } from 'lucide-react';
 
 import { useAuthStore } from '@/features/auth/store/authStore';
 import { useCartStore } from '@/features/online/cart/store/cartStore';
 import { useBranchStore } from '@/features/branch/store/branchStore';
-import useProductStore from '@/features/product/store/productStore';
 
 
 const UnifiedMainNav = () => {
   const customer = useAuthStore((state) => state.customer);
-  const role = useAuthStore((state) => state.role);
-  const token = useAuthStore((state) => state.token);
+  
   const logout = useAuthStore((state) => state.logout);
   const clearAuthStorage = useAuthStore((state) => state.clearStorage);
 
   const clearCart = useCartStore((state) => state.clearCart);
   const clearBranchStorage = useBranchStore((state) => state.clearStorage);
-  const selectedBranchId = useBranchStore((state) => state.selectedBranchId);
-  const fetchDropdownsAction = useProductStore((state) => state.fetchDropdownsAction);
-
+    
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
 
   const toggleDropdown = () => setIsOpen((prev) => !prev);
 
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setIsOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  useEffect(() => {
-    if (token && role === 'customer' && selectedBranchId) {
-      fetchDropdownsAction(selectedBranchId);
-    }
-  }, [token, role, selectedBranchId]);
-
+  
   const navClass = ({ isActive }) =>
     isActive
       ? 'bg-blue-200 px-2 sm:px-3 py-1 sm:py-2 rounded-md text-xs sm:text-sm font-medium text-blue-700 border border-white/40 border-[1px]'
@@ -94,13 +75,13 @@ const UnifiedMainNav = () => {
                 {isOpen && (
                   <div className="absolute right-0 mt-2 w-40 sm:w-48 bg-white shadow-md rounded-md z-50 text-sm">
                     <div className="px-4 py-2 text-gray-700 border-b font-semibold">{customer?.name}</div>
-                    <Link to="/customers/profile" className="block px-4 py-2 hover:bg-gray-100 flex items-center gap-2">
+                    <Link to="/customers/profile" className="flex w-full px-4 py-2 hover:bg-gray-100 items-center gap-2">
                       <User className="w-4 h-4 text-gray-500" /> โปรไฟล์ของฉัน
                     </Link>
-                    <Link to="/customers/orders" className="block px-4 py-2 hover:bg-gray-100 flex items-center gap-2">
+                    <Link to="/customers/orders" className="flex w-full px-4 py-2 hover:bg-gray-100 items-center gap-2">
                       <Package className="w-4 h-4 text-gray-500" /> คำสั่งซื้อของฉัน
                     </Link>
-                    <button onClick={handleLogout} className="block w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center gap-2">
+                    <button type="button" onClick={handleLogout} className="flex w-full text-left px-4 py-2 hover:bg-gray-100 items-center gap-2">
                       <LogOut className="w-4 h-4 text-gray-500" /> ออกจากระบบ
                     </button>
                   </div>
@@ -115,3 +96,5 @@ const UnifiedMainNav = () => {
 };
 
 export default UnifiedMainNav;
+
+

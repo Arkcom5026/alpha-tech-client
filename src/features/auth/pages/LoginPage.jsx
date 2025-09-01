@@ -4,8 +4,17 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '@/features/auth/store/authStore';
 import { FaGoogle, FaFacebook, FaLock } from 'react-icons/fa';
-import { useBranchStore } from '@/features/branch/store/branchStore';
 import { useCartStore } from '@/features/online/cart/store/cartStore';
+
+// ---- role helpers (normalize + checks)
+const normalizeRole = (r) => {
+  const v = (r || '').toLowerCase();
+  return v === 'supperadmin' ? 'superadmin' : v;
+};
+const isStaffRole = (r) => {
+  const v = normalizeRole(r);
+  return v === 'admin' || v === 'superadmin' || v === 'employee';
+};
 
 const LoginPage = () => {
   const navigate = useNavigate();
@@ -26,8 +35,10 @@ const LoginPage = () => {
   useEffect(() => {
     if (!isLoggedIn) return;
     const currentPath = window.location.pathname;
-    if (role === 'admin' && currentPath !== '/pos/dashboard') navigate('/pos/dashboard');
-    else if (role === 'employee' && currentPath !== '/pos/dashboard') navigate('/pos/dashboard');
+    const r = normalizeRole(role);
+    if (isStaffRole(r) && currentPath !== '/pos/dashboard') {
+      navigate('/pos/dashboard');
+    }
   }, [isLoggedIn, role, navigate]);
 
   const handleLogin = async (e) => {
@@ -36,38 +47,50 @@ const LoginPage = () => {
     setLoading(true);
     try {
       sessionStorage.setItem('lastUsedEmail', email);
-      const { token, role, profile } = await loginAction({ emailOrPhone: email, password });
+      const { token, role: roleFromServer, profile } = await loginAction({ emailOrPhone: email, password });
+      const r = normalizeRole(roleFromServer);
 
-      if (role === 'employee' && profile?.position && profile?.branch) {
-        const rawPosition = profile.position.name;
+      if (isStaffRole(r)) {
+        // พนักงาน / แอดมิน / ซูเปอร์แอดมิน → เข้า POS
+        const rawPosition = profile?.position?.name;
         const mappedPosition = rawPosition === 'employee' ? 'ผู้ดูแลระบบ' : rawPosition;
-       
 
         useAuthStore.getState().setUser({
           token,
-          role,
+          role: r,
           employee: {
-            id: profile.id,
-            name: profile.name,
-            phone: profile.phone,
-            email: profile.email,
+            id: profile?.id,
+            name: profile?.name,
+            phone: profile?.phone,
+            email: profile?.email,
             positionName: mappedPosition || '__NO_POSITION__',
-            branchId: profile.branch.id,
+            branchId: profile?.branch?.id,
           },
         });
-        
+        // เผื่อจุดอื่นในระบบยังอ่านจาก localStorage
+        try {
+          localStorage.setItem('role', r);
+          localStorage.setItem('token', token);
+        } catch (storageErr) {
+          // บางสภาพแวดล้อม (เช่น โหมด private/strict) อาจปิดกั้น localStorage
+          // non-blocking: แค่แจ้งเตือนเพื่อดีบัก แล้วปล่อยให้ flow ดำเนินต่อ
+          console.warn('⚠️ Cannot access localStorage:', storageErr);
+        }
+
         navigate('/pos/dashboard', { replace: true });
+        return;
       }
 
-      if (role === 'customer') {
+      if (r === 'customer') {
+        // ลูกค้า → flow ตะกร้า/ร้านค้าออนไลน์
         useAuthStore.getState().setUser({
           token,
-          role,
+          role: r,
           customer: {
-            id: profile.id,
-            name: profile.name,
-            phone: profile.phone,
-            email: profile.email,
+            id: profile?.id,
+            name: profile?.name,
+            phone: profile?.phone,
+            email: profile?.email,
           },
         });
 
@@ -83,8 +106,11 @@ const LoginPage = () => {
 
         const fromPath = location.state?.from?.pathname || '/';
         navigate(fromPath, { replace: true });
+        return;
       }
 
+      // กรณี role ไม่รู้จัก
+      setError('ไม่สามารถระบุสิทธิ์ผู้ใช้งานได้');
     } catch (err) {
       console.error('🔴 Login Error:', err);
       const message = err?.response?.data?.message || err?.message || 'เกิดข้อผิดพลาด';
@@ -194,4 +220,3 @@ const LoginPage = () => {
 };
 
 export default LoginPage;
-

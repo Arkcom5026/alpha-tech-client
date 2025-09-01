@@ -6,12 +6,14 @@ import useProductProfileStore from '../store/productProfileStore';
 import useProductStore from '@/features/product/store/productStore';
 import CascadingFilterGroup from '@/components/shared/form/CascadingFilterGroup';
 import StandardActionButtons from '@/components/shared/buttons/StandardActionButtons';
+import { useAuthStore } from '@/features/auth/store/authStore';
 
 const ListProductProfilePage = () => {
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const location = useLocation();
   const isListPath = /\/pos\/stock\/profiles\/?$/.test(location.pathname);
+  const { canManageProductOrdering, isSuperAdmin } = useAuthStore();
 
   const {
     items,
@@ -116,12 +118,14 @@ const ListProductProfilePage = () => {
     setPageAction(1);
   };
 
+  const canManage = isSuperAdmin || canManageProductOrdering;
+
   return (
     <div className="p-6 w-full flex flex-col items-center">
       <div className="w-full max-w-6xl">
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-xl font-semibold text-zinc-800 dark:text-white">รายการลักษณะสินค้า (Product Profiles)</h1>
-          <StandardActionButtons onAdd={handleCreate} />
+          {canManage && <StandardActionButtons onAdd={handleCreate} />}
         </div>
 
         <div className="flex flex-col gap-3 mb-4">
@@ -182,7 +186,7 @@ const ListProductProfilePage = () => {
             error={error}
             page={page}
             limit={limit}
-            onEdit={handleEdit}
+            onEdit={canManage ? handleEdit : undefined}
           />
         </div>
 

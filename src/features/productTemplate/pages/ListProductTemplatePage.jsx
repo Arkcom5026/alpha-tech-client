@@ -1,4 +1,4 @@
-// ✅ src/features/productTemplate/pages/ListProductTemplatePage.jsx (ปรับให้เหมือนหน้า ListProductProfilePage และยังคงคุมสิทธิ์ SuperAdmin สำหรับแก้ไข/เพิ่ม)
+// ✅ src/features/productTemplate/pages/ListProductTemplatePage.jsx (ปรับสิทธิ์ให้ SuperAdmin + Admin จัดการได้ และสอดคล้อง RBAC)
 import React from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import ProductTemplateTable from '../components/ProductTemplateTable';
@@ -12,17 +12,8 @@ const ListProductTemplatePage = () => {
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
 
-  const { user, isSuperAdmin: isSuperAdminFromStore } = useAuthStore();
-  const roleName = (
-    user?.roleName || user?.role?.name || user?.role || user?.profile?.roleName || user?.profile?.role || ''
-  ).toString();
-  const roleId = user?.roleId ?? user?.role?.id ?? user?.profile?.roleId ?? user?.profile?.role?.id;
-  const isSuperAdmin = Boolean(
-    isSuperAdminFromStore === true ||
-    roleName.toUpperCase() === 'SUPERADMIN' ||
-    roleId === 1 ||
-    user?.isSuperAdmin === true
-  );
+  const { canManageProductOrdering, isSuperAdmin } = useAuthStore();
+  const canManage = isSuperAdmin || canManageProductOrdering;
 
   const {
     items,
@@ -92,7 +83,7 @@ const ListProductTemplatePage = () => {
       <div className="w-full max-w-6xl">
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-xl font-semibold text-zinc-800 dark:text-white">รายการรูปแบบสินค้า (Product Template)</h1>
-          {isSuperAdmin && <StandardActionButtons onAdd={handleCreate} />}
+          {canManage && <StandardActionButtons onAdd={handleCreate} />}
         </div>
 
         <div className="flex flex-col gap-3 mb-4">
@@ -140,9 +131,7 @@ const ListProductTemplatePage = () => {
             error={error}
             page={page}
             limit={limit}
-            // ✅ การ "แก้ไข" เปิดให้ตามสิทธิ์ภายในตาราง (canEdit) — ส่ง handleEdit เสมอ
-            //    ส่วน "ปิดใช้งาน/กู้คืน" ยังจำกัด SuperAdmin เท่านั้น
-            onEdit={handleEdit}
+            onEdit={canManage ? handleEdit : undefined}
             onToggleActive={isSuperAdmin ? useProductTemplateStore.getState().toggleActiveAction : undefined}
           />
         </div>

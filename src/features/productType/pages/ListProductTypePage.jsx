@@ -8,10 +8,12 @@ import StandardActionButtons from '@/components/shared/buttons/StandardActionBut
 import useProductTypeStore from '../store/productTypeStore';
 import useProductStore from '@/features/product/store/productStore';
 import CascadingFilterGroup from '@/components/shared/form/CascadingFilterGroup';
+import { useAuthStore } from '@/features/auth/store/authStore';
 
 const ListProductTypePage = () => {
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
+  const { canManageProductOrdering, isSuperAdmin } = useAuthStore();
 
   const {
     items,
@@ -71,13 +73,16 @@ const ListProductTypePage = () => {
     setPageAction(1);
   };
 
+  const canManage = isSuperAdmin || canManageProductOrdering;
+
   return (
     <div className="p-6 w-full flex flex-col items-center">
       <div className="w-full max-w-6xl">
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-xl font-semibold text-zinc-800 dark:text-white">จัดการประเภทสินค้า</h1>
-          <StandardActionButtons onAdd={handleCreate} />
+          {/* ✅ แสดงปุ่มเพิ่มทั้ง Admin และ SuperAdmin */}
+          {canManage && <StandardActionButtons onAdd={handleCreate} />}
         </div>
 
         {/* Filters */}
@@ -128,7 +133,7 @@ const ListProductTypePage = () => {
             error={error}
             page={page}
             limit={limit}
-            onEdit={handleEdit}
+            onEdit={canManage ? handleEdit : undefined}
           />
         </div>
 

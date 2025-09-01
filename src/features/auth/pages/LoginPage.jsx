@@ -1,4 +1,5 @@
 // ✅ @filename: LoginPage.jsx
+// RBAC update: ให้สิทธิ์ "จัดลำดับสินค้า" เฉพาะ ADMIN ตามนโยบายใหม่
 
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -14,6 +15,23 @@ const normalizeRole = (r) => {
 const isStaffRole = (r) => {
   const v = normalizeRole(r);
   return v === 'admin' || v === 'superadmin' || v === 'employee';
+};
+
+// ⛳ RBAC capabilities ตามนโยบายล่าสุด
+// - superadmin: จัดการสิทธิ์/สาขา (NO product ordering)
+// - admin: จัดการลำดับสินค้า/ข้อมูลสาขาได้
+// - employee: ปฏิบัติการทั่วไป
+const buildCapabilities = (role) => {
+  const r = normalizeRole(role);
+  return {
+    isSuperAdmin: r === 'superadmin',
+    isAdmin: r === 'admin',
+    isEmployee: r === 'employee',
+    // ความสามารถหลักๆ
+    canManageBranches: r === 'superadmin' || r === 'admin',
+    canGrantPermissions: r === 'superadmin',
+    canManageProductOrdering: r === 'admin', // ⬅️ ตามสเปก: ให้เฉพาะ Admin
+  };
 };
 
 // ⛳ กำหนดสาขาเริ่มต้นให้ SuperAdmin (กันบางหน้าที่ require branchId)
@@ -50,22 +68,23 @@ const LoginPage = () => {
     setLoading(true);
     try {
       sessionStorage.setItem('lastUsedEmail', email);
-      const { token, role: roleFromServer, profile } = await loginAction({ emailOrPhone: email, password });
+      const { token, role: roleFromServer } = await loginAction({ emailOrPhone: email, password });
       const r = normalizeRole(roleFromServer);
+      const caps = buildCapabilities(r);
 
-      // 🔐 เคสพิเศษ: SuperAdmin → mock employee + branchId เพื่อให้ผ่านทุก guard
+      // 🔐 เคสพิเศษ: SuperAdmin → mock employee + branchId แบบ hard-coded
       if (r === 'superadmin') {
         useAuthStore.getState().setUser({
           token,
           role: r,
-          isSuperAdmin: true,
+          ...caps,
           employee: {
             id: '__SUPERADMIN__',
-            name: profile?.name || 'Super Admin',
-            phone: profile?.phone || '',
-            email: profile?.email || email,
+            name: 'Super Admin',
+            phone: '',
+            email: email,
             positionName: 'SuperAdmin',
-            branchId: profile?.branch?.id ?? SUPERADMIN_BRANCH_ID,
+            branchId: SUPERADMIN_BRANCH_ID,
           },
         });
         try {
@@ -80,19 +99,17 @@ const LoginPage = () => {
 
       if (isStaffRole(r)) {
         // พนักงาน / แอดมิน → เข้า POS
-        const rawPosition = profile?.position?.name;
-        const mappedPosition = rawPosition === 'employee' ? 'ผู้ดูแลระบบ' : rawPosition;
-
         useAuthStore.getState().setUser({
           token,
           role: r,
+          ...caps,
           employee: {
-            id: profile?.id,
-            name: profile?.name,
-            phone: profile?.phone,
-            email: profile?.email,
-            positionName: mappedPosition || '__NO_POSITION__',
-            branchId: profile?.branch?.id,
+            id: r === 'admin' ? '__ADMIN__' : '__EMPLOYEE__',
+            name: r === 'admin' ? 'ผู้ดูแลสาขา' : 'พนักงาน',
+            phone: '',
+            email,
+            positionName: r === 'admin' ? 'Admin' : 'Employee',
+            branchId: SUPERADMIN_BRANCH_ID,
           },
         });
         try {
@@ -111,10 +128,10 @@ const LoginPage = () => {
           token,
           role: r,
           customer: {
-            id: profile?.id,
-            name: profile?.name,
-            phone: profile?.phone,
-            email: profile?.email,
+            id: '__CUSTOMER__',
+            name: 'ลูกค้า',
+            phone: '',
+            email,
           },
         });
 
@@ -133,8 +150,9 @@ const LoginPage = () => {
         return;
       }
 
-      // กรณี role ไม่รู้จัก
+      // กรณี role ไม่รู้จัก → logout หรือแสดง error
       setError('ไม่สามารถระบุสิทธิ์ผู้ใช้งานได้');
+      useAuthStore.getState().logoutAction?.();
     } catch (err) {
       console.error('🔴 Login Error:', err);
       const message = err?.response?.data?.message || err?.message || 'เกิดข้อผิดพลาด';

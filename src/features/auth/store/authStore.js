@@ -132,8 +132,11 @@ export const useAuthStore = create(
         return r === 'admin' || r === 'superadmin';
       },
       getRole: () => normalizeRole(useAuthStore.getState().role),
+      canManageProductOrdering: () => {
+        const r = normalizeRole(useAuthStore.getState().role);
+        return r === 'admin' || r === 'superadmin';
+      },
     }),
     { name: 'auth-storage' }
   )
 );
-

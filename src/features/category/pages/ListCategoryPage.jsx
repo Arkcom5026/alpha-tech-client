@@ -5,15 +5,12 @@ import CategoryTable from '../components/CategoryTable';
 
 import StandardActionButtons from '@/components/shared/buttons/StandardActionButtons';
 import { useCategoryStore } from '../Store/CategoryStore';
-
-const roleIsAdminOrSuper = () => {
-  const role = (localStorage.getItem('role') || '').toLowerCase();
-  return role === 'admin' || role === 'supperadmin' || role === 'superadmin';
-};
+import { useAuthStore } from '@/features/auth/store/authStore';
 
 const ListCategoryPage = () => {
   const navigate = useNavigate();
-  const isAdmin = roleIsAdminOrSuper();
+  const { isSuperAdmin, canManageProductOrdering } = useAuthStore();
+  const canManage = isSuperAdmin || canManageProductOrdering;
 
   const {
     items,
@@ -35,6 +32,7 @@ const ListCategoryPage = () => {
   }, [page, search, fetchListAction]);
 
   const handleEdit = (category) => {
+    if (!canManage) return;
     navigate(`edit/${category.id}`);
   };
 
@@ -50,7 +48,7 @@ const ListCategoryPage = () => {
       <div className="w-full max-w-4xl">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-bold text-zinc-800 dark:text-white">รายการหมวดหมู่สินค้า</h2>
-          {isAdmin && (
+          {canManage && (
             <StandardActionButtons onAdd={() => navigate('create')} />
           )}
         </div>
@@ -78,7 +76,7 @@ const ListCategoryPage = () => {
           </div>
         )}
 
-        <CategoryTable data={items} onEdit={handleEdit} />
+        <CategoryTable data={items} onEdit={canManage ? handleEdit : undefined} />
 
         <div className="flex items-center justify-between text-sm text-gray-600 mt-4">
           <span>{paginationText}</span>

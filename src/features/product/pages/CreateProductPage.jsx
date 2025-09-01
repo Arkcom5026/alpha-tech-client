@@ -1,4 +1,4 @@
-// ✅ src/features/product/pages/CreateProductPage.jsx
+// ✅ src/features/product/pages/CreateProductPage.jsx (full width)
 
 import React, { useState, useRef } from 'react';
 import { useBranchStore } from '@/features/branch/store/branchStore';
@@ -32,17 +32,14 @@ const CreateProductPage = () => {
       delete formData.unit;
       delete formData.productImages;
 
-      const templateIdParsed = parseInt(formData.templateId);
-
+      const templateIdParsed = parseInt(formData.productTemplateId);
       if (isNaN(templateIdParsed)) {
         setError('ข้อมูลไม่ครบถ้วนหรือไม่ถูกต้อง');
         setIsProcessing(false);
         return;
       }
 
-      const safeCaptions = Array.isArray(captions)
-        ? captions
-        : selectedFiles.map(() => '');
+      const safeCaptions = Array.isArray(captions) ? captions : selectedFiles.map(() => '');
       const safeCoverIndex = Number.isInteger(coverIndex) ? coverIndex : 0;
 
       const uploadedImages = await uploadImages(
@@ -63,11 +60,11 @@ const CreateProductPage = () => {
         cost: formData.cost ? parseFloat(formData.cost) : null,
         images: uploadedImages,
         branchPrice: {
-          costPrice: formData.branchPrice?.costPrice ?? 0,
-          priceWholesale: formData.branchPrice?.priceWholesale ?? 0,
-          priceTechnician: formData.branchPrice?.priceTechnician ?? 0,
-          priceRetail: formData.branchPrice?.priceRetail ?? 0,
-          priceOnline: formData.branchPrice?.priceOnline ?? 0,
+          costPrice: Number(formData.branchPrice?.costPrice ?? 0),
+          priceWholesale: Number(formData.branchPrice?.priceWholesale ?? 0),
+          priceTechnician: Number(formData.branchPrice?.priceTechnician ?? 0),
+          priceRetail: Number(formData.branchPrice?.priceRetail ?? 0),
+          priceOnline: Number(formData.branchPrice?.priceOnline ?? 0),
         },
       });
 
@@ -85,7 +82,7 @@ const CreateProductPage = () => {
 
   if (!branchId) {
     return (
-      <div className="max-w-4xl mx-auto">
+      <div className="w-full px-4 lg:px-6">
         <h2 className="text-xl font-bold mb-4">เพิ่มสินค้า</h2>
         <p className="text-red-500 font-medium">กำลังโหลดข้อมูลสาขา...</p>
       </div>
@@ -93,42 +90,51 @@ const CreateProductPage = () => {
   }
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="w-full max-w-none px-4 lg:px-6">
       <h2 className="text-xl font-bold mb-4">เพิ่มสินค้า</h2>
-      {error && <p className="text-red-500 font-medium mb-2">{error}</p>}
+      {error && (
+        <div className="mb-4 rounded border border-red-200 bg-red-50 text-red-700 px-4 py-2">
+          {error}
+        </div>
+      )}
 
-      <div className="mb-6">
-        <ProductImage
-          ref={imageRef}
-          files={selectedFiles}
-          setFiles={setSelectedFiles}
-          previewUrls={previewUrls}
-          setPreviewUrls={setPreviewUrls}
-          captions={captions}
-          setCaptions={setCaptions}
-          coverIndex={coverIndex}
-          setCoverIndex={setCoverIndex}
-          oldImages={[]}
-          setOldImages={() => {}}
-        />
+      {/* ✅ Full-width layout: รูปภาพเต็มกว้างด้านบน / ฟอร์มเต็มกว้างด้านล่าง */}
+      <div className="grid grid-cols-1 gap-6">
+        <div>
+          <ProductImage
+            ref={imageRef}
+            files={selectedFiles}
+            setFiles={setSelectedFiles}
+            previewUrls={previewUrls}
+            setPreviewUrls={setPreviewUrls}
+            captions={captions}
+            setCaptions={setCaptions}
+            coverIndex={coverIndex}
+            setCoverIndex={setCoverIndex}
+            oldImages={[]}
+            setOldImages={() => {}}
+          />
+        </div>
+
+        <div>
+          <ProductForm
+            onSubmit={handleCreate}
+            mode="create"
+            defaultValues={{
+              name: '',
+              description: '',
+              spec: '',
+              productTemplateId: '',
+              productProfileId: '',
+              productTypeId: '',
+              categoryId: '',
+              noSN: false,
+              active: true,
+              cost: '',
+            }}
+          />
+        </div>
       </div>
-
-      <ProductForm
-        onSubmit={handleCreate}
-        mode="create"
-        defaultValues={{
-          name: '',
-          description: '',
-          spec: '',
-          templateId: '',
-          productProfileId: '',
-          productTypeId: '',
-          categoryId: '',
-          noSN: false,
-          active: true,
-          cost: '',
-        }}
-      />
 
       <ProcessingDialog
         open={isProcessing || showSuccess}

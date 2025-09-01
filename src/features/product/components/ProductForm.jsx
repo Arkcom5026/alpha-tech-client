@@ -11,7 +11,6 @@ import ProcessingDialog from '@/components/shared/dialogs/ProcessingDialog';
 const ProductForm = ({ onSubmit, defaultValues, mode, cascadeReady, setCascadeReady }) => {
   const { dropdowns } = useProductStore();
 
-  const [internalDefaults, setInternalDefaults] = React.useState(defaultValues || null);
   const hasReset = useRef(false);
   const prevDefaults = useRef(null);
   const [showDialog, setShowDialog] = React.useState(false);
@@ -25,7 +24,7 @@ const ProductForm = ({ onSubmit, defaultValues, mode, cascadeReady, setCascadeRe
       categoryId: data?.categoryId ? String(data.categoryId) : '',
       productTypeId: data?.productTypeId ? String(data.productTypeId) : '',
       productProfileId: data?.productProfileId ? String(data.productProfileId) : '',
-      templateId: data?.templateId ? String(data.templateId) : '',
+      productTemplateId: data?.productTemplateId ? String(data.productTemplateId) : '',
       branchPrice: {
         costPrice: branchPrice.costPrice ?? '',
         priceWholesale: branchPrice.priceWholesale ?? '',
@@ -36,7 +35,7 @@ const ProductForm = ({ onSubmit, defaultValues, mode, cascadeReady, setCascadeRe
     };
   };
 
-  const methods = useForm({ mode: 'onChange', defaultValues: {} });
+  const methods = useForm({ mode: 'onChange', defaultValues: prepareDefaults(defaultValues || {}) });
   const {
     handleSubmit,
     register,
@@ -53,16 +52,16 @@ const ProductForm = ({ onSubmit, defaultValues, mode, cascadeReady, setCascadeRe
       mode,
       hasReset: hasReset.current,
       cascadeReady,
-      internalDefaults,
+      defaultValues,
     });
 
     if (
       mode === 'edit' &&
-      internalDefaults?.branchPrice &&
+      defaultValues?.branchPrice &&
       cascadeReady &&
       !hasReset.current
     ) {
-      const prepared = prepareDefaults(internalDefaults);
+      const prepared = prepareDefaults(defaultValues);
       const logHeader = `📌 [${timestamp}] ProductForm reset triggered`;
 
       if (!_.isEqual(prepared, prevDefaults.current)) {
@@ -80,7 +79,7 @@ const ProductForm = ({ onSubmit, defaultValues, mode, cascadeReady, setCascadeRe
         console.log(`⚠️ [${timestamp}] Skip reset: defaultValues are identical`);
       }
     }
-  }, [internalDefaults, cascadeReady]);
+  }, [defaultValues, cascadeReady, mode, reset]);
 
   useEffect(() => {
     if (mode !== 'create') return;
@@ -96,7 +95,7 @@ const ProductForm = ({ onSubmit, defaultValues, mode, cascadeReady, setCascadeRe
     }, 300);
 
     return () => clearTimeout(timeout);
-  }, [watch('branchPrice.costPrice'), mode]);
+  }, [watch, mode, setValue]);
 
   const handleFormSubmit = async (data) => {
     setShowDialog(true);
@@ -107,16 +106,28 @@ const ProductForm = ({ onSubmit, defaultValues, mode, cascadeReady, setCascadeRe
   return (
     <FormProvider {...methods}>
       <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
-        <div className="grid grid-cols-2 gap-6">
-          <CascadingDropdowns
-            register={register}
-            errors={errors}
-            watch={watch}
-            dropdowns={dropdowns}
-            defaultValues={prepareDefaults(internalDefaults || {})}
-            onCascadeReady={setCascadeReady}
-          />
-        </div>
+        {/* ✅ จัดระยะและขนาดของ CascadingDropdowns ให้เป็น 4 คอลัมน์เต็ม */}
+        <CascadingDropdowns
+          dropdowns={dropdowns}
+          value={{
+            categoryId: watch('categoryId') ?? '',
+            productTypeId: watch('productTypeId') ?? '',
+            productProfileId: watch('productProfileId') ?? '',
+            productTemplateId: watch('productTemplateId') ?? '',
+          }}
+          onChange={(partial) => {
+            Object.entries(partial).forEach(([k, v]) => setValue(k, v ?? ''));
+          }}
+          onCascadeReady={setCascadeReady}
+          placeholders={{
+            category: '-- เลือกหมวดหมู่ --',
+            type: '-- เลือกประเภทสินค้า --',
+            profile: '-- เลือกลักษณะสินค้า (Profile) --',
+            template: '-- เลือกรูปแบบสินค้า (Template) --',
+          }}
+          containerClassName="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
+          selectClassName="min-w-[20rem]"
+        />
 
         <div className="grid grid-cols-1 gap-6">
           <FormFields
@@ -126,7 +137,7 @@ const ProductForm = ({ onSubmit, defaultValues, mode, cascadeReady, setCascadeRe
             setValue={setValue}
             dropdowns={dropdowns}
             isEditMode={mode === 'edit'}
-            defaultValues={prepareDefaults(internalDefaults || {})}
+            defaultValues={prepareDefaults(defaultValues || {})}
           />
         </div>
 

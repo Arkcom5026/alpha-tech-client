@@ -3,29 +3,21 @@
 
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus } from 'lucide-react';
-import useEmployeeStore from '@/features/employee/store/employeeStore';
-
+import StandardActionButtons from '@/components/shared/buttons/StandardActionButtons';
 import EmployeeTable from '../components/EmployeeTable';
 import { getAllEmployees } from '../api/employeeApi';
-import { useBranchStore } from '@/features/branch/store/branchStore';
-import StandardActionButtons from '@/components/shared/buttons/StandardActionButtons';
+import { useAuthStore } from '@/features/auth/store/authStore.js';
 
 const ListEmployeePage = () => {
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
-  const token = useEmployeeStore((s) => s.token);
-  const branchId = useBranchStore((s) => s.currentBranch?.id);
+  const token = useAuthStore((s) => s.token); // ใช้ token จาก authStore (เผื่อ interceptor ต้องใช้)
 
   useEffect(() => {
     const fetchEmployees = async () => {
-      console.log('🧪 token:', token);
-      console.log('🧪 branchId:', branchId);
-
       try {
-        const res = await getAllEmployees(token, branchId);
-        console.log('✅ ดึงรายชื่อพนักงาน:', res);
+        const res = await getAllEmployees(); // apiClient แนบ token ให้เองแล้ว
         setEmployees(res);
       } catch (err) {
         console.error('❌ โหลดพนักงานล้มเหลว:', err);
@@ -33,23 +25,19 @@ const ListEmployeePage = () => {
         setLoading(false);
       }
     };
-
-    if (token && branchId) {
-      fetchEmployees();
-    }
-  }, [token, branchId]);
-
-  if (!token || !branchId) {
-    return <p>กำลังโหลดข้อมูลสาขาและสิทธิ์ผู้ใช้...</p>;
-  }
+    fetchEmployees();
+  }, [token]);
 
   return (
     <div className="p-4">
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-xl font-semibold">รายชื่อพนักงาน</h1>
-        <StandardActionButtons onCreate={() => navigate('/pos/employees/approve')} />
+        <StandardActionButtons onAdd={() => navigate('/pos/settings/employee/approve')} />
       </div>
-      {loading ? <p>กำลังโหลด...</p> : <EmployeeTable employees={employees} />}
+      {loading ? <p>กำลังโหลด...</p> : <EmployeeTable employees={employees} onRefresh={async () => {
+        setLoading(true);
+        try { setEmployees(await getAllEmployees()); } finally { setLoading(false); }
+      }} />}
     </div>
   );
 };

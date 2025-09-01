@@ -1,25 +1,22 @@
+
+
 // ✅ @filename: EmployeeTable.jsx
 // ✅ @folder: src/features/employee/components/
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import useEmployeeStore from '@/features/employee/store/employeeStore';
 import StandardActionButtons from '@/components/shared/buttons/StandardActionButtons';
+import { deleteEmployee as apiDeleteEmployee } from '../api/employeeApi';
 
 const EmployeeTable = ({ employees, onRefresh }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [positionFilter, setPositionFilter] = useState('');
   const navigate = useNavigate();
-  const token = useEmployeeStore((s) => s.token);
 
   const handleDelete = async (id) => {
     if (!confirm('คุณแน่ใจหรือไม่ว่าต้องการลบพนักงานคนนี้?')) return;
     try {
-      const res = await fetch(`/api/settings/employees/${id}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) throw new Error('ไม่สามารถลบพนักงานได้');
+      await apiDeleteEmployee(id); // ใช้ apiClient แนบ token ใน interceptor
       if (onRefresh) onRefresh();
     } catch (err) {
       console.error('❌ ลบพนักงานล้มเหลว:', err);
@@ -28,7 +25,7 @@ const EmployeeTable = ({ employees, onRefresh }) => {
   };
 
   const filtered = employees.filter((e) => {
-    const matchName = e.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchName = (e.name || '').toLowerCase().includes(searchTerm.toLowerCase());
     const matchPosition = positionFilter ? e.position?.id === Number(positionFilter) : true;
     return matchName && matchPosition;
   });

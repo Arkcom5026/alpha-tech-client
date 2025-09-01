@@ -1,4 +1,5 @@
-// ✅ useEmployeeStore.js (ใหม่ แบบ default export + persist storage)
+
+// ✅ useEmployeeStore.js (แก้ key persist ไม่ให้ชนกับ auth-store)
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
@@ -14,19 +15,16 @@ import {
 
 const useEmployeeStore = create(
   persist(
-    (set, get) => ({
-      // 🔐 สำหรับ session และ RBAC
+    (set) => ({
       employee: null,
       branch: null,
       position: null,
       token: '',
       role: '',
 
-      // 🔁 CRUD พนักงาน
       employees: [],
       employeeError: null,
 
-      // ✅ ตำแหน่งพนักงาน
       positions: [],
       fetchPositionsAction: async () => {
         try {
@@ -37,7 +35,6 @@ const useEmployeeStore = create(
         }
       },
 
-      // ✅ อนุมัติพนักงานใหม่
       approveEmployeeAction: async (payload) => {
         try {
           await approveEmployee(payload);
@@ -47,7 +44,6 @@ const useEmployeeStore = create(
         }
       },
 
-      // ✅ ค้นหาผู้ใช้เพื่ออนุมัติ
       findUserByEmailAction: async (email) => {
         try {
           const user = await findUserByEmail(email);
@@ -58,7 +54,6 @@ const useEmployeeStore = create(
         }
       },
 
-      // ✅ Session
       setSession: ({ token, role, position, branch, employee }) => {
         const fullBranch = branch
           ? {
@@ -76,25 +71,14 @@ const useEmployeeStore = create(
       },
 
       clearSession: () => {
-        set({
-          token: '',
-          role: '',
-          position: null,
-          branch: null,
-          employee: null,
-        });
-        localStorage.removeItem('auth-storage');
-        localStorage.removeItem('branch-storage');
+        set({ token: '', role: '', position: null, branch: null, employee: null });
       },
 
-      // ✅ Setter สำหรับ employee โดยตรง (ใช้หลัง F5 reload)
       setEmployee: (employee) => set({ employee }),
 
-      // ✅ CRUD พนักงาน (ดึง token/branchId จาก store โดยตรง)
       getEmployees: async () => {
         try {
-          const { token, branch } = get();
-          const res = await getAllEmployees(token, branch.id);
+          const res = await getAllEmployees(); // ไม่ต้องส่ง token/branch แล้ว
           set({ employees: res });
         } catch (err) {
           set({ employeeError: err.message });
@@ -103,8 +87,7 @@ const useEmployeeStore = create(
 
       addEmployee: async (form) => {
         try {
-          const { token } = get();
-          const res = await createEmployee(token, form);
+          const res = await createEmployee(form);
           set((state) => ({ employees: [...state.employees, res] }));
         } catch (err) {
           set({ employeeError: err.message });
@@ -113,8 +96,7 @@ const useEmployeeStore = create(
 
       updateEmployee: async (id, form) => {
         try {
-          const { token } = get();
-          const updated = await updateEmployee(token, id, form);
+          const updated = await updateEmployee(id, form);
           set((state) => ({
             employees: state.employees.map((e) => (e.id === id ? updated : e)),
           }));
@@ -125,24 +107,20 @@ const useEmployeeStore = create(
 
       removeEmployee: async (id) => {
         try {
-          const { token } = get();
-          await deleteEmployee(token, id);
-          set((state) => ({
-            employees: state.employees.filter((e) => e.id !== id),
-          }));
+          await deleteEmployee(id);
+          set((state) => ({ employees: state.employees.filter((e) => e.id !== id) }));
         } catch (err) {
           set({ employeeError: err.message });
         }
       },
     }),
     {
-      name: 'auth-storage',
+      name: 'employee-storage', // ✅ ไม่ชนกับ auth-storage
       partialize: (state) => ({
         employee: state.employee,
         branch: state.branch,
         position: state.position,
-        token: state.token,
-        role: state.role,
+        // ไม่จำเป็นต้อง persist token/role ซ้ำ หาก authStore ดูแลอยู่แล้ว
       }),
     }
   )

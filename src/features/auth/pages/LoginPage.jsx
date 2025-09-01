@@ -16,6 +16,9 @@ const isStaffRole = (r) => {
   return v === 'admin' || v === 'superadmin' || v === 'employee';
 };
 
+// ⛳ กำหนดสาขาเริ่มต้นให้ SuperAdmin (กันบางหน้าที่ require branchId)
+const SUPERADMIN_BRANCH_ID = Number(import.meta?.env?.VITE_MAIN_BRANCH_ID) || 1;
+
 const LoginPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -50,8 +53,33 @@ const LoginPage = () => {
       const { token, role: roleFromServer, profile } = await loginAction({ emailOrPhone: email, password });
       const r = normalizeRole(roleFromServer);
 
+      // 🔐 เคสพิเศษ: SuperAdmin → mock employee + branchId เพื่อให้ผ่านทุก guard
+      if (r === 'superadmin') {
+        useAuthStore.getState().setUser({
+          token,
+          role: r,
+          isSuperAdmin: true,
+          employee: {
+            id: '__SUPERADMIN__',
+            name: profile?.name || 'Super Admin',
+            phone: profile?.phone || '',
+            email: profile?.email || email,
+            positionName: 'SuperAdmin',
+            branchId: profile?.branch?.id ?? SUPERADMIN_BRANCH_ID,
+          },
+        });
+        try {
+          localStorage.setItem('role', r);
+          localStorage.setItem('token', token);
+        } catch (storageErr) {
+          console.warn('⚠️ Cannot access localStorage:', storageErr);
+        }
+        navigate('/pos/dashboard', { replace: true });
+        return;
+      }
+
       if (isStaffRole(r)) {
-        // พนักงาน / แอดมิน / ซูเปอร์แอดมิน → เข้า POS
+        // พนักงาน / แอดมิน → เข้า POS
         const rawPosition = profile?.position?.name;
         const mappedPosition = rawPosition === 'employee' ? 'ผู้ดูแลระบบ' : rawPosition;
 
@@ -67,16 +95,12 @@ const LoginPage = () => {
             branchId: profile?.branch?.id,
           },
         });
-        // เผื่อจุดอื่นในระบบยังอ่านจาก localStorage
         try {
           localStorage.setItem('role', r);
           localStorage.setItem('token', token);
         } catch (storageErr) {
-          // บางสภาพแวดล้อม (เช่น โหมด private/strict) อาจปิดกั้น localStorage
-          // non-blocking: แค่แจ้งเตือนเพื่อดีบัก แล้วปล่อยให้ flow ดำเนินต่อ
           console.warn('⚠️ Cannot access localStorage:', storageErr);
         }
-
         navigate('/pos/dashboard', { replace: true });
         return;
       }

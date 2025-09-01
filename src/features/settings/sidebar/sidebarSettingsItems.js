@@ -8,7 +8,7 @@ export const sidebarSettingsItems = [
       { label: 'รายชื่อพนักงาน', to: '/pos/settings/employee' },
       { label: 'อนุมัติพนักงาน', to: '/pos/settings/approve' },
       { label: 'ตำแหน่งงาน', to: '/pos/settings/positions' },
-      { label: 'สาขา', to: '/pos/settings/branches' },
+      { label: 'จัดการสาขา', to: '/pos/settings/branches' },
       { label: 'ธนาคาร', to: '/pos/settings/bank' },
     ],
   },

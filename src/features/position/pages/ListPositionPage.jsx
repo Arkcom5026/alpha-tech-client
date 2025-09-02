@@ -62,9 +62,12 @@ const ListPositionPage = () => {
               {message && <span className="text-xs text-green-600">{message}</span>}
               {error && <span className="text-xs text-rose-600">{error}</span>}
             </div>
-            <ActionButton className="bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500" onClick={() => navigate('create')}>
-              เพิ่มตำแหน่ง
-            </ActionButton>
+            <div className="flex items-center gap-2">
+              
+              <ActionButton className="bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500" onClick={() => navigate('create')}>
+                เพิ่มตำแหน่ง
+              </ActionButton>
+            </div>
           </div>
         </div>
 
@@ -94,6 +97,7 @@ const ListPositionPage = () => {
               <th className="px-4 py-2 w-[60px] text-center">#</th>
               <th className="px-4 py-2 w-[40%]">ชื่อตำแหน่ง</th>
               <th className="px-4 py-2">คำอธิบาย</th>
+              
               <th className="px-4 py-2 w-[10%] text-center">สถานะ</th>
               <th className="px-4 py-2 text-right w-[20%]">การจัดการ</th>
             </tr>
@@ -106,38 +110,47 @@ const ListPositionPage = () => {
             )}
 
             {rows.map((row, idx) => (
-              <tr
-                key={row.id}
-                className={`border-b border-zinc-100 dark:border-zinc-800 hover:bg-zinc-50/60 dark:hover:bg-zinc-800/50 ${idx % 2 === 1 ? 'bg-white dark:bg-zinc-900' : 'bg-zinc-50/40 dark:bg-zinc-900/40'}`}
-              >
-                <td className="px-4 py-3 text-center">{(page - 1) * (limit) + idx + 1}</td>
-                <td className="px-4 py-3"><span className="font-medium text-zinc-800 dark:text-zinc-100">{row.name}</span></td>
-                <td className="px-4 py-3">{row.description || '-'}</td>
-                <td className="px-4 py-3 text-center">
-                  {row.isActive ? (
-                    <Badge className="bg-emerald-50 text-emerald-700 ring-emerald-600/20 dark:bg-emerald-900/30 dark:text-emerald-300 dark:ring-emerald-400/30">ใช้งาน</Badge>
-                  ) : (
-                    <Badge className="bg-zinc-200 text-zinc-800 ring-zinc-400/40 dark:bg-zinc-700 dark:text-zinc-200 dark:ring-zinc-500/40">ปิดใช้งาน</Badge>
-                  )}
-                </td>
-                <td className="px-4 py-3 text-right whitespace-nowrap">
-                  <div className="inline-flex items-center gap-2 justify-end min-w-[220px]">
-                    <ActionButton
-                      className="border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-                      onClick={() => onEdit(row)}
-                    >
-                      แก้ไข
-                    </ActionButton>
-                    <ActionButton
-                      className={`text-white ${row.isActive ? 'bg-rose-600 hover:bg-rose-700 focus:ring-rose-500' : 'bg-emerald-600 hover:bg-emerald-700 focus:ring-emerald-500'}`}
-                      onClick={() => handleToggle(row)}
-                    >
-                      {row.isActive ? 'ปิดใช้งาน' : 'กู้คืน'}
-                    </ActionButton>
-                  </div>
-                </td>
-              </tr>
-            ))}
+            <tr
+              key={row.id}
+              className={`border-b border-zinc-100 dark:border-zinc-800 hover:bg-zinc-50/60 dark:hover:bg-zinc-800/50 ${idx % 2 === 1 ? 'bg-white dark:bg-zinc-900' : 'bg-zinc-50/40 dark:bg-zinc-900/40'}`}
+            >
+              {/* # ลำดับ */}
+              <td className="px-4 py-3 text-center">{(page - 1) * limit + idx + 1}</td>
+
+              {/* ชื่อตำแหน่ง */}
+              <td className="px-4 py-3">{row.name || '-'}</td>
+
+              {/* คำอธิบาย */}
+              <td className="px-4 py-3">{row.description || '-'}</td>
+
+              {/* สถานะ */}
+              <td className="px-4 py-3 text-center">
+                {row.isActive ? (
+                  <Badge className="bg-emerald-50 text-emerald-700 ring-emerald-600/20 dark:bg-emerald-900/30 dark:text-emerald-300 dark:ring-emerald-400/30">ใช้งาน</Badge>
+                ) : (
+                  <Badge className="bg-zinc-200 text-zinc-800 ring-zinc-400/40 dark:bg-zinc-700 dark:text-zinc-200 dark:ring-zinc-500/40">ปิดใช้งาน</Badge>
+                )}
+              </td>
+
+              {/* การจัดการ */}
+              <td className="px-4 py-3 text-right whitespace-nowrap">
+                <div className="inline-flex items-center gap-2 justify-end min-w-[220px]">
+                  <ActionButton
+                    className="border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                    onClick={() => onEdit(row)}
+                  >
+                    แก้ไข
+                  </ActionButton>
+                  <ActionButton
+                    className={`text-white ${row.isActive ? 'bg-rose-600 hover:bg-rose-700 focus:ring-rose-500' : 'bg-emerald-600 hover:bg-emerald-700 focus:ring-emerald-500'}`}
+                    onClick={() => handleToggle(row)}
+                  >
+                    {row.isActive ? 'ปิดใช้งาน' : 'กู้คืน'}
+                  </ActionButton>
+                </div>
+              </td>
+            </tr>
+          ))}
           </tbody>
         </table>
 
@@ -178,4 +191,9 @@ const ListPositionPage = () => {
 };
 
 export default ListPositionPage;
+
+
+
+
+
 

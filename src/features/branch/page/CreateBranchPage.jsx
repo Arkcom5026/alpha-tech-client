@@ -1,4 +1,4 @@
-// CreateBranchPage.jsx
+// CreateBranchPage.jsx (updated for new Address model)
 
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -10,13 +10,16 @@ const CreateBranchPage = () => {
   const navigate = useNavigate();
   const { createBranchAction } = useBranchStore();
 
+  // ✅ ใช้ฟิลด์ตามมาตรฐานใหม่
   const [formData, setFormData] = useState({
     name: "",
     address: "",
     phone: "",
-    province: "",
-    district: "",
-    region: "กลาง",
+    provinceCode: "",
+    districtCode: "",
+    subdistrictCode: "",
+    postalCode: "",
+    region: "",
     latitude: "",
     longitude: "",
     RBACEnabled: false,
@@ -25,17 +28,32 @@ const CreateBranchPage = () => {
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
+  // ปัดทศนิยม lat/lng เป็นเลข 6 ตำแหน่งก่อนส่ง (invalid -> null)
+  const fix6 = (x) => (x === '' || x == null ? null : (Number.isFinite(Number(x)) ? Number(Number(x).toFixed(6)) : null));
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setErrorMessage("");
 
     try {
-      await createBranchAction({
-        ...formData,
-        latitude: formData.latitude ? parseFloat(formData.latitude) : null,
-        longitude: formData.longitude ? parseFloat(formData.longitude) : null,
-      });
+      // ✅ Map payload ให้สอดคล้องกับ BE รุ่นใหม่ (ใช้ subdistrictCode + postalCode)
+      const payload = {
+        name: formData.name?.trim(),
+        address: formData.address?.trim(),
+        phone: formData.phone?.trim() || null,
+        subdistrictCode: formData.subdistrictCode ? String(formData.subdistrictCode) : null,
+        postalCode: formData.postalCode ? String(formData.postalCode) : null,
+        latitude: fix6(formData.latitude),
+        longitude: fix6(formData.longitude),
+        RBACEnabled: !!formData.RBACEnabled,
+        // หมายเหตุ: provinceCode/districtCode ใช้ภายใน UI สำหรับคำนวณและเลือก ADM
+        // ถ้า BE ต้องการเก็บเพิ่ม สามารถส่งไปด้วยได้ โดยเพิ่มสองบรรทัดด้านล่าง:
+        // provinceCode: formData.provinceCode || null,
+        // districtCode: formData.districtCode || null,
+      };
+
+      await createBranchAction(payload);
       navigate("/pos/settings/branches?refresh=1");
     } catch (err) {
       console.error("❌ createBranchAction error", err);
@@ -63,3 +81,10 @@ const CreateBranchPage = () => {
 };
 
 export default CreateBranchPage;
+
+
+
+
+
+
+

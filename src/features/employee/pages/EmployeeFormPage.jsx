@@ -1,38 +1,77 @@
-// ✅ @filename: EmployeeFormPage.jsx
+// ✅ @filename: EditEmployeePage.jsx
 // ✅ @folder: src/features/employee/pages/
 
-import { useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { getEmployeeById, updateEmployee } from '../api/employeeApi';
 import EmployeeForm from '../components/EmployeeForm';
-import { createEmployee } from '../api/employeeApi';
-import useEmployeeStore from '@/features/employee/store/employeeStore';
+import { useAuthStore } from '@/features/auth/store/authStore.js';
 
-const EmployeeFormPage = () => {
-  const [loading, setLoading] = useState(false);
+const EditEmployeePage = () => {
+  const { id } = useParams();
   const navigate = useNavigate();
-  const token = useEmployeeStore((s) => s.token);
-  const branchId = useEmployeeStore((s) => s.branch?.id);
+  const token = useAuthStore((s) => s.token);
 
-  const handleCreate = async (formData) => {
+  const [employee, setEmployee] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadEmployee = async () => {
+      try {
+        setLoading(true);
+        setError('');
+        if (!id) {
+          setError('ไม่พบรหัสพนักงานใน URL');
+          return;
+        }
+        // 🔐 ใช้ token จาก useAuthStore ตามมาตรฐานระบบ
+        const data = await getEmployeeById(id);
+        if (!cancelled) setEmployee(data);
+      } catch (err) {
+        console.error('❌ ดึงข้อมูลพนักงานล้มเหลว:', err);
+        if (!cancelled) setError(err?.response?.data?.message || err?.message || 'ดึงข้อมูลพนักงานล้มเหลว');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    loadEmployee();
+    return () => {
+      cancelled = true;
+    };
+  }, [token, id]);
+
+  const handleUpdate = async (formData) => {
     try {
-      if (!branchId) throw new Error('ยังไม่ได้เลือกสาขา');
-      setLoading(true);
-      const dataWithBranch = { ...formData, branchId };
-      await createEmployee(token, dataWithBranch);
-      navigate('/pos/employees');
+      await updateEmployee(id, formData);
+      navigate('/pos/settings/employee');
     } catch (err) {
-      console.error('❌ สร้างพนักงานล้มเหลว:', err);
-    } finally {
-      setLoading(false);
+      console.error('❌ แก้ไขพนักงานล้มเหลว:', err);
+      setError(err?.response?.data?.message || err?.message || 'แก้ไขพนักงานล้มเหลว');
     }
   };
 
+  if (loading) return <p className="text-center">กำลังโหลดข้อมูล...</p>;
+  if (error) return <p className="text-center text-red-500">{error}</p>;
+  if (!employee) return <p className="text-center text-red-500">ไม่พบข้อมูลพนักงาน</p>;
+
   return (
-    <div className="max-w-xl mx-auto p-4">
-      <h1 className="text-xl font-semibold mb-4">สร้างโปรไฟล์พนักงานจากผู้ใช้ที่มีอยู่</h1>
-      <EmployeeForm onSubmit={handleCreate} loading={loading} />
+    <div className="max-w-xl mx-auto mt-8 p-6 bg-white dark:bg-zinc-900 rounded-2xl shadow-md border dark:border-zinc-700">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-xl font-semibold text-blue-800 dark:text-white">✏️ แก้ไขข้อมูลพนักงาน</h1>
+        <button
+          onClick={() => navigate(-1)}
+          className="text-sm px-3 py-1 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded shadow"
+        >
+          ← กลับ
+        </button>
+      </div>
+      <EmployeeForm defaultValues={employee} onSubmit={handleUpdate} loading={false} showUserSearch={false} />
     </div>
   );
 };
 
-export default EmployeeFormPage;
+export default EditEmployeePage;
+

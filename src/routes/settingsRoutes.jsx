@@ -14,7 +14,8 @@ import { EditBankPage } from '@/features/bank/page/EditBankPage';
 import ListPositionPage from '@/features/position/pages/ListPositionPage';
 import CreatePositionPage from '@/features/position/pages/CreatePositionPage';
 import EditPositionPage from '@/features/position/pages/EditPositionPage';
-import SettingsDashboardPage from '@/features/settings/page/SettingsDashboardPage';
+import SettingsDashboardPage from '@/features/settings/pages/SettingsDashboardPage';
+import ManageRolesPage from '@/features/employee/pages/ManageRolesPage';
 
 // ⚙️ ROUTES: Dashboard เป็น index ของ "/pos/settings" และกระจายเมนูย่อยระดับเดียวกัน
 // - รายชื่อพนักงาน:         /pos/settings/employee
@@ -38,6 +39,9 @@ const settingsRoutes = {
 
     // อนุมัติพนักงานใหม่ (ย้ายมาอยู่ระดับเดียวกับ employee)
     { path: 'approve', element: <ApproveEmployeePage /> },
+
+    // จัดการ role
+    { path: 'roles', element: <ManageRolesPage /> },
 
     // ตำแหน่งงาน (ย้ายมาอยู่ระดับเดียวกับ employee)
     {
@@ -72,3 +76,5 @@ const settingsRoutes = {
 };
 
 export default settingsRoutes;
+
+

@@ -1,27 +1,40 @@
 
+
 // ✅ @filename: EmployeeForm.jsx
 // ✅ @folder: src/features/employee/components/
 
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { useState } from 'react';
-import apiClient from '@/utils/apiClient';
-import useEmployeeStore from '@/features/employee/store/employeeStore';
+import { useState, useEffect } from 'react';
 
-const EmployeeForm = ({ defaultValues = {}, onSubmit, loading }) => {
-  const [userSuggestions, setUserSuggestions] = useState([]);
-  const [searchQuery, setSearchQuery] = useState('');  
+/**
+ * EmployeeForm — ใช้ได้ทั้งโหมดเพิ่ม และแก้ไข
+ * ข้อกำหนดโปรเจกต์: ห้ามเรียก API ตรงจาก Component
+ * - ถ้าเป็น superadmin จะสามารถแก้ไขสาขา (branchId) ได้ โดยรับข้อมูลสาขาผ่าน props
+ */
+const EmployeeForm = ({ defaultValues = {}, onSubmit, loading, canEditBranch = false, branchOptions = [] }) => {
+  // ✂️ ตัด UI/logic ค้นหาผู้ใช้ออกทั้งหมด ตามคำขอ
 
-
-const branchIdFromStore = useEmployeeStore.getState().branch?.id || '';
-
-const [formData, setFormData] = useState({
-    userId: defaultValues.userId || '',
+  const [formData, setFormData] = useState({
     name: defaultValues.name || '',
     phone: defaultValues.phone || '',
-    positionId: defaultValues.positionId || '',
-    branchId: branchIdFromStore,
+    positionId: defaultValues.positionId ? String(defaultValues.positionId) : '',
+    branchId: defaultValues.branchId
+      ? String(defaultValues.branchId)
+      : (defaultValues.branch?.id ? String(defaultValues.branch.id) : ''),
   });
+
+  // sync เมื่อ defaultValues เปลี่ยน (หลังโหลดข้อมูล)
+  useEffect(() => {
+    setFormData({
+      name: defaultValues.name || '',
+      phone: defaultValues.phone || '',
+      positionId: defaultValues.positionId ? String(defaultValues.positionId) : '',
+      branchId: defaultValues.branchId
+        ? String(defaultValues.branchId)
+        : (defaultValues.branch?.id ? String(defaultValues.branch.id) : ''),
+    });
+  }, [defaultValues]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -30,85 +43,53 @@ const [formData, setFormData] = useState({
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.positionId) {
-      alert('โปรดเลือกตำแหน่ง');
-      return;
-    }
+    // ใช้ browser validation แทน alert (ตามมาตรฐาน UI ของระบบ)
     await onSubmit({
-      ...formData,
+      name: formData.name.trim(),
+      phone: formData.phone.trim(),
       positionId: Number(formData.positionId),
+      ...(canEditBranch && formData.branchId ? { branchId: Number(formData.branchId) } : {}),
     });
-  };
-
-  const handleSearch = async () => {
-    if (!searchQuery || searchQuery.length < 2) return;
-    try {
-      const res = await apiClient.get(`/employees/users/search?q=${searchQuery}&_=${Date.now()}`);
-      console.log('✅ ค้นหา user:', res.data);
-      setUserSuggestions(res.data);
-
-      // ✅ Autofill ทันทีเมื่อเจอ 1 คนชัดเจน
-      if (res.data.length === 1) {
-        const user = res.data[0];
-        setFormData((prev) => ({
-          ...prev,
-          userId: user.id,
-          name: user.customerProfile?.name || '',
-          phone: user.customerProfile?.phone || '',
-          
-        }));
-      }
-    } catch (err) {
-      console.error('❌ searchUsers error:', err);
-    }
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-  <label className="text-sm font-medium">ค้นหาผู้ใช้</label>
-  <div className="flex gap-2">
-    <input
-      type="text"
-      name="searchQuery"
-      className="border p-2 w-full rounded text-sm"
-      placeholder="พิมพ์ชื่อ หรืออีเมลของผู้ใช้..."
-      value={searchQuery}
-      onChange={(e) => setSearchQuery(e.target.value)}
-      onKeyDown={async (e) => {
-        if (e.key === 'Enter') await handleSearch();
-      }}
-    />
-    <Button type="button" onClick={handleSearch} className="text-sm">ค้นหา</Button>
-  </div>
-  {userSuggestions.length > 0 ? (
-    <div className="mt-1 border rounded bg-white max-h-40 overflow-y-auto text-sm">
-      {userSuggestions.map((user) => (
-        <div
-          key={user.id}
-          className="px-3 py-1 hover:bg-gray-100 cursor-pointer"
-          onClick={() => setFormData((prev) => ({
-            ...prev,
-            userId: user.id,
-            name: user.customerProfile?.name || '',
-            phone: user.customerProfile?.phone || '',
-            
-          }))}
-        >
-          {user.customerProfile?.name || 'ไม่มีชื่อ'} ({user.email})
-        </div>
-      ))}
-    </div>
-  ) : (
-    <p className="text-sm text-gray-500 mt-2">ไม่พบผู้ใช้ที่ตรงกับคำค้น</p>
-  )}
-      
-</div>
+      {/* 🔍 บล็อกค้นหาผู้ใช้ถูกตัดออกตามคำขอ */}
 
-<Input name="name" placeholder="ชื่อพนักงาน" value={formData.name} onChange={handleChange} required />
-      <Input name="phone" placeholder="เบอร์โทรศัพท์" value={formData.phone} onChange={handleChange} />
+      <Input
+        name="name"
+        placeholder="ชื่อพนักงาน"
+        value={formData.name}
+        onChange={handleChange}
+        required
+      />
 
-            <label className="text-sm font-medium">ตำแหน่ง</label>
+      <Input
+        name="phone"
+        placeholder="เบอร์โทรศัพท์"
+        value={formData.phone}
+        onChange={handleChange}
+      />
+
+      {canEditBranch && (
+        <>
+          <label className="text-sm font-medium">สาขา</label>
+          <select
+            name="branchId"
+            value={formData.branchId}
+            onChange={handleChange}
+            required
+            className="border p-2 w-full rounded text-sm"
+          >
+            <option value="">-- เลือกสาขา --</option>
+            {Array.isArray(branchOptions) && branchOptions.map((b) => (
+              <option key={b.id} value={b.id}>{b.name}</option>
+            ))}
+          </select>
+        </>
+      )}
+
+      <label className="text-sm font-medium">ตำแหน่ง</label>
       <select
         name="positionId"
         value={formData.positionId}
@@ -127,7 +108,7 @@ const [formData, setFormData] = useState({
       </select>
 
       <div className="flex justify-end">
-        <Button type="submit" disabled={loading}>
+        <Button type="submit" disabled={loading || !formData.positionId}>
           {loading ? 'กำลังบันทึก...' : 'บันทึก'}
         </Button>
       </div>
@@ -136,4 +117,7 @@ const [formData, setFormData] = useState({
 };
 
 export default EmployeeForm;
+
+
+
 

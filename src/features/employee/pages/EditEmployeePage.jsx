@@ -3,41 +3,76 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getEmployeeById, updateEmployee } from '../api/employeeApi';
+import { getEmployeeById, updateEmployee, getBranchDropdowns } from '../api/employeeApi';
 import EmployeeForm from '../components/EmployeeForm';
-import useEmployeeStore from '@/features/employee/store/employeeStore';
+import { useAuthStore } from '@/features/auth/store/authStore.js';
 
 const EditEmployeePage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const token = useEmployeeStore((s) => s.token);
+  const token = useAuthStore((s) => s.token);
+  const role = useAuthStore((s) => s.role);
+  const isSuperAdmin = String(role || '').toLowerCase() === 'superadmin';
+
   const [employee, setEmployee] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [branches, setBranches] = useState([]);
 
   useEffect(() => {
+    let cancelled = false;
     const loadEmployee = async () => {
       try {
-        const data = await getEmployeeById(token, id);
-        setEmployee(data);
+        setLoading(true);
+        setError('');
+        if (!id) {
+          setError('ไม่พบรหัสพนักงานใน URL');
+          return;
+        }
+        // 🔐 ใช้ token จาก useAuthStore ตามมาตรฐานระบบ
+        const data = await getEmployeeById(id);
+        if (!cancelled) setEmployee(data);
       } catch (err) {
         console.error('❌ ดึงข้อมูลพนักงานล้มเหลว:', err);
+        if (!cancelled) setError(err?.response?.data?.message || err?.message || 'ดึงข้อมูลพนักงานล้มเหลว');
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
-    if (token && id) loadEmployee();
+
+    loadEmployee();
+    return () => {
+      cancelled = true;
+    };
   }, [token, id]);
+
+  // โหลดสาขาสำหรับ superadmin เพื่อแก้ไข branch
+  useEffect(() => {
+    if (!isSuperAdmin) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const rows = await getBranchDropdowns();
+        if (!cancelled) setBranches(Array.isArray(rows) ? rows : []);
+      } catch (err) {
+        console.error('❌ โหลดสาขาล้มเหลว:', err);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [isSuperAdmin]);
 
   const handleUpdate = async (formData) => {
     try {
-      await updateEmployee(token, id, formData);
-      navigate('/pos/employees');
+      await updateEmployee(id, formData);
+      navigate('/pos/settings/employee');
     } catch (err) {
       console.error('❌ แก้ไขพนักงานล้มเหลว:', err);
+      setError(err?.response?.data?.message || err?.message || 'แก้ไขพนักงานล้มเหลว');
     }
   };
 
   if (loading) return <p className="text-center">กำลังโหลดข้อมูล...</p>;
+  if (error) return <p className="text-center text-red-500">{error}</p>;
   if (!employee) return <p className="text-center text-red-500">ไม่พบข้อมูลพนักงาน</p>;
 
   return (
@@ -51,9 +86,10 @@ const EditEmployeePage = () => {
           ← กลับ
         </button>
       </div>
-      <EmployeeForm defaultValues={employee} onSubmit={handleUpdate} loading={false} />
+      <EmployeeForm defaultValues={employee} onSubmit={handleUpdate} loading={false} canEditBranch={isSuperAdmin} branchOptions={branches} />
     </div>
   );
 };
 
 export default EditEmployeePage;
+

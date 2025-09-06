@@ -1,3 +1,4 @@
+
 // branchStore.js
 
 import { create } from 'zustand';
@@ -93,14 +94,12 @@ export const useBranchStore = create(
                 const lng = pos.coords.longitude;
                 console.log('📍 [DEBUG] พิกัดผู้ใช้:', { lat, lng });
 
-                const nearest = get().findNearestBranchByLocation(lat, lng);
+                const nearest = findNearestBranchByLocation(lat, lng);
                 console.log('🏬 [DEBUG] สาขาใกล้ที่สุด:', nearest);
 
                 if (nearest) {
-                  set({
-                    currentBranch: nearest,
-                    selectedBranchId: nearest.id,
-                  });
+                  set({ currentBranch: nearest });
+                  setSelectedBranchId(nearest.id);
                   console.log('✅ [DEBUG] ตั้งค่าสาขา:', nearest.id);
                   resolve(true);
                 } else {
@@ -215,3 +214,6 @@ export const useBranchStore = create(
     }
   )
 );
+
+
+

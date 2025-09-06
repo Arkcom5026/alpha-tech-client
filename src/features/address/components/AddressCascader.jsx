@@ -1,4 +1,3 @@
-
 // =============================================================
 // File: src/features/address/components/AddressCascader.jsx
 // Desc: 3-level cascading selects (Province → District → Subdistrict)
@@ -12,7 +11,7 @@
 //  - Auto-loads children and propagates postalCode from selected subdistrict
 // =============================================================
 
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useAddressStore } from '@/features/address/store/addressStore';
 
 const toStr = (v) => (v == null ? '' : String(v));
@@ -25,6 +24,7 @@ const AddressCascader = ({
   className = '',
   labels = {},
   placeholders = {},
+  provinceFilter,
 }) => {
   const {
     provinces,
@@ -34,6 +34,12 @@ const AddressCascader = ({
     getDistrictsByProvince,
     getSubdistrictsByDistrict,
   } = useAddressStore();
+
+  // Provinces filtered by external predicate (e.g., region)
+  const provincesFiltered = useMemo(
+    () => (provinces || []).filter((p) => !provinceFilter || provinceFilter(p)),
+    [provinces, provinceFilter]
+  );
 
   const provinceCode = toStr(value?.provinceCode);
   const districtCode = toStr(value?.districtCode);
@@ -53,6 +59,12 @@ const AddressCascader = ({
   useEffect(() => {
     if (districtCode) void fetchSubdistrictsAction(districtCode);
   }, [districtCode, fetchSubdistrictsAction]);
+  // If current province falls outside of filter, reset the cascade
+  useEffect(() => {
+    if (!provinceCode) return;
+    const ok = (provincesFiltered || []).some((p) => String(p.code) === String(provinceCode));
+    if (!ok) onChange?.({ provinceCode: '', districtCode: '', subdistrictCode: '', postalCode: '' });
+  }, [provinceCode, provincesFiltered]);
 
   const districts = getDistrictsByProvince(provinceCode);
   const subdistricts = getSubdistrictsByDistrict(districtCode);
@@ -87,7 +99,7 @@ const AddressCascader = ({
           required={required}
         >
           <option value="">{placeholders.province || 'เลือกจังหวัด'}</option>
-          {provinces.map((p) => (
+          {provincesFiltered.map((p) => (
             <option key={p.code} value={p.code}>{p.nameTh}</option>
           ))}
         </select>
@@ -131,3 +143,5 @@ const AddressCascader = ({
 };
 
 export default AddressCascader;
+
+

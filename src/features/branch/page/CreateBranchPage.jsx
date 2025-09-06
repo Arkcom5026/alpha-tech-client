@@ -15,43 +15,34 @@ const CreateBranchPage = () => {
     name: "",
     address: "",
     phone: "",
+    // ใช้สำหรับควบคุม AddressForm ใน UI เท่านั้น (ฝั่ง BE ใช้แค่ subdistrictCode)
     provinceCode: "",
     districtCode: "",
     subdistrictCode: "",
     postalCode: "",
-    region: "",
-    latitude: "",
-    longitude: "",
     RBACEnabled: false,
   });
 
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
-
-  // ปัดทศนิยม lat/lng เป็นเลข 6 ตำแหน่งก่อนส่ง (invalid -> null)
-  const fix6 = (x) => (x === '' || x == null ? null : (Number.isFinite(Number(x)) ? Number(Number(x).toFixed(6)) : null));
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setErrorMessage("");
 
     try {
-      // ✅ Map payload ให้สอดคล้องกับ BE รุ่นใหม่ (ใช้ subdistrictCode + postalCode)
       const payload = {
         name: formData.name?.trim(),
         address: formData.address?.trim(),
         phone: formData.phone?.trim() || null,
         subdistrictCode: formData.subdistrictCode ? String(formData.subdistrictCode) : null,
-        postalCode: formData.postalCode ? String(formData.postalCode) : null,
-        latitude: fix6(formData.latitude),
-        longitude: fix6(formData.longitude),
         RBACEnabled: !!formData.RBACEnabled,
-        // หมายเหตุ: provinceCode/districtCode ใช้ภายใน UI สำหรับคำนวณและเลือก ADM
-        // ถ้า BE ต้องการเก็บเพิ่ม สามารถส่งไปด้วยได้ โดยเพิ่มสองบรรทัดด้านล่าง:
-        // provinceCode: formData.provinceCode || null,
-        // districtCode: formData.districtCode || null,
       };
+
+      if (!payload.name || !payload.address || !payload.subdistrictCode) {
+        setErrorMessage("กรุณากรอกข้อมูลให้ครบ: ชื่อสาขา, ที่อยู่ และ จังหวัด/อำเภอ/ตำบล");
+        return;
+      }
 
       await createBranchAction(payload);
       navigate("/pos/settings/branches?refresh=1");
@@ -69,8 +60,8 @@ const CreateBranchPage = () => {
         formData={formData}
         setFormData={setFormData}
         onSubmit={handleSubmit}
-        allowLocationDetect={true} // ✅ แสดงปุ่มใช้พิกัด
         submitLabel="บันทึกสาขาใหม่"
+        isEdit={false}
       />
       <ProcessingDialog open={loading} />
       {errorMessage && (
@@ -81,6 +72,8 @@ const CreateBranchPage = () => {
 };
 
 export default CreateBranchPage;
+
+
 
 
 

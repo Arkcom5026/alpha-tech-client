@@ -1,6 +1,8 @@
+
 // EditBranchPage.jsx (updated for new Address model)
 
 import React, { useEffect, useState } from "react";
+import { useAddressStore } from "@/features/address/store/addressStore";
 import { useParams, useNavigate } from "react-router-dom";
 import { useBranchStore } from "@/features/branch/store/branchStore";
 import BranchForm from "@/features/branch/components/BranchForm";
@@ -10,19 +12,18 @@ const EditBranchPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { getBranchByIdAction, updateBranchAction } = useBranchStore();
+  const { ensureProvincesAction } = useAddressStore();
 
   // ✅ ใช้ฟิลด์ตามมาตรฐานใหม่ของ Address
   const [formData, setFormData] = useState({
     name: "",
     address: "",
     phone: "",
+    // UI-only for AddressForm control; BE uses only subdistrictCode
     provinceCode: "",
     districtCode: "",
     subdistrictCode: "",
     postalCode: "",
-    region: "",
-    latitude: "",
-    longitude: "",
     RBACEnabled: false,
   });
 
@@ -40,20 +41,18 @@ const EditBranchPage = () => {
 
     const load = async () => {
       try {
+        // Ensure provinces are loaded before setting codes so dropdowns can bind correctly
+        await ensureProvincesAction();
         const branch = await getBranchByIdAction(numericId);
         if (branch) {
           setFormData({
             name: branch.name || "",
             address: branch.address || "",
             phone: branch.phone || "",
-            // ถ้ามี provinceCode/districtCode จาก BE จะถูกตั้งค่า; ถ้าไม่มีให้เป็นค่าว่าง (ผู้ใช้เลือกใหม่ได้)
-            provinceCode: branch.provinceCode || "",
-            districtCode: branch.districtCode || "",
-            subdistrictCode: branch.subdistrictCode || "",
-            postalCode: branch.postalCode || "",
-            region: branch.region || "",
-            latitude: branch.latitude !== null && branch.latitude !== undefined ? String(branch.latitude) : "",
-            longitude: branch.longitude !== null && branch.longitude !== undefined ? String(branch.longitude) : "",
+            provinceCode: (branch.provinceCode != null && branch.provinceCode !== "") ? String(branch.provinceCode) : "",
+            districtCode: (branch.districtCode != null && branch.districtCode !== "") ? String(branch.districtCode) : "",
+            subdistrictCode: (branch.subdistrictCode != null && branch.subdistrictCode !== "") ? String(branch.subdistrictCode) : "",
+            postalCode: (branch.postalCode != null && branch.postalCode !== "") ? String(branch.postalCode) : "",
             RBACEnabled: !!branch.RBACEnabled,
           });
         } else {
@@ -70,9 +69,6 @@ const EditBranchPage = () => {
     load();
   }, [id, getBranchByIdAction]);
 
-  // ปัดทศนิยม lat/lng เป็นเลข 6 ตำแหน่งก่อนส่ง (invalid -> null)
-  const fix6 = (x) => (x === '' || x == null ? null : (Number.isFinite(Number(x)) ? Number(Number(x).toFixed(6)) : null));
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
@@ -84,14 +80,15 @@ const EditBranchPage = () => {
         address: formData.address?.trim(),
         phone: formData.phone?.trim() || null,
         subdistrictCode: formData.subdistrictCode ? String(formData.subdistrictCode) : null,
-        postalCode: formData.postalCode ? String(formData.postalCode) : null,
-        latitude: fix6(formData.latitude),
-        longitude: fix6(formData.longitude),
         RBACEnabled: !!formData.RBACEnabled,
-        // ถ้า BE ต้องการเก็บ code ระดับบนเพิ่ม สามารถส่งไปด้วยได้:
-        // provinceCode: formData.provinceCode || null,
-        // districtCode: formData.districtCode || null,
       };
+
+      if (!payload.name || !payload.address || !payload.subdistrictCode) {
+        setErrorMessage("กรุณากรอกข้อมูลให้ครบ: ชื่อสาขา, ที่อยู่ และ จังหวัด/อำเภอ/ตำบล");
+        setSaving(false);
+        return;
+      }
+
 
       await updateBranchAction(Number(id), payload);
       navigate("/pos/settings/branches?refresh=1");
@@ -108,12 +105,11 @@ const EditBranchPage = () => {
   return (
     <div className="max-w-xl mx-auto p-4 space-y-4">
       <BranchForm
+        key={`edit-${id}-${formData.provinceCode}-${formData.districtCode}-${formData.subdistrictCode}`}
         formData={formData}
         setFormData={setFormData}
         onSubmit={handleSubmit}
         submitLabel="บันทึกการเปลี่ยนแปลง"
-        isEdit={true}
-        allowLocationDetect={true}
       />
       <ProcessingDialog open={saving} />
       {errorMessage && (
@@ -124,4 +120,7 @@ const EditBranchPage = () => {
 };
 
 export default EditBranchPage;
+
+
+
 

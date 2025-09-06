@@ -49,14 +49,17 @@ const ListBranchPage = () => {
             {branches.map((branch) => (
               <tr key={branch.id} className="border-t hover:bg-gray-50">
                 <td className="px-4 py-2 whitespace-nowrap">{branch.name}</td>
-                <td className="px-4 py-2 whitespace-pre-line text-sm text-gray-700">
+                <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-700">
                   <AddressDisplay
-                    addressString={branch.branchAddress}
+                    addressString={[branch.address, branch.fullAddress].filter(Boolean).join(' ')}
                     fallback={{
                       address: branch.address,
                       subdistrictName: branch.subdistrictName,
                       districtName: branch.districtName,
                       provinceName: branch.provinceName,
+                      subdistrictCode: branch.subdistrictCode,
+                      districtCode: branch.districtCode,
+                      provinceCode: branch.provinceCode,
                       postalCode: branch.postalCode,
                     }}
                   />
@@ -97,3 +100,8 @@ const ListBranchPage = () => {
 };
 
 export default ListBranchPage;
+
+
+
+
+

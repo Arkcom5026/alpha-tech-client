@@ -1,3 +1,5 @@
+
+
 import apiClient from '@/utils/apiClient';
 
 // ค้นหาลูกค้าด้วยเบอร์โทร
@@ -25,7 +27,7 @@ export const createCustomer = async (data) => {
 // ✅ อัปเดตข้อมูลลูกค้า (Online)
 export const updateCustomerProfileOnline = async (data) => {
   try {
-    const res = await apiClient.patch('/customers/me-online', data);
+    const res = await apiClient.put('/customers/me', data);
     return res.data;
   } catch (error) {
     console.error('❌ [updateCustomerProfileOnline] error:', error);
@@ -34,9 +36,9 @@ export const updateCustomerProfileOnline = async (data) => {
 };
 
 // ✅ อัปเดตข้อมูลลูกค้า (POS)
-export const updateCustomerProfilePos = async (data) => {
+export const updateCustomerProfilePos = async (id, data) => {
   try {
-    const res = await apiClient.patch('/customers/me-pos', data);
+    const res = await apiClient.put(`/customers/${id}`, data);
     return res.data;
   } catch (error) {
     console.error('❌ [updateCustomerProfilePos] error:', error);
@@ -78,3 +80,5 @@ export const getCustomerByName = async (keyword) => {
     throw error;
   }
 };
+
+

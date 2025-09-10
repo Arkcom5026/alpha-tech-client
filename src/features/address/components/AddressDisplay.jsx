@@ -1,4 +1,7 @@
 
+
+
+
 // =============================================================
 // File: src/features/address/components/AddressDisplay.jsx
 // Desc: Compact read-only address renderer
@@ -21,3 +24,7 @@ const AddressDisplay = ({ addressString = '', fallback }) => {
 };
 
 export default AddressDisplay;
+
+
+
+

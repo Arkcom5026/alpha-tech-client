@@ -26,11 +26,13 @@ const initialState = {
     provinces: false,
     districts: false,
     subdistricts: false,
+    resolving: false,
   },
   error: {
     provinces: '',
     districts: '',
     subdistricts: '',
+    resolving: '',
   },
 };
 
@@ -132,8 +134,66 @@ export const useAddressStore = create((set, get) => ({
   },
   setPostalCode: (postalCode) => set((s) => ({ selected: { ...s.selected, postalCode: String(postalCode || '') } })),
 
+  // --- Resolver (preload by subdistrictCode) -------------------
+  resolveBySubdistrictCodeAction: async (subdistrictCode) => {
+    const code = String(subdistrictCode || '');
+    if (!code) return null;
+
+    // mark loading
+    set((s) => ({ loading: { ...s.loading, resolving: true }, error: { ...s.error, resolving: '' } }));
+
+    try {
+      // 1) call backend resolver
+      const res = await fetch(`/api/address/resolve?subdistrictCode=${encodeURIComponent(code)}`, {
+        headers: { Accept: 'application/json' },
+      });
+      const info = await res.json();
+      if (!res.ok) throw new Error(info?.message || 'resolve failed');
+
+      const pCode = String(info?.provinceCode || '');
+      const dCode = String(info?.districtCode || '');
+      const sCode = String(info?.subdistrictCode || code);
+
+      // 2) ensure province list exists
+      await get().ensureProvincesAction();
+
+      // 3) load districts for province and set selection
+      if (pCode) {
+        await get().fetchDistrictsAction(pCode);
+        get().setSelectedProvince(pCode);
+      }
+
+      // 4) load subdistricts for district and set selection
+      if (dCode) {
+        await get().fetchSubdistrictsAction(dCode);
+        get().setSelectedDistrict(dCode);
+      }
+
+      // 5) set subdistrict & postal (prefer resolver value, fallback to list cache)
+      const list = get().getSubdistrictsByDistrict(dCode);
+      const found = list.find((x) => String(x.code) === sCode);
+      const postal = String(info?.postalCode || found?.postcode || '');
+      get().setSelectedSubdistrict(sCode);
+      if (postal) get().setPostalCode(postal);
+
+      return {
+        provinceCode: pCode,
+        districtCode: dCode,
+        subdistrictCode: sCode,
+        postalCode: postal,
+      };
+    } catch (err) {
+      console.error('[addressStore.resolveBySubdistrictCodeAction] error', err);
+      set((s) => ({ error: { ...s.error, resolving: 'ไม่สามารถเติมที่อยู่อัตโนมัติได้' } }));
+      return null;
+    } finally {
+      set((s) => ({ loading: { ...s.loading, resolving: false } }));
+    }
+  },
+
   // --- Reset ---------------------------------------------------
   resetAll: () => set(() => ({ ...initialState, provinces: get().provinces })),
 }));
+
 
 

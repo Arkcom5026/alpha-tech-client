@@ -1,3 +1,4 @@
+// customerStore.js
 
 import { create } from 'zustand';
 import {
@@ -84,10 +85,12 @@ const useCustomerStore = create((set) => ({
   },
 
   // ✏️ Update (POS)
-  updateCustomerProfilePosAction: async (data) => {
+  updateCustomerProfilePosAction: async (id, data) => {
     set({ isLoading: true, error: null });
     try {
-      const updatedCustomer = await updateCustomerProfilePosApi(data);
+      const safeId = Number(id);
+      if (!Number.isFinite(safeId)) throw new Error('INVALID_CUSTOMER_ID');
+      const updatedCustomer = await updateCustomerProfilePosApi(safeId, data);
       set({ customer: updatedCustomer });
       return updatedCustomer;
     } catch (err) {
@@ -132,13 +135,16 @@ const useCustomerStore = create((set) => ({
   setCustomer: (customer) => set({ customer }),
   resetCustomer: () => set({ customer: null, error: null }),
 
-  // 🔁 Backward-compatible aliases (ถ้าคอมโพเนนต์เดิมยังเรียกชื่อเก่าอยู่)
+  // 🔁 Backward-compatible aliases
   createCustomerAction: async (data) => {
     return await useCustomerStore.getState().createCustomer(data);
   },
   updateCustomerProfileAction: async (data, mode = 'online') => {
     if (mode === 'pos') {
-      return await useCustomerStore.getState().updateCustomerProfilePosAction(data);
+      const { id, ...payload } = data || {};
+      const safeId = Number(id);
+      if (!Number.isFinite(safeId)) throw new Error('INVALID_CUSTOMER_ID');
+      return await useCustomerStore.getState().updateCustomerProfilePosAction(safeId, payload);
     }
     return await useCustomerStore.getState().updateCustomerProfileOnlineAction(data);
   },

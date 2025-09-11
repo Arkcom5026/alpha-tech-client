@@ -61,7 +61,8 @@ export const cancelPayment = async (paymentId, note = '') => {
 export const searchPrintablePayments = async (query = {}) => {
   try {
     const res = await apiClient.get('/payments/printable', { params: query });
-    if (process.env.NODE_ENV === 'development') {
+    // ใช้ตัวแปรสภาพแวดล้อมแบบ Vite/มาตรฐานสมัยใหม่ แทนการอ้างอิง process ในฝั่ง FE
+    if (import.meta && import.meta.env && import.meta.env.DEV) {
       console.log('searchPrintablePayments : ', res);
     }
     return res.data;
@@ -70,3 +71,8 @@ export const searchPrintablePayments = async (query = {}) => {
     throw err.response?.data || { message: 'ไม่สามารถค้นหารายการพิมพ์บิลได้' };
   }
 };
+
+
+
+
+

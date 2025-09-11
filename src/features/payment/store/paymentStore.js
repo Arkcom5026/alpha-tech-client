@@ -1,13 +1,9 @@
 
+// 📁 FILE: features/payment/store/paymentStore.js
+
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
-import { submitPayment, submitPayments, cancelPayment, searchPrintablePayments } from '../api/paymentApi';
-import useSalesStore from '@/features/sales/store/salesStore';
-
-
-import useEmployeeStore from '@/features/employee/store/employeeStore';
-import { useBranchStore } from '@/features/branch/store/branchStore';
-
+import { submitPayments,  searchPrintablePayments } from '../api/paymentApi';
 
 const usePaymentStore = create(devtools((set, get) => ({
   paymentData: {
@@ -79,24 +75,27 @@ const usePaymentStore = create(devtools((set, get) => ({
 
   submitPaymentAction: async (saleId) => {
     const { paymentData } = get();
-    const { employee } = useEmployeeStore.getState();
-    const { branch } = useBranchStore.getState();
-
     try {
       set({ isSubmitting: true, error: null });
 
-      const payload = {
-        saleId,
+      // ใช้เส้นทางเดียวกับ multi เพื่อให้ BE เข้าชุดเดียว (createPayments)
+      const receivedAtISO = `${paymentData.receivedAt}T00:00:00+07:00`;
+      const paymentItems = [{
         paymentMethod: paymentData.paymentMethod,
         amount: parseFloat(paymentData.amount),
         note: paymentData.note || '',
-        receivedAt: new Date(paymentData.receivedAt),
-        employeeProfileId: employee?.id,
-        branchId: branch?.id,
-      };
+      }];
 
-      await submitPayment(payload);
+      await submitPayments({
+        saleId: Number(saleId),
+        note: paymentData.note || '',
+        receivedAt: receivedAtISO,
+        paymentItems,
+      });
+
       set({ isSubmitting: false });
+      get().resetPaymentForm();
+      return true;
     } catch (err) {
       console.error('❌ Payment Error:', err);
       set({ isSubmitting: false, error: 'ไม่สามารถบันทึกการชำระเงินได้' });
@@ -106,15 +105,10 @@ const usePaymentStore = create(devtools((set, get) => ({
   submitMultiPaymentAction: async ({ saleId, paymentList, note }) => {
     try {
       set({ isSubmitting: true, error: null });
-
       const filteredPayments = paymentList.filter(
         (p) => !isNaN(Number(p.amount)) && Number(p.amount) > 0
       );
-
-      console.log('📦 paymentList ที่ถูกกรองแล้ว:', filteredPayments);
-
       if (!filteredPayments.length) {
-        console.warn('⚠️ ไม่มีรายการชำระเงินที่มีจำนวนเงินที่มากกว่า 0');
         set({ isSubmitting: false });
         return;
       }
@@ -131,16 +125,20 @@ const usePaymentStore = create(devtools((set, get) => ({
           : {}),
       }));
 
+      // header-level receivedAt เพื่อให้บันทึกวันรับเงินตรงกับ UI
+      const { paymentData } = get();
+      const receivedAtISO = `${paymentData.receivedAt}T00:00:00+07:00`;
+
       const payload = {
         saleId: Number(saleId),
         note: note || '',
+        receivedAt: receivedAtISO,
         paymentItems,
       };
 
-      console.log('📤 ส่ง payload ไป createPayments:', payload);
-
       await submitPayments(payload);
       set({ isSubmitting: false });
+      get().resetPaymentForm();
       return true;
     } catch (err) {
       console.error('❌ MultiPayment Error:', err);
@@ -148,15 +146,22 @@ const usePaymentStore = create(devtools((set, get) => ({
     }
   },
 
-  loadPrintablePaymentsAction: async () => {
+  loadPrintablePaymentsAction: async (params = {}) => {
     try {
-      const data = await searchPrintablePayments();
+      const data = await searchPrintablePayments({
+        fromDate: params.fromDate,
+        toDate: params.toDate,
+        keyword: params.keyword || '',
+        limit: params.limit || 100,
+        _ts: Date.now(),
+      });
       set({ printablePayments: data });
     } catch (err) {
       console.error('❌ โหลด printablePayments ล้มเหลว:', err);
     }
   },
-  
 })))
 
 export default usePaymentStore;
+
+

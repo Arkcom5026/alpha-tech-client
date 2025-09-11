@@ -1,33 +1,71 @@
-// BillPrintOptions.jsx (New Component)
-import React from 'react';
+// BillPrintOptions.jsx (Refined)
+import React, { useEffect, useMemo } from 'react';
+import PropTypes from 'prop-types';
 
-const BillPrintOptions = ({ saleOption, setSaleOption, hideNoneOption = false }) => {
+export const PRINT_OPTION = {
+  NONE: 'NONE',
+  RECEIPT: 'RECEIPT',
+  TAX_INVOICE: 'TAX_INVOICE',
+  DELIVERY_NOTE: 'DELIVERY_NOTE',
+};
+
+export const SALE_MODE = {
+  CASH: 'CASH',
+  CREDIT: 'CREDIT',
+};
+
+const BillPrintOptions = ({ saleOption, setSaleOption, hideNoneOption = false, currentSaleMode = SALE_MODE.CASH }) => {
+  const isCredit = currentSaleMode === SALE_MODE.CREDIT;
+
+  // สร้างชุดตัวเลือกตามโหมดการขาย
+  const options = useMemo(() => {
+    const base = [
+      ...(hideNoneOption ? [] : [{ value: PRINT_OPTION.NONE, label: 'ไม่พิมพ์บิล', disabled: false }]),
+      { value: PRINT_OPTION.RECEIPT, label: 'ใบกำกับภาษีอย่างย่อ', disabled: isCredit },
+      { value: PRINT_OPTION.TAX_INVOICE, label: 'ใบกำกับภาษีเต็มรูป', disabled: isCredit },
+      { value: PRINT_OPTION.DELIVERY_NOTE, label: 'ใบส่งของ', disabled: false },
+    ];
+    return base;
+  }, [hideNoneOption, isCredit]);
+
+  // ถ้าโหมดเครดิตและค่าปัจจุบันไม่ถูกต้อง → บังคับเป็นใบส่งของ
+  useEffect(() => {
+    if (isCredit && (saleOption === PRINT_OPTION.RECEIPT || saleOption === PRINT_OPTION.TAX_INVOICE)) {
+      setSaleOption(PRINT_OPTION.DELIVERY_NOTE);
+    }
+  }, [isCredit, saleOption, setSaleOption]);
+
+  const handleChange = (e) => {
+    const next = e.target.value;
+    const opt = options.find((o) => o.value === next);
+    if (opt && !opt.disabled) setSaleOption(next);
+  };
+
   return (
-
-    <div className="space-y-3 pl-3 text-base text-gray-700">
-
-      {!hideNoneOption && (
-        <label className="flex items-center">
-          <input type="radio" value="NONE" checked={saleOption === 'NONE'} onChange={(e) => setSaleOption(e.target.value)} className="form-radio text-blue-600 mr-2 w-4 h-4" />
-          ไม่พิมพ์บิล
+    <fieldset className="space-y-3 pl-3 text-base text-gray-700">
+      {options.map((o) => (
+        <label key={o.value} className={`flex items-center ${o.disabled ? 'opacity-50 cursor-not-allowed' : ''}`}>
+          <input
+            type="radio"
+            value={o.value}
+            checked={saleOption === o.value}
+            onChange={handleChange}
+            className="form-radio text-blue-600 mr-2 w-4 h-4"
+            disabled={o.disabled}
+          />
+          {o.label}
         </label>
-      )}
-      <div className='flex justify-between'>
-        <label className="flex items-center">
-          <input type="radio" value="RECEIPT" checked={saleOption === 'RECEIPT'} onChange={(e) => setSaleOption(e.target.value)} className="form-radio text-blue-600 mr-2 w-4 h-4" />
-          ใบกำกับภาษีอย่างย่อ
-        </label>
-       
-        <label className="flex items-center pl-3">
-          <input type="radio" value="TAX_INVOICE" checked={saleOption === 'TAX_INVOICE'} onChange={(e) => setSaleOption(e.target.value)} className="form-radio text-blue-600 mr-2  w-4 h-4" />
-          ใบกำกับภาษีเต็มรูป
-        </label>
-      </div>
-
-    </div>
-
-
+      ))}
+    </fieldset>
   );
 };
 
+BillPrintOptions.propTypes = {
+  saleOption: PropTypes.oneOf(Object.values(PRINT_OPTION)).isRequired,
+  setSaleOption: PropTypes.func.isRequired,
+  hideNoneOption: PropTypes.bool,
+  currentSaleMode: PropTypes.oneOf(Object.values(SALE_MODE)),
+};
+
 export default BillPrintOptions;
+

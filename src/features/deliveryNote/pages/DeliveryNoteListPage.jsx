@@ -1,5 +1,5 @@
 import useSalesStore from '@/features/sales/store/salesStore';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 const DeliveryNoteListPage = () => {

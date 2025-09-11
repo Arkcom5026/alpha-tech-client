@@ -1,3 +1,5 @@
+
+
 // PaymentSection component (Refactored to use sub-components)
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import useSalesStore from '@/features/sales/store/salesStore';
@@ -15,8 +17,7 @@ const PaymentSection = ({
   isSubmitting,
   setIsSubmitting,
   onSaleConfirmed,
-  setClearPhoneTrigger,
-  onSaleModeChange,
+  setClearPhoneTrigger, 
 }) => {
   const navigate = useNavigate();
 
@@ -39,20 +40,21 @@ const PaymentSection = ({
     selectedDeposit,
     depositUsed,
     setDepositUsed,
-    applyDepositUsageAction,
     clearCustomerAndDeposit,
   } = useCustomerDepositStore();
 
-  const [saleOption, setSaleOption] = useState('NONE');
   const [paymentError, setPaymentError] = useState('');
+  const [saleOption, setSaleOption] = useState('NONE');
   const [currentSaleMode, setCurrentSaleMode] = useState('CASH');
-
-  // 🔄 Sync sale mode to parent when toggled here
-  useEffect(() => {
-    if (typeof onSaleModeChange === 'function') {
-      onSaleModeChange(currentSaleMode);
+  // Guard switching to CREDIT when outstanding > 0 and no customer selected
+  const handleSetCurrentSaleMode = (nextMode) => {
+    const outstanding = Math.max(0, (Number(calc?.totalToPay) || 0) - (Number(calc?.grandTotalPaid) || 0));
+    if (nextMode === 'CREDIT' && outstanding > 0 && !hasValidCustomerId) {
+      alert('การขายแบบเครดิตต้องเลือกชื่อลูกค้าก่อน (มียอดค้างชำระ)');
+      return;
     }
-  }, [currentSaleMode, onSaleModeChange]);
+    setCurrentSaleMode(nextMode);
+  };
 
   const effectiveCustomer = selectedCustomer || { id: null, name: 'ลูกค้าทั่วไป' };
   const validSaleItems = Array.isArray(saleItems) ? saleItems : [];
@@ -125,14 +127,9 @@ const PaymentSection = ({
 
     try {
       setIsSubmitting(true);
-      const confirmedSale = await confirmSaleOrderAction();
+      const confirmedSale = await confirmSaleOrderAction(currentSaleMode);
       if (confirmedSale?.id) {
         const updatedPayments = [...paymentList];
-
-        if (safeDepositUsed > 0 && selectedDeposit?.id) {
-          updatedPayments.push({ method: 'DEPOSIT', amount: safeDepositUsed, customerDepositId: selectedDeposit.id });
-        }
-
         if (currentSaleMode === 'CASH') {
           const validPayments = updatedPayments.filter(p => parseFloat(p.amount) > 0);
           if (validPayments.length === 0 && safeDepositUsed === 0) {
@@ -141,19 +138,20 @@ const PaymentSection = ({
           }
         }
 
-        await submitMultiPaymentAction({
-          saleId: confirmedSale.id,
-          netPaid: calc.grandTotalPaid,
-          paymentList: updatedPayments,
-        });
-
+        // Include deposit as a payment item so BE consumes it atomically in the same transaction
         if (safeDepositUsed > 0 && selectedDeposit?.id) {
-          await applyDepositUsageAction({
-            depositId: selectedDeposit.id,
-            amountUsed: safeDepositUsed,
-            saleId: confirmedSale.id,
+          updatedPayments.push({
+            method: 'DEPOSIT',
+            amount: safeDepositUsed,
+            customerDepositId: selectedDeposit.id,
+            note: 'ใช้มัดจำ',
           });
         }
+
+        await submitMultiPaymentAction({
+          saleId: confirmedSale.id,
+          paymentList: updatedPayments,
+        });
 
         if (saleOption === 'RECEIPT') {
           navigate('/pos/sales/bill/print-short/' + confirmedSale.id, { state: { payment: updatedPayments } });
@@ -166,7 +164,7 @@ const PaymentSection = ({
         if (typeof onSaleConfirmed === 'function') {
           onSaleConfirmed();
         }
-      } else {
+        } else {
         setPaymentError('❌ ไม่พบ ID ของรายการขายหลังจากยืนยัน');
       }
     } catch (err) {
@@ -188,7 +186,7 @@ const PaymentSection = ({
       clearCustomerAndDeposit();
       setCustomerIdAction(null);
       setClearPhoneTrigger?.(Date.now());
-      onSaleModeChange('CASH');
+      setCurrentSaleMode('CASH');
     }
   }, [
     hasValidCustomerId,
@@ -200,9 +198,7 @@ const PaymentSection = ({
     confirmSaleOrderAction,
     paymentList,
     selectedDeposit?.id,
-    submitMultiPaymentAction,
-    applyDepositUsageAction,
-    saleOption,
+    submitMultiPaymentAction, saleOption,
     navigate,
     onSaleConfirmed,
     setDepositUsed,
@@ -214,7 +210,6 @@ const PaymentSection = ({
     setClearPhoneTrigger,
     setIsSubmitting,
     currentSaleMode,
-    onSaleModeChange,
     calc
   ]);
 
@@ -265,7 +260,8 @@ const PaymentSection = ({
           saleOption={saleOption}
           setSaleOption={setSaleOption}
           currentSaleMode={currentSaleMode}
-          setCurrentSaleMode={setCurrentSaleMode}
+          setCurrentSaleMode={handleSetCurrentSaleMode}
+          hasValidCustomerId={hasValidCustomerId}
         />
       </div>
     </div>
@@ -273,3 +269,7 @@ const PaymentSection = ({
 };
 
 export default PaymentSection;
+
+
+
+

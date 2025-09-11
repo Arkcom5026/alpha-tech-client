@@ -147,12 +147,13 @@ const PrintBillListPage = () => {
                           ? `/pos/sales/bill/print-short/${p.saleId}`
                           : `/pos/sales/bill/print-full/${p.saleId}`;
                       navigate(path, { state: { payment: {
+                        paymentId: p.id,
                         sale: p.sale,
-                        payments: p.sale?.payments || [],
+                        items: p.items || [],
                         amount: p.amount,
-                        paymentMethod: p.paymentMethod,
+                        paymentMethods: Array.isArray(p.items) ? [...new Set(p.items.map((i) => i.paymentMethod).filter(Boolean))] : [],
                         receivedAt: p.receivedAt,
-                        note: p.sale?.note || '',
+                        note: p.note || p.sale?.note || '',
                       } } });
                     }}
                     className="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700"
@@ -174,3 +175,4 @@ const PrintBillListPage = () => {
 };
 
 export default PrintBillListPage;
+

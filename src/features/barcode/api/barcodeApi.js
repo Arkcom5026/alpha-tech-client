@@ -1,17 +1,18 @@
 // src/features/barcode/api/barcodeApi.js
 // ES Module API client for barcode & receipt operations
 // All requests go through utils/apiClient (axios instance)
-// Return shapes are normalized when needed
 
 import apiClient from '@/utils/apiClient';
 
 // ---------------------------------------------
 // Generate barcodes that are missing for a receipt
 // ---------------------------------------------
-export const generateMissingBarcodes = async (receiptId) => {
+export const generateMissingBarcodes = async (receiptId, options = {}) => {
   if (!receiptId) throw new Error('Missing receiptId');
+  const { dryRun = false, lotLabelPerLot = 1 } = options || {};
   try {
-    const res = await apiClient.post(`/barcodes/generate-missing/${receiptId}`);    
+    const payload = { dryRun: !!dryRun, lotLabelPerLot: Number(lotLabelPerLot) || 1 };
+    const res = await apiClient.post(`/barcodes/generate-missing/${receiptId}`, payload);
     return res.data;
   } catch (err) {
     console.error('❌ generateMissingBarcodes error:', err);
@@ -20,12 +21,16 @@ export const generateMissingBarcodes = async (receiptId) => {
 };
 
 // ---------------------------------------------
-// Fetch all barcodes for a given receipt
+// Fetch barcodes for a receipt (with optional filters)
+// opts: { kind?: 'SN'|'LOT', onlyUnscanned?: boolean }
 // ---------------------------------------------
-export const getBarcodesByReceiptId = async (receiptId) => {
+export const getBarcodesByReceiptId = async (receiptId, opts = {}) => {
   if (!receiptId) throw new Error('Missing receiptId');
   try {
-    const res = await apiClient.get(`/barcodes/by-receipt/${receiptId}`);
+    const params = {};
+    if (opts.kind) params.kind = String(opts.kind).toUpperCase();
+    if (opts.onlyUnscanned) params.onlyUnscanned = 1;
+    const res = await apiClient.get(`/barcodes/by-receipt/${receiptId}`, { params });
     return res.data;
   } catch (err) {
     console.error('❌ getBarcodesByReceiptId error:', err);
@@ -34,14 +39,68 @@ export const getBarcodesByReceiptId = async (receiptId) => {
 };
 
 // ---------------------------------------------
-// Get receipts that already have barcodes
+// Audit a receipt's barcode health (read-only)
+// ---------------------------------------------
+export const auditReceiptBarcodes = async (receiptId, { includeDetails = true } = {}) => {
+  if (!receiptId) throw new Error('Missing receiptId');
+  try {
+    const res = await apiClient.get(`/barcodes/receipt/${receiptId}/audit`, {
+      params: { includeDetails: includeDetails ? 1 : 0 },
+    });
+    return res.data;
+  } catch (err) {
+    console.error('❌ auditReceiptBarcodes error:', err);
+    throw err;
+  }
+};
+
+// ---------------------------------------------
+// Get receipts that already have barcodes (รอพิมพ์บาร์โค้ด)
 // ---------------------------------------------
 export const getReceiptsWithBarcodes = async () => {
   try {
-    const res = await apiClient.get('/barcodes/with-barcodes');
+    const res = await apiClient.get('/barcodes/receipts-with-barcodes');
     return res.data;
   } catch (err) {
+    if (err && err.response && err.response.status === 404) {
+      const res2 = await apiClient.get('/barcodes/with-barcodes');
+      return res2.data;
+    }
     console.error('❌ getReceiptsWithBarcodes error:', err);
+    throw err;
+  }
+};
+
+// ---------------------------------------------
+// Get receipts that are ready to scan SN (มี SN และยังมี SN ค้างยิง)
+// ---------------------------------------------
+export const getReceiptsReadyToScanSN = async () => {
+  try {
+    const res = await apiClient.get('/barcodes/receipts-ready-to-scan-sn');
+    return res.data;
+  } catch (err) {
+    if (err && err.response && err.response.status === 404) {
+      const res2 = await apiClient.get('/barcodes/ready-to-scan-sn');
+      return res2.data;
+    }
+    console.error('❌ getReceiptsReadyToScanSN error:', err);
+    throw err;
+  }
+};
+
+// ---------------------------------------------
+// Get receipts that are ready to scan/activate (รวม SN & LOT)
+// ---------------------------------------------
+export const getReceiptsReadyToScan = async () => {
+  try {
+    const res = await apiClient.get('/barcodes/receipts-ready-to-scan');
+    return res.data;
+  } catch (err) {
+    if (err && err.response && err.response.status === 404) {
+      const res2 = await apiClient.get('/barcodes/ready-to-scan');
+      return res2.data;
+    }
+    console.error('❌ getReceiptsReadyToScan error:', err);
     throw err;
   }
 };
@@ -81,7 +140,7 @@ export const updateSerialNumber = async (barcode, serialNumber) => {
 export const markBarcodesAsPrinted = async (purchaseOrderReceiptId) => {
   if (!purchaseOrderReceiptId) throw new Error('Missing purchaseOrderReceiptId');
   try {
-    const res = await apiClient.patch(`/barcodes/mark-printed`, { purchaseOrderReceiptId });
+    const res = await apiClient.patch('/barcodes/mark-printed', { purchaseOrderReceiptId });
     return res.data;
   } catch (err) {
     console.error('❌ markBarcodesAsPrinted error:', err);
@@ -107,12 +166,18 @@ export const reprintBarcodes = async (receiptId) => {
 // Search receipts for reprint flow (server-side search every time)
 // params: { mode: 'RC' | 'PO', query: string, printed?: boolean }
 // ---------------------------------------------
-export const searchReprintReceipts = async ({ mode = 'RC', query, printed = true } = {}) => {
-  const q = String(query ?? '').trim();
+export const searchReprintReceipts = async (opts = {}) => {
+  const { mode = 'RC', query, printed = true } = opts;
+  const q = String(query || '').trim();
   if (!q) return [];
   try {
-    const res = await apiClient.get('/barcodes/reprint-search', { params: { mode, query: q, printed } });
-    return Array.isArray(res.data) ? res.data : res.data?.data ?? [];
+    const res = await apiClient.get('/barcodes/reprint-search', {
+      params: { mode, query: q, printed },
+    });
+    const data = res && res.data;
+    if (Array.isArray(data)) return data;
+    if (data && Array.isArray(data.data)) return data.data;
+    return [];
   } catch (err) {
     console.error('❌ searchReprintReceipts error:', err);
     throw err;
@@ -143,7 +208,7 @@ export const commitScans = async (receiptId, items) => {
   const payload = Array.isArray(items) ? items : [];
   try {
     const res = await apiClient.post(`/receipts/${receiptId}/commit-scans`, { items: payload });
-    const data = res?.data ?? {};
+    const data = (res && res.data) || {};
     return {
       ok: !!data.ok,
       committed: Array.isArray(data.committed) ? data.committed : [],
@@ -152,7 +217,7 @@ export const commitScans = async (receiptId, items) => {
     };
   } catch (err) {
     console.error('❌ commitScans error:', err);
-    if (err?.response?.data) {
+    if (err && err.response && err.response.data) {
       const d = err.response.data;
       return {
         ok: !!d.ok,

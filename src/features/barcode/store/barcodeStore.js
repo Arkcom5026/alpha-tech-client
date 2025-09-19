@@ -1,14 +1,19 @@
+
+
+
 // src/features/barcode/store/barcodeStore.js
-import apiClient from '@/utils/apiClient';
 import { create } from 'zustand';
+import apiClient from '@/utils/apiClient';
 import {
   getBarcodesByReceiptId,
   generateMissingBarcodes,
   reprintBarcodes,
   getReceiptsWithBarcodes,
+  getReceiptsReadyToScan,
+  getReceiptsReadyToScanSN,
   receiveStockItem,
   updateSerialNumber,
-  markBarcodesAsPrinted,  
+  markBarcodesAsPrinted,
 } from '../api/barcodeApi';
 
 
@@ -16,11 +21,19 @@ import {
 const normalizeBarcodeItem = (b) => {
   const stockItemId = b?.stockItem?.id ?? b?.stockItemId ?? null;
   const serialNumber = b?.stockItem?.serialNumber ?? b?.serialNumber ?? null;
+  const kind = b?.kind ?? (stockItemId ? 'SN' : (b?.simpleLotId ? 'LOT' : undefined));
+  const qtyLabelsSuggested = Number(b?.qtyLabelsSuggested ?? (kind === 'LOT' ? 1 : 1));
+  const productName = b?.productName ?? b?.product?.name ?? b?.stockItem?.product?.name ?? undefined;
+  const productSpec = b?.productSpec ?? b?.product?.spec ?? b?.stockItem?.product?.spec ?? undefined;
   return {
     ...b,
     id: b?.id ?? null,
     barcode: b?.barcode,
     printed: Boolean(b?.printed),
+    kind,
+    qtyLabelsSuggested,
+    productName,
+    productSpec,
     stockItemId,
     serialNumber,
     stockItem: b?.stockItem
@@ -41,6 +54,18 @@ const normalizeBarcodeItem = (b) => {
 };
 
 const useBarcodeStore = create((set, get) => ({
+  // Convenience getter for printing: duplicates LOT labels using qtyLabelsSuggested
+  getExpandedBarcodesForPrint: (useSuggested = true) => {
+    const state = get();
+    const src = Array.isArray(state.barcodes) ? state.barcodes : [];
+    const out = [];
+    for (const b of src) {
+      const n = useSuggested && b?.kind === 'LOT' ? Math.max(1, Number(b.qtyLabelsSuggested || 1)) : 1;
+      for (let i = 0; i < n; i++) out.push({ ...b, _dupIdx: i });
+    }
+    return out;
+  },
+
   barcodes: [],
   scannedList: [],
   receipts: [],
@@ -119,6 +144,54 @@ const useBarcodeStore = create((set, get) => ({
     } catch (err) {
       console.error('[loadReceiptsWithBarcodesAction]', err);
       set({ error: err.message || 'โหลดใบตรวจรับล้มเหลว', loading: false });
+    }
+  },
+
+  // ✅ โหลดใบที่พร้อมยิง SN (เฉพาะ SN ค้างยิง)
+  loadReceiptsReadyToScanSNAction: async () => {
+    set({ loading: true, error: null });
+    try {
+      const rows = await getReceiptsReadyToScanSN();
+      set({ receipts: Array.isArray(rows) ? rows : [], loading: false });
+    } catch (err) {
+      console.error('[loadReceiptsReadyToScanSNAction]', err);
+      set({ error: err?.message || 'โหลดใบที่พร้อมยิง SN ล้มเหลว', loading: false });
+    }
+  },
+
+  // ✅ โหลดใบที่พร้อมยิง/เปิดล็อต (รวม SN & LOT)
+  loadReceiptsReadyToScanAction: async () => {
+    set({ loading: true, error: null });
+    try {
+      const rows = await getReceiptsReadyToScan();
+      set({ receipts: Array.isArray(rows) ? rows : [], loading: false });
+    } catch (err) {
+      console.error('[loadReceiptsReadyToScanAction]', err);
+      set({ error: err?.message || 'โหลดใบที่พร้อมยิง/เปิดล็อตล้มเหลว', loading: false });
+    }
+  },
+
+  // ✅ โหลดเฉพาะ SN ที่ยังไม่ยิงของใบนี้
+  loadUnscannedSNByReceiptAction: async (receiptId) => {
+    set({ loading: true, error: null });
+    try {
+      const data = await getBarcodesByReceiptId(receiptId, { kind: 'SN', onlyUnscanned: true });
+      set({ barcodes: (data?.barcodes || []).map(normalizeBarcodeItem), loading: false });
+    } catch (err) {
+      console.error('[loadUnscannedSNByReceiptAction]', err);
+      set({ error: err?.message || 'โหลด SN ที่ค้างยิงล้มเหลว', loading: false });
+    }
+  },
+
+  // ✅ โหลดเฉพาะ LOT ที่ยังไม่ ACTIVATE ของใบนี้
+  loadUnactivatedLOTByReceiptAction: async (receiptId) => {
+    set({ loading: true, error: null });
+    try {
+      const data = await getBarcodesByReceiptId(receiptId, { kind: 'LOT', onlyUnactivated: true });
+      set({ barcodes: (data?.barcodes || []).map(normalizeBarcodeItem), loading: false });
+    } catch (err) {
+      console.error('[loadUnactivatedLOTByReceiptAction]', err);
+      set({ error: err?.message || 'โหลด LOT ที่ยังไม่เปิดล็อตล้มเหลว', loading: false });
     }
   },
 
@@ -234,6 +307,4 @@ const useBarcodeStore = create((set, get) => ({
 }));
 
 export default useBarcodeStore;
-
-
 

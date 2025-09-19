@@ -1,9 +1,7 @@
-// ✅ ScanBarcodeListPage.jsx — ปรับเงื่อนไขการนับ scanned/pending ให้ตรงกับ API (stockItemObj)
 import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 
 import PendingBarcodeTable from '../components/PendingBarcodeTable';
-import InStockBarcodeTable from '../components/InStockBarcodeTable';
 import useBarcodeStore from '@/features/barcode/store/barcodeStore';
 import { finalizeReceiptIfNeeded } from '@/features/purchaseOrderReceipt/api/purchaseOrderReceiptApi';
 
@@ -60,11 +58,18 @@ const ScanBarcodeListPage = () => {
     oscillator.stop(audioCtx.currentTime + 0.12);
   };
 
-  // ✅ รองรับทั้ง stockItemId และ stockItem object
-  const isScanned = (b) => b?.stockItemId != null || b?.stockItem?.id != null;
+  // ✅ นับสถานะสแกนให้ครอบคลุมทั้ง SN & LOT
+  // SN: ถือว่าสแกนแล้วถ้ามี stockItemId หรือ stockItem.id
+  // LOT: ถือว่าสแกนแล้วถ้า status === 'SN_RECEIVED' (ตาม Prisma enum)
+  const isScanned = (b) => {
+    const snScanned = b?.stockItemId != null || b?.stockItem?.id != null;
+    const isLot = b?.kind === 'LOT' || b?.simpleLotId != null;
+    const lotActivated = isLot && String(b?.status || '').toUpperCase() === 'SN_RECEIVED';
+    return snScanned || lotActivated;
+  };
 
   const scannedList = useMemo(() => barcodes.filter(isScanned), [barcodes]);
-    const pendingList = useMemo(() => barcodes.filter((b) => !isScanned(b)), [barcodes]);
+  const pendingList = useMemo(() => barcodes.filter((b) => !isScanned(b)), [barcodes]);
 
   const pendingCount = pendingList.length;
   const scannedCount = scannedList.length;
@@ -182,8 +187,21 @@ const ScanBarcodeListPage = () => {
       playBeep();
       success = true;
     } catch (err) {
-      const msg = err?.response?.data?.error?.toString?.() || 'เกิดข้อผิดพลาดระหว่างบันทึกเข้าสต๊อก';
-      setPageMessage({ type: 'error', text: `❌ ${msg}` });
+      const raw = err?.response?.data?.error || err?.response?.data?.message || err?.message || '';
+      const msg = String(raw);
+      const already = /already|ซ้ำ|SN_RECEIVED/i.test(msg);
+
+      if (already) {
+        // กรณีสแกนซ้ำ: ถือว่า idempotent → รีเฟรชแล้วแจ้งเตือนแบบข้อมูล
+        refreshBarcodesDebounced();
+        setPageMessage({ type: 'info', text: 'ℹ️ บาร์โค้ดนี้ถูกบันทึกไว้แล้ว' });
+        playBeep();
+        setBarcodeInput('');
+        setSnInput('');
+      } else {
+        setPageMessage({ type: 'error', text: `❌ ${msg || 'เกิดข้อผิดพลาดระหว่างบันทึกเข้าสต๊อก'}` });
+        playErrorBeep();
+      }
     } finally {
       setSubmitting(false);
       if (success && barcodeInputRef?.current) {
@@ -335,8 +353,43 @@ const ScanBarcodeListPage = () => {
 
         <div className="col-span-12 lg:col-span-8">
           <h2 className="text-base font-semibold mb-2">Scanned (รับแล้ว) {scannedCount}</h2>
-          <div className="overflow-visible">
-            <InStockBarcodeTable items={scannedList} />
+          <div className="overflow-x-auto border rounded bg-white">
+            {scannedList.length === 0 ? (
+              <div className="text-gray-500 text-sm p-3">ยังไม่มีสินค้าที่ถูกยิง</div>
+            ) : (
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-green-50 text-left">
+                    <th className="px-3 py-2 w-14">#</th>
+                    <th className="px-3 py-2">สินค้า</th>
+                    <th className="px-3 py-2">บาร์โค้ด</th>
+                    <th className="px-3 py-2">SN</th>
+                    <th className="px-3 py-2">สถานะ</th>
+                    <th className="px-3 py-2 text-right">จัดการ</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {scannedList.map((b, idx) => {
+                    const isLot = b?.kind === 'LOT' || b?.simpleLotId != null;
+                    const productName = b?.productName || b?.product?.name || '-';
+                    const snText = isLot ? '-' : (b?.serialNumber || b?.stockItem?.serialNumber || '-');
+                    const statusText = isLot
+                      ? (String(b?.status || '').toUpperCase() === 'SN_RECEIVED' ? 'LOT / SN_RECEIVED' : 'LOT')
+                      : 'IN_STOCK';
+                    return (
+                      <tr key={b.id || `${b.barcode}-${idx}`} className="border-t">
+                        <td className="px-3 py-2">{idx + 1}</td>
+                        <td className="px-3 py-2">{productName}</td>
+                        <td className="px-3 py-2 font-mono">{b.barcode}</td>
+                        <td className="px-3 py-2 font-mono">{snText}</td>
+                        <td className="px-3 py-2">{statusText}</td>
+                        <td className="px-3 py-2 text-right">—</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
           </div>
         </div>
       </div>
@@ -354,4 +407,10 @@ export default ScanBarcodeListPage;
 
 
 
- 
+
+
+
+
+
+
+

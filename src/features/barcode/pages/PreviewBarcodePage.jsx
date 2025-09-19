@@ -22,6 +22,11 @@ const PreviewBarcodePage = () => {
   const [showBarcode, setShowBarcode] = useState(true);
   const [showQR, setShowQR] = useState(false);
 
+  // ใช้ helper จาก store เพื่อขยายจำนวนดวงของ LOT ตาม qtyLabelsSuggested
+  const getExpandedBarcodesForPrint = useBarcodeStore((s) => s.getExpandedBarcodesForPrint);
+  const [useSuggested, setUseSuggested] = useState(true);
+  const expandedBarcodes = useMemo(() => getExpandedBarcodesForPrint(useSuggested), [getExpandedBarcodesForPrint, useSuggested, barcodes]);
+
   // โหลดข้อมูลอัตโนมัติครั้งแรก และกันกดซ้ำ
   const handleLoadBarcodes = useCallback(async () => {
     if (!receiptId || loading || loaded) return; // กัน double click/โหลดซ้ำ
@@ -129,6 +134,11 @@ const PreviewBarcodePage = () => {
               แสดง QR Code
             </label>
 
+            <label className="flex items-center gap-2">
+              <input type="checkbox" checked={useSuggested} onChange={(e) => setUseSuggested(e.target.checked)} />
+              พิมพ์ตามจำนวนรับ (SIMPLE)
+            </label>
+
             <button
               onClick={handleLoadBarcodes}
               className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
@@ -139,7 +149,7 @@ const PreviewBarcodePage = () => {
             <button
               onClick={handlePrint}
               className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
-              disabled={!loaded || barcodes.length === 0}
+              disabled={!loaded || expandedBarcodes.length === 0}
             >
               พิมพ์บาร์โค้ด
             </button>
@@ -147,7 +157,7 @@ const PreviewBarcodePage = () => {
             <button
               onClick={handleConfirmPrinted}
               className="px-4 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700"
-              disabled={!loaded || barcodes.length === 0}
+              disabled={!loaded || expandedBarcodes.length === 0}
             >
               ยืนยันพิมพ์แล้ว
             </button>
@@ -161,17 +171,21 @@ const PreviewBarcodePage = () => {
           <p className="text-red-500 mt-4 print:hidden">ไม่พบบาร์โค้ดจากใบรับสินค้านี้</p>
         ) : (
           <div className="grid gap-y-[0.1mm] gap-x-1 mt-4 print-area justify-center" style={gridStyle}>
-            {barcodes.map((item) => {
-              const product = item?.product;
+            {expandedBarcodes.map((item) => {
               return (
                 <div
-                  key={item.barcode || item.id}
+                  key={`${item.id || item.barcode}-${item._dupIdx ?? 0}`}
                   className="barcode-cell border p-0.5 rounded text-center flex flex-col items-center justify-center"
                 >
+                  {/* แสดงชนิดบาร์โค้ดเฉพาะ SN เท่านั้น */}
+                  {item.kind === 'SN' && (
+                    <div className="text-[10px] text-gray-600 mb-0.5 print:hidden">SN</div>
+                  )}
+
                   <BarcodeWithQRRenderer
                     barcodeValue={showBarcode ? item.barcode : null}
-                    qrValue={showQR ? item.barcode : null}
-                    productName={product?.name || 'ชื่อสินค้าไม่พบ'}
+                    qrValue={item.kind === 'SN' && showQR ? item.barcode : null}
+                    productName={item.productName || 'ชื่อสินค้าไม่พบ'}
                     barcodeHeight={barcodeHeight}
                     barcodeWidth={barcodeWidth}
                     fontSize={5}
@@ -188,3 +202,6 @@ const PreviewBarcodePage = () => {
 };
 
 export default PreviewBarcodePage;
+
+
+

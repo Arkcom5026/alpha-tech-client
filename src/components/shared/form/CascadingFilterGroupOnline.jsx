@@ -72,14 +72,14 @@ export default function CascadingFilterGroupOnline({
     if (field === 'categoryId') {
       next.productTypeId = undefined;
       next.productProfileId = undefined;
-      next.templateId = undefined;
+      next.productTemplateId = undefined;
     }
     if (field === 'productTypeId') {
       next.productProfileId = undefined;
-      next.templateId = undefined;
+      next.productTemplateId = undefined;
     }
     if (field === 'productProfileId') {
-      next.templateId = undefined;
+      next.productTemplateId = undefined;
     }
 
     onChange(value[field] === val ? { ...next } : next);
@@ -91,7 +91,7 @@ export default function CascadingFilterGroupOnline({
       categoryId: undefined,
       productTypeId: undefined,
       productProfileId: undefined,
-      templateId: undefined,
+      productTemplateId: undefined,
     });
   };
 
@@ -141,8 +141,8 @@ export default function CascadingFilterGroupOnline({
 
         {!hiddenFields.includes('template') && (
           <select
-            value={value.templateId || ''}
-            onChange={(e) => update('templateId', e.target.value)}
+            value={value.productTemplateId || ''}
+            onChange={(e) => update('productTemplateId', e.target.value)}
             className="border px-3 py-2 rounded w-full text-sm"
           >
             <option value="">{placeholders.template}</option>

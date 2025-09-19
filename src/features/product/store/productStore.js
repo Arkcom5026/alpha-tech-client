@@ -1,3 +1,4 @@
+
 // ✅ src/features/product/store/productStore.js (updated)
 import { create } from 'zustand';
 
@@ -10,6 +11,7 @@ import {
   getProductsForPos,
   getCatalogDropdowns,
 } from '../api/productApi';
+import { migrateSnToSimple } from '../api/productApi';
 import { uploadImagesProduct, uploadImagesProductFull, deleteImageProduct } from '../api/productImagesApi';
 
 const initialDropdowns = {
@@ -19,14 +21,20 @@ const initialDropdowns = {
   productProfiles: [],
   profiles: [],
   templates: [],
+  productTemplates: [],
 };
 
 const useProductStore = create((set, get) => ({
-  products: [],
+  // ---- Lists / Entities ----
+  products: [],              // รายการทั่วไปที่ใช้หลายหน้า
+  simpleProducts: [],        // รายการเฉพาะหน้า Quick Receive (SIMPLE)
   currentProduct: null,
+
+  // ---- Dropdowns ----
   dropdowns: initialDropdowns,
   dropdownsLoaded: false,
 
+  // ---- UI State ----
   searchResults: [],
   isLoading: false,
   error: null,
@@ -95,9 +103,22 @@ const useProductStore = create((set, get) => ({
       delete cleanedPayload.unit;
       delete cleanedPayload.unitId;
 
-      const data = await updateProduct(id, cleanedPayload);
-      set({ isLoading: false });
-      return data;
+      try {
+        const data = await updateProduct(id, cleanedPayload);
+        set({ isLoading: false });
+        return data;
+      } catch (err) {
+        // Try auto-migrate if switching to SIMPLE (noSN=true) but SNs still exist
+        const code = err?.code || err?.error || err?.data?.error || err?.response?.data?.error;
+        const switchingToSimple = cleanedPayload?.noSN === true;
+        if (switchingToSimple && code === 'MODE_SWITCH_REQUIRES_CONVERSION') {
+          await migrateSnToSimple(id);
+          const data = await updateProduct(id, cleanedPayload);
+          set({ isLoading: false });
+          return data;
+        }
+        throw err;
+      }
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('❌ updateProduct error:', error);
@@ -169,7 +190,7 @@ const useProductStore = create((set, get) => ({
         raw?.data?.templates
       );
 
-      const dropdowns = { categories, productTypes, profiles, productProfiles: profiles, templates };
+      const dropdowns = { categories, productTypes, profiles, productProfiles: profiles, templates, productTemplates: templates };
       set({ dropdowns, dropdownsLoaded: true });
       return dropdowns;
     } catch (error) {
@@ -221,8 +242,12 @@ const useProductStore = create((set, get) => ({
   fetchProductsAction: async (filters = {}) => {
     set({ isLoading: true, error: null });
     try {
-      const data = await getProductsForPos(filters);
-      set({ products: data, isLoading: false });
+      const raw = await getProductsForPos(filters);
+      const payload = raw?.data ?? raw; // รองรับ axios/fetch wrappers
+      const list = Array.isArray(payload)
+        ? payload
+        : (Array.isArray(payload?.items) ? payload.items : []);
+      set({ products: list, isLoading: false });
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('❌ fetchProductsAction error:', error);
@@ -230,19 +255,42 @@ const useProductStore = create((set, get) => ({
     }
   },
 
+  // ✅ Only SIMPLE products for Quick Receive (เก็บแยก state)
+  fetchSimpleProductsAction: async (filters = {}) => {
+    set({ isLoading: true, error: null });
+    try {
+      const params = { ...filters, mode: 'SIMPLE' }; // force SIMPLE
+      const raw = await getProductsForPos(params);
+      const payload = raw?.data ?? raw; // รองรับ axios/fetch wrappers
+      const list = Array.isArray(payload)
+        ? payload
+        : (Array.isArray(payload?.items) ? payload.items : []);
+      set({ simpleProducts: list, isLoading: false });
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('❌ fetchSimpleProductsAction error:', error);
+      set({ error, isLoading: false });
+    }
+  },
+
   refreshProductList: async (filters = {}) => {
     set({ isLoading: true, error: null });
     try {
-      const [products] = await Promise.all([
+      const [raw] = await Promise.all([
         getProductsForPos(filters),
       ]);
+      const payload = raw?.data ?? raw;
+      const products = Array.isArray(payload)
+        ? payload
+        : (Array.isArray(payload?.items) ? payload.items : []);
       set({ products, isLoading: false });
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('❌ refreshProductList error:', error);
       set({ error, isLoading: false });
     }
-  },
+  }
 }));
 
 export default useProductStore;
+

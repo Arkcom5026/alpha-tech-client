@@ -1,16 +1,22 @@
-// src/features/product/components/FormFields.jsx
-import React from 'react';
-import { Controller } from 'react-hook-form'; // Import Controller
-import PaymentInput from '@/components/shared/input/PaymentInput'; // Import PaymentInput
 
-export default function FormFields({ register, errors, dropdowns, control, setValue, isEditMode }) {
+// ✅ src/features/product/components/FormFields.jsx
+import React from 'react';
+import { Controller, useWatch } from 'react-hook-form';
+import PaymentInput from '@/components/shared/input/PaymentInput';
+
+export default function FormFields({ register, errors, control, showInitialQty = false }) {
+  // ตรวจสอบโหมดสินค้าแบบ Simple จากฟอร์ม
+  const currentMode = useWatch({ control, name: 'mode' });
+  const isSimple = currentMode === 'SIMPLE';
+
   return (
     <div>
+      {/* ชื่อ/รุ่นสินค้า */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-
         <div>
-          <label className="block font-medium mb-1 text-gray-700">ชื่อสินค้า</label>
+          <label htmlFor="name" className="block font-medium mb-1 text-gray-700">ชื่อสินค้า</label>
           <input
+            id="name"
             type="text"
             {...register('name', { required: 'กรุณาระบุชื่อสินค้า' })}
             className="w-full p-2 border rounded-md focus:ring-blue-400 focus:border-blue-400 text-gray-800"
@@ -19,8 +25,9 @@ export default function FormFields({ register, errors, dropdowns, control, setVa
         </div>
 
         <div>
-          <label className="block font-medium mb-1 text-gray-700">รุ่นสินค้า</label>
+          <label htmlFor="model" className="block font-medium mb-1 text-gray-700">รุ่นสินค้า</label>
           <input
+            id="model"
             type="text"
             {...register('model')}
             className="w-full p-2 border rounded-md focus:ring-blue-400 focus:border-blue-400 text-gray-800"
@@ -29,21 +36,62 @@ export default function FormFields({ register, errors, dropdowns, control, setVa
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mt-4 ">
+      {/* ประเภทสินค้า: Simple / Template → map เป็น noSN (true/false) */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
+        <div>
+          <label htmlFor="product-mode" className="block font-medium mb-1 text-gray-700">ประเภทสินค้า</label>
+          <Controller
+            name="mode"
+            control={control}
+            defaultValue="STRUCTURED"
+            render={({ field }) => (
+              <select
+                id="product-mode"
+                className="w-full p-2 border rounded-md focus:ring-blue-400 focus:border-blue-400 text-gray-800"
+                value={field.value || 'STRUCTURED'}
+                onChange={(e) => field.onChange(e.target.value)}
+              >
+                <option value="STRUCTURED">Template (มี SN รายชิ้น)</option>
+                <option value="SIMPLE">Simple (นับสต๊อกตามจำนวน)</option>
+              </select>
+            )}
+          />
+          {/* ช่วยจำเงื่อนไขตามที่เราเพิ่งเพิ่มใน ProductForm */}
+          
+        </div>
 
+        {/* จำนวนเริ่มต้น (เฉพาะ Simple) */}
+        {showInitialQty && isSimple && (
+          <div>
+            <label htmlFor="initialQty" className="block font-medium mb-1 text-gray-700">จำนวนเริ่มต้น (รับเข้าคลัง)</label>
+            <input
+              id="initialQty"
+              type="number"
+              inputMode="numeric"
+              className="w-full p-2 border rounded-md text-right focus:ring-blue-400 focus:border-blue-400 text-gray-800"
+              placeholder="0"
+              {...register('initialQty', { valueAsNumber: true, min: { value: 0, message: 'ต้องไม่ติดลบ' } })}
+            />
+            {errors.initialQty && <p className="text-red-500 text-sm mt-1">{errors.initialQty.message}</p>}
+          </div>
+        )}
+      </div>
+
+      {/* ราคาต่อสาขา (BranchPrice) */}
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mt-4 ">
         {/* ราคาทุน */}
         <div>
           <Controller
             name="branchPrice.costPrice"
             control={control}
-            defaultValue={0} // กำหนดค่าเริ่มต้น
+            
             rules={{ valueAsNumber: true, min: { value: 0, message: 'ราคาทุนต้องไม่ติดลบ' } }}
-            render={({ field, fieldState }) => (
+            render={({ field }) => (
               <PaymentInput
                 title="ราคาทุน"
-                value={field.value === 0 ? '' : field.value} // แสดงค่าว่างถ้าเป็น 0
-                onChange={(val) => field.onChange(val === '' ? 0 : parseFloat(val))} // แปลงเป็นตัวเลขหรือ 0
-                color="blue" // กำหนดสี
+                value={field.value === 0 ? '' : field.value}
+                onChange={(val) => field.onChange(val === '' ? 0 : parseFloat(val))}
+                color="blue"
               />
             )}
           />
@@ -55,9 +103,9 @@ export default function FormFields({ register, errors, dropdowns, control, setVa
           <Controller
             name="branchPrice.priceWholesale"
             control={control}
-            defaultValue={0}
+            
             rules={{ valueAsNumber: true, min: { value: 0, message: 'ราคาขายส่งต้องไม่ติดลบ' } }}
-            render={({ field, fieldState }) => (
+            render={({ field }) => (
               <PaymentInput
                 title="ราคาขายส่ง"
                 value={field.value === 0 ? '' : field.value}
@@ -74,9 +122,9 @@ export default function FormFields({ register, errors, dropdowns, control, setVa
           <Controller
             name="branchPrice.priceTechnician"
             control={control}
-            defaultValue={0}
+            
             rules={{ valueAsNumber: true, min: { value: 0, message: 'ราคาช่างต้องไม่ติดลบ' } }}
-            render={({ field, fieldState }) => (
+            render={({ field }) => (
               <PaymentInput
                 title="ราคาช่าง"
                 value={field.value === 0 ? '' : field.value}
@@ -93,9 +141,9 @@ export default function FormFields({ register, errors, dropdowns, control, setVa
           <Controller
             name="branchPrice.priceRetail"
             control={control}
-            defaultValue={0}
+            
             rules={{ valueAsNumber: true, min: { value: 0, message: 'ราคาขายปลีกต้องไม่ติดลบ' } }}
-            render={({ field, fieldState }) => (
+            render={({ field }) => (
               <PaymentInput
                 title="ราคาขายปลีก"
                 value={field.value === 0 ? '' : field.value}
@@ -112,9 +160,9 @@ export default function FormFields({ register, errors, dropdowns, control, setVa
           <Controller
             name="branchPrice.priceOnline"
             control={control}
-            defaultValue={0}
+            
             rules={{ valueAsNumber: true, min: { value: 0, message: 'ราคาออนไลน์ต้องไม่ติดลบ' } }}
-            render={({ field, fieldState }) => (
+            render={({ field }) => (
               <PaymentInput
                 title="ราคาออนไลน์"
                 value={field.value === 0 ? '' : field.value}
@@ -125,12 +173,12 @@ export default function FormFields({ register, errors, dropdowns, control, setVa
           />
           {errors.branchPrice?.priceOnline && <p className="text-red-500 text-sm mt-1">{errors.branchPrice.priceOnline.message}</p>}
         </div>
-
       </div>
-
+      {/* รายละเอียด */}
       <div className="mt-4">
-        <label className="block font-medium mb-1 text-gray-700">รายละเอียดสินค้า</label>
+        <label htmlFor="description" className="block font-medium mb-1 text-gray-700">รายละเอียดสินค้า</label>
         <textarea
+          id="description"
           {...register('description')}
           rows={2}
           placeholder="แนะนำสินค้าโดยย่อ เช่น ขนาด น้ำหนัก ความสามารถ"
@@ -139,19 +187,22 @@ export default function FormFields({ register, errors, dropdowns, control, setVa
       </div>
 
       <div className="mt-4">
-        <label className="block font-medium mb-1 text-gray-700">รายละเอียดสเปก</label>
+        <label htmlFor="spec" className="block font-medium mb-1 text-gray-700">รายละเอียดสเปก</label>
         <textarea
+          id="spec"
           {...register('spec')}
           rows={3}
           placeholder={`รายละเอียดเชิงเทคนิค เช่น CPU, RAM, ความจุ, จอภาพ`}
           className="w-full p-3 border rounded-md font-mono focus:ring-blue-400 focus:border-blue-400 text-gray-800"
         />
       </div>
-      <div className="flex items-center space-x-2 p-2 mt-4">
-          <input type="checkbox" {...register('active')} id="active" defaultChecked className="form-checkbox h-5 w-5 text-blue-600 rounded" />
-          <label htmlFor="active" className="text-gray-700">เปิดใช้งานสินค้า</label>          
-        </div>
 
+      {/* เปิดใช้งานสินค้า */}
+      <div className="flex items-center space-x-2 p-2 mt-4">
+        <input type="checkbox" {...register('active')} id="active" defaultChecked className="form-checkbox h-5 w-5 text-blue-600 rounded" />
+        <label htmlFor="active" className="text-gray-700">เปิดใช้งานสินค้า</label>
+      </div>
     </div>
   );
 }
+

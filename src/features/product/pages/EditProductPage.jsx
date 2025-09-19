@@ -1,3 +1,4 @@
+
 // ✅ src/features/product/pages/EditProductPage.jsx
 
 import { useEffect, useState, useRef, useMemo } from 'react';
@@ -13,17 +14,26 @@ const EditProductPage = () => {
   const [captions, setCaptions] = useState([]);
   const [coverIndex, setCoverIndex] = useState(null);
   const { id } = useParams();
-    const [product, setProduct] = useState(null);
+  const [product, setProduct] = useState(null);
   const [error, setError] = useState('');
   const [selectedFiles, setSelectedFiles] = useState([]);
   const imageRef = useRef();
   const [oldImages, setOldImages] = useState([]);
   const hasFetched = useRef(false);
-  const [cascadeReady, setCascadeReady] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
 
   const { updateProduct, getProductById, deleteImage, ensureDropdownsAction, dropdownsLoaded } = useProductStore();
+
+  // --- helpers ---
+  const normalizeImages = (imgs = []) =>
+    imgs.map((it) => ({
+      id: it?.id ?? it?.publicId ?? it?._id,
+      url: it?.url ?? it?.secure_url ?? it?.src ?? '',
+      caption: it?.caption ?? '',
+      isCover: Boolean(it?.isCover),
+      publicId: it?.publicId ?? it?.cloudinaryPublicId ?? it?.id,
+    }));
 
   useEffect(() => {
     if (!dropdownsLoaded) {
@@ -44,13 +54,20 @@ const EditProductPage = () => {
           return;
         }
 
+        const serverImages = Array.isArray(data.images)
+          ? data.images
+          : Array.isArray(data.productImages)
+          ? data.productImages
+          : [];
+
+        const images = normalizeImages(serverImages);
+
         setProduct({
           ...data,
-          images: Array.isArray(data.productImages) ? data.productImages : [],
+          images,
         });
 
-        setOldImages(Array.isArray(data.productImages) ? data.productImages : []);
-        setCascadeReady(true); // ✅ เพิ่มบรรทัดนี้เพื่อให้ฟอร์ม reset dropdown
+        setOldImages(images);
       } catch (err) {
         console.error('โหลดข้อมูลสินค้าล้มเหลว:', err);
         setError('ไม่สามารถโหลดข้อมูลสินค้าได้');
@@ -62,25 +79,48 @@ const EditProductPage = () => {
 
   const mappedProduct = useMemo(() => {
     if (!product) return null;
+
+    // ✅ กำหนดโหมดแบบปลอดภัย (ไม่ไปยุ่งกับ Template)
+    const resolveMode = (p) => {
+      if (p?.mode) return p.mode; // ค่าจากเซิร์ฟเวอร์มีสิทธิ์สูงสุด
+      if (typeof p?.noSN === 'boolean') return p.noSN ? 'SIMPLE' : 'STRUCTURED';
+      if (p?.productTemplateId) return 'STRUCTURED';
+      return 'SIMPLE';
+    };
+
     return {
       ...product,
-      unitId: product.unitId?.toString() || '',
-      productProfileId: product.productProfileId?.toString() || '',
-      categoryId: product.categoryId?.toString() || '',
-      productTypeId: product.productTypeId?.toString() || '',
-      templateId: product.templateId?.toString() || '',
+      mode: resolveMode(product),
+      unitId: product.unitId ?? '',
+      productProfileId: product.productProfileId ?? '',
+      categoryId: product.categoryId ?? '',
+      productTypeId: product.productTypeId ?? '',
+      productTemplateId: product.productTemplateId ?? '',
     };
   }, [product]);
 
   const handleUpdate = async (formData) => {
     setIsUpdating(true);
 
+    // ✅ หากเลือก SIMPLE ให้ตัดการผูกกับ Template ออก (ระดับ Product เท่านั้น)
+    if (formData?.mode === 'SIMPLE') {
+      formData.productTemplateId = null;
+      formData.noSN = true;
+      formData.trackSerialNumber = false;
+    } else if (formData?.mode === 'STRUCTURED') {
+      formData.noSN = false;
+      formData.trackSerialNumber = true;
+    }
+
     try {
-      const [uploadedImages, imagesToDelete] = await imageRef.current.upload();
+      const result = await imageRef.current?.upload?.();
+      const uploadedImages = Array.isArray(result?.[0]) ? result[0] : [];
+      const imagesToDelete = Array.isArray(result?.[1]) ? result[1] : [];
 
       formData.images = uploadedImages;
       formData.imagesToDelete = imagesToDelete;
 
+      // ลบรูปเก่าที่ผู้ใช้ติ๊กเลือก
       for (const img of imagesToDelete) {
         if (!img) continue;
         try {
@@ -90,7 +130,43 @@ const EditProductPage = () => {
         }
       }
 
+      // บันทึกสินค้า
       await updateProduct(id, formData);
+
+      // 🔄 โหลดข้อมูลล่าสุดกลับมาโชว์
+      try {
+        const fresh = await getProductById(id);
+        if (fresh) {
+          const serverImages = Array.isArray(fresh.images)
+            ? fresh.images
+            : Array.isArray(fresh.productImages)
+            ? fresh.productImages
+            : [];
+          const images = normalizeImages(serverImages);
+
+          setProduct({
+            ...fresh,
+            images,
+          });
+          setOldImages(images);
+        }
+      } catch (e) {
+        console.warn('⚠️ รีเฟรชข้อมูลสินค้าไม่สำเร็จหลังบันทึก:', e);
+      }
+
+      // เคลียร์สถานะไฟล์/พรีวิวชั่วคราว
+      setSelectedFiles([]);
+      setPreviewUrls([]);
+      setCaptions([]);
+      setCoverIndex(null);
+      if (imageRef.current && typeof imageRef.current.reset === 'function') {
+        try {
+          imageRef.current.reset();
+        } catch (e) {
+          console.debug('imageRef.reset() skipped:', e);
+        }
+      }
+
       setShowSuccess(true);
       setTimeout(() => setShowSuccess(false), 3000);
     } catch (err) {
@@ -103,9 +179,10 @@ const EditProductPage = () => {
 
   if (error) return <p className="text-red-500 font-medium">{error}</p>;
   if (!mappedProduct) return <p>กำลังโหลดข้อมูล...</p>;
+  if (!dropdownsLoaded) return <p>กำลังโหลดรายการตัวเลือก...</p>;
 
   return (
-    <div className="max-w-3xl mx-auto">
+    <div className="w-full max-w-[1600px] mx-auto px-4 lg:px-8">
       <h2 className="text-xl font-bold mb-4">แก้ไขสินค้า</h2>
 
       <div className="mb-6">
@@ -127,11 +204,10 @@ const EditProductPage = () => {
       </div>
 
       <ProductForm
+        key={`edit-form-${mappedProduct?.id || id}-${mappedProduct?.updatedAt || ''}`}
         defaultValues={mappedProduct}
         onSubmit={handleUpdate}
         mode="edit"
-        cascadeReady={cascadeReady && dropdownsLoaded}
-        setCascadeReady={setCascadeReady}
       />
 
       <ProcessingDialog
@@ -145,4 +221,5 @@ const EditProductPage = () => {
 };
 
 export default EditProductPage;
+
 

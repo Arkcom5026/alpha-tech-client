@@ -1,4 +1,4 @@
-// ✅ import product loader
+// ✅ purchaseOrderStore.js (updated to align with current Form usage + store naming standard)
 import { create } from 'zustand';
 import { getProducts } from '@/features/product/api/productApi';
 import {
@@ -11,20 +11,24 @@ import {
   updatePurchaseOrder,
   updatePurchaseOrderStatus,
   getPurchaseOrdersBySupplier,
-
 } from '../api/purchaseOrderApi';
-
 
 import { useBranchStore } from '@/features/branch/store/branchStore';
 
 const usePurchaseOrderStore = create((set, get) => ({
+  // --- State ---
   purchaseOrders: [],
   selectedPO: null,
+  // 🔁 เพิ่มคีย์ที่ฟอร์มปัจจุบันใช้อยู่ เพื่อไม่ให้พัง (alias ของ selectedPO)
+  purchaseOrder: null,
+
   productList: [],
   eligiblePOs: [],
   suppliers: [],
   loading: false,
   error: null,
+
+  // --- Actions (คงชื่อเดิมเพื่อ backwards-compatibility และเพิ่ม Action-suffix ตามกฎข้อ 64) ---
 
   // ✅ อัปเดตใหม่: รองรับ search และ status filter
   fetchAllPurchaseOrders: async ({ search = '', status = 'pending,partially_received' } = {}) => {
@@ -39,6 +43,7 @@ const usePurchaseOrderStore = create((set, get) => ({
       set({ error: err, loading: false });
     }
   },
+  fetchAllPurchaseOrdersAction: async (args) => get().fetchAllPurchaseOrders(args),
 
   fetchEligiblePurchaseOrders: async () => {
     const branchId = useBranchStore.getState().selectedBranchId;
@@ -52,29 +57,32 @@ const usePurchaseOrderStore = create((set, get) => ({
       set({ error: err, loading: false });
     }
   },
+  fetchEligiblePurchaseOrdersAction: async () => get().fetchEligiblePurchaseOrders(),
 
   fetchPurchaseOrderById: async (id) => {
     set({ loading: true });
     try {
       const data = await getPurchaseOrderById(id);
-      set({ selectedPO: data, loading: false });
+      set({ selectedPO: data, purchaseOrder: data, loading: false });
       return data;
     } catch (err) {
       console.error('❌ fetchPurchaseOrderById error:', err);
       set({ error: err, loading: false });
     }
   },
+  fetchPurchaseOrderByIdAction: async (id) => get().fetchPurchaseOrderById(id),
 
   loadOrderById: async (id) => {
     try {
       const data = await getPurchaseOrderById(id);
-      set({ selectedPO: data });
+      set({ selectedPO: data, purchaseOrder: data });
       return data;
     } catch (err) {
       console.error('❌ loadOrderById error:', err);
       throw err;
     }
   },
+  loadOrderByIdAction: async (id) => get().loadOrderById(id),
 
   createPurchaseOrder: async (poData) => {
     try {
@@ -86,6 +94,7 @@ const usePurchaseOrderStore = create((set, get) => ({
       throw err;
     }
   },
+  createPurchaseOrderAction: async (poData) => get().createPurchaseOrder(poData),
 
   createPurchaseOrderWithAdvance: async (poData) => {
     try {
@@ -97,15 +106,15 @@ const usePurchaseOrderStore = create((set, get) => ({
       throw err;
     }
   },
+  createPurchaseOrderWithAdvanceAction: async (poData) => get().createPurchaseOrderWithAdvance(poData),
 
   updatePurchaseOrder: async (id, poData) => {
     try {
       const updated = await updatePurchaseOrder(id, poData);
       set((state) => ({
-        purchaseOrders: state.purchaseOrders.map((po) =>
-          po.id === id ? updated : po
-        ),
+        purchaseOrders: state.purchaseOrders.map((po) => (po.id === id ? updated : po)),
         selectedPO: updated,
+        purchaseOrder: updated,
       }));
       return updated;
     } catch (err) {
@@ -113,15 +122,15 @@ const usePurchaseOrderStore = create((set, get) => ({
       throw err;
     }
   },
+  updatePurchaseOrderAction: async (id, poData) => get().updatePurchaseOrder(id, poData),
 
   updatePurchaseOrderStatusAction: async ({ id, status }) => {
     try {
       const updated = await updatePurchaseOrderStatus({ id, status });
       set((state) => ({
-        purchaseOrders: state.purchaseOrders.map((po) =>
-          po.id === id ? updated : po
-        ),
+        purchaseOrders: state.purchaseOrders.map((po) => (po.id === id ? updated : po)),
         selectedPO: state.selectedPO?.id === id ? updated : state.selectedPO,
+        purchaseOrder: state.purchaseOrder?.id === id ? updated : state.purchaseOrder,
       }));
       return updated;
     } catch (err) {
@@ -135,12 +144,16 @@ const usePurchaseOrderStore = create((set, get) => ({
       await deletePurchaseOrder(id);
       set((state) => ({
         purchaseOrders: state.purchaseOrders.filter((po) => po.id !== id),
+        // ถ้าลบตัวที่กำลังเปิดอยู่ ให้เคลียร์ selection
+        selectedPO: state.selectedPO?.id === id ? null : state.selectedPO,
+        purchaseOrder: state.purchaseOrder?.id === id ? null : state.purchaseOrder,
       }));
     } catch (err) {
       console.error('❌ removePurchaseOrder error:', err);
       throw err;
     }
   },
+  removePurchaseOrderAction: async (id) => get().removePurchaseOrder(id),
 
   // ✅ โหลดสินค้า (ใช้ใน modal หรือ form ที่เกี่ยวข้องกับ PO)
   loadProductsPurchaseOrder: async ({ search, status, limit = 50, page = 1 } = {}) => {
@@ -152,29 +165,23 @@ const usePurchaseOrderStore = create((set, get) => ({
       set({ error: err });
     }
   },
+  loadProductsPurchaseOrderAction: async (args) => get().loadProductsPurchaseOrder(args),
 
   // ✅ ดึง PO ตาม supplierId (ใช้ใน SupplierPaymentTabs)
   fetchPurchaseOrdersBySupplierAction: async (supplierId) => {
     set({ loading: true });
     try {
       const data = await getPurchaseOrdersBySupplier(supplierId);
-      
       // ✅ กรองเฉพาะ PO ที่ยังไม่จ่ายครบ
-      console.log('fetchPurchaseOrdersBySupplierAction data :',data)
-      const unpaidPOs = data.filter((po) =>
-        po.paymentStatus !== 'PAID' &&
-        po.paymentStatus !== 'CANCELLED' // ป้องกันกรณียกเลิก
+      const unpaidPOs = data.filter(
+        (po) => po.paymentStatus !== 'PAID' && po.paymentStatus !== 'CANCELLED'
       );
-  
       set({ purchaseOrders: unpaidPOs, loading: false });
     } catch (err) {
       console.error('❌ fetchPurchaseOrdersBySupplierAction error:', err);
       set({ error: err, loading: false });
     }
   },
-  
-
-
 }));
 
 export default usePurchaseOrderStore;

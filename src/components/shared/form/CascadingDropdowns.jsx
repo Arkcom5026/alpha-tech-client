@@ -1,69 +1,36 @@
-// ✅ components/shared/form/CascadingDropdowns.jsx — FORM‑CENTRIC (aligned with CascadingFilterGroup)
-// Now supports full chain: Category → ProductType → ProductProfile → ProductTemplate
-import React, { useEffect, useMemo } from "react";
 
-/**
- * Props (backward compatible):
- *  - dropdowns: {
- *      categories?: Array<{ id:number|string, name:string }>,
- *      productTypes?: Array<{ id:number|string, name:string, categoryId?:number|string, category?:{id} }>,
- *      productProfiles?: Array<{ id:number|string, name:string, productTypeId?:number|string, productType?:{id} }>|Array, // accepts `profiles` alias
- *      productTemplates?: Array<{ id:number|string, name:string, productProfileId?:number|string, productProfile?:{id} }>|Array // accepts `templates` alias
- *    }
- *  - value: {
- *      categoryId?: number|string|null,
- *      productTypeId?: number|string|null,
- *      productProfileId?: number|string|null,
- *      productTemplateId?: number|string|null,
- *    }
- *    • Accepts number | string | null. Internally normalized to string ('' when empty).
- *  - onChange: (partial: {categoryId?, productTypeId?, productProfileId?, productTemplateId?}) => void
- *  - isLoading?: boolean  // disable selects while loading
- *  - hiddenFields?: Array<'category' | 'type' | 'profile' | 'template'>
- *  - placeholders?: Partial<{ category: string; type: string; profile: string; template: string }>
- *  - direction?: 'row' | 'col'  // layout hint (default: 'row')
- *  - disableUrlSync?: boolean   // default: true (don’t sync URL here)
- *  - selectClassName?: string   // extra Tailwind classes for <select> width, e.g. 'min-w-[22rem]'
- *  - containerClassName?: string // static grid classes e.g. 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6' (preferred)
- */
-export default function CascadingDropdowns({
-  dropdowns,
-  value,
-  onChange,
-  isLoading = false,
+
+// ✅ components/shared/form/CascadingDropdowns.jsx
+
+import React, {  useMemo, useCallback } from "react";
+
+export default function CascadingDropdowns({ dropdowns, value = {}, onChange, isLoading = false,
+  strict = false,
   hiddenFields = [],
   placeholders = {},
   direction = 'row',
-  disableUrlSync = true,
   selectClassName = 'min-w-[14rem]',
   containerClassName,
 }) {
-  // ---------- helpers ----------
   const toId = (v) => (v === undefined || v === null || v === '' ? '' : String(v));
-  const sameStyleEmit = (key, nextStr) => {
-    // emit using the same primitive style as incoming value[key]
+
+  const sameStyleEmit = useCallback((key, nextStr) => {
     const prev = value?.[key];
     if (typeof prev === 'number') {
       onChange({ [key]: nextStr === '' ? null : Number(nextStr) });
     } else if (prev === null) {
-      onChange({ [key]: nextStr === '' ? null : Number.isFinite(Number(nextStr)) ? Number(nextStr) : nextStr });
+      onChange({ [key]: nextStr === '' ? null : (Number.isFinite(Number(nextStr)) ? Number(nextStr) : nextStr) });
     } else {
-      onChange({ [key]: nextStr }); // string style ('' empty)
+      onChange({ [key]: nextStr });
     }
-  };
+  }, [onChange, value]);
+
   const getCategoryIdOfType = (t) => t?.categoryId ?? t?.category?.id ?? t?.category_id ?? undefined;
   const getTypeIdOfProfile = (p) => p?.productTypeId ?? p?.productType?.id ?? p?.product_type_id ?? undefined;
   const getProfileIdOfTemplate = (tp) => tp?.productProfileId ?? tp?.productProfile?.id ?? tp?.product_profile_id ?? undefined;
 
-  // ---------- normalize collections ----------
-  const categories = useMemo(
-    () => (Array.isArray(dropdowns?.categories) ? dropdowns.categories : []),
-    [dropdowns?.categories]
-  );
-  const productTypes = useMemo(
-    () => (Array.isArray(dropdowns?.productTypes) ? dropdowns.productTypes : []),
-    [dropdowns?.productTypes]
-  );
+  const categories = useMemo(() => Array.isArray(dropdowns?.categories) ? dropdowns.categories : [], [dropdowns?.categories]);
+  const productTypes = useMemo(() => Array.isArray(dropdowns?.productTypes) ? dropdowns.productTypes : [], [dropdowns?.productTypes]);
   const productProfiles = useMemo(() => {
     const arr = dropdowns?.productProfiles ?? dropdowns?.profiles;
     return Array.isArray(arr) ? arr : [];
@@ -73,129 +40,69 @@ export default function CascadingDropdowns({
     return Array.isArray(arr) ? arr : [];
   }, [dropdowns?.productTemplates, dropdowns?.templates]);
 
-  // ---------- normalize selected values to string ('' = empty) ----------
   const selectedCatId = toId(value?.categoryId);
   const selectedTypeId = toId(value?.productTypeId);
   const selectedProfileId = toId(value?.productProfileId);
-  const selectedTemplateId = toId(value?.productTemplateId);
+  const selectedProductTemplateId = toId(value?.productTemplateId);
 
-  // ---------- filtered lists (strict by parent) ----------
+  const ensureSelectedOption = (list, selectedId) => {
+    if (!selectedId) return list;
+    const exists = list.some((x) => String(x.id) === String(selectedId));
+    // ⛔ ในโหมด strict (เช่นหน้า Create) ไม่เพิ่ม option "กำลังโหลดค่าเดิม"
+    // ✅ ในโหมดแก้ไข (strict=false) จะคง fallback เดิมไว้ได้ หากต้องการ
+    return exists ? list : (strict ? list : [{ id: selectedId, name: '— กำลังโหลดค่าเดิม —' }, ...list]);
+  };
+
   const filteredTypes = useMemo(() => {
-    if (!selectedCatId) return [];
-    return productTypes.filter((t) => String(getCategoryIdOfType(t)) === selectedCatId);
-  }, [productTypes, selectedCatId]);
+    if (strict && !selectedCatId) return [];
+    if (!selectedCatId) return ensureSelectedOption(productTypes, selectedTypeId);
+    return ensureSelectedOption(
+      productTypes.filter((t) => String(getCategoryIdOfType(t)) === selectedCatId),
+      selectedTypeId
+    );
+  }, [productTypes, selectedCatId, selectedTypeId, strict]);
 
   const filteredProfiles = useMemo(() => {
-    if (!selectedTypeId) return [];
-    return productProfiles.filter((p) => String(getTypeIdOfProfile(p)) === selectedTypeId);
-  }, [productProfiles, selectedTypeId]);
+    if (strict && !selectedTypeId) return [];
+    if (selectedTypeId) {
+      return ensureSelectedOption(
+        productProfiles.filter((p) => String(getTypeIdOfProfile(p)) === selectedTypeId),
+        selectedProfileId
+      );
+    }
+    if (selectedCatId) {
+      if (strict) return [];
+    }
+    return ensureSelectedOption(productProfiles, selectedProfileId);
+  }, [productProfiles, selectedTypeId, selectedCatId, selectedProfileId, strict]);
 
   const filteredTemplates = useMemo(() => {
-    if (!selectedProfileId) return [];
-    return productTemplates.filter((tp) => String(getProfileIdOfTemplate(tp)) === selectedProfileId);
-  }, [productTemplates, selectedProfileId]);
+    if (strict && !selectedProfileId) return [];
+    const pro = selectedProfileId;
+    const typ = selectedTypeId;
+    const cat = selectedCatId;
 
-  // ---------- effects: validate and clear when parent/collections change ----------
-  // Category change → validate/clear Type; also clear Profile & Template downstream
-  useEffect(() => {
-    if (!selectedCatId) {
-      if (selectedTypeId) sameStyleEmit('productTypeId', '');
-      if (selectedProfileId) sameStyleEmit('productProfileId', '');
-      if (selectedTemplateId) sameStyleEmit('productTemplateId', '');
-      return;
+    let out = [];
+    if (pro) {
+      out = productTemplates.filter((tp) => String(getProfileIdOfTemplate(tp)) === pro);
+    } else if (selectedProductTemplateId && !strict) {
+      out = productTemplates.filter((tp) => String(tp?.id) === selectedProductTemplateId);
+    } else if (typ && !strict) {
+      out = productTemplates.filter((tp) => String(tp?.productTypeId ?? tp?.productType?.id) === typ);
+    } else if (cat && !strict) {
+      out = productTemplates.filter((tp) => String(tp?.categoryId ?? tp?.category?.id) === cat);
+    } else {
+      out = strict ? [] : productTemplates;
     }
-    if (selectedTypeId && !isLoading && productTypes.length > 0) {
-      const ok = productTypes.some(
-        (t) => String(t?.id) === selectedTypeId && String(getCategoryIdOfType(t)) === selectedCatId
-      );
-      if (!ok) {
-        sameStyleEmit('productTypeId', '');
-        if (selectedProfileId) sameStyleEmit('productProfileId', '');
-        if (selectedTemplateId) sameStyleEmit('productTemplateId', '');
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedCatId]);
 
-  // Type change → validate/clear Profile & Template
-  useEffect(() => {
-    if (!selectedTypeId) {
-      if (selectedProfileId) sameStyleEmit('productProfileId', '');
-      if (selectedTemplateId) sameStyleEmit('productTemplateId', '');
-      return;
-    }
-    if (selectedProfileId && !isLoading && productProfiles.length > 0) {
-      const ok = productProfiles.some(
-        (p) => String(p?.id) === selectedProfileId && String(getTypeIdOfProfile(p)) === selectedTypeId
-      );
-      if (!ok) {
-        sameStyleEmit('productProfileId', '');
-        if (selectedTemplateId) sameStyleEmit('productTemplateId', '');
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedTypeId]);
+    if ((!out || out.length === 0) && productTemplates.length > 0 && !strict) out = productTemplates;
+    return ensureSelectedOption(out, selectedProductTemplateId);
+  }, [productTemplates, selectedCatId, selectedTypeId, selectedProfileId, selectedProductTemplateId, strict]);
 
-  // Profile change → validate/clear Template
-  useEffect(() => {
-    if (!selectedProfileId) {
-      if (selectedTemplateId) sameStyleEmit('productTemplateId', '');
-      return;
-    }
-    if (selectedTemplateId && !isLoading && productTemplates.length > 0) {
-      const ok = productTemplates.some(
-        (tp) => String(tp?.id) === selectedTemplateId && String(getProfileIdOfTemplate(tp)) === selectedProfileId
-      );
-      if (!ok) sameStyleEmit('productTemplateId', '');
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedProfileId]);
-
-  // Collections late/async updates: re-validate existing selections
-  useEffect(() => {
-    if (!selectedTypeId || !selectedCatId || isLoading || productTypes.length === 0) return;
-    const ok = productTypes.some(
-      (t) => String(t?.id) === selectedTypeId && String(getCategoryIdOfType(t)) === selectedCatId
-    );
-    if (!ok) {
-      sameStyleEmit('productTypeId', '');
-      if (selectedProfileId) sameStyleEmit('productProfileId', '');
-      if (selectedTemplateId) sameStyleEmit('productTemplateId', '');
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [productTypes]);
-
-  useEffect(() => {
-    if (!selectedProfileId || !selectedTypeId || isLoading || productProfiles.length === 0) return;
-    const ok = productProfiles.some(
-      (p) => String(p?.id) === selectedProfileId && String(getTypeIdOfProfile(p)) === selectedTypeId
-    );
-    if (!ok) {
-      sameStyleEmit('productProfileId', '');
-      if (selectedTemplateId) sameStyleEmit('productTemplateId', '');
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [productProfiles]);
-
-  useEffect(() => {
-    if (!selectedTemplateId || !selectedProfileId || isLoading || productTemplates.length === 0) return;
-    const ok = productTemplates.some(
-      (tp) => String(tp?.id) === selectedTemplateId && String(getProfileIdOfTemplate(tp)) === selectedProfileId
-    );
-    if (!ok) sameStyleEmit('productTemplateId', '');
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [productTemplates]);
-
-  // Explicitly avoid URL sync here (left for List pages only)
-  useEffect(() => {
-    if (disableUrlSync) return; // purposely do nothing
-  }, [disableUrlSync]);
-
-  // ---------- UI controls ----------
   const categoryDisabled = isLoading;
-  const typeDisabled = isLoading || !selectedCatId;
-  const profileDisabled = isLoading || !selectedTypeId;
-  const templateDisabled = isLoading || !selectedProfileId;
+  const typeDisabled = isLoading || (strict && !selectedCatId);
+  const profileDisabled = isLoading || (strict && !selectedTypeId);
+  const templateDisabled = isLoading || (strict && !selectedProfileId);
 
   const showCategory = !hiddenFields.includes('category');
   const showType = !hiddenFields.includes('type');
@@ -209,12 +116,11 @@ export default function CascadingDropdowns({
     template: placeholders.template ?? '-- เลือกรูปแบบสินค้า (Template) --',
   };
 
-  // container layout: prefer static Tailwind classes so the JIT compiler can see them
   const containerClass = containerClassName
     ? containerClassName
     : (direction === 'col'
         ? 'grid grid-cols-1 gap-3'
-        : 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3');
+        : 'grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3');
 
   return (
     <div className={containerClass}>
@@ -224,21 +130,17 @@ export default function CascadingDropdowns({
           <select
             id="cdg-category"
             aria-label="เลือกหมวดหมู่"
-            className={`border rounded px-3 py-2 w-full ${selectClassName}`}
+            className={`border rounded px-3 py-2 w-full ${selectClassName} ${categoryDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
             value={selectedCatId}
             onChange={(e) => {
-              const next = e.target.value; // string | ''
-              if (next !== selectedCatId) {
-                sameStyleEmit('categoryId', next);
-              }
+              const next = e.target.value;
+              sameStyleEmit('categoryId', next);
             }}
             disabled={categoryDisabled}
           >
             <option value="">{ph.category}</option>
-            {categories.map((c) => (
-              <option key={c.id} value={String(c.id)}>
-                {c.name}
-              </option>
+            {ensureSelectedOption(categories, selectedCatId).map((c) => (
+              <option key={c.id} value={String(c.id)}>{c.name}</option>
             ))}
           </select>
         </div>
@@ -250,21 +152,17 @@ export default function CascadingDropdowns({
           <select
             id="cdg-type"
             aria-label="เลือกประเภทสินค้า"
-            className={`border rounded px-3 py-2 w-full ${selectClassName}`}
+            className={`border rounded px-3 py-2 w-full ${selectClassName} ${typeDisabled ? 'opacity-50 cursor-not-allowed' : ''}` }
             value={selectedTypeId}
             onChange={(e) => {
-              const next = e.target.value; // string | ''
-              if (next !== selectedTypeId) {
-                sameStyleEmit('productTypeId', next);
-              }
+              const next = e.target.value;
+              sameStyleEmit('productTypeId', next);
             }}
             disabled={typeDisabled}
           >
             <option value="">{ph.type}</option>
             {filteredTypes.map((t) => (
-              <option key={t.id} value={String(t.id)}>
-                {t.name}
-              </option>
+              <option key={t.id} value={String(t.id)}>{t.name}</option>
             ))}
           </select>
         </div>
@@ -276,21 +174,17 @@ export default function CascadingDropdowns({
           <select
             id="cdg-profile"
             aria-label="เลือกลักษณะสินค้า (Profile)"
-            className={`border rounded px-3 py-2 w-full ${selectClassName}`}
+            className={`border rounded px-3 py-2 w-full ${selectClassName} ${profileDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
             value={selectedProfileId}
             onChange={(e) => {
-              const next = e.target.value; // string | ''
-              if (next !== selectedProfileId) {
-                sameStyleEmit('productProfileId', next);
-              }
+              const next = e.target.value;
+              sameStyleEmit('productProfileId', next);
             }}
             disabled={profileDisabled}
           >
             <option value="">{ph.profile}</option>
             {filteredProfiles.map((p) => (
-              <option key={p.id} value={String(p.id)}>
-                {p.name}
-              </option>
+              <option key={p.id} value={String(p.id)}>{p.name}</option>
             ))}
           </select>
         </div>
@@ -302,21 +196,17 @@ export default function CascadingDropdowns({
           <select
             id="cdg-template"
             aria-label="เลือกรูปแบบสินค้า (Template)"
-            className={`border rounded px-3 py-2 w-full ${selectClassName}`}
-            value={selectedTemplateId}
+            className={`border rounded px-3 py-2 w-full ${selectClassName} ${templateDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+            value={selectedProductTemplateId}
             onChange={(e) => {
-              const next = e.target.value; // string | ''
-              if (next !== selectedTemplateId) {
-                sameStyleEmit('productTemplateId', next);
-              }
+              const next = e.target.value;
+              sameStyleEmit('productTemplateId', next);
             }}
             disabled={templateDisabled}
           >
             <option value="">{ph.template}</option>
             {filteredTemplates.map((tp) => (
-              <option key={tp.id} value={String(tp.id)}>
-                {tp.name}
-              </option>
+              <option key={tp.id} value={String(tp.id)}>{tp.name}</option>
             ))}
           </select>
         </div>
@@ -324,3 +214,4 @@ export default function CascadingDropdowns({
     </div>
   );
 }
+

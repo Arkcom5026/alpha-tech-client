@@ -1,7 +1,35 @@
-// purchaseOrderApi.js
-import apiClient from '@/utils/apiClient';
 
-// ✅ ดึง Supplier ทั้งหมด
+// purchaseOrderApi.js (refined)
+// - ใช้ apiClient กลางตามมาตรฐาน (#37, #61)
+// - Getters คืน []/null เมื่อผิดพลาด; Mutations โยน error ให้ Store จัดการ
+// - รองรับ params: search, status (string | string[]), page, pageSize
+
+import apiClient from '@/utils/apiClient.js';
+
+// ────────────────────────────────────────────────────────────────────────────────
+// Helpers
+// ────────────────────────────────────────────────────────────────────────────────
+const buildParams = ({ search, status, page, pageSize } = {}) => {
+  const params = {};
+  if (search && typeof search === 'string' && search.trim() !== '') {
+    params.search = search.trim();
+  }
+  if (status && status !== 'all') {
+    // รองรับทั้ง string และ array แล้ว normalize เป็น CSV ตัวพิมพ์ใหญ่
+    const list = Array.isArray(status) ? status : String(status).split(',');
+    params.status = list
+      .map((s) => String(s).trim().toUpperCase())
+      .filter(Boolean)
+      .join(',');
+  }
+  if (Number.isFinite(page)) params.page = page;
+  if (Number.isFinite(pageSize)) params.pageSize = pageSize;
+  return params;
+};
+
+// ────────────────────────────────────────────────────────────────────────────────
+// Suppliers (minimal needed here)
+// ────────────────────────────────────────────────────────────────────────────────
 export const getSuppliers = async () => {
   try {
     const res = await apiClient.get('/suppliers');
@@ -12,20 +40,14 @@ export const getSuppliers = async () => {
   }
 };
 
-// ✅ ดึง PO ทั้งหมด (ใช้ใน ListPage)
-export const getPurchaseOrders = async ({ search, status } = {}) => {
+// ────────────────────────────────────────────────────────────────────────────────
+// Purchase Orders
+// ────────────────────────────────────────────────────────────────────────────────
+export const getPurchaseOrders = async (opts = {}) => {
   try {
-    const params = {};
-
-    if (search && search.trim() !== '') {
-      params.search = search.trim();
-    }
-
-    if (status && status !== 'all') {
-      params.status = status;
-    }
-
-    const res = await apiClient.get('/purchase-orders', { params });
+    const res = await apiClient.get('/purchase-orders', {
+      params: buildParams(opts),
+    });
     return res.data;
   } catch (error) {
     console.error('❌ getPurchaseOrders error:', error);
@@ -33,10 +55,11 @@ export const getPurchaseOrders = async ({ search, status } = {}) => {
   }
 };
 
-// ✅ ดึง PO ที่ยังตรวจรับไม่ครบ (ใช้ในหน้า “ตรวจรับสินค้า”)
 export const getEligiblePurchaseOrders = async () => {
   try {
-    const res = await apiClient.get('/purchase-orders?status=PENDING,PARTIALLY_RECEIVED');
+    const res = await apiClient.get('/purchase-orders', {
+      params: { status: 'PENDING,PARTIALLY_RECEIVED' },
+    });
     return res.data;
   } catch (error) {
     console.error('❌ getEligiblePurchaseOrders error:', error);
@@ -44,7 +67,6 @@ export const getEligiblePurchaseOrders = async () => {
   }
 };
 
-// ✅ ดึง PO ตาม ID (ใช้ในหน้าแก้ไข/รายละเอียด)
 export const getPurchaseOrderById = async (id) => {
   try {
     const res = await apiClient.get(`/purchase-orders/${id}`);
@@ -55,7 +77,17 @@ export const getPurchaseOrderById = async (id) => {
   }
 };
 
-// ✅ สร้าง PO ใหม่
+export const getPurchaseOrderDetailById = async (id) => {
+  // alias ของ getPurchaseOrderById เพื่อความชัดในที่ใช้งาน
+  try {
+    const res = await apiClient.get(`/purchase-orders/${id}`);
+    return res.data;
+  } catch (error) {
+    console.error('📛 [getPurchaseOrderDetailById] error:', error);
+    return null;
+  }
+};
+
 export const createPurchaseOrder = async (data) => {
   try {
     const res = await apiClient.post('/purchase-orders', data);
@@ -66,7 +98,6 @@ export const createPurchaseOrder = async (data) => {
   }
 };
 
-// ✅ สร้าง PO ใหม่
 export const createPurchaseOrderWithAdvance = async (data) => {
   try {
     const res = await apiClient.post('/purchase-orders/with-advance', data);
@@ -77,7 +108,6 @@ export const createPurchaseOrderWithAdvance = async (data) => {
   }
 };
 
-// ✅ แก้ไข PO
 export const updatePurchaseOrder = async (id, data) => {
   try {
     const res = await apiClient.put(`/purchase-orders/${id}`, data);
@@ -88,18 +118,16 @@ export const updatePurchaseOrder = async (id, data) => {
   }
 };
 
-// ✅ GET รายละเอียด PO แบบเต็ม (พร้อม supplier + รายการสินค้า + receiptItem)
-export const getPurchaseOrderDetailById = async (poId) => {
+export const updatePurchaseOrderStatus = async ({ id, status }) => {
   try {
-    const res = await apiClient.get(`/purchase-orders/${poId}`);
+    const res = await apiClient.patch(`/purchase-orders/${id}/status`, { status });
     return res.data;
   } catch (error) {
-    console.error('📛 [getPurchaseOrderDetailById] error:', error);
+    console.error('❌ updatePurchaseOrderStatus error:', error);
     throw error;
   }
 };
 
-// ✅ ลบ PO
 export const deletePurchaseOrder = async (id) => {
   try {
     const res = await apiClient.delete(`/purchase-orders/${id}`);
@@ -110,22 +138,9 @@ export const deletePurchaseOrder = async (id) => {
   }
 };
 
-// ✅ เปลี่ยนสถานะ PO
-export const updatePurchaseOrderStatus = async ({ id, status }) => {
-  try {
-    console.log('✅ updatePurchaseOrderStatus:', { id, status });
-    const res = await apiClient.patch(`/purchase-orders/${id}/status`, { status });
-    return res.data;
-  } catch (error) {
-    console.error(`❌ updatePurchaseOrderStatus error:`, error);
-    throw error;
-  }
-};
-
-// ✅ ดึง PO ตาม supplierId (ใช้ใน SupplierPaymentTabs)
 export const getPurchaseOrdersBySupplier = async (supplierId) => {
   try {
-    const res = await apiClient.get(`/purchase-orders/by-supplier`, {
+    const res = await apiClient.get('/purchase-orders/by-supplier', {
       params: { supplierId },
     });
     return res.data;
@@ -134,3 +149,5 @@ export const getPurchaseOrdersBySupplier = async (supplierId) => {
     return [];
   }
 };
+
+

@@ -1,6 +1,3 @@
-
-// EditBranchPage.jsx (updated for new Address model)
-
 import React, { useEffect, useState } from "react";
 import { useAddressStore } from "@/features/address/store/addressStore";
 import { useParams, useNavigate } from "react-router-dom";
@@ -14,16 +11,17 @@ const EditBranchPage = () => {
   const { getBranchByIdAction, updateBranchAction } = useBranchStore();
   const { ensureProvincesAction } = useAddressStore();
 
-  // ✅ ใช้ฟิลด์ตามมาตรฐานใหม่ของ Address
   const [formData, setFormData] = useState({
     name: "",
     address: "",
     phone: "",
-    // UI-only for AddressForm control; BE uses only subdistrictCode
     provinceCode: "",
     districtCode: "",
     subdistrictCode: "",
     postalCode: "",
+    businessType: "GENERAL",
+    usePresetFeatures: true,
+    features: { mode: "STRUCTURED", trackSerialNumber: false, enableTemplates: true },
     RBACEnabled: false,
   });
 
@@ -39,34 +37,38 @@ const EditBranchPage = () => {
       return;
     }
 
-    const load = async () => {
+    (async () => {
       try {
-        // Ensure provinces are loaded before setting codes so dropdowns can bind correctly
         await ensureProvincesAction();
         const branch = await getBranchByIdAction(numericId);
-        if (branch) {
-          setFormData({
-            name: branch.name || "",
-            address: branch.address || "",
-            phone: branch.phone || "",
-            provinceCode: (branch.provinceCode != null && branch.provinceCode !== "") ? String(branch.provinceCode) : "",
-            districtCode: (branch.districtCode != null && branch.districtCode !== "") ? String(branch.districtCode) : "",
-            subdistrictCode: (branch.subdistrictCode != null && branch.subdistrictCode !== "") ? String(branch.subdistrictCode) : "",
-            postalCode: (branch.postalCode != null && branch.postalCode !== "") ? String(branch.postalCode) : "",
-            RBACEnabled: !!branch.RBACEnabled,
-          });
-        } else {
+        if (!branch) {
           setErrorMessage("ไม่พบข้อมูลสาขา");
+          return;
         }
+        setFormData({
+          name: branch.name || "",
+          address: branch.address || "",
+          phone: branch.phone || "",
+          provinceCode: branch.provinceCode ? String(branch.provinceCode) : "",
+          districtCode: branch.districtCode ? String(branch.districtCode) : "",
+          subdistrictCode: branch.subdistrictCode ? String(branch.subdistrictCode) : "",
+          postalCode: branch.postalCode ? String(branch.postalCode) : "",
+          businessType: (branch.businessType || "GENERAL").toUpperCase(),
+          usePresetFeatures: branch.features ? false : true,
+          features: branch.features ? {
+            mode: branch.features.mode === "SIMPLE" ? "SIMPLE" : "STRUCTURED",
+            trackSerialNumber: !!branch.features.trackSerialNumber,
+            enableTemplates: branch.features.enableTemplates !== false,
+          } : { mode: "STRUCTURED", trackSerialNumber: false, enableTemplates: true },
+          RBACEnabled: !!branch.RBACEnabled,
+        });
       } catch (err) {
         console.error("❌ getBranchByIdAction error", err);
         setErrorMessage("ไม่สามารถโหลดข้อมูลสาขาได้");
       } finally {
         setLoading(false);
       }
-    };
-
-    load();
+    })();
   }, [id, getBranchByIdAction]);
 
   const handleSubmit = async (e) => {
@@ -76,11 +78,12 @@ const EditBranchPage = () => {
 
     try {
       const payload = {
-        name: formData.name?.trim(),
-        address: formData.address?.trim(),
+        name: formData.name?.trim() || "",
+        address: formData.address?.trim() || "",
         phone: formData.phone?.trim() || null,
         subdistrictCode: formData.subdistrictCode ? String(formData.subdistrictCode) : null,
         RBACEnabled: !!formData.RBACEnabled,
+        businessType: (formData.businessType || "GENERAL").toUpperCase(),
       };
 
       if (!payload.name || !payload.address || !payload.subdistrictCode) {
@@ -89,6 +92,14 @@ const EditBranchPage = () => {
         return;
       }
 
+      if (!formData.usePresetFeatures && formData.features) {
+        const f = formData.features;
+        payload.features = {
+          mode: f.mode === "SIMPLE" ? "SIMPLE" : "STRUCTURED",
+          trackSerialNumber: !!f.trackSerialNumber,
+          enableTemplates: f.enableTemplates !== false,
+        };
+      }
 
       await updateBranchAction(Number(id), payload);
       navigate("/pos/settings/branches?refresh=1");
@@ -105,11 +116,12 @@ const EditBranchPage = () => {
   return (
     <div className="max-w-xl mx-auto p-4 space-y-4">
       <BranchForm
-        key={`edit-${id}-${formData.provinceCode}-${formData.districtCode}-${formData.subdistrictCode}`}
+        key={`edit-${id}-${formData.provinceCode}-${formData.districtCode}-${formData.subdistrictCode}-${formData.businessType}`}
         formData={formData}
         setFormData={setFormData}
         onSubmit={handleSubmit}
         submitLabel="บันทึกการเปลี่ยนแปลง"
+        isEdit
       />
       <ProcessingDialog open={saving} />
       {errorMessage && (
@@ -120,7 +132,5 @@ const EditBranchPage = () => {
 };
 
 export default EditBranchPage;
-
-
 
 

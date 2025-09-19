@@ -1,7 +1,8 @@
+
 // ✅ src/features/product/components/ProductImage.jsx
 
-import React, { useImperativeHandle, forwardRef, useState, useRef, useEffect } from 'react';
-import { X, Star, Trash2 } from 'lucide-react';
+import React, { useImperativeHandle, forwardRef, useRef, useEffect } from 'react';
+import { Star, Trash2 } from 'lucide-react';
 import useProductStore from '../store/productStore';
 
 const ProductImage = forwardRef(({
@@ -32,7 +33,7 @@ const ProductImage = forwardRef(({
 
     if (isOld) {
       const imageToRemove = oldImages[index];
-      imagesToDeleteRef.current.push(imageToRemove.public_id);
+      if (imageToRemove?.public_id) imagesToDeleteRef.current.push(imageToRemove.public_id);
       setOldImages((prev) => prev.filter((_, i) => i !== index));
 
     } else {
@@ -85,8 +86,12 @@ const ProductImage = forwardRef(({
     },
   }));
 
+  const sortedOld = Array.isArray(oldImages)
+    ? [...oldImages].sort((a, b) => (b?.isCover ? 1 : 0) - (a?.isCover ? 1 : 0))
+    : [];
+
   const allImages = [
-    ...(Array.isArray(oldImages) ? oldImages.map((img) => ({ ...img, isOld: true })) : []),
+    ...sortedOld.map((img) => ({ ...img, isOld: true })),
     ...(Array.isArray(previewUrls) ? previewUrls.map((url, i) => ({ url, isOld: false, fileIndex: i })) : [])
   ];
 
@@ -111,8 +116,10 @@ const ProductImage = forwardRef(({
       {allImages.map((img, index) => (
         <div key={index} className="relative border rounded p-2 bg-white dark:bg-zinc-900 border-gray-300 dark:border-gray-600">
           <img
-            src={img.url}
-            alt={`img-${index}`}
+            src={(img?.secure_url || img?.url || '')}
+            alt={img?.caption || `img-${index}`}
+            loading="lazy"
+            onError={(e) => { e.currentTarget.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=='; }}
             className="w-full h-auto rounded bg-white dark:bg-zinc-800"
           />
 
@@ -148,3 +155,5 @@ const ProductImage = forwardRef(({
 });
 
 export default ProductImage;
+
+

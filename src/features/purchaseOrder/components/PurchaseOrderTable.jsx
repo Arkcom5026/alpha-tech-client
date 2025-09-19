@@ -1,29 +1,85 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import StandardActionButtons from '@/components/shared/buttons/StandardActionButtons';
 
-const PurchaseOrderTable = ({ products = [], setProducts = () => { }, loading = false, editable = true }) => {
+// PurchaseOrderTable
+// - ปรับอินพุตจำนวน/ราคาให้เป็นไปตามกฎข้อ 78 (placeholder, ชิดขวา, ไม่บังคับ 0 ระหว่างพิมพ์)
+// - ใช้ raw state แยกสำหรับช่อง input เพื่อ UX ที่ลื่นไหล แล้วค่อยแปลงเป็นตัวเลขเมื่ออัปเดตเข้า store
+const PurchaseOrderTable = ({ products = [], setProducts = () => {}, loading = false, editable = true }) => {
   const lastRowRef = useRef(null);
+
+  // เก็บค่าที่ผู้ใช้กำลังพิมพ์แบบ raw string เพื่อไม่ให้เด้งเป็น 0 ระหว่างพิมพ์
+  const [rawQty, setRawQty] = useState({}); // { [id]: string }
+  const [rawCost, setRawCost] = useState({}); // { [id]: string }
+
+  // ซิงก์ค่าเริ่มต้นเมื่อ products เปลี่ยน (เฉพาะรายการที่ยังไม่มีใน raw)
+  useEffect(() => {
+    setRawQty((prev) => {
+      const next = { ...prev };
+      products.forEach((p) => {
+        if (!(p.id in next)) next[p.id] = String(p.quantity ?? 1);
+      });
+      return next;
+    });
+    setRawCost((prev) => {
+      const next = { ...prev };
+      products.forEach((p) => {
+        if (!(p.id in next)) next[p.id] = (p.costPrice ?? 0) > 0 ? String(p.costPrice) : '';
+      });
+      return next;
+    });
+  }, [products]);
+
+  const parseQty = (value) => {
+    const n = parseInt(value ?? '', 10);
+    return Number.isFinite(n) && n > 0 ? n : 1;
+  };
+
+  const parseCost = (value) => {
+    const n = parseFloat(value ?? '');
+    return Number.isFinite(n) && n >= 0 ? n : 0;
+  };
 
   const handleDelete = (id) => {
     setProducts((prev) => prev.filter((item) => item.id !== id));
+    // ล้าง raw state เพื่อความสะอาด
+    setRawQty((prev) => {
+      const n = { ...prev }; delete n[id]; return n;
+    });
+    setRawCost((prev) => {
+      const n = { ...prev }; delete n[id]; return n;
+    });
   };
 
-  const handleChange = (id, field, value) => {
-    setProducts((prev) =>
-      prev.map((item) =>
-        item.id === id ? { ...item, [field]: Number(value) || 0 } : item
-      )
-    );
+  // อัปเดตจำนวนตามที่ผู้ใช้พิมพ์ (raw) + อัปเดตตัวเลขเข้าตะกร้าเมื่อค่ามีความหมาย
+  const handleQtyChange = (id, value) => {
+    const cleaned = value.replace(/[^0-9]/g, '');
+    setRawQty((prev) => ({ ...prev, [id]: cleaned }));
+    if (cleaned !== '') {
+      const qty = parseQty(cleaned);
+      setProducts((prev) => prev.map((it) => (it.id === id ? { ...it, quantity: qty } : it)));
+    }
+  };
+
+  // อัปเดตราคาตามที่ผู้ใช้พิมพ์ (raw) + อัปเดตตัวเลขเข้าตะกร้าเมื่อค่ามีความหมาย
+  const handleCostChange = (id, value) => {
+    const cleaned = value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');
+    setRawCost((prev) => ({ ...prev, [id]: cleaned }));
+    if (cleaned !== '') {
+      const cost = parseCost(cleaned);
+      setProducts((prev) => prev.map((it) => (it.id === id ? { ...it, costPrice: cost } : it)));
+    }
   };
 
   useEffect(() => {
     if (lastRowRef.current) {
-      lastRowRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      try {
+        lastRowRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      } catch { /* no-op to avoid eslint no-empty */ }
     }
   }, [products.length]);
 
-
+  const rows = useMemo(() => products, [products]);
 
   return (
     <div className="rounded-md border overflow-x-auto">
@@ -31,7 +87,6 @@ const PurchaseOrderTable = ({ products = [], setProducts = () => { }, loading = 
       <Table>
         <TableHeader className="bg-blue-100">
           <TableRow>
-
             <TableHead className="text-center w-[150px]">หมวดหมู่</TableHead>
             <TableHead className="text-center w-[130px]">ประเภท</TableHead>
             <TableHead className="text-center w-[130px]">ลักษณะ</TableHead>
@@ -46,39 +101,60 @@ const PurchaseOrderTable = ({ products = [], setProducts = () => { }, loading = 
         </TableHeader>
 
         <TableBody>
-          {!loading && products.length > 0 ? (
-            products.map((item, index) => {
-              const total = item.quantity * item.costPrice;
-              const isLast = index === products.length - 1;
+          {!loading && rows.length > 0 ? (
+            rows.map((item, index) => {
+              const isLast = index === rows.length - 1;
+
+              const qtyDisplay = rawQty[item.id] ?? String(item.quantity ?? 1);
+              const costDisplay = rawCost[item.id] ?? ((item.costPrice ?? 0) > 0 ? String(item.costPrice) : '');
+
+              const qtyParsed = parseQty(qtyDisplay);
+              const costParsed = parseCost(costDisplay);
+              const total = qtyParsed * costParsed;
+
               return (
-                <TableRow key={item.id} ref={isLast ? lastRowRef : null}>
+                <TableRow key={item.id} ref={isLast ? lastRowRef : null} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
                   <TableCell>{item.category || '-'}</TableCell>
                   <TableCell>{item.productType || '-'}</TableCell>
                   <TableCell>{item.productProfile || '-'}</TableCell>
                   <TableCell>{item.productTemplate || '-'}</TableCell>
                   <TableCell>{item.name || '-'}</TableCell>
                   <TableCell>{item.model || '-'}</TableCell>
-                  <TableCell className="text-center">
+
+                  <TableCell className="align-middle">
                     <input
                       type="number"
-                      value={item.quantity}
+                      className="w-20 text-right border rounded p-1"
+                      value={qtyDisplay}
+                      placeholder="1"
                       min={1}
-                      onChange={(e) => handleChange(item.id, 'quantity', e.target.value)}
-                      className="w-20 text-center border rounded p-1"
+                      onChange={(e) => handleQtyChange(item.id, e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') e.preventDefault();
+                      }}
+                      inputMode="numeric"
                     />
                   </TableCell>
-                  <TableCell className="text-center">
+
+                  <TableCell className="align-middle">
                     <input
                       type="number"
-                      value={item.costPrice}
+                      className="w-24 text-right border rounded p-1"
+                      value={costDisplay}
+                      placeholder="0.00"
                       min={0}
-                      onChange={(e) => handleChange(item.id, 'costPrice', e.target.value)}
-                      className="w-24 text-center border rounded p-1"
+                      onChange={(e) => handleCostChange(item.id, e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') e.preventDefault();
+                      }}
+                      inputMode="decimal"
                     />
                   </TableCell>
-                  <TableCell className="text-center">{total.toLocaleString()} ฿</TableCell>
+
+                  <TableCell className="text-center align-middle">{total.toLocaleString()} ฿</TableCell>
+
                   {editable && (
-                    <TableCell className="text-center">
+                    <TableCell className="text-center align-middle">
                       <div className="flex justify-center">
                         <StandardActionButtons onDelete={() => handleDelete(item.id)} />
                       </div>

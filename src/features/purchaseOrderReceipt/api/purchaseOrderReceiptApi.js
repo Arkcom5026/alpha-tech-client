@@ -1,11 +1,12 @@
 // ✅ purchaseOrderReceiptApi.js — API ฝั่งใบรับสินค้า (ESM)
 import apiClient from '@/utils/apiClient';
 
-// 🔎 ดึงใบรับสินค้าทั้งหมด (รองรับกรอง printed แบบ optional)
+// ────────────────────────────────────────────────────────────────────────────────
+// Receipts (เดิม)
+// ────────────────────────────────────────────────────────────────────────────────
 export const getAllReceipts = async (params = {}) => {
   try {
     const { data } = await apiClient.get('/purchase-order-receipts', { params });
-    console.log("getAllReceipts :",data )
     return data;
   } catch (error) {
     console.error('❌ getAllReceipts error:', error);
@@ -63,7 +64,6 @@ export const deleteReceipt = async (id) => {
   }
 };
 
-// 🚦 สรุปบาร์โค้ดตามใบรับ (ใช้ในโหมดพิมพ์แบบเก่า)
 export const getReceiptBarcodeSummaries = async (params = {}) => {
   try {
     const { data } = await apiClient.get('/purchase-order-receipts/receipt-barcode-summaries', { params });
@@ -74,7 +74,6 @@ export const getReceiptBarcodeSummaries = async (params = {}) => {
   }
 };
 
-// 🧾 ใบรับสินค้าที่พร้อมชำระ
 export const getReceiptsReadyToPay = async (params = {}) => {
   try {
     const { data } = await apiClient.get('/purchase-order-receipts/ready-to-pay', { params });
@@ -85,7 +84,6 @@ export const getReceiptsReadyToPay = async (params = {}) => {
   }
 };
 
-// ✅ ทำเครื่องหมายว่ารับของครบ/จบใบรับ
 export const markReceiptAsCompleted = async (receiptId) => {
   try {
     const { data } = await apiClient.patch(`/purchase-order-receipts/${receiptId}/complete`);
@@ -96,7 +94,6 @@ export const markReceiptAsCompleted = async (receiptId) => {
   }
 };
 
-// ✅ Finalize ถ้าจำเป็น (เช็คและปิดสถานะ)
 export const finalizeReceiptIfNeeded = async (receiptId) => {
   try {
     const { data } = await apiClient.patch(`/purchase-order-receipts/${receiptId}/finalize`);
@@ -107,7 +104,6 @@ export const finalizeReceiptIfNeeded = async (receiptId) => {
   }
 };
 
-// 🖨️ ทำเครื่องหมายว่า "พิมพ์แล้ว"
 export const markReceiptAsPrinted = async (receiptId) => {
   try {
     const { data } = await apiClient.patch(`/purchase-order-receipts/${receiptId}/printed`);
@@ -118,15 +114,56 @@ export const markReceiptAsPrinted = async (receiptId) => {
   }
 };
 
-// 🧮 (ออปชัน) ดึง "สรุปใบรับ" โดยตรงจาก API หากมี endpoint พร้อม
-// หาก Back-end รองรับ endpoint นี้ คุณสามารถสลับ Store มาใช้ตัวนี้แทนการ normalize ฝั่ง FE ได้ทันที
 export const getReceiptSummaries = async (params = {}) => {
   try {
     const { data } = await apiClient.get('/purchase-order-receipts/summaries', { params });
-    // คาดหวังรูปแบบ: [{id, code, purchaseOrderCode, supplier, taxInvoiceNo, receivedAt, totalItems, scannedCount, printed}]
     return data;
   } catch (error) {
     console.error('❌ getReceiptSummaries error:', error);
     throw error;
   }
 };
+
+// ────────────────────────────────────────────────────────────────────────────────
+// QUICK + Barcode + Commit (SIMPLE & STRUCTURED)
+// ────────────────────────────────────────────────────────────────────────────────
+export const createQuickReceipt = async (payload) => {
+  try {
+    const { data } = await apiClient.post('/quick-receipts', payload);
+    return data;
+  } catch (error) {
+    console.error('❌ createQuickReceipt error:', error);
+    throw error;
+  }
+};
+
+export const generateReceiptBarcodes = async (receiptId) => {
+  try {
+    const { data } = await apiClient.post(`/purchase-order-receipts/${receiptId}/generate-barcodes`);
+    return data;
+  } catch (error) {
+    console.error('❌ generateReceiptBarcodes error:', error);
+    throw error;
+  }
+};
+
+export const printReceipt = async (receiptId, options = {}) => {
+  try {
+    const { data } = await apiClient.post(`/purchase-order-receipts/${receiptId}/print`, options);
+    return data;
+  } catch (error) {
+    console.error('❌ printReceipt error:', error);
+    throw error;
+  }
+};
+
+export const commitReceipt = async (receiptId) => {
+  try {
+    const { data } = await apiClient.post(`/purchase-order-receipts/${receiptId}/commit`);
+    return data;
+  } catch (error) {
+    console.error('❌ commitReceipt error:', error);
+    throw error;
+  }
+};
+

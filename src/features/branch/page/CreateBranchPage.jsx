@@ -1,5 +1,3 @@
-// CreateBranchPage.jsx (updated for new Address model)
-
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useBranchStore } from "@/features/branch/store/branchStore";
@@ -10,21 +8,24 @@ const CreateBranchPage = () => {
   const navigate = useNavigate();
   const { createBranchAction } = useBranchStore();
 
-  // ✅ ใช้ฟิลด์ตามมาตรฐานใหม่
+  // ฟิลด์ตาม Address ใหม่ + ประเภทสาขา + ตัวเลือก Preset
   const [formData, setFormData] = useState({
     name: "",
     address: "",
     phone: "",
-    // ใช้สำหรับควบคุม AddressForm ใน UI เท่านั้น (ฝั่ง BE ใช้แค่ subdistrictCode)
     provinceCode: "",
     districtCode: "",
     subdistrictCode: "",
     postalCode: "",
+    businessType: "GENERAL",
+    usePresetFeatures: true, // true = ไม่ส่ง features ให้ BE → ใช้ preset อัตโนมัติ
+    features: { mode: "STRUCTURED", trackSerialNumber: false, enableTemplates: true },
     RBACEnabled: false,
   });
 
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -32,16 +33,26 @@ const CreateBranchPage = () => {
 
     try {
       const payload = {
-        name: formData.name?.trim(),
-        address: formData.address?.trim(),
+        name: formData.name?.trim() || "",
+        address: formData.address?.trim() || "",
         phone: formData.phone?.trim() || null,
         subdistrictCode: formData.subdistrictCode ? String(formData.subdistrictCode) : null,
         RBACEnabled: !!formData.RBACEnabled,
+        businessType: (formData.businessType || "GENERAL").toUpperCase(),
       };
 
       if (!payload.name || !payload.address || !payload.subdistrictCode) {
         setErrorMessage("กรุณากรอกข้อมูลให้ครบ: ชื่อสาขา, ที่อยู่ และ จังหวัด/อำเภอ/ตำบล");
         return;
+      }
+
+      if (!formData.usePresetFeatures && formData.features) {
+        const f = formData.features;
+        payload.features = {
+          mode: f.mode === "SIMPLE" ? "SIMPLE" : "STRUCTURED",
+          trackSerialNumber: !!f.trackSerialNumber,
+          enableTemplates: f.enableTemplates !== false,
+        };
       }
 
       await createBranchAction(payload);
@@ -72,12 +83,3 @@ const CreateBranchPage = () => {
 };
 
 export default CreateBranchPage;
-
-
-
-
-
-
-
-
-

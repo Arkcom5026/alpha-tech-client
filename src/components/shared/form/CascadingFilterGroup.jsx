@@ -1,5 +1,4 @@
 
-
 // ✅ src/components/shared/form/CascadingFilterGroup.jsx
 
 import { useMemo } from 'react';
@@ -178,7 +177,7 @@ export default function CascadingFilterGroup({
         {!hide('template') && (
           <select
             aria-label="รูปแบบสินค้า (Template)"
-            value={productTemplateId === '' ? '' : productTemplateId}
+            value={productTemplateId === '' ? '' : productTemplateId }
             onChange={(e) => update('productTemplateId', e.target.value)}
             disabled={templateDisabled}
             className={`border px-3 py-2 rounded w-full text-sm ${templateDisabled ? 'bg-gray-100' : ''}`}
@@ -224,4 +223,5 @@ export default function CascadingFilterGroup({
     </div>
   );
 }
+
 

@@ -1,52 +1,33 @@
-// supplierPaymentApi.js
+// supplierPaymentApi.js (refined)
+// - ใช้ apiClient กลาง (#37, #61)
+// - Getters: คืน []/null เมื่อพลาด; Mutations: throw ให้ Store จัดการ
+// - ใช้ query params แทน string concatenation
 
-import apiClient from '@/utils/apiClient';
+import apiClient from '@/utils/apiClient.js';
 
-  // ✅ สร้างการชำระเงินให้ Supplier
-  export const createSupplierPayment = async (data) => {
-    try {
-      const res = await apiClient.post('/supplier-payments', {
-        supplierId: data.supplierId,
-        paymentDate: data.paymentDate,
-        amount: data.amount,
-        method: data.method,
-        paymentType: data.paymentType,
-        note: data.note,
-        debitAmount: data.debitAmount,
-        creditAmount: data.creditAmount,
-        receipts: data.receiptItems || [], // ✅ ใช้ชื่อที่ backend รอรับ
-      });
-      return res.data;
-    } catch (err) {
-      console.error('❌ [createSupplierPayment] error:', err);
-      throw err;
-    }
-  };
-  
-
-// ✅ ดึงการชำระเงินทั้งหมด (รายงานรวม)
-export const getAllSupplierPayments = async () => {
+// ────────────────────────────────────────────────────────────────────────────────
+// Create / Delete (Mutations)
+// ────────────────────────────────────────────────────────────────────────────────
+export const createSupplierPayment = async (data) => {
   try {
-    const res = await apiClient.get('/supplier-payments');
+    const res = await apiClient.post('/supplier-payments', {
+      supplierId: data.supplierId,
+      paymentDate: data.paymentDate,
+      amount: data.amount,
+      method: data.method,
+      paymentType: data.paymentType,
+      note: data.note,
+      debitAmount: data.debitAmount,
+      creditAmount: data.creditAmount,
+      receipts: data.receiptItems || [], // ชื่อฟิลด์ตาม BE
+    });
     return res.data;
   } catch (err) {
-    console.error('❌ [getAllSupplierPayments] error:', err);
+    console.error('❌ [createSupplierPayment] error:', err);
     throw err;
   }
 };
 
-// ✅ ดึงการชำระเงินของ PO รายการเดียว
-export const getSupplierPaymentsByPO = async (poId) => {
-  try {
-    const res = await apiClient.get(`/supplier-payments/by-po/${poId}`);
-    return res.data;
-  } catch (err) {
-    console.error('❌ [getSupplierPaymentsByPO] error:', err);
-    throw err;
-  }
-};
-
-// ✅ ลบรายการการชำระเงิน
 export const deleteSupplierPayment = async (paymentId) => {
   try {
     const res = await apiClient.delete(`/supplier-payments/${paymentId}`);
@@ -57,26 +38,48 @@ export const deleteSupplierPayment = async (paymentId) => {
   }
 };
 
-// ✅ ดึงการชำระเงินทั้งหมดของ Supplier รายใดรายหนึ่ง
+// ────────────────────────────────────────────────────────────────────────────────
+// Reads (Getters)
+// ────────────────────────────────────────────────────────────────────────────────
+export const getAllSupplierPayments = async () => {
+  try {
+    const res = await apiClient.get('/supplier-payments');
+    return res.data;
+  } catch (err) {
+    console.error('❌ [getAllSupplierPayments] error:', err);
+    return [];
+  }
+};
+
+export const getSupplierPaymentsByPO = async (poId) => {
+  try {
+    const res = await apiClient.get(`/supplier-payments/by-po/${poId}`);
+    return res.data;
+  } catch (err) {
+    console.error('❌ [getSupplierPaymentsByPO] error:', err);
+    return [];
+  }
+};
+
 export const getSupplierPaymentsBySupplier = async (supplierId) => {
   try {
     const res = await apiClient.get(`/supplier-payments/by-supplier/${supplierId}`);
     return res.data;
   } catch (error) {
-    console.error('❌ getSupplierPaymentsBySupplier error:', error);
+    console.error('❌ [getSupplierPaymentsBySupplier] error:', error);
     return [];
   }
 };
 
-// ✅ ดึงยอดมัดจำที่ยังไม่ได้ผูกกับ 
+// ✅ ดึงยอดมัดจำที่ยังไม่ได้ผูกกับเอกสารอื่น ของ Supplier ที่ระบุ
 export const getAdvancePaymentsBySupplier = async (supplierId) => {
   try {
-   
-    const res = await apiClient.get(`/supplier-payments/advance?supplierId=${supplierId}`);
-    console.log('getAdvancePaymentsBySupplier res : ',res)
+    const res = await apiClient.get('/supplier-payments/advance', {
+      params: { supplierId },
+    });
     return res.data;
   } catch (error) {
-    console.error('❌ getAdvancePaymentsBySupplier error:', error);
+    console.error('❌ [getAdvancePaymentsBySupplier] error:', error);
     return [];
   }
 };

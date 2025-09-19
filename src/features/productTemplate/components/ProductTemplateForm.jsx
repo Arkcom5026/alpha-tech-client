@@ -176,6 +176,3 @@ const ProductTemplateForm = ({ defaultValues = {}, onSubmit, mode }) => {
 
 export default ProductTemplateForm;
 
-
-
-

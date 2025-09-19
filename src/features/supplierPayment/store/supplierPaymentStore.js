@@ -1,9 +1,12 @@
 // supplierPaymentStore.js
+// ✅ อัปเดตให้สอดคล้องกับการใช้งานใน PurchaseOrderForm
+// - คง state เดิม `advancePayments` เพื่อ backwards-compat
+// - เพิ่ม `advancePaymentsBySupplier: { [supplierId]: AdvancePayment[] }` ตามที่หน้า Form ใช้
+// - ทุก action ลงท้ายด้วย Action (กฎ #64) และเรียก API ผ่าน ...Api เท่านั้น (กฎ #61)
 
 import { create } from 'zustand';
 import {
   createSupplierPayment,
-  getSupplierPaymentsByPO,
   deleteSupplierPayment,
   getAllSupplierPayments,
   getAdvancePaymentsBySupplier,
@@ -11,30 +14,37 @@ import {
 } from '../api/supplierPaymentApi';
 
 const useSupplierPaymentStore = create((set, get) => ({
+  // ── State ───────────────────────────────────────────────────────────────────
   supplierPayments: [],
   isSupplierPaymentLoading: false,
   isSupplierPaymentSubmitting: false,
   supplierPaymentError: null,
   selectedSupplier: null,
-  advancePayments: [], // ✅ เพิ่ม state สำหรับเก็บรายการชำระเงินล่วงหน้า
 
+  // เก็บลิสต์รวบยอดแบบเดิม (compat)
+  advancePayments: [],
+  // เก็บแบบ Map ตาม supplierId → ใช้ใน PurchaseOrderForm
+  advancePaymentsBySupplier: {}, // { [supplierId: number]: AdvancePayment[] }
+
+  // ── Setters ────────────────────────────────────────────────────────────────
   setSelectedSupplier: (supplier) => set({ selectedSupplier: supplier }),
 
-  // ✅ สร้างการชำระเงินให้ Supplier (Action)
+  // ── Actions ────────────────────────────────────────────────────────────────
+  // สร้างการชำระเงินให้ Supplier
   createSupplierPaymentAction: async (paymentData) => {
     set({ isSupplierPaymentSubmitting: true, supplierPaymentError: null });
     try {
-      const response = await createSupplierPayment(paymentData); // ✅ ส่งตรง receiptItems
+      const response = await createSupplierPayment(paymentData);
       set({ isSupplierPaymentSubmitting: false });
       return response;
     } catch (err) {
       console.error('❌ [createSupplierPaymentAction] error:', err);
-      set({ isSupplierPaymentSubmitting: false, supplierPaymentError: err.message || 'เกิดข้อผิดพลาด' });
+      set({ isSupplierPaymentSubmitting: false, supplierPaymentError: err?.message || 'เกิดข้อผิดพลาด' });
       return null;
     }
   },
 
-  // ✅ ดึงรายการชำระเงินทั้งหมด
+  // ดึงรายการชำระเงินทั้งหมด
   fetchAllSupplierPaymentsAction: async () => {
     set({ isSupplierPaymentLoading: true, supplierPaymentError: null });
     try {
@@ -42,13 +52,11 @@ const useSupplierPaymentStore = create((set, get) => ({
       set({ supplierPayments: data, isSupplierPaymentLoading: false });
     } catch (err) {
       console.error('❌ [fetchAllSupplierPaymentsAction] error:', err);
-      set({ isSupplierPaymentLoading: false, supplierPaymentError: err.message || 'ไม่สามารถโหลดข้อมูลได้' });
+      set({ isSupplierPaymentLoading: false, supplierPaymentError: err?.message || 'ไม่สามารถโหลดข้อมูลได้' });
     }
   },
 
-
-
-  // ✅ ลบรายการชำระเงิน
+  // ลบรายการชำระเงิน
   deleteSupplierPaymentAction: async (paymentId) => {
     try {
       await deleteSupplierPayment(paymentId);
@@ -57,40 +65,59 @@ const useSupplierPaymentStore = create((set, get) => ({
       set({ supplierPayments: updated });
     } catch (err) {
       console.error('❌ [deleteSupplierPaymentAction] error:', err);
-      set({ supplierPaymentError: err.message || 'ลบข้อมูลไม่สำเร็จ' });
+      set({ supplierPaymentError: err?.message || 'ลบข้อมูลไม่สำเร็จ' });
     }
   },
 
-  // ✅ ดึงข้อมูลการชำระเงินทั้งหมดของ Supplier รายใดรายหนึ่ง
+  // ดึงข้อมูลการชำระเงินทั้งหมดของ Supplier
   fetchSupplierPaymentsBySupplierIdAction: async (supplierId) => {
     try {
       const data = await getSupplierPaymentsBySupplier(supplierId);
-      console.log('✅ supplierPayments for supplierId:', supplierId, data);
-      if (data?.length > 0) {
-        set({ supplierPayments: data, selectedSupplier: data[0].supplier });
+      if (Array.isArray(data) && data.length > 0) {
+        set({ supplierPayments: data, selectedSupplier: data[0].supplier || null });
       } else {
         set({ supplierPayments: [], selectedSupplier: null });
       }
     } catch (err) {
-      console.error('❌ fetchSupplierPaymentsBySupplierIdAction error:', err);
+      console.error('❌ [fetchSupplierPaymentsBySupplierIdAction] error:', err);
     }
   },
 
-  // ✅ ดึงข้อมูลการชำระเงินล่วงหน้าตาม Supplier พร้อมตั้งค่า Supplier ด้วย
+  // ดึงข้อมูลการชำระเงินล่วงหน้าตาม Supplier และแคชเป็น Map
   fetchAdvancePaymentsBySupplierAction: async (supplierId) => {
+    if (!supplierId) return;
     try {
       const data = await getAdvancePaymentsBySupplier(supplierId);
-      console.log('fetchAdvancePaymentsBySupplierAction data : ', data);
-      if (data?.length > 0) {
-        set({ advancePayments: data, selectedSupplier: data[0].supplier });
-      } else {
-        set({ advancePayments: [], selectedSupplier: null });
-      }
+      // อัปเดตทั้งแบบเก่า (array) และแบบ Map ตาม supplierId
+      set((state) => ({
+        advancePayments: Array.isArray(data) ? data : [],
+        advancePaymentsBySupplier: {
+          ...state.advancePaymentsBySupplier,
+          [supplierId]: Array.isArray(data) ? data : [],
+        },
+        selectedSupplier: data?.[0]?.supplier || state.selectedSupplier || null,
+      }));
     } catch (err) {
-      console.error('❌ fetchAdvancePaymentsBySupplierAction error:', err);
+      console.error('❌ [fetchAdvancePaymentsBySupplierAction] error:', err);
+      // กรณี error ให้เคลียร์เฉพาะช่องของ supplierId นั้น ๆ แต่ไม่ยุ่งกับช่องอื่น
+      set((state) => ({
+        advancePaymentsBySupplier: { ...state.advancePaymentsBySupplier, [supplierId]: [] },
+      }));
     }
+  },
+
+  // Utility: ล้างแคชมัดจำของซัพพลายเออร์รายใดรายหนึ่ง
+  clearAdvancePaymentsCacheAction: (supplierId) => {
+    if (!supplierId) return;
+    set((state) => {
+      const next = { ...state.advancePaymentsBySupplier };
+      delete next[supplierId];
+      return { advancePaymentsBySupplier: next };
+    });
   },
 }));
 
 export default useSupplierPaymentStore;
+
+
 

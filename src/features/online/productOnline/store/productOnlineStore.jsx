@@ -9,7 +9,7 @@ import {
 } from '../api/productOnlineApi';
 import { useBranchStore } from '@/features/branch/store/branchStore';
 
-export const useProductOnlineStore = create((set, get) => ({
+export const useProductOnlineStore = create((set) => ({
   products: [],
   selectedProduct: null,
   isLoading: false,
@@ -20,7 +20,7 @@ export const useProductOnlineStore = create((set, get) => ({
     categoryId: '',
     productTypeId: '',
     productProfileId: '',
-    templateId: '',
+    productTemplateId: '',
   },
   setFilters: (newFilters) => set({ filters: newFilters }),
 

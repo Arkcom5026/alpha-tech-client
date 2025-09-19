@@ -1,4 +1,4 @@
-// ✅ supplierStore.js (อัปเดตชื่อฟังก์ชัน + เพิ่มให้ครบ)
+// src/features/supplier/store/supplierStore.js
 import { create } from 'zustand';
 import {
   createSupplier,
@@ -9,66 +9,74 @@ import {
 } from '../api/supplierApi';
 import { useBranchStore } from '@/features/branch/store/branchStore';
 
-const useSupplierStore = create((set) => ({
+const useSupplierStore = create((set, get) => ({
   suppliers: [],
   selectedSupplier: null,
   supplierError: null,
   isSupplierLoading: false,
 
+  // ✅ รายชื่อสำหรับ dropdown พร้อมใช้
+  getSupplierOptions: () =>
+    (get().suppliers || []).map(s => ({ id: Number(s.id), name: s?.name ?? '-' })),
 
-  // ✅ โหลด supplier ทั้งหมด
+  // ✅ โหลด supplier ทั้งหมด (ตามสาขาปัจจุบัน)
   fetchSuppliersAction: async () => {
     const branchId = useBranchStore.getState().selectedBranchId;
     if (!branchId) return;
+    set({ isSupplierLoading: true, supplierError: null });
     try {
       const data = await getAllSuppliers({ branchId });
-      // ✅ เรียงตามตัวอักษร A-Z
-      
-      const sorted = [...data].sort((a, b) => a.name.localeCompare(b.name));
-      console.log('fetchSuppliersAction : ',sorted)
+      const safe = Array.isArray(data) ? data : [];
+      // กันชื่อว่าง & เรียง A-Z
+      const sorted = [...safe].sort((a, b) =>
+        (a?.name ?? '').localeCompare(b?.name ?? '', 'th')
+      );
       set({ suppliers: sorted });
     } catch (err) {
-      console.error('❌ fetchAllSuppliersAction error:', err);
-      set({ error: err });
+      console.error('❌ fetchSuppliersAction error:', err);
+      set({ supplierError: String(err?.message || err) });
+    } finally {
+      set({ isSupplierLoading: false });
     }
   },
 
-
-  // ✅ โหลด supplier รายตัว (ใช้ในหน้า detail/payment)
+  // ✅ โหลด supplier รายตัว
   fetchSupplierByIdAction: async (id) => {
     const parsedId = Number(id);
-    if (isNaN(parsedId)) {
-      console.error('❌ [fetchSupplierByIdAction] error: invalid id', id);
+    if (Number.isNaN(parsedId)) {
+      console.error('❌ [fetchSupplierByIdAction] invalid id', id);
       return set({ supplierError: 'ID ไม่ถูกต้อง' });
     }
+    set({ isSupplierLoading: true, supplierError: null });
     try {
       const res = await getSupplierById(parsedId);
-      console.log('fetchSupplierByIdAction : ', res);
       set({ selectedSupplier: res });
     } catch (err) {
       console.error('❌ [fetchSupplierByIdAction] error:', err);
-      set({ supplierError: err.message });
+      set({ supplierError: String(err?.message || err) });
+    } finally {
+      set({ isSupplierLoading: false });
     }
   },
 
-  // ✅ เพิ่ม supplier ใหม่
   createSupplierAction: async (form) => {
+    set({ supplierError: null });
     try {
       const res = await createSupplier(form);
       set((state) => ({ suppliers: [...state.suppliers, res] }));
     } catch (err) {
       console.error('❌ [createSupplierAction] error:', err);
-      set({ supplierError: err.message });
+      set({ supplierError: String(err?.message || err) });
     }
   },
 
-  // ✅ แก้ไขข้อมูล supplier
   updateSupplierAction: async (id, form) => {
     const parsedId = Number(id);
-    if (isNaN(parsedId)) {
-      console.error('❌ [updateSupplierAction] error: invalid id', id);
+    if (Number.isNaN(parsedId)) {
+      console.error('❌ [updateSupplierAction] invalid id', id);
       return set({ supplierError: 'ID ไม่ถูกต้อง' });
     }
+    set({ supplierError: null });
     try {
       const updated = await updateSupplier(parsedId, form);
       set((state) => ({
@@ -76,17 +84,17 @@ const useSupplierStore = create((set) => ({
       }));
     } catch (err) {
       console.error('❌ [updateSupplierAction] error:', err);
-      set({ supplierError: err.message });
+      set({ supplierError: String(err?.message || err) });
     }
   },
 
-  // ✅ ลบ supplier
   deleteSupplierAction: async (id) => {
     const parsedId = Number(id);
-    if (isNaN(parsedId)) {
-      console.error('❌ [deleteSupplierAction] error: invalid id', id);
+    if (Number.isNaN(parsedId)) {
+      console.error('❌ [deleteSupplierAction] invalid id', id);
       return set({ supplierError: 'ID ไม่ถูกต้อง' });
     }
+    set({ supplierError: null });
     try {
       await deleteSupplier(parsedId);
       set((state) => ({
@@ -94,11 +102,10 @@ const useSupplierStore = create((set) => ({
       }));
     } catch (err) {
       console.error('❌ [deleteSupplierAction] error:', err);
-      set({ supplierError: err.message });
+      set({ supplierError: String(err?.message || err) });
     }
   },
 
-  // ✅ reset state (optional สำหรับ logout/staging)
   resetSupplierState: () => set({
     suppliers: [],
     selectedSupplier: null,

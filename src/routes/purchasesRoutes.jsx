@@ -24,6 +24,7 @@ import CreateSupplierPage from '@/features/supplier/pages/CreateSupplierPage';
 import EditSupplierPage from '@/features/supplier/pages/EditSupplierPage';
 import ViewSupplierPage from '@/features/supplier/pages/ViewSupplierPage';
 import ListSupplierPage from '@/features/supplier/pages/ListSupplierPage';
+import QuickReceivePage from '@/features/quickReceive/pages/QuickReceivePage';
 
 
 const purchasesRoutes = {
@@ -53,6 +54,9 @@ const purchasesRoutes = {
         { path: 'print/:id', element: <PrintPurchaseOrderReceiptTemplate /> },
         { path: 'items', element: <ListReceiptItemsToScanPage /> },
         { path: 'items/scan/:receiptId', element: <ScanBarcodeListPage /> },
+        { path: 'quick-receive', element: <QuickReceivePage /> },
+      
+
       ]
     },
     {

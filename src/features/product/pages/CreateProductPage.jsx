@@ -1,6 +1,6 @@
 // ✅ src/features/product/pages/CreateProductPage.jsx (full width)
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useBranchStore } from '@/features/branch/store/branchStore';
 import useProductStore from '../store/productStore';
 import ProductForm from '../components/ProductForm';
@@ -9,7 +9,7 @@ import ProcessingDialog from '@/components/shared/dialogs/ProcessingDialog';
 
 const CreateProductPage = () => {
   const branchId = useBranchStore((state) => state.selectedBranchId);
-  const { saveProduct, uploadImages } = useProductStore();
+  const { saveProduct, uploadImages, ensureDropdownsAction, dropdownsLoaded } = useProductStore();
   const [error, setError] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
@@ -19,78 +19,52 @@ const CreateProductPage = () => {
   const [previewUrls, setPreviewUrls] = useState([]);
   const [captions, setCaptions] = useState([]);
   const [coverIndex, setCoverIndex] = useState(null);
+  // ✅ โหลด dropdowns จาก Store ครั้งเดียว (idempotent)
+  useEffect(() => {
+    ensureDropdownsAction?.();
+  }, [ensureDropdownsAction]);
 
   const handleCreate = async (formData) => {
     try {
-      if (!branchId) {
-        setError('ไม่พบ branchId โปรดลองล็อกอินใหม่');
-        return;
-      }
-
       setIsProcessing(true);
+      setError('');
 
-      delete formData.unit;
-      delete formData.productImages;
+      const payload = { ...formData, branchId };
+      const created = await saveProduct(payload);
 
-      const templateIdParsed = parseInt(formData.productTemplateId);
-      if (isNaN(templateIdParsed)) {
-        setError('ข้อมูลไม่ครบถ้วนหรือไม่ถูกต้อง');
-        setIsProcessing(false);
-        return;
+      if (Array.isArray(selectedFiles) && selectedFiles.length && typeof uploadImages === 'function' && created?.id) {
+        await uploadImages(created.id, { files: selectedFiles, captions, coverIndex });
       }
-
-      const safeCaptions = Array.isArray(captions) ? captions : selectedFiles.map(() => '');
-      const safeCoverIndex = Number.isInteger(coverIndex) ? coverIndex : 0;
-
-      const uploadedImages = await uploadImages(
-        selectedFiles,
-        safeCaptions,
-        safeCoverIndex
-      );
-
-      await saveProduct({
-        name: formData.name,
-        model: formData.model || '',
-        description: formData.description || '',
-        spec: formData.spec || '',
-        warranty: formData.warranty ? parseInt(formData.warranty) : null,
-        templateId: templateIdParsed,
-        noSN: formData.noSN ?? false,
-        active: formData.active ?? true,
-        cost: formData.cost ? parseFloat(formData.cost) : null,
-        images: uploadedImages,
-        branchPrice: {
-          costPrice: Number(formData.branchPrice?.costPrice ?? 0),
-          priceWholesale: Number(formData.branchPrice?.priceWholesale ?? 0),
-          priceTechnician: Number(formData.branchPrice?.priceTechnician ?? 0),
-          priceRetail: Number(formData.branchPrice?.priceRetail ?? 0),
-          priceOnline: Number(formData.branchPrice?.priceOnline ?? 0),
-        },
-      });
 
       setShowSuccess(true);
-      setTimeout(() => {
-        setShowSuccess(false);
-        setIsProcessing(false);
-      }, 2000);
     } catch (err) {
-      console.error('❌ บันทึกไม่สำเร็จ:', err);
-      setError('เกิดข้อผิดพลาดในการบันทึกข้อมูล');
+      setError(err?.message || 'เกิดข้อผิดพลาดในการบันทึกสินค้า');
+    } finally {
       setIsProcessing(false);
     }
   };
 
   if (!branchId) {
-    return (
-      <div className="w-full px-4 lg:px-6">
+
+  return (
+      <div className="w-full max-w-[1600px] mx-auto px-4 lg:px-8">
         <h2 className="text-xl font-bold mb-4">เพิ่มสินค้า</h2>
         <p className="text-red-500 font-medium">กำลังโหลดข้อมูลสาขา...</p>
       </div>
     );
   }
 
+  if (!dropdownsLoaded) {
+    return (
+      <div className="w-full max-w-[1600px] mx-auto px-4 lg:px-8">
+        <h2 className="text-xl font-bold mb-4">เพิ่มสินค้า</h2>
+        <p className="text-gray-600">กำลังโหลดรายการตัวเลือก (หมวด / ประเภท / ลักษณะ / รูปแบบ)...</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="w-full max-w-none px-4 lg:px-6">
+    <div className="w-full max-w-[1600px] mx-auto px-4 lg:px-8">
       <h2 className="text-xl font-bold mb-4">เพิ่มสินค้า</h2>
       {error && (
         <div className="mb-4 rounded border border-red-200 bg-red-50 text-red-700 px-4 py-2">
@@ -129,6 +103,7 @@ const CreateProductPage = () => {
               productTypeId: '',
               categoryId: '',
               noSN: false,
+              initialQty: '',
               active: true,
               cost: '',
             }}
@@ -147,3 +122,4 @@ const CreateProductPage = () => {
 };
 
 export default CreateProductPage;
+

@@ -16,7 +16,7 @@ const SidebarOnline = () => {
     categoryId: '',
     productTypeId: '',
     productProfileId: '',
-    templateId: '',
+    productTemplateId: '',
   });
 
   const [searchText, setLocalSearchText] = useState('');

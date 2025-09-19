@@ -1,10 +1,13 @@
-import React, { useEffect, useState, useCallback } from 'react';
+
+// POItemListForReceipt.js (patched)
+
+import React, { useEffect, useState } from 'react';
 import usePurchaseOrderReceiptStore from '../store/purchaseOrderReceiptStore';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
-// ✨ CHANGED: รับ formData เข้ามาเพื่อเอาค่าจากฟอร์มด้านบน
+// รับ formData เข้ามาเพื่อเอาค่าจากฟอร์มด้านบน
 const POItemListForReceipt = ({ poId, receiptId, setReceiptId, formData }) => {
   const {
     loadOrderById,
@@ -22,10 +25,10 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, formData }) => {
   const [editMode, setEditMode] = useState({});
   const [savedRows, setSavedRows] = useState({});
   const [forceAccept, setForceAccept] = useState({});
-  const [finalizeMode, setFinalizeMode] = useState(false);
   const [itemStatus, setItemStatus] = useState({});
   const [statusPromptShown, setStatusPromptShown] = useState({});
-  
+  const [finalizeError, setFinalizeError] = useState('');
+
   const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
@@ -40,10 +43,12 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, formData }) => {
       const initQuantities = {};
       const initPrices = {};
       const initTotals = {};
-      currentOrder.items.forEach((item) => {
-        const remainingQty = item.quantity - item.receivedQuantity;
+      (currentOrder.items || []).forEach((item) => {
+        const qty = Number(item.quantity || 0);
+        const received = Number(item.receivedQuantity || 0);
+        const remainingQty = qty - received;
         const qtyToSet = remainingQty > 0 ? remainingQty : 0;
-        const priceToSet = item.costPrice || 0;
+        const priceToSet = Number(item.costPrice || 0);
         initQuantities[item.id] = qtyToSet;
         initPrices[item.id] = priceToSet;
         initTotals[item.id] = qtyToSet * priceToSet;
@@ -51,54 +56,54 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, formData }) => {
       setReceiptQuantities(initQuantities);
       setReceiptPrices(initPrices);
       setReceiptTotals(initTotals);
-      
       setIsInitialized(true);
     }
   }, [currentOrder, poId, isInitialized]);
 
   const calculateTotal = (itemId, quantity, costPrice) => {
+    const q = Number(quantity) || 0;
+    const c = Number(costPrice) || 0;
     setReceiptTotals((prev) => ({
       ...prev,
-      [itemId]: quantity * costPrice
+      [itemId]: q * c,
     }));
   };
 
   const handleQuantityChange = (itemId, value) => {
     const num = Number(value);
-    const item = currentOrder.items.find((i) => i.id === itemId);
-    if (!item || isNaN(num) || num < 0) return;
+    const item = (currentOrder?.items || []).find((i) => i.id === itemId);
+    if (!item || Number.isNaN(num) || num < 0) return;
 
     const received = Number(item.receivedQuantity || 0);
     const total = num + received;
-    const isIncomplete = total < item.quantity;
-    
-    // This logic seems specific, keeping it as is.
-    const shouldWarn = item.quantity > 10 && value.toString().startsWith("1");
+    const isIncomplete = total < Number(item.quantity || 0);
+
+    const shouldWarn = Number(item.quantity || 0) > 10 && value.toString().startsWith('1');
 
     setReceiptQuantities((prev) => ({
       ...prev,
       [itemId]: num,
     }));
-    const price = receiptPrices[itemId] ?? item.costPrice ?? 0;
+    const price = receiptPrices[item.id] ?? Number(item.costPrice || 0);
     calculateTotal(itemId, num, price);
 
     if ((num === 0 || isIncomplete || shouldWarn) && !statusPromptShown[itemId]) {
-      setStatusPromptShown((prev) => ({ ...prev, [itemId]: true, }));
+      setStatusPromptShown((prev) => ({ ...prev, [itemId]: true }));
     } else if (!isIncomplete && !shouldWarn && statusPromptShown[itemId]) {
       setStatusPromptShown((prev) => {
-        const newShown = { ...prev };
-        delete newShown[itemId];
-        return newShown;
+        const next = { ...prev };
+        delete next[itemId];
+        return next;
       });
     }
   };
 
   const handlePriceChange = (itemId, value) => {
     const costPrice = Number(value);
-    if (isNaN(costPrice) || costPrice < 0) return;
+    if (Number.isNaN(costPrice) || costPrice < 0) return;
     setReceiptPrices((prev) => ({
       ...prev,
-      [itemId]: costPrice
+      [itemId]: costPrice,
     }));
     const quantity = receiptQuantities[itemId] ?? 0;
     calculateTotal(itemId, quantity, costPrice);
@@ -124,25 +129,27 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, formData }) => {
       let newReceiptId = receiptId;
 
       if (!newReceiptId) {
-        // ✨ CHANGED: ส่งข้อมูลจากฟอร์มเข้าไปใน action เพื่อสร้างใบรับของ
+        // สร้างใบรับของครั้งแรก พร้อมค่าจากฟอร์มด้านบน
         const newReceipt = await createReceiptAction({
-          purchaseOrderId: poId,
-          note: formData.note,
-          supplierTaxInvoiceNumber: formData.supplierTaxInvoiceNumber,
-          supplierTaxInvoiceDate: formData.supplierTaxInvoiceDate,
+          purchaseOrderId: Number(poId),
+          note: (formData?.note ?? '').trim(),
+          supplierTaxInvoiceNumber: (formData?.supplierTaxInvoiceNumber ?? '').trim() || null,
+          supplierTaxInvoiceDate: formData?.supplierTaxInvoiceDate || null,
+          receivedAt: formData?.receivedAt || new Date().toISOString().slice(0, 10),
         });
         newReceiptId = newReceipt.id;
         setReceiptId(newReceiptId);
       }
 
       const payload = {
-        quantity: receiptQuantities[item.id],
-        costPrice: receiptPrices[item.id],
+        quantity: Number(receiptQuantities[item.id] ?? 0),
+        costPrice: Number(receiptPrices[item.id] ?? 0),
         receiptId: newReceiptId,
         purchaseOrderItemId: item.id,
       };
       await addReceiptItemAction(payload);
       setSavedRows((prev) => ({ ...prev, [item.id]: true }));
+      setFinalizeError('');
     } catch (error) {
       console.error('❌ saveItem error:', error);
     } finally {
@@ -151,16 +158,16 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, formData }) => {
   };
 
   const handleConfirmFinalize = () => {
-    const allSaved = currentOrder.items.every((item) => savedRows[item.id]);
-    if (!allSaved) return alert('กรุณาบันทึกรายการสินค้าทั้งหมดก่อน');
+    const allSaved = (currentOrder?.items || []).every((item) => savedRows[item.id]);
+    if (!allSaved) { setFinalizeError('กรุณาบันทึกรายการสินค้าทั้งหมดก่อน'); return; }
 
-    const allDone = currentOrder.items.every((item) => {
+    const allDone = (currentOrder?.items || []).every((item) => {
       const status = itemStatus[item.id];
-      return status === 'done' || (item.receivedQuantity || 0) >= item.quantity;
+      return status === 'done' || (Number(item.receivedQuantity || 0) >= Number(item.quantity || 0));
     });
     const statusToSet = allDone ? 'COMPLETED' : 'PARTIAL';
     updatePurchaseOrderStatusAction({ id: currentOrder.id, status: statusToSet });
-    setFinalizeMode(false);
+    setFinalizeError('');
   };
 
   if (loading || !isInitialized) return <p>กำลังโหลดรายการสินค้า...</p>;
@@ -170,15 +177,18 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, formData }) => {
   return (
     <div className="space-y-4 w-full">
       <h2 className="text-lg font-semibold">รายการสินค้าในใบสั่งซื้อ</h2>
+      {finalizeError && (
+        <div className="rounded-md border border-red-300 bg-red-50 p-2 text-sm text-red-700">{finalizeError}</div>
+      )}
       <div className="overflow-x-auto w-full">
         <Table>
           <TableHeader className="bg-blue-100">
-            <TableRow>              
+            <TableRow>
               <TableHead className="text-center w-[150px]">หมวดหมู่</TableHead>
               <TableHead className="text-center w-[130px]">ประเภท</TableHead>
               <TableHead className="text-center w-[130px]">ลักษณะ</TableHead>
               <TableHead className="text-center w-[130px]">รูปแบบ</TableHead>
-              <TableHead className="text-center w-[120px]">ชื่อ</TableHead>
+              <TableHead className="text-center w-[200px]">ชื่อสินค้า</TableHead>
               <TableHead className="text-center w-[120px]">รุ่น</TableHead>
               <TableHead className="text-center w-[80px]">จำนวนที่สั่ง</TableHead>
               <TableHead className="text-center w-[100px]">ราคาที่สั่ง</TableHead>
@@ -190,34 +200,67 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, formData }) => {
           </TableHeader>
           <TableBody>
             {(currentOrder?.items || []).map((item) => {
+              // normalize product hierarchy names for display (defensive + lenient)
+              const catName = item.product?.category?.name
+                ?? item.product?.productTemplate?.productProfile?.productType?.category?.name
+                ?? item.category?.name
+                ?? item.categoryName
+                ?? item.product?.categoryName
+                ?? '-';
+              const typeName = item.product?.productType?.name
+                ?? item.product?.productTemplate?.productProfile?.productType?.name
+                ?? item.productType?.name
+                ?? item.productTypeName
+                ?? item.product?.productTypeName
+                ?? '-';
+              const profileName = item.product?.productProfile?.name
+                ?? item.product?.productTemplate?.productProfile?.name
+                ?? item.productProfile?.name
+                ?? item.productProfileName
+                ?? item.product?.productProfileName
+                ?? '-';
+              const templateName = item.product?.productTemplate?.name
+                ?? item.productTemplate?.name
+                ?? item.productTemplateName
+                ?? '-';
+              const productName = item.product?.name
+                ?? item.product?.productTemplate?.name
+                ?? item.name
+                ?? item.productName
+                ?? '-';
+              const modelName = item.product?.model
+                ?? item.product?.productTemplate?.model
+                ?? item.model
+                ?? item.productModel
+                ?? '-';
+
               const received = Number(item.receivedQuantity || 0);
+              const qtyOrdered = Number(item.quantity || 0);
               const quantity = receiptQuantities[item.id] ?? '';
               const price = receiptPrices[item.id] ?? '';
-              const total = receiptTotals[item.id] ?? 0;
-              const isSaved = savedRows[item.id];
-              const isEditing = editMode[item.id];
-              const isOver = (Number(quantity) + received) > item.quantity;
-              const showStatusPrompt = statusPromptShown[item.id];
+              const total = Number(receiptTotals[item.id] ?? 0);
+              const isSaved = !!savedRows[item.id];
+              const isEditing = !!editMode[item.id];
+              const isOver = (Number(quantity) + received) > qtyOrdered;
+              const showStatusPrompt = !!statusPromptShown[item.id];
               const isStatusSelected = itemStatus[item.id] === 'done' || itemStatus[item.id] === 'pending';
-              const disableSave = saving[item.id] || quantity === '' ||
-                ((showStatusPrompt && !isStatusSelected) ||
-                  (isOver && !forceAccept[item.id]));
-              
+              const disableSave = !!(saving[item.id] || quantity === '' || ((showStatusPrompt && !isStatusSelected) || (isOver && !forceAccept[item.id])));
+
               return (
                 <TableRow key={item.id}>
-                  <TableCell>{item.product?.category || '-'}</TableCell>
-                  <TableCell>{item.product?.productType || '-'}</TableCell>
-                  <TableCell>{item.product?.productProfile || '-'}</TableCell>
-                  <TableCell>{item.product?.productTemplate || '-'}</TableCell>                  
-                  <TableCell>{item.product?.name || '-'}</TableCell>
-                  <TableCell>{item.product?.model || '-'}</TableCell>                  
-                  <TableCell className="text-center px-2 py-1">{item.quantity}</TableCell>
-                  <TableCell className="text-center px-2 py-1">{item.costPrice}</TableCell>
+                  <TableCell>{catName}</TableCell>
+                  <TableCell>{typeName}</TableCell>
+                  <TableCell>{profileName}</TableCell>
+                  <TableCell>{templateName}</TableCell>
+                  <TableCell>{productName}</TableCell>
+                  <TableCell>{modelName}</TableCell>
+                  <TableCell className="text-center px-2 py-1">{qtyOrdered}</TableCell>
+                  <TableCell className="text-center px-2 py-1">{Number(item.costPrice || 0)}</TableCell>
                   <TableCell className="px-2 py-1">
                     <input
                       type="number"
                       min="0"
-                      className="w-20 text-center border rounded px-1 py-0.5"
+                      className="w-20 text-right border rounded px-1 py-0.5"
                       value={quantity}
                       onChange={(e) => handleQuantityChange(item.id, e.target.value)}
                       onFocus={() => handleFocusQuantity(item.id)}
@@ -264,7 +307,8 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, formData }) => {
                     <input
                       type="number"
                       min="0"
-                      className="w-24 text-center border rounded px-1 py-0.5"
+                      step="0.01"
+                      className="w-24 text-right border rounded px-1 py-0.5"
                       value={price}
                       onChange={(e) => handlePriceChange(item.id, e.target.value)}
                       disabled={isSaved && !isEditing}
@@ -310,3 +354,8 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, formData }) => {
 };
 
 export default POItemListForReceipt;
+
+
+
+
+

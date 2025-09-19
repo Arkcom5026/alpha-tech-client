@@ -1,4 +1,3 @@
-
 // ✅ src/features/productTemplate/store/productTemplateStore.js
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
@@ -93,6 +92,11 @@ const useProductTemplateStore = create(devtools((set, get) => ({
     } finally {
       set({ isLoading: false });
     }
+  },
+
+  // ✅ alias (เผื่อโค้ด FE ที่ยังเรียก addTemplate อยู่)
+  addTemplate: async (data) => {
+    return await get().addTemplateAction(data);
   },
 
   // ✅ update

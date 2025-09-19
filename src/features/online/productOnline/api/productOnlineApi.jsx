@@ -8,7 +8,7 @@ export const getProductsForOnline = async (filters = {}) => {
     if (filters.categoryId) params.categoryId = filters.categoryId;
     if (filters.productTypeId) params.productTypeId = filters.productTypeId;
     if (filters.productProfileId) params.productProfileId = filters.productProfileId;
-    if (filters.templateId) params.templateId = filters.templateId;
+    if (filters.productTemplateId) params.productTemplateId = filters.productTemplateId;
     if (filters.searchText) params.searchText = filters.searchText;
 
     const res = await apiClient.get('/products/online/search', { params });

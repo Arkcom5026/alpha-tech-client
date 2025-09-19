@@ -1,4 +1,5 @@
 
+
 // ✅ src/features/product/components/ProductTable.jsx
 import { Link, useNavigate } from 'react-router-dom';
 import StandardActionButtons from '@/components/shared/buttons/StandardActionButtons';
@@ -9,7 +10,7 @@ const ProductTable = ({ products, onDelete, deleting }) => {
 
   return (
     <div className="rounded-md border overflow-x-auto">
-      <h3 className="text-md font-semibold px-4 pt-3 pb-2 text-gray-700">รายการสินค้าที่สั่งซื้อ</h3>
+      <h3 className="text-md font-semibold px-4 pt-3 pb-2 text-gray-700">รายการสินค้า</h3>
       <Table>
         <TableHeader className="bg-blue-100">
           <TableRow>
@@ -31,9 +32,7 @@ const ProductTable = ({ products, onDelete, deleting }) => {
 
         <TableBody>
           {products.length > 0 ? (
-            products.map((item, index) => {
-              const isLast = index === products.length - 1;
-              return (
+            products.map((item) => {return (
                 <TableRow key={item.id}>                  
                   <TableCell>{item.category || '-'}</TableCell>
                   <TableCell>{item.productType || '-'}</TableCell>
@@ -80,6 +79,8 @@ const ProductTable = ({ products, onDelete, deleting }) => {
 };
 
 export default ProductTable;
+
+
 
 
 

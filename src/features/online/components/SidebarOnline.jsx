@@ -1,10 +1,8 @@
-
-
 // =============================
 // FILE: src/features/productOnline/components/SidebarOnline.jsx
-// (อัปเดตให้โหลด dropdowns และส่งค่าได้ถูกต้อง)
+// (เสริมความปลอดภัย: บังคับโหลด dropdowns หลัง deploy, กันค่า null, และไม่ยิงซ้ำ)
 // =============================
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import haversine from 'haversine-distance';
 
 import { useBranchStore } from '@/features/branch/store/branchStore';
@@ -13,39 +11,50 @@ import CascadingFilterGroup from '@/components/shared/form/CascadingFilterGroup'
 import { useProductOnlineStore } from '@/features/online/productOnline/store/productOnlineStore';
 
 const SidebarOnline = () => {
-
+  // ─────────── Online Store (FE only) ───────────
   const setFilters = useProductOnlineStore((s) => s.setFilters);
-  const setSearchText = useProductOnlineStore((s) => s.setSearchText);
+  const setSearchText = useProductOnlineStore((s) => s.setSearchTextAction || s.setSearchText);
   const filters = useProductOnlineStore((s) => s.filters);
-  const searchText = useProductOnlineStore((s) => s.searchText);
-  const resetFilters = useProductOnlineStore((s) => s.resetFilters);
+  const searchText = useProductOnlineStore((s) => s.filters?.searchText ?? s.searchText ?? '');
+  const resetFilters = useProductOnlineStore((s) => s.resetFilters || s.resetFiltersAction);
 
-  // ✅ dropdowns delegated to productStore (single source of truth)
+  // ─────────── Product dropdowns (SSOT) ───────────
   const dropdowns = useProductStore((s) => s.dropdowns);
   const fetchDropdownsAction = useProductStore((s) => s.fetchDropdownsAction);
   const dropdownsLoaded = useProductStore((s) => s.dropdownsLoaded);
-  const branches = useBranchStore((s) => s.branches);
-  const selectedBranchId = useBranchStore((s) => s.selectedBranchId);
-  const getBranchNameById = useBranchStore((s) => s.getBranchNameById);
 
-  // 🔄 โหลด dropdowns เมื่อ mount (และเมื่อเปลี่ยนสาขา เผื่อมีนโยบายราคาเฉพาะสาขา)
+  // ─────────── Branch ───────────
+  const branches = useBranchStore((s) => s.branches || []);
+  const selectedBranchId = useBranchStore((s) => s.selectedBranchId);
+  const getBranchNameById = useBranchStore((s) => s.getBranchNameById || (() => ''));
+  const currentBranch = useBranchStore((s) => s.currentBranch);
+
+  // ✅ บังคับโหลด dropdowns เคสหลัง Deploy / เคส cache ว่าง
   useEffect(() => {
-    fetchDropdownsAction?.(false);
-  }, [fetchDropdownsAction, selectedBranchId]);
+    const hasData = Boolean(dropdowns && (
+      (dropdowns.categories?.length || 0) > 0 ||
+      (dropdowns.productTypes?.length || 0) > 0 ||
+      (dropdowns.productProfiles?.length || 0) > 0 ||
+      (dropdowns.productTemplates?.length || 0) > 0
+    ));
+    if (!hasData || !dropdownsLoaded) {
+      // force=true เพื่อข้าม persist cache หลัง deploy
+      fetchDropdownsAction?.(true);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedBranchId, dropdownsLoaded]);
 
   const handleSearchTextChange = (e) => {
-    const text = e.target.value ?? '';
+    const text = e?.target?.value ?? '';
     setSearchText(text);
   };
 
   const handleReset = () => {
-    resetFilters();
-    // รีโหลดรายการสินค้า (ถ้าหน้าปัจจุบันเชื่อมกับ action นี้)
-    useProductOnlineStore.getState().loadProductsAction?.();
+    resetFilters?.();
+    // ปล่อยให้ store debounce โหลดให้เอง
   };
 
-  const currentBranch = useBranchStore((s) => s.currentBranch);
-  const selectedBranch = branches.find((b) => b.id === selectedBranchId);
+  const selectedBranch = useMemo(() => branches.find((b) => b.id === selectedBranchId), [branches, selectedBranchId]);
 
   let distanceInKm = null;
   if (
@@ -58,18 +67,13 @@ const SidebarOnline = () => {
     distanceInKm = (distance / 1000).toFixed(2);
   }
 
-  // ✅ Trigger persist manually when selectedBranchId changes
-  useEffect(() => {
-    const branch = useBranchStore.getState();
-    localStorage.setItem('branch-storage', JSON.stringify({
-      state: {
-        currentBranch: branch.currentBranch,
-        selectedBranchId: branch.selectedBranchId,
-        version: branch.version,
-      },
-      version: 0,
-    }));
-  }, [selectedBranchId]);
+  // ✅ dropdowns ปลอดภัยเสมอ (กัน undefined)
+  const dropdownsSafe = useMemo(() => ({
+    categories: dropdowns?.categories ?? [],
+    productTypes: dropdowns?.productTypes ?? [],
+    productProfiles: dropdowns?.productProfiles ?? [],
+    productTemplates: dropdowns?.productTemplates ?? [],
+  }), [dropdowns]);
 
   return (
     <div className="space-y-2 px-2 py-2">
@@ -86,7 +90,7 @@ const SidebarOnline = () => {
                 useBranchStore.setState({
                   selectedBranchId: newBranch.id,
                   currentBranch: newBranch,
-                  version: useBranchStore.getState().version + 1,
+                  version: (useBranchStore.getState().version || 0) + 1,
                 });
               }
             }}
@@ -113,13 +117,19 @@ const SidebarOnline = () => {
 
       <CascadingFilterGroup
         variant="online"
-        value={filters}
-        onChange={setFilters}
-        dropdowns={dropdowns}
+        value={{
+          categoryId: filters?.categoryId ?? '',
+          productTypeId: filters?.productTypeId ?? '',
+          productProfileId: filters?.productProfileId ?? '',
+          productTemplateId: filters?.productTemplateId ?? '',
+        }}
+        onChange={(next) => setFilters?.(next)}
+        dropdowns={dropdownsSafe}
         searchText={searchText}
         onSearchTextChange={handleSearchTextChange}
         showReset
         onReset={handleReset}
+        isLoading={!dropdownsLoaded}
       />
 
       { !dropdownsLoaded && (
@@ -130,19 +140,3 @@ const SidebarOnline = () => {
 };
 
 export default SidebarOnline;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -1,7 +1,8 @@
-// productOnlineStore.jsx (updated)
-// - บังคับโหลด Dropdowns หลัง Deploy ผ่าน initOnlineShopAction()
-// - ทำ cascade reset + debounce fetch อัตโนมัติเมื่อเปลี่ยนตัวกรอง
-// - ไม่ส่ง branchId จาก FE ถ้าไม่ได้เลือก จะใช้ selectedBranchId จาก Store ตามกฎ BRANCH_SCOPE_ENFORCED
+// productOnlineStore.jsx (Plan A: Performance)
+// - Debounce dropdown fetch 700ms / search 800ms
+// - Result cache 30s ตามคีย์ของตัวกรอง + หน้า
+// - Pagination: page=1,size=18, fields='card' เพื่อลด payload
+// - Reset paging เมื่อเปลี่ยนตัวกรอง (Minimal Disruption)
 
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
@@ -23,24 +24,50 @@ const initialFilters = {
   searchText: '',
 };
 
+const DEFAULT_PAGE = 1;
+const DEFAULT_SIZE = 18;
+const DEFAULT_FIELDS = 'card'; // BE ควร select เฉพาะฟิลด์ที่การ์ดใช้
+const CACHE_TTL_MS = 30_000; // 30 วินาที
+// Frontend env flag (Vite): แทนที่ process.env.NODE_ENV เพื่อลด no-undef
+const IS_DEV = typeof import.meta !== 'undefined' && import.meta.env && (import.meta.env.DEV || import.meta.env.MODE !== 'production');
+
 export const useProductOnlineStore = create(
   devtools((set, get) => ({
     // ========== State ==========
     products: [],
+    total: 0,
+    page: DEFAULT_PAGE,
+    size: DEFAULT_SIZE,
+    fields: DEFAULT_FIELDS,
+
     selectedProduct: null,
     isLoading: false,
     error: null,
 
     filters: { ...initialFilters },
 
-    // ====== Internal (debounce/seq) ======
+    // ====== Internal (debounce/seq/cache) ======
     _reqSeq: 0,
     _fetchTimer: null,
+    _resultCache: new Map(), // key -> { at, items, total }
+
+    // ========== Pagination ==========
+    setPageAction: (page) => set({ page: Number(page) || DEFAULT_PAGE }),
+    setSizeAction: (size) => {
+      const s = Number(size) || DEFAULT_SIZE;
+      set({ size: s });
+      get().resetPagingAction();
+      // reload ด้วยขนาดใหม่ทันที
+      get().loadProductsAction({ page: 1, size: s });
+    },
+    nextPageAction: () => set({ page: get().page + 1 }),
+    resetPagingAction: () => set({ page: DEFAULT_PAGE }),
 
     // ========== Filters ==========
     setBranchIdAction: (branchId) => {
       set((state) => ({ filters: { ...state.filters, branchId } }));
-      get()._debounceFetch();
+      get().resetPagingAction();
+      get()._debounceFetch(700);
     },
 
     setFilterAction: (key, value) => {
@@ -77,7 +104,8 @@ export const useProductOnlineStore = create(
       }
       if (JSON.stringify(curr) !== JSON.stringify(next)) {
         set({ filters: next });
-        get()._debounceFetch();
+        get().resetPagingAction();
+        get()._debounceFetch(700);
       }
     },
 
@@ -117,7 +145,8 @@ export const useProductOnlineStore = create(
 
       if (JSON.stringify(curr) !== JSON.stringify(next)) {
         set({ filters: next });
-        get()._debounceFetch();
+        get().resetPagingAction();
+        get()._debounceFetch(700);
       }
     },
 
@@ -161,7 +190,8 @@ export const useProductOnlineStore = create(
 
       if (JSON.stringify(curr) !== JSON.stringify(next)) {
         set({ filters: next });
-        get()._debounceFetch();
+        get().resetPagingAction();
+        get()._debounceFetch(700);
       }
     },
 
@@ -175,10 +205,11 @@ export const useProductOnlineStore = create(
 
     resetFilters: () => get().resetFiltersAction(),
 
-    // ✅ อัปเดตเฉพาะ searchText
+    // ✅ อัปเดตเฉพาะ searchText (ดีบาวน์ยาวขึ้น)
     setSearchTextAction: (text = '') => {
       set((state) => ({ filters: { ...state.filters, searchText: String(text) } }));
-      get()._debounceFetch(250);
+      get().resetPagingAction();
+      get()._debounceFetch(800);
     },
 
     // ✅ ดึง filters ในรูปแบบ UI ('' แทน undefined)
@@ -195,6 +226,7 @@ export const useProductOnlineStore = create(
 
     resetFiltersAction: () => {
       set({ filters: { ...initialFilters, branchId: get().filters.branchId } });
+      get().resetPagingAction();
       get()._debounceFetch(0);
     },
 
@@ -205,27 +237,70 @@ export const useProductOnlineStore = create(
       set({ _fetchTimer: null });
     },
 
-    _debounceFetch: (delay = 350) => {
+    _debounceFetch: (delay = 700) => {
       const t = get()._fetchTimer;
       if (t) clearTimeout(t);
       const timer = setTimeout(() => get().loadProductsAction(), delay);
       set({ _fetchTimer: timer });
     },
 
-    loadProductsAction: async () => {
+    _makeCacheKey: (filters, page, size, fields) => {
+      const keyObj = {
+        b: filters.branchId || null,
+        c: filters.categoryId || null,
+        t: filters.productTypeId || null,
+        p: filters.productProfileId || null,
+        m: filters.productTemplateId || null,
+        q: (filters.searchText || '').trim() || null,
+        pg: page,
+        sz: size,
+        f: fields,
+      };
+      return JSON.stringify(keyObj);
+    },
+
+    _readCache: (key) => {
+      const rec = get()._resultCache.get(key);
+      if (!rec) return null;
+      if (Date.now() - rec.at > CACHE_TTL_MS) return null;
+      return rec;
+    },
+
+    _writeCache: (key, items, total) => {
+      get()._resultCache.set(key, { at: Date.now(), items, total });
+    },
+
+    loadProductsAction: async (opts = {}) => {
       const s = get();
       const selectedBranchId = useBranchStore.getState().selectedBranchId;
-      const filters = { ...s.filters, branchId: s.filters.branchId || selectedBranchId };
+      const filters = { ...s.filters, ...(opts.filters || {}), branchId: (opts.branchId ?? s.filters.branchId ?? selectedBranchId) };
       if (!filters.branchId) {
         console.warn('⚠️ [loadProductsAction] missing branchId');
         return;
       }
+
+      const page = (opts.page ?? s.page ?? DEFAULT_PAGE);
+      const size = (opts.size ?? s.size ?? DEFAULT_SIZE);
+      const fields = (opts.fields ?? s.fields ?? DEFAULT_FIELDS);
+
+      const key = get()._makeCacheKey(filters, page, size, fields);
+      const cached = get()._readCache(key);
+      if (cached) {
+        set({ products: cached.items, total: cached.total, isLoading: false });
+        return; // ใช้แคช
+      }
+
       const mySeq = get()._reqSeq + 1;
       set({ _reqSeq: mySeq, isLoading: true, error: null });
       try {
-        const data = await getProductsForOnline(filters);
+        const params = { ...filters, page, size, fields };
+        if (IS_DEV) { console.log('[ONLINE] loadProductsAction params', params); }
+        const data = await getProductsForOnline(params);
+        const items = data?.items || data || [];
+        const total = data?.total ?? items.length;
+        get()._writeCache(key, items, total);
         if (get()._reqSeq === mySeq) {
-          set({ products: data?.items || data || [], isLoading: false });
+          set({ products: items, total, isLoading: false });
         }
       } catch (err) {
         console.error('❌ โหลดสินค้าออนไลน์ล้มเหลว:', err);
@@ -248,7 +323,8 @@ export const useProductOnlineStore = create(
       if (!hasData || !productStore.dropdownsLoaded) {
         await productStore.fetchDropdownsAction?.(true); // force=true เคสหลัง deploy
       }
-      await get().loadProductsAction();
+      set({ page: DEFAULT_PAGE, size: DEFAULT_SIZE });
+      await get().loadProductsAction({ page: DEFAULT_PAGE, size: DEFAULT_SIZE });
     },
 
     getProductByIdAction: async (id, branchId) => {
@@ -269,15 +345,30 @@ export const useProductOnlineStore = create(
     },
 
     // คงไว้เพื่อ backward-compat: เรียกเหมือน loadProductsAction
-    searchProductsAction: async (filters = {}) => {
+    searchProductsAction: async (extra = {}) => {
       const selectedBranchId = useBranchStore.getState().selectedBranchId;
-      const merged = { ...get().filters, ...filters, branchId: filters.branchId || selectedBranchId };
+      const mergedFilters = { ...get().filters, ...extra, branchId: extra.branchId || selectedBranchId };
+      const page = extra.page || get().page || DEFAULT_PAGE;
+      const size = extra.size || get().size || DEFAULT_SIZE;
+      const fields = extra.fields || get().fields || DEFAULT_FIELDS;
+
+      const key = get()._makeCacheKey(mergedFilters, page, size, fields);
+      const cached = get()._readCache(key);
+      if (cached) {
+        set({ products: cached.items, total: cached.total, isLoading: false });
+        return;
+      }
+
       const mySeq = get()._reqSeq + 1;
       set({ _reqSeq: mySeq, isLoading: true, error: null });
       try {
-        const data = await getProductsForOnline(merged);
+        const params = { ...mergedFilters, page, size, fields };
+        const data = await getProductsForOnline(params);
+        const items = data?.items || data || [];
+        const total = data?.total ?? items.length;
+        get()._writeCache(key, items, total);
         if (get()._reqSeq === mySeq) {
-          set({ products: data?.items || data || [], isLoading: false });
+          set({ products: items, total, isLoading: false });
         }
       } catch (err) {
         console.error('❌ ค้นหาสินค้าออนไลน์ล้มเหลว:', err);
@@ -291,12 +382,9 @@ export const useProductOnlineStore = create(
     clearProductsAction: () => set({ products: [] }),
     clearSelectedProductAction: () => set({ selectedProduct: null }),
 
-    clearProductCacheAction: async () => {
-      try {
-        // clearOnlineProductCache ถูกลบออก (ไม่มีใน API แล้ว)
-      } catch (err) {
-        console.error('❌ ล้างแคชสินค้าล้มเหลว:', err);
-      }
+    clearProductCacheAction: () => {
+      get()._resultCache = new Map();
     },
   })),
 );
+

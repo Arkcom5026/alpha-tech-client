@@ -1,4 +1,6 @@
 
+
+
 // ProductOnlineListPage.jsx
 
 import React, { useEffect, useState, useMemo, useRef } from 'react';
@@ -11,7 +13,6 @@ import { useBranchStore } from '@/features/branch/store/branchStore';
 const ProductOnlineListPage = () => {
   const rawProducts = useProductOnlineStore((state) => state.products);
   const loadProductsAction = useProductOnlineStore((state) => state.loadProductsAction);
-    const filters = useProductOnlineStore((state) => state.filters);
   const loadDropdownsAction = useProductOnlineStore((state) => state.loadDropdownsAction);
 
   const selectedBranchId = useBranchStore((state) => state.selectedBranchId); 
@@ -78,13 +79,10 @@ const ProductOnlineListPage = () => {
   }, [selectedBranchId, productsLoaded, rawProducts]);
 
   useEffect(() => { loadDropdownsAction?.(); }, [loadDropdownsAction]);
+  // NOTE: ลบ useEffect โหลดซ้ำเมื่อ filters เปลี่ยนออก
+  // เหตุผล: store จัดการ debounce และ reload เองเมื่อ setFilters* ถูกเรียกแล้ว
+  // หากต้องการให้เพจเป็นคนสั่งโหลด ให้เรียก: loadProductsAction({ branchId: selectedBranchId, filters })
 
-  useEffect(() => {
-    if (selectedBranchId) {
-      console.log("[FILTERS] 🔄 โหลดสินค้าใหม่ตาม filter", filters);
-      loadProductsAction({ branchId: selectedBranchId, ...filters });
-    }
-  }, [filters, selectedBranchId]);
 
   if (!selectedBranchId && autoSelectTried) {
     return (
@@ -123,6 +121,9 @@ const ProductOnlineListPage = () => {
 };
 
 export default ProductOnlineListPage;
+
+
+
 
 
 

@@ -73,8 +73,8 @@ export const getCatalogDropdowns = async () => {
       categories = [],
       productTypes = [],
       productProfiles = [],
-      templates = [],
       productTemplates,
+      templates = [], // alias (compat)
     } = raw || {};
 
     const tpl = Array.isArray(productTemplates) ? productTemplates : (templates || []);
@@ -87,6 +87,39 @@ export const getCatalogDropdowns = async () => {
       templates: tpl,
       productTemplates: tpl,
     };
+  } catch (err) { throw parseApiError(err); }
+};
+
+// =============================
+// Online Catalog (มาตรฐาน productTemplateId)
+// =============================
+const __buildOnlineParams = (obj = {}) => Object.fromEntries(
+  Object.entries(obj).filter(([, v]) => v !== '' && v !== undefined && v !== null)
+);
+
+export const getOnlineProducts = async ({
+  search,
+  page = 1,
+  pageSize = 24,
+  sort = 'newest',
+  categoryId,
+  productTypeId,
+  productProfileId,
+  productTemplateId,
+  branch, // slug (public)
+} = {}) => {
+  try {
+    const params = __buildOnlineParams({ search, page, pageSize, sort, categoryId, productTypeId, productProfileId, productTemplateId, branch, _ts: Date.now() });
+    const { data } = await apiClient.get('products/online/search', { params });
+    return data; // { items, total, page, pageSize }
+  } catch (err) { throw parseApiError(err); }
+};
+
+export const getProductOnlineById = async (id, { branch } = {}) => {
+  try {
+    const params = __buildOnlineParams({ branch, _ts: Date.now() });
+    const { data } = await apiClient.get(`products/online/detail/${id}`, { params });
+    return data;
   } catch (err) { throw parseApiError(err); }
 };
 
@@ -139,3 +172,6 @@ export const migrateSnToSimple = async (productId) => {
     return data;
   } catch (err) { throw parseApiError(err); }
 };
+
+
+

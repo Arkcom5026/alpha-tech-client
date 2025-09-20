@@ -1,5 +1,5 @@
 
-// ✅ src/features/product/store/productStore.js (updated)
+// ✅ src/features/product/store/productStore.js
 import { create } from 'zustand';
 
 import {
@@ -293,4 +293,3 @@ const useProductStore = create((set, get) => ({
 }));
 
 export default useProductStore;
-

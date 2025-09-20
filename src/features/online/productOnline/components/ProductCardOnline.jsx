@@ -1,8 +1,12 @@
+
+
+
+
 // ✅ ปรับ ProductCardOnline: ใส่กรอบให้รูปภาพ และจัด layout คงที่ สวยงาม
 import React from 'react';
 import { ShoppingCart } from 'lucide-react';
 import { numberFormat } from '@/utils/number';
-import { motion } from 'framer-motion';
+import { motion as Motion } from 'framer-motion';
 import { useCartStore } from '../../cart/store/cartStore';
 import { useNavigate } from 'react-router-dom';
 import { useBranchStore } from '@/features/branch/store/branchStore';
@@ -10,6 +14,8 @@ import { useBranchStore } from '@/features/branch/store/branchStore';
 const ProductCardOnline = ({ item }) => {
   const addToCart = useCartStore((state) => state.addToCart);
   const cartItems = useCartStore((state) => state.cartItems);
+  const increaseQty = useCartStore((s) => s.increaseQty || s.incrementQty || s.increaseQuantity || s.addQty || s.plusQty || s.addQuantity);
+  const updateItemQty = useCartStore((s) => s.updateItemQty || s.updateQty || s.setItemQty);
   const navigate = useNavigate();
   const branchId = useBranchStore((state) => state.selectedBranchId);
 
@@ -21,15 +27,38 @@ const ProductCardOnline = ({ item }) => {
   const priceOnline = typeof rawPriceOnline === 'number' ? rawPriceOnline : 0;
   const category = item.category || '-';
   const productType = item.productType || '-';
-  const productProfile = item.productProfile || '-';
+  // const productProfile = item.productProfile || '-' // unused
   const productTemplate = item.productTemplate || '-';
   const highlight = item.isBestPrice || false;
   const isReady = item.isReady || false;
 
-  const isInCart = cartItems.some((p) => p.id === item.id);
+  const onAddToCart = () => {
+    const productId = item.productId ?? item.id;
+    const exist = cartItems.find((p) => String(p?.productId ?? p?.id) === String(productId));
+
+    if (exist) {
+      const key = exist.id ?? exist.productId ?? productId;
+      if (increaseQty) return increaseQty(key);
+      if (updateItemQty) return updateItemQty(key, (exist.quantity || 0) + 1);
+      return addToCart({ ...exist, quantity: (exist.quantity || 0) + 1 });
+    }
+
+    return addToCart({
+      ...item,
+      id: item.id ?? productId,
+      productId,
+      branchId,
+      quantity: 1,
+      priceAtThatTime: priceOnline,
+    });
+  };
+
+  const productKey = String(item?.productId ?? item?.id);
+  const existingInCart = cartItems.find((p) => String(p?.productId ?? p?.id) === productKey);
+  const isInCart = !!existingInCart;
 
   return (
-    <motion.div
+    <Motion.div
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.15 }}
@@ -99,7 +128,7 @@ const ProductCardOnline = ({ item }) => {
 
             <div className="my-1">
               <button
-                onClick={() => addToCart(item)}
+                onClick={onAddToCart}
                 className={`rounded-md px-3 py-1.5 transition text-sm flex items-center gap-1
                   ${isInCart ? 'bg-green-500 text-white hover:bg-green-600' : 'bg-blue-400 text-white hover:bg-blue-500 '}`}
               >
@@ -110,8 +139,11 @@ const ProductCardOnline = ({ item }) => {
           </div>
         </div>
       </div>
-    </motion.div>
+    </Motion.div>
   );
 };
 
 export default ProductCardOnline;
+
+
+

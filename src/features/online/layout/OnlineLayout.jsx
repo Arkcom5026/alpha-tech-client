@@ -1,14 +1,14 @@
+
+
 // src/layouts/OnlineLayout.jsx
 
 import UnifiedMainNav from "@/components/common/UnifiedMainNav";
 import SidebarOnline from "../components/SidebarOnline";
-import { Outlet, useLocation } from "react-router-dom";
+import { Outlet } from "react-router-dom";
 import CartPanel from "../cart/components/CartPanel";
 import ErrorBoundary from "@/components/shared/error/ErrorBoundary"; // ✅ เพิ่ม ErrorBoundary
 
-const OnlineLayout = () => {
-  const { pathname } = useLocation();
-  const isHome = pathname === "/";
+const OnlineLayout = () => { // ❌ unused var removed
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -43,3 +43,6 @@ const OnlineLayout = () => {
 };
 
 export default OnlineLayout;
+
+
+

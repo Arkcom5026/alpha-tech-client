@@ -1,13 +1,18 @@
+
+// ProductOnlineListPage.jsx
+
 import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { useProductOnlineStore } from '../store/productOnlineStore';
+
 import ProductCardOnline from '../components/ProductCardOnline';
 import { useBranchStore } from '@/features/branch/store/branchStore';
+
 
 const ProductOnlineListPage = () => {
   const rawProducts = useProductOnlineStore((state) => state.products);
   const loadProductsAction = useProductOnlineStore((state) => state.loadProductsAction);
+    const filters = useProductOnlineStore((state) => state.filters);
   const loadDropdownsAction = useProductOnlineStore((state) => state.loadDropdownsAction);
-  const filters = useProductOnlineStore((state) => state.filters);
 
   const selectedBranchId = useBranchStore((state) => state.selectedBranchId); 
   const autoDetectAndSetBranchByGeo = useBranchStore((state) => state.autoDetectAndSetBranchByGeo);
@@ -72,9 +77,7 @@ const ProductOnlineListPage = () => {
     }
   }, [selectedBranchId, productsLoaded, rawProducts]);
 
-  useEffect(() => {
-    loadDropdownsAction();
-  }, []);
+  useEffect(() => { loadDropdownsAction?.(); }, [loadDropdownsAction]);
 
   useEffect(() => {
     if (selectedBranchId) {
@@ -120,3 +123,6 @@ const ProductOnlineListPage = () => {
 };
 
 export default ProductOnlineListPage;
+
+
+

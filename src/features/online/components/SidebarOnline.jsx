@@ -1,55 +1,59 @@
-import React, { useState, useEffect } from 'react';
+
+
+// =============================
+// FILE: src/features/productOnline/components/SidebarOnline.jsx
+// (อัปเดตให้โหลด dropdowns และส่งค่าได้ถูกต้อง)
+// =============================
+import React, { useEffect } from 'react';
 import haversine from 'haversine-distance';
-import { useProductOnlineStore } from '../productOnline/store/productOnlineStore';
+
 import { useBranchStore } from '@/features/branch/store/branchStore';
-import CascadingFilterGroupOnline from '@/components/shared/form/CascadingFilterGroupOnline';
+import useProductStore from '@/features/product/store/productStore';
+import CascadingFilterGroup from '@/components/shared/form/CascadingFilterGroup';
+import { useProductOnlineStore } from '@/features/online/productOnline/store/productOnlineStore';
 
 const SidebarOnline = () => {
-  const dropdowns = useProductOnlineStore((state) => state.dropdowns); 
-  const setFilters = useProductOnlineStore((state) => state.setFilters);
-  const setSearchText = useProductOnlineStore((state) => state.setSearchText);
-  const branches = useBranchStore((state) => state.branches);
-  const selectedBranchId = useBranchStore((state) => state.selectedBranchId);
-    const getBranchNameById = useBranchStore((state) => state.getBranchNameById);
 
-  const [filters, setLocalFilters] = useState({
-    categoryId: '',
-    productTypeId: '',
-    productProfileId: '',
-    productTemplateId: '',
-  });
+  const setFilters = useProductOnlineStore((s) => s.setFilters);
+  const setSearchText = useProductOnlineStore((s) => s.setSearchText);
+  const filters = useProductOnlineStore((s) => s.filters);
+  const searchText = useProductOnlineStore((s) => s.searchText);
+  const resetFilters = useProductOnlineStore((s) => s.resetFilters);
 
-  const [searchText, setLocalSearchText] = useState('');
+  // ✅ dropdowns delegated to productStore (single source of truth)
+  const dropdowns = useProductStore((s) => s.dropdowns);
+  const fetchDropdownsAction = useProductStore((s) => s.fetchDropdownsAction);
+  const dropdownsLoaded = useProductStore((s) => s.dropdownsLoaded);
+  const branches = useBranchStore((s) => s.branches);
+  const selectedBranchId = useBranchStore((s) => s.selectedBranchId);
+  const getBranchNameById = useBranchStore((s) => s.getBranchNameById);
 
-  const handleFilterChange = (newFilters) => {
-    setLocalFilters(newFilters);
-    setFilters(newFilters);
-  };
+  // 🔄 โหลด dropdowns เมื่อ mount (และเมื่อเปลี่ยนสาขา เผื่อมีนโยบายราคาเฉพาะสาขา)
+  useEffect(() => {
+    fetchDropdownsAction?.(false);
+  }, [fetchDropdownsAction, selectedBranchId]);
 
   const handleSearchTextChange = (e) => {
-    const text = e.target.value;
-    setLocalSearchText(text);
+    const text = e.target.value ?? '';
     setSearchText(text);
   };
 
-  const currentBranch = useBranchStore((state) => state.currentBranch);
+  const handleReset = () => {
+    resetFilters();
+    // รีโหลดรายการสินค้า (ถ้าหน้าปัจจุบันเชื่อมกับ action นี้)
+    useProductOnlineStore.getState().loadProductsAction?.();
+  };
+
+  const currentBranch = useBranchStore((s) => s.currentBranch);
   const selectedBranch = branches.find((b) => b.id === selectedBranchId);
 
   let distanceInKm = null;
   if (
-    currentBranch?.latitude &&
-    currentBranch?.longitude &&
-    selectedBranch?.latitude &&
-    selectedBranch?.longitude
+    currentBranch?.latitude && currentBranch?.longitude &&
+    selectedBranch?.latitude && selectedBranch?.longitude
   ) {
-    const userLoc = {
-      latitude: currentBranch.latitude,
-      longitude: currentBranch.longitude,
-    };
-    const branchLoc = {
-      latitude: selectedBranch.latitude,
-      longitude: selectedBranch.longitude,
-    };
+    const userLoc = { latitude: currentBranch.latitude, longitude: currentBranch.longitude };
+    const branchLoc = { latitude: selectedBranch.latitude, longitude: selectedBranch.longitude };
     const distance = haversine(userLoc, branchLoc);
     distanceInKm = (distance / 1000).toFixed(2);
   }
@@ -57,17 +61,14 @@ const SidebarOnline = () => {
   // ✅ Trigger persist manually when selectedBranchId changes
   useEffect(() => {
     const branch = useBranchStore.getState();
-    localStorage.setItem(
-      'branch-storage',
-      JSON.stringify({
-        state: {
-          currentBranch: branch.currentBranch,
-          selectedBranchId: branch.selectedBranchId,
-          version: branch.version,
-        },
-        version: 0,
-      })
-    );
+    localStorage.setItem('branch-storage', JSON.stringify({
+      state: {
+        currentBranch: branch.currentBranch,
+        selectedBranchId: branch.selectedBranchId,
+        version: branch.version,
+      },
+      version: 0,
+    }));
   }, [selectedBranchId]);
 
   return (
@@ -97,9 +98,7 @@ const SidebarOnline = () => {
             ))}
           </select>
           {distanceInKm && (
-            <div className="text-xs text-gray-500 mt-1">
-              ระยะห่าง {distanceInKm} กม.
-            </div>
+            <div className="text-xs text-gray-500 mt-1">ระยะห่าง {distanceInKm} กม.</div>
           )}
         </div>
       </div>
@@ -112,14 +111,38 @@ const SidebarOnline = () => {
         className="border px-3 py-2 rounded w-full"
       />
 
-      <CascadingFilterGroupOnline
+      <CascadingFilterGroup
+        variant="online"
         value={filters}
-        onChange={handleFilterChange}
-        dropdowns={dropdowns || {}}
+        onChange={setFilters}
+        dropdowns={dropdowns}
+        searchText={searchText}
+        onSearchTextChange={handleSearchTextChange}
         showReset
+        onReset={handleReset}
       />
+
+      { !dropdownsLoaded && (
+        <div className="text-xs text-gray-500">กำลังโหลดชุดตัวกรอง…</div>
+      )}
     </div>
   );
 };
 
 export default SidebarOnline;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

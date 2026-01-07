@@ -1,6 +1,6 @@
 // =============================
 // client/src/features/stockAudit/pages/ReadyToSellAuditPage.jsx
-// ปรับเพิ่มการรองรับ "พบของค้างตรวจ" (Resolved Pending) + loading indicator ในตาราง
+// แก้ไข: เพิ่ม isStarting ใน Destructuring และปรับปรุงประสิทธิภาพการโหลดข้อมูล
 
 import React, { useEffect, useRef, useState } from 'react'
 import useStockAuditStore from '../store/stockAuditStore'
@@ -12,22 +12,31 @@ const ReadyToSellAuditPage = () => {
   const scanRef = useRef(null)
   const audioCtxRef = useRef(null)
 
+  // ดึง State และ Action จาก Store
   const {
     sessionId, expectedCount, scannedCount, missingCount,
     expectedItems, expectedTotal, expectedPage, expectedPageSize,
     scannedItems, scannedTotal, scannedPage, scannedPageSize,
     startReadyAuditAction, loadItemsAction, scanBarcodeAction, confirmAuditAction, loadOverviewAction, scanSnAction,
+    cancelAuditAction, resetAuditStateAction,
     isScanning, isConfirming, errorMessage, isLoadingItems,
+    isCancelling,
+    isStarting, // ✅ เพิ่มตัวแปรนี้ที่เดิมขาดไป ทำให้เกิด Error
   } = useStockAuditStore()
 
   const [scanMode, setScanMode] = useState('BARCODE')
   const [openConfirmLost, setOpenConfirmLost] = useState(false)
   const [openConfirmPending, setOpenConfirmPending] = useState(false)
+  const [openCancel, setOpenCancel] = useState(false)
   const [bannerMessage, setBannerMessage] = useState('')
 
-  // 🔒 guard เพื่อกัน useEffect เรียกซ้ำจาก React StrictMode (dev)
+  // ค่าค้นหาแยกสองตาราง (กัน bug เปลี่ยนหน้าแล้ว q หาย)
+  const [expectedQ, setExpectedQ] = useState('')
+  const [scannedQ, setScannedQ] = useState('')
+
   const initRef = useRef(false)
 
+  // --- Functions: Scan Focus & Audio ---
   const focusScan = () => {
     const el = scanRef.current
     if (!el) return
@@ -119,7 +128,7 @@ const ReadyToSellAuditPage = () => {
     }
     const dur = 0.25
     const gap = 0.12
-    const f   = 1900
+    const f = 1900
     makeTone(now + 0.00, f, dur)
     makeTone(now + dur + gap, f, dur)
   }
@@ -143,25 +152,11 @@ const ReadyToSellAuditPage = () => {
     await playNoise({ duration: 0.5, volume: 0.5 })
   }
 
+  // --- Effects ---
   useEffect(() => {
-    // กันซ้ำ (React 18 StrictMode จะ mount/unmount ซ้ำใน dev)
-    if (initRef.current) return;
-    initRef.current = true;
-
-    (async () => {
-      try {
-        const res = await startReadyAuditAction();
-        // เคสนี้ให้เพียง "เริ่มรอบ" เท่านั้น ปล่อยให้ AuditTable เป็นผู้โหลดข้อมูลรอบแรกเอง
-        if (res?.ok || res?.status === 409) {
-          // (no-op) — AuditTable จะเป็นคนเรียก loadItemsAction รอบแรก
-        }
-      } catch (err) {
-        console.error('startReadyAuditAction error:', err);
-      }
-    })();
-
-    if (scanRef.current) focusScan();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (initRef.current) return
+    initRef.current = true
+    if (scanRef.current) focusScan()
   }, [])
 
   useEffect(() => {
@@ -180,8 +175,8 @@ const ReadyToSellAuditPage = () => {
 
   useEffect(() => { focusScan() }, [scanMode])
 
+  // --- Handlers ---
   const classifyScanResult = (result, err) => {
-    // normalize from both success body and AxiosError
     const code = String(result?.code ?? result?.status ?? result?.reason ?? '').toUpperCase()
     const statusCode = Number(result?.statusCode ?? result?.httpStatus ?? err?.response?.status ?? 0)
     const messageRaw = (result?.message ?? result?.msg ?? result?.error ?? err?.response?.data?.message ?? err?.response?.data?.error ?? '').toString()
@@ -194,11 +189,9 @@ const ReadyToSellAuditPage = () => {
       resolvedPending: false,
     }
 
-    // HTTP code hints first
     if (statusCode === 409) flags.duplicate = true
     if (statusCode === 404 || statusCode === 422) flags.notFound = true
 
-    // Code / reason tokens from backend
     const dupTokens = ['DUPLICATE','ALREADY','ALREADY_SCANNED']
     const nfTokens  = ['NOT_FOUND','NOT_IN_EXPECTED','UNEXPECTED','UNKNOWN_ITEM']
     const rpTokens  = ['RESOLVED_PENDING','PENDING_RESOLVED']
@@ -206,7 +199,6 @@ const ReadyToSellAuditPage = () => {
     if (nfTokens.some(t => code.includes(t)))  flags.notFound = true
     if (rpTokens.some(t => code.includes(t)))  flags.resolvedPending = true
 
-    // Heuristics from message (simple includes, TH/EN)
     const m = message
     if (m.includes('duplicate') || (m.includes('สแกน') && m.includes('แล้ว'))) flags.duplicate = true
     if (m.includes('ไม่พบ') || m.includes('not found') || m.includes('unexpected') || m.includes('ไม่อยู่ในชุดคาดหวัง')) flags.notFound = true
@@ -227,41 +219,46 @@ const ReadyToSellAuditPage = () => {
         result = await scanBarcodeAction(input, { mode: scanMode })
       }
 
-      // รับผลลัพธ์แบบรวมก่อน แล้วค่อยดึง flag ออกมา
-      const flags = classifyScanResult(result)
-      const { ok, duplicate, notFound, resolvedPending } = flags
+      const { ok, duplicate, notFound, resolvedPending } = classifyScanResult(result)
 
-      if (resolvedPending) {
+      if (ok || resolvedPending) {
         await playSuccess()
-        setBannerMessage('พบของค้างตรวจ – เคลียร์ให้แล้ว')
-        setTimeout(() => setBannerMessage(''), 2500)
-        await loadItemsAction({ scanned: 0, q: '', page: expectedPage, pageSize: expectedPageSize })
-        await loadItemsAction({ scanned: 1, q: '', page: scannedPage, pageSize: scannedPageSize })
-      } else if (ok) {
-        await playSuccess()
-        await loadItemsAction({ scanned: 0, q: '', page: expectedPage, pageSize: expectedPageSize })
-        await loadItemsAction({ scanned: 1, q: '', page: scannedPage, pageSize: scannedPageSize })
+        if (resolvedPending) {
+          setBannerMessage('พบของค้างตรวจ – เคลียร์ให้แล้ว')
+          setTimeout(() => setBannerMessage(''), 2500)
+        }
+        // โหลดข้อมูลทั้งสองตารางใหม่
+        // รีเฟรช summary + ตาราง (ใช้ q ปัจจุบัน ไม่ล้างคำค้นหา)
+        if (sessionId) await loadOverviewAction(sessionId)
+        await Promise.all([
+          loadItemsAction({ scanned: 0, q: expectedQ, page: expectedPage, pageSize: expectedPageSize }),
+          loadItemsAction({ scanned: 1, q: scannedQ, page: scannedPage, pageSize: scannedPageSize })
+        ])
       } else if (duplicate) {
         await playDuplicate()
       } else if (notFound) {
         await playError()
       } else {
-        console.warn('handleScan result unclassified:', result)
         await playError()
       }
     } catch (err) {
-      const flags = classifyScanResult(null, err)
-      const { duplicate, notFound, resolvedPending } = flags
+      const { duplicate, notFound, resolvedPending } = classifyScanResult(null, err)
       if (resolvedPending) {
         await playSuccess()
         setBannerMessage('พบของค้างตรวจ – เคลียร์ให้แล้ว')
         setTimeout(() => setBannerMessage(''), 2500)
+        // รีเฟรช summary + ตาราง (ใช้ q ปัจจุบัน ไม่ล้างคำค้นหา)
+        if (sessionId) await loadOverviewAction(sessionId)
+        await Promise.all([
+          loadItemsAction({ scanned: 0, q: expectedQ, page: expectedPage, pageSize: expectedPageSize }),
+          loadItemsAction({ scanned: 1, q: scannedQ, page: scannedPage, pageSize: scannedPageSize })
+        ])
       } else if (duplicate) {
         await playDuplicate()
       } else if (notFound) {
         await playError()
       } else {
-        console.error('handleScan exception (unclassified):', err)
+        console.error('Scan error:', err)
         await playError()
       }
     } finally {
@@ -272,12 +269,15 @@ const ReadyToSellAuditPage = () => {
   const doConfirmLost = async () => {
     try {
       const res = await confirmAuditAction('MARK_LOST')
-      if (res?.ok) await playSuccess()
-      await loadOverviewAction(sessionId)
-      await loadItemsAction({ scanned: 0, q: '', page: 1, pageSize: expectedPageSize })
-      await loadItemsAction({ scanned: 1, q: '', page: 1, pageSize: scannedPageSize })
+      if (res?.ok) {
+        await playSuccess()
+        await loadOverviewAction(sessionId)
+        await Promise.all([
+                        loadItemsAction({ scanned: 0, q: '', page: 1, pageSize: expectedPageSize }),
+                        loadItemsAction({ scanned: 1, q: '', page: 1, pageSize: scannedPageSize })
+                      ])
+      }
     } catch (e) {
-      console.error('confirm lost error', e)
       await playError()
     } finally {
       setOpenConfirmLost(false)
@@ -288,15 +288,36 @@ const ReadyToSellAuditPage = () => {
   const doConfirmPending = async () => {
     try {
       const res = await confirmAuditAction('MARK_PENDING')
-      if (res?.ok) await playSuccess()
-      await loadOverviewAction(sessionId)
-      await loadItemsAction({ scanned: 0, q: '', page: 1, pageSize: expectedPageSize })
-      await loadItemsAction({ scanned: 1, q: '', page: 1, pageSize: scannedPageSize })
+      if (res?.ok) {
+        await playSuccess()
+        await loadOverviewAction(sessionId)
+        await Promise.all([
+          loadItemsAction({ scanned: 0, q: '', page: 1, pageSize: expectedPageSize }),
+          loadItemsAction({ scanned: 1, q: '', page: 1, pageSize: scannedPageSize })
+        ])
+      }
     } catch (e) {
-      console.error('confirm pending error', e)
       await playError()
     } finally {
       setOpenConfirmPending(false)
+      focusScan()
+    }
+  }
+
+  const doCancelAudit = async () => {
+    if (!sessionId) return
+    try {
+      const res = await cancelAuditAction(sessionId)
+      if (res?.ok) {
+        await playSuccess()
+        if (typeof resetAuditStateAction === 'function') resetAuditStateAction()
+      } else {
+        await playError()
+      }
+    } catch (e) {
+      await playError()
+    } finally {
+      setOpenCancel(false)
       focusScan()
     }
   }
@@ -313,12 +334,55 @@ const ReadyToSellAuditPage = () => {
           <span className="text-gray-500">(F2 โฟกัสช่องสแกน · F3 สลับโหมด)</span>
         </div>
         <div className="flex items-center gap-2">
+          {sessionId && (
+            <button
+              type="button"
+              className={`px-4 py-2 rounded-lg text-white ${isCancelling ? 'bg-gray-400 cursor-not-allowed' : 'bg-zinc-600 hover:bg-zinc-700'}`}
+              onClick={() => setOpenCancel(true)}
+              disabled={isCancelling || isConfirming}
+              title="ยกเลิกรอบตรวจนับ (ไม่สรุปสูญหาย/ค้างตรวจ และล้างข้อมูลในหน้านี้)"
+            >
+              {isCancelling ? 'กำลังยกเลิก...' : 'ยกเลิกรอบ'}
+            </button>
+          )}
+
+          {!sessionId && (
+            <button
+              type="button"
+              className={`px-4 py-2 rounded-lg text-white ${isStarting ? 'bg-gray-400 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-700'}`}
+              onClick={async () => {
+                try {
+                  const res = await startReadyAuditAction()
+                  if (res?.ok || res?.status === 409) {
+                    // ใช้ sessionId จาก response เป็นหลัก (กัน state ยังไม่ sync)
+                    const sid =
+                      res?.sessionId ??
+                      (typeof useStockAuditStore?.getState === 'function' ? useStockAuditStore.getState().sessionId : undefined) ??
+                      sessionId
+                    if (sid) {
+                      await loadOverviewAction(sid)
+                      await Promise.all([
+                        loadItemsAction({ scanned: 0, q: '', page: 1, pageSize: expectedPageSize }),
+                        loadItemsAction({ scanned: 1, q: '', page: 1, pageSize: scannedPageSize })
+                      ])
+                    }
+                  }
+                } catch (err) {
+                  console.error('Start Audit Error:', err)
+                } finally {
+                  focusScan()
+                }
+              }}
+              disabled={isStarting}
+            >
+              {isStarting ? 'กำลังเริ่มรอบ...' : 'เริ่มรอบตรวจนับ'}
+            </button>
+          )}
           <button
             type="button"
             className={`px-4 py-2 rounded-lg text-white ${isConfirming ? 'bg-blue-500 opacity-60 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}
             onClick={() => setOpenConfirmLost(true)}
-            disabled={isConfirming}
-            title="บันทึกสินค้าที่ไม่ถูกสแกนเป็นสูญหาย และปิดรอบ"
+            disabled={isConfirming || isCancelling || !sessionId}
           >
             บันทึกสินค้าสูญหาย
           </button>
@@ -326,8 +390,7 @@ const ReadyToSellAuditPage = () => {
             type="button"
             className={`px-4 py-2 rounded-lg text-white ${isConfirming ? 'bg-amber-500 opacity-60 cursor-not-allowed' : 'bg-amber-500 hover:bg-amber-600'}`}
             onClick={() => setOpenConfirmPending(true)}
-            disabled={isConfirming}
-            title="ปิดรอบ (ค้างตรวจ): สินค้าที่ไม่ถูกสแกนจะเป็นค้างตรวจ"
+            disabled={isConfirming || isCancelling || !sessionId}
           >
             ปิดรอบ (ค้างตรวจ)
           </button>
@@ -342,7 +405,7 @@ const ReadyToSellAuditPage = () => {
       )}
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-        {/* Expected (ยังไม่สแกน) */}
+        {/* Expected Table */}
         <div className="rounded-xl border p-3">
           <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
             <h3 className="font-semibold">Expected (ยังไม่สแกน) {expectedTotal}</h3>
@@ -350,7 +413,7 @@ const ReadyToSellAuditPage = () => {
               <ScanInput
                 ref={scanRef}
                 onSubmit={handleScan}
-                disabled={isScanning}
+                disabled={isScanning || !sessionId}
                 placeholder={scanMode === 'SN' ? 'สแกน/พิมพ์ SN (F3 สลับโหมด)' : 'สแกนบาร์โค้ด (F3 สลับโหมด)'}
                 autoSubmit
                 delay={140}
@@ -363,13 +426,11 @@ const ReadyToSellAuditPage = () => {
                     type="button"
                     className={`px-3 py-1 text-xs ${scanMode === 'BARCODE' ? 'bg-gray-900 text-white' : 'bg-white hover:bg-gray-50'}`}
                     onClick={() => setScanMode('BARCODE')}
-                    title="สแกน Barcode"
                   >BARCODE</button>
                   <button
                     type="button"
                     className={`px-3 py-1 text-xs ${scanMode === 'SN' ? 'bg-gray-900 text-white' : 'bg-white hover:bg-gray-50'}`}
                     onClick={() => setScanMode('SN')}
-                    title="สแกน Serial Number"
                   >SN</button>
                 </div>
               </div>
@@ -382,12 +443,15 @@ const ReadyToSellAuditPage = () => {
             page={expectedPage}
             pageSize={expectedPageSize}
             loading={isLoadingItems}
-            onSearch={(q) => loadItemsAction({ scanned: 0, q, page: 1, pageSize: expectedPageSize })}
-            onPageChange={(page) => loadItemsAction({ scanned: 0, q: '', page, pageSize: expectedPageSize })}
+            onSearch={(q) => {
+              setExpectedQ(q)
+              return loadItemsAction({ scanned: 0, q, page: 1, pageSize: expectedPageSize })
+            }}
+            onPageChange={(page) => loadItemsAction({ scanned: 0, q: expectedQ, page, pageSize: expectedPageSize })}
           />
         </div>
 
-        {/* Scanned */}
+        {/* Scanned Table */}
         <div className="rounded-xl border p-3">
           <div className="flex items-center justify-between mb-2 py-2">
             <h3 className="font-semibold">Scanned {scannedTotal}</h3>
@@ -400,13 +464,15 @@ const ReadyToSellAuditPage = () => {
             pageSize={scannedPageSize}
             scanned={true}
             loading={isLoadingItems}
-            onSearch={(q) => loadItemsAction({ scanned: 1, q, page: 1, pageSize: scannedPageSize })}
-            onPageChange={(page) => loadItemsAction({ scanned: 1, q: '', page, pageSize: scannedPageSize })}
+            onSearch={(q) => {
+              setScannedQ(q)
+              return loadItemsAction({ scanned: 1, q, page: 1, pageSize: scannedPageSize })
+            }}
+            onPageChange={(page) => loadItemsAction({ scanned: 1, q: scannedQ, page, pageSize: scannedPageSize })}
           />
         </div>
       </div>
 
-      {/* Dialogs */}
       <ConfirmActionDialog
         open={openConfirmLost}
         onOpenChange={setOpenConfirmLost}
@@ -415,7 +481,7 @@ const ReadyToSellAuditPage = () => {
         confirmText={isConfirming ? 'กำลังบันทึก...' : 'ยืนยันบันทึกสูญหาย'}
         confirmVariant="primary"
         onConfirm={doConfirmLost}
-        disabled={isConfirming}
+        disabled={isConfirming || isCancelling || !sessionId}
       />
 
       <ConfirmActionDialog
@@ -426,10 +492,28 @@ const ReadyToSellAuditPage = () => {
         confirmText={isConfirming ? 'กำลังบันทึก...' : 'ยืนยันปิดรอบ (ค้างตรวจ)'}
         confirmVariant="warning"
         onConfirm={doConfirmPending}
-        disabled={isConfirming}
+        disabled={isConfirming || isCancelling || !sessionId}
+      />
+
+      <ConfirmActionDialog
+        open={openCancel}
+        onOpenChange={setOpenCancel}
+        title="ยกเลิกรอบตรวจนับ"
+        description="ยกเลิกรอบนี้โดยไม่สรุปเป็นสูญหาย/ค้างตรวจ และล้างข้อมูลในหน้านี้ (สามารถเริ่มรอบใหม่ได้ทันที)"
+        confirmText={isCancelling ? 'กำลังยกเลิก...' : 'ยืนยันยกเลิกรอบ'}
+        confirmVariant="danger"
+        onConfirm={doCancelAudit}
+        disabled={isConfirming || isCancelling || !sessionId}
       />
     </div>
   )
 }
 
 export default ReadyToSellAuditPage
+
+
+
+
+
+
+

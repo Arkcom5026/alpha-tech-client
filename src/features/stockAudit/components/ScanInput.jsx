@@ -1,4 +1,5 @@
 
+
 // =============================
 // client/src/features/stockAudit/components/ScanInput.jsx (updated)
 // - กว้างพอดี (compact ~320px)
@@ -75,3 +76,5 @@ export default ScanInput
 
 // ใช้งานในหน้าเพจ (ตัวอย่าง)
 // <ScanInput ref={scanRef} onSubmit={handleScan} disabled={isScanning} compact autoSubmit delay={180} />
+
+

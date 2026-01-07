@@ -1,4 +1,5 @@
 
+
 // =============================
 // features/stockAudit/store/useStockAuditStore.js
 // ✅ Zustand Store (ES Modules) — มี default export ชัดเจน
@@ -48,6 +49,7 @@ const useStockAuditStore = create((set, get) => ({
   isLoadingItems: false,
   isScanning: false,
   isConfirming: false,
+  isCancelling: false,
 
   // messages
   errorMessage: '',
@@ -83,6 +85,7 @@ const useStockAuditStore = create((set, get) => ({
     isLoadingItems: false,
     isScanning: false,
     isConfirming: false,
+    isCancelling: false,
     errorMessage: '',
     
   }),
@@ -280,6 +283,36 @@ const useStockAuditStore = create((set, get) => ({
   
   
 
+  cancelAuditAction: async (sid, payload = {}) => {
+    const sessionId = sid || get().sessionId
+    if (!sessionId) return { ok: false, error: 'sessionId required' }
+
+    // กันยิงซ้ำ
+    if (get().isCancelling) return { ok: false, error: 'Cancelling in progress' }
+
+    set({ isCancelling: true, errorMessage: '' })
+    try {
+      if (typeof stockAuditApi.cancelAudit !== 'function') {
+        throw new Error('cancelAudit API not implemented')
+      }
+
+      const res = await stockAuditApi.cancelAudit(sessionId, payload)
+      // รองรับ response แบบ { ok:true } หรือ { cancelled:true }
+      const ok = res?.ok === true || res?.cancelled === true || res?.status === 'CANCELLED'
+      if (!ok) throw new Error('Cancel failed')
+
+      // เคลียร์ state ให้กลับไปก่อนเริ่มรอบทันที (FE ก็เรียกซ้ำได้ ไม่เป็นไร)
+      get().resetAuditStateAction()
+      return { ok: true }
+    } catch (err) {
+      const message = getApiMessage(err, 'Cancel failed')
+      set({ errorMessage: message })
+      return { ok: false, error: message }
+    } finally {
+      set({ isCancelling: false })
+    }
+  },
+
   confirmAuditAction: async (strategy = 'MARK_PENDING') => {
     const { sessionId, expectedPageSize, scannedPageSize } = get()
     if (!sessionId) return { ok: false, error: 'sessionId required' }
@@ -304,3 +337,8 @@ const useStockAuditStore = create((set, get) => ({
 }))
 
 export default useStockAuditStore
+
+
+
+
+

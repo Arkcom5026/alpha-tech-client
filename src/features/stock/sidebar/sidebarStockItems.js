@@ -5,12 +5,12 @@ export const sidebarStockItems = [
       { label: 'ภาพรวมสต๊อก', to: '/pos/stock' },
       
       { label: 'รายการสินค้า', to: '/pos/stock/products' },                   
-      { label: 'หมวดหมู่สินค้า', to: '/pos/stock/categories' },
+      { label: 'หมวดสินค้า', to: '/pos/stock/categories' },
       { label: 'ประเภทสินค้า', to: '/pos/stock/types' },
-      { label: 'ลักษณะสินค้า', to: '/pos/stock/profiles' },    
-      { label: 'รูปแบบสินค้า', to: '/pos/stock/templates' },           
+      { label: 'รุ่นสินค้า', to: '/pos/stock/profiles' },    
+      { label: 'สเปกสินค้า (SKU)', to: '/pos/stock/templates' },           
       { label: 'กำหนดราคา', to: '/pos/stock/branch-prices' },  
-      { label: 'เช็คสต๊อก', to: '/pos/stock/stock-adit' },
+      { label: 'เช็คสต๊อก', to: '/pos/stock/stock-audit' },
       { label: 'จัดการหน่วยนับ', to: '/pos/stock/units' },
       
 
@@ -18,6 +18,7 @@ export const sidebarStockItems = [
     ],
   },
 ];
+
 
 
 

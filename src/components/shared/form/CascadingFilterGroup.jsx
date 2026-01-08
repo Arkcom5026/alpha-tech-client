@@ -9,10 +9,10 @@ export default function CascadingFilterGroup({
   hiddenFields = [],
   className = '',
   placeholders = {
-    category: '-- เลือกหมวดหมู่สินค้า --',
+    category: '-- เลือกหมวดสินค้า --',
     productType: '-- เลือกประเภทสินค้า --',
-    productProfile: '-- เลือกลักษณะสินค้า --',
-    template: '-- เลือกรูปแบบสินค้า --',
+    productProfile: '-- เลือกรุ่นสินค้า --',
+    template: '-- เลือกสเปกสินค้า (SKU) --',
   },
   showReset = false,
   direction,
@@ -162,7 +162,7 @@ export default function CascadingFilterGroup({
 
         {!hide('productProfile') && (
           <select
-            aria-label="ลักษณะสินค้า"
+            aria-label="รุ่นสินค้า"
             value={productProfileId === '' ? '' : productProfileId}
             onChange={(e) => update('productProfileId', e.target.value)}
             disabled={profileDisabled}
@@ -178,7 +178,7 @@ export default function CascadingFilterGroup({
 
         {!hide('template') && (
           <select
-            aria-label="รูปแบบสินค้า (Template)"
+            aria-label="สเปกสินค้า (SKU)"
             value={productTemplateId === '' ? '' : productTemplateId }
             onChange={(e) => update('productTemplateId', e.target.value)}
             disabled={templateDisabled}
@@ -229,3 +229,5 @@ export default function CascadingFilterGroup({
 
  
  
+
+

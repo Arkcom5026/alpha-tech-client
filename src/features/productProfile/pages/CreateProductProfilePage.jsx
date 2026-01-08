@@ -1,4 +1,4 @@
-// ✅ CreateProductProfilePage — FULL VERSION (aligned with CreateProductTypePage)
+// ✅ CreateProductProfilePage — FULL VERSION (UI: รุ่นสินค้า) — aligned with CreateProductTypePage
 import React, { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import PageHeader from '@/components/shared/layout/PageHeader';
@@ -79,7 +79,7 @@ const CreateProductProfilePage = () => {
         categoryId: Number(formData.categoryId),
         productTypeId: Number(formData.productTypeId),
       });
-      setSuccessMsg('บันทึกลักษณะสินค้าเรียบร้อยแล้ว');
+      setSuccessMsg('บันทึกรุ่นสินค้าเรียบร้อยแล้ว');
       setTimeout(() => navigate(LIST_PATH), 600);
     } catch (err) {
       setErrorMsg(parseApiError(err));
@@ -91,7 +91,7 @@ const CreateProductProfilePage = () => {
   return (
     <div className="p-6 w-full flex flex-col items-center">
       <div className="w-full max-w-3xl">
-        <PageHeader title="เพิ่มลักษณะสินค้าใหม่" />
+        <PageHeader title="เพิ่มรุ่นสินค้าใหม่" />
 
         {errorMsg && (
           <div className="mt-3 mb-4 rounded-lg border border-red-300 bg-red-50 px-4 py-2 text-sm text-red-700">
@@ -122,5 +122,7 @@ const CreateProductProfilePage = () => {
 };
 
 export default CreateProductProfilePage;
+
+
 
 

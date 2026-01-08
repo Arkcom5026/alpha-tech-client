@@ -257,8 +257,8 @@ const ProductForm = ({ onSubmit, defaultValues, mode }) => {
           placeholders={{
             category: '-- เลือกหมวดหมู่ --',
             type: '-- เลือกประเภทสินค้า --',
-            profile: '-- เลือกลักษณะสินค้า (Profile) --',
-            template: '-- เลือกรูปแบบสินค้า (Template) --',
+            profile: '-- เลือกรุ่น/ซีรีส์ (เช่น VIVO Y04) --',
+            template: '-- เลือกสเปก/ตัวเลือก (เช่น 4GB/64GB) --',
           }}
           containerClassName="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6"
           selectClassName="w-full"
@@ -295,4 +295,6 @@ const ProductForm = ({ onSubmit, defaultValues, mode }) => {
 };
 
 export default ProductForm;
+
+
 

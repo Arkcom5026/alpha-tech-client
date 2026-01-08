@@ -143,7 +143,7 @@ const ProductProfileForm = ({
 
         {/* cascading dropdowns */}
         <div>
-          <label className="block mb-1 font-medium">หมวดหมู่สินค้า * / ประเภทสินค้า *</label>
+          <label className="block mb-1 font-medium">หมวดสินค้า * / ประเภทสินค้า *</label>
           {(!isDropdownLoading && (cascaded?.categories?.length || 0) > 0) ? (
             <CascadingDropdowns
               dropdowns={cascaded}
@@ -178,13 +178,13 @@ const ProductProfileForm = ({
 
         {/* name */}
         <div>
-          <label className="block mb-1 font-medium">ชื่อลักษณะสินค้า *</label>
+          <label className="block mb-1 font-medium">ชื่อรุ่นสินค้า *</label>
           <input
             type="text"
             {...methods.register('name')}
             disabled={busy}
             className="w-full border rounded px-3 py-2 bg-white dark:bg-zinc-900 border-zinc-300 dark:border-zinc-700"
-            placeholder="เช่น สี/ไซซ์/แพ็กเกจ"
+            placeholder="เช่น VIVO Y04, iPhone 13, Router 4G"
           />
           {errors?.name && <p className="text-red-500 text-sm mt-1">{errors.name.message}</p>}
         </div>
@@ -215,6 +215,9 @@ const ProductProfileForm = ({
 };
 
 export default ProductProfileForm;
+
+
+
 
 
 

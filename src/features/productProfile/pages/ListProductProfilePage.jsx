@@ -1,3 +1,4 @@
+
 // ✅ src/features/productProfile/pages/ListProductProfilePage.jsx
 import React from 'react';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
@@ -88,14 +89,14 @@ const ListProductProfilePage = () => {
 
   const handleCreate = (e) => {
     e.preventDefault();
-    console.log('[ListProfile] navigate to create');
+    console.log('[ListProductProfile] navigate to create');
     navigate('/pos/stock/profiles/create'); // absolute path ปลอดภัย
   };
 
   const handleEdit = (row) => {
     const id = Number(row?.id);
     if (!id) return;
-    console.log('[ListProfile] navigate to edit', id);
+    console.log('[ListProductProfile] navigate to edit', id);
     navigate(`/pos/stock/profiles/edit/${id}`); // absolute path ปลอดภัย
   };
 
@@ -124,7 +125,12 @@ const ListProductProfilePage = () => {
     <div className="p-6 w-full flex flex-col items-center">
       <div className="w-full max-w-6xl">
         <div className="flex items-center justify-between mb-4">
-          <h1 className="text-xl font-semibold text-zinc-800 dark:text-white">รายการลักษณะสินค้า (Product Profiles)</h1>
+          <div>
+            <h1 className="text-xl font-semibold text-zinc-800 dark:text-white">รายการรุ่นสินค้า</h1>
+            <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+              รุ่นสินค้า = ชื่อรุ่น/ตระกูลสินค้าที่ใช้ขาย เช่น VIVO Y04, iPhone 13, ASUS TUF F15 (ไม่ใช่สเปก/สี)
+            </p>
+          </div>
           {canManage && <StandardActionButtons onAdd={handleCreate} />}
         </div>
 
@@ -142,7 +148,7 @@ const ListProductProfilePage = () => {
               <input
                 type="text"
                 className="input input-bordered w-full"
-                placeholder="ค้นหา..."
+                placeholder="ค้นหารุ่นสินค้า เช่น VIVO Y04"
                 value={search}
                 onChange={onSearchChange}
               />
@@ -207,3 +213,5 @@ const ListProductProfilePage = () => {
 };
 
 export default ListProductProfilePage;
+
+

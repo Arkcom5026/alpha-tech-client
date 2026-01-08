@@ -12,6 +12,7 @@ import { useNavigate } from 'react-router-dom';
 
 const ProductTemplateForm = ({ defaultValues = {}, onSubmit, mode }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formError, setFormError] = useState('');
 
   const { units, fetchUnits } = useUnitStore();
   const { dropdowns, dropdownsLoaded, ensureDropdownsAction } = useProductStore();
@@ -67,9 +68,10 @@ const ProductTemplateForm = ({ defaultValues = {}, onSubmit, mode }) => {
     const typeOk = formData.productTypeId !== '' && formData.productTypeId != null;
     const profileOk = formData.productProfileId !== '' && formData.productProfileId != null;
     if (mode !== 'edit' && (!catOk || !typeOk || !profileOk)) {
-      alert('กรุณาเลือก หมวดหมู่ → ประเภทสินค้า → ลักษณะสินค้า ให้ครบก่อนบันทึก');
+      setFormError('กรุณาเลือก หมวดสินค้า → ประเภทสินค้า → รุ่นสินค้า ให้ครบก่อนบันทึก');
       return;
     }
+    setFormError('');
 
     setIsSubmitting(true);
     try {
@@ -103,7 +105,12 @@ const ProductTemplateForm = ({ defaultValues = {}, onSubmit, mode }) => {
         onSubmit={formMethods.handleSubmit(handleFormSubmit)}
         className="space-y-6"
       >
-        {/* ⬆️ CascadingDropdowns สำหรับเลือก Category → Type → Profile */}
+        {formError ? (
+          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700" role="alert" aria-live="assertive">
+            {formError}
+          </div>
+        ) : null}
+        {/* ⬆️ CascadingDropdowns สำหรับเลือก หมวดสินค้า → ประเภทสินค้า → รุ่นสินค้า */}
         <div className="grid grid-cols-1 gap-6 ">
           <CascadingDropdowns
             dropdowns={dropdowns}
@@ -133,12 +140,13 @@ const ProductTemplateForm = ({ defaultValues = {}, onSubmit, mode }) => {
         {/* ⬇️ Form ด้านล่าง */}
         <div className="grid grid-cols-1 gap-6">
           <div>
-            <label className="font-medium block mb-1">ชื่อรูปแบบสินค้า</label>
+            <label className="font-medium block mb-1">ชื่อสเปกสินค้า (SKU)</label>
+            <p className="text-xs text-zinc-500 mb-2">สเปกสินค้า (SKU) = ตัวเลือกย่อยของรุ่นที่แยกราคา/สต๊อก เช่น 4GB/64GB, 4GB/128GB</p>
             <input
               {...register('name')}
               disabled={isBusy}
               className="input w-full border border-gray-300 dark:border-gray-600 rounded px-3 py-2 bg-white dark:bg-zinc-800 text-black dark:text-white"
-              placeholder="เช่น Asus Vivobook"
+              placeholder="เช่น 4GB/64GB"
             />
           </div>
 
@@ -175,4 +183,5 @@ const ProductTemplateForm = ({ defaultValues = {}, onSubmit, mode }) => {
 };
 
 export default ProductTemplateForm;
+
 

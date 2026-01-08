@@ -44,8 +44,8 @@ const EditProductTemplatePage = () => {
 
         setTemplate(mapped);
       } catch (err) {
-        console.error('โหลดข้อมูลรูปแบบสินค้าล้มเหลว:', err);
-        setError('ไม่สามารถโหลดข้อมูลรูปแบบสินค้าได้');
+        console.error('โหลดข้อมูลสเปกสินค้า (SKU) ล้มเหลว:', err);
+        setError('ไม่สามารถโหลดข้อมูลสเปกสินค้า (SKU) ได้');
       }
     };
 
@@ -59,25 +59,21 @@ const EditProductTemplatePage = () => {
 
   const handleUpdate = async (formData) => {
     try {
-      const branchIdParsed = parseInt(selectedBranchId);
-      if (isNaN(branchIdParsed)) {
-        setError('ไม่พบรหัสสาขา');
-        return;
-      }
-      formData.branchId = branchIdParsed;
-
+      setError('');
       setIsUpdating(true);
-      await updateTemplate(id, formData);
-      setIsUpdating(false);
-      setShowSuccess(true);
 
+      // ✅ BE must enforce branch scope from JWT; FE must NOT send branchId
+      await updateTemplate(id, formData);
+
+      setShowSuccess(true);
       setTimeout(() => {
         setShowSuccess(false);
         navigate('/pos/stock/templates');
       }, 2000);
     } catch (err) {
-      console.error('อัปเดตข้อมูลรูปแบบสินค้าล้มเหลว:', err);
+      console.error('อัปเดตข้อมูลสเปกสินค้า (SKU) ล้มเหลว:', err);
       setError('เกิดข้อผิดพลาดในการบันทึกข้อมูล');
+    } finally {
       setIsUpdating(false);
     }
   };
@@ -87,7 +83,7 @@ const EditProductTemplatePage = () => {
 
   return (
     <div className="max-w-3xl mx-auto">
-      <PageHeader title={`แก้ไขรูปแบบสินค้า #${id}`} />
+      <PageHeader title={`แก้ไขสเปกสินค้า (SKU) #${id}`} />
       <div className="mb-3">
         <Link to="/pos/stock/templates" className="text-sm text-blue-600 hover:underline">ย้อนกลับ</Link>
       </div>
@@ -103,7 +99,7 @@ const EditProductTemplatePage = () => {
       <ProcessingDialog
         open={isUpdating || showSuccess}
         isLoading={isUpdating}
-        message={isUpdating ? 'ระบบกำลังอัปเดตข้อมูล กรุณารอสักครู่...' : '✅ บันทึกข้อมูลเรียบร้อยแล้ว'}
+        message={isUpdating ? 'ระบบกำลังอัปเดตข้อมูล กรุณารอสักครู่...' : '✅ บันทึกข้อมูลสเปกสินค้า (SKU) เรียบร้อยแล้ว'}
         onClose={() => setShowSuccess(false)}
       />
     </div>
@@ -111,3 +107,4 @@ const EditProductTemplatePage = () => {
 };
 
 export default EditProductTemplatePage;
+

@@ -89,7 +89,7 @@ const ProductTemplateTable = ({
       <div className="w-[1100px] bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm rounded-xl overflow-hidden">
         <div className="px-4 py-3 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-800/60 sticky top-0 z-10">
           <div className="flex items-center justify-between">
-            <div className="text-sm text-zinc-600 dark:text-zinc-300">รายการ</div>
+            <div className="text-sm text-zinc-600 dark:text-zinc-300">รายการสเปกสินค้า (SKU)</div>
             <div className="text-xs text-zinc-500">ทั้งหมด {rows.length} รายการ</div>
           </div>
         </div>
@@ -98,10 +98,10 @@ const ProductTemplateTable = ({
           <thead className="text-left text-zinc-600 bg-zinc-50 dark:bg-zinc-800">
             <tr className="border-b border-zinc-200 dark:border-zinc-800">
               <th className="px-4 py-2 w-[60px] text-center">#</th>
-              <th className="px-4 py-2 w-[20%]">รูปแบบสินค้า</th>
-              <th className="px-4 py-2 w-[20%]">ลักษณะสินค้า</th>
+              <th className="px-4 py-2 w-[20%]">สเปกสินค้า (SKU)</th>
+              <th className="px-4 py-2 w-[20%]">รุ่นสินค้า</th>
               <th className="px-4 py-2 w-[20%]">ประเภทสินค้า</th>
-              <th className="px-4 py-2 w-[20%]">หมวดหมู่</th>
+              <th className="px-4 py-2 w-[20%]">หมวดสินค้า</th>
               <th className="px-4 py-2 w-[10%] text-center">สถานะ</th>
               <th className="px-4 py-2 text-right w-[20%]">การจัดการ</th>
             </tr>
@@ -173,7 +173,7 @@ const ProductTemplateTable = ({
         {confirm && (
           <div className="px-4 py-3 flex items-center justify-between bg-amber-50/90 dark:bg-amber-900/30 border-t border-amber-200 dark:border-amber-800">
             <div className="text-sm text-amber-900 dark:text-amber-200">
-              ยืนยันการ{confirm.nextActive ? 'กู้คืน' : 'ปิดใช้งาน'} รูปแบบสินค้า “{confirm.row?.name}” หรือไม่?
+              ยืนยันการ{confirm.nextActive ? 'กู้คืน' : 'ปิดใช้งาน'} สเปกสินค้า (SKU) “{confirm.row?.name}” หรือไม่?
             </div>
             <div className="flex gap-2">
               <ActionButton className="border border-amber-300 text-amber-900 hover:bg-amber-100" onClick={() => setConfirm(null)}>
@@ -191,3 +191,4 @@ const ProductTemplateTable = ({
 };
 
 export default ProductTemplateTable;
+

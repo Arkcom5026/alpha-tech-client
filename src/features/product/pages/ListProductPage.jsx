@@ -206,7 +206,7 @@
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4">
           <input
             type="text"
-            placeholder="ค้นหาชื่อสินค้า..."
+            placeholder="ค้นหาชื่อสินค้า / รุ่น / สเปก..."
             value={searchText}
             onChange={(e) => setSearchText(e.target.value)}
             onKeyDown={handleSearchKeyDown}
@@ -224,13 +224,13 @@
             <option value="price-desc">ราคามาก → น้อย</option>
           </select>
 
-          {/* ตัวกรองรูปแบบสินค้า (SIMPLE/STRUCTURED) */}
+          {/* ตัวกรองโหมดสินค้า (SIMPLE/STRUCTURED) */}
           <select
             value={filter.mode}
             onChange={(e) => handleFilterChange({ ...filter, mode: e.target.value })}
             className="border px-3 py-2 rounded w-full"
           >
-            <option value="">-- เลือกรูปแบบสินค้า --</option>
+            <option value="">-- เลือกโหมดสินค้า --</option>
             <option value="SIMPLE">นับตามจำนวน (SIMPLE)</option>
             <option value="STRUCTURED">มี SN รายชิ้น (STRUCTURED)</option>
           </select>
@@ -276,6 +276,7 @@
       </div>
     );
   }
+
 
 
 

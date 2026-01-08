@@ -112,8 +112,8 @@ export default function CascadingDropdowns({ dropdowns, value = {}, onChange, is
   const ph = {
     category: placeholders.category ?? '-- เลือกหมวดหมู่ --',
     type: placeholders.type ?? '-- เลือกประเภทสินค้า --',
-    profile: placeholders.profile ?? '-- เลือกลักษณะสินค้า (Profile) --',
-    template: placeholders.template ?? '-- เลือกรูปแบบสินค้า (Template) --',
+    profile: placeholders.profile ?? '-- เลือกรุ่นสินค้า --',
+    template: placeholders.template ?? '-- เลือกสเปกสินค้า (SKU) --',
   };
 
   const containerClass = containerClassName
@@ -170,10 +170,10 @@ export default function CascadingDropdowns({ dropdowns, value = {}, onChange, is
 
       {showProfile && (
         <div>
-          <label htmlFor="cdg-profile" className="sr-only">ลักษณะสินค้า (Profile)</label>
+          <label htmlFor="cdg-profile" className="sr-only">รุ่นสินค้า</label>
           <select
             id="cdg-profile"
-            aria-label="เลือกลักษณะสินค้า (Profile)"
+            aria-label="เลือกรุ่นสินค้า"
             className={`border rounded px-3 py-2 w-full ${selectClassName} ${profileDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
             value={selectedProfileId}
             onChange={(e) => {
@@ -192,10 +192,10 @@ export default function CascadingDropdowns({ dropdowns, value = {}, onChange, is
 
       {showTemplate && (
         <div>
-          <label htmlFor="cdg-template" className="sr-only">รูปแบบสินค้า (Template)</label>
+          <label htmlFor="cdg-template" className="sr-only">สเปกสินค้า (SKU)</label>
           <select
             id="cdg-template"
-            aria-label="เลือกรูปแบบสินค้า (Template)"
+            aria-label="เลือกสเปกสินค้า (SKU)"
             className={`border rounded px-3 py-2 w-full ${selectClassName} ${templateDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
             value={selectedProductTemplateId}
             onChange={(e) => {

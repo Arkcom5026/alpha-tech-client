@@ -126,10 +126,10 @@ const ProductOnlineDetailPage = () => {
             </button>
 
             <div className="mt-6 grid grid-cols-1 md:grid-cols-2 text-sm text-gray-500 gap-y-1 gap-x-6">
-              <div>หมวดหมู่: <span className="text-gray-700">{category || '-'}</span></div>
+              <div>หมวดสินค้า: <span className="text-gray-700">{category || '-'}</span></div>
               <div>ประเภทสินค้า: <span className="text-gray-700">{productType || '-'}</span></div>
-              <div>ลักษณะสินค้า: <span className="text-gray-700">{productProfile || '-'}</span></div>
-              <div>รูปแบบสินค้า: <span className="text-gray-700">{productTemplate || '-'}</span></div>
+              <div>รุ่นสินค้า: <span className="text-gray-700">{productProfile || '-'}</span></div>
+              <div>สเปกสินค้า (SKU): <span className="text-gray-700">{productTemplate || '-'}</span></div>
               <div>จำนวนในสต๊อก: <span className="text-gray-700">{quantity ?? '-'} ชิ้น</span></div>
               <div>ขายไปแล้ว: <span className="text-gray-700">{sold ?? '-'} ชิ้น</span></div>
               <div>การรับประกัน: <span className="text-gray-700">{warranty ?? '-'} วัน</span></div>
@@ -190,3 +190,6 @@ const ProductOnlineDetailPage = () => {
 };
 
 export default ProductOnlineDetailPage;
+
+
+

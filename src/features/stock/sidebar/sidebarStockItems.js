@@ -7,7 +7,7 @@ export const sidebarStockItems = [
       { label: 'รายการสินค้า', to: '/pos/stock/products' },                   
       { label: 'หมวดสินค้า', to: '/pos/stock/categories' },
       { label: 'ประเภทสินค้า', to: '/pos/stock/types' },
-      { label: 'รุ่นสินค้า', to: '/pos/stock/profiles' },    
+      { label: 'แบรนด์', to: '/pos/stock/profiles' },    
       { label: 'สเปกสินค้า (SKU)', to: '/pos/stock/templates' },           
       { label: 'กำหนดราคา', to: '/pos/stock/branch-prices' },  
       { label: 'เช็คสต๊อก', to: '/pos/stock/stock-audit' },

@@ -178,7 +178,7 @@ const ProductProfileForm = ({
 
         {/* name */}
         <div>
-          <label className="block mb-1 font-medium">ชื่อรุ่นสินค้า *</label>
+          <label className="block mb-1 font-medium">ชื่อแบรนด์ *</label>
           <input
             type="text"
             {...methods.register('name')}

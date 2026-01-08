@@ -112,7 +112,7 @@ export default function CascadingDropdowns({ dropdowns, value = {}, onChange, is
   const ph = {
     category: placeholders.category ?? '-- เลือกหมวดหมู่ --',
     type: placeholders.type ?? '-- เลือกประเภทสินค้า --',
-    profile: placeholders.profile ?? '-- เลือกรุ่นสินค้า --',
+    profile: placeholders.profile ?? '-- เลือกแบรนด์ --',
     template: placeholders.template ?? '-- เลือกสเปกสินค้า (SKU) --',
   };
 
@@ -170,10 +170,10 @@ export default function CascadingDropdowns({ dropdowns, value = {}, onChange, is
 
       {showProfile && (
         <div>
-          <label htmlFor="cdg-profile" className="sr-only">รุ่นสินค้า</label>
+          <label htmlFor="cdg-profile" className="sr-only">แบรนด์</label>
           <select
             id="cdg-profile"
-            aria-label="เลือกรุ่นสินค้า"
+            aria-label="เลือกแบรนด์"
             className={`border rounded px-3 py-2 w-full ${selectClassName} ${profileDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
             value={selectedProfileId}
             onChange={(e) => {
@@ -214,4 +214,6 @@ export default function CascadingDropdowns({ dropdowns, value = {}, onChange, is
     </div>
   );
 }
+
+
 

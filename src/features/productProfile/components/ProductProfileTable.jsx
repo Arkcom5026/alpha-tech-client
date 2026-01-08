@@ -63,7 +63,7 @@ const ProductProfileTable = ({ data = [], loading, error, page = 1, limit = 20, 
         {/* Header */}
         <div className="px-4 py-3 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-800/60 backdrop-blur supports-[backdrop-filter]:bg-zinc-50/60 sticky top-0 z-10">
           <div className="flex items-center justify-between">
-            <div className="text-sm text-zinc-600 dark:text-zinc-300">รายการรุ่นสินค้า</div>
+            <div className="text-sm text-zinc-600 dark:text-zinc-300">รายการแบรนด์</div>
             <div className="text-xs text-zinc-500">ทั้งหมด {rows.length} รายการ</div>
           </div>
         </div>
@@ -74,7 +74,7 @@ const ProductProfileTable = ({ data = [], loading, error, page = 1, limit = 20, 
           <thead className="text-left text-zinc-600 bg-zinc-50 dark:bg-zinc-800">
             <tr className="border-b border-zinc-200 dark:border-zinc-800">
               <th className="px-4 py-2 w-[60px] text-center">#</th>
-              <th className="px-4 py-2 w-[30%]">ชื่อรุ่นสินค้า</th>
+              <th className="px-4 py-2 w-[30%]">ชื่อแบรนด์</th>
               <th className="px-4 py-2 w-[22%]">ประเภทสินค้า</th>
               <th className="px-4 py-2 w-[22%]">หมวดหมู่</th>
               <th className="px-4 py-2 w-[10%] text-center">สถานะ</th>
@@ -168,7 +168,7 @@ const ProductProfileTable = ({ data = [], loading, error, page = 1, limit = 20, 
         {confirm && (
           <div className="px-4 py-3 flex items-center justify-between bg-amber-50/90 dark:bg-amber-900/30 border-t border-amber-200 dark:border-amber-800">
             <div className="text-sm text-amber-900 dark:text-amber-200">
-              ยืนยันการ{confirm.type === 'archive' ? 'ปิดใช้งาน' : 'กู้คืน'} รุ่นสินค้า “{confirm.row?.name}” หรือไม่?
+              ยืนยันการ{confirm.type === 'archive' ? 'ปิดใช้งาน' : 'กู้คืน'} แบรนด์ “{confirm.row?.name}” หรือไม่?
             </div>
             <div className="flex gap-2">
               <ActionButton className="border border-amber-300 text-amber-900 hover:bg-amber-100" onClick={() => setConfirm(null)}>
@@ -186,6 +186,8 @@ const ProductProfileTable = ({ data = [], loading, error, page = 1, limit = 20, 
 };
 
 export default ProductProfileTable;
+
+
 
 
 

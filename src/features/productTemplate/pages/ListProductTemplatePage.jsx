@@ -85,7 +85,7 @@ const ListProductTemplatePage = () => {
           <div>
             <h1 className="text-xl font-semibold text-zinc-800 dark:text-white">รายการสเปกสินค้า (SKU)</h1>
             <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-              สเปกสินค้า (SKU) = ตัวเลือกย่อยของ “รุ่นสินค้า” ที่แยกการขาย/ราคา/สต๊อก เช่น 4GB/64GB, 4GB/128GB (ไม่ใช่รุ่น)
+              สเปกสินค้า (SKU) = ตัวเลือกย่อยของ “แบรนด์” ที่แยกการขาย/ราคา/สต๊อก เช่น 4GB/64GB, 4GB/128GB (ไม่ใช่รุ่น)
             </p>
           </div>
           {canManage && <StandardActionButtons onAdd={handleCreate} />}

@@ -40,6 +40,7 @@ export const useBillStore = create((set) => ({
       const vatRate = typeof rc.vatRate === 'number' ? rc.vatRate : 7;
 
       // normalize sale items: NOTE our SaleItem.amount is VAT-included per piece
+      // UI wording: name => คำเรียก, model => สเปกสินค้า (SKU)
       const items = Array.isArray(sale?.items) ? sale.items : [];
       const saleItems = items.map((i) => {
         const qty = 1; // by design: 1 SaleItem = 1 unit (serial-based)
@@ -49,8 +50,8 @@ export const useBillStore = create((set) => ({
         const lineEx = unitEx * qty;
         return {
           id: i?.id,
-          productName: i?.stockItem?.product?.name || 'ไม่พบชื่อสินค้า',
-          productModel: i?.stockItem?.product?.model || 'ไม่พบรุ่นสินค้า',
+          productName: i?.stockItem?.product?.name || 'ไม่พบคำเรียกสินค้า',
+          productModel: i?.stockItem?.product?.model || 'ไม่พบสเปกสินค้า (SKU)',
           quantity: qty,
           unit: i?.stockItem?.product?.template?.unit?.name || '-',
           amount: amountVatIncl, // VAT-included per line (for summary totalling)
@@ -94,3 +95,6 @@ export const useBillStore = create((set) => ({
     }
   },
 }));
+
+
+

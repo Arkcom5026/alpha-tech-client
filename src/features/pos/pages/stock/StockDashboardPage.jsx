@@ -65,10 +65,10 @@ const StockDashboardPage = () => {
           <Tile color="blue" title="พิมพ์บาร์โค้ด" to="/pos/stock/barcodes/print" desc="จัดกลุ่มเพื่อพิมพ์บาร์โค้ดตามใบตรวจรับ/รายการ" />
         </Section>
 
-        <Section title="ราคาและโครงสร้างสินค้า" subtitle="โครงสร้างสินค้า (หมวด/ประเภท/รุ่น/สเปก) และการตั้งราคาตามสาขา">
+        <Section title="ราคาและโครงสร้างสินค้า" subtitle="โครงสร้างสินค้า (หมวด/ประเภท/แบรนด์/สเปก) และการตั้งราคาตามสาขา">
           <Tile color="blue" title="ราคาแต่ละสาขา (Branch Prices)" to="/pos/stock/branch-prices" desc="จัดการราคาขายตามสาขา และความพร้อมขาย" />
           <Tile color="zinc" title="สเปกสินค้า (SKU)" to="/pos/stock/templates" desc="กำหนดสเปกที่ขายจริง (SKU) เพื่อแยกราคา/สต๊อก เช่น 4GB/64GB" />
-          <Tile color="zinc" title="รุ่นสินค้า" to="/pos/stock/profiles" desc="กำหนดชื่อรุ่น/ตระกูลสินค้า เช่น VIVO Y04, iPhone 13 เพื่อเชื่อมกับสเปก (SKU)" />
+          <Tile color="zinc" title="แบรนด์" to="/pos/stock/profiles" desc="กำหนดแบรนด์/ยี่ห้อสินค้า เช่น Apple, ASUS, VIVO เพื่อเชื่อมกับสเปก (SKU)" />
           <Tile color="zinc" title="ประเภทสินค้า (Types)" to="/pos/stock/types" desc="กลุ่มประเภทสินค้า เช่น มือถือ คอมพิวเตอร์ อุปกรณ์" />
           <Tile color="zinc" title="หมวดสินค้า" to="/pos/stock/categories" desc="จัดกลุ่มหมวดหลักเพื่อการกรองและรายงาน (เช่น Mobile, Computer)" />
         </Section>
@@ -78,5 +78,7 @@ const StockDashboardPage = () => {
 };
 
 export default StockDashboardPage;
+
+
 
 

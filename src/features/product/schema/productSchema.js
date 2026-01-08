@@ -9,7 +9,7 @@ export const productSchema = z.object({
   price: z.number().min(0, 'ราคาต้องมากกว่าหรือเท่ากับ 0'),
   stock: z.number().min(0, 'สต๊อกเริ่มต้นต้องมากกว่าหรือเท่ากับ 0'),
   productTemplateId: z.string().min(1, 'กรุณาเลือกสเปกสินค้า (SKU)'),
-  productProfileId: z.string().min(1, 'กรุณาเลือกรุ่นสินค้า'),
+  productProfileId: z.string().min(1, 'กรุณาเลือกแบรนด์'),
   unitId: z.string().min(1, 'กรุณาเลือกหน่วยนับ'),
   categoryId: z.string().min(1, 'กรุณาเลือกหมวดสินค้า'),
   images: z.array(

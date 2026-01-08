@@ -1,4 +1,5 @@
 
+
 // ✅ src/features/productProfile/pages/ListProductProfilePage.jsx
 import React from 'react';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
@@ -126,9 +127,9 @@ const ListProductProfilePage = () => {
       <div className="w-full max-w-6xl">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h1 className="text-xl font-semibold text-zinc-800 dark:text-white">รายการรุ่นสินค้า</h1>
+            <h1 className="text-xl font-semibold text-zinc-800 dark:text-white">รายการแบรนด์</h1>
             <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-              รุ่นสินค้า = ชื่อรุ่น/ตระกูลสินค้าที่ใช้ขาย เช่น VIVO Y04, iPhone 13, ASUS TUF F15 (ไม่ใช่สเปก/สี)
+              แบรนด์ = ยี่ห้อ/ผู้ผลิตสินค้า เช่น Apple, ASUS, VIVO (ไม่ใช่รุ่น/สเปก/สี)
             </p>
           </div>
           {canManage && <StandardActionButtons onAdd={handleCreate} />}
@@ -148,7 +149,7 @@ const ListProductProfilePage = () => {
               <input
                 type="text"
                 className="input input-bordered w-full"
-                placeholder="ค้นหารุ่นสินค้า เช่น VIVO Y04"
+                placeholder="ค้นหาแบรนด์ เช่น Apple, ASUS, VIVO"
                 value={search}
                 onChange={onSearchChange}
               />
@@ -213,5 +214,9 @@ const ListProductProfilePage = () => {
 };
 
 export default ListProductProfilePage;
+
+
+
+
 
 

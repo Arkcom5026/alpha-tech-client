@@ -2,7 +2,7 @@
 import { z } from 'zod';
 
 export const productProfileSchema = z.object({
-  name: z.string().min(1, 'กรุณากรอกชื่อรุ่นสินค้า'),
+  name: z.string().min(1, 'กรุณากรอกชื่อแบรนด์'),
   description: z.string().optional(), // ตัวเลือก: รายละเอียด/หมายเหตุของรุ่น (ถ้ามี)
   productTypeId: z
     .string()

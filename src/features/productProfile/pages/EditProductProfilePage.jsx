@@ -54,9 +54,9 @@ const EditProductProfilePage = () => {
     <div className="p-6">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h1 className="text-xl font-semibold">แก้ไขรุ่นสินค้า #{id}</h1>
+          <h1 className="text-xl font-semibold">แก้ไขแบรนด์ #{id}</h1>
           <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-            รุ่นสินค้า = ชื่อรุ่น/ตระกูลสินค้าที่ใช้ขาย (ไม่ใช่สเปก/สี) เช่น VIVO Y04, iPhone 13
+            แบรนด์ = ชื่อรุ่น/ตระกูลสินค้าที่ใช้ขาย (ไม่ใช่สเปก/สี) เช่น VIVO Y04, iPhone 13
           </p>
         </div>
         <Link to={LIST_PATH} className="btn btn-outline">ย้อนกลับ</Link>

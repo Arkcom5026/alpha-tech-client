@@ -68,7 +68,7 @@ const ProductTemplateForm = ({ defaultValues = {}, onSubmit, mode }) => {
     const typeOk = formData.productTypeId !== '' && formData.productTypeId != null;
     const profileOk = formData.productProfileId !== '' && formData.productProfileId != null;
     if (mode !== 'edit' && (!catOk || !typeOk || !profileOk)) {
-      setFormError('กรุณาเลือก หมวดสินค้า → ประเภทสินค้า → รุ่นสินค้า ให้ครบก่อนบันทึก');
+      setFormError('กรุณาเลือก หมวดสินค้า → ประเภทสินค้า → แบรนด์ ให้ครบก่อนบันทึก');
       return;
     }
     setFormError('');
@@ -110,7 +110,7 @@ const ProductTemplateForm = ({ defaultValues = {}, onSubmit, mode }) => {
             {formError}
           </div>
         ) : null}
-        {/* ⬆️ CascadingDropdowns สำหรับเลือก หมวดสินค้า → ประเภทสินค้า → รุ่นสินค้า */}
+        {/* ⬆️ CascadingDropdowns สำหรับเลือก หมวดสินค้า → ประเภทสินค้า → แบรนด์ */}
         <div className="grid grid-cols-1 gap-6 ">
           <CascadingDropdowns
             dropdowns={dropdowns}

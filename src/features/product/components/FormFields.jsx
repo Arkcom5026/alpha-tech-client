@@ -1,4 +1,8 @@
 
+
+
+
+
 // ✅ src/features/product/components/FormFields.jsx
 import React from 'react';
 import { Controller, useWatch } from 'react-hook-form';
@@ -11,29 +15,22 @@ export default function FormFields({ register, errors, control, showInitialQty =
 
   return (
     <div>
-      {/* ชื่อ/รุ่นสินค้า */}
+      {/* ชื่อสินค้า */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
-          <label htmlFor="name" className="block font-medium mb-1 text-gray-700">ชื่อสินค้า</label>
+          <label htmlFor="name" className="block font-medium mb-1 text-gray-700">คำเรียกสินค้า (ชื่อเรียกสั้น)</label>
           <input
             id="name"
             type="text"
-            {...register('name', { required: 'กรุณาระบุชื่อสินค้า' })}
+            placeholder="เช่น Y04, NV2, G102"
+            {...register('name', { required: 'กรุณาระบุคำเรียกสินค้า' })}
             className="w-full p-2 border rounded-md focus:ring-blue-400 focus:border-blue-400 text-gray-800"
           />
           {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name.message}</p>}
         </div>
 
-        <div>
-          <label htmlFor="model" className="block font-medium mb-1 text-gray-700">รุ่นสินค้า</label>
-          <input
-            id="model"
-            type="text"
-            {...register('model')}
-            className="w-full p-2 border rounded-md focus:ring-blue-400 focus:border-blue-400 text-gray-800"
-            placeholder="เช่น K617, NKM637, A32-B"
-          />
-        </div>
+        {/* ซ่อน field `model` เพื่อป้องกันความสับสนกับ “รุ่น” (ProductProfile) ในลำดับขั้น แต่คง payload เดิมไว้ (ปล่อยว่างได้) */}
+        <input type="hidden" {...register('model')} />
       </div>
 
       {/* ประเภทสินค้า: Simple / Template → map เป็น noSN (true/false) */}
@@ -205,4 +202,6 @@ export default function FormFields({ register, errors, control, showInitialQty =
     </div>
   );
 }
+
+
 

@@ -83,6 +83,20 @@ const useProductStore = create((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const cleanedPayload = { ...payload };
+
+      // ✅ BE createProduct ใช้ data.templateId (ไม่ใช่ productTemplateId)
+      // ดังนั้นต้อง map ให้ถูกก่อนยิง API เพื่อกัน PRODUCT_TEMPLATE_REQUIRED
+      if (!cleanedPayload.templateId && cleanedPayload.productTemplateId) {
+        cleanedPayload.templateId = cleanedPayload.productTemplateId;
+      }
+
+      // ✅ ไม่ส่ง branchId ไป BE (BE อ่านจาก req.user.branchId ตาม BRANCH_SCOPE_ENFORCED)
+      delete cleanedPayload.branchId;
+
+      // ✅ เคลียร์ field ที่ไม่ควรส่ง
+      delete cleanedPayload.productTemplateId;
+      delete cleanedPayload.unit;
+      delete cleanedPayload.unitId;
       delete cleanedPayload.unit;
       delete cleanedPayload.unitId;
 
@@ -318,4 +332,5 @@ const useProductStore = create((set, get) => ({
 
 export default useProductStore;
   
+
 

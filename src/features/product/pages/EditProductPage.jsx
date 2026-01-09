@@ -27,19 +27,32 @@ const EditProductPage = () => {
 
   // --- helpers ---
   const normalizeImages = (imgs = []) =>
-    imgs.map((it) => ({
-      id: it?.id ?? it?.publicId ?? it?._id,
-      url: it?.url ?? it?.secure_url ?? it?.src ?? '',
-      caption: it?.caption ?? '',
-      isCover: Boolean(it?.isCover),
-      publicId: it?.publicId ?? it?.cloudinaryPublicId ?? it?.id,
-    }));
+    imgs.map((it) => {
+      const publicIdString =
+        (typeof it?.public_id === 'string' && it.public_id) ||
+        (typeof it?.publicId === 'string' && it.publicId) ||
+        (typeof it?.cloudinaryPublicId === 'string' && it.cloudinaryPublicId) ||
+        null;
+  
+      return {
+        id: it?.id ?? it?._id ?? null,
+        url: it?.url ?? it?.secure_url ?? it?.secureUrl ?? it?.src ?? '',
+        caption: it?.caption ?? '',
+        isCover: Boolean(it?.isCover),
+        public_id: publicIdString,
+        publicId: publicIdString,
+      };
+    });
+  
+
+
 
   useEffect(() => {
     if (!dropdownsLoaded) {
       ensureDropdownsAction();
     }
   }, [dropdownsLoaded, ensureDropdownsAction]);
+
 
   useEffect(() => {
     if (!id || hasFetched.current) return;
@@ -122,13 +135,20 @@ const EditProductPage = () => {
 
       // ลบรูปเก่าที่ผู้ใช้ติ๊กเลือก
       for (const img of imagesToDelete) {
-        if (!img) continue;
+        if (img == null || img === '') continue;
+      
         try {
-          await deleteImage({ productId: id, publicId: img });
+          // ✅ ถ้าเป็นเลข ให้ส่งเป็น imageId (ตรงกับ BE ที่รองรับ imageId แล้ว)
+          if (typeof img === 'number') {
+            await deleteImage({ productId: id, imageId: img });
+          } else {
+            await deleteImage({ productId: id, publicId: img });
+          }
         } catch (err) {
           console.warn('⚠️ ลบภาพไม่สำเร็จ:', err);
         }
       }
+      
 
       // บันทึกสินค้า
       await updateProduct(id, formData);

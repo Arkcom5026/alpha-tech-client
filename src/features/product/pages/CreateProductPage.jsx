@@ -1,3 +1,5 @@
+
+
 // ✅ src/features/product/pages/CreateProductPage.jsx (full width)
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -23,6 +25,15 @@ const CreateProductPage = () => {
   useEffect(() => {
     ensureDropdownsAction?.();
   }, [ensureDropdownsAction]);
+  // ✅ Normalize files ให้เป็น Array<File> เสมอ (กัน "e.forEach is not a function")
+  // รองรับ: Array, FileList, single File/object, null/undefined
+  const normalizeFiles = (input) => {
+    if (!input) return [];
+    if (Array.isArray(input)) return input;
+    // FileList จาก input[type=file]
+    if (typeof FileList !== 'undefined' && input instanceof FileList) return Array.from(input);
+    return [input];
+  };
 
   const handleCreate = async (formData) => {
     try {
@@ -32,8 +43,11 @@ const CreateProductPage = () => {
       const payload = { ...formData, branchId };
       const created = await saveProduct(payload);
 
-      if (Array.isArray(selectedFiles) && selectedFiles.length && typeof uploadImages === 'function' && created?.id) {
-        await uploadImages(created.id, { files: selectedFiles, captions, coverIndex });
+      // ✅ กัน selectedFiles เป็น FileList/object เดี่ยว แล้วทำให้ forEach พังใน flow อัปโหลด
+      const filesToUpload = normalizeFiles(selectedFiles);
+
+      if (filesToUpload.length && typeof uploadImages === 'function' && created?.id) {
+        await uploadImages(created.id, { files: filesToUpload, captions, coverIndex });
       }
 
       setShowSuccess(true);
@@ -45,8 +59,7 @@ const CreateProductPage = () => {
   };
 
   if (!branchId) {
-
-  return (
+    return (
       <div className="w-full max-w-[1600px] mx-auto px-4 lg:px-8">
         <h2 className="text-xl font-bold mb-4">เพิ่มสินค้า</h2>
         <p className="text-red-500 font-medium">กำลังโหลดข้อมูลสาขา...</p>
@@ -78,7 +91,19 @@ const CreateProductPage = () => {
           <ProductImage
             ref={imageRef}
             files={selectedFiles}
-            setFiles={setSelectedFiles}
+            setFiles={(updaterOrValue) => {
+              // ✅ รองรับทั้ง setState(value) และ setState((prev) => next)
+              // เพราะ ProductImage เรียก setFiles((prev)=>...) และเราต้องไม่ไป normalize ฟังก์ชันเป็นไฟล์
+              if (typeof updaterOrValue === 'function') {
+                setSelectedFiles((prev) => {
+                  const prevArr = normalizeFiles(prev);
+                  const next = updaterOrValue(prevArr);
+                  return normalizeFiles(next);
+                });
+                return;
+              }
+              setSelectedFiles(normalizeFiles(updaterOrValue));
+            }}
             previewUrls={previewUrls}
             setPreviewUrls={setPreviewUrls}
             captions={captions}
@@ -122,4 +147,6 @@ const CreateProductPage = () => {
 };
 
 export default CreateProductPage;
+
+
 

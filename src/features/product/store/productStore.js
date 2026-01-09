@@ -1,5 +1,6 @@
 
 
+
 // ✅ src/features/product/store/productStore.js
 import { create } from 'zustand';
 
@@ -13,7 +14,12 @@ import {
   getCatalogDropdowns,
 } from '../api/productApi';
 import { migrateSnToSimple } from '../api/productApi';
-import { uploadImagesProduct, uploadImagesProductFull, deleteImageProduct } from '../api/productImagesApi';
+import {
+  uploadImagesProduct,
+  uploadImagesProductFull,
+  deleteImageProduct,
+  setProductCoverImage,
+} from '../api/productImagesApi';
 
 const initialDropdowns = {
   categories: [],
@@ -240,6 +246,18 @@ const useProductStore = create((set, get) => ({
   uploadImagesFull: async (productId, files, captions, coverIndex) => {
     try {
       const uploaded = await uploadImagesProductFull(productId, files, captions, coverIndex);
+
+      // ✅ ถ้า currentProduct คือสินค้าตัวเดียวกัน ให้รีเฟรช images ทันที (กัน UI เพี้ยน)
+      set((state) => {
+        if (!state.currentProduct || Number(state.currentProduct?.id) !== Number(productId)) return {};
+        return {
+          currentProduct: {
+            ...state.currentProduct,
+            images: uploaded?.images ?? state.currentProduct?.images,
+          },
+        };
+      });
+
       return uploaded;
     } catch (error) {
       // eslint-disable-next-line no-console
@@ -248,9 +266,54 @@ const useProductStore = create((set, get) => ({
     }
   },
 
-  deleteImage: async ({ productId, publicId }) => {
-    if (!productId || !publicId) throw new Error('Missing data');
-    return deleteImageProduct(productId, publicId);
+  // ✅ ตั้งรูปหน้าปกหลังอัปโหลด (PATCH /products/:id/images/:imageId/cover)
+  setCoverImageAction: async ({ productId, imageId }) => {
+    try {
+      const pid = productId != null ? Number(productId) : null;
+      const imgId = imageId != null && imageId !== '' ? Number(imageId) : null;
+
+      if (!pid || !imgId) throw new Error('Missing data');
+
+      const result = await setProductCoverImage(pid, imgId);
+
+      // ✅ sync currentProduct.images ให้ทันที
+      if (result?.images) {
+        set((state) => {
+          if (!state.currentProduct || Number(state.currentProduct?.id) !== pid) return {};
+          return {
+            currentProduct: {
+              ...state.currentProduct,
+              images: result.images,
+            },
+          };
+        });
+      }
+
+      return result;
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('❌ setCoverImageAction error:', error);
+      throw error;
+    }
+  },
+
+  deleteImage: async ({ productId, imageId, publicId, public_id, id }) => {
+    try {
+      const pid = productId != null ? Number(productId) : null;
+      const imgIdRaw = imageId ?? id;
+      const imgId = imgIdRaw != null && imgIdRaw !== '' ? Number(imgIdRaw) : null;
+      const pub = (public_id ?? publicId ?? '').toString().trim();
+
+      if (!pid || (!imgId && !pub)) throw new Error('Missing data');
+
+      // ✅ รองรับทั้ง imageId (number) หรือ public_id (string)
+      const payload = imgId ? { imageId: imgId } : { public_id: pub };
+      return await deleteImageProduct(pid, payload);
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('❌ deleteImage error:', error);
+      throw error;
+    }
   },
 
   // -------- POS Search / List for POS --------
@@ -332,5 +395,11 @@ const useProductStore = create((set, get) => ({
 
 export default useProductStore;
   
+
+
+
+
+
+
 
 

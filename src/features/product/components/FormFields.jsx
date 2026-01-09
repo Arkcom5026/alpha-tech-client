@@ -1,8 +1,5 @@
 
 
-
-
-
 // ✅ src/features/product/components/FormFields.jsx
 import React from 'react';
 import { Controller, useWatch } from 'react-hook-form';
@@ -202,6 +199,8 @@ export default function FormFields({ register, errors, control, showInitialQty =
     </div>
   );
 }
+
+
 
 
 

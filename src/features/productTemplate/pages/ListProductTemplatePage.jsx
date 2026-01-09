@@ -1,3 +1,7 @@
+
+
+
+
 // ✅ src/features/productTemplate/pages/ListProductTemplatePage.jsx (ปรับสิทธิ์ให้ SuperAdmin + Admin จัดการได้ และสอดคล้อง RBAC)
 import React from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -56,14 +60,22 @@ const ListProductTemplatePage = () => {
   }, [params, setPageAction, setIncludeInactiveAction, setCategoryFilterAction, setProductTypeFilterAction, setProductProfileFilterAction]);
 
   React.useEffect(() => {
+    // ✅ Restore-only safeguard: prevent URL sync effect from causing unnecessary loops
     fetchListAction();
+
     const next = new URLSearchParams(params);
     next.set('page', String(page));
     if (includeInactive) next.set('includeInactive', 'true'); else next.delete('includeInactive');
     if (categoryId != null) next.set('categoryId', String(categoryId)); else next.delete('categoryId');
     if (productTypeId != null) next.set('productTypeId', String(productTypeId)); else next.delete('productTypeId');
     if (productProfileId != null) next.set('productProfileId', String(productProfileId)); else next.delete('productProfileId');
-    setParams(next, { replace: true });
+
+    // Only update URL when it actually changes (avoids render→effect→setParams loop)
+    const currStr = params.toString();
+    const nextStr = next.toString();
+    if (nextStr !== currStr) {
+      setParams(next, { replace: true });
+    }
   }, [page, limit, includeInactive, categoryId, productTypeId, productProfileId, fetchListAction, params, setParams]);
 
   const handleCreate = () => navigate('/pos/stock/templates/create');

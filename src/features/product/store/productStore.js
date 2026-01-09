@@ -1,4 +1,5 @@
 
+
 // ✅ src/features/product/store/productStore.js
 import { create } from 'zustand';
 
@@ -242,11 +243,31 @@ const useProductStore = create((set, get) => ({
   fetchProductsAction: async (filters = {}) => {
     set({ isLoading: true, error: null });
     try {
+      // 🧪 Debug (restore-only): ดู filter ที่ถูกส่งเข้ามาจริง
+      // eslint-disable-next-line no-console
+      console.log('🧪 [productStore] fetchProductsAction input', filters);
+
       const raw = await getProductsForPos(filters);
       const payload = raw?.data ?? raw; // รองรับ axios/fetch wrappers
+
+      // 🧪 Debug (restore-only): ดู shape เบื้องต้นของ response
+      // eslint-disable-next-line no-console
+      console.log('🧪 [productStore] fetchProductsAction responseKeys', {
+        hasData: !!raw?.data,
+        topKeys: raw && typeof raw === 'object' ? Object.keys(raw).slice(0, 10) : typeof raw,
+        payloadKeys: payload && typeof payload === 'object' ? Object.keys(payload).slice(0, 10) : typeof payload,
+      });
+
       const list = Array.isArray(payload)
         ? payload
-        : (Array.isArray(payload?.items) ? payload.items : []);
+        : (Array.isArray(payload?.items) ? payload.items
+          : (Array.isArray(payload?.products) ? payload.products
+            : (Array.isArray(payload?.data?.items) ? payload.data.items
+              : (Array.isArray(payload?.data?.products) ? payload.data.products : []))));
+
+      // eslint-disable-next-line no-console
+      console.log('🧪 [productStore] fetchProductsAction listCount', list.length);
+
       set({ products: list, isLoading: false });
     } catch (error) {
       // eslint-disable-next-line no-console
@@ -264,7 +285,10 @@ const useProductStore = create((set, get) => ({
       const payload = raw?.data ?? raw; // รองรับ axios/fetch wrappers
       const list = Array.isArray(payload)
         ? payload
-        : (Array.isArray(payload?.items) ? payload.items : []);
+        : (Array.isArray(payload?.items) ? payload.items
+          : (Array.isArray(payload?.products) ? payload.products
+            : (Array.isArray(payload?.data?.items) ? payload.data.items
+              : (Array.isArray(payload?.data?.products) ? payload.data.products : []))));
       set({ simpleProducts: list, isLoading: false });
     } catch (error) {
       // eslint-disable-next-line no-console
@@ -293,3 +317,5 @@ const useProductStore = create((set, get) => ({
 }));
 
 export default useProductStore;
+  
+

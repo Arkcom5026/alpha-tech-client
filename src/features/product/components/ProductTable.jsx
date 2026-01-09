@@ -17,10 +17,10 @@ const ProductTable = ({ products, onDelete, deleting }) => {
             
             <TableHead className="text-center w-[150px]">หมวดหมู่</TableHead>
             <TableHead className="text-center w-[130px]">ประเภท</TableHead>
-            <TableHead className="text-center w-[130px]">ลักษณะ</TableHead>
-            <TableHead className="text-center w-[130px]">รูปแบบ</TableHead>            
-            <TableHead className="text-center w-[120px]">ชื่อ</TableHead>
-            <TableHead className="text-center w-[120px]">รุ่น</TableHead>
+            <TableHead className="text-center w-[130px]">แบรนด์</TableHead>
+            <TableHead className="text-center w-[130px]">สเปกสินค้า (SKU)</TableHead>            
+            <TableHead className="text-center w-[120px]">คำเรียก</TableHead>
+            <TableHead className="text-center w-[120px]">SKU</TableHead>
             <TableHead className="text-center w-[80px]">ราคาทุน</TableHead>
             <TableHead className="text-center w-[100px]">ราคาส่ง</TableHead>
             <TableHead className="text-center w-[100px]">ราคาช่าง</TableHead>
@@ -67,7 +67,7 @@ const ProductTable = ({ products, onDelete, deleting }) => {
             })
           ) : (
             <TableRow>
-              <TableCell colSpan={11} className="text-center text-muted-foreground">
+              <TableCell colSpan={12} className="text-center text-muted-foreground">
                 ไม่พบข้อมูลสินค้า
               </TableCell>
             </TableRow>
@@ -79,6 +79,9 @@ const ProductTable = ({ products, onDelete, deleting }) => {
 };
 
 export default ProductTable;
+
+
+
 
 
 

@@ -1,5 +1,6 @@
 
 
+
 // ✅ src/features/productProfile/pages/ListProductProfilePage.jsx
 import React from 'react';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
@@ -140,7 +141,7 @@ const ListProductProfilePage = () => {
             value={{ categoryId, productTypeId }}
             onChange={onCascadeChange}
             dropdowns={dropdowns}
-            hiddenFields={["template", "productProfile"]}
+            hiddenFields={['template','profile']}
             showReset
           />
 
@@ -214,6 +215,7 @@ const ListProductProfilePage = () => {
 };
 
 export default ListProductProfilePage;
+
 
 
 

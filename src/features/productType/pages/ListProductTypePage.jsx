@@ -1,3 +1,5 @@
+
+
 // ✅ Fix import path ใน ListProductTypePage.jsx ให้ตรงกับไฟล์จริง (ProductTypeTable.jsx)
 import React from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -82,7 +84,7 @@ const ListProductTypePage = () => {
             value={{ categoryId }}
             onChange={onCascadeChange}
             dropdowns={dropdowns}
-            hiddenFields={["template", "productProfile", "productType"]}
+            hiddenFields={['template','profile','type']}
             showReset
           />
 
@@ -145,3 +147,6 @@ const ListProductTypePage = () => {
 };
 
 export default ListProductTypePage;
+
+
+

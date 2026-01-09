@@ -12,6 +12,8 @@ import {
   getProducts,
   getProductsForPos,
   getCatalogDropdowns,
+  disableProduct,
+  enableProduct,
 } from '../api/productApi';
 import { migrateSnToSimple } from '../api/productApi';
 import {
@@ -165,7 +167,57 @@ const useProductStore = create((set, get) => ({
     }
   },
 
-  // -------- Dropdowns (โหลดครั้งเดียว ใช้ทั้งระบบ) --------
+  // -------- Products (Enable/Disable) --------
+  // ✅ แยก API ชัดเจน ไม่ใช้ delete แล้ว
+  disableProductAction: async (id) => {
+    set({ isLoading: true, error: null });
+    try {
+      const result = await disableProduct(id);
+      const pid = Number(id);
+      set((state) => ({
+        products: Array.isArray(state.products)
+          ? state.products.map((p) => (Number(p.id) === pid ? { ...p, active: false } : p))
+          : state.products,
+        currentProduct:
+          state.currentProduct && Number(state.currentProduct?.id) === pid
+            ? { ...state.currentProduct, active: false }
+            : state.currentProduct,
+        isLoading: false,
+      }));
+      return result;
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('❌ disableProductAction error:', error);
+      set({ error, isLoading: false });
+      throw error;
+    }
+  },
+
+  enableProductAction: async (id) => {
+    set({ isLoading: true, error: null });
+    try {
+      const result = await enableProduct(id);
+      const pid = Number(id);
+      set((state) => ({
+        products: Array.isArray(state.products)
+          ? state.products.map((p) => (Number(p.id) === pid ? { ...p, active: true } : p))
+          : state.products,
+        currentProduct:
+          state.currentProduct && Number(state.currentProduct?.id) === pid
+            ? { ...state.currentProduct, active: true }
+            : state.currentProduct,
+        isLoading: false,
+      }));
+      return result;
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('❌ enableProductAction error:', error);
+      set({ error, isLoading: false });
+      throw error;
+    }
+  },
+
+  // -------- Dropdowns (โหลดครั้งเดียว ใช้ทั้งระบบ) -------- (โหลดครั้งเดียว ใช้ทั้งระบบ) --------
   fetchDropdownsAction: async (force = false) => {
     // prevent unnecessary reload
     if (get().dropdownsLoaded && !force) return get().dropdowns;
@@ -395,11 +447,5 @@ const useProductStore = create((set, get) => ({
 
 export default useProductStore;
   
-
-
-
-
-
-
 
 

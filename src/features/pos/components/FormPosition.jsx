@@ -12,6 +12,7 @@ const FormPosition = () => {
    // const [categorier, setCategories] = useState([])
    
    const getProductType = useProductTypeStore((state)=>state.getProductType)
+   
 
    const [name, setName] = useState('')
 

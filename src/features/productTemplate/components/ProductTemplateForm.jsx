@@ -1,7 +1,7 @@
 
 // ✅ src/features/productTemplate/components/ProductTemplateForm.jsx
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useForm, FormProvider } from 'react-hook-form';
 
 import useUnitStore from '@/features/unit/store/unitStore';
@@ -17,10 +17,11 @@ const ProductTemplateForm = ({ defaultValues = {}, onSubmit, mode }) => {
   const { units, fetchUnits } = useUnitStore();
   const { dropdowns, dropdownsLoaded, ensureDropdownsAction } = useProductStore();
 
-  const toNumOrEmpty = (v) => (v === undefined || v === null || v === '' ? '' : Number(v));
+    const toNumOrEmpty = (v) => (v === undefined || v === null || v === '' ? '' : Number(v));
 
-  const formMethods = useForm({
-    defaultValues: {
+  // ✅ ทำ defaultValues ให้ stable และรองรับเคส Edit ที่โหลดข้อมูลมาแบบ async
+  const stableDefaults = useMemo(
+    () => ({
       name: defaultValues?.name ?? '',
       description: defaultValues?.description ?? '',
       spec: defaultValues?.spec ?? '',
@@ -30,21 +31,40 @@ const ProductTemplateForm = ({ defaultValues = {}, onSubmit, mode }) => {
       unitId: toNumOrEmpty(defaultValues?.unitId),
       categoryId: toNumOrEmpty(
         defaultValues?.categoryId ??
-        defaultValues?.productType?.categoryId ??
-        defaultValues?.productType?.category?.id
+          defaultValues?.productType?.categoryId ??
+          defaultValues?.productType?.category?.id
       ),
-      productTypeId: toNumOrEmpty(
-        defaultValues?.productTypeId ??
-        defaultValues?.productType?.id
-      ),
-      productProfileId: toNumOrEmpty(
-        defaultValues?.productProfileId ??
-        defaultValues?.productProfile?.id
-      ),
-    },
+      productTypeId: toNumOrEmpty(defaultValues?.productTypeId ?? defaultValues?.productType?.id),
+      productProfileId: toNumOrEmpty(defaultValues?.productProfileId ?? defaultValues?.productProfile?.id),
+    }),
+    [
+      defaultValues?.name,
+      defaultValues?.description,
+      defaultValues?.spec,
+      defaultValues?.warranty,
+      defaultValues?.noSN,
+      defaultValues?.codeType,
+      defaultValues?.unitId,
+      defaultValues?.categoryId,
+      defaultValues?.productTypeId,
+      defaultValues?.productProfileId,
+      defaultValues?.productType?.id,
+      defaultValues?.productType?.categoryId,
+      defaultValues?.productType?.category?.id,
+      defaultValues?.productProfile?.id,
+    ]
+  );
+
+  const formMethods = useForm({
+    defaultValues: stableDefaults,
   });
 
-  const { watch, register, formState: { isSubmitting: rhfIsSubmitting } } = formMethods;
+    const {
+    watch,
+    register,
+    reset,
+    formState: { isSubmitting: rhfIsSubmitting },
+  } = formMethods;
 
   const navigate = useNavigate();
   const isBusy = isSubmitting || rhfIsSubmitting;
@@ -54,12 +74,27 @@ const ProductTemplateForm = ({ defaultValues = {}, onSubmit, mode }) => {
   const productTypeId = watch('productTypeId');
   const productProfileId = watch('productProfileId');
 
+    // ✅ เมื่อ Edit โหลด defaultValues ทีหลัง → reset ฟอร์มให้ตรงข้อมูลล่าสุด
+  useEffect(() => {
+    reset(stableDefaults);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stableDefaults]);
+
   useEffect(() => {
     if (!Array.isArray(units) || units.length === 0) {
-      fetchUnits?.();
+      try {
+        fetchUnits?.();
+      } catch (e) {
+        console.error('[ProductTemplateForm] fetchUnits error', e);
+      }
     }
-    ensureDropdownsAction?.();
-  }, [fetchUnits, ensureDropdownsAction, units]);
+    try {
+      ensureDropdownsAction?.();
+    } catch (e) {
+      console.error('[ProductTemplateForm] ensureDropdownsAction error', e);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ensureDropdownsAction, fetchUnits, units?.length]);
 
   const handleFormSubmit = async (formData) => {
     if (isSubmitting) return;
@@ -84,6 +119,9 @@ const ProductTemplateForm = ({ defaultValues = {}, onSubmit, mode }) => {
         name: (formData.name || '').trim(),
       };
       await onSubmit(payload);
+    } catch (e) {
+      // ✅ ไม่ใช้ alert/toast ใน P1
+      setFormError(e?.message || 'บันทึกไม่สำเร็จ');
     } finally {
       setIsSubmitting(false);
     }
@@ -183,5 +221,7 @@ const ProductTemplateForm = ({ defaultValues = {}, onSubmit, mode }) => {
 };
 
 export default ProductTemplateForm;
+
+
 
 

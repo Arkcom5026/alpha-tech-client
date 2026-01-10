@@ -3,11 +3,7 @@ import React, { useMemo, useState, useEffect } from 'react';
 import useProductProfileStore from '../store/productProfileStore';
 import useProductStore from '@/features/product/store/productStore';
 
-// ใช้แนวทางเดียวกับ CategoryTable/ProductTypeTable
-const roleIsAdminOrSuper = () => {
-  const role = (localStorage.getItem('role') || '').toLowerCase();
-  return role === 'admin' || role === 'supperadmin' || role === 'superadmin';
-};
+// ✅ Table ไม่เช็ค auth เอง (ให้ Page ตัดสินสิทธิ์และส่ง canManage ลงมา)
 
 const Badge = ({ children, className = '' }) => (
   <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${className}`}>{children}</span>
@@ -22,9 +18,9 @@ const ActionButton = ({ children, className = '', ...rest }) => (
   </button>
 );
 
-const ProductProfileTable = ({ data = [], loading, error, page = 1, limit = 20, onEdit }) => {
+const ProductProfileTable = ({ data = [], loading, error, page = 1, limit = 20, onEdit, canManage = false }) => {
   const { archiveProfileAction, restoreProfileAction, isSubmitting } = useProductProfileStore();
-  const isAdmin = roleIsAdminOrSuper();
+  const isAdmin = !!canManage;
 
   // โหลด dropdowns ของสินค้าเพื่อใช้ map id -> name
   const { dropdowns, ensureDropdownsAction } = useProductStore();
@@ -97,7 +93,7 @@ const ProductProfileTable = ({ data = [], loading, error, page = 1, limit = 20, 
               const categoryName = row.productType?.category?.name || row.category?.name || categoriesById[String(categoryIdFromRow)]?.name || '-';
               const isActive = !!row.active;
               const isSystem = !!row.isSystem;
-              const canEdit = isAdmin && !isSystem && isActive;
+                            const canEdit = isAdmin && !isSystem && isActive;
               const canArchive = isAdmin && !isSystem && isActive;
               const canRestore = isAdmin && !isSystem && !isActive;
 
@@ -186,6 +182,9 @@ const ProductProfileTable = ({ data = [], loading, error, page = 1, limit = 20, 
 };
 
 export default ProductProfileTable;
+
+
+
 
 
 

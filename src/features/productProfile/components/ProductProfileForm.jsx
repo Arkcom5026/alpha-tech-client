@@ -63,8 +63,12 @@ const ProductProfileForm = ({
   }), [
     defaultValues?.name,
     defaultValues?.description,
+    // ⚠️ ครอบคลุมทุก field ที่ใช้คำนวณ categoryId / productTypeId เพื่อให้ reset นิ่งเวลา edit
     defaultValues?.categoryId,
     defaultValues?.productTypeId,
+    defaultValues?.productType?.id,
+    defaultValues?.productType?.categoryId,
+    defaultValues?.productType?.category?.id,
   ]);
 
   useEffect(() => {
@@ -131,8 +135,9 @@ const ProductProfileForm = ({
     const payload = {
       name: (data.name || '').trim(),
       description: (data.description || '').trim(),
-      categoryId: Number(data.categoryId),
-      productTypeId: Number(data.productTypeId),
+      // ✅ กัน Number('') เป็น NaN (แม้ UI จะกันไว้แล้ว แต่ทำให้ BE สะอาดและปลอดภัยขึ้น)
+      categoryId: data.categoryId === '' || data.categoryId == null ? null : Number(data.categoryId),
+      productTypeId: data.productTypeId === '' || data.productTypeId == null ? null : Number(data.productTypeId),
     };
     await onSubmitProp(payload);
   };
@@ -184,7 +189,7 @@ const ProductProfileForm = ({
             {...methods.register('name')}
             disabled={busy}
             className="w-full border rounded px-3 py-2 bg-white dark:bg-zinc-900 border-zinc-300 dark:border-zinc-700"
-            placeholder="เช่น VIVO Y04, iPhone 13, Router 4G"
+            placeholder="เช่น EPSON, CANON, HP, ASUS, VIVO"
           />
           {errors?.name && <p className="text-red-500 text-sm mt-1">{errors.name.message}</p>}
         </div>
@@ -215,6 +220,8 @@ const ProductProfileForm = ({
 };
 
 export default ProductProfileForm;
+
+
 
 
 

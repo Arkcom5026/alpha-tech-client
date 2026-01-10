@@ -1,11 +1,12 @@
 // ✅ src/features/productType/pages/EditProductTypePage.jsx
-import React, { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import ProductTypeForm from '../components/ProductTypeForm';
 import PageHeader from '@/components/shared/layout/PageHeader';
 
 import { parseApiError } from '@/utils/uiHelpers';
 import useProductTypeStore from '../store/productTypeStore';
+import { useAuthStore } from '@/features/auth/store/authStore';
 
 // มาตรฐานระบบ:
 // - ห้ามใช้ dialog alert/processing (Standard #70) → แสดงข้อความในหน้าเพจเท่านั้น
@@ -20,10 +21,21 @@ const EditProductTypePage = () => {
   const [formData, setFormData] = useState(null);
   const [isFetching, setIsFetching] = useState(true);
 
+    // ✅ Guard สิทธิ์ (P1-safe): canManageProductOrdering เป็น selector function
+  const { isSuperAdmin, canManageProductOrdering } = useAuthStore();
+  const canManage = useMemo(
+    () => isSuperAdmin || canManageProductOrdering(),
+    [isSuperAdmin, canManageProductOrdering]
+  );
+
   const { fetchByIdAction, updateProductTypeAction, isSubmitting } = useProductTypeStore();
 
   // Load current data
   useEffect(() => {
+    if (!canManage) {
+      setIsFetching(false);
+      return;
+    }
     let mounted = true;
     (async () => {
       setIsFetching(true);
@@ -38,9 +50,10 @@ const EditProductTypePage = () => {
       }
     })();
     return () => { mounted = false; };
-  }, [id, fetchByIdAction]);
+  }, [id, fetchByIdAction, canManage]);
 
   const handleSubmit = async (payload) => {
+    if (!canManage) return; // hard-stop safety
     setErrorMsg('');
     setSuccessMsg('');
     try {
@@ -51,6 +64,36 @@ const EditProductTypePage = () => {
       setErrorMsg(parseApiError(err) || 'ไม่สามารถอัปเดตประเภทสินค้าได้');
     }
   };
+
+    if (!canManage) {
+    return (
+      <div className="p-6 w-full flex flex-col items-center">
+        <div className="w-full max-w-3xl">
+          <PageHeader title="แก้ไขประเภทสินค้า" />
+
+          <div className="mt-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            <div className="font-semibold">คุณไม่มีสิทธิ์เข้าถึงหน้านี้</div>
+            <div className="mt-1">เฉพาะผู้ดูแลระบบ (Admin) หรือ Super Admin เท่านั้นที่สามารถเพิ่ม/แก้ไขประเภทสินค้าได้</div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button
+                type="button"
+                className="rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+                onClick={() => navigate(-1)}
+              >
+                ย้อนกลับ
+              </button>
+              <Link
+                className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-sm font-medium text-blue-700 hover:bg-blue-100"
+                to="/pos/stock/types"
+              >
+                กลับไปหน้ารายการ
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 w-full flex flex-col items-center">
@@ -89,3 +132,7 @@ const EditProductTypePage = () => {
 };
 
 export default EditProductTypePage;
+
+
+
+

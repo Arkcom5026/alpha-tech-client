@@ -1,6 +1,5 @@
 
 
-
 // ✅ src/features/productProfile/pages/ListProductProfilePage.jsx
 import React from 'react';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
@@ -16,7 +15,26 @@ const ListProductProfilePage = () => {
   const [params, setParams] = useSearchParams();
   const location = useLocation();
   const isListPath = /\/pos\/stock\/profiles\/?$/.test(location.pathname);
-  const { canManageProductOrdering, isSuperAdmin } = useAuthStore();
+
+    // ✅ อ่านสิทธิ์จาก authStore แบบ tolerant (รองรับทั้ง value และ function)
+  const auth = useAuthStore();
+  const isSuperAdmin = React.useMemo(() => {
+    const v = auth?.isSuperAdmin;
+    return typeof v === 'function' ? !!v() : !!v;
+  }, [auth]);
+
+  const canManageProductOrdering = React.useMemo(() => {
+    const v = auth?.canManageProductOrdering;
+    return typeof v === 'function' ? !!v() : !!v;
+  }, [auth]);
+
+  // ✅ permission: SuperAdmin หรือสิทธิ์จัดการลำดับสินค้า
+  const canManage = React.useMemo(() => {
+    return !!isSuperAdmin || !!canManageProductOrdering;
+  }, [isSuperAdmin, canManageProductOrdering]);
+
+  // ✅ โหมด on-demand: ต้องกด “แสดงข้อมูล” ก่อน 1 ครั้ง
+  const [hasLoaded, setHasLoaded] = React.useState(false);
 
   const {
     items,
@@ -44,9 +62,10 @@ const ListProductProfilePage = () => {
     ensureDropdownsAction?.();
   }, [ensureDropdownsAction]);
 
-  // Init from URL → Store
+  // ✅ Init จาก URL → Store (ยึดโฟลว์เดิม)
   React.useEffect(() => {
     if (!isListPath) return;
+
     const p = Number(params.get('page') || 1);
     const s = params.get('search') || '';
     const inc = params.get('includeInactive') === 'true';
@@ -70,9 +89,21 @@ const ListProductProfilePage = () => {
     return true;
   }, []);
 
-  // Fetch list + sync URL
+  // ✅ โฟลว์ “เหมือนของเดิม”:
+  // - เมื่อเปลี่ยน filter/page/search/limit → fetchListAction ทันที
+  // - แต่จะเริ่มทำงานหลังผู้ใช้กด “แสดงข้อมูล” เท่านั้น
+  //
+  // หมายเหตุสำคัญ:
+  // - เวลาเปลี่ยน “หมวดหมู่” เราจะล้างประเภทสินค้า (productTypeId) พร้อมกัน
+  //   เพื่อกันเคส intermediate state ทำให้ยิง fetch ด้วย type เก่าแล้วได้ข้อมูลว่าง
+  const skipAutoFetchOnceRef = React.useRef(false);
+
   React.useEffect(() => {
     if (!isListPath) return;
+    if (!hasLoaded) return;
+
+    // ✅ กันเคสเปลี่ยนหมวดหมู่แล้วเราจะยิง fetch แบบ deterministic จาก onCascadeChange เอง 1 ครั้ง
+    if (skipAutoFetchOnceRef.current) return;
 
     fetchListAction();
 
@@ -87,28 +118,89 @@ const ListProductProfilePage = () => {
       setParams(next, { replace: true });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isListPath, page, limit, search, includeInactive, categoryId, productTypeId]);
+  }, [isListPath, hasLoaded, page, limit, search, includeInactive, categoryId, productTypeId]);
 
   const handleCreate = (e) => {
     e.preventDefault();
-    console.log('[ListProductProfile] navigate to create');
-    navigate('/pos/stock/profiles/create'); // absolute path ปลอดภัย
+    navigate('/pos/stock/profiles/create');
   };
 
   const handleEdit = (row) => {
     const id = Number(row?.id);
     if (!id) return;
-    console.log('[ListProductProfile] navigate to edit', id);
-    navigate(`/pos/stock/profiles/edit/${id}`); // absolute path ปลอดภัย
+    navigate(`/pos/stock/profiles/edit/${id}`);
   };
 
-  const onPrev = () => page > 1 && setPageAction(page - 1);
-  const onNext = () => page < totalPages && setPageAction(page + 1);
+  const onPrev = () => hasLoaded && page > 1 && setPageAction(page - 1);
+  const onNext = () => hasLoaded && page < totalPages && setPageAction(page + 1);
 
-  const onCascadeChange = ({ categoryId: catId, productTypeId: typeId }) => {
-    setCategoryFilterAction(catId ? Number(catId) : null);
-    setProductTypeFilterAction(typeId ? Number(typeId) : null);
+  const prevCategoryRef = React.useRef(categoryId);
+  const lastCascadeKeyRef = React.useRef('');
+
+  const onCascadeChange = (payload) => {
+    // ✅ CascadingFilterGroup (เดิม): onChange({ categoryId, productTypeId })
+    // ⚠️ ปัญหาที่เจอบ่อย: ตอนเลือก “ประเภท” บาง implementation จะส่งมาเฉพาะ productTypeId (ไม่ส่ง categoryId ซ้ำ)
+    // ถ้าเราอ่าน rawCat แล้วได้ null จะทำให้ categoryId ถูก set เป็น null → dropdown เด้งเคลียร์ทั้งคู่
+
+    const rawCat = payload?.categoryId ?? payload?.catId ?? payload?.category?.id;
+    const rawType = payload?.productTypeId ?? payload?.typeId ?? payload?.productType?.id;
+
+    // ✅ ถ้า payload ไม่ส่ง categoryId มา (ตอนเปลี่ยนประเภท) → ให้ “คงค่าเดิม” ไว้
+    const nextCat = rawCat != null ? Number(rawCat) : (categoryId ?? null);
+    // ✅ ถ้า payload ไม่ส่ง productTypeId มา (เช่น reset) → ให้คงค่าเดิมไว้
+    const nextType = rawType != null ? Number(rawType) : (productTypeId ?? null);
+
+    const prevCat = prevCategoryRef.current ?? (categoryId ?? null);
+    const isCategoryChanged = (prevCat ?? null) !== (nextCat ?? null);
+
+    // ✅ ถ้าเปลี่ยนหมวดหมู่ → ต้องล้าง “ประเภทสินค้า” ทันที (โฟลว์เดิม)
+    // ทำแบบ deterministic: set ทั้งคู่ แล้วค่อยยิง fetch หลังจากนั้น 1 ครั้ง
+    setCategoryFilterAction(nextCat);
+    setProductTypeFilterAction(isCategoryChanged ? null : nextType);
+    prevCategoryRef.current = nextCat;
+
+    // ✅ เปลี่ยนตัวกรอง = กลับหน้า 1
     setPageAction(1);
+
+    // ถ้ายังไม่โหลดข้อมูล (on-demand) → แค่ตั้งค่า filter ไว้เฉย ๆ
+    if (!hasLoaded) return;
+
+    // ✅ ป้องกันการยิง fetch ซ้ำ (เช่น onChange ถูกเรียกซ้ำจาก component)
+    const cascadeKey = `${nextCat ?? ''}|${isCategoryChanged ? '' : nextType ?? ''}`;
+    if (lastCascadeKeyRef.current === cascadeKey) return;
+    lastCascadeKeyRef.current = cascadeKey;
+
+    // ✅ กัน effect ตัวหลักยิง fetch ด้วย state ชั่วคราว (intermediate)
+    skipAutoFetchOnceRef.current = true;
+
+    // ✅ รอให้ store update + React re-render เสร็จก่อน แล้วค่อยยิง fetch หนึ่งครั้ง
+    queueMicrotask(() => {
+      fetchListAction();
+
+      // sync URL ให้ตรงทันที (กันรีเฟรชแล้วหลุด)
+      const next = new URLSearchParams(params);
+      next.set('page', '1');
+
+      if (search) next.set('search', search);
+      else next.delete('search');
+
+      if (includeInactive) next.set('includeInactive', 'true');
+      else next.delete('includeInactive');
+
+      if (nextCat != null) next.set('categoryId', String(nextCat));
+      else next.delete('categoryId');
+
+      // ถ้าเปลี่ยนหมวดหมู่ → type ต้องถูกล้างใน URL ด้วย
+      if (!isCategoryChanged && nextType != null) next.set('productTypeId', String(nextType));
+      else next.delete('productTypeId');
+
+      setParams(next, { replace: true });
+
+      // เปิดให้ effect หลักทำงานรอบถัดไป
+      queueMicrotask(() => {
+        skipAutoFetchOnceRef.current = false;
+      });
+    });
   };
 
   const onSearchChange = (e) => {
@@ -120,8 +212,6 @@ const ListProductProfilePage = () => {
     setSearchAction('');
     setPageAction(1);
   };
-
-  const canManage = isSuperAdmin || canManageProductOrdering;
 
   return (
     <div className="p-6 w-full flex flex-col items-center">
@@ -137,25 +227,30 @@ const ListProductProfilePage = () => {
         </div>
 
         <div className="flex flex-col gap-3 mb-4">
-          <CascadingFilterGroup
-            value={{ categoryId, productTypeId }}
-            onChange={onCascadeChange}
-            dropdowns={dropdowns}
-            hiddenFields={['template','profile']}
-            showReset
-          />
+          <div className={!hasLoaded ? 'pointer-events-none opacity-60' : ''} aria-disabled={!hasLoaded}>
+            <CascadingFilterGroup
+              value={{ categoryId, productTypeId }}
+              onChange={onCascadeChange}
+              dropdowns={dropdowns}
+              hiddenFields={['template', 'profile']}
+              showReset
+            />
+          </div>
 
           <div className="flex flex-wrap items-center gap-3">
             <div className="flex items-center gap-2 grow max-w-xl">
               <input
                 type="text"
                 className="input input-bordered w-full"
-                placeholder="ค้นหาแบรนด์ เช่น Apple, ASUS, VIVO"
+                placeholder={hasLoaded ? 'ค้นหาแบรนด์ เช่น Apple, ASUS, VIVO' : 'กด “แสดงข้อมูล” ก่อนเพื่อโหลดรายการ'}
                 value={search}
                 onChange={onSearchChange}
+                disabled={!hasLoaded}
               />
               {search ? (
-                <button type="button" className="btn" onClick={clearSearch}>ล้าง</button>
+                <button type="button" className="btn" onClick={clearSearch}>
+                  ล้าง
+                </button>
               ) : null}
             </div>
 
@@ -164,47 +259,94 @@ const ListProductProfilePage = () => {
                 type="checkbox"
                 className="checkbox"
                 checked={!!includeInactive}
-                onChange={(e) => setIncludeInactiveAction(e.target.checked)}
+                onChange={(e) => {
+                  setIncludeInactiveAction(e.target.checked);
+                  setPageAction(1);
+                }}
+                disabled={!hasLoaded}
               />
               แสดงข้อมูลที่ถูกปิดใช้งานด้วย
             </label>
 
-            <div className="flex items-center gap-2 text-sm ml-auto">
-              <span className="text-zinc-700 dark:text-zinc-300">แถว/หน้า</span>
-              <select
-                className="select select-bordered"
-                value={limit}
-                onChange={(e) => {
-                  setLimitAction(Number(e.target.value));
+            <div className="ml-auto flex items-center gap-3">
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-zinc-700 dark:text-zinc-300">แถว/หน้า</span>
+                <select
+                  className="select select-bordered"
+                  value={limit}
+                  disabled={!hasLoaded}
+                  onChange={(e) => {
+                    setLimitAction(Number(e.target.value));
+                    setPageAction(1);
+                  }}
+                >
+                  {[10, 20, 50, 100].map((n) => (
+                    <option key={n} value={n}>
+                      {n}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <button
+                type="button"
+                className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-[0_6px_20px_-6px_rgba(37,99,235,0.55)] hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 disabled:opacity-50"
+                disabled={isLoading || hasLoaded}
+                onClick={() => {
+                  if (hasLoaded) return;
+                  setHasLoaded(true);
                   setPageAction(1);
+
+                  // sync URL ทันที (เพื่อรีเฟรชแล้วยังอยู่ที่ filter เดิม)
+                  const next = new URLSearchParams(params);
+                  next.set('page', '1');
+
+                  if (search) next.set('search', search);
+                  else next.delete('search');
+
+                  if (includeInactive) next.set('includeInactive', 'true');
+                  else next.delete('includeInactive');
+
+                  if (categoryId != null) next.set('categoryId', String(categoryId));
+                  else next.delete('categoryId');
+
+                  if (productTypeId != null) next.set('productTypeId', String(productTypeId));
+                  else next.delete('productTypeId');
+
+                  setParams(next, { replace: true });
                 }}
               >
-                {[10, 20, 50, 100].map((n) => (
-                  <option key={n} value={n}>{n}</option>
-                ))}
-              </select>
+                แสดงข้อมูล
+              </button>
             </div>
           </div>
         </div>
 
         <div className="border rounded-xl p-3 shadow-sm bg-white dark:bg-zinc-900">
           <ProductProfileTable
-            data={items}
+            data={hasLoaded ? items : []}
             loading={isLoading}
             error={error}
             page={page}
             limit={limit}
+            canManage={canManage}
             onEdit={canManage ? handleEdit : undefined}
           />
         </div>
 
         <div className="flex items-center justify-between mt-4">
-          <div className="text-sm text-zinc-600 dark:text-zinc-400">หน้า {page} / {Math.max(totalPages || 1, 1)}</div>
+          <div className="text-sm text-zinc-600 dark:text-zinc-400">
+            หน้า {page} / {Math.max(totalPages || 1, 1)}
+          </div>
           <div className="flex gap-2">
-            <button className="btn btn-outline" onClick={onPrev} disabled={page <= 1 || isLoading}>
+            <button className="btn btn-outline" onClick={onPrev} disabled={!hasLoaded || page <= 1 || isLoading}>
               ก่อนหน้า
             </button>
-            <button className="btn btn-outline" onClick={onNext} disabled={page >= totalPages || isLoading}>
+            <button
+              className="btn btn-outline"
+              onClick={onNext}
+              disabled={!hasLoaded || page >= Math.max(totalPages || 1, 1) || isLoading}
+            >
               ถัดไป
             </button>
           </div>
@@ -215,10 +357,3 @@ const ListProductProfilePage = () => {
 };
 
 export default ListProductProfilePage;
-
-
-
-
-
-
-

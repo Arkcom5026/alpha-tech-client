@@ -25,7 +25,10 @@ export default function ListProductPage() {
   });
 
   const [currentPage, setCurrentPage] = useState(1);
-  
+
+  // ✅ on-demand: ต้องกดปุ่ม “แสดงข้อมูล” ก่อนจึงจะโหลดและให้ dropdown ทำงาน
+  const [hasLoaded, setHasLoaded] = useState(false);
+
   const [disableTarget, setDisableTarget] = useState(null);
   const [enablingId, setEnablingId] = useState(null);
 
@@ -502,10 +505,12 @@ export default function ListProductPage() {
   }, [branchId, fetchProductsAction, showInactive]);
 
   // ✅ โหลดเมื่อ branchId เปลี่ยน หรือ toggle แสดงของปิดใช้งานเปลี่ยน
+  // แต่จะเริ่มทำงานหลังผู้ใช้กด “แสดงข้อมูล” เท่านั้น
   useEffect(() => {
     if (!branchId) return;
+    if (!hasLoaded) return;
     loadAllProductsOnce();
-  }, [branchId, loadAllProductsOnce]);
+  }, [branchId, hasLoaded, loadAllProductsOnce]);
 
   // ✅ ตรวจ refresh=1 เพื่อ reload (Step 1: reload all products)
   useEffect(() => {
@@ -518,19 +523,80 @@ export default function ListProductPage() {
     }
   }, [location.search, location.pathname, branchId, loadAllProductsOnce, navigate]);
 
+  const prevCatRef = useRef(null);
+  const prevTypeRef = useRef(null);
+  const prevProfRef = useRef(null);
+
   const handleFilterChange = (next) => {
-    // ✅ Restore-only: CascadingFilterGroup emits partial updates; merge to avoid wiping other filters
-    // ✅ Normalize ids to number|null when possible
-    const normalize = (obj) => {
-      const out = { ...obj };
-      if ('categoryId' in out) out.categoryId = out.categoryId === '' || out.categoryId == null ? null : Number(out.categoryId);
-      if ('productTypeId' in out) out.productTypeId = out.productTypeId === '' || out.productTypeId == null ? null : Number(out.productTypeId);
-      if ('productProfileId' in out) out.productProfileId = out.productProfileId === '' || out.productProfileId == null ? null : Number(out.productProfileId);
-      if ('productTemplateId' in out) out.productTemplateId = out.productTemplateId === '' || out.productTemplateId == null ? null : Number(out.productTemplateId);
-      return out;
+    // ✅ dropdown ทำงานหลังจากกด “แสดงข้อมูล” เท่านั้น
+    if (!hasLoaded) return;
+  
+    // ✅ Fix dropdown เด้งเคลียร์ (เหมือนเคส ListProductTemplatePage)
+    // CascadingFilterGroup อาจส่งมาแค่ field ที่เปลี่ยน เช่น { productTypeId } โดยไม่ส่ง { categoryId }
+    // ถ้าเราเอา categoryId ที่ไม่มีใน payload ไป normalize เป็น null → จะเคลียร์หมวด + เคลียร์ลูกโซ่ทันที
+
+    const pick = (obj, key, aliases = []) => {
+      if (obj == null) return undefined;
+      if (Object.prototype.hasOwnProperty.call(obj, key)) return obj[key];
+      for (const a of aliases) {
+        if (Object.prototype.hasOwnProperty.call(obj, a)) return obj[a];
+      }
+      return undefined;
     };
 
-    setFilter((prev) => ({ ...prev, ...normalize(next) }));
+    const toIdOrNull = (v) => {
+      if (v === '' || v === null) return null;
+      if (v === undefined) return undefined; // สำคัญ: undefined = ไม่ได้ส่งมา (ให้คงค่าเดิม)
+      const n = Number(v);
+      return Number.isFinite(n) ? n : null;
+    };
+
+    // ✅ รองรับชื่อ key หลายแบบ (กัน component รุ่นเก่า)
+    const rawCat = pick(next, 'categoryId', ['catId']);
+    const rawType = pick(next, 'productTypeId', ['typeId']);
+    const rawProf = pick(next, 'productProfileId', ['profileId']);
+    const rawTpl = pick(next, 'productTemplateId', ['templateId']);
+
+    setFilter((prev) => {
+      const prevCat = prev.categoryId ?? null;
+      const prevType = prev.productTypeId ?? null;
+      const prevProf = prev.productProfileId ?? null;
+
+      const nextCat = toIdOrNull(rawCat);
+      const nextType = toIdOrNull(rawType);
+      const nextProf = toIdOrNull(rawProf);
+      const nextTpl = toIdOrNull(rawTpl);
+
+      // ✅ ถ้า payload ไม่ส่งค่า → คงของเดิม
+      const mergedCat = nextCat === undefined ? prevCat : nextCat;
+      const mergedType = nextType === undefined ? prevType : nextType;
+      const mergedProf = nextProf === undefined ? prevProf : nextProf;
+      const mergedTpl = nextTpl === undefined ? prev.productTemplateId ?? null : nextTpl;
+
+      const isCatChanged = (prevCat ?? null) !== (mergedCat ?? null);
+      const isTypeChanged = (prevType ?? null) !== (mergedType ?? null);
+      const isProfChanged = (prevProf ?? null) !== (mergedProf ?? null);
+
+      // ✅ Cascade rules (มาตรฐานเดียวกับ Template)
+      // - เปลี่ยนหมวด → ล้างประเภท + แบรนด์ + รุ่น
+      // - เปลี่ยนประเภท → ล้างแบรนด์ + รุ่น
+      // - เปลี่ยนแบรนด์ → ล้างรุ่น
+      const out = {
+        ...prev,
+        categoryId: mergedCat,
+        productTypeId: isCatChanged ? null : mergedType,
+        productProfileId: isCatChanged || isTypeChanged ? null : mergedProf,
+        productTemplateId: isCatChanged || isTypeChanged || isProfChanged ? null : mergedTpl,
+      };
+
+      prevCatRef.current = out.categoryId;
+      prevTypeRef.current = out.productTypeId;
+      prevProfRef.current = out.productProfileId;
+
+      return out;
+    });
+
+    // ✅ เปลี่ยนตัวกรอง → กลับหน้า 1
     setCurrentPage(1);
   };
 
@@ -648,20 +714,51 @@ export default function ListProductPage() {
                 
               </div>
 
-              <CascadingFilterGroup value={filter} onChange={handleFilterChange} dropdowns={dropdowns} showReset />
+              {/* ✅ dropdown ทำงานหลังจากกด “แสดงข้อมูล” แล้วเท่านั้น */}
+              <div className={!hasLoaded ? 'pointer-events-none opacity-60' : ''} aria-disabled={!hasLoaded}>
+                <CascadingFilterGroup value={filter} onChange={handleFilterChange} dropdowns={dropdowns} showReset />
+              </div>
+
+              {/* ✅ ปุ่ม “แสดงข้อมูล” */}
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="ml-auto flex items-center gap-3">
+                  <button
+                    type="button"
+                    className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-[0_6px_20px_-6px_rgba(37,99,235,0.55)] hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 disabled:opacity-50"
+                    disabled={loadingAll || hasLoaded}
+                    onClick={() => {
+                      if (hasLoaded) return;
+                      setHasLoaded(true);
+                      setCurrentPage(1);
+                      queueMicrotask(() => {
+                        loadAllProductsOnce();
+                      });
+                    }}
+                  >
+                    แสดงข้อมูล
+                  </button>
+                </div>
+              </div>
 
               {/* ✅ Step 1.5: Loading/Error แบบ UI-based (ห้าม toast/alert) */}
-              {loadingAll && (
+              {!hasLoaded && (
+                <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-3 text-zinc-800">
+                  <div className="font-semibold">ยังไม่ได้โหลดข้อมูล</div>
+                  <div className="text-sm opacity-90">กรุณากดปุ่ม “แสดงข้อมูล” เพื่อโหลดรายการสินค้า ก่อนเริ่มใช้งานตัวกรอง</div>
+                </div>
+              )}
+
+              {hasLoaded && loadingAll && (
                 <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-blue-800">
                   <div className="font-semibold">กำลังโหลดรายการสินค้า…</div>
                   <div className="text-sm opacity-90">โปรดรอสักครู่ ระบบกำลังดึงข้อมูลทั้งหมดเพื่อกรองในหน้านี้</div>
                 </div>
               )}
 
-              {loadAllError && !loadingAll && (
+              {hasLoaded && loadAllError && !loadingAll && (
                 <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-red-800">
                   <div className="font-semibold">โหลดรายการสินค้าไม่สำเร็จ</div>
-                  <div className="text-sm opacity-90">กรุณาลองใหม่อีกครั้ง (ระบบยังไม่เรียก API ซ้ำจาก dropdown)</div>
+                  <div className="text-sm opacity-90">กรุณาลองใหม่อีกครั้ง</div>
                   <div className="mt-3 flex flex-wrap gap-2">
                     <button type="button" className="btn btn-outline" onClick={() => loadAllProductsOnce()}>
                       ลองใหม่
@@ -688,7 +785,7 @@ export default function ListProductPage() {
                 </div>
               )}
 
-              {!loadingAll && !loadAllError && (
+              {hasLoaded && !loadingAll && !loadAllError && (
                 <div className="text-sm text-zinc-600 dark:text-zinc-400">
                   แสดงผลจากข้อมูลที่โหลดแล้ว{' '}
                   <span className="font-medium">{allProducts.length.toLocaleString('th-TH')}</span> รายการ • พบตามเงื่อนไข{' '}
@@ -708,12 +805,14 @@ export default function ListProductPage() {
         {/* Table wrapper (โทนเดียวกับ ListProductTemplatePage) */}
         <div className="mt-4 border rounded-xl p-3 shadow-sm bg-white dark:bg-zinc-900">
           <ProductTable
-            products={paginated}
-            items={paginated}
-            data={paginated}
+            products={hasLoaded ? paginated : []}
+            items={hasLoaded ? paginated : []}
+            data={hasLoaded ? paginated : []}
+            onEdit={(id) => navigate(`/pos/stock/products/edit/${id}`)}
             onDisable={confirmDisable}
             onEnable={confirmEnable}
-            disabling={false}            enabling={!!enablingId}
+            disabling={false}
+            enabling={!!enablingId}
             density={density}
             showAllPrices={showAllPrices}
           />
@@ -756,16 +855,5 @@ export default function ListProductPage() {
     </div>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
 
 

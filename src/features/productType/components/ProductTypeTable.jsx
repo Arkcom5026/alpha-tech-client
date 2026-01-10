@@ -1,30 +1,30 @@
+
+
 // ✅ src/features/productType/components/ProductTypeTable.jsx
 import React, { useMemo, useState } from 'react';
 import useProductTypeStore from '@/features/productType/store/productTypeStore.js';
-import { useAuthStore } from '@/features/auth/store/authStore.js';
 
-const Badge = ({ children, className = '' }) => (
-  <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${className}`}>{children}</span>
+// ✅ Lightweight UI helpers (P1-safe): avoid missing imports in early-stage project
+const Badge = ({ className = '', children }) => (
+  <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${className}`.trim()}>
+    {children}
+  </span>
 );
 
-const ActionButton = ({ children, className = '', ...rest }) => (
+const ActionButton = ({ className = '', children, ...props }) => (
   <button
-    className={`px-3 py-1.5 rounded-md text-sm font-medium transition focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 ${className}`}
-    {...rest}
+    type="button"
+    className={`inline-flex items-center justify-center rounded-lg px-3 py-1.5 text-sm font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-60 ${className}`.trim()}
+    {...props}
   >
     {children}
   </button>
 );
 
-/**
- * ProductTypeTable
- * - RBAC: Admin + SuperAdmin จัดการได้เต็มที่
- * - ใช้ confirm bar (ไม่ใช้ dialog)
- */
-const ProductTypeTable = ({ data = [], loading, error, page = 1, limit = 20, onEdit }) => {
+const ProductTypeTable = ({ data = [], loading, error, page = 1, limit = 20, onEdit, canManage = false }) => {
   const { archiveProductTypeAction, restoreProductTypeAction, isSubmitting } = useProductTypeStore();
-  const { isSuperAdmin, canManageProductOrdering } = useAuthStore();
-  const canManage = isSuperAdmin || canManageProductOrdering;
+  // ❌ ไม่เช็ค auth ใน Table (ให้ Page ตัดสินสิทธิ์)
+  // ใช้ canManage จาก props เท่านั้น
 
   const rows = useMemo(() => (Array.isArray(data) ? data : []), [data]);
   const [confirm, setConfirm] = useState(null); // { type: 'archive'|'restore', row }
@@ -165,3 +165,4 @@ const ProductTypeTable = ({ data = [], loading, error, page = 1, limit = 20, onE
 };
 
 export default ProductTypeTable;
+

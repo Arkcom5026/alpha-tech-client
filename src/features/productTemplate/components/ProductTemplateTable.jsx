@@ -2,7 +2,6 @@
 
 // ✅ src/features/productTemplate/components/ProductTemplateTable.jsx
 import React, { useMemo, useEffect, useState } from 'react';
-import useProductTemplateStore from '../store/productTemplateStore';
 import useProductStore from '@/features/product/store/productStore';
 
 // Badge component for status labels
@@ -40,13 +39,19 @@ const ProductTemplateTable = ({
   onToggleActive,
 }) => {
               
-  const store = useProductTemplateStore();
-  const toggleActiveAction = onToggleActive || store.toggleActiveAction;
+  // ✅ Table ไม่ดึง action จาก store เอง (ให้ Page ส่ง onToggleActive / onEdit มาเท่านั้น)
+  const toggleActiveAction = onToggleActive;
 
   const { dropdowns, ensureDropdownsAction } = useProductStore();
   const { categories, productTypes, productProfiles } = dropdowns || {};
 
-  useEffect(() => { ensureDropdownsAction?.(); }, [ensureDropdownsAction]);
+  useEffect(() => {
+    try {
+      ensureDropdownsAction?.();
+    } catch (e) {
+      console.error('[ProductTemplateTable] ensureDropdownsAction error', e);
+    }
+  }, [ensureDropdownsAction]);
 
   const categoriesById = useMemo(() => {
     const m = {};
@@ -76,8 +81,13 @@ const ProductTemplateTable = ({
 
   const proceed = async () => {
     if (!confirm?.row || !toggleActiveAction) return setConfirm(null);
-    await toggleActiveAction(confirm.row.id);
-    setConfirm(null);
+    try {
+      await toggleActiveAction(confirm.row.id);
+    } catch (e) {
+      console.error('[ProductTemplateTable] toggleActiveAction error', e);
+    } finally {
+      setConfirm(null);
+    }
   };
 
   if (error) {
@@ -191,4 +201,5 @@ const ProductTemplateTable = ({
 };
 
 export default ProductTemplateTable;
+
 

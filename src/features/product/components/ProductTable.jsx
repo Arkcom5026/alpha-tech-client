@@ -17,6 +17,7 @@ const ActionButton = ({ children, className = '', type = 'button', ...rest }) =>
 const ProductTable = ({
   products = [],
   // รองรับชื่อ prop เก่า/ใหม่ (กันพลาดเวลา refactor)
+  onEdit,
   onDisable,
   onEnable,
   onDisableProduct,
@@ -27,6 +28,7 @@ const ProductTable = ({
   density = 'normal',
   showAllPrices = false,
 }) => {
+  const handleEdit = onEdit;
   const handleDisable = onDisable || onDisableProduct;
   const handleEnable = onEnable || onEnableProduct;
 
@@ -113,6 +115,15 @@ const ProductTable = ({
 
                   <TableCell className={`px-4 ${cellPad} text-right whitespace-nowrap sticky right-0 z-10 bg-white dark:bg-zinc-900`}>
                     <div className="inline-flex items-center gap-2 justify-end min-w-[220px]">
+                      <ActionButton
+                        className="border border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-50 focus:ring-zinc-400"
+                        onClick={() => handleEdit?.(item.id)}
+                        disabled={!handleEdit}
+                        title="แก้ไขสินค้า"
+                      >
+                        แก้ไข
+                      </ActionButton>
+
                       {isActive ? (
                         <ActionButton
                           className="text-white bg-rose-600 hover:bg-rose-700 focus:ring-rose-500"
@@ -154,3 +165,5 @@ const ProductTable = ({
 };
 
 export default ProductTable;
+
+

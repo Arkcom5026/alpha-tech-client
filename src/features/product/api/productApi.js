@@ -45,7 +45,7 @@ export const updateProduct = async (id, payload) => {
 export const updateProductAndGet = async (id, payload) => {
   try {
     await apiClient.patch(`products/${id}`, payload);
-    const { data: fresh } = await apiClient.get(`products/${id}`, { params: { _ts: Date.now() } });
+    const { data: fresh } = await apiClient.get(`products/${id}`, { params: { _ts: Date.now(), v: 'full' } });
     if (import.meta.env?.DEV) console.log('[productApi] updateProductAndGet fresh', id, fresh);
     return fresh;
   } catch (err) { throw parseApiError(err); }
@@ -82,8 +82,10 @@ export const enableProduct = async (id) => {
 
 // Dropdowns (โหลดครั้งเดียว ใช้ทั้งระบบ)
 export const getProductDropdownsPublic = async () => {
-  const { data } = await apiClient.get('products/dropdowns', { params: { _ts: Date.now() }});
-  return data;
+  try {
+    const { data } = await apiClient.get('products/dropdowns', { params: { _ts: Date.now() }});
+    return data;
+  } catch (err) { throw parseApiError(err); }
 };
 
 export const getCatalogDropdowns = async () => {
@@ -192,6 +194,8 @@ export const migrateSnToSimple = async (productId) => {
     return data;
   } catch (err) { throw parseApiError(err); }
 };
+
+
 
 
 

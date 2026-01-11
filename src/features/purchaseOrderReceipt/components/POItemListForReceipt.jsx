@@ -141,12 +141,21 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, formData }) => {
         setReceiptId(newReceiptId);
       }
 
+      const qtyToReceive = Number(receiptQuantities[item.id] ?? 0);
+      const costPriceToReceive = Number(receiptPrices[item.id] ?? 0);
+
+      // NOTE (Minimal Disruption):
+      // - PO Receipt สามารถรับเกิน PO ได้ (ตาม business rule ใหม่) แต่ "receivedQuantity" ฝั่ง PO ยังคงยึดจากการยิง SN เข้าสต๊อก (Stock-based) เท่านั้น
+      // - เราจะเปิดทางเฉพาะกรณีผู้ใช้ติ๊กยืนยันรับเกิน (forceAccept) เพื่อไม่กระทบโฟลว์เดิม
       const payload = {
-        quantity: Number(receiptQuantities[item.id] ?? 0),
-        costPrice: Number(receiptPrices[item.id] ?? 0),
-        receiptId: newReceiptId,
+        quantity: qtyToReceive,
+        costPrice: costPriceToReceive,
+        purchaseOrderReceiptId: newReceiptId,
         purchaseOrderItemId: item.id,
+        // ✅ ส่งเฉพาะตอนที่ user ติ๊ก (ไม่ติ๊ก = behavior เดิม 100%)
+        forceAccept: !!forceAccept[item.id],
       };
+
       await addReceiptItemAction(payload);
       setSavedRows((prev) => ({ ...prev, [item.id]: true }));
       setFinalizeError('');
@@ -354,8 +363,4 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, formData }) => {
 };
 
 export default POItemListForReceipt;
-
-
-
-
 

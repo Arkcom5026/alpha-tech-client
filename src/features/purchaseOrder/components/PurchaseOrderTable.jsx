@@ -1,4 +1,5 @@
 
+
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import StandardActionButtons from '@/components/shared/buttons/StandardActionButtons';
@@ -93,11 +94,10 @@ const PurchaseOrderTable = ({ products = [], setProducts = () => {}, loading = f
           <TableRow>
             <TableHead className="text-center w-[150px]">หมวดหมู่</TableHead>
             <TableHead className="text-center w-[130px]">ประเภท</TableHead>
-            <TableHead className="text-center w-[130px]">ลักษณะ</TableHead>
-            <TableHead className="text-center w-[130px]">รูปแบบ</TableHead>
+            <TableHead className="text-center w-[130px]">แบรนด์</TableHead>
+            <TableHead className="text-center w-[130px]">สเปก</TableHead>
             <TableHead className="text-center w-[120px]">ชื่อสินค้า</TableHead>
-            <TableHead className="text-center w-[120px]">รุ่น</TableHead>
-            <TableHead className="text-center w-[60px]">จำนวน</TableHead>
+                        <TableHead className="text-center w-[60px]">จำนวน</TableHead>
             <TableHead className="text-center w-[60px]">ราคา</TableHead>
             <TableHead className="text-center w-[80px]">ราคารวม</TableHead>
             <TableHead className="text-center w-[100px]">จัดการ</TableHead>
@@ -123,8 +123,7 @@ const PurchaseOrderTable = ({ products = [], setProducts = () => {}, loading = f
                   <TableCell>{item.productProfile || '-'}</TableCell>
                   <TableCell>{item.productTemplate || '-'}</TableCell>
                   <TableCell>{item.name || '-'}</TableCell>
-                  <TableCell>{item.model || '-'}</TableCell>
-
+                  
                   <TableCell className="align-middle">
                     <input
                       type="number"
@@ -169,7 +168,7 @@ const PurchaseOrderTable = ({ products = [], setProducts = () => {}, loading = f
             })
           ) : (
             <TableRow>
-              <TableCell colSpan={10} className="text-center text-muted-foreground">
+              <TableCell colSpan={9} className="text-center text-muted-foreground">
                 {loading ? 'กำลังโหลดข้อมูล...' : 'ยังไม่มีรายการสินค้าในใบสั่งซื้อ'}
               </TableCell>
             </TableRow>
@@ -181,4 +180,5 @@ const PurchaseOrderTable = ({ products = [], setProducts = () => {}, loading = f
 };
 
 export default PurchaseOrderTable;
+
 

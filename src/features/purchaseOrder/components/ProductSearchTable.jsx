@@ -1,3 +1,5 @@
+
+
 import React, { useMemo, useState } from 'react';
 
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
@@ -84,11 +86,10 @@ const ProductSearchTable = ({ results = [], onAdd }) => {
           <TableRow>
             <TableHead className="text-center w-[150px]">หมวดหมู่</TableHead>
             <TableHead className="text-center w-[130px]">ประเภท</TableHead>
-            <TableHead className="text-center w-[130px]">ลักษณะ</TableHead>
-            <TableHead className="text-center w-[130px]">รูปแบบ</TableHead>
+            <TableHead className="text-center w-[130px]">แบรนด์</TableHead>
+            <TableHead className="text-center w-[130px]">สเปก</TableHead>
             <TableHead className="text-center w-[120px]">ชื่อสินค้า</TableHead>
-            <TableHead className="text-center w-[120px]">รุ่น</TableHead>
-            <TableHead className="text-center w-[60px]">จำนวน</TableHead>
+                        <TableHead className="text-center w-[60px]">จำนวน</TableHead>
             <TableHead className="text-center w-[60px]">ราคา</TableHead>
             <TableHead className="text-center w-[80px]">ราคารวม</TableHead>
             <TableHead className="text-center w-[100px]">จัดการ</TableHead>
@@ -97,7 +98,7 @@ const ProductSearchTable = ({ results = [], onAdd }) => {
         <TableBody>
           {visibleResults.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={10} className="text-center py-4 text-muted-foreground">
+              <TableCell colSpan={9} className="text-center py-4 text-muted-foreground">
                 ไม่พบรายการสินค้า กรุณาพิมพ์ชื่อหรือสแกนบาร์โค้ด
               </TableCell>
             </TableRow>
@@ -124,8 +125,7 @@ const ProductSearchTable = ({ results = [], onAdd }) => {
                   <TableCell className="align-middle">{product.productProfile}</TableCell>
                   <TableCell className="align-middle">{product.productTemplate}</TableCell>
                   <TableCell className="align-middle">{product.name}</TableCell>
-                  <TableCell className="align-middle">{product.model}</TableCell>
-
+                  
                   <TableCell className="align-middle">
                     <input
                       type="number"
@@ -171,3 +171,5 @@ const ProductSearchTable = ({ results = [], onAdd }) => {
 };
 
 export default ProductSearchTable;
+
+

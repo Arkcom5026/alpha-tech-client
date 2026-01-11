@@ -62,3 +62,5 @@ const PurchaseOrderReceiptTable = ({ purchaseOrders }) => {
 };
 
 export default PurchaseOrderReceiptTable;
+
+

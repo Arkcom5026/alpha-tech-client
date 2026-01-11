@@ -1,6 +1,4 @@
 
-
-
 // PurchaseOrderForm.jsx
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -296,15 +294,6 @@ const PurchaseOrderForm = ({
       }}
       className="space-y-6"
     >
-      {submitError && (
-        <div
-          className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700"
-          role="alert"
-          aria-live="assertive"
-        >
-          {submitError}
-        </div>
-      )}
 
       {/* Supplier & Date */}
       <div className="flex gap-6 flex-wrap">
@@ -383,6 +372,15 @@ const PurchaseOrderForm = ({
 
       {/* Actions */}
       <div className="flex flex-col items-end px-4 gap-2">
+        {submitError && (
+          <div
+            className="w-full rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700"
+            role="alert"
+            aria-live="assertive"
+          >
+            {submitError}
+          </div>
+        )}
         <label className="flex items-center gap-2">
           <input type="checkbox" checked={shouldPrint} onChange={(e) => setShouldPrint(e.target.checked)} />
           <span className="text-sm text-gray-700">พิมพ์ใบสั่งซื้อ</span>
@@ -401,3 +399,6 @@ const PurchaseOrderForm = ({
 };
 
 export default PurchaseOrderForm;
+
+
+

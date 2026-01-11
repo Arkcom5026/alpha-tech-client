@@ -47,3 +47,4 @@ const CreatePurchaseOrderPage = () => {
 };
 
 export default CreatePurchaseOrderPage;
+

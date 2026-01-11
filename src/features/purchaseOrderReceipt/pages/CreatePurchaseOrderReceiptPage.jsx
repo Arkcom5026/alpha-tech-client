@@ -122,4 +122,3 @@ const CreatePurchaseOrderReceiptPage = () => {
 
 export default CreatePurchaseOrderReceiptPage;
 
-

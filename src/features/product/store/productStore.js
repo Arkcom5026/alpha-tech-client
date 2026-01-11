@@ -1,6 +1,7 @@
 
 
 
+
 // ✅ src/features/product/store/productStore.js
 import { create } from 'zustand';
 
@@ -57,7 +58,7 @@ const useProductStore = create((set, get) => ({
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('❌ fetchProducts error:', error);
-      set({ error, isLoading: false });
+      set({ error: get().normalizeError(error, 'โหลดสินค้าสำหรับ POS ไม่สำเร็จ'), isLoading: false });
     }
   },
 
@@ -368,7 +369,41 @@ const useProductStore = create((set, get) => ({
     }
   },
 
+
+
+
   // -------- POS Search / List for POS --------
+
+  // ✅ Normalize API responses (array-first) เพื่อให้ Store ไม่เดารูปแบบ response
+  // รองรับทั้ง: array, { data: array }, { items: array }, { products: array }
+  normalizePosProductList: (raw) => {
+    const payload = raw?.data ?? raw;
+
+    if (Array.isArray(payload)) return payload;
+    if (Array.isArray(payload?.items)) return payload.items;
+    if (Array.isArray(payload?.products)) return payload.products;
+
+    // nested shapes (เผื่อบาง wrapper คืน data ซ้อน)
+    if (Array.isArray(payload?.data)) return payload.data;
+    if (Array.isArray(payload?.data?.items)) return payload.data.items;
+    if (Array.isArray(payload?.data?.products)) return payload.data.products;
+
+    return [];
+  },
+
+  // ✅ Standardize error object (แสดงใน UI ได้ง่าย)
+  normalizeError: (err, fallbackMessage = 'เกิดข้อผิดพลาด') => {
+    const code = err?.code || err?.error || err?.response?.data?.error || err?.data?.error;
+    const message =
+      err?.response?.data?.message ||
+      err?.response?.data?.error ||
+      err?.message ||
+      (typeof err === 'string' ? err : '') ||
+      fallbackMessage;
+
+    return { code, message, raw: err };
+  },
+
   fetchProductsAction: async (filters = {}) => {
     set({ isLoading: true, error: null });
     try {
@@ -377,31 +412,63 @@ const useProductStore = create((set, get) => ({
       console.log('🧪 [productStore] fetchProductsAction input', filters);
 
       const raw = await getProductsForPos(filters);
-      const payload = raw?.data ?? raw; // รองรับ axios/fetch wrappers
+      const list = get().normalizePosProductList(raw);
 
       // 🧪 Debug (restore-only): ดู shape เบื้องต้นของ response
       // eslint-disable-next-line no-console
       console.log('🧪 [productStore] fetchProductsAction responseKeys', {
-        hasData: !!raw?.data,
+        isArrayTop: Array.isArray(raw),
+        isArrayPayload: Array.isArray(raw?.data ?? raw),
+        listCount: Array.isArray(list) ? list.length : 0,
         topKeys: raw && typeof raw === 'object' ? Object.keys(raw).slice(0, 10) : typeof raw,
-        payloadKeys: payload && typeof payload === 'object' ? Object.keys(payload).slice(0, 10) : typeof payload,
       });
 
-      const list = Array.isArray(payload)
-        ? payload
-        : (Array.isArray(payload?.items) ? payload.items
-          : (Array.isArray(payload?.products) ? payload.products
-            : (Array.isArray(payload?.data?.items) ? payload.data.items
-              : (Array.isArray(payload?.data?.products) ? payload.data.products : []))));
+      // ✅ Production-safety: กันข้อมูลซ้ำจาก BE (เช่น JOIN แล้วได้แถวซ้ำ)
+      // - ยึด product.id เป็น key
+      // - ถ้าเจอซ้ำ: เลือกตัวที่มี costPrice > 0 ก่อน (กันกรณี 0.00 มาทับ)
+      const deduped = (() => {
+        const map = new Map();
+        for (const item of list) {
+          const key = item?.id;
+          if (!key) continue;
+
+          const prev = map.get(key);
+          if (!prev) {
+            map.set(key, item);
+            continue;
+          }
+
+          const prevCost = Number(prev?.costPrice ?? 0);
+          const nextCost = Number(item?.costPrice ?? 0);
+
+          // ถ้าตัวใหม่มีราคา > 0 และตัวเดิมราคาเป็น 0 ให้ replace
+          if (
+            (Number.isFinite(nextCost) && nextCost > 0) &&
+            (!Number.isFinite(prevCost) || prevCost <= 0)
+          ) {
+            map.set(key, { ...prev, ...item });
+          } else {
+            // ไม่ replace แต่ merge field ที่ขาดหาย (กันบาง query คืน field ไม่ครบ)
+            map.set(key, { ...item, ...prev });
+          }
+        }
+        return Array.from(map.values());
+      })();
 
       // eslint-disable-next-line no-console
-      console.log('🧪 [productStore] fetchProductsAction listCount', list.length);
+      console.log(
+        '🧪 [productStore] fetchProductsAction listCount',
+        list.length,
+        'dedupedCount',
+        deduped.length
+      );
 
-      set({ products: list, isLoading: false });
+      // ✅ สำคัญ: replace list เสมอ (ไม่ append) เพื่อกันข้อมูลค้าง/ซ้ำ
+      set({ products: deduped, isLoading: false });
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('❌ fetchProductsAction error:', error);
-      set({ error, isLoading: false });
+      set({ error: get().normalizeError(error, 'โหลดสินค้าสำหรับ POS ไม่สำเร็จ'), isLoading: false });
     }
   },
 
@@ -411,41 +478,33 @@ const useProductStore = create((set, get) => ({
     try {
       const params = { ...filters, mode: 'SIMPLE' }; // force SIMPLE
       const raw = await getProductsForPos(params);
-      const payload = raw?.data ?? raw; // รองรับ axios/fetch wrappers
-      const list = Array.isArray(payload)
-        ? payload
-        : (Array.isArray(payload?.items) ? payload.items
-          : (Array.isArray(payload?.products) ? payload.products
-            : (Array.isArray(payload?.data?.items) ? payload.data.items
-              : (Array.isArray(payload?.data?.products) ? payload.data.products : []))));
+      const list = get().normalizePosProductList(raw);
       set({ simpleProducts: list, isLoading: false });
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('❌ fetchSimpleProductsAction error:', error);
-      set({ error, isLoading: false });
+      set({ error: get().normalizeError(error, 'โหลดสินค้ากลุ่ม SIMPLE ไม่สำเร็จ'), isLoading: false });
     }
   },
 
   refreshProductList: async (filters = {}) => {
     set({ isLoading: true, error: null });
     try {
-      const [raw] = await Promise.all([
-        getProductsForPos(filters),
-      ]);
-      const payload = raw?.data ?? raw;
-      const products = Array.isArray(payload)
-        ? payload
-        : (Array.isArray(payload?.items) ? payload.items : []);
+      const raw = await getProductsForPos(filters);
+      const products = get().normalizePosProductList(raw);
       set({ products, isLoading: false });
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('❌ refreshProductList error:', error);
-      set({ error, isLoading: false });
+      set({ error: get().normalizeError(error, 'รีเฟรชรายการสินค้าไม่สำเร็จ'), isLoading: false });
     }
-  }
+  },
 }));
 
 export default useProductStore;
   
+
+
+
 
 

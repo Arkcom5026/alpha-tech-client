@@ -195,11 +195,9 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, formData }) => {
             <TableRow>
               <TableHead className="text-center w-[150px]">หมวดหมู่</TableHead>
               <TableHead className="text-center w-[130px]">ประเภท</TableHead>
-              <TableHead className="text-center w-[130px]">ลักษณะ</TableHead>
-              <TableHead className="text-center w-[130px]">รูปแบบ</TableHead>
-              <TableHead className="text-center w-[200px]">ชื่อสินค้า</TableHead>
-              <TableHead className="text-center w-[120px]">รุ่น</TableHead>
-              <TableHead className="text-center w-[80px]">จำนวนที่สั่ง</TableHead>
+              <TableHead className="text-center w-[130px]">แบรนด์</TableHead>
+              <TableHead className="text-center w-[130px]">สเปก</TableHead>
+              <TableHead className="text-center w-[200px]">ชื่อสินค้า</TableHead>              <TableHead className="text-center w-[80px]">จำนวนที่สั่ง</TableHead>
               <TableHead className="text-center w-[100px]">ราคาที่สั่ง</TableHead>
               <TableHead className="text-center w-[100px]">จำนวนที่รับ</TableHead>
               <TableHead className="text-center w-[100px]">ราคาที่รับ</TableHead>
@@ -237,12 +235,6 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, formData }) => {
                 ?? item.name
                 ?? item.productName
                 ?? '-';
-              const modelName = item.product?.model
-                ?? item.product?.productTemplate?.model
-                ?? item.model
-                ?? item.productModel
-                ?? '-';
-
               const received = Number(item.receivedQuantity || 0);
               const qtyOrdered = Number(item.quantity || 0);
               const quantity = receiptQuantities[item.id] ?? '';
@@ -261,9 +253,7 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, formData }) => {
                   <TableCell>{typeName}</TableCell>
                   <TableCell>{profileName}</TableCell>
                   <TableCell>{templateName}</TableCell>
-                  <TableCell>{productName}</TableCell>
-                  <TableCell>{modelName}</TableCell>
-                  <TableCell className="text-center px-2 py-1">{qtyOrdered}</TableCell>
+                  <TableCell>{productName}</TableCell>                  <TableCell className="text-center px-2 py-1">{qtyOrdered}</TableCell>
                   <TableCell className="text-center px-2 py-1">{Number(item.costPrice || 0)}</TableCell>
                   <TableCell className="px-2 py-1">
                     <input
@@ -363,4 +353,6 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, formData }) => {
 };
 
 export default POItemListForReceipt;
+
+
 

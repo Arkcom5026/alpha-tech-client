@@ -1,3 +1,5 @@
+
+
 // ✅ purchaseOrderReceiptStore.js — จัดการสถานะ Receipt + Items (รองรับ SIMPLE + STRUCTURED + QUICK)
 
 import { create } from 'zustand';
@@ -171,8 +173,22 @@ const usePurchaseOrderReceiptStore = create((set) => ({
   addReceiptItemAction: async (payload) => {
     try {
       set({ error: null });
-      const adaptedPayload = { ...payload, purchaseOrderReceiptId: payload.receiptId };
+
+      // ✅ รองรับทั้งรูปแบบใหม่และของเดิม
+      // - ใหม่: payload.purchaseOrderReceiptId
+      // - เดิม: payload.receiptId
+      const adaptedPayload = { ...payload };
+
+      if (!adaptedPayload.purchaseOrderReceiptId && adaptedPayload.receiptId) {
+        adaptedPayload.purchaseOrderReceiptId = adaptedPayload.receiptId;
+      }
       delete adaptedPayload.receiptId;
+
+      // ✅ กันพลาด: ต้องมี purchaseOrderReceiptId เสมอ
+      if (!adaptedPayload.purchaseOrderReceiptId) {
+        throw new Error('Missing purchaseOrderReceiptId for addReceiptItem');
+      }
+
       return await addReceiptItem(adaptedPayload);
     } catch (error) {
       console.error('📛 addReceiptItem error:', error);
@@ -340,3 +356,5 @@ const usePurchaseOrderReceiptStore = create((set) => ({
 }));
 
 export default usePurchaseOrderReceiptStore;
+
+

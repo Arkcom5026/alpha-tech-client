@@ -1,3 +1,4 @@
+
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import StandardActionButtons from '@/components/shared/buttons/StandardActionButtons';
@@ -53,22 +54,25 @@ const PurchaseOrderTable = ({ products = [], setProducts = () => {}, loading = f
 
   // อัปเดตจำนวนตามที่ผู้ใช้พิมพ์ (raw) + อัปเดตตัวเลขเข้าตะกร้าเมื่อค่ามีความหมาย
   const handleQtyChange = (id, value) => {
-    const cleaned = value.replace(/[^0-9]/g, '');
+    const cleaned = String(value ?? '').replace(/[^0-9]/g, '');
     setRawQty((prev) => ({ ...prev, [id]: cleaned }));
-    if (cleaned !== '') {
-      const qty = parseQty(cleaned);
-      setProducts((prev) => prev.map((it) => (it.id === id ? { ...it, quantity: qty } : it)));
-    }
+
+    // ✅ ไม่ปล่อยให้ state ค้างค่าที่ไม่แน่นอน: ถ้าว่างให้ถือเป็น 1
+    const qty = cleaned === '' ? 1 : parseQty(cleaned);
+    setProducts((prev) => prev.map((it) => (it.id === id ? { ...it, quantity: qty } : it)));
   };
 
   // อัปเดตราคาตามที่ผู้ใช้พิมพ์ (raw) + อัปเดตตัวเลขเข้าตะกร้าเมื่อค่ามีความหมาย
   const handleCostChange = (id, value) => {
-    const cleaned = value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');
+    const cleaned = String(value ?? '')
+      .replace(/[^0-9.]/g, '')
+      .replace(/(\..*)\./g, '$1');
+
     setRawCost((prev) => ({ ...prev, [id]: cleaned }));
-    if (cleaned !== '') {
-      const cost = parseCost(cleaned);
-      setProducts((prev) => prev.map((it) => (it.id === id ? { ...it, costPrice: cost } : it)));
-    }
+
+    // ✅ ไม่ปล่อยให้ state ค้างค่า undefined: ถ้าว่างให้ถือเป็น 0
+    const cost = cleaned === '' ? 0 : parseCost(cleaned);
+    setProducts((prev) => prev.map((it) => (it.id === id ? { ...it, costPrice: cost } : it)));
   };
 
   useEffect(() => {
@@ -177,3 +181,4 @@ const PurchaseOrderTable = ({ products = [], setProducts = () => {}, loading = f
 };
 
 export default PurchaseOrderTable;
+

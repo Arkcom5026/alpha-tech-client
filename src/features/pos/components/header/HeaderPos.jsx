@@ -1,3 +1,5 @@
+// HeaderPos.jsx
+
 import { useEffect, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { Sun, Moon, UserCircle } from 'lucide-react';
@@ -5,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import useThemeStore from '@/store/themeStore';
 
 import { useAuthStore } from '@/features/auth/store/authStore';
+import { P1_CAP } from '@/features/auth/rbac/rbacClient';
 import { useBranchStore } from '@/features/branch/store/branchStore';
 
 const HeaderPos = () => {
@@ -13,6 +16,18 @@ const HeaderPos = () => {
   const logoutAction = useAuthStore((state) => state.logoutAction);
   const token = useAuthStore((state) => state.token);
   const role = useAuthStore((state) => state.role);
+
+  // RBAC (P1 Bestline) - FE menu guard (Minimal Disruption)
+  const canSelector = useAuthStore((state) => state.canSelector);
+  const can = (capKey) => (typeof canSelector === 'function' ? canSelector(capKey) : true);
+
+  const canPurchasing = can(P1_CAP.PURCHASING) || can(P1_CAP.RECEIVE_STOCK);
+  const canSales = can(P1_CAP.POS_SALE);
+  const canStock = can(P1_CAP.RECEIVE_STOCK) || can(P1_CAP.STOCK_AUDIT) || can(P1_CAP.MANAGE_PRODUCTS);
+  const canReports = can(P1_CAP.VIEW_REPORTS);
+  const canFinance = can(P1_CAP.VIEW_REPORTS); // conservative baseline (ปรับละเอียดได้ภายหลัง)
+  const canSettings = can(P1_CAP.MANAGE_EMPLOYEES) || can(P1_CAP.MANAGE_PRODUCTS); // conservative baseline
+  const canEmployees = can(P1_CAP.MANAGE_EMPLOYEES);
 
   const branchName = useBranchStore((state) => state.currentBranch?.name);
   const selectedBranchId = useBranchStore((state) => state.selectedBranchId);
@@ -50,25 +65,49 @@ const HeaderPos = () => {
         >
           <option value="" disabled hidden>เมนูทั้งหมด</option>
           <option value="/pos">หน้าหลัก</option>
-          <option value="/pos/purchases">จัดซื้อ</option>
-          <option value="/pos/sales">การขาย</option>
+          {canPurchasing && <option value="/pos/purchases">จัดซื้อ</option>}
+          {canSales && <option value="/pos/sales">การขาย</option>}
           <option value="/pos/services">บริการ</option>
-          <option value="/pos/stock">สต๊อก</option>
-          <option value="/pos/reports">รายงาน</option>
-          <option value="/pos/finance">การเงิน</option>
-          <option value="/pos/employees">พนักงาน</option>
+          {canStock && <option value="/pos/stock">สต๊อก</option>}
+          {canReports && <option value="/pos/reports">รายงาน</option>}
+          {canFinance && <option value="/pos/finance">การเงิน</option>}
+          {canEmployees && <option value="/pos/employees">พนักงาน</option>}
         </select>
       </div>
 
       <nav className="hidden md:flex flex-wrap gap-2 max-w-full overflow-x-auto scrollbar-thin">
         <NavLink to="/pos" className={navLinkClass}>หน้าหลัก</NavLink>
-        <NavLink to="/pos/purchases" className={navLinkClass}>จัดซื้อ</NavLink>
-        <NavLink to="/pos/sales" className={navLinkClass}>การขาย</NavLink>
+        {canPurchasing && (
+          <NavLink to="/pos/purchases" className={navLinkClass}>
+            จัดซื้อ
+          </NavLink>
+        )}
+        {canSales && (
+          <NavLink to="/pos/sales" className={navLinkClass}>
+            การขาย
+          </NavLink>
+        )}
         <NavLink to="/pos/services" className={navLinkClass}>บริการ</NavLink>
-        <NavLink to="/pos/stock" className={navLinkClass}>สต๊อก</NavLink>
-        <NavLink to="/pos/reports" className={navLinkClass}>รายงาน</NavLink>
-        <NavLink to="/pos/finance" className={navLinkClass}>การเงิน</NavLink>
-        <NavLink to="/pos/settings" className={navLinkClass}>ตั้งค่าระบบ</NavLink>
+        {canStock && (
+          <NavLink to="/pos/stock" className={navLinkClass}>
+            สต๊อก
+          </NavLink>
+        )}
+        {canReports && (
+          <NavLink to="/pos/reports" className={navLinkClass}>
+            รายงาน
+          </NavLink>
+        )}
+        {canFinance && (
+          <NavLink to="/pos/finance" className={navLinkClass}>
+            การเงิน
+          </NavLink>
+        )}
+        {canSettings && (
+          <NavLink to="/pos/settings" className={navLinkClass}>
+            ตั้งค่าระบบ
+          </NavLink>
+        )}
       </nav>
 
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-end gap-3 w-full md:w-auto relative">
@@ -121,5 +160,7 @@ const HeaderPos = () => {
 };
 
 export default HeaderPos;
+
+
 
 

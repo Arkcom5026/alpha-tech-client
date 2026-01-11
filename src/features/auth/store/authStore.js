@@ -3,6 +3,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { loginUser } from '../api/authApi';
+import { buildRoleContext, can as canCap, P1_CAP } from '../rbac/rbacClient';
 import { useBranchStore } from '@/features/branch/store/branchStore';
 import useProductStore from '@/features/product/store/productStore';
 
@@ -136,7 +137,50 @@ export const useAuthStore = create(
         const r = normalizeRole(useAuthStore.getState().role);
         return r === 'admin' || r === 'superadmin';
       },
+
+      // ---------- RBAC (P1 Bestline) ----------
+      /**
+       * RoleContext (single source for FE guarding)
+       * - derive from existing auth-store + branch-store values
+       * - no API calls
+       */
+      getRoleContextSelector: () => {
+        const state = useAuthStore.getState();
+        const branchState = useBranchStore.getState?.() || {};
+
+        // branch-store shape may vary; try common keys safely
+        const branch = branchState.branch || branchState.currentBranch || branchState.activeBranch || null;
+        const rbacEnabled = branch?.RBACEnabled;
+
+        return buildRoleContext({
+          role: state.role, // accepts lowercase; rbacClient normalizes
+          branchId: state.employee?.branchId ?? null,
+          positionName: state.employee?.positionName ?? null,
+          rbacEnabled: rbacEnabled ?? true,
+        });
+      },
+
+      /**
+       * Capability checker
+       * @param {string} capKey - use P1_CAP.*
+       */
+      canSelector: (capKey) => {
+        const ctx = useAuthStore.getState().getRoleContextSelector();
+        return canCap(ctx, capKey);
+      },
+
+      // Convenience shortcuts (optional)
+      capsSelector: () => useAuthStore.getState().getRoleContextSelector().capabilities,
+      canManageEmployeesSelector: () => useAuthStore.getState().canSelector(P1_CAP.MANAGE_EMPLOYEES),
+      canManageProductsSelector: () => useAuthStore.getState().canSelector(P1_CAP.MANAGE_PRODUCTS),
+      canEditPricingSelector: () => useAuthStore.getState().canSelector(P1_CAP.EDIT_PRICING),
+      canPurchasingSelector: () => useAuthStore.getState().canSelector(P1_CAP.PURCHASING),
+      canReceiveStockSelector: () => useAuthStore.getState().canSelector(P1_CAP.RECEIVE_STOCK),
+      canPosSaleSelector: () => useAuthStore.getState().canSelector(P1_CAP.POS_SALE),
+      canStockAuditSelector: () => useAuthStore.getState().canSelector(P1_CAP.STOCK_AUDIT),
+      canViewReportsSelector: () => useAuthStore.getState().canSelector(P1_CAP.VIEW_REPORTS),
     }),
     { name: 'auth-storage' }
   )
 );
+

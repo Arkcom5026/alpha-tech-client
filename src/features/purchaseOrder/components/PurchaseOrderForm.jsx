@@ -1,3 +1,6 @@
+
+
+
 // PurchaseOrderForm.jsx
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -26,11 +29,11 @@ import useSupplierPaymentStore from '@/features/supplierPayment/store/supplierPa
  * - ไม่เรียก API ตรงจาก Component: เรียกผ่าน Store เท่านั้น
  * - อินพุตตัวเลขชิดขวา, placeholder ตามมาตรฐาน
  */
-export default function PurchaseOrderForm({
+const PurchaseOrderForm = ({
   mode = 'create',
   searchText = '',
   onSearchTextChange = () => {},
-}) {
+}) => {
   const { id } = useParams();
   const navigate = useNavigate();
 
@@ -45,12 +48,17 @@ export default function PurchaseOrderForm({
   const [selectedAdvance, setSelectedAdvance] = useState([]); // advance payments used
   const [shouldPrint, setShouldPrint] = useState(true);
 
+  // UI-based alerts (ห้ามใช้ alert/toast)
+  const [submitError, setSubmitError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   // ฟิลเตอร์ค้นหา (แนวทางเดียวกับ ListProductPage + QuickReceiveSimpleForm)
   const [filter, setFilter] = useState({
     categoryId: '',
     productTypeId: '',
     productProfileId: '',
-    productTemplateId: '', // ใช้คีย์เดียวกับ ListProductPage
+    productTemplateId: '', // ใช้คีย์เดียวกับ ListProductPage    // NOTE: Project #1 ใช้ ProductProfile เป็น "แบรนด์/ยี่ห้อ" อยู่แล้ว
+    // ถ้ายังไม่มี brandId ในระบบจริง ให้เก็บไว้เป็นเผื่ออนาคต แต่ *ไม่ใช้เป็นเงื่อนไขค้นหา* เพื่อกันความสับสน
     brandId: '',
   });
   const [committedSearchText, setCommittedSearchText] = useState('');
@@ -125,40 +133,76 @@ export default function PurchaseOrderForm({
   }, []);
 
   const handleSubmit = useCallback(async () => {
-    if (!supplier || products.length === 0) return;
+    // reset message
+    setSubmitError('');
+
+    if (isSubmitting) return;
+    if (!supplier?.id) {
+      setSubmitError('กรุณาเลือก Supplier ก่อนบันทึก');
+      return;
+    }
+    if (!Array.isArray(products) || products.length === 0) {
+      setSubmitError('กรุณาเพิ่มสินค้าอย่างน้อย 1 รายการ');
+      return;
+    }
+
+    // ✅ Sanitize items ให้เป็น number 100% ป้องกันกรณีเลือกหลายรายการแล้ว BE reject (string/NaN/empty)
+    const safeItems = products
+      .map((p) => {
+        const productId = Number(p.id);
+        const quantity = Number.parseInt(String(p.quantity ?? '1'), 10);
+        const costPrice = Number.parseFloat(String(p.costPrice ?? '0'));
+
+        return {
+          productId,
+          quantity: Number.isFinite(quantity) && quantity > 0 ? quantity : 1,
+          costPrice: Number.isFinite(costPrice) && costPrice >= 0 ? costPrice : 0,
+        };
+      })
+      .filter((it) => Number.isFinite(it.productId) && it.productId > 0);
+
+    if (safeItems.length === 0) {
+      setSubmitError('ไม่พบรายการสินค้าที่ถูกต้องสำหรับบันทึก');
+      return;
+    }
+
     const payload = {
       supplierId: supplier.id,
       date: orderDate,
       note,
-      items: products.map((p) => ({
-        productId: p.id,
-        quantity: p.quantity,
-        costPrice: p.costPrice || 0,
-      })),
+      items: safeItems,
       advancePaymentsUsed: selectedAdvance.map((adv) => ({
         paymentId: adv.id,
-        amount: adv.debitAmount || 0,
+        amount: Number.isFinite(Number(adv.debitAmount)) ? Number(adv.debitAmount) : 0,
       })),
     };
+
+    setIsSubmitting(true);
     try {
       if (mode === 'edit' && id) {
         const updated = await updatePurchaseOrder(id, payload);
-        if (updated) {
-          if (shouldPrint) navigate(`/pos/purchases/orders/print/${id}`);
-          else navigate('/pos/purchases/orders');
+        if (!updated) {
+          setSubmitError('บันทึกไม่สำเร็จ กรุณาตรวจสอบข้อมูลอีกครั้ง');
+          return;
         }
+        if (shouldPrint) navigate(`/pos/purchases/orders/print/${id}`);
+        else navigate('/pos/purchases/orders');
       } else {
         const created = await createPurchaseOrderWithAdvance(payload);
-        if (created?.id) {
-          if (shouldPrint) navigate(`/pos/purchases/orders/print/${created.id}`);
-          else navigate('/pos/purchases/orders');
+        if (!created?.id) {
+          setSubmitError('บันทึกไม่สำเร็จ กรุณาตรวจสอบข้อมูลอีกครั้ง');
+          return;
         }
+        if (shouldPrint) navigate(`/pos/purchases/orders/print/${created.id}`);
+        else navigate('/pos/purchases/orders');
       }
     } catch (e) {
-      // ให้ store/Call site จัดการ error; ที่นี่ไม่ alert
       console.error('[PO] submit error:', e);
+      setSubmitError('เกิดข้อผิดพลาดระหว่างบันทึก กรุณาลองใหม่อีกครั้ง');
+    } finally {
+      setIsSubmitting(false);
     }
-  }, [supplier, products, orderDate, note, selectedAdvance, mode, id, shouldPrint, updatePurchaseOrder, createPurchaseOrderWithAdvance, navigate]);
+  }, [supplier, products, orderDate, note, selectedAdvance, mode, id, shouldPrint, updatePurchaseOrder, createPurchaseOrderWithAdvance, navigate, isSubmitting]);
 
   // ────────────────────────────────────────────────────────────────────────────
   // Effects
@@ -225,15 +269,13 @@ export default function PurchaseOrderForm({
 
   // Search products when filters or committed text change
   useEffect(() => {
-    const hasFilter = filter.categoryId || filter.productTypeId || filter.productProfileId || filter.productTemplateId || filter.brandId;
+    const hasFilter = filter.categoryId || filter.productTypeId || filter.productProfileId || filter.productTemplateId;
     if (hasFilter || committedSearchText) {
       const params = {
         categoryId: filter.categoryId ? Number(filter.categoryId) : undefined,
         productTypeId: filter.productTypeId ? Number(filter.productTypeId) : undefined,
         productProfileId: filter.productProfileId ? Number(filter.productProfileId) : undefined,
-        productTemplateId: filter.productTemplateId ? Number(filter.productTemplateId) : undefined,
-        brandId: filter.brandId ? Number(filter.brandId) : undefined,
-        searchText: committedSearchText || undefined,
+        productTemplateId: filter.productTemplateId ? Number(filter.productTemplateId) : undefined,        searchText: committedSearchText || undefined,
       };
       try { fetchProductsAction(params); } catch { /* no-op */ }
     }
@@ -247,7 +289,23 @@ export default function PurchaseOrderForm({
   if (loading) return <p className="p-4">กำลังโหลดข้อมูล...</p>;
 
   return (
-    <form onSubmit={(e) => e.preventDefault()} className="space-y-6">
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        handleSubmit();
+      }}
+      className="space-y-6"
+    >
+      {submitError && (
+        <div
+          className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700"
+          role="alert"
+          aria-live="assertive"
+        >
+          {submitError}
+        </div>
+      )}
+
       {/* Supplier & Date */}
       <div className="flex gap-6 flex-wrap">
         <div className="w-[300px]">
@@ -307,7 +365,7 @@ export default function PurchaseOrderForm({
               categoryId: patch.categoryId ?? patch.selectedCategoryId ?? patch.category ?? '',
               productTypeId: patch.productTypeId ?? patch.typeId ?? patch.selectedTypeId ?? patch.type ?? '',
               productProfileId: patch.productProfileId ?? patch.profileId ?? patch.selectedProfileId ?? patch.profile ?? '',
-              productTemplateId: patch.productTemplateId ?? patch.productTemplateId ?? patch.selectedproductTemplateIdte ?? '',
+              productTemplateId: patch.productTemplateId ?? patch.templateId ?? patch.selectedTemplateId ?? patch.template ?? '',
               brandId: patch.brandId ?? patch.brand ?? patch.selectedBrandId ?? '',
             };
             handleFilterChange(normalized);
@@ -318,9 +376,7 @@ export default function PurchaseOrderForm({
       {/* Search Result */}
       <ProductSearchTable
         results={fetchedProducts}
-        onAdd={addProductToOrder}
-        filterKey={`${filter.categoryId}|${filter.productTypeId}|${filter.productProfileId}|${filter.productTemplateId}|${filter.brandId}|${committedSearchText}`}
-      />
+        onAdd={addProductToOrder}      />
 
       {/* Cart */}
       <PurchaseOrderTable products={products} setProducts={setProducts} editable={mode !== 'view'} />
@@ -332,10 +388,16 @@ export default function PurchaseOrderForm({
           <span className="text-sm text-gray-700">พิมพ์ใบสั่งซื้อ</span>
         </label>
         <div className="flex items-center gap-4">
-          <StandardActionButtons onSave={handleSubmit} onCancel={handleCancel} />
+          <StandardActionButtons
+            onSave={() => {
+              if (!isSubmitting) handleSubmit();
+            }}
+            onCancel={handleCancel}
+          />
         </div>
       </div>
     </form>
   );
-}
+};
 
+export default PurchaseOrderForm;

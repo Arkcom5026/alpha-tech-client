@@ -1,4 +1,5 @@
 
+
 // purchaseOrderApi.js (refined)
 // - ใช้ apiClient กลางตามมาตรฐาน (#37, #61)
 // - Getters คืน []/null เมื่อผิดพลาด; Mutations โยน error ให้ Store จัดการ
@@ -98,14 +99,17 @@ export const createPurchaseOrder = async (data) => {
   }
 };
 
+// ✅ Option A: ไม่อนุญาตให้ FE เรียก endpoint with-advance ในขั้น Create PO
+// คง function ไว้กัน import เดิมพัง แต่จะ throw ชัดเจน
 export const createPurchaseOrderWithAdvance = async (data) => {
-  try {
-    const res = await apiClient.post('/purchase-orders/with-advance', data);
-    return res.data;
-  } catch (error) {
-    console.error('❌ createPurchaseOrderWithAdvance error:', error);
-    throw error;
-  }
+  const hasAdvance = Array.isArray(data?.advancePaymentsUsed) && data.advancePaymentsUsed.length > 0;
+  const err = new Error(
+    hasAdvance
+      ? 'Create PO ไม่รองรับ advancePaymentsUsed (ทางเลือก A) — ให้ไปผูก/ตัดชำระในขั้นตอนจ่ายเงิน Supplier'
+      : 'Endpoint /purchase-orders/with-advance ถูกปิดสำหรับขั้น Create PO (ทางเลือก A) — ใช้ createPurchaseOrder แทน'
+  );
+  err.code = hasAdvance ? 'PO_ADVANCE_NOT_ALLOWED' : 'PO_WITH_ADVANCE_DISABLED';
+  throw err;
 };
 
 export const updatePurchaseOrder = async (id, data) => {
@@ -149,5 +153,7 @@ export const getPurchaseOrdersBySupplier = async (supplierId) => {
     return [];
   }
 };
+
+
 
 

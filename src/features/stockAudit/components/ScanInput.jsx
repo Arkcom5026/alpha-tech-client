@@ -78,3 +78,4 @@ export default ScanInput
 // <ScanInput ref={scanRef} onSubmit={handleScan} disabled={isScanning} compact autoSubmit delay={180} />
 
 
+

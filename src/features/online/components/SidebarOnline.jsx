@@ -1,14 +1,20 @@
+
 // =============================
 // FILE: src/features/productOnline/components/SidebarOnline.jsx
 // (อัปเดต: ปรับ Cascade Filter ให้เป็นลำดับขั้นจริงสำหรับ Online)
 // =============================
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import haversine from 'haversine-distance';
 
 import { useBranchStore } from '@/features/branch/store/branchStore';
 import useProductStore from '@/features/product/store/productStore';
 import CascadingFilterGroup from '@/components/shared/form/CascadingFilterGroup';
 import { useProductOnlineStore } from '@/features/online/productOnline/store/productOnlineStore';
+
+// =============================
+// LocalStorage keys (Online)
+// =============================
+const LS_SELECTED_BRANCH_ID_KEY = 'alphaTech:online:selectedBranchId';
 
 const SidebarOnline = () => {
   const setFilters = useProductOnlineStore((s) => s.setFilters);
@@ -24,7 +30,9 @@ const SidebarOnline = () => {
   const branches = useBranchStore((s) => s.branches || []);
   const selectedBranchId = useBranchStore((s) => s.selectedBranchId);
   const getBranchNameById = useBranchStore((s) => s.getBranchNameById || (() => ''));
-  const currentBranch = useBranchStore((s) => s.currentBranch);
+  // NOTE: ความตั้งใจเดิมของหน้า shop คือ “เลือกสาขาใกล้ที่สุดครั้งแรกเท่านั้น”
+  // เราจึงเก็บตำแหน่งลูกค้าเป็น local state/ref และไม่เอา currentBranch มาใช้แทน
+  const _unusedCurrentBranch = useBranchStore((s) => s.currentBranch);
 
   useEffect(() => {
     const hasData = Boolean(dropdowns && (
@@ -52,14 +60,132 @@ const SidebarOnline = () => {
     [branches, selectedBranchId]
   );
 
+  // =============================
+  // Auto-select nearest branch (ครั้งแรกที่เข้า /shop เท่านั้น)
+  // =============================
+  const didAutoSelectRef = useRef(false);
+  const [userLocation, setUserLocation] = useState(null); // { latitude, longitude }
+
+  useEffect(() => {
+    // รันแค่ครั้งแรกของการเปิดหน้า และไม่รันซ้ำเมื่อ user เปลี่ยนสาขาเอง
+    if (didAutoSelectRef.current) return;
+
+    // 1) ถ้ามีสาขาที่ลูกค้าเคยเลือกไว้ (persist) ให้ใช้สาขานั้นก่อนเสมอ
+    try {
+      if (!selectedBranchId) {
+        const raw = localStorage.getItem(LS_SELECTED_BRANCH_ID_KEY);
+        const persistedId = Number(raw);
+        if (persistedId) {
+          const persistedBranch = (branches || []).find((b) => Number(b?.id) === persistedId);
+          if (persistedBranch?.id) {
+            didAutoSelectRef.current = true;
+            useBranchStore.setState({
+              selectedBranchId: persistedBranch.id,
+              version: (useBranchStore.getState().version || 0) + 1,
+            });
+            setFilters?.({ branchId: persistedBranch.id });
+            return;
+          }
+        }
+      }
+    } catch (e) {
+      // ignore storage errors
+    }
+    if (!branches?.length) return;
+
+    didAutoSelectRef.current = true;
+
+    // ถ้ามี selectedBranchId อยู่แล้ว (เช่นเคยเลือกไว้) ก็ไม่ต้อง override
+    if (selectedBranchId) return;
+
+    // ขอ location จาก browser ครั้งเดียว
+    if (!navigator?.geolocation) {
+      // fallback: ถ้าไม่มี geolocation ให้ใช้สาขาแรก
+      const first = branches[0];
+      if (first?.id) {
+        // ✅ persist fallback สาขาแรก
+        try {
+          localStorage.setItem(LS_SELECTED_BRANCH_ID_KEY, String(first.id));
+        } catch (e) {
+          // ignore storage errors
+        }
+
+        // ✅ persist fallback สาขาแรก
+        try {
+          localStorage.setItem(LS_SELECTED_BRANCH_ID_KEY, String(first.id));
+        } catch (e) {
+          // ignore storage errors
+        }
+
+        useBranchStore.setState({
+          selectedBranchId: first.id,
+          version: (useBranchStore.getState().version || 0) + 1,
+        });
+        setFilters?.({ branchId: first.id });
+      }
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const lat = Number(pos?.coords?.latitude);
+        const lon = Number(pos?.coords?.longitude);
+        if (!lat || !lon) return;
+
+        const loc = { latitude: lat, longitude: lon };
+        setUserLocation(loc);
+
+        // คัดเฉพาะสาขาที่มีพิกัด
+        const candidates = (branches || []).filter((b) => b?.latitude && b?.longitude);
+        if (!candidates.length) return;
+
+        let nearest = candidates[0];
+        let best = Infinity;
+        for (const b of candidates) {
+          const d = haversine(loc, { latitude: Number(b.latitude), longitude: Number(b.longitude) });
+          if (d < best) {
+            best = d;
+            nearest = b;
+          }
+        }
+
+        if (nearest?.id) {
+          // ✅ persist สาขาที่ถูกเลือกอัตโนมัติ (ครั้งแรก)
+          try {
+            localStorage.setItem(LS_SELECTED_BRANCH_ID_KEY, String(nearest.id));
+          } catch (e) {
+            // ignore storage errors
+          }
+
+          useBranchStore.setState({
+            selectedBranchId: nearest.id,
+            version: (useBranchStore.getState().version || 0) + 1,
+          });
+          setFilters?.({ branchId: nearest.id });
+        }
+      },
+      () => {
+        // ถ้าผู้ใช้ไม่อนุญาต location → fallback เป็นสาขาแรก
+        const first = branches[0];
+        if (first?.id) {
+          useBranchStore.setState({
+            selectedBranchId: first.id,
+            version: (useBranchStore.getState().version || 0) + 1,
+          });
+          setFilters?.({ branchId: first.id });
+        }
+      },
+      { enableHighAccuracy: false, timeout: 5000, maximumAge: 60_000 }
+    );
+  }, [branches, selectedBranchId, setFilters]);
+
+  // ระยะห่าง = ตำแหน่งลูกค้า → สาขาที่เลือก (ถ้ามี userLocation)
   let distanceInKm = null;
-  if (
-    currentBranch?.latitude && currentBranch?.longitude &&
-    selectedBranch?.latitude && selectedBranch?.longitude
-  ) {
-    const userLoc = { latitude: currentBranch.latitude, longitude: currentBranch.longitude };
-    const branchLoc = { latitude: selectedBranch.latitude, longitude: selectedBranch.longitude };
-    const distance = haversine(userLoc, branchLoc);
+  if (userLocation?.latitude && userLocation?.longitude && selectedBranch?.latitude && selectedBranch?.longitude) {
+    const distance = haversine(
+      { latitude: userLocation.latitude, longitude: userLocation.longitude },
+      { latitude: Number(selectedBranch.latitude), longitude: Number(selectedBranch.longitude) }
+    );
     distanceInKm = (distance / 1000).toFixed(2);
   }
 
@@ -137,7 +263,7 @@ const SidebarOnline = () => {
   return (
     <div className="space-y-2 px-2 py-2">
       <div className="bg-green-50 border border-green-300 text-green-800 px-3 py-2 rounded text-sm">
-        <div className="font-bold">สาขาที่ใกล้ที่สุด</div>
+        <div className="font-bold">สาขาที่เลือก</div>
         {getBranchNameById(selectedBranchId)}
         <div className="mt-2">
           <select
@@ -146,9 +272,16 @@ const SidebarOnline = () => {
               const newId = Number(e.target.value);
               const newBranch = branches.find((b) => b.id === newId);
               if (newBranch) {
+                // ✅ จำสาขาที่ลูกค้าเลือกไว้ เพื่อให้ใช้งานในสภาพแวดล้อมสาขานี้ต่อเนื่อง (persist)
+                try {
+                  localStorage.setItem(LS_SELECTED_BRANCH_ID_KEY, String(newBranch.id));
+                } catch (e) {
+                  // ignore storage errors
+                }
+
                 useBranchStore.setState({
                   selectedBranchId: newBranch.id,
-                  currentBranch: newBranch,
+                  // ✅ ผู้ใช้เลือกเปลี่ยนสาขาเองได้ แต่ไม่ override ตำแหน่งลูกค้า (userLocation)
                   version: (useBranchStore.getState().version || 0) + 1,
                 });
                 setFilters?.({ branchId: newBranch.id });
@@ -228,3 +361,4 @@ const SidebarOnline = () => {
 };
 
 export default SidebarOnline;
+

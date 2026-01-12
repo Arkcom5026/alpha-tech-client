@@ -1,3 +1,4 @@
+
 // =============================
 // client/src/features/stockAudit/pages/ReadyToSellAuditPage.jsx
 // แก้ไข: เพิ่ม isStarting ใน Destructuring และปรับปรุงประสิทธิภาพการโหลดข้อมูล
@@ -29,6 +30,12 @@ const ReadyToSellAuditPage = () => {
   const [openConfirmPending, setOpenConfirmPending] = useState(false)
   const [openCancel, setOpenCancel] = useState(false)
   const [bannerMessage, setBannerMessage] = useState('')
+  const [lastScannedValue, setLastScannedValue] = useState('')
+
+  // --- Helpers ---
+  const formatNum = (n) => Number(n ?? 0).toLocaleString('th-TH')
+  const hasSession = !!sessionId
+  const missingIsCritical = Number(missingCount ?? 0) > 0
 
   // ค่าค้นหาแยกสองตาราง (กัน bug เปลี่ยนหน้าแล้ว q หาย)
   const [expectedQ, setExpectedQ] = useState('')
@@ -223,6 +230,8 @@ const ReadyToSellAuditPage = () => {
 
       if (ok || resolvedPending) {
         await playSuccess()
+        setLastScannedValue(input)
+
         if (resolvedPending) {
           setBannerMessage('พบของค้างตรวจ – เคลียร์ให้แล้ว')
           setTimeout(() => setBannerMessage(''), 2500)
@@ -327,10 +336,16 @@ const ReadyToSellAuditPage = () => {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
           <span className="font-medium">Session:</span>
-          <span>{sessionId ?? '-'}</span>
-          <span>Expected: <b>{expectedCount}</b></span>
-          <span>Scanned: <b>{scannedCount}</b></span>
-          <span>Missing: <b>{missingCount}</b></span>
+          <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold border ${hasSession ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-zinc-50 text-zinc-600 border-zinc-200'}`}
+          >
+            {hasSession ? `#${sessionId}` : '-'}
+          </span>
+          <span>Expected: <b className="tabular-nums">{formatNum(expectedCount)}</b></span>
+          <span>Scanned: <b className="tabular-nums">{formatNum(scannedCount)}</b></span>
+          <span>
+            Missing:{' '}
+            <b className={`tabular-nums ${missingIsCritical ? 'text-red-600' : ''}`}>{formatNum(missingCount)}</b>
+          </span>
           <span className="text-gray-500">(F2 โฟกัสช่องสแกน · F3 สลับโหมด)</span>
         </div>
         <div className="flex items-center gap-2">
@@ -383,6 +398,7 @@ const ReadyToSellAuditPage = () => {
             className={`px-4 py-2 rounded-lg text-white ${isConfirming ? 'bg-blue-500 opacity-60 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}
             onClick={() => setOpenConfirmLost(true)}
             disabled={isConfirming || isCancelling || !sessionId}
+            title={!sessionId ? 'ต้องกด “เริ่มรอบตรวจนับ” ก่อน จึงจะสรุปสูญหายได้' : 'สรุปของที่ยังไม่สแกนเป็น “สูญหาย” และปิดรอบ'}
           >
             บันทึกสินค้าสูญหาย
           </button>
@@ -391,16 +407,22 @@ const ReadyToSellAuditPage = () => {
             className={`px-4 py-2 rounded-lg text-white ${isConfirming ? 'bg-amber-500 opacity-60 cursor-not-allowed' : 'bg-amber-500 hover:bg-amber-600'}`}
             onClick={() => setOpenConfirmPending(true)}
             disabled={isConfirming || isCancelling || !sessionId}
+            title={!sessionId ? 'ต้องกด “เริ่มรอบตรวจนับ” ก่อน จึงจะปิดรอบได้' : 'ปิดรอบแบบ “ค้างตรวจ” (ไม่สรุปสูญหาย)'}
           >
             ปิดรอบ (ค้างตรวจ)
           </button>
         </div>
       </div>
 
-      {(errorMessage || bannerMessage) && (
+      {(errorMessage || bannerMessage || lastScannedValue) && (
         <div className="text-sm">
           {errorMessage && <span className="text-red-600">{errorMessage}</span>}
           {bannerMessage && <span className="ml-3 px-2 py-1 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">{bannerMessage}</span>}
+          {lastScannedValue && !errorMessage && (
+            <span className="ml-3 px-2 py-1 rounded bg-blue-50 text-blue-700 border border-blue-200">
+              ล่าสุด: <b className="tabular-nums">{lastScannedValue}</b>
+            </span>
+          )}
         </div>
       )}
 
@@ -463,6 +485,7 @@ const ReadyToSellAuditPage = () => {
             page={scannedPage}
             pageSize={scannedPageSize}
             scanned={true}
+            highlightValue={lastScannedValue}
             loading={isLoadingItems}
             onSearch={(q) => {
               setScannedQ(q)
@@ -510,10 +533,6 @@ const ReadyToSellAuditPage = () => {
 }
 
 export default ReadyToSellAuditPage
-
-
-
-
 
 
 

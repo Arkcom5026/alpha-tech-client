@@ -1,4 +1,7 @@
 
+
+
+
 // PurchaseOrderForm.jsx
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -15,7 +18,7 @@ import PurchaseOrderTable from '@/features/purchaseOrder/components/PurchaseOrde
 import usePurchaseOrderStore from '@/features/purchaseOrder/store/purchaseOrderStore';
 import useProductStore from '@/features/product/store/productStore';
 import useSupplierStore from '@/features/supplier/store/supplierStore';
-import useSupplierPaymentStore from '@/features/supplierPayment/store/supplierPaymentStore';
+
 
 /**
  * PurchaseOrderForm (Create/Edit)
@@ -43,7 +46,6 @@ const PurchaseOrderForm = ({
   const [orderDate, setOrderDate] = useState(() => new Date().toISOString().substring(0, 10));
   const [note, setNote] = useState('');
   const [products, setProducts] = useState([]); // [{ id, name, quantity, costPrice, ... }]
-  const [selectedAdvance, setSelectedAdvance] = useState([]); // advance payments used
   const [shouldPrint, setShouldPrint] = useState(true);
 
   // UI-based alerts (ห้ามใช้ alert/toast)
@@ -70,7 +72,7 @@ const PurchaseOrderForm = ({
     purchaseOrder,
     loading,
     fetchPurchaseOrderById,
-    createPurchaseOrderWithAdvance,
+    createPurchaseOrder,
     updatePurchaseOrder,
   } = usePurchaseOrderStore();
 
@@ -81,10 +83,8 @@ const PurchaseOrderForm = ({
     ensureDropdownsAction,
   } = useProductStore();
 
-  const {
-    advancePaymentsBySupplier = {},
-    fetchAdvancePaymentsBySupplierAction,
-  } = useSupplierPaymentStore();
+  // ✅ Option A: Create PO ไม่รองรับ advance payments (ตัด supplier payment store ออกจากฟอร์มนี้)
+
 
   // ────────────────────────────────────────────────────────────────────────────
   // Handlers
@@ -169,11 +169,8 @@ const PurchaseOrderForm = ({
       date: orderDate,
       note,
       items: safeItems,
-      advancePaymentsUsed: selectedAdvance.map((adv) => ({
-        paymentId: adv.id,
-        amount: Number.isFinite(Number(adv.debitAmount)) ? Number(adv.debitAmount) : 0,
-      })),
     };
+    
 
     setIsSubmitting(true);
     try {
@@ -186,7 +183,8 @@ const PurchaseOrderForm = ({
         if (shouldPrint) navigate(`/pos/purchases/orders/print/${id}`);
         else navigate('/pos/purchases/orders');
       } else {
-        const created = await createPurchaseOrderWithAdvance(payload);
+        const created = await createPurchaseOrder(payload);
+
         if (!created?.id) {
           setSubmitError('บันทึกไม่สำเร็จ กรุณาตรวจสอบข้อมูลอีกครั้ง');
           return;
@@ -200,7 +198,7 @@ const PurchaseOrderForm = ({
     } finally {
       setIsSubmitting(false);
     }
-  }, [supplier, products, orderDate, note, selectedAdvance, mode, id, shouldPrint, updatePurchaseOrder, createPurchaseOrderWithAdvance, navigate, isSubmitting]);
+  }, [supplier, products, orderDate, note, mode, id, shouldPrint, updatePurchaseOrder, createPurchaseOrder, navigate, isSubmitting]);
 
   // ────────────────────────────────────────────────────────────────────────────
   // Effects
@@ -252,18 +250,15 @@ const PurchaseOrderForm = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, purchaseOrder]);
 
-  // When supplier changes → load credit + advance payments
+  // When supplier changes → load credit (Option A: ไม่โหลด/ใช้ advance payments ในขั้น Create PO)
   useEffect(() => {
     if (!supplier?.id) {
       setCreditHint(null);
-      setSelectedAdvance([]);
       return;
     }
     const s = supplierList.find((x) => x.id === supplier.id);
     setCreditHint(s ? { used: s.creditBalance || 0, total: s.creditLimit || 0 } : null);
-    try { fetchAdvancePaymentsBySupplierAction(supplier.id); } catch { /* no-op */ }
-    setSelectedAdvance([]);
-  }, [supplier, supplierList, fetchAdvancePaymentsBySupplierAction]);
+  }, [supplier, supplierList]);
 
   // Search products when filters or committed text change
   useEffect(() => {
@@ -282,7 +277,6 @@ const PurchaseOrderForm = ({
   // ────────────────────────────────────────────────────────────────────────────
   // Derived
   // ────────────────────────────────────────────────────────────────────────────
-  const advancePayments = useMemo(() => advancePaymentsBySupplier?.[supplier?.id] ?? [], [advancePaymentsBySupplier, supplier]);
 
   if (loading) return <p className="p-4">กำลังโหลดข้อมูล...</p>;
 
@@ -312,31 +306,13 @@ const PurchaseOrderForm = ({
         </div>
       </div>
 
-      {/* Advance payments (optional) */}
-      {advancePayments.length > 0 && (
-        <div>
-          <Label>เลือกยอดมัดจำที่จะใช้กับใบสั่งซื้อนี้</Label>
-          <div className="space-y-1 mt-2">
-            {advancePayments.map((adv) => {
-              const isSelected = selectedAdvance.some((s) => s.id === adv.id);
-              return (
-                <div key={adv.id} className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={isSelected}
-                    onChange={(e) => {
-                      setSelectedAdvance((prev) => (e.target.checked ? [...prev, adv] : prev.filter((p) => p.id !== adv.id)));
-                    }}
-                  />
-                  <span>
-                    ยอดชำระล่วงหน้า: ฿{adv.debitAmount != null ? adv.debitAmount.toLocaleString() : 'ไม่ระบุ'} | วันที่: {adv.paidAt ? new Date(adv.paidAt).toLocaleDateString() : 'ไม่ระบุ'}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
+      {/* ✅ Option A: ไม่รองรับการใช้เงินล่วงหน้าในขั้น Create PO */}
+      <div className="rounded-md border border-zinc-200 bg-zinc-50 p-3 text-sm text-zinc-700">
+        <div className="font-medium">หมายเหตุ</div>
+        <div className="mt-1">
+          ขั้นสร้างใบสั่งซื้อ (PO) ไม่รองรับการใช้/ผูกเงินล่วงหน้า (advance) — ให้ไปทำในขั้นตอนจ่ายเงิน Supplier ภายหลัง
         </div>
-      )}
+      </div>
 
       {/* Filters & Search */}
       <div className="p-2">
@@ -399,6 +375,13 @@ const PurchaseOrderForm = ({
 };
 
 export default PurchaseOrderForm;
+
+
+
+
+
+
+
 
 
 

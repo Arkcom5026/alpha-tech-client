@@ -1,218 +1,236 @@
 
 
+// ✅ src/components/shared/form/CascadingFilterGroup.jsx (Prisma‑strict)
 
-// ✅ components/shared/form/CascadingDropdowns.jsx
+import { useMemo } from 'react';
 
-import React, {  useMemo, useCallback } from "react";
-
-export default function CascadingDropdowns({ dropdowns, value = {}, onChange, isLoading = false,
-  strict = false,
+export default function CascadingFilterGroup({
+  value = {},
+  onChange,
+  dropdowns = {},
   hiddenFields = [],
-  placeholders = {},
-  direction = 'row',
-  selectClassName = 'min-w-[14rem]',
-  containerClassName,
+  className = '',
+  placeholders = {
+    category: '-- เลือกหมวดสินค้า --',
+    productType: '-- เลือกประเภทสินค้า --',
+    // ✅ ลำดับสินค้าแบบใหม่ (Online): ProductProfile = แบรนด์/ยี่ห้อ
+    productProfile: '-- เลือกแบรนด์/ยี่ห้อ --',
+    // ✅ ลำดับสินค้าแบบใหม่ (Online): ProductTemplate = สเปก (หลีกเลี่ยงคำว่า SKU ในหน้าใช้งาน)
+    template: '-- เลือกสเปกสินค้า --',
+  },
+  showReset = false,
+  direction,
+  variant = 'pos',
+  showSearch = false,
+  searchText = '',
+  onSearchTextChange = () => {},
+  onSearchCommit = () => {},
 }) {
-  const toId = (v) => (v === undefined || v === null || v === '' ? '' : String(v));
+  // Layout: derive direction. Default POS=row; Online stacks to column.
+  // รองรับทั้งค่า 'col' และ 'column' เพื่อกันหลุดจาก component อื่น
+  const __direction = (direction ?? (variant === 'online' ? 'col' : 'row'));
+  const __isColumn = __direction === 'col' || __direction === 'column';
 
-  const sameStyleEmit = useCallback((key, nextStr) => {
-    const prev = value?.[key];
-    if (typeof prev === 'number') {
-      onChange({ [key]: nextStr === '' ? null : Number(nextStr) });
-    } else if (prev === null) {
-      onChange({ [key]: nextStr === '' ? null : (Number.isFinite(Number(nextStr)) ? Number(nextStr) : nextStr) });
-    } else {
-      onChange({ [key]: nextStr });
-    }
-  }, [onChange, value]);
+  // ───────────────── Prisma schema only — no alias/fallback ─────────────────
+  const {
+    categories = [],
+    productTypes = [],
+    productProfiles = [],
+    productTemplates = [],
+  } = dropdowns || {};
 
-  const getCategoryIdOfType = (t) => t?.categoryId ?? t?.category?.id ?? t?.category_id ?? undefined;
-  const getTypeIdOfProfile = (p) => p?.productTypeId ?? p?.productType?.id ?? p?.product_type_id ?? undefined;
-  const getProfileIdOfTemplate = (tp) => tp?.productProfileId ?? tp?.productProfile?.id ?? tp?.product_profile_id ?? undefined;
+  const toNumOrEmpty = (v) => (v === '' || v === null || v === undefined ? '' : Number(v));
+  const getCatIdOfType = (t) => t?.categoryId; // Prisma: productType.categoryId
 
-  const categories = useMemo(() => Array.isArray(dropdowns?.categories) ? dropdowns.categories : [], [dropdowns?.categories]);
-  const productTypes = useMemo(() => Array.isArray(dropdowns?.productTypes) ? dropdowns.productTypes : [], [dropdowns?.productTypes]);
-  const productProfiles = useMemo(() => {
-    const arr = dropdowns?.productProfiles ?? dropdowns?.profiles;
-    return Array.isArray(arr) ? arr : [];
-  }, [dropdowns?.productProfiles, dropdowns?.profiles]);
-  const productTemplates = useMemo(() => {
-    const arr = dropdowns?.productTemplates ?? dropdowns?.templates;
-    return Array.isArray(arr) ? arr : [];
-  }, [dropdowns?.productTemplates, dropdowns?.templates]);
+  const categoryId = toNumOrEmpty(value.categoryId);
+  const productTypeId = toNumOrEmpty(value.productTypeId);
+  const productProfileId = toNumOrEmpty(value.productProfileId);
+  const productTemplateId = toNumOrEmpty(value.productTemplateId);
 
-  const selectedCatId = toId(value?.categoryId);
-  const selectedTypeId = toId(value?.productTypeId);
-  const selectedProfileId = toId(value?.productProfileId);
-  const selectedProductTemplateId = toId(value?.productTemplateId);
+  // ───────────────── Filters (strict to Prisma keys) ─────────────────
+  const filteredProductTypes = useMemo(() => {
+    if (!Array.isArray(productTypes)) return [];
+    if (categoryId === '') return productTypes;
+    return productTypes.filter((t) => Number(getCatIdOfType(t)) === Number(categoryId));
+  }, [productTypes, categoryId]);
 
-  const ensureSelectedOption = (list, selectedId) => {
-    if (!selectedId) return list;
-    const exists = list.some((x) => String(x.id) === String(selectedId));
-    // ⛔ ในโหมด strict (เช่นหน้า Create) ไม่เพิ่ม option "กำลังโหลดค่าเดิม"
-    // ✅ ในโหมดแก้ไข (strict=false) จะคง fallback เดิมไว้ได้ หากต้องการ
-    return exists ? list : (strict ? list : [{ id: selectedId, name: '— กำลังโหลดค่าเดิม —' }, ...list]);
-  };
-
-  const filteredTypes = useMemo(() => {
-    if (strict && !selectedCatId) return [];
-    if (!selectedCatId) return ensureSelectedOption(productTypes, selectedTypeId);
-    return ensureSelectedOption(
-      productTypes.filter((t) => String(getCategoryIdOfType(t)) === selectedCatId),
-      selectedTypeId
-    );
-  }, [productTypes, selectedCatId, selectedTypeId, strict]);
-
-  const filteredProfiles = useMemo(() => {
-    if (strict && !selectedTypeId) return [];
-    if (selectedTypeId) {
-      return ensureSelectedOption(
-        productProfiles.filter((p) => String(getTypeIdOfProfile(p)) === selectedTypeId),
-        selectedProfileId
+  const filteredProductProfiles = useMemo(() => {
+    if (!Array.isArray(productProfiles)) return [];
+    if (productTypeId === '') {
+      if (categoryId === '' || !Array.isArray(productTypes)) return productProfiles;
+      const allowedTypeIds = new Set((productTypes || [])
+        .filter((t) => Number(getCatIdOfType(t)) === Number(categoryId))
+        .map((t) => Number(t.id))
       );
+      return productProfiles.filter((p) => allowedTypeIds.has(Number(p.productTypeId)));
     }
-    if (selectedCatId) {
-      if (strict) return [];
-    }
-    return ensureSelectedOption(productProfiles, selectedProfileId);
-  }, [productProfiles, selectedTypeId, selectedCatId, selectedProfileId, strict]);
+    return productProfiles.filter((p) => Number(p.productTypeId) === Number(productTypeId));
+  }, [productProfiles, productTypes, categoryId, productTypeId]);
 
   const filteredTemplates = useMemo(() => {
-    if (strict && !selectedProfileId) return [];
-    const pro = selectedProfileId;
-    const typ = selectedTypeId;
-    const cat = selectedCatId;
+    if (!Array.isArray(productTemplates)) return [];
 
-    let out = [];
-    if (pro) {
-      out = productTemplates.filter((tp) => String(getProfileIdOfTemplate(tp)) === pro);
-    } else if (selectedProductTemplateId && !strict) {
-      out = productTemplates.filter((tp) => String(tp?.id) === selectedProductTemplateId);
-    } else if (typ && !strict) {
-      out = productTemplates.filter((tp) => String(tp?.productTypeId ?? tp?.productType?.id) === typ);
-    } else if (cat && !strict) {
-      out = productTemplates.filter((tp) => String(tp?.categoryId ?? tp?.category?.id) === cat);
-    } else {
-      out = strict ? [] : productTemplates;
+    // 1) เลือกตาม profile โดยตรง
+    if (productProfileId !== '') {
+      return productTemplates.filter((t) => Number(t.productProfileId) === Number(productProfileId));
     }
 
-    if ((!out || out.length === 0) && productTemplates.length > 0 && !strict) out = productTemplates;
-    return ensureSelectedOption(out, selectedProductTemplateId);
-  }, [productTemplates, selectedCatId, selectedTypeId, selectedProfileId, selectedProductTemplateId, strict]);
+    // 2) ยังไม่เลือก profile แต่เลือก type → template ที่ profile อยู่ใน type นั้น
+    if (productTypeId !== '') {
+      const allowedProfileIds = new Set((productProfiles || [])
+        .filter((p) => Number(p.productTypeId) === Number(productTypeId))
+        .map((p) => Number(p.id))
+      );
+      return productTemplates.filter((t) => allowedProfileIds.has(Number(t.productProfileId)));
+    }
 
-  const categoryDisabled = isLoading;
-  const typeDisabled = isLoading || (strict && !selectedCatId);
-  const profileDisabled = isLoading || (strict && !selectedTypeId);
-  const templateDisabled = isLoading || (strict && !selectedProfileId);
+    // 3) ยังไม่เลือก type แต่เลือก category → template ที่ profile อยู่ใน type ของหมวดนั้น
+    if (categoryId !== '' && Array.isArray(productTypes)) {
+      const allowedTypeIds = new Set((productTypes || [])
+        .filter((t) => Number(getCatIdOfType(t)) === Number(categoryId))
+        .map((t) => Number(t.id))
+      );
+      const allowedProfileIds = new Set((productProfiles || [])
+        .filter((p) => allowedTypeIds.has(Number(p.productTypeId)))
+        .map((p) => Number(p.id))
+      );
+      return productTemplates.filter((t) => allowedProfileIds.has(Number(t.productProfileId)));
+    }
 
-  const showCategory = !hiddenFields.includes('category');
-  const showType = !hiddenFields.includes('type');
-  const showProfile = !hiddenFields.includes('profile');
-  const showTemplate = !hiddenFields.includes('template');
+    // 4) ไม่เลือกอะไรเลย → ทั้งหมด
+    return productTemplates;
+  }, [productTemplates, productProfiles, productTypes, productProfileId, productTypeId, categoryId]);
 
-  const ph = {
-    category: placeholders.category ?? '-- เลือกหมวดหมู่ --',
-    type: placeholders.type ?? '-- เลือกประเภทสินค้า --',
-    profile: placeholders.profile ?? '-- เลือกแบรนด์ --',
-    template: placeholders.template ?? '-- เลือกสเปกสินค้า (SKU) --',
+  // ───────────────── Update cascade ─────────────────
+  const update = (field, rawVal) => {
+    const val = toNumOrEmpty(rawVal);
+    if (value[field] === val) return;
+
+    const next = { ...value, [field]: val };
+    if (field === 'categoryId') {
+      next.productTypeId = '';
+      next.productProfileId = '';
+      next.productTemplateId = '';
+    } else if (field === 'productTypeId') {
+      next.productProfileId = '';
+      next.productTemplateId = '';
+    } else if (field === 'productProfileId') {
+      next.productTemplateId = '';
+    }
+    onChange?.(next);
   };
 
-  const containerClass = containerClassName
-    ? containerClassName
-    : (direction === 'col'
-        ? 'grid grid-cols-1 gap-3'
-        : 'grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3');
+  const handleReset = () => {
+    onChange?.({ categoryId: '', productTypeId: '', productProfileId: '', productTemplateId: '' });
+  };
+
+  // ───────────────── Disabled flags (keep flexible) ─────────────────
+  const typeDisabled = false;
+  const profileDisabled = false;
+  const templateDisabled = false;
+
+  const hide = (k) => hiddenFields.includes(k)
+    || (k === 'productProfile' && hiddenFields.includes('profile'))
+    || (k === 'productType' && hiddenFields.includes('type'));
 
   return (
-    <div className={containerClass}>
-      {showCategory && (
-        <div>
-          <label htmlFor="cdg-category" className="sr-only">หมวดหมู่</label>
+    <div className={`space-y-2 ${className}`}>
+      <div className={__isColumn ? 'space-y-2' : 'grid grid-cols-1 md:grid-cols-4 gap-4'}>
+        {!hide('category') && (
           <select
-            id="cdg-category"
-            aria-label="เลือกหมวดหมู่"
-            className={`border rounded px-3 py-2 w-full ${selectClassName} ${categoryDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-            value={selectedCatId}
-            onChange={(e) => {
-              const next = e.target.value;
-              sameStyleEmit('categoryId', next);
-            }}
-            disabled={categoryDisabled}
+            aria-label="หมวดหมู่สินค้า"
+            value={categoryId === '' ? '' : categoryId}
+            onChange={(e) => update('categoryId', e.target.value)}
+            className="border px-3 py-2 rounded w-full text-sm"
           >
-            <option value="">{ph.category}</option>
-            {ensureSelectedOption(categories, selectedCatId).map((c) => (
-              <option key={c.id} value={String(c.id)}>{c.name}</option>
+            <option value="">{placeholders.category}</option>
+            {(categories || []).map((cat) => (
+              <option key={cat.id} value={cat.id}>{cat.name}</option>
             ))}
           </select>
-        </div>
-      )}
+        )}
 
-      {showType && (
-        <div>
-          <label htmlFor="cdg-type" className="sr-only">ประเภทสินค้า</label>
+        {!hide('productType') && (
           <select
-            id="cdg-type"
-            aria-label="เลือกประเภทสินค้า"
-            className={`border rounded px-3 py-2 w-full ${selectClassName} ${typeDisabled ? 'opacity-50 cursor-not-allowed' : ''}` }
-            value={selectedTypeId}
-            onChange={(e) => {
-              const next = e.target.value;
-              sameStyleEmit('productTypeId', next);
-            }}
+            aria-label="ประเภทสินค้า"
+            value={productTypeId === '' ? '' : productTypeId}
+            onChange={(e) => update('productTypeId', e.target.value)}
             disabled={typeDisabled}
+            className={`border px-3 py-2 rounded w-full text-sm ${typeDisabled ? 'bg-gray-100' : ''}`}
           >
-            <option value="">{ph.type}</option>
-            {filteredTypes.map((t) => (
-              <option key={t.id} value={String(t.id)}>{t.name}</option>
+            <option value="">{placeholders.productType}</option>
+            {filteredProductTypes.length === 0 && <option disabled value="">ไม่มีข้อมูล</option>}
+            {filteredProductTypes.map((type) => (
+              <option key={type.id} value={type.id}>{type.name}</option>
             ))}
           </select>
-        </div>
-      )}
+        )}
 
-      {showProfile && (
-        <div>
-          <label htmlFor="cdg-profile" className="sr-only">แบรนด์</label>
+        {!hide('productProfile') && (
           <select
-            id="cdg-profile"
-            aria-label="เลือกแบรนด์"
-            className={`border rounded px-3 py-2 w-full ${selectClassName} ${profileDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-            value={selectedProfileId}
-            onChange={(e) => {
-              const next = e.target.value;
-              sameStyleEmit('productProfileId', next);
-            }}
+            aria-label="แบรนด์/ยี่ห้อ"
+            value={productProfileId === '' ? '' : productProfileId}
+            onChange={(e) => update('productProfileId', e.target.value)}
             disabled={profileDisabled}
+            className={`border px-3 py-2 rounded w-full text-sm ${profileDisabled ? 'bg-gray-100' : ''}`}
           >
-            <option value="">{ph.profile}</option>
-            {filteredProfiles.map((p) => (
-              <option key={p.id} value={String(p.id)}>{p.name}</option>
+            <option value="">{placeholders.productProfile}</option>
+            {filteredProductProfiles.length === 0 && <option disabled value="">ไม่มีข้อมูล</option>}
+            {filteredProductProfiles.map((profile) => (
+              <option key={profile.id} value={profile.id}>{profile.name}</option>
             ))}
           </select>
+        )}
+
+        {!hide('template') && (
+          <select
+            aria-label="สเปกสินค้า"
+            value={productTemplateId === '' ? '' : productTemplateId }
+            onChange={(e) => update('productTemplateId', e.target.value)}
+            disabled={templateDisabled}
+            className={`border px-3 py-2 rounded w-full text-sm ${templateDisabled ? 'bg-gray-100' : ''}`}
+          >
+            <option value="">{placeholders.template}</option>
+            {filteredTemplates.length === 0 && <option disabled value="">ไม่มีข้อมูล</option>}
+            {filteredTemplates.map((temp) => (
+              <option key={temp.id} value={temp.id}>{temp.name}</option>
+            ))}
+          </select>
+        )}
+      </div>
+
+      {showSearch && (
+        <div className="mt-2">
+          <input
+            type="text"
+            placeholder="ค้นหาด้วยชื่อสินค้า / บาร์โค้ด"
+            value={searchText}
+            onChange={(e) => onSearchTextChange(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                onSearchCommit(searchText.trim());
+              }
+            }}
+            className="border px-3 py-2 rounded w-full text-sm"
+          />
         </div>
       )}
 
-      {showTemplate && (
-        <div>
-          <label htmlFor="cdg-template" className="sr-only">สเปกสินค้า (SKU)</label>
-          <select
-            id="cdg-template"
-            aria-label="เลือกสเปกสินค้า (SKU)"
-            className={`border rounded px-3 py-2 w-full ${selectClassName} ${templateDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-            value={selectedProductTemplateId}
-            onChange={(e) => {
-              const next = e.target.value;
-              sameStyleEmit('productTemplateId', next);
-            }}
-            disabled={templateDisabled}
+      {showReset && (
+        <div className="text-right">
+          <button
+            type="button"
+            onClick={handleReset}
+            className="text-sm text-blue-600 hover:underline"
           >
-            <option value="">{ph.template}</option>
-            {filteredTemplates.map((tp) => (
-              <option key={tp.id} value={String(tp.id)}>{tp.name}</option>
-            ))}
-          </select>
+            ล้างตัวกรอง
+          </button>
         </div>
       )}
     </div>
   );
 }
 
+
+ 

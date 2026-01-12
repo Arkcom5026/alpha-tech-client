@@ -5,12 +5,13 @@
 // ✅ ตารางใช้ร่วม (Expected/Scanned)
 // - scanned = true จะแสดงคอลัมน์ scannedAt
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 const AuditTable = ({
   items = [],
   loading = false,
   scanned = false,
+  highlightValue = '',
   page = 1,
   pageSize = 50,
   total = 0,
@@ -21,7 +22,27 @@ const AuditTable = ({
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   // ใช้สถานะภายในเพื่อแสดงค่าที่พิมพ์ แม้ parent ยังไม่อัปเดต q
   const [localQ, setLocalQ] = useState(q);
+  const debounceRef = useRef(null);
+  const debounceMs = 320;
+
   useEffect(() => { setLocalQ(q || ''); }, [q]);
+
+  // cleanup pending debounce
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, []);
+
+  // Highlight helpers (for latest scanned row)
+  const norm = (v) => String(v ?? '').trim().toLowerCase();
+  const isHighlightedRow = (it) => {
+    const hv = norm(highlightValue);
+    if (!hv) return false;
+    const b = norm(it?.barcode);
+    const sn = norm(it?.serialNumber || it?.sn || it?.serialNo);
+    return hv === b || hv === sn;
+  };
 
   return (
     <div className="space-y-2">
@@ -32,7 +53,22 @@ const AuditTable = ({
           className="border rounded px-3 py-2 w-80 md:w-96"
           placeholder="ค้นหา: barcode / SN / ชื่อสินค้า / รุ่น"
           value={localQ}
-          onChange={(e) => { const v = e.target.value; setLocalQ(v); onSearch?.(v); }}
+          onChange={(e) => {
+            const v = e.target.value;
+            setLocalQ(v);
+            if (!onSearch) return;
+            if (debounceRef.current) clearTimeout(debounceRef.current);
+            debounceRef.current = setTimeout(() => {
+              onSearch(v);
+            }, debounceMs);
+          }}
+          onKeyDown={(e) => {
+            if (e.key !== 'Enter') return;
+            e.preventDefault();
+            if (!onSearch) return;
+            if (debounceRef.current) clearTimeout(debounceRef.current);
+            onSearch(localQ);
+          }}
         />
         <div className="flex items-center gap-2 text-xs">
           <div className="text-gray-500">{total} รายการ</div>
@@ -63,7 +99,7 @@ const AuditTable = ({
               </tr>
             ) : (
               items.map((it, idx) => (
-                <tr key={it.id} className="odd:bg-white even:bg-gray-50">
+                <tr key={it.id} className={`odd:bg-white even:bg-gray-50 ${isHighlightedRow(it) ? 'ring-2 ring-blue-200 bg-blue-50/40' : ''}`}>
                   <td className="p-2 border-b">{(page - 1) * pageSize + idx + 1}</td>
                   <td className="p-2 border-b font-mono">{it.barcode}</td>
                   <td className="p-2 border-b font-mono">{it.serialNumber || it.sn || it.serialNo || '-'}</td>

@@ -1,3 +1,6 @@
+
+
+
 // ✅ src/routes/stockRoutes.jsx
 import StockDashboardPage from "@/features/pos/pages/stock/StockDashboardPage";
 import ListProductPage from "@/features/product/pages/ListProductPage";
@@ -88,7 +91,7 @@ const stockRoutes = {
     },
 
     {
-      path: 'stock-adit',
+      path: 'stock-audit',
       children: [
         { index: true, element: <ReadyToSellAuditPage />, },
       ]
@@ -98,3 +101,5 @@ const stockRoutes = {
 };
 
 export default stockRoutes;
+
+

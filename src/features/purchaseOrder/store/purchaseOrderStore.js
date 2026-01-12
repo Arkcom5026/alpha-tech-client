@@ -1,9 +1,10 @@
+
+
 // ✅ purchaseOrderStore.js (updated to align with current Form usage + store naming standard)
 import { create } from 'zustand';
 import { getProducts } from '@/features/product/api/productApi';
 import {
   createPurchaseOrder,
-  createPurchaseOrderWithAdvance,
   deletePurchaseOrder,
   getEligiblePurchaseOrders,
   getPurchaseOrderById,
@@ -13,7 +14,7 @@ import {
   getPurchaseOrdersBySupplier,
 } from '../api/purchaseOrderApi';
 
-import { useBranchStore } from '@/features/branch/store/branchStore';
+// NOTE: Option A — FE ห้ามส่ง branchId ไป backend (BE ต้องอ่านจาก JWT/employee context เท่านั้น)
 
 const usePurchaseOrderStore = create((set, get) => ({
   // --- State ---
@@ -32,11 +33,9 @@ const usePurchaseOrderStore = create((set, get) => ({
 
   // ✅ อัปเดตใหม่: รองรับ search และ status filter
   fetchAllPurchaseOrders: async ({ search = '', status = 'pending,partially_received' } = {}) => {
-    const branchId = useBranchStore.getState().selectedBranchId;
-    if (!branchId) return;
     set({ loading: true });
     try {
-      const data = await getPurchaseOrders({ search, status, branchId });
+      const data = await getPurchaseOrders({ search, status });
       set({ purchaseOrders: data, loading: false });
     } catch (err) {
       console.error('❌ fetchAllPurchaseOrders error:', err);
@@ -45,12 +44,11 @@ const usePurchaseOrderStore = create((set, get) => ({
   },
   fetchAllPurchaseOrdersAction: async (args) => get().fetchAllPurchaseOrders(args),
 
+  
   fetchEligiblePurchaseOrders: async () => {
-    const branchId = useBranchStore.getState().selectedBranchId;
-    if (!branchId) return;
     set({ loading: true });
     try {
-      const data = await getEligiblePurchaseOrders(branchId);
+      const data = await getEligiblePurchaseOrders();
       set({ eligiblePOs: data, loading: false });
     } catch (err) {
       console.error('❌ fetchEligiblePurchaseOrders error:', err);
@@ -97,14 +95,19 @@ const usePurchaseOrderStore = create((set, get) => ({
   createPurchaseOrderAction: async (poData) => get().createPurchaseOrder(poData),
 
   createPurchaseOrderWithAdvance: async (poData) => {
-    try {
-      const newPO = await createPurchaseOrderWithAdvance(poData);
-      set((state) => ({ purchaseOrders: [newPO, ...state.purchaseOrders] }));
-      return newPO;
-    } catch (err) {
-      console.error('❌ createPurchaseOrderWithAdvance error:', err);
+    // ✅ Option A: Create PO ไม่รองรับ advancePaymentsUsed
+    // คงชื่อฟังก์ชันไว้กันจุดที่เรียกเดิมพัง แต่จะ reject ชัดเจนให้แก้ไปใช้ createPurchaseOrderAction แทน
+    const hasAdvance = Array.isArray(poData?.advancePaymentsUsed) && poData.advancePaymentsUsed.length > 0;
+    if (hasAdvance) {
+      const err = new Error(
+        'ขั้นสร้างใบสั่งซื้อ (PO) ไม่รองรับการใช้เงินล่วงหน้า (advancePaymentsUsed) — กรุณาสร้าง PO แบบปกติ และไปผูก/ตัดชำระเงินในขั้นตอนจ่ายเงิน Supplier ภายหลัง'
+      );
+      err.code = 'PO_ADVANCE_NOT_ALLOWED';
       throw err;
     }
+
+    // fallback: สร้าง PO ปกติ
+    return get().createPurchaseOrder(poData);
   },
   createPurchaseOrderWithAdvanceAction: async (poData) => get().createPurchaseOrderWithAdvance(poData),
 

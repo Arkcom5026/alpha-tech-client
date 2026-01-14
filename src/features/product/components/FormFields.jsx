@@ -1,5 +1,6 @@
 
 
+
 // ✅ src/features/product/components/FormFields.jsx
 import React from 'react';
 import { Controller, useWatch } from 'react-hook-form';
@@ -78,8 +79,14 @@ export default function FormFields({ register, errors, control, showInitialQty =
           <Controller
             name="branchPrice.costPrice"
             control={control}
-            
-            rules={{ valueAsNumber: true, min: { value: 0, message: 'ราคาทุนต้องไม่ติดลบ' } }}
+            rules={{
+              valueAsNumber: true,
+              validate: (v) => {
+                const n = Number.parseFloat(String(v ?? ''));
+                if (!Number.isFinite(n)) return 'กรุณาระบุราคาทุน';
+                return n > 0 || 'ต้องกำหนดราคาทุนมากกว่า 0';
+              },
+            }}
             render={({ field }) => (
               <PaymentInput
                 title="ราคาทุน"

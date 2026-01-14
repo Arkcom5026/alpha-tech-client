@@ -15,17 +15,25 @@ const ProductSearchTable = ({ results = [], onAdd }) => {
   const [costPrices, setCostPrices] = useState({}); // { [productId]: string }
   const [removedIds, setRemovedIds] = useState([]);
 
+  // ✅ UI-based error ต่อแถว (ห้ามใช้ alert/toast)
+  const [rowErrors, setRowErrors] = useState({}); // { [productId]: string }
+
+  const setRowError = (id, msg) => {
+    setRowErrors((prev) => ({ ...prev, [id]: msg }));
+  };
+
   const handleQuantityChange = (id, value) => {
     // อนุญาตเฉพาะตัวเลขบวก (จำนวนเต็ม) หรือค่าว่างระหว่างพิมพ์
     const cleaned = value.replace(/[^0-9]/g, '');
     setQuantities((prev) => ({ ...prev, [id]: cleaned }));
+    if (rowErrors[id]) setRowError(id, '');
   };
 
   const handleCostPriceChange = (id, value) => {
     // อนุญาตเฉพาะตัวเลขและจุดทศนิยมเดียว หรือค่าว่าง
-    const cleaned = value.replace(/[^0-9.]/g, '')
-      .replace(/(\..*)\./g, '$1'); // ป้องกันหลายจุด
+    const cleaned = value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1'); // ป้องกันหลายจุด
     setCostPrices((prev) => ({ ...prev, [id]: cleaned }));
+    if (rowErrors[id]) setRowError(id, '');
   };
 
   const toQty = (raw) => {
@@ -43,6 +51,12 @@ const ProductSearchTable = ({ results = [], onAdd }) => {
   const handleAdd = (product) => {
     const qty = toQty(quantities[product.id]);
     const cost = toCost(costPrices[product.id], product.costPrice ?? 0);
+
+    // ✅ กันตั้งแต่ต้นทาง: ไม่ให้เพิ่มถ้าราคาทุน = 0
+    if (!Number.isFinite(cost) || cost <= 0) {
+      setRowError(product.id, 'ไม่สามารถเพิ่มรายการได้: ต้องกำหนดราคาทุนก่อน (มากกว่า 0)');
+      return;
+    }
 
     onAdd({
       id: product.id,
@@ -65,6 +79,12 @@ const ProductSearchTable = ({ results = [], onAdd }) => {
     });
 
     setCostPrices((prev) => {
+      const updated = { ...prev };
+      delete updated[product.id];
+      return updated;
+    });
+
+    setRowErrors((prev) => {
       const updated = { ...prev };
       delete updated[product.id];
       return updated;
@@ -156,8 +176,13 @@ const ProductSearchTable = ({ results = [], onAdd }) => {
                   </TableCell>
                   <TableCell className="text-center align-middle">{total.toLocaleString()} ฿</TableCell>
                   <TableCell className="text-center align-middle">
-                    <div className="flex justify-center">
+                    <div className="flex flex-col items-center justify-center gap-1">
                       <StandardActionButtons onAdd={() => handleAdd(product)} />
+                      {!!rowErrors[product.id] && (
+                        <div className="text-xs text-red-600" role="alert" aria-live="assertive">
+                          {rowErrors[product.id]}
+                        </div>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>

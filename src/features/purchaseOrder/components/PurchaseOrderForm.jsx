@@ -1,7 +1,6 @@
 
 
 
-
 // PurchaseOrderForm.jsx
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -35,6 +34,11 @@ const PurchaseOrderForm = ({
   searchText = '',
   onSearchTextChange = () => {},
 }) => {
+  // ✅ helper: ตรวจว่าเป็นจำนวนเงินที่มากกว่า 0 (กันบิลล้มเมื่อ BE บังคับ costPrice > 0)
+  const isPositiveMoney = (v) => {
+    const n = Number.parseFloat(String(v ?? ''));
+    return Number.isFinite(n) && n > 0;
+  };
   const { id } = useParams();
   const navigate = useNavigate();
 
@@ -144,6 +148,22 @@ const PurchaseOrderForm = ({
       return;
     }
 
+    // ✅ กันอีกชั้น: ถ้ามีรายการใดราคาทุนเป็น 0/ว่าง → ไม่ให้บันทึก (UI-based)
+    const zeroCostProducts = products.filter((p) => !isPositiveMoney(p?.costPrice));
+    if (zeroCostProducts.length > 0) {
+      const names = zeroCostProducts
+        .map((p) => p?.name || '-')
+        .slice(0, 5);
+
+      setSubmitError(
+        'ไม่สามารถบันทึกได้: กรุณากำหนดราคาทุนให้มากกว่า 0 ก่อน (พบราคาเป็น 0 ใน: ' +
+          names.join(', ') +
+          (zeroCostProducts.length > 5 ? ' ...' : '') +
+          ')'
+      );
+      return;
+    }
+
     // ✅ Sanitize items ให้เป็น number 100% ป้องกันกรณีเลือกหลายรายการแล้ว BE reject (string/NaN/empty)
     const safeItems = products
       .map((p) => {
@@ -154,7 +174,7 @@ const PurchaseOrderForm = ({
         return {
           productId,
           quantity: Number.isFinite(quantity) && quantity > 0 ? quantity : 1,
-          costPrice: Number.isFinite(costPrice) && costPrice >= 0 ? costPrice : 0,
+          costPrice: Number.isFinite(costPrice) && costPrice > 0 ? costPrice : 0,
         };
       })
       .filter((it) => Number.isFinite(it.productId) && it.productId > 0);
@@ -375,12 +395,6 @@ const PurchaseOrderForm = ({
 };
 
 export default PurchaseOrderForm;
-
-
-
-
-
-
 
 
 

@@ -1,9 +1,11 @@
+
 // src/pages/pos/barcode/PreviewBarcodePage.jsx
 
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import useBarcodeStore from '@/features/barcode/store/barcodeStore';
 import BarcodeWithQRRenderer from '@/components/shared/barcode/BarcodeWithQRRenderer';
+import c39FontUrl from '@/assets/fonts/c39hrp24dhtt.ttf?url';
 import usePurchaseOrderReceiptStore from '@/features/purchaseOrderReceipt/store/purchaseOrderReceiptStore';
 
 const PreviewBarcodePage = () => {
@@ -91,20 +93,26 @@ const PreviewBarcodePage = () => {
   return (
     <>
       <style>{`
-        /* ✅ Code39 Font: วางไฟล์ฟอนต์ไว้ที่ /public/fonts/C39HrP24DhTt.ttf */
+        /* ✅ Code39 Font (Vite-safe): แนะนำเก็บไฟล์ไว้ที่ src/assets/fonts/C39HrP24DhTt.ttf
+           แล้วให้ Vite bundle ให้เอง (กัน 404 จาก /public หรือชื่อไฟล์ไม่ตรง)
+        */
         @font-face {
           font-family: 'C39HrP24DhTt';
-          src: url('/fonts/C39HrP24DhTt.ttf') format('truetype');
+          /* ✅ path ต้องอ้างจากไฟล์นี้ไปยัง src/assets/fonts และต้องตรงตัวพิมพ์เล็ก-ใหญ่ */
+          src: url('${c39FontUrl}') format('truetype');
           font-weight: normal;
           font-style: normal;
+          font-display: swap;
         }
 
-        /* ✅ เพิ่ม letter-spacing ให้เหมือนฉลากมาตรฐาน */
-        .c39-font {
-          font-family: 'C39HrP24DhTt', monospace;
-          /* ✅ ขยายระยะห่างตัวอักษรให้ใกล้มาตรฐานฉลาก */
-          letter-spacing: 8px; /* ขยายระยะตัวเลขให้กว้างขึ้นตามตัวอย่าง */
+        /* ✅ LIST (font-only): ฟอนต์สำหรับวาดแท่งบาร์ (Code39) */
+        .c39-barcode {
+          font-family: 'C39HrP24DhTt', monospace !important;
+          letter-spacing: 0; /* ให้ฟอนต์คุม spacing ของแท่งเอง */
+          white-space: nowrap;
         }
+
+        
 
         @media print {
           body { margin: 0; padding: 0; background: white; }
@@ -126,7 +134,7 @@ const PreviewBarcodePage = () => {
           /* ✅ โหมดมาตรฐาน (LIST) แบบตัวอย่าง */
           .print-area.is-list { justify-content: flex-start !important; }
           .print-area.is-list .barcode-cell {
-            margin: 0.5mm 0 !important;
+            margin: 1mm 0 !important; /* เพิ่มระยะห่างแนวตั้งระหว่างบาร์โค้ด */
             padding: 0 !important;
             border: none !important;
           }
@@ -254,21 +262,48 @@ const PreviewBarcodePage = () => {
                 }`}
               >
                 {/* ✅ แสดงชนิดบาร์โค้ดเฉพาะ SN เท่านั้น */}
-                
+                {printLayout === 'list' ? (
+                  <div className="flex flex-col items-center justify-center">
+                    {/* LIST = font-only (Code39) เพื่อให้ไม่กระทบของเดิม */}
+                    {showBarcode ? (
+                      <div
+                        className="c39-barcode"
+                        style={{ fontSize: `${effectiveBarcodeHeight}px`, lineHeight: 1 }}
+                      >
+                        {`*${item.barcode}*`}
+                      </div>
+                    ) : null}
 
-                <BarcodeWithQRRenderer
-                  barcodeValue={showBarcode ? item.barcode : null}
-                  qrValue={item.kind === 'SN' && showQR ? item.barcode : null}
-                  productName={printLayout === 'list' ? null : item.productName || 'ชื่อสินค้าไม่พบ'}
-                  barcodeHeight={effectiveBarcodeHeight}
-                  barcodeWidth={barcodeWidth}
-                  fontSize={6}
-                  marginTopText={-4}
-                  layout={printLayout === 'list' ? 'list-vertical' : 'grid'}
-                  barcodeFormat={printLayout === 'list' ? 'CODE39' : undefined}
-                  showAsteriskText={printLayout === 'list'}
-                  useC39Font={printLayout === 'list'}
-                />
+                    
+
+                    {/* QR (ถ้าต้องการ) */}
+                    {item.kind === 'SN' && showQR ? (
+                      <div className="mt-1">
+                        <BarcodeWithQRRenderer
+                          barcodeValue={null}
+                          qrValue={item.barcode}
+                          productName={null}
+                          barcodeHeight={0}
+                          barcodeWidth={0}
+                          fontSize={0}
+                          marginTopText={0}
+                          layout="list-vertical"
+                        />
+                      </div>
+                    ) : null}
+                  </div>
+                ) : (
+                  <BarcodeWithQRRenderer
+                    barcodeValue={showBarcode ? item.barcode : null}
+                    qrValue={item.kind === 'SN' && showQR ? item.barcode : null}
+                    productName={item.productName || 'ชื่อสินค้าไม่พบ'}
+                    barcodeHeight={effectiveBarcodeHeight}
+                    barcodeWidth={barcodeWidth}
+                    fontSize={6}
+                    marginTopText={-4}
+                    layout="grid"
+                  />
+                )}
               </div>
             ))}
           </div>
@@ -279,3 +314,18 @@ const PreviewBarcodePage = () => {
 };
 
 export default PreviewBarcodePage;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

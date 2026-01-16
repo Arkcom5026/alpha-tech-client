@@ -17,8 +17,8 @@ const PreviewBarcodePage = () => {
   const [loaded, setLoaded] = useState(false);
 
   // ✅ ขนาดบาร์โค้ด (ปรับได้)
-  const [barcodeHeight, setBarcodeHeight] = useState(16);
-  const [barcodeWidth, setBarcodeWidth] = useState(1.1);
+  const [barcodeHeight, setBarcodeHeight] = useState(30);
+  const [barcodeWidth, setBarcodeWidth] = useState(0.8);
 
   // ✅ จำนวนคอลัมน์ (โหมด grid เท่านั้น)
   const [columns, setColumns] = useState(10);
@@ -28,11 +28,9 @@ const PreviewBarcodePage = () => {
   // - list: แบบตัวอย่างมาตรฐาน (เรียงแนวตั้ง 1 คอลัมน์ ชิด ๆ)
   const [printLayout, setPrintLayout] = useState('grid');
 
-  // ✅ ความสูงอัตโนมัติสำหรับโหมด LIST (ต้องประกาศหลัง printLayout)
-  const effectiveBarcodeHeight = useMemo(
-    () => (printLayout === 'list' ? 40 : barcodeHeight),
-    [printLayout, barcodeHeight]
-  );
+  // ✅ ความสูงบาร์โค้ดที่ใช้จริง (LIST/GRID)
+  // หมายเหตุ: โหมด LIST (font-only) จะใช้เทคนิค scaleY เพื่อ “ลดสูง” โดยไม่ทำให้ “แคบลง”
+  const effectiveBarcodeHeight = useMemo(() => barcodeHeight, [barcodeHeight]);
 
   const [showBarcode, setShowBarcode] = useState(true);
   const [showQR, setShowQR] = useState(false);
@@ -112,7 +110,14 @@ const PreviewBarcodePage = () => {
           white-space: nowrap;
         }
 
-        
+        /* ✅ โหมด LIST: ระยะห่าง “ตอนพรีวิวบนจอ” (หน่วย px จะเห็นผลชัด)
+           หมายเหตุ: ตอนพิมพ์จริงจะ override เป็น mm ใน @media print อีกที
+        */
+        .print-area.is-list .barcode-cell {
+          margin: 16px 0; /* ~4mm บนหน้าจอ 96dpi */
+          padding: 0;
+          border: none;
+        }
 
         @media print {
           body { margin: 0; padding: 0; background: white; }
@@ -134,7 +139,7 @@ const PreviewBarcodePage = () => {
           /* ✅ โหมดมาตรฐาน (LIST) แบบตัวอย่าง */
           .print-area.is-list { justify-content: flex-start !important; }
           .print-area.is-list .barcode-cell {
-            margin: 1mm 0 !important; /* เพิ่มระยะห่างแนวตั้งระหว่างบาร์โค้ด */
+            margin: 1.5mm 0 !important; /* เพิ่มระยะห่างแนวตั้งระหว่างบาร์โค้ด */
             padding: 0 !important;
             border: none !important;
           }
@@ -264,17 +269,33 @@ const PreviewBarcodePage = () => {
                 {/* ✅ แสดงชนิดบาร์โค้ดเฉพาะ SN เท่านั้น */}
                 {printLayout === 'list' ? (
                   <div className="flex flex-col items-center justify-center">
-                    {/* LIST = font-only (Code39) เพื่อให้ไม่กระทบของเดิม */}
+                    {/* LIST = font-only (Code39) */}
                     {showBarcode ? (
-                      <div
-                        className="c39-barcode"
-                        style={{ fontSize: `${effectiveBarcodeHeight}px`, lineHeight: 1 }}
-                      >
-                        {`*${item.barcode}*`}
-                      </div>
-                    ) : null}
+                      (() => {
+                        // ล็อก “ความกว้าง/ความหนาแท่ง” ด้วย baseFontSize
+                        // แล้วคุม “ความสูงจริง” ด้วย scaleY (ไม่ทำให้แคบลงตาม)
+                        const baseFontSize = 28; // แนะนำ 32/36/40 (ยิ่งมาก ยิ่งกว้าง)
+                        const safeHeight = Number.isFinite(Number(effectiveBarcodeHeight))
+                          ? Number(effectiveBarcodeHeight)
+                          : 40;
+                        const scaleY = Math.max(0.2, safeHeight / baseFontSize);
 
-                    
+                        return (
+                          <div
+                            className="c39-barcode"
+                            style={{
+                              fontSize: `${baseFontSize}px`,
+                              lineHeight: 1,
+                              display: 'inline-block',
+                              transform: `scaleY(${scaleY})`,
+                              transformOrigin: 'center top',
+                            }}
+                          >
+                            {`*${item.barcode}*`}
+                          </div>
+                        );
+                      })()
+                    ) : null}
 
                     {/* QR (ถ้าต้องการ) */}
                     {item.kind === 'SN' && showQR ? (
@@ -314,6 +335,8 @@ const PreviewBarcodePage = () => {
 };
 
 export default PreviewBarcodePage;
+
+
 
 
 

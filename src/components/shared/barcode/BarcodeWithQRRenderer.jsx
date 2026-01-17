@@ -1,4 +1,5 @@
 
+
 // ✅ BarcodeWithQRRenderer (รองรับโหมด LIST + Code39 + แสดง *...* + รองรับฟอนต์ C39HrP24DhTt)
 import React from "react";
 import QRCode from "react-qr-code";
@@ -23,22 +24,28 @@ const BarcodeWithQRRenderer = ({
   marginTopText = 2,
   layout = "grid",
   barcodeFormat,
+  // ✅ คุมการแสดงชื่อสินค้า (บางหน้าจะ render ชื่อเองแล้ว)
+  showProductName = true,
 }) => {
   if (!barcodeValue && !qrValue) return null;
 
   const isList = layout === "list-vertical";
+  const shouldShowName = !isList && showProductName && (productName ?? '').toString().trim() !== '';
 
   return (
-    <div className="w-full h-full flex flex-col items-center justify-center">
-      {/* ✅ โหมดเดิม: แสดงชื่อสินค้า */}
-      {!isList && (
+    <div
+      className="inline-flex flex-col items-center justify-center"
+      style={{ width: 'fit-content', maxWidth: '100%' }}
+    >
+      {/* ✅ โหมดเดิม: แสดงชื่อสินค้า (ถ้าเปิดใช้) */}
+      {shouldShowName ? (
         <div
-          className="text-xs font-medium text-center truncate w-full"
-          style={{ marginBottom: `${marginTopText}px`, fontSize: `${fontSize}px` }}
+          className="text-xs font-medium text-center"
+          style={{ marginBottom: `${marginTopText}px`, fontSize: `${fontSize}px`, width: '100%' }}
         >
-          {productName || "-"}
+          {productName}
         </div>
-      )}
+      ) : null}
 
       {barcodeValue && (
         <div className={isList ? 'm-0 p-0' : 'my-1'}>

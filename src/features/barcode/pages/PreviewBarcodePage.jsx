@@ -7,6 +7,244 @@ import useBarcodeStore from '@/features/barcode/store/barcodeStore';
 import c39FontUrl from '@/assets/fonts/c39hrp24dhtt.ttf?url';
 import usePurchaseOrderReceiptStore from '@/features/purchaseOrderReceipt/store/purchaseOrderReceiptStore';
 
+// ✅ Tiny QR (Version 1-L, EC=L, Mask 0) — no external deps
+// - ใช้ Byte mode (0100) เพื่อความเข้ากันได้/เสถียรในการสแกน
+// - ทำให้ “ขนาดโมดูลเป็นจำนวนเต็ม” เสมอ เพื่อไม่ให้ภาพเบลอเวลา print/preview (สาเหตุหลักที่สแกนไม่ติด)
+// - Version 1-L รองรับข้อมูล ~17 bytes → เหมาะกับ barcode ส่วนใหญ่
+const QrSvg = ({ value, size = 100 }) => {
+  const v = (value ?? '').toString().trim();
+
+  // ---- GF(256) tables (primitive poly 0x11d)
+  const gf = React.useMemo(() => {
+    const exp = new Array(512).fill(0);
+    const log = new Array(256).fill(0);
+    let x = 1;
+    for (let i = 0; i < 255; i++) {
+      exp[i] = x;
+      log[x] = i;
+      x <<= 1;
+      if (x & 0x100) x ^= 0x11d;
+    }
+    for (let i = 255; i < 512; i++) exp[i] = exp[i - 255];
+    return { exp, log };
+  }, []);
+
+  const gfMul = React.useCallback(
+    (a, b) => {
+      if (a === 0 || b === 0) return 0;
+      return gf.exp[gf.log[a] + gf.log[b]];
+    },
+    [gf]
+  );
+
+  // RS encode for Version 1-L: 19 data cw, 7 ecc cw
+  // Generator (degree 7) for QR: [87,229,146,149,238,102,21]
+  const rsEncode = React.useCallback(
+    (dataCw) => {
+      const gen = [87, 229, 146, 149, 238, 102, 21];
+      const ecc = new Array(7).fill(0);
+      for (let i = 0; i < dataCw.length; i++) {
+        const factor = dataCw[i] ^ ecc[0];
+        // shift left
+        for (let j = 0; j < 6; j++) ecc[j] = ecc[j + 1];
+        ecc[6] = 0;
+        // apply generator
+        for (let j = 0; j < 7; j++) {
+          ecc[j] ^= gfMul(gen[j], factor);
+        }
+      }
+      return ecc;
+    },
+    [gfMul]
+  );
+
+  const matrix = React.useMemo(() => {
+    const N = 21;
+    const m = Array.from({ length: N }, () => new Array(N).fill(null));
+
+    const set = (r, c, val) => {
+      if (r < 0 || c < 0 || r >= N || c >= N) return;
+      m[r][c] = val;
+    };
+
+    const placeFinder = (r0, c0) => {
+      for (let r = -1; r <= 7; r++) {
+        for (let c = -1; c <= 7; c++) {
+          const rr = r0 + r;
+          const cc = c0 + c;
+          if (rr < 0 || cc < 0 || rr >= N || cc >= N) continue;
+          const in7 = r >= 0 && r <= 6 && c >= 0 && c <= 6;
+          const onBorder = r === 0 || r === 6 || c === 0 || c === 6;
+          const in3 = r >= 2 && r <= 4 && c >= 2 && c <= 4;
+          if (!in7) set(rr, cc, 0);
+          else set(rr, cc, onBorder || in3 ? 1 : 0);
+        }
+      }
+    };
+
+    placeFinder(0, 0);
+    placeFinder(0, N - 7);
+    placeFinder(N - 7, 0);
+
+    // timing patterns
+    for (let i = 8; i <= N - 9; i++) {
+      set(6, i, i % 2 === 0 ? 1 : 0);
+      set(i, 6, i % 2 === 0 ? 1 : 0);
+    }
+
+    // dark module
+    set(13, 8, 1);
+
+    const isReserved = (r, c) => {
+      if (r === 6 || c === 6) return true;
+      const inTL = r <= 8 && c <= 8;
+      const inTR = r <= 8 && c >= N - 9;
+      const inBL = r >= N - 9 && c <= 8;
+      if (inTL || inTR || inBL) return true;
+      if (r === 13 && c === 8) return true;
+      // format info areas
+      if (r === 8 || c === 8) {
+        if (!(r === 8 && c === 8)) return true;
+      }
+      return false;
+    };
+
+    // ✅ Byte mode (0100)
+    // Version 1-L รองรับ ~17 bytes (เพื่อไม่ให้ overflow)
+    const bytes = Array.from(v, (ch) => ch.charCodeAt(0) & 0xff).slice(0, 17);
+
+    const bits = [];
+    const pushBits = (num, len) => {
+      for (let i = len - 1; i >= 0; i--) bits.push((num >> i) & 1);
+    };
+
+    pushBits(0b0100, 4); // mode
+    pushBits(bytes.length, 8); // count
+    for (let i = 0; i < bytes.length; i++) pushBits(bytes[i], 8);
+
+    const maxDataBits = 19 * 8;
+    const remainBits = maxDataBits - bits.length;
+    if (remainBits > 0) pushBits(0, Math.min(4, remainBits));
+    while (bits.length % 8 !== 0) bits.push(0);
+
+    const data = [];
+    for (let i = 0; i < bits.length; i += 8) {
+      let b = 0;
+      for (let j = 0; j < 8; j++) b = (b << 1) | bits[i + j];
+      data.push(b);
+    }
+
+    // pad bytes
+    while (data.length < 19) data.push(data.length % 2 === 0 ? 0xec : 0x11);
+
+    const ecc = rsEncode(data);
+    const codewords = [...data, ...ecc];
+
+    const stream = [];
+    codewords.forEach((cw) => {
+      for (let i = 7; i >= 0; i--) stream.push((cw >> i) & 1);
+    });
+
+    // place data (mask 0)
+    let bitIdx = 0;
+    let col = N - 1;
+    let dirUp = true;
+    const mask0 = (r, c) => ((r + c) % 2 === 0 ? 1 : 0);
+
+    while (col > 0) {
+      if (col === 6) col--; // skip timing col
+      for (let rowStep = 0; rowStep < N; rowStep++) {
+        const r = dirUp ? N - 1 - rowStep : rowStep;
+        for (let dc = 0; dc < 2; dc++) {
+          const c = col - dc;
+          if (isReserved(r, c)) continue;
+          const bit = stream[bitIdx++] ?? 0;
+          set(r, c, bit ^ mask0(r, c));
+        }
+      }
+      col -= 2;
+      dirUp = !dirUp;
+    }
+
+    // format info: EC=L (01) + mask0 (000) => 01000
+    const formatData = 0b01000;
+    const bch15_5 = (val) => {
+      let v2 = val << 10;
+      const poly = 0x537;
+      for (let i = 14; i >= 10; i--) {
+        if ((v2 >> i) & 1) v2 ^= poly << (i - 10);
+      }
+      return (((val << 10) | (v2 & 0x3ff)) ^ 0x5412) & 0x7fff;
+    };
+    const fmt = bch15_5(formatData);
+    const fmtBits = [];
+    for (let i = 14; i >= 0; i--) fmtBits.push((fmt >> i) & 1);
+
+    const coordsA = [
+      [8, 0], [8, 1], [8, 2], [8, 3], [8, 4], [8, 5],
+      [8, 7], [8, 8], [7, 8], [5, 8], [4, 8], [3, 8], [2, 8], [1, 8], [0, 8],
+    ];
+    const coordsB = [
+      [N - 1, 8], [N - 2, 8], [N - 3, 8], [N - 4, 8], [N - 5, 8], [N - 6, 8], [N - 7, 8],
+      [8, N - 8], [8, N - 7], [8, N - 6], [8, N - 5], [8, N - 4], [8, N - 3], [8, N - 2], [8, N - 1],
+    ];
+
+    coordsA.forEach(([r, c], i) => set(r, c, fmtBits[i]));
+    coordsB.forEach(([r, c], i) => set(r, c, fmtBits[i]));
+
+    // fill remaining
+    for (let r = 0; r < N; r++) {
+      for (let c = 0; c < N; c++) {
+        if (m[r][c] === null) m[r][c] = 0;
+      }
+    }
+
+    return m;
+  }, [v, rsEncode]);
+
+  const N = 21;
+  const quiet = 4;
+  const total = N + quiet * 2; // 29
+
+  const target = Math.max(28, Number(size) || 110);
+  // ✅ “โมดูลต้องเป็นจำนวนเต็ม” เพื่อกันเบลอ/สแกนไม่ติด
+  const modulePx = Math.max(1, Math.round(target / total));
+  const px = modulePx * total;
+
+  const rects = [];
+  for (let r = 0; r < N; r++) {
+    for (let c = 0; c < N; c++) {
+      if (matrix[r][c] === 1) {
+        rects.push(
+          <rect
+            key={r + '-' + c}
+            x={(c + quiet) * modulePx}
+            y={(r + quiet) * modulePx}
+            width={modulePx}
+            height={modulePx}
+            fill="#000"
+          />
+        );
+      }
+    }
+  }
+
+  return (
+    <svg
+      width={px}
+      height={px}
+      viewBox={'0 0 ' + px + ' ' + px}
+      role="img"
+      aria-label="QR Code"
+      shapeRendering="crispEdges"
+      style={{ display: 'block' }}
+    >
+      <rect x="0" y="0" width={px} height={px} fill="#fff" />
+      {rects}
+    </svg>
+  );
+};
+
 const PreviewBarcodePage = () => {
   // ✅ ชื่อสินค้าสำหรับงานพิมพ์ (รองรับ Production)
   // - บังคับ “ไม่เกิน 2 บรรทัด” แบบ deterministic (ไม่พึ่ง line-clamp อย่างเดียว)
@@ -52,6 +290,25 @@ const PreviewBarcodePage = () => {
   const [isPrinting, setIsPrinting] = useState(false);
   const [fontSizePx, setFontSizePx] = useState(28);
 
+  // ✅ Toggle โหมดพิมพ์: Barcode / QR (default: barcode only)
+  // - ค่าเริ่มต้น: ปิด QR เสมอ (ผู้ใช้เป็นคนเลือก)
+  // - รองรับ: ปิด Barcode เพื่อพิมพ์ QR อย่างเดียว
+  const [showBarcode, setShowBarcode] = useState(true);
+  const [showQr, setShowQr] = useState(false);
+  const [qrSizePx, setQrSizePx] = useState(100);
+
+  // ✅ Option Guard for QR Size (production-safe)
+  // - กัน NaN/ค่าว่าง
+  // - บังคับช่วงให้สแกนได้จริงและไม่กินพื้นที่ label เกินจำเป็น
+  const clampQrSize = (value) => {
+    const num = Number(value);
+    if (!Number.isFinite(num)) return 100;
+
+    // min = 80px  (เล็กกว่านี้เริ่มสแกนยาก)
+    // max = 200px (ใหญ่เกินไปจะกินพื้นที่ label)
+    return Math.min(200, Math.max(80, num));
+  };
+
   // ✅ จำนวนคอลัมน์ (GRID)
   const [columns, setColumns] = useState(10);
   // (ลบแล้ว) effectiveBarcodeHeight / barcodeHeight — ใช้ font-only ไม่ต้องคุมความสูงด้วย state แยก
@@ -62,6 +319,12 @@ const PreviewBarcodePage = () => {
   const getApproxBarcodeWidthPx = useCallback(
     (barcode) => {
       const text = (barcode || '').toString();
+
+      // ✅ ถ้าปิด Barcode (พิมพ์เฉพาะ QR) → ใช้ความกว้างตาม QR เป็นหลัก
+      if (!showBarcode) {
+        return Math.max(48, Number(qrSizePx) || 48);
+      }
+
       // Code39 ต้องมี * ครอบ (start/stop)
       const len = Math.max(0, text.length + 2);
 
@@ -74,7 +337,7 @@ const PreviewBarcodePage = () => {
       const w = Math.round(len * fontSizePx * effectiveScaleX * k);
       return Math.max(48, w);
     },
-    [fontSizePx, fontScaleX, isPrinting]
+    [fontSizePx, fontScaleX, isPrinting, showBarcode, qrSizePx]
   );
 
   // ใช้ helper จาก store เพื่อขยายจำนวนดวงของ LOT ตาม qtyLabelsSuggested
@@ -410,6 +673,49 @@ const PreviewBarcodePage = () => {
               />
             </label>
 
+            {/* ✅ ผู้ใช้เลือกได้: พิมพ์ Barcode / พิมพ์ QR / หรือพิมพ์เฉพาะ QR */}
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={showBarcode}
+                onChange={(e) => {
+                  const next = e.target.checked;
+                  setShowBarcode(next);
+                  // ถ้าปิด Barcode แล้ว และยังไม่ได้เปิด QR → เปิด QR ให้อัตโนมัติ
+                  if (!next && !showQr) setShowQr(true);
+                }}
+              />
+              พิมพ์บาร์โค้ด
+            </label>
+
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={showQr}
+                onChange={(e) => {
+                  const next = e.target.checked;
+                  setShowQr(next);
+                  // ถ้าปิด QR แล้ว และยังไม่ได้เปิด Barcode → เปิด Barcode ให้อัตโนมัติ
+                  if (!next && !showBarcode) setShowBarcode(true);
+                }}
+              />
+              พิมพ์ QR Code
+            </label>
+
+            <label className="flex items-center gap-2">
+              ขนาด QR:
+              <input
+                type="number"
+                value={qrSizePx}
+                onChange={(e) => setQrSizePx(clampQrSize(e.target.value))}
+                onBlur={(e) => setQrSizePx(clampQrSize(e.target.value))}
+                className="w-20 border rounded px-2 py-1"
+                min={80}
+                max={200}
+                step={1}
+              />
+            </label>
+
 
             <label className="flex items-center gap-2">
               <input type="checkbox" checked={useSuggested} onChange={(e) => setUseSuggested(e.target.checked)} />
@@ -475,20 +781,38 @@ const PreviewBarcodePage = () => {
                     </div>
 
                     <div className="inline-block barcode-bars-wrap">
-                      <div
-                        ref={setBarcodeElRef(rowKey)}
-                        className="c39-barcode"
-                        style={{
-                          fontSize: `${fontSizePx}px`,
-                          lineHeight: 1,
-                          transform: isPrinting ? 'none' : `scaleX(${fontScaleX})`,
-                          transformOrigin: 'left top',
-                          display: 'inline-block',
-                          marginTop: '0px',
-                        }}
-                      >
-                        *{item.barcode}*
-                      </div>
+                      {showBarcode ? (
+                        <div
+                          ref={setBarcodeElRef(rowKey)}
+                          className="c39-barcode"
+                          style={{
+                            fontSize: `${fontSizePx}px`,
+                            lineHeight: 1,
+                            transform: isPrinting ? 'none' : `scaleX(${fontScaleX})`,
+                            transformOrigin: 'left top',
+                            display: 'inline-block',
+                            marginTop: '0px',
+                          }}
+                        >
+                          *{item.barcode}*
+                        </div>
+                      ) : null}
+
+                      {showQr ? (
+                        <div
+                          style={{
+                            marginTop: showBarcode ? '4px' : '0px',
+                            display: 'flex',
+                            justifyContent: 'center',
+                            width: '100%',
+                          }}
+                        >
+                          <QrSvg
+                            value={(item.barcode || '').toString()}
+                            size={clampQrSize(qrSizePx)}
+                          />
+                        </div>
+                      ) : null}
                     </div>
                   </div>
                 </div>
@@ -504,6 +828,9 @@ const PreviewBarcodePage = () => {
 };
 
 export default PreviewBarcodePage;
+
+
+
 
 
 

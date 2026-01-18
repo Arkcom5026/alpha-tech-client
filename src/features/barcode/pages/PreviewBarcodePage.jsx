@@ -1,26 +1,38 @@
 
 // src/pages/pos/barcode/PreviewBarcodePage.jsx
 
-import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import useBarcodeStore from '@/features/barcode/store/barcodeStore';
-import BarcodeWithQRRenderer from '@/components/shared/barcode/BarcodeWithQRRenderer';
 import c39FontUrl from '@/assets/fonts/c39hrp24dhtt.ttf?url';
 import usePurchaseOrderReceiptStore from '@/features/purchaseOrderReceipt/store/purchaseOrderReceiptStore';
 
 const PreviewBarcodePage = () => {
   // ✅ ชื่อสินค้าสำหรับงานพิมพ์ (รองรับ Production)
-  // - แสดงได้สูงสุด 2 บรรทัดด้วย CSS line-clamp
-  // - มี fallback ตัดตัวอักษรกรณีชื่อเป็นคำยาวติดกันมาก (กันล้น/แกว่ง)
-  const getListDisplayName = useCallback((item) => {
+  // - บังคับ “ไม่เกิน 2 บรรทัด” แบบ deterministic (ไม่พึ่ง line-clamp อย่างเดียว)
+  // - ใช้ความกว้างของบาร์โค้ด (px) เพื่อคำนวณจำนวนตัวอักษรสูงสุด
+  // - มี fallback กันเคสคำยาวติดกัน/ไม่มีช่องว่าง
+  const getListDisplayNameByWidth = useCallback((item, widthPx) => {
     const raw = (item?.productName || '').toString().trim();
     if (!raw) return 'ชื่อสินค้าไม่พบ';
 
-    // กันเคสคำยาวติดกัน/ไม่มีช่องว่าง: ตัดด้วยจำนวนตัวอักษรเพื่อให้ ellipsis ทำงานนิ่ง
-    const MAX_CHARS = 90; // ประมาณ 2 บรรทัดที่ font 11px บนหน้ากระดาษ
-    if (raw.length <= MAX_CHARS) return raw;
+    const w = Math.max(48, Number(widthPx) || 0);
 
-    const sliced = raw.slice(0, MAX_CHARS).trim();
+    // ✅ ปรับได้: font ชื่อสินค้า 11px, ค่าเฉลี่ยความกว้างตัวอักษร ~0.55em
+    // เพื่อกัน “หน้า Before Print” ที่บางครั้ง line-clamp เพี้ยนจนโผล่บรรทัดที่ 3
+    const NAME_FONT_PX = 11;
+    const AVG_CHAR_PX = NAME_FONT_PX * 0.55;
+
+    // ลดนิดเพื่อกัน padding/การปัดเศษของ Chrome
+    const safeW = Math.max(24, w - 6);
+
+    const charsPerLine = Math.max(8, Math.floor(safeW / AVG_CHAR_PX));
+    const maxChars = Math.max(16, charsPerLine * 2);
+
+    if (raw.length <= maxChars) return raw;
+
+    // ✅ ตัดแบบนิ่ง + ellipsis
+    const sliced = raw.slice(0, Math.max(0, maxChars - 1)).trim();
     return `${sliced}…`;
   }, []);
 
@@ -31,47 +43,66 @@ const PreviewBarcodePage = () => {
   const [loading, setLoading] = useState(false);
   const [loaded, setLoaded] = useState(false);
 
-  // ✅ ขนาดบาร์โค้ด (ปรับได้)
-  const [barcodeHeight, setBarcodeHeight] = useState(30);
-  const [barcodeWidth, setBarcodeWidth] = useState(0.8);
+  // ✅ โหมดพิมพ์ (Production): ใช้ font-only (Code39) เท่านั้น
+  // เหตุผล: สินค้าชิ้นเล็ก → ต้องย่อได้มากและยังสแกนเสถียร
+  const [fontScaleX, setFontScaleX] = useState(1.0);
 
-  // ✅ LIST (font-only): ปรับความกว้างบาร์โค้ดจาก UI (scaleX)
-  // 1.00 = ปกติ, 0.90 = แคบลงเล็กน้อย, 0.80 = แคบชัด
-  const [listWidthScale, setListWidthScale] = useState(0.9);
+  // ✅ กันพฤติกรรมไม่สม่ำเสมอของ Chrome Print Preview (บางเครื่อง/บางไดรเวอร์อาจไม่ apply transform: scaleX)
+  // เราจะ “ตรึงโหมดพิมพ์” ให้ใช้ความกว้างแบบไม่พึ่ง transform เพื่อให้ชื่อสินค้าไม่ล้นบาร์โค้ดในหน้า Before Print
+  const [isPrinting, setIsPrinting] = useState(false);
+  const [fontSizePx, setFontSizePx] = useState(28);
 
-  // ✅ จำนวนคอลัมน์ (โหมด grid เท่านั้น)
+  // ✅ จำนวนคอลัมน์ (GRID)
   const [columns, setColumns] = useState(10);
+  // (ลบแล้ว) effectiveBarcodeHeight / barcodeHeight — ใช้ font-only ไม่ต้องคุมความสูงด้วย state แยก
 
-  // ✅ โหมดรูปแบบการพิมพ์
-  // - grid: แบบเดิมหลายคอลัมน์
-  // - list: แบบเรียงแนวตั้ง 1 คอลัมน์ (font-only)
-  const [printLayout, setPrintLayout] = useState('grid');
+  // ✅ คุมความกว้าง “ชื่อสินค้า” ให้ไม่เกินบาร์โค้ด (Production-friendly)
+  // หมายเหตุ: หลีกเลี่ยงการวัด DOM เพราะ print preview ของ Chrome/Windows มัก scale/layout ต่างจากหน้าเว็บ
+  // ใช้การประมาณความกว้างจากจำนวนตัวอักษร + fontSize + scale แทน เพื่อให้ผลนิ่งทั้งหน้า Preview และหน้า Print
+  const getApproxBarcodeWidthPx = useCallback(
+    (barcode) => {
+      const text = (barcode || '').toString();
+      // Code39 ต้องมี * ครอบ (start/stop)
+      const len = Math.max(0, text.length + 2);
 
-  // ✅ ความสูงบาร์โค้ดที่ใช้จริง (LIST/GRID)
-  // หมายเหตุ: โหมด LIST (font-only) จะใช้ scaleY เพื่อ “ลดสูง” โดยไม่ทำให้ “แคบลง”
-  const effectiveBarcodeHeight = useMemo(() => barcodeHeight, [barcodeHeight]);
+      // ✅ สำคัญ: ตอนพิมพ์จริง/หน้า Before Print ให้ “ไม่พึ่ง transform scaleX”
+      // เพราะบางเครื่อง Print Preview จะ ignore transform ทำให้บาร์แคบลง แต่ชื่อยังยาว → ดูเหมือนล้นบาร์
+      const effectiveScaleX = isPrinting ? 1 : Math.max(0.6, Number(fontScaleX) || 1);
 
-  const [showBarcode, setShowBarcode] = useState(true);
-  const [showQR, setShowQR] = useState(false);
-
-  // ✅ วัด “ความกว้างจริงของบาร์โค้ด” แล้วเอาไปล็อกความกว้างของชื่อสินค้าให้เท่ากัน (กันชื่อดันให้กว้างเอง)
-  const [measuredBarcodeWidths, setMeasuredBarcodeWidths] = useState({});
-  const measureBarcodeWidth = useCallback((key, el) => {
-    if (!el) return;
-    // ใช้ RAF เพื่อให้ได้ขนาดหลัง layout/transform แล้ว
-    requestAnimationFrame(() => {
-      const rect = el.getBoundingClientRect();
-      const w = Math.max(0, Math.round(rect.width));
-      setMeasuredBarcodeWidths((prev) => {
-        if (prev[key] === w) return prev;
-        return { ...prev, [key]: w };
-      });
-    });
-  }, []);
+      // ค่าสัดส่วนนี้ตั้งใจให้ "กว้างพอ" (กันตัดบาร์) และนิ่งข้าม print preview
+      const k = 0.72; // px-per-char factor (tuned for Code39 glyph width)
+      const w = Math.round(len * fontSizePx * effectiveScaleX * k);
+      return Math.max(48, w);
+    },
+    [fontSizePx, fontScaleX, isPrinting]
+  );
 
   // ใช้ helper จาก store เพื่อขยายจำนวนดวงของ LOT ตาม qtyLabelsSuggested
   const getExpandedBarcodesForPrint = useBarcodeStore((s) => s.getExpandedBarcodesForPrint);
   const [useSuggested, setUseSuggested] = useState(true);
+
+  // ✅ วัด “ความกว้างบาร์โค้ดจริง” จาก DOM เพื่อให้ชื่อสินค้าไม่เกินบาร์โค้ด
+  // เหตุผล: Chrome Print Preview บางเครื่อง scale/ignore transform ทำให้ค่าประมาณเพี้ยน
+  const barcodeElsRef = useRef(new Map());
+  const [barcodeWidthMap, setBarcodeWidthMap] = useState({});
+
+  const setBarcodeElRef = useCallback((key) => (el) => {
+    if (!key) return;
+    if (el) barcodeElsRef.current.set(key, el);
+    else barcodeElsRef.current.delete(key);
+  }, []);
+
+  const measureBarcodeWidths = useCallback(() => {
+    const next = {};
+    barcodeElsRef.current.forEach((el, key) => {
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      const w = Math.round(rect?.width || 0);
+      if (w > 0) next[key] = Math.max(48, w);
+    });
+    setBarcodeWidthMap(next);
+  }, []);
+
   const expandedBarcodes = useMemo(
     () => getExpandedBarcodesForPrint(useSuggested),
     // NOTE: barcodes ใส่ไว้เพื่อ force re-memo เมื่อโหลดชุดใหม่
@@ -96,6 +127,91 @@ const PreviewBarcodePage = () => {
     }
   }, [receiptId, loaded, loading, handleLoadBarcodes]);
 
+  // ✅ Detect print mode (beforeprint/afterprint + matchMedia('print')) เพื่อให้ layout ในหน้า Before Print ไม่เพี้ยน
+  useEffect(() => {
+    const onBeforePrint = () => {
+      setIsPrinting(true);
+      // ✅ รอ layout print-mode (transform:none) แล้วค่อยวัดความกว้างจริง
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => measureBarcodeWidths());
+      });
+    };
+
+    const onAfterPrint = () => {
+      setIsPrinting(false);
+      // ✅ กลับมาโหมดปกติ วัดใหม่อีกครั้ง (transform: scaleX)
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => measureBarcodeWidths());
+      });
+    };
+
+    window.addEventListener('beforeprint', onBeforePrint);
+    window.addEventListener('afterprint', onAfterPrint);
+
+    // ✅ บางเครื่อง/บางไดรเวอร์อาจไม่ยิง beforeprint ตอนเปิด Print Preview
+    // ใช้ matchMedia('print') เป็น fallback เพื่อให้ isPrinting + measure ทำงานเสถียร
+    const mql = window.matchMedia?.('print');
+    const onMqlChange = (e) => {
+      const printing = !!e?.matches;
+      setIsPrinting(printing);
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => measureBarcodeWidths());
+      });
+    };
+
+    if (mql) {
+      if (typeof mql.addEventListener === 'function') mql.addEventListener('change', onMqlChange);
+      else if (typeof mql.addListener === 'function') mql.addListener(onMqlChange);
+    }
+
+    return () => {
+      window.removeEventListener('beforeprint', onBeforePrint);
+      window.removeEventListener('afterprint', onAfterPrint);
+
+      if (mql) {
+        if (typeof mql.removeEventListener === 'function') mql.removeEventListener('change', onMqlChange);
+        else if (typeof mql.removeListener === 'function') mql.removeListener(onMqlChange);
+      }
+    };
+  }, [measureBarcodeWidths]);
+
+  // ✅ วัดความกว้างเมื่อข้อมูล/การตั้งค่าเปลี่ยน (ทั้งหน้า Preview และหน้า Print)
+  useEffect(() => {
+    if (!loaded || expandedBarcodes.length === 0) return;
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => measureBarcodeWidths());
+    });
+  }, [loaded, expandedBarcodes.length, fontSizePx, fontScaleX, isPrinting, columns, measureBarcodeWidths]);
+
+  // ✅ บังคับวัดใหม่หลังฟอนต์โหลด (ลดความเพี้ยนใน Chrome/Windows Print Preview)
+  useEffect(() => {
+    if (!loaded || expandedBarcodes.length === 0) return;
+
+    let cancelled = false;
+
+    const run = async () => {
+      try {
+        if (document?.fonts?.ready) {
+          await document.fonts.ready;
+        }
+      } catch {
+        // ignore
+      }
+
+      if (cancelled) return;
+
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => measureBarcodeWidths());
+      });
+    };
+
+    run();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [loaded, expandedBarcodes.length, measureBarcodeWidths]);
+
   const handlePrint = () => {
     if (!loaded || barcodes.length === 0) return;
     window.print();
@@ -115,12 +231,13 @@ const PreviewBarcodePage = () => {
   };
 
   const gridStyle = useMemo(() => {
-    const colCount = printLayout === 'list' ? 1 : columns;
+    const colCount = Math.max(1, Number(columns) || 1);
     return {
-      gridTemplateColumns: `repeat(${colCount}, auto)`,
-      justifyContent: printLayout === 'list' ? 'flex-start' : 'center',
+      // ✅ minmax(0, max-content) ช่วยกันการขยายคอลัมน์เพราะข้อความยาวในบาง print preview
+      gridTemplateColumns: `repeat(${colCount}, minmax(0, max-content))`,
+      justifyContent: 'flex-start',
     };
-  }, [columns, printLayout]);
+  }, [columns]);
 
   return (
     <>
@@ -134,51 +251,73 @@ const PreviewBarcodePage = () => {
           font-display: swap;
         }
 
-        /* ✅ ชื่อสินค้า (ใช้ทั้ง LIST/GRID): 2 บรรทัด + ตัด … และ “กว้างเท่าบาร์โค้ด” (กว้างตาม .barcode-block) */
-        .barcode-product-name,
-        .list-product-name {
-          font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, 'Helvetica Neue', Arial, 'Noto Sans', 'Liberation Sans', sans-serif;
-          font-size: 11px;
-          line-height: 1.15;
-          letter-spacing: 0.4px;
-          margin-bottom: 2px;
-          text-align: center;
+        /* ✅ ชื่อสินค้า (font-only): กว้างตาม .barcode-block และตัด … */
 
-          /* ✅ clamp ทำงานต้องมี “ความกว้างที่ถูกจำกัดจริง” → เราจะล็อกผ่าน inline style จากการวัดความกว้างบาร์โค้ด */
-          display: -webkit-box;
-          -webkit-box-orient: vertical;
-          -webkit-line-clamp: 2;
-          overflow: hidden;
-          text-overflow: ellipsis;
+       .barcode-product-name {
+  position: relative;
+  z-index: 2;
+  background: #fff;
+  padding: 0 1px;
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, 'Helvetica Neue', Arial, 'Noto Sans', 'Liberation Sans', sans-serif;
+  font-size: 11px;
+  line-height: 12px; /* ✅ lock line height (print preview stable) */
+  letter-spacing: 0.4px;
+  margin-bottom: 2px;
+  text-align: left;
 
-          white-space: normal;
-          overflow-wrap: anywhere;
-          word-break: break-word;
+  /* ✅ Hard cap = exactly 2 lines (prevents "line 3" bleeding into bars in Print Preview) */
+  height: 24px;      /* 12px * 2 */
+  max-height: 24px;
+  overflow: hidden;
 
-          max-height: calc(1.15em * 2);
-        }
+  /* ✅ Support clamp (extra safety) */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+
+  /* ✅ handle long tokens */
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+
+
 
         /* ✅ กล่องที่ “ล็อกความกว้าง” ให้ยึดตามบาร์โค้ด (shrink-to-fit) */
         .barcode-block {
           display: inline-flex;
           flex-direction: column;
-          align-items: center;
+          align-items: flex-start;
           justify-content: center;
           max-width: 100%;
+          overflow: hidden; /* ✅ กันล้นในหน้า Before Print */
+          min-width: 0;     /* ✅ ให้ ellipsis/flex shrink ทำงานเสถียร */
         }
 
-        /* ✅ LIST (font-only): ฟอนต์สำหรับวาดแท่งบาร์ (Code39) */
+        /* ✅ กันไม่ให้เนื้อหาใน cell ล้นตอน print preview */
+        .barcode-cell {
+          overflow: hidden;
+          min-width: 0; /* ✅ กัน grid cell ขยายเพราะข้อความ */
+        }
+
+        /* ✅ Font-only: ฟอนต์สำหรับวาดแท่งบาร์ (Code39) */
         .c39-barcode {
           font-family: 'C39HrP24DhTt', monospace !important;
           letter-spacing: 0;
           white-space: nowrap;
         }
 
-        /* ✅ โหมด LIST: ระยะห่าง “ตอนพรีวิวบนจอ” */
-        .print-area.is-list .barcode-cell {
-          margin: 16px 0;
-          padding: 0;
-          border: none;
+        /* ✅ กันตัวบาร์ (transform/font glyph) ล้ำขึ้นไปซ้อนชื่อสินค้า */
+        .barcode-bars-wrap {
+          position: relative;
+          z-index: 1;
+          padding-top: 2px;
         }
 
         @media print {
@@ -190,20 +329,11 @@ const PreviewBarcodePage = () => {
             border-radius: 0 !important;
           }
           .print-area .p-1 { padding: 0 !important; }
-
-          /* ✅ โหมดเดิม (GRID) */
-          .print-area.is-grid .barcode-cell {
-            margin-bottom: 0.1mm !important;
-            padding: 0.5mm !important;
-            border: 1px solid #ccc !important;
-          }
-
-          /* ✅ โหมด LIST */
-          .print-area.is-list { justify-content: flex-start !important; }
-          .print-area.is-list .barcode-cell {
-            margin: 4mm 0 !important; /* ระยะห่างแนวตั้งระหว่างบาร์โค้ด */
-            padding: 0 !important;
-            border: none !important;
+          /* ✅ บังคับล็อกความสูงชื่อสินค้า (กันทับบาร์ใน print preview) */
+          .barcode-product-name {
+            height: 2.35em !important;
+            max-height: 2.35em !important;
+            overflow: hidden !important;
           }
 
           @page { margin: 4mm; size: A4; }
@@ -216,33 +346,7 @@ const PreviewBarcodePage = () => {
 
         <div className="flex justify-center">
           <div className="flex gap-4 items-center flex-wrap print:hidden">
-            <label className="flex items-center gap-1">
-              ความสูง:
-              <input
-                type="number"
-                value={barcodeHeight}
-                onChange={(e) => setBarcodeHeight(Number(e.target.value))}
-                className="w-20 border rounded px-2 py-1"
-                min={10}
-                max={60}
-                step={1}
-              />
-            </label>
 
-            <label className="flex items-center gap-2">
-              ความกว้างเส้น (GRID):
-              <input
-                type="number"
-                value={barcodeWidth}
-                onChange={(e) => setBarcodeWidth(Number(e.target.value))}
-                className="w-20 border rounded px-2 py-1"
-                min={0.5}
-                max={10}
-                step={0.1}
-                disabled={printLayout === 'list'}
-                title={printLayout === 'list' ? 'โหมด LIST ใช้ตัวปรับ “ความกว้าง LIST” แทน' : ''}
-              />
-            </label>
 
             <label className="flex items-center gap-2">
               คอลัมน์:
@@ -254,53 +358,37 @@ const PreviewBarcodePage = () => {
                 min={1}
                 max={12}
                 step={1}
-                disabled={printLayout === 'list'}
-                title={printLayout === 'list' ? 'โหมด LIST บังคับเป็น 1 คอลัมน์' : ''}
               />
             </label>
 
+
+            {/* ✅ ตั้งค่าเฉพาะโหมดฟอนต์ (font-only) */}
             <label className="flex items-center gap-2">
+              ความกว้างฟอนต์:
               <input
-                type="checkbox"
-                checked={printLayout === 'list'}
-                onChange={(e) => setPrintLayout(e.target.checked ? 'list' : 'grid')}
+                type="number"
+                value={fontScaleX}
+                onChange={(e) => setFontScaleX(Number(e.target.value))}
+                className="w-20 border rounded px-2 py-1"
+                min={0.6}
+                max={1.6}
+                step={0.1}
               />
-              โหมดพิมพ์แบบยาว (LIST)
-            </label>
-
-            {printLayout === 'list' ? (
-              <label className="flex items-center gap-2">
-                ความกว้าง LIST:
-                <input
-                  type="range"
-                  value={listWidthScale}
-                  onChange={(e) => setListWidthScale(Number(e.target.value))}
-                  className="w-44"
-                  min={0.7}
-                  max={1.2}
-                  step={0.01}
-                />
-                <input
-                  type="number"
-                  value={listWidthScale}
-                  onChange={(e) => setListWidthScale(Number(e.target.value))}
-                  className="w-20 border rounded px-2 py-1"
-                  min={0.7}
-                  max={1.2}
-                  step={0.01}
-                />
-              </label>
-            ) : null}
-
-            <label className="flex items-center gap-2">
-              <input type="checkbox" checked={showBarcode} onChange={(e) => setShowBarcode(e.target.checked)} />
-              แสดง Barcode
             </label>
 
             <label className="flex items-center gap-2">
-              <input type="checkbox" checked={showQR} onChange={(e) => setShowQR(e.target.checked)} />
-              แสดง QR Code
+              ขนาดฟอนต์:
+              <input
+                type="number"
+                value={fontSizePx}
+                onChange={(e) => setFontSizePx(Number(e.target.value))}
+                className="w-20 border rounded px-2 py-1"
+                min={14}
+                max={60}
+                step={1}
+              />
             </label>
+
 
             <label className="flex items-center gap-2">
               <input type="checkbox" checked={useSuggested} onChange={(e) => setUseSuggested(e.target.checked)} />
@@ -340,100 +428,53 @@ const PreviewBarcodePage = () => {
           <p className="text-red-500 mt-4 print:hidden">ไม่พบบาร์โค้ดจากใบรับสินค้านี้</p>
         ) : (
           <div
-            className={`grid gap-y-[1mm] gap-x-[2mm] mt-4 print-area ${
-              printLayout === 'list' ? 'is-list justify-start' : 'is-grid justify-center'
-            }`}
+            className={`grid gap-y-[1mm] gap-x-[2mm] mt-4 print-area is-grid justify-center`}
             style={gridStyle}
           >
             {expandedBarcodes.map((item) => {
-              const displayName = getListDisplayName(item);
-              const key = `${item.id || item.barcode}-${item._dupIdx ?? 0}`;
+              const rowKey = `${item.id || item.barcode}-${item._dupIdx ?? 0}`;
 
-              // LIST (font-only) sizing
-              const baseFontSize = 40; // ยิ่งมาก “กว้างขึ้น” (ไม่เกี่ยวกับความสูง)
-              const safeHeight = Number.isFinite(Number(effectiveBarcodeHeight))
-                ? Number(effectiveBarcodeHeight)
-                : 30;
-              const scaleY = Math.max(0.2, safeHeight / baseFontSize);
-              const safeScaleX = Math.max(0.6, Math.min(1.4, Number(listWidthScale) || 1));
+              const measuredW = Number(barcodeWidthMap[rowKey] || 0);
+              const approxW = getApproxBarcodeWidthPx(item.barcode);
+              const finalW = Math.max(48, measuredW > 0 ? measuredW : approxW);
+
+              const displayName = getListDisplayNameByWidth(item, finalW);
 
               return (
                 <div
-                  key={key}
-                  className={`barcode-cell ${
-                    printLayout === 'list'
-                      ? 'text-center flex flex-col items-center justify-center'
-                      : 'border p-0.5 rounded text-center flex flex-col items-center justify-center'
-                  }`}
+                  key={rowKey}
+                  className="barcode-cell border p-0.5 rounded text-left flex flex-col items-start justify-start"
                 >
-                  {/* ✅ ห่อทุกอย่างด้วย .barcode-block เพื่อให้ “ความกว้างชื่อสินค้า = ความกว้างบาร์โค้ด” */}
-                  <div className="barcode-block">
-                    {/* ✅ ชื่อสินค้า: 2 บรรทัด + ตัด … (ทั้ง LIST/GRID) */}
-                    <div
-                      className={printLayout === 'list' ? 'list-product-name' : 'barcode-product-name'}
-                      title={item.productName || ''}
-                      style={
-                        measuredBarcodeWidths[key]
-                          ? { width: `${measuredBarcodeWidths[key]}px`, maxWidth: `${measuredBarcodeWidths[key]}px` }
-                          : undefined
-                      }
-                    >
+                  <div
+                    className="barcode-block"
+                    style={{ width: `${finalW}px`, maxWidth: `${finalW}px` }}
+                  >
+                    <div className="barcode-product-name" title={item.productName || ''}>
                       {displayName}
                     </div>
 
-                    {/* ✅ LIST = font-only (Code39) */}
-                    {printLayout === 'list' ? (
-                      showBarcode ? (
-                        <div
-                          className="c39-barcode"
-                          ref={(el) => measureBarcodeWidth(key, el)}
-                          style={{
-                            fontSize: `${baseFontSize}px`,
-                            lineHeight: 1,
-                            display: 'inline-block',
-                            transform: `scaleX(${safeScaleX}) scaleY(${scaleY})`,
-                            transformOrigin: 'center top',
-                          }}
-                        >
-                          {`*${item.barcode}*`}
-                        </div>
-                      ) : null
-                    ) : (
-                      <div className="inline-block" ref={(el) => measureBarcodeWidth(key, el)}>
-                        <BarcodeWithQRRenderer
-                          barcodeValue={showBarcode ? item.barcode : null}
-                          qrValue={showQR ? item.barcode : null}
-                          productName={''}
-                          showProductName={false}
-                          barcodeHeight={effectiveBarcodeHeight}
-                          barcodeWidth={barcodeWidth}
-                          fontSize={6}
-                          marginTopText={-4}
-                          layout="grid"
-                        />
+                    <div className="inline-block barcode-bars-wrap">
+                      <div
+                        ref={setBarcodeElRef(rowKey)}
+                        className="c39-barcode"
+                        style={{
+                          fontSize: `${fontSizePx}px`,
+                          lineHeight: 1,
+                          transform: isPrinting ? 'none' : `scaleX(${fontScaleX})`,
+                          transformOrigin: 'left top',
+                          display: 'inline-block',
+                          marginTop: '0px',
+                        }}
+                      >
+                        *{item.barcode}*
                       </div>
-                    )}
-
-                    {/* ✅ QR เสริมในโหมด LIST */}
-                    {printLayout === 'list' && showQR ? (
-                      <div className="mt-1">
-                        <BarcodeWithQRRenderer
-                          barcodeValue={null}
-                          qrValue={item.barcode}
-                          productName={''}
-                          showProductName={false}
-                          barcodeHeight={effectiveBarcodeHeight}
-                          barcodeWidth={barcodeWidth}
-                          fontSize={6}
-                          marginTopText={-4}
-                          layout="qr"
-                        />
-                      </div>
-                    ) : null}
+                    </div>
                   </div>
                 </div>
               );
             })}
+
+
           </div>
         )}
       </div>
@@ -442,5 +483,17 @@ const PreviewBarcodePage = () => {
 };
 
 export default PreviewBarcodePage;
+
+
+
+
+
+
+
+
+
+
+
+
 
 

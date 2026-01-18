@@ -321,6 +321,27 @@ const PreviewBarcodePage = () => {
         }
 
         @media print {
+          /* ✅ ดันบาร์โค้ดชิดบน + ชิดซ้าย ในหน้า Print Preview */
+          html, body { margin: 0 !important; padding: 0 !important; background: white; }
+
+          /* ✅ ลด whitespace จาก wrapper/spacing ของหน้า */
+          .print-root { padding: 0 !important; margin: 0 !important; }
+          .print-root > * { margin-top: 0 !important; }
+          .mt-1 { margin-top: 0 !important; }
+
+          /* ✅ บังคับ grid ให้อยู่ซ้ายบนเสมอ (กัน Chrome print preview ชอบจัดกลาง) */
+          .print-area {
+            width: 100% !important;
+            justify-content: flex-start !important;
+            justify-items: start !important;
+            align-content: start !important;
+            align-items: start !important;
+          }
+
+          /* ✅ ดันบาร์โค้ดชิดบน + ชิดซ้าย ในหน้า Print Preview */
+          .print-area { margin-top: 0 !important; justify-content: flex-start !important; }
+          .p-6 { padding-top: 0 !important; padding-bottom: 0 !important; }
+
           body { margin: 0; padding: 0; background: white; }
           .print-area { padding: 0; margin: 0; }
           .print-area .shadow, .print-area .border, .print-area .rounded-xl {
@@ -336,12 +357,12 @@ const PreviewBarcodePage = () => {
             overflow: hidden !important;
           }
 
-          @page { margin: 4mm; size: A4; }
+          @page { margin: 0mm; size: A4; }
           header, footer, nav, .print-hidden { display: none !important; }
         }
       `}</style>
 
-      <div className="p-6 space-y-6">
+      <div className="p-6 space-y-6 print-root">
         <h1 className="text-xl font-bold print:hidden">พรีวิวบาร์โค้ด</h1>
 
         <div className="flex justify-center">
@@ -420,7 +441,7 @@ const PreviewBarcodePage = () => {
           </div>
         </div>
 
-        <hr />
+        <hr className="print:hidden" />
 
         {!loaded ? (
           <p className="text-gray-500 mt-4 print:hidden">กำลังเตรียมข้อมูลบาร์โค้ด...</p>
@@ -428,7 +449,7 @@ const PreviewBarcodePage = () => {
           <p className="text-red-500 mt-4 print:hidden">ไม่พบบาร์โค้ดจากใบรับสินค้านี้</p>
         ) : (
           <div
-            className={`grid gap-y-[1mm] gap-x-[2mm] mt-4 print-area is-grid justify-center`}
+            className={`grid gap-y-[1mm] gap-x-[2mm] mt-1 print-area is-grid`}
             style={gridStyle}
           >
             {expandedBarcodes.map((item) => {

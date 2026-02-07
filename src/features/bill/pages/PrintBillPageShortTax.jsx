@@ -1,74 +1,63 @@
-import { useParams, useLocation } from 'react-router-dom';
-import { useEffect, useState } from 'react';
-import { getSaleById } from '@/features/sales/api/saleApi';
-import BillLayoutShortTax from '../components/BillLayoutShortTax';
+import { useEffect } from 'react'
+import { useLocation, useParams } from 'react-router-dom'
+import BillLayoutShortTax from '../components/BillLayoutShortTax'
+import { useBillStore } from '@/features/bill/store/useBillStore'
 
 const PrintBillPageShortTax = () => {
-  const { id } = useParams();
-  const location = useLocation();
-  const [sale, setSale] = useState(null);
+  const { id } = useParams()
+  const location = useLocation()
+
+  const { sale, payment, saleItems, config, loading, error, loadSaleByIdAction, resetAction } =
+    useBillStore()
 
   useEffect(() => {
-    const stateSale = location.state?.payment?.sale;
-    if (stateSale) {
-      setSale(stateSale);
-      return;
-    }
+    const statePayment = location.state?.payment
 
-    if (typeof id !== 'string' || isNaN(Number(id))) {
-      console.warn('🛑 Invalid sale ID:', id);
-      return;
-    }
-
-    (async () => {
+    const run = async () => {
       try {
-        const res = await getSaleById(id);
-        setSale(res);
-      } catch (err) {
-        console.error('❌ Error loading sale:', err);
+        if (statePayment?.sale?.id) {
+          await loadSaleByIdAction(statePayment.sale.id)
+          return
+        }
+        if (id) {
+          await loadSaleByIdAction(id)
+        }
+      } catch {
+        // error handled in store
       }
-    })();
-  }, [id, location.state]);
+    }
 
-  if (!sale || !sale.items) {
-    return <div className="text-center p-6 text-gray-700">⼻ กำลังโหลดข้อมูลใบเสร็จ...</div>;
+    run()
+    return () => {
+      resetAction()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, location.key, loadSaleByIdAction, resetAction])
+
+  if (loading) {
+    return <div className="text-center p-6 text-gray-700">⏳ กำลังโหลดข้อมูลใบเสร็จ...</div>
+  }
+  if (error) {
+    return <div className="text-center p-6 text-red-600">เกิดข้อผิดพลาด: {error}</div>
+  }
+  if (!sale || !saleItems?.length || !config) {
+    return <div className="text-center p-6 text-gray-700">ไม่พบข้อมูลใบเสร็จ</div>
   }
 
-  const saleItems = (sale.items || []).map((i) => ({
-    id: i.id,
-    productName: i.stockItem.product?.name || 'ไม่พบชื่อสินค้า',
-    model: i.stockItem.product?.model || null,
-    price: i.price ?? 0,
-    quantity: 1,
-    unit: i.stockItem.product?.template?.unit?.name || '-',
-  }));
+  const customerType = sale.customer?.type || 'PERSON'
+  const hideContactName = customerType === 'ORGANIZATION' || customerType === 'GOVERNMENT'
 
-  const branch = sale.branch || {};
-  const config = branch.receiptConfig || {};
+  return (
+    <BillLayoutShortTax
+      sale={sale}
+      saleItems={saleItems}
+      payments={payment ? [payment] : []}
+      config={{ ...config, hideDate: true }}
+      hideContactName={hideContactName}
+    />
+  )
+}
 
-  const fullConfig = {
-    branchName: config.branchName || branch.name || '-',
-    address: config.address || branch.address || '-',
-    phone: config.phone || branch.phone || '-',
-    taxId: config.taxId || branch.taxId || '-',
-    footerNote: config.footerNote || '',
-    logoUrl: config.logoUrl || null,
-    vatRate: config.vatRate || 7,
-    hideDate: true,
-  };
+export default PrintBillPageShortTax
 
-  const customerType = sale.customer?.type || 'PERSON';
-  const hideContactName = customerType === 'ORGANIZATION' || customerType === 'GOVERNMENT';
 
-  const saleData = {
-    sale,
-    saleItems,
-    payments: sale.payments || [],
-    config: fullConfig,
-    hideContactName, // ✅ ซ่อนชื่อผู้ติดต่อเมื่อเป็นหน่วยงาน
-  };
-
-  return <BillLayoutShortTax {...saleData} />;
-};
-
-export default PrintBillPageShortTax;

@@ -1,10 +1,12 @@
+
+
 // ===============================
 // features/bill/pages/PrintBillPageFullTax.jsx
 // ===============================
 import { useEffect } from 'react';
 import { useLocation, useParams } from 'react-router-dom';
-import BillLayoutFullTax from '@/features/bill/components/BillLayoutFullTax';
-import { useBillStore } from '@/features/bill/store/BillStore';
+import BillLayoutFullTax from '@/features/bill/components/BillLayoutFullTax'
+import { useBillStore } from '@/features/bill/store/useBillStore'
 
 const PrintBillPageFullTax = () => {
   const { id } = useParams();
@@ -50,3 +52,5 @@ const PrintBillPageFullTax = () => {
 };
 
 export default PrintBillPageFullTax;
+
+

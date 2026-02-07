@@ -70,23 +70,77 @@ const useStockItemStore = create(
     },
 
     // ✅ ฟังก์ชันอัปเดตสถานะสินค้าเป็นขายแล้ว
-    updateStockItemsToSoldAction: async (stockItemIds) => {
+    // Production hardening:
+    // - รองรับ backend 409: ขายไม่ได้/ขายซ้ำ/สถานะไม่ใช่ IN_STOCK
+    // - เซ็ต error ใน store เพื่อให้ UI แสดงเป็น error block ได้
+    updateStockItemsToSoldAction: async (stockItemIds = []) => {
+      // validate input
+      const ids = Array.isArray(stockItemIds)
+        ? [...new Set(stockItemIds.map((x) => Number(x)).filter(Number.isFinite))]
+        : [];
+
+      if (ids.length === 0) {
+        const e = new Error('ไม่มีรายการสินค้าที่ต้องอัปเดตเป็นขายแล้ว');
+        set({ error: e.message });
+        throw e;
+      }
+
+      set({ loading: true, error: null });
       try {
-        await markStockItemsAsSold(stockItemIds); // ✅ ส่ง array ไปอย่างถูกต้อง
+        const res = await markStockItemsAsSold(ids); // ✅ ส่ง array ไปอย่างถูกต้อง
+        return res;
       } catch (err) {
+        const status = err?.response?.status;
+        const payload = err?.response?.data;
+
+        // ✅ 409 = อัปเดตไม่ครบ/ขายซ้ำ/ไม่อยู่ในสาขา/ไม่ใช่ IN_STOCK
+        if (status === 409) {
+          const message = payload?.message || 'มีบางรายการไม่สามารถเปลี่ยนเป็นขายแล้วได้';
+          set({ error: message });
+
+          const mapped = new Error(message);
+          mapped.name = 'StockItemNotSellableError';
+          mapped.status = 409;
+          mapped.code = payload?.code;
+          mapped.details = payload;
+          throw mapped;
+        }
+
+        // 400/401/500 ฯลฯ
+        const message = payload?.message || err?.message || 'อัปเดตสถานะขายแล้วไม่สำเร็จ';
+        set({ error: message });
         console.error('❌ อัปเดต stockItem ล้มเหลว:', err);
         throw err;
+      } finally {
+        set({ loading: false });
       }
     },
 
     // ✅ ฟังก์ชันค้นหาสินค้าจาก barcode เพื่อใช้งานทั่วไป เช่น หน้าขาย / เคลม / ตัดสต๊อก
+    // - ถ้าพบว่า barcode มีอยู่แต่ "ไม่พร้อมขาย" (เช่น SOLD/CLAIMED/LOST) จะคืนค่า object แบบ notSellable ให้ UI แสดงข้อความได้ชัด
     searchStockItemAction: async (barcode) => {
       try {
         const item = await searchStockItem(barcode);
         console.log('🔍 ค้นหาสินค้าสำหรับขาย:', item);
         return item || null;
       } catch (err) {
-        console.error('❌ ไม่พบสินค้า:', err);
+        const statusCode = err?.response?.status;
+        const payload = err?.response?.data;
+
+        // ✅ แยกเคส: มีบาร์โค้ด แต่ไม่พร้อมขาย
+        if (statusCode === 409) {
+          return {
+            notSellable: true,
+            status: payload?.status,
+            code: payload?.code,
+            message: payload?.message || 'สินค้านี้ไม่พร้อมขาย',
+          };
+        }
+
+        // 404 = ไม่พบจริง ๆ
+        if (statusCode === 404) return null;
+
+        console.error('❌ ค้นหา stockItem ล้มเหลว:', err);
         return null;
       }
     },
@@ -114,6 +168,7 @@ const useStockItemStore = create(
 );
 
 export default useStockItemStore;
+
 
 
 

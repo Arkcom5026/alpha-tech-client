@@ -47,13 +47,13 @@ const CalculationDetails = ({
         <span>ส่วนลดท้ายบิล</span>
         <input
           type="number"
-          inputMode="numeric"
+          inputMode="decimal"
           min="0"
-          step="1"
+          step="0.01"
           className={`w-[120px] h-[45px] border rounded-md px-2 text-lg text-right focus:ring-2 shadow-sm ${billOver ? 'border-red-500 focus:ring-red-400' : 'border-gray-300 focus:ring-orange-400'}`}
-          placeholder="0"
-          value={Number.isFinite(billDisc) ? billDisc : ''}
-          onChange={(e) => setBillDiscount(Math.max(0, Math.min(Number(e.target.value) || 0, totalOriginal)))}
+          placeholder="0.00"
+          value={billDisc === 0 ? '' : (Number.isFinite(billDisc) ? billDisc : '')}
+          onChange={(e) => setBillDiscount(e)}
           onKeyDown={preventInvalidNumberKeys}
           onWheel={(e) => e.currentTarget.blur()}
           disabled={disabled}
@@ -62,7 +62,7 @@ const CalculationDetails = ({
 
       {billOver && (
         <div className="text-red-600 text-sm mt-1 text-right px-2">
-          ⚠️ ส่วนลดท้ายบิลห้ามเกินยอดรวมสินค้า ({totalOriginalPrice.toLocaleString()} ฿)
+          ⚠️ ส่วนลดท้ายบิลห้ามเกินยอดรวมสินค้า ({fmt(totalOriginal)} ฿)
         </div>
       )}
 
@@ -82,23 +82,25 @@ const CalculationDetails = ({
       <hr className="border-gray-200" />
 
       {depositTotal > 0 && (
-        <div className="flex justify-between items-center px-2 py-1">
-          {/* เปลี่ยน input สำหรับ "ใช้มัดจำ" เป็น PaymentInput */}
-          <PaymentInput
-            title="ใช้มัดจำ"
-            value={depositUsed}
-            onChange={(val) => handleDepositUsedChange(Math.max(0, Math.min(Number(val) || 0, depositTotal)))} // clamp to available deposit
-            placeholder="0.00"
-            color="blue" // กำหนดสีให้เข้ากับธีม
-          />
-        </div>
-      )}
+        <>
+          <div className="flex justify-between items-center px-2 py-1">
+            {/* เปลี่ยน input สำหรับ "ใช้มัดจำ" เป็น PaymentInput */}
+            <PaymentInput
+              title="ใช้มัดจำ"
+              value={depositUsed}
+              onChange={(val) => handleDepositUsedChange(Math.max(0, Math.min(Number(val) || 0, depositTotal)))}
+              placeholder="0.00"
+              color="blue"
+            />
+          </div>
 
-      <div className="flex justify-between px-2 pt-1 text-blue-700 text-lg">
-        <span>มัดจำคงเหลือ:</span>
-        <span className="font-bold text-blue-600">{fmt(remainDeposit)} ฿</span>
-      </div>
-      <hr className="border-gray-200" />
+          <div className="flex justify-between px-2 pt-1 text-blue-700 text-lg">
+            <span>มัดจำคงเหลือ:</span>
+            <span className="font-bold text-blue-600">{fmt(remainDeposit)} ฿</span>
+          </div>
+          <hr className="border-gray-200" />
+        </>
+      )}
     </div>
   );
 };
@@ -118,5 +120,7 @@ CalculationDetails.propTypes = {
 };
 
 export default CalculationDetails;
+
+
 
 

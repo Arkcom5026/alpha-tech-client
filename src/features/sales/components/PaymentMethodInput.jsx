@@ -1,9 +1,21 @@
+
 // PaymentMethodInput.jsx (Refactored: props safe, UX hardened, optional disabled)
 import React from 'react';
 import PropTypes from 'prop-types';
 
 const preventInvalidNumberKeys = (e) => {
   if (["e", "E", "+", "-"].includes(e.key)) e.preventDefault();
+};
+
+// ✅ Money input UX standard:
+// - แสดง placeholder 0.00 เมื่อค่าเป็น 0
+// - หลีกเลี่ยงการโชว์ "0" ค้างในช่อง (พิมพ์ทับยาก)
+const moneyValue = (v) => {
+  if (v === null || v === undefined) return '';
+  // รองรับทั้ง number และ string
+  const s = String(v).trim();
+  if (s === '' || s === '0' || s === '0.0' || s === '0.00') return '';
+  return v;
 };
 
 const PaymentMethodInput = ({
@@ -20,7 +32,7 @@ const PaymentMethodInput = ({
   const creditNum = Number(credit) || 0;
 
   return (
-    <div className="gap-4">
+    <div className="flex flex-col gap-4">
       <div className="min-w-[200px] rounded-xl shadow-sm border bg-green-50 border-green-100 px-3 py-3">
         {/* เงินสด */}
         <h3 className="text-base font-bold text-gray-800 mb-1">เงินสด</h3>
@@ -31,7 +43,7 @@ const PaymentMethodInput = ({
           step="0.01"
           className="w-full h-[50px] border border-gray-300 rounded-md px-3 py-3 text-2xl text-right font-bold text-green-700 focus:ring-2 focus:ring-green-500 shadow-sm"
           placeholder="0.00"
-          value={cash}
+          value={moneyValue(cash)}
           onChange={onCashChange}
           onFocus={(e) => e.target.select()}
           onKeyDown={preventInvalidNumberKeys}
@@ -50,7 +62,7 @@ const PaymentMethodInput = ({
             step="0.01"
             className="w-full h-[50px] border border-gray-300 rounded-md px-3 py-2 text-2xl text-right font-bold text-sky-700 focus:ring-2 focus:ring-sky-500 shadow-sm"
             placeholder="0.00"
-            value={transfer}
+            value={moneyValue(transfer)}
             onChange={onTransferChange}
             onFocus={(e) => e.target.select()}
             onKeyDown={preventInvalidNumberKeys}
@@ -70,7 +82,7 @@ const PaymentMethodInput = ({
             step="0.01"
             className="w-full h-[50px] border border-gray-300 rounded-md px-3 py-2 text-2xl text-right font-bold text-yellow-700 focus:ring-2 focus:ring-yellow-500 shadow-sm"
             placeholder="0.00"
-            value={credit}
+            value={moneyValue(credit)}
             onChange={onCreditChange}
             onFocus={(e) => e.target.select()}
             onKeyDown={preventInvalidNumberKeys}
@@ -112,4 +124,5 @@ PaymentMethodInput.propTypes = {
 };
 
 export default PaymentMethodInput;
+
 

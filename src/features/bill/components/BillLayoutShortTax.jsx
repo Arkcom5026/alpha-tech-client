@@ -1,26 +1,38 @@
+
+
 import React from 'react';
 
+
+const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100
+const formatCurrency = (val) =>
+  (Number(val) || 0).toLocaleString('th-TH', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })
+
 const BillLayoutShortTax = ({ sale, saleItems, payments, config, hideContactName }) => {
-  if (!sale || !saleItems || !payments || !config) return null;
+  if (!sale || !saleItems || !payments || !config) return null
 
-  const computedTotal = saleItems.reduce((sum, item) => {
-    const price = typeof item.price === 'number' ? item.price : 0;
-    const quantity = typeof item.quantity === 'number' ? item.quantity : 0;
-    return sum + price * quantity;
-  }, 0);
+  // ✅ คิดเงินแบบหน่วยสตางค์ให้แม่นยำ
+  const totalSatang = saleItems.reduce((sum, item) => {
+    const price = Math.round((Number(item.price) || 0) * 100)
+    const qty = Number(item.quantity) || 0
+    return sum + price * qty
+  }, 0)
 
-  // ✅ ราคาสินค้ารวม VAT แล้ว → ไม่ต้องลบส่วนลดอีก
-  const total = computedTotal;
-  const vatRate = typeof config.vatRate === 'number' ? config.vatRate : 7;
+  const total = totalSatang / 100
+  const vatRate = typeof config.vatRate === 'number' ? config.vatRate : 7
 
-  const beforeVat = total / (1 + vatRate / 100);
-  const vatAmount = total - beforeVat;
+  const beforeVat = round2(total / (1 + vatRate / 100))
+  const vatAmount = round2(total - beforeVat)
 
-  const formatCurrency = (val) => parseFloat(val || 0).toFixed(2);
-  const handlePrint = () => window.print();
+  const handlePrint = () => window.print()
 
   return (
-    <div className="w-[80mm] min-h-[280mm] pt-6 pb-6 mx-auto text-base font-sans leading-relaxed">
+    <div
+      className="w-[80mm] min-h-[280mm] pt-6 pb-6 mx-auto text-base leading-relaxed"
+      style={{ fontFamily: 'TH Sarabun New, sans-serif' }}
+    >
       <style>{`
         @media print {
           body {
@@ -35,7 +47,10 @@ const BillLayoutShortTax = ({ sale, saleItems, payments, config, hideContactName
       `}</style>
 
       <div className="text-right print:hidden mb-4">
-        <button onClick={handlePrint} className="bg-blue-600 hover:bg-blue-700 text-white py-1 px-4 rounded text-sm">
+        <button
+          onClick={handlePrint}
+          className="bg-blue-600 hover:bg-blue-700 text-white py-1 px-4 rounded text-sm"
+        >
           พิมพ์บิล
         </button>
       </div>
@@ -52,7 +67,17 @@ const BillLayoutShortTax = ({ sale, saleItems, payments, config, hideContactName
       <div className="text-sm mb-4 space-y-1">
         <p className="font-bold">ใบกำกับภาษีอย่างย่อ / ใบเสร็จรับเงิน</p>
         <p>เลขที่: {sale.code}</p>
-        <p>วันที่: {new Date(sale.createdAt).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' })}</p>
+        {!config.hideDate && (
+          <p>
+            วันที่:{' '}
+            {new Date(sale.createdAt).toLocaleDateString('th-TH', {
+              year: 'numeric',
+              month: 'short',
+              day: 'numeric',
+              timeZone: 'Asia/Bangkok',
+            })}
+          </p>
+        )}
         <p>พนักงานขาย: {sale.employee?.name || '-'}</p>
         <p>หน่วยงาน: {sale.customer?.companyName || '-'}</p>
         {!hideContactName && <p>ลูกค้า: {sale.customer?.name || '-'}</p>}
@@ -71,10 +96,12 @@ const BillLayoutShortTax = ({ sale, saleItems, payments, config, hideContactName
             <tr key={item.id} className="border-b border-dashed">
               <td className="py-1">
                 {item.productName}
-                {item.model && <span className="text-xs text-gray-800"> ({item.model})</span>}
+                {item.productModel && (
+                  <span className="text-xs text-gray-800"> ({item.productModel})</span>
+                )}
               </td>
               <td className="text-right py-1">{item.quantity}</td>
-              <td className="text-right py-1">{formatCurrency(item.price * item.quantity)} ฿</td>
+              <td className="text-right py-1">{formatCurrency((Number(item.price) || 0) * (Number(item.quantity) || 0))} ฿</td>
             </tr>
           ))}
         </tbody>
@@ -91,7 +118,9 @@ const BillLayoutShortTax = ({ sale, saleItems, payments, config, hideContactName
         {sale.note && <p>หมายเหตุ: {sale.note}</p>}
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default BillLayoutShortTax;
+export default BillLayoutShortTax
+
+

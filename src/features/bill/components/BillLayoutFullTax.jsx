@@ -1,3 +1,12 @@
+
+
+
+
+
+
+
+
+
 // ===============================
 // features/bill/components/BillLayoutFullTax.jsx
 // ===============================
@@ -187,3 +196,12 @@ const BillLayoutFullTax = ({ sale, saleItems, payments, config }) => {
 };
 
 export default BillLayoutFullTax;
+
+
+
+
+
+
+
+
+

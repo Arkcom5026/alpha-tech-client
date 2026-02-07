@@ -1,3 +1,6 @@
+
+
+
 // ✅ stockItemApi.js — API สำหรับรับ SN และค้นหาด้วย query
 import apiClient from '@/utils/apiClient';
 
@@ -64,11 +67,6 @@ export const getAvailableStockItemsByProduct = async (productId) => {
     throw err;
   }
 };
-
-
-
-
-
 
 
 

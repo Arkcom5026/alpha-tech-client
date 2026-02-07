@@ -30,6 +30,7 @@ const CustomerSection = ({ productSearchRef, clearTrigger, hideCustomerDetails, 
 
   const [customerLoading, setCustomerLoading] = useState(false);
   const [formError, setFormError] = useState('');
+  const [formInfo, setFormInfo] = useState('');
   const [pendingPhone, setPendingPhone] = useState(false);
   const [isModified, setIsModified] = useState(false);
   const [searchResults, setSearchResults] = useState([]);
@@ -146,7 +147,7 @@ const CustomerSection = ({ productSearchRef, clearTrigger, hideCustomerDetails, 
     setCompanyName(''); setTaxId(''); setCustomerType('INDIVIDUAL');
     setNameSearch(''); setSearchResults([]); setSelectedCustomer(null);
     setCustomerDepositAmount(0); setSelectedDeposit(null);
-    setIsModified(false); setFormError(''); setPendingPhone(false);
+    setIsModified(false); setFormError(''); setFormInfo(''); setPendingPhone(false);
     setCustomerIdAction(null); clearCustomerAndDeposit(); setShouldShowDetails(false);
     const delay = setTimeout(() => {
       if (phoneInputRef.current) { phoneInputRef.current.focus(); phoneInputRef.current.select(); }
@@ -212,6 +213,7 @@ const CustomerSection = ({ productSearchRef, clearTrigger, hideCustomerDetails, 
 
   const handleVerifyCustomer = async () => {
     setFormError('');
+    setFormInfo('');
     try {
       setCustomerLoading(true);
       setSelectedCustomer(null);
@@ -274,7 +276,7 @@ const CustomerSection = ({ productSearchRef, clearTrigger, hideCustomerDetails, 
       if (!(selectedCustomer && selectedCustomer.id)) return;
       // ⬇️ Scoped fix: ส่ง id เป็นพารามิเตอร์ตัวแรก ตามสัญญา (id, data)
       await updateCustomerProfilePosAction(
-        Number(selectedCustomer.id),
+        selectedCustomer.id,
         {
           name,
           email,
@@ -287,22 +289,29 @@ const CustomerSection = ({ productSearchRef, clearTrigger, hideCustomerDetails, 
         }
       );
       setIsModified(false);
-      alert('อัปเดตข้อมูลลูกค้าสำเร็จ!');
-    } catch {
-      alert('อัปเดตข้อมูลลูกค้าไม่สำเร็จ!');
+      setFormError('');
+      setFormInfo('อัปเดตข้อมูลลูกค้าสำเร็จ');
+    } catch (err) {
+      setFormInfo('');
+      setFormError('อัปเดตข้อมูลลูกค้าไม่สำเร็จ');
     }
   };
 
   const handleConfirmCreateCustomer = async () => {
     setFormError('');
+    setFormInfo('');
     if (!name.trim()) {
       setFormError('กรุณากรอกชื่อลูกค้า');
       return;
     }
+
+    // ✅ ใช้เบอร์ที่เป็นตัวเลขล้วนเป็นหลัก (rawPhone มาจาก handleVerifyCustomer)
+    const cleanPhone = (rawPhone || phone || '').replace(/-/g, '');
+
     try {
       const newCustomer = await createCustomerAction({
         name,
-        phone: rawPhone,
+        phone: cleanPhone,
         email,
         subdistrictCode: subdistrictCode || null,
         postcode: postalCode || undefined,
@@ -311,16 +320,26 @@ const CustomerSection = ({ productSearchRef, clearTrigger, hideCustomerDetails, 
         companyName,
         taxId,
       });
+
       if (newCustomer && newCustomer.id) {
-        setSelectedCustomer(newCustomer);
-        setCustomerIdAction(newCustomer.id);
-        alert('สร้างลูกค้าใหม่สำเร็จ!');
-        setShouldShowDetails(true);
-        setTimeout(() => {
-          if (productSearchRef && productSearchRef.current) productSearchRef.current.focus();
-        }, 100);
+        // ✅ สำคัญ: หลังสร้างลูกค้า ต้องทำให้ customerDepositStore เห็นลูกค้าทันที
+        // เพื่อให้ PaymentSection ผ่านเงื่อนไข hasValidCustomerId โดยไม่ต้องกดค้นหาอีกรอบ
+        setPendingPhone(false);
+
+        let hydratedCustomer = null;
+        if (searchCustomerByPhoneAndDepositAction && /^[0-9]{10}$/.test(cleanPhone)) {
+          try {
+            hydratedCustomer = await searchCustomerByPhoneAndDepositAction(cleanPhone);
+          } catch {
+            // noop: ถ้า hydrate ไม่ได้ ให้ fallback ใช้ newCustomer
+          }
+        }
+
+        // ✅ เดิน flow เดิมให้ครบ (setCustomerId + focus + show details + reset flags)
+        processSelectedCustomer(hydratedCustomer || newCustomer);
       }
     } catch (err) {
+      setFormInfo('');
       setFormError('สร้างลูกค้าไม่สำเร็จ: ' + (((err && err.message) || '') || 'เกิดข้อผิดพลาด'));
     }
   };
@@ -411,6 +430,10 @@ const CustomerSection = ({ productSearchRef, clearTrigger, hideCustomerDetails, 
 
       {formError && (
         <p className="text-red-600 text-sm mt-2 p-2 bg-red-100 rounded-md border border-red-200">{formError}</p>
+      )}
+
+      {formInfo && (
+        <p className="text-green-700 text-sm mt-2 p-2 bg-green-100 rounded-md border border-green-200">{formInfo}</p>
       )}
 
       {searchMode === 'name' && searchResults.length > 0 && (
@@ -532,4 +555,7 @@ const CustomerSection = ({ productSearchRef, clearTrigger, hideCustomerDetails, 
 };
 
 export default CustomerSection;
+
+
+
 

@@ -1,5 +1,9 @@
 // ✅ src/routes/posRoutes.jsx
-import { Navigate } from 'react-router-dom';
+import { Navigate } from 'react-router-dom'
+
+// ✅ Bill / Receipt print pages
+import PrintBillPageShortTax from '@/features/bill/pages/PrintBillPageShortTax.jsx'
+import PrintBillPageFullTax from '@/features/bill/pages/PrintBillPageFullTax.jsx'
 
 import LayoutPos from '@/layouts/pos/LayoutPos';
 import LogoutPos from '@/features/pos/pages/LogoutPos';
@@ -14,7 +18,9 @@ import financeRoutes from './financeRoutes';
 import settingsRoutes from './settingsRoutes';
 
 const posRoutes = {
-  path: '/pos',
+  // ✅ Important: ทำให้ route นี้ nest ใต้ /app ได้จริง (ไม่เป็น absolute path)
+  // ถ้า parent เป็น /app → จะกลายเป็น /app/pos
+  path: 'pos',
   element: <LayoutPos />,
   children: [
     { index: true, element: <Navigate to="dashboard" replace /> },
@@ -27,6 +33,18 @@ const posRoutes = {
     financeRoutes,
     settingsRoutes,
 
+    // =============================
+    // Bill / Receipt printing
+    // =============================
+    {
+      path: 'sales/bill/print-short/:id',
+      element: <PrintBillPageShortTax />,
+    },
+    {
+      path: 'sales/bill/print-full/:id',
+      element: <PrintBillPageFullTax />,
+    },
+
     {
       path: 'logout',
       element: <LogoutPos />,
@@ -35,3 +53,5 @@ const posRoutes = {
 };
 
 export default posRoutes;
+
+

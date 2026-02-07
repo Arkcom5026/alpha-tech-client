@@ -1,16 +1,28 @@
-// PaymentSummary.jsx (New Component - Updated to include BillPrintOptions + PropTypes)
+
+// ------------------------------------------------------------
+// 📁 FILE: src/features/sales/components/PaymentSummary.jsx
+
 import React, { useEffect } from 'react';
 import PropTypes from 'prop-types';
+
 import BillPrintOptions from './BillPrintOptions';
 
-// Utils
-const fmt = (n) => Number(n || 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fmt = (n) =>
+  Number(n || 0).toLocaleString('th-TH', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 
-// Enums (avoid magic strings)
 const SALE_MODE = { CASH: 'CASH', CREDIT: 'CREDIT' };
-const PRINT_OPTION = { NONE: 'NONE', DELIVERY_NOTE: 'DELIVERY_NOTE' };
 
-// ✨ รับ currentSaleMode เข้ามา พร้อม setCurrentSaleMode
+// ✅ รองรับทั้งหมด (แก้ warning: TAX_INVOICE / RECEIPT)
+const PRINT_OPTION = {
+  NONE: 'NONE',
+  RECEIPT: 'RECEIPT',
+  TAX_INVOICE: 'TAX_INVOICE',
+  DELIVERY_NOTE: 'DELIVERY_NOTE',
+};
+
 const PaymentSummary = ({
   totalToPay,
   grandTotalPaid,
@@ -23,8 +35,8 @@ const PaymentSummary = ({
   setSaleOption,
   currentSaleMode,
   setCurrentSaleMode,
+  hasValidCustomerId,
 }) => {
-  // Coerce to numbers to avoid string comparison issues
   const totalNum = Number(totalToPay) || 0;
   const paidNum = Number(grandTotalPaid) || 0;
   const changeNum = Number(safeChangeAmount) || 0;
@@ -32,56 +44,61 @@ const PaymentSummary = ({
   const isCash = currentSaleMode === SALE_MODE.CASH;
   const isCredit = currentSaleMode === SALE_MODE.CREDIT;
 
-  // Ensure a valid default print option when switching to CREDIT
+  // ✅ คุมตัวเลือกการพิมพ์ให้สอดคล้องกับโหมดขาย
   useEffect(() => {
+    // CREDIT: จำกัดให้เลือกได้แค่ NONE / DELIVERY_NOTE
     if (isCredit && ![PRINT_OPTION.NONE, PRINT_OPTION.DELIVERY_NOTE].includes(saleOption)) {
       setSaleOption(PRINT_OPTION.DELIVERY_NOTE);
+      return;
     }
-  }, [isCredit, saleOption, setSaleOption]);
 
-  const changeClass = changeNum > 0
-    ? 'text-green-600'
-    : changeNum < 0
-      ? 'text-red-600'
-      : 'text-gray-600';
+    // CASH: ถ้าซ่อน NONE ให้ default เป็น RECEIPT เพื่อไม่ให้ radio “ว่าง”
+    if (isCash && saleOption === PRINT_OPTION.NONE) {
+      setSaleOption(PRINT_OPTION.RECEIPT);
+    }
+  }, [isCredit, isCash, saleOption, setSaleOption]);
+
+  const changeClass =
+    changeNum > 0 ? 'text-green-600' : changeNum < 0 ? 'text-red-600' : 'text-gray-600';
 
   return (
     <div className="flex-1 min-w-[300px] max-w-[420px] bg-lime-50 p-6 rounded-xl flex flex-col justify-between shadow-lg border border-lime-100">
       <div>
-        {/* ✨ แสดงสรุปยอดตาม Sale Mode */}
         {isCash ? (
-          <>
-            <div className="text-lg text-gray-700 ">
-              <div className="flex justify-between items-center mb-3">
-                <span className="text-2xl font-bold text-gray-900">ยอดสุทธิที่ต้องชำระ</span>
-                <span className="text-3xl font-extrabold text-blue-700">{fmt(totalNum)} ฿</span>
-              </div>
-
-              <div className="flex justify-between font-semibold text-xl py-2">
-                <span className="font-bold text-gray-900">รวมยอดที่รับ</span>
-                <span className={(paidNum >= totalNum ? 'text-green-600' : 'text-red-600') + ' text-3xl font-extrabold'}>
-                  {fmt(paidNum)} ฿
-                </span>
-              </div>
-              <div className="flex justify-between font-semibold text-xl py-1 mt-0">
-                <span className="font-bold text-gray-900">เงินทอน</span>
-                <span className={`${changeClass} text-3xl font-extrabold`}>
-                  {fmt(changeNum)} ฿
-                </span>
-              </div>
+          <div className="text-lg text-gray-700">
+            <div className="flex justify-between items-center mb-3">
+              <span className="text-2xl font-bold text-gray-900">ยอดสุทธิที่ต้องชำระ</span>
+              <span className="text-3xl font-extrabold text-blue-700">{fmt(totalNum)} ฿</span>
             </div>
-          </>
+
+            <div className="flex justify-between font-semibold text-xl py-2">
+              <span className="font-bold text-gray-900">รวมยอดที่รับ</span>
+              <span
+                className={(paidNum >= totalNum ? 'text-green-600' : 'text-red-600') + ' text-3xl font-extrabold'}
+              >
+                {fmt(paidNum)} ฿
+              </span>
+            </div>
+
+            <div className="flex justify-between font-semibold text-xl py-1 mt-0">
+              <span className="font-bold text-gray-900">เงินทอน</span>
+              <span className={`${changeClass} text-3xl font-extrabold`}>{fmt(changeNum)} ฿</span>
+            </div>
+          </div>
         ) : (
           <div className="text-center py-0">
             <p className="text-3xl font-bold text-purple-700 mb-4">ยอดเครดิต/หน่วยงาน</p>
             <p className="text-xl text-gray-600">ยอดรวม: {fmt(totalNum)} ฿</p>
-            <p className="py-8"></p>
+            <p className="py-8" />
           </div>
         )}
       </div>
 
       {paymentError && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded-md relative text-base mb-4 mt-auto" role="alert">
+        <div
+          className="bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded-md relative text-base mb-4 mt-auto"
+          role="alert"
+        >
           <strong className="font-bold">ข้อผิดพลาด!</strong>
           <span className="block sm:inline"> {paymentError}</span>
         </div>
@@ -91,49 +108,28 @@ const PaymentSummary = ({
         <input
           type="checkbox"
           checked={isCredit}
-          onChange={(e) => setCurrentSaleMode(e.target.checked ? SALE_MODE.CREDIT : SALE_MODE.CASH)}
+          onChange={(e) => {
+            const next = e.target.checked ? SALE_MODE.CREDIT : SALE_MODE.CASH;
+            // ✅ ถ้าเลือกเครดิต แต่ยังไม่ได้เลือกลูกค้า → ปล่อยให้ PaymentSection เป็นคน guard
+            setCurrentSaleMode(next);
+          }}
           disabled={isSubmitting}
           className="form-checkbox h-4 w-4 text-purple-600 rounded"
         />
         เครดิต/หน่วยงาน
+        {!hasValidCustomerId && isCredit && (
+          <span className="text-sm text-red-600">(ต้องเลือกลูกค้าก่อน)</span>
+        )}
       </label>
 
-      {/* ย้าย BillPrintOptions มาไว้ที่นี่ */}
       <div className="mt-auto">
-        {isCash && (
-          // ✨ ซ่อน BillPrintOptions เมื่อเป็น CREDIT
-          <BillPrintOptions saleOption={saleOption} setSaleOption={setSaleOption} hideNoneOption={true} />
-        )}
-  {isCredit && (
-          // ✨ แสดงตัวเลือกการพิมพ์สำหรับ CREDIT
-          <fieldset aria-labelledby="print-credit-label" className="flex justify-center space-x-6">
-            <span id="print-credit-label" className="sr-only">ตัวเลือกการพิมพ์สำหรับเครดิต</span>
-
-            <label className="flex items-center space-x-2 ">
-              <input
-                type="radio"
-                name="saleOptionCredit"
-                value={PRINT_OPTION.NONE}
-                checked={saleOption === PRINT_OPTION.NONE}
-                onChange={() => setSaleOption(PRINT_OPTION.NONE)}
-                className="form-radio text-gray-600 w-4 h-4"
-              />
-              <span>ไม่พิมพ์เอกสาร</span>
-            </label>
-
-            <label className="flex items-center space-x-2">
-              <input
-                type="radio"
-                name="saleOptionCredit"
-                value={PRINT_OPTION.DELIVERY_NOTE}
-                checked={saleOption === PRINT_OPTION.DELIVERY_NOTE}
-                onChange={() => setSaleOption(PRINT_OPTION.DELIVERY_NOTE)}
-                className="form-radio text-blue-600 w-4 h-4"
-              />
-              <span>พิมพ์ใบส่งสินค้า</span>
-            </label>
-          </fieldset>
-        )}
+        <BillPrintOptions
+          saleOption={saleOption}
+          setSaleOption={setSaleOption}
+          currentSaleMode={currentSaleMode}
+          // CASH: ซ่อน NONE (ตาม UX ที่เลือก)
+          hideNoneOption={isCash}
+        />
       </div>
 
       <div className="text-center mt-auto">
@@ -157,15 +153,21 @@ PaymentSummary.propTypes = {
   isSubmitting: PropTypes.bool.isRequired,
   onConfirm: PropTypes.func.isRequired,
   paymentError: PropTypes.oneOfType([PropTypes.string, PropTypes.node]),
-  saleOption: PropTypes.oneOf([PRINT_OPTION.NONE, PRINT_OPTION.DELIVERY_NOTE]).isRequired,
+  saleOption: PropTypes.oneOf([
+    PRINT_OPTION.NONE,
+    PRINT_OPTION.RECEIPT,
+    PRINT_OPTION.TAX_INVOICE,
+    PRINT_OPTION.DELIVERY_NOTE,
+  ]).isRequired,
   setSaleOption: PropTypes.func.isRequired,
   currentSaleMode: PropTypes.oneOf([SALE_MODE.CASH, SALE_MODE.CREDIT]).isRequired,
   setCurrentSaleMode: PropTypes.func.isRequired,
+  hasValidCustomerId: PropTypes.bool,
+};
+
+PaymentSummary.defaultProps = {
+  hasValidCustomerId: false,
 };
 
 export default PaymentSummary;
-
-
-
-  
 

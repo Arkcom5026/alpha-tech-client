@@ -1,22 +1,35 @@
-import React, { useEffect, useRef, useState } from 'react';
-import useSalesStore from '@/features/sales/store/salesStore';
-import useCustomerDepositStore from '@/features/customerDeposit/store/customerDepositStore';
-import useStockItemStore from '@/features/stockItem/store/stockItemStore';
+// 📁 FILE: src/features/sales/layout/QuickSaleLayout.jsx
 
-import CustomerSection from '../components/CustomerSection';
-import PaymentSection from '../components/PaymentSection';
-import SaleItemTable from '../components/SaleItemTable';
+import React, { useEffect, useRef, useState } from 'react'
+import useSalesStore from '@/features/sales/store/salesStore'
+import useStockItemStore from '@/features/stockItem/store/stockItemStore'
+
+import CustomerSection from '../components/CustomerSection'
+import PaymentSection from '../components/PaymentSection'
+import SaleItemTable from '../components/SaleItemTable'
 
 const QuickSaleLayout = () => {
-  const barcodeInputRef = useRef(null);
-  const phoneInputRef = useRef(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [selectedPriceType, setSelectedPriceType] = useState('retail');
-  const [clearPhoneTrigger, setClearPhoneTrigger] = useState(null);
-  const [hideCustomerDetails, setHideCustomerDetails] = useState(false);
+  const barcodeInputRef = useRef(null)
+  const phoneInputRef = useRef(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [selectedPriceType, setSelectedPriceType] = useState('retail')
+  const [clearPhoneTrigger, setClearPhoneTrigger] = useState(null)
+  const [hideCustomerDetails, setHideCustomerDetails] = useState(false)
 
-  // ✨ 1. สร้าง State ใหม่เพื่อเก็บ "โหมดการขาย" ('CASH' หรือ 'CREDIT')
-  const [saleMode, setSaleMode] = useState('CASH');
+  // ✅ reset UI hiding when a new sale cycle starts (PaymentSection triggers clearPhoneTrigger)
+  useEffect(() => {
+    if (clearPhoneTrigger) setHideCustomerDetails(false)
+  }, [clearPhoneTrigger])
+
+  // 🔔 UI-based barcode error (no toast / no dialog)
+  const [barcodeError, setBarcodeError] = useState('')
+
+  // ✨ โหมดการขาย: CASH | CREDIT
+  const [saleMode, setSaleMode] = useState('CASH')
+
+  // 🧾 ตัวเลือกการพิมพ์บิลหลังยืนยันการขาย
+  // NONE | RECEIPT | TAX_INVOICE | DELIVERY_NOTE
+  const [saleOption, setSaleOption] = useState('NONE')
 
   const {
     saleItems,
@@ -25,117 +38,208 @@ const QuickSaleLayout = () => {
     confirmSaleOrderAction,
     sharedBillDiscountPerItem,
     billDiscount,
-    saleCompleted,
-    setSaleCompleted,
-  } = useSalesStore();
+    error: saleError,
+    clearErrorAction: clearSaleErrorAction,
+  } = useSalesStore()
 
-  const { searchStockItemAction } = useStockItemStore();
-  const { clearCustomerAndDeposit, setCustomerIdAction } = useCustomerDepositStore();
+  const {
+    searchStockItemAction,
+    error: stockError,
+    clearErrorAction: clearStockErrorAction,
+  } = useStockItemStore()
 
   useEffect(() => {
-    phoneInputRef.current?.focus();
-  }, []);
+    phoneInputRef.current?.focus()
+  }, [])
 
-  useEffect(() => {
-    if (saleCompleted) {
-      console.log('✅ เคลียร์ข้อมูลลูกค้าและมัดจำ...');
-      clearCustomerAndDeposit();
-      setCustomerIdAction(null);
-      setSaleCompleted(false);
-      setClearPhoneTrigger(Date.now());
-      setSaleMode('CASH'); // ✨ รีเซ็ตโหมดการขายเป็นขายสดเสมอ
-      setTimeout(() => {
-        setHideCustomerDetails(true);
-      }, 200);
-    }
-  }, [saleCompleted, clearCustomerAndDeposit, setCustomerIdAction, setSaleCompleted]);
+  // ✅ NOTE: การ reset หลังขาย ให้ PaymentSection เป็น owner เพียงจุดเดียว (กัน reset ซ้ำ)
+  // QuickSaleLayout ควรทำแค่ “เปิดหน้าพิมพ์” และ “ปรับ UI เล็กน้อย” เท่านั้น
 
   const handleBarcodeSearch = async (e) => {
-    if (e.key === 'Enter') {
-      const barcode = e.target.value.trim();
-      if (!barcode) return;
-      try {
-        const results = await searchStockItemAction(barcode);
-        const foundItem = Array.isArray(results) ? results[0] : results;
-        if (foundItem) {
-          const preparedItem = {
-            barcodeId: foundItem.id,
-            barcode: foundItem.barcode,
-            stockItemId: foundItem.id,
-            productName: foundItem.product?.name || '',
-            model: foundItem.product?.model || '',
-            price: foundItem.prices?.[selectedPriceType] || 0,
-            discount: 0,
-            discountWithoutBill: 0,
-            billShare: 0,
-          };
-          addSaleItemAction(preparedItem);
-        }
-        e.target.value = '';
-      } catch (error) {
-        console.error('❌ ค้นหาสินค้าไม่สำเร็จ:', error);
-      }
-    }
-  };
+    clearSaleErrorAction?.()
+    clearStockErrorAction?.()
 
-  const handleSaleConfirmed = () => {
-    setHideCustomerDetails(false);
-  };
+    if (e.key !== 'Enter') return
+
+    const barcode = e.target.value.trim()
+    if (!barcode) return
+
+    setBarcodeError('')
+
+    try {
+      const result = await searchStockItemAction(barcode)
+
+      // ✅ แยกเคส: มีบาร์โค้ด แต่ไม่พร้อมขาย (เช่น SOLD/CLAIMED/LOST)
+      if (result?.notSellable) {
+        const status = result.status || 'UNKNOWN'
+
+        if (status === 'SOLD') {
+          setBarcodeError(`❌ บาร์โค้ด ${barcode} สินค้าชิ้นนี้ขายแล้ว`)
+        } else {
+          setBarcodeError(`❌ สินค้านี้ไม่พร้อมขาย (สถานะ: ${status})`)
+        }
+
+        e.target.value = ''
+        barcodeInputRef.current?.focus()
+        return
+      }
+
+      const foundItem = Array.isArray(result) ? result[0] : result
+
+      if (!foundItem) {
+        setBarcodeError('❌ ไม่พบบาร์โค้ดนี้ในระบบ')
+        e.target.value = ''
+        barcodeInputRef.current?.focus()
+        return
+      }
+
+      // 🔒 Safety: เผื่อ backend คืน item ที่มี status ไม่พร้อมขายมาในอนาคต
+      const status = foundItem.status || foundItem.stockItem?.status
+      if (status && status !== 'IN_STOCK') {
+        if (status === 'SOLD') {
+          setBarcodeError(`❌ บาร์โค้ด ${barcode} สินค้าชิ้นนี้ขายแล้ว`)
+        } else {
+          setBarcodeError(`❌ สินค้านี้ไม่พร้อมขาย (สถานะ: ${status})`)
+        }
+
+        e.target.value = ''
+        barcodeInputRef.current?.focus()
+        return
+      }
+
+      const duplicated = saleItems.some((i) => i.stockItemId === foundItem.id)
+      if (duplicated) {
+        setBarcodeError('⚠️ บาร์โค้ดนี้ถูกเพิ่มในรายการขายแล้ว')
+        e.target.value = ''
+        barcodeInputRef.current?.focus()
+        return
+      }
+
+      const preparedItem = {
+        barcodeId: foundItem.id,
+        barcode: foundItem.barcode,
+        stockItemId: foundItem.id,
+        productName: foundItem.product?.name || '',
+        model: foundItem.product?.model || '',
+        price: foundItem.prices?.[selectedPriceType] || 0,
+        discount: 0,
+        discountWithoutBill: 0,
+        billShare: 0,
+      }
+
+      addSaleItemAction(preparedItem)
+      e.target.value = ''
+      barcodeInputRef.current?.focus()
+    } catch {
+      setBarcodeError('❌ ระบบค้นหาสินค้าขัดข้อง กรุณาลองใหม่')
+      e.target.value = ''
+      barcodeInputRef.current?.focus()
+    }
+  }
 
   const handleConfirmSale = async () => {
-    if (saleItems.length === 0 || isSubmitting) return;
+    // ✅ PaymentSection เป็นคนคุม flow (confirm -> pay -> onSaleConfirmed)
+    // หน้าที่: “ยืนยันการขาย” และส่ง saleId กลับไปเท่านั้น
+    clearSaleErrorAction?.()
+
+    if (saleItems.length === 0 || isSubmitting) return { error: 'ยังไม่มีรายการสินค้า' }
+
     try {
-      setIsSubmitting(true);
-      // ✨ 2. ส่ง saleMode เข้าไปใน Action เพื่อให้ Backend รู้ว่าเป็นการขายสดหรือเครดิต
-      await confirmSaleOrderAction(saleMode); 
-      console.log('✅ ยืนยันการขายเสร็จแล้ว → เคลียร์ข้อมูลลูกค้า');
-      clearCustomerAndDeposit();
-      setCustomerIdAction(null);
-      setClearPhoneTrigger(Date.now());
-      setSaleMode('CASH'); // ✨ รีเซ็ตโหมดการขาย
-      setTimeout(() => {
-        setHideCustomerDetails(true);
-      }, 200);
+      setIsSubmitting(true)
+
+      const res = await confirmSaleOrderAction(saleMode)
+      if (res?.error) return res
+
+      const saleId = res?.saleId
+      return { saleId, data: res?.data }
     } catch (err) {
-      console.error('❌ ยืนยันการขายล้มเหลว:', err);
+      return { error: err?.message || 'ยืนยันการขายล้มเหลว' }
     } finally {
-      setIsSubmitting(false);
+      setIsSubmitting(false)
     }
-  };
+  }
+
+  const handleSaleConfirmed = (saleId, option) => {
+    // ✅ basePath guard: รองรับ route ที่ถูก mount ใต้ /app
+    const basePath = window.location.pathname.startsWith('/app') ? '/app' : '';
+    // ✅ เปิดหน้า print ตามตัวเลือกที่ผู้ใช้เลือก (ใช้ route เดียวกับ “พิมพ์บิลย้อนหลัง”)
+    if (saleId && option && option !== 'NONE') {
+      let printUrl = ''
+
+      if (option === 'RECEIPT') {
+        printUrl = `${basePath}/pos/sales/bill/print-short/${saleId}`
+      } else if (option === 'TAX_INVOICE') {
+        printUrl = `${basePath}/pos/sales/bill/print-full/${saleId}`
+      } else if (option === 'DELIVERY_NOTE') {
+        // TODO: ใส่ route จริงของใบส่งของเมื่อพร้อม
+        // ตอนนี้กัน UX ว่าง ๆ ไว้ก่อน
+        setBarcodeError('ℹ️ ใบส่งของยังไม่พร้อมใช้งานในเวอร์ชันนี้')
+        printUrl = ''
+      }
+
+      if (printUrl) {
+        window.open(printUrl, '_blank', 'noopener,noreferrer')
+      }
+    }
+
+    // ✅ UI reset เล็กน้อยเท่านั้น (ตัว reset หลักอยู่ใน PaymentSection)
+    // ไม่ล้างข้อมูลหลักซ้ำซ้อน (PaymentSection เป็น owner)
+    setTimeout(() => {
+      setHideCustomerDetails(true)
+    }, 200)
+  }
 
   return (
     <>
-    {/* <div className="p-4 bg-white rounded-xl shadow-lg mt-4 min-w-[1600px]"> */}
-      <div className="flex flex-col-2 gap-2">
+      <div className="grid grid-cols-12 gap-2">
+        <div className="col-span-12 lg:col-span-4">
+          <CustomerSection
+            phoneInputRef={phoneInputRef}
+            productSearchRef={barcodeInputRef}
+            clearTrigger={clearPhoneTrigger}
+            onClearFinish={() => setClearPhoneTrigger(null)}
+            key={clearPhoneTrigger}
+            hideCustomerDetails={hideCustomerDetails}
+            onSaleModeSelect={setSaleMode}
+          />
+        </div>
 
-        <CustomerSection
-          phoneInputRef={phoneInputRef}
-          productSearchRef={barcodeInputRef}
-          clearTrigger={clearPhoneTrigger}
-          onClearFinish={() => setClearPhoneTrigger(null)}
-          key={clearPhoneTrigger}
-          hideCustomerDetails={hideCustomerDetails}
-          // ✨ 3. ส่งฟังก์ชัน setSaleMode เข้าไปใน CustomerSection
-          onSaleModeSelect={setSaleMode}
-        />
-        
-        <div className="col-span-12 lg:col-span-8 ">
-          <div className="bg-white p-4 ">
+        <div className="col-span-12 lg:col-span-8">
+          <div className="bg-white p-4">
             <h2 className="text-lg font-bold text-gray-800">เลือกราคาขาย:</h2>
             <div className="mb-2 flex gap-4 min-w-[1100px]">
               <label className="flex items-center space-x-2 text-gray-700">
-                <input type="radio" value="wholesale" checked={selectedPriceType === 'wholesale'} onChange={(e) => setSelectedPriceType(e.target.value)} className="form-radio text-blue-600" />
+                <input
+                  type="radio"
+                  value="wholesale"
+                  checked={selectedPriceType === 'wholesale'}
+                  onChange={(e) => setSelectedPriceType(e.target.value)}
+                  className="form-radio text-blue-600"
+                />
                 <span>ราคาส่ง</span>
               </label>
               <label className="flex items-center space-x-2 text-gray-700">
-                <input type="radio" value="technician" checked={selectedPriceType === 'technician'} onChange={(e) => setSelectedPriceType(e.target.value)} className="form-radio text-blue-600" />
+                <input
+                  type="radio"
+                  value="technician"
+                  checked={selectedPriceType === 'technician'}
+                  onChange={(e) => setSelectedPriceType(e.target.value)}
+                  className="form-radio text-blue-600"
+                />
                 <span>ราคาช่าง</span>
               </label>
               <label className="flex items-center space-x-2 text-gray-700">
-                <input type="radio" value="retail" checked={selectedPriceType === 'retail'} onChange={(e) => setSelectedPriceType(e.target.value)} className="form-radio text-blue-600" />
+                <input
+                  type="radio"
+                  value="retail"
+                  checked={selectedPriceType === 'retail'}
+                  onChange={(e) => setSelectedPriceType(e.target.value)}
+                  className="form-radio text-blue-600"
+                />
                 <span>ราคาปลีก</span>
               </label>
             </div>
+
             <input
               ref={barcodeInputRef}
               type="text"
@@ -143,6 +247,15 @@ const QuickSaleLayout = () => {
               onKeyDown={handleBarcodeSearch}
               className="w-full border border-gray-300 focus:ring-2 focus:ring-blue-500 text-lg px-3 py-2 rounded-md shadow-sm"
             />
+
+            {(barcodeError || saleError || stockError) && (
+              <div
+                className="mt-2 rounded-md border border-red-300 bg-red-50 px-3 py-2 text-red-700"
+                aria-live="assertive"
+              >
+                {barcodeError || saleError || stockError}
+              </div>
+            )}
           </div>
 
           <div className="bg-white p-4 min-h-[400px]">
@@ -160,29 +273,26 @@ const QuickSaleLayout = () => {
             </div>
           </div>
         </div>
-
       </div>
 
-      <div className="col-span-12 py-4 ">
+      <div className="col-span-12 py-4">
         <PaymentSection
           saleItems={saleItems}
-          onConfirm={handleConfirmSale}
           isSubmitting={isSubmitting}
           setIsSubmitting={setIsSubmitting}
           onSaleConfirmed={handleSaleConfirmed}
           setClearPhoneTrigger={setClearPhoneTrigger}
-          // ✨ 4. ส่ง saleMode ปัจจุบันและ setter ไปยัง PaymentSection
-          onSaleModeChange={setSaleMode}
           currentSaleMode={saleMode}
+          onSaleModeChange={setSaleMode}
+          saleOption={saleOption}
+          onSaleOptionChange={setSaleOption}
+          onConfirmSale={handleConfirmSale}
         />
       </div>
-    {/* </div> */}
     </>
-  );
-};
+  )
+}
 
-export default QuickSaleLayout;
-
-
+export default QuickSaleLayout
 
 

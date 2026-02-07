@@ -2,13 +2,28 @@
 
 import apiClient from '@/utils/apiClient';
 
+// ✅ Policy: ต้องมี try/catch ครอบทุกจุดเสี่ยง (Production)
+// ✅ No console.log/console.error ใน production path
+// ✅ catch ต้อง “เพิ่มค่า” บางอย่างเพื่อไม่ให้ eslint มองว่า useless-catch
+const attachApiContext = (err, context) => {
+  try {
+    if (err && typeof err === 'object') {
+      // ไม่ทับของเดิม ถ้ามีอยู่แล้ว
+      if (!err._apiContext) err._apiContext = context;
+      if (!err._apiAt) err._apiAt = new Date().toISOString();
+    }
+  } catch (_) {
+    // ignore
+  }
+  return err;
+};
+
 export const createSaleOrder = async (payload) => {
   try {
     const res = await apiClient.post('/sale-orders', payload);
     return res.data;
   } catch (err) {
-    console.error('❌ [createSaleOrder]', err);
-    throw err;
+    throw attachApiContext(err, 'saleApi.createSaleOrder');
   }
 };
 
@@ -17,8 +32,7 @@ export const getAllSales = async () => {
     const res = await apiClient.get('/sale-orders');
     return res.data;
   } catch (err) {
-    console.error('❌ [getAllSales]', err);
-    throw err;
+    throw attachApiContext(err, 'saleApi.getAllSales');
   }
 };
 
@@ -27,8 +41,7 @@ export const getSaleById = async (id) => {
     const res = await apiClient.get(`/sale-orders/${id}`);
     return res.data;
   } catch (err) {
-    console.error('❌ [getSaleById]', err);
-    throw err;
+    throw attachApiContext(err, 'saleApi.getSaleById');
   }
 };
 
@@ -37,8 +50,7 @@ export const returnSale = async (saleOrderId, saleItemId) => {
     const res = await apiClient.post(`/sale-orders/${saleOrderId}/return`, { saleItemId });
     return res.data;
   } catch (err) {
-    console.error('❌ [returnSale]', err);
-    throw err;
+    throw attachApiContext(err, 'saleApi.returnSale');
   }
 };
 
@@ -47,8 +59,7 @@ export const markSaleAsPaid = async (saleId) => {
     const res = await apiClient.post(`/sale-orders/${saleId}/mark-paid`);
     return res.data;
   } catch (err) {
-    console.error('❌ [markSaleAsPaid]', err);
-    throw err;
+    throw attachApiContext(err, 'saleApi.markSaleAsPaid');
   }
 };
 
@@ -56,35 +67,32 @@ export const getSaleReturns = async () => {
   try {
     const res = await apiClient.get('/sale-orders/return');
     return res.data;
-  } catch (error) {
-    console.error('❌ [getSaleReturns] error:', error);
-    throw error;
+  } catch (err) {
+    throw attachApiContext(err, 'saleApi.getSaleReturns');
   }
 };
 
-// ✅ New: Update customer profile via token (no :id in URL)
+// ✅ Update customer profile via token (no :id in URL)
 export const updateCustomer = async (data) => {
   try {
     const res = await apiClient.patch('/customers/me', data);
     return res.data;
   } catch (err) {
-    console.error('❌ [updateCustomer]', err);
-    throw err;
+    throw attachApiContext(err, 'saleApi.updateCustomer');
   }
 };
 
-// ✅ New: Function to search printable sales with filters
+// ✅ Search printable sales with filters
 export const searchPrintableSales = async (params) => {
   try {
     const res = await apiClient.get('/sale-orders/printable-sales', { params });
     return res.data;
-  } catch (error) {
-    console.error('❌ [searchPrintableSales] error:', error);
-    throw error;
+  } catch (err) {
+    throw attachApiContext(err, 'saleApi.searchPrintableSales');
   }
 };
 
-// ✅ New: Convert OrderOnline to Sale
+// ✅ Convert OrderOnline to Sale
 export const convertOrderOnlineToSale = async (orderOnlineId, stockSelections) => {
   try {
     const res = await apiClient.post(`/order-online/${orderOnlineId}/convert-to-sale`, {
@@ -92,7 +100,6 @@ export const convertOrderOnlineToSale = async (orderOnlineId, stockSelections) =
     });
     return res.data;
   } catch (err) {
-    console.error('❌ [convertOrderOnlineToSale]', err);
-    throw err;
+    throw attachApiContext(err, 'saleApi.convertOrderOnlineToSale');
   }
 };

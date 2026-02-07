@@ -15,6 +15,9 @@ export const SALE_MODE = {
 };
 
 const BillPrintOptions = ({ saleOption, setSaleOption, hideNoneOption = false, currentSaleMode = SALE_MODE.CASH }) => {
+  // guard: กันกรณี handler ถูกส่งมาไม่ครบ
+  if (typeof setSaleOption !== 'function') return null;
+  const isCash = currentSaleMode === SALE_MODE.CASH;
   const isCredit = currentSaleMode === SALE_MODE.CREDIT;
 
   // สร้างชุดตัวเลือกตามโหมดการขาย
@@ -30,10 +33,17 @@ const BillPrintOptions = ({ saleOption, setSaleOption, hideNoneOption = false, c
 
   // ถ้าโหมดเครดิตและค่าปัจจุบันไม่ถูกต้อง → บังคับเป็นใบส่งของ
   useEffect(() => {
+    // CREDIT: ถ้าเลือก RECEIPT/TAX_INVOICE ให้บังคับเป็น DELIVERY_NOTE
     if (isCredit && (saleOption === PRINT_OPTION.RECEIPT || saleOption === PRINT_OPTION.TAX_INVOICE)) {
       setSaleOption(PRINT_OPTION.DELIVERY_NOTE);
+      return;
     }
-  }, [isCredit, saleOption, setSaleOption]);
+
+    // CASH: ถ้าซ่อน NONE และค่าเป็น NONE ให้ default เป็น RECEIPT
+    if (isCash && hideNoneOption && saleOption === PRINT_OPTION.NONE) {
+      setSaleOption(PRINT_OPTION.RECEIPT);
+    }
+  }, [isCredit, isCash, hideNoneOption, saleOption, setSaleOption]);
 
   const handleChange = (e) => {
     const next = e.target.value;
@@ -42,10 +52,12 @@ const BillPrintOptions = ({ saleOption, setSaleOption, hideNoneOption = false, c
   };
 
   return (
-    <fieldset className="space-y-3 pl-3 text-base text-gray-700">
+    <fieldset className="space-y-3 pl-3 text-base text-gray-700" role="radiogroup" aria-label="ตัวเลือกการพิมพ์เอกสาร">
+      {/* options (radio) */}
       {options.map((o) => (
         <label key={o.value} className={`flex items-center ${o.disabled ? 'opacity-50 cursor-not-allowed' : ''}`}>
           <input
+            name="bill-print-option"
             type="radio"
             value={o.value}
             checked={saleOption === o.value}
@@ -68,4 +80,7 @@ BillPrintOptions.propTypes = {
 };
 
 export default BillPrintOptions;
+
+
+
 

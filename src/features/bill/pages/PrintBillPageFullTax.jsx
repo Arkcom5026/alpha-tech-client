@@ -6,7 +6,7 @@
 import { useEffect } from 'react';
 import { useLocation, useParams } from 'react-router-dom';
 import BillLayoutFullTax from '@/features/bill/components/BillLayoutFullTax'
-import { useBillStore } from '@/features/bill/store/BillStore_tmp'
+import { useBillStore } from '@/features/bill/store/billStore'
 
 const PrintBillPageFullTax = () => {
   const { id } = useParams();

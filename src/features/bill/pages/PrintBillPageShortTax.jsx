@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { useLocation, useParams } from 'react-router-dom'
 import BillLayoutShortTax from '../components/BillLayoutShortTax'
-import { useBillStore } from '@/features/bill/store/BillStore_tmp'
+import { useBillStore } from '@/features/bill/store/billStore'
 
 const PrintBillPageShortTax = () => {
   const { id } = useParams()

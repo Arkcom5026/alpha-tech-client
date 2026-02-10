@@ -26,9 +26,19 @@ const apiClient = axios.create({
 apiClient.interceptors.request.use(
   (config) => {
     const token = getToken();
-    if (token) {      
-      config.headers.Authorization = token;
+
+    if (token) {
+      // ✅ Axios v1: config.headers อาจเป็น AxiosHeaders หรือ object หรือ undefined
+      // ตั้งให้ชัวร์ว่า Authorization ถูกแนบจริงเสมอ
+      if (config.headers && typeof config.headers.set === 'function') {
+        config.headers.set('Authorization', token);
+      } else {
+        config.headers = config.headers || {};
+        // eslint-disable-next-line no-param-reassign
+        config.headers.Authorization = token;
+      }
     }
+
     return config;
   },
   (error) => Promise.reject(error)
@@ -63,3 +73,7 @@ apiClient.interceptors.response.use(
 );
 
 export default apiClient;
+
+
+
+  

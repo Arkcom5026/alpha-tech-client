@@ -197,7 +197,3 @@ export const migrateSnToSimple = async (productId) => {
 
 
 
-
-
-
-

@@ -20,8 +20,7 @@ export default function ListProductPage() {
     // ✅ Restore-only: keep filter ids as null|number to avoid "12" !== 12 issues
     categoryId: null,
     productTypeId: null,
-    productProfileId: null,
-    productTemplateId: null,
+    brandId: null,
   });
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -30,6 +29,7 @@ export default function ListProductPage() {
   const [hasLoaded, setHasLoaded] = useState(false);
 
   const [disableTarget, setDisableTarget] = useState(null);
+  const [disablingId, setDisablingId] = useState(null);
   const [enablingId, setEnablingId] = useState(null);
 
   // ใช้เรียกจากตาราง (แทน confirmDelete เดิม)
@@ -38,7 +38,7 @@ export default function ListProductPage() {
     if (target) setDisableTarget(target);
   };
 
-    const confirmEnable = async (prodId) => {
+  const confirmEnable = async (prodId) => {
     console.log('🧪 [Enable] confirmEnable clicked', { prodId });
 
     const target = allProducts.find((p) => p.id === prodId);
@@ -101,16 +101,33 @@ export default function ListProductPage() {
     dropdownsLoaded,
     ensureDropdownsAction,
   } = useProductStore();
-  
+
 
   // ✅ Step 1: เราใช้ allProducts เป็นแหล่งข้อมูลหลักในหน้านี้ (products ใน store จะถูก overwrite ทีละหน้า)
   // eslint-disable-next-line no-unused-vars
   const _storeProducts = products;
 
-  // โหลด dropdowns ครั้งเดียวเมื่อเข้าหน้า
-  useEffect(() => {
-    ensureDropdownsAction();
-  }, [ensureDropdownsAction]);
+// ✅ เลื่อนการเรียก dropdowns: เรียกหลังผู้ใช้กด “แสดงข้อมูล” (hasLoaded) และมี branchId แล้วเท่านั้น
+// - กัน 401 (token/branch context อาจยังไม่พร้อมตอน mount)
+// - กัน StrictMode ยิงซ้ำ
+const dropdownsFetchRef = useRef({ branchId: null, done: false });
+
+useEffect(() => {
+  if (!hasLoaded) return;
+  if (!branchId) return;
+  if (dropdownsLoaded === true) return;
+
+  // reset เมื่อสลับสาขา
+  if (dropdownsFetchRef.current.branchId !== branchId) {
+    dropdownsFetchRef.current = { branchId, done: false };
+  }
+
+  if (dropdownsFetchRef.current.done) return;
+  dropdownsFetchRef.current.done = true;
+
+  ensureDropdownsAction();
+}, [hasLoaded, branchId, dropdownsLoaded, ensureDropdownsAction]);
+
 
   // 📌 (1) อ่านค่าจาก URL มาตั้งค่าเริ่มต้น (Deep-linkable)
   useEffect(() => {
@@ -120,9 +137,6 @@ export default function ListProductPage() {
 
     const cat = params.get('categoryId');
     const type = params.get('productTypeId');
-    const prof = params.get('productProfileId');
-    const tpl = params.get('productTemplateId');
-
     setSearchText(q);
     setCommittedSearchText(q);
     setSortOrder(s);
@@ -131,8 +145,6 @@ export default function ListProductPage() {
       ...prev,
       categoryId: cat != null ? Number(cat) : null,
       productTypeId: type != null ? Number(type) : null,
-      productProfileId: prof != null ? Number(prof) : null,
-      productTemplateId: tpl != null ? Number(tpl) : null,
     }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -144,9 +156,6 @@ export default function ListProductPage() {
 
     if (filter.categoryId != null) params.set('categoryId', String(filter.categoryId));
     if (filter.productTypeId != null) params.set('productTypeId', String(filter.productTypeId));
-    if (filter.productProfileId != null) params.set('productProfileId', String(filter.productProfileId));
-    if (filter.productTemplateId != null) params.set('productTemplateId', String(filter.productTemplateId));
-    
     if (committedSearchText) params.set('q', committedSearchText);
     if (sortOrder && sortOrder !== 'name-asc') params.set('sort', sortOrder);
 
@@ -159,29 +168,35 @@ export default function ListProductPage() {
 
 
   const handleDisable = async () => {
-    console.log('🧪 [Disable] handleDisable start', { disableTarget });
     if (!disableTarget?.id) return;
-    try {
-      // ✅ No delete: ใช้ disable action เท่านั้น
-      console.log('🧪 [Disable] calling disableProductAction', { id: disableTarget.id });
-      const res = await disableProductAction(disableTarget.id);
-      console.log('🧪 [Disable] disableProductAction result', res);
 
-      const targetId = disableTarget.id;
+    const targetId = disableTarget.id;
+    setDisablingId(targetId);
+
+    // ✅ No delete: ใช้ disable action เท่านั้น
+    try {
+      const res = await disableProductAction(targetId);
+
+      // sync UI ทันที
       setAllProducts((prev) =>
-        Array.isArray(prev)
-          ? prev.map((p) => (p?.id === targetId ? { ...p, active: false } : p))
-          : prev
+        Array.isArray(prev) ? prev.map((p) => (p?.id === targetId ? { ...p, active: false } : p)) : prev
       );
 
       setDisableTarget(null);
+
+      // reload กันข้อมูลค้าง
       await loadAllProductsOnce();
+
+      return res;
     } catch (error) {
       console.error('❌ ปิดใช้งานสินค้าไม่สำเร็จ:', error);
+      throw error;
+    } finally {
+      setDisablingId(null);
     }
   };
 
-  
+
 
   const getPrice = (p) => p.prices?.find(pr => pr.level === 1)?.price || 0;
 
@@ -218,30 +233,6 @@ export default function ListProductPage() {
     const name = p?.productTypeName ?? p?.typeName ?? p?.productType?.name ?? p?.product_type_name;
     if (!name || !Array.isArray(dropdowns?.productTypes)) return undefined;
     const hit = dropdowns.productTypes.find((t) => String(t?.name || '').trim() === String(name).trim());
-    return hit?.id;
-  };
-
-  const resolveProfileId = (p) => {
-    const direct = p?.productProfileId ?? p?.productProfile?.id ?? p?.profileId ?? p?.product_profile_id;
-    if (direct != null) return direct;
-
-    // fallback: resolve by name → dropdowns.profiles/productProfiles
-    const name = p?.productProfileName ?? p?.profileName ?? p?.productProfile?.name ?? p?.product_profile_name;
-    const arr = dropdowns?.productProfiles ?? dropdowns?.profiles;
-    if (!name || !Array.isArray(arr)) return undefined;
-    const hit = arr.find((x) => String(x?.name || '').trim() === String(name).trim());
-    return hit?.id;
-  };
-
-  const resolveTemplateId = (p) => {
-    const direct = p?.templateId ?? p?.productTemplateId ?? p?.productTemplate?.id ?? p?.product_template_id;
-    if (direct != null) return direct;
-
-    // fallback: resolve by name → dropdowns.templates/productTemplates
-    const name = p?.productTemplateName ?? p?.templateName ?? p?.productTemplate?.name ?? p?.product_template_name;
-    const arr = dropdowns?.productTemplates ?? dropdowns?.templates;
-    if (!name || !Array.isArray(arr)) return undefined;
-    const hit = arr.find((x) => String(x?.name || '').trim() === String(name).trim());
     return hit?.id;
   };
   const toNum = (v) => {
@@ -281,25 +272,21 @@ export default function ListProductPage() {
 
   const filtered = useMemo(() => {
     return allProducts.filter((p) => {
-      // ✅ Restore-only: รองรับกรณี product ไม่มี categoryId ตรง แต่ผูกผ่าน type/relation หรือส่งมาเป็น name
+      // category
       const resolvedCategoryId = resolveCategoryId(p);
       const okCategory = matchesId(filter.categoryId, resolvedCategoryId);
 
-      // ✅ Restore-only: รองรับกรณี product ไม่มี productTypeId ตรง แต่ผูกผ่าน relation หรือส่งมาเป็น name
+      // type
       const resolvedTypeId = resolveTypeId(p);
       const okType = matchesId(filter.productTypeId, resolvedTypeId);
 
-      // ✅ Restore-only: บาง record อาจไม่ได้มี productProfileId ตรง แต่ผูกผ่าน relation / legacy key / name
-      const resolvedProfileId = resolveProfileId(p);
-      const okProfile = matchesId(filter.productProfileId, resolvedProfileId);
-
-      // ✅ Restore-only: รองรับ key หลายแบบ (templateId / productTemplateId / productTemplate.id / name)
-      const resolvedTemplateId = resolveTemplateId(p);
-      const okTemplate = matchesId(filter.productTemplateId, resolvedTemplateId);
+      // brand (optional)
+      const resolvedBrandId = p?.brandId ?? p?.brand?.id ?? undefined;
+      const okBrand = matchesId(filter.brandId, resolvedBrandId);
 
       const okMode = true; // mode filter removed
 
-      // ✅ Active filter (default: ซ่อนของปิดใช้งาน)
+      // active
       const okActive = showInactive ? true : resolveActive(p) !== false;
 
       const q = (committedSearchText || '').toLowerCase();
@@ -307,11 +294,9 @@ export default function ListProductPage() {
         !q ||
         (p.name?.toLowerCase().includes(q) ||
           p.model?.toLowerCase().includes(q) ||
-          // ✅ รองรับค้นหา "แบรนด์" จากชื่อ profile/brand ที่ BE ส่งมา
-          (p.productProfileName || p.profileName || p.productProfile?.name || '')
-            .toLowerCase()
-            .includes(q));
-      return okCategory && okType && okProfile && okTemplate && okMode && okActive && okSearch;
+          (p.brandName || p.brand?.name || '').toLowerCase().includes(q));
+
+      return okCategory && okType && okBrand && okMode && okActive && okSearch;
     });
   }, [allProducts, filter, committedSearchText, dropdowns, dropdownsLoaded, showInactive]);
 
@@ -358,15 +343,11 @@ export default function ListProductPage() {
         (acc, p) => {
           const rc = toNum(resolveCategoryId(p));
           const rt = toNum(resolveTypeId(p));
-          const rp = toNum(resolveProfileId(p));
-          const rtp = toNum(resolveTemplateId(p));
           if (rc === undefined) acc.noResolvedCategory += 1;
           if (rt === undefined) acc.noResolvedType += 1;
-          if (rp === undefined) acc.noResolvedProfile += 1;
-          if (rtp === undefined) acc.noResolvedTemplate += 1;
           return acc;
         },
-        { noResolvedCategory: 0, noResolvedType: 0, noResolvedProfile: 0, noResolvedTemplate: 0 }
+        { noResolvedCategory: 0, noResolvedType: 0 }
       );
       console.log('🧪 [ListProductPage] resolveStats', stats);
 
@@ -376,21 +357,15 @@ export default function ListProductPage() {
           (acc, p) => {
             const rc = toNum(resolveCategoryId(p));
             const rt = toNum(resolveTypeId(p));
-            const rp = toNum(resolveProfileId(p));
-            const rtp = toNum(resolveTemplateId(p));
             if (rc !== undefined) acc.category[rc] = (acc.category[rc] || 0) + 1;
             if (rt !== undefined) acc.type[rt] = (acc.type[rt] || 0) + 1;
-            if (rp !== undefined) acc.profile[rp] = (acc.profile[rp] || 0) + 1;
-            if (rtp !== undefined) acc.template[rtp] = (acc.template[rtp] || 0) + 1;
             return acc;
           },
-          { category: {}, type: {}, profile: {}, template: {} }
+          { category: {}, type: {} }
         );
         console.log('🧪 [ListProductPage] resolvedIdDistribution', {
           category: Object.entries(dist.category).sort((a, b) => Number(a[0]) - Number(b[0])).slice(0, 30),
           type: Object.entries(dist.type).sort((a, b) => Number(a[0]) - Number(b[0])).slice(0, 30),
-          profile: Object.entries(dist.profile).sort((a, b) => Number(a[0]) - Number(b[0])).slice(0, 30),
-          template: Object.entries(dist.template).sort((a, b) => Number(a[0]) - Number(b[0])).slice(0, 30),
         });
       } catch (e) {
         console.log('🧪 [ListProductPage] resolvedIdDistribution error', e);
@@ -408,16 +383,9 @@ export default function ListProductPage() {
         categoryName: p.categoryName ?? p.category?.name ?? p.category_name,
         productTypeId: p.productTypeId,
         productTypeName: p.productTypeName ?? p.typeName ?? p.productType?.name ?? p.product_type_name,
-        productProfileId: p.productProfileId,
-        productProfileName: p.productProfileName ?? p.profileName ?? p.productProfile?.name ?? p.product_profile_name,
-        templateId: p.templateId,
-        productTemplateId: p.productTemplateId,
-        productTemplateName: p.productTemplateName ?? p.templateName ?? p.productTemplate?.name ?? p.product_template_name,
         // resolved for filtering
         resolvedCategoryId: resolveCategoryId(p),
         resolvedTypeId: resolveTypeId(p),
-        resolvedProfileId: resolveProfileId(p),
-        resolvedTemplateId: resolveTemplateId(p),
         // keys snapshot (ช่วยตามหาชื่อ field จริงจาก BE)
         keys: Object.keys(p || {}).slice(0, 30),
       }));
@@ -468,24 +436,70 @@ export default function ListProductPage() {
         const list = useProductStore.getState().products || [];
         console.log('✅ [ListProductPage] got', { page, count: list.length });
 
-                // ✅ Normalize: ensure `active` exists even if BE uses isActive/enabled
-        const normalized = Array.isArray(list)
-          ? list.map((p) => {
-              const raw = p?.active ?? p?.isActive ?? p?.enabled;
-              const active = typeof raw === 'boolean'
-                ? raw
-                : raw === 0 || raw === '0'
+        // ✅ Normalize: flatten fields for FE table (minimal disruption)
+        const normalizeRow = (p) => {
+          const raw = p?.active ?? p?.isActive ?? p?.enabled;
+          const active = typeof raw === 'boolean'
+            ? raw
+            : raw === 0 || raw === '0'
+              ? false
+              : raw === 1 || raw === '1'
+                ? true
+                : p?.deletedAt
                   ? false
-                  : raw === 1 || raw === '1'
-                    ? true
-                    : p?.deletedAt
-                      ? false
-                      : p?.status
-                        ? String(p.status).toUpperCase() !== 'INACTIVE'
-                        : undefined;
-              return active === undefined ? p : { ...p, active };
-            })
-          : [];
+                  : p?.status
+                    ? String(p.status).toUpperCase() !== 'INACTIVE'
+                    : true;
+
+          const bp = Array.isArray(p?.branchPrice) ? p.branchPrice[0] : p?.branchPrice;
+          const sb = Array.isArray(p?.stockBalances) ? p.stockBalances[0] : p?.stockBalances;
+
+          // name labels (รองรับทั้ง relation และ field legacy)
+          const categoryName = p?.category?.name ?? p?.categoryName ?? p?.category_name ?? null;
+          const typeName = p?.productType?.name ?? p?.productTypeName ?? p?.typeName ?? p?.product_type_name ?? null;
+          const profileName = p?.productProfile?.name ?? p?.profileName ?? p?.product_profile_name ?? null;
+          const templateName = p?.template?.name ?? p?.templateName ?? p?.template_name ?? null;
+
+          // ✅ Brand (optional): รองรับทั้ง relation และ legacy keys (non-breaking)
+          const brandName =
+            p?.brand?.name ??
+            p?.brandName ??
+            p?.brand_name ??
+            null;
+
+          return {
+            ...p,
+            active,
+
+            // ✅ Table fields (string)
+            category: categoryName,
+            productType: typeName,
+
+            // ✅ Brand (string)
+            brandName,
+
+            // ✅ Keep legacy field for other UI parts (if any)
+            productProfile: profileName,
+            templateName,
+
+            // ✅ SKU/spec
+            sku: p?.sku ?? p?.model ?? p?.spec ?? templateName ?? null,
+
+            // ✅ Prices (branch-scoped)
+            costPrice: bp?.costPrice ?? p?.costPrice ?? null,
+            priceRetail: bp?.priceRetail ?? p?.priceRetail ?? null,
+            priceOnline: bp?.priceOnline ?? p?.priceOnline ?? null,
+            priceWholesale: bp?.priceWholesale ?? p?.priceWholesale ?? null,
+            priceTechnician: bp?.priceTechnician ?? p?.priceTechnician ?? null,
+
+            // ✅ Stock balance (branch-scoped)
+            stockQuantity: sb?.quantity ?? p?.stockQuantity ?? null,
+            stockReserved: sb?.reserved ?? p?.stockReserved ?? null,
+            lastReceivedCost: sb?.lastReceivedCost ?? p?.lastReceivedCost ?? null,
+          };
+        };
+
+        const normalized = Array.isArray(list) ? list.map(normalizeRow) : [];
 
         acc = acc.concat(normalized);
         if (list.length < TAKE) break;
@@ -525,12 +539,12 @@ export default function ListProductPage() {
 
   const prevCatRef = useRef(null);
   const prevTypeRef = useRef(null);
-  const prevProfRef = useRef(null);
+
 
   const handleFilterChange = (next) => {
     // ✅ dropdown ทำงานหลังจากกด “แสดงข้อมูล” เท่านั้น
     if (!hasLoaded) return;
-  
+
     // ✅ Fix dropdown เด้งเคลียร์ (เหมือนเคส ListProductTemplatePage)
     // CascadingFilterGroup อาจส่งมาแค่ field ที่เปลี่ยน เช่น { productTypeId } โดยไม่ส่ง { categoryId }
     // ถ้าเราเอา categoryId ที่ไม่มีใน payload ไป normalize เป็น null → จะเคลียร์หมวด + เคลียร์ลูกโซ่ทันที
@@ -554,44 +568,27 @@ export default function ListProductPage() {
     // ✅ รองรับชื่อ key หลายแบบ (กัน component รุ่นเก่า)
     const rawCat = pick(next, 'categoryId', ['catId']);
     const rawType = pick(next, 'productTypeId', ['typeId']);
-    const rawProf = pick(next, 'productProfileId', ['profileId']);
-    const rawTpl = pick(next, 'productTemplateId', ['templateId']);
-
     setFilter((prev) => {
       const prevCat = prev.categoryId ?? null;
-      const prevType = prev.productTypeId ?? null;
-      const prevProf = prev.productProfileId ?? null;
-
-      const nextCat = toIdOrNull(rawCat);
+      const prevType = prev.productTypeId ?? null; const nextCat = toIdOrNull(rawCat);
       const nextType = toIdOrNull(rawType);
-      const nextProf = toIdOrNull(rawProf);
-      const nextTpl = toIdOrNull(rawTpl);
 
       // ✅ ถ้า payload ไม่ส่งค่า → คงของเดิม
       const mergedCat = nextCat === undefined ? prevCat : nextCat;
       const mergedType = nextType === undefined ? prevType : nextType;
-      const mergedProf = nextProf === undefined ? prevProf : nextProf;
-      const mergedTpl = nextTpl === undefined ? prev.productTemplateId ?? null : nextTpl;
-
       const isCatChanged = (prevCat ?? null) !== (mergedCat ?? null);
-      const isTypeChanged = (prevType ?? null) !== (mergedType ?? null);
-      const isProfChanged = (prevProf ?? null) !== (mergedProf ?? null);
 
-      // ✅ Cascade rules (มาตรฐานเดียวกับ Template)
-      // - เปลี่ยนหมวด → ล้างประเภท + แบรนด์ + รุ่น
-      // - เปลี่ยนประเภท → ล้างแบรนด์ + รุ่น
-      // - เปลี่ยนแบรนด์ → ล้างรุ่น
+      // ✅ Cascade rules (new 3-level)
+      // - เปลี่ยนหมวด → ล้างประเภท + สินค้า
+      // - เปลี่ยนประเภท → ล้างสินค้า
       const out = {
         ...prev,
         categoryId: mergedCat,
         productTypeId: isCatChanged ? null : mergedType,
-        productProfileId: isCatChanged || isTypeChanged ? null : mergedProf,
-        productTemplateId: isCatChanged || isTypeChanged || isProfChanged ? null : mergedTpl,
       };
 
       prevCatRef.current = out.categoryId;
       prevTypeRef.current = out.productTypeId;
-      prevProfRef.current = out.productProfileId;
 
       return out;
     });
@@ -655,7 +652,31 @@ export default function ListProductPage() {
                   </select>
                 </div>
 
-                
+
+                {/* brand */}
+                <div className="w-full lg:w-[220px]">
+                  <select
+                    value={filter.brandId == null ? '' : String(filter.brandId)}
+                    onChange={(e) => {
+                      const v = e.target.value
+                      setFilter((prev) => ({ ...prev, brandId: v === '' ? null : Number(v) }))
+                      setCurrentPage(1)
+                    }}
+                    className="border px-3 py-2 rounded w-full"
+                    disabled={!hasLoaded}
+                    aria-disabled={!hasLoaded}
+                  >
+                    <option value="">แบรนด์ทั้งหมด</option>
+                    {(Array.isArray(dropdowns?.brands) ? dropdowns.brands : []).map((b) => (
+                      <option key={String(b.id)} value={String(b.id)}>
+                        {b.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+
+
 
                 {/* per page */}
                 <div className="flex items-center gap-2 w-full lg:w-auto">
@@ -711,12 +732,12 @@ export default function ListProductPage() {
                 </label>
 
                 {/* hint */}
-                
+
               </div>
 
               {/* ✅ dropdown ทำงานหลังจากกด “แสดงข้อมูล” แล้วเท่านั้น */}
               <div className={!hasLoaded ? 'pointer-events-none opacity-60' : ''} aria-disabled={!hasLoaded}>
-                <CascadingFilterGroup value={filter} onChange={handleFilterChange} dropdowns={dropdowns} showReset />
+                <CascadingFilterGroup value={filter} onChange={handleFilterChange} dropdowns={dropdowns} showReset hiddenFields={['product']} />
               </div>
 
               {/* ✅ ปุ่ม “แสดงข้อมูล” */}
@@ -811,8 +832,9 @@ export default function ListProductPage() {
             onEdit={(id) => navigate(`/pos/stock/products/edit/${id}`)}
             onDisable={confirmDisable}
             onEnable={confirmEnable}
-            disabling={false}
-            enabling={!!enablingId}
+            // ✅ pass per-row working id (so button disabled only for that row)
+            disabling={disablingId}
+            enabling={enablingId}
             density={density}
             showAllPrices={showAllPrices}
           />
@@ -855,5 +877,10 @@ export default function ListProductPage() {
     </div>
   );
 }
+
+
+
+
+
 
 

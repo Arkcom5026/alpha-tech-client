@@ -1,3 +1,4 @@
+
 // src/features/productProfile/store/productProfileStore.js
 import { create } from 'zustand';
 import {
@@ -18,8 +19,7 @@ const useProductProfileStore = create((set, get) => ({
   totalPages: 1,
   search: '',
   includeInactive: false,
-  categoryId: null,
-  productTypeId: null,
+  // ❌ ProductProfile ไม่ผูกกับ Category/ProductType ตาม BestLine
 
   current: null,
   isLoading: false,
@@ -30,16 +30,14 @@ const useProductProfileStore = create((set, get) => ({
   setPageAction: (page) => set({ page }),
   setSearchAction: (search) => set({ search, page: 1 }),
   setIncludeInactiveAction: (includeInactive) => set({ includeInactive, page: 1 }),
-  setCategoryFilterAction: (categoryId) => set({ categoryId, page: 1 }),
-  setProductTypeFilterAction: (productTypeId) => set({ productTypeId, page: 1 }),
   setLimitAction: (limit) => set({ limit, page: 1 }),
   clearCurrentAction: () => set({ current: null }),
 
   fetchListAction: async () => {
-    const { page, limit, search, includeInactive, categoryId, productTypeId } = get();
+    const { page, limit, search, includeInactive } = get();
     set({ isLoading: true, error: null });
     try {
-      const res = await getProductProfiles({ page, limit, search, includeInactive, categoryId, productTypeId });
+      const res = await getProductProfiles({ page, limit, search, includeInactive });
       const payload = res?.data ?? res;
 
       const pick = (obj, paths) => {
@@ -78,14 +76,12 @@ const useProductProfileStore = create((set, get) => ({
     }
   },
 
-  fetchProfileById: async (id) => {
+  fetchProfileByIdAction: async (id) => {
     set({ isLoadingCurrent: true, error: null });
     try {
       const res = await getProductProfileById(id);
       const payload = res?.data ?? res;
 
-      console.log('[ProfileById] raw res:', res);
-      console.log('[ProfileById] payload keys:', payload && Object.keys(payload || {}));
 
       const pick = (obj, paths) => {
         for (const p of paths) {
@@ -116,33 +112,33 @@ const useProductProfileStore = create((set, get) => ({
     }
   },
 
-  createProfile: async (payload) => {
+  createProfileAction: async (payload) => {
     set({ isSubmitting: true, error: null });
     try {
       const created = await createProductProfile(payload);
       set({ isSubmitting: false });
       await get().fetchListAction();
-      return created;
+      return created?.data ?? created;
     } catch (err) {
       set({ isSubmitting: false, error: parseApiError(err) });
       throw err;
     }
   },
 
-  updateProfile: async (id, payload) => {
+  updateProfileAction: async (id, payload) => {
     set({ isSubmitting: true, error: null });
     try {
       const updated = await updateProductProfile(id, payload);
       set({ isSubmitting: false });
       await get().fetchListAction();
-      return updated;
+      return updated?.data ?? updated;
     } catch (err) {
       set({ isSubmitting: false, error: parseApiError(err) });
       throw err;
     }
   },
 
-  deleteProfile: async (id) => {
+  deleteProfileAction: async (id) => {
     set({ isSubmitting: true, error: null });
     try {
       await deleteProductProfile(id);
@@ -154,6 +150,13 @@ const useProductProfileStore = create((set, get) => ({
       throw err;
     }
   },
+
+  // ===== Backward-compatible aliases (deprecated) =====
+  fetchProfileById: (...args) => get().fetchProfileByIdAction(...args),
+  createProfile: (...args) => get().createProfileAction(...args),
+  updateProfile: (...args) => get().updateProfileAction(...args),
+  deleteProfile: (...args) => get().deleteProfileAction(...args),
 }));
 
 export default useProductProfileStore;
+

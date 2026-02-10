@@ -1,3 +1,4 @@
+
 // ✅ src/features/productTemplate/store/productTemplateStore.js
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
@@ -11,9 +12,6 @@ const initialState = {
   totalPages: 1,
   totalItems: 0,
   includeInactive: false,
-  categoryId: null,
-  productTypeId: null,
-  productProfileId: null,
   search: '',
   isLoading: false,
   error: null,
@@ -27,28 +25,42 @@ const useProductTemplateStore = create(devtools((set, get) => ({
   setPageAction: (n) => set({ page: Number(n) || 1 }),
   setLimitAction: (n) => set({ limit: Number(n) || 20 }),
   setIncludeInactiveAction: (v) => set({ includeInactive: !!v }),
-  setCategoryFilterAction: (v) => set({ categoryId: v ?? null }),
-  setProductTypeFilterAction: (v) => set({ productTypeId: v ?? null }),
-  setProductProfileFilterAction: (v) => set({ productProfileId: v ?? null }),
   setSearchAction: (txt) => set({ search: txt ?? '' }),
 
-  // ✅ fetch list
-  fetchListAction: async () => {
-    const { page, limit, includeInactive, categoryId, productTypeId, productProfileId, search } = get();
-    set({ isLoading: true, error: null });
+  // ✅ fetch list (supports override params from Page)
+  fetchListAction: async (overrides = {}) => {
+    const base = get();
+
+    const page = Number(overrides.page ?? base.page) || 1;
+    const limit = Number(overrides.limit ?? base.limit) || 20;
+    const includeInactive = !!(overrides.includeInactive ?? base.includeInactive);
+    const search = (overrides.search ?? base.search) ?? '';
+
+    const params = {
+      page,
+      limit,
+      includeInactive,
+      search: String(search || '') || undefined,
+    };
+
+    set({
+      page,
+      limit,
+      includeInactive,
+      search,
+      isLoading: true,
+      error: null,
+      lastQuery: params,
+    });
+
     try {
-      const params = {
-        page,
-        limit,
-        includeInactive,
-        categoryId: categoryId ?? undefined,
-        productTypeId: productTypeId ?? undefined,
-        productProfileId: productProfileId ?? undefined,
-        search: search || undefined,
-      };
       const res = await productTemplateApi.getProductTemplates(params);
       const { items = [], totalPages = 1, totalItems = 0 } = res || {};
-      set({ items, totalPages: Number(totalPages) || 1, totalItems: Number(totalItems) || items.length });
+      set({
+        items,
+        totalPages: Number(totalPages) || 1,
+        totalItems: Number(totalItems) || items.length,
+      });
     } catch (e) {
       console.error('[productTemplateStore] fetchListAction error:', e);
       set({ error: e?.message || 'ไม่สามารถโหลดข้อมูลได้' });
@@ -57,10 +69,22 @@ const useProductTemplateStore = create(devtools((set, get) => ({
     }
   },
 
-  // ✅ refresh current list with lastQuery
+  // ✅ refresh current list with lastQuery (or current state)
   refreshTemplatesAction: async () => {
-    await get().fetchListAction();
+    const base = get();
+    const { lastQuery } = base;
+
+    if (lastQuery) return await base.fetchListAction(lastQuery);
+
+    // fall back to current state (prevents recursion)
+    return await base.fetchListAction({
+      page: base.page,
+      limit: base.limit,
+      includeInactive: base.includeInactive,
+      search: base.search,
+    });
   },
+
 
   // ✅ get by id
   getTemplateByIdAction: async (id) => {
@@ -83,7 +107,7 @@ const useProductTemplateStore = create(devtools((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const newTemplate = await productTemplateApi.createProductTemplate(data);
-      await get().fetchListAction();
+      await get().refreshTemplatesAction();
       return newTemplate;
     } catch (e) {
       console.error('[productTemplateStore] addTemplateAction error:', e);
@@ -94,17 +118,13 @@ const useProductTemplateStore = create(devtools((set, get) => ({
     }
   },
 
-  // ✅ alias (เผื่อโค้ด FE ที่ยังเรียก addTemplate อยู่)
-  addTemplate: async (data) => {
-    return await get().addTemplateAction(data);
-  },
 
   // ✅ update
   updateTemplateAction: async (id, data) => {
     set({ isLoading: true, error: null });
     try {
       await productTemplateApi.updateProductTemplate(id, data);
-      await get().fetchListAction();
+      await get().refreshTemplatesAction();
       return true;
     } catch (e) {
       console.error('[productTemplateStore] updateTemplateAction error:', e);
@@ -120,7 +140,7 @@ const useProductTemplateStore = create(devtools((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       await productTemplateApi.deleteProductTemplate(id);
-      await get().fetchListAction();
+      await get().refreshTemplatesAction();
       return true;
     } catch (e) {
       console.error('[productTemplateStore] deleteTemplateAction error:', e);
@@ -135,7 +155,7 @@ const useProductTemplateStore = create(devtools((set, get) => ({
   toggleActiveAction: async (id) => {
     try {
       await productTemplateApi.toggleActive(id);
-      await get().fetchListAction();
+      await get().refreshTemplatesAction();
     } catch (e) {
       console.error('[productTemplateStore] toggleActiveAction error:', e);
       set({ error: e?.message || 'ไม่สามารถเปลี่ยนสถานะได้' });
@@ -143,7 +163,16 @@ const useProductTemplateStore = create(devtools((set, get) => ({
   },
 
   // ✅ reset filters
-  resetFiltersAction: () => set({ categoryId: null, productTypeId: null, productProfileId: null, page: 1 }),
-})))
+  resetFiltersAction: () =>
+    set({
+      page: 1,
+      includeInactive: false,
+      search: '',
+      lastQuery: null,
+    }),
+}))
+);
 
 export default useProductTemplateStore;
+
+

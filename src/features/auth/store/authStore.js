@@ -1,11 +1,11 @@
 
+
 // authStore.js
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { loginUser } from '../api/authApi';
 import { buildRoleContext, can as canCap, P1_CAP } from '../rbac/rbacClient';
 import { useBranchStore } from '@/features/branch/store/branchStore';
-import useProductStore from '@/features/product/store/productStore';
 
 // ---------- helpers ----------
 const normalizeRole = (r) => {
@@ -81,7 +81,8 @@ export const useAuthStore = create(
             if (profile?.branch) {
               branchFull = await useBranchStore.getState().loadAndSetBranchById(profile.branch.id);
             }
-            await useProductStore.getState().ensureDropdownsAction();
+            // ✅ เลื่อนการโหลด dropdowns ออกจากขั้นตอน login (กัน 401 ทำให้ login พัง)
+            // ให้หน้า/ฟีเจอร์ที่ต้องใช้ dropdowns เป็นคนเรียกเองเมื่อจำเป็น (เช่น หลังผู้ใช้กด “แสดงข้อมูล”)
 
             const rawPosition = profile?.position?.name;
             const mappedPosition = rawPosition === 'employee' ? 'ผู้ดูแลระบบ' : rawPosition;

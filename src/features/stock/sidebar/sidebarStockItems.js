@@ -1,3 +1,4 @@
+
 import { P1_CAP } from '@/features/auth/rbac/rbacClient';
 
 /**
@@ -24,8 +25,9 @@ export const sidebarStockItems = [
       { label: 'รายการสินค้า', to: '/pos/stock/products', cap: P1_CAP.MANAGE_PRODUCTS },                   
       { label: 'หมวดสินค้า', to: '/pos/stock/categories', cap: P1_CAP.MANAGE_PRODUCTS },
       { label: 'ประเภทสินค้า', to: '/pos/stock/types', cap: P1_CAP.MANAGE_PRODUCTS },
-      { label: 'แบรนด์', to: '/pos/stock/profiles', cap: P1_CAP.MANAGE_PRODUCTS },    
-      { label: 'สเปกสินค้า (SKU)', to: '/pos/stock/templates', cap: P1_CAP.MANAGE_PRODUCTS },           
+      { label: 'แบรนด์', to: '/pos/stock/brands', cap: P1_CAP.MANAGE_PRODUCTS },    
+      { label: 'โปรไฟล์สินค้า', to: '/pos/stock/profiles', cap: P1_CAP.MANAGE_PRODUCTS },      
+      { label: 'เทมเพลตสินค้า', to: '/pos/stock/templates', cap: P1_CAP.MANAGE_PRODUCTS },           
       { label: 'กำหนดราคา', to: '/pos/stock/branch-prices', cap: P1_CAP.EDIT_PRICING },  
       { label: 'เช็คสต๊อก', to: '/pos/stock/stock-audit', cap: P1_CAP.STOCK_AUDIT },
       { label: 'จัดการหน่วยนับ', to: '/pos/stock/units', cap: P1_CAP.MANAGE_PRODUCTS },
@@ -35,10 +37,6 @@ export const sidebarStockItems = [
     ],
   },
 ];
-
-
-
-
 
 
 

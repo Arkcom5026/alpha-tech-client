@@ -1,8 +1,8 @@
 
-
 // ✅ src/components/shared/form/CascadingFilterGroup.jsx (Prisma‑strict)
+// ✅ New hierarchy: Category → Type → Product only
 
-import { useMemo } from 'react';
+import { useMemo } from 'react'
 
 export default function CascadingFilterGroup({
   value = {},
@@ -13,10 +13,7 @@ export default function CascadingFilterGroup({
   placeholders = {
     category: '-- เลือกหมวดสินค้า --',
     productType: '-- เลือกประเภทสินค้า --',
-    // ✅ ลำดับสินค้าแบบใหม่ (Online): ProductProfile = แบรนด์/ยี่ห้อ
-    productProfile: '-- เลือกแบรนด์/ยี่ห้อ --',
-    // ✅ ลำดับสินค้าแบบใหม่ (Online): ProductTemplate = สเปก (หลีกเลี่ยงคำว่า SKU ในหน้าใช้งาน)
-    template: '-- เลือกสเปกสินค้า --',
+    product: '-- เลือกสินค้า --',
   },
   showReset = false,
   direction,
@@ -28,114 +25,78 @@ export default function CascadingFilterGroup({
 }) {
   // Layout: derive direction. Default POS=row; Online stacks to column.
   // รองรับทั้งค่า 'col' และ 'column' เพื่อกันหลุดจาก component อื่น
-  const __direction = (direction ?? (variant === 'online' ? 'col' : 'row'));
-  const __isColumn = __direction === 'col' || __direction === 'column';
+  const __direction = (direction ?? (variant === 'online' ? 'col' : 'row'))
+  const __isColumn = __direction === 'col' || __direction === 'column'
 
   // ───────────────── Prisma schema only — no alias/fallback ─────────────────
   const {
     categories = [],
     productTypes = [],
-    productProfiles = [],
-    productTemplates = [],
-  } = dropdowns || {};
+    products = [],
+  } = dropdowns || {}
 
-  const toNumOrEmpty = (v) => (v === '' || v === null || v === undefined ? '' : Number(v));
-  const getCatIdOfType = (t) => t?.categoryId; // Prisma: productType.categoryId
+  const toNumOrEmpty = (v) => (v === '' || v === null || v === undefined ? '' : Number(v))
 
-  const categoryId = toNumOrEmpty(value.categoryId);
-  const productTypeId = toNumOrEmpty(value.productTypeId);
-  const productProfileId = toNumOrEmpty(value.productProfileId);
-  const productTemplateId = toNumOrEmpty(value.productTemplateId);
+  const getCatIdOfType = (t) => t?.categoryId
+  const getCatIdOfProduct = (p) => p?.categoryId
+  const getTypeIdOfProduct = (p) => p?.productTypeId
+
+  const categoryId = toNumOrEmpty(value.categoryId)
+  const productTypeId = toNumOrEmpty(value.productTypeId)
+  const productId = toNumOrEmpty(value.productId)
 
   // ───────────────── Filters (strict to Prisma keys) ─────────────────
   const filteredProductTypes = useMemo(() => {
-    if (!Array.isArray(productTypes)) return [];
-    if (categoryId === '') return productTypes;
-    return productTypes.filter((t) => Number(getCatIdOfType(t)) === Number(categoryId));
-  }, [productTypes, categoryId]);
+    if (!Array.isArray(productTypes)) return []
+    if (categoryId === '') return productTypes
+    return productTypes.filter((t) => Number(getCatIdOfType(t)) === Number(categoryId))
+  }, [productTypes, categoryId])
 
-  const filteredProductProfiles = useMemo(() => {
-    if (!Array.isArray(productProfiles)) return [];
-    if (productTypeId === '') {
-      if (categoryId === '' || !Array.isArray(productTypes)) return productProfiles;
-      const allowedTypeIds = new Set((productTypes || [])
-        .filter((t) => Number(getCatIdOfType(t)) === Number(categoryId))
-        .map((t) => Number(t.id))
-      );
-      return productProfiles.filter((p) => allowedTypeIds.has(Number(p.productTypeId)));
-    }
-    return productProfiles.filter((p) => Number(p.productTypeId) === Number(productTypeId));
-  }, [productProfiles, productTypes, categoryId, productTypeId]);
+  const filteredProducts = useMemo(() => {
+    if (!Array.isArray(products)) return []
 
-  const filteredTemplates = useMemo(() => {
-    if (!Array.isArray(productTemplates)) return [];
+    let out = products
 
-    // 1) เลือกตาม profile โดยตรง
-    if (productProfileId !== '') {
-      return productTemplates.filter((t) => Number(t.productProfileId) === Number(productProfileId));
+    if (categoryId !== '') {
+      out = out.filter((p) => Number(getCatIdOfProduct(p)) === Number(categoryId))
     }
 
-    // 2) ยังไม่เลือก profile แต่เลือก type → template ที่ profile อยู่ใน type นั้น
     if (productTypeId !== '') {
-      const allowedProfileIds = new Set((productProfiles || [])
-        .filter((p) => Number(p.productTypeId) === Number(productTypeId))
-        .map((p) => Number(p.id))
-      );
-      return productTemplates.filter((t) => allowedProfileIds.has(Number(t.productProfileId)));
+      out = out.filter((p) => Number(getTypeIdOfProduct(p)) === Number(productTypeId))
     }
 
-    // 3) ยังไม่เลือก type แต่เลือก category → template ที่ profile อยู่ใน type ของหมวดนั้น
-    if (categoryId !== '' && Array.isArray(productTypes)) {
-      const allowedTypeIds = new Set((productTypes || [])
-        .filter((t) => Number(getCatIdOfType(t)) === Number(categoryId))
-        .map((t) => Number(t.id))
-      );
-      const allowedProfileIds = new Set((productProfiles || [])
-        .filter((p) => allowedTypeIds.has(Number(p.productTypeId)))
-        .map((p) => Number(p.id))
-      );
-      return productTemplates.filter((t) => allowedProfileIds.has(Number(t.productProfileId)));
-    }
-
-    // 4) ไม่เลือกอะไรเลย → ทั้งหมด
-    return productTemplates;
-  }, [productTemplates, productProfiles, productTypes, productProfileId, productTypeId, categoryId]);
+    return out
+  }, [products, categoryId, productTypeId])
 
   // ───────────────── Update cascade ─────────────────
   const update = (field, rawVal) => {
-    const val = toNumOrEmpty(rawVal);
-    if (value[field] === val) return;
+    const val = toNumOrEmpty(rawVal)
+    if (value[field] === val) return
 
-    const next = { ...value, [field]: val };
+    const next = { ...value, [field]: val }
     if (field === 'categoryId') {
-      next.productTypeId = '';
-      next.productProfileId = '';
-      next.productTemplateId = '';
+      next.productTypeId = ''
+      next.productId = ''
     } else if (field === 'productTypeId') {
-      next.productProfileId = '';
-      next.productTemplateId = '';
-    } else if (field === 'productProfileId') {
-      next.productTemplateId = '';
+      next.productId = ''
     }
-    onChange?.(next);
-  };
+    onChange?.(next)
+  }
 
   const handleReset = () => {
-    onChange?.({ categoryId: '', productTypeId: '', productProfileId: '', productTemplateId: '' });
-  };
+    onChange?.({ categoryId: '', productTypeId: '', productId: '' })
+  }
 
   // ───────────────── Disabled flags (keep flexible) ─────────────────
-  const typeDisabled = false;
-  const profileDisabled = false;
-  const templateDisabled = false;
+  const typeDisabled = false
+  const productDisabled = false
 
   const hide = (k) => hiddenFields.includes(k)
-    || (k === 'productProfile' && hiddenFields.includes('profile'))
-    || (k === 'productType' && hiddenFields.includes('type'));
+    || (k === 'productType' && hiddenFields.includes('type'))
 
   return (
     <div className={`space-y-2 ${className}`}>
-      <div className={__isColumn ? 'space-y-2' : 'grid grid-cols-1 md:grid-cols-4 gap-4'}>
+      <div className={__isColumn ? 'space-y-2' : 'grid grid-cols-1 md:grid-cols-3 gap-4'}>
         {!hide('category') && (
           <select
             aria-label="หมวดหมู่สินค้า"
@@ -166,34 +127,18 @@ export default function CascadingFilterGroup({
           </select>
         )}
 
-        {!hide('productProfile') && (
+        {!hide('product') && (
           <select
-            aria-label="แบรนด์/ยี่ห้อ"
-            value={productProfileId === '' ? '' : productProfileId}
-            onChange={(e) => update('productProfileId', e.target.value)}
-            disabled={profileDisabled}
-            className={`border px-3 py-2 rounded w-full text-sm ${profileDisabled ? 'bg-gray-100' : ''}`}
+            aria-label="สินค้า"
+            value={productId === '' ? '' : productId}
+            onChange={(e) => update('productId', e.target.value)}
+            disabled={productDisabled}
+            className={`border px-3 py-2 rounded w-full text-sm ${productDisabled ? 'bg-gray-100' : ''}`}
           >
-            <option value="">{placeholders.productProfile}</option>
-            {filteredProductProfiles.length === 0 && <option disabled value="">ไม่มีข้อมูล</option>}
-            {filteredProductProfiles.map((profile) => (
-              <option key={profile.id} value={profile.id}>{profile.name}</option>
-            ))}
-          </select>
-        )}
-
-        {!hide('template') && (
-          <select
-            aria-label="สเปกสินค้า"
-            value={productTemplateId === '' ? '' : productTemplateId }
-            onChange={(e) => update('productTemplateId', e.target.value)}
-            disabled={templateDisabled}
-            className={`border px-3 py-2 rounded w-full text-sm ${templateDisabled ? 'bg-gray-100' : ''}`}
-          >
-            <option value="">{placeholders.template}</option>
-            {filteredTemplates.length === 0 && <option disabled value="">ไม่มีข้อมูล</option>}
-            {filteredTemplates.map((temp) => (
-              <option key={temp.id} value={temp.id}>{temp.name}</option>
+            <option value="">{placeholders.product}</option>
+            {filteredProducts.length === 0 && <option disabled value="">ไม่มีข้อมูล</option>}
+            {filteredProducts.map((p) => (
+              <option key={p.id} value={p.id}>{p.name}</option>
             ))}
           </select>
         )}
@@ -208,8 +153,8 @@ export default function CascadingFilterGroup({
             onChange={(e) => onSearchTextChange(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
-                e.preventDefault();
-                onSearchCommit(searchText.trim());
+                e.preventDefault()
+                onSearchCommit(searchText.trim())
               }
             }}
             className="border px-3 py-2 rounded w-full text-sm"
@@ -229,8 +174,7 @@ export default function CascadingFilterGroup({
         </div>
       )}
     </div>
-  );
+  )
 }
 
 
- 

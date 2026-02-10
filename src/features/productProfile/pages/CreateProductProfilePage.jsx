@@ -1,4 +1,4 @@
-// ✅ CreateProductProfilePage — FULL VERSION (UI: แบรนด์) — aligned with CreateProductTypePage
+// ✅ CreateProductProfilePage — FULL VERSION (UI: โปรไฟล์สินค้า) — aligned with CreateProductTypePage
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import PageHeader from '@/components/shared/layout/PageHeader';
@@ -9,7 +9,7 @@ import { useAuthStore } from '@/features/auth/store/authStore';
 import { parseApiError } from '@/utils/uiHelpers';
 import useProductStore from '@/features/product/store/productStore';
 
-const LIST_PATH = '/pos/stock/profiles';
+const LIST_PATH = '/pos/stock/profiles'; // โปรไฟล์สินค้า
 
 const CreateProductProfilePage = () => {
   const navigate = useNavigate();
@@ -88,7 +88,7 @@ const CreateProductProfilePage = () => {
         categoryId: Number(formData.categoryId),
         productTypeId: Number(formData.productTypeId),
       });
-      setSuccessMsg('บันทึกแบรนด์เรียบร้อยแล้ว');
+      setSuccessMsg('บันทึกโปรไฟล์สินค้าเรียบร้อยแล้ว');
       setTimeout(() => navigate(LIST_PATH), 600);
     } catch (err) {
       setErrorMsg(parseApiError(err));
@@ -101,11 +101,21 @@ const CreateProductProfilePage = () => {
     return (
       <div className="p-6 w-full flex flex-col items-center">
         <div className="w-full max-w-3xl">
-          <PageHeader title="เพิ่มแบรนด์ใหม่" />
+          <PageHeader title="เพิ่มโปรไฟล์สินค้าใหม่" />
+
+        {/* BestLine guidance */}
+        <div className="mt-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
+          <div className="font-semibold">โปรไฟล์สินค้า (Product Profile) ใช้เมื่อใด?</div>
+          <ul className="mt-1 list-disc pl-5 space-y-1">
+            <li>ใช้เมื่อสินค้าใน <span className="font-medium">ประเภทสินค้าเดียวกัน</span> มีรูปแบบ/แนวคิดการใช้งาน <span className="font-medium">ซ้ำจริง</span></li>
+            <li><span className="font-medium">ไม่ใช่แบรนด์</span> และ <span className="font-medium">ไม่จำเป็นต้องมีทุกสินค้า</span></li>
+            <li>ถ้าไม่ซ้ำ แนะนำให้บันทึกสเปกไว้ที่สินค้าโดยตรง (Product / productConfig)</li>
+          </ul>
+        </div>
 
           <div className="mt-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800">
             <div className="font-semibold">คุณไม่มีสิทธิ์เข้าถึงหน้านี้</div>
-            <div className="mt-1">เฉพาะผู้ดูแลระบบ (Admin) หรือ Super Admin เท่านั้นที่สามารถเพิ่ม/แก้ไขแบรนด์ได้</div>
+            <div className="mt-1">เฉพาะผู้ดูแลระบบ (Admin) หรือ Super Admin เท่านั้นที่สามารถเพิ่ม/แก้ไขโปรไฟล์สินค้าได้</div>
             <div className="mt-3 flex flex-wrap gap-2">
               <button
                 type="button"
@@ -118,7 +128,7 @@ const CreateProductProfilePage = () => {
                 className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-sm font-medium text-blue-700 hover:bg-blue-100"
                 to={LIST_PATH}
               >
-                กลับไปหน้ารายการ
+                กลับไปหน้ารายการโปรไฟล์สินค้า
               </Link>
             </div>
           </div>
@@ -130,7 +140,7 @@ const CreateProductProfilePage = () => {
   return (
     <div className="p-6 w-full flex flex-col items-center">
       <div className="w-full max-w-3xl">
-        <PageHeader title="เพิ่มแบรนด์ใหม่" />
+        <PageHeader title="เพิ่มโปรไฟล์สินค้าใหม่" />
 
         {errorMsg && (
           <div className="mt-3 mb-4 rounded-lg border border-red-300 bg-red-50 px-4 py-2 text-sm text-red-700">
@@ -152,7 +162,7 @@ const CreateProductProfilePage = () => {
           />
 
           <div className="flex justify-between mt-4">
-            <Link to={LIST_PATH} className="btn btn-outline">ย้อนกลับ</Link>
+            <Link to={LIST_PATH} className="btn btn-outline">กลับไปหน้ารายการโปรไฟล์สินค้า</Link>
           </div>
         </div>
       </div>
@@ -161,10 +171,6 @@ const CreateProductProfilePage = () => {
 };
 
 export default CreateProductProfilePage;
-
-
-
-
 
 
 

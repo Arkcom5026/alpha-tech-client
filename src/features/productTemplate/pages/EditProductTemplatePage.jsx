@@ -1,10 +1,11 @@
 
+
+
 // ✅ src/features/productTemplate/pages/EditProductTemplatePage.jsx
-import { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import ProductTemplateForm from '../components/ProductTemplateForm';
 import useProductTemplateStore from '../store/productTemplateStore';
-import useProductStore from '@/features/product/store/productStore';
 import { useAuthStore } from '@/features/auth/store/authStore';
 
 import { useBranchStore } from '@/features/branch/store/branchStore';
@@ -29,9 +30,6 @@ const EditProductTemplatePage = () => {
 
   const { getTemplateByIdAction: getTemplateById, updateTemplateAction: updateTemplate } = useProductTemplateStore();
 
-  // dropdowns from productStore (single source of truth)
-  const { ensureDropdownsAction, dropdowns, dropdownsLoaded } = useProductStore();
-  const isDropdownLoading = !dropdownsLoaded;
 
   useEffect(() => {
     if (!canManage) return;
@@ -47,31 +45,20 @@ const EditProductTemplatePage = () => {
 
         const mapped = {
           ...data,
-          unitId: data.unitId?.toString() || '',
-          productProfileId: data.productProfileId?.toString() || '',
-          categoryId: data.productProfile?.productType?.categoryId?.toString() || '',
-          productTypeId: data.productProfile?.productTypeId?.toString() || '',
+          unitId: data?.unitId ? String(data.unitId) : '',
+          productProfileId: data?.productProfileId ? String(data.productProfileId) : '',
         };
 
         setTemplate(mapped);
       } catch (err) {
-        console.error('โหลดข้อมูลสเปกสินค้า (SKU) ล้มเหลว:', err);
-        setError('ไม่สามารถโหลดข้อมูลสเปกสินค้า (SKU) ได้');
+        console.error('โหลดข้อมูลเทมเพลทสินค้า ล้มเหลว:', err);
+        setError('ไม่สามารถโหลดข้อมูลเทมเพลทสินค้าได้');
       }
     };
 
     fetchData();
   }, [id, selectedBranchId, getTemplateById, canManage]);
 
-  // ensure dropdowns are loaded for the cascading selects
-  useEffect(() => {
-    if (!canManage) return;
-    try {
-      ensureDropdownsAction?.();
-    } catch (e) {
-      console.error('[EditProductTemplatePage] ensureDropdownsAction error', e);
-    }
-  }, [ensureDropdownsAction, canManage]);
 
   const handleUpdate = async (formData) => {
     if (!canManage) return; // hard-stop safety
@@ -88,7 +75,7 @@ const EditProductTemplatePage = () => {
         navigate('/pos/stock/templates');
       }, 2000);
     } catch (err) {
-      console.error('อัปเดตข้อมูลสเปกสินค้า (SKU) ล้มเหลว:', err);
+      console.error('อัปเดตข้อมูลเทมเพลทสินค้า ล้มเหลว:', err);
       setError('เกิดข้อผิดพลาดในการบันทึกข้อมูล');
     } finally {
       setIsUpdating(false);
@@ -98,10 +85,10 @@ const EditProductTemplatePage = () => {
   if (!canManage) {
     return (
       <div className="max-w-3xl mx-auto p-6">
-        <PageHeader title={`แก้ไขสเปกสินค้า (SKU) #${id}`} />
+        <PageHeader title={`แก้ไขเทมเพลทสินค้า #${id}`} />
         <div className="mt-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800">
           <div className="font-semibold">คุณไม่มีสิทธิ์เข้าถึงหน้านี้</div>
-          <div className="mt-1">เฉพาะผู้ดูแลระบบ (Admin) หรือ Super Admin เท่านั้นที่สามารถเพิ่ม/แก้ไขสเปกสินค้า (SKU) ได้</div>
+          <div className="mt-1">เฉพาะผู้ดูแลระบบ (Admin) หรือ Super Admin เท่านั้นที่สามารถเพิ่ม/แก้ไขเทมเพลทสินค้าได้</div>
           <div className="mt-3 flex flex-wrap gap-2">
             <button
               type="button"
@@ -114,7 +101,7 @@ const EditProductTemplatePage = () => {
               className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-sm font-medium text-blue-700 hover:bg-blue-100"
               to="/pos/stock/templates"
             >
-              กลับไปหน้ารายการ
+              กลับไปหน้ารายการเทมเพลทสินค้า
             </Link>
           </div>
         </div>
@@ -127,15 +114,13 @@ const EditProductTemplatePage = () => {
 
   return (
     <div className="max-w-3xl mx-auto">
-      <PageHeader title={`แก้ไขสเปกสินค้า (SKU) #${id}`} />
+      <PageHeader title={`แก้ไขเทมเพลทสินค้า #${id}`} />
       <div className="mb-3">
-        <Link to="/pos/stock/templates" className="text-sm text-blue-600 hover:underline">ย้อนกลับ</Link>
+        <Link to="/pos/stock/templates" className="text-sm text-blue-600 hover:underline">กลับไปหน้ารายการเทมเพลทสินค้า</Link>
       </div>
 
       <ProductTemplateForm
         defaultValues={template}
-        dropdowns={dropdowns}
-        isDropdownLoading={isDropdownLoading}
         onSubmit={handleUpdate}
         mode="edit"
       />
@@ -143,7 +128,7 @@ const EditProductTemplatePage = () => {
       <ProcessingDialog
         open={isUpdating || showSuccess}
         isLoading={isUpdating}
-        message={isUpdating ? 'ระบบกำลังอัปเดตข้อมูล กรุณารอสักครู่...' : '✅ บันทึกข้อมูลสเปกสินค้า (SKU) เรียบร้อยแล้ว'}
+        message={isUpdating ? 'ระบบกำลังอัปเดตข้อมูล กรุณารอสักครู่...' : '✅ บันทึกข้อมูลเทมเพลทสินค้าเรียบร้อยแล้ว'}
         onClose={() => setShowSuccess(false)}
       />
     </div>
@@ -151,8 +136,5 @@ const EditProductTemplatePage = () => {
 };
 
 export default EditProductTemplatePage;
-
-
-
 
 

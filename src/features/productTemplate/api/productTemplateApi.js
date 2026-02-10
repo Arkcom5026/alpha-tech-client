@@ -1,4 +1,7 @@
 
+
+
+
 // ✅ src/features/productTemplate/api/productTemplateApi.js
 import apiClient from '@/utils/apiClient';
 
@@ -8,7 +11,11 @@ const sanitizeParams = (params = {}) => {
   const q = params.q ?? params.search;
   if (q != null && String(q).trim()) out.q = String(q).trim();
 
-  ['categoryId', 'productTypeId', 'productProfileId', 'page', 'limit'].forEach((k) => {
+  // alias support: store uses `search`
+  const search = params.search;
+  if (search != null && String(search).trim()) out.q = String(search).trim();
+
+  ['page', 'limit'].forEach((k) => {
     const v = params[k];
     if (v === undefined || v === null || v === '') return;
     const n = Number(v);
@@ -105,6 +112,5 @@ export const toggleActive = async (id) => {
     throw error;
   }
 };
-
 
 

@@ -1,7 +1,9 @@
 // ✅ src/features/productProfile/components/ProductProfileTable.jsx
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState } from 'react';
 import useProductProfileStore from '../store/productProfileStore';
-import useProductStore from '@/features/product/store/productStore';
+// ❌ ProductProfile ไม่ผูกกับ Category / ProductType แล้ว (BestLine)
+// ตัด dependency ฝั่ง Product ออกทั้งหมด
+// import useProductStore from '@/features/product/store/productStore';
 
 // ✅ Table ไม่เช็ค auth เอง (ให้ Page ตัดสินสิทธิ์และส่ง canManage ลงมา)
 
@@ -22,35 +24,32 @@ const ProductProfileTable = ({ data = [], loading, error, page = 1, limit = 20, 
   const { archiveProfileAction, restoreProfileAction, isSubmitting } = useProductProfileStore();
   const isAdmin = !!canManage;
 
-  // โหลด dropdowns ของสินค้าเพื่อใช้ map id -> name
-  const { dropdowns, ensureDropdownsAction } = useProductStore();
-  const { categories, productTypes } = dropdowns || {};
-
-  useEffect(() => { ensureDropdownsAction?.(); }, [ensureDropdownsAction]);
-
-  const categoriesById = useMemo(() => {
-    const m = {};
-    (categories || []).forEach((c) => { m[String(c.id)] = c; });
-    return m;
-  }, [categories]);
-
-  const productTypesById = useMemo(() => {
-    const m = {};
-    (productTypes || []).forEach((pt) => { m[String(pt.id)] = pt; });
-    return m;
-  }, [productTypes]);
+  // ❌ (removed) ProductProfileTable ไม่ต้องมี logic map product/category ใด ๆ ตาม BestLine
 
   const rows = useMemo(() => (Array.isArray(data) ? data : []), [data]);
   const [confirm, setConfirm] = useState(null); // { type: 'archive'|'restore', row }
+  const [actionError, setActionError] = useState(null);
 
-  const handleArchive = (row) => setConfirm({ type: 'archive', row });
-  const handleRestore = (row) => setConfirm({ type: 'restore', row });
+  const handleArchive = (row) => {
+    setActionError(null);
+    setConfirm({ type: 'archive', row });
+  };
+  const handleRestore = (row) => {
+    setActionError(null);
+    setConfirm({ type: 'restore', row });
+  };
 
   const proceed = async () => {
     if (!confirm?.row) return;
-    if (confirm.type === 'archive') await archiveProfileAction(confirm.row.id);
-    if (confirm.type === 'restore') await restoreProfileAction(confirm.row.id);
-    setConfirm(null);
+    setActionError(null);
+
+    try {
+      if (confirm.type === 'archive') await archiveProfileAction(confirm.row.id);
+      if (confirm.type === 'restore') await restoreProfileAction(confirm.row.id);
+      setConfirm(null);
+    } catch (e) {
+      setActionError(e?.message || String(e));
+    }
   };
 
   return (
@@ -59,7 +58,12 @@ const ProductProfileTable = ({ data = [], loading, error, page = 1, limit = 20, 
         {/* Header */}
         <div className="px-4 py-3 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-800/60 backdrop-blur supports-[backdrop-filter]:bg-zinc-50/60 sticky top-0 z-10">
           <div className="flex items-center justify-between">
-            <div className="text-sm text-zinc-600 dark:text-zinc-300">รายการแบรนด์</div>
+            <div>
+              <div className="text-sm text-zinc-600 dark:text-zinc-300">รายการโปรไฟล์สินค้า</div>
+              <div className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
+                โปรไฟล์สินค้า = กลุ่มมาตรฐานภายใน “ประเภทสินค้า” (ใช้เมื่อซ้ำจริง • ไม่ใช่แบรนด์ • ไม่จำเป็นต้องมีทุกสินค้า)
+              </div>
+            </div>
             <div className="text-xs text-zinc-500">ทั้งหมด {rows.length} รายการ</div>
           </div>
         </div>
@@ -70,9 +74,8 @@ const ProductProfileTable = ({ data = [], loading, error, page = 1, limit = 20, 
           <thead className="text-left text-zinc-600 bg-zinc-50 dark:bg-zinc-800">
             <tr className="border-b border-zinc-200 dark:border-zinc-800">
               <th className="px-4 py-2 w-[60px] text-center">#</th>
-              <th className="px-4 py-2 w-[30%]">ชื่อแบรนด์</th>
-              <th className="px-4 py-2 w-[22%]">ประเภทสินค้า</th>
-              <th className="px-4 py-2 w-[22%]">หมวดหมู่</th>
+              <th className="px-4 py-2 w-[30%]">ชื่อโปรไฟล์สินค้า</th>
+              
               <th className="px-4 py-2 w-[10%] text-center">สถานะ</th>
               <th className="px-4 py-2 text-right w-[22%]">การจัดการ</th>
             </tr>
@@ -80,17 +83,12 @@ const ProductProfileTable = ({ data = [], loading, error, page = 1, limit = 20, 
           <tbody>
             {!loading && rows.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-zinc-500">ไม่พบข้อมูล</td>
+                <td colSpan={5} className="px-4 py-8 text-center text-zinc-500">ไม่พบข้อมูล</td>
               </tr>
             )}
 
             {rows.map((row, idx) => {
-              const productTypeId = row.productTypeId ?? row.productType?.id ?? null;
-              const productTypeObj = productTypesById[String(productTypeId)] || null;
-              const productTypeName = row.productType?.name || productTypeObj?.name || '-';
-
-              const categoryIdFromRow = row.categoryId ?? row.category?.id ?? row.productType?.categoryId ?? productTypeObj?.categoryId ?? null;
-              const categoryName = row.productType?.category?.name || row.category?.name || categoriesById[String(categoryIdFromRow)]?.name || '-';
+              
               const isActive = !!row.active;
               const isSystem = !!row.isSystem;
                             const canEdit = isAdmin && !isSystem && isActive;
@@ -111,8 +109,7 @@ const ProductProfileTable = ({ data = [], loading, error, page = 1, limit = 20, 
                       )}
                     </div>
                   </td>
-                  <td className="px-4 py-3 align-middle">{productTypeName}</td>
-                  <td className="px-4 py-3 align-middle">{categoryName}</td>
+                  
                   <td className="px-4 py-3 text-center align-middle">
                     {isActive ? (
                       <Badge className="bg-emerald-50 text-emerald-700 ring-emerald-600/20 dark:bg-emerald-900/30 dark:text-emerald-300 dark:ring-emerald-400/30">ใช้งาน</Badge>
@@ -155,7 +152,7 @@ const ProductProfileTable = ({ data = [], loading, error, page = 1, limit = 20, 
 
             {loading && (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-zinc-500">กำลังโหลดข้อมูล...</td>
+                <td colSpan={5} className="px-4 py-8 text-center text-zinc-500">กำลังโหลดข้อมูล...</td>
               </tr>
             )}
           </tbody>
@@ -164,10 +161,21 @@ const ProductProfileTable = ({ data = [], loading, error, page = 1, limit = 20, 
         {confirm && (
           <div className="px-4 py-3 flex items-center justify-between bg-amber-50/90 dark:bg-amber-900/30 border-t border-amber-200 dark:border-amber-800">
             <div className="text-sm text-amber-900 dark:text-amber-200">
-              ยืนยันการ{confirm.type === 'archive' ? 'ปิดใช้งาน' : 'กู้คืน'} แบรนด์ “{confirm.row?.name}” หรือไม่?
+              ยืนยันการ{confirm.type === 'archive' ? 'ปิดใช้งาน' : 'กู้คืน'} โปรไฟล์สินค้า “{confirm.row?.name}” หรือไม่?
+              {actionError && (
+                <div className="mt-1 text-xs text-rose-700 dark:text-rose-300">
+                  {actionError}
+                </div>
+              )}
             </div>
             <div className="flex gap-2">
-              <ActionButton className="border border-amber-300 text-amber-900 hover:bg-amber-100" onClick={() => setConfirm(null)}>
+              <ActionButton
+                className="border border-amber-300 text-amber-900 hover:bg-amber-100"
+                onClick={() => {
+                  setActionError(null);
+                  setConfirm(null);
+                }}
+              >
                 ยกเลิก
               </ActionButton>
               <ActionButton className="bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500" onClick={proceed} disabled={isSubmitting}>
@@ -182,12 +190,4 @@ const ProductProfileTable = ({ data = [], loading, error, page = 1, limit = 20, 
 };
 
 export default ProductProfileTable;
-
-
-
-
-
-
-
-
 

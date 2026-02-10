@@ -1,6 +1,7 @@
 
 
 
+
 // ✅ src/routes/stockRoutes.jsx
 import StockDashboardPage from "@/features/pos/pages/stock/StockDashboardPage";
 import ListProductPage from "@/features/product/pages/ListProductPage";
@@ -11,6 +12,11 @@ import EditProductTemplatePage from '@/features/productTemplate/pages/EditProduc
 import ListProductProfilePage from '@/features/productProfile/pages/ListProductProfilePage';
 import CreateProductProfilePage from '@/features/productProfile/pages/CreateProductProfilePage';
 import EditProductProfilePage from '@/features/productProfile/pages/EditProductProfilePage';
+
+// ===== Brand =====
+import ListBrandPage from '@/features/brand/pages/ListBrandPage';
+import CreateBrandPage from '@/features/brand/pages/CreateBrandPage';
+import EditBrandPage from '@/features/brand/pages/EditBrandPage';
 import ListProductTypePage from "@/features/productType/pages/ListProductTypePage";
 import CreateProductTypePage from "@/features/productType/pages/CreateProductTypePage";
 import EditProductTypePage from "@/features/productType/pages/EditProductTypePage";
@@ -59,11 +65,25 @@ const stockRoutes = {
       ]
     },
     {
-      path: 'profiles',      
+      path: 'profiles',
       children: [
         { index: true, element: <ListProductProfilePage /> },
         { path: 'create', element: <CreateProductProfilePage /> },
         { path: 'edit/:id', element: <EditProductProfilePage /> },
+      ]
+    },
+
+    {
+      path: 'brands',
+      children: [
+        { index: true, element: <ListBrandPage /> },
+        { path: 'create', element: <CreateBrandPage /> },
+
+        // ✅ Standard route (aligned with other modules)
+        { path: 'edit/:id', element: <EditBrandPage /> },
+
+        // ✅ Backward-compat (ถ้ามีลิงก์เดิมใช้อยู่)
+        { path: ':id/edit', element: <EditBrandPage /> },
       ]
     },
     {
@@ -101,5 +121,4 @@ const stockRoutes = {
 };
 
 export default stockRoutes;
-
 

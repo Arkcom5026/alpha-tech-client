@@ -1,10 +1,25 @@
-
-
 // ✅ components/shared/form/CascadingDropdowns.jsx
 
-import React, {  useMemo, useCallback } from "react";
+import React, { useMemo, useCallback } from 'react'
 
-export default function CascadingDropdowns({ dropdowns, value = {}, onChange, isLoading = false,
+// =====================================================
+// CascadingDropdowns (v2.1)
+// ✅ ลำดับขั้นสินค้า: Category → Type → Product เท่านั้น
+// ✅ Profile / Template ถูกถอดออกจากการเลือก (ไม่ได้อยู่ใน flow นี้แล้ว)
+//
+// Props
+// - dropdowns: { categories, productTypes, products (or productItems) }
+// - value: { categoryId, productTypeId, productId }
+// - onChange(patch)
+// - strict: true (Create) => disable downstream จนกว่าจะเลือก parent ครบ
+// - hiddenFields: ['category','type','product']
+// =====================================================
+
+export default function CascadingDropdowns({
+  dropdowns,
+  value = {},
+  onChange,
+  isLoading = false,
   strict = false,
   hiddenFields = [],
   placeholders = {},
@@ -12,115 +27,131 @@ export default function CascadingDropdowns({ dropdowns, value = {}, onChange, is
   selectClassName = 'min-w-[14rem]',
   containerClassName,
 }) {
-  const toId = (v) => (v === undefined || v === null || v === '' ? '' : String(v));
+  const toId = (v) => (v === undefined || v === null || v === '' ? '' : String(v))
 
-  const sameStyleEmit = useCallback((key, nextStr) => {
-    const prev = value?.[key];
+  // ---- Same-style coercion (preserve number/null/string style per existing state) ----
+  const coerceNext = useCallback((prev, nextStr) => {
     if (typeof prev === 'number') {
-      onChange({ [key]: nextStr === '' ? null : Number(nextStr) });
-    } else if (prev === null) {
-      onChange({ [key]: nextStr === '' ? null : (Number.isFinite(Number(nextStr)) ? Number(nextStr) : nextStr) });
-    } else {
-      onChange({ [key]: nextStr });
+      return nextStr === '' ? null : Number(nextStr)
     }
-  }, [onChange, value]);
+    if (prev === null) {
+      if (nextStr === '') return null
+      const asNum = Number(nextStr)
+      return Number.isFinite(asNum) ? asNum : nextStr
+    }
+    return nextStr
+  }, [])
 
-  const getCategoryIdOfType = (t) => t?.categoryId ?? t?.category?.id ?? t?.category_id ?? undefined;
-  const getTypeIdOfProfile = (p) => p?.productTypeId ?? p?.productType?.id ?? p?.product_type_id ?? undefined;
-  const getProfileIdOfTemplate = (tp) => tp?.productProfileId ?? tp?.productProfile?.id ?? tp?.product_profile_id ?? undefined;
+  const emitPatch = useCallback((patchStrMap) => {
+    const patch = {}
+    for (const [key, nextStr] of Object.entries(patchStrMap)) {
+      patch[key] = coerceNext(value?.[key], nextStr)
+    }
+    onChange(patch)
+  }, [coerceNext, onChange, value])
 
-  const categories = useMemo(() => Array.isArray(dropdowns?.categories) ? dropdowns.categories : [], [dropdowns?.categories]);
-  const productTypes = useMemo(() => Array.isArray(dropdowns?.productTypes) ? dropdowns.productTypes : [], [dropdowns?.productTypes]);
-  const productProfiles = useMemo(() => {
-    const arr = dropdowns?.productProfiles ?? dropdowns?.profiles;
-    return Array.isArray(arr) ? arr : [];
-  }, [dropdowns?.productProfiles, dropdowns?.profiles]);
-  const productTemplates = useMemo(() => {
-    const arr = dropdowns?.productTemplates ?? dropdowns?.templates;
-    return Array.isArray(arr) ? arr : [];
-  }, [dropdowns?.productTemplates, dropdowns?.templates]);
+  // ---- Relationship helpers (supports both direct FK and nested) ----
+  const getCategoryIdOfType = (t) => t?.categoryId ?? t?.category?.id ?? t?.category_id ?? undefined
+  const getCategoryIdOfProduct = (p) => p?.categoryId ?? p?.category?.id ?? p?.category_id ?? undefined
+  const getTypeIdOfProduct = (p) => p?.productTypeId ?? p?.productType?.id ?? p?.product_type_id ?? undefined
 
-  const selectedCatId = toId(value?.categoryId);
-  const selectedTypeId = toId(value?.productTypeId);
-  const selectedProfileId = toId(value?.productProfileId);
-  const selectedProductTemplateId = toId(value?.productTemplateId);
+  // ---- Lists ----
+  const categories = useMemo(() => (Array.isArray(dropdowns?.categories) ? dropdowns.categories : []), [dropdowns?.categories])
+  const productTypes = useMemo(() => (Array.isArray(dropdowns?.productTypes) ? dropdowns.productTypes : []), [dropdowns?.productTypes])
+  const products = useMemo(() => {
+    const arr = dropdowns?.products ?? dropdowns?.productItems
+    return Array.isArray(arr) ? arr : []
+  }, [dropdowns?.products, dropdowns?.productItems])
 
-  const ensureSelectedOption = (list, selectedId) => {
-    if (!selectedId) return list;
-    const exists = list.some((x) => String(x.id) === String(selectedId));
-    // ⛔ ในโหมด strict (เช่นหน้า Create) ไม่เพิ่ม option "กำลังโหลดค่าเดิม"
-    // ✅ ในโหมดแก้ไข (strict=false) จะคง fallback เดิมไว้ได้ หากต้องการ
-    return exists ? list : (strict ? list : [{ id: selectedId, name: '— กำลังโหลดค่าเดิม —' }, ...list]);
-  };
+  // ---- Selected ----
+  const selectedCatId = toId(value?.categoryId)
+  const selectedTypeId = toId(value?.productTypeId)
+  const selectedProductId = toId(value?.productId)
 
+  // ---- Fallback option for Edit (strict=false) ----
+  const ensureSelectedOption = useCallback((list, selectedId) => {
+    if (!selectedId) return list
+    const exists = list.some((x) => String(x.id) === String(selectedId))
+    return exists ? list : (strict ? list : [{ id: selectedId, name: '— กำลังโหลดค่าเดิม —' }, ...list])
+  }, [strict])
+
+  // ---- Cascade lists ----
   const filteredTypes = useMemo(() => {
-    if (strict && !selectedCatId) return [];
-    if (!selectedCatId) return ensureSelectedOption(productTypes, selectedTypeId);
+    if (strict && !selectedCatId) return []
+    if (!selectedCatId) return ensureSelectedOption(productTypes, selectedTypeId)
     return ensureSelectedOption(
       productTypes.filter((t) => String(getCategoryIdOfType(t)) === selectedCatId),
       selectedTypeId
-    );
-  }, [productTypes, selectedCatId, selectedTypeId, strict]);
+    )
+  }, [productTypes, selectedCatId, selectedTypeId, strict, ensureSelectedOption])
 
-  const filteredProfiles = useMemo(() => {
-    if (strict && !selectedTypeId) return [];
-    if (selectedTypeId) {
-      return ensureSelectedOption(
-        productProfiles.filter((p) => String(getTypeIdOfProfile(p)) === selectedTypeId),
-        selectedProfileId
-      );
-    }
+  const filteredProducts = useMemo(() => {
+    if (strict && (!selectedCatId || !selectedTypeId)) return []
+
+    // ถ้าไม่เลือก parent → ใน non-strict ให้คง selected เดิมได้
+    if (!selectedCatId && !selectedTypeId) return ensureSelectedOption(products, selectedProductId)
+
+    let out = products
+
+    // filter by category if chosen
     if (selectedCatId) {
-      if (strict) return [];
-    }
-    return ensureSelectedOption(productProfiles, selectedProfileId);
-  }, [productProfiles, selectedTypeId, selectedCatId, selectedProfileId, strict]);
-
-  const filteredTemplates = useMemo(() => {
-    if (strict && !selectedProfileId) return [];
-    const pro = selectedProfileId;
-    const typ = selectedTypeId;
-    const cat = selectedCatId;
-
-    let out = [];
-    if (pro) {
-      out = productTemplates.filter((tp) => String(getProfileIdOfTemplate(tp)) === pro);
-    } else if (selectedProductTemplateId && !strict) {
-      out = productTemplates.filter((tp) => String(tp?.id) === selectedProductTemplateId);
-    } else if (typ && !strict) {
-      out = productTemplates.filter((tp) => String(tp?.productTypeId ?? tp?.productType?.id) === typ);
-    } else if (cat && !strict) {
-      out = productTemplates.filter((tp) => String(tp?.categoryId ?? tp?.category?.id) === cat);
-    } else {
-      out = strict ? [] : productTemplates;
+      out = out.filter((p) => String(getCategoryIdOfProduct(p)) === selectedCatId)
     }
 
-    if ((!out || out.length === 0) && productTemplates.length > 0 && !strict) out = productTemplates;
-    return ensureSelectedOption(out, selectedProductTemplateId);
-  }, [productTemplates, selectedCatId, selectedTypeId, selectedProfileId, selectedProductTemplateId, strict]);
+    // filter by type if chosen
+    if (selectedTypeId) {
+      out = out.filter((p) => String(getTypeIdOfProduct(p)) === selectedTypeId)
+    }
 
-  const categoryDisabled = isLoading;
-  const typeDisabled = isLoading || (strict && !selectedCatId);
-  const profileDisabled = isLoading || (strict && !selectedTypeId);
-  const templateDisabled = isLoading || (strict && !selectedProfileId);
+    return ensureSelectedOption(out, selectedProductId)
+  }, [products, selectedCatId, selectedTypeId, selectedProductId, strict, ensureSelectedOption])
 
-  const showCategory = !hiddenFields.includes('category');
-  const showType = !hiddenFields.includes('type');
-  const showProfile = !hiddenFields.includes('profile');
-  const showTemplate = !hiddenFields.includes('template');
+  // ---- UI rules ----
+  const categoryDisabled = isLoading
+  const typeDisabled = isLoading || (strict && !selectedCatId)
+  const productDisabled = isLoading || (strict && (!selectedCatId || !selectedTypeId))
+
+  const hide = (k) => hiddenFields.includes(k) || (k === 'type' && hiddenFields.includes('productType'))
+
+  const showCategory = !hide('category')
+  const showType = !hide('type')
+  const showProduct = !hide('product')
 
   const ph = {
     category: placeholders.category ?? '-- เลือกหมวดหมู่ --',
     type: placeholders.type ?? '-- เลือกประเภทสินค้า --',
-    profile: placeholders.profile ?? '-- เลือกแบรนด์ --',
-    template: placeholders.template ?? '-- เลือกสเปกสินค้า (SKU) --',
-  };
+    product: placeholders.product ?? '-- เลือกสินค้า --',
+  }
+
+  const visibleCount = (showCategory ? 1 : 0) + (showType ? 1 : 0) + (showProduct ? 1 : 0)
 
   const containerClass = containerClassName
     ? containerClassName
     : (direction === 'col'
-        ? 'grid grid-cols-1 gap-3'
-        : 'grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3');
+      ? 'grid grid-cols-1 gap-3'
+      : `grid grid-cols-1 md:grid-cols-${visibleCount} lg:grid-cols-${visibleCount} xl:grid-cols-${visibleCount} gap-3`)
+
+  // ---- Downstream reset (Production rule) ----
+  const onCategoryChange = (next) => {
+    // Category → reset Type + Product
+    emitPatch({
+      categoryId: next,
+      productTypeId: '',
+      productId: '',
+    })
+  }
+
+  const onTypeChange = (next) => {
+    // Type → reset Product
+    emitPatch({
+      productTypeId: next,
+      productId: '',
+    })
+  }
+
+  const onProductChange = (next) => {
+    emitPatch({ productId: next })
+  }
 
   return (
     <div className={containerClass}>
@@ -132,10 +163,7 @@ export default function CascadingDropdowns({ dropdowns, value = {}, onChange, is
             aria-label="เลือกหมวดหมู่"
             className={`border rounded px-3 py-2 w-full ${selectClassName} ${categoryDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
             value={selectedCatId}
-            onChange={(e) => {
-              const next = e.target.value;
-              sameStyleEmit('categoryId', next);
-            }}
+            onChange={(e) => onCategoryChange(e.target.value)}
             disabled={categoryDisabled}
           >
             <option value="">{ph.category}</option>
@@ -152,12 +180,9 @@ export default function CascadingDropdowns({ dropdowns, value = {}, onChange, is
           <select
             id="cdg-type"
             aria-label="เลือกประเภทสินค้า"
-            className={`border rounded px-3 py-2 w-full ${selectClassName} ${typeDisabled ? 'opacity-50 cursor-not-allowed' : ''}` }
+            className={`border rounded px-3 py-2 w-full ${selectClassName} ${typeDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
             value={selectedTypeId}
-            onChange={(e) => {
-              const next = e.target.value;
-              sameStyleEmit('productTypeId', next);
-            }}
+            onChange={(e) => onTypeChange(e.target.value)}
             disabled={typeDisabled}
           >
             <option value="">{ph.type}</option>
@@ -168,52 +193,25 @@ export default function CascadingDropdowns({ dropdowns, value = {}, onChange, is
         </div>
       )}
 
-      {showProfile && (
+      {showProduct && (
         <div>
-          <label htmlFor="cdg-profile" className="sr-only">แบรนด์</label>
+          <label htmlFor="cdg-product" className="sr-only">สินค้า</label>
           <select
-            id="cdg-profile"
-            aria-label="เลือกแบรนด์"
-            className={`border rounded px-3 py-2 w-full ${selectClassName} ${profileDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-            value={selectedProfileId}
-            onChange={(e) => {
-              const next = e.target.value;
-              sameStyleEmit('productProfileId', next);
-            }}
-            disabled={profileDisabled}
+            id="cdg-product"
+            aria-label="เลือกสินค้า"
+            className={`border rounded px-3 py-2 w-full ${selectClassName} ${productDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+            value={selectedProductId}
+            onChange={(e) => onProductChange(e.target.value)}
+            disabled={productDisabled}
           >
-            <option value="">{ph.profile}</option>
-            {filteredProfiles.map((p) => (
+            <option value="">{ph.product}</option>
+            {filteredProducts.map((p) => (
               <option key={p.id} value={String(p.id)}>{p.name}</option>
             ))}
           </select>
         </div>
       )}
-
-      {showTemplate && (
-        <div>
-          <label htmlFor="cdg-template" className="sr-only">สเปกสินค้า (SKU)</label>
-          <select
-            id="cdg-template"
-            aria-label="เลือกสเปกสินค้า (SKU)"
-            className={`border rounded px-3 py-2 w-full ${selectClassName} ${templateDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-            value={selectedProductTemplateId}
-            onChange={(e) => {
-              const next = e.target.value;
-              sameStyleEmit('productTemplateId', next);
-            }}
-            disabled={templateDisabled}
-          >
-            <option value="">{ph.template}</option>
-            {filteredTemplates.map((tp) => (
-              <option key={tp.id} value={String(tp.id)}>{tp.name}</option>
-            ))}
-          </select>
-        </div>
-      )}
     </div>
-  );
+  )
 }
-
-
 

@@ -4,22 +4,96 @@
 // ✅ src/features/product/components/ProductForm.jsx
 
 import React, { useEffect, useRef, useCallback } from 'react';
-import { useForm, FormProvider } from 'react-hook-form';
+import { useForm, FormProvider, Controller } from 'react-hook-form';
 import _ from 'lodash';
 import useProductStore from '../store/productStore';
-import CascadingDropdowns from '@/components/shared/form/CascadingDropdowns';
+import useBrandStore from '@/features/brand/store/brandStore';
 import FormFields from './FormFields';
 import ProcessingDialog from '@/components/shared/dialogs/ProcessingDialog';
 
 const ProductForm = ({ onSubmit, defaultValues, mode }) => {
-  const { dropdowns, fetchDropdowns, loadDropdowns, getProductDropdowns } = useProductStore();
+  const {
+    dropdowns,
+    dropdownsLoaded,
+    dropdownsLoading,
+    dropdownsError,
+    ensureDropdownsAction,
+    fetchDropdownsAction,
+  } = useProductStore();
+
+  // ✅ token gate (กันยิง API ก่อน auth พร้อม → 401)
+  const getAuthToken = () => {
+    if (typeof window === 'undefined') return ''
+    // รองรับหลาย key เผื่อโปรเจกต์เคยเปลี่ยนชื่อ storage
+    return (
+      localStorage.getItem('token') ||
+      localStorage.getItem('accessToken') ||
+      localStorage.getItem('jwt') ||
+      localStorage.getItem('authToken') ||
+      localStorage.getItem('posToken') ||
+      ''
+    )
+  }
+
+  const hasToken = Boolean(getAuthToken())
+    
+
+  // ✅ preload product dropdowns (idempotent) — Category/Type/Brand depend on this
+  // กันยิงซ้ำใน StrictMode / re-render
+  const dropdownsRequestedRef = useRef(false)
+
+  useEffect(() => {
+    if (!hasToken) return
+    if (dropdownsRequestedRef.current) return
+
+    const hasAny =
+      (Array.isArray(dropdowns?.categories) ? dropdowns.categories.length : 0) > 0 ||
+      (Array.isArray(dropdowns?.productTypes) ? dropdowns.productTypes.length : 0) > 0
+
+    if (dropdownsLoaded || hasAny || dropdownsLoading) return
+
+    const fn =
+      (typeof ensureDropdownsAction === 'function' && ensureDropdownsAction) ||
+      (typeof fetchDropdownsAction === 'function' && fetchDropdownsAction)
+
+    if (!fn) return
+
+    dropdownsRequestedRef.current = true
+    Promise.resolve(fn()).catch(() => {
+      // แค่ไม่ให้ throw กระทบ UI (401/timeout ฯลฯ)
+    })
+  }, [
+    hasToken,
+    dropdownsLoaded,
+    dropdownsLoading,
+    dropdowns?.categories?.length,
+    dropdowns?.productTypes?.length,
+    ensureDropdownsAction,
+    fetchDropdownsAction,
+  ]);
+
+  // ถ้า token หายระหว่างทาง ให้เปิดทาง retry ได้
+  useEffect(() => {
+    if (!hasToken) dropdownsRequestedRef.current = false
+  }, [hasToken]);
+
+
+  // ✅ Brand reference data (idempotent, shared for Create/Edit)
+  const brandItems = useBrandStore((s) => s?.items ?? s?.brands ?? s?.list ?? [])
+  const fetchBrandsAction = useBrandStore(
+    (s) => s?.fetchBrandsAction || s?.fetchBrands || s?.loadBrandsAction || s?.loadBrands
+  )
 
   const hasReset = useRef(false);
   const prevDefaults = useRef(null);
   const [showDialog, setShowDialog] = React.useState(false);
-  // โหมด strict สำหรับ CascadingDropdowns: create=true, edit=false แต่จะเป็น true เมื่อผู้ใช้เริ่มเปลี่ยนลำดับชั้น
+
+  // ✅ New: Cascading สำหรับ Product (Create/Edit) เหลือแค่ 2 ชั้น: Category → Type
+  // Strict ยังมีประโยชน์ใน create เพื่อบังคับลำดับการเลือก (กันเลือก type ก่อน category)
   const [strict, setStrict] = React.useState(mode === 'create');
-  useEffect(() => { setStrict(mode === 'create'); }, [mode]);
+  useEffect(() => {
+    setStrict(mode === 'create');
+  }, [mode]);
 
   const prepareDefaults = useCallback((data) => {
     // Helpers
@@ -40,60 +114,29 @@ const ProductForm = ({ onSubmit, defaultValues, mode }) => {
     };
 
     // ---- seed ids จาก payload ----
-    let catId = (data?.categoryId !== '' && data?.categoryId != null)
-      ? data.categoryId
-      : (data?.category?.id ?? data?.category_id ?? '');
+    let catId =
+      data?.categoryId !== '' && data?.categoryId != null
+        ? data.categoryId
+        : data?.category?.id ?? data?.category_id ?? '';
 
-    let typeId = (data?.productTypeId !== '' && data?.productTypeId != null)
-      ? data.productTypeId
-      : (data?.productType?.id ?? data?.typeId ?? data?.product_type_id ?? '');
-
-    let profileId = (data?.productProfileId !== '' && data?.productProfileId != null)
-      ? data.productProfileId
-      : (data?.productProfile?.id ?? data?.profileId ?? data?.product_profile_id ?? '');
-
-    let productTemplateId = (data?.productTemplateId !== '' && data?.productTemplateId != null)
-      ? data.productTemplateId
-      : (data?.productTemplate?.id ?? data?.productTemplateId ?? data?.product_template_id ?? data?.productTemplatedId ?? data?.product_templated_id ?? '');
+    let typeId =
+      data?.productTypeId !== '' && data?.productTypeId != null
+        ? data.productTypeId
+        : data?.productType?.id ?? data?.typeId ?? data?.product_type_id ?? '';
 
     // ---- เพิ่ม fallback จากชื่อ (กรณี payload ไม่มี id) ----
     if (!catId) {
       catId = byName(dropdowns?.categories, data?.categoryName ?? data?.category?.name ?? data?.category_name);
     }
     if (!typeId) {
-      typeId = byName(dropdowns?.productTypes, data?.productTypeName ?? data?.typeName ?? data?.productType?.name ?? data?.product_type_name);
-    }
-    if (!profileId) {
-      const listProfiles = dropdowns?.productProfiles ?? dropdowns?.profiles;
-      profileId = byName(listProfiles, data?.productProfileName ?? data?.profileName ?? data?.productProfile?.name ?? data?.product_profile_name);
-    }
-    if (!productTemplateId) {
-      const listTemplates = dropdowns?.productTemplates ?? dropdowns?.templates;
-      productTemplateId = byName(listTemplates, data?.productTemplateName ?? data?.templateName ?? data?.template?.name ?? data?.productTemplate?.name ?? data?.product_template_name);
+      typeId = byName(
+        dropdowns?.productTypes,
+        data?.productTypeName ?? data?.typeName ?? data?.productType?.name ?? data?.product_type_name
+      );
     }
 
     // ---- เติมสายแม่จาก dropdowns ถ้าขาด ----
     const _types = Array.isArray(dropdowns?.productTypes) ? dropdowns.productTypes : [];
-    const _profiles = Array.isArray(dropdowns?.productProfiles) ? dropdowns.productProfiles : (Array.isArray(dropdowns?.profiles) ? dropdowns.profiles : []);
-    const _templates = Array.isArray(dropdowns?.productTemplates) ? dropdowns.productTemplates : (Array.isArray(dropdowns?.templates) ? dropdowns.templates : []);
-
-    // จาก template → profile/type/category
-    if (!profileId && productTemplateId) {
-      const tpl = _templates.find((t) => String(t.id) === String(productTemplateId));
-      if (tpl) {
-        profileId = tpl.productProfileId ?? tpl.productProfile?.id ?? profileId;
-        typeId = typeId || (tpl.productTypeId ?? tpl.productType?.id);
-        catId = catId || (tpl.categoryId ?? tpl.category?.id);
-      }
-    }
-
-    // จาก profile → type
-    if (!typeId && profileId) {
-      const pr = _profiles.find((p) => String(p.id) === String(profileId));
-      if (pr) {
-        typeId = pr.productTypeId ?? pr.productType?.id ?? typeId;
-      }
-    }
 
     // จาก type → category
     if (!catId && typeId) {
@@ -109,8 +152,13 @@ const ProductForm = ({ onSubmit, defaultValues, mode }) => {
       model: data?.model ?? data?.modelName ?? data?.productModel ?? data?.series ?? data?.variant ?? '',
       categoryId: (catId === '' || catId == null) ? '' : Number(catId),
       productTypeId: (typeId === '' || typeId == null) ? '' : Number(typeId),
-      productProfileId: (profileId === '' || profileId == null) ? '' : Number(profileId),
-      productTemplateId: (productTemplateId === '' || productTemplateId == null) ? '' : Number(productTemplateId),
+
+      // ✅ Brand (optional) — Product-level
+      brandId:
+        (data?.brandId !== '' && data?.brandId != null)
+          ? Number(data.brandId)
+          : (data?.brand?.id != null ? Number(data.brand.id) : ''),
+
       mode: (data?.mode ? String(data.mode).toUpperCase() : (data?.noSN ? 'SIMPLE' : 'STRUCTURED')),
       noSN: !!data?.noSN,
       active: data?.active !== false,
@@ -153,34 +201,28 @@ const ProductForm = ({ onSubmit, defaultValues, mode }) => {
     defaultValues,
     dropdowns?.categories?.length,
     dropdowns?.productTypes?.length,
-    dropdowns?.productProfiles?.length,
-    dropdowns?.productTemplates?.length,
-    dropdowns?.templates?.length,
+    
     reset,
     prepareDefaults,
   ]);
-  // 🔄 preload dropdowns ถ้ายังไม่พร้อม (รองรับชื่อ action ได้ทั้ง getProductDropdowns/fetchDropdowns/loadDropdowns)
+  // 🔄 preload brands (idempotent) — แยกจาก product dropdowns เพื่อไม่ผูกกันผิดโมดูล
+  const brandsRequestedRef = useRef(false)
   useEffect(() => {
-    const ready =
-      (dropdowns?.categories?.length || 0) > 0 ||
-      (dropdowns?.productTypes?.length || 0) > 0 ||
-      (dropdowns?.productProfiles?.length || 0) > 0 ||
-      (dropdowns?.productTemplates?.length || 0) > 0 ||
-      (dropdowns?.templates?.length || 0) > 0;
-    const fetcher = getProductDropdowns || fetchDropdowns || loadDropdowns;
-    if (!ready && typeof fetcher === 'function') {
-      fetcher().catch(() => {});
+    if (!hasToken) return
+    if (brandsRequestedRef.current) return
+
+    const ready = (Array.isArray(brandItems) ? brandItems.length : 0) > 0
+    if (ready) return
+
+    if (typeof fetchBrandsAction === 'function') {
+      brandsRequestedRef.current = true
+      Promise.resolve(fetchBrandsAction({ includeInactive: false })).catch(() => {})
     }
-  }, [
-    dropdowns?.categories?.length,
-    dropdowns?.productTypes?.length,
-    dropdowns?.productProfiles?.length,
-    dropdowns?.productTemplates?.length,
-    dropdowns?.templates?.length,
-    getProductDropdowns,
-    fetchDropdowns,
-    loadDropdowns,
-  ]);
+  }, [hasToken, brandItems?.length, fetchBrandsAction]);
+
+  useEffect(() => {
+    if (!hasToken) brandsRequestedRef.current = false
+  }, [hasToken]);
 
   const handleFormSubmit = async (data) => {
     setShowDialog(true);
@@ -192,79 +234,132 @@ const ProductForm = ({ onSubmit, defaultValues, mode }) => {
   return (
     <FormProvider {...methods}>
       <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
-        <CascadingDropdowns
-          dropdowns={dropdowns}
-          strict={strict}
-          value={{
-            categoryId: toStr(watch('categoryId')),
-            productTypeId: toStr(watch('productTypeId')),
-            productProfileId: toStr(watch('productProfileId')),
-            productTemplateId: toStr(watch('productTemplateId')),
-          }}
-          onChange={(partial) => {
-            const currCat = toStr(watch('categoryId'));
-            const currType = toStr(watch('productTypeId'));
-            const currProf = toStr(watch('productProfileId'));
-            const currTpl = toStr(watch('productTemplateId'));
-            const eq = (a, b) => String(a ?? '') === String(b ?? '');
+        {/* ✅ UI-based error (ห้าม dialog alert) */}
+        {dropdownsError && (
+          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-red-800">
+            <div className="font-semibold">โหลดข้อมูล Dropdown ไม่สำเร็จ</div>
+            <div className="text-sm opacity-90">{String(dropdownsError)}</div>
+          </div>
+        )}
 
-            if (Object.prototype.hasOwnProperty.call(partial, 'categoryId')) {
-              const incoming = toStr(partial.categoryId);
-              // ถ้าเลือกค่าเดิม ไม่ต้องเคลียร์ลูก
-              if (eq(incoming, currCat)) {
-                setValue('categoryId', incoming === '' ? '' : Number(incoming));
-                return;
-              }
-              setValue('categoryId', incoming === '' ? '' : Number(incoming));
-              setValue('productTypeId', '');
-              setValue('productProfileId', '');
-              setValue('productTemplateId', '');
-              setStrict(true);
-              return;
-            }
-            if (Object.prototype.hasOwnProperty.call(partial, 'productTypeId')) {
-              const incoming = toStr(partial.productTypeId);
-              if (eq(incoming, currType)) {
-                setValue('productTypeId', incoming === '' ? '' : Number(incoming));
-                return;
-              }
-              setValue('productTypeId', incoming === '' ? '' : Number(incoming));
-              setValue('productProfileId', '');
-              setValue('productTemplateId', '');
-              setStrict(true);
-              return;
-            }
-            if (Object.prototype.hasOwnProperty.call(partial, 'productProfileId')) {
-              const incoming = toStr(partial.productProfileId);
-              if (eq(incoming, currProf)) {
-                setValue('productProfileId', incoming === '' ? '' : Number(incoming));
-                return;
-              }
-              setValue('productProfileId', incoming === '' ? '' : Number(incoming));
-              setValue('productTemplateId', '');
-              setStrict(true);
-              return;
-            }
-            if (Object.prototype.hasOwnProperty.call(partial, 'productTemplateId')) {
-              const incoming = toStr(partial.productTemplateId);
-              if (eq(incoming, currTpl)) {
-                setValue('productTemplateId', incoming === '' ? '' : Number(incoming));
-                return;
-              }
-              setValue('productTemplateId', incoming === '' ? '' : Number(incoming));
-              return;
-            }
-            Object.entries(partial).forEach(([k, v]) => setValue(k, v ?? ''));
-          }}
-          placeholders={{
-            category: '-- เลือกหมวดหมู่ --',
-            type: '-- เลือกประเภทสินค้า --',
-            profile: '-- เลือกรุ่น/ซีรีส์ (เช่น VIVO Y04) --',
-            template: '-- เลือกสเปก/ตัวเลือก (เช่น 4GB/64GB) --',
-          }}
-          containerClassName="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6"
-          selectClassName="w-full"
-        />
+        {/* ✅ 3-column row: หมวดหมู่ + ประเภท + แบรนด์ (บรรทัดเดียวกัน) */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* หมวดหมู่ */}
+          <div>
+            <label htmlFor="categoryId" className="block font-medium mb-1 text-gray-700">หมวดหมู่</label>
+            <Controller
+              name="categoryId"
+              control={control}
+              defaultValue=""
+              render={({ field }) => (
+                <select
+                  id="categoryId"
+                  className="w-full p-2 border rounded-md focus:ring-blue-400 focus:border-blue-400 text-gray-800"
+                  value={field.value === '' || field.value == null ? '' : String(field.value)}
+                  onChange={(e) => {
+                    const incoming = e.target.value
+                    const currCat = toStr(watch('categoryId'))
+                    const eq = (a, b) => String(a ?? '') === String(b ?? '')
+
+                    if (eq(incoming, currCat)) {
+                      field.onChange(incoming === '' ? '' : Number(incoming))
+                      return
+                    }
+
+                    field.onChange(incoming === '' ? '' : Number(incoming))
+                    // เปลี่ยนหมวดหมู่แล้ว เคลียร์ประเภท
+                    setValue('productTypeId', '')
+                    setStrict(true)
+                  }}
+                >
+                  <option value="">-- เลือกหมวดหมู่ --</option>
+                  {(Array.isArray(dropdowns?.categories) ? dropdowns.categories : []).map((c) => (
+                    <option key={String(c.id)} value={String(c.id)}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              )}
+            />
+          </div>
+
+          {/* ประเภทสินค้า */}
+          <div>
+            <label htmlFor="productTypeId" className="block font-medium mb-1 text-gray-700">ประเภทสินค้า</label>
+            <Controller
+              name="productTypeId"
+              control={control}
+              defaultValue=""
+              render={({ field }) => {
+                const catIdStr = toStr(watch('categoryId'))
+                const allTypes = Array.isArray(dropdowns?.productTypes) ? dropdowns.productTypes : []
+                const filteredTypes = catIdStr
+                  ? allTypes.filter((t) => String(t?.categoryId ?? t?.category?.id ?? '') === String(catIdStr))
+                  : allTypes
+
+                const disabled = strict && !catIdStr
+
+                return (
+                  <select
+                    id="productTypeId"
+                    className="w-full p-2 border rounded-md focus:ring-blue-400 focus:border-blue-400 text-gray-800"
+                    value={field.value === '' || field.value == null ? '' : String(field.value)}
+                    onChange={(e) => {
+                      const incoming = e.target.value
+                      const currType = toStr(watch('productTypeId'))
+                      const eq = (a, b) => String(a ?? '') === String(b ?? '')
+
+                      if (eq(incoming, currType)) {
+                        field.onChange(incoming === '' ? '' : Number(incoming))
+                        return
+                      }
+
+                      field.onChange(incoming === '' ? '' : Number(incoming))
+                      setStrict(true)
+                    }}
+                    disabled={disabled}
+                    aria-disabled={disabled}
+                  >
+                    <option value="">-- เลือกประเภทสินค้า --</option>
+                    {filteredTypes.map((t) => (
+                      <option key={String(t.id)} value={String(t.id)}>
+                        {t.name}
+                      </option>
+                    ))}
+                  </select>
+                )
+              }}
+            />
+          </div>
+
+          {/* แบรนด์ */}
+          <div>
+            <label htmlFor="brandId" className="block font-medium mb-1 text-gray-700">แบรนด์</label>
+            <Controller
+              name="brandId"
+              control={control}
+              defaultValue=""
+              render={({ field }) => (
+                <select
+                  id="brandId"
+                  className="w-full p-2 border rounded-md focus:ring-blue-400 focus:border-blue-400 text-gray-800"
+                  value={field.value === '' || field.value == null ? '' : String(field.value)}
+                  onChange={(e) => {
+                    const v = e.target.value
+                    field.onChange(v === '' ? '' : Number(v))
+                  }}
+                >
+                  <option value="">-- ไม่ระบุแบรนด์ --</option>
+                  {(Array.isArray(brandItems) ? brandItems : []).map((b) => (
+                    <option key={String(b.id)} value={String(b.id)}>
+                      {b.name}
+                    </option>
+                  ))}
+                </select>
+              )}
+            />
+          </div>
+        </div>
 
         <div className="grid grid-cols-1 gap-6">
           <FormFields
@@ -297,5 +392,7 @@ const ProductForm = ({ onSubmit, defaultValues, mode }) => {
 };
 
 export default ProductForm;
+
+
 
 

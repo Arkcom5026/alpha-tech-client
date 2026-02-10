@@ -1,40 +1,36 @@
-
-
 // ✅ src/features/productProfile/pages/ListProductProfilePage.jsx
-import React from 'react';
-import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
-import ProductProfileTable from '../components/ProductProfileTable';
-import useProductProfileStore from '../store/productProfileStore';
-import useProductStore from '@/features/product/store/productStore';
-import CascadingFilterGroup from '@/components/shared/form/CascadingFilterGroup';
-import StandardActionButtons from '@/components/shared/buttons/StandardActionButtons';
-import { useAuthStore } from '@/features/auth/store/authStore';
+import React from 'react'
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom'
+import ProductProfileTable from '../components/ProductProfileTable'
+import useProductProfileStore from '../store/productProfileStore'
+import StandardActionButtons from '@/components/shared/buttons/StandardActionButtons'
+import { useAuthStore } from '@/features/auth/store/authStore'
 
 const ListProductProfilePage = () => {
-  const navigate = useNavigate();
-  const [params, setParams] = useSearchParams();
-  const location = useLocation();
-  const isListPath = /\/pos\/stock\/profiles\/?$/.test(location.pathname);
+  const navigate = useNavigate()
+  const [params, setParams] = useSearchParams()
+  const location = useLocation()
+  const isListPath = /\/pos\/stock\/profiles\/?$/.test(location.pathname)
 
-    // ✅ อ่านสิทธิ์จาก authStore แบบ tolerant (รองรับทั้ง value และ function)
-  const auth = useAuthStore();
+  // ✅ อ่านสิทธิ์จาก authStore แบบ tolerant (รองรับทั้ง value และ function)
+  const auth = useAuthStore()
   const isSuperAdmin = React.useMemo(() => {
-    const v = auth?.isSuperAdmin;
-    return typeof v === 'function' ? !!v() : !!v;
-  }, [auth]);
+    const v = auth?.isSuperAdmin
+    return typeof v === 'function' ? !!v() : !!v
+  }, [auth])
 
   const canManageProductOrdering = React.useMemo(() => {
-    const v = auth?.canManageProductOrdering;
-    return typeof v === 'function' ? !!v() : !!v;
-  }, [auth]);
+    const v = auth?.canManageProductOrdering
+    return typeof v === 'function' ? !!v() : !!v
+  }, [auth])
 
   // ✅ permission: SuperAdmin หรือสิทธิ์จัดการลำดับสินค้า
   const canManage = React.useMemo(() => {
-    return !!isSuperAdmin || !!canManageProductOrdering;
-  }, [isSuperAdmin, canManageProductOrdering]);
+    return !!isSuperAdmin || !!canManageProductOrdering
+  }, [isSuperAdmin, canManageProductOrdering])
 
   // ✅ โหมด on-demand: ต้องกด “แสดงข้อมูล” ก่อน 1 ครั้ง
-  const [hasLoaded, setHasLoaded] = React.useState(false);
+  const [hasLoaded, setHasLoaded] = React.useState(false)
 
   const {
     items,
@@ -43,206 +39,104 @@ const ListProductProfilePage = () => {
     totalPages,
     search,
     includeInactive,
-    categoryId,
-    productTypeId,
     isLoading,
     error,
     setPageAction,
     setSearchAction,
     setIncludeInactiveAction,
-    setCategoryFilterAction,
-    setProductTypeFilterAction,
     setLimitAction,
     fetchListAction,
-  } = useProductProfileStore();
-
-  const { dropdowns, ensureDropdownsAction } = useProductStore();
-
-  React.useEffect(() => {
-    ensureDropdownsAction?.();
-  }, [ensureDropdownsAction]);
+  } = useProductProfileStore()
 
   // ✅ Init จาก URL → Store (ยึดโฟลว์เดิม)
   React.useEffect(() => {
-    if (!isListPath) return;
+    if (!isListPath) return
 
-    const p = Number(params.get('page') || 1);
-    const s = params.get('search') || '';
-    const inc = params.get('includeInactive') === 'true';
-    const cat = params.get('categoryId');
-    const type = params.get('productTypeId');
+    const p = Number(params.get('page') || 1)
+    const s = params.get('search') || ''
+    const inc = params.get('includeInactive') === 'true'
 
-    setPageAction(p);
-    setSearchAction(s);
-    setIncludeInactiveAction(inc);
-    setCategoryFilterAction(cat ? Number(cat) : null);
-    setProductTypeFilterAction(type ? Number(type) : null);
+    setPageAction(p)
+    setSearchAction(s)
+    setIncludeInactiveAction(inc)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isListPath]);
+  }, [isListPath])
 
   const isSameParams = React.useCallback((a, b) => {
-    if (a.toString() === b.toString()) return true;
-    if (a.size !== b.size) return false;
+    if (a.toString() === b.toString()) return true
+    if (a.size !== b.size) return false
     for (const [k, v] of a.entries()) {
-      if (b.get(k) !== v) return false;
+      if (b.get(k) !== v) return false
     }
-    return true;
-  }, []);
+    return true
+  }, [])
 
-  // ✅ โฟลว์ “เหมือนของเดิม”:
-  // - เมื่อเปลี่ยน filter/page/search/limit → fetchListAction ทันที
+  // ✅ โฟลว์เดิม:
+  // - เปลี่ยน page/search/limit/includeInactive → fetchListAction ทันที
   // - แต่จะเริ่มทำงานหลังผู้ใช้กด “แสดงข้อมูล” เท่านั้น
-  //
-  // หมายเหตุสำคัญ:
-  // - เวลาเปลี่ยน “หมวดหมู่” เราจะล้างประเภทสินค้า (productTypeId) พร้อมกัน
-  //   เพื่อกันเคส intermediate state ทำให้ยิง fetch ด้วย type เก่าแล้วได้ข้อมูลว่าง
-  const skipAutoFetchOnceRef = React.useRef(false);
-
   React.useEffect(() => {
-    if (!isListPath) return;
-    if (!hasLoaded) return;
+    if (!isListPath) return
+    if (!hasLoaded) return
 
-    // ✅ กันเคสเปลี่ยนหมวดหมู่แล้วเราจะยิง fetch แบบ deterministic จาก onCascadeChange เอง 1 ครั้ง
-    if (skipAutoFetchOnceRef.current) return;
+    fetchListAction()
 
-    fetchListAction();
-
-    const next = new URLSearchParams();
-    next.set('page', String(page));
-    if (search) next.set('search', search);
-    if (includeInactive) next.set('includeInactive', 'true');
-    if (categoryId != null) next.set('categoryId', String(categoryId));
-    if (productTypeId != null) next.set('productTypeId', String(productTypeId));
+    const next = new URLSearchParams()
+    next.set('page', String(page))
+    if (search) next.set('search', search)
+    if (includeInactive) next.set('includeInactive', 'true')
 
     if (!isSameParams(next, params)) {
-      setParams(next, { replace: true });
+      setParams(next, { replace: true })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isListPath, hasLoaded, page, limit, search, includeInactive, categoryId, productTypeId]);
+  }, [isListPath, hasLoaded, page, limit, search, includeInactive])
 
   const handleCreate = (e) => {
-    e.preventDefault();
-    navigate('/pos/stock/profiles/create');
-  };
+    e.preventDefault()
+    navigate('/pos/stock/profiles/create')
+  }
 
   const handleEdit = (row) => {
-    const id = Number(row?.id);
-    if (!id) return;
-    navigate(`/pos/stock/profiles/edit/${id}`);
-  };
+    const id = Number(row?.id)
+    if (!id) return
+    navigate(`/pos/stock/profiles/edit/${id}`)
+  }
 
-  const onPrev = () => hasLoaded && page > 1 && setPageAction(page - 1);
-  const onNext = () => hasLoaded && page < totalPages && setPageAction(page + 1);
-
-  const prevCategoryRef = React.useRef(categoryId);
-  const lastCascadeKeyRef = React.useRef('');
-
-  const onCascadeChange = (payload) => {
-    // ✅ CascadingFilterGroup (เดิม): onChange({ categoryId, productTypeId })
-    // ⚠️ ปัญหาที่เจอบ่อย: ตอนเลือก “ประเภท” บาง implementation จะส่งมาเฉพาะ productTypeId (ไม่ส่ง categoryId ซ้ำ)
-    // ถ้าเราอ่าน rawCat แล้วได้ null จะทำให้ categoryId ถูก set เป็น null → dropdown เด้งเคลียร์ทั้งคู่
-
-    const rawCat = payload?.categoryId ?? payload?.catId ?? payload?.category?.id;
-    const rawType = payload?.productTypeId ?? payload?.typeId ?? payload?.productType?.id;
-
-    // ✅ ถ้า payload ไม่ส่ง categoryId มา (ตอนเปลี่ยนประเภท) → ให้ “คงค่าเดิม” ไว้
-    const nextCat = rawCat != null ? Number(rawCat) : (categoryId ?? null);
-    // ✅ ถ้า payload ไม่ส่ง productTypeId มา (เช่น reset) → ให้คงค่าเดิมไว้
-    const nextType = rawType != null ? Number(rawType) : (productTypeId ?? null);
-
-    const prevCat = prevCategoryRef.current ?? (categoryId ?? null);
-    const isCategoryChanged = (prevCat ?? null) !== (nextCat ?? null);
-
-    // ✅ ถ้าเปลี่ยนหมวดหมู่ → ต้องล้าง “ประเภทสินค้า” ทันที (โฟลว์เดิม)
-    // ทำแบบ deterministic: set ทั้งคู่ แล้วค่อยยิง fetch หลังจากนั้น 1 ครั้ง
-    setCategoryFilterAction(nextCat);
-    setProductTypeFilterAction(isCategoryChanged ? null : nextType);
-    prevCategoryRef.current = nextCat;
-
-    // ✅ เปลี่ยนตัวกรอง = กลับหน้า 1
-    setPageAction(1);
-
-    // ถ้ายังไม่โหลดข้อมูล (on-demand) → แค่ตั้งค่า filter ไว้เฉย ๆ
-    if (!hasLoaded) return;
-
-    // ✅ ป้องกันการยิง fetch ซ้ำ (เช่น onChange ถูกเรียกซ้ำจาก component)
-    const cascadeKey = `${nextCat ?? ''}|${isCategoryChanged ? '' : nextType ?? ''}`;
-    if (lastCascadeKeyRef.current === cascadeKey) return;
-    lastCascadeKeyRef.current = cascadeKey;
-
-    // ✅ กัน effect ตัวหลักยิง fetch ด้วย state ชั่วคราว (intermediate)
-    skipAutoFetchOnceRef.current = true;
-
-    // ✅ รอให้ store update + React re-render เสร็จก่อน แล้วค่อยยิง fetch หนึ่งครั้ง
-    queueMicrotask(() => {
-      fetchListAction();
-
-      // sync URL ให้ตรงทันที (กันรีเฟรชแล้วหลุด)
-      const next = new URLSearchParams(params);
-      next.set('page', '1');
-
-      if (search) next.set('search', search);
-      else next.delete('search');
-
-      if (includeInactive) next.set('includeInactive', 'true');
-      else next.delete('includeInactive');
-
-      if (nextCat != null) next.set('categoryId', String(nextCat));
-      else next.delete('categoryId');
-
-      // ถ้าเปลี่ยนหมวดหมู่ → type ต้องถูกล้างใน URL ด้วย
-      if (!isCategoryChanged && nextType != null) next.set('productTypeId', String(nextType));
-      else next.delete('productTypeId');
-
-      setParams(next, { replace: true });
-
-      // เปิดให้ effect หลักทำงานรอบถัดไป
-      queueMicrotask(() => {
-        skipAutoFetchOnceRef.current = false;
-      });
-    });
-  };
+  const onPrev = () => hasLoaded && page > 1 && setPageAction(page - 1)
+  const onNext = () => hasLoaded && page < totalPages && setPageAction(page + 1)
 
   const onSearchChange = (e) => {
-    setSearchAction(e.target.value || '');
-    setPageAction(1);
-  };
+    setSearchAction(e.target.value || '')
+    setPageAction(1)
+  }
 
   const clearSearch = () => {
-    setSearchAction('');
-    setPageAction(1);
-  };
+    setSearchAction('')
+    setPageAction(1)
+  }
 
   return (
     <div className="p-6 w-full flex flex-col items-center">
       <div className="w-full max-w-6xl">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h1 className="text-xl font-semibold text-zinc-800 dark:text-white">รายการแบรนด์</h1>
+            <h1 className="text-xl font-semibold text-zinc-800 dark:text-white">โปรไฟล์สินค้า</h1>
             <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-              แบรนด์ = ยี่ห้อ/ผู้ผลิตสินค้า เช่น Apple, ASUS, VIVO (ไม่ใช่รุ่น/สเปก/สี)
+              โปรไฟล์สินค้า = <span className="font-medium">กลุ่มมาตรฐานที่นำไปใช้ซ้ำได้</span> ใช้เมื่อมีรูปแบบซ้ำจริง
+              เพื่อช่วยเลือก Template/ค่าเริ่มต้นให้สม่ำเสมอ{' '}
+              <span className="font-medium">(ไม่ผูกกับหมวดหมู่/ประเภทสินค้า และไม่จำเป็นต้องมีทุกสินค้า)</span>
             </p>
           </div>
           {canManage && <StandardActionButtons onAdd={handleCreate} />}
         </div>
 
         <div className="flex flex-col gap-3 mb-4">
-          <div className={!hasLoaded ? 'pointer-events-none opacity-60' : ''} aria-disabled={!hasLoaded}>
-            <CascadingFilterGroup
-              value={{ categoryId, productTypeId }}
-              onChange={onCascadeChange}
-              dropdowns={dropdowns}
-              hiddenFields={['template', 'profile']}
-              showReset
-            />
-          </div>
-
           <div className="flex flex-wrap items-center gap-3">
             <div className="flex items-center gap-2 grow max-w-xl">
               <input
                 type="text"
                 className="input input-bordered w-full"
-                placeholder={hasLoaded ? 'ค้นหาแบรนด์ เช่น Apple, ASUS, VIVO' : 'กด “แสดงข้อมูล” ก่อนเพื่อโหลดรายการ'}
+                placeholder={hasLoaded ? 'ค้นหาโปรไฟล์สินค้า เช่น ชื่อโปรไฟล์/คำค้น' : 'กด “แสดงข้อมูล” ก่อนเพื่อโหลดรายการ'}
                 value={search}
                 onChange={onSearchChange}
                 disabled={!hasLoaded}
@@ -260,8 +154,8 @@ const ListProductProfilePage = () => {
                 className="checkbox"
                 checked={!!includeInactive}
                 onChange={(e) => {
-                  setIncludeInactiveAction(e.target.checked);
-                  setPageAction(1);
+                  setIncludeInactiveAction(e.target.checked)
+                  setPageAction(1)
                 }}
                 disabled={!hasLoaded}
               />
@@ -276,8 +170,8 @@ const ListProductProfilePage = () => {
                   value={limit}
                   disabled={!hasLoaded}
                   onChange={(e) => {
-                    setLimitAction(Number(e.target.value));
-                    setPageAction(1);
+                    setLimitAction(Number(e.target.value))
+                    setPageAction(1)
                   }}
                 >
                   {[10, 20, 50, 100].map((n) => (
@@ -293,27 +187,21 @@ const ListProductProfilePage = () => {
                 className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-[0_6px_20px_-6px_rgba(37,99,235,0.55)] hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 disabled:opacity-50"
                 disabled={isLoading || hasLoaded}
                 onClick={() => {
-                  if (hasLoaded) return;
-                  setHasLoaded(true);
-                  setPageAction(1);
+                  if (hasLoaded) return
+                  setHasLoaded(true)
+                  setPageAction(1)
 
                   // sync URL ทันที (เพื่อรีเฟรชแล้วยังอยู่ที่ filter เดิม)
-                  const next = new URLSearchParams(params);
-                  next.set('page', '1');
+                  const next = new URLSearchParams(params)
+                  next.set('page', '1')
 
-                  if (search) next.set('search', search);
-                  else next.delete('search');
+                  if (search) next.set('search', search)
+                  else next.delete('search')
 
-                  if (includeInactive) next.set('includeInactive', 'true');
-                  else next.delete('includeInactive');
+                  if (includeInactive) next.set('includeInactive', 'true')
+                  else next.delete('includeInactive')
 
-                  if (categoryId != null) next.set('categoryId', String(categoryId));
-                  else next.delete('categoryId');
-
-                  if (productTypeId != null) next.set('productTypeId', String(productTypeId));
-                  else next.delete('productTypeId');
-
-                  setParams(next, { replace: true });
+                  setParams(next, { replace: true })
                 }}
               >
                 แสดงข้อมูล
@@ -353,7 +241,7 @@ const ListProductProfilePage = () => {
         </div>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default ListProductProfilePage;
+export default ListProductProfilePage

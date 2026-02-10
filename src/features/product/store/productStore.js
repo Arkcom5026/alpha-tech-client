@@ -1,7 +1,5 @@
 
 
-
-
 // ✅ src/features/product/store/productStore.js
 import { create } from 'zustand';
 
@@ -32,6 +30,8 @@ const initialDropdowns = {
   profiles: [],
   templates: [],
   productTemplates: [],
+  // ✅ Brand (optional extension)
+  brands: [],
 };
 
 const useProductStore = create((set, get) => ({
@@ -218,7 +218,7 @@ const useProductStore = create((set, get) => ({
     }
   },
 
-  // -------- Dropdowns (โหลดครั้งเดียว ใช้ทั้งระบบ) -------- (โหลดครั้งเดียว ใช้ทั้งระบบ) --------
+  // -------- Dropdowns (โหลดครั้งเดียว ใช้ทั้งระบบ) --------
   fetchDropdownsAction: async (force = false) => {
     // prevent unnecessary reload
     if (get().dropdownsLoaded && !force) return get().dropdowns;
@@ -250,33 +250,47 @@ const useProductStore = create((set, get) => ({
         raw?.list // some APIs return `list` for types
       );
 
-      const profiles = pickArr(
-        raw?.profiles,
-        raw?.productProfiles,
-        raw?.profileList,
-        raw?.data?.profiles
+            const profiles = pickArr(raw?.profiles, raw?.productProfiles, raw?.profileList, raw?.data?.profiles);
+
+      const brands = pickArr(
+        raw?.brands,
+        raw?.brandList,
+        raw?.brand_list,
+        raw?.data?.brands,
+        raw?.items?.brands
       );
 
-      const templates = pickArr(
-        raw?.templates,
-        raw?.productTemplates,
-        raw?.templateList,
-        raw?.data?.templates
-      );
+      const templates = pickArr(raw?.templates, raw?.productTemplates, raw?.templateList, raw?.data?.templates);
 
-      const dropdowns = { categories, productTypes, profiles, productProfiles: profiles, templates, productTemplates: templates };
-      set({ dropdowns, dropdownsLoaded: true });
+            const dropdowns = {
+        categories,
+        productTypes,
+        profiles,
+        productProfiles: profiles,
+        templates,
+        productTemplates: templates,
+        brands,
+      };
+
+      set({ dropdowns, dropdownsLoaded: true, error: null });
       return dropdowns;
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('❌ fetchDropdownsAction error:', error);
-      set({ error });
-      throw error;
+
+      // ✅ Fail-soft: อย่า throw เพื่อกัน Uncaught promise และกันหน้า crash
+      // เก็บ error แบบ normalize เพื่อให้ UI แสดงได้
+      const normalized = get().normalizeError(error, 'โหลดรายการตัวเลือกไม่สำเร็จ');
+      set({ error: normalized, dropdownsLoaded: false });
+
+      // คืนค่าที่มีอยู่ (อาจเป็น empty) เพื่อไม่ให้ caller พัง
+      return get().dropdowns;
     }
   },
 
   ensureDropdownsAction: async () => {
     if (!get().dropdownsLoaded) {
+      // ✅ Fail-soft: fetchDropdownsAction ถูกทำให้ไม่ throw แล้ว
       await get().fetchDropdownsAction(true);
     }
     return get().dropdowns;
@@ -503,8 +517,5 @@ const useProductStore = create((set, get) => ({
 
 export default useProductStore;
   
-
-
-
 
 

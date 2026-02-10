@@ -11,7 +11,13 @@ import ProcessingDialog from '@/components/shared/dialogs/ProcessingDialog';
 
 const CreateProductPage = () => {
   const branchId = useBranchStore((state) => state.selectedBranchId);
-  const { saveProduct, uploadImages, ensureDropdownsAction, dropdownsLoaded } = useProductStore();
+  const {
+    saveProduct,
+    uploadImages,
+    ensureDropdownsAction,
+    dropdownsLoaded,
+    error: storeError,
+  } = useProductStore();
   const [error, setError] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
@@ -21,10 +27,23 @@ const CreateProductPage = () => {
   const [previewUrls, setPreviewUrls] = useState([]);
   const [captions, setCaptions] = useState([]);
   const [coverIndex, setCoverIndex] = useState(null);
-  // ✅ โหลด dropdowns จาก Store ครั้งเดียว (idempotent)
+  // ✅ เลื่อนการโหลด dropdowns: รอให้ branchId พร้อมก่อน + กัน StrictMode ยิงซ้ำ
+  const dropdownsFetchRef = useRef({ branchId: null, done: false });
   useEffect(() => {
-    ensureDropdownsAction?.();
-  }, [ensureDropdownsAction]);
+    if (!branchId) return;
+    if (dropdownsLoaded === true) return;
+
+    // reset เมื่อสลับสาขา
+    if (dropdownsFetchRef.current.branchId !== branchId) {
+      dropdownsFetchRef.current = { branchId, done: false };
+    }
+
+    if (dropdownsFetchRef.current.done) return;
+    dropdownsFetchRef.current.done = true;
+
+    // ✅ อย่าให้ error ของ dropdowns ทำให้หน้า crash
+    Promise.resolve(ensureDropdownsAction?.()).catch(() => {});
+  }, [branchId, dropdownsLoaded, ensureDropdownsAction]);
   // ✅ Normalize files ให้เป็น Array<File> เสมอ (กัน "e.forEach is not a function")
   // รองรับ: Array, FileList, single File/object, null/undefined
   const normalizeFiles = (input) => {
@@ -71,7 +90,24 @@ const CreateProductPage = () => {
     return (
       <div className="w-full max-w-[1600px] mx-auto px-4 lg:px-8">
         <h2 className="text-xl font-bold mb-4">เพิ่มสินค้า</h2>
+
+        {storeError?.message ? (
+          <div className="mb-4 rounded border border-red-200 bg-red-50 text-red-700 px-4 py-2">
+            {storeError.message}
+          </div>
+        ) : null}
+
         <p className="text-gray-600">กำลังโหลดรายการตัวเลือก (หมวด / ประเภท / ลักษณะ / รูปแบบ)...</p>
+
+        <div className="mt-4">
+          <button
+            type="button"
+            className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700"
+            onClick={() => Promise.resolve(ensureDropdownsAction?.()).catch(() => {})}
+          >
+            โหลดรายการอีกครั้ง
+          </button>
+        </div>
       </div>
     );
   }
@@ -127,6 +163,9 @@ const CreateProductPage = () => {
               productProfileId: '',
               productTypeId: '',
               categoryId: '',
+
+              // ✅ Brand (optional)
+              brandId: '',
               noSN: false,
               initialQty: '',
               active: true,
@@ -147,7 +186,6 @@ const CreateProductPage = () => {
 };
 
 export default CreateProductPage;
-
 
 
 

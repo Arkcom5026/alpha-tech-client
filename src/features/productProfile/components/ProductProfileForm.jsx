@@ -149,6 +149,9 @@ const ProductProfileForm = ({
         {/* cascading dropdowns */}
         <div>
           <label className="block mb-1 font-medium">หมวดสินค้า * / ประเภทสินค้า *</label>
+          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+            เลือกประเภทสินค้าให้ถูกต้องก่อน แล้วค่อยสร้างโปรไฟล์เมื่อมีรูปแบบการใช้งาน <span className="font-medium">ซ้ำจริง</span> (โปรไฟล์ไม่ใช่แบรนด์ และไม่จำเป็นต้องมีทุกสินค้า)
+          </p>
           {(!isDropdownLoading && (cascaded?.categories?.length || 0) > 0) ? (
             <CascadingDropdowns
               dropdowns={cascaded}
@@ -181,15 +184,18 @@ const ProductProfileForm = ({
           {errors?.productTypeId && <p className="text-red-500 text-sm mt-1">{errors.productTypeId.message}</p>}
         </div>
 
-        {/* name */}
+        {/* profile name */}
         <div>
-          <label className="block mb-1 font-medium">ชื่อแบรนด์ *</label>
+          <label className="block mb-1 font-medium">ชื่อโปรไฟล์สินค้า *</label>
+          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+            ตั้งชื่อให้สื่อ “กลุ่มมาตรฐานภายในประเภทสินค้า” เช่น Office / Gaming / Heavy-Duty เพื่อใช้ซ้ำได้ในอนาคต
+          </p>
           <input
             type="text"
             {...methods.register('name')}
             disabled={busy}
             className="w-full border rounded px-3 py-2 bg-white dark:bg-zinc-900 border-zinc-300 dark:border-zinc-700"
-            placeholder="เช่น EPSON, CANON, HP, ASUS, VIVO"
+            placeholder="เช่น Laptop - Office, Laptop - Gaming, ปริ้นเตอร์ - Inkjet, ปริ้นเตอร์ - Laser"
           />
           {errors?.name && <p className="text-red-500 text-sm mt-1">{errors.name.message}</p>}
         </div>
@@ -220,15 +226,5 @@ const ProductProfileForm = ({
 };
 
 export default ProductProfileForm;
-
-
-
-
-
-
-
-
-
-
 
 

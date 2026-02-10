@@ -1,9 +1,10 @@
 
+
 // ✅ src/features/productProfile/api/productProfileApi.js
 // ปรับมาตรฐานเดียวกับ Category/ProductType
 // - ใช้ path แบบ relative (ไม่มี / นำหน้า) เพื่อพึ่ง baseURL จาก apiClient
 // - ครอบ try...catch และโยน parseApiError
-// - รองรับ page, limit, search, includeInactive, categoryId, productTypeId
+// - รองรับ page, limit, search, includeInactive (ไม่ผูก category/type แล้ว)
 // - archive/restore ใช้ PATCH
 // - dropdowns รองรับ active + filter
 // - เพิ่ม cache-buster `_ts`
@@ -18,14 +19,11 @@ export const getProductProfiles = async ({
   page = 1,
   limit = 20,
   search = '',
-  includeInactive = false,
-  categoryId = null,
-  productTypeId = null,
-} = {}) => {
-  try {
-    const params = { page, limit, search, includeInactive, _ts: Date.now() };
-    if (categoryId) params.categoryId = Number(categoryId);
-    if (productTypeId) params.productTypeId = Number(productTypeId);
+  includeInactive = false,} = {}) => {
+  try {    const params = { page, limit, search, includeInactive, _ts: Date.now() };
+
+    // Backward-compatible: ignore legacy filters (categoryId/productTypeId)
+    // ProductProfile ไม่ผูกกับ Category/ProductType ตาม BestLine ใหม่
 
     const { data } = await apiClient.get(BASE, { params });
     return data;
@@ -95,11 +93,10 @@ export const restoreProductProfile = async (id) => {
 };
 
 // 🔹 DROPDOWNS
-export const getProductProfileDropdowns = async ({ active = true, categoryId = null, productTypeId = null } = {}) => {
-  try {
-    const params = { active, _ts: Date.now() };
-    if (categoryId) params.categoryId = Number(categoryId);
-    if (productTypeId) params.productTypeId = Number(productTypeId);
+export const getProductProfileDropdowns = async ({ active = true } = {}) => {
+  try {    const params = { active, _ts: Date.now() };
+
+    // Backward-compatible: ignore legacy filters (categoryId/productTypeId)
 
     const { data } = await apiClient.get(`${BASE}/dropdowns`, { params });
     return data;

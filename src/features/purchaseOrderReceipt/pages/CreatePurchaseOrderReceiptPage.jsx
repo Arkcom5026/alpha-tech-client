@@ -1,7 +1,7 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import POItemListForReceipt from '@/features/purchaseOrderReceipt/components/POItemListForReceipt';
@@ -32,9 +32,23 @@ const CreatePurchaseOrderReceiptPage = () => {
     },
   });
 
+  // ✅ Keep formData reactive (avoid passing a stale snapshot)
+  const formValues = useWatch({ control: form.control });
+  const formData = useMemo(
+    () => ({
+      supplierTaxInvoiceNumber: formValues?.supplierTaxInvoiceNumber ?? '',
+      supplierTaxInvoiceDate: formValues?.supplierTaxInvoiceDate ?? '',
+      receivedAt: formValues?.receivedAt ?? '',
+      note: formValues?.note ?? '',
+    }),
+    [formValues]
+  );
+
   useEffect(() => {
     if (poId) {
-      loadOrderById(poId);
+      loadOrderById(Number(poId));
+      // ✅ reset receiptId when switching PO
+      setReceiptId(null);
     }
   }, [poId, loadOrderById]);
 
@@ -52,7 +66,7 @@ const CreatePurchaseOrderReceiptPage = () => {
             <div>
               <p><strong>รหัสใบสั่งซื้อ:</strong> {currentOrder.code}</p>
               <p><strong>Supplier:</strong> {currentOrder.supplier?.name || '-'}</p>
-              <p><strong>วันที่สั่งซื้อ:</strong> {new Date(currentOrder.createdAt).toLocaleDateString('th-TH')}</p>
+              <p><strong>วันที่สั่งซื้อ:</strong> {currentOrder.createdAt ? new Date(currentOrder.createdAt).toLocaleDateString('th-TH') : '-'}</p>
             </div>
 
             <div className="space-y-4">
@@ -108,10 +122,10 @@ const CreatePurchaseOrderReceiptPage = () => {
         <div className="mt-8">
           <POItemListForReceipt
             key={currentOrder.id}
-            poId={poId}
+            poId={Number(poId)}
             receiptId={receiptId}
             setReceiptId={setReceiptId}
-            formData={form.getValues()}
+            formData={formData}
             items={currentOrder.items} // ✨ ส่ง items มาด้วยเพื่อแสดงในตาราง
           />
         </div>
@@ -121,4 +135,6 @@ const CreatePurchaseOrderReceiptPage = () => {
 };
 
 export default CreatePurchaseOrderReceiptPage;
+
+
 

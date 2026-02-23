@@ -1,5 +1,6 @@
 
 
+
 // ✅ purchaseOrderReceiptStore.js — จัดการสถานะ Receipt + Items (รองรับ SIMPLE + STRUCTURED + QUICK)
 
 import { create } from 'zustand';
@@ -21,7 +22,7 @@ import {
 import { getEligiblePurchaseOrders, getPurchaseOrderDetailById, updatePurchaseOrderStatus } from '@/features/purchaseOrder/api/purchaseOrderApi';
 import { addReceiptItem, updateReceiptItem, deleteReceiptItem } from '@/features/purchaseOrderReceiptItem/api/purchaseOrderReceiptItemApi';
 
-const usePurchaseOrderReceiptStore = create((set) => ({
+const usePurchaseOrderReceiptStore = create((set, get) => ({
 
   receipts: [],
   receiptBarcodeSummaries: [],
@@ -119,7 +120,8 @@ const usePurchaseOrderReceiptStore = create((set) => ({
     }
   },
 
-  updateReceipt: async (id, payload) => {
+  // ✅ Standard naming (Action) — keep legacy name as alias to avoid breaking callers
+  updateReceiptAction: async (id, payload) => {
     try {
       set({ error: null });
       const updated = await updateReceipt(id, payload);
@@ -136,7 +138,8 @@ const usePurchaseOrderReceiptStore = create((set) => ({
     }
   },
 
-  deleteReceipt: async (id) => {
+  // ✅ Standard naming (Action) — keep legacy name as alias to avoid breaking callers
+  deleteReceiptAction: async (id) => {
     try {
       set({ error: null });
       await deleteReceipt(id);
@@ -152,21 +155,29 @@ const usePurchaseOrderReceiptStore = create((set) => ({
     }
   },
 
-  fetchPurchaseOrdersForReceipt: async () => {
+  fetchPurchaseOrdersForReceiptAction: async () => {
     try {
+      set({ loading: true, error: null });
       const res = await getEligiblePurchaseOrders();
-      set({ purchaseOrdersForReceipt: res });
+      set({ purchaseOrdersForReceipt: res, loading: false, error: null });
+      return res;
     } catch (err) {
       console.error('❌ โหลด Purchase Orders สำหรับใบรับสินค้าไม่สำเร็จ:', err);
+      set({ error: err, loading: false });
+      return [];
     }
   },
 
-  loadOrderById: async (poId) => {
+  loadOrderByIdAction: async (poId) => {
     try {
+      set({ loading: true, error: null });
       const res = await getPurchaseOrderDetailById(poId);
-      set({ currentOrder: res });
+      set({ currentOrder: res, loading: false, error: null });
+      return res;
     } catch (err) {
       console.error('❌ โหลด loadOrderById สำหรับใบรับสินค้าไม่สำเร็จ:', err);
+      set({ error: err, loading: false });
+      return null;
     }
   },
 
@@ -350,6 +361,12 @@ const usePurchaseOrderReceiptStore = create((set) => ({
       return null;
     }
   },
+
+  // ✅ Legacy aliases (do NOT remove yet)
+  updateReceipt: async (id, payload) => get().updateReceiptAction(id, payload),
+  deleteReceipt: async (id) => get().deleteReceiptAction(id),
+  fetchPurchaseOrdersForReceipt: async () => get().fetchPurchaseOrdersForReceiptAction(),
+  loadOrderById: async (poId) => get().loadOrderByIdAction(poId),
 
   clearCurrentReceipt: () => set({ currentReceipt: null }),
   clearError: () => set({ error: null }),

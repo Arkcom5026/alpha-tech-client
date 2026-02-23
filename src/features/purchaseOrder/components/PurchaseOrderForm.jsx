@@ -1,6 +1,5 @@
 
 
-
 // PurchaseOrderForm.jsx
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -60,9 +59,7 @@ const PurchaseOrderForm = ({
   const [filter, setFilter] = useState({
     categoryId: '',
     productTypeId: '',
-    productProfileId: '',
-    productTemplateId: '', // ใช้คีย์เดียวกับ ListProductPage    // NOTE: Project #1 ใช้ ProductProfile เป็น "แบรนด์/ยี่ห้อ" อยู่แล้ว
-    // ถ้ายังไม่มี brandId ในระบบจริง ให้เก็บไว้เป็นเผื่ออนาคต แต่ *ไม่ใช้เป็นเงื่อนไขค้นหา* เพื่อกันความสับสน
+    // ✅ PO Search ต้องใช้ Brand/ยี่ห้อ แทน dropdown "เลือกสินค้า"
     brandId: '',
   });
   const [committedSearchText, setCommittedSearchText] = useState('');
@@ -100,16 +97,13 @@ const PurchaseOrderForm = ({
   const handleFilterChange = useCallback((patch) => {
     setFilter((prev) => {
       const updated = { ...prev, ...patch };
-      if (patch.categoryId && patch.categoryId !== prev.categoryId) {
+
+      // ✅ cascading เฉพาะ Category -> Type
+      if (Object.prototype.hasOwnProperty.call(patch, 'categoryId') && patch.categoryId !== prev.categoryId) {
         updated.productTypeId = '';
-        updated.productProfileId = '';
-        updated.productTemplateId = '';
-      } else if (patch.productTypeId && patch.productTypeId !== prev.productTypeId) {
-        updated.productProfileId = '';
-        updated.productTemplateId = '';
-      } else if (patch.productProfileId && patch.productProfileId !== prev.productProfileId) {
-        updated.productTemplateId = '';
       }
+
+      // brandId เป็น filter อิสระ ไม่ reset ตาม type/category (ลด disruption)
       return updated;
     });
   }, []);
@@ -226,20 +220,18 @@ const PurchaseOrderForm = ({
   // Ensure dropdowns ready
   useEffect(() => { try { ensureDropdownsAction(); } catch { /* no-op */ } }, [ensureDropdownsAction]);
 
-  // (เสริม) โหลด dropdown ลูกอัตโนมัติตามลำดับชั้น
+  // (เสริม) โหลด dropdown ลูกอัตโนมัติตามลำดับชั้น (PO ใช้แค่ Category -> Type + Brands)
   useEffect(() => {
     try {
       if (filter.categoryId) {
-        ensureDropdownsAction({ level: 'types', categoryId: Number(filter.categoryId) });
+        // ✅ ให้สอดคล้องกับ productStore: ส่งแค่ categoryId เพื่อโหลดประเภทสินค้า (types)
+        ensureDropdownsAction({ categoryId: Number(filter.categoryId) });
       }
-      if (filter.productTypeId) {
-        ensureDropdownsAction({ level: 'profiles', typeId: Number(filter.productTypeId) });
-      }
-      if (filter.productProfileId) {
-        ensureDropdownsAction({ level: 'templates', profileId: Number(filter.productProfileId) });
-      }
-    } catch { /* no-op */ }
-  }, [filter.categoryId, filter.productTypeId, filter.productProfileId, ensureDropdownsAction]);
+      // ✅ brands เป็น global list → ให้ ensureDropdownsAction() ตัวแรกจัดการ
+    } catch {
+      /* no-op */
+    }
+  }, [filter.categoryId, ensureDropdownsAction]);
 
   // Load for edit
   useEffect(() => {
@@ -282,15 +274,19 @@ const PurchaseOrderForm = ({
 
   // Search products when filters or committed text change
   useEffect(() => {
-    const hasFilter = filter.categoryId || filter.productTypeId || filter.productProfileId || filter.productTemplateId;
+    const hasFilter = filter.categoryId || filter.productTypeId || filter.brandId;
     if (hasFilter || committedSearchText) {
       const params = {
         categoryId: filter.categoryId ? Number(filter.categoryId) : undefined,
         productTypeId: filter.productTypeId ? Number(filter.productTypeId) : undefined,
-        productProfileId: filter.productProfileId ? Number(filter.productProfileId) : undefined,
-        productTemplateId: filter.productTemplateId ? Number(filter.productTemplateId) : undefined,        searchText: committedSearchText || undefined,
+        brandId: filter.brandId ? Number(filter.brandId) : undefined,
+        searchText: committedSearchText || undefined,
       };
-      try { fetchProductsAction(params); } catch { /* no-op */ }
+      try {
+        fetchProductsAction(params);
+      } catch {
+        /* no-op */
+      }
     }
   }, [filter, committedSearchText, fetchProductsAction]);
 
@@ -335,27 +331,69 @@ const PurchaseOrderForm = ({
       </div>
 
       {/* Filters & Search */}
-      <div className="p-2">
+      <div className="p-2 space-y-2">
         <Label>ค้นหาสินค้า</Label>
-        <CascadingFilterGroup
-          value={filter}
-          dropdowns={dropdowns}
-          showSearch
-          searchText={searchText}
-          onSearchTextChange={onSearchTextChange}
-          onSearchCommit={(text) => setCommittedSearchText(text.trim() || '')}
-          onChange={(patch) => {
-            // Normalize คีย์จาก CascadingFilterGroup ให้ตรงกับรูปแบบภายใน
-            const normalized = {
-              categoryId: patch.categoryId ?? patch.selectedCategoryId ?? patch.category ?? '',
-              productTypeId: patch.productTypeId ?? patch.typeId ?? patch.selectedTypeId ?? patch.type ?? '',
-              productProfileId: patch.productProfileId ?? patch.profileId ?? patch.selectedProfileId ?? patch.profile ?? '',
-              productTemplateId: patch.productTemplateId ?? patch.templateId ?? patch.selectedTemplateId ?? patch.template ?? '',
-              brandId: patch.brandId ?? patch.brand ?? patch.selectedBrandId ?? '',
-            };
-            handleFilterChange(normalized);
-          }}
-        />
+
+        {/* ✅ 3 dropdown: หมวดหมู่ / ประเภท / แบรนด์(ยี่ห้อ) */}
+        <div className="flex flex-wrap gap-2">
+          <select
+            className="h-9 w-[220px] rounded-md border border-input bg-background px-3 text-sm"
+            value={filter.categoryId}
+            onChange={(e) => handleFilterChange({ categoryId: e.target.value })}
+          >
+            <option key="cat-placeholder" value="">-- เลือกหมวดหมู่ --</option>
+            {(dropdowns?.categories || []).map((c, i) => (
+              <option key={`cat-${c?.id ?? c?.name ?? i}`} value={String(c?.id ?? '')}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+
+          <select
+            className="h-9 w-[220px] rounded-md border border-input bg-background px-3 text-sm"
+            value={filter.productTypeId}
+            onChange={(e) => handleFilterChange({ productTypeId: e.target.value })}
+            disabled={!filter.categoryId || (dropdowns?.productTypes || dropdowns?.types || []).length === 0}
+          >
+            <option key="type-placeholder" value="">-- เลือกประเภทสินค้า --</option>
+            {(!filter.categoryId && <option key="type-hint" value="" disabled>เลือกหมวดหมู่ก่อน</option>)}
+            {((dropdowns?.productTypes || dropdowns?.types || [])).map((t, i) => (
+              <option key={`type-${t?.id ?? t?.name ?? i}`} value={String(t?.id ?? '')}>
+                {t.name}
+              </option>
+            ))}
+          </select>
+
+          <select
+            className="h-9 w-[220px] rounded-md border border-input bg-background px-3 text-sm"
+            value={filter.brandId}
+            onChange={(e) => handleFilterChange({ brandId: e.target.value })}
+          >
+            <option key="brand-placeholder" value="">-- เลือกแบรนด์/ยี่ห้อ --</option>
+            {(dropdowns?.brands || []).map((b, i) => (
+              <option key={`brand-${b?.id ?? b?.name ?? i}`} value={String(b?.id ?? '')}>
+                {b.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Search box (commit) */}
+        <div className="flex flex-wrap items-center gap-2">
+          <Input
+            value={searchText}
+            onChange={(e) => onSearchTextChange(e.target.value)}
+            placeholder="ค้นหาด้วยชื่อสินค้า / บาร์โค้ด"
+            className="w-[460px]"
+          />
+          <button
+            type="button"
+            className="h-9 rounded-md border border-zinc-300 bg-white px-4 text-sm"
+            onClick={() => setCommittedSearchText((searchText || '').trim())}
+          >
+            ค้นหา
+          </button>
+        </div>
       </div>
 
       {/* Search Result */}

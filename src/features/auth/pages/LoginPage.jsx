@@ -9,33 +9,15 @@ import { useCartStore } from '@/features/online/cart/store/cartStore';
 
 // ---- role helpers (normalize + checks)
 const normalizeRole = (r) => {
-  const v = (r || '').toLowerCase();
+  const v = (r || '').toString().trim().toLowerCase();
   return v === 'supperadmin' ? 'superadmin' : v;
 };
+
 const isStaffRole = (r) => {
   const v = normalizeRole(r);
   return v === 'admin' || v === 'superadmin' || v === 'employee';
 };
 
-// ⛳ RBAC capabilities ตามนโยบายล่าสุด
-// - superadmin: จัดการสิทธิ์/สาขา (NO product ordering)
-// - admin: จัดการลำดับสินค้า/ข้อมูลสาขาได้
-// - employee: ปฏิบัติการทั่วไป
-const buildCapabilities = (role) => {
-  const r = normalizeRole(role);
-  return {
-    isSuperAdmin: r === 'superadmin',
-    isAdmin: r === 'admin',
-    isEmployee: r === 'employee',
-    // ความสามารถหลักๆ
-    canManageBranches: r === 'superadmin' || r === 'admin',
-    canGrantPermissions: r === 'superadmin',
-    canManageProductOrdering: r === 'admin', // ⬅️ ตามสเปก: ให้เฉพาะ Admin
-  };
-};
-
-// ⛳ กำหนดสาขาเริ่มต้นให้ SuperAdmin (กันบางหน้าที่ require branchId)
-const SUPERADMIN_BRANCH_ID = Number(import.meta?.env?.VITE_MAIN_BRANCH_ID) || 1;
 
 const LoginPage = () => {
   const navigate = useNavigate();
@@ -43,6 +25,9 @@ const LoginPage = () => {
   const loginAction = useAuthStore((state) => state.loginAction);
   const token = useAuthStore((state) => state.token);
   const role = useAuthStore((state) => state.role);
+  const profileType = useAuthStore((state) => state.profileType);
+  const authError = useAuthStore((state) => state.authError);
+  const employee = useAuthStore((state) => state.employee);
 
   const [email, setEmail] = useState(() => sessionStorage.getItem('lastUsedEmail') || 'advicebanphot@gmail.com');
   const [password, setPassword] = useState('Arkcom-5026');
@@ -57,84 +42,60 @@ const LoginPage = () => {
     if (!isLoggedIn) return;
     const currentPath = window.location.pathname;
     const r = normalizeRole(role);
-    if (isStaffRole(r) && currentPath !== '/pos/dashboard') {
-      navigate('/pos/dashboard');
+    const pt = (profileType || '').toString().trim().toLowerCase();
+
+    // ✅ Staff session must be employee context
+    if (isStaffRole(r) || pt === 'employee') {
+      if (currentPath !== '/pos/dashboard') navigate('/pos/dashboard');
     }
-  }, [isLoggedIn, role, navigate]);
+  }, [isLoggedIn, role, profileType, navigate]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
+
     try {
       sessionStorage.setItem('lastUsedEmail', email);
-      const { token, role: roleFromServer } = await loginAction({ emailOrPhone: email, password });
-      const r = normalizeRole(roleFromServer);
-      const caps = buildCapabilities(r);
 
-      // 🔐 เคสพิเศษ: SuperAdmin → mock employee + branchId แบบ hard-coded
-      if (r === 'superadmin') {
-        useAuthStore.getState().setUser({
-          token,
-          role: r,
-          ...caps,
-          employee: {
-            id: '__SUPERADMIN__',
-            name: 'Super Admin',
-            phone: '',
-            email: email,
-            positionName: 'SuperAdmin',
-            branchId: SUPERADMIN_BRANCH_ID,
-          },
-        });
+      setError('');
+      await loginAction({ emailOrPhone: email, password });
+
+      const st = useAuthStore.getState();
+
+      // ✅ Prefer store error (inline UI) — no dialog alert
+      if (st.authError) {
+        setError(st.authError);
+        return;
+      }
+
+      const effectiveRole = normalizeRole(st.role);
+      const effectiveProfileType = (st.profileType || '').toString().trim().toLowerCase();
+
+      // ✅ Staff (employee/admin/superadmin) → เข้า POS
+      if (isStaffRole(effectiveRole) || effectiveProfileType === 'employee') {
+        // ✅ Branch context required for POS
+        const branchId = st.employee?.branchId ?? null;
+        if (!branchId) {
+          setError('บัญชีพนักงานต้องมีสาขา (branchId) ก่อนเข้า POS');
+          useAuthStore.getState().logoutAction?.();
+          return;
+        }
+
+        // NOTE: keep legacy localStorage write for minimal disruption
         try {
-          localStorage.setItem('role', r);
-          localStorage.setItem('token', token);
+          localStorage.setItem('token', st.token || '');
+          localStorage.setItem('role', effectiveRole || '');
         } catch (storageErr) {
           console.warn('⚠️ Cannot access localStorage:', storageErr);
         }
+
         navigate('/pos/dashboard', { replace: true });
         return;
       }
 
-      if (isStaffRole(r)) {
-        // พนักงาน / แอดมิน → เข้า POS
-        useAuthStore.getState().setUser({
-          token,
-          role: r,
-          ...caps,
-          employee: {
-            id: r === 'admin' ? '__ADMIN__' : '__EMPLOYEE__',
-            name: r === 'admin' ? 'ผู้ดูแลสาขา' : 'พนักงาน',
-            phone: '',
-            email,
-            positionName: r === 'admin' ? 'Admin' : 'Employee',
-            branchId: SUPERADMIN_BRANCH_ID,
-          },
-        });
-        try {
-          localStorage.setItem('role', r);
-          localStorage.setItem('token', token);
-        } catch (storageErr) {
-          console.warn('⚠️ Cannot access localStorage:', storageErr);
-        }
-        navigate('/pos/dashboard', { replace: true });
-        return;
-      }
-
-      if (r === 'customer') {
-        // ลูกค้า → flow ตะกร้า/ร้านค้าออนไลน์
-        useAuthStore.getState().setUser({
-          token,
-          role: r,
-          customer: {
-            id: '__CUSTOMER__',
-            name: 'ลูกค้า',
-            phone: '',
-            email,
-          },
-        });
-
+      // ✅ Customer → flow ตะกร้า/ร้านค้าออนไลน์
+      if (effectiveRole === 'customer' || effectiveProfileType === 'customer') {
         try {
           if (cartItems.length > 0) {
             await mergeCartAction();
@@ -150,12 +111,17 @@ const LoginPage = () => {
         return;
       }
 
-      // กรณี role ไม่รู้จัก → logout หรือแสดง error
+      // กรณี role/profileType ไม่รู้จัก
       setError('ไม่สามารถระบุสิทธิ์ผู้ใช้งานได้');
       useAuthStore.getState().logoutAction?.();
     } catch (err) {
       console.error('🔴 Login Error:', err);
-      const message = err?.response?.data?.message || err?.message || 'เกิดข้อผิดพลาด';
+      const st = useAuthStore.getState();
+      const message =
+        st.authError ||
+        err?.response?.data?.message ||
+        err?.message ||
+        'เกิดข้อผิดพลาด';
       setError(message);
     } finally {
       setLoading(false);
@@ -262,3 +228,9 @@ const LoginPage = () => {
 };
 
 export default LoginPage;
+
+
+
+
+
+

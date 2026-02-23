@@ -9,7 +9,6 @@ import ProductForm from '../components/ProductForm';
 import ProductImage from '../components/ProductImage';
 
 import useProductStore from '../store/productStore';
-import ProcessingDialog from '@/components/shared/dialogs/ProcessingDialog';
 
 const EditProductPage = () => {
   const [previewUrls, setPreviewUrls] = useState([]);
@@ -232,17 +231,28 @@ const EditProductPage = () => {
         mode="edit"
       />
 
-      <ProcessingDialog
-        open={isUpdating || showSuccess}
-        isLoading={isUpdating}
-        message={isUpdating ? 'ระบบกำลังอัปเดตข้อมูล กรุณารอสักครู่...' : '✅ บันทึกข้อมูลเรียบร้อยแล้ว'}
-        onClose={() => setShowSuccess(false)}
-      />
+      {/* ✅ Inline status (แทน dialog) */}
+      {(isUpdating || showSuccess) && (
+        <div
+          className={`mt-4 rounded-lg border px-4 py-3 text-sm font-medium ${
+            isUpdating
+              ? 'border-blue-200 bg-blue-50 text-blue-800'
+              : 'border-green-200 bg-green-50 text-green-800'
+          }`}
+          role="status"
+          aria-live="polite"
+        >
+          {isUpdating
+            ? 'ระบบกำลังอัปเดตข้อมูล กรุณารอสักครู่...'
+            : '✅ บันทึกข้อมูลเรียบร้อยแล้ว'}
+        </div>
+      )}
     </div>
   );
 };
 
 export default EditProductPage;
+
 
 
 

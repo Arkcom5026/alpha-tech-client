@@ -1,11 +1,10 @@
 
+
 // POItemListForReceipt.js (patched)
 
 import React, { useEffect, useState } from 'react';
 import usePurchaseOrderReceiptStore from '../store/purchaseOrderReceiptStore';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 
 // รับ formData เข้ามาเพื่อเอาค่าจากฟอร์มด้านบน
 const POItemListForReceipt = ({ poId, receiptId, setReceiptId, formData }) => {
@@ -39,7 +38,7 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, formData }) => {
   }, [poId, loadOrderById]);
 
   useEffect(() => {
-    if (currentOrder && currentOrder.id === parseInt(poId, 10) && !isInitialized) {
+    if (currentOrder && currentOrder.id === Number(poId) && !isInitialized) {
       const initQuantities = {};
       const initPrices = {};
       const initTotals = {};
@@ -158,6 +157,7 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, formData }) => {
 
       await addReceiptItemAction(payload);
       setSavedRows((prev) => ({ ...prev, [item.id]: true }));
+      setEditMode((prev) => ({ ...prev, [item.id]: false }));
       setFinalizeError('');
     } catch (error) {
       console.error('❌ saveItem error:', error);
@@ -174,7 +174,7 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, formData }) => {
       const status = itemStatus[item.id];
       return status === 'done' || (Number(item.receivedQuantity || 0) >= Number(item.quantity || 0));
     });
-    const statusToSet = allDone ? 'COMPLETED' : 'PARTIAL';
+    const statusToSet = allDone ? 'COMPLETED' : 'PARTIALLY_RECEIVED';
     updatePurchaseOrderStatusAction({ id: currentOrder.id, status: statusToSet });
     setFinalizeError('');
   };
@@ -196,8 +196,10 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, formData }) => {
               <TableHead className="text-center w-[150px]">หมวดหมู่</TableHead>
               <TableHead className="text-center w-[130px]">ประเภท</TableHead>
               <TableHead className="text-center w-[130px]">แบรนด์</TableHead>
-              <TableHead className="text-center w-[130px]">สเปก</TableHead>
-              <TableHead className="text-center w-[200px]">ชื่อสินค้า</TableHead>              <TableHead className="text-center w-[80px]">จำนวนที่สั่ง</TableHead>
+              <TableHead className="text-center w-[130px]">โปรไฟล์</TableHead>
+              <TableHead className="text-center w-[130px]">เทมเพลต</TableHead>
+              <TableHead className="text-center w-[200px]">ชื่อสินค้า</TableHead>
+              <TableHead className="text-center w-[80px]">จำนวนที่สั่ง</TableHead>
               <TableHead className="text-center w-[100px]">ราคาที่สั่ง</TableHead>
               <TableHead className="text-center w-[100px]">จำนวนที่รับ</TableHead>
               <TableHead className="text-center w-[100px]">ราคาที่รับ</TableHead>
@@ -219,6 +221,11 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, formData }) => {
                 ?? item.productType?.name
                 ?? item.productTypeName
                 ?? item.product?.productTypeName
+                ?? '-';
+              const brandName = item.product?.brand?.name
+                ?? item.brand?.name
+                ?? item.brandName
+                ?? item.product?.brandName
                 ?? '-';
               const profileName = item.product?.productProfile?.name
                 ?? item.product?.productTemplate?.productProfile?.name
@@ -242,18 +249,25 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, formData }) => {
               const total = Number(receiptTotals[item.id] ?? 0);
               const isSaved = !!savedRows[item.id];
               const isEditing = !!editMode[item.id];
+              const canEdit = isEditing || !isSaved;
               const isOver = (Number(quantity) + received) > qtyOrdered;
               const showStatusPrompt = !!statusPromptShown[item.id];
               const isStatusSelected = itemStatus[item.id] === 'done' || itemStatus[item.id] === 'pending';
-              const disableSave = !!(saving[item.id] || quantity === '' || ((showStatusPrompt && !isStatusSelected) || (isOver && !forceAccept[item.id])));
+              const disableSave = !!(
+                saving[item.id]
+                || quantity === ''
+                || ((showStatusPrompt && !isStatusSelected) || (isOver && !forceAccept[item.id]))
+              );
 
               return (
                 <TableRow key={item.id}>
                   <TableCell>{catName}</TableCell>
                   <TableCell>{typeName}</TableCell>
+                  <TableCell>{brandName}</TableCell>
                   <TableCell>{profileName}</TableCell>
                   <TableCell>{templateName}</TableCell>
-                  <TableCell>{productName}</TableCell>                  <TableCell className="text-center px-2 py-1">{qtyOrdered}</TableCell>
+                  <TableCell>{productName}</TableCell>
+                  <TableCell className="text-center px-2 py-1">{qtyOrdered}</TableCell>
                   <TableCell className="text-center px-2 py-1">{Number(item.costPrice || 0)}</TableCell>
                   <TableCell className="px-2 py-1">
                     <input
@@ -264,7 +278,7 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, formData }) => {
                       onChange={(e) => handleQuantityChange(item.id, e.target.value)}
                       onFocus={() => handleFocusQuantity(item.id)}
                       onBlur={() => handleBlurQuantity(item.id)}
-                      disabled={isSaved && !isEditing}
+                      disabled={!canEdit}
                     />
                     {isOver && (
                       <label className="flex items-center text-xs mt-1">
@@ -307,25 +321,38 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, formData }) => {
                       type="number"
                       min="0"
                       step="0.01"
+                      placeholder="0.00"
                       className="w-24 text-right border rounded px-1 py-0.5"
-                      value={price}
+                      value={price === 0 ? '' : price}
                       onChange={(e) => handlePriceChange(item.id, e.target.value)}
-                      disabled={isSaved && !isEditing}
+                      disabled={!canEdit}
                     />
                   </TableCell>
                   <TableCell className="text-right px-2 py-1">{total.toFixed(2)}</TableCell>
                   <TableCell className="text-center px-2 py-1">
-                    {!isSaved && (
-                      <button
-                        onClick={() => handleSaveItem(item)}
-                        disabled={disableSave}
-                        className="bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700 disabled:opacity-50"
-                      >
-                        {saving[item.id] ? '...' : 'บันทึก'}
-                      </button>
+                    {(!isSaved || isEditing) && (
+                      <div className="flex items-center justify-center gap-2">
+                        <button
+                          onClick={() => handleSaveItem(item)}
+                          disabled={disableSave}
+                          className="bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700 disabled:opacity-50"
+                        >
+                          {saving[item.id] ? '...' : (isSaved ? 'บันทึก' : 'บันทึก')}
+                        </button>
+                        {isSaved && isEditing && (
+                          <button
+                            type="button"
+                            onClick={() => setEditMode((prev) => ({ ...prev, [item.id]: false }))}
+                            className="bg-gray-200 text-gray-900 px-2 py-1 rounded hover:bg-gray-300"
+                          >
+                            ยกเลิก
+                          </button>
+                        )}
+                      </div>
                     )}
-                    {isSaved && (
+                    {isSaved && !isEditing && (
                       <button
+                        type="button"
                         onClick={() => setEditMode((prev) => ({ ...prev, [item.id]: true }))}
                         className="bg-yellow-500 text-white px-2 py-1 rounded hover:bg-yellow-600"
                       >
@@ -353,6 +380,8 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, formData }) => {
 };
 
 export default POItemListForReceipt;
+
+
 
 
 

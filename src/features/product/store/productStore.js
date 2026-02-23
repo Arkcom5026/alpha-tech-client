@@ -1,7 +1,10 @@
 
 
+
+
 // ✅ src/features/product/store/productStore.js
 import { create } from 'zustand';
+import _ from 'lodash';
 
 import {
   createProduct,
@@ -35,6 +38,17 @@ const initialDropdowns = {
 };
 
 const useProductStore = create((set, get) => ({
+  // -------- Shared utils (local to store) --------
+  normalizeName: (v) => (v ?? '').toString().trim(),
+  // ✅ Brand options must come from Brand table only (id + name)
+  // (Do NOT merge legacy free-text brandName to avoid null/duplicate keys)
+  normalizeBrandOptions: (brands = []) => {
+    const arr = Array.isArray(brands) ? brands : []
+    const filtered = arr.filter((b) => b && b.id != null)
+    const uniq = _.uniqBy(filtered, (b) => String(b.id))
+    return _.sortBy(uniq, (b) => String(b?.name ?? ''))
+  },
+
   // ---- Lists / Entities ----
   products: [],              // รายการทั่วไปที่ใช้หลายหน้า
   simpleProducts: [],        // รายการเฉพาะหน้า Quick Receive (SIMPLE)
@@ -91,18 +105,12 @@ const useProductStore = create((set, get) => ({
   saveProduct: async (payload) => {
     set({ isLoading: true, error: null });
     try {
-      const cleanedPayload = { ...payload };
-
-      // ✅ BE createProduct ใช้ data.templateId (ไม่ใช่ productTemplateId)
-      // ดังนั้นต้อง map ให้ถูกก่อนยิง API เพื่อกัน PRODUCT_TEMPLATE_REQUIRED
-      if (!cleanedPayload.templateId && cleanedPayload.productTemplateId) {
-        cleanedPayload.templateId = cleanedPayload.productTemplateId;
-      }
+      const cleanedPayload = { ...payload };      // ✅ Template/Profile เป็น optional helper — อย่าทำ mapping บังคับ
 
       // ✅ ไม่ส่ง branchId ไป BE (BE อ่านจาก req.user.branchId ตาม BRANCH_SCOPE_ENFORCED)
-      delete cleanedPayload.branchId;
-
-      // ✅ เคลียร์ field ที่ไม่ควรส่ง
+      delete cleanedPayload.branchId;      // ✅ เคลียร์ field ที่ไม่ควรส่ง
+      if (cleanedPayload?.templateId === '' || cleanedPayload?.templateId == null) delete cleanedPayload.templateId
+      if (cleanedPayload?.productProfileId === '' || cleanedPayload?.productProfileId == null) delete cleanedPayload.productProfileId
       delete cleanedPayload.productTemplateId;
       delete cleanedPayload.unit;
       delete cleanedPayload.unitId;
@@ -252,7 +260,7 @@ const useProductStore = create((set, get) => ({
 
             const profiles = pickArr(raw?.profiles, raw?.productProfiles, raw?.profileList, raw?.data?.profiles);
 
-      const brands = pickArr(
+            const brands = pickArr(
         raw?.brands,
         raw?.brandList,
         raw?.brand_list,
@@ -260,16 +268,19 @@ const useProductStore = create((set, get) => ({
         raw?.items?.brands
       );
 
+      const normalizedBrands = get().normalizeBrandOptions(brands)
+
+
       const templates = pickArr(raw?.templates, raw?.productTemplates, raw?.templateList, raw?.data?.templates);
 
-            const dropdowns = {
+                  const dropdowns = {
         categories,
         productTypes,
         profiles,
         productProfiles: profiles,
         templates,
         productTemplates: templates,
-        brands,
+        brands: normalizedBrands,
       };
 
       set({ dropdowns, dropdownsLoaded: true, error: null });
@@ -425,7 +436,41 @@ const useProductStore = create((set, get) => ({
       // eslint-disable-next-line no-console
       console.log('🧪 [productStore] fetchProductsAction input', filters);
 
-      const raw = await getProductsForPos(filters);
+      // ✅ Normalize params (PO/Stock search ต้องส่งเลขเป็น number และไม่ส่งค่าว่าง)
+      const toNum = (v) => {
+        if (v == null) return undefined;
+        const s = String(v).trim();
+        if (!s) return undefined;
+        const n = Number(s);
+        return Number.isFinite(n) ? n : undefined;
+      };
+
+            const rawBrandId = filters?.brandId;
+      const brandIdNum = toNum(rawBrandId);
+
+      const params = {
+        ...filters,
+        categoryId: toNum(filters?.categoryId),
+        productTypeId: toNum(filters?.productTypeId),
+
+        // ✅ Brand filter
+        // - numeric => brandId
+        // - non-numeric string => brandName (รองรับ legacy product.brandName)
+        brandId: brandIdNum ?? undefined,
+
+        // normalize searchText
+        searchText: (filters?.searchText ?? '').toString().trim() || undefined,
+      };
+
+      // ลบ key ที่เป็น undefined เพื่อไม่ให้ BE แปลผิด
+      Object.keys(params).forEach((k) => {
+        if (params[k] === undefined) delete params[k];
+      });
+
+      // eslint-disable-next-line no-console
+      console.log('🧪 [productStore] fetchProductsAction params', params);
+
+      const raw = await getProductsForPos(params);
       const list = get().normalizePosProductList(raw);
 
       // 🧪 Debug (restore-only): ดู shape เบื้องต้นของ response
@@ -478,6 +523,7 @@ const useProductStore = create((set, get) => ({
       );
 
       // ✅ สำคัญ: replace list เสมอ (ไม่ append) เพื่อกันข้อมูลค้าง/ซ้ำ
+
       set({ products: deduped, isLoading: false });
     } catch (error) {
       // eslint-disable-next-line no-console
@@ -517,5 +563,7 @@ const useProductStore = create((set, get) => ({
 
 export default useProductStore;
   
+
+
 
 

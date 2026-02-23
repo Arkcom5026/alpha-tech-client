@@ -1,3 +1,9 @@
+
+
+
+
+
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import StandardActionButtons from '@/components/shared/buttons/StandardActionButtons';
@@ -70,3 +76,7 @@ const PurchaseOrderListTable = ({ purchaseOrders }) => {
 };
 
 export default PurchaseOrderListTable;
+
+
+
+

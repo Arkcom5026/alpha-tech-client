@@ -57,13 +57,17 @@ const ProductSearchTable = ({ results = [], onAdd }) => {
       setRowError(product.id, 'ไม่สามารถเพิ่มรายการได้: ต้องกำหนดราคาทุนก่อน (มากกว่า 0)');
       return;
     }
+    const brandLabel = product?.brand?.name ?? product?.brandName ?? product?.brand ?? product?.productProfile ?? '';
 
     onAdd({
       id: product.id,
       name: product.name,
       category: product.category,
       productType: product.productType,
-      productProfile: product.productProfile,
+      // ✅ ใช้ Brand จริง (fallback: legacy productProfile)
+      productProfile: brandLabel,
+      brandId: product?.brand?.id ?? product?.brandId ?? null,
+      brandName: brandLabel,
       productTemplate: product.productTemplate,
       model: product.model,
       description: product.description,
@@ -142,7 +146,7 @@ const ProductSearchTable = ({ results = [], onAdd }) => {
                 <TableRow key={product.id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
                   <TableCell className="align-middle">{product.category}</TableCell>
                   <TableCell className="align-middle">{product.productType}</TableCell>
-                  <TableCell className="align-middle">{product.productProfile}</TableCell>
+                  <TableCell className="align-middle">{product?.brand?.name ?? product?.brandName ?? product?.brand ?? product?.productProfile ?? ''}</TableCell>
                   <TableCell className="align-middle">{product.productTemplate}</TableCell>
                   <TableCell className="align-middle">{product.name}</TableCell>
                   
@@ -196,5 +200,9 @@ const ProductSearchTable = ({ results = [], onAdd }) => {
 };
 
 export default ProductSearchTable;
+
+
+
+
 
 

@@ -1,5 +1,6 @@
 
 
+
 // ✅ src/features/product/api/productApi.js
 import apiClient from '@/utils/apiClient';
 import { parseApiError } from '@/utils/uiHelpers';
@@ -95,6 +96,7 @@ export const getCatalogDropdowns = async () => {
       categories = [],
       productTypes = [],
       productProfiles = [],
+      brands = [],
       productTemplates,
       templates = [], // alias (compat)
     } = raw || {};
@@ -106,6 +108,7 @@ export const getCatalogDropdowns = async () => {
       productTypes,
       profiles: productProfiles,
       productProfiles,
+      brands,
       templates: tpl,
       productTemplates: tpl,
     };

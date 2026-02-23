@@ -1,3 +1,4 @@
+
 // ✅ purchaseOrderReceiptApi.js — API ฝั่งใบรับสินค้า (ESM)
 import apiClient from '@/utils/apiClient';
 
@@ -167,3 +168,51 @@ export const commitReceipt = async (receiptId) => {
   }
 };
 
+// ────────────────────────────────────────────────────────────────────────────────
+// Purchase Orders for Receipt (NEW)
+// NOTE: used by purchaseOrderReceiptStore
+// ────────────────────────────────────────────────────────────────────────────────
+export const getEligiblePurchaseOrders = async (params = {}) => {
+  try {
+    const { data } = await apiClient.get('/purchase-orders/eligible-for-receipt', { params });
+    return data;
+  } catch (error) {
+    console.error('❌ getEligiblePurchaseOrders error:', error);
+    throw error;
+  }
+};
+
+export const getPurchaseOrderDetailById = async (poId) => {
+  try {
+    const { data } = await apiClient.get(`/purchase-orders/${poId}/detail-for-receipt`);
+    return data;
+  } catch (error) {
+    console.error('❌ getPurchaseOrderDetailById error:', error);
+    throw error;
+  }
+};
+
+// Update received qty/price for a specific receipt item (server decides rules)
+export const updateReceiptItemReceived = async (receiptId, itemId, payload) => {
+  try {
+    const { data } = await apiClient.patch(
+      `/purchase-order-receipts/${receiptId}/items/${itemId}`,
+      payload
+    );
+    return data;
+  } catch (error) {
+    console.error('❌ updateReceiptItemReceived error:', error);
+    throw error;
+  }
+};
+
+// Finalize receipt + (optionally) update PO status on server
+export const finalizeReceipt = async (receiptId, payload = {}) => {
+  try {
+    const { data } = await apiClient.patch(`/purchase-order-receipts/${receiptId}/finalize`, payload);
+    return data;
+  } catch (error) {
+    console.error('❌ finalizeReceipt error:', error);
+    throw error;
+  }
+};

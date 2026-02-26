@@ -1,4 +1,10 @@
 
+
+
+
+
+
+
 // 📁 FILE: features/sales/store/salesStore.js
 
 import { create } from 'zustand';
@@ -10,8 +16,24 @@ import {
   returnSale,
   markSaleAsPaid,
   searchPrintableSales,
-  convertOrderOnlineToSale
+  convertOrderOnlineToSale,
 } from '../api/saleApi';
+
+// ✅ Defensive normalizer (production-grade): กันเคส item หลุดรูปแบบ/stockItemId หายระหว่างทาง
+const normalizeStockItemId = (item) => {
+  const raw = item?.stockItemId ?? item?.stockItem?.id ?? item?.id ?? null;
+  const n = raw == null ? null : Number(raw);
+  return Number.isFinite(n) ? n : null;
+};
+
+// ✅ No console.* in production path (allow in DEV only)
+const devError = (...args) => {
+  try {
+    if (import.meta?.env?.DEV) console.error(...args);
+  } catch (_) {
+    // ignore
+  }
+};
 
 const useSalesStore = create((set, get) => ({
   // ✅ global state for UI-based alert/error block (no dialog)
@@ -162,11 +184,26 @@ const useSalesStore = create((set, get) => ({
   setCustomerIdAction: (id) => set({ customerId: id }),
 
   addSaleItemAction: (item) => {
-    set((state) => {
-      const exists = state.saleItems.some((i) => i.stockItemId === item.stockItemId);
-      if (exists) return state;
-      return { saleItems: [...state.saleItems, item] };
-    });
+    try {
+      const stockItemId = normalizeStockItemId(item);
+      if (!stockItemId) {
+        set({ error: 'ข้อมูลสินค้าไม่ครบ (ไม่มี stockItemId)' });
+        return;
+      }
+
+      const safeItem = {
+        ...item,
+        stockItemId,
+      };
+
+      set((state) => {
+        const exists = (state.saleItems || []).some((i) => normalizeStockItemId(i) === stockItemId);
+        if (exists) return state;
+        return { saleItems: [...(state.saleItems || []), safeItem] };
+      });
+    } catch (err) {
+      set({ error: err?.message || 'เพิ่มรายการสินค้าไม่สำเร็จ' });
+    }
   },
 
   removeSaleItemAction: (stockItemId) => {
@@ -180,20 +217,30 @@ const useSalesStore = create((set, get) => ({
   },
 
   updateItemDiscountAction: (stockItemId, discount) => {
+    const sid = Number(stockItemId) || 0;
     set((state) => ({
-      saleItems: state.saleItems.map((item) =>
-        item.stockItemId === stockItemId
-          ? { ...item, discount: Number(discount) || 0 }
+      saleItems: (state.saleItems || []).map((item) =>
+        normalizeStockItemId(item) === sid
+          ? {
+              ...item,
+              stockItemId: sid, // 🔒 กันหลุด
+              discount: Number(discount) || 0,
+            }
           : item
       ),
     }));
   },
 
   updateSaleItemAction: (stockItemId, newData) => {
+    const sid = Number(stockItemId) || 0;
     set((state) => ({
-      saleItems: state.saleItems.map((item) =>
-        item.stockItemId === stockItemId
-          ? { ...item, ...newData }
+      saleItems: (state.saleItems || []).map((item) =>
+        normalizeStockItemId(item) === sid
+          ? {
+              ...item,
+              ...newData,
+              stockItemId: sid, // 🔒 กันหลุดเวลามีการ merge
+            }
           : item
       ),
     }));
@@ -203,7 +250,7 @@ const useSalesStore = create((set, get) => ({
     try {
       await markSaleAsPaid(saleId);
     } catch (err) {
-      console.error('❌ [markSalePaidAction]', err);
+      devError('❌ [markSalePaidAction]', err);
     }
   },
 
@@ -220,6 +267,18 @@ const useSalesStore = create((set, get) => ({
       set({ error: msg });
       return { error: msg };
     }
+    // ✅ validate: ต้องมี stockItemId ทุกชิ้น (กัน payload หลุด)
+    const missingRows = (saleItems || [])
+      .map((it, idx) => ({ idx, stockItemId: normalizeStockItemId(it) }))
+      .filter((x) => !x.stockItemId)
+      .map((x) => x.idx + 1);
+
+    if (missingRows.length > 0) {
+      const msg = `มีบางรายการไม่มี stockItemId (ข้อมูลสินค้าไม่ครบ) แถว: ${missingRows.join(', ')}`;
+      set({ error: msg });
+      return { error: msg };
+    }
+
     if (saleItems.length === 0) {
       const msg = 'ยังไม่มีรายการสินค้า';
       set({ error: msg });
@@ -245,7 +304,6 @@ const useSalesStore = create((set, get) => ({
 
       const totalBeforeDiscount = totalBeforeDiscountSatang / 100;
       const totalDiscount = totalDiscountSatang / 100;
-      const totalNet = totalNetSatang / 100;
       const vatAmount = vatSatang / 100;
       const totalAmount = totalAmountSatang / 100;
 
@@ -258,11 +316,10 @@ const useSalesStore = create((set, get) => ({
         totalAmount,
         note: '',
         items: saleItems
-          .filter((item) => !!item.stockItemId && !!item.barcodeId)
           .map((item) => ({
             stockItemId: item.stockItemId,
-            barcodeId: item.barcodeId,
             basePrice: Number(item.price) || 0,
+            // ✅ คิด VAT ต่อชิ้นจาก (ราคา - ส่วนลด) แบบสตางค์
             vatAmount:
               Math.round(
                 (Math.max(
@@ -273,6 +330,7 @@ const useSalesStore = create((set, get) => ({
                   vatRate) /
                   100
               ) / 100,
+            // ✅ ราคาสุทธิหลังหักส่วนลด
             price:
               Math.max(
                 Math.round((Number(item.price) || 0) * 100) -
@@ -321,7 +379,7 @@ const useSalesStore = create((set, get) => ({
 
       // 400/401/500 ฯลฯ
       const msg = payload?.message || err?.message || 'เกิดข้อผิดพลาดในการขาย';
-      console.error('❌ [confirmSaleOrderAction]', err);
+      devError('❌ [confirmSaleOrderAction]', err);
       set({ error: msg });
       return { error: msg };
     } finally {
@@ -334,7 +392,7 @@ const useSalesStore = create((set, get) => ({
       const data = await getAllSales();
       set({ sales: data });
     } catch (err) {
-      console.error('[loadSalesAction]', err);
+      devError('[loadSalesAction]', err);
     }
   },
 
@@ -346,7 +404,7 @@ const useSalesStore = create((set, get) => ({
       const data = await getSaleById(id);
       set({ currentSale: data });
     } catch (err) {
-      console.error('[getSaleByIdAction]', err);
+      devError('[getSaleByIdAction]', err);
       set({ currentSale: null });
     }
   },
@@ -356,7 +414,7 @@ const useSalesStore = create((set, get) => ({
       const data = await returnSale(saleOrderId, saleItemId);
       return data;
     } catch (err) {
-      console.error('[returnSaleAction]', err);
+      devError('[returnSaleAction]', err);
       return { error: 'เกิดข้อผิดพลาดในการคืนสินค้า' };
     }
   },
@@ -388,7 +446,7 @@ const useSalesStore = create((set, get) => ({
       });
       set({ printableSales: data });
     } catch (error) {
-      console.error('❌ [loadPrintableSalesAction] error:', error);
+      devError('❌ [loadPrintableSalesAction] error:', error);
       set({ printableSales: [] });
     }
   },
@@ -398,13 +456,18 @@ const useSalesStore = create((set, get) => ({
       const res = await convertOrderOnlineToSale(orderOnlineId, stockSelections);
       return res;
     } catch (err) {
-      console.error('❌ [convertOrderOnlineToSaleAction]', err);
+      devError('❌ [convertOrderOnlineToSaleAction]', err);
       throw err;
     }
   },
 }));
 
 export default useSalesStore;
+
+
+
+
+
 
 
 

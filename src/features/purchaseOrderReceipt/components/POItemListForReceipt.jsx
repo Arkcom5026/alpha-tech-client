@@ -2,16 +2,19 @@
 
 // POItemListForReceipt.js (patched)
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import usePurchaseOrderReceiptStore from '../store/purchaseOrderReceiptStore';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 
 // รับ formData เข้ามาเพื่อเอาค่าจากฟอร์มด้านบน
-const POItemListForReceipt = ({ poId, receiptId, setReceiptId, formData }) => {
+// รองรับการส่ง items (normalized) จาก Page เพื่อให้คอลัมน์หมวดหมู่/ประเภท/แบรนด์/โปรไฟล์/เทมเพลต แสดงได้แน่นอน
+const POItemListForReceipt = ({ poId, receiptId, setReceiptId, formData, items }) => {
   const {
+    loadOrderByIdAction,
     loadOrderById,
     currentOrder,
     loading,
+    error,
     addReceiptItemAction,
     createReceiptAction,
     updatePurchaseOrderStatusAction,
@@ -28,21 +31,36 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, formData }) => {
   const [statusPromptShown, setStatusPromptShown] = useState({});
   const [finalizeError, setFinalizeError] = useState('');
 
-  const [isInitialized, setIsInitialized] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);  // ✅ prefer items passed from page (already normalized)
+  // fallback to store currentOrder.items
+  const listItems = useMemo(() => {
+    const fromProps = Array.isArray(items) ? items : null;
+    if (fromProps && fromProps.length) return fromProps;
+    const fromStore = Array.isArray(currentOrder?.items) ? currentOrder.items : [];
+    return fromStore;
+  }, [items, currentOrder?.items]);
 
   useEffect(() => {
+    // ถ้ามี items จาก props แล้ว ไม่ต้อง reload ซ้ำใน component (ลด side-effect)
+    if (Array.isArray(items) && items.length) return;
+
     if (poId) {
       setIsInitialized(false);
-      loadOrderById(poId);
+      const fn = loadOrderByIdAction || loadOrderById;
+      // Defensive: avoid breaking if store export shape changes
+      try {
+        fn?.(poId);
+      } catch (err) {
+        console.error('📛 loadOrderById error:', err);
+      }
     }
-  }, [poId, loadOrderById]);
-
-  useEffect(() => {
-    if (currentOrder && currentOrder.id === Number(poId) && !isInitialized) {
+  }, [poId, loadOrderByIdAction, loadOrderById, items]);  useEffect(() => {
+    const initSource = listItems;
+    if (Array.isArray(initSource) && initSource.length && !isInitialized) {
       const initQuantities = {};
       const initPrices = {};
       const initTotals = {};
-      (currentOrder.items || []).forEach((item) => {
+      initSource.forEach((item) => {
         const qty = Number(item.quantity || 0);
         const received = Number(item.receivedQuantity || 0);
         const remainingQty = qty - received;
@@ -54,10 +72,9 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, formData }) => {
       });
       setReceiptQuantities(initQuantities);
       setReceiptPrices(initPrices);
-      setReceiptTotals(initTotals);
-      setIsInitialized(true);
+      setReceiptTotals(initTotals);      setIsInitialized(true);
     }
-  }, [currentOrder, poId, isInitialized]);
+  }, [listItems, isInitialized]);
 
   const calculateTotal = (itemId, quantity, costPrice) => {
     const q = Number(quantity) || 0;
@@ -66,11 +83,9 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, formData }) => {
       ...prev,
       [itemId]: q * c,
     }));
-  };
-
-  const handleQuantityChange = (itemId, value) => {
+  };  const handleQuantityChange = (itemId, value) => {
     const num = Number(value);
-    const item = (currentOrder?.items || []).find((i) => i.id === itemId);
+    const item = (listItems || []).find((i) => i.id === itemId);
     if (!item || Number.isNaN(num) || num < 0) return;
 
     const received = Number(item.receivedQuantity || 0);
@@ -166,7 +181,7 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, formData }) => {
     }
   };
 
-  const handleConfirmFinalize = () => {
+  const handleConfirmFinalize = async () => {
     const allSaved = (currentOrder?.items || []).every((item) => savedRows[item.id]);
     if (!allSaved) { setFinalizeError('กรุณาบันทึกรายการสินค้าทั้งหมดก่อน'); return; }
 
@@ -175,13 +190,26 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, formData }) => {
       return status === 'done' || (Number(item.receivedQuantity || 0) >= Number(item.quantity || 0));
     });
     const statusToSet = allDone ? 'COMPLETED' : 'PARTIALLY_RECEIVED';
-    updatePurchaseOrderStatusAction({ id: currentOrder.id, status: statusToSet });
+    try {
+      await updatePurchaseOrderStatusAction({ id: currentOrder.id, status: statusToSet });
+      setFinalizeError('');
+    } catch (err) {
+      console.error('❌ finalize error:', err);
+      setFinalizeError(err?.message || 'บันทึกสถานะใบสั่งซื้อไม่สำเร็จ');
+    }
     setFinalizeError('');
   };
 
   if (loading || !isInitialized) return <p>กำลังโหลดรายการสินค้า...</p>;
 
-  const allSaved = currentOrder?.items?.every((item) => savedRows[item.id]);
+  if (error && !currentOrder) {
+    return (
+      <div className="rounded-md border border-red-300 bg-red-50 p-3 text-sm text-red-700">
+        <div className="font-semibold">โหลดรายการสินค้าไม่สำเร็จ</div>
+        <div className="break-words">{error?.message || 'กรุณาลองใหม่อีกครั้ง'}</div>
+      </div>
+    );
+  }  const allSaved = (listItems || []).every((item) => savedRows[item.id]);
 
   return (
     <div className="space-y-4 w-full">
@@ -208,40 +236,57 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, formData }) => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {(currentOrder?.items || []).map((item) => {
-              // normalize product hierarchy names for display (defensive + lenient)
-              const catName = item.product?.category?.name
-                ?? item.product?.productTemplate?.productProfile?.productType?.category?.name
-                ?? item.category?.name
-                ?? item.categoryName
-                ?? item.product?.categoryName
-                ?? '-';
-              const typeName = item.product?.productType?.name
-                ?? item.product?.productTemplate?.productProfile?.productType?.name
-                ?? item.productType?.name
-                ?? item.productTypeName
-                ?? item.product?.productTypeName
-                ?? '-';
-              const brandName = item.product?.brand?.name
-                ?? item.brand?.name
-                ?? item.brandName
-                ?? item.product?.brandName
-                ?? '-';
-              const profileName = item.product?.productProfile?.name
-                ?? item.product?.productTemplate?.productProfile?.name
-                ?? item.productProfile?.name
-                ?? item.productProfileName
-                ?? item.product?.productProfileName
-                ?? '-';
-              const templateName = item.product?.productTemplate?.name
-                ?? item.productTemplate?.name
-                ?? item.productTemplateName
-                ?? '-';
-              const productName = item.product?.name
-                ?? item.product?.productTemplate?.name
-                ?? item.name
-                ?? item.productName
-                ?? '-';
+            {(listItems || []).map((item) => {
+                            // normalize product hierarchy names for display (defensive + lenient)
+              // ✅ prefer normalized fields from store/page first
+              const catName =
+                item.categoryName ??
+                item.product?.category?.name ??
+                item.product?.productType?.category?.name ??
+                item.product?.template?.productProfile?.productType?.category?.name ??
+                item.product?.productTemplate?.productProfile?.productType?.category?.name ??
+                item.category?.name ??
+                item.product?.categoryName ??
+                '-';
+              const typeName =
+                item.productTypeName ??
+                item.product?.productType?.name ??
+                item.product?.productTemplate?.productProfile?.productType?.name ??
+                item.productType?.name ??
+                item.product?.productTypeName ??
+                '-';
+              const brandName =
+                item.brandName ??
+                item.product?.brand?.name ??
+                item.product?.productProfile?.brand?.name ??
+                item.product?.template?.brand?.name ??
+                item.product?.template?.productProfile?.brand?.name ??
+                item.product?.productTemplate?.productProfile?.brand?.name ??
+                item.brand?.name ??
+                item.product?.brandName ??
+                '-';
+              const profileName =
+                item.profileName ??
+                item.product?.productProfile?.name ??
+                item.product?.template?.productProfile?.name ??
+                item.productProfile?.name ??
+                item.product?.productProfileName ??
+                '-';
+              const templateName =
+                item.templateName ??
+                item.product?.template?.name ??
+                item.product?.productTemplate?.name ??
+                item.template?.name ??
+                item.productTemplate?.name ??
+                item.productTemplateName ??
+                '-';
+              const productName =
+                item.productName ??
+                item.product?.name ??
+                item.product?.template?.name ??
+                item.product?.productTemplate?.name ??
+                item.name ??
+                '-';
               const received = Number(item.receivedQuantity || 0);
               const qtyOrdered = Number(item.quantity || 0);
               const quantity = receiptQuantities[item.id] ?? '';
@@ -368,6 +413,7 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, formData }) => {
       </div>
       <div className="pt-4 text-right">
         <button
+          type="button"
           onClick={handleConfirmFinalize}
           disabled={!allSaved}
           className="bg-purple-700 text-white px-4 py-2 rounded disabled:opacity-50"
@@ -380,8 +426,6 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, formData }) => {
 };
 
 export default POItemListForReceipt;
-
-
 
 
 

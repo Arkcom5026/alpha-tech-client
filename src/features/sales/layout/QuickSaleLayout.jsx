@@ -1,6 +1,6 @@
 // 📁 FILE: src/features/sales/layout/QuickSaleLayout.jsx
 
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState, useMemo } from 'react'
 import useSalesStore from '@/features/sales/store/salesStore'
 import useStockItemStore from '@/features/stockItem/store/stockItemStore'
 
@@ -51,6 +51,18 @@ const QuickSaleLayout = () => {
   useEffect(() => {
     phoneInputRef.current?.focus()
   }, [])
+
+  // ⚡ O(1) duplicate lookup (POS-grade performance)
+  const saleItemKeySet = useMemo(() => {
+    const s = new Set()
+    ;(saleItems || []).forEach((it) => {
+      const sid = it?.stockItemId
+      const bc = it?.barcode
+      if (sid != null) s.add(`SID:${String(sid)}`)
+      if (bc) s.add(`BC:${String(bc).trim()}`)
+    })
+    return s
+  }, [saleItems])
 
   // ✅ NOTE: การ reset หลังขาย ให้ PaymentSection เป็น owner เพียงจุดเดียว (กัน reset ซ้ำ)
   // QuickSaleLayout ควรทำแค่ “เปิดหน้าพิมพ์” และ “ปรับ UI เล็กน้อย” เท่านั้น
@@ -107,7 +119,7 @@ const QuickSaleLayout = () => {
         return
       }
 
-      const duplicated = saleItems.some((i) => i.stockItemId === foundItem.id)
+      const duplicated = saleItemKeySet.has(`SID:${String(foundItem.id)}`) || (foundItem.barcode && saleItemKeySet.has(`BC:${String(foundItem.barcode).trim()}`))
       if (duplicated) {
         setBarcodeError('⚠️ บาร์โค้ดนี้ถูกเพิ่มในรายการขายแล้ว')
         e.target.value = ''
@@ -116,9 +128,9 @@ const QuickSaleLayout = () => {
       }
 
       const preparedItem = {
-        barcodeId: foundItem.id,
-        barcode: foundItem.barcode,
+        // ✅ ใช้ stockItemId เป็นหลัก (barcodeId ไม่บังคับใน flow ขาย)
         stockItemId: foundItem.id,
+        barcode: foundItem.barcode,
         productName: foundItem.product?.name || '',
         model: foundItem.product?.model || '',
         price: foundItem.prices?.[selectedPriceType] || 0,
@@ -294,5 +306,8 @@ const QuickSaleLayout = () => {
 }
 
 export default QuickSaleLayout
+
+
+
 
 

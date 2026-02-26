@@ -1,6 +1,8 @@
 
 
 
+
+
 // ✅ purchaseOrderReceiptStore.js — จัดการสถานะ Receipt + Items (รองรับ SIMPLE + STRUCTURED + QUICK)
 
 import { create } from 'zustand';
@@ -22,6 +24,9 @@ import {
 import { getEligiblePurchaseOrders, getPurchaseOrderDetailById, updatePurchaseOrderStatus } from '@/features/purchaseOrder/api/purchaseOrderApi';
 import { addReceiptItem, updateReceiptItem, deleteReceiptItem } from '@/features/purchaseOrderReceiptItem/api/purchaseOrderReceiptItemApi';
 
+// ✅ In-flight guard (module-level) to prevent duplicate receipt creation on rapid clicks
+let _createReceiptInFlight = null;
+
 const usePurchaseOrderReceiptStore = create((set, get) => ({
 
   receipts: [],
@@ -35,18 +40,20 @@ const usePurchaseOrderReceiptStore = create((set, get) => ({
   poItems: [],
   receiptItems: [],
   loading: false,
+  creatingReceipt: false,
   receiptBarcodeLoading: false,
   receiptSummariesLoading: false,
   error: null,
 
   // ── โหลด/จัดการ Receipt เดิม ─────────────────────────────────────────────
-  loadReceipts: async () => {
+  // ✅ Standard naming (Action) — aligned with production rule, keep legacy alias below
+  loadReceiptsAction: async () => {
     try {
       set({ loading: true, error: null });
       const data = await getAllReceipts();
       set({ receipts: data, loading: false, error: null });
     } catch (error) {
-      console.error('📛 loadReceipts error:', error);
+      console.error('📛 loadReceiptsAction error:', error);
       set({ error, loading: false });
     }
   },
@@ -108,16 +115,38 @@ const usePurchaseOrderReceiptStore = create((set, get) => ({
   },
 
   createReceiptAction: async (payload) => {
-    try {
-      set({ error: null });
-      const newReceipt = await createReceipt(payload);
-      set((state) => ({ receipts: [newReceipt, ...state.receipts], error: null }));
-      return newReceipt;
-    } catch (error) {
-      console.error('📛 createReceipt error:', error);
-      set({ error });
-      throw error;
-    }
+    // ✅ Idempotency guard (UI may trigger rapid clicks before receiptId is set)
+    if (_createReceiptInFlight) return _createReceiptInFlight;
+
+    const task = (async () => {
+      try {
+        set({ creatingReceipt: true, loading: true, error: null });
+        const newReceipt = await createReceipt(payload);
+
+        // Defensive: ensure we have an id for downstream actions
+        if (!newReceipt?.id) {
+          throw new Error('createReceipt returned empty id');
+        }
+
+        set((state) => ({
+          receipts: [newReceipt, ...state.receipts],
+          currentReceipt: newReceipt,
+          creatingReceipt: false,
+          loading: false,
+          error: null,
+        }));
+        return newReceipt;
+      } catch (error) {
+        console.error('📛 createReceiptAction error:', error);
+        set({ error, creatingReceipt: false, loading: false });
+        throw error;
+      } finally {
+        _createReceiptInFlight = null;
+      }
+    })();
+
+    _createReceiptInFlight = task;
+    return task;
   },
 
   // ✅ Standard naming (Action) — keep legacy name as alias to avoid breaking callers
@@ -172,8 +201,39 @@ const usePurchaseOrderReceiptStore = create((set, get) => ({
     try {
       set({ loading: true, error: null });
       const res = await getPurchaseOrderDetailById(poId);
-      set({ currentOrder: res, loading: false, error: null });
-      return res;
+
+      // ✅ Normalize PO items for UI table (Category/Type/Brand/Profile/Template)
+      // Support both shapes:
+      // 1) Nested: item.product.{category/productType/brand/productProfile/template}
+      // 2) Flattened (from BE): item.{categoryName, productTypeName, brandName, profileName, templateName, unitName, productName}
+      const items = Array.isArray(res?.items) ? res.items : [];
+      const normalizedItems = items.map((it) => {
+        const p = it?.product || {};
+        const categoryName =
+          it?.categoryName ?? p?.category?.name ?? p?.categoryName ?? '-';
+        const productTypeName =
+          it?.productTypeName ?? p?.productType?.name ?? p?.productTypeName ?? '-';
+        const brandName = it?.brandName ?? p?.brand?.name ?? p?.brandName ?? '-';
+        const profileName =
+          it?.profileName ?? p?.productProfile?.name ?? p?.productProfileName ?? '-';
+        const templateName = it?.templateName ?? p?.template?.name ?? p?.templateName ?? '-';
+        const productName = it?.productName ?? p?.name ?? '-';
+        const unitName = it?.unitName ?? p?.unit?.name ?? p?.template?.unit?.name ?? '-';
+
+        return {
+          ...it,
+          productName,
+          unitName,
+          categoryName,
+          productTypeName,
+          brandName,
+          profileName,
+          templateName,
+        };
+      });
+
+      set({ currentOrder: { ...res, items: normalizedItems }, poItems: normalizedItems, loading: false, error: null });
+      return { ...res, items: normalizedItems };
     } catch (err) {
       console.error('❌ โหลด loadOrderById สำหรับใบรับสินค้าไม่สำเร็จ:', err);
       set({ error: err, loading: false });
@@ -284,14 +344,28 @@ const usePurchaseOrderReceiptStore = create((set, get) => ({
 
   updatePurchaseOrderStatusAction: async ({ id, status }) => {
     try {
-      set({ error: null });
+      set({ error: null, loading: true });
       const res = await updatePurchaseOrderStatus({ id, status });
-      set({ currentOrder: res, error: null });
-      return res;
+
+      // ✅ Minimal disruption: อย่าเขียนทับ currentOrder ทั้งก้อน
+      // เพราะ endpoint status มัก include product แบบสั้น (id/name) ทำให้คอลัมน์หมวดหมู่/ประเภท/แบรนด์/... หาย
+      // เรา merge เฉพาะฟิลด์สถานะไว้ แล้วคง items เดิมที่โหลดแบบละเอียดไว้
+      const prev = get().currentOrder;
+      const next = prev
+        ? {
+            ...prev,
+            status: res?.status ?? status,
+            updatedAt: res?.updatedAt ?? prev?.updatedAt,
+          }
+        : res;
+
+      set({ currentOrder: next, error: null, loading: false });
+      return next;
     } catch (err) {
       console.error('❌ updatePurchaseOrderStatusAction error:', err);
-      set({ error: err });
-      return null;
+      set({ error: err, loading: false });
+      // ✅ Important: throw so caller can show UI error block
+      throw err;
     }
   },
 
@@ -363,6 +437,7 @@ const usePurchaseOrderReceiptStore = create((set, get) => ({
   },
 
   // ✅ Legacy aliases (do NOT remove yet)
+  loadReceipts: async () => get().loadReceiptsAction(),
   updateReceipt: async (id, payload) => get().updateReceiptAction(id, payload),
   deleteReceipt: async (id) => get().deleteReceiptAction(id),
   fetchPurchaseOrdersForReceipt: async () => get().fetchPurchaseOrdersForReceiptAction(),
@@ -373,5 +448,7 @@ const usePurchaseOrderReceiptStore = create((set, get) => ({
 }));
 
 export default usePurchaseOrderReceiptStore;
+
+
 
 

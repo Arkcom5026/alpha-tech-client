@@ -1,6 +1,7 @@
 
 
 
+
 // ✅ src/features/product/api/productApi.js
 import apiClient from '@/utils/apiClient';
 import { parseApiError } from '@/utils/uiHelpers';
@@ -84,7 +85,8 @@ export const enableProduct = async (id) => {
 // Dropdowns (โหลดครั้งเดียว ใช้ทั้งระบบ)
 export const getProductDropdownsPublic = async () => {
   try {
-    const { data } = await apiClient.get('products/dropdowns', { params: { _ts: Date.now() }});
+    // ✅ Online Shop uses PUBLIC endpoint (no auth)
+    const { data } = await apiClient.get('products/online/dropdowns', { params: { _ts: Date.now() }});
     return data;
   } catch (err) { throw parseApiError(err); }
 };
@@ -197,6 +199,7 @@ export const migrateSnToSimple = async (productId) => {
     return data;
   } catch (err) { throw parseApiError(err); }
 };
+
 
 
 

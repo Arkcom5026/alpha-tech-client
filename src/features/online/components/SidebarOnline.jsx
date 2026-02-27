@@ -1,7 +1,7 @@
-
 // =============================
 // FILE: src/features/productOnline/components/SidebarOnline.jsx
-// (อัปเดต: ปรับ Cascade Filter ให้เป็นลำดับขั้นจริงสำหรับ Online)
+// (อัปเดต: Online ใช้ลำดับขั้น Category → ProductType → Product(optional))
+// (และซ่อน dropdown “สินค้า” ไว้ก่อน เพื่อใช้ Search เป็นหลัก)
 // =============================
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import haversine from 'haversine-distance';
@@ -21,39 +21,47 @@ const SidebarOnline = () => {
   const setSearchText = useProductOnlineStore((s) => s.setSearchTextAction || s.setSearchText);
   const filters = useProductOnlineStore((s) => s.filters);
   const searchText = useProductOnlineStore((s) => s.filters?.searchText ?? s.searchText ?? '');
-  const resetFilters = useProductOnlineStore((s) => s.resetFilters || s.resetFiltersAction);
 
   const dropdowns = useProductStore((s) => s.dropdowns);
   const fetchDropdownsAction = useProductStore((s) => s.fetchDropdownsAction);
   const dropdownsLoaded = useProductStore((s) => s.dropdownsLoaded);
 
   const branches = useBranchStore((s) => s.branches || []);
+  const loadBranchesAction = useBranchStore(
+    (s) =>
+      s.loadAllBranchesAction ||
+      s.loadBranchesAction ||
+      s.fetchBranchesAction ||
+      s.loadBranches ||
+      s.fetchBranches
+  );
+
   const selectedBranchId = useBranchStore((s) => s.selectedBranchId);
   const getBranchNameById = useBranchStore((s) => s.getBranchNameById || (() => ''));
-  // NOTE: ความตั้งใจเดิมของหน้า shop คือ “เลือกสาขาใกล้ที่สุดครั้งแรกเท่านั้น”
-  // เราจึงเก็บตำแหน่งลูกค้าเป็น local state/ref และไม่เอา currentBranch มาใช้แทน
-  const _unusedCurrentBranch = useBranchStore((s) => s.currentBranch);
 
+  // ✅ ensure branches are loaded for branch dropdown
   useEffect(() => {
-    const hasData = Boolean(dropdowns && (
-      (dropdowns.categories?.length || 0) > 0 ||
-      (dropdowns.productTypes?.length || 0) > 0 ||
-      (dropdowns.productProfiles?.length || 0) > 0 ||
-      (dropdowns.productTemplates?.length || 0) > 0
-    ));
+    if (Array.isArray(branches) && branches.length > 0) return;
+    loadBranchesAction?.();
+  }, [branches?.length, loadBranchesAction]);
+
+  // ✅ ensure dropdowns are loaded (only what Online needs)
+  useEffect(() => {
+    const hasData = Boolean(
+      dropdowns &&
+        ((dropdowns.categories?.length || 0) > 0 || (dropdowns.productTypes?.length || 0) > 0)
+    );
+
     if (!hasData || !dropdownsLoaded) {
       fetchDropdownsAction?.(true);
     }
-  }, [selectedBranchId, dropdownsLoaded]);
+  }, [dropdowns, dropdownsLoaded, fetchDropdownsAction]);
 
   const handleSearchTextChange = (e) => {
     const text = e?.target?.value ?? '';
-    setSearchText(text);
+    setSearchText?.(text);
   };
 
-  const handleReset = () => {
-    resetFilters?.();
-  };
 
   const selectedBranch = useMemo(
     () => branches.find((b) => b.id === selectedBranchId),
@@ -67,7 +75,6 @@ const SidebarOnline = () => {
   const [userLocation, setUserLocation] = useState(null); // { latitude, longitude }
 
   useEffect(() => {
-    // รันแค่ครั้งแรกของการเปิดหน้า และไม่รันซ้ำเมื่อ user เปลี่ยนสาขาเอง
     if (didAutoSelectRef.current) return;
 
     // 1) ถ้ามีสาขาที่ลูกค้าเคยเลือกไว้ (persist) ให้ใช้สาขานั้นก่อนเสมอ
@@ -91,31 +98,21 @@ const SidebarOnline = () => {
     } catch (e) {
       // ignore storage errors
     }
+
     if (!branches?.length) return;
 
     didAutoSelectRef.current = true;
 
-    // ถ้ามี selectedBranchId อยู่แล้ว (เช่นเคยเลือกไว้) ก็ไม่ต้อง override
+    // ถ้ามี selectedBranchId อยู่แล้ว ก็ไม่ต้อง override
     if (selectedBranchId) return;
 
-    // ขอ location จาก browser ครั้งเดียว
+    // fallback: ถ้าไม่มี geolocation ให้ใช้สาขาแรก
     if (!navigator?.geolocation) {
-      // fallback: ถ้าไม่มี geolocation ให้ใช้สาขาแรก
       const first = branches[0];
       if (first?.id) {
-        // ✅ persist fallback สาขาแรก
         try {
           localStorage.setItem(LS_SELECTED_BRANCH_ID_KEY, String(first.id));
-        } catch (e) {
-          // ignore storage errors
-        }
-
-        // ✅ persist fallback สาขาแรก
-        try {
-          localStorage.setItem(LS_SELECTED_BRANCH_ID_KEY, String(first.id));
-        } catch (e) {
-          // ignore storage errors
-        }
+        } catch (e) {}
 
         useBranchStore.setState({
           selectedBranchId: first.id,
@@ -135,12 +132,12 @@ const SidebarOnline = () => {
         const loc = { latitude: lat, longitude: lon };
         setUserLocation(loc);
 
-        // คัดเฉพาะสาขาที่มีพิกัด
         const candidates = (branches || []).filter((b) => b?.latitude && b?.longitude);
         if (!candidates.length) return;
 
         let nearest = candidates[0];
         let best = Infinity;
+
         for (const b of candidates) {
           const d = haversine(loc, { latitude: Number(b.latitude), longitude: Number(b.longitude) });
           if (d < best) {
@@ -150,12 +147,9 @@ const SidebarOnline = () => {
         }
 
         if (nearest?.id) {
-          // ✅ persist สาขาที่ถูกเลือกอัตโนมัติ (ครั้งแรก)
           try {
             localStorage.setItem(LS_SELECTED_BRANCH_ID_KEY, String(nearest.id));
-          } catch (e) {
-            // ignore storage errors
-          }
+          } catch (e) {}
 
           useBranchStore.setState({
             selectedBranchId: nearest.id,
@@ -168,6 +162,10 @@ const SidebarOnline = () => {
         // ถ้าผู้ใช้ไม่อนุญาต location → fallback เป็นสาขาแรก
         const first = branches[0];
         if (first?.id) {
+          try {
+            localStorage.setItem(LS_SELECTED_BRANCH_ID_KEY, String(first.id));
+          } catch (e) {}
+
           useBranchStore.setState({
             selectedBranchId: first.id,
             version: (useBranchStore.getState().version || 0) + 1,
@@ -181,7 +179,12 @@ const SidebarOnline = () => {
 
   // ระยะห่าง = ตำแหน่งลูกค้า → สาขาที่เลือก (ถ้ามี userLocation)
   let distanceInKm = null;
-  if (userLocation?.latitude && userLocation?.longitude && selectedBranch?.latitude && selectedBranch?.longitude) {
+  if (
+    userLocation?.latitude &&
+    userLocation?.longitude &&
+    selectedBranch?.latitude &&
+    selectedBranch?.longitude
+  ) {
     const distance = haversine(
       { latitude: userLocation.latitude, longitude: userLocation.longitude },
       { latitude: Number(selectedBranch.latitude), longitude: Number(selectedBranch.longitude) }
@@ -189,33 +192,23 @@ const SidebarOnline = () => {
     distanceInKm = (distance / 1000).toFixed(2);
   }
 
-  // normalize dropdowns (เก็บ parent keys ไว้สำหรับ cascade)
+  // normalize dropdowns (Online: Category → Type → Product(optional))
   const normalizeList = (arr = [], type = '') =>
     (arr || [])
       .map((x) => {
         const id = Number(x?.id ?? x?.value ?? x?.key ?? x?.code ?? x?.Id ?? x?.ID ?? 0) || 0;
-        const name = String(
-          x?.name ?? x?.label ?? x?.text ?? x?.Name ?? x?.Label ?? x?.Text ?? ''
-        ).trim();
+        const name = String(x?.name ?? x?.label ?? x?.text ?? x?.Name ?? x?.Label ?? x?.Text ?? '').trim();
 
-        // เดา parent id ตามชนิดของรายการ + alias ยอดฮิต
-        const categoryId = Number(
-          x?.categoryId ?? x?.catalogId ?? x?.groupId ?? x?.CategoryId ?? x?.CatalogId
-        ) || undefined;
-        const productTypeId = Number(
-          x?.productTypeId ?? x?.typeId ?? x?.subgroupId ?? x?.ProductTypeId ?? x?.TypeId
-        ) || undefined;
+        // best-effort parent ids (minimal disruption)
+        const categoryId =
+          Number(x?.categoryId ?? x?.catalogId ?? x?.groupId ?? x?.CategoryId ?? x?.CatalogId) || undefined;
 
-        // template ปกติจะอ้างถึง productProfileId
-        const templateProfileId = Number(
-          x?.productProfileId ?? x?.profileId ?? x?.ProductProfileId ?? x?.ProfileId
-        ) || undefined;
+        const productTypeId =
+          Number(x?.productTypeId ?? x?.typeId ?? x?.subgroupId ?? x?.ProductTypeId ?? x?.TypeId) || undefined;
 
         const payload = { id, name };
         if (type === 'productTypes') Object.assign(payload, { categoryId });
-        if (type === 'productProfiles') Object.assign(payload, { productTypeId });
-        if (type === 'productTemplates') Object.assign(payload, { productProfileId: templateProfileId });
-        if (type === 'categories') Object.assign(payload, {});
+        if (type === 'products') Object.assign(payload, { categoryId, productTypeId });
         return payload;
       })
       .filter((x) => x.id && x.name);
@@ -226,37 +219,27 @@ const SidebarOnline = () => {
         dropdowns?.categories || dropdowns?.productCategories || dropdowns?.groups || dropdowns?.catalogs || [],
         'categories'
       ),
-      productTypes: normalizeList(
-        dropdowns?.productTypes || dropdowns?.types || dropdowns?.subgroups || [],
-        'productTypes'
-      ),
-      productProfiles: normalizeList(
-        dropdowns?.productProfiles || dropdowns?.profiles || dropdowns?.attributes || dropdowns?.characteristics || [],
-        'productProfiles'
-      ),
-      productTemplates: normalizeList(
-        dropdowns?.productTemplates || dropdowns?.templates || dropdowns?.models || [],
-        'productTemplates'
-      ),
+      productTypes: normalizeList(dropdowns?.productTypes || dropdowns?.types || dropdowns?.subgroups || [], 'productTypes'),
+      // products is optional for Online (we hide the dropdown by default)
+      products: normalizeList(dropdowns?.products || dropdowns?.productList || dropdowns?.items || [], 'products'),
     }),
     [dropdowns]
   );
 
-  // ทำการกรองตามลำดับขั้น (category -> type -> profile -> template)
+  // cascade filter: category -> type -> product
   const dropdownsFiltered = useMemo(() => {
     const catId = Number(filters?.categoryId) || undefined;
     const typeId = Number(filters?.productTypeId) || undefined;
-    const profId = Number(filters?.productProfileId) || undefined;
 
     const productTypes = (dropdownsSafe.productTypes || []).filter((t) => !catId || t.categoryId === catId);
-    const productProfiles = (dropdownsSafe.productProfiles || []).filter((p) => !typeId || p.productTypeId === typeId);
-    const productTemplates = (dropdownsSafe.productTemplates || []).filter((t) => !profId || t.productProfileId === profId);
+    const products = (dropdownsSafe.products || []).filter(
+      (p) => (!catId || p.categoryId === catId) && (!typeId || p.productTypeId === typeId)
+    );
 
     return {
       categories: dropdownsSafe.categories || [],
       productTypes,
-      productProfiles,
-      productTemplates,
+      products,
     };
   }, [dropdownsSafe, filters]);
 
@@ -272,18 +255,15 @@ const SidebarOnline = () => {
               const newId = Number(e.target.value);
               const newBranch = branches.find((b) => b.id === newId);
               if (newBranch) {
-                // ✅ จำสาขาที่ลูกค้าเลือกไว้ เพื่อให้ใช้งานในสภาพแวดล้อมสาขานี้ต่อเนื่อง (persist)
                 try {
                   localStorage.setItem(LS_SELECTED_BRANCH_ID_KEY, String(newBranch.id));
-                } catch (e) {
-                  // ignore storage errors
-                }
+                } catch (e) {}
 
                 useBranchStore.setState({
                   selectedBranchId: newBranch.id,
-                  // ✅ ผู้ใช้เลือกเปลี่ยนสาขาเองได้ แต่ไม่ override ตำแหน่งลูกค้า (userLocation)
                   version: (useBranchStore.getState().version || 0) + 1,
                 });
+
                 setFilters?.({ branchId: newBranch.id });
               }
             }}
@@ -296,9 +276,8 @@ const SidebarOnline = () => {
               </option>
             ))}
           </select>
-          {distanceInKm && (
-            <div className="text-xs text-gray-500 mt-1">ระยะห่าง {distanceInKm} กม.</div>
-          )}
+
+          {distanceInKm && <div className="text-xs text-gray-500 mt-1">ระยะห่าง {distanceInKm} กม.</div>}
         </div>
       </div>
 
@@ -312,53 +291,52 @@ const SidebarOnline = () => {
 
       <CascadingFilterGroup
         variant="online"
+        // ✅ Online: ซ่อน dropdown “สินค้า” ไว้ก่อน (ใช้ Search เป็นหลัก)
+        hiddenFields={['product']}
         value={{
           categoryId: filters?.categoryId ?? '',
           productTypeId: filters?.productTypeId ?? '',
-          productProfileId: filters?.productProfileId ?? '',
-          productTemplateId: filters?.productTemplateId ?? '',
+          productId: filters?.productId ?? '',
         }}
-        dropdowns={dropdownsFiltered}
-        searchText={searchText}
-        onSearchTextChange={handleSearchTextChange}
+        dropdowns={{
+          categories: dropdownsFiltered.categories,
+          productTypes: dropdownsFiltered.productTypes,
+          products: dropdownsFiltered.products,
+        }}
         showReset
-        onReset={handleReset}
-        isLoading={!dropdownsLoaded}
         onChange={(next) => {
           const curr = {
             categoryId: filters?.categoryId,
             productTypeId: filters?.productTypeId,
-            productProfileId: filters?.productProfileId,
-            productTemplateId: filters?.productTemplateId,
+            productId: filters?.productId,
           };
+
           const merged = {
             categoryId: next.categoryId ?? curr.categoryId,
             productTypeId: next.productTypeId ?? curr.productTypeId,
-            productProfileId: next.productProfileId ?? curr.productProfileId,
-            productTemplateId: next.productTemplateId ?? curr.productTemplateId,
+            productId: next.productId ?? curr.productId,
             branchId: selectedBranchId,
           };
-          for (const k of Object.keys(merged)) { if (merged[k] === '') merged[k] = undefined; }
+
+          for (const k of Object.keys(merged)) {
+            if (merged[k] === '') merged[k] = undefined;
+          }
+
+          // cascade reset
           if (merged.categoryId !== curr.categoryId) {
             merged.productTypeId = undefined;
-            merged.productProfileId = undefined;
-            merged.productTemplateId = undefined;
+            merged.productId = undefined;
           } else if (merged.productTypeId !== curr.productTypeId) {
-            merged.productProfileId = undefined;
-            merged.productTemplateId = undefined;
-          } else if (merged.productProfileId !== curr.productProfileId) {
-            merged.productTemplateId = undefined;
+            merged.productId = undefined;
           }
+
           setFilters?.(merged);
         }}
       />
 
-      {!dropdownsLoaded && (
-        <div className="text-xs text-gray-500">กำลังโหลดชุดตัวกรอง…</div>
-      )}
+      {!dropdownsLoaded && <div className="text-xs text-gray-500">กำลังโหลดชุดตัวกรอง…</div>}
     </div>
   );
 };
 
 export default SidebarOnline;
-

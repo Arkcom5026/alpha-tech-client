@@ -1,4 +1,7 @@
 
+
+
+
 // src/features/brand/store/brandStore.js
  
 // Zustand Store (Production-grade)
@@ -45,6 +48,29 @@ export const useBrandStore = create(
         set({ pageSize: ps, page: 1 })
       },
       clearErrorAction: () => set({ error: null }),
+
+      fetchBrandDropdownsAction: async (override = {}) => {
+        const state = get()
+        set({ loading: true, error: null })
+        try {
+          const items = await brandApi.getBrandDropdowns({
+            includeInactive: override.includeInactive ?? state.includeInactive,
+          })
+
+          set({
+            items: Array.isArray(items) ? items : [],
+            page: 1,
+            pageSize: Array.isArray(items) ? items.length : 0,
+            total: Array.isArray(items) ? items.length : 0,
+            loading: false,
+          })
+
+          return { ok: true }
+        } catch (err) {
+          set({ loading: false, error: normalizeErrorMessage(err) })
+          return { ok: false, error: normalizeErrorMessage(err) }
+        }
+      },
 
       fetchBrandsAction: async (override = {}) => {
         const state = get()
@@ -129,3 +155,5 @@ export const useBrandStore = create(
 
 // ✅ Default export for backward-compatible imports
 export default useBrandStore
+
+

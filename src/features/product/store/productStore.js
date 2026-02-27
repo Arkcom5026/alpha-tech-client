@@ -2,6 +2,9 @@
 
 
 
+
+
+
 // ✅ src/features/product/store/productStore.js
 import { create } from 'zustand';
 import _ from 'lodash';
@@ -35,6 +38,8 @@ const initialDropdowns = {
   productTemplates: [],
   // ✅ Brand (optional extension)
   brands: [],
+  // ✅ ProductType ↔ Brand mapping (auto-learn)
+  productTypeBrands: [],
 };
 
 const useProductStore = create((set, get) => ({
@@ -57,6 +62,10 @@ const useProductStore = create((set, get) => ({
   // ---- Dropdowns ----
   dropdowns: initialDropdowns,
   dropdownsLoaded: false,
+
+  // ✅ Fast lookup map for ProductType ↔ Brand (built from dropdowns.productTypeBrands)
+  // shape: { [productTypeId:number]: { [brandId:number]: true } }
+  productTypeBrandMap: {},
 
   // ---- UI State ----
   searchResults: [],
@@ -237,6 +246,18 @@ const useProductStore = create((set, get) => ({
       // normalize various possible shapes from BE
       const pickArr = (...xs) => xs.find((x) => Array.isArray(x)) || [];
 
+      // ✅ Accept wrapper shapes: { items: [] } / { data: [] }
+      const pickArrDeep = (...xs) => {
+        for (const x of xs) {
+          if (Array.isArray(x)) return x;
+          if (x && Array.isArray(x.items)) return x.items;
+          if (x && Array.isArray(x.data)) return x.data;
+          if (x && x.data && Array.isArray(x.data.items)) return x.data.items;
+          if (x && x.data && Array.isArray(x.data.data)) return x.data.data;
+        }
+        return [];
+      };
+
       const categories = pickArr(
         raw?.categories,
         raw?.categoryList,
@@ -247,31 +268,84 @@ const useProductStore = create((set, get) => ({
         raw?.items?.categories
       );
 
-      const productTypes = pickArr(
+      const productTypes = pickArrDeep(
         raw?.productTypes,
         raw?.productTypeList,
         raw?.product_types,
         raw?.types,
         raw?.data?.productTypes,
+        raw?.data?.productTypes?.items,
+        raw?.data?.productTypes?.data,
         raw?.list?.productTypes,
         raw?.items?.productTypes,
-        raw?.list // some APIs return `list` for types
+        raw?.categoriesList // (some legacy APIs misname keys)
       );
 
-            const profiles = pickArr(raw?.profiles, raw?.productProfiles, raw?.profileList, raw?.data?.profiles);
+            const profiles = pickArrDeep(
+        raw?.profiles,
+        raw?.productProfiles,
+        raw?.profileList,
+        raw?.data?.profiles,
+        raw?.data?.profiles?.items,
+        raw?.data?.profiles?.data
+      );
 
-            const brands = pickArr(
+            const brands = pickArrDeep(
         raw?.brands,
         raw?.brandList,
         raw?.brand_list,
         raw?.data?.brands,
+        raw?.data?.brands?.items,
+        raw?.data?.brands?.data,
         raw?.items?.brands
       );
 
-      const normalizedBrands = get().normalizeBrandOptions(brands)
+      const normalizedBrands = get().normalizeBrandOptions(brands);
 
+      // ✅ ProductType ↔ Brand mapping (auto-learn)
+      const productTypeBrandsRaw = pickArrDeep(
+        raw?.productTypeBrands, // normalized [{productTypeId:number, brandId:number}]
+        raw?.product_type_brands,
+        raw?.typeBrandMap,
+        raw?.type_brand_map,
+        raw?.data?.productTypeBrands,
+        raw?.data?.productTypeBrands?.items,
+        raw?.data?.productTypeBrands?.data,
+        raw?.items?.productTypeBrands,
+        raw?.data?.productTypeBrand,
+        raw?.data?.productTypeBrand?.items
+      );
 
-      const templates = pickArr(raw?.templates, raw?.productTemplates, raw?.templateList, raw?.data?.templates);
+      // ✅ normalize mapping rows (ensure numeric ids)
+      const productTypeBrands = (Array.isArray(productTypeBrandsRaw) ? productTypeBrandsRaw : [])
+        .map((row) => {
+          const productTypeId = row?.productTypeId ?? row?.product_type_id ?? row?.typeId ?? row?.productType?.id;
+          const brandId = row?.brandId ?? row?.brand_id ?? row?.brand?.id;
+          const pt = productTypeId == null || productTypeId === '' ? null : Number(productTypeId);
+          const br = brandId == null || brandId === '' ? null : Number(brandId);
+          if (!Number.isFinite(pt) || !Number.isFinite(br)) return null;
+          return { productTypeId: pt, brandId: br };
+        })
+        .filter(Boolean);
+
+      // ✅ Build fast lookup map for FE filtering
+      const productTypeBrandMap = productTypeBrands.reduce((acc, row) => {
+        const pt = Number(row.productTypeId);
+        const br = Number(row.brandId);
+        if (!Number.isFinite(pt) || !Number.isFinite(br)) return acc;
+        if (!acc[pt]) acc[pt] = {};
+        acc[pt][br] = true;
+        return acc;
+      }, {});
+
+      const templates = pickArrDeep(
+        raw?.templates,
+        raw?.productTemplates,
+        raw?.templateList,
+        raw?.data?.templates,
+        raw?.data?.templates?.items,
+        raw?.data?.templates?.data
+      );
 
                   const dropdowns = {
         categories,
@@ -281,9 +355,10 @@ const useProductStore = create((set, get) => ({
         templates,
         productTemplates: templates,
         brands: normalizedBrands,
+        productTypeBrands,
       };
 
-      set({ dropdowns, dropdownsLoaded: true, error: null });
+      set({ dropdowns, productTypeBrandMap, dropdownsLoaded: true, error: null });
       return dropdowns;
     } catch (error) {
       // eslint-disable-next-line no-console
@@ -307,7 +382,30 @@ const useProductStore = create((set, get) => ({
     return get().dropdowns;
   },
 
-  resetDropdowns: () => set({ dropdowns: initialDropdowns, dropdownsLoaded: false }),
+  resetDropdowns: () => set({ dropdowns: initialDropdowns, dropdownsLoaded: false, productTypeBrandMap: {} }),
+
+  // ✅ Brand options filtered by selected productTypeId
+  // - If productTypeId is empty => return all brands
+  // - If type has no mapping yet => return all brands (fail-soft; mapping auto-learns)
+  getBrandOptionsByProductTypeIdAction: (productTypeId) => {
+    const ptId = productTypeId == null || productTypeId === '' ? null : Number(productTypeId);
+    const st = get();
+    const brands = Array.isArray(st?.dropdowns?.brands) ? st.dropdowns.brands : [];
+
+    if (!Number.isFinite(ptId) || ptId == null) return brands;
+
+    const map = st?.productTypeBrandMap || {};
+    const allowed = map?.[ptId];
+
+    // fail-soft: if no mapping for this type yet, show all brands
+    if (!allowed) return brands;
+
+    return brands.filter((b) => {
+      const bid = b?.id == null || b?.id === '' ? null : Number(b.id);
+      if (!Number.isFinite(bid) || bid == null) return false;
+      return allowed[bid] === true;
+    });
+  },
 
   // -------- Image Uploads --------
   uploadImages: async (files, captions, coverIndex) => {
@@ -563,6 +661,10 @@ const useProductStore = create((set, get) => ({
 
 export default useProductStore;
   
+
+
+
+
 
 
 

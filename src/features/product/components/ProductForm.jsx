@@ -1,7 +1,18 @@
+
+
+
+
+
+
+
 // ✅ src/features/product/components/ProductForm.jsx
 
 import React, { useEffect, useRef, useCallback, useMemo, useState } from 'react';
-import { useForm, FormProvider, Controller } from 'react-hook-form';
+import { useForm, FormProvider, Controller, useWatch } from 'react-hook-form';
+import _ from 'lodash';
+
+import useProductStore from '../store/productStore';
+import useBrandStore from '@/features/brand/store/brandStore';
 
 // ✅ Standard money input (0.00 placeholder + text-right) — local to this form
 const PaymentInput = ({ title, value, onChange, disabled = false }) => {
@@ -21,9 +32,6 @@ const PaymentInput = ({ title, value, onChange, disabled = false }) => {
     </div>
   );
 };
-import _ from 'lodash';
-import useProductStore from '../store/productStore';
-import useBrandStore from '@/features/brand/store/brandStore';
 
 const ProductForm = ({ onSubmit, defaultValues, mode }) => {
   const {
@@ -33,6 +41,12 @@ const ProductForm = ({ onSubmit, defaultValues, mode }) => {
     dropdownsError,
     ensureDropdownsAction,
     fetchDropdownsAction,
+
+    // ✅ optional: mapping fetchers (ProductTypeBrand)
+    fetchProductTypeBrandsAction,
+    ensureProductTypeBrandsAction,
+    fetchTypeBrandsAction,
+    ensureTypeBrandsAction,
   } = useProductStore();
 
   // ✅ token gate (กันยิง API ก่อน auth พร้อม → 401)
@@ -51,7 +65,7 @@ const ProductForm = ({ onSubmit, defaultValues, mode }) => {
 
   const hasToken = Boolean(getAuthToken());
 
-  // ✅ preload product dropdowns (idempotent) — Category/Type/Profile/Template depend on this
+  // ✅ preload product dropdowns (idempotent) — Category/Type depend on this
   // กันยิงซ้ำใน StrictMode / re-render
   const dropdownsRequestedRef = useRef(false);
 
@@ -93,53 +107,14 @@ const ProductForm = ({ onSubmit, defaultValues, mode }) => {
   // ✅ Brand reference data (idempotent, shared for Create/Edit)
   const brandItems = useBrandStore((s) => s?.items ?? s?.brands ?? s?.list ?? []);
   const fetchBrandsAction = useBrandStore(
-    (s) => s?.fetchBrandsAction || s?.fetchBrands || s?.loadBrandsAction || s?.loadBrands
+    (s) =>
+      s?.fetchBrandDropdownsAction ||
+      s?.fetchBrandDropdowns ||
+      s?.fetchBrandsAction ||
+      s?.fetchBrands ||
+      s?.loadBrandsAction ||
+      s?.loadBrands
   );
-
-  // ✅ preload brands (idempotent)
-  const brandsRequestedRef = useRef(false);
-  useEffect(() => {
-    if (!hasToken) return;
-    if (brandsRequestedRef.current) return;
-
-    const ready = (Array.isArray(brandItems) ? brandItems.length : 0) > 0;
-    if (ready) return;
-
-    if (typeof fetchBrandsAction === 'function') {
-      brandsRequestedRef.current = true;
-      Promise.resolve(fetchBrandsAction({ includeInactive: false })).catch(() => {});
-    }
-  }, [hasToken, brandItems?.length, fetchBrandsAction]);
-
-  useEffect(() => {
-    if (!hasToken) brandsRequestedRef.current = false;
-  }, [hasToken]);
-
-  // ✅ Normalize brands for <select> (prevent null/duplicate keys)
-  const safeBrands = useMemo(() => {
-    const arr = Array.isArray(brandItems) ? brandItems : [];
-    const filtered = arr.filter((b) => b && b.id != null);
-    const uniq = _.uniqBy(filtered, (b) => String(b.id));
-    return _.sortBy(uniq, (b) => String(b?.name ?? ''));
-  }, [brandItems]);
-
-
-  // ✅ Optional helpers: Profile / Template (from product dropdowns)
-  const safeProfiles = useMemo(() => {
-    const raw = dropdowns?.productProfiles ?? dropdowns?.profiles ?? dropdowns?.productProfileItems ?? [];
-    const arr = Array.isArray(raw) ? raw : [];
-    const filtered = arr.filter((p) => p && p.id != null);
-    const uniq = _.uniqBy(filtered, (p) => String(p.id));
-    return _.sortBy(uniq, (p) => String(p?.name ?? ''));
-  }, [dropdowns?.productProfiles, dropdowns?.profiles, dropdowns?.productProfileItems]);
-
-  const safeTemplates = useMemo(() => {
-    const raw = dropdowns?.productTemplates ?? dropdowns?.templates ?? dropdowns?.productTemplateItems ?? [];
-    const arr = Array.isArray(raw) ? raw : [];
-    const filtered = arr.filter((t) => t && t.id != null);
-    const uniq = _.uniqBy(filtered, (t) => String(t.id));
-    return _.sortBy(uniq, (t) => String(t?.name ?? ''));
-  }, [dropdowns?.productTemplates, dropdowns?.templates, dropdowns?.productTemplateItems]);
 
   // ✅ Cascading สำหรับ Product (Create/Edit) เหลือแค่ 2 ชั้น: Category → Type
   const [strict, setStrict] = useState(mode === 'create');
@@ -266,9 +241,160 @@ const ProductForm = ({ onSubmit, defaultValues, mode }) => {
     reset,
   } = methods;
 
+  // ✅ watch productTypeId safely (react-hook-form)
+  // NOTE: keep this declared exactly once (avoid "already been declared")
+  const watchedProductTypeId = useWatch({ control, name: 'productTypeId' });
+
   function toStr(v) {
     return v === '' || v == null ? '' : String(v);
   }
+
+  // ✅ brand fetch guards (avoid duplicate requests / support refetch on type change)
+  const brandsRequestedRef = useRef(false);
+  const lastBrandTypeIdRef = useRef('__INIT__');
+
+  const requestBrands = useCallback(
+    (productTypeId) => {
+      if (typeof fetchBrandsAction !== 'function') return Promise.resolve();
+
+      // รองรับหลายรูปแบบของ store/API (บางโปรเจกต์ใช้ key = typeId)
+      const typeKey = productTypeId === '' || productTypeId == null ? undefined : productTypeId;
+      const args = {
+        includeInactive: false,
+        productTypeId: typeKey,
+        typeId: typeKey,
+      };
+
+      return Promise.resolve(fetchBrandsAction(args)).catch(() => {
+        // swallow (401/timeout) - UI should not crash
+      });
+    },
+    [fetchBrandsAction]
+  );
+
+  // ✅ Normalize brands for <select> (prevent null/duplicate keys)
+  const safeBrands = useMemo(() => {
+    const arr = Array.isArray(brandItems) ? brandItems : [];
+    const filtered = arr.filter((b) => b && b.id != null);
+    const uniq = _.uniqBy(filtered, (b) => String(b.id));
+    return _.sortBy(uniq, (b) => String(b?.name ?? ''));
+  }, [brandItems]);
+
+    // ✅ Type → Brand mapping (ProductTypeBrand)
+  // - ถ้า BE ส่ง mapping มาพร้อม dropdowns → ใช้กรองแบรนด์ใน FE
+  // - ถ้าไม่มี mapping → อย่างน้อยเราจะพยายามให้ BE ส่งแบรนด์แบบ filter ตาม productTypeId (ผ่าน /api/brands/dropdowns)
+  const pickFirstArray = (...candidates) => {
+    for (const c of candidates) {
+      if (Array.isArray(c)) return c;
+    }
+    return [];
+  };
+
+  const productTypeBrandsRaw = useMemo(() => {
+    // tolerate many possible payload shapes/keys (minimal disruption)
+    return pickFirstArray(
+      dropdowns?.productTypeBrands,
+      dropdowns?.productTypeBrand,
+      dropdowns?.typeBrands,
+      dropdowns?.typeBrand,
+      dropdowns?.productTypeBrandMappings,
+      dropdowns?.typeBrandMappings,
+      dropdowns?.productTypeBrandRows,
+      dropdowns?.typeBrandRows,
+      dropdowns?.mappings?.productTypeBrands,
+      dropdowns?.mappings?.typeBrands,
+      dropdowns?.data?.productTypeBrands,
+      dropdowns?.data?.typeBrands
+    );
+  }, [dropdowns]);
+
+  const allowedBrandIdSet = useMemo(() => {
+    const typeIdStr = watchedProductTypeId === '' || watchedProductTypeId == null ? '' : String(watchedProductTypeId);
+    const arr = Array.isArray(productTypeBrandsRaw) ? productTypeBrandsRaw : [];
+
+    // ยังไม่เลือก type → ไม่กรอง
+    if (!typeIdStr) return null;
+
+    // ไม่มี mapping → ไม่กรอง (ปล่อยให้ BE-filter หรือแสดงทั้งหมด)
+    if (arr.length === 0) return null;
+
+    const set = new Set();
+    for (const row of arr) {
+      // tolerate row shapes
+      const pt = row?.productTypeId ?? row?.typeId ?? row?.product_type_id ?? row?.product_typeId;
+      const bid = row?.brandId ?? row?.brand_id ?? row?.brand?.id;
+      if (pt == null || bid == null) continue;
+      if (String(pt) === String(typeIdStr)) set.add(String(bid));
+    }
+
+    // mapping ถูกโหลดแล้ว แต่ไม่มีแถวของ type นี้จริง ๆ → กรองเป็น “ว่าง”
+    return set;
+  }, [productTypeBrandsRaw, watchedProductTypeId]);
+
+  const brandsForSelect = useMemo(() => {
+    // 1) ถ้ามี mapping → กรองใน FE
+    if (allowedBrandIdSet) {
+      return safeBrands.filter((b) => allowedBrandIdSet.has(String(b.id)));
+    }
+    // 2) ถ้าไม่มี mapping → ใช้รายการจาก store ตามที่ BE ส่งมา (อาจจะ filter แล้ว)
+    return safeBrands;
+  }, [safeBrands, allowedBrandIdSet]);
+
+  // ✅ Ensure brands dropdown is requested with productTypeId (BE-side filter)
+  // หมายเหตุ: เราไม่ "ensure mapping" ที่นี่เพื่อไม่ไปผูกกับ action ใหม่/เก่าใน productStore
+  useEffect(() => {
+    if (!hasToken) return;
+    if (typeof fetchBrandsAction !== 'function') return;
+
+    const nextTypeKey = watchedProductTypeId === '' || watchedProductTypeId == null ? '' : String(watchedProductTypeId);
+    const typeChanged = lastBrandTypeIdRef.current !== nextTypeKey;
+
+    // เปลี่ยน type → ให้ refetch ทุกครั้ง (BE จะ filter ให้)
+    if (typeChanged) {
+      lastBrandTypeIdRef.current = nextTypeKey;
+      requestBrands(nextTypeKey ? Number(nextTypeKey) : undefined);
+      return;
+    }
+
+    // preload ครั้งแรกเฉพาะตอน list ว่าง
+    if (brandsRequestedRef.current) return;
+    const ready = (Array.isArray(brandItems) ? brandItems.length : 0) > 0;
+    if (ready) return;
+
+    brandsRequestedRef.current = true;
+    requestBrands(nextTypeKey ? Number(nextTypeKey) : undefined);
+  }, [hasToken, fetchBrandsAction, requestBrands, watchedProductTypeId, brandItems]);
+
+  // ✅ If type changes and selected brand is not allowed → clear brandId
+  useEffect(() => {
+    const typeIdStr = watchedProductTypeId === '' || watchedProductTypeId == null ? '' : String(watchedProductTypeId);
+    if (!typeIdStr) return;
+    if (!allowedBrandIdSet) return; // mapping not loaded → don't clear
+
+    const currBrandIdStr = toStr(watch('brandId'));
+    if (!currBrandIdStr) return;
+    if (!allowedBrandIdSet.has(String(currBrandIdStr))) {
+      setValue('brandId', '');
+    }
+  }, [watchedProductTypeId, allowedBrandIdSet, setValue, watch]);
+
+  // ✅ Optional helpers: Profile / Template (from product dropdowns)
+
+  const safeProfiles = useMemo(() => {
+    const raw = dropdowns?.productProfiles ?? dropdowns?.profiles ?? dropdowns?.productProfileItems ?? [];
+    const arr = Array.isArray(raw) ? raw : [];
+    const filtered = arr.filter((p) => p && p.id != null);
+    const uniq = _.uniqBy(filtered, (p) => String(p.id));
+    return _.sortBy(uniq, (p) => String(p?.name ?? ''));
+  }, [dropdowns?.productProfiles, dropdowns?.profiles, dropdowns?.productProfileItems]);
+
+  const safeTemplates = useMemo(() => {
+    const raw = dropdowns?.productTemplates ?? dropdowns?.templates ?? dropdowns?.productTemplateItems ?? [];
+    const arr = Array.isArray(raw) ? raw : [];
+    const filtered = arr.filter((t) => t && t.id != null);
+    const uniq = _.uniqBy(filtered, (t) => String(t.id));
+    return _.sortBy(uniq, (t) => String(t?.name ?? ''));
+  }, [dropdowns?.productTemplates, dropdowns?.templates, dropdowns?.productTemplateItems]);
 
   // ✅ Selected brand name (for UX helpers / de-dup hints)
   const selectedBrandIdStr = toStr(watch('brandId'));
@@ -351,157 +477,166 @@ const ProductForm = ({ onSubmit, defaultValues, mode }) => {
         {/* ===================== Identity (ข้อมูลหลักสินค้า) ===================== */}
         <div className="rounded-lg border bg-white p-4">
           <div className="mb-4">
-            <div className="font-semibold text-gray-800 flex items-center gap-2">🧱 <span>Identity (ข้อมูลหลักสินค้า)</span></div>
+            <div className="font-semibold text-gray-800 flex items-center gap-2">
+              🧱 <span>Identity (ข้อมูลหลักสินค้า)</span>
+            </div>
             <div className="text-sm text-gray-500">ข้อมูลที่เป็นตัวตนของสินค้าและใช้เป็นโครงสร้างหลักของระบบ</div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* หมวดหมู่ */}
-          <div>
-            <label htmlFor="categoryId" className="block font-medium mb-1 text-gray-700">
-              หมวดหมู่
-            </label>
-            <Controller
-              name="categoryId"
-              control={control}
-              defaultValue=""
-              rules={mode === 'create' ? { required: 'กรุณาเลือกหมวดหมู่' } : undefined}
-              render={({ field }) => {
-                const allCats = Array.isArray(dropdowns?.categories) ? dropdowns.categories : [];
+            {/* หมวดหมู่ */}
+            <div>
+              <label htmlFor="categoryId" className="block font-medium mb-1 text-gray-700">
+                หมวดหมู่
+              </label>
+              <Controller
+                name="categoryId"
+                control={control}
+                defaultValue=""
+                rules={mode === 'create' ? { required: 'กรุณาเลือกหมวดหมู่' } : undefined}
+                render={({ field }) => {
+                  const allCats = Array.isArray(dropdowns?.categories) ? dropdowns.categories : [];
 
-                return (
-                  <select
-                    id="categoryId"
-                    className="w-full p-2 border rounded-md focus:ring-blue-400 focus:border-blue-400 text-gray-800"
-                    value={field.value === '' || field.value == null ? '' : String(field.value)}
-                    onChange={(e) => {
-                      const nextCat = e.target.value;
-                      const nextCatVal = nextCat === '' ? '' : Number(nextCat);
+                  return (
+                    <select
+                      id="categoryId"
+                      className="w-full p-2 border rounded-md focus:ring-blue-400 focus:border-blue-400 text-gray-800"
+                      value={field.value === '' || field.value == null ? '' : String(field.value)}
+                      onChange={(e) => {
+                        const nextCat = e.target.value;
+                        const nextCatVal = nextCat === '' ? '' : Number(nextCat);
 
-                      const prevCatStr = toStr(watch('categoryId'));
-                      const prevTypeStr = toStr(watch('productTypeId'));
+                        const prevCatStr = toStr(watch('categoryId'));
+                        const prevTypeStr = toStr(watch('productTypeId'));
 
-                      field.onChange(nextCatVal);
+                        field.onChange(nextCatVal);
 
-                      // ถ้าเปลี่ยนหมวด → type เดิมไม่อยู่ในหมวดใหม่ ให้เคลียร์
-                      if (prevTypeStr) {
-                        const allTypes = Array.isArray(dropdowns?.productTypes) ? dropdowns.productTypes : [];
-                        const hit = allTypes.find((t) => String(t.id) === String(prevTypeStr));
-                        const hitCatId = String(hit?.categoryId ?? hit?.category?.id ?? '');
-                        if (nextCat && hit && hitCatId !== String(nextCat)) {
-                          setValue('productTypeId', '');
+                        // ถ้าเปลี่ยนหมวด → type เดิมไม่อยู่ในหมวดใหม่ ให้เคลียร์
+                        if (prevTypeStr) {
+                          const allTypes = Array.isArray(dropdowns?.productTypes) ? dropdowns.productTypes : [];
+                          const hit = allTypes.find((t) => String(t.id) === String(prevTypeStr));
+                          const hitCatId = String(hit?.categoryId ?? hit?.category?.id ?? '');
+                          if (nextCat && hit && hitCatId !== String(nextCat)) {
+                            setValue('productTypeId', '');
+                          }
                         }
-                      }
 
-                      // create: บังคับลำดับให้ชัด
-                      if (mode === 'create') setStrict(true);
+                        // create: บังคับลำดับให้ชัด
+                        if (mode === 'create') setStrict(true);
 
-                      // ถ้าเพิ่งเริ่มเลือกหมวด (จากว่าง → มีค่า) ก็ถือว่า strict ได้
-                      if (!prevCatStr && nextCat) setStrict(true);
-                    }}
-                  >
-                    <option value="">-- เลือกหมวดหมู่ --</option>
-                    {allCats
-                      .filter((c) => c && c.id != null)
-                      .map((c) => (
-                        <option key={`cat_${String(c.id)}`} value={String(c.id)}>
-                          {c.name}
-                        </option>
-                      ))}
-                  </select>
-                );
-              }}
-            />
-          </div>
+                        // ถ้าเพิ่งเริ่มเลือกหมวด (จากว่าง → มีค่า) ก็ถือว่า strict ได้
+                        if (!prevCatStr && nextCat) setStrict(true);
+                      }}
+                    >
+                      <option value="">-- เลือกหมวดหมู่ --</option>
+                      {allCats
+                        .filter((c) => c && c.id != null)
+                        .map((c) => (
+                          <option key={`cat_${String(c.id)}`} value={String(c.id)}>
+                            {c.name}
+                          </option>
+                        ))}
+                    </select>
+                  );
+                }}
+              />
+            </div>
 
-          {/* ประเภทสินค้า */}
-          <div>
-            <label htmlFor="productTypeId" className="block font-medium mb-1 text-gray-700">
-              ประเภทสินค้า
-            </label>
-            <Controller
-              name="productTypeId"
-              control={control}
-              defaultValue=""
-              rules={mode === 'create' ? { required: 'กรุณาเลือกประเภทสินค้า' } : undefined}
-              render={({ field }) => {
-                const catIdStr = toStr(watch('categoryId'));
-                const allTypes = Array.isArray(dropdowns?.productTypes) ? dropdowns.productTypes : [];
-                const filteredTypes = catIdStr
-                  ? allTypes.filter((t) => String(t?.categoryId ?? t?.category?.id ?? '') === String(catIdStr))
-                  : allTypes;
+            {/* ประเภทสินค้า */}
+            <div>
+              <label htmlFor="productTypeId" className="block font-medium mb-1 text-gray-700">
+                ประเภทสินค้า
+              </label>
+              <Controller
+                name="productTypeId"
+                control={control}
+                defaultValue=""
+                rules={mode === 'create' ? { required: 'กรุณาเลือกประเภทสินค้า' } : undefined}
+                render={({ field }) => {
+                  const catIdStr = toStr(watch('categoryId'));
+                  const allTypes = Array.isArray(dropdowns?.productTypes) ? dropdowns.productTypes : [];
+                  const filteredTypes = catIdStr
+                    ? allTypes.filter((t) => String(t?.categoryId ?? t?.category?.id ?? '') === String(catIdStr))
+                    : allTypes;
 
-                const disabled = strict && !catIdStr;
+                  const disabled = strict && !catIdStr;
 
-                return (
+                  return (
+                    <select
+                      id="productTypeId"
+                      className="w-full p-2 border rounded-md focus:ring-blue-400 focus:border-blue-400 text-gray-800"
+                      value={field.value === '' || field.value == null ? '' : String(field.value)}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        field.onChange(v === '' ? '' : Number(v));
+                        setStrict(true);
+                      }}
+                      disabled={disabled}
+                      aria-disabled={disabled}
+                    >
+                      <option value="">-- เลือกประเภทสินค้า --</option>
+                      {filteredTypes
+                        .filter((t) => t && t.id != null)
+                        .map((t) => (
+                          <option key={`type_${String(t.id)}`} value={String(t.id)}>
+                            {t.name}
+                          </option>
+                        ))}
+                    </select>
+                  );
+                }}
+              />
+              {strict && !toStr(watch('categoryId')) ? (
+                <div className="mt-1 text-xs text-gray-500">* กรุณาเลือกหมวดหมู่ก่อน</div>
+              ) : null}
+            </div>
+
+            {/* แบรนด์ */}
+            <div>
+              <label htmlFor="brandId" className="block font-medium mb-1 text-gray-700">
+                แบรนด์
+              </label>
+              <Controller
+                name="brandId"
+                control={control}
+                defaultValue=""
+                render={({ field }) => (
                   <select
-                    id="productTypeId"
+                    id="brandId"
                     className="w-full p-2 border rounded-md focus:ring-blue-400 focus:border-blue-400 text-gray-800"
                     value={field.value === '' || field.value == null ? '' : String(field.value)}
                     onChange={(e) => {
                       const v = e.target.value;
                       field.onChange(v === '' ? '' : Number(v));
-                      setStrict(true);
                     }}
-                    disabled={disabled}
-                    aria-disabled={disabled}
                   >
-                    <option value="">-- เลือกประเภทสินค้า --</option>
-                    {filteredTypes
-                      .filter((t) => t && t.id != null)
-                      .map((t) => (
-                        <option key={`type_${String(t.id)}`} value={String(t.id)}>
-                          {t.name}
-                        </option>
-                      ))}
+                    <option value="">-- ไม่ระบุแบรนด์ --</option>
+                    {brandsForSelect.map((b) => (
+                      <option key={`brand_${String(b.id)}`} value={String(b.id)}>
+                        {b.name}
+                      </option>
+                    ))}
                   </select>
-                );
-              }}
-            />
-            {strict && !toStr(watch('categoryId')) ? (
-              <div className="mt-1 text-xs text-gray-500">* กรุณาเลือกหมวดหมู่ก่อน</div>
-            ) : null}
-          </div>
-
-          {/* แบรนด์ */}
-          <div>
-            <label htmlFor="brandId" className="block font-medium mb-1 text-gray-700">
-              แบรนด์
-            </label>
-            <Controller
-              name="brandId"
-              control={control}
-              defaultValue=""
-              render={({ field }) => (
-                <select
-                  id="brandId"
-                  className="w-full p-2 border rounded-md focus:ring-blue-400 focus:border-blue-400 text-gray-800"
-                  value={field.value === '' || field.value == null ? '' : String(field.value)}
-                  onChange={(e) => {
-                    const v = e.target.value;
-                    field.onChange(v === '' ? '' : Number(v));
-                  }}
-                >
-                  <option value="">-- ไม่ระบุแบรนด์ --</option>
-                  {safeBrands.map((b) => (
-                    <option key={`brand_${String(b.id)}`} value={String(b.id)}>
-                      {b.name}
-                    </option>
-                  ))}
-                </select>
-              )}
-            />
-          </div>
+                )}
+              />
+              {/* ✅ ช่วย debug ทันทีว่า filter ทำงานหรือยัง */}
+              {toStr(watch('productTypeId')) ? (
+                <div className="mt-1 text-xs text-gray-500">
+                  แบรนด์ที่แสดง: {brandsForSelect.length} รายการ
+                  {allowedBrandIdSet ? ` (ตาม mapping ของประเภทสินค้า)` : ' (ยังไม่พบ mapping → แสดงทั้งหมด)'}
+                </div>
+              ) : null}
+            </div>
           </div>
         </div>
 
         {/* ===================== Helper Layer ===================== */}
         <div className="rounded-lg border bg-white p-4">
           <div>
-            <div className="font-semibold text-gray-700 flex items-center gap-2">🧰 <span>ข้อมูลเพิ่มเติม / ตัวช่วย (ไม่บังคับ)</span></div>
-            <div className="text-sm text-gray-500">
-              ช่วยให้ค้นหา/จัดกลุ่ม/กรอกได้เร็วขึ้น และลดการพิมพ์ซ้ำใน “ชื่อสินค้า”
+            <div className="font-semibold text-gray-700 flex items-center gap-2">
+              🧰 <span>ข้อมูลเพิ่มเติม / ตัวช่วย (ไม่บังคับ)</span>
             </div>
+            <div className="text-sm text-gray-500">ช่วยให้ค้นหา/จัดกลุ่ม/กรอกได้เร็วขึ้น และลดการพิมพ์ซ้ำใน “ชื่อสินค้า”</div>
           </div>
 
           <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -517,7 +652,8 @@ const ProductForm = ({ onSubmit, defaultValues, mode }) => {
                 {...register('shortName')}
               />
               <div className="mt-1 text-xs text-gray-500">
-                * แนะนำกรอกอย่างใดอย่างหนึ่ง: <span className="font-medium">คำเรียกสั้น</span> หรือ <span className="font-medium">Model</span> (กรอกทั้งคู่ได้ถ้าจำเป็น)
+                * แนะนำกรอกอย่างใดอย่างหนึ่ง: <span className="font-medium">คำเรียกสั้น</span> หรือ{' '}
+                <span className="font-medium">Model</span> (กรอกทั้งคู่ได้ถ้าจำเป็น)
               </div>
             </div>
 
@@ -532,9 +668,7 @@ const ProductForm = ({ onSubmit, defaultValues, mode }) => {
                 className="w-full p-2 border rounded-md focus:ring-blue-400 focus:border-blue-400 text-gray-800"
                 {...register('model')}
               />
-              <div className="mt-1 text-xs text-gray-500">
-                * ถ้าใส่รุ่นไว้ในชื่อสินค้าอยู่แล้ว ช่องนี้ปล่อยว่างได้ (ลดการกรอกซ้ำ)
-              </div>
+              <div className="mt-1 text-xs text-gray-500">* ถ้าใส่รุ่นไว้ในชื่อสินค้าอยู่แล้ว ช่องนี้ปล่อยว่างได้ (ลดการกรอกซ้ำ)</div>
             </div>
 
             <div>
@@ -588,9 +722,7 @@ const ProductForm = ({ onSubmit, defaultValues, mode }) => {
                 render={({ field }) => {
                   const profileIdStr = toStr(watch('productProfileId'));
                   const filteredTemplates = profileIdStr
-                    ? safeTemplates.filter(
-                        (t) => String(t?.productProfileId ?? t?.profileId ?? '') === String(profileIdStr)
-                      )
+                    ? safeTemplates.filter((t) => String(t?.productProfileId ?? t?.profileId ?? '') === String(profileIdStr))
                     : safeTemplates;
 
                   return (
@@ -681,7 +813,9 @@ const ProductForm = ({ onSubmit, defaultValues, mode }) => {
 
                     {showDupHint ? (
                       <div className="mt-1 text-xs text-gray-500">
-                        พบข้อมูลซ้ำในชื่อสินค้า: {hasBrandInName ? 'แบรนด์ ' : ''}{hasShortInName ? 'คำเรียกสั้น ' : ''}{hasModelInName ? 'Model ' : ''}
+                        พบข้อมูลซ้ำในชื่อสินค้า: {hasBrandInName ? 'แบรนด์ ' : ''}
+                        {hasShortInName ? 'คำเรียกสั้น ' : ''}
+                        {hasModelInName ? 'Model ' : ''}
                         <span className="ml-1">(ถ้ากรอกไว้ในช่องแยกแล้ว สามารถเอาออกจากชื่อสินค้าได้)</span>
                       </div>
                     ) : (
@@ -695,7 +829,6 @@ const ProductForm = ({ onSubmit, defaultValues, mode }) => {
               {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name.message}</p>}
             </div>
 
-            {/* ช่องขวาเว้นไว้เพื่อความบาลานซ์ของ layout (ข้อมูล shortName/model อยู่ด้านบนแล้ว) */}
             <div />
           </div>
 
@@ -705,179 +838,163 @@ const ProductForm = ({ onSubmit, defaultValues, mode }) => {
               <div className="font-semibold text-gray-800 flex items-center gap-2">⚙️ <span>Stock Behavior</span></div>
               <div className="text-sm text-gray-500">กำหนดพฤติกรรมการจัดการสต๊อก ไม่ใช่ตัวตนของสินค้า</div>
             </div>
-            {/* ประเภทสินค้า: Simple / Structured → map เป็น noSN (true/false) */}
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
-            <div>
-              <label htmlFor="product-mode" className="block font-medium mb-1 text-gray-700">
-                โหมดสต๊อกสินค้า
+              <div>
+                <label htmlFor="product-mode" className="block font-medium mb-1 text-gray-700">
+                  โหมดสต๊อกสินค้า
+                </label>
+                <Controller
+                  name="mode"
+                  control={control}
+                  defaultValue="STRUCTURED"
+                  render={({ field }) => (
+                    <select
+                      id="product-mode"
+                      className="w-full p-2 border rounded-md focus:ring-blue-400 focus:border-blue-400 text-gray-800"
+                      value={field.value || 'STRUCTURED'}
+                      onChange={(e) => field.onChange(e.target.value)}
+                    >
+                      <option value="STRUCTURED">Structured (มี Serial Number รายชิ้น)</option>
+                      <option value="SIMPLE">Simple (นับจำนวน ไม่ใช้ Serial Number)</option>
+                    </select>
+                  )}
+                />
+              </div>
+            </div>
+
+            {/* ราคาต่อสาขา (BranchPrice) */}
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mt-4 ">
+              <div>
+                <Controller
+                  name="branchPrice.costPrice"
+                  control={control}
+                  rules={{
+                    valueAsNumber: true,
+                    validate: (v) => {
+                      const n = Number.parseFloat(String(v ?? ''));
+                      if (!Number.isFinite(n)) return 'กรุณาระบุราคาทุน';
+                      return n > 0 || 'ต้องกำหนดราคาทุนมากกว่า 0';
+                    },
+                  }}
+                  render={({ field }) => (
+                    <PaymentInput
+                      title="ราคาทุน"
+                      value={field.value === 0 ? '' : field.value}
+                      onChange={(val) => field.onChange(val === '' ? 0 : parseFloat(val))}
+                    />
+                  )}
+                />
+                {errors.branchPrice?.costPrice && (
+                  <p className="text-red-500 text-sm mt-1">{errors.branchPrice.costPrice.message}</p>
+                )}
+              </div>
+
+              <div>
+                <Controller
+                  name="branchPrice.priceWholesale"
+                  control={control}
+                  rules={{ valueAsNumber: true, min: { value: 0, message: 'ราคาขายส่งต้องไม่ติดลบ' } }}
+                  render={({ field }) => (
+                    <PaymentInput
+                      title="ราคาขายส่ง"
+                      value={field.value === 0 ? '' : field.value}
+                      onChange={(val) => field.onChange(val === '' ? 0 : parseFloat(val))}
+                    />
+                  )}
+                />
+                {errors.branchPrice?.priceWholesale && (
+                  <p className="text-red-500 text-sm mt-1">{errors.branchPrice.priceWholesale.message}</p>
+                )}
+              </div>
+
+              <div>
+                <Controller
+                  name="branchPrice.priceTechnician"
+                  control={control}
+                  rules={{ valueAsNumber: true, min: { value: 0, message: 'ราคาช่างต้องไม่ติดลบ' } }}
+                  render={({ field }) => (
+                    <PaymentInput
+                      title="ราคาช่าง"
+                      value={field.value === 0 ? '' : field.value}
+                      onChange={(val) => field.onChange(val === '' ? 0 : parseFloat(val))}
+                    />
+                  )}
+                />
+                {errors.branchPrice?.priceTechnician && (
+                  <p className="text-red-500 text-sm mt-1">{errors.branchPrice.priceTechnician.message}</p>
+                )}
+              </div>
+
+              <div>
+                <Controller
+                  name="branchPrice.priceRetail"
+                  control={control}
+                  rules={{ valueAsNumber: true, min: { value: 0, message: 'ราคาขายปลีกต้องไม่ติดลบ' } }}
+                  render={({ field }) => (
+                    <PaymentInput
+                      title="ราคาขายปลีก"
+                      value={field.value === 0 ? '' : field.value}
+                      onChange={(val) => field.onChange(val === '' ? 0 : parseFloat(val))}
+                    />
+                  )}
+                />
+                {errors.branchPrice?.priceRetail && (
+                  <p className="text-red-500 text-sm mt-1">{errors.branchPrice.priceRetail.message}</p>
+                )}
+              </div>
+
+              <div>
+                <Controller
+                  name="branchPrice.priceOnline"
+                  control={control}
+                  rules={{ valueAsNumber: true, min: { value: 0, message: 'ราคาออนไลน์ต้องไม่ติดลบ' } }}
+                  render={({ field }) => (
+                    <PaymentInput
+                      title="ราคาออนไลน์"
+                      value={field.value === 0 ? '' : field.value}
+                      onChange={(val) => field.onChange(val === '' ? 0 : parseFloat(val))}
+                    />
+                  )}
+                />
+                {errors.branchPrice?.priceOnline && (
+                  <p className="text-red-500 text-sm mt-1">{errors.branchPrice.priceOnline.message}</p>
+                )}
+              </div>
+            </div>
+
+            <div className="mt-4">
+              <label htmlFor="description" className="block font-medium mb-1 text-gray-700">
+                รายละเอียดสินค้า
               </label>
-              <Controller
-                name="mode"
-                control={control}
-                defaultValue="STRUCTURED"
-                render={({ field }) => (
-                  <select
-                    id="product-mode"
-                    className="w-full p-2 border rounded-md focus:ring-blue-400 focus:border-blue-400 text-gray-800"
-                    value={field.value || 'STRUCTURED'}
-                    onChange={(e) => field.onChange(e.target.value)}
-                  >
-                    <option value="STRUCTURED">Structured (มี Serial Number รายชิ้น)</option>
-                    <option value="SIMPLE">Simple (นับจำนวน ไม่ใช้ Serial Number)</option>
-                  </select>
-                )}
+              <textarea
+                id="description"
+                {...register('description')}
+                rows={2}
+                placeholder="แนะนำสินค้าโดยย่อ เช่น ขนาด น้ำหนัก ความสามารถ"
+                className="w-full p-3 border rounded-md focus:ring-blue-400 focus:border-blue-400 text-gray-800"
               />
             </div>
-          </div>
 
-          {/* ราคาต่อสาขา (BranchPrice) */}
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mt-4 ">
-            {/* ราคาทุน */}
-            <div>
-              <Controller
-                name="branchPrice.costPrice"
-                control={control}
-                rules={{
-                  valueAsNumber: true,
-                  validate: (v) => {
-                    const n = Number.parseFloat(String(v ?? ''));
-                    if (!Number.isFinite(n)) return 'กรุณาระบุราคาทุน';
-                    return n > 0 || 'ต้องกำหนดราคาทุนมากกว่า 0';
-                  },
-                }}
-                render={({ field }) => (
-                  <PaymentInput
-                    title="ราคาทุน"
-                    value={field.value === 0 ? '' : field.value}
-                    onChange={(val) => field.onChange(val === '' ? 0 : parseFloat(val))}
-                    color="blue"
-                  />
-                )}
+            <div className="mt-4">
+              <label htmlFor="spec" className="block font-medium mb-1 text-gray-700">
+                รายละเอียดสเปก
+              </label>
+              <textarea
+                id="spec"
+                {...register('spec')}
+                rows={3}
+                placeholder="รายละเอียดเชิงเทคนิค เช่น CPU, RAM, ความจุ, จอภาพ"
+                className="w-full p-3 border rounded-md font-mono focus:ring-blue-400 focus:border-blue-400 text-gray-800"
               />
-              {errors.branchPrice?.costPrice && (
-                <p className="text-red-500 text-sm mt-1">{errors.branchPrice.costPrice.message}</p>
-              )}
             </div>
 
-            {/* ราคาขายส่ง (POS) */}
-            <div>
-              <Controller
-                name="branchPrice.priceWholesale"
-                control={control}
-                rules={{ valueAsNumber: true, min: { value: 0, message: 'ราคาขายส่งต้องไม่ติดลบ' } }}
-                render={({ field }) => (
-                  <PaymentInput
-                    title="ราคาขายส่ง"
-                    value={field.value === 0 ? '' : field.value}
-                    onChange={(val) => field.onChange(val === '' ? 0 : parseFloat(val))}
-                    color="blue"
-                  />
-                )}
-              />
-              {errors.branchPrice?.priceWholesale && (
-                <p className="text-red-500 text-sm mt-1">{errors.branchPrice.priceWholesale.message}</p>
-              )}
+            <div className="mt-4 flex items-center gap-2">
+              <input id="active" type="checkbox" className="h-4 w-4" {...register('active')} />
+              <label htmlFor="active" className="text-sm text-gray-700">
+                เปิดใช้งานสินค้า
+              </label>
             </div>
-
-            {/* ราคาช่าง (POS) */}
-            <div>
-              <Controller
-                name="branchPrice.priceTechnician"
-                control={control}
-                rules={{ valueAsNumber: true, min: { value: 0, message: 'ราคาช่างต้องไม่ติดลบ' } }}
-                render={({ field }) => (
-                  <PaymentInput
-                    title="ราคาช่าง"
-                    value={field.value === 0 ? '' : field.value}
-                    onChange={(val) => field.onChange(val === '' ? 0 : parseFloat(val))}
-                    color="blue"
-                  />
-                )}
-              />
-              {errors.branchPrice?.priceTechnician && (
-                <p className="text-red-500 text-sm mt-1">{errors.branchPrice.priceTechnician.message}</p>
-              )}
-            </div>
-
-            {/* ราคาขายปลีก (POS) */}
-            <div>
-              <Controller
-                name="branchPrice.priceRetail"
-                control={control}
-                rules={{ valueAsNumber: true, min: { value: 0, message: 'ราคาขายปลีกต้องไม่ติดลบ' } }}
-                render={({ field }) => (
-                  <PaymentInput
-                    title="ราคาขายปลีก"
-                    value={field.value === 0 ? '' : field.value}
-                    onChange={(val) => field.onChange(val === '' ? 0 : parseFloat(val))}
-                    color="blue"
-                  />
-                )}
-              />
-              {errors.branchPrice?.priceRetail && (
-                <p className="text-red-500 text-sm mt-1">{errors.branchPrice.priceRetail.message}</p>
-              )}
-            </div>
-
-            {/* ราคาออนไลน์ */}
-            <div>
-              <Controller
-                name="branchPrice.priceOnline"
-                control={control}
-                rules={{ valueAsNumber: true, min: { value: 0, message: 'ราคาออนไลน์ต้องไม่ติดลบ' } }}
-                render={({ field }) => (
-                  <PaymentInput
-                    title="ราคาออนไลน์"
-                    value={field.value === 0 ? '' : field.value}
-                    onChange={(val) => field.onChange(val === '' ? 0 : parseFloat(val))}
-                    color="blue"
-                  />
-                )}
-              />
-              {errors.branchPrice?.priceOnline && (
-                <p className="text-red-500 text-sm mt-1">{errors.branchPrice.priceOnline.message}</p>
-              )}
-            </div>
-          </div>
-
-          {/* รายละเอียด */}
-          <div className="mt-4">
-            <label htmlFor="description" className="block font-medium mb-1 text-gray-700">
-              รายละเอียดสินค้า
-            </label>
-            <textarea
-              id="description"
-              {...register('description')}
-              rows={2}
-              placeholder="แนะนำสินค้าโดยย่อ เช่น ขนาด น้ำหนัก ความสามารถ"
-              className="w-full p-3 border rounded-md focus:ring-blue-400 focus:border-blue-400 text-gray-800"
-            />
-          </div>
-
-          <div className="mt-4">
-            <label htmlFor="spec" className="block font-medium mb-1 text-gray-700">
-              รายละเอียดสเปก
-            </label>
-            <textarea
-              id="spec"
-              {...register('spec')}
-              rows={3}
-              placeholder="รายละเอียดเชิงเทคนิค เช่น CPU, RAM, ความจุ, จอภาพ"
-              className="w-full p-3 border rounded-md font-mono focus:ring-blue-400 focus:border-blue-400 text-gray-800"
-            />
-          </div>
-          {/* เปิดใช้งานสินค้า */}
-          <div className="mt-4 flex items-center gap-2">
-            <input
-              id="active"
-              type="checkbox"
-              className="h-4 w-4"
-              {...register('active')}
-            />
-            <label htmlFor="active" className="text-sm text-gray-700">
-              เปิดใช้งานสินค้า
-            </label>
-          </div>
           </div>
         </div>
 

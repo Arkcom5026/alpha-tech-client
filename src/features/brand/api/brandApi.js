@@ -1,6 +1,7 @@
 
 
 
+
 // ✅ src/features/stock/brand/api/brandApi.js
 import apiClient from '@/utils/apiClient';
 import { parseApiError } from '@/utils/uiHelpers';
@@ -113,9 +114,10 @@ const __extractArray = (mapped) => {
   return [];
 };
 
-export const getBrandDropdowns = async ({ includeInactive = false } = {}) => {
+export const getBrandDropdowns = async ({ includeInactive = false, productTypeId } = {}) => {
   const params = __buildParams({
     includeInactive: includeInactive ? 'true' : 'false',
+    productTypeId: productTypeId || undefined,
     _ts: Date.now(),
   });
 

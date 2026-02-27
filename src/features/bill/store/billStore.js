@@ -8,8 +8,8 @@ import { create } from 'zustand';
 import { getSaleById } from '@/features/sales/api/saleApi';
 
 // 🔒 In-flight guard: กันยิงซ้ำจากหลาย render/หลาย effect (print window มัก call ซ้ำ)
-let _inflight = null;
-let _inflightSaleId = null;
+// IMPORTANT: ต้องรองรับการเรียกพร้อมกันหลาย saleId ได้ (เช่น user เปิดหลายแท็บ)
+const _inflightBySaleId = new Map();
 
 // Helpers (scoped here to avoid leaking to components)
 const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
@@ -25,7 +25,7 @@ const formatThaiDate = (iso) => {
   });
 };
 
-export const useBillStore = create((set) => ({
+export const useBillStore = create((set, get) => ({
   sale: null,
   payment: null,
   saleItems: [],
@@ -36,30 +36,59 @@ export const useBillStore = create((set) => ({
   resetAction: () => set({ sale: null, payment: null, saleItems: [], config: null, loading: false, error: null }),
 
   // Load sale by id and normalize for bill layout (Production standard)
-  loadSaleByIdAction: async (saleId) => {
+  loadSaleByIdAction: async (saleId, options) => {
     if (!saleId) {
       const message = 'ไม่พบ saleId สำหรับการพิมพ์บิล';
       set({ loading: false, error: message });
       throw new Error(message);
     }
 
-    // ✅ cache: ถ้าโหลด saleId เดิมแล้ว ไม่ต้องยิงซ้ำ
-    const current = useBillStore.getState?.();
-    if (current?.sale?.id === saleId && !current?.error) {
-      return { sale: current.sale, payment: current.payment, saleItems: current.saleItems, config: current.config };
+    // optional: used to disambiguate payment selection on print pages (e.g., refresh with ?paymentId=...)
+    const requestedPaymentId = options?.paymentId ? String(options.paymentId) : '';
+
+    // ✅ cache: ถ้าโหลด saleId เดิมแล้ว ไม่ต้องยิงซ้ำ (แต่ถ้ามี paymentId มา ต้องตรงกันด้วย)
+    const current = get();
+    const currentPaymentId = current?.payment?.id != null ? String(current.payment.id) : '';
+    if (current?.sale?.id != null && String(current.sale.id) === String(saleId) && !current?.error) {
+      if (!requestedPaymentId || requestedPaymentId === currentPaymentId) {
+        return { sale: current.sale, payment: current.payment, saleItems: current.saleItems, config: current.config };
+      }
+      // paymentId ไม่ตรง → ต้องรีโหลดเพื่อเลือก payment ที่ถูกต้อง
     }
 
-    // 🔒 in-flight: ถ้ามี request เดิมอยู่ ให้รอผลเดิม
-    if (_inflight && _inflightSaleId === saleId) {
-      return _inflight;
+    // 🔒 in-flight: ถ้ามี request ของ saleId เดิมอยู่ ให้รอผลเดิม
+    const requestKey = `${String(saleId)}:${requestedPaymentId}`;
+    const inflight = _inflightBySaleId.get(requestKey);
+    if (inflight) {
+      return inflight;
     }
 
     set({ loading: true, error: null });
 
     try {
-      _inflightSaleId = saleId;
-      _inflight = (async () => {
-        const sale = await getSaleById(saleId);
+      const job = (async () => {
+        const sale = await getSaleById(saleId, {
+          // ✅ print pages always need payments for correct receipt selection
+          includePayments: 1,
+          ...(requestedPaymentId ? { paymentId: requestedPaymentId } : {}),
+          // ✅ support apiClient params shape as well
+          params: {
+            includePayments: 1,
+            ...(requestedPaymentId ? { paymentId: requestedPaymentId } : {}),
+          },
+        });
+
+        // payments (defensive): รองรับหลาย payment ต่อ 1 sale (กรณีพิมพ์ย้อนหลัง)
+        const payments = Array.isArray(sale?.payments)
+          ? sale.payments
+          : Array.isArray(sale?.paymentItems)
+            ? sale.paymentItems
+            : [];
+        const pickPaymentById = (list, id) => {
+          if (!id) return null;
+          const sid = String(id);
+          return list.find((p) => String(p?.id) === sid) || null;
+        };
 
         // branch + receipt config
         const branch = sale?.branch || {};
@@ -92,12 +121,20 @@ export const useBillStore = create((set) => ({
         const beforeVat = round2(saleItems.reduce((s, x) => s + (Number(x.totalExVat) || 0), 0));
         const vatAmount = round2(total - beforeVat);
 
-        // default payment object if not provided by caller route state
+        // default payment object (เลือกจาก paymentId ถ้ามี) เพื่อรองรับ refresh / เปิดลิงก์ตรง
+        const picked = pickPaymentById(payments, requestedPaymentId);
+        const paymentMethodSafe = picked?.paymentMethod || sale?.paymentMethod || '-';
+        const noteSafe = picked?.note ?? sale?.note ?? '';
+        const receivedAtSafe = picked?.receivedAt || sale?.createdAt || null;
+        const paymentAmountSafe = round2(picked?.amount ?? picked?.paidAmount ?? total);
+
         const payment = {
+          id: picked?.id ?? null,
           saleId: sale?.id,
-          paymentMethod: sale?.paymentMethod || '-',
-          amount: total,
-          note: sale?.note || '',
+          paymentMethod: paymentMethodSafe,
+          amount: paymentAmountSafe,
+          note: noteSafe,
+          receivedAt: receivedAtSafe,
           sale,
         };
 
@@ -117,18 +154,27 @@ export const useBillStore = create((set) => ({
         return { sale, payment, saleItems, config };
       })();
 
-      return await _inflight;
+      _inflightBySaleId.set(requestKey, job);
+      return await job;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'ไม่สามารถโหลดข้อมูลใบเสร็จได้';
       set({ error: message, loading: false });
       throw err;
     } finally {
-      // 🔓 clear in-flight (สำเร็จหรือ fail ก็ต้อง clear)
-      _inflight = null;
-      _inflightSaleId = null;
+      // 🔓 clear in-flight (สำเร็จหรือ fail ก็ต้อง clear เฉพาะ key นี้)
+      _inflightBySaleId.delete(requestKey);
     }
   },
 }));
+
+
+
+
+
+
+
+
+
 
 
 

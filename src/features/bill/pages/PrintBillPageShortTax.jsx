@@ -1,17 +1,33 @@
 
 
 
+
+
+
+
+
+
+
 // src/features/bill/pages/PrintBillPageShortTax.jsx
 
 
-import { useEffect, useRef } from 'react'
-import { useParams } from 'react-router-dom'
+import { useEffect, useMemo, useRef } from 'react'
+import { useParams, useSearchParams } from 'react-router-dom'
 import BillLayoutShortTax from '../components/BillLayoutShortTax'
 import { useBillStore } from '@/features/bill/store/billStore'
 
 const PrintBillPageShortTax = () => {
-  const { id } = useParams()
+  const params = useParams()
+  // รองรับ route param ได้ทั้ง :id และ :saleId (กันพังจากชื่อ param ไม่ตรงกัน)
+  const saleId = params.id || params.saleId
   const printedRef = useRef(false)
+
+  // รองรับกรณี refresh/เปิดลิงก์ตรง: PrintBillListPage จะส่ง ?paymentId=...
+  const [searchParams] = useSearchParams()
+  const paymentId = useMemo(() => {
+    const v = searchParams.get('paymentId')
+    return v ? String(v) : null
+  }, [searchParams])
 
   const { sale, payment, saleItems, config, loading, error, loadSaleByIdAction, resetAction } =
     useBillStore()
@@ -20,8 +36,18 @@ const PrintBillPageShortTax = () => {
     const run = async () => {
       try {
         // ✅ Single source of truth: ใช้ saleId จาก URL เท่านั้น (รองรับ refresh/reprint)
-        if (id) {
-          await loadSaleByIdAction(id)
+        if (saleId) {
+          // ส่ง paymentId เป็น hint ให้ store/BE ใช้เลือก payment ที่ถูกต้อง (ถ้ามีหลายรายการ)
+          await loadSaleByIdAction(
+            saleId,
+            paymentId
+              ? {
+                  // ✅ support both store shapes (options.paymentId OR options.params.paymentId)
+                  paymentId,
+                  params: { paymentId },
+                }
+              : undefined
+          )
         }
       } catch {
         // error handled in store
@@ -33,12 +59,20 @@ const PrintBillPageShortTax = () => {
       resetAction()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id, loadSaleByIdAction, resetAction])
+  }, [saleId, paymentId, loadSaleByIdAction, resetAction])
+
+  // ✅ Reset auto-print guard when saleId changes
+  useEffect(() => {
+    printedRef.current = false
+  }, [saleId])
 
   // ✅ Auto-print (optional): เปิดแท็บใหม่แล้วพิมพ์ทันที แต่กันยิงซ้ำ
   useEffect(() => {
     if (printedRef.current) return
     if (!sale?.id) return
+    if (!config) return
+    if (!saleItems?.length) return
+    if (!payment) return
 
     printedRef.current = true
 
@@ -52,7 +86,7 @@ const PrintBillPageShortTax = () => {
     }, 300)
 
     return () => clearTimeout(t)
-  }, [sale?.id])
+  }, [sale?.id, config, saleItems?.length, payment?.id])
 
   if (loading) {
     return <div className="text-center p-6 text-gray-700">⏳ กำลังโหลดข้อมูลใบเสร็จ...</div>
@@ -71,11 +105,8 @@ const PrintBillPageShortTax = () => {
     <>
       {/* ✅ เอกสารพิมพ์ต้องใช้ TH Sarabun New (มาตรฐานถาวร) */}
       <style>{`
-        @media print {
-          @page { size: auto; margin: 10mm; }
-          html, body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-        }
-        .bill-print-root { font-family: "TH Sarabun New", "Sarabun", system-ui, sans-serif; }
+        /* Font root (print CSS is handled in BillLayoutShortTax) */
+        .bill-print-root { font-family: 'THSarabunNew', 'TH Sarabun New', 'Sarabun', system-ui, sans-serif; }
       `}</style>
 
       <div className="bill-print-root">
@@ -92,6 +123,9 @@ const PrintBillPageShortTax = () => {
 }
 
 export default PrintBillPageShortTax
+
+
+
 
 
 

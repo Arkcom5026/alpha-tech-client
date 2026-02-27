@@ -1,3 +1,4 @@
+
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import usePaymentStore from '../store/paymentStore';
@@ -9,12 +10,18 @@ const PrintBillListPage = () => {
   const [fromDate, setFromDate] = useState(() => {
     const today = new Date();
     const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-    return firstDayOfMonth.toISOString().split('T')[0];
+    // Use local date (avoid UTC shift issues)
+    const pad2 = (n) => String(n).padStart(2, '0');
+    const toLocalYMD = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+    return toLocalYMD(firstDayOfMonth);
   });
   const [toDate, setToDate] = useState(() => {
     const today = new Date();
     const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-    return lastDayOfMonth.toISOString().split('T')[0];
+    // Use local date (avoid UTC shift issues)
+    const pad2 = (n) => String(n).padStart(2, '0');
+    const toLocalYMD = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+    return toLocalYMD(lastDayOfMonth);
   });
   const [printFormat, setPrintFormat] = useState('short');
   const [limit, setLimit] = useState(100);
@@ -76,7 +83,7 @@ const PrintBillListPage = () => {
         <input
           type="number"
           value={limit}
-          onChange={(e) => setLimit(parseInt(e.target.value, 10) || 0)}
+          onChange={(e) => setLimit(parseInt(e.target.value, 10) || 1)}
           placeholder="จำนวน"
           className="border px-2 py-1 w-24 rounded"
           min="1"
@@ -126,10 +133,12 @@ const PrintBillListPage = () => {
                     : '-'}
                 </td>
                 <td className="border px-2 py-1">
-                  {new Date(p.receivedAt).toLocaleString('th-TH', {
-                    dateStyle: 'short',
-                    timeStyle: 'short',
-                  })}
+                  {p.receivedAt
+                    ? new Date(p.receivedAt).toLocaleString('th-TH', {
+                        dateStyle: 'short',
+                        timeStyle: 'short',
+                      })
+                    : '-'}
                 </td>
                 <td className="border px-2 py-1">{p.employeeProfile?.name || '-'}</td>                
                 <td className="border px-2 py-1 text-center">
@@ -143,11 +152,13 @@ const PrintBillListPage = () => {
                 <td className="border px-2 py-1 text-center">
                   <button
                     onClick={() => {
-                      const path = printFormat === 'short'
-                          ? `/pos/sales/bill/print-short/${p.saleId}`
-                          : `/pos/sales/bill/print-full/${p.saleId}`;
+                      const basePath = printFormat === 'short'
+                        ? `/pos/sales/bill/print-short/${p.saleId}`
+                        : `/pos/sales/bill/print-full/${p.saleId}`;
+                      // Add query param for print pages to safely refetch from DB when state is missing (e.g., refresh)
+                      const path = `${basePath}?paymentId=${encodeURIComponent(String(p.id))}`;
                       navigate(path, { state: { payment: {
-                        paymentId: p.id,
+                        id: p.id,
                         sale: p.sale,
                         items: p.items || [],
                         amount: p.amount,
@@ -175,4 +186,12 @@ const PrintBillListPage = () => {
 };
 
 export default PrintBillListPage;
+
+
+
+
+
+
+
+
 

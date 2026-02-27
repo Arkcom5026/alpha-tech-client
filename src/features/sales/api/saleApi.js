@@ -1,4 +1,13 @@
 
+
+
+
+
+
+
+
+
+
 // 📁 FILE: features/sales/api/saleApi.js
 
 import apiClient from '@/utils/apiClient';
@@ -37,9 +46,17 @@ export const getAllSales = async () => {
   }
 };
 
-export const getSaleById = async (id) => {
+// ✅ getSaleById (print-safe)
+// - รองรับ options เพื่อส่ง query params เพิ่มเติม
+// - ใส่ includePayments=1 เป็นค่าเริ่มต้นแบบ defensive (ถ้า BE ไม่รองรับจะถูก ignore)
+export const getSaleById = async (id, options) => {
   try {
-    const res = await apiClient.get(`/sale-orders/${id}`);
+    const params = {
+      includePayments: 1,
+      ...(options?.params || {}),
+    };
+
+    const res = await apiClient.get(`/sale-orders/${id}`, { params });
     return res.data;
   } catch (err) {
     throw attachApiContext(err, 'saleApi.getSaleById');
@@ -104,6 +121,10 @@ export const convertOrderOnlineToSale = async (orderOnlineId, stockSelections) =
     throw attachApiContext(err, 'saleApi.convertOrderOnlineToSale');
   }
 };
+
+
+
+
 
 
 

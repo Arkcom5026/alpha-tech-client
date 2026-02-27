@@ -1,4 +1,5 @@
 
+
 // 📁 FILE: features/payment/store/paymentStore.js
 
 import { create } from 'zustand';
@@ -17,6 +18,8 @@ const usePaymentStore = create(devtools((set, get) => ({
 
   paymentList: [],
   printablePayments: [],
+  isLoadingPrintablePayments: false,
+  printablePaymentsError: null,
 
   setPaymentField: (field, value) => {
     set((state) => ({
@@ -148,16 +151,32 @@ const usePaymentStore = create(devtools((set, get) => ({
 
   loadPrintablePaymentsAction: async (params = {}) => {
     try {
+      set({ isLoadingPrintablePayments: true, printablePaymentsError: null });
+
+      const limitSafe = Math.max(1, Number(params.limit || 100));
+
       const data = await searchPrintablePayments({
-        fromDate: params.fromDate,
-        toDate: params.toDate,
+        fromDate: params.fromDate || undefined,
+        toDate: params.toDate || undefined,
         keyword: params.keyword || '',
-        limit: params.limit || 100,
+        limit: limitSafe,
+        // cache-bust for print history refresh
         _ts: Date.now(),
       });
-      set({ printablePayments: data });
+
+      // defensive normalize: allow API to return array or {items: []}
+      const listSafe = Array.isArray(data)
+        ? data
+        : Array.isArray(data?.items)
+          ? data.items
+          : [];
+
+      set({ printablePayments: listSafe, isLoadingPrintablePayments: false });
+      return listSafe;
     } catch (err) {
       console.error('❌ โหลด printablePayments ล้มเหลว:', err);
+      set({ isLoadingPrintablePayments: false, printablePaymentsError: 'โหลดรายการพิมพ์ย้อนหลังไม่สำเร็จ' });
+      return [];
     }
   },
 })))

@@ -1,3 +1,7 @@
+
+
+// paymentApi.js
+
 // ✅ apiClient.js ถูก import ด้วย alias @ อย่างถูกต้องแล้ว
 import apiClient from '@/utils/apiClient';
 
@@ -29,7 +33,7 @@ export const submitPayments = async (paymentArray) => {
 // ✅ 2. ดึงรายการชำระเงินทั้งหมดของใบขาย
 export const getPaymentsBySaleId = async (saleId) => {
   try {
-    const res = await apiClient.get(`/payments?saleId=${saleId}`);
+    const res = await apiClient.get('/payments', { params: { saleId } });
     return res.data;
   } catch (err) {
     console.error('❌ [getPaymentsBySaleId] error:', err);
@@ -50,11 +54,16 @@ export const updatePayment = async (paymentId, updates) => {
 
 // ✅ 4. ยกเลิก
 export const cancelPayment = async (paymentId, note = '') => {
-  const res = await apiClient.post('/payments/cancel', {
-    paymentId,
-    note,
-  });
-  return res.data;
+  try {
+    const res = await apiClient.post('/payments/cancel', {
+      paymentId,
+      note,
+    });
+    return res.data;
+  } catch (err) {
+    console.error('❌ [cancelPayment] error:', err);
+    throw err.response?.data || { message: 'ไม่สามารถยกเลิกรายการชำระเงินได้' };
+  }
 };
 
 // ✅ 5. ดึงข้อมูลการรับเงินมาแสดง (พร้อมรองรับการค้นหาแบบ filter)
@@ -62,8 +71,8 @@ export const searchPrintablePayments = async (query = {}) => {
   try {
     const res = await apiClient.get('/payments/printable', { params: query });
     // ใช้ตัวแปรสภาพแวดล้อมแบบ Vite/มาตรฐานสมัยใหม่ แทนการอ้างอิง process ในฝั่ง FE
-    if (import.meta && import.meta.env && import.meta.env.DEV) {
-      console.log('searchPrintablePayments : ', res);
+    if (import.meta?.env?.DEV) {
+      console.log('[searchPrintablePayments] response:', res);
     }
     return res.data;
   } catch (err) {
@@ -71,6 +80,7 @@ export const searchPrintablePayments = async (query = {}) => {
     throw err.response?.data || { message: 'ไม่สามารถค้นหารายการพิมพ์บิลได้' };
   }
 };
+
 
 
 

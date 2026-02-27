@@ -4,6 +4,7 @@
 
 
 
+
 // ===============================
 // features/bill/components/BillLayoutFullTax.jsx
 // ===============================
@@ -86,6 +87,74 @@ const BillLayoutFullTax = ({ sale, saleItems, payments, config }) => {
 
   return (
     <>
+      <style>{`
+        /* ✅ TH Sarabun New (must be available in /public/fonts)
+           Recommended files:
+           - /fonts/THSarabunNew.ttf
+           - /fonts/THSarabunNew-Bold.ttf
+           - /fonts/THSarabunNew-Italic.ttf
+           - /fonts/THSarabunNew-BoldItalic.ttf
+        */
+        @font-face {
+          font-family: 'THSarabunNew';
+          src: url('/fonts/THSarabunNew.ttf') format('truetype');
+          font-weight: 400;
+          font-style: normal;
+          font-display: swap;
+        }
+        @font-face {
+          font-family: 'THSarabunNew';
+          src: url('/fonts/THSarabunNew-Bold.ttf') format('truetype');
+          font-weight: 700;
+          font-style: normal;
+          font-display: swap;
+        }
+        @font-face {
+          font-family: 'THSarabunNew';
+          src: url('/fonts/THSarabunNew-Italic.ttf') format('truetype');
+          font-weight: 400;
+          font-style: italic;
+          font-display: swap;
+        }
+        @font-face {
+          font-family: 'THSarabunNew';
+          src: url('/fonts/THSarabunNew-BoldItalic.ttf') format('truetype');
+          font-weight: 700;
+          font-style: italic;
+          font-display: swap;
+        }
+
+        /* Print stability for A4 */
+        @media print {
+          html, body {
+            margin: 0;
+            padding: 0;
+          }
+          body {
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+          }
+          @page {
+            size: A4;
+            margin: 10mm;
+          }
+
+          /* Avoid breaking critical blocks */
+          .no-break {
+            page-break-inside: avoid;
+            break-inside: avoid;
+          }
+          table { page-break-inside: auto; }
+          tr, td, th { page-break-inside: avoid; break-inside: avoid; }
+
+          /* Keep the page at natural height on print */
+          .print-a4 {
+            width: 210mm !important;
+            min-height: 297mm !important;
+            height: auto !important;
+          }
+        }
+      `}</style>
       <div className="w-full max-w-[794px] mx-auto mb-4 text-right print:hidden">
         <label className="inline-flex items-center gap-2 px-5 text-sm">
           <input
@@ -105,11 +174,11 @@ const BillLayoutFullTax = ({ sale, saleItems, payments, config }) => {
       </div>
 
       <div
-        className="w-full overflow-hidden mx-auto text-sm border border-gray-600 px-4 pt-4 pb-2 flex flex-col rounded-md"
-        style={{ width: '210mm', height: '297mm', fontFamily: 'TH Sarabun New, sans-serif' }}
+        className="w-full overflow-hidden mx-auto text-sm border border-gray-600 px-4 pt-4 pb-2 flex flex-col rounded-md print-a4"
+        style={{ width: '210mm', minHeight: '297mm', height: 'auto', fontFamily: 'THSarabunNew, TH Sarabun New, sans-serif' }}
       >
         {/* Header */}
-        <div className="flex justify-between items-start border-b pb-2 mb-2 gap-3">
+        <div className="flex justify-between items-start border-b pb-2 mb-2 gap-3 no-break">
           <div className="flex items-start gap-3">
             {config.logoUrl ? (
               <img src={config.logoUrl} alt="logo" className="w-16 h-16 object-contain print:mt-1" />
@@ -133,7 +202,7 @@ const BillLayoutFullTax = ({ sale, saleItems, payments, config }) => {
         </h3>
 
         {/* Customer & Sale Info */}
-        <div className="grid grid-cols-[4fr_1.5fr] gap-4 mb-4">
+        <div className="grid grid-cols-[4fr_1.5fr] gap-4 mb-4 no-break">
           <div className="border border-black p-2 rounded-lg">
             <p className="text-base">ลูกค้า: {getDisplayCustomerName(sale.customer)}</p>
             <p>ที่อยู่: {getCustomerAddressText(sale.customer)}</p>
@@ -203,7 +272,7 @@ const BillLayoutFullTax = ({ sale, saleItems, payments, config }) => {
         </div>
 
         {/* Summary */}
-        <div className="grid grid-cols-2 gap-4 text-xs mt-auto pt-4" style={{ minHeight: '130px' }}>
+        <div className="grid grid-cols-2 gap-4 text-xs mt-auto pt-4 no-break" style={{ minHeight: '130px' }}>
           <div>
             <ul className="list-decimal ml-4">
               <li>ได้รับสินค้าตามรายการข้างต้นครบถ้วน</li>
@@ -229,7 +298,7 @@ const BillLayoutFullTax = ({ sale, saleItems, payments, config }) => {
         </div>
 
         {/* Signatures */}
-        <div className="grid grid-cols-3 gap-4 text-sm mt-2 text-center pt-4">
+        <div className="grid grid-cols-3 gap-4 text-sm mt-2 text-center pt-4 no-break">
           <div>
             <p className="border-t border-black pt-2 pb-4">ผู้รับของ / RECEIVED BY</p>
           </div>
@@ -246,6 +315,7 @@ const BillLayoutFullTax = ({ sale, saleItems, payments, config }) => {
 };
 
 export default React.memo(BillLayoutFullTax);
+
 
 
 

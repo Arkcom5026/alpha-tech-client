@@ -1,4 +1,7 @@
 
+
+
+
 // src/features/bill/components/BillLayoutShortTax.jsx
 
 import React from 'react';
@@ -42,18 +45,66 @@ const BillLayoutShortTax = ({ sale, saleItems, payments, config, hideContactName
   return (
     <div
       className="w-[80mm] min-h-[280mm] pt-6 pb-6 mx-auto text-base leading-relaxed"
-      style={{ fontFamily: 'TH Sarabun New, sans-serif' }}
+      style={{ fontFamily: 'THSarabunNew, TH Sarabun New, sans-serif' }}
     >
       <style>{`
+        /* ✅ TH Sarabun New (served from /public/fonts)
+           Files:
+           - /fonts/THSarabunNew.ttf
+           - /fonts/THSarabunNew-Bold.ttf
+           - /fonts/THSarabunNew-Italic.ttf
+           - /fonts/THSarabunNew-BoldItalic.ttf
+        */
+        @font-face {
+          font-family: 'THSarabunNew';
+          src: url('/fonts/THSarabunNew.ttf') format('truetype');
+          font-weight: 400;
+          font-style: normal;
+          font-display: swap;
+        }
+        @font-face {
+          font-family: 'THSarabunNew';
+          src: url('/fonts/THSarabunNew-Bold.ttf') format('truetype');
+          font-weight: 700;
+          font-style: normal;
+          font-display: swap;
+        }
+        @font-face {
+          font-family: 'THSarabunNew';
+          src: url('/fonts/THSarabunNew-Italic.ttf') format('truetype');
+          font-weight: 400;
+          font-style: italic;
+          font-display: swap;
+        }
+        @font-face {
+          font-family: 'THSarabunNew';
+          src: url('/fonts/THSarabunNew-BoldItalic.ttf') format('truetype');
+          font-weight: 700;
+          font-style: italic;
+          font-display: swap;
+        }
+
         @media print {
-          body {
+          html, body {
             margin: 0;
             padding: 0;
+          }
+          body {
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
           }
           @page {
             size: 80mm auto;
             margin: 0;
           }
+
+          /* Avoid breaking critical blocks / rows */
+          .no-break {
+            page-break-inside: avoid;
+            break-inside: avoid;
+          }
+          table { page-break-inside: auto; }
+          tr, td, th { page-break-inside: avoid; break-inside: avoid; }
         }
       `}</style>
 
@@ -67,7 +118,7 @@ const BillLayoutShortTax = ({ sale, saleItems, payments, config, hideContactName
       </div>
 
       {/* Header */}
-      <div className="text-center border-b border-gray-300 pb-3 mb-4">
+      <div className="text-center border-b border-gray-300 pb-3 mb-4 no-break">
         {config.logoUrl && <img src={config.logoUrl} alt="logo" className="h-10 mx-auto mb-2" />}
         <h2 className="font-bold text-base leading-snug">{config.branchName}</h2>
         <p className="text-sm whitespace-pre-line leading-tight">{config.address}</p>
@@ -75,7 +126,7 @@ const BillLayoutShortTax = ({ sale, saleItems, payments, config, hideContactName
         {config.taxId && <p className="text-sm">เลขผู้เสียภาษี {config.taxId}</p>}
       </div>
 
-      <div className="text-sm mb-4 space-y-1">
+      <div className="text-sm mb-4 space-y-1 no-break">
         <p className="font-bold">ใบกำกับภาษีอย่างย่อ / ใบเสร็จรับเงิน</p>
         <p>เลขที่: {sale.code}</p>
         {!config.hideDate && (
@@ -110,14 +161,14 @@ const BillLayoutShortTax = ({ sale, saleItems, payments, config, hideContactName
         </tbody>
       </table>
 
-      <div className="text-sm text-right space-y-1">
+      <div className="text-sm text-right space-y-1 no-break">
         <p>รวมก่อน VAT: {formatCurrency(beforeVat)} ฿</p>
         <p>VAT {vatRate}%: {formatCurrency(vatAmount)} ฿</p>
         <p className="font-bold text-base">รวมทั้งสิ้น: {formatCurrency(total)} ฿</p>
         <p className="text-center mt-3 text-sm border-t border-dashed pt-2">VAT INCLUDED</p>
       </div>
 
-      <div className="mt-6 text-sm space-y-1">
+      <div className="mt-6 text-sm space-y-1 no-break">
         {sale.note && <p>หมายเหตุ: {sale.note}</p>}
       </div>
     </div>
@@ -126,6 +177,9 @@ const BillLayoutShortTax = ({ sale, saleItems, payments, config, hideContactName
 
 // ✅ memo ป้องกัน re-render ตอนเปิด print window
 export default React.memo(BillLayoutShortTax)
+
+
+
 
 
 

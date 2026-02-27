@@ -1,3 +1,4 @@
+
 // 📁 FILE: components/SaleItemTable.jsx
 
 import React, { useEffect } from 'react'
@@ -6,7 +7,7 @@ import useSalesStore from '@/features/sales/store/salesStore'
 const SaleItemTable = ({ items = [], onRemove, billDiscount = 0 }) => {
   const {
     sharedBillDiscountPerItem, // ใช้สำหรับแสดงผล “เฉลี่ยต่อรายการ” เท่านั้น
-    setSharedBillDiscountPerItem,
+    setSharedBillDiscountPerItemAction,
     updateSaleItemAction,
   } = useSalesStore()
 
@@ -21,7 +22,7 @@ const SaleItemTable = ({ items = [], onRemove, billDiscount = 0 }) => {
   useEffect(() => {
     const handler = setTimeout(() => {
       if (!Array.isArray(items) || items.length === 0) {
-        if (sharedBillDiscountPerItem !== 0) setSharedBillDiscountPerItem(0)
+        if (sharedBillDiscountPerItem !== 0) setSharedBillDiscountPerItemAction(0)
         return
       }
 
@@ -45,7 +46,7 @@ const SaleItemTable = ({ items = [], onRemove, billDiscount = 0 }) => {
           }
         })
 
-        if (sharedBillDiscountPerItem !== 0) setSharedBillDiscountPerItem(0)
+        if (sharedBillDiscountPerItem !== 0) setSharedBillDiscountPerItemAction(0)
         return
       }
 
@@ -86,7 +87,7 @@ const SaleItemTable = ({ items = [], onRemove, billDiscount = 0 }) => {
 
       // display only: เฉลี่ยต่อรายการ (2 ตำแหน่ง)
       const avg = Math.floor((billDiscount / items.length) * 100) / 100
-      if (sharedBillDiscountPerItem !== avg) setSharedBillDiscountPerItem(avg)
+      if (sharedBillDiscountPerItem !== avg) setSharedBillDiscountPerItemAction(avg)
     }, 100)
 
     return () => clearTimeout(handler)
@@ -94,7 +95,7 @@ const SaleItemTable = ({ items = [], onRemove, billDiscount = 0 }) => {
     billDiscount,
     items,
     updateSaleItemAction,
-    setSharedBillDiscountPerItem,
+    setSharedBillDiscountPerItemAction,
     sharedBillDiscountPerItem,
   ])
 
@@ -213,3 +214,6 @@ const SaleItemTable = ({ items = [], onRemove, billDiscount = 0 }) => {
 }
 
 export default SaleItemTable
+
+
+

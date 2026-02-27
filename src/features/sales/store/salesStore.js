@@ -153,11 +153,31 @@ const useSalesStore = create((set, get) => ({
   // ✅ Alias ตามมาตรฐาน store (Action suffix) — backward compatible
   setBillDiscountAction: (amount) => get().setBillDiscount(amount),
 
-  setSharedBillDiscountPerItem: () => {
+  // ✅ รองรับทั้ง 2 แบบ:
+  // 1) UI คำนวณค่า avg แล้วส่งมา (preferred)
+  // 2) ถ้าไม่ส่งมา → คำนวณจาก billDiscount/saleItems (backward compatible)
+  setSharedBillDiscountPerItem: (value) => {
+    const n = value == null ? null : Number(value);
+    if (Number.isFinite(n)) {
+      // keep 2 decimals (เงินบาท/สตางค์) เพื่อให้ UI/table แสดงตรง
+      const safe = Math.floor(n * 100) / 100;
+      set({ sharedBillDiscountPerItem: safe });
+      return;
+    }
+
     const { billDiscount, saleItems } = get();
-    const shared = saleItems.length > 0 ? Math.floor(billDiscount / saleItems.length) : 0;
-    set({ sharedBillDiscountPerItem: shared });
+    if (!saleItems?.length) {
+      set({ sharedBillDiscountPerItem: 0 });
+      return;
+    }
+
+    // fallback: average from billDiscount
+    const avg = Math.floor(((Number(billDiscount) || 0) / saleItems.length) * 100) / 100;
+    set({ sharedBillDiscountPerItem: avg });
   },
+
+  // ✅ Alias ตามมาตรฐาน store (Action suffix) — backward compatible
+  setSharedBillDiscountPerItemAction: (value) => get().setSharedBillDiscountPerItem(value),
 
   sumPaymentList: () => {
     const list = get().paymentList || [];
@@ -463,6 +483,8 @@ const useSalesStore = create((set, get) => ({
 }));
 
 export default useSalesStore;
+
+
 
 
 

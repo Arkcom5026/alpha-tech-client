@@ -1,4 +1,8 @@
 
+
+
+
+
   // src/pages/pos/barcode/PreviewBarcodePage.jsx
 
   import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
@@ -275,11 +279,14 @@
     }, []);
 
     const { receiptId } = useParams();
-    const { barcodes, loadBarcodesAction, markBarcodeAsPrintedAction } = useBarcodeStore();
-    const { markReceiptAsPrintedAction } = usePurchaseOrderReceiptStore();
+    const { barcodes, loadBarcodesAction, markBarcodeAsPrintedAction, clearErrorAction: clearBarcodeErrorAction } = useBarcodeStore();
+    const { markReceiptAsPrintedAction, clearErrorAction: clearReceiptErrorAction } = usePurchaseOrderReceiptStore();
 
     const [loading, setLoading] = useState(false);
     const [loaded, setLoaded] = useState(false);
+
+    // ✅ UI-based error (no dialog)
+    const [uiError, setUiError] = useState('');
 
     // ✅ โหมดพิมพ์ (Production): ใช้ font-only (Code39) เท่านั้น
     // เหตุผล: สินค้าชิ้นเล็ก → ต้องย่อได้มากและยังสแกนเสถียร
@@ -375,14 +382,23 @@
     // โหลดข้อมูลอัตโนมัติครั้งแรก และกันกดซ้ำ
     const handleLoadBarcodes = useCallback(async () => {
       if (!receiptId || loading || loaded) return;
+      setUiError('');
+      clearBarcodeErrorAction?.();
+      clearReceiptErrorAction?.();
+
       setLoading(true);
       try {
-        await loadBarcodesAction(receiptId);
+        const rid = Number.isFinite(Number(receiptId)) ? Number(receiptId) : receiptId;
+        await loadBarcodesAction(rid);
         setLoaded(true);
+      } catch (err) {
+        console.error('❌ loadBarcodesAction failed:', err);
+        setUiError(err?.message || err?.response?.data?.message || 'โหลดบาร์โค้ดไม่สำเร็จ');
+        setLoaded(false);
       } finally {
         setLoading(false);
       }
-    }, [receiptId, loading, loaded, loadBarcodesAction]);
+    }, [receiptId, loading, loaded, loadBarcodesAction, clearBarcodeErrorAction, clearReceiptErrorAction]);
 
     useEffect(() => {
       if (!loaded && !loading && receiptId) {
@@ -477,19 +493,33 @@
 
     const handlePrint = () => {
       if (!loaded || barcodes.length === 0) return;
-      window.print();
+      setUiError('');
+      try {
+        window.print();
+      } catch (err) {
+        console.error('❌ window.print failed:', err);
+        setUiError('ไม่สามารถเปิดหน้าพิมพ์ได้ กรุณาลองใหม่อีกครั้ง');
+      }
     };
 
     const handleConfirmPrinted = async () => {
+      setUiError('');
       try {
         if (!receiptId || barcodes.length === 0) return;
+        const rid = Number.isFinite(Number(receiptId)) ? Number(receiptId) : receiptId;
+
         const hasUnprinted = barcodes.some((b) => !b.printed);
         if (hasUnprinted) {
-          await markBarcodeAsPrintedAction({ purchaseOrderReceiptId: receiptId });
+          await markBarcodeAsPrintedAction({ purchaseOrderReceiptId: rid });
         }
-        await markReceiptAsPrintedAction(receiptId);
-      } catch (error) {
-        console.error('❌ อัปเดตสถานะ printed ล้มเหลว:', error);
+
+        await markReceiptAsPrintedAction(rid);
+
+        // ✅ refresh state so UI reflects printed
+        setLoaded(false);
+      } catch (err) {
+        console.error('❌ อัปเดตสถานะ printed ล้มเหลว:', err);
+        setUiError(err?.message || err?.response?.data?.message || 'อัปเดตสถานะพิมพ์ไม่สำเร็จ');
       }
     };
 
@@ -752,6 +782,20 @@
             </div>
           </div>
 
+          {uiError ? (
+            <div className="print:hidden rounded-md border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">
+              <div className="font-semibold">เกิดข้อผิดพลาด</div>
+              <div className="mt-1 break-words">{uiError}</div>
+              <button
+                type="button"
+                className="mt-2 text-xs text-gray-700 underline"
+                onClick={() => setUiError('')}
+              >
+                ปิดข้อความ
+              </button>
+            </div>
+          ) : null}
+
           <hr className="print:hidden" />
 
           {!loaded ? (
@@ -833,6 +877,8 @@
   };
 
   export default PreviewBarcodePage;
+
+
 
 
 

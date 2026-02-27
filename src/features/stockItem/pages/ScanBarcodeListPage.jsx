@@ -1,9 +1,16 @@
+
+
+
+
+
+
+// ScanBarcodeListPage.jsx
+
 import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 
 import PendingBarcodeTable from '../components/PendingBarcodeTable';
 import useBarcodeStore from '@/features/barcode/store/barcodeStore';
-import { finalizeReceiptIfNeeded } from '@/features/purchaseOrderReceipt/api/purchaseOrderReceiptApi';
 
 const ScanBarcodeListPage = () => {
   const { receiptId } = useParams();
@@ -25,14 +32,17 @@ const ScanBarcodeListPage = () => {
     receiveSNAction,
     currentReceipt,
     loadReceiptWithSupplierAction,
+    finalizeReceiptIfNeededAction,
+    clearErrorAction,
   } = useBarcodeStore();
 
   useEffect(() => {
     if (receiptId) {
+      clearErrorAction?.();
       loadBarcodesAction(receiptId);
       loadReceiptWithSupplierAction(receiptId);
     }
-  }, [receiptId, loadBarcodesAction, loadReceiptWithSupplierAction]);
+  }, [receiptId, loadBarcodesAction, loadReceiptWithSupplierAction, clearErrorAction]);
 
   useEffect(() => {
     if (keepSN && snInputRef.current) snInputRef.current.focus();
@@ -104,16 +114,22 @@ const ScanBarcodeListPage = () => {
         }
       } else if (e.key === 'F3') {
         e.preventDefault();
-        setKeepSN((v) => !v);
+        const nextKeepSN = !keepSN;
+        setKeepSN(nextKeepSN);
         setTimeout(() => {
-          if (!keepSN) snInputRef.current?.focus();
+          if (nextKeepSN) snInputRef.current?.focus();
           else barcodeInputRef.current?.focus();
         }, 0);
       } else if (e.key === 'F4') {
         e.preventDefault();
         if (!receiptId) return;
         setSubmitting(true);
-        finalizeReceiptIfNeeded(receiptId)
+        if (!finalizeReceiptIfNeededAction) {
+          setPageMessage({ type: 'error', text: '❌ Store ยังไม่มี finalizeReceiptIfNeededAction' });
+          setSubmitting(false);
+          return;
+        }
+        finalizeReceiptIfNeededAction(receiptId)
           .then(async () => {
             await Promise.all([
               loadBarcodesAction(receiptId),
@@ -122,13 +138,16 @@ const ScanBarcodeListPage = () => {
             setPageMessage({ type: 'success', text: '✅ Finalize ใบรับสำเร็จ' });
             playBeep();
           })
-          .catch(() => setPageMessage({ type: 'error', text: '❌ Finalize ไม่สำเร็จ' }))
+          .catch((err) => {
+            const msg = err?.response?.data?.message || err?.message || 'Finalize ไม่สำเร็จ';
+            setPageMessage({ type: 'error', text: `❌ ${msg}` });
+          })
           .finally(() => setSubmitting(false));
       }
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [receiptId, keepSN, loadBarcodesAction, loadReceiptWithSupplierAction]);
+  }, [receiptId, keepSN, loadBarcodesAction, loadReceiptWithSupplierAction, finalizeReceiptIfNeededAction]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -148,6 +167,24 @@ const ScanBarcodeListPage = () => {
     if (!found) {
       setPageMessage({ type: 'error', text: '❌ ไม่พบบาร์โค้ดนี้ในรายการที่ต้องรับเข้าสต๊อก' });
       playErrorBeep();
+      return;
+    }
+
+    // 🔒 Guardrail: ถ้า SN เคยถูกขายแล้ว (SOLD / มี saleItem / มี soldAt) ห้ามรับเข้าสต๊อก
+    // เหตุผล: StockItem 1 ชิ้นขายได้ครั้งเดียว (SaleItem.stockItemId unique)
+    const sold =
+      String(found?.stockItem?.status || '').toUpperCase() === 'SOLD' ||
+      found?.stockItem?.soldAt != null ||
+      found?.stockItem?.saleItem?.id != null;
+
+    if (sold) {
+      setPageMessage({ type: 'error', text: '❌ บาร์โค้ดนี้ถูกขายไปแล้ว (SOLD) ไม่สามารถรับเข้าสต๊อกได้' });
+      playErrorBeep();
+      setBarcodeInput('');
+      if (barcodeInputRef?.current) {
+        barcodeInputRef.current.focus();
+        barcodeInputRef.current.select?.();
+      }
       return;
     }
 
@@ -218,15 +255,21 @@ const ScanBarcodeListPage = () => {
     if (!receiptId) return;
     setSubmitting(true);
     try {
-      await finalizeReceiptIfNeeded(receiptId);
+      if (!finalizeReceiptIfNeededAction) {
+        setPageMessage({ type: 'error', text: '❌ Store ยังไม่มี finalizeReceiptIfNeededAction' });
+        setSubmitting(false);
+        return;
+      }
+      await finalizeReceiptIfNeededAction(receiptId);
       await Promise.all([
         loadBarcodesAction(receiptId),
         loadReceiptWithSupplierAction(receiptId),
       ]);
       setPageMessage({ type: 'success', text: '✅ Finalize ใบรับสำเร็จ' });
       playBeep();
-    } catch {
-      setPageMessage({ type: 'error', text: '❌ Finalize ไม่สำเร็จ' });
+    } catch (err) {
+      const msg = err?.response?.data?.message || err?.message || 'Finalize ไม่สำเร็จ';
+      setPageMessage({ type: 'error', text: `❌ ${msg}` });
     } finally {
       setSubmitting(false);
     }
@@ -373,9 +416,25 @@ const ScanBarcodeListPage = () => {
                     const isLot = b?.kind === 'LOT' || b?.simpleLotId != null;
                     const productName = b?.productName || b?.product?.name || '-';
                     const snText = isLot ? '-' : (b?.serialNumber || b?.stockItem?.serialNumber || '-');
+                    const apiStockStatus = String(b?.stockItemStatus || '').toUpperCase();
+
+                    // ✅ Status source of truth: ถ้ามี stockItem ให้ยึด stockItem.status จาก DB
+                    const dbStockStatus = String(b?.stockItem?.status || '').toUpperCase();
+
+                    // ✅ Guardrail: ถ้ามีสัญญาณว่า SOLD ให้แสดง SOLD เสมอ (กันกรณี payload stale)
+                    const soldFlag =
+                      dbStockStatus === 'SOLD' ||
+                      apiStockStatus === 'SOLD' ||
+                      b?.stockItem?.soldAt != null ||
+                      b?.stockItem?.saleItem?.id != null;
+
+                    const resolvedStockStatus = soldFlag
+                      ? 'SOLD'
+                      : (dbStockStatus || apiStockStatus || '-');
+
                     const statusText = isLot
                       ? (String(b?.status || '').toUpperCase() === 'SN_RECEIVED' ? 'LOT / SN_RECEIVED' : 'LOT')
-                      : 'IN_STOCK';
+                      : resolvedStockStatus;
                     return (
                       <tr key={b.id || `${b.barcode}-${idx}`} className="border-t">
                         <td className="px-3 py-2">{idx + 1}</td>
@@ -398,14 +457,6 @@ const ScanBarcodeListPage = () => {
 };
 
 export default ScanBarcodeListPage;
-
-
-
-
-
-
-
-
 
 
 

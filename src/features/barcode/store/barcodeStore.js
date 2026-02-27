@@ -1,6 +1,16 @@
 
 
 
+
+
+
+
+
+
+
+
+
+
 // src/features/barcode/store/barcodeStore.js
 import { create } from 'zustand';
 import apiClient from '@/utils/apiClient';
@@ -16,10 +26,15 @@ import {
   markBarcodesAsPrinted,
 } from '../api/barcodeApi';
 
+// ✅ Receipt finalization (must be called via Store; components must not call API directly)
+import { finalizeReceiptIfNeeded } from '@/features/purchaseOrderReceipt/api/purchaseOrderReceiptApi';
+
 
 // 🔧 ตัวช่วยให้ shape ของ barcodes สอดคล้องกันทุก endpoint
 const normalizeBarcodeItem = (b) => {
   const stockItemId = b?.stockItem?.id ?? b?.stockItemId ?? null;
+  // ✅ status source of truth: prefer nested stockItem.status from DB, fallback to flat stockItemStatus
+  const stockItemStatus = b?.stockItem?.status ?? b?.stockItemStatus ?? null;
   const serialNumber = b?.stockItem?.serialNumber ?? b?.serialNumber ?? null;
   const kind = b?.kind ?? (stockItemId ? 'SN' : (b?.simpleLotId ? 'LOT' : undefined));
   const qtyLabelsSuggested = Number(b?.qtyLabelsSuggested ?? (kind === 'LOT' ? 1 : 1));
@@ -36,19 +51,20 @@ const normalizeBarcodeItem = (b) => {
     productSpec,
     stockItemId,
     serialNumber,
+    stockItemStatus: stockItemStatus ? String(stockItemStatus).toUpperCase() : null,
     stockItem: b?.stockItem
       ? {
           ...b.stockItem,
           id: stockItemId,
           serialNumber,
           barcode: b.stockItem.barcode ?? undefined,
-          status: b.stockItem.status ?? undefined,
+          status: b.stockItem.status ?? stockItemStatus ?? undefined,
         }
       : {
           id: stockItemId,
           serialNumber,
           barcode: undefined,
-          status: undefined,
+          status: stockItemStatus ?? undefined,
         },
   };
 };
@@ -73,11 +89,15 @@ const useBarcodeStore = create((set, get) => ({
   loading: false,
   error: null,
 
+  // ✅ Standard UI actions (no dialog)
+  clearErrorAction: () => set({ error: null }),
+  clearError: () => set({ error: null }),
+
   // ----- Local-first draft scanning (persist per receipt) -----
   receiptId: null,
   draftScans: [], // [{ barcode, sn }]
   rowErrors: {}, // { [barcode]: { code, message } }
-  draftLoading: false,  // ✅ NEW: error ต่อแถว
+  draftLoading: false,  // ✅ NEW: loading สำหรับ draft actions/commit
 
   // ✅ โหลดบาร์โค้ดตาม receiptId
   loadBarcodesAction: async (receiptId) => {
@@ -195,41 +215,96 @@ const useBarcodeStore = create((set, get) => ({
     }
   },
 
-  receiveSNAction: async (barcode) => {
+  // ✅ Finalize receipt safely (Store-first)
+  finalizeReceiptIfNeededAction: async (receiptId) => {
+    try {
+      set({ error: null });
+      if (!receiptId) throw new Error('Missing receiptId');
+      const rid = Number.isFinite(Number(receiptId)) ? Number(receiptId) : receiptId;
+      return await finalizeReceiptIfNeeded(rid);
+    } catch (err) {
+      console.error('[finalizeReceiptIfNeededAction]', err);
+      set({ error: err?.response?.data?.message || err?.message || 'Finalize ไม่สำเร็จ' });
+      throw err;
+    }
+  },
+
+  receiveSNAction: async (payload) => {
+    // ✅ Accept multiple payload styles (Minimal Disruption)
+    // - receiveSNAction('BARCODE')
+    // - receiveSNAction({ barcode: 'BARCODE' })
+    // - receiveSNAction({ barcode: { barcode: 'BARCODE', serialNumber?: '...' } })
+    const raw = typeof payload === 'object' && payload !== null ? payload.barcode : payload;
+    const barcode = raw && typeof raw === 'object' ? raw.barcode : raw;
     if (!barcode) return;
     try {
       const res = await receiveStockItem(barcode);
-      set((state) => ({ scannedList: [...state.scannedList, res.stockItem] }));
+      const nextStockItem = res?.stockItem || res;
+
+      // ✅ update barcodes list with fresh stockItem/status from BE
+      set((state) => ({
+        barcodes: Array.isArray(state.barcodes)
+          ? state.barcodes.map((b) =>
+              b.barcode === barcode
+                ? normalizeBarcodeItem({
+                    ...b,
+                    stockItem: nextStockItem,
+                    stockItemStatus: nextStockItem?.status ?? b.stockItemStatus ?? b.stockItem?.status,
+                  })
+                : b
+            )
+          : state.barcodes,
+        // ✅ keep scannedList as "barcode rows" (not raw stockItem) to avoid UI fallback bugs
+        scannedList: (() => {
+          const prev = Array.isArray(state.scannedList) ? state.scannedList : [];
+          const row = normalizeBarcodeItem({ barcode, stockItem: nextStockItem, stockItemStatus: nextStockItem?.status });
+          // ✅ de-dup by barcode (idempotent-friendly)
+          const next = prev.filter((x) => x?.barcode !== barcode);
+          next.push(row);
+          return next;
+        })(),
+      }));
+
+      return res;
     } catch (err) {
       console.error('[receiveSNAction]', err);
-      set({ error: err.message || 'ยิงบาร์โค้ดล้มเหลว' });
+      const msg = err?.response?.data?.message || err?.response?.data?.error || err?.message || 'ยิงบาร์โค้ดล้มเหลว';
+      set({ error: msg });
+      throw err;
     }
   },
 
   updateSerialNumberAction: async (barcode, serialNumber) => {
     try {
       const res = await updateSerialNumber(barcode, serialNumber);
-      const receiptId = res?.stockItem?.purchaseOrderReceiptItem?.receiptId;
+      const nextStockItem = res?.stockItem;
+      const receiptId = nextStockItem?.purchaseOrderReceiptItem?.receiptId;
+
       set((state) => ({
         barcodes: state.barcodes.map((item) =>
           item.barcode === barcode
-            ? {
+            ? normalizeBarcodeItem({
                 ...item,
                 serialNumber,
-                stockItemId: item.stockItemId ?? res?.stockItem?.id ?? item.stockItem?.id ?? null,
+                stockItemId: item.stockItemId ?? nextStockItem?.id ?? item.stockItem?.id ?? null,
                 stockItem: {
                   ...(item.stockItem || {}),
+                  ...(nextStockItem || {}),
                   serialNumber,
-                  id: item.stockItem?.id ?? res?.stockItem?.id ?? null,
+                  id: item.stockItem?.id ?? nextStockItem?.id ?? null,
+                  status: nextStockItem?.status ?? item.stockItem?.status ?? item.stockItemStatus,
                 },
-              }
+                stockItemStatus: nextStockItem?.status ?? item.stockItemStatus ?? item.stockItem?.status,
+              })
             : item
         ),
       }));
+
       if (receiptId) await get().loadBarcodesAction(receiptId);
       return res;
     } catch (err) {
       console.error('❌ อัปเดต SN ล้มเหลว:', err);
+      set({ error: err?.message || 'อัปเดต Serial Number ล้มเหลว' });
       throw err;
     }
   },
@@ -247,23 +322,38 @@ const useBarcodeStore = create((set, get) => ({
       const receiptId = res?.stockItem?.purchaseOrderReceiptItem?.receiptId;
       if (receiptId) await get().loadBarcodesAction(receiptId);
       return res;
-    } catch (error) {
-      console.error('❌ ลบ SN ล้มเหลว:', error);
-      set({ error: error?.message || 'ลบ SN ล้มเหลว' });
-      throw error;
+    } catch (err) {
+      console.error('❌ ลบ SN ล้มเหลว:', err);
+      set({ error: err?.message || 'ลบ SN ล้มเหลว' });
+      throw err;
     }
   },
 
-  markBarcodeAsPrintedAction: async (purchaseOrderReceiptId) => {
+  markBarcodeAsPrintedAction: async (payload) => {
     try {
-      const updated = await markBarcodesAsPrinted(purchaseOrderReceiptId);
+      // ✅ Accept both styles:
+      // - markBarcodeAsPrintedAction(receiptId)
+      // - markBarcodeAsPrintedAction({ purchaseOrderReceiptId: receiptId })
+      const rid =
+        typeof payload === 'object' && payload !== null
+          ? payload.purchaseOrderReceiptId ?? payload.receiptId
+          : payload;
+
+      if (!rid) throw new Error('ไม่พบ purchaseOrderReceiptId');
+
+      const updated = await markBarcodesAsPrinted(rid);
+
+      // ✅ Update local state to reflect printed immediately (no dialog)
       set((state) => ({
-        barcodes: state.barcodes.map((item) => ({ ...item, printed: true })),
+        barcodes: Array.isArray(state.barcodes)
+          ? state.barcodes.map((item) => ({ ...item, printed: true }))
+          : state.barcodes,
       }));
+
       return updated;
     } catch (err) {
       console.error('❌ อัปเดต printed ล้มเหลว:', err);
-      set({ error: 'อัปเดตสถานะ printed ล้มเหลว' });
+      set({ error: err?.message || 'อัปเดตสถานะ printed ล้มเหลว' });
       throw err;
     }
   },
@@ -307,4 +397,11 @@ const useBarcodeStore = create((set, get) => ({
 }));
 
 export default useBarcodeStore;
+
+
+
+
+
+
+
 

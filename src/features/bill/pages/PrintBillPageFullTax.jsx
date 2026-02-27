@@ -3,27 +3,23 @@
 // ===============================
 // features/bill/pages/PrintBillPageFullTax.jsx
 // ===============================
-import { useEffect } from 'react';
-import { useLocation, useParams } from 'react-router-dom';
+import { useEffect, useRef } from 'react';
+import { useParams } from 'react-router-dom';
 import BillLayoutFullTax from '@/features/bill/components/BillLayoutFullTax'
 import { useBillStore } from '@/features/bill/store/billStore'
 
 const PrintBillPageFullTax = () => {
   const { id } = useParams();
-  const location = useLocation();
+  const printedRef = useRef(false);
   const { sale, payment, saleItems, config, loading, error, loadSaleByIdAction, resetAction } = useBillStore();
 
   useEffect(() => {
     let mounted = true;
 
-    // If the route provided a payment object with sale, prefer it (e.g., after checkout)
-    const statePayment = location.state?.payment;
     const run = async () => {
       try {
-        if (statePayment?.sale) {
-          // preload from state then still normalize via store (ensures consistent rounding)
-          await loadSaleByIdAction(statePayment.sale.id);
-        } else if (id) {
+        // ✅ Single source of truth: ใช้ saleId จาก URL เท่านั้น (รองรับ refresh/reprint)
+        if (id) {
           await loadSaleByIdAction(id);
         }
       } catch {
@@ -36,7 +32,26 @@ const PrintBillPageFullTax = () => {
       mounted = false;
       resetAction();
     };
-  }, [id, location.state, loadSaleByIdAction, resetAction]);
+  }, [id, loadSaleByIdAction, resetAction]);
+
+  // ✅ Auto-print: เปิดแท็บใหม่แล้วพิมพ์ทันที แต่กันยิงซ้ำ
+  useEffect(() => {
+    if (printedRef.current) return;
+    if (!sale?.id) return;
+
+    printedRef.current = true;
+
+    const t = setTimeout(() => {
+      try {
+        window.focus?.();
+        window.print?.();
+      } catch {
+        // ignore
+      }
+    }, 300);
+
+    return () => clearTimeout(t);
+  }, [sale?.id]);
 
   if (loading) {
     return <div className="text-center p-6 text-gray-700">⏳ กำลังโหลดข้อมูลใบเสร็จ...</div>;
@@ -48,9 +63,27 @@ const PrintBillPageFullTax = () => {
     return <div className="text-center p-6 text-gray-700">ไม่พบข้อมูลใบเสร็จ</div>;
   }
 
-  return <BillLayoutFullTax sale={sale} saleItems={saleItems} payments={[payment]} config={config} />;
+  return (
+    <>
+      {/* ✅ เอกสารพิมพ์ต้องใช้ TH Sarabun New (มาตรฐานถาวร) */}
+      <style>{`
+        @media print {
+          @page { size: auto; margin: 10mm; }
+          html, body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        }
+        .bill-print-root { font-family: "TH Sarabun New", "Sarabun", system-ui, sans-serif; }
+      `}</style>
+
+      <div className="bill-print-root">
+        <BillLayoutFullTax sale={sale} saleItems={saleItems} payments={[payment]} config={config} />
+      </div>
+    </>
+  );
 };
 
 export default PrintBillPageFullTax;
+
+
+
 
 

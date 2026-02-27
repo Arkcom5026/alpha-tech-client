@@ -1,5 +1,8 @@
 
-import React, { useEffect, useState } from 'react';
+
+// PurchaseOrderListPage.jsx
+
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
 
@@ -11,18 +14,25 @@ const PurchaseOrderListPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const navigate = useNavigate();
 
-  const {
-    purchaseOrders,
-    fetchAllPurchaseOrders,
-    loading,
-  } = usePurchaseOrderStore();
+  const isFirstRunRef = useRef(true);
 
-  useEffect(() => {
-    fetchAllPurchaseOrders({ search: '' });
-  }, [fetchAllPurchaseOrders]);
+  const { purchaseOrders, fetchAllPurchaseOrders, loading } = usePurchaseOrderStore();
 
+  // ✅ Single source of fetching logic (avoid double-fetch on mount)
+  // - first run: fetch immediately
+  // - subsequent changes: debounce to reduce request spam
   useEffect(() => {
-    fetchAllPurchaseOrders({ search: searchTerm });
+    if (isFirstRunRef.current) {
+      isFirstRunRef.current = false;
+      fetchAllPurchaseOrders({ search: searchTerm });
+      return undefined;
+    }
+
+    const t = window.setTimeout(() => {
+      fetchAllPurchaseOrders({ search: searchTerm });
+    }, 300);
+
+    return () => window.clearTimeout(t);
   }, [searchTerm, fetchAllPurchaseOrders]);
 
   return (
@@ -37,20 +47,19 @@ const PurchaseOrderListPage = () => {
           />
         </div>
 
-        <StandardActionButtons
-          showCreate
-          onAdd={() => navigate('/pos/purchases/orders/create')}
-        />
+        <StandardActionButtons showCreate onAdd={() => navigate('/pos/purchases/orders/create')} />
       </div>
 
       <div>
-        <PurchaseOrderListTable purchaseOrders={Array.isArray(purchaseOrders) ? purchaseOrders : []} loading={loading} />
+        <PurchaseOrderListTable
+          purchaseOrders={Array.isArray(purchaseOrders) ? purchaseOrders : []}
+          loading={loading}
+        />
       </div>
     </div>
   );
 };
 
 export default PurchaseOrderListPage;
-
 
 

@@ -7,7 +7,7 @@
 // ✅ Minimal patch: fix store wiring + robust number parsing
 // ============================================================
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 
 import useSalesStore from '@/features/sales/store/salesStore';
 import useCustomerDepositStore from '@/features/customerDeposit/store/customerDepositStore';
@@ -54,6 +54,8 @@ const PaymentSection = ({
 
   const [paymentError, setPaymentError] = useState('');
   const [depositTouched, setDepositTouched] = useState(false);
+  // 🔒 กันกด Confirm ซ้ำ/Enter ซ้ำ ระหว่าง async (double-submit guard)
+  const confirmLockRef = useRef(false);
 
   const effectiveCustomer = selectedCustomer || { id: null, name: 'ลูกค้าทั่วไป' };
   const hasValidCustomerId = !!effectiveCustomer?.id;
@@ -170,6 +172,9 @@ const PaymentSection = ({
     (currentSaleMode === 'CREDIT' && validSaleItems.length > 0);
 
   const handleConfirm = useCallback(async () => {
+    // 🔒 ป้องกันการยิงซ้ำจาก double click / enter key
+    if (confirmLockRef.current) return;
+    confirmLockRef.current = true;
     setPaymentError('');
 
     if (validSaleItems.length === 0) {
@@ -378,6 +383,8 @@ const PaymentSection = ({
 };
 
 export default PaymentSection;
+
+
 
 
 

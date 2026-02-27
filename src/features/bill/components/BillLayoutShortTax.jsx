@@ -1,4 +1,5 @@
 
+// src/features/bill/components/BillLayoutShortTax.jsx
 
 import React from 'react';
 
@@ -25,6 +26,16 @@ const BillLayoutShortTax = ({ sale, saleItems, payments, config, hideContactName
 
   const beforeVat = round2(total / (1 + vatRate / 100))
   const vatAmount = round2(total - beforeVat)
+
+  // ✅ กันเคสวันที่เป็น undefined และลด re-render JSX
+  const dateText = sale?.createdAt
+    ? new Date(sale.createdAt).toLocaleDateString('th-TH', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        timeZone: 'Asia/Bangkok',
+      })
+    : '-'
 
   const handlePrint = () => window.print()
 
@@ -68,15 +79,7 @@ const BillLayoutShortTax = ({ sale, saleItems, payments, config, hideContactName
         <p className="font-bold">ใบกำกับภาษีอย่างย่อ / ใบเสร็จรับเงิน</p>
         <p>เลขที่: {sale.code}</p>
         {!config.hideDate && (
-          <p>
-            วันที่:{' '}
-            {new Date(sale.createdAt).toLocaleDateString('th-TH', {
-              year: 'numeric',
-              month: 'short',
-              day: 'numeric',
-              timeZone: 'Asia/Bangkok',
-            })}
-          </p>
+          <p>วันที่: {dateText}</p>
         )}
         <p>พนักงานขาย: {sale.employee?.name || '-'}</p>
         <p>หน่วยงาน: {sale.customer?.companyName || '-'}</p>
@@ -121,6 +124,8 @@ const BillLayoutShortTax = ({ sale, saleItems, payments, config, hideContactName
   )
 }
 
-export default BillLayoutShortTax
+// ✅ memo ป้องกัน re-render ตอนเปิด print window
+export default React.memo(BillLayoutShortTax)
+
 
 

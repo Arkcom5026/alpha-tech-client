@@ -1,3 +1,4 @@
+
 // 📁 FILE: src/features/sales/layout/QuickSaleLayout.jsx
 
 import React, { useEffect, useRef, useState, useMemo } from 'react'
@@ -171,18 +172,30 @@ const QuickSaleLayout = () => {
     }
   }
 
+  // 🔒 กันการเปิดหน้าพิมพ์ซ้ำ (POS มักเจอ double-trigger จาก enter/double click)
+  const lastPrintKeyRef = useRef('')
+
   const handleSaleConfirmed = (saleId, option) => {
     // ✅ basePath guard: รองรับ route ที่ถูก mount ใต้ /app
-    const basePath = window.location.pathname.startsWith('/app') ? '/app' : '';
+    const basePath = window.location.pathname.startsWith('/app') ? '/app' : ''
+
+    const finalOption = option || saleOption
+
     // ✅ เปิดหน้า print ตามตัวเลือกที่ผู้ใช้เลือก (ใช้ route เดียวกับ “พิมพ์บิลย้อนหลัง”)
-    if (saleId && option && option !== 'NONE') {
+    if (saleId && finalOption && finalOption !== 'NONE') {
+      const printKey = `${String(saleId)}::${String(finalOption)}`
+      if (lastPrintKeyRef.current === printKey) {
+        // ป้องกันการเปิดซ้ำ
+        return
+      }
+
       let printUrl = ''
 
-      if (option === 'RECEIPT') {
+      if (finalOption === 'RECEIPT') {
         printUrl = `${basePath}/pos/sales/bill/print-short/${saleId}`
-      } else if (option === 'TAX_INVOICE') {
+      } else if (finalOption === 'TAX_INVOICE') {
         printUrl = `${basePath}/pos/sales/bill/print-full/${saleId}`
-      } else if (option === 'DELIVERY_NOTE') {
+      } else if (finalOption === 'DELIVERY_NOTE') {
         // TODO: ใส่ route จริงของใบส่งของเมื่อพร้อม
         // ตอนนี้กัน UX ว่าง ๆ ไว้ก่อน
         setBarcodeError('ℹ️ ใบส่งของยังไม่พร้อมใช้งานในเวอร์ชันนี้')
@@ -190,6 +203,7 @@ const QuickSaleLayout = () => {
       }
 
       if (printUrl) {
+        lastPrintKeyRef.current = printKey
         window.open(printUrl, '_blank', 'noopener,noreferrer')
       }
     }
@@ -306,6 +320,8 @@ const QuickSaleLayout = () => {
 }
 
 export default QuickSaleLayout
+
+
 
 
 

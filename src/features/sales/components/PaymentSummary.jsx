@@ -1,4 +1,5 @@
 
+
 // ------------------------------------------------------------
 // 📁 FILE: src/features/sales/components/PaymentSummary.jsx
 
@@ -134,7 +135,12 @@ const PaymentSummary = ({
 
       <div className="text-center mt-auto">
         <button
-          onClick={onConfirm}
+          type="button"
+          onClick={() => {
+            // 🔒 Defensive: กัน click/enter ซ้ำตอน disabled (แม้ปกติ button จะกันอยู่แล้ว)
+            if (!isConfirmEnabled || isSubmitting) return;
+            onConfirm?.();
+          }}
           disabled={!isConfirmEnabled || isSubmitting}
           className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-xl font-semibold transition-colors duration-200 shadow-md w-full"
         >
@@ -170,4 +176,6 @@ PaymentSummary.defaultProps = {
 };
 
 export default PaymentSummary;
+
+
 

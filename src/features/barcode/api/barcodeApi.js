@@ -1,3 +1,8 @@
+
+
+
+
+
 // src/features/barcode/api/barcodeApi.js
 // ES Module API client for barcode & receipt operations
 // All requests go through utils/apiClient (axios instance)
@@ -229,4 +234,5 @@ export const commitScans = async (receiptId, items) => {
     return { ok: false, committed: [], errors: [], message: 'Network error' };
   }
 };
+
 

@@ -1,24 +1,25 @@
-import { useEffect } from 'react'
-import { useLocation, useParams } from 'react-router-dom'
+
+
+
+// src/features/bill/pages/PrintBillPageShortTax.jsx
+
+
+import { useEffect, useRef } from 'react'
+import { useParams } from 'react-router-dom'
 import BillLayoutShortTax from '../components/BillLayoutShortTax'
 import { useBillStore } from '@/features/bill/store/billStore'
 
 const PrintBillPageShortTax = () => {
   const { id } = useParams()
-  const location = useLocation()
+  const printedRef = useRef(false)
 
   const { sale, payment, saleItems, config, loading, error, loadSaleByIdAction, resetAction } =
     useBillStore()
 
   useEffect(() => {
-    const statePayment = location.state?.payment
-
     const run = async () => {
       try {
-        if (statePayment?.sale?.id) {
-          await loadSaleByIdAction(statePayment.sale.id)
-          return
-        }
+        // ✅ Single source of truth: ใช้ saleId จาก URL เท่านั้น (รองรับ refresh/reprint)
         if (id) {
           await loadSaleByIdAction(id)
         }
@@ -32,7 +33,26 @@ const PrintBillPageShortTax = () => {
       resetAction()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id, location.key, loadSaleByIdAction, resetAction])
+  }, [id, loadSaleByIdAction, resetAction])
+
+  // ✅ Auto-print (optional): เปิดแท็บใหม่แล้วพิมพ์ทันที แต่กันยิงซ้ำ
+  useEffect(() => {
+    if (printedRef.current) return
+    if (!sale?.id) return
+
+    printedRef.current = true
+
+    const t = setTimeout(() => {
+      try {
+        window.focus?.()
+        window.print?.()
+      } catch {
+        // ignore
+      }
+    }, 300)
+
+    return () => clearTimeout(t)
+  }, [sale?.id])
 
   if (loading) {
     return <div className="text-center p-6 text-gray-700">⏳ กำลังโหลดข้อมูลใบเสร็จ...</div>
@@ -48,17 +68,34 @@ const PrintBillPageShortTax = () => {
   const hideContactName = customerType === 'ORGANIZATION' || customerType === 'GOVERNMENT'
 
   return (
-    <BillLayoutShortTax
-      sale={sale}
-      saleItems={saleItems}
-      payments={payment ? [payment] : []}
-      config={{ ...config, hideDate: true }}
-      hideContactName={hideContactName}
-    />
+    <>
+      {/* ✅ เอกสารพิมพ์ต้องใช้ TH Sarabun New (มาตรฐานถาวร) */}
+      <style>{`
+        @media print {
+          @page { size: auto; margin: 10mm; }
+          html, body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        }
+        .bill-print-root { font-family: "TH Sarabun New", "Sarabun", system-ui, sans-serif; }
+      `}</style>
+
+      <div className="bill-print-root">
+        <BillLayoutShortTax
+          sale={sale}
+          saleItems={saleItems}
+          payments={payment ? [payment] : []}
+          config={{ ...config, hideDate: true }}
+          hideContactName={hideContactName}
+        />
+      </div>
+    </>
   )
 }
 
 export default PrintBillPageShortTax
+
+
+
+
 
 
 

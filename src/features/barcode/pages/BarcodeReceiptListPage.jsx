@@ -1,7 +1,17 @@
-// src/features/stockItem/pages/BarcodeReceiptListPage.jsx
+
+
+
+
+
+// src/features/barcode/pages/BarcodeReceiptListPage.jsx
+
+
 import React, { useEffect } from 'react';
 import usePurchaseOrderReceiptStore from '@/features/purchaseOrderReceipt/store/purchaseOrderReceiptStore';
 import BarcodePrintTable from '../controllers/BarcodePrintTable';
+// ✅ fix import path (vite requires correct extension or existing file name)
+// ✅ correct path (file is under stockItem/components)
+
 
 
 
@@ -12,14 +22,20 @@ const BarcodeReceiptListPage = () => {
     loadReceiptSummariesAction,
     loading,
     error,
+    clearErrorAction,
   } = usePurchaseOrderReceiptStore();
 
   useEffect(() => {
+    // ✅ clear old error before reload (UI-based error, no dialog)
+    clearErrorAction?.();
     loadReceiptSummariesAction({ printed: false });
-  }, [loadReceiptSummariesAction]);
+  }, [loadReceiptSummariesAction, clearErrorAction]);
 
   const hasData = Array.isArray(receiptSummaries) && receiptSummaries.length > 0;
-  const showError = !loading && error && !hasData;
+
+  // ✅ guard error display (variable was missing)
+  const showError = !loading && !!error;
+  
 
   return (
     <div className="p-4">
@@ -48,3 +64,14 @@ const BarcodeReceiptListPage = () => {
 };
 
 export default BarcodeReceiptListPage;
+
+
+
+
+
+
+
+
+
+
+

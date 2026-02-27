@@ -3,6 +3,12 @@
 
 
 
+
+
+
+
+
+
 // ✅ purchaseOrderReceiptStore.js — จัดการสถานะ Receipt + Items (รองรับ SIMPLE + STRUCTURED + QUICK)
 
 import { create } from 'zustand';
@@ -307,21 +313,36 @@ const usePurchaseOrderReceiptStore = create((set, get) => ({
     }
   },
 
-  markReceiptAsPrintedAction: async (receiptId) => {
+  markReceiptAsPrintedAction: async (payload) => {
     try {
       set({ error: null });
+
+      // ✅ Accept both styles:
+      // - markReceiptAsPrintedAction(receiptId)
+      // - markReceiptAsPrintedAction({ receiptId })
+      const receiptId = typeof payload === 'object' && payload !== null ? payload.receiptId : payload;
+
+      if (!receiptId) throw new Error('Missing receiptId');
+
       const res = await markReceiptAsPrinted(receiptId);
+
       set((state) => ({
         receipts: state.receipts.map((r) => (r.id === receiptId ? res : r)),
         currentReceipt: res,
+
+        // ✅ reflect immediately in both summaries
         receiptBarcodeSummaries: state.receiptBarcodeSummaries.map((s) =>
           s.id === receiptId ? { ...s, printed: true } : s
         ),
-        receiptSummaries: (state.receiptSummaries || []).map((s) =>
-          s.id === receiptId ? { ...s, printed: true } : s
-        ),
+
+        // ✅ In pending list mode (printed:false), remove item so it disappears immediately
+        receiptSummaries: Array.isArray(state.receiptSummaries)
+          ? state.receiptSummaries.filter((s) => s.id !== receiptId)
+          : state.receiptSummaries,
+
         error: null,
       }));
+
       return res;
     } catch (err) {
       console.error('❌ markReceiptAsPrintedAction error:', err);
@@ -444,10 +465,16 @@ const usePurchaseOrderReceiptStore = create((set, get) => ({
   loadOrderById: async (poId) => get().loadOrderByIdAction(poId),
 
   clearCurrentReceipt: () => set({ currentReceipt: null }),
+
+  // ✅ Standard naming (Action) + legacy support
+  clearErrorAction: () => set({ error: null }),
   clearError: () => set({ error: null }),
 }));
 
 export default usePurchaseOrderReceiptStore;
+
+
+
 
 
 

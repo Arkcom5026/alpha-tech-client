@@ -4,13 +4,10 @@
 
 
 
-
-
-
 // ===============================
 // features/bill/components/BillLayoutFullTax.jsx
 // ===============================
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 const formatCurrency = (val) => (Number(val) || 0).toLocaleString('th-TH', {
   minimumFractionDigits: 2,
@@ -20,6 +17,14 @@ const formatCurrency = (val) => (Number(val) || 0).toLocaleString('th-TH', {
 const BillLayoutFullTax = ({ sale, saleItems, payments, config }) => {
   // Hooks must be called unconditionally at the top of the component
   const [hideDate, setHideDate] = useState(Boolean(config?.hideDate));
+  const hideDateTouchedRef = useRef(false);
+
+  // ✅ sync initial hideDate from config when data arrives (but don't override user's toggle)
+  useEffect(() => {
+    if (hideDateTouchedRef.current) return;
+    setHideDate(Boolean(config?.hideDate));
+  }, [config?.hideDate]);
+
   if (!sale || !saleItems || !payments || !config) return null;
 
   const vatRate = typeof config.vatRate === 'number' ? config.vatRate : 7;
@@ -30,7 +35,14 @@ const BillLayoutFullTax = ({ sale, saleItems, payments, config }) => {
 
   const maxRowCount = 20;
   const emptyRowCount = Math.max(maxRowCount - saleItems.length, 0);
-  const handlePrint = () => window.print();
+  const handlePrint = () => {
+    try {
+      window.focus?.();
+      window.print?.();
+    } catch {
+      // ignore
+    }
+  };
 
   const getDisplayCustomerName = (customer) => {
     if (!customer) return '-';
@@ -38,15 +50,53 @@ const BillLayoutFullTax = ({ sale, saleItems, payments, config }) => {
     return customer.name || '-';
   };
 
-  const renderDate = (iso) => hideDate ? (
-    <span className="inline-block border-b border-black w-[120px] h-[18px] align-bottom" />
-  ) : (config?.formatThaiDate ? config.formatThaiDate(iso) : iso);
+  // ✅ address single source of truth: prefer pre-composed address string from BE
+  const getCustomerAddressText = (customer) => {
+    if (!customer) return '-';
+    return customer.customerAddress || customer.address || '-';
+  };
+
+  const getCustomerPhoneText = (customer) => {
+    if (!customer) return '-';
+    return customer.phone || customer.phoneNumber || '-';
+  };
+
+  const getCustomerTaxIdText = (customer) => {
+    if (!customer) return '-';
+    return customer.taxId || customer.taxNo || '-';
+  };
+
+  const renderDate = (iso) => {
+    if (hideDate) {
+      return <span className="inline-block border-b border-black w-[120px] h-[18px] align-bottom" />;
+    }
+    if (!iso) return '-';
+    if (config?.formatThaiDate) return config.formatThaiDate(iso);
+    try {
+      return new Date(iso).toLocaleDateString('th-TH', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        timeZone: 'Asia/Bangkok',
+      });
+    } catch {
+      return String(iso);
+    }
+  };
 
   return (
     <>
       <div className="w-full max-w-[794px] mx-auto mb-4 text-right print:hidden">
         <label className="inline-flex items-center gap-2 px-5 text-sm">
-          <input type="checkbox" checked={hideDate} onChange={(e) => setHideDate(e.target.checked)} className="w-5 h-5" />
+          <input
+            type="checkbox"
+            checked={hideDate}
+            onChange={(e) => {
+              hideDateTouchedRef.current = true;
+              setHideDate(e.target.checked);
+            }}
+            className="w-5 h-5"
+          />
           <span className="text-base ml-2">ไม่แสดงวันที่ในเอกสาร</span>
         </label>
         <button onClick={handlePrint} className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 ml-4">
@@ -86,14 +136,14 @@ const BillLayoutFullTax = ({ sale, saleItems, payments, config }) => {
         <div className="grid grid-cols-[4fr_1.5fr] gap-4 mb-4">
           <div className="border border-black p-2 rounded-lg">
             <p className="text-base">ลูกค้า: {getDisplayCustomerName(sale.customer)}</p>
-            <p>ที่อยู่: {sale.customer?.address || '-'}</p>
-            <p>โทร: {sale.customer?.phone || '-'}</p>
-            <p>เลขประจำตัวผู้เสียภาษี: {sale.customer?.taxId || '-'}</p>
+            <p>ที่อยู่: {getCustomerAddressText(sale.customer)}</p>
+            <p>โทร: {getCustomerPhoneText(sale.customer)}</p>
+            <p>เลขประจำตัวผู้เสียภาษี: {getCustomerTaxIdText(sale.customer)}</p>
           </div>
 
           <div className="border border-black p-2 rounded-lg space-y-1">
-            <p>วันที่: {renderDate(sale.soldAt)}</p>
-            <p>เลขที่: {sale.code}</p>
+            <p>วันที่: {renderDate(sale.soldAt || sale.createdAt)}</p>
+            <p>เลขที่: {sale.code || sale.saleNo || sale.id}</p>
             <p>เงื่อนไขการชำระเงิน: {sale.paymentTerms || '-'}</p>
             <p>วันที่ครบกำหนด: {sale.dueDate ? renderDate(sale.dueDate) : '-'}</p>
           </div>
@@ -195,7 +245,9 @@ const BillLayoutFullTax = ({ sale, saleItems, payments, config }) => {
   );
 };
 
-export default BillLayoutFullTax;
+export default React.memo(BillLayoutFullTax);
+
+
 
 
 

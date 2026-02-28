@@ -2,7 +2,7 @@
 
 
 
-
+  
 
 // src/features/barcode/pages/PrintBarcodeBatchPage.jsx
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -298,6 +298,14 @@ const PrintBarcodeBatchPage = () => {
     barcodeStore?.fetchBarcodeReceiptItemsAction ||
     barcodeStore?.getBarcodeReceiptItemsAction;
 
+  // ✅ Fast path (ยิงครั้งเดียวสำหรับหลายใบ)
+  // Expected endpoint: GET /api/barcodes/print-batch?ids=458,451
+  const fetchPrintBatchAction =
+    barcodeStore?.fetchPrintBatchAction ||
+    barcodeStore?.fetchBarcodesForPrintBatchAction ||
+    barcodeStore?.getBarcodesForPrintBatchAction ||
+    barcodeStore?.loadPrintBatchAction;
+
   const markBarcodeAsPrintedAction =
     barcodeStore?.markBarcodeAsPrintedAction ||
     barcodeStore?.confirmBarcodesPrintedAction ||
@@ -316,6 +324,8 @@ const PrintBarcodeBatchPage = () => {
 
   const qs = useMemo(() => new URLSearchParams(location.search), [location.search]);
   const ids = useMemo(() => parseIds(qs.get("ids")), [qs]);
+  // ✅ Stable key for effects (avoid TDZ / strict-mode quirks)
+  const idsKey = useMemo(() => `ids:${ids.join(",")}`, [ids]);
 
   // ✅ UI state
   const [uiError, setUiError] = useState("");
@@ -394,6 +404,12 @@ const PrintBarcodeBatchPage = () => {
     return n;
   }, [ids, safeRowsByReceipt]);
 
+  // ✅ Performance mode: label เยอะมาก → ลดงาน DOM/measure เพื่อให้ “เร็วขึ้นอีกระดับ”
+  const PERF_THRESHOLD = 400; // ปรับได้ตามเครื่องจริง
+  const isHeavyBatch = totalLabels >= PERF_THRESHOLD;
+  const INITIAL_RENDER = 250;
+  const RENDER_STEP = 250;
+
   // ✅ Flat list (pack all receipts into same page grid)
   const flatItems = useMemo(() => {
     const out = [];
@@ -403,6 +419,56 @@ const PrintBarcodeBatchPage = () => {
     }
     return out;
   }, [ids, safeRowsByReceipt]);
+
+  // ✅ Progressive render (perceived speed เร็วขึ้นมากเวลา label เยอะ)
+  const [renderLimit, setRenderLimit] = useState(0);
+  const renderLimitRef = useRef(0);
+  useEffect(() => {
+    renderLimitRef.current = renderLimit;
+  }, [renderLimit]);
+
+  useEffect(() => {
+    if (!loaded) {
+      setRenderLimit(0);
+      return;
+    }
+
+    const total = flatItems.length;
+    if (total === 0) {
+      setRenderLimit(0);
+      return;
+    }
+
+    // ชุดแรกให้ไว
+    setRenderLimit(Math.min(total, INITIAL_RENDER));
+
+    let cancelled = false;
+    const schedule = (fn) => {
+      if (typeof window.requestIdleCallback === "function") window.requestIdleCallback(fn, { timeout: 250 });
+      else setTimeout(fn, 0);
+    };
+
+    const pump = () => {
+      if (cancelled) return;
+      const cur = renderLimitRef.current || 0;
+      if (cur >= total) return;
+      const next = Math.min(total, cur + RENDER_STEP);
+      setRenderLimit(next);
+      schedule(pump);
+    };
+
+    schedule(pump);
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loaded, idsKey, flatItems.length]);
+
+  const visibleItems = useMemo(() => {
+    const limit = renderLimit > 0 ? renderLimit : flatItems.length;
+    return flatItems.slice(0, limit);
+  }, [flatItems, renderLimit]);
 
   // ✅ One-line summary (ตามที่ขอ)
   const receiptsInlineLabel = useMemo(() => {
@@ -502,6 +568,8 @@ const PrintBarcodeBatchPage = () => {
   );
 
   const measureBarcodeWidths = useCallback(() => {
+    // ✅ Perf: batch ใหญ่ → ข้ามการวัด width ทีละตัว (หนักมาก)
+    if (isHeavyBatch) return;
     const next = {};
     barcodeElsRef.current.forEach((el, key) => {
       if (!el) return;
@@ -510,7 +578,7 @@ const PrintBarcodeBatchPage = () => {
       if (w > 0) next[key] = Math.max(48, w);
     });
     setBarcodeWidthMap(next);
-  }, []);
+  }, [isHeavyBatch]);
 
   const gridStyle = useMemo(() => {
     const colCount = Math.max(1, Number(columns) || 1);
@@ -536,8 +604,8 @@ const PrintBarcodeBatchPage = () => {
         return;
       }
 
-      if (typeof fetchBarcodesByReceiptIdAction !== "function") {
-        setUiError("ไม่พบ action สำหรับโหลดบาร์โค้ดใน barcodeStore (fetch/load/get ... by receiptId)");
+      if (typeof fetchPrintBatchAction !== "function" && typeof fetchBarcodesByReceiptIdAction !== "function") {
+        setUiError("ไม่พบ action สำหรับโหลดบาร์โค้ดใน barcodeStore (print-batch หรือ fetch/load/get ... by receiptId)");
         return;
       }
 
@@ -553,38 +621,64 @@ const PrintBarcodeBatchPage = () => {
 
       setLoading(true);
       try {
-        // ✅ โหลดแบบ parallel ต่อ receipt เพื่อให้ multi-select เร็วขึ้น
-        const tasks = ids.map(async (receiptId) => {
-          // ✅ generate-missing เฉพาะครั้งแรกต่อ receipt ใน session (ลดเวลารวม)
-          if (typeof generateBarcodesAction === "function") {
-            const shouldGenerate =
-              force || !(generatedOnceRef.current.has(receiptId));
-            if (shouldGenerate) {
-              try {
-                await generateBarcodesAction(receiptId);
-                generatedOnceRef.current.add(receiptId);
-              } catch {
-                // ignore
+        // ✅ FAST PATH: โหลดแบบ batch ครั้งเดียว (ชัดเจนว่าเร็วขึ้น)
+        // ถ้ามี action ใหม่ → ใช้ก่อน
+        let all = [];
+
+        if (typeof fetchPrintBatchAction === "function") {
+          const res = await fetchPrintBatchAction(ids, { force });
+          const arr = Array.isArray(res) ? res : Array.isArray(res?.data) ? res.data : Array.isArray(res?.barcodes) ? res.barcodes : [];
+
+          // normalize shape ให้เหมือนเดิม
+          const dupMap = new Map();
+          all = arr.map((it) => {
+            const receiptId = Number(it.purchaseOrderReceiptId ?? it.receiptId ?? it.purchaseOrderReceipt?.id ?? 0);
+            const key = `${receiptId}`;
+            const next = (dupMap.get(key) || 0) + 1;
+            dupMap.set(key, next);
+
+            return {
+              receiptId,
+              id: it.id ?? `${receiptId}-${it.barcode ?? it.code ?? Math.random()}`,
+              barcode: (it.barcode ?? it.code ?? "").toString(),
+              productName: it.productName ?? it.product?.name ?? it.name ?? "",
+              printed: !!it.printed,
+              _dupIdx: next - 1,
+            };
+          });
+        } else {
+          // ✅ Fallback: โหลดแบบ parallel ต่อ receipt (ของเดิม)
+          const tasks = ids.map(async (receiptId) => {
+            // ✅ generate-missing เฉพาะครั้งแรกต่อ receipt ใน session (ลดเวลารวม)
+            if (typeof generateBarcodesAction === "function") {
+              const shouldGenerate = force || !generatedOnceRef.current.has(receiptId);
+              if (shouldGenerate) {
+                try {
+                  await generateBarcodesAction(receiptId);
+                  generatedOnceRef.current.add(receiptId);
+                } catch {
+                  // ignore
+                }
               }
             }
-          }
 
-          const list = await fetchBarcodesByReceiptIdAction(receiptId);
-          const arr = Array.isArray(list) ? list : Array.isArray(list?.data) ? list.data : [];
+            const list = await fetchBarcodesByReceiptIdAction(receiptId);
+            const arr = Array.isArray(list) ? list : Array.isArray(list?.data) ? list.data : [];
 
-          let dupIdx = 0;
-          return arr.map((it) => ({
-            receiptId,
-            id: it.id ?? `${receiptId}-${it.barcode ?? Math.random()}`,
-            barcode: (it.barcode ?? it.code ?? "").toString(),
-            productName: it.productName ?? it.product?.name ?? "",
-            printed: !!it.printed,
-            _dupIdx: dupIdx++,
-          }));
-        });
+            let dupIdx = 0;
+            return arr.map((it) => ({
+              receiptId,
+              id: it.id ?? `${receiptId}-${it.barcode ?? Math.random()}`,
+              barcode: (it.barcode ?? it.code ?? "").toString(),
+              productName: it.productName ?? it.product?.name ?? "",
+              printed: !!it.printed,
+              _dupIdx: dupIdx++,
+            }));
+          });
 
-        const chunks = await Promise.all(tasks);
-        const all = chunks.flat();
+          const chunks = await Promise.all(tasks);
+          all = chunks.flat();
+        }
 
         setRows(all);
         setLoaded(true);
@@ -607,20 +701,22 @@ const PrintBarcodeBatchPage = () => {
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [ids, fetchBarcodesByReceiptIdAction, generateBarcodesAction, measureBarcodeWidths, loaded]
+    [ids, fetchPrintBatchAction, fetchBarcodesByReceiptIdAction, generateBarcodesAction, measureBarcodeWidths, loaded]
   );
 
   // ✅ Auto-load when ids change (StrictMode-safe via inFlightLoadRef)
-  const idsKey = useMemo(() => `ids:${ids.join(",")}`, [ids]);
   useEffect(() => {
     if (!ids.length) return;
 
     // ✅ รอจน store action พร้อมก่อน (กันค้างแบบไม่มี api call)
-    if (typeof fetchBarcodesByReceiptIdAction !== "function") return;
+    const hasAnyLoader =
+      typeof fetchPrintBatchAction === "function" || typeof fetchBarcodesByReceiptIdAction === "function";
+    if (!hasAnyLoader) return;
 
-    loadAll();
+    // ✅ ids เปลี่ยน → force reload รอบเดียว
+    loadAll({ force: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [idsKey, fetchBarcodesByReceiptIdAction]);
+  }, [idsKey, fetchPrintBatchAction, fetchBarcodesByReceiptIdAction]);
 
   // ✅ Detect print mode (beforeprint/afterprint + matchMedia fallback)
   useEffect(() => {
@@ -746,6 +842,22 @@ const PrintBarcodeBatchPage = () => {
 
     setHasTriggeredPrint(true);
 
+    // ✅ ถ้าเป็น progressive render → เร่ง render ให้ครบก่อน print (กันพิมพ์ออกไม่ครบ)
+    if (renderLimit > 0 && renderLimit < flatItems.length) {
+      setRenderLimit(flatItems.length);
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          try {
+            window.print();
+          } catch (err) {
+            console.error("❌ window.print failed:", err);
+            setUiError("ไม่สามารถเปิดหน้าพิมพ์ได้ กรุณาลองใหม่อีกครั้ง");
+          }
+        });
+      });
+      return;
+    }
+
     try {
       window.print();
     } catch (err) {
@@ -861,7 +973,7 @@ const PrintBarcodeBatchPage = () => {
         .barcode-bars-only {
           overflow: hidden;
           /* Hide human-readable digits embedded in some Code39 fonts */
-          height: calc(var(--barcode-font-size, 30px) * 0.78);
+          height: calc(var(--barcode-font-size, 30px) * 1.05);
           display: flex;
           align-items: flex-start;
           justify-content: center;
@@ -883,7 +995,7 @@ const PrintBarcodeBatchPage = () => {
           margin-top: 8px;
         }
 
-        /* ✅ Print packing baseline (A4) — lock label size in mm for consistent auto-fill */ (A4) — lock label size in mm for consistent auto-fill */
+        /* ✅ Print packing baseline (A4) — lock label size in mm for consistent auto-fill */
           :root {
             --label-w: 38mm;
             --label-h: 22mm;
@@ -1106,7 +1218,7 @@ const PrintBarcodeBatchPage = () => {
 
         {!loaded ? (
           <div className="print-hidden text-gray-500">
-            {typeof fetchBarcodesByReceiptIdAction !== "function"
+            {typeof fetchPrintBatchAction !== "function" && typeof fetchBarcodesByReceiptIdAction !== "function"
               ? "กำลังเตรียมระบบโหลดบาร์โค้ด..."
               : "กำลังเตรียมข้อมูล..."}
           </div>
@@ -1114,7 +1226,7 @@ const PrintBarcodeBatchPage = () => {
         <div className="print-hidden text-rose-600">ไม่พบข้อมูลบาร์โค้ดสำหรับรายการที่เลือก</div>
         ) : (
         <div className="grid gap-y-[1mm] gap-x-[2mm] mt-1 print-area" style={gridStyle}>
-          {flatItems.map((item) => {
+          {visibleItems.map((item) => {
             const receiptId = item.receiptId;
             const rowKey = `${receiptId}-${item.id || item.barcode}-${item._dupIdx ?? 0}`;
 
@@ -1199,6 +1311,8 @@ const PrintBarcodeBatchPage = () => {
 };
 
 export default PrintBarcodeBatchPage;
+
+
 
 
 

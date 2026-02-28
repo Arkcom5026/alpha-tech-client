@@ -10,6 +10,10 @@
 
 
 
+
+
+
+
 // src/features/barcode/store/barcodeStore.js
 import { create } from 'zustand';
 import apiClient from '@/utils/apiClient';
@@ -68,6 +72,32 @@ const normalizeBarcodeItem = (b) => {
   };
 };
 
+// ✅ Concurrency helper (ลดเวลารวมตอนยิงหลาย receipt) + ป้องกัน burst request
+const runWithConcurrency = async (items, worker, limit = 3) => {
+  const arr = Array.isArray(items) ? items : [];
+  if (arr.length === 0) return [];
+
+  const safeLimit = Math.max(1, Number(limit) || 1);
+  const results = new Array(arr.length);
+  let nextIndex = 0;
+
+  const runners = new Array(Math.min(safeLimit, arr.length)).fill(null).map(async () => {
+    while (nextIndex < arr.length) {
+      const i = nextIndex++;
+      try {
+        results[i] = await worker(arr[i], i);
+      } catch (err) {
+        // เก็บ error ไว้ แต่ไม่ทำให้ทั้ง batch ล่ม
+        results[i] = { __error: true, error: err, item: arr[i] };
+      }
+    }
+  });
+
+  await Promise.all(runners);
+  return results;
+};
+
+
 const useBarcodeStore = create((set, get) => ({
   // Convenience getter for printing: duplicates LOT labels using qtyLabelsSuggested
   getExpandedBarcodesForPrint: (useSuggested = true) => {
@@ -115,15 +145,16 @@ const useBarcodeStore = create((set, get) => ({
 
   // ✅ สำหรับ Multi-print (Batch): คืนค่า list โดยไม่แตะ state กลาง (ไม่ clobber ระหว่างหลาย receipt)
   fetchBarcodesByReceiptIdAction: async (receiptId, opts = {}) => {
-    set({ loading: true, error: null });
+    const silent = Boolean(opts?.silent);
+    if (!silent) set({ loading: true, error: null });
     try {
       const res = await getBarcodesByReceiptId(receiptId, opts);
       const list = (res?.barcodes || []).map(normalizeBarcodeItem);
-      set({ loading: false });
+      if (!silent) set({ loading: false });
       return list;
     } catch (err) {
       console.error('[fetchBarcodesByReceiptIdAction]', err);
-      set({ error: err?.message || 'โหลดบาร์โค้ดล้มเหลว', loading: false });
+      if (!silent) set({ error: err?.message || 'โหลดบาร์โค้ดล้มเหลว', loading: false });
       return [];
     }
   },
@@ -131,6 +162,51 @@ const useBarcodeStore = create((set, get) => ({
   // ✅ Alias (กันชื่อ action ไม่ตรงในหน้า Batch)
   loadBarcodesByReceiptIdAction: async (receiptId, opts = {}) => get().fetchBarcodesByReceiptIdAction(receiptId, opts),
   getBarcodesByReceiptIdAction: async (receiptId, opts = {}) => get().fetchBarcodesByReceiptIdAction(receiptId, opts),
+
+  // ✅ Multi-print (Batch) — ยิง generate+get แบบคุม concurrency และไม่ clobber state กลาง
+  // ใช้กับ PrintBarcodeBatchPage เพื่อให้ “หลายใบ” เร็วขึ้นชัดเจน
+  fetchPrintBatchAction: async (receiptIds = [], opts = {}) => {
+    const ids = Array.isArray(receiptIds) ? receiptIds.map((x) => Number(x)).filter((x) => Number.isFinite(x)) : [];
+    const force = Boolean(opts?.force);
+    const concurrency = Math.max(1, Number(opts?.concurrency || 3));
+
+    set({ loading: true, error: null });
+
+    try {
+      // 1) generate-missing (ทำครั้งเดียวต่อ receipt ใน call นี้)
+      await runWithConcurrency(
+        ids,
+        async (rid) => {
+          if (!force) {
+            // ถ้าไม่ force ก็ยัง generate ได้ (idempotent) แต่ลดงานฝั่ง server ด้วยการข้ามตาม opts
+            // ปล่อยให้ caller (page) ใช้ session-cache ต่อได้
+          }
+          await generateMissingBarcodes(rid);
+          return true;
+        },
+        concurrency
+      );
+
+      // 2) get barcodes per receipt (คุม concurrency เช่นกัน)
+      const lists = await runWithConcurrency(
+        ids,
+        async (rid) => {
+          const res = await getBarcodesByReceiptId(rid, { ...(opts || {}), silent: true });
+          const list = (res?.barcodes || []).map(normalizeBarcodeItem);
+          return list.map((it, idx) => ({ ...it, receiptId: rid, _dupIdx: it?._dupIdx ?? idx }));
+        },
+        concurrency
+      );
+
+      const flat = (lists || []).flatMap((x) => (Array.isArray(x) ? x : []));
+      set({ loading: false });
+      return flat;
+    } catch (err) {
+      console.error('[fetchPrintBatchAction]', err);
+      set({ error: err?.message || 'โหลดบาร์โค้ดแบบหลายใบล้มเหลว', loading: false });
+      return [];
+    }
+  },
 
   // ✅ Commit draftScans ทั้งหมดไป BE (ลบชุดซ้ำออก ใช้เวอร์ชันล่างสุดแทน)
 

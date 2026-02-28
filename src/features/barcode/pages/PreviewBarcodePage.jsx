@@ -2,6 +2,7 @@
 
 
 
+
   // src/pages/pos/barcode/PreviewBarcodePage.jsx
 
   import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
@@ -766,8 +767,8 @@
           /* ✅ ตัด human-readable digits ที่ฝังมากับบาง Code39 fonts (ให้เหมือน PrintBarcodeBatchPage) */
           .barcode-bars-only {
             overflow: hidden;
-            /* Hide human-readable digits embedded in some Code39 fonts */
-            height: calc(var(--barcode-font-size, 30px) * 0.78);
+            /* 🔧 เพิ่มความสูงเพื่อให้ human-readable digits แสดงครบ (ไม่ถูกตัด) */
+            height: calc(var(--barcode-font-size, 30px) * 1.05);
             display: flex;
             align-items: flex-start;
             justify-content: center;
@@ -1117,6 +1118,8 @@
   };
 
   export default PreviewBarcodePage;
+
+
 
 
 

@@ -4,6 +4,9 @@
 
 
 
+
+
+
 // ScanBarcodeListPage.jsx
 
 import React, { useEffect, useState, useRef, useMemo } from 'react';
@@ -72,9 +75,30 @@ const ScanBarcodeListPage = () => {
   // SN: ถือว่าสแกนแล้วถ้ามี stockItemId หรือ stockItem.id
   // LOT: ถือว่าสแกนแล้วถ้า status === 'SN_RECEIVED' (ตาม Prisma enum)
   const isScanned = (b) => {
-    const snScanned = b?.stockItemId != null || b?.stockItem?.id != null;
+    // ✅ SN: ให้ยึด "stockItemId" ของ barcodeReceiptItem เท่านั้น
+    // เหตุผล: บาง payload อาจแนบ b.stockItem มาจากระดับ receiptItem (shared) ทำให้เข้าใจผิดว่า "ทุกแถว" ถูกยิงแล้ว
+    const snScanned = b?.stockItemId != null;
+
+    // ✅ ตรวจว่า "สินค้านี้" ตั้งค่าโหมดสต๊อกเป็น SN (แยกรายชิ้น) หรือไม่
+    // หมายเหตุ: รองรับ field name หลายแบบแบบ defensive เพื่อไม่ให้พังเมื่อ payload เปลี่ยน
+    const stockModeRaw = String(
+      b?.product?.stockMode ||
+      b?.product?.stockBehavior ||
+      b?.product?.stockTrackingMode ||
+      b?.productStockMode ||
+      b?.stockMode ||
+      ''
+    ).toUpperCase();
+    const isProductSNMode = stockModeRaw.includes('SN');
+
+    // ✅ ถ้าเป็นสินค้าโหมด SN ให้ถือว่าสแกนแล้วเฉพาะเมื่อมี stockItemId เท่านั้น
+    // (กันเคสที่ API/FE อัปเดต status แบบ LOT/SN_RECEIVED ในระดับรายการ ทำให้ทุกแถวถูกนับว่ารับแล้ว)
+    if (isProductSNMode) return snScanned;
+
+    // ✅ LOT: ถือว่าสแกนแล้วถ้า status === 'SN_RECEIVED'
     const isLot = b?.kind === 'LOT' || b?.simpleLotId != null;
     const lotActivated = isLot && String(b?.status || '').toUpperCase() === 'SN_RECEIVED';
+
     return snScanned || lotActivated;
   };
 
@@ -415,26 +439,29 @@ const ScanBarcodeListPage = () => {
                   {scannedList.map((b, idx) => {
                     const isLot = b?.kind === 'LOT' || b?.simpleLotId != null;
                     const productName = b?.productName || b?.product?.name || '-';
-                    const snText = isLot ? '-' : (b?.serialNumber || b?.stockItem?.serialNumber || '-');
+                    const snText = isLot ? '-' : (b?.serialNumber || (b?.stockItemId ? b?.stockItem?.serialNumber : null) || '-');
                     const apiStockStatus = String(b?.stockItemStatus || '').toUpperCase();
 
                     // ✅ Status source of truth: ถ้ามี stockItem ให้ยึด stockItem.status จาก DB
-                    const dbStockStatus = String(b?.stockItem?.status || '').toUpperCase();
+                    const dbStockStatus = b?.stockItemId ? String(b?.stockItem?.status || '').toUpperCase() : '';
 
                     // ✅ Guardrail: ถ้ามีสัญญาณว่า SOLD ให้แสดง SOLD เสมอ (กันกรณี payload stale)
                     const soldFlag =
                       dbStockStatus === 'SOLD' ||
                       apiStockStatus === 'SOLD' ||
-                      b?.stockItem?.soldAt != null ||
-                      b?.stockItem?.saleItem?.id != null;
+                      (b?.stockItemId ? (b?.stockItem?.soldAt != null || b?.stockItem?.saleItem?.id != null) : false);
 
                     const resolvedStockStatus = soldFlag
                       ? 'SOLD'
                       : (dbStockStatus || apiStockStatus || '-');
 
-                    const statusText = isLot
-                      ? (String(b?.status || '').toUpperCase() === 'SN_RECEIVED' ? 'LOT / SN_RECEIVED' : 'LOT')
-                      : resolvedStockStatus;
+                    const hasStockItem = b?.stockItemId != null;
+
+                    // ✅ ถ้ามี stockItem แล้ว ให้ยึดเป็น “รายชิ้น” (แสดงสถานะจาก stockItem) แม้ kind จะเป็น LOT
+                    // เฉพาะ LOT จริง (ไม่มี stockItem) เท่านั้นที่จะแสดง LOT / SN_RECEIVED
+                    const statusText = hasStockItem
+                      ? resolvedStockStatus
+                      : (String(b?.status || '').toUpperCase() === 'SN_RECEIVED' ? 'LOT / SN_RECEIVED' : 'LOT');
                     return (
                       <tr key={b.id || `${b.barcode}-${idx}`} className="border-t">
                         <td className="px-3 py-2">{idx + 1}</td>
@@ -457,6 +484,8 @@ const ScanBarcodeListPage = () => {
 };
 
 export default ScanBarcodeListPage;
+
+
 
 
 

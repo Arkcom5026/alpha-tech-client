@@ -3,6 +3,7 @@
 
 
 
+
 // ✅ src/features/product/components/ProductForm.jsx
 
 import React, { useEffect, useRef, useCallback, useMemo, useState } from 'react';
@@ -33,18 +34,13 @@ const PaymentInput = ({ title, value, onChange, disabled = false }) => {
 
 const ProductForm = ({ onSubmit, defaultValues, mode }) => {
   const {
+    // ✅ dropdowns (category/type/profile/template/mappings)
     dropdowns,
     dropdownsLoaded,
     dropdownsLoading,
     dropdownsError,
     ensureDropdownsAction,
     fetchDropdownsAction,
-
-    // ✅ optional: mapping fetchers (ProductTypeBrand)
-    fetchProductTypeBrandsAction,
-    ensureProductTypeBrandsAction,
-    fetchTypeBrandsAction,
-    ensureTypeBrandsAction,
   } = useProductStore();
 
   // ✅ token gate (กันยิง API ก่อน auth พร้อม → 401)
@@ -189,7 +185,13 @@ const ProductForm = ({ onSubmit, defaultValues, mode }) => {
               ? Number(data.brand.id)
               : '',
 
-        mode: data?.mode ? String(data.mode).toUpperCase() : data?.noSN ? 'SIMPLE' : 'STRUCTURED',
+        mode: data?.mode
+          ? String(data.mode).toUpperCase()
+          : data?.trackSerialNumber
+            ? 'STRUCTURED'
+            : data?.noSN
+              ? 'SIMPLE'
+              : 'STRUCTURED',
         noSN: !!data?.noSN,
         active: data?.active !== false,
         branchPrice: {
@@ -416,9 +418,10 @@ const ProductForm = ({ onSubmit, defaultValues, mode }) => {
   const handleFormSubmit = async (data) => {
     const cleanBase = _.omit(data || {}, ['initialQty']);
 
-    // ✅ SSoT: noSN (โหมด SIMPLE = นับจำนวน, STRUCTURED = มี SN รายชิ้น)
+    // ✅ SSoT: mode (SIMPLE = นับจำนวน, STRUCTURED = มี SN รายชิ้น)
+    // - ส่ง `mode` ตรง ๆ เสมอ (อย่าลบทิ้ง) เพื่อให้ BE/DB เปลี่ยนได้แน่นอน
     const modeVal = String(cleanBase?.mode ?? '').trim().toUpperCase();
-    const derivedNoSN = modeVal === 'SIMPLE';
+    const resolvedMode = modeVal === 'SIMPLE' ? 'SIMPLE' : 'STRUCTURED';
 
     const normalizeId = (v) => (v === '' || v == null ? null : Number(v));
     const normalizeText = (v) => {
@@ -436,10 +439,12 @@ const ProductForm = ({ onSubmit, defaultValues, mode }) => {
 
       shortName: normalizeText(cleanBase.shortName),
       model: normalizeText(cleanBase.model),
-      noSN: derivedNoSN,
-    };
 
-    delete payload.mode;
+      // ✅ Stock mode fields (DB)
+      mode: resolvedMode,
+      noSN: resolvedMode === 'SIMPLE',
+      trackSerialNumber: resolvedMode === 'STRUCTURED',
+    };
 
     await onSubmit(payload);
   };
@@ -1013,6 +1018,11 @@ const ProductForm = ({ onSubmit, defaultValues, mode }) => {
 };
 
 export default ProductForm;
+
+
+
+
+
 
 
 

@@ -9,6 +9,7 @@
 import React, { useEffect } from 'react';
 import usePurchaseOrderReceiptStore from '@/features/purchaseOrderReceipt/store/purchaseOrderReceiptStore';
 import BarcodePrintTable from '../controllers/BarcodePrintTable';
+
 // ✅ fix import path (vite requires correct extension or existing file name)
 // ✅ correct path (file is under stockItem/components)
 
@@ -64,11 +65,6 @@ const BarcodeReceiptListPage = () => {
 };
 
 export default BarcodeReceiptListPage;
-
-
-
-
-
 
 
 

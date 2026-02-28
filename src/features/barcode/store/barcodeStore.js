@@ -10,7 +10,6 @@
 
 
 
-
 // src/features/barcode/store/barcodeStore.js
 import { create } from 'zustand';
 import apiClient from '@/utils/apiClient';
@@ -99,20 +98,39 @@ const useBarcodeStore = create((set, get) => ({
   rowErrors: {}, // { [barcode]: { code, message } }
   draftLoading: false,  // ✅ NEW: loading สำหรับ draft actions/commit
 
-  // ✅ โหลดบาร์โค้ดตาม receiptId
+  // ✅ โหลดบาร์โค้ดตาม receiptId (อัปเดต state สำหรับหน้า Preview/Scan)
   loadBarcodesAction: async (receiptId) => {
     set({ loading: true, error: null });
     try {
       const res = await getBarcodesByReceiptId(receiptId);
       set({
-        barcodes: (res.barcodes || []).map(normalizeBarcodeItem),
+        barcodes: (res?.barcodes || []).map(normalizeBarcodeItem),
         loading: false,
       });
     } catch (err) {
       console.error('[loadBarcodesAction]', err);
-      set({ error: err.message || 'โหลดบาร์โค้ดล้มเหลว', loading: false });
+      set({ error: err?.message || 'โหลดบาร์โค้ดล้มเหลว', loading: false });
     }
   },
+
+  // ✅ สำหรับ Multi-print (Batch): คืนค่า list โดยไม่แตะ state กลาง (ไม่ clobber ระหว่างหลาย receipt)
+  fetchBarcodesByReceiptIdAction: async (receiptId, opts = {}) => {
+    set({ loading: true, error: null });
+    try {
+      const res = await getBarcodesByReceiptId(receiptId, opts);
+      const list = (res?.barcodes || []).map(normalizeBarcodeItem);
+      set({ loading: false });
+      return list;
+    } catch (err) {
+      console.error('[fetchBarcodesByReceiptIdAction]', err);
+      set({ error: err?.message || 'โหลดบาร์โค้ดล้มเหลว', loading: false });
+      return [];
+    }
+  },
+
+  // ✅ Alias (กันชื่อ action ไม่ตรงในหน้า Batch)
+  loadBarcodesByReceiptIdAction: async (receiptId, opts = {}) => get().fetchBarcodesByReceiptIdAction(receiptId, opts),
+  getBarcodesByReceiptIdAction: async (receiptId, opts = {}) => get().fetchBarcodesByReceiptIdAction(receiptId, opts),
 
   // ✅ Commit draftScans ทั้งหมดไป BE (ลบชุดซ้ำออก ใช้เวอร์ชันล่างสุดแทน)
 
@@ -397,6 +415,8 @@ const useBarcodeStore = create((set, get) => ({
 }));
 
 export default useBarcodeStore;
+
+
 
 
 

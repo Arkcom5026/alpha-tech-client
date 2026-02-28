@@ -2,7 +2,6 @@
 
 
 
-
   // src/pages/pos/barcode/PreviewBarcodePage.jsx
 
   import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
@@ -285,17 +284,47 @@
     const [loading, setLoading] = useState(false);
     const [loaded, setLoaded] = useState(false);
 
+    // ✅ Prevent double-fetch (React 18 StrictMode / state re-render) — production-safe
+    // - กันยิงซ้ำ 2 รอบแบบที่เห็นใน log (by-receipt ถูกเรียกซ้ำ)
+    // - อนุญาต reload ได้เมื่อผู้ใช้กด “โหลดอีกครั้ง” หรือหลัง confirm printed
+    const inFlightLoadRef = useRef(false);
+    const lastLoadedKeyRef = useRef(null);
+
     // ✅ UI-based error (no dialog)
     const [uiError, setUiError] = useState('');
 
+    // ✅ Print Batch Stamp (audit-friendly): กัน “พิมพ์ผิดใบ/ปะปนงาน” แบบสุดท้าย
+    // - แสดงในกระดาษ (print-only) เป็นลายน้ำ/ข้อความจาง ๆ
+    // - ผูกกับ receiptId + timestamp + nonce เพื่อ trace กลับได้
+    const [printStamp, setPrintStamp] = useState('');
+    const lastStampReceiptRef = useRef(null);
+
+    // ✅ Print guard: ต้องกดพิมพ์อย่างน้อย 1 ครั้งก่อน “ยืนยันพิมพ์แล้ว”
+    const [hasTriggeredPrint, setHasTriggeredPrint] = useState(false);
+    const hasTriggeredPrintRef = useRef(false);
+
+    // ✅ Zero Human Error (optional): auto-confirm หลังจากปิดหน้าพิมพ์ (afterprint)
+    // - ค่าเริ่มต้นเปิด เพื่อให้ flow โรงงาน: กดพิมพ์ → ปิดหน้าพิมพ์ → ระบบ mark printed
+    const [autoConfirmAfterPrint, setAutoConfirmAfterPrint] = useState(true);
+    const autoConfirmAfterPrintRef = useRef(true);
+
+    // keep refs fresh
+    useEffect(() => {
+      hasTriggeredPrintRef.current = !!hasTriggeredPrint;
+    }, [hasTriggeredPrint]);
+
+    useEffect(() => {
+      autoConfirmAfterPrintRef.current = !!autoConfirmAfterPrint;
+    }, [autoConfirmAfterPrint]);
+
     // ✅ โหมดพิมพ์ (Production): ใช้ font-only (Code39) เท่านั้น
     // เหตุผล: สินค้าชิ้นเล็ก → ต้องย่อได้มากและยังสแกนเสถียร
-    const [fontScaleX, setFontScaleX] = useState(1.0);
+    const [fontScaleX, setFontScaleX] = useState(1.1);
 
     // ✅ กันพฤติกรรมไม่สม่ำเสมอของ Chrome Print Preview (บางเครื่อง/บางไดรเวอร์อาจไม่ apply transform: scaleX)
     // เราจะ “ตรึงโหมดพิมพ์” ให้ใช้ความกว้างแบบไม่พึ่ง transform เพื่อให้ชื่อสินค้าไม่ล้นบาร์โค้ดในหน้า Before Print
     const [isPrinting, setIsPrinting] = useState(false);
-    const [fontSizePx, setFontSizePx] = useState(28);
+    const [fontSizePx, setFontSizePx] = useState(30);
 
     // ✅ Toggle โหมดพิมพ์: Barcode / QR (default: barcode only)
     // - ค่าเริ่มต้น: ปิด QR เสมอ (ผู้ใช้เป็นคนเลือก)
@@ -303,6 +332,18 @@
     const [showBarcode, setShowBarcode] = useState(true);
     const [showQr, setShowQr] = useState(false);
     const [qrSizePx, setQrSizePx] = useState(100);
+
+    // ✅ “นิ่งสุดของจริง”: ป้องกันพิมพ์ซ้ำโดย default (ต้องจงใจเปิดเอง)
+    const [includePrinted, setIncludePrinted] = useState(false);
+
+    // ✅ Barcode sanity check (Code39): กันอักขระต้องห้าม/ภาษาไทย
+    const isValidCode39 = useCallback((raw) => {
+      const s = (raw ?? '').toString().trim();
+      if (!s) return false;
+      // Code39 (basic set): 0-9 A-Z space - . $ / + %
+      // NOTE: เราวาดด้วยฟอนต์ Code39 โดยครอบ * เองอยู่แล้ว
+      return /^[0-9A-Z\-\. \$\/\+%]+$/.test(s);
+    }, []);
 
     // ✅ Option Guard for QR Size (production-safe)
     // - กัน NaN/ค่าว่าง
@@ -317,7 +358,10 @@
     };
 
     // ✅ จำนวนคอลัมน์ (GRID)
-    const [columns, setColumns] = useState(10);
+    const [columns, setColumns] = useState(5);
+
+    // ✅ Persist user settings (UX Pro)
+    const SETTINGS_KEY = 'pos_barcode_preview_settings_v1';
     // (ลบแล้ว) effectiveBarcodeHeight / barcodeHeight — ใช้ font-only ไม่ต้องคุมความสูงด้วย state แยก
 
     // ✅ คุมความกว้าง “ชื่อสินค้า” ให้ไม่เกินบาร์โค้ด (Production-friendly)
@@ -379,17 +423,35 @@
       [getExpandedBarcodesForPrint, useSuggested, barcodes]
     );
 
+    // ✅ Filter “printed already” by default (ลดความเสี่ยงพิมพ์ซ้ำ)
+    const expandedBarcodesSafe = useMemo(() => {
+      const list = Array.isArray(expandedBarcodes) ? expandedBarcodes : [];
+      return includePrinted ? list : list.filter((it) => !it?.printed);
+    }, [expandedBarcodes, includePrinted]);
+
     // โหลดข้อมูลอัตโนมัติครั้งแรก และกันกดซ้ำ
     const handleLoadBarcodes = useCallback(async () => {
-      if (!receiptId || loading || loaded) return;
+      if (!receiptId) return;
+
+      const rid = Number.isFinite(Number(receiptId)) ? Number(receiptId) : receiptId;
+      const loadKey = `receipt:${rid}`;
+
+      // ✅ hard guard: กันยิงซ้ำซ้อน (รวม StrictMode)
+      if (inFlightLoadRef.current) return;
+
+      // ✅ soft guard: ถ้าโหลด key เดิมสำเร็จแล้ว และไม่ได้สั่ง reload → ไม่ต้องยิงซ้ำ
+      // NOTE: ผู้ใช้ยังสามารถกดปุ่ม “โหลดอีกครั้ง” เพื่อ reload ได้ (ปุ่มจะเรียกฟังก์ชันนี้โดยตรง)
+      if (loaded && lastLoadedKeyRef.current === loadKey) return;
+
       setUiError('');
       clearBarcodeErrorAction?.();
       clearReceiptErrorAction?.();
 
+      inFlightLoadRef.current = true;
       setLoading(true);
       try {
-        const rid = Number.isFinite(Number(receiptId)) ? Number(receiptId) : receiptId;
         await loadBarcodesAction(rid);
+        lastLoadedKeyRef.current = loadKey;
         setLoaded(true);
       } catch (err) {
         console.error('❌ loadBarcodesAction failed:', err);
@@ -397,18 +459,74 @@
         setLoaded(false);
       } finally {
         setLoading(false);
+        inFlightLoadRef.current = false;
       }
-    }, [receiptId, loading, loaded, loadBarcodesAction, clearBarcodeErrorAction, clearReceiptErrorAction]);
+    }, [receiptId, loaded, loadBarcodesAction, clearBarcodeErrorAction, clearReceiptErrorAction]);
 
     useEffect(() => {
-      if (!loaded && !loading && receiptId) {
-        handleLoadBarcodes();
-      }
+      // ✅ Auto-load once per receiptId (ไม่ยิงซ้ำ)
+      if (!receiptId) return;
+      if (loaded || loading) return;
+      handleLoadBarcodes();
     }, [receiptId, loaded, loading, handleLoadBarcodes]);
+
+    // ✅ Load persisted settings once
+    useEffect(() => {
+      try {
+        const raw = localStorage.getItem(SETTINGS_KEY);
+        if (!raw) return;
+        const s = JSON.parse(raw);
+        if (typeof s?.columns === 'number') setColumns(Math.max(1, Math.min(12, s.columns)));
+        if (typeof s?.fontScaleX === 'number') setFontScaleX(Math.max(0.6, Math.min(1.6, s.fontScaleX)));
+        if (typeof s?.fontSizePx === 'number') setFontSizePx(Math.max(14, Math.min(60, s.fontSizePx)));
+        if (typeof s?.showBarcode === 'boolean') setShowBarcode(s.showBarcode);
+        if (typeof s?.showQr === 'boolean') setShowQr(s.showQr);
+        if (typeof s?.qrSizePx === 'number') setQrSizePx(clampQrSize(s.qrSizePx));
+        if (typeof s?.useSuggested === 'boolean') setUseSuggested(s.useSuggested);
+        if (typeof s?.autoConfirmAfterPrint === 'boolean') setAutoConfirmAfterPrint(s.autoConfirmAfterPrint);
+      } catch {
+        // ignore
+      }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    // ✅ Persist settings when changed
+    useEffect(() => {
+      try {
+        const payload = {
+          columns,
+          fontScaleX,
+          fontSizePx,
+          showBarcode,
+          showQr,
+          qrSizePx,
+          useSuggested,
+          autoConfirmAfterPrint,
+        };
+        localStorage.setItem(SETTINGS_KEY, JSON.stringify(payload));
+      } catch {
+        // ignore
+      }
+    }, [columns, fontScaleX, fontSizePx, showBarcode, showQr, qrSizePx, useSuggested, autoConfirmAfterPrint]);
 
     // ✅ Detect print mode (beforeprint/afterprint + matchMedia('print')) เพื่อให้ layout ในหน้า Before Print ไม่เพี้ยน
     useEffect(() => {
       const onBeforePrint = () => {
+        // ✅ generate/refresh print stamp per receipt
+        try {
+          const rid = receiptId || '-';
+          const needNew = !printStamp || lastStampReceiptRef.current !== rid;
+          if (needNew) {
+            const now = new Date();
+            const ts = now.toISOString().replace('T', ' ').slice(0, 19);
+            const nonce = Math.random().toString(36).slice(2, 8).toUpperCase();
+            setPrintStamp(`RECEIPT:${rid} | PRINT:${ts} | ${nonce}`);
+            lastStampReceiptRef.current = rid;
+          }
+        } catch {
+          // ignore
+        }
+
         setIsPrinting(true);
         // ✅ รอ layout print-mode (transform:none) แล้วค่อยวัดความกว้างจริง
         requestAnimationFrame(() => {
@@ -418,10 +536,18 @@
 
       const onAfterPrint = () => {
         setIsPrinting(false);
+
         // ✅ กลับมาโหมดปกติ วัดใหม่อีกครั้ง (transform: scaleX)
         requestAnimationFrame(() => {
           requestAnimationFrame(() => measureBarcodeWidths());
         });
+
+        // ✅ Zero Human Error: auto confirm after print (optional)
+        // NOTE: เราไม่สามารถพิสูจน์ได้ว่าเครื่องพิมพ์ออกจริง 100% แต่ afterprint ช่วยลด human error ได้มาก
+        if (autoConfirmAfterPrintRef.current && hasTriggeredPrintRef.current) {
+          // run async without blocking UI thread
+          Promise.resolve().then(() => handleConfirmPrinted({ skipPrintGuard: true }));
+        }
       };
 
       window.addEventListener('beforeprint', onBeforePrint);
@@ -456,11 +582,11 @@
 
     // ✅ วัดความกว้างเมื่อข้อมูล/การตั้งค่าเปลี่ยน (ทั้งหน้า Preview และหน้า Print)
     useEffect(() => {
-      if (!loaded || expandedBarcodes.length === 0) return;
+      if (!loaded || expandedBarcodesSafe.length === 0) return;
       requestAnimationFrame(() => {
         requestAnimationFrame(() => measureBarcodeWidths());
       });
-    }, [loaded, expandedBarcodes.length, fontSizePx, fontScaleX, isPrinting, columns, measureBarcodeWidths]);
+    }, [loaded, expandedBarcodesSafe.length, fontSizePx, fontScaleX, isPrinting, columns, measureBarcodeWidths]);
 
     // ✅ บังคับวัดใหม่หลังฟอนต์โหลด (ลดความเพี้ยนใน Chrome/Windows Print Preview)
     useEffect(() => {
@@ -489,11 +615,29 @@
       return () => {
         cancelled = true;
       };
-    }, [loaded, expandedBarcodes.length, measureBarcodeWidths]);
+    }, [loaded, expandedBarcodesSafe.length, measureBarcodeWidths]);
 
     const handlePrint = () => {
-      if (!loaded || barcodes.length === 0) return;
+      if (!loaded || expandedBarcodesSafe.length === 0) return;
       setUiError('');
+
+      // ✅ Hard guard: ต้องเลือกอย่างน้อย 1 โหมด
+      if (!showBarcode && !showQr) {
+        setUiError('ต้องเลือกอย่างน้อย 1 รูปแบบการพิมพ์ (บาร์โค้ด หรือ QR)');
+        return;
+      }
+
+      // ✅ Sanity check ก่อนพิมพ์: กัน barcode invalid ที่สแกนไม่ได้/ฟอนต์วาดไม่ได้
+      const invalid = expandedBarcodesSafe.filter((it) => !isValidCode39(it?.barcode));
+      if (invalid.length > 0) {
+        const sample = invalid.slice(0, 3).map((x) => (x?.barcode ?? '').toString()).join(', ');
+        setUiError(`พบ Barcode ไม่ถูกต้องตามมาตรฐาน Code39 จำนวน ${invalid.length} รายการ (ตัวอย่าง: ${sample})`);
+        return;
+      }
+
+      // ✅ mark that user initiated print
+      setHasTriggeredPrint(true);
+
       try {
         window.print();
       } catch (err) {
@@ -502,10 +646,19 @@
       }
     };
 
-    const handleConfirmPrinted = async () => {
+    const handleConfirmPrinted = async (opts = {}) => {
+      const { skipPrintGuard = false } = opts;
       setUiError('');
+
       try {
         if (!receiptId || barcodes.length === 0) return;
+
+        // ✅ Safety lock: ต้องพิมพ์ก่อนยืนยัน (กันคนกดผิด)
+        if (!skipPrintGuard && !hasTriggeredPrintRef.current) {
+          setUiError('กรุณากด “พิมพ์บาร์โค้ด” ก่อน แล้วค่อยกด “ยืนยันพิมพ์แล้ว”');
+          return;
+        }
+
         const rid = Number.isFinite(Number(receiptId)) ? Number(receiptId) : receiptId;
 
         const hasUnprinted = barcodes.some((b) => !b.printed);
@@ -515,7 +668,11 @@
 
         await markReceiptAsPrintedAction(rid);
 
+        // ✅ reset guard after successful confirm
+        setHasTriggeredPrint(false);
+
         // ✅ refresh state so UI reflects printed
+        lastLoadedKeyRef.current = null;
         setLoaded(false);
       } catch (err) {
         console.error('❌ อัปเดตสถานะ printed ล้มเหลว:', err);
@@ -606,6 +763,17 @@
             white-space: nowrap;
           }
 
+          /* ✅ ตัด human-readable digits ที่ฝังมากับบาง Code39 fonts (ให้เหมือน PrintBarcodeBatchPage) */
+          .barcode-bars-only {
+            overflow: hidden;
+            /* Hide human-readable digits embedded in some Code39 fonts */
+            height: calc(var(--barcode-font-size, 30px) * 0.78);
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            width: 100%;
+          }
+
           /* ✅ กันตัวบาร์ (transform/font glyph) ล้ำขึ้นไปซ้อนชื่อสินค้า */
           .barcode-bars-wrap {
             position: relative;
@@ -619,6 +787,26 @@
           }
 
           @media print {
+            /* ✅ Print batch stamp (audit) */
+            .print-stamp {
+              position: fixed;
+              top: 2mm;
+              left: 2mm;
+              font-size: 9px;
+              letter-spacing: 0.3px;
+              opacity: 0.35;
+              color: #000;
+              z-index: 9999;
+              pointer-events: none;
+              user-select: none;
+              white-space: nowrap;
+            }
+            .print-stamp.bottom {
+              top: auto;
+              bottom: 2mm;
+            }
+
+
             /* ✅ ดันบาร์โค้ดชิดบน + ชิดซ้าย ในหน้า Print Preview */
             html, body { margin: 0 !important; padding: 0 !important; background: white; }
 
@@ -661,7 +849,29 @@
         `}</style>
 
         <div className="p-6 space-y-6 print-root">
+          {/* ✅ Print-only audit stamp (top + bottom) */}
+          <div className="print-stamp hidden print:block">{printStamp || `RECEIPT:${receiptId || '-'} | PRINT:-`}</div>
+          <div className="print-stamp bottom hidden print:block">{printStamp || `RECEIPT:${receiptId || '-'} | PRINT:-`}</div>
           <h1 className="text-xl font-bold print:hidden">พรีวิวบาร์โค้ด</h1>
+
+          {/* ✅ Context + Summary (ลด human error) */}
+          <div className="print:hidden rounded-lg border bg-white px-4 py-3 text-sm">
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-1">
+              <div><span className="text-gray-600">Receipt:</span> <span className="font-semibold">#{receiptId || '-'}</span></div>
+              <div className="hidden md:block"><span className="text-gray-600">Stamp:</span> <span className="font-semibold">{printStamp ? printStamp : '-'}</span></div>
+              <div><span className="text-gray-600">Labels:</span> <span className="font-semibold">{expandedBarcodesSafe.length}</span></div>
+              <div>
+                <span className="text-gray-600">Printed:</span>{' '}
+                <span className="font-semibold">{barcodes.filter((b) => b.printed).length} / {barcodes.length}</span>
+              </div>
+              <div>
+                <span className="text-gray-600">สถานะยืนยัน:</span>{' '}
+                <span className={hasTriggeredPrint ? 'font-semibold text-emerald-700' : 'font-semibold text-gray-700'}>
+                  {hasTriggeredPrint ? 'พิมพ์แล้ว (พร้อมยืนยัน)' : 'ยังไม่ได้พิมพ์'}
+                </span>
+              </div>
+            </div>
+          </div>
 
           <div className="flex justify-center">
             <div className="flex gap-4 items-center flex-wrap print:hidden">
@@ -757,6 +967,24 @@
                 พิมพ์ตามจำนวนรับ (SIMPLE)
               </label>
 
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={autoConfirmAfterPrint}
+                  onChange={(e) => setAutoConfirmAfterPrint(e.target.checked)}
+                />
+                ยืนยันอัตโนมัติหลังพิมพ์
+              </label>
+
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={includePrinted}
+                  onChange={(e) => setIncludePrinted(e.target.checked)}
+                />
+                รวมรายการที่พิมพ์แล้ว
+              </label>
+
               <button
                 onClick={handleLoadBarcodes}
                 className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
@@ -767,7 +995,7 @@
               <button
                 onClick={handlePrint}
                 className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
-                disabled={!loaded || expandedBarcodes.length === 0}
+                disabled={!loaded || expandedBarcodesSafe.length === 0}
               >
                 พิมพ์บาร์โค้ด
               </button>
@@ -775,7 +1003,7 @@
               <button
                 onClick={handleConfirmPrinted}
                 className="px-4 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700"
-                disabled={!loaded || expandedBarcodes.length === 0}
+                disabled={!loaded || expandedBarcodesSafe.length === 0}
               >
                 ยืนยันพิมพ์แล้ว
               </button>
@@ -807,8 +1035,11 @@
               className={`grid gap-y-[1mm] gap-x-[2mm] mt-1 print-area is-grid`}
               style={gridStyle}
             >
-              {expandedBarcodes.map((item) => {
+              {expandedBarcodesSafe.map((item) => {
                 const rowKey = `${item.id || item.barcode}-${item._dupIdx ?? 0}`;
+
+                const validC39 = isValidCode39(item?.barcode);
+                const cellOpacity = validC39 ? 1 : 0.65;
 
                 const measuredW = Number(barcodeWidthMap[rowKey] || 0);
                 const approxW = getApproxBarcodeWidthPx(item.barcode);
@@ -819,31 +1050,43 @@
                 return (
                   <div
                     key={rowKey}
-                    className="barcode-cell border p-0.5 rounded text-left flex flex-col items-start justify-start"
+                    className={`barcode-cell border p-0.5 rounded text-left flex flex-col items-start justify-start relative ${validC39 ? '' : 'border-rose-300 bg-rose-50'}`}
+                    style={{ opacity: cellOpacity }}
                   >
-                    <div
-                      className="barcode-block"
-                      style={{ width: `${finalW}px`, maxWidth: `${finalW}px` }}
-                    >
+                    {item.printed ? (
+                      <div className="absolute right-1 top-1 rounded bg-emerald-600 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                        PRINTED
+                      </div>
+                    ) : null}
+
+                    {!validC39 ? (
+                      <div className="absolute left-1 top-1 rounded bg-rose-600 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                        INVALID
+                      </div>
+                    ) : null}
+
+                    <div className="barcode-block" style={{ width: `${finalW}px`, maxWidth: `${finalW}px` }}>
                       <div className="barcode-product-name" title={item.productName || ''}>
                         {displayName}
                       </div>
 
                       <div className="barcode-bars-wrap">
                         {showBarcode ? (
-                          <div
-                            ref={setBarcodeElRef(rowKey)}
-                            className="c39-barcode"
-                            style={{
-                              fontSize: `${fontSizePx}px`,
-                              lineHeight: 1,
-                              transform: isPrinting ? 'none' : `scaleX(${fontScaleX})`,
-                              transformOrigin: 'center top',
-                              display: 'inline-block',
-                              marginTop: '0px',
-                            }}
-                          >
-                            *{item.barcode}*
+                          <div className="barcode-bars-only" style={{ "--barcode-font-size": `${fontSizePx}px` }}>
+                            <div
+                              ref={setBarcodeElRef(rowKey)}
+                              className="c39-barcode"
+                              style={{
+                                fontSize: `${fontSizePx}px`,
+                                lineHeight: 1,
+                                transform: isPrinting ? 'none' : `scaleX(${fontScaleX})`,
+                                transformOrigin: 'center top',
+                                display: 'inline-block',
+                                marginTop: '0px',
+                              }}
+                            >
+                              *{(item.barcode || '').toString().trim().toUpperCase()}*
+                            </div>
                           </div>
                         ) : null}
 
@@ -856,10 +1099,7 @@
                               width: '100%',
                             }}
                           >
-                            <QrSvg
-                              value={(item.barcode || '').toString()}
-                              size={clampQrSize(qrSizePx)}
-                            />
+                            <QrSvg value={(item.barcode || '').toString().trim().toUpperCase()} size={clampQrSize(qrSizePx)} />
                           </div>
                         ) : null}
                       </div>
@@ -877,18 +1117,6 @@
   };
 
   export default PreviewBarcodePage;
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

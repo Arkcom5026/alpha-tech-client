@@ -6,7 +6,6 @@
 
 
 
-
 // src/features/stockItem/components/BarcodePrintTable.jsx
 
 import React, { useEffect, useMemo, useState } from 'react';
@@ -422,9 +421,6 @@ const BarcodePrintTable = ({ receipts }) => {
 };
 
 export default BarcodePrintTable;
-
-
-
 
 
 

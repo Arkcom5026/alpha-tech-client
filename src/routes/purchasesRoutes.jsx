@@ -1,3 +1,10 @@
+
+
+
+
+
+
+
 // 📂 src/routes/pos/purchasesRoutes.jsx
 
 import { Navigate } from 'react-router-dom';
@@ -18,6 +25,7 @@ import ViewPurchaseOrderReceiptPage from '@/features/purchaseOrderReceipt/pages/
 import PrintPurchaseOrderReceiptTemplate from '@/features/purchaseOrderReceipt/pages/PrintPurchaseOrderReceiptTemplate';
 import BarcodeReceiptListPage from '@/features/barcode/pages/BarcodeReceiptListPage';
 import PreviewBarcodePage from '@/features/barcode/pages/PreviewBarcodePage';
+import PrintBarcodeBatchPage from '@/features/barcode/pages/PrintBarcodeBatchPage';
 import ListReceiptItemsToScanPage from '@/features/stockItem/pages/ListReceiptItemsToScanPage';
 import ScanBarcodeListPage from '@/features/stockItem/pages/ScanBarcodeListPage';
 import CreateSupplierPage from '@/features/supplier/pages/CreateSupplierPage';
@@ -63,7 +71,8 @@ const purchasesRoutes = {
       path: 'barcodes',
       children: [
         { index: true, element: <BarcodeReceiptListPage /> }, // รายการใบรับ    
-        { path: 'preview/:receiptId', element: <PreviewBarcodePage /> }, // หน้าพรีวิวก่อนพิมพ์        
+        { path: 'preview/:receiptId', element: <PreviewBarcodePage /> }, // หน้าพรีวิวก่อนพิมพ์
+        { path: 'print', element: <PrintBarcodeBatchPage /> }, // พิมพ์หลายใบ ?ids=1,2,3        
       ]
     },
     { 
@@ -82,4 +91,8 @@ const purchasesRoutes = {
 
 export default purchasesRoutes;
 //  /pos/purchases/orders/create
+
+
+
+
 

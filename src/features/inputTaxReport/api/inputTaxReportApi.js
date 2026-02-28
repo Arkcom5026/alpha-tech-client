@@ -1,29 +1,34 @@
+
+
+
+
 // src/features/inputTaxReport/api/inputTaxReportApi.js
 
 import apiClient from '@/utils/apiClient';
 
 
-export const getInputTaxReport = async (filters) => {
-  
+export const getInputTaxReport = async (filters = {}) => {
   try {
-
     const validFilters = {};
-    if (filters.month) {
-    validFilters.month = filters.month;
-  }
-    if (filters.year) {
-    validFilters.year = filters.year;
-  }
+
+    // ✅ Option A: date range is the source of truth
+    if (filters.startDate) validFilters.startDate = filters.startDate;
+    if (filters.endDate) validFilters.endDate = filters.endDate;
+
+    // (legacy) keep month/year support for backward compatibility
+    if (filters.month) validFilters.month = filters.month;
+    if (filters.year) validFilters.year = filters.year;
 
     const response = await apiClient.get('/input-tax-reports', {
       params: validFilters,
     });
 
     return response.data;
-
   } catch (error) {
-
     console.error('❌ [getInputTaxReport] error:', error);
     throw error;
   }
 };
+
+
+

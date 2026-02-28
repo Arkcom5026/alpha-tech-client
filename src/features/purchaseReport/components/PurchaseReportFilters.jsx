@@ -1,20 +1,30 @@
+
+
 // src/features/purchaseReport/components/PurchaseReportFilters.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { Grid, TextField, Button, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
 
 // ✅ 1. นำเข้า Store แทนการนำเข้า API โดยตรง
 import useSupplierStore from '@/features/supplier/store/supplierStore';
 
 
-// ✅ สถานะถูกอัปเดตให้ตรงกับ PurchaseOrderStatus ใน Prisma Schema
-const purchaseStatuses = [
-    { id: 'all', name: 'ทั้งหมด' },
-    { id: 'PENDING', name: 'รอดำเนินการ' },
-    { id: 'PARTIALLY_RECEIVED', name: 'รับของบางส่วน' },
-    { id: 'RECEIVED', name: 'รับของครบแล้ว' },
-    { id: 'PAID', name: 'ชำระเงินแล้ว' },
-    { id: 'COMPLETED', name: 'เสร็จสมบูรณ์' },
-    { id: 'CANCELLED', name: 'ยกเลิก' },
+// ✅ รายงานนี้อ้างอิง “ใบรับสินค้า” (PurchaseOrderReceipt)
+// - สถานะใบรับ: ReceiptStatus (PENDING | COMPLETED | CANCELLED)
+// - สถานะชำระ: PaymentStatus (UNPAID | PARTIALLY_PAID | WAITING_APPROVAL | PAID | CANCELLED)
+const receiptStatuses = [
+  { id: 'all', name: 'ทั้งหมด' },
+  { id: 'PENDING', name: 'รอดำเนินการ' },
+  { id: 'COMPLETED', name: 'เสร็จสมบูรณ์' },
+  { id: 'CANCELLED', name: 'ยกเลิก' },
+];
+
+const paymentStatuses = [
+  { id: 'all', name: 'ทั้งหมด' },
+  { id: 'UNPAID', name: 'ค้างชำระ' },
+  { id: 'PARTIALLY_PAID', name: 'ชำระบางส่วน' },
+  { id: 'WAITING_APPROVAL', name: 'รอตรวจสอบ' },
+  { id: 'PAID', name: 'ชำระแล้ว' },
+  { id: 'CANCELLED', name: 'ยกเลิก' },
 ];
 
 
@@ -46,10 +56,11 @@ export const PurchaseReportFilters = ({ filters, onFiltersChange, onGenerateRepo
   const handleClearFilters = () => {
     // ❌ ลบ branchId ออกจาก object ที่ reset
     onFiltersChange({
-        dateFrom: '',
-        dateTo: '',
-        supplierId: 'all',
-        status: 'all',
+      dateFrom: '',
+      dateTo: '',
+      supplierId: 'all',
+      receiptStatus: 'all',
+      paymentStatus: 'all',
     });
   };
 
@@ -110,11 +121,28 @@ export const PurchaseReportFilters = ({ filters, onFiltersChange, onGenerateRepo
           <InputLabel>สถานะ</InputLabel>
           <Select
             label="สถานะ"
-            name="status"
-            value={filters.status || 'all'}
+            name="receiptStatus"
+            value={filters.receiptStatus || 'all'}
             onChange={handleChange}
           >
-            {purchaseStatuses.map((status) => (
+            {receiptStatuses.map((status) => (
+              <MenuItem key={status.id} value={status.id}>{status.name}</MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+      </Grid>
+
+      {/* Filter: Payment Status */}
+      <Grid item xs={12} sm={3} md={3}>
+        <FormControl fullWidth>
+          <InputLabel>สถานะชำระ</InputLabel>
+          <Select
+            label="สถานะชำระ"
+            name="paymentStatus"
+            value={filters.paymentStatus || 'all'}
+            onChange={handleChange}
+          >
+            {paymentStatuses.map((status) => (
               <MenuItem key={status.id} value={status.id}>{status.name}</MenuItem>
             ))}
           </Select>
@@ -147,3 +175,6 @@ export const PurchaseReportFilters = ({ filters, onFiltersChange, onGenerateRepo
     </Grid>
   );
 };
+
+
+

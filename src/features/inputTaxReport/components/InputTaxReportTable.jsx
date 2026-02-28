@@ -1,3 +1,4 @@
+
 // InputTaxReportTable.jsx (ปรับโครงสร้างให้เป็นมาตรฐานเดียวกับ SalesTaxTable)
 
 import React from 'react';
@@ -17,7 +18,22 @@ const formatDate = (dateString) => {
   return date.toLocaleDateString('th-TH');
 };
 
+const toNum = (v) => {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+};
+
 const InputTaxReportTable = ({ items = [], type }) => {
+  const sumBase = items.reduce((sum, item) => sum + toNum(item.totalAmount), 0);
+  const sumVat = items.reduce((sum, item) => sum + toNum(item.vatAmount), 0);
+
+  // Prefer server-calculated grandTotal when present, otherwise base+vat
+  const sumGrand = items.reduce((sum, item) => {
+    const grand = item?.grandTotal;
+    if (grand !== undefined && grand !== null && grand !== '') return sum + toNum(grand);
+    return sum + toNum(item.totalAmount) + toNum(item.vatAmount);
+  }, 0);
+
   return (
     <div className="mb-8">
       
@@ -47,7 +63,11 @@ const InputTaxReportTable = ({ items = [], type }) => {
                   <td className="px-2 py-1 border border-gray-700">{item.supplierTaxId || '-'}</td>
                   <td className="px-2 py-1 text-right font-mono border border-gray-700">{formatCurrency(item.totalAmount)}</td>
                   <td className="px-2 py-1 text-right font-mono border border-gray-700">{formatCurrency(item.vatAmount)}</td>
-                  <td className="px-2 py-1 text-right font-mono border border-gray-700">{formatCurrency(item.totalAmount + item.vatAmount)}</td>
+                  <td className="px-2 py-1 text-right font-mono border border-gray-700">{formatCurrency(
+                      item?.grandTotal !== undefined && item?.grandTotal !== null && item?.grandTotal !== ''
+                        ? toNum(item.grandTotal)
+                        : toNum(item.totalAmount) + toNum(item.vatAmount)
+                    )}</td>
                 </tr>
               ))
             ) : (
@@ -65,13 +85,13 @@ const InputTaxReportTable = ({ items = [], type }) => {
                   รวมก่อน VAT
                 </td>
                 <td className="px-2 py-2 text-right font-mono text-black border border-gray-700">
-                  {formatCurrency(items.reduce((sum, item) => sum + item.totalAmount, 0))}
+                  {formatCurrency(sumBase)}
                 </td>
                 <td className="px-2 py-2 text-right font-mono text-black border border-gray-700">
-                  {formatCurrency(items.reduce((sum, item) => sum + item.vatAmount, 0))}
+                  {formatCurrency(sumVat)}
                 </td>
                 <td className="px-2 py-2 text-right font-mono text-black border border-gray-700">
-                  {formatCurrency(items.reduce((sum, item) => sum + item.totalAmount + item.vatAmount, 0))}
+                  {formatCurrency(sumGrand)}
                 </td>
               </tr>
             </tfoot>

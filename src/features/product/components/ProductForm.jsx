@@ -3,8 +3,6 @@
 
 
 
-
-
 // ✅ src/features/product/components/ProductForm.jsx
 
 import React, { useEffect, useRef, useCallback, useMemo, useState } from 'react';
@@ -855,8 +853,8 @@ const ProductForm = ({ onSubmit, defaultValues, mode }) => {
                       value={field.value || 'STRUCTURED'}
                       onChange={(e) => field.onChange(e.target.value)}
                     >
-                      <option value="STRUCTURED">Structured (มี Serial Number รายชิ้น)</option>
-                      <option value="SIMPLE">Simple (นับจำนวน ไม่ใช้ Serial Number)</option>
+                      <option value="STRUCTURED">SN (แยกรายชิ้น)</option>
+                      <option value="SIMPLE">No SN (นับจำนวน)</option>
                     </select>
                   )}
                 />
@@ -1015,6 +1013,8 @@ const ProductForm = ({ onSubmit, defaultValues, mode }) => {
 };
 
 export default ProductForm;
+
+
 
 
 

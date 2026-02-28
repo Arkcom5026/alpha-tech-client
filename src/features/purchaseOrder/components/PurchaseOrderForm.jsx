@@ -383,7 +383,7 @@ const PurchaseOrderForm = ({
           <Input
             value={searchText}
             onChange={(e) => onSearchTextChange(e.target.value)}
-            placeholder="ค้นหาด้วยชื่อสินค้า / บาร์โค้ด"
+            placeholder="ค้นหาด้วยชื่อสินค้า"
             className="w-[460px]"
           />
           <button

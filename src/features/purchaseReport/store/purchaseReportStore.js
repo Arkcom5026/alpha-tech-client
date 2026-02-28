@@ -1,3 +1,8 @@
+
+
+
+
+
 // src/features/purchaseReport/store/purchaseReportStore.js
 import { create } from 'zustand';
 import { getPurchaseReport } from '../api/purchaseReportApi';
@@ -38,8 +43,10 @@ export const usePurchaseReportStore = create((set, get) => ({
     dateFrom: firstDay,
     dateTo: lastDay,
     supplierId: 'all',
-    // ❌ ลบ branchId ออกจาก filters
-    status: 'all',
+    productId: 'all',
+    // ✅ Receipt-level statuses (report is based on PurchaseOrderReceipt)
+    receiptStatus: 'all',
+    paymentStatus: 'all',
   },
   reportData: [],
   // ✅ อัปเดตโครงสร้าง summary ให้ตรงกับ API
@@ -59,6 +66,11 @@ export const usePurchaseReportStore = create((set, get) => ({
    * Action สำหรับอัปเดตค่าใน filters
    * @param {object} newFilters - object ของ filter ใหม่
    */
+  // ✅ Standard naming: *Action (keep backward compatibility)
+  setFiltersAction: (newFilters) => {
+    set({ filters: newFilters });
+  },
+  // Backward compatible alias (avoid breaking existing imports)
   setFilters: (newFilters) => {
     set({ filters: newFilters });
   },
@@ -66,21 +78,31 @@ export const usePurchaseReportStore = create((set, get) => ({
   /**
    * Action สำหรับดึงข้อมูลรายงานการจัดซื้อจาก API
    */
-  fetchPurchaseReport: async () => {
+  fetchPurchaseReportAction: async () => {
     // เริ่มต้นการโหลด
     set({ isLoading: true, error: null });
     try {
       // ดึงค่า filters ปัจจุบันจาก state
       const currentFilters = get().filters;
-      
+
       // ✨ ตรวจสอบและแก้ไขค่า filters ก่อนส่งไป API
       const filtersToSend = { ...currentFilters };
+
+      // Guard: dateFrom without dateTo -> same day
       if (filtersToSend.dateFrom && !filtersToSend.dateTo) {
-        // ถ้ามี dateFrom แต่ไม่มี dateTo, ให้ใช้ dateFrom เป็น dateTo ด้วย
-        // เพื่อให้แน่ใจว่ามีการส่งช่วงวันที่ที่ถูกต้องเสมอ
         filtersToSend.dateTo = filtersToSend.dateFrom;
       }
-      
+
+      // Normalize: omit "all" to reduce noisy query params
+      const normalizeAll = (v) => (v === 'all' || v === '' ? undefined : v);
+      filtersToSend.supplierId = normalizeAll(filtersToSend.supplierId);
+      filtersToSend.productId = normalizeAll(filtersToSend.productId);
+      filtersToSend.receiptStatus = normalizeAll(filtersToSend.receiptStatus);
+      filtersToSend.paymentStatus = normalizeAll(filtersToSend.paymentStatus);
+
+      // Remove legacy key to avoid confusion
+      delete filtersToSend.status;
+
       // เรียกใช้ API ด้วย filters ที่แก้ไขแล้ว
       const response = await getPurchaseReport(filtersToSend);
 
@@ -91,15 +113,21 @@ export const usePurchaseReportStore = create((set, get) => ({
         isLoading: false,
       });
     } catch (err) {
-      console.error("Failed to fetch purchase report:", err);
+      console.error('Failed to fetch purchase report:', err);
       // หากเกิดข้อผิดพลาด, อัปเดต state
       set({
         isLoading: false,
         error: 'ไม่สามารถดึงข้อมูลรายงานได้',
-        reportData: [], // เคลียร์ข้อมูลเก่าออก
-        // ✅ อัปเดตโครงสร้าง summary ตอน reset ค่า
+        reportData: [],
         summary: { totalAmount: 0, totalItems: 0, uniqueReceipts: 0 },
       });
     }
   },
+  // Backward compatible alias (avoid breaking existing calls)
+  fetchPurchaseReport: async () => {
+    return get().fetchPurchaseReportAction();
+  },
 }));
+
+
+

@@ -1,11 +1,27 @@
+
 // PrintInputTaxReportPage.jsx (ใช้ InputTaxReportTable แทนการสร้างตารางเอง)
 
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useMemo, useState } from 'react';
 import { useReactToPrint } from 'react-to-print';
-import { useInputTaxReportStore } from '../store/inputTaxReporStore';
+
+
 import { format } from 'date-fns';
 import InputTaxReportTable from '../components/InputTaxReportTable';
+import { useInputTaxReportStore } from '../store/inputTaxReporStore';
 
+
+
+const parseLocalDateInput = (value) => {
+  // value: 'YYYY-MM-DD'
+  if (!value) return null;
+  const m = /^([0-9]{4})-([0-9]{2})-([0-9]{2})$/.exec(String(value));
+  if (!m) return null;
+  const y = Number(m[1]);
+  const mo = Number(m[2]);
+  const d = Number(m[3]);
+  if (!y || mo < 1 || mo > 12 || d < 1 || d > 31) return null;
+  return new Date(y, mo - 1, d);
+};
 
 const PrintInputTaxReportPage = () => {
   const {
@@ -25,6 +41,15 @@ const PrintInputTaxReportPage = () => {
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
 
+  // อ่าน query จาก URL ครั้งแรก
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const s = params.get('startDate');
+    const e = params.get('endDate');
+    if (s) setStartDate(s);
+    if (e) setEndDate(e);
+  }, []);
+
   const handlePrint = useReactToPrint({
     content: () => printRef.current || null,
     documentTitle: 'รายงานภาษีซื้อ',
@@ -40,40 +65,51 @@ const PrintInputTaxReportPage = () => {
   };
 
   const formatDateThai = (dateStr) => {
-    const d = new Date(dateStr);
-    return isNaN(d) ? '-' : format(d, 'dd/MM/yyyy');
+    const d = parseLocalDateInput(dateStr);
+    return !d || isNaN(d) ? '-' : format(d, 'dd/MM/yyyy');
   };
 
-  useEffect(() => {
-    fetchInputTaxReportAction();
-  }, [fetchInputTaxReportAction]);
-
-  useEffect(() => {
-    const searchParams = new URLSearchParams(window.location.search);
-    const start = searchParams.get('startDate');
-    const end = searchParams.get('endDate');
-    if (start) setStartDate(start);
-    if (end) setEndDate(end);
-  }, []);
-
-  useEffect(() => {
+  const branchContext = useMemo(() => {
     try {
       const branchStorage = localStorage.getItem('branch-storage');
-      if (branchStorage) {
-        const parsedStorage = JSON.parse(branchStorage);
-        const currentBranch = parsedStorage.state?.currentBranch;
-        if (currentBranch) {
-          setCompanyInfo({
-            name: currentBranch.name || 'ชื่อบริษัท (ไม่พบข้อมูล)',
-            address: currentBranch.address || 'ที่อยู่ (ไม่พบข้อมูล)',
-            taxId: currentBranch.taxId || 'เลขประจำตัวผู้เสียภาษี (ไม่พบข้อมูล)',
-          });
-        }
-      }
+      if (!branchStorage) return { branchId: null, currentBranch: null };
+      const parsedStorage = JSON.parse(branchStorage);
+      const state = parsedStorage?.state || {};
+      const currentBranch = state.currentBranch || null;
+      const branchId = state.branchId ?? currentBranch?.id ?? currentBranch?.branchId ?? null;
+      return { branchId: branchId ? Number(branchId) : null, currentBranch };
     } catch (e) {
-      console.error('โหลดข้อมูลสาขาไม่สำเร็จ');
+      console.error('โหลดข้อมูลสาขาไม่สำเร็จ', e);
+      return { branchId: null, currentBranch: null };
     }
   }, []);
+
+  const rangeParams = useMemo(() => {
+    if (!startDate || !endDate) return null;
+    return {
+      startDate,
+      endDate,
+    };
+  }, [startDate, endDate]);
+
+  // ยิง fetch เมื่อ branch และช่วงวันที่พร้อม
+  useEffect(() => {
+    if (!branchContext.branchId) return;
+    if (!rangeParams) return;
+
+    fetchInputTaxReportAction(branchContext.branchId, rangeParams);
+  }, [branchContext.branchId, rangeParams, fetchInputTaxReportAction]);
+
+  useEffect(() => {
+    const currentBranch = branchContext.currentBranch;
+    if (currentBranch) {
+      setCompanyInfo({
+        name: currentBranch.name || 'ชื่อบริษัท (ไม่พบข้อมูล)',
+        address: currentBranch.address || 'ที่อยู่ (ไม่พบข้อมูล)',
+        taxId: currentBranch.taxId || 'เลขประจำตัวผู้เสียภาษี (ไม่พบข้อมูล)',
+      });
+    }
+  }, [branchContext.currentBranch]);
 
   return (
     <div className="flex flex-col items-center p-4 bg-gray-200">
@@ -128,7 +164,11 @@ const PrintInputTaxReportPage = () => {
           </div>
           <br />
 
-          <InputTaxReportTable items={reportData} type="normal" />
+          {isLoading ? (
+            <div className="text-center py-4">กำลังโหลดข้อมูล...</div>
+          ) : (
+            <InputTaxReportTable items={reportData} type="normal" />
+          )}
 
           <div className="flex justify-between items-end text-[12px] mt-auto">                     
             
@@ -142,7 +182,7 @@ const PrintInputTaxReportPage = () => {
               <div className="w-[50%] ">
                 <div className="flex justify-between ">
                   <span>รวมเงิน / SUB TOTAL</span>
-                  <span className="font-bold">{formatNumber(summary.totalAmount - summary.vatAmount)} ฿</span>
+                  <span className="font-bold">{formatNumber(summary.totalAmount)} ฿</span>
                 </div>
 
                 <div className="flex justify-between pt-2 ">
@@ -165,3 +205,6 @@ const PrintInputTaxReportPage = () => {
 };
 
 export default PrintInputTaxReportPage;
+
+
+

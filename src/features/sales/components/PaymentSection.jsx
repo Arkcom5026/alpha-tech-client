@@ -1,10 +1,6 @@
-
-
-
-
 // ============================================================
 // 📁 FILE: src/features/sales/components/PaymentSection.jsx
-// ✅ Minimal patch: fix store wiring + robust number parsing
+// ✅ Final patched version: fix JSX syntax + computedSaleOption scope + store wiring + robust number parsing
 // ============================================================
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
@@ -54,11 +50,18 @@ const PaymentSection = ({
 
   const [paymentError, setPaymentError] = useState('');
   const [depositTouched, setDepositTouched] = useState(false);
+
   // 🔒 กันกด Confirm ซ้ำ/Enter ซ้ำ ระหว่าง async (double-submit guard)
   const confirmLockRef = useRef(false);
 
   const effectiveCustomer = selectedCustomer || { id: null, name: 'ลูกค้าทั่วไป' };
   const hasValidCustomerId = !!effectiveCustomer?.id;
+
+  // ✅ หน่วยงาน/องค์กร: อิงจาก customer.type (INDIVIDUAL/ORGANIZATION/GOVERNMENT)
+  const customerType = effectiveCustomer?.type;
+  const isOrgBuyer = customerType === 'ORGANIZATION' || customerType === 'GOVERNMENT';
+  const isCreditSale = currentSaleMode === 'CREDIT';
+  const isCreditOrg = currentSaleMode === 'CREDIT' && isOrgBuyer; // (kept for future use)
 
   const validSaleItems = Array.isArray(saleItems) ? saleItems : [];
 
@@ -172,117 +175,139 @@ const PaymentSection = ({
     (currentSaleMode === 'CREDIT' && validSaleItems.length > 0);
 
   const handleConfirm = useCallback(async () => {
+    let result = null;
+
     // 🔒 ป้องกันการยิงซ้ำจาก double click / enter key
-    if (confirmLockRef.current) return;
+    if (confirmLockRef.current) return null;
     confirmLockRef.current = true;
+
     setPaymentError('');
 
-    if (validSaleItems.length === 0) {
-      setPaymentError('กรุณาเพิ่มรายการสินค้าก่อนยืนยันการขาย');
-      return;
-    }
-
-    if (isSubmitting) {
-      setPaymentError('กำลังดำเนินการ กรุณารอสักครู่');
-      return;
-    }
-
-    if (currentSaleMode === 'CASH' && calc.totalPaid + safeDepositUsed < calc.totalToPay) {
-      setPaymentError('ยอดเงินที่ชำระยังไม่เพียงพอ');
-      return;
-    }
-
-    if (safeBillDiscount > totalOriginalPrice) {
-      setPaymentError('ส่วนลดท้ายบิลห้ามเกินยอดรวมราคาสินค้า');
-      return;
-    }
-
-    if (currentSaleMode === 'CREDIT' && !hasValidCustomerId) {
-      setPaymentError('การขายแบบเครดิตต้องเลือกชื่อลูกค้าก่อน');
-      return;
-    }
-
-    const paymentsSnapshot = (paymentList || []).map((p) => ({ ...p }));
-
-    let didSucceed = false;
-
+    // ✅ IMPORTANT: ต้องปล่อย lock เสมอ แม้จะ return ออกก่อนเข้า try/catch หลัก
     try {
-      setIsSubmitting?.(true);
-
-      if (typeof onConfirmSale !== 'function') {
-        setPaymentError('ระบบยืนยันการขายยังไม่พร้อมใช้งาน (missing onConfirmSale)');
-        return;
+      if (validSaleItems.length === 0) {
+        setPaymentError('กรุณาเพิ่มรายการสินค้าก่อนยืนยันการขาย');
+        return null;
       }
 
-      const res = await onConfirmSale();
-      if (res?.error) {
-        setPaymentError(res.error);
-        return;
+      if (isSubmitting) {
+        setPaymentError('กำลังดำเนินการ กรุณารอสักครู่');
+        return null;
       }
 
-      const saleId = res?.saleId;
-      if (!saleId) {
-        setPaymentError('❌ ไม่พบ ID ของรายการขายหลังจากยืนยัน');
-        return;
+      if (currentSaleMode === 'CASH' && calc.totalPaid + safeDepositUsed < calc.totalToPay) {
+        setPaymentError('ยอดเงินที่ชำระยังไม่เพียงพอ');
+        return null;
       }
 
-      const updatedPayments = [...paymentsSnapshot];
+      if (safeBillDiscount > totalOriginalPrice) {
+        setPaymentError('ส่วนลดท้ายบิลห้ามเกินยอดรวมราคาสินค้า');
+        return null;
+      }
 
-      if (currentSaleMode === 'CASH') {
-        const validPayments = updatedPayments.filter((p) => parseMoney(p.amount) > 0);
-        if (validPayments.length === 0 && safeDepositUsed === 0) {
-          setPaymentError('⚠️ ไม่มีรายการชำระเงินที่มีจำนวนเงินมากกว่า 0 หรือใช้มัดจำ');
-          return;
+      if (currentSaleMode === 'CREDIT' && !hasValidCustomerId) {
+        setPaymentError('การขายแบบเครดิตต้องเลือกชื่อลูกค้าก่อน');
+        return null;
+      }
+
+      const paymentsSnapshot = (paymentList || []).map((p) => ({ ...p }));
+
+      let didSucceed = false;
+
+      try {
+        setIsSubmitting?.(true);
+
+        if (typeof onConfirmSale !== 'function') {
+          setPaymentError('ระบบยืนยันการขายยังไม่พร้อมใช้งาน (missing onConfirmSale)');
+          return null;
+        }
+
+        const res = await onConfirmSale({
+          // ✅ CREDIT → DELIVERY_NOTE เสมอ (บังคับพิมพ์)
+          deliveryNoteMode: isCreditSale ? 'PRINT' : undefined,
+          saleType: customerType === 'GOVERNMENT' ? 'GOVERNMENT' : undefined,
+        });
+
+        if (res?.error) {
+          setPaymentError(res.error);
+          return null;
+        }
+
+        const saleId = res?.saleId;
+        if (!saleId) {
+          setPaymentError('❌ ไม่พบ ID ของรายการขายหลังจากยืนยัน');
+          return null;
+        }
+
+        const updatedPayments = [...paymentsSnapshot];
+
+        if (currentSaleMode === 'CASH') {
+          const validPayments = updatedPayments.filter((p) => parseMoney(p.amount) > 0);
+          if (validPayments.length === 0 && safeDepositUsed === 0) {
+            setPaymentError('⚠️ ไม่มีรายการชำระเงินที่มีจำนวนเงินมากกว่า 0 หรือใช้มัดจำ');
+            return null;
+          }
+        }
+
+        if (safeDepositUsed > 0 && selectedDeposit?.id) {
+          updatedPayments.push({
+            method: 'DEPOSIT',
+            amount: safeDepositUsed,
+            customerDepositId: selectedDeposit.id,
+            note: 'ใช้มัดจำ',
+          });
+        }
+
+        await submitMultiPaymentAction({
+          saleId,
+          paymentList: updatedPayments,
+        });
+
+        // ✅ CREDIT → DELIVERY_NOTE เสมอ
+        const computedSaleOption = isCreditSale ? 'DELIVERY_NOTE' : saleOption;
+
+        if (typeof onSaleConfirmed === 'function') {
+          onSaleConfirmed(saleId, computedSaleOption);
+        }
+
+        // ✅ Return for PaymentSummary (so it can navigate/print)
+        result = { saleId, saleOption: computedSaleOption };
+
+        didSucceed = true;
+        return result;
+      } catch (err) {
+        setPaymentError('❌ ยืนยันการขายล้มเหลว: ' + (err?.message || 'เกิดข้อผิดพลาด'));
+        return null;
+      } finally {
+        // ✅ Always: release submitting state
+        setIsSubmitting?.(false);
+
+        // ✅ Only reset sale state AFTER success.
+        //    If confirm/payment fails, keep cart/payment inputs so user can fix and retry.
+        if (didSucceed) {
+          setTimeout(() => {
+            const phoneInput = document.getElementById('customer-phone-input');
+            if (phoneInput) {
+              phoneInput.focus();
+              phoneInput.select?.();
+            }
+          }, 100);
+
+          setDepositTouched(false);
+          setDepositUsed(0);
+          setCardRef('');
+          setBillDiscount(0);
+          resetSaleOrderAction?.();
+          clearCustomerAndDeposit?.();
+          setCustomerIdAction?.(null);
+          setClearPhoneTrigger?.(Date.now());
+          onSaleModeChange?.('CASH');
+          onSaleOptionChange?.('NONE');
         }
       }
-
-      if (safeDepositUsed > 0 && selectedDeposit?.id) {
-        updatedPayments.push({
-          method: 'DEPOSIT',
-          amount: safeDepositUsed,
-          customerDepositId: selectedDeposit.id,
-          note: 'ใช้มัดจำ',
-        });
-      }
-
-      await submitMultiPaymentAction({
-        saleId,
-        paymentList: updatedPayments,
-      });
-
-      if (typeof onSaleConfirmed === 'function') {
-        onSaleConfirmed(saleId, saleOption);
-      }
-
-      didSucceed = true;
-    } catch (err) {
-      setPaymentError('❌ ยืนยันการขายล้มเหลว: ' + (err?.message || 'เกิดข้อผิดพลาด'));
     } finally {
-      // ✅ Always: release submitting state
-      setIsSubmitting?.(false);
-
-      // ✅ Only reset sale state AFTER success.
-      //    If confirm/payment fails, keep cart/payment inputs so user can fix and retry.
-      if (didSucceed) {
-        setTimeout(() => {
-          const phoneInput = document.getElementById('customer-phone-input');
-          if (phoneInput) {
-            phoneInput.focus();
-            phoneInput.select?.();
-          }
-        }, 100);
-
-        setDepositTouched(false);
-        setDepositUsed(0);
-        setCardRef('');
-        setBillDiscount(0);
-        resetSaleOrderAction?.();
-        clearCustomerAndDeposit?.();
-        setCustomerIdAction?.(null);
-        setClearPhoneTrigger?.(Date.now());
-        onSaleModeChange?.('CASH');
-        onSaleOptionChange?.('NONE');
-      }
+      // ✅ Always release confirm lock (even when early-return)
+      confirmLockRef.current = false;
     }
   }, [
     calc.totalPaid,
@@ -311,6 +336,10 @@ const PaymentSection = ({
     submitMultiPaymentAction,
     totalOriginalPrice,
     validSaleItems.length,
+    isCreditSale,
+    isCreditOrg,
+    isOrgBuyer,
+    customerType,
   ]);
 
   const handleBillDiscountChange = useCallback(
@@ -363,6 +392,17 @@ const PaymentSection = ({
           onCardRefChange={(e) => setCardRef(e.target.value)}
         />
 
+        {/* ✅ CREDIT: พิมพ์ใบส่งของ (บังคับ) */}
+        {isCreditSale && (
+          <div className="bg-gray-50 border border-gray-200 rounded-md p-3 min-w-[340px]">
+            <div className="text-sm font-bold mb-2">เอกสาร (เครดิต)</div>
+            <div className="text-sm">✅ พิมพ์ใบส่งของ (บังคับ)</div>
+            <div className="text-xs text-gray-600 mt-2">
+              * ขายแบบเครดิตยังไม่ออกใบกำกับภาษี (ออกได้เมื่อรับเงิน)
+            </div>
+          </div>
+        )}
+
         <PaymentSummary
           totalToPay={calc.totalToPay}
           grandTotalPaid={calc.grandTotalPaid}
@@ -383,10 +423,3 @@ const PaymentSection = ({
 };
 
 export default PaymentSection;
-
-
-
-
-
-
-

@@ -1,4 +1,8 @@
 
+
+
+
+
 // 📁 FILE: src/features/sales/layout/QuickSaleLayout.jsx
 
 import React, { useEffect, useRef, useState, useMemo } from 'react'
@@ -150,7 +154,7 @@ const QuickSaleLayout = () => {
     }
   }
 
-  const handleConfirmSale = async () => {
+  const handleConfirmSale = async (opts = {}) => {
     // ✅ PaymentSection เป็นคนคุม flow (confirm -> pay -> onSaleConfirmed)
     // หน้าที่: “ยืนยันการขาย” และส่ง saleId กลับไปเท่านั้น
     clearSaleErrorAction?.()
@@ -160,7 +164,7 @@ const QuickSaleLayout = () => {
     try {
       setIsSubmitting(true)
 
-      const res = await confirmSaleOrderAction(saleMode)
+      const res = await confirmSaleOrderAction(saleMode, opts)
       if (res?.error) return res
 
       const saleId = res?.saleId
@@ -320,6 +324,11 @@ const QuickSaleLayout = () => {
 }
 
 export default QuickSaleLayout
+
+
+
+
+
 
 
 

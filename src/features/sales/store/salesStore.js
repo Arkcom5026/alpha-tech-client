@@ -3,8 +3,6 @@
 
 
 
-
-
 // 📁 FILE: features/sales/store/salesStore.js
 
 import { create } from 'zustand';
@@ -279,7 +277,7 @@ const useSalesStore = create((set, get) => ({
   // Production hardening:
   // - เซ็ต loading/error ใน store เพื่อให้ UI แสดง error block ได้
   // - รองรับ backend 409 (ขายซ้ำ/สถานะไม่พร้อม/partial failure)
-  confirmSaleOrderAction: async (saleMode) => {
+  confirmSaleOrderAction: async (saleMode, opts = {}) => {
     const { saleItems, customerId } = get();
 
     if (saleMode === 'CREDIT' && !customerId) {
@@ -327,6 +325,15 @@ const useSalesStore = create((set, get) => ({
       const vatAmount = vatSatang / 100;
       const totalAmount = totalAmountSatang / 100;
 
+      const isCredit = saleMode === 'CREDIT';
+
+      // ✅ CREDIT: default เป็น DELIVERY_NOTE เสมอ (บังคับพิมพ์) เพราะต้องมีเอกสารให้เซ็นรับของ
+// ✅ CREDIT: ห้ามออกใบกำกับ/ใบเสร็จ (ยังไม่รับเงิน) — คุมที่ FE + BE
+      // opts:
+      // - deliveryNoteMode: 'PRINT' | 'NO_PRINT' (NOTE: CREDIT will be forced to PRINT)
+      // - saleType: optional override (e.g. 'GOVERNMENT')
+      const saleType = opts?.saleType;
+
       const payload = {
         customerId,
         totalBeforeDiscount,
@@ -337,7 +344,7 @@ const useSalesStore = create((set, get) => ({
         note: '',
         items: saleItems
           .map((item) => ({
-            stockItemId: item.stockItemId,
+            stockItemId: normalizeStockItemId(item),
             basePrice: Number(item.price) || 0,
             // ✅ คิด VAT ต่อชิ้นจาก (ราคา - ส่วนลด) แบบสตางค์
             vatAmount:
@@ -360,7 +367,20 @@ const useSalesStore = create((set, get) => ({
             discount: Number(item.discount) || 0,
             remark: '',
           })),
+        // ✅ BE expects "mode" (single source of truth)
+        mode: saleMode,
+        // keep for backward compatibility (if any older endpoint still reads it)
         saleMode,
+
+        // ✅ Explicit flags for BE (backward-compatible: BE can ignore unknown keys)
+        isCredit,
+        // Credit sale at sale-time: never issue tax invoice
+        isTaxInvoice: isCredit ? false : undefined,
+        saleType: saleType || undefined,
+
+        // ✅ Only send delivery note mode for CREDIT + ORG
+        // ✅ CREDIT always forces delivery note print as default (A)
+        deliveryNoteMode: isCredit ? 'PRINT' : undefined,
       };
 
       const data = await createSaleOrder(payload);
@@ -385,7 +405,7 @@ const useSalesStore = create((set, get) => ({
         ],
       });
 
-      return { saleId, data };
+      return { saleId, data, deliveryNoteMode: isCredit ? 'PRINT' : undefined };
     } catch (err) {
       const status = err?.response?.status;
       const payload = err?.response?.data;
@@ -456,18 +476,41 @@ const useSalesStore = create((set, get) => ({
   },
 
   loadPrintableSalesAction: async (params = {}) => {
+    const fromDate = params?.fromDate;
+    const toDate = params?.toDate;
+    const keyword = params?.keyword || '';
+    const limitRaw = params?.limit;
+
+    // ✅ optional server-side filters (keep FE light)
+    // - Delivery Note list uses onlyUnpaid=1
+    // - Print Bill list uses onlyPaid=1
+    const onlyUnpaid = params?.onlyUnpaid;
+    const onlyPaid = params?.onlyPaid;
+
+    const limitParsed = parseInt(limitRaw, 10);
+    const limit = Math.min(Math.max(Number.isFinite(limitParsed) ? limitParsed : 100, 1), 500);
+
+    set({ loading: true, error: null });
+
     try {
       const data = await searchPrintableSales({
-        fromDate: params.fromDate,
-        toDate: params.toDate,
-        keyword: params.keyword || '',
-        limit: params.limit || 100,
-        _ts: Date.now(),
+        fromDate,
+        toDate,
+        keyword,
+        limit,
+        // pass-through optional flags (BE will ignore if unsupported)
+        ...(onlyUnpaid ? { onlyUnpaid } : {}),
+        ...(onlyPaid ? { onlyPaid } : {}),
       });
-      set({ printableSales: data });
-    } catch (error) {
-      devError('❌ [loadPrintableSalesAction] error:', error);
-      set({ printableSales: [] });
+      set({ printableSales: Array.isArray(data) ? data : [] });
+      return { ok: true };
+    } catch (err) {
+      devError('❌ [loadPrintableSalesAction] error:', err);
+      const msg = err?.response?.data?.message || err?.message || 'โหลดรายการใบขายย้อนหลังไม่สำเร็จ';
+      set({ printableSales: [], error: msg });
+      return { ok: false, error: msg };
+    } finally {
+      set({ loading: false });
     }
   },
 
@@ -483,6 +526,12 @@ const useSalesStore = create((set, get) => ({
 }));
 
 export default useSalesStore;
+
+
+
+
+
+
 
 
 

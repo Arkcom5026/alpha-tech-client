@@ -1,13 +1,15 @@
+
+
 // ✅ DeliveryNoteForm ปรับโครงสร้างให้ตรงกับ BillLayoutFullTax 100%
-import { concat } from 'lodash';
 import React from 'react';
 
-const DeliveryNoteForm = ({ sale, saleItems, payments, config, hideDate, setHideDate, showDateLine }) => {
+const DeliveryNoteForm = ({ sale, saleItems, config, hideDate, setHideDate }) => {
   if (!sale || !saleItems || !config) {
     return <div className="p-4 text-center text-gray-600">ไม่พบข้อมูลใบส่งของ</div>;
   }
 
   const formatThaiDate = (dateString) => {
+    if (!dateString) return '-';
     const thMonths = ['', 'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
     const date = new Date(dateString);
     const day = date.getDate();
@@ -17,17 +19,17 @@ const DeliveryNoteForm = ({ sale, saleItems, payments, config, hideDate, setHide
   };
 
   const formatCurrency = (val) => {
-    const num = parseFloat(val || 0);
+    const num = Number.parseFloat(val ?? 0);
     return num.toFixed(2);
   };
 
-  const vatRate = typeof sale.vatRate === 'number' ? sale.vatRate : 7;
+  const vatRate = Number.isFinite(Number(sale.vatRate)) ? Number(sale.vatRate) : 7;
 
   // ✅ รวมราคาสินค้าหลังหักส่วนลดแต่ละรายการ
   const computedTotal = saleItems.reduce((sum, item) => {
-    const price = typeof item.price === 'number' ? item.price : 0;
-    const discount = typeof item.discount === 'number' ? item.discount : 0;
-    const quantity = typeof item.quantity === 'number' ? item.quantity : 0;
+    const price = Number.isFinite(Number(item.price)) ? Number(item.price) : 0;
+    const discount = Number.isFinite(Number(item.discount)) ? Number(item.discount) : 0;
+    const quantity = Number.isFinite(Number(item.quantity)) ? Number(item.quantity) : 0;
     const netUnitPrice = price - discount;
     return sum + netUnitPrice * quantity;
   }, 0);
@@ -128,7 +130,7 @@ const DeliveryNoteForm = ({ sale, saleItems, payments, config, hideDate, setHide
               const unitPriceBeforeVat = netUnitPrice / (1 + vatRate / 100);
               const amountBeforeVat = unitPriceBeforeVat * quantity;
               return (
-                <tr key={item.id}>
+                <tr key={item.id ?? item.stockItemId ?? `row-${index}`}>
                   <td className="border border-black px-1 text-center h-[28px]">{index + 1}</td>
                   <td className="border border-black px-1 h-[28px]">
                     {item.productName} {item.productModel ? `(${item.productModel})` : ''}
@@ -202,3 +204,4 @@ const DeliveryNoteForm = ({ sale, saleItems, payments, config, hideDate, setHide
 };
 
 export default DeliveryNoteForm;
+

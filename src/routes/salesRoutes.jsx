@@ -1,5 +1,6 @@
+
 import SalesDashboardPage from "@/features/pos/pages/sales/SalesDashboardPage";
-import PrintBillListPage from "@/features/payment/pages/PrintBillListPage";
+import PrintBillListPage from "@/features/bill/pages/PrintBillListPage";
 import PrintBillPageShortTax from "@/features/bill/pages/PrintBillPageShortTax";
 import PrintBillPageFullTax from "@/features/bill/pages/PrintBillPageFullTax";
 

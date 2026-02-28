@@ -1,3 +1,4 @@
+
 // ✅ src/routes/posRoutes.jsx
 import { Navigate } from 'react-router-dom'
 
@@ -37,11 +38,11 @@ const posRoutes = {
     // Bill / Receipt printing
     // =============================
     {
-      path: 'sales/bill/print-short/:id',
+      path: 'sales/bill/print-short/:saleId',
       element: <PrintBillPageShortTax />,
     },
     {
-      path: 'sales/bill/print-full/:id',
+      path: 'sales/bill/print-full/:saleId',
       element: <PrintBillPageFullTax />,
     },
 
@@ -53,5 +54,6 @@ const posRoutes = {
 };
 
 export default posRoutes;
+
 
 

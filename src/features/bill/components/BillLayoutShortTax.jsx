@@ -2,6 +2,7 @@
 
 
 
+
 // src/features/bill/components/BillLayoutShortTax.jsx
 
 import React from 'react';
@@ -14,15 +15,58 @@ const formatCurrency = (val) =>
     maximumFractionDigits: 2,
   })
 
+// ✅ number safe
+const n = (v) => {
+  const x = Number(v)
+  return Number.isFinite(x) ? x : 0
+}
+
+// ✅ unit price resolver (fallback หลายชื่อ กัน field mismatch)
+const getUnitPrice = (item) => {
+  if (!item) return 0
+
+  // รองรับชื่อ field ที่พบบ่อยใน POS
+  const candidates = [
+    item.price, // เดิม
+    item.unitPrice,
+    item.sellPrice,
+    item.unitPriceIncVat,
+    item.unitPriceExVat,
+    item.sellingPrice,
+    item.salePrice,
+    item.lineUnitPrice,
+  ]
+
+  for (const v of candidates) {
+    const num = n(v)
+    if (num > 0) return num
+  }
+
+  return 0
+}
+
+// ✅ line total (หน่วยสตางค์) ให้แม่น และกัน float drift
+const getLineTotalSatang = (item) => {
+  const qty = n(item?.quantity)
+  const unit = getUnitPrice(item)
+  const unitSatang = Math.round(unit * 100)
+  return unitSatang * qty
+}
+
 const BillLayoutShortTax = ({ sale, saleItems, payments, config, hideContactName }) => {
   if (!sale || !saleItems || !payments || !config) return null
 
-  // ✅ คิดเงินแบบหน่วยสตางค์ให้แม่นยำ
-  const totalSatang = saleItems.reduce((sum, item) => {
-    const price = Math.round((Number(item.price) || 0) * 100)
-    const qty = Number(item.quantity) || 0
-    return sum + price * qty
-  }, 0)
+  // ✅ Total: prefer from sale (source of truth) ถ้ามี แล้วค่อย fallback ไปคำนวณจากรายการ
+  const computedTotalSatang = saleItems.reduce((sum, item) => sum + getLineTotalSatang(item), 0)
+
+  const saleTotalCandidateBaht =
+    n(sale?.totalAmount) ||
+    n(sale?.total) ||
+    n(sale?.grandTotal) ||
+    n(sale?.totalPremium)
+
+  const saleTotalCandidateSatang = Math.round(saleTotalCandidateBaht * 100)
+  const totalSatang = saleTotalCandidateSatang > 0 ? saleTotalCandidateSatang : computedTotalSatang
 
   const total = totalSatang / 100
   const vatRate = typeof config.vatRate === 'number' ? config.vatRate : 7
@@ -155,7 +199,7 @@ const BillLayoutShortTax = ({ sale, saleItems, payments, config, hideContactName
                 )}
               </td>
               <td className="text-right py-1">{item.quantity}</td>
-              <td className="text-right py-1">{formatCurrency((Number(item.price) || 0) * (Number(item.quantity) || 0))} ฿</td>
+              <td className="text-right py-1">{formatCurrency(getLineTotalSatang(item) / 100)} ฿</td>
             </tr>
           ))}
         </tbody>
@@ -177,6 +221,7 @@ const BillLayoutShortTax = ({ sale, saleItems, payments, config, hideContactName
 
 // ✅ memo ป้องกัน re-render ตอนเปิด print window
 export default React.memo(BillLayoutShortTax)
+
 
 
 

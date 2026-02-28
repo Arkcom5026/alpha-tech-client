@@ -1,12 +1,15 @@
 
 
+
+
 // ------------------------------------------------------------
 // 📁 FILE: src/features/sales/components/PaymentSummary.jsx
 
 import React, { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import PropTypes from 'prop-types';
 
-import BillPrintOptions from './BillPrintOptions';
+import BillPrintOptions, { PRINT_OPTION, SALE_MODE } from './BillPrintOptions';
 
 const fmt = (n) =>
   Number(n || 0).toLocaleString('th-TH', {
@@ -14,15 +17,6 @@ const fmt = (n) =>
     maximumFractionDigits: 2,
   });
 
-const SALE_MODE = { CASH: 'CASH', CREDIT: 'CREDIT' };
-
-// ✅ รองรับทั้งหมด (แก้ warning: TAX_INVOICE / RECEIPT)
-const PRINT_OPTION = {
-  NONE: 'NONE',
-  RECEIPT: 'RECEIPT',
-  TAX_INVOICE: 'TAX_INVOICE',
-  DELIVERY_NOTE: 'DELIVERY_NOTE',
-};
 
 const PaymentSummary = ({
   totalToPay,
@@ -38,6 +32,10 @@ const PaymentSummary = ({
   setCurrentSaleMode,
   hasValidCustomerId,
 }) => {
+  const navigate = useNavigate();
+
+  // ✅ Central print route for delivery note (adjust if your router uses a different path)
+  const DELIVERY_NOTE_PRINT_ROUTE = '/pos/sales/delivery-note/print';
   const totalNum = Number(totalToPay) || 0;
   const paidNum = Number(grandTotalPaid) || 0;
   const changeNum = Number(safeChangeAmount) || 0;
@@ -47,8 +45,8 @@ const PaymentSummary = ({
 
   // ✅ คุมตัวเลือกการพิมพ์ให้สอดคล้องกับโหมดขาย
   useEffect(() => {
-    // CREDIT: จำกัดให้เลือกได้แค่ NONE / DELIVERY_NOTE
-    if (isCredit && ![PRINT_OPTION.NONE, PRINT_OPTION.DELIVERY_NOTE].includes(saleOption)) {
+    // ✅ CREDIT: บังคับให้เป็น DELIVERY_NOTE เสมอ (เอกสารให้เซ็นรับของ)
+    if (isCredit && saleOption !== PRINT_OPTION.DELIVERY_NOTE) {
       setSaleOption(PRINT_OPTION.DELIVERY_NOTE);
       return;
     }
@@ -130,16 +128,35 @@ const PaymentSummary = ({
           currentSaleMode={currentSaleMode}
           // CASH: ซ่อน NONE (ตาม UX ที่เลือก)
           hideNoneOption={isCash}
+          // CREDIT: บังคับใบส่งของ (ซ่อน option อื่นภายใน component)
         />
       </div>
 
       <div className="text-center mt-auto">
         <button
           type="button"
-          onClick={() => {
+          onClick={async () => {
             // 🔒 Defensive: กัน click/enter ซ้ำตอน disabled (แม้ปกติ button จะกันอยู่แล้ว)
             if (!isConfirmEnabled || isSubmitting) return;
-            onConfirm?.();
+
+            try {
+              const created = await onConfirm?.();
+
+              // ✅ CREDIT is always DELIVERY_NOTE; CASH prints only when chosen
+              const shouldPrintDeliveryNote = isCredit || saleOption === PRINT_OPTION.DELIVERY_NOTE;
+              if (!shouldPrintDeliveryNote) return;
+
+              const createdSale = created?.sale ?? created;
+              const saleId = createdSale?.id ?? created?.saleId ?? created?.id;
+              if (!saleId) return;
+
+              navigate(`${DELIVERY_NOTE_PRINT_ROUTE}/${saleId}`, {
+                state: { sale: createdSale },
+              });
+            } catch (err) {
+              // NOTE: onConfirm already sets paymentError via parent; keep this for debug only
+              console.error('[PaymentSummary] confirm sale error', err);
+            }
           }}
           disabled={!isConfirmEnabled || isSubmitting}
           className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-xl font-semibold transition-colors duration-200 shadow-md w-full"

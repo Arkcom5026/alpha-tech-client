@@ -7,7 +7,6 @@
 
 
 
-
 // src/features/bill/pages/PrintBillPageShortTax.jsx
 
 
@@ -98,6 +97,16 @@ const PrintBillPageShortTax = () => {
     return <div className="text-center p-6 text-gray-700">ไม่พบข้อมูลใบเสร็จ</div>
   }
 
+  // ✅ Receipt printing requires at least 1 valid payment
+  // (List page disables print when unpaid, but direct URL should be safe too)
+  if (!payment) {
+    return (
+      <div className="text-center p-6 text-gray-700">
+        ใบขายนี้ยังไม่มีการรับชำระ จึงยังไม่สามารถพิมพ์ใบเสร็จได้
+      </div>
+    )
+  }
+
   const customerType = sale.customer?.type || 'PERSON'
   const hideContactName = customerType === 'ORGANIZATION' || customerType === 'GOVERNMENT'
 
@@ -123,6 +132,7 @@ const PrintBillPageShortTax = () => {
 }
 
 export default PrintBillPageShortTax
+
 
 
 

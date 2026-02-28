@@ -1,3 +1,4 @@
+
 // BillPrintOptions.jsx (Refined)
 import React, { useEffect, useMemo } from 'react';
 import PropTypes from 'prop-types';
@@ -14,18 +15,30 @@ export const SALE_MODE = {
   CREDIT: 'CREDIT',
 };
 
-const BillPrintOptions = ({ saleOption, setSaleOption, hideNoneOption = false, currentSaleMode = SALE_MODE.CASH }) => {
-  // guard: กันกรณี handler ถูกส่งมาไม่ครบ
-  if (typeof setSaleOption !== 'function') return null;
+const BillPrintOptions = ({
+  saleOption,
+  setSaleOption,
+  hideNoneOption = false,
+  currentSaleMode = SALE_MODE.CASH,
+  }) => {
+  const isValidSetter = typeof setSaleOption === 'function';
+  // ✅ หลีกเลี่ยง hook conditional: ใช้ safe setter แทน
+  const setSaleOptionSafe = isValidSetter ? setSaleOption : () => {};
+  // NOTE: keep hooks unconditional; rendering returns null later if setter missing
   const isCash = currentSaleMode === SALE_MODE.CASH;
   const isCredit = currentSaleMode === SALE_MODE.CREDIT;
 
   // สร้างชุดตัวเลือกตามโหมดการขาย
   const options = useMemo(() => {
+    // ✅ CREDIT: บังคับใบส่งของเท่านั้น (เอกสารให้เซ็นรับของ)
+    if (isCredit) {
+      return [{ value: PRINT_OPTION.DELIVERY_NOTE, label: 'ใบส่งของ', disabled: false }];
+    }
+
     const base = [
       ...(hideNoneOption ? [] : [{ value: PRINT_OPTION.NONE, label: 'ไม่พิมพ์บิล', disabled: false }]),
-      { value: PRINT_OPTION.RECEIPT, label: 'ใบกำกับภาษีอย่างย่อ', disabled: isCredit },
-      { value: PRINT_OPTION.TAX_INVOICE, label: 'ใบกำกับภาษีเต็มรูป', disabled: isCredit },
+      { value: PRINT_OPTION.RECEIPT, label: 'ใบกำกับภาษีอย่างย่อ', disabled: false },
+      { value: PRINT_OPTION.TAX_INVOICE, label: 'ใบกำกับภาษีเต็มรูป', disabled: false },
       { value: PRINT_OPTION.DELIVERY_NOTE, label: 'ใบส่งของ', disabled: false },
     ];
     return base;
@@ -33,23 +46,25 @@ const BillPrintOptions = ({ saleOption, setSaleOption, hideNoneOption = false, c
 
   // ถ้าโหมดเครดิตและค่าปัจจุบันไม่ถูกต้อง → บังคับเป็นใบส่งของ
   useEffect(() => {
-    // CREDIT: ถ้าเลือก RECEIPT/TAX_INVOICE ให้บังคับเป็น DELIVERY_NOTE
-    if (isCredit && (saleOption === PRINT_OPTION.RECEIPT || saleOption === PRINT_OPTION.TAX_INVOICE)) {
-      setSaleOption(PRINT_OPTION.DELIVERY_NOTE);
+    // ✅ CREDIT: บังคับ DELIVERY_NOTE เสมอ
+    if (isCredit && saleOption !== PRINT_OPTION.DELIVERY_NOTE) {
+      setSaleOptionSafe(PRINT_OPTION.DELIVERY_NOTE);
       return;
     }
 
     // CASH: ถ้าซ่อน NONE และค่าเป็น NONE ให้ default เป็น RECEIPT
     if (isCash && hideNoneOption && saleOption === PRINT_OPTION.NONE) {
-      setSaleOption(PRINT_OPTION.RECEIPT);
+      setSaleOptionSafe(PRINT_OPTION.RECEIPT);
     }
-  }, [isCredit, isCash, hideNoneOption, saleOption, setSaleOption]);
+  }, [isCredit, isCash, hideNoneOption, saleOption, isValidSetter, setSaleOptionSafe]);
 
   const handleChange = (e) => {
     const next = e.target.value;
     const opt = options.find((o) => o.value === next);
-    if (opt && !opt.disabled) setSaleOption(next);
+    if (opt && !opt.disabled) setSaleOptionSafe(next);
   };
+
+    if (!isValidSetter) return null;
 
   return (
     <fieldset className="space-y-3 pl-3 text-base text-gray-700" role="radiogroup" aria-label="ตัวเลือกการพิมพ์เอกสาร">
@@ -77,9 +92,10 @@ BillPrintOptions.propTypes = {
   setSaleOption: PropTypes.func.isRequired,
   hideNoneOption: PropTypes.bool,
   currentSaleMode: PropTypes.oneOf(Object.values(SALE_MODE)),
-};
+  };
 
 export default BillPrintOptions;
+
 
 
 

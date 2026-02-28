@@ -4,10 +4,6 @@
 
 
 
-
-
-
-
 // 📁 FILE: features/sales/api/saleApi.js
 
 import apiClient from '@/utils/apiClient';
@@ -30,7 +26,7 @@ const attachApiContext = (err, context) => {
 
 export const createSaleOrder = async (payload) => {
   try {
-    const res = await apiClient.post('/sale-orders', payload);
+    const res = await apiClient.post('/sales', payload);
     return res.data;
   } catch (err) {
     throw attachApiContext(err, 'saleApi.createSaleOrder');
@@ -39,7 +35,7 @@ export const createSaleOrder = async (payload) => {
 
 export const getAllSales = async () => {
   try {
-    const res = await apiClient.get('/sale-orders');
+    const res = await apiClient.get('/sales');
     return res.data;
   } catch (err) {
     throw attachApiContext(err, 'saleApi.getAllSales');
@@ -56,7 +52,7 @@ export const getSaleById = async (id, options) => {
       ...(options?.params || {}),
     };
 
-    const res = await apiClient.get(`/sale-orders/${id}`, { params });
+    const res = await apiClient.get(`/sales/${id}`, { params });
     return res.data;
   } catch (err) {
     throw attachApiContext(err, 'saleApi.getSaleById');
@@ -65,7 +61,7 @@ export const getSaleById = async (id, options) => {
 
 export const returnSale = async (saleOrderId, saleItemId) => {
   try {
-    const res = await apiClient.post(`/sale-orders/${saleOrderId}/return`, { saleItemId });
+    const res = await apiClient.post(`/sales/${saleOrderId}/return`, { saleItemId });
     return res.data;
   } catch (err) {
     throw attachApiContext(err, 'saleApi.returnSale');
@@ -74,7 +70,7 @@ export const returnSale = async (saleOrderId, saleItemId) => {
 
 export const markSaleAsPaid = async (saleId) => {
   try {
-    const res = await apiClient.post(`/sale-orders/${saleId}/mark-paid`);
+    const res = await apiClient.post(`/sales/${saleId}/mark-paid`);
     return res.data;
   } catch (err) {
     throw attachApiContext(err, 'saleApi.markSaleAsPaid');
@@ -83,7 +79,7 @@ export const markSaleAsPaid = async (saleId) => {
 
 export const getSaleReturns = async () => {
   try {
-    const res = await apiClient.get('/sale-orders/return');
+    const res = await apiClient.get('/sales/return');
     return res.data;
   } catch (err) {
     throw attachApiContext(err, 'saleApi.getSaleReturns');
@@ -101,10 +97,28 @@ export const updateCustomer = async (data) => {
 };
 
 // ✅ Search printable sales with filters
+// ✅ Search printable sales (Sales history for printing)
+// - Primary endpoint: /sales/printable
+// - Backward-compat fallback: /sales/printable-sales (temporary)
 export const searchPrintableSales = async (params) => {
   try {
-    const res = await apiClient.get('/sale-orders/printable-sales', { params });
-    return res.data;
+    const safeParams = {
+      ...(params || {}),
+      _ts: Date.now(), // cache-bust for list pages
+    };
+
+    try {
+      const res = await apiClient.get('/sales/printable', { params: safeParams });
+      return res.data;
+    } catch (err) {
+      // Fallback only when BE hasn't deployed new route yet
+      const status = err?.response?.status;
+      if (status === 404) {
+        const res2 = await apiClient.get('/sales/printable-sales', { params: safeParams });
+        return res2.data;
+      }
+      throw err;
+    }
   } catch (err) {
     throw attachApiContext(err, 'saleApi.searchPrintableSales');
   }
@@ -129,3 +143,6 @@ export const convertOrderOnlineToSale = async (orderOnlineId, stockSelections) =
 
 
 
+
+
+  

@@ -322,13 +322,7 @@ const PurchaseOrderForm = ({
         </div>
       </div>
 
-      {/* ✅ Option A: ไม่รองรับการใช้เงินล่วงหน้าในขั้น Create PO */}
-      <div className="rounded-md border border-zinc-200 bg-zinc-50 p-3 text-sm text-zinc-700">
-        <div className="font-medium">หมายเหตุ</div>
-        <div className="mt-1">
-          ขั้นสร้างใบสั่งซื้อ (PO) ไม่รองรับการใช้/ผูกเงินล่วงหน้า (advance) — ให้ไปทำในขั้นตอนจ่ายเงิน Supplier ภายหลัง
-        </div>
-      </div>
+
 
       {/* Filters & Search */}
       <div className="p-2 space-y-2">

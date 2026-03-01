@@ -87,11 +87,30 @@ const PurchaseOrderTable = ({ products = [], setProducts = () => {}, loading = f
 
   const rows = useMemo(() => products, [products]);
 
+  // ✅ Summary (ยอดรวม) — อิงค่าที่ผู้ใช้กำลังพิมพ์ (raw) เพื่อให้ยอดรวมอัปเดตตาม UI แบบ real-time
+  const summary = useMemo(() => {
+    return rows.reduce(
+      (acc, item) => {
+        const qtyDisplay = rawQty[item.id] ?? String(item.quantity ?? 1);
+        const costDisplay = rawCost[item.id] ?? ((item.costPrice ?? 0) > 0 ? String(item.costPrice) : '');
+
+        const qty = parseQty(qtyDisplay);
+        const cost = parseCost(costDisplay);
+
+        acc.totalQty += qty;
+        acc.totalAmount += qty * cost;
+        return acc;
+      },
+      { totalQty: 0, totalAmount: 0 }
+    );
+  }, [rows, rawQty, rawCost]);
+
   return (
-    <div className="rounded-md border overflow-x-auto">
+    <div className="rounded-md border">
       <h3 className="text-md font-semibold px-4 pt-3 pb-2 text-gray-700">รายการสินค้าที่สั่งซื้อ</h3>
+      <div className="max-h-[400px] overflow-y-auto overflow-x-auto">
       <Table>
-        <TableHeader className="bg-blue-100">
+        <TableHeader className="bg-blue-100 sticky top-0 z-20">
           <TableRow>
             <TableHead className="text-center w-[150px]">หมวดหมู่</TableHead>
             <TableHead className="text-center w-[130px]">ประเภท</TableHead>
@@ -107,66 +126,83 @@ const PurchaseOrderTable = ({ products = [], setProducts = () => {}, loading = f
 
         <TableBody>
           {!loading && rows.length > 0 ? (
-            rows.map((item, index) => {
-              const isLast = index === rows.length - 1;
+            <>
+              {rows.map((item, index) => {
+                const isLast = index === rows.length - 1;
 
-              const qtyDisplay = rawQty[item.id] ?? String(item.quantity ?? 1);
-              const costDisplay = rawCost[item.id] ?? ((item.costPrice ?? 0) > 0 ? String(item.costPrice) : '');
+                const qtyDisplay = rawQty[item.id] ?? String(item.quantity ?? 1);
+                const costDisplay = rawCost[item.id] ?? ((item.costPrice ?? 0) > 0 ? String(item.costPrice) : '');
 
-              const qtyParsed = parseQty(qtyDisplay);
-              const costParsed = parseCost(costDisplay);
-              const total = qtyParsed * costParsed;
+                const qtyParsed = parseQty(qtyDisplay);
+                const costParsed = parseCost(costDisplay);
+                const total = qtyParsed * costParsed;
 
-              return (
-                <TableRow key={item.id} ref={isLast ? lastRowRef : null} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                  <TableCell>{item.category || '-'}</TableCell>
-                  <TableCell>{item.productType || '-'}</TableCell>
-                  <TableCell>{item.productProfile || '-'}</TableCell>
-                  <TableCell>{item.productTemplate || '-'}</TableCell>
-                  <TableCell>{item.name || '-'}</TableCell>
-                  
-                  <TableCell className="align-middle">
-                    <input
-                      type="number"
-                      className="w-20 text-right border rounded p-1"
-                      value={qtyDisplay}
-                      placeholder="1"
-                      min={1}
-                      onChange={(e) => handleQtyChange(item.id, e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') e.preventDefault();
-                      }}
-                      inputMode="numeric"
-                    />
-                  </TableCell>
+                return (
+                  <TableRow
+                    key={item.id}
+                    ref={isLast ? lastRowRef : null}
+                    className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}
+                  >
+                    <TableCell>{item.category || '-'}</TableCell>
+                    <TableCell>{item.productType || '-'}</TableCell>
+                    <TableCell>{item.productProfile || '-'}</TableCell>
+                    <TableCell>{item.productTemplate || '-'}</TableCell>
+                    <TableCell>{item.name || '-'}</TableCell>
 
-                  <TableCell className="align-middle">
-                    <input
-                      type="number"
-                      className="w-24 text-right border rounded p-1"
-                      value={costDisplay}
-                      placeholder="0.00"
-                      min={0}
-                      onChange={(e) => handleCostChange(item.id, e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') e.preventDefault();
-                      }}
-                      inputMode="decimal"
-                    />
-                  </TableCell>
-
-                  <TableCell className="text-center align-middle">{total.toLocaleString()} ฿</TableCell>
-
-                  {editable && (
-                    <TableCell className="text-center align-middle">
-                      <div className="flex justify-center">
-                        <StandardActionButtons onDelete={() => handleDelete(item.id)} />
-                      </div>
+                    <TableCell className="align-middle">
+                      <input
+                        type="number"
+                        className="w-20 text-right border rounded p-1"
+                        placeholder="1"
+                        value={qtyDisplay}
+                        min={1}
+                        onChange={(e) => handleQtyChange(item.id, e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') e.preventDefault();
+                        }}
+                        inputMode="numeric"
+                      />
                     </TableCell>
-                  )}
-                </TableRow>
-              );
-            })
+
+                    <TableCell className="align-middle">
+                      <input
+                        type="number"
+                        className="w-24 text-right border rounded p-1"
+                        placeholder="0.00"
+                        value={costDisplay}
+                        min={0}
+                        onChange={(e) => handleCostChange(item.id, e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') e.preventDefault();
+                        }}
+                        inputMode="decimal"
+                      />
+                    </TableCell>
+
+                    <TableCell className="text-right align-middle tabular-nums">{total.toLocaleString()} ฿</TableCell>
+
+                    {editable && (
+                      <TableCell className="text-center align-middle">
+                        <div className="flex justify-center">
+                          <StandardActionButtons onDelete={() => handleDelete(item.id)} />
+                        </div>
+                      </TableCell>
+                    )}
+                  </TableRow>
+                );
+              })}
+
+              {/* ✅ บรรทัดยอดรวม */}
+              <TableRow className="bg-blue-50 sticky bottom-0 z-20 border-t shadow-sm">
+                <TableCell colSpan={5} className="text-right font-semibold text-gray-700 tabular-nums">
+                  ยอดรวม
+                </TableCell>
+                <TableCell className="text-right font-semibold tabular-nums">{summary.totalQty.toLocaleString()}</TableCell>
+                <TableCell className="text-center text-muted-foreground">-</TableCell>
+                <TableCell className="text-right font-semibold tabular-nums">{summary.totalAmount.toLocaleString()} ฿</TableCell>
+                {editable && <TableCell />}
+              </TableRow>
+            </>
           ) : (
             <TableRow>
               <TableCell colSpan={9} className="text-center text-muted-foreground">
@@ -176,11 +212,13 @@ const PurchaseOrderTable = ({ products = [], setProducts = () => {}, loading = f
           )}
         </TableBody>
       </Table>
+      </div>
     </div>
   );
 };
 
 export default PurchaseOrderTable;
+
 
 
 

@@ -1,5 +1,11 @@
 
 
+
+
+
+
+
+
 import React, { useMemo, useState } from 'react';
 
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
@@ -103,10 +109,11 @@ const ProductSearchTable = ({ results = [], onAdd }) => {
   );
 
   return (
-    <div className="rounded-md border overflow-x-auto mt-6 shadow-sm">
+    <div className="rounded-md border mt-6">
       <h3 className="text-md font-semibold px-4 pt-3 pb-2 text-gray-700">ผลการค้นหา</h3>
-      <Table>
-        <TableHeader className="bg-blue-100">
+      <div className="max-h-[360px] overflow-y-auto overflow-x-auto">
+        <Table>
+        <TableHeader className="bg-blue-100/95 backdrop-blur sticky top-0 z-20 border-b">
           <TableRow>
             <TableHead className="text-center w-[150px]">หมวดหมู่</TableHead>
             <TableHead className="text-center w-[130px]">ประเภท</TableHead>
@@ -164,10 +171,10 @@ const ProductSearchTable = ({ results = [], onAdd }) => {
                       inputMode="numeric"
                     />
                   </TableCell>
-                  <TableCell className="text-center align-middle">
+                  <TableCell className="align-middle tabular-nums">
                     <input
                       type="number"
-                      className="w-24 text-right border rounded p-1"
+                      className="w-24 text-right border rounded p-1 tabular-nums"
                       value={displayCost}
                       placeholder="0.00"
                       min={0}
@@ -178,7 +185,7 @@ const ProductSearchTable = ({ results = [], onAdd }) => {
                       inputMode="decimal"
                     />
                   </TableCell>
-                  <TableCell className="text-center align-middle">{total.toLocaleString()} ฿</TableCell>
+                  <TableCell className="text-right align-middle tabular-nums">{total.toLocaleString()} ฿</TableCell>
                   <TableCell className="text-center align-middle">
                     <div className="flex flex-col items-center justify-center gap-1">
                       <StandardActionButtons onAdd={() => handleAdd(product)} />
@@ -195,11 +202,13 @@ const ProductSearchTable = ({ results = [], onAdd }) => {
           )}
         </TableBody>
       </Table>
+      </div>
     </div>
   );
 };
 
 export default ProductSearchTable;
+
 
 
 

@@ -3,7 +3,7 @@
 
 
 // ✅ src/routes/stockRoutes.jsx
-import StockDashboardPage from "@/features/pos/pages/stock/StockDashboardPage";
+import StockDashboardPage from "@/features/stock/pages/StockDashboardPage";
 import ListProductPage from "@/features/product/pages/ListProductPage";
 import ListProductTemplatePage from '@/features/productTemplate/pages/ListProductTemplatePage';
 import CreateProductTemplatePage from '@/features/productTemplate/pages/CreateProductTemplatePage';

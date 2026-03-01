@@ -1,9 +1,4 @@
-
-
-
-
-
-// 📁 FILE: features/sales/store/salesStore.js
+// 📁 FILE: src/features/sales/store/salesStore.js
 
 import { create } from 'zustand';
 
@@ -17,7 +12,7 @@ import {
   convertOrderOnlineToSale,
 } from '../api/saleApi';
 
-// ✅ Defensive normalizer (production-grade): กันเคส item หลุดรูปแบบ/stockItemId หายระหว่างทาง
+// ✅ Defensive normalizer (production-grade)
 const normalizeStockItemId = (item) => {
   const raw = item?.stockItemId ?? item?.stockItem?.id ?? item?.id ?? null;
   const n = raw == null ? null : Number(raw);
@@ -33,10 +28,36 @@ const devError = (...args) => {
   }
 };
 
+// ✅ Normalize printable response (รองรับหลายรูปแบบจาก BE)
+const normalizePrintableRows = (rows) => {
+  if (Array.isArray(rows)) return rows;
+
+  if (rows && typeof rows === 'object') {
+    if (Array.isArray(rows.items)) return rows.items;
+    if (Array.isArray(rows.sales)) return rows.sales;
+    if (Array.isArray(rows.data)) return rows.data;
+
+    const r = rows.result;
+    if (r && typeof r === 'object') {
+      if (Array.isArray(r.items)) return r.items;
+      if (Array.isArray(r.sales)) return r.sales;
+      if (Array.isArray(r.data)) return r.data;
+    }
+  }
+
+  return [];
+};
+
 const useSalesStore = create((set, get) => ({
   // ✅ global state for UI-based alert/error block (no dialog)
   loading: false,
   error: null,
+
+  // ✅ Sales Dashboard overview state (separate from global loading/error)
+  salesOverviewLoading: false,
+  salesOverviewError: null,
+  salesOverviewLastLoadedAt: null,
+  clearSalesOverviewErrorAction: () => set({ salesOverviewError: null }),
 
   saleItems: [],
   customerId: null,
@@ -44,7 +65,7 @@ const useSalesStore = create((set, get) => ({
   currentSale: null,
   printableSales: [],
 
-  // ✅ last created sale id (for post-confirm flows like print bill)
+  // ✅ last created sale id
   lastCreatedSaleId: null,
   setLastCreatedSaleIdAction: (id) => set({ lastCreatedSaleId: id || null }),
 
@@ -68,18 +89,14 @@ const useSalesStore = create((set, get) => ({
     set((state) => {
       const exists = state.paymentList.some((p) => p.method === method);
       const newList = exists
-        ? state.paymentList.map((p) =>
-            p.method === method ? { ...p, amount: Number(amount) || 0 } : p
-          )
+        ? state.paymentList.map((p) => (p.method === method ? { ...p, amount: Number(amount) || 0 } : p))
         : [...state.paymentList, { method, amount: Number(amount) || 0, note: '' }];
       return { paymentList: newList };
     });
   },
-
-  // ✅ Alias ตามมาตรฐาน store (Action suffix) — backward compatible
   setPaymentAmountAction: (method, amount) => get().setPaymentAmount(method, amount),
 
-  // ✅ ปรับการเฉลี่ยส่วนลดบิลแบบ Largest Remainder (หน่วยสตางค์) — ผลรวมตรง billDiscount เป๊ะ
+  // ✅ Largest Remainder (satang) — sum discount ตรง billDiscount เป๊ะ
   setBillDiscount: (amount) => {
     const billDiscount = Number(amount) || 0;
     const { saleItems } = get();
@@ -101,12 +118,7 @@ const useSalesStore = create((set, get) => ({
     if (totalDiscSatang <= 0) {
       const newItems = saleItems.map((item) => {
         const baseDiscount = Number(item.discountWithoutBill ?? 0) || 0;
-        return {
-          ...item,
-          billShare: 0,
-          discountWithoutBill: baseDiscount,
-          discount: baseDiscount,
-        };
+        return { ...item, billShare: 0, discountWithoutBill: baseDiscount, discount: baseDiscount };
       });
       set({ billDiscount, saleItems: newItems, sharedBillDiscountPerItem: 0 });
       return;
@@ -136,28 +148,17 @@ const useSalesStore = create((set, get) => ({
     const newItems = provisional.map(({ item, baseDiscount, flo }) => {
       const finalFlo = floById.get(item.stockItemId) ?? flo;
       const billShare = finalFlo / 100;
-      return {
-        ...item,
-        discountWithoutBill: baseDiscount,
-        billShare,
-        discount: baseDiscount + billShare,
-      };
+      return { ...item, discountWithoutBill: baseDiscount, billShare, discount: baseDiscount + billShare };
     });
 
     const avg = Math.floor((billDiscount / saleItems.length) * 100) / 100;
     set({ billDiscount, saleItems: newItems, sharedBillDiscountPerItem: avg });
   },
-
-  // ✅ Alias ตามมาตรฐาน store (Action suffix) — backward compatible
   setBillDiscountAction: (amount) => get().setBillDiscount(amount),
 
-  // ✅ รองรับทั้ง 2 แบบ:
-  // 1) UI คำนวณค่า avg แล้วส่งมา (preferred)
-  // 2) ถ้าไม่ส่งมา → คำนวณจาก billDiscount/saleItems (backward compatible)
   setSharedBillDiscountPerItem: (value) => {
     const n = value == null ? null : Number(value);
     if (Number.isFinite(n)) {
-      // keep 2 decimals (เงินบาท/สตางค์) เพื่อให้ UI/table แสดงตรง
       const safe = Math.floor(n * 100) / 100;
       set({ sharedBillDiscountPerItem: safe });
       return;
@@ -169,12 +170,9 @@ const useSalesStore = create((set, get) => ({
       return;
     }
 
-    // fallback: average from billDiscount
     const avg = Math.floor(((Number(billDiscount) || 0) / saleItems.length) * 100) / 100;
     set({ sharedBillDiscountPerItem: avg });
   },
-
-  // ✅ Alias ตามมาตรฐาน store (Action suffix) — backward compatible
   setSharedBillDiscountPerItemAction: (value) => get().setSharedBillDiscountPerItem(value),
 
   sumPaymentList: () => {
@@ -209,10 +207,7 @@ const useSalesStore = create((set, get) => ({
         return;
       }
 
-      const safeItem = {
-        ...item,
-        stockItemId,
-      };
+      const safeItem = { ...item, stockItemId };
 
       set((state) => {
         const exists = (state.saleItems || []).some((i) => normalizeStockItemId(i) === stockItemId);
@@ -225,9 +220,7 @@ const useSalesStore = create((set, get) => ({
   },
 
   removeSaleItemAction: (stockItemId) => {
-    set((state) => ({
-      saleItems: state.saleItems.filter((i) => i.stockItemId !== stockItemId),
-    }));
+    set((state) => ({ saleItems: state.saleItems.filter((i) => i.stockItemId !== stockItemId) }));
   },
 
   clearSaleItemsAction: () => {
@@ -238,13 +231,7 @@ const useSalesStore = create((set, get) => ({
     const sid = Number(stockItemId) || 0;
     set((state) => ({
       saleItems: (state.saleItems || []).map((item) =>
-        normalizeStockItemId(item) === sid
-          ? {
-              ...item,
-              stockItemId: sid, // 🔒 กันหลุด
-              discount: Number(discount) || 0,
-            }
-          : item
+        normalizeStockItemId(item) === sid ? { ...item, stockItemId: sid, discount: Number(discount) || 0 } : item
       ),
     }));
   },
@@ -253,13 +240,7 @@ const useSalesStore = create((set, get) => ({
     const sid = Number(stockItemId) || 0;
     set((state) => ({
       saleItems: (state.saleItems || []).map((item) =>
-        normalizeStockItemId(item) === sid
-          ? {
-              ...item,
-              ...newData,
-              stockItemId: sid, // 🔒 กันหลุดเวลามีการ merge
-            }
-          : item
+        normalizeStockItemId(item) === sid ? { ...item, ...newData, stockItemId: sid } : item
       ),
     }));
   },
@@ -272,11 +253,7 @@ const useSalesStore = create((set, get) => ({
     }
   },
 
-  // ✅ ส่ง saleMode ให้ BE จัดการสถานะเอง
-  // ✅ ส่ง saleMode ให้ BE จัดการสถานะเอง
-  // Production hardening:
-  // - เซ็ต loading/error ใน store เพื่อให้ UI แสดง error block ได้
-  // - รองรับ backend 409 (ขายซ้ำ/สถานะไม่พร้อม/partial failure)
+  // ✅ ส่ง saleMode ให้ BE จัดการสถานะเอง (Production hardening)
   confirmSaleOrderAction: async (saleMode, opts = {}) => {
     const { saleItems, customerId } = get();
 
@@ -285,7 +262,7 @@ const useSalesStore = create((set, get) => ({
       set({ error: msg });
       return { error: msg };
     }
-    // ✅ validate: ต้องมี stockItemId ทุกชิ้น (กัน payload หลุด)
+
     const missingRows = (saleItems || [])
       .map((it, idx) => ({ idx, stockItemId: normalizeStockItemId(it) }))
       .filter((x) => !x.stockItemId)
@@ -307,7 +284,7 @@ const useSalesStore = create((set, get) => ({
 
     try {
       const vatRate = 7;
-      // ✅ คำนวณเงินแบบสตางค์ เพื่อความแม่นยำ
+
       const totalBeforeDiscountSatang = saleItems.reduce(
         (sum, item) => sum + Math.round((Number(item.price) || 0) * 100),
         0
@@ -316,6 +293,7 @@ const useSalesStore = create((set, get) => ({
         (sum, item) => sum + Math.round((Number(item.discount) || 0) * 100),
         0
       );
+
       const totalNetSatang = Math.max(totalBeforeDiscountSatang - totalDiscountSatang, 0);
       const vatSatang = Math.round((totalNetSatang * vatRate) / 100);
       const totalAmountSatang = totalNetSatang + vatSatang;
@@ -326,12 +304,6 @@ const useSalesStore = create((set, get) => ({
       const totalAmount = totalAmountSatang / 100;
 
       const isCredit = saleMode === 'CREDIT';
-
-      // ✅ CREDIT: default เป็น DELIVERY_NOTE เสมอ (บังคับพิมพ์) เพราะต้องมีเอกสารให้เซ็นรับของ
-// ✅ CREDIT: ห้ามออกใบกำกับ/ใบเสร็จ (ยังไม่รับเงิน) — คุมที่ FE + BE
-      // opts:
-      // - deliveryNoteMode: 'PRINT' | 'NO_PRINT' (NOTE: CREDIT will be forced to PRINT)
-      // - saleType: optional override (e.g. 'GOVERNMENT')
       const saleType = opts?.saleType;
 
       const payload = {
@@ -342,56 +314,37 @@ const useSalesStore = create((set, get) => ({
         vatRate,
         totalAmount,
         note: '',
-        items: saleItems
-          .map((item) => ({
-            stockItemId: normalizeStockItemId(item),
-            basePrice: Number(item.price) || 0,
-            // ✅ คิด VAT ต่อชิ้นจาก (ราคา - ส่วนลด) แบบสตางค์
-            vatAmount:
-              Math.round(
-                (Math.max(
-                  Math.round((Number(item.price) || 0) * 100) -
-                    Math.round((Number(item.discount) || 0) * 100),
-                  0
-                ) *
-                  vatRate) /
-                  100
-              ) / 100,
-            // ✅ ราคาสุทธิหลังหักส่วนลด
-            price:
-              Math.max(
-                Math.round((Number(item.price) || 0) * 100) -
-                  Math.round((Number(item.discount) || 0) * 100),
+        items: saleItems.map((item) => ({
+          stockItemId: normalizeStockItemId(item),
+          basePrice: Number(item.price) || 0,
+          vatAmount:
+            Math.round(
+              (Math.max(
+                Math.round((Number(item.price) || 0) * 100) - Math.round((Number(item.discount) || 0) * 100),
                 0
-              ) / 100,
-            discount: Number(item.discount) || 0,
-            remark: '',
-          })),
-        // ✅ BE expects "mode" (single source of truth)
+              ) *
+                vatRate) /
+                100
+            ) / 100,
+          price:
+            Math.max(
+              Math.round((Number(item.price) || 0) * 100) - Math.round((Number(item.discount) || 0) * 100),
+              0
+            ) / 100,
+          discount: Number(item.discount) || 0,
+          remark: '',
+        })),
         mode: saleMode,
-        // keep for backward compatibility (if any older endpoint still reads it)
         saleMode,
-
-        // ✅ Explicit flags for BE (backward-compatible: BE can ignore unknown keys)
         isCredit,
-        // Credit sale at sale-time: never issue tax invoice
         isTaxInvoice: isCredit ? false : undefined,
         saleType: saleType || undefined,
-
-        // ✅ Only send delivery note mode for CREDIT + ORG
-        // ✅ CREDIT always forces delivery note print as default (A)
         deliveryNoteMode: isCredit ? 'PRINT' : undefined,
       };
 
       const data = await createSaleOrder(payload);
 
-      // ✅ normalize saleId เพื่อให้ FE เปิดหน้า print ได้แน่นอน (รองรับ backend หลายรูปแบบ)
-      const saleId =
-        data?.saleId ??
-        data?.id ??
-        data?.saleOrderId ??
-        data?.sale?.id ??
-        null;
+      const saleId = data?.saleId ?? data?.id ?? data?.saleOrderId ?? data?.sale?.id ?? null;
 
       set({
         saleItems: [],
@@ -410,20 +363,162 @@ const useSalesStore = create((set, get) => ({
       const status = err?.response?.status;
       const payload = err?.response?.data;
 
-      // ✅ 409: ขายไม่ได้/ขายซ้ำ/สถานะเปลี่ยน (backend hardening)
       if (status === 409) {
         const msg = payload?.message || 'มีบางรายการไม่สามารถทำรายการขายได้ (อาจถูกขายไปแล้ว)';
         set({ error: msg });
         return { error: msg, code: payload?.code, details: payload };
       }
 
-      // 400/401/500 ฯลฯ
       const msg = payload?.message || err?.message || 'เกิดข้อผิดพลาดในการขาย';
       devError('❌ [confirmSaleOrderAction]', err);
       set({ error: msg });
       return { error: msg };
     } finally {
       set({ loading: false });
+    }
+  },
+
+  // ============================================================
+  // ✅ Executive Dashboard (Sales) — Overview summary (manual load)
+  // ============================================================
+
+  fetchSalesDashboardOverviewAction: async (opts = {}) => {
+    const scope = opts?.scope || 'today'; // today | custom
+
+    const startOfDay = (d) => {
+      const x = new Date(d);
+      x.setHours(0, 0, 0, 0);
+      return x;
+    };
+
+    const startOfMonth = (d) => {
+      const x = startOfDay(d);
+      x.setDate(1);
+      return x;
+    };
+
+    const endOfDayExclusive = (d) => {
+      const x = startOfDay(d);
+      x.setDate(x.getDate() + 1);
+      return x;
+    };
+
+    const toISODate = (d) => {
+      const x = new Date(d);
+      const yyyy = x.getFullYear();
+      const mm = String(x.getMonth() + 1).padStart(2, '0');
+      const dd = String(x.getDate()).padStart(2, '0');
+      return `${yyyy}-${mm}-${dd}`;
+    };
+
+    const pickNumber = (...vals) => {
+      for (const v of vals) {
+        const n = Number(v);
+        if (Number.isFinite(n)) return n;
+      }
+      return 0;
+    };
+
+    const isPaidSale = (s) => {
+      if (s?.isPaid === true) return true;
+      if (s?.paid === true) return true;
+      if (s?.paidAt) return true;
+      if (s?.paymentStatus && String(s.paymentStatus).toUpperCase() === 'PAID') return true;
+      if (s?.status && String(s.status).toUpperCase() === 'PAID') return true;
+      if (s?.lifecycleStatus && String(s.lifecycleStatus).toUpperCase() === 'PAID') return true;
+
+      const payments = Array.isArray(s?.payments)
+        ? s.payments
+        : Array.isArray(s?.paymentList)
+        ? s.paymentList
+        : null;
+
+      if (payments?.length) {
+        const sum = payments.reduce((acc, p) => acc + pickNumber(p?.amount, p?.paidAmount, p?.value), 0);
+        if (sum > 0) return true;
+      }
+
+      return false;
+    };
+
+    set({ salesOverviewLoading: true, salesOverviewError: null });
+
+    try {
+      let fromDate;
+      let toDate;
+      let monthFromDate;
+      let monthToDate;
+
+      if (scope === 'custom') {
+        fromDate = opts?.fromDate || null;
+        toDate = opts?.toDate || null;
+      } else {
+        const now = new Date();
+        fromDate = toISODate(startOfDay(now));
+        toDate = toISODate(endOfDayExclusive(now));
+        monthFromDate = toISODate(startOfMonth(now));
+        monthToDate = toDate;
+      }
+
+      const limit = Math.min(Math.max(Number(opts?.limit || 500) || 500, 50), 2000);
+
+      const rows = await searchPrintableSales({
+        fromDate,
+        toDate,
+        keyword: '',
+        limit,
+      });
+
+      const sales = normalizePrintableRows(rows);
+
+      const includeMonth = opts?.includeMonth !== false;
+      let monthSalesAmount = null;
+
+      if (includeMonth && monthFromDate && monthToDate) {
+        const monthLimit = Math.min(Math.max(Number(opts?.monthLimit || 2000) || 2000, 200), 5000);
+        const monthRows = await searchPrintableSales({
+          fromDate: monthFromDate,
+          toDate: monthToDate,
+          keyword: '',
+          limit: monthLimit,
+        });
+        const monthSales = normalizePrintableRows(monthRows);
+
+        monthSalesAmount = monthSales.reduce((acc, s) => {
+          const v = pickNumber(s?.totalAmount, s?.total, s?.grandTotal, s?.finalTotal, s?.amount, s?.netTotal);
+          return acc + v;
+        }, 0);
+      }
+
+      const todaySalesCount = sales.length;
+
+      const todaySalesAmount = sales.reduce((acc, s) => {
+        const v = pickNumber(s?.totalAmount, s?.total, s?.grandTotal, s?.finalTotal, s?.amount, s?.netTotal);
+        return acc + v;
+      }, 0);
+
+      const unpaidCount = sales.reduce((acc, s) => (isPaidSale(s) ? acc : acc + 1), 0);
+
+      const data = {
+        todaySalesAmount,
+        todaySalesCount,
+        unpaidCount,
+        monthSalesAmount: monthSalesAmount == null ? undefined : monthSalesAmount,
+        todaySalesAmountHint: scope === 'today' ? 'ยอดรวมช่วงวันนี้' : 'ยอดรวมตามช่วงเวลาที่เลือก',
+        todaySalesCountHint: scope === 'today' ? 'จำนวนบิลช่วงวันนี้' : 'จำนวนบิลตามช่วงเวลาที่เลือก',
+        unpaidHint: 'รายการที่ยังไม่พบสถานะ PAID/paidAt',
+        monthSalesAmountHint: scope === 'today' ? 'ยอดสะสมเดือนนี้ (month-to-date)' : 'ยอดสะสมเดือนนี้ (อิงช่วงเวลาที่เลือก)',
+      };
+
+      set({ salesOverviewLastLoadedAt: new Date().toISOString() });
+      return data;
+    } catch (err) {
+      devError('❌ [fetchSalesDashboardOverviewAction] error:', err);
+      const msg = err?.response?.data?.message || err?.message || 'โหลดภาพรวมการขายไม่สำเร็จ';
+      set({ salesOverviewError: msg });
+      throw err;
+    } finally {
+      set({ salesOverviewLoading: false });
     }
   },
 
@@ -481,9 +576,6 @@ const useSalesStore = create((set, get) => ({
     const keyword = params?.keyword || '';
     const limitRaw = params?.limit;
 
-    // ✅ optional server-side filters (keep FE light)
-    // - Delivery Note list uses onlyUnpaid=1
-    // - Print Bill list uses onlyPaid=1
     const onlyUnpaid = params?.onlyUnpaid;
     const onlyPaid = params?.onlyPaid;
 
@@ -498,10 +590,10 @@ const useSalesStore = create((set, get) => ({
         toDate,
         keyword,
         limit,
-        // pass-through optional flags (BE will ignore if unsupported)
         ...(onlyUnpaid ? { onlyUnpaid } : {}),
         ...(onlyPaid ? { onlyPaid } : {}),
       });
+
       set({ printableSales: Array.isArray(data) ? data : [] });
       return { ok: true };
     } catch (err) {
@@ -526,20 +618,5 @@ const useSalesStore = create((set, get) => ({
 }));
 
 export default useSalesStore;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 

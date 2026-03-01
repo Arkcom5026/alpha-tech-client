@@ -1,4 +1,5 @@
 
+
 // ✅ src/routes/posRoutes.jsx
 import { Navigate } from 'react-router-dom'
 
@@ -54,6 +55,7 @@ const posRoutes = {
 };
 
 export default posRoutes;
+
 
 
 

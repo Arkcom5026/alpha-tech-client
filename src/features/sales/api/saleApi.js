@@ -1,10 +1,4 @@
-
-
-
-
-
-
-// 📁 FILE: features/sales/api/saleApi.js
+// 📁 FILE: src/features/sales/api/saleApi.js
 
 import apiClient from '@/utils/apiClient';
 
@@ -14,7 +8,6 @@ import apiClient from '@/utils/apiClient';
 const attachApiContext = (err, context) => {
   try {
     if (err && typeof err === 'object') {
-      // ไม่ทับของเดิม ถ้ามีอยู่แล้ว
       if (!err._apiContext) err._apiContext = context;
       if (!err._apiAt) err._apiAt = new Date().toISOString();
     }
@@ -43,8 +36,6 @@ export const getAllSales = async () => {
 };
 
 // ✅ getSaleById (print-safe)
-// - รองรับ options เพื่อส่ง query params เพิ่มเติม
-// - ใส่ includePayments=1 เป็นค่าเริ่มต้นแบบ defensive (ถ้า BE ไม่รองรับจะถูก ignore)
 export const getSaleById = async (id, options) => {
   try {
     const params = {
@@ -96,7 +87,6 @@ export const updateCustomer = async (data) => {
   }
 };
 
-// ✅ Search printable sales with filters
 // ✅ Search printable sales (Sales history for printing)
 // - Primary endpoint: /sales/printable
 // - Backward-compat fallback: /sales/printable-sales (temporary)
@@ -104,14 +94,13 @@ export const searchPrintableSales = async (params) => {
   try {
     const safeParams = {
       ...(params || {}),
-      _ts: Date.now(), // cache-bust for list pages
+      _ts: Date.now(),
     };
 
     try {
       const res = await apiClient.get('/sales/printable', { params: safeParams });
       return res.data;
     } catch (err) {
-      // Fallback only when BE hasn't deployed new route yet
       const status = err?.response?.status;
       if (status === 404) {
         const res2 = await apiClient.get('/sales/printable-sales', { params: safeParams });
@@ -135,14 +124,3 @@ export const convertOrderOnlineToSale = async (orderOnlineId, stockSelections) =
     throw attachApiContext(err, 'saleApi.convertOrderOnlineToSale');
   }
 };
-
-
-
-
-
-
-
-
-
-
-  

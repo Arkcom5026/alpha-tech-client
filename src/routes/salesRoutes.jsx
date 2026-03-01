@@ -1,5 +1,10 @@
 
-import SalesDashboardPage from "@/features/pos/pages/sales/SalesDashboardPage";
+
+
+
+
+
+import SalesDashboardPage from "@/features/sales/pages/SalesDashboardPage";
 import PrintBillListPage from "@/features/bill/pages/PrintBillListPage";
 import PrintBillPageShortTax from "@/features/bill/pages/PrintBillPageShortTax";
 import PrintBillPageFullTax from "@/features/bill/pages/PrintBillPageFullTax";
@@ -20,13 +25,17 @@ import OnlineConvertOrderPage from "@/features/orderOnlinePos/pages/OnlineConver
 // import ReturnListPage from "@/features/saleReturn/pages/ReturnListPage"; // ถ้ายังไม่สร้าง ให้ comment ไว้ก่อน
 
 const salesRoutes = {
-  path: '/pos/sales',
+  // ✅ nested under posRoutes (path: 'pos')
+  // so this route must be relative: /pos/sales
+  path: 'sales',
   children: [
     {
       index: true,
       element: <SalesDashboardPage />, // ✅ หน้า Dashboard ของ Sales
-
-      
+    },
+    {
+      path: 'dashboard',
+      element: <SalesDashboardPage />,
     },
     {
       path: 'sale',
@@ -76,8 +85,9 @@ const salesRoutes = {
       path: 'order-online',
       children: [
         { index: true, element: <ListOrderOnlinePosPage /> },
-        { path: ':id', element: <OrderOnlinePosDetailPage /> },
+        // ✅ specific route must come before :id
         { path: 'convert/:id', element: <OnlineConvertOrderPage /> },
+        { path: ':id', element: <OrderOnlinePosDetailPage /> },
         
         
       ],      

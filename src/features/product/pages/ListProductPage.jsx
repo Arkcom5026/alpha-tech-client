@@ -1,6 +1,9 @@
-
-
 // ✅ src/features/product/pages/ListProductPage.jsx
+// ✅ Policy update (Production):
+// - Product เป็น Global Master Data → ห้ามปิดใช้งานจาก POS
+// - อนุญาต “ลบถาวร” เฉพาะ SUPERADMIN เท่านั้น
+// - หากสินค้ามีการอ้างอิง (ถูกใช้แล้ว) BE ควรปฏิเสธ และ FE จะแสดงข้อความในหน้า
+
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -11,6 +14,12 @@ import ProductTable from '../components/ProductTable';
 import useProductStore from '../store/productStore';
 import { useBranchStore } from '@/features/branch/store/branchStore';
 import CascadingFilterGroup from '@/components/shared/form/CascadingFilterGroup';
+
+// ✅ SUPERADMIN guard (best-effort): ป้องกันปุ่มลบโผล่ให้คนทั่วไป
+// - ถ้าโปรเจกต์คุณใช้ authStore เป็นมาตรฐานกลาง → จะอ่าน role จากที่นี่
+// - ถ้า path ไม่ตรง ให้ปรับ import ให้ตรงกับโปรเจกต์จริง (Minimal disruption)
+// 🔧 Fix: authStore ไม่มี default export → ใช้ named export แทน
+import { useAuthStore } from '@/features/auth/store/authStore';
 
 export default function ListProductPage() {
   const [searchText, setSearchText] = useState('');
@@ -28,52 +37,15 @@ export default function ListProductPage() {
   // ✅ on-demand: ต้องกดปุ่ม “แสดงข้อมูล” ก่อนจึงจะโหลดและให้ dropdown ทำงาน
   const [hasLoaded, setHasLoaded] = useState(false);
 
-  const [disableTarget, setDisableTarget] = useState(null);
-  const [disablingId, setDisablingId] = useState(null);
-  const [enablingId, setEnablingId] = useState(null);
-
-  // ใช้เรียกจากตาราง (แทน confirmDelete เดิม)
-  const confirmDisable = (prodId) => {
-    const target = allProducts.find((p) => p.id === prodId);
-    if (target) setDisableTarget(target);
-  };
-
-  const confirmEnable = async (prodId) => {
-    console.log('🧪 [Enable] confirmEnable clicked', { prodId });
-
-    const target = allProducts.find((p) => p.id === prodId);
-    if (!target) return;
-
-    // ✅ No dialog for enable: perform immediately
-    setEnablingId(prodId);
-
-    try {
-      console.log('🧪 [Enable] calling enableProductAction', { id: prodId });
-      const res = await enableProductAction(prodId);
-      console.log('🧪 [Enable] enableProductAction result', res);
-
-      // sync UI ทันที
-      setAllProducts((prev) =>
-        Array.isArray(prev)
-          ? prev.map((p) => (p?.id === prodId ? { ...p, active: true } : p))
-          : prev
-      );
-
-      // reload กันข้อมูลค้าง
-      await loadAllProductsOnce();
-    } catch (error) {
-      console.error('❌ เปิดใช้งานสินค้าไม่สำเร็จ:', error);
-    } finally {
-      setEnablingId(null);
-    }
-  };
-
+  // ✅ Delete flow (SUPERADMIN only)
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
+  const [deleteError, setDeleteError] = useState(null); // UI-based error (ห้าม alert)
 
   // ✅ View options (รองรับข้อมูลเยอะ)
   const [pageSize, setPageSize] = useState(25); // 10 | 25 | 50
   const [density, setDensity] = useState('normal'); // 'normal' | 'compact'
   const [showAllPrices, setShowAllPrices] = useState(false); // toggle: แสดงราคาทั้งหมด
-  const [showInactive, setShowInactive] = useState(false); // toggle: แสดงสินค้าที่ปิดใช้งาน
 
   const perPage = pageSize;
 
@@ -87,47 +59,48 @@ export default function ListProductPage() {
   const TAKE = 200;
   const MAX_PAGES_SAFETY = 500;
 
-
   const branchId = useBranchStore((state) => state.selectedBranchId);
   const navigate = useNavigate();
   const location = useLocation();
 
+  const authRole = useAuthStore((s) => s?.user?.role ?? s?.role ?? null);
+  const isSuperAdmin = String(authRole || '').toUpperCase() === 'SUPERADMIN';
+
   const {
     products,
     fetchProductsAction,
-    disableProductAction,
-    enableProductAction,
     dropdowns,
     dropdownsLoaded,
     ensureDropdownsAction,
+    // ✅ New (expected): deleteProductAction(id)
+    // หมายเหตุ: ถ้ายังไม่มี ให้เพิ่มใน productStore ตามมาตรฐาน store-first
+    deleteProductAction,
   } = useProductStore();
-
 
   // ✅ Step 1: เราใช้ allProducts เป็นแหล่งข้อมูลหลักในหน้านี้ (products ใน store จะถูก overwrite ทีละหน้า)
   // eslint-disable-next-line no-unused-vars
   const _storeProducts = products;
 
-// ✅ เลื่อนการเรียก dropdowns: เรียกหลังผู้ใช้กด “แสดงข้อมูล” (hasLoaded) และมี branchId แล้วเท่านั้น
-// - กัน 401 (token/branch context อาจยังไม่พร้อมตอน mount)
-// - กัน StrictMode ยิงซ้ำ
-const dropdownsFetchRef = useRef({ branchId: null, done: false });
+  // ✅ เลื่อนการเรียก dropdowns: เรียกหลังผู้ใช้กด “แสดงข้อมูล” (hasLoaded) และมี branchId แล้วเท่านั้น
+  // - กัน 401 (token/branch context อาจยังไม่พร้อมตอน mount)
+  // - กัน StrictMode ยิงซ้ำ
+  const dropdownsFetchRef = useRef({ branchId: null, done: false });
 
-useEffect(() => {
-  if (!hasLoaded) return;
-  if (!branchId) return;
-  if (dropdownsLoaded === true) return;
+  useEffect(() => {
+    if (!hasLoaded) return;
+    if (!branchId) return;
+    if (dropdownsLoaded === true) return;
 
-  // reset เมื่อสลับสาขา
-  if (dropdownsFetchRef.current.branchId !== branchId) {
-    dropdownsFetchRef.current = { branchId, done: false };
-  }
+    // reset เมื่อสลับสาขา
+    if (dropdownsFetchRef.current.branchId !== branchId) {
+      dropdownsFetchRef.current = { branchId, done: false };
+    }
 
-  if (dropdownsFetchRef.current.done) return;
-  dropdownsFetchRef.current.done = true;
+    if (dropdownsFetchRef.current.done) return;
+    dropdownsFetchRef.current.done = true;
 
-  ensureDropdownsAction();
-}, [hasLoaded, branchId, dropdownsLoaded, ensureDropdownsAction]);
-
+    ensureDropdownsAction();
+  }, [hasLoaded, branchId, dropdownsLoaded, ensureDropdownsAction]);
 
   // 📌 (1) อ่านค่าจาก URL มาตั้งค่าเริ่มต้น (Deep-linkable)
   useEffect(() => {
@@ -149,7 +122,6 @@ useEffect(() => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-
   // 📌 (2) ซิงก์ state → URL (restore-only, prevent loops)
   useEffect(() => {
     const params = new URLSearchParams();
@@ -166,59 +138,79 @@ useEffect(() => {
     }
   }, [filter, committedSearchText, sortOrder, navigate, location.pathname, location.search]);
 
-
-  const handleDisable = async () => {
-    if (!disableTarget?.id) return;
-
-    const targetId = disableTarget.id;
-    setDisablingId(targetId);
-
-    // ✅ No delete: ใช้ disable action เท่านั้น
-    try {
-      const res = await disableProductAction(targetId);
-
-      // sync UI ทันที
-      setAllProducts((prev) =>
-        Array.isArray(prev) ? prev.map((p) => (p?.id === targetId ? { ...p, active: false } : p)) : prev
-      );
-
-      setDisableTarget(null);
-
-      // reload กันข้อมูลค้าง
-      await loadAllProductsOnce();
-
-      return res;
-    } catch (error) {
-      console.error('❌ ปิดใช้งานสินค้าไม่สำเร็จ:', error);
-      throw error;
-    } finally {
-      setDisablingId(null);
+  // ✅ Delete confirm (SUPERADMIN only)
+  const confirmDelete = (prodId) => {
+    if (!isSuperAdmin) return;
+    const target = allProducts.find((p) => p.id === prodId);
+    if (target) {
+      setDeleteError(null);
+      setDeleteTarget(target);
     }
   };
 
+  const handleDelete = async () => {
+    if (!deleteTarget?.id) return;
 
+    // ✅ Guard: SUPERADMIN only (double check)
+    if (!isSuperAdmin) {
+      setDeleteError('สิทธิ์ไม่เพียงพอ: เฉพาะ SUPERADMIN เท่านั้นที่สามารถลบสินค้าได้');
+      setDeleteTarget(null);
+      return;
+    }
 
-  const getPrice = (p) => p.prices?.find(pr => pr.level === 1)?.price || 0;
+    const targetId = deleteTarget.id;
+    setDeletingId(targetId);
+    setDeleteError(null);
 
-  // ✅ กรองในฝั่ง FE เพื่อกันกรณี BE ไม่ได้กรองหรือชื่อคีย์ไม่ตรง
-  // ✅ Restore-only: บังคับเทียบ id แบบตัวเลขทั้งสองฝั่ง เพื่อกันเคส "12" !== 12
+    try {
+      if (typeof deleteProductAction !== 'function') {
+        // ✅ Hard guard: FE ยังไม่พร้อม (ป้องกันเงียบ)
+        throw new Error('FE_NOT_READY_DELETE_ACTION');
+      }
+
+      await deleteProductAction(targetId);
+
+      // ✅ sync UI ทันที
+      setAllProducts((prev) => (Array.isArray(prev) ? prev.filter((p) => p?.id !== targetId) : prev));
+      setDeleteTarget(null);
+
+      // ✅ reload กันข้อมูลค้าง/การจัดหน้าเปลี่ยน
+      await loadAllProductsOnce();
+    } catch (error) {
+      // ✅ UI-based error (ห้าม alert)
+      const msg =
+        error?.response?.data?.error ||
+        error?.response?.data?.message ||
+        (error?.message === 'FE_NOT_READY_DELETE_ACTION'
+          ? 'ระบบยังไม่รองรับการลบสินค้าในฝั่งหน้าบ้าน (deleteProductAction ยังไม่ถูกเพิ่มใน productStore)'
+          : error?.message) ||
+        'ลบสินค้าไม่สำเร็จ';
+
+      setDeleteError(msg);
+
+      // ไม่ปิด dialog เพื่อให้ผู้ใช้เห็น error และตัดสินใจได้
+      // แต่ถ้าคุณอยากปิด ให้ uncomment บรรทัดนี้
+      // setDeleteTarget(null);
+
+      throw error;
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const getPrice = (p) => p.prices?.find((pr) => pr.level === 1)?.price || 0;
 
   // ✅ Restore-only: ช่วย resolve id จากชื่อ (กรณี BE ส่งมาเป็น name แต่ไม่มี id/relation)
   const resolveCategoryId = (p) => {
     const direct = p?.categoryId ?? p?.category?.id;
     if (direct != null) return direct;
 
-    // ✅ Restore-only: ถ้ามีชื่อหมวดหมู่ใน record ให้พยายาม resolve จากชื่อก่อน
-    // (กันเคสที่ productType relation ชี้ผิดหมวด / legacy data)
     const name = p?.categoryName ?? p?.category?.name ?? p?.category_name;
     if (name && Array.isArray(dropdowns?.categories)) {
-      const hit = dropdowns.categories.find(
-        (c) => String(c?.name || '').trim() === String(name).trim()
-      );
+      const hit = dropdowns.categories.find((c) => String(c?.name || '').trim() === String(name).trim());
       if (hit?.id != null) return hit.id;
     }
 
-    // ผ่าน productType relation (หลายระบบผูก category ผ่าน type)
     const viaType = p?.productType?.categoryId ?? p?.productType?.category?.id;
     if (viaType != null) return viaType;
 
@@ -229,12 +221,12 @@ useEffect(() => {
     const direct = p?.productTypeId ?? p?.productType?.id ?? p?.product_type_id;
     if (direct != null) return direct;
 
-    // fallback: resolve by name → dropdowns.productTypes
     const name = p?.productTypeName ?? p?.typeName ?? p?.productType?.name ?? p?.product_type_name;
     if (!name || !Array.isArray(dropdowns?.productTypes)) return undefined;
     const hit = dropdowns.productTypes.find((t) => String(t?.name || '').trim() === String(name).trim());
     return hit?.id;
   };
+
   const toNum = (v) => {
     if (v === '' || v === null || v === undefined) return undefined;
     const n = Number(v);
@@ -243,31 +235,15 @@ useEffect(() => {
 
   const matchesId = (filterVal, resolvedVal) => {
     const f = toNum(filterVal);
-    // ✅ ถ้ายังไม่เลือก filter → ผ่าน
     if (f === undefined) return true;
 
     const r = toNum(resolvedVal);
 
     // ✅ Restore-only UX guard:
-    // ถ้าเลือกแล้วแต่ยัง resolve ไม่ได้ *เพราะ dropdowns ยังโหลดไม่เสร็จ* → อย่าเพิ่งตัดทิ้ง (กันรายการหายวูบ)
     if (r === undefined && dropdownsLoaded !== true) return true;
-
-    // ✅ Scoped fix (strict): ถ้าเลือกแล้ว และ resolve ไม่ได้จริง → ตัดทิ้ง
     if (r === undefined) return false;
 
     return r === f;
-  };
-
-  const resolveActive = (p) => {
-    // ✅ normalize boolean / 0-1 / string
-    const raw = p?.active ?? p?.isActive ?? p?.enabled;
-
-    if (typeof raw === 'boolean') return raw;
-    if (raw === 0 || raw === '0') return false;
-    if (raw === 1 || raw === '1') return true;
-
-    if (p?.deletedAt) return false;
-    return true;
   };
 
   const filtered = useMemo(() => {
@@ -284,11 +260,6 @@ useEffect(() => {
       const resolvedBrandId = p?.brandId ?? p?.brand?.id ?? undefined;
       const okBrand = matchesId(filter.brandId, resolvedBrandId);
 
-      const okMode = true; // mode filter removed
-
-      // active
-      const okActive = showInactive ? true : resolveActive(p) !== false;
-
       const q = (committedSearchText || '').toLowerCase();
       const okSearch =
         !q ||
@@ -296,9 +267,9 @@ useEffect(() => {
           p.model?.toLowerCase().includes(q) ||
           (p.brandName || p.brand?.name || '').toLowerCase().includes(q));
 
-      return okCategory && okType && okBrand && okMode && okActive && okSearch;
+      return okCategory && okType && okBrand && okSearch;
     });
-  }, [allProducts, filter, committedSearchText, dropdowns, dropdownsLoaded, showInactive]);
+  }, [allProducts, filter, committedSearchText, dropdowns, dropdownsLoaded]);
 
   const sorted = useMemo(() => {
     return [...filtered].sort((a, b) => {
@@ -323,8 +294,6 @@ useEffect(() => {
 
   // 🧪 Debug (restore-only): ดูว่าข้อมูลหายที่ขั้นไหน (products → filtered → sorted)
   useEffect(() => {
-    // ✅ Step 1.5: จำกัด debug log เฉพาะ DEV เพื่อไม่ให้รบกวน Production และไม่ทำให้ browser หน่วง
-    // (Vite) import.meta.env.DEV
     if (!(import.meta && import.meta.env && import.meta.env.DEV)) return;
 
     console.log('🧪 [ListProductPage] counts', {
@@ -336,70 +305,9 @@ useEffect(() => {
       filter,
       committedSearchText,
     });
-
-    // ✅ เพิ่มสรุปว่า resolve id ไม่ได้กี่รายการ (ช่วยชี้ว่า data/include relation ขาดตรงไหน)
-    if (Array.isArray(allProducts) && allProducts.length > 0) {
-      const stats = allProducts.reduce(
-        (acc, p) => {
-          const rc = toNum(resolveCategoryId(p));
-          const rt = toNum(resolveTypeId(p));
-          if (rc === undefined) acc.noResolvedCategory += 1;
-          if (rt === undefined) acc.noResolvedType += 1;
-          return acc;
-        },
-        { noResolvedCategory: 0, noResolvedType: 0 }
-      );
-      console.log('🧪 [ListProductPage] resolveStats', stats);
-
-      // ✅ เพิ่ม distribution ของ id ที่ resolve ได้ (ช่วยดูว่าทุกสินค้าถูก resolve ไปกองที่ id เดียวหรือไม่)
-      try {
-        const dist = allProducts.reduce(
-          (acc, p) => {
-            const rc = toNum(resolveCategoryId(p));
-            const rt = toNum(resolveTypeId(p));
-            if (rc !== undefined) acc.category[rc] = (acc.category[rc] || 0) + 1;
-            if (rt !== undefined) acc.type[rt] = (acc.type[rt] || 0) + 1;
-            return acc;
-          },
-          { category: {}, type: {} }
-        );
-        console.log('🧪 [ListProductPage] resolvedIdDistribution', {
-          category: Object.entries(dist.category).sort((a, b) => Number(a[0]) - Number(b[0])).slice(0, 30),
-          type: Object.entries(dist.type).sort((a, b) => Number(a[0]) - Number(b[0])).slice(0, 30),
-        });
-      } catch (e) {
-        console.log('🧪 [ListProductPage] resolvedIdDistribution error', e);
-      }
-    }
-
-    // ถ้ามีของจาก BE แต่กรองแล้วเหลือ 0 → dump ตัวอย่าง 3 ชิ้นแรกให้ดู id ที่เอามาเทียบ
-    if (Array.isArray(allProducts) && allProducts.length > 0 && Array.isArray(filtered) && filtered.length === 0) {
-      const sample = allProducts.slice(0, 3).map((p) => ({
-        id: p.id,
-        name: p.name,
-        mode: p.mode,
-        // raw hints
-        categoryId: p.categoryId,
-        categoryName: p.categoryName ?? p.category?.name ?? p.category_name,
-        productTypeId: p.productTypeId,
-        productTypeName: p.productTypeName ?? p.typeName ?? p.productType?.name ?? p.product_type_name,
-        // resolved for filtering
-        resolvedCategoryId: resolveCategoryId(p),
-        resolvedTypeId: resolveTypeId(p),
-        // keys snapshot (ช่วยตามหาชื่อ field จริงจาก BE)
-        keys: Object.keys(p || {}).slice(0, 30),
-      }));
-      console.log('🧪 [ListProductPage] filtered=0 sample', sample);
-    }
   }, [branchId, allProducts, filtered, sorted, paginated, filter, committedSearchText]);
 
   const totalPages = useMemo(() => Math.ceil(filtered.length / perPage), [filtered.length, perPage]);
-
-  // ✅ Stats: จำนวนสินค้าที่ปิดใช้งาน (ไว้ยืนยันว่า toggle ทำงาน)
-  const inactiveCount = useMemo(() => {
-    if (!Array.isArray(allProducts) || allProducts.length === 0) return 0;
-    return allProducts.reduce((acc, p) => acc + (resolveActive(p) === false ? 1 : 0), 0);
-  }, [allProducts]);
 
   // ✅ Step 1: โหลดสินค้าทั้งหมด (วนทีละหน้า) แล้วเก็บไว้ที่ allProducts
   // IMPORTANT: ต้องประกาศก่อน useEffect ที่อ้างถึง เพื่อกัน TDZ (Temporal Dead Zone)
@@ -415,7 +323,9 @@ useEffect(() => {
       let page = 1;
       let acc = [];
 
-      console.log('✅ [ListProductPage] loadAllProducts start', { branchId, TAKE, showInactive });
+      if (import.meta?.env?.DEV) {
+        console.log('✅ [ListProductPage] loadAllProducts start', { branchId, TAKE });
+      }
 
       while (page <= MAX_PAGES_SAFETY) {
         const pageFilters = {
@@ -423,53 +333,37 @@ useEffect(() => {
           take: TAKE,
           pageSize: TAKE,
           limit: TAKE,
-          // ✅ include inactive when toggle on
-          includeInactive: showInactive ? 1 : 0,
-          // ✅ Step 1: ไม่ส่งตัวกรอง dropdown ไป BE
-          // เพื่อให้ได้รายการครบ แล้วไปกรองที่ FE
+          // ✅ Policy: ไม่รองรับ inactive/disable ในหน้านี้แล้ว
+          includeInactive: 0,
         };
 
-        console.log('➡️ [ListProductPage] fetch page', { page, TAKE });
+        if (import.meta?.env?.DEV) {
+          console.log('➡️ [ListProductPage] fetch page', { page, TAKE });
+        }
+
         await fetchProductsAction(pageFilters);
 
         // ✅ อ่านค่าล่าสุดจาก store หลัง fetch
         const list = useProductStore.getState().products || [];
-        console.log('✅ [ListProductPage] got', { page, count: list.length });
+
+        if (import.meta?.env?.DEV) {
+          console.log('✅ [ListProductPage] got', { page, count: list.length });
+        }
 
         // ✅ Normalize: flatten fields for FE table (minimal disruption)
         const normalizeRow = (p) => {
-          const raw = p?.active ?? p?.isActive ?? p?.enabled;
-          const active = typeof raw === 'boolean'
-            ? raw
-            : raw === 0 || raw === '0'
-              ? false
-              : raw === 1 || raw === '1'
-                ? true
-                : p?.deletedAt
-                  ? false
-                  : p?.status
-                    ? String(p.status).toUpperCase() !== 'INACTIVE'
-                    : true;
-
           const bp = Array.isArray(p?.branchPrice) ? p.branchPrice[0] : p?.branchPrice;
           const sb = Array.isArray(p?.stockBalances) ? p.stockBalances[0] : p?.stockBalances;
 
-          // name labels (รองรับทั้ง relation และ field legacy)
           const categoryName = p?.category?.name ?? p?.categoryName ?? p?.category_name ?? null;
           const typeName = p?.productType?.name ?? p?.productTypeName ?? p?.typeName ?? p?.product_type_name ?? null;
           const profileName = p?.productProfile?.name ?? p?.profileName ?? p?.product_profile_name ?? null;
           const templateName = p?.template?.name ?? p?.templateName ?? p?.template_name ?? null;
 
-          // ✅ Brand (optional): รองรับทั้ง relation และ legacy keys (non-breaking)
-          const brandName =
-            p?.brand?.name ??
-            p?.brandName ??
-            p?.brand_name ??
-            null;
+          const brandName = p?.brand?.name ?? p?.brandName ?? p?.brand_name ?? null;
 
           return {
             ...p,
-            active,
 
             // ✅ Table fields (string)
             category: categoryName,
@@ -506,7 +400,10 @@ useEffect(() => {
         page += 1;
       }
 
-      console.log('🏁 [ListProductPage] loadAllProducts done', { total: acc.length });
+      if (import.meta?.env?.DEV) {
+        console.log('🏁 [ListProductPage] loadAllProducts done', { total: acc.length });
+      }
+
       setAllProducts(acc);
     } catch (err) {
       console.error('❌ [ListProductPage] loadAllProducts error', err);
@@ -516,9 +413,9 @@ useEffect(() => {
       setLoadingAll(false);
       loadingAllRef.current = false;
     }
-  }, [branchId, fetchProductsAction, showInactive]);
+  }, [branchId, fetchProductsAction]);
 
-  // ✅ โหลดเมื่อ branchId เปลี่ยน หรือ toggle แสดงของปิดใช้งานเปลี่ยน
+  // ✅ โหลดเมื่อ branchId เปลี่ยน
   // แต่จะเริ่มทำงานหลังผู้ใช้กด “แสดงข้อมูล” เท่านั้น
   useEffect(() => {
     if (!branchId) return;
@@ -540,14 +437,8 @@ useEffect(() => {
   const prevCatRef = useRef(null);
   const prevTypeRef = useRef(null);
 
-
   const handleFilterChange = (next) => {
-    // ✅ dropdown ทำงานหลังจากกด “แสดงข้อมูล” เท่านั้น
     if (!hasLoaded) return;
-
-    // ✅ Fix dropdown เด้งเคลียร์ (เหมือนเคส ListProductTemplatePage)
-    // CascadingFilterGroup อาจส่งมาแค่ field ที่เปลี่ยน เช่น { productTypeId } โดยไม่ส่ง { categoryId }
-    // ถ้าเราเอา categoryId ที่ไม่มีใน payload ไป normalize เป็น null → จะเคลียร์หมวด + เคลียร์ลูกโซ่ทันที
 
     const pick = (obj, key, aliases = []) => {
       if (obj == null) return undefined;
@@ -560,27 +451,23 @@ useEffect(() => {
 
     const toIdOrNull = (v) => {
       if (v === '' || v === null) return null;
-      if (v === undefined) return undefined; // สำคัญ: undefined = ไม่ได้ส่งมา (ให้คงค่าเดิม)
+      if (v === undefined) return undefined;
       const n = Number(v);
       return Number.isFinite(n) ? n : null;
     };
 
-    // ✅ รองรับชื่อ key หลายแบบ (กัน component รุ่นเก่า)
     const rawCat = pick(next, 'categoryId', ['catId']);
     const rawType = pick(next, 'productTypeId', ['typeId']);
     setFilter((prev) => {
       const prevCat = prev.categoryId ?? null;
-      const prevType = prev.productTypeId ?? null; const nextCat = toIdOrNull(rawCat);
+      const prevType = prev.productTypeId ?? null;
+      const nextCat = toIdOrNull(rawCat);
       const nextType = toIdOrNull(rawType);
 
-      // ✅ ถ้า payload ไม่ส่งค่า → คงของเดิม
       const mergedCat = nextCat === undefined ? prevCat : nextCat;
       const mergedType = nextType === undefined ? prevType : nextType;
       const isCatChanged = (prevCat ?? null) !== (mergedCat ?? null);
 
-      // ✅ Cascade rules (new 3-level)
-      // - เปลี่ยนหมวด → ล้างประเภท + สินค้า
-      // - เปลี่ยนประเภท → ล้างสินค้า
       const out = {
         ...prev,
         categoryId: mergedCat,
@@ -593,7 +480,6 @@ useEffect(() => {
       return out;
     });
 
-    // ✅ เปลี่ยนตัวกรอง → กลับหน้า 1
     setCurrentPage(1);
   };
 
@@ -616,6 +502,9 @@ useEffect(() => {
             <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
               จัดการสินค้าในระบบสต๊อก • เปลี่ยนตัวกรองแล้วแสดงผลทันทีโดยไม่เรียก API ซ้ำ
             </p>
+            <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-500">
+              นโยบาย: Product เป็นข้อมูลกลาง (Global) — ไม่มีการปิดใช้งานจาก POS • ลบถาวรได้เฉพาะ SUPERADMIN
+            </p>
           </div>
           <StandardActionButtons onAdd={() => navigate('/pos/stock/products/create')} />
         </div>
@@ -625,7 +514,6 @@ useEffect(() => {
         <div className="mt-4">
           <div className="sticky top-0 z-20 rounded-xl border border-zinc-200/80 bg-white/85 backdrop-blur dark:border-zinc-800/80 dark:bg-zinc-900/80">
             <div className="p-3 sm:p-4 flex flex-col gap-3">
-              {/* ✅ Controls row: จัดให้อยู่บรรทัดเดียวบนจอใหญ่ (เหมือนภาพที่ต้องการ) */}
               <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:flex-wrap xl:flex-nowrap">
                 {/* search */}
                 <div className="w-full xl:flex-1 xl:min-w-[360px]">
@@ -652,15 +540,14 @@ useEffect(() => {
                   </select>
                 </div>
 
-
                 {/* brand */}
                 <div className="w-full lg:w-[220px]">
                   <select
                     value={filter.brandId == null ? '' : String(filter.brandId)}
                     onChange={(e) => {
-                      const v = e.target.value
-                      setFilter((prev) => ({ ...prev, brandId: v === '' ? null : Number(v) }))
-                      setCurrentPage(1)
+                      const v = e.target.value;
+                      setFilter((prev) => ({ ...prev, brandId: v === '' ? null : Number(v) }));
+                      setCurrentPage(1);
                     }}
                     className="border px-3 py-2 rounded w-full"
                     disabled={!hasLoaded}
@@ -674,9 +561,6 @@ useEffect(() => {
                     ))}
                   </select>
                 </div>
-
-
-
 
                 {/* per page */}
                 <div className="flex items-center gap-2 w-full lg:w-auto">
@@ -698,11 +582,7 @@ useEffect(() => {
                 {/* density */}
                 <div className="flex items-center gap-2 w-full lg:w-auto">
                   <label className="text-sm text-zinc-600 dark:text-zinc-400 whitespace-nowrap">ความหนาแน่น</label>
-                  <select
-                    value={density}
-                    onChange={(e) => setDensity(e.target.value)}
-                    className="border px-3 py-2 rounded"
-                  >
+                  <select value={density} onChange={(e) => setDensity(e.target.value)} className="border px-3 py-2 rounded">
                     <option value="normal">ปกติ</option>
                     <option value="compact">กะทัดรัด</option>
                   </select>
@@ -710,37 +590,21 @@ useEffect(() => {
 
                 {/* show all prices */}
                 <label className="inline-flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400 select-none w-full lg:w-auto whitespace-nowrap">
-                  <input
-                    type="checkbox"
-                    checked={showAllPrices}
-                    onChange={(e) => setShowAllPrices(e.target.checked)}
-                  />
+                  <input type="checkbox" checked={showAllPrices} onChange={(e) => setShowAllPrices(e.target.checked)} />
                   แสดงราคาทั้งหมด
                 </label>
-
-                {/* show inactive */}
-                <label className="inline-flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400 select-none w-full lg:w-auto whitespace-nowrap">
-                  <input
-                    type="checkbox"
-                    checked={showInactive}
-                    onChange={(e) => {
-                      setShowInactive(e.target.checked);
-                      setCurrentPage(1);
-                    }}
-                  />
-                  แสดงสินค้าที่ปิดใช้งาน
-                </label>
-
-                {/* hint */}
-
               </div>
 
-              {/* ✅ dropdown ทำงานหลังจากกด “แสดงข้อมูล” แล้วเท่านั้น */}
               <div className={!hasLoaded ? 'pointer-events-none opacity-60' : ''} aria-disabled={!hasLoaded}>
-                <CascadingFilterGroup value={filter} onChange={handleFilterChange} dropdowns={dropdowns} showReset hiddenFields={['product']} />
+                <CascadingFilterGroup
+                  value={filter}
+                  onChange={handleFilterChange}
+                  dropdowns={dropdowns}
+                  showReset
+                  hiddenFields={['product']}
+                />
               </div>
 
-              {/* ✅ ปุ่ม “แสดงข้อมูล” */}
               <div className="flex flex-wrap items-center gap-3">
                 <div className="ml-auto flex items-center gap-3">
                   <button
@@ -761,7 +625,6 @@ useEffect(() => {
                 </div>
               </div>
 
-              {/* ✅ Step 1.5: Loading/Error แบบ UI-based (ห้าม toast/alert) */}
               {!hasLoaded && (
                 <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-3 text-zinc-800">
                   <div className="font-semibold">ยังไม่ได้โหลดข้อมูล</div>
@@ -808,50 +671,48 @@ useEffect(() => {
 
               {hasLoaded && !loadingAll && !loadAllError && (
                 <div className="text-sm text-zinc-600 dark:text-zinc-400">
-                  แสดงผลจากข้อมูลที่โหลดแล้ว{' '}
-                  <span className="font-medium">{allProducts.length.toLocaleString('th-TH')}</span> รายการ • พบตามเงื่อนไข{' '}
+                  แสดงผลจากข้อมูลที่โหลดแล้ว <span className="font-medium">{allProducts.length.toLocaleString('th-TH')}</span> รายการ • พบตามเงื่อนไข{' '}
                   <span className="font-medium">{filtered.length.toLocaleString('th-TH')}</span> รายการ
-                  {showInactive && (
-                    <>
-                      {' '}• ปิดใช้งาน{' '}
-                      <span className="font-medium">{inactiveCount.toLocaleString('th-TH')}</span> รายการ
-                    </>
-                  )}
+                </div>
+              )}
+
+              {/* ✅ Delete error (UI-based) */}
+              {hasLoaded && deleteError && (
+                <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-amber-900">
+                  <div className="font-semibold">ลบสินค้าไม่สำเร็จ</div>
+                  <div className="text-sm opacity-90 whitespace-pre-line">{String(deleteError)}</div>
+                  <div className="mt-2 text-xs opacity-80">
+                    หมายเหตุ: ถ้าสินค้าถูกใช้งานแล้ว ระบบควรบังคับให้ “ห้ามลบ” และใช้วิธี Archive แทน (เพื่อรักษาประวัติ)
+                  </div>
                 </div>
               )}
             </div>
           </div>
         </div>
 
-        {/* Table wrapper (โทนเดียวกับ ListProductTemplatePage) */}
+        {/* Table wrapper */}
         <div className="mt-4 border rounded-xl p-3 shadow-sm bg-white dark:bg-zinc-900">
           <ProductTable
             products={hasLoaded ? paginated : []}
             items={hasLoaded ? paginated : []}
             data={hasLoaded ? paginated : []}
             onEdit={(id) => navigate(`/pos/stock/products/edit/${id}`)}
-            onDisable={confirmDisable}
-            onEnable={confirmEnable}
-            // ✅ pass per-row working id (so button disabled only for that row)
-            disabling={disablingId}
-            enabling={enablingId}
+            // ✅ เปลี่ยนจากปิดใช้งาน → ลบถาวร (SUPERADMIN เท่านั้น)
+            onDelete={confirmDelete}
+            deleting={deletingId}
+            canDelete={isSuperAdmin}
             density={density}
             showAllPrices={showAllPrices}
           />
-
         </div>
 
-        {/* Pagination (ก่อนหน้า/ถัดไป) */}
+        {/* Pagination */}
         <div className="flex items-center justify-between mt-4">
           <div className="text-sm text-zinc-600 dark:text-zinc-400">
             หน้า {currentPage} / {Math.max(totalPages || 1, 1)}
           </div>
           <div className="flex gap-2">
-            <button
-              className="btn btn-outline"
-              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              disabled={currentPage <= 1}
-            >
+            <button className="btn btn-outline" onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} disabled={currentPage <= 1}>
               ก่อนหน้า
             </button>
             <button
@@ -864,23 +725,29 @@ useEffect(() => {
           </div>
         </div>
 
+        {/* ✅ Confirm delete (SUPERADMIN only) */}
         <ConfirmDeleteDialog
-          open={!!disableTarget}
-          onClose={() => setDisableTarget(null)}
-          onConfirm={handleDisable}
-          itemLabel={disableTarget?.name || 'ไม่พบคำเรียกสินค้า'}
-          name="ยืนยันการปิดใช้งานสินค้า"
-          description={`คุณแน่ใจว่าต้องการปิดใช้งาน “${disableTarget?.name || 'ไม่พบคำเรียกสินค้า'}” หรือไม่?\n\nหมายเหตุ: การปิดใช้งานจะไม่ลบข้อมูลถาวร และสามารถเปิดใช้งานกลับได้ในอนาคต`}
+          open={!!deleteTarget}
+          onClose={() => setDeleteTarget(null)}
+          onConfirm={handleDelete}
+          itemLabel={deleteTarget?.name || 'ไม่พบคำเรียกสินค้า'}
+          name="ยืนยันการลบสินค้า (ถาวร)"
+          description={`คุณแน่ใจว่าต้องการลบ “${deleteTarget?.name || 'ไม่พบคำเรียกสินค้า'}” หรือไม่?
+
+⚠️ การลบเป็นการลบถาวร และอาจลบไม่ได้หากสินค้าถูกใช้งานแล้ว (มีการอ้างอิงในสต๊อก/จัดซื้อ/ขาย/ออนไลน์)`}
+          // ✅ ป้องกันกดรัว
+          loading={deletingId === deleteTarget?.id}
         />
 
+        {/* ✅ SUPERADMIN hint */}
+        {hasLoaded && !isSuperAdmin && (
+          <div className="mt-4 rounded-lg border border-zinc-200 bg-white px-4 py-3 text-zinc-700 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300">
+            <div className="text-sm">
+              สิทธิ์ปัจจุบัน: <span className="font-medium">{authRole || '-'}</span> • การลบสินค้า (ถาวร) อนุญาตเฉพาะ SUPERADMIN เท่านั้น
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
 }
-
-
-
-
-
-
-

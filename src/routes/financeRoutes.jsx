@@ -1,7 +1,11 @@
 
+
+
 import CreateCustomerDepositPage from "@/features/customerDeposit/pages/CreateCustomerDepositPage";
 import ListCustomerDepositPage from "@/features/customerDeposit/pages/ListCustomerDepositPage";
-import FinanceDashboardPage from "@/features/pos/pages/finance/FinanceDashboardPage";
+import FinanceDashboardPage from "@/features/finance/pages/FinanceDashboardPage";
+import AccountsReceivablePage from "@/features/finance/pages/AccountsReceivablePage";
+import CustomerCreditPage from "@/features/finance/pages/CustomerCreditPage";
 import CreateRefundPage from "@/features/refund/pages/CreateRefundPage";
 import ListReturnsPage from "@/features/refund/pages/ListReturnsPage";
 import PrintRefundReceiptPage from "@/features/refund/pages/PrintRefundReceiptPage";
@@ -21,7 +25,18 @@ const financeRoutes = {
     {
       index: true,
       element: <FinanceDashboardPage />, // ✅ หน้า Dashboard ของ Finance
+    },
 
+    // ✅ Accounts Receivable (ลูกหนี้/ยอดค้าง)
+    {
+      path: 'ar',
+      element: <AccountsReceivablePage />,
+    },
+
+    // ✅ Customer Credit (เครดิตลูกค้า)
+    {
+      path: 'customer-credit',
+      element: <CustomerCreditPage />,
     },
     {
       path: 'refunds',
@@ -60,3 +75,4 @@ const financeRoutes = {
 };
 
 export default financeRoutes;
+

@@ -1,5 +1,6 @@
 
 
+
 // ✅ src/features/product/components/ProductTable.jsx
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 
@@ -16,24 +17,22 @@ const ActionButton = ({ children, className = '', type = 'button', ...rest }) =>
 
 const ProductTable = ({
   products = [],
-  // รองรับชื่อ prop เก่า/ใหม่ (กันพลาดเวลา refactor)
+
+  // ✅ Edit
   onEdit,
-  onDisable,
-  onEnable,
-  onDisableProduct,
-  onEnableProduct,
-  // disabling/enabling อาจเป็น boolean หรือเป็น id ที่กำลังทำงานอยู่
-  disabling,
-  enabling,
+
+  // ✅ Delete (SUPERADMIN only)
+  onDelete,
+  deleting,
+  canDelete = false,
+
   density = 'normal',
   showAllPrices = false,
 }) => {
   const handleEdit = onEdit;
-  const handleDisable = onDisable || onDisableProduct;
-  const handleEnable = onEnable || onEnableProduct;
 
-  const isDisabling = (id) => (typeof disabling === 'boolean' ? disabling : String(disabling) === String(id));
-  const isEnabling = (id) => (typeof enabling === 'boolean' ? enabling : String(enabling) === String(id));
+  // deleting อาจเป็น boolean หรือเป็น id ที่กำลังทำงานอยู่
+  const isDeleting = (id) => (typeof deleting === 'boolean' ? deleting : String(deleting) === String(id));
 
   const resolveActive = (row) => {
     // ✅ normalize active flag (boolean / 0-1 / string)
@@ -124,28 +123,18 @@ const ProductTable = ({
                         แก้ไข
                       </ActionButton>
 
-                      {isActive ? (
+                      {/* ✅ Policy: ห้ามปิดใช้งานจาก POS (Product เป็น Global master data) */}
+
+                      {canDelete ? (
                         <ActionButton
                           className="text-white bg-rose-600 hover:bg-rose-700 focus:ring-rose-500"
-                          onClick={() => handleDisable?.(item.id)}
-                          disabled={isDisabling(item.id)}
-                          title="ปิดใช้งานสินค้า"
+                          onClick={() => onDelete?.(item.id)}
+                          disabled={!onDelete || isDeleting(item.id)}
+                          title="ลบถาวร (เฉพาะ SUPERADMIN)"
                         >
-                          ปิดใช้งาน
+                          {isDeleting(item.id) ? 'กำลังลบ…' : 'ลบ'}
                         </ActionButton>
-                      ) : (
-                        <ActionButton
-                          className="text-white bg-emerald-600 hover:bg-emerald-700 focus:ring-emerald-500"
-                          onClick={() => {
-                          
-                          handleEnable?.(item.id);
-                        }}
-                          disabled={isEnabling(item.id)}
-                          title="เปิดใช้งานสินค้า"
-                        >
-                          เปิดใช้งาน
-                        </ActionButton>
-                      )}
+                      ) : null}
                     </div>
                   </TableCell>
                 </TableRow>
@@ -165,6 +154,8 @@ const ProductTable = ({
 };
 
 export default ProductTable;
+
+
 
 
 

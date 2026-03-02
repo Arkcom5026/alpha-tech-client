@@ -61,12 +61,19 @@ const PaymentSection = ({
   const customerType = effectiveCustomer?.type;
   const isOrgBuyer = customerType === 'ORGANIZATION' || customerType === 'GOVERNMENT';
   const isCreditSale = currentSaleMode === 'CREDIT';
+  const hasImmediatePayment = useMemo(() => {
+    // ✅ Any non-deposit payment amount typed in the UI (CASH/TRANSFER/CREDIT) should be blocked in CREDIT mode
+    return (paymentList || []).some((p) => {
+      const m = String(p?.method || '').toUpperCase();
+      if (m === 'DEPOSIT') return false;
+      return parseMoney(p?.amount) > 0;
+    });
+  }, [paymentList]);
   const isCreditOrg = currentSaleMode === 'CREDIT' && isOrgBuyer; // (kept for future use)
 
   const validSaleItems = Array.isArray(saleItems) ? saleItems : [];
-
   // ✅ Minimal hardening: รองรับเลขที่เป็น string มี comma (เช่น "1,200")
-  const parseMoney = (val) => {
+  function parseMoney(val) {
     if (val == null) return 0;
     if (typeof val === 'number') return Number.isFinite(val) ? val : 0;
     if (typeof val === 'string') {
@@ -76,7 +83,7 @@ const PaymentSection = ({
     }
     const n = Number(val);
     return Number.isFinite(n) ? n : 0;
-  };
+  }
 
   const getItemPrice = (item) => {
     const p =
@@ -107,6 +114,21 @@ const PaymentSection = ({
     const suggested = Math.min(customerDepositAmount, safeFinalPrice);
     setDepositUsed(suggested);
   }, [customerDepositAmount, safeFinalPrice, setDepositUsed, depositTouched]);
+
+  // ✅ CREDIT mode policy (production): ห้ามรับเงินทันที ยกเว้น “มัดจำ”
+  // - Clear any typed payment amounts when switching to CREDIT (avoid accidental partial payment)
+  useEffect(() => {
+    if (!isCreditSale) return;
+
+    try {
+      setPaymentAmount?.('CASH', '');
+      setPaymentAmount?.('TRANSFER', '');
+      setPaymentAmount?.('CREDIT', '');
+      setCardRef?.('');
+    } catch (_) {
+      // ignore
+    }
+  }, [isCreditSale, setPaymentAmount, setCardRef]);
 
   const handleDepositUsedChange = useCallback(
     (input) => {
@@ -172,7 +194,10 @@ const PaymentSection = ({
       calc.totalPaid + safeDepositUsed >= calc.totalToPay &&
       safeDepositUsed <= safeFinalPrice &&
       validSaleItems.length > 0) ||
-    (currentSaleMode === 'CREDIT' && validSaleItems.length > 0);
+    (currentSaleMode === 'CREDIT' &&
+      validSaleItems.length > 0 &&
+      hasValidCustomerId &&
+      !hasImmediatePayment);
 
   const handleConfirm = useCallback(async () => {
     let result = null;
@@ -207,6 +232,12 @@ const PaymentSection = ({
 
       if (currentSaleMode === 'CREDIT' && !hasValidCustomerId) {
         setPaymentError('การขายแบบเครดิตต้องเลือกชื่อลูกค้าก่อน');
+        return null;
+      }
+
+      // ✅ CREDIT policy: prohibit immediate payments (allow DEPOSIT only)
+      if (currentSaleMode === 'CREDIT' && hasImmediatePayment) {
+        setPaymentError('โหมดเครดิต: ห้ามกรอกเงินสด/โอน/บัตรทันที (อนุญาตเฉพาะ “มัดจำ”)');
         return null;
       }
 
@@ -372,25 +403,36 @@ const PaymentSection = ({
           handleDepositUsedChange={handleDepositUsedChange}
         />
 
-        <PaymentMethodInput
-          cash={paymentList.find((p) => p.method === 'CASH')?.amount || ''}
-          transfer={paymentList.find((p) => p.method === 'TRANSFER')?.amount || ''}
-          credit={paymentList.find((p) => p.method === 'CREDIT')?.amount || ''}
-          onCashChange={(e) => {
-            const cleaned = String(e?.target?.value ?? '').replace(/,/g, '');
-            setPaymentAmount('CASH', cleaned);
-          }}
-          onTransferChange={(e) => {
-            const cleaned = String(e?.target?.value ?? '').replace(/,/g, '');
-            setPaymentAmount('TRANSFER', cleaned);
-          }}
-          onCreditChange={(e) => {
-            const cleaned = String(e?.target?.value ?? '').replace(/,/g, '');
-            setPaymentAmount('CREDIT', cleaned);
-          }}
-          cardRef={cardRef}
-          onCardRefChange={(e) => setCardRef(e.target.value)}
-        />
+        {/* ✅ CREDIT policy: hide direct payment inputs (CASH/TRANSFER/CREDIT) to prevent accidental partial payments */}
+        {!isCreditSale ? (
+          <PaymentMethodInput
+            cash={paymentList.find((p) => p.method === 'CASH')?.amount || ''}
+            transfer={paymentList.find((p) => p.method === 'TRANSFER')?.amount || ''}
+            credit={paymentList.find((p) => p.method === 'CREDIT')?.amount || ''}
+            onCashChange={(e) => {
+              const cleaned = String(e?.target?.value ?? '').replace(/,/g, '');
+              setPaymentAmount('CASH', cleaned);
+            }}
+            onTransferChange={(e) => {
+              const cleaned = String(e?.target?.value ?? '').replace(/,/g, '');
+              setPaymentAmount('TRANSFER', cleaned);
+            }}
+            onCreditChange={(e) => {
+              const cleaned = String(e?.target?.value ?? '').replace(/,/g, '');
+              setPaymentAmount('CREDIT', cleaned);
+            }}
+            cardRef={cardRef}
+            onCardRefChange={(e) => setCardRef(e.target.value)}
+          />
+        ) : (
+          <div className="bg-gray-50 border border-gray-200 rounded-md p-3 min-w-[340px]">
+            <div className="text-sm font-bold mb-1">การรับเงิน (เครดิต)</div>
+            <div className="text-sm">🚫 ไม่รับเงินสด/โอน/บัตรในขั้นตอนนี้</div>
+            <div className="text-xs text-gray-600 mt-2">
+              * อนุญาตเฉพาะ “มัดจำ” (ถ้ามี) ผ่านช่องมัดจำด้านซ้าย
+            </div>
+          </div>
+        )}
 
         {/* ✅ CREDIT: พิมพ์ใบส่งของ (บังคับ) */}
         {isCreditSale && (
@@ -423,3 +465,9 @@ const PaymentSection = ({
 };
 
 export default PaymentSection;
+
+
+
+
+
+

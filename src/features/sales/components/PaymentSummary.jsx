@@ -2,6 +2,11 @@
 
 
 
+
+
+
+
+
 // ------------------------------------------------------------
 // 📁 FILE: src/features/sales/components/PaymentSummary.jsx
 
@@ -85,10 +90,40 @@ const PaymentSummary = ({
             </div>
           </div>
         ) : (
-          <div className="text-center py-0">
-            <p className="text-3xl font-bold text-purple-700 mb-4">ยอดเครดิต/หน่วยงาน</p>
-            <p className="text-xl text-gray-600">ยอดรวม: {fmt(totalNum)} ฿</p>
-            <p className="py-8" />
+          <div className="text-gray-700">
+            <div className="text-center">
+              <p className="text-3xl font-bold text-purple-700 mb-2">ยอดเครดิต/หน่วยงาน</p>
+              <p className="text-sm text-gray-600">* โหมดเครดิตรับ “มัดจำ” ได้ แต่ไม่รับเงินสด/โอน/บัตรในหน้านี้</p>
+            </div>
+
+            <div className="mt-5 space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-lg font-bold text-gray-900">ยอดสุทธิ</span>
+                <span className="text-2xl font-extrabold text-blue-700">{fmt(totalNum)} ฿</span>
+              </div>
+
+              <div className="flex justify-between items-center">
+                <span className="text-lg font-bold text-gray-900">มัดจำที่ใช้</span>
+                <span className={(paidNum > 0 ? 'text-green-600' : 'text-gray-600') + ' text-2xl font-extrabold'}>
+                  {fmt(paidNum)} ฿
+                </span>
+              </div>
+
+              {(() => {
+                const outstanding = Math.max(0, Number((totalNum - paidNum).toFixed(2)));
+                const outstandingClass = outstanding > 0 ? 'text-red-600' : 'text-green-600';
+                return (
+                  <div className="flex justify-between items-center pt-2 border-t border-gray-200">
+                    <span className="text-lg font-bold text-gray-900">ยอดค้าง</span>
+                    <span className={outstandingClass + ' text-3xl font-extrabold'}>
+                      {fmt(outstanding)} ฿
+                    </span>
+                  </div>
+                );
+              })()}
+            </div>
+
+            <div className="py-4" />
           </div>
         )}
       </div>
@@ -193,6 +228,9 @@ PaymentSummary.defaultProps = {
 };
 
 export default PaymentSummary;
+
+
+
 
 
 

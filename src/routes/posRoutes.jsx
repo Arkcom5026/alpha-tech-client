@@ -13,6 +13,7 @@ import LogoutPos from '@/features/pos/pages/LogoutPos';
 import dashboardRoutes from './dashboardRoutes';
 import purchasesRoutes from './purchasesRoutes';
 import salesRoutes from './salesRoutes';
+import customerRoutes from './customerRoutes';
 import stockRoutes from './stockRoutes';
 import reportsRoutes from './reportsRoutes';
 import servicesRoutes from './servicesRoutes';
@@ -29,6 +30,7 @@ const posRoutes = {
     dashboardRoutes,
     purchasesRoutes,
     salesRoutes,
+    customerRoutes,
     stockRoutes,
     reportsRoutes,
     servicesRoutes,
@@ -55,6 +57,8 @@ const posRoutes = {
 };
 
 export default posRoutes;
+
+
 
 
 

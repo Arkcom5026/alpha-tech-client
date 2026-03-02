@@ -1,3 +1,4 @@
+
 // 📁 FILE: src/features/sales/store/salesStore.js
 
 import { create } from 'zustand';
@@ -420,6 +421,16 @@ const useSalesStore = create((set, get) => ({
     };
 
     const isPaidSale = (s) => {
+      // ✅ Prefer new canonical field (Prisma: Sale.statusPayment)
+      // Treat CANCELLED as non-unpaid for dashboard purposes.
+      if (s?.statusPayment) {
+        const sp = String(s.statusPayment).toUpperCase();
+        if (sp === 'PAID') return true;
+        if (sp === 'CANCELLED') return true;
+        if (sp === 'UNPAID' || sp === 'PARTIALLY_PAID' || sp === 'WAITING_APPROVAL') return false;
+      }
+
+      // ✅ Backward compatibility (older fields / mixed responses)
       if (s?.isPaid === true) return true;
       if (s?.paid === true) return true;
       if (s?.paidAt) return true;
@@ -506,7 +517,7 @@ const useSalesStore = create((set, get) => ({
         monthSalesAmount: monthSalesAmount == null ? undefined : monthSalesAmount,
         todaySalesAmountHint: scope === 'today' ? 'ยอดรวมช่วงวันนี้' : 'ยอดรวมตามช่วงเวลาที่เลือก',
         todaySalesCountHint: scope === 'today' ? 'จำนวนบิลช่วงวันนี้' : 'จำนวนบิลตามช่วงเวลาที่เลือก',
-        unpaidHint: 'รายการที่ยังไม่พบสถานะ PAID/paidAt',
+        unpaidHint: 'รายการที่ยังไม่เป็น PAID (อิง statusPayment ก่อน แล้ว fallback paid/paidAt)',
         monthSalesAmountHint: scope === 'today' ? 'ยอดสะสมเดือนนี้ (month-to-date)' : 'ยอดสะสมเดือนนี้ (อิงช่วงเวลาที่เลือก)',
       };
 
@@ -618,5 +629,6 @@ const useSalesStore = create((set, get) => ({
 }));
 
 export default useSalesStore;
+
 
 

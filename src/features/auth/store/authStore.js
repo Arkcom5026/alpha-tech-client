@@ -1,5 +1,7 @@
 
 
+
+
 // authStore.js
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
@@ -129,6 +131,10 @@ export const useAuthStore = create(
 // - admin/superadmin ใช้ตามคีย์ตำแหน่ง
 // - owner/manager ให้ถือเป็น admin (backoffice)
 const effectiveRole = (() => {
+  // ✅ Trust explicit platform roles from BE (even if no EmployeeProfile)
+  if (serverRole === 'superadmin') return 'superadmin';
+  if (serverRole === 'admin') return 'admin';
+
   if (baseRole !== 'employee') return baseRole;
 
   if (positionKey === 'superadmin') return 'superadmin';
@@ -146,7 +152,7 @@ const effectiveRole = (() => {
             null;
 
           // ✅ BRANCH_SCOPE_ENFORCED (P1): Staff session must always have branchId
-          if (['employee', 'admin', 'superadmin'].includes(effectiveRole) && !branchIdFromServer) {
+          if (['employee', 'admin'].includes(effectiveRole) && !branchIdFromServer) {
             const msg = 'บัญชีพนักงานต้องมีสาขา (branchId) ก่อนเข้า POS (กรุณาให้แอดมินกำหนดสาขาใน EmployeeProfile)';
             set({ authError: msg });
             // keep store clean (guards may clear storage too)

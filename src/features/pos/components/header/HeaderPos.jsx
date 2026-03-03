@@ -1,3 +1,5 @@
+
+
 // HeaderPos.jsx
 
 import { useEffect, useState } from 'react';
@@ -12,14 +14,30 @@ import { useBranchStore } from '@/features/branch/store/branchStore';
 
 const HeaderPos = () => {
   const navigate = useNavigate();
+
   const employee = useAuthStore((state) => state.employee);
+  const user = useAuthStore((state) => state.user);
   const logoutAction = useAuthStore((state) => state.logoutAction);
   const token = useAuthStore((state) => state.token);
   const role = useAuthStore((state) => state.role);
 
+  // Branch selector state (must be declared before using)
+
+  // ✅ SUPERADMIN global mode: allow login without branch, but restrict menu to GLOBAL-safe pages only
+  const isSuperAdmin = String(role || '').toLowerCase() === 'superadmin';
+  const isGlobalSuperAdmin = isSuperAdmin && !employee?.branchId && !selectedBranchId;
+
+  // Display name (fallback for SUPERADMIN without EmployeeProfile)
+  const displayName = employee?.name || user?.username || user?.email || 'ผู้ใช้';
+
   // RBAC (P1 Bestline) - FE menu guard (Minimal Disruption)
   const canSelector = useAuthStore((state) => state.canSelector);
-  const can = (capKey) => (typeof canSelector === 'function' ? canSelector(capKey) : true);
+  const can = (capKey) => {
+    // ✅ SUPERADMIN should never be blocked by RBAC mapping gaps
+    if (isSuperAdmin) return true;
+    return typeof canSelector === 'function' ? canSelector(capKey) : true;
+  };
+  const canGlobalProducts = isSuperAdmin || can(P1_CAP.MANAGE_PRODUCTS);
 
   const canPurchasing = can(P1_CAP.PURCHASING) || can(P1_CAP.RECEIVE_STOCK);
   const canSales = can(P1_CAP.POS_SALE);
@@ -29,12 +47,22 @@ const HeaderPos = () => {
   const canSettings = can(P1_CAP.MANAGE_EMPLOYEES) || can(P1_CAP.MANAGE_PRODUCTS); // conservative baseline
   const canEmployees = can(P1_CAP.MANAGE_EMPLOYEES);
 
+  // ✅ Menu visibility (branch-scope enforced). SUPERADMIN without branch = GLOBAL-only.
+  const showPurchasing = !isGlobalSuperAdmin && canPurchasing;
+  const showSales = !isGlobalSuperAdmin && canSales;
+  const showServices = !isGlobalSuperAdmin; // services are branch-scoped by nature
+  const showStockModule = !isGlobalSuperAdmin && canStock;
+  const showReports = !isGlobalSuperAdmin && canReports;
+  const showFinance = !isGlobalSuperAdmin && canFinance;
+  const showSettings = !isGlobalSuperAdmin && canSettings;
+  const showEmployees = !isGlobalSuperAdmin && canEmployees;
+  const showGlobalProducts = isGlobalSuperAdmin && canGlobalProducts;
+
   const branchName = useBranchStore((state) => state.currentBranch?.name);
   const selectedBranchId = useBranchStore((state) => state.selectedBranchId);
   const clearBranch = useBranchStore((state) => state.clearBranch);
   const loadAndSetBranchById = useBranchStore((state) => state.loadAndSetBranchById);
-
-    const { isDark, toggleTheme } = useThemeStore();
+  const { isDark, toggleTheme } = useThemeStore();
   const [showMenu, setShowMenu] = useState(false);
 
   const handleLogout = () => {
@@ -65,45 +93,51 @@ const HeaderPos = () => {
         >
           <option value="" disabled hidden>เมนูทั้งหมด</option>
           <option value="/pos">หน้าหลัก</option>
-          {canPurchasing && <option value="/pos/purchases">จัดซื้อ</option>}
-          {canSales && <option value="/pos/sales">การขาย</option>}
-          <option value="/pos/services">บริการ</option>
-          {canStock && <option value="/pos/stock">สต๊อก</option>}
-          {canReports && <option value="/pos/reports">รายงาน</option>}
-          {canFinance && <option value="/pos/finance">การเงิน</option>}
-          {canEmployees && <option value="/pos/employees">พนักงาน</option>}
+          {showPurchasing && <option value="/pos/purchases">จัดซื้อ</option>}
+          {showSales && <option value="/pos/sales">การขาย</option>}
+          {showServices && <option value="/pos/services">บริการ</option>}
+          {showStockModule && <option value="/pos/stock">สต๊อก</option>}
+          {showGlobalProducts && <option value="/pos/stock/products">สินค้า</option>}
+          {showReports && <option value="/pos/reports">รายงาน</option>}
+          {showFinance && <option value="/pos/finance">การเงิน</option>}
+          {showEmployees && <option value="/pos/employees">พนักงาน</option>}
         </select>
       </div>
 
       <nav className="hidden md:flex flex-wrap gap-2 max-w-full overflow-x-auto scrollbar-thin">
         <NavLink to="/pos" className={navLinkClass}>หน้าหลัก</NavLink>
-        {canPurchasing && (
+        {showPurchasing && (
           <NavLink to="/pos/purchases" className={navLinkClass}>
             จัดซื้อ
           </NavLink>
         )}
-        {canSales && (
+        {showSales && (
           <NavLink to="/pos/sales" className={navLinkClass}>
             การขาย
           </NavLink>
         )}
-        <NavLink to="/pos/services" className={navLinkClass}>บริการ</NavLink>
-        {canStock && (
+        {showServices && <NavLink to="/pos/services" className={navLinkClass}>บริการ</NavLink>}
+        {showStockModule && (
           <NavLink to="/pos/stock" className={navLinkClass}>
             สต๊อก
           </NavLink>
         )}
-        {canReports && (
+        {showGlobalProducts && (
+          <NavLink to="/pos/stock/products" className={navLinkClass}>
+            สินค้า
+          </NavLink>
+        )}
+        {showReports && (
           <NavLink to="/pos/reports" className={navLinkClass}>
             รายงาน
           </NavLink>
         )}
-        {canFinance && (
+        {showFinance && (
           <NavLink to="/pos/finance" className={navLinkClass}>
             การเงิน
           </NavLink>
         )}
-        {canSettings && (
+        {showSettings && (
           <NavLink to="/pos/settings" className={navLinkClass}>
             ตั้งค่าระบบ
           </NavLink>
@@ -119,20 +153,26 @@ const HeaderPos = () => {
           {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
         </Button>
 
-        {branchName && (
+        {branchName && !isGlobalSuperAdmin && (
           <div className="text-sm font-medium bg-blue-600/60 px-3 py-1 rounded-full dark:bg-slate-700 max-w-[250px] truncate">
             สาขา: {branchName}
           </div>
         )}
 
-        {employee?.name && (
+        {isGlobalSuperAdmin && (
+          <div className="text-xs font-semibold bg-white/10 border border-white/20 px-3 py-1 rounded-full">
+            SUPERADMIN • GLOBAL
+          </div>
+        )}
+
+        {token && (
           <div className="relative">
             <button
               className="flex items-center gap-2 px-3 py-1 bg-blue-600/80 hover:bg-blue-700 rounded-full text-sm"
               onClick={() => setShowMenu(!showMenu)}
             >
               <UserCircle className="w-5 h-5" />
-              <span className="truncate max-w-[150px]">{employee.name}</span>
+              <span className="truncate max-w-[150px]">{displayName}</span>
             </button>
             {showMenu && (
               <div className="absolute right-0 mt-2 w-40 bg-white text-black rounded shadow-md z-50">
@@ -160,6 +200,8 @@ const HeaderPos = () => {
 };
 
 export default HeaderPos;
+
+
 
 
 

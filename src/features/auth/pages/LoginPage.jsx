@@ -1,3 +1,4 @@
+
 // ✅ @filename: LoginPage.jsx
 // RBAC update: ให้สิทธิ์ "จัดลำดับสินค้า" เฉพาะ ADMIN ตามนโยบายใหม่
 
@@ -25,9 +26,11 @@ const LoginPage = () => {
   const loginAction = useAuthStore((state) => state.loginAction);
   const token = useAuthStore((state) => state.token);
   const role = useAuthStore((state) => state.role);
-  const profileType = useAuthStore((state) => state.profileType);
-  const authError = useAuthStore((state) => state.authError);
-  const employee = useAuthStore((state) => state.employee);
+  const profileType = useAuthStore((state) => state.profileType);  const user = useAuthStore((state) => state.user);
+
+  // ✅ แสดง username เฉพาะตอนรันบน localhost เท่านั้น
+  const isLocalhost = typeof window !== 'undefined' && window.location.hostname === 'localhost';
+  const debugUsername = user?.username || user?.email || '';
 
   const [email, setEmail] = useState(() => sessionStorage.getItem('lastUsedEmail') || 'advicebanphot@gmail.com');
   const [password, setPassword] = useState('Arkcom-5026');
@@ -74,9 +77,9 @@ const LoginPage = () => {
 
       // ✅ Staff (employee/admin/superadmin) → เข้า POS
       if (isStaffRole(effectiveRole) || effectiveProfileType === 'employee') {
-        // ✅ Branch context required for POS
+        // ✅ Branch context required for POS (EXCEPT SUPERADMIN)
         const branchId = st.employee?.branchId ?? null;
-        if (!branchId) {
+        if (!branchId && effectiveRole !== 'superadmin') {
           setError('บัญชีพนักงานต้องมีสาขา (branchId) ก่อนเข้า POS');
           useAuthStore.getState().logoutAction?.();
           return;
@@ -139,6 +142,11 @@ const LoginPage = () => {
           <FaLock className="mx-auto text-3xl text-green-600 mb-2" />
           <h2 className="text-2xl font-bold">เข้าสู่ระบบ</h2>
           <p className="text-sm text-gray-500">กรุณาเข้าสู่ระบบด้วยบัญชีของคุณ</p>
+          {isLocalhost && debugUsername && (
+            <div className="mt-2 text-xs text-blue-600 bg-blue-50 border border-blue-200 rounded px-2 py-1 inline-block">
+              🛠 Dev Mode: {debugUsername}
+            </div>
+          )}
         </div>
 
         <div className="space-y-3">
@@ -228,6 +236,8 @@ const LoginPage = () => {
 };
 
 export default LoginPage;
+
+
 
 
 

@@ -1,5 +1,6 @@
 
 
+
 // ✅ src/features/product/pages/CreateProductPage.jsx (full width)
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -21,6 +22,7 @@ const CreateProductPage = () => {
   const [error, setError] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [saveLocked, setSaveLocked] = useState(false);
 
   const imageRef = useRef();
   const [selectedFiles, setSelectedFiles] = useState([]);
@@ -55,6 +57,9 @@ const CreateProductPage = () => {
   };
 
   const handleCreate = async (formData) => {
+    // ✅ ถ้าเคยบันทึกสำเร็จแล้วและผู้ใช้แก้ไขข้อมูลใหม่ → ปลดล็อกก่อนบันทึกซ้ำ
+    if (saveLocked) setSaveLocked(false);
+
     try {
       setIsProcessing(true);
       setError('');
@@ -70,6 +75,7 @@ const CreateProductPage = () => {
       }
 
       setShowSuccess(true);
+      setSaveLocked(true);
     } catch (err) {
       setError(err?.message || 'เกิดข้อผิดพลาดในการบันทึกสินค้า');
     } finally {
@@ -155,6 +161,13 @@ const CreateProductPage = () => {
           <ProductForm
             onSubmit={handleCreate}
             mode="create"
+            // ✅ หลังบันทึกสำเร็จ ให้ disable ปุ่มบันทึก (กันกดย้ำ)
+            submitDisabled={isProcessing || saveLocked}
+            submitLabel={saveLocked ? 'บันทึกแล้ว' : undefined}
+            onAnyChange={() => {
+              if (saveLocked) setSaveLocked(false);
+              if (showSuccess) setShowSuccess(false);
+            }}
             defaultValues={{
               name: '',
               description: '',
@@ -186,6 +199,8 @@ const CreateProductPage = () => {
 };
 
 export default CreateProductPage;
+
+
 
 
 

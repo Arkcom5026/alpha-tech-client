@@ -4,6 +4,7 @@
 
 
 
+
 // ✅ src/features/product/components/ProductForm.jsx
 
 import React, { useEffect, useRef, useCallback, useMemo, useState } from 'react';
@@ -32,7 +33,16 @@ const PaymentInput = ({ title, value, onChange, disabled = false }) => {
   );
 };
 
-const ProductForm = ({ onSubmit, defaultValues, mode }) => {
+const ProductForm = ({
+  onSubmit,
+  defaultValues,
+  mode,
+  // ✅ allow parent page to lock submit after successful save
+  submitDisabled = false,
+  submitLabel,
+  // ✅ notify parent when any field changes (used to unlock submit)
+  onAnyChange,
+}) => {
   const {
     // ✅ dropdowns (category/type/profile/template/mappings)
     dropdowns,
@@ -451,7 +461,18 @@ const ProductForm = ({ onSubmit, defaultValues, mode }) => {
 
   return (
     <FormProvider {...methods}>
-      <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
+      <form
+        onSubmit={handleSubmit(handleFormSubmit)}
+        onChange={() => {
+          // ✅ parent unlock hook (do not crash UI if handler throws)
+          try {
+            if (!isSubmitting && typeof onAnyChange === 'function') onAnyChange();
+          } catch (_) {
+            // ignore
+          }
+        }}
+        className="space-y-6"
+      >
         {/* ✅ UI-based status/error (ห้าม dialog alert) */}
         {isSubmitting && (
           <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-blue-900">
@@ -1004,12 +1025,18 @@ const ProductForm = ({ onSubmit, defaultValues, mode }) => {
         <div className="flex justify-end border-t pt-6">
           <button
             type="submit"
-            disabled={isSubmitting}
+            disabled={Boolean(isSubmitting || submitDisabled)}
             className={`px-4 py-2 rounded bg-blue-600 text-white font-semibold ${
-              isSubmitting ? 'opacity-50 cursor-not-allowed' : ''
+              isSubmitting || submitDisabled ? 'opacity-50 cursor-not-allowed' : ''
             }`}
           >
-            {isSubmitting ? 'กำลังบันทึก...' : mode === 'edit' ? 'บันทึกการแก้ไข' : 'เพิ่มสินค้า'}
+            {isSubmitting
+              ? 'กำลังบันทึก...'
+              : submitLabel
+                ? submitLabel
+                : mode === 'edit'
+                  ? 'บันทึกการแก้ไข'
+                  : 'เพิ่มสินค้า'}
           </button>
         </div>
       </form>

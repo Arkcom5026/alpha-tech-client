@@ -23,6 +23,7 @@ const EditProductPage = () => {
   const hasFetched = useRef(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [saveLocked, setSaveLocked] = useState(false);
 
   const { updateProduct, getProductById, deleteImage, ensureDropdownsAction, dropdownsLoaded } = useProductStore();
 
@@ -114,6 +115,9 @@ const EditProductPage = () => {
   }, [product]);
 
   const handleUpdate = async (formData) => {
+    // ถ้าผู้ใช้กดบันทึกอีกครั้งหลังเคยบันทึกสำเร็จแล้ว ให้ปลดล็อกก่อน (กัน state ค้าง)
+    if (saveLocked) setSaveLocked(false);
+
     setIsUpdating(true);
 
     // ✅ หากเลือก SIMPLE ให้ตัดการผูกกับ Template ออก (ระดับ Product เท่านั้น)
@@ -189,6 +193,7 @@ const EditProductPage = () => {
       }
 
       setShowSuccess(true);
+      setSaveLocked(true);
       setTimeout(() => setShowSuccess(false), 3000);
     } catch (err) {
       console.error('อัปเดตข้อมูลสินค้าล้มเหลว:', err);
@@ -229,6 +234,12 @@ const EditProductPage = () => {
         defaultValues={mappedProduct}
         onSubmit={handleUpdate}
         mode="edit"
+        // ✅ หลังบันทึกสำเร็จ ให้ disable ปุ่มบันทึก (จนกว่าจะมีการแก้ไขใหม่)
+        submitDisabled={isUpdating || saveLocked}
+        submitLabel={saveLocked ? 'บันทึกแล้ว' : undefined}
+        onAnyChange={() => {
+          if (saveLocked) setSaveLocked(false);
+        }}
       />
 
       {/* ✅ Inline status (แทน dialog) */}
@@ -252,6 +263,8 @@ const EditProductPage = () => {
 };
 
 export default EditProductPage;
+
+
 
 
 

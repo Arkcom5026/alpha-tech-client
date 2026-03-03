@@ -5,6 +5,7 @@
 
 
 
+
 // ===============================
 // features/bill/components/BillLayoutFullTax.jsx
 // ===============================
@@ -14,6 +15,9 @@ const formatCurrency = (val) => (Number(val) || 0).toLocaleString('th-TH', {
   minimumFractionDigits: 2,
   maximumFractionDigits: 2,
 });
+
+// ✅ rounding helper (2 decimals) to prevent float drift on print
+const round2 = (n) => Number((Number(n || 0)).toFixed(2));
 
 const BillLayoutFullTax = ({ sale, saleItems, payments, config }) => {
   // Hooks must be called unconditionally at the top of the component
@@ -226,8 +230,8 @@ const BillLayoutFullTax = ({ sale, saleItems, payments, config }) => {
               <th className="border border-black px-1 h-[28px]">รายการ<br />DESCRIPTION</th>
               <th className="border border-black px-1 h-[28px]">จำนวน<br />QTY</th>
               <th className="border border-black px-1 h-[28px]">หน่วย<br />UNIT</th>
-              <th className="border border-black px-1 h-[28px]">ราคาต่อหน่วย (ไม่รวม VAT)<br />UNIT PRICE (EX VAT)</th>
-              <th className="border border-black px-1 h-[28px]">จำนวนเงิน (ไม่รวม VAT)<br />AMOUNT (EX VAT)</th>
+              <th className="border border-black px-1 h-[28px]">ราคาต่อหน่วย<br />UNIT PRICE</th>
+              <th className="border border-black px-1 h-[28px]">จำนวนเงิน<br />AMOUNT</th>
             </tr>
           </thead>
           <tbody>
@@ -239,8 +243,51 @@ const BillLayoutFullTax = ({ sale, saleItems, payments, config }) => {
                 </td>
                 <td className="border border-black px-1 text-center h-[28px]">{item.quantity}</td>
                 <td className="border border-black px-1 text-center h-[28px]">{item.unit || '-'}</td>
-                <td className="border border-black px-1 text-right h-[28px]">{formatCurrency(item.unitPriceExVat)}</td>
-                <td className="border border-black px-1 text-right h-[28px]">{formatCurrency(item.totalExVat)}</td>
+                <td className="border border-black px-1 text-right h-[28px]">{
+                  formatCurrency(
+                    (() => {
+                      const qty = Number(item?.quantity) || 0;
+                      // ✅ Full price (INC VAT) like Delivery Note
+                      const explicit = item?.unitPriceIncVat ?? item?.unitPrice ?? item?.price ?? item?.sellPrice;
+                      if (explicit != null && Number.isFinite(Number(explicit))) return round2(explicit);
+
+                      // fallback: if only EX VAT is present, gross-up using vatRate
+                      const ex = item?.unitPriceExVat;
+                      if (ex != null && Number.isFinite(Number(ex))) {
+                        return round2(Number(ex) * (1 + vatRate / 100));
+                      }
+
+                      // last resort: derive from total / qty
+                      const totalInc = item?.amount ?? item?.total ?? item?.totalAmount;
+                      if (qty > 0 && totalInc != null && Number.isFinite(Number(totalInc))) {
+                        return round2(Number(totalInc) / qty);
+                      }
+                      return 0;
+                    })()
+                  )
+                }</td>
+                <td className="border border-black px-1 text-right h-[28px]">{
+                  formatCurrency(
+                    (() => {
+                      const qty = Number(item?.quantity) || 0;
+                      const explicitAmount = item?.amount ?? item?.total ?? item?.totalAmount;
+                      if (explicitAmount != null && Number.isFinite(Number(explicitAmount))) return round2(explicitAmount);
+
+                      // fallback: compute from full unit price
+                      const explicitUnit = item?.unitPriceIncVat ?? item?.unitPrice ?? item?.price ?? item?.sellPrice;
+                      if (explicitUnit != null && Number.isFinite(Number(explicitUnit))) {
+                        return round2(Number(explicitUnit) * qty);
+                      }
+
+                      // fallback: gross-up EX VAT total
+                      const exTotal = item?.totalExVat;
+                      if (exTotal != null && Number.isFinite(Number(exTotal))) {
+                        return round2(Number(exTotal) * (1 + vatRate / 100));
+                      }
+                      return 0;
+                    })()
+                  )
+                }</td>
               </tr>
             ))}
             {[...Array(emptyRowCount)].map((_, idx) => (
@@ -283,15 +330,15 @@ const BillLayoutFullTax = ({ sale, saleItems, payments, config }) => {
           </div>
           <div>
             <p className="flex justify-between border-t border-black border-b py-1">
-              <span>รวมเงิน / SUB TOTAL</span>
+              <span>รวมเงิน</span>
               <span>{formatCurrency(beforeVat)} ฿</span>
             </p>
             <p className="flex justify-between border-b border-black py-1">
-              <span>ภาษีมูลค่าเพิ่ม {vatRate}% / VAT</span>
+              <span>ภาษีมูลค่าเพิ่ม {vatRate}%</span>
               <span>{formatCurrency(vatAmount)} ฿</span>
             </p>
             <p className="flex justify-between border-b border-black font-bold py-1">
-              <span>จำนวนเงินรวมทั้งสิ้น / TOTAL AMOUNT</span>
+              <span>จำนวนเงินรวมทั้งสิ้น</span>
               <span>{formatCurrency(total)} ฿</span>
             </p>
           </div>
@@ -315,6 +362,7 @@ const BillLayoutFullTax = ({ sale, saleItems, payments, config }) => {
 };
 
 export default React.memo(BillLayoutFullTax);
+
 
 
 

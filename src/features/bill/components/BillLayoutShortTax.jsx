@@ -54,6 +54,26 @@ const getLineTotalSatang = (item) => {
 }
 
 const BillLayoutShortTax = ({ sale, saleItems, payments, config, hideContactName }) => {
+  // ✅ normalize payments once (avoid JSX IIFE + keep parser happy)
+  const normalizedPayments = Array.isArray(payments)
+    ? payments
+        .map((p) => {
+          const raw = (p?.method || p?.paymentMethod || p?.type || '').toString().trim();
+          const method = raw ? raw.toUpperCase() : '';
+          const amt = n(p?.amount || p?.paidAmount || p?.value);
+          return { p, method, amt };
+        })
+        .filter((x) => x.amt > 0.0001 && x.method && x.method !== '-' && x.method !== 'N/A')
+    : [];
+
+  const labelOf = (m) => {
+    if (m === 'CASH') return 'เงินสด';
+    if (m === 'TRANSFER' || m === 'BANK_TRANSFER') return 'โอน';
+    if (m === 'CARD' || m === 'CREDIT_CARD') return 'บัตร';
+    return m;
+  };
+
+  const paidTotal = round2(normalizedPayments.reduce((s, x) => s + n(x.amt), 0));
   if (!sale || !saleItems || !payments || !config) return null
 
   // ✅ Total: prefer from sale (source of truth) ถ้ามี แล้วค่อย fallback ไปคำนวณจากรายการ
@@ -74,6 +94,13 @@ const BillLayoutShortTax = ({ sale, saleItems, payments, config, hideContactName
   const beforeVat = round2(total / (1 + vatRate / 100))
   const vatAmount = round2(total - beforeVat)
 
+  // ✅ 7-11-ish meta: counts + change
+  const itemLines = Array.isArray(saleItems) ? saleItems.length : 0
+  const qtyTotal = Array.isArray(saleItems) ? saleItems.reduce((s, it) => s + n(it?.quantity), 0) : 0
+
+  const change = round2(paidTotal - total)
+  const shouldShowChange = paidTotal > 0 && change > 0.005
+
   // ✅ กันเคสวันที่เป็น undefined และลด re-render JSX
   const dateText = sale?.createdAt
     ? new Date(sale.createdAt).toLocaleDateString('th-TH', {
@@ -88,8 +115,15 @@ const BillLayoutShortTax = ({ sale, saleItems, payments, config, hideContactName
 
   return (
     <div
-      className="w-[80mm] min-h-[280mm] pt-6 pb-6 mx-auto text-base leading-relaxed"
-      style={{ fontFamily: 'THSarabunNew, TH Sarabun New, sans-serif' }}
+      className="mx-auto receipt-root"
+      style={{
+        width: '80mm',
+        minHeight: 'auto',
+        fontFamily: 'THSarabunNew, TH Sarabun New, sans-serif',
+        fontSize: config?.thermalFontSize || '13px',
+        lineHeight: 1.18,
+        padding: '6px 8px 8px',
+      }}
     >
       <style>{`
         /* ✅ TH Sarabun New (served from /public/fonts)
@@ -132,12 +166,15 @@ const BillLayoutShortTax = ({ sale, saleItems, payments, config, hideContactName
           html, body {
             margin: 0;
             padding: 0;
+            width: 80mm;
           }
           body {
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
+            width: 80mm;
           }
           @page {
+            /* ✅ allow dynamic paper size via config.paperSize (e.g. '80mm', '58mm', 'A4') */
             size: 80mm auto;
             margin: 0;
           }
@@ -150,9 +187,71 @@ const BillLayoutShortTax = ({ sale, saleItems, payments, config, hideContactName
           table { page-break-inside: auto; }
           tr, td, th { page-break-inside: avoid; break-inside: avoid; }
         }
+
+        /* ✅ Thermal receipt utilities */
+        .receipt-root {
+          color: #000;
+          width: 80mm;
+          max-width: 80mm;
+        }
+        @media print {
+          .receipt-root {
+            margin: 0 !important;
+            width: 80mm !important;
+            max-width: 80mm !important;
+          }
+        }
+        .mono {
+          font-variant-numeric: tabular-nums;
+          font-feature-settings: "tnum" 1;
+        }
+        .hr {
+          border-top: 1px dashed #999;
+          margin: 5px 0;
+        }
+        .hr-solid {
+          border-top: 1px solid #999;
+          margin: 5px 0;
+        }
+        .tight {
+          line-height: 1.15;
+        }
+        .small {
+          font-size: 12px;
+        }
+        .xs {
+          font-size: 11px;
+        }
+        .label {
+          opacity: 0.95;
+        }
+        .row {
+          display: flex;
+          align-items: baseline;
+          justify-content: space-between;
+          gap: 4px;
+        }
+        .row > .left {
+          flex: 1;
+          min-width: 0;
+        }
+        .row > .right {
+          flex: 0 0 auto;
+          text-align: right;
+          white-space: nowrap;
+        }
+        .clip {
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+        .wrap {
+          white-space: normal;
+          word-break: break-word;
+        }
       `}</style>
 
-      <div className="text-right print:hidden mb-4">
+      <div className="text-right print:hidden mb-2">
         <button
           onClick={handlePrint}
           className="bg-blue-600 hover:bg-blue-700 text-white py-1 px-4 rounded text-sm"
@@ -161,59 +260,165 @@ const BillLayoutShortTax = ({ sale, saleItems, payments, config, hideContactName
         </button>
       </div>
 
-      {/* Header */}
-      <div className="text-center border-b border-gray-300 pb-3 mb-4 no-break">
-        {config.logoUrl && <img src={config.logoUrl} alt="logo" className="h-10 mx-auto mb-2" />}
-        <h2 className="font-bold text-base leading-snug">{config.branchName}</h2>
-        <p className="text-sm whitespace-pre-line leading-tight">{config.address}</p>
-        {config.phone && <p className="text-sm">โทร. {config.phone}</p>}
-        {config.taxId && <p className="text-sm">เลขผู้เสียภาษี {config.taxId}</p>}
+      {/* Header (thermal-friendly) */}
+      <div className="text-center no-break tight">
+        {config.logoUrl && <img src={config.logoUrl} alt="logo" className="h-10 mx-auto mb-1" />}
+        <div className="font-bold" style={{ fontSize: '16px' }}>{config.branchName}</div>
+        {config.address && <div className="small wrap">{config.address}</div>}
+        <div className="small mono">
+          {config.phone ? `โทร. ${config.phone}` : ''}
+          {config.phone && config.taxId ? '  •  ' : ''}
+          {config.taxId ? `เลขผู้เสียภาษี ${config.taxId}` : ''}
+        </div>
       </div>
 
-      <div className="text-sm mb-4 space-y-1 no-break">
-        <p className="font-bold">ใบกำกับภาษีอย่างย่อ / ใบเสร็จรับเงิน</p>
-        <p>เลขที่: {sale.code}</p>
+      <div className="hr" />
+
+      <div className="no-break tight" style={{ marginBottom: 6 }}>
+        {/* POS meta (7-11-ish) */}
+        <div className="row xs mono" style={{ marginTop: 2 }}>
+          <div className="left label">แคชเชียร์</div>
+          <div className="right clip">{sale.employee?.name || config?.cashierName || '-'}</div>
+        </div>
+        <div className="row xs mono">
+          <div className="left label">เครื่อง</div>
+          <div className="right">{config?.terminalId || config?.posId || '-'}</div>
+        </div>
+        <div className="row xs mono">
+          <div className="left label">รายการ/ชิ้น</div>
+          <div className="right">{itemLines}/{qtyTotal}</div>
+        </div>
+
+        <div className="hr-solid" style={{ margin: '6px 0' }} />
+
+        <div className="text-center font-bold">ใบกำกับภาษีอย่างย่อ / ใบเสร็จรับเงิน</div>
+        <div className="row small mono" style={{ marginTop: 4 }}>
+          <div className="left label">เลขที่</div>
+          <div className="right">{sale.code}</div>
+        </div>
         {!config.hideDate && (
-          <p>วันที่: {dateText}</p>
+          <div className="row small mono">
+            <div className="left label">วันที่</div>
+            <div className="right">{dateText}</div>
+          </div>
         )}
-        <p>พนักงานขาย: {sale.employee?.name || '-'}</p>
-        <p>หน่วยงาน: {sale.customer?.companyName || '-'}</p>
-        {!hideContactName && <p>ลูกค้า: {sale.customer?.name || '-'}</p>}
+        <div className="row small">
+          <div className="left label">พนักงานขาย</div>
+          <div className="right clip">{sale.employee?.name || '-'}</div>
+        </div>
+        <div className="row small">
+          <div className="left label">หน่วยงาน</div>
+          <div className="right clip">{sale.customer?.companyName || '-'}</div>
+        </div>
+        {!hideContactName && (
+          <div className="row small">
+            <div className="left label">ลูกค้า</div>
+            <div className="right clip">{sale.customer?.name || '-'}</div>
+          </div>
+        )}
       </div>
 
-      <table className="w-full text-sm border-t border-b border-gray-300 mb-4">
-        <thead>
-          <tr className="border-b">
-            <th className="text-left py-1">สินค้า</th>
-            <th className="text-right py-1">จำนวน</th>
-            <th className="text-right py-1">ราคา</th>
-          </tr>
-        </thead>
-        <tbody>
-          {saleItems.map((item) => (
-            <tr key={item.id} className="border-b border-dashed">
-              <td className="py-1">
-                {item.productName}
-                {item.productModel && (
-                  <span className="text-xs text-gray-800"> ({item.productModel})</span>
-                )}
-              </td>
-              <td className="text-right py-1">{item.quantity}</td>
-              <td className="text-right py-1">{formatCurrency(getLineTotalSatang(item) / 100)} ฿</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <div className="hr" />
+      <div className="no-break">
+        <div className="row xs mono" style={{ marginBottom: 4 }}>
+          <div className="left label">สินค้า</div>
+          <div className="right label">จำนวน</div>
+          <div className="right label" style={{ minWidth: 72 }}>ราคา</div>
+        </div>
 
-      <div className="text-sm text-right space-y-1 no-break">
-        <p>รวมก่อน VAT: {formatCurrency(beforeVat)} ฿</p>
-        <p>VAT {vatRate}%: {formatCurrency(vatAmount)} ฿</p>
-        <p className="font-bold text-base">รวมทั้งสิ้น: {formatCurrency(total)} ฿</p>
-        <p className="text-center mt-3 text-sm border-t border-dashed pt-2">VAT INCLUDED</p>
+        <div className="hr-solid" />
+
+        <div>
+          {saleItems.map((item) => {
+            const qty = n(item?.quantity);
+            const unit = getUnitPrice(item);
+            const lineTotal = getLineTotalSatang(item) / 100;
+            return (
+              <div key={item.id} className="tight" style={{ padding: '3px 0' }}>
+                <div className="row">
+                  <div className="left wrap">
+                    <div className="wrap">{item.productName || '-'}</div>
+                    {(item.productModel || unit > 0) && (
+                      <div className="xs mono" style={{ opacity: 0.95 }}>
+                        {item.productModel ? `${item.productModel}` : ''}
+                        {item.productModel && unit > 0 ? ' • ' : ''}
+                        {unit > 0 ? `${qty} x ${formatCurrency(unit)}` : ''}
+                      </div>
+                    )}
+                  </div>
+                  <div className="right mono" style={{ minWidth: 36 }}>{qty || ''}</div>
+                  <div className="right mono" style={{ minWidth: 72 }}>{formatCurrency(lineTotal)}</div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="hr-solid" />
       </div>
 
-      <div className="mt-6 text-sm space-y-1 no-break">
-        {sale.note && <p>หมายเหตุ: {sale.note}</p>}
+      <div className="no-break" style={{ marginTop: 6 }}>
+        <div className="row mono">
+          <div className="left label">รวมเงิน</div>
+          <div className="right">{formatCurrency(beforeVat)} ฿</div>
+        </div>
+        <div className="row mono">
+          <div className="left label">ภาษีมูลค่าเพิ่ม {vatRate}%</div>
+          <div className="right">{formatCurrency(vatAmount)} ฿</div>
+        </div>
+
+        {/* Payment breakdown (7-11 style) */}
+        {normalizedPayments.length > 0 && (
+          <>
+            <div className="hr" />
+            {normalizedPayments.map(({ p, method, amt }, idx) => (
+              <div key={p?.id ?? `${method}-${idx}`} className="row mono">
+                <div className="left label">{labelOf(method)}</div>
+                <div className="right">{formatCurrency(amt)} ฿</div>
+              </div>
+            ))}
+          </>
+        )}
+
+        {/* Change (optional) */}
+        {shouldShowChange && (
+          <div className="row mono">
+            <div className="left label">เงินทอน</div>
+            <div className="right">{formatCurrency(change)} ฿</div>
+          </div>
+        )}
+
+        <div className="hr" />
+        <div className="row mono" style={{ fontWeight: 800, fontSize: '18px', letterSpacing: '0.3px' }}>
+          <div className="left">จำนวนเงินรวมทั้งสิ้น</div>
+          <div className="right">{formatCurrency(total)} ฿</div>
+        </div>
+        <div className="text-center xs" style={{ marginTop: 6 }}>(ราคารวมภาษีมูลค่าเพิ่มแล้ว)</div>
+      </div>
+
+      <div className="hr" />
+
+      <div className="mt-2 small no-break tight">
+        {sale.note && <div className="wrap">หมายเหตุ: {sale.note}</div>}
+        {config?.receiptFooter && <div className="wrap" style={{ marginTop: 4 }}>{config.receiptFooter}</div>}
+      </div>
+
+      <div className="hr" />
+
+      <div className="text-center small no-break tight">
+        <div>ขอบคุณที่ใช้บริการ</div>
+        <div className="xs" style={{ marginTop: 2 }}>
+          {config?.returnPolicyShort || 'กรุณาตรวจสอบสินค้าให้เรียบร้อยก่อนออกจากร้าน'}
+        </div>
+
+        {/* Footer code lines (7-11-ish) */}
+        <div className="hr" />
+        <div className="mono xs" style={{ letterSpacing: '1.2px' }}>
+          {config?.footerCode || sale.code}
+        </div>
+        <div className="mono xs" style={{ marginTop: 2 }}>
+          {config?.footerCode2 || (sale?.id ? `TXN-${sale.id}` : '')}
+        </div>
       </div>
     </div>
   )
@@ -221,6 +426,7 @@ const BillLayoutShortTax = ({ sale, saleItems, payments, config, hideContactName
 
 // ✅ memo ป้องกัน re-render ตอนเปิด print window
 export default React.memo(BillLayoutShortTax)
+
 
 
 

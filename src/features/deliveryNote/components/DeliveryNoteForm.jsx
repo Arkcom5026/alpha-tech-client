@@ -127,8 +127,8 @@ const DeliveryNoteForm = ({ sale, saleItems, config, hideDate, setHideDate }) =>
               const discount = typeof item.discount === 'number' ? item.discount : 0;
               const quantity = typeof item.quantity === 'number' ? item.quantity : 0;
               const netUnitPrice = price - discount;
-              const unitPriceBeforeVat = netUnitPrice / (1 + vatRate / 100);
-              const amountBeforeVat = unitPriceBeforeVat * quantity;
+              const unitPriceFull = netUnitPrice;
+              const amountFull = unitPriceFull * quantity;
               return (
                 <tr key={item.id ?? item.stockItemId ?? `row-${index}`}>
                   <td className="border border-black px-1 text-center h-[28px]">{index + 1}</td>
@@ -137,8 +137,8 @@ const DeliveryNoteForm = ({ sale, saleItems, config, hideDate, setHideDate }) =>
                   </td>
                   <td className="border border-black px-1 text-center h-[28px]">{quantity}</td>
                   <td className="border border-black px-1 text-center h-[28px]">{item.unit || '-'}</td>
-                  <td className="border border-black px-1 text-right h-[28px]">{formatCurrency(unitPriceBeforeVat)}</td>
-                  <td className="border border-black px-1 text-right h-[28px]">{formatCurrency(amountBeforeVat)}</td>
+                  <td className="border border-black px-1 text-right h-[28px]">{formatCurrency(unitPriceFull)}</td>
+                  <td className="border border-black px-1 text-right h-[28px]">{formatCurrency(amountFull)}</td>
                 </tr>
               );
             })}
@@ -167,7 +167,7 @@ const DeliveryNoteForm = ({ sale, saleItems, config, hideDate, setHideDate }) =>
           </div>
           <div>
             <p className="flex justify-between border-t border-black border-b py-1">
-              <span>รวมเงิน / SUB TOTAL</span>
+              <span>รวมเงิน</span>
               <span>{formatCurrency(beforeVat)} ฿</span>
             </p>
             <p className="flex justify-between border-b border-black py-1">
@@ -175,7 +175,7 @@ const DeliveryNoteForm = ({ sale, saleItems, config, hideDate, setHideDate }) =>
               <span>{formatCurrency(vatAmount)} ฿</span>
             </p>
             <p className="flex justify-between border-b border-black font-extrabold text-base py-1 bg-gray-100">
-              <span>จำนวนเงินรวมทั้งสิ้น / TOTAL AMOUNT</span>
+              <span>จำนวนเงินรวมทั้งสิ้น</span>
               <span>{formatCurrency(total)} ฿</span>
             </p>
           </div>
@@ -204,4 +204,7 @@ const DeliveryNoteForm = ({ sale, saleItems, config, hideDate, setHideDate }) =>
 };
 
 export default DeliveryNoteForm;
+
+
+
 

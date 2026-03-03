@@ -3,6 +3,7 @@
 
 
 
+
 // src/features/bill/components/BillLayoutShortTax.jsx
 
 import React from 'react';
@@ -21,36 +22,45 @@ const n = (v) => {
   return Number.isFinite(x) ? x : 0
 }
 
-// ✅ unit price resolver (fallback หลายชื่อ กัน field mismatch)
+// ✅ unit price resolver (SNAPSHOT ONLY)
+// ❗ ห้ามใช้ราคาจาก Product/current fields (เช่น item.price, sellPrice) เพราะราคาเปลี่ยนย้อนหลังได้
+// เราจะยึดจาก SaleItem snapshot เท่านั้น:
+// - unitPriceIncVat / unitPrice (preferred)
+// - derive from amount/qty (last resort)
 const getUnitPrice = (item) => {
-  if (!item) return 0
+  if (!item) return 0;
 
-  // รองรับชื่อ field ที่พบบ่อยใน POS
+  // ✅ snapshot candidates (INC-VAT)
   const candidates = [
-    item.price, // เดิม
-    item.unitPrice,
-    item.sellPrice,
     item.unitPriceIncVat,
-    item.unitPriceExVat,
-    item.sellingPrice,
-    item.salePrice,
+    item.unitPrice, // assume INC-VAT snapshot in this system
     item.lineUnitPrice,
-  ]
+  ];
 
   for (const v of candidates) {
-    const num = n(v)
-    if (num > 0) return num
+    const num = n(v);
+    if (num > 0) return num;
   }
 
-  return 0
-}
+  // ✅ last resort: derive from line amount / qty (also snapshot)
+  const qty = n(item?.quantity);
+  const amount = n(item?.amount ?? item?.total ?? item?.totalAmount);
+  if (qty > 0 && amount > 0) return round2(amount / qty);
 
-// ✅ line total (หน่วยสตางค์) ให้แม่น และกัน float drift
+  return 0;
+};
+
+// ✅ line total (snapshot-first)
+// - Prefer item.amount (snapshot) if present
+// - Otherwise compute from unit * qty using satang math
 const getLineTotalSatang = (item) => {
-  const qty = n(item?.quantity)
-  const unit = getUnitPrice(item)
-  const unitSatang = Math.round(unit * 100)
-  return unitSatang * qty
+  const amount = n(item?.amount ?? item?.total ?? item?.totalAmount);
+  if (amount > 0) return Math.round(amount * 100);
+
+  const qty = n(item?.quantity);
+  const unit = getUnitPrice(item);
+  const unitSatang = Math.round(unit * 100);
+  return unitSatang * qty;
 }
 
 const BillLayoutShortTax = ({ sale, saleItems, payments, config, hideContactName }) => {
@@ -76,23 +86,28 @@ const BillLayoutShortTax = ({ sale, saleItems, payments, config, hideContactName
   const paidTotal = round2(normalizedPayments.reduce((s, x) => s + n(x.amt), 0));
   if (!sale || !saleItems || !payments || !config) return null
 
-  // ✅ Total: prefer from sale (source of truth) ถ้ามี แล้วค่อย fallback ไปคำนวณจากรายการ
-  const computedTotalSatang = saleItems.reduce((sum, item) => sum + getLineTotalSatang(item), 0)
+  // ✅ Total/VAT (Production Lock: Sale snapshot is source of truth)
+// - totalAmount = GROSS (รวม VAT)
+// - vat        = VAT amount (ถ้ามีใน DB ใช้ตรง ๆ)
+// - beforeVat  = totalAmount - vat
+// ❗ ห้ามเอายอดรวมมาคำนวณจาก SaleItem (กันราคาเปลี่ยนย้อนหลัง + กัน VAT ซ้ำ)
+const vatRate = Number.isFinite(Number(sale?.vatRate))
+  ? Number(sale.vatRate)
+  : (typeof config?.vatRate === 'number' ? config.vatRate : 7);
 
-  const saleTotalCandidateBaht =
-    n(sale?.totalAmount) ||
-    n(sale?.total) ||
-    n(sale?.grandTotal) ||
-    n(sale?.totalPremium)
+const saleTotalCandidateBaht =
+  n(sale?.totalAmount) ||
+  n(sale?.total) ||
+  n(sale?.grandTotal) ||
+  n(sale?.totalPremium);
 
-  const saleTotalCandidateSatang = Math.round(saleTotalCandidateBaht * 100)
-  const totalSatang = saleTotalCandidateSatang > 0 ? saleTotalCandidateSatang : computedTotalSatang
+const total = round2(saleTotalCandidateBaht);
 
-  const total = totalSatang / 100
-  const vatRate = typeof config.vatRate === 'number' ? config.vatRate : 7
+// ✅ VAT: prefer stored; fallback ถอดจาก gross ตาม rate
+const vatStored = sale?.vat != null ? round2(n(sale.vat)) : null;
+const vatAmount = vatStored != null ? vatStored : round2((total * vatRate) / (100 + vatRate));
 
-  const beforeVat = round2(total / (1 + vatRate / 100))
-  const vatAmount = round2(total - beforeVat)
+const beforeVat = round2(total - vatAmount);
 
   // ✅ 7-11-ish meta: counts + change
   const itemLines = Array.isArray(saleItems) ? saleItems.length : 0
@@ -117,12 +132,13 @@ const BillLayoutShortTax = ({ sale, saleItems, payments, config, hideContactName
     <div
       className="mx-auto receipt-root"
       style={{
-        width: '80mm',
+        width: '76mm',
         minHeight: 'auto',
         fontFamily: 'THSarabunNew, TH Sarabun New, sans-serif',
         fontSize: config?.thermalFontSize || '13px',
-        lineHeight: 1.18,
-        padding: '6px 8px 8px',
+        lineHeight: 1.26,
+        /* backup padding (กันเคส browser บางตัว ignore @page margin) */
+        padding: '10px 1mm',
       }}
     >
       <style>{`
@@ -162,6 +178,8 @@ const BillLayoutShortTax = ({ sale, saleItems, payments, config, hideContactName
           font-display: swap;
         }
 
+        * { box-sizing: border-box; }
+
         @media print {
           html, body {
             margin: 0;
@@ -174,9 +192,10 @@ const BillLayoutShortTax = ({ sale, saleItems, payments, config, hideContactName
             width: 80mm;
           }
           @page {
-            /* ✅ allow dynamic paper size via config.paperSize (e.g. '80mm', '58mm', 'A4') */
+            /* ✅ 80mm thermal with safe zone */
             size: 80mm auto;
-            margin: 0;
+            /* Premium safe margins (ลดเสี่ยงตัวอักษรกินขอบ/โดนตัด) */
+            margin: 3mm 3mm 3mm 3mm;
           }
 
           /* Avoid breaking critical blocks / rows */
@@ -191,45 +210,60 @@ const BillLayoutShortTax = ({ sale, saleItems, payments, config, hideContactName
         /* ✅ Thermal receipt utilities */
         .receipt-root {
           color: #000;
-          width: 80mm;
-          max-width: 80mm;
+          width: 76mm;
+          max-width: 76mm;
+          margin: 0 auto;
         }
         @media print {
           .receipt-root {
-            margin: 0 !important;
-            width: 80mm !important;
-            max-width: 80mm !important;
+            margin: 0 auto !important;
+            width: 76mm !important;
+            max-width: 76mm !important;
           }
         }
+
+        /* ✅ Inner safe padding (keeps text away from edges even when root is 76mm) */
+        .receipt-inner {
+          width: 100%;
+          /* Premium safe zone inside content */
+          padding-left: 3mm;
+          padding-right: 3mm;
+        }
+
         .mono {
           font-variant-numeric: tabular-nums;
           font-feature-settings: "tnum" 1;
         }
         .hr {
-          border-top: 1px dashed #999;
-          margin: 5px 0;
+          border-top: 1px dotted #cfcfcf;
+          margin: 10px 0;
         }
         .hr-solid {
-          border-top: 1px solid #999;
-          margin: 5px 0;
+          border-top: 0.75px solid #111;
+          margin: 10px 0;
         }
         .tight {
-          line-height: 1.15;
+          line-height: 1.14;
         }
         .small {
           font-size: 12px;
+          line-height: 1.25;
         }
         .xs {
           font-size: 11px;
+          line-height: 1.2;
         }
         .label {
-          opacity: 0.95;
+          opacity: 0.86;
+        }
+        .muted {
+          opacity: 0.78;
         }
         .row {
           display: flex;
           align-items: baseline;
           justify-content: space-between;
-          gap: 4px;
+          gap: 8px;
         }
         .row > .left {
           flex: 1;
@@ -249,6 +283,19 @@ const BillLayoutShortTax = ({ sale, saleItems, payments, config, hideContactName
           white-space: normal;
           word-break: break-word;
         }
+
+        /* ✅ Micro rhythm */
+        .section-pad {
+          padding-top: 2px;
+          padding-bottom: 2px;
+        }
+        .title-band {
+          padding: 10px 8px 9px;
+          letter-spacing: 0.35px;
+          font-size: 18px;
+          border-top: 1px solid #000;
+          border-bottom: 1px solid #000;
+        }
       `}</style>
 
       <div className="text-right print:hidden mb-2">
@@ -260,21 +307,32 @@ const BillLayoutShortTax = ({ sale, saleItems, payments, config, hideContactName
         </button>
       </div>
 
-      {/* Header (thermal-friendly) */}
+      <div className="receipt-inner">
+        {/* Header (thermal-friendly) */}
       <div className="text-center no-break tight">
         {config.logoUrl && <img src={config.logoUrl} alt="logo" className="h-10 mx-auto mb-1" />}
-        <div className="font-bold" style={{ fontSize: '16px' }}>{config.branchName}</div>
-        {config.address && <div className="small wrap">{config.address}</div>}
-        <div className="small mono">
-          {config.phone ? `โทร. ${config.phone}` : ''}
-          {config.phone && config.taxId ? '  •  ' : ''}
-          {config.taxId ? `เลขผู้เสียภาษี ${config.taxId}` : ''}
+        <div
+          className="font-bold"
+          style={{
+            fontSize: '18px',
+            letterSpacing: '0.55px',
+            marginBottom: 3,
+          }}
+        >
+          {config.branchName}
         </div>
+        {config.address && <div className="small wrap">{config.address}</div>}
+        <div className="small mono muted" style={{ letterSpacing: '0.1px' }}>
+          {config.phone ? `โทร. ${config.phone}` : ''}
+        </div>
+        {config.taxId && (
+          <div className="small mono muted">เลขผู้เสียภาษี {config.taxId}</div>
+        )}
       </div>
 
       <div className="hr" />
 
-      <div className="no-break tight" style={{ marginBottom: 6 }}>
+      <div className="no-break tight section-pad" style={{ paddingLeft: 1, paddingRight: 1, marginBottom: 6 }}>
         {/* POS meta (7-11-ish) */}
         <div className="row xs mono" style={{ marginTop: 2 }}>
           <div className="left label">แคชเชียร์</div>
@@ -291,7 +349,9 @@ const BillLayoutShortTax = ({ sale, saleItems, payments, config, hideContactName
 
         <div className="hr-solid" style={{ margin: '6px 0' }} />
 
-        <div className="text-center font-bold">ใบกำกับภาษีอย่างย่อ / ใบเสร็จรับเงิน</div>
+        <div className="text-center font-bold title-band">
+          ใบกำกับภาษีอย่างย่อ / ใบเสร็จรับเงิน
+        </div>
         <div className="row small mono" style={{ marginTop: 4 }}>
           <div className="left label">เลขที่</div>
           <div className="right">{sale.code}</div>
@@ -320,10 +380,10 @@ const BillLayoutShortTax = ({ sale, saleItems, payments, config, hideContactName
 
       <div className="hr" />
       <div className="no-break">
-        <div className="row xs mono" style={{ marginBottom: 4 }}>
+        <div className="row xs mono" style={{ marginBottom: 6 }}>
           <div className="left label">สินค้า</div>
           <div className="right label">จำนวน</div>
-          <div className="right label" style={{ minWidth: 72 }}>ราคา</div>
+          <div className="right label" style={{ minWidth: 74, letterSpacing: '0.2px' }}>ราคา</div>
         </div>
 
         <div className="hr-solid" />
@@ -333,21 +393,23 @@ const BillLayoutShortTax = ({ sale, saleItems, payments, config, hideContactName
             const qty = n(item?.quantity);
             const unit = getUnitPrice(item);
             const lineTotal = getLineTotalSatang(item) / 100;
+            // ✅ Always show qty x unitPrice using snapshot (derive unit from lineTotal/qty if unit missing)
+            const unitDisplay = unit > 0 ? unit : (qty > 0 && lineTotal > 0 ? round2(lineTotal / qty) : 0);
             return (
               <div key={item.id} className="tight" style={{ padding: '3px 0' }}>
                 <div className="row">
                   <div className="left wrap">
                     <div className="wrap">{item.productName || '-'}</div>
-                    {(item.productModel || unit > 0) && (
-                      <div className="xs mono" style={{ opacity: 0.95 }}>
+                    {(item.productModel || (qty > 0 && unitDisplay > 0)) && (
+                      <div className="xs mono muted" style={{ letterSpacing: '0.1px' }}>
                         {item.productModel ? `${item.productModel}` : ''}
-                        {item.productModel && unit > 0 ? ' • ' : ''}
-                        {unit > 0 ? `${qty} x ${formatCurrency(unit)}` : ''}
+                        {item.productModel && unitDisplay > 0 ? ' • ' : ''}
+                        {qty > 0 && unitDisplay > 0 ? `${qty} x ${formatCurrency(unitDisplay)}` : ''}
                       </div>
                     )}
                   </div>
                   <div className="right mono" style={{ minWidth: 36 }}>{qty || ''}</div>
-                  <div className="right mono" style={{ minWidth: 72 }}>{formatCurrency(lineTotal)}</div>
+                  <div className="right mono" style={{ minWidth: 74, letterSpacing: '0.2px' }}>{formatCurrency(lineTotal)}</div>
                 </div>
               </div>
             );
@@ -389,7 +451,15 @@ const BillLayoutShortTax = ({ sale, saleItems, payments, config, hideContactName
         )}
 
         <div className="hr" />
-        <div className="row mono" style={{ fontWeight: 800, fontSize: '18px', letterSpacing: '0.3px' }}>
+        <div
+          className="row mono"
+          style={{
+            fontWeight: 800,
+            fontSize: '20px',
+            letterSpacing: '0.6px',
+            marginTop: 10,
+          }}
+        >
           <div className="left">จำนวนเงินรวมทั้งสิ้น</div>
           <div className="right">{formatCurrency(total)} ฿</div>
         </div>
@@ -413,12 +483,13 @@ const BillLayoutShortTax = ({ sale, saleItems, payments, config, hideContactName
 
         {/* Footer code lines (7-11-ish) */}
         <div className="hr" />
-        <div className="mono xs" style={{ letterSpacing: '1.2px' }}>
+        <div className="mono xs" style={{ letterSpacing: '1.6px' }}>
           {config?.footerCode || sale.code}
         </div>
         <div className="mono xs" style={{ marginTop: 2 }}>
           {config?.footerCode2 || (sale?.id ? `TXN-${sale.id}` : '')}
         </div>
+      </div>
       </div>
     </div>
   )

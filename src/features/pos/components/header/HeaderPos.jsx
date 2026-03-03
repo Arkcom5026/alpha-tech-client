@@ -1,5 +1,3 @@
-
-
 // HeaderPos.jsx
 
 import { useEffect, useState } from 'react';
@@ -21,11 +19,16 @@ const HeaderPos = () => {
   const token = useAuthStore((state) => state.token);
   const role = useAuthStore((state) => state.role);
 
-  // Branch selector state (must be declared before using)
+  // ✅ Branch store wiring (declare BEFORE any use to avoid TDZ)
+  // Note: SUPERADMIN must NOT depend on branch context, but hooks can still be read safely.
+  const branchName = useBranchStore((state) => state.currentBranch?.name);
+  const selectedBranchId = useBranchStore((state) => state.selectedBranchId);
+  const clearBranch = useBranchStore((state) => state.clearBranch);
+  const loadAndSetBranchById = useBranchStore((state) => state.loadAndSetBranchById);
 
-  // ✅ SUPERADMIN global mode: allow login without branch, but restrict menu to GLOBAL-safe pages only
+  // ✅ SUPERADMIN global mode: must not reference branch
   const isSuperAdmin = String(role || '').toLowerCase() === 'superadmin';
-  const isGlobalSuperAdmin = isSuperAdmin && !employee?.branchId && !selectedBranchId;
+  const isGlobalSuperAdmin = isSuperAdmin;
 
   // Display name (fallback for SUPERADMIN without EmployeeProfile)
   const displayName = employee?.name || user?.username || user?.email || 'ผู้ใช้';
@@ -47,21 +50,19 @@ const HeaderPos = () => {
   const canSettings = can(P1_CAP.MANAGE_EMPLOYEES) || can(P1_CAP.MANAGE_PRODUCTS); // conservative baseline
   const canEmployees = can(P1_CAP.MANAGE_EMPLOYEES);
 
-  // ✅ Menu visibility (branch-scope enforced). SUPERADMIN without branch = GLOBAL-only.
-  const showPurchasing = !isGlobalSuperAdmin && canPurchasing;
-  const showSales = !isGlobalSuperAdmin && canSales;
-  const showServices = !isGlobalSuperAdmin; // services are branch-scoped by nature
-  const showStockModule = !isGlobalSuperAdmin && canStock;
-  const showReports = !isGlobalSuperAdmin && canReports;
-  const showFinance = !isGlobalSuperAdmin && canFinance;
-  const showSettings = !isGlobalSuperAdmin && canSettings;
-  const showEmployees = !isGlobalSuperAdmin && canEmployees;
-  const showGlobalProducts = isGlobalSuperAdmin && canGlobalProducts;
+  // ✅ Menu visibility
+// SUPERADMIN must not depend on branch context, but can still see menus.
+// Pages that require branch should handle missing branchId gracefully.
+const showPurchasing = canPurchasing;
+const showSales = canSales;
+const showServices = true;
+const showStockModule = canStock;
+const showReports = canReports;
+const showFinance = canFinance;
+const showSettings = canSettings;
+const showEmployees = canEmployees;
+const showGlobalProducts = isSuperAdmin && canGlobalProducts;
 
-  const branchName = useBranchStore((state) => state.currentBranch?.name);
-  const selectedBranchId = useBranchStore((state) => state.selectedBranchId);
-  const clearBranch = useBranchStore((state) => state.clearBranch);
-  const loadAndSetBranchById = useBranchStore((state) => state.loadAndSetBranchById);
   const { isDark, toggleTheme } = useThemeStore();
   const [showMenu, setShowMenu] = useState(false);
 
@@ -72,10 +73,14 @@ const HeaderPos = () => {
   };
 
   useEffect(() => {
-    if (token && role === 'employee' && employee?.branchId && selectedBranchId) {
+    // ✅ SUPERADMIN must never auto-load or depend on branch context
+    if (isSuperAdmin) return;
+
+    const roleLower = String(role || '').toLowerCase();
+    if (token && roleLower === 'employee' && employee?.branchId && selectedBranchId) {
       loadAndSetBranchById(selectedBranchId);
     }
-  }, [token, role, employee?.branchId, selectedBranchId, loadAndSetBranchById]);
+  }, [isSuperAdmin, token, role, employee?.branchId, selectedBranchId, loadAndSetBranchById]);
 
   const navLinkClass = ({ isActive }) =>
     `px-5 py-2 rounded-md text-base font-medium transition-all duration-200 whitespace-nowrap border border-white/20 shadow-sm ${
@@ -91,7 +96,9 @@ const HeaderPos = () => {
           className="bg-blue-600 text-white rounded-md px-3 py-2 text-sm"
           defaultValue=""
         >
-          <option value="" disabled hidden>เมนูทั้งหมด</option>
+          <option value="" disabled hidden>
+            เมนูทั้งหมด
+          </option>
           <option value="/pos">หน้าหลัก</option>
           {showPurchasing && <option value="/pos/purchases">จัดซื้อ</option>}
           {showSales && <option value="/pos/sales">การขาย</option>}
@@ -105,7 +112,9 @@ const HeaderPos = () => {
       </div>
 
       <nav className="hidden md:flex flex-wrap gap-2 max-w-full overflow-x-auto scrollbar-thin">
-        <NavLink to="/pos" className={navLinkClass}>หน้าหลัก</NavLink>
+        <NavLink to="/pos" className={navLinkClass}>
+          หน้าหลัก
+        </NavLink>
         {showPurchasing && (
           <NavLink to="/pos/purchases" className={navLinkClass}>
             จัดซื้อ
@@ -116,7 +125,11 @@ const HeaderPos = () => {
             การขาย
           </NavLink>
         )}
-        {showServices && <NavLink to="/pos/services" className={navLinkClass}>บริการ</NavLink>}
+        {showServices && (
+          <NavLink to="/pos/services" className={navLinkClass}>
+            บริการ
+          </NavLink>
+        )}
         {showStockModule && (
           <NavLink to="/pos/stock" className={navLinkClass}>
             สต๊อก
@@ -145,11 +158,7 @@ const HeaderPos = () => {
       </nav>
 
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-end gap-3 w-full md:w-auto relative">
-        <Button
-          variant="ghost"
-          className="text-white/80 hover:text-white"
-          onClick={toggleTheme}
-        >
+        <Button variant="ghost" className="text-white/80 hover:text-white" onClick={toggleTheme}>
           {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
         </Button>
 
@@ -174,6 +183,7 @@ const HeaderPos = () => {
               <UserCircle className="w-5 h-5" />
               <span className="truncate max-w-[150px]">{displayName}</span>
             </button>
+
             {showMenu && (
               <div className="absolute right-0 mt-2 w-40 bg-white text-black rounded shadow-md z-50">
                 <button
@@ -200,8 +210,6 @@ const HeaderPos = () => {
 };
 
 export default HeaderPos;
-
-
 
 
 

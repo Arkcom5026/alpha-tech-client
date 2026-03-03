@@ -14,7 +14,7 @@ import _ from 'lodash';
 import {
   createProduct,
   updateProduct,
-  deleteProduct,
+  deleteProduct as deleteProductApi,
   getProductById,
   getProducts,
   getProductsForPos,
@@ -170,22 +170,49 @@ const useProductStore = create((set, get) => ({
     }
   },
 
-  deleteProduct: async (id) => {
-    set({ isLoading: true, error: null });
-    try {
-      const data = await deleteProduct(id);
-      set((state) => ({
-        products: state.products.filter((p) => p.id !== id),
+  // ============================================================
+    // 🗑 deleteProduct (API raw)
+    // ============================================================
+    deleteProduct: async (id) => {
+      try {
+        await deleteProductApi(id);
+        return true;
+      } catch (error) {
+        throw error;
+      }
+    },
+
+    // ============================================================
+    // 🛡 deleteProductAction (Production-standard action)
+    // - ใช้ใน Component เท่านั้น
+    // - ครอบ try/catch
+    // - อัปเดต state ภายใน store
+    // ============================================================
+    deleteProductAction: async (id) => {
+      try {
+        set({ isLoading: true, error: null });
+
+        await get().deleteProduct(id);
+
+        // ✅ Optimistic update
+        set((state) => ({
+          products: Array.isArray(state.products)
+          ? state.products.filter((p) => Number(p?.id) !== Number(id))
+          : state.products,
         isLoading: false,
-      }));
-      return data;
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('❌ deleteProduct error:', error);
-      set({ error, isLoading: false });
-      throw error;
-    }
-  },
+        }));
+
+        return true;
+      } catch (error) {
+        const message =
+          error?.response?.data?.message ||
+          error?.message ||
+          'ลบสินค้าไม่สำเร็จ';
+
+        set({ error: get().normalizeError(error, message), isLoading: false });
+        return false;
+      }
+    },
 
   // -------- Products (Enable/Disable) --------
   // ✅ แยก API ชัดเจน ไม่ใช้ delete แล้ว
@@ -663,6 +690,10 @@ const useProductStore = create((set, get) => ({
 
 export default useProductStore;
   
+
+
+
+
 
 
 

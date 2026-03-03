@@ -2,7 +2,7 @@
 
 
 
-
+// src/features/deliveryNote/pages/DeliveryNoteListPage.jsx
 
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
@@ -83,45 +83,105 @@ const DeliveryNoteListPage = () => {
   const rawRows = Array.isArray(printableSales) ? printableSales : [];
 
   // ----- normalize helpers (defensive; supports multiple BE shapes)
+  const toNum = (v) => {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : null;
+  };
+
+  const round2 = (n) => {
+    const x = Number(n);
+    if (!Number.isFinite(x)) return 0;
+    return Math.round(x * 100) / 100;
+  };
+
   const getPaidAmount = (s) => {
     const candidates = [s?.paidAmount, s?.paidTotal, s?.paid, s?.paidSum, s?.totalPaid];
-    for (const v of candidates) {
-      const n = Number(v);
-      if (Number.isFinite(n)) return n;
+    for (let i = 0; i < candidates.length; i += 1) {
+      const n = toNum(candidates[i]);
+      if (n != null) return n;
     }
 
     const p = Array.isArray(s?.payments) ? s.payments : null;
     if (p && p.length > 0) {
       const sum = p.reduce((acc, it) => {
-        const n = Number(it?.amount ?? it?.receivedAmount ?? 0);
-        return acc + (Number.isFinite(n) ? n : 0);
+        const n = toNum(it?.amount ?? it?.receivedAmount ?? 0);
+        return acc + (n != null ? n : 0);
       }, 0);
-      return Number.isFinite(sum) ? sum : 0;
+      return round2(sum);
     }
 
+    return 0;
+  };
+
+  // ✅ Defensive total normalizer: “ยอดรวม (Gross / รวม VAT แล้ว)”
+  // เป้าหมาย: ยอดใน List ต้องตรงกับยอดจริงที่แสดงในใบส่งของ/ใบเสร็จ
+  // กติกา (กัน VAT ซ้ำ + ยึด DB เป็นหลัก):
+  // 1) ถ้ามี totalAmount → ถือว่าเป็นยอดรวม (gross) (authoritative) (ห้ามบวก VAT ซ้ำ)
+  // 2) ถ้ามี beforeVat + vatAmount → รวมตรงนี้ (แม่นสุดเมื่อ BE ส่ง split มา)
+  // 3) ถ้า BE ส่ง field แนว “gross/grand total” มา → ใช้เลย
+  // 4) fallback: gross-up จาก beforeVat เฉพาะกรณีไม่มี vatAmount
+  const getGrossTotalAmount = (s) => {
+    // ✅ IMPORTANT (DB): totalBeforeDiscount ในโปรเจกต์นี้เป็น “ยอดรวมที่รวม VAT แล้ว (gross)”
+    //    ดังนั้นห้ามนำไปบวก VAT ซ้ำเด็ดขาด
+
+    // ✅ 1) totalAmount is authoritative (avoid VAT double-count)
+    const totalAmount = toNum(s?.totalAmount);
+    if (totalAmount != null) return round2(totalAmount);
+
+    // ✅ 2) totalBeforeDiscount (gross) — treat as explicit gross
+    const totalBeforeDiscountGross = toNum(s?.totalBeforeDiscount);
+    if (totalBeforeDiscountGross != null) return round2(totalBeforeDiscountGross);
+
+    const beforeVat = toNum(s?.beforeVat ?? s?.totalBeforeVat ?? s?.subTotal ?? s?.subtotalAmount);
+    const vatAmount = toNum(s?.vatAmount ?? s?.vat ?? s?.taxAmount ?? s?.vatTotal);
+
+    // ✅ 2) Best when split fields exist
+    if (beforeVat != null && vatAmount != null) {
+      return round2(beforeVat + vatAmount);
+    }
+
+    // ✅ 3) Explicit “gross/grand total” fields
+    const explicitCandidates = [
+      s?.grandTotal,
+      s?.totalWithVat,
+      s?.totalInclVat,
+      s?.totalAmountGross,
+      s?.totalFinal,
+      s?.amountTotal,
+      s?.total,
+    ];
+    for (let i = 0; i < explicitCandidates.length; i += 1) {
+      const n = toNum(explicitCandidates[i]);
+      if (n != null) return round2(n);
+    }
+
+    // ✅ 4) Fallback: gross-up from beforeVat only when we don't have vatAmount
+    const vatRate = toNum(s?.vatRate);
+    if (beforeVat != null) {
+      if (vatRate != null) return round2(beforeVat * (1 + vatRate / 100));
+      return round2(beforeVat);
+    }
+
+    // last resort
+    if (vatAmount != null) return round2(vatAmount);
     return 0;
   };
 
   const getRemainingAmount = (s) => {
     const candidates = [s?.remainingAmount, s?.balanceDue, s?.unpaidAmount, s?.dueAmount, s?.balanceAmount];
-    for (const v of candidates) {
-      const n = Number(v);
-      if (Number.isFinite(n)) return n;
+    for (let i = 0; i < candidates.length; i += 1) {
+      const n = toNum(candidates[i]);
+      if (n != null) return n;
     }
 
-    const total = Number(s?.totalAmount ?? 0);
+    const total = getGrossTotalAmount(s);
     const paid = getPaidAmount(s);
-    if (Number.isFinite(total)) return Math.max(0, total - paid);
-    return 0;
+    return Math.max(0, round2(total - paid));
   };
 
   const isUnpaidSale = (s) => {
     const remaining = getRemainingAmount(s);
-    if (Number.isFinite(remaining) && remaining > 0.0001) return true;
-
-    const total = Number(s?.totalAmount ?? 0);
-    const paid = getPaidAmount(s);
-    if (Number.isFinite(total) && Number.isFinite(paid) && total > 0 && paid + 0.0001 < total) return true;
+    if (remaining > 0.0001) return true;
 
     if (s?.isPaid === false) return true;
     if (s?.paymentStatus && String(s.paymentStatus).toUpperCase() === 'UNPAID') return true;
@@ -133,27 +193,41 @@ const DeliveryNoteListPage = () => {
     // ✅ Delivery Note list: show ONLY unpaid sales (follow Print Receipt list policy)
     const unpaidOnly = rawRows.filter((s) => isUnpaidSale(s));
 
+    const nowTs = Date.now();
+    const toDays = (ts) => {
+      const n = Number(ts);
+      if (!Number.isFinite(n) || n <= 0) return 0;
+      const diff = Math.max(0, nowTs - n);
+      return Math.floor(diff / (1000 * 60 * 60 * 24));
+    };
+
+    const mapRow = (s) => {
+      const totalAmount = getGrossTotalAmount(s);
+      const paidAmount = getPaidAmount(s);
+      const balanceAmount = getRemainingAmount(s);
+
+      const createdAt = s?.createdAt ?? s?.soldAt ?? null;
+      const createdTs = createdAt ? new Date(createdAt).getTime() : 0;
+      const agingDays = createdTs ? toDays(createdTs) : 0;
+
+      return {
+        id: s.id,
+        code: s.code,
+        companyName: s?.companyName ?? s?.customer?.companyName ?? '-',
+        customerName: s?.customerName ?? s?.customer?.name ?? '-',
+        customerPhone: s?.customerPhone ?? s?.customer?.phone ?? '-',
+        totalAmount,
+        paidAmount,
+        balanceAmount,
+        createdAt,
+        agingDays,
+        lastPaidAt: s?.lastPaidAt ?? s?.lastReceivedAt ?? null,
+        employeeName: s?.employeeName ?? s?.employee?.name ?? '-',
+      };
+    };
+
     const query = search.trim().toLowerCase();
-    if (!query) {
-      return unpaidOnly.map((s) => {
-        const totalAmount = Number(s?.totalAmount ?? 0);
-        const paidAmount = getPaidAmount(s);
-        const balanceAmount = getRemainingAmount(s);
-        return {
-          id: s.id,
-          code: s.code,
-          companyName: s?.companyName ?? s?.customer?.companyName ?? '-',
-          customerName: s?.customerName ?? s?.customer?.name ?? '-',
-          customerPhone: s?.customerPhone ?? s?.customer?.phone ?? '-',
-          totalAmount,
-          paidAmount,
-          balanceAmount,
-          createdAt: s?.createdAt ?? s?.soldAt ?? null,
-          lastPaidAt: s?.lastPaidAt ?? s?.lastReceivedAt ?? null,
-          employeeName: s?.employeeName ?? s?.employee?.name ?? '-',
-        };
-      });
-    }
+    if (!query) return unpaidOnly.map(mapRow);
 
     return unpaidOnly
       .filter((s) => {
@@ -171,30 +245,16 @@ const DeliveryNoteListPage = () => {
 
         return hay.includes(query);
       })
-      .map((s) => {
-        const totalAmount = Number(s?.totalAmount ?? 0);
-        const paidAmount = getPaidAmount(s);
-        const balanceAmount = getRemainingAmount(s);
-        return {
-          id: s.id,
-          code: s.code,
-          companyName: s?.companyName ?? s?.customer?.companyName ?? '-',
-          customerName: s?.customerName ?? s?.customer?.name ?? '-',
-          customerPhone: s?.customerPhone ?? s?.customer?.phone ?? '-',
-          totalAmount,
-          paidAmount,
-          balanceAmount,
-          createdAt: s?.createdAt ?? s?.soldAt ?? null,
-          lastPaidAt: s?.lastPaidAt ?? s?.lastReceivedAt ?? null,
-          employeeName: s?.employeeName ?? s?.employee?.name ?? '-',
-        };
-      });
+      .map(mapRow);
   }, [rawRows, search]);
 
   const getSortVal = (row, key) => {
     if (!row) return null;
     if (key === 'totalAmount' || key === 'paidAmount' || key === 'balanceAmount') {
       return Number(row?.[key] || 0);
+    }
+    if (key === 'agingDays') {
+      return Number(row?.agingDays || 0);
     }
     if (key === 'createdAt' || key === 'lastPaidAt') {
       const v = row?.[key];
@@ -234,6 +294,24 @@ const DeliveryNoteListPage = () => {
     return String(av) > String(bv) ? dir : -dir;
   });
 
+  const summary = useMemo(() => {
+    const count = sortedRows.length;
+    const totalSum = round2(sortedRows.reduce((acc, r) => acc + Number(r?.totalAmount || 0), 0));
+    const paidSum = round2(sortedRows.reduce((acc, r) => acc + Number(r?.paidAmount || 0), 0));
+    const balanceSum = round2(sortedRows.reduce((acc, r) => acc + Number(r?.balanceAmount || 0), 0));
+    const avg = count > 0 ? round2(totalSum / count) : 0;
+    return { count, totalSum, paidSum, balanceSum, avg };
+  }, [sortedRows]);
+
+  const formatMoney = (n) => Number(n || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 });
+
+  const agingBadgeClass = (days) => {
+    const d = Number(days || 0);
+    if (d >= 31) return 'bg-red-100 text-red-700';
+    if (d >= 8) return 'bg-amber-100 text-amber-800';
+    return 'bg-gray-100 text-gray-700';
+  };
+
   return (
     <div className="p-4">
       <h1 className="text-xl font-bold mb-2">พิมพ์ใบส่งของย้อนหลัง</h1>
@@ -243,7 +321,7 @@ const DeliveryNoteListPage = () => {
 
       <div className="mb-3 flex flex-wrap items-center gap-2 text-sm text-gray-700">
         <div className="font-medium">ผลลัพธ์:</div>
-        <div className="px-2 py-0.5 rounded bg-gray-100">{sortedRows.length} รายการ</div>
+        <div className="px-2 py-0.5 rounded bg-gray-100">{summary.count} รายการ</div>
         {loading ? <div className="text-gray-500">กำลังโหลด…</div> : null}
         <button
           type="button"
@@ -252,6 +330,26 @@ const DeliveryNoteListPage = () => {
         >
           {showDebug ? 'ซ่อนดีบัก' : 'แสดงดีบัก'}
         </button>
+      </div>
+
+      {/* ✅ Executive summary (unpaid-only) */}
+      <div className="mb-4 grid grid-cols-1 md:grid-cols-4 gap-2 text-sm">
+        <div className="border rounded p-3 bg-white">
+          <div className="text-xs text-gray-500">ใบส่งของค้างชำระ</div>
+          <div className="text-lg font-bold">{summary.count} รายการ</div>
+        </div>
+        <div className="border rounded p-3 bg-white">
+          <div className="text-xs text-gray-500">ยอดรวมทั้งหมด</div>
+          <div className="text-lg font-bold">{formatMoney(summary.totalSum)} ฿</div>
+        </div>
+        <div className="border rounded p-3 bg-white">
+          <div className="text-xs text-gray-500">ค้างชำระรวม</div>
+          <div className="text-lg font-bold">{formatMoney(summary.balanceSum)} ฿</div>
+        </div>
+        <div className="border rounded p-3 bg-white">
+          <div className="text-xs text-gray-500">เฉลี่ยต่อใบ</div>
+          <div className="text-lg font-bold">{formatMoney(summary.avg)} ฿</div>
+        </div>
       </div>
 
       {showDebug ? (
@@ -404,6 +502,13 @@ const DeliveryNoteListPage = () => {
               </th>
               <th
                 className="border px-2 py-1 sticky top-0 bg-gray-100 z-10 cursor-pointer select-none"
+                onClick={() => toggleSort('agingDays')}
+                title="เรียงตามจำนวนวันค้าง (นับจากวันที่ขายถึงวันนี้)"
+              >
+                ค้างมาแล้ว{sortIndicator('agingDays')}
+              </th>
+              <th
+                className="border px-2 py-1 sticky top-0 bg-gray-100 z-10 cursor-pointer select-none"
                 onClick={() => toggleSort('lastPaidAt')}
                 title="เรียงตามรับเงินล่าสุด"
               >
@@ -446,6 +551,11 @@ const DeliveryNoteListPage = () => {
                     </td>
                     <td className="border px-2 py-1">
                       {s.createdAt ? new Date(s.createdAt).toLocaleDateString('th-TH', { dateStyle: 'short' }) : '-'}
+                    </td>
+                    <td className="border px-2 py-1">
+                      <span className={`inline-flex items-center rounded px-2 py-0.5 text-xs font-medium ${agingBadgeClass(s.agingDays)}`}>
+                        {Number(s.agingDays || 0)} วัน
+                      </span>
                     </td>
                     <td className="border px-2 py-1">
                       {s.lastPaidAt
@@ -498,15 +608,6 @@ const DeliveryNoteListPage = () => {
 };
 
 export default DeliveryNoteListPage;
-
-
-
-
-
-
-
-
-
 
 
 

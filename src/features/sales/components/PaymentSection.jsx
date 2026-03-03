@@ -1,3 +1,6 @@
+
+
+
 // ============================================================
 // 📁 FILE: src/features/sales/components/PaymentSection.jsx
 // ✅ Final patched version: fix JSX syntax + computedSaleOption scope + store wiring + robust number parsing
@@ -142,8 +145,19 @@ const PaymentSection = ({
     [customerDepositAmount, setDepositUsed]
   );
 
-  const priceBeforeVat = safeFinalPrice > 0 ? safeFinalPrice / 1.07 : 0;
-  const vatAmount = safeFinalPrice > 0 ? safeFinalPrice - priceBeforeVat : 0;
+  // ✅ VAT-included model (ราคาหน้างาน = รวม VAT แล้ว)
+  // สามารถรองรับ VAT เปลี่ยนในอนาคต (เช่น 7% → 10%)
+  const vatRate = 7; // TODO: future → ดึงจาก config / store / BE
+
+  const vatAmount =
+    safeFinalPrice > 0
+      ? (safeFinalPrice * vatRate) / (100 + vatRate)
+      : 0;
+
+  const priceBeforeVat =
+    safeFinalPrice > 0
+      ? safeFinalPrice - vatAmount
+      : 0;
   const safeDepositUsed = Math.min(depositUsed, safeFinalPrice);
 
   const calc = useMemo(() => {
@@ -241,7 +255,20 @@ const PaymentSection = ({
         return null;
       }
 
-      const paymentsSnapshot = (paymentList || []).map((p) => ({ ...p }));
+      // ✅ Snapshot payments from UI (do NOT persist change)
+      // - For CASH, persist only the amount that actually settles the bill (cashReceived - change)
+      // - This keeps Sale.paidAmount aligned with real revenue, and prevents "ยอดรวม vs ชำระแล้ว" mismatch
+      const paymentsSnapshot = (paymentList || []).map((p) => {
+        const method = String(p?.method || '').toUpperCase();
+        const amount = parseMoney(p?.amount);
+
+        if (method === 'CASH') {
+          const appliedCash = Math.max(amount - parseMoney(calc?.safeChangeAmount), 0);
+          return { ...p, amount: appliedCash };
+        }
+
+        return { ...p, amount };
+      });
 
       let didSucceed = false;
 
@@ -465,9 +492,4 @@ const PaymentSection = ({
 };
 
 export default PaymentSection;
-
-
-
-
-
 

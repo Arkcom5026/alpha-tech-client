@@ -5,8 +5,6 @@
 
 
 
-
-
 // ------------------------------------------------------------
 // 📁 FILE: src/features/sales/components/PaymentSummary.jsx
 
@@ -42,8 +40,12 @@ const PaymentSummary = ({
   // ✅ Central print route for delivery note (adjust if your router uses a different path)
   const DELIVERY_NOTE_PRINT_ROUTE = '/pos/sales/delivery-note/print';
   const totalNum = Number(totalToPay) || 0;
+  // paidNum = "ยอดชำระจริง" (applied) ที่ใช้ตัดบิล (ไม่รวมเงินทอน)
   const paidNum = Number(grandTotalPaid) || 0;
+  // changeNum = เงินทอน (คำนวณจากยอดรับเงินจริงฝั่ง CASH)
   const changeNum = Number(safeChangeAmount) || 0;
+  // ✅ UI ต้องแสดง "ยอดเงินที่รับจริง" (tendered) = ชำระจริง + เงินทอน
+  const receivedNum = Number((paidNum + Math.max(0, changeNum)).toFixed(2));
 
   const isCash = currentSaleMode === SALE_MODE.CASH;
   const isCredit = currentSaleMode === SALE_MODE.CREDIT;
@@ -71,16 +73,17 @@ const PaymentSummary = ({
         {isCash ? (
           <div className="text-lg text-gray-700">
             <div className="flex justify-between items-center mb-3">
-              <span className="text-2xl font-bold text-gray-900">ยอดสุทธิที่ต้องชำระ</span>
+              <span className="text-2xl font-bold text-gray-900">ยอดที่ต้องชำระ</span>
               <span className="text-3xl font-extrabold text-blue-700">{fmt(totalNum)} ฿</span>
+              <div className="text-xs text-gray-500">* รวม VAT แล้ว</div>
             </div>
 
             <div className="flex justify-between font-semibold text-xl py-2">
               <span className="font-bold text-gray-900">รวมยอดที่รับ</span>
               <span
-                className={(paidNum >= totalNum ? 'text-green-600' : 'text-red-600') + ' text-3xl font-extrabold'}
+                className={(receivedNum >= totalNum ? 'text-green-600' : 'text-red-600') + ' text-3xl font-extrabold'}
               >
-                {fmt(paidNum)} ฿
+                {fmt(receivedNum)} ฿
               </span>
             </div>
 
@@ -98,8 +101,9 @@ const PaymentSummary = ({
 
             <div className="mt-5 space-y-3">
               <div className="flex justify-between items-center">
-                <span className="text-lg font-bold text-gray-900">ยอดสุทธิ</span>
+                <span className="text-lg font-bold text-gray-900">ยอดรวม</span>
                 <span className="text-2xl font-extrabold text-blue-700">{fmt(totalNum)} ฿</span>
+                <div className="text-xs text-gray-500">* รวม VAT แล้ว</div>
               </div>
 
               <div className="flex justify-between items-center">
@@ -228,6 +232,9 @@ PaymentSummary.defaultProps = {
 };
 
 export default PaymentSummary;
+
+
+
 
 
 

@@ -1,5 +1,7 @@
 
 
+// src/features/deliveryNote/components/DeliveryNoteForm.jsx
+
 // ✅ DeliveryNoteForm ปรับโครงสร้างให้ตรงกับ BillLayoutFullTax 100%
 import React from 'react';
 
@@ -18,25 +20,93 @@ const DeliveryNoteForm = ({ sale, saleItems, config, hideDate, setHideDate }) =>
     return `${day} ${thMonths[month]} ${year}`;
   };
 
-  const formatCurrency = (val) => {
+    const formatCurrency = (val) => {
     const num = Number.parseFloat(val ?? 0);
-    return num.toFixed(2);
+    if (!Number.isFinite(num)) return '0.00';
+    return num.toLocaleString('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
   };
-
   const vatRate = Number.isFinite(Number(sale.vatRate)) ? Number(sale.vatRate) : 7;
 
-  // ✅ รวมราคาสินค้าหลังหักส่วนลดแต่ละรายการ
-  const computedTotal = saleItems.reduce((sum, item) => {
-    const price = Number.isFinite(Number(item.price)) ? Number(item.price) : 0;
-    const discount = Number.isFinite(Number(item.discount)) ? Number(item.discount) : 0;
-    const quantity = Number.isFinite(Number(item.quantity)) ? Number(item.quantity) : 0;
-    const netUnitPrice = price - discount;
-    return sum + netUnitPrice * quantity;
-  }, 0);
+  // ✅ numeric helpers (production-safe)
+  const toNumber = (v) => {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : 0;
+  };
+  const round2 = (n) => Number((toNumber(n)).toFixed(2));
 
-  const total = computedTotal;
-  const beforeVat = total / (1 + vatRate / 100);
-  const vatAmount = total - beforeVat;
+  // ✅ Line calculator (VAT-INCLUDED standard)
+  // - หน้างาน/ระบบนี้ถือว่า “ราคาขาย” เป็น INC-VAT (Gross) เป็นหลัก
+  // - หลีกเลี่ยงการ gross-up จาก EX-VAT เพื่อตัดปัญหา VAT ซ้ำ
+  // - ถ้ามี split (base+vat) จาก BE ให้ใช้เป็น truth ได้เลย
+  const calcLine = (item) => {
+    const qty = toNumber(item?.quantity);
+    const discount = toNumber(item?.discount);
+
+    // Prefer explicit EX/VAT splits (most reliable)
+    const baseUnitRaw = item?.basePrice ?? item?.unitPriceExVat ?? item?.priceExVat;
+    const vatUnitRaw = item?.vatAmount ?? item?.vatPerUnit;
+
+    if (baseUnitRaw != null && vatUnitRaw != null) {
+      const baseUnit = Math.max(toNumber(baseUnitRaw) - discount, 0);
+      const vatUnit = toNumber(vatUnitRaw);
+      const unitInc = round2(baseUnit + vatUnit);
+      const beforeVat = round2(baseUnit * qty);
+      const vatAmount = round2(vatUnit * qty);
+      const total = round2(beforeVat + vatAmount);
+      return { qty, unitInc, beforeVat, vatAmount, total };
+    }
+
+    // If we only have an explicit INC-VAT price, use it directly (VAT-included)
+    const incUnitRaw = item?.priceIncVat ?? item?.unitPriceIncVat ?? item?.unitPrice ?? item?.sellPrice;
+    if (incUnitRaw != null) {
+      const unitInc = round2(Math.max(toNumber(incUnitRaw) - discount, 0));
+      const total = round2(unitInc * qty);
+
+      // ✅ Extract VAT from gross (supports future VAT change: 7% → 10% etc.)
+      const vatAmount = round2(total > 0 ? (total * vatRate) / (100 + vatRate) : 0);
+      const beforeVat = round2(total - vatAmount);
+
+      return { qty, unitInc, beforeVat, vatAmount, total };
+    }
+
+    // Fallback (VAT-included): treat item.price as INC-VAT (Gross)
+    // (กันเคส field name ต่างกัน / legacy payload)
+    const unitInc = round2(Math.max(toNumber(item?.price) - discount, 0));
+    const total = round2(unitInc * qty);
+
+    const vatAmount = round2(total > 0 ? (total * vatRate) / (100 + vatRate) : 0);
+    const beforeVat = round2(total - vatAmount);
+
+    return { qty, unitInc, beforeVat, vatAmount, total };
+  };
+
+  // ✅ Totals (no VAT double-count)
+  const computedTotals = saleItems.reduce(
+    (acc, item) => {
+      const ln = calcLine(item);
+      acc.beforeVat += ln.beforeVat;
+      acc.vatAmount += ln.vatAmount;
+      acc.total += ln.total;
+      return acc;
+    },
+    { beforeVat: 0, vatAmount: 0, total: 0 }
+  );
+
+  // ✅ Prefer DB totals (authoritative) to avoid drift
+  const saleTotal = Number.isFinite(Number(sale?.totalAmount)) ? round2(Number(sale.totalAmount)) : null;
+  const saleVat = Number.isFinite(Number(sale?.vat)) ? round2(Number(sale.vat)) : null;
+
+  const total = saleTotal ?? round2(computedTotals.total);
+
+  // ✅ VAT & Net (before VAT)
+  // - If DB provides vat, trust it
+  // - Otherwise extract VAT from gross (VAT-included)
+  const computedVat = round2(computedTotals.vatAmount);
+  const vatAmount = saleVat ?? (computedVat > 0 ? computedVat : round2(total > 0 ? (total * vatRate) / (100 + vatRate) : 0));
+  const beforeVat = round2(total - vatAmount);
 
   const maxRowCount = 20;
   const emptyRowCount = Math.max(maxRowCount - saleItems.length, 0);
@@ -123,22 +193,15 @@ const DeliveryNoteForm = ({ sale, saleItems, config, hideDate, setHideDate }) =>
           </thead>
           <tbody>
             {saleItems.map((item, index) => {
-              const price = typeof item.price === 'number' ? item.price : 0;
-              const discount = typeof item.discount === 'number' ? item.discount : 0;
-              const quantity = typeof item.quantity === 'number' ? item.quantity : 0;
-              const netUnitPrice = price - discount;
-              const unitPriceFull = netUnitPrice;
-              const amountFull = unitPriceFull * quantity;
+              const ln = calcLine(item);
               return (
                 <tr key={item.id ?? item.stockItemId ?? `row-${index}`}>
                   <td className="border border-black px-1 text-center h-[28px]">{index + 1}</td>
-                  <td className="border border-black px-1 h-[28px]">
-                    {item.productName} {item.productModel ? `(${item.productModel})` : ''}
-                  </td>
-                  <td className="border border-black px-1 text-center h-[28px]">{quantity}</td>
+                  <td className="border border-black px-1 h-[28px]">{item.productName}</td>
+                  <td className="border border-black px-1 text-center h-[28px]">{ln.qty}</td>
                   <td className="border border-black px-1 text-center h-[28px]">{item.unit || '-'}</td>
-                  <td className="border border-black px-1 text-right h-[28px]">{formatCurrency(unitPriceFull)}</td>
-                  <td className="border border-black px-1 text-right h-[28px]">{formatCurrency(amountFull)}</td>
+                  <td className="border border-black px-1 text-right h-[28px]">{formatCurrency(ln.unitInc)}</td>
+                  <td className="border border-black px-1 text-right h-[28px]">{formatCurrency(ln.total)}</td>
                 </tr>
               );
             })}
@@ -159,10 +222,9 @@ const DeliveryNoteForm = ({ sale, saleItems, config, hideDate, setHideDate }) =>
         <div className="grid grid-cols-2 gap-4 text-xs mt-auto pt-4" style={{ minHeight: '130px' }}>
           <div>
             <ul className="list-decimal ml-4">
-              <li>ได้รับสินค้าตามรายการข้างต้นครบถ้วน</li>
-              <li>หากสินค้าไม่ครบต้องแจ้งภายใน 3 วัน</li>
-              <li>สินค้าซื้อแล้วไม่รับคืน</li>
-              <li>โปรดชำระเงินในนาม "{config.branchName}"</li>
+              <li>สินค้าตามรายการข้างต้น แม้จะได้ส่งมอบแก่ผู้ซื้อแล้ว ก็ยังเป็นทรัพย์สินของผู้ขาย จนกว่าผู้ซื้อจะได้ชำระเงินเสร็จเรียบร้อยแล้ว</li>
+              <li>เครื่องคอมพิวเตอร์ทุกเครื่อง ทางผู้ขายไม่ได้ติดตั้งซอฟแวร์</li>
+              <li>ทางร้านขอสงวนสิทธิ์ในการนำใบส่งของฉบับนี้ยื่นการในนาม<br />{config.branchName}</li>
             </ul>
           </div>
           <div>
@@ -204,6 +266,7 @@ const DeliveryNoteForm = ({ sale, saleItems, config, hideDate, setHideDate }) =>
 };
 
 export default DeliveryNoteForm;
+
 
 
 

@@ -1,11 +1,16 @@
-
-
-
 //  src/features/bill/pages/PrintBillListPage.jsx
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useSalesStore from '@/features/sales/store/salesStore';
+
+// ✅ Money helpers
+const n = (v) => {
+  const x = Number(v);
+  return Number.isFinite(x) ? x : 0;
+};
+const round2 = (v) => Number(n(v).toFixed(2));
+const fmt = (v) => round2(v).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 const PrintBillListPage = () => {
   // ✅ guard against double initial fetch in React StrictMode (dev only)
@@ -19,14 +24,14 @@ const PrintBillListPage = () => {
     const start = new Date(today);
     start.setDate(today.getDate() - 30);
 
-    const pad2 = (n) => String(n).padStart(2, '0');
+    const pad2 = (x) => String(x).padStart(2, '0');
     const toLocalYMD = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
     return toLocalYMD(start);
   });
   const [toDate, setToDate] = useState(() => {
     // ✅ Default: today (local)
     const today = new Date();
-    const pad2 = (n) => String(n).padStart(2, '0');
+    const pad2 = (x) => String(x).padStart(2, '0');
     const toLocalYMD = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
     return toLocalYMD(today);
   });
@@ -47,8 +52,8 @@ const PrintBillListPage = () => {
   const error = salesStore.error;
   const loadPrintableSalesAction = salesStore.loadPrintableSalesAction;
 
-  const clampLimit = (n) => {
-    const parsed = parseInt(n, 10);
+  const clampLimit = (x) => {
+    const parsed = parseInt(x, 10);
     const safe = Number.isFinite(parsed) ? parsed : 100;
     return Math.min(Math.max(safe, 1), 500);
   };
@@ -86,19 +91,47 @@ const PrintBillListPage = () => {
 
   const rowsRaw = Array.isArray(printableSales) ? printableSales : [];
 
-  // ✅ Defensive UI guard: Bill list must show only sales with at least 1 payment
-  // Even if BE filtering is misconfigured, we won't show "ยังไม่ชำระ" items here.
-  const rows = rowsRaw.filter((r) => Number(r?.paidAmount || 0) > 0);
+  // ✅ Defensive UI guard: show only sales that have at least 1 payment in any case
+  // ✅ IMPORTANT (Standard ใหม่):
+  // - totalAmount = Gross รวม VAT จาก Sale snapshot
+  // - paidAmount  = เงินรับเข้าจริง (อาจมากกว่า totalAmount ได้ เช่น เงินสด)
+  // - change      = คำนวณเพื่อแสดงผล (ไม่จำเป็นต้องเก็บ DB)
+  // - appliedPaid = ยอดตัดบิลจริง = min(received, gross)
+  // - balance     = gross - appliedPaid
+  const rows = rowsRaw.filter((r) => n(r?.paidAmount) > 0);
+
+  const withComputed = rows.map((r) => {
+    const gross = n(r?.totalAmount);
+    const received = n(r?.paidAmount);
+    const appliedPaid = Math.min(received, gross);
+    const changeAmount = Math.max(received - gross, 0);
+    const balanceComputed = Math.max(gross - appliedPaid, 0);
+
+    return {
+      ...r,
+      _gross: gross,
+      _received: received,
+      _appliedPaid: appliedPaid,
+      _change: changeAmount,
+      _balance: balanceComputed,
+    };
+  });
 
   const getSortVal = (row, key) => {
     if (!row) return null;
-    if (key === 'totalAmount' || key === 'paidAmount' || key === 'balanceAmount') {
-      return Number(row?.[key] || 0);
-    }
+
+    // ✅ computed keys (UI truth)
+    if (key === 'totalAmount') return n(row?._gross ?? row?.totalAmount);
+    if (key === 'paidAmount') return n(row?._appliedPaid ?? row?.paidAmount); // Applied
+    if (key === 'receivedAmount') return n(row?._received ?? row?.paidAmount);
+    if (key === 'changeAmount') return n(row?._change);
+    if (key === 'balanceAmount') return n(row?._balance ?? row?.balanceAmount);
+
     if (key === 'createdAt' || key === 'lastPaidAt') {
       const v = row?.[key];
       return v ? new Date(v).getTime() : 0;
     }
+
     return String(row?.[key] ?? '').toLowerCase();
   };
 
@@ -119,17 +152,14 @@ const PrintBillListPage = () => {
     return sortDir === 'asc' ? ' ▲' : ' ▼';
   };
 
-  const sortedRows = [...rows].sort((a, b) => {
+  const sortedRows = [...withComputed].sort((a, b) => {
     const av = getSortVal(a, sortKey);
     const bv = getSortVal(b, sortKey);
 
     if (av === bv) return 0;
     const dir = sortDir === 'asc' ? 1 : -1;
 
-    // numbers / timestamps
     if (typeof av === 'number' && typeof bv === 'number') return av > bv ? dir : -dir;
-
-    // strings
     return String(av) > String(bv) ? dir : -dir;
   });
 
@@ -184,9 +214,7 @@ const PrintBillListPage = () => {
               </div>
               <div>
                 printableSales(raw):{' '}
-                <span className="font-mono">
-                  {String(Array.isArray(printableSales) ? printableSales.length : 'not-array')}
-                </span>
+                <span className="font-mono">{String(Array.isArray(printableSales) ? printableSales.length : 'not-array')}</span>
               </div>
             </div>
           </div>
@@ -207,19 +235,9 @@ const PrintBillListPage = () => {
           placeholder="ค้นหาชื่อลูกค้า, เบอร์โทร, หรือรหัสใบขาย..."
           className="border px-2 py-1 w-72 rounded"
         />
-        <input
-          type="date"
-          value={fromDate}
-          onChange={(e) => setFromDate(e.target.value)}
-          className="border px-2 py-1 rounded"
-        />
+        <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="border px-2 py-1 rounded" />
         <span>ถึง</span>
-        <input
-          type="date"
-          value={toDate}
-          onChange={(e) => setToDate(e.target.value)}
-          className="border px-2 py-1 rounded"
-        />
+        <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="border px-2 py-1 rounded" />
         <input
           type="number"
           value={limit}
@@ -240,215 +258,203 @@ const PrintBillListPage = () => {
         <div className="ml-auto flex gap-4 items-center">
           <label className="text-sm font-medium">รูปแบบการพิมพ์:</label>
           <label className="flex items-center gap-1">
-            <input
-              type="radio"
-              name="format"
-              value="short"
-              checked={printFormat === 'short'}
-              onChange={() => setPrintFormat('short')}
-            />{' '}
-            ย่อ
+            <input type="radio" name="format" value="short" checked={printFormat === 'short'} onChange={() => setPrintFormat('short')} /> ย่อ
           </label>
           <label className="flex items-center gap-1">
-            <input
-              type="radio"
-              name="format"
-              value="full"
-              checked={printFormat === 'full'}
-              onChange={() => setPrintFormat('full')}
-            />{' '}
-            เต็มรูปแบบ
+            <input type="radio" name="format" value="full" checked={printFormat === 'full'} onChange={() => setPrintFormat('full')} /> เต็มรูปแบบ
           </label>
         </div>
       </div>
 
-      {uiError ? (
-        <div className="mb-3 p-3 border border-amber-300 bg-amber-50 text-amber-800 rounded">
-          {uiError}
-        </div>
-      ) : null}
-
-      {error ? (
-        <div className="mb-3 p-3 border border-red-300 bg-red-50 text-red-700 rounded">
-          {error}
-        </div>
-      ) : null}
+      {uiError ? <div className="mb-3 p-3 border border-amber-300 bg-amber-50 text-amber-800 rounded">{uiError}</div> : null}
+      {error ? <div className="mb-3 p-3 border border-red-300 bg-red-50 text-red-700 rounded">{error}</div> : null}
 
       <div className="overflow-auto border rounded" style={{ maxHeight: 520 }}>
-      <table className="w-full text-sm border-collapse">
-        <thead className="bg-gray-100">
-          <tr>
-            <th
-              className="border px-2 py-1 text-left sticky top-0 bg-gray-100 z-10 cursor-pointer select-none"
-              onClick={() => toggleSort('code')}
-              title="เรียงตามเลขที่"
-            >
-              เลขที่{sortIndicator('code')}
-            </th>
-            <th
-              className="border px-2 py-1 sticky top-0 bg-gray-100 z-10 cursor-pointer select-none"
-              onClick={() => toggleSort('companyName')}
-              title="เรียงตามหน่วยงาน"
-            >
-              หน่วยงาน{sortIndicator('companyName')}
-            </th>
-            <th
-              className="border px-2 py-1 sticky top-0 bg-gray-100 z-10 cursor-pointer select-none"
-              onClick={() => toggleSort('customerName')}
-              title="เรียงตามชื่อลูกค้า"
-            >
-              ลูกค้า{sortIndicator('customerName')}
-            </th>
-            <th className="border px-2 py-1 sticky top-0 bg-gray-100 z-10">เบอร์โทร</th>
-            <th
-              className="border px-2 py-1 sticky top-0 bg-gray-100 z-10 cursor-pointer select-none"
-              onClick={() => toggleSort('totalAmount')}
-              title="เรียงตามยอดรวม"
-            >
-              ยอดรวม{sortIndicator('totalAmount')}
-            </th>
-            <th
-              className="border px-2 py-1 sticky top-0 bg-gray-100 z-10 cursor-pointer select-none"
-              onClick={() => toggleSort('paidAmount')}
-              title="เรียงตามยอดชำระแล้ว"
-            >
-              ชำระแล้ว{sortIndicator('paidAmount')}
-            </th>
-            <th
-              className="border px-2 py-1 sticky top-0 bg-gray-100 z-10 cursor-pointer select-none"
-              onClick={() => toggleSort('balanceAmount')}
-              title="เรียงตามยอดค้างชำระ"
-            >
-              ค้างชำระ{sortIndicator('balanceAmount')}
-            </th>
-            <th
-              className="border px-2 py-1 sticky top-0 bg-gray-100 z-10 cursor-pointer select-none"
-              onClick={() => toggleSort('createdAt')}
-              title="เรียงตามวันที่ขาย"
-            >
-              วันที่ขาย{sortIndicator('createdAt')}
-            </th>
-            <th
-              className="border px-2 py-1 sticky top-0 bg-gray-100 z-10 cursor-pointer select-none"
-              onClick={() => toggleSort('lastPaidAt')}
-              title="เรียงตามรับเงินล่าสุด"
-            >
-              รับเงินล่าสุด{sortIndicator('lastPaidAt')}
-            </th>
-            <th className="border px-2 py-1 sticky top-0 bg-gray-100 z-10">ผู้รับเงิน</th>
-            <th className="border px-2 py-1 sticky top-0 bg-gray-100 z-10" colSpan={2}>
-              การดำเนินการ
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {sortedRows.length > 0 ? (
-            sortedRows.map((s) => {
-              // ✅ เปิดพิมพ์เมื่อมีการรับชำระอย่างน้อย 1 ครั้ง
-              const canPrint = Number(s?.paidAmount || 0) > 0;
-              const isFullyPaid = Number(s?.balanceAmount || 0) <= 0 && canPrint;
-              return (
-                <tr key={s.id} className="border-t hover:bg-gray-50">
-                  <td className="border px-2 py-1">{s.code || '-'}</td>
-                  <td className="border px-2 py-1">{s.companyName || '-'}</td>
-                  <td className="border px-2 py-1">{s.customerName || '-'}</td>
-                  <td className="border px-2 py-1">{s.customerPhone || '-'}</td>
-                  <td className="border px-2 py-1 text-right">
-                    {Number(s.totalAmount || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 })}
-                  </td>
-                  <td className="border px-2 py-1 text-right">
-                    {Number(s.paidAmount || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 })}
-                  </td>
-                  <td className="border px-2 py-1 text-right">
-                    {Number(s.balanceAmount || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 })}
-                    {canPrint ? (
-                      <span
-                        className={`ml-2 inline-flex items-center rounded px-2 py-0.5 text-xs font-medium ${
-                          isFullyPaid ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
-                        }`}
-                        title={isFullyPaid ? 'ชำระครบแล้ว' : 'มีการรับชำระแล้ว (อาจยังค้าง)'}
-                      >
-                        {isFullyPaid ? 'ชำระครบ' : 'รับชำระแล้ว'}
-                      </span>
-                    ) : (
-                      <span
-                        className="ml-2 inline-flex items-center rounded bg-gray-100 text-gray-600 px-2 py-0.5 text-xs font-medium"
-                        title="ยังไม่มีการรับชำระ"
-                      >
-                        ยังไม่ชำระ
-                      </span>
-                    )}
-                  </td>
-                  <td className="border px-2 py-1">
-                    {s.createdAt
-                      ? new Date(s.createdAt).toLocaleDateString('th-TH', { dateStyle: 'short' })
-                      : '-'}
-                  </td>
-                  <td className="border px-2 py-1">
-                    {s.lastPaidAt
-                      ? new Date(s.lastPaidAt).toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' })
-                      : '-'}
-                  </td>
-                  <td className="border px-2 py-1">{s.employeeName || '-'}</td>
-                  <td className="border px-2 py-1 text-center">
-                    <button
-                      onClick={() => navigate(`/sale-detail/${s.id}`)}
-                      className="bg-gray-500 text-white px-3 py-1 rounded hover:bg-gray-600"
-                    >
-                      รายละเอียด
-                    </button>
-                  </td>
-                  <td className="border px-2 py-1 text-center">
-                    <button
-                      onClick={() => {
-                        if (!canPrint) return;
-                        const basePath =
-                          printFormat === 'short'
-                            ? `/pos/sales/bill/print-short/${s.id}`
-                            : `/pos/sales/bill/print-full/${s.id}`;
-                        // หน้า print refetch จาก DB อยู่แล้ว → ไม่ต้องพึ่ง state (กันข้อมูล stale)
-                        navigate(basePath);
-                      }}
-                      className={`px-3 py-1 rounded ${
-                        canPrint
-                          ? 'bg-blue-600 text-white hover:bg-blue-700'
-                          : 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                      }`}
-                      title={canPrint ? 'พิมพ์ใบเสร็จ' : 'ยังไม่มีการรับชำระ จึงพิมพ์ใบเสร็จไม่ได้'}
-                    >
-                      {canPrint ? 'พิมพ์' : 'ยังไม่ชำระ'}
-                    </button>
-                  </td>
-                </tr>
-              );
-            })
-          ) : (
+        <table className="w-full text-sm border-collapse">
+          <thead className="bg-gray-100">
             <tr>
-              <td colSpan={12} className="text-center py-6 text-gray-600">
-                ไม่พบข้อมูล
-                <div className="mt-2 text-xs text-gray-500">แนะนำ: ลองขยายช่วงวันที่ หรือเพิ่ม limit แล้วกดค้นหาอีกครั้ง</div>
-              </td>
+              <th
+                className="border px-2 py-1 text-left sticky top-0 bg-gray-100 z-10 cursor-pointer select-none"
+                onClick={() => toggleSort('code')}
+                title="เรียงตามเลขที่"
+              >
+                เลขที่{sortIndicator('code')}
+              </th>
+              <th
+                className="border px-2 py-1 sticky top-0 bg-gray-100 z-10 cursor-pointer select-none"
+                onClick={() => toggleSort('companyName')}
+                title="เรียงตามหน่วยงาน"
+              >
+                หน่วยงาน{sortIndicator('companyName')}
+              </th>
+              <th
+                className="border px-2 py-1 sticky top-0 bg-gray-100 z-10 cursor-pointer select-none"
+                onClick={() => toggleSort('customerName')}
+                title="เรียงตามชื่อลูกค้า"
+              >
+                ลูกค้า{sortIndicator('customerName')}
+              </th>
+              <th className="border px-2 py-1 sticky top-0 bg-gray-100 z-10">เบอร์โทร</th>
+              <th
+                className="border px-2 py-1 sticky top-0 bg-gray-100 z-10 cursor-pointer select-none"
+                onClick={() => toggleSort('totalAmount')}
+                title="เรียงตามยอดรวม"
+              >
+                ยอดรวม{sortIndicator('totalAmount')}
+              </th>
+              <th
+                className="border px-2 py-1 sticky top-0 bg-gray-100 z-10 cursor-pointer select-none"
+                onClick={() => toggleSort('paidAmount')}
+                title="เรียงตามยอดชำระแล้ว (Applied)"
+              >
+                ชำระแล้ว{sortIndicator('paidAmount')}
+              </th>
+              <th
+                className="border px-2 py-1 sticky top-0 bg-gray-100 z-10 cursor-pointer select-none"
+                onClick={() => toggleSort('receivedAmount')}
+                title="เรียงตามยอดรับเงินจริง"
+              >
+                รับเงิน{sortIndicator('receivedAmount')}
+              </th>
+              <th
+                className="border px-2 py-1 sticky top-0 bg-gray-100 z-10 cursor-pointer select-none"
+                onClick={() => toggleSort('changeAmount')}
+                title="เรียงตามเงินทอน (คำนวณจากรับเงินจริง - ยอดบิล)"
+              >
+                เงินทอน{sortIndicator('changeAmount')}
+              </th>
+              <th
+                className="border px-2 py-1 sticky top-0 bg-gray-100 z-10 cursor-pointer select-none"
+                onClick={() => toggleSort('balanceAmount')}
+                title="เรียงตามยอดค้างชำระ (คำนวณจากยอดบิล - ชำระแล้ว)"
+              >
+                ค้างชำระ{sortIndicator('balanceAmount')}
+              </th>
+              <th
+                className="border px-2 py-1 sticky top-0 bg-gray-100 z-10 cursor-pointer select-none"
+                onClick={() => toggleSort('createdAt')}
+                title="เรียงตามวันที่ขาย"
+              >
+                วันที่ขาย{sortIndicator('createdAt')}
+              </th>
+              <th
+                className="border px-2 py-1 sticky top-0 bg-gray-100 z-10 cursor-pointer select-none"
+                onClick={() => toggleSort('lastPaidAt')}
+                title="เรียงตามรับเงินล่าสุด"
+              >
+                รับเงินล่าสุด{sortIndicator('lastPaidAt')}
+              </th>
+              <th className="border px-2 py-1 sticky top-0 bg-gray-100 z-10">ผู้รับเงิน</th>
+              <th className="border px-2 py-1 sticky top-0 bg-gray-100 z-10" colSpan={2}>
+                การดำเนินการ
+              </th>
             </tr>
-          )}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {sortedRows.length > 0 ? (
+              sortedRows.map((s) => {
+                const gross = n(s?._gross ?? s?.totalAmount);
+                const received = n(s?._received ?? s?.paidAmount);
+                const appliedPaid = n(s?._appliedPaid ?? Math.min(received, gross));
+                const changeAmount = n(s?._change ?? Math.max(received - gross, 0));
+                const balance = n(s?._balance ?? Math.max(gross - appliedPaid, 0));
+
+                const canPrint = appliedPaid > 0;
+                const isFullyPaid = balance <= 0 && canPrint;
+
+                return (
+                  <tr key={s.id} className="border-t hover:bg-gray-50">
+                    <td className="border px-2 py-1">{s.code || '-'}</td>
+                    <td className="border px-2 py-1">{s.companyName || '-'}</td>
+                    <td className="border px-2 py-1">{s.customerName || '-'}</td>
+                    <td className="border px-2 py-1">{s.customerPhone || '-'}</td>
+
+                    <td className="border px-2 py-1 text-right">{fmt(gross)}</td>
+                    <td className="border px-2 py-1 text-right">{fmt(appliedPaid)}</td>
+                    <td className="border px-2 py-1 text-right">{fmt(received)}</td>
+                    <td className="border px-2 py-1 text-right">{fmt(changeAmount)}</td>
+
+                    <td className="border px-2 py-1 text-right">
+                      {fmt(balance)}
+                      {canPrint ? (
+                        <span
+                          className={`ml-2 inline-flex items-center rounded px-2 py-0.5 text-xs font-medium ${
+                            isFullyPaid ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
+                          }`}
+                          title={isFullyPaid ? 'ชำระครบแล้ว' : 'มีการรับชำระแล้ว (อาจยังค้าง)'}
+                        >
+                          {isFullyPaid ? 'ชำระครบ' : 'รับชำระแล้ว'}
+                        </span>
+                      ) : (
+                        <span
+                          className="ml-2 inline-flex items-center rounded bg-gray-100 text-gray-600 px-2 py-0.5 text-xs font-medium"
+                          title="ยังไม่มีการรับชำระ"
+                        >
+                          ยังไม่ชำระ
+                        </span>
+                      )}
+                    </td>
+
+                    <td className="border px-2 py-1">
+                      {s.createdAt ? new Date(s.createdAt).toLocaleDateString('th-TH', { dateStyle: 'short' }) : '-'}
+                    </td>
+                    <td className="border px-2 py-1">
+                      {s.lastPaidAt
+                        ? new Date(s.lastPaidAt).toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' })
+                        : '-'}
+                    </td>
+                    <td className="border px-2 py-1">{s.employeeName || '-'}</td>
+
+                    <td className="border px-2 py-1 text-center">
+                      <button
+                        onClick={() => navigate(`/sale-detail/${s.id}`)}
+                        className="bg-gray-500 text-white px-3 py-1 rounded hover:bg-gray-600"
+                      >
+                        รายละเอียด
+                      </button>
+                    </td>
+                    <td className="border px-2 py-1 text-center">
+                      <button
+                        onClick={() => {
+                          if (!canPrint) return;
+                          const basePath =
+                            printFormat === 'short'
+                              ? `/pos/sales/bill/print-short/${s.id}`
+                              : `/pos/sales/bill/print-full/${s.id}`;
+                          navigate(basePath);
+                        }}
+                        className={`px-3 py-1 rounded ${
+                          canPrint ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                        }`}
+                        title={canPrint ? 'พิมพ์ใบเสร็จ' : 'ยังไม่มีการรับชำระ จึงพิมพ์ใบเสร็จไม่ได้'}
+                      >
+                        {canPrint ? 'พิมพ์' : 'ยังไม่ชำระ'}
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })
+            ) : (
+              <tr>
+                <td colSpan={14} className="text-center py-6 text-gray-600">
+                  ไม่พบข้อมูล
+                  <div className="mt-2 text-xs text-gray-500">แนะนำ: ลองขยายช่วงวันที่ หรือเพิ่ม limit แล้วกดค้นหาอีกครั้ง</div>
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       </div>
 
       <div className="mt-3 text-xs text-gray-600">
-        หมายเหตุ: หน้านี้แสดงเฉพาะ “ใบขายที่มีการรับชำระแล้วอย่างน้อย 1 ครั้ง” (กรองจาก BE ด้วย onlyPaid=1) ตามช่วงวันที่ขาย (createdAt). ค่าเริ่มต้น = ย้อนหลัง 30 วันถึงวันนี้
+        หมายเหตุ: หน้านี้แสดงเฉพาะ “ใบขายที่มีการรับชำระแล้วอย่างน้อย 1 ครั้ง” (กรองจาก BE ด้วย onlyPaid=1) ตามช่วงวันที่ขาย (createdAt).
+        ✅ ยอดรวม (totalAmount) = Gross รวม VAT จาก Sale snapshot.
+        ✅ ชำระแล้ว = ยอดที่ถูกนำไปตัดบิลจริง (Applied) = min(รับเงิน, ยอดบิล) → กันเคสเงินสดที่รับเกิน.
+        ✅ รับเงิน/เงินทอน = คำนวณเพื่อแสดงผล (ไม่จำเป็นต้องเก็บใน DB).
+        ค่าเริ่มต้น = ย้อนหลัง 30 วันถึงวันนี้
       </div>
     </div>
   );
 };
 
 export default PrintBillListPage;
-
-
-
-
-
-
-
-
-
-

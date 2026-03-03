@@ -1,3 +1,4 @@
+
 // ✅ src/components/shared/ConfirmDeleteDialog.jsx
 import {
   Dialog,
@@ -9,11 +10,38 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 
-const ConfirmDeleteDialog = ({ open, itemLabel, name, description, onCancel, onConfirm }) => {
-  
+const ConfirmDeleteDialog = ({
+  open,
+  itemLabel,
+  name,
+  description,
+  // Backward/forward compatible props
+  onCancel,
+  onClose,
+  onOpenChange,
+  onConfirm,
+  loading,
+}) => {
+  const handleCancel = () => {
+    try {
+      if (typeof onCancel === 'function') return onCancel();
+      if (typeof onClose === 'function') return onClose();
+    } catch (_) {
+      // ignore
+    }
+  };
+
+  const handleOpenChange = (isOpen) => {
+    try {
+      if (typeof onOpenChange === 'function') onOpenChange(isOpen);
+    } catch (_) {
+      // ignore
+    }
+    if (!isOpen) handleCancel();
+  };
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => { if (!isOpen) onCancel(); }}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{name || 'ยืนยันการลบ'}</DialogTitle>
@@ -25,8 +53,10 @@ const ConfirmDeleteDialog = ({ open, itemLabel, name, description, onCancel, onC
           คุณต้องการลบ <span className="font-semibold">"{itemLabel}"</span> ใช่หรือไม่?
         </div>
         <DialogFooter className="pt-4">
-          <Button variant="outline" onClick={onCancel}>ยกเลิก</Button>
-          <Button variant="destructive" onClick={onConfirm}>ยืนยันการลบ</Button>
+          <Button variant="outline" onClick={handleCancel} disabled={!!loading}>ยกเลิก</Button>
+          <Button variant="destructive" onClick={onConfirm} disabled={!!loading}>
+            {loading ? 'กำลังลบ…' : 'ยืนยันการลบ'}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -35,3 +65,4 @@ const ConfirmDeleteDialog = ({ open, itemLabel, name, description, onCancel, onC
 
 export default ConfirmDeleteDialog;
    
+

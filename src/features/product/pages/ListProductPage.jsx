@@ -1,3 +1,6 @@
+
+
+
 // ✅ src/features/product/pages/ListProductPage.jsx
 // ✅ Policy update (Production):
 // - Product เป็น Global Master Data → ห้ามปิดใช้งานจาก POS
@@ -66,16 +69,22 @@ export default function ListProductPage() {
   const authRole = useAuthStore((s) => s?.user?.role ?? s?.role ?? null);
   const isSuperAdmin = String(authRole || '').toUpperCase() === 'SUPERADMIN';
 
+
   const {
     products,
     fetchProductsAction,
+    fetchProducts,
     dropdowns,
     dropdownsLoaded,
     ensureDropdownsAction,
     // ✅ New (expected): deleteProductAction(id)
-    // หมายเหตุ: ถ้ายังไม่มี ให้เพิ่มใน productStore ตามมาตรฐาน store-first
-    deleteProductAction,
+    // หมายเหตุ: ถ้ายังไม่มี ให้เพิ่มใน productStore ตามมาตรฐาน store-first    deleteProductAction,
+    deleteProduct,
   } = useProductStore();
+
+  // ✅ SUPERADMIN: ไม่อ้างอิงสาขา แต่ยังต้องสามารถโหลด “Global products” ได้
+  // IMPORTANT: ต้องประกาศหลัง destructure store เพื่อกัน TDZ
+  const fetchForList = isSuperAdmin ? fetchProducts : fetchProductsAction;
 
   // ✅ Step 1: เราใช้ allProducts เป็นแหล่งข้อมูลหลักในหน้านี้ (products ใน store จะถูก overwrite ทีละหน้า)
   // eslint-disable-next-line no-unused-vars
@@ -88,7 +97,7 @@ export default function ListProductPage() {
 
   useEffect(() => {
     if (!hasLoaded) return;
-    if (!branchId) return;
+    if (!isSuperAdmin && !branchId) return;
     if (dropdownsLoaded === true) return;
 
     // reset เมื่อสลับสาขา
@@ -160,15 +169,15 @@ export default function ListProductPage() {
 
     const targetId = deleteTarget.id;
     setDeletingId(targetId);
-    setDeleteError(null);
+    setDeleteError(null);    try {
+      const deleteFn = typeof deleteProductAction === 'function' ? deleteProductAction : deleteProduct;
 
-    try {
-      if (typeof deleteProductAction !== 'function') {
+      if (typeof deleteFn !== 'function') {
         // ✅ Hard guard: FE ยังไม่พร้อม (ป้องกันเงียบ)
         throw new Error('FE_NOT_READY_DELETE_ACTION');
       }
 
-      await deleteProductAction(targetId);
+      await deleteFn(targetId);
 
       // ✅ sync UI ทันที
       setAllProducts((prev) => (Array.isArray(prev) ? prev.filter((p) => p?.id !== targetId) : prev));
@@ -184,15 +193,14 @@ export default function ListProductPage() {
         (error?.message === 'FE_NOT_READY_DELETE_ACTION'
           ? 'ระบบยังไม่รองรับการลบสินค้าในฝั่งหน้าบ้าน (deleteProductAction ยังไม่ถูกเพิ่มใน productStore)'
           : error?.message) ||
-        'ลบสินค้าไม่สำเร็จ';
-
-      setDeleteError(msg);
+        'ลบสินค้าไม่สำเร็จ';      setDeleteError(msg);
 
       // ไม่ปิด dialog เพื่อให้ผู้ใช้เห็น error และตัดสินใจได้
       // แต่ถ้าคุณอยากปิด ให้ uncomment บรรทัดนี้
       // setDeleteTarget(null);
 
-      throw error;
+      // ✅ อย่า throw ต่อ เพื่อกัน Uncaught (in promise) ทำให้ UX แย่
+      return;
     } finally {
       setDeletingId(null);
     }
@@ -312,7 +320,7 @@ export default function ListProductPage() {
   // ✅ Step 1: โหลดสินค้าทั้งหมด (วนทีละหน้า) แล้วเก็บไว้ที่ allProducts
   // IMPORTANT: ต้องประกาศก่อน useEffect ที่อ้างถึง เพื่อกัน TDZ (Temporal Dead Zone)
   const loadAllProductsOnce = useCallback(async () => {
-    if (!branchId) return;
+    if (!isSuperAdmin && !branchId) return;
     if (loadingAllRef.current) return;
 
     loadingAllRef.current = true;
@@ -324,7 +332,7 @@ export default function ListProductPage() {
       let acc = [];
 
       if (import.meta?.env?.DEV) {
-        console.log('✅ [ListProductPage] loadAllProducts start', { branchId, TAKE });
+        console.log('✅ [ListProductPage] loadAllProducts start', { branchId, isSuperAdmin, TAKE });
       }
 
       while (page <= MAX_PAGES_SAFETY) {
@@ -341,10 +349,24 @@ export default function ListProductPage() {
           console.log('➡️ [ListProductPage] fetch page', { page, TAKE });
         }
 
-        await fetchProductsAction(pageFilters);
+        await fetchForList(pageFilters);
 
         // ✅ อ่านค่าล่าสุดจาก store หลัง fetch
-        const list = useProductStore.getState().products || [];
+        const rawList = useProductStore.getState().products;
+
+        // ✅ Array-first normalizer (รองรับ wrapper จาก getProducts)
+        const pickArr = (x) => {
+          if (Array.isArray(x)) return x;
+          if (x && Array.isArray(x.items)) return x.items;
+          if (x && Array.isArray(x.products)) return x.products;
+          if (x && Array.isArray(x.data)) return x.data;
+          if (x && x.data && Array.isArray(x.data.items)) return x.data.items;
+          if (x && x.data && Array.isArray(x.data.products)) return x.data.products;
+          if (x && x.data && Array.isArray(x.data.data)) return x.data.data;
+          return [];
+        };
+
+        const list = pickArr(rawList);
 
         if (import.meta?.env?.DEV) {
           console.log('✅ [ListProductPage] got', { page, count: list.length });
@@ -413,26 +435,26 @@ export default function ListProductPage() {
       setLoadingAll(false);
       loadingAllRef.current = false;
     }
-  }, [branchId, fetchProductsAction]);
+  }, [isSuperAdmin, branchId, fetchForList]);
 
   // ✅ โหลดเมื่อ branchId เปลี่ยน
   // แต่จะเริ่มทำงานหลังผู้ใช้กด “แสดงข้อมูล” เท่านั้น
   useEffect(() => {
-    if (!branchId) return;
     if (!hasLoaded) return;
+    if (!isSuperAdmin && !branchId) return;
     loadAllProductsOnce();
-  }, [branchId, hasLoaded, loadAllProductsOnce]);
+  }, [isSuperAdmin, branchId, hasLoaded, loadAllProductsOnce]);
 
   // ✅ ตรวจ refresh=1 เพื่อ reload (Step 1: reload all products)
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const refresh = params.get('refresh');
-    if (refresh && branchId) {
+    if (refresh && (isSuperAdmin || branchId)) {
       loadAllProductsOnce();
       params.delete('refresh');
       navigate({ pathname: location.pathname, search: params.toString() }, { replace: true });
     }
-  }, [location.search, location.pathname, branchId, loadAllProductsOnce, navigate]);
+  }, [location.search, location.pathname, isSuperAdmin, branchId, loadAllProductsOnce, navigate]);
 
   const prevCatRef = useRef(null);
   const prevTypeRef = useRef(null);
@@ -728,7 +750,11 @@ export default function ListProductPage() {
         {/* ✅ Confirm delete (SUPERADMIN only) */}
         <ConfirmDeleteDialog
           open={!!deleteTarget}
+          // ✅ รองรับหลาย signature ของ dialog component (กันเคสกด X / คลิกพื้นหลังแล้วไม่ปิด)
           onClose={() => setDeleteTarget(null)}
+          onOpenChange={(nextOpen) => {
+            if (!nextOpen) setDeleteTarget(null);
+          }}
           onConfirm={handleDelete}
           itemLabel={deleteTarget?.name || 'ไม่พบคำเรียกสินค้า'}
           name="ยืนยันการลบสินค้า (ถาวร)"
@@ -751,3 +777,10 @@ export default function ListProductPage() {
     </div>
   );
 }
+
+
+
+
+
+
+

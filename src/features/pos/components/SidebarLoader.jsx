@@ -1,3 +1,6 @@
+
+
+
 // ✅ สำรอง Sidebar ทั้งหมดจากระบบ ณ เวลานี้ เพื่อความปลอดภัยและเรียกคืนได้
 
 // src/features/pos/components/SidebarLoader.jsx
@@ -59,3 +62,7 @@ export default function SidebarLoader() {
     </div>
   );
 }
+
+
+
+

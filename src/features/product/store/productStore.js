@@ -5,8 +5,6 @@
 
 
 
-
-
 // ✅ src/features/product/store/productStore.js
 import { create } from 'zustand';
 import _ from 'lodash';
@@ -21,13 +19,16 @@ import {
   getCatalogDropdowns,
   disableProduct,
   enableProduct,
+  getReadyToSell,
+  getReadyToSellStructuredDetails,
 } from '../api/productApi';
-import { migrateSnToSimple } from '../api/productApi';
+
+// ✅ Images (แยกไฟล์ตามโมดูลภาพสินค้า)
 import {
   uploadImagesProduct,
   uploadImagesProductFull,
-  deleteImageProduct,
   setProductCoverImage,
+  deleteImageProduct,
 } from '../api/productImagesApi';
 
 const initialDropdowns = {
@@ -50,10 +51,10 @@ const useProductStore = create((set, get) => ({
   // ✅ Brand options must come from Brand table only (id + name)
   // (Do NOT merge legacy free-text brandName to avoid null/duplicate keys)
   normalizeBrandOptions: (brands = []) => {
-    const arr = Array.isArray(brands) ? brands : []
-    const filtered = arr.filter((b) => b && b.id != null)
-    const uniq = _.uniqBy(filtered, (b) => String(b.id))
-    return _.sortBy(uniq, (b) => String(b?.name ?? ''))
+    const arr = Array.isArray(brands) ? brands : [];
+    const filtered = arr.filter((b) => b && b.id != null);
+    const uniq = _.uniqBy(filtered, (b) => String(b.id));
+    return _.sortBy(uniq, (b) => String(b?.name ?? ''));
   },
 
   // ---- Lists / Entities ----
@@ -73,6 +74,18 @@ const useProductStore = create((set, get) => ({
   searchResults: [],
   isLoading: false,
   error: null,
+
+  // =========================
+  // ✅ Ready-to-sell (พร้อมขาย)
+  // =========================
+  readyToSellData: { items: [], page: 1, pageSize: 50, total: 0 },
+  readyToSellLoading: false,
+  readyToSellError: null,
+  
+  // ✅ Ready-to-sell details (STRUCTURED)
+  readyToSellStructuredDetails: { items: [], total: 0, productId: null },
+  readyToSellStructuredDetailsLoading: false,
+  readyToSellStructuredDetailsError: null,
 
   // -------- Products (List/Read) --------
   fetchProducts: async (filters = {}) => {
@@ -125,8 +138,6 @@ const useProductStore = create((set, get) => ({
       delete cleanedPayload.productTemplateId;
       delete cleanedPayload.unit;
       delete cleanedPayload.unitId;
-      delete cleanedPayload.unit;
-      delete cleanedPayload.unitId;
 
       const data = await createProduct(cleanedPayload);
       set({ isLoading: false });
@@ -138,7 +149,6 @@ const useProductStore = create((set, get) => ({
       throw error;
     }
   },
-
   updateProduct: async (id, payload) => {
     set({ isLoading: true, error: null });
     try {
@@ -155,7 +165,13 @@ const useProductStore = create((set, get) => ({
         const code = err?.code || err?.error || err?.data?.error || err?.response?.data?.error;
         const switchingToSimple = cleanedPayload?.noSN === true;
         if (switchingToSimple && code === 'MODE_SWITCH_REQUIRES_CONVERSION') {
-          await migrateSnToSimple(id);
+          // ✅ avoid ReferenceError: delegate to store action (implemented later)
+          if (typeof get().migrateSnToSimpleAction !== 'function') {
+            throw Object.assign(new Error('ยังไม่พบ action สำหรับแปลง SN → SIMPLE (migrateSnToSimpleAction)'), {
+              code: 'MIGRATE_ACTION_MISSING',
+            });
+          }
+          await get().migrateSnToSimpleAction(id);
           const data = await updateProduct(id, cleanedPayload);
           set({ isLoading: false });
           return data;
@@ -171,16 +187,25 @@ const useProductStore = create((set, get) => ({
   },
 
   // ============================================================
-    // 🗑 deleteProduct (API raw)
-    // ============================================================
-    deleteProduct: async (id) => {
-      try {
-        await deleteProductApi(id);
-        return true;
-      } catch (error) {
-        throw error;
-      }
-    },
+  // 🔁 migrateSnToSimpleAction
+  // - กัน ReferenceError ตอนสลับ STRUCTURED → SIMPLE แล้วต้อง convert SN
+  // - ตอนนี้ยังไม่ implement flow convert ใน FE (รอ BE endpoint/flow ที่ lock แล้ว)
+  // ============================================================
+  migrateSnToSimpleAction: async () => {
+    throw Object.assign(new Error('โฟลว์แปลง SN → SIMPLE ยังไม่ถูก implement ในเวอร์ชันนี้'), {
+      code: 'MIGRATE_SN_TO_SIMPLE_NOT_IMPLEMENTED',
+    });
+  },
+
+  // ============================================================
+  // 🗑 deleteProduct (API raw)
+  // - helper ระดับ API (ให้ action เป็นคนจัดการ state + error)
+  // - ❌ ไม่ต้องครอบ try/catch ที่แค่ throw กลับ (กัน eslint no-useless-catch)
+  // ============================================================
+  deleteProduct: async (id) => {
+    await deleteProductApi(id);
+    return true;
+  },
 
     // ============================================================
     // 🛡 deleteProductAction (Production-standard action)
@@ -555,6 +580,116 @@ const useProductStore = create((set, get) => ({
 
     return { code, message, raw: err };
   },
+  // ✅ Normalize ready-to-sell response (array-safe)
+  // รองรับทั้ง: {items,page,pageSize,total} หรือ array ตรง
+  normalizeReadyToSellResponse: (raw) => {
+    const payload = raw?.data ?? raw;
+
+    const items = Array.isArray(payload?.items)
+      ? payload.items
+      : Array.isArray(payload)
+        ? payload
+        : Array.isArray(payload?.data)
+          ? payload.data
+          : [];
+
+    const page = Number(payload?.page ?? 1);
+    const pageSize = Number(payload?.pageSize ?? 50);
+    const total = Number(payload?.total ?? items.length);
+
+    return {
+      items,
+      page: Number.isFinite(page) ? page : 1,
+      pageSize: Number.isFinite(pageSize) ? pageSize : 50,
+      total: Number.isFinite(total) ? total : items.length,
+    };
+  },
+
+  // ✅ Ready-to-sell action (Production-grade)
+  // - branchId ต้องมาจาก store (ห้าม component ส่งมั่ว)
+  // - ครอบ try/catch + map error สำหรับ UI
+  fetchReadyToSellAction: async ({
+    branchId,
+    q = '',
+    mode = 'ALL', // ALL | STRUCTURED | SIMPLE
+    page = 1,
+    pageSize = 50,
+    sort = 'receivedAt_desc',
+  } = {}) => {
+    set({ readyToSellLoading: true, readyToSellError: null });
+    try {
+      if (!branchId) {
+        throw Object.assign(new Error('ไม่พบ branchId กรุณา login ใหม่'), { code: 'BRANCH_ID_MISSING' });
+      }
+
+      const data = await getReadyToSell({
+        branchId,
+        q: (q ?? '').toString().trim(),
+        mode,
+        page,
+        pageSize,
+        sort,
+      });
+
+      const normalized = get().normalizeReadyToSellResponse(data);
+      set({ readyToSellData: normalized, readyToSellLoading: false, readyToSellError: null });
+      return normalized;
+    } catch (error) {
+      const mapped = get().normalizeError(error, 'โหลดรายการสินค้าพร้อมขายไม่สำเร็จ');
+      set({ readyToSellLoading: false, readyToSellError: mapped });
+      return null;
+    }
+  },
+
+  
+
+  // ✅ Ready-to-sell details (STRUCTURED)
+  fetchReadyToSellStructuredDetailsAction: async ({ branchId, productId, q = '' } = {}) => {
+    set({ readyToSellStructuredDetailsLoading: true, readyToSellStructuredDetailsError: null });
+    try {
+      if (!branchId) throw Object.assign(new Error('ไม่พบ branchId กรุณา login ใหม่'), { code: 'BRANCH_ID_MISSING' });
+      if (!productId) throw Object.assign(new Error('ไม่พบ productId'), { code: 'PRODUCT_ID_MISSING' });
+
+      const data = await getReadyToSellStructuredDetails({
+        branchId,
+        productId,
+        q: (q ?? '').toString().trim(),
+      });
+
+      const payload = data?.data ?? data;
+      const items = Array.isArray(payload?.items) ? payload.items : Array.isArray(payload) ? payload : [];
+      const total = Number(payload?.total ?? items.length);
+
+      const normalized = {
+        items,
+        total: Number.isFinite(total) ? total : items.length,
+        productId: Number(productId),
+      };
+
+      set({ readyToSellStructuredDetails: normalized, readyToSellStructuredDetailsLoading: false, readyToSellStructuredDetailsError: null });
+      return normalized;
+    } catch (error) {
+      const mapped = get().normalizeError(error, 'โหลดรายละเอียดสินค้าแบบ SN ไม่สำเร็จ');
+      set({ readyToSellStructuredDetailsLoading: false, readyToSellStructuredDetailsError: mapped });
+      return null;
+    }
+  },
+
+  resetReadyToSellAction: () => {
+    set({
+      readyToSellData: { items: [], page: 1, pageSize: 50, total: 0 },
+      readyToSellLoading: false,
+      readyToSellError: null,
+    });
+  },
+  
+  resetReadyToSellStructuredDetailsAction: () => {
+    set({
+      readyToSellStructuredDetails: { items: [], total: 0, productId: null },
+      readyToSellStructuredDetailsLoading: false,
+      readyToSellStructuredDetailsError: null,
+    });
+  },
 
   fetchProductsAction: async (filters = {}) => {
     set({ isLoading: true, error: null });
@@ -690,6 +825,8 @@ const useProductStore = create((set, get) => ({
 
 export default useProductStore;
   
+
+
 
 
 

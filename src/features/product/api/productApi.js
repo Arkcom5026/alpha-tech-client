@@ -2,8 +2,6 @@
 
 
 
-
-
 // ✅ src/features/product/api/productApi.js
 import apiClient from '@/utils/apiClient';
 import { parseApiError } from '@/utils/uiHelpers';
@@ -200,6 +198,66 @@ export const migrateSnToSimple = async (productId) => {
     const { data } = await apiClient.post(`products/${productId}/migrate-to-simple`);
     return data;
   } catch (err) { throw parseApiError(err); }
+};
+
+
+// ==================================================
+// Ready-to-sell (summary)
+// ==================================================
+// GET products/ready-to-sell?branchId=&q=&mode=&page=&pageSize=&sort=
+export const getReadyToSell = async ({ branchId, q = '', mode = 'ALL', page = 1, pageSize = 50, sort = 'receivedAt_desc' } = {}) => {
+  try {
+    if (!branchId) {
+      const e = new Error('ไม่พบ branchId กรุณา login ใหม่');
+      e.code = 'BRANCH_ID_MISSING';
+      throw e;
+    }
+
+    const params = {
+      branchId,
+      q: q?.trim() ? q.trim() : undefined,
+      mode,
+      page,
+      pageSize,
+      sort,
+      _ts: Date.now(),
+    };
+
+    const { data } = await apiClient.get('products/ready-to-sell', { params });
+    return data; // { items, total, page, pageSize }
+  } catch (err) {
+    throw parseApiError(err);
+  }
+};
+
+// ==================================================
+// Ready-to-sell (STRUCTURED details)
+// ==================================================
+// GET products/ready-to-sell/structured/:productId?q=
+export const getReadyToSellStructuredDetails = async ({ branchId, productId, q = '' } = {}) => {
+  try {
+    if (!branchId) {
+      const e = new Error('ไม่พบ branchId กรุณา login ใหม่');
+      e.code = 'BRANCH_ID_MISSING';
+      throw e;
+    }
+    if (!productId) {
+      const e = new Error('ไม่พบ productId');
+      e.code = 'PRODUCT_ID_MISSING';
+      throw e;
+    }
+
+    const params = {
+      branchId,
+      q: q?.trim() ? q.trim() : undefined,
+      _ts: Date.now(),
+    };
+
+    const { data } = await apiClient.get(`products/ready-to-sell/structured/${productId}`, { params });
+    return data; // { items, total }
+  } catch (err) {
+    throw parseApiError(err);
+  }
 };
 
 

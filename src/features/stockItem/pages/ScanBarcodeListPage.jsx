@@ -7,6 +7,7 @@
 
 
 
+
 // ScanBarcodeListPage.jsx
 
 import React, { useEffect, useState, useRef, useMemo } from 'react';
@@ -27,6 +28,13 @@ const ScanBarcodeListPage = () => {
   const [pageMessage, setPageMessage] = useState(null);
   const snInputRef = useRef(null);
   const barcodeInputRef = useRef(null);
+
+  // 🔁 เมื่อยิงบาร์โค้ดเสร็จและ input ถูกเคลียร์ ให้โฟกัสกลับมาที่ช่องยิงบาร์โค้ดทันที
+  useEffect(() => {
+    if (barcodeInput === '' && barcodeInputRef?.current) {
+      barcodeInputRef.current.focus();
+    }
+  }, [barcodeInput]);
 
   const {
     loadBarcodesAction,

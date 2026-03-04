@@ -27,7 +27,7 @@ const ProductTable = ({
   canDelete = false,
 
   density = 'normal',
-  showAllPrices = false,
+
 }) => {
   const handleEdit = onEdit;
 
@@ -48,29 +48,70 @@ const ProductTable = ({
   const rowClass = density === 'compact' ? 'text-xs' : 'text-sm';
   const cellPad = density === 'compact' ? 'py-1' : 'py-2';
 
-  const colCount = showAllPrices ? 11 : 8; // หมวด/ประเภท/แบรนด์/สเปก/เทมเพลต/ราคาปลีก/ราคาออนไลน์/จัดการ + (ราคาทุน/ส่ง/ช่าง)
+  const colCount = 11; // แสดงราคาทั้งหมดเสมอ (ทุน/ส่ง/ช่าง/ปลีก/ออนไลน์)
 
-  const fmt = (v) => (typeof v === 'number' ? v.toLocaleString('th-TH') : v ? Number(v).toLocaleString('th-TH') : '-');
+  // ✅ Price formatter (production UX):
+  // - null/undefined/''/0 -> show em dash with muted style ("no price")
+  // - number -> Thai format with tabular nums
+  const toNumOrNull = (v) => {
+    if (v === '' || v === null || v === undefined) return null;
+    const n = Number(v);
+    if (!Number.isFinite(n)) return null;
+    return n;
+  };
+
+  const priceCell = (v) => {
+    const n = toNumOrNull(v);
+    const isMissing = n == null || n === 0;
+    const text = isMissing ? '—' : n.toLocaleString('th-TH');
+    return <span className={isMissing ? 'opacity-50' : ''}>{text}</span>;
+  };
+
+  // ✅ Resolve price source (BranchPrice) - support multiple response shapes
+  // Expected DB fields: costPrice, priceWholesale, priceTechnician, priceRetail, priceOnline
+  const resolveBranchPrice = (item) => {
+    // Common shapes from BE
+    if (!item || typeof item !== 'object') return null;
+
+    // 1) flat fields already merged onto item
+    const hasFlat =
+      item.costPrice != null ||
+      item.priceRetail != null ||
+      item.priceOnline != null ||
+      item.priceWholesale != null ||
+      item.priceTechnician != null;
+    if (hasFlat) return item;
+
+    // 2) nested single object
+    const single = item.branchPrice || item.branchPriceRef || item.branchPriceByBranch || item.price || null;
+    if (single && typeof single === 'object') return single;
+
+    // 3) nested array (pick first; upstream should filter by branchId)
+    const arr = item.branchPrices || item.branchPriceList || item.prices || null;
+    if (Array.isArray(arr) && arr.length > 0) return arr[0];
+
+    return null;
+  };
 
   return (
     <div className="w-full overflow-x-auto">
       <Table className={rowClass}>
         <TableHeader className="sticky top-0 z-10">
           <TableRow className="bg-zinc-50/70 dark:bg-zinc-800/40">
-            <TableHead className="text-center w-[150px] text-zinc-700 dark:text-zinc-200">หมวดหมู่</TableHead>
-            <TableHead className="text-center w-[130px] text-zinc-700 dark:text-zinc-200">ประเภท</TableHead>
-            <TableHead className="text-center w-[130px] text-zinc-700 dark:text-zinc-200">แบรนด์</TableHead>
-            <TableHead className="text-center w-[160px] text-zinc-700 dark:text-zinc-200">โปรไฟล์</TableHead>
-            <TableHead className="text-left w-[180px] text-zinc-700 dark:text-zinc-200">เทมเพลต</TableHead>
+            <TableHead className="text-center w-[150px] text-zinc-700 dark:text-zinc-200">หมวดหมู่สินค้า (category)</TableHead>
+            <TableHead className="text-center w-[130px] text-zinc-700 dark:text-zinc-200">ประเภทสินค้า (productType)</TableHead>
+            <TableHead className="text-center w-[130px] text-zinc-700 dark:text-zinc-200">แบรนด์ (brand)</TableHead>
+            <TableHead className="text-center w-[160px] text-zinc-700 dark:text-zinc-200">SKU/รุ่น (sku/model)</TableHead>
+            <TableHead className="text-left w-[180px] text-zinc-700 dark:text-zinc-200">ชื่อสินค้า (name)</TableHead>
 
             {/* ตัวเลข: ให้ชิดขวาเสมอ */}
-            {showAllPrices && (
+            {
               <>
                 <TableHead className="text-right w-[90px] tabular-nums text-zinc-700 dark:text-zinc-200">ราคาทุน</TableHead>
                 <TableHead className="text-right w-[100px] tabular-nums text-zinc-700 dark:text-zinc-200">ราคาส่ง</TableHead>
                 <TableHead className="text-right w-[100px] tabular-nums text-zinc-700 dark:text-zinc-200">ราคาช่าง</TableHead>
               </>
-            )}
+            }
             <TableHead className="text-right w-[100px] tabular-nums text-zinc-700 dark:text-zinc-200">ราคาปลีก</TableHead>
             <TableHead className="text-right w-[110px] tabular-nums text-zinc-700 dark:text-zinc-200">ราคาออนไลน์</TableHead>
 
@@ -101,16 +142,12 @@ const ProductTable = ({
                     </div>
                   </TableCell>
 
-                  {showAllPrices && (
-                    <>
-                      <TableCell className={`text-right tabular-nums ${cellPad}`}>{fmt(item.costPrice)}</TableCell>
-                      <TableCell className={`text-right tabular-nums ${cellPad}`}>{fmt(item.priceWholesale)}</TableCell>
-                      <TableCell className={`text-right tabular-nums ${cellPad}`}>{fmt(item.priceTechnician)}</TableCell>
-                    </>
-                  )}
-
-                  <TableCell className={`text-right tabular-nums ${cellPad}`}>{fmt(item.priceRetail)}</TableCell>
-                  <TableCell className={`text-right tabular-nums ${cellPad}`}>{fmt(item.priceOnline)}</TableCell>
+                
+                  <TableCell className={`text-right tabular-nums ${cellPad}`}>{priceCell(resolveBranchPrice(item)?.costPrice ?? item.costPrice)}</TableCell>
+                  <TableCell className={`text-right tabular-nums ${cellPad}`}>{priceCell(resolveBranchPrice(item)?.priceWholesale ?? item.priceWholesale)}</TableCell>
+                  <TableCell className={`text-right tabular-nums ${cellPad}`}>{priceCell(resolveBranchPrice(item)?.priceTechnician ?? item.priceTechnician)}</TableCell>
+                  <TableCell className={`text-right tabular-nums ${cellPad}`}>{priceCell(resolveBranchPrice(item)?.priceRetail ?? item.priceRetail)}</TableCell>
+                  <TableCell className={`text-right tabular-nums ${cellPad}`}>{priceCell(resolveBranchPrice(item)?.priceOnline ?? item.priceOnline)}</TableCell>
 
                   <TableCell className={`px-4 ${cellPad} text-right whitespace-nowrap sticky right-0 z-10 bg-white dark:bg-zinc-900`}>
                     <div className="inline-flex items-center gap-2 justify-end min-w-[220px]">
@@ -154,6 +191,10 @@ const ProductTable = ({
 };
 
 export default ProductTable;
+
+
+
+
 
 
 

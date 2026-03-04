@@ -1,10 +1,3 @@
-
-
-
-
-
-
-
 // ✅ src/features/product/components/ProductForm.jsx
 
 import React, { useEffect, useRef, useCallback, useMemo, useState } from 'react';
@@ -187,7 +180,7 @@ const ProductForm = ({
         categoryId: catId === '' || catId == null ? '' : Number(catId),
         productTypeId: typeId === '' || typeId == null ? '' : Number(typeId),
 
-        // ✅ Brand (optional) — Product-level
+        // ✅ Brand — required by UX (but allow name to include brand as well)
         brandId:
           data?.brandId !== '' && data?.brandId != null
             ? Number(data.brandId)
@@ -252,7 +245,6 @@ const ProductForm = ({
   } = methods;
 
   // ✅ watch productTypeId safely (react-hook-form)
-  // NOTE: keep this declared exactly once (avoid "already been declared")
   const watchedProductTypeId = useWatch({ control, name: 'productTypeId' });
 
   function toStr(v) {
@@ -290,9 +282,7 @@ const ProductForm = ({
     return _.sortBy(uniq, (b) => String(b?.name ?? ''));
   }, [brandItems]);
 
-    // ✅ Type → Brand mapping (ProductTypeBrand)
-  // - ถ้า BE ส่ง mapping มาพร้อม dropdowns → ใช้กรองแบรนด์ใน FE
-  // - ถ้าไม่มี mapping → อย่างน้อยเราจะพยายามให้ BE ส่งแบรนด์แบบ filter ตาม productTypeId (ผ่าน /api/brands/dropdowns)
+  // ✅ Type → Brand mapping (ProductTypeBrand)
   const pickFirstArray = (...candidates) => {
     for (const c of candidates) {
       if (Array.isArray(c)) return c;
@@ -325,12 +315,11 @@ const ProductForm = ({
     // ยังไม่เลือก type → ไม่กรอง
     if (!typeIdStr) return null;
 
-    // ไม่มี mapping → ไม่กรอง (ปล่อยให้ BE-filter หรือแสดงทั้งหมด)
+    // ไม่มี mapping → ไม่กรอง
     if (arr.length === 0) return null;
 
     const set = new Set();
     for (const row of arr) {
-      // tolerate row shapes
       const pt = row?.productTypeId ?? row?.typeId ?? row?.product_type_id ?? row?.product_typeId;
       const bid = row?.brandId ?? row?.brand_id ?? row?.brand?.id;
       if (pt == null || bid == null) continue;
@@ -346,12 +335,11 @@ const ProductForm = ({
     if (allowedBrandIdSet) {
       return safeBrands.filter((b) => allowedBrandIdSet.has(String(b.id)));
     }
-    // 2) ถ้าไม่มี mapping → ใช้รายการจาก store ตามที่ BE ส่งมา (อาจจะ filter แล้ว)
+    // 2) ถ้าไม่มี mapping → ใช้รายการจาก store ตามที่ BE ส่งมา
     return safeBrands;
   }, [safeBrands, allowedBrandIdSet]);
 
   // ✅ Ensure brands dropdown is requested with productTypeId (BE-side filter)
-  // หมายเหตุ: เราไม่ "ensure mapping" ที่นี่เพื่อไม่ไปผูกกับ action ใหม่/เก่าใน productStore
   useEffect(() => {
     if (!hasToken) return;
     if (typeof fetchBrandsAction !== 'function') return;
@@ -389,7 +377,6 @@ const ProductForm = ({
   }, [watchedProductTypeId, allowedBrandIdSet, setValue, watch]);
 
   // ✅ Optional helpers: Profile / Template (from product dropdowns)
-
   const safeProfiles = useMemo(() => {
     const raw = dropdowns?.productProfiles ?? dropdowns?.profiles ?? dropdowns?.productProfileItems ?? [];
     const arr = Array.isArray(raw) ? raw : [];
@@ -429,7 +416,6 @@ const ProductForm = ({
     const cleanBase = _.omit(data || {}, ['initialQty']);
 
     // ✅ SSoT: mode (SIMPLE = นับจำนวน, STRUCTURED = มี SN รายชิ้น)
-    // - ส่ง `mode` ตรง ๆ เสมอ (อย่าลบทิ้ง) เพื่อให้ BE/DB เปลี่ยนได้แน่นอน
     const modeVal = String(cleanBase?.mode ?? '').trim().toUpperCase();
     const resolvedMode = modeVal === 'SIMPLE' ? 'SIMPLE' : 'STRUCTURED';
 
@@ -437,6 +423,13 @@ const ProductForm = ({
     const normalizeText = (v) => {
       const s = (v ?? '').toString().trim();
       return s.length ? s : null;
+    };
+
+    const bp = cleanBase?.branchPrice ?? {};
+    const numOrNull = (v) => {
+      if (v === '' || v == null) return null;
+      const n = Number(v);
+      return Number.isFinite(n) ? n : null;
     };
 
     const payload = {
@@ -450,10 +443,18 @@ const ProductForm = ({
       shortName: normalizeText(cleanBase.shortName),
       model: normalizeText(cleanBase.model),
 
-      // ✅ Stock mode fields (DB)
       mode: resolvedMode,
       noSN: resolvedMode === 'SIMPLE',
       trackSerialNumber: resolvedMode === 'STRUCTURED',
+
+      // ✅ ราคาต่อสาขา (BranchPrice) — BE resolve branch context
+      branchPrice: {
+        costPrice: numOrNull(bp.costPrice),
+        priceWholesale: numOrNull(bp.priceWholesale),
+        priceTechnician: numOrNull(bp.priceTechnician),
+        priceRetail: numOrNull(bp.priceRetail),
+        priceOnline: numOrNull(bp.priceOnline),
+      },
     };
 
     await onSubmit(payload);
@@ -545,10 +546,7 @@ const ProductForm = ({
                           }
                         }
 
-                        // create: บังคับลำดับให้ชัด
                         if (mode === 'create') setStrict(true);
-
-                        // ถ้าเพิ่งเริ่มเลือกหมวด (จากว่าง → มีค่า) ก็ถือว่า strict ได้
                         if (!prevCatStr && nextCat) setStrict(true);
                       }}
                     >
@@ -615,15 +613,16 @@ const ProductForm = ({
               ) : null}
             </div>
 
-            {/* แบรนด์ */}
+            {/* แบรนด์ (required) */}
             <div>
               <label htmlFor="brandId" className="block font-medium mb-1 text-gray-700">
-                แบรนด์
+                แบรนด์ <span className="text-red-500">*</span>
               </label>
               <Controller
                 name="brandId"
                 control={control}
                 defaultValue=""
+                rules={{ required: 'กรุณาเลือกแบรนด์' }}
                 render={({ field }) => (
                   <select
                     id="brandId"
@@ -634,7 +633,7 @@ const ProductForm = ({
                       field.onChange(v === '' ? '' : Number(v));
                     }}
                   >
-                    <option value="">-- ไม่ระบุแบรนด์ --</option>
+                    <option value="">-- เลือกแบรนด์ --</option>
                     {brandsForSelect.map((b) => (
                       <option key={`brand_${String(b.id)}`} value={String(b.id)}>
                         {b.name}
@@ -643,143 +642,14 @@ const ProductForm = ({
                   </select>
                 )}
               />
+              {errors?.brandId && <p className="text-red-500 text-sm mt-1">{String(errors.brandId.message)}</p>}
+
               {/* ✅ ช่วย debug ทันทีว่า filter ทำงานหรือยัง */}
               {toStr(watch('productTypeId')) ? (
                 <div className="mt-1 text-xs text-gray-500">
                   แบรนด์ที่แสดง: {brandsForSelect.length} รายการ
                   {allowedBrandIdSet ? ` (ตาม mapping ของประเภทสินค้า)` : ' (ยังไม่พบ mapping → แสดงทั้งหมด)'}
                 </div>
-              ) : null}
-            </div>
-          </div>
-        </div>
-
-        {/* ===================== Helper Layer ===================== */}
-        <div className="rounded-lg border bg-white p-4">
-          <div>
-            <div className="font-semibold text-gray-700 flex items-center gap-2">
-              🧰 <span>ข้อมูลเพิ่มเติม / ตัวช่วย (ไม่บังคับ)</span>
-            </div>
-            <div className="text-sm text-gray-500">ช่วยให้ค้นหา/จัดกลุ่ม/กรอกได้เร็วขึ้น และลดการพิมพ์ซ้ำใน “ชื่อสินค้า”</div>
-          </div>
-
-          <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label htmlFor="shortName" className="block font-medium mb-1 text-gray-700">
-                คำเรียกสินค้า (ชื่อเรียกสั้น)
-              </label>
-              <input
-                id="shortName"
-                type="text"
-                placeholder="เช่น V04, NV2, G102"
-                className="w-full p-2 border rounded-md focus:ring-blue-400 focus:border-blue-400 text-gray-800"
-                {...register('shortName')}
-              />
-              <div className="mt-1 text-xs text-gray-500">
-                * แนะนำกรอกอย่างใดอย่างหนึ่ง: <span className="font-medium">คำเรียกสั้น</span> หรือ{' '}
-                <span className="font-medium">Model</span> (กรอกทั้งคู่ได้ถ้าจำเป็น)
-              </div>
-            </div>
-
-            <div>
-              <label htmlFor="model" className="block font-medium mb-1 text-gray-700">
-                รุ่น / Model (optional)
-              </label>
-              <input
-                id="model"
-                type="text"
-                placeholder="เช่น i5-12400, NVMe 1TB, Gen4"
-                className="w-full p-2 border rounded-md focus:ring-blue-400 focus:border-blue-400 text-gray-800"
-                {...register('model')}
-              />
-              <div className="mt-1 text-xs text-gray-500">* ถ้าใส่รุ่นไว้ในชื่อสินค้าอยู่แล้ว ช่องนี้ปล่อยว่างได้ (ลดการกรอกซ้ำ)</div>
-            </div>
-
-            <div>
-              <label htmlFor="productProfileId" className="block font-medium mb-1 text-gray-700">
-                โปรไฟล์ (optional)
-              </label>
-              <Controller
-                name="productProfileId"
-                control={control}
-                defaultValue=""
-                render={({ field }) => (
-                  <select
-                    id="productProfileId"
-                    className="w-full p-2 border rounded-md focus:ring-blue-400 focus:border-blue-400 text-gray-800"
-                    value={field.value === '' || field.value == null ? '' : String(field.value)}
-                    onChange={(e) => {
-                      const v = e.target.value;
-                      const next = v === '' ? '' : Number(v);
-                      field.onChange(next);
-
-                      // ถ้าเปลี่ยน profile แล้ว template ที่เลือกอยู่ไม่สอดคล้อง → เคลียร์
-                      const currTemplateId = toStr(watch('productTemplateId'));
-                      if (!currTemplateId) return;
-
-                      const tpl = safeTemplates.find((t) => String(t.id) === String(currTemplateId));
-                      const tplProfileId = tpl?.productProfileId ?? tpl?.profileId;
-                      if (next && tplProfileId != null && String(tplProfileId) !== String(next)) {
-                        setValue('productTemplateId', '');
-                      }
-                    }}
-                  >
-                    <option value="">-- ไม่ระบุโปรไฟล์ --</option>
-                    {safeProfiles.map((p) => (
-                      <option key={`profile_${String(p.id)}`} value={String(p.id)}>
-                        {p.name}
-                      </option>
-                    ))}
-                  </select>
-                )}
-              />
-            </div>
-
-            <div>
-              <label htmlFor="productTemplateId" className="block font-medium mb-1 text-gray-700">
-                เทมเพลต (optional)
-              </label>
-              <Controller
-                name="productTemplateId"
-                control={control}
-                defaultValue=""
-                render={({ field }) => {
-                  const profileIdStr = toStr(watch('productProfileId'));
-                  const filteredTemplates = profileIdStr
-                    ? safeTemplates.filter((t) => String(t?.productProfileId ?? t?.profileId ?? '') === String(profileIdStr))
-                    : safeTemplates;
-
-                  return (
-                    <select
-                      id="productTemplateId"
-                      className="w-full p-2 border rounded-md focus:ring-blue-400 focus:border-blue-400 text-gray-800"
-                      value={field.value === '' || field.value == null ? '' : String(field.value)}
-                      onChange={(e) => {
-                        const v = e.target.value;
-                        const next = v === '' ? '' : Number(v);
-                        field.onChange(next);
-
-                        // ถ้าเลือก template แล้ว profile ยังว่าง → auto-fill profile จาก template
-                        if (!next) return;
-                        const tpl = safeTemplates.find((t) => String(t.id) === String(next));
-                        const tplProfileId = tpl?.productProfileId ?? tpl?.profileId;
-                        if (tplProfileId != null && !toStr(watch('productProfileId'))) {
-                          setValue('productProfileId', Number(tplProfileId));
-                        }
-                      }}
-                    >
-                      <option value="">-- ไม่ระบุเทมเพลต --</option>
-                      {filteredTemplates.map((t) => (
-                        <option key={`template_${String(t.id)}`} value={String(t.id)}>
-                          {t.name}
-                        </option>
-                      ))}
-                    </select>
-                  );
-                }}
-              />
-              {toStr(watch('productProfileId')) ? (
-                <div className="mt-1 text-xs text-gray-500">* แสดงเทมเพลตที่อยู่ภายใต้โปรไฟล์ที่เลือก</div>
               ) : null}
             </div>
           </div>
@@ -811,7 +681,7 @@ const ProductForm = ({
                       <input
                         id="name"
                         type="text"
-                        placeholder="เช่น Kingston NV2 1TB, Acer Nitro 5"
+                        placeholder="เช่น CANON CL-811 COL, Kingston NV2 1TB"
                         {...register('name', { required: 'กรุณาระบุชื่อสินค้า' })}
                         className="w-full p-2 border rounded-md focus:ring-blue-400 focus:border-blue-400 text-gray-800"
                       />
@@ -840,11 +710,11 @@ const ProductForm = ({
                         พบข้อมูลซ้ำในชื่อสินค้า: {hasBrandInName ? 'แบรนด์ ' : ''}
                         {hasShortInName ? 'คำเรียกสั้น ' : ''}
                         {hasModelInName ? 'Model ' : ''}
-                        <span className="ml-1">(ถ้ากรอกไว้ในช่องแยกแล้ว สามารถเอาออกจากชื่อสินค้าได้)</span>
+                        <span className="ml-1">(ถ้าชื่อสินค้ามียี่ห้อซ้ำอยู่แล้วถือว่าใช้ได้ ไม่จำเป็นต้องแก้)</span>
                       </div>
                     ) : (
                       <div className="mt-1 text-xs text-gray-500">
-                        Tip: เลือกแบรนด์/ใส่คำเรียกสั้นหรือ Model แล้วกด “เติมชื่อจากข้อมูลที่เลือก” เพื่อลดการพิมพ์ซ้ำ
+                        Tip: เลือกแบรนด์/ใส่คำเรียกสั้นหรือ Model แล้วกด “เติมจาก Helper” เพื่อช่วยกรอกชื่อให้เร็วขึ้น (ถ้าชื่อมีแบรนด์ซ้ำอยู่แล้วถือว่าใช้ได้)
                       </div>
                     )}
                   </>
@@ -856,10 +726,141 @@ const ProductForm = ({
             <div />
           </div>
 
+          {/* ===================== Helper Layer ===================== */}
+          <div className="rounded-lg border bg-white p-4">
+            <div>
+              <div className="font-semibold text-gray-700 flex items-center gap-2">
+                🧰 <span>ข้อมูลเพิ่มเติม / ตัวช่วย (ไม่บังคับ)</span>
+              </div>
+              <div className="text-sm text-gray-500">ช่วยให้ค้นหา/จัดกลุ่ม/กรอกได้เร็วขึ้น และลดการพิมพ์ซ้ำใน “ชื่อสินค้า”</div>
+            </div>
+
+            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label htmlFor="shortName" className="block font-medium mb-1 text-gray-700">
+                  คำเรียกสินค้า (ชื่อเรียกสั้น)
+                </label>
+                <input
+                  id="shortName"
+                  type="text"
+                  placeholder="เช่น 811, V04, NV2"
+                  className="w-full p-2 border rounded-md focus:ring-blue-400 focus:border-blue-400 text-gray-800"
+                  {...register('shortName')}
+                />
+                <div className="mt-1 text-xs text-gray-500">
+                  * แนะนำกรอกอย่างใดอย่างหนึ่ง: <span className="font-medium">คำเรียกสั้น</span> หรือ{' '}
+                  <span className="font-medium">Model</span> (กรอกทั้งคู่ได้ถ้าจำเป็น)
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="model" className="block font-medium mb-1 text-gray-700">
+                  รุ่น / Model (optional)
+                </label>
+                <input
+                  id="model"
+                  type="text"
+                  placeholder="เช่น CL-811, i5-12400, Gen4"
+                  className="w-full p-2 border rounded-md focus:ring-blue-400 focus:border-blue-400 text-gray-800"
+                  {...register('model')}
+                />
+                <div className="mt-1 text-xs text-gray-500">* ถ้าใส่รุ่นไว้ในชื่อสินค้าอยู่แล้ว ช่องนี้ปล่อยว่างได้ (ลดการกรอกซ้ำ)</div>
+              </div>
+
+              <div>
+                <label htmlFor="productProfileId" className="block font-medium mb-1 text-gray-700">
+                  โปรไฟล์ (optional)
+                </label>
+                <Controller
+                  name="productProfileId"
+                  control={control}
+                  defaultValue=""
+                  render={({ field }) => (
+                    <select
+                      id="productProfileId"
+                      className="w-full p-2 border rounded-md focus:ring-blue-400 focus:border-blue-400 text-gray-800"
+                      value={field.value === '' || field.value == null ? '' : String(field.value)}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        const next = v === '' ? '' : Number(v);
+                        field.onChange(next);
+
+                        const currTemplateId = toStr(watch('productTemplateId'));
+                        if (!currTemplateId) return;
+
+                        const tpl = safeTemplates.find((t) => String(t.id) === String(currTemplateId));
+                        const tplProfileId = tpl?.productProfileId ?? tpl?.profileId;
+                        if (next && tplProfileId != null && String(tplProfileId) !== String(next)) {
+                          setValue('productTemplateId', '');
+                        }
+                      }}
+                    >
+                      <option value="">-- ไม่ระบุโปรไฟล์ --</option>
+                      {safeProfiles.map((p) => (
+                        <option key={`profile_${String(p.id)}`} value={String(p.id)}>
+                          {p.name}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                />
+              </div>
+
+              <div>
+                <label htmlFor="productTemplateId" className="block font-medium mb-1 text-gray-700">
+                  เทมเพลต (optional)
+                </label>
+                <Controller
+                  name="productTemplateId"
+                  control={control}
+                  defaultValue=""
+                  render={({ field }) => {
+                    const profileIdStr = toStr(watch('productProfileId'));
+                    const filteredTemplates = profileIdStr
+                      ? safeTemplates.filter((t) => String(t?.productProfileId ?? t?.profileId ?? '') === String(profileIdStr))
+                      : safeTemplates;
+
+                    return (
+                      <select
+                        id="productTemplateId"
+                        className="w-full p-2 border rounded-md focus:ring-blue-400 focus:border-blue-400 text-gray-800"
+                        value={field.value === '' || field.value == null ? '' : String(field.value)}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          const next = v === '' ? '' : Number(v);
+                          field.onChange(next);
+
+                          if (!next) return;
+                          const tpl = safeTemplates.find((t) => String(t.id) === String(next));
+                          const tplProfileId = tpl?.productProfileId ?? tpl?.profileId;
+                          if (tplProfileId != null && !toStr(watch('productProfileId'))) {
+                            setValue('productProfileId', Number(tplProfileId));
+                          }
+                        }}
+                      >
+                        <option value="">-- ไม่ระบุเทมเพลต --</option>
+                        {filteredTemplates.map((t) => (
+                          <option key={`template_${String(t.id)}`} value={String(t.id)}>
+                            {t.name}
+                          </option>
+                        ))}
+                      </select>
+                    );
+                  }}
+                />
+                {toStr(watch('productProfileId')) ? (
+                  <div className="mt-1 text-xs text-gray-500">* แสดงเทมเพลตที่อยู่ภายใต้โปรไฟล์ที่เลือก</div>
+                ) : null}
+              </div>
+            </div>
+          </div>
+
           {/* ===================== Stock Behavior (Helper ด้านสต๊อก) ===================== */}
           <div className="rounded-lg border bg-white p-4">
             <div className="mb-4">
-              <div className="font-semibold text-gray-800 flex items-center gap-2">⚙️ <span>Stock Behavior</span></div>
+              <div className="font-semibold text-gray-800 flex items-center gap-2">
+                ⚙️ <span>Stock Behavior</span>
+              </div>
               <div className="text-sm text-gray-500">กำหนดพฤติกรรมการจัดการสต๊อก ไม่ใช่ตัวตนของสินค้า</div>
             </div>
 
@@ -887,14 +888,13 @@ const ProductForm = ({
               </div>
             </div>
 
-            {/* ราคาต่อสาขา (BranchPrice) */}
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mt-4 ">
+            {/* ราคาสินค้า (BranchPrice) */}
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mt-4">
               <div>
                 <Controller
                   name="branchPrice.costPrice"
                   control={control}
                   rules={{
-                    valueAsNumber: true,
                     validate: (v) => {
                       const n = Number.parseFloat(String(v ?? ''));
                       if (!Number.isFinite(n)) return 'กรุณาระบุราคาทุน';
@@ -902,11 +902,7 @@ const ProductForm = ({
                     },
                   }}
                   render={({ field }) => (
-                    <PaymentInput
-                      title="ราคาทุน"
-                      value={field.value === 0 ? '' : field.value}
-                      onChange={(val) => field.onChange(val === '' ? 0 : parseFloat(val))}
-                    />
+                    <PaymentInput title="ราคาทุน" value={field.value ?? ''} onChange={(val) => field.onChange(val)} />
                   )}
                 />
                 {errors.branchPrice?.costPrice && (
@@ -918,13 +914,16 @@ const ProductForm = ({
                 <Controller
                   name="branchPrice.priceWholesale"
                   control={control}
-                  rules={{ valueAsNumber: true, min: { value: 0, message: 'ราคาขายส่งต้องไม่ติดลบ' } }}
+                  rules={{
+                    validate: (v) => {
+                      if (v === '' || v == null) return true;
+                      const n = Number(v);
+                      if (!Number.isFinite(n)) return 'รูปแบบตัวเลขไม่ถูกต้อง';
+                      return n >= 0 || 'ราคาขายส่งต้องไม่ติดลบ';
+                    },
+                  }}
                   render={({ field }) => (
-                    <PaymentInput
-                      title="ราคาขายส่ง"
-                      value={field.value === 0 ? '' : field.value}
-                      onChange={(val) => field.onChange(val === '' ? 0 : parseFloat(val))}
-                    />
+                    <PaymentInput title="ราคาขายส่ง" value={field.value ?? ''} onChange={(val) => field.onChange(val)} />
                   )}
                 />
                 {errors.branchPrice?.priceWholesale && (
@@ -936,13 +935,16 @@ const ProductForm = ({
                 <Controller
                   name="branchPrice.priceTechnician"
                   control={control}
-                  rules={{ valueAsNumber: true, min: { value: 0, message: 'ราคาช่างต้องไม่ติดลบ' } }}
+                  rules={{
+                    validate: (v) => {
+                      if (v === '' || v == null) return true;
+                      const n = Number(v);
+                      if (!Number.isFinite(n)) return 'รูปแบบตัวเลขไม่ถูกต้อง';
+                      return n >= 0 || 'ราคาช่างต้องไม่ติดลบ';
+                    },
+                  }}
                   render={({ field }) => (
-                    <PaymentInput
-                      title="ราคาช่าง"
-                      value={field.value === 0 ? '' : field.value}
-                      onChange={(val) => field.onChange(val === '' ? 0 : parseFloat(val))}
-                    />
+                    <PaymentInput title="ราคาช่าง" value={field.value ?? ''} onChange={(val) => field.onChange(val)} />
                   )}
                 />
                 {errors.branchPrice?.priceTechnician && (
@@ -954,13 +956,16 @@ const ProductForm = ({
                 <Controller
                   name="branchPrice.priceRetail"
                   control={control}
-                  rules={{ valueAsNumber: true, min: { value: 0, message: 'ราคาขายปลีกต้องไม่ติดลบ' } }}
+                  rules={{
+                    validate: (v) => {
+                      if (v === '' || v == null) return true;
+                      const n = Number(v);
+                      if (!Number.isFinite(n)) return 'รูปแบบตัวเลขไม่ถูกต้อง';
+                      return n >= 0 || 'ราคาขายปลีกต้องไม่ติดลบ';
+                    },
+                  }}
                   render={({ field }) => (
-                    <PaymentInput
-                      title="ราคาขายปลีก"
-                      value={field.value === 0 ? '' : field.value}
-                      onChange={(val) => field.onChange(val === '' ? 0 : parseFloat(val))}
-                    />
+                    <PaymentInput title="ราคาขายปลีก" value={field.value ?? ''} onChange={(val) => field.onChange(val)} />
                   )}
                 />
                 {errors.branchPrice?.priceRetail && (
@@ -972,13 +977,16 @@ const ProductForm = ({
                 <Controller
                   name="branchPrice.priceOnline"
                   control={control}
-                  rules={{ valueAsNumber: true, min: { value: 0, message: 'ราคาออนไลน์ต้องไม่ติดลบ' } }}
+                  rules={{
+                    validate: (v) => {
+                      if (v === '' || v == null) return true;
+                      const n = Number(v);
+                      if (!Number.isFinite(n)) return 'รูปแบบตัวเลขไม่ถูกต้อง';
+                      return n >= 0 || 'ราคาออนไลน์ต้องไม่ติดลบ';
+                    },
+                  }}
                   render={({ field }) => (
-                    <PaymentInput
-                      title="ราคาออนไลน์"
-                      value={field.value === 0 ? '' : field.value}
-                      onChange={(val) => field.onChange(val === '' ? 0 : parseFloat(val))}
-                    />
+                    <PaymentInput title="ราคาออนไลน์" value={field.value ?? ''} onChange={(val) => field.onChange(val)} />
                   )}
                 />
                 {errors.branchPrice?.priceOnline && (
@@ -1045,15 +1053,3 @@ const ProductForm = ({
 };
 
 export default ProductForm;
-
-
-
-
-
-
-
-
-
-
-
-

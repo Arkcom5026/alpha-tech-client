@@ -462,7 +462,7 @@ const BarcodeReceiptListPage = () => {
                 </button>
               </div>
               {remoteSupplierSearchActive ? (
-                <div className="text-xs text-gray-500">กำลังใช้ผลการค้นหาจากชื่อ Supplier (API)</div>
+                <div className="text-xs text-gray-500"></div>
               ) : (
                 <div className="text-xs text-gray-500"></div>
               )}

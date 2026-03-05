@@ -3,20 +3,10 @@
 
 
 
-
-
-
-
-
-
-
-
-
-
-
 // src/features/barcode/store/barcodeStore.js
 import { create } from 'zustand';
-import apiClient from '@/utils/apiClient';
+// ❌ Store must not call apiClient directly (project rule)
+// import apiClient from '@/utils/apiClient';
 import {
   getBarcodesByReceiptId,
   generateMissingBarcodes,
@@ -27,10 +17,12 @@ import {
   receiveStockItem,
   updateSerialNumber,
   markBarcodesAsPrinted,
+  searchReprintReceipts,
 } from '../api/barcodeApi';
 
 // ✅ Receipt finalization (must be called via Store; components must not call API directly)
-import { finalizeReceiptIfNeeded } from '@/features/purchaseOrderReceipt/api/purchaseOrderReceiptApi';
+// ✅ Receipt APIs (Store must call via ...Api only)
+import { finalizeReceiptIfNeeded, getReceiptById } from '@/features/purchaseOrderReceipt/api/purchaseOrderReceiptApi';
 
 
 // 🔧 ตัวช่วยให้ shape ของ barcodes สอดคล้องกันทุก endpoint
@@ -214,8 +206,8 @@ const useBarcodeStore = create((set, get) => ({
   // ✅ โหลดใบรับสินค้าพร้อม supplier
   loadReceiptWithSupplierAction: async (receiptId) => {
     try {
-      const res = await apiClient.get(`/purchase-order-receipts/${receiptId}`);
-      set({ currentReceipt: res.data });
+      const data = await getReceiptById(receiptId);
+      set({ currentReceipt: data });
     } catch (err) {
       console.error('[loadReceiptWithSupplierAction]', err);
       set({ error: 'โหลดข้อมูลใบรับสินค้าไม่สำเร็จ' });
@@ -452,21 +444,60 @@ const useBarcodeStore = create((set, get) => ({
     }
   },
 
-  searchReprintReceiptsAction: async ({ mode = 'RC', query, printed = true } = {}) => {
+  searchReprintReceiptsAction: async ({
+    mode = 'RC',
+    query,
+    printed = true,
+    supplierKeyword,
+    limit = 50,
+  } = {}) => {
     const q = String(query ?? '').trim();
-    if (!q) return [];
+    const sup = String(supplierKeyword ?? '').trim();
+
+    // ✅ allow supplier-only search (ERP-scale)
+    if (!q && !sup) return [];
+
+    const lim = (() => {
+      const n = Number(limit);
+      if (!Number.isFinite(n)) return 50;
+      return Math.min(Math.max(Math.trunc(n), 1), 50);
+    })();
+
     try {
-      const res = await apiClient.get('/barcodes/reprint-search', { params: { mode, query: q, printed } });
-      return Array.isArray(res.data) ? res.data : res.data?.data ?? [];
+      // ✅ Store must call API via ...Api (single source of truth)
+      const rows = await searchReprintReceipts({
+        mode,
+        query: q,
+        printed,
+        supplierKeyword: sup,
+        limit: lim,
+      });
+      return Array.isArray(rows) ? rows : [];
     } catch (err) {
+      // ✅ Minimal Disruption: keep a safe fallback (still via ...Api)
       console.warn('[searchReprintReceiptsAction] fallback', err?.response?.status);
       try {
-        const res2 = await apiClient.get('/barcodes/with-barcodes', { params: { printed: true } });
-        const rows = Array.isArray(res2.data) ? res2.data : [];
-        const lower = q.toLowerCase();
-        return mode === 'RC'
-          ? rows.filter((r) => String(r.code || '').toLowerCase().includes(lower))
-          : rows.filter((r) => String(r.purchaseOrderCode || r.orderCode || '').toLowerCase().includes(lower));
+        const rows = await getReceiptsWithBarcodes({ printed: true });
+        const list = Array.isArray(rows) ? rows : [];
+
+        const lowerQ = q.toLowerCase();
+        const lowerSup = sup.toLowerCase();
+
+        const matchSupplier = (r) => {
+          if (!lowerSup) return true;
+          const name = String(r?.supplier || r?.supplierName || r?.purchaseOrderSupplier || '').toLowerCase();
+          return name.includes(lowerSup);
+        };
+
+        const matchCode = (r) => {
+          if (!lowerQ) return true;
+          if (String(mode).toUpperCase() === 'PO') {
+            return String(r?.purchaseOrderCode || r?.orderCode || r?.poCode || '').toLowerCase().includes(lowerQ);
+          }
+          return String(r?.code || r?.receiptCode || '').toLowerCase().includes(lowerQ);
+        };
+
+        return list.filter((r) => matchSupplier(r) && matchCode(r)).slice(0, lim);
       } catch (fallbackErr) {
         console.error('[searchReprintReceiptsAction] ❌', fallbackErr);
         set({ error: fallbackErr?.message || 'ค้นหาใบรับเพื่อพิมพ์ซ้ำล้มเหลว' });
@@ -491,6 +522,15 @@ const useBarcodeStore = create((set, get) => ({
 }));
 
 export default useBarcodeStore;
+
+
+
+
+
+
+
+
+
 
 
 

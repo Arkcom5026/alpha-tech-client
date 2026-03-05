@@ -10,10 +10,9 @@
 
 // ScanBarcodeListPage.jsx
 
-import React, { useEffect, useState, useRef, useMemo } from 'react';
+import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 
-import PendingBarcodeTable from '../components/PendingBarcodeTable';
 import useBarcodeStore from '@/features/barcode/store/barcodeStore';
 
 const ScanBarcodeListPage = () => {
@@ -24,6 +23,17 @@ const ScanBarcodeListPage = () => {
   const [snInput, setSnInput] = useState('');
   const [keepSN, setKeepSN] = useState(false);
   const [inputStartTime, setInputStartTime] = useState(null);
+
+  // ✅ Warehouse UX: flash highlight แถวล่าสุดที่ยิงสำเร็จ (ช่วยให้ตาไล่ของได้เร็ว)
+  const [lastFlashBarcode, setLastFlashBarcode] = useState('');
+  const [lastFlashAt, setLastFlashAt] = useState(0);
+
+  const triggerSuccessFlash = useCallback((barcode) => {
+    const b = String(barcode || '').trim();
+    if (!b) return;
+    setLastFlashBarcode(b);
+    setLastFlashAt(Date.now());
+  }, []);
   const [snError, setSnError] = useState('');
   const [pageMessage, setPageMessage] = useState(null);
   const snInputRef = useRef(null);
@@ -59,25 +69,44 @@ const ScanBarcodeListPage = () => {
     if (keepSN && snInputRef.current) snInputRef.current.focus();
   }, [keepSN]);
 
-  const playBeep = () => {
-    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    const oscillator = audioCtx.createOscillator();
-    oscillator.type = 'sine';
-    oscillator.frequency.setValueAtTime(800, audioCtx.currentTime);
-    oscillator.connect(audioCtx.destination);
-    oscillator.start();
-    oscillator.stop(audioCtx.currentTime + 0.1);
+  // ✅ Warehouse UX: Beep (success) / Error Beep (fail) แบบประหยัด resource
+  const audioCtxRef = useRef(null);
+  const ensureAudioCtx = () => {
+    try {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return null;
+      if (!audioCtxRef.current) audioCtxRef.current = new Ctx();
+      if (audioCtxRef.current.state === 'suspended') {
+        audioCtxRef.current.resume?.().catch(() => {});
+      }
+      return audioCtxRef.current;
+    } catch (_) {
+      return null;
+    }
   };
 
-  const playErrorBeep = () => {
-    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    const oscillator = audioCtx.createOscillator();
-    oscillator.type = 'square';
-    oscillator.frequency.setValueAtTime(300, audioCtx.currentTime);
-    oscillator.connect(audioCtx.destination);
-    oscillator.start();
-    oscillator.stop(audioCtx.currentTime + 0.12);
+  const playTone = (frequency, durationMs, type) => {
+    const ctx = ensureAudioCtx();
+    if (!ctx) return;
+    try {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(frequency, ctx.currentTime);
+      gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.2, ctx.currentTime + 0.005);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + durationMs / 1000);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + durationMs / 1000);
+    } catch (_) {
+      // ignore
+    }
   };
+
+  const playBeep = () => playTone(880, 90, 'sine');
+  const playErrorBeep = () => playTone(260, 120, 'square');
 
   // ✅ นับสถานะสแกนให้ครอบคลุมทั้ง SN & LOT
   // SN: ถือว่าสแกนแล้วถ้ามี stockItemId หรือ stockItem.id
@@ -110,6 +139,36 @@ const ScanBarcodeListPage = () => {
     return snScanned || lotActivated;
   };
 
+  // ✅ Product name resolver (defensive)
+  // เหตุผล: payload บางจุดอาจไม่แนบ productName ตรง ๆ โดยเฉพาะ "ฝั่งค้างรับ" (pending)
+  // จึงต้องไล่ fallback ผ่าน relation ที่มีอยู่จริง (receiptItem / poItem / product)
+  const resolveProductName = useCallback((b) => {
+    try {
+      const name =
+        b?.productName ||
+        b?.product?.name ||
+        b?.purchaseOrderReceiptItem?.productName ||
+        b?.purchaseOrderReceiptItem?.product?.name ||
+        b?.receiptItem?.productName ||
+        b?.receiptItem?.product?.name ||
+        b?.purchaseOrderItem?.productName ||
+        b?.purchaseOrderItem?.product?.name ||
+        b?.poItem?.productName ||
+        b?.poItem?.product?.name ||
+        b?.productSnapshot?.name ||
+        '';
+
+      const s = String(name || '').trim();
+      if (s) return s;
+
+      // fallback สุดท้าย: โชว์ productId ถ้ามี (ช่วย debug / ลบข้อมูลทดสอบ)
+      const pid = b?.productId ?? b?.product?.id ?? b?.purchaseOrderReceiptItem?.productId ?? null;
+      return pid != null ? `#${pid}` : '-';
+    } catch (_) {
+      return '-';
+    }
+  }, []);
+
   const scannedList = useMemo(() => barcodes.filter(isScanned), [barcodes]);
   const pendingList = useMemo(() => barcodes.filter((b) => !isScanned(b)), [barcodes]);
 
@@ -117,23 +176,155 @@ const ScanBarcodeListPage = () => {
   const scannedCount = scannedList.length;
   const totalCount = barcodes.length;
 
+  // 🔒 กันยิงซ้ำ & ล็อกปุ่มระหว่างส่ง
+  const [submitting, setSubmitting] = useState(false);
+  const [lastSubmit, setLastSubmit] = useState({ barcode: '', at: 0 });
+
   // 🔄 Debounced refresh หลังยิงสำเร็จ (ลด GET ซ้ำซ้อน)
   const refreshTimeoutRef = useRef(null);
-  const refreshBarcodesDebounced = () => {
+  const refreshBarcodesDebounced = useCallback(() => {
     if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current);
     refreshTimeoutRef.current = setTimeout(() => {
       if (receiptId) loadBarcodesAction(receiptId);
     }, 600);
-  };
+  }, [receiptId, loadBarcodesAction]);
+
+  // 🧺 Warehouse UX (โหดขึ้น): Queue กันยิงถี่ + กัน request ซ้อน
+  // - ให้ยิงต่อเนื่องได้แม้ network หน่วง
+  // - process ทีละรายการแบบ FIFO (single in-flight)
+  const scanQueueRef = useRef([]);
+  const inFlightRef = useRef(false);
+
+  const enqueueScan = useCallback((job) => {
+    try {
+      const b = String(job?.barcode || '').trim();
+      if (!b) return false;
+
+      // กัน duplicate ติดกันใน queue (เช่น scanner เด้งซ้ำ)
+      const q = scanQueueRef.current || [];
+      const last = q.length ? q[q.length - 1] : null;
+      if (last && String(last.barcode) === b && Date.now() - Number(last.enqueuedAt || 0) < 500) {
+        return false;
+      }
+
+      q.push({
+        barcode: b,
+        serialNumber: job?.serialNumber ?? null,
+        keepSN: !!job?.keepSN,
+        enqueuedAt: Date.now(),
+      });
+      scanQueueRef.current = q;
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }, []);
+
+  const processQueue = useCallback(async () => {
+    if (inFlightRef.current) return;
+    if (!scanQueueRef.current?.length) return;
+
+    inFlightRef.current = true;
+    setSubmitting(true);
+
+    try {
+      // eslint-disable-next-line no-constant-condition
+      while (true) {
+        const q = scanQueueRef.current || [];
+        if (!q.length) break;
+
+        const job = q.shift();
+        scanQueueRef.current = q;
+
+        const barcode = String(job?.barcode || '').trim();
+        if (!barcode) continue;
+
+        // กันยิงซ้ำในช่วงสั้น (idempotent UX)
+        const now = Date.now();
+        if (lastSubmit.barcode === barcode && now - lastSubmit.at < 650) {
+          continue;
+        }
+        setLastSubmit({ barcode, at: now });
+
+        const payload = {
+          barcode,
+          serialNumber: job?.keepSN ? String(job?.serialNumber || '').trim() : null,
+          keepSN: !!job?.keepSN,
+        };
+
+        let ok = false;
+        try {
+          await receiveSNAction(payload);
+          ok = true;
+          refreshBarcodesDebounced();
+          setPageMessage({ type: 'success', text: `✅ รับเข้าแล้ว: ${barcode}` });
+          playBeep();
+          triggerSuccessFlash(barcode);
+        } catch (err) {
+          const raw = err?.response?.data?.error || err?.response?.data?.message || err?.message || '';
+          const msg = String(raw);
+          const already = /already|ซ้ำ|SN_RECEIVED/i.test(msg);
+
+          if (already) {
+            refreshBarcodesDebounced();
+            setPageMessage({ type: 'info', text: `ℹ️ บันทึกไว้แล้ว: ${barcode}` });
+            playBeep();
+          } else {
+            setPageMessage({ type: 'error', text: `❌ ${barcode}: ${msg || 'บันทึกไม่สำเร็จ'}` });
+            playErrorBeep();
+          }
+        } finally {
+          if (ok) await new Promise((r) => setTimeout(r, 20));
+        }
+      }
+    } finally {
+      inFlightRef.current = false;
+      setSubmitting(false);
+      try {
+        barcodeInputRef?.current?.focus?.();
+        barcodeInputRef?.current?.select?.();
+      } catch (_) {
+        // ignore
+      }
+    }
+  }, [lastSubmit, receiveSNAction, refreshBarcodesDebounced, triggerSuccessFlash]);
+
+  // ✅ Warehouse UX: Auto-submit เมื่อยิงสแกนจบ (scanner ยิงเร็วมาก) → ลดการต้องกดปุ่ม
+  const autoSubmitTimeoutRef = useRef(null);
+  const scheduleAutoSubmit = useCallback((nextValue) => {
+    try {
+      if (autoSubmitTimeoutRef.current) clearTimeout(autoSubmitTimeoutRef.current);
+      if (submitting) return;
+
+      const v = String(nextValue || '').trim();
+      if (!v) return;
+
+      const startedAt = inputStartTime || Date.now();
+      const burstMs = Date.now() - startedAt;
+
+      // ถ้ายิงเร็ว (<250ms) ให้ auto submit เมื่อหยุดนิ่งเล็กน้อย
+      if (burstMs <= 250) {
+        autoSubmitTimeoutRef.current = setTimeout(() => {
+          const form = document.getElementById('scan-form');
+          form?.requestSubmit?.();
+        }, 140);
+      }
+    } catch (_) {
+      // ignore
+    }
+  }, [submitting, inputStartTime]);
+
   useEffect(() => {
     return () => {
       if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current);
+      if (autoSubmitTimeoutRef.current) clearTimeout(autoSubmitTimeoutRef.current);
+      try {
+        audioCtxRef.current?.close?.();
+      } catch (_) {
+        // ignore
+      }
     };
   }, []);
-
-  // 🔒 กันยิงซ้ำ & ล็อกปุ่มระหว่างส่ง & ล็อกปุ่มระหว่างส่ง
-  const [submitting, setSubmitting] = useState(false);
-  const [lastSubmit, setLastSubmit] = useState({ barcode: '', at: 0 });
 
   // ⌨️ คีย์ลัด F2/F3/F4
   useEffect(() => {
@@ -183,27 +374,20 @@ const ScanBarcodeListPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (submitting) return;
     setPageMessage(null);
 
     const barcode = (barcodeInput || '').trim();
     if (!barcode) return;
 
-    const now = Date.now();
-    if (lastSubmit.barcode === barcode && now - lastSubmit.at < 800) {
-      setPageMessage({ type: 'info', text: 'ℹ️ ข้ามการยิงซ้ำ (ภายใน 0.8 วินาที)' });
-      return;
-    }
-
     const found = barcodes.find((b) => b.barcode === barcode);
     if (!found) {
       setPageMessage({ type: 'error', text: '❌ ไม่พบบาร์โค้ดนี้ในรายการที่ต้องรับเข้าสต๊อก' });
       playErrorBeep();
+      setBarcodeInput('');
+      barcodeInputRef?.current?.focus?.();
       return;
     }
 
-    // 🔒 Guardrail: ถ้า SN เคยถูกขายแล้ว (SOLD / มี saleItem / มี soldAt) ห้ามรับเข้าสต๊อก
-    // เหตุผล: StockItem 1 ชิ้นขายได้ครั้งเดียว (SaleItem.stockItemId unique)
     const sold =
       String(found?.stockItem?.status || '').toUpperCase() === 'SOLD' ||
       found?.stockItem?.soldAt != null ||
@@ -213,22 +397,17 @@ const ScanBarcodeListPage = () => {
       setPageMessage({ type: 'error', text: '❌ บาร์โค้ดนี้ถูกขายไปแล้ว (SOLD) ไม่สามารถรับเข้าสต๊อกได้' });
       playErrorBeep();
       setBarcodeInput('');
-      if (barcodeInputRef?.current) {
-        barcodeInputRef.current.focus();
-        barcodeInputRef.current.select?.();
-      }
+      barcodeInputRef?.current?.focus?.();
+      barcodeInputRef?.current?.select?.();
       return;
     }
 
-    // กันยิงซ้ำ: ถ้าบาร์โค้ดนี้รับเข้าสต๊อกแล้ว ให้ข้าม
     if (isScanned(found)) {
       setPageMessage({ type: 'info', text: 'ℹ️ บาร์โค้ดนี้รับเข้าสต๊อกแล้ว' });
       playErrorBeep();
       setBarcodeInput('');
-      if (barcodeInputRef?.current) {
-        barcodeInputRef.current.focus();
-        barcodeInputRef.current.select?.();
-      }
+      barcodeInputRef?.current?.focus?.();
+      barcodeInputRef?.current?.select?.();
       return;
     }
 
@@ -237,50 +416,29 @@ const ScanBarcodeListPage = () => {
       return;
     }
 
-    const payload = { barcode, serialNumber: keepSN ? snInput.trim() : null, keepSN };
+    // ✅ โหมดคลัง: enqueue ทันที แล้วให้ยิงตัวถัดไปได้เลย (ไม่ต้องรอ API)
+    const accepted = enqueueScan({
+      barcode,
+      serialNumber: keepSN ? snInput.trim() : null,
+      keepSN,
+    });
 
-    let success = false;
-    try {
-      setSubmitting(true);
-      setLastSubmit({ barcode, at: now });
+    setBarcodeInput('');
+    setSnInput('');
+    setInputStartTime(null);
+    setSnError('');
 
-      await receiveSNAction(payload);
-      // Refresh (debounced) แทนการ GET ทุกนัด
-      refreshBarcodesDebounced();
+    // โฟกัสกลับทันที (เพื่อยิงต่อเนื่อง)
+    barcodeInputRef?.current?.focus?.();
+    barcodeInputRef?.current?.select?.();
 
-      setBarcodeInput('');
-      setSnInput('');
-      setInputStartTime(null);
-      setSnError('');
-      setPageMessage({ type: 'success', text: '✅ บันทึกการรับเข้าสต๊อกสำเร็จ' });
+    if (!accepted) {
+      setPageMessage({ type: 'info', text: 'ℹ️ ข้ามรายการซ้ำในคิว' });
       playBeep();
-      success = true;
-    } catch (err) {
-      const raw = err?.response?.data?.error || err?.response?.data?.message || err?.message || '';
-      const msg = String(raw);
-      const already = /already|ซ้ำ|SN_RECEIVED/i.test(msg);
-
-      if (already) {
-        // กรณีสแกนซ้ำ: ถือว่า idempotent → รีเฟรชแล้วแจ้งเตือนแบบข้อมูล
-        refreshBarcodesDebounced();
-        setPageMessage({ type: 'info', text: 'ℹ️ บาร์โค้ดนี้ถูกบันทึกไว้แล้ว' });
-        playBeep();
-        setBarcodeInput('');
-        setSnInput('');
-      } else {
-        setPageMessage({ type: 'error', text: `❌ ${msg || 'เกิดข้อผิดพลาดระหว่างบันทึกเข้าสต๊อก'}` });
-        playErrorBeep();
-      }
-    } finally {
-      setSubmitting(false);
-      if (success && barcodeInputRef?.current) {
-        // ตั้งโฟกัสกลับไปที่ช่องยิงบาร์โค้ดทุกครั้งที่บันทึกสำเร็จ
-        barcodeInputRef.current.focus();
-        if (typeof barcodeInputRef.current.select === 'function') {
-          barcodeInputRef.current.select();
-        }
-      }
+      return;
     }
+
+    processQueue();
   };
   // Finalize ใบรับครั้งเดียวตอนจบงาน
   const handleFinalize = async () => {
@@ -349,7 +507,18 @@ const ScanBarcodeListPage = () => {
                   disabled={submitting}
                   onChange={(e) => {
                     if (!inputStartTime) setInputStartTime(Date.now());
-                    setBarcodeInput(e.target.value);
+                    const next = e.target.value;
+                    setBarcodeInput(next);
+                    // ✅ Warehouse UX: ยิงเสร็จให้ auto submit เมื่อเป็น scanner burst
+                    scheduleAutoSubmit(next);
+                  }}
+                  onKeyDown={(e) => {
+                    // ✅ Warehouse UX: Enter = submit ทันที (รองรับกรณี scanner ยิง Enter)
+                    if (e.key === 'Enter') {
+                      setTimeout(() => {
+                        setInputStartTime(null);
+                      }, 0);
+                    }
                   }}
                 />
                 <button
@@ -421,8 +590,49 @@ const ScanBarcodeListPage = () => {
       <div className="grid grid-cols-12 gap-4">
         <div className="col-span-12 lg:col-span-4">
           <h2 className="text-base font-semibold mb-2">Expected (ยังไม่ยิง) {pendingCount}</h2>
-          <div className="overflow-visible">
-            <PendingBarcodeTable loading={!pendingList.length && loading} items={pendingList} />
+
+          {/* 🧭 Warehouse UX (โหดขึ้น): Sticky "Next" + ไฮไลต์บรรทัดถัดไป */}
+          {pendingList?.length > 0 && (
+            <div className="mb-2 px-3 py-2 rounded border bg-yellow-50 text-sm">
+              <div className="font-semibold text-yellow-900">Next to scan</div>
+              <div className="font-mono text-yellow-900">{pendingList[0]?.barcode || '-'}</div>
+              <div className="text-yellow-800 truncate">{resolveProductName(pendingList[0])}</div>
+            </div>
+          )}
+
+          <div className="overflow-x-auto border rounded bg-white">
+            {pendingList.length === 0 ? (
+              <div className="text-gray-500 text-sm p-3">ไม่มีรายการค้างรับ</div>
+            ) : (
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-yellow-50 text-left sticky top-0">
+                    <th className="px-3 py-2 w-14">#</th>
+                    <th className="px-3 py-2">สินค้า</th>
+                    <th className="px-3 py-2">บาร์โค้ด</th>
+                    <th className="px-3 py-2">SN</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pendingList.map((b, idx) => {
+                    const productName = resolveProductName(b);
+                    const isNext = idx === 0;
+                    const isTypingMatch = barcodeInput && String(b?.barcode || '') === String(barcodeInput).trim();
+                    return (
+                      <tr
+                        key={b.id || `${b.barcode}-${idx}`}
+                        className={`border-t ${isNext ? 'bg-yellow-100' : isTypingMatch ? 'bg-blue-50' : ''}`}
+                      >
+                        <td className="px-3 py-2">{idx + 1}</td>
+                        <td className="px-3 py-2">{productName}</td>
+                        <td className="px-3 py-2 font-mono">{b?.barcode || '-'}</td>
+                        <td className="px-3 py-2 font-mono">-</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
           </div>
         </div>
 
@@ -446,7 +656,7 @@ const ScanBarcodeListPage = () => {
                 <tbody>
                   {scannedList.map((b, idx) => {
                     const isLot = b?.kind === 'LOT' || b?.simpleLotId != null;
-                    const productName = b?.productName || b?.product?.name || '-';
+                    const productName = resolveProductName(b);
                     const snText = isLot ? '-' : (b?.serialNumber || (b?.stockItemId ? b?.stockItem?.serialNumber : null) || '-');
                     const apiStockStatus = String(b?.stockItemStatus || '').toUpperCase();
 
@@ -471,7 +681,14 @@ const ScanBarcodeListPage = () => {
                       ? resolvedStockStatus
                       : (String(b?.status || '').toUpperCase() === 'SN_RECEIVED' ? 'LOT / SN_RECEIVED' : 'LOT');
                     return (
-                      <tr key={b.id || `${b.barcode}-${idx}`} className="border-t">
+                      <tr
+                        key={b.id || `${b.barcode}-${idx}`}
+                        className={`border-t transition-colors ${
+                          lastFlashBarcode && String(b?.barcode || '') === String(lastFlashBarcode) && (Date.now() - lastFlashAt) < 900
+                            ? 'bg-green-100'
+                            : ''
+                        }`}
+                      >
                         <td className="px-3 py-2">{idx + 1}</td>
                         <td className="px-3 py-2">{productName}</td>
                         <td className="px-3 py-2 font-mono">{b.barcode}</td>
@@ -492,6 +709,8 @@ const ScanBarcodeListPage = () => {
 };
 
 export default ScanBarcodeListPage;
+
+
 
 
 

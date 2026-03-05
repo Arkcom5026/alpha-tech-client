@@ -2,6 +2,8 @@
 
 
 
+
+
 // src/features/barcode/api/barcodeApi.js
 // ES Module API client for barcode & receipt operations
 // All requests go through utils/apiClient (axios instance)
@@ -61,13 +63,33 @@ export const auditReceiptBarcodes = async (receiptId, { includeDetails = true } 
 // ---------------------------------------------
 // Get receipts that already have barcodes (รอพิมพ์บาร์โค้ด)
 // ---------------------------------------------
-export const getReceiptsWithBarcodes = async () => {
+export const getReceiptsWithBarcodes = async (opts = {}) => {
   try {
-    const res = await apiClient.get('/barcodes/receipts-with-barcodes');
+    const printed = opts?.printed;
+    const limit = opts?.limit;
+
+    const params = {
+      ...(typeof printed === 'boolean' ? { printed } : {}),
+      ...(limit != null ? { limit: Math.min(Math.max(Number(limit) || 50, 1), 100) } : {}),
+    };
+
+    const res = await apiClient.get('/barcodes/receipts-with-barcodes', {
+      params: Object.keys(params).length ? params : undefined,
+    });
     return res.data;
   } catch (err) {
+    // ✅ backward-compatible fallback
     if (err && err.response && err.response.status === 404) {
-      const res2 = await apiClient.get('/barcodes/with-barcodes');
+      const printed = opts?.printed;
+      const limit = opts?.limit;
+      const params = {
+        ...(typeof printed === 'boolean' ? { printed } : {}),
+        ...(limit != null ? { limit: Math.min(Math.max(Number(limit) || 50, 1), 100) } : {}),
+      };
+
+      const res2 = await apiClient.get('/barcodes/with-barcodes', {
+        params: Object.keys(params).length ? params : undefined,
+      });
       return res2.data;
     }
     console.error('❌ getReceiptsWithBarcodes error:', err);
@@ -115,7 +137,8 @@ export const getReceiptsReadyToScan = async () => {
 export const receiveStockItem = async (barcode, serialNumber) => {
   if (!barcode) throw new Error('Missing barcode');
   try {
-    const payload = serialNumber != null ? { barcode, serialNumber } : { barcode };
+    const sn = String(serialNumber ?? '').trim();
+    const payload = sn ? { barcode, serialNumber: sn } : { barcode };
     const res = await apiClient.post('/stock-items/receive-sn', payload);
     return res.data;
   } catch (err) {
@@ -171,13 +194,40 @@ export const reprintBarcodes = async (receiptId) => {
 // params: { mode: 'RC' | 'PO', query: string, printed?: boolean }
 // ---------------------------------------------
 export const searchReprintReceipts = async (opts = {}) => {
-  const { mode = 'RC', query, printed = true } = opts;
+  const {
+    mode = 'RC',
+    query,
+    printed = true,
+    supplierKeyword,
+    limit = 50,
+  } = opts;
+
   const q = String(query || '').trim();
-  if (!q) return [];
+  const sup = String(supplierKeyword || '').trim();
+
+  // ✅ allow supplier-only search (ERP-scale)
+  if (!q && !sup) return [];
+
+  const lim = (() => {
+    const n = Number(limit);
+    if (!Number.isFinite(n)) return 50;
+    return Math.min(Math.max(Math.trunc(n), 1), 50);
+  })();
+
+  // ✅ mode guard (prevent unexpected values)
+  const m = String(mode || 'RC').toUpperCase();
+  const safeMode = m === 'PO' ? 'PO' : 'RC';
+
   try {
-    const res = await apiClient.get('/barcodes/reprint-search', {
-      params: { mode, query: q, printed },
-    });
+    const params = {
+      mode: safeMode,
+      printed: !!printed,
+      limit: lim,
+      ...(q ? { query: q } : {}),
+      ...(sup ? { supplierKeyword: sup } : {}),
+    };
+
+    const res = await apiClient.get('/barcodes/reprint-search', { params });
     const data = res && res.data;
     if (Array.isArray(data)) return data;
     if (data && Array.isArray(data.data)) return data.data;
@@ -209,7 +259,18 @@ export const finalizeReceiptIfNeeded = async (receiptId) => {
 // ---------------------------------------------
 export const commitScans = async (receiptId, items) => {
   if (!receiptId) throw new Error('Missing receiptId');
-  const payload = Array.isArray(items) ? items : [];
+
+  // ✅ payload guard: keep only valid scan rows
+  const payload = Array.isArray(items)
+    ? items
+        .map((it) => {
+          const barcode = String(it?.barcode ?? '').trim();
+          const sn = String(it?.sn ?? it?.serialNumber ?? '').trim();
+          if (!barcode) return null;
+          return sn ? { barcode, sn } : { barcode };
+        })
+        .filter(Boolean)
+    : [];
   try {
     const res = await apiClient.post(`/receipts/${receiptId}/commit-scans`, { items: payload });
     const data = (res && res.data) || {};

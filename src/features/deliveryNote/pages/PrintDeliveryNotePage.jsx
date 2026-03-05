@@ -1,7 +1,5 @@
 
 
-
-
 // src/features/deliveryNote/pages/PrintDeliveryNotePage.jsx
 
 import { useEffect, useMemo, useState } from 'react';
@@ -162,9 +160,6 @@ const PrintDeliveryNotePage = () => {
 };
 
 export default PrintDeliveryNotePage;
-
-
-
 
 
 

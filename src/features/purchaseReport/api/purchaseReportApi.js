@@ -1,6 +1,21 @@
+
+
+
+
+
+
 // src/features/purchaseReport/api/purchaseReportApi.js
 
 import apiClient from '@/utils/apiClient';
+
+// ✅ No console.* in production path (allow in DEV only)
+const devError = (...args) => {
+  try {
+    if (import.meta?.env?.DEV) console.error(...args);
+  } catch (_) {
+    // ignore
+  }
+};
 
 /**
  * Build safe query params:
@@ -37,22 +52,46 @@ export const getPurchaseReport = async (filters) => {
     const response = await apiClient.get('/purchase-reports', { params });
     return response.data;
   } catch (error) {
-    console.error('❌ [getPurchaseReport] error:', error);
+    devError('❌ [getPurchaseReport] error:', error);
     throw error;
   }
 };
 
 /**
- * รายงานสรุปตามใบรับ (ถ้าคุณทำ endpoint นี้ใน BE)
+ * รายงานสรุปตามใบรับ (Receipt-level)
+ * Route:
+ *   GET /purchase-reports/receipts
  */
 export const getPurchaseReceiptSummaryReport = async (filters) => {
   try {
     const params = buildQueryParams(filters);
 
-    const response = await apiClient.get('/purchase-reports/summary-by-receipt', { params });
+    const response = await apiClient.get('/purchase-reports/receipts', { params });
     return response.data;
   } catch (error) {
-    console.error('❌ [getPurchaseReceiptSummaryReport] error:', error);
+    devError('❌ [getPurchaseReceiptSummaryReport] error:', error);
     throw error;
   }
 };
+
+/**
+ * รายงานรายละเอียดใบรับ (Receipt detail)
+ * Route:
+ *   GET /purchase-reports/receipts/:receiptId
+ */
+export const getPurchaseReceiptReportDetail = async (receiptId) => {
+  try {
+    const rid = receiptId == null ? null : Number(receiptId);
+    if (!Number.isFinite(rid) || rid <= 0) {
+      throw new Error('Invalid receiptId');
+    }
+
+    const response = await apiClient.get(`/purchase-reports/receipts/${rid}`);
+    return response.data;
+  } catch (error) {
+    devError('❌ [getPurchaseReceiptReportDetail] error:', error);
+    throw error;
+  }
+};
+
+

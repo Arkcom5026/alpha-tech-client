@@ -1,3 +1,4 @@
+
 // 📁 FILE: src/features/sales/api/saleApi.js
 
 import apiClient from '@/utils/apiClient';
@@ -38,8 +39,17 @@ export const getAllSales = async () => {
 // ✅ getSaleById (print-safe)
 export const getSaleById = async (id, options) => {
   try {
+    // ✅ Backward/forward compatible params builder
+    // - options.includePayments / options.includeBranch are our preferred flags
+    // - options.params is still supported for legacy callers
     const params = {
-      includePayments: 1,
+      includePayments:
+        options?.includePayments === false
+          ? 0
+          : options?.includePayments === true
+            ? 1
+            : 1,
+      ...(options?.includeBranch ? { includeBranch: 1 } : {}),
       ...(options?.params || {}),
     };
 
@@ -87,6 +97,9 @@ export const updateCustomer = async (data) => {
   }
 };
 
+
+
+
 // ✅ Search printable sales (Sales history for printing)
 // - Primary endpoint: /sales/printable
 // - Backward-compat fallback: /sales/printable-sales (temporary)
@@ -113,6 +126,10 @@ export const searchPrintableSales = async (params) => {
   }
 };
 
+
+
+
+
 // ✅ Convert OrderOnline to Sale
 export const convertOrderOnlineToSale = async (orderOnlineId, stockSelections) => {
   try {
@@ -124,3 +141,4 @@ export const convertOrderOnlineToSale = async (orderOnlineId, stockSelections) =
     throw attachApiContext(err, 'saleApi.convertOrderOnlineToSale');
   }
 };
+

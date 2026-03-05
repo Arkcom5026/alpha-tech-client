@@ -1,4 +1,5 @@
 
+
 // src/features/purchaseReport/components/PurchaseReportTable.jsx
 import React from 'react';
 import {
@@ -63,8 +64,17 @@ const paymentStatusLabel = (s) => {
 /**
  * Component ตารางสำหรับแสดงผลรายงานการจัดซื้อ
  */
-export const PurchaseReportTable = ({ data, summary, isLoading }) => {
-  const safeSummary = summary || { totalAmount: 0, totalItems: 0, uniqueReceipts: 0 };
+export const PurchaseReportTable = ({ data, summary, isLoading, onRowClick }) => {
+  // ✅ Receipt-level summary (aligned with BE)
+  const safeSummary = summary || { receiptCount: 0, itemCount: 0, totalAmount: 0 };
+
+  const handleRowClick = (row) => {
+    try {
+      if (typeof onRowClick === 'function') onRowClick(row);
+    } catch (_) {
+      // ignore
+    }
+  };
 
   if (isLoading) {
     return (
@@ -86,65 +96,69 @@ export const PurchaseReportTable = ({ data, summary, isLoading }) => {
 
   return (
     <TableContainer component={Paper}>
-      <Table sx={{ minWidth: 650 }} aria-label="purchase report table">
+      <Table sx={{ minWidth: 650 }} aria-label="purchase receipt report table">
         <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
           <TableRow>
             <TableCell>วันที่รับ</TableCell>
             <TableCell>เลขที่ใบรับ</TableCell>
+            <TableCell>อ้างอิง PO</TableCell>
+            <TableCell>ผู้ขาย</TableCell>
             <TableCell>สถานะใบรับ</TableCell>
             <TableCell>สถานะชำระ</TableCell>
-            <TableCell>สินค้า</TableCell>
-            <TableCell>ผู้ขาย</TableCell>
-            <TableCell align="right">จำนวน</TableCell>
-            <TableCell>หน่วย</TableCell>
-            <TableCell align="right">ราคา/หน่วย (ทุน)</TableCell>
-            <TableCell align="right">ราคารวม</TableCell>
+            <TableCell align="right">จำนวนรายการ</TableCell>
+            <TableCell align="right">ยอดรวมใบรับ</TableCell>
           </TableRow>
         </TableHead>
 
         <TableBody>
-          {data.map((row, index) => (
-            <TableRow
-              key={`${row.receiptId || 'r'}-${row.receiptCode || 'c'}-${row.productName || 'p'}-${index}`}
-              sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
-              hover
-            >
-              <TableCell component="th" scope="row">
-                {row.receiptDate ? new Date(row.receiptDate).toLocaleDateString('th-TH') : '-'}
-              </TableCell>
+          {data.map((row, index) => {
+            const clickable = typeof onRowClick === 'function' && Number.isFinite(Number(row?.receiptId));
 
-              <TableCell>{row.receiptCode || '-'}</TableCell>
+            return (
+              <TableRow
+                key={`${row.receiptId || 'r'}-${row.receiptCode || 'c'}-${index}`}
+                sx={{
+                  '&:last-child td, &:last-child th': { border: 0 },
+                  cursor: clickable ? 'pointer' : 'default',
+                }}
+                hover
+                onClick={clickable ? () => handleRowClick(row) : undefined}
+              >
+                <TableCell component="th" scope="row">
+                  {row.receiptDate ? new Date(row.receiptDate).toLocaleDateString('th-TH') : '-'}
+                </TableCell>
 
-              <TableCell>
-                <Stack direction="row" spacing={1} alignItems="center">
-                  <Chip size="small" label={receiptStatusLabel(row.receiptStatus)} variant="outlined" />
-                </Stack>
-              </TableCell>
+                <TableCell>{row.receiptCode || '-'}</TableCell>
+                <TableCell>{row.poCode || '-'}</TableCell>
+                <TableCell>{row.supplierName || '-'}</TableCell>
 
-              <TableCell>
-                <Stack direction="row" spacing={1} alignItems="center">
-                  <Chip size="small" label={paymentStatusLabel(row.paymentStatus)} variant="outlined" />
-                </Stack>
-              </TableCell>
+                <TableCell>
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <Chip size="small" label={receiptStatusLabel(row.receiptStatus)} variant="outlined" />
+                  </Stack>
+                </TableCell>
 
-              <TableCell>{row.productName || '-'}</TableCell>
-              <TableCell>{row.supplierName || '-'}</TableCell>
-              <TableCell align="right">{formatQty(row.quantity)}</TableCell>
-              <TableCell>{row.unitName || '-'}</TableCell>
-              <TableCell align="right">{formatMoney(row.costPrice)}</TableCell>
-              <TableCell align="right">{formatMoney(row.totalCost)}</TableCell>
-            </TableRow>
-          ))}
+                <TableCell>
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <Chip size="small" label={paymentStatusLabel(row.paymentStatus)} variant="outlined" />
+                  </Stack>
+                </TableCell>
 
-          {/* Summary Row (ตารางมี 10 คอลัมน์ => colSpan ต้องรวมให้ครบ 10) */}
+                <TableCell align="right">{formatQty(row.itemCount)}</TableCell>
+                <TableCell align="right">{formatMoney(row.totalAmount)}</TableCell>
+              </TableRow>
+            );
+          })}
+
+          {/* Summary Row (ตารางมี 8 คอลัมน์ => colSpan ต้องรวมให้ครบ 8) */}
           <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
-            {/* 1..9 */}
-            <TableCell colSpan={9} align="right">
+            {/* 1..7 */}
+            <TableCell colSpan={7} align="right">
               <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
                 ยอดรวมทั้งหมด
               </Typography>
             </TableCell>
-            {/* 10 */}
+            {/* 8 */}
             <TableCell align="right">
               <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
                 {formatMoney(safeSummary.totalAmount)}
@@ -156,3 +170,4 @@ export const PurchaseReportTable = ({ data, summary, isLoading }) => {
     </TableContainer>
   );
 };
+

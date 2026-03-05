@@ -1,5 +1,11 @@
 
 
+
+
+
+
+
+
 // src/features/deliveryNote/components/DeliveryNoteForm.jsx
 
 // ✅ DeliveryNoteForm ปรับโครงสร้างให้ตรงกับ BillLayoutFullTax 100%
@@ -95,18 +101,25 @@ const DeliveryNoteForm = ({ sale, saleItems, config, hideDate, setHideDate }) =>
     { beforeVat: 0, vatAmount: 0, total: 0 }
   );
 
-  // ✅ Prefer DB totals (authoritative) to avoid drift
-  const saleTotal = Number.isFinite(Number(sale?.totalAmount)) ? round2(Number(sale.totalAmount)) : null;
-  const saleVat = Number.isFinite(Number(sale?.vat)) ? round2(Number(sale.vat)) : null;
+  // ✅ Totals (VAT-INC pricing): ราคาต่อหน่วยในตารางเป็น "รวม VAT แล้ว" (Gross)
+  // ดังนั้น:
+  // - รวมทั้งสิ้น (Gross) = ผลรวมบรรทัดทั้งหมด
+  // - VAT = ถอด VAT จาก Gross ด้วยสูตร vat = gross * r / (100 + r)
+  // - รวมเงิน (ก่อน VAT) = gross - vat
+  //
+  // หมายเหตุ: ถ้า BE ส่ง totalAmount/vat มา อาจเป็นคนละนิยาม (INC/EX) ตามจุดใช้งาน
+  // สำหรับเอกสารนี้ให้ยึดตาม “ราคาที่แสดงในบรรทัด” เป็น source of truth เพื่อไม่ให้ VAT ซ้ำ/เพี้ยน
+  const computedGross = round2(computedTotals.total);
 
-  const total = saleTotal ?? round2(computedTotals.total);
+  // ถ้ามี totalAmount จาก BE และมันใกล้เคียงกับ computedGross ให้ใช้เป็น gross (กัน drift จากการปัดเศษ)
+  const saleTotalMaybe = Number.isFinite(Number(sale?.totalAmount)) ? round2(Number(sale.totalAmount)) : null;
+  const gross = saleTotalMaybe != null && Math.abs(saleTotalMaybe - computedGross) <= 0.05
+    ? saleTotalMaybe
+    : computedGross;
 
-  // ✅ VAT & Net (before VAT)
-  // - If DB provides vat, trust it
-  // - Otherwise extract VAT from gross (VAT-included)
-  const computedVat = round2(computedTotals.vatAmount);
-  const vatAmount = saleVat ?? (computedVat > 0 ? computedVat : round2(total > 0 ? (total * vatRate) / (100 + vatRate) : 0));
-  const beforeVat = round2(total - vatAmount);
+  const vatAmount = round2(gross > 0 ? (gross * vatRate) / (100 + vatRate) : 0);
+  const beforeVat = round2(gross - vatAmount);
+  const total = gross;
 
   const maxRowCount = 20;
   const emptyRowCount = Math.max(maxRowCount - saleItems.length, 0);
@@ -266,7 +279,6 @@ const DeliveryNoteForm = ({ sale, saleItems, config, hideDate, setHideDate }) =>
 };
 
 export default DeliveryNoteForm;
-
 
 
 

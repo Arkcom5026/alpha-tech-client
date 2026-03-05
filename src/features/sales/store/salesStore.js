@@ -1,4 +1,5 @@
 
+
 // 📁 FILE: src/features/sales/store/salesStore.js
 
 import { create } from 'zustand';
@@ -47,6 +48,33 @@ const normalizePrintableRows = (rows) => {
   }
 
   return [];
+};
+
+// ✅ Normalize sale detail for print/doc screens (Delivery Note / Tax Invoice)
+// - Flatten branch fields (taxId etc.) to reduce UI fragility
+// - Keep backward compatibility with older BE shapes
+const normalizeSaleDetail = (sale) => {
+  if (!sale || typeof sale !== 'object') return sale;
+
+  const branch = sale.branch || sale.Branch || sale?.employee?.branch || sale?.employee?.Branch || null;
+  const normalizedBranch = branch && typeof branch === 'object' ? branch : null;
+
+  const taxId =
+    normalizedBranch?.taxId ??
+    normalizedBranch?.taxNo ??
+    normalizedBranch?.taxNumber ??
+    normalizedBranch?.taxpayerId ??
+    sale?.branchTaxId ??
+    sale?.taxId ??
+    null;
+
+  return {
+    ...sale,
+    branch: normalizedBranch || sale.branch || null,
+
+    // Convenience (prefer using sale.branch.taxId in UI, but this helps migration)
+    branchTaxId: taxId,
+  };
 };
 
 const useSalesStore = create((set, get) => ({
@@ -547,8 +575,11 @@ const useSalesStore = create((set, get) => ({
 
   getSaleByIdAction: async (id) => {
     try {
-      const data = await getSaleById(id);
-      set({ currentSale: data });
+      // ✅ Ask BE for related entities when supported (safe if BE ignores unknown params)
+      // - includePayments: used by multiple pages already
+      // - includeBranch: for Delivery Note header (taxId, address, phone)
+      const data = await getSaleById(id, { includePayments: true, includeBranch: true });
+      set({ currentSale: normalizeSaleDetail(data) });
     } catch (err) {
       devError('[getSaleByIdAction]', err);
       set({ currentSale: null });
@@ -581,6 +612,9 @@ const useSalesStore = create((set, get) => ({
     });
   },
 
+
+
+  
   loadPrintableSalesAction: async (params = {}) => {
     const fromDate = params?.fromDate;
     const toDate = params?.toDate;
@@ -617,6 +651,10 @@ const useSalesStore = create((set, get) => ({
     }
   },
 
+
+
+
+
   convertOrderOnlineToSaleAction: async (orderOnlineId, stockSelections) => {
     try {
       const res = await convertOrderOnlineToSale(orderOnlineId, stockSelections);
@@ -629,6 +667,7 @@ const useSalesStore = create((set, get) => ({
 }));
 
 export default useSalesStore;
+
 
 
 

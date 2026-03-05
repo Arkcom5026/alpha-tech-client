@@ -1,7 +1,9 @@
 
 
+
 // src/features/purchaseReport/pages/ListPurchaseReportPage.jsx
 import React, { useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 // ตัวอย่างการนำเข้า UI Components จาก Library เช่น Material-UI
 import { Box, Typography, Card, CardContent, CardHeader, Stack, Chip } from '@mui/material';
@@ -18,6 +20,7 @@ import { usePurchaseReportStore } from '../store/purchaseReportStore';
  * - แสดงผล Filters และ Table
  */
 export const ListPurchaseReportPage = () => {
+  const navigate = useNavigate();
   // เชื่อมต่อกับ Zustand store เพื่อเข้าถึง state และ actions
   const {
     filters,
@@ -29,7 +32,7 @@ export const ListPurchaseReportPage = () => {
     fetchPurchaseReportAction,
   } = usePurchaseReportStore();
 
-  const summarySafe = summary || { totalAmount: 0, totalItems: 0, uniqueReceipts: 0 };
+  const summarySafe = summary || { receiptCount: 0, itemCount: 0, totalAmount: 0 };
 
   // สร้างฟังก์ชันสำหรับสั่งให้ดึงข้อมูลด้วย useCallback เพื่อไม่ให้ฟังก์ชันถูกสร้างใหม่ทุกครั้ง
   const handleGenerateReport = useCallback(() => {
@@ -61,14 +64,15 @@ export const ListPurchaseReportPage = () => {
         </CardContent>
       </Card>
 
+
       {/* ส่วนตารางแสดงผลลัพธ์ */}
       <Card>
         <CardHeader
           title="ผลลัพธ์รายงาน"
           subheader={
             <Stack direction="row" spacing={1} sx={{ mt: 1, flexWrap: 'wrap' }}>
-              <Chip size="small" label={`จำนวนใบรับ: ${Number(summarySafe.uniqueReceipts || 0).toLocaleString('en-US')}`} variant="outlined" />
-              <Chip size="small" label={`จำนวนรายการ: ${Number(summarySafe.totalItems || 0).toLocaleString('en-US')}`} variant="outlined" />
+              <Chip size="small" label={`จำนวนใบรับ: ${Number(summarySafe.receiptCount || 0).toLocaleString('en-US')}`} variant="outlined" />
+              <Chip size="small" label={`จำนวนรายการ: ${Number(summarySafe.itemCount || 0).toLocaleString('en-US')}`} variant="outlined" />
               <Chip
                 size="small"
                 label={`ยอดรวม: ${Number(summarySafe.totalAmount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
@@ -80,8 +84,14 @@ export const ListPurchaseReportPage = () => {
         <CardContent>
           <PurchaseReportTable
             data={reportData}
-            summary={summary}
+            summary={summarySafe}
             isLoading={isLoading}
+            onRowClick={(row) => {
+              const rid = row?.receiptId == null ? null : Number(row.receiptId);
+              if (Number.isFinite(rid) && rid > 0) {
+                navigate(`/pos/reports/purchase/receipts/${rid}`);
+              }
+            }}
           />
         </CardContent>
       </Card>
@@ -91,6 +101,7 @@ export const ListPurchaseReportPage = () => {
 
 // Export default เพื่อให้รองรับการทำ lazy loading ในอนาคต
 export default ListPurchaseReportPage;
+
 
 
 

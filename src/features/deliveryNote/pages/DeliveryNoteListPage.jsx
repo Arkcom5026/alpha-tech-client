@@ -122,15 +122,21 @@ const DeliveryNoteListPage = () => {
   // 4) fallback: gross-up จาก beforeVat เฉพาะกรณีไม่มี vatAmount
   const getGrossTotalAmount = (s) => {
     // ✅ IMPORTANT (DB): totalBeforeDiscount ในโปรเจกต์นี้เป็น “ยอดรวมที่รวม VAT แล้ว (gross)”
-    //    ดังนั้นห้ามนำไปบวก VAT ซ้ำเด็ดขาด
+    //    ดังนั้นห้ามนำไปบวก VAT ซ้ำเด็ดขาด    // ✅ 1) Prefer “gross from line items” fields first to match เอกสารพิมพ์ (VAT-Included pricing)
+    // ในโปรเจกต์นี้พบว่า totalAmount บาง endpoint อาจเป็น "gross+vat" (เสี่ยง VAT ซ้ำ) ขณะที่ totalBeforeDiscount = gross จริง
 
-    // ✅ 1) totalAmount is authoritative (avoid VAT double-count)
     const totalAmount = toNum(s?.totalAmount);
-    if (totalAmount != null) return round2(totalAmount);
-
-    // ✅ 2) totalBeforeDiscount (gross) — treat as explicit gross
     const totalBeforeDiscountGross = toNum(s?.totalBeforeDiscount);
+
+    // ถ้ามีทั้งคู่และต่างกัน -> ใช้ค่าที่ "เล็กกว่า" เป็น gross (กันเคส totalAmount = gross + vat)
+    if (totalAmount != null && totalBeforeDiscountGross != null) {
+      if (Math.abs(totalAmount - totalBeforeDiscountGross) <= 0.05) return round2(totalAmount);
+      return round2(Math.min(totalAmount, totalBeforeDiscountGross));
+    }
+
+    // มีแค่ตัวเดียว
     if (totalBeforeDiscountGross != null) return round2(totalBeforeDiscountGross);
+    if (totalAmount != null) return round2(totalAmount);
 
     const beforeVat = toNum(s?.beforeVat ?? s?.totalBeforeVat ?? s?.subTotal ?? s?.subtotalAmount);
     const vatAmount = toNum(s?.vatAmount ?? s?.vat ?? s?.taxAmount ?? s?.vatTotal);
@@ -514,10 +520,8 @@ const DeliveryNoteListPage = () => {
               >
                 รับเงินล่าสุด{sortIndicator('lastPaidAt')}
               </th>
-              <th className="border px-2 py-1 sticky top-0 bg-gray-100 z-10">ผู้รับเงิน</th>
-              <th className="border px-2 py-1 sticky top-0 bg-gray-100 z-10" colSpan={2}>
-                การดำเนินการ
-              </th>
+              <th className="border px-2 py-1 sticky top-0 bg-gray-100 z-10">ผู้ทำรายการ</th>
+              <th className="border px-2 py-1 sticky top-0 bg-gray-100 z-10">การดำเนินการ</th>
             </tr>
           </thead>
           <tbody>
@@ -563,14 +567,7 @@ const DeliveryNoteListPage = () => {
                         : '-'}
                     </td>
                     <td className="border px-2 py-1">{s.employeeName || '-'}</td>
-                    <td className="border px-2 py-1 text-center">
-                      <button
-                        onClick={() => navigate(`/pos/sales/detail/${s.id}`)}
-                        className="bg-gray-500 text-white px-3 py-1 rounded hover:bg-gray-600"
-                      >
-                        รายละเอียด
-                      </button>
-                    </td>
+                    
                     <td className="border px-2 py-1 text-center">
                       <button
                         onClick={() => {
@@ -590,7 +587,7 @@ const DeliveryNoteListPage = () => {
               })
             ) : (
               <tr>
-                <td colSpan={12} className="text-center py-6 text-gray-600">
+                <td colSpan={11} className="text-center py-6 text-gray-600">
                   ไม่พบข้อมูล
                   <div className="mt-2 text-xs text-gray-500">แนะนำ: ลองขยายช่วงวันที่ หรือเพิ่ม limit แล้วกดค้นหาอีกครั้ง</div>
                 </td>
@@ -608,6 +605,7 @@ const DeliveryNoteListPage = () => {
 };
 
 export default DeliveryNoteListPage;
+
 
 
 

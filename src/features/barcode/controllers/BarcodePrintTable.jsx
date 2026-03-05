@@ -2,6 +2,7 @@
 
 
 
+
 // src/features/stockItem/components/BarcodePrintTable.jsx
 
 import React, { useEffect, useMemo, useState } from 'react';
@@ -123,9 +124,9 @@ const BarcodePrintTable = ({ mode = 'UNPRINTED', receipts }) => {
         </div>
       )}
 
-      <div className="overflow-x-auto">
-        <table className="min-w-full text-sm border border-gray-300">
-          <thead className="bg-gray-100">
+      <div className="max-h-[560px] overflow-auto rounded border border-gray-300">
+        <table className="min-w-full text-sm">
+          <thead className="bg-gray-100 sticky top-0 z-10">
             <tr>
               {/* ✅ Checkbox only for UNPRINTED batch print */}
               <th className="border px-2 py-1 text-center" style={{ width: 40 }}>
@@ -149,7 +150,7 @@ const BarcodePrintTable = ({ mode = 'UNPRINTED', receipts }) => {
           </thead>
           <tbody>
             {visibleReceipts.map((r, index) => (
-              <tr key={r.id} className="hover:bg-gray-50">
+              <tr key={r.id} className={`hover:bg-gray-50 ${index % 2 === 1 ? 'bg-white' : 'bg-gray-50/30'}`}>
                 <td className="border px-2 py-1 text-center">
                   {mode === 'UNPRINTED' ? (
                     <input
@@ -162,8 +163,8 @@ const BarcodePrintTable = ({ mode = 'UNPRINTED', receipts }) => {
                   )}
                 </td>
                 <td className="border px-2 py-1 text-center">{index + 1}</td>
-                <td className="border px-2 py-1">{r.purchaseOrderCode}</td>
-                <td className="border px-2 py-1">{r.code}</td>
+                <td className="border px-2 py-1 font-mono text-xs">{r.purchaseOrderCode}</td>
+                <td className="border px-2 py-1 font-mono text-xs">{r.code}</td>
                 <td className="border px-2 py-1">{r.supplier}</td>
                 <td className="border px-2 py-1">{formatDateTh(r.receivedAt)}</td>
                 <td className="border px-2 py-1 text-center">
@@ -212,13 +213,29 @@ const BarcodePrintTable = ({ mode = 'UNPRINTED', receipts }) => {
       {/* ✅ Batch print (UNPRINTED only) */}
       {mode === 'UNPRINTED' && selectedIds.length > 0 && (
         <div className="mt-2">
-          <button
-            type="button"
-            className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
-            onClick={() => navigate(`/pos/purchases/barcodes/print?ids=${selectedIds.join(',')}`)}
-          >
-            พิมพ์รายการที่เลือก ({selectedIds.length})
-          </button>
+          <div className="sticky bottom-0 bg-white/90 backdrop-blur border-t border-gray-200 py-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="text-sm text-gray-700">
+              เลือกแล้ว <span className="font-medium">{selectedIds.length}</span> รายการ
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                className="rounded border bg-white px-3 py-2 text-sm text-gray-800 hover:bg-gray-50"
+                onClick={() => setSelectedIds([])}
+              >
+                ยกเลิกการเลือก
+              </button>
+              <button
+                type="button"
+                className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+                onClick={() => navigate(`/pos/purchases/barcodes/print?ids=${selectedIds.join(',')}`)}
+              >
+                พิมพ์รายการที่เลือก ({selectedIds.length})
+              </button>
+            </div>
+          </div>
+        </div>
         </div>
       )}
     </div>
@@ -226,4 +243,7 @@ const BarcodePrintTable = ({ mode = 'UNPRINTED', receipts }) => {
 };
 
 export default BarcodePrintTable;
+
+
+
 

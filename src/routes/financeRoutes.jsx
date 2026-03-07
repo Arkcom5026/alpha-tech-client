@@ -1,11 +1,19 @@
 
 
+// src/routes/financeRoutes.jsx
 
 import CreateCustomerDepositPage from "@/features/customerDeposit/pages/CreateCustomerDepositPage";
 import ListCustomerDepositPage from "@/features/customerDeposit/pages/ListCustomerDepositPage";
 import FinanceDashboardPage from "@/features/finance/pages/FinanceDashboardPage";
 import AccountsReceivablePage from "@/features/finance/pages/AccountsReceivablePage";
 import CustomerCreditPage from "@/features/finance/pages/CustomerCreditPage";
+
+// Customer Receipt
+import CustomerReceiptListPage from "@/features/customerReceipt/pages/CustomerReceiptListPage";
+import CreateCustomerReceiptPage from "@/features/customerReceipt/pages/CreateCustomerReceiptPage";
+import CustomerReceiptDetailPage from "@/features/customerReceipt/pages/CustomerReceiptDetailPage";
+import CustomerReceiptAllocatePage from "@/features/customerReceipt/pages/CustomerReceiptAllocatePage";
+import PrintCustomerReceiptPage from "@/features/customerReceipt/pages/PrintCustomerReceiptPage";
 import CreateRefundPage from "@/features/refund/pages/CreateRefundPage";
 import ListReturnsPage from "@/features/refund/pages/ListReturnsPage";
 import PrintRefundReceiptPage from "@/features/refund/pages/PrintRefundReceiptPage";
@@ -60,6 +68,17 @@ const financeRoutes = {
       ]
     },
     {
+      path: 'customer-receipts',
+      children: [
+        { index: true, element: <CustomerReceiptListPage /> },
+        { path: 'create', element: <CreateCustomerReceiptPage /> },
+        { path: ':id', element: <CustomerReceiptDetailPage /> },
+        { path: ':id/allocate', element: <CustomerReceiptAllocatePage /> },
+        { path: ':id/print', element: <PrintCustomerReceiptPage /> },
+      ],
+    },
+
+    {
       path: 'deposit',
       children: [
         { index: true, element: <ListCustomerDepositPage />, }, // ✅ เส้นทางใหม่: รับเงินมัดจำ
@@ -75,4 +94,9 @@ const financeRoutes = {
 };
 
 export default financeRoutes;
+
+
+
+
+
 

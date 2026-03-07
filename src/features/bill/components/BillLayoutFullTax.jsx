@@ -1,3 +1,4 @@
+
 // ===============================
 // features/bill/components/BillLayoutFullTax.jsx
 // ===============================
@@ -279,8 +280,8 @@ const BillLayoutFullTax = ({ sale, saleItems, payments, config }) => {
         </h3>
 
         {/* Customer & Sale Info */}
-        <div className="grid grid-cols-[4fr_1.5fr] gap-4 text-sm mb-4 no-break">
-          <div className="doc-box border border-black p-2 rounded-lg">
+        <div className="grid grid-cols-[2.8fr_1.7fr] gap-4 text-sm mb-4 no-break">
+          <div className="doc-box border border-black p-2 rounded-lg space-y-1 leading-tight">
             <p>ลูกค้า: {getDisplayCustomerName(sale.customer)}</p>
             <p>ที่อยู่: {getCustomerAddressText(sale.customer)}</p>
             <p>โทร: {getCustomerPhoneText(sale.customer)}</p>
@@ -291,7 +292,7 @@ const BillLayoutFullTax = ({ sale, saleItems, payments, config }) => {
             <p>วันที่: {renderDate(sale.soldAt || sale.createdAt)}</p>
             <p>เลขที่: {sale.code || sale.saleNo || sale.id}</p>
             <p>เงื่อนไขการชำระเงิน: {sale.paymentTerms || '-'}</p>
-            <p>วันที่ครบกำหนด: {sale.dueDate ? renderDate(sale.dueDate) : '-'}</p>
+            
           </div>
         </div>
 
@@ -299,12 +300,12 @@ const BillLayoutFullTax = ({ sale, saleItems, payments, config }) => {
         <table className="w-full text-xs mb-2 border border-black">
           <thead className="bg-gray-100">
             <tr className="border-b border-black">
-              <th className="border border-black px-1 h-[28px]">ลำดับ<br />ITEM</th>
-              <th className="border border-black px-1 h-[28px]">รายการ<br />DESCRIPTION</th>
-              <th className="border border-black px-1 h-[28px]">จำนวน<br />QTY</th>
-              <th className="border border-black px-1 h-[28px]">หน่วย<br />UNIT</th>
-              <th className="border border-black px-1 h-[28px]">ราคาต่อหน่วย<br />UNIT PRICE</th>
-              <th className="border border-black px-1 h-[28px]">จำนวนเงิน<br />AMOUNT</th>
+              <th className="border border-black px-1 h-[28px] leading-tight w-[7%]">ลำดับ<br />ITEM</th>
+              <th className="border border-black px-1 h-[28px] leading-tight w-[39%]">รายการ<br />DESCRIPTION</th>
+              <th className="border border-black px-1 h-[28px] leading-tight w-[8%]">จำนวน<br />QTY</th>
+              <th className="border border-black px-1 h-[28px] leading-tight w-[7%]">หน่วย<br />UNIT</th>
+              <th className="border border-black px-1 h-[28px] leading-tight w-[19%]">ราคาต่อหน่วย<br />UNIT PRICE</th>
+              <th className="border border-black px-1 h-[28px] leading-tight w-[20%]">จำนวนเงิน<br />AMOUNT</th>
             </tr>
           </thead>
           <tbody>
@@ -312,7 +313,7 @@ const BillLayoutFullTax = ({ sale, saleItems, payments, config }) => {
               <tr key={item.id}>
                 <td className="border border-black px-1 text-center h-[28px]">{index + 1}</td>
                 <td className="border border-black px-1 h-[28px]">
-                  {item.productName} {item.productModel ? `(${item.productModel})` : ''}
+                  {item.productName}
                 </td>
                 <td className="border border-black px-1 text-center h-[28px]">{item.quantity}</td>
                 <td className="border border-black px-1 text-center h-[28px]">{item.unit || '-'}</td>
@@ -379,9 +380,9 @@ const BillLayoutFullTax = ({ sale, saleItems, payments, config }) => {
 
         {/* Summary */}
         <div className="grid grid-cols-2 gap-4 text-xs mt-auto pt-4 no-break" style={{ minHeight: '130px' }}>
-          <div className="leading-tight flex flex-col items-center justify-start text-center pt-2">
+          <div className="leading-tight flex flex-col items-center justify-start text-center pt-3">
             <p className="font-bold">จำนวนเงินเป็นตัวอักษร</p>
-            <p className="italic">({bahtText(total)})</p>
+            <p className="italic text-base font-semibold">({bahtText(total)})</p>
           </div>
           <div>
             <p className="flex justify-between border-t border-black border-b py-1">
@@ -400,8 +401,8 @@ const BillLayoutFullTax = ({ sale, saleItems, payments, config }) => {
         </div>
 
         {/* Signatures */}
-        <div className="mt-4 text-sm text-center no-break">
-          <div className="w-[40%] mx-auto">
+        <div className="mt-5 text-sm text-center no-break">
+          <div className="w-[48%] mx-auto">
             <div className="border-t border-dashed border-black pt-1 h-[45px] flex flex-col justify-start items-center">
               <span className="mt-1">ผู้รับเงิน / RECEIVED BY</span>
             </div>
@@ -413,3 +414,4 @@ const BillLayoutFullTax = ({ sale, saleItems, payments, config }) => {
 };
 
 export default React.memo(BillLayoutFullTax);
+

@@ -1,5 +1,6 @@
 
 
+
 // src/features/customerReceipt/components/CustomerReceiptPrintLayout.jsx
 
 import React from 'react';
@@ -276,19 +277,18 @@ const CustomerReceiptPrintLayout = ({ receipt }) => {
           TAX INVOICE ORIGINAL / DELIVERY ORDER
         </p>
 
-        <div className="grid grid-cols-[4fr_1.5fr] gap-4 text-sm mb-3 no-break">
-          <div className="border border-black p-2 rounded-lg leading-tight">
+        <div className="grid grid-cols-[2.8fr_1.7fr] gap-4 text-sm mb-4 no-break">
+          <div className="border border-black p-2 rounded-lg space-y-1 leading-tight">
             <p>ลูกค้า: {buildCustomerName(customer)}</p>
             <p>ที่อยู่: {buildCustomerAddress(customer)}</p>
             <p>โทร: {customer?.phone || customer?.phoneNumber || '-'}</p>
             <p>เลขประจำตัวผู้เสียภาษี: {customer?.taxId || customer?.taxNo || '-'}</p>
           </div>
 
-          <div className="border border-black p-2 rounded-lg leading-tight">
+          <div className="border border-black p-2 rounded-lg space-y-1 leading-tight">
             <p>วันที่: {formatDate(firstSale?.soldAt || firstSale?.createdAt || receipt?.receivedAt)}</p>
             <p>เลขที่: {firstSale?.code || receipt?.code || '-'}</p>
             <p>เงื่อนไขการชำระเงิน: -</p>
-            <p>วันที่ครบกำหนด: {firstSale?.dueDate ? formatDate(firstSale.dueDate) : '-'}</p>
           </div>
         </div>
 
@@ -308,7 +308,7 @@ const CustomerReceiptPrintLayout = ({ receipt }) => {
               <tr key={item.key || index}>
                 <td className="border border-black px-1 text-center h-[28px] align-top">{index + 1}</td>
                 <td className="border border-black px-1 h-[28px] align-top">
-                  {item.productName} {item.productModel ? `(${item.productModel})` : ''}
+                  {item.productName}
                 </td>
                 <td className="border border-black px-1 text-center h-[28px] align-top">{item.quantity}</td>
                 <td className="border border-black px-1 text-center h-[28px] align-top">{item.unit || '-'}</td>
@@ -332,7 +332,7 @@ const CustomerReceiptPrintLayout = ({ receipt }) => {
         <div className="grid grid-cols-2 gap-4 text-xs mt-auto pt-4 no-break" style={{ minHeight: '120px' }}>
           <div className="leading-tight flex flex-col items-center justify-start text-center pt-3">
             <p className="font-bold">จำนวนเงินเป็นตัวอักษร</p>
-            <p className="italic">({bahtText(total)})</p>
+            <p className="italic text-base font-semibold">({bahtText(total)})</p>
           </div>
 
           <div>
@@ -364,3 +364,4 @@ const CustomerReceiptPrintLayout = ({ receipt }) => {
 };
 
 export default React.memo(CustomerReceiptPrintLayout);
+

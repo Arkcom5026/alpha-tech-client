@@ -306,24 +306,24 @@ const CustomerReceiptPrintLayout = ({ receipt }) => {
           <tbody>
             {lineItems.map((item, index) => (
               <tr key={item.key || index}>
-                <td className="border border-black px-1 text-center h-[28px] align-top">{index + 1}</td>
-                <td className="border border-black px-1 h-[28px] align-top">
+                <td className="border border-black px-1 py-[2px] text-center h-[28px] align-middle">{index + 1}</td>
+                <td className="border border-black px-1 py-[2px] h-[28px] align-middle">
                   {item.productName}
                 </td>
-                <td className="border border-black px-1 text-center h-[28px] align-top">{item.quantity}</td>
-                <td className="border border-black px-1 text-center h-[28px] align-top">{item.unit || '-'}</td>
-                <td className="border border-black px-1 text-right h-[28px] align-top">{formatCurrency(item.unitPrice)}</td>
-                <td className="border border-black px-1 text-right h-[28px] align-top">{formatCurrency(item.amount)}</td>
+                <td className="border border-black px-1 py-[2px] text-center h-[28px] align-middle">{item.quantity}</td>
+                <td className="border border-black px-1 py-[2px] text-center h-[28px] align-middle">{item.unit || '-'}</td>
+                <td className="border border-black px-1 py-[2px] text-right h-[28px] align-middle">{formatCurrency(item.unitPrice)}</td>
+                <td className="border border-black px-1 py-[2px] text-right h-[28px] align-middle">{formatCurrency(item.amount)}</td>
               </tr>
             ))}
             {[...Array(emptyRowCount)].map((_, idx) => (
               <tr key={`empty-${idx}`}>
-                <td className="border border-black px-1 text-center h-[28px]">&nbsp;</td>
-                <td className="border border-black px-1 h-[28px]">&nbsp;</td>
-                <td className="border border-black px-1 text-center h-[28px]">&nbsp;</td>
-                <td className="border border-black px-1 text-center h-[28px]">&nbsp;</td>
-                <td className="border border-black px-1 text-right h-[28px]">&nbsp;</td>
-                <td className="border border-black px-1 text-right h-[28px]">&nbsp;</td>
+                <td className="border border-black px-1 py-[2px] text-center h-[28px] align-middle">&nbsp;</td>
+                <td className="border border-black px-1 py-[2px] h-[28px] align-middle">&nbsp;</td>
+                <td className="border border-black px-1 py-[2px] text-center h-[28px] align-middle">&nbsp;</td>
+                <td className="border border-black px-1 py-[2px] text-center h-[28px] align-middle">&nbsp;</td>
+                <td className="border border-black px-1 py-[2px] text-right h-[28px] align-middle">&nbsp;</td>
+                <td className="border border-black px-1 py-[2px] text-right h-[28px] align-middle">&nbsp;</td>
               </tr>
             ))}
           </tbody>
@@ -364,4 +364,6 @@ const CustomerReceiptPrintLayout = ({ receipt }) => {
 };
 
 export default React.memo(CustomerReceiptPrintLayout);
+
+
 

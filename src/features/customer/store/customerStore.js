@@ -1,4 +1,4 @@
-// customerStore.js
+// src/features/customer/store/customerStore.js
 
 import { create } from 'zustand';
 import {

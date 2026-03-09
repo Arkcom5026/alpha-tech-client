@@ -1,6 +1,9 @@
 
 
+// src/features/sales/components/CustomerSection.jsx
+
 // CustomerSection component (aligned with BranchForm address handling)
+
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import InputMask from 'react-input-mask';
 import useSalesStore from '@/features/sales/store/salesStore';
@@ -34,6 +37,7 @@ const CustomerSection = ({ productSearchRef, clearTrigger, hideCustomerDetails, 
   const [pendingPhone, setPendingPhone] = useState(false);
   const [isModified, setIsModified] = useState(false);
   const [searchResults, setSearchResults] = useState([]);
+  const [selectedSearchCustomerId, setSelectedSearchCustomerId] = useState(null);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [clearKey, setClearKey] = useState(Date.now());
   const [isClearing, setIsClearing] = useState(false);
@@ -109,6 +113,7 @@ const CustomerSection = ({ productSearchRef, clearTrigger, hideCustomerDetails, 
     setCustomerDepositAmount,
     searchCustomerByPhoneAndDepositAction,
     searchCustomerByNameAndDepositAction,
+    searchCustomerByCustomerIdAndDepositAction,
     setSelectedDeposit,
     clearCustomerAndDeposit,
   } = useCustomerDepositStore();
@@ -145,7 +150,7 @@ const CustomerSection = ({ productSearchRef, clearTrigger, hideCustomerDetails, 
     setName(''); setEmail('');
     setAddressDetail(''); setProvinceCode(''); setDistrictCode(''); setSubdistrictCode(''); setPostalCode('');
     setCompanyName(''); setTaxId(''); setCustomerType('INDIVIDUAL');
-    setNameSearch(''); setSearchResults([]); setSelectedCustomer(null);
+    setNameSearch(''); setSearchResults([]); setSelectedSearchCustomerId(null); setSelectedCustomer(null);
     setCustomerDepositAmount(0); setSelectedDeposit(null);
     setIsModified(false); setFormError(''); setFormInfo(''); setPendingPhone(false);
     setCustomerIdAction(null); clearCustomerAndDeposit(); setShouldShowDetails(false);
@@ -192,7 +197,10 @@ const CustomerSection = ({ productSearchRef, clearTrigger, hideCustomerDetails, 
   }, [selectedCustomer, isClearing]);
 
   // เลือก/ค้นหาลูกค้า
-  const processSelectedCustomer = (customer) => {
+  const processSelectedCustomer = (payload) => {
+    const customer = payload?.customer || payload;
+    if (!(customer && customer.id)) return;
+
     setSelectedCustomer(customer);
     setCustomerIdAction(customer.id);
     setName(customer.name || '');
@@ -241,6 +249,7 @@ const CustomerSection = ({ productSearchRef, clearTrigger, hideCustomerDetails, 
           }, 100);
         }
         setSearchResults([]);
+        setSelectedSearchCustomerId(null);
       } else {
         if (!nameSearch.trim()) {
           setFormError('กรุณากรอกชื่อหรือนามสกุลเพื่อค้นหา');
@@ -248,10 +257,22 @@ const CustomerSection = ({ productSearchRef, clearTrigger, hideCustomerDetails, 
           return;
         }
         const result = await searchCustomerByNameAndDepositAction(nameSearch);
-        if (result) {
-          setSearchResults([result]);
+        const resultList = Array.isArray(result?.results)
+          ? result.results
+          : Array.isArray(result)
+            ? result
+            : result
+              ? [result]
+              : [];
+
+        if (resultList.length > 0) {
+          setSearchResults(resultList);
+          setSelectedSearchCustomerId(null);
+          setPendingPhone(false);
+          setShouldShowDetails(false);
         } else {
           setSearchResults([]);
+          setSelectedSearchCustomerId(null);
           setPendingPhone(true);
           setShouldShowDetails(true);
           setName(''); setEmail('');
@@ -269,7 +290,23 @@ const CustomerSection = ({ productSearchRef, clearTrigger, hideCustomerDetails, 
     }
   };
 
-  const handleSelectCustomer = (customer) => processSelectedCustomer(customer);
+  const handleSelectCustomer = async (customer) => {
+    try {
+      if (!(customer && customer.id)) return;
+      setCustomerLoading(true);
+      setSelectedSearchCustomerId(customer.id);
+
+      const fullPayload = searchCustomerByCustomerIdAndDepositAction
+        ? await searchCustomerByCustomerIdAndDepositAction(customer.id)
+        : null;
+
+      processSelectedCustomer(fullPayload || customer);
+    } catch (err) {
+      setFormError('ดึงข้อมูลลูกค้าไม่สำเร็จ');
+    } finally {
+      setCustomerLoading(false);
+    }
+  };
 
   const handleUpdateCustomer = async () => {
     try {
@@ -362,7 +399,7 @@ const CustomerSection = ({ productSearchRef, clearTrigger, hideCustomerDetails, 
   return (
     <div className="bg-white p-4  min-w-[390px] relative">
       <h2 className="text-xl font-bold text-gray-800 mb-4">
-        {(customerType === 'ORGANIZATION' || customerType === 'GOVERNMENT') && companyName ? 'หน่วยงาน' : 'ข้อมูลลูกค้า'}
+        {customerType !== 'INDIVIDUAL' ? 'หน่วยงาน' : 'ข้อมูลลูกค้า'}
       </h2>
 
       {/* ค้นหา */}
@@ -439,16 +476,34 @@ const CustomerSection = ({ productSearchRef, clearTrigger, hideCustomerDetails, 
       {searchMode === 'name' && searchResults.length > 0 && (
         <div className="mt-4 border border-gray-300 rounded-md p-3 bg-gray-50 shadow-sm">
           <p className="font-semibold mb-2 text-gray-800">ผลการค้นหา:</p>
-          <ul className="space-y-1">
-            {searchResults.map((cust) => (
-              <button
-                key={cust.id}
-                onClick={() => handleSelectCustomer(cust)}
-                className="block w-full text-left px-4 py-2 border-b border-gray-200 last:border-b-0 text-gray-700 hover:bg-blue-100 rounded-sm transition-colors duration-200"
-              >
-                {(cust.type === 'ORGANIZATION' || cust.type === 'GOVERNMENT') ? cust.companyName : cust.name} ({cust.phone})
-              </button>
-            ))}
+          <ul className="space-y-2">
+            {searchResults.map((cust) => {
+              const displayLabel = (cust.type === 'ORGANIZATION' || cust.type === 'GOVERNMENT')
+                ? (cust.companyName || cust.name || '-')
+                : (cust.name || cust.companyName || '-');
+              const displayPhone = cust.phone || 'ไม่มีเบอร์โทร';
+              const displayAddress = cust.customerAddress || '';
+              const displayDeposit = Number(cust.totalDeposit || 0).toLocaleString('th-TH', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              });
+
+              return (
+                <li key={cust.id}>
+                  <button
+                    type="button"
+                    onClick={() => handleSelectCustomer(cust)}
+                    disabled={customerLoading}
+                    className={`block w-full text-left px-4 py-3 border rounded-md transition-colors duration-200 ${selectedSearchCustomerId === cust.id ? 'border-blue-500 bg-blue-100' : 'border-gray-200 bg-white hover:bg-blue-50'} ${customerLoading ? 'opacity-70 cursor-wait' : ''}`}
+                  >
+                    <div className="font-medium text-gray-800">{displayLabel}</div>
+                    <div className="text-sm text-gray-600">{displayPhone}</div>
+                    {displayAddress ? <div className="text-sm text-gray-500 mt-1">{displayAddress}</div> : null}
+                    <div className="text-xs text-gray-500 mt-1">เงินมัดจำคงเหลือ: {displayDeposit} บาท</div>
+                  </button>
+                </li>
+              );
+            })}
           </ul>
         </div>
       )}
@@ -555,6 +610,9 @@ const CustomerSection = ({ productSearchRef, clearTrigger, hideCustomerDetails, 
 };
 
 export default CustomerSection;
+
+
+
 
 
 

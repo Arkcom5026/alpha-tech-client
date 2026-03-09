@@ -1,4 +1,6 @@
-// customerDepositApi.js
+
+
+// src/features/customerDeposit/api/customerDepositApi.js
 
 import apiClient from '@/utils/apiClient';
 
@@ -64,7 +66,9 @@ export const getCustomerDepositTotal = async (customerId) => {
 
 export const getCustomerAndDepositByPhone = async (phone) => {
   try {
-    const res = await apiClient.get(`/customer-deposits/by-phone/${phone}`);
+    if (!phone) return null;
+    const safePhone = encodeURIComponent(String(phone).trim());
+    const res = await apiClient.get(`/customer-deposits/by-phone/${safePhone}`);
     console.log('getCustomerAndDepositByPhone res :', res);
     return res.data;
   } catch (error) {
@@ -75,11 +79,25 @@ export const getCustomerAndDepositByPhone = async (phone) => {
 
 export const getCustomerAndDepositByName = async (name) => {
   try {
-    const res = await apiClient.get(`/customer-deposits/by-name`, { params: { q: name } });
-    console.log('getCustomerAndDepositByName res : ',res)
+    if (!name) return { results: [] };
+    const res = await apiClient.get(`/customer-deposits/by-name`, {
+      params: { q: String(name).trim() },
+    });
+    console.log('getCustomerAndDepositByName res : ', res);
     return res.data;
   } catch (error) {
     console.error('getCustomerAndDepositByName error:', error);
+    throw error;
+  }
+};
+
+export const getCustomerAndDepositByCustomerId = async (customerId) => {
+  try {
+    const res = await apiClient.get(`/customer-deposits/by-customer/${customerId}`);
+    console.log('getCustomerAndDepositByCustomerId res :', res);
+    return res.data;
+  } catch (error) {
+    console.error('getCustomerAndDepositByCustomerId error:', error);
     throw error;
   }
 };
@@ -93,3 +111,4 @@ export const applyDepositUsage = async (data) => {
     throw error;
   }
 };
+

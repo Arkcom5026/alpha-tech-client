@@ -1,3 +1,5 @@
+
+
 // =============================================================
 // Module: src/features/address/
 // Purpose: Address/ADM (Province → District → Subdistrict) API + Store + Components
@@ -43,7 +45,7 @@ const tryGet = async (paths, params) => {
 
 export const getProvinces = async () => {
   try {
-    const raw = await tryGet(['/api/address/provinces', '/locations/provinces']);
+    const raw = await tryGet(['/address/provinces', '/locations/provinces']);
     return raw.map(normalizeProvince).filter((p) => p.code && p.nameTh);
   } catch (err) {
     console.error('[addressApi.getProvinces] error', err);
@@ -55,7 +57,7 @@ export const getDistricts = async (provinceCode) => {
   try {
     if (!provinceCode) return [];
     const params = { provinceCode: String(provinceCode) };
-    const raw = await tryGet(['/api/address/districts', '/locations/districts'], params);
+    const raw = await tryGet(['/address/districts', '/locations/districts'], params);
     return raw.map(normalizeDistrict).filter((d) => d.code && d.nameTh);
   } catch (err) {
     console.error('[addressApi.getDistricts] error', err);
@@ -67,7 +69,7 @@ export const getSubdistricts = async (districtCode) => {
   try {
     if (!districtCode) return [];
     const params = { districtCode: String(districtCode) };
-    const raw = await tryGet(['/api/address/subdistricts', '/locations/subdistricts'], params);
+    const raw = await tryGet(['/address/subdistricts', '/locations/subdistricts'], params);
     return raw.map(normalizeSubdistrict).filter((s) => s.code && s.nameTh);
   } catch (err) {
     console.error('[addressApi.getSubdistricts] error', err);
@@ -75,3 +77,48 @@ export const getSubdistricts = async (districtCode) => {
   }
 };
 
+export const resolveAddressBySubdistrictCode = async (subdistrictCode) => {
+  try {
+    if (!subdistrictCode) return null;
+
+    const code = String(subdistrictCode);
+    const paths = ['/address/resolve', '/locations/resolve'];
+
+    for (const path of paths) {
+      try {
+        const res = await apiClient.get(path, { params: { subdistrictCode: code } });
+        const data = res?.data;
+        if (!data) continue;
+
+        return {
+          subdistrictCode: String(
+            data?.subdistrictCode ?? data?.subdistrict?.code ?? data?.code ?? code,
+          ),
+          postcode: String(
+            data?.postcode ?? data?.subdistrict?.postcode ?? data?.postalCode ?? '',
+          ),
+          districtCode: String(
+            data?.districtCode ?? data?.district?.code ?? data?.subdistrict?.districtCode ?? '',
+          ),
+          provinceCode: String(
+            data?.provinceCode
+              ?? data?.province?.code
+              ?? data?.district?.provinceCode
+              ?? data?.subdistrict?.district?.provinceCode
+              ?? '',
+          ),
+          subdistrict: data?.subdistrict || null,
+          district: data?.district || null,
+          province: data?.province || null,
+        };
+      } catch {
+        // continue to next path
+      }
+    }
+
+    return null;
+  } catch (err) {
+    console.error('[addressApi.resolveAddressBySubdistrictCode] error', err);
+    return null;
+  }
+};

@@ -1,4 +1,5 @@
 
+
 // =============================================================
 // File: src/features/address/store/addressStore.js
 // Desc: Zustand store for address dropdowns w/ caching & controlled selection
@@ -8,7 +9,7 @@
 // =============================================================
 
 import { create } from 'zustand';
-import { getProvinces, getDistricts, getSubdistricts } from '@/features/address/api/addressApi';
+import { getProvinces, getDistricts, getSubdistricts, resolveAddressBySubdistrictCode } from '@/features/address/api/addressApi';
 
 const initialState = {
   provinces: [],
@@ -143,12 +144,9 @@ export const useAddressStore = create((set, get) => ({
     set((s) => ({ loading: { ...s.loading, resolving: true }, error: { ...s.error, resolving: '' } }));
 
     try {
-      // 1) call backend resolver
-      const res = await fetch(`/api/address/resolve?subdistrictCode=${encodeURIComponent(code)}`, {
-        headers: { Accept: 'application/json' },
-      });
-      const info = await res.json();
-      if (!res.ok) throw new Error(info?.message || 'resolve failed');
+      // 1) call backend resolver via api layer
+      const info = await resolveAddressBySubdistrictCode(code);
+      if (!info) throw new Error('resolve failed');
 
       const pCode = String(info?.provinceCode || '');
       const dCode = String(info?.districtCode || '');
@@ -157,16 +155,16 @@ export const useAddressStore = create((set, get) => ({
       // 2) ensure province list exists
       await get().ensureProvincesAction();
 
-      // 3) load districts for province and set selection
+      // 3) set province first, then load districts for that province
       if (pCode) {
-        await get().fetchDistrictsAction(pCode);
         get().setSelectedProvince(pCode);
+        await get().fetchDistrictsAction(pCode);
       }
 
-      // 4) load subdistricts for district and set selection
+      // 4) set district first, then load subdistricts for that district
       if (dCode) {
-        await get().fetchSubdistrictsAction(dCode);
         get().setSelectedDistrict(dCode);
+        await get().fetchSubdistrictsAction(dCode);
       }
 
       // 5) set subdistrict & postal (prefer resolver value, fallback to list cache)
@@ -194,6 +192,7 @@ export const useAddressStore = create((set, get) => ({
   // --- Reset ---------------------------------------------------
   resetAll: () => set(() => ({ ...initialState, provinces: get().provinces })),
 }));
+
 
 
 

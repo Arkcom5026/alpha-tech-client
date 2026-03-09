@@ -69,7 +69,20 @@ const usePurchaseOrderReceiptStore = create((set, get) => ({
       const wantPrinted = opts.printed ?? undefined;
       set({ loading: true, receiptSummariesLoading: true, error: null });
 
-      const all = await getAllReceipts();
+      // ✅ ส่ง query params ไปที่ API จริง ห้ามโหลดทั้งหมดแล้วค่อยกรองใน FE
+      // รองรับ backend contract:
+      // - printed=true/false
+      // - q = RC/PO code
+      // - supplier = supplier name
+      // - supplierId = supplier dropdown exact match
+      const params = {};
+      if (typeof wantPrinted === 'boolean') params.printed = wantPrinted;
+      if (opts.q) params.q = opts.q;
+      if (opts.supplier) params.supplier = opts.supplier;
+      if (Number.isFinite(Number(opts.supplierId))) params.supplierId = Number(opts.supplierId);
+      if (Number.isFinite(Number(opts.limit))) params.limit = Number(opts.limit);
+
+      const all = await getAllReceipts(params);
       const list = Array.isArray(all)
         ? all
         : Array.isArray(all?.items)
@@ -84,7 +97,8 @@ const usePurchaseOrderReceiptStore = create((set, get) => ({
         id: r.id,
         code: r.code || r.receiptCode || r.purchaseOrderReceiptCode || r.poReceiptCode,
         purchaseOrderCode: r.purchaseOrderCode || r.orderCode || r.poCode || r.purchaseOrder?.code,
-        supplier: r.supplier || r.supplierName || r.supplier?.name,
+        supplierId: r.supplierId || r.purchaseOrder?.supplier?.id || null,
+        supplier: r.supplier || r.supplierName || r.supplier?.name || r.purchaseOrder?.supplier?.name,
         taxInvoiceNo: r.tax || r.taxInvoiceNo || r.taxInvoiceNumber || r.taxNumber,
         receivedAt: r.receivedAt || r.createdAt || r.date,
         totalItems: r.total || r.totalItems || r.itemsCount || r.receivedQty || 0,
@@ -92,13 +106,8 @@ const usePurchaseOrderReceiptStore = create((set, get) => ({
         printed: Boolean(r.printed ?? r.isPrinted ?? false),
       }));
 
-      const filtered =
-        typeof wantPrinted === 'boolean'
-          ? normalized.filter((x) => x.printed === wantPrinted)
-          : normalized;
-
-      set({ receiptSummaries: filtered, loading: false, receiptSummariesLoading: false, error: null });
-      return filtered;
+      set({ receiptSummaries: normalized, loading: false, receiptSummariesLoading: false, error: null });
+      return normalized;
     } catch (error) {
       console.error('📛 loadReceiptSummariesAction error:', error);
       set({ error, loading: false, receiptSummariesLoading: false });
@@ -472,6 +481,8 @@ const usePurchaseOrderReceiptStore = create((set, get) => ({
 }));
 
 export default usePurchaseOrderReceiptStore;
+
+
 
 
 

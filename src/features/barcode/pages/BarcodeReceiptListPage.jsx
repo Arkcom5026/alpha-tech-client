@@ -1,5 +1,6 @@
 
 
+
 // src/features/barcode/pages/BarcodeReceiptListPage.jsx
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -175,6 +176,20 @@ const BarcodeReceiptListPage = () => {
     return map;
   }, [suppliers]);
 
+  const supplierIdByNormalizedName = useMemo(() => {
+    const list = Array.isArray(suppliers) ? suppliers : [];
+    const map = new Map();
+    for (const s of list) {
+      const idRaw = s?.id ?? s?.supplierId ?? null;
+      const id = Number(idRaw);
+      const name = String(s?.name ?? s?.supplierName ?? '').trim();
+      if (!Number.isFinite(id) || !name) continue;
+      const key = norm(name);
+      if (!map.has(key)) map.set(key, id);
+    }
+    return map;
+  }, [suppliers]);
+
   const getSupplierName = (r) => {
     // รองรับได้หลาย shape จาก BE
     const s = r?.supplier ?? r?.Supplier ?? null;
@@ -266,11 +281,20 @@ const BarcodeReceiptListPage = () => {
       // 1) supplier name search keyword (explicit)
       // 2) supplier dropdown selection (exact)
       const supplierKeywordEffective = kwSupplierName || (selSup && selSup !== 'ALL' ? selSup : '');
+      const supplierIdEffective = !kwSupplierName && selSup && selSup !== 'ALL'
+        ? supplierIdByNormalizedName.get(norm(selSup))
+        : undefined;
 
+      // ✅ Align query params with backend API
+      // BE expects: printed, q (RC/PO search), supplier (supplier name), supplierId(optional)
+      // Priority:
+      // 1) supplierId from dropdown = exact filter
+      // 2) supplier name keyword      = free-text deep search
       loadReceiptSummariesAction({
         printed,
-        ...(kwCode ? { codeKeyword: kwCode } : {}),
-        ...(supplierKeywordEffective ? { supplierKeyword: supplierKeywordEffective } : {}),
+        ...(kwCode ? { q: kwCode } : {}),
+        ...(Number.isFinite(supplierIdEffective) ? { supplierId: supplierIdEffective } : {}),
+        ...(!Number.isFinite(supplierIdEffective) && supplierKeywordEffective ? { supplier: supplierKeywordEffective } : {}),
         limit: 50,
       });
 
@@ -285,7 +309,7 @@ const BarcodeReceiptListPage = () => {
 
       setLastLoadedAt(Date.now());
     },
-    [loadReceiptSummariesAction, mode]
+    [loadReceiptSummariesAction, mode, supplierIdByNormalizedName, norm]
   );
 
   // ✅ keep latest runReceiptSearch in a ref (used by clearAllFilters / chip actions safely)
@@ -742,6 +766,7 @@ const BarcodeReceiptListPage = () => {
 };
 
 export default BarcodeReceiptListPage;
+
 
 
 

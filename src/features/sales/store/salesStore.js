@@ -1,5 +1,6 @@
 
 
+
 // 📁 FILE: src/features/sales/store/salesStore.js
 
 import { create } from 'zustand';
@@ -323,9 +324,8 @@ const useSalesStore = create((set, get) => ({
         0
       );
 
-      const totalNetSatang = Math.max(totalBeforeDiscountSatang - totalDiscountSatang, 0);
-      const vatSatang = Math.round((totalNetSatang * vatRate) / 100);
-      const totalAmountSatang = totalNetSatang + vatSatang;
+      const totalAmountSatang = Math.max(totalBeforeDiscountSatang - totalDiscountSatang, 0);
+      const vatSatang = Math.round((totalAmountSatang * vatRate) / (100 + vatRate));
 
       const totalBeforeDiscount = totalBeforeDiscountSatang / 100;
       const totalDiscount = totalDiscountSatang / 100;
@@ -343,26 +343,21 @@ const useSalesStore = create((set, get) => ({
         vatRate,
         totalAmount,
         note: '',
-        items: saleItems.map((item) => ({
-          stockItemId: normalizeStockItemId(item),
-          basePrice: Number(item.price) || 0,
-          vatAmount:
-            Math.round(
-              (Math.max(
-                Math.round((Number(item.price) || 0) * 100) - Math.round((Number(item.discount) || 0) * 100),
-                0
-              ) *
-                vatRate) /
-                100
-            ) / 100,
-          price:
-            Math.max(
-              Math.round((Number(item.price) || 0) * 100) - Math.round((Number(item.discount) || 0) * 100),
-              0
-            ) / 100,
-          discount: Number(item.discount) || 0,
-          remark: '',
-        })),
+        items: saleItems.map((item) => {
+          const itemBaseSatang = Math.round((Number(item.price) || 0) * 100);
+          const itemDiscountSatang = Math.round((Number(item.discount) || 0) * 100);
+          const itemGrossSatang = Math.max(itemBaseSatang - itemDiscountSatang, 0);
+          const itemVatSatang = Math.round((itemGrossSatang * vatRate) / (100 + vatRate));
+
+          return {
+            stockItemId: normalizeStockItemId(item),
+            basePrice: Number(item.price) || 0,
+            vatAmount: itemVatSatang / 100,
+            price: itemGrossSatang / 100,
+            discount: Number(item.discount) || 0,
+            remark: '',
+          };
+        }),
         mode: saleMode,
         saleMode,
         isCredit,
@@ -667,6 +662,7 @@ const useSalesStore = create((set, get) => ({
 }));
 
 export default useSalesStore;
+
 
 
 

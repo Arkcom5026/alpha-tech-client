@@ -1,6 +1,7 @@
 
 
 
+
 // ============================================================
 // 📁 FILE: src/features/sales/components/PaymentSection.jsx
 // ✅ Final patched version: fix JSX syntax + computedSaleOption scope + store wiring + robust number parsing
@@ -146,17 +147,19 @@ const PaymentSection = ({
   );
 
   // ✅ VAT-included model (ราคาหน้างาน = รวม VAT แล้ว)
-  // สามารถรองรับ VAT เปลี่ยนในอนาคต (เช่น 7% → 10%)
-  const vatRate = 7; // TODO: future → ดึงจาก config / store / BE
+  // VAT คำนวณเพื่อ "แยกแสดง" เท่านั้น ไม่ได้บวกเพิ่มในยอดขาย
+  const vatRate = 7; // future: ดึงจาก config
+
+  const round2 = (n) => Number((Number(n) || 0).toFixed(2));
 
   const vatAmount =
     safeFinalPrice > 0
-      ? (safeFinalPrice * vatRate) / (100 + vatRate)
+      ? round2((safeFinalPrice * vatRate) / (100 + vatRate))
       : 0;
 
   const priceBeforeVat =
     safeFinalPrice > 0
-      ? safeFinalPrice - vatAmount
+      ? round2(safeFinalPrice - vatAmount)
       : 0;
   const safeDepositUsed = Math.min(depositUsed, safeFinalPrice);
 
@@ -492,4 +495,6 @@ const PaymentSection = ({
 };
 
 export default PaymentSection;
+
+
 

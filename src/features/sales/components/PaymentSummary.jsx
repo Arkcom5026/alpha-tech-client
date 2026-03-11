@@ -1,10 +1,6 @@
 
 
 
-
-
-
-
 // ------------------------------------------------------------
 // 📁 FILE: src/features/sales/components/PaymentSummary.jsx
 
@@ -75,7 +71,7 @@ const PaymentSummary = ({
             <div className="flex justify-between items-center mb-3">
               <span className="text-2xl font-bold text-gray-900">ยอดที่ต้องชำระ</span>
               <span className="text-3xl font-extrabold text-blue-700">{fmt(totalNum)} ฿</span>
-              <div className="text-xs text-gray-500">* รวม VAT แล้ว</div>
+           
             </div>
 
             <div className="flex justify-between font-semibold text-xl py-2">
@@ -232,12 +228,6 @@ PaymentSummary.defaultProps = {
 };
 
 export default PaymentSummary;
-
-
-
-
-
-
 
 
 

@@ -11,9 +11,6 @@
 
 
 
-
-
-
 // ✅ src/features/product/pages/ReadyToSellStructuredDetailsPage.jsx
 // Show all IN_STOCK StockItems (STRUCTURED) for a product in the selected branch
 
@@ -364,7 +361,9 @@ const ReadyToSellStructuredDetailsPage = () => {
             )}
 
             {scanMessage && (
-$1
+              <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-amber-900">
+                <div className="font-medium">{scanMessage}</div>
+              </div>
             )}
 
             {!branchId && (
@@ -425,7 +424,28 @@ $1
                         key={key}
                         className={`hover:bg-gray-50 ${highlightId != null && it?.id === highlightId ? 'bg-amber-50 ring-1 ring-amber-200' : ''}`}
                       >
-                        <td className="px-4 py-3 whitespace-nowrap font-mono">{code}</td>
+                        <td className="px-4 py-3 whitespace-nowrap font-mono">
+                          <div className="flex items-center gap-2">
+                            <span>{code}</span>
+                            {code && code !== '-' && (
+                              <button
+                                type="button"
+                                title="คัดลอกบาร์โค้ด"
+                                className="text-xs px-2 py-0.5 rounded border bg-gray-50 hover:bg-gray-100"
+                                onClick={() => {
+                                  try {
+                                    navigator.clipboard.writeText(String(code));
+                                    setScanMessage(`คัดลอก ${code} แล้ว`);
+                                  } catch (_) {
+                                    setScanMessage('ไม่สามารถคัดลอกได้');
+                                  }
+                                }}
+                              >
+                                Copy
+                              </button>
+                            )}
+                          </div>
+                        </td>
                         <td className="px-4 py-3 whitespace-nowrap">
                           <span className="inline-flex items-center px-2 py-1 rounded-full text-xs border bg-gray-50 border-gray-200 text-gray-700">
                             {st}
@@ -446,6 +466,7 @@ $1
 };
 
 export default ReadyToSellStructuredDetailsPage;
+
 
 
 

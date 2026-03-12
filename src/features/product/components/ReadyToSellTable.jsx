@@ -53,6 +53,7 @@ const ReadyToSellTable = ({ items = [], loading = false, onViewDetails }) => {
       const mode = normalizeMode(r);
 
       const code =
+        r?.displayCode ??
         r?.serialNumber ??
         r?.barcode ??
         r?.lotBarcode ??

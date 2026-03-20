@@ -1,6 +1,7 @@
 
 
 
+
 // 📁 FILE: src/features/sales/store/salesStore.js
 
 import { create } from 'zustand';
@@ -324,6 +325,13 @@ const useSalesStore = create((set, get) => ({
         0
       );
 
+      // ✅ VAT-included pricing baseline
+      // - item.price    = ราคาขายตั้งต้นก่อนส่วนลด/บวกเพิ่ม (รวม VAT แล้ว)
+      // - item.discount = ส่วนลดสุทธิระดับรายการ
+      //                   ค่าบวก  = ลดราคา
+      //                   ค่าลบ   = บวกเพิ่มราคา (manual markup)
+      // - totalAmount   = totalBeforeDiscount - totalDiscount
+      // ดังนั้น discount = -10 จะหมายถึงบวกเพิ่มราคา 10 บาท
       const totalAmountSatang = Math.max(totalBeforeDiscountSatang - totalDiscountSatang, 0);
       const vatSatang = Math.round((totalAmountSatang * vatRate) / (100 + vatRate));
 
@@ -393,7 +401,7 @@ const useSalesStore = create((set, get) => ({
         return { error: msg, code: payload?.code, details: payload };
       }
 
-      const msg = payload?.message || err?.message || 'เกิดข้อผิดพลาดในการขาย';
+      const msg = payload?.error || payload?.message || err?.message || 'เกิดข้อผิดพลาดในการขาย';
       devError('❌ [confirmSaleOrderAction]', err);
       set({ error: msg });
       return { error: msg };
@@ -548,7 +556,7 @@ const useSalesStore = create((set, get) => ({
       return data;
     } catch (err) {
       devError('❌ [fetchSalesDashboardOverviewAction] error:', err);
-      const msg = err?.response?.data?.message || err?.message || 'โหลดภาพรวมการขายไม่สำเร็จ';
+      const msg = err?.response?.data?.error || err?.response?.data?.message || err?.message || 'โหลดภาพรวมการขายไม่สำเร็จ';
       set({ salesOverviewError: msg });
       throw err;
     } finally {
@@ -638,7 +646,7 @@ const useSalesStore = create((set, get) => ({
       return { ok: true };
     } catch (err) {
       devError('❌ [loadPrintableSalesAction] error:', err);
-      const msg = err?.response?.data?.message || err?.message || 'โหลดรายการใบขายย้อนหลังไม่สำเร็จ';
+      const msg = err?.response?.data?.error || err?.response?.data?.message || err?.message || 'โหลดรายการใบขายย้อนหลังไม่สำเร็จ';
       set({ printableSales: [], error: msg });
       return { ok: false, error: msg };
     } finally {
@@ -662,6 +670,7 @@ const useSalesStore = create((set, get) => ({
 }));
 
 export default useSalesStore;
+
 
 
 

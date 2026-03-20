@@ -1,6 +1,7 @@
 
 
 
+
 // ------------------------------------------------------------
 // 📁 FILE: src/features/sales/components/PaymentSummary.jsx
 
@@ -29,7 +30,7 @@ const PaymentSummary = ({
   setSaleOption,
   currentSaleMode,
   setCurrentSaleMode,
-  hasValidCustomerId,
+  hasValidCustomerId = false,
 }) => {
   const navigate = useNavigate();
 
@@ -223,9 +224,7 @@ PaymentSummary.propTypes = {
   hasValidCustomerId: PropTypes.bool,
 };
 
-PaymentSummary.defaultProps = {
-  hasValidCustomerId: false,
-};
+
 
 export default PaymentSummary;
 

@@ -2,6 +2,7 @@
 
 
 
+
 // ============================================================
 // 📁 FILE: src/features/sales/components/PaymentSection.jsx
 // ✅ Final patched version: fix JSX syntax + computedSaleOption scope + store wiring + robust number parsing
@@ -76,6 +77,8 @@ const PaymentSection = ({
   const isCreditOrg = currentSaleMode === 'CREDIT' && isOrgBuyer; // (kept for future use)
 
   const validSaleItems = Array.isArray(saleItems) ? saleItems : [];
+  const round2 = (n) => Number((Number(n) || 0).toFixed(2));
+
   // ✅ Minimal hardening: รองรับเลขที่เป็น string มี comma (เช่น "1,200")
   function parseMoney(val) {
     if (val == null) return 0;
@@ -101,16 +104,27 @@ const PaymentSection = ({
   };
 
   const getItemDiscount = (item) => {
+    // ✅ Item-level discount semantics (VAT included pricing)
+    // - ค่าบวก  = ลดราคา
+    // - ค่าลบ   = บวกเพิ่มราคา (manual markup)
     const d = item?.discountWithoutBill ?? item?.discount ?? 0;
     return parseMoney(d);
   };
 
-  const totalOriginalPrice = validSaleItems.reduce((sum, item) => sum + getItemPrice(item), 0);
-  const totalDiscountOnly = validSaleItems.reduce((sum, item) => sum + getItemDiscount(item), 0);
+  const totalOriginalPrice = round2(
+    validSaleItems.reduce((sum, item) => sum + getItemPrice(item), 0)
+  );
+  const totalDiscountOnly = round2(
+    validSaleItems.reduce((sum, item) => sum + getItemDiscount(item), 0)
+  );
 
   const safeBillDiscount = parseMoney(billDiscount);
-  const totalDiscount = totalDiscountOnly + safeBillDiscount;
-  const safeFinalPrice = Math.max(totalOriginalPrice - totalDiscountOnly - safeBillDiscount, 0);
+  const totalDiscount = round2(totalDiscountOnly + safeBillDiscount);
+
+  // ✅ VAT-included pricing baseline
+  // safeFinalPrice = totalOriginalPrice - itemDiscounts - billDiscount
+  // ดังนั้นถ้ามี item discount ติดลบ เช่น -10 จะกลายเป็น “บวกเพิ่มราคา” 10 บาทโดยอัตโนมัติ
+  const safeFinalPrice = round2(Math.max(totalOriginalPrice - totalDiscountOnly - safeBillDiscount, 0));
 
   useEffect(() => {
     // ✅ Guard: อย่า overwrite ค่า “มัดจำที่ใช้” หลังผู้ใช้เริ่มแก้เอง
@@ -149,8 +163,6 @@ const PaymentSection = ({
   // ✅ VAT-included model (ราคาหน้างาน = รวม VAT แล้ว)
   // VAT คำนวณเพื่อ "แยกแสดง" เท่านั้น ไม่ได้บวกเพิ่มในยอดขาย
   const vatRate = 7; // future: ดึงจาก config
-
-  const round2 = (n) => Number((Number(n) || 0).toFixed(2));
 
   const vatAmount =
     safeFinalPrice > 0
@@ -495,6 +507,8 @@ const PaymentSection = ({
 };
 
 export default PaymentSection;
+
+
 
 
 

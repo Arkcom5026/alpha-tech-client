@@ -1,7 +1,7 @@
 
 
 
-
+// src/routes/salesRoutes.jsx
 
 
 import SalesDashboardPage from "@/features/sales/pages/SalesDashboardPage";

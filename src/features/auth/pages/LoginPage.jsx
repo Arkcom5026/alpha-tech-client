@@ -1,6 +1,5 @@
-
 // ✅ @filename: LoginPage.jsx
-// RBAC update: ให้สิทธิ์ "จัดลำดับสินค้า" เฉพาะ ADMIN ตามนโยบายใหม่
+// SUPERADMIN login routing: แยก Global session ออกจาก POS session แบบ minimal disruption
 
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -14,11 +13,12 @@ const normalizeRole = (r) => {
   return v === 'supperadmin' ? 'superadmin' : v;
 };
 
-const isStaffRole = (r) => {
-  const v = normalizeRole(r);
-  return v === 'admin' || v === 'superadmin' || v === 'employee';
-};
+const isSuperAdminRole = (r) => normalizeRole(r) === 'superadmin';
 
+const isPosStaffRole = (r) => {
+  const v = normalizeRole(r);
+  return v === 'admin' || v === 'employee';
+};
 
 const LoginPage = () => {
   const navigate = useNavigate();
@@ -26,7 +26,8 @@ const LoginPage = () => {
   const loginAction = useAuthStore((state) => state.loginAction);
   const token = useAuthStore((state) => state.token);
   const role = useAuthStore((state) => state.role);
-  const profileType = useAuthStore((state) => state.profileType);  const user = useAuthStore((state) => state.user);
+  const profileType = useAuthStore((state) => state.profileType);
+  const user = useAuthStore((state) => state.user);
 
   // ✅ แสดง username เฉพาะตอนรันบน localhost เท่านั้น
   const isLocalhost = typeof window !== 'undefined' && window.location.hostname === 'localhost';
@@ -43,13 +44,24 @@ const LoginPage = () => {
 
   useEffect(() => {
     if (!isLoggedIn) return;
+
     const currentPath = window.location.pathname;
     const r = normalizeRole(role);
     const pt = (profileType || '').toString().trim().toLowerCase();
 
-    // ✅ Staff session must be employee context
-    if (isStaffRole(r) || pt === 'employee') {
-      if (currentPath !== '/pos/dashboard') navigate('/pos/dashboard');
+    // ✅ SUPERADMIN = Global session only
+    if (isSuperAdminRole(r)) {
+      if (currentPath !== '/superadmin/dashboard') {
+        navigate('/superadmin/dashboard', { replace: true });
+      }
+      return;
+    }
+
+    // ✅ POS staff session must be employee context
+    if (isPosStaffRole(r) || pt === 'employee') {
+      if (currentPath !== '/pos/dashboard') {
+        navigate('/pos/dashboard', { replace: true });
+      }
     }
   }, [isLoggedIn, role, profileType, navigate]);
 
@@ -75,11 +87,24 @@ const LoginPage = () => {
       const effectiveRole = normalizeRole(st.role);
       const effectiveProfileType = (st.profileType || '').toString().trim().toLowerCase();
 
-      // ✅ Staff (employee/admin/superadmin) → เข้า POS
-      if (isStaffRole(effectiveRole) || effectiveProfileType === 'employee') {
-        // ✅ Branch context required for POS (EXCEPT SUPERADMIN)
+      // ✅ SUPERADMIN → เข้า Global dashboard เท่านั้น
+      if (isSuperAdminRole(effectiveRole)) {
+        try {
+          localStorage.setItem('token', st.token || '');
+          localStorage.setItem('role', effectiveRole || '');
+        } catch (storageErr) {
+          console.warn('⚠️ Cannot access localStorage:', storageErr);
+        }
+
+        navigate('/superadmin/dashboard', { replace: true });
+        return;
+      }
+
+      // ✅ POS staff (employee/admin) → เข้า POS
+      if (isPosStaffRole(effectiveRole) || effectiveProfileType === 'employee') {
+        // ✅ Branch context required for POS
         const branchId = st.employee?.branchId ?? null;
-        if (!branchId && effectiveRole !== 'superadmin') {
+        if (!branchId) {
           setError('บัญชีพนักงานต้องมีสาขา (branchId) ก่อนเข้า POS');
           useAuthStore.getState().logoutAction?.();
           return;
@@ -236,11 +261,3 @@ const LoginPage = () => {
 };
 
 export default LoginPage;
-
-
-
-
-
-
-
-

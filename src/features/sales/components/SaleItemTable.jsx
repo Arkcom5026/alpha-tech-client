@@ -1,4 +1,5 @@
 
+
 // 📁 FILE: components/SaleItemTable.jsx
 
 import React, { useEffect } from 'react'
@@ -102,7 +103,7 @@ const SaleItemTable = ({ items = [], onRemove, billDiscount = 0 }) => {
   const handleDiscountChange = (itemId, input) => {
     // รองรับทั้ง event และ number
     const raw = typeof input === 'number' ? input : input?.target?.value
-    const newDiscountWithoutBill = Math.max(0, toNumber(raw))
+    const newDiscountWithoutBill = toNumber(raw)
 
     const itemToUpdate = items.find((item) => item.stockItemId === itemId)
     if (!itemToUpdate) return
@@ -116,6 +117,29 @@ const SaleItemTable = ({ items = [], onRemove, billDiscount = 0 }) => {
     })
   }
 
+  const handleSellingPriceChange = (itemId, input) => {
+    const raw = typeof input === 'number' ? input : input?.target?.value
+    const newSellingPrice = Math.max(0, toNumber(raw))
+
+    const itemToUpdate = items.find((item) => item.stockItemId === itemId)
+    if (!itemToUpdate) return
+
+    const basePrice = typeof itemToUpdate.price === 'number' ? itemToUpdate.price : 0
+    const billShare = itemToUpdate.billShare || 0
+
+    // ✅ VAT-included pricing baseline
+    // discountWithoutBill = basePrice - sellingPrice
+    // ค่าบวก = ลดราคา / ค่าลบ = บวกเพิ่มราคา
+    const nextDiscountWithoutBill = Number((basePrice - newSellingPrice).toFixed(2))
+    const nextTotalDiscount = Number((nextDiscountWithoutBill + billShare).toFixed(2))
+
+    updateSaleItemAction(itemId, {
+      sellingPrice: newSellingPrice,
+      discountWithoutBill: nextDiscountWithoutBill,
+      discount: nextTotalDiscount,
+    })
+  }
+
   if (!Array.isArray(items) || items.length === 0) {
     return (
       <table className="w-full text-left border">
@@ -126,6 +150,7 @@ const SaleItemTable = ({ items = [], onRemove, billDiscount = 0 }) => {
             <th className="p-2 border">รุ่น</th>
             <th className="p-2 border">บาร์โค้ด</th>
             <th className="p-2 border">ราคา</th>
+            <th className="p-2 border">ขายจริง</th>
             <th className="p-2 border">ส่วนลด</th>
             <th className="p-2 border">ลดท้ายบิล</th>
             <th className="p-2 border">สุทธิ</th>
@@ -134,7 +159,7 @@ const SaleItemTable = ({ items = [], onRemove, billDiscount = 0 }) => {
         </thead>
         <tbody>
           <tr>
-            <td colSpan="9" className="p-4 text-center text-gray-500">
+            <td colSpan="10" className="p-4 text-center text-gray-500">
               ยังไม่มีสินค้าที่จะขาย
             </td>
           </tr>
@@ -152,6 +177,7 @@ const SaleItemTable = ({ items = [], onRemove, billDiscount = 0 }) => {
           <th className="p-2 border w-[140px]">รุ่น</th>
           <th className="p-2 border w-[100px]">บาร์โค้ด</th>
           <th className="p-2 border w-24">ราคา</th>
+          <th className="p-2 border w-24">ขายจริง</th>
           <th className="p-2 border w-24">ส่วนลด</th>
           <th className="p-2 border w-24">ลดท้ายบิล</th>
           <th className="p-2 border w-24">สุทธิ</th>
@@ -164,6 +190,10 @@ const SaleItemTable = ({ items = [], onRemove, billDiscount = 0 }) => {
           const discountWithoutBill = item.discountWithoutBill || 0
           const billShare = item.billShare || 0
           const safePrice = typeof item.price === 'number' ? item.price : 0
+          const sellingPrice =
+            typeof item.sellingPrice === 'number'
+              ? item.sellingPrice
+              : Math.max(0, safePrice - discountWithoutBill)
           const net = Math.max(0, safePrice - discount)
 
           return (
@@ -173,6 +203,18 @@ const SaleItemTable = ({ items = [], onRemove, billDiscount = 0 }) => {
               <td className="p-2 border">{item.model}</td>
               <td className="p-2 border text-center">{item.barcode}</td>
               <td className="p-2 border text-right">{safePrice.toFixed(2)}</td>
+              <td className="p-2 border text-right">
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  step="0.01"
+                  step="0.01"
+                  className="w-24 py-0 border rounded text-right"
+                  placeholder="0.00"
+                  value={sellingPrice === 0 ? '' : sellingPrice}
+                  onChange={(e) => handleSellingPriceChange(item.stockItemId, e)}
+                />
+              </td>
               <td className="p-2 border text-right">
                 <input
                   type="number"
@@ -214,6 +256,7 @@ const SaleItemTable = ({ items = [], onRemove, billDiscount = 0 }) => {
 }
 
 export default SaleItemTable
+
 
 
 

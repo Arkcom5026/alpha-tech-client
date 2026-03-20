@@ -133,12 +133,20 @@ const QuickSaleLayout = () => {
       }
 
       const preparedItem = {
-        // ✅ ใช้ stockItemId เป็นหลัก (barcodeId ไม่บังคับใน flow ขาย)
+        // ✅ FE pricing baseline (VAT included)
+        // - price         = ราคาตั้งต้นก่อนลด/บวกเพิ่ม (ใช้เป็น canonical base price ในตะกร้า)
+        // - discount      = ส่วนลดสุทธิระดับรายการ
+        //                   ค่าบวก = ลดราคา / ค่าลบ = บวกเพิ่มราคา
+        // - sellingPrice  = ราคาที่แสดง/แก้ไขใน UI (เริ่มต้นเท่ากับ price)
+        // - originalPrice = ราคาอ้างอิงจาก price type ที่เลือกตอนสแกนเข้า
+        // หมายเหตุ: รอบนี้ยังไม่เปลี่ยน flow การแก้ราคาในไฟล์นี้ เพียงล็อก baseline ให้ชัดก่อน
         stockItemId: foundItem.id,
         barcode: foundItem.barcode,
         productName: foundItem.product?.name || '',
         model: foundItem.product?.model || '',
         price: foundItem.prices?.[selectedPriceType] || 0,
+        originalPrice: foundItem.prices?.[selectedPriceType] || 0,
+        sellingPrice: foundItem.prices?.[selectedPriceType] || 0,
         discount: 0,
         discountWithoutBill: 0,
         billShare: 0,
@@ -324,6 +332,7 @@ const QuickSaleLayout = () => {
 }
 
 export default QuickSaleLayout
+
 
 
 

@@ -1,10 +1,14 @@
 
+
+
+
 // ✅ stockItemStore.js — จัดการ SN ที่ยิงเข้าสต๊อก และค้นหา SN สำหรับขาย
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import {
   markStockItemsAsSold,
   receiveStockItem,
+  receiveAllPendingNoSN,
   searchStockItem,
   getAvailableStockItemsByProduct
 } from '../api/stockItemApi';
@@ -16,13 +20,27 @@ const useStockItemStore = create(
     error: null,
 
     // ✅ ฟังก์ชันยิง SN เข้าสต๊อก
-    receiveSNAction: async ({ barcode, serialNumber, receiptItemId } = {}) => {
-      const code = barcode || serialNumber;
+    receiveSNAction: async ({ barcode, serialNumber, receiptItemId, keepSN } = {}) => {
+      const normalizedBarcode = String(barcode || '').trim();
+      const normalizedSerialNumber = String(serialNumber || '').trim();
+      const shouldKeepSN = keepSN === true;
+      const code = normalizedBarcode;
+
       if (!code) {
         set((s) => ({
           scannedList: [
             ...s.scannedList,
             { barcode: '', status: 'error', error: 'กรุณาระบุบาร์โค้ด' },
+          ],
+        }));
+        return;
+      }
+
+      if (shouldKeepSN && !normalizedSerialNumber) {
+        set((s) => ({
+          scannedList: [
+            ...s.scannedList,
+            { barcode: String(code), status: 'error', error: 'กรุณาระบุ SN' },
           ],
         }));
         return;
@@ -42,7 +60,20 @@ const useStockItemStore = create(
 
       set({ loading: true, error: null });
       try {
-        const data = await receiveStockItem({ barcode: String(code), serialNumber, receiptItemId });
+        const payload = shouldKeepSN
+          ? {
+              barcode: String(code),
+              serialNumber: normalizedSerialNumber,
+              receiptItemId,
+              keepSN: true,
+            }
+          : {
+              barcode: String(code),
+              receiptItemId,
+              keepSN: false,
+            };
+
+        const data = await receiveStockItem(payload);
         const kind = data?.stockItem ? 'SN' : (data?.lot ? 'LOT' : undefined);
         const extra = kind === 'SN'
           ? { stockItemId: data?.stockItem?.id }
@@ -64,6 +95,30 @@ const useStockItemStore = create(
             { barcode: String(code), status: 'error', error: error?.message || 'รับสินค้าไม่สำเร็จ' },
           ],
         }));
+      } finally {
+        set({ loading: false });
+      }
+    },
+
+    // ✅ ฟังก์ชันลับ: รับสินค้าค้างรับทั้งหมดในครั้งเดียว
+    // ปัจจุบัน backend รองรับ bulk receive ได้ทั้ง SIMPLE และ STRUCTURED
+    receiveAllPendingNoSNAction: async ({ receiptId } = {}) => {
+      const normalizedReceiptId = Number(receiptId);
+      if (!Number.isFinite(normalizedReceiptId) || normalizedReceiptId <= 0) {
+        const e = new Error('receiptId ไม่ถูกต้อง');
+        set({ error: e.message });
+        throw e;
+      }
+
+      set({ loading: true, error: null });
+      try {
+        const res = await receiveAllPendingNoSN({ receiptId: normalizedReceiptId });
+        return res;
+      } catch (err) {
+        const message = err?.response?.data?.message || err?.message || 'รับสินค้าค้างรับทั้งหมดไม่สำเร็จ';
+        set({ error: message });
+        console.error('❌ receiveAllPendingNoSNAction ล้มเหลว:', err);
+        throw err;
       } finally {
         set({ loading: false });
       }
@@ -168,6 +223,7 @@ const useStockItemStore = create(
 );
 
 export default useStockItemStore;
+
 
 
 

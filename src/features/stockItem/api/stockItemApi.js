@@ -1,23 +1,30 @@
 
 
 
+
+
 // ✅ stockItemApi.js — API สำหรับรับ SN และค้นหาด้วย query
 import apiClient from '@/utils/apiClient';
 
 // 🔁 รับ SN เข้าสต๊อก (รองรับทั้ง serialNumber และ barcode — คง backward compatible)
-export const receiveStockItem = async ({ barcode, serialNumber, receiptItemId } = {}) => {
+export const receiveStockItem = async ({ barcode, serialNumber, receiptItemId, keepSN } = {}) => {
   try {
-    // ✅ backward-compat: เดิมบางที่ส่งมาเป็น { serialNumber: sn } อย่างเดียว
     const code = barcode || serialNumber;
     if (!code) throw new Error('กรุณาระบุบาร์โค้ดที่ต้องการรับเข้าสต๊อก');
 
-    // ส่งเป็นรูปแบบใหม่ (nested) แต่จะมี route adapter รับได้ทั้งแบบเก่า/ใหม่
-    const payload = { barcode: { barcode: String(code) } };
-    // ถ้า serialNumber ต่างจาก barcode ให้แนบไปด้วย (กรณี STRUCTURED ที่มี SN จริง)
-    if (serialNumber && String(serialNumber) !== String(code)) {
+    const payload = {
+      barcode: {
+        barcode: String(code),
+      },
+      keepSN: keepSN === true,
+    };
+
+    // ✅ ส่ง SN เฉพาะกรณีที่ต้องเก็บจริง
+    if (keepSN === true && serialNumber && String(serialNumber) !== String(code)) {
       payload.barcode.serialNumber = String(serialNumber);
     }
-    if (receiptItemId) payload.receiptItemId = receiptItemId; // ไม่บังคับ แต่เผื่อใช้ในอนาคต
+
+    if (receiptItemId) payload.receiptItemId = receiptItemId;
 
     const res = await apiClient.post('/stock-items/receive-sn', payload);
     return res.data;
@@ -29,6 +36,25 @@ export const receiveStockItem = async ({ barcode, serialNumber, receiptItemId } 
 };
 
 // 🔍 ค้นหาสินค้าพร้อมขายด้วย query (barcode, title, หรือรหัสสินค้า)
+// 🔐 รับสินค้าค้างรับทั้งหมดในครั้งเดียว (เฉพาะ non-SN flow)
+export const receiveAllPendingNoSN = async ({ receiptId } = {}) => {
+  try {
+    const normalizedReceiptId = Number(receiptId);
+    if (!Number.isFinite(normalizedReceiptId) || normalizedReceiptId <= 0) {
+      throw new Error('receiptId ไม่ถูกต้อง');
+    }
+
+    const res = await apiClient.post('/stock-items/receive-all-no-sn', {
+      receiptId: normalizedReceiptId,
+    });
+    return res.data;
+  } catch (err) {
+    console.error('❌ receiveAllPendingNoSN error:', err);
+    const msg = err?.response?.data?.error || err?.response?.data?.message || err?.message || 'ไม่สามารถรับสินค้าค้างรับทั้งหมดได้';
+    throw new Error(msg);
+  }
+};
+
 export const searchStockItem = async (query) => {
   try {
     if (!query) throw new Error('กรุณาระบุคำค้นหา');
@@ -67,6 +93,7 @@ export const getAvailableStockItemsByProduct = async (productId) => {
     throw err;
   }
 };
+
 
 
 

@@ -3,6 +3,8 @@
 
 
 
+
+
 // src/features/barcode/store/barcodeStore.js
 import { create } from 'zustand';
 // ❌ Store must not call apiClient directly (project rule)
@@ -19,6 +21,7 @@ import {
   markBarcodesAsPrinted,
   searchReprintReceipts,
 } from '../api/barcodeApi';
+import { receiveAllPendingNoSN } from '@/features/stockItem/api/stockItemApi';
 
 // ✅ Receipt finalization (must be called via Store; components must not call API directly)
 // ✅ Receipt APIs (Store must call via ...Api only)
@@ -113,6 +116,30 @@ const useBarcodeStore = create((set, get) => ({
   // ✅ Standard UI actions (no dialog)
   clearErrorAction: () => set({ error: null }),
   clearError: () => set({ error: null }),
+
+  // 🔐 ฟังก์ชันลับ: รับสินค้าค้างรับทั้งหมดในครั้งเดียว
+  // ปัจจุบัน backend รองรับ bulk receive ได้ทั้ง SIMPLE และ STRUCTURED
+  receiveAllPendingNoSNAction: async ({ receiptId } = {}) => {
+    const normalizedReceiptId = Number(receiptId);
+    if (!Number.isFinite(normalizedReceiptId) || normalizedReceiptId <= 0) {
+      const e = new Error('receiptId ไม่ถูกต้อง');
+      set({ error: e.message });
+      throw e;
+    }
+
+    set({ loading: true, error: null });
+    try {
+      const res = await receiveAllPendingNoSN({ receiptId: normalizedReceiptId });
+      return res;
+    } catch (err) {
+      const message = err?.response?.data?.message || err?.message || 'รับสินค้าค้างรับทั้งหมดไม่สำเร็จ';
+      set({ error: message });
+      console.error('❌ receiveAllPendingNoSNAction ล้มเหลว:', err);
+      throw err;
+    } finally {
+      set({ loading: false });
+    }
+  },
 
   // ----- Local-first draft scanning (persist per receipt) -----
   receiptId: null,
@@ -522,19 +549,6 @@ const useBarcodeStore = create((set, get) => ({
 }));
 
 export default useBarcodeStore;
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

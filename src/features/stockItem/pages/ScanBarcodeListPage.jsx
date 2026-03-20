@@ -3,17 +3,14 @@
 
 
 
-
-
-
-
-
 // ScanBarcodeListPage.jsx
 
 import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 
 import useBarcodeStore from '@/features/barcode/store/barcodeStore';
+
+const SECRET_RECEIVE_ALL_CODE = 'all';
 
 const ScanBarcodeListPage = () => {
   const { receiptId } = useParams();
@@ -34,10 +31,28 @@ const ScanBarcodeListPage = () => {
     setLastFlashBarcode(b);
     setLastFlashAt(Date.now());
   }, []);
+
+  // ✅ ล้าง flash state แบบ time-based นอก render เพื่อให้ highlight ดับเองอย่างเสถียร
+  useEffect(() => {
+    if (!lastFlashBarcode || !lastFlashAt) return;
+    const t = setTimeout(() => {
+      setLastFlashBarcode('');
+      setLastFlashAt(0);
+    }, 900);
+    return () => clearTimeout(t);
+  }, [lastFlashBarcode, lastFlashAt]);
   const [snError, setSnError] = useState('');
   const [pageMessage, setPageMessage] = useState(null);
+  const [secretAllArmedAt, setSecretAllArmedAt] = useState(0);
   const snInputRef = useRef(null);
   const barcodeInputRef = useRef(null);
+
+  // ✅ โฟกัสช่องยิงบาร์โค้ดทันทีเมื่อเข้า page
+  useEffect(() => {
+    try {
+      barcodeInputRef?.current?.focus?.();
+    } catch (_) { }
+  }, []);
 
   // 🔁 เมื่อยิงบาร์โค้ดเสร็จและ input ถูกเคลียร์ ให้โฟกัสกลับมาที่ช่องยิงบาร์โค้ดทันที
   useEffect(() => {
@@ -55,6 +70,7 @@ const ScanBarcodeListPage = () => {
     loadReceiptWithSupplierAction,
     finalizeReceiptIfNeededAction,
     clearErrorAction,
+    receiveAllPendingNoSNAction,
   } = useBarcodeStore();
 
   useEffect(() => {
@@ -77,7 +93,7 @@ const ScanBarcodeListPage = () => {
       if (!Ctx) return null;
       if (!audioCtxRef.current) audioCtxRef.current = new Ctx();
       if (audioCtxRef.current.state === 'suspended') {
-        audioCtxRef.current.resume?.().catch(() => {});
+        audioCtxRef.current.resume?.().catch(() => { });
       }
       return audioCtxRef.current;
     } catch (_) {
@@ -116,17 +132,14 @@ const ScanBarcodeListPage = () => {
     // เหตุผล: บาง payload อาจแนบ b.stockItem มาจากระดับ receiptItem (shared) ทำให้เข้าใจผิดว่า "ทุกแถว" ถูกยิงแล้ว
     const snScanned = b?.stockItemId != null;
 
-    // ✅ ตรวจว่า "สินค้านี้" ตั้งค่าโหมดสต๊อกเป็น SN (แยกรายชิ้น) หรือไม่
-    // หมายเหตุ: รองรับ field name หลายแบบแบบ defensive เพื่อไม่ให้พังเมื่อ payload เปลี่ยน
-    const stockModeRaw = String(
-      b?.product?.stockMode ||
-      b?.product?.stockBehavior ||
-      b?.product?.stockTrackingMode ||
-      b?.productStockMode ||
-      b?.stockMode ||
+    // ✅ Prisma ล่าสุดของ P1 ใช้ Product.mode เป็น source of truth
+    const productMode = String(
+      b?.product?.mode ||
+      b?.purchaseOrderReceiptItem?.product?.mode ||
+      b?.receiptItem?.product?.mode ||
       ''
     ).toUpperCase();
-    const isProductSNMode = stockModeRaw.includes('SN');
+    const isProductSNMode = productMode === 'STRUCTURED';
 
     // ✅ ถ้าเป็นสินค้าโหมด SN ให้ถือว่าสแกนแล้วเฉพาะเมื่อมี stockItemId เท่านั้น
     // (กันเคสที่ API/FE อัปเดต status แบบ LOT/SN_RECEIVED ในระดับรายการ ทำให้ทุกแถวถูกนับว่ารับแล้ว)
@@ -186,7 +199,7 @@ const ScanBarcodeListPage = () => {
     if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current);
     refreshTimeoutRef.current = setTimeout(() => {
       if (receiptId) loadBarcodesAction(receiptId);
-    }, 600);
+    }, 300);
   }, [receiptId, loadBarcodesAction]);
 
   // 🧺 Warehouse UX (โหดขึ้น): Queue กันยิงถี่ + กัน request ซ้อน
@@ -246,11 +259,16 @@ const ScanBarcodeListPage = () => {
         }
         setLastSubmit({ barcode, at: now });
 
-        const payload = {
-          barcode,
-          serialNumber: job?.keepSN ? String(job?.serialNumber || '').trim() : null,
-          keepSN: !!job?.keepSN,
-        };
+        const payload = job?.keepSN
+          ? {
+            barcode,
+            serialNumber: String(job?.serialNumber || '').trim(),
+            keepSN: true,
+          }
+          : {
+            barcode,
+            keepSN: false,
+          };
 
         let ok = false;
         try {
@@ -299,6 +317,14 @@ const ScanBarcodeListPage = () => {
       const v = String(nextValue || '').trim();
       if (!v) return;
 
+      // 🔐 กัน auto-submit ระหว่างผู้ใช้กำลังพิมพ์ secret code เช่น a / al / all
+      // ไม่อย่างนั้นจะเผลอ submit กลางทางแล้วขึ้น "ไม่พบบาร์โค้ด"
+      if (!keepSN) {
+        const secret = String(SECRET_RECEIVE_ALL_CODE || '').toLowerCase();
+        const lower = v.toLowerCase();
+        if (secret && secret.startsWith(lower)) return;
+      }
+
       const startedAt = inputStartTime || Date.now();
       const burstMs = Date.now() - startedAt;
 
@@ -312,14 +338,15 @@ const ScanBarcodeListPage = () => {
     } catch (_) {
       // ignore
     }
-  }, [submitting, inputStartTime]);
+  }, [submitting, inputStartTime, keepSN]);
 
   useEffect(() => {
     return () => {
       if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current);
       if (autoSubmitTimeoutRef.current) clearTimeout(autoSubmitTimeoutRef.current);
       try {
-        audioCtxRef.current?.close?.();
+        const ctx = audioCtxRef.current;
+        if (ctx && ctx.state !== 'closed') ctx.close?.();
       } catch (_) {
         // ignore
       }
@@ -374,13 +401,94 @@ const ScanBarcodeListPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (submitting) return;
     setPageMessage(null);
 
-    const barcode = (barcodeInput || '').trim();
+    const barcode = String(barcodeInput || '')
+      .trim()
+      .replace(/\r|\n/g, '')
+      .replace(/\s+/g, '');
     if (!barcode) return;
+
+    // 🔐 Hidden operator command: รับสินค้าค้างรับทั้งหมดในครั้งเดียว
+    const isSecretAll = barcode.toLowerCase() === SECRET_RECEIVE_ALL_CODE;
+
+    if (isSecretAll) {
+      const now = Date.now();
+      const armedWindowMs = 2500;
+
+      setBarcodeInput('');
+      setSnInput('');
+      setInputStartTime(null);
+      setSnError('');
+
+      // ✅ Safety polish: ต้องพิมพ์ all ซ้ำอีกครั้งภายในช่วงสั้น ๆ เพื่อยืนยัน
+      // ช่วยกัน mis-scan / พิมพ์พลาด โดยไม่ต้องใช้ dialog
+      if (!secretAllArmedAt || (now - secretAllArmedAt) > armedWindowMs) {
+        setSecretAllArmedAt(now);
+        setPageMessage({
+          type: 'info',
+          text: `ℹ️ โหมดลับพร้อมแล้ว — พิมพ์ all ซ้ำอีกครั้งภายใน ${Math.floor(armedWindowMs / 1000)} วินาที เพื่อรับสินค้าค้างรับทั้งหมด`,
+        });
+        playBeep();
+        barcodeInputRef?.current?.focus?.();
+        barcodeInputRef?.current?.select?.();
+        return;
+      }
+
+      setSecretAllArmedAt(0);
+
+      if (!pendingList.length) {
+        setPageMessage({ type: 'info', text: 'ℹ️ ไม่มีรายการค้างรับให้รับเข้าทั้งหมด' });
+        playBeep();
+        barcodeInputRef?.current?.focus?.();
+        barcodeInputRef?.current?.select?.();
+        return;
+      }
+
+      if (!receiveAllPendingNoSNAction) {
+        setPageMessage({ type: 'error', text: '❌ Store ยังไม่มี receiveAllPendingNoSNAction' });
+        playErrorBeep();
+        barcodeInputRef?.current?.focus?.();
+        barcodeInputRef?.current?.select?.();
+        return;
+      }
+
+      setSubmitting(true);
+      try {
+        const bulkResult = await receiveAllPendingNoSNAction({ receiptId });
+        await Promise.all([
+          loadBarcodesAction(receiptId),
+          loadReceiptWithSupplierAction(receiptId),
+        ]);
+        const receivedCount = Number(bulkResult?.receivedCount || pendingList.length || 0);
+        setPageMessage({ type: 'success', text: `✅ รับสินค้าค้างรับทั้งหมดสำเร็จ ${receivedCount} รายการ` });
+        playBeep();
+      } catch (err) {
+        const msg = err?.response?.data?.message || err?.message || 'รับสินค้าค้างรับทั้งหมดไม่สำเร็จ';
+        setPageMessage({ type: 'error', text: `❌ ${msg}` });
+        playErrorBeep();
+      } finally {
+        setSubmitting(false);
+        barcodeInputRef?.current?.focus?.();
+        barcodeInputRef?.current?.select?.();
+      }
+      return;
+    }
+
+    // 🔐 ถ้าผู้ใช้ยังพิมพ์ secret code ไม่ครบ เช่น a / al ให้เงียบไว้ก่อน
+    if (!keepSN) {
+      const secret = String(SECRET_RECEIVE_ALL_CODE || '').toLowerCase();
+      const lower = barcode.toLowerCase();
+      if (secret && secret.startsWith(lower) && lower !== secret) {
+        barcodeInputRef?.current?.focus?.();
+        return;
+      }
+    }
 
     const found = barcodes.find((b) => b.barcode === barcode);
     if (!found) {
+      setSecretAllArmedAt(0);
       setPageMessage({ type: 'error', text: '❌ ไม่พบบาร์โค้ดนี้ในรายการที่ต้องรับเข้าสต๊อก' });
       playErrorBeep();
       setBarcodeInput('');
@@ -394,6 +502,7 @@ const ScanBarcodeListPage = () => {
       found?.stockItem?.saleItem?.id != null;
 
     if (sold) {
+      setSecretAllArmedAt(0);
       setPageMessage({ type: 'error', text: '❌ บาร์โค้ดนี้ถูกขายไปแล้ว (SOLD) ไม่สามารถรับเข้าสต๊อกได้' });
       playErrorBeep();
       setBarcodeInput('');
@@ -403,6 +512,7 @@ const ScanBarcodeListPage = () => {
     }
 
     if (isScanned(found)) {
+      setSecretAllArmedAt(0);
       setPageMessage({ type: 'info', text: 'ℹ️ บาร์โค้ดนี้รับเข้าสต๊อกแล้ว' });
       playErrorBeep();
       setBarcodeInput('');
@@ -411,6 +521,7 @@ const ScanBarcodeListPage = () => {
       return;
     }
 
+    setSecretAllArmedAt(0);
     if (keepSN && !snInput.trim()) {
       setSnError('กรุณายิง/กรอก SN ก่อนยืนยัน');
       return;
@@ -480,11 +591,10 @@ const ScanBarcodeListPage = () => {
       {pageMessage && (
         <div
           key={pageMessage.text}
-          className={`px-4 py-2 text-sm border rounded ${
-            pageMessage.type === 'error' ? 'bg-red-100 text-red-700 border-red-300' :
-            pageMessage.type === 'success' ? 'bg-green-100 text-green-700 border-green-300' :
-            'bg-blue-100 text-blue-700 border-blue-300'
-          }`}
+          className={`px-4 py-2 text-sm border rounded ${pageMessage.type === 'error' ? 'bg-red-100 text-red-700 border-red-300' :
+              pageMessage.type === 'success' ? 'bg-green-100 text-green-700 border-green-300' :
+                'bg-blue-100 text-blue-700 border-blue-300'
+            }`}
         >
           {pageMessage.text}
         </div>
@@ -531,10 +641,10 @@ const ScanBarcodeListPage = () => {
               </div>
               <div className="flex items-center gap-6">
                 <label className="text-sm">
-                  <input type="radio" name="keepSN" value="false" checked={!keepSN} onChange={() => setKeepSN(false)} disabled={submitting}/> ไม่เก็บ SN
+                  <input type="radio" name="keepSN" value="false" checked={!keepSN} onChange={() => setKeepSN(false)} disabled={submitting} /> ไม่เก็บ SN
                 </label>
                 <label className="text-sm">
-                  <input type="radio" name="keepSN" value="true" checked={keepSN} onChange={() => setKeepSN(true)} disabled={submitting}/> ต้องเก็บ SN (ยิง SN ถัดไป)
+                  <input type="radio" name="keepSN" value="true" checked={keepSN} onChange={() => setKeepSN(true)} disabled={submitting} /> ต้องเก็บ SN (ยิง SN ถัดไป)
                 </label>
               </div>
               <div className="text-xs text-gray-500">F2 โฟกัสช่องสแกน · F3 สลับโหมด SN · F4 Finalize</div>
@@ -683,11 +793,10 @@ const ScanBarcodeListPage = () => {
                     return (
                       <tr
                         key={b.id || `${b.barcode}-${idx}`}
-                        className={`border-t transition-colors ${
-                          lastFlashBarcode && String(b?.barcode || '') === String(lastFlashBarcode) && (Date.now() - lastFlashAt) < 900
+                        className={`border-t transition-colors ${lastFlashBarcode && String(b?.barcode || '') === String(lastFlashBarcode)
                             ? 'bg-green-100'
                             : ''
-                        }`}
+                          }`}
                       >
                         <td className="px-3 py-2">{idx + 1}</td>
                         <td className="px-3 py-2">{productName}</td>
@@ -709,10 +818,6 @@ const ScanBarcodeListPage = () => {
 };
 
 export default ScanBarcodeListPage;
-
-
-
-
 
 
 

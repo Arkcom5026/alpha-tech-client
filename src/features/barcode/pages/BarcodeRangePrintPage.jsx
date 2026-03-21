@@ -10,6 +10,48 @@ const DEFAULT_PAD_LENGTH = 7;
 const normalizeDigits = (value = '') => String(value).replace(/\D/g, '');
 const wrapCode39Value = (value = '') => `*${String(value)}*`;
 
+const buildManualItems = (rawInput = '') => {
+  const rawTokens = String(rawInput)
+    .split(/[\n,]+/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  if (!rawTokens.length) {
+    throw new Error('กรุณากรอกรายการบาร์โค้ดอย่างน้อย 1 รายการ');
+  }
+
+  const invalidTokens = rawTokens.filter((item) => !/^\d+$/.test(item));
+  if (invalidTokens.length > 0) {
+    throw new Error(
+      `พบข้อมูลที่ไม่ใช่ตัวเลข: ${invalidTokens.slice(0, 3).join(', ')}`
+    );
+  }
+
+  const uniqueItems = [];
+  const seen = new Set();
+  let duplicateCount = 0;
+
+  rawTokens.forEach((item) => {
+    if (seen.has(item)) {
+      duplicateCount += 1;
+      return;
+    }
+
+    seen.add(item);
+    
+    uniqueItems.push(item);
+  });
+
+  if (uniqueItems.length > MAX_PRINT_ITEMS) {
+    throw new Error(`พิมพ์ได้ไม่เกิน ${MAX_PRINT_ITEMS} รายการต่อครั้ง`);
+  }
+
+  return {
+    items: uniqueItems,
+    duplicateCount,
+  };
+};
+
 const buildRangeItems = ({ startRaw, endRaw }) => {
   const startDigits = normalizeDigits(startRaw);
   const endDigits = normalizeDigits(endRaw);
@@ -46,8 +88,13 @@ const buildRangeItems = ({ startRaw, endRaw }) => {
   });
 };
 
-const RangeSummary = ({ items }) => {
+const RangeSummary = ({ items, inputMode }) => {
   if (!items.length) return null;
+
+  const summaryLabel =
+    inputMode === 'manual'
+      ? `รายการกำหนดเอง: ${items.length} รายการ`
+      : `ช่วงเลข: ${items[0]} - ${items[items.length - 1]}`;
 
   return (
     <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
@@ -55,7 +102,7 @@ const RangeSummary = ({ items }) => {
         สร้างบาร์โค้ดแล้ว <strong>{items.length}</strong> รายการ
       </div>
       <div className="mt-1 break-all text-xs text-emerald-700">
-        ช่วงเลข: {items[0]} - {items[items.length - 1]}
+        {summaryLabel}
       </div>
     </div>
   );
@@ -99,6 +146,8 @@ const BarcodeLabelCard = ({ value, fontScaleX, fontSizePx }) => {
 
 const BarcodeRangePrintPage = () => {
   const navigate = useNavigate();
+  const [inputMode, setInputMode] = useState('range');
+  const [manualInput, setManualInput] = useState('');
   const [startNumber, setStartNumber] = useState('0000001');
   const [endNumber, setEndNumber] = useState('0000010');
   const [generatedItems, setGeneratedItems] = useState([]);
@@ -128,6 +177,17 @@ const BarcodeRangePrintPage = () => {
       setPageError('');
       setPageInfo('');
 
+      if (inputMode === 'manual') {
+        const { items, duplicateCount } = buildManualItems(manualInput);
+        setGeneratedItems(items);
+        setPageInfo(
+          duplicateCount > 0
+            ? `สร้างรายการบาร์โค้ดเรียบร้อยแล้ว และตัดรายการซ้ำออก ${duplicateCount} รายการ`
+            : 'สร้างรายการบาร์โค้ดเรียบร้อยแล้ว สามารถตรวจสอบตัวอย่างก่อนสั่งพิมพ์ได้'
+        );
+        return;
+      }
+
       const items = buildRangeItems({
         startRaw: startNumber,
         endRaw: endNumber,
@@ -144,8 +204,9 @@ const BarcodeRangePrintPage = () => {
   };
 
   const handleClearAction = () => {
-    setStartNumber('');
-    setEndNumber('');
+    setStartNumber('0000001');
+    setEndNumber('0000010');
+    setManualInput('');
     setGeneratedItems([]);
     setPageError('');
     setPageInfo('ล้างข้อมูลเรียบร้อยแล้ว');
@@ -262,17 +323,50 @@ const BarcodeRangePrintPage = () => {
         }
       `}</style>
 
-      <h1 className="text-xl font-bold print:hidden">พรีวิวบาร์โค้ดจากช่วงเลข</h1>
+      <h1 className="text-xl font-bold print:hidden">พรีวิวบาร์โค้ดแบบกำหนดเอง</h1>
 
       <div className="print:hidden rounded-lg border bg-white px-4 py-3 text-sm">
         <div className="flex flex-wrap items-center gap-x-6 gap-y-1">
-          <div><span className="text-gray-600">ช่วงเลข:</span> <span className="font-semibold">{hasItems ? `${generatedItems[0]} - ${generatedItems[generatedItems.length - 1]}` : '-'}</span></div>
+          <div>
+            <span className="text-gray-600">
+              {inputMode === 'manual' ? 'รายการกำหนดเอง:' : 'ช่วงเลข:'}
+            </span>{' '}
+            <span className="font-semibold">
+              {hasItems
+                ? inputMode === 'manual'
+                  ? `${generatedItems.length} รายการ`
+                  : `${generatedItems[0]} - ${generatedItems[generatedItems.length - 1]}`
+                : '-'}
+            </span>
+          </div>
           <div><span className="text-gray-600">Labels:</span> <span className="font-semibold">{generatedItems.length}</span></div>
           <div><span className="text-gray-600">สถานะ:</span> <span className="font-semibold text-gray-700">ยังไม่ผูกฐานข้อมูล</span></div>
         </div>
       </div>
 
-      <div className="flex justify-center print:hidden">
+      <div className="print:hidden rounded-lg border bg-white px-4 py-3">
+        <div className="mb-3 flex flex-wrap gap-4">
+          <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
+            <input
+              type="radio"
+              name="barcode-input-mode"
+              checked={inputMode === 'range'}
+              onChange={() => setInputMode('range')}
+            />
+            ช่วงเลข
+          </label>
+
+          <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
+            <input
+              type="radio"
+              name="barcode-input-mode"
+              checked={inputMode === 'manual'}
+              onChange={() => setInputMode('manual')}
+            />
+            กรอกเองหลายรายการ
+          </label>
+        </div>
+
         <div className="flex gap-4 items-center flex-wrap">
           <label className="flex items-center gap-2">
             คอลัมน์:
@@ -313,27 +407,31 @@ const BarcodeRangePrintPage = () => {
             />
           </label>
 
-          <label className="flex items-center gap-2">
-            เลขเริ่มต้น:
-            <input
-              type="text"
-              inputMode="numeric"
-              className="w-28 border rounded px-2 py-1"
-              value={startNumber}
-              onChange={(event) => setStartNumber(normalizeDigits(event.target.value))}
-            />
-          </label>
+          {inputMode === 'range' ? (
+            <>
+              <label className="flex items-center gap-2">
+                เลขเริ่มต้น:
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  className="w-28 border rounded px-2 py-1"
+                  value={startNumber}
+                  onChange={(event) => setStartNumber(normalizeDigits(event.target.value))}
+                />
+              </label>
 
-          <label className="flex items-center gap-2">
-            เลขสิ้นสุด:
-            <input
-              type="text"
-              inputMode="numeric"
-              className="w-28 border rounded px-2 py-1"
-              value={endNumber}
-              onChange={(event) => setEndNumber(normalizeDigits(event.target.value))}
-            />
-          </label>
+              <label className="flex items-center gap-2">
+                เลขสิ้นสุด:
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  className="w-28 border rounded px-2 py-1"
+                  value={endNumber}
+                  onChange={(event) => setEndNumber(normalizeDigits(event.target.value))}
+                />
+              </label>
+            </>
+          ) : null}
 
           <button
             type="button"
@@ -367,45 +465,69 @@ const BarcodeRangePrintPage = () => {
             กลับหน้ารายการ
           </button>
         </div>
+
+        {inputMode === 'manual' ? (
+          <div className="mt-3">
+            <label className="mb-2 block text-sm font-medium text-slate-700">
+              กรอกบาร์โค้ดเองหลายรายการ
+            </label>
+            <textarea
+              className="min-h-[140px] w-full rounded border px-3 py-2 text-sm outline-none focus:border-blue-500"
+              placeholder={
+                `กรอก 1 รายการต่อ 1 บรรทัด
+หรือคั่นด้วย comma เช่น 0000001,0000123,9988776`
+              }
+              value={manualInput}
+              onChange={(event) => setManualInput(event.target.value)}
+            />
+            <div className="mt-1 text-xs text-slate-500">
+              รองรับตัวเลขเท่านั้น ระบบจะตัดบรรทัดว่างและรายการซ้ำออกอัตโนมัติ สูงสุด {MAX_PRINT_ITEMS} รายการต่อครั้ง
+            </div>
+          </div>
+        ) : null}
       </div>
 
       <div className="print:hidden space-y-3">
         <PageMessage type="error" message={pageError} />
         <PageMessage type="info" message={pageInfo} />
-        <RangeSummary items={generatedItems} />
+        <RangeSummary items={generatedItems} inputMode={inputMode} />
       </div>
 
       <hr className="print:hidden" />
 
       <div className="bg-white p-1 print:rounded-none print:border-0 print:p-0 print:shadow-none">
-          <div className="print-hide mb-4 border-b border-slate-200 pb-3">
-            <h2 className="text-lg font-semibold text-slate-900">
-              {previewTitle}
-            </h2>
-            <p className="mt-1 text-sm text-slate-600">
-              แสดงเฉพาะตัวเลขและบาร์โค้ดตามที่ผู้ใช้ต้องการ โดยไม่มีชื่อสินค้าและรุ่นสินค้า
-            </p>
-          </div>
-
-          {hasItems ? (
-            <div className="grid gap-y-[0.8mm] gap-x-[1.5mm] mt-1 print-area" style={gridStyle}>
-              {generatedItems.map((value) => (
-                <BarcodeLabelCard
-                  key={value}
-                  value={value}
-                  fontScaleX={fontScaleX}
-                  fontSizePx={fontSizePx}
-                />
-              ))}
-            </div>
-          ) : (
-            <div className="rounded-lg border border-dashed border-slate-300 px-4 py-10 text-center text-sm text-slate-500 print:hidden">
-              ยังไม่มีรายการบาร์โค้ด กรุณากรอกช่วงเลขแล้วกด “สร้างตัวอย่าง”
-            </div>
-          )}
+        <div className="print-hide mb-4 border-b border-slate-200 pb-3">
+          <h2 className="text-lg font-semibold text-slate-900">
+            {previewTitle}
+          </h2>
+          <p className="mt-1 text-sm text-slate-600">
+            แสดงเฉพาะตัวเลขและบาร์โค้ดตามที่ผู้ใช้ต้องการ โดยไม่มีชื่อสินค้าและรุ่นสินค้า
+          </p>
         </div>
+
+        {hasItems ? (
+          <div className="grid gap-y-[0.8mm] gap-x-[1.5mm] mt-1 print-area" style={gridStyle}>
+            {generatedItems.map((value) => (
+              <BarcodeLabelCard
+                key={value}
+                value={value}
+                fontScaleX={fontScaleX}
+                fontSizePx={fontSizePx}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="rounded-lg border border-dashed border-slate-300 px-4 py-10 text-center text-sm text-slate-500 print:hidden">
+            {inputMode === 'manual'
+              ? 'ยังไม่มีรายการบาร์โค้ด กรุณากรอกข้อมูลที่ต้องการแล้วกด “สร้างตัวอย่าง”'
+              : 'ยังไม่มีรายการบาร์โค้ด กรุณากรอกช่วงเลขแล้วกด “สร้างตัวอย่าง”'}
+          </div>
+        )}
+      </div>
     </div>
+
   );
 };
 
 export default BarcodeRangePrintPage;
+

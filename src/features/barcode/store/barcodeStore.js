@@ -1,10 +1,6 @@
 
 
 
-
-
-
-
 // src/features/barcode/store/barcodeStore.js
 import { create } from 'zustand';
 // ❌ Store must not call apiClient directly (project rule)
@@ -346,12 +342,35 @@ const useBarcodeStore = create((set, get) => ({
     // ✅ Accept multiple payload styles (Minimal Disruption)
     // - receiveSNAction('BARCODE')
     // - receiveSNAction({ barcode: 'BARCODE' })
-    // - receiveSNAction({ barcode: { barcode: 'BARCODE', serialNumber?: '...' } })
-    const raw = typeof payload === 'object' && payload !== null ? payload.barcode : payload;
+    // - receiveSNAction({ barcode: { barcode: 'BARCODE', serialNumber?: '...' }, keepSN?: true })
+    // - receiveSNAction({ barcode: 'BARCODE', serialNumber?: '...', keepSN?: true })
+    const isObjectPayload = typeof payload === 'object' && payload !== null;
+    const raw = isObjectPayload ? payload.barcode : payload;
     const barcode = raw && typeof raw === 'object' ? raw.barcode : raw;
     if (!barcode) return;
+
+    // ✅ Preserve SN intent + value all the way to API/BE
+    const serialNumber = (() => {
+      if (raw && typeof raw === 'object') return raw.serialNumber ?? null;
+      if (isObjectPayload) return payload.serialNumber ?? null;
+      return null;
+    })();
+    const keepSN = Boolean(
+      (raw && typeof raw === 'object' && raw.keepSN === true) ||
+      (isObjectPayload && payload.keepSN === true)
+    );
+
+    const requestPayload =
+      keepSN || serialNumber
+        ? {
+            barcode: String(barcode),
+            serialNumber: serialNumber ? String(serialNumber).trim() : null,
+            keepSN,
+          }
+        : String(barcode);
+
     try {
-      const res = await receiveStockItem(barcode);
+      const res = await receiveStockItem(requestPayload);
       const nextStockItem = res?.stockItem || res;
 
       // ✅ update barcodes list with fresh stockItem/status from BE
@@ -363,6 +382,9 @@ const useBarcodeStore = create((set, get) => ({
                     ...b,
                     stockItem: nextStockItem,
                     stockItemStatus: nextStockItem?.status ?? b.stockItemStatus ?? b.stockItem?.status,
+                    serialNumber:
+                      nextStockItem?.serialNumber ??
+                      (keepSN ? (serialNumber ? String(serialNumber).trim() : null) : b?.serialNumber ?? null),
                   })
                 : b
             )
@@ -370,7 +392,14 @@ const useBarcodeStore = create((set, get) => ({
         // ✅ keep scannedList as "barcode rows" (not raw stockItem) to avoid UI fallback bugs
         scannedList: (() => {
           const prev = Array.isArray(state.scannedList) ? state.scannedList : [];
-          const row = normalizeBarcodeItem({ barcode, stockItem: nextStockItem, stockItemStatus: nextStockItem?.status });
+          const row = normalizeBarcodeItem({
+            barcode,
+            serialNumber:
+              nextStockItem?.serialNumber ??
+              (keepSN ? (serialNumber ? String(serialNumber).trim() : null) : null),
+            stockItem: nextStockItem,
+            stockItemStatus: nextStockItem?.status,
+          });
           // ✅ de-dup by barcode (idempotent-friendly)
           const next = prev.filter((x) => x?.barcode !== barcode);
           next.push(row);
@@ -549,6 +578,7 @@ const useBarcodeStore = create((set, get) => ({
 }));
 
 export default useBarcodeStore;
+
 
 
 

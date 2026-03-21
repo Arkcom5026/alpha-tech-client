@@ -1,14 +1,19 @@
 
 
 
+
+
 // src/features/barcode/pages/BarcodeReceiptListPage.jsx
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import usePurchaseOrderReceiptStore from '@/features/purchaseOrderReceipt/store/purchaseOrderReceiptStore';
 import useSupplierStore from '@/features/supplier/store/supplierStore';
 import BarcodePrintTable from '../controllers/BarcodePrintTable';
 
 const BarcodeReceiptListPage = () => {
+  const navigate = useNavigate();
+  const goBarcodeRange = () => navigate('/pos/purchases/barcodes/range-print');
   // ✅ Big-store UX: remember last mode + supplier per mode
   const LS_MODE_KEY = 'pos:barcodeReceiptList:lastMode';
   const LS_SUPPLIER_KEY_UNPRINTED = 'pos:barcodeReceiptList:lastSupplier:UNPRINTED';
@@ -464,6 +469,14 @@ const BarcodeReceiptListPage = () => {
               อัปเดตล่าสุด: {formatRelativeTh(lastLoadedAt)}
             </div>
           ) : null}
+          <button
+            type="button"
+            className="h-9 rounded border bg-white px-3 text-sm text-gray-800 hover:bg-gray-50"
+            onClick={goBarcodeRange}
+            title="พิมพ์บาร์โค้ดจากช่วงเลข"
+          >
+            พิมพ์บาร์โค้ด (ช่วงเลข)
+          </button>
         </div>
       </div>
 
@@ -766,6 +779,7 @@ const BarcodeReceiptListPage = () => {
 };
 
 export default BarcodeReceiptListPage;
+
 
 
 

@@ -4,6 +4,7 @@
 
 
 
+
 // src/features/barcode/api/barcodeApi.js
 // ES Module API client for barcode & receipt operations
 // All requests go through utils/apiClient (axios instance)
@@ -134,11 +135,46 @@ export const getReceiptsReadyToScan = async () => {
 // ---------------------------------------------
 // Receive stock item by scanning barcode (server decides SN policy)
 // ---------------------------------------------
-export const receiveStockItem = async (barcode, serialNumber) => {
+export const receiveStockItem = async (input, maybeSerialNumber) => {
+  // ✅ Backward compatible:
+  // - receiveStockItem('BARCODE')
+  // - receiveStockItem('BARCODE', 'SN-123')
+  // - receiveStockItem({ barcode: 'BARCODE', serialNumber: 'SN-123', keepSN: true })
+  // - receiveStockItem({ barcode: { barcode: 'BARCODE', serialNumber: 'SN-123' }, keepSN: true })
+  const isObjectInput = typeof input === 'object' && input !== null;
+  const nested = isObjectInput ? input.barcode : null;
+
+  const barcode = (() => {
+    if (nested && typeof nested === 'object') return String(nested.barcode || '').trim();
+    if (isObjectInput) return String(input.barcode || '').trim();
+    return String(input || '').trim();
+  })();
+
   if (!barcode) throw new Error('Missing barcode');
+
+  const serialNumber = (() => {
+    if (nested && typeof nested === 'object') return String(nested.serialNumber ?? '').trim();
+    if (isObjectInput) return String(input.serialNumber ?? '').trim();
+    return String(maybeSerialNumber ?? '').trim();
+  })();
+
+  const keepSN = (() => {
+    if (nested && typeof nested === 'object' && nested.keepSN === true) return true;
+    if (isObjectInput && input.keepSN === true) return true;
+    return false;
+  })();
+
   try {
-    const sn = String(serialNumber ?? '').trim();
-    const payload = sn ? { barcode, serialNumber: sn } : { barcode };
+    const payload = keepSN || serialNumber
+      ? {
+          barcode: {
+            barcode,
+            ...(serialNumber ? { serialNumber } : {}),
+          },
+          keepSN,
+        }
+      : { barcode };
+
     const res = await apiClient.post('/stock-items/receive-sn', payload);
     return res.data;
   } catch (err) {

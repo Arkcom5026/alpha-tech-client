@@ -1,5 +1,6 @@
 
 
+
 // PurchaseOrderForm.jsx
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -7,7 +8,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import StandardActionButtons from '@/components/shared/buttons/StandardActionButtons';
-import CascadingFilterGroup from '@/components/shared/form/CascadingFilterGroup';
 import PurchaseOrderSupplierSelector from '@/features/purchaseOrder/components/PurchaseOrderSupplierSelector';
 import ProductSearchTable from '@/features/purchaseOrder/components/ProductSearchTable';
 import PurchaseOrderTable from '@/features/purchaseOrder/components/PurchaseOrderTable';
@@ -107,6 +107,10 @@ const PurchaseOrderForm = ({
       return updated;
     });
   }, []);
+
+  const handleCommitSearch = useCallback(() => {
+    setCommittedSearchText((searchText || '').trim());
+  }, [searchText]);
 
   const addProductToOrder = useCallback((product) => {
     setProducts((prev) => {
@@ -300,7 +304,6 @@ const PurchaseOrderForm = ({
     <form
       onSubmit={(e) => {
         e.preventDefault();
-        handleSubmit();
       }}
       className="space-y-6"
     >
@@ -377,13 +380,19 @@ const PurchaseOrderForm = ({
           <Input
             value={searchText}
             onChange={(e) => onSearchTextChange(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                handleCommitSearch();
+              }
+            }}
             placeholder="ค้นหาด้วยชื่อสินค้า"
             className="w-[460px]"
           />
           <button
             type="button"
             className="h-9 rounded-md border border-zinc-300 bg-white px-4 text-sm"
-            onClick={() => setCommittedSearchText((searchText || '').trim())}
+            onClick={handleCommitSearch}
           >
             ค้นหา
           </button>
@@ -427,6 +436,7 @@ const PurchaseOrderForm = ({
 };
 
 export default PurchaseOrderForm;
+
 
 
 

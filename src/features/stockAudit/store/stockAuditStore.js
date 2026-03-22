@@ -1,5 +1,6 @@
 
 
+
 // =============================
 // features/stockAudit/store/useStockAuditStore.js
 // ✅ Zustand Store (ES Modules) — มี default export ชัดเจน
@@ -15,6 +16,104 @@ const getApiMessage = (err, fallback) =>
   err?.response?.data?.message || err?.message || fallback
 
 /** @typedef {'MARK_PENDING'|'MARK_LOST'} ConfirmStrategy */
+
+const refreshAuditTables = async (get, sessionId) => {
+  const {
+    expectedPage,
+    expectedPageSize,
+    scannedPage,
+    scannedPageSize,
+    expectedQuery,
+    scannedQuery,
+  } = get()
+
+  await Promise.all([
+    get().loadOverviewAction(sessionId),
+    get().loadItemsAction({
+      scanned: 0,
+      q: expectedQuery.q,
+      page: expectedPage,
+      pageSize: expectedPageSize,
+    }),
+    get().loadItemsAction({
+      scanned: 1,
+      q: scannedQuery.q,
+      page: scannedPage,
+      pageSize: scannedPageSize,
+    }),
+  ])
+}
+
+const canUseOptimisticScan = (state) => {
+  return (
+    Number(state.expectedPage || 1) === 1 &&
+    Number(state.scannedPage || 1) === 1 &&
+    String(state.expectedQuery?.q || '').trim() === '' &&
+    String(state.scannedQuery?.q || '').trim() === ''
+  )
+}
+
+const findExpectedMatchIndex = (items, input, mode) => {
+  const keyword = String(input || '').trim()
+  if (!keyword) return -1
+
+  return items.findIndex((it) => {
+    const barcode = String(it?.barcode || '').trim()
+    const sn = String(it?.stockItem?.serialNumber || '').trim()
+
+    if (mode === 'SN') return sn === keyword
+    return barcode === keyword || sn === keyword
+  })
+}
+
+const applyOptimisticScanState = (set, get, input, mode, apiRes) => {
+  const state = get()
+  if (!canUseOptimisticScan(state)) return false
+
+  const matchIndex = findExpectedMatchIndex(state.expectedItems || [], input, mode)
+  if (matchIndex < 0) return false
+
+  const matched = state.expectedItems[matchIndex]
+  const apiItem = apiRes && apiRes.item ? apiRes.item : null
+  const nextScannedItem = {
+    ...matched,
+    ...(apiItem || {}),
+    isScanned: true,
+    scannedAt: (apiItem && apiItem.scannedAt) || new Date().toISOString(),
+  }
+
+  const nextExpectedItems = [...(state.expectedItems || [])]
+  nextExpectedItems.splice(matchIndex, 1)
+
+  const alreadyInScanned = (state.scannedItems || []).some((it) => {
+    const a = String(it?.barcode || '').trim()
+    const b = String(nextScannedItem?.barcode || '').trim()
+    const sa = String(it?.stockItem?.serialNumber || '').trim()
+    const sb = String(nextScannedItem?.stockItem?.serialNumber || '').trim()
+    return (a && b && a === b) || (sa && sb && sa === sb)
+  })
+
+  const nextScannedItems = alreadyInScanned
+    ? [...(state.scannedItems || [])]
+    : [nextScannedItem, ...(state.scannedItems || [])]
+
+  const scannedCount = Number(state.scannedCount || 0) + 1
+  const expectedCount = Number(state.expectedCount || 0)
+  const missingCount = Math.max(0, expectedCount - scannedCount)
+  const expectedTotal = Math.max(0, Number(state.expectedTotal || 0) - 1)
+  const scannedTotal = Number(state.scannedTotal || 0) + (alreadyInScanned ? 0 : 1)
+
+  set({
+    expectedItems: nextExpectedItems,
+    expectedTotal,
+    scannedItems: nextScannedItems,
+    scannedTotal,
+    scannedCount,
+    missingCount,
+  })
+
+  return true
+}
 
 const useStockAuditStore = create((set, get) => ({
   // ----- State -----
@@ -92,37 +191,27 @@ const useStockAuditStore = create((set, get) => ({
 
   startReadyAuditAction: async () => {
     set({ isStarting: true, errorMessage: '' })
-    // ถ้ามี session เดิมอยู่แล้ว ไม่ต้องเรียก API ซ้ำ (กัน 409 และลด log)
+
     const existId = get().sessionId
     if (existId) {
-      await get().loadOverviewAction(existId)
-      await get().loadItemsAction({ scanned: 0, q: '', page: 1, pageSize: get().expectedPageSize })
-      await get().loadItemsAction({ scanned: 1, q: '', page: 1, pageSize: get().scannedPageSize })
-      
+      await refreshAuditTables(get, existId)
       set({ isStarting: false })
-      return { ok: true, sessionId: existId }
+      return { ok: true, sessionId: existId, reused: true }
     }
+
     try {
       const res = await stockAuditApi.startReadyAudit()
-      const sessionId = res.sessionId
-      set({ sessionId, expectedCount: res.expectedCount })
-      await get().loadOverviewAction(sessionId)
-      // เติมข้อมูลให้ทั้ง 2 ตารางทันที
-      await get().loadItemsAction({ scanned: 0, q: '', page: 1, pageSize: get().expectedPageSize })
-      await get().loadItemsAction({ scanned: 1, q: '', page: 1, pageSize: get().scannedPageSize })
-      return { ok: true, sessionId }
+      const sessionId = res?.sessionId
+      if (!sessionId) throw new Error('sessionId not returned')
+
+      set({
+        sessionId,
+        expectedCount: Number(res?.expectedCount || 0),
+      })
+
+      await refreshAuditTables(get, sessionId)
+      return { ok: true, sessionId, reused: !!res?.reused }
     } catch (err) {
-      const status = err?.response?.status
-      const data = err?.response?.data
-      if (status === 409 && data?.sessionId) {
-        const sessionId = data.sessionId
-        // มี DRAFT อยู่แล้ว → ใช้ session เดิมต่อ
-        set({ sessionId, expectedCount: data.expectedCount ?? 0 })
-        await get().loadOverviewAction(sessionId)
-        await get().loadItemsAction({ scanned: 0, q: '', page: 1, pageSize: get().expectedPageSize })
-        await get().loadItemsAction({ scanned: 1, q: '', page: 1, pageSize: get().scannedPageSize })
-        return { ok: true, sessionId }
-      }
       const message = getApiMessage(err, 'Start audit failed')
       set({ errorMessage: message })
       return { ok: false, error: message }
@@ -217,20 +306,28 @@ const useStockAuditStore = create((set, get) => ({
     set({ isScanning: true, errorMessage: '' })
     try {
       let res
-      // ถ้า component ส่ง mode=SN มา และมี API สำหรับ SN ให้เรียกใช้โดยตรง
-      if (opts?.mode === 'SN' && typeof stockAuditApi.scanAuditSn === 'function') {
+      const mode = opts && opts.mode === 'SN' ? 'SN' : 'BARCODE'
+
+      if (mode === 'SN' && typeof stockAuditApi.scanAuditSn === 'function') {
         res = await stockAuditApi.scanAuditSn(sessionId, input)
       } else {
-        // โหมด BARCODE หรือ fallback → ใช้ endpoint เดิม (บางระบบ backend อาจ auto-detect ได้)
         res = await stockAuditApi.scanAuditBarcode(sessionId, input, opts)
       }
 
-      if (res?.scanned !== true && res?.ok !== true) throw new Error('Scan failed')
-      await get().loadOverviewAction(sessionId)
-      // รีโหลดทั้ง 2 ตารางเพื่อให้ซ้าย/ขวาอัปเดตพร้อมกัน
-      await get().loadItemsAction({ scanned: 0, q: expectedQuery.q, page: expectedPage, pageSize: expectedPageSize })
-      await get().loadItemsAction({ scanned: 1, q: scannedQuery.q, page: scannedPage, pageSize: scannedPageSize })
-      return { ok: true }
+      if (!res || (res.scanned !== true && res.ok !== true)) {
+        throw new Error('Scan failed')
+      }
+
+      const applied = applyOptimisticScanState(set, get, input, mode, res)
+      if (!applied) {
+        await Promise.all([
+          get().loadOverviewAction(sessionId),
+          get().loadItemsAction({ scanned: 0, q: expectedQuery.q, page: expectedPage, pageSize: expectedPageSize }),
+          get().loadItemsAction({ scanned: 1, q: scannedQuery.q, page: scannedPage, pageSize: scannedPageSize }),
+        ])
+      }
+
+      return { ok: true, optimistic: applied }
     } catch (err) {
       const message = getApiMessage(err, 'Scan failed')
       set({ errorMessage: message })
@@ -263,15 +360,20 @@ const useStockAuditStore = create((set, get) => ({
       if (typeof stockAuditApi.scanAuditSn === 'function') {
         res = await stockAuditApi.scanAuditSn(sessionId, input)
       } else {
-        // fallback: ใช้ endpoint เดิม พร้อมส่ง hint ว่าเป็น SN
         res = await stockAuditApi.scanAuditBarcode(sessionId, input, { mode: 'SN' })
       }
-      if (res?.scanned !== true && res?.ok !== true) throw new Error('Scan failed')
+      if (!res || (res.scanned !== true && res.ok !== true)) throw new Error('Scan failed')
 
-      await get().loadOverviewAction(sessionId)
-      await get().loadItemsAction({ scanned: 0, q: expectedQuery.q, page: expectedPage, pageSize: expectedPageSize })
-      await get().loadItemsAction({ scanned: 1, q: scannedQuery.q, page: scannedPage, pageSize: scannedPageSize })
-      return { ok: true }
+      const applied = applyOptimisticScanState(set, get, input, 'SN', res)
+      if (!applied) {
+        await Promise.all([
+          get().loadOverviewAction(sessionId),
+          get().loadItemsAction({ scanned: 0, q: expectedQuery.q, page: expectedPage, pageSize: expectedPageSize }),
+          get().loadItemsAction({ scanned: 1, q: scannedQuery.q, page: scannedPage, pageSize: scannedPageSize }),
+        ])
+      }
+
+      return { ok: true, optimistic: applied }
     } catch (err) {
       const message = getApiMessage(err, 'Scan SN failed')
       set({ errorMessage: message })
@@ -320,10 +422,11 @@ const useStockAuditStore = create((set, get) => ({
     try {
       const res = await stockAuditApi.confirmAudit(sessionId, strategy)
       if (res.confirmed !== true) throw new Error('Confirm failed')
-      await get().loadOverviewAction(sessionId)
-      // ✅ รีโหลดทั้ง 2 ตารางให้สอดคล้องกับ flow ของการสแกน
-      await get().loadItemsAction({ scanned: 0, q: '', page: 1, pageSize: expectedPageSize })
-      await get().loadItemsAction({ scanned: 1, q: '', page: 1, pageSize: scannedPageSize })
+      await Promise.all([
+        get().loadOverviewAction(sessionId),
+        get().loadItemsAction({ scanned: 0, q: '', page: 1, pageSize: expectedPageSize }),
+        get().loadItemsAction({ scanned: 1, q: '', page: 1, pageSize: scannedPageSize }),
+      ])
       
       return { ok: true }
     } catch (err) {

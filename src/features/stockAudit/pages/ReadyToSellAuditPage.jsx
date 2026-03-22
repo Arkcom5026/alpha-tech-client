@@ -1,4 +1,7 @@
 
+
+
+
 // =============================
 // client/src/features/stockAudit/pages/ReadyToSellAuditPage.jsx
 // แก้ไข: เพิ่ม isStarting ใน Destructuring และปรับปรุงประสิทธิภาพการโหลดข้อมูล
@@ -18,7 +21,7 @@ const ReadyToSellAuditPage = () => {
     sessionId, expectedCount, scannedCount, missingCount,
     expectedItems, expectedTotal, expectedPage, expectedPageSize,
     scannedItems, scannedTotal, scannedPage, scannedPageSize,
-    startReadyAuditAction, loadItemsAction, scanBarcodeAction, confirmAuditAction, loadOverviewAction, scanSnAction,
+    startReadyAuditAction, loadItemsAction, scanBarcodeAction, confirmAuditAction, scanSnAction,
     cancelAuditAction, resetAuditStateAction,
     isScanning, isConfirming, errorMessage, isLoadingItems,
     isCancelling,
@@ -216,8 +219,13 @@ const ReadyToSellAuditPage = () => {
   }
 
   const handleScan = async (value) => {
-    if (!value) { focusScan(); return }
+    if (!value) {
+      focusScan()
+      return
+    }
+
     const input = String(value).trim()
+
     try {
       let result
       if (scanMode === 'SN' && typeof scanSnAction === 'function') {
@@ -236,13 +244,6 @@ const ReadyToSellAuditPage = () => {
           setBannerMessage('พบของค้างตรวจ – เคลียร์ให้แล้ว')
           setTimeout(() => setBannerMessage(''), 2500)
         }
-        // โหลดข้อมูลทั้งสองตารางใหม่
-        // รีเฟรช summary + ตาราง (ใช้ q ปัจจุบัน ไม่ล้างคำค้นหา)
-        if (sessionId) await loadOverviewAction(sessionId)
-        await Promise.all([
-          loadItemsAction({ scanned: 0, q: expectedQ, page: expectedPage, pageSize: expectedPageSize }),
-          loadItemsAction({ scanned: 1, q: scannedQ, page: scannedPage, pageSize: scannedPageSize })
-        ])
       } else if (duplicate) {
         await playDuplicate()
       } else if (notFound) {
@@ -252,16 +253,11 @@ const ReadyToSellAuditPage = () => {
       }
     } catch (err) {
       const { duplicate, notFound, resolvedPending } = classifyScanResult(null, err)
+
       if (resolvedPending) {
         await playSuccess()
         setBannerMessage('พบของค้างตรวจ – เคลียร์ให้แล้ว')
         setTimeout(() => setBannerMessage(''), 2500)
-        // รีเฟรช summary + ตาราง (ใช้ q ปัจจุบัน ไม่ล้างคำค้นหา)
-        if (sessionId) await loadOverviewAction(sessionId)
-        await Promise.all([
-          loadItemsAction({ scanned: 0, q: expectedQ, page: expectedPage, pageSize: expectedPageSize }),
-          loadItemsAction({ scanned: 1, q: scannedQ, page: scannedPage, pageSize: scannedPageSize })
-        ])
       } else if (duplicate) {
         await playDuplicate()
       } else if (notFound) {
@@ -280,11 +276,7 @@ const ReadyToSellAuditPage = () => {
       const res = await confirmAuditAction('MARK_LOST')
       if (res?.ok) {
         await playSuccess()
-        await loadOverviewAction(sessionId)
-        await Promise.all([
-                        loadItemsAction({ scanned: 0, q: '', page: 1, pageSize: expectedPageSize }),
-                        loadItemsAction({ scanned: 1, q: '', page: 1, pageSize: scannedPageSize })
-                      ])
+        // store จะจัดการ refresh/optimistic เอง
       }
     } catch (e) {
       await playError()
@@ -299,11 +291,7 @@ const ReadyToSellAuditPage = () => {
       const res = await confirmAuditAction('MARK_PENDING')
       if (res?.ok) {
         await playSuccess()
-        await loadOverviewAction(sessionId)
-        await Promise.all([
-          loadItemsAction({ scanned: 0, q: '', page: 1, pageSize: expectedPageSize }),
-          loadItemsAction({ scanned: 1, q: '', page: 1, pageSize: scannedPageSize })
-        ])
+        // store จะจัดการ refresh/optimistic เอง
       }
     } catch (e) {
       await playError()
@@ -366,27 +354,8 @@ const ReadyToSellAuditPage = () => {
               type="button"
               className={`px-4 py-2 rounded-lg text-white ${isStarting ? 'bg-gray-400 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-700'}`}
               onClick={async () => {
-                try {
-                  const res = await startReadyAuditAction()
-                  if (res?.ok || res?.status === 409) {
-                    // ใช้ sessionId จาก response เป็นหลัก (กัน state ยังไม่ sync)
-                    const sid =
-                      res?.sessionId ??
-                      (typeof useStockAuditStore?.getState === 'function' ? useStockAuditStore.getState().sessionId : undefined) ??
-                      sessionId
-                    if (sid) {
-                      await loadOverviewAction(sid)
-                      await Promise.all([
-                        loadItemsAction({ scanned: 0, q: '', page: 1, pageSize: expectedPageSize }),
-                        loadItemsAction({ scanned: 1, q: '', page: 1, pageSize: scannedPageSize })
-                      ])
-                    }
-                  }
-                } catch (err) {
-                  console.error('Start Audit Error:', err)
-                } finally {
-                  focusScan()
-                }
+                await startReadyAuditAction()
+                focusScan()
               }}
               disabled={isStarting}
             >
@@ -533,6 +502,8 @@ const ReadyToSellAuditPage = () => {
 }
 
 export default ReadyToSellAuditPage
+
+
 
 
 

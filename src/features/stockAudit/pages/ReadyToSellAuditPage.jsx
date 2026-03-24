@@ -2,6 +2,10 @@
 
 
 
+
+
+
+
 // =============================
 // client/src/features/stockAudit/pages/ReadyToSellAuditPage.jsx
 // แก้ไข: เพิ่ม isStarting ใน Destructuring และปรับปรุงประสิทธิภาพการโหลดข้อมูล
@@ -21,7 +25,7 @@ const ReadyToSellAuditPage = () => {
     sessionId, expectedCount, scannedCount, missingCount,
     expectedItems, expectedTotal, expectedPage, expectedPageSize,
     scannedItems, scannedTotal, scannedPage, scannedPageSize,
-    startReadyAuditAction, loadItemsAction, scanBarcodeAction, confirmAuditAction, scanSnAction,
+    startReadyAuditAction, loadActiveReadyAuditAction, loadOverviewAction, loadItemsAction, scanBarcodeAction, confirmAuditAction, scanSnAction,
     cancelAuditAction, resetAuditStateAction,
     isScanning, isConfirming, errorMessage, isLoadingItems,
     isCancelling,
@@ -33,6 +37,7 @@ const ReadyToSellAuditPage = () => {
   const [openConfirmPending, setOpenConfirmPending] = useState(false)
   const [openCancel, setOpenCancel] = useState(false)
   const [bannerMessage, setBannerMessage] = useState('')
+  const [sessionClosed, setSessionClosed] = useState(false)
   const [lastScannedValue, setLastScannedValue] = useState('')
 
   // --- Helpers ---
@@ -166,7 +171,23 @@ const ReadyToSellAuditPage = () => {
   useEffect(() => {
     if (initRef.current) return
     initRef.current = true
-    if (scanRef.current) focusScan()
+
+    const bootstrap = async () => {
+      try {
+        const res = await loadActiveReadyAuditAction()
+        if (res?.ok && res?.found) {
+          setSessionClosed(false)
+          setBannerMessage('พบรอบตรวจนับที่เปิดค้างอยู่ ระบบเชื่อมเข้ารอบเดิมให้แล้ว')
+          setTimeout(() => setBannerMessage(''), 3500)
+        }
+      } catch (err) {
+        console.error('Bootstrap active audit error:', err)
+      } finally {
+        if (scanRef.current) focusScan()
+      }
+    }
+
+    bootstrap()
   }, [])
 
   useEffect(() => {
@@ -184,6 +205,41 @@ const ReadyToSellAuditPage = () => {
   }, [])
 
   useEffect(() => { focusScan() }, [scanMode])
+
+  useEffect(() => {
+    if (!sessionId || typeof loadOverviewAction !== 'function') {
+      setSessionClosed(false)
+      return
+    }
+
+    let cancelled = false
+
+    const syncSessionState = async () => {
+      try {
+        const res = await loadOverviewAction(sessionId)
+        const confirmedAt = res?.session?.confirmedAt || null
+        if (cancelled) return
+
+        if (confirmedAt) {
+          setSessionClosed(true)
+          setBannerMessage('รอบตรวจนับนี้ถูกปิดแล้ว ระบบล้างสถานะรอบปัจจุบันให้เพื่อเริ่มรอบใหม่ได้')
+          if (typeof resetAuditStateAction === 'function') {
+            resetAuditStateAction()
+          }
+          setTimeout(() => setBannerMessage(''), 4500)
+          return
+        }
+
+        setSessionClosed(false)
+      } catch (err) {
+        if (cancelled) return
+        console.error('Sync session state error:', err)
+      }
+    }
+
+    syncSessionState()
+    return () => { cancelled = true }
+  }, [sessionId, loadOverviewAction, resetAuditStateAction])
 
   // --- Handlers ---
   const classifyScanResult = (result, err) => {
@@ -354,7 +410,14 @@ const ReadyToSellAuditPage = () => {
               type="button"
               className={`px-4 py-2 rounded-lg text-white ${isStarting ? 'bg-gray-400 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-700'}`}
               onClick={async () => {
-                await startReadyAuditAction()
+                const res = await startReadyAuditAction()
+                if (res?.ok) {
+                  setSessionClosed(false)
+                }
+                if (res?.ok && res?.reused) {
+                  setBannerMessage('พบรอบตรวจนับที่เปิดค้างอยู่ ระบบเชื่อมเข้ารอบเดิมให้แล้ว')
+                  setTimeout(() => setBannerMessage(''), 3500)
+                }
                 focusScan()
               }}
               disabled={isStarting}
@@ -366,8 +429,8 @@ const ReadyToSellAuditPage = () => {
             type="button"
             className={`px-4 py-2 rounded-lg text-white ${isConfirming ? 'bg-blue-500 opacity-60 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}
             onClick={() => setOpenConfirmLost(true)}
-            disabled={isConfirming || isCancelling || !sessionId}
-            title={!sessionId ? 'ต้องกด “เริ่มรอบตรวจนับ” ก่อน จึงจะสรุปสูญหายได้' : 'สรุปของที่ยังไม่สแกนเป็น “สูญหาย” และปิดรอบ'}
+            disabled={isConfirming || isCancelling || !sessionId || sessionClosed}
+            title={!sessionId ? 'ต้องกด “เริ่มรอบตรวจนับ” ก่อน จึงจะสรุปสูญหายได้' : (sessionClosed ? 'รอบนี้ถูกปิดแล้ว' : 'สรุปของที่ยังไม่สแกนเป็น “สูญหาย” และปิดรอบ')}
           >
             บันทึกสินค้าสูญหาย
           </button>
@@ -375,8 +438,8 @@ const ReadyToSellAuditPage = () => {
             type="button"
             className={`px-4 py-2 rounded-lg text-white ${isConfirming ? 'bg-amber-500 opacity-60 cursor-not-allowed' : 'bg-amber-500 hover:bg-amber-600'}`}
             onClick={() => setOpenConfirmPending(true)}
-            disabled={isConfirming || isCancelling || !sessionId}
-            title={!sessionId ? 'ต้องกด “เริ่มรอบตรวจนับ” ก่อน จึงจะปิดรอบได้' : 'ปิดรอบแบบ “ค้างตรวจ” (ไม่สรุปสูญหาย)'}
+            disabled={isConfirming || isCancelling || !sessionId || sessionClosed}
+            title={!sessionId ? 'ต้องกด “เริ่มรอบตรวจนับ” ก่อน จึงจะปิดรอบได้' : (sessionClosed ? 'รอบนี้ถูกปิดแล้ว' : 'ปิดรอบแบบ “ค้างตรวจ” (ไม่สรุปสูญหาย)')}
           >
             ปิดรอบ (ค้างตรวจ)
           </button>
@@ -404,8 +467,8 @@ const ReadyToSellAuditPage = () => {
               <ScanInput
                 ref={scanRef}
                 onSubmit={handleScan}
-                disabled={isScanning || !sessionId}
-                placeholder={scanMode === 'SN' ? 'สแกน/พิมพ์ SN (F3 สลับโหมด)' : 'สแกนบาร์โค้ด (F3 สลับโหมด)'}
+                disabled={isScanning || !sessionId || sessionClosed}
+                placeholder={sessionClosed ? 'รอบนี้ถูกปิดแล้ว — กดเริ่มรอบใหม่เพื่อสแกนต่อ' : (scanMode === 'SN' ? 'สแกน/พิมพ์ SN (F3 สลับโหมด)' : 'สแกนบาร์โค้ด (F3 สลับโหมด)')}
                 autoSubmit
                 delay={140}
                 className="border border-black rounded px-3 py-2 w-80 md:w-96"
@@ -473,7 +536,7 @@ const ReadyToSellAuditPage = () => {
         confirmText={isConfirming ? 'กำลังบันทึก...' : 'ยืนยันบันทึกสูญหาย'}
         confirmVariant="primary"
         onConfirm={doConfirmLost}
-        disabled={isConfirming || isCancelling || !sessionId}
+        disabled={isConfirming || isCancelling || !sessionId || sessionClosed}
       />
 
       <ConfirmActionDialog
@@ -484,7 +547,7 @@ const ReadyToSellAuditPage = () => {
         confirmText={isConfirming ? 'กำลังบันทึก...' : 'ยืนยันปิดรอบ (ค้างตรวจ)'}
         confirmVariant="warning"
         onConfirm={doConfirmPending}
-        disabled={isConfirming || isCancelling || !sessionId}
+        disabled={isConfirming || isCancelling || !sessionId || sessionClosed}
       />
 
       <ConfirmActionDialog
@@ -495,7 +558,7 @@ const ReadyToSellAuditPage = () => {
         confirmText={isCancelling ? 'กำลังยกเลิก...' : 'ยืนยันยกเลิกรอบ'}
         confirmVariant="danger"
         onConfirm={doCancelAudit}
-        disabled={isConfirming || isCancelling || !sessionId}
+        disabled={isConfirming || isCancelling || !sessionId || sessionClosed}
       />
     </div>
   )

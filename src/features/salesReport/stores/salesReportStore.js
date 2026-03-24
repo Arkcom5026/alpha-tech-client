@@ -1,6 +1,7 @@
 
 
 
+
 /* =========================
    salesReportStore.js
 ========================= */
@@ -66,6 +67,8 @@ const DEFAULT_SALES_DETAIL = {
   items: [],
   payments: [],
   timeline: [],
+  totals: null,
+  paymentSummary: null,
 };
 
 const buildListQueryParams = (filters = {}) => {
@@ -136,6 +139,8 @@ const normalizeSalesDetailResponse = (payload = {}) => ({
   items: Array.isArray(payload?.items) ? payload.items : [],
   payments: Array.isArray(payload?.payments) ? payload.payments : [],
   timeline: Array.isArray(payload?.timeline) ? payload.timeline : [],
+  totals: payload?.totals || null,
+  paymentSummary: payload?.paymentSummary || null,
 });
 
 const getErrorMessage = (error, fallbackMessage) => {

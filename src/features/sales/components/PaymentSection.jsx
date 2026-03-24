@@ -3,6 +3,7 @@
 
 
 
+
 // ============================================================
 // 📁 FILE: src/features/sales/components/PaymentSection.jsx
 // ✅ Final patched version: fix JSX syntax + computedSaleOption scope + store wiring + robust number parsing
@@ -67,7 +68,7 @@ const PaymentSection = ({
   const isOrgBuyer = customerType === 'ORGANIZATION' || customerType === 'GOVERNMENT';
   const isCreditSale = currentSaleMode === 'CREDIT';
   const hasImmediatePayment = useMemo(() => {
-    // ✅ Any non-deposit payment amount typed in the UI (CASH/TRANSFER/CREDIT) should be blocked in CREDIT mode
+    // ✅ Any non-deposit payment amount typed in the UI (CASH/TRANSFER/CARD) should be blocked in CREDIT mode
     return (paymentList || []).some((p) => {
       const m = String(p?.method || '').toUpperCase();
       if (m === 'DEPOSIT') return false;
@@ -141,7 +142,7 @@ const PaymentSection = ({
     try {
       setPaymentAmount?.('CASH', '');
       setPaymentAmount?.('TRANSFER', '');
-      setPaymentAmount?.('CREDIT', '');
+      setPaymentAmount?.('CARD', '');
       setCardRef?.('');
     } catch (_) {
       // ignore
@@ -445,12 +446,12 @@ const PaymentSection = ({
           handleDepositUsedChange={handleDepositUsedChange}
         />
 
-        {/* ✅ CREDIT policy: hide direct payment inputs (CASH/TRANSFER/CREDIT) to prevent accidental partial payments */}
+        {/* ✅ CREDIT policy: hide direct payment inputs (CASH/TRANSFER/CARD) to prevent accidental partial payments */}
         {!isCreditSale ? (
           <PaymentMethodInput
             cash={paymentList.find((p) => p.method === 'CASH')?.amount || ''}
             transfer={paymentList.find((p) => p.method === 'TRANSFER')?.amount || ''}
-            credit={paymentList.find((p) => p.method === 'CREDIT')?.amount || ''}
+            credit={paymentList.find((p) => p.method === 'CARD')?.amount || ''}
             onCashChange={(e) => {
               const cleaned = String(e?.target?.value ?? '').replace(/,/g, '');
               setPaymentAmount('CASH', cleaned);
@@ -461,7 +462,7 @@ const PaymentSection = ({
             }}
             onCreditChange={(e) => {
               const cleaned = String(e?.target?.value ?? '').replace(/,/g, '');
-              setPaymentAmount('CREDIT', cleaned);
+              setPaymentAmount('CARD', cleaned);
             }}
             cardRef={cardRef}
             onCardRefChange={(e) => setCardRef(e.target.value)}
@@ -469,7 +470,7 @@ const PaymentSection = ({
         ) : (
           <div className="bg-gray-50 border border-gray-200 rounded-md p-3 min-w-[340px]">
             <div className="text-sm font-bold mb-1">การรับเงิน (เครดิต)</div>
-            <div className="text-sm">🚫 ไม่รับเงินสด/โอน/บัตรในขั้นตอนนี้</div>
+            <div className="text-sm">🚫 ไม่รับเงินสด/โอน/บัตรเครดิตในขั้นตอนนี้</div>
             <div className="text-xs text-gray-600 mt-2">
               * อนุญาตเฉพาะ “มัดจำ” (ถ้ามี) ผ่านช่องมัดจำด้านซ้าย
             </div>
@@ -507,6 +508,8 @@ const PaymentSection = ({
 };
 
 export default PaymentSection;
+
+
 
 
 

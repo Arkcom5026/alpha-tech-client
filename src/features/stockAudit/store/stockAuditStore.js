@@ -207,12 +207,55 @@ const useStockAuditStore = create((set, get) => ({
       set({
         sessionId,
         expectedCount: Number(res?.expectedCount || 0),
+        scannedCount: Number(res?.scannedCount || 0),
+        missingCount: Math.max(
+          0,
+          Number(res?.expectedCount || 0) - Number(res?.scannedCount || 0)
+        ),
       })
 
       await refreshAuditTables(get, sessionId)
       return { ok: true, sessionId, reused: !!res?.reused }
     } catch (err) {
       const message = getApiMessage(err, 'Start audit failed')
+      set({ errorMessage: message })
+      return { ok: false, error: message }
+    } finally {
+      set({ isStarting: false })
+    }
+  },
+
+  loadActiveReadyAuditAction: async () => {
+    set({ isStarting: true, errorMessage: '' })
+    try {
+      if (typeof stockAuditApi.getActiveReadySession !== 'function') {
+        throw new Error('getActiveReadySession API not implemented')
+      }
+
+      const res = await stockAuditApi.getActiveReadySession()
+      const session = res?.session || null
+
+      if (!session?.id) {
+        set({ sessionId: null })
+        return { ok: true, found: false }
+      }
+
+      const sessionId = Number(session.id)
+      const expectedCount = Number(session.expectedCount || 0)
+      const scannedCount = Number(session.scannedCount || 0)
+      const missingCount = Math.max(0, expectedCount - scannedCount)
+
+      set({
+        sessionId,
+        expectedCount,
+        scannedCount,
+        missingCount,
+      })
+
+      await refreshAuditTables(get, sessionId)
+      return { ok: true, found: true, sessionId }
+    } catch (err) {
+      const message = getApiMessage(err, 'Load active audit failed')
       set({ errorMessage: message })
       return { ok: false, error: message }
     } finally {
@@ -440,6 +483,12 @@ const useStockAuditStore = create((set, get) => ({
 }))
 
 export default useStockAuditStore
+
+
+
+
+
+
 
 
 

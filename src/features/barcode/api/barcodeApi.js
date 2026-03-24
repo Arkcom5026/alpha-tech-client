@@ -1,10 +1,6 @@
 
 
 
-
-
-
-
 // src/features/barcode/api/barcodeApi.js
 // ES Module API client for barcode & receipt operations
 // All requests go through utils/apiClient (axios instance)
@@ -189,7 +185,10 @@ export const receiveStockItem = async (input, maybeSerialNumber) => {
 export const updateSerialNumber = async (barcode, serialNumber) => {
   if (!barcode) throw new Error('Missing barcode');
   try {
-    const res = await apiClient.patch(`/stock-items/update-sn/${barcode}`, { serialNumber });
+    const res = await apiClient.patch('/barcodes/update-serial-number', {
+      barcode,
+      serialNumber,
+    });
     return res.data;
   } catch (err) {
     console.error('❌ updateSerialNumber error:', err);
@@ -330,14 +329,6 @@ export const commitScans = async (receiptId, items) => {
     return { ok: false, committed: [], errors: [], message: 'Network error' };
   }
 };
-
-
-
-
-
-
-
-
 
 
 

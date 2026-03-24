@@ -1,6 +1,7 @@
 
 
 
+
 // src/features/barcode/store/barcodeStore.js
 import { create } from 'zustand';
 // ❌ Store must not call apiClient directly (project rule)
@@ -416,6 +417,58 @@ const useBarcodeStore = create((set, get) => ({
     }
   },
 
+  // ✅ New: ใช้กับหน้า ScanBarcodeListPage (แก้ SN หลังรับเข้า)
+  updateReceivedSNAction: async ({ stockItemId, serialNumber, barcodeReceiptId, receiptId } = {}) => {
+    try {
+      if (!serialNumber) throw new Error('serialNumber is required');
+
+      // 🔑 BestLine: ใช้ barcode เป็นตัวหลัก (minimal disruption กับ API เดิม)
+      // หา barcode จาก state
+      const state = get();
+      const target = (state.barcodes || []).find((b) => b?.id === barcodeReceiptId);
+
+      if (!target?.barcode) {
+        throw new Error('ไม่พบ barcode สำหรับรายการนี้');
+      }
+
+      const barcode = target.barcode;
+
+      // reuse ของเดิม
+      const res = await updateSerialNumber(barcode, serialNumber);
+      const nextStockItem = res?.stockItem;
+
+      set((state) => ({
+        barcodes: (state.barcodes || []).map((item) =>
+          item.barcode === barcode
+            ? normalizeBarcodeItem({
+                ...item,
+                serialNumber,
+                stockItemId: item.stockItemId ?? nextStockItem?.id ?? item.stockItem?.id ?? null,
+                stockItem: {
+                  ...(item.stockItem || {}),
+                  ...(nextStockItem || {}),
+                  serialNumber,
+                  id: item.stockItem?.id ?? nextStockItem?.id ?? null,
+                  status: nextStockItem?.status ?? item.stockItem?.status ?? item.stockItemStatus,
+                },
+                stockItemStatus: nextStockItem?.status ?? item.stockItemStatus ?? item.stockItem?.status,
+              })
+            : item
+        ),
+      }));
+
+      if (receiptId) {
+        await get().loadBarcodesAction(receiptId);
+      }
+
+      return res;
+    } catch (err) {
+      console.error('❌ updateReceivedSNAction ล้มเหลว:', err);
+      set({ error: err?.message || 'อัปเดต SN ไม่สำเร็จ' });
+      throw err;
+    }
+  },
+
   updateSerialNumberAction: async (barcode, serialNumber) => {
     try {
       const res = await updateSerialNumber(barcode, serialNumber);
@@ -578,6 +631,7 @@ const useBarcodeStore = create((set, get) => ({
 }));
 
 export default useBarcodeStore;
+
 
 
 

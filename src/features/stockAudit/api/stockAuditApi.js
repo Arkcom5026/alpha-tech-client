@@ -1,7 +1,14 @@
 
+
 // src/features/stockAudit/api/stockAuditApi.js
 
 import apiClient from '@/utils/apiClient'
+
+// ดึง active ready-audit session ของสาขาปัจจุบัน
+export const getActiveReadySession = async () => {
+  const res = await apiClient.get('/stock-audit/ready/active')
+  return res.data
+}
 
 // เริ่มรอบเช็คสต๊อกพร้อมขาย (สร้าง Expected Snapshot)
 export const startReadyAudit = async () => {

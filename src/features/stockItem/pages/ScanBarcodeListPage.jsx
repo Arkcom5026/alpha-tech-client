@@ -3,6 +3,8 @@
 
 
 
+
+
 // ScanBarcodeListPage.jsx
 
 import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react';
@@ -44,6 +46,11 @@ const ScanBarcodeListPage = () => {
   const [snError, setSnError] = useState('');
   const [pageMessage, setPageMessage] = useState(null);
   const [secretAllArmedAt, setSecretAllArmedAt] = useState(0);
+
+  // ✏️ แก้ SN หลังรับเข้าแล้ว (เฉพาะรายชิ้น / ยังไม่ SOLD)
+  const [editingBarcodeReceiptId, setEditingBarcodeReceiptId] = useState(null);
+  const [editingSN, setEditingSN] = useState('');
+  const [editingSubmitting, setEditingSubmitting] = useState(false);
   const snInputRef = useRef(null);
   const barcodeInputRef = useRef(null);
 
@@ -71,6 +78,7 @@ const ScanBarcodeListPage = () => {
     finalizeReceiptIfNeededAction,
     clearErrorAction,
     receiveAllPendingNoSNAction,
+    updateReceivedSNAction,
   } = useBarcodeStore();
 
   useEffect(() => {
@@ -576,6 +584,86 @@ const ScanBarcodeListPage = () => {
     }
   };
 
+  const startEditSN = (barcodeReceipt) => {
+    const sold =
+      String(barcodeReceipt?.stockItem?.status || '').toUpperCase() === 'SOLD' ||
+      String(barcodeReceipt?.stockItemStatus || '').toUpperCase() === 'SOLD' ||
+      barcodeReceipt?.stockItem?.soldAt != null ||
+      barcodeReceipt?.stockItem?.saleItem?.id != null;
+
+    if (sold) {
+      setPageMessage({ type: 'error', text: '❌ สินค้าชิ้นนี้ถูกขายไปแล้ว ไม่สามารถแก้ SN ได้' });
+      playErrorBeep();
+      return;
+    }
+
+    if (!barcodeReceipt?.stockItemId) {
+      setPageMessage({ type: 'error', text: '❌ รายการนี้ยังไม่มี stock item สำหรับแก้ SN' });
+      playErrorBeep();
+      return;
+    }
+
+    const currentSN = String(
+      barcodeReceipt?.stockItem?.serialNumber || barcodeReceipt?.serialNumber || ''
+    ).trim();
+
+    setEditingBarcodeReceiptId(barcodeReceipt.id);
+    setEditingSN(currentSN);
+    setPageMessage(null);
+  };
+
+  const cancelEditSN = () => {
+    setEditingBarcodeReceiptId(null);
+    setEditingSN('');
+  };
+
+  const saveEditSN = async (barcodeReceipt) => {
+    const nextSN = String(editingSN || '').trim();
+    if (!nextSN) {
+      setPageMessage({ type: 'error', text: '❌ กรุณากรอก SN ก่อนบันทึก' });
+      playErrorBeep();
+      return;
+    }
+
+    if (!barcodeReceipt?.stockItemId) {
+      setPageMessage({ type: 'error', text: '❌ ไม่พบ stock item สำหรับแก้ SN' });
+      playErrorBeep();
+      return;
+    }
+
+    if (!updateReceivedSNAction) {
+      setPageMessage({ type: 'error', text: '❌ Store ยังไม่มี updateReceivedSNAction' });
+      playErrorBeep();
+      return;
+    }
+
+    setEditingSubmitting(true);
+    try {
+      await updateReceivedSNAction({
+        stockItemId: barcodeReceipt.stockItemId,
+        serialNumber: nextSN,
+        barcodeReceiptId: barcodeReceipt.id,
+        receiptId,
+      });
+
+      await Promise.all([
+        loadBarcodesAction(receiptId),
+        loadReceiptWithSupplierAction(receiptId),
+      ]);
+
+      setEditingBarcodeReceiptId(null);
+      setEditingSN('');
+      setPageMessage({ type: 'success', text: `✅ แก้ SN สำเร็จ: ${barcodeReceipt.barcode}` });
+      playBeep();
+    } catch (err) {
+      const msg = err?.response?.data?.error || err?.response?.data?.message || err?.message || 'บันทึก SN ไม่สำเร็จ';
+      setPageMessage({ type: 'error', text: `❌ ${msg}` });
+      playErrorBeep();
+    } finally {
+      setEditingSubmitting(false);
+    }
+  };
+
   return (
     <div className="p-4 space-y-4">
       {/* HEADER */}
@@ -784,6 +872,8 @@ const ScanBarcodeListPage = () => {
                       : (dbStockStatus || apiStockStatus || '-');
 
                     const hasStockItem = b?.stockItemId != null;
+                    const canEditSN = hasStockItem && !isLot && !soldFlag;
+                    const isEditingRow = editingBarcodeReceiptId === b?.id;
 
                     // ✅ ถ้ามี stockItem แล้ว ให้ยึดเป็น “รายชิ้น” (แสดงสถานะจาก stockItem) แม้ kind จะเป็น LOT
                     // เฉพาะ LOT จริง (ไม่มี stockItem) เท่านั้นที่จะแสดง LOT / SN_RECEIVED
@@ -801,9 +891,65 @@ const ScanBarcodeListPage = () => {
                         <td className="px-3 py-2">{idx + 1}</td>
                         <td className="px-3 py-2">{productName}</td>
                         <td className="px-3 py-2 font-mono">{b.barcode}</td>
-                        <td className="px-3 py-2 font-mono">{snText}</td>
+                        <td className="px-3 py-2 font-mono">
+                          {isEditingRow ? (
+                            <input
+                              type="text"
+                              className="border rounded px-2 py-1 w-56 max-w-full font-mono"
+                              value={editingSN}
+                              disabled={editingSubmitting}
+                              onChange={(e) => setEditingSN(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                  saveEditSN(b);
+                                }
+                                if (e.key === 'Escape') {
+                                  e.preventDefault();
+                                  cancelEditSN();
+                                }
+                              }}
+                            />
+                          ) : (
+                            snText
+                          )}
+                        </td>
                         <td className="px-3 py-2">{statusText}</td>
-                        <td className="px-3 py-2 text-right">—</td>
+                        <td className="px-3 py-2 text-right">
+                          {isEditingRow ? (
+                            <div className="flex items-center justify-end gap-2">
+                              <button
+                                type="button"
+                                onClick={() => saveEditSN(b)}
+                                disabled={editingSubmitting}
+                                className="px-3 py-1 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60"
+                              >
+                                {editingSubmitting ? 'กำลังบันทึก...' : 'บันทึก'}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={cancelEditSN}
+                                disabled={editingSubmitting}
+                                className="px-3 py-1 rounded border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-60"
+                              >
+                                ยกเลิก
+                              </button>
+                            </div>
+                          ) : canEditSN ? (
+                            <button
+                              type="button"
+                              onClick={() => startEditSN(b)}
+                              disabled={editingSubmitting || submitting}
+                              className="px-3 py-1 rounded border border-blue-300 text-blue-700 hover:bg-blue-50 disabled:opacity-60"
+                            >
+                              แก้ SN
+                            </button>
+                          ) : soldFlag ? (
+                            <span className="text-xs text-gray-500">แก้ไม่ได้ (SOLD)</span>
+                          ) : (
+                            '—'
+                          )}
+                        </td>
                       </tr>
                     );
                   })}
@@ -818,11 +964,5 @@ const ScanBarcodeListPage = () => {
 };
 
 export default ScanBarcodeListPage;
-
-
-
-
-
-
 
 

@@ -3,24 +3,9 @@ import { createRoot } from 'react-dom/client';
 import './index.css';
 import App from './App.jsx';
 
-// ✅ ล้าง localStorage เฉพาะกรณี token หรือ branch ผิด format หรือ decode ไม่ได้ เพื่อไม่ให้ user หลุดจากระบบโดยไม่จำเป็น
-try {
-  const rawToken = localStorage.getItem('auth-storage');
-  const rawBranch = localStorage.getItem('branch-storage');
-
-  const hasValidToken = rawToken && JSON.parse(rawToken)?.state?.token;
-  const hasValidBranch = rawBranch && JSON.parse(rawBranch)?.state?.currentBranch;
-
-  if (!hasValidToken || !hasValidBranch) {
-    localStorage.removeItem('auth-storage');
-    localStorage.removeItem('branch-storage');
-    console.warn('🧹 ล้าง localStorage เพราะ token/branch ไม่สมบูรณ์');
-  }
-} catch (err) {
-  console.error('❌ localStorage format ผิด → ล้างออกทั้งหมด', err);
-  localStorage.removeItem('auth-storage');
-  localStorage.removeItem('branch-storage');
-}
+// ✅ main.jsx ต้องทำหน้าที่ bootstrap app เท่านั้น
+// ❌ ไม่ควรตัดสิน auth / branch lifecycle จาก localStorage ที่นี่
+// การตรวจสอบ session และการ cleanup ให้ไปอยู่ที่ store / auth bootstrap flow แทน
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

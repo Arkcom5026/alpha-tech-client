@@ -1,11 +1,10 @@
 
 
+// src/features/auth/store/authStore.js
 
-
-// authStore.js
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { loginUser } from '../api/authApi';
+import { loginUser, verifySession } from '../api/authApi';
 import { buildRoleContext, can as canCap, P1_CAP } from '../rbac/rbacClient';
 import { useBranchStore } from '@/features/branch/store/branchStore';
 
@@ -67,16 +66,32 @@ const deriveEffectiveProfileType = (serverProfileType, profile, serverRole) => {
   return spt || null;
 };
 
+const getEmptyAuthState = () => ({
+  token: null,
+  role: null,
+  profileType: null,
+  authError: null,
+  isSuperAdmin: false,
+  employee: null,
+  customer: null,
+  authChecked: false,
+  isBootstrappingAuth: false,
+});
+
+const clearLegacyAuthStorage = () => {
+  try {
+    localStorage.removeItem('auth-storage');
+    localStorage.removeItem('token');
+    localStorage.removeItem('role');
+  } catch (error) {
+    console.error('❌ clearLegacyAuthStorage failed:', error);
+  }
+};
+
 export const useAuthStore = create(
   persist(
     (set) => ({
-      token: null,
-      role: null,
-      profileType: null, // ✅ เก็บ context ที่แท้จริง
-      authError: null,
-      isSuperAdmin: false,
-      employee: null,
-      customer: null,
+      ...getEmptyAuthState(),
 
       setUser: ({ token, role, profileType, employee, customer }) =>
         set({
@@ -87,30 +102,140 @@ export const useAuthStore = create(
           customer,
           authError: null,
           isSuperAdmin: normalizeRole(role) === 'superadmin',
+          authChecked: true,
         }),
 
-      logout: () =>
-        set({ token: null, role: null, profileType: null, authError: null, isSuperAdmin: false, employee: null, customer: null }),
+      markAuthCheckedAction: () => set({ authChecked: true }),
+      setBootstrappingAuthAction: (isBootstrappingAuth) => set({ isBootstrappingAuth }),
+
+      verifySessionAction: async () => {
+        const state = useAuthStore.getState();
+        const token = state.token;
+
+        if (!token) {
+          set({ authChecked: false, isBootstrappingAuth: false });
+          return false;
+        }
+
+        try {
+          set({ isBootstrappingAuth: true, authError: null });
+
+          const res = await verifySession();
+          const profile = res?.data?.profile || null;
+          const serverRole = normalizeRole(res?.data?.role || state.role);
+          const serverProfileType = (res?.data?.profileType || state.profileType || '').toString();
+          const positionName = pickPositionName(profile);
+          const positionKey = pickPositionKey(profile);
+          const effectiveProfileType = deriveEffectiveProfileType(serverProfileType, profile, serverRole);
+          const baseRole = effectiveProfileType === 'employee' ? 'employee' : serverRole;
+          const effectiveRole = (() => {
+            if (serverRole === 'superadmin') return 'superadmin';
+            if (serverRole === 'admin') return 'admin';
+            if (baseRole !== 'employee') return baseRole;
+            if (positionKey === 'superadmin') return 'superadmin';
+            if (positionKey === 'admin') return 'admin';
+            if (positionKey === 'owner' || positionKey === 'manager') return 'admin';
+            return 'employee';
+          })();
+
+          const branchIdFromServer =
+            res?.data?.branchId ??
+            profile?.branchId ??
+            profile?.branch?.id ??
+            state.employee?.branchId ??
+            null;
+
+          if (['employee', 'admin'].includes(effectiveRole) && !branchIdFromServer) {
+            throw new Error('บัญชีพนักงานต้องมีสาขา (branchId) ก่อนเข้า POS');
+          }
+
+          let employee = null;
+          let customer = null;
+
+          if (['employee', 'admin', 'superadmin'].includes(effectiveRole)) {
+            employee = {
+              id: profile?.id,
+              name: profile?.name,
+              phone: profile?.phone,
+              email: profile?.email,
+              positionName: positionName || '__NO_POSITION__',
+              positionKey: positionKey || null,
+              branchId: branchIdFromServer ? Number(branchIdFromServer) : null,
+            };
+
+            if (branchIdFromServer) {
+              await useBranchStore.getState().loadAndSetBranchById(Number(branchIdFromServer));
+            }
+          }
+
+          if (effectiveRole === 'customer') {
+            customer = {
+              id: profile?.id,
+              name: profile?.name,
+              phone: profile?.phone,
+              email: profile?.email,
+            };
+          }
+
+          set({
+            token,
+            role: effectiveRole,
+            profileType: effectiveProfileType,
+            employee,
+            customer,
+            authError: null,
+            isSuperAdmin: effectiveRole === 'superadmin',
+            authChecked: true,
+            isBootstrappingAuth: false,
+          });
+
+          return true;
+        } catch (error) {
+          console.error('❌ verifySessionAction failed:', error);
+          useAuthStore.getState().resetAuthStateAction();
+          set({ isBootstrappingAuth: false, authChecked: false });
+          return false;
+        }
+      },
+
+      bootstrapAuthAction: async () => {
+        const state = useAuthStore.getState();
+
+        if (!state.token) {
+          set({ authChecked: false, isBootstrappingAuth: false });
+          return false;
+        }
+
+        set({ isBootstrappingAuth: true });
+        return state.verifySessionAction();
+      },
+      resetAuthStateAction: () => {
+        set(getEmptyAuthState());
+        clearLegacyAuthStorage();
+      },
+
+      logout: () => {
+        useAuthStore.getState().resetAuthStateAction();
+      },
 
       logoutAction: () => {
-        set({ token: null, role: null, profileType: null, authError: null, isSuperAdmin: false, employee: null, customer: null });
-        localStorage.removeItem('auth-storage');
+        useAuthStore.getState().resetAuthStateAction();
       },
 
       clearStorage: () => {
-        set({ token: null, role: null, profileType: null, authError: null, isSuperAdmin: false, employee: null, customer: null });
+        useAuthStore.getState().resetAuthStateAction();
       },
 
       isLoggedIn: () => {
         const state = useAuthStore.getState();
-        return !!state.token;
+        return !!state.token && !!state.authChecked && !state.isBootstrappingAuth;
       },
 
       // ---------- LOGIN ----------
       loginAction: async (credentials) => {
         try {
           // reset error each attempt (UI should render authError as inline block)
-          set({ authError: null });
+          set({ authError: null, authChecked: false, isBootstrappingAuth: false });
           const res = await loginUser(credentials);
           console.log('✅ loginUser response:', res);
 
@@ -128,21 +253,21 @@ export const useAuthStore = create(
           // เพิ่มเติม: ถ้า serverRole มาผิดเป็น customer แต่ context เป็น employee → force เป็น employee ก่อน
           const baseRole = effectiveProfileType === 'employee' ? 'employee' : serverRole;
           // ✅ ยกระดับสิทธิ์จากตำแหน่ง (RBAC)
-// - admin/superadmin ใช้ตามคีย์ตำแหน่ง
-// - owner/manager ให้ถือเป็น admin (backoffice)
-const effectiveRole = (() => {
-  // ✅ Trust explicit platform roles from BE (even if no EmployeeProfile)
-  if (serverRole === 'superadmin') return 'superadmin';
-  if (serverRole === 'admin') return 'admin';
+          // - admin/superadmin ใช้ตามคีย์ตำแหน่ง
+          // - owner/manager ให้ถือเป็น admin (backoffice)
+          const effectiveRole = (() => {
+            // ✅ Trust explicit platform roles from BE (even if no EmployeeProfile)
+            if (serverRole === 'superadmin') return 'superadmin';
+            if (serverRole === 'admin') return 'admin';
 
-  if (baseRole !== 'employee') return baseRole;
+            if (baseRole !== 'employee') return baseRole;
 
-  if (positionKey === 'superadmin') return 'superadmin';
-  if (positionKey === 'admin') return 'admin';
-  if (positionKey === 'owner' || positionKey === 'manager') return 'admin';
+            if (positionKey === 'superadmin') return 'superadmin';
+            if (positionKey === 'admin') return 'admin';
+            if (positionKey === 'owner' || positionKey === 'manager') return 'admin';
 
-  return 'employee';
-})();
+            return 'employee';
+          })();
 
           let branchFull = null;
           const branchIdFromServer =
@@ -155,8 +280,7 @@ const effectiveRole = (() => {
           if (['employee', 'admin'].includes(effectiveRole) && !branchIdFromServer) {
             const msg = 'บัญชีพนักงานต้องมีสาขา (branchId) ก่อนเข้า POS (กรุณาให้แอดมินกำหนดสาขาใน EmployeeProfile)';
             set({ authError: msg });
-            // keep store clean (guards may clear storage too)
-            set({ token: null, role: null, profileType: null, isSuperAdmin: false, employee: null, customer: null });
+            useAuthStore.getState().resetAuthStateAction();
             throw new Error(msg);
           }
 
@@ -171,6 +295,7 @@ const effectiveRole = (() => {
             profileType: effectiveProfileType,
             authError: null,
             isSuperAdmin: effectiveRole === 'superadmin',
+            authChecked: true,
             employee: ['employee', 'admin', 'superadmin'].includes(effectiveRole)
               ? {
                   id: profile?.id,
@@ -225,6 +350,7 @@ const effectiveRole = (() => {
 
           set((state) => ({
             ...state,
+            authChecked: true,
             employee: employee ?? state.employee,
             customer: customer ?? state.customer,
           }));
@@ -249,7 +375,7 @@ const effectiveRole = (() => {
             return serverMsg || err?.message || 'เข้าสู่ระบบไม่สำเร็จ';
           })();
 
-          set({ authError: friendly });
+          set({ authError: friendly, authChecked: false, isBootstrappingAuth: false });
           console.error('❌ loginAction error:', err);
           // keep throwing so UI can stop navigation; UI should read authError to show inline error.
           throw err;
@@ -257,6 +383,10 @@ const effectiveRole = (() => {
       },
 
       // ---------- Selectors ที่เรียกจากหน้า UI ----------
+      isAuthenticatedSelector: () => {
+        const state = useAuthStore.getState();
+        return !!state.token && !!state.authChecked;
+      },
       isSuperAdminSelector: () => normalizeRole(useAuthStore.getState().role) === 'superadmin',
       isAdminOrAboveSelector: () => {
         const state = useAuthStore.getState();
@@ -348,5 +478,4 @@ const effectiveRole = (() => {
     { name: 'auth-storage' }
   )
 );
-
 

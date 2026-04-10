@@ -1,4 +1,6 @@
-// HeaderPos.jsx
+
+
+// src/features/pos/components/header/HeaderPos.jsx
 
 import { useEffect, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
@@ -16,7 +18,7 @@ const HeaderPos = () => {
   const employee = useAuthStore((state) => state.employee);
   const user = useAuthStore((state) => state.user);
   const logoutAction = useAuthStore((state) => state.logoutAction);
-  const token = useAuthStore((state) => state.token);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticatedSelector?.());
   const role = useAuthStore((state) => state.role);
 
   // ✅ Branch store wiring (declare BEFORE any use to avoid TDZ)
@@ -77,10 +79,10 @@ const showGlobalProducts = isSuperAdmin && canGlobalProducts;
     if (isSuperAdmin) return;
 
     const roleLower = String(role || '').toLowerCase();
-    if (token && roleLower === 'employee' && employee?.branchId && selectedBranchId) {
+    if (isAuthenticated && roleLower === 'employee' && employee?.branchId && selectedBranchId) {
       loadAndSetBranchById(selectedBranchId);
     }
-  }, [isSuperAdmin, token, role, employee?.branchId, selectedBranchId, loadAndSetBranchById]);
+  }, [isSuperAdmin, isAuthenticated, role, employee?.branchId, selectedBranchId, loadAndSetBranchById]);
 
   const navLinkClass = ({ isActive }) =>
     `px-5 py-2 rounded-md text-base font-medium transition-all duration-200 whitespace-nowrap border border-white/20 shadow-sm ${
@@ -174,7 +176,7 @@ const showGlobalProducts = isSuperAdmin && canGlobalProducts;
           </div>
         )}
 
-        {token && (
+        {isAuthenticated && (
           <div className="relative">
             <button
               className="flex items-center gap-2 px-3 py-1 bg-blue-600/80 hover:bg-blue-700 rounded-full text-sm"

@@ -1,4 +1,5 @@
-// UnifiedMainNav.jsx (อัปเดตการแสดงผล Avatar ให้เหมือน LoginForm.jsx)
+
+// UnifiedMainNav.jsx (FIX: ใช้ isAuthenticated แทน customer และ cleanup auth ให้เป็น centralized)
 
 import React, { useState, useRef } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
@@ -8,12 +9,12 @@ import { useAuthStore } from '@/features/auth/store/authStore';
 import { useCartStore } from '@/features/online/cart/store/cartStore';
 import { useBranchStore } from '@/features/branch/store/branchStore';
 
-
 const UnifiedMainNav = () => {
   const customer = useAuthStore((state) => state.customer);
-  
-  const logout = useAuthStore((state) => state.logout);
-  const clearAuthStorage = useAuthStore((state) => state.clearStorage);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticatedSelector?.());
+
+  // ✅ ใช้ logoutAction จุดเดียว
+  const logout = useAuthStore((state) => state.logoutAction);
 
   const clearCart = useCartStore((state) => state.clearCart);
   const clearBranchStorage = useBranchStore((state) => state.clearStorage);
@@ -24,21 +25,18 @@ const UnifiedMainNav = () => {
 
   const toggleDropdown = () => setIsOpen((prev) => !prev);
 
-  
   const navClass = ({ isActive }) =>
     isActive
       ? 'bg-blue-200 px-2 sm:px-3 py-1 sm:py-2 rounded-md text-xs sm:text-sm font-medium text-blue-700 border border-white/40 border-[1px]'
       : 'px-2 sm:px-3 py-1 sm:py-2 rounded-md text-xs sm:text-sm font-medium text-white border border-white/40 border-[1px] hover:bg-blue-100/60';
 
   const handleLogout = () => {
+    // ✅ centralized auth cleanup
     logout();
-    clearAuthStorage();
+
+    // non-auth state
     clearCart();
     clearBranchStorage();
-
-    localStorage.removeItem('auth-storage');
-    localStorage.removeItem('cart-storage');
-    localStorage.removeItem('branch-storage');
 
     navigate('/');
   };
@@ -59,11 +57,12 @@ const UnifiedMainNav = () => {
 
           {/* Right Section: Auth / Avatar */}
           <div className="flex items-center gap-3 sm:gap-4">
-            {!customer && (
+            {/* ✅ FIX: ใช้ isAuthenticated แทน customer */}
+            {!isAuthenticated && (
               <NavLink to="/login" className={navClass}>Login</NavLink>
             )}
 
-            {customer && (
+            {isAuthenticated && customer && (
               <div className="relative" ref={dropdownRef}>
                 <button
                   onClick={toggleDropdown}

@@ -1,13 +1,29 @@
+
+
 // ✅ src/features/auth/components/ProtectedRoute.jsx
+
+
 import { Navigate, Outlet } from 'react-router-dom';
-import { useAuthStore } from '@/features/auth/store/authStore'; // ✅ แก้ path store ให้ถูกต้องตามโครงสร้างระบบ
+import { useAuthStore } from '@/features/auth/store/authStore';
 
 const ProtectedRoute = ({ allowedRoles = [], children }) => {
-  const token = useAuthStore((state) => state.token);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticatedSelector?.());
+  const isBootstrappingAuth = useAuthStore((state) => state.isBootstrappingAuth);
   const role = useAuthStore((state) => state.role);
+  const token = useAuthStore((state) => state.token);
 
-  // ✅ ถ้าไม่มี token → redirect ไปหน้า login
-  if (!token) return <Navigate to="/login" replace />;
+  // ✅ ระหว่างกำลัง bootstrap session อยู่ ยังไม่รีบ redirect
+  if (isBootstrappingAuth) {
+    return null;
+  }
+
+  // ✅ ถ้ามี token ค้างและระบบยังไม่ได้เช็กเสร็จ ให้รอก่อน
+  if (token && !isAuthenticated) {
+    return null;
+  }
+
+  // ✅ ใช้สถานะ authenticated จาก store กลางเท่านั้น
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
 
   // ✅ ถ้ามีการจำกัด role → ตรวจสอบสิทธิ์
   if (allowedRoles.length > 0 && !allowedRoles.includes(role)) {

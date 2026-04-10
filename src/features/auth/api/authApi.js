@@ -1,7 +1,8 @@
-import apiClient from '@/utils/apiClient';
 
-// ✅ @filename: authApi.js
-// ✅ @folder: src/features/auth/api/
+
+// src/features/auth/api/authApi.js
+
+import apiClient from '@/utils/apiClient';
 
 export async function registerUser(data) {
   try {
@@ -22,3 +23,14 @@ export async function loginUser(data) {
     throw err;
   }
 }
+
+export async function verifySession() {
+  try {
+    const res = await apiClient.get('/auth/me');
+    return res;
+  } catch (err) {
+    console.error('🔴 verifySession error:', err);
+    throw err;
+  }
+}
+

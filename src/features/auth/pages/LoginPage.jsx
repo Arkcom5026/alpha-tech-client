@@ -1,3 +1,5 @@
+
+
 // ✅ @filename: LoginPage.jsx
 // SUPERADMIN login routing: แยก Global session ออกจาก POS session แบบ minimal disruption
 
@@ -24,7 +26,8 @@ const LoginPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const loginAction = useAuthStore((state) => state.loginAction);
-  const token = useAuthStore((state) => state.token);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticatedSelector?.());
+  const isBootstrappingAuth = useAuthStore((state) => state.isBootstrappingAuth);
   const role = useAuthStore((state) => state.role);
   const profileType = useAuthStore((state) => state.profileType);
   const user = useAuthStore((state) => state.user);
@@ -39,11 +42,14 @@ const LoginPage = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const isLoggedIn = !!token;
+  const isLoggedIn = isAuthenticated;
   const { cartItems, fetchCartAction, mergeCartAction, clearCart } = useCartStore();
 
   useEffect(() => {
-    if (!isLoggedIn) return;
+    // ✅ ระหว่าง bootstrap auth ยังไม่ redirect
+    if (isBootstrappingAuth) return;
+
+    if (!isAuthenticated) return;
 
     const currentPath = window.location.pathname;
     const r = normalizeRole(role);
@@ -90,8 +96,7 @@ const LoginPage = () => {
       // ✅ SUPERADMIN → เข้า Global dashboard เท่านั้น
       if (isSuperAdminRole(effectiveRole)) {
         try {
-          localStorage.setItem('token', st.token || '');
-          localStorage.setItem('role', effectiveRole || '');
+          // ❌ removed legacy localStorage writes (use authStore only)
         } catch (storageErr) {
           console.warn('⚠️ Cannot access localStorage:', storageErr);
         }
@@ -112,8 +117,7 @@ const LoginPage = () => {
 
         // NOTE: keep legacy localStorage write for minimal disruption
         try {
-          localStorage.setItem('token', st.token || '');
-          localStorage.setItem('role', effectiveRole || '');
+          // ❌ removed legacy localStorage writes (use authStore only)
         } catch (storageErr) {
           console.warn('⚠️ Cannot access localStorage:', storageErr);
         }
@@ -261,3 +265,5 @@ const LoginPage = () => {
 };
 
 export default LoginPage;
+
+

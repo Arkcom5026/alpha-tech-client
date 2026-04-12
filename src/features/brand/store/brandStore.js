@@ -4,6 +4,7 @@
 
 
 
+
 // src/features/brand/store/brandStore.js
  
 // Zustand Store (Production-grade)
@@ -225,6 +226,34 @@ export const useBrandStore = create(
         }
       },
 
+      // ===== Mapping: ProductType ↔ Brand =====
+      attachBrandToProductTypeAction: async ({ productTypeId, brandId }) => {
+        set({ saving: true, error: null })
+        try {
+          if (!productTypeId || !brandId) {
+            throw new Error('INVALID_PRODUCTTYPE_OR_BRAND')
+          }
+
+          const res = await brandApi.attachBrandToProductType({
+            productTypeId: Number(productTypeId),
+            brandId: Number(brandId),
+          })
+
+          // หลัง mapping สำเร็จ → รีโหลด dropdown เฉพาะ productType นี้
+          await get().fetchBrandDropdownsAction({
+            productTypeId: Number(productTypeId),
+            force: true,
+          })
+
+          set({ saving: false })
+          return { ok: true, data: res }
+        } catch (err) {
+          const normalized = normalizeErrorMessage(err)
+          set({ saving: false, error: normalized })
+          return { ok: false, error: normalized }
+        }
+      },
+
       getBrandOptionsAction: () => {
         const items = get().items
         return Array.isArray(items) ? items : []
@@ -241,6 +270,7 @@ export const useBrandStore = create(
 
 // ✅ Default export for backward-compatible imports
 export default useBrandStore
+
 
 
 

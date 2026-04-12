@@ -1,9 +1,5 @@
 
 
-
-
-
-
 // ✅ src/features/product/components/ProductForm.jsx
 
 import React, { useEffect, useRef, useCallback, useMemo, useState } from 'react';
@@ -460,11 +456,17 @@ const ProductForm = ({
   }, [watchedProductTypeId]);
 
   const refreshBrandsForCurrentType = useCallback(async () => {
+    // ✅ สำคัญ: force refresh product dropdowns เพื่อดึง ProductTypeBrand mapping ล่าสุดกลับมา
     try {
-      await Promise.resolve(fetchDropdownsAction?.());
+      if (typeof fetchDropdownsAction === 'function') {
+        await Promise.resolve(fetchDropdownsAction(true));
+      }
     } catch (_) {
       // ignore
     }
+
+    // ✅ reset preload guard แล้วดึง brand dropdown ของ type ปัจจุบันใหม่
+    brandsRequestedRef.current = false;
     try {
       await Promise.resolve(requestBrands(activeProductTypeId ?? undefined));
     } catch (_) {
@@ -491,6 +493,7 @@ const ProductForm = ({
         attachBrandToProductTypeAction({ productTypeId: activeProductTypeId, brandId: Number(brand?.id) })
       );
       await refreshBrandsForCurrentType();
+      // ✅ ให้ form ใช้ brandId ใหม่หลัง store sync รอบล่าสุดแล้ว
       setValue('brandId', Number(brand?.id), { shouldDirty: true, shouldTouch: true, shouldValidate: true });
       setBrandHelperSuccess(`เพิ่มแบรนด์ “${String(brand?.name ?? '')}” เข้า mapping และเลือกใช้งานแล้ว`);
       setShowExistingBrandHelper(false);
@@ -537,6 +540,7 @@ const ProductForm = ({
       );
 
       await refreshBrandsForCurrentType();
+      // ✅ ให้ form ใช้ brandId ใหม่หลัง store sync รอบล่าสุดแล้ว
       setValue('brandId', brandId, { shouldDirty: true, shouldTouch: true, shouldValidate: true });
       setBrandHelperSuccess(`สร้างแบรนด์ใหม่ “${name}” และเพิ่มเข้า mapping แล้ว`);
       setNewBrandName('');
@@ -1324,6 +1328,7 @@ const ProductForm = ({
 };
 
 export default ProductForm;
+
 
 
 

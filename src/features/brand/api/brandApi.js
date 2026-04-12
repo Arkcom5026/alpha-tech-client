@@ -2,6 +2,7 @@
 
 
 
+
 // ✅ src/features/stock/brand/api/brandApi.js
 import apiClient from '@/utils/apiClient';
 import { parseApiError } from '@/utils/uiHelpers';
@@ -149,6 +150,23 @@ export const getBrandDropdowns = async ({ includeInactive = false, productTypeId
   }
 };
 
+// =============================
+// MAPPING: ProductType ↔ Brand
+// =============================
+export const attachBrandToProductType = async ({ productTypeId, brandId }) => {
+  try {
+    const payload = {
+      productTypeId: Number(productTypeId),
+      brandId: Number(brandId),
+    };
+
+    const { data } = await apiClient.post('product-type-brands', payload);
+    return data;
+  } catch (err) {
+    throw parseApiError(err);
+  }
+};
+
 // Alias (backward-compatible)
 export const getBrandsForDropdown = getBrandDropdowns;
 
@@ -161,6 +179,7 @@ export default {
   toggleBrandActive,
   getBrandDropdowns,
   getBrandsForDropdown, // alias
+  attachBrandToProductType,
 };
 
 

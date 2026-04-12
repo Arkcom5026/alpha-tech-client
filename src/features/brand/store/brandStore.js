@@ -2,6 +2,8 @@
 
 
 
+
+
 // src/features/brand/store/brandStore.js
  
 // Zustand Store (Production-grade)
@@ -38,6 +40,9 @@ export const useBrandStore = create(
       loading: false,
       saving: false,
       error: null,
+      dropdownsLoaded: false,
+      dropdownsLoading: false,
+      lastFetchKey: null,
 
       // ===== actions =====
       setQueryAction: (q) => set({ q: String(q || ''), page: 1 }),
@@ -48,28 +53,95 @@ export const useBrandStore = create(
         set({ pageSize: ps, page: 1 })
       },
       clearErrorAction: () => set({ error: null }),
+      resetBrandDropdownsAction: () => set({
+        items: [],
+        dropdownsLoaded: false,
+        dropdownsLoading: false,
+        error: null,
+        lastFetchKey: null,
+      }),
 
       fetchBrandDropdownsAction: async (override = {}) => {
         const state = get()
-        set({ loading: true, error: null })
+        const includeInactive = override.includeInactive ?? state.includeInactive
+        const productTypeId =
+          override.productTypeId === '' || override.productTypeId === null || override.productTypeId === undefined
+            ? undefined
+            : Number(override.productTypeId)
+        const force = override.force === true
+        const fetchKey = JSON.stringify({
+          includeInactive,
+          productTypeId: Number.isFinite(productTypeId) ? productTypeId : null,
+        })
+
+        if (
+          !force &&
+          state.dropdownsLoaded &&
+          state.lastFetchKey === fetchKey &&
+          Array.isArray(state.items) &&
+          state.items.length > 0
+        ) {
+          return { ok: true, cached: true, items: state.items }
+        }
+
+        set({ loading: true, dropdownsLoading: true, error: null })
         try {
           const items = await brandApi.getBrandDropdowns({
-            includeInactive: override.includeInactive ?? state.includeInactive,
+            includeInactive,
+            productTypeId: Number.isFinite(productTypeId) ? productTypeId : undefined,
           })
+          const safeItems = Array.isArray(items) ? items : []
 
           set({
-            items: Array.isArray(items) ? items : [],
+            items: safeItems,
             page: 1,
-            pageSize: Array.isArray(items) ? items.length : 0,
-            total: Array.isArray(items) ? items.length : 0,
+            pageSize: safeItems.length,
+            total: safeItems.length,
             loading: false,
+            dropdownsLoading: false,
+            dropdownsLoaded: safeItems.length > 0,
+            lastFetchKey: fetchKey,
           })
 
-          return { ok: true }
+          return { ok: true, items: safeItems }
         } catch (err) {
-          set({ loading: false, error: normalizeErrorMessage(err) })
-          return { ok: false, error: normalizeErrorMessage(err) }
+          const normalized = normalizeErrorMessage(err)
+          set({
+            loading: false,
+            dropdownsLoading: false,
+            dropdownsLoaded: false,
+            error: normalized,
+          })
+          return { ok: false, error: normalized }
         }
+      },
+
+      ensureBrandDropdownsAction: async (override = {}) => {
+        const state = get()
+        const includeInactive = override.includeInactive ?? state.includeInactive
+        const productTypeId =
+          override.productTypeId === '' || override.productTypeId === null || override.productTypeId === undefined
+            ? undefined
+            : Number(override.productTypeId)
+        const fetchKey = JSON.stringify({
+          includeInactive,
+          productTypeId: Number.isFinite(productTypeId) ? productTypeId : null,
+        })
+
+        if (
+          state.dropdownsLoaded &&
+          state.lastFetchKey === fetchKey &&
+          Array.isArray(state.items) &&
+          state.items.length > 0
+        ) {
+          return { ok: true, cached: true, items: state.items }
+        }
+
+        return get().fetchBrandDropdownsAction({
+          includeInactive,
+          productTypeId: Number.isFinite(productTypeId) ? productTypeId : undefined,
+          force: override.force === true,
+        })
       },
 
       fetchBrandsAction: async (override = {}) => {
@@ -83,15 +155,19 @@ export const useBrandStore = create(
             includeInactive: override.includeInactive ?? state.includeInactive,
           })
 
+          const safeItems = Array.isArray(data?.items) ? data.items : []
+
           set({
-            items: Array.isArray(data?.items) ? data.items : [],
+            items: safeItems,
             page: Number(data?.page) || (override.page ?? state.page),
             pageSize: Number(data?.pageSize) || (override.pageSize ?? state.pageSize),
             total: Number(data?.total) || 0,
             loading: false,
+            dropdownsLoaded: safeItems.length > 0,
+            lastFetchKey: null,
           })
 
-          return { ok: true }
+          return { ok: true, items: safeItems }
         } catch (err) {
           set({ loading: false, error: normalizeErrorMessage(err) })
           return { ok: false, error: normalizeErrorMessage(err) }
@@ -148,6 +224,16 @@ export const useBrandStore = create(
           return { ok: false, error: normalizeErrorMessage(err) }
         }
       },
+
+      getBrandOptionsAction: () => {
+        const items = get().items
+        return Array.isArray(items) ? items : []
+      },
+
+      hasBrandDropdownsAction: () => {
+        const state = get()
+        return !!(state.dropdownsLoaded && Array.isArray(state.items) && state.items.length > 0)
+      },
     }),
     { name: 'brandStore' }
   )
@@ -155,5 +241,7 @@ export const useBrandStore = create(
 
 // ✅ Default export for backward-compatible imports
 export default useBrandStore
+
+
 
 

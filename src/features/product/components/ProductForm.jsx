@@ -1,3 +1,9 @@
+
+
+
+
+
+
 // ✅ src/features/product/components/ProductForm.jsx
 
 import React, { useEffect, useRef, useCallback, useMemo, useState } from 'react';
@@ -6,6 +12,7 @@ import _ from 'lodash';
 
 import useProductStore from '../store/productStore';
 import useBrandStore from '@/features/brand/store/brandStore';
+import { useAuthStore } from '@/features/auth/store/authStore';
 
 // ✅ Standard money input (0.00 placeholder + text-right) — local to this form
 const PaymentInput = ({ title, value, onChange, disabled = false }) => {
@@ -44,23 +51,13 @@ const ProductForm = ({
     dropdownsError,
     ensureDropdownsAction,
     fetchDropdownsAction,
-  } = useProductStore();
-
-  // ✅ token gate (กันยิง API ก่อน auth พร้อม → 401)
-  const getAuthToken = () => {
-    if (typeof window === 'undefined') return '';
-    // รองรับหลาย key เผื่อโปรเจกต์เคยเปลี่ยนชื่อ storage
-    return (
-      localStorage.getItem('token') ||
-      localStorage.getItem('accessToken') ||
-      localStorage.getItem('jwt') ||
-      localStorage.getItem('authToken') ||
-      localStorage.getItem('posToken') ||
-      ''
-    );
-  };
-
-  const hasToken = Boolean(getAuthToken());
+    getSafeBrandOptionsByProductTypeIdAction,
+    getBrandOptionsByProductTypeIdAction,
+    hasBrandMappingByProductTypeIdAction,
+  } = useProductStore();  // ✅ auth gate จาก store กลางเท่านั้น (ห้ามอ่าน localStorage ตรงใน component)
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticatedSelector?.());
+  const isBootstrappingAuth = useAuthStore((state) => state.isBootstrappingAuth);
+  const hasToken = Boolean(isAuthenticated) && !isBootstrappingAuth;
 
   // ✅ preload product dropdowns (idempotent) — Category/Type depend on this
   // กันยิงซ้ำใน StrictMode / re-render
@@ -103,6 +100,17 @@ const ProductForm = ({
 
   // ✅ Brand reference data (idempotent, shared for Create/Edit)
   const brandItems = useBrandStore((s) => s?.items ?? s?.brands ?? s?.list ?? []);
+  const createBrandAction = useBrandStore(
+    (s) => s?.createBrandAction || s?.createBrand || s?.addBrandAction || s?.addBrand
+  );
+  const attachBrandToProductTypeAction = useBrandStore(
+    (s) =>
+      s?.attachBrandToProductTypeAction ||
+      s?.addBrandToProductTypeAction ||
+      s?.createProductTypeBrandAction ||
+      s?.attachBrandAction
+  );
+  const ensureBrandDropdownsAction = useBrandStore((s) => s?.ensureBrandDropdownsAction);
   const fetchBrandsAction = useBrandStore(
     (s) =>
       s?.fetchBrandDropdownsAction ||
@@ -112,9 +120,18 @@ const ProductForm = ({
       s?.loadBrandsAction ||
       s?.loadBrands
   );
+  const hasBrandDropdownsAction = useBrandStore((s) => s?.hasBrandDropdownsAction);
 
   // ✅ Cascading สำหรับ Product (Create/Edit) เหลือแค่ 2 ชั้น: Category → Type
   const [strict, setStrict] = useState(mode === 'create');
+  const [showBrandDebug, setShowBrandDebug] = useState(false);
+  const [showCreateBrandHelper, setShowCreateBrandHelper] = useState(false);
+  const [showExistingBrandHelper, setShowExistingBrandHelper] = useState(false);
+  const [brandSearch, setBrandSearch] = useState('');
+  const [newBrandName, setNewBrandName] = useState('');
+  const [brandHelperError, setBrandHelperError] = useState('');
+  const [brandHelperSuccess, setBrandHelperSuccess] = useState('');
+  const [brandHelperSaving, setBrandHelperSaving] = useState(false);
   useEffect(() => {
     setStrict(mode === 'create');
   }, [mode]);
@@ -257,92 +274,108 @@ const ProductForm = ({
 
   const requestBrands = useCallback(
     (productTypeId) => {
-      if (typeof fetchBrandsAction !== 'function') return Promise.resolve();
-
-      // รองรับหลายรูปแบบของ store/API (บางโปรเจกต์ใช้ key = typeId)
-      const typeKey = productTypeId === '' || productTypeId == null ? undefined : productTypeId;
+      const typeKey = productTypeId === '' || productTypeId == null ? undefined : Number(productTypeId);
       const args = {
         includeInactive: false,
-        productTypeId: typeKey,
-        typeId: typeKey,
+        productTypeId: Number.isFinite(typeKey) ? typeKey : undefined,
+        typeId: Number.isFinite(typeKey) ? typeKey : undefined,
       };
 
-      return Promise.resolve(fetchBrandsAction(args)).catch(() => {
+      const runner =
+        (typeof ensureBrandDropdownsAction === 'function' && ensureBrandDropdownsAction) ||
+        (typeof fetchBrandsAction === 'function' && fetchBrandsAction) ||
+        null;
+
+      if (!runner) return Promise.resolve();
+
+      return Promise.resolve(runner(args)).catch(() => {
         // swallow (401/timeout) - UI should not crash
       });
     },
-    [fetchBrandsAction]
+    [ensureBrandDropdownsAction, fetchBrandsAction]
   );
 
   // ✅ Normalize brands for <select> (prevent null/duplicate keys)
+  // priority:
+  // 1) brandStore items (when loaded successfully)
+  // 2) productStore dropdowns.brands fallback (fail-soft)
   const safeBrands = useMemo(() => {
-    const arr = Array.isArray(brandItems) ? brandItems : [];
-    const filtered = arr.filter((b) => b && b.id != null);
+    const storeBrands = Array.isArray(brandItems) ? brandItems : [];
+    const fallbackBrands =
+      typeof getSafeBrandOptionsByProductTypeIdAction === 'function'
+        ? getSafeBrandOptionsByProductTypeIdAction(watchedProductTypeId)
+        : Array.isArray(dropdowns?.brands)
+          ? dropdowns.brands
+          : [];
+
+    const hasPrimary =
+      (typeof hasBrandDropdownsAction === 'function' && hasBrandDropdownsAction()) ||
+      storeBrands.length > 0;
+
+    const source = hasPrimary ? storeBrands : fallbackBrands;
+    const filtered = (Array.isArray(source) ? source : []).filter((b) => b && b.id != null);
     const uniq = _.uniqBy(filtered, (b) => String(b.id));
     return _.sortBy(uniq, (b) => String(b?.name ?? ''));
-  }, [brandItems]);
+  }, [
+    brandItems,
+    dropdowns?.brands,
+    getSafeBrandOptionsByProductTypeIdAction,
+    watchedProductTypeId,
+    hasBrandDropdownsAction,
+  ]);
 
   // ✅ Type → Brand mapping (ProductTypeBrand)
-  const pickFirstArray = (...candidates) => {
-    for (const c of candidates) {
-      if (Array.isArray(c)) return c;
+  // ใช้ helper จาก productStore เป็น source of truth หลัก
+  // และกรองซ้ำที่ FE เสมอ แม้ source หลักจะมาจาก brandStore
+  const strictMappedBrands = useMemo(() => {
+    if (typeof getBrandOptionsByProductTypeIdAction === 'function') {
+      return getBrandOptionsByProductTypeIdAction(watchedProductTypeId);
     }
     return [];
-  };
+  }, [getBrandOptionsByProductTypeIdAction, watchedProductTypeId]);
 
-  const productTypeBrandsRaw = useMemo(() => {
-    // tolerate many possible payload shapes/keys (minimal disruption)
-    return pickFirstArray(
-      dropdowns?.productTypeBrands,
-      dropdowns?.productTypeBrand,
-      dropdowns?.typeBrands,
-      dropdowns?.typeBrand,
-      dropdowns?.productTypeBrandMappings,
-      dropdowns?.typeBrandMappings,
-      dropdowns?.productTypeBrandRows,
-      dropdowns?.typeBrandRows,
-      dropdowns?.mappings?.productTypeBrands,
-      dropdowns?.mappings?.typeBrands,
-      dropdowns?.data?.productTypeBrands,
-      dropdowns?.data?.typeBrands
-    );
-  }, [dropdowns]);
+  const mappedFallbackBrands = useMemo(() => {
+    if (typeof getSafeBrandOptionsByProductTypeIdAction === 'function') {
+      return getSafeBrandOptionsByProductTypeIdAction(watchedProductTypeId);
+    }
+    return Array.isArray(dropdowns?.brands) ? dropdowns.brands : [];
+  }, [getSafeBrandOptionsByProductTypeIdAction, watchedProductTypeId, dropdowns?.brands]);
+
+  const hasBrandMapping = useMemo(() => {
+    if (typeof hasBrandMappingByProductTypeIdAction !== 'function') return false;
+    return hasBrandMappingByProductTypeIdAction(watchedProductTypeId);
+  }, [hasBrandMappingByProductTypeIdAction, watchedProductTypeId]);
 
   const allowedBrandIdSet = useMemo(() => {
-    const typeIdStr = watchedProductTypeId === '' || watchedProductTypeId == null ? '' : String(watchedProductTypeId);
-    const arr = Array.isArray(productTypeBrandsRaw) ? productTypeBrandsRaw : [];
-
-    // ยังไม่เลือก type → ไม่กรอง
-    if (!typeIdStr) return null;
-
-    // ไม่มี mapping → ไม่กรอง
-    if (arr.length === 0) return null;
-
-    const set = new Set();
-    for (const row of arr) {
-      const pt = row?.productTypeId ?? row?.typeId ?? row?.product_type_id ?? row?.product_typeId;
-      const bid = row?.brandId ?? row?.brand_id ?? row?.brand?.id;
-      if (pt == null || bid == null) continue;
-      if (String(pt) === String(typeIdStr)) set.add(String(bid));
-    }
-
-    // mapping ถูกโหลดแล้ว แต่ไม่มีแถวของ type นี้จริง ๆ → กรองเป็น “ว่าง”
-    return set;
-  }, [productTypeBrandsRaw, watchedProductTypeId]);
+    if (!hasBrandMapping) return null;
+    const arr = Array.isArray(strictMappedBrands) ? strictMappedBrands : [];
+    return new Set(arr.map((b) => String(b?.id)).filter(Boolean));
+  }, [hasBrandMapping, strictMappedBrands]);
 
   const brandsForSelect = useMemo(() => {
-    // 1) ถ้ามี mapping → กรองใน FE
+    // ✅ ถ้ามี mapping → กรองเสมอ ไม่ว่า source จะมาจาก brandStore หรือ fallback
     if (allowedBrandIdSet) {
       return safeBrands.filter((b) => allowedBrandIdSet.has(String(b.id)));
     }
-    // 2) ถ้าไม่มี mapping → ใช้รายการจาก store ตามที่ BE ส่งมา
+
+    // ✅ ไม่มี mapping จริง → ใช้ fallback ที่ fail-soft ได้
+    const fallbackSet = new Set(
+      (Array.isArray(mappedFallbackBrands) ? mappedFallbackBrands : [])
+        .map((b) => String(b?.id))
+        .filter(Boolean)
+    );
+
+    if (fallbackSet.size > 0) {
+      return safeBrands.filter((b) => fallbackSet.has(String(b.id)));
+    }
+
     return safeBrands;
-  }, [safeBrands, allowedBrandIdSet]);
+  }, [safeBrands, allowedBrandIdSet, mappedFallbackBrands]);
 
   // ✅ Ensure brands dropdown is requested with productTypeId (BE-side filter)
   useEffect(() => {
     if (!hasToken) return;
-    if (typeof fetchBrandsAction !== 'function') return;
+    if (typeof requestBrands !== 'function') return;
 
     const nextTypeKey = watchedProductTypeId === '' || watchedProductTypeId == null ? '' : String(watchedProductTypeId);
     const typeChanged = lastBrandTypeIdRef.current !== nextTypeKey;
@@ -361,7 +394,7 @@ const ProductForm = ({
 
     brandsRequestedRef.current = true;
     requestBrands(nextTypeKey ? Number(nextTypeKey) : undefined);
-  }, [hasToken, fetchBrandsAction, requestBrands, watchedProductTypeId, brandItems]);
+  }, [hasToken, requestBrands, watchedProductTypeId, brandItems]);
 
   // ✅ If type changes and selected brand is not allowed → clear brandId
   useEffect(() => {
@@ -400,6 +433,120 @@ const ProductForm = ({
     const hit = safeBrands.find((b) => String(b.id) === String(selectedBrandIdStr));
     return (hit?.name ?? '').toString().trim();
   }, [safeBrands, selectedBrandIdStr]);
+
+  const allBrandsMaster = useMemo(() => {
+    const arr = Array.isArray(dropdowns?.brands) ? dropdowns.brands : [];
+    const filtered = arr.filter((b) => b && b.id != null);
+    const uniq = _.uniqBy(filtered, (b) => String(b.id));
+    return _.sortBy(uniq, (b) => String(b?.name ?? ''));
+  }, [dropdowns?.brands]);
+
+  const unmappedExistingBrands = useMemo(() => {
+    const mappedIds = new Set((Array.isArray(strictMappedBrands) ? strictMappedBrands : []).map((b) => String(b?.id)).filter(Boolean));
+    const q = brandSearch.trim().toLowerCase();
+    return allBrandsMaster.filter((b) => {
+      const idStr = String(b?.id ?? '');
+      const name = String(b?.name ?? '').trim();
+      if (!name) return false;
+      if (mappedIds.has(idStr)) return false;
+      if (!q) return true;
+      return name.toLowerCase().includes(q);
+    });
+  }, [allBrandsMaster, strictMappedBrands, brandSearch]);
+
+  const activeProductTypeId = useMemo(() => {
+    const n = Number(watchedProductTypeId);
+    return Number.isFinite(n) ? n : null;
+  }, [watchedProductTypeId]);
+
+  const refreshBrandsForCurrentType = useCallback(async () => {
+    try {
+      await Promise.resolve(fetchDropdownsAction?.());
+    } catch (_) {
+      // ignore
+    }
+    try {
+      await Promise.resolve(requestBrands(activeProductTypeId ?? undefined));
+    } catch (_) {
+      // ignore
+    }
+  }, [fetchDropdownsAction, requestBrands, activeProductTypeId]);
+
+  const handleAttachExistingBrand = useCallback(async (brand) => {
+    setBrandHelperError('');
+    setBrandHelperSuccess('');
+
+    if (!activeProductTypeId) {
+      setBrandHelperError('กรุณาเลือกประเภทสินค้าก่อน');
+      return;
+    }
+    if (typeof attachBrandToProductTypeAction !== 'function') {
+      setBrandHelperError('ยังไม่พร้อมใช้งานการเพิ่ม mapping ของแบรนด์');
+      return;
+    }
+
+    try {
+      setBrandHelperSaving(true);
+      await Promise.resolve(
+        attachBrandToProductTypeAction({ productTypeId: activeProductTypeId, brandId: Number(brand?.id) })
+      );
+      await refreshBrandsForCurrentType();
+      setValue('brandId', Number(brand?.id), { shouldDirty: true, shouldTouch: true, shouldValidate: true });
+      setBrandHelperSuccess(`เพิ่มแบรนด์ “${String(brand?.name ?? '')}” เข้า mapping และเลือกใช้งานแล้ว`);
+      setShowExistingBrandHelper(false);
+      setBrandSearch('');
+    } catch (error) {
+      setBrandHelperError(error?.message || 'เพิ่มแบรนด์เข้า mapping ไม่สำเร็จ');
+    } finally {
+      setBrandHelperSaving(false);
+    }
+  }, [activeProductTypeId, attachBrandToProductTypeAction, refreshBrandsForCurrentType, setValue]);
+
+  const handleCreateBrandAndAttach = useCallback(async () => {
+    setBrandHelperError('');
+    setBrandHelperSuccess('');
+
+    const name = String(newBrandName || '').trim();
+    if (!activeProductTypeId) {
+      setBrandHelperError('กรุณาเลือกประเภทสินค้าก่อน');
+      return;
+    }
+    if (!name) {
+      setBrandHelperError('กรุณาระบุชื่อแบรนด์ใหม่');
+      return;
+    }
+    if (typeof createBrandAction !== 'function') {
+      setBrandHelperError('ยังไม่พร้อมใช้งานการสร้างแบรนด์ใหม่');
+      return;
+    }
+    if (typeof attachBrandToProductTypeAction !== 'function') {
+      setBrandHelperError('ยังไม่พร้อมใช้งานการเพิ่ม mapping ของแบรนด์');
+      return;
+    }
+
+    try {
+      setBrandHelperSaving(true);
+      const created = await Promise.resolve(createBrandAction({ name }));
+      const brandId = Number(created?.data?.id ?? created?.id ?? created?.brand?.id);
+      if (!Number.isFinite(brandId)) {
+        throw new Error('สร้างแบรนด์สำเร็จแต่ไม่พบ brandId ที่จะนำไปผูก mapping');
+      }
+
+      await Promise.resolve(
+        attachBrandToProductTypeAction({ productTypeId: activeProductTypeId, brandId })
+      );
+
+      await refreshBrandsForCurrentType();
+      setValue('brandId', brandId, { shouldDirty: true, shouldTouch: true, shouldValidate: true });
+      setBrandHelperSuccess(`สร้างแบรนด์ใหม่ “${name}” และเพิ่มเข้า mapping แล้ว`);
+      setNewBrandName('');
+      setShowCreateBrandHelper(false);
+    } catch (error) {
+      setBrandHelperError(error?.message || 'สร้างแบรนด์ใหม่ไม่สำเร็จ');
+    } finally {
+      setBrandHelperSaving(false);
+    }
+  }, [activeProductTypeId, newBrandName, createBrandAction, attachBrandToProductTypeAction, refreshBrandsForCurrentType, setValue]);
 
   // ✅ reset form เมื่อ edit + defaultValues เปลี่ยน (รองรับ dropdowns มาทีหลัง)
   const prevDefaults = useRef(null);
@@ -479,6 +626,13 @@ const ProductForm = ({
           <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-blue-900">
             <div className="font-semibold">กำลังบันทึกข้อมูลสินค้า…</div>
             <div className="text-sm opacity-90">ระบบกำลังประมวลผล กรุณารอสักครู่</div>
+          </div>
+        )}
+
+                {isBootstrappingAuth && (
+          <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-blue-900">
+            <div className="font-semibold">กำลังตรวจสอบสิทธิ์การใช้งาน…</div>
+            <div className="text-sm opacity-90">ระบบกำลังเตรียมข้อมูลก่อนโหลดรายการอ้างอิงของสินค้า</div>
           </div>
         )}
 
@@ -645,10 +799,127 @@ const ProductForm = ({
               {errors?.brandId && <p className="text-red-500 text-sm mt-1">{String(errors.brandId.message)}</p>}
 
               {/* ✅ ช่วย debug ทันทีว่า filter ทำงานหรือยัง */}
-              {toStr(watch('productTypeId')) ? (
-                <div className="mt-1 text-xs text-gray-500">
-                  แบรนด์ที่แสดง: {brandsForSelect.length} รายการ
-                  {allowedBrandIdSet ? ` (ตาม mapping ของประเภทสินค้า)` : ' (ยังไม่พบ mapping → แสดงทั้งหมด)'}
+              <div className="mt-2 flex items-center gap-3">
+                {toStr(watch('productTypeId')) ? (
+                  <div className="text-xs text-gray-500">แบรนด์ที่พร้อมใช้งาน: {brandsForSelect.length} รายการ</div>
+                ) : null}
+
+                <button
+                  type="button"
+                  className="text-xs text-gray-500 underline underline-offset-2 hover:text-gray-700"
+                  onClick={() => setShowBrandDebug((prev) => !prev)}
+                >
+                  {showBrandDebug ? 'ซ่อนข้อมูลการตรวจสอบแบรนด์' : 'แสดงข้อมูลการตรวจสอบแบรนด์'}
+                </button>
+              </div>
+
+              {showBrandDebug && toStr(watch('productTypeId')) ? (
+                <div className="mt-1 rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-600">
+                  <div>
+                    แบรนด์ที่แสดง: {brandsForSelect.length} รายการ
+                    {allowedBrandIdSet ? ' (ตาม mapping ของประเภทสินค้า)' : ' (ยังไม่พบ mapping → fallback ตามข้อมูลที่มี)'}
+                  </div>
+                  <div>
+                    แหล่งข้อมูล: {Array.isArray(brandItems) && brandItems.length > 0 ? 'brandStore (primary)' : 'product dropdowns fallback'}
+                  </div>
+                </div>
+              ) : null}
+
+              <div className="mt-2 flex flex-wrap items-center gap-3 text-xs">
+                <button
+                  type="button"
+                  className="text-blue-700 underline underline-offset-2 hover:text-blue-900 disabled:text-gray-400"
+                  disabled={!activeProductTypeId || brandHelperSaving}
+                  onClick={() => {
+                    setBrandHelperError('');
+                    setBrandHelperSuccess('');
+                    setShowCreateBrandHelper((prev) => !prev);
+                    if (showExistingBrandHelper) setShowExistingBrandHelper(false);
+                  }}
+                >
+                  + เพิ่มแบรนด์ใหม่
+                </button>
+
+                <button
+                  type="button"
+                  className="text-blue-700 underline underline-offset-2 hover:text-blue-900 disabled:text-gray-400"
+                  disabled={!activeProductTypeId || brandHelperSaving}
+                  onClick={() => {
+                    setBrandHelperError('');
+                    setBrandHelperSuccess('');
+                    setShowExistingBrandHelper((prev) => !prev);
+                    if (showCreateBrandHelper) setShowCreateBrandHelper(false);
+                  }}
+                >
+                  ไม่พบแบรนด์ที่ต้องการ?
+                </button>
+
+                {!activeProductTypeId ? <span className="text-gray-500">* กรุณาเลือกประเภทสินค้าก่อน</span> : null}
+              </div>
+
+              {brandHelperError ? (
+                <div className="mt-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">{brandHelperError}</div>
+              ) : null}
+              {brandHelperSuccess ? (
+                <div className="mt-2 rounded-md border border-green-200 bg-green-50 px-3 py-2 text-xs text-green-800">{brandHelperSuccess}</div>
+              ) : null}
+
+              {showCreateBrandHelper ? (
+                <div className="mt-3 rounded-lg border border-blue-200 bg-blue-50 p-3">
+                  <div className="font-medium text-sm text-blue-900">เพิ่มแบรนด์ใหม่</div>
+                  <div className="mt-1 text-xs text-blue-800">ระบบจะสร้างแบรนด์ใหม่ แล้วเพิ่มเข้า mapping ของประเภทสินค้าที่เลือกให้อัตโนมัติ</div>
+                  <div className="mt-3 flex flex-col gap-2 md:flex-row">
+                    <input
+                      type="text"
+                      value={newBrandName}
+                      onChange={(e) => setNewBrandName(e.target.value)}
+                      placeholder="เช่น Sony, JBL, Logitech"
+                      className="w-full rounded-md border border-blue-200 bg-white p-2 text-sm text-gray-800"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleCreateBrandAndAttach}
+                      disabled={brandHelperSaving || !activeProductTypeId}
+                      className="rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {brandHelperSaving ? 'กำลังบันทึก...' : 'สร้างแบรนด์และเพิ่มเข้า mapping'}
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+
+              {showExistingBrandHelper ? (
+                <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3">
+                  <div className="font-medium text-sm text-amber-900">ค้นหาแบรนด์ที่มีอยู่แล้วในระบบ แต่ยังไม่ได้ผูกกับประเภทสินค้านี้</div>
+                  <div className="mt-1 text-xs text-amber-800">เลือกแบรนด์จากรายการด้านล่างเพื่อเพิ่มเข้า mapping แล้วใช้งานได้ทันที</div>
+                  <div className="mt-3">
+                    <input
+                      type="text"
+                      value={brandSearch}
+                      onChange={(e) => setBrandSearch(e.target.value)}
+                      placeholder="ค้นหาชื่อแบรนด์..."
+                      className="w-full rounded-md border border-amber-200 bg-white p-2 text-sm text-gray-800"
+                    />
+                  </div>
+                  <div className="mt-3 max-h-56 overflow-auto rounded-md border border-amber-200 bg-white">
+                    {unmappedExistingBrands.length === 0 ? (
+                      <div className="px-3 py-3 text-sm text-gray-500">ไม่พบแบรนด์ที่ยังไม่ได้ผูกกับประเภทสินค้านี้</div>
+                    ) : (
+                      unmappedExistingBrands.slice(0, 50).map((brand) => (
+                        <div key={`unmapped_brand_${String(brand.id)}`} className="flex items-center justify-between border-b border-gray-100 px-3 py-2 last:border-b-0">
+                          <div className="text-sm text-gray-800">{brand.name}</div>
+                          <button
+                            type="button"
+                            onClick={() => handleAttachExistingBrand(brand)}
+                            disabled={brandHelperSaving}
+                            className="rounded-md border border-amber-300 bg-amber-100 px-2 py-1 text-xs font-medium text-amber-900 disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            เพิ่มเข้า mapping และเลือกใช้งาน
+                          </button>
+                        </div>
+                      ))
+                    )}
+                  </div>
                 </div>
               ) : null}
             </div>
@@ -1053,3 +1324,9 @@ const ProductForm = ({
 };
 
 export default ProductForm;
+
+
+
+
+
+

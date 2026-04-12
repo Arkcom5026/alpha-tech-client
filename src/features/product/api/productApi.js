@@ -2,6 +2,7 @@
 
 
 
+
 // ✅ src/features/product/api/productApi.js
 import apiClient from '@/utils/apiClient';
 import { parseApiError } from '@/utils/uiHelpers';
@@ -91,14 +92,30 @@ export const getProductDropdownsPublic = async () => {
   } catch (err) { throw parseApiError(err); }
 };
 
-export const getCatalogDropdowns = async () => {
+export const getProductDropdowns = async () => {
   try {
-    const raw = await getProductDropdownsPublic();
+    // ✅ POS / internal master dropdowns (ต้องมี mapping เช่น productTypeBrands)
+    const { data } = await apiClient.get('products/dropdowns', { params: { _ts: Date.now() }});
+    return data;
+  } catch (err) {
+    throw parseApiError(err);
+  }
+};
+
+export const getCatalogDropdowns = async ({ scope = 'pos' } = {}) => {
+  try {
+    // ✅ default = POS เพราะ ProductForm ต้องใช้ mapping productTypeBrands
+    const raw = scope === 'online'
+      ? await getProductDropdownsPublic()
+      : await getProductDropdowns();
+
     const {
       categories = [],
       productTypes = [],
       productProfiles = [],
       brands = [],
+      productTypeBrands = [],
+      productTypeBrandMap = {},
       productTemplates,
       templates = [], // alias (compat)
     } = raw || {};
@@ -111,6 +128,8 @@ export const getCatalogDropdowns = async () => {
       profiles: productProfiles,
       productProfiles,
       brands,
+      productTypeBrands,
+      productTypeBrandMap,
       templates: tpl,
       productTemplates: tpl,
     };
@@ -259,6 +278,7 @@ export const getReadyToSellStructuredDetails = async ({ branchId, productId, q =
     throw parseApiError(err);
   }
 };
+
 
 
 

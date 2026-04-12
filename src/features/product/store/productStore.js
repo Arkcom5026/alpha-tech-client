@@ -2,9 +2,6 @@
 
 
 
-
-
-
 // ✅ src/features/product/store/productStore.js
 import { create } from 'zustand';
 import _ from 'lodash';
@@ -45,6 +42,109 @@ const initialDropdowns = {
   productTypeBrands: [],
 };
 
+const toFiniteNumber = (value) => {
+  if (value === null || value === undefined || value === '') return null;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+};
+
+const normalizeProductTypeBrandRows = (input = []) => {
+  const rows = Array.isArray(input) ? input : [];
+
+  return rows
+    .map((row) => {
+      const productTypeId =
+        row?.productTypeId ??
+        row?.product_type_id ??
+        row?.typeId ??
+        row?.type_id ??
+        row?.productType?.id ??
+        row?.product_type?.id;
+
+      const brandId =
+        row?.brandId ??
+        row?.brand_id ??
+        row?.brand?.id;
+
+      const pt = toFiniteNumber(productTypeId);
+      const br = toFiniteNumber(brandId);
+      if (pt == null || br == null) return null;
+      return { productTypeId: pt, brandId: br };
+    })
+    .filter(Boolean);
+};
+
+const normalizeProductTypeBrandMapFromObject = (input = {}) => {
+  if (!input || typeof input !== 'object' || Array.isArray(input)) return [];
+
+  const rows = [];
+
+  Object.entries(input).forEach(([rawProductTypeId, rawBrandMap]) => {
+    const productTypeId = toFiniteNumber(rawProductTypeId);
+    if (productTypeId == null) return;
+
+    if (Array.isArray(rawBrandMap)) {
+      rawBrandMap.forEach((rawBrandId) => {
+        const brandId = toFiniteNumber(rawBrandId?.brandId ?? rawBrandId?.brand_id ?? rawBrandId?.id ?? rawBrandId);
+        if (brandId != null) rows.push({ productTypeId, brandId });
+      });
+      return;
+    }
+
+    if (rawBrandMap && typeof rawBrandMap === 'object') {
+      Object.entries(rawBrandMap).forEach(([rawBrandId, enabled]) => {
+        if (enabled !== true) return;
+        const brandId = toFiniteNumber(rawBrandId);
+        if (brandId != null) rows.push({ productTypeId, brandId });
+      });
+    }
+  });
+
+  return rows;
+};
+
+const normalizeProductTypeBrandRowsFromTypes = (productTypes = []) => {
+  const types = Array.isArray(productTypes) ? productTypes : [];
+  const rows = [];
+
+  types.forEach((type) => {
+    const productTypeId = toFiniteNumber(type?.id ?? type?.productTypeId ?? type?.typeId);
+    if (productTypeId == null) return;
+
+    const nestedBrands =
+      (Array.isArray(type?.brands) && type.brands) ||
+      (Array.isArray(type?.brandOptions) && type.brandOptions) ||
+      (Array.isArray(type?.allowedBrands) && type.allowedBrands) ||
+      (Array.isArray(type?.typeBrands) && type.typeBrands) ||
+      [];
+
+    nestedBrands.forEach((brand) => {
+      const brandId = toFiniteNumber(
+        brand?.id ??
+        brand?.brandId ??
+        brand?.brand_id ??
+        brand?.brand?.id ??
+        brand
+      );
+      if (brandId != null) rows.push({ productTypeId, brandId });
+    });
+  });
+
+  return rows;
+};
+
+const buildProductTypeBrandMap = (rows = []) => {
+  const list = Array.isArray(rows) ? rows : [];
+  return list.reduce((acc, row) => {
+    const pt = toFiniteNumber(row?.productTypeId);
+    const br = toFiniteNumber(row?.brandId);
+    if (pt == null || br == null) return acc;
+    if (!acc[pt]) acc[pt] = {};
+    acc[pt][br] = true;
+    return acc;
+  }, {});
+};
+
 const useProductStore = create((set, get) => ({
   // -------- Shared utils (local to store) --------
   normalizeName: (v) => (v ?? '').toString().trim(),
@@ -65,10 +165,12 @@ const useProductStore = create((set, get) => ({
   // ---- Dropdowns ----
   dropdowns: initialDropdowns,
   dropdownsLoaded: false,
+  dropdownsLoading: false,
 
   // ✅ Fast lookup map for ProductType ↔ Brand (built from dropdowns.productTypeBrands)
   // shape: { [productTypeId:number]: { [brandId:number]: true } }
   productTypeBrandMap: {},
+  productTypeBrandMeta: { rows: 0, types: 0 },
 
   // ---- UI State ----
   searchResults: [],
@@ -293,6 +395,9 @@ const useProductStore = create((set, get) => ({
   fetchDropdownsAction: async (force = false) => {
     // prevent unnecessary reload
     if (get().dropdownsLoaded && !force) return get().dropdowns;
+
+    set({ dropdownsLoading: true, error: null });
+
     try {
       // call API
       const raw = await getCatalogDropdowns();
@@ -358,39 +463,42 @@ const useProductStore = create((set, get) => ({
 
       // ✅ ProductType ↔ Brand mapping (auto-learn)
       const productTypeBrandsRaw = pickArrDeep(
-        raw?.productTypeBrands, // normalized [{productTypeId:number, brandId:number}]
+        raw?.productTypeBrands,
         raw?.product_type_brands,
-        raw?.typeBrandMap,
-        raw?.type_brand_map,
         raw?.data?.productTypeBrands,
         raw?.data?.productTypeBrands?.items,
         raw?.data?.productTypeBrands?.data,
         raw?.items?.productTypeBrands,
+        raw?.items?.productTypeBrands?.items,
+        raw?.items?.productTypeBrands?.data,
         raw?.data?.productTypeBrand,
-        raw?.data?.productTypeBrand?.items
+        raw?.data?.productTypeBrand?.items,
+        raw?.productTypes?.typeBrands,
+        raw?.data?.productTypes?.typeBrands
       );
 
-      // ✅ normalize mapping rows (ensure numeric ids)
-      const productTypeBrands = (Array.isArray(productTypeBrandsRaw) ? productTypeBrandsRaw : [])
-        .map((row) => {
-          const productTypeId = row?.productTypeId ?? row?.product_type_id ?? row?.typeId ?? row?.productType?.id;
-          const brandId = row?.brandId ?? row?.brand_id ?? row?.brand?.id;
-          const pt = productTypeId == null || productTypeId === '' ? null : Number(productTypeId);
-          const br = brandId == null || brandId === '' ? null : Number(brandId);
-          if (!Number.isFinite(pt) || !Number.isFinite(br)) return null;
-          return { productTypeId: pt, brandId: br };
-        })
-        .filter(Boolean);
+      const productTypeBrandMapRaw =
+        raw?.productTypeBrandMap ??
+        raw?.product_type_brand_map ??
+        raw?.typeBrandMap ??
+        raw?.type_brand_map ??
+        raw?.data?.productTypeBrandMap ??
+        raw?.data?.product_type_brand_map ??
+        raw?.data?.typeBrandMap ??
+        raw?.items?.productTypeBrandMap ??
+        null;
+
+      const productTypeBrands = _.uniqBy(
+        [
+          ...normalizeProductTypeBrandRows(productTypeBrandsRaw),
+          ...normalizeProductTypeBrandMapFromObject(productTypeBrandMapRaw),
+          ...normalizeProductTypeBrandRowsFromTypes(productTypes),
+        ],
+        (row) => `${row.productTypeId}:${row.brandId}`
+      );
 
       // ✅ Build fast lookup map for FE filtering
-      const productTypeBrandMap = productTypeBrands.reduce((acc, row) => {
-        const pt = Number(row.productTypeId);
-        const br = Number(row.brandId);
-        if (!Number.isFinite(pt) || !Number.isFinite(br)) return acc;
-        if (!acc[pt]) acc[pt] = {};
-        acc[pt][br] = true;
-        return acc;
-      }, {});
+      const productTypeBrandMap = buildProductTypeBrandMap(productTypeBrands);
 
       const templates = pickArrDeep(
         raw?.templates,
@@ -412,7 +520,17 @@ const useProductStore = create((set, get) => ({
         productTypeBrands,
       };
 
-      set({ dropdowns, productTypeBrandMap, dropdownsLoaded: true, error: null });
+      set({
+        dropdowns,
+        productTypeBrandMap,
+        productTypeBrandMeta: {
+          rows: productTypeBrands.length,
+          types: Object.keys(productTypeBrandMap).length,
+        },
+        dropdownsLoaded: true,
+        dropdownsLoading: false,
+        error: null,
+      });
       return dropdowns;
     } catch (error) {
       // eslint-disable-next-line no-console
@@ -421,7 +539,11 @@ const useProductStore = create((set, get) => ({
       // ✅ Fail-soft: อย่า throw เพื่อกัน Uncaught promise และกันหน้า crash
       // เก็บ error แบบ normalize เพื่อให้ UI แสดงได้
       const normalized = get().normalizeError(error, 'โหลดรายการตัวเลือกไม่สำเร็จ');
-      set({ error: normalized, dropdownsLoaded: false });
+      set({
+        error: normalized,
+        dropdownsLoaded: false,
+        dropdownsLoading: false,
+      });
 
       // คืนค่าที่มีอยู่ (อาจเป็น empty) เพื่อไม่ให้ caller พัง
       return get().dropdowns;
@@ -436,29 +558,66 @@ const useProductStore = create((set, get) => ({
     return get().dropdowns;
   },
 
-  resetDropdowns: () => set({ dropdowns: initialDropdowns, dropdownsLoaded: false, productTypeBrandMap: {} }),
+  resetDropdowns: () => set({
+    dropdowns: initialDropdowns,
+    dropdownsLoaded: false,
+    dropdownsLoading: false,
+    productTypeBrandMap: {},
+    productTypeBrandMeta: { rows: 0, types: 0 },
+  }),
 
   // ✅ Brand options filtered by selected productTypeId
   // - If productTypeId is empty => return all brands
   // - If type has no mapping yet => return all brands (fail-soft; mapping auto-learns)
   getBrandOptionsByProductTypeIdAction: (productTypeId) => {
-    const ptId = productTypeId == null || productTypeId === '' ? null : Number(productTypeId);
+    const ptId = toFiniteNumber(productTypeId);
     const st = get();
     const brands = Array.isArray(st?.dropdowns?.brands) ? st.dropdowns.brands : [];
 
-    if (!Number.isFinite(ptId) || ptId == null) return brands;
+    if (ptId == null) return brands;
 
-    const map = st?.productTypeBrandMap || {};
-    const allowed = map?.[ptId];
+    const computedMap =
+      st?.productTypeBrandMap && Object.keys(st.productTypeBrandMap).length > 0
+        ? st.productTypeBrandMap
+        : buildProductTypeBrandMap(st?.dropdowns?.productTypeBrands || []);
+
+    const allowed = computedMap?.[ptId];
 
     // fail-soft: if no mapping for this type yet, show all brands
-    if (!allowed) return brands;
+    if (!allowed || typeof allowed !== 'object') return brands;
 
-    return brands.filter((b) => {
-      const bid = b?.id == null || b?.id === '' ? null : Number(b.id);
-      if (!Number.isFinite(bid) || bid == null) return false;
+    const filtered = brands.filter((b) => {
+      const bid = toFiniteNumber(b?.id);
+      if (bid == null) return false;
       return allowed[bid] === true;
     });
+
+    return filtered;
+  },
+
+  hasBrandMappingByProductTypeIdAction: (productTypeId) => {
+    const ptId = toFiniteNumber(productTypeId);
+    if (ptId == null) return false;
+    const st = get();
+    const computedMap =
+      st?.productTypeBrandMap && Object.keys(st.productTypeBrandMap).length > 0
+        ? st.productTypeBrandMap
+        : buildProductTypeBrandMap(st?.dropdowns?.productTypeBrands || []);
+    const allowed = computedMap?.[ptId];
+    return !!(allowed && typeof allowed === 'object' && Object.keys(allowed).length > 0);
+  },
+
+  // ✅ helper กลางสำหรับ ProductForm
+  // - คืน brands จาก dropdowns กลางเสมอ
+  // - ถ้าไม่มี productTypeId → คืนทั้งหมด
+  // - ถ้ากรองแล้วว่าง แต่ยังมี brands กลาง → fallback เป็นทั้งหมด
+  getSafeBrandOptionsByProductTypeIdAction: (productTypeId) => {
+    const st = get();
+    const allBrands = Array.isArray(st?.dropdowns?.brands) ? st.dropdowns.brands : [];
+    const filtered = st.getBrandOptionsByProductTypeIdAction(productTypeId);
+
+    if (Array.isArray(filtered) && filtered.length > 0) return filtered;
+    return allBrands;
   },
 
   // -------- Image Uploads --------
@@ -825,6 +984,9 @@ const useProductStore = create((set, get) => ({
 
 export default useProductStore;
   
+
+
+
 
 
 

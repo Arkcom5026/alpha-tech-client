@@ -1,9 +1,6 @@
 
 
 
-
-
-
 // src/features/deliveryNote/components/DeliveryNoteForm.jsx
 
 // ✅ DeliveryNoteForm ปรับโครงสร้างให้ตรงกับ BillLayoutFullTax 100%
@@ -287,7 +284,7 @@ const DeliveryNoteForm = ({ sale, saleItems, config, hideDate, setHideDate }) =>
               <div className="border border-black p-3 rounded-lg space-y-1.5">
                 <p>ลูกค้า: {getDisplayCustomerName(sale.customer)}</p>
                 <p>ที่อยู่: {sale.customer?.address || '-'}</p>
-                <p>โทร: {sale.customer?.phone || '-'}</p>
+                <p>โทร: {sale.customer?.user?.loginId || sale.customer?.phone || '-'}</p>
                 <p>เลขประจำตัวผู้เสียภาษี: {sale.customer?.taxId || '-'}</p>
               </div>
 
@@ -413,10 +410,6 @@ const DeliveryNoteForm = ({ sale, saleItems, config, hideDate, setHideDate }) =>
 };
 
 export default DeliveryNoteForm;
-
-
-
-
 
 
 

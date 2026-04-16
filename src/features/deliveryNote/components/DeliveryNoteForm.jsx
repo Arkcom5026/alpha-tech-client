@@ -3,6 +3,7 @@
 
 
 
+
 // src/features/deliveryNote/components/DeliveryNoteForm.jsx
 
 // ✅ DeliveryNoteForm ปรับโครงสร้างให้ตรงกับ BillLayoutFullTax 100%
@@ -130,7 +131,7 @@ const DeliveryNoteForm = ({ sale, saleItems, config, hideDate, setHideDate }) =>
   // หมายเหตุ: ปัญหาล้นหน้าไม่ได้เกิดจากจำนวนแถวอย่างเดียว
   // แต่เกิดจาก layout ความสูงรวม (header + table + footer)
   // ดังนั้น pagination จะใช้ค่าปลอดภัย
-  const MAX_ROWS_LAST_PAGE = 20;
+  const MAX_ROWS_LAST_PAGE = 18;
   const MAX_ROWS_NORMAL_PAGE = 24;
 
   const paginateItems = (items) => {
@@ -201,7 +202,7 @@ const DeliveryNoteForm = ({ sale, saleItems, config, hideDate, setHideDate }) =>
           tr, td, th { page-break-inside: avoid; break-inside: avoid; }
 
           /* Footer density (last page) */
-          .dn-summary { min-height: 110px !important; padding-top: 6px !important; }
+          .dn-summary { min-height: 90px !important; padding-top: 4px !important; }
 
           /* ✅ Signatures must hug the bottom edge (ERP-grade) */
           .dn-signatures {
@@ -250,14 +251,14 @@ const DeliveryNoteForm = ({ sale, saleItems, config, hideDate, setHideDate }) =>
         return (
           <div
             key={`dn-page-${pageIndex + 1}`}
-            className="w-full overflow-hidden mx-auto text-sm border border-gray-600 px-4 pt-4 pb-2 flex flex-col rounded-md relative print:overflow-visible dn-print-page"
+            className="w-full overflow-hidden mx-auto text-sm border border-gray-600 px-5 pt-4 pb-3 flex flex-col rounded-md relative print:overflow-visible dn-print-page"
             style={{
               width: '190mm',
               // ❗ อย่าบังคับ height = 297mm เพราะ browser print margin + scaling
               // จะทำให้เนื้อหาถูกดันเกิน A4
               // ใช้ minHeight แทนเพื่อให้ layout ยืดหยุ่นตาม printer
               minHeight: '277mm',
-              fontFamily: 'TH Sarabun New, sans-serif',
+              fontFamily: 'Tahoma, Arial, sans-serif',
               pageBreakAfter: isLast ? 'auto' : 'always',
               breakAfter: isLast ? 'auto' : 'page',
             }}
@@ -283,14 +284,14 @@ const DeliveryNoteForm = ({ sale, saleItems, config, hideDate, setHideDate }) =>
 
             {/* Customer & Sale Info */}
             <div className="grid grid-cols-[2.8fr_1.7fr] gap-4 text-sm mb-4 dn-no-break">
-              <div className="border border-black p-2 rounded-lg space-y-1">
+              <div className="border border-black p-3 rounded-lg space-y-1.5">
                 <p>ลูกค้า: {getDisplayCustomerName(sale.customer)}</p>
                 <p>ที่อยู่: {sale.customer?.address || '-'}</p>
                 <p>โทร: {sale.customer?.phone || '-'}</p>
                 <p>เลขประจำตัวผู้เสียภาษี: {sale.customer?.taxId || '-'}</p>
               </div>
 
-              <div className="border border-black p-2 rounded-lg space-y-1">
+              <div className="border border-black p-3 rounded-lg space-y-1.5">
                 <p>
                   วันที่:{' '}
                   {hideDate ? (
@@ -307,15 +308,15 @@ const DeliveryNoteForm = ({ sale, saleItems, config, hideDate, setHideDate }) =>
             </div>
 
             {/* Table */}
-            <table className="w-full text-xs mb-2 border border-black">
+            <table className="w-full text-xs mb-3 border border-black table-fixed">
               <thead className="bg-gray-100">
                 <tr className="border-b border-black">
-                  <th className="border border-black px-1 h-[24px]">ลำดับ<br />ITEM</th>
-                  <th className="border border-black px-1 h-[24px]">รายการ<br />DESCRIPTION</th>
-                  <th className="border border-black px-1 h-[24px]">จำนวน<br />QTY</th>
-                  <th className="border border-black px-1 h-[24px]">หน่วย<br />UNIT</th>
-                  <th className="border border-black px-1 h-[24px]">ราคาต่อหน่วย<br />UNIT PRICE</th>
-                  <th className="border border-black px-1 h-[24px]">จำนวนเงิน<br />AMOUNT</th>
+                  <th className="border border-black px-2 h-[24px] w-[8%]">ลำดับ<br />ITEM</th>
+                  <th className="border border-black px-2 h-[24px] w-[32%]">รายการ<br />DESCRIPTION</th>
+                  <th className="border border-black px-2 h-[24px] w-[10%]">จำนวน<br />QTY</th>
+                  <th className="border border-black px-2 h-[24px] w-[10%]">หน่วย<br />UNIT</th>
+                  <th className="border border-black px-2 h-[24px] w-[20%] text-right">ราคาต่อหน่วย<br />UNIT PRICE</th>
+                  <th className="border border-black px-2 h-[24px] w-[20%] text-right">จำนวนเงิน<br />AMOUNT</th>
                 </tr>
               </thead>
               <tbody>
@@ -325,18 +326,18 @@ const DeliveryNoteForm = ({ sale, saleItems, config, hideDate, setHideDate }) =>
                   return (
                     <tr key={item.id ?? item.stockItemId ?? `row-${pageIndex}-${index}`}>
                       <td className="border border-black px-1 text-center h-[24px]">{runningIndex + 1}</td>
-                      <td className="border border-black px-1 h-[24px]">{item.productName}</td>
+                      <td className="border border-black px-2 h-[24px]">{item.productName}</td>
                       <td className="border border-black px-1 text-center h-[24px]">{ln.qty}</td>
                       <td className="border border-black px-1 text-center h-[24px]">{item.unit || '-'}</td>
-                      <td className="border border-black px-1 text-right h-[24px]">{formatCurrency(ln.unitInc)}</td>
-                      <td className="border border-black px-1 text-right h-[24px]">{formatCurrency(ln.total)}</td>
+                      <td className="border border-black px-2 text-right h-[24px] tabular-nums">{formatCurrency(ln.unitInc)}</td>
+                      <td className="border border-black px-2 text-right h-[24px] tabular-nums font-medium">{formatCurrency(ln.total)}</td>
                     </tr>
                   );
                 })}
                 {[...Array(emptyRowCount)].map((_, idx) => (
                   <tr key={`empty-${pageIndex}-${idx}`}>
                     <td className="border border-black px-1 text-center h-[24px]">&nbsp;</td>
-                    <td className="border border-black px-1 h-[24px]">&nbsp;</td>
+                    <td className="border border-black px-2 h-[24px]">&nbsp;</td>
                     <td className="border border-black px-1 text-center h-[24px]">&nbsp;</td>
                     <td className="border border-black px-1 text-center h-[24px]">&nbsp;</td>
                     <td className="border border-black px-1 text-right h-[24px]">&nbsp;</td>
@@ -350,7 +351,7 @@ const DeliveryNoteForm = ({ sale, saleItems, config, hideDate, setHideDate }) =>
             {isLast ? (
               <>
                 {/* Summary */}
-                <div className="grid grid-cols-2 gap-4 text-xs pt-3 dn-summary dn-no-break  " style={{ minHeight: '70px' }}>
+                <div className="grid grid-cols-2 gap-5 text-xs pt-3 dn-summary dn-no-break" style={{ minHeight: '60px' }}>
                   <div>
                     <ul className="list-decimal ml-4">
                       <li>
@@ -373,14 +374,14 @@ const DeliveryNoteForm = ({ sale, saleItems, config, hideDate, setHideDate }) =>
                       <span>ภาษีมูลค่าเพิ่ม / VAT</span>
                       <span>{formatCurrency(vatAmount)} ฿</span>
                     </p>
-                    <p className="flex justify-between border-b border-black font-extrabold text-base py-1 bg-gray-100">
+                    <p className="flex justify-between border-b border-black font-extrabold text-base py-1 bg-gray-100 tabular-nums">
                       <span>จำนวนเงินรวมทั้งสิ้น</span>
                       <span>{formatCurrency(total)} ฿</span>
                     </p>
                   </div>
                 </div>
 
-                <div className="h-[80px]"></div>
+                <div className="h-[70px]"></div>
 
                 {/* Signatures */}
                 <div className="grid grid-cols-3 gap-4 text-sm text-center pt-2 pb-0 dn-signatures dn-no-break">
@@ -412,6 +413,8 @@ const DeliveryNoteForm = ({ sale, saleItems, config, hideDate, setHideDate }) =>
 };
 
 export default DeliveryNoteForm;
+
+
 
 
 

@@ -70,6 +70,59 @@ const getLineTotalSatang = (item) => {
 }
 
 const BillLayoutShortTax = ({ sale, saleItems, payments, config, hideContactName }) => {
+  const receiptTitle = 'ใบกำกับภาษีอย่างย่อ / ใบเสร็จรับเงิน';
+
+  const getAdaptiveTitleStyle = (text) => {
+    const len = String(text || '').trim().length;
+
+    if (len >= 34) {
+      return {
+        fontSize: '12.5px',
+        letterSpacing: '0px',
+        padding: '8px 4px 7px',
+      };
+    }
+
+    if (len >= 28) {
+      return {
+        fontSize: '13px',
+        letterSpacing: '0.05px',
+        padding: '8px 5px 7px',
+      };
+    }
+
+    return {
+      fontSize: '14px',
+      letterSpacing: '0.2px',
+      padding: '8px 6px 7px',
+    };
+  };
+
+  const getAdaptiveTotalStyle = (label, amountText) => {
+    const len = `${label || ''}${amountText || ''}`.trim().length;
+
+    if (len >= 26) {
+      return {
+        fontSize: '16px',
+        letterSpacing: '0px',
+        gap: '8px',
+      };
+    }
+
+    if (len >= 22) {
+      return {
+        fontSize: '17px',
+        letterSpacing: '0.05px',
+        gap: '10px',
+      };
+    }
+
+    return {
+      fontSize: '18px',
+      letterSpacing: '0.1px',
+      gap: '12px',
+    };
+  };
   const getCustomerPhoneText = (customer) => {
     if (!customer) return '-';
     return customer.user?.loginId || customer.phone || customer.phoneNumber || '-';
@@ -118,6 +171,10 @@ const vatStored = sale?.vat != null ? round2(n(sale.vat)) : null;
 const vatAmount = vatStored != null ? vatStored : round2((total * vatRate) / (100 + vatRate));
 
 const beforeVat = round2(total - vatAmount);
+
+  const totalLabel = 'จำนวนเงินรวมทั้งสิ้น';
+  const totalAmountText = `${formatCurrency(total)} ฿`;
+  const adaptiveTotalStyle = getAdaptiveTotalStyle(totalLabel, totalAmountText);
 
   // ✅ 7-11-ish meta: counts + change
   const itemLines = Array.isArray(saleItems) ? saleItems.length : 0
@@ -200,8 +257,8 @@ const beforeVat = round2(total - vatAmount);
         .receipt-inner {
           width: 100%;
           /* Premium safe zone inside content */
-          padding-left: 3mm;
-          padding-right: 3mm;
+          padding-left: 2.8mm;
+          padding-right: 2.8mm;
         }
 
         .mono {
@@ -210,11 +267,11 @@ const beforeVat = round2(total - vatAmount);
         }
         .hr {
           border-top: 1px dotted #cfcfcf;
-          margin: 9px 0;
+          margin: 7px 0;
         }
         .hr-solid {
           border-top: 0.75px solid #111;
-          margin: 8px 0;
+          margin: 7px 0;
         }
         .tight {
           line-height: 1.14;
@@ -264,11 +321,12 @@ const beforeVat = round2(total - vatAmount);
           padding-bottom: 3px;
         }
         .title-band {
-          padding: 10px 8px 9px;
-          letter-spacing: 0.35px;
-          font-size: 18px;
           border-top: 1px solid #000;
           border-bottom: 1px solid #000;
+          line-height: 1.2;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
         }
       `}</style>
 
@@ -323,8 +381,8 @@ const beforeVat = round2(total - vatAmount);
 
         <div className="hr-solid" style={{ margin: '5px 0' }} />
 
-        <div className="text-center font-bold title-band">
-          ใบกำกับภาษีอย่างย่อ / ใบเสร็จรับเงิน
+        <div className="text-center font-bold title-band" style={getAdaptiveTitleStyle(receiptTitle)}>
+          {receiptTitle}
         </div>
         <div className="row small mono" style={{ marginTop: 3 }}>
           <div className="left label">เลขที่</div>
@@ -345,7 +403,7 @@ const beforeVat = round2(total - vatAmount);
           <div className="right clip">{sale.customer?.companyName || '-'}</div>
         </div>
         <div className="row small mono">
-          <div className="left label">โทร</div>
+          <div className="left label">โทร:</div>
           <div className="right clip">{getCustomerPhoneText(sale.customer)}</div>
         </div>
         {!hideContactName && (
@@ -360,8 +418,8 @@ const beforeVat = round2(total - vatAmount);
       <div className="no-break">
         <div className="row xs mono" style={{ marginBottom: 5 }}>
           <div className="left label">สินค้า</div>
-          <div className="right label">จำนวน</div>
-          <div className="right label" style={{ minWidth: 74, letterSpacing: '0.1px' }}>ราคา</div>
+          <div className="right label" style={{ minWidth: 36, textAlign: 'right' }}>จำนวน</div>
+          <div className="right label" style={{ minWidth: 78, textAlign: 'right', letterSpacing: '0.05px' }}>ราคา</div>
         </div>
 
         <div className="hr-solid" />
@@ -371,23 +429,16 @@ const beforeVat = round2(total - vatAmount);
             const qty = n(item?.quantity);
             const unit = getUnitPrice(item);
             const lineTotal = getLineTotalSatang(item) / 100;
-            // ✅ Always show qty x unitPrice using snapshot (derive unit from lineTotal/qty if unit missing)
-            const unitDisplay = unit > 0 ? unit : (qty > 0 && lineTotal > 0 ? round2(lineTotal / qty) : 0);
+            const unitDisplay = unit > 0 ? unit : qty > 0 && lineTotal > 0 ? round2(lineTotal / qty) : 0;
+
             return (
-              <div key={item.id} className="tight" style={{ padding: '4px 0' }}>
+              <div key={item.id} className="tight" style={{ padding: '5px 0' }}>
                 <div className="row">
                   <div className="left wrap">
                     <div className="wrap">{item.productName || '-'}</div>
-                    {(item.productModel || (qty > 0 && unitDisplay > 0)) && (
-                      <div className="xs mono muted" style={{ letterSpacing: '0.05px' }}>
-                        {item.productModel ? `${item.productModel}` : ''}
-                        {item.productModel && unitDisplay > 0 ? ' • ' : ''}
-                        {qty > 0 && unitDisplay > 0 ? `${qty} x ${formatCurrency(unitDisplay)}` : ''}
-                      </div>
-                    )}
                   </div>
-                  <div className="right mono" style={{ minWidth: 36 }}>{qty || ''}</div>
-                  <div className="right mono" style={{ minWidth: 74, letterSpacing: '0.1px', fontWeight: 500 }}>{formatCurrency(lineTotal)}</div>
+                  <div className="right mono" style={{ minWidth: 36, textAlign: 'right' }}>{qty || ''}</div>
+                  <div className="right mono" style={{ minWidth: 78, textAlign: 'right', letterSpacing: '0.05px', fontWeight: 500 }}>{formatCurrency(lineTotal)}</div>
                 </div>
               </div>
             );
@@ -433,13 +484,16 @@ const beforeVat = round2(total - vatAmount);
           className="row mono"
           style={{
             fontWeight: 800,
-            fontSize: '19px',
-            letterSpacing: '0.35px',
+            fontSize: adaptiveTotalStyle.fontSize,
+            letterSpacing: adaptiveTotalStyle.letterSpacing,
             marginTop: 8,
+            alignItems: 'baseline',
+            gap: adaptiveTotalStyle.gap,
+            whiteSpace: 'nowrap',
           }}
         >
-          <div className="left">จำนวนเงินรวมทั้งสิ้น</div>
-          <div className="right">{formatCurrency(total)} ฿</div>
+          <div className="left clip">{totalLabel}</div>
+          <div className="right">{totalAmountText}</div>
         </div>
         <div className="text-center xs" style={{ marginTop: 5 }}>(ราคารวมภาษีมูลค่าเพิ่มแล้ว)</div>
       </div>

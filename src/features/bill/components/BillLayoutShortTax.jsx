@@ -3,8 +3,14 @@
 
 
 
-
 // src/features/bill/components/BillLayoutShortTax.jsx
+// ✅ Standard Document System Applied:
+// - Unified font: Tahoma, Arial
+// - Unified spacing rhythm
+// - Unified customer phone source (user.loginId)
+// - Unified number formatting (tabular-nums)
+// - Consistent section spacing across documents
+
 
 import React from 'react';
 
@@ -64,6 +70,10 @@ const getLineTotalSatang = (item) => {
 }
 
 const BillLayoutShortTax = ({ sale, saleItems, payments, config, hideContactName }) => {
+  const getCustomerPhoneText = (customer) => {
+    if (!customer) return '-';
+    return customer.user?.loginId || customer.phone || customer.phoneNumber || '-';
+  };
   // ✅ normalize payments once (avoid JSX IIFE + keep parser happy)
   const normalizedPayments = Array.isArray(payments)
     ? payments
@@ -134,50 +144,14 @@ const beforeVat = round2(total - vatAmount);
       style={{
         width: '76mm',
         minHeight: 'auto',
-        fontFamily: 'THSarabunNew, TH Sarabun New, sans-serif',
+        fontFamily: 'Tahoma, Arial, sans-serif',
         fontSize: config?.thermalFontSize || '13px',
-        lineHeight: 1.26,
+        lineHeight: 1.3,
         /* backup padding (กันเคส browser บางตัว ignore @page margin) */
-        padding: '10px 1mm',
+        padding: '10px 1.5mm',
       }}
     >
       <style>{`
-        /* ✅ TH Sarabun New (served from /public/fonts)
-           Files:
-           - /fonts/THSarabunNew.ttf
-           - /fonts/THSarabunNew-Bold.ttf
-           - /fonts/THSarabunNew-Italic.ttf
-           - /fonts/THSarabunNew-BoldItalic.ttf
-        */
-        @font-face {
-          font-family: 'THSarabunNew';
-          src: url('/fonts/THSarabunNew.ttf') format('truetype');
-          font-weight: 400;
-          font-style: normal;
-          font-display: swap;
-        }
-        @font-face {
-          font-family: 'THSarabunNew';
-          src: url('/fonts/THSarabunNew-Bold.ttf') format('truetype');
-          font-weight: 700;
-          font-style: normal;
-          font-display: swap;
-        }
-        @font-face {
-          font-family: 'THSarabunNew';
-          src: url('/fonts/THSarabunNew-Italic.ttf') format('truetype');
-          font-weight: 400;
-          font-style: italic;
-          font-display: swap;
-        }
-        @font-face {
-          font-family: 'THSarabunNew';
-          src: url('/fonts/THSarabunNew-BoldItalic.ttf') format('truetype');
-          font-weight: 700;
-          font-style: italic;
-          font-display: swap;
-        }
-
         * { box-sizing: border-box; }
 
         @media print {
@@ -236,22 +210,22 @@ const beforeVat = round2(total - vatAmount);
         }
         .hr {
           border-top: 1px dotted #cfcfcf;
-          margin: 10px 0;
+          margin: 9px 0;
         }
         .hr-solid {
           border-top: 0.75px solid #111;
-          margin: 10px 0;
+          margin: 8px 0;
         }
         .tight {
           line-height: 1.14;
         }
         .small {
           font-size: 12px;
-          line-height: 1.25;
+          line-height: 1.3;
         }
         .xs {
           font-size: 11px;
-          line-height: 1.2;
+          line-height: 1.25;
         }
         .label {
           opacity: 0.86;
@@ -286,8 +260,8 @@ const beforeVat = round2(total - vatAmount);
 
         /* ✅ Micro rhythm */
         .section-pad {
-          padding-top: 2px;
-          padding-bottom: 2px;
+          padding-top: 3px;
+          padding-bottom: 3px;
         }
         .title-band {
           padding: 10px 8px 9px;
@@ -315,14 +289,14 @@ const beforeVat = round2(total - vatAmount);
           className="font-bold"
           style={{
             fontSize: '18px',
-            letterSpacing: '0.55px',
+            letterSpacing: '0.35px',
             marginBottom: 3,
           }}
         >
           {config.branchName}
         </div>
         {config.address && <div className="small wrap">{config.address}</div>}
-        <div className="small mono muted" style={{ letterSpacing: '0.1px' }}>
+        <div className="small mono muted" style={{ letterSpacing: '0.05px' }}>
           {config.phone ? `โทร. ${config.phone}` : ''}
         </div>
         {config.taxId && (
@@ -347,12 +321,12 @@ const beforeVat = round2(total - vatAmount);
           <div className="right">{itemLines}/{qtyTotal}</div>
         </div>
 
-        <div className="hr-solid" style={{ margin: '6px 0' }} />
+        <div className="hr-solid" style={{ margin: '5px 0' }} />
 
         <div className="text-center font-bold title-band">
           ใบกำกับภาษีอย่างย่อ / ใบเสร็จรับเงิน
         </div>
-        <div className="row small mono" style={{ marginTop: 4 }}>
+        <div className="row small mono" style={{ marginTop: 3 }}>
           <div className="left label">เลขที่</div>
           <div className="right">{sale.code}</div>
         </div>
@@ -370,6 +344,10 @@ const beforeVat = round2(total - vatAmount);
           <div className="left label">หน่วยงาน</div>
           <div className="right clip">{sale.customer?.companyName || '-'}</div>
         </div>
+        <div className="row small mono">
+          <div className="left label">โทร</div>
+          <div className="right clip">{getCustomerPhoneText(sale.customer)}</div>
+        </div>
         {!hideContactName && (
           <div className="row small">
             <div className="left label">ลูกค้า</div>
@@ -380,10 +358,10 @@ const beforeVat = round2(total - vatAmount);
 
       <div className="hr" />
       <div className="no-break">
-        <div className="row xs mono" style={{ marginBottom: 6 }}>
+        <div className="row xs mono" style={{ marginBottom: 5 }}>
           <div className="left label">สินค้า</div>
           <div className="right label">จำนวน</div>
-          <div className="right label" style={{ minWidth: 74, letterSpacing: '0.2px' }}>ราคา</div>
+          <div className="right label" style={{ minWidth: 74, letterSpacing: '0.1px' }}>ราคา</div>
         </div>
 
         <div className="hr-solid" />
@@ -396,12 +374,12 @@ const beforeVat = round2(total - vatAmount);
             // ✅ Always show qty x unitPrice using snapshot (derive unit from lineTotal/qty if unit missing)
             const unitDisplay = unit > 0 ? unit : (qty > 0 && lineTotal > 0 ? round2(lineTotal / qty) : 0);
             return (
-              <div key={item.id} className="tight" style={{ padding: '3px 0' }}>
+              <div key={item.id} className="tight" style={{ padding: '4px 0' }}>
                 <div className="row">
                   <div className="left wrap">
                     <div className="wrap">{item.productName || '-'}</div>
                     {(item.productModel || (qty > 0 && unitDisplay > 0)) && (
-                      <div className="xs mono muted" style={{ letterSpacing: '0.1px' }}>
+                      <div className="xs mono muted" style={{ letterSpacing: '0.05px' }}>
                         {item.productModel ? `${item.productModel}` : ''}
                         {item.productModel && unitDisplay > 0 ? ' • ' : ''}
                         {qty > 0 && unitDisplay > 0 ? `${qty} x ${formatCurrency(unitDisplay)}` : ''}
@@ -409,7 +387,7 @@ const beforeVat = round2(total - vatAmount);
                     )}
                   </div>
                   <div className="right mono" style={{ minWidth: 36 }}>{qty || ''}</div>
-                  <div className="right mono" style={{ minWidth: 74, letterSpacing: '0.2px' }}>{formatCurrency(lineTotal)}</div>
+                  <div className="right mono" style={{ minWidth: 74, letterSpacing: '0.1px', fontWeight: 500 }}>{formatCurrency(lineTotal)}</div>
                 </div>
               </div>
             );
@@ -419,7 +397,7 @@ const beforeVat = round2(total - vatAmount);
         <div className="hr-solid" />
       </div>
 
-      <div className="no-break" style={{ marginTop: 6 }}>
+      <div className="no-break" style={{ marginTop: 5 }}>
         <div className="row mono">
           <div className="left label">รวมเงิน</div>
           <div className="right">{formatCurrency(beforeVat)} ฿</div>
@@ -455,15 +433,15 @@ const beforeVat = round2(total - vatAmount);
           className="row mono"
           style={{
             fontWeight: 800,
-            fontSize: '20px',
-            letterSpacing: '0.6px',
-            marginTop: 10,
+            fontSize: '19px',
+            letterSpacing: '0.35px',
+            marginTop: 8,
           }}
         >
           <div className="left">จำนวนเงินรวมทั้งสิ้น</div>
           <div className="right">{formatCurrency(total)} ฿</div>
         </div>
-        <div className="text-center xs" style={{ marginTop: 6 }}>(ราคารวมภาษีมูลค่าเพิ่มแล้ว)</div>
+        <div className="text-center xs" style={{ marginTop: 5 }}>(ราคารวมภาษีมูลค่าเพิ่มแล้ว)</div>
       </div>
 
       <div className="hr" />
@@ -497,6 +475,7 @@ const beforeVat = round2(total - vatAmount);
 
 // ✅ memo ป้องกัน re-render ตอนเปิด print window
 export default React.memo(BillLayoutShortTax)
+
 
 
 

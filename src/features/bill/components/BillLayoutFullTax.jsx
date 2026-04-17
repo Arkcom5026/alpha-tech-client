@@ -1,4 +1,5 @@
 
+
 // ===============================
 // features/bill/components/BillLayoutFullTax.jsx
 // ===============================
@@ -137,7 +138,7 @@ const BillLayoutFullTax = ({ sale, saleItems, payments, config }) => {
 
   const getCustomerPhoneText = (customer) => {
     if (!customer) return '-';
-    return customer.phone || customer.phoneNumber || '-';
+    return customer.user?.loginId || customer.phone || customer.phoneNumber || '-';
   };
 
   const getCustomerTaxIdText = (customer) => {
@@ -166,42 +167,6 @@ const BillLayoutFullTax = ({ sale, saleItems, payments, config }) => {
   return (
     <>
       <style>{`
-        /* ✅ TH Sarabun New (must be available in /public/fonts)
-           Recommended files:
-           - /fonts/THSarabunNew.ttf
-           - /fonts/THSarabunNew-Bold.ttf
-           - /fonts/THSarabunNew-Italic.ttf
-           - /fonts/THSarabunNew-BoldItalic.ttf
-        */
-        @font-face {
-          font-family: 'THSarabunNew';
-          src: url('/fonts/THSarabunNew.ttf') format('truetype');
-          font-weight: 400;
-          font-style: normal;
-          font-display: swap;
-        }
-        @font-face {
-          font-family: 'THSarabunNew';
-          src: url('/fonts/THSarabunNew-Bold.ttf') format('truetype');
-          font-weight: 700;
-          font-style: normal;
-          font-display: swap;
-        }
-        @font-face {
-          font-family: 'THSarabunNew';
-          src: url('/fonts/THSarabunNew-Italic.ttf') format('truetype');
-          font-weight: 400;
-          font-style: italic;
-          font-display: swap;
-        }
-        @font-face {
-          font-family: 'THSarabunNew';
-          src: url('/fonts/THSarabunNew-BoldItalic.ttf') format('truetype');
-          font-weight: 700;
-          font-style: italic;
-          font-display: swap;
-        }
-
         /* Print stability for A4 */
         @media print {
           html, body {
@@ -252,8 +217,8 @@ const BillLayoutFullTax = ({ sale, saleItems, payments, config }) => {
       </div>
 
       <div
-        className="w-full overflow-hidden mx-auto text-sm border border-gray-600 px-4 pt-4 pb-2 flex flex-col rounded-md print-a4"
-        style={{ width: '210mm', minHeight: '297mm', height: 'auto', fontFamily: 'TH Sarabun New, sans-serif' }}
+        className="w-full overflow-hidden mx-auto text-sm border border-gray-600 px-5 pt-4 pb-3 flex flex-col rounded-md print-a4"
+        style={{ width: '210mm', minHeight: '297mm', height: 'auto', fontFamily: 'Tahoma, Arial, sans-serif' }}
       >
         {/* Header */}
         <div className="flex justify-between items-start border-b pb-2 mb-2 gap-3 no-break">
@@ -262,33 +227,33 @@ const BillLayoutFullTax = ({ sale, saleItems, payments, config }) => {
               <img src={config.logoUrl} alt="logo" className="w-16 h-16 object-contain print:mt-1" />
             ) : null}
             <div>
-              <h2 className="font-bold text-sm">{config.branchName}</h2>
+              <h2 className="font-bold text-[16px] leading-tight">{config.branchName}</h2>
               <p>ที่อยู่: {config.address}</p>
               <p>โทร: {config.phone}</p>
               <p>เลขประจำตัวผู้เสียภาษี: {config.taxId}</p>
             </div>
           </div>
           <div className="text-right">
-            <p className="border border-gray-600 px-2 py-1 font-bold rounded-md leading-tight text-xs">
+            <p className="border border-gray-400 px-3 py-2 font-bold rounded-md leading-tight text-[13px]">
               ต้นฉบับลูกค้า<br />CUSTOMER ORIGINAL
             </p>
           </div>
         </div>
 
-        <h3 className="text-center font-bold underline text-lg mb-4">
+        <h3 className="text-center font-bold underline text-[20px] leading-tight mb-4">
           ใบเสร็จรับเงิน / ใบกำกับภาษี<br />TAX INVOICE ORIGINAL / DELIVERY ORDER
         </h3>
 
         {/* Customer & Sale Info */}
-        <div className="grid grid-cols-[2.8fr_1.7fr] gap-4 text-sm mb-4 no-break">
-          <div className="doc-box border border-black p-2 rounded-lg space-y-1 leading-tight">
+        <div className="grid grid-cols-[2.8fr_1.7fr] gap-4 text-[15px] mb-4 no-break">
+          <div className="doc-box border border-black p-3 rounded-lg space-y-1.5 leading-tight">
             <p>ลูกค้า: {getDisplayCustomerName(sale.customer)}</p>
             <p>ที่อยู่: {getCustomerAddressText(sale.customer)}</p>
             <p>โทร: {getCustomerPhoneText(sale.customer)}</p>
             <p>เลขประจำตัวผู้เสียภาษี: {getCustomerTaxIdText(sale.customer)}</p>
           </div>
 
-          <div className="doc-box border border-black p-2 rounded-lg space-y-1">
+          <div className="doc-box border border-black p-3 rounded-lg space-y-1.5">
             <p>วันที่: {renderDate(sale.soldAt || sale.createdAt)}</p>
             <p>เลขที่: {sale.code || sale.saleNo || sale.id}</p>
             <p>เงื่อนไขการชำระเงิน: {sale.paymentTerms || '-'}</p>
@@ -297,27 +262,27 @@ const BillLayoutFullTax = ({ sale, saleItems, payments, config }) => {
         </div>
 
         {/* Table */}
-        <table className="w-full text-xs mb-2 border border-black">
+        <table className="w-full text-xs mb-3 border border-black table-fixed">
           <thead className="bg-gray-100">
             <tr className="border-b border-black">
-              <th className="border border-black px-1 h-[28px] leading-tight w-[7%]">ลำดับ<br />ITEM</th>
-              <th className="border border-black px-1 h-[28px] leading-tight w-[39%]">รายการ<br />DESCRIPTION</th>
-              <th className="border border-black px-1 h-[28px] leading-tight w-[8%]">จำนวน<br />QTY</th>
-              <th className="border border-black px-1 h-[28px] leading-tight w-[7%]">หน่วย<br />UNIT</th>
-              <th className="border border-black px-1 h-[28px] leading-tight w-[19%]">ราคาต่อหน่วย<br />UNIT PRICE</th>
-              <th className="border border-black px-1 h-[28px] leading-tight w-[20%]">จำนวนเงิน<br />AMOUNT</th>
+              <th className="border border-black px-2 h-[28px] leading-tight w-[8%]">ลำดับ<br />ITEM</th>
+              <th className="border border-black px-2 h-[28px] leading-tight w-[32%]">รายการ<br />DESCRIPTION</th>
+              <th className="border border-black px-2 h-[28px] leading-tight w-[10%]">จำนวน<br />QTY</th>
+              <th className="border border-black px-2 h-[28px] leading-tight w-[10%]">หน่วย<br />UNIT</th>
+              <th className="border border-black px-2 h-[28px] leading-tight w-[20%] text-right">ราคาต่อหน่วย<br />UNIT PRICE</th>
+              <th className="border border-black px-2 h-[28px] leading-tight w-[20%] text-right">จำนวนเงิน<br />AMOUNT</th>
             </tr>
           </thead>
           <tbody>
             {saleItems.map((item, index) => (
               <tr key={item.id}>
-                <td className="border border-black px-1 text-center h-[28px]">{index + 1}</td>
-                <td className="border border-black px-1 h-[28px]">
+                <td className="border border-black px-2 text-center h-[28px]">{index + 1}</td>
+                <td className="border border-black px-2 h-[28px]">
                   {item.productName}
                 </td>
-                <td className="border border-black px-1 text-center h-[28px]">{item.quantity}</td>
-                <td className="border border-black px-1 text-center h-[28px]">{item.unit || '-'}</td>
-                <td className="border border-black px-1 text-right h-[28px]">{
+                <td className="border border-black px-2 text-center h-[28px]">{item.quantity}</td>
+                <td className="border border-black px-2 text-center h-[28px]">{item.unit || '-'}</td>
+                <td className="border border-black px-2 text-right h-[28px] tabular-nums">{
                   formatCurrency(
                     (() => {
                       const qty = Number(item?.quantity) || 0;
@@ -341,7 +306,7 @@ const BillLayoutFullTax = ({ sale, saleItems, payments, config }) => {
                     })()
                   )
                 }</td>
-                <td className="border border-black px-1 text-right h-[28px]">{
+                <td className="border border-black px-2 text-right h-[28px] tabular-nums">{
                   formatCurrency(
                     (() => {
                       const qty = Number(item?.quantity) || 0;
@@ -367,33 +332,33 @@ const BillLayoutFullTax = ({ sale, saleItems, payments, config }) => {
             ))}
             {[...Array(emptyRowCount)].map((_, idx) => (
               <tr key={`empty-${idx}`}>
-                <td className="border border-black px-1 text-center h-[28px]">&nbsp;</td>
-                <td className="border border-black px-1 h-[28px]">&nbsp;</td>
-                <td className="border border-black px-1 text-center h-[28px]">&nbsp;</td>
-                <td className="border border-black px-1 text-center h-[28px]">&nbsp;</td>
-                <td className="border border-black px-1 text-right h-[28px]">&nbsp;</td>
-                <td className="border border-black px-1 text-right h-[28px]">&nbsp;</td>
+                <td className="border border-black px-2 text-center h-[28px]">&nbsp;</td>
+                <td className="border border-black px-2 h-[28px]">&nbsp;</td>
+                <td className="border border-black px-2 text-center h-[28px]">&nbsp;</td>
+                <td className="border border-black px-2 text-center h-[28px]">&nbsp;</td>
+                <td className="border border-black px-2 text-right h-[28px] tabular-nums">&nbsp;</td>
+                <td className="border border-black px-2 text-right h-[28px] tabular-nums">&nbsp;</td>
               </tr>
             ))}
           </tbody>
         </table>
 
         {/* Summary */}
-        <div className="grid grid-cols-2 gap-4 text-xs mt-auto pt-4 no-break" style={{ minHeight: '130px' }}>
+        <div className="grid grid-cols-2 gap-5 text-[13px] mt-auto pt-3 no-break" style={{ minHeight: '110px' }}>
           <div className="leading-tight flex flex-col items-center justify-start text-center pt-3">
             <p className="font-bold">จำนวนเงินเป็นตัวอักษร</p>
-            <p className="italic text-base font-semibold">({bahtText(total)})</p>
+            <p className="italic text-[18px] font-semibold">({bahtText(total)})</p>
           </div>
           <div>
-            <p className="flex justify-between border-t border-black border-b py-1">
+            <p className="flex justify-between border-t border-black border-b py-1 text-[14px]">
               <span>รวมเงิน</span>
               <span>{formatCurrency(beforeVat)} ฿</span>
             </p>
-            <p className="flex justify-between border-b border-black py-1">
+            <p className="flex justify-between border-b border-black py-1 text-[14px]">
               <span>ภาษีมูลค่าเพิ่ม {vatRate}%</span>
               <span>{formatCurrency(vatAmount)} ฿</span>
             </p>
-            <p className="flex justify-between border-b border-black font-extrabold text-base py-1 bg-gray-100">
+            <p className="flex justify-between border-b border-black font-extrabold text-[18px] py-1 bg-gray-100 tabular-nums">
               <span>จำนวนเงินรวมทั้งสิ้น</span>
               <span>{formatCurrency(total)} ฿</span>
             </p>
@@ -401,9 +366,9 @@ const BillLayoutFullTax = ({ sale, saleItems, payments, config }) => {
         </div>
 
         {/* Signatures */}
-        <div className="mt-5 text-sm text-center no-break">
+        <div className="mt-4 text-[15px] text-center no-break">
           <div className="w-[48%] mx-auto">
-            <div className="border-t border-dashed border-black pt-1 h-[45px] flex flex-col justify-start items-center">
+            <div className="border-t border-dashed border-black pt-1 h-[55px] flex flex-col justify-start items-center">
               <span className="mt-1">ผู้รับเงิน / RECEIVED BY</span>
             </div>
           </div>
@@ -414,4 +379,5 @@ const BillLayoutFullTax = ({ sale, saleItems, payments, config }) => {
 };
 
 export default React.memo(BillLayoutFullTax);
+
 

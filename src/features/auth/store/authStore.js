@@ -1,9 +1,6 @@
 
 
 
-
-
-
 // src/features/auth/store/authStore.js
 
 import { create } from 'zustand';
@@ -519,7 +516,11 @@ export const useAuthStore = create(
       // ---------- Selectors ที่เรียกจากหน้า UI ----------
       isAuthenticatedSelector: () => {
         const state = useAuthStore.getState();
-        return !!state.token && !!state.authChecked;
+        return !!state.token && !!state.authChecked && !state.isBootstrappingAuth;
+      },
+      isOnlineCustomerAuthenticatedSelector: () => {
+        const state = useAuthStore.getState();
+        return !!state.token && !!state.authChecked && !state.isBootstrappingAuth && normalizeRole(state.role) === 'customer' && !!state.customer?.id;
       },
       isSuperAdminSelector: () => normalizeRole(useAuthStore.getState().role) === 'superadmin',
       isAdminOrAboveSelector: () => {
@@ -612,6 +613,8 @@ export const useAuthStore = create(
     { name: 'auth-storage' }
   )
 );
+
+
 
 
 

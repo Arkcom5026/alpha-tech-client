@@ -1,4 +1,5 @@
 
+
 // UnifiedMainNav.jsx (FIX: ใช้ isAuthenticated แทน customer และ cleanup auth ให้เป็น centralized)
 
 import React, { useState, useRef } from 'react';
@@ -11,7 +12,7 @@ import { useBranchStore } from '@/features/branch/store/branchStore';
 
 const UnifiedMainNav = () => {
   const customer = useAuthStore((state) => state.customer);
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticatedSelector?.());
+  const isOnlineCustomerAuthenticated = useAuthStore((state) => state.isOnlineCustomerAuthenticatedSelector?.());
 
   // ✅ ใช้ logoutAction จุดเดียว
   const logout = useAuthStore((state) => state.logoutAction);
@@ -57,12 +58,12 @@ const UnifiedMainNav = () => {
 
           {/* Right Section: Auth / Avatar */}
           <div className="flex items-center gap-3 sm:gap-4">
-            {/* ✅ FIX: ใช้ isAuthenticated แทน customer */}
-            {!isAuthenticated && (
+            {/* ✅ FIX: ใช้ customer-facing auth selector โดยตรง */}
+            {!isOnlineCustomerAuthenticated && (
               <NavLink to="/login" className={navClass}>Login</NavLink>
             )}
 
-            {isAuthenticated && customer && (
+            {isOnlineCustomerAuthenticated && customer && (
               <div className="relative" ref={dropdownRef}>
                 <button
                   onClick={toggleDropdown}
@@ -95,5 +96,6 @@ const UnifiedMainNav = () => {
 };
 
 export default UnifiedMainNav;
+
 
 

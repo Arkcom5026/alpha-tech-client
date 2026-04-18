@@ -1,5 +1,7 @@
 
 
+
+
 // src/features/auth/store/authStore.js
 
 import { create } from 'zustand';
@@ -191,9 +193,20 @@ export const useAuthStore = create(
 
           return true;
         } catch (error) {
+          const status = error?.response?.status;
+          const serverMsg = error?.response?.data?.message;
+          const friendlyMessage =
+            status === 401 || status === 403
+              ? 'เซสชันหมดอายุหรือไม่มีสิทธิ์ใช้งาน กรุณาเข้าสู่ระบบใหม่'
+              : serverMsg || error?.message || 'ตรวจสอบเซสชันไม่สำเร็จ';
+
           console.error('❌ verifySessionAction failed:', error);
           useAuthStore.getState().resetAuthStateAction();
-          set({ isBootstrappingAuth: false, authChecked: false });
+          set({
+            authError: friendlyMessage,
+            isBootstrappingAuth: false,
+            authChecked: false,
+          });
           return false;
         }
       },
@@ -478,4 +491,6 @@ export const useAuthStore = create(
     { name: 'auth-storage' }
   )
 );
+
+
 

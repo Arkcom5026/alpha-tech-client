@@ -64,8 +64,7 @@ const getLineTotalSatang = (item) => {
   if (amount > 0) return Math.round(amount * 100);
 
   const qty = n(item?.quantity);
-  const unit = getUnitPrice(item);
-  const unitSatang = Math.round(unit * 100);
+    const unitSatang = Math.round(unit * 100);
   return unitSatang * qty;
 }
 
@@ -427,10 +426,8 @@ const beforeVat = round2(total - vatAmount);
         <div>
           {saleItems.map((item) => {
             const qty = n(item?.quantity);
-            const unit = getUnitPrice(item);
-            const lineTotal = getLineTotalSatang(item) / 100;
-            const unitDisplay = unit > 0 ? unit : qty > 0 && lineTotal > 0 ? round2(lineTotal / qty) : 0;
-
+                        const lineTotal = getLineTotalSatang(item) / 100;
+            
             return (
               <div key={item.id} className="tight" style={{ padding: '5px 0' }}>
                 <div className="row">
@@ -518,9 +515,7 @@ const beforeVat = round2(total - vatAmount);
         <div className="mono xs" style={{ letterSpacing: '1.6px' }}>
           {config?.footerCode || sale.code}
         </div>
-        <div className="mono xs" style={{ marginTop: 2 }}>
-          {config?.footerCode2 || (sale?.id ? `TXN-${sale.id}` : '')}
-        </div>
+        
       </div>
       </div>
     </div>

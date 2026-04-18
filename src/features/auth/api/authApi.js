@@ -1,5 +1,6 @@
 
 
+
 // src/features/auth/api/authApi.js
 
 import apiClient from '@/utils/apiClient';
@@ -26,6 +27,7 @@ export async function loginUser(data) {
 
 export async function verifySession() {
   try {
+    // session bootstrap endpoint for restoring auth from token
     const res = await apiClient.get('/auth/me');
     return res;
   } catch (err) {
@@ -33,4 +35,5 @@ export async function verifySession() {
     throw err;
   }
 }
+
 

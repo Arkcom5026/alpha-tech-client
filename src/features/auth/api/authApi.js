@@ -1,6 +1,7 @@
 
 
 
+
 // src/features/auth/api/authApi.js
 
 import apiClient from '@/utils/apiClient';
@@ -35,5 +36,26 @@ export async function verifySession() {
     throw err;
   }
 }
+
+export async function requestPasswordReset(data) {
+  try {
+    const res = await apiClient.post('/auth/forgot-password', data);
+    return res;
+  } catch (err) {
+    console.error('🔴 requestPasswordReset error:', err);
+    throw err;
+  }
+}
+
+export async function resetPassword(data) {
+  try {
+    const res = await apiClient.post('/auth/reset-password', data);
+    return res;
+  } catch (err) {
+    console.error('🔴 resetPassword error:', err);
+    throw err;
+  }
+}
+
 
 

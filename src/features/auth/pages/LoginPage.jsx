@@ -2,11 +2,12 @@
 
 
 
+
 // ✅ @filename: LoginPage.jsx
 // SUPERADMIN login routing: แยก Global session ออกจาก POS session แบบ minimal disruption
 
 import { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuthStore } from '@/features/auth/store/authStore';
 import { FaGoogle, FaFacebook, FaLock, FaEye, FaEyeSlash, FaSpinner } from 'react-icons/fa';
 import { useCartStore } from '@/features/online/cart/store/cartStore';
@@ -371,9 +372,9 @@ const LoginPage = () => {
               />
               จำอีเมลหรือเบอร์โทรศัพท์
             </label>
-            <a href="#" className="text-blue-600 hover:underline">
+            <Link to="/forgot-password" className="text-blue-600 hover:underline">
               ลืมรหัสผ่าน?
-            </a>
+            </Link>
           </div>
 
           {error && (
@@ -410,5 +411,7 @@ const LoginPage = () => {
 };
 
 export default LoginPage;
+
+
 
 

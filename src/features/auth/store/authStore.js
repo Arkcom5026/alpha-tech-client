@@ -2,11 +2,13 @@
 
 
 
+
+
 // src/features/auth/store/authStore.js
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { loginUser, verifySession } from '../api/authApi';
+import { loginUser, verifySession, requestPasswordReset, resetPassword } from '../api/authApi';
 import { buildRoleContext, can as canCap, P1_CAP } from '../rbac/rbacClient';
 import { useBranchStore } from '@/features/branch/store/branchStore';
 
@@ -72,12 +74,18 @@ const getEmptyAuthState = () => ({
   token: null,
   role: null,
   profileType: null,
-  authError: null,
-  isSuperAdmin: false,
   employee: null,
   customer: null,
+  authError: null,
   authChecked: false,
+  isSuperAdmin: false,
   isBootstrappingAuth: false,
+  isRequestPasswordResetLoading: false,
+  requestPasswordResetError: null,
+  requestPasswordResetSuccessMessage: '',
+  isResetPasswordLoading: false,
+  resetPasswordError: null,
+  resetPasswordSuccessMessage: '',
 });
 
 const clearLegacyAuthStorage = () => {
@@ -109,6 +117,119 @@ export const useAuthStore = create(
 
       markAuthCheckedAction: () => set({ authChecked: true }),
       setBootstrappingAuthAction: (isBootstrappingAuth) => set({ isBootstrappingAuth }),
+
+      clearRequestPasswordResetStateAction: () =>
+        set({
+          isRequestPasswordResetLoading: false,
+          requestPasswordResetError: null,
+          requestPasswordResetSuccessMessage: '',
+        }),
+
+      clearResetPasswordStateAction: () =>
+        set({
+          isResetPasswordLoading: false,
+          resetPasswordError: null,
+          resetPasswordSuccessMessage: '',
+        }),
+
+      requestPasswordResetAction: async ({ email }) => {
+        const normalizedEmail = (email || '').toString().trim().toLowerCase();
+
+        set({
+          isRequestPasswordResetLoading: true,
+          requestPasswordResetError: null,
+          requestPasswordResetSuccessMessage: '',
+        });
+
+        try {
+          if (!normalizedEmail) {
+            throw new Error('กรุณากรอกอีเมล');
+          }
+
+          const res = await requestPasswordReset({ email: normalizedEmail });
+          const successMessage =
+            res?.data?.message ||
+            'หากข้อมูลของคุณมีอยู่ในระบบ เราได้ส่งลิงก์สำหรับตั้งรหัสผ่านใหม่แล้ว';
+
+          set({
+            isRequestPasswordResetLoading: false,
+            requestPasswordResetError: null,
+            requestPasswordResetSuccessMessage: successMessage,
+          });
+
+          return res?.data;
+        } catch (error) {
+          const serverMsg = error?.response?.data?.message;
+          const friendlyMessage = serverMsg || 'ไม่สามารถส่งลิงก์รีเซ็ตรหัสผ่านได้';
+
+          set({
+            isRequestPasswordResetLoading: false,
+            requestPasswordResetError: friendlyMessage,
+            requestPasswordResetSuccessMessage: '',
+          });
+
+          console.error('❌ requestPasswordResetAction error:', error);
+          throw error;
+        }
+      },
+
+      resetPasswordAction: async ({ token, password, confirmPassword }) => {
+        const normalizedToken = (token || '').toString().trim();
+
+        set({
+          isResetPasswordLoading: true,
+          resetPasswordError: null,
+          resetPasswordSuccessMessage: '',
+        });
+
+        try {
+          if (!normalizedToken) {
+            throw new Error('ลิงก์นี้ไม่ถูกต้องหรือไม่ครบถ้วน กรุณาขอรีเซ็ตรหัสผ่านใหม่อีกครั้ง');
+          }
+
+          if (!password || !confirmPassword) {
+            throw new Error('กรุณากรอกรหัสผ่านใหม่และยืนยันรหัสผ่าน');
+          }
+
+          if (password.length < 6) {
+            throw new Error('รหัสผ่านต้องมีความยาวอย่างน้อย 6 ตัวอักษร');
+          }
+
+          if (password !== confirmPassword) {
+            throw new Error('ยืนยันรหัสผ่านไม่ตรงกัน');
+          }
+
+          const res = await resetPassword({
+            token: normalizedToken,
+            password,
+            confirmPassword,
+          });
+
+          const successMessage =
+            res?.data?.message || 'ตั้งรหัสผ่านใหม่เรียบร้อยแล้ว กรุณาเข้าสู่ระบบอีกครั้ง';
+
+          set({
+            isResetPasswordLoading: false,
+            resetPasswordError: null,
+            resetPasswordSuccessMessage: successMessage,
+          });
+
+          return res?.data;
+        } catch (error) {
+          const serverMsg = error?.response?.data?.message;
+          const fallbackMessage = error?.message || 'ไม่สามารถตั้งรหัสผ่านใหม่ได้';
+          const friendlyMessage = serverMsg || fallbackMessage;
+
+          set({
+            isResetPasswordLoading: false,
+            resetPasswordError: friendlyMessage,
+            resetPasswordSuccessMessage: '',
+          });
+
+          console.error('❌ resetPasswordAction error:', error);
+          throw error;
+        }
+      },
 
       verifySessionAction: async () => {
         const state = useAuthStore.getState();
@@ -491,6 +612,8 @@ export const useAuthStore = create(
     { name: 'auth-storage' }
   )
 );
+
+
 
 
 

@@ -1,12 +1,14 @@
 
 
+
+
 // ✅ @filename: LoginPage.jsx
 // SUPERADMIN login routing: แยก Global session ออกจาก POS session แบบ minimal disruption
 
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '@/features/auth/store/authStore';
-import { FaGoogle, FaFacebook, FaLock } from 'react-icons/fa';
+import { FaGoogle, FaFacebook, FaLock, FaEye, FaEyeSlash, FaSpinner } from 'react-icons/fa';
 import { useCartStore } from '@/features/online/cart/store/cartStore';
 
 // ---- role helpers (normalize + checks)
@@ -36,11 +38,76 @@ const LoginPage = () => {
   const isLocalhost = typeof window !== 'undefined' && window.location.hostname === 'localhost';
   const debugUsername = user?.username || user?.email || '';
 
-  const [email, setEmail] = useState(() => sessionStorage.getItem('lastUsedEmail') || 'advicebanphot@gmail.com');
-  const [password, setPassword] = useState('Arkcom-5026');
-  const [rememberMe, setRememberMe] = useState(false);
+  const [emailOrPhone, setEmailOrPhone] = useState(() => {
+    const rememberedIdentifier = localStorage.getItem('rememberedLoginIdentifier');
+    const legacySessionIdentifier = sessionStorage.getItem('rememberedLoginIdentifier');
+    return rememberedIdentifier || legacySessionIdentifier || '';
+  });
+  const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(() => {
+    return Boolean(
+      localStorage.getItem('rememberedLoginIdentifier') ||
+      sessionStorage.getItem('rememberedLoginIdentifier'),
+    );
+  });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState({ emailOrPhone: '', password: '' });
+
+  const normalizedIdentifier = emailOrPhone.trim();
+  const normalizedIdentifierCompact = normalizedIdentifier.split(' ').join('').split('-').join('');
+  const hasAtSign = normalizedIdentifier.includes('@');
+  const hasDotAfterAt = hasAtSign && normalizedIdentifier.split('@')[1]?.includes('.');
+  const normalizedPhoneValue = normalizedIdentifierCompact.startsWith('+')
+    ? normalizedIdentifierCompact.slice(1)
+    : normalizedIdentifierCompact;
+  const isDigitsOnly = normalizedPhoneValue !== '' && normalizedPhoneValue.split('').every((char) => char >= '0' && char <= '9');
+  const looksLikePhoneInput = normalizedIdentifierCompact !== '' && isDigitsOnly;
+  const isIdentifierValid = !normalizedIdentifier
+    ? false
+    : hasAtSign
+      ? hasDotAfterAt && !normalizedIdentifier.startsWith('@') && !normalizedIdentifier.endsWith('@')
+      : looksLikePhoneInput
+        ? normalizedPhoneValue.length >= 9 && normalizedPhoneValue.length <= 15
+        : false;
+  const isSubmitDisabled = loading || !isIdentifierValid || !password;
+
+  useEffect(() => {
+    if (!emailOrPhone) {
+      setFieldErrors((prev) => ({
+        ...prev,
+        emailOrPhone: '',
+      }));
+      return;
+    }
+
+    let nextEmailError = '';
+
+    if (hasAtSign) {
+      if (!hasDotAfterAt || normalizedIdentifier.startsWith('@') || normalizedIdentifier.endsWith('@')) {
+        nextEmailError = 'รูปแบบอีเมลไม่ถูกต้อง';
+      }
+    } else if (looksLikePhoneInput) {
+      if (normalizedPhoneValue.length < 9 || normalizedPhoneValue.length > 15) {
+        nextEmailError = 'รูปแบบเบอร์โทรศัพท์ไม่ถูกต้อง';
+      }
+    } else {
+      nextEmailError = 'กรุณากรอกอีเมลหรือเบอร์โทรศัพท์ที่ถูกต้อง';
+    }
+
+    setFieldErrors((prev) => ({
+      ...prev,
+      emailOrPhone: nextEmailError,
+    }));
+  }, [
+    emailOrPhone,
+    hasAtSign,
+    hasDotAfterAt,
+    looksLikePhoneInput,
+    normalizedIdentifier,
+    normalizedPhoneValue,
+  ]);
 
   const isLoggedIn = isAuthenticated;
   const { cartItems, fetchCartAction, mergeCartAction, clearCart } = useCartStore();
@@ -74,13 +141,56 @@ const LoginPage = () => {
   const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
+    setFieldErrors({ emailOrPhone: '', password: '' });
+
+    const normalizedIdentifier = emailOrPhone.trim();
+    const nextFieldErrors = { emailOrPhone: '', password: '' };
+
+    if (!normalizedIdentifier) {
+      nextFieldErrors.emailOrPhone = 'กรุณากรอกอีเมลหรือเบอร์โทรศัพท์';
+    } else {
+      const compactValue = normalizedIdentifier.split(' ').join('').split('-').join('');
+      const hasAtSign = normalizedIdentifier.includes('@');
+      const hasDotAfterAt = hasAtSign && normalizedIdentifier.split('@')[1]?.includes('.');
+      const numericValue = compactValue.startsWith('+') ? compactValue.slice(1) : compactValue;
+      const isDigitsOnly = numericValue !== '' && numericValue.split('').every((char) => char >= '0' && char <= '9');
+      const looksLikePhone = compactValue !== '' && isDigitsOnly;
+
+      if (hasAtSign) {
+        if (!hasDotAfterAt || normalizedIdentifier.startsWith('@') || normalizedIdentifier.endsWith('@')) {
+          nextFieldErrors.emailOrPhone = 'รูปแบบอีเมลไม่ถูกต้อง';
+        }
+      } else if (looksLikePhone) {
+        if (numericValue.length < 9 || numericValue.length > 15) {
+          nextFieldErrors.emailOrPhone = 'รูปแบบเบอร์โทรศัพท์ไม่ถูกต้อง';
+        }
+      } else {
+        nextFieldErrors.emailOrPhone = 'กรุณากรอกอีเมลหรือเบอร์โทรศัพท์ที่ถูกต้อง';
+      }
+    }
+
+    if (!password) {
+      nextFieldErrors.password = 'กรุณากรอกรหัสผ่าน';
+    }
+
+    if (nextFieldErrors.emailOrPhone || nextFieldErrors.password) {
+      setFieldErrors(nextFieldErrors);
+      return;
+    }
+
     setLoading(true);
 
     try {
-      sessionStorage.setItem('lastUsedEmail', email);
+      if (rememberMe && normalizedIdentifier) {
+        localStorage.setItem('rememberedLoginIdentifier', normalizedIdentifier);
+        sessionStorage.removeItem('rememberedLoginIdentifier');
+      } else {
+        localStorage.removeItem('rememberedLoginIdentifier');
+        sessionStorage.removeItem('rememberedLoginIdentifier');
+      }
 
       setError('');
-      await loginAction({ emailOrPhone: email, password });
+      await loginAction({ emailOrPhone: normalizedIdentifier, password });
 
       const st = useAuthStore.getState();
 
@@ -203,25 +313,53 @@ const LoginPage = () => {
           </div>
         </div>
 
-        <form onSubmit={handleLogin} autoComplete="off" className="space-y-4">
+        <form onSubmit={handleLogin} autoComplete="on" className="space-y-4">
+          <div>
           <input
             type="text"
             placeholder="อีเมลหรือเบอร์โทรศัพท์"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            autoComplete="off"
-            className="w-full border px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-            required
+            value={emailOrPhone}
+            onChange={(e) => {
+              setEmailOrPhone(e.target.value);
+            }}
+            autoComplete="username"
+            className={`w-full border px-3 py-2.5 rounded focus:outline-none focus:ring-2 ${fieldErrors.emailOrPhone ? 'border-red-500 focus:ring-red-500' : 'focus:ring-blue-500'}`}
+            aria-invalid={Boolean(fieldErrors.emailOrPhone)}
           />
-          <input
-            type="password"
-            placeholder="••••••••"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            autoComplete="new-password"
-            className="w-full border px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-            required
-          />
+          {fieldErrors.emailOrPhone && (
+            <p className="mt-1.5 text-sm text-red-600">{fieldErrors.emailOrPhone}</p>
+          )}
+        </div>
+          <div>
+            <div className="relative">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  if (fieldErrors.password) {
+                    setFieldErrors((prev) => ({ ...prev, password: '' }));
+                  }
+                }}
+                autoComplete="current-password"
+                className={`w-full border px-3 py-2.5 pr-11 rounded focus:outline-none focus:ring-2 ${fieldErrors.password ? 'border-red-500 focus:ring-red-500' : 'focus:ring-blue-500'}`}
+                aria-invalid={Boolean(fieldErrors.password)}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((prev) => !prev)}
+                className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-500 hover:text-gray-700"
+                aria-label={showPassword ? 'ซ่อนรหัสผ่าน' : 'แสดงรหัสผ่าน'}
+                title={showPassword ? 'ซ่อนรหัสผ่าน' : 'แสดงรหัสผ่าน'}
+              >
+                {showPassword ? <FaEyeSlash /> : <FaEye />}
+              </button>
+            </div>
+            {fieldErrors.password && (
+              <p className="mt-1.5 text-sm text-red-600">{fieldErrors.password}</p>
+            )}
+          </div>
 
           <div className="flex items-center justify-between text-sm">
             <label className="flex items-center">
@@ -231,7 +369,7 @@ const LoginPage = () => {
                 checked={rememberMe}
                 onChange={(e) => setRememberMe(e.target.checked)}
               />
-              จำฉันไว้ในระบบ
+              จำอีเมลหรือเบอร์โทรศัพท์
             </label>
             <a href="#" className="text-blue-600 hover:underline">
               ลืมรหัสผ่าน?
@@ -246,10 +384,17 @@ const LoginPage = () => {
 
           <button
             type="submit"
-            className="w-full bg-blue-700 hover:bg-blue-800 text-white py-2 rounded shadow font-medium min-h-[44px]"
-            disabled={loading}
+            className={`w-full py-2 rounded shadow font-medium min-h-[44px] inline-flex items-center justify-center gap-2 transition ${isSubmitDisabled ? 'bg-blue-400 cursor-not-allowed text-white' : 'bg-blue-700 hover:bg-blue-800 text-white'}`}
+            disabled={isSubmitDisabled}
           >
-            {loading ? 'กำลังเข้าสู่ระบบ...' : 'เข้าสู่ระบบด้วยรหัสผ่าน'}
+            {loading ? (
+              <>
+                <FaSpinner className="animate-spin" />
+                <span>กำลังเข้าสู่ระบบ...</span>
+              </>
+            ) : (
+              'เข้าสู่ระบบด้วยรหัสผ่าน'
+            )}
           </button>
         </form>
 

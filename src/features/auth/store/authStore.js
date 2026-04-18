@@ -2,6 +2,8 @@
 
 
 
+
+
 // src/features/auth/store/authStore.js
 
 import { create } from 'zustand';
@@ -411,6 +413,7 @@ export const useAuthStore = create(
           console.error('❌ logoutAction failed:', error);
         } finally {
           useAuthStore.getState().resetAuthStateAction();
+          window.location.href = '/login';
         }
       },
 
@@ -690,23 +693,12 @@ export const useAuthStore = create(
     {
       name: 'auth-storage',
       partialize: (state) => ({
-        role: state.role,
-        profileType: state.profileType,
-        employee: state.employee,
-        customer: state.customer,
-        isSuperAdmin: state.isSuperAdmin,
         rememberMe: state.rememberMe,
-        session: state.session,
         lastLoginIdentifier: state.lastLoginIdentifier,
       }),
     }
   )
 );
-
-
-
-
-
 
 
 

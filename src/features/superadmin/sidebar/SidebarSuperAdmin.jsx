@@ -1,5 +1,9 @@
+
+// src/features/superadmin/sidebar/SidebarSuperAdmin.jsx
+
 import React from 'react';
 import { NavLink } from 'react-router-dom';
+import { useAuthStore } from '@/features/auth/store/authStore';
 
 const menuItems = [
   {
@@ -36,6 +40,16 @@ const baseLinkClass =
   'flex items-center rounded-xl px-4 py-3 text-sm font-medium transition-colors duration-150';
 
 const SidebarSuperAdmin = () => {
+  const logoutAction = useAuthStore((state) => state.logoutAction);
+
+  const handleLogout = async () => {
+    try {
+      await logoutAction();
+    } catch (error) {
+      console.error('logoutAction failed:', error);
+    }
+  };
+
   return (
     <aside className="flex min-h-screen w-full max-w-[280px] flex-col border-r border-slate-200 bg-slate-900 text-white">
       <div className="border-b border-slate-800 px-5 py-5">
@@ -83,6 +97,14 @@ const SidebarSuperAdmin = () => {
       </nav>
 
       <div className="border-t border-slate-800 px-4 py-4">
+        <button
+          type="button"
+          onClick={handleLogout}
+          className="mb-4 flex w-full items-center justify-center rounded-xl border border-rose-800/70 bg-rose-950/40 px-4 py-3 text-sm font-semibold text-rose-200 transition-colors duration-150 hover:bg-rose-900/50 hover:text-white"
+        >
+          ออกจากระบบ
+        </button>
+
         <div className="rounded-2xl border border-amber-900/60 bg-amber-950/30 px-4 py-3">
           <div className="text-sm font-semibold text-amber-300">ข้อควรระวัง</div>
           <p className="mt-2 text-xs leading-5 text-slate-300">
@@ -96,3 +118,9 @@ const SidebarSuperAdmin = () => {
 };
 
 export default SidebarSuperAdmin;
+
+
+
+
+
+

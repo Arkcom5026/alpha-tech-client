@@ -1,11 +1,20 @@
 
 
 
+
 // src/features/auth/store/authStore.js
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { loginUser, verifySession, requestPasswordReset, resetPassword } from '../api/authApi';
+import {
+  loginUser,
+  verifySession,
+  requestPasswordReset,
+  resetPassword,
+  refreshSession,
+  logoutSession,
+  logoutAllSessions,
+} from '../api/authApi';
 import { buildRoleContext, can as canCap, P1_CAP } from '../rbac/rbacClient';
 import { useBranchStore } from '@/features/branch/store/branchStore';
 
@@ -69,6 +78,10 @@ const deriveEffectiveProfileType = (serverProfileType, profile, serverRole) => {
 
 const getEmptyAuthState = () => ({
   token: null,
+  accessToken: null,
+  rememberMe: false,
+  session: null,
+  lastLoginIdentifier: '',
   role: null,
   profileType: null,
   employee: null,
@@ -87,11 +100,10 @@ const getEmptyAuthState = () => ({
 
 const clearLegacyAuthStorage = () => {
   try {
-    localStorage.removeItem('auth-storage');
     localStorage.removeItem('token');
     localStorage.removeItem('role');
-  } catch (error) {
-    console.error('❌ clearLegacyAuthStorage failed:', error);
+  } catch (_error) {
+    console.error('❌ clearLegacyAuthStorage failed:', _error);
   }
 };
 
@@ -100,9 +112,12 @@ export const useAuthStore = create(
     (set) => ({
       ...getEmptyAuthState(),
 
-      setUser: ({ token, role, profileType, employee, customer }) =>
+      setUser: ({ token, accessToken, role, profileType, employee, customer, rememberMe = false, session = null }) =>
         set({
-          token,
+          token: accessToken || token || null,
+          accessToken: accessToken || token || null,
+          rememberMe,
+          session,
           role,
           profileType,
           employee,
@@ -230,7 +245,7 @@ export const useAuthStore = create(
 
       verifySessionAction: async () => {
         const state = useAuthStore.getState();
-        const token = state.token;
+        const token = state.accessToken || state.token;
 
         if (!token) {
           set({ authChecked: false, isBootstrappingAuth: false });
@@ -299,6 +314,7 @@ export const useAuthStore = create(
 
           set({
             token,
+            accessToken: token,
             role: effectiveRole,
             profileType: effectiveProfileType,
             employee,
@@ -332,25 +348,80 @@ export const useAuthStore = create(
       bootstrapAuthAction: async () => {
         const state = useAuthStore.getState();
 
-        if (!state.token) {
-          set({ authChecked: false, isBootstrappingAuth: false });
-          return false;
+        set({ isBootstrappingAuth: true, authError: null });
+
+        if (state.accessToken || state.token) {
+          return state.verifySessionAction();
         }
 
-        set({ isBootstrappingAuth: true });
-        return state.verifySessionAction();
+        try {
+          const res = await refreshSession();
+          const accessToken = res?.data?.accessToken || res?.data?.token || null;
+
+          if (!accessToken) {
+            set({ authChecked: false, isBootstrappingAuth: false });
+            return false;
+          }
+
+          set({
+            token: accessToken,
+            accessToken,
+            rememberMe: !!res?.data?.session?.rememberMe,
+            session: res?.data?.session || null,
+          });
+
+          return await useAuthStore.getState().verifySessionAction();
+        } catch {
+          set({
+            token: null,
+            accessToken: null,
+            authChecked: false,
+            isBootstrappingAuth: false,
+          });
+          return false;
+        }
       },
       resetAuthStateAction: () => {
-        set(getEmptyAuthState());
+        const state = useAuthStore.getState();
+        const preservedRememberMe = !!state.rememberMe;
+        const preservedIdentifier = preservedRememberMe ? (state.lastLoginIdentifier || '') : '';
+
+        set({
+          ...getEmptyAuthState(),
+          rememberMe: preservedRememberMe,
+          lastLoginIdentifier: preservedIdentifier,
+        });
         clearLegacyAuthStorage();
       },
 
-      logout: () => {
-        useAuthStore.getState().resetAuthStateAction();
+      logout: async () => {
+        try {
+          await logoutSession();
+        } catch (error) {
+          console.error('❌ logout failed:', error);
+        } finally {
+          useAuthStore.getState().resetAuthStateAction();
+        }
       },
 
-      logoutAction: () => {
-        useAuthStore.getState().resetAuthStateAction();
+      logoutAction: async () => {
+        try {
+          await logoutSession();
+        } catch (error) {
+          console.error('❌ logoutAction failed:', error);
+        } finally {
+          useAuthStore.getState().resetAuthStateAction();
+        }
+      },
+
+      logoutAllDevicesAction: async () => {
+        try {
+          await logoutAllSessions();
+        } catch (error) {
+          console.error('❌ logoutAllDevicesAction failed:', error);
+        } finally {
+          useAuthStore.getState().resetAuthStateAction();
+        }
       },
 
       clearStorage: () => {
@@ -359,7 +430,7 @@ export const useAuthStore = create(
 
       isLoggedIn: () => {
         const state = useAuthStore.getState();
-        return !!state.token && !!state.authChecked && !state.isBootstrappingAuth;
+        return !!(state.accessToken || state.token) && !!state.authChecked && !state.isBootstrappingAuth;
       },
 
       // ---------- LOGIN ----------
@@ -367,6 +438,7 @@ export const useAuthStore = create(
         try {
           // reset error each attempt (UI should render authError as inline block)
           set({ authError: null, authChecked: false, isBootstrappingAuth: false });
+          const rememberMe = !!credentials?.rememberMe;
           const res = await loginUser(credentials);
           console.log('✅ loginUser response:', res);
 
@@ -421,7 +493,11 @@ export const useAuthStore = create(
           // ✅ ตั้งค่าก่อนเรียกอะไรอื่น (atomic enough to satisfy guards)
           // NOTE: For staff roles, we set employee.branchId immediately to avoid "token exists but branch missing" window.
           set({
-            token: res.data.token,
+            token: res.data.accessToken || res.data.token || null,
+            accessToken: res.data.accessToken || res.data.token || null,
+            rememberMe,
+            session: res.data.session || null,
+            lastLoginIdentifier: rememberMe ? (credentials?.identifier || credentials?.emailOrPhone || '') : '',
             role: effectiveRole,
             profileType: effectiveProfileType,
             authError: null,
@@ -489,7 +565,8 @@ export const useAuthStore = create(
           console.log('✅ loginAction success:', { profile, branchFull, effectiveRole, effectiveProfileType, positionKey });
 
           return {
-            token: res.data.token,
+            token: res.data.accessToken || res.data.token || null,
+            accessToken: res.data.accessToken || res.data.token || null,
             role: effectiveRole,
             profileType: effectiveProfileType,
             profile,
@@ -516,11 +593,11 @@ export const useAuthStore = create(
       // ---------- Selectors ที่เรียกจากหน้า UI ----------
       isAuthenticatedSelector: () => {
         const state = useAuthStore.getState();
-        return !!state.token && !!state.authChecked && !state.isBootstrappingAuth;
+        return !!(state.accessToken || state.token) && !!state.authChecked && !state.isBootstrappingAuth;
       },
       isOnlineCustomerAuthenticatedSelector: () => {
         const state = useAuthStore.getState();
-        return !!state.token && !!state.authChecked && !state.isBootstrappingAuth && normalizeRole(state.role) === 'customer' && !!state.customer?.id;
+        return !!(state.accessToken || state.token) && !!state.authChecked && !state.isBootstrappingAuth && normalizeRole(state.role) === 'customer' && !!state.customer?.id;
       },
       isSuperAdminSelector: () => normalizeRole(useAuthStore.getState().role) === 'superadmin',
       isAdminOrAboveSelector: () => {
@@ -610,9 +687,22 @@ export const useAuthStore = create(
       canStockAuditSelector: () => useAuthStore.getState().canSelector(P1_CAP.STOCK_AUDIT),
       canViewReportsSelector: () => useAuthStore.getState().canSelector(P1_CAP.VIEW_REPORTS),
     }),
-    { name: 'auth-storage' }
+    {
+      name: 'auth-storage',
+      partialize: (state) => ({
+        role: state.role,
+        profileType: state.profileType,
+        employee: state.employee,
+        customer: state.customer,
+        isSuperAdmin: state.isSuperAdmin,
+        rememberMe: state.rememberMe,
+        session: state.session,
+        lastLoginIdentifier: state.lastLoginIdentifier,
+      }),
+    }
   )
 );
+
 
 
 

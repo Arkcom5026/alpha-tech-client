@@ -2,7 +2,6 @@
 
 
 
-
 // ✅ @filename: LoginPage.jsx
 // SUPERADMIN login routing: แยก Global session ออกจาก POS session แบบ minimal disruption
 
@@ -34,23 +33,16 @@ const LoginPage = () => {
   const role = useAuthStore((state) => state.role);
   const profileType = useAuthStore((state) => state.profileType);
   const user = useAuthStore((state) => state.user);
+  const rememberedIdentifier = useAuthStore((state) => state.lastLoginIdentifier);
+  const rememberedSessionFlag = useAuthStore((state) => state.rememberMe);
 
   // ✅ แสดง username เฉพาะตอนรันบน localhost เท่านั้น
   const isLocalhost = typeof window !== 'undefined' && window.location.hostname === 'localhost';
   const debugUsername = user?.username || user?.email || '';
 
-  const [emailOrPhone, setEmailOrPhone] = useState(() => {
-    const rememberedIdentifier = localStorage.getItem('rememberedLoginIdentifier');
-    const legacySessionIdentifier = sessionStorage.getItem('rememberedLoginIdentifier');
-    return rememberedIdentifier || legacySessionIdentifier || '';
-  });
+  const [emailOrPhone, setEmailOrPhone] = useState(() => rememberedIdentifier || '');
   const [password, setPassword] = useState('');
-  const [rememberMe, setRememberMe] = useState(() => {
-    return Boolean(
-      localStorage.getItem('rememberedLoginIdentifier') ||
-      sessionStorage.getItem('rememberedLoginIdentifier'),
-    );
-  });
+  const [rememberMe, setRememberMe] = useState(() => Boolean(rememberedSessionFlag || rememberedIdentifier));
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -111,6 +103,16 @@ const LoginPage = () => {
   ]);
 
   const isLoggedIn = isAuthenticated;
+
+  useEffect(() => {
+    if (!emailOrPhone && rememberedIdentifier) {
+      setEmailOrPhone(rememberedIdentifier);
+    }
+  }, [emailOrPhone, rememberedIdentifier]);
+
+  useEffect(() => {
+    setRememberMe(Boolean(rememberedSessionFlag || rememberedIdentifier));
+  }, [rememberedSessionFlag, rememberedIdentifier]);
   const { cartItems, fetchCartAction, mergeCartAction, clearCart } = useCartStore();
 
   useEffect(() => {
@@ -182,16 +184,12 @@ const LoginPage = () => {
     setLoading(true);
 
     try {
-      if (rememberMe && normalizedIdentifier) {
-        localStorage.setItem('rememberedLoginIdentifier', normalizedIdentifier);
-        sessionStorage.removeItem('rememberedLoginIdentifier');
-      } else {
-        localStorage.removeItem('rememberedLoginIdentifier');
-        sessionStorage.removeItem('rememberedLoginIdentifier');
-      }
-
       setError('');
-      await loginAction({ emailOrPhone: normalizedIdentifier, password });
+      await loginAction({
+        emailOrPhone: normalizedIdentifier,
+        password,
+        rememberMe,
+      });
 
       const st = useAuthStore.getState();
 
@@ -314,7 +312,7 @@ const LoginPage = () => {
           </div>
         </div>
 
-        <form onSubmit={handleLogin} autoComplete="on" className="space-y-4">
+        <form onSubmit={handleLogin} autoComplete="off" className="space-y-4">
           <div>
           <input
             type="text"
@@ -323,7 +321,7 @@ const LoginPage = () => {
             onChange={(e) => {
               setEmailOrPhone(e.target.value);
             }}
-            autoComplete="username"
+            autoComplete="off"
             className={`w-full border px-3 py-2.5 rounded focus:outline-none focus:ring-2 ${fieldErrors.emailOrPhone ? 'border-red-500 focus:ring-red-500' : 'focus:ring-blue-500'}`}
             aria-invalid={Boolean(fieldErrors.emailOrPhone)}
           />
@@ -343,7 +341,7 @@ const LoginPage = () => {
                     setFieldErrors((prev) => ({ ...prev, password: '' }));
                   }
                 }}
-                autoComplete="current-password"
+                autoComplete="new-password"
                 className={`w-full border px-3 py-2.5 pr-11 rounded focus:outline-none focus:ring-2 ${fieldErrors.password ? 'border-red-500 focus:ring-red-500' : 'focus:ring-blue-500'}`}
                 aria-invalid={Boolean(fieldErrors.password)}
               />
@@ -370,7 +368,7 @@ const LoginPage = () => {
                 checked={rememberMe}
                 onChange={(e) => setRememberMe(e.target.checked)}
               />
-              จำอีเมลหรือเบอร์โทรศัพท์
+              จำฉันไว้ในระบบ
             </label>
             <Link to="/forgot-password" className="text-blue-600 hover:underline">
               ลืมรหัสผ่าน?
@@ -411,6 +409,7 @@ const LoginPage = () => {
 };
 
 export default LoginPage;
+
 
 
 

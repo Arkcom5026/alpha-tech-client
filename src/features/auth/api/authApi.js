@@ -37,6 +37,43 @@ export async function verifySession() {
   }
 }
 
+export async function refreshSession() {
+  try {
+    const res = await apiClient.post('/auth/refresh');
+    return res;
+  } catch (err) {
+    const status = err?.response?.status;
+
+    // Guest bootstrap without refresh cookie → expected 401, do not spam console
+    if (status !== 401) {
+      console.error('🔴 refreshSession error:', err);
+    }
+
+    throw err;
+  }
+}
+
+export async function logoutSession() {
+  try {
+    const res = await apiClient.post('/auth/logout');
+    return res;
+  } catch (err) {
+    console.error('🔴 logoutSession error:', err);
+    throw err;
+  }
+}
+
+export async function logoutAllSessions() {
+  try {
+    const res = await apiClient.post('/auth/logout-all');
+    return res;
+  } catch (err) {
+    console.error('🔴 logoutAllSessions error:', err);
+    throw err;
+  }
+}
+
+
 export async function requestPasswordReset(data) {
   try {
     const res = await apiClient.post('/auth/forgot-password', data);
@@ -56,6 +93,9 @@ export async function resetPassword(data) {
     throw err;
   }
 }
+
+
+
 
 
 

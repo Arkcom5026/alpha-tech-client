@@ -1,10 +1,11 @@
 
 
+
 // UnifiedMainNav.jsx (FIX: ใช้ isAuthenticated แทน customer และ cleanup auth ให้เป็น centralized)
 
 import React, { useState, useRef } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
-import { UserCircle, Package, LogOut, User } from 'lucide-react';
+import { UserCircle, Package, LogOut, User, Shield } from 'lucide-react';
 
 import { useAuthStore } from '@/features/auth/store/authStore';
 import { useCartStore } from '@/features/online/cart/store/cartStore';
@@ -16,6 +17,7 @@ const UnifiedMainNav = () => {
 
   // ✅ ใช้ logoutAction จุดเดียว
   const logout = useAuthStore((state) => state.logoutAction);
+  const logoutAllDevices = useAuthStore((state) => state.logoutAllDevicesAction);
 
   const clearCart = useCartStore((state) => state.clearCart);
   const clearBranchStorage = useBranchStore((state) => state.clearStorage);
@@ -31,11 +33,20 @@ const UnifiedMainNav = () => {
       ? 'bg-blue-200 px-2 sm:px-3 py-1 sm:py-2 rounded-md text-xs sm:text-sm font-medium text-blue-700 border border-white/40 border-[1px]'
       : 'px-2 sm:px-3 py-1 sm:py-2 rounded-md text-xs sm:text-sm font-medium text-white border border-white/40 border-[1px] hover:bg-blue-100/60';
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     // ✅ centralized auth cleanup
-    logout();
+    await logout();
 
     // non-auth state
+    clearCart();
+    clearBranchStorage();
+
+    navigate('/');
+  };
+
+  const handleLogoutAllDevices = async () => {
+    await logoutAllDevices();
+
     clearCart();
     clearBranchStorage();
 
@@ -84,6 +95,9 @@ const UnifiedMainNav = () => {
                     <button type="button" onClick={handleLogout} className="flex w-full text-left px-4 py-2 hover:bg-gray-100 items-center gap-2">
                       <LogOut className="w-4 h-4 text-gray-500" /> ออกจากระบบ
                     </button>
+                    <button type="button" onClick={handleLogoutAllDevices} className="flex w-full text-left px-4 py-2 hover:bg-gray-100 items-center gap-2 border-t">
+                      <Shield className="w-4 h-4 text-gray-500" /> ออกจากระบบทุกอุปกรณ์
+                    </button>
                   </div>
                 )}
               </div>
@@ -96,6 +110,7 @@ const UnifiedMainNav = () => {
 };
 
 export default UnifiedMainNav;
+
 
 
 

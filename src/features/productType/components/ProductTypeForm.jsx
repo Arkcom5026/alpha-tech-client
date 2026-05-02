@@ -1,5 +1,6 @@
 
 
+
 // ✅ src/features/productType/components/ProductTypeForm.jsx (updated to use CascadingFilterGroup)
 import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
@@ -87,7 +88,7 @@ const ProductTypeForm = ({ defaultValues = {}, onSubmit, onCancel, mode = 'creat
     const nameOk = (data.name || '').trim().length > 0;
     const catOk = data.categoryId !== '' && data.categoryId != null;
     if (mode !== 'edit' && (!catOk || !nameOk)) {
-      alert('กรุณาเลือกหมวดหมู่และกรอกชื่อให้ครบก่อนบันทึก');
+      setFormError('กรุณาเลือกหมวดหมู่และกรอกชื่อให้ครบก่อนบันทึก');
       return;
     }
     try {
@@ -159,6 +160,7 @@ const ProductTypeForm = ({ defaultValues = {}, onSubmit, onCancel, mode = 'creat
 };
 
 export default ProductTypeForm;
+
 
 
 

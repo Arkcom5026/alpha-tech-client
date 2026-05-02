@@ -1,3 +1,4 @@
+
 // src/features/productType/api/productTypeApi.js
 import apiClient from '@/utils/apiClient';
 
@@ -7,7 +8,7 @@ const withParams = (params = {}) => ({ params });
 export const parseApiError = (error) => {
   const fallback = { code: 'UNKNOWN', message: 'เกิดข้อผิดพลาดที่ไม่คาดคิด' };
   const res = error?.response;
-  const code = res?.data?.code || fallback.code;
+  const code = res?.data?.code || res?.data?.error || fallback.code;
   const messageFromServer = res?.data?.message;
   const map = {
     HAS_REFERENCES: 'ไม่สามารถดำเนินการได้ เนื่องจากมีข้อมูลที่เชื่อมโยงอยู่',
@@ -91,3 +92,4 @@ export const getProductTypeDropdowns = async (opts = { active: true, categoryId:
     throw parseApiError(error);
   }
 };
+

@@ -7,6 +7,7 @@
 
 
 
+
 // src/features/bill/pages/PrintBillPageShortTax.jsx
 
 
@@ -58,7 +59,7 @@ const PrintBillPageShortTax = () => {
       resetAction()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [saleId, paymentId, loadSaleByIdAction, resetAction])
+  }, [saleId, paymentId])
 
   // ✅ Reset auto-print guard when saleId changes
   useEffect(() => {
@@ -132,6 +133,10 @@ const PrintBillPageShortTax = () => {
 }
 
 export default PrintBillPageShortTax
+
+
+
+
 
 
 

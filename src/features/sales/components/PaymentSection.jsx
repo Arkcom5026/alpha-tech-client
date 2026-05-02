@@ -4,6 +4,7 @@
 
 
 
+
 // ============================================================
 // 📁 FILE: src/features/sales/components/PaymentSection.jsx
 // ✅ Final patched version: fix JSX syntax + computedSaleOption scope + store wiring + robust number parsing
@@ -338,7 +339,12 @@ const PaymentSection = ({
         });
 
         // ✅ CREDIT → DELIVERY_NOTE เสมอ
-        const computedSaleOption = isCreditSale ? 'DELIVERY_NOTE' : saleOption;
+        // ✅ CASH fallback: ถ้ายังเป็น NONE ให้พิมพ์ใบเสร็จ เพื่อกันจังหวะ saleOption ยังไม่ถูก set จาก PaymentSummary
+        const computedSaleOption = isCreditSale
+          ? 'DELIVERY_NOTE'
+          : saleOption === 'NONE'
+            ? 'RECEIPT'
+            : saleOption;
 
         if (typeof onSaleConfirmed === 'function') {
           onSaleConfirmed(saleId, computedSaleOption);
@@ -508,6 +514,7 @@ const PaymentSection = ({
 };
 
 export default PaymentSection;
+
 
 
 

@@ -64,7 +64,8 @@ const getLineTotalSatang = (item) => {
   if (amount > 0) return Math.round(amount * 100);
 
   const qty = n(item?.quantity);
-    const unitSatang = Math.round(unit * 100);
+  const unit = getUnitPrice(item);
+  const unitSatang = Math.round(unit * 100);
   return unitSatang * qty;
 }
 
@@ -524,6 +525,8 @@ const beforeVat = round2(total - vatAmount);
 
 // ✅ memo ป้องกัน re-render ตอนเปิด print window
 export default React.memo(BillLayoutShortTax)
+
+
 
 
 

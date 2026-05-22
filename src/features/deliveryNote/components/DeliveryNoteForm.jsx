@@ -1,6 +1,7 @@
 
 
 
+
 // src/features/deliveryNote/components/DeliveryNoteForm.jsx
 
 // ✅ DeliveryNoteForm ปรับโครงสร้างให้ตรงกับ BillLayoutFullTax 100%
@@ -165,7 +166,20 @@ const DeliveryNoteForm = ({ sale, saleItems, config, hideDate, setHideDate }) =>
     return out;
   })();
 
-  const handlePrint = () => window.print();
+  const handlePrint = () => {
+    // ลดข้อความหัวกระดาษจาก browser เช่น title ด้านบนกลาง
+    // หมายเหตุ: URL/วันที่จาก Chrome Header/Footer ต้องปิดใน Print Dialog ด้วย
+    const originalTitle = document.title;
+
+    try {
+      document.title = ' ';
+      window.print();
+    } finally {
+      window.setTimeout(() => {
+        document.title = originalTitle;
+      }, 500);
+    }
+  };
 
   const getDisplayCustomerName = (customer) => {
     if (!customer) return '-';
@@ -180,13 +194,13 @@ const DeliveryNoteForm = ({ sale, saleItems, config, hideDate, setHideDate }) =>
         @media print {
           html, body { margin: 0; padding: 0; }
           body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-          @page { size: A4; margin: 10mm; }
+          @page { size: A4; margin: 0; }
 
           /* Reduce outer box so it never exceeds printable area (account for printer margins) */
           .dn-print-page {
             box-sizing: border-box;
-            width: 190mm !important;
-            min-height: 277mm !important; /* 297mm - (10mm top + 10mm bottom) */
+            width: 210mm !important;
+            min-height: 297mm !important;
             height: auto !important;
             padding: 6mm !important;
             border-radius: 0 !important;
@@ -250,11 +264,10 @@ const DeliveryNoteForm = ({ sale, saleItems, config, hideDate, setHideDate }) =>
             key={`dn-page-${pageIndex + 1}`}
             className="w-full overflow-hidden mx-auto text-sm border border-gray-600 px-5 pt-4 pb-3 flex flex-col rounded-md relative print:overflow-visible dn-print-page"
             style={{
-              width: '190mm',
-              // ❗ อย่าบังคับ height = 297mm เพราะ browser print margin + scaling
-              // จะทำให้เนื้อหาถูกดันเกิน A4
-              // ใช้ minHeight แทนเพื่อให้ layout ยืดหยุ่นตาม printer
-              minHeight: '277mm',
+              width: '210mm',
+              // ใช้ขนาด A4 เต็มหน้า เพราะ @page margin = 0
+              // เพื่อลดพื้นที่ browser header/footer และคุม layout เอกสารเอง
+              minHeight: '297mm',
               fontFamily: 'Tahoma, Arial, sans-serif',
               pageBreakAfter: isLast ? 'auto' : 'always',
               breakAfter: isLast ? 'auto' : 'page',
@@ -410,6 +423,7 @@ const DeliveryNoteForm = ({ sale, saleItems, config, hideDate, setHideDate }) =>
 };
 
 export default DeliveryNoteForm;
+
 
 
 

@@ -1,5 +1,6 @@
 
 
+ 
 
 
 // 📁 FILE: src/features/sales/store/salesStore.js
@@ -232,10 +233,18 @@ const useSalesStore = create((set, get) => ({
 
   addSaleItemAction: (item) => {
     try {
+      // 🔒 SN-only guard: ปิดประตู LOT/SIMPLE ไม่ให้หลุดเข้า saleItems
+      // SIMPLE flow จะใช้ contract แยกในอนาคต ไม่ปะปนกับ stockItemId/SN flow
+      if (item?.kind === 'LOT' || item?.simpleLotId) {
+        const msg = 'สินค้าประเภทจำนวน/LOT ยังไม่รองรับในหน้าขายนี้';
+        set({ error: msg });
+        return { ok: false, error: msg, code: 'SALE_SN_ONLY' };
+      }
+
       const stockItemId = normalizeStockItemId(item);
       if (!stockItemId) {
         set({ error: 'ข้อมูลสินค้าไม่ครบ (ไม่มี stockItemId)' });
-        return;
+        return { ok: false, error: 'ข้อมูลสินค้าไม่ครบ (ไม่มี stockItemId)', code: 'MISSING_STOCK_ITEM_ID' };
       }
 
       const safeItem = { ...item, stockItemId };
@@ -292,6 +301,23 @@ const useSalesStore = create((set, get) => ({
       const msg = 'การขายแบบเครดิตต้องเลือกชื่อลูกค้าก่อน';
       set({ error: msg });
       return { error: msg };
+    }
+
+    // 🔒 SN-only guard (confirm layer)
+    // กัน state เก่าหรือข้อมูลที่หลุดเข้ามาโดยไม่ผ่าน addSaleItemAction
+    const unsupportedRows = (saleItems || [])
+      .map((it, idx) => ({
+        idx,
+        kind: it?.kind,
+        simpleLotId: it?.simpleLotId,
+      }))
+      .filter((x) => x.kind === 'LOT' || x.simpleLotId)
+      .map((x) => x.idx + 1);
+
+    if (unsupportedRows.length > 0) {
+      const msg = `มีสินค้าประเภทจำนวน/LOT อยู่ในรายการขาย แถว: ${unsupportedRows.join(', ')} กรุณาลบออกก่อน`;
+      set({ error: msg });
+      return { error: msg, code: 'SALE_SN_ONLY' };
     }
 
     const missingRows = (saleItems || [])
@@ -670,6 +696,8 @@ const useSalesStore = create((set, get) => ({
 }));
 
 export default useSalesStore;
+
+
 
 
 

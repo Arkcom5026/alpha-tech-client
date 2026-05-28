@@ -110,6 +110,15 @@ const QuickSaleLayout = () => {
         return
       }
 
+      // 🔒 SN-only guard: ตอนนี้หน้าขายนี้รองรับเฉพาะ StockItem/SN เท่านั้น
+      // LOT/SIMPLE จะถูกเปิดเป็น flow แยกใน phase ถัดไป เพื่อไม่ให้ข้อมูลขายปะปนกัน
+      if (foundItem.kind === 'LOT' || foundItem.simpleLotId || !foundItem.id || !foundItem.barcode) {
+        setBarcodeError('❌ สินค้าประเภทจำนวน/LOT ยังไม่รองรับในหน้าขายนี้ กรุณาใช้สินค้าที่มี SN ก่อน')
+        e.target.value = ''
+        barcodeInputRef.current?.focus()
+        return
+      }
+
       // 🔒 Safety: เผื่อ backend คืน item ที่มี status ไม่พร้อมขายมาในอนาคต
       const status = foundItem.status || foundItem.stockItem?.status
       if (status && status !== 'IN_STOCK') {
@@ -332,6 +341,9 @@ const QuickSaleLayout = () => {
 }
 
 export default QuickSaleLayout
+
+
+
 
 
 

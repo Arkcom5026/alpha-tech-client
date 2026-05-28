@@ -1,5 +1,6 @@
 
 
+
 // src/features/deliveryNote/pages/PrintDeliveryNotePage.jsx
 
 import { useEffect, useMemo, useState } from 'react';
@@ -89,21 +90,44 @@ const PrintDeliveryNotePage = () => {
   }
 
   // ✅ Delivery Note (หน้างานจริง): รวมสินค้า 1 รายการต่อ 1 บรรทัด โดย group ตาม productId
-  // - สินค้าเดียวกันในบิลเดียวกันต้องรวม qty (ตาม business rule)
-  // - discount รวมเป็นยอดรวมของสินค้านั้น (sum ต่อชิ้น) เพื่อความปลอดภัยของยอดเงิน
+  // - ตอนนี้ P1 Sale หลักเป็น SN-only: Sale.items คือสินค้า SN รายชิ้น
+  // - SaleItem.price คือราคาสุทธิต่อชิ้นแล้ว ห้ามเอา discount ไปหักซ้ำตอนพิมพ์
+  // - รองรับ simpleItems แบบ fallback ในอนาคต แต่ยังไม่เปิด flow ขาย SIMPLE ในหน้านี้
   // - ไม่แสดง barcode/serial ในระดับ grouped (Delivery Note เน้นจำนวน ไม่เน้น trace รายชิ้น)
   const preparedSaleItems = (() => {
-    const src = Array.isArray(currentSale.items) ? currentSale.items : [];
+    const src = Array.isArray(currentSale.simpleItems) && currentSale.simpleItems.length > 0
+      ? currentSale.simpleItems
+      : Array.isArray(currentSale.items)
+        ? currentSale.items
+        : [];
+
     const grouped = new Map();
 
     for (const item of src) {
-      const product = item?.stockItem?.product;
-      const productIdRaw = product?.id ?? null;
+      const product = item?.product || item?.stockItem?.product || item?.productSnapshot || null;
+      const productIdRaw = product?.id ?? item?.productId ?? item?.stockItem?.productId ?? null;
       const productId = productIdRaw == null ? null : String(productIdRaw);
       const key = productId ?? `unknown-${item?.id ?? Math.random()}`;
 
-      const unitPrice = Number(item?.basePrice ?? 0) || 0;
-      const discountEach = Number(item?.discount ?? 0) || 0;
+      const isSnItem = Boolean(item?.stockItemId || item?.stockItem?.id);
+
+      const unitPrice = isSnItem
+        ? (Number(item?.price ?? item?.unitPrice ?? item?.basePrice ?? 0) || 0)
+        : (Number(
+            item?.unitPrice
+            ?? item?.price
+            ?? item?.basePrice
+            ?? item?.sellPrice
+            ?? 0
+          ) || 0);
+
+      const quantity = isSnItem
+        ? 1
+        : Math.max(1, Number(item?.quantity ?? item?.qty ?? 1) || 1);
+
+      const discountEach = isSnItem
+        ? 0
+        : (Number(item?.discount ?? item?.discountAmount ?? 0) || 0);
 
       if (!grouped.has(key)) {
         grouped.set(key, {
@@ -112,11 +136,11 @@ const PrintDeliveryNotePage = () => {
           productId: productIdRaw,
           // เก็บ stockItemId แค่ตัวแรกเพื่อความเข้ากันได้กับโค้ดเดิม (ไม่ได้ใช้เป็นหลัก)
           stockItemId: item?.stockItemId ?? item?.stockItem?.id ?? null,
-          productName: product?.name || 'ไม่พบชื่อสินค้า',
-          productModel: product?.model || '-',
+          productName: product?.name || item?.productName || item?.name || 'ไม่พบชื่อสินค้า',
+          productModel: product?.model || item?.productModel || '-',
           price: unitPrice,
           quantity: 0,
-          unit: product?.unit?.name || product?.template?.unit?.name || '-',
+          unit: product?.unit?.name || product?.template?.unit?.name || item?.unit || '-',
           discount: 0,
           barcode: '-',
           serialNumber: '-',
@@ -124,7 +148,7 @@ const PrintDeliveryNotePage = () => {
       }
 
       const agg = grouped.get(key);
-      agg.quantity += 1;
+      agg.quantity += quantity;
       agg.discount += discountEach;
 
       // ✅ Guard (minimal): ถ้าราคาไม่เท่ากันในสินค้าเดียวกัน ให้คงราคาแรกไว้ตามกติกาหน้างาน
@@ -160,6 +184,9 @@ const PrintDeliveryNotePage = () => {
 };
 
 export default PrintDeliveryNotePage;
+
+
+
 
 
 

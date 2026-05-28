@@ -2,6 +2,11 @@
 
 
 
+
+
+
+
+
 // src/features/deliveryNote/components/DeliveryNoteForm.jsx
 
 // ✅ DeliveryNoteForm ปรับโครงสร้างให้ตรงกับ BillLayoutFullTax 100%
@@ -99,17 +104,16 @@ const DeliveryNoteForm = ({ sale, saleItems, config, hideDate, setHideDate }) =>
 
   // ✅ Totals (VAT-INC pricing): ราคาต่อหน่วยในตารางเป็น "รวม VAT แล้ว" (Gross)
   // ดังนั้น:
-  // - รวมทั้งสิ้น (Gross) = ผลรวมบรรทัดทั้งหมด
-  // - VAT = ถอด VAT จาก Gross ด้วยสูตร vat = gross * r / (100 + r)
-  // - รวมเงิน (ก่อน VAT) = gross - vat
+  // - รายการสินค้าในตารางใช้ calcLine เพื่อแสดงบรรทัด
+  // - ยอดท้ายเอกสารต้องยึด canonical total จาก Sale ก่อนเสมอ
+  // - ถ้าไม่มี totalAmount จาก Sale ค่อย fallback ไป computedGross จากรายการสินค้า
   //
-  // หมายเหตุ: ถ้า BE ส่ง totalAmount/vat มา อาจเป็นคนละนิยาม (INC/EX) ตามจุดใช้งาน
-  // สำหรับเอกสารนี้ให้ยึดตาม “ราคาที่แสดงในบรรทัด” เป็น source of truth เพื่อไม่ให้ VAT ซ้ำ/เพี้ยน
+  // เหตุผล: หน้า Print อาจได้รับ saleItems ไม่ครบ/ถูก transform คนละ source กับ Sale summary
+  // ถ้ายึด computedGross เป็นหลัก จะทำให้ยอดใบส่งของเพี้ยนจากยอดขายจริงได้
   const computedGross = round2(computedTotals.total);
 
-  // ถ้ามี totalAmount จาก BE และมันใกล้เคียงกับ computedGross ให้ใช้เป็น gross (กัน drift จากการปัดเศษ)
   const saleTotalMaybe = Number.isFinite(Number(sale?.totalAmount)) ? round2(Number(sale.totalAmount)) : null;
-  const gross = saleTotalMaybe != null && Math.abs(saleTotalMaybe - computedGross) <= 0.05
+  const gross = saleTotalMaybe != null && saleTotalMaybe > 0
     ? saleTotalMaybe
     : computedGross;
 
@@ -423,6 +427,12 @@ const DeliveryNoteForm = ({ sale, saleItems, config, hideDate, setHideDate }) =>
 };
 
 export default DeliveryNoteForm;
+
+
+
+
+
+
 
 
 

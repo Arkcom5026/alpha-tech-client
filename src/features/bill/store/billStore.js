@@ -1,6 +1,8 @@
 
 
 
+
+
 // ===============================
 // features/bill/store/billStore.js
 // ===============================
@@ -23,6 +25,40 @@ const formatThaiDate = (iso) => {
     month: 'long',
     year: 'numeric',
   });
+};
+
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const isUnauthorizedError = (err) => {
+  const status = err?.response?.status ?? err?.status;
+  return Number(status) === 401;
+};
+
+const getFriendlyBillErrorMessage = (err) => {
+  if (isUnauthorizedError(err)) {
+    return 'สิทธิ์การใช้งานหมดอายุชั่วคราว กรุณารอสักครู่แล้วลองโหลดใบเสร็จใหม่อีกครั้ง';
+  }
+
+  if (err instanceof Error && err.message) {
+    return err.message;
+  }
+
+  return 'ไม่สามารถโหลดข้อมูลใบเสร็จได้';
+};
+
+const loadSaleForPrintWithAuthRetry = async (saleId, params) => {
+  try {
+    return await getSaleById(saleId, params);
+  } catch (err) {
+    if (!isUnauthorizedError(err)) {
+      throw err;
+    }
+
+    // หน้า print อาจ mount ระหว่าง apiClient กำลัง refresh token
+    // retry เฉพาะ transient 401 หนึ่งครั้ง เพื่อไม่ให้ผู้ใช้เจอ error ที่ recover ได้เอง
+    await delay(300);
+    return getSaleById(saleId, params);
+  }
 };
 
 export const useBillStore = create((set, get) => ({
@@ -67,7 +103,7 @@ export const useBillStore = create((set, get) => ({
 
     try {
       const job = (async () => {
-        const sale = await getSaleById(saleId, {
+        const sale = await loadSaleForPrintWithAuthRetry(saleId, {
           // ✅ print pages always need payments for correct receipt selection
           includePayments: 1,
           ...(requestedPaymentId ? { paymentId: requestedPaymentId } : {}),
@@ -157,7 +193,7 @@ export const useBillStore = create((set, get) => ({
       _inflightBySaleId.set(requestKey, job);
       return await job;
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'ไม่สามารถโหลดข้อมูลใบเสร็จได้';
+      const message = getFriendlyBillErrorMessage(err);
       set({ error: message, loading: false });
       throw err;
     } finally {

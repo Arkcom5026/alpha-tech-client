@@ -1,5 +1,7 @@
 
 
+
+
 // src/features/customerReceipt/components/SaleAllocationCandidateTable.jsx
 
 const formatMoney = (value) => {
@@ -138,7 +140,6 @@ const SaleAllocationCandidateTable = ({
                   >
                     <td className="px-4 py-3 text-sm text-gray-700">
                       <button
-                        type="button"
                         type="button"
                         onClick={() => onSelect?.(item)}
                         disabled={outstandingAmount <= 0}

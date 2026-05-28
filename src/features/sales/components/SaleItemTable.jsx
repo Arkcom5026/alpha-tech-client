@@ -207,8 +207,7 @@ const SaleItemTable = ({ items = [], onRemove, billDiscount = 0 }) => {
                 <input
                   type="number"
                   inputMode="decimal"
-                  step="0.01"
-                  step="0.01"
+                  step="0.01"                  
                   className="w-24 py-0 border rounded text-right"
                   placeholder="0.00"
                   value={sellingPrice === 0 ? '' : sellingPrice}

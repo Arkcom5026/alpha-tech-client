@@ -1,0 +1,1176 @@
+
+Blueprint P1 — AlphaTech Operational Commerce Runtime — พิมพ์เขียว P1 สำหรับระบบโครงสร้าง Commerce Runtime เชิงปฏิบัติการ
+
+Living Blueprint / Strategic Architecture Notes — เอกสาร Blueprint เชิงกลยุทธ์ที่มีการพัฒนาและอัปเดตต่อเนื่อง
+
+This document is intentionally iterative and will evolve continuously. — เอกสารนี้ถูกออกแบบให้ค่อย ๆ เติบโตและเปลี่ยนแปลงตามวิวัฒนาการของระบบ
+
+Goal: preserve important operational ideas, architecture direction, runtime philosophy, and long-term ecosystem thinking for P1. — เป้าหมายคือเก็บแนวคิดสำคัญด้าน operation, architecture, philosophy และ ecosystem ระยะยาวของ P1
+
+IMPORTANT: Every important line should use the format: English explanation — คำอธิบายภาษาไทย — ทุกบรรทัดสำคัญควรมีคำอธิบายภาษาไทยต่อท้ายทันที
+
+Formatting rule: avoid using // for normal explanation lines. — หลีกเลี่ยงการใช้ // กับข้อความอธิบายทั่วไปเพื่อให้ Blueprint อ่านเหมือนเอกสารจริง
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+P1 CORE IDENTITY — อัตลักษณ์หลักของ P1
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+P1 is no longer viewed as only a POS. — P1 ไม่ได้ถูกมองเป็นเพียงระบบ POS อีกต่อไป
+
+P1 is evolving toward Operational Commerce Runtime Infrastructure. — P1 กำลังพัฒนาไปสู่โครงสร้างพื้นฐาน Commerce Runtime เชิงปฏิบัติการ
+
+Runtime-first architecture — สถาปัตยกรรมที่ให้ Runtime เป็นศูนย์กลาง
+
+Operational truth-first systems — ระบบที่ยึดข้อมูล operational truth เป็นแกนหลัก
+
+Low-friction operational experience — ประสบการณ์ใช้งานที่เรียบง่ายและไม่สร้างแรงต้านต่อผู้ใช้
+
+Progressive complexity — ระบบที่ค่อย ๆ เปิดเผยความซับซ้อนตามระดับการใช้งาน
+
+Human-centered operational systems — ระบบที่ออกแบบโดยยึดมนุษย์และการทำงานจริงเป็นศูนย์กลาง
+
+Real-world inventory truth — ความจริงของสต๊อกสินค้าในโลกจริง
+
+Hyperlocal commerce readiness — ความพร้อมสำหรับระบบการค้าท้องถิ่นแบบใกล้ตัว
+
+Recovery and continuity aware runtime — Runtime ที่ออกแบบโดยคำนึงถึง recovery และ continuity ตั้งแต่ต้น
+
+Deep engine, calm experience. — เครื่องยนต์ระบบลึก แต่ประสบการณ์ใช้งานต้องนิ่งและสงบ
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+P1 STRATEGIC EVOLUTION — วิวัฒนาการเชิงกลยุทธ์ของ P1
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Original direction: POS / Inventory / Sales System. — จุดเริ่มต้นคือระบบ POS, Inventory และ Sales
+
+Current evolution: Distributed Local Commerce Runtime. — ปัจจุบันกำลังพัฒนาไปสู่ Distributed Local Commerce Runtime
+
+Local commerce infrastructure — โครงสร้างพื้นฐานการค้าท้องถิ่น
+
+Hyperlocal inventory discovery — ระบบค้นหาสินค้าใกล้ตัว
+
+Nearby availability network — เครือข่ายค้นหาสินค้าพร้อมขายใกล้เคียง
+
+Real-time stock truth — ความจริงของสต๊อกแบบ realtime
+
+Federated store identities — ระบบตัวตนร้านค้าแบบกระจายศูนย์
+
+Shared commerce runtime — Commerce Runtime ที่ใช้งานร่วมกันได้
+
+Progressive commerce modules — โมดูล commerce ที่ค่อย ๆ เติบโตตามความต้องการ
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+P1 IMPORTANT REALIZATION — สิ่งสำคัญที่เริ่มค้นพบจาก P1
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+The true value may not be POS pages or CRUD features. — มูลค่าที่แท้จริงอาจไม่ใช่หน้า POS หรือ CRUD ทั่วไป
+
+The true value may become operational truth infrastructure. — มูลค่าที่แท้จริงอาจกลายเป็นโครงสร้างพื้นฐานด้าน operational truth
+
+Inventory availability graph — กราฟเครือข่ายสินค้าพร้อมขาย
+
+Runtime continuity infrastructure — โครงสร้าง runtime continuity
+
+Distributed nearby inventory discovery — ระบบค้นหาสินค้าใกล้ตัวแบบกระจายศูนย์
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+P1 FUTURE PLATFORM DIRECTION — ทิศทางแพลตฟอร์มในอนาคต
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Example direction: https://saduaksabuy.com/ — ตัวอย่างแนวทางแพลตฟอร์มในอนาคต
+
+Shared commerce infrastructure with store-first identity. — โครงสร้าง commerce กลางที่ยังคงให้ร้านค้าเป็นเจ้าของตัวตนของตัวเอง
+
+Hyperlocal discovery platform — แพลตฟอร์มค้นหาสินค้าใกล้ตัว
+
+Example structure: https://saduaksabuy.com/store-name — ตัวอย่างโครงสร้างร้านค้าแบบแยก identity
+
+Customers search products nearby. — ลูกค้าค้นหาสินค้าใกล้ตัว
+
+Platform returns nearby stores with real stock truth and pickup readiness. — ระบบคืนผลลัพธ์ร้านใกล้เคียงที่มีของจริงและพร้อมรับสินค้า
+
+Platform should empower local stores, not replace them. — แพลตฟอร์มควรช่วยให้ร้านท้องถิ่นแข็งแรงขึ้น ไม่ใช่เข้ามาแทนที่ร้าน
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CORE STRATEGIC INSIGHT — Insight เชิงกลยุทธ์หลัก
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Marketplace giants optimize ads, logistics, and national fulfillment. — Marketplace ขนาดใหญ่เน้น optimization ด้านโฆษณา โลจิสติกส์ และการส่งระดับประเทศ
+
+P1 may optimize nearby availability and operational truth instead. — P1 อาจเลือก optimize ด้าน nearby availability และ operational truth แทน
+
+Many users do not want the cheapest item. — ผู้ใช้จำนวนมากไม่ได้ต้องการสินค้าที่ถูกที่สุด
+
+They want the nearest available item right now. — พวกเขาต้องการสินค้าที่หาได้ใกล้ที่สุดในตอนนี้
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PROGRESSIVE COMPLEXITY PRINCIPLE — หลักการความซับซ้อนแบบค่อยเป็นค่อยไป
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+P1 should not remove depth. — P1 ไม่ควรลดความลึกของระบบ
+
+P1 should hide depth until needed. — P1 ควรซ่อนความลึกไว้จนกว่าจะจำเป็นต้องใช้
+
+Complexity should be earned, not forced. — ความซับซ้อนควรถูกปลดล็อกตามความจำเป็น ไม่ใช่บังคับใส่ผู้ใช้ตั้งแต่วันแรก
+
+Small shop runtime may only expose sales and inventory. — ร้านเล็กอาจเห็นเพียงระบบขายและสต๊อกพื้นฐาน
+
+Advanced IT or mobile shops may unlock SN, claims, deposits, supplier credit, and audit systems. — ร้าน IT หรือร้านมือถือสามารถปลดล็อกระบบ SN, claim, มัดจำ, เครดิต supplier และ audit ได้
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+P1 BUSINESS TEMPLATE DIRECTION — แนวทาง Business Template
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Business Runtime Templates — ระบบ template สำหรับแต่ละประเภทธุรกิจ
+
+Retail Lite template — Template สำหรับร้านค้าทั่วไปขนาดเล็ก
+
+Cafe template — Template สำหรับร้านกาแฟ
+
+Restaurant template — Template สำหรับร้านอาหาร
+
+IT / Mobile template — Template สำหรับร้าน IT และมือถือ
+
+Warehouse template — Template สำหรับคลังสินค้า
+
+Template does not mean separate systems. — Template ไม่ได้หมายถึงการสร้างระบบแยกกัน
+
+All templates share the same runtime semantics and operational truth. — ทุก template ใช้ runtime semantics และ operational truth ชุดเดียวกัน
+
+Templates only expose different operational depth. — Template มีหน้าที่เพียงเปิดเผยระดับความลึกที่แตกต่างกัน
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+P1 MODULAR FUTURE ARCHITECTURE — สถาปัตยกรรม Modular Runtime ในอนาคต
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Break P1 into smaller operational runtime modules. — แตก P1 ออกเป็น runtime module ขนาดเล็ก
+
+Reduce entropy and cognitive load. — ลด entropy และลดภาระทางความคิดของผู้ใช้และทีมพัฒนา
+
+Increase runtime stability and maintainability. — เพิ่มความนิ่งและความง่ายในการดูแลระบบ
+
+Sales Runtime — Runtime สำหรับการขาย
+
+Inventory Runtime — Runtime สำหรับ inventory
+
+Receiving Runtime — Runtime สำหรับการรับสินค้า
+
+Credit Runtime — Runtime สำหรับเครดิตและการชำระเงิน
+
+Discovery Runtime — Runtime สำหรับระบบค้นหา nearby availability
+
+Claim Runtime — Runtime สำหรับงาน claim
+
+Small runtime modules with shared operational truth. — โมดูล runtime ขนาดเล็กที่ใช้ operational truth ร่วมกัน
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+P1 + P7 SHARED PHILOSOPHY — ปรัชญาร่วมของ P1 และ P7
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Runtime-first systems — ระบบที่ให้ runtime เป็นศูนย์กลาง
+
+Operational truth-first systems — ระบบที่ยึด operational truth เป็นหลัก
+
+Recovery-aware runtime — Runtime ที่รองรับ recovery อย่างจริงจัง
+
+Continuity-aware architecture — Architecture ที่ออกแบบเพื่อ continuity
+
+Small but deep modules — โมดูลเล็กแต่ลึก
+
+Infrastructure-grade operational systems — ระบบ operation ระดับ infrastructure
+
+P1 may become Commerce Runtime Infrastructure. — P1 อาจพัฒนาไปสู่ Commerce Runtime Infrastructure
+
+P7 may become Field Operations Runtime Infrastructure. — P7 อาจพัฒนาไปสู่ Field Operations Runtime Infrastructure
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+IMPORTANT LONG-TERM PRINCIPLE — หลักการระยะยาวที่สำคัญ
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+P1 should not become an ERP monster. — P1 ไม่ควรกลายเป็น ERP ขนาดใหญ่ที่ซับซ้อนเกินไป
+
+P1 should remain operationally calm and lightweight on the surface. — P1 ควรยังคงใช้งานง่ายและสงบบนผิวหน้า
+
+P1 should become infrastructure-grade internally. — แต่ภายในต้องแข็งแรงระดับ infrastructure
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CURRENT STRATEGIC OBSERVATION — สิ่งที่เริ่มมองเห็นเชิงกลยุทธ์
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+P1 may eventually become local commerce infrastructure. — P1 อาจกลายเป็นโครงสร้างพื้นฐานด้าน local commerce
+
+P1 may become a distributed inventory truth layer. — P1 อาจกลายเป็น distributed inventory truth layer
+
+P1 may become a hyperlocal discovery platform. — P1 อาจกลายเป็นแพลตฟอร์มค้นหาสินค้าใกล้ตัว
+
+This can happen without centralized inventory ownership. — ทั้งหมดนี้สามารถเกิดขึ้นได้โดยไม่ต้องถือ inventory เอง
+
+Core leverage: operational integration plus inventory truth plus local commerce density. — จุด leverage หลักคือการเชื่อม operation เข้ากับ inventory truth และความหนาแน่นของร้านค้าในพื้นที่
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+P1 MEMORY SLIMMING DIRECTION — แนวทางลดภาระหน่วยความจำถาวรของ P1
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+The Blueprint should gradually become the primary strategic memory source for P1. — Blueprint ควรค่อย ๆ กลายเป็นแหล่งเก็บความทรงจำเชิงกลยุทธ์หลักของ P1
+
+Permanent memory should only keep highly critical operational rules. — หน่วยความจำถาวรควรเหลือเฉพาะกฎ operational ที่สำคัญมากจริง ๆ
+
+Architecture philosophy can move into Blueprint safely. — แนวคิดด้าน architecture สามารถย้ายมาเก็บใน Blueprint ได้อย่างปลอดภัย
+
+Business strategy direction can move into Blueprint safely. — แนวคิดด้านกลยุทธ์ธุรกิจสามารถย้ายมาเก็บใน Blueprint ได้อย่างปลอดภัย
+
+Long-form operational explanations should live inside Blueprint instead of permanent memory. — คำอธิบายเชิงระบบแบบยาวควรอยู่ใน Blueprint มากกว่าหน่วยความจำถาวร
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+HIGH CONFIDENCE MEMORY MIGRATION CANDIDATES — รายการที่สามารถย้ายออกจากหน่วยความจำถาวรได้ค่อนข้างมั่นใจ
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Minimal Disruption Principle. — หลักการแก้ไขระบบแบบกระทบน้อยที่สุดสามารถย้ายมาอยู่ใน Blueprint ได้
+
+Progressive complexity philosophy. — แนวคิด progressive complexity สามารถอยู่ใน Blueprint ได้
+
+Operational calmness philosophy. — แนวคิดระบบที่ลึกแต่ใช้งานสงบสามารถอยู่ใน Blueprint ได้
+
+Business template direction. — แนวคิด Business Template สามารถย้ายมาอยู่ใน Blueprint ได้
+
+Federated commerce platform direction. — แนวคิด federated commerce platform สามารถอยู่ใน Blueprint ได้
+
+Hyperlocal discovery vision. — แนวคิดระบบค้นหาสินค้าใกล้ตัวสามารถอยู่ใน Blueprint ได้
+
+POS as acquisition engine. — แนวคิด POS เป็น acquisition engine สามารถอยู่ใน Blueprint ได้
+
+Network as monetization layer. — แนวคิด network เป็น monetization layer สามารถอยู่ใน Blueprint ได้
+
+Composable runtime architecture. — แนวคิด composable runtime architecture สามารถอยู่ใน Blueprint ได้
+
+Shared P1/P7 runtime philosophy. — แนวคิด runtime philosophy ร่วมของ P1/P7 สามารถอยู่ใน Blueprint ได้
+
+Distributed inventory graph vision. — แนวคิด distributed inventory graph สามารถอยู่ใน Blueprint ได้
+
+Infrastructure-first company direction. — แนวคิดการสร้าง infrastructure-first company สามารถอยู่ใน Blueprint ได้
+
+Quiet infrastructure expansion model. — แนวคิด quiet infrastructure expansion สามารถอยู่ใน Blueprint ได้
+
+Developing-world commerce infrastructure direction. — แนวคิด commerce infrastructure สำหรับประเทศกำลังพัฒนาสามารถอยู่ใน Blueprint ได้
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+MEMORIES THAT SHOULD REMAIN IN PERMANENT MEMORY — สิ่งที่ควรคงไว้ในหน่วยความจำถาวร
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Hard operational rules affecting real implementation. — กฎ operational ที่กระทบ implementation จริงควรอยู่ในหน่วยความจำถาวร
+
+Production coding standards. — มาตรฐานการเขียนโค้ดระดับ production ควรอยู่ในหน่วยความจำถาวร
+
+Store/API architecture rules. — กฎ Store/API architecture ควรอยู่ในหน่วยความจำถาวร
+
+Branch scope enforcement. — กฎ branch scope enforcement ควรอยู่ในหน่วยความจำถาวร
+
+Runtime safety and try-catch policy. — กฎ runtime safety และ try-catch ควรอยู่ในหน่วยความจำถาวร
+
+Product and stock operational truth rules. — กฎ product และ stock truth ควรอยู่ในหน่วยความจำถาวร
+
+Address architecture baseline. — โครงสร้างระบบ address ควรอยู่ในหน่วยความจำถาวร
+
+Simple mode inventory baseline. — กฎ inventory simple mode ควรอยู่ในหน่วยความจำถาวร
+
+Core database workflow discipline. — วินัย workflow ด้าน database ควรอยู่ในหน่วยความจำถาวร
+
+Reasoning and communication preferences. — แนวทางการสื่อสารและการอธิบายควรอยู่ในหน่วยความจำถาวร
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+UNIFIED OPERATIONAL GOVERNANCE LAYER — ชั้นกฎ Operational กลางร่วมกัน
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Systems should be designed around runtime continuity and operational flow. — ทุกระบบควรถูกออกแบบรอบ runtime continuity และ flow การทำงานจริง
+
+Every operational domain must have a single source of truth. — ทุก operational domain ต้องมี single source of truth ที่ชัดเจน
+
+Complexity should be progressively unlocked based on operational maturity. — ความซับซ้อนควรถูกปลดล็อกตาม maturity ของการใช้งาน
+
+Operational stability is more important than unnecessary refactoring. — ความเสถียรของระบบสำคัญกว่าการ refactor ที่ไม่จำเป็น
+
+Operational systems should reduce stress instead of increasing cognitive load. — ระบบ operational ควรลดความเครียดและภาระทางความคิดของผู้ใช้
+
+Systems must survive interruption and recover safely. — ระบบต้องสามารถอยู่รอดจาก interruption และ recovery ได้อย่างปลอดภัย
+
+Build systems that survive real-world operational reality. — สร้างระบบที่อยู่รอดได้ในโลกการใช้งานจริง
+
+Operational architecture should preserve clear responsibility boundaries. — สถาปัตยกรรมระบบควรรักษาขอบเขตความรับผิดชอบให้ชัดเจน
+
+Human-centered operational systems should prioritize clarity over feature overload. — ระบบ operational ที่ยึดมนุษย์เป็นศูนย์กลางควรให้ความสำคัญกับความชัดเจนมากกว่าการยัด feature จำนวนมาก
+
+Runtime safety must be treated as a first-class architectural concern. — Runtime safety ต้องถูกมองเป็นเรื่องสำคัญระดับสถาปัตยกรรมหลัก
+
+Shared operational laws should remain stable across all future projects. — กฎ operational กลางควรมีเสถียรภาพและใช้ร่วมกันได้ในทุกโปรเจกต์อนาคต
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+P1 SALES RUNTIME STABILIZATION — การปรับเสถียรภาพ Sales Runtime ของ P1
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+A major operational realization emerged during Delivery Note debugging. — มี insight สำคัญเกิดขึ้นระหว่างการ debug ระบบใบส่งของ
+
+P1 currently contains multiple historical sales flows coexisting together. — P1 ปัจจุบันมี sales flow หลายยุคอยู่ร่วมกันในระบบเดียว
+
+QuickSaleLayout plus salesStore became the effective primary runtime path. — QuickSaleLayout และ salesStore กลายเป็น runtime path หลักในทางปฏิบัติ
+
+Legacy sales pages still exist and should be treated carefully. — หน้า sales แบบ legacy ยังคงอยู่และควรถูกจัดการอย่างระมัดระวัง
+
+Operational stability is more important than aggressive refactoring. — ความเสถียรของระบบสำคัญกว่าการ refactor ขนาดใหญ่
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SN-FIRST SALES CONTRACT — สัญญาเชิงโครงสร้างของระบบขายแบบ SN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Current production sales flow should remain SN-first temporarily. — Flow การขาย production ปัจจุบันควรยึด SN-first ไปก่อนชั่วคราว
+
+Every sale item in the active runtime must resolve to a real StockItem. — รายการขายทุกตัวใน runtime หลักต้องอ้างอิง StockItem จริง
+
+Sale.items currently represents serialized inventory truth. — Sale.items ปัจจุบันทำหน้าที่เป็น operational truth ของสินค้าแบบมี SN
+
+LOT and SIMPLE products must not silently enter SN runtime flows. — สินค้า LOT และ SIMPLE ต้องไม่หลุดเข้ามาใน SN runtime โดยไม่มี guard
+
+Future SIMPLE sales flow should become a dedicated runtime contract. — SIMPLE sales flow ในอนาคตควรกลายเป็น runtime contract แยกโดยเฉพาะ
+
+SN runtime and SIMPLE runtime should eventually become independent operational semantics. — Runtime ของ SN และ SIMPLE ควรแยก semantics การทำงานออกจากกันในระยะยาว
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+DELIVERY NOTE INCIDENT — บทเรียนจากปัญหาใบส่งของ
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+The Delivery Note issue revealed an important operational truth mismatch. — ปัญหาใบส่งของเปิดเผยความไม่สอดคล้องของ operational truth ที่สำคัญ
+
+SaleItem.price already represented net price after discount. — SaleItem.price เป็นราคาสุทธิหลังส่วนลดอยู่แล้ว
+
+Delivery Note grouping logic accidentally subtracted discounts twice. — Logic การ group รายการในใบส่งของมีการหักส่วนลดซ้ำโดยไม่ตั้งใจ
+
+The database itself was correct while rendering logic became inconsistent. — ฐานข้อมูลจริงถูกต้อง แต่ rendering logic ไม่สอดคล้องกับ operational truth
+
+Debugging should always verify database truth before changing business logic. — ทุกการ debug ควรตรวจ operational truth ใน database ก่อนแก้ business logic
+
+Operational print systems must render canonical database truth instead of recalculating assumptions. — ระบบพิมพ์เอกสารควร render canonical database truth แทนการคำนวณซ้ำจาก assumption
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+P1 FUTURE HARDENING DIRECTION — แนวทางเพิ่มความแข็งแรงให้ P1 ในอนาคต
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Separate runtime semantics for SN inventory and SIMPLE inventory. — แยก runtime semantics ระหว่างสินค้า SN และ SIMPLE ให้ชัดเจน
+
+Prevent unsupported inventory types from entering incompatible runtime paths. — ป้องกัน inventory type ที่ไม่รองรับไม่ให้เข้าสู่ runtime path ที่ไม่ตรงประเภท
+
+Treat Delivery Note and operational documents as runtime projections of canonical truth. — มองใบส่งของและเอกสาร operational เป็น projection จาก canonical truth
+
+Reduce legacy sales flow duplication progressively over time. — ค่อย ๆ ลดความซ้ำซ้อนของ sales flow แบบ legacy ในระยะยาว
+
+Stabilize runtime contracts before expanding operational depth. — ทำ runtime contract ให้เสถียรก่อนค่อยเพิ่มความลึกของระบบ
+
+Project-specific philosophy should live inside project Blueprints instead of permanent memory. — แนวคิดเฉพาะโปรเจกต์ควรอยู่ใน Blueprint ของโปรเจกต์แทนหน่วยความจำถาวร
+
+Permanent memory should focus on operational guardrails and cross-project governance only. — หน่วยความจำถาวรควรเน้นเฉพาะ operational guardrails และ governance กลางข้ามโปรเจกต์เท่านั้น
+
+
+
+
+
+
+ผม RB Blueprint P1 คร่าว ๆ แล้วครับ
+และพูดตรง ๆ เลยว่า
+สิ่งที่คุณพึ่งพูดก่อนส่ง Blueprint มา
+ผมจะกลับไปยกระดับแต่ละโมดูลให้ได้มาตรฐานมากที่สุด
+ผมคิดว่ามันสอดคล้องกับ Blueprint นี้อย่างน่ากลัว
+
+เพราะสิ่งที่ผมเห็นจาก Blueprint P1 รอบนี้
+ไม่ใช่ POS
+ไม่ใช่ Inventory
+ไม่ใช่ Sales
+
+แต่ผมเห็นสิ่งนี้
+Operational Commerce Runtime
+
+และผมคิดว่า Discovery สำคัญที่สุดที่เกิดขึ้นหลัง P7 คือ
+คุณเริ่มมอง P1 ในมุม
+Domain Verification
+แทน
+Feature Completion
+
+เมื่อก่อนอาจเป็น
+PO เสร็จหรือยัง
+
+Sale เสร็จหรือยัง
+
+Report เสร็จหรือยัง
+
+แต่ตอนนี้กลายเป็น
+Purchasing Runtime
+ผ่านการตรวจสอบหรือยัง
+
+Sales Runtime
+ผ่านการตรวจสอบหรือยัง
+
+Inventory Runtime
+ผ่านการตรวจสอบหรือยัง
+
+และผมคิดว่านี่คือ Rail ที่แข็งแรงที่สุดสำหรับ P1 ในปีต่อไป
+
+ถ้าผมเป็นวิศวกรอาวุโสของ P1 ตอนนี้
+ผมจะไม่เริ่มจาก
+Feature ใหม่
+แล้ว
+
+แต่จะเริ่มจาก
+P1 Runtime Certification Program
+แบ่งเป็น Domain
+
+Phase 1
+Inventory Runtime Certification
+ตรวจ
+Operational Truth
+Stock Flow
+SN Flow
+Simple Flow
+Claim Flow
+Stock Adjustment
+Auditability
+
+Phase 2
+Purchasing Runtime Certification
+ตรวจ
+PO
+Receipt
+Supplier Credit
+Supplier Debt
+Receiving Flow
+Reconciliation
+
+Phase 3
+Sales Runtime Certification
+ตรวจ
+QuickSale
+SN Sale
+Delivery Note
+Return
+Payment
+Discount
+Projection Accuracy
+
+Phase 4
+Financial Runtime Certification
+ตรวจ
+AR
+AP
+Supplier Credit
+Cash Movement
+
+Phase 5
+Reporting Runtime Certification
+ตรวจ
+Report Truth
+Projection Truth
+Aggregation Accuracy
+
+สิ่งที่ผมชอบที่สุดใน Blueprint
+คือประโยคนี้
+P1 should not become an ERP monster.
+และ
+P1 should remain operationally calm and lightweight on the surface.
+
+นี่แหละครับคือสิ่งที่ผมคิดว่า P7 ช่วย P1 ได้มาก
+เพราะ P7 สอนเราว่า
+ลึกได้
+
+แต่ต้องไม่รก
+
+ใหญ่ได้
+
+แต่ต้องไม่วุ่นวาย
+
+สิ่งที่ผมเห็นหลัง RB
+Blueprint P1 + Discovery จาก P7 เริ่มต่อกันติดแล้ว
+Blueprint P1 เดิม
+Operational Truth
+
+Progressive Complexity
+
+Runtime Modules
+
+Business Templates
+
+P7 เพิ่ม
+Verification
+
+Continuity
+
+Recovery
+
+Runtime Discipline
+
+Milestone
+
+Regression Lock
+
+และเมื่อเอาสองชุดมารวมกัน
+ผมเริ่มเห็นภาพใหม่
+P1 Version 2
+
+ไม่ใช่การเพิ่ม Feature
+
+แต่คือ
+
+การทำให้ทุก Runtime Domain
+สามารถอธิบายได้
+
+ตรวจสอบได้
+
+ทดสอบได้
+
+Recover ได้
+
+และเชื่อถือได้
+
+พูดง่าย ๆ
+ก่อนหน้านี้
+P1 = Operational Commerce Runtime
+ตาม Blueprint เดิม
+
+แต่หลังผ่าน P7
+ผมเริ่มเห็นว่า
+P1 Future
+
+=
+
+Verified Operational Commerce Runtime
+และผมคิดว่านี่น่าจะเป็นทิศทางที่แข็งแรงที่สุดที่คุณสามารถพา P1 ไปได้ในช่วงต่อจากนี้ครับ 🚀
+
+
+
+--------------------
+
+
+UB — STEP R.1 Daily Closing Confidence
+Mission
+
+ช่วยให้เจ้าของร้านปิดร้านได้อย่างมั่นใจ
+
+Human Reality
+
+ปัจจุบันร้านรับเงินผ่าน
+
+เงินสด
+โอน
+QR
+บัตรเครดิต
+มัดจำ
+
+เมื่อสิ้นวันต้อง
+
+นับเงินสด
+เปิด Mobile Banking
+เช็คยอด QR
+เช็คยอดบัตร
+รวมยอดเอง
+เทียบกับ POS
+
+สร้างภาระและความเครียดทุกวัน
+
+Desired Outcome
+
+เจ้าของร้านเปิดหน้าเดียวแล้วตอบได้ทันทีว่า
+
+วันนี้ขายได้เท่าไร
+
+เงินสดเท่าไร
+
+โอนเท่าไร
+
+บัตรเท่าไร
+
+QR เท่าไร
+
+รวมรับเงินจริงเท่าไร
+
+ตรงกับยอดขายหรือไม่
+STEP R.1.1
+
+Daily Closing Summary Surface
+
+แสดง
+ยอดขายวันนี้
+
+จำนวนบิล
+
+กำไรขั้นต้น
+
+ยอดคืนสินค้า
+STEP R.1.2
+
+Payment Breakdown
+
+แสดง
+เงินสด
+
+โอน
+
+QR
+
+บัตร
+
+E-Wallet
+
+มัดจำ
+STEP R.1.3
+
+Closing Confidence
+
+แสดง
+ยอดขายจาก POS
+
+ยอดรับเงินจริง
+
+ส่วนต่าง
+
+สถานะ
+
+ตัวอย่าง
+
+✅ ยอดตรง
+
+หรือ
+
+⚠️ ต่าง 500 บาท
+STEP R.1.4
+
+Customer Financial Visibility
+
+ต่อยอดจาก
+
+CustomerDeposit
+DepositUsage
+CustomerReceipt
+
+แสดง
+
+ลูกค้ามัดจำ
+
+ลูกค้าค้างชำระ
+
+รับชำระแล้ว
+
+ยอดคงเหลือ
+Not In Scope
+
+ยังไม่ทำ
+
+เช็คหน่วยงานราชการ
+Credit Settlement ขั้นสูง
+BI Dashboard
+Forecast
+Multi-Year Analytics
+Current Recommendation
+
+หลังจาก Discovery ทั้ง Prisma และ Human Reality
+
+ผมไม่แนะนำให้เริ่มจาก Monthly Report
+
+แต่ให้เริ่มจาก
+
+R.1.1 Daily Closing Summary Surface
+
+ก่อน
+
+เพราะนี่คือภาระที่เกิดขึ้นทุกวันและสร้างคุณค่าได้ทันที
+
+นี่เป็นตัวอย่างที่ดีมากของสิ่งที่ Blueprint ค้นพบครับ
+
+เราไม่ได้สร้าง
+
+Sales Report
+
+เราเริ่มสร้าง
+
+Owner Confidence System
+
+และ Sales Report เป็นเพียง Capability ตัวแรกที่ช่วยให้เกิดความมั่นใจนั้น
+
+STATUS:
+🟢 R.1 Mission Clarified
+🟢 Human Reality Validated
+🟢 Desired Outcome Validated
+🟢 Current Step: R.1.1 Daily Closing Summary Surface Design
+🟡 รอออกแบบ Data Contract และ UI Surface V1 จาก Prisma จริงของ P1 ต่อไป
+
+
+UB Proposal
+
+ผมคิดว่าเราควรเพิ่มเข้า Blueprint P1 ในหมวด Runtime Certification Direction
+
+Financial Runtime Certification (Candidate)
+
+Mission
+
+Verify that financial operational truth can be trusted before expanding reporting depth.
+
+Coverage
+
+Payment Runtime
+Customer Deposit Runtime
+Customer Receipt Runtime
+Supplier Credit Runtime
+Daily Closing Runtime
+
+Verification Goals
+
+Single Source of Truth
+
+Reconciliation Accuracy
+
+Payment Aggregation Accuracy
+
+Deposit Allocation Accuracy
+
+Customer Debt Visibility
+
+Daily Closing Confidence
+
+Success Criteria
+
+Owner can verify end-of-day financial state from one operational surface.
+
+System reduces closing burden rather than adding reporting complexity.
+
+ผมคิดว่า UB ตัวนี้จะเชื่อม
+
+Blueprint P1 เดิม
++
+Human Reality จากภรรยาคุณ
++
+Discovery จาก P7
+
+เข้าด้วยกันได้พอดี
+
+และทำให้ Daily Closing Confidence ไม่ใช่ Feature แยก
+
+แต่กลายเป็นส่วนหนึ่งของ Verified Operational Commerce Runtime โดยตรง
+
+STATUS:
+🟢 RB Blueprint P1 Completed
+🟢 พบการเชื่อมต่อระหว่าง P1 และ P7 ที่ถูก Layer
+🟢 ยืนยัน R.1 Daily Closing Confidence เป็น Runtime Visibility ไม่ใช่ Reporting Feature
+🟢 แนะนำ UB: Financial Runtime Certification Candidate
+🟢 Current Step: R.1.1 Daily Closing Summary Surface Design
+🟡 รอออกแบบ Data Contract V1 จาก Payment / Deposit / Receipt Runtime จริงของ P1 ต่อไป
+
+
+----------
+
+
+UB — Financial Runtime Certification (Candidate)
+Status
+STATUS: ACTIVE DISCOVERY
+CERTIFICATION STATUS: CANDIDATE
+SOURCE: Human Reality Validation
+Mission
+
+Verify that financial operational truth can be trusted before expanding reporting depth.
+
+ยืนยันว่า Financial Operational Truth สามารถเชื่อถือได้ก่อนขยาย Reporting Layer เพิ่มเติม
+
+Human Reality Source
+
+Operational feedback from real store usage revealed a recurring burden:
+
+การใช้งานจริงของร้านค้าพบภาระซ้ำที่เกิดขึ้นทุกวัน
+
+End-of-day reconciliation burden
+
+Cash counting
+
+Transfer verification
+
+Card verification
+
+Deposit visibility
+
+Customer payment tracking
+
+ผู้ใช้งานไม่ได้ต้องการรายงานเพิ่มเติมเป็นหลัก
+
+ผู้ใช้งานต้องการความมั่นใจว่าสถานะทางการเงินของร้านถูกต้อง
+
+Core Discovery
+
+Previous assumption:
+
+Need more sales reports
+
+Validated reality:
+
+Need confidence before closing the shop
+
+Sales reporting is a capability.
+
+Closing confidence is the desired outcome.
+
+Runtime Scope
+Payment Runtime
+Cash
+
+Transfer
+
+QR
+
+Card
+
+E-Wallet
+Customer Deposit Runtime
+Deposits
+
+Deposit Usage
+
+Outstanding Deposits
+Customer Receipt Runtime
+Customer Payments
+
+Receipt Allocation
+
+Outstanding Customer Balance
+Daily Closing Runtime
+Sales Total
+
+Payment Breakdown
+
+Reconciliation
+
+Difference Detection
+
+Closing Confidence
+Verification Goals
+Operational Truth
+
+Single source of truth exists for every financial domain.
+
+Reconciliation Accuracy
+
+Aggregated payment totals must match operational reality.
+
+Payment Aggregation Accuracy
+
+Cash
+
+Transfer
+
+QR
+
+Card
+
+E-Wallet
+
+must be accurately aggregated from runtime data.
+
+Deposit Allocation Accuracy
+
+Deposit balance must remain explainable and traceable.
+
+Customer Debt Visibility
+
+Outstanding customer obligations must be visible.
+
+Daily Closing Confidence
+
+Owner should be able to determine:
+
+Can I close the shop with confidence?
+
+from a single operational surface.
+
+Runtime Certification Success Criteria
+Level 1
+
+Daily Closing Confidence Surface
+
+Owner can immediately verify:
+
+Sales Today
+
+Gross Profit
+
+Cash
+
+Transfer
+
+Card
+
+QR
+
+Total Collected
+
+Difference
+Level 2
+
+Customer Financial Visibility
+
+Owner can immediately verify:
+
+Outstanding Customer Balance
+
+Deposits
+
+Payments Received
+
+Remaining Obligations
+Level 3
+
+Financial Runtime Confidence
+
+System reduces reconciliation burden instead of increasing reporting complexity.
+
+Relationship To R.1
+
+Current Active Agenda:
+
+R.1 Daily Closing Confidence
+
+Interpretation:
+
+R.1
+=
+First Financial Runtime Certification Surface
+
+Not merely a reporting feature.
+
+Strategic Alignment
+
+Aligned with:
+
+Operational Truth First
+
+Runtime First
+
+Human Reality First
+
+Reduce Cognitive Burden
+
+Verified Operational Commerce Runtime
+
+ผมคิดว่า UB นี้แข็งแรงมากครับ เพราะมันทำให้
+
+รายงานขาย
+
+ถูกยกระดับเป็น
+
+Financial Runtime Visibility
+
+และทำให้ P1 เดินในทิศทางเดียวกับสิ่งที่ P7 ค้นพบ คือ
+
+ระบบที่ดีไม่ใช่ระบบที่แสดงข้อมูลเยอะที่สุด
+
+แต่เป็นระบบที่ช่วยให้ผู้ใช้มั่นใจได้มากที่สุดว่าหน้าที่สำคัญถูกจัดการเรียบร้อยแล้ว
+
+STATUS:
+🟢 UB Completed
+🟢 Financial Runtime Certification Candidate Added
+🟢 R.1 Re-anchored as Financial Runtime Visibility
+🟢 Human Reality Validated
+🟢 Current Step: R.1.1 Daily Closing Summary Surface Design
+🟡 รอออกแบบ Data Contract V1 และ Operational Surface V1 ต่อไป
+
+
+UB (Blueprint Update Candidate)
+STEP P1-FIN-DC-03
+Daily Closing Range V1
+
+Status:
+LOCK READY
+
+Validated:
+- Single Date
+- Date Range
+- Credit-aware Closing
+- Real Database
+- Real User Validation
+
+Discovery:
+User immediately requested Quick Range capability
+after successful validation.
+
+Next Agenda:
+STEP P1-FIN-DC-04
+Daily Closing Quick Range & Session Continuity
+
+ผมเห็นด้วยให้เปิดวาระใหม่ได้ทันที และเดินต่อที่ Quick Range Presets ก่อน เพราะเป็นสิ่งที่ผู้ใช้จริงร้องขอในนาทีแรกหลังใช้งานครับ।
+
+
+UB
+STEP P1-AUTH-01.2
+Default Persistent Session
+
+Status:
+COMPLETE
+
+Change:
+- Remember Me enabled by default
+- Reduce accidental 1-day refresh-token sessions
+- Align POS behavior with real retail usage
+
+Expected Outcome:
+- Fewer unexpected logouts
+- Reduced user frustration
+- Improved session continuity
+
+
+UB — P1 Finance Daily Closing Evolution
+
+Status: COMPLETED & LOCKED ✅
+
+วาระที่ปิดแล้ว
+STEP P1-FIN-DC-01
+
+Daily Closing Foundation
+
+สร้าง Daily Closing Summary API
+เชื่อม FE ↔ BE สำเร็จ
+โหลดข้อมูลปิดร้านได้จริง
+Build ผ่าน
+
+Status: LOCKED
+
+STEP P1-FIN-DC-02
+
+Credit-Aware Daily Closing
+
+Discovery จากการใช้งานจริง:
+
+ยอดขายไม่ตรงกับยอดรับเงินจริง เพราะมีการขายเครดิต
+
+ดำเนินการ:
+
+แยก "ยอดขายรวม"
+แยก "ยอดเครดิต/ค้างชำระ"
+แยก "รับเงินจริง"
+ปรับสูตรความต่าง
+เปลี่ยนการตีความจาก
+เงินหาย
+เป็น
+เครดิตค้างชำระ
+
+ผลลัพธ์:
+
+ภรรยาผู้ใช้งานจริงยืนยันว่าข้อมูลสมเหตุสมผล
+ความต่างติดลบปลอมถูกกำจัด
+
+Status: LOCKED
+
+STEP P1-FIN-DC-03
+
+Date Range Support
+
+Discovery จากผู้ใช้งานจริง:
+
+อยากดูตั้งแต่วันที่ 1 ถึงวันที่ 10
+
+ดำเนินการ:
+
+เพิ่ม fromDate
+เพิ่ม toDate
+รองรับ Single Day
+รองรับ Date Range
+รองรับปุ่ม "ดูวันเดียว"
+
+ผลลัพธ์:
+
+ดูข้อมูลสะสมหลายวันได้
+ใช้งานผ่านผู้ใช้จริงแล้ว
+
+Status: LOCKED
+
+STEP P1-FIN-DC-04
+
+Session Recovery Improvement
+
+Discovery จากผู้ใช้งานจริง:
+
+Session หมดอายุแล้วต้อง Login ใหม่บ่อย
+
+ดำเนินการ:
+
+ตรวจสอบ auth flow
+ตรวจสอบ refresh flow
+ปรับ Remember Me เป็นค่าเริ่มต้น
+ลดโอกาสหลุด session ระหว่างใช้งาน
+
+ผลลัพธ์:
+
+ลดภาระ Login ซ้ำ
+ลด User Friction
+
+Status: LOCKED
+
+STEP P1-FIN-DC-05
+
+Finance Navigation Integration
+
+ดำเนินการ:
+
+เพิ่มเมนู "สรุปปิดร้าน"
+เชื่อม Sidebar → Daily Closing
+เข้าถึงได้จากเมนูปกติ
+ไม่ต้องพิมพ์ URL
+
+ผลลัพธ์:
+
+กลายเป็นส่วนหนึ่งของ Finance Module
+พร้อมให้ผู้ใช้ใช้งานจริง
+
+Status: LOCKED
+
+Discovery สำคัญ
+
+การ Validate รอบนี้ยืนยันอีกครั้งว่า
+
+Human Reality
+>
+Architecture Assumption
+
+Requirement ใหม่ทั้งหมดเกิดจาก
+
+ผู้ใช้งานจริงเดินมาดู
+ผู้ใช้งานจริงถาม
+ผู้ใช้งานจริงใช้งาน
+ผู้ใช้งานจริงสับสน
+ผู้ใช้งานจริงต้องการเพิ่ม
+
+ไม่ใช่จากการออกแบบล่วงหน้า
+
+Last Known Good State
+
+✅ Daily Closing Summary ใช้งานได้
+
+✅ Credit-Aware Closing ใช้งานได้
+
+✅ Date Range ใช้งานได้
+
+✅ Sidebar Integration ใช้งานได้
+
+✅ Build ผ่าน
+
+✅ Production Path Stable
+
+Next Candidate Agenda
+
+STEP P1-FIN-DC-06
+Daily Closing UX Refinement
+
+หัวข้อที่รอพิจารณาในอนาคต:
+
+Export PDF
+Export Excel
+Saved Period Presets
+วันนี้
+เมื่อวาน
+สัปดาห์นี้
+เดือนนี้
+Daily Closing History
+Daily Closing Snapshot Lock
+Mobile Layout Refinement
+
+Current Recommendation: ปล่อยให้ผู้ใช้ใช้งานจริงต่อก่อน และเก็บ Reality Signal เพิ่มเติมจากภรรยาและหน้างานจริง
+
+UB Complete ✅

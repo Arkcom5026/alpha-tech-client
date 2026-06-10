@@ -1,5 +1,3 @@
-
-
 // src/routes/financeRoutes.jsx
 
 import CreateCustomerDepositPage from "@/features/customerDeposit/pages/CreateCustomerDepositPage";
@@ -7,6 +5,7 @@ import ListCustomerDepositPage from "@/features/customerDeposit/pages/ListCustom
 import FinanceDashboardPage from "@/features/finance/pages/FinanceDashboardPage";
 import AccountsReceivablePage from "@/features/finance/pages/AccountsReceivablePage";
 import CustomerCreditPage from "@/features/finance/pages/CustomerCreditPage";
+import DailyClosingPage from "@/features/finance/pages/DailyClosingPage";
 
 // Customer Receipt
 import CustomerReceiptListPage from "@/features/customerReceipt/pages/CustomerReceiptListPage";
@@ -24,7 +23,6 @@ import ListReceiptPaymentsSupplierPage from "@/features/supplierPayment/pages/Li
 import { CreateAdvanceSupplierPaymentPage } from "@/features/supplierPayment/pages/CreateAdvanceSupplierPaymentPage";
 import { CreateReceiptSupplierPaymentPage } from "@/features/supplierPayment/pages/CreateReceiptSupplierPaymentPage";
 
-
 import SupplierPaymentDetailPage from "@/features/supplierPayment/pages/SupplierPaymentDetailPage";
 
 const financeRoutes = {
@@ -33,6 +31,12 @@ const financeRoutes = {
     {
       index: true,
       element: <FinanceDashboardPage />, // ✅ หน้า Dashboard ของ Finance
+    },
+
+    // ✅ Daily Closing Confidence — สรุปปิดร้านประจำวัน
+    {
+      path: 'daily-closing',
+      element: <DailyClosingPage />,
     },
 
     // ✅ Accounts Receivable (ลูกหนี้/ยอดค้าง)
@@ -46,6 +50,7 @@ const financeRoutes = {
       path: 'customer-credit',
       element: <CustomerCreditPage />,
     },
+
     {
       path: 'refunds',
       children: [
@@ -57,16 +62,15 @@ const financeRoutes = {
 
     {
       path: 'payments',
-      children: [        
-        { path: 'advance', element: <ListAdvancePaymentsSupplierPage /> },     
-        { path: 'receipt', element: <ListReceiptPaymentsSupplierPage />, },   
-        { path: 'detail/:supplierId', element: <SupplierPaymentDetailPage /> },        
+      children: [
+        { path: 'advance', element: <ListAdvancePaymentsSupplierPage /> },
+        { path: 'receipt', element: <ListReceiptPaymentsSupplierPage /> },
+        { path: 'detail/:supplierId', element: <SupplierPaymentDetailPage /> },
         { path: 'advance/supplier/:supplierId', element: <CreateAdvanceSupplierPaymentPage /> },
-        { path: 'receipt/supplier/:supplierId', element: <CreateReceiptSupplierPaymentPage />, },
-
-
-      ]
+        { path: 'receipt/supplier/:supplierId', element: <CreateReceiptSupplierPaymentPage /> },
+      ],
     },
+
     {
       path: 'customer-receipts',
       children: [
@@ -81,12 +85,9 @@ const financeRoutes = {
     {
       path: 'deposit',
       children: [
-        { index: true, element: <ListCustomerDepositPage />, }, // ✅ เส้นทางใหม่: รับเงินมัดจำ
+        { index: true, element: <ListCustomerDepositPage /> }, // ✅ เส้นทางใหม่: รับเงินมัดจำ
         { path: 'create', element: <CreateCustomerDepositPage /> },
-        
-
-
-      ]
+      ],
     },
 
     // เพิ่ม children routes เพิ่มเติมได้ที่นี่
@@ -94,9 +95,3 @@ const financeRoutes = {
 };
 
 export default financeRoutes;
-
-
-
-
-
-

@@ -1,34 +1,20 @@
-
-
-
-
-
-
-
-
 // 📁 FILE: src/features/finance/store/financeStore.js
 // ✅ Production-grade Zustand store (store-first)
-// - Actions end with Action
-// - No direct axios calls here: use financeApi (which should use apiClient.js)
-// - UI-based error messages (no dialog)
-// - Defensive param normalization
 
 import { create } from 'zustand';
 
 import {
+  getDailyClosingSummary,
   getAccountsReceivableSummary,
   getAccountsReceivableRows,
   getCustomerCreditSummary,
   getCustomerCreditRows,
 } from '@/features/finance/api/financeApi';
 
-// ✅ DEV-only logger (no console.* in prod path)
 const devError = (...args) => {
   try {
     if (import.meta?.env?.DEV) console.error(...args);
-  } catch (_) {
-    // ignore
-  }
+  } catch (_) {}
 };
 
 const normalizeQueryParams = (raw = {}) => {
@@ -37,22 +23,21 @@ const normalizeQueryParams = (raw = {}) => {
   const keyword = typeof p.keyword === 'string' ? p.keyword.trim() : '';
   const fromDate = typeof p.fromDate === 'string' ? p.fromDate.trim() : '';
   const toDate = typeof p.toDate === 'string' ? p.toDate.trim() : '';
+  const date = typeof p.date === 'string' ? p.date.trim() : '';
   const status = typeof p.status === 'string' ? p.status.trim() : '';
 
-  // ✅ IMPORTANT: Do NOT send branchId from FE (server must use req.user.branchId)
-  const out = {
+  return {
     ...(keyword ? { keyword } : {}),
     ...(fromDate ? { fromDate } : {}),
     ...(toDate ? { toDate } : {}),
+    ...(date ? { date } : {}),
     ...(status ? { status } : {}),
   };
-
-  return out;
 };
 
 const mapErrorMessage = (err, fallback) => {
   try {
-    const apiMsg = err?.response?.data?.message;
+    const apiMsg = err?.response?.data?.message || err?.response?.data?.error;
     if (typeof apiMsg === 'string' && apiMsg.trim()) return apiMsg.trim();
 
     const msg = err?.message;
@@ -64,10 +49,36 @@ const mapErrorMessage = (err, fallback) => {
   }
 };
 
-const useFinanceStore = create((set, get) => ({
-  // ============================================================
-  // ✅ AR: Accounts Receivable (ลูกหนี้/ยอดค้าง)
-  // ============================================================
+const useFinanceStore = create((set) => ({
+  dailyClosingSummary: null,
+  dailyClosingLoading: false,
+  dailyClosingError: null,
+
+  resetDailyClosingErrorAction: () => set({ dailyClosingError: null }),
+
+  fetchDailyClosingSummaryAction: async (params = {}) => {
+    try {
+      const q = normalizeQueryParams(params);
+      set({ dailyClosingLoading: true, dailyClosingError: null });
+
+      const data = await getDailyClosingSummary(q);
+
+      set({
+        dailyClosingSummary: data || null,
+        dailyClosingLoading: false,
+      });
+
+      return data || null;
+    } catch (err) {
+      devError('[financeStore] fetchDailyClosingSummaryAction error:', err);
+      set({
+        dailyClosingLoading: false,
+        dailyClosingError: mapErrorMessage(err, 'โหลดข้อมูลสรุปปิดร้านไม่สำเร็จ'),
+      });
+      return null;
+    }
+  },
+
   arSummary: null,
   arRows: [],
   arLoading: false,
@@ -82,7 +93,6 @@ const useFinanceStore = create((set, get) => ({
 
       const data = await getAccountsReceivableSummary(q);
 
-      // Expected shape (flexible): { outstandingTotal, invoiceCount, customerCount }
       set({ arSummary: data || null, arLoading: false });
       return data;
     } catch (err) {
@@ -115,7 +125,6 @@ const useFinanceStore = create((set, get) => ({
     }
   },
 
-  // ✅ Convenience: load both summary + rows
   fetchAccountsReceivableAction: async (params = {}) => {
     try {
       const q = normalizeQueryParams(params);
@@ -145,9 +154,6 @@ const useFinanceStore = create((set, get) => ({
     }
   },
 
-  // ============================================================
-  // ✅ Customer Credit (เครดิตลูกค้า)
-  // ============================================================
   customerCreditSummary: null,
   customerCreditRows: [],
   customerCreditLoading: false,
@@ -224,11 +230,3 @@ const useFinanceStore = create((set, get) => ({
 }));
 
 export default useFinanceStore;
-
-
-
-
-
-
-
-

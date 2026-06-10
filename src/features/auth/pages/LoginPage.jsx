@@ -42,7 +42,7 @@ const LoginPage = () => {
 
   const [emailOrPhone, setEmailOrPhone] = useState(() => rememberedIdentifier || '');
   const [password, setPassword] = useState('');
-  const [rememberMe, setRememberMe] = useState(() => Boolean(rememberedSessionFlag || rememberedIdentifier));
+  const [rememberMe, setRememberMe] = useState(true);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -111,9 +111,10 @@ const LoginPage = () => {
   }, [emailOrPhone, rememberedIdentifier]);
 
   useEffect(() => {
-    setRememberMe(Boolean(rememberedSessionFlag || rememberedIdentifier));
+    if (rememberedSessionFlag || rememberedIdentifier) {
+      setRememberMe(true);
+    }
   }, [rememberedSessionFlag, rememberedIdentifier]);
-  const { cartItems, fetchCartAction, mergeCartAction, clearCart } = useCartStore();
 
   useEffect(() => {
     // ✅ ระหว่าง bootstrap auth ยังไม่ redirect

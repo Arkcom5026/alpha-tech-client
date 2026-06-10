@@ -325,12 +325,12 @@ const DeliveryNoteForm = ({ sale, saleItems, config, hideDate, setHideDate }) =>
             <table className="w-full text-xs mb-3 border border-black table-fixed">
               <thead className="bg-gray-100">
                 <tr className="border-b border-black">
-                  <th className="border border-black px-2 h-[24px] w-[8%]">ลำดับ<br />ITEM</th>
-                  <th className="border border-black px-2 h-[24px] w-[32%]">รายการ<br />DESCRIPTION</th>
-                  <th className="border border-black px-2 h-[24px] w-[10%]">จำนวน<br />QTY</th>
-                  <th className="border border-black px-2 h-[24px] w-[10%]">หน่วย<br />UNIT</th>
-                  <th className="border border-black px-2 h-[24px] w-[20%] text-right">ราคาต่อหน่วย<br />UNIT PRICE</th>
-                  <th className="border border-black px-2 h-[24px] w-[20%] text-right">จำนวนเงิน<br />AMOUNT</th>
+                  <th className="border border-black px-2 h-[24px] w-[7%]">ลำดับ<br />ITEM</th>
+                  <th className="border border-black px-2 h-[24px] w-[47%]">รายการ<br />DESCRIPTION</th>
+                  <th className="border border-black px-2 h-[24px] w-[8%]">จำนวน<br />QTY</th>
+                  <th className="border border-black px-2 h-[24px] w-[8%]">หน่วย<br />UNIT</th>
+                  <th className="border border-black px-2 h-[24px] w-[15%] text-right">ราคาต่อหน่วย<br />UNIT PRICE</th>
+                  <th className="border border-black px-2 h-[24px] w-[15%] text-right">จำนวนเงิน<br />AMOUNT</th>
                 </tr>
               </thead>
               <tbody>
@@ -338,13 +338,15 @@ const DeliveryNoteForm = ({ sale, saleItems, config, hideDate, setHideDate }) =>
                   const ln = calcLine(item);
                   const runningIndex = (pageOffsets[pageIndex] ?? 0) + index; // display continuity
                   return (
-                    <tr key={item.id ?? item.stockItemId ?? `row-${pageIndex}-${index}`}>
-                      <td className="border border-black px-1 text-center h-[24px]">{runningIndex + 1}</td>
-                      <td className="border border-black px-2 h-[24px]">{item.productName}</td>
-                      <td className="border border-black px-1 text-center h-[24px]">{ln.qty}</td>
-                      <td className="border border-black px-1 text-center h-[24px]">{item.unit || '-'}</td>
-                      <td className="border border-black px-2 text-right h-[24px] tabular-nums">{formatCurrency(ln.unitInc)}</td>
-                      <td className="border border-black px-2 text-right h-[24px] tabular-nums font-medium">{formatCurrency(ln.total)}</td>
+                    <tr key={item.id ?? item.stockItemId ?? `row-${pageIndex}-${index}`} className="align-top">
+                      <td className="border border-black px-1 py-1 text-center align-top min-h-[24px]">{runningIndex + 1}</td>
+                      <td className="border border-black px-2 py-1 whitespace-pre-wrap break-words align-top leading-relaxed">
+                        {item.productName}
+                      </td>
+                      <td className="border border-black px-1 py-1 text-center align-top min-h-[24px]">{ln.qty}</td>
+                      <td className="border border-black px-1 py-1 text-center align-top min-h-[24px]">{item.unit || '-'}</td>
+                      <td className="border border-black px-2 py-1 text-right align-top tabular-nums">{formatCurrency(ln.unitInc)}</td>
+                      <td className="border border-black px-2 py-1 text-right align-top tabular-nums font-medium">{formatCurrency(ln.total)}</td>
                     </tr>
                   );
                 })}

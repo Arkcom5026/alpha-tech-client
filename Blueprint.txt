@@ -1174,3 +1174,146 @@ Mobile Layout Refinement
 Current Recommendation: ปล่อยให้ผู้ใช้ใช้งานจริงต่อก่อน และเก็บ Reality Signal เพิ่มเติมจากภรรยาและหน้างานจริง
 
 UB Complete ✅
+
+
+--------------
+
+
+UB — STEP P1-DOC-01
+Operational Document Certification
+STEP P1-DOC-01.2-A
+Sale Document Include Contract Extraction
+
+Status: LOCKED ✅
+
+Completed
+
+สร้างโครงสร้างใหม่ตามมาตรฐาน P7
+
+src/modules/
+  sales/
+    contracts/
+      saleDocument.include.js
+    projections/
+Engineering Lift Applied
+
+ก่อนหน้า
+
+saleController.js
+  └─ Prisma Include ฝังอยู่ใน Controller
+
+หลังปรับ
+
+src/modules/sales/contracts/
+  └─ saleDocument.include.js
+
+saleController.js
+  └─ ใช้งานผ่าน Contract
+Verification
+Backend
+npm run dev
+
+Result
+
+✅ Server running on port 5000
+
+PASS ✅
+
+Runtime
+
+เปิด
+
+/pos/sales/delivery-note/print/:saleId
+
+Result
+
+✅ โหลดเอกสารได้
+✅ ไม่พบ Runtime Error
+✅ ไม่พบ Import Error
+✅ ไม่พบ Regression
+
+PASS ✅
+
+Architecture Discovery
+
+P1 Backend Convergence Rule ได้ถูก Validate จริงครั้งแรก
+
+แนวทางใหม่
+
+Touch Flow
+↓
+Extract Low-Risk Logic
+↓
+src/modules/<domain>
+↓
+Controller Becomes Thinner
+
+โดยไม่ต้องทำ Big Refactor
+
+Current P1 Engineering Standard
+
+เมื่อมีการสร้างใหม่หรือ Extract ใหม่
+
+ให้ใช้
+
+src/modules/<domain>/
+
+เป็นเป้าหมายเริ่มต้น
+
+หลีกเลี่ยงการสร้างมาตรฐานคู่ขนาน
+
+src/features/<domain>/
+
+สำหรับ Backend
+
+Current Structure
+src/modules/
+  sales/
+    contracts/
+      saleDocument.include.js
+    projections/
+
+Status
+
+sales module bootstrap
+= STARTED ✅
+Active Agenda
+STEP P1-DOC-01.1
+Operational Document Certification
+
+Status: ACTIVE 🚀
+
+Current Focus
+
+Audit Human Reality Gap
+
+ตรวจสอบว่า
+
+ผู้ติดต่อ
+เวลานัดหมาย
+เวลาส่ง
+เวลารับ
+หมายเหตุหน้างาน
+
+มีอยู่ในระบบหรือไม่
+
+และควร Project ลงเอกสารอย่างไร
+
+Integrity Status
+Business Logic      ✅ Stable
+Server Runtime      ✅ Stable
+Document Runtime    ✅ Stable
+Sales Module        ✅ Started
+Regression Status   ✅ None Detected
+
+Mission Alignment:
+
+✅ Human Reality First
+✅ Operational Truth First
+✅ Touch → Improve → Converge
+✅ P1 → P7 Architecture Convergence
+✅ Engineering Standard Lift Active
+
+
+----------------
+

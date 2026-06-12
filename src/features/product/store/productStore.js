@@ -36,6 +36,8 @@ const initialDropdowns = {
   profiles: [],
   templates: [],
   productTemplates: [],
+  // ✅ Product.unit runtime truth
+  units: [],
   // ✅ Brand (optional extension)
   brands: [],
   // ✅ ProductType ↔ Brand mapping (auto-learn)
@@ -239,7 +241,6 @@ const useProductStore = create((set, get) => ({
       if (cleanedPayload?.productProfileId === '' || cleanedPayload?.productProfileId == null) delete cleanedPayload.productProfileId
       delete cleanedPayload.productTemplateId;
       delete cleanedPayload.unit;
-      delete cleanedPayload.unitId;
 
       const data = await createProduct(cleanedPayload);
       set({ isLoading: false });
@@ -256,7 +257,6 @@ const useProductStore = create((set, get) => ({
     try {
       const cleanedPayload = { ...payload };
       delete cleanedPayload.unit;
-      delete cleanedPayload.unitId;
 
       try {
         const data = await updateProduct(id, cleanedPayload);
@@ -509,6 +509,17 @@ const useProductStore = create((set, get) => ({
         raw?.data?.templates?.data
       );
 
+      const units = pickArrDeep(
+        raw?.units,
+        raw?.unitList,
+        raw?.unit_list,
+        raw?.productUnits,
+        raw?.data?.units,
+        raw?.data?.units?.items,
+        raw?.data?.units?.data,
+        raw?.items?.units
+      );
+
                   const dropdowns = {
         categories,
         productTypes,
@@ -516,6 +527,7 @@ const useProductStore = create((set, get) => ({
         productProfiles: profiles,
         templates,
         productTemplates: templates,
+        units,
         brands: normalizedBrands,
         productTypeBrands,
       };

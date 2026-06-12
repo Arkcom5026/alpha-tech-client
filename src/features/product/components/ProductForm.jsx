@@ -201,6 +201,14 @@ const ProductForm = ({
               ? Number(data.brand.id)
               : '',
 
+        // ✅ Product.unit = Runtime Truth (restored)
+        unitId:
+          data?.unitId !== '' && data?.unitId != null
+            ? Number(data.unitId)
+            : data?.unit?.id != null
+              ? Number(data.unit.id)
+              : '',
+
         mode: data?.mode
           ? String(data.mode).toUpperCase()
           : data?.trackSerialNumber
@@ -422,6 +430,15 @@ const ProductForm = ({
     return _.sortBy(uniq, (t) => String(t?.name ?? ''));
   }, [dropdowns?.productTemplates, dropdowns?.templates, dropdowns?.productTemplateItems]);
 
+  // ✅ Product.unit = Runtime Truth (not Template/Profile)
+  const safeUnits = useMemo(() => {
+    const raw = dropdowns?.units ?? dropdowns?.unitItems ?? dropdowns?.productUnits ?? [];
+    const arr = Array.isArray(raw) ? raw : [];
+    const filtered = arr.filter((u) => u && u.id != null);
+    const uniq = _.uniqBy(filtered, (u) => String(u.id));
+    return _.sortBy(uniq, (u) => String(u?.name ?? ''));
+  }, [dropdowns?.units, dropdowns?.unitItems, dropdowns?.productUnits]);
+
   // ✅ Selected brand name (for UX helpers / de-dup hints)
   const selectedBrandIdStr = toStr(watch('brandId'));
   const selectedBrandName = useMemo(() => {
@@ -561,7 +578,7 @@ const ProductForm = ({
       reset(prepared);
       prevDefaults.current = prepared;
     }
-  }, [mode, defaultValues, dropdowns?.categories?.length, dropdowns?.productTypes?.length, reset, prepareDefaults]);
+  }, [mode, defaultValues, dropdowns?.categories?.length, dropdowns?.productTypes?.length, dropdowns?.units?.length, reset, prepareDefaults]);
 
   const handleFormSubmit = async (data) => {
     const cleanBase = _.omit(data || {}, ['initialQty']);
@@ -588,6 +605,7 @@ const ProductForm = ({
       categoryId: normalizeId(cleanBase.categoryId),
       productTypeId: normalizeId(cleanBase.productTypeId),
       brandId: normalizeId(cleanBase.brandId),
+      unitId: normalizeId(cleanBase.unitId),
       productProfileId: normalizeId(cleanBase.productProfileId),
       productTemplateId: normalizeId(cleanBase.productTemplateId),
 
@@ -1160,6 +1178,38 @@ const ProductForm = ({
                     </select>
                   )}
                 />
+              </div>
+
+              <div>
+                <label htmlFor="product-unit" className="block font-medium mb-1 text-gray-700">
+                  หน่วยนับสินค้า
+                </label>
+                <Controller
+                  name="unitId"
+                  control={control}
+                  defaultValue=""
+                  render={({ field }) => (
+                    <select
+                      id="product-unit"
+                      className="w-full p-2 border rounded-md focus:ring-blue-400 focus:border-blue-400 text-gray-800"
+                      value={field.value === '' || field.value == null ? '' : String(field.value)}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        field.onChange(v === '' ? '' : Number(v));
+                      }}
+                    >
+                      <option value="">-- เลือกหน่วยนับ --</option>
+                      {safeUnits.map((u) => (
+                        <option key={`unit_${String(u.id)}`} value={String(u.id)}>
+                          {u.name}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                />
+                <div className="mt-1 text-xs text-gray-500">
+                  * Product.unit คือหน่วยจริงของสินค้า ไม่ใช้ ProductTemplate ในวาระนี้
+                </div>
               </div>
             </div>
 

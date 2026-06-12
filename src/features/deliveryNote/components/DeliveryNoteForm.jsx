@@ -1,18 +1,25 @@
-
-
-
-
-
-
-
-
-
 // src/features/deliveryNote/components/DeliveryNoteForm.jsx
 
 // ✅ DeliveryNoteForm ปรับโครงสร้างให้ตรงกับ BillLayoutFullTax 100%
 import React from 'react';
+import { buildCustomerFullAddress } from '@features/customer/utils/customerAddressFormatter';
 
-const DeliveryNoteForm = ({ sale, saleItems, config, hideDate, setHideDate }) => {
+const DeliveryNoteForm = ({
+  sale,
+  saleItems,
+  config,
+  hideDate,
+  setHideDate,
+
+  // ✅ Document Workspace / Document Line Editor
+  editableDocumentLines = false,
+  editingLineKey = null,
+  lineDrafts = {},
+  savingLineKey = null,
+  onToggleDocumentLineEdit,
+  onChangeDocumentLineDraft,
+  onSaveDocumentLine,
+}) => {
   if (!sale || !saleItems || !config) {
     return <div className="p-4 text-center text-gray-600">ไม่พบข้อมูลใบส่งของ</div>;
   }
@@ -27,7 +34,7 @@ const DeliveryNoteForm = ({ sale, saleItems, config, hideDate, setHideDate }) =>
     return `${day} ${thMonths[month]} ${year}`;
   };
 
-    const formatCurrency = (val) => {
+  const formatCurrency = (val) => {
     const num = Number.parseFloat(val ?? 0);
     if (!Number.isFinite(num)) return '0.00';
     return num.toLocaleString('en-US', {
@@ -35,6 +42,7 @@ const DeliveryNoteForm = ({ sale, saleItems, config, hideDate, setHideDate }) =>
       maximumFractionDigits: 2,
     });
   };
+
   const vatRate = Number.isFinite(Number(sale.vatRate)) ? Number(sale.vatRate) : 7;
 
   // ✅ numeric helpers (production-safe)
@@ -42,17 +50,14 @@ const DeliveryNoteForm = ({ sale, saleItems, config, hideDate, setHideDate }) =>
     const n = Number(v);
     return Number.isFinite(n) ? n : 0;
   };
+
   const round2 = (n) => Number((toNumber(n)).toFixed(2));
 
   // ✅ Line calculator (VAT-INCLUDED standard)
-  // - หน้างาน/ระบบนี้ถือว่า “ราคาขาย” เป็น INC-VAT (Gross) เป็นหลัก
-  // - หลีกเลี่ยงการ gross-up จาก EX-VAT เพื่อตัดปัญหา VAT ซ้ำ
-  // - ถ้ามี split (base+vat) จาก BE ให้ใช้เป็น truth ได้เลย
   const calcLine = (item) => {
     const qty = toNumber(item?.quantity);
     const discount = toNumber(item?.discount);
 
-    // Prefer explicit EX/VAT splits (most reliable)
     const baseUnitRaw = item?.basePrice ?? item?.unitPriceExVat ?? item?.priceExVat;
     const vatUnitRaw = item?.vatAmount ?? item?.vatPerUnit;
 
@@ -66,31 +71,24 @@ const DeliveryNoteForm = ({ sale, saleItems, config, hideDate, setHideDate }) =>
       return { qty, unitInc, beforeVat, vatAmount, total };
     }
 
-    // If we only have an explicit INC-VAT price, use it directly (VAT-included)
     const incUnitRaw = item?.priceIncVat ?? item?.unitPriceIncVat ?? item?.unitPrice ?? item?.sellPrice;
     if (incUnitRaw != null) {
       const unitInc = round2(Math.max(toNumber(incUnitRaw) - discount, 0));
       const total = round2(unitInc * qty);
-
-      // ✅ Extract VAT from gross (supports future VAT change: 7% → 10% etc.)
       const vatAmount = round2(total > 0 ? (total * vatRate) / (100 + vatRate) : 0);
       const beforeVat = round2(total - vatAmount);
 
       return { qty, unitInc, beforeVat, vatAmount, total };
     }
 
-    // Fallback (VAT-included): treat item.price as INC-VAT (Gross)
-    // (กันเคส field name ต่างกัน / legacy payload)
     const unitInc = round2(Math.max(toNumber(item?.price) - discount, 0));
     const total = round2(unitInc * qty);
-
     const vatAmount = round2(total > 0 ? (total * vatRate) / (100 + vatRate) : 0);
     const beforeVat = round2(total - vatAmount);
 
     return { qty, unitInc, beforeVat, vatAmount, total };
   };
 
-  // ✅ Totals (no VAT double-count)
   const computedTotals = saleItems.reduce(
     (acc, item) => {
       const ln = calcLine(item);
@@ -102,14 +100,6 @@ const DeliveryNoteForm = ({ sale, saleItems, config, hideDate, setHideDate }) =>
     { beforeVat: 0, vatAmount: 0, total: 0 }
   );
 
-  // ✅ Totals (VAT-INC pricing): ราคาต่อหน่วยในตารางเป็น "รวม VAT แล้ว" (Gross)
-  // ดังนั้น:
-  // - รายการสินค้าในตารางใช้ calcLine เพื่อแสดงบรรทัด
-  // - ยอดท้ายเอกสารต้องยึด canonical total จาก Sale ก่อนเสมอ
-  // - ถ้าไม่มี totalAmount จาก Sale ค่อย fallback ไป computedGross จากรายการสินค้า
-  //
-  // เหตุผล: หน้า Print อาจได้รับ saleItems ไม่ครบ/ถูก transform คนละ source กับ Sale summary
-  // ถ้ายึด computedGross เป็นหลัก จะทำให้ยอดใบส่งของเพี้ยนจากยอดขายจริงได้
   const computedGross = round2(computedTotals.total);
 
   const saleTotalMaybe = Number.isFinite(Number(sale?.totalAmount)) ? round2(Number(sale.totalAmount)) : null;
@@ -120,19 +110,7 @@ const DeliveryNoteForm = ({ sale, saleItems, config, hideDate, setHideDate }) =>
   const vatAmount = round2(gross > 0 ? (gross * vatRate) / (100 + vatRate) : 0);
   const beforeVat = round2(gross - vatAmount);
   const total = gross;
-  // ✅ Pagination (Production-grade)
-  // เป้าหมาย:
-  // - เอกสารไม่ล้น A4 แน่นอน
-  // - รองรับหลายหน้าอัตโนมัติ
-  // - Summary + Signature อยู่เฉพาะ “หน้าสุดท้าย” เท่านั้น
-  // - มีเลขหน้า X/Y
-  //
-  // แนวคิด:
-  // - หน้าสุดท้ายต้องเผื่อพื้นที่ให้ Summary + Signature → จำกัดแถวต่ำกว่า
-  // - หน้ากลาง ๆ ไม่มี Summary/Signature → ใส่แถวได้มากกว่า
-  // หมายเหตุ: ปัญหาล้นหน้าไม่ได้เกิดจากจำนวนแถวอย่างเดียว
-  // แต่เกิดจาก layout ความสูงรวม (header + table + footer)
-  // ดังนั้น pagination จะใช้ค่าปลอดภัย
+
   const MAX_ROWS_LAST_PAGE = 18;
   const MAX_ROWS_NORMAL_PAGE = 24;
 
@@ -140,14 +118,11 @@ const DeliveryNoteForm = ({ sale, saleItems, config, hideDate, setHideDate }) =>
     const src = Array.isArray(items) ? items : [];
     const pages = [];
 
-    // ถ้ารายการ <= last-page capacity → 1 หน้า (พร้อม footer)
     if (src.length <= MAX_ROWS_LAST_PAGE) {
       pages.push({ items: src, isLast: true });
       return pages;
     }
 
-    // ถ้าเกิน → ตัดหน้าแบบ “กันล้นแน่นอน”
-    // - ปาดด้วย NORMAL_PAGE จนกว่า remainder จะ <= LAST_PAGE
     let i = 0;
     while (src.length - i > MAX_ROWS_LAST_PAGE) {
       pages.push({ items: src.slice(i, i + MAX_ROWS_NORMAL_PAGE), isLast: false });
@@ -159,7 +134,6 @@ const DeliveryNoteForm = ({ sale, saleItems, config, hideDate, setHideDate }) =>
 
   const pages = paginateItems(saleItems);
 
-  // ✅ Running index across pages (avoid relying on MAX_ROWS_* which can change)
   const pageOffsets = (() => {
     const out = [];
     let acc = 0;
@@ -171,8 +145,6 @@ const DeliveryNoteForm = ({ sale, saleItems, config, hideDate, setHideDate }) =>
   })();
 
   const handlePrint = () => {
-    // ลดข้อความหัวกระดาษจาก browser เช่น title ด้านบนกลาง
-    // หมายเหตุ: URL/วันที่จาก Chrome Header/Footer ต้องปิดใน Print Dialog ด้วย
     const originalTitle = document.title;
 
     try {
@@ -191,16 +163,86 @@ const DeliveryNoteForm = ({ sale, saleItems, config, hideDate, setHideDate }) =>
     return customer.name || '-';
   };
 
+  const normalizeDocumentLinePart = (value) => {
+    if (typeof value !== 'string') return '';
+    return value.trim();
+  };
+
+  const buildDocumentLineText = (item) => {
+    const parts = [
+      item?.documentPrefix,
+      item?.documentDescription,
+      item?.documentSuffix,
+    ]
+      .map(normalizeDocumentLinePart)
+      .filter(Boolean);
+
+    return parts.length > 0 ? parts.join(' ') : item?.productName || '-';
+  };
+
+  const getLineKey = (item) => item?.documentLineKey || item?.id || item?.stockItemId || null;
+
+  const renderDocumentLineEditorRow = (item, pageIndex, index) => {
+    if (!editableDocumentLines) return null;
+
+    const lineKey = getLineKey(item);
+    if (!lineKey || editingLineKey !== lineKey) return null;
+
+    const draft = {
+      documentPrefix: item?.documentPrefix || '',
+      documentDescription: item?.documentDescription || item?.productName || '',
+      documentSuffix: item?.documentSuffix || '',
+      ...(lineDrafts?.[lineKey] || {}),
+    };
+
+    const isSaving = savingLineKey === lineKey;
+
+    return (
+      <tr key={`editor-${lineKey}-${pageIndex}-${index}`} className="print:hidden bg-slate-50">
+        <td colSpan={editableDocumentLines ? 7 : 6} className="border border-black px-3 py-2">
+          <div className="max-w-[520px] ml-auto mr-0 space-y-2">
+            <input
+              value={draft.documentPrefix}
+              onChange={(e) => onChangeDocumentLineDraft?.(item, 'documentPrefix', e.target.value)}
+              className="w-full border border-slate-300 rounded px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-teal-500"
+            />
+
+            <input
+              value={draft.documentDescription}
+              onChange={(e) => onChangeDocumentLineDraft?.(item, 'documentDescription', e.target.value)}
+              className="w-full border border-slate-300 rounded px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-teal-500"
+            />
+
+            <input
+              value={draft.documentSuffix}
+              onChange={(e) => onChangeDocumentLineDraft?.(item, 'documentSuffix', e.target.value)}
+              className="w-full border border-slate-300 rounded px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-teal-500"
+            />
+
+            <div className="text-right">
+              <button
+                type="button"
+                onClick={() => onSaveDocumentLine?.(item)}
+                disabled={isSaving}
+                className="px-3 py-1 rounded bg-teal-600 text-white text-xs hover:bg-teal-700 disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {isSaving ? 'กำลังบันทึก...' : 'บันทึก'}
+              </button>
+            </div>
+          </div>
+        </td>
+      </tr>
+    );
+  };
+
   return (
     <>
       <style>{`
-        /* ✅ Delivery Note print guardrails (A4-safe) */
         @media print {
           html, body { margin: 0; padding: 0; }
           body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
           @page { size: A4; margin: 0; }
 
-          /* Reduce outer box so it never exceeds printable area (account for printer margins) */
           .dn-print-page {
             box-sizing: border-box;
             width: 210mm !important;
@@ -211,26 +253,22 @@ const DeliveryNoteForm = ({ sale, saleItems, config, hideDate, setHideDate }) =>
             overflow: visible !important;
           }
 
-          /* Keep critical blocks together when possible */
           .dn-no-break { page-break-inside: avoid; break-inside: avoid; }
           table { page-break-inside: auto; }
           tr, td, th { page-break-inside: avoid; break-inside: avoid; }
 
-          /* Footer density (last page) */
           .dn-summary { min-height: 90px !important; padding-top: 4px !important; }
 
-          /* ✅ Signatures must hug the bottom edge (ERP-grade) */
           .dn-signatures {
             position: absolute !important;
             left: 6mm !important;
             right: 6mm !important;
-            bottom: 3mm !important; /* แนบขอบล่างมากที่สุดโดยยังปลอดภัยต่อ printer margin */
+            bottom: 3mm !important;
             padding-top: 0 !important;
           }
           .dn-signatures p { min-height: 60px !important; }
         }
 
-        /* Screen preview: keep signatures pinned near bottom too */
         .dn-signatures {
           position: absolute;
           left: 16px;
@@ -238,6 +276,7 @@ const DeliveryNoteForm = ({ sale, saleItems, config, hideDate, setHideDate }) =>
           bottom: 10px;
         }
       `}</style>
+
       <div className="w-full max-w-[794px] mx-auto mb-4 text-right print:hidden">
         <label className="inline-flex items-center gap-2 px-5 text-sm">
           <input
@@ -259,7 +298,6 @@ const DeliveryNoteForm = ({ sale, saleItems, config, hideDate, setHideDate }) =>
       {pages.map((pg, pageIndex) => {
         const isLast = Boolean(pg?.isLast);
         const pageItems = Array.isArray(pg?.items) ? pg.items : [];
-
         const rowCap = isLast ? MAX_ROWS_LAST_PAGE : MAX_ROWS_NORMAL_PAGE;
         const emptyRowCount = Math.max(rowCap - pageItems.length, 0);
 
@@ -269,15 +307,12 @@ const DeliveryNoteForm = ({ sale, saleItems, config, hideDate, setHideDate }) =>
             className="w-full overflow-hidden mx-auto text-sm border border-gray-600 px-5 pt-4 pb-3 flex flex-col rounded-md relative print:overflow-visible dn-print-page"
             style={{
               width: '210mm',
-              // ใช้ขนาด A4 เต็มหน้า เพราะ @page margin = 0
-              // เพื่อลดพื้นที่ browser header/footer และคุม layout เอกสารเอง
               minHeight: '297mm',
               fontFamily: 'Tahoma, Arial, sans-serif',
               pageBreakAfter: isLast ? 'auto' : 'always',
               breakAfter: isLast ? 'auto' : 'page',
             }}
           >
-            {/* Header */}
             <div className="flex justify-between items-center border-b pb-2 mb-2 dn-no-break">
               <div>
                 <h2 className="font-bold text-sm">{config.branchName}</h2>
@@ -296,11 +331,10 @@ const DeliveryNoteForm = ({ sale, saleItems, config, hideDate, setHideDate }) =>
               ใบส่งของ<br />DELIVERY NOTE
             </h3>
 
-            {/* Customer & Sale Info */}
             <div className="grid grid-cols-[2.8fr_1.7fr] gap-4 text-sm mb-4 dn-no-break">
               <div className="border border-black p-3 rounded-lg space-y-1.5">
                 <p>ลูกค้า: {getDisplayCustomerName(sale.customer)}</p>
-                <p>ที่อยู่: {sale.customer?.address || '-'}</p>
+                <p>ที่อยู่: {buildCustomerFullAddress(sale.customer)}</p>
                 <p>โทร: {sale.customer?.user?.loginId || sale.customer?.phone || '-'}</p>
                 <p>เลขประจำตัวผู้เสียภาษี: {sale.customer?.taxId || '-'}</p>
               </div>
@@ -321,7 +355,6 @@ const DeliveryNoteForm = ({ sale, saleItems, config, hideDate, setHideDate }) =>
               </div>
             </div>
 
-            {/* Table */}
             <table className="w-full text-xs mb-3 border border-black table-fixed">
               <thead className="bg-gray-100">
                 <tr className="border-b border-black">
@@ -331,25 +364,54 @@ const DeliveryNoteForm = ({ sale, saleItems, config, hideDate, setHideDate }) =>
                   <th className="border border-black px-2 h-[24px] w-[8%]">หน่วย<br />UNIT</th>
                   <th className="border border-black px-2 h-[24px] w-[15%] text-right">ราคาต่อหน่วย<br />UNIT PRICE</th>
                   <th className="border border-black px-2 h-[24px] w-[15%] text-right">จำนวนเงิน<br />AMOUNT</th>
+                  {editableDocumentLines ? (
+                    <th className="border border-black px-1 h-[24px] w-[5%] print:hidden">&nbsp;</th>
+                  ) : null}
                 </tr>
               </thead>
               <tbody>
                 {pageItems.map((item, index) => {
                   const ln = calcLine(item);
-                  const runningIndex = (pageOffsets[pageIndex] ?? 0) + index; // display continuity
+                  const runningIndex = (pageOffsets[pageIndex] ?? 0) + index;
+                  const lineKey = getLineKey(item);
+                  const isEditing = editableDocumentLines && editingLineKey === lineKey;
+                  const hasDocumentLine = Boolean(item?.hasDocumentLine);
+
                   return (
-                    <tr key={item.id ?? item.stockItemId ?? `row-${pageIndex}-${index}`} className="align-top">
-                      <td className="border border-black px-1 py-1 text-center align-top min-h-[24px]">{runningIndex + 1}</td>
-                      <td className="border border-black px-2 py-1 whitespace-pre-wrap break-words align-top leading-relaxed">
-                        {item.productName}
-                      </td>
-                      <td className="border border-black px-1 py-1 text-center align-top min-h-[24px]">{ln.qty}</td>
-                      <td className="border border-black px-1 py-1 text-center align-top min-h-[24px]">{item.unit || '-'}</td>
-                      <td className="border border-black px-2 py-1 text-right align-top tabular-nums">{formatCurrency(ln.unitInc)}</td>
-                      <td className="border border-black px-2 py-1 text-right align-top tabular-nums font-medium">{formatCurrency(ln.total)}</td>
-                    </tr>
+                    <React.Fragment key={item.id ?? item.stockItemId ?? `row-${pageIndex}-${index}`}>
+                      <tr className={`align-top ${isEditing ? 'bg-slate-50 print:bg-white' : ''}`}>
+                        <td className="border border-black px-1 py-1 text-center align-top min-h-[24px]">{runningIndex + 1}</td>
+                        <td
+                          className="border border-black px-2 py-1 whitespace-normal break-words align-top leading-relaxed"
+                        >
+                          {buildDocumentLineText(item)}
+                        </td>
+                        <td className="border border-black px-1 py-1 text-center align-top min-h-[24px]">{ln.qty}</td>
+                        <td className="border border-black px-1 py-1 text-center align-top min-h-[24px]">{item.unit || '-'}</td>
+                        <td className="border border-black px-2 py-1 text-right align-top tabular-nums">{formatCurrency(ln.unitInc)}</td>
+                        <td className="border border-black px-2 py-1 text-right align-top tabular-nums font-medium">{formatCurrency(ln.total)}</td>
+                        {editableDocumentLines ? (
+                          <td className="border border-black px-1 py-1 text-center align-top print:hidden">
+                            <button
+                              type="button"
+                              onClick={() => onToggleDocumentLineEdit?.(item)}
+                              className={`inline-flex items-center justify-center w-7 h-7 rounded border text-xs ${isEditing || hasDocumentLine
+                                  ? 'border-teal-500 bg-teal-50 text-teal-700'
+                                  : 'border-slate-300 bg-white text-slate-500 hover:bg-slate-50'
+                                }`}
+                              aria-label="แก้ข้อความเอกสารของรายการนี้"
+                            >
+                              {hasDocumentLine ? '✓' : '☑'}
+                            </button>
+                          </td>
+                        ) : null}
+                      </tr>
+
+                      {renderDocumentLineEditorRow(item, pageIndex, index)}
+                    </React.Fragment>
                   );
                 })}
+
                 {[...Array(emptyRowCount)].map((_, idx) => (
                   <tr key={`empty-${pageIndex}-${idx}`}>
                     <td className="border border-black px-1 text-center h-[24px]">&nbsp;</td>
@@ -358,15 +420,16 @@ const DeliveryNoteForm = ({ sale, saleItems, config, hideDate, setHideDate }) =>
                     <td className="border border-black px-1 text-center h-[24px]">&nbsp;</td>
                     <td className="border border-black px-1 text-right h-[24px]">&nbsp;</td>
                     <td className="border border-black px-1 text-right h-[24px]">&nbsp;</td>
+                    {editableDocumentLines ? (
+                      <td className="border border-black px-1 text-center h-[24px] print:hidden">&nbsp;</td>
+                    ) : null}
                   </tr>
                 ))}
               </tbody>
             </table>
 
-            {/* Summary + Signatures: ONLY last page */}
             {isLast ? (
               <>
-                {/* Summary */}
                 <div className="grid grid-cols-2 gap-5 text-xs pt-3 dn-summary dn-no-break" style={{ minHeight: '60px' }}>
                   <div>
                     <ul className="list-decimal ml-4">
@@ -399,7 +462,6 @@ const DeliveryNoteForm = ({ sale, saleItems, config, hideDate, setHideDate }) =>
 
                 <div className="h-[70px]"></div>
 
-                {/* Signatures */}
                 <div className="grid grid-cols-3 gap-4 text-sm text-center pt-2 pb-0 dn-signatures dn-no-break">
                   <div>
                     <p className="border-t border-black pt-2 pb-6 min-h-[80px]">ผู้รับของ / RECEIVED BY</p>
@@ -413,11 +475,9 @@ const DeliveryNoteForm = ({ sale, saleItems, config, hideDate, setHideDate }) =>
                 </div>
               </>
             ) : (
-              // spacer กัน layout กระโดด (ให้ความสูงหน้าดูนิ่ง)
               <div className="mt-auto" />
             )}
 
-            {/* Page number */}
             <div className="absolute bottom-2 right-4 text-xs text-gray-400">
               {pageIndex + 1}/{pages.length}
             </div>
@@ -429,14 +489,3 @@ const DeliveryNoteForm = ({ sale, saleItems, config, hideDate, setHideDate }) =>
 };
 
 export default DeliveryNoteForm;
-
-
-
-
-
-
-
-
-
-
-

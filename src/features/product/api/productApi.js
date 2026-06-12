@@ -1,8 +1,3 @@
-
-
-
-
-
 // ✅ src/features/product/api/productApi.js
 import apiClient from '@/utils/apiClient';
 import { parseApiError } from '@/utils/uiHelpers';
@@ -67,8 +62,6 @@ export const deleteProduct = async (id) => {
 // =============================
 // Enable / Disable (แยก API)
 // =============================
-// หมายเหตุ: ให้ BE ทำ endpoint ให้ชัดเจน เช่น
-// POST /products/:id/disable  และ  POST /products/:id/enable
 export const disableProduct = async (id) => {
   try {
     const { data } = await apiClient.post(`products/${id}/disable`);
@@ -116,6 +109,7 @@ export const getCatalogDropdowns = async ({ scope = 'pos' } = {}) => {
       brands = [],
       productTypeBrands = [],
       productTypeBrandMap = {},
+      units = [],
       productTemplates,
       templates = [], // alias (compat)
     } = raw || {};
@@ -130,6 +124,7 @@ export const getCatalogDropdowns = async ({ scope = 'pos' } = {}) => {
       brands,
       productTypeBrands,
       productTypeBrandMap,
+      units,
       templates: tpl,
       productTemplates: tpl,
     };
@@ -219,7 +214,6 @@ export const migrateSnToSimple = async (productId) => {
   } catch (err) { throw parseApiError(err); }
 };
 
-
 // ==================================================
 // Ready-to-sell (summary)
 // ==================================================
@@ -278,8 +272,3 @@ export const getReadyToSellStructuredDetails = async ({ branchId, productId, q =
     throw parseApiError(err);
   }
 };
-
-
-
-
-

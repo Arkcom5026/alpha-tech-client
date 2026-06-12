@@ -66,7 +66,14 @@ const refreshAccessToken = async () => {
         return nextAccessToken;
       })
       .catch((error) => {
-        useAuthStore.getState().resetAuthStateAction?.();
+        if (import.meta.env?.DEV) {
+          console.error('[apiClient] refreshAccessToken failed', {
+            message: error?.message,
+            status: error?.response?.status,
+            data: error?.response?.data,
+          });
+        }
+      
         throw error;
       })
       .finally(() => {

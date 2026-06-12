@@ -1,9 +1,8 @@
-
-
 // ===============================
 // features/bill/components/BillLayoutFullTax.jsx
 // ===============================
 import React, { useEffect, useRef, useState } from 'react';
+import { buildCustomerFullAddress } from '@features/customer/utils/customerAddressFormatter';
 
 const formatCurrency = (val) => (Number(val) || 0).toLocaleString('th-TH', {
   minimumFractionDigits: 2,
@@ -76,7 +75,39 @@ const bahtText = (amount) => {
   return bahtTextPart + satangTextPart;
 };
 
-const BillLayoutFullTax = ({ sale, saleItems, payments, config }) => {
+const normalizeDocumentLinePart = (value) => {
+  if (typeof value !== 'string') return '';
+  return value.trim();
+};
+
+const buildDocumentLineText = (item) => {
+  const parts = [
+    item?.documentPrefix,
+    item?.documentDescription || item?.productName,
+    item?.documentSuffix,
+  ]
+    .map(normalizeDocumentLinePart)
+    .filter(Boolean);
+
+  return parts.length > 0 ? parts.join(' ') : '-';
+};
+
+const getLineKey = (item) => item?.documentLineKey || item?.id || null;
+
+const BillLayoutFullTax = ({
+  sale,
+  saleItems,
+  payments,
+  config,
+
+  editableDocumentLines = false,
+  editingLineKey = null,
+  lineDrafts = {},
+  savingLineKey = null,
+  onToggleDocumentLineEdit,
+  onChangeDocumentLineDraft,
+  onSaveDocumentLine,
+}) => {
   // Hooks must be called unconditionally at the top of the component
   const [hideDate, setHideDate] = useState(Boolean(config?.hideDate));
   const hideDateTouchedRef = useRef(false);
@@ -115,6 +146,8 @@ const BillLayoutFullTax = ({ sale, saleItems, payments, config }) => {
 
   const maxRowCount = 20;
   const emptyRowCount = Math.max(maxRowCount - saleItems.length, 0);
+  const displayColumnCount = editableDocumentLines ? 7 : 6;
+
   const handlePrint = () => {
     try {
       window.focus?.();
@@ -130,9 +163,16 @@ const BillLayoutFullTax = ({ sale, saleItems, payments, config }) => {
     return customer.name || '-';
   };
 
-  // ✅ address single source of truth: prefer pre-composed address string from BE
+  // ✅ Customer address: use the same formatter as DeliveryNoteForm
+  // This supports structured customer address fields and prevents blank/partial address display.
   const getCustomerAddressText = (customer) => {
     if (!customer) return '-';
+
+    const formattedAddress = buildCustomerFullAddress(customer);
+    if (typeof formattedAddress === 'string' && formattedAddress.trim()) {
+      return formattedAddress.trim();
+    }
+
     return customer.customerAddress || customer.address || '-';
   };
 
@@ -162,6 +202,127 @@ const BillLayoutFullTax = ({ sale, saleItems, payments, config }) => {
     } catch {
       return String(iso);
     }
+  };
+
+  const renderDocumentLineButton = (item) => {
+    if (!editableDocumentLines || !item) return null;
+
+    const lineKey = getLineKey(item);
+    if (!lineKey) return null;
+
+    const isEditing = editingLineKey === lineKey;
+    const hasDocumentLine = Boolean(item?.hasDocumentLine);
+
+    return (
+      <button
+        type="button"
+        onClick={() => onToggleDocumentLineEdit?.(item)}
+        title={hasDocumentLine ? 'รายการนี้มีข้อความเอกสารแล้ว' : 'เพิ่มข้อความเอกสาร'}
+        aria-label={hasDocumentLine ? 'รายการนี้มีข้อความเอกสารแล้ว' : 'เพิ่มข้อความเอกสาร'}
+        className={`inline-flex h-6 w-6 items-center justify-center rounded border text-[11px] leading-none ${
+          isEditing || hasDocumentLine
+            ? 'border-teal-500 bg-teal-50 text-teal-700'
+            : 'border-slate-300 bg-white text-slate-500 hover:bg-slate-50'
+        }`}
+      >
+        {hasDocumentLine ? '✓' : '☑'}
+      </button>
+    );
+  };
+
+  const renderDocumentLineEditorRow = (item) => {
+    if (!editableDocumentLines || !item) return null;
+
+    const lineKey = getLineKey(item);
+    if (!lineKey || editingLineKey !== lineKey) return null;
+
+    const isSaving = savingLineKey === lineKey;
+
+    const draft = {
+      documentPrefix: item?.documentPrefix || '',
+      documentDescriptionRaw: item?.documentDescriptionRaw || '',
+      documentSuffix: item?.documentSuffix || '',
+      ...(lineDrafts?.[lineKey] || {}),
+    };
+
+    const readonlyDescription =
+      item?.documentDescription ||
+      item?.productName ||
+      item?.documentDescriptionRaw ||
+      '-';
+
+    return (
+      <tr key={`editor-${lineKey}`} className="print:hidden bg-slate-50">
+        <td colSpan={displayColumnCount} className="border border-black px-3 py-2">
+          <div className="mx-auto max-w-[560px] space-y-2">
+            <input
+              value={draft.documentPrefix}
+              onChange={(e) => onChangeDocumentLineDraft?.(item, 'documentPrefix', e.target.value)}
+              placeholder="ข้อความก่อนสินค้า"
+              className="w-full rounded border border-slate-300 bg-white px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-teal-500"
+            />
+
+            <div className="w-full rounded border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700">
+              {readonlyDescription}
+            </div>
+
+            <input
+              value={draft.documentSuffix}
+              onChange={(e) => onChangeDocumentLineDraft?.(item, 'documentSuffix', e.target.value)}
+              placeholder="ข้อความท้ายสินค้า"
+              className="w-full rounded border border-slate-300 bg-white px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-teal-500"
+            />
+
+            <div className="text-right">
+              <button
+                type="button"
+                onClick={() => onSaveDocumentLine?.(item)}
+                disabled={isSaving}
+                className="rounded bg-teal-600 px-3 py-1 text-xs text-white hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isSaving ? 'กำลังบันทึก...' : 'บันทึก'}
+              </button>
+            </div>
+          </div>
+        </td>
+      </tr>
+    );
+  };
+
+  const getUnitPriceIncVat = (item) => {
+    const qty = Number(item?.quantity) || 0;
+    const explicit = item?.unitPriceIncVat ?? item?.unitPrice;
+    if (explicit != null && Number.isFinite(Number(explicit))) return round2(explicit);
+
+    const ex = item?.unitPriceExVat;
+    if (ex != null && Number.isFinite(Number(ex))) {
+      return round2(Number(ex) * (1 + vatRate / 100));
+    }
+
+    const totalInc = item?.amount ?? item?.total ?? item?.totalAmount;
+    if (qty > 0 && totalInc != null && Number.isFinite(Number(totalInc))) {
+      return round2(Number(totalInc) / qty);
+    }
+
+    return 0;
+  };
+
+  const getLineAmountIncVat = (item) => {
+    const qty = Number(item?.quantity) || 0;
+    const explicitAmount = item?.amount ?? item?.total ?? item?.totalAmount;
+    if (explicitAmount != null && Number.isFinite(Number(explicitAmount))) return round2(explicitAmount);
+
+    const explicitUnit = item?.unitPriceIncVat ?? item?.unitPrice;
+    if (explicitUnit != null && Number.isFinite(Number(explicitUnit))) {
+      return round2(Number(explicitUnit) * qty);
+    }
+
+    const exTotal = item?.totalExVat;
+    if (exTotal != null && Number.isFinite(Number(exTotal))) {
+      return round2(Number(exTotal) * (1 + vatRate / 100));
+    }
+
+    return 0;
   };
 
   return (
@@ -257,7 +418,6 @@ const BillLayoutFullTax = ({ sale, saleItems, payments, config }) => {
             <p>วันที่: {renderDate(sale.soldAt || sale.createdAt)}</p>
             <p>เลขที่: {sale.code || sale.saleNo || sale.id}</p>
             <p>เงื่อนไขการชำระเงิน: {sale.paymentTerms || '-'}</p>
-            
           </div>
         </div>
 
@@ -266,69 +426,41 @@ const BillLayoutFullTax = ({ sale, saleItems, payments, config }) => {
           <thead className="bg-gray-100">
             <tr className="border-b border-black">
               <th className="border border-black px-2 h-[28px] leading-tight w-[8%]">ลำดับ<br />ITEM</th>
-              <th className="border border-black px-2 h-[28px] leading-tight w-[32%]">รายการ<br />DESCRIPTION</th>
+              <th className="border border-black px-2 h-[28px] leading-tight w-[30%]">รายการ<br />DESCRIPTION</th>
               <th className="border border-black px-2 h-[28px] leading-tight w-[10%]">จำนวน<br />QTY</th>
               <th className="border border-black px-2 h-[28px] leading-tight w-[10%]">หน่วย<br />UNIT</th>
-              <th className="border border-black px-2 h-[28px] leading-tight w-[20%] text-right">ราคาต่อหน่วย<br />UNIT PRICE</th>
-              <th className="border border-black px-2 h-[28px] leading-tight w-[20%] text-right">จำนวนเงิน<br />AMOUNT</th>
+              <th className="border border-black px-2 h-[28px] leading-tight w-[19%] text-right">ราคาต่อหน่วย<br />UNIT PRICE</th>
+              <th className="border border-black px-2 h-[28px] leading-tight w-[19%] text-right">จำนวนเงิน<br />AMOUNT</th>
+              {editableDocumentLines ? (
+                <th className="border border-black px-1 h-[28px] leading-tight w-[4%] print:hidden">&nbsp;</th>
+              ) : null}
             </tr>
           </thead>
           <tbody>
             {saleItems.map((item, index) => (
-              <tr key={item.id}>
-                <td className="border border-black px-2 text-center h-[28px]">{index + 1}</td>
-                <td className="border border-black px-2 h-[28px]">
-                  {item.productName}
-                </td>
-                <td className="border border-black px-2 text-center h-[28px]">{item.quantity}</td>
-                <td className="border border-black px-2 text-center h-[28px]">{item.unit || '-'}</td>
-                <td className="border border-black px-2 text-right h-[28px] tabular-nums">{
-                  formatCurrency(
-                    (() => {
-                      const qty = Number(item?.quantity) || 0;
-                      // ✅ Full price (INC VAT) like Delivery Note
-                      // ✅ snapshot only (do NOT use current Product price fields)
-                      const explicit = item?.unitPriceIncVat ?? item?.unitPrice;
-                      if (explicit != null && Number.isFinite(Number(explicit))) return round2(explicit);
+              <React.Fragment key={item.id ?? item.documentLineKey ?? `item-${index}`}>
+                <tr>
+                  <td className="border border-black px-2 text-center h-[28px] align-top">{index + 1}</td>
+                  <td className="border border-black px-2 h-[28px] align-top whitespace-normal break-words">
+                    {buildDocumentLineText(item)}
+                  </td>
+                  <td className="border border-black px-2 text-center h-[28px] align-top">{item.quantity}</td>
+                  <td className="border border-black px-2 text-center h-[28px] align-top">{item.unit || '-'}</td>
+                  <td className="border border-black px-2 text-right h-[28px] align-top tabular-nums">
+                    {formatCurrency(getUnitPriceIncVat(item))}
+                  </td>
+                  <td className="border border-black px-2 text-right h-[28px] align-top tabular-nums">
+                    {formatCurrency(getLineAmountIncVat(item))}
+                  </td>
+                  {editableDocumentLines ? (
+                    <td className="border border-black px-1 py-1 text-center align-top print:hidden">
+                      {renderDocumentLineButton(item)}
+                    </td>
+                  ) : null}
+                </tr>
 
-                      // fallback: if only EX VAT is present, gross-up using vatRate
-                      const ex = item?.unitPriceExVat;
-                      if (ex != null && Number.isFinite(Number(ex))) {
-                        return round2(Number(ex) * (1 + vatRate / 100));
-                      }
-
-                      // last resort: derive from total / qty
-                      const totalInc = item?.amount ?? item?.total ?? item?.totalAmount;
-                      if (qty > 0 && totalInc != null && Number.isFinite(Number(totalInc))) {
-                        return round2(Number(totalInc) / qty);
-                      }
-                      return 0;
-                    })()
-                  )
-                }</td>
-                <td className="border border-black px-2 text-right h-[28px] tabular-nums">{
-                  formatCurrency(
-                    (() => {
-                      const qty = Number(item?.quantity) || 0;
-                      const explicitAmount = item?.amount ?? item?.total ?? item?.totalAmount;
-                      if (explicitAmount != null && Number.isFinite(Number(explicitAmount))) return round2(explicitAmount);
-
-                      // fallback: compute from snapshot unit price only (do NOT use current Product price fields)
-                      const explicitUnit = item?.unitPriceIncVat ?? item?.unitPrice;
-                      if (explicitUnit != null && Number.isFinite(Number(explicitUnit))) {
-                        return round2(Number(explicitUnit) * qty);
-                      }
-
-                      // fallback: gross-up EX VAT total
-                      const exTotal = item?.totalExVat;
-                      if (exTotal != null && Number.isFinite(Number(exTotal))) {
-                        return round2(Number(exTotal) * (1 + vatRate / 100));
-                      }
-                      return 0;
-                    })()
-                  )
-                }</td>
-              </tr>
+                {renderDocumentLineEditorRow(item)}
+              </React.Fragment>
             ))}
             {[...Array(emptyRowCount)].map((_, idx) => (
               <tr key={`empty-${idx}`}>
@@ -338,6 +470,9 @@ const BillLayoutFullTax = ({ sale, saleItems, payments, config }) => {
                 <td className="border border-black px-2 text-center h-[28px]">&nbsp;</td>
                 <td className="border border-black px-2 text-right h-[28px] tabular-nums">&nbsp;</td>
                 <td className="border border-black px-2 text-right h-[28px] tabular-nums">&nbsp;</td>
+                {editableDocumentLines ? (
+                  <td className="border border-black px-1 text-center h-[28px] print:hidden">&nbsp;</td>
+                ) : null}
               </tr>
             ))}
           </tbody>
@@ -366,10 +501,18 @@ const BillLayoutFullTax = ({ sale, saleItems, payments, config }) => {
         </div>
 
         {/* Signatures */}
-        <div className="mt-4 text-[15px] text-center no-break">
-          <div className="w-[48%] mx-auto">
-            <div className="border-t border-dashed border-black pt-1 h-[55px] flex flex-col justify-start items-center">
-              <span className="mt-1">ผู้รับเงิน / RECEIVED BY</span>
+        <div
+          className="mt-2 grid grid-cols-2 gap-12 text-[15px] text-center no-break"
+          style={{ minHeight: '92px' }}
+        >
+          <div className="flex h-[92px] flex-col justify-end">
+            <div className="border-t border-dashed border-black pt-1 min-h-[28px] flex flex-col justify-start items-center">
+              <span className="mt-1">ผู้ชำระเงิน / PAID BY</span>
+            </div>
+          </div>
+          <div className="flex h-[92px] flex-col justify-end">
+            <div className="border-t border-dashed border-black pt-1 min-h-[28px] flex flex-col justify-start items-center">
+              <span className="mt-1">ผู้รับชำระเงิน / RECEIVED BY</span>
             </div>
           </div>
         </div>
@@ -379,5 +522,3 @@ const BillLayoutFullTax = ({ sale, saleItems, payments, config }) => {
 };
 
 export default React.memo(BillLayoutFullTax);
-
-

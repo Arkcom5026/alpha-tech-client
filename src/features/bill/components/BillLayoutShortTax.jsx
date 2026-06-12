@@ -1,189 +1,239 @@
-
-
-
-
-
 // src/features/bill/components/BillLayoutShortTax.jsx
-// ✅ Standard Document System Applied:
-// - Unified font: Tahoma, Arial
-// - Unified spacing rhythm
-// - Unified customer phone source (user.loginId)
-// - Unified number formatting (tabular-nums)
-// - Consistent section spacing across documents
 
-
-import React from 'react';
-
+import React from 'react'
 
 const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100
+
 const formatCurrency = (val) =>
   (Number(val) || 0).toLocaleString('th-TH', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })
 
-// ✅ number safe
 const n = (v) => {
   const x = Number(v)
   return Number.isFinite(x) ? x : 0
 }
 
-// ✅ unit price resolver (SNAPSHOT ONLY)
-// ❗ ห้ามใช้ราคาจาก Product/current fields (เช่น item.price, sellPrice) เพราะราคาเปลี่ยนย้อนหลังได้
-// เราจะยึดจาก SaleItem snapshot เท่านั้น:
-// - unitPriceIncVat / unitPrice (preferred)
-// - derive from amount/qty (last resort)
 const getUnitPrice = (item) => {
-  if (!item) return 0;
+  if (!item) return 0
 
-  // ✅ snapshot candidates (INC-VAT)
   const candidates = [
     item.unitPriceIncVat,
-    item.unitPrice, // assume INC-VAT snapshot in this system
+    item.unitPrice,
     item.lineUnitPrice,
-  ];
+  ]
 
   for (const v of candidates) {
-    const num = n(v);
-    if (num > 0) return num;
+    const num = n(v)
+    if (num > 0) return num
   }
 
-  // ✅ last resort: derive from line amount / qty (also snapshot)
-  const qty = n(item?.quantity);
-  const amount = n(item?.amount ?? item?.total ?? item?.totalAmount);
-  if (qty > 0 && amount > 0) return round2(amount / qty);
+  const qty = n(item?.quantity)
+  const amount = n(item?.amount ?? item?.total ?? item?.totalAmount)
+  if (qty > 0 && amount > 0) return round2(amount / qty)
 
-  return 0;
-};
-
-// ✅ line total (snapshot-first)
-// - Prefer item.amount (snapshot) if present
-// - Otherwise compute from unit * qty using satang math
-const getLineTotalSatang = (item) => {
-  const amount = n(item?.amount ?? item?.total ?? item?.totalAmount);
-  if (amount > 0) return Math.round(amount * 100);
-
-  const qty = n(item?.quantity);
-  const unit = getUnitPrice(item);
-  const unitSatang = Math.round(unit * 100);
-  return unitSatang * qty;
+  return 0
 }
 
-const BillLayoutShortTax = ({ sale, saleItems, payments, config, hideContactName }) => {
-  const receiptTitle = 'ใบกำกับภาษีอย่างย่อ / ใบเสร็จรับเงิน';
+const getLineTotalSatang = (item) => {
+  const amount = n(item?.amount ?? item?.total ?? item?.totalAmount)
+  if (amount > 0) return Math.round(amount * 100)
+
+  const qty = n(item?.quantity)
+  const unit = getUnitPrice(item)
+  const unitSatang = Math.round(unit * 100)
+  return unitSatang * qty
+}
+
+const buildDocumentLineText = (item) => {
+  const prefix = String(item?.documentPrefix || '').trim()
+  const description = String(item?.documentDescription || item?.productName || '').trim()
+  const suffix = String(item?.documentSuffix || '').trim()
+
+  return [prefix, description, suffix].filter(Boolean).join(' ') || '-'
+}
+
+const getLineKey = (item) => item?.documentLineKey || item?.id || null
+
+const BillLayoutShortTax = ({
+  sale,
+  saleItems,
+  payments,
+  config,
+  hideContactName,
+
+  editableDocumentLines = false,
+  editingLineKey = null,
+  lineDrafts = {},
+  savingLineKey = null,
+  onToggleDocumentLineEdit,
+  onChangeDocumentLineDraft,
+  onSaveDocumentLine,
+}) => {
+  const receiptTitle = 'ใบกำกับภาษีอย่างย่อ / ใบเสร็จรับเงิน'
 
   const getAdaptiveTitleStyle = (text) => {
-    const len = String(text || '').trim().length;
+    const len = String(text || '').trim().length
 
-    if (len >= 34) {
-      return {
-        fontSize: '12.5px',
-        letterSpacing: '0px',
-        padding: '8px 4px 7px',
-      };
-    }
+    if (len >= 34) return { fontSize: '12.5px', letterSpacing: '0px', padding: '8px 4px 7px' }
+    if (len >= 28) return { fontSize: '13px', letterSpacing: '0.05px', padding: '8px 5px 7px' }
 
-    if (len >= 28) {
-      return {
-        fontSize: '13px',
-        letterSpacing: '0.05px',
-        padding: '8px 5px 7px',
-      };
-    }
-
-    return {
-      fontSize: '14px',
-      letterSpacing: '0.2px',
-      padding: '8px 6px 7px',
-    };
-  };
+    return { fontSize: '14px', letterSpacing: '0.2px', padding: '8px 6px 7px' }
+  }
 
   const getAdaptiveTotalStyle = (label, amountText) => {
-    const len = `${label || ''}${amountText || ''}`.trim().length;
+    const len = `${label || ''}${amountText || ''}`.trim().length
 
-    if (len >= 26) {
-      return {
-        fontSize: '16px',
-        letterSpacing: '0px',
-        gap: '8px',
-      };
-    }
+    if (len >= 26) return { fontSize: '16px', letterSpacing: '0px', gap: '8px' }
+    if (len >= 22) return { fontSize: '17px', letterSpacing: '0.05px', gap: '10px' }
 
-    if (len >= 22) {
-      return {
-        fontSize: '17px',
-        letterSpacing: '0.05px',
-        gap: '10px',
-      };
-    }
+    return { fontSize: '18px', letterSpacing: '0.1px', gap: '12px' }
+  }
 
-    return {
-      fontSize: '18px',
-      letterSpacing: '0.1px',
-      gap: '12px',
-    };
-  };
   const getCustomerPhoneText = (customer) => {
-    if (!customer) return '-';
-    return customer.user?.loginId || customer.phone || customer.phoneNumber || '-';
-  };
-  // ✅ normalize payments once (avoid JSX IIFE + keep parser happy)
+    if (!customer) return '-'
+    return customer.user?.loginId || customer.phone || customer.phoneNumber || '-'
+  }
+
   const normalizedPayments = Array.isArray(payments)
     ? payments
         .map((p) => {
-          const raw = (p?.method || p?.paymentMethod || p?.type || '').toString().trim();
-          const method = raw ? raw.toUpperCase() : '';
-          const amt = n(p?.amount || p?.paidAmount || p?.value);
-          return { p, method, amt };
+          const raw = (p?.method || p?.paymentMethod || p?.type || '').toString().trim()
+          const method = raw ? raw.toUpperCase() : ''
+          const amt = n(p?.amount || p?.paidAmount || p?.value)
+          return { p, method, amt }
         })
         .filter((x) => x.amt > 0.0001 && x.method && x.method !== '-' && x.method !== 'N/A')
-    : [];
+    : []
 
   const labelOf = (m) => {
-    if (m === 'CASH') return 'เงินสด';
-    if (m === 'TRANSFER' || m === 'BANK_TRANSFER') return 'โอน';
-    if (m === 'CARD' || m === 'CREDIT_CARD') return 'บัตร';
-    return m;
-  };
+    if (m === 'CASH') return 'เงินสด'
+    if (m === 'TRANSFER' || m === 'BANK_TRANSFER') return 'โอน'
+    if (m === 'CARD' || m === 'CREDIT_CARD') return 'บัตร'
+    return m
+  }
 
-  const paidTotal = round2(normalizedPayments.reduce((s, x) => s + n(x.amt), 0));
+  const renderDocumentLineEditorPanel = (item) => {
+    if (!editableDocumentLines || !item) return null
+
+    const lineKey = getLineKey(item)
+    if (!lineKey || editingLineKey !== lineKey) return null
+
+    const isSaving = savingLineKey === lineKey
+
+    const draft = {
+      documentPrefix: item?.documentPrefix || '',
+      documentDescriptionRaw: item?.documentDescriptionRaw || '',
+      documentSuffix: item?.documentSuffix || '',
+      ...(lineDrafts?.[lineKey] || {}),
+    }
+
+    const readonlyDescription =
+      item?.documentDescription ||
+      item?.productName ||
+      item?.documentDescriptionRaw ||
+      '-'
+
+    return (
+      <div className="print:hidden" style={{ marginTop: 6, paddingLeft: 0 }}>
+        <div
+          className="rounded border border-slate-200 bg-slate-50"
+          style={{
+            padding: 6,
+          }}
+        >
+          <div className="space-y-1">
+            <input
+              value={draft.documentPrefix}
+              onChange={(e) => onChangeDocumentLineDraft?.(item, 'documentPrefix', e.target.value)}
+              placeholder="ข้อความก่อนสินค้า"
+              className="w-full rounded border border-slate-300 bg-white px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-teal-500"
+            />
+
+            <div className="w-full rounded border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700">
+              {readonlyDescription}
+            </div>
+
+            <input
+              value={draft.documentSuffix}
+              onChange={(e) => onChangeDocumentLineDraft?.(item, 'documentSuffix', e.target.value)}
+              placeholder="ข้อความท้ายสินค้า"
+              className="w-full rounded border border-slate-300 bg-white px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-teal-500"
+            />
+
+            <div className="text-right">
+              <button
+                type="button"
+                onClick={() => onSaveDocumentLine?.(item)}
+                disabled={isSaving}
+                className="rounded bg-teal-600 px-3 py-1 text-xs text-white hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isSaving ? 'กำลังบันทึก...' : 'บันทึก'}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  const renderDocumentLineButton = (item) => {
+    if (!editableDocumentLines || !item) return null
+
+    const lineKey = getLineKey(item)
+    if (!lineKey) return null
+
+    const isEditing = editingLineKey === lineKey
+    const hasDocumentLine = Boolean(item?.hasDocumentLine)
+
+    return (
+      <button
+        type="button"
+        onClick={() => onToggleDocumentLineEdit?.(item)}
+        title={hasDocumentLine ? 'รายการนี้มีข้อความเอกสารแล้ว' : 'เพิ่มข้อความเอกสาร'}
+        aria-label={hasDocumentLine ? 'รายการนี้มีข้อความเอกสารแล้ว' : 'เพิ่มข้อความเอกสาร'}
+        className={`print:hidden inline-flex h-5 w-5 items-center justify-center rounded border text-[11px] leading-none ${
+          isEditing || hasDocumentLine
+            ? 'border-teal-500 bg-teal-50 text-teal-700'
+            : 'border-slate-300 bg-white text-slate-500 hover:bg-slate-50'
+        }`}
+      >
+        {hasDocumentLine ? '✓' : '☑'}
+      </button>
+    )
+  }
+
+  const paidTotal = round2(normalizedPayments.reduce((s, x) => s + n(x.amt), 0))
   if (!sale || !saleItems || !payments || !config) return null
 
-  // ✅ Total/VAT (Production Lock: Sale snapshot is source of truth)
-// - totalAmount = GROSS (รวม VAT)
-// - vat        = VAT amount (ถ้ามีใน DB ใช้ตรง ๆ)
-// - beforeVat  = totalAmount - vat
-// ❗ ห้ามเอายอดรวมมาคำนวณจาก SaleItem (กันราคาเปลี่ยนย้อนหลัง + กัน VAT ซ้ำ)
-const vatRate = Number.isFinite(Number(sale?.vatRate))
-  ? Number(sale.vatRate)
-  : (typeof config?.vatRate === 'number' ? config.vatRate : 7);
+  const vatRate = Number.isFinite(Number(sale?.vatRate))
+    ? Number(sale.vatRate)
+    : typeof config?.vatRate === 'number'
+      ? config.vatRate
+      : 7
 
-const saleTotalCandidateBaht =
-  n(sale?.totalAmount) ||
-  n(sale?.total) ||
-  n(sale?.grandTotal) ||
-  n(sale?.totalPremium);
+  const saleTotalCandidateBaht =
+    n(sale?.totalAmount) ||
+    n(sale?.total) ||
+    n(sale?.grandTotal) ||
+    n(sale?.totalPremium)
 
-const total = round2(saleTotalCandidateBaht);
+  const total = round2(saleTotalCandidateBaht)
+  const vatStored = sale?.vat != null ? round2(n(sale.vat)) : null
+  const vatAmount = vatStored != null ? vatStored : round2((total * vatRate) / (100 + vatRate))
+  const beforeVat = round2(total - vatAmount)
 
-// ✅ VAT: prefer stored; fallback ถอดจาก gross ตาม rate
-const vatStored = sale?.vat != null ? round2(n(sale.vat)) : null;
-const vatAmount = vatStored != null ? vatStored : round2((total * vatRate) / (100 + vatRate));
+  const totalLabel = 'จำนวนเงินรวมทั้งสิ้น'
+  const totalAmountText = `${formatCurrency(total)} ฿`
+  const adaptiveTotalStyle = getAdaptiveTotalStyle(totalLabel, totalAmountText)
 
-const beforeVat = round2(total - vatAmount);
-
-  const totalLabel = 'จำนวนเงินรวมทั้งสิ้น';
-  const totalAmountText = `${formatCurrency(total)} ฿`;
-  const adaptiveTotalStyle = getAdaptiveTotalStyle(totalLabel, totalAmountText);
-
-  // ✅ 7-11-ish meta: counts + change
   const itemLines = Array.isArray(saleItems) ? saleItems.length : 0
   const qtyTotal = Array.isArray(saleItems) ? saleItems.reduce((s, it) => s + n(it?.quantity), 0) : 0
 
   const change = round2(paidTotal - total)
   const shouldShowChange = paidTotal > 0 && change > 0.005
 
-  // ✅ กันเคสวันที่เป็น undefined และลด re-render JSX
   const dateText = sale?.createdAt
     ? new Date(sale.createdAt).toLocaleDateString('th-TH', {
         year: 'numeric',
@@ -192,8 +242,6 @@ const beforeVat = round2(total - vatAmount);
         timeZone: 'Asia/Bangkok',
       })
     : '-'
-
-  const handlePrint = () => window.print()
 
   return (
     <div
@@ -204,7 +252,6 @@ const beforeVat = round2(total - vatAmount);
         fontFamily: 'Tahoma, Arial, sans-serif',
         fontSize: config?.thermalFontSize || '13px',
         lineHeight: 1.3,
-        /* backup padding (กันเคส browser บางตัว ignore @page margin) */
         padding: '10px 1.5mm',
       }}
     >
@@ -223,13 +270,10 @@ const beforeVat = round2(total - vatAmount);
             width: 80mm;
           }
           @page {
-            /* ✅ 80mm thermal with safe zone */
             size: 80mm auto;
-            /* Premium safe margins (ลดเสี่ยงตัวอักษรกินขอบ/โดนตัด) */
             margin: 3mm 3mm 3mm 3mm;
           }
 
-          /* Avoid breaking critical blocks / rows */
           .no-break {
             page-break-inside: avoid;
             break-inside: avoid;
@@ -238,13 +282,13 @@ const beforeVat = round2(total - vatAmount);
           tr, td, th { page-break-inside: avoid; break-inside: avoid; }
         }
 
-        /* ✅ Thermal receipt utilities */
         .receipt-root {
           color: #000;
           width: 76mm;
           max-width: 76mm;
           margin: 0 auto;
         }
+
         @media print {
           .receipt-root {
             margin: 0 auto !important;
@@ -253,10 +297,8 @@ const beforeVat = round2(total - vatAmount);
           }
         }
 
-        /* ✅ Inner safe padding (keeps text away from edges even when root is 76mm) */
         .receipt-inner {
           width: 100%;
-          /* Premium safe zone inside content */
           padding-left: 2.8mm;
           padding-right: 2.8mm;
         }
@@ -314,8 +356,6 @@ const beforeVat = round2(total - vatAmount);
           white-space: normal;
           word-break: break-word;
         }
-
-        /* ✅ Micro rhythm */
         .section-pad {
           padding-top: 3px;
           padding-bottom: 3px;
@@ -330,209 +370,204 @@ const beforeVat = round2(total - vatAmount);
         }
       `}</style>
 
-      <div className="text-right print:hidden mb-2">
-        <button
-          onClick={handlePrint}
-          className="bg-blue-600 hover:bg-blue-700 text-white py-1 px-4 rounded text-sm"
-        >
-          พิมพ์บิล
-        </button>
-      </div>
-
       <div className="receipt-inner">
-        {/* Header (thermal-friendly) */}
-      <div className="text-center no-break tight">
-        {config.logoUrl && <img src={config.logoUrl} alt="logo" className="h-10 mx-auto mb-1" />}
-        <div
-          className="font-bold"
-          style={{
-            fontSize: '18px',
-            letterSpacing: '0.35px',
-            marginBottom: 3,
-          }}
-        >
-          {config.branchName}
-        </div>
-        {config.address && <div className="small wrap">{config.address}</div>}
-        <div className="small mono muted" style={{ letterSpacing: '0.05px' }}>
-          {config.phone ? `โทร. ${config.phone}` : ''}
-        </div>
-        {config.taxId && (
-          <div className="small mono muted">เลขผู้เสียภาษี {config.taxId}</div>
-        )}
-      </div>
-
-      <div className="hr" />
-
-      <div className="no-break tight section-pad" style={{ paddingLeft: 1, paddingRight: 1, marginBottom: 6 }}>
-        {/* POS meta (7-11-ish) */}
-        <div className="row xs mono" style={{ marginTop: 2 }}>
-          <div className="left label">แคชเชียร์</div>
-          <div className="right clip">{sale.employee?.name || config?.cashierName || '-'}</div>
-        </div>
-        <div className="row xs mono">
-          <div className="left label">เครื่อง</div>
-          <div className="right">{config?.terminalId || config?.posId || '-'}</div>
-        </div>
-        <div className="row xs mono">
-          <div className="left label">รายการ/ชิ้น</div>
-          <div className="right">{itemLines}/{qtyTotal}</div>
-        </div>
-
-        <div className="hr-solid" style={{ margin: '5px 0' }} />
-
-        <div className="text-center font-bold title-band" style={getAdaptiveTitleStyle(receiptTitle)}>
-          {receiptTitle}
-        </div>
-        <div className="row small mono" style={{ marginTop: 3 }}>
-          <div className="left label">เลขที่</div>
-          <div className="right">{sale.code}</div>
-        </div>
-        {!config.hideDate && (
-          <div className="row small mono">
-            <div className="left label">วันที่</div>
-            <div className="right">{dateText}</div>
+        <div className="text-center no-break tight">
+          {config.logoUrl && <img src={config.logoUrl} alt="logo" className="h-10 mx-auto mb-1" />}
+          <div className="font-bold" style={{ fontSize: '18px', letterSpacing: '0.35px', marginBottom: 3 }}>
+            {config.branchName}
           </div>
-        )}
-        <div className="row small">
-          <div className="left label">พนักงานขาย</div>
-          <div className="right clip">{sale.employee?.name || '-'}</div>
+          {config.address && <div className="small wrap">{config.address}</div>}
+          <div className="small mono muted" style={{ letterSpacing: '0.05px' }}>
+            {config.phone ? `โทร. ${config.phone}` : ''}
+          </div>
+          {config.taxId && <div className="small mono muted">เลขผู้เสียภาษี {config.taxId}</div>}
         </div>
-        <div className="row small">
-          <div className="left label">หน่วยงาน</div>
-          <div className="right clip">{sale.customer?.companyName || '-'}</div>
-        </div>
-        <div className="row small mono">
-          <div className="left label">โทร:</div>
-          <div className="right clip">{getCustomerPhoneText(sale.customer)}</div>
-        </div>
-        {!hideContactName && (
+
+        <div className="hr" />
+
+        <div className="no-break tight section-pad" style={{ paddingLeft: 1, paddingRight: 1, marginBottom: 6 }}>
+          <div className="row xs mono" style={{ marginTop: 2 }}>
+            <div className="left label">แคชเชียร์</div>
+            <div className="right clip">{sale.employee?.name || config?.cashierName || '-'}</div>
+          </div>
+          <div className="row xs mono">
+            <div className="left label">เครื่อง</div>
+            <div className="right">{config?.terminalId || config?.posId || '-'}</div>
+          </div>
+          <div className="row xs mono">
+            <div className="left label">รายการ/ชิ้น</div>
+            <div className="right">{itemLines}/{qtyTotal}</div>
+          </div>
+
+          <div className="hr-solid" style={{ margin: '5px 0' }} />
+
+          <div className="text-center font-bold title-band" style={getAdaptiveTitleStyle(receiptTitle)}>
+            {receiptTitle}
+          </div>
+          <div className="row small mono" style={{ marginTop: 3 }}>
+            <div className="left label">เลขที่</div>
+            <div className="right">{sale.code}</div>
+          </div>
+          {!config.hideDate && (
+            <div className="row small mono">
+              <div className="left label">วันที่</div>
+              <div className="right">{dateText}</div>
+            </div>
+          )}
           <div className="row small">
-            <div className="left label">ลูกค้า</div>
-            <div className="right clip">{sale.customer?.name || '-'}</div>
+            <div className="left label">พนักงานขาย</div>
+            <div className="right clip">{sale.employee?.name || '-'}</div>
           </div>
-        )}
-      </div>
-
-      <div className="hr" />
-      <div className="no-break">
-        <div className="row xs mono" style={{ marginBottom: 5 }}>
-          <div className="left label">สินค้า</div>
-          <div className="right label" style={{ minWidth: 36, textAlign: 'right' }}>จำนวน</div>
-          <div className="right label" style={{ minWidth: 78, textAlign: 'right', letterSpacing: '0.05px' }}>ราคา</div>
+          <div className="row small">
+            <div className="left label">หน่วยงาน</div>
+            <div className="right clip">{sale.customer?.companyName || '-'}</div>
+          </div>
+          <div className="row small mono">
+            <div className="left label">โทร:</div>
+            <div className="right clip">{getCustomerPhoneText(sale.customer)}</div>
+          </div>
+          {!hideContactName && (
+            <div className="row small">
+              <div className="left label">ลูกค้า</div>
+              <div className="right clip">{sale.customer?.name || '-'}</div>
+            </div>
+          )}
         </div>
 
-        <div className="hr-solid" />
+        <div className="hr" />
 
-        <div>
-          {saleItems.map((item) => {
-            const qty = n(item?.quantity);
-                        const lineTotal = getLineTotalSatang(item) / 100;
-            
-            return (
-              <div key={item.id} className="tight" style={{ padding: '5px 0' }}>
-                <div className="row">
-                  <div className="left wrap">
-                    <div className="wrap">{item.productName || '-'}</div>
+        <div className="no-break">
+          <div className="row xs mono" style={{ marginBottom: 5 }}>
+            <div className="left label">สินค้า</div>
+            <div className="right label" style={{ minWidth: 36, textAlign: 'right' }}>จำนวน</div>
+            <div className="right label" style={{ minWidth: 78, textAlign: 'right', letterSpacing: '0.05px' }}>ราคา</div>
+            {editableDocumentLines ? (
+              <div className="right label print:hidden" style={{ width: 22, textAlign: 'right' }}>&nbsp;</div>
+            ) : null}
+          </div>
+
+          <div className="hr-solid" />
+
+          <div>
+            {saleItems.map((item) => {
+              const qty = n(item?.quantity)
+              const lineTotal = getLineTotalSatang(item) / 100
+
+              return (
+                <div key={item.id} className="tight" style={{ padding: '5px 0' }}>
+                  <div className="row">
+                    <div className="left wrap">
+                      <div className="wrap">{buildDocumentLineText(item)}</div>
+                    </div>
+
+                    <div className="right mono" style={{ minWidth: 36, textAlign: 'right' }}>
+                      {qty || ''}
+                    </div>
+                    <div
+                      className="right mono"
+                      style={{
+                        minWidth: 78,
+                        textAlign: 'right',
+                        letterSpacing: '0.05px',
+                        fontWeight: 500,
+                      }}
+                    >
+                      {formatCurrency(lineTotal)}
+                    </div>
+
+                    {editableDocumentLines ? (
+                      <div
+                        className="right print:hidden"
+                        style={{
+                          width: 22,
+                          textAlign: 'right',
+                        }}
+                      >
+                        {renderDocumentLineButton(item)}
+                      </div>
+                    ) : null}
                   </div>
-                  <div className="right mono" style={{ minWidth: 36, textAlign: 'right' }}>{qty || ''}</div>
-                  <div className="right mono" style={{ minWidth: 78, textAlign: 'right', letterSpacing: '0.05px', fontWeight: 500 }}>{formatCurrency(lineTotal)}</div>
+
+                  {renderDocumentLineEditorPanel(item)}
                 </div>
-              </div>
-            );
-          })}
-        </div>
-
-        <div className="hr-solid" />
-      </div>
-
-      <div className="no-break" style={{ marginTop: 5 }}>
-        <div className="row mono">
-          <div className="left label">รวมเงิน</div>
-          <div className="right">{formatCurrency(beforeVat)} ฿</div>
-        </div>
-        <div className="row mono">
-          <div className="left label">ภาษีมูลค่าเพิ่ม {vatRate}%</div>
-          <div className="right">{formatCurrency(vatAmount)} ฿</div>
-        </div>
-
-        {/* Payment breakdown (7-11 style) */}
-        {normalizedPayments.length > 0 && (
-          <>
-            <div className="hr" />
-            {normalizedPayments.map(({ p, method, amt }, idx) => (
-              <div key={p?.id ?? `${method}-${idx}`} className="row mono">
-                <div className="left label">{labelOf(method)}</div>
-                <div className="right">{formatCurrency(amt)} ฿</div>
-              </div>
-            ))}
-          </>
-        )}
-
-        {/* Change (optional) */}
-        {shouldShowChange && (
-          <div className="row mono">
-            <div className="left label">เงินทอน</div>
-            <div className="right">{formatCurrency(change)} ฿</div>
+              )
+            })}
           </div>
-        )}
+
+          <div className="hr-solid" />
+        </div>
+
+        <div className="no-break" style={{ marginTop: 5 }}>
+          <div className="row mono">
+            <div className="left label">รวมเงิน</div>
+            <div className="right">{formatCurrency(beforeVat)} ฿</div>
+          </div>
+          <div className="row mono">
+            <div className="left label">ภาษีมูลค่าเพิ่ม {vatRate}%</div>
+            <div className="right">{formatCurrency(vatAmount)} ฿</div>
+          </div>
+
+          {normalizedPayments.length > 0 && (
+            <>
+              <div className="hr" />
+              {normalizedPayments.map(({ p, method, amt }, idx) => (
+                <div key={p?.id ?? `${method}-${idx}`} className="row mono">
+                  <div className="left label">{labelOf(method)}</div>
+                  <div className="right">{formatCurrency(amt)} ฿</div>
+                </div>
+              ))}
+            </>
+          )}
+
+          {shouldShowChange && (
+            <div className="row mono">
+              <div className="left label">เงินทอน</div>
+              <div className="right">{formatCurrency(change)} ฿</div>
+            </div>
+          )}
+
+          <div className="hr" />
+          <div
+            className="row mono"
+            style={{
+              fontWeight: 800,
+              fontSize: adaptiveTotalStyle.fontSize,
+              letterSpacing: adaptiveTotalStyle.letterSpacing,
+              marginTop: 8,
+              alignItems: 'baseline',
+              gap: adaptiveTotalStyle.gap,
+              whiteSpace: 'nowrap',
+            }}
+          >
+            <div className="left clip">{totalLabel}</div>
+            <div className="right">{totalAmountText}</div>
+          </div>
+          <div className="text-center xs" style={{ marginTop: 5 }}>(ราคารวมภาษีมูลค่าเพิ่มแล้ว)</div>
+        </div>
 
         <div className="hr" />
-        <div
-          className="row mono"
-          style={{
-            fontWeight: 800,
-            fontSize: adaptiveTotalStyle.fontSize,
-            letterSpacing: adaptiveTotalStyle.letterSpacing,
-            marginTop: 8,
-            alignItems: 'baseline',
-            gap: adaptiveTotalStyle.gap,
-            whiteSpace: 'nowrap',
-          }}
-        >
-          <div className="left clip">{totalLabel}</div>
-          <div className="right">{totalAmountText}</div>
-        </div>
-        <div className="text-center xs" style={{ marginTop: 5 }}>(ราคารวมภาษีมูลค่าเพิ่มแล้ว)</div>
-      </div>
 
-      <div className="hr" />
-
-      <div className="mt-2 small no-break tight">
-        {sale.note && <div className="wrap">หมายเหตุ: {sale.note}</div>}
-        {config?.receiptFooter && <div className="wrap" style={{ marginTop: 4 }}>{config.receiptFooter}</div>}
-      </div>
-
-      <div className="hr" />
-
-      <div className="text-center small no-break tight">
-        <div>ขอบคุณที่ใช้บริการ</div>
-        <div className="xs" style={{ marginTop: 2 }}>
-          {config?.returnPolicyShort || 'กรุณาตรวจสอบสินค้าให้เรียบร้อยก่อนออกจากร้าน'}
+        <div className="mt-2 small no-break tight">
+          {sale.note && <div className="wrap">หมายเหตุ: {sale.note}</div>}
+          {config?.receiptFooter && <div className="wrap" style={{ marginTop: 4 }}>{config.receiptFooter}</div>}
         </div>
 
-        {/* Footer code lines (7-11-ish) */}
         <div className="hr" />
-        <div className="mono xs" style={{ letterSpacing: '1.6px' }}>
-          {config?.footerCode || sale.code}
+
+        <div className="text-center small no-break tight">
+          <div>ขอบคุณที่ใช้บริการ</div>
+          <div className="xs" style={{ marginTop: 2 }}>
+            {config?.returnPolicyShort || 'กรุณาตรวจสอบสินค้าให้เรียบร้อยก่อนออกจากร้าน'}
+          </div>
+
+          <div className="hr" />
+          <div className="mono xs" style={{ letterSpacing: '1.6px' }}>
+            {config?.footerCode || sale.code}
+          </div>
         </div>
-        
-      </div>
       </div>
     </div>
   )
 }
 
-// ✅ memo ป้องกัน re-render ตอนเปิด print window
 export default React.memo(BillLayoutShortTax)
-
-
-
-
-
-
-
-
-
-
-

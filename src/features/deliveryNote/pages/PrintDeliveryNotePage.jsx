@@ -1,6 +1,3 @@
-
-
-
 // src/features/deliveryNote/pages/PrintDeliveryNotePage.jsx
 
 import { useEffect, useMemo, useState } from 'react';
@@ -8,18 +5,73 @@ import { useParams, useLocation } from 'react-router-dom';
 import useSalesStore from '@/features/sales/store/salesStore';
 import DeliveryNoteForm from '../components/DeliveryNoteForm';
 
+const normalizeDocumentText = (value) => {
+  if (typeof value !== 'string') return '';
+  return value.trim();
+};
+
+const nullableDocumentText = (value) => {
+  const normalized = normalizeDocumentText(value);
+  return normalized || null;
+};
+
+const resolveSaleItemProductName = (item) => {
+  const product =
+    item?.product ||
+    item?.stockItem?.product ||
+    item?.productSnapshot ||
+    null;
+
+  return (
+    product?.name ||
+    item?.productName ||
+    item?.name ||
+    'ไม่พบชื่อสินค้า'
+  );
+};
+
+const buildSaleDocumentLineDescription = (item) => {
+  const documentDescription = normalizeDocumentText(item?.documentDescription);
+  return documentDescription || resolveSaleItemProductName(item);
+};
+
+const buildSaleDocumentLine = (item) => ({
+  documentPrefix: normalizeDocumentText(item?.documentPrefix),
+  documentDescriptionRaw: normalizeDocumentText(item?.documentDescription),
+  documentDescription: buildSaleDocumentLineDescription(item),
+  documentSuffix: normalizeDocumentText(item?.documentSuffix),
+});
+
+const buildPrintableProductName = (documentLine) =>
+  [
+    documentLine?.documentPrefix,
+    documentLine?.documentDescription,
+    documentLine?.documentSuffix,
+  ]
+    .map((x) => normalizeDocumentText(x))
+    .filter(Boolean)
+    .join('\n');
+
 const PrintDeliveryNotePage = () => {
   const { saleId } = useParams();
   const location = useLocation();
 
   const saleStore = useSalesStore();
-  const { getSaleByIdAction, currentSale, setCurrentSale } = saleStore;
+  const {
+    getSaleByIdAction,
+    updateSaleDocumentLinesAction,
+    currentSale,
+    setCurrentSale,
+  } = saleStore;
 
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [hideDate, setHideDate] = useState(false);
 
-  // ✅ Avoid unstable deps from location.state object
+  const [editingLineKey, setEditingLineKey] = useState(null);
+  const [lineDrafts, setLineDrafts] = useState({});
+  const [savingLineKey, setSavingLineKey] = useState(null);
+
   const navSale = useMemo(() => location.state?.sale || null, [location.key]);
 
   useEffect(() => {
@@ -34,27 +86,33 @@ const PrintDeliveryNotePage = () => {
       setIsLoading(true);
       setError('');
 
-      try {        // ✅ Prefer navigation state (fast path)
-        // But for printing docs, we still hydrate from BE when branch/tax fields are missing.
+      try {
         if (navSale && String(navSale.id) === String(saleId)) {
           setCurrentSale(navSale);
 
           const navBranch = navSale?.branch || null;
           const hasTaxId = Boolean(navBranch?.taxId || navSale?.branchTaxId);
-          const hasBranchBasics = Boolean(navBranch?.address || navBranch?.phone || navBranch?.name || navBranch?.companyName);
-          const needHydrate = !hasTaxId || !hasBranchBasics;
+          const hasBranchBasics = Boolean(
+            navBranch?.address ||
+            navBranch?.phone ||
+            navBranch?.name ||
+            navBranch?.companyName
+          );
+
+          const navHasItems =
+            (Array.isArray(navSale?.items) && navSale.items.length > 0) ||
+            (Array.isArray(navSale?.simpleItems) && navSale.simpleItems.length > 0);
+
+          const needHydrate = !hasTaxId || !hasBranchBasics || !navHasItems;
 
           if (!needHydrate) {
             if (isMounted) setIsLoading(false);
             return;
           }
-          // continue to BE fetch (hydrate)
         }
 
-        // ✅ Fallback: fetch from backend
         await getSaleByIdAction(saleId);
       } catch (err) {
-                // ✅ No console.* in production path
         try {
           if (import.meta?.env?.DEV) {
             // eslint-disable-next-line no-console
@@ -76,25 +134,9 @@ const PrintDeliveryNotePage = () => {
     };
   }, [saleId, navSale, getSaleByIdAction, setCurrentSale]);
 
+  const preparedSaleItems = useMemo(() => {
+    if (!currentSale || String(currentSale.id) !== String(saleId)) return [];
 
-  if (isLoading) {
-    return <div className="p-4 text-center text-gray-600">กำลังโหลดข้อมูลใบส่งของ...</div>;
-  }
-
-  if (error) {
-    return <div className="p-4 text-center text-red-600">{error}</div>;
-  }
-
-  if (!currentSale || String(currentSale.id) !== String(saleId)) {
-    return <div className="p-4 text-center text-red-600">ไม่พบข้อมูลใบส่งของ หรือข้อมูลไม่ถูกต้อง</div>;
-  }
-
-  // ✅ Delivery Note (หน้างานจริง): รวมสินค้า 1 รายการต่อ 1 บรรทัด โดย group ตาม productId
-  // - ตอนนี้ P1 Sale หลักเป็น SN-only: Sale.items คือสินค้า SN รายชิ้น
-  // - SaleItem.price คือราคาสุทธิต่อชิ้นแล้ว ห้ามเอา discount ไปหักซ้ำตอนพิมพ์
-  // - รองรับ simpleItems แบบ fallback ในอนาคต แต่ยังไม่เปิด flow ขาย SIMPLE ในหน้านี้
-  // - ไม่แสดง barcode/serial ในระดับ grouped (Delivery Note เน้นจำนวน ไม่เน้น trace รายชิ้น)
-  const preparedSaleItems = (() => {
     const src = Array.isArray(currentSale.simpleItems) && currentSale.simpleItems.length > 0
       ? currentSale.simpleItems
       : Array.isArray(currentSale.items)
@@ -107,7 +149,18 @@ const PrintDeliveryNotePage = () => {
       const product = item?.product || item?.stockItem?.product || item?.productSnapshot || null;
       const productIdRaw = product?.id ?? item?.productId ?? item?.stockItem?.productId ?? null;
       const productId = productIdRaw == null ? null : String(productIdRaw);
-      const key = productId ?? `unknown-${item?.id ?? Math.random()}`;
+
+      const documentLine = buildSaleDocumentLine({
+        ...item,
+        product,
+      });
+
+      const key = [
+        productId ? `product-${productId}` : `unknown-${item?.id ?? Math.random()}`,
+        `prefix-${documentLine.documentPrefix}`,
+        `description-${documentLine.documentDescription}`,
+        `suffix-${documentLine.documentSuffix}`,
+      ].join('|');
 
       const isSnItem = Boolean(item?.stockItemId || item?.stockItem?.id);
 
@@ -130,44 +183,165 @@ const PrintDeliveryNotePage = () => {
         : (Number(item?.discount ?? item?.discountAmount ?? 0) || 0);
 
       if (!grouped.has(key)) {
+        const stableId = productId ? `product-${productId}-${grouped.size}` : `unknown-${item?.id ?? grouped.size}`;
+
         grouped.set(key, {
-          // key สำหรับ render row (deterministic)
-          id: productId ? `product-${productId}` : `unknown-${item?.id ?? ''}`,
+          id: stableId,
+          documentLineKey: key,
           productId: productIdRaw,
-          // เก็บ stockItemId แค่ตัวแรกเพื่อความเข้ากันได้กับโค้ดเดิม (ไม่ได้ใช้เป็นหลัก)
           stockItemId: item?.stockItemId ?? item?.stockItem?.id ?? null,
-          productName: product?.name || item?.productName || item?.name || 'ไม่พบชื่อสินค้า',
+
+          // ✅ Source IDs for per-row save.
+          saleItemIds: isSnItem && item?.id ? [Number(item.id)] : [],
+          simpleItemIds: !isSnItem && item?.id ? [Number(item.id)] : [],
+
+          // ✅ Document Line Runtime
+          documentPrefix: documentLine.documentPrefix,
+          documentDescriptionRaw: documentLine.documentDescriptionRaw,
+          documentDescription: documentLine.documentDescription,
+          documentSuffix: documentLine.documentSuffix,
+          hasDocumentLine: Boolean(documentLine.documentPrefix || documentLine.documentSuffix),
+
+          // ✅ Printable view model for existing DeliveryNoteForm
+          productName: buildPrintableProductName(documentLine),
+
           productModel: product?.model || item?.productModel || '-',
           price: unitPrice,
           quantity: 0,
-          unit: product?.unit?.name || product?.template?.unit?.name || item?.unit || '-',
+          unit: product?.unit?.name || item?.unit || 'ชิ้น',
           discount: 0,
           barcode: '-',
           serialNumber: '-',
         });
+      } else {
+        const agg = grouped.get(key);
+        if (isSnItem && item?.id) agg.saleItemIds.push(Number(item.id));
+        if (!isSnItem && item?.id) agg.simpleItemIds.push(Number(item.id));
       }
 
       const agg = grouped.get(key);
       agg.quantity += quantity;
       agg.discount += discountEach;
-
-      // ✅ Guard (minimal): ถ้าราคาไม่เท่ากันในสินค้าเดียวกัน ให้คงราคาแรกไว้ตามกติกาหน้างาน
-      // (ถือเป็น data anomaly มากกว่าจะทำให้เอกสารแตกบรรทัด)
-      if (agg.price !== unitPrice && unitPrice !== 0) {
-        // keep first price
-      }
     }
 
     return Array.from(grouped.values());
-  })();
+  }, [currentSale, saleId]);
 
-    const branch = currentSale.branch || {};
+  const handleToggleDocumentLineEdit = (item) => {
+    const key = item?.documentLineKey || item?.id;
+    if (!key) return;
+
+    setEditingLineKey((current) => {
+      if (current === key) return null;
+
+      setLineDrafts((prev) => ({
+        ...prev,
+        [key]: {
+          documentPrefix: item?.documentPrefix || '',
+          documentDescriptionRaw: item?.documentDescriptionRaw || '',
+          documentSuffix: item?.documentSuffix || '',
+        },
+      }));
+
+      return key;
+    });
+  };
+
+  const handleChangeDocumentLineDraft = (item, field, value) => {
+    const key = item?.documentLineKey || item?.id;
+    if (!key) return;
+
+    setLineDrafts((prev) => ({
+      ...prev,
+      [key]: {
+        documentPrefix: item?.documentPrefix || '',
+        documentDescriptionRaw: item?.documentDescriptionRaw || '',
+        documentSuffix: item?.documentSuffix || '',
+        ...(prev?.[key] || {}),
+        [field]: value,
+      },
+    }));
+  };
+
+  const handleSaveDocumentLine = async (item) => {
+    const key = item?.documentLineKey || item?.id;
+    if (!key || !saleId) return;
+
+    if (typeof updateSaleDocumentLinesAction !== 'function') {
+      setError('ไม่พบ action สำหรับบันทึกข้อความก่อน/หลังสินค้า');
+      return;
+    }
+
+    const draft = {
+      documentPrefix: item?.documentPrefix || '',
+      documentDescriptionRaw: item?.documentDescriptionRaw || '',
+      documentSuffix: item?.documentSuffix || '',
+      ...(lineDrafts?.[key] || {}),
+    };
+
+    const saleItemIds = Array.isArray(item?.saleItemIds) ? item.saleItemIds : [];
+    const simpleItemIds = Array.isArray(item?.simpleItemIds) ? item.simpleItemIds : [];
+
+    const makePayloadLine = (id) => ({
+      id,
+      documentPrefix: nullableDocumentText(draft.documentPrefix),
+      documentDescription: nullableDocumentText(draft.documentDescriptionRaw),
+      documentSuffix: nullableDocumentText(draft.documentSuffix),
+    });
+
+    setSavingLineKey(key);
+    setError('');
+
+    try {
+      const result = await updateSaleDocumentLinesAction(
+        saleId,
+        {
+          items: saleItemIds.map(makePayloadLine),
+          simpleItems: simpleItemIds.map(makePayloadLine),
+        },
+        { refresh: true }
+      );
+
+      if (!result?.ok) {
+        setError(result?.error || 'บันทึกข้อความก่อน/หลังสินค้าไม่สำเร็จ');
+        return;
+      }
+
+      setEditingLineKey(null);
+      setLineDrafts((prev) => {
+        const next = { ...(prev || {}) };
+        delete next[key];
+        return next;
+      });
+    } catch (err) {
+      const msg =
+        err?.response?.data?.error ||
+        err?.response?.data?.message ||
+        err?.message ||
+        'บันทึกข้อความก่อน/หลังสินค้าไม่สำเร็จ';
+      setError(msg);
+    } finally {
+      setSavingLineKey(null);
+    }
+  };
+
+  if (isLoading) {
+    return <div className="p-4 text-center text-gray-600">กำลังโหลดข้อมูลใบส่งของ...</div>;
+  }
+
+  if (error) {
+    return <div className="p-4 text-center text-red-600">{error}</div>;
+  }
+
+  if (!currentSale || String(currentSale.id) !== String(saleId)) {
+    return <div className="p-4 text-center text-red-600">ไม่พบข้อมูลใบส่งของ หรือข้อมูลไม่ถูกต้อง</div>;
+  }
+
+  const branch = currentSale.branch || {};
   const preparedConfig = {
-    // ✅ Prefer legal entity name when available
     branchName: branch.companyName || branch.name || '-',
     address: branch.address || '-',
     phone: branch.phone || '-',
-    // ✅ Support normalized fallback from store
     taxId: branch.taxId || currentSale.branchTaxId || '-',
   };
 
@@ -178,15 +352,17 @@ const PrintDeliveryNotePage = () => {
         hideDate={hideDate}
         setHideDate={setHideDate}
         saleItems={preparedSaleItems}
-        config={preparedConfig}      />
+        config={preparedConfig}
+        editableDocumentLines
+        editingLineKey={editingLineKey}
+        lineDrafts={lineDrafts}
+        savingLineKey={savingLineKey}
+        onToggleDocumentLineEdit={handleToggleDocumentLineEdit}
+        onChangeDocumentLineDraft={handleChangeDocumentLineDraft}
+        onSaveDocumentLine={handleSaveDocumentLine}
+      />
     </div>
   );
 };
 
 export default PrintDeliveryNotePage;
-
-
-
-
-
-

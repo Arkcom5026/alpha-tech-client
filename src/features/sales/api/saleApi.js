@@ -1,4 +1,3 @@
-
 // 📁 FILE: src/features/sales/api/saleApi.js
 
 import apiClient from '@/utils/apiClient';
@@ -36,12 +35,8 @@ export const getAllSales = async () => {
   }
 };
 
-// ✅ getSaleById (print-safe)
 export const getSaleById = async (id, options) => {
   try {
-    // ✅ Backward/forward compatible params builder
-    // - options.includePayments / options.includeBranch are our preferred flags
-    // - options.params is still supported for legacy callers
     const params = {
       includePayments:
         options?.includePayments === false
@@ -59,6 +54,18 @@ export const getSaleById = async (id, options) => {
     throw attachApiContext(err, 'saleApi.getSaleById');
   }
 };
+
+export const updateSaleDocumentLines = async (saleId, payload) => {
+  try {
+    const res = await apiClient.put(`/sales/${saleId}/document-lines`, payload);
+    return res.data;
+  } catch (err) {
+    throw attachApiContext(err, 'saleApi.updateSaleDocumentLines');
+  }
+};
+
+// 🧭 Backward-compatible alias
+export const updateSaleDocumentDescriptions = updateSaleDocumentLines;
 
 export const returnSale = async (saleOrderId, saleItemId) => {
   try {
@@ -87,7 +94,6 @@ export const getSaleReturns = async () => {
   }
 };
 
-// ✅ Update customer profile via token (no :id in URL)
 export const updateCustomer = async (data) => {
   try {
     const res = await apiClient.patch('/customers/me', data);
@@ -97,12 +103,6 @@ export const updateCustomer = async (data) => {
   }
 };
 
-
-
-
-// ✅ Search printable sales (Sales history for printing)
-// - Primary endpoint: /sales/printable
-// - Backward-compat fallback: /sales/printable-sales (temporary)
 export const searchPrintableSales = async (params) => {
   try {
     const safeParams = {
@@ -126,11 +126,6 @@ export const searchPrintableSales = async (params) => {
   }
 };
 
-
-
-
-
-// ✅ Convert OrderOnline to Sale
 export const convertOrderOnlineToSale = async (orderOnlineId, stockSelections) => {
   try {
     const res = await apiClient.post(`/order-online/${orderOnlineId}/convert-to-sale`, {
@@ -141,4 +136,3 @@ export const convertOrderOnlineToSale = async (orderOnlineId, stockSelections) =
     throw attachApiContext(err, 'saleApi.convertOrderOnlineToSale');
   }
 };
-

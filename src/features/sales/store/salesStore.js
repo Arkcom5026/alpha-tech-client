@@ -15,6 +15,7 @@ import {
   markSaleAsPaid,
   searchPrintableSales,
   convertOrderOnlineToSale,
+  updateSaleDocumentLines,
 } from '../api/saleApi';
 
 // ✅ Defensive normalizer (production-grade)
@@ -612,6 +613,49 @@ const useSalesStore = create((set, get) => ({
     } catch (err) {
       devError('[getSaleByIdAction]', err);
       set({ currentSale: null });
+    }
+  },
+
+  updateSaleDocumentLinesAction: async (saleId, payload, options = {}) => {
+    try {
+      const normalizedSaleId = Number(saleId);
+
+      if (!Number.isInteger(normalizedSaleId) || normalizedSaleId <= 0) {
+        const msg = 'Sale ID ไม่ถูกต้อง';
+        set({ error: msg });
+        return { ok: false, error: msg };
+      }
+
+      set({ loading: true, error: null });
+
+      const result = await updateSaleDocumentLines(normalizedSaleId, payload || {});
+
+      // ✅ Refresh current runtime after save so the document workspace updates immediately.
+      if (options?.refresh !== false) {
+        await get().getSaleByIdAction(normalizedSaleId);
+      }
+
+      return {
+        ok: true,
+        data: result,
+      };
+    } catch (err) {
+      devError('[updateSaleDocumentLinesAction]', err);
+
+      const msg =
+        err?.response?.data?.error ||
+        err?.response?.data?.message ||
+        err?.message ||
+        'บันทึกข้อความก่อน/หลังสินค้าไม่สำเร็จ';
+
+      set({ error: msg });
+
+      return {
+        ok: false,
+        error: msg,
+      };
+    } finally {
+      set({ loading: false });
     }
   },
 

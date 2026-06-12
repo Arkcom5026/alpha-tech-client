@@ -1317,3 +1317,858 @@ Mission Alignment:
 
 ----------------
 
+UB — STEP P1-DOC-01
+Operational Document Certification
+STEP P1-DOC-01.2-A
+Sale Document Include Contract Extraction
+
+Status: LOCKED ✅
+
+Completed
+
+สร้างโครงสร้างใหม่ตามมาตรฐาน P7
+
+src/modules/
+  sales/
+    contracts/
+      saleDocument.include.js
+    projections/
+
+ย้าย Prisma Include Contract ออกจาก
+
+controllers/saleController.js
+
+เข้าสู่
+
+src/modules/sales/contracts/
+
+สำเร็จ
+
+Verification
+Backend
+npm run dev
+
+Result
+
+✅ Server running on port 5000
+
+PASS
+
+Runtime
+/pos/sales/delivery-note/print/:saleId
+
+Result
+
+✅ โหลดเอกสารได้
+✅ ไม่พบ Runtime Error
+✅ ไม่พบ Import Error
+✅ ไม่พบ Regression
+
+PASS
+
+STEP P1-DOC-01.1-C
+Document Row Overflow Certification
+
+Status: IN PROGRESS 🚀
+
+Discovery
+
+จากเอกสารจริงของลูกค้า
+
+งาน CCTV
+งานซ่อม
+งานบริการ
+
+พบว่า
+
+Description
+
+มีความสำคัญสูงสุดในเอกสาร
+
+และมีแนวโน้มยาวหลายบรรทัด
+
+Human Reality Gap
+
+ก่อนปรับ
+
+UNIT PRICE 20%
+AMOUNT     20%
+
+กินพื้นที่มากเกินจำเป็น
+
+ในขณะที่
+
+DESCRIPTION
+
+แคบเกินไปสำหรับงานบริการ
+
+Improvements Applied
+
+ปรับสัดส่วนตาราง
+
+จาก
+
+ITEM         8%
+DESCRIPTION 32%
+QTY         10%
+UNIT        10%
+UNIT PRICE 20%
+AMOUNT     20%
+
+เป็น
+
+ITEM         7%
+DESCRIPTION 47%
+QTY          8%
+UNIT         8%
+UNIT PRICE 15%
+AMOUNT      15%
+Layout Improvements
+
+รองรับข้อความยาวมากขึ้น
+
+เพิ่ม
+
+whitespace-pre-wrap
+break-words
+align-top
+
+ให้คอลัมน์ Description
+
+และเปลี่ยน Row ให้รองรับความสูงแบบ Dynamic
+
+Verification
+
+จากภาพล่าสุด
+
+✅ DESCRIPTION กว้างขึ้น
+✅ UNIT PRICE ลดลง
+✅ AMOUNT ลดลง
+✅ Layout สมดุลขึ้น
+✅ อ่านง่ายขึ้น
+Current Assessment
+
+วาระนี้
+
+ยังไม่ Lock
+
+เนื่องจากยังไม่ได้ทดสอบกับเคสจริง
+
+งาน CCTV
+หลายบรรทัด
+หลายรายการ
+
+ที่เป็นต้นตอของปัญหา
+
+Engineering Convergence
+
+Status: ACTIVE
+
+Sales Module
+src/modules/sales/
+
+Status
+
+BOOTSTRAPPED ✅
+Next Candidate
+src/features/finance
+
+→
+
+src/modules/finance
+
+เมื่อเริ่มวาระ Finance รอบถัดไป
+
+ตามกฎ
+
+Touch → Improve → Converge
+Current Active Agendas
+Business
+STEP P1-DOC-01.1-C
+Document Row Overflow Certification
+
+ทดสอบกับเอกสารงานจริง (CCTV / Service Work)
+
+Engineering
+Finance Module Convergence
+
+เตรียมย้าย Domain ใหม่เข้าสู่
+
+src/modules/finance
+
+ตามมาตรฐาน P7
+
+Integrity Status
+Business Logic      ✅ Stable
+Document Runtime    ✅ Stable
+Sales Module        ✅ Started
+Architecture Lift   ✅ Active
+Regression Status   ✅ None Detected
+
+-----------------------
+
+UB — P1 Product Unit Restoration & Customer Address Consolidation
+
+วาระ: Runtime Truth Restoration / Product.unit + Customer Address Standardization
+
+สถานะ: ✅ COMPLETED
+
+1. Customer Address Standardization
+
+Discovery
+
+ระหว่างแก้ไขใบส่งของพบว่า:
+
+หน้าขาย:
+แสดงที่อยู่เต็ม
+
+ใบส่งของ:
+แสดงเฉพาะ addressDetail (บ้านเลขที่)
+
+สาเหตุ:
+
+saleDocument.include.js
+ไม่ได้ include
+
+customer.subdistrict
+→ district
+→ province
+
+จึงไม่สามารถประกอบที่อยู่เต็มได้
+
+Implementation
+
+SALE_DOCUMENT_INCLUDE ถูกยกระดับให้ดึง:
+
+customer
+ ├─ user
+ └─ subdistrict
+      └─ district
+           └─ province
+
+พร้อมสร้าง
+
+src/features/customer/utils/customerAddressFormatter.js
+
+เป็น Runtime Formatter กลาง
+
+สำหรับ:
+
+ใบส่งของ
+ใบกำกับภาษี
+ใบเสนอราคา
+ใบสั่งขาย
+เอกสารลูกค้าอื่นในอนาคต
+
+Validation
+
+Delivery Note
+ก่อน:
+123
+
+หลัง:
+123 ต.เจริญผล อ.บรรพตพิสัย จ.นครสวรรค์ 60180
+
+✅ Verified
+
+2. Product Unit Restoration
+
+Discovery
+
+จากการย้อนตรวจ Product Architecture พบว่า
+
+ช่วงรื้อโครงสร้าง Product ครั้งใหญ่
+
+ProductTemplate
+ProductProfile
+Product
+
+มีความซับซ้อนสูง
+
+จึงมีการซ่อน Unit ออกจาก Product Form เพื่อลดผลกระทบ
+
+Architecture Clarification
+
+ปัจจุบัน
+
+ProductTemplate
+= ยังไม่เป็น Runtime Truth
+
+ProductProfile
+= ยังไม่เป็น Runtime Truth
+
+Product.unit
+= Runtime Truth
+
+จึงควรให้ผู้ใช้กำหนด Unit ที่ Product โดยตรง
+
+Implementation
+
+Dropdown Unit ถูกคืนกลับสู่
+
+Create Product
+Edit Product
+
+โดยใช้
+
+Product.unitId
+
+เป็นแหล่งข้อมูลหลัก
+
+3. Product API Upgrade
+
+getCatalogDropdowns()
+
+ยกระดับให้ส่งต่อ:
+
+units
+
+จาก Backend สู่ Product Form
+
+ทำให้ Unit สามารถถูกใช้งานได้แบบมาตรฐานร่วมกับ:
+
+categories
+productTypes
+brands
+profiles
+templates
+units
+4. Runtime Validation
+
+ทดสอบจริง
+
+สินค้าเดิม (ไม่มี Unit)
+→ เพิ่ม "ตัว"
+
+บันทึก
+→ ปิดหน้า
+
+เปิดใหม่
+→ แสดง "ตัว"
+
+เปลี่ยนเป็น "ชิ้น"
+
+บันทึก
+→ ปิดหน้า
+
+เปิดใหม่
+→ แสดง "ชิ้น"
+
+ผลลัพธ์
+
+Create
+Update
+Reload
+Persistence
+
+ผ่านทั้งหมด
+
+✅ Runtime Truth Confirmed
+
+Locked Understanding
+Product.unit
+คือ Runtime Truth
+
+ProductTemplate.unit
+ยังไม่ใช่ Runtime Truth
+
+ProductProfile
+ยังไม่ใช่ Runtime Truth
+
+การจัดการหน่วยนับของสินค้า
+ต้องอ้างอิง Product.unit เป็นหลัก
+จนกว่าจะมีการ Promote Template Architecture อย่างเป็นทางการ
+Next Recommended Agenda
+P1-UNIT-RESTORE-02
+
+Trace Product.unit Usage
+
+ตรวจสอบว่าหน่วยนับถูกนำไปใช้ครบหรือยังใน:
+
+ขายสินค้า
+ใบส่งของ
+ใบกำกับภาษี
+ใบเสนอราคา
+พิมพ์สินค้า
+รายงานสินค้า
+หน้าสต็อก
+Ready To Sell
+
+เป้าหมาย:
+
+Product.unit
+→ Single Source of Truth
+→ End-to-End Visibility
+
+🔒 Regression Lock Candidate Ready.
+
+-------------------
+
+UB — P1 STEP: Document Line Runtime Foundation
+
+วาระ: Document Line Architecture Standardization
+
+สถานะ: ✅ COMPLETED
+
+1. Runtime Model Expansion
+
+Prisma ยกระดับ SaleItem และ SaleItemSimple
+
+จากเดิม
+
+documentDescription
+
+เป็น
+
+documentPrefix
+documentDescription
+documentSuffix
+
+ทำให้เอกสารสามารถรองรับ
+
+ข้อความก่อนสินค้า
+
+ชื่อสินค้า / ข้อความหลัก
+
+ข้อความหลังสินค้า
+
+โดยไม่กระทบ Product Runtime Truth
+
+2. Architecture Standardization
+
+แนวคิดถูกยกระดับจาก
+
+Document Description
+
+เป็น
+
+Document Line
+
+เพื่อให้สอดคล้องกับความเป็นจริงของข้อมูล
+
+Document Line ประกอบด้วย
+
+Prefix
+Description
+Suffix
+
+ไม่ใช่ข้อความเพียงช่องเดียว
+
+3. Backend Standardization
+
+Backend ถูกปรับมาตรฐานเป็น
+
+saleDocument.service.js
+
+ใช้
+
+updateSaleDocumentLines
+
+แทน
+
+updateSaleDocumentDescriptions
+
+และรองรับ
+
+documentPrefix
+documentDescription
+documentSuffix
+
+ครบทั้ง
+
+SaleItem
+SaleItemSimple
+4. Route Standardization
+
+Endpoint หลักใหม่
+
+PUT /api/sales/:id/document-lines
+
+พร้อมคง
+
+PUT /api/sales/:id/document-descriptions
+
+ไว้เป็น Backward Compatibility ชั่วคราว
+
+5. Lesson Candidate (Level 2)
+Operational Runtime Truth vs Document Runtime Truth
+
+Discovery สำคัญ
+
+Product Runtime Truth
+≠
+Document Runtime Truth
+Product Runtime Truth
+
+รับผิดชอบ
+
+ชื่อสินค้า
+ราคา
+Unit
+Brand
+Mode
+Stock
+Document Runtime Truth
+
+รับผิดชอบ
+
+ข้อความก่อนสินค้า
+
+ข้อความที่ใช้พิมพ์
+
+ข้อความหลังสินค้า
+
+บริบทของลูกค้า
+
+Document Runtime ไม่ควรย้อนกลับไปแก้ Product Runtime
+
+และ Product Runtime ไม่ควรถูกออกแบบเพื่อรองรับเอกสารเฉพาะครั้ง
+
+ถือเป็นการแยก Domain ที่ชัดเจนและลดการปะปนของ Business Responsibility
+
+Current Status
+✅ Prisma
+✅ Service
+✅ Controller
+✅ Route
+
+Document Line Foundation พร้อมแล้ว
+
+Next Agenda
+P1-DOC-LINE-02
+
+Frontend Runtime Integration
+
+ลำดับดำเนินงาน
+
+saleApi
+↓
+saleStore
+↓
+Document Edit UI
+↓
+Delivery Note
+↓
+Receipt
+↓
+Regression Validation
+
+Blueprint Status: 🔒 STEP P1-DOC-LINE-01 Ready to Lock.
+
+------------------
+
+UB — STEP P1 Document Workspace UX Standard (LOCK)
+
+Status: ✅ Locked (Design Standard)
+
+Human Reality
+
+ผู้ใช้ไม่ได้ต้องการ "แก้ข้อมูลสินค้า"
+
+ผู้ใช้ต้องการ "ปรับข้อความบนเอกสาร" เฉพาะบางรายการ ก่อนพิมพ์
+
+ดังนั้นหน้าพิมพ์ควรเป็น Document Workspace ไม่ใช่เพียง Print Preview
+
+Document Line Editing Standard
+Entry
+ใช้ไอคอน ✏️ (หรือไอคอนแก้ไขที่เลือกภายหลัง) อยู่ ท้ายบรรทัด ของรายการสินค้า
+หลีกเลี่ยงการวางไว้ด้านหน้าเพื่อไม่ให้ดึงสายตาจากการตรวจรายการสินค้า
+Interaction
+กดไอคอนแล้ว Expand Inline
+ไม่ใช้ Modal
+ไม่เปิดหน้าใหม่
+ไม่เปลี่ยน Context
+Editing Layout
+[input]
+
+ชื่อสินค้า (Readonly)
+
+[input]
+
+                    [บันทึก]
+Input บน = documentPrefix
+ตรงกลาง = ชื่อสินค้า (Readonly)
+Input ล่าง = documentSuffix
+UX Principle
+ไม่มี Label
+ไม่มีคำอธิบาย
+ใช้ตำแหน่งของ Input เป็นตัวสื่อความหมาย
+ผู้ใช้เข้าใจโดยธรรมชาติว่าเป็น
+ข้อความก่อนชื่อสินค้า
+ข้อความหลังชื่อสินค้า
+Save Behavior
+บันทึกเฉพาะรายการ (Per Row Save)
+ไม่กระทบรายการอื่น
+หลังบันทึก Refresh Runtime และ Preview ทันที
+เอกสารพร้อมพิมพ์ทันทีโดยไม่ต้องออกจากหน้า
+Scope
+
+มาตรฐานนี้ให้ใช้กับเอกสารทุกประเภทของ P1 เช่น
+
+✅ ใบส่งของ (Delivery Note)
+✅ ใบเสร็จรับเงิน
+✅ ใบกำกับภาษี
+✅ เอกสารขายอื่น ๆ ในอนาคต
+
+ผมเห็นด้วยอย่างมากกับการ Lock เรื่องนี้ เพราะนี่ไม่ใช่แค่การเพิ่มฟีเจอร์ แต่เป็น Document Workspace Pattern ของทั้งระบบ ซึ่งจะทำให้ประสบการณ์ใช้งานเอกสารทุกหน้ามีรูปแบบเดียวกัน ผู้ใช้เรียนรู้ครั้งเดียวและใช้งานได้ทุกเอกสารครับ
+
+
+----------------------
+
+
+Cross-Project Pattern: Structured Runtime → Natural Human Output
+
+เมื่อผู้ใช้ต้องการ “ข้อความเอกสาร” อย่าเก็บเป็น string เดียวทันที ถ้าข้อความนั้นมีโครงสร้างตามธรรมชาติของงาน
+
+ให้แยกเป็น:
+- Prefix / ข้อความก่อนแกนหลัก
+- Core / ข้อความหลักหรือ Truth เดิม
+- Suffix / ข้อความหลังแกนหลัก
+
+จากนั้นเวลาแสดงผล ให้ประกอบกลับเป็นภาษามนุษย์แบบธรรมชาติ
+
+หลักการ:
+Structured Data for System
+Natural Language for Human
+
+ตัวอย่าง:
+documentPrefix + productName + documentSuffix
+→ “เปลี่ยนตลับหมึก Canon G2010 พร้อมทำความสะอาด”
+
+ใช้ได้กับ:
+- เอกสารขาย
+- ใบส่งของ
+- ใบเสร็จ
+- ใบกำกับภาษี
+- Work Order
+- Service Report
+- Field Operation Report
+- P7 checklist / return verification note
+
+
+----------------------------
+
+UB — Deferred Architecture Plan (Document Workspace)
+
+ผมเสนอให้บันทึกไว้ใน Blueprint ของ P1 เป็น "แผนที่ล็อกแล้ว แต่ยังไม่ดำเนินการ" ดังนี้
+
+STEP D.3 — Shared Document Workspace (Deferred)
+
+สถานะ: Deferred / Planned
+
+เหตุผล:
+
+ปัจจุบัน P7 เป็นภารกิจหลัก
+P1 ต้องการเพียง Patch ที่ปลอดภัยและใช้งานได้จริง
+หลีกเลี่ยงการรีแฟกเตอร์ขนาดใหญ่ที่อาจกระทบงานหลัก
+แนวทางที่ล็อกไว้
+
+เมื่อกลับมาปรับโครงสร้าง P1 รอบใหญ่ จะดำเนินการดังนี้
+
+แยก DocumentToolbar เป็น Component กลาง
+แยก DocumentLineEditor เป็น Component กลาง
+แยก Document Workspace Runtime (Draft / Edit / Save State)
+ใช้ Runtime และ API เดียวกันกับ
+Delivery Note
+Receipt
+Tax Invoice
+Quotation
+Purchase Order
+เอกสารอื่น ๆ
+แยก Workspace ออกจาก Renderer
+ให้ Renderer ของแต่ละเอกสารเหลือหน้าที่แสดงผลเท่านั้น
+ระหว่างนี้ (Temporary Rule)
+ใช้การแก้ไขแบบ Patch เฉพาะหน้า
+ไม่รีแฟกเตอร์โครงสร้าง
+ไม่แยก Runtime
+ลดผลกระทบต่อ P7 ให้มากที่สุด
+
+ผมชอบวิธีคิดนี้มาก เพราะมันเป็นการ ล็อกทิศทางไว้ แต่ไม่บังคับให้ทำทันที
+
+เมื่อถึงเวลาปรับใหญ่ เราไม่ต้องกลับมาคิดใหม่ว่า "ควรทำอย่างไร" เพราะ Blueprint ได้เก็บสถาปัตยกรรมเป้าหมายไว้เรียบร้อยแล้ว ส่วนวันนี้เราสามารถเดินหน้าพัฒนา P7 ได้เต็มกำลังโดยไม่ต้องแบกงานรีแฟกเตอร์ของ P1 ติดตัวไปครับ
+
+-----------
+
+UB ครับ ✅
+
+P1 Document Line / Receipt Decision Update
+
+Discovery:
+Receipt can originate from two flows:
+1) Cash Sale → Receipt directly
+2) Credit Sale → Delivery Note first → Receipt later
+Future flow may allow one Receipt to be created from multiple Delivery Notes / Sales.
+
+Decision:
+Receipt must be able to add / remove / edit document line text independently from the user’s perspective, because cash receipts may exist without any Delivery Note.
+
+Temporary Patch Rule:
+For now, Receipt Short may use existing SaleItem / SaleItemSimple fields:
+- documentPrefix
+- documentDescription
+- documentSuffix
+
+This enables immediate edit support for receipt lines with low backend impact.
+
+Known Limitation:
+During temporary patch phase, Delivery Note and Receipt still share the same SaleItem document fields. Therefore editing receipt document text may affect Delivery Note display for the same Sale.
+
+Future Architecture Lock:
+When returning for the larger P1 refactor, create document-type-specific truth:
+- DeliveryNoteDocumentLine
+- ReceiptDocumentLine
+- TaxInvoiceDocumentLine
+or a generic DocumentLine table with documentType.
+
+Future model must support:
+- Receipt from cash sale
+- Receipt from one delivery note
+- Receipt from multiple delivery notes / sales
+- Initial copy/inherit from source document lines
+- Independent override after receipt creation
+- Traceability back to source SaleItem / SaleItemSimple
+
+ตอนนี้ล็อกแผนไว้แล้วครับ.
+
+------------------------
+
+UB ที่ควรบันทึก
+STEP — Document Line Workspace V1 (LOCK)
+
+Completed
+
+เพิ่มระบบ Document Line Editing สำหรับเอกสารขาย
+รองรับข้อมูลแบบ Structured
+documentPrefix
+documentDescription
+documentSuffix
+ใช้ API กลาง
+PUT /sales/:id/document-lines
+ใช้ Service กลาง
+saleDocument.service
+รองรับทั้ง
+ใบเสร็จอย่างย่อ (Short Tax)
+ใบกำกับภาษีเต็มรูป (Full Tax)
+แสดงสถานะรายการที่มี Document Line ด้วยปุ่ม ✓
+แก้ไขและบันทึกได้จากหน้าเอกสาร
+Reload หลังบันทึกสำเร็จทันที
+Print Mode ซ่อน UI Editing ทั้งหมด
+Technical Debt (Deferred)
+
+Deferred Refactor
+
+รวม Document Workspace เป็น Shared Layer
+
+Candidate
+
+useDocumentLineEditor()
+
+หรือ
+
+DocumentWorkspace
+
+เพื่อใช้ร่วมกันระหว่าง
+
+PrintBillPageShortTax
+PrintBillPageFullTax
+PrintDeliveryNotePage
+เอกสารอื่นในอนาคต
+
+Reason
+
+ไม่มีผลกับ Business
+ระบบทำงานได้สมบูรณ์แล้ว
+ลดความเสี่ยง Regression
+ย้ายไปทำในช่วง Refactor รอบใหญ่ของ P1
+
+ผมคิดว่านี่สอดคล้องกับหลักการที่เรายึดมาตลอดคือ
+
+"Working software before structural perfection."
+
+ตอนนี้คุณค่าได้ส่งมอบแล้ว ส่วนการทำให้โค้ดสวยขึ้นสามารถทำเป็นวาระ Refactor แยกได้ภายหลัง โดยไม่กระทบการเดินหน้าของ P7
+
+ดังนั้นผมแนะนำให้ Lock Task นี้, ทำ UB ตามข้างต้น แล้วกลับไปลุย P7 ได้เลยครับ 🚀
+
+-----------
+
+UB ที่ผมเสนอ
+
+เพิ่มไว้ใน Blueprint ของ P1
+
+STEP — Document Workspace Refactor
+
+หลัง P7 แล้ว
+
+เป้าหมาย
+
+รวม Document Line Editor ให้เหลือชุดเดียว
+รวม Document Line Button
+รวม Document Line Preview
+ลดโค้ดซ้ำระหว่าง
+Delivery Note
+Bill Short Tax
+Bill Full Tax
+ทำ Shared Document Workspace Component
+ไม่เปลี่ยน UX
+ไม่เปลี่ยน Database
+ไม่เปลี่ยน API
+
+--------------
+
+UB — P1 Invoice Layout Refinement
+
+Task: ปรับปรุงหน้าพิมพ์ใบเสร็จรับเงิน / ใบกำกับภาษี ตามความต้องการลูกค้า
+
+สถานะ
+
+✅ Completed & Locked
+
+สิ่งที่ดำเนินการ
+1. Customer Address Rendering
+เปลี่ยนหน้าบิลให้ใช้ buildCustomerFullAddress() เช่นเดียวกับ Delivery Note
+รองรับข้อมูลที่อยู่แบบ Structured Address
+แก้ปัญหาที่อยู่ลูกค้าไม่แสดงในเอกสาร
+มี fallback ไปยัง customer.customerAddress และ customer.address
+
+ผลลัพธ์
+
+ที่อยู่ลูกค้าแสดงครบถ้วนตามข้อมูลในระบบ
+2. Payment Signature Section
+
+ปรับส่วนลายเซ็นด้านล่างจาก
+
+ผู้รับเงิน (ช่องเดียว)
+
+เป็น
+
+ผู้ชำระเงิน / PAID BY
+ผู้รับชำระเงิน / RECEIVED BY
+
+ตรงตามรูปแบบเอกสารของลูกค้า
+
+3. Bottom Layout Refinement
+
+ปรับตำแหน่ง Summary และ Signature
+
+เลื่อนชุดลายเซ็นลงใกล้ขอบล่างกระดาษ
+เพิ่มพื้นที่สำหรับการเซ็นจริง
+ทำให้ Layout สมดุลและใกล้เคียงเอกสารต้นฉบับมากขึ้น
+ไม่กระทบพื้นที่ตารางสินค้า
+Regression
+✅ ไม่กระทบการคำนวณ VAT
+✅ ไม่กระทบยอดรวม
+✅ ไม่กระทบ Document Line Workspace
+✅ ไม่กระทบระบบพิมพ์
+✅ ไม่กระทบ Delivery Note
+Locked Understanding
+
+เอกสารสำหรับลูกค้าไม่ควรวัดเพียง "ข้อมูลถูกต้อง" แต่ต้องให้ความสำคัญกับ คุณภาพการใช้งานจริงของเอกสาร (Document Usability) ได้แก่
+
+ความครบถ้วนของข้อมูล
+ความสมดุลของ Layout
+พื้นที่สำหรับการเซ็นใช้งานจริง
+ความสอดคล้องกับรูปแบบเอกสารที่ลูกค้าคุ้นเคย
+
+การปรับครั้งนี้ยกระดับคุณภาพของเอกสารโดยไม่เปลี่ยน Business Logic หรือ Data Contract จึงถือเป็น Document Presentation Improvement ที่ปลอดภัยและสามารถใช้เป็นมาตรฐานสำหรับเอกสารประเภทอื่นใน P1 ต่อไปได้
+
+สถานะสุดท้าย: ✅ Task Completed & Locked

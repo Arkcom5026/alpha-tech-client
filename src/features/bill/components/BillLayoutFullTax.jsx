@@ -289,41 +289,51 @@ const BillLayoutFullTax = ({
     );
   };
 
-  const getUnitPriceIncVat = (item) => {
-    const qty = Number(item?.quantity) || 0;
-    const explicit = item?.unitPriceIncVat ?? item?.unitPrice;
-    if (explicit != null && Number.isFinite(Number(explicit))) return round2(explicit);
-
-    const ex = item?.unitPriceExVat;
-    if (ex != null && Number.isFinite(Number(ex))) {
-      return round2(Number(ex) * (1 + vatRate / 100));
-    }
-
-    const totalInc = item?.amount ?? item?.total ?? item?.totalAmount;
-    if (qty > 0 && totalInc != null && Number.isFinite(Number(totalInc))) {
-      return round2(Number(totalInc) / qty);
-    }
-
-    return 0;
-  };
 
   const getLineAmountIncVat = (item) => {
-    const qty = Number(item?.quantity) || 0;
-    const explicitAmount = item?.amount ?? item?.total ?? item?.totalAmount;
-    if (explicitAmount != null && Number.isFinite(Number(explicitAmount))) return round2(explicitAmount);
-
-    const explicitUnit = item?.unitPriceIncVat ?? item?.unitPrice;
+    const qty = Number(item?.quantity) || 0
+  
+    const explicitAmount = item?.amount ?? item?.total ?? item?.totalAmount
+    if (explicitAmount != null && Number.isFinite(Number(explicitAmount))) {
+      return round2(explicitAmount)
+    }
+  
+    const explicitUnit = item?.unitPriceIncVat ?? item?.unitPrice
     if (explicitUnit != null && Number.isFinite(Number(explicitUnit))) {
-      return round2(Number(explicitUnit) * qty);
+      return round2(Number(explicitUnit) * qty)
     }
-
-    const exTotal = item?.totalExVat;
+  
+    const exTotal = item?.totalExVat
     if (exTotal != null && Number.isFinite(Number(exTotal))) {
-      return round2(Number(exTotal) * (1 + vatRate / 100));
+      return round2(Number(exTotal) * (1 + vatRate / 100))
     }
+  
+    return 0
+  }
+  
+  const getUnitPriceIncVat = (item) => {
+    const qty = Number(item?.quantity) || 0
+  
+    // ✅ เอกสารพิมพ์ต้องให้ UNIT PRICE สัมพันธ์กับ AMOUNT เสมอ
+    const amountIncVat = getLineAmountIncVat(item)
+    if (qty > 0 && Number.isFinite(amountIncVat)) {
+      return round2(amountIncVat / qty)
+    }
+  
+    const explicit = item?.unitPriceIncVat ?? item?.unitPrice
+    if (explicit != null && Number.isFinite(Number(explicit))) {
+      return round2(explicit)
+    }
+  
+    const ex = item?.unitPriceExVat
+    if (ex != null && Number.isFinite(Number(ex))) {
+      return round2(Number(ex) * (1 + vatRate / 100))
+    }
+  
+    return 0
+  }
 
-    return 0;
-  };
+
 
   return (
     <>

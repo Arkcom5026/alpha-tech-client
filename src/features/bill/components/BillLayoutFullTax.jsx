@@ -3,6 +3,7 @@
 // ===============================
 import React, { useEffect, useRef, useState } from 'react';
 import { buildCustomerFullAddress } from '@features/customer/utils/customerAddressFormatter';
+import { buildReceiptItems } from '../utils/receiptGrouping';
 
 const formatCurrency = (val) => (Number(val) || 0).toLocaleString('th-TH', {
   minimumFractionDigits: 2,
@@ -118,6 +119,13 @@ const BillLayoutFullTax = ({
     setHideDate(Boolean(config?.hideDate));
   }, [config?.hideDate]);
 
+  // ✅ Shared receipt grouping engine: keep Full Tax and Short Receipt behavior aligned.
+  // Hooks must stay before any early return.
+  const displaySaleItems = React.useMemo(
+    () => buildReceiptItems(saleItems || []),
+    [saleItems]
+  );
+
   if (!sale || !saleItems || !payments || !config) return null;
 
   // ✅ VAT rate: prefer Sale snapshot, fallback to config, then 7
@@ -145,7 +153,7 @@ const BillLayoutFullTax = ({
   }
 
   const maxRowCount = 20;
-  const emptyRowCount = Math.max(maxRowCount - saleItems.length, 0);
+  const emptyRowCount = Math.max(maxRowCount - displaySaleItems.length, 0);
   const displayColumnCount = editableDocumentLines ? 7 : 6;
 
   const handlePrint = () => {
@@ -447,7 +455,7 @@ const BillLayoutFullTax = ({
             </tr>
           </thead>
           <tbody>
-            {saleItems.map((item, index) => (
+            {displaySaleItems.map((item, index) => (
               <React.Fragment key={item.id ?? item.documentLineKey ?? `item-${index}`}>
                 <tr>
                   <td className="border border-black px-2 text-center h-[28px] align-top">{index + 1}</td>

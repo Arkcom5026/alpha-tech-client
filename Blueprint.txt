@@ -2172,3 +2172,170 @@ Locked Understanding
 การปรับครั้งนี้ยกระดับคุณภาพของเอกสารโดยไม่เปลี่ยน Business Logic หรือ Data Contract จึงถือเป็น Document Presentation Improvement ที่ปลอดภัยและสามารถใช้เป็นมาตรฐานสำหรับเอกสารประเภทอื่นใน P1 ต่อไปได้
 
 สถานะสุดท้าย: ✅ Task Completed & Locked
+
+---------------
+
+UB — Receipt Engine Consolidation & Document Layout Standardization
+
+Task: P7 – Receipt Printing System (Short Tax + Full Tax)
+
+Status: ✅ Completed & Verified
+
+1. Mission
+
+ยกระดับระบบเอกสารของ P7 ให้ใช้กฎการรวมรายการสินค้า (Receipt Grouping Rules) เพียงชุดเดียว เพื่อให้เอกสารทุกประเภทมีพฤติกรรมตรงกันและลดการเกิด Logic ซ้ำ (Duplicate Business Logic)
+
+2. Human Reality
+
+ระหว่างการใช้งานจริงพบว่า
+
+ใบเสร็จย่อ (Short Tax) และใบกำกับภาษีเต็ม (Full Tax) ใช้ Logic คนละชุด
+เมื่อแก้กฎการรวมสินค้าในเอกสารหนึ่ง อีกเอกสารไม่เปลี่ยนตาม
+ทำให้เกิดพฤติกรรมไม่สอดคล้องกัน เช่น
+ใบเสร็จย่อรวมสินค้า
+ใบกำกับภาษีเต็มไม่รวมสินค้า
+
+สะท้อนว่า Business Rule ถูกฝังอยู่ใน Presentation Layer
+
+3. Discovery
+
+ค้นพบว่า
+
+Receipt Grouping ไม่ใช่ Utility
+
+แต่เป็น
+
+Business Rule ของระบบขาย
+
+กฎนี้กำหนดว่า
+
+สินค้าใดควรรวม
+สินค้าใดไม่ควรรวม
+จำนวนควรรวมอย่างไร
+ราคาใดถือว่าเป็นรายการเดียวกัน
+Prefix / Suffix มีผลต่อการรวม
+Serial / IMEI ต้องไม่ถูกรวม
+
+ดังนั้น Logic นี้ไม่ควรอยู่ภายใน Layout Component
+
+4. Architecture Evolution
+
+เดิม
+
+BillLayoutShortTax
+    └── Group Logic
+
+BillLayoutFullTax
+    └── Group Logic
+
+หลังปรับ
+
+Receipt Group Engine
+        │
+        ├──────────────┐
+        │              │
+Short Tax         Full Tax
+
+เกิด Single Source of Truth สำหรับการรวมรายการสินค้า
+
+5. Runtime Verification
+
+ยืนยันจากการทดสอบจริง
+
+Short Tax
+✅ รวม Adapter เป็น Qty 2
+✅ Amount คำนวณถูก
+✅ Serial ไม่รวม
+✅ Prefix/Suffix ยังทำงาน
+✅ Document Editor ใช้งานได้
+Full Tax
+✅ ใช้ Engine เดียวกัน
+✅ Qty ถูกต้อง
+✅ Amount ถูกต้อง
+✅ Layout ไม่เสีย
+✅ VAT ไม่เปลี่ยน
+✅ Total ไม่เปลี่ยน
+6. UI / UX Improvements
+
+ปรับ Typography ของใบเสร็จย่อ
+
+ปรับชื่อบริษัทให้อยู่ 1 บรรทัด
+ปรับขนาดตัวอักษรให้สมดุล
+ปรับ Visual Hierarchy
+ปรับระยะห่างรายการสินค้า
+รักษาความเด่นของยอดรวม
+
+ผลลัพธ์
+
+อ่านง่ายขึ้น
+ใช้งานจริงกับ Thermal Printer ได้ดีขึ้น
+เอกสารดูเป็น Production มากขึ้น
+7. Locked Understanding
+
+ล็อกความเข้าใจสำหรับ P7
+
+Receipt Grouping Engine
+
+Receipt Grouping เป็น Business Rule กลางของระบบเอกสาร
+
+Document Layout ทุกประเภทต้องใช้ Engine เดียวกัน
+
+ห้ามสร้าง Logic การรวมสินค้าใหม่ภายใน Component
+
+Layout Responsibility
+
+Layout มีหน้าที่
+
+แสดงผล
+จัด Typography
+จัด Spacing
+จัด Table
+
+เท่านั้น
+
+Business Rule ต้องอยู่นอก Layout
+
+Single Source of Truth
+
+กฎการรวมสินค้า
+
+Quantity
+Price
+Serial
+IMEI
+Prefix
+Suffix
+Document Line
+
+ต้องมีแหล่งอ้างอิงเพียงแห่งเดียว
+
+8. Engineering Direction
+
+Receipt Engine ถือเป็น Foundation ของระบบเอกสาร
+
+สามารถนำไปใช้ต่อกับ
+
+Delivery Order
+Quotation
+Invoice
+Tax Invoice
+Receipt
+Packing List
+
+โดยไม่ต้องเขียน Logic ใหม่
+
+9. Task Result
+
+สถานะปัจจุบัน
+
+✅ Short Tax Stable
+✅ Full Tax Stable
+✅ Shared Receipt Engine Operational
+✅ Runtime Verified
+✅ Production Ready Baseline Established
+
+UB Classification
+
+Category: Architecture Evolution + Runtime Verification
+Project: P7
+Blueprint Action: Append เข้า Blueprint ของ P7 (ไม่บันทึกลง Memory ตาม Governance ปัจจุบัน)

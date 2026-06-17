@@ -1,6 +1,7 @@
 // src/features/bill/components/BillLayoutShortTax.jsx
 
 import React from 'react'
+import { buildReceiptItems } from '@/features/bill/utils/receiptGrouping'
 
 const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100
 
@@ -56,6 +57,8 @@ const buildDocumentLineText = (item) => {
 
 const getLineKey = (item) => item?.documentLineKey || item?.id || null
 
+
+
 const BillLayoutShortTax = ({
   sale,
   saleItems,
@@ -89,6 +92,52 @@ const BillLayoutShortTax = ({
     if (len >= 22) return { fontSize: '17px', letterSpacing: '0.05px', gap: '10px' }
 
     return { fontSize: '18px', letterSpacing: '0.1px', gap: '12px' }
+  }
+
+  const getAdaptiveBranchNameStyle = (text) => {
+    const len = String(text || '').trim().replace(/\s+/g, ' ').length
+
+    if (len >= 46) {
+      return {
+        fontSize: '12.6px',
+        lineHeight: 1.18,
+        letterSpacing: '-0.45px',
+        transform: 'scaleX(0.94)',
+        transformOrigin: 'center',
+      }
+    }
+
+    if (len >= 40) {
+      return {
+        fontSize: '13.2px',
+        lineHeight: 1.18,
+        letterSpacing: '-0.35px',
+        transform: 'scaleX(0.96)',
+        transformOrigin: 'center',
+      }
+    }
+
+    if (len >= 34) {
+      return {
+        fontSize: '14px',
+        lineHeight: 1.18,
+        letterSpacing: '-0.2px',
+      }
+    }
+
+    if (len >= 28) {
+      return {
+        fontSize: '15px',
+        lineHeight: 1.18,
+        letterSpacing: '-0.05px',
+      }
+    }
+
+    return {
+      fontSize: '16px',
+      lineHeight: 1.18,
+      letterSpacing: '0.1px',
+    }
   }
 
   const getCustomerPhoneText = (customer) => {
@@ -205,6 +254,12 @@ const BillLayoutShortTax = ({
   }
 
   const paidTotal = round2(normalizedPayments.reduce((s, x) => s + n(x.amt), 0))
+
+  const displaySaleItems = React.useMemo(
+    () => buildReceiptItems(saleItems || []),
+    [saleItems]
+  )
+
   if (!sale || !saleItems || !payments || !config) return null
 
   const vatRate = Number.isFinite(Number(sale?.vatRate))
@@ -228,8 +283,8 @@ const BillLayoutShortTax = ({
   const totalAmountText = `${formatCurrency(total)} ฿`
   const adaptiveTotalStyle = getAdaptiveTotalStyle(totalLabel, totalAmountText)
 
-  const itemLines = Array.isArray(saleItems) ? saleItems.length : 0
-  const qtyTotal = Array.isArray(saleItems) ? saleItems.reduce((s, it) => s + n(it?.quantity), 0) : 0
+  const itemLines = Array.isArray(displaySaleItems) ? displaySaleItems.length : 0
+  const qtyTotal = Array.isArray(displaySaleItems) ? displaySaleItems.reduce((s, it) => s + n(it?.quantity), 0) : 0
 
   const change = round2(paidTotal - total)
   const shouldShowChange = paidTotal > 0 && change > 0.005
@@ -368,12 +423,33 @@ const BillLayoutShortTax = ({
           overflow: hidden;
           text-overflow: ellipsis;
         }
+        .receipt-product-line {
+          padding: 4px 0;
+        }
+        .receipt-product-name {
+          font-size: 12px;
+          line-height: 1.15;
+          letter-spacing: -0.05px;
+        }
+        .receipt-product-number {
+          font-size: 12px;
+          line-height: 1.15;
+        }
       `}</style>
 
       <div className="receipt-inner">
         <div className="text-center no-break tight">
           {config.logoUrl && <img src={config.logoUrl} alt="logo" className="h-10 mx-auto mb-1" />}
-          <div className="font-bold" style={{ fontSize: '18px', letterSpacing: '0.35px', marginBottom: 3 }}>
+          <div
+            className="font-bold"
+            style={{
+              ...getAdaptiveBranchNameStyle(config.branchName),
+              marginBottom: 3,
+              maxWidth: '100%',
+              whiteSpace: 'nowrap',
+              overflow: 'visible',
+            }}
+          >
             {config.branchName}
           </div>
           {config.address && <div className="small wrap">{config.address}</div>}
@@ -449,22 +525,22 @@ const BillLayoutShortTax = ({
           <div className="hr-solid" />
 
           <div>
-            {saleItems.map((item) => {
+            {displaySaleItems.map((item) => {
               const qty = n(item?.quantity)
               const lineTotal = getLineTotalSatang(item) / 100
 
               return (
-                <div key={item.id} className="tight" style={{ padding: '5px 0' }}>
+                <div key={getLineKey(item) || item.id} className="tight receipt-product-line">
                   <div className="row">
                     <div className="left wrap">
-                      <div className="wrap">{buildDocumentLineText(item)}</div>
+                      <div className="wrap receipt-product-name">{buildDocumentLineText(item)}</div>
                     </div>
 
-                    <div className="right mono" style={{ minWidth: 36, textAlign: 'right' }}>
+                    <div className="right mono receipt-product-number" style={{ minWidth: 36, textAlign: 'right' }}>
                       {qty || ''}
                     </div>
                     <div
-                      className="right mono"
+                      className="right mono receipt-product-number"
                       style={{
                         minWidth: 78,
                         textAlign: 'right',

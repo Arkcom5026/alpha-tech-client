@@ -1,0 +1,36 @@
+name: Frontend Mission Control v2
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 🛰️ ขนส่งและสแกนซอร์สโค้ดจาก Repository
+      uses: actions/checkout@v4
+
+    - name: ⚙️ จัดวางสแตนด์บายสภาวะแวดล้อม Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20
+        cache: 'npm'
+
+    - name: 📦 บรรจุและติดตั้ง Packages ฝั่งหน้าบ้าน
+      run: npm ci
+
+    - name: 🔐 ผูกเงื่อนไขความลับผ่านระบบกระจกเงาสะท้อน (Injecting Secrets)
+      run: |
+        echo "VITE_API_URL=https://api.saduaksabuy.com/api/v2/procurement" >> .env
+        echo "VITE_KEY_CONNECTOR=${{ secrets.KEY_CONNECTOR }}" >> .env
+        echo "VITE_KEY_LOGIC=${{ secrets.KEY_LOGIC }}" >> .env
+        echo "VITE_KEY_API=${{ secrets.KEY_API }}" >> .env
+        echo "VITE_KEY_PRISMA=${{ secrets.KEY_PRISMA }}" >> .env
+        echo "VITE_KEY_ORCHESTRATOR=${{ secrets.KEY_ORCHESTRATOR }}" >> .env
+
+    - name: 🏗️ รันคำสั่งคอมไพล์ประกอบร่างโปรเจกต์ (Production Build)
+      run: npm run build

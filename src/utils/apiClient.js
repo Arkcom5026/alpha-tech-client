@@ -33,6 +33,11 @@ const applyAuthorizationHeader = (config, bearerToken) => {
   return config;
 };
 
+// 🟢 FIXED BASE URL: ดึงค่าจาก Env Variables ของ Vite ที่ตั้งบน Vercel อัตโนมัติ 
+// และเติม /api/ ต่อท้ายให้ตรงตามพาธเดิมของระบบ
+const rawBaseURL = import.meta.env.VITE_API_BASE_URL || 'https://api.saduaksabuy.com';
+const baseURL = rawBaseURL.endsWith('/') ? `${rawBaseURL}api/` : `${rawBaseURL}/api/`;
+
 // ✅ ปรับแต่งให้ตัวยิงรีเฟรชผูกกับสเปกพอร์ตคงที่โดยตรง
 const refreshAccessToken = async () => {
   if (!refreshPromise) {
@@ -90,13 +95,9 @@ function getToken() {
   return token ? `Bearer ${token}` : null;
 }
 
-// 🎯 [STRICT ISOLATION LINE] บังคับล็อกพอร์ต 5000 สำหรับแกนหลักหน้าบ้านและระบบ Login 
-// ตัดขาดจากตัวแปรภายนอกเพื่อพิสูจน์ทราบอาการ Runtime Mutation กลางทาง
-const baseURL = 'http://localhost:5000/api/';
-
 const apiClient = axios.create({
   baseURL,
-  timeout: 20000,
+  timeout: 30000, // 🟢 FIXED: ขยายเวลาให้ทนทานต่อ Cold Start ของ Render 
   withCredentials: true,
   headers: {
     'Content-Type': 'application/json',

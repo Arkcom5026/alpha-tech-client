@@ -1,12 +1,14 @@
-
 // src/App.jsx
-
 import React, { useEffect } from 'react';
 import { useAuthStore } from '@/features/auth/store/authStore';
-import { RouterProvider } from 'react-router-dom';
+import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
-import router from '@/routes';
 import 'react-toastify/dist/ReactToastify.css';
+
+// เชื่อมต่อตรงเข้าหาผังเมืองหลักพิกัดใหม่ที่สะอาดที่สุด
+import AppRouter from './routes/AppRouter';
+
+const router = createBrowserRouter(AppRouter);
 
 const App = () => {
   const bootstrapAuthAction = useAuthStore((state) => state.bootstrapAuthAction);
@@ -28,4 +30,3 @@ const App = () => {
 };
 
 export default App;
-

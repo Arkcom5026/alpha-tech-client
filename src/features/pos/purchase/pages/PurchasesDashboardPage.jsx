@@ -9,14 +9,14 @@ const PurchasesDashboardPage = () => {
       {/* ปุ่มลิงก์ไปสร้างใบสั่งซื้อ */}
       <div>
         <Link
-          to="/pos/purchases/po"
+          to={shopSlug ? `/${shopSlug}/pos/purchases/po` : `/pos/purchases/po`}
           className="inline-block bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
         >
           ➕ สร้างใบสั่งซื้อสินค้า
         </Link>
       </div>
 
-      <Link to="/pos/purchases/po">
+      <Link to={shopSlug ? `/${shopSlug}/pos/purchases/po` : `/pos/purchases/po`}>
         <Card className="hover:shadow cursor-pointer">
           <CardContent className="p-4">
             <p className="font-bold text-lg">📄 รายการใบสั่งซื้อ</p>

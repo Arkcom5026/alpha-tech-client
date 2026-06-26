@@ -1,13 +1,17 @@
-
 // ===== components/OrderOnlinePosTable.jsx =====
 
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom'; // 🟢 ดึง useParams ร่วมขบวนจัด Multi-Tenant
 import OrderOnlinePosStatusBadge from './OrderOnlinePosStatusBadge';
 import { useOrderOnlinePosStore } from '../store/orderOnlinePosStore';
 
 const OrderOnlinePosTable = ({ orders }) => {
   const navigate = useNavigate();
+  
+  // 🟢 FIXED: ดึงรหัสร้านค้าความปลอดภัยแชร์สาขามาใช้งานคุมเส้นทางย้ายเลน
+  const { shopSlug } = useParams();
+  const targetSlug = shopSlug || 'advancetech';
+
   const {
     approveOrderOnlineSlipAction,
     rejectOrderOnlineSlipAction,
@@ -73,7 +77,8 @@ const OrderOnlinePosTable = ({ orders }) => {
                 <td className="border p-2 text-center space-y-1">
                   <button
                     className="text-blue-600 hover:underline block w-full"
-                    onClick={() => navigate(`/pos/sales/order-online/${order.id}`)}
+                    // 🟢 FIXED: ซ่อมพาสปุ่มกดดูสเปกออเดอร์เดลิเวอรี่ให้วิ่งผ่านเลน Tenant
+                    onClick={() => navigate(`/${targetSlug}/pos/sales/order-online/${order.id}`)}
                   >
                     ดูรายละเอียด
                   </button>

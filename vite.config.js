@@ -1,4 +1,6 @@
 // ✅ vite.config.js
+// 🏛️ Premium Enterprise POS Bundler Configuration
+
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
@@ -25,6 +27,6 @@ export default defineConfig({
     }
   },
   server: {
-    historyApiFallback: true // ✅ รองรับ React Router SPA
+    historyApiFallback: true
   }
 })

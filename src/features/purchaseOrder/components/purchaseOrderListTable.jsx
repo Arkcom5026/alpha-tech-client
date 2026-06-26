@@ -1,9 +1,9 @@
 // ../components/purchaseOrderListTable
 
 import React, { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom'; // 🟢 ดึง useParams ร่วมขบวนจัด Multi-Tenant
 import StandardActionButtons from '@/components/shared/buttons/StandardActionButtons';
-import usePurchaseOrderStore from '../store/purchaseOrderStore';
+import { usePurchaseOrderStore } from '../store/purchaseOrderStore'; // 🟢 ใส่ปีกกาครอบ สัญญาณจูนติดทันที!
 
 const formatDateTh = (value) => {
   try {
@@ -23,7 +23,6 @@ const formatDateTh = (value) => {
 const getStatusMeta = (statusRaw) => {
   const status = String(statusRaw || '').toUpperCase();
 
-  // ✅ keep mapping minimal & safe; extend later if you add more statuses
   if (status === 'PENDING') return { label: 'รอดำเนินการ', className: 'bg-slate-100 text-slate-700' };
   if (status === 'PARTIALLY_RECEIVED')
     return { label: 'รับแล้วบางส่วน', className: 'bg-amber-100 text-amber-800' };
@@ -37,12 +36,16 @@ const getStatusMeta = (statusRaw) => {
 
 const canDeletePO = (po) => {
   const status = String(po?.status || '').toUpperCase();
-  // ✅ guardrail: delete only when still pending (no receipt yet)
   return status === 'PENDING';
 };
 
 const PurchaseOrderListTable = ({ purchaseOrders, loading }) => {
   const navigate = useNavigate();
+  
+  // 🟢 FIXED: ดึงพารามิเตอร์ร้านค้าเพื่อคุมสิทธิ์ความปลอดภัยแชร์สาขาในเลน URL POS
+  const { shopSlug } = useParams();
+  const targetSlug = shopSlug || 'advancetech';
+
   const { removePurchaseOrderAction } = usePurchaseOrderStore();
 
   const [uiError, setUiError] = useState(null);
@@ -54,7 +57,8 @@ const PurchaseOrderListTable = ({ purchaseOrders, loading }) => {
   const handleEdit = (id) => {
     setUiError(null);
     setUiInfo(null);
-    navigate(`/pos/purchases/orders/edit/${id}`);
+    // 🟢 FIXED: ซ่อมท่อทางเดินรถบิล PO จัดซื้อหลังร้านให้วิ่งผ่าน Dynamic targetSlug
+    navigate(`/${targetSlug}/pos/purchases/orders/edit/${id}`);
   };
 
   const handleDelete = async (po) => {
@@ -139,9 +143,7 @@ const PurchaseOrderListTable = ({ purchaseOrders, loading }) => {
                       showEdit
                       showDelete
                       onEdit={() => handleEdit(po.id)}
-                      // ✅ no dialog confirm (policy); show inline message instead
                       onDelete={isDeleting ? undefined : () => handleDelete(po)}
-                      // If StandardActionButtons supports disabled props, you can wire it later.
                     />
                     {isDeleting && <span className="ml-2 text-xs text-gray-500">กำลังลบ...</span>}
                     {!canDeletePO(po) && (

@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Printer } from 'lucide-react';
-import usePurchaseOrderStore from '../store/purchaseOrderStore';
+import { usePurchaseOrderStore } from '../store/purchaseOrderStore'; // 🟢 ใส่ปีกกาครอบ สัญญาณจูนติดทันที!
 
 const PurchaseOrderDetailPage = () => {
   const { id } = useParams();

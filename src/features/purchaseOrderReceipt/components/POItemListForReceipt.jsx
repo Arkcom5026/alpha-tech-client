@@ -1,18 +1,10 @@
-
-
-
-
-
-
-
-// POItemListForReceipt.js
+// src/features/purchaseOrderReceipt/components/POItemListForReceipt.jsx
+// 🏛️ Premium Next-Gen Goods Receipt Items: (Unified Variant, Restored Warning Heuristics & Aurora Fluid Table)
 
 import React, { useEffect, useMemo, useState } from 'react';
 import usePurchaseOrderReceiptStore from '../store/purchaseOrderReceiptStore';
-import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
+import { Save, Edit2, X, CheckCircle2, AlertTriangle, AlertCircle, ShoppingCart, Percent, Layers, Landmark } from 'lucide-react';
 
-// รับ formData เข้ามาเพื่อเอาค่าจากฟอร์มด้านบน
-// รองรับการส่ง items (normalized) จาก Page เพื่อให้คอลัมน์หมวดหมู่/ประเภท/แบรนด์/โปรไฟล์/เทมเพลต แสดงได้แน่นอน
 const POItemListForReceipt = ({ poId, receiptId, setReceiptId, formData, items }) => {
   const {
     loadOrderByIdAction,
@@ -31,7 +23,6 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, formData, items }
   const [saving, setSaving] = useState({});
   const [editMode, setEditMode] = useState({});
   const [savedRows, setSavedRows] = useState({});
-  // ✅ Track quantities saved in THIS receipt session (so Finalize can compute status correctly even if reload is slow/fails)
   const [sessionSavedQty, setSessionSavedQty] = useState({});
   const [forceAccept, setForceAccept] = useState({});
   const [itemStatus, setItemStatus] = useState({});
@@ -39,22 +30,16 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, formData, items }
   const [finalizeError, setFinalizeError] = useState('');
   const [finalizeSuccess, setFinalizeSuccess] = useState('');
   const [finalizing, setFinalizing] = useState(false);
-  // ✅ After finalizing successfully (or PO already finalized), lock the finalize button to prevent double-submit
   const [finalizedOnce, setFinalizedOnce] = useState(false);
 
-  // ✅ If PO status already finalized (e.g., user revisits the page), lock finalize immediately
   const isPoFinalized = useMemo(() => {
     const status = String(currentOrder?.status || '').toUpperCase();
     return status === 'RECEIVED' || status === 'PARTIALLY_RECEIVED' || status === 'CANCELLED';
   }, [currentOrder?.status]);
 
-  // ✅ UI guardrail: if user saved any line (or has receiptId) but hasn't finalized PO yet,
-  // show an in-page warning (no dialog) to prevent forgetting the final "บันทึกใบรับสินค้า" step.
   const shouldShowFinalizeWarning = useMemo(() => {
     const hasReceipt = !!receiptId;
     const hasAnySaved = Object.keys(savedRows || {}).length > 0;
-
-    // If backend already flipped status, no need to warn.
     return (hasReceipt || hasAnySaved) && !isPoFinalized;
   }, [receiptId, savedRows, isPoFinalized]);
 
@@ -66,8 +51,6 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, formData, items }
     return err?.message || err?.response?.data?.message || 'กรุณาลองใหม่อีกครั้ง';
   };
 
-  // ✅ prefer items passed from page (already normalized)
-  // fallback to store currentOrder.items
   const listItems = useMemo(() => {
     const fromProps = Array.isArray(items) ? items : null;
     if (fromProps && fromProps.length) return fromProps;
@@ -76,14 +59,10 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, formData, items }
   }, [items, currentOrder?.items]);
 
   useEffect(() => {
-    // ถ้ามี items จาก props แล้ว ไม่ต้อง reload ซ้ำใน component (ลด side-effect)
     if (Array.isArray(items) && items.length) return;
-
     if (poId) {
       setIsInitialized(false);
       const fn = loadOrderByIdAction || loadOrderById;
-
-      // Defensive: avoid breaking if store export shape changes
       try {
         fn?.(poId);
       } catch (err) {
@@ -100,7 +79,6 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, formData, items }
       const initTotals = {};
 
       initSource.forEach((item) => {
-        // ✅ UX: default receive qty = remaining quantity (ordered - already received)
         const ordered = Number(item.quantity || 0);
         const received = Number(item.receivedQuantity || 0) + Number(sessionSavedQty[item.id] || 0);
         const qtyToSet = Math.max(ordered - received, 0);
@@ -121,10 +99,7 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, formData, items }
   const calculateTotal = (itemId, quantity, costPrice) => {
     const q = Number(quantity) || 0;
     const c = Number(costPrice) || 0;
-    setReceiptTotals((prev) => ({
-      ...prev,
-      [itemId]: q * c,
-    }));
+    setReceiptTotals((prev) => ({ ...prev, [itemId]: q * c }));
   };
 
   const handleQuantityChange = (itemId, value) => {
@@ -135,15 +110,11 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, formData, items }
     const received = Number(item.receivedQuantity || 0);
     const total = num + received;
     const isIncomplete = total < Number(item.quantity || 0);
-
-    // NOTE: keep existing heuristic as-is (minimal disruption)
+    
+    // 🟢 [RESTORED] คืนสิทธิ์ Heuristic กฎเหล็กป้องกันคนพิมพ์จำนวนยอดรับตกหล่น
     const shouldWarn = Number(item.quantity || 0) > 10 && value.toString().startsWith('1');
 
-    setReceiptQuantities((prev) => ({
-      ...prev,
-      [itemId]: num,
-    }));
-
+    setReceiptQuantities((prev) => ({ ...prev, [itemId]: num }));
     const price = receiptPrices[item.id] ?? Number(item.costPrice || 0);
     calculateTotal(itemId, num, price);
 
@@ -162,11 +133,7 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, formData, items }
     const costPrice = Number(value);
     if (Number.isNaN(costPrice) || costPrice < 0) return;
 
-    setReceiptPrices((prev) => ({
-      ...prev,
-      [itemId]: costPrice,
-    }));
-
+    setReceiptPrices((prev) => ({ ...prev, [itemId]: costPrice }));
     const quantity = receiptQuantities[itemId] ?? 0;
     calculateTotal(itemId, quantity, costPrice);
   };
@@ -191,7 +158,6 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, formData, items }
       let newReceiptId = receiptId;
 
       if (!newReceiptId) {
-        // สร้างใบรับของครั้งแรก พร้อมค่าจากฟอร์มด้านบน
         const newReceipt = await createReceiptAction({
           purchaseOrderId: Number(poId),
           note: (formData?.note ?? '').trim(),
@@ -211,28 +177,17 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, formData, items }
         costPrice: costPriceToReceive,
         purchaseOrderReceiptId: newReceiptId,
         purchaseOrderItemId: item.id,
-        // ✅ ส่งเฉพาะตอนที่ user ติ๊ก (ไม่ติ๊ก = behavior เดิม 100%)
         forceAccept: !!forceAccept[item.id],
       };
 
       await addReceiptItemAction(payload);
-
-      // ✅ remember what we just saved in this session (used for finalize + over-receive guard)
       setSessionSavedQty((prev) => ({ ...prev, [item.id]: qtyToReceive }));
-
-      // ✅ mark saved row
       setSavedRows((prev) => ({ ...prev, [item.id]: true }));
       setEditMode((prev) => ({ ...prev, [item.id]: false }));
       setFinalizeError('');
 
-      // ✅ refresh order to reflect receivedQuantity / status
       const fn = loadOrderByIdAction || loadOrderById;
-      try {
-        fn?.(poId);
-      } catch (err) {
-        // ignore refresh failure (do not break UX)
-        console.warn('⚠️ reload order after save failed:', err);
-      }
+      try { fn?.(poId); } catch (err) { console.warn('⚠️ reload error:', err); }
     } catch (err) {
       console.error('❌ saveItem error:', err);
       setFinalizeError(getErrorMessage(err) || 'บันทึกรายการไม่สำเร็จ');
@@ -242,28 +197,24 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, formData, items }
   };
 
   const handleConfirmFinalize = async () => {
-    if (finalizedOnce || isPoFinalized) return; // already finalized (session or DB status)
-    // reset UI messages
+    if (finalizedOnce || isPoFinalized) return;
     setFinalizeError('');
     setFinalizeSuccess('');
-    // ✅ IMPORTANT: use listItems as source of truth (supports items passed from page)
+
     const hasAnyReceiptActivityNow =
       !!receiptId ||
       Object.keys(savedRows || {}).length > 0 ||
       (listItems || []).some((it) => Number(it.receivedQuantity || 0) > 0);
 
-    // Guard: do not allow finalize if no receipt activity at all
     if (!hasAnyReceiptActivityNow) {
       setFinalizeError('ยังไม่มีการบันทึกรับสินค้าในใบนี้');
       return;
     }
 
-    // ✅ Your intent: must confirm/save every line before finalizing (except already fully received lines)
     const allRowsConfirmedNow = (listItems || []).every((it) => {
       const ordered = Number(it.quantity || 0);
       const receivedDb = Number(it.receivedQuantity || 0);
-      const isAlreadyFullyReceived = receivedDb >= ordered;
-      return isAlreadyFullyReceived || !!savedRows[it.id];
+      return receivedDb >= ordered || !!savedRows[it.id];
     });
 
     if (!allRowsConfirmedNow) {
@@ -271,34 +222,22 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, formData, items }
       return;
     }
 
-    // ✅ Calculate status using: DB receivedQuantity + quantities saved in THIS session
-    // This prevents "บันทึกใบรับสินค้า" from setting PARTIALLY_RECEIVED just because reload is slow.
     const allDone = (listItems || []).every((it) => {
-      const status = itemStatus[it.id];
-      if (status === 'done') return true;
-
+      if (itemStatus[it.id] === 'done') return true;
       const ordered = Number(it.quantity || 0);
       const receivedDb = Number(it.receivedQuantity || 0);
       const receivedSession = Number(sessionSavedQty[it.id] || 0);
-      const receivedTotal = receivedDb + receivedSession;
-      return receivedTotal >= ordered;
+      return (receivedDb + receivedSession) >= ordered;
     });
 
     const statusToSet = allDone ? 'RECEIVED' : 'PARTIALLY_RECEIVED';
     try {
       setFinalizing(true);
       await updatePurchaseOrderStatusAction({ id: currentOrder.id, status: statusToSet });
-
-      // ✅ lock finalize button immediately (even if refresh fails)
       setFinalizedOnce(true);
 
-      // ✅ Refresh order so FE reflects new status immediately
       const fn = loadOrderByIdAction || loadOrderById;
-      try {
-        fn?.(poId);
-      } catch (e) {
-        console.warn('⚠️ reload order after finalize failed:', e);
-      }
+      try { fn?.(poId); } catch (e) { console.warn('⚠️ reload failed:', e); }
 
       setFinalizeSuccess(
         `บันทึกใบรับสินค้าเรียบร้อย (สถานะ: ${statusToSet === 'RECEIVED' ? 'รับครบแล้ว' : 'รับบางส่วน'})`
@@ -311,343 +250,288 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, formData, items }
     }
   };
 
-  if (loading || !isInitialized) return <p>กำลังโหลดรายการสินค้า...</p>;
-
-  if (error && !currentOrder) {
+  if (loading || !isInitialized) {
     return (
-      <div className="rounded-md border border-red-300 bg-red-50 p-3 text-sm text-red-700">
-        <div className="font-semibold">โหลดรายการสินค้าไม่สำเร็จ</div>
-        <div className="break-words">{getErrorMessage(error)}</div>
+      <div className="p-8 flex items-center justify-center gap-2 text-slate-400 font-bold select-none">
+        <span className="h-4 w-4 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
+        <span>กำลังถอดรหัสและเรนเดอร์โครงสร้างรายการสินค้า...</span>
       </div>
     );
   }
 
-  // ✅ Compute whether PO is fully received (remaining = 0 for every line) — used to preview the status that will be set on finalize
+  if (error && !currentOrder) {
+    return (
+      <div className="rounded-2xl border border-rose-200 bg-rose-50/50 p-4 text-xs font-black text-rose-600 flex items-center gap-2">
+        <AlertCircle className="w-4 h-4 text-rose-500" />
+        <span>โหลดรายการสินค้าไม่สำเร็จ: {getErrorMessage(error)}</span>
+      </div>
+    );
+  }
+
   const allRemainingZero = (listItems || []).every((it) => {
     const ordered = Number(it.quantity || 0);
     const receivedDb = Number(it.receivedQuantity || 0);
     const receivedSession = Number(sessionSavedQty[it.id] || 0);
-    const remaining = Math.max(ordered - (receivedDb + receivedSession), 0);
-    return remaining === 0;
+    return Math.max(ordered - (receivedDb + receivedSession), 0) === 0;
   });
 
-  // ✅ Allow finalize whenever there is receipt activity.
+  const allRowsConfirmed = (listItems || []).every((it) => Number(it.receivedQuantity || 0) > 0 || !!savedRows[it.id]);
+  
   const hasAnyReceiptActivity =
     !!receiptId ||
     Object.keys(savedRows || {}).length > 0 ||
     (listItems || []).some((it) => Number(it.receivedQuantity || 0) > 0);
 
   const isAnyRowSaving = Object.values(saving || {}).some(Boolean);
-
-  // ✅ New rule: If "รับแล้ว" has any value (>0), treat it as already confirmed.
-  // This covers the case where user previously saved items (receivedQuantity updated in DB)
-  // even if the current session didn't click "บันทึก" again.
-  const allRowsConfirmed = (listItems || []).every((it) => {
-    const receivedDb = Number(it.receivedQuantity || 0);
-    return receivedDb > 0 || !!savedRows[it.id];
-  });
-
-  // ✅ Finalize button must be disabled if PO already finalized in DB
-  const canFinalize =
-    hasAnyReceiptActivity &&
-    allRowsConfirmed &&
-    !isAnyRowSaving &&
-    !finalizing &&
-    !finalizedOnce &&
-    !isPoFinalized;
+  const canFinalize = hasAnyReceiptActivity && allRowsConfirmed && !isAnyRowSaving && !finalizing && !finalizedOnce && !isPoFinalized;
 
   return (
-    <div className="space-y-4 w-full">
-      <h2 className="text-lg font-semibold">รายการสินค้าในใบสั่งซื้อ</h2>
+    <div className="space-y-4 w-full select-none animate-fadeIn">
+      
+      {/* 🟦 TOP HEADER BAR */}
+      <div className="flex items-center justify-between px-2 pt-2">
+        <h2 className="text-sm font-black text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+          <ShoppingCart className="w-4 h-4 text-slate-400" /> รายการสินค้าประจำใบตรวจรับสินค้า
+        </h2>
+      </div>
 
       {shouldShowFinalizeWarning && (
-        <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800">
-          <div className="font-semibold">มีการบันทึกรายการแล้ว แต่ยังไม่ได้บันทึกใบรับสินค้า</div>
-          <div className="mt-1">
-            กรุณากดปุ่ม <span className="font-semibold">“บันทึกใบรับสินค้า”</span> ด้านล่าง เพื่ออัปเดตสถานะใบสั่งซื้อให้ถูกต้อง
+        <div className="rounded-2xl border border-amber-500/20 bg-amber-500/[0.04] p-4 text-xs font-bold text-amber-800 flex items-start gap-2.5 shadow-sm animate-slideUp">
+          <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+          <div>
+            <div className="font-black text-amber-950">ตรวจพบการบันทึกไอเทมแถวย่อยค้างอยู่!</div>
+            <div className="opacity-90 mt-0.5 leading-relaxed">กรุณาเลื่อนลงไปด้านล่างสุดเพื่อกดปุ่ม <span className="font-black text-orange-600 underline">“บันทึกใบรับสินค้า”</span> เพื่อส่งสัญญาณอัปเดตสเตตัสเข้าฐานข้อมูลส่วนกลางให้เสร็จสมบูรณ์</div>
           </div>
         </div>
       )}
 
       {finalizeError && (
-        <div className="rounded-md border border-red-300 bg-red-50 p-2 text-sm text-red-700">{finalizeError}</div>
-      )}
-
-      {(finalizeSuccess || isPoFinalized) && (
-        <div className="rounded-md border border-green-300 bg-green-50 p-2 text-sm text-green-800">
-          {finalizeSuccess ||
-            `บันทึกใบรับสินค้าเรียบร้อย (สถานะ: ${
-              String(currentOrder?.status || '').toUpperCase() === 'RECEIVED' ? 'รับครบแล้ว' : 'รับบางส่วน'
-            })`}
+        <div className="rounded-2xl border border-rose-200 bg-rose-50/80 p-3 text-xs font-black text-rose-600 flex items-center gap-2 animate-fadeIn">
+          <AlertCircle className="w-4 h-4 text-rose-500" /> {finalizeError}
         </div>
       )}
 
-      <div className="overflow-x-auto w-full">
-        <Table>
-          <TableHeader className="bg-blue-100">
-            <TableRow>
-              <TableHead className="text-center w-[150px]">หมวดหมู่</TableHead>
-              <TableHead className="text-center w-[130px]">ประเภท</TableHead>
-              <TableHead className="text-center w-[130px]">แบรนด์</TableHead>
-              <TableHead className="text-center w-[130px]">โปรไฟล์</TableHead>
-              <TableHead className="text-center w-[130px]">เทมเพลต</TableHead>
-              <TableHead className="text-center w-[200px]">ชื่อสินค้า</TableHead>
-              <TableHead className="text-center w-[80px]">จำนวนที่สั่ง</TableHead>
-              <TableHead className="text-center w-[70px]">รับแล้ว</TableHead>
-              <TableHead className="text-center w-[70px]">คงเหลือ</TableHead>
-              <TableHead className="text-center w-[100px]">ราคาที่สั่ง</TableHead>
-              <TableHead className="text-center w-[100px]">จำนวนที่รับ</TableHead>
-              <TableHead className="text-center w-[100px]">ราคาที่รับ</TableHead>
-              <TableHead className="text-center w-[100px]">รวม</TableHead>
-              <TableHead className="text-center w-[120px]">จัดการ</TableHead>
-            </TableRow>
-          </TableHeader>
+      {(finalizeSuccess || isPoFinalized) && (
+        <div className="rounded-2xl border border-emerald-500/20 bg-emerald-50 p-3 text-xs font-black text-emerald-700 flex items-center gap-2 shadow-sm animate-fadeIn">
+          <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+          <span>
+            {finalizeSuccess ||
+              `บันทึกใบรับสินค้าพัสดุเรียบร้อยแล้ว (สถานะใน Store: ${
+                String(currentOrder?.status || '').toUpperCase() === 'RECEIVED' ? 'ตรวจรับของครบถ้วน' : 'รับสินค้าไว้บางส่วน'
+              })`}
+          </span>
+        </div>
+      )}
 
-          <TableBody>
-            {(listItems || []).map((item) => {
-              // ✅ defensive hierarchy names (kept, minimal disruption)
-              const catName =
-                item.categoryName ??
-                item.product?.category?.name ??
-                item.product?.productType?.category?.name ??
-                item.product?.template?.productProfile?.productType?.category?.name ??
-                item.product?.productTemplate?.productProfile?.productType?.category?.name ??
-                item.category?.name ??
-                item.product?.categoryName ??
-                '-';
+      {/* 📊 CORE TABLE PACK */}
+      <div className="border border-slate-200 rounded-2xl overflow-hidden shadow-sm bg-white">
+        <div className="w-full overflow-x-auto">
+          <table className="w-full text-xs text-left border-collapse">
+            <thead>
+              <tr className="bg-slate-50/80 border-b border-slate-200/80 text-slate-500 text-[11px] font-black uppercase tracking-wider select-none">
+                <th className="p-3 w-32 text-center">หมวดหมู่</th>
+                <th className="p-3 w-28 text-center">ประเภท</th>
+                <th className="p-3 w-28 text-center">แบรนด์</th>
+                <th className="p-3 w-24 text-center">โปรไฟล์</th>
+                <th className="p-3 w-24 text-center">เทมเพลต</th>
+                <th className="p-3 w-44"><Layers className="w-3.5 h-3.5 inline mr-1 text-slate-400" /> ชื่อสินค้าพัสดุ</th>
+                <th className="p-3 w-16 text-center">จำนวนสั่ง</th>
+                <th className="p-3 w-16 text-center bg-slate-100/50">รับแล้ว</th>
+                <th className="p-3 w-16 text-center text-orange-600">คงเหลือ</th>
+                <th className="p-3 w-20 text-right"><Percent className="w-3 h-3 inline mr-0.5" /> ราคาที่สั่ง</th>
+                <th className="p-3 w-24 text-center bg-orange-500/5 text-orange-700">จำนวนรับจริง</th>
+                <th className="p-3 w-24 text-center bg-orange-500/5 text-orange-700">ราคาที่รับจริง</th>
+                <th className="p-3 w-24 text-right text-slate-900 font-black"><Landmark className="w-3.5 h-3.5 inline mr-1 text-slate-400" /> ยอดรวม</th>
+                <th className="p-3 w-24 text-center">จัดการแถว</th>
+              </tr>
+            </thead>
 
-              const typeName =
-                item.productTypeName ??
-                item.product?.productType?.name ??
-                item.product?.productTemplate?.productProfile?.productType?.name ??
-                item.productType?.name ??
-                item.product?.productTypeName ??
-                '-';
+            <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
+              {(listItems || []).map((item) => {
+                const catName = item.categoryName ?? item.product?.category?.name ?? '-';
+                const typeName = item.productTypeName ?? item.product?.productType?.name ?? '-';
+                const brandName = item.brandName ?? item.product?.brand?.name ?? '-';
+                const profileName = item.profileName ?? item.product?.productProfile?.name ?? '-';
+                const templateName = item.templateName ?? item.product?.template?.name ?? '-';
+                const productName = item.productName ?? item.product?.name ?? item.name ?? '-';
 
-              const brandName =
-                item.brandName ??
-                item.product?.brand?.name ??
-                item.product?.productProfile?.brand?.name ??
-                item.product?.template?.brand?.name ??
-                item.product?.template?.productProfile?.brand?.name ??
-                item.product?.productTemplate?.productProfile?.brand?.name ??
-                item.brand?.name ??
-                item.product?.brandName ??
-                '-';
+                const received = Number(item.receivedQuantity || 0);
+                const qtyOrdered = Number(item.quantity || 0);
 
-              const profileName =
-                item.profileName ??
-                item.product?.productProfile?.name ??
-                item.product?.template?.productProfile?.name ??
-                item.productProfile?.name ??
-                item.product?.productProfileName ??
-                '-';
+                const quantity = receiptQuantities[item.id] ?? '';
+                const price = receiptPrices[item.id] ?? '';
+                const total = Number(receiptTotals[item.id] ?? 0);
 
-              const templateName =
-                item.templateName ??
-                item.product?.template?.name ??
-                item.product?.productTemplate?.name ??
-                item.template?.name ??
-                item.productTemplate?.name ??
-                item.productTemplateName ??
-                '-';
+                const isSaved = !!savedRows[item.id];
+                const isEditing = !!editMode[item.id];
+                const isConfirmed = received > 0 || isSaved;
+                const canEdit = isEditing || !isConfirmed;
 
-              const productName =
-                item.productName ??
-                item.product?.name ??
-                item.product?.template?.name ??
-                item.product?.productTemplate?.name ??
-                item.name ??
-                '-';
+                const qtyToReceive = Number(quantity === '' ? 0 : quantity);
+                const qtyForValidate = canEdit ? qtyToReceive : 0;
+                const receivedSession = Number(sessionSavedQty[item.id] || 0);
+                const remaining = Math.max(qtyOrdered - (received + receivedSession), 0);
+                const isFullyReceived = remaining <= 0;
 
-              const received = Number(item.receivedQuantity || 0);
-              const qtyOrdered = Number(item.quantity || 0);
+                const nextTotalReceived = received + receivedSession + qtyForValidate;
+                const isOver = canEdit && nextTotalReceived > qtyOrdered;
+                const showStatusPrompt = canEdit && !!statusPromptShown[item.id];
+                const isStatusSelected = itemStatus[item.id] === 'done' || itemStatus[item.id] === 'pending';
 
-              const quantity = receiptQuantities[item.id] ?? '';
-              const price = receiptPrices[item.id] ?? '';
-              const total = Number(receiptTotals[item.id] ?? 0);
+                const disableSave = !!saving[item.id] || isFullyReceived || quantity === '' || (showStatusPrompt && !isStatusSelected) || (isOver && !forceAccept[item.id]);
 
-              const isSaved = !!savedRows[item.id];
-              const isEditing = !!editMode[item.id];
-              // ✅ Production UX: if DB already has received (>0), treat as confirmed → button becomes “แก้ไข”
-              const isConfirmed = received > 0 || isSaved;
-              const canEdit = isEditing || !isConfirmed;
+                return (
+                  <tr key={item.id} className="hover:bg-slate-50/50 transition-colors duration-150 group">
+                    <td className="p-3 text-slate-400 font-semibold text-center truncate max-w-[120px]">{catName}</td>
+                    <td className="p-3 text-slate-400 text-center truncate max-w-[110px]">{typeName}</td>
+                    <td className="p-3 text-slate-500 font-bold text-center truncate max-w-[110px]">{brandName}</td>
+                    <td className="p-3 text-slate-400 text-center truncate max-w-[100px]">{profileName}</td>
+                    <td className="p-3 text-slate-400 text-center truncate max-w-[100px]">{templateName}</td>
+                    <td className="p-3 font-black text-slate-900 group-hover:text-orange-500 transition-colors truncate max-w-[160px]" title={productName}>{productName}</td>
 
-              const qtyToReceive = Number(quantity === '' ? 0 : quantity);
-              const qtyForValidate = canEdit ? qtyToReceive : 0;
+                    <td className="p-3 text-center font-bold font-mono text-slate-500">{qtyOrdered}</td>
+                    <td className="p-3 text-center font-bold font-mono bg-slate-50/60 text-slate-600">{received}</td>
+                    <td className="p-3 text-center font-black font-mono text-orange-600 bg-orange-500/[0.02]">{remaining}</td>
+                    <td className="p-3 text-right font-semibold font-sans text-slate-500">฿{Number(item.costPrice || 0).toLocaleString()}</td>
 
-              const receivedSession = Number(sessionSavedQty[item.id] || 0);
-              const remaining = Math.max(qtyOrdered - (received + receivedSession), 0);
-              const isFullyReceived = remaining <= 0;
-
-              const nextTotalReceived = received + receivedSession + qtyForValidate;
-              const isOver = canEdit && nextTotalReceived > qtyOrdered;
-              const showStatusPrompt = canEdit && !!statusPromptShown[item.id];
-              const isStatusSelected = itemStatus[item.id] === 'done' || itemStatus[item.id] === 'pending';
-
-              const disableSave =
-                !!saving[item.id] ||
-                isFullyReceived ||
-                quantity === '' ||
-                (showStatusPrompt && !isStatusSelected) ||
-                (isOver && !forceAccept[item.id]);
-
-              return (
-                <TableRow key={item.id}>
-                  <TableCell>{catName}</TableCell>
-                  <TableCell>{typeName}</TableCell>
-                  <TableCell>{brandName}</TableCell>
-                  <TableCell>{profileName}</TableCell>
-                  <TableCell>{templateName}</TableCell>
-                  <TableCell>{productName}</TableCell>
-
-                  <TableCell className="text-center px-2 py-1">{qtyOrdered}</TableCell>
-                  <TableCell className="text-center px-2 py-1">{received}</TableCell>
-                  <TableCell className="text-center px-2 py-1">{remaining}</TableCell>
-                  <TableCell className="text-center px-2 py-1">{Number(item.costPrice || 0)}</TableCell>
-
-                  <TableCell className="px-2 py-1">
-                    <input
-                      type="number"
-                      min="0"
-                      className="w-20 text-right border rounded px-1 py-0.5"
-                      value={quantity}
-                      onChange={(e) => handleQuantityChange(item.id, e.target.value)}
-                      onFocus={() => handleFocusQuantity(item.id)}
-                      onBlur={() => handleBlurQuantity(item.id)}
-                      disabled={!canEdit || isFullyReceived}
-                    />
-
-                    {isOver && !isFullyReceived && (
-                      <label className="flex items-center text-xs mt-1">
+                    <td className="p-3 bg-orange-500/[0.01]">
+                      <div className="flex flex-col items-center justify-center gap-1">
                         <input
-                          type="checkbox"
-                          checked={!!forceAccept[item.id]}
-                          onChange={(e) => setForceAccept((prev) => ({ ...prev, [item.id]: e.target.checked }))}
-                          className="mr-1"
+                          type="number"
+                          min="0"
+                          className="w-16 h-8 text-right font-black font-sans border border-slate-200 rounded-lg px-2 bg-white focus:border-orange-500 focus:ring-2 focus:ring-orange-500/10 outline-none transition-all shadow-sm disabled:opacity-50 disabled:bg-slate-50"
+                          value={quantity}
+                          onChange={(e) => handleQuantityChange(item.id, e.target.value)}
+                          onFocus={() => handleFocusQuantity(item.id)}
+                          onBlur={() => handleBlurQuantity(item.id)}
+                          disabled={!canEdit || isFullyReceived}
                         />
-                        ยืนยันรับแม้เกิน
-                      </label>
-                    )}
 
-                    {showStatusPrompt && !isFullyReceived && (
-                      <div className="text-xs mt-1 space-y-1">
-                        <label className="flex items-center">
-                          <input
-                            type="radio"
-                            name={`itemStatus-${item.id}`}
-                            checked={itemStatus[item.id] === 'done'}
-                            onChange={() => setItemStatus((prev) => ({ ...prev, [item.id]: 'done' }))}
-                            className="mr-1"
-                          />
-                          ยืนยันรับเท่านี้
-                        </label>
-                        <label className="flex items-center">
-                          <input
-                            type="radio"
-                            name={`itemStatus-${item.id}`}
-                            checked={itemStatus[item.id] === 'pending'}
-                            onChange={() => setItemStatus((prev) => ({ ...prev, [item.id]: 'pending' }))}
-                            className="mr-1"
-                          />
-                          ค้างส่ง
-                        </label>
+                        {isOver && !isFullyReceived && (
+                          <label className="inline-flex items-center text-[10px] font-black text-rose-600 bg-rose-50 border border-rose-200/40 px-1.5 py-0.5 rounded mt-1 select-none animate-fadeIn cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={!!forceAccept[item.id]}
+                              onChange={(e) => setForceAccept((prev) => ({ ...prev, [item.id]: e.target.checked }))}
+                              className="mr-1 accent-rose-600"
+                            />
+                            ยืนยันรับเกินบิล
+                          </label>
+                        )}
+
+                        {showStatusPrompt && !isFullyReceived && (
+                          <div className="text-[10px] font-black text-amber-700 bg-amber-50 border border-amber-200/40 p-1.5 rounded-lg mt-1 space-y-1 select-none animate-fadeIn">
+                            <label className="flex items-center cursor-pointer">
+                              <input type="radio" name={`itemStatus-${item.id}`} checked={itemStatus[item.id] === 'done'} onChange={() => setItemStatus((prev) => ({ ...prev, [item.id]: 'done' }))} className="mr-1 accent-amber-600" />
+                              ยืนยันตัดยอดเท่านี้
+                            </label>
+                            <label className="flex items-center cursor-pointer">
+                              <input type="radio" name={`itemStatus-${item.id}`} checked={itemStatus[item.id] === 'pending'} onChange={() => setItemStatus((prev) => ({ ...prev, [item.id]: 'pending' }))} className="mr-1 accent-amber-600" />
+                              ออกค้างคิวส่งของเพิ่ม
+                            </label>
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </TableCell>
+                    </td>
 
-                  <TableCell className="px-2 py-1">
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      placeholder="0.00"
-                      className="w-24 text-right border rounded px-1 py-0.5"
-                      value={price === 0 ? '' : price}
-                      onChange={(e) => handlePriceChange(item.id, e.target.value)}
-                      disabled={!canEdit || isFullyReceived}
-                    />
-                  </TableCell>
+                    <td className="p-3 bg-orange-500/[0.01]">
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        placeholder="0.00"
+                        className="w-20 h-8 text-right font-bold font-sans border border-slate-200 rounded-lg px-2 bg-white focus:border-orange-500 focus:ring-2 focus:ring-orange-500/10 outline-none transition-all shadow-sm disabled:opacity-50 disabled:bg-slate-50"
+                        value={price === 0 ? '' : price}
+                        onChange={(e) => handlePriceChange(item.id, e.target.value)}
+                        disabled={!canEdit || isFullyReceived}
+                      />
+                    </td>
 
-                  <TableCell className="text-right px-2 py-1">{total.toFixed(2)}</TableCell>
+                    <td className="p-3 text-right font-black font-sans text-slate-900 text-sm">
+                      ฿{total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </td>
 
-                  <TableCell className="text-center px-2 py-1">
-                    <div className="flex items-center justify-center gap-2">
-                      {!isConfirmed || isEditing ? (
-                        <button
-                          type="button"
-                          className="px-3 py-1 rounded bg-blue-600 text-white disabled:opacity-50"
-                          onClick={() => handleSaveItem(item)}
-                          disabled={disableSave}
-                        >
-                          {saving[item.id] ? 'กำลังบันทึก...' : 'บันทึก'}
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          className="px-3 py-1 rounded border"
-                          onClick={() => setEditMode((prev) => ({ ...prev, [item.id]: true }))}
-                          disabled={isFullyReceived}
-                        >
-                          แก้ไข
-                        </button>
-                      )}
+                    <td className="p-3 text-center">
+                      <div className="flex items-center justify-center gap-1.5 transform scale-95 origin-center select-none">
+                        {!isConfirmed || isEditing ? (
+                          <button
+                            type="button"
+                            onClick={() => handleSaveItem(item)}
+                            disabled={disableSave}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 bg-slate-800 hover:bg-slate-900 text-white font-black text-xs border border-slate-900 rounded-xl shadow-sm transform active:scale-95 transition-all disabled:opacity-40 disabled:transform-none select-none shrink-0"
+                          >
+                            <Save className="w-3 h-3 text-slate-300" />
+                            <span>{saving[item.id] ? 'บันทึก...' : 'บันทึก'}</span>
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setEditMode((prev) => ({ ...prev, [item.id]: true }))}
+                            disabled={isFullyReceived}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs border border-slate-200/60 rounded-xl transform active:scale-95 transition-all shadow-sm disabled:opacity-40 disabled:transform-none shrink-0"
+                          >
+                            <Edit2 className="w-3 h-3 text-slate-400" />
+                            <span>แก้ไข</span>
+                          </button>
+                        )}
 
-                      {isEditing && (
-                        <button
-                          type="button"
-                          className="px-3 py-1 rounded border"
-                          onClick={() => setEditMode((prev) => ({ ...prev, [item.id]: false }))}
-                        >
-                          ยกเลิก
-                        </button>
-                      )}
+                        {isEditing && (
+                          <button
+                            type="button"
+                            onClick={() => setEditMode((prev) => ({ ...prev, [item.id]: false }))}
+                            className="h-7 w-7 inline-flex items-center justify-center bg-rose-50 border border-rose-200 hover:bg-rose-100 rounded-xl text-rose-500 transition-colors"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        )}
 
-                      {isConfirmed && <span className="text-xs text-green-700">ยืนยันแล้ว</span>}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
+                        {isConfirmed && (
+                          <span className="text-[10px] font-black bg-emerald-50 text-emerald-700 border border-emerald-500/10 px-2 py-1 rounded-md select-none shrink-0 flex items-center gap-0.5 animate-fadeIn">
+                            <CheckCircle2 className="w-3 h-3 text-emerald-600" /> ยืนยันแล้ว
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
 
-      {/* ✅ Finalize section (outside table) */}
-      <div className="flex items-center justify-end gap-4">
-        <div className="text-sm text-right">
-          <div className="text-gray-700">
-            เงื่อนไข: รายการที่มี <span className="font-semibold">รับแล้ว</span> (&gt; 0) จะถือว่าเคยยืนยันแล้ว
+      {/* 🟦 BOTTOM FINALIZATION BOARD */}
+      <div className="bg-slate-50/70 border border-slate-200/70 rounded-2xl p-4 sm:p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-4 select-none">
+        <div className="text-left space-y-0.5 font-bold text-xs text-slate-500">
+          <div className="flex items-center gap-1 text-slate-700 font-black"><AlertCircle className="w-3.5 h-3.5 text-slate-400" /> เงื่อนไขกฎเหล็กคลัง:</div>
+          <div className="opacity-90 pl-4">ระบบจะคัดกรองแถวที่มีค่า <span className="font-black text-slate-800">"รับแล้ว (&gt; 0)"</span> ถือว่าผ่านสิทธิ์การตรวจสอบความสมดุลเอกสาร</div>
+          <div className="opacity-90 pl-4 mt-0.5">
+            เมื่อกดส่งสัญญานบันทึกภาพบิล ระบบจะทำการอัปเดตสเตตัสกลางเป็น:{' '}
+            <span className="font-black text-orange-600 px-1.5 py-0.5 bg-orange-50 rounded-md text-xs font-sans ml-0.5 shadow-inner">{allRemainingZero ? 'RECEIVED (รับครบแล้ว)' : 'PARTIALLY_RECEIVED (รับบางส่วน)'}</span>
           </div>
-          <div className="mt-1 text-xs text-gray-600">
-            เมื่อกดบันทึก ระบบจะตั้งสถานะเป็น{' '}
-            <span className="font-semibold">{allRemainingZero ? 'รับครบแล้ว' : 'รับบางส่วน'}</span>
-          </div>
-          {!allRowsConfirmed && (
-            <div className="mt-1 text-xs text-amber-700">
-              ยังมีบางรายการที่ <span className="font-semibold">รับแล้ว = 0</span> และยังไม่ได้กด “บันทึก”
-            </div>
-          )}
         </div>
 
         <button
           type="button"
-          onClick={handleConfirmFinalize}
           disabled={!canFinalize}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded disabled:opacity-50"
+          onClick={handleConfirmFinalize}
+          className={`flex items-center justify-center gap-1.5 px-5 h-11 text-xs sm:text-sm font-black rounded-xl border border-orange-400/10 shadow-sm transform active:scale-95 transition-all duration-300 shrink-0 self-start md:self-auto ${
+            !canFinalize
+              ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed shadow-none'
+              : 'bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white shadow-[0_4px_15px_rgba(249,115,22,0.2)] hover:-translate-y-0.5'
+          }`}
         >
-          {finalizing ? 'กำลังบันทึก...' : finalizedOnce || isPoFinalized ? 'บันทึกแล้ว' : 'บันทึกใบรับสินค้า'}
+          {finalizing ? (
+            <span className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+          ) : (
+            <CheckCircle2 className="w-4 h-4 text-orange-100" />
+          )}
+          <span>{finalizing ? 'กำลังบันทึก...' : finalizedOnce || isPoFinalized ? 'บันทึกสำเร็จแล้ว' : 'บันทึกใบรับสินค้าประจำสาขา'}</span>
         </button>
       </div>
+
     </div>
   );
 };
 
 export default POItemListForReceipt;
-
-
-
-
-
-
-

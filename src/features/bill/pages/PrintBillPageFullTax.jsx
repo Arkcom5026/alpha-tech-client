@@ -1,4 +1,5 @@
 // src/features/bill/pages/PrintBillPageFullTax.jsx
+// 🏛️ Premium Next-Gen POS Print Page: (Full A4 Tax Invoice Core Logic Restored)
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
@@ -61,9 +62,9 @@ const PrintBillPageFullTax = () => {
       saleId,
       paymentId
         ? {
-          paymentId,
-          params: { paymentId },
-        }
+            paymentId,
+            params: { paymentId },
+          }
         : undefined
     )
   }
@@ -197,7 +198,7 @@ const PrintBillPageFullTax = () => {
       // ✅ Force reload: clear billStore cache before loading same saleId again
       resetAction()
       await reloadSaleForPrint()
-      
+   
       setEditingLineKey(null)
       setLineDrafts((prev) => {
         const next = { ...(prev || {}) }
@@ -226,16 +227,17 @@ const PrintBillPageFullTax = () => {
     }
   }
 
+  // 🟢 FIXED: สับเปลี่ยนกล่องสถานะขณะประมวลผลให้อ่านชัดเจน ไม่จมหายในเลเยอร์โหมดมืด
   if (loading) {
-    return <div className="text-center p-6 text-gray-700">⏳ กำลังโหลดข้อมูลใบเสร็จ...</div>
+    return <div className="text-center p-8 text-zinc-400 font-bold bg-slate-900 min-h-screen">⏳ กำลังโหลดข้อมูลใบเสร็จเต็มรูปแบบ...</div>
   }
 
   if (error || pageError) {
-    return <div className="text-center p-6 text-red-600">เกิดข้อผิดพลาด: {error || pageError}</div>
+    return <div className="text-center p-8 text-rose-400 font-bold bg-slate-900 min-h-screen">เกิดข้อผิดพลาด: {error || pageError}</div>
   }
 
   if (!sale || !Array.isArray(saleItems) || saleItems.length === 0 || !payment || !config) {
-    return <div className="text-center p-6 text-gray-700">ไม่พบข้อมูลใบเสร็จ</div>
+    return <div className="text-center p-8 text-zinc-400 font-bold bg-slate-900 min-h-screen">ไม่พบข้อมูลใบเสร็จตามรหัสอ้างอิง</div>
   }
 
   return (
@@ -244,22 +246,26 @@ const PrintBillPageFullTax = () => {
         .bill-print-root { font-family: 'THSarabunNew', 'TH Sarabun New', 'Sarabun', system-ui, sans-serif; }
       `}</style>
 
-      <div className="bill-print-root">
-        <BillLayoutFullTax
-          sale={sale}
-          saleItems={saleItems}
-          payments={[payment]}
-          config={config}
-          mode="full"
-          taxMode="full"
-          editableDocumentLines
-          editingLineKey={editingLineKey}
-          lineDrafts={lineDrafts}
-          savingLineKey={savingLineKey}
-          onToggleDocumentLineEdit={handleToggleDocumentLineEdit}
-          onChangeDocumentLineDraft={handleChangeDocumentLineDraft}
-          onSaveDocumentLine={handleSaveDocumentLine}
-        />
+      {/* 🟢 FIXED: บังคับคลาส CSS ตัดสิทธิ์ควบคุมความมืด ปรับพื้นที่กระดาษพิมพ์ A4 ตรงกลางให้เป็นสีขาว ตัวอักษรสีดำสนิท 100% */}
+      {/* เติมคลาส bg-white text-black dark:bg-white dark:text-black ครอบคลุมพิกัดแผ่นฟอร์มทั้งหมด */}
+      <div className="w-full min-h-screen bg-white text-black dark:bg-white dark:text-black py-8 px-4 print:p-0 print:bg-white">
+        <div className="bill-print-root mx-auto max-w-[210mm] bg-white text-black dark:bg-white dark:text-black p-6 rounded-2xl border border-zinc-200 shadow-sm print:p-0 print:border-none print:shadow-none">
+          <BillLayoutFullTax
+            sale={sale}
+            saleItems={saleItems}
+            payments={[payment]}
+            config={config}
+            mode="full"
+            taxMode="full"
+            editableDocumentLines
+            editingLineKey={editingLineKey}
+            lineDrafts={lineDrafts}
+            savingLineKey={savingLineKey}
+            onToggleDocumentLineEdit={handleToggleDocumentLineEdit}
+            onChangeDocumentLineDraft={handleChangeDocumentLineDraft}
+            onSaveDocumentLine={handleSaveDocumentLine}
+          />
+        </div>
       </div>
     </>
   )

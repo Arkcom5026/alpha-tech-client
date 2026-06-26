@@ -1,12 +1,27 @@
-
-
 // src/features/pos/components/header/HeaderPos.jsx
+// 🏛️ P1 POS Header — Dark Enterprise + Amber Premium
+// Principle: clear module state, calm operational surface, premium but not distracting.
 
 import { useEffect, useState } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
-import { Sun, Moon, UserCircle } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import useThemeStore from '@/store/themeStore';
+import { NavLink, useNavigate, useParams } from 'react-router-dom';
+import {
+  Activity,
+  BarChart3,
+  ChevronDown,
+  CircleDollarSign,
+  ClipboardList,
+  Home,
+  LogOut,
+  Menu,
+  Package,
+  Settings,
+  ShieldCheck,
+  ShoppingCart,
+  Store,
+  Terminal,
+  UserCircle,
+  Wrench,
+} from 'lucide-react';
 
 import { useAuthStore } from '@/features/auth/store/authStore';
 import { P1_CAP } from '@/features/auth/rbac/rbacClient';
@@ -14,6 +29,7 @@ import { useBranchStore } from '@/features/branch/store/branchStore';
 
 const HeaderPos = () => {
   const navigate = useNavigate();
+  const { shopSlug } = useParams();
 
   const employee = useAuthStore((state) => state.employee);
   const user = useAuthStore((state) => state.user);
@@ -21,52 +37,21 @@ const HeaderPos = () => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticatedSelector?.());
   const role = useAuthStore((state) => state.role);
 
-  // ✅ Branch store wiring (declare BEFORE any use to avoid TDZ)
-  // Note: SUPERADMIN must NOT depend on branch context, but hooks can still be read safely.
-  const branchName = useBranchStore((state) => state.currentBranch?.name);
+  const fallbackBranchName = useBranchStore((state) => state.currentBranch?.name);
   const selectedBranchId = useBranchStore((state) => state.selectedBranchId);
   const clearBranch = useBranchStore((state) => state.clearBranch);
   const loadAndSetBranchById = useBranchStore((state) => state.loadAndSetBranchById);
 
-  // ✅ SUPERADMIN global mode: must not reference branch
+  const displayBranchName =
+    employee?.branchName ||
+    fallbackBranchName ||
+    (shopSlug ? `ร้านค้าพันธมิตร (${shopSlug})` : 'ไม่ระบุสาขา');
+
   const isSuperAdmin = String(role || '').toLowerCase() === 'superadmin';
   const isGlobalSuperAdmin = isSuperAdmin;
-
-  // Display name (fallback for SUPERADMIN without EmployeeProfile)
   const displayName = employee?.name || user?.username || user?.email || 'ผู้ใช้';
 
-  // RBAC (P1 Bestline) - FE menu guard (Minimal Disruption)
-  const canSelector = useAuthStore((state) => state.canSelector);
-  const can = (capKey) => {
-    // ✅ SUPERADMIN should never be blocked by RBAC mapping gaps
-    if (isSuperAdmin) return true;
-    return typeof canSelector === 'function' ? canSelector(capKey) : true;
-  };
-  const canGlobalProducts = isSuperAdmin || can(P1_CAP.MANAGE_PRODUCTS);
-
-  const canPurchasing = can(P1_CAP.PURCHASING) || can(P1_CAP.RECEIVE_STOCK);
-  const canSales = can(P1_CAP.POS_SALE);
-  const canStock = can(P1_CAP.RECEIVE_STOCK) || can(P1_CAP.STOCK_AUDIT) || can(P1_CAP.MANAGE_PRODUCTS);
-  const canReports = can(P1_CAP.VIEW_REPORTS);
-  const canFinance = can(P1_CAP.VIEW_REPORTS); // conservative baseline (ปรับละเอียดได้ภายหลัง)
-  const canSettings = can(P1_CAP.MANAGE_EMPLOYEES) || can(P1_CAP.MANAGE_PRODUCTS); // conservative baseline
-  const canEmployees = can(P1_CAP.MANAGE_EMPLOYEES);
-
-  // ✅ Menu visibility
-// SUPERADMIN must not depend on branch context, but can still see menus.
-// Pages that require branch should handle missing branchId gracefully.
-const showPurchasing = canPurchasing;
-const showSales = canSales;
-const showServices = true;
-const showStockModule = canStock;
-const showReports = canReports;
-const showFinance = canFinance;
-const showSettings = canSettings;
-const showEmployees = canEmployees;
-const showGlobalProducts = isSuperAdmin && canGlobalProducts;
-
-  const { isDark, toggleTheme } = useThemeStore();
-  const [showMenu, setShowMenu] = useState(false);
+   const [showMenu, setShowMenu] = useState(false);
 
   const handleLogout = () => {
     clearBranch();
@@ -75,144 +60,203 @@ const showGlobalProducts = isSuperAdmin && canGlobalProducts;
   };
 
   useEffect(() => {
-    // ✅ SUPERADMIN must never auto-load or depend on branch context
     if (isSuperAdmin) return;
 
     const roleLower = String(role || '').toLowerCase();
+
     if (isAuthenticated && roleLower === 'employee' && employee?.branchId && selectedBranchId) {
       loadAndSetBranchById(selectedBranchId);
     }
   }, [isSuperAdmin, isAuthenticated, role, employee?.branchId, selectedBranchId, loadAndSetBranchById]);
 
+  const getRoutePath = (subPath) => {
+    return shopSlug ? `/${shopSlug}/pos${subPath}` : `/pos${subPath}`;
+  };
+
+  // 🟢 FIXED: ปลดล็อกสวิตช์ฟิลเตอร์เมนูหลักด้านบน เปิดโล่ง show: true ให้ผู้ใช้งานกดใช้งานได้ครบทุกโมดูล
+  const navItems = [
+    { label: 'หน้าหลัก', path: getRoutePath(''), end: true, show: true, icon: Home },
+    { label: 'จัดซื้อ', path: getRoutePath('/purchases'), show: true, icon: ShoppingCart },
+    { label: 'การขาย', path: getRoutePath('/sales'), show: true, icon: ClipboardList },
+    { label: 'บริการ', path: getRoutePath('/services'), show: true, icon: Wrench },
+    { label: 'สต๊อก', path: getRoutePath('/stock'), show: true, icon: Package },
+    { label: 'รายงาน', path: getRoutePath('/reports'), show: true, icon: BarChart3 },
+    { label: 'การเงิน', path: getRoutePath('/finance'), show: true, icon: CircleDollarSign },
+    { label: 'ตั้งค่าระบบ', path: getRoutePath('/settings'), show: true, icon: Settings },
+  ].filter((item) => item.show);
+
   const navLinkClass = ({ isActive }) =>
-    `px-5 py-2 rounded-md text-base font-medium transition-all duration-200 whitespace-nowrap border border-white/20 shadow-sm ${
-      isActive ? 'bg-white text-blue-800' : 'text-white/80 hover:bg-blue-600'
-    }`;
+    [
+      'relative inline-flex items-center justify-center gap-2 overflow-visible rounded-2xl px-4 py-2.5',
+      'text-[13px] font-black whitespace-nowrap border transition-all duration-200',
+      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/70',
+      'focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950',
+      'before:absolute before:inset-x-3 before:top-0 before:h-px before:rounded-full before:transition-opacity before:duration-200',
+      'after:absolute after:left-5 after:right-5 after:-bottom-[3px] after:h-[2px] after:rounded-full after:transition-all after:duration-200',
+      isActive
+        ? [
+            'border-amber-300/70 bg-gradient-to-b from-amber-400 to-orange-500 text-white',
+            'shadow-[0_0_0_1px_rgba(251,191,36,0.28),0_0_28px_rgba(245,158,11,0.50),0_10px_32px_rgba(249,115,22,0.34)]',
+            'before:bg-white/60 before:opacity-100 after:bg-amber-200 after:opacity-100 after:shadow-[0_0_12px_rgba(251,191,36,0.55)]',
+          ].join(' ')
+        : [
+            'border-[#7a5b21]/80 bg-slate-950/34 text-slate-100',
+            'shadow-[inset_0_1px_0_rgba(255,255,255,0.055),0_0_0_1px_rgba(120,53,15,0.14)]',
+            'before:bg-gradient-to-r before:from-transparent before:via-white/10 before:to-transparent before:opacity-100 after:bg-amber-400/55 after:opacity-0',
+            'hover:-translate-y-px hover:border-[#d6a84a]/85 hover:bg-white/10 hover:text-white hover:shadow-[0_0_0_1px_rgba(251,191,36,0.18),0_0_16px_rgba(212,168,74,0.24)] hover:after:opacity-100',
+          ].join(' '),
+    ].join(' ');
 
   return (
-    <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 px-4 py-3 bg-blue-700 text-white shadow-md dark:bg-slate-900 dark:text-white">
-      {/* Responsive Dropdown Menu */}
-      <div className="block md:hidden">
-        <select
-          onChange={(e) => navigate(e.target.value)}
-          className="bg-blue-600 text-white rounded-md px-3 py-2 text-sm"
-          defaultValue=""
-        >
-          <option value="" disabled hidden>
-            เมนูทั้งหมด
-          </option>
-          <option value="/pos">หน้าหลัก</option>
-          {showPurchasing && <option value="/pos/purchases">จัดซื้อ</option>}
-          {showSales && <option value="/pos/sales">การขาย</option>}
-          {showServices && <option value="/pos/services">บริการ</option>}
-          {showStockModule && <option value="/pos/stock">สต๊อก</option>}
-          {showGlobalProducts && <option value="/pos/stock/products">สินค้า</option>}
-          {showReports && <option value="/pos/reports">รายงาน</option>}
-          {showFinance && <option value="/pos/finance">การเงิน</option>}
-          {showEmployees && <option value="/pos/employees">พนักงาน</option>}
-        </select>
-      </div>
+    <header className="sticky top-0 z-40 w-full border-t-2 border-orange-400 border-b border-amber-500/35 bg-slate-950 text-white shadow-[0_18px_48px_rgba(15,23,42,0.24)]">
+      <div className="relative overflow-visible">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_16%_0%,rgba(249,115,22,0.20),transparent_28%),radial-gradient(circle_at_82%_0%,rgba(251,191,36,0.10),transparent_24%),radial-gradient(circle_at_70%_100%,rgba(59,130,246,0.05),transparent_40%),linear-gradient(90deg,rgba(15,23,42,0.98),rgba(30,41,59,0.97),rgba(15,23,42,0.98))]" />
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-transparent via-amber-300 to-transparent opacity-80" />
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-amber-300/95 to-transparent" />
+        <div className="pointer-events-none absolute inset-x-1/4 bottom-0 h-10 bg-amber-500/14 blur-2xl" />
 
-      <nav className="hidden md:flex flex-wrap gap-2 max-w-full overflow-x-auto scrollbar-thin">
-        <NavLink to="/pos" className={navLinkClass}>
-          หน้าหลัก
-        </NavLink>
-        {showPurchasing && (
-          <NavLink to="/pos/purchases" className={navLinkClass}>
-            จัดซื้อ
-          </NavLink>
-        )}
-        {showSales && (
-          <NavLink to="/pos/sales" className={navLinkClass}>
-            การขาย
-          </NavLink>
-        )}
-        {showServices && (
-          <NavLink to="/pos/services" className={navLinkClass}>
-            บริการ
-          </NavLink>
-        )}
-        {showStockModule && (
-          <NavLink to="/pos/stock" className={navLinkClass}>
-            สต๊อก
-          </NavLink>
-        )}
-        {showGlobalProducts && (
-          <NavLink to="/pos/stock/products" className={navLinkClass}>
-            สินค้า
-          </NavLink>
-        )}
-        {showReports && (
-          <NavLink to="/pos/reports" className={navLinkClass}>
-            รายงาน
-          </NavLink>
-        )}
-        {showFinance && (
-          <NavLink to="/pos/finance" className={navLinkClass}>
-            การเงิน
-          </NavLink>
-        )}
-        {showSettings && (
-          <NavLink to="/pos/settings" className={navLinkClass}>
-            ตั้งค่าระบบ
-          </NavLink>
-        )}
-      </nav>
+        <div className="relative mx-auto flex h-[76px] max-w-[1680px] items-center gap-4 px-6 xl:px-8">
+          {/* Mobile selector */}
+          <div className="flex items-center gap-2 md:hidden">
+            <div className="flex h-9 w-9 items-center justify-center rounded-2xl border border-[#b7791f]/65 bg-slate-950/40 text-orange-300 shadow-inner">
+              <Menu className="h-4 w-4" />
+            </div>
 
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-end gap-3 w-full md:w-auto relative">
-        <Button variant="ghost" className="text-white/80 hover:text-white" onClick={toggleTheme}>
-          {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-        </Button>
-
-        {branchName && !isGlobalSuperAdmin && (
-          <div className="text-sm font-medium bg-blue-600/60 px-3 py-1 rounded-full dark:bg-slate-700 max-w-[250px] truncate">
-            สาขา: {branchName}
-          </div>
-        )}
-
-        {isGlobalSuperAdmin && (
-          <div className="text-xs font-semibold bg-white/10 border border-white/20 px-3 py-1 rounded-full">
-            SUPERADMIN • GLOBAL
-          </div>
-        )}
-
-        {isAuthenticated && (
-          <div className="relative">
-            <button
-              className="flex items-center gap-2 px-3 py-1 bg-blue-600/80 hover:bg-blue-700 rounded-full text-sm"
-              onClick={() => setShowMenu(!showMenu)}
+            <select
+              onChange={(event) => navigate(event.target.value)}
+              className="h-10 rounded-2xl border border-[#b7791f]/65 bg-slate-900 px-3 text-sm font-black text-white outline-none transition focus:border-orange-400"
+              defaultValue=""
             >
-              <UserCircle className="w-5 h-5" />
-              <span className="truncate max-w-[150px]">{displayName}</span>
-            </button>
+              <option value="" disabled hidden>
+                เมนู POS
+              </option>
+              {navItems.map((item) => (
+                <option key={item.path} value={item.path}>
+                  {item.label}
+                </option>
+              ))}
+            </select>
+          </div>
 
-            {showMenu && (
-              <div className="absolute right-0 mt-2 w-40 bg-white text-black rounded shadow-md z-50">
+          {/* POS identity badge */}
+          <div className="hidden items-center gap-3 md:flex">
+            <div className="flex h-10 items-center gap-2 rounded-2xl border border-[#b7791f]/70 bg-slate-950/38 px-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_0_18px_rgba(245,158,11,0.12)]">
+              <span className="h-1.5 w-1.5 rounded-full bg-amber-400 shadow-[0_0_0_4px_rgba(245,158,11,0.14)]" />
+              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white">POS</span>
+            </div>
+            <div className="h-8 w-px bg-gradient-to-b from-transparent via-amber-400/28 to-transparent" />
+          </div>
+
+          {/* Desktop navigation */}
+          <nav className="hidden min-w-0 flex-1 items-center gap-1.5 md:flex">
+            {navItems.map((item) => {
+              const Icon = item.icon;
+
+              return (
+                <NavLink key={item.path} to={item.path} end={item.end} className={navLinkClass}>
+                  <Icon className="h-4 w-4 shrink-0 text-amber-300" />
+                  <span>{item.label}</span>
+                </NavLink>
+              );
+            })}
+          </nav>
+
+          <div className="hidden h-9 w-px shrink-0 bg-gradient-to-b from-transparent via-amber-300/25 to-transparent xl:block" />
+
+          {/* Right control panel */}
+          <div className="ml-auto flex shrink-0 items-center justify-end gap-2">
+            {displayBranchName && !isGlobalSuperAdmin && (
+              <div className="hidden max-w-[320px] items-center gap-2 rounded-full border border-[#b7791f]/65 bg-slate-950/28 px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur lg:flex">
+                <div className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-orange-500/10 text-orange-300 ring-1 ring-amber-400/35">
+                  <Activity className="h-3.5 w-3.5" />
+                  <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-emerald-400 ring-2 ring-slate-900 animate-[pulse_3.5s_ease-in-out_infinite]" />
+                </div>
+
+                <div className="min-w-0">
+                  <p className="text-[9px] font-black uppercase tracking-[0.18em] text-orange-300/85">
+                    Branch online
+                  </p>
+                  <p className="truncate text-xs font-black text-slate-100">{displayBranchName}</p>
+                </div>
+              </div>
+            )}
+
+            {isGlobalSuperAdmin && (
+              <div className="hidden items-center gap-2 rounded-full border border-red-400/20 bg-red-500/10 px-3 py-2 text-red-300 lg:flex">
+                <Terminal className="h-3.5 w-3.5" />
+                <span className="text-[10px] font-black uppercase tracking-[0.18em]">Superadmin</span>
+              </div>
+            )}
+
+            {isAuthenticated && (
+              <div className="relative">
                 <button
                   type="button"
-                  onClick={() => navigate('/profile')}
-                  className="w-full text-left px-4 py-2 hover:bg-gray-100"
+                  onClick={() => setShowMenu((value) => !value)}
+                  className="flex h-11 items-center gap-2 rounded-full border border-[#b7791f]/65 bg-slate-950/28 px-3 text-left text-slate-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] transition hover:border-amber-400/80 hover:bg-white/10 hover:shadow-[0_0_0_1px_rgba(251,191,36,0.10)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400/70"
+                  aria-expanded={showMenu}
+                  aria-label="เปิดเมนูผู้ใช้งาน POS"
                 >
-                  ดูโปรไฟล์
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-900 text-slate-300 ring-1 ring-amber-400/30">
+                    <UserCircle className="h-4 w-4" />
+                  </div>
+
+                  <div className="hidden min-w-0 sm:block">
+                    <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-slate-500">
+                      POS Operator
+                    </p>
+                    <p className="max-w-[130px] truncate text-xs font-black">{displayName}</p>
+                  </div>
+
+                  <ChevronDown className={`h-3.5 w-3.5 text-slate-500 transition ${showMenu ? 'rotate-180' : ''}`} />
                 </button>
-                <button
-                  type="button"
-                  onClick={handleLogout}
-                  className="w-full text-left px-4 py-2 text-red-600 hover:bg-gray-100"
-                >
-                  ออกจากระบบ
-                </button>
+
+                {showMenu && (
+                  <div className="absolute right-0 mt-2 w-56 overflow-hidden rounded-2xl border border-[#7a5b21]/85 bg-slate-950/95 p-2 text-slate-100 shadow-2xl shadow-slate-950/40 backdrop-blur-xl">
+                    <div className="px-3 py-2">
+                      <p className="truncate text-sm font-black">{displayName}</p>
+                      <p className="mt-0.5 truncate text-[11px] font-semibold text-slate-500">
+                        {displayBranchName}
+                      </p>
+                    </div>
+
+                    <div className="my-1 h-px bg-gradient-to-r from-transparent via-amber-300/28 to-transparent" />
+
+                    {/* 🟢 FIXED: ถอดเงื่อนไข canSettings ออกเพื่อให้ปุ่มตั้งค่าระบบแสดงผลกับทุกคนเสมอ */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowMenu(false);
+                        navigate(getRoutePath('/settings'));
+                      }}
+                      className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-xs font-bold text-slate-300 transition hover:bg-white/10 hover:text-white"
+                    >
+                      <Settings className="h-3.5 w-3.5 text-orange-300" />
+                      ตั้งค่าระบบ
+                    </button>
+
+                    <div className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-xs font-bold text-emerald-300">
+                      <ShieldCheck className="h-3.5 w-3.5" />
+                      Session พร้อมใช้งาน
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleLogout}
+                      className="mt-1 flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-xs font-black text-red-300 transition hover:bg-red-500/10"
+                    >
+                      <LogOut className="h-3.5 w-3.5" />
+                      ออกจากระบบ POS
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>
-        )}
+        </div>
       </div>
     </header>
   );
 };
 
 export default HeaderPos;
-
-
-
-

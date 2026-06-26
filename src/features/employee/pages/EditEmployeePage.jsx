@@ -1,6 +1,3 @@
-// ✅ @filename: EditEmployeePage.jsx
-// ✅ @folder: src/features/employee/pages/
-
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getEmployeeById, updateEmployee, getBranchDropdowns } from '../api/employeeApi';
@@ -8,7 +5,7 @@ import EmployeeForm from '../components/EmployeeForm';
 import { useAuthStore } from '@/features/auth/store/authStore.js';
 
 const EditEmployeePage = () => {
-  const { id } = useParams();
+  const { shopSlug, id } = useParams(); // 🟢 [DYNAMIC PARAM FIX] แกะรหัส shopSlug มาควบคุมเลนวิ่ง
   const navigate = useNavigate();
   const token = useAuthStore((s) => s.token);
   const role = useAuthStore((s) => s.role);
@@ -29,7 +26,6 @@ const EditEmployeePage = () => {
           setError('ไม่พบรหัสพนักงานใน URL');
           return;
         }
-        // 🔐 ใช้ token จาก useAuthStore ตามมาตรฐานระบบ
         const data = await getEmployeeById(id);
         if (!cancelled) setEmployee(data);
       } catch (err) {
@@ -46,7 +42,6 @@ const EditEmployeePage = () => {
     };
   }, [token, id]);
 
-  // โหลดสาขาสำหรับ superadmin เพื่อแก้ไข branch
   useEffect(() => {
     if (!isSuperAdmin) return;
     let cancelled = false;
@@ -64,7 +59,8 @@ const EditEmployeePage = () => {
   const handleUpdate = async (formData) => {
     try {
       await updateEmployee(id, formData);
-      navigate('/pos/settings/employee');
+      // 🟢 [DYNAMIC NAVIGATE] วิ่งสับเลนขากลับตรงล็อกพ่วง shopSlug เข้าหน้าบัญชีรายชื่อพนักงานส่วนกลาง
+      navigate(`/${shopSlug}/pos/settings/employee`);
     } catch (err) {
       console.error('❌ แก้ไขพนักงานล้มเหลว:', err);
       setError(err?.response?.data?.message || err?.message || 'แก้ไขพนักงานล้มเหลว');
@@ -92,4 +88,3 @@ const EditEmployeePage = () => {
 };
 
 export default EditEmployeePage;
-

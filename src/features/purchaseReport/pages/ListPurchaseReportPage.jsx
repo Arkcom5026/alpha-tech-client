@@ -1,9 +1,6 @@
-
-
-
 // src/features/purchaseReport/pages/ListPurchaseReportPage.jsx
 import React, { useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom'; // 🟢 ดึง useParams ร่วมขบวนจัด Multi-Tenant
 
 // ตัวอย่างการนำเข้า UI Components จาก Library เช่น Material-UI
 import { Box, Typography, Card, CardContent, CardHeader, Stack, Chip } from '@mui/material';
@@ -21,7 +18,11 @@ import { usePurchaseReportStore } from '../store/purchaseReportStore';
  */
 export const ListPurchaseReportPage = () => {
   const navigate = useNavigate();
-  // เชื่อมต่อกับ Zustand store เพื่อเข้าถึง state และ actions
+  
+  // 🟢 FIXED: ดึงตัวแปรสลักความปลอดภัยแชร์สาขาประจำตัวพนักงานเพื่อคุมท่อทางเดินรถ
+  const { shopSlug } = useParams();
+  const targetSlug = shopSlug || 'advancetech';
+
   const {
     filters,
     // ✅ Standard actions (*Action) — store keeps backward-compatible aliases too
@@ -86,10 +87,11 @@ export const ListPurchaseReportPage = () => {
             data={reportData}
             summary={summarySafe}
             isLoading={isLoading}
+            // 🟢 FIXED: ซ่อมแซมระบบพาสทางเดินรถให้ลิงก์รายละเอียดใบจัดซื้อผ่าน Dynamic targetSlug
             onRowClick={(row) => {
               const rid = row?.receiptId == null ? null : Number(row.receiptId);
               if (Number.isFinite(rid) && rid > 0) {
-                navigate(`/pos/reports/purchase/receipts/${rid}`);
+                navigate(`/${targetSlug}/pos/reports/purchase/receipts/${rid}`);
               }
             }}
           />
@@ -101,8 +103,3 @@ export const ListPurchaseReportPage = () => {
 
 // Export default เพื่อให้รองรับการทำ lazy loading ในอนาคต
 export default ListPurchaseReportPage;
-
-
-
-
-

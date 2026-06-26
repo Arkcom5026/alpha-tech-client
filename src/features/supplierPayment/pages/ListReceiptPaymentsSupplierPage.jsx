@@ -1,9 +1,15 @@
 import React, { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+// ✅ FIX: นำ useParams จาก react-router-dom มาเปิดระบบแกะค่า Tenant ปลอดภัย
+import { useNavigate, useParams } from 'react-router-dom';
 import useSupplierStore from '@/features/supplier/store/supplierStore';
 
 const ListReceiptPaymentsSupplierPage = () => {
   const navigate = useNavigate();
+
+  // 🟢 FIXED: เรียกใช้งาน useParams ดึงรหัสร้านค้าความปลอดภัยเพื่อคุม Multi-Tenant URL
+  const { shopSlug } = useParams();
+  const targetSlug = shopSlug || 'advancetech';
+
   const { suppliers, fetchSuppliersAction, isSupplierLoading } = useSupplierStore();
 
   useEffect(() => {
@@ -11,7 +17,8 @@ const ListReceiptPaymentsSupplierPage = () => {
   }, [fetchSuppliersAction]);
 
   const handleNavigate = (supplierId) => {
-    navigate(`/pos/finance/payments/receipt/supplier/${supplierId}`, {
+    // 🟢 FIXED: ซ่อมพาสปุ่มกดชำระเครดิตให้วิ่งผ่านเลน Tenant ร่วมสาขาหลัก
+    navigate(`/${targetSlug}/pos/finance/payments/receipt/supplier/${supplierId}`, {
       state: { supplierId },
     });
   };

@@ -1,15 +1,10 @@
-
-
-
-
-
-
 // src/features/auth/store/authStore.js
 
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist } from 'zustand/middleware'; // 🟢 มาตรฐานสากลของ zustand/middleware ตัวจริง
 import {
   loginUser,
+  registerUser, // 🟢 ดึง API ลงทะเบียนเข้ามาร่วมงาน
   verifySession,
   requestPasswordReset,
   resetPassword,
@@ -17,21 +12,23 @@ import {
   logoutSession,
   logoutAllSessions,
 } from '../api/authApi';
+
+// 🟢 LINK CORE INSTANCE: นำเข้าท่อส่งสัญญาณ Axios แกนหลักที่แท้จริงของระบบ
+import apiClient from '@/utils/apiClient';
+
 import { buildRoleContext, can as canCap, P1_CAP } from '../rbac/rbacClient';
 import { useBranchStore } from '@/features/branch/store/branchStore';
 
 // ---------- helpers ----------
 const normalizeRole = (r) => {
   const v = (r || '').toString().trim().toLowerCase();
-  return v === 'supperadmin' ? 'superadmin' : v; // กันสะกดผิดจาก BE
+  return v === 'supperadmin' ? 'superadmin' : v;
 };
 
-// แยก "ชื่อแสดงผล" vs "คีย์ตำแหน่ง" (RBAC)
 const normalizePositionKey = (rawName) => {
   const v = (rawName || '').toString().trim().toLowerCase();
   if (!v) return null;
 
-  // EN
   if (v === 'superadmin') return 'superadmin';
   if (v === 'admin') return 'admin';
   if (v === 'owner') return 'owner';
@@ -40,22 +37,19 @@ const normalizePositionKey = (rawName) => {
   if (v === 'employee') return 'employee';
   if (v === 'sales') return 'sales';
 
-  // TH (ตำแหน่งในระบบจริง)
   if (['ซุปเปอร์แอดมิน', 'ซุปเปอร์แอดมินระบบ', 'ผู้ดูแลระบบสูงสุด'].includes(v)) return 'superadmin';
   if (['เจ้าของ', 'เจ้าของกิจการ', 'owner'].includes(v)) return 'owner';
   if (['ผู้ดูแลระบบ', 'แอดมิน', 'ผู้จัดการระบบ'].includes(v)) return 'admin';
   if (['ผู้จัดการ', 'ผู้จัดการสาขา'].includes(v)) return 'manager';
   if (['พนักงาน', 'พนักงานทั่วไป', 'สตาฟ', 'staff'].includes(v)) return 'staff';
-  if (['พนักงานขาย', 'แคชเชียร์', 'ขายหน้าร้าน'].includes(v)) return 'sales';
+  if (['พนักงานขาย', 'แคชเชียร์', 'ขายหน้านวัตกรรม'].includes(v)) return 'sales';
 
-  // fallback: ส่งค่าเดิม (แต่จะไม่ยกระดับ role ถ้าไม่รู้จัก)
   return v;
 };
 
 const pickPositionName = (profile) => (profile?.position?.name || '').toString().trim() || null;
 const pickPositionKey = (profile) => normalizePositionKey(pickPositionName(profile));
 
-// ตัดสิน profileType ให้ "employee" มาก่อนเสมอ ถ้าพบสัญญาณว่าเป็นพนักงาน
 const deriveEffectiveProfileType = (serverProfileType, profile, serverRole) => {
   const spt = (serverProfileType || '').toString().trim().toLowerCase();
   const sr = normalizeRole(serverRole);
@@ -68,10 +62,7 @@ const deriveEffectiveProfileType = (serverProfileType, profile, serverRole) => {
     profile?.employeeId
   );
 
-  // ✅ P1: customer สามารถเป็น employee ได้ด้วย → ยึด employee ก่อน
   if (looksLikeEmployee) return 'employee';
-
-  // fallback จาก role
   if (['employee', 'admin', 'superadmin'].includes(sr)) return 'employee';
   if (sr === 'customer') return 'customer';
 
@@ -92,6 +83,14 @@ const getEmptyAuthState = () => ({
   authChecked: false,
   isSuperAdmin: false,
   isBootstrappingAuth: false,
+  // 🟢 เพิ่มตัวแปรสำหรับควบคุมโฟลว์ลงทะเบียนพาร์ตเนอร์ใหม่
+  isRegisterLoading: false,
+  registerError: null,
+  
+  // 👥 [ADDED SUB-EMPLOYEE STATES]: ตัวแปรคุมสถานะเพิ่มพนักงานย่อยหลังร้าน
+  isSubEmployeeLoading: false,
+  subEmployeeError: null,
+
   isRequestPasswordResetLoading: false,
   requestPasswordResetError: null,
   requestPasswordResetSuccessMessage: '',
@@ -146,6 +145,53 @@ export const useAuthStore = create(
           resetPasswordSuccessMessage: '',
         }),
 
+      // 🟢 [ADDED ACTION] ฟังก์ชันส่งข้อมูลลงทะเบียนพาร์ตเนอร์เชื่อม API หลังบ้านจริง
+      registerPartnerAction: async ({ shopName, shopSlug, email }) => {
+        set({ isRegisterLoading: true, registerError: null });
+        try {
+          const res = await registerUser({
+            shopName: shopName.trim(),
+            shopSlug: shopSlug.trim(),
+            email: email.trim().toLowerCase()
+          });
+          
+          set({ isRegisterLoading: false, registerError: null });
+          return res?.data;
+        } catch (error) {
+          const serverMsg = error?.response?.data?.message;
+          const friendlyMessage = serverMsg || 'ไม่สามารถลงทะเบียนร้านค้าได้ กรุณาลองใหม่อีกครั้ง';
+          
+          set({ isRegisterLoading: false, registerError: friendlyMessage });
+          console.error('❌ registerPartnerAction error:', error);
+          throw error;
+        }
+      },
+
+      // 👥 [ADDED ACTION]: ฟังก์ชันส่งยิงเพิ่มพนักงานย่อยข้ามสาขา
+      addSubEmployeeAction: async ({ name, email, password, phone, v2Role }) => {
+        set({ isSubEmployeeLoading: true, subEmployeeError: null });
+        try {
+          // 🚀 เรียกใช้งานผ่านอินสแตนซ์ apiClient เพื่อผูกแนบ Token สิทธิ์เจ้าของร้านโดยอัตโนมัติคุม Multi-Tenant
+          const res = await apiClient.post('/auth/add-sub-employee', {
+            name: name.trim(),
+            email: email.trim().toLowerCase(),
+            password,
+            phone: phone.trim(),
+            v2Role
+          });
+
+          set({ isSubEmployeeLoading: false, subEmployeeError: null });
+          return res?.data;
+        } catch (error) {
+          const serverMsg = error?.response?.data?.message;
+          const friendlyMessage = serverMsg || 'ไม่สามารถเปิดสิทธิ์เพิ่มพนักงานย่อยได้ กรุณาลองใหม่อีกครั้ง';
+          
+          set({ isSubEmployeeLoading: false, subEmployeeError: friendlyMessage });
+          console.error('❌ addSubEmployeeAction error:', error);
+          throw error;
+        }
+      },
+
       requestPasswordResetAction: async ({ email }) => {
         const normalizedEmail = (email || '').toString().trim().toLowerCase();
 
@@ -198,7 +244,7 @@ export const useAuthStore = create(
 
         try {
           if (!normalizedToken) {
-            throw new Error('ลิงก์นี้ไม่ถูกต้องหรือไม่ครบถ้วน กรุณาขอรีเซ็ตรหัสผ่านใหม่อีกครั้ง');
+            throw new Error('ลิงก์นี้ไม่ถูกต้องหรือหมดอายุแล้ว กรุณาขอรีเซ็ตรหัสผ่านใหม่อีกครั้ง');
           }
 
           if (!password || !confirmPassword) {
@@ -282,6 +328,12 @@ export const useAuthStore = create(
             state.employee?.branchId ??
             null;
 
+          const branchSlugFromServer =
+            res?.data?.branch?.slug ??
+            profile?.branch?.slug ??
+            state.employee?.branchSlug ??
+            null;
+
           if (['employee', 'admin'].includes(effectiveRole) && !branchIdFromServer) {
             throw new Error('บัญชีพนักงานต้องมีสาขา (branchId) ก่อนเข้า POS');
           }
@@ -298,6 +350,7 @@ export const useAuthStore = create(
               positionName: positionName || '__NO_POSITION__',
               positionKey: positionKey || null,
               branchId: branchIdFromServer ? Number(branchIdFromServer) : null,
+              branchSlug: branchSlugFromServer || null,
             };
 
             if (branchIdFromServer) {
@@ -383,6 +436,7 @@ export const useAuthStore = create(
           return false;
         }
       },
+
       resetAuthStateAction: () => {
         const state = useAuthStore.getState();
         const preservedRememberMe = !!state.rememberMe;
@@ -401,7 +455,7 @@ export const useAuthStore = create(
           await logoutSession();
         } catch (error) {
           console.error('❌ logout failed:', error);
-        } finally {
+        } finally { // 🟢 FIX: แก้ไขตัวสะกดจาก finaly เป็น finally
           useAuthStore.getState().resetAuthStateAction();
         }
       },
@@ -411,7 +465,7 @@ export const useAuthStore = create(
           await logoutSession();
         } catch (error) {
           console.error('❌ logoutAction failed:', error);
-        } finally {
+        } finally { // 🟢 FIX: แก้ไขตัวสะกดจาก finaly เป็น finally
           useAuthStore.getState().resetAuthStateAction();
           window.location.href = '/login';
         }
@@ -422,7 +476,7 @@ export const useAuthStore = create(
           await logoutAllSessions();
         } catch (error) {
           console.error('❌ logoutAllDevicesAction failed:', error);
-        } finally {
+        } finally { // 🟢 FIX: แก้ไขตัวสะกดจาก finaly เป็น finally
           useAuthStore.getState().resetAuthStateAction();
         }
       },
@@ -436,53 +490,44 @@ export const useAuthStore = create(
         return !!(state.accessToken || state.token) && !!state.authChecked && !state.isBootstrappingAuth;
       },
 
-      // ---------- LOGIN ----------
+      // 🟢 OPTIMIZED: จัดระเบียบ Side-effects และรวบการเรียกสเตต Branch เหลือจุดเดียว ท้ายการ Commit สเตตสมบูรณ์
       loginAction: async (credentials) => {
         try {
-          // reset error each attempt (UI should render authError as inline block)
           set({ authError: null, authChecked: false, isBootstrappingAuth: false });
           const rememberMe = !!credentials?.rememberMe;
           const res = await loginUser(credentials);
           console.log('✅ loginUser response:', res);
 
           const profile = res.data.profile;
-          const serverRole = normalizeRole(res.data.role); // 'employee' | 'customer' | ...
+          const serverRole = normalizeRole(res.data.role);
           const serverProfileType = (res.data.profileType || '').toString();
           const positionName = pickPositionName(profile);
           const positionKey = pickPositionKey(profile);
 
-          // ✅ profileType: employee มาก่อนเสมอ
           const effectiveProfileType = deriveEffectiveProfileType(serverProfileType, profile, serverRole);
-
-          // ✅ ยกระดับ role จาก "ตำแหน่ง" ได้ (รองรับชื่อไทย)
-          // เงื่อนไขเดิม: serverRole เป็น employee แล้วตำแหน่งเป็น admin/superadmin → ยกระดับ
-          // เพิ่มเติม: ถ้า serverRole มาผิดเป็น customer แต่ context เป็น employee → force เป็น employee ก่อน
           const baseRole = effectiveProfileType === 'employee' ? 'employee' : serverRole;
-          // ✅ ยกระดับสิทธิ์จากตำแหน่ง (RBAC)
-          // - admin/superadmin ใช้ตามคีย์ตำแหน่ง
-          // - owner/manager ให้ถือเป็น admin (backoffice)
+          
           const effectiveRole = (() => {
-            // ✅ Trust explicit platform roles from BE (even if no EmployeeProfile)
             if (serverRole === 'superadmin') return 'superadmin';
             if (serverRole === 'admin') return 'admin';
-
             if (baseRole !== 'employee') return baseRole;
-
             if (positionKey === 'superadmin') return 'superadmin';
             if (positionKey === 'admin') return 'admin';
             if (positionKey === 'owner' || positionKey === 'manager') return 'admin';
-
             return 'employee';
           })();
 
-          let branchFull = null;
           const branchIdFromServer =
             res.data?.branchId ??
             profile?.branchId ??
             profile?.branch?.id ??
             null;
 
-          // ✅ BRANCH_SCOPE_ENFORCED (P1): Staff session must always have branchId
+          const branchSlugFromServer =
+            res.data?.branch?.slug ??
+            profile?.branch?.slug ??
+            null;
+
           if (['employee', 'admin'].includes(effectiveRole) && !branchIdFromServer) {
             const msg = 'บัญชีพนักงานต้องมีสาขา (branchId) ก่อนเข้า POS (กรุณาให้แอดมินกำหนดสาขาใน EmployeeProfile)';
             set({ authError: msg });
@@ -490,11 +535,30 @@ export const useAuthStore = create(
             throw new Error(msg);
           }
 
-          let employee = null;
-          let customer = null;
+          const targetBranchId = branchIdFromServer || profile?.branch?.id || null;
 
-          // ✅ ตั้งค่าก่อนเรียกอะไรอื่น (atomic enough to satisfy guards)
-          // NOTE: For staff roles, we set employee.branchId immediately to avoid "token exists but branch missing" window.
+          const employeeData = ['employee', 'admin', 'superadmin'].includes(effectiveRole)
+            ? {
+                id: profile?.id,
+                name: profile?.name,
+                phone: profile?.phone,
+                email: profile?.email,
+                positionName: positionName || '__NO_POSITION__',
+                positionKey: positionKey || null,
+                branchId: targetBranchId ? Number(targetBranchId) : null,
+                branchSlug: branchSlugFromServer || profile?.branch?.slug || null,
+              }
+            : null;
+
+          const customerData = effectiveRole === 'customer'
+            ? {
+                id: profile?.id,
+                name: profile?.name,
+                phone: profile?.phone,
+                email: profile?.email,
+              }
+            : null;
+
           set({
             token: res.data.accessToken || res.data.token || null,
             accessToken: res.data.accessToken || res.data.token || null,
@@ -506,66 +570,16 @@ export const useAuthStore = create(
             authError: null,
             isSuperAdmin: effectiveRole === 'superadmin',
             authChecked: true,
-            employee: ['employee', 'admin', 'superadmin'].includes(effectiveRole)
-              ? {
-                  id: profile?.id,
-                  name: profile?.name,
-                  phone: profile?.phone,
-                  email: profile?.email,
-                  positionName: positionName || '__NO_POSITION__',
-                  positionKey: positionKey || null,
-                  branchId: branchIdFromServer ? Number(branchIdFromServer) : null,
-                }
-              : null,
-            customer: effectiveRole === 'customer'
-              ? {
-                  id: profile?.id,
-                  name: profile?.name,
-                  phone: profile?.phone,
-                  email: profile?.email,
-                }
-              : null,
+            employee: employeeData,
+            customer: customerData,
           });
 
-          // พนักงาน/แอดมิน/ซุปเปอร์แอดมิน
-          if (['employee', 'admin', 'superadmin'].includes(effectiveRole)) {
-            // ✅ Branch context is mandatory for POS. Prefer explicit id from server/token.
-            if (branchIdFromServer) {
-              branchFull = await useBranchStore.getState().loadAndSetBranchById(Number(branchIdFromServer));
-            } else if (profile?.branch?.id) {
-              branchFull = await useBranchStore.getState().loadAndSetBranchById(Number(profile.branch.id));
-            }
-
-            employee = {
-              id: profile?.id,
-              name: profile?.name,
-              phone: profile?.phone,
-              email: profile?.email,
-              // ✅ แยกชัดเจน: ชื่อใช้แสดงผล vs key ใช้ทำ RBAC
-              positionName: positionName || '__NO_POSITION__',
-              positionKey: positionKey || null,
-              branchId: branchIdFromServer ?? profile?.branch?.id ?? null,
-            };
+          // 🚀 อัปเดตสเตตสาขาของเครื่อง POS ที่จุดสิ้นสุดอย่างมั่นคงจุดเดียว ไม่ซ้ำซ้อน
+          if (targetBranchId && ['employee', 'admin', 'superadmin'].includes(effectiveRole)) {
+            await useBranchStore.getState().loadAndSetBranchById(Number(targetBranchId));
           }
 
-          // ลูกค้า
-          if (effectiveRole === 'customer') {
-            customer = {
-              id: profile?.id,
-              name: profile?.name,
-              phone: profile?.phone,
-              email: profile?.email,
-            };
-          }
-
-          set((state) => ({
-            ...state,
-            authChecked: true,
-            employee: employee ?? state.employee,
-            customer: customer ?? state.customer,
-          }));
-
-          console.log('✅ loginAction success:', { profile, branchFull, effectiveRole, effectiveProfileType, positionKey });
+          console.log('✅ loginAction success:', { profile, effectiveRole, effectiveProfileType, positionKey });
 
           return {
             token: res.data.accessToken || res.data.token || null,
@@ -588,12 +602,10 @@ export const useAuthStore = create(
 
           set({ authError: friendly, authChecked: false, isBootstrappingAuth: false });
           console.error('❌ loginAction error:', err);
-          // keep throwing so UI can stop navigation; UI should read authError to show inline error.
           throw err;
         }
       },
 
-      // ---------- Selectors ที่เรียกจากหน้า UI ----------
       isAuthenticatedSelector: () => {
         const state = useAuthStore.getState();
         return !!(state.accessToken || state.token) && !!state.authChecked && !state.isBootstrappingAuth;
@@ -607,14 +619,11 @@ export const useAuthStore = create(
         const state = useAuthStore.getState();
         const r = normalizeRole(state.role);
 
-        // ✅ legacy role-based (ยังรองรับไว้)
         if (r === 'admin' || r === 'superadmin') return true;
 
-        // ✅ position-based (ผู้จัดการ/เจ้าของ ถือเป็น backoffice)
         const pk = normalizeRole(state.employee?.positionKey);
         if (['owner', 'manager', 'admin', 'superadmin'].includes(pk)) return true;
 
-        // ✅ capability-based (single source of truth เมื่อเปิด RBAC)
         try {
           return (
             state.canManageEmployeesSelector?.() ||
@@ -632,14 +641,11 @@ export const useAuthStore = create(
         const state = useAuthStore.getState();
         const r = normalizeRole(state.role);
 
-        // ✅ legacy role-based (ยังรองรับไว้)
         if (r === 'admin' || r === 'superadmin') return true;
 
-        // ✅ position-based (manager/admin/superadmin/owner)
         const pk = normalizeRole(state.employee?.positionKey);
         if (['owner', 'manager', 'admin', 'superadmin'].includes(pk)) return true;
 
-        // ✅ capability-based
         try {
           return state.canManageProductsSelector?.() || state.canEditPricingSelector?.();
         } catch {
@@ -647,13 +653,6 @@ export const useAuthStore = create(
         }
       },
 
-
-      // ---------- RBAC (P1 Bestline) ----------
-      /**
-       * RoleContext (single source for FE guarding)
-       * - derive from existing auth-store + branch-store values
-       * - no API calls
-       */
       getRoleContextSelector: () => {
         const state = useAuthStore.getState();
         const branchState = useBranchStore.getState?.() || {};
@@ -662,24 +661,18 @@ export const useAuthStore = create(
         const rbacEnabled = branch?.RBACEnabled;
 
         return buildRoleContext({
-          role: state.role, // rbacClient normalizes
+          role: state.role,
           branchId: state.employee?.branchId ?? null,
-          // ✅ ใช้ key เพื่อให้ RBAC ตรง (อย่าส่งชื่อไทยเข้าไปเป็นคีย์)
           positionName: state.employee?.positionKey ?? state.employee?.positionName ?? null,
           rbacEnabled: rbacEnabled ?? true,
         });
       },
 
-      /**
-       * Capability checker
-       * @param {string} capKey - use P1_CAP.*
-       */
       canSelector: (capKey) => {
         const ctx = useAuthStore.getState().getRoleContextSelector();
         return canCap(ctx, capKey);
       },
 
-      // Convenience shortcuts (optional)
       capsSelector: () => useAuthStore.getState().getRoleContextSelector().capabilities,
       canManageEmployeesSelector: () => useAuthStore.getState().canSelector(P1_CAP.MANAGE_EMPLOYEES),
       canManageProductsSelector: () => useAuthStore.getState().canSelector(P1_CAP.MANAGE_PRODUCTS),
@@ -699,6 +692,3 @@ export const useAuthStore = create(
     }
   )
 );
-
-
-

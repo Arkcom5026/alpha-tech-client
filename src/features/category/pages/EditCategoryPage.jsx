@@ -35,7 +35,7 @@ const EditCategoryPage = () => {
           setInfo('หมวดระบบ (ล็อก) ไม่อนุญาตให้แก้ไข');
         }
       } catch {
-        navigate('/pos/stock/categories');
+        navigate(`/${shopSlug}/pos/stock/categories`);
       } finally {
         setLoading(false);
       }
@@ -50,7 +50,7 @@ const EditCategoryPage = () => {
     }
     const res = await updateAction(id, data);
     if (res?.ok) {
-      navigate('/pos/stock/categories');
+      navigate(`/${shopSlug}/pos/stock/categories`);
     } else if (res?.message) {
       setInfo(res.message);
       setTimeout(() => setInfo(''), 3500);
@@ -73,7 +73,7 @@ const EditCategoryPage = () => {
         form={form}
         mode="edit"
         onSubmit={onSubmit}
-        onCancel={() => navigate('/pos/stock/categories')}
+        onCancel={() => navigate(`/${shopSlug}/pos/stock/categories`)}
         submitting={submitting || !!initial?.isSystem}
       />
     </div>

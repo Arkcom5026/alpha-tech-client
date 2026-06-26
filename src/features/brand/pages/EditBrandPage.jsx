@@ -73,12 +73,12 @@ const EditBrandPage = () => {
 
     const result = await updateBrandAction({ id: numericId, name: nameTrim })
     if (result?.ok) {
-      navigate('/pos/stock/brands')
+      navigate(`/${shopSlug}/pos/stock/brands`)
     }
   }
 
   const onCancel = () => {
-    navigate('/pos/stock/brands')
+    navigate(`/${shopSlug}/pos/stock/brands`)
   }
 
   const onToggle = async () => {

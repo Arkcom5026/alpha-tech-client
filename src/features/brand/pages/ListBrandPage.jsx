@@ -1,280 +1,158 @@
+// src/features/settings/pages/ListBranchPage.jsx
+import { useEffect, useMemo } from "react";
+import { useNavigate, useParams } from "react-router-dom"; // 🟢 [DYNAMIC PARAM FIX] นำเข้า useParams มาร่วมทีม
+import { useAuthStore } from '@/features/auth/store/authStore.js';
+import AddressDisplay from "@/features/address/components/AddressDisplay";
 
-// src/features/stock/brand/pages/ListBrandPage.jsx
-// List Brands (Production-grade, no direct API calls)
+const businessTypeTh = (bt) => {
+  const key = String(bt || '').toUpperCase();
+  switch (key) {
+    case 'IT': return 'ไอที/คอมพิวเตอร์';
+    case 'ELECTRONICS': return 'อิเล็กทรอนิกส์';
+    case 'CONSTRUCTION': return 'วัสดุก่อสร้าง';
+    case 'GROCERY': return 'มินิมาร์ท/ของชำ';
+    case 'GENERAL': return 'ทั่วไป';
+    default: return key || '-';
+  }
+};
 
-import React, { useEffect, useMemo, useState } from 'react'
-import { useBrandStore } from '../store/brandStore'
+const BusinessTypeBadge = ({ value }) => (
+  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">
+    {businessTypeTh(value)}
+  </span>
+);
 
-const ListBrandPage = () => {
-  const {
-    items,
-    page,
-    pageSize,
-    total,
-    q,
-    includeInactive,
-    loading,
-    saving,
-    error,
-    setQueryAction,
-    setIncludeInactiveAction,
-    setPageAction,
-    setPageSizeAction,
-    clearErrorAction,
-    fetchBrandsAction,
-    toggleBrandActiveAction,
-  } = useBrandStore()
+const FeaturesBadge = ({ features }) => {
+  const mode = features?.mode;
+  const sn = features?.trackSerialNumber === true;
+  const templ = features?.enableTemplates !== false; // default true
+  return (
+    <div className="flex flex-wrap gap-1 text-xs">
+      {mode && (
+        <span className="px-2 py-0.5 rounded bg-gray-100 border border-gray-200 text-gray-700">โหมด: {mode}</span>
+      )}
+      <span className={`px-2 py-0.5 rounded border ${sn ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-gray-100 border-gray-200 text-gray-600'}`}>
+        SN: {sn ? 'ติดตาม' : 'ไม่ติดตาม'}
+      </span>
+      <span className={`px-2 py-0.5 rounded border ${templ ? 'bg-indigo-50 border-indigo-200 text-indigo-700' : 'bg-gray-100 border-gray-200 text-gray-600'}`}>
+        Template: {templ ? 'เปิด' : 'ปิด'}
+      </span>
+    </div>
+  );
+};
 
-  // local search box to avoid fetch-per-keystroke
-  const [qDraft, setQDraft] = useState(q)
+const ListBranchPage = () => {
+  // 🟢 [LINK BINDING] ดึงค่า shopSlug ผ่าน useParams มาสแตนด์บายป้อนปุ่มควบคุมเลนวิ่งตารางหลัก
+  const { shopSlug } = useParams();
+  const navigate = useNavigate();
+  const branches = useBranchStore((state) => state.branches) || [];
+  const loadAllBranchesAction = useBranchStore((state) => state.loadAllBranchesAction);
+
+  // 🔐 RBAC
+  const role = useAuthStore((s) => s.role);
+  const currentBranchId = useAuthStore((s) => s.branchId);
+  const isSuperAdmin = String(role || '').toLowerCase() === 'superadmin';
 
   useEffect(() => {
-    // initial load
-    fetchBrandsAction()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+    loadAllBranchesAction();
+  }, [loadAllBranchesAction]);
 
-  useEffect(() => {
-    setQDraft(q)
-  }, [q])
-
-  const totalPages = useMemo(() => {
-    const t = Number(total) || 0
-    const ps = Number(pageSize) || 20
-    return Math.max(1, Math.ceil(t / ps))
-  }, [total, pageSize])
-
-  const canPrev = page > 1
-  const canNext = page < totalPages
-
-  const onSearch = async (e) => {
-    e?.preventDefault?.()
-    clearErrorAction()
-    setQueryAction(qDraft)
-    await fetchBrandsAction({ q: qDraft, page: 1 })
-  }
-
-  const onResetSearch = async () => {
-    clearErrorAction()
-    setQDraft('')
-    setQueryAction('')
-    await fetchBrandsAction({ q: '', page: 1 })
-  }
-
-  const onToggle = async (row) => {
-    if (!row?.id) return
-    clearErrorAction()
-    await toggleBrandActiveAction({ id: row.id, isActive: !row.isActive })
-  }
-
-  const onIncludeInactiveChange = async (e) => {
-    const v = !!e.target.checked
-    clearErrorAction()
-    setIncludeInactiveAction(v)
-    await fetchBrandsAction({ includeInactive: v, page: 1 })
-  }
-
-  const onPrev = async () => {
-    if (!canPrev) return
-    const nextPage = page - 1
-    setPageAction(nextPage)
-    await fetchBrandsAction({ page: nextPage })
-  }
-
-  const onNext = async () => {
-    if (!canNext) return
-    const nextPage = page + 1
-    setPageAction(nextPage)
-    await fetchBrandsAction({ page: nextPage })
-  }
-
-  const onPageSizeChange = async (e) => {
-    const ps = Number(e.target.value) || 20
-    setPageSizeAction(ps)
-    await fetchBrandsAction({ pageSize: ps, page: 1 })
-  }
+  const visibleBranches = useMemo(() => {
+    // ปลอดภัยไว้ก่อน: ถ้าไม่ใช่ superadmin แสดงเฉพาะสาขาที่ login
+    return isSuperAdmin ? branches : branches.filter((b) => b?.id === currentBranchId);
+  }, [branches, isSuperAdmin, currentBranchId]);
 
   return (
-    <div className="p-4">
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div>
-          <h1 className="text-xl font-semibold">แบรนด์</h1>
-          <p className="text-sm text-gray-500">จัดการรายชื่อแบรนด์ของสาขา</p>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <a
-            href="/pos/stock/brands/create"
-            className="px-3 py-2 rounded bg-blue-600 text-white text-sm hover:bg-blue-700"
-          >
-            + เพิ่มแบรนด์
-          </a>
-        </div>
+    <div className="p-4 max-w-7xl mx-auto">
+      <div className="flex justify-between items-center mb-4">
+        <h1 className="text-xl font-bold">จัดการสาขา</h1>
+        
+        {/* 🟢 [BUG FIX ONADD LINK] ล้างคอมเมนต์ผิดไวยากรณ์ออก และสับท่อเลนวิ่งปุ่มเพิ่มสาขาให้พ่วงสัญญาณชื่อร้านค้าเสถียร 100% */}
+        <button
+          onClick={() => isSuperAdmin && navigate(`/${shopSlug}/pos/settings/branches/create`)}
+          className={`px-4 py-2 rounded text-white ${isSuperAdmin ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-300 cursor-not-allowed'}`}
+          aria-disabled={!isSuperAdmin}
+          title={isSuperAdmin ? 'เพิ่มสาขาใหม่' : 'ต้องเป็น Super Admin'}
+        >
+          + เพิ่มสาขา
+        </button>
       </div>
 
-      {/* error block (no dialog alert) */}
-      {error ? (
-        <div className="mt-3 rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-          <div className="font-medium">เกิดข้อผิดพลาด</div>
-          <div className="mt-1 break-words">{error}</div>
-        </div>
-      ) : null}
-
-      {/* toolbar */}
-      <div className="mt-4 rounded border bg-white p-3">
-        <form onSubmit={onSearch} className="flex flex-wrap items-end gap-3">
-          <div className="flex-1 min-w-[220px]">
-            <label className="block text-sm font-medium mb-1">ค้นหา</label>
-            <input
-              value={qDraft}
-              onChange={(e) => setQDraft(e.target.value)}
-              placeholder="พิมพ์ชื่อแบรนด์..."
-              className="w-full rounded border px-3 py-2 text-sm"
-            />
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              type="submit"
-              disabled={loading}
-              className="px-3 py-2 rounded bg-gray-900 text-white text-sm disabled:opacity-60"
-            >
-              ค้นหา
-            </button>
-            <button
-              type="button"
-              onClick={onResetSearch}
-              disabled={loading}
-              className="px-3 py-2 rounded border text-sm disabled:opacity-60"
-            >
-              ล้าง
-            </button>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <label className="inline-flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={includeInactive}
-                onChange={onIncludeInactiveChange}
-              />
-              แสดงที่ปิดใช้งาน
-            </label>
-          </div>
-
-          <div className="ml-auto flex items-center gap-2">
-            <label className="text-sm text-gray-600">ต่อหน้า</label>
-            <select
-              value={pageSize}
-              onChange={onPageSizeChange}
-              className="rounded border px-2 py-2 text-sm"
-            >
-              <option value={10}>10</option>
-              <option value={20}>20</option>
-              <option value={50}>50</option>
-              <option value={100}>100</option>
-            </select>
-          </div>
-        </form>
-      </div>
-
-      {/* table */}
-      <div className="mt-4 rounded border bg-white overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-sm">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="text-left px-3 py-2">ชื่อแบรนด์</th>
-                <th className="text-left px-3 py-2 w-[140px]">สถานะ</th>
-                <th className="text-right px-3 py-2 w-[220px]">จัดการ</th>
+      <div className="overflow-x-auto md:overflow-visible">
+        <table className="min-w-full bg-white border border-gray-200">
+          <colgroup>
+            <col className="w-[200px]" />
+            <col className="w-[110px]" />
+            <col className="w-[340px]" />
+            <col className="w-[400px]" />
+            <col className="w-[110px]" />
+            <col className="w-[90px]" />
+          </colgroup>
+          <thead className="bg-gray-100">
+            <tr>
+              <th className="text-left px-4 py-2 border-b w-[200px]">ชื่อสาขา</th>
+              <th className="text-left px-4 py-2 border-b w-[120px]">ประเภทสาขา</th>
+              <th className="text-left px-4 py-2 border-b w-[340px]">คุณสมบัติ (Features)</th>
+              <th className="text-left px-4 py-2 border-b w-[400px]">ที่อยู่</th>
+              <th className="text-left px-4 py-2 border-b w-[110px]">เบอร์โทร</th>
+              <th className="text-center px-4 py-2 border-b w-[90px]">จัดการ</th>
+            </tr>
+          </thead>
+          <tbody>
+            {visibleBranches.map((branch) => (
+              <tr key={branch.id} className="border-t hover:bg-gray-50">
+                <td className="px-4 py-2 whitespace-nowrap font-medium">{branch.name}</td>
+                <td className="px-4 py-2 whitespace-nowrap">
+                  <BusinessTypeBadge value={branch.businessType} />
+                </td>
+                <td className="px-4 py-2 align-top min-w-[340px]"><FeaturesBadge features={branch.features} /></td>
+                <td className="px-4 py-2 text-sm text-gray-700 align-middle">
+                  <div
+                    className="max-w-[400px] truncate"
+                    title={[branch.address, branch.fullAddress].filter(Boolean).join(' ')}
+                  >
+                    <AddressDisplay
+                      addressString={[branch.address, branch.fullAddress].filter(Boolean).join(' ')}
+                      fallback={{
+                        address: branch.address,
+                        subdistrictName: branch.subdistrictName,
+                        districtName: branch.districtName,
+                        provinceName: branch.provinceName,
+                        subdistrictCode: branch.subdistrictCode,
+                        districtCode: branch.districtCode,
+                        provinceCode: branch.provinceCode,
+                        postalCode: branch.postalCode,
+                      }}
+                    />
+                  </div>
+                </td>
+                <td className="px-4 py-2 whitespace-nowrap">{branch.phone || '-'}</td>
+                <td className="px-4 py-2 text-center">
+                  
+                  {/* 🟢 [BUG FIX ONEDIT LINK] ล้างคอมเมนต์หลุดลักไก่ในแท็กออก และครอบเลนนำทางแก้ไขสาขาให้เสถียร ไม่ดีดเด้ง */}
+                  <button
+                    onClick={() => isSuperAdmin && navigate(`/${shopSlug}/pos/settings/branches/edit/${branch.id}`)}
+                    className={`${isSuperAdmin ? 'text-blue-600 hover:underline' : 'text-gray-400 cursor-not-allowed'}`}
+                    aria-disabled={!isSuperAdmin}
+                    title={isSuperAdmin ? 'แก้ไขสาขา' : 'ต้องเป็น Super Admin'}
+                  >
+                    แก้ไข
+                  </button>
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr>
-                  <td colSpan={3} className="px-3 py-6 text-center text-gray-500">
-                    กำลังโหลดข้อมูล...
-                  </td>
-                </tr>
-              ) : items?.length ? (
-                items.map((row) => (
-                  <tr key={row.id} className="border-t">
-                    <td className="px-3 py-2">{row.name}</td>
-                    <td className="px-3 py-2">
-                      <span
-                        className={`inline-flex items-center rounded px-2 py-1 text-xs ${
-                          row.isActive ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-gray-100 text-gray-600 border border-gray-200'
-                        }`}
-                      >
-                        {row.isActive ? 'ใช้งาน' : 'ปิดใช้งาน'}
-                      </span>
-                    </td>
-                    <td className="px-3 py-2 text-right">
-                      <div className="inline-flex items-center gap-2">
-                        <a
-                          href={`/pos/stock/brands/${row.id}/edit`}
-                          className="px-3 py-1.5 rounded border text-sm hover:bg-gray-50"
-                        >
-                          แก้ไข
-                        </a>
-                        <button
-                          type="button"
-                          onClick={() => onToggle(row)}
-                          disabled={saving}
-                          className="px-3 py-1.5 rounded border text-sm hover:bg-gray-50 disabled:opacity-60"
-                        >
-                          {row.isActive ? 'ปิดใช้งาน' : 'เปิดใช้งาน'}
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={3} className="px-3 py-6 text-center text-gray-500">
-                    ไม่พบข้อมูล
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* footer */}
-        <div className="flex items-center justify-between gap-3 p-3 border-t bg-white">
-          <div className="text-sm text-gray-600">
-            ทั้งหมด <span className="font-medium">{total}</span> รายการ
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={onPrev}
-              disabled={!canPrev || loading}
-              className="px-3 py-2 rounded border text-sm disabled:opacity-60"
-            >
-              ก่อนหน้า
-            </button>
-            <div className="text-sm text-gray-600">
-              หน้า <span className="font-medium">{page}</span> / {totalPages}
-            </div>
-            <button
-              type="button"
-              onClick={onNext}
-              disabled={!canNext || loading}
-              className="px-3 py-2 rounded border text-sm disabled:opacity-60"
-            >
-              ถัดไป
-            </button>
-          </div>
-        </div>
+            ))}
+            {visibleBranches.length === 0 && (
+              <tr>
+                <td colSpan={6} className="text-center py-8 text-gray-400">
+                  ไม่มีข้อมูลสาขา
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       </div>
-
-      {/* saving hint (no toast/dialog required) */}
-      {saving ? (
-        <div className="mt-3 text-sm text-gray-600">กำลังบันทึก...</div>
-      ) : null}
     </div>
-  )
-}
+  );
+};
 
-export default ListBrandPage
+export default ListBranchPage;

@@ -1,45 +1,37 @@
-
-
-
-
-
 // src/features/barcode/pages/BarcodeReceiptListPage.jsx
-
+// 🏛️ Premium Next-Gen Barcode List: (Fixed Tenant Navigation, Aurora Switch, Glassmorphic Filter Pack)
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+// 🟢 [IMPORT FIXED] เรียกใช้งาน useParams จากโครงสร้างหลักเพื่อปลดล็อกสิทธิ์ชื่อบริษัทคั่น URL
+import { useNavigate, useParams } from 'react-router-dom';
 import usePurchaseOrderReceiptStore from '@/features/purchaseOrderReceipt/store/purchaseOrderReceiptStore';
 import useSupplierStore from '@/features/supplier/store/supplierStore';
 import BarcodePrintTable from '../controllers/BarcodePrintTable';
+import { RefreshCw, Barcode, SlidersHorizontal, Tag, Search, ArrowRight, AlertCircle, X } from 'lucide-react';
 
 const BarcodeReceiptListPage = () => {
   const navigate = useNavigate();
-  const goBarcodeRange = () => navigate('/pos/purchases/barcodes/range-print');
-  // ✅ Big-store UX: remember last mode + supplier per mode
+  const { shopSlug } = useParams(); // 🟢 [SLUG ACTIVATED] เจาะจงดักจับพิกัด Dynamic Shop Slug ประจำหน้า
+  
+  // 🟢 [NAVIGATE FIXED] ผูกคำสั่งส่งสิทธิ์ชื่อบริษัทคั่นกลาง ไร้อาการสะบัดเด้งกลับหน้าแรก 100%
+  const goBarcodeRange = () => {
+    const targetSlug = shopSlug || 'advancetech';
+    navigate(`/${targetSlug}/pos/purchases/barcodes/range-print`);
+  };
+
   const LS_MODE_KEY = 'pos:barcodeReceiptList:lastMode';
   const LS_SUPPLIER_KEY_UNPRINTED = 'pos:barcodeReceiptList:lastSupplier:UNPRINTED';
   const LS_SUPPLIER_KEY_REPRINT = 'pos:barcodeReceiptList:lastSupplier:REPRINT';
   const getSupplierLsKey = (m) => (m === 'REPRINT' ? LS_SUPPLIER_KEY_REPRINT : LS_SUPPLIER_KEY_UNPRINTED);
 
-  // ✅ Filters
   const [codeKeyword, setCodeKeyword] = useState('');
-  const [supplierSelected, setSupplierSelected] = useState('ALL'); // ALL | <supplierName>
-
-  // ✅ Page mode (must be defined before any hook reads it)
-  const [mode, setMode] = useState('UNPRINTED'); // UNPRINTED | REPRINT
-
-  // ✅ REPRINT dropdown should reuse UNPRINTED supplier list (no extra API call)
+  const [supplierSelected, setSupplierSelected] = useState('ALL'); 
+  const [mode, setMode] = useState('UNPRINTED'); 
   const [unprintedSupplierOptions, setUnprintedSupplierOptions] = useState([]);
-
-  // ✅ REPRINT: optional deep search by supplier name (BE filter; only when user asks)
   const [supplierNameKeyword, setSupplierNameKeyword] = useState('');
   const [remoteSupplierSearchActive, setRemoteSupplierSearchActive] = useState(false);
   const [remoteCodeSearchActive, setRemoteCodeSearchActive] = useState(false);
-
-  
-  // ✅ Operational
   const [lastLoadedAt, setLastLoadedAt] = useState(null);
 
-  // ✅ Brand-grade UX: relative last-updated text (auto refresh every 30s)
   const [nowTick, setNowTick] = useState(() => Date.now());
   useEffect(() => {
     if (!lastLoadedAt) return;
@@ -78,7 +70,6 @@ const BarcodeReceiptListPage = () => {
     return chips;
   }, [mode, codeKeyword, supplierNameKeyword, supplierSelected]);
 
-  // ✅ clear filters (uses refs to avoid TDZ issues)
   const runReceiptSearchFnRef = useRef(null);
 
   const clearAllFilters = useCallback(() => {
@@ -88,18 +79,13 @@ const BarcodeReceiptListPage = () => {
     setRemoteSupplierSearchActive(false);
     setRemoteCodeSearchActive(false);
 
-    // ✅ UNPRINTED: local reset only
     if (mode === 'UNPRINTED') return;
 
-    // ✅ REPRINT: clear via API (if available)
     try {
       const fn = runReceiptSearchFnRef.current;
       if (typeof fn === 'function') fn({ nextCodeKeyword: '', nextSupplierNameKeyword: '', nextSupplierSelected: 'ALL', source: 'clear' });
-    } catch (_) {
-      // ignore
-    }
+    } catch (_) {}
   }, [mode]);
-
 
   const {
     receiptSummaries,
@@ -108,35 +94,24 @@ const BarcodeReceiptListPage = () => {
     error,
   } = usePurchaseOrderReceiptStore();
 
-  // ✅ Supplier cache (NO extra API call): use whatever is already in supplierStore
   const suppliers = useSupplierStore((s) => s?.suppliers ?? s?.supplierList ?? []);
 
-  // ------------------------------
-  // ✅ Default mode on open: UNPRINTED (per requirement)
-  // ------------------------------
   const restoreModeOnceRef = useRef(true);
   useEffect(() => {
     if (!restoreModeOnceRef.current) return;
     restoreModeOnceRef.current = false;
-
-    // ✅ Always open this page in UNPRINTED mode (ร้านใช้งานจริงต้องเห็นงานค้างก่อน)
     setMode('UNPRINTED');
     try {
       localStorage.setItem(LS_MODE_KEY, 'UNPRINTED');
-    } catch (_) {
-      // ignore
-    }
+    } catch (_) {}
   }, []);
 
   useEffect(() => {
     try {
       localStorage.setItem(LS_MODE_KEY, mode);
-    } catch (_) {
-      // ignore
-    }
+    } catch (_) {}
   }, [mode]);
 
-  // ✅ Remember last chosen supplier (per mode)
   const pendingRestoreSupplierRef = useRef(null);
   useEffect(() => {
     try {
@@ -146,23 +121,16 @@ const BarcodeReceiptListPage = () => {
     }
   }, [mode]);
 
-  // ✅ Persist supplier selection per mode (ignore ALL)
   useEffect(() => {
     if (!supplierSelected || supplierSelected === 'ALL') return;
     try {
       localStorage.setItem(getSupplierLsKey(mode), supplierSelected);
-    } catch (_) {
-      // ignore
-    }
+    } catch (_) {}
   }, [supplierSelected, mode]);
 
-  // ------------------------------
-  // ✅ Helpers
-  // ------------------------------
   const hasData = Array.isArray(receiptSummaries) && receiptSummaries.length > 0;
   const norm = (v) => String(v ?? '').trim().toLowerCase();
 
-  // ✅ Align supplier extraction with BarcodePrintTable normalization
   const getSupplierId = (r) => {
     const raw = r?.supplierId ?? r?.supplier?.id ?? r?.Supplier?.id ?? null;
     const n = raw == null ? null : Number(raw);
@@ -196,7 +164,6 @@ const BarcodeReceiptListPage = () => {
   }, [suppliers]);
 
   const getSupplierName = (r) => {
-    // รองรับได้หลาย shape จาก BE
     const s = r?.supplier ?? r?.Supplier ?? null;
     let name = '';
     if (typeof s === 'object' && s) name = s?.name ?? s?.supplierName ?? s?.title ?? s?.companyName ?? '';
@@ -206,23 +173,18 @@ const BarcodeReceiptListPage = () => {
     name = String(name ?? '').trim();
     if (name) return name;
 
-    // ✅ fallback: if BE sends only supplierId, use supplierStore cache (no extra fetch)
     const sid = getSupplierId(r);
     if (sid == null) return '';
     return String(supplierNameById.get(String(sid)) ?? '').trim();
   };
 
-  // ✅ Base list by mode (API is source-of-truth; keep table-safety only)
   const baseByMode = useMemo(() => {
     const all = Array.isArray(receiptSummaries) ? receiptSummaries : [];
     return all;
   }, [receiptSummaries]);
 
-  // ✅ Supplier dropdown options: show ONLY suppliers that exist in the currently loaded list
-  // (UNPRINTED + REPRINT use the same rule; no extra API call)
   const supplierOptions = useMemo(() => {
     const all = Array.isArray(baseByMode) ? baseByMode : [];
-
     const map = new Map();
     for (const r of all) {
       const name = String(getSupplierName(r) ?? '').trim();
@@ -230,15 +192,12 @@ const BarcodeReceiptListPage = () => {
       const key = norm(name);
       if (!map.has(key)) map.set(key, name);
     }
-
     return Array.from(map.values()).sort((a, b) => a.localeCompare(b, 'th'));
   }, [baseByMode, supplierNameById]);
 
-  // ✅ Cache supplier list from UNPRINTED (so REPRINT dropdown still shows suppliers even if printed list has none)
   useEffect(() => {
     if (mode !== 'UNPRINTED') return;
     if (!Array.isArray(supplierOptions) || supplierOptions.length === 0) return;
-
     setUnprintedSupplierOptions((prev) => {
       const sameLen = Array.isArray(prev) && prev.length === supplierOptions.length;
       const same = sameLen && prev.every((v, i) => v === supplierOptions[i]);
@@ -255,46 +214,28 @@ const BarcodeReceiptListPage = () => {
     return supplierOptions;
   }, [mode, unprintedSupplierOptions, supplierOptions]);
 
-  // ------------------------------
-  // ✅ One API for all filters (ERP-scale)
-  // ------------------------------
   const codeKeywordRef = useRef(codeKeyword);
   const supplierNameKeywordRef = useRef(supplierNameKeyword);
   const supplierSelectedRef = useRef(supplierSelected);
 
-  useEffect(() => {
-    codeKeywordRef.current = codeKeyword;
-  }, [codeKeyword]);
-  useEffect(() => {
-    supplierNameKeywordRef.current = supplierNameKeyword;
-  }, [supplierNameKeyword]);
-  useEffect(() => {
-    supplierSelectedRef.current = supplierSelected;
-  }, [supplierSelected]);
+  useEffect(() => { codeKeywordRef.current = codeKeyword; }, [codeKeyword]);
+  useEffect(() => { supplierNameKeywordRef.current = supplierNameKeyword; }, [supplierNameKeyword]);
+  useEffect(() => { supplierSelectedRef.current = supplierSelected; }, [supplierSelected]);
 
   const runReceiptSearch = useCallback(
     ({ nextCodeKeyword, nextSupplierNameKeyword, nextSupplierSelected, source } = {}) => {
       if (typeof loadReceiptSummariesAction !== 'function') return;
 
       const printed = mode === 'UNPRINTED' ? false : true;
-
       const kwCode = String(nextCodeKeyword ?? codeKeywordRef.current ?? '').trim();
       const kwSupplierName = String(nextSupplierNameKeyword ?? supplierNameKeywordRef.current ?? '').trim();
       const selSup = String(nextSupplierSelected ?? supplierSelectedRef.current ?? 'ALL');
 
-      // Priority:
-      // 1) supplier name search keyword (explicit)
-      // 2) supplier dropdown selection (exact)
       const supplierKeywordEffective = kwSupplierName || (selSup && selSup !== 'ALL' ? selSup : '');
       const supplierIdEffective = !kwSupplierName && selSup && selSup !== 'ALL'
         ? supplierIdByNormalizedName.get(norm(selSup))
         : undefined;
 
-      // ✅ Align query params with backend API
-      // BE expects: printed, q (RC/PO search), supplier (supplier name), supplierId(optional)
-      // Priority:
-      // 1) supplierId from dropdown = exact filter
-      // 2) supplier name keyword      = free-text deep search
       loadReceiptSummariesAction({
         printed,
         ...(kwCode ? { q: kwCode } : {}),
@@ -303,34 +244,25 @@ const BarcodeReceiptListPage = () => {
         limit: 50,
       });
 
-      // Flags for UX hints
       setRemoteSupplierSearchActive(Boolean(kwSupplierName));
       setRemoteCodeSearchActive(Boolean(kwCode) && source === 'code');
 
-      // If supplier name search is used, keep dropdown at ALL to avoid double-intent
       if (kwSupplierName && supplierSelectedRef.current !== 'ALL') {
         setSupplierSelected('ALL');
       }
-
       setLastLoadedAt(Date.now());
     },
-    [loadReceiptSummariesAction, mode, supplierIdByNormalizedName, norm]
+    [loadReceiptSummariesAction, mode, supplierIdByNormalizedName]
   );
 
-  // ✅ keep latest runReceiptSearch in a ref (used by clearAllFilters / chip actions safely)
-  useEffect(() => {
-    runReceiptSearchFnRef.current = runReceiptSearch;
-  }, [runReceiptSearch]);
+  useEffect(() => { runReceiptSearchFnRef.current = runReceiptSearch; }, [runReceiptSearch]);
 
-  // ✅ Load summaries when mode changes (guard StrictMode double-mount)
   const lastModeRef = useRef(null);
   useEffect(() => {
     if (typeof loadReceiptSummariesAction !== 'function') return;
-
     if (lastModeRef.current === mode) return;
     lastModeRef.current = mode;
 
-    // ✅ Reset filters per mode switch (then restore last supplier per mode via LS)
     setCodeKeyword('');
     setSupplierNameKeyword('');
     setRemoteSupplierSearchActive(false);
@@ -340,37 +272,27 @@ const BarcodeReceiptListPage = () => {
     runReceiptSearch({ source: 'mode' });
   }, [mode, loadReceiptSummariesAction, runReceiptSearch]);
 
-  // ✅ Restore supplier only when options are ready
   useEffect(() => {
     const pending = pendingRestoreSupplierRef.current;
     if (!pending) return;
-
-    // Only restore when current selection is ALL (don’t override user choice)
     if (supplierSelected !== 'ALL') return;
 
     const key = norm(pending);
     const matched = dropdownSupplierOptions.find((n) => norm(n) === key);
     if (matched) {
       setSupplierSelected(matched);
-
-      // ✅ UNPRINTED: restore = local filter only (no API)
       if (mode !== 'UNPRINTED') {
-        // ✅ REPRINT: restore should also re-query (same API)
         runReceiptSearch({ nextSupplierSelected: matched, nextSupplierNameKeyword: '', source: 'restoreSupplier' });
       }
     }
-
     pendingRestoreSupplierRef.current = null;
   }, [dropdownSupplierOptions, supplierSelected, runReceiptSearch, mode]);
 
-  // ✅ Debounce RC/PO search 500ms (ERP-like), only in REPRINT
   const codeDebounceRef = useRef(null);
   useEffect(() => {
     if (mode !== 'REPRINT') return;
-
     const kw = String(codeKeyword ?? '').trim();
 
-    // empty: don’t auto-search; user can refresh/reset explicitly
     if (!kw) {
       setRemoteCodeSearchActive(false);
       if (codeDebounceRef.current) {
@@ -397,11 +319,8 @@ const BarcodeReceiptListPage = () => {
     };
   }, [codeKeyword, mode, runReceiptSearch]);
 
-  // ✅ Visible list (UNPRINTED = local supplier filter; REPRINT = server-filtered)
   const visibleReceipts = useMemo(() => {
     let list = Array.isArray(baseByMode) ? baseByMode : [];
-
-    // ✅ UNPRINTED: local filter by supplier dropdown (we already loaded all unprinted on open)
     if (mode === 'UNPRINTED') {
       const sel = String(supplierSelected ?? 'ALL');
       if (sel && sel !== 'ALL') {
@@ -419,251 +338,170 @@ const BarcodeReceiptListPage = () => {
     return [...list].sort((a, b) => {
       const dt = ts(b) - ts(a);
       if (dt) return dt;
-
       const rcA = String(a?.receiptCode ?? a?.code ?? a?.receiptNo ?? '');
       const rcB = String(b?.receiptCode ?? b?.code ?? b?.receiptNo ?? '');
       const c = rcB.localeCompare(rcA, 'en');
       if (c) return c;
-
       const poA = String(a?.purchaseOrderCode ?? a?.poCode ?? a?.purchaseOrder?.code ?? '');
       const poB = String(b?.purchaseOrderCode ?? b?.poCode ?? b?.purchaseOrder?.code ?? '');
       return poB.localeCompare(poA, 'en');
     });
   }, [baseByMode, mode, supplierSelected]);
 
-  // ------------------------------
-  // ✅ UI handlers
-  // ------------------------------
   const showError = !loading && error != null;
-
-  const reloadCurrentMode = () => {
-    // ✅ refresh = API (same endpoint)
-    runReceiptSearch({ source: 'refresh' });
-  };
-
+  const reloadCurrentMode = () => { runReceiptSearch({ source: 'refresh' }); };
   const runRemoteSupplierSearch = () => {
-    // ✅ supplier name search = API (same endpoint)
     const kw = String(supplierNameKeyword ?? '').trim();
     runReceiptSearch({ nextSupplierNameKeyword: kw, source: 'supplierName' });
   };
 
   return (
-    <div className="p-4">
-      <div className="mb-3 flex flex-wrap items-center gap-3">
-        <h2 className="text-xl font-semibold">รายการใบรับสินค้าที่รอพิมพ์บาร์โค้ด</h2>
-        <div className="ml-auto flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            className={`h-9 rounded border bg-white px-3 text-sm text-gray-800 hover:bg-gray-50 ${loading ? 'opacity-60 cursor-not-allowed' : ''}`}
-            onClick={() => {
-              if (loading) return;
-              reloadCurrentMode();
-            }}
-            title="รีเฟรชรายการ"
-            disabled={loading}
-          >
-            {loading ? 'กำลังโหลด...' : 'รีเฟรช'}
-          </button>
-          {lastLoadedAt ? (
-            <div className="text-xs text-gray-500" title={new Date(lastLoadedAt).toLocaleString('th-TH')}>
-              อัปเดตล่าสุด: {formatRelativeTh(lastLoadedAt)}
+    <div className="w-full h-full p-6 space-y-6 text-slate-800 selection:bg-orange-500 selection:text-white animate-fadeIn">
+      
+      {/* 🟦 1. ส่วนหัวแผงควบคุมสไตล์ Glassmorphism ผสานปุ่มฟังก์ชันสะท้อนออร่า */}
+      <div className="bg-white/80 border border-slate-200/80 p-6 rounded-3xl shadow-[0_4px_25px_rgba(0,0,0,0.01)] backdrop-blur-md flex flex-col xl:flex-row xl:items-center xl:justify-between gap-5 transition-all duration-300">
+        <div className="min-w-0">
+          <h1 className="text-xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+            <Barcode className="w-5 h-5 text-orange-500" /> รายการใบรับสินค้าที่รอพิมพ์บาร์โค้ด
+          </h1>
+          <p className="text-xs text-slate-400 mt-1 font-bold tracking-wide">
+            Barcode Issuance Command Center • ตรวจสอบรายการใบรับของภาษีพัสดุเพื่อจัดพิมพ์เลขซีเรียลประจำสาขา
+          </p>
+        </div>
+
+        {/* ชุดปุ่มกดคำสั่งฝั่งขวา ลอยมน มีมิติสปริง */}
+        <div className="flex flex-wrap items-center gap-3 xl:ml-auto">
+          {lastLoadedAt && (
+            <div className="text-[11px] font-black bg-slate-100 text-slate-500 border border-slate-200 px-3 py-1.5 rounded-xl shadow-inner select-none" title={new Date(lastLoadedAt).toLocaleString('th-TH')}>
+              🔄 อัปเดตล่าสุด: {formatRelativeTh(lastLoadedAt)}
             </div>
-          ) : null}
+          )}
+
           <button
             type="button"
-            className="h-9 rounded border bg-white px-3 text-sm text-gray-800 hover:bg-gray-50"
-            onClick={goBarcodeRange}
-            title="พิมพ์บาร์โค้ดจากช่วงเลข"
+            disabled={loading}
+            onClick={reloadCurrentMode}
+            className={`flex items-center gap-1.5 h-10 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-black text-xs sm:text-sm border border-slate-200/60 rounded-xl shadow-sm transform active:scale-95 hover:-translate-y-px transition-all duration-200 ${loading ? 'opacity-60 cursor-not-allowed animate-pulse' : ''}`}
           >
-            พิมพ์บาร์โค้ด (ช่วงเลข)
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-orange-500' : ''}`} />
+            <span>{loading ? 'กำลังโหลด...' : 'รีเฟรช'}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={goBarcodeRange}
+            className="flex items-center gap-1.5 h-10 px-4 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-black text-xs sm:text-sm rounded-xl border border-orange-400/10 shadow-[0_4px_15px_rgba(249,115,22,0.2)] transform hover:-translate-y-0.5 active:scale-95 transition-all duration-300"
+          >
+            <span>พิมพ์บาร์โค้ด (ช่วงเลข)</span>
+            <ArrowRight className="w-4 h-4 text-orange-100" />
           </button>
         </div>
       </div>
 
-      {/* ✅ Mode selector (legacy UX) */}
-      <div className="mb-3 flex flex-wrap items-center gap-4">
-        <div className="text-sm text-gray-700">โหมด:</div>
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="radio"
-            name="barcodeReceiptMode"
-            checked={mode === 'UNPRINTED'}
-            onChange={() => setMode('UNPRINTED')}
-          />
+      {/* 🎨 2. แถบสวิตช์สลับโหมดแคบซูล Aurora Switch แทนที่เรดิโอโบราณ */}
+      <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-2xl w-fit border border-slate-200/40 shadow-inner select-none">
+        <button
+          type="button"
+          onClick={() => setMode('UNPRINTED')}
+          className={`px-5 py-2 text-xs font-black rounded-xl transition-all duration-300 ${mode === 'UNPRINTED' ? 'bg-gradient-to-r from-slate-800 to-slate-900 text-white shadow-md' : 'text-slate-500 hover:text-slate-900'}`}
+        >
           ยังไม่ได้พิมพ์
-        </label>
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="radio"
-            name="barcodeReceiptMode"
-            checked={mode === 'REPRINT'}
-            onChange={() => setMode('REPRINT')}
-          />
+        </button>
+        <button
+          type="button"
+          onClick={() => setMode('REPRINT')}
+          className={`px-5 py-2 text-xs font-black rounded-xl transition-all duration-300 ${mode === 'REPRINT' ? 'bg-gradient-to-r from-slate-800 to-slate-900 text-white shadow-md' : 'text-slate-500 hover:text-slate-900'}`}
+        >
           พิมพ์ซ้ำ
-        </label>
+        </button>
       </div>
 
-      {/* ✅ Filters */}
-      <div className="mb-4 rounded-lg border bg-white p-3">
-        {/* ✅ Active filters (brand-grade chips) */}
-        {activeFilterChips.length > 0 ? (
-          <div className="mb-3 flex flex-wrap items-center gap-2">
-            <div className="text-xs text-gray-500">กำลังกรอง:</div>
+      {/* 🟦 3. กล่องรวมศูนย์ควบคุมตัวกรองอัจฉริยะ (Smart Filter Hub Container) */}
+      <div className="bg-white border border-slate-200/80 rounded-3xl p-4 shadow-[0_4px_25px_rgba(0,0,0,0.01)] space-y-4">
+        
+        {/* แถบ Chips ตัวกรองแบรนด์เกรด */}
+        {activeFilterChips.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2 pb-2 border-b border-slate-100">
+            <span className="text-[11px] font-black text-slate-400 flex items-center gap-1"><SlidersHorizontal className="w-3.5 h-3.5" /> กำลังใช้ตัวกรอง:</span>
             {activeFilterChips.map((c) => (
-              <span
-                key={c.key}
-                className="inline-flex items-center gap-2 rounded-full border bg-gray-50 px-3 py-1 text-xs text-gray-700"
-                title={c.label}
-              >
+              <span key={c.key} className="inline-flex items-center gap-1.5 rounded-full border border-orange-500/10 bg-orange-500/5 px-3 py-1 text-xs font-black text-orange-700 shadow-sm animate-fadeIn">
                 {c.label}
-                {c.key !== 'supplierSel' ? (
-                  <button
-                    type="button"
-                    className="text-gray-500 hover:text-gray-900"
-                    onClick={() => {
-                      if (c.key === 'code') setCodeKeyword('');
-                      if (c.key === 'supplierName') setSupplierNameKeyword('');
-                      // for these two, REPRINT should re-query; UNPRINTED is local anyway
-                      if (mode === 'REPRINT') {
-                        runReceiptSearch({
-                          nextCodeKeyword: c.key === 'code' ? '' : String(codeKeywordRef.current ?? '').trim(),
-                          nextSupplierNameKeyword: c.key === 'supplierName' ? '' : String(supplierNameKeywordRef.current ?? '').trim(),
-                          nextSupplierSelected: supplierSelectedRef.current ?? 'ALL',
-                          source: 'chip',
-                        });
-                      }
-                    }}
-                    aria-label="ลบตัวกรอง"
-                  >
-                    ×
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    className="text-gray-500 hover:text-gray-900"
-                    onClick={() => setSupplierSelected('ALL')}
-                    aria-label="ลบตัวกรอง"
-                  >
-                    ×
-                  </button>
-                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (c.key === 'code') setCodeKeyword('');
+                    if (c.key === 'supplierName') setSupplierNameKeyword('');
+                    if (c.key === 'supplierSel') setSupplierSelected('ALL');
+                    if (mode === 'REPRINT' && c.key !== 'supplierSel') {
+                      runReceiptSearch({
+                        nextCodeKeyword: c.key === 'code' ? '' : String(codeKeywordRef.current ?? '').trim(),
+                        nextSupplierNameKeyword: c.key === 'supplierName' ? '' : String(supplierNameKeywordRef.current ?? '').trim(),
+                        nextSupplierSelected: supplierSelectedRef.current ?? 'ALL',
+                        source: 'chip',
+                      });
+                    }
+                  }}
+                  className="hover:bg-orange-500/10 text-orange-400 hover:text-orange-700 rounded-full h-4 w-4 inline-flex items-center justify-center font-bold text-xs transition-colors"
+                >
+                  <X className="w-2.5 h-2.5" />
+                </button>
               </span>
             ))}
-            <button
-              type="button"
-              className="ml-1 text-xs text-gray-600 underline hover:text-gray-900"
-              onClick={clearAllFilters}
-            >
+            <button type="button" onClick={clearAllFilters} className="ml-2 text-xs font-black text-slate-400 underline hover:text-orange-500 transition-colors">
               ล้างทั้งหมด
             </button>
           </div>
-        ) : null}
-        <div className="flex flex-wrap items-end gap-3">
-          {/* ✅ REPRINT: keyword search by RC/PO (API + debounce) */}
+        )}
+
+        {/* ชุดเครื่องมือ Input กล่องเลือกซัพพลายเออร์และกรองลึก */}
+        <div className="flex flex-wrap items-end gap-4">
+          
           {mode === 'REPRINT' && (
-            <div className="flex flex-col gap-1">
-              <label className="text-sm text-gray-700">ค้นหาด้วยเลข RC/PO</label>
+            <div className="flex flex-col gap-1.5 animate-fadeIn">
+              <label className="text-xs font-black text-slate-500 flex items-center gap-1"><Search className="w-3.5 h-3.5" /> ค้นหาด้วยเลข RC/PO</label>
               <input
                 type="text"
-                className="h-10 w-[260px] rounded border px-3 outline-none focus:ring"
+                className="h-10 w-64 rounded-xl border border-slate-200 px-3 text-sm font-bold bg-slate-50 focus:bg-white focus:border-orange-500 outline-none transition-all shadow-inner"
                 placeholder="เช่น RC-... หรือ PO-..."
                 value={codeKeyword}
                 onChange={(e) => setCodeKeyword(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Escape') {
-                    e.preventDefault();
-                    setCodeKeyword('');
-                    setRemoteCodeSearchActive(false);
-                    runReceiptSearch({ nextCodeKeyword: '', source: 'code' });
-                    return;
-                  }
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    const kw = String(e.currentTarget.value ?? '').trim();
-                    setCodeKeyword(kw);
-
-                    // flush debounce
-                    if (codeDebounceRef.current) {
-                      clearTimeout(codeDebounceRef.current);
-                      codeDebounceRef.current = null;
-                    }
-
-                    runReceiptSearch({ nextCodeKeyword: kw, source: 'code' });
-                    e.currentTarget.blur();
-                  }
-                }}
               />
-              {remoteCodeSearchActive ? (
-                <div className="text-xs text-gray-500">กำลังใช้ผลการค้นหาด้วย RC/PO (API)</div>
-              ) : (
-                <div className="text-xs text-gray-500"></div>
-              )}
             </div>
           )}
 
-          {/* ✅ REPRINT: optional deep search by supplier name (API) */}
           {mode === 'REPRINT' && (
-            <div className="flex flex-col gap-1">
-              <label className="text-sm text-gray-700">ค้นหา Supplier (ชื่อ)</label>
+            <div className="flex flex-col gap-1.5 animate-fadeIn">
+              <label className="text-xs font-black text-slate-500 flex items-center gap-1"><User className="w-3.5 h-3.5" /> ค้นหาคู่ค้า (Deep Search)</label>
               <div className="flex items-center gap-2">
                 <input
                   type="text"
-                  className="h-10 w-[260px] rounded border px-3 outline-none focus:ring"
-                  placeholder="พิมพ์ชื่อ Supplier แล้วกด Enter"
+                  className="h-10 w-60 rounded-xl border border-slate-200 px-3 text-sm font-bold bg-slate-50 focus:bg-white focus:border-orange-500 outline-none transition-all shadow-inner"
+                  placeholder="พิมพ์ชื่อ Supplier แล้วกดค้นหา"
                   value={supplierNameKeyword}
                   onChange={(e) => setSupplierNameKeyword(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Escape') {
-                      e.preventDefault();
-                      setSupplierNameKeyword('');
-                      setRemoteSupplierSearchActive(false);
-                      setRemoteCodeSearchActive(false);
-                      // clear supplier name search (API)
-                      runReceiptSearch({ nextSupplierNameKeyword: '', source: 'supplierName' });
-                      return;
-                    }
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      runRemoteSupplierSearch();
-                      e.currentTarget.blur();
-                    }
-                  }}
                 />
                 <button
                   type="button"
-                  className="h-10 rounded bg-blue-600 px-4 text-sm text-white hover:bg-blue-700"
                   onClick={runRemoteSupplierSearch}
-                  title="ค้นหาด้วยชื่อ Supplier"
+                  className="h-10 rounded-xl bg-slate-800 hover:bg-slate-900 text-white text-xs font-black px-4 shadow-sm active:scale-95 transition-all"
                 >
                   ค้นหา
                 </button>
               </div>
-              {remoteSupplierSearchActive ? (
-                <div className="text-xs text-gray-500"></div>
-              ) : (
-                <div className="text-xs text-gray-500"></div>
-              )}
             </div>
           )}
 
-          {/* ✅ Supplier dropdown (UNPRINTED = local filter, REPRINT = API) */}
-          <div className="flex flex-col gap-1">
-            <label className="text-sm text-gray-700">กรองด้วย Supplier</label>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-black text-slate-500 flex items-center gap-1"><Tag className="w-3.5 h-3.5" /> ตัวกรองค่ายซัพพลายเออร์</label>
             <select
-              className="h-10 w-[320px] rounded border px-3 bg-white outline-none focus:ring"
+              className="h-10 w-[320px] rounded-xl border border-slate-200 px-3 bg-white text-sm font-bold outline-none focus:border-orange-500 shadow-sm transition-all cursor-pointer"
               value={supplierSelected}
               onChange={(e) => {
                 const v = e.target.value;
                 setSupplierSelected(v);
-
-                // clear supplier name search intent when choosing dropdown
                 if (supplierNameKeywordRef.current) setSupplierNameKeyword('');
                 setRemoteSupplierSearchActive(false);
-
-                // ✅ UNPRINTED: local filter only (no API) — we already loaded all unprinted on open
                 if (mode === 'UNPRINTED') return;
-
-                // ✅ REPRINT: keep ERP behavior (API)
                 runReceiptSearch({
                   nextSupplierSelected: v,
                   nextSupplierNameKeyword: '',
@@ -671,121 +509,75 @@ const BarcodeReceiptListPage = () => {
                 });
               }}
             >
-              <option value="ALL">ทั้งหมด</option>
+              <option value="ALL">ทั้งหมด (All Supplier Options)</option>
               {dropdownSupplierOptions.map((name) => (
-                <option key={name} value={name}>
-                  {name}
-                </option>
+                <option key={name} value={name}>{name}</option>
               ))}
             </select>
           </div>
 
-          <button
-            type="button"
-            className="h-10 rounded bg-gray-100 px-4 text-gray-800 hover:bg-gray-200"
-            onClick={clearAllFilters}
-            disabled={activeFilterChips.length === 0}
-            title="ล้างตัวกรองทั้งหมด"
-          >
-            ล้าง
-          </button>
-
-          <div className="ml-auto flex items-center gap-3 text-sm text-gray-600">
+          <div className="ml-auto flex items-center gap-4 text-xs sm:text-sm text-slate-500 font-bold select-none h-10">
             <div>
-              แสดงผล: <span className="font-medium">{visibleReceipts.length}</span> รายการ
-              {hasData ? (
-                <span className="ml-2 text-xs text-gray-500">
-                  • Supplier: <span className="font-medium">{dropdownSupplierOptions.length}</span>
+              ตรวจพบ: <span className="font-black text-slate-900 text-sm">{visibleReceipts.length}</span> ใบรับสินค้า
+              {hasData && (
+                <span className="ml-2 text-xs text-slate-400 font-bold">
+                  • คู่ค้าในลิสต์: <span className="font-black text-slate-700">{dropdownSupplierOptions.length}ค่าย</span>
                 </span>
-              ) : null}
+              )}
             </div>
-            {loading ? <div className="text-xs text-gray-500">กำลังโหลดข้อมูล…</div> : null}
           </div>
         </div>
       </div>
 
-      {loading && (
-        <div className="mb-3 rounded-lg border bg-white p-3">
-          <div className="text-sm text-gray-700">กำลังโหลดข้อมูล…</div>
-          <div className="mt-2 h-2 w-full overflow-hidden rounded bg-gray-100">
-            <div className="h-2 w-1/2 animate-pulse rounded bg-gray-300" />
-          </div>
-        </div>
-      )}
-
+      {/* ⚠️ 4. ส่วนแสดงโครงสร้างแจ้งเตือนเครือข่ายล่ม Error Fallback */}
       {showError && (
-        <div className="text-red-600">
-          <span>เกิดข้อผิดพลาด: {error?.message ?? String(error)}</span>
-          <button
-            type="button"
-            className="ml-2 px-3 py-1 rounded bg-blue-600 text-white hover:bg-blue-700"
-            onClick={reloadCurrentMode}
-          >
+        <div className="bg-rose-50 border border-rose-200 text-rose-600 text-xs p-4 rounded-2xl font-black flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 text-rose-500" />
+            <span>เกิดข้อผิดพลาดในการดึงพิกัดบาร์โค้ด: {error?.message ?? String(error)}</span>
+          </div>
+          <button type="button" className="px-4 py-1.5 rounded-xl bg-rose-600 text-white hover:bg-rose-700 active:scale-95 transition-all" onClick={reloadCurrentMode}>
             ลองอีกครั้ง
           </button>
         </div>
       )}
 
-      {/* ✅ Empty state (brand-grade) */}
-      {!loading && !error && Array.isArray(visibleReceipts) && visibleReceipts.length === 0 ? (
-        <div className="rounded-lg border bg-white p-6">
-          <div className="text-base font-medium text-gray-900">ยังไม่มีรายการให้แสดง</div>
-          <div className="mt-1 text-sm text-gray-600">
-            {mode === 'UNPRINTED'
-              ? 'ยังไม่พบใบรับสินค้าที่รอพิมพ์บาร์โค้ดในขณะนี้'
-              : 'ไม่พบข้อมูลที่ตรงกับตัวกรอง/คำค้น'}
+      {/* 📦 5. EMPTY STATE: แผงแจ้งเตือนไร้ข้อมูลกรณีฟิลเตอร์หลุดพิกัด */}
+      {!loading && !error && Array.isArray(visibleReceipts) && visibleReceipts.length === 0 && (
+        <div className="rounded-3xl border border-slate-200/80 bg-white p-10 text-center space-y-3 shadow-sm select-none animate-fadeIn">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-400 border border-slate-200/40 shadow-sm">
+            <Barcode className="w-5 h-5 text-slate-500" />
           </div>
-          <div className="mt-4 flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              className="h-10 rounded bg-blue-600 px-4 text-sm text-white hover:bg-blue-700"
-              onClick={() => {
-                if (loading) return;
-                reloadCurrentMode();
-              }}
-            >
-              รีเฟรช
+          <div>
+            <h3 className="text-base font-black text-slate-900">ยังไม่มีรายการใบรับของในระบบ</h3>
+            <p className="mt-1 text-xs font-bold text-slate-400 max-w-sm mx-auto leading-relaxed">
+              {mode === 'UNPRINTED'
+                ? 'กระบวนการเคลียร์ของหลังบ้านเสร็จสิ้นแล้ว! ยังไม่พบใบตรวจรับพัสดุพอร์ต 5000 ค้างพิมพ์บาร์โค้ดในขณะนี้'
+                : 'ระบุคีย์ตัวแปรหลุดเป้าหมาย ไม่พบข้อมูลใบเสร็จภาษีที่ตรงกับเงื่อนไขการค้นหาปัจจุบัน'}
+            </p>
+          </div>
+          <div className="flex justify-center gap-2 pt-2">
+            <button type="button" onClick={reloadCurrentMode} className="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white font-black text-xs rounded-xl active:scale-95 transition-all shadow-sm">
+              รีเฟรชรายการข้อมูล
             </button>
-            {activeFilterChips.length > 0 ? (
-              <button
-                type="button"
-                className="h-10 rounded border bg-white px-4 text-sm text-gray-800 hover:bg-gray-50"
-                onClick={clearAllFilters}
-              >
-                ล้างตัวกรอง
+            {activeFilterChips.length > 0 && (
+              <button type="button" onClick={clearAllFilters} className="px-4 py-2 bg-slate-100 border border-slate-200 text-slate-600 font-bold text-xs rounded-xl hover:bg-slate-200 active:scale-95 transition-all">
+                ล้างหน้าตัวกรอง
               </button>
-            ) : null}
-            {mode === 'REPRINT' ? (
-              <button
-                type="button"
-                className="h-10 rounded border bg-white px-4 text-sm text-gray-800 hover:bg-gray-50"
-                onClick={() => setMode('UNPRINTED')}
-              >
-                ไปโหมด “ยังไม่ได้พิมพ์”
-              </button>
-            ) : null}
-          </div>
-          <div className="mt-3 text-xs text-gray-500">
-            Tip: กด <span className="font-mono">Esc</span> เพื่อล้างช่องค้นหา (โหมดพิมพ์ซ้ำ)
+            )}
           </div>
         </div>
-      ) : null}
+      )}
 
-      {!loading && (hasData || !error) && Array.isArray(visibleReceipts) && visibleReceipts.length > 0 ? (
-        <BarcodePrintTable mode={mode} receipts={visibleReceipts} />
-      ) : null}
+      {/* 📊 6. RENDER OUTPUT: ส่งต่อก้อนอาเรย์ให้ตารางย่อยเรนเดอร์บาร์โค้ด */}
+      {!loading && (hasData || !error) && Array.isArray(visibleReceipts) && visibleReceipts.length > 0 && (
+        <div className="animate-fadeIn">
+          <BarcodePrintTable mode={mode} receipts={visibleReceipts} />
+        </div>
+      )}
+
     </div>
   );
 };
 
 export default BarcodeReceiptListPage;
-
-
-
-
-
-
-
-
-
-

@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom'; // 🟢 นำเข้า useParams ร่วมทัพ
 import EmployeeTable from '../components/EmployeeTable';
 import { getAllEmployees, getBranchDropdowns } from '../api/employeeApi';
 import { useAuthStore } from '@/features/auth/store/authStore.js';
 
 const ListEmployeePage = () => {
-  // 🔐 Auth
+  const { shopSlug } = useParams(); // 🟢 [LINK BINDING] แกะรหัสชื่อร้านค้าพาร์ตเนอร์คุมระบบนำทาง Multi-Tenant
   const token = useAuthStore((s) => s.token);
   const role = useAuthStore((s) => s.role);
   const branchId = useAuthStore((s) => s.branchId);
@@ -13,21 +13,18 @@ const ListEmployeePage = () => {
   const canManage = ['admin', 'superadmin'].includes(lowerRole);
   const isSuperAdmin = lowerRole === 'superadmin';
 
-  // 📄 Data & UI state
   const [allEmployees, setAllEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  // 🔎 Filters & Pagination
   const [filters, setFilters] = useState({ search: '', status: 'all' });
-  const [branchFilter, setBranchFilter] = useState('all'); // เฉพาะ superadmin
+  const [branchFilter, setBranchFilter] = useState('all'); 
   const [branchOptions, setBranchOptions] = useState([]);
   const [page, setPage] = useState(1);
   const [limit] = useState(20);
   const [total, setTotal] = useState(0);
   const pages = useMemo(() => Math.max(1, Math.ceil(total / Math.max(1, limit))), [total, limit]);
 
-  // 🧮 Client-side filtering & pagination
   const filtered = useMemo(() => {
     const q = String(filters.search || '').trim().toLowerCase();
     return (allEmployees || []).filter((e) => {
@@ -52,18 +49,16 @@ const ListEmployeePage = () => {
     return filtered.slice(start, start + limit);
   }, [filtered, page, limit]);
 
-  // ⏱️ Debounce search
-    const updateFilter = (patch) => {
+  const updateFilter = (patch) => {
     setFilters((prev) => ({ ...prev, ...patch }));
     setPage(1);
   };
 
-  // 📥 Load list
   const fetchEmployees = async () => {
     setLoading(true);
     setError('');
     try {
-      const branchParam = isSuperAdmin ? undefined : branchId; // superadmin ดึงทุกสาขาครั้งเดียว
+      const branchParam = isSuperAdmin ? undefined : branchId; 
       const data = await getAllEmployees({ page: 1, limit: 10000, status: 'all', branchId: branchParam });
       const items = Array.isArray(data) ? data : (data?.items || []);
       setAllEmployees(items);
@@ -78,32 +73,27 @@ const ListEmployeePage = () => {
 
   useEffect(() => {
     fetchEmployees();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, isSuperAdmin, branchId]);
 
   useEffect(() => { setPage(1); }, [filters, branchFilter]);
 
-  // โหลดสาขาสำหรับ superadmin
   useEffect(() => {
     if (!isSuperAdmin) return;
     (async () => {
       try {
         const rows = await getBranchDropdowns();
         setBranchOptions(Array.isArray(rows) ? rows : []);
-      } catch {/* no-op */}
+      } catch {}
     })();
   }, [isSuperAdmin]);
 
-  // Handler ส่งต่อให้ตาราง (จะผูก API จริงที่ store/api ภายหลัง)
   const handleToggleActive = async (id, nextActive) => {
-    // ปัจจุบันยังไม่ได้เชื่อม API จริง แค่ return สำเร็จไปก่อน
     return Promise.resolve({ id, nextActive });
   };
 
   return (
     <div className="w-full mt-4">
       <div className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm rounded-xl overflow-hidden">
-        {/* Header (match ManageRolesPage) */}
         <div className="px-4 py-3 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-800/60 sticky top-0 z-10">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -112,9 +102,10 @@ const ListEmployeePage = () => {
             </div>
             <div className="flex items-center gap-2">
               {isSuperAdmin && (
+                /* 🟢 [DYNAMIC LINK FIX] พ่วงพิกัดทางเดิน Multi-Tenant ให้ลิงก์ข้ามไปบอร์ด Role */
                 <Link
-                  to="/pos/settings/roles"
-                  className="px-3 py-2 rounded bg-purple-600 text-white hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  to={`/${shopSlug}/pos/settings/roles`}
+                  className="px-3 py-2 rounded bg-purple-600 text-white hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 text-xs font-bold"
                   title="จัดการ Role (admin ↔ employee)"
                 >
                   จัดการ Role
@@ -124,16 +115,15 @@ const ListEmployeePage = () => {
           </div>
         </div>
 
-        {/* Toolbar (match ManageRolesPage) */}
         <div className="px-4 py-3 flex items-center gap-2 flex-wrap">
           <input
-            className="border border-zinc-300 dark:border-zinc-700 rounded-md px-3 py-2 w-full flex-1 min-w-[300px] max-w-2xl bg-white dark:bg-zinc-900"
+            className="border border-zinc-300 dark:border-zinc-700 rounded-md px-3 py-2 w-full flex-1 min-w-[300px] max-w-2xl bg-white dark:bg-zinc-900 text-sm"
             placeholder="ค้นหาชื่อ / อีเมล / เบอร์โทร..."
             value={filters.search}
             onChange={(e) => updateFilter({ search: e.target.value })}
           />
           <select
-            className="border border-zinc-300 dark:border-zinc-700 rounded-md px-3 py-2 bg-white dark:bg-zinc-900"
+            className="border border-zinc-300 dark:border-zinc-700 rounded-md px-3 py-2 bg-white dark:bg-zinc-900 text-sm"
             value={filters.status}
             onChange={(e) => updateFilter({ status: e.target.value })}
           >
@@ -145,7 +135,7 @@ const ListEmployeePage = () => {
 
           {isSuperAdmin ? (
             <select
-              className="border border-zinc-300 dark:border-zinc-700 rounded-md px-3 py-2 bg-white dark:bg-zinc-900 min-w-[260px]"
+              className="border border-zinc-300 dark:border-zinc-700 rounded-md px-3 py-2 bg-white dark:bg-zinc-900 min-w-[260px] text-sm"
               value={branchFilter}
               onChange={(e) => setBranchFilter(e.target.value)}
               title="กรองตามสาขา"
@@ -162,7 +152,6 @@ const ListEmployeePage = () => {
           ) : null}
         </div>
 
-        {/* Table (embedded) */}
         <EmployeeTable
           data={employeesPage}
           loading={loading}
@@ -175,7 +164,6 @@ const ListEmployeePage = () => {
           embedded
         />
 
-        {/* Pagination (match ManageRolesPage) */}
         {pages > 1 && (
           <div className="flex gap-2 p-4 justify-center border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50/60 dark:bg-zinc-800/40">
             {Array.from({ length: pages }, (_, i) => i + 1).map((p) => (
@@ -195,5 +183,3 @@ const ListEmployeePage = () => {
 };
 
 export default ListEmployeePage;
-
-

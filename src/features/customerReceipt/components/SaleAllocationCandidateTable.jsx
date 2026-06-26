@@ -1,8 +1,5 @@
-
-
-
-
 // src/features/customerReceipt/components/SaleAllocationCandidateTable.jsx
+// 🏛️ Premium Next-Gen POS Allocation Candidate Grid: (High-Density Slate Unified Edition)
 
 const formatMoney = (value) => {
   const number = Number(value || 0);
@@ -14,7 +11,6 @@ const formatMoney = (value) => {
 
 const formatDate = (value) => {
   if (!value) return '-';
-
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '-';
 
@@ -47,11 +43,11 @@ const getPaymentStatusConfig = (status) => {
 };
 
 const TableLoadingRows = () => {
-  return Array.from({ length: 5 }).map((_, index) => (
+  return Array.from({ length: 4 }).map((_, index) => (
     <tr key={`loading-${index}`} className="border-t border-gray-100">
       {Array.from({ length: 8 }).map((__, cellIndex) => (
-        <td key={`loading-${index}-${cellIndex}`} className="px-4 py-3">
-          <div className="h-4 w-full animate-pulse rounded bg-gray-200" />
+        <td key={`loading-${index}-${cellIndex}`} className="px-3 py-2.5">
+          <div className="h-3.5 bg-slate-100 animate-pulse rounded w-full" />
         </td>
       ))}
     </tr>
@@ -60,10 +56,10 @@ const TableLoadingRows = () => {
 
 const EmptyState = () => {
   return (
-    <div className="flex min-h-[220px] flex-col items-center justify-center px-6 py-10 text-center">
-      <p className="text-base font-medium text-gray-800">ไม่พบบิลค้างชำระสำหรับลูกค้ารายนี้</p>
-      <p className="mt-1 text-sm text-gray-500">
-        ระบบไม่พบบิลขายที่มียอดคงค้างภายใต้ลูกค้าและสาขาปัจจุบัน หรืออาจยังไม่ได้โหลดข้อมูลล่าสุดเข้ามา
+    <div className="flex min-h-[200px] flex-col items-center justify-center px-6 py-8 text-center select-none">
+      <p className="text-sm font-black text-slate-400">📭 ไม่พบบิลค้างชำระสำหรับลูกค้ารายนี้</p>
+      <p className="mt-1 text-xs text-slate-400 font-bold max-w-md">
+        ระบบไม่พบบิลขายที่มียอดคงค้างภายใต้ชื่อลูกค้าและสาขาปัจจุบัน หรือบิลทั้งหมดอาจได้รับการเคลียร์ยอดหนี้เสร็จสมบูรณ์แล้ว
       </p>
     </div>
   );
@@ -78,39 +74,23 @@ const SaleAllocationCandidateTable = ({
   const safeItems = Array.isArray(items) ? items : [];
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white">
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
+    <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+      <div className="overflow-x-auto max-h-[320px] overflow-y-auto">
+        <table className="w-full text-left border-collapse text-xs">
+          <thead className="bg-slate-50 text-[10px] md:text-[11px] text-slate-400 font-black uppercase tracking-wider sticky top-0 bg-slate-50 z-10 border-b border-slate-100 select-none">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
-                เลือก
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
-                เลขที่บิลขาย
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
-                วันที่ขาย
-              </th>
-              <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">
-                มูลค่าบิล
-              </th>
-              <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">
-                ชำระแล้ว
-              </th>
-              <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">
-                คงค้าง
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
-                สถานะชำระเงิน
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
-                ลูกค้า
-              </th>
+              <th className="p-2 px-3 text-center w-20">เลือกบิล</th>
+              <th className="p-2 px-2">เลขที่บิลขาย</th>
+              <th className="p-2 px-2">วันที่ขาย</th>
+              <th className="p-2 px-2 text-right">มูลค่าบิลรวม</th>
+              <th className="p-2 px-2 text-right">ชำระแล้ว</th>
+              <th className="p-2 px-2 text-right">คงค้างสุทธิ</th>
+              <th className="p-2 px-2 text-center">สถานะชำระ</th>
+              <th className="p-2 px-3">ลูกค้า / สังกัดหน่วยงาน</th>
             </tr>
           </thead>
 
-          <tbody className="bg-white">
+          <tbody className="divide-y divide-slate-100 font-semibold text-slate-600 text-[11px] sm:text-xs">
             {loading ? (
               <TableLoadingRows />
             ) : safeItems.length === 0 ? (
@@ -134,61 +114,65 @@ const SaleAllocationCandidateTable = ({
                 return (
                   <tr
                     key={item?.id}
-                    className={`border-t border-gray-100 align-top transition ${
-                      isSelected ? 'bg-blue-50/70' : 'hover:bg-gray-50/60'
+                    className={`transition-colors align-middle ${
+                      isSelected ? 'bg-orange-500/5 text-slate-900' : 'hover:bg-slate-50/50'
                     }`}
                   >
-                    <td className="px-4 py-3 text-sm text-gray-700">
-                      <button
-                        type="button"
-                        onClick={() => onSelect?.(item)}
-                        disabled={outstandingAmount <= 0}
-                        className={`inline-flex items-center justify-center rounded-xl border px-3 py-1.5 text-sm font-medium transition ${
-                          isSelected
-                            ? 'border-blue-600 bg-blue-600 text-white hover:bg-blue-700'
-                            : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
-                        } disabled:cursor-not-allowed disabled:opacity-60`}
-                      >
-                        {outstandingAmount <= 0 ? 'ตัดครบแล้ว' : isSelected ? 'เลือกแล้ว' : 'เลือกบิล'}
-                      </button>
+                    <td className="p-2 px-3 text-center select-none">
+                      {outstandingAmount <= 0 ? (
+                        <span className="inline-flex px-2 py-0.5 text-[9px] font-black rounded bg-slate-100 text-slate-400 border border-slate-200">
+                          ตัดครบแล้ว
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => onSelect?.(item)}
+                          className={`h-5 px-2.5 font-black text-[10px] rounded transition-all active:scale-95 ${
+                            isSelected
+                              ? 'bg-slate-900 text-white shadow-sm'
+                              : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 shadow-sm'
+                          }`}
+                        >
+                          {isSelected ? 'เลือกแล้ว' : 'เลือกบิล'}
+                        </button>
+                      )}
                     </td>
 
-                    <td className="px-4 py-3 text-sm text-gray-900">
-                      <div className="font-medium">{item?.code || `SALE #${item?.id || '-'}`}</div>
-                      <div className="mt-1 text-xs text-gray-500">Sale ID: {item?.id || '-'}</div>
+                    <td className="p-2 px-2 font-mono font-black text-slate-900 select-all">
+                      {item?.code || `SALE #${item?.id || '-'}`}
                     </td>
 
-                    <td className="px-4 py-3 text-sm text-gray-700">
+                    <td className="p-2 px-2 font-mono text-slate-400">
                       <div>{formatDate(item?.createdAt || item?.saleDate)}</div>
-                      <div className="mt-1 text-xs text-gray-500">
-                        ครบกำหนด: {formatDate(item?.dueDate)}
-                      </div>
+                      {item?.dueDate && (
+                        <div className="text-[10px] font-sans font-bold text-rose-500">
+                          Due: {formatDate(item?.dueDate)}
+                        </div>
+                      )}
                     </td>
 
-                    <td className="px-4 py-3 text-right text-sm font-medium text-gray-900">
+                    <td className="p-2 px-2 text-right font-mono text-slate-400">
                       {formatMoney(item?.totalAmount)}
                     </td>
 
-                    <td className="px-4 py-3 text-right text-sm text-gray-700">
+                    <td className="p-2 px-2 text-right font-mono text-emerald-700">
                       {formatMoney(item?.paidAmount)}
                     </td>
 
-                    <td className="px-4 py-3 text-right text-sm font-semibold text-amber-700">
+                    <td className="p-2 px-2 text-right font-mono font-black text-rose-600">
                       {formatMoney(outstandingAmount)}
                     </td>
 
-                    <td className="px-4 py-3 text-sm text-gray-700">
-                      <span
-                        className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium ${paymentStatus.className}`}
-                      >
+                    <td className="p-2 px-2 text-center select-none">
+                      <span className={`inline-flex px-1.5 py-0.5 text-[9px] font-black rounded ${paymentStatus.className}`}>
                         {paymentStatus.label}
                       </span>
                     </td>
 
-                    <td className="px-4 py-3 text-sm text-gray-700">
-                      <div className="font-medium text-gray-900">{customerName}</div>
-                      <div className="mt-1 text-xs text-gray-500">
-                        {item?.customer?.taxId || item?.customerTaxId || item?.customer?.phone || '-'}
+                    <td className="p-2 px-3 font-bold text-slate-700 truncate max-w-[180px]" title={customerName}>
+                      <div>{customerName}</div>
+                      <div className="text-[10px] font-mono text-slate-400 font-normal">
+                        {item?.customer?.taxId || item?.customerTaxId || item?.customer?.phone || '—'}
                       </div>
                     </td>
                   </tr>
@@ -203,4 +187,3 @@ const SaleAllocationCandidateTable = ({
 };
 
 export default SaleAllocationCandidateTable;
-

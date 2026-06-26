@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import dayjs from 'dayjs';
 import buddhistEra from 'dayjs/plugin/buddhistEra';
 import 'dayjs/locale/th';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom'; // 🟢 ดึง useParams ร่วมขบวนจัด Multi-Tenant
 
 dayjs.extend(buddhistEra);
 dayjs.locale('th');
@@ -12,6 +12,13 @@ const SupplierReceiptSelectionTable = ({ receipts, isLoading, selectedReceipts, 
   const [endDate, setEndDate] = useState(dayjs().format('YYYY-MM-DD'));
   const [limit, setLimit] = useState(5);
   const navigate = useNavigate();
+
+  // 🟢 FIXED: ดึงพารามิเตอร์ร้านค้าเพื่อคุมสิทธิ์ความปลอดภัยแชร์สาขาในเลน Multi-Tenant URL
+  const { shopSlug } = useParams();
+  const targetSlug = shopSlug || 'advancetech';
+
+  const rows = Array.isArray(data) ? data : [];
+  const colCount = 8;
 
   const isSelected = (receiptId) => selectedReceipts.some((r) => r.receiptId === receiptId);
 
@@ -26,7 +33,8 @@ const SupplierReceiptSelectionTable = ({ receipts, isLoading, selectedReceipts, 
 
   const handleSearch = () => onSearch(startDate, endDate, limit);
   const handleNavigateToHistory = () => {
-    if (supplierId) navigate(`/pos/finance/payments/detail/${supplierId}`);
+    // 🟢 FIXED: ซ่อมพาสปุ่มกดดูประวัติการชำระเงินของซัพพลายเออร์ให้วิ่งผ่านเลน Tenant
+    if (supplierId) navigate(`/${targetSlug}/pos/finance/payments/detail/${supplierId}`);
   };
 
   const payableReceipts = receipts.filter(r => ((r.totalAmount || 0) - (r.paidAmount || 0)) > 0);

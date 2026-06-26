@@ -85,7 +85,7 @@ const ListProductTypePage = () => {
   
 
   const handleEdit = (row) => navigate(`/pos/stock/types/edit/${row.id}`);
-  const handleCreate = () => navigate('/pos/stock/types/create');
+  const handleCreate = () => navigate(`/${shopSlug}/pos/stock/types/create`);
 
   const onPrev = () => {
     if (!hasSearched) return;

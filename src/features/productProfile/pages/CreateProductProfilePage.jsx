@@ -1,6 +1,7 @@
+// src/features/productProfile/pages/CreateProductProfilePage.jsx
 // ✅ CreateProductProfilePage — FULL VERSION (UI: โปรไฟล์สินค้า) — aligned with CreateProductTypePage
 import React, { useEffect, useMemo, useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useParams } from 'react-router-dom'; // 🟢 [DYNAMIC PARAM FIX] นำเข้า useParams
 import PageHeader from '@/components/shared/layout/PageHeader';
 import ProductProfileForm from '../components/ProductProfileForm';
 import useProductProfileStore from '../store/productProfileStore';
@@ -9,10 +10,13 @@ import { useAuthStore } from '@/features/auth/store/authStore';
 import { parseApiError } from '@/utils/uiHelpers';
 import useProductStore from '@/features/product/store/productStore';
 
-const LIST_PATH = '/pos/stock/profiles'; // โปรไฟล์สินค้า
-
 const CreateProductProfilePage = () => {
+  // 🟢 [LINK BINDING] แกะรหัสชื่อร้านค้าจาก URL สแตนด์บายเพื่อคุมระบบทางวิ่ง Multi-Tenant
+  const { shopSlug } = useParams();
   const navigate = useNavigate();
+
+  // 🟢 [DYNAMIC PATH FIX] แปลงเป็น Dynamic Path ระดับภายใน Component ล้างสแลชตัวท้ายออกให้แบนราบ
+  const LIST_PATH = `/${shopSlug}/pos/stock/profiles`;
 
   // ✅ Guard สิทธิ์ (P1-safe): canManageProductOrdering เป็น selector function
   const { isSuperAdmin, canManageProductOrdering } = useAuthStore();
@@ -103,15 +107,15 @@ const CreateProductProfilePage = () => {
         <div className="w-full max-w-3xl">
           <PageHeader title="เพิ่มโปรไฟล์สินค้าใหม่" />
 
-        {/* BestLine guidance */}
-        <div className="mt-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
-          <div className="font-semibold">โปรไฟล์สินค้า (Product Profile) ใช้เมื่อใด?</div>
-          <ul className="mt-1 list-disc pl-5 space-y-1">
-            <li>ใช้เมื่อสินค้าใน <span className="font-medium">ประเภทสินค้าเดียวกัน</span> มีรูปแบบ/แนวคิดการใช้งาน <span className="font-medium">ซ้ำจริง</span></li>
-            <li><span className="font-medium">ไม่ใช่แบรนด์</span> และ <span className="font-medium">ไม่จำเป็นต้องมีทุกสินค้า</span></li>
-            <li>ถ้าไม่ซ้ำ แนะนำให้บันทึกสเปกไว้ที่สินค้าโดยตรง (Product / productConfig)</li>
-          </ul>
-        </div>
+          {/* BestLine guidance */}
+          <div className="mt-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
+            <div className="font-semibold">โปรไฟล์สินค้า (Product Profile) ใช้เมื่อใด?</div>
+            <ul className="mt-1 list-disc pl-5 space-y-1">
+              <li>ใช้เมื่อสินค้าใน <span className="font-medium">ประเภทสินค้าเดียวกัน</span> มีรูปแบบ/แนวคิดการใช้งาน <span className="font-medium">ซ้ำจริง</span></li>
+              <li><span className="font-medium">ไม่ใช่แบรนด์</span> และ <span className="font-medium">ไม่จำเป็นต้องมีทุกสินค้า</span></li>
+              <li>ถ้าไม่ซ้ำ แนะนำให้บันทึกสเปกไว้ที่สินค้าโดยตรง (Product / productConfig)</li>
+            </ul>
+          </div>
 
           <div className="mt-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800">
             <div className="font-semibold">คุณไม่มีสิทธิ์เข้าถึงหน้านี้</div>
@@ -171,6 +175,3 @@ const CreateProductProfilePage = () => {
 };
 
 export default CreateProductProfilePage;
-
-
-

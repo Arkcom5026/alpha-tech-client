@@ -1,4 +1,5 @@
 // src/features/bill/pages/PrintBillPageShortTax.jsx
+// 🏛️ Premium Next-Gen POS Print Page: (Short Thermal Receipt Core Logic Restored)
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
@@ -220,21 +221,22 @@ const PrintBillPageShortTax = () => {
     }
   }
 
+  // 🟢 FIXED: สับเปลี่ยนกล่องสถานะขณะประมวลผลให้อ่านชัดเจน ไม่จมหายในเลเยอร์โหมดมืด
   if (loading) {
-    return <div className="text-center p-6 text-gray-700">⏳ กำลังโหลดข้อมูลใบเสร็จ...</div>
+    return <div className="text-center p-8 text-zinc-400 font-bold bg-slate-900 min-h-screen">⏳ กำลังโหลดข้อมูลใบเสร็จรับเงิน...</div>
   }
 
   if (error || pageError) {
-    return <div className="text-center p-6 text-red-600">เกิดข้อผิดพลาด: {error || pageError}</div>
+    return <div className="text-center p-8 text-rose-400 font-bold bg-slate-900 min-h-screen">เกิดข้อผิดพลาด: {error || pageError}</div>
   }
 
   if (!sale || !saleItems?.length || !config) {
-    return <div className="text-center p-6 text-gray-700">ไม่พบข้อมูลใบเสร็จ</div>
+    return <div className="text-center p-8 text-zinc-400 font-bold bg-slate-900 min-h-screen">ไม่พบข้อมูลใบเสร็จตามรหัสอ้างอิง</div>
   }
 
   if (!payment) {
     return (
-      <div className="text-center p-6 text-gray-700">
+      <div className="text-center p-8 text-amber-400 font-bold bg-slate-900 min-h-screen">
         ใบขายนี้ยังไม่มีการรับชำระ จึงยังไม่สามารถพิมพ์ใบเสร็จได้
       </div>
     )
@@ -249,6 +251,7 @@ const PrintBillPageShortTax = () => {
         .bill-print-root { font-family: 'THSarabunNew', 'TH Sarabun New', 'Sarabun', system-ui, sans-serif; }
       `}</style>
 
+      {/* 🎛️ เครื่องมือควบคุมด้านบนของเอกสารพิมพ์ */}
       <DocumentToolbar
         actions={[
           {
@@ -261,21 +264,25 @@ const PrintBillPageShortTax = () => {
         note={autoPrint ? 'Auto print เปิดอยู่' : undefined}
       />
 
-      <div className="bill-print-root">
-        <BillLayoutShortTax
-          sale={sale}
-          saleItems={saleItems}
-          payments={payment ? [payment] : []}
-          config={{ ...config, hideDate: true }}
-          hideContactName={hideContactName}
-          editableDocumentLines
-          editingLineKey={editingLineKey}
-          lineDrafts={lineDrafts}
-          savingLineKey={savingLineKey}
-          onToggleDocumentLineEdit={handleToggleDocumentLineEdit}
-          onChangeDocumentLineDraft={handleChangeDocumentLineDraft}
-          onSaveDocumentLine={handleSaveDocumentLine}
-        />
+      {/* 🟢 FIXED: สลักคลาส CSS ตัดสิทธิ์ควบคุมความมืด บังคับให้หน้ากระดาษเป็นสีขาว ตัวหนังสือสีดำสนิท 100% */}
+      {/* เติมคลาส bg-white text-black dark:bg-white dark:text-black คลุมหมดจดทั่วทั้งแผ่นม้วนกระดาษ */}
+      <div className="w-full min-h-screen bg-white text-black dark:bg-white dark:text-black py-6 px-4 print:p-0 print:bg-white">
+        <div className="bill-print-root mx-auto max-w-[80mm] bg-white text-black dark:bg-white dark:text-black p-4 rounded-xl border border-zinc-200 shadow-sm print:p-0 print:border-none print:shadow-none">
+          <BillLayoutShortTax
+            sale={sale}
+            saleItems={saleItems}
+            payments={payment ? [payment] : []}
+            config={{ ...config, hideDate: true }}
+            hideContactName={hideContactName}
+            editableDocumentLines
+            editingLineKey={editingLineKey}
+            lineDrafts={lineDrafts}
+            savingLineKey={savingLineKey}
+            onToggleDocumentLineEdit={handleToggleDocumentLineEdit}
+            onChangeDocumentLineDraft={handleChangeDocumentLineDraft}
+            onSaveDocumentLine={handleSaveDocumentLine}
+          />
+        </div>
       </div>
     </>
   )

@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
-// ✅ FIX: Added useParams to the import from react-router-dom
+// ✅ FIX: นำ useParams จาก react-router-dom มาเปิดระบบแกะค่า Tenant ปลอดภัย
 import { useNavigate, useParams } from 'react-router-dom';
 import useSupplierStore from '@/features/supplier/store/supplierStore';
-import useSupplierPaymentStore from '../store/supplierPaymentStore';
 import dayjs from 'dayjs';
 import 'dayjs/locale/th';
 dayjs.locale('th');
@@ -11,6 +10,11 @@ dayjs.locale('th');
 // Page to list suppliers eligible for advance payment
 const ListAdvancePaymentsSupplierPage = () => {
   const navigate = useNavigate();
+  
+  // 🟢 FIXED: เรียกใช้งาน useParams ดึงรหัสร้านค้าความปลอดภัยเพื่อคุม Multi-Tenant URL
+  const { shopSlug } = useParams();
+  const targetSlug = shopSlug || 'advancetech';
+
   const { suppliers, fetchSuppliersAction, isSupplierLoading } = useSupplierStore();
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -19,7 +23,8 @@ const ListAdvancePaymentsSupplierPage = () => {
   }, [fetchSuppliersAction]);
 
   const handleNavigate = (supplierId) => {
-    navigate(`/pos/finance/payments/advance/supplier/${supplierId}`);
+    // 🟢 FIXED: ซ่อมพาสปุ่มกดจ่ายเงินล่วงหน้าของซัพพลายเออร์ให้วิ่งผ่านเลน Tenant ร่วมสาขา
+    navigate(`/${targetSlug}/pos/finance/payments/advance/supplier/${supplierId}`);
   };
 
   // Filter for suppliers who do not offer credit (creditLimit is 0)

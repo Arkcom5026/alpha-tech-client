@@ -68,7 +68,7 @@ const PODetailPage = () => {
         </table>
       </div>
 
-      <Link to="/pos/purchases/po">
+      <Link to={shopSlug ? `/${shopSlug}/pos/purchases/po` : `/pos/purchases/po`}>
         <Button variant="outline">⬅️ กลับ</Button>
       </Link>
     </div>

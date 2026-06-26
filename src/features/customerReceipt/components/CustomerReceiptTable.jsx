@@ -1,6 +1,5 @@
-
-
 // src/features/customerReceipt/components/CustomerReceiptTable.jsx
+// 🏛️ Premium Next-Gen POS Financial Data Grid: (Dynamic Route & Same-Window Navigation)
 
 import { Link } from 'react-router-dom';
 
@@ -14,7 +13,6 @@ const formatMoney = (value) => {
 
 const formatDateTime = (value) => {
   if (!value) return '-';
-
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '-';
 
@@ -146,36 +144,23 @@ const CustomerReceiptTable = ({
 }) => {
   const safeItems = Array.isArray(items) ? items : [];
 
+  // 🟢 [DYNAMIC LINK GENERATOR]: ดึงตำแหน่งพิกัดแท้จริงจาก Address bar หน้าร้าน เพื่อสร้างลิงก์ที่ปลอดภัย ไร้อาการหลุดขอบเขตพาธ
+  const currentPath = window.location.pathname; // จะได้ค่าเช่น /advance/pos/finance/customer-receipts
+
   return (
     <div className="overflow-hidden rounded-2xl">
       <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
-                เลขที่ใบรับเงิน
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
-                วันที่รับเงิน
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
-                ลูกค้า / หน่วยงาน
-              </th>
-              <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">
-                ยอดรับ
-              </th>
-              <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">
-                ตัดแล้ว
-              </th>
-              <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">
-                คงเหลือ
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
-                สถานะ
-              </th>
-              <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">
-                จัดการ
-              </th>
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">เลขที่ใบรับเงิน</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">วันที่รับเงิน</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">ลูกค้า / หน่วยงาน</th>
+              <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">ยอดรับ</th>
+              <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">ตัดแล้ว</th>
+              <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">คงเหลือ</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">สถานะ</th>
+              <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">จัดการ</th>
             </tr>
           </thead>
 
@@ -193,69 +178,50 @@ const CustomerReceiptTable = ({
                 const statusConfig = getStatusConfig(item?.status);
                 const receiptId = item?.id;
                 const remainingAmount = Number(item?.remainingAmount || 0);
-                const detailPath = `/pos/finance/customer-receipts/${receiptId}`;
-                const allocatePath = `/pos/finance/customer-receipts/${receiptId}/allocate`;
-                const printPath = `/pos/finance/customer-receipts/${receiptId}/print`;
+                
+                // 🟢 สับรางจับคู่สัมพัทธ์เข้าตำแหน่ง URL เดิม ช่วยให้เปิดทำงานหน้าเดิมลื่นไหล 100%
+                const detailPath = `${currentPath}/${receiptId}`;
+                const allocatePath = `${currentPath}/${receiptId}/allocate`;
+                const printPath = `${currentPath}/${receiptId}/print`;
 
                 return (
                   <tr key={receiptId} className="border-t border-gray-100 align-top hover:bg-gray-50/60">
                     <td className="px-4 py-3 text-sm text-gray-900">
                       <div className="font-medium">{item?.code || '-'}</div>
-                      <div className="mt-1 text-xs text-gray-500">
-                        Ref: {item?.referenceNo || '-'}
-                      </div>
+                      <div className="mt-1 text-xs text-gray-500">Ref: {item?.referenceNo || '-'}</div>
                     </td>
 
                     <td className="px-4 py-3 text-sm text-gray-700">{formatDateTime(item?.receivedAt)}</td>
 
                     <td className="px-4 py-3 text-sm text-gray-700">
                       <div className="font-medium text-gray-900">{resolveCustomerName(item)}</div>
-                      <div className="mt-1 text-xs text-gray-500">
-                        {item?.customer?.taxId || item?.customer?.phone || '-'}
-                      </div>
+                      <div className="mt-1 text-xs text-gray-500">{item?.customer?.taxId || item?.customer?.phone || '-'}</div>
                     </td>
 
-                    <td className="px-4 py-3 text-right text-sm font-medium text-gray-900">
-                      {formatMoney(item?.totalAmount)}
-                    </td>
+                    <td className="px-4 py-3 text-right text-sm font-medium text-gray-900">{formatMoney(item?.totalAmount)}</td>
 
-                    <td className="px-4 py-3 text-right text-sm text-gray-700">
-                      {formatMoney(item?.allocatedAmount)}
-                    </td>
+                    <td className="px-4 py-3 text-right text-sm text-gray-700">{formatMoney(item?.allocatedAmount)}</td>
 
-                    <td className="px-4 py-3 text-right text-sm font-medium text-blue-700">
-                      {formatMoney(remainingAmount)}
-                    </td>
+                    <td className="px-4 py-3 text-right text-sm font-medium text-blue-700">{formatMoney(remainingAmount)}</td>
 
                     <td className="px-4 py-3 text-sm text-gray-700">
-                      <span
-                        className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium ${statusConfig.className}`}
-                      >
+                      <span className={`inline-flex rounded-full border border-gray-200 px-2.5 py-1 text-xs font-medium ${statusConfig.className}`}>
                         {statusConfig.label}
                       </span>
                     </td>
 
                     <td className="px-4 py-3 text-right text-sm">
-                      <div className="flex flex-wrap justify-end gap-2">
-                        <Link
-                          to={detailPath}
-                          className="inline-flex items-center justify-center rounded-xl border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
-                        >
+                      <div className="flex flex-wrap justify-end gap-2 select-none">
+                        <Link to={detailPath} className="inline-flex items-center justify-center rounded-xl border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 shadow-sm">
                           รายละเอียด
                         </Link>
 
-                        <Link
-                          to={printPath}
-                          className="inline-flex items-center justify-center rounded-xl border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-sm font-medium text-emerald-700 transition hover:bg-emerald-100"
-                        >
+                        <Link to={printPath} className="inline-flex items-center justify-center rounded-xl border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-sm font-medium text-emerald-700 transition hover:bg-emerald-100 shadow-sm">
                           พิมพ์ใบเสร็จ
                         </Link>
 
                         {item?.status !== 'CANCELLED' && remainingAmount > 0 && (
-                          <Link
-                            to={allocatePath}
-                            className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-blue-700"
-                          >
+                          <Link to={allocatePath} className="inline-flex items-center justify-center rounded-xl bg-slate-900 text-white px-3 py-1.5 text-sm font-medium transition hover:bg-slate-800 shadow-sm">
                             ตัดชำระ
                           </Link>
                         )}
@@ -280,5 +246,3 @@ const CustomerReceiptTable = ({
 };
 
 export default CustomerReceiptTable;
-
-

@@ -1,9 +1,5 @@
-
-
-
-
-// ------------------------------------------------------------
-// 📁 FILE: src/features/sales/components/PaymentSummary.jsx
+// src/features/sales/components/PaymentSummary.jsx
+// 🏛️ Premium Next-Gen POS Payment Summary: (Pure High-Contrast & Premium Dark Layout Center)
 
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -16,7 +12,6 @@ const fmt = (n) =>
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
-
 
 const PaymentSummary = ({
   totalToPay,
@@ -34,151 +29,122 @@ const PaymentSummary = ({
 }) => {
   const navigate = useNavigate();
 
-  // ✅ Central print route for delivery note (adjust if your router uses a different path)
   const DELIVERY_NOTE_PRINT_ROUTE = '/pos/sales/delivery-note/print';
   const totalNum = Number(totalToPay) || 0;
-  // paidNum = "ยอดชำระจริง" (applied) ที่ใช้ตัดบิล (ไม่รวมเงินทอน)
   const paidNum = Number(grandTotalPaid) || 0;
-  // changeNum = เงินทอน (คำนวณจากยอดรับเงินจริงฝั่ง CASH)
   const changeNum = Number(safeChangeAmount) || 0;
-  // ✅ UI ต้องแสดง "ยอดเงินที่รับจริง" (tendered) = ชำระจริง + เงินทอน
   const receivedNum = Number((paidNum + Math.max(0, changeNum)).toFixed(2));
 
   const isCash = currentSaleMode === SALE_MODE.CASH;
   const isCredit = currentSaleMode === SALE_MODE.CREDIT;
 
-  // ✅ คุมตัวเลือกการพิมพ์ให้สอดคล้องกับโหมดขาย
   useEffect(() => {
-    // ✅ CREDIT: บังคับให้เป็น DELIVERY_NOTE เสมอ (เอกสารให้เซ็นรับของ)
     if (isCredit && saleOption !== PRINT_OPTION.DELIVERY_NOTE) {
       setSaleOption(PRINT_OPTION.DELIVERY_NOTE);
       return;
     }
-
-    // CASH: ถ้าซ่อน NONE ให้ default เป็น RECEIPT เพื่อไม่ให้ radio “ว่าง”
     if (isCash && saleOption === PRINT_OPTION.NONE) {
       setSaleOption(PRINT_OPTION.RECEIPT);
     }
   }, [isCredit, isCash, saleOption, setSaleOption]);
 
   const changeClass =
-    changeNum > 0 ? 'text-green-600' : changeNum < 0 ? 'text-red-600' : 'text-gray-600';
+    changeNum > 0 ? 'text-emerald-600 font-black' : changeNum < 0 ? 'text-rose-600 font-black' : 'text-slate-600 font-bold';
 
   return (
-    <div className="flex-1 min-w-[300px] max-w-[420px] bg-lime-50 p-6 rounded-xl flex flex-col justify-between shadow-lg border border-lime-100">
-      <div>
+    /* 🟢 [THEME UNIFICATION]: โยกสีมะนาวสว่างออก คุมด้วยฟอนต์ขวาสีเข้มพรีเมียม บอกยอดสุทธิชัดเจนระดับสากล */
+    <div className="flex-1 w-full flex flex-col justify-between gap-3 text-xs font-bold text-slate-600">
+      <div className="space-y-2">
         {isCash ? (
-          <div className="text-lg text-gray-700">
-            <div className="flex justify-between items-center mb-3">
-              <span className="text-2xl font-bold text-gray-900">ยอดที่ต้องชำระ</span>
-              <span className="text-3xl font-extrabold text-blue-700">{fmt(totalNum)} ฿</span>
-           
+          <div className="space-y-1.5 border-b border-slate-100 pb-2">
+            <div className="flex justify-between items-center bg-slate-900 text-white p-2 rounded-xl shadow-inner select-none">
+              <span className="text-[11px] font-black tracking-wide uppercase opacity-70">ยอดสุทธิที่ต้องชำระ</span>
+              <span className="font-mono text-lg font-black text-teal-400">฿{fmt(totalNum)}</span>
             </div>
 
-            <div className="flex justify-between font-semibold text-xl py-2">
-              <span className="font-bold text-gray-900">รวมยอดที่รับ</span>
-              <span
-                className={(receivedNum >= totalNum ? 'text-green-600' : 'text-red-600') + ' text-3xl font-extrabold'}
-              >
-                {fmt(receivedNum)} ฿
+            <div className="flex justify-between items-center px-1 pt-1">
+              <span className="text-slate-800 font-black">รวมยอดเงินที่รับจริง</span>
+              <span className={`font-mono font-black ${receivedNum >= totalNum ? 'text-emerald-600' : 'text-rose-600'}`}>
+                ฿{fmt(receivedNum)}
               </span>
             </div>
 
-            <div className="flex justify-between font-semibold text-xl py-1 mt-0">
-              <span className="font-bold text-gray-900">เงินทอน</span>
-              <span className={`${changeClass} text-3xl font-extrabold`}>{fmt(changeNum)} ฿</span>
+            <div className="flex justify-between items-center px-1">
+              <span className="text-slate-800 font-black">มูลค่าเงินทอนหน้าร้าน</span>
+              <span className={`font-mono ${changeClass}`}>฿{fmt(changeNum)}</span>
             </div>
           </div>
         ) : (
-          <div className="text-gray-700">
-            <div className="text-center">
-              <p className="text-3xl font-bold text-purple-700 mb-2">ยอดเครดิต/หน่วยงาน</p>
-              <p className="text-sm text-gray-600">* โหมดเครดิตรับ “มัดจำ” ได้ แต่ไม่รับเงินสด/โอน/บัตรในหน้านี้</p>
+          <div className="space-y-1.5 border-b border-slate-100 pb-2">
+            <div className="bg-slate-950 text-white p-2 rounded-xl text-center shadow-inner select-none">
+              <p className="text-[11px] font-black tracking-wide uppercase text-amber-400">โหมดเครดิตค้างชำระ / หน่วยงาน</p>
             </div>
 
-            <div className="mt-5 space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-lg font-bold text-gray-900">ยอดรวม</span>
-                <span className="text-2xl font-extrabold text-blue-700">{fmt(totalNum)} ฿</span>
-                <div className="text-xs text-gray-500">* รวม VAT แล้ว</div>
+            <div className="space-y-1 pt-1 text-[11px]">
+              <div className="flex justify-between items-center px-1">
+                <span>ยอดมูลค่ารวมบิล (รวม VAT):</span>
+                <span className="font-mono font-bold text-slate-900">฿{fmt(totalNum)}</span>
               </div>
-
-              <div className="flex justify-between items-center">
-                <span className="text-lg font-bold text-gray-900">มัดจำที่ใช้</span>
-                <span className={(paidNum > 0 ? 'text-green-600' : 'text-gray-600') + ' text-2xl font-extrabold'}>
-                  {fmt(paidNum)} ฿
-                </span>
+              <div className="flex justify-between items-center px-1 text-emerald-600">
+                <span>ยอดเงินมัดจำล่วงหน้าที่ใช้หักลอย:</span>
+                <span className="font-mono font-bold">฿{fmt(paidNum)}</span>
               </div>
-
               {(() => {
                 const outstanding = Math.max(0, Number((totalNum - paidNum).toFixed(2)));
-                const outstandingClass = outstanding > 0 ? 'text-red-600' : 'text-green-600';
                 return (
-                  <div className="flex justify-between items-center pt-2 border-t border-gray-200">
-                    <span className="text-lg font-bold text-gray-900">ยอดค้าง</span>
-                    <span className={outstandingClass + ' text-3xl font-extrabold'}>
-                      {fmt(outstanding)} ฿
-                    </span>
+                  <div className="flex justify-between items-center pt-1.5 border-t border-dashed border-slate-100 px-1 font-black text-xs">
+                    <span className="text-slate-900">ยอดค้างบัญชีเครดิตยกยอด:</span>
+                    <span className={`font-mono ${outstanding > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>฿{fmt(outstanding)}</span>
                   </div>
                 );
               })()}
             </div>
-
-            <div className="py-4" />
           </div>
         )}
       </div>
 
       {paymentError && (
-        <div
-          className="bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded-md relative text-base mb-4 mt-auto"
-          role="alert"
-        >
-          <strong className="font-bold">ข้อผิดพลาด!</strong>
-          <span className="block sm:inline"> {paymentError}</span>
+        <div className="bg-rose-50 border border-rose-200 text-rose-600 p-2.5 rounded-xl text-[11px] font-black animate-slideUp">
+          ⚠️ {paymentError}
         </div>
       )}
 
-      <label className="inline-flex items-center gap-2 text-gray-700 text-lg py-2">
+      {/* สวิตช์สลับโหมดขายเครดิต */}
+      <label className="inline-flex items-center gap-2 text-[11px] font-black text-slate-700 cursor-pointer select-none">
         <input
           type="checkbox"
           checked={isCredit}
           onChange={(e) => {
             const next = e.target.checked ? SALE_MODE.CREDIT : SALE_MODE.CASH;
-            // ✅ ถ้าเลือกเครดิต แต่ยังไม่ได้เลือกลูกค้า → ปล่อยให้ PaymentSection เป็นคน guard
             setCurrentSaleMode(next);
           }}
           disabled={isSubmitting}
-          className="form-checkbox h-4 w-4 text-purple-600 rounded"
+          className="accent-slate-900 h-3.5 w-3.5"
         />
-        เครดิต/หน่วยงาน
+        <span>เปิดเลนขายแบบ เครดิต/หน่วยงาน</span>
         {!hasValidCustomerId && isCredit && (
-          <span className="text-sm text-red-600">(ต้องเลือกลูกค้าก่อน)</span>
+          <span className="text-[10px] text-rose-500 font-medium">(กรุณาเลือกชื่อลูกค้าก่อน)</span>
         )}
       </label>
 
-      <div className="mt-auto">
+      {/* แผงตัวเลือกการพิมพ์แบบเรียงแถวคลีนตา */}
+      <div className="py-0.5">
         <BillPrintOptions
           saleOption={saleOption}
           setSaleOption={setSaleOption}
           currentSaleMode={currentSaleMode}
-          // CASH: ซ่อน NONE (ตาม UX ที่เลือก)
           hideNoneOption={isCash}
-          // CREDIT: บังคับใบส่งของ (ซ่อน option อื่นภายใน component)
         />
       </div>
 
-      <div className="text-center mt-auto">
+      {/* ปุ่มสั่งการกดยืนยันการขายพรีเมียมสีเข้มองค์กร */}
+      <div className="pt-1 select-none">
         <button
           type="button"
           onClick={async () => {
-            // 🔒 Defensive: กัน click/enter ซ้ำตอน disabled (แม้ปกติ button จะกันอยู่แล้ว)
             if (!isConfirmEnabled || isSubmitting) return;
-
             try {
               const created = await onConfirm?.();
-
-              // ✅ CREDIT is always DELIVERY_NOTE; CASH prints only when chosen
               const shouldPrintDeliveryNote = isCredit || saleOption === PRINT_OPTION.DELIVERY_NOTE;
               if (!shouldPrintDeliveryNote) return;
 
@@ -190,14 +156,13 @@ const PaymentSummary = ({
                 state: { sale: createdSale },
               });
             } catch (err) {
-              // NOTE: onConfirm already sets paymentError via parent; keep this for debug only
               console.error('[PaymentSummary] confirm sale error', err);
             }
           }}
           disabled={!isConfirmEnabled || isSubmitting}
-          className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-xl font-semibold transition-colors duration-200 shadow-md w-full"
+          className="w-full h-9 bg-slate-900 hover:bg-slate-800 text-white font-black text-xs rounded-xl active:scale-[0.99] transition-all shadow-md disabled:opacity-40 disabled:transform-none disabled:shadow-none"
         >
-          {isSubmitting ? 'กำลังดำเนินการ...' : 'ยืนยันการขาย'}
+          {isSubmitting ? '⏳ กำลังประมวลผลตัดคลังสินค้า...' : '🛒 ยืนยันปิดยอดการขายสินค้า'}
         </button>
       </div>
     </div>
@@ -224,9 +189,4 @@ PaymentSummary.propTypes = {
   hasValidCustomerId: PropTypes.bool,
 };
 
-
-
 export default PaymentSummary;
-
-
-

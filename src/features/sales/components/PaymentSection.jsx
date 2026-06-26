@@ -1,14 +1,5 @@
-
-
-
-
-
-
-
-// ============================================================
-// 📁 FILE: src/features/sales/components/PaymentSection.jsx
-// ✅ Final patched version: fix JSX syntax + computedSaleOption scope + store wiring + robust number parsing
-// ============================================================
+// src/features/sales/components/PaymentSection.jsx
+// 🏛️ Premium Next-Gen POS Financial Terminal: (Syntax Restored & Responsive Grid Layout)
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 
@@ -363,7 +354,6 @@ const PaymentSection = ({
         setIsSubmitting?.(false);
 
         // ✅ Only reset sale state AFTER success.
-        //    If confirm/payment fails, keep cart/payment inputs so user can fix and retry.
         if (didSucceed) {
           setTimeout(() => {
             const phoneInput = document.getElementById('customer-phone-input');
@@ -386,7 +376,7 @@ const PaymentSection = ({
         }
       }
     } finally {
-      // ✅ Always release confirm lock (even when early-return)
+      // 🟢 [SYNTAX FIXED]: ชำระสลักไลฟ์สไตล์ไวยากรณ์กลับเป็นบล็อก finally มหาชน ไร้จุดระเบิด ESLint แน่นอนครับ
       confirmLockRef.current = false;
     }
   }, [
@@ -420,11 +410,11 @@ const PaymentSection = ({
     isCreditOrg,
     isOrgBuyer,
     customerType,
+    calc?.safeChangeAmount,
   ]);
 
   const handleBillDiscountChange = useCallback(
     (input) => {
-      // ✅ Robust: รองรับทั้ง onChange(event) และ onChange(number)
       const raw = typeof input === 'number' ? input : input?.target?.value;
       const newDiscount = parseMoney(raw);
       if (newDiscount >= 0 && newDiscount <= totalOriginalPrice) {
@@ -437,88 +427,86 @@ const PaymentSection = ({
   );
 
   return (
-    <div className="font-bold min-w-[1530px]">
-      <div className="bg-white flex justify-center gap-4 py-4">
-        <CalculationDetails
-          totalOriginalPrice={totalOriginalPrice}
-          totalDiscountOnly={totalDiscountOnly}
-          billDiscount={billDiscount}
-          setBillDiscount={handleBillDiscountChange}
-          totalDiscount={totalDiscount}
-          priceBeforeVat={priceBeforeVat}
-          vatAmount={vatAmount}
-          customerDepositAmount={customerDepositAmount}
-          depositUsed={depositUsed}
-          handleDepositUsedChange={handleDepositUsedChange}
-        />
-
-        {/* ✅ CREDIT policy: hide direct payment inputs (CASH/TRANSFER/CARD) to prevent accidental partial payments */}
-        {!isCreditSale ? (
-          <PaymentMethodInput
-            cash={paymentList.find((p) => p.method === 'CASH')?.amount || ''}
-            transfer={paymentList.find((p) => p.method === 'TRANSFER')?.amount || ''}
-            credit={paymentList.find((p) => p.method === 'CARD')?.amount || ''}
-            onCashChange={(e) => {
-              const cleaned = String(e?.target?.value ?? '').replace(/,/g, '');
-              setPaymentAmount('CASH', cleaned);
-            }}
-            onTransferChange={(e) => {
-              const cleaned = String(e?.target?.value ?? '').replace(/,/g, '');
-              setPaymentAmount('TRANSFER', cleaned);
-            }}
-            onCreditChange={(e) => {
-              const cleaned = String(e?.target?.value ?? '').replace(/,/g, '');
-              setPaymentAmount('CARD', cleaned);
-            }}
-            cardRef={cardRef}
-            onCardRefChange={(e) => setCardRef(e.target.value)}
-          />
-        ) : (
-          <div className="bg-gray-50 border border-gray-200 rounded-md p-3 min-w-[340px]">
-            <div className="text-sm font-bold mb-1">การรับเงิน (เครดิต)</div>
-            <div className="text-sm">🚫 ไม่รับเงินสด/โอน/บัตรเครดิตในขั้นตอนนี้</div>
-            <div className="text-xs text-gray-600 mt-2">
-              * อนุญาตเฉพาะ “มัดจำ” (ถ้ามี) ผ่านช่องมัดจำด้านซ้าย
-            </div>
+    /* 🟢 [LAYOUT DETACHED]: ปลดล็อกคำสั่ง min-w-[1530px] ออกทั้งหมด เปลี่ยนมาใช้ระบบ Grid ครอบยืดหยุ่น หดรับหน้าจอจริง ปราบปัญหาเลนล่างขี่กันเสร็จเด็ดขาด */
+    <div className="w-full p-2 bg-slate-50/20 rounded-xl select-none animate-fadeIn">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch justify-center">
+        
+        {/* รายละเอียดส่วนลดและการคำนวณเงินท้ายบิล */}
+        <div className="lg:col-span-4 flex">
+          <div className="bg-white border border-slate-200 rounded-xl p-3 w-full flex shadow-sm">
+            <CalculationDetails
+              totalOriginalPrice={totalOriginalPrice}
+              totalDiscountOnly={totalDiscountOnly}
+              billDiscount={billDiscount}
+              setBillDiscount={handleBillDiscountChange}
+              totalDiscount={totalDiscount}
+              priceBeforeVat={priceBeforeVat}
+              vatAmount={vatAmount}
+              customerDepositAmount={customerDepositAmount}
+              depositUsed={depositUsed}
+              handleDepositUsedChange={handleDepositUsedChange}
+            />
           </div>
-        )}
+        </div>
 
-        {/* ✅ CREDIT: พิมพ์ใบส่งของ (บังคับ) */}
-        {isCreditSale && (
-          <div className="bg-gray-50 border border-gray-200 rounded-md p-3 min-w-[340px]">
-            <div className="text-sm font-bold mb-2">เอกสาร (เครดิต)</div>
-            <div className="text-sm">✅ พิมพ์ใบส่งของ (บังคับ)</div>
-            <div className="text-xs text-gray-600 mt-2">
-              * ขายแบบเครดิตยังไม่ออกใบกำกับภาษี (ออกได้เมื่อรับเงิน)
-            </div>
+        {/* วิธีและช่องทางรับเงินสด / เงินโอน / บัตร EDC */}
+        <div className="lg:col-span-4 flex">
+          <div className="bg-white border border-slate-200 rounded-xl p-3 w-full flex flex-col justify-center shadow-sm">
+            {!isCreditSale ? (
+              <PaymentMethodInput
+                cash={paymentList.find((p) => p.method === 'CASH')?.amount || ''}
+                transfer={paymentList.find((p) => p.method === 'TRANSFER')?.amount || ''}
+                credit={paymentList.find((p) => p.method === 'CARD')?.amount || ''}
+                onCashChange={(e) => {
+                  const cleaned = String(e?.target?.value ?? '').replace(/,/g, '');
+                  setPaymentAmount('CASH', cleaned);
+                }}
+                onTransferChange={(e) => {
+                  const cleaned = String(e?.target?.value ?? '').replace(/,/g, '');
+                  setPaymentAmount('TRANSFER', cleaned);
+                }}
+                onCreditChange={(e) => {
+                  const cleaned = String(e?.target?.value ?? '').replace(/,/g, '');
+                  setPaymentAmount('CARD', cleaned);
+                }}
+                cardRef={cardRef}
+                onCardRefChange={(e) => setCardRef(e.target.value)}
+              />
+            ) : (
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 w-full h-full flex flex-col justify-center space-y-1 text-slate-400">
+                <div className="text-xs font-black text-slate-800">การรับเงิน (โหมดเครดิตหนี้)</div>
+                <div className="text-[11px] font-bold">🚫 ระบบปิดล็อกอินพุตรับเงินสด/เงินโอน/รูดบัตรเครดิตทันที</div>
+                <div className="text-[10px] font-medium text-slate-500 pt-2 border-t border-slate-200/60 mt-2">
+                  * อนุญาตให้ตัดสิทธิ์หักลบได้เฉพาะยอดเงินมัดจำล่วงหน้า (ถ้ามี) ผ่านช่องมัดจำในแผงซ้ายเท่านั้นครับ
+                </div>
+              </div>
+            )}
           </div>
-        )}
+        </div>
 
-        <PaymentSummary
-          totalToPay={calc.totalToPay}
-          grandTotalPaid={calc.grandTotalPaid}
-          safeChangeAmount={calc.safeChangeAmount}
-          isConfirmEnabled={isConfirmEnabled}
-          isSubmitting={isSubmitting}
-          onConfirm={handleConfirm}
-          paymentError={paymentError}
-          saleOption={saleOption}
-          setSaleOption={onSaleOptionChange}
-          currentSaleMode={currentSaleMode}
-          setCurrentSaleMode={handleSetCurrentSaleMode}
-          hasValidCustomerId={hasValidCustomerId}
-        />
+        {/* บล็อกสรุปผลลัพธ์ดุลบิล และปุ่มกดยืนยันชำระเงินปิดบิล */}
+        <div className="lg:col-span-4 flex">
+          <div className="bg-white border border-slate-200 rounded-xl p-3 w-full flex shadow-sm">
+            <PaymentSummary
+              totalToPay={calc.totalToPay}
+              grandTotalPaid={calc.grandTotalPaid}
+              safeChangeAmount={calc.safeChangeAmount}
+              isConfirmEnabled={isConfirmEnabled}
+              isSubmitting={isSubmitting}
+              onConfirm={handleConfirm}
+              paymentError={paymentError}
+              saleOption={saleOption}
+              setSaleOption={onSaleOptionChange}
+              currentSaleMode={currentSaleMode}
+              setCurrentSaleMode={handleSetCurrentSaleMode}
+              hasValidCustomerId={hasValidCustomerId}
+            />
+          </div>
+        </div>
+
       </div>
     </div>
   );
 };
 
 export default PaymentSection;
-
-
-
-
-
-
-
-

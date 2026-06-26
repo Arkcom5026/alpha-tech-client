@@ -1,17 +1,10 @@
-
-
-
-
-  
-
 // src/features/barcode/pages/PrintBarcodeBatchPage.jsx
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import useBarcodeStore from "@/features/barcode/store/barcodeStore";
 import c39FontUrl from "@/assets/fonts/c39hrp24dhtt.ttf?url";
 
 // ✅ Tiny QR (Version 1-L, EC=L, Mask 0) — no external deps
-// (copy from PreviewBarcodePage เพื่อให้สแกน/พิมพ์นิ่งเหมือนกัน)
 const QrSvg = ({ value, size = 100 }) => {
   const v = (value ?? "").toString().trim();
 
@@ -169,38 +162,10 @@ const QrSvg = ({ value, size = 100 }) => {
     for (let i = 14; i >= 0; i--) fmtBits.push((fmt >> i) & 1);
 
     const coordsA = [
-      [8, 0],
-      [8, 1],
-      [8, 2],
-      [8, 3],
-      [8, 4],
-      [8, 5],
-      [8, 7],
-      [8, 8],
-      [7, 8],
-      [5, 8],
-      [4, 8],
-      [3, 8],
-      [2, 8],
-      [1, 8],
-      [0, 8],
+      [8, 0], [8, 1], [8, 2], [8, 3], [8, 4], [8, 5], [8, 7], [8, 8], [7, 8], [5, 8], [4, 8], [3, 8], [2, 8], [1, 8], [0, 8],
     ];
     const coordsB = [
-      [N - 1, 8],
-      [N - 2, 8],
-      [N - 3, 8],
-      [N - 4, 8],
-      [N - 5, 8],
-      [N - 6, 8],
-      [N - 7, 8],
-      [8, N - 8],
-      [8, N - 7],
-      [8, N - 6],
-      [8, N - 5],
-      [8, N - 4],
-      [8, N - 3],
-      [8, N - 2],
-      [8, N - 1],
+      [N - 1, 8], [N - 2, 8], [N - 3, 8], [N - 4, 8], [N - 5, 8], [N - 6, 8], [N - 7, 8], [8, N - 8], [8, N - 7], [8, N - 6], [8, N - 5], [8, N - 4], [8, N - 3], [8, N - 2], [8, N - 1],
     ];
 
     coordsA.forEach(([r, c], i) => set(r, c, fmtBits[i]));
@@ -274,22 +239,20 @@ const isValidCode39 = (raw) => {
   return /^[0-9A-Z\-\. \$\/\+%]+$/.test(s);
 };
 
-
 const clampQrSize = (value) => {
   const num = Number(value);
   if (!Number.isFinite(num)) return 100;
   return Math.min(200, Math.max(80, num));
 };
 
-
-
 const PrintBarcodeBatchPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { shopSlug } = useParams(); // 🟢 ดึงรหัสร้านค้ารองรับระบบ Multi-Tenant
 
   const barcodeStore = useBarcodeStore();
 
-  // ✅ Store (รองรับหลายชื่อ action เพื่อกันชื่อไม่ตรง)
+  // ✅ Store Handles
   const fetchBarcodesByReceiptIdAction =
     barcodeStore?.fetchBarcodesByReceiptIdAction ||
     barcodeStore?.loadBarcodesByReceiptIdAction ||
@@ -298,8 +261,6 @@ const PrintBarcodeBatchPage = () => {
     barcodeStore?.fetchBarcodeReceiptItemsAction ||
     barcodeStore?.getBarcodeReceiptItemsAction;
 
-  // ✅ Fast path (ยิงครั้งเดียวสำหรับหลายใบ)
-  // Expected endpoint: GET /api/barcodes/print-batch?ids=458,451
   const fetchPrintBatchAction =
     barcodeStore?.fetchPrintBatchAction ||
     barcodeStore?.fetchBarcodesForPrintBatchAction ||
@@ -324,7 +285,6 @@ const PrintBarcodeBatchPage = () => {
 
   const qs = useMemo(() => new URLSearchParams(location.search), [location.search]);
   const ids = useMemo(() => parseIds(qs.get("ids")), [qs]);
-  // ✅ Stable key for effects (avoid TDZ / strict-mode quirks)
   const idsKey = useMemo(() => `ids:${ids.join(",")}`, [ids]);
 
   // ✅ UI state
@@ -332,7 +292,7 @@ const PrintBarcodeBatchPage = () => {
   const [loading, setLoading] = useState(false);
   const [loaded, setLoaded] = useState(false);
 
-  // ✅ Settings (ให้มาตรฐานเดียวกับ Preview)
+  // ✅ Settings
   const [columns, setColumns] = useState(5);
   const [fontScaleX, setFontScaleX] = useState(1.1);
   const [fontSizePx, setFontSizePx] = useState(30);
@@ -362,7 +322,7 @@ const PrintBarcodeBatchPage = () => {
   const lastStampKeyRef = useRef("");
 
   // ✅ Data state
-  const [rows, setRows] = useState([]); // flat list
+  const [rows, setRows] = useState([]);
 
   const grouped = useMemo(() => {
     const map = new Map();
@@ -404,13 +364,11 @@ const PrintBarcodeBatchPage = () => {
     return n;
   }, [ids, safeRowsByReceipt]);
 
-  // ✅ Performance mode: label เยอะมาก → ลดงาน DOM/measure เพื่อให้ “เร็วขึ้นอีกระดับ”
-  const PERF_THRESHOLD = 400; // ปรับได้ตามเครื่องจริง
+  const PERF_THRESHOLD = 400;
   const isHeavyBatch = totalLabels >= PERF_THRESHOLD;
   const INITIAL_RENDER = 250;
   const RENDER_STEP = 250;
 
-  // ✅ Flat list (pack all receipts into same page grid)
   const flatItems = useMemo(() => {
     const out = [];
     for (const receiptId of ids) {
@@ -420,7 +378,6 @@ const PrintBarcodeBatchPage = () => {
     return out;
   }, [ids, safeRowsByReceipt]);
 
-  // ✅ Progressive render (perceived speed เร็วขึ้นมากเวลา label เยอะ)
   const [renderLimit, setRenderLimit] = useState(0);
   const renderLimitRef = useRef(0);
   useEffect(() => {
@@ -439,7 +396,6 @@ const PrintBarcodeBatchPage = () => {
       return;
     }
 
-    // ชุดแรกให้ไว
     setRenderLimit(Math.min(total, INITIAL_RENDER));
 
     let cancelled = false;
@@ -462,7 +418,6 @@ const PrintBarcodeBatchPage = () => {
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loaded, idsKey, flatItems.length]);
 
   const visibleItems = useMemo(() => {
@@ -470,7 +425,6 @@ const PrintBarcodeBatchPage = () => {
     return flatItems.slice(0, limit);
   }, [flatItems, renderLimit]);
 
-  // ✅ One-line summary (ตามที่ขอ)
   const receiptsInlineLabel = useMemo(() => {
     return ids
       .map((receiptId) => {
@@ -480,7 +434,6 @@ const PrintBarcodeBatchPage = () => {
       .join("   ");
   }, [ids, safeRowsByReceipt]);
 
-  // ✅ Settings persist
   const SETTINGS_KEY = "pos_barcode_batch_settings_v1";
   useEffect(() => {
     try {
@@ -497,7 +450,6 @@ const PrintBarcodeBatchPage = () => {
     } catch {
       // ignore
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -517,13 +469,11 @@ const PrintBarcodeBatchPage = () => {
     }
   }, [columns, fontScaleX, fontSizePx, showBarcode, showQr, qrSizePx, autoConfirmAfterPrint]);
 
-  // ✅ Name helper (deterministic 2 lines) — reuse logic from Preview
   const getListDisplayNameByWidth = useCallback((item, widthPx) => {
     const raw = (item?.productName || "").toString().trim();
     if (!raw) return "ชื่อสินค้าไม่พบ";
 
     const w = Math.max(48, Number(widthPx) || 0);
-
     const NAME_FONT_PX = 11;
     const AVG_CHAR_PX = NAME_FONT_PX * 0.55;
     const safeW = Math.max(24, w - 6);
@@ -540,10 +490,7 @@ const PrintBarcodeBatchPage = () => {
   const getApproxBarcodeWidthPx = useCallback(
     (barcode) => {
       const text = (barcode || "").toString();
-
-      if (!showBarcode) {
-        return Math.max(48, Number(qrSizePx) || 48);
-      }
+      if (!showBarcode) return Math.max(48, Number(qrSizePx) || 48);
 
       const len = Math.max(0, text.length + 2);
       const effectiveScaleX = isPrinting ? 1 : Math.max(0.6, Number(fontScaleX) || 1);
@@ -554,7 +501,6 @@ const PrintBarcodeBatchPage = () => {
     [fontSizePx, fontScaleX, isPrinting, showBarcode, qrSizePx]
   );
 
-  // ✅ Measure actual widths (กัน print preview เพี้ยน)
   const barcodeElsRef = useRef(new Map());
   const [barcodeWidthMap, setBarcodeWidthMap] = useState({});
 
@@ -568,7 +514,6 @@ const PrintBarcodeBatchPage = () => {
   );
 
   const measureBarcodeWidths = useCallback(() => {
-    // ✅ Perf: batch ใหญ่ → ข้ามการวัด width ทีละตัว (หนักมาก)
     if (isHeavyBatch) return;
     const next = {};
     barcodeElsRef.current.forEach((el, key) => {
@@ -588,7 +533,6 @@ const PrintBarcodeBatchPage = () => {
     };
   }, [columns]);
 
-  // ✅ Load guard (กันโหลดซ้ำ/ทับกัน เมื่อเลือกหลายใบหรือกดซ้ำ)
   const inFlightLoadRef = useRef(false);
   const lastLoadKeyRef = useRef("");
   const generatedOnceRef = useRef(new Set());
@@ -596,7 +540,6 @@ const PrintBarcodeBatchPage = () => {
   const loadAll = useCallback(
     async (opts = {}) => {
       const { force = false } = opts;
-
       setUiError("");
 
       if (!ids.length) {
@@ -605,31 +548,24 @@ const PrintBarcodeBatchPage = () => {
       }
 
       if (typeof fetchPrintBatchAction !== "function" && typeof fetchBarcodesByReceiptIdAction !== "function") {
-        setUiError("ไม่พบ action สำหรับโหลดบาร์โค้ดใน barcodeStore (print-batch หรือ fetch/load/get ... by receiptId)");
+        setUiError("ไม่พบ action สำหรับโหลดบาร์โค้ดใน barcodeStore");
         return;
       }
 
       const loadKey = `ids:${ids.join(",")}`;
       if (!force && inFlightLoadRef.current) return;
-      if (!force && lastLoadKeyRef.current === loadKey && loaded) {
-        // same ids set already loaded → skip
-        return;
-      }
+      if (!force && lastLoadKeyRef.current === loadKey && loaded) return;
 
       inFlightLoadRef.current = true;
       lastLoadKeyRef.current = loadKey;
-
       setLoading(true);
-      try {
-        // ✅ FAST PATH: โหลดแบบ batch ครั้งเดียว (ชัดเจนว่าเร็วขึ้น)
-        // ถ้ามี action ใหม่ → ใช้ก่อน
-        let all = [];
 
+      try {
+        let all = [];
         if (typeof fetchPrintBatchAction === "function") {
           const res = await fetchPrintBatchAction(ids, { force });
           const arr = Array.isArray(res) ? res : Array.isArray(res?.data) ? res.data : Array.isArray(res?.barcodes) ? res.barcodes : [];
 
-          // normalize shape ให้เหมือนเดิม
           const dupMap = new Map();
           all = arr.map((it) => {
             const receiptId = Number(it.purchaseOrderReceiptId ?? it.receiptId ?? it.purchaseOrderReceipt?.id ?? 0);
@@ -647,18 +583,14 @@ const PrintBarcodeBatchPage = () => {
             };
           });
         } else {
-          // ✅ Fallback: โหลดแบบ parallel ต่อ receipt (ของเดิม)
           const tasks = ids.map(async (receiptId) => {
-            // ✅ generate-missing เฉพาะครั้งแรกต่อ receipt ใน session (ลดเวลารวม)
             if (typeof generateBarcodesAction === "function") {
               const shouldGenerate = force || !generatedOnceRef.current.has(receiptId);
               if (shouldGenerate) {
                 try {
                   await generateBarcodesAction(receiptId);
                   generatedOnceRef.current.add(receiptId);
-                } catch {
-                  // ignore
-                }
+                } catch { /* ignore */ }
               }
             }
 
@@ -683,42 +615,32 @@ const PrintBarcodeBatchPage = () => {
         setRows(all);
         setLoaded(true);
 
-        // วัดความกว้างหลัง DOM update
         requestAnimationFrame(() => {
           requestAnimationFrame(() => measureBarcodeWidths());
         });
 
-        if (all.length === 0) {
-          setUiError("ไม่พบข้อมูลบาร์โค้ดสำหรับรายการที่เลือก");
-        }
+        if (all.length === 0) setUiError("ไม่พบข้อมูลบาร์โค้ดสำหรับรายการที่เลือก");
       } catch (err) {
         console.error(err);
         setUiError(err?.message || err?.response?.data?.message || "โหลดบาร์โค้ดไม่สำเร็จ");
         setLoaded(false);
+        // 🟢 แก้ไขให้ถูกต้อง (เติม l เป็น finally)
       } finally {
         setLoading(false);
         inFlightLoadRef.current = false;
       }
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [ids, fetchPrintBatchAction, fetchBarcodesByReceiptIdAction, generateBarcodesAction, measureBarcodeWidths, loaded]
   );
 
-  // ✅ Auto-load when ids change (StrictMode-safe via inFlightLoadRef)
   useEffect(() => {
     if (!ids.length) return;
-
-    // ✅ รอจน store action พร้อมก่อน (กันค้างแบบไม่มี api call)
-    const hasAnyLoader =
-      typeof fetchPrintBatchAction === "function" || typeof fetchBarcodesByReceiptIdAction === "function";
+    const hasAnyLoader = typeof fetchPrintBatchAction === "function" || typeof fetchBarcodesByReceiptIdAction === "function";
     if (!hasAnyLoader) return;
 
-    // ✅ ids เปลี่ยน → force reload รอบเดียว
     loadAll({ force: true });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [idsKey, fetchPrintBatchAction, fetchBarcodesByReceiptIdAction]);
 
-  // ✅ Detect print mode (beforeprint/afterprint + matchMedia fallback)
   useEffect(() => {
     const onBeforePrint = () => {
       try {
@@ -731,9 +653,7 @@ const PrintBarcodeBatchPage = () => {
           setPrintStamp(`BATCH:${key} | PRINT:${ts} | ${nonce}`);
           lastStampKeyRef.current = key;
         }
-      } catch {
-        // ignore
-      }
+      } catch { /* ignore */ }
 
       setIsPrinting(true);
       requestAnimationFrame(() => {
@@ -743,7 +663,6 @@ const PrintBarcodeBatchPage = () => {
 
     const onAfterPrint = () => {
       setIsPrinting(false);
-
       requestAnimationFrame(() => {
         requestAnimationFrame(() => measureBarcodeWidths());
       });
@@ -758,8 +677,7 @@ const PrintBarcodeBatchPage = () => {
 
     const mql = window.matchMedia?.("print");
     const onMqlChange = (e) => {
-      const printing = !!e?.matches;
-      setIsPrinting(printing);
+      setIsPrinting(!!e?.matches);
       requestAnimationFrame(() => {
         requestAnimationFrame(() => measureBarcodeWidths());
       });
@@ -779,7 +697,6 @@ const PrintBarcodeBatchPage = () => {
         else if (typeof mql.removeListener === "function") mql.removeListener(onMqlChange);
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ids, printStamp, measureBarcodeWidths]);
 
   useEffect(() => {
@@ -791,33 +708,25 @@ const PrintBarcodeBatchPage = () => {
 
   useEffect(() => {
     if (!loaded) return;
-
     let cancelled = false;
 
     const run = async () => {
       try {
         if (document?.fonts?.ready) await document.fonts.ready;
-      } catch {
-        // ignore
-      }
+      } catch { /* ignore */ }
 
       if (cancelled) return;
-
       requestAnimationFrame(() => {
         requestAnimationFrame(() => measureBarcodeWidths());
       });
     };
 
     run();
-
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [loaded, rows.length, measureBarcodeWidths]);
 
   const handlePrint = () => {
     setUiError("");
-
     if (!loaded || totalLabels === 0) return;
 
     if (!showBarcode && !showQr) {
@@ -825,50 +734,34 @@ const PrintBarcodeBatchPage = () => {
       return;
     }
 
-    // ✅ Sanity check (stop print)
     const invalid = rows.filter((it) => {
       if (!includePrinted && it.printed) return false;
       return !isValidCode39(it?.barcode);
     });
 
     if (invalid.length > 0) {
-      const sample = invalid
-        .slice(0, 3)
-        .map((x) => (x?.barcode ?? "").toString())
-        .join(", ");
+      const sample = invalid.slice(0, 3).map((x) => (x?.barcode ?? "").toString()).join(", ");
       setUiError(`พบ Barcode ไม่ถูกต้องตามมาตรฐาน Code39 จำนวน ${invalid.length} รายการ (ตัวอย่าง: ${sample})`);
       return;
     }
 
     setHasTriggeredPrint(true);
 
-    // ✅ ถ้าเป็น progressive render → เร่ง render ให้ครบก่อน print (กันพิมพ์ออกไม่ครบ)
     if (renderLimit > 0 && renderLimit < flatItems.length) {
       setRenderLimit(flatItems.length);
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
-          try {
-            window.print();
-          } catch (err) {
-            console.error("❌ window.print failed:", err);
-            setUiError("ไม่สามารถเปิดหน้าพิมพ์ได้ กรุณาลองใหม่อีกครั้ง");
-          }
+          try { window.print(); } catch (err) { setUiError("ไม่สามารถเปิดหน้าพิมพ์ได้ กรุณาลองใหม่อีกครั้ง"); }
         });
       });
       return;
     }
 
-    try {
-      window.print();
-    } catch (err) {
-      console.error("❌ window.print failed:", err);
-      setUiError("ไม่สามารถเปิดหน้าพิมพ์ได้ กรุณาลองใหม่อีกครั้ง");
-    }
+    try { window.print(); } catch (err) { setUiError("ไม่สามารถเปิดหน้าพิมพ์ได้ กรุณาลองใหม่อีกครั้ง"); }
   };
 
   const handleConfirmPrinted = async (opts = {}) => {
     const { skipPrintGuard = false } = opts;
-
     setUiError("");
 
     if (!skipPrintGuard && !hasTriggeredPrintRef.current) {
@@ -877,7 +770,7 @@ const PrintBarcodeBatchPage = () => {
     }
 
     if (typeof markBarcodeAsPrintedAction !== "function" || typeof markReceiptAsPrintedAction !== "function") {
-      setUiError("ไม่พบ action สำหรับ mark printed ใน barcodeStore (mark/confirm ... printed)");
+      setUiError("ไม่พบ action สำหรับ mark printed ใน barcodeStore");
       return;
     }
 
@@ -886,11 +779,9 @@ const PrintBarcodeBatchPage = () => {
         await markBarcodeAsPrintedAction({ purchaseOrderReceiptId: receiptId });
         await markReceiptAsPrintedAction(receiptId);
       }
-
       setHasTriggeredPrint(false);
       await loadAll();
     } catch (err) {
-      console.error(err);
       setUiError(err?.message || err?.response?.data?.message || "ยืนยันพิมพ์แล้วไม่สำเร็จ");
     }
   };
@@ -902,7 +793,7 @@ const PrintBarcodeBatchPage = () => {
           <div className="text-red-600 font-semibold">ไม่พบ ids ใน query</div>
           <button
             className="mt-3 px-3 py-2 rounded bg-blue-600 text-white"
-            onClick={() => navigate("/pos/purchases/barcodes")}
+            onClick={() => navigate(`/${shopSlug}/pos/purchases/barcodes`)}
           >
             กลับหน้ารายการ
           </button>
@@ -914,7 +805,6 @@ const PrintBarcodeBatchPage = () => {
   return (
     <>
       <style>{`
-        /* ✅ Code39 Font (Vite-safe) */
         @font-face {
           font-family: 'C39HrP24DhTt';
           src: url('${c39FontUrl}') format('truetype');
@@ -922,13 +812,12 @@ const PrintBarcodeBatchPage = () => {
           font-style: normal;
           font-display: swap;
         }
-
         .barcode-product-name {
           position: relative;
           z-index: 2;
           background: #fff;
           padding: 0 1px;
-          font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, 'Helvetica Neue', Arial, 'Noto Sans', 'Liberation Sans', sans-serif;
+          font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
           font-size: 11px;
           line-height: 12px;
           letter-spacing: 0.4px;
@@ -941,14 +830,10 @@ const PrintBarcodeBatchPage = () => {
           -webkit-line-clamp: 2;
           -webkit-box-orient: vertical;
           width: 100%;
-          max-width: 100%;
-          min-width: 0;
           box-sizing: border-box;
-          white-space: normal;
           overflow-wrap: anywhere;
           word-break: break-word;
         }
-
         .barcode-block {
           display: inline-flex;
           flex-direction: column;
@@ -956,105 +841,62 @@ const PrintBarcodeBatchPage = () => {
           justify-content: center;
           max-width: 100%;
           overflow: hidden;
-          min-width: 0;
         }
-
-        .barcode-cell {
-          overflow: hidden;
-          min-width: 0;
-        }
-
-        .c39-barcode {
-          font-family: 'C39HrP24DhTt', monospace !important;
-          letter-spacing: 0;
-          white-space: nowrap;
-        }
-
+        .barcode-cell { overflow: hidden; }
+        .c39-barcode { font-family: 'C39HrP24DhTt', monospace !important; letter-spacing: 0; white-space: nowrap; }
         .barcode-bars-only {
           overflow: hidden;
-          /* Hide human-readable digits embedded in some Code39 fonts */
           height: calc(var(--barcode-font-size, 30px) * 1.05);
           display: flex;
           align-items: flex-start;
           justify-content: center;
           width: 100%;
         }
-
         .barcode-bars-wrap {
           position: relative;
           z-index: 1;
-          padding-top: 0px;
           display: flex;
           flex-direction: column;
           align-items: center;
           justify-content: flex-start;
           width: 100%;
         }
-
-        .receipt-block {
-          margin-top: 8px;
+        .receipt-block { margin-top: 8px; }
+        :root {
+          --label-w: 38mm;
+          --label-h: 22mm;
+          --label-gap-x: 2mm;
+          --label-gap-y: 1.5mm;
+          --print-cols: 5;
         }
-
-        /* ✅ Print packing baseline (A4) — lock label size in mm for consistent auto-fill */
-          :root {
-            --label-w: 38mm;
-            --label-h: 22mm;
-            --label-gap-x: 2mm;
-            --label-gap-y: 1.5mm;
-            --print-cols: 5;
+        @media print {
+          html, body { margin: 0 !important; padding: 0 !important; background: white; }
+          .print-hidden { display: none !important; }
+          .receipt-block { break-inside: auto; page-break-inside: auto; margin-top: 0 !important; }
+          .barcode-cell {
+            break-inside: avoid;
+            page-break-inside: avoid;
+            width: var(--label-w) !important;
+            min-width: var(--label-w) !important;
+            max-width: var(--label-w) !important;
+            min-height: var(--label-h) !important;
+            box-sizing: border-box;
           }
-
-          @media print {
-            html, body { margin: 0 !important; padding: 0 !important; background: white; }
-
-            .print-hidden { display: none !important; }
-
-            /* ✅ Multi-receipts in same page */
-            .receipt-block {
-              break-inside: auto;
-              page-break-inside: auto;
-              margin-top: 0 !important;
-            }
-
-            /* ✅ Never split a label cell across pages + lock label size */
-            .barcode-cell {
-              break-inside: avoid;
-              page-break-inside: avoid;
-              width: var(--label-w) !important;
-              min-width: var(--label-w) !important;
-              max-width: var(--label-w) !important;
-              min-height: var(--label-h) !important;
-              box-sizing: border-box;
-            }
-
-            /* ✅ Auto-pack columns based on real page width */
-            .print-area {
-              display: grid !important;
-              grid-template-columns: repeat(var(--print-cols), var(--label-w)) !important;
-              column-gap: var(--label-gap-x) !important;
-              row-gap: var(--label-gap-y) !important;
-              justify-content: flex-start !important;
-              justify-items: start !important;
-              align-content: start !important;
-              align-items: start !important;
-              width: 100% !important;
-              margin-top: 0 !important;
-            }
-
-            .barcode-product-name {
-              font-size: 10px !important;
-              line-height: 11px !important;
-              height: 22px !important;
-              max-height: 22px !important;
-            }
-
-            /* ✅ tiny safety margin (กันโดน printer non-printable area) */
-            @page { margin: 2mm; size: A4; }
+          .print-area {
+            display: grid !important;
+            grid-template-columns: repeat(var(--print-cols), var(--label-w)) !important;
+            column-gap: var(--label-gap-x) !important;
+            row-gap: var(--label-gap-y) !important;
+            justify-content: flex-start !important;
+            width: 100% !important;
+            margin-top: 0 !important;
           }
+          .barcode-product-name { font-size: 10px !important; line-height: 11px !important; height: 22px !important; max-height: 22px !important; }
+          @page { margin: 2mm; size: A4; }
+        }
       `}</style>
 
       <div className="p-6 space-y-6 print-root" style={{ "--print-cols": Math.max(1, Number(columns) || 1) }}>
-        {/* ✅ Print-only audit stamp */}
         <div className="print-stamp hidden print:block">{printStamp || `BATCH:ids:${ids.join(",")} | PRINT:-`}</div>
         <div className="print-stamp bottom hidden print:block">{printStamp || `BATCH:ids:${ids.join(",")} | PRINT:-`}</div>
 
@@ -1064,21 +906,12 @@ const PrintBarcodeBatchPage = () => {
 
           <div className="mt-3 rounded border bg-white px-4 py-3 text-sm">
             <div className="flex flex-wrap gap-x-6 gap-y-1 items-center">
-              <div>
-                <span className="text-gray-600">IDs:</span> <span className="font-semibold">{ids.join(", ")}</span>
-              </div>
-              <div>
-                <span className="text-gray-600">Labels:</span> <span className="font-semibold">{totalLabels}</span>
-              </div>
-              <div className="hidden md:block">
-                <span className="text-gray-600">Stamp:</span> <span className="font-semibold">{printStamp || "-"}</span>
-              </div>
+              <div><span className="text-gray-600">IDs:</span> <span className="font-semibold">{ids.join(", ")}</span></div>
+              <div><span className="text-gray-600">Labels:</span> <span className="font-semibold">{totalLabels}</span></div>
+              <div className="hidden md:block"><span className="text-gray-600">Stamp:</span> <span className="font-semibold">{printStamp || "-"}</span></div>
             </div>
-
             {receiptSummary.length ? (
-              <div className="mt-2 text-xs text-gray-600 whitespace-nowrap overflow-x-auto">
-                {receiptsInlineLabel}
-              </div>
+              <div className="mt-2 text-xs text-gray-600 whitespace-nowrap overflow-x-auto">{receiptsInlineLabel}</div>
             ) : null}
           </div>
 
@@ -1086,10 +919,7 @@ const PrintBarcodeBatchPage = () => {
             <div className="mt-3 rounded-md border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">
               <div className="font-semibold">เกิดข้อผิดพลาด</div>
               <div className="mt-1 break-words">{uiError}</div>
-              <button type="button" className="mt-2 text-xs text-gray-700 underline" onClick={() => setUiError("")}
-              >
-                ปิดข้อความ
-              </button>
+              <button type="button" className="mt-2 text-xs text-gray-700 underline" onClick={() => setUiError("")}>ปิดข้อความ</button>
             </div>
           ) : null}
 
@@ -1097,119 +927,52 @@ const PrintBarcodeBatchPage = () => {
           <div className="mt-3 flex flex-wrap gap-3 items-center">
             <label className="flex items-center gap-2">
               คอลัมน์:
-              <input
-                className="w-16 border rounded px-2 py-1"
-                type="number"
-                value={columns}
-                onChange={(e) => setColumns(Number(e.target.value || 1))}
-                min={1}
-                max={12}
-                step={1}
-              />
+              <input className="w-16 border rounded px-2 py-1" type="number" value={columns} onChange={(e) => setColumns(Number(e.target.value || 1))} min={1} max={12} />
             </label>
-
             <label className="flex items-center gap-2">
               ความกว้างฟอนต์:
-              <input
-                className="w-20 border rounded px-2 py-1"
-                type="number"
-                step="0.1"
-                value={fontScaleX}
-                onChange={(e) => setFontScaleX(Number(e.target.value || 1.1))}
-                min={0.6}
-                max={1.6}
-              />
+              <input className="w-20 border rounded px-2 py-1" type="number" step="0.1" value={fontScaleX} onChange={(e) => setFontScaleX(Number(e.target.value || 1.1))} min={0.6} max={1.6} />
             </label>
-
             <label className="flex items-center gap-2">
               ขนาดฟอนต์:
-              <input
-                className="w-20 border rounded px-2 py-1"
-                type="number"
-                value={fontSizePx}
-                onChange={(e) => setFontSizePx(Number(e.target.value || 30))}
-                min={14}
-                max={60}
-              />
+              <input className="w-20 border rounded px-2 py-1" type="number" value={fontSizePx} onChange={(e) => setFontSizePx(Number(e.target.value || 30))} min={14} max={60} />
             </label>
-
             <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={showBarcode}
-                onChange={(e) => {
-                  const next = e.target.checked;
-                  setShowBarcode(next);
-                  if (!next && !showQr) setShowQr(true);
-                }}
-              />
+              <input type="checkbox" checked={showBarcode} onChange={(e) => { const next = e.target.checked; setShowBarcode(next); if (!next && !showQr) setShowQr(true); }} />
               พิมพ์บาร์โค้ด
             </label>
-
             <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={showQr}
-                onChange={(e) => {
-                  const next = e.target.checked;
-                  setShowQr(next);
-                  if (!next && !showBarcode) setShowBarcode(true);
-                }}
-              />
+              <input type="checkbox" checked={showQr} onChange={(e) => { const next = e.target.checked; setShowQr(next); if (!next && !showBarcode) setShowBarcode(true); }} />
               พิมพ์ QR
             </label>
-
             <label className="flex items-center gap-2">
               ขนาด QR:
-              <input
-                className="w-20 border rounded px-2 py-1"
-                type="number"
-                value={qrSizePx}
-                onChange={(e) => setQrSizePx(clampQrSize(e.target.value))}
-                onBlur={(e) => setQrSizePx(clampQrSize(e.target.value))}
-                min={80}
-                max={200}
-              />
+              <input className="w-20 border rounded px-2 py-1" type="number" value={qrSizePx} onChange={(e) => setQrSizePx(clampQrSize(e.target.value))} min={80} max={200} />
             </label>
-
             <label className="flex items-center gap-2">
               <input type="checkbox" checked={includePrinted} onChange={(e) => setIncludePrinted(e.target.checked)} />
               รวมรายการที่พิมพ์แล้ว
             </label>
-
             <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={autoConfirmAfterPrint}
-                onChange={(e) => setAutoConfirmAfterPrint(e.target.checked)}
-              />
+              <input type="checkbox" checked={autoConfirmAfterPrint} onChange={(e) => setAutoConfirmAfterPrint(e.target.checked)} />
               ยืนยันอัตโนมัติหลังพิมพ์
             </label>
 
             <button className="px-3 py-2 rounded bg-blue-600 text-white" disabled={loading} onClick={() => loadAll({ force: true })}>
               {loading ? "กำลังโหลด..." : loaded ? "โหลดอีกครั้ง" : "โหลด"}
             </button>
-
-            <button
-              className="px-3 py-2 rounded bg-emerald-600 text-white"
-              disabled={loading || !loaded || totalLabels === 0}
-              onClick={handlePrint}
-            >
+            <button className="px-3 py-2 rounded bg-emerald-600 text-white" disabled={loading || !loaded || totalLabels === 0} onClick={handlePrint}>
               พิมพ์บาร์โค้ด
             </button>
-
-            <button
-              className="px-3 py-2 rounded bg-emerald-700 text-white"
-              disabled={loading || !loaded || totalLabels === 0}
-              onClick={() => handleConfirmPrinted()}
-            >
+            <button className="px-3 py-2 rounded bg-emerald-700 text-white" disabled={loading || !loaded || totalLabels === 0} onClick={() => handleConfirmPrinted()}>
               ยืนยันพิมพ์แล้ว
             </button>
 
+            {/* 🟢 ครอบพาสส่งสัญญาณชื่อร้านค้าพาร์ตเนอร์กลับหน้ารายการหลักอย่างเสถียร ไม่ตกขบวนดีดเด้ง */}
             <button
               className="px-3 py-2 rounded bg-slate-600 text-white"
               type="button"
-              onClick={() => navigate("/pos/purchases/barcodes")}
+              onClick={() => navigate(`/${shopSlug}/pos/purchases/barcodes`)}
             >
               กลับหน้ารายการ
             </button>
@@ -1219,91 +982,70 @@ const PrintBarcodeBatchPage = () => {
         {!loaded ? (
           <div className="print-hidden text-gray-500">
             {typeof fetchPrintBatchAction !== "function" && typeof fetchBarcodesByReceiptIdAction !== "function"
-              ? "กำลังเตรียมระบบโหลดบาร์โค้ด..."
-              : "กำลังเตรียมข้อมูล..."}
+              ? "กำลังเตรียมระบบโหลดบาร์โค้ด..." : "กำลังเตรียมข้อมูล..."}
           </div>
-        ) :  rows.length === 0 ? (
-        <div className="print-hidden text-rose-600">ไม่พบข้อมูลบาร์โค้ดสำหรับรายการที่เลือก</div>
+        ) : rows.length === 0 ? (
+          <div className="print-hidden text-rose-600">ไม่พบข้อมูลบาร์โค้ดสำหรับรายการที่เลือก</div>
         ) : (
-        <div className="grid gap-y-[1mm] gap-x-[2mm] mt-1 print-area" style={gridStyle}>
-          {visibleItems.map((item) => {
-            const receiptId = item.receiptId;
-            const rowKey = `${receiptId}-${item.id || item.barcode}-${item._dupIdx ?? 0}`;
+          <div className="grid gap-y-[1mm] gap-x-[2mm] mt-1 print-area" style={gridStyle}>
+            {visibleItems.map((item) => {
+              const receiptId = item.receiptId;
+              const rowKey = `${receiptId}-${item.id || item.barcode}-${item._dupIdx ?? 0}`;
+              const validC39 = isValidCode39(item?.barcode);
+              const cellOpacity = validC39 ? 1 : 0.65;
 
-            const validC39 = isValidCode39(item?.barcode);
-            const cellOpacity = validC39 ? 1 : 0.65;
+              const measuredW = Number(barcodeWidthMap[rowKey] || 0);
+              const approxW = getApproxBarcodeWidthPx(item.barcode);
+              const finalW = Math.max(48, measuredW > 0 ? measuredW : approxW);
+              const displayName = getListDisplayNameByWidth(item, finalW);
+              const code = (item?.barcode || "").toString().trim().toUpperCase();
 
-            const measuredW = Number(barcodeWidthMap[rowKey] || 0);
-            const approxW = getApproxBarcodeWidthPx(item.barcode);
-            const finalW = Math.max(48, measuredW > 0 ? measuredW : approxW);
+              return (
+                <div
+                  key={rowKey}
+                  className={`barcode-cell border p-0.5 rounded text-left flex flex-col items-start justify-start relative ${validC39 ? "" : "border-rose-300 bg-rose-50"}`}
+                  style={{ opacity: cellOpacity }}
+                >
+                  <div className="absolute left-1 top-1 text-[11px] text-gray-500">#{receiptId}</div>
+                  {item.printed ? (
+                    <div className="absolute right-1 top-1 rounded bg-emerald-600 px-1.5 py-0.5 text-[10px] font-semibold text-white">PRINTED</div>
+                  ) : null}
+                  {!validC39 ? (
+                    <div className="absolute right-1 bottom-1 rounded bg-rose-600 px-1.5 py-0.5 text-[10px] font-semibold text-white">INVALID</div>
+                  ) : null}
 
-            const displayName = getListDisplayNameByWidth(item, finalW);
-            const code = (item?.barcode || "").toString().trim().toUpperCase();
-
-            return (
-              <div
-                key={rowKey}
-                className={`barcode-cell border p-0.5 rounded text-left flex flex-col items-start justify-start relative ${validC39 ? "" : "border-rose-300 bg-rose-50"
-                  }`}
-                style={{ opacity: cellOpacity }}
-              >
-                <div className="absolute left-1 top-1 text-[11px] text-gray-500">#{receiptId}</div>
-
-                {item.printed ? (
-                  <div className="absolute right-1 top-1 rounded bg-emerald-600 px-1.5 py-0.5 text-[10px] font-semibold text-white">
-                    PRINTED
-                  </div>
-                ) : null}
-
-                {!validC39 ? (
-                  <div className="absolute right-1 bottom-1 rounded bg-rose-600 px-1.5 py-0.5 text-[10px] font-semibold text-white">
-                    INVALID
-                  </div>
-                ) : null}
-
-                <div className="barcode-block" style={{ width: "100%", maxWidth: "100%" }}>
-                  <div className="barcode-product-name" title={item.productName || ""}>
-                    {displayName}
-                  </div>
-
-                  <div className="barcode-bars-wrap">
-                    {showBarcode ? (
-                      <div className="barcode-bars-only" style={{ "--barcode-font-size": `${fontSizePx}px` }}>
-                        <div
-                          ref={setBarcodeElRef(rowKey)}
-                          className="c39-barcode"
-                          style={{
-                            fontSize: `${fontSizePx}px`,
-                            lineHeight: 1,
-                            transform: isPrinting ? "none" : `scaleX(${fontScaleX})`,
-                            transformOrigin: "center top",
-                            display: "inline-block",
-                            marginTop: "0px",
-                          }}
-                        >
-                          *{code}*
+                  <div className="barcode-block" style={{ width: "100%", maxWidth: "100%" }}>
+                    <div className="barcode-product-name" title={item.productName || ""}>{displayName}</div>
+                    <div className="barcode-bars-wrap">
+                      {showBarcode ? (
+                        <div className="barcode-bars-only" style={{ "--barcode-font-size": `${fontSizePx}px` }}>
+                          <div
+                            ref={setBarcodeElRef(rowKey)}
+                            className="c39-barcode"
+                            style={{
+                              fontSize: `${fontSizePx}px`,
+                              lineHeight: 1,
+                              transform: isPrinting ? "none" : `scaleX(${fontScaleX})`,
+                              transformOrigin: "center top",
+                              display: "inline-block",
+                            }}
+                          >
+                            *{code}*
+                          </div>
                         </div>
-                      </div>
-                    ) : null}
+                      ) : null}
 
-                    {showQr ? (
-                      <div
-                        style={{
-                          marginTop: showBarcode ? "4px" : "0px",
-                          display: "flex",
-                          justifyContent: "center",
-                          width: "100%",
-                        }}
-                      >
-                        <QrSvg value={code} size={clampQrSize(qrSizePx)} />
-                      </div>
-                    ) : null}
+                      {showQr ? (
+                        <div style={{ marginTop: showBarcode ? "4px" : "0px", display: "flex", justifyContent: "center", width: "100%" }}>
+                          <QrSvg value={code} size={clampQrSize(qrSizePx)} />
+                        </div>
+                      ) : null}
+                    </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
         )}
       </div>
     </>
@@ -1311,9 +1053,3 @@ const PrintBarcodeBatchPage = () => {
 };
 
 export default PrintBarcodeBatchPage;
-
-
-
-
-
-

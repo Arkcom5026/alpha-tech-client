@@ -1,17 +1,19 @@
-// ✅ src/features/bank/pages/ListBankPage.jsx (ปรับรูปแบบให้เหมือนหน้า ListProductTemplatePage และคุมสิทธิ์ SuperAdmin สำหรับเพิ่ม/ปิดใช้งานธนาคาร)
+// src/features/bank/pages/ListBankPage.jsx
+// 🏛️ Premium Next-Gen POS Bank Settings Hub: (Dynamic Path Unified Slate Layout)
+
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/features/auth/store/authStore';
 import useBankStore from '@/features/bank/store/bankStore';
 
 const Badge = ({ children, className = '' }) => (
-  <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${className}`}>{children}</span>
+  <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ring-1 ring-inset ${className}`}>{children}</span>
 );
 
 const ActionButton = ({ children, className = '', type = 'button', ...rest }) => (
   <button
     type={type}
-    className={`px-3 py-1.5 rounded-md text-sm font-medium transition focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 ${className}`}
+    className={`px-3 py-1.5 rounded-xl text-xs font-black transition focus:outline-none active:scale-95 disabled:opacity-40 ${className}`}
     {...rest}
   >
     {children}
@@ -21,10 +23,12 @@ const ActionButton = ({ children, className = '', type = 'button', ...rest }) =>
 const ListBankPage = () => {
   const navigate = useNavigate();
   const { user, isSuperAdmin: isSuperAdminFromStore } = useAuthStore();
+  
   const roleName = (
     user?.roleName || user?.role?.name || user?.role || user?.profile?.roleName || user?.profile?.role || ''
   ).toString();
   const roleId = user?.roleId ?? user?.role?.id ?? user?.profile?.roleId ?? user?.profile?.role?.id;
+  
   const isSuperAdmin = Boolean(
     isSuperAdminFromStore === true ||
     roleName.toUpperCase() === 'SUPERADMIN' ||
@@ -41,7 +45,10 @@ const ListBankPage = () => {
     fetchBanksAction({ search, active: active === 'all' ? undefined : active === 'true' });
   }, [search, active, fetchBanksAction]);
 
-  const onEdit = (row) => navigate(`edit/${row.id}`);
+  // 🟢 [DYNAMIC PATH MATCHING]: ผูกพาธสัมพัทธ์โดยแกะพิกัดจากตำแหน่งเบราว์เซอร์ปัจจุบันโดยตรง ป้องกันหน้าจอว่างเปล่าเด้งหลุด
+  const currentPath = window.location.pathname;
+
+  const onEdit = (row) => navigate(`${currentPath}/${row.id}/edit`);
 
   const handleToggle = (row) => {
     const nextActive = !row?.active;
@@ -58,100 +65,105 @@ const ListBankPage = () => {
   const rows = Array.isArray(banks) ? banks : [];
 
   return (
-    <div className="p-6 w-full flex flex-col items-center">
-      <div className="w-full max-w-5xl">
-        <div className="flex items-center justify-between mb-4">
-          <h1 className="text-xl font-semibold text-zinc-800 dark:text-white">รายการธนาคาร</h1>
+    <div className="p-3 md:p-5 w-full flex flex-col items-center selection:bg-slate-900 selection:text-white font-sans text-xs md:text-sm antialiased font-semibold text-slate-800 animate-fadeIn">
+      <div className="w-full max-w-5xl bg-white border border-slate-200 rounded-2xl shadow-sm p-4 overflow-hidden">
+        
+        <div className="flex items-center justify-between mb-4 border-b border-slate-100 pb-3 select-none">
+          <div>
+            <h1 className="text-sm md:text-base font-black text-slate-900 uppercase tracking-wide">รายการสารบบสมุดบัญชีธนาคาร</h1>
+            <p className="text-[10px] text-slate-400 font-bold mt-0.5">กำหนดข้อมูลธนาคารรับ/จ่ายเงินของหน่วยงาน ควบคุมสิทธิ์สากลด้วยระบบเซสชัน SuperAdmin เท่านั้น</p>
+          </div>
           <ActionButton
-            className="bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500 disabled:opacity-50"
-            onClick={() => isSuperAdmin && navigate('create')}
+            className="bg-slate-900 text-white hover:bg-slate-800 disabled:cursor-not-allowed border border-slate-900"
+            onClick={() => isSuperAdmin && navigate(`${currentPath}/create`)}
             disabled={!isSuperAdmin}
-            title={!isSuperAdmin ? 'ต้องเป็น SuperAdmin' : undefined}
+            title={!isSuperAdmin ? 'สิทธิ์ไม่ถึงระดับ SuperAdmin' : undefined}
           >
-            เพิ่มธนาคาร
+            เพิ่มธนาคารใหม่
           </ActionButton>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 mb-4">
+        <div className="flex flex-wrap items-center gap-2 mb-4 select-none">
           <input
-            className="border border-zinc-300 dark:border-zinc-700 rounded-md px-3 py-2 w-full max-w-md bg-white dark:bg-zinc-900"
-            placeholder="ค้นหาชื่อธนาคาร..."
+            className="border border-slate-200 rounded-xl px-3 h-8 w-full max-w-xs bg-slate-50 focus:bg-white focus:border-slate-900 outline-none text-xs font-bold shadow-inner transition-all"
+            placeholder="พิมพ์ค้นชื่อสถาบันธนาคาร..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
           <select
-            className="border border-zinc-300 dark:border-zinc-700 rounded-md px-3 py-2 bg-white dark:bg-zinc-900"
+            className="border border-slate-200 rounded-xl px-3 h-8 bg-slate-50 text-xs font-bold outline-none cursor-pointer"
             value={active}
             onChange={(e) => setActive(e.target.value)}
           >
-            <option value="all">ทั้งหมด</option>
-            <option value="true">ใช้งานอยู่</option>
-            <option value="false">ปิดใช้งาน</option>
+            <option value="all">แสดงสถาบันทั้งหมด</option>
+            <option value="true">เฉพาะสถานะใช้งานอยู่</option>
+            <option value="false">เฉพาะสถานะปิดใช้งาน</option>
           </select>
         </div>
 
-        <div className="border rounded-xl p-3 shadow-sm bg-white dark:bg-zinc-900">
-          <table className="min-w-full text-sm">
-            <thead className="text-left text-zinc-600 bg-zinc-50 dark:bg-zinc-800">
-              <tr className="border-b border-zinc-200 dark:border-zinc-800">
-                <th className="px-4 py-2 w-[60px] text-center">#</th>
-                <th className="px-4 py-2">ชื่อธนาคาร</th>
-                <th className="px-4 py-2 w-[15%] text-center">สถานะ</th>
-                <th className="px-4 py-2 text-right w-[20%]">การจัดการ</th>
+        <div className="overflow-x-auto rounded-xl border border-slate-100">
+          <table className="w-full text-left border-collapse text-xs">
+            <thead className="bg-slate-50 text-[10px] md:text-[11px] text-slate-400 font-black uppercase tracking-wider select-none border-b border-slate-100">
+              <tr>
+                <th className="p-2.5 w-[60px] text-center">#</th>
+                <th className="p-2.5">รายชื่อสถาบันธนาคารรับ-จ่าย</th>
+                <th className="p-2.5 w-[120px] text-center">สถานะใช้งาน</th>
+                <th className="p-2.5 text-center w-[180px]">การจัดการควบคุม</th>
               </tr>
             </thead>
-            <tbody>
-              {rows.length === 0 && (
+            <tbody className="divide-y divide-slate-100 font-semibold text-slate-600">
+              {rows.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-4 py-8 text-center text-zinc-500">ไม่พบข้อมูล</td>
+                  <td colSpan={4} className="p-8 text-center text-slate-400 italic font-bold select-none">❌ ไม่พบประวัติรายชื่อข้อมูลบัญชีธนาคารในขอบเขตนี้</td>
                 </tr>
-              )}
-              {rows.map((row, idx) => (
-                <tr key={row.id} className="border-b border-zinc-100 dark:border-zinc-800 hover:bg-zinc-50/60 dark:hover:bg-zinc-800/50">
-                  <td className="px-4 py-3 text-center">{idx + 1}</td>
-                  <td className="px-4 py-3"><span className="font-medium text-zinc-800 dark:text-zinc-100">{row.name}</span></td>
-                  <td className="px-4 py-3 text-center">
-                    {row.active ? (
-                      <Badge className="bg-emerald-50 text-emerald-700 ring-emerald-600/20 dark:bg-emerald-900/30 dark:text-emerald-300 dark:ring-emerald-400/30">ใช้งาน</Badge>
-                    ) : (
-                      <Badge className="bg-zinc-200 text-zinc-800 ring-zinc-400/40 dark:bg-zinc-700 dark:text-zinc-200 dark:ring-zinc-500/40">ปิดใช้งาน</Badge>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-right whitespace-nowrap">
-                    <div className="inline-flex items-center gap-2 justify-end min-w-[160px]">
-                      <ActionButton
-                        className="border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-                        onClick={() => onEdit(row)}
-                      >
-                        แก้ไข
-                      </ActionButton>
-                      {isSuperAdmin && (
-                        <ActionButton
-                          className={`text-white ${row.active ? 'bg-rose-600 hover:bg-rose-700 focus:ring-rose-500' : 'bg-emerald-600 hover:bg-emerald-700 focus:ring-emerald-500'}`}
-                          onClick={() => handleToggle(row)}
-                        >
-                          {row.active ? 'ปิดใช้งาน' : 'กู้คืน'}
-                        </ActionButton>
+              ) : (
+                rows.map((row, idx) => (
+                  <tr key={row.id} className="hover:bg-slate-50/50 transition-colors">
+                    <td className="p-2.5 text-center font-mono font-bold text-slate-400">{idx + 1}</td>
+                    <td className="p-2.5"><span className="font-black text-slate-900 text-xs sm:text-sm select-all">{row.name}</span></td>
+                    <td className="p-2.5 text-center select-none">
+                      {row.active ? (
+                        <Badge className="bg-emerald-50 text-emerald-700 border border-emerald-200">ใช้งานอยู่</Badge>
+                      ) : (
+                        <Badge className="bg-slate-100 text-slate-400 border border-slate-200">ปิดใช้งาน</Badge>
                       )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                    <td className="p-2.5 text-center select-none">
+                      <div className="flex items-center justify-center gap-1.5">
+                        <ActionButton
+                          className="border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                          onClick={() => onEdit(row)}
+                        >
+                          แก้ไขข้อมูล
+                        </ActionButton>
+                        {isSuperAdmin && (
+                          <ActionButton
+                            className={`text-white ${row.active ? 'bg-rose-600 hover:bg-rose-700' : 'bg-emerald-600 hover:bg-emerald-700'}`}
+                            onClick={() => handleToggle(row)}
+                          >
+                            {row.active ? 'สั่งระงับ' : 'เปิดใช้งาน'}
+                          </ActionButton>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
 
         {confirm && (
-          <div className="px-4 py-3 flex items-center justify-between bg-amber-50/90 dark:bg-amber-900/30 border-t border-amber-200 dark:border-amber-800">
-            <div className="text-sm text-amber-900 dark:text-amber-200">
-              ยืนยันการ{confirm.nextActive ? 'กู้คืน' : 'ปิดใช้งาน'} ธนาคาร “{confirm.row?.name}” หรือไม่?
+          <div className="mt-3 p-3 flex flex-col sm:flex-row sm:items-center justify-between bg-amber-50 border border-amber-100 rounded-xl animate-slideUp gap-2 select-none">
+            <div className="text-xs font-black text-amber-900">
+              ⚠️ ยืนยันการเปลี่ยนแปลงระบบเป็น [{confirm.nextActive ? 'กู้คืนเปิดใช้งาน' : 'ระงับปิดใช้งาน'}] ของธนาคาร “{confirm.row?.name}” หรือไม่?
             </div>
-            <div className="flex gap-2">
-              <ActionButton className="border border-amber-300 text-amber-900 hover:bg-amber-100" onClick={() => setConfirm(null)}>
+            <div className="flex gap-1.5 shrink-0 justify-end">
+              <ActionButton className="border border-amber-200 bg-white text-amber-800 hover:bg-amber-100" onClick={() => setConfirm(null)}>
                 ยกเลิก
               </ActionButton>
-              <ActionButton className="bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500" onClick={proceedToggle} disabled={!isSuperAdmin}>
-                ยืนยัน
+              <ActionButton className="bg-slate-900 text-white hover:bg-slate-800" onClick={proceedToggle} disabled={!isSuperAdmin}>
+                ยืนยันคำสั่ง
               </ActionButton>
             </div>
           </div>

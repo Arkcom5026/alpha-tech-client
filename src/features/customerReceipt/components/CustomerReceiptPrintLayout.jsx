@@ -1,13 +1,10 @@
-
-
-
 // src/features/customerReceipt/components/CustomerReceiptPrintLayout.jsx
+// 🏛️ Tenant-Safe Premium Printer Layout Container: (A4 Standard Crystal Clean Alignment)
 
 import React from 'react';
 
 const formatDate = (value) => {
   if (!value) return '-';
-
   try {
     return new Date(value).toLocaleDateString('th-TH', {
       year: 'numeric',
@@ -85,8 +82,6 @@ const bahtText = (amount) => {
   return bahtTextPart + satangTextPart;
 };
 
-
-
 const buildCustomerName = (customer) => {
   if (!customer) return '-';
   return customer.companyName || customer.name || '-';
@@ -94,7 +89,6 @@ const buildCustomerName = (customer) => {
 
 const buildCustomerAddress = (customer) => {
   if (!customer) return '-';
-
   const parts = [
     customer.customerAddress,
     customer.address,
@@ -104,66 +98,21 @@ const buildCustomerAddress = (customer) => {
     customer.provinceName,
     customer.postcode,
   ].filter(Boolean);
-
   return parts.length ? parts.join(' ') : '-';
 };
 
 const buildReceiptLineItems = (allocations = []) => {
   const lines = [];
-
   allocations.forEach((allocation, allocationIndex) => {
-    const saleItems = Array.isArray(allocation?.sale?.saleItems)
-      ? allocation.sale.saleItems
-      : [];
-
+    const saleItems = Array.isArray(allocation?.sale?.saleItems) ? allocation.sale.saleItems : [];
     if (saleItems.length > 0) {
       saleItems.forEach((saleItem, saleItemIndex) => {
-        const quantity = Number(
-          saleItem?.quantity ?? saleItem?.qty ?? saleItem?.count ?? saleItem?.itemQty ?? 1
-        );
-
-        const unitPrice = Number(
-          saleItem?.unitPriceIncVat ??
-            saleItem?.unitPrice ??
-            saleItem?.price ??
-            saleItem?.sellingPrice ??
-            saleItem?.salePrice ??
-            0
-        );
-
-        const amount = Number(
-          saleItem?.amount ??
-            saleItem?.totalAmount ??
-            saleItem?.total ??
-            saleItem?.lineTotal ??
-            saleItem?.subtotal ??
-            unitPrice * quantity
-        );
-
-        const productName =
-          saleItem?.productName ||
-          saleItem?.name ||
-          saleItem?.description ||
-          saleItem?.title ||
-          saleItem?.itemName ||
-          saleItem?.stockItem?.product?.name ||
-          saleItem?.product?.name ||
-          '-';
-
-        const productModel =
-          saleItem?.productModel ||
-          saleItem?.model ||
-          saleItem?.stockItem?.product?.productModel ||
-          saleItem?.product?.productModel ||
-          '';
-
-        const unit =
-          saleItem?.unit ||
-          saleItem?.unitName ||
-          saleItem?.stockItem?.product?.unit?.name ||
-          saleItem?.product?.unit?.name ||
-          saleItem?.unitObj?.name ||
-          '-';
+        const quantity = Number(saleItem?.quantity ?? saleItem?.qty ?? saleItem?.count ?? saleItem?.itemQty ?? 1);
+        const unitPrice = Number(saleItem?.unitPriceIncVat ?? saleItem?.unitPrice ?? saleItem?.price ?? saleItem?.sellingPrice ?? saleItem?.salePrice ?? 0);
+        const amount = Number(saleItem?.amount ?? saleItem?.totalAmount ?? saleItem?.total ?? saleItem?.lineTotal ?? saleItem?.subtotal ?? unitPrice * quantity);
+        const productName = saleItem?.productName || saleItem?.name || saleItem?.description || saleItem?.title || saleItem?.itemName || saleItem?.stockItem?.product?.name || saleItem?.product?.name || '-';
+        const productModel = saleItem?.productModel || saleItem?.model || saleItem?.stockItem?.product?.productModel || saleItem?.product?.productModel || '';
+        const unit = saleItem?.unit || saleItem?.unitName || saleItem?.stockItem?.product?.unit?.name || saleItem?.product?.unit?.name || saleItem?.unitObj?.name || '-';
 
         lines.push({
           key: `${allocation?.id || allocationIndex}-${saleItem?.id || saleItemIndex}`,
@@ -180,15 +129,14 @@ const buildReceiptLineItems = (allocations = []) => {
 
     lines.push({
       key: `${allocation?.id || allocationIndex}-fallback`,
-      productName: `ชำระตามบิล ${allocation?.sale?.code || allocation?.saleCode || '-'}`,
+      productName: `ชำระตามบิลใบเสร็จเลขที่ ${allocation?.sale?.code || allocation?.saleCode || '-'}`,
       productModel: '',
       quantity: 1,
-      unit: '-',
+      unit: 'งวด',
       unitPrice: Number(allocation?.amount || 0),
       amount: Number(allocation?.amount || 0),
     });
   });
-
   return lines;
 };
 
@@ -201,169 +149,117 @@ const CustomerReceiptPrintLayout = ({ receipt }) => {
 
   const total = round2(Number(receipt?.totalAmount || 0));
   const vatRate = Number.isFinite(Number(firstSale?.vatRate)) ? Number(firstSale.vatRate) : 7;
-  const vatAmount = Number.isFinite(Number(firstSale?.vat))
-    ? round2(Number(firstSale.vat))
-    : round2((total * vatRate) / (100 + vatRate));
+  const vatAmount = Number.isFinite(Number(firstSale?.vat)) ? round2(Number(firstSale.vat)) : round2((total * vatRate) / (100 + vatRate));
   const beforeVat = round2(total - vatAmount);
 
-  const maxRowCount = 20;
+  const maxRowCount = 18;
   const emptyRowCount = Math.max(maxRowCount - lineItems.length, 0);
 
   return (
-    <>
-      <style>{`
-        @media print {
-          html, body {
-            margin: 0;
-            padding: 0;
-          }
-          body {
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
-          }
-          @page {
-            size: A4;
-            margin: 10mm;
-          }
-          .print-a4 {
-            width: 210mm !important;
-            min-height: 297mm !important;
-            height: auto !important;
-          }
-          .no-break {
-            page-break-inside: avoid;
-            break-inside: avoid;
-          }
-          table {
-            page-break-inside: auto;
-          }
-          tr, td, th {
-            page-break-inside: avoid;
-            break-inside: avoid;
-          }
-        }
-      `}</style>
+    <div className="w-full overflow-hidden mx-auto text-sm border border-gray-600 px-5 pt-4 pb-4 flex flex-col rounded-md print-a4 bg-white"
+      style={{ width: '210mm', minHeight: '297mm', height: 'auto', fontFamily: 'Tahoma, Arial, sans-serif' }}>
+      
+      <div className="flex justify-between items-start border-b pb-2 mb-2 gap-3 no-break">
+        <div className="leading-tight">
+          <h2 className="font-bold text-[15px]">{branch?.name || branch?.branchName || '-'}</h2>
+          <p className="text-xs text-gray-600 mt-0.5">ที่อยู่: {branch?.address || '-'}</p>
+          <p className="text-xs text-gray-600">โทร: {branch?.phone || '-'}</p>
+          <p className="text-xs font-bold text-gray-950">เลขประจำตัวผู้เสียภาษี: {branch?.taxId || '-'}</p>
+        </div>
+        <div className="text-right select-none">
+          <p className="border border-black px-3 py-1.5 font-bold rounded-md leading-tight text-xs bg-gray-50/50">
+            ต้นฉบับลูกค้า<br />CUSTOMER ORIGINAL
+          </p>
+        </div>
+      </div>
 
-      <div
-        className="w-full overflow-hidden mx-auto text-sm border border-gray-600 px-4 pt-4 pb-2 flex flex-col rounded-md print-a4"
-        style={{
-          width: '210mm',
-          minHeight: '297mm',
-          height: 'auto',
-          fontFamily: 'Arial, Helvetica, sans-serif',
-        }}
-      >
-        <div className="flex justify-between items-start border-b pb-2 mb-2 gap-3 no-break">
-          <div>
-            <h2 className="font-bold text-sm">{branch?.name || branch?.branchName || '-'}</h2>
-            <p>ที่อยู่: {branch?.address || '-'}</p>
-            <p>โทร: {branch?.phone || '-'}</p>
-            <p>เลขประจำตัวผู้เสียภาษี: {branch?.taxId || '-'}</p>
-          </div>
+      <h3 className="text-center font-bold underline text-[20px] leading-tight mb-4 mt-2">
+        ใบเสร็จรับเงิน / ใบกำกับภาษี (ลูกหนี้)<br />
+        <span className="text-xs no-underline font-medium text-gray-500 tracking-wider">TAX INVOICE ORIGINAL / RECEIPTS CREDIT CONTROL</span>
+      </h3>
 
-          <div className="text-right">
-            <p className="border border-gray-600 px-2 py-1 font-bold rounded-md leading-tight text-xs">
-              ต้นฉบับลูกค้า
-              <br />
-              CUSTOMER ORIGINAL
-            </p>
-          </div>
+      <div className="grid grid-cols-[2.8fr_1.7fr] gap-4 text-xs mb-3 no-break">
+        <div className="border border-black p-2.5 rounded-lg space-y-1 leading-snug">
+          <p><span className="text-gray-500 font-medium">ลูกค้า/สังกัดหน่วยงาน:</span> <span className="font-bold text-gray-950">{buildCustomerName(customer)}</span></p>
+          <p><span className="text-gray-500 font-medium">ที่อยู่ประทับตราส่งเอกสาร:</span> <span className="font-medium text-gray-800">{buildCustomerAddress(customer)}</span></p>
+          <p><span className="text-gray-500 font-medium">เบอร์โทรติดต่อ:</span> <span className="font-mono font-bold">{customer?.phone || customer?.phoneNumber || '-'}</span></p>
+          <p><span className="text-gray-500 font-medium">เลขประจำตัวผู้เสียภาษี:</span> <span className="font-mono font-black">{customer?.taxId || customer?.taxNo || '-'}</span></p>
         </div>
 
-        <h3 className="text-center font-bold underline text-lg leading-tight mb-1">
-          ใบเสร็จรับเงิน / ใบกำกับภาษี
-        </h3>
-        <p className="text-center font-bold text-base mb-4 leading-tight">
-          TAX INVOICE ORIGINAL / DELIVERY ORDER
-        </p>
-
-        <div className="grid grid-cols-[2.8fr_1.7fr] gap-4 text-sm mb-4 no-break">
-          <div className="border border-black p-2 rounded-lg space-y-1 leading-tight">
-            <p>ลูกค้า: {buildCustomerName(customer)}</p>
-            <p>ที่อยู่: {buildCustomerAddress(customer)}</p>
-            <p>โทร: {customer?.phone || customer?.phoneNumber || '-'}</p>
-            <p>เลขประจำตัวผู้เสียภาษี: {customer?.taxId || customer?.taxNo || '-'}</p>
-          </div>
-
-          <div className="border border-black p-2 rounded-lg space-y-1 leading-tight">
-            <p>วันที่: {formatDate(firstSale?.soldAt || firstSale?.createdAt || receipt?.receivedAt)}</p>
-            <p>เลขที่: {firstSale?.code || receipt?.code || '-'}</p>
-            <p>เงื่อนไขการชำระเงิน: -</p>
-          </div>
+        <div className="border border-black p-2.5 rounded-lg space-y-1 leading-snug font-mono text-xs">
+          <p><span className="text-gray-500 font-sans font-medium">วันที่ประทับตรา:</span> <span className="font-sans font-bold">{formatDate(receipt?.receivedAt)}</span></p>
+          <p><span className="text-gray-500 font-sans font-medium">เลขที่เอกสารการเงิน:</span> <span className="font-black text-gray-950">{receipt?.code || '-'}</span></p>
+          <p><span className="text-gray-500 font-sans font-medium">อ้างอิงวิธีรับชำระ:</span> <span className="font-sans font-bold text-blue-700">{receipt?.paymentMethod || '-'}</span></p>
         </div>
+      </div>
 
-        <table className="w-full text-xs mb-2 border border-black">
-          <thead>
-            <tr className="border-b border-black">
-              <th className="border border-black px-1 h-[28px] leading-tight w-[7%]">ลำดับ<br />ITEM</th>
-              <th className="border border-black px-1 h-[28px] leading-tight w-[39%]">รายการ<br />DESCRIPTION</th>
-              <th className="border border-black px-1 h-[28px] leading-tight w-[8%]">จำนวน<br />QTY</th>
-              <th className="border border-black px-1 h-[28px] leading-tight w-[7%]">หน่วย<br />UNIT</th>
-              <th className="border border-black px-1 h-[28px] leading-tight w-[19%]">ราคาต่อหน่วย<br />UNIT PRICE</th>
-              <th className="border border-black px-1 h-[28px] leading-tight w-[20%]">จำนวนเงิน<br />AMOUNT</th>
+      <table className="w-full text-xs mb-2 border border-black table-fixed">
+        <thead className="bg-gray-50 select-none">
+          <tr className="border-b border-black text-[11px]">
+            <th className="border border-black px-1 h-[26px] text-center w-[8%]">ลำดับ</th>
+            <th className="border border-black px-2 h-[26px] text-left w-[46%]">รายละเอียดรายการตัดหนี้</th>
+            <th className="border border-black px-1 h-[26px] text-center w-[10%]">จำนวน</th>
+            <th className="border border-black px-1 h-[26px] text-center w-[8%]">หน่วย</th>
+            <th className="border border-black px-2 h-[26px] text-right w-[14%]">ราคาต่อหน่วย</th>
+            <th className="border border-black px-2 h-[26px] text-right w-[14%]">จำนวนเงิน</th>
+          </tr>
+        </thead>
+        <tbody className="text-[11px] leading-relaxed">
+          {lineItems.map((item, index) => (
+            <tr key={item.key || index} className="align-middle">
+              <td className="border border-black px-1 py-1 text-center h-[26px] tabular-nums text-gray-400">{index + 1}</td>
+              <td className="border border-black px-2 py-1 h-[26px] font-bold text-gray-900 truncate" title={item.productName}>{item.productName}</td>
+              <td className="border border-black px-1 py-1 text-center h-[26px] font-semibold">{item.quantity}</td>
+              <td className="border border-black px-1 py-1 text-center h-[26px] text-gray-500">{item.unit || '-'}</td>
+              <td className="border border-black px-2 py-1 text-right h-[26px] font-mono">{formatCurrency(item.unitPrice)}</td>
+              <td className="border border-black px-2 py-1 text-right h-[26px] font-mono font-bold text-gray-950">{formatCurrency(item.amount)}</td>
             </tr>
-          </thead>
-          <tbody>
-            {lineItems.map((item, index) => (
-              <tr key={item.key || index}>
-                <td className="border border-black px-1 py-[2px] text-center h-[28px] align-middle">{index + 1}</td>
-                <td className="border border-black px-1 py-[2px] h-[28px] align-middle">
-                  {item.productName}
-                </td>
-                <td className="border border-black px-1 py-[2px] text-center h-[28px] align-middle">{item.quantity}</td>
-                <td className="border border-black px-1 py-[2px] text-center h-[28px] align-middle">{item.unit || '-'}</td>
-                <td className="border border-black px-1 py-[2px] text-right h-[28px] align-middle">{formatCurrency(item.unitPrice)}</td>
-                <td className="border border-black px-1 py-[2px] text-right h-[28px] align-middle">{formatCurrency(item.amount)}</td>
-              </tr>
-            ))}
-            {[...Array(emptyRowCount)].map((_, idx) => (
-              <tr key={`empty-${idx}`}>
-                <td className="border border-black px-1 py-[2px] text-center h-[28px] align-middle">&nbsp;</td>
-                <td className="border border-black px-1 py-[2px] h-[28px] align-middle">&nbsp;</td>
-                <td className="border border-black px-1 py-[2px] text-center h-[28px] align-middle">&nbsp;</td>
-                <td className="border border-black px-1 py-[2px] text-center h-[28px] align-middle">&nbsp;</td>
-                <td className="border border-black px-1 py-[2px] text-right h-[28px] align-middle">&nbsp;</td>
-                <td className="border border-black px-1 py-[2px] text-right h-[28px] align-middle">&nbsp;</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+          ))}
+          {[...Array(emptyRowCount)].map((_, idx) => (
+            <tr key={`empty-${idx}`}>
+              <td className="border border-black px-1 h-[26px]">&nbsp;</td>
+              <td className="border border-black px-2 h-[26px]">&nbsp;</td>
+              <td className="border border-black px-1 h-[26px]">&nbsp;</td>
+              <td className="border border-black px-1 h-[26px]">&nbsp;</td>
+              <td className="border border-black px-2 h-[26px]">&nbsp;</td>
+              <td className="border border-black px-2 h-[26px]">&nbsp;</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
 
-        <div className="grid grid-cols-2 gap-4 text-xs mt-auto pt-4 no-break" style={{ minHeight: '120px' }}>
-          <div className="leading-tight flex flex-col items-center justify-start text-center pt-3">
-            <p className="font-bold">จำนวนเงินเป็นตัวอักษร</p>
-            <p className="italic text-base font-semibold">({bahtText(total)})</p>
-          </div>
-
-          <div>
-            <p className="flex justify-between border-b border-black py-1">
-              <span>รวมเงิน</span>
-              <span>{formatCurrency(beforeVat)} ฿</span>
-            </p>
-            <p className="flex justify-between border-b border-black py-1">
-              <span>ภาษีมูลค่าเพิ่ม {vatRate}%</span>
-              <span>{formatCurrency(vatAmount)} ฿</span>
-            </p>
-            <p className="flex justify-between border-b border-black font-extrabold text-base py-1">
-              <span>จำนวนเงินรวมทั้งสิ้น</span>
-              <span>{formatCurrency(total)} ฿</span>
-            </p>
-          </div>
+      <div className="grid grid-cols-2 gap-4 text-xs mt-auto pt-3 border-t border-dashed border-gray-300 no-break">
+        <div className="leading-tight flex flex-col items-center justify-center text-center p-2 rounded-xl bg-gray-50 select-none">
+          <p className="font-bold text-gray-500 text-[11px]">จำนวนเงินรวมสุทธิเป็นตัวอักษร</p>
+          <p className="italic text-sm font-black text-slate-900 mt-1">({bahtText(total)})</p>
         </div>
 
-        <div className="mt-5 text-sm text-center no-break">
-          <div className="w-[48%] mx-auto">
-            <div className="border-t border-dashed border-black pt-1 h-[45px] flex flex-col justify-start items-center">
-              <span className="mt-1">ผู้รับเงิน / RECEIVED BY</span>
-            </div>
+        <div className="space-y-1 font-semibold text-gray-700">
+          <p className="flex justify-between border-b border-gray-100 py-0.5">
+            <span>รวมเงินมูลค่าก่อนภาษี (Net)</span>
+            <span className="font-mono">{formatCurrency(beforeVat)} ฿</span>
+          </p>
+          <p className="flex justify-between border-b border-gray-100 py-0.5 text-rose-600">
+            <span>ภาษีมูลค่าเพิ่ม Vat {vatRate}%</span>
+            <span className="font-mono">{formatCurrency(vatAmount)} ฿</span>
+          </p>
+          <p className="flex justify-between border-b border-black font-black text-sm py-1 text-gray-950 bg-gray-50/70 px-1 rounded">
+            <span>จำนวนเงินรวมทั้งสิ้น (Vat Incl.)</span>
+            <span className="font-mono text-base text-blue-700">฿{formatCurrency(total)}</span>
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-8 text-center no-break border-t border-gray-100 pt-4 select-none">
+        <div className="w-[40%] mx-auto">
+          <div className="border-t border-dashed border-black pt-1.5 h-[40px] flex flex-col justify-start items-center">
+            <span className="text-xs font-black text-gray-700 tracking-wider">เจ้าหน้าที่ผู้รับชำระเงิน / AUTHORIZED SIGNATURE</span>
+            <span className="text-[9px] text-gray-400 font-mono mt-1">Premium POS Ledger Settle Scribe</span>
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
 };
 
 export default React.memo(CustomerReceiptPrintLayout);
-
-
-

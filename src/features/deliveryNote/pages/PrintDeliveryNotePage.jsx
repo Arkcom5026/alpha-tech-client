@@ -1,4 +1,5 @@
 // src/features/deliveryNote/pages/PrintDeliveryNotePage.jsx
+// 🏛️ Premium Next-Gen POS Delivery Note Workspace: (Force Re-Hydration Core Version)
 
 import { useEffect, useMemo, useState } from 'react';
 import { useParams, useLocation } from 'react-router-dom';
@@ -74,6 +75,13 @@ const PrintDeliveryNotePage = () => {
 
   const navSale = useMemo(() => location.state?.sale || null, [location.key]);
 
+  // 🟢 [DYNAMIC RESET CONTROL]: บังคับล้างสถานะใบขายเก่าในคลัง Store ทุกครั้งที่กดเปลี่ยนเลข saleId ป้องกันอาการจอนิ่ง
+  useEffect(() => {
+    if (saleId && typeof setCurrentSale === 'function') {
+      setCurrentSale(null);
+    }
+  }, [saleId, setCurrentSale]);
+
   useEffect(() => {
     let isMounted = true;
 
@@ -111,16 +119,10 @@ const PrintDeliveryNotePage = () => {
           }
         }
 
-        await getSaleByIdAction(saleId);
-      } catch (err) {
-        try {
-          if (import.meta?.env?.DEV) {
-            // eslint-disable-next-line no-console
-            console.error('[PrintDeliveryNotePage] fetch sale error', err);
-          }
-        } catch (_) {
-          // ignore
+        if (typeof getSaleByIdAction === 'function') {
+          await getSaleByIdAction(saleId);
         }
+      } catch (err) {
         if (isMounted) setError('ไม่สามารถโหลดข้อมูลใบส่งของได้');
       } finally {
         if (isMounted) setIsLoading(false);
@@ -135,7 +137,7 @@ const PrintDeliveryNotePage = () => {
   }, [saleId, navSale, getSaleByIdAction, setCurrentSale]);
 
   const preparedSaleItems = useMemo(() => {
-    if (!currentSale || String(currentSale.id) !== String(saleId)) return [];
+    if (!currentSale) return [];
 
     const src = Array.isArray(currentSale.simpleItems) && currentSale.simpleItems.length > 0
       ? currentSale.simpleItems
@@ -166,13 +168,7 @@ const PrintDeliveryNotePage = () => {
 
       const unitPrice = isSnItem
         ? (Number(item?.price ?? item?.unitPrice ?? item?.basePrice ?? 0) || 0)
-        : (Number(
-            item?.unitPrice
-            ?? item?.price
-            ?? item?.basePrice
-            ?? item?.sellPrice
-            ?? 0
-          ) || 0);
+        : (Number(item?.unitPrice ?? item?.price ?? item?.basePrice ?? item?.sellPrice ?? 0) || 0);
 
       const quantity = isSnItem
         ? 1
@@ -190,21 +186,14 @@ const PrintDeliveryNotePage = () => {
           documentLineKey: key,
           productId: productIdRaw,
           stockItemId: item?.stockItemId ?? item?.stockItem?.id ?? null,
-
-          // ✅ Source IDs for per-row save.
           saleItemIds: isSnItem && item?.id ? [Number(item.id)] : [],
           simpleItemIds: !isSnItem && item?.id ? [Number(item.id)] : [],
-
-          // ✅ Document Line Runtime
           documentPrefix: documentLine.documentPrefix,
           documentDescriptionRaw: documentLine.documentDescriptionRaw,
           documentDescription: documentLine.documentDescription,
           documentSuffix: documentLine.documentSuffix,
           hasDocumentLine: Boolean(documentLine.documentPrefix || documentLine.documentSuffix),
-
-          // ✅ Printable view model for existing DeliveryNoteForm
           productName: buildPrintableProductName(documentLine),
-
           productModel: product?.model || item?.productModel || '-',
           price: unitPrice,
           quantity: 0,
@@ -225,7 +214,7 @@ const PrintDeliveryNotePage = () => {
     }
 
     return Array.from(grouped.values());
-  }, [currentSale, saleId]);
+  }, [currentSale]);
 
   const handleToggleDocumentLineEdit = (item) => {
     const key = item?.documentLineKey || item?.id;
@@ -289,7 +278,7 @@ const PrintDeliveryNotePage = () => {
       documentSuffix: nullableDocumentText(draft.documentSuffix),
     });
 
-    setSavingLineKey(key);
+    setSavingLineKey(key)
     setError('');
 
     try {
@@ -325,16 +314,17 @@ const PrintDeliveryNotePage = () => {
     }
   };
 
+  // 🟢 FIXED: ปรับเปลี่ยนข้อความแจ้งสถานะโหลดข้อมูล ไม่ให้จมหายในเลเยอร์โหมดมืด
   if (isLoading) {
-    return <div className="p-4 text-center text-gray-600">กำลังโหลดข้อมูลใบส่งของ...</div>;
+    return <div className="p-8 text-center text-zinc-400 font-bold bg-slate-900 min-h-screen">⏳ กำลังสตรีมโครงสร้างใบส่งของ A4...</div>;
   }
 
   if (error) {
-    return <div className="p-4 text-center text-red-600">{error}</div>;
+    return <div className="p-8 text-center text-rose-400 font-black bg-slate-900 min-h-screen">⚠️ {error}</div>;
   }
 
-  if (!currentSale || String(currentSale.id) !== String(saleId)) {
-    return <div className="p-4 text-center text-red-600">ไม่พบข้อมูลใบส่งของ หรือข้อมูลไม่ถูกต้อง</div>;
+  if (!currentSale) {
+    return <div className="p-8 text-center text-zinc-400 font-bold bg-slate-900 min-h-screen">❌ ไม่พบชุดข้อมูลโครงสร้างของใบขายรายการนี้</div>;
   }
 
   const branch = currentSale.branch || {};
@@ -346,21 +336,25 @@ const PrintDeliveryNotePage = () => {
   };
 
   return (
-    <div className="p-4 space-y-4">
-      <DeliveryNoteForm
-        sale={currentSale}
-        hideDate={hideDate}
-        setHideDate={setHideDate}
-        saleItems={preparedSaleItems}
-        config={preparedConfig}
-        editableDocumentLines
-        editingLineKey={editingLineKey}
-        lineDrafts={lineDrafts}
-        savingLineKey={savingLineKey}
-        onToggleDocumentLineEdit={handleToggleDocumentLineEdit}
-        onChangeDocumentLineDraft={handleChangeDocumentLineDraft}
-        onSaveDocumentLine={handleSaveDocumentLine}
-      />
+    // 🟢 FIXED: สลักคลาส CSS ตัดสิทธิ์ควบคุมความมืด ปรับพื้นที่หน้ากระดาษพิมพ์ A4 ตรงกลางให้เป็นสีขาว ตัวอักษรสีดำสนิท 100%
+    // เติมคลาส bg-white text-black dark:bg-white dark:text-black ครอบคลุมพิกัดแผ่นฟอร์ม DeliveryNoteForm ทั้งผืน
+    <div className="w-full min-h-screen bg-white text-black dark:bg-white dark:text-black py-8 px-4 print:p-0 print:bg-white animate-fadeIn">
+      <div className="mx-auto max-w-[210mm] bg-white text-black dark:bg-white dark:text-black p-2 print:p-0">
+        <DeliveryNoteForm
+          sale={currentSale}
+          hideDate={hideDate}
+          setHideDate={setHideDate}
+          saleItems={preparedSaleItems}
+          config={preparedConfig}
+          editableDocumentLines
+          editingLineKey={editingLineKey}
+          lineDrafts={lineDrafts}
+          savingLineKey={savingLineKey}
+          onToggleDocumentLineEdit={handleToggleDocumentLineEdit}
+          onChangeDocumentLineDraft={handleChangeDocumentLineDraft}
+          onSaveDocumentLine={handleSaveDocumentLine}
+        />
+      </div>
     </div>
   );
 };

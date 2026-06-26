@@ -1,13 +1,10 @@
-// ✅ @filename: ViewEmployeePage.jsx
-// ✅ @folder: src/features/employee/pages/
-
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getEmployeeById } from '../api/employeeApi';
 import useEmployeeStore from '@/features/employee/store/employeeStore';
 
 const ViewEmployeePage = () => {
-  const { id } = useParams();
+  const { shopSlug, id } = useParams(); // 🟢 [DYNAMIC PARAM FIX] แกะรหัส shopSlug มาควบคุมเลนวิ่ง
   const navigate = useNavigate();
   const token = useEmployeeStore((s) => s.token);
   const [employee, setEmployee] = useState(null);
@@ -38,7 +35,6 @@ const ViewEmployeePage = () => {
         </div>
         <h1 className="text-2xl font-bold text-blue-800 dark:text-white">👤 รายละเอียดพนักงาน</h1>
       </div>
-      <h1 className="text-2xl font-bold mb-6 text-blue-800 dark:text-white">👤 รายละเอียดพนักงาน</h1>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm text-zinc-800 dark:text-zinc-200">
         <div><span className="font-medium">ชื่อ:</span> {employee.name}</div>
         <div><span className="font-medium">อีเมล:</span> {employee.user?.email || '-'}</div>
@@ -55,7 +51,8 @@ const ViewEmployeePage = () => {
         </button>
         <div className="flex gap-2">
           <button
-            onClick={() => navigate(`/pos/employees/edit/${employee.id}`)}
+            /* 🟢 [DYNAMIC NAVIGATE] ต่อท่อพิกัดให้ปุ่มแก้ไขพนักงานวิ่งเข้าล็อก Multi-Tenant */
+            onClick={() => navigate(`/${shopSlug}/pos/settings/employee/edit/${employee.id}`)}
             className="text-sm px-4 py-2 bg-yellow-400 hover:bg-yellow-500 text-white rounded shadow"
           >
             ✏️ แก้ไขข้อมูล
@@ -69,7 +66,7 @@ const ViewEmployeePage = () => {
                   headers: { Authorization: `Bearer ${token}` },
                 });
                 if (!res.ok) throw new Error('ไม่สามารถลบพนักงานได้');
-                navigate('/pos/employees');
+                navigate(`/${shopSlug}/pos/settings/employee`);
               } catch (err) {
                 console.error('❌ ลบพนักงานล้มเหลว:', err);
                 alert('เกิดข้อผิดพลาดในการลบพนักงาน');

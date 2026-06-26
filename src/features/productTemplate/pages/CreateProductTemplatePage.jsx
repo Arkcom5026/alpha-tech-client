@@ -1,10 +1,7 @@
-
-
-
-// ✅ src/features/productTemplate/pages/CreateProductTemplatePage.jsx
+// src/features/productTemplate/pages/CreateProductTemplatePage.jsx
 
 import React, { useMemo, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom' // 🟢 [DYNAMIC PARAM FIX] นำเข้า useParams มาร่วมทีม
 
 import ProductTemplateForm from '../components/ProductTemplateForm'
 import useProductTemplateStore from '../store/productTemplateStore'
@@ -13,6 +10,8 @@ import { useBranchStore } from '@/features/branch/store/branchStore'
 import ProcessingDialog from '@/components/shared/dialogs/ProcessingDialog'
 
 const CreateProductTemplatePage = () => {
+  // 🟢 [LINK BINDING] แกะรหัสชื่อร้านค้าจาก URL สแตนด์บายเพื่อคุมทางวิ่งปุ่มกดแบบ Multi-Tenant
+  const { shopSlug } = useParams()
   const navigate = useNavigate()
 
   // ✅ Guard สิทธิ์ (P1-safe): canManageProductOrdering เป็น selector function
@@ -79,7 +78,8 @@ const CreateProductTemplatePage = () => {
         setShowSuccess(true)
         setTimeout(() => {
           setShowSuccess(false)
-          navigate('/pos/stock/templates')
+          // 🟢 [DYNAMIC NAVIGATE] ปรับเป็นแบบ Template Literal ครอบพาสส่งสัญญานชื่อร้านค้าพาร์ตเนอร์กลับหน้ารายการหลักอย่างเสถียร
+          navigate(`/${shopSlug}/pos/stock/templates`);
         }, 2000)
       } else {
         setError('ไม่สามารถเพิ่มเทมเพลทสินค้าได้')
@@ -113,9 +113,10 @@ const CreateProductTemplatePage = () => {
             >
               ย้อนกลับ
             </button>
+            {/* 🟢 [DYNAMIC LINK FIX] ปรับเป็น Template Literal ครอบพาสลิงก์สำหรับเคสไม่มีสิทธิ์ใช้งาน ป้องกันการดีดเด้งตกเลนวิ่ง */}
             <Link
               className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-sm font-medium text-blue-700 hover:bg-blue-100"
-              to="/pos/stock/templates"
+              to={`/${shopSlug}/pos/stock/templates`}
             >
               กลับไปหน้ารายการเทมเพลทสินค้า
             </Link>
@@ -135,9 +136,9 @@ const CreateProductTemplatePage = () => {
         </p>
       </div>
 
-      {error && <p className="text-red-500 font-medium mb-2">{error}</p>}
+      {error && <p className="text-red-500 font-medium mb-2">{error}</p>} {/* cite: CreateProductTemplatePage.jsx */}
 
-      <ProductTemplateForm onSubmit={handleCreate} mode="create" />
+      <ProductTemplateForm onSubmit={handleCreate} mode="create" /> {/* cite: CreateProductTemplatePage.jsx */}
 
       <ProcessingDialog
         open={isSubmitting || showSuccess}
@@ -154,4 +155,3 @@ const CreateProductTemplatePage = () => {
 }
 
 export default CreateProductTemplatePage
-

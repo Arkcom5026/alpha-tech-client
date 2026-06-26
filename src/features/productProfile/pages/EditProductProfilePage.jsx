@@ -1,5 +1,3 @@
-
-
 // src/features/productProfile/pages/EditProductProfilePage.jsx
 import React, { useEffect, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
@@ -8,11 +6,13 @@ import { useAuthStore } from '@/features/auth/store/authStore';
 import useProductStore from '@/features/product/store/productStore';
 import ProductProfileForm from '../components/ProductProfileForm';
 
-const LIST_PATH = '/pos/stock/profiles';
-
 const EditProductProfilePage = () => {
-  const { id } = useParams();
+  // 🟢 [DYNAMIC PARAM FIX] แกะรหัส shopSlug ร่วมกับ id จาก useParams
+  const { shopSlug, id } = useParams();
   const navigate = useNavigate();
+
+  // 🟢 [DYNAMIC PATH FIX] ล้างเครื่องหมายเปิดปิดแหว่ง และรองรับตัวแปร Multi-Tenant
+  const LIST_PATH = `/${shopSlug}/pos/stock/profiles`;
 
   // ✅ Guard สิทธิ์ (P1-safe): canManageProductOrdering เป็น selector function
   const { isSuperAdmin, canManageProductOrdering } = useAuthStore();
@@ -39,8 +39,10 @@ const EditProductProfilePage = () => {
     if (!id) return;
     (async () => {
       try {
-        const e = await fetchProfileById(Number(id));        if (!e) navigate(LIST_PATH);
-      } catch (e) {        navigate(LIST_PATH);
+        const e = await fetchProfileById(Number(id));        
+        if (!e) navigate(LIST_PATH);
+      } catch (e) {        
+        navigate(LIST_PATH);
       }
     })();
     return () => clearCurrentAction();
@@ -94,41 +96,42 @@ const EditProductProfilePage = () => {
   if (!current) return <div className="p-4">ไม่พบข้อมูล</div>;
 
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-4">
-    
-          <h1 className="text-xl font-semibold">แก้ไขโปรไฟล์สินค้า #{id}</h1>
-          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-            โปรไฟล์สินค้า = <span className="font-medium">กลุ่มมาตรฐานภายใน “ประเภทสินค้า”</span> ใช้เมื่อมีรูปแบบซ้ำจริง เพื่อช่วยเลือก Template/ค่าเริ่มต้นให้สม่ำเสมอ <span className="font-medium">(ไม่ใช่แบรนด์/ยี่ห้อ และไม่จำเป็นต้องมีทุกสินค้า)</span>
-          </p>
-        
+    <div className="p-6 w-full flex flex-col items-center">
+      <div className="w-full max-w-3xl">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h1 className="text-xl font-semibold">แก้ไขโปรไฟล์สินค้า #{id}</h1>
+            <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+              โปรไฟล์สินค้า = <span className="font-medium">กลุ่มมาตรฐานภายใน “ประเภทสินค้า”</span> ใช้เมื่อมีรูปแบบซ้ำจริง เพื่อช่วยเลือก Template/ค่าเริ่มต้นให้สม่ำเสมอ <span className="font-medium">(ไม่ใช่แบรนด์/ยี่ห้อ และไม่จำเป็นต้องมีทุกสินค้า)</span>
+            </p>
+          </div>
+          <Link to={LIST_PATH} className="btn btn-outline">กลับไปหน้ารายการโปรไฟล์สินค้า</Link>
+        </div>
 
-      {/* BestLine guidance */}
-      <div className="mb-4 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
-        <div className="font-semibold">แนวทาง (BestLine)</div>
-        <ul className="mt-1 list-disc pl-5 space-y-1">
-          <li>ใช้โปรไฟล์เมื่อมีสินค้าในประเภทเดียวกัน <span className="font-medium">ซ้ำจริง</span> และต้องการมาตรฐานร่วม</li>
-          <li>ถ้าไม่ซ้ำ แนะนำให้เก็บสเปกไว้ที่สินค้าโดยตรง (Product / productConfig)</li>
-          <li>Template เป็นค่าเริ่มต้น (optional) — Product สามารถ override ได้</li>
-        </ul>
-      </div>
+        {/* BestLine guidance */}
+        <div className="mb-4 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
+          <div className="font-semibold">แนวทาง (BestLine)</div>
+          <ul className="mt-1 list-disc pl-5 space-y-1">
+            <li>ใช้โปรไฟล์เมื่อมีสินค้าในประเภทเดียวกัน <span className="font-medium">ซ้ำจริง</span> และต้องการมาตรฐานร่วม</li>
+            <li>ถ้าไม่ซ้ำ แนะนำให้เก็บสเปกไว้ที่สินค้าโดยตรง (Product / productConfig)</li>
+            <li>Template เป็นค่าเริ่มต้น (optional) — Product สามารถ override ได้</li>
+          </ul>
+        </div>
 
-      <div className="bg-white dark:bg-zinc-900 shadow rounded-2xl p-4">
-        <ProductProfileForm
-          mode="edit"
-          defaultValues={current}
-          dropdowns={dropdowns}
-          isDropdownLoading={isDropdownLoading}
-          onSubmit={handleSubmit}
-          onCancel={handleCancel}
-        />
-      </div>
+        {/* 🟢 [STRUCTURE ALIGNMENT FIX] ปิดกล่องโครงสร้าง HTML และส่งคอมโพเนนต์ฟอร์มทำงาน */}
+        <div className="bg-white dark:bg-zinc-900 border shadow-sm rounded-xl p-4">
+          <ProductProfileForm
+            mode="edit"
+            defaultValues={current}
+            dropdowns={dropdowns}
+            isDropdownLoading={isDropdownLoading}
+            onSubmit={handleSubmit}
+            onCancel={handleCancel}
+          />
+        </div>
       </div>
     </div>
   );
 };
 
 export default EditProductProfilePage;
-
-
-

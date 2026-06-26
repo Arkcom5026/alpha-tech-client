@@ -93,13 +93,13 @@ const SalesDashboardPage = () => {
 
           <div className="flex flex-wrap gap-3">
             <Link
-              to="/pos/reports/sales/list"
+              to={shopSlug ? `/${shopSlug}/pos/reports/sales/list` : `/pos/reports/sales/list`}
               className="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
             >
               ดูรายการขาย
             </Link>
             <Link
-              to="/pos/reports/sales/products"
+              to={shopSlug ? `/${shopSlug}/pos/reports/sales/products` : `/pos/reports/sales/products`}
               className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"
             >
               วิเคราะห์สินค้า
@@ -323,7 +323,7 @@ const SalesDashboardPage = () => {
               <p className="mt-1 text-sm text-slate-500">Top products จากจำนวนขายและมูลค่า</p>
             </div>
             <Link
-              to="/pos/reports/sales/products"
+              to={shopSlug ? `/${shopSlug}/pos/reports/sales/products` : `/pos/reports/sales/products`}
               className="text-sm font-semibold text-blue-600 hover:text-blue-700"
             >
               ดูทั้งหมด

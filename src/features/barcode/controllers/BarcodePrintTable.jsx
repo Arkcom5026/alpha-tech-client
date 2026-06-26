@@ -1,13 +1,11 @@
-
-
-
-
-
 // src/features/stockItem/components/BarcodePrintTable.jsx
+// 🏛️ Premium Next-Gen Barcode Table: (Fixed Multi-Tenant Redirection, Aurora Badges & Spring Physics Commands)
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+// 🟢 [IMPORT FIXED] เรียกใช้งาน useParams ดักจับค่า shopSlug เพื่อรักษาเส้นทาง Multi-Tenant v2 สากล
+import { useNavigate, useParams } from 'react-router-dom';
 import useBarcodeStore from '@/features/barcode/store/barcodeStore';
+import { Layers, Calendar, User, Printer, CheckCircle, AlertCircle, Sparkles, Search, X } from 'lucide-react';
 
 const formatDateTh = (value) => {
   try {
@@ -30,20 +28,17 @@ const getErrorMessage = (err) => {
   return err?.response?.data?.message || err?.message || 'เกิดข้อผิดพลาด';
 };
 
-/**
- * ✅ Restructured (Production-grade, minimal disruption)
- * - Page owns: mode + search/filter UX
- * - Table owns: rendering + print actions only
- */
 const BarcodePrintTable = ({ mode = 'UNPRINTED', receipts }) => {
   const navigate = useNavigate();
+  // 🟢 [SLUG ACTIVATED] แกะรอยคีย์ shopSlug เพื่อคุมระนาบเส้นทางลัดรายสาขาให้แม่นยำ 100%
+  const { shopSlug } = useParams();
+  
   const { generateBarcodesAction, reprintBarcodesAction } = useBarcodeStore();
 
   const [selectedIds, setSelectedIds] = useState([]);
   const [uiError, setUiError] = useState('');
   const [printingId, setPrintingId] = useState(null);
 
-  // ✅ Normalize receipts shape defensively
   const normalizedReceipts = useMemo(
     () =>
       (Array.isArray(receipts) ? receipts : []).map((r) => ({
@@ -58,9 +53,7 @@ const BarcodePrintTable = ({ mode = 'UNPRINTED', receipts }) => {
   );
 
   const visibleReceipts = useMemo(() => {
-    // ✅ UNPRINTED: show only not-printed rows (safety)
     if (mode === 'UNPRINTED') return normalizedReceipts.filter((r) => !r.printed);
-    // ✅ REPRINT: page already filtered; show as-is
     return normalizedReceipts;
   }, [normalizedReceipts, mode]);
 
@@ -73,7 +66,6 @@ const BarcodePrintTable = ({ mode = 'UNPRINTED', receipts }) => {
   const toggleSelectAll = () => setSelectedIds(isAllSelected ? [] : visibleReceipts.map((r) => r.id));
 
   useEffect(() => {
-    // ✅ When mode/data changes, clear selection to prevent accidental batch print
     setSelectedIds([]);
     setUiError('');
   }, [mode, receipts]);
@@ -84,7 +76,10 @@ const BarcodePrintTable = ({ mode = 'UNPRINTED', receipts }) => {
     try {
       setPrintingId(receiptId);
       await generateBarcodesAction(receiptId);
-      navigate(`/pos/purchases/barcodes/preview/${receiptId}`);
+      
+      // 🟢 [ROUTING FIXED] บังคับท่อส่งหน้าพรีวิวเดี่ยว ให้เกาะสาย Dynamic shopSlug ป้องกันการดีดเด้งหลุด
+      const targetSlug = shopSlug || 'advancetech';
+      navigate(`/${targetSlug}/pos/purchases/barcodes/preview/${receiptId}`);
     } catch (err) {
       if (import.meta?.env?.DEV) console.error('[handlePrintClick] ❌', err);
       setUiError(getErrorMessage(err));
@@ -99,7 +94,10 @@ const BarcodePrintTable = ({ mode = 'UNPRINTED', receipts }) => {
     try {
       setPrintingId(receiptId);
       await reprintBarcodesAction(receiptId);
-      navigate(`/pos/purchases/barcodes/preview/${receiptId}`);
+      
+      // 🟢 [ROUTING FIXED] บังคับท่อส่งหน้าพรีวิวพิมพ์ซ้ำเดี่ยว ให้เกาะสาย Dynamic shopSlug ป้องกันการดีดเด้งหลุด
+      const targetSlug = shopSlug || 'advancetech';
+      navigate(`/${targetSlug}/pos/purchases/barcodes/preview/${receiptId}`);
     } catch (err) {
       if (import.meta?.env?.DEV) console.error('[handleReprintClick] ❌', err);
       setUiError(getErrorMessage(err));
@@ -109,133 +107,125 @@ const BarcodePrintTable = ({ mode = 'UNPRINTED', receipts }) => {
   };
 
   return (
-    <div className="space-y-4">
-      {/* UI-based error (no dialog) */}
+    <div className="space-y-4 font-sans text-slate-800">
+      
+      {/* ⚠️ กล่องข้อความแจ้งเตือน Error UI */}
       {uiError && (
-        <div className="border rounded-md p-3 bg-white">
-          <div className="text-sm text-rose-700">{uiError}</div>
-          <button
-            type="button"
-            className="mt-2 text-xs text-gray-600 underline"
-            onClick={() => setUiError('')}
-          >
-            ปิดข้อความ
-          </button>
+        <div className="rounded-2xl border border-rose-200 bg-rose-50 p-3 text-xs font-black text-rose-600 flex items-center justify-between animate-fadeIn">
+          <div className="flex items-center gap-1.5">
+            <AlertCircle className="w-4 h-4 text-rose-500" />
+            <span>{uiError}</span>
+          </div>
+          <button type="button" className="underline ml-2 text-slate-500 hover:text-slate-900" onClick={() => setUiError('')}>ปิด</button>
         </div>
       )}
 
-      <div className="max-h-[560px] overflow-auto rounded border border-gray-300">
-        <table className="min-w-full text-sm">
-          <thead className="bg-gray-100 sticky top-0 z-10">
-            <tr>
-              {/* ✅ Checkbox only for UNPRINTED batch print */}
-              <th className="border px-2 py-1 text-center" style={{ width: 40 }}>
-                {mode === 'UNPRINTED' ? (
-                  <input type="checkbox" onChange={toggleSelectAll} checked={isAllSelected} />
-                ) : (
-                  <span />
-                )}
-              </th>
-              <th className="border px-2 py-1 text-center" style={{ width: 70 }}>
-                ลำดับ
-              </th>
-              <th className="border px-2 py-1">เลขใบสั่งซื้อ</th>
-              <th className="border px-2 py-1">เลขใบตรวจรับ</th>
-              <th className="border px-2 py-1">Supplier</th>
-              <th className="border px-2 py-1">วันที่รับ</th>
-              <th className="border px-2 py-1 text-center" style={{ width: 110 }}>
-                การพิมพ์
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {visibleReceipts.map((r, index) => (
-              <tr key={r.id} className={`hover:bg-gray-50 ${index % 2 === 1 ? 'bg-white' : 'bg-gray-50/30'}`}>
-                <td className="border px-2 py-1 text-center">
+      {/* 📊 CORE TABLE LAYOUT: จัดโฉมตารางโมเดิร์นคลีน โปร่งตา ขอบโค้งมนมีมิติ */}
+      <div className="overflow-hidden rounded-2xl border border-slate-200 shadow-[0_4px_25px_rgba(0,0,0,0.01)] bg-white">
+        <div className="w-full overflow-x-auto">
+          <table className="w-full text-xs sm:text-sm text-left border-collapse">
+            <thead>
+              <tr className="bg-slate-50/80 border-b border-slate-200/60 text-slate-500 text-xs font-black uppercase tracking-wider select-none">
+                <th className="p-3 w-12 text-center">
                   {mode === 'UNPRINTED' ? (
-                    <input
-                      type="checkbox"
-                      checked={selectedIds.includes(r.id)}
-                      onChange={() => toggleSelect(r.id)}
-                    />
+                    <input type="checkbox" onChange={toggleSelectAll} checked={isAllSelected} className="accent-orange-500 cursor-pointer h-4 w-4 rounded" />
                   ) : (
                     <span />
                   )}
-                </td>
-                <td className="border px-2 py-1 text-center">{index + 1}</td>
-                <td className="border px-2 py-1 font-mono text-xs">{r.purchaseOrderCode}</td>
-                <td className="border px-2 py-1 font-mono text-xs">{r.code}</td>
-                <td className="border px-2 py-1">{r.supplier}</td>
-                <td className="border px-2 py-1">{formatDateTh(r.receivedAt)}</td>
-                <td className="border px-2 py-1 text-center">
-                  {mode === 'UNPRINTED' ? (
-                    <button
-                      type="button"
-                      onClick={() => handlePrintClick(r.id)}
-                      disabled={printingId === r.id}
-                      className={`px-3 py-1 text-white rounded ${
-                        printingId === r.id
-                          ? 'bg-green-400 cursor-not-allowed'
-                          : 'bg-green-600 hover:bg-green-700'
-                      }`}
-                    >
-                      {printingId === r.id ? 'กำลังสร้าง...' : 'พิมพ์'}
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => handleReprintClick(r.id)}
-                      disabled={printingId === r.id}
-                      className={`px-3 py-1 text-white rounded ${
-                        printingId === r.id
-                          ? 'bg-blue-400 cursor-not-allowed'
-                          : 'bg-blue-600 hover:bg-blue-700'
-                      }`}
-                    >
-                      {printingId === r.id ? 'กำลังเตรียม...' : 'พิมพ์ซ้ำ'}
-                    </button>
-                  )}
-                </td>
+                </th>
+                <th className="p-3 w-16 text-center">ลำดับ</th>
+                <th className="p-3">เลขใบสั่งซื้อ PO</th>
+                <th className="p-3">เลขใบตรวจรับ RC</th>
+                <th className="p-3"><User className="w-3.5 h-3.5 inline mr-1 text-slate-400" /> Supplier</th>
+                <th className="p-3"><Calendar className="w-3.5 h-3.5 inline mr-1 text-slate-400" /> วันที่รับของ</th>
+                <th className="p-3 text-center w-32">การจัดพิมพ์</th>
               </tr>
-            ))}
+            </thead>
+            <tbody className="divide-y divide-slate-100 font-medium text-slate-600 text-xs sm:text-sm">
+              {visibleReceipts.map((r, index) => (
+                <tr key={r.id} className="hover:bg-slate-50/60 transition-colors duration-150 group">
+                  <td className="p-3 text-center">
+                    {mode === 'UNPRINTED' ? (
+                      <input type="checkbox" checked={selectedIds.includes(r.id)} onChange={() => toggleSelect(r.id)} className="accent-orange-500 cursor-pointer h-4 w-4 rounded" />
+                    ) : (
+                      <span />
+                    )}
+                  </td>
+                  <td className="p-3 text-center font-bold text-slate-400 font-sans text-xs">{index + 1}</td>
+                  <td className="p-3 font-mono font-bold text-slate-400 text-xs">{r.purchaseOrderCode}</td>
+                  <td className="p-3 font-mono font-black text-slate-900 group-hover:text-orange-500 transition-colors text-xs sm:text-sm">{r.code}</td>
+                  <td className="p-3 font-bold text-slate-800">{r.supplier}</td>
+                  <td className="p-3 font-semibold text-slate-500 font-sans">{formatDateTh(r.receivedAt)}</td>
+                  <td className="p-3 text-center select-none">
+                    {mode === 'UNPRINTED' ? (
+                      <button
+                        type="button"
+                        onClick={() => handlePrintClick(r.id)}
+                        disabled={printingId === r.id}
+                        className={`px-4 py-1.5 text-xs font-black rounded-xl border tracking-wide shadow-sm active:scale-95 transform transition-all duration-200 ${
+                          printingId === r.id
+                            ? 'bg-orange-400 border-orange-400 text-white cursor-not-allowed shadow-none'
+                            : 'bg-slate-800 hover:bg-slate-900 text-white border-slate-900 hover:-translate-y-0.5'
+                        }`}
+                      >
+                        {printingId === r.id ? 'สร้างฉลาก...' : 'พิมพ์ฉลาก'}
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => handleReprintClick(r.id)}
+                        disabled={printingId === r.id}
+                        className={`px-4 py-1.5 text-xs font-black rounded-xl border tracking-wide shadow-sm active:scale-95 transform transition-all duration-200 ${
+                          printingId === r.id
+                            ? 'bg-blue-400 border-blue-400 text-white cursor-not-allowed shadow-none'
+                            : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200 hover:-translate-y-0.5'
+                        }`}
+                      >
+                        {printingId === r.id ? 'เตรียมงาน...' : 'พิมพ์ซ้ำ'}
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))}
 
-            {visibleReceipts.length === 0 && (
-              <tr>
-                <td colSpan={7} className="text-center text-gray-500 p-6">
-                  {mode === 'UNPRINTED' ? 'ไม่มีรายการรอพิมพ์' : 'ไม่พบข้อมูลที่ตรงกับคำค้น'}
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+              {visibleReceipts.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="text-center text-slate-400 font-bold italic py-12 text-sm select-none">
+                    {mode === 'UNPRINTED' ? '✨ ไม่มีรายการบิลค้างพิมพ์บาร์โค้ดในระบบขณะนี้' : 'ไม่พบข้อมูลใบรับสินค้าที่ตรงกับตัวกรองค้นหา'}
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
-      {/* ✅ Batch print (UNPRINTED only) */}
+      {/* 🟦 3. แผงควบคุมคำสั่งพิมพ์กลุ่มอัจฉริยะท้ายบิล (Batch Print Action Tray Container) */}
       {mode === 'UNPRINTED' && selectedIds.length > 0 && (
-        <div className="mt-2">
-          <div className="sticky bottom-0 bg-white/90 backdrop-blur border-t border-gray-200 py-2">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="text-sm text-gray-700">
-              เลือกแล้ว <span className="font-medium">{selectedIds.length}</span> รายการ
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                className="rounded border bg-white px-3 py-2 text-sm text-gray-800 hover:bg-gray-50"
-                onClick={() => setSelectedIds([])}
-              >
-                ยกเลิกการเลือก
-              </button>
-              <button
-                type="button"
-                className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
-                onClick={() => navigate(`/pos/purchases/barcodes/print?ids=${selectedIds.join(',')}`)}
-              >
-                พิมพ์รายการที่เลือก ({selectedIds.length})
-              </button>
-            </div>
+        <div className="bg-slate-800 border border-slate-900 rounded-2xl p-4 shadow-[0_10px_30px_rgba(30,41,59,0.15)] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 select-none animate-slideUp">
+          <div className="text-xs font-black text-slate-300 flex items-center gap-1.5">
+            <Sparkles className="w-4 h-4 text-orange-400 Regal-Breathing-Pulse" /> 
+            <span>เลือกบิลรวมเข้าแผงคิวงานแล้ว</span> 
+            <span className="text-white text-sm font-sans px-1.5 py-0.5 bg-slate-700 rounded-md shadow-inner">{selectedIds.length}</span> 
+            <span>ใบตรวจรับพัสดุ</span>
           </div>
-        </div>
+          
+          <div className="flex items-center gap-2 select-none w-full sm:w-auto">
+            <button type="button" className="flex-1 sm:flex-none h-9 px-4 bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold text-xs rounded-xl active:scale-95 transition-all" onClick={() => setSelectedIds([])}>ยกเลิกการเลือก</button>
+            
+            {/* 🟢 [ROUTING FIXED] ปรับปุ่มพิมพ์กลุ่มพ่วงรหัสตัวแปร shopSlug ยิงพุ่งตรงเข้าเป้าหมายอย่างแม่นยำ ไร้อาการเด้งสะบัด */}
+            <button
+              type="button"
+              onClick={() => {
+                const targetSlug = shopSlug || 'advancetech';
+                navigate(`/${targetSlug}/pos/purchases/barcodes/print?ids=${selectedIds.join(',')}`);
+              }}
+              className="flex-1 sm:flex-none h-9 px-4 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-black text-xs rounded-xl border border-orange-400/10 shadow-lg transform active:scale-95 hover:-translate-y-0.5 transition-all duration-300 flex items-center justify-center gap-1"
+            >
+              <Printer className="w-3.5 h-3.5 text-orange-100" />
+              <span>พิมพ์กลุ่มรายการที่เลือก ({selectedIds.length})</span>
+            </button>
+          </div>
         </div>
       )}
     </div>
@@ -243,7 +233,3 @@ const BarcodePrintTable = ({ mode = 'UNPRINTED', receipts }) => {
 };
 
 export default BarcodePrintTable;
-
-
-
-

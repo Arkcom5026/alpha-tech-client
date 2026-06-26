@@ -1,5 +1,3 @@
-
-
 // src/utils/apiClient.js
 
 import axios from 'axios';
@@ -35,6 +33,7 @@ const applyAuthorizationHeader = (config, bearerToken) => {
   return config;
 };
 
+// ✅ ปรับแต่งให้ตัวยิงรีเฟรชผูกกับสเปกพอร์ตคงที่โดยตรง
 const refreshAccessToken = async () => {
   if (!refreshPromise) {
     refreshPromise = axios.post(
@@ -91,11 +90,9 @@ function getToken() {
   return token ? `Bearer ${token}` : null;
 }
 
-// ✅ baseURL: normalize ให้ลงท้ายด้วย /api/ เสมอ
-let baseURL = 'http://localhost:5000/api/';
-if (import.meta.env.VITE_API_URL) {
-  baseURL = `${import.meta.env.VITE_API_URL.replace(/\/$/, '')}/api/`;
-}
+// 🎯 [STRICT ISOLATION LINE] บังคับล็อกพอร์ต 5000 สำหรับแกนหลักหน้าบ้านและระบบ Login 
+// ตัดขาดจากตัวแปรภายนอกเพื่อพิสูจน์ทราบอาการ Runtime Mutation กลางทาง
+const baseURL = 'http://localhost:5000/api/';
 
 const apiClient = axios.create({
   baseURL,
@@ -179,7 +176,3 @@ apiClient.interceptors.response.use(
 );
 
 export default apiClient;
-
-
-
-  

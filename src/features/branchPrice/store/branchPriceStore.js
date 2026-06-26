@@ -6,6 +6,7 @@ import {
   upsertBranchPrice,
   getBranchPricesByBranchId,
   getAllProductsWithBranchPriceByBranchId,
+  updateMultipleBranchPrices, // 🟢 FIXED: เพิ่มการอิมพอร์ตตรงนี้ไว้ที่หัวเสา
 } from '../api/branchPriceApi';
 
 const useBranchPriceStore = create((set) => ({
@@ -125,9 +126,8 @@ const useBranchPriceStore = create((set) => ({
   updateMultipleBranchPricesAction: async (updatedList) => {
     set({ loading: true, error: null });
     try {
-      await import('../api/branchPriceApi').then((mod) =>
-        mod.updateMultipleBranchPrices(updatedList)
-      );
+      // 🟢 FIXED: ยุบคำสั่ง await import ทิ้ง แล้วเรียกใช้ฟังก์ชันตรง ๆ จากหัวเสาได้ทันที
+      await updateMultipleBranchPrices(updatedList);
 
       set((state) => ({
         allProductsWithPrice: state.allProductsWithPrice.map((item) => {

@@ -1,15 +1,23 @@
-// ✅ src/features/supplier/pages/ListSupplierPage.jsx
-import { useEffect, useState } from 'react';
+// src/features/supplier/pages/ListSupplierPage.jsx
+// 🏛️ Premium Next-Gen Influx Registry Center: (Lean Pure Data Architecture)
+
+import React, { useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import SupplierTable from '../components/SupplierTable';
 import { useAuthStore } from '@/features/auth/store/authStore';
 import { useBranchStore } from '@/features/branch/store/branchStore';
 import useSupplierStore from '../store/supplierStore';
+import { Plus, Building2 } from 'lucide-react';
 
 const ListSupplierPage = () => {
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+  const { shopSlug } = useParams();
   const token = useAuthStore((state) => state.token);
   const selectedBranchId = useBranchStore((state) => state.selectedBranchId);
   const { suppliers, fetchSuppliersAction, deleteSupplierAction } = useSupplierStore();
+
+  const targetSlug = shopSlug || 'advancetech';
 
   const handleDeleteSupplier = async (id) => {
     try {
@@ -22,7 +30,6 @@ const ListSupplierPage = () => {
 
   useEffect(() => {
     const init = async () => {
-      
       try {
         if (!selectedBranchId || !token) return;
         await fetchSuppliersAction();
@@ -33,24 +40,39 @@ const ListSupplierPage = () => {
       }
     };
     init();
-  }, [token, selectedBranchId]);
-
-
+  }, [token, selectedBranchId, fetchSuppliersAction]);
 
   if (!selectedBranchId) {
-    return <p className="text-center text-gray-500">ยังไม่ได้เลือกสาขา</p>;
+    return (
+      <div className="w-full text-center py-12 text-slate-400 font-bold select-none border border-dashed rounded-xl bg-slate-50 animate-fadeIn text-xs md:text-sm">
+        📭 กรุณาทำการเลือกสาขาของระบบร้านค้าก่อนเรียกดูบัญชีรายชื่อผู้ขายครับ
+      </div>
+    );
   }
 
   return (
-    <div className="p-4">
+    <div className="w-full space-y-2 max-w-[1600px] mx-auto text-slate-800 animate-fadeIn text-xs md:text-sm">
       {loading ? (
-        <p>กำลังโหลดข้อมูล...</p>
+        <div className="text-center py-12 text-slate-400 font-bold select-none italic tracking-wide">
+          ⏳ กำลังเรียกตรวจบัญชีทะเบียนคู่ค้าส่วนกลาง...
+        </div>
       ) : suppliers.length === 0 ? (
-        <div className="text-center text-gray-500 space-y-4">
-          <p>ยังไม่มีผู้ขายในระบบ</p>
-          <a href="/pos/purchases/suppliers/create" className="inline-block px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
-            ➕ เพิ่มผู้ขาย
-          </a>
+        <div className="bg-white border border-slate-200 p-12 rounded-xl shadow-sm text-center space-y-3 select-none flex flex-col items-center justify-center">
+          <div className="p-3 bg-slate-100 rounded-full text-slate-400">
+            <Building2 className="w-6 h-6" />
+          </div>
+          <div className="space-y-1">
+            <p className="text-slate-900 font-black">ยังไม่มีข้อมูลบัญชีผู้ขายในสาขานี้</p>
+            <p className="text-[11px] text-slate-400 font-medium">ลงทะเบียนรายชื่อบริษัทคู่ค้า ซัพพลายเออร์ เพื่อใช้ผูกข้อมูลในใบสั่งซื้อและใบรับสินค้า</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate(`/${targetSlug}/pos/purchases/suppliers/create`)}
+            className="h-8 px-4 bg-slate-900 hover:bg-slate-800 text-white font-black text-xs rounded-lg active:scale-95 transition-all shadow-sm flex items-center gap-1.5"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>ลงทะเบียนผู้ขายรายแรก</span>
+          </button>
         </div>
       ) : (
         <SupplierTable suppliers={suppliers} onDelete={handleDeleteSupplier} />
@@ -60,6 +82,3 @@ const ListSupplierPage = () => {
 };
 
 export default ListSupplierPage;
-
-
-

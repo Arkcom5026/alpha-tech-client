@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuthStore } from '@/features/auth/store/authStore.js';
@@ -33,9 +32,13 @@ const EmployeeTable = ({
   onRefresh,
   embedded = false,
 }) => {
-  // 🔐 ใช้ role จาก auth store เพื่อแสดงคอลัมน์สาขาเฉพาะ superadmin
+  // 🔐 ใช้สิทธิ์และข้อมูลโปรไฟล์จาก auth store เพื่อแสดงผลและจัด Multi-Tenant URL
   const role = useAuthStore((s) => s.role);
+  const employee = useAuthStore((s) => s.employee);
   const isSuperAdmin = String(role || '').toLowerCase() === 'superadmin';
+
+  // 🍊 ดึงรหัสร้านค้าสับสายความปลอดภัยแชร์สาขา (ถ้าไม่มีให้ Fallback ปลอดภัย)
+  const shopSlug = employee?.branchSlug || 'default';
 
   const rows = Array.isArray(data) ? data : [];
   const colCount = 8 + (isSuperAdmin ? 1 : 0);
@@ -140,7 +143,8 @@ const EmployeeTable = ({
                 <div className="inline-flex items-center gap-2 justify-end min-w-[260px]">
                   {!readOnly && (
                     <Link
-                      to={`/pos/settings/employee/edit/${id}`}
+                      // 🟢 FIXED: สับรางเปลี่ยนมาเติมสแลชตัวแรกและแนบตัวแปรความปลอดภัย shopSlug คุม Multi-Tenant
+                      to={`/${shopSlug}/pos/settings/employee/edit/${id}`}
                       className="px-3 py-1.5 rounded-md text-sm font-medium border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800"
                       title="แก้ไขข้อมูลพนักงาน"
                     >
@@ -170,7 +174,6 @@ const EmployeeTable = ({
   );
 
   if (embedded) {
-    // ฝังในกรอบจากหน้า ListEmployeePage (รูปแบบเดียวกับ ManageRolesPage)
     return (
       <div className="w-full">
         <div>{TableBlock}</div>
@@ -193,7 +196,6 @@ const EmployeeTable = ({
     );
   }
 
-  // โหมดมีกรอบการ์ดในตัว (ยังคงไว้เพื่อความยืดหยุ่น)
   return (
     <div className="w-full flex justify-center mt-4">
       <div className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm rounded-xl overflow-hidden">
@@ -227,7 +229,3 @@ const EmployeeTable = ({
 };
 
 export default EmployeeTable;
-
-
-
-

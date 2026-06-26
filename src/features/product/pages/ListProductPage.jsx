@@ -528,7 +528,7 @@ export default function ListProductPage() {
               นโยบาย: Product เป็นข้อมูลกลาง (Global) — ไม่มีการปิดใช้งานจาก POS • ลบถาวรได้เฉพาะ SUPERADMIN
             </p>
           </div>
-          <StandardActionButtons onAdd={() => navigate('/pos/stock/products/create')} />
+          <StandardActionButtons onAdd={() => navigate(`/${shopSlug}/pos/stock/products/create`)} />
         </div>
         <div className="mt-3 pb-3 border-b border-zinc-200 dark:border-zinc-800" />
 

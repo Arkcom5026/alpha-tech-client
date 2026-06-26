@@ -333,7 +333,7 @@ export const SalesDetailPage = () => {
 
           <div className="flex flex-wrap gap-3">
             <Link
-              to="/pos/reports/sales/list"
+              to={shopSlug ? `/${shopSlug}/pos/reports/sales/list` : `/pos/reports/sales/list`}
               className="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
             >
               กลับรายการขาย

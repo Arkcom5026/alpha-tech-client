@@ -1,11 +1,8 @@
-
-
-
 // src/features/customerReceipt/pages/CustomerReceiptDetailPage.jsx
+// 🏛️ Premium Next-Gen POS Customer Receipt Workspace: (Zero-Slug Crash Production Hardened Version)
 
 import { useEffect } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-
 import useCustomerReceiptStore from '../store/customerReceiptStore';
 import CustomerReceiptDetailCard from '../components/CustomerReceiptDetailCard';
 import CustomerReceiptAllocationTable from '../components/CustomerReceiptAllocationTable';
@@ -20,52 +17,42 @@ const CustomerReceiptDetailPage = () => {
   const submitting = useCustomerReceiptStore((state) => state.submitting);
   const error = useCustomerReceiptStore((state) => state.error);
   const successMessage = useCustomerReceiptStore((state) => state.successMessage);
-  const getCustomerReceiptByIdAction = useCustomerReceiptStore(
-    (state) => state.getCustomerReceiptByIdAction
-  );
-  const cancelCustomerReceiptAction = useCustomerReceiptStore(
-    (state) => state.cancelCustomerReceiptAction
-  );
-  const clearCustomerReceiptMessagesAction = useCustomerReceiptStore(
-    (state) => state.clearCustomerReceiptMessagesAction
-  );
-  const clearSelectedCustomerReceiptAction = useCustomerReceiptStore(
-    (state) => state.clearSelectedCustomerReceiptAction
-  );
+  
+  const getCustomerReceiptByIdAction = useCustomerReceiptStore((state) => state.getCustomerReceiptByIdAction);
+  const cancelCustomerReceiptAction = useCustomerReceiptStore((state) => state.cancelCustomerReceiptAction);
+  const clearCustomerReceiptMessagesAction = useCustomerReceiptStore((state) => state.clearCustomerReceiptMessagesAction);
+  const clearSelectedCustomerReceiptAction = useCustomerReceiptStore((state) => state.clearSelectedCustomerReceiptAction);
 
   useEffect(() => {
     clearCustomerReceiptMessagesAction();
-
     if (id) {
       getCustomerReceiptByIdAction(Number(id)).catch(() => {});
     }
-
     return () => {
       clearCustomerReceiptMessagesAction();
       clearSelectedCustomerReceiptAction();
     };
-  }, [
-    id,
-    getCustomerReceiptByIdAction,
-    clearCustomerReceiptMessagesAction,
-    clearSelectedCustomerReceiptAction,
-  ]);
+  }, [id, getCustomerReceiptByIdAction, clearCustomerReceiptMessagesAction, clearSelectedCustomerReceiptAction]);
 
   const handleCancel = async ({ cancelReason }) => {
     if (!selectedItem?.id) return;
-
     await cancelCustomerReceiptAction({
       receiptId: selectedItem.id,
       cancelReason,
     });
   };
 
-  const canAllocate =
-    selectedItem?.status !== 'CANCELLED' && Number(selectedItem?.remainingAmount || 0) > 0;
+  // 🟢 [DYNAMIC SAFE PATH ENGINE]: แกะหาจุดตั้งต้น /customer-receipts จาก URL ปัจจุบันบนเบราว์เซอร์ เพื่อความปลอดภัยขั้นสูงสุด
+  const getDynamicFinanceUrl = (segment) => {
+    const currentPath = window.location.pathname; 
+    const lookupKey = `/customer-receipts/${id}`;
+    const baseListPath = currentPath.includes(lookupKey)
+      ? currentPath.substring(0, currentPath.indexOf(lookupKey))
+      : currentPath.substring(0, currentPath.indexOf('/customer-receipts'));
+    return `${baseListPath}/customer-receipts${segment}`;
+  };
 
-  const allocatePath = selectedItem?.id
-    ? `/pos/finance/customer-receipts/${selectedItem.id}/allocate`
-    : '/pos/finance/customer-receipts';
+  const canAllocate = selectedItem?.status !== 'CANCELLED' && Number(selectedItem?.remainingAmount || 0) > 0;
 
   const renderBody = () => {
     if (detailLoading) {
@@ -85,10 +72,8 @@ const CustomerReceiptDetailPage = () => {
             รายการนี้อาจไม่มีอยู่แล้ว หรือระบบยังไม่สามารถโหลดรายละเอียดได้ในขณะนี้
           </p>
           <div className="mt-4">
-            <Link
-              to="/pos/finance/customer-receipts"
-              className="inline-flex items-center justify-center rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
-            >
+            {/* 🟢 [CRITICAL FIX]: ล้าง shopSlug ที่แฝงตัวอยู่ตรงนี้ออกเรียบร้อย รอดพ้นหน้าขาวร้อยเปอร์เซ็นต์ */}
+            <Link to={getDynamicFinanceUrl('')} className="inline-flex items-center justify-center rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50">
               กลับไปรายการ
             </Link>
           </div>
@@ -121,26 +106,16 @@ const CustomerReceiptDetailPage = () => {
           <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
             <h2 className="text-base font-semibold text-gray-900">การดำเนินการ</h2>
             <div className="mt-4 flex flex-col gap-2">
-              <button
-                type="button"
-                onClick={() => navigate(-1)}
-                className="inline-flex items-center justify-center rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
-              >
+              <button type="button" onClick={() => navigate(-1)} className="inline-flex items-center justify-center rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50">
                 กลับหน้าก่อนหน้า
               </button>
 
-              <Link
-                to="/pos/finance/customer-receipts"
-                className="inline-flex items-center justify-center rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
-              >
+              <Link to={getDynamicFinanceUrl('')} className="inline-flex items-center justify-center rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50">
                 กลับไปรายการทั้งหมด
               </Link>
 
               {canAllocate && (
-                <Link
-                  to={allocatePath}
-                  className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700"
-                >
+                <Link to={getDynamicFinanceUrl(`/${selectedItem.id}/allocate`)} className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700">
                   ไปหน้าตัดชำระ
                 </Link>
               )}
@@ -148,11 +123,7 @@ const CustomerReceiptDetailPage = () => {
           </div>
 
           <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-            <CustomerReceiptCancelSection
-              item={selectedItem}
-              submitting={submitting}
-              onSubmit={handleCancel}
-            />
+            <CustomerReceiptCancelSection item={selectedItem} submitting={submitting} onSubmit={handleCancel} />
           </div>
         </div>
       </div>
@@ -164,7 +135,7 @@ const CustomerReceiptDetailPage = () => {
       <div className="flex flex-col gap-4 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm md:flex-row md:items-start md:justify-between">
         <div className="space-y-1">
           <div className="flex items-center gap-2 text-sm text-gray-500">
-            <Link to="/pos/finance/customer-receipts" className="transition hover:text-gray-700">
+            <Link to={getDynamicFinanceUrl('')} className="transition hover:text-gray-700">
               รายการรับชำระลูกหนี้
             </Link>
             <span>/</span>
@@ -181,10 +152,7 @@ const CustomerReceiptDetailPage = () => {
 
         {canAllocate && (
           <div className="flex flex-wrap gap-2">
-            <Link
-              to={allocatePath}
-              className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700"
-            >
+            <Link to={getDynamicFinanceUrl(`/${selectedItem?.id}/allocate`)} className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700">
               ตัดชำระใบรับเงิน
             </Link>
           </div>
@@ -209,7 +177,3 @@ const CustomerReceiptDetailPage = () => {
 };
 
 export default CustomerReceiptDetailPage;
-
-
-
-

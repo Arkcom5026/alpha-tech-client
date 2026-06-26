@@ -1,14 +1,7 @@
-
-
 // 📁 FILE: src/features/finance/pages/CustomerCreditPage.jsx
-// ✅ Hard-stable: useSyncExternalStore + store API (prevents Zustand selector rerender loop)
-// ✅ Production-grade (minimal disruption)
-// - Store-first (no direct API calls)
-// - UI-based alerts only (no dialog)
-// - No auto-load on mount (press Search)
-
+// ✅ Hard-stable: useSyncExternalStore + store API
 import React, { useCallback, useMemo, useState, useSyncExternalStore } from 'react';
-
+import { useParams } from 'react-router-dom'; // 🟢 [DYNAMIC PARAM FIX] นำเข้า useParams มาร่วมทีม
 import useFinanceStore from '@/features/finance/store/financeStore';
 import CustomerCreditTable from '@/features/finance/components/CustomerCreditTable';
 
@@ -38,7 +31,6 @@ const parseMoney = (val) => {
     }
   }
   if (typeof val === 'string') {
-    // ✅ Robust sanitize: handle commas, currency symbols, spaces
     const s = val.replace(/,/g, '').replace(/[^0-9.-]/g, '').trim();
     if (!s) return 0;
     const n = Number(s);
@@ -57,9 +49,7 @@ const parseMoney = (val) => {
         return Number.isFinite(n) ? n : 0;
       }
     }
-  } catch (_) {
-    // ignore
-  }
+  } catch (_) {}
   return 0;
 };
 
@@ -79,7 +69,6 @@ const getDefaultRange90 = () => {
   }
 };
 
-// ✅ Hard-stable selector hook (no zustand hook usage)
 const useFinanceSlice = (selector) => {
   const subscribe = useFinanceStore.subscribe;
   const getSnapshot = () => selector(useFinanceStore.getState());
@@ -88,13 +77,13 @@ const useFinanceSlice = (selector) => {
 };
 
 const CustomerCreditPage = () => {
+  const { shopSlug } = useParams(); // 🟢 [LINK BINDING] แกะรหัสชื่อร้านค้าพาร์ตเนอร์คุมระบบนำทาง Multi-Tenant
   const defaults = useMemo(() => getDefaultRange90(), []);
 
   const [keyword, setKeyword] = useState('');
   const [fromDate, setFromDate] = useState(defaults.fromDate);
   const [toDate, setToDate] = useState(defaults.toDate);
 
-  // ✅ slices (hard-stable)
   const customerCreditSummary = useFinanceSlice((s) => s.customerCreditSummary);
   const customerCreditRows = useFinanceSlice((s) => s.customerCreditRows);
   const customerCreditLoading = useFinanceSlice((s) => s.customerCreditLoading);
@@ -103,10 +92,6 @@ const CustomerCreditPage = () => {
   const safeRows = Array.isArray(customerCreditRows) ? customerCreditRows : [];
 
   const computedSummary = useMemo(() => {
-    // ✅ BE may return either:
-    //  A) { success:true, summary:{ ... } }
-    //  B) { ... }
-    //  C) legacy shapes
     const src = customerCreditSummary && typeof customerCreditSummary === 'object' ? customerCreditSummary : null;
     const s = src?.summary && typeof src.summary === 'object' ? src.summary : src;
 
@@ -139,7 +124,6 @@ const CustomerCreditPage = () => {
         if (cid != null) seen.add(String(cid));
       }
 
-      // limitTotal is optional; best-effort
       const limitTotal = safeRows.reduce((sum, r) => {
         const v =
           r?.creditLimit ??
@@ -175,7 +159,6 @@ const CustomerCreditPage = () => {
 
       const customerCount = Number(s.customerCount ?? s.totalCustomers ?? s.customers ?? safeRows.length) || 0;
 
-      // Prefer "totalCreditLimit"; fallback to other known keys
       const limitTotal = parseMoney(
         s.totalCreditLimit ??
           s.creditLimitTotal ??
@@ -185,7 +168,6 @@ const CustomerCreditPage = () => {
           s.creditLimitSum
       );
 
-      // ✅ If summary looks empty but rows have data -> fallback (AR-style)
       if (creditTotal <= 0 && safeRows.length) {
         const fromRows = computeFromRows();
         if (fromRows.creditTotal > 0) return fromRows;
@@ -199,7 +181,6 @@ const CustomerCreditPage = () => {
       return { creditTotal, customerCount, limitTotal };
     }
 
-    // Fallback: compute from rows
     return computeFromRows();
   }, [customerCreditSummary, safeRows]);
 
@@ -212,18 +193,13 @@ const CustomerCreditPage = () => {
   }, [keyword, fromDate, toDate]);
 
   const reload = useCallback(async () => {
-    // ✅ DEV-only trace (verify click -> action)
     try {
       if (import.meta?.env?.DEV) {
         // eslint-disable-next-line no-console
         console.log('[CustomerCreditPage] reload()', buildParams());
       }
-    } catch (_) {
-      // ignore
-    }
+    } catch (_) {}
     const params = buildParams();
-
-    // ✅ pull actions from getState() (no subscription)
     const st = useFinanceStore.getState();
 
     if (typeof st.resetCustomerCreditErrorAction === 'function') {
@@ -351,8 +327,11 @@ const CustomerCreditPage = () => {
           </div>
 
           <div className="flex flex-wrap gap-3 mt-4">
+            {/* 🟢 [BUG FIX SUCCESS] ซ่อมคีย์บอร์ดพิมพ์เศษสตริง $1 หลุดพังออกถาวร ปิดแท็กสะอาดสมบูรณ์ */}
             <button
-              type="submit"$1
+              type="submit"
+              className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-semibold hover:bg-blue-700 transition"
+              disabled={!!customerCreditLoading}
             >
               {customerCreditLoading ? 'กำลังโหลด...' : 'ค้นหา'}
             </button>
@@ -388,11 +367,3 @@ const CustomerCreditPage = () => {
 };
 
 export default CustomerCreditPage;
-
-
-
-
-
-
-
-

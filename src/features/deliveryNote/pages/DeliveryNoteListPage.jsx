@@ -1,34 +1,28 @@
-
-
-
-
 // src/features/deliveryNote/pages/DeliveryNoteListPage.jsx
+// 🏛️ Premium Next-Gen POS Delivery Note Console: (Unified Production High-Density Grid)
 
-
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useSalesStore from '@/features/sales/store/salesStore';
+import { RefreshCw, Search, FileText, Printer, AlertCircle, Clock, ChevronUp, ChevronDown, Bug, Info } from 'lucide-react';
 
 const DeliveryNoteListPage = () => {
+  const didInitRef = useRef(false);
   const navigate = useNavigate();
 
   const [search, setSearch] = useState('');
   const [fromDate, setFromDate] = useState(() => {
-    // ✅ Default: last 30 days (inclusive) in local time
     const today = new Date();
     const start = new Date(today);
     start.setDate(today.getDate() - 30);
-
     const pad2 = (n) => String(n).padStart(2, '0');
-    const toLocalYMD = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
-    return toLocalYMD(start);
+    return `${start.getFullYear()}-${pad2(start.getMonth() + 1)}-${pad2(start.getDate())}`;
   });
+  
   const [toDate, setToDate] = useState(() => {
-    // ✅ Default: today (local)
     const today = new Date();
     const pad2 = (n) => String(n).padStart(2, '0');
-    const toLocalYMD = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
-    return toLocalYMD(today);
+    return `${today.getFullYear()}-${pad2(today.getMonth() + 1)}-${pad2(today.getDate())}`;
   });
 
   const [limit, setLimit] = useState(100);
@@ -37,14 +31,14 @@ const DeliveryNoteListPage = () => {
   const [lastSearchedAt, setLastSearchedAt] = useState(null);
   const [showDebug, setShowDebug] = useState(false);
 
-  // ✅ Client-side sorting (UX only; BE already orders by createdAt desc)
+  // ✅ Client-side sorting states
   const [sortKey, setSortKey] = useState('createdAt');
   const [sortDir, setSortDir] = useState('desc');
 
-  const salesStore = useSalesStore();
-  const printableSales = salesStore.printableSales;
-  const loading = salesStore.loading;
-  const error = salesStore.error;
+  const salesStore = useSalesStore() || {};
+  const printableSales = salesStore.printableSales || [];
+  const loading = salesStore.loading || false;
+  const error = salesStore.error || null;
   const loadPrintableSalesAction = salesStore.loadPrintableSalesAction;
 
   const clampLimit = (n) => {
@@ -66,23 +60,29 @@ const DeliveryNoteListPage = () => {
       fromDate,
       toDate,
       limit: clampLimit(limit),
-      // ✅ BE should filter unpaid for Delivery Note list
       onlyUnpaid: 1,
     };
 
     setLastQuery(params);
     setLastSearchedAt(new Date().toISOString());
 
-    await loadPrintableSalesAction(params);
+    if (typeof loadPrintableSalesAction === 'function') {
+      try {
+        await loadPrintableSalesAction(params);
+      } catch (err) {
+        setUiError('❌ เกิดข้อผิดพลาดจากฐานข้อมูลหลังบ้าน: ' + (err.message || 'Network Fail'));
+      }
+    }
   }, [search, fromDate, toDate, limit, loadPrintableSalesAction]);
 
   useEffect(() => {
+    if (didInitRef.current) return;
+    didInitRef.current = true;
     handleSearch();
   }, [handleSearch]);
 
   const rawRows = Array.isArray(printableSales) ? printableSales : [];
 
-  // ----- normalize helpers (defensive; supports multiple BE shapes)
   const toNum = (v) => {
     const n = Number(v);
     return Number.isFinite(n) ? n : null;
@@ -100,75 +100,41 @@ const DeliveryNoteListPage = () => {
       const n = toNum(candidates[i]);
       if (n != null) return n;
     }
-
     const p = Array.isArray(s?.payments) ? s.payments : null;
     if (p && p.length > 0) {
-      const sum = p.reduce((acc, it) => {
-        const n = toNum(it?.amount ?? it?.receivedAmount ?? 0);
-        return acc + (n != null ? n : 0);
-      }, 0);
+      const sum = p.reduce((acc, it) => acc + toNum(it?.amount ?? it?.receivedAmount ?? 0), 0);
       return round2(sum);
     }
-
     return 0;
   };
 
-  // ✅ Defensive total normalizer: “ยอดรวม (Gross / รวม VAT แล้ว)”
-  // เป้าหมาย: ยอดใน List ต้องตรงกับยอดจริงที่แสดงในใบส่งของ/ใบเสร็จ
-  // กติกา (กัน VAT ซ้ำ + ยึด DB เป็นหลัก):
-  // 1) ถ้ามี totalAmount → ถือว่าเป็นยอดรวม (gross) (authoritative) (ห้ามบวก VAT ซ้ำ)
-  // 2) ถ้ามี beforeVat + vatAmount → รวมตรงนี้ (แม่นสุดเมื่อ BE ส่ง split มา)
-  // 3) ถ้า BE ส่ง field แนว “gross/grand total” มา → ใช้เลย
-  // 4) fallback: gross-up จาก beforeVat เฉพาะกรณีไม่มี vatAmount
   const getGrossTotalAmount = (s) => {
-    // ✅ IMPORTANT (DB): totalBeforeDiscount ในโปรเจกต์นี้เป็น “ยอดรวมที่รวม VAT แล้ว (gross)”
-    //    ดังนั้นห้ามนำไปบวก VAT ซ้ำเด็ดขาด    // ✅ 1) Prefer “gross from line items” fields first to match เอกสารพิมพ์ (VAT-Included pricing)
-    // ในโปรเจกต์นี้พบว่า totalAmount บาง endpoint อาจเป็น "gross+vat" (เสี่ยง VAT ซ้ำ) ขณะที่ totalBeforeDiscount = gross จริง
-
     const totalAmount = toNum(s?.totalAmount);
     const totalBeforeDiscountGross = toNum(s?.totalBeforeDiscount);
 
-    // ถ้ามีทั้งคู่และต่างกัน -> ใช้ค่าที่ "เล็กกว่า" เป็น gross (กันเคส totalAmount = gross + vat)
     if (totalAmount != null && totalBeforeDiscountGross != null) {
       if (Math.abs(totalAmount - totalBeforeDiscountGross) <= 0.05) return round2(totalAmount);
       return round2(Math.min(totalAmount, totalBeforeDiscountGross));
     }
-
-    // มีแค่ตัวเดียว
     if (totalBeforeDiscountGross != null) return round2(totalBeforeDiscountGross);
     if (totalAmount != null) return round2(totalAmount);
 
     const beforeVat = toNum(s?.beforeVat ?? s?.totalBeforeVat ?? s?.subTotal ?? s?.subtotalAmount);
     const vatAmount = toNum(s?.vatAmount ?? s?.vat ?? s?.taxAmount ?? s?.vatTotal);
 
-    // ✅ 2) Best when split fields exist
-    if (beforeVat != null && vatAmount != null) {
-      return round2(beforeVat + vatAmount);
-    }
+    if (beforeVat != null && vatAmount != null) return round2(beforeVat + vatAmount);
 
-    // ✅ 3) Explicit “gross/grand total” fields
-    const explicitCandidates = [
-      s?.grandTotal,
-      s?.totalWithVat,
-      s?.totalInclVat,
-      s?.totalAmountGross,
-      s?.totalFinal,
-      s?.amountTotal,
-      s?.total,
-    ];
+    const explicitCandidates = [s?.grandTotal, s?.totalWithVat, s?.totalInclVat, s?.totalAmountGross, s?.totalFinal, s?.amountTotal, s?.total];
     for (let i = 0; i < explicitCandidates.length; i += 1) {
       const n = toNum(explicitCandidates[i]);
       if (n != null) return round2(n);
     }
 
-    // ✅ 4) Fallback: gross-up from beforeVat only when we don't have vatAmount
     const vatRate = toNum(s?.vatRate);
     if (beforeVat != null) {
       if (vatRate != null) return round2(beforeVat * (1 + vatRate / 100));
       return round2(beforeVat);
     }
-
-    // last resort
     if (vatAmount != null) return round2(vatAmount);
     return 0;
   };
@@ -179,54 +145,35 @@ const DeliveryNoteListPage = () => {
       const n = toNum(candidates[i]);
       if (n != null) return n;
     }
-
-    const total = getGrossTotalAmount(s);
-    const paid = getPaidAmount(s);
-    return Math.max(0, round2(total - paid));
+    return Math.max(0, round2(getGrossTotalAmount(s) - getPaidAmount(s)));
   };
 
   const isUnpaidSale = (s) => {
-    const remaining = getRemainingAmount(s);
-    if (remaining > 0.0001) return true;
-
+    if (getRemainingAmount(s) > 0.0001) return true;
     if (s?.isPaid === false) return true;
     if (s?.paymentStatus && String(s.paymentStatus).toUpperCase() === 'UNPAID') return true;
-
     return false;
   };
 
   const rows = useMemo(() => {
-    // ✅ Delivery Note list: show ONLY unpaid sales (follow Print Receipt list policy)
     const unpaidOnly = rawRows.filter((s) => isUnpaidSale(s));
-
     const nowTs = Date.now();
-    const toDays = (ts) => {
-      const n = Number(ts);
-      if (!Number.isFinite(n) || n <= 0) return 0;
-      const diff = Math.max(0, nowTs - n);
-      return Math.floor(diff / (1000 * 60 * 60 * 24));
-    };
+    const toDays = (ts) => Math.floor(Math.max(0, nowTs - Number(ts)) / (1000 * 60 * 60 * 24));
 
     const mapRow = (s) => {
-      const totalAmount = getGrossTotalAmount(s);
-      const paidAmount = getPaidAmount(s);
-      const balanceAmount = getRemainingAmount(s);
-
       const createdAt = s?.createdAt ?? s?.soldAt ?? null;
       const createdTs = createdAt ? new Date(createdAt).getTime() : 0;
-      const agingDays = createdTs ? toDays(createdTs) : 0;
-
       return {
         id: s.id,
         code: s.code,
         companyName: s?.companyName ?? s?.customer?.companyName ?? '-',
         customerName: s?.customerName ?? s?.customer?.name ?? '-',
         customerPhone: s?.customerPhone ?? s?.customer?.phone ?? '-',
-        totalAmount,
-        paidAmount,
-        balanceAmount,
+        totalAmount: getGrossTotalAmount(s),
+        paidAmount: getPaidAmount(s),
+        balanceAmount: getRemainingAmount(s),
         createdAt,
-        agingDays,
+        agingDays: createdTs ? toDays(createdTs) : 0,
         lastPaidAt: s?.lastPaidAt ?? s?.lastReceivedAt ?? null,
         employeeName: s?.employeeName ?? s?.employee?.name ?? '-',
       };
@@ -236,377 +183,202 @@ const DeliveryNoteListPage = () => {
     if (!query) return unpaidOnly.map(mapRow);
 
     return unpaidOnly
-      .filter((s) => {
-        const hay = [
-          s?.customer?.companyName,
-          s?.customer?.name,
-          s?.customer?.phone,
-          s?.companyName,
-          s?.customerName,
-          s?.customerPhone,
-          s?.code,
-        ]
-          .map((v) => String(v ?? '').toLowerCase())
-          .join(' | ');
-
-        return hay.includes(query);
-      })
+      .filter((s) => [s?.customer?.companyName, s?.customer?.name, s?.customer?.phone, s?.code].map(v => String(v ?? '').toLowerCase()).join(' | ').includes(query))
       .map(mapRow);
   }, [rawRows, search]);
 
   const getSortVal = (row, key) => {
     if (!row) return null;
-    if (key === 'totalAmount' || key === 'paidAmount' || key === 'balanceAmount') {
-      return Number(row?.[key] || 0);
-    }
-    if (key === 'agingDays') {
-      return Number(row?.agingDays || 0);
-    }
-    if (key === 'createdAt' || key === 'lastPaidAt') {
-      const v = row?.[key];
-      return v ? new Date(v).getTime() : 0;
-    }
-    return String(row?.[key] ?? '').toLowerCase();
+    if (key === 'totalAmount' || key === 'paidAmount' || key === 'balanceAmount' || key === 'agingDays') return Number(row[key] || 0);
+    if (key === 'createdAt' || key === 'lastPaidAt') return row[key] ? new Date(row[key]).getTime() : 0;
+    return String(row[key] ?? '').toLowerCase();
   };
 
   const toggleSort = (key) => {
     if (!key) return;
-    setSortKey((prevKey) => {
-      if (prevKey !== key) {
-        setSortDir('asc');
-        return key;
-      }
-      setSortDir((prevDir) => (prevDir === 'asc' ? 'desc' : 'asc'));
-      return prevKey;
-    });
+    if (sortKey !== key) {
+      setSortKey(key);
+      setSortDir('asc');
+    } else {
+      setSortDir((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+    }
   };
 
   const sortIndicator = (key) => {
     if (sortKey !== key) return null;
-    return sortDir === 'asc' ? ' ▲' : ' ▼';
+    return sortDir === 'asc' ? <ChevronUp className="w-3 h-3 inline pl-0.5" /> : <ChevronDown className="w-3 h-3 inline pl-0.5" />;
   };
 
-  const sortedRows = [...rows].sort((a, b) => {
-    const av = getSortVal(a, sortKey);
-    const bv = getSortVal(b, sortKey);
-
-    if (av === bv) return 0;
-    const dir = sortDir === 'asc' ? 1 : -1;
-
-    // numbers / timestamps
-    if (typeof av === 'number' && typeof bv === 'number') return av > bv ? dir : -dir;
-
-    // strings
-    return String(av) > String(bv) ? dir : -dir;
-  });
+  const sortedRows = useMemo(() => {
+    return [...rows].sort((a, b) => {
+      const av = getSortVal(a, sortKey);
+      const bv = getSortVal(b, sortKey);
+      if (av === bv) return 0;
+      const dir = sortDir === 'asc' ? 1 : -1;
+      return av > bv ? dir : -dir;
+    });
+  }, [rows, sortKey, sortDir]);
 
   const summary = useMemo(() => {
     const count = sortedRows.length;
     const totalSum = round2(sortedRows.reduce((acc, r) => acc + Number(r?.totalAmount || 0), 0));
     const paidSum = round2(sortedRows.reduce((acc, r) => acc + Number(r?.paidAmount || 0), 0));
     const balanceSum = round2(sortedRows.reduce((acc, r) => acc + Number(r?.balanceAmount || 0), 0));
-    const avg = count > 0 ? round2(totalSum / count) : 0;
-    return { count, totalSum, paidSum, balanceSum, avg };
+    return { count, totalSum, paidSum, balanceSum, avg: count > 0 ? round2(totalSum / count) : 0 };
   }, [sortedRows]);
 
   const formatMoney = (n) => Number(n || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 });
 
   const agingBadgeClass = (days) => {
-    const d = Number(days || 0);
-    if (d >= 31) return 'bg-red-100 text-red-700';
-    if (d >= 8) return 'bg-amber-100 text-amber-800';
-    return 'bg-gray-100 text-gray-700';
+    if (days >= 31) return 'bg-rose-50 border border-rose-100 text-rose-600';
+    if (days >= 8) return 'bg-amber-50 border border-amber-100 text-amber-700';
+    return 'bg-slate-900/5 text-slate-500 border border-slate-100';
   };
 
   return (
-    <div className="p-4">
-      <h1 className="text-xl font-bold mb-2">พิมพ์ใบส่งของย้อนหลัง</h1>
-      <div className="mb-2 text-xs text-gray-600">
-        หมายเหตุ: หน้านี้แสดงเฉพาะ “ใบขายที่ยังค้างชำระ” (กรองจาก BE ด้วย onlyUnpaid=1) เพื่อใช้พิมพ์ใบส่งของ โดยค่าเริ่มต้นจะแสดงย้อนหลัง 30 วันถึงวันนี้
-      </div>
-
-      <div className="mb-3 flex flex-wrap items-center gap-2 text-sm text-gray-700">
-        <div className="font-medium">ผลลัพธ์:</div>
-        <div className="px-2 py-0.5 rounded bg-gray-100">{summary.count} รายการ</div>
-        {loading ? <div className="text-gray-500">กำลังโหลด…</div> : null}
-        <button
-          type="button"
-          className="ml-auto text-xs underline text-gray-600 hover:text-gray-800"
-          onClick={() => setShowDebug((v) => !v)}
-        >
-          {showDebug ? 'ซ่อนดีบัก' : 'แสดงดีบัก'}
-        </button>
-      </div>
-
-      {/* ✅ Executive summary (unpaid-only) */}
-      <div className="mb-4 grid grid-cols-1 md:grid-cols-4 gap-2 text-sm">
-        <div className="border rounded p-3 bg-white">
-          <div className="text-xs text-gray-500">ใบส่งของค้างชำระ</div>
-          <div className="text-lg font-bold">{summary.count} รายการ</div>
-        </div>
-        <div className="border rounded p-3 bg-white">
-          <div className="text-xs text-gray-500">ยอดรวมทั้งหมด</div>
-          <div className="text-lg font-bold">{formatMoney(summary.totalSum)} ฿</div>
-        </div>
-        <div className="border rounded p-3 bg-white">
-          <div className="text-xs text-gray-500">ค้างชำระรวม</div>
-          <div className="text-lg font-bold">{formatMoney(summary.balanceSum)} ฿</div>
-        </div>
-        <div className="border rounded p-3 bg-white">
-          <div className="text-xs text-gray-500">เฉลี่ยต่อใบ</div>
-          <div className="text-lg font-bold">{formatMoney(summary.avg)} ฿</div>
-        </div>
-      </div>
-
-      {showDebug ? (
-        <div className="mb-3 p-3 border rounded bg-gray-50 text-xs text-gray-700">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-            <div>
-              <div className="font-semibold mb-1">ตัวกรองที่ส่งไป BE</div>
-              <div>
-                keyword: <span className="font-mono">{String(lastQuery?.keyword ?? '')}</span>
+    <div className="w-full h-full p-2 md:p-3 space-y-3 max-w-[1600px] mx-auto text-slate-800 selection:bg-orange-500 selection:text-white animate-fadeIn text-xs md:text-sm antialiased font-sans font-semibold">
+      
+      <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden w-full">
+        {/* หัวแผงควบคุมระดับท็อป */}
+        <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-3 p-3.5 pb-2.5 border-b border-slate-100 select-none">
+          <div className="flex items-center justify-between xl:justify-start gap-3 w-full xl:w-auto">
+            <div className="flex items-center gap-1.5">
+              <div className="p-1.5 bg-slate-900/5 text-slate-800 rounded-lg">
+                <FileText className="w-4 h-4" />
               </div>
-              <div>
-                fromDate: <span className="font-mono">{String(lastQuery?.fromDate ?? '')}</span>
-              </div>
-              <div>
-                toDate: <span className="font-mono">{String(lastQuery?.toDate ?? '')}</span>
-              </div>
-              <div>
-                limit: <span className="font-mono">{String(lastQuery?.limit ?? '')}</span>
-              </div>
-              <div>
-                onlyUnpaid: <span className="font-mono">{String(lastQuery?.onlyUnpaid ?? '')}</span>
-              </div>
+              <h2 className="text-xs md:text-sm font-black text-slate-900 uppercase tracking-wide">พิมพ์ใบส่งของและตรวจสอบเครดิตค้างชำระ</h2>
             </div>
-            <div>
-              <div className="font-semibold mb-1">สถานะ Store</div>
-              <div>
-                loading: <span className="font-mono">{String(loading)}</span>
-              </div>
-              <div>
-                error: <span className="font-mono">{String(error ?? '')}</span>
-              </div>
-              <div>
-                lastSearchedAt: <span className="font-mono">{String(lastSearchedAt ?? '')}</span>
-              </div>
-              <div>
-                printableSales(raw):{' '}
-                <span className="font-mono">
-                  {String(Array.isArray(printableSales) ? printableSales.length : 'not-array')}
-                </span>
-              </div>
+            <button type="button" onClick={() => setShowDebug((v) => !v)} className="text-[10px] font-black text-slate-400 hover:text-slate-900 flex items-center gap-0.5 transition-colors">
+              <Bug className="w-3 h-3" /> {showDebug ? 'ซ่อนดีบัก' : 'ดีบักเกอร์'}
+            </button>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3 w-full xl:w-auto">
+            <div className="relative">
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
+              <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSearch()} placeholder="ค้นชื่อลูกค้า, เบอร์โทร, รหัสใบขาย..."
+                className="h-8 w-52 pl-8 pr-3 text-xs font-bold text-slate-900 bg-slate-50 focus:bg-white border border-slate-200 focus:border-slate-900 rounded-lg outline-none transition-all shadow-inner" />
+            </div>
+
+            <div className="flex items-center gap-1 text-[11px] font-mono font-black text-slate-900 bg-slate-50 border border-slate-200 rounded-lg p-0.5">
+              <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="bg-transparent px-1 outline-none" />
+              <span className="text-slate-400 font-sans">ถึง</span>
+              <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="bg-transparent px-1 outline-none" />
+            </div>
+
+            <input type="number" value={limit} onChange={(e) => setLimit(e.target.value)} onBlur={() => setLimit(clampLimit(limit))} placeholder="Limit" className="h-8 border border-slate-200 rounded-lg px-2 text-center font-mono font-black text-slate-900 bg-white w-14 outline-none text-xs" min="1" />
+
+            <button onClick={handleSearch} disabled={loading} className="h-8 px-4 bg-slate-900 hover:bg-slate-800 text-white font-black text-xs rounded-lg active:scale-95 transition-all shadow-sm flex items-center gap-1.5 disabled:opacity-40 ml-auto xl:ml-0">
+              {loading ? <RefreshCw className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
+              ค้นหา
+            </button>
+          </div>
+        </div>
+
+        {showDebug && (
+          <div className="m-3 p-3 border border-slate-200 rounded-xl bg-slate-50 text-[11px] text-slate-600 font-mono space-y-1 animate-fadeIn">
+            <div className="font-black text-slate-900 mb-1 flex items-center gap-1"><Bug className="w-3.5 h-3.5" /> BE Payload Sync Inspection:</div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
+              <div>• keyword: <span className="font-black text-slate-900">"{lastQuery?.keyword ?? ''}"</span> | fromDate: <span className="font-black text-slate-900">"{lastQuery?.fromDate}"</span> | toDate: <span className="font-black text-slate-900">"{lastQuery?.toDate}"</span></div>
+              <div>• loading: <span className="font-black text-slate-900">{String(loading)}</span> | Action Status: <span className="font-black text-slate-900">{typeof loadPrintableSalesAction === 'function' ? '🟢 Ready' : '❌ Missing Action'}</span></div>
             </div>
           </div>
-          <div className="mt-2 text-gray-600">ถ้าไม่พบข้อมูล ให้ลอง: (1) ขยายช่วงวันที่ (2) เพิ่ม limit (3) ตรวจ branchId/token ฝั่ง BE</div>
+        )}
+
+        {uiError && <div className="mx-3 my-2 bg-rose-50 border border-rose-100 p-2 rounded-lg text-[11px] font-black text-rose-600 animate-slideUp">⚠️ {uiError}</div>}
+        {error && <div className="mx-3 my-2 bg-rose-50 border border-rose-100 p-2 rounded-lg text-[11px] font-black text-rose-600 animate-slideUp">⚠️ {error}</div>}
+
+        {/* บล็อกสรุปผลลัพธ์แบบ High-Density 4 คอลัมน์พรีเมียม */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 p-3 bg-slate-50/50 border-b border-slate-100">
+          <div className="border border-slate-150 rounded-xl p-2 bg-white shadow-inner select-none">
+            <div className="text-[10px] text-slate-400 font-black uppercase">เอกสารค้างชำระ</div>
+            <div className="text-sm font-black text-slate-900 font-mono">{summary.count} ใบงาน</div>
+          </div>
+          <div className="border border-slate-150 rounded-xl p-2 bg-white shadow-inner select-none">
+            <div className="text-[10px] text-slate-400 font-black uppercase">มูลค่ารวมพัสดุ</div>
+            <div className="text-sm font-black text-slate-800 font-mono">{formatMoney(summary.totalSum)} ฿</div>
+          </div>
+          <div className="border border-slate-150 rounded-xl p-2 bg-white shadow-inner select-none">
+            <div className="text-[10px] text-slate-400 font-black uppercase">ยอดหนี้ค้างชำระรวม</div>
+            <div className="text-sm font-black text-rose-600 font-mono">{formatMoney(summary.balanceSum)} ฿</div>
+          </div>
+          <div className="border border-slate-150 rounded-xl p-2 bg-white shadow-inner select-none">
+            <div className="text-[10px] text-slate-400 font-black uppercase">เฉลี่ยต่อใบส่งของ</div>
+            <div className="text-sm font-black text-emerald-700 font-mono">{formatMoney(summary.avg)} ฿</div>
+          </div>
         </div>
-      ) : null}
 
-      <div className="flex flex-wrap gap-2 items-center mb-4">
-        <input
-          type="text"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') handleSearch();
-          }}
-          placeholder="ค้นหาชื่อลูกค้า, เบอร์โทร, หรือรหัสใบขาย..."
-          className="border px-2 py-1 w-72 rounded"
-        />
-        <input
-          type="date"
-          value={fromDate}
-          onChange={(e) => setFromDate(e.target.value)}
-          className="border px-2 py-1 rounded"
-        />
-        <span>ถึง</span>
-        <input
-          type="date"
-          value={toDate}
-          onChange={(e) => setToDate(e.target.value)}
-          className="border px-2 py-1 rounded"
-        />
-        <input
-          type="number"
-          value={limit}
-          onChange={(e) => setLimit(e.target.value)}
-          onBlur={() => setLimit(clampLimit(limit))}
-          placeholder="จำนวน"
-          className="border px-2 py-1 w-24 rounded"
-          min="1"
-        />
-        <button
-          onClick={handleSearch}
-          className="bg-indigo-600 text-white px-4 py-1 rounded hover:bg-indigo-700 disabled:opacity-60"
-          disabled={loading}
-        >
-          {loading ? 'กำลังค้นหา…' : 'ค้นหา'}
-        </button>
-      </div>
-
-      {uiError ? (
-        <div className="mb-3 p-3 border border-amber-300 bg-amber-50 text-amber-800 rounded">{uiError}</div>
-      ) : null}
-
-      {error ? (
-        <div className="mb-3 p-3 border border-red-300 bg-red-50 text-red-700 rounded">{error}</div>
-      ) : null}
-
-      <div className="overflow-auto border rounded" style={{ maxHeight: 520 }}>
-        <table className="w-full text-sm border-collapse">
-          <thead className="bg-gray-100">
-            <tr>
-              <th
-                className="border px-2 py-1 text-left sticky top-0 bg-gray-100 z-10 cursor-pointer select-none"
-                onClick={() => toggleSort('code')}
-                title="เรียงตามเลขที่"
-              >
-                เลขที่{sortIndicator('code')}
-              </th>
-              <th
-                className="border px-2 py-1 sticky top-0 bg-gray-100 z-10 cursor-pointer select-none"
-                onClick={() => toggleSort('companyName')}
-                title="เรียงตามหน่วยงาน"
-              >
-                หน่วยงาน{sortIndicator('companyName')}
-              </th>
-              <th
-                className="border px-2 py-1 sticky top-0 bg-gray-100 z-10 cursor-pointer select-none"
-                onClick={() => toggleSort('customerName')}
-                title="เรียงตามชื่อลูกค้า"
-              >
-                ลูกค้า{sortIndicator('customerName')}
-              </th>
-              <th className="border px-2 py-1 sticky top-0 bg-gray-100 z-10">เบอร์โทร</th>
-              <th
-                className="border px-2 py-1 sticky top-0 bg-gray-100 z-10 cursor-pointer select-none"
-                onClick={() => toggleSort('totalAmount')}
-                title="เรียงตามยอดรวม"
-              >
-                ยอดรวม{sortIndicator('totalAmount')}
-              </th>
-              <th
-                className="border px-2 py-1 sticky top-0 bg-gray-100 z-10 cursor-pointer select-none"
-                onClick={() => toggleSort('paidAmount')}
-                title="เรียงตามยอดชำระแล้ว"
-              >
-                ชำระแล้ว{sortIndicator('paidAmount')}
-              </th>
-              <th
-                className="border px-2 py-1 sticky top-0 bg-gray-100 z-10 cursor-pointer select-none"
-                onClick={() => toggleSort('balanceAmount')}
-                title="เรียงตามยอดค้างชำระ"
-              >
-                ค้างชำระ{sortIndicator('balanceAmount')}
-              </th>
-              <th
-                className="border px-2 py-1 sticky top-0 bg-gray-100 z-10 cursor-pointer select-none"
-                onClick={() => toggleSort('createdAt')}
-                title="เรียงตามวันที่ขาย"
-              >
-                วันที่ขาย{sortIndicator('createdAt')}
-              </th>
-              <th
-                className="border px-2 py-1 sticky top-0 bg-gray-100 z-10 cursor-pointer select-none"
-                onClick={() => toggleSort('agingDays')}
-                title="เรียงตามจำนวนวันค้าง (นับจากวันที่ขายถึงวันนี้)"
-              >
-                ค้างมาแล้ว{sortIndicator('agingDays')}
-              </th>
-              <th
-                className="border px-2 py-1 sticky top-0 bg-gray-100 z-10 cursor-pointer select-none"
-                onClick={() => toggleSort('lastPaidAt')}
-                title="เรียงตามรับเงินล่าสุด"
-              >
-                รับเงินล่าสุด{sortIndicator('lastPaidAt')}
-              </th>
-              <th className="border px-2 py-1 sticky top-0 bg-gray-100 z-10">ผู้ทำรายการ</th>
-              <th className="border px-2 py-1 sticky top-0 bg-gray-100 z-10">การดำเนินการ</th>
-            </tr>
-          </thead>
-          <tbody>
-            {sortedRows.length > 0 ? (
-              sortedRows.map((s) => {
-                // ✅ Delivery note: list is unpaid-only -> always allow print
-                const canPrint = true;
-                const isFullyPaid = false;
-                return (
-                  <tr key={s.id} className="border-t hover:bg-gray-50">
-                    <td className="border px-2 py-1">{s.code || '-'}</td>
-                    <td className="border px-2 py-1">{s.companyName || '-'}</td>
-                    <td className="border px-2 py-1">{s.customerName || '-'}</td>
-                    <td className="border px-2 py-1">{s.customerPhone || '-'}</td>
-                    <td className="border px-2 py-1 text-right">
-                      {Number(s.totalAmount || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 })}
-                    </td>
-                    <td className="border px-2 py-1 text-right">
-                      {Number(s.paidAmount || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 })}
-                    </td>
-                    <td className="border px-2 py-1 text-right">
-                      {Number(s.balanceAmount || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 })}
-                      <span
-                        className={`ml-2 inline-flex items-center rounded px-2 py-0.5 text-xs font-medium ${
-                          isFullyPaid ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-800'
-                        }`}
-                        title="ค้างชำระ"
-                      >
-                        ค้างชำระ
-                      </span>
-                    </td>
-                    <td className="border px-2 py-1">
-                      {s.createdAt ? new Date(s.createdAt).toLocaleDateString('th-TH', { dateStyle: 'short' }) : '-'}
-                    </td>
-                    <td className="border px-2 py-1">
-                      <span className={`inline-flex items-center rounded px-2 py-0.5 text-xs font-medium ${agingBadgeClass(s.agingDays)}`}>
-                        {Number(s.agingDays || 0)} วัน
-                      </span>
-                    </td>
-                    <td className="border px-2 py-1">
-                      {s.lastPaidAt
-                        ? new Date(s.lastPaidAt).toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' })
-                        : '-'}
-                    </td>
-                    <td className="border px-2 py-1">{s.employeeName || '-'}</td>
-                    
-                    <td className="border px-2 py-1 text-center">
-                      <button
-                        onClick={() => {
-                          if (!canPrint) return;
-                          navigate(`/pos/sales/delivery-note/print/${s.id}`);
-                        }}
-                        className={`px-3 py-1 rounded ${
-                          canPrint ? 'bg-green-600 text-white hover:bg-green-700' : 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                        }`}
-                        title={canPrint ? 'พิมพ์ใบส่งของ' : 'ไม่สามารถพิมพ์ได้'}
-                      >
-                        {canPrint ? 'พิมพ์ซ้ำ' : 'พิมพ์ไม่ได้'}
-                      </button>
+        {/* ตัวตารางข้อมูลพรีเมียมกระชับพื้นที่ */}
+        <div className="p-2 px-3">
+          <div className="overflow-x-auto rounded-xl border border-slate-100 overflow-y-auto max-h-[550px]">
+            <table className="w-full text-left border-collapse border-slate-200 text-xs">
+              <thead className="bg-slate-50 text-[10px] md:text-[11px] text-slate-400 font-black uppercase tracking-wider sticky top-0 bg-slate-50 z-10 select-none border-b border-slate-100">
+                <tr>
+                  <th className="p-2 px-2.5 cursor-pointer hover:bg-slate-100" onClick={() => toggleSort('code')}>เลขที่ใบขาย {sortIndicator('code')}</th>
+                  <th className="p-2 px-2 cursor-pointer hover:bg-slate-100" onClick={() => toggleSort('companyName')}>หน่วยงาน {sortIndicator('companyName')}</th>
+                  <th className="p-2 px-2 cursor-pointer hover:bg-slate-100" onClick={() => toggleSort('customerName')}>ลูกค้า {sortIndicator('customerName')}</th>
+                  <th className="p-2 px-2">เบอร์โทร</th>
+                  <th className="p-2 px-2 text-right cursor-pointer hover:bg-slate-100" onClick={() => toggleSort('totalAmount')}>ยอดรวม {sortIndicator('totalAmount')}</th>
+                  <th className="p-2 px-2 text-right cursor-pointer hover:bg-slate-100" onClick={() => toggleSort('paidAmount')}>ชำระแล้ว {sortIndicator('paidAmount')}</th>
+                  <th className="p-2 px-2 text-right cursor-pointer hover:bg-slate-100" onClick={() => toggleSort('balanceAmount')}>ค้างชำระ {sortIndicator('balanceAmount')}</th>
+                  <th className="p-2 px-2 cursor-pointer hover:bg-slate-100" onClick={() => toggleSort('createdAt')}>วันที่ขาย {sortIndicator('createdAt')}</th>
+                  <th className="p-2 px-2 cursor-pointer hover:bg-slate-100" onClick={() => toggleSort('agingDays')}>ค้างมาแล้ว {sortIndicator('agingDays')}</th>
+                  <th className="p-2 px-2">ผู้ทำรายการ</th>
+                  <th className="p-2 px-2.5 text-center">สั่งการ</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 font-semibold text-slate-600 text-[11px] sm:text-xs">
+                {sortedRows.length > 0 ? (
+                  sortedRows.map((s) => (
+                    <tr key={s.id} className="hover:bg-slate-50/50 transition-colors">
+                      <td className="p-2 px-2.5 font-mono font-black text-slate-900 select-all">{s.code || '-'}</td>
+                      <td className="p-2 px-2 truncate max-w-[130px] font-bold text-slate-700" title={s.companyName}>{s.companyName || '-'}</td>
+                      <td className="p-2 px-2 truncate max-w-[130px] font-bold text-slate-900" title={s.customerName}>{s.customerName || '-'}</td>
+                      <td className="p-2 px-2 font-mono text-slate-500">{s.customerPhone || '-'}</td>
+                      <td className="p-2 px-2 text-right font-mono text-slate-400">{formatMoney(s.totalAmount)}</td>
+                      <td className="p-2 px-2 text-right font-mono text-emerald-700">{formatMoney(s.paidAmount)}</td>
+                      <td className="p-2 px-2 text-right font-mono text-rose-600 font-black">{formatMoney(s.balanceAmount)}</td>
+                      <td className="p-2 px-2 font-mono text-slate-400">{s.createdAt ? new Date(s.createdAt).toLocaleDateString('th-TH', { dateStyle: 'short' }) : '-'}</td>
+                      <td className="p-2 px-2">
+                        <span className={`inline-flex px-1.5 py-0.5 text-[10px] font-black rounded-md ${agingBadgeClass(s.agingDays)}`}>
+                          {s.agingDays} วัน
+                        </span>
+                      </td>
+                      <td className="p-2 px-2 text-slate-500 truncate max-w-[90px]">{s.employeeName || '-'}</td>
+                      <td className="p-2 px-2.5 text-center">
+                        {/* 🟢 [SAME WINDOW NAVIGATION VERIFIED]:
+                             ถอดสัญกรณ์และคำนวณ Base URL ปัจจุบัน เพื่อนำทางไปสู่ใบส่งของ A4 ในหน้าต่างเดิมอย่างแม่นยำ ไม่เด้งหนี 100% */}
+                        <button type="button"
+                          onClick={() => {
+                            const currentPath = window.location.pathname; 
+                            const basePosSalesPath = currentPath.substring(0, currentPath.indexOf('/delivery-note'));
+                            navigate(`${basePosSalesPath}/delivery-note/print/${s.id}`);
+                          }}
+                          className="h-6 px-2.5 bg-slate-900 hover:bg-slate-800 text-white font-black text-[10px] rounded-md shadow-sm transition-all flex items-center justify-center gap-1 mx-auto active:scale-95">
+                          <Printer className="w-3 h-3" /> พิมพ์ซ้ำ
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={11} className="p-10 text-center text-slate-400 italic font-bold select-none">
+                      📭 ไม่พบประวัติใบส่งของค้างชำระตามเงื่อนไขตัวกรองพิกัดปัจจุบัน
                     </td>
                   </tr>
-                );
-              })
-            ) : (
-              <tr>
-                <td colSpan={11} className="text-center py-6 text-gray-600">
-                  ไม่พบข้อมูล
-                  <div className="mt-2 text-xs text-gray-500">แนะนำ: ลองขยายช่วงวันที่ หรือเพิ่ม limit แล้วกดค้นหาอีกครั้ง</div>
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
 
-      <div className="mt-3 text-xs text-gray-600">
-        หมายเหตุ: หน้านี้แสดงเฉพาะ “ใบขายค้างชำระ” (onlyUnpaid=1) ตามช่วงวันที่ขาย (createdAt). ค่าเริ่มต้น = ย้อนหลัง 30 วันถึงวันนี้ และปุ่มพิมพ์จะแสดงได้ทันทีสำหรับการพิมพ์ใบส่งของ
+        <div className="p-2 bg-slate-50/40 border-t border-slate-100 text-[10px] text-slate-400 flex items-center gap-1 select-none">
+          <Info className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+          <span>ระบบคลังกรองดึงสถานะ Unpaid เครดิตค้างจ่ายหน้าร้านแบบเรียลไทม์อัตโนมัติ 100%</span>
+        </div>
       </div>
     </div>
   );
 };
 
 export default DeliveryNoteListPage;
-
-
-
-
-

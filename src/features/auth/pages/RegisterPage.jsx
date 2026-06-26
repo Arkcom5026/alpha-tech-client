@@ -4,12 +4,12 @@
 
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useNavigate } from 'react-router-dom'; // 🟢 [DYNAMIC PARAM FIX] นำเข้า useNavigate เพื่อการสับรางแบบ Single Page Application
 import { registerSchema } from '@/features/auth/schema/registerSchema';
-
-
 import { registerUser } from '@/features/auth/api/authApi';
 
 const RegisterPage = () => {
+  const navigate = useNavigate(); // 🟢 เรียกใช้งานหัวอ่านระบบนำทางหน้าร้าน
   const {
     register,
     handleSubmit,
@@ -25,7 +25,9 @@ const RegisterPage = () => {
       await registerUser({ name, phone, email, password, role: 'customer' });
       reset();
       alert('✅ สมัครสำเร็จแล้ว');
-      window.location.href = '/login';
+      
+      // 🟢 [BUG FIX ROUTE] เปลี่ยนจาก window.location.href แบบแข็ง มาดีดส่งเข้าหาประตูเมืองใหม่พรีเมียม 100%
+      navigate('/partner-portal', { replace: true });
     } catch (err) {
       console.error(err);
       alert(err?.response?.data?.message || err.message || 'เกิดข้อผิดพลาด');
@@ -73,12 +75,11 @@ const RegisterPage = () => {
           />
 
           {errors.name && <p className='text-red-600 text-sm'>{errors.name.message}</p>}
-{errors.email && <p className='text-red-600 text-sm'>{errors.email.message}</p>}
-{errors.password && <p className='text-red-600 text-sm'>{errors.password.message}</p>}
-{errors.confirmPassword && <p className='text-red-600 text-sm'>{errors.confirmPassword.message}</p>}
-{errors.phone && <p className='text-red-600 text-sm'>{errors.phone.message}</p>}
+          {errors.email && <p className='text-red-600 text-sm'>{errors.email.message}</p>}
+          {errors.password && <p className='text-red-600 text-sm'>{errors.password.message}</p>}
+          {errors.confirmPassword && <p className='text-red-600 text-sm'>{errors.confirmPassword.message}</p>}
+          {errors.phone && <p className='text-red-600 text-sm'>{errors.phone.message}</p>}
           
-
           <button
             type="submit"
             className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700"
@@ -93,4 +94,3 @@ const RegisterPage = () => {
 };
 
 export default RegisterPage;
-

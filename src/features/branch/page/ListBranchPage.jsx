@@ -1,5 +1,6 @@
+// src/features/settings/pages/ListBranchPage.jsx
 import { useEffect, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom"; // 🟢 [DYNAMIC PARAM FIX] นำเข้า useParams มาร่วมทีม
 import { useAuthStore } from '@/features/auth/store/authStore.js';
 import { useBranchStore } from "../store/branchStore";
 import AddressDisplay from "@/features/address/components/AddressDisplay";
@@ -42,6 +43,8 @@ const FeaturesBadge = ({ features }) => {
 };
 
 const ListBranchPage = () => {
+  // 🟢 [LINK BINDING] ดึงค่า shopSlug ผ่าน useParams มาสแตนด์บายป้อนปุ่มควบคุมเลนวิ่งตารางหลัก
+  const { shopSlug } = useParams();
   const navigate = useNavigate();
   const branches = useBranchStore((state) => state.branches) || [];
   const loadAllBranchesAction = useBranchStore((state) => state.loadAllBranchesAction);
@@ -65,7 +68,8 @@ const ListBranchPage = () => {
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-xl font-bold">จัดการสาขา</h1>
         <button
-          onClick={() => isSuperAdmin && navigate("/pos/settings/branches/create")}
+          {/* 🟢 [BUG FIX ONADD LINK] สับท่อเลนวิ่งปุ่มเพิ่มสาขาให้ลื่นไหลราบเรียบและพ่วงสัญญานชื่อร้านค้า */}
+          onClick={() => isSuperAdmin && navigate(`/${shopSlug}/pos/settings/branches/create`)}
           className={`px-4 py-2 rounded text-white ${isSuperAdmin ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-300 cursor-not-allowed'}`}
           aria-disabled={!isSuperAdmin}
           title={isSuperAdmin ? 'เพิ่มสาขาใหม่' : 'ต้องเป็น Super Admin'}
@@ -125,7 +129,8 @@ const ListBranchPage = () => {
                 <td className="px-4 py-2 whitespace-nowrap">{branch.phone || '-'}</td>
                 <td className="px-4 py-2 text-center">
                   <button
-                    onClick={() => isSuperAdmin && navigate(`/pos/settings/branches/edit/${branch.id}`)}
+                    {/* 🟢 [BUG FIX ONEDIT LINK] แปลงท่อนำทางปุ่มแก้ไขสาขาในตารางให้วิ่งแบบ Dynamic Flat ไม่ดีดเด้งตกขบวน */}
+                    onClick={() => isSuperAdmin && navigate(`/${shopSlug}/pos/settings/branches/edit/${branch.id}`)}
                     className={`${isSuperAdmin ? 'text-blue-600 hover:underline' : 'text-gray-400 cursor-not-allowed'}`}
                     aria-disabled={!isSuperAdmin}
                     title={isSuperAdmin ? 'แก้ไขสาขา' : 'ต้องเป็น Super Admin'}
@@ -150,6 +155,3 @@ const ListBranchPage = () => {
 };
 
 export default ListBranchPage;
-
-
-

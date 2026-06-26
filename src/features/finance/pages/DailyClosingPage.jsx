@@ -1,8 +1,7 @@
 // 📁 FILE: src/features/finance/pages/DailyClosingPage.jsx
 // ✅ Daily Closing Confidence Surface V2.1 — Credit-aware + Date Range
-
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-
+import { useParams } from 'react-router-dom'; // 🟢 [DYNAMIC PARAM FIX] นำเข้า useParams มาร่วมทีม
 import useFinanceStore from '@/features/finance/store/financeStore';
 
 const toISODate = (d) => {
@@ -26,14 +25,12 @@ const parseMoney = (val) => {
     const n = Number(val.replace(/,/g, '').trim());
     return Number.isFinite(n) ? n : 0;
   }
-
   try {
     if (typeof val === 'object' && typeof val.toNumber === 'function') {
       const n = val.toNumber();
       return Number.isFinite(n) ? n : 0;
     }
   } catch (_) {}
-
   return 0;
 };
 
@@ -123,6 +120,7 @@ const SignalRow = ({ label, value, helper, tone = 'slate' }) => {
 };
 
 const DailyClosingPage = () => {
+  const { shopSlug } = useParams(); // 🟢 [LINK BINDING] แกะรหัสชื่อร้านค้าพาร์ตเนอร์คุมระบบนำทาง Multi-Tenant
   const dailyClosingSummary = useFinanceStore((s) => s.dailyClosingSummary);
   const dailyClosingLoading = useFinanceStore((s) => s.dailyClosingLoading);
   const dailyClosingError = useFinanceStore((s) => s.dailyClosingError);

@@ -59,7 +59,7 @@ const EditProductTypePage = () => {
     try {
       await updateProductTypeAction(Number(id), payload);
       setSuccessMsg('อัปเดตประเภทสินค้าเรียบร้อยแล้ว');
-      setTimeout(() => navigate('/pos/stock/types'), 600);
+      setTimeout(() => navigate(`/${shopSlug}/pos/stock/types`), 600);
     } catch (err) {
       setErrorMsg(parseApiError(err) || 'ไม่สามารถอัปเดตประเภทสินค้าได้');
     }
@@ -84,7 +84,7 @@ const EditProductTypePage = () => {
               </button>
               <Link
                 className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-sm font-medium text-blue-700 hover:bg-blue-100"
-                to="/pos/stock/types"
+                to={shopSlug ? `/${shopSlug}/pos/stock/types` : `/pos/stock/types`}
               >
                 กลับไปหน้ารายการ
               </Link>

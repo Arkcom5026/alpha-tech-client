@@ -24,7 +24,7 @@ const CreateCategoryPage = () => {
       const res = await createAction(data); // ✅ เรียกผ่าน store ตามมาตรฐาน
       if (res?.ok) {
         setInfo('สร้างหมวดหมู่เรียบร้อย');
-        navigate('/pos/stock/categories');
+        navigate(`/${shopSlug}/pos/stock/categories`);
       } else if (res?.message) {
         setInfo(res.message);
         setTimeout(() => setInfo(''), 3500);
@@ -50,7 +50,7 @@ const CreateCategoryPage = () => {
         onSubmit={(data) => {
           onSubmit(data);
         }}
-        onCancel={() => navigate('/pos/stock/categories')}
+        onCancel={() => navigate(`/${shopSlug}/pos/stock/categories`)}
         submitting={submitting}
       />
     </div>

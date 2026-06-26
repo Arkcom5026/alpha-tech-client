@@ -1,7 +1,9 @@
-// CreatePurchaseOrderReceiptPage.jsx
+// src/features/purchaseOrderReceipt/pages/CreatePurchaseOrderReceiptPage.jsx
+// 🏛️ Tenant-Safe Procurement Form: (Dual-Param Guard Activated, Store Sync & Glassmorphic Pack)
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { useParams } from 'react-router-dom';
+// 🟢 [IMPORT FIXED] ดึง useParams มาเพื่อแกะรอยค่าพารามิเตอร์คั่น URL ป้องกันระบบดีดหนีกลับหน้าแรก
+import { useParams, useNavigate } from 'react-router-dom';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -13,6 +15,7 @@ import { Form, FormField, FormItem, FormLabel, FormMessage } from '@/components/
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
+import { ArrowLeft, FileSpreadsheet, Calendar, User, FileText, Loader2, AlertCircle } from 'lucide-react';
 
 const createReceiptSchema = z.object({
   supplierTaxInvoiceNumber: z.string().optional().nullable(),
@@ -66,7 +69,12 @@ const CreatePurchaseOrderReceiptPage = () => {
     };
   };
 
-  const { poId } = useParams();
+  // 🟢 [SLUG & DUAL-PARAM GUARD ACTIVATED] ดักจับพารามิเตอร์คู่ขนาน (รองรับทั้งระบบจัดเส้นทางแบบ :poId และ :id)
+  const params = useParams();
+  const shopSlug = params.shopSlug;
+  const poId = params.poId || params.id; // หากฝั่งตารางส่ง id หรือ poId มา ตัวแปรจะจับคู่ล็อกเข้าฟังก์ชันได้ทันทีกระชับ 100%
+  
+  const navigate = useNavigate();
 
   const {
     currentOrder,
@@ -74,7 +82,7 @@ const CreatePurchaseOrderReceiptPage = () => {
     error,
     loadOrderByIdAction,
     loadOrderById,
-    clearErrorAction, // (ถ้ามีใน store จะใช้, ถ้าไม่มีไม่พัง)
+    clearErrorAction,
   } = usePurchaseOrderReceiptStore();
 
   const normalizedItems = useMemo(() => {
@@ -94,7 +102,7 @@ const CreatePurchaseOrderReceiptPage = () => {
     },
   });
 
-  // ✅ Keep formData reactive (avoid passing a stale snapshot)
+  // Keep formData reactive
   const formValues = useWatch({ control: form.control });
   const formData = useMemo(
     () => ({
@@ -110,7 +118,9 @@ const CreatePurchaseOrderReceiptPage = () => {
     const fn = loadOrderByIdAction || loadOrderById;
     try {
       clearErrorAction?.();
-      fn?.(Number(poId));
+      if (poId) {
+        fn?.(Number(poId));
+      }
     } catch (err) {
       console.error('📛 loadOrderById error:', err);
     }
@@ -119,113 +129,160 @@ const CreatePurchaseOrderReceiptPage = () => {
   useEffect(() => {
     if (poId) {
       doLoadOrder();
-      // ✅ reset receiptId when switching PO
       setReceiptId(null);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [poId, loadOrderByIdAction, loadOrderById]);
 
+  // 📦 LOADING FALLBACK STATE
   if (loading && !currentOrder) {
-    return <p className="p-4">📭 กำลังโหลดข้อมูลใบสั่งซื้อ...</p>;
+    return (
+      <div className="w-full py-16 flex flex-col items-center justify-center gap-3 text-slate-400 font-bold select-none animate-fadeIn font-sans">
+        <Loader2 className="w-6 h-6 animate-spin text-orange-500" />
+        <p className="text-sm">กำลังสกัดค้นโครงสร้างเอกสารใบสั่งซื้อพอร์ต Live API...</p>
+      </div>
+    );
   }
 
+  // 📦 ERROR FALLBACK STATE
   if (error && !currentOrder) {
     return (
-      <div className="p-4 space-y-3">
-        <div className="border border-red-200 bg-red-50 text-red-700 rounded p-3">
-          <div className="font-semibold">โหลดข้อมูลใบสั่งซื้อไม่สำเร็จ</div>
-          <div className="text-sm break-words">{getErrorMessage(error)}</div>
-
-          <div className="mt-3 flex gap-2">
-            <Button type="button" variant="default" size="sm" onClick={doLoadOrder}>
-              ลองโหลดใหม่
-            </Button>
-            <Button type="button" variant="outline" size="sm" onClick={() => clearErrorAction?.()}>
-              ปิดข้อความ
-            </Button>
-          </div>
+      <div className="max-w-xl mx-auto mt-8 p-6 bg-white border border-rose-200 text-center rounded-3xl shadow-sm space-y-4 animate-fadeIn font-sans">
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-50 text-rose-500 border border-rose-100">
+          <AlertCircle className="w-5 h-5" />
+        </div>
+        <div>
+          <h2 className="text-base font-black text-slate-900 tracking-tight">โหลดข้อมูลใบสั่งซื้อไม่สำเร็จ</h2>
+          <p className="text-xs font-bold text-rose-600 mt-1 break-words">{getErrorMessage(error)}</p>
+        </div>
+        <div className="flex gap-2 justify-center pt-2">
+          <button type="button" onClick={doLoadOrder} className="px-4 py-2 bg-slate-800 text-white font-black text-xs rounded-xl shadow-sm active:scale-95 transition-all">ลองโหลดใหม่</button>
+          <button type="button" onClick={() => clearErrorAction?.()} className="px-4 py-2 bg-slate-100 text-slate-600 font-bold text-xs rounded-xl hover:bg-slate-200 transition-all">ปิดข้อความ</button>
         </div>
       </div>
     );
   }
 
+  // 📦 EMPTY FALLBACK STATE
   if (!currentOrder) {
-    return <p className="p-4">📭 ไม่พบข้อมูลใบสั่งซื้อ</p>;
+    return (
+      <div className="max-w-xl mx-auto mt-8 p-6 bg-white border border-slate-200 text-center rounded-3xl shadow-sm space-y-3 animate-fadeIn font-sans">
+        <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-slate-50 text-slate-400 border border-slate-200/60">
+          <AlertCircle className="w-5 h-5" />
+        </div>
+        <p className="text-sm font-black text-slate-500">ไม่พบข้อมูลพิกัดใบสั่งซื้อฉบับนี้ในคลังสาขา</p>
+      </div>
+    );
   }
 
   return (
-    <div className="p-4 w-full mx-auto">
-      <h1 className="text-2xl font-bold mb-4">สร้างใบรับสินค้าจากใบสั่งซื้อ</h1>
+    <div className="w-full h-full p-4 md:p-6 space-y-6 max-w-[1400px] mx-auto text-slate-800 selection:bg-orange-500 selection:text-white animate-fadeIn font-sans">
+      
+      {/* 🟦 1. ส่วนหัวบาร์ควบคุมคุมสิทธิ์สไตล์ Glassmorphism ผสานปุ่มถอยกลับเสถียร 100% */}
+      <div className="bg-white/80 dark:bg-zinc-900/80 border border-slate-200/80 dark:border-zinc-800 p-6 rounded-3xl shadow-[0_4px_25px_rgba(0,0,0,0.01)] backdrop-blur-md flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5 transition-all duration-300">
+        <div className="min-w-0">
+          <h1 className="text-xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2 select-none">
+            <FileSpreadsheet className="w-5 h-5 text-orange-500" /> สร้างใบรับสินค้าจากใบสั่งซื้อ
+          </h1>
+          <p className="text-xs font-bold text-slate-400 dark:text-zinc-400 mt-1">
+            Goods Receipt Processing Center • บันทึกหลักฐานเลขใบกำกับภาษีคู่ค้าและตรวจนับจำนวนรับของเข้าคลังพัสดุสาขา
+          </p>
+        </div>
 
+        <button
+          type="button"
+          onClick={() => {
+            const targetSlug = shopSlug || 'advancetech';
+            navigate(`/${targetSlug}/pos/purchases/receipt`);
+          }}
+          className="flex items-center gap-1.5 h-10 px-4 text-xs font-black bg-white hover:bg-slate-50 dark:bg-zinc-800 text-slate-700 dark:text-zinc-200 border border-slate-200 dark:border-zinc-700 rounded-xl transform active:scale-95 transition-all shadow-sm shrink-0 self-start sm:self-auto"
+        >
+          <ArrowLeft className="w-3.5 h-3.5" />
+          <span>กลับหน้ารายการตรวจรับ</span>
+        </button>
+      </div>
+
+      {/* 🟦 2. แผงกรอกข้อมูลเอกสารและสรุป Profile ใบสั่งซื้อแบบกล่องโค้งพรีเมียม */}
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(() => {})}>
-          <div className="bg-gray-50 border rounded p-4 mb-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <p>
-                  <strong>รหัสใบสั่งซื้อ:</strong> {currentOrder.code}
-                </p>
-                <p>
-                  <strong>Supplier:</strong> {currentOrder.supplier?.name || '-'}
-                </p>
-                <p>
-                  <strong>วันที่สั่งซื้อ:</strong> {formatDateTh(currentOrder.createdAt)}
-                </p>
+        <form onSubmit={form.handleSubmit(() => {})} className="space-y-6">
+          
+          <div className="bg-white dark:bg-zinc-900 border border-slate-200/80 dark:border-zinc-800 rounded-3xl p-5 sm:p-6 shadow-[0_4px_25px_rgba(0,0,0,0.01)]">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+              
+              {/* ข้อมูลดิบฝั่งซ้ายสรุปใบสั่งซื้อ */}
+              <div className="space-y-3 bg-slate-50/60 dark:bg-zinc-800/40 border border-slate-200/60 dark:border-zinc-800/60 p-5 rounded-2xl text-xs sm:text-sm font-bold text-slate-600 dark:text-zinc-300 shadow-inner">
+                <div className="text-slate-400 uppercase text-[10px] tracking-wider font-black select-none mb-1">รายละเอียดใบสั่งซื้อหลักฐาน</div>
+                <div className="flex justify-between items-center py-0.5">
+                  <span>รหัสใบสั่งซื้อระบบ:</span>
+                  <span className="font-mono font-black text-slate-900 dark:text-white bg-white dark:bg-zinc-800 border border-slate-200/60 dark:border-zinc-700/60 px-2 py-0.5 rounded-md text-xs">{currentOrder.code}</span>
+                </div>
+                <div className="flex justify-between items-center py-0.5">
+                  <span><User className="w-3.5 h-3.5 inline mr-1 text-slate-400" /> ชื่อคู่ค้า Supplier:</span>
+                  <span className="font-black text-slate-900 dark:text-white max-w-[240px] text-right truncate" title={currentOrder.supplier?.name}>{currentOrder.supplier?.name || '-'}</span>
+                </div>
+                <div className="flex justify-between items-center py-0.5">
+                  <span><Calendar className="w-3.5 h-3.5 inline mr-1 text-slate-400" /> วันที่ออกบิลสั่งซื้อ:</span>
+                  <span className="font-semibold text-slate-500 dark:text-zinc-400 font-sans">{formatDateTh(currentOrder.createdAt)}</span>
+                </div>
               </div>
 
-              <div className="space-y-4">
+              {/* ส่วน Input รับค่าเลขที่ใบกำกับภาษีฝั่งขวา */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
                   name="supplierTaxInvoiceNumber"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>เลขที่ใบกำกับภาษี</FormLabel>
-                      <Input {...field} placeholder="กรอกเลขที่ใบกำกับภาษี" className="bg-white" />
-                      <FormMessage />
+                    <FormItem className="space-y-1.5">
+                      <FormLabel className="text-xs font-black text-slate-500"><FileText className="w-3.5 h-3.5 inline mr-1" /> เลขที่ใบกำกับภาษี</FormLabel>
+                      <Input {...field} placeholder="กรอกรหัสเลขบิลภาษีคู่ค้า" className="h-10 text-sm font-bold px-3 bg-white border border-slate-200 rounded-xl focus:border-orange-500 outline-none transition-all shadow-sm" />
+                      <FormMessage className="text-[11px] font-black text-rose-500" />
                     </FormItem>
                   )}
                 />
+                
                 <FormField
                   control={form.control}
                   name="supplierTaxInvoiceDate"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>วันที่ในใบกำกับภาษี</FormLabel>
-                      <Input {...field} type="date" className="bg-white" />
-                      <FormMessage />
+                    <FormItem className="space-y-1.5">
+                      <FormLabel className="text-xs font-black text-slate-500"><Calendar className="w-3.5 h-3.5 inline mr-1" /> วันที่ในใบกำกับภาษี</FormLabel>
+                      <Input {...field} type="date" className="h-10 text-sm font-bold px-3 bg-white border border-slate-200 rounded-xl focus:border-orange-500 outline-none transition-all shadow-sm cursor-pointer font-sans" />
+                      <FormMessage className="text-[11px] font-black text-rose-500" />
                     </FormItem>
                   )}
                 />
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+            {/* กล่องกรอกวันที่รับของจริงและหมายเหตุเพิ่มเติมด้านล่าง */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-5 pt-4 border-t border-slate-100 dark:border-zinc-800">
               <FormField
                 control={form.control}
                 name="receivedAt"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>วันที่รับของจริง</FormLabel>
-                    <Input {...field} type="date" className="bg-white" />
-                    <FormMessage />
+                  <FormItem className="space-y-1.5">
+                    <FormLabel className="text-xs font-black text-slate-500"><Calendar className="w-3.5 h-3.5 inline mr-1" /> วันที่รับเข้าคลังจริง</FormLabel>
+                    <Input {...field} type="date" className="h-10 text-sm font-bold px-3 bg-white border border-slate-200 rounded-xl focus:border-orange-500 outline-none transition-all shadow-sm cursor-pointer font-sans" />
+                    <FormMessage className="text-[11px] font-black text-rose-500" />
                   </FormItem>
                 )}
               />
+              
               <FormField
                 control={form.control}
                 name="note"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>หมายเหตุ</FormLabel>
-                    <Textarea {...field} placeholder="หมายเหตุเพิ่มเติม (ถ้ามี)" className="bg-white" />
-                    <FormMessage />
+                  <FormItem className="space-y-1.5">
+                    <FormLabel className="text-xs font-black text-slate-500">หมายเหตุบันทึกจัดซื้อ</FormLabel>
+                    <Textarea {...field} placeholder="พิมพ์หมายเหตุหรือข้อมูลกำกับเพิ่มเติม (ถ้ามี)..." className="text-sm font-medium p-3 bg-white border border-slate-200 rounded-xl focus:border-orange-500 outline-none transition-all shadow-sm h-10 min-h-[40px] resize-none" />
+                    <FormMessage className="text-[11px] font-black text-rose-500" />
                   </FormItem>
                 )}
               />
             </div>
           </div>
 
-          <div className="mt-8">
+          {/* 📊 3. ตารางแจกแจงรายการสินค้าดีไซน์ใหม่สลักส่งค่า Reactive */}
+          <div className="bg-white dark:bg-zinc-900 border border-slate-200/80 dark:border-zinc-800 rounded-3xl shadow-[0_4px_25px_rgba(0,0,0,0.01)] overflow-hidden">
             <POItemListForReceipt
               key={currentOrder.id}
               poId={Number(poId)}
@@ -235,6 +292,7 @@ const CreatePurchaseOrderReceiptPage = () => {
               items={normalizedItems}
             />
           </div>
+
         </form>
       </Form>
     </div>
@@ -242,10 +300,3 @@ const CreatePurchaseOrderReceiptPage = () => {
 };
 
 export default CreatePurchaseOrderReceiptPage;
-
-
-
-
-
-
-

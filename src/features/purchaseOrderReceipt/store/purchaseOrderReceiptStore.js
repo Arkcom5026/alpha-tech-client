@@ -1,15 +1,5 @@
-
-
-
-
-
-
-
-
-
-
-
-// ✅ purchaseOrderReceiptStore.js — จัดการสถานะ Receipt + Items (รองรับ SIMPLE + STRUCTURED + QUICK)
+// src/features/purchaseOrderReceipt/store/purchaseOrderReceiptStore.js
+// 🏛️ Tenant-Safe Receipt Zustand Store: (Fixed Multi-Tenant Parameter Propagation & Mapping Layer)
 
 import { create } from 'zustand';
 import {
@@ -30,17 +20,16 @@ import {
 import { getEligiblePurchaseOrders, getPurchaseOrderDetailById, updatePurchaseOrderStatus } from '@/features/purchaseOrder/api/purchaseOrderApi';
 import { addReceiptItem, updateReceiptItem, deleteReceiptItem } from '@/features/purchaseOrderReceiptItem/api/purchaseOrderReceiptItemApi';
 
-// ✅ In-flight guard (module-level) to prevent duplicate receipt creation on rapid clicks
 let _createReceiptInFlight = null;
 
 const usePurchaseOrderReceiptStore = create((set, get) => ({
 
   receipts: [],
   receiptBarcodeSummaries: [],
-  receiptSummaries: [], // ✅ เก็บ summary ของใบรับสินค้าโดยตรง
+  receiptSummaries: [], 
   purchaseOrdersForReceipt: [],
   receiptsReadyToPay: [],
-  barcodePreview: [], // ✅ สำหรับ payload บาร์โค้ดที่ใช้พิมพ์
+  barcodePreview: [], 
   currentReceipt: null,
   currentOrder: null,
   poItems: [],
@@ -51,8 +40,6 @@ const usePurchaseOrderReceiptStore = create((set, get) => ({
   receiptSummariesLoading: false,
   error: null,
 
-  // ── โหลด/จัดการ Receipt เดิม ─────────────────────────────────────────────
-  // ✅ Standard naming (Action) — aligned with production rule, keep legacy alias below
   loadReceiptsAction: async () => {
     try {
       set({ loading: true, error: null });
@@ -69,16 +56,11 @@ const usePurchaseOrderReceiptStore = create((set, get) => ({
       const wantPrinted = opts.printed ?? undefined;
       set({ loading: true, receiptSummariesLoading: true, error: null });
 
-      // ✅ ส่ง query params ไปที่ API จริง ห้ามโหลดทั้งหมดแล้วค่อยกรองใน FE
-      // รองรับ backend contract:
-      // - printed=true/false
-      // - q = RC/PO code
-      // - supplier = supplier name
-      // - supplierId = supplier dropdown exact match
       const params = {};
       if (typeof wantPrinted === 'boolean') params.printed = wantPrinted;
       if (opts.q) params.q = opts.q;
       if (opts.supplier) params.supplier = opts.supplier;
+      if (opts.shopSlug) params.shopSlug = opts.shopSlug; // 🟢 ส่งสิทธิ์ต่อท่อตามสาขา
       if (Number.isFinite(Number(opts.supplierId))) params.supplierId = Number(opts.supplierId);
       if (Number.isFinite(Number(opts.limit))) params.limit = Number(opts.limit);
 
@@ -118,7 +100,7 @@ const usePurchaseOrderReceiptStore = create((set, get) => ({
   loadReceiptBarcodeSummariesAction: async (opts = {}) => {
     try {
       set({ loading: true, receiptBarcodeLoading: true, error: null });
-      const params = { printed: opts.printed ?? false };
+      const params = { printed: opts.printed ?? false, shopSlug: opts.shopSlug };
       const data = await getReceiptBarcodeSummaries(params);
       set({ receiptBarcodeSummaries: data, loading: false, receiptBarcodeLoading: false, error: null });
       return data;
@@ -130,7 +112,6 @@ const usePurchaseOrderReceiptStore = create((set, get) => ({
   },
 
   createReceiptAction: async (payload) => {
-    // ✅ Idempotency guard (UI may trigger rapid clicks before receiptId is set)
     if (_createReceiptInFlight) return _createReceiptInFlight;
 
     const task = (async () => {
@@ -138,7 +119,6 @@ const usePurchaseOrderReceiptStore = create((set, get) => ({
         set({ creatingReceipt: true, loading: true, error: null });
         const newReceipt = await createReceipt(payload);
 
-        // Defensive: ensure we have an id for downstream actions
         if (!newReceipt?.id) {
           throw new Error('createReceipt returned empty id');
         }
@@ -164,7 +144,6 @@ const usePurchaseOrderReceiptStore = create((set, get) => ({
     return task;
   },
 
-  // ✅ Standard naming (Action) — keep legacy name as alias to avoid breaking callers
   updateReceiptAction: async (id, payload) => {
     try {
       set({ error: null });
@@ -182,7 +161,6 @@ const usePurchaseOrderReceiptStore = create((set, get) => ({
     }
   },
 
-  // ✅ Standard naming (Action) — keep legacy name as alias to avoid breaking callers
   deleteReceiptAction: async (id) => {
     try {
       set({ error: null });
@@ -199,12 +177,41 @@ const usePurchaseOrderReceiptStore = create((set, get) => ({
     }
   },
 
-  fetchPurchaseOrdersForReceiptAction: async () => {
+  // 🟢 [LIVE TENANT CONFIGURATION FIXED] ขยายฟังก์ชันรับพารามิเตอร์รายบริษัทคั่นทางย่อย พร้อมจัดระเบียบรูปร่างโครงสร้างข้อมูล Array
+  fetchPurchaseOrdersForReceiptAction: async (opts = {}) => {
     try {
       set({ loading: true, error: null });
-      const res = await getEligiblePurchaseOrders();
-      set({ purchaseOrdersForReceipt: res, loading: false, error: null });
-      return res;
+      
+      // ส่งผ่านค่า params ตัวแปรสาขา / สถานะ ดักกรองตรงไปยังฐานข้อมูลกลางหลังบ้าน Port 5000
+      const params = {
+        status: 'PENDING,PARTIALLY_RECEIVED',
+        ...(opts.shopSlug ? { shopSlug: opts.shopSlug } : {})
+      };
+
+      const res = await getEligiblePurchaseOrders(params);
+      
+      // ดักเจาะกล่องวัตถุ ปรับค่า Array Shape ผูกเงื่อนไขป้องกันกรณี Schema ส่งข้อมูลซ้อนชั้นมา
+      const rawList = Array.isArray(res) 
+        ? res 
+        : Array.isArray(res?.data) 
+          ? res.data 
+          : Array.isArray(res?.items) 
+            ? res.items 
+            : [];
+
+      const normalizedOrders = rawList.map((po) => ({
+        id: po.id,
+        code: po.code || po.poNumber || po.purchaseOrderCode || '-',
+        createdAt: po.createdAt || po.dateOrdered || null,
+        status: po.status || 'PENDING',
+        supplier: {
+          id: po.supplier?.id || po.supplierId || null,
+          name: po.supplier?.name || po.supplierName || po.Supplier?.name || 'ไม่ระบุชื่อคู่ค้าซัพพลายเออร์'
+        }
+      }));
+
+      set({ purchaseOrdersForReceipt: normalizedOrders, loading: false, error: null });
+      return normalizedOrders;
     } catch (err) {
       console.error('❌ โหลด Purchase Orders สำหรับใบรับสินค้าไม่สำเร็จ:', err);
       set({ error: err, loading: false });
@@ -217,20 +224,13 @@ const usePurchaseOrderReceiptStore = create((set, get) => ({
       set({ loading: true, error: null });
       const res = await getPurchaseOrderDetailById(poId);
 
-      // ✅ Normalize PO items for UI table (Category/Type/Brand/Profile/Template)
-      // Support both shapes:
-      // 1) Nested: item.product.{category/productType/brand/productProfile/template}
-      // 2) Flattened (from BE): item.{categoryName, productTypeName, brandName, profileName, templateName, unitName, productName}
       const items = Array.isArray(res?.items) ? res.items : [];
       const normalizedItems = items.map((it) => {
         const p = it?.product || {};
-        const categoryName =
-          it?.categoryName ?? p?.category?.name ?? p?.categoryName ?? '-';
-        const productTypeName =
-          it?.productTypeName ?? p?.productType?.name ?? p?.productTypeName ?? '-';
+        const categoryName = it?.categoryName ?? p?.category?.name ?? p?.categoryName ?? '-';
+        const productTypeName = it?.productTypeName ?? p?.productType?.name ?? p?.productTypeName ?? '-';
         const brandName = it?.brandName ?? p?.brand?.name ?? p?.brandName ?? '-';
-        const profileName =
-          it?.profileName ?? p?.productProfile?.name ?? p?.productProfileName ?? '-';
+        const profileName = it?.profileName ?? p?.productProfile?.name ?? p?.productProfileName ?? '-';
         const templateName = it?.templateName ?? p?.template?.name ?? p?.templateName ?? '-';
         const productName = it?.productName ?? p?.name ?? '-';
         const unitName = it?.unitName ?? p?.unit?.name ?? p?.template?.unit?.name ?? '-';
@@ -259,10 +259,6 @@ const usePurchaseOrderReceiptStore = create((set, get) => ({
   addReceiptItemAction: async (payload) => {
     try {
       set({ error: null });
-
-      // ✅ รองรับทั้งรูปแบบใหม่และของเดิม
-      // - ใหม่: payload.purchaseOrderReceiptId
-      // - เดิม: payload.receiptId
       const adaptedPayload = { ...payload };
 
       if (!adaptedPayload.purchaseOrderReceiptId && adaptedPayload.receiptId) {
@@ -270,7 +266,6 @@ const usePurchaseOrderReceiptStore = create((set, get) => ({
       }
       delete adaptedPayload.receiptId;
 
-      // ✅ กันพลาด: ต้องมี purchaseOrderReceiptId เสมอ
       if (!adaptedPayload.purchaseOrderReceiptId) {
         throw new Error('Missing purchaseOrderReceiptId for addReceiptItem');
       }
@@ -325,10 +320,6 @@ const usePurchaseOrderReceiptStore = create((set, get) => ({
   markReceiptAsPrintedAction: async (payload) => {
     try {
       set({ error: null });
-
-      // ✅ Accept both styles:
-      // - markReceiptAsPrintedAction(receiptId)
-      // - markReceiptAsPrintedAction({ receiptId })
       const receiptId = typeof payload === 'object' && payload !== null ? payload.receiptId : payload;
 
       if (!receiptId) throw new Error('Missing receiptId');
@@ -338,17 +329,12 @@ const usePurchaseOrderReceiptStore = create((set, get) => ({
       set((state) => ({
         receipts: state.receipts.map((r) => (r.id === receiptId ? res : r)),
         currentReceipt: res,
-
-        // ✅ reflect immediately in both summaries
         receiptBarcodeSummaries: state.receiptBarcodeSummaries.map((s) =>
           s.id === receiptId ? { ...s, printed: true } : s
         ),
-
-        // ✅ In pending list mode (printed:false), remove item so it disappears immediately
         receiptSummaries: Array.isArray(state.receiptSummaries)
           ? state.receiptSummaries.filter((s) => s.id !== receiptId)
           : state.receiptSummaries,
-
         error: null,
       }));
 
@@ -376,10 +362,6 @@ const usePurchaseOrderReceiptStore = create((set, get) => ({
     try {
       set({ error: null, loading: true });
       const res = await updatePurchaseOrderStatus({ id, status });
-
-      // ✅ Minimal disruption: อย่าเขียนทับ currentOrder ทั้งก้อน
-      // เพราะ endpoint status มัก include product แบบสั้น (id/name) ทำให้คอลัมน์หมวดหมู่/ประเภท/แบรนด์/... หาย
-      // เรา merge เฉพาะฟิลด์สถานะไว้ แล้วคง items เดิมที่โหลดแบบละเอียดไว้
       const prev = get().currentOrder;
       const next = prev
         ? {
@@ -394,12 +376,10 @@ const usePurchaseOrderReceiptStore = create((set, get) => ({
     } catch (err) {
       console.error('❌ updatePurchaseOrderStatusAction error:', err);
       set({ error: err, loading: false });
-      // ✅ Important: throw so caller can show UI error block
       throw err;
     }
   },
 
-  // ── QUICK + SIMPLE/STRUCTURED Actions ───────────────────────────────────────
   createQuickReceiptAction: async (payload) => {
     set({ loading: true, error: null });
     try {
@@ -466,7 +446,6 @@ const usePurchaseOrderReceiptStore = create((set, get) => ({
     }
   },
 
-  // ✅ Legacy aliases (do NOT remove yet)
   loadReceipts: async () => get().loadReceiptsAction(),
   updateReceipt: async (id, payload) => get().updateReceiptAction(id, payload),
   deleteReceipt: async (id) => get().deleteReceiptAction(id),
@@ -474,19 +453,8 @@ const usePurchaseOrderReceiptStore = create((set, get) => ({
   loadOrderById: async (poId) => get().loadOrderByIdAction(poId),
 
   clearCurrentReceipt: () => set({ currentReceipt: null }),
-
-  // ✅ Standard naming (Action) + legacy support
   clearErrorAction: () => set({ error: null }),
   clearError: () => set({ error: null }),
 }));
 
 export default usePurchaseOrderReceiptStore;
-
-
-
-
-
-
-
-
-

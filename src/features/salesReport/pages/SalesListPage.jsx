@@ -1,11 +1,7 @@
-
-
-
-
 // src/features/salesReport/pages/SalesListPage.jsx
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom'; // 🟢 ดึง useParams ร่วมขบวนตรวจ
 import useSalesReportStore from '@/features/salesReport/stores/salesReportStore';
 
 // ✅ local helpers (scoped fix)
@@ -73,6 +69,11 @@ const statusClassMap = {
 
 const SalesListPage = () => {
   const navigate = useNavigate();
+  
+  // 🟢 FIXED: ดึงตัวแปรสลักความปลอดภัยแชร์สาขาจากเราเตอร์มาใช้งานคุมเส้นทาง
+  const { shopSlug } = useParams();
+  const targetSlug = shopSlug || 'advancetech';
+
   const filters = useSalesReportStore((state) => state.filters);
   const salesList = useSalesReportStore((state) => state.salesList);
   const salesListLoading = useSalesReportStore((state) => state.salesListLoading);
@@ -181,7 +182,8 @@ const SalesListPage = () => {
 
   const handleOpenSaleDetail = (saleId) => {
     if (!saleId) return;
-    navigate(`/pos/reports/sales/${saleId}`);
+    // 🟢 FIXED: ซ่อมแซมระบบโยกย้ายเส้นทางเจาะลึกแถวข้อมูลบิลให้วิ่งผ่านรหัส Tenant ร่วมสาขาจริง
+    navigate(`/${targetSlug}/pos/reports/sales/${saleId}`);
   };
 
   return (
@@ -200,7 +202,8 @@ const SalesListPage = () => {
 
           <div className="flex flex-wrap gap-3">
             <Link
-              to="/pos/reports/sales"
+              // 🟢 FIXED: สับสายทางวิ่งถอยกลับ Dashboard ให้มีตัวแปร Tenant แปะหน้าเสมอเสถียร 100%
+              to={`/${targetSlug}/pos/reports/sales`}
               className="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
             >
               กลับ Dashboard
@@ -366,7 +369,6 @@ const SalesListPage = () => {
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-slate-200 text-sm">
               <thead className="bg-slate-50 sticky top-0 z-10">
-              
                 <tr>
                   <th className="px-4 py-3 text-left font-semibold text-slate-700">เลขบิล</th>
 
@@ -448,7 +450,8 @@ const SalesListPage = () => {
                       </td>
                       <td className="px-4 py-3 text-right">
                         <Link
-                          to={`/pos/reports/sales/${row.id}`}
+                          // 🟢 FIXED: สับสายพาสตรงปุ่มกดรายละเอียดท้ายตารางให้สลัก Dynamic targetSlug คุมสาขาปลอดภัย
+                          to={`/${targetSlug}/pos/reports/sales/${row.id}`}
                           onClick={(event) => event.stopPropagation()}
                           className="inline-flex items-center justify-center rounded-xl border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
                         >
@@ -502,12 +505,3 @@ const SalesListPage = () => {
 };
 
 export default SalesListPage;
-
-
-
-
-
-
-
-
-

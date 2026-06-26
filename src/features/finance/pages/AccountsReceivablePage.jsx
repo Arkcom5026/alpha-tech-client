@@ -1,20 +1,8 @@
-
-
-
-
-
-
 // 📁 FILE: src/features/finance/pages/AccountsReceivablePage.jsx
-// ✅ Production-grade (minimal disruption)
-// - Store-first (no direct API calls)
-// - UI-based alerts only (no dialog)
-// - Defensive rendering (handles missing store fields gracefully)
-
+// ✅ Production-grade (minimal disruption) - Store-first
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-
+import { useParams } from 'react-router-dom'; // 🟢 [DYNAMIC PARAM FIX] นำเข้า useParams มาร่วมทีม
 import useFinanceStore from '@/features/finance/store/financeStore';
-
-
 import AccountsReceivableTable from '@/features/finance/components/AccountsReceivableTable';
 
 const toISODate = (d) => {
@@ -39,15 +27,12 @@ function parseMoney(val) {
     const n = Number(s);
     return Number.isFinite(n) ? n : 0;
   }
-  // Prisma Decimal or similar
   try {
     if (typeof val === 'object' && typeof val.toNumber === 'function') {
       const n = val.toNumber();
       return Number.isFinite(n) ? n : 0;
     }
-  } catch (_) {
-    // ignore
-  }
+  } catch (_) {}
   return 0;
 }
 
@@ -57,7 +42,8 @@ const fmt = (n) => {
 };
 
 const AccountsReceivablePage = () => {
-  // ✅ Select store fields individually to avoid unstable object selectors
+  const { shopSlug } = useParams(); // 🟢 [LINK BINDING] แกะรหัสชื่อร้านค้าพาร์ตเนอร์คุมระบบนำทาง Multi-Tenant
+  
   const arSummary = useFinanceStore((s) => s.arSummary);
   const arRows = useFinanceStore((s) => s.arRows);
   const arLoading = useFinanceStore((s) => s.arLoading);
@@ -68,10 +54,8 @@ const AccountsReceivablePage = () => {
   const fetchAccountsReceivableRowsAction = useFinanceStore((s) => s.fetchAccountsReceivableRowsAction);
   const resetArErrorAction = useFinanceStore((s) => s.resetArErrorAction);
 
-  // ✅ Filters (minimal)
   const [keyword, setKeyword] = useState('');
 
-  // ✅ Initialize default date range (last 30 days) without a setState effect
   const [fromDate, setFromDate] = useState(() => {
     try {
       const today = new Date();
@@ -91,17 +75,11 @@ const AccountsReceivablePage = () => {
     }
   });
 
-  const [status, setStatus] = useState('OPEN'); // OPEN = UNPAID + PARTIALLY_PAID
-
-  // ✅ StrictMode guard (dev)
+  const [status, setStatus] = useState('OPEN');
   const didInitRef = useRef(false);
-
   const safeRows = Array.isArray(arRows) ? arRows : [];
 
   const computedSummary = useMemo(() => {
-    // Prefer store summary if provided; but if it looks empty while rows have data,
-    // fallback to computing from rows (prevents misleading 0.00 on cards)
-
     const computeFromRows = () => {
       const invoiceCount = safeRows.length;
       const outstandingTotal = safeRows.reduce((sum, r) => {
@@ -111,7 +89,6 @@ const AccountsReceivablePage = () => {
         return sum + outstanding;
       }, 0);
 
-      // Best-effort distinct customers
       const seen = new Set();
       for (const r of safeRows) {
         const cid = r.customerId ?? r.customer?.id ?? null;
@@ -126,7 +103,6 @@ const AccountsReceivablePage = () => {
       const invoiceCount = Number(arSummary.invoiceCount ?? arSummary.totalBills ?? safeRows.length) || 0;
       const customerCount = Number(arSummary.customerCount ?? arSummary.totalCustomers ?? 0) || 0;
 
-      // If summary is zero-ish but rows clearly have outstanding, trust rows.
       if (safeRows.length > 0 && outstandingTotal <= 0) {
         const rowsComputed = computeFromRows();
         if (rowsComputed.outstandingTotal > 0) return rowsComputed;
@@ -139,33 +115,27 @@ const AccountsReceivablePage = () => {
   }, [arSummary, safeRows]);
 
   const buildParams = useCallback(() => {
-    const params = {
+    return {
       keyword: keyword.trim() || undefined,
       fromDate: fromDate || undefined,
       toDate: toDate || undefined,
       status: status || undefined,
     };
-
-    // If only one side of date range is set, keep it — BE should handle gracefully.
-    return params;
   }, [keyword, fromDate, toDate, status]);
 
   const reload = useCallback(async () => {
     const params = buildParams();
 
-    // ✅ prefer combined action if exists
     if (typeof fetchAccountsReceivableAction === 'function') {
       await fetchAccountsReceivableAction(params);
       return;
     }
 
-    // ✅ otherwise call split actions (summary + rows) if available
     const jobs = [];
     if (typeof fetchAccountsReceivableSummaryAction === 'function') jobs.push(fetchAccountsReceivableSummaryAction(params));
     if (typeof fetchAccountsReceivableRowsAction === 'function') jobs.push(fetchAccountsReceivableRowsAction(params));
 
     if (jobs.length === 0) {
-      // No action wired yet → show UI error (production-friendly)
       if (typeof resetArErrorAction === 'function') resetArErrorAction();
       return;
     }
@@ -176,9 +146,6 @@ const AccountsReceivablePage = () => {
   useEffect(() => {
     if (didInitRef.current) return;
     didInitRef.current = true;
-
-    // ✅ Auto-load once on mount (safe with StrictMode guard)
-    // eslint-disable-next-line no-void
     void reload();
   }, [reload]);
 
@@ -216,7 +183,6 @@ const AccountsReceivablePage = () => {
       typeof fetchAccountsReceivableSummaryAction === 'function' ||
       typeof fetchAccountsReceivableRowsAction === 'function';
 
-    // if no action and no rows/summary → show wiring hint
     return !hasAnyAction && !safeRows.length && !arSummary;
   }, [fetchAccountsReceivableAction, fetchAccountsReceivableSummaryAction, fetchAccountsReceivableRowsAction, safeRows.length, arSummary]);
 
@@ -230,7 +196,6 @@ const AccountsReceivablePage = () => {
           </p>
         </div>
 
-        {/* ✅ Summary */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="bg-white rounded-xl shadow-sm border p-5">
             <div className="text-sm text-gray-500">ยอดค้างรวม</div>
@@ -251,7 +216,6 @@ const AccountsReceivablePage = () => {
           </div>
         </div>
 
-        {/* ✅ Error block (UI-based alert) */}
         {arError ? (
           <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
             <div className="font-semibold">ไม่สามารถโหลดข้อมูลลูกหนี้ได้</div>
@@ -264,13 +228,11 @@ const AccountsReceivablePage = () => {
             <div className="font-semibold">ยังไม่ได้เชื่อม store action สำหรับลูกหนี้</div>
             <div className="text-sm mt-1">
               โปรดเพิ่ม action ใน <span className="font-mono">financeStore.js</span> เช่น{' '}
-              <span className="font-mono">fetchAccountsReceivableAction</span> หรือ{' '}
-              <span className="font-mono">fetchAccountsReceivableRowsAction</span> แล้วหน้า AR จะโหลดข้อมูลได้ทันที
+              <span className="font-mono">fetchAccountsReceivableAction</span>
             </div>
           </div>
         ) : null}
 
-        {/* ✅ Filters */}
         <form onSubmit={onApplyFilters} className="bg-white border rounded-xl p-5 shadow-sm">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
@@ -338,7 +300,6 @@ const AccountsReceivablePage = () => {
           </div>
         </form>
 
-        {/* ✅ Table */}
         <div className="bg-white border rounded-xl p-5 shadow-sm">
           <div className="flex items-center justify-between gap-3 mb-3">
             <div className="text-sm font-semibold text-gray-700">รายการบิลค้าง</div>
@@ -357,9 +318,3 @@ const AccountsReceivablePage = () => {
 };
 
 export default AccountsReceivablePage;
-
-
-
-
-
-

@@ -1,23 +1,24 @@
-
-
-
-// ✅ src/features/productTemplate/pages/ListProductTemplatePage.jsx
+// src/features/productTemplate/pages/ListProductTemplatePage.jsx
 // - โหมด on-demand: ต้องกด “แสดงข้อมูล” ก่อน 1 ครั้ง
 // - หลังจากโหลดแล้ว: เปลี่ยน dropdown / includeInactive / page / limit → fetch ทันที
 // - Cascading 2 ชั้น: Category → Type (Template ไม่ใช่ cascade และไม่มี ProductProfile แล้ว)
 // - URL sync: เก็บ filter/page ไว้เพื่อ refresh/back/forward
 import React from 'react'
-import { useNavigate, useSearchParams, useLocation } from 'react-router-dom'
+import { useNavigate, useSearchParams, useLocation, useParams } from 'react-router-dom' // 🟢 [DYNAMIC PARAM FIX] นำเข้า useParams มาร่วมทีม
 import ProductTemplateTable from '../components/ProductTemplateTable'
 import StandardActionButtons from '@/components/shared/buttons/StandardActionButtons'
 import { useAuthStore } from '@/features/auth/store/authStore'
 import useProductTemplateStore from '../store/productTemplateStore'
 
 const ListProductTemplatePage = () => {
+  // 🟢 [LINK BINDING] แกะรหัสชื่อร้านค้าจาก URL สแตนด์บายเพื่อคุมทางวิ่งปุ่มกดแบบ Multi-Tenant
+  const { shopSlug } = useParams() 
   const navigate = useNavigate()
   const [params, setParams] = useSearchParams()
   const location = useLocation()
-  const isListPath = /\/pos\/stock\/templates\/?$/.test(location.pathname)
+  
+  // 🟢 [DYNAMIC PATH MATCH] ปรับตัวตรวจพาธให้รองรับรูปแบบ Multi-Tenant เพื่อไม่ให้เช็คเงื่อนไขหลุดเฟรม
+  const isListPath = new RegExp(`(?:\\/${shopSlug})?\\/pos\\/stock\\/templates\\/?$`).test(location.pathname)
 
   // ✅ อ่านสิทธิ์จาก authStore แบบ tolerant (รองรับทั้ง value และ function)
   const auth = useAuthStore()
@@ -74,19 +75,10 @@ const ListProductTemplatePage = () => {
   }, [])
 
   // ✅ โฟลว์ “เหมือนของเดิม”:
-  // - เมื่อเปลี่ยน filter/page/limit/includeInactive → fetchListAction ทันที
-  // - แต่จะเริ่มทำงานหลังผู้ใช้กด “แสดงข้อมูล” เท่านั้น
-  //
-  // Cascade rules:
-  // - เปลี่ยน “หมวดหมู่” → ล้าง productTypeId
-  // เพื่อกัน intermediate state ทำให้ยิง fetch ด้วยค่าเก่าแล้วได้ข้อมูลว่าง
-  const skipAutoFetchOnceRef = React.useRef(false)
-
   React.useEffect(() => {
     if (!isListPath) return
     if (!hasLoaded) return
 
-    // ✅ กันเคสเปลี่ยนหมวด/ประเภท แล้วเราจะยิง fetch แบบ deterministic จาก onCascadeChange เอง 1 ครั้ง
     if (skipAutoFetchOnceRef.current) return
 
     fetchListAction({ page, limit, includeInactive })
@@ -95,20 +87,20 @@ const ListProductTemplatePage = () => {
     next.set('page', String(page))
     if (includeInactive) next.set('includeInactive', 'true')
 
-
     if (!isSameParams(next, params)) {
       setParams(next, { replace: true })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isListPath, hasLoaded, page, limit, includeInactive])
 
-  const handleCreate = () => navigate('/pos/stock/templates/create')
-  const handleEdit = (row) => navigate(`/pos/stock/templates/edit/${row.id}`)
+  const skipAutoFetchOnceRef = React.useRef(false)
+
+  // 🟢 [BUG FIX PATHS] ล้างเครื่องหมายโควทเดี่ยวซ้อน ลบสแลชตัวท้ายออก และเปิด Dynamic ลิงก์แก้ไข 100%
+  const handleCreate = () => navigate(`/${shopSlug}/pos/stock/templates/create`)
+  const handleEdit = (row) => navigate(`/${shopSlug}/pos/stock/templates/edit/${row.id}`)
 
   const onPrev = () => hasLoaded && page > 1 && setPageAction(page - 1)
   const onNext = () => hasLoaded && page < Math.max(totalPages || 1, 1) && setPageAction(page + 1)
-
-  // ✅ เผื่อกรณี API ยังไม่กรองครบทุก field → กรองซ้ำฝั่ง FE แบบปลอดภัย (ไม่กระทบถ้า BE กรองอยู่แล้ว)
 
   return (
     <div className="p-6 w-full flex flex-col items-center">
@@ -125,8 +117,6 @@ const ListProductTemplatePage = () => {
         </div>
 
         <div className="flex flex-col gap-3 mb-4">
-          {/* ✅ ก่อนกด “แสดงข้อมูล” ให้ disable ตัวกรอง เพื่อไม่ให้ผู้ใช้สับสน */}
-
           <div className="flex flex-wrap items-center gap-3">
             <label className="inline-flex items-center gap-2 text-sm text-zinc-700 dark:text-zinc-300">
               <input
@@ -171,7 +161,6 @@ const ListProductTemplatePage = () => {
                   setHasLoaded(true)
                   setPageAction(1)
 
-                  // sync URL ทันที (เพื่อรีเฟรชแล้วยังอยู่ที่ filter เดิม)
                   const next = new URLSearchParams(params)
                   next.set('page', '1')
 
@@ -222,8 +211,3 @@ const ListProductTemplatePage = () => {
 }
 
 export default ListProductTemplatePage
-
-
-
-
-

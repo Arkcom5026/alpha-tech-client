@@ -1,7 +1,4 @@
-
-
-
-// ✅ src/features/productTemplate/pages/EditProductTemplatePage.jsx
+// src/features/productTemplate/pages/EditProductTemplatePage.jsx
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import ProductTemplateForm from '../components/ProductTemplateForm';
@@ -13,7 +10,8 @@ import ProcessingDialog from '@/components/shared/dialogs/ProcessingDialog';
 import PageHeader from '@/components/shared/layout/PageHeader';
 
 const EditProductTemplatePage = () => {
-  const { id } = useParams();
+  // 🟢 [DYNAMIC PARAM FIX] แกะรหัส shopSlug ร่วมกับ id จาก useParams เพื่อดึงสัญญาณ Multi-Tenant
+  const { shopSlug, id } = useParams();
   const navigate = useNavigate();
   const selectedBranchId = useBranchStore((state) => state.selectedBranchId);
 
@@ -29,7 +27,6 @@ const EditProductTemplatePage = () => {
   const [showSuccess, setShowSuccess] = useState(false);
 
   const { getTemplateByIdAction: getTemplateById, updateTemplateAction: updateTemplate } = useProductTemplateStore();
-
 
   useEffect(() => {
     if (!canManage) return;
@@ -59,7 +56,6 @@ const EditProductTemplatePage = () => {
     fetchData();
   }, [id, selectedBranchId, getTemplateById, canManage]);
 
-
   const handleUpdate = async (formData) => {
     if (!canManage) return; // hard-stop safety
     try {
@@ -72,7 +68,8 @@ const EditProductTemplatePage = () => {
       setShowSuccess(true);
       setTimeout(() => {
         setShowSuccess(false);
-        navigate('/pos/stock/templates');
+        // 🟢 [BUG FIX SIGNALS] ล้างเครื่องหมายโควทเดี่ยวซ้อน และตัดสแลชตัวท้ายออกให้แบนราบตรงล็อกเราเตอร์
+        navigate(`/${shopSlug}/pos/stock/templates`);
       }, 2000);
     } catch (err) {
       console.error('อัปเดตข้อมูลเทมเพลทสินค้า ล้มเหลว:', err);
@@ -97,9 +94,10 @@ const EditProductTemplatePage = () => {
             >
               ย้อนกลับ
             </button>
+            {/* 🟢 [DYNAMIC LINK FIX] เปลี่ยนพาธ Link ดักหน้าไม่มีสิทธิ์ให้รองรับตัวแปรชื่อร้านค้า */}
             <Link
               className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-sm font-medium text-blue-700 hover:bg-blue-100"
-              to="/pos/stock/templates"
+              to={`/${shopSlug}/pos/stock/templates`}
             >
               กลับไปหน้ารายการเทมเพลทสินค้า
             </Link>
@@ -116,7 +114,10 @@ const EditProductTemplatePage = () => {
     <div className="max-w-3xl mx-auto">
       <PageHeader title={`แก้ไขเทมเพลทสินค้า #${id}`} />
       <div className="mb-3">
-        <Link to="/pos/stock/templates" className="text-sm text-blue-600 hover:underline">กลับไปหน้ารายการเทมเพลทสินค้า</Link>
+        {/* 🟢 [DYNAMIC LINK FIX] เปลี่ยนพาธ Link ด้านบนฟอร์มให้รองรับตัวแปรชื่อร้านค้าเพื่อไม่ให้ดีดตกราง */}
+        <Link to={`/${shopSlug}/pos/stock/templates`} className="text-sm text-blue-600 hover:underline">
+          กลับไปหน้ารายการเทมเพลทสินค้า
+        </Link>
       </div>
 
       <ProductTemplateForm
@@ -136,5 +137,3 @@ const EditProductTemplatePage = () => {
 };
 
 export default EditProductTemplatePage;
-
-

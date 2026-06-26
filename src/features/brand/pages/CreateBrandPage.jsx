@@ -38,12 +38,12 @@ const CreateBrandPage = () => {
     const result = await createBrandAction({ name: nameTrim })
     if (result?.ok) {
       // กลับไปหน้า list
-      navigate('/pos/stock/brands')
+      navigate(`/${shopSlug}/pos/stock/brands`)
     }
   }
 
   const onCancel = () => {
-    navigate('/pos/stock/brands')
+    navigate(`/${shopSlug}/pos/stock/brands`)
   }
 
   return (

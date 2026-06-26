@@ -1,11 +1,12 @@
-// ✅ src/features/unit/pages/ListUnitPage.jsx
+// src/features/unit/pages/ListUnitPage.jsx
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom'; // 🟢 [DYNAMIC PARAM FIX] นำเข้า useParams มาร่วมทีม
 import useUnitStore from '../store/unitStore';
 import StandardActionButtons from '@/components/shared/buttons/StandardActionButtons';
 import ConfirmDeleteDialog from '@/components/shared/dialogs/ConfirmDeleteDialog';
 
 const ListUnitPage = () => {
+  const { shopSlug } = useParams(); // 🟢 [LINK BINDING] แกะรหัสชื่อร้านค้าจาก URL สแตนด์บายเพื่อคุมทางวิ่งปุ่มกด
   const navigate = useNavigate();
   const { units, fetchUnits, deleteUnit, isLoading } = useUnitStore();
   const [confirmId, setConfirmId] = useState(null);
@@ -22,7 +23,8 @@ const ListUnitPage = () => {
     <div className="p-4 max-w-3xl mx-auto">
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-xl font-bold">รายการหน่วยนับ</h1>
-        <StandardActionButtons onAdd={() => navigate('/pos/stock/units/create')} />
+        {/* 🟢 [CLEAN ENGINE LINK] สับรางปุ่มกดสร้างข้อมูล ล้างสแลชท้ายคำออกให้ราบเรียบตรงล็อกเราเตอร์ */}
+        <StandardActionButtons onAdd={() => navigate(`/${shopSlug}/pos/stock/units/create`)} />
       </div>
 
       {isLoading ? (
@@ -45,7 +47,7 @@ const ListUnitPage = () => {
                   <td className="p-2 align-middle">
                     <div className="flex justify-center items-center gap-2">
                       <StandardActionButtons
-                        onEdit={() => navigate(`/pos/stock/units/edit/${unit.id}`)}
+                        onEdit={() => navigate(`/${shopSlug}/pos/stock/units/edit/${unit.id}`)}
                         onDelete={() => setConfirmId(unit.id)}
                       />
                     </div>

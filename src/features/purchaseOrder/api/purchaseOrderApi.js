@@ -1,22 +1,13 @@
+// src/features/purchaseOrder/api/purchaseOrderApi.js
+// 🏛️ Canonical Port 5000 Router: (Fixed Response Mapping Shape & Safe Live API Influx)
+import apiClient from '@/utils/apiClient.js'; 
 
-
-// purchaseOrderApi.js (refined)
-// - ใช้ apiClient กลางตามมาตรฐาน (#37, #61)
-// - Getters คืน []/null เมื่อผิดพลาด; Mutations โยน error ให้ Store จัดการ
-// - รองรับ params: search, status (string | string[]), page, pageSize
-
-import apiClient from '@/utils/apiClient.js';
-
-// ────────────────────────────────────────────────────────────────────────────────
-// Helpers
-// ────────────────────────────────────────────────────────────────────────────────
 const buildParams = ({ search, status, page, pageSize } = {}) => {
   const params = {};
   if (search && typeof search === 'string' && search.trim() !== '') {
     params.search = search.trim();
   }
   if (status && status !== 'all') {
-    // รองรับทั้ง string และ array แล้ว normalize เป็น CSV ตัวพิมพ์ใหญ่
     const list = Array.isArray(status) ? status : String(status).split(',');
     params.status = list
       .map((s) => String(s).trim().toUpperCase())
@@ -28,9 +19,6 @@ const buildParams = ({ search, status, page, pageSize } = {}) => {
   return params;
 };
 
-// ────────────────────────────────────────────────────────────────────────────────
-// Suppliers (minimal needed here)
-// ────────────────────────────────────────────────────────────────────────────────
 export const getSuppliers = async () => {
   try {
     const res = await apiClient.get('/suppliers');
@@ -42,17 +30,19 @@ export const getSuppliers = async () => {
 };
 
 // ────────────────────────────────────────────────────────────────────────────────
-// Purchase Orders
+// Purchase Orders (แก้ไขกลไกส่งกลับเพื่อให้สอดรับกับหน้า Dashboard อย่างเป็นเอกภาพ)
 // ────────────────────────────────────────────────────────────────────────────────
 export const getPurchaseOrders = async (opts = {}) => {
   try {
     const res = await apiClient.get('/purchase-orders', {
       params: buildParams(opts),
     });
+
+    // 🟢 [BUG FIX RESOLVED] คืนค่า res.data กลับไปตรง ๆ ห้ามหั่นย่อย Array เพื่อให้หน้าจอรับไปประมวลผลต่อได้สมบูรณ์
     return res.data;
   } catch (error) {
     console.error('❌ getPurchaseOrders error:', error);
-    return [];
+    return { success: false, data: [] };
   }
 };
 
@@ -64,14 +54,14 @@ export const getEligiblePurchaseOrders = async () => {
     return res.data;
   } catch (error) {
     console.error('❌ getEligiblePurchaseOrders error:', error);
-    return [];
+    return { success: false, data: [] };
   }
 };
 
 export const getPurchaseOrderById = async (id) => {
   try {
     const res = await apiClient.get(`/purchase-orders/${id}`);
-    return res.data;
+    return res.data && res.data.success ? res.data.data : res.data;
   } catch (error) {
     console.error(`❌ getPurchaseOrderById(${id}) error:`, error);
     return null;
@@ -79,10 +69,9 @@ export const getPurchaseOrderById = async (id) => {
 };
 
 export const getPurchaseOrderDetailById = async (id) => {
-  // alias ของ getPurchaseOrderById เพื่อความชัดในที่ใช้งาน
   try {
     const res = await apiClient.get(`/purchase-orders/${id}`);
-    return res.data;
+    return res.data && res.data.success ? res.data.data : res.data;
   } catch (error) {
     console.error('📛 [getPurchaseOrderDetailById] error:', error);
     return null;
@@ -99,14 +88,12 @@ export const createPurchaseOrder = async (data) => {
   }
 };
 
-// ✅ Option A: ไม่อนุญาตให้ FE เรียก endpoint with-advance ในขั้น Create PO
-// คง function ไว้กัน import เดิมพัง แต่จะ throw ชัดเจน
 export const createPurchaseOrderWithAdvance = async (data) => {
   const hasAdvance = Array.isArray(data?.advancePaymentsUsed) && data.advancePaymentsUsed.length > 0;
   const err = new Error(
     hasAdvance
-      ? 'Create PO ไม่รองรับ advancePaymentsUsed (ทางเลือก A) — ให้ไปผูก/ตัดชำระในขั้นตอนจ่ายเงิน Supplier'
-      : 'Endpoint /purchase-orders/with-advance ถูกปิดสำหรับขั้น Create PO (ทางเลือก A) — ใช้ createPurchaseOrder แทน'
+      ? 'Create PO ไม่รองรับ advancePaymentsUsed — ให้ไปผูก/ตัดชำระในขั้นตอนจ่ายเงิน Supplier'
+      : 'Endpoint /purchase-orders/with-advance ถูกปิดสำหรับขั้น Create PO — ใช้ createPurchaseOrder แทน'
   );
   err.code = hasAdvance ? 'PO_ADVANCE_NOT_ALLOWED' : 'PO_WITH_ADVANCE_DISABLED';
   throw err;
@@ -150,10 +137,6 @@ export const getPurchaseOrdersBySupplier = async (supplierId) => {
     return res.data;
   } catch (error) {
     console.error(`❌ getPurchaseOrdersBySupplier(${supplierId}) error:`, error);
-    return [];
+    return { success: false, data: [] };
   }
 };
-
-
-
-

@@ -1,11 +1,12 @@
-// ✅ src/features/unit/pages/EditUnitPage.jsx
+// src/features/unit/pages/EditUnitPage.jsx
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import useUnitStore from '../store/unitStore';
 import UnitForm from '../components/UnitForm';
 
 const EditUnitPage = () => {
-  const { id } = useParams();
+  // 🟢 [DYNAMIC PARAM FIX] แกะรหัส shopSlug ร่วมกับ id จาก useParams เพื่อเปิดท่อสัญญาน Multi-Tenant
+  const { shopSlug, id } = useParams(); 
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -31,7 +32,8 @@ const EditUnitPage = () => {
     setIsSubmitting(true);
     try {
       await updateUnit(id, formData);
-      navigate('/pos/stock/units/');
+      // 🟢 [CLEAN ENGINE NAVIGATE] เรียกใช้งาน shopSlug ดึงพิกัดกลับสู่หน้าตารางหลักอย่างแม่นยำ ล้างท่อ / ท้ายคำทิ้ง
+      navigate(`/${shopSlug}/pos/stock/units`);
     } catch (err) {
       console.error('update unit error:', err);
     } finally {

@@ -1,17 +1,8 @@
-
-
 // =============================================================
 // Module: src/features/address/
 // Purpose: Address/ADM (Province → District → Subdistrict) API + Store + Components
 // Convention: Project #1 (Frontend = ESM; Backend = CommonJS). No barrel file.
 // =============================================================
-
-// =============================================================
-// File: src/features/address/api/addressApi.js
-// Desc: API layer for Thailand ADM dropdowns (Province → District → Subdistrict)
-// Note: Uses central axios instance from '@/utils/apiClient'
-// =============================================================
-
 
 import apiClient from '@/utils/apiClient';
 
@@ -82,11 +73,18 @@ export const resolveAddressBySubdistrictCode = async (subdistrictCode) => {
     if (!subdistrictCode) return null;
 
     const code = String(subdistrictCode);
-    const paths = ['/address/resolve', '/locations/resolve'];
+    // เพิ่มเส้นทางพหูพจน์ และพาสตรงเข้ากระบวนการตรวจสอบ
+    const paths = [
+      '/address/resolve', 
+      '/locations/resolve', 
+      '/addresses/resolve', 
+      `/address/resolve/${code}`
+    ];
 
     for (const path of paths) {
       try {
-        const res = await apiClient.get(path, { params: { subdistrictCode: code } });
+        const url = path.endsWith(code) ? path : path;
+        const res = await apiClient.get(url, { params: { subdistrictCode: code } });
         const data = res?.data;
         if (!data) continue;
 

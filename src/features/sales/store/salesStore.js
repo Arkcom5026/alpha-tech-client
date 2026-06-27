@@ -1,8 +1,3 @@
-
-
- 
-
-
 // 📁 FILE: src/features/sales/store/salesStore.js
 
 import { create } from 'zustand';
@@ -55,8 +50,6 @@ const normalizePrintableRows = (rows) => {
 };
 
 // ✅ Normalize sale detail for print/doc screens (Delivery Note / Tax Invoice)
-// - Flatten branch fields (taxId etc.) to reduce UI fragility
-// - Keep backward compatibility with older BE shapes
 const normalizeSaleDetail = (sale) => {
   if (!sale || typeof sale !== 'object') return sale;
 
@@ -75,18 +68,14 @@ const normalizeSaleDetail = (sale) => {
   return {
     ...sale,
     branch: normalizedBranch || sale.branch || null,
-
-    // Convenience (prefer using sale.branch.taxId in UI, but this helps migration)
     branchTaxId: taxId,
   };
 };
 
 const useSalesStore = create((set, get) => ({
-  // ✅ global state for UI-based alert/error block (no dialog)
   loading: false,
   error: null,
 
-  // ✅ Sales Dashboard overview state (separate from global loading/error)
   salesOverviewLoading: false,
   salesOverviewError: null,
   salesOverviewLastLoadedAt: null,
@@ -98,7 +87,6 @@ const useSalesStore = create((set, get) => ({
   currentSale: null,
   printableSales: [],
 
-  // ✅ last created sale id
   lastCreatedSaleId: null,
   setLastCreatedSaleIdAction: (id) => set({ lastCreatedSaleId: id || null }),
 
@@ -129,7 +117,6 @@ const useSalesStore = create((set, get) => ({
   },
   setPaymentAmountAction: (method, amount) => get().setPaymentAmount(method, amount),
 
-  // ✅ Largest Remainder (satang) — sum discount ตรง billDiscount เป๊ะ
   setBillDiscount: (amount) => {
     const billDiscount = Number(amount) || 0;
     const { saleItems } = get();
@@ -234,8 +221,6 @@ const useSalesStore = create((set, get) => ({
 
   addSaleItemAction: (item) => {
     try {
-      // 🔒 SN-only guard: ปิดประตู LOT/SIMPLE ไม่ให้หลุดเข้า saleItems
-      // SIMPLE flow จะใช้ contract แยกในอนาคต ไม่ปะปนกับ stockItemId/SN flow
       if (item?.kind === 'LOT' || item?.simpleLotId) {
         const msg = 'สินค้าประเภทจำนวน/LOT ยังไม่รองรับในหน้าขายนี้';
         set({ error: msg });
@@ -294,7 +279,6 @@ const useSalesStore = create((set, get) => ({
     }
   },
 
-  // ✅ ส่ง saleMode ให้ BE จัดการสถานะเอง (Production hardening)
   confirmSaleOrderAction: async (saleMode, opts = {}) => {
     const { saleItems, customerId } = get();
 
@@ -304,8 +288,6 @@ const useSalesStore = create((set, get) => ({
       return { error: msg };
     }
 
-    // 🔒 SN-only guard (confirm layer)
-    // กัน state เก่าหรือข้อมูลที่หลุดเข้ามาโดยไม่ผ่าน addSaleItemAction
     const unsupportedRows = (saleItems || [])
       .map((it, idx) => ({
         idx,
@@ -352,13 +334,6 @@ const useSalesStore = create((set, get) => ({
         0
       );
 
-      // ✅ VAT-included pricing baseline
-      // - item.price    = ราคาขายตั้งต้นก่อนส่วนลด/บวกเพิ่ม (รวม VAT แล้ว)
-      // - item.discount = ส่วนลดสุทธิระดับรายการ
-      //                   ค่าบวก  = ลดราคา
-      //                   ค่าลบ   = บวกเพิ่มราคา (manual markup)
-      // - totalAmount   = totalBeforeDiscount - totalDiscount
-      // ดังนั้น discount = -10 จะหมายถึงบวกเพิ่มราคา 10 บาท
       const totalAmountSatang = Math.max(totalBeforeDiscountSatang - totalDiscountSatang, 0);
       const vatSatang = Math.round((totalAmountSatang * vatRate) / (100 + vatRate));
 
@@ -371,24 +346,27 @@ const useSalesStore = create((set, get) => ({
       const saleType = opts?.saleType;
 
       const payload = {
-        customerId,
-        totalBeforeDiscount,
-        totalDiscount,
-        vat: vatAmount,
-        vatRate,
-        totalAmount,
+        customerId: customerId ? Number(customerId) : null,
+        totalBeforeDiscount: Number(totalBeforeDiscount),
+        totalDiscount: Number(totalDiscount),
+        vat: Number(vatAmount),
+        vatRate: Number(vatRate),
+        totalAmount: Number(totalAmount),
         note: '',
         items: saleItems.map((item) => {
           const itemBaseSatang = Math.round((Number(item.price) || 0) * 100);
           const itemDiscountSatang = Math.round((Number(item.discount) || 0) * 100);
           const itemGrossSatang = Math.max(itemBaseSatang - itemDiscountSatang, 0);
           const itemVatSatang = Math.round((itemGrossSatang * vatRate) / (100 + vatRate));
+          const netPrice = itemGrossSatang / 100;
 
           return {
             stockItemId: normalizeStockItemId(item),
+            // 🟢 FIXED PAYLOAD: ควานหาไอดีสินค้าตัวแม่ (productId) ส่งแนบคู่ไปให้หลังบ้าน Prisma ตัดคลังสต๊อกตรงล็อก
+            productId: item?.productId ? Number(item.productId) : (item?.product?.id ? Number(item.product.id) : undefined),
             basePrice: Number(item.price) || 0,
             vatAmount: itemVatSatang / 100,
-            price: itemGrossSatang / 100,
+            price: Number(netPrice),
             discount: Number(item.discount) || 0,
             remark: '',
           };
@@ -402,7 +380,6 @@ const useSalesStore = create((set, get) => ({
       };
 
       const data = await createSaleOrder(payload);
-
       const saleId = data?.saleId ?? data?.id ?? data?.saleOrderId ?? data?.sale?.id ?? null;
 
       set({
@@ -433,16 +410,13 @@ const useSalesStore = create((set, get) => ({
       set({ error: msg });
       return { error: msg };
     } finally {
+      // 🟢 FIXED SYNTAX: คืนค่าไวยากรณ์สากล finally ครอบปิดบล็อกได้อย่างราบรื่น
       set({ loading: false });
     }
   },
 
-  // ============================================================
-  // ✅ Executive Dashboard (Sales) — Overview summary (manual load)
-  // ============================================================
-
   fetchSalesDashboardOverviewAction: async (opts = {}) => {
-    const scope = opts?.scope || 'today'; // today | custom
+    const scope = opts?.scope || 'today';
 
     const startOfDay = (d) => {
       const x = new Date(d);
@@ -479,16 +453,13 @@ const useSalesStore = create((set, get) => ({
     };
 
     const isPaidSale = (s) => {
-      // ✅ Prefer new canonical field (Prisma: Sale.statusPayment)
-      // Treat CANCELLED as non-unpaid for dashboard purposes.
       if (s?.statusPayment) {
         const sp = String(s.statusPayment).toUpperCase();
         if (sp === 'PAID') return true;
         if (sp === 'CANCELLED') return true;
-        if (sp === 'UNPAID' || sp === 'PARTIALLY_PAID' || sp === 'WAITING_APPROVAL') return false;
+        if (s?.statusPayment && (sp === 'UNPAID' || sp === 'PARTIALLY_PAID' || sp === 'WAITING_APPROVAL')) return false;
       }
 
-      // ✅ Backward compatibility (older fields / mixed responses)
       if (s?.isPaid === true) return true;
       if (s?.paid === true) return true;
       if (s?.paidAt) return true;
@@ -605,9 +576,6 @@ const useSalesStore = create((set, get) => ({
 
   getSaleByIdAction: async (id) => {
     try {
-      // ✅ Ask BE for related entities when supported (safe if BE ignores unknown params)
-      // - includePayments: used by multiple pages already
-      // - includeBranch: for Delivery Note header (taxId, address, phone)
       const data = await getSaleById(id, { includePayments: true, includeBranch: true });
       set({ currentSale: normalizeSaleDetail(data) });
     } catch (err) {
@@ -630,7 +598,6 @@ const useSalesStore = create((set, get) => ({
 
       const result = await updateSaleDocumentLines(normalizedSaleId, payload || {});
 
-      // ✅ Refresh current runtime after save so the document workspace updates immediately.
       if (options?.refresh !== false) {
         await get().getSaleByIdAction(normalizedSaleId);
       }
@@ -685,9 +652,6 @@ const useSalesStore = create((set, get) => ({
     });
   },
 
-
-
-  
   loadPrintableSalesAction: async (params = {}) => {
     const fromDate = params?.fromDate;
     const toDate = params?.toDate;
@@ -724,10 +688,6 @@ const useSalesStore = create((set, get) => ({
     }
   },
 
-
-
-
-
   convertOrderOnlineToSaleAction: async (orderOnlineId, stockSelections) => {
     try {
       const res = await convertOrderOnlineToSale(orderOnlineId, stockSelections);
@@ -740,11 +700,3 @@ const useSalesStore = create((set, get) => ({
 }));
 
 export default useSalesStore;
-
-
-
-
-
-
-
-

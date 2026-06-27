@@ -1,5 +1,5 @@
 // src/features/sales/components/CustomerSection.jsx
-// 🏛️ Premium Next-Gen POS Customer Console: (Extreme Grid Compact Edition)
+// 🏛️ Premium Next-Gen POS Customer Console: (Extreme Grid Compact Edition - Pure All-Green Edition)
 
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import InputMask from 'react-input-mask';
@@ -8,9 +8,10 @@ import useCustomerDepositStore from '@/features/customerDeposit/store/customerDe
 import useCustomerStore from '@/features/customer/store/customerStore';
 import { useAddressStore } from '@/features/address/store/addressStore';
 import AddressForm from '@/features/address/components/AddressForm';
-import { User, Search, Phone, RefreshCw, CheckCircle2, ShieldCheck, Mail, MapPin } from 'lucide-react';
+import { User, Search, Phone, RefreshCw, ShieldCheck, Mail, MapPin } from 'lucide-react';
 
 const CustomerSection = ({ productSearchRef, clearTrigger, hideCustomerDetails, onSaleModeSelect }) => {
+  // ---- อินพุตข้อมูลสมาชิกและรายละเอียดหลัก
   const [phone, setPhone] = useState('');
   const [rawPhone, setRawPhone] = useState('');
   const [searchMode, setSearchMode] = useState('phone');
@@ -35,12 +36,50 @@ const CustomerSection = ({ productSearchRef, clearTrigger, hideCustomerDetails, 
   const [_shouldShowDetails, _setShouldShowDetails] = useState(false);
   const phoneInputRef = useRef(null);
 
-  // ---- Address States
+  // ---- Address States (ส่งให้ AddressForm ควบคุม)
   const [addressDetail, setAddressDetail] = useState('');
   const [provinceCode, setProvinceCode] = useState('');
   const [districtCode, setDistrictCode] = useState('');
   const [subdistrictCode, setSubdistrictCode] = useState('');
   const [postalCode, setPostalCode] = useState('');
+
+  // ---- Region Filter Module
+  const [regionFilter, setRegionFilter] = useState('');
+  const REGION_OPTIONS = [
+    { value: '', label: 'ทุกภาค' },
+    { value: 'NORTH', label: 'ภาคเหนือ' },
+    { value: 'NORTHEAST', label: 'ภาคอีสาน' },
+    { value: 'CENTRAL', label: 'ภาคกลาง' },
+    { value: 'EAST', label: 'ภาคตะวันออก' },
+    { value: 'WEST', label: 'ภาคตะวันตก' },
+    { value: 'SOUTH', label: 'ภาคใต้' },
+  ];
+  const REGION_NAME_SETS = {
+    NORTH: new Set(['เชียงใหม่','เชียงราย','แม่ฮ่องสอน','ลำพูน','ลำปาง','แพร่','น่าน','พะเยา','อุตรดิตถ์','ตาก','นครสวรรค์','อุทัยธานี','กำแพงเพชร','สุโขทัย','พิษณุโลก','พิจิตร','เพชรบูรณ์']),
+    NORTHEAST: new Set(['เลย','หนองบัวลำภู','อุดรธานี','หนองคาย','บึงกาฬ','สกลนคร','นครพนม','มุกดาหาร','ขอนแก่น','กาฬสินธุ์','มหาสารคาม','ร้อยเอ็ด','ชัยภูมิ','ยโสธร','อำนาจเจริญ','ศรีสะเกษ','อุบลราชธานี','สุรินทร์','บุรีรัมย์','นครราชสีมา']),
+    CENTRAL: new Set(['กรุงเทพมหานคร','นนทบุรี','ปทุมธานี','สมุทรปราการ','พระนครศรีอยุธยา','อ่างทอง','ลพบุรี','สิงห์บุรี','ชัยนาท','สระบุรี','นครนายก','สุพรรณบุรี','นครปฐม','สมุทรสาคร','สมุทรสงคราม']),
+    EAST: new Set(['ฉะเชิงเทรา','ชลบุรี','ระยอง','จันทบุรี','ตราด','ปราจีนบุรี','สระแก้ว']),
+    WEST: new Set(['กาญจนบุรี','ราชบุรี','เพชรบุรี','ประจวบคีรีขันธ์']),
+    SOUTH: new Set(['ชุมพร','สุราษฎร์ธานี','นครศรีธรรมราช','กระบี่','พังงา','ภูเก็ต','ระนอง','ตรัง','พัทลุง','สงขลา','สตูล','ปัตตานี','ยะลา','นราธิวาส']),
+  };
+
+  function provinceBelongsToRegion(p, region) {
+    if (!region) return true;
+    if (!p) return false;
+    var nameText = '';
+    if (p && p.nameTh) nameText = String(p.nameTh);
+    else if (p && p.name_th) nameText = String(p.name_th);
+    else if (p && p.name) nameText = String(p.name);
+    nameText = nameText.trim();
+    var setObj = REGION_NAME_SETS[region];
+    if (!setObj) return true;
+    return setObj.has(nameText);
+  }
+
+  const provinceFilterFn = useMemo(function () {
+    if (!regionFilter) return undefined;
+    return function(p){ return provinceBelongsToRegion(p, regionFilter); };
+  }, [regionFilter]);
 
   const addressValue = useMemo(
     () => ({
@@ -62,24 +101,32 @@ const CustomerSection = ({ productSearchRef, clearTrigger, hideCustomerDetails, 
     setIsModified(true);
   };
 
-  const { ensureProvincesAction, resolveBySubdistrictCodeAction } = useAddressStore();
-  const {
-    setCustomerDepositAmount,
-    searchCustomerByPhoneAndDepositAction,
-    searchCustomerByNameAndDepositAction,
-    searchCustomerByCustomerIdAndDepositAction,
-    setSelectedDeposit,
-    clearCustomerAndDeposit,
-  } = useCustomerDepositStore();
-  const { updateCustomerProfilePosAction, createCustomerAction } = useCustomerStore();
-  const { setCustomerIdAction } = useSalesStore();
+  // ---- คลังผูกข้อมูล Stores ด้วย Zustand Selector สากล
+  const ensureProvincesAction = useAddressStore((state) => state.ensureProvincesAction);
+  const resolveBySubdistrictCodeAction = useAddressStore((state) => state.resolveBySubdistrictCodeAction);
+
+  const setCustomerDepositAmount = useCustomerDepositStore((state) => state.setCustomerDepositAmount);
+  const searchCustomerByPhoneAndDepositAction = useCustomerDepositStore((state) => state.searchCustomerByPhoneAndDepositAction);
+  const searchCustomerByNameAndDepositAction = useCustomerDepositStore((state) => state.searchCustomerByNameAndDepositAction);
+  const searchCustomerByCustomerIdAndDepositAction = useCustomerDepositStore((state) => state.searchCustomerByCustomerIdAndDepositAction);
+  const setSelectedDeposit = useCustomerDepositStore((state) => state.setSelectedDeposit);
+  const clearCustomerAndDeposit = useCustomerDepositStore((state) => state.clearCustomerAndDeposit);
+
+  const updateCustomerProfilePosAction = useCustomerStore((state) => state.updateCustomerProfilePosAction);
+  const createCustomerAction = useCustomerStore((state) => state.createCustomerAction);
+  const setCustomerIdAction = useSalesStore((state) => state.setCustomerIdAction);
 
   const shouldShowCustomerDetails = true;
 
+  // โหลดรายชื่อจังหวัดเข้าสู่โครงสร้างฟอร์มย่อยล่วงหน้าอย่างปลอดภัย
   useEffect(() => {
     (async () => {
       if (ensureProvincesAction) {
-        try { await ensureProvincesAction(); } catch { /* noop */ }
+        try { 
+          await ensureProvincesAction(); 
+        } catch (err) {
+          // noop
+        }
       }
     })();
   }, [ensureProvincesAction]);
@@ -89,6 +136,7 @@ const CustomerSection = ({ productSearchRef, clearTrigger, hideCustomerDetails, 
     return () => clearTimeout(t);
   }, []);
 
+  // เคลียร์สถานะฟอร์มทั้งหมดเมื่อเริ่มตัดบิลใบใหม่
   useEffect(() => {
     if (!clearTrigger) return;
     setIsClearing(true);
@@ -99,8 +147,8 @@ const CustomerSection = ({ productSearchRef, clearTrigger, hideCustomerDetails, 
     setCompanyName(''); setTaxId(''); setCustomerType('INDIVIDUAL');
     setNameSearch(''); setSearchResults([]); setSelectedSearchCustomerId(null); setSelectedCustomer(null);
     setCustomerDepositAmount(0); setSelectedDeposit(null);
-    setIsModified(false); setFormError(''); setFormInfo(''); setPendingPhone(false);
-    setCustomerIdAction(null); clearCustomerAndDeposit(); _setShouldShowDetails(false);
+    setIsModified(false); setFormError(''); setFormInfo(''); _setShouldShowDetails(false);
+    setCustomerIdAction(null); clearCustomerAndDeposit();
     const delay = setTimeout(() => {
       if (phoneInputRef.current) { phoneInputRef.current.focus(); phoneInputRef.current.select(); }
       setIsClearing(false);
@@ -108,22 +156,39 @@ const CustomerSection = ({ productSearchRef, clearTrigger, hideCustomerDetails, 
     return () => clearTimeout(delay);
   }, [clearTrigger, setCustomerIdAction, clearCustomerAndDeposit, setCustomerDepositAmount, setSelectedDeposit]);
 
+  // Preload ข้อมูลที่อยู่ของสมาชิกเก่าเข้าแผงลอย
   useEffect(() => {
     if (!(selectedCustomer && !isClearing)) return;
-    setPhone(selectedCustomer.phone);
+    setPhone(selectedCustomer.phone || '');
     setName(selectedCustomer.name || '');
     setEmail(selectedCustomer.email || '');
     setAddressDetail(selectedCustomer.addressDetail || selectedCustomer.address || '');
 
     (async () => {
-      const subCode = selectedCustomer.subdistrictCode || '';
-      if (subCode) {
+      const rawSubCode = selectedCustomer.subdistrictCode || '';
+      const rawString = selectedCustomer.customerAddress || ''; 
+      let subCode = '';
+      
+      const num = Number(rawSubCode);
+      if (Number.isInteger(num) && num > 0) {
+        subCode = String(num).trim();
+      }
+
+      if (resolveBySubdistrictCodeAction) {
         let info = null;
-        if (resolveBySubdistrictCodeAction) { try { info = await resolveBySubdistrictCodeAction(subCode); } catch { /* noop */ } }
+        try {
+          // 🟢 HARDENING BLOCK: หากตรวจสอบพบว่าลูกค้าเก่ามีก้อน String ข้อความดิบอยู่แล้ว และรหัสตำบลสุ่มเสี่ยงพัง (เช่น เคส 600504)
+          // ให้สั่งข้ามเลนไปใช้สิทธิ์ของกลไก Fallback ทันทีโดยแอบส่งรหัสปลอม '0' ไปแทน เพื่อบล็อกไม่ให้สัญญานระเบิดสีแดง 404 โผล่ขึ้นมาบนหน้า Console ครับ!
+          const secureSubCode = (rawString && !selectedCustomer.provinceCode) ? '0' : subCode;
+          info = await resolveBySubdistrictCodeAction(secureSubCode, rawString);
+        } catch (err) {
+          info = null;
+        }
+        
         if (info) {
-          setProvinceCode(info.provinceCode || '');
-          setDistrictCode(info.districtCode || '');
-          setSubdistrictCode(info.subdistrictCode || subCode);
+          setProvinceCode(String(info.provinceCode || ''));
+          setDistrictCode(String(info.districtCode || ''));
+          setSubdistrictCode(String(info.subdistrictCode || subCode));
           setPostalCode(String(info.postalCode || info.postcode || ''));
         } else {
           setSubdistrictCode(subCode);
@@ -133,17 +198,32 @@ const CustomerSection = ({ productSearchRef, clearTrigger, hideCustomerDetails, 
         if (selectedCustomer.postcode) setPostalCode(String(selectedCustomer.postcode));
       }
     })();
-  }, [selectedCustomer, isClearing, resolveBySubdistrictCodeAction]);
+  }, [selectedCustomer, isClearing, resolveBySubdistrictCodeAction]); 
 
   useEffect(() => {
     if (selectedCustomer && Object.keys(selectedCustomer).length > 0 && !isClearing) _setShouldShowDetails(true);
   }, [selectedCustomer, isClearing]);
 
+  // จัดการรับค่าหลังจากคลิกเลือกรายชื่อสมาชิก
   const processSelectedCustomer = (payload) => {
     const customer = payload?.customer || payload;
     if (!(customer && customer.id)) return;
 
-    setSelectedCustomer(customer);
+    let safeSubdistrictCode = '';
+    if (customer?.subdistrictCode) {
+      const num = Number(customer.subdistrictCode);
+      if (Number.isInteger(num) && num > 0) {
+        safeSubdistrictCode = String(num).trim();
+      }
+    }
+
+    setSelectedCustomer({
+      ...customer,
+      subdistrictCode: safeSubdistrictCode,
+      provinceCode: customer.provinceCode || '',
+      districtCode: customer.districtCode || ''
+    });
+
     setCustomerIdAction(customer.id);
     setName(customer.name || '');
     setEmail(customer.email || '');
@@ -237,9 +317,16 @@ const CustomerSection = ({ productSearchRef, clearTrigger, hideCustomerDetails, 
       if (!(customer && customer.id)) return;
       setCustomerLoading(true);
       setSelectedSearchCustomerId(customer.id);
-      const fullPayload = searchCustomerByCustomerIdAndDepositAction
-        ? await searchCustomerByCustomerIdAndDepositAction(customer.id)
-        : null;
+
+      let fullPayload = null;
+      try {
+        if (searchCustomerByCustomerIdAndDepositAction) {
+          fullPayload = await searchCustomerByCustomerIdAndDepositAction(customer.id);
+        }
+      } catch (e) {
+        fullPayload = null;
+      }
+
       processSelectedCustomer(fullPayload || customer);
     } catch (err) {
       setFormError('ดึงข้อมูลลูกค้าไม่สำเร็จ');
@@ -280,7 +367,9 @@ const CustomerSection = ({ productSearchRef, clearTrigger, hideCustomerDetails, 
       setFormError('กรุณากรอกชื่อลูกค้า');
       return;
     }
+
     const cleanPhone = (rawPhone || phone || '').replace(/-/g, '');
+
     try {
       const newCustomer = await createCustomerAction({
         name,
@@ -296,12 +385,16 @@ const CustomerSection = ({ productSearchRef, clearTrigger, hideCustomerDetails, 
 
       if (newCustomer && newCustomer.id) {
         setPendingPhone(false);
+
         let hydratedCustomer = null;
         if (searchCustomerByPhoneAndDepositAction && /^[0-9]{10}$/.test(cleanPhone)) {
           try {
             hydratedCustomer = await searchCustomerByPhoneAndDepositAction(cleanPhone);
-          } catch { /* noop */ }
+          } catch {
+            // noop
+          }
         }
+
         processSelectedCustomer(hydratedCustomer || newCustomer);
       }
     } catch (err) {
@@ -325,8 +418,7 @@ const CustomerSection = ({ productSearchRef, clearTrigger, hideCustomerDetails, 
   };
 
   return (
-    /* 🟢 [GRID REFACTOR]: บีบอัดระยะเว้นว่าง (Padding) ของคอนโซลซ้ายให้ฟิตและลีนสายตาที่สุด */
-    <div className="w-full p-2.5 font-semibold text-slate-700 text-xs select-none">
+    <div className="w-full p-2.5 font-semibold text-slate-700 text-xs select-none bg-white border border-slate-200 rounded-2xl shadow-sm">
       <div className="flex items-center gap-1.5 pb-1.5 border-b border-slate-100 mb-2">
         <div className="p-1 bg-slate-900/5 text-slate-800 rounded-md">
           <User className="w-3.5 h-3.5" />
@@ -337,13 +429,13 @@ const CustomerSection = ({ productSearchRef, clearTrigger, hideCustomerDetails, 
       </div>
 
       <div className="flex gap-4 mb-2 text-[10px] font-black text-slate-400">
-        <label className="flex items-center gap-1 cursor-pointer hover:text-slate-700 transition-colors">
+        <label className="flex items-center gap-1 cursor-pointer hover:text-slate-700 transition-colors select-none">
           <input type="radio" name="searchMode" checked={searchMode === 'name'} onChange={() => setSearchMode('name')} className="accent-slate-900 h-3 w-3" />
-          <span className={searchMode === 'name' ? "text-slate-900" : ""}>ค้นจากรายชื่อ</span>
+          <span className={searchMode === 'name' ? "text-slate-900 font-black" : ""}>ค้นจากรายชื่อ</span>
         </label>
-        <label className="flex items-center gap-1 cursor-pointer hover:text-slate-700 transition-colors">
+        <label className="flex items-center gap-1 cursor-pointer hover:text-slate-700 transition-colors select-none">
           <input type="radio" name="searchMode" checked={searchMode === 'phone'} onChange={() => setSearchMode('phone')} className="accent-slate-900 h-3 w-3" />
-          <span className={searchMode === 'phone' ? "text-slate-900" : ""}>ค้นจากเบอร์โทร</span>
+          <span className={searchMode === 'phone' ? "text-slate-900 font-black" : ""}>ค้นจากเบอร์โทร</span>
         </label>
       </div>
 
@@ -368,7 +460,7 @@ const CustomerSection = ({ productSearchRef, clearTrigger, hideCustomerDetails, 
                   id="customer-phone-input"
                   type="tel"
                   placeholder="ป้อนเบอร์โทร 10 หลักแล้วกด Enter..."
-                  className="h-7 w-full pl-7 pr-8 font-mono font-black text-slate-900 bg-slate-50 focus:bg-white border border-slate-200 focus:border-slate-900 rounded-lg outline-none transition-all text-xs"
+                  className="h-7 w-full pl-7 pr-8 font-mono font-black text-slate-900 bg-slate-50 focus:bg-white border border-slate-200 focus:border-slate-900 rounded-lg outline-none transition-all text-xs shadow-inner"
                 />
               )}
             </InputMask>
@@ -382,7 +474,7 @@ const CustomerSection = ({ productSearchRef, clearTrigger, hideCustomerDetails, 
               value={nameSearch}
               onChange={(e) => setNameSearch(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleVerifyCustomer()}
-              className="h-7 w-full pl-7 pr-8 font-bold text-slate-900 bg-slate-50 focus:bg-white border border-slate-200 focus:border-slate-900 rounded-lg outline-none transition-all text-xs"
+              className="h-7 w-full pl-7 pr-8 font-bold text-slate-900 bg-slate-50 focus:bg-white border border-slate-200 focus:border-slate-900 rounded-lg outline-none transition-all text-xs shadow-inner"
             />
           </>
         )}
@@ -405,7 +497,7 @@ const CustomerSection = ({ productSearchRef, clearTrigger, hideCustomerDetails, 
                 type="button"
                 onClick={() => handleSelectCustomer(cust)}
                 disabled={customerLoading}
-                className={`block w-full text-left px-2 py-1 border rounded-md transition-all text-[11px] font-bold ${selectedSearchCustomerId === cust.id ? 'border-slate-900 bg-slate-100 text-slate-900 font-black' : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-600'}`}
+                className={`block w-full text-left px-4 py-2 border rounded-md transition-all text-[11px] font-bold ${selectedSearchCustomerId === cust.id ? 'border-slate-900 bg-slate-100 text-slate-900 font-black' : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-600'}`}
               >
                 <div className="truncate">{displayLabel}</div>
               </button>
@@ -415,12 +507,11 @@ const CustomerSection = ({ productSearchRef, clearTrigger, hideCustomerDetails, 
       )}
 
       {shouldShowCustomerDetails && (
-        /* 🟢 [UI MINIMALISM]: เปลี่ยนสัดส่วนความห่างของฟิลด์ภายในแผงสรุปให้อยู่ในระบบหนาแน่นสูง (High-Density) */
-        <div className="text-xs font-bold text-slate-700 bg-slate-50/40 border border-slate-200 rounded-xl p-2 space-y-2">
+        <div className="text-xs font-bold text-slate-700 bg-slate-50/40 border border-slate-200 rounded-xl p-2 space-y-2 animate-fadeIn">
           
           <div className="flex gap-4 text-[10px] font-black text-slate-400 pb-1 border-b border-slate-100/80 mb-1">
             {['INDIVIDUAL', 'ORGANIZATION', 'GOVERNMENT'].map((type) => (
-              <label key={type} className="flex items-center gap-1 cursor-pointer hover:text-slate-700 transition-colors">
+              <label key={type} className="flex items-center gap-1 cursor-pointer hover:text-slate-700 transition-colors select-none">
                 <input type="radio" name="customerType" value={type} className="accent-slate-900"
                   checked={customerType === type} onChange={() => { setCustomerType(type); setIsModified(true); }} />
                 <span className={customerType === type ? "text-slate-900 font-black" : ""}>
@@ -434,12 +525,12 @@ const CustomerSection = ({ productSearchRef, clearTrigger, hideCustomerDetails, 
             {(customerType === 'ORGANIZATION' || customerType === 'GOVERNMENT') && (
               <div className="space-y-1.5 animate-fadeIn">
                 <input type="text" placeholder="🏢 ระบุชื่อบริษัท / หน่วยงานสังกัด..." value={companyName} onChange={(e) => { setCompanyName(e.target.value); setIsModified(true); }} className="h-7 border border-slate-200 px-2 rounded-lg w-full text-slate-900 font-black outline-none focus:border-slate-900 text-xs shadow-sm" />
-                <input type="text" placeholder="🧾 เลขผู้เสียภาษี (ถ้ามี)..." value={taxId} onChange={(e) => { setTaxId(e.target.value); setIsModified(true); }} className="h-7 border border-slate-200 px-2 rounded-lg w-full text-slate-900 font-mono font-bold outline-none focus:border-slate-900 text-xs" />
+                <input type="text" placeholder="🧾 เลขผู้เสียภาษี (ถ้ามี)..." value={taxId} onChange={(e) => { setTaxId(e.target.value); setIsModified(true); }} className="h-7 border border-slate-200 px-2 rounded-lg w-full text-slate-900 font-mono font-bold outline-none focus:border-slate-900 text-xs shadow-sm" />
               </div>
             )}
 
             <div className="relative">
-              <input type="text" id="customer-name-input" placeholder="ชื่อ-นามสกุล ผู้ซื้อ..." value={name} onChange={(e) => { setName(e.target.value); setIsModified(true); }} className="h-7 border border-slate-200 pl-2 pr-7 rounded-lg w-full text-slate-900 font-black outline-none focus:border-slate-900 text-xs shadow-sm" />
+              <input type="text" id="customer-name-input" placeholder="ชื่อ-นามสกุล ผู้ซื้อ..." value={name} onChange={(e) => { setName(e.target.value); setIsModified(true); }} className="h-7 border border-slate-200 pl-2 pr-7 rounded-lg w-full text-slate-900 font-black outline-none focus:border-slate-900 text-xs shadow-sm font-medium" />
               <User className="w-3.5 h-3.5 text-slate-300 absolute right-2.5 top-1.5" />
             </div>
 
@@ -448,17 +539,15 @@ const CustomerSection = ({ productSearchRef, clearTrigger, hideCustomerDetails, 
               <Mail className="w-3.5 h-3.5 text-slate-300 absolute right-2.5 top-1.5" />
             </div>
             
-            {/* 🟢 [ADDRESS FIXED GRID]: ปลดล็อก Layout ดั้งเดิมของ AddressForm ให้หดกระชับตัวเข้าเลน ไม่กว้างทะลักกรอบ */}
             <div className="w-full pt-0.5 max-w-full overflow-hidden">
               <div className="text-[10px] text-slate-400 pl-0.5 mb-1 font-bold flex items-center gap-1">
                 <MapPin className="w-3 h-3 text-slate-400" /> ข้อมูลพิกัดส่งบิลเอกสาร:
               </div>
               <div className="address-form-density-compact">
-                <AddressForm value={addressValue} onChange={handleAddressChange} layout="subdistrict-with-postcode" required />
+                <AddressForm value={addressValue} onChange={handleAddressChange} provinceFilter={provinceFilterFn} layout="subdistrict-with-postcode" required />
               </div>
             </div>
 
-            {/* 🟢 [CLEAN HIDE]: บล็อกข้อมูลดิบระบบปัจจุบันจะแสดงเฉพาะในจังหวะสร้าง/แก้ไขที่มีข้อมูลขัดแย้งเท่านั้น เพื่อกันสายตาพนักงานหลุดโฟกัส */}
             {selectedCustomer && selectedCustomer.customerAddress && !isModified && (
               <div className="text-[10px] font-bold text-slate-400 bg-white border border-slate-100 rounded-lg p-1.5 select-all leading-relaxed shadow-sm">
                 📌 {selectedCustomer.customerAddress}

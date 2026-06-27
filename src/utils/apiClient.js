@@ -1,5 +1,3 @@
-// src/utils/apiClient.js
-
 import axios from 'axios';
 import { useAuthStore } from '@/features/auth/store/authStore';
 
@@ -26,26 +24,22 @@ const applyAuthorizationHeader = (config, bearerToken) => {
     config.headers.set('Authorization', bearerToken);
   } else {
     config.headers = config.headers || {};
-    // eslint-disable-next-line no-param-reassign
     config.headers.Authorization = bearerToken;
   }
 
   return config;
 };
 
-// 🟢 FIXED BASE URL: ดึงค่าจาก Env Variables ของ Vite ที่ตั้งบน Vercel อัตโนมัติ 
-// และเติม /api/ ต่อท้ายให้ตรงตามพาธเดิมของระบบ
-const rawBaseURL = import.meta.env.VITE_API_BASE_URL || 'https://api.saduaksabuy.com';
-const baseURL = rawBaseURL.endsWith('/') ? `${rawBaseURL}api/` : `${rawBaseURL}/api/`;
+// 🟢 ABSOLUTE DIRECT IP FOR POS: ล็อกเป็น 127.0.0.1 ป้องกันคุกกี้สิทธิ์หลุดบน Windows Localhost
+const coreBaseURL = 'http://127.0.0.1:5000/api';
 
-// ✅ ปรับแต่งให้ตัวยิงรีเฟรชผูกกับสเปกพอร์ตคงที่โดยตรง
 const refreshAccessToken = async () => {
   if (!refreshPromise) {
-    refreshPromise = axios.post(
-      `${baseURL}auth/refresh`,
+    // ใช้ Instance สดใหม่ที่ระบุสิทธิ์เด็ดขาด
+    refreshPromise = axios.create({ withCredentials: true }).post(
+      `${coreBaseURL}/auth/refresh`,
       {},
       {
-        withCredentials: true,
         timeout: 20000,
         headers: {
           'Content-Type': 'application/json',
@@ -74,10 +68,9 @@ const refreshAccessToken = async () => {
           console.error('[apiClient] refreshAccessToken failed', {
             message: error?.message,
             status: error?.response?.status,
-            data: error?.response?.data,
           });
         }
-      
+        useAuthStore.setState((state) => ({ ...state, token: null, accessToken: null }));
         throw error;
       })
       .finally(() => {
@@ -88,29 +81,30 @@ const refreshAccessToken = async () => {
   return refreshPromise;
 };
 
-// ✅ ฟังก์ชันดึง token จาก authStore โดยตรง
 function getToken() {
   const state = useAuthStore.getState();
   const token = state?.accessToken || state?.token;
-  return token ? `Bearer ${token}` : null;
+  return token ? token : null;
 }
 
 const apiClient = axios.create({
-  baseURL,
-  timeout: 30000, // 🟢 FIXED: ขยายเวลาให้ทนทานต่อ Cold Start ของ Render 
-  withCredentials: true,
+  baseURL: coreBaseURL,
+  timeout: 30000, 
+  withCredentials: true, // ⛳️ บังคับอนุญาตส่ง Cookie แนบไปทุกรอบคำขอ
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// ⛳️ Request interceptor: แนบ Authorization จาก store ให้ทุกคำขอ
+// Request interceptor
 apiClient.interceptors.request.use(
   (config) => {
-    const token = getToken();
+    config.baseURL = coreBaseURL;
 
+    const token = getToken();
     if (token) {
-      applyAuthorizationHeader(config, token);
+      const bearerToken = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
+      applyAuthorizationHeader(config, bearerToken);
     }
 
     return config;
@@ -118,34 +112,12 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// 🧭 Response interceptor: log error แบบละเอียดใน DEV mode
+// Response interceptor
 apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
-    if (import.meta.env?.DEV) {
-      const requestUrlForLog = error?.config?.url || '';
-      const statusForLog = error?.response?.status;
-      const isExpectedGuestRefresh401 = isRefreshEndpoint(requestUrlForLog) && statusForLog === 401;
-
-      if (!isExpectedGuestRefresh401) {
-        console.error('[apiClient] error', {
-          message: error?.message,
-          code: error?.code,
-          name: error?.name,
-          url: error?.config?.url,
-          baseURL: error?.config?.baseURL,
-          method: error?.config?.method,
-          status: error?.response?.status,
-          data: error?.response?.data,
-        });
-      }
-    }
-
     if (!error?.response && (error?.code === 'ERR_NETWORK' || error?.message === 'Network Error')) {
-      const enhanced = new Error('Network Error: ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้');
-      // @ts-ignore
-      enhanced.original = error;
-      return Promise.reject(enhanced);
+      return Promise.reject(error);
     }
 
     const originalRequest = error?.config;
@@ -166,6 +138,8 @@ apiClient.interceptors.response.use(
         const nextAccessToken = await refreshAccessToken();
         const bearerToken = nextAccessToken ? `Bearer ${nextAccessToken}` : null;
         applyAuthorizationHeader(originalRequest, bearerToken);
+        
+        originalRequest.baseURL = coreBaseURL;
         return apiClient(originalRequest);
       } catch (refreshError) {
         return Promise.reject(refreshError);

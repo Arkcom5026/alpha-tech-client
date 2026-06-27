@@ -1,25 +1,23 @@
 // src/features/auth/store/authStore.js
 
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware'; // 🟢 มาตรฐานสากลของ zustand/middleware ตัวจริง
+import { persist } from 'zustand/middleware'; 
 import {
   loginUser,
-  registerUser, // 🟢 ดึง API ลงทะเบียนเข้ามาร่วมงาน
+  registerUser, 
   verifySession,
   requestPasswordReset,
   resetPassword,
-  refreshSession,
   logoutSession,
   logoutAllSessions,
 } from '../api/authApi';
 
-// 🟢 LINK CORE INSTANCE: นำเข้าท่อส่งสัญญาณ Axios แกนหลักที่แท้จริงของระบบ
+// 🟢 LINK CORE INSTANCE: นำเข้าตัวแกนหลักเพื่อควบคุมพอร์ต 5000
 import apiClient from '@/utils/apiClient';
 
 import { buildRoleContext, can as canCap, P1_CAP } from '../rbac/rbacClient';
 import { useBranchStore } from '@/features/branch/store/branchStore';
 
-// ---------- helpers ----------
 const normalizeRole = (r) => {
   const v = (r || '').toString().trim().toLowerCase();
   return v === 'supperadmin' ? 'superadmin' : v;
@@ -83,14 +81,10 @@ const getEmptyAuthState = () => ({
   authChecked: false,
   isSuperAdmin: false,
   isBootstrappingAuth: false,
-  // 🟢 เพิ่มตัวแปรสำหรับควบคุมโฟลว์ลงทะเบียนพาร์ตเนอร์ใหม่
   isRegisterLoading: false,
   registerError: null,
-  
-  // 👥 [ADDED SUB-EMPLOYEE STATES]: ตัวแปรคุมสถานะเพิ่มพนักงานย่อยหลังร้าน
   isSubEmployeeLoading: false,
   subEmployeeError: null,
-
   isRequestPasswordResetLoading: false,
   requestPasswordResetError: null,
   requestPasswordResetSuccessMessage: '',
@@ -145,7 +139,6 @@ export const useAuthStore = create(
           resetPasswordSuccessMessage: '',
         }),
 
-      // 🟢 [ADDED ACTION] ฟังก์ชันส่งข้อมูลลงทะเบียนพาร์ตเนอร์เชื่อม API หลังบ้านจริง
       registerPartnerAction: async ({ shopName, shopSlug, email }) => {
         set({ isRegisterLoading: true, registerError: null });
         try {
@@ -167,11 +160,9 @@ export const useAuthStore = create(
         }
       },
 
-      // 👥 [ADDED ACTION]: ฟังก์ชันส่งยิงเพิ่มพนักงานย่อยข้ามสาขา
       addSubEmployeeAction: async ({ name, email, password, phone, v2Role }) => {
         set({ isSubEmployeeLoading: true, subEmployeeError: null });
         try {
-          // 🚀 เรียกใช้งานผ่านอินสแตนซ์ apiClient เพื่อผูกแนบ Token สิทธิ์เจ้าของร้านโดยอัตโนมัติคุม Multi-Tenant
           const res = await apiClient.post('/auth/add-sub-employee', {
             name: name.trim(),
             email: email.trim().toLowerCase(),
@@ -303,7 +294,7 @@ export const useAuthStore = create(
         try {
           set({ isBootstrappingAuth: true, authError: null });
 
-          const res = await verifySession();
+          const res = await apiClient.get('/auth/me'); // 🟢 บังคับคุยผ่านตัวอินสแตนซ์ศูนย์กลางล็อกพอร์ต
           const profile = res?.data?.profile || null;
           const serverRole = normalizeRole(res?.data?.role || state.role);
           const serverProfileType = (res?.data?.profileType || state.profileType || '').toString();
@@ -402,7 +393,6 @@ export const useAuthStore = create(
 
       bootstrapAuthAction: async () => {
         const state = useAuthStore.getState();
-
         set({ isBootstrappingAuth: true, authError: null });
 
         if (state.accessToken || state.token) {
@@ -410,7 +400,8 @@ export const useAuthStore = create(
         }
 
         try {
-          const res = await refreshSession();
+          // 🟢 FIXED: เรียกส่งตัวแปรผ่าน apiClient ศูนย์กลาง เพื่อล็อกเป้าเชื่อม 127.0.0.1:5000 แก้อาการ 401 Loop
+          const res = await apiClient.post('/auth/refresh');
           const accessToken = res?.data?.accessToken || res?.data?.token || null;
 
           if (!accessToken) {
@@ -455,7 +446,7 @@ export const useAuthStore = create(
           await logoutSession();
         } catch (error) {
           console.error('❌ logout failed:', error);
-        } finally { // 🟢 FIX: แก้ไขตัวสะกดจาก finaly เป็น finally
+        } finally { 
           useAuthStore.getState().resetAuthStateAction();
         }
       },
@@ -465,7 +456,7 @@ export const useAuthStore = create(
           await logoutSession();
         } catch (error) {
           console.error('❌ logoutAction failed:', error);
-        } finally { // 🟢 FIX: แก้ไขตัวสะกดจาก finaly เป็น finally
+        } finally { 
           useAuthStore.getState().resetAuthStateAction();
           window.location.href = '/login';
         }
@@ -476,7 +467,7 @@ export const useAuthStore = create(
           await logoutAllSessions();
         } catch (error) {
           console.error('❌ logoutAllDevicesAction failed:', error);
-        } finally { // 🟢 FIX: แก้ไขตัวสะกดจาก finaly เป็น finally
+        } finally { 
           useAuthStore.getState().resetAuthStateAction();
         }
       },
@@ -490,7 +481,6 @@ export const useAuthStore = create(
         return !!(state.accessToken || state.token) && !!state.authChecked && !state.isBootstrappingAuth;
       },
 
-      // 🟢 OPTIMIZED: จัดระเบียบ Side-effects และรวบการเรียกสเตต Branch เหลือจุดเดียว ท้ายการ Commit สเตตสมบูรณ์
       loginAction: async (credentials) => {
         try {
           set({ authError: null, authChecked: false, isBootstrappingAuth: false });
@@ -574,7 +564,6 @@ export const useAuthStore = create(
             customer: customerData,
           });
 
-          // 🚀 อัปเดตสเตตสาขาของเครื่อง POS ที่จุดสิ้นสุดอย่างมั่นคงจุดเดียว ไม่ซ้ำซ้อน
           if (targetBranchId && ['employee', 'admin', 'superadmin'].includes(effectiveRole)) {
             await useBranchStore.getState().loadAndSetBranchById(Number(targetBranchId));
           }

@@ -138,13 +138,16 @@ export const useAuthStore = create(
           resetPasswordSuccessMessage: '',
         }),
 
-      registerPartnerAction: async ({ shopName, shopSlug, email }) => {
+      // 🟢 เปิดท่อรับค่า categoryId พ่วงเพิ่มเข้ามาจากหน้าฟอร์มลงทะเบียน
+      registerPartnerAction: async ({ shopName, shopSlug, email, categoryId }) => {
         set({ isRegisterLoading: true, registerError: null });
         try {
+          // 🟢 ยิงส่ง Payload ชุดสมบูรณ์รวมถึงไอดีหมวดธุรกิจข้ามฝั่งไปหา API หลังบ้าน
           const res = await registerUser({
             shopName: shopName.trim(),
             shopSlug: shopSlug.trim(),
-            email: email.trim().toLowerCase()
+            email: email.trim().toLowerCase(),
+            categoryId: categoryId ? Number(categoryId) : 1 // Fallback เผื่อไว้กรณีไม่มีค่าส่งมา
           });
           
           set({ isRegisterLoading: false, registerError: null });

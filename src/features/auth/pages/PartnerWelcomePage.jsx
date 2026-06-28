@@ -11,20 +11,21 @@ import {
   FaArrowLeft, 
   FaBolt,
   FaChevronRight,
-  FaSpinner
+  FaSpinner,
+  FaBriefcase // 🟢 เพิ่มไอคอนสำหรับหมวดธุรกิจ
 } from 'react-icons/fa';
-import { useAuthStore } from '@/features/auth/store/authStore'; // 🟢 นำเข้า Store เข้ามารับช่วงต่อโฟลว์
+import { useAuthStore } from '@/features/auth/store/authStore'; 
 import LoginPage from './LoginPage';
 
 const PartnerWelcomePage = () => {
-  const [activeMode, setActiveMode] = useState('welcome'); // 'welcome' | 'login' | 'register'
+  const [activeMode, setActiveMode] = useState('welcome'); 
 
   // 📝 REGISTRATION FLOW STATES
   const [shopName, setShopName] = useState('');
   const [shopSlug, setShopSlug] = useState('');
   const [email, setEmail] = useState('');
+  const [categoryId, setCategoryId] = useState(1); // 🟢 เพิ่มสเตตรองรับไอดีหมวดธุรกิจสากล (Default เป็น 1: ไอที)
   
-  // 🟢 ดึงฟังก์ชันและสเตตจริงมาจาก Zustand Store
   const registerPartnerAction = useAuthStore((state) => state.registerPartnerAction);
   const isRegisterLoading = useAuthStore((state) => state.isRegisterLoading || false);
   const storeRegisterError = useAuthStore((state) => state.registerError || null);
@@ -32,7 +33,16 @@ const PartnerWelcomePage = () => {
   const [localValidationError, setLocalValidationError] = useState('');
   const [registerSuccess, setRegisterSuccess] = useState('');
 
-  // 💡 ฟังก์ชันจัดการแปลงค่า Slug อัตโนมัติ
+  // 💡 รายการหมวดธุรกิจสากลแกนหลักของแพลตฟอร์ม (ตรงล็อก 1-6 กับฐานข้อมูล Supabase 100%)
+  const businessCategories = [
+    { id: 1, name: '💻 อุปกรณ์ไอทีและคอมพิวเตอร์' },
+    { id: 2, name: '📱 สมาร์ทโฟนและแกดเจ็ต' },
+    { id: 3, name: '📺 เครื่องใช้ไฟฟ้าภายในบ้าน' },
+    { id: 4, name: '🔨 เครื่องมือช่างและวัสดุก่อสร้าง' },
+    { id: 5, name: '🛒 สินค้าอุปโภคบริโภคและโชห่วย' },
+    { id: 6, name: '📝 อุปกรณ์สำนักงาน' },
+  ];
+
   const handleSlugChange = (val) => {
     const formattedSlug = val
       .toLowerCase()
@@ -47,7 +57,6 @@ const PartnerWelcomePage = () => {
     setLocalValidationError('');
     setRegisterSuccess('');
 
-    // 🔍 Front-End Validation
     if (!shopName.trim()) {
       setLocalValidationError('กรุณากรอกชื่อร้านค้าของคุณ');
       return;
@@ -68,23 +77,23 @@ const PartnerWelcomePage = () => {
     }
 
     try {
-      // 🟢 [API CALL]: ยิงส่งข้อมูลไปยังเซิร์ฟเวอร์หลักผ่านระบบสเตต Zustand และรอรับผล
-      await registerPartnerAction({ shopName, shopSlug, email });
+      // 🟢 [API CALL]: ส่งพ่วง categoryId ยิงไปล็อกสิทธิ์ระดับ Tenant ขากลางทันทีตั้งแต่ Onboarding
+      await registerPartnerAction({ shopName, shopSlug, email, categoryId: Number(categoryId) });
 
       setRegisterSuccess('ลงทะเบียนเปิดร้านค้าสำเร็จ! ระบบกำลังนำทางคุณไปยังหน้าล็อกอิน');
       
-      // 🟢 [CLEAN & HARD RESET STATE]: ล้างข้อมูลขยะทั้งหมดออกทันทีเมื่อการบันทึกสำเร็จ
       setTimeout(() => {
         setShopName('');
         setShopSlug('');
         setEmail('');
+        setCategoryId(1); // Reset ค่า
         setRegisterSuccess('');
         setLocalValidationError('');
-        setActiveMode('login'); // สับเลนส่งกลับไปที่หน้าล็อกอิน Merchant Center
+        setActiveMode('login'); 
       }, 2000);
 
     } catch (err) {
-      // เออร์เรอร์ฝั่งเซิร์ฟเวอร์จะถูกจับเก็บไว้ที่ storeRegisterError อัตโนมัติ
+      // จับเออร์เรอร์ฝั่งเซิร์ฟเวอร์อัตโนมัติ
     }
   };
 
@@ -92,6 +101,7 @@ const PartnerWelcomePage = () => {
     setShopName('');
     setShopSlug('');
     setEmail('');
+    setCategoryId(1);
     setLocalValidationError('');
     setRegisterSuccess('');
     setActiveMode(mode);
@@ -102,14 +112,14 @@ const PartnerWelcomePage = () => {
   return (
     <div className="min-h-screen bg-[#FFF9F5] font-sans antialiased text-slate-800 flex flex-col justify-between relative overflow-hidden selection:bg-orange-500 selection:text-white">
       
-      {/* 🔮 BACKGROUND ATMOSPHERE */}
+      {/* BACKGROUND ATMOSPHERE */}
       <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
         <div className="absolute top-[-10%] left-[-10%] h-[600px] w-[600px] rounded-full bg-orange-200/15 blur-3xl animate-pulse" />
         <div className="absolute bottom-[-10%] right-[-10%] h-[500px] w-[500px] rounded-full bg-amber-100/30 blur-3xl" />
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#f1e9e2_1px,transparent_1px),linear-gradient(to_bottom,#f1e9e2_1px,transparent_1px)] bg-[size:4rem_4rem] opacity-25" />
       </div>
 
-      {/* 🌐 TOP NAVIGATION BAR */}
+      {/* TOP NAVIGATION BAR */}
       <header className="w-full bg-slate-950 border-b border-orange-500/10 sticky top-0 z-50 py-4 px-6 shadow-xl shadow-slate-950/10">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <a href="/" className="flex items-center gap-3 select-none">
@@ -146,7 +156,7 @@ const PartnerWelcomePage = () => {
         </div>
       </header>
 
-      {/* 🏛️ 🚀 MAIN CONTAINER */}
+      {/* MAIN CONTAINER */}
       <main className="max-w-6xl w-full mx-auto px-6 py-10 flex items-center justify-center flex-1 z-10">
         
         <div className="w-full min-h-[560px] rounded-[44px] bg-slate-950 text-white shadow-2xl border border-slate-800 p-8 md:p-12 lg:p-16 relative overflow-hidden group grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-12 items-center">
@@ -154,7 +164,7 @@ const PartnerWelcomePage = () => {
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_20%,rgba(249,115,22,0.14),transparent_40%)] pointer-events-none" />
           <div className="absolute -left-20 -bottom-20 h-72 w-72 rounded-full bg-orange-500/5 blur-3xl pointer-events-none" />
 
-          {/* 🌌 ส่วนข้อมูลด้านซ้าย (7 คอลัมน์) */}
+          {/* ส่วนข้อมูลด้านซ้าย */}
           <div className="md:col-span-7 space-y-6 relative z-10 text-center md:text-left">
             <div className="inline-flex items-center gap-2 bg-orange-500/10 border border-orange-500/20 text-orange-400 text-[10px] font-black px-3 py-1.5 rounded-full uppercase tracking-widest font-sans mx-auto md:mx-0">
               <FaBolt className="text-[9px]" /> P1 MERCHANT SERVICE PLATFORM
@@ -189,10 +199,10 @@ const PartnerWelcomePage = () => {
             </div>
           </div>
 
-          {/* 🧾 ส่วนอินเตอร์เฟซและฟอร์มฝั่งขวา (5 คอลัมน์) */}
+          {/* ส่วนอินเตอร์เฟซและฟอร์มฝั่งขวา */}
           <div className="md:col-span-5 relative z-10 w-full max-w-sm mx-auto md:max-w-none">
             
-            {/* 🌟 โหมดที่ 1: หน้าเริ่มต้นต้อนรับ */}
+            {/* โหมดที่ 1: หน้าเริ่มต้นต้อนรับ */}
             {activeMode === 'welcome' && (
               <div className="bg-white/[0.03] backdrop-blur-xl p-8 rounded-3xl border border-white/10 space-y-6 text-center w-full shadow-2xl shadow-black/20 text-left">
                 <div className="text-center space-y-2">
@@ -228,14 +238,14 @@ const PartnerWelcomePage = () => {
               </div>
             )}
 
-            {/* 🔑 โหมดที่ 2: ฝังหน้าล็อกอินตัวจริง (LoginPage) */}
+            {/* โหมดที่ 2: ฝังหน้าล็อกอินตัวจริง */}
             {activeMode === 'login' && (
               <div className="animate-fadeIn">
                 <LoginPage />
               </div>
             )}
 
-            {/* 📝 โหมดที่ 3: ฟอร์มลงทะเบียนร้านค้าใหม่ */}
+            {/* โหมดที่ 3: ฟอร์มลงทะเบียนร้านค้าใหม่ */}
             {activeMode === 'register' && (
               <div className="bg-white/[0.03] backdrop-blur-xl p-8 rounded-3xl border border-white/10 space-y-5 w-full shadow-2xl shadow-black/20 text-left animate-fadeIn">
                 <div className="flex items-center justify-between border-b border-white/5 pb-3">
@@ -274,12 +284,33 @@ const PartnerWelcomePage = () => {
                       disabled={isRegisterLoading}
                       className="w-full px-3.5 py-2.5 bg-white/5 border border-white/10 rounded-xl text-xs font-bold text-white outline-none focus:bg-white/10 focus:border-orange-500 transition-all placeholder:text-slate-600" 
                     />
-                    {/* 💡 🟢 เพิ่มป้ายคำแนะนำจานช่วยคัดกรอง UX ตามหลักการสร้างร้านค้าทั่วประเทศเพื่อกันพาร์ตเนอร์สับสน */}
                     <p className="mt-1 text-[10px] text-slate-500 font-medium leading-normal pl-0.5">
-                      คำแนะนำ: สามารถระบุชื่อพิกัดหรือชื่อสาขาพ่วงท้ายได้ เช่น สบายมาร์ท (สาขาเมืองนครสวรรค์) เพื่อความชัดเจนบนหน้าเอกสารและใบเสร็จรับเงิน
+                      คำแนะนำ: สามารถระบุชื่อพิกัดหรือชื่อสาขาพ่วงท้ายได้ เช่น สบายมาร์ท (สาขาเมืองนครสวรรค์)
                     </p>
                   </div>
                   
+                  {/* 🟢เพิ่มกล่องดรอปดาวน์เลือกหมวดหมู่ธุรกิจสากล (Cascading Core Category Selection) */}
+                  <div className="space-y-1">
+                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest select-none flex items-center gap-1.5">
+                      <FaBriefcase className="text-orange-500 text-[9px]" /> ประเภทกลุ่มธุรกิจของร้านค้า
+                    </label>
+                    <select
+                      value={categoryId}
+                      onChange={(e) => setCategoryId(Number(e.target.value))}
+                      disabled={isRegisterLoading}
+                      className="w-full px-3.5 py-2.5 bg-slate-900 border border-white/10 rounded-xl text-xs font-bold text-white outline-none focus:bg-white/10 focus:border-orange-500 transition-all cursor-pointer"
+                    >
+                      {businessCategories.map((cat) => (
+                        <option key={cat.id} value={cat.id} className="bg-slate-950 text-white font-bold">
+                          {cat.name}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="mt-1 text-[10px] text-slate-500 font-medium leading-normal pl-0.5">
+                      *ระบบจะจัดหน้าจอ POS และกลุ่มสินค้าขากลางที่เหมาะสมให้พาร์ตเนอร์ใช้งานอัตโนมัติ
+                    </p>
+                  </div>
+
                   <div className="space-y-1">
                     <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest select-none">
                       ชื่อย่อลิงก์สาขา (Shop Slug)
@@ -338,7 +369,7 @@ const PartnerWelcomePage = () => {
 
       </main>
 
-      {/* 📑 GLOBAL FOOTER */}
+      {/* GLOBAL FOOTER */}
       <footer className="w-full bg-white border-t border-slate-200/50 py-4 text-center text-[11px] text-slate-400 font-medium select-none">
         &copy; {new Date().getFullYear()} SADUAKSABUY.COM. All rights reserved.
       </footer>

@@ -1,5 +1,5 @@
 // src/utils/apiClient.js
-// 🏛️ Enterprise Multi-Tenant API Client (Vercel Env & Proxy Routing Edition)
+// 🏛️ Enterprise Multi-Tenant API Client (Strict Custom Environment Routing Edition)
 import axios from 'axios';
 import { useAuthStore } from '@/features/auth/store/authStore';
 
@@ -32,30 +32,23 @@ const applyAuthorizationHeader = (config, bearerToken) => {
   return config;
 };
 
-// 🟢 1. STRICT API DETECTOR: รองรับทั้ง Env บน Vercel และสลับโหมดอัตโนมัติ
+// 🟢 1. STRICT API DETECTOR: เชื่อมโยงตาม Vercel Variables (Render ตรง) และรองรับ Local Dev
 const getRuntimeBaseURL = () => {
-  // 1.1 ลำดับแรก: ดึงค่าจากตัวแปรบน Vercel ที่แก้ใหม่ (VITE_API_URL หรือ VITE_API_BASE_URL)
+  // 1.1 ลำดับแรก: เชื่อมต่อโดยตรงตามค่าที่ได้จากหน้าคอนฟิก Vercel Dashboard
   const envURL = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL;
   if (envURL) {
     return `${envURL.replace(/\/$/, '')}/api/`;
   }
 
-  // 1.2 ลำดับสอง: ตรวจสอบระดับบราวเซอร์แบบ Runtime (Fallback กันหลุด)
+  // 1.2 ลำดับสอง: รองรับทีมพัฒนาเปิดรันข้ามเครื่องทดสอบในวง LAN
   if (typeof window !== 'undefined' && window.location) {
     const currentHostname = window.location.hostname;
-
-    // ถ้าเปิดบนโดเมนระบบหลัก บังคับวิ่งเข้าพอร์ต /api ของโดเมนหลักทันที
-    if (currentHostname.includes('saduaksabuy.com') || currentHostname.includes('vercel.app')) {
-      return 'https://saduaksabuy.com/api/';
-    }
-
-    // สำหรับทีมพัฒนา: รันข้ามเครื่องในวง LAN ข้าม IP พอร์ต 5000
     if (currentHostname !== 'localhost' && currentHostname !== '127.0.0.1') {
       return `http://${currentHostname}:5000/api/`;
     }
   }
 
-  // 1.3 ค่า Fallback ปลอดภัยที่สุดสำหรับเครื่อง Developer (Localhost)
+  // 1.3 ค่า Fallback ปลอดภัยสำหรับเครื่อง Developer (Localhost)
   return 'http://localhost:5000/api/';
 };
 
@@ -68,7 +61,7 @@ const apiClient = axios.create({
   },
 });
 
-// 🟢 2. DYNAMIC BASEURL BINDING (แทรกแซงทุก Request เปลี่ยนเป้าหมายให้ตรงจุดตลอดเวลา)
+// 🟢 2. REALTIME BASEURL OVERRIDE (บังคับพิกัด URL ใหม่ทุกครั้งที่มีการกดส่งข้อมูล)
 apiClient.interceptors.request.use(
   (config) => {
     config.baseURL = getRuntimeBaseURL();

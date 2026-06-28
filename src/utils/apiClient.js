@@ -1,5 +1,5 @@
 // src/utils/apiClient.js
-// 🏛️ Enterprise Multi-Tenant API Client (Dynamic Vercel & Local Hybrid Edition)
+// 🏛️ Enterprise Multi-Tenant API Client (Runtime Environment Auto-Matching Edition)
 import axios from 'axios';
 import { useAuthStore } from '@/features/auth/store/authStore';
 
@@ -32,23 +32,29 @@ const applyAuthorizationHeader = (config, bearerToken) => {
   return config;
 };
 
-// 🟢 1. DYNAMIC API DETECTOR: รองรับ Vercel Env (Production) และ Local Dev ควบคู่กัน
+// 🟢 1. RUNTIME API DETECTOR: แยกแยะ Local Dev และ Production ด้วย Domain จริงบนบราวเซอร์
 const detectBaseURL = () => {
-  // 1.1 ลำดับแรก: ถ้ามี VITE_API_URL ในระบบ (เช่น บน Vercel Setup) ให้ใช้ค่านั้นทันที
-  if (import.meta.env.VITE_API_URL) {
-    return `${import.meta.env.VITE_API_URL.replace(/\/$/, '')}/api/`;
-  }
-  
-  // 1.2 ลำดับสอง: สำหรับเคสทีมพัฒนาเปิดเครื่องรัน Local Dev ข้ามเครื่องในวง LAN 
+  // 1.1 เช็กระดับ Client-side Runtime (สลับให้อัตโนมัติตาม URL ที่เปิดใช้งานจริง)
   if (typeof window !== 'undefined' && window.location) {
     const currentHostname = window.location.hostname;
-    // ถ้าไม่ใช่เครื่องตัวเอง และไม่ใช่โดเมนหลัก ให้เดาว่าเป็น IP วง LAN พอร์ต 5000
-    if (currentHostname !== 'localhost' && currentHostname !== '127.0.0.1' && !currentHostname.includes('saduaksabuy.com')) {
+
+    // ถ้าเปิดใช้งานบนโดเมนระบบหลัก (Production) บังคับชี้เข้า API ของเว็บหลักทันที
+    if (currentHostname.includes('saduaksabuy.com')) {
+      return 'https://api.saduaksabuy.com/api/';
+    }
+
+    // สำหรับทีมพัฒนา: ถ้าเปิดรันข้ามเครื่องในวง LAN (เช็กว่าไม่ใช่ localhost แต่เป็นเลข IP อื่น ๆ)
+    if (currentHostname !== 'localhost' && currentHostname !== '127.0.0.1') {
       return `http://${currentHostname}:5000/api/`;
     }
   }
+  
+  // 1.2 ถ้ามีตัวแปร .env ฝังไว้ตอน Build ให้ใช้เป็นตัวเลือกเสริม
+  if (import.meta.env.VITE_API_URL) {
+    return `${import.meta.env.VITE_API_URL.replace(/\/$/, '')}/api/`;
+  }
 
-  // 1.3 ลำดับสุดท้าย: ค่า Fallback ปลอดภัยสำหรับเครื่อง Developer (Localhost)
+  // 1.3 ค่า Fallback ปลอดภัยที่สุดสำหรับเครื่อง Developer (Localhost)
   return 'http://localhost:5000/api/';
 };
 

@@ -1,5 +1,5 @@
 // src/utils/apiClient.js
-// 🏛️ Enterprise Multi-Tenant API Client (Runtime Environment Auto-Matching Edition)
+// 🏛️ Enterprise Multi-Tenant API Client (Strict Build-Mode Router Edition)
 import axios from 'axios';
 import { useAuthStore } from '@/features/auth/store/authStore';
 
@@ -32,30 +32,23 @@ const applyAuthorizationHeader = (config, bearerToken) => {
   return config;
 };
 
-// 🟢 1. RUNTIME API DETECTOR: แยกแยะ Local Dev และ Production ด้วย Domain จริงบนบราวเซอร์
+// 🟢 1. STRICT MODE DETECTOR: การันตีแยกสาย Local / Production ผ่านระบบ Build-Mode ของ Vite
 const detectBaseURL = () => {
-  // 1.1 เช็กระดับ Client-side Runtime (สลับให้อัตโนมัติตาม URL ที่เปิดใช้งานจริง)
-  if (typeof window !== 'undefined' && window.location) {
-    const currentHostname = window.location.hostname;
-
-    // ถ้าเปิดใช้งานบนโดเมนระบบหลัก (Production) บังคับชี้เข้า API ของเว็บหลักทันที
-    if (currentHostname.includes('saduaksabuy.com')) {
-      return 'https://api.saduaksabuy.com/api/';
+  // 1.1 ถ้ากำลังรันในโหมดพัฒนาสด ๆ (Local Development เช่น npm run dev บนเครื่องเรา)
+  if (import.meta.env.DEV) {
+    if (typeof window !== 'undefined' && window.location) {
+      const currentHostname = window.location.hostname;
+      // รองรับการเทสข้ามเครื่องในวง LAN สำหรับทีมพัฒนา
+      if (currentHostname !== 'localhost' && currentHostname !== '127.0.0.1') {
+        return `http://${currentHostname}:5000/api/`;
+      }
     }
-
-    // สำหรับทีมพัฒนา: ถ้าเปิดรันข้ามเครื่องในวง LAN (เช็กว่าไม่ใช่ localhost แต่เป็นเลข IP อื่น ๆ)
-    if (currentHostname !== 'localhost' && currentHostname !== '127.0.0.1') {
-      return `http://${currentHostname}:5000/api/`;
-    }
-  }
-  
-  // 1.2 ถ้ามีตัวแปร .env ฝังไว้ตอน Build ให้ใช้เป็นตัวเลือกเสริม
-  if (import.meta.env.VITE_API_URL) {
-    return `${import.meta.env.VITE_API_URL.replace(/\/$/, '')}/api/`;
+    return 'http://localhost:5000/api/';
   }
 
-  // 1.3 ค่า Fallback ปลอดภัยที่สุดสำหรับเครื่อง Developer (Localhost)
-  return 'http://localhost:5000/api/';
+  // 1.2 ถ้าผ่านการ Build เป็น Production แล้ว (เช่น สั่ง build ขึ้น Vercel/Server จริง)
+  // บังคับชี้เข้า API ของเว็บหลักเสมอ เพื่อแก้ปัญหา ERR_CONNECTION_REFUSED ที่เครื่องลูกค้า
+  return 'https://api.saduaksabuy.com/api/';
 };
 
 const baseURL = detectBaseURL();

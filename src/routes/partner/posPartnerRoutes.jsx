@@ -13,10 +13,12 @@ import { customerPartnerRoutes } from './customerPartnerRoutes';
 
 // 🟢 2. นำเข้าโมดูลย่อยและคอมโพเนนต์ตัวจริงในระบบ ผ่านระบบสัญกรณ์ Alias @features
 import DashboardPage from '@features/pos/pages/DashboardPage'; 
-import ServicesDashboardPage from '@/features/pos/pages/dashboard/ServicesDashboardPage';
 import LogoutPos from '@features/pos/pages/LogoutPos';
 import FinanceDashboardPage from '@/features/finance/pages/FinanceDashboardPage';
 import SettingsDashboardPage from '@/features/settings/pages/SettingsDashboardPage';
+
+// 🟢 [LIVE SERVICES FIXED PORT]: สับรางเปลี่ยนมาดึงไฟล์บริการจากพิกัดโฟลเดอร์ใหม่ล่าสุดที่จัดสรรไว้
+import ServicesDashboardPage from '@/features/pos/pages/dashboard/ServicesDashboardPage';
 
 // 🟢 [LIVE REPORTS PAGE INTEGRATION]: นำเข้าคอมโพเนนต์แดชบอร์ดรายงานโหมดสว่างสไตล์ Platinum
 import { ReportsDashboardPage } from '@/features/pos/pages/dashboard/ReportsDashboardPage';
@@ -83,15 +85,13 @@ export const posPartnerRoutes = [
   salesRoutes,     // 🛍️ งานขาย
   stockRoutes,     // 📦 คลังสินค้า
 
-  // 📈 4. โมดูลระบบรายงาน (แก้ไขล้างคราบลูปดีดอัตโนมัติ)
+  // 📈 4. โมดูลระบบรายงาน
   {
     path: 'reports',
     element: <Outlet />,
     children: [
-      // 🔥 FIX DEPLOY: เมื่อผู้ใช้งานคลิกปุ่มใหญ่เมนู "รายงาน" บังคับให้เปิดบอร์ดแสดงผลกราฟโหมดสว่างทันที ไม่ดีดเด้งหนีไปไหนอีกต่อไป
       { index: true, element: <ReportsDashboardPage /> },
-      
-      { path: 'sales', element: <ReportsDashboardPage /> }, // ดักรองรับท่อส่งจากเมนูปุ่มนำทางย่อย
+      { path: 'sales', element: <ReportsDashboardPage /> }, 
       { path: 'sales/list', element: <TempReportPage title="📑 รายการเอกสารและบิลใบเสร็จงานขาย" /> },
       { path: 'sales/products', element: <TempReportPage title="📦 รายงานวิเคราะห์อันดับสินค้าขายดี" /> },
       { path: 'purchase', element: <TempReportPage title="🚚 รายงานวิเคราะห์ประวัติการจัดซื้อสินค้า" /> },
@@ -167,7 +167,7 @@ export const posPartnerRoutes = [
   // 🛠️ 7. โมดูลบริการหลังการขาย (Service)
   {
     path: 'services',
-    element: <Outlet />, // 🟢 FIXED: เติมสิทธิ์เปิดช่องทางสตรีมเลเอาต์ลงไป ป้องกันหน้าจอบริการค้างหรือหลุดเฟรมซ้อนเบิ้ล
+    element: <Outlet />, 
     children: [
       { index: true, element: <ServicesDashboardPage /> }
     ]

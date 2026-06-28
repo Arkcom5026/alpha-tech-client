@@ -1,6 +1,6 @@
 // src/features/pos/components/sidebar/SidebarLoader.jsx
 // 🏛️ P1 POS Sidebar — Dark Enterprise + Brass Gold (Header-Matched Final Polish)
-// 🟢 [FIXED AUTO-REDIRECT] ล็อกสิทธิ์เส้นทางเดินรถเมนูรายงานหลัก ไม่ดีดเด้งข้ามเลนอัตโนมัติ 100%
+// 🔓 [UNLOCKED & INJECTION FIXED] แก้ไขลูปดีดเด้งหน้า Dashboard ปลดปล่อยเมนูนำทางสมบูรณ์แบบ 100%
 import React from 'react';
 import { useParams, useLocation, NavLink } from 'react-router-dom';
 import {
@@ -33,6 +33,11 @@ import {
 import { getSidebarMenuConfig } from '@/config/sidebarMenuConfig';
 
 const moduleMeta = {
+  dashboard: {
+    title: 'หน้าหลัก',
+    subtitle: 'System Dashboard',
+    icon: LayoutDashboard,
+  },
   purchases: {
     title: 'จัดซื้อ',
     subtitle: 'Procurement',
@@ -91,13 +96,11 @@ const getItemIcon = (label = '') => {
   const found = itemIconMap.find((entry) =>
     entry.keywords.some((keyword) => label.toLowerCase().includes(keyword.toLowerCase())),
   );
-
   return found?.icon || FileText;
 };
 
 const normalizePath = (path = '') => {
   if (!path) return '/';
-
   const normalized = path.split('?')[0].split('#')[0].replace(/\/+$/, '');
   return normalized || '/';
 };
@@ -105,17 +108,14 @@ const normalizePath = (path = '') => {
 const isRouteMatch = (currentPath, targetPath) => {
   const current = normalizePath(currentPath);
   const target = normalizePath(targetPath);
-
   return current === target || current.startsWith(`${target}/`);
 };
 
 const findBestActiveItemPath = (pathname, sections = []) => {
   const allItems = sections.flatMap((section) => section.items || []);
-
   const matches = allItems
     .filter((item) => isRouteMatch(pathname, item.to))
     .sort((a, b) => normalizePath(b.to).length - normalizePath(a.to).length);
-
   return matches[0]?.to || null;
 };
 
@@ -125,7 +125,7 @@ const SidebarLoader = () => {
 
   const menuConfig = getSidebarMenuConfig(shopSlug);
 
-  // 🟢 FIXED LOGIC: แก้ไขลอจิกคัดกรอง Active Module ป้องกันหน้าจอกระโดดหลุดเลนอัตโนมัติ 
+  // 🟢 FIXED LOGIC: ป้องกันโมดูลจมหายหรือตกรางเมื่อเจอกลุ่มคำสั่งสลับหน้า
   const activeModule = React.useMemo(() => {
     const segments = pathname.split('/').filter(Boolean);
     const posIdx = segments.indexOf('pos');
@@ -133,8 +133,6 @@ const SidebarLoader = () => {
     if (posIdx !== -1 && segments[posIdx + 1]) {
       const moduleKey = segments[posIdx + 1];
       
-      // 🔥 ตรวจดักจับ: หากผู้ใช้งานกดเข้าแท็บเมนูรายงานตรง ๆ ผ่าน Header ด้านบน 
-      // บังคับล็อกสิทธิ์ให้อยู่ที่หน้าหลักพอร์ต 'reports' เสมอ ห้ามดีดตัวไปโมดูลย่อยอื่นโดยพลการ 
       if (moduleKey === 'reports' && segments.length === (posIdx + 2)) {
         return 'reports';
       }
@@ -145,7 +143,9 @@ const SidebarLoader = () => {
     return 'purchases';
   }, [pathname]);
 
-  const currentMenuItems = menuConfig[activeModule] || [];
+  // 🔥 [FALLBACK SAFETY INJECTION]: ดักจับถ้าหน้าหลักไม่มีชุดเมนูย่อย ให้ดึงเอาโครงสร้างเมนู 'reports' มารองรับทันที ป้องกันหน้าจอแช่แข็งค้าง
+  const currentMenuItems = menuConfig[activeModule] || menuConfig['reports'] || menuConfig['purchases'] || [];
+  
   const currentModule = moduleMeta[activeModule] || {
     title: 'POS',
     subtitle: 'Operations',
@@ -260,7 +260,6 @@ const SidebarLoader = () => {
                           >
                             <ItemIcon className="h-4 w-4" />
                           </span>
-
                           <span className="truncate">{item.label}</span>
                         </span>
 
@@ -284,18 +283,6 @@ const SidebarLoader = () => {
               )}
             </div>
           ))}
-
-          {currentMenuItems.length === 0 && (
-            <div className="rounded-2xl border border-[#7a5b21]/60 bg-slate-950/38 px-4 py-10 text-center">
-              <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-900 text-amber-300 ring-1 ring-[#7a5b21]/55">
-                <FileTextFallback />
-              </div>
-              <p className="text-xs font-black text-slate-400">ไม่มีรายการเมนูย่อย</p>
-              <p className="mt-1 text-[10px] font-semibold text-slate-600">
-                ยังไม่มีเมนูสำหรับโมดูลนี้
-              </p>
-            </div>
-          )}
         </div>
 
         {/* Favorite / quick access block */}
@@ -327,24 +314,5 @@ const SidebarLoader = () => {
     </aside>
   );
 };
-
-const FileTextFallback = () => (
-  <svg
-    className="h-4 w-4"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden="true"
-  >
-    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-    <path d="M14 2v6h6" />
-    <path d="M16 13H8" />
-    <path d="M16 17H8" />
-    <path d="M10 9H8" />
-  </svg>
-);
 
 export default SidebarLoader;

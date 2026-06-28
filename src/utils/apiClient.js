@@ -32,15 +32,16 @@ const applyAuthorizationHeader = (config, bearerToken) => {
   return config;
 };
 
-// 🟢 1. STRICT API DETECTOR: เชื่อมโยงตาม Vercel Variables (Render ตรง) และรองรับ Local Dev
+// src/utils/apiClient.js (ฉบับขจัด Network Error ถาวร)
+
+// 🟢 1. STRICT API DETECTOR: ล็อกอันดับตามตัวแปรอัปเดตล่าสุดบน Vercel และแก้ไอพีภายในเครื่อง
 const getRuntimeBaseURL = () => {
-  // 1.1 ลำดับแรก: เชื่อมต่อโดยตรงตามค่าที่ได้จากหน้าคอนฟิก Vercel Dashboard
-  const envURL = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL;
+  // สลับเอา VITE_API_BASE_URL (ตัวที่เพิ่งอัปเดตล่าสุด) ขึ้นมาเช็คเป็นด่านแรกเพื่อความถูกต้องบน Cloud
+  const envURL = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL;
   if (envURL) {
     return `${envURL.replace(/\/$/, '')}/api/`;
   }
 
-  // 1.2 ลำดับสอง: รองรับทีมพัฒนาเปิดรันข้ามเครื่องทดสอบในวง LAN
   if (typeof window !== 'undefined' && window.location) {
     const currentHostname = window.location.hostname;
     if (currentHostname !== 'localhost' && currentHostname !== '127.0.0.1') {
@@ -48,12 +49,13 @@ const getRuntimeBaseURL = () => {
     }
   }
 
-  // 1.3 ค่า Fallback ปลอดภัยสำหรับเครื่อง Developer (Localhost)
-  return 'http://localhost:5000/api/';
+  // 🟢 FIXED: เปลี่ยนจาก localhost เป็น 127.0.0.1 เพื่อบังคับวิ่งเลน IPv4 ตรงล็อกเดียวกับ authApi.js ทันที
+  return 'http://127.0.0.1:5000/api/';
 };
 
 const apiClient = axios.create({
-  baseURL: 'http://localhost:5000/api/',
+  // 🟢 FIXED: บังคับไอพีเริ่มต้นเป็น 127.0.0.1 เพื่อป้องกัน Windows แปลงค่าเป็น IPv6 (::1) แล้วสายหลุด
+  baseURL: 'http://127.0.0.1:5000/api/',
   timeout: 30000,
   withCredentials: true,
   headers: {

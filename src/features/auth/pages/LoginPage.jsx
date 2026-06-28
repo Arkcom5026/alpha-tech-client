@@ -1,5 +1,6 @@
 // src/features/auth/pages/LoginPage.jsx
 // 🏛️ Masterpiece Single Container Edition: Unified Partner Portal Onboarding (Mass Market Balanced Wide Design)
+// 🎨 Warm Luxury Style - Fully Synced with Marketplace Design Language
 
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
@@ -161,17 +162,19 @@ const LoginPage = () => {
   const handleOAuthLogin = (provider) => { window.location.href = `/api/auth/oauth/${provider}`; };
 
   return (
-    <div className="bg-white/[0.03] backdrop-blur-xl p-8 rounded-3xl border border-white/10 space-y-6 text-center w-full shadow-2xl shadow-black/20 text-left">
+    // 🎨 [THEME INTEGRATION] ปรับตัวกล่องครอบให้เป็นสีขาว คอนทราสต์เทาจาง ชนธีมสว่างคลีนสบายตา
+    <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-md space-y-5 w-full text-left">
       
       <div className="text-center space-y-2">
-        <div className="w-12 h-12 bg-gradient-to-tr from-orange-500 to-amber-500 text-white rounded-xl flex items-center justify-center text-lg mx-auto shadow-md shadow-orange-500/20">
+        {/* แบกสไตล์ไอคอนกล่องทองนวลตาตามสไตล์หน้าแรก */}
+        <div className="w-12 h-12 bg-[#FAF6F0] border border-[#EFE9DE] text-[#FA8C16] rounded-xl flex items-center justify-center text-lg mx-auto shadow-sm">
           <FaLock />
         </div>
-        <h3 className="font-black text-lg text-white tracking-tight pt-1">เข้าสู่ระบบ Merchant Center</h3>
+        <h3 className="font-black text-base text-slate-900 tracking-tight pt-1">เข้าสู่ระบบ Merchant Center</h3>
         <p className="text-slate-500 text-xs font-semibold">กรุณาเข้าเซสชันจัดการบัญชีร้านค้า</p>
         
         {isLocalhost && debugUsername && (
-          <div className="mt-2 text-[10px] font-mono font-bold text-orange-400 bg-orange-500/10 border border-orange-500/20 rounded px-2 py-0.5 inline-block">
+          <div className="mt-2 text-[10px] font-mono font-bold text-[#D46B08] bg-orange-500/10 border border-orange-500/20 rounded px-2 py-0.5 inline-block">
             🛠 Dev Mode: {debugUsername}
           </div>
         )}
@@ -189,37 +192,38 @@ const LoginPage = () => {
       </div>
 
       <div className="relative my-4">
-        <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-white/5"></div></div>
-        <div className="relative flex justify-center text-[11px] font-bold uppercase"><span className="bg-[#0c101b] px-3 text-slate-500">หรือ</span></div>
+        <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-100"></div></div>
+        <div className="relative flex justify-center text-[11px] font-bold uppercase"><span className="bg-white px-3 text-slate-400">หรือ</span></div>
       </div>
 
       <form onSubmit={handleLogin} autoComplete="off" className="space-y-4">
         <div className="space-y-1">
-          <input type="text" placeholder="อีเมลหรือเบอร์โทรศัพท์" value={emailOrPhone} onChange={(e) => setEmailOrPhone(e.target.value)} autoComplete="off" className={`w-full px-3.5 py-2.5 bg-white/5 border rounded-xl text-xs font-bold text-white outline-none transition-all placeholder:text-slate-600 border-white/10 focus:border-orange-500 focus:bg-white/10 ${fieldErrors.emailOrPhone ? 'border-red-500/50 focus:ring-4 focus:ring-red-500/10' : ''}`} aria-invalid={Boolean(fieldErrors.emailOrPhone)} />
-          {fieldErrors.emailOrPhone && <p className="mt-1 text-[11px] font-bold text-red-400">{fieldErrors.emailOrPhone}</p>}
+          {/* ปรับ Input ย้อมพื้นเทาจาง กรอบส้มเมื่อ Focus ยืดหยุ่นอ่านง่ายขึ้นมหาศาล */}
+          <input type="text" placeholder="อีเมลหรือเบอร์โทรศัพท์" value={emailOrPhone} onChange={(e) => setEmailOrPhone(e.target.value)} autoComplete="off" className={`w-full px-3.5 py-2.5 bg-slate-50 border rounded-xl text-xs font-bold text-slate-900 outline-none transition-all placeholder:text-slate-400 border-slate-200 focus:border-[#FA8C16] focus:bg-white ${fieldErrors.emailOrPhone ? 'border-red-500/50 focus:ring-4 focus:ring-red-500/10' : ''}`} aria-invalid={Boolean(fieldErrors.emailOrPhone)} />
+          {fieldErrors.emailOrPhone && <p className="mt-1 text-[11px] font-bold text-red-500">{fieldErrors.emailOrPhone}</p>}
         </div>
 
         <div className="space-y-1">
           <div className="relative">
-            <input type={showPassword ? 'text' : 'password'} placeholder="••••••••" value={password} onChange={(e) => { setPassword(e.target.value); if (fieldErrors.password) setFieldErrors((prev) => ({ ...prev, password: '' })); }} autoComplete="new-password" className={`w-full px-3.5 py-2.5 pr-11 bg-white/5 border rounded-xl text-xs font-bold text-white outline-none transition-all placeholder:text-slate-700 border-white/10 focus:border-orange-500 focus:bg-white/10 ${fieldErrors.password ? 'border-red-500/50 focus:ring-4 focus:ring-red-500/10' : ''}`} aria-invalid={Boolean(fieldErrors.password)} />
-            <button type="button" onClick={() => setShowPassword((prev) => !prev)} className="absolute inset-y-0 right-0 flex items-center px-3.5 text-slate-500 hover:text-slate-400">{showPassword ? <FaEyeSlash /> : <FaEye />}</button>
+            <input type={showPassword ? 'text' : 'password'} placeholder="••••••••" value={password} onChange={(e) => { setPassword(e.target.value); if (fieldErrors.password) setFieldErrors((prev) => ({ ...prev, password: '' })); }} autoComplete="new-password" className={`w-full px-3.5 py-2.5 pr-11 bg-slate-50 border rounded-xl text-xs font-bold text-slate-900 outline-none transition-all placeholder:text-slate-400 border-slate-200 focus:border-[#FA8C16] focus:bg-white ${fieldErrors.password ? 'border-red-500/50 focus:ring-4 focus:ring-red-500/10' : ''}`} aria-invalid={Boolean(fieldErrors.password)} />
+            <button type="button" onClick={() => setShowPassword((prev) => !prev)} className="absolute inset-y-0 right-0 flex items-center px-3.5 text-slate-400 hover:text-slate-600">{showPassword ? <FaEyeSlash /> : <FaEye />}</button>
           </div>
-          {fieldErrors.password && <p className="mt-1 text-[11px] font-bold text-red-400">{fieldErrors.password}</p>}
+          {fieldErrors.password && <p className="mt-1 text-[11px] font-bold text-red-500">{fieldErrors.password}</p>}
         </div>
 
-        <div className="flex items-center justify-between text-[11px] font-bold text-slate-400 select-none">
-          <label className="flex items-center cursor-pointer hover:text-slate-300 transition-colors">
-            <input type="checkbox" className="mr-2 rounded border-white/10 bg-white/5 text-orange-500 focus:ring-0 focus:ring-offset-0" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} /> จําฉันไว้ในระบบ
+        <div className="flex items-center justify-between text-[11px] font-bold text-slate-500 select-none">
+          <label className="flex items-center cursor-pointer hover:text-slate-800 transition-colors">
+            <input type="checkbox" className="mr-2 rounded border-slate-300 text-[#FA8C16] focus:ring-0 focus:ring-offset-0 bg-slate-50" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} /> จําฉันไว้ในระบบ
           </label>
           
-          {/* 🟢 [BUG SOLVED]: สับรางยิงลิงก์เข้า Absolute Path ไปพิกัดสายส่งหลักของระบบอย่างแม่นยำ[cite: 6, 8] */}
-          <Link to="/partner-portal/forgot-password" className="text-orange-400 hover:text-orange-300 transition-colors">ลืมรหัสผ่าน?</Link>
+          <Link to="/partner-portal/forgot-password" className="text-[#FA8C16] hover:text-[#D46B08] transition-colors">ลืมรหัสผ่าน?</Link>
         </div>
 
-        {error && <div className="text-red-400 text-xs font-bold bg-red-500/10 border border-red-500/20 p-2.5 rounded-xl">{error}</div>}
+        {error && <div className="text-red-500 text-xs font-bold bg-red-50/5 border border-red-200/50 p-2.5 rounded-xl">{error}</div>}
 
-        <button type="submit" className={`w-full py-3 rounded-xl font-black text-xs shadow-md transition-all duration-200 inline-flex items-center justify-center gap-2 min-h-[44px] active:scale-[0.98] ${isSubmitDisabled ? 'bg-orange-500/30 cursor-not-allowed text-white/50 shadow-none' : 'bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white shadow-orange-500/15'}`} disabled={isSubmitDisabled}>
-          {loading ? (<><FaSpinner className="animate-spin text-sm" /><span>กำลังยืนยันสิทธิ์...</span></>) : 'เข้าสู่ระบบด้วยรหัสผ่าน'}
+        {/* ย้อมปุ่มส่งข้อมูลให้เป็น สีกรมท่าลึกตัดส้มทอง เข้าชุดตามแบบสปิริตหน้าแรกเป๊ะ */}
+        <button type="submit" className={`w-full py-3 rounded-xl font-black text-xs shadow-md transition-all duration-200 inline-flex items-center justify-center gap-2 min-h-[44px] active:scale-[0.98] ${isSubmitDisabled ? 'bg-slate-300 cursor-not-allowed text-slate-500 shadow-none' : 'bg-[#111625] hover:bg-slate-800 text-white shadow-slate-900/10'}`} disabled={isSubmitDisabled}>
+          {loading ? (<><FaSpinner className="animate-spin text-sm" /><span>กำลังยืนยันสิทธิ์...</span></>) : <span className="text-white">เข้าสู่ระบบด้วยรหัสผ่าน</span>}
         </button>
       </form>
     </div>

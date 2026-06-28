@@ -1,9 +1,9 @@
-// ../components/purchaseOrderListTable
+// src/features/purchaseOrder/components/purchaseOrderListTable.jsx
 
 import React, { useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom'; // 🟢 ดึง useParams ร่วมขบวนจัด Multi-Tenant
+import { useNavigate, useParams } from 'react-router-dom'; 
 import StandardActionButtons from '@/components/shared/buttons/StandardActionButtons';
-import { usePurchaseOrderStore } from '../store/purchaseOrderStore'; // 🟢 ใส่ปีกกาครอบ สัญญาณจูนติดทันที!
+import { usePurchaseOrderStore } from '../store/purchaseOrderStore';
 
 const formatDateTh = (value) => {
   try {
@@ -23,26 +23,16 @@ const formatDateTh = (value) => {
 const getStatusMeta = (statusRaw) => {
   const status = String(statusRaw || '').toUpperCase();
 
-  if (status === 'PENDING') return { label: 'รอดำเนินการ', className: 'bg-slate-100 text-slate-700' };
-  if (status === 'PARTIALLY_RECEIVED')
-    return { label: 'รับแล้วบางส่วน', className: 'bg-amber-100 text-amber-800' };
-  if (status === 'COMPLETED' || status === 'RECEIVED')
-    return { label: 'รับครบแล้ว', className: 'bg-emerald-100 text-emerald-800' };
-  if (status === 'CANCELLED' || status === 'CANCELED')
-    return { label: 'ยกเลิก', className: 'bg-rose-100 text-rose-800' };
+  if (status === 'PENDING') return { label: 'รอดำเนินการ', className: 'bg-slate-100 text-slate-700 border-slate-200' };
+  if (status === 'PARTIALLY_RECEIVED') return { label: 'รับแล้วบางส่วน', className: 'bg-amber-50 text-amber-700 border-amber-200/50' };
+  if (status === 'COMPLETED' || status === 'RECEIVED') return { label: 'เสร็จสมบูรณ์', className: 'bg-emerald-50 text-emerald-700 border-emerald-200/50' };
+  if (status === 'CANCELLED' || status === 'CANCELED') return { label: 'ยกเลิกเอกสาร', className: 'bg-rose-50 text-rose-700 border-rose-200/50' };
 
   return { label: statusRaw || '-', className: 'bg-gray-100 text-gray-700' };
 };
 
-const canDeletePO = (po) => {
-  const status = String(po?.status || '').toUpperCase();
-  return status === 'PENDING';
-};
-
 const PurchaseOrderListTable = ({ purchaseOrders, loading }) => {
   const navigate = useNavigate();
-  
-  // 🟢 FIXED: ดึงพารามิเตอร์ร้านค้าเพื่อคุมสิทธิ์ความปลอดภัยแชร์สาขาในเลน URL POS
   const { shopSlug } = useParams();
   const targetSlug = shopSlug || 'advancetech';
 
@@ -57,7 +47,6 @@ const PurchaseOrderListTable = ({ purchaseOrders, loading }) => {
   const handleEdit = (id) => {
     setUiError(null);
     setUiInfo(null);
-    // 🟢 FIXED: ซ่อมท่อทางเดินรถบิล PO จัดซื้อหลังร้านให้วิ่งผ่าน Dynamic targetSlug
     navigate(`/${targetSlug}/pos/purchases/orders/edit/${id}`);
   };
 
@@ -66,16 +55,22 @@ const PurchaseOrderListTable = ({ purchaseOrders, loading }) => {
     setUiInfo(null);
 
     if (!po?.id) return;
+    const currentStatus = String(po?.status || '').toUpperCase();
+    
+    if (currentStatus !== 'PENDING') {
+      setUiError('ความปลอดภัยระบบ: ปฏิเสธการลบเนื่องจากเอกสาร PO นี้เริ่มกระบวนการตรวจรับแล้ว');
+      return;
+    }
 
-    if (!canDeletePO(po)) {
-      setUiError('ไม่สามารถลบใบสั่งซื้อที่เริ่มตรวจรับ/รับสินค้าแล้วได้');
+    if (!window.confirm(`คุณต้องการลบเอกสารใบสั่งซื้อเลขที่ ${po.code || ''} ใช่หรือไม่?`)) {
       return;
     }
 
     try {
       setDeletingId(po.id);
+      // 🚀 เคลียร์สเตตฝั่งบีอีผ่าน apiClient พอร์ต 5000 อัตโนมัติ
       await removePurchaseOrderAction(po.id);
-      setUiInfo(`ลบใบสั่งซื้อ ${po.code || ''} สำเร็จ`);
+      setUiInfo(`ลบใบสั่งซื้อ ${po.code || ''} ออกจากคลังเรียบร้อยแล้ว`);
     } catch (err) {
       const msg = err?.response?.data?.message || err?.message || 'ลบใบสั่งซื้อไม่สำเร็จ';
       setUiError(String(msg));
@@ -85,76 +80,83 @@ const PurchaseOrderListTable = ({ purchaseOrders, loading }) => {
   };
 
   return (
-    <div className="border rounded-md overflow-hidden">
+    <div className="rounded-2xl border border-slate-200 overflow-hidden bg-white shadow-sm animate-fadeIn">
       {(uiError || uiInfo) && (
-        <div className="p-3 border-b bg-white">
-          {uiError && <div className="text-sm text-rose-700">{uiError}</div>}
-          {!uiError && uiInfo && <div className="text-sm text-emerald-700">{uiInfo}</div>}
+        <div className="p-3 border-b border-slate-100 px-4 font-bold text-xs">
+          {uiError && <div className="text-rose-600 bg-rose-50 border border-rose-100 p-2 rounded-xl">⚠️ ข้อขัดข้อง: {uiError}</div>}
+          {!uiError && uiInfo && <div className="text-emerald-600 bg-emerald-50 border border-emerald-100 p-2 rounded-xl">✅ สำเร็จ: {uiInfo}</div>}
         </div>
       )}
 
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="bg-gray-50">
-            <th className="px-4 py-2 text-left">#</th>
-            <th className="px-4 py-2 text-left">วันที่</th>
-            <th className="px-4 py-2 text-left">เลขที่ใบสั่งซื้อ</th>
-            <th className="px-4 py-2 text-left">Supplier</th>
-            <th className="px-4 py-2 text-left">สถานะ</th>
-            <th className="px-4 py-2 text-left">การจัดการ</th>
-          </tr>
-        </thead>
-
-        <tbody>
-          {loading && (
-            <tr>
-              <td className="px-4 py-3" colSpan={6}>
-                กำลังโหลด...
-              </td>
+      <div className="w-full overflow-x-auto">
+        <table className="w-full text-xs text-left border-collapse">
+          <thead>
+            <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-black uppercase select-none">
+              <th className="px-4 py-3 w-[50px]">#</th>
+              <th className="px-4 py-3">วันที่ออกเอกสาร</th>
+              <th className="px-4 py-3">เลขที่ใบสั่งซื้อ (PO Code)</th>
+              <th className="px-4 py-3">คู่ค้าจัดซื้อ (Supplier)</th>
+              <th className="px-4 py-3 text-center w-[120px]">สถานะ</th>
+              <th className="px-4 py-3 text-center w-[130px]">การจัดการ</th>
             </tr>
-          )}
+          </thead>
 
-          {!loading && rows.length === 0 && (
-            <tr>
-              <td className="px-4 py-3 text-gray-500" colSpan={6}>
-                ไม่พบรายการ
-              </td>
-            </tr>
-          )}
+          <tbody className="divide-y divide-slate-100">
+            {loading && (
+              <tr>
+                <td className="px-4 py-8 text-center text-slate-400 font-bold italic animate-pulse" colSpan={6}>
+                  กำลังประมวลผลดึงโครงสร้างประวัติจัดซื้อเรียลไทม์...
+                </td>
+              </tr>
+            )}
 
-          {!loading &&
-            rows.map((po, index) => {
-              const statusMeta = getStatusMeta(po?.status);
-              const isDeleting = deletingId === po?.id;
+            {!loading && rows.length === 0 && (
+              <tr>
+                <td className="px-4 py-10 text-center text-slate-400 font-bold italic" colSpan={6}>
+                  ไม่พบเอกสารใบสั่งซื้อจัดคลังในเงื่อนไขปัจจุบัน
+                </td>
+              </tr>
+            )}
 
-              return (
-                <tr key={po.id} className="border-t">
-                  <td className="px-4 py-2">{index + 1}</td>
-                  <td className="px-4 py-2">{formatDateTh(po?.createdAt)}</td>
-                  <td className="px-4 py-2">{po?.code || '-'}</td>
-                  <td className="px-4 py-2">{po?.supplier?.name || '-'}</td>
-                  <td className="px-4 py-2">
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${statusMeta.className}`}>
-                      {statusMeta.label}
-                    </span>
-                  </td>
-                  <td className="px-4 py-2">
-                    <StandardActionButtons
-                      showEdit
-                      showDelete
-                      onEdit={() => handleEdit(po.id)}
-                      onDelete={isDeleting ? undefined : () => handleDelete(po)}
-                    />
-                    {isDeleting && <span className="ml-2 text-xs text-gray-500">กำลังลบ...</span>}
-                    {!canDeletePO(po) && (
-                      <span className="ml-2 text-xs text-gray-400">ลบได้เฉพาะสถานะ “รอดำเนินการ”</span>
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
-        </tbody>
-      </table>
+            {!loading &&
+              rows.map((po, index) => {
+                const statusMeta = getStatusMeta(po?.status);
+                const isDeleting = deletingId === po?.id;
+                const isPending = String(po?.status || '').toUpperCase() === 'PENDING';
+
+                return (
+                  <tr key={po.id} className="hover:bg-slate-50/40 transition-colors duration-150 group">
+                    <td className="px-4 py-3 font-bold text-slate-400">{index + 1}</td>
+                    <td className="px-4 py-3 font-medium text-slate-500">{formatDateTh(po?.createdAt)}</td>
+                    <td className="px-4 py-3 font-black text-slate-900 group-hover:text-orange-500 transition-colors tracking-tight">{po?.code || '-'}</td>
+                    <td className="px-4 py-3 font-bold text-slate-700">{po?.supplier?.name || '-'}</td>
+                    <td className="px-4 py-3 text-center">
+                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-black border ${statusMeta.className}`}>
+                        {statusMeta.label}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <div className="flex items-center justify-center gap-1">
+                        <StandardActionButtons
+                          showEdit={isPending}
+                          showDelete={isPending}
+                          onEdit={() => handleEdit(po.id)}
+                          onDelete={isDeleting ? undefined : () => handleDelete(po)}
+                        />
+                        {isDeleting && <span className="text-[10px] text-slate-400 font-bold animate-pulse">กำลังลบ...</span>}
+                        {!isPending && (
+                          <span className="text-[10px] text-slate-400 font-bold bg-slate-50 border px-2 py-0.5 rounded-md select-none">
+                            คุมคลังแล้ว
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 };

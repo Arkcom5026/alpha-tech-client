@@ -60,7 +60,7 @@ const usePurchaseOrderReceiptStore = create((set, get) => ({
       if (typeof wantPrinted === 'boolean') params.printed = wantPrinted;
       if (opts.q) params.q = opts.q;
       if (opts.supplier) params.supplier = opts.supplier;
-      if (opts.shopSlug) params.shopSlug = opts.shopSlug; // 🟢 ส่งสิทธิ์ต่อท่อตามสาขา
+      if (opts.shopSlug) params.shopSlug = opts.shopSlug; 
       if (Number.isFinite(Number(opts.supplierId))) params.supplierId = Number(opts.supplierId);
       if (Number.isFinite(Number(opts.limit))) params.limit = Number(opts.limit);
 
@@ -177,12 +177,10 @@ const usePurchaseOrderReceiptStore = create((set, get) => ({
     }
   },
 
-  // 🟢 [LIVE TENANT CONFIGURATION FIXED] ขยายฟังก์ชันรับพารามิเตอร์รายบริษัทคั่นทางย่อย พร้อมจัดระเบียบรูปร่างโครงสร้างข้อมูล Array
   fetchPurchaseOrdersForReceiptAction: async (opts = {}) => {
     try {
       set({ loading: true, error: null });
       
-      // ส่งผ่านค่า params ตัวแปรสาขา / สถานะ ดักกรองตรงไปยังฐานข้อมูลกลางหลังบ้าน Port 5000
       const params = {
         status: 'PENDING,PARTIALLY_RECEIVED',
         ...(opts.shopSlug ? { shopSlug: opts.shopSlug } : {})
@@ -190,7 +188,6 @@ const usePurchaseOrderReceiptStore = create((set, get) => ({
 
       const res = await getEligiblePurchaseOrders(params);
       
-      // ดักเจาะกล่องวัตถุ ปรับค่า Array Shape ผูกเงื่อนไขป้องกันกรณี Schema ส่งข้อมูลซ้อนชั้นมา
       const rawList = Array.isArray(res) 
         ? res 
         : Array.isArray(res?.data) 
@@ -233,12 +230,12 @@ const usePurchaseOrderReceiptStore = create((set, get) => ({
         const profileName = it?.profileName ?? p?.productProfile?.name ?? p?.productProfileName ?? '-';
         const templateName = it?.templateName ?? p?.template?.name ?? p?.templateName ?? '-';
         const productName = it?.productName ?? p?.name ?? '-';
-        const unitName = it?.unitName ?? p?.unit?.name ?? p?.template?.unit?.name ?? '-';
+        const fontName = it?.unitName ?? p?.unit?.name ?? p?.template?.unit?.name ?? '-';
 
         return {
           ...it,
           productName,
-          unitName,
+          unitName: fontName,
           categoryName,
           productTypeName,
           brandName,
@@ -253,6 +250,32 @@ const usePurchaseOrderReceiptStore = create((set, get) => ({
       console.error('❌ โหลด loadOrderById สำหรับใบรับสินค้าไม่สำเร็จ:', err);
       set({ error: err, loading: false });
       return null;
+    }
+  },
+
+  /**
+   * 🚀 NEW COMPLIANCE ACTION: ส่งคำสั่งสับสวิตช์ยกเลิกใบสั่งซื้อ (Cancel PO) ส่งตรงพอร์ต 5000
+   * มีกลไกตัดจบแถว Reactive State เพื่อให้รายการที่ยกเลิกเด้งออกจากหน้าจอตรวจรับทันที
+   */
+  cancelPurchaseOrderAction: async (poId) => {
+    try {
+      set({ loading: true, error: null });
+      
+      // อัปเดตสถานะตรงไปยังฐานข้อมูลกลางหลังบ้านให้เป็น CANCELLED
+      const res = await updatePurchaseOrderStatus({ id: Number(poId), status: 'CANCELLED' });
+      
+      // ประมวลผลล้างแถวข้อมูลออกจากสเตตตะกร้ารอรับของแบบเรียลไทม์
+      set((state) => ({
+        purchaseOrdersForReceipt: state.purchaseOrdersForReceipt.filter((po) => po.id !== Number(poId)),
+        loading: false,
+        error: null
+      }));
+      
+      return res;
+    } catch (err) {
+      console.error('❌ ดำเนินการยกเลิกเอกสารใบสั่งซื้อจัดคลังไม่สำเร็จ:', err);
+      set({ error: err, loading: false });
+      throw err;
     }
   },
 

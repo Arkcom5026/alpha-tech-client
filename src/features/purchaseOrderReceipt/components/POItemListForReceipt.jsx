@@ -1,5 +1,4 @@
 // src/features/purchaseOrderReceipt/components/POItemListForReceipt.jsx
-// 🏛️ Premium Next-Gen Goods Receipt Items: (Unified Variant, Restored Warning Heuristics & Aurora Fluid Table)
 
 import React, { useEffect, useMemo, useState } from 'react';
 import usePurchaseOrderReceiptStore from '../store/purchaseOrderReceiptStore';
@@ -111,7 +110,6 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, formData, items }
     const total = num + received;
     const isIncomplete = total < Number(item.quantity || 0);
     
-    // 🟢 [RESTORED] คืนสิทธิ์ Heuristic กฎเหล็กป้องกันคนพิมพ์จำนวนยอดรับตกหล่น
     const shouldWarn = Number(item.quantity || 0) > 10 && value.toString().startsWith('1');
 
     setReceiptQuantities((prev) => ({ ...prev, [itemId]: num }));
@@ -288,7 +286,6 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, formData, items }
   return (
     <div className="space-y-4 w-full select-none animate-fadeIn">
       
-      {/* 🟦 TOP HEADER BAR */}
       <div className="flex items-center justify-between px-2 pt-2">
         <h2 className="text-sm font-black text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
           <ShoppingCart className="w-4 h-4 text-slate-400" /> รายการสินค้าประจำใบตรวจรับสินค้า
@@ -323,7 +320,6 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, formData, items }
         </div>
       )}
 
-      {/* 📊 CORE TABLE PACK */}
       <div className="border border-slate-200 rounded-2xl overflow-hidden shadow-sm bg-white">
         <div className="w-full overflow-x-auto">
           <table className="w-full text-xs text-left border-collapse">
@@ -500,7 +496,6 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, formData, items }
         </div>
       </div>
 
-      {/* 🟦 BOTTOM FINALIZATION BOARD */}
       <div className="bg-slate-50/70 border border-slate-200/70 rounded-2xl p-4 sm:p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-4 select-none">
         <div className="text-left space-y-0.5 font-bold text-xs text-slate-500">
           <div className="flex items-center gap-1 text-slate-700 font-black"><AlertCircle className="w-3.5 h-3.5 text-slate-400" /> เงื่อนไขกฎเหล็กคลัง:</div>

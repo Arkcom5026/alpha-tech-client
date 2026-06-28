@@ -1,3 +1,4 @@
+// src/utils/apiClient.js
 import axios from 'axios';
 import { useAuthStore } from '@/features/auth/store/authStore';
 
@@ -70,7 +71,8 @@ const refreshAccessToken = async () => {
             status: error?.response?.status,
           });
         }
-        useAuthStore.setState((state) => ({ ...state, token: null, accessToken: null }));
+        // 🟢 CLEAR STORE IMMEDIATELY: สั่งล้าง Zustand สเตตัสสิทธิ์ทันทีที่ท่อต่ออายุพังพินาศ
+        useAuthStore.setState({ token: null, accessToken: null, user: null, session: null });
         throw error;
       })
       .finally(() => {
@@ -142,6 +144,22 @@ apiClient.interceptors.response.use(
         originalRequest.baseURL = coreBaseURL;
         return apiClient(originalRequest);
       } catch (refreshError) {
+        // 🚀 HARD RESOLVE FIX: ปิดวงจรลูปอุบาทว์รัวๆ 401 กลางอากาศ
+        console.warn('🚨 [apiClient] สิทธิ์คุกกี้สลายตัวถาวร — ทำลายล้างเซสชันขยะหน้าร้านและพาเด้งกลับจุดสตาร์ท');
+        
+        // 1. กวาดล้างข้อมูลใน Zustand Store
+        useAuthStore.setState({ token: null, accessToken: null, user: null, session: null });
+        
+        // 2. ล้างหน่วยความจำตกค้างใน Browser Cache
+        localStorage.removeItem('pos_accessToken');
+        localStorage.removeItem('pos_token');
+        localStorage.removeItem('pos_user_profile');
+        
+        // 3. ดีดผู้ใช้งานกลับหน้า ล็อกอิน ป้องกันกระสุนยิงถล่ม API
+        if (!window.location.pathname.includes('/login')) {
+          window.location.href = '/login?expired=true';
+        }
+
         return Promise.reject(refreshError);
       }
     }

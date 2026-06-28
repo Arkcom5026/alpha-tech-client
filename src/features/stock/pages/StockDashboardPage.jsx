@@ -1,11 +1,10 @@
 // src/features/stock/pages/StockDashboardPage.jsx
 // P1 Style: Operational Overview (ระดับพนักงานสต๊อก)
+// 🎨 Minimal Platinum Light Mode Edition (User Feedback Optimized — High Contrast Layout)
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom'; // 🟢 ดึง useParams มาเพื่อแกะชื่อร้านพาร์ตเนอร์
 import useStockStore from '@/features/stock/store/stockStore';
-
-// 🟢 [CLEANED] ถอนโครงสร้าง HeaderPos และ SidebarLoader ตัวในออกเพื่อสยบบั๊กเมนูซ้อนเบิ้ล
 
 // =============================
 // Small UI Components
@@ -45,13 +44,12 @@ const formatTimeAgo = (d) => {
   return `${day}d ago`;
 };
 
-// 🟢 NEW STYLE BUTTON: ปรับโทนปุ่มกดให้คมชัดและพรีเมียมในเลเยอร์สีมืด
 const Button = ({ children, onClick, disabled, variant = 'primary' }) => {
-  const base = 'inline-flex items-center justify-center rounded-xl px-4 py-2 text-xs font-black transition-all border shadow-sm duration-150';
+  const base = 'inline-flex items-center justify-center rounded-xl px-4 py-2 text-xs font-black transition-all border shadow-sm duration-150 select-none';
   const variants = {
-    primary: 'bg-gradient-to-b from-amber-400 to-orange-500 text-white border-amber-500/30 hover:shadow-[0_0_20px_rgba(245,158,11,0.2)] shadow-orange-500/10',
-    subtle: 'bg-zinc-800 text-zinc-100 border-zinc-700/80 hover:bg-zinc-700 hover:text-white',
-    ghost: 'bg-transparent text-zinc-400 border-transparent hover:bg-zinc-800/60 hover:text-white',
+    primary: 'bg-gradient-to-b from-orange-500 to-amber-500 text-white border-orange-600/20 hover:from-orange-600 hover:to-amber-600 shadow-orange-500/10 active:scale-95 transform',
+    subtle: 'bg-slate-800 text-slate-100 border-slate-900 hover:bg-slate-900 active:scale-95 transform',
+    ghost: 'bg-transparent text-slate-500 border-transparent hover:bg-slate-100 hover:text-slate-900',
   };
 
   return (
@@ -68,10 +66,10 @@ const Button = ({ children, onClick, disabled, variant = 'primary' }) => {
 
 const Section = ({ title, subtitle, right, children }) => (
   <section className="mb-10">
-    <header className="mb-4 flex items-start justify-between gap-4">
+    <header className="mb-4 flex items-start justify-between gap-4 select-none">
       <div>
-        <h2 className="text-base font-black text-white">{title}</h2>
-        {subtitle && <p className="text-xs text-zinc-400 font-medium mt-0.5">{subtitle}</p>}
+        <h2 className="text-base font-black text-slate-900">{title}</h2>
+        {subtitle && <p className="text-xs text-slate-400 font-bold mt-0.5">{subtitle}</p>}
       </div>
       {right}
     </header>
@@ -79,44 +77,42 @@ const Section = ({ title, subtitle, right, children }) => (
   </section>
 );
 
-// 🟢 NEW STYLE EMPTY BOX: กล่องลายเส้นประสีมืดรับดีไซน์สองเลเยอร์
 const EmptyBox = ({ title, desc, action, onClick, clickable = false, loading = false }) => (
   <button
     type="button"
     onClick={onClick}
     disabled={!clickable || loading}
-    className={`w-full rounded-2xl border border-dashed border-zinc-800 bg-zinc-900 p-6 shadow-sm text-left transition-all duration-200 ${clickable ? 'hover:border-amber-500/40 hover:bg-zinc-800/40 hover:-translate-y-0.5 cursor-pointer' : 'cursor-default'} ${loading ? 'opacity-70 cursor-wait' : ''}`}
+    className={`w-full rounded-2xl border border-dashed border-slate-200 bg-slate-50/50 p-6 shadow-inner text-left transition-all duration-200 ${clickable ? 'hover:border-orange-500/40 hover:bg-white hover:-translate-y-0.5 cursor-pointer' : 'cursor-default'} ${loading ? 'opacity-70 cursor-wait' : ''}`}
     aria-label={title}
   >
-    <div className="text-sm font-bold text-white">{title}</div>
-    {desc && <div className="text-xs text-zinc-400 mt-1.5 leading-snug font-medium">{desc}</div>}
+    <div className="text-sm font-black text-slate-900">{title}</div>
+    {desc && <div className="text-xs text-slate-500 mt-1.5 leading-snug font-bold">{desc}</div>}
     {action && <div className="mt-4">{action}</div>}
 
     {clickable && !action && (
-      <div className="mt-4 inline-flex items-center gap-2 text-xs text-amber-400">
-        <span className="rounded-lg bg-amber-500/10 border border-amber-500/20 px-2 py-1 font-bold">แตะเพื่อโหลด</span>
-        <span className="text-[11px] text-zinc-500 font-bold">(ไม่โหลดอัตโนมัติ)</span>
+      <div className="mt-4 inline-flex items-center gap-2 text-xs text-orange-600 font-black select-none">
+        <span className="rounded-lg bg-orange-500/10 border border-orange-500/20 px-2.5 py-1">แตะเพื่อสั่งโหลดข้อมูล</span>
+        <span className="text-[11px] text-slate-400 font-bold">(ระบบไม่โหลดอัตโนมัติ)</span>
       </div>
     )}
   </button>
 );
 
-// 🟢 NEW STYLE SUMMARY CARD: ย้อมสีใหม่ให้ออกแนวดาร์กโหมดพรีเมียมทั้งหมด แยกเฉดด้วยสีเส้นและป้ายอักษร
 const SummaryCard = ({ label, value, color, onClick, clickable = false, hint }) => {
   const colorMap = {
-    green: 'border-emerald-500/20 bg-zinc-900/60 text-white hover:border-emerald-500/40',
-    blue: 'border-blue-500/20 bg-zinc-900/60 text-white hover:border-blue-500/40',
-    rose: 'border-rose-500/20 bg-zinc-900/60 text-white hover:border-rose-500/40',
-    amber: 'border-amber-500/20 bg-zinc-900/60 text-white hover:border-amber-500/40',
-    zinc: 'border-zinc-800 bg-zinc-900/60 text-white hover:border-zinc-700',
+    green: 'border-emerald-500/20 bg-white text-slate-900 hover:border-emerald-500/40',
+    blue: 'border-blue-500/20 bg-white text-slate-900 hover:border-blue-500/40',
+    rose: 'border-rose-500/20 bg-white text-slate-900 hover:border-rose-500/40',
+    amber: 'border-orange-500/20 bg-white text-slate-900 hover:border-orange-500/40',
+    zinc: 'border-slate-200 bg-white text-slate-900 hover:border-slate-400',
   };
 
   const labelTone = {
-    green: 'text-emerald-400',
-    blue: 'text-blue-400',
-    rose: 'text-rose-400',
-    amber: 'text-amber-400',
-    zinc: 'text-zinc-400',
+    green: 'text-emerald-600',
+    blue: 'text-blue-600',
+    rose: 'text-rose-600',
+    amber: 'text-orange-600',
+    zinc: 'text-slate-400',
   };
 
   return (
@@ -124,14 +120,14 @@ const SummaryCard = ({ label, value, color, onClick, clickable = false, hint }) 
       type="button"
       onClick={onClick}
       disabled={!clickable}
-      className={`w-full rounded-2xl border px-5 py-4 shadow-sm text-left transition-all duration-200 ${colorMap[color]} ${clickable ? 'hover:shadow-xl hover:-translate-y-0.5 cursor-pointer' : 'cursor-default'}`}
+      className={`w-full rounded-2xl border px-5 py-4 shadow-[0_4px_20px_rgba(0,0,0,0.01)] text-left transition-all duration-200 ${colorMap[color]} ${clickable ? 'hover:shadow-md hover:-translate-y-0.5 cursor-pointer' : 'cursor-default'}`}
       aria-label={label}
     >
-      <div className={`text-[11px] font-black uppercase tracking-wider ${labelTone[color] || 'text-zinc-400'}`}>{label}</div>
-      <div className="text-xl font-black mt-1.5 tracking-tight text-white">{value}</div>
+      <div className={`text-[11px] font-black uppercase tracking-wider ${labelTone[color] || 'text-slate-400'}`}>{label}</div>
+      <div className="text-xl font-black mt-1.5 tracking-tight text-slate-900">{value}</div>
       {clickable && (
-        <div className="text-[11px] mt-2 font-bold text-amber-400 opacity-90">
-          {hint || 'แตะเพื่อดูรายการ'}
+        <div className="text-[11px] mt-2 font-black text-orange-600 opacity-90">
+          {hint || 'แตะเพื่อเรียกดูตาราง'}
         </div>
       )}
     </button>
@@ -141,11 +137,11 @@ const SummaryCard = ({ label, value, color, onClick, clickable = false, hint }) 
 const ErrorStrip = ({ message, onRetry, retrying = false }) => {
   if (!message) return null;
   return (
-    <div className="mb-3 rounded-2xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 shadow-sm">
+    <div className="mb-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 shadow-sm animate-fadeIn">
       <div className="flex items-start justify-between gap-3">
-        <div className="text-xs text-rose-300 leading-snug">
-          <div className="font-bold">โหลดไม่สำเร็จ</div>
-          <div className="mt-0.5 opacity-90">{String(message)}</div>
+        <div className="text-xs text-rose-700 leading-snug font-medium">
+          <div className="font-black text-sm">โหลดข้อมูลไม่สำเร็จ</div>
+          <div className="mt-0.5 font-bold opacity-90">{String(message)}</div>
         </div>
         {onRetry && (
           <Button variant="subtle" onClick={onRetry} disabled={retrying}>
@@ -161,10 +157,10 @@ const MiniChip = ({ label, value, onClick }) => (
   <button
     type="button"
     onClick={onClick}
-    className="inline-flex items-center gap-2 rounded-xl border border-zinc-800 bg-zinc-900/60 px-3 py-1.5 text-xs text-zinc-300 shadow-sm hover:bg-zinc-800 hover:text-white transition"
+    className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-600 shadow-sm hover:bg-slate-50 hover:text-slate-900 transition font-bold"
   >
     <span className="opacity-70 font-medium">{label}</span>
-    <span className="font-black text-amber-400">{value}</span>
+    <span className="font-black text-orange-600">{value}</span>
   </button>
 );
 
@@ -174,32 +170,32 @@ const MiniChip = ({ label, value, onClick }) => (
 
 const HealthBadge = ({ tone = 'neutral', title, subtitle }) => {
   const toneMap = {
-    good: 'border-emerald-500/20 bg-emerald-500/5 text-white',
-    warn: 'border-amber-500/20 bg-amber-500/5 text-white',
-    critical: 'border-rose-500/20 bg-rose-500/5 text-white',
-    neutral: 'border-zinc-800 bg-zinc-900/60 text-white',
+    good: 'border-emerald-500/20 bg-emerald-500/5 text-slate-900',
+    warn: 'border-orange-500/20 bg-orange-500/5 text-slate-900',
+    critical: 'border-rose-500/20 bg-rose-500/5 text-slate-900',
+    neutral: 'border-slate-200 bg-white text-slate-900',
   };
 
   const dotMap = {
-    good: 'bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.4)]',
-    warn: 'bg-amber-400 shadow-[0_0_10px_rgba(251,191,36,0.4)]',
-    critical: 'bg-rose-400 shadow-[0_0_10px_rgba(248,113,113,0.4)]',
-    neutral: 'bg-zinc-500',
+    good: 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.3)]',
+    warn: 'bg-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.3)]',
+    critical: 'bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.3)]',
+    neutral: 'bg-slate-400',
   };
 
   return (
-    <div className={`w-full rounded-2xl border px-5 py-4 shadow-sm ${toneMap[tone] || toneMap.neutral}`}>
+    <div className={`w-full rounded-2xl border px-5 py-4 shadow-[0_4px_20px_rgba(0,0,0,0.01)] ${toneMap[tone] || toneMap.neutral}`}>
       <div className="flex items-start justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 select-none">
             <span className={`h-2 w-2 rounded-full ${dotMap[tone] || dotMap.neutral} animate-pulse`} />
-            <div className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Stock Health</div>
+            <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Inventory Health Status</div>
           </div>
-          <div className="text-base font-black mt-1.5 leading-tight text-white">{title}</div>
-          {subtitle && <div className="text-xs mt-1 text-zinc-400 font-medium leading-snug">{subtitle}</div>}
+          <div className="text-base font-black mt-1.5 leading-tight text-slate-900">{title}</div>
+          {subtitle && <div className="text-xs mt-1 text-slate-500 font-bold leading-snug">{subtitle}</div>}
         </div>
-        <div className="hidden sm:flex flex-col items-end gap-2">
-          <div className="text-[10px] font-black uppercase tracking-widest text-zinc-400 bg-zinc-800 px-2 py-0.5 rounded-md border border-zinc-700">Executive Summary</div>
+        <div className="hidden sm:flex flex-col items-end gap-2 select-none">
+          <div className="text-[10px] font-black uppercase tracking-widest text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">Executive Summary</div>
         </div>
       </div>
     </div>
@@ -209,15 +205,15 @@ const HealthBadge = ({ tone = 'neutral', title, subtitle }) => {
 const ActionItem = ({ title, desc, tone = 'neutral', ctaLabel = 'ไปดู', onClick, disabled = false }) => {
   const toneMap = {
     critical: 'border-rose-500/20 bg-rose-500/5',
-    warn: 'border-amber-500/20 bg-amber-500/5',
-    neutral: 'border-zinc-800 bg-zinc-900/60',
+    warn: 'border-orange-500/20 bg-orange-500/5',
+    neutral: 'border-slate-200 bg-white',
   };
 
   return (
-    <div className={`rounded-2xl border p-4 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 transition-all duration-200 hover:shadow-md ${toneMap[tone] || toneMap.neutral}`}>
+    <div className={`rounded-2xl border p-4 shadow-[0_4px_20px_rgba(0,0,0,0.01)] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 transition-all duration-200 hover:shadow-md ${toneMap[tone] || toneMap.neutral}`}>
       <div className="min-w-0">
-        <div className="text-sm font-bold text-white truncate">{title}</div>
-        {desc && <div className="text-xs text-zinc-400 mt-0.5 font-medium leading-snug">{desc}</div>}
+        <div className="text-sm font-black text-slate-900 truncate">{title}</div>
+        {desc && <div className="text-xs text-slate-500 mt-0.5 font-bold leading-snug">{desc}</div>}
       </div>
       <Button variant="subtle" onClick={onClick} disabled={disabled}>
         <span className="text-xs font-bold">{ctaLabel}</span>
@@ -442,7 +438,7 @@ const StockDashboardPage = () => {
       if (flags.risk) parts.push(`ความเสี่ยง ${rt} รายการ`);
       if (flags.inStockLow) parts.push('ไม่มีสินค้าพร้อมขาย');
       if (flags.audit) parts.push('มีรอบตรวจนับค้าง');
-      return { tone: 'critical', title: 'CRITICAL', subtitle: parts.join(' • ') };
+      return { tone: 'critical', title: 'CRITICAL WARNING', subtitle: parts.join(' • ') };
     }
 
     if (flags.missing || flags.risk || flags.audit || flags.claimedHigh) {
@@ -451,7 +447,7 @@ const StockDashboardPage = () => {
       if (flags.risk) parts.push(`ความเสี่ยง ${rt} รายการ`);
       if (flags.audit) parts.push('มีรอบตรวจนับที่กำลังทำอยู่');
       if (flags.claimedHigh) parts.push(`CLAIMED สูง (${claimed})`);
-      return { tone: 'warn', title: 'WARNING', subtitle: parts.join(' • ') };
+      return { tone: 'warn', title: 'WARNING STATUS', subtitle: parts.join(' • ') };
     }
 
     return null; // 🟢 สภาพปกติ = ส่งค่า null ตัดกล่องซ้อนทับออกทันที
@@ -463,7 +459,6 @@ const StockDashboardPage = () => {
     await safeLoad('risk');
   }, [safeLoad]);
 
-  // 🟢 [DYNAMIC PATH FIX] ปรับแต่งท่อทางเดินรถให้สืบทอดค่าชื่อสาขาร้านค้า (shopSlug) เสมอ
   const immediateActions = useMemo(() => {
     const items = [];
 
@@ -572,29 +567,29 @@ const StockDashboardPage = () => {
   }, [overviewUI.loaded, overviewUI.loading, auditUI.loaded, auditUI.loading, riskUI.loaded, riskUI.loading, overviewCards, auditData, riskCards, riskTotal, navigate, safeLoad, loadAllAction, shopSlug]);
 
   return (
-    // 🟢 FIXED: เปลี่ยนพื้นหลังรากฐานเป็น bg-slate-900 และคง p-6 ไว้เพื่อสร้างมิติตัดขอบการ์ดลอยแบบ Layered Depth ที่ต้องการ
-    <div className="space-y-6 animate-fadeIn p-6 bg-slate-900 min-h-screen text-white">
+    // 🟢 PLATINUM LIGHT MODE OVERHAUL: ล้างความมืดทึมออก เปลี่ยนเฉดสว่าง คลีน ตัวหนังสือสีกราไฟต์เข้มอ่านง่ายชัดเจน
+    <div className="space-y-6 animate-fadeIn p-4 md:p-6 bg-slate-50 min-h-screen text-slate-800 font-sans">
       
-      {/* ส่วนหัวภาพรวมของแผงควบคุม */}
-      <div className="bg-zinc-900 border border-zinc-800/80 p-6 rounded-2xl shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      {/* ================= 🟦 ส่วนหัวภาพรวมของแผงควบคุมสไตล์ Glassmorphism ================= */}
+      <div className="bg-white border border-slate-200/80 p-6 rounded-3xl shadow-[0_4px_25px_rgba(0,0,0,0.01)] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 transition-all select-none">
         <div className="min-w-0">
           <div className="flex items-center gap-3">
-            <h1 className="text-xl font-black text-white">ภาพรวมระบบคลังสินค้า</h1>
+            <h1 className="text-xl font-black text-slate-900 tracking-tight">ภาพรวมระบบคลังสินค้า (Stock Overview)</h1>
             {overviewUI.loaded && !health && (
-              <span className="text-[9px] bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-black px-1.5 py-0.5 rounded-md uppercase tracking-wider flex items-center gap-1 select-none">
-                <span className="h-1 w-1 rounded-full bg-emerald-400 animate-pulse" /> Status Normal
+              <span className="text-[9px] bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 font-black px-1.5 py-0.5 rounded-md uppercase tracking-wider flex items-center gap-1 select-none">
+                <span className="h-1 w-1 rounded-full bg-emerald-500 animate-pulse" /> Status Normal
               </span>
             )}
           </div>
-          <p className="text-xs text-zinc-400 mt-0.5 font-medium">โฟกัสงานคลังและสต๊อกหน้าร้าน (งานรับสินค้า/ยิง SN ค้าง จะแยกอยู่เมนูจัดซื้อ)</p>
+          <p className="text-xs text-slate-400 font-bold mt-0.5 tracking-wide">Operational Stock Control Panel • โฟกัสงานคลังและปริมาณสินค้าหมุนเวียนหน้าร้าน</p>
           {lastUpdatedAll && (
-            <div className="text-[10px] font-mono text-zinc-500 mt-1.5">UPDATED: {formatTimeAgo(lastUpdatedAll)}</div>
+            <div className="text-[10px] font-mono text-slate-400 font-black mt-1.5">🔄 อัปเดตล่าสุด: {formatTimeAgo(lastUpdatedAll)}</div>
           )}
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
           <Button variant="subtle" onClick={loadAllAction} disabled={overviewUI.loading || auditUI.loading || riskUI.loading}>
-            {(overviewUI.loading || auditUI.loading || riskUI.loading) ? 'กำลังโหลด...' : 'โหลดทั้งหมด'}
+            {(overviewUI.loading || auditUI.loading || riskUI.loading) ? 'กำลังสตรีม...' : 'โหลดข้อมูลทั้งหมด'}
           </Button>
         </div>
       </div>
@@ -607,7 +602,7 @@ const StockDashboardPage = () => {
       )}
 
       {/* ================= Section: Immediate Actions ================= */}
-      <Section title="Immediate Actions" subtitle="สิ่งที่ควรทำตอนนี้ (เพื่อให้สต๊อกนิ่ง + ลดความเสี่ยงทุจริตหรือสูญหาย)">
+      <Section title="Immediate Actions" subtitle="สิ่งที่ควรดำเนินการตอนนี้ (เพื่อปรับดุลบัญชีสต็อกให้นิ่งและลดอัตราสินค้าสูญหาย)">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {immediateActions.map((it, idx) => (
             <ActionItem
@@ -623,17 +618,17 @@ const StockDashboardPage = () => {
         </div>
       </Section>
 
-      {/* ================= Block A: Overview (manual load) ================= */}
+      {/* ================= Block A: Overview ================= */}
       <Section
-        title="ภาพรวมงานสต๊อกสินค้า"
-        subtitle="แกนวัดปริมาณสินค้าคงคลัง ข้อมูลพร้อมขาย และยอดจองสินค้าแปรผันตามประเภทไอเทม"
+        title="ภาพรวมปริมาณงานสต๊อกพัสดุ"
+        subtitle="แกนวัดสินค้าคงคลัง ข้อมูลพร้อมขายหน้าร้าน และรายงานสินค้าถูกจองค้างงวด"
         right={overviewUI.loaded ? (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 select-none">
             {overviewUI.lastLoadedAt && (
-              <span className="text-[11px] text-zinc-500 font-mono">UPDATED: {formatTimeAgo(overviewUI.lastLoadedAt)}</span>
+              <span className="text-[11px] text-slate-400 font-mono font-bold">เช็คข้อมูลเมื่อ: {formatTimeAgo(overviewUI.lastLoadedAt)}</span>
             )}
             <Button variant="subtle" onClick={() => safeLoad('overview')} disabled={overviewUI.loading}>
-              {overviewUI.loading ? 'กำลังโหลด...' : 'รีเฟรช'}
+              {overviewUI.loading ? 'กำลังเรียก...' : 'รีเฟรชยอดคลัง'}
             </Button>
           </div>
         ) : null}
@@ -642,8 +637,8 @@ const StockDashboardPage = () => {
 
         {!overviewUI.loaded && (
           <EmptyBox
-            title="ยังไม่ได้โหลดข้อมูลภาพรวม"
-            desc={overviewUI.error || 'แตะที่บล็อกนี้เพื่อโหลดตัวเลขภาพรวมคงคลังสถิติล่าสุด'}
+            title="สถิติภาพรวมสต๊อกยังไม่ได้โหลดสิทธิ์"
+            desc={overviewUI.error || 'แตะที่กล่องผืนผ้านี้เพื่อเริ่มต้นส่งคำสั่งรันจำนวนตัวเลขคงคลังสถิติล่าสุด'}
             clickable
             loading={overviewUI.loading}
             onClick={() => safeLoad('overview')}
@@ -653,17 +648,17 @@ const StockDashboardPage = () => {
         {overviewUI.loaded && overviewCards && (
           <div className="space-y-4">
             {(overviewExtras?.hasStructuredTotal || overviewExtras?.hasSimpleNetAvailable) && (
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2 select-none">
                 {overviewExtras?.hasSimpleNetAvailable && (
                   <MiniChip
-                    label="พร้อมขายแบบไม่ยิง SN (SIMPLE)"
+                    label="สินค้าพร้อมขายแบบไม่ยิง SN (SIMPLE)"
                     value={overviewExtras.simpleNetAvailable}
                     onClick={() => navigate(`/${shopSlug}/pos/stock/simple`)}
                   />
                 )}
                 {overviewExtras?.hasStructuredTotal && (
                   <MiniChip
-                    label="จำนวน StockItem ทั้งหมด (STRUCTURED)"
+                    label="จำนวนชุดไอเทมซีเรียลนัมเบอร์ (STRUCTURED)"
                     value={overviewExtras.structuredTotal}
                     onClick={() => navigate(`/${shopSlug}/pos/stock/items`)}
                   />
@@ -673,36 +668,36 @@ const StockDashboardPage = () => {
 
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               <SummaryCard
-                label="สินค้าพร้อมขาย (IN_STOCK)"
+                label="สินค้าพร้อมจำหน่าย (IN_STOCK)"
                 value={overviewCards.inStock}
                 color="green"
                 clickable
                 onClick={() => navigate(`/${shopSlug}/pos/stock/items?status=IN_STOCK`)}
-                hint="ดูรายการพร้อมขาย"
+                hint="เรียกดูตารางสินค้าพร้อมขาย"
               />
               <SummaryCard
-                label="สินค้าถูกจอง (CLAIMED)"
+                label="สินค้าถูกจองค้างบิล (CLAIMED)"
                 value={overviewCards.claimed}
                 color="blue"
                 clickable
                 onClick={() => navigate(`/${shopSlug}/pos/stock/items?status=CLAIMED`)}
-                hint="ดูรายการที่ถูกจอง"
+                hint="เรียกดูรายการที่ถูกจอง"
               />
               <SummaryCard
-                label="ขายวันนี้ (SOLD Today)"
+                label="ตัดขายวันนี้ (SOLD Today)"
                 value={overviewCards.soldToday}
                 color="zinc"
                 clickable
                 onClick={() => navigate(`/${shopSlug}/pos/stock/items?status=SOLD&date=today`)}
-                hint="ขายวันนี้ (อิง soldAt)"
+                hint="ประวัติขายวันนี้ (อิงสิทธิ์ soldAt)"
               />
               <SummaryCard
-                label="ต้องตรวจสอบ (MISSING_PENDING_REVIEW)"
+                label="ต้องส่งการตรวจสอบ (MISSING)"
                 value={overviewCards.missingPendingReview}
                 color="amber"
                 clickable
                 onClick={() => navigate(`/${shopSlug}/pos/stock/items?status=MISSING_PENDING_REVIEW`)}
-                hint="ดูรายการที่ต้องตรวจสอบ"
+                hint="เรียกดูรายการที่ต้องตรวจสอบ"
               />
             </div>
           </div>
@@ -711,15 +706,15 @@ const StockDashboardPage = () => {
 
       {/* ================= Block B: Audit In Progress ================= */}
       <Section
-        title="การตรวจนับสต๊อกที่กำลังดำเนินการค้างอยู่"
-        subtitle="ตรวจสอบรอบนับสต๊อกสินค้าหน้าร้านเพื่อทำการ Re-reconcile บัญชีให้ตรงบิลคงเหลือ"
+        title="ความคืบหน้ารอบตรวจนับสินค้าค้างงาน"
+        subtitle="ตรวจสอบกระบวนการเช็คสต็อกสินค้าทางกายภาพเพื่อปรับยอด Re-reconcile บัญชีสาขา"
         right={auditUI.loaded ? (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 select-none">
             {auditUI.lastLoadedAt && (
-              <span className="text-[11px] text-zinc-500 font-mono">UPDATED: {formatTimeAgo(auditUI.lastLoadedAt)}</span>
+              <span className="text-[11px] text-slate-400 font-mono font-bold">เช็คข้อมูลเมื่อ: {formatTimeAgo(auditUI.lastLoadedAt)}</span>
             )}
             <Button variant="subtle" onClick={() => safeLoad('audit')} disabled={auditUI.loading}>
-              {auditUI.loading ? 'กำลังโหลด...' : 'รีเฟรช'}
+              {auditUI.loading ? 'กำลังเรียก...' : 'รีเฟรชสเตตัสนับ'}
             </Button>
           </div>
         ) : null}
@@ -728,8 +723,8 @@ const StockDashboardPage = () => {
 
         {!auditUI.loaded && (
           <EmptyBox
-            title="ยังไม่ได้โหลดข้อมูลการตรวจนับ"
-            desc={auditUI.error || 'แตะที่บล็อกนี้เพื่อดึงประวัติงานบันทึกตรวจนับค้างรอบปัจจุบัน'}
+            title="บันทึกการตรวจนับสต๊อกค้างงวดยังไม่ได้โหลดสิทธิ์"
+            desc={auditUI.error || 'แตะที่กล่องผืนผ้านี้เพื่อดึงสเตตัสประวัติรอบตรวจนับปัจจุบัน'}
             clickable
             loading={auditUI.loading}
             onClick={() => safeLoad('audit')}
@@ -737,21 +732,21 @@ const StockDashboardPage = () => {
         )}
 
         {auditUI.loaded && (
-          <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-5 shadow-sm">
+          <div className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-[0_4px_25px_rgba(0,0,0,0.01)]">
             {!auditData ? (
-              <div className="text-sm text-zinc-400 font-medium py-2">👍 ไม่พบรอบตรวจนับสินค้าค้างดำเนินการในระบบขณะนี้</div>
+              <div className="text-sm text-slate-400 font-bold py-2 italic text-center select-none">👍 ไม่พบรอบบันทึกตรวจนับพัสดุค้างคาในระบบหลังบ้าน ณ เวลานี้</div>
             ) : (
               <div className="flex flex-col gap-4">
-                <div className="flex items-start justify-between gap-4">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                   <div>
-                    <div className="text-sm font-black text-white">
-                      โหมดการตรวจสอบรอบ: <span className="text-amber-400">{auditData.mode === 'FULL' ? 'FULL AUDIT' : 'READY SNAPSHOT'}</span>
+                    <div className="text-sm font-black text-slate-900">
+                      ระดับการควบคุมรอบ: <span className="text-orange-600 bg-orange-50 px-2 py-0.5 border border-orange-200/60 rounded-md font-mono text-xs">{auditData.mode === 'FULL' ? 'FULL AUDIT MODE' : 'READY SNAPSHOT MODE'}</span>
                     </div>
-                    <div className="text-xs text-zinc-500 mt-1 font-mono">
-                      STARTED AT: {auditData.startedAt ? new Date(auditData.startedAt).toLocaleString('th-TH') : '-'}
+                    <div className="text-xs text-slate-400 mt-2 font-mono font-bold select-none">
+                      STARTED TIME: {auditData.startedAt ? new Date(auditData.startedAt).toLocaleString('th-TH') : '-'}
                     </div>
                     {auditData?.employee?.name && (
-                      <div className="text-xs text-zinc-400 mt-1 font-medium">เจ้าหน้าที่ผู้รับผิดชอบ: {auditData.employee.name}</div>
+                      <div className="text-xs text-slate-500 mt-1 font-bold">เจ้าหน้าที่ผู้รับผิดชอบรอบตรวจ: <span className="text-slate-800 font-black">{auditData.employee.name}</span></div>
                     )}
                   </div>
                   <Button
@@ -760,22 +755,22 @@ const StockDashboardPage = () => {
                       navigate(auditData.mode === 'FULL' ? `/${shopSlug}/pos/stock/stock-audit` : `/${shopSlug}/pos/stock/ready-audit`)
                     }
                   >
-                    ทำต่อเลย
+                    เข้าสู่หน้าจอนับต่อ
                   </Button>
                 </div>
 
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="rounded-xl border border-zinc-800 bg-zinc-950/40 p-4">
-                    <div className="text-xs text-zinc-500 font-black uppercase tracking-wider">คาดว่าจะตรวจ</div>
-                    <div className="text-lg font-black text-white mt-1">{auditData.expectedCount ?? 0}</div>
+                <div className="grid grid-cols-3 gap-4 select-none">
+                  <div className="rounded-xl border border-slate-100 bg-slate-50/50 p-4">
+                    <div className="text-xs text-slate-400 font-black uppercase tracking-wider">เป้าหมายที่คาดไว้</div>
+                    <div className="text-lg font-black text-slate-900 mt-1">{auditData.expectedCount ?? 0} ชิ้น</div>
                   </div>
-                  <div className="rounded-xl border border-zinc-800 bg-zinc-950/40 p-4">
-                    <div className="text-xs text-zinc-500 font-black uppercase tracking-wider">สแกนแล้ว</div>
-                    <div className="text-lg font-black text-white mt-1">{auditData.scannedCount ?? 0}</div>
+                  <div className="rounded-xl border border-slate-100 bg-slate-50/50 p-4">
+                    <div className="text-xs text-slate-400 font-black uppercase tracking-wider">ยิงเลเซอร์นับแล้ว</div>
+                    <div className="text-lg font-black text-slate-900 mt-1">{auditData.scannedCount ?? 0} ชิ้น</div>
                   </div>
-                  <div className="rounded-xl border border-zinc-800 bg-zinc-950/40 p-4">
-                    <div className="text-xs text-zinc-500 font-black uppercase tracking-wider">ความคืบหน้า</div>
-                    <div className="text-lg font-black text-amber-400 mt-1">
+                  <div className="rounded-xl border border-slate-100 bg-slate-50/50 p-4">
+                    <div className="text-xs text-slate-400 font-black uppercase tracking-wider">ความคืบหน้าภาพรวม</div>
+                    <div className="text-lg font-black text-orange-600 mt-1">
                       {auditData.expectedCount > 0
                         ? `${Math.round((auditData.scannedCount / auditData.expectedCount) * 100)}%`
                         : '0%'}
@@ -788,17 +783,17 @@ const StockDashboardPage = () => {
         )}
       </Section>
 
-      {/* ================= Block C: Risk (manual load) ================= */}
+      {/* ================= Block C: Risk ================= */}
       <Section
-        title="ดัชนีชี้วัดความเสี่ยงและความเสียหายในคลัง"
-        subtitle="ตรวจสอบและอนุมัติตัดจ่ายสินค้าตกเกรด สูญหาย ชำรุด หรือตัดใช้สอยภายในบูท"
+        title="ดัชนีจำแนกกลุ่มความเสี่ยงและสินค้าชำรุด"
+        subtitle="ตรวจสอบและพิจารณาทำลายสิทธิ์ตัดจ่ายพัสดุสูญหาย ชำรุด หรือนำไปใช้งานในสาขา"
         right={riskUI.loaded ? (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 select-none">
             {riskUI.lastLoadedAt && (
-              <span className="text-[11px] text-zinc-500 font-mono">UPDATED: {formatTimeAgo(riskUI.lastLoadedAt)}</span>
+              <span className="text-[11px] text-slate-400 font-mono font-bold">เช็คข้อมูลเมื่อ: {formatTimeAgo(riskUI.lastLoadedAt)}</span>
             )}
             <Button variant="subtle" onClick={() => safeLoad('risk')} disabled={riskUI.loading}>
-              {riskUI.loading ? 'กำลังโหลด...' : 'รีเฟรช'}
+              {riskUI.loading ? 'กำลังเรียก...' : 'รีเฟรชยอดความเสี่ยง'}
             </Button>
           </div>
         ) : null}
@@ -807,8 +802,8 @@ const StockDashboardPage = () => {
 
         {!riskUI.loaded && (
           <EmptyBox
-            title="ยังไม่ได้โหลดข้อมูลความเสี่ยงสต๊อก"
-            desc={riskUI.error || 'แตะที่บล็อกนี้เพื่อโหลดสรุปจำแนกสถานะกลุ่มสินค้าความเสี่ยง (LOST / DAMAGED / USED / RETURNED)'}
+            title="ดัชนีประเมินอัตราเสี่ยงคลังยังไม่ได้โหลดสิทธิ์"
+            desc={riskUI.error || 'แตะที่กล่องผืนผ้านี้เพื่อสั่งกระจายยอดความเสี่ยงสต็อกแยกรายประเภทสเตตัส (LOST / DAMAGED / USED / RETURNED)'}
             clickable
             loading={riskUI.loading}
             onClick={() => safeLoad('risk')}
@@ -818,28 +813,28 @@ const StockDashboardPage = () => {
         {riskUI.loaded && riskCards && (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <SummaryCard
-              label="สูญหาย (LOST)"
+              label="พัสดุสูญหาย (LOST)"
               value={riskCards.lost}
               color="rose"
               clickable
               onClick={() => navigate(`/${shopSlug}/pos/stock/items?status=LOST`)}
             />
             <SummaryCard
-              label="เสียหาย (DAMAGED)"
+              label="ชำรุดเสียหาย (DAMAGED)"
               value={riskCards.damaged}
               color="amber"
               clickable
               onClick={() => navigate(`/${shopSlug}/pos/stock/items?status=DAMAGED`)}
             />
             <SummaryCard
-              label="ใช้ภายใน (USED)"
+              label="ตัดใช้ภายในบูท (USED)"
               value={riskCards.used}
               color="zinc"
               clickable
               onClick={() => navigate(`/${shopSlug}/pos/stock/items?status=USED`)}
             />
             <SummaryCard
-              label="คืนสินค้า (RETURNED)"
+              label="ส่งคืนบริษัทแม่ (RETURNED)"
               value={riskCards.returned}
               color="blue"
               clickable
@@ -849,8 +844,8 @@ const StockDashboardPage = () => {
         )}
 
         {riskUI.loaded && !riskCards && (
-          <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-5 text-sm text-zinc-400 font-medium">
-            ไม่พบข้อมูลความเสี่ยงในระบบรอบนี้
+          <div className="rounded-3xl border border-slate-200 bg-white p-5 text-sm text-slate-400 font-bold italic text-center select-none animate-fadeIn">
+            ✨ บัญชีปลอดภัย ไม่พบความเสี่ยงหรือสินค้าชำรุดในระบบคลังรอบนี้
           </div>
         )}
       </Section>

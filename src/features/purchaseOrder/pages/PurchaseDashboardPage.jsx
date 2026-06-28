@@ -1,4 +1,5 @@
 // src/features/purchaseOrder/pages/PurchaseDashboardPage.jsx
+// 🏛️ Enterprise Platinum Light Mode Edition (User Feedback Optimized — Clear Reading Text)
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
@@ -22,11 +23,11 @@ const formatTimeAgo = (d) => {
 };
 
 const Button = ({ children, onClick, disabled, variant = 'subtle' }) => {
-  const base = 'inline-flex items-center justify-center rounded-xl px-4 py-2 text-xs font-black transition-all border shadow-sm duration-150';
+  const base = 'inline-flex items-center justify-center rounded-xl px-4 py-2 text-xs font-black transition-all border shadow-sm duration-150 select-none';
   const variants = {
-    primary: 'bg-gradient-to-b from-amber-400 to-orange-500 text-white border-amber-500/30 hover:shadow-[0_0_20px_rgba(245,158,11,0.2)] shadow-orange-500/10',
-    subtle: 'bg-zinc-800 text-zinc-100 border-zinc-700/80 hover:bg-zinc-700 hover:text-white',
-    ghost: 'bg-transparent text-zinc-400 border-transparent hover:bg-zinc-800/60 hover:text-white',
+    primary: 'bg-gradient-to-b from-orange-500 to-amber-500 text-white border-orange-600/20 hover:from-orange-600 hover:to-amber-600 shadow-orange-500/10 active:scale-95 transform',
+    subtle: 'bg-slate-800 text-slate-100 border-slate-900 hover:bg-slate-900 active:scale-95 transform',
+    ghost: 'bg-transparent text-slate-500 border-transparent hover:bg-slate-100 hover:text-slate-900',
   };
 
   return (
@@ -44,11 +45,11 @@ const Button = ({ children, onClick, disabled, variant = 'subtle' }) => {
 const ErrorStrip = ({ message, onRetry, retrying = false }) => {
   if (!message) return null;
   return (
-    <div className="mb-3 rounded-2xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 shadow-sm">
+    <div className="mb-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 shadow-sm animate-fadeIn">
       <div className="flex items-start justify-between gap-3">
-        <div className="text-xs text-rose-300 leading-snug">
-          <div className="font-bold">โหลดไม่สำเร็จ</div>
-          <div className="mt-0.5 opacity-90">{String(message)}</div>
+        <div className="text-xs text-rose-700 leading-snug font-medium">
+          <div className="font-black text-sm">โหลดข้อมูลไม่สำเร็จ</div>
+          <div className="mt-0.5 font-bold opacity-90">{String(message)}</div>
         </div>
         {onRetry && (
           <Button variant="subtle" onClick={onRetry} disabled={retrying}>
@@ -65,15 +66,15 @@ const EmptyBox = ({ title, desc, onClick, clickable = false, loading = false }) 
     type="button"
     onClick={onClick}
     disabled={!clickable || loading}
-    className={`w-full rounded-2xl border border-dashed border-zinc-800 bg-zinc-900 p-6 shadow-sm text-left transition-all duration-200 ${clickable ? 'hover:border-amber-500/40 hover:bg-zinc-800/40 hover:-translate-y-0.5 cursor-pointer' : 'cursor-default'} ${loading ? 'opacity-70 cursor-wait' : ''}`}
+    className={`w-full rounded-2xl border border-dashed border-slate-200 bg-slate-50/50 p-6 shadow-inner text-left transition-all duration-200 ${clickable ? 'hover:border-orange-500/40 hover:bg-white hover:-translate-y-0.5 cursor-pointer' : 'cursor-default'} ${loading ? 'opacity-70 cursor-wait' : ''}`}
     aria-label={title}
   >
-    <div className="text-sm font-bold text-white">{title}</div>
-    {desc && <div className="text-xs text-zinc-400 mt-1.5 leading-snug font-medium">{desc}</div>}
+    <div className="text-sm font-black text-slate-900">{title}</div>
+    {desc && <div className="text-xs text-slate-500 mt-1.5 leading-snug font-bold">{desc}</div>}
     {clickable && (
-      <div className="mt-4 inline-flex items-center gap-2 text-xs text-amber-400">
-        <span className="rounded-lg bg-amber-500/10 border border-amber-500/20 px-2 py-1 font-bold">แตะเพื่อโหลด</span>
-        <span className="text-[11px] text-zinc-500 font-bold">(ไม่โหลดอัตโนมัติ)</span>
+      <div className="mt-4 inline-flex items-center gap-2 text-xs text-orange-600 font-black select-none">
+        <span className="rounded-lg bg-orange-500/10 border border-orange-500/20 px-2.5 py-1">แตะเพื่อสั่งโหลดข้อมูล</span>
+        <span className="text-[11px] text-slate-400 font-bold">(ระบบไม่โหลดอัตโนมัติ)</span>
       </div>
     )}
   </button>
@@ -84,43 +85,43 @@ const SummaryCard = ({ label, value, clickable = false, onClick }) => (
     type="button"
     onClick={onClick}
     disabled={!clickable}
-    className={`w-full rounded-2xl border border-zinc-800/80 bg-zinc-900/60 px-5 py-4 shadow-sm text-left transition-all duration-200 ${clickable ? 'hover:border-amber-500/40 hover:shadow-xl hover:-translate-y-0.5 cursor-pointer' : 'cursor-default'}`}
+    className={`w-full rounded-2xl border border-slate-200 bg-slate-50/60 px-5 py-4 shadow-sm text-left transition-all duration-200 ${clickable ? 'hover:border-orange-500/40 hover:bg-white hover:shadow-md hover:-translate-y-0.5 cursor-pointer' : 'cursor-default'}`}
     aria-label={label}
   >
-    <div className="text-xs text-zinc-400 font-medium">{label}</div>
-    <div className="text-xl font-black text-white mt-1.5 tracking-tight">{value}</div>
-    {clickable && <div className="text-[11px] mt-2 text-amber-400 font-bold">แตะเพื่อดูรายการ</div>}
+    <div className="text-xs text-slate-400 font-black uppercase tracking-wide">{label}</div>
+    <div className="text-xl font-black text-slate-900 mt-1.5 tracking-tight">{value}</div>
+    {clickable && <div className="text-[11px] mt-2 text-orange-600 font-black">แตะเพื่อเรียกดูตาราง</div>}
   </button>
 );
 
 const TrendLine = ({ tone = 'neutral', text }) => {
   if (!text) return null;
   const map = {
-    neutral: 'text-zinc-500',
-    good: 'text-emerald-400',
-    warn: 'text-amber-400',
-    critical: 'text-rose-400',
+    neutral: 'text-slate-400',
+    good: 'text-emerald-600',
+    warn: 'text-orange-600',
+    critical: 'text-rose-600',
   };
-  return <div className={`text-[11px] mt-1.5 font-bold ${map[tone] || map.neutral}`}>{text}</div>;
+  return <div className={`text-[11px] mt-1.5 font-black ${map[tone] || map.neutral}`}>{text}</div>;
 };
 
 const KPIBarItem = ({ label, value, tone = 'neutral', hint, onClick }) => {
   const toneMap = {
-    neutral: 'border-zinc-800 bg-zinc-900/60 text-white',
-    warn: 'border-amber-500/20 bg-amber-500/5 text-white',
-    good: 'border-emerald-500/20 bg-emerald-500/5 text-white',
-    critical: 'border-rose-500/20 bg-rose-500/5 text-white',
+    neutral: 'border-slate-200 bg-white text-slate-900',
+    warn: 'border-orange-500/20 bg-orange-500/5 text-slate-900',
+    good: 'border-emerald-500/20 bg-emerald-500/5 text-slate-900',
+    critical: 'border-rose-500/20 bg-rose-500/5 text-slate-900',
   };
 
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`w-full rounded-2xl border px-4 py-3 text-left shadow-sm transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 ${toneMap[tone] || toneMap.neutral}`}
+      className={`w-full rounded-2xl border px-4 py-3 text-left shadow-[0_4px_20px_rgba(0,0,0,0.01)] transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 ${toneMap[tone] || toneMap.neutral}`}
       aria-label={label}
     >
-      <div className="text-[11px] text-zinc-400 font-bold uppercase tracking-wider">{label}</div>
-      <div className="text-lg font-black mt-1 leading-none text-white tracking-tight">{value}</div>
+      <div className="text-[11px] text-slate-400 font-black uppercase tracking-wider select-none">{label}</div>
+      <div className="text-lg font-black mt-1 leading-none text-slate-900 tracking-tight">{value}</div>
       <TrendLine tone={tone} text={hint} />
     </button>
   );
@@ -129,28 +130,28 @@ const KPIBarItem = ({ label, value, tone = 'neutral', hint, onClick }) => {
 const HealthBanner = ({ tone = 'neutral', title, subtitle, actionLabel, onAction }) => {
   const toneMap = {
     good: 'border-emerald-500/20 bg-emerald-500/5',
-    warn: 'border-amber-500/20 bg-amber-500/5',
+    warn: 'border-orange-500/20 bg-orange-500/5',
     critical: 'border-rose-500/20 bg-rose-500/5',
-    neutral: 'border-zinc-800 bg-zinc-900/60',
+    neutral: 'border-slate-200 bg-white',
   };
 
   const dotMap = {
-    good: 'bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.4)]',
-    warn: 'bg-amber-400 shadow-[0_0_10px_rgba(251,191,36,0.4)]',
-    critical: 'bg-rose-400 shadow-[0_0_10px_rgba(248,113,113,0.4)]',
-    neutral: 'bg-zinc-500',
+    good: 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.3)]',
+    warn: 'bg-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.3)]',
+    critical: 'bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.3)]',
+    neutral: 'bg-slate-400',
   };
 
   return (
-    <div className={`w-full rounded-2xl border px-5 py-4 shadow-sm ${toneMap[tone] || toneMap.neutral}`}>
+    <div className={`w-full rounded-2xl border px-5 py-4 shadow-[0_4px_20px_rgba(0,0,0,0.01)] ${toneMap[tone] || toneMap.neutral}`}>
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 select-none">
             <span className={`h-2 w-2 rounded-full ${dotMap[tone] || dotMap.neutral} animate-pulse`} />
-            <div className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Purchase Health</div>
+            <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Procurement Health Status</div>
           </div>
-          <div className="text-base font-black text-white mt-1.5 truncate tracking-tight">{title}</div>
-          {subtitle && <div className="text-xs text-zinc-400 mt-0.5 font-medium leading-snug">{subtitle}</div>}
+          <div className="text-base font-black text-slate-900 mt-1.5 truncate tracking-tight">{title}</div>
+          {subtitle && <div className="text-xs text-slate-500 mt-0.5 font-bold leading-snug">{subtitle}</div>}
         </div>
 
         {onAction && (
@@ -169,31 +170,31 @@ const AgingSummary = ({ buckets, onClick }) => {
 
   const Seg = ({ label, value, tone }) => {
     const map = {
-      neutral: 'border-zinc-800 bg-zinc-900/40',
-      warn: 'border-amber-500/20 bg-amber-500/5',
+      neutral: 'border-slate-200 bg-slate-50/60',
+      warn: 'border-orange-500/20 bg-orange-500/5',
       critical: 'border-rose-500/20 bg-rose-500/5',
     };
     return (
       <button
         type="button"
         onClick={onClick}
-        className={`w-full rounded-2xl border px-4 py-3 text-left shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 ${map[tone]}`}
+        className={`w-full rounded-2xl border px-4 py-3 text-left shadow-sm transition-all duration-200 hover:bg-white hover:shadow-md hover:-translate-y-0.5 ${map[tone]}`}
       >
-        <div className="text-[11px] text-zinc-400 font-bold uppercase tracking-wider">{label}</div>
-        <div className="text-base font-black text-white mt-1 tracking-tight">{value}</div>
+        <div className="text-[11px] text-slate-400 font-black uppercase tracking-wider">{label}</div>
+        <div className="text-base font-black text-slate-900 mt-1 tracking-tight">{value}</div>
       </button>
     );
   };
 
   return (
-    <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-5 shadow-sm space-y-4">
-      <div className="flex items-start justify-between gap-3">
+    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_4px_25px_rgba(0,0,0,0.01)] space-y-4">
+      <div className="flex items-start justify-between gap-3 select-none">
         <div>
-          <div className="text-sm font-black text-white">Aging Summary</div>
-          <div className="text-xs text-zinc-400 mt-0.5 font-medium">ค้างตามอายุงาน (เฉพาะที่ยังไม่ปิด)</div>
+          <div className="text-sm font-black text-slate-900">Aging Summary Report</div>
+          <div className="text-xs text-slate-400 mt-0.5 font-bold">วิเคราะห์งานค้างตามอายุเอกสารบิล</div>
         </div>
-        <div className="text-[10px] font-black bg-zinc-800 text-amber-400 px-2 py-0.5 rounded-md border border-zinc-700 uppercase tracking-wide">
-          รวม {total} รายการ
+        <div className="text-[10px] font-black bg-slate-100 text-orange-700 px-2.5 py-0.5 rounded-lg border border-slate-200/60 uppercase tracking-wide">
+          งานค้างรวม {total} ใบ
         </div>
       </div>
 
@@ -413,9 +414,9 @@ const PurchaseDashboardPage = () => {
     if (!overviewUI.loaded || !overviewUI.data) {
       return {
         tone: 'neutral',
-        title: 'ยังไม่ได้โหลดข้อมูลภาพรวมการจัดซื้อ',
-        subtitle: 'กด “โหลดทั้งหมด” หรือแตะ “ภาพรวม” เพื่อดึงตัวเลขล่าสุด (ไม่โหลดอัตโนมัติ)',
-        actionLabel: 'โหลดภาพรวม',
+        title: 'ยังไม่ได้เรียกข้อมูลสารบบภาพรวม',
+        subtitle: 'กรุณากดคำสั่ง “โหลดทั้งหมด” เพื่อคำนวณสถิติประมวลผลดุลการค้า',
+        actionLabel: 'ดึงข้อมูลภาพรวม',
         action: safeLoadOverview,
       };
     }
@@ -428,9 +429,9 @@ const PurchaseDashboardPage = () => {
     if (oldOver15 > 0) {
       return {
         tone: 'critical',
-        title: `${oldOver15} PO ค้างเกิน 15 วัน`,
-        subtitle: `รวมงานค้าง ${inProgress} รายการ • แนะนำเข้าไปปิด/ตรวจรับ/สรุปการจ่ายให้ครบ`,
-        actionLabel: 'ดู PO ค้าง',
+        title: `🚨 พบใบสั่งซื้อค้างส่งวิกฤต ${oldOver15} รายการ (เกิน 15 วัน)`,
+        subtitle: `รวมงานรอเคลียร์สุทธิ ${inProgress} ใบ — กรุณาติดตามคู่ค้าหรือเร่งรัดการตัดงบระบบคลังสินค้า`,
+        actionLabel: 'จัดระบบบิลค้าง',
         action: () => navigate(`/${shopSlug}/pos/purchases/list?status=pending,partially_received,received,paid`),
       };
     }
@@ -438,9 +439,9 @@ const PurchaseDashboardPage = () => {
     if (oldOver7 > 0) {
       return {
         tone: 'warn',
-        title: `${oldOver7} PO ยังไม่ปิดเกิน 7 วัน`,
-        subtitle: `รวมงานค้าง ${inProgress} รายการ • ควรไล่เช็คสถานะและปิดงานให้ทันรอบบัญชี`,
-        actionLabel: 'ดู PO ค้าง',
+        title: `⚠️ มีเอกสาร PO รอเคลียร์สะสม ${oldOver7} รายการ (เกิน 7 วัน)`,
+        subtitle: `รวมงานอยู่ในกระบวนการ ${inProgress} ใบ — ควรประมวลสเตตัสปิดจ๊อบให้ทันรอบงบบัญชี`,
+        actionLabel: 'จัดระบบบิลค้าง',
         action: () => navigate(`/${shopSlug}/pos/purchases/list?status=pending,partially_received,received,paid`),
       };
     }
@@ -448,74 +449,75 @@ const PurchaseDashboardPage = () => {
     if (inProgress > 0) {
       return {
         tone: 'warn',
-        title: `มีงานจัดซื้อค้าง ${inProgress} รายการ`,
-        subtitle: 'ยังอยู่ในกระบวนการ (PENDING/RECEIVED/PAID) — ตรวจรับ/ชำระ/ปิดงานตามลำดับ',
-        actionLabel: 'ดูรายการ',
+        title: `📦 มีรายการจัดซื้ออยู่ระหว่างดำเนินงาน ${inProgress} รายการ`,
+        subtitle: 'อยู่ในขั้นตอนตามท่อ (PENDING/RECEIVED/PAID) — ตรวจนับของและชำระงบตามสายพานปกติ',
+        actionLabel: 'ตรวจสอบตาราง',
         action: () => navigate(`/${shopSlug}/pos/purchases/list?status=pending,partially_received,received,paid`),
       };
     }
 
     return {
       tone: 'good',
-      title: 'ไม่มีงานจัดซื้อค้าง',
-      subtitle: `รวมทั้งหมด ${Number(d.total || 0)} รายการ • Status Normal`,
-      actionLabel: 'ดูทั้งหมด',
+      title: '✨ ข้อมูลคลังนิ่งสนิท ไม่มีใบสั่งซื้อตกงวดงานค้าง',
+      subtitle: `รวมเอกสารประวัติจัดซื้อเรียบร้อยทั้งสิ้น ${Number(d.total || 0)} รายการ • ใช้งานได้ปกติ`,
+      actionLabel: 'ดูสมุดประวัติ',
       action: () => navigate(`/${shopSlug}/pos/purchases/list`),
     };
   }, [overviewUI.loaded, overviewUI.data, safeLoadOverview, navigate, shopSlug]);
 
   return (
-    <div className="space-y-6 animate-fadeIn p-6 bg-slate-900 min-h-screen text-white">
+    // 🟢 PLATINUM LIGHT MODE OVERHAUL: ล้างความมืดทึมออก เปลี่ยนเฉดสว่าง คลีน ตัวหนังสืออ่านง่ายสะใจร้อยเปอร์เซ็นต์
+    <div className="space-y-6 animate-fadeIn p-4 md:p-6 bg-slate-50 min-h-screen text-slate-800 font-sans">
       
-      {/* ================= HEADER LAYOUT CLEAN ================= */}
-      <div className="bg-zinc-900 border border-zinc-800/80 p-6 rounded-2xl shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      {/* ================= 🟦 1. ส่วนหัวบอร์ดสไตล์ Glassmorphism คลีนแพลทินัม ================= */}
+      <div className="bg-white border border-slate-200/80 p-6 rounded-3xl shadow-[0_4px_25px_rgba(0,0,0,0.01)] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 transition-all select-none">
         <div className="min-w-0">
-          <h1 className="text-xl font-black text-white">ภาพรวมระบบงานจัดซื้อ</h1>
-          <p className="text-xs text-zinc-400 mt-0.5 font-medium">Executive Procurement & Supplier Operations Overview</p>
-          {lastUpdatedAll && <div className="text-[10px] font-mono text-zinc-500 mt-1.5">UPDATED: {formatTimeAgo(lastUpdatedAll)}</div>}
+          <h1 className="text-xl font-black text-slate-900 tracking-tight">ภาพรวมแดชบอร์ดงานจัดซื้อ (PO Overview)</h1>
+          <p className="text-xs text-slate-400 mt-0.5 font-bold tracking-wide">Executive Procurement Analytics & Supplier Control Center</p>
+          {lastUpdatedAll && <div className="text-[10px] font-mono text-slate-400 font-black mt-1.5">🔄 อัปเดตล่าสุด: {formatTimeAgo(lastUpdatedAll)}</div>}
         </div>
 
         <div className="flex flex-wrap items-center gap-2 shrink-0">
-          <Button variant="primary" onClick={() => navigate(`/${shopSlug}/pos/purchases/create`)}>สร้าง PO ใหม่</Button>
+          <Button variant="primary" onClick={() => navigate(`/${shopSlug}/pos/purchases/create`)}>สร้างใบสั่งซื้อ PO ใหม่</Button>
           <Button variant="subtle" onClick={() => navigate(`/${shopSlug}/pos/purchases/list?status=pending,partially_received,received,paid`)}>
-            ดู PO ค้างทั้งหมด
+            เรียกดูใบสั่งซื้อค้างทั้งหมด
           </Button>
           <Button variant="subtle" onClick={loadAllAction} disabled={overviewUI.loading}>
-            {overviewUI.loading ? 'กำลังโหลด...' : 'โหลดทั้งหมด'}
+            {overviewUI.loading ? 'กำลังสตรีม...' : 'โหลดข้อมูลทั้งหมด'}
           </Button>
         </div>
       </div>
 
-      {/* ================= Layer 1: Executive Summary ================= */}
+      {/* ================= Layer 2: KPI & Health Matrix ================= */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         <div className="lg:col-span-8 space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 select-none">
             <KPIBarItem
-              label="Open PO"
-              value={overviewUI.loaded && overviewUI.data ? `${overviewUI.data.openPO} รายการ` : '—'}
+              label="ใบสั่งซื้อ Open PO"
+              value={overviewUI.loaded && overviewUI.data ? `${overviewUI.data.openPO} ใบ` : '—'}
               tone={overviewUI.loaded && overviewUI.data && overviewUI.data.openPO > 0 ? 'warn' : 'neutral'}
-              hint={overviewUI.loaded && overviewUI.data ? `เดือนนี้ ${overviewUI.data.trend.openPO_month} • 7 วัน ${overviewUI.data.trend.openPO_week}` : 'แตะ “โหลดทั้งหมด” เพื่อดึงข้อมูล'}
+              hint={overviewUI.loaded && overviewUI.data ? `เดือนนี้ ${overviewUI.data.trend.openPO_month} • 7 วัน ${overviewUI.data.trend.openPO_week}` : 'กดปุ่มเพื่อ Query ข้อมูล'}
               onClick={() => navigate(`/${shopSlug}/pos/purchases/list?status=pending`)}
             />
             <KPIBarItem
-              label="Awaiting Receipt"
-              value={overviewUI.loaded && overviewUI.data ? `${overviewUI.data.awaitingReceipt} รายการ` : '—'}
+              label="บิลค้างตรวจรับของ"
+              value={overviewUI.loaded && overviewUI.data ? `${overviewUI.data.awaitingReceipt} ใบ` : '—'}
               tone={overviewUI.loaded && overviewUI.data && overviewUI.data.awaitingReceipt > 0 ? 'warn' : 'neutral'}
-              hint={overviewUI.loaded && overviewUI.data ? 'สถานะ RECEIVED' : ''}
+              hint={overviewUI.loaded && overviewUI.data ? 'สถานะ RECEIVED ค้างคลัง' : ''}
               onClick={() => navigate(`/${shopSlug}/pos/purchases/list?status=partially_received,received`)}
             />
             <KPIBarItem
-              label="Ready to Close"
-              value={overviewUI.loaded && overviewUI.data ? `${overviewUI.data.readyToClose} รายการ` : '—'}
+              label="บิลชำระงบ (รอปิดจ๊อบ)"
+              value={overviewUI.loaded && overviewUI.data ? `${overviewUI.data.readyToClose} ใบ` : '—'}
               tone={overviewUI.loaded && overviewUI.data && overviewUI.data.readyToClose > 0 ? 'good' : 'neutral'}
-              hint={overviewUI.loaded && overviewUI.data ? 'สถานะ PAID (รอปิดงาน)' : ''}
+              hint={overviewUI.loaded && overviewUI.data ? 'สถานะ PAID สรุปงวดบัญชี' : ''}
               onClick={() => navigate(`/${shopSlug}/pos/purchases/list?status=paid`)}
             />
             <KPIBarItem
-              label="Completed This Month"
-              value={overviewUI.loaded && overviewUI.data ? `${overviewUI.data.completedThisMonth} รายการ` : '—'}
+              label="ปิดงานสำเร็จประจำเดือน"
+              value={overviewUI.loaded && overviewUI.data ? `${overviewUI.data.completedThisMonth} ใบ` : '—'}
               tone={overviewUI.loaded && overviewUI.data && overviewUI.data.completedThisMonth > 0 ? 'good' : 'neutral'}
-              hint={overviewUI.loaded && overviewUI.data ? `เทียบเดือนก่อน ${overviewUI.data.trend.completed_month}` : ''}
+              hint={overviewUI.loaded && overviewUI.data ? `เทียบงบงวดก่อน ${overviewUI.data.trend.completed_month}` : ''}
               onClick={() => navigate(`/${shopSlug}/pos/purchases/list?status=completed`)}
             />
           </div>
@@ -537,18 +539,18 @@ const PurchaseDashboardPage = () => {
         </div>
       </div>
 
-      {/* ================= Layer 2: Operational Snapshot ================= */}
-      <div className="bg-zinc-900 border border-zinc-800/80 p-6 rounded-2xl shadow-sm space-y-4">
-        <div className="flex items-center justify-between gap-4">
+      {/* ================= Layer 3: Document Status Snapshot ================= */}
+      <div className="bg-white border border-slate-200/80 p-6 rounded-3xl shadow-[0_4px_25px_rgba(0,0,0,0.01)] space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 select-none">
           <div>
-            <h2 className="text-base font-black text-white">Operational Snapshot</h2>
-            <p className="text-xs text-zinc-400 mt-0.5 font-medium">แตะเพื่อโหลดสถานะเอกสารล่าสุดแยกรายกลุ่มบัญชี</p>
+            <h2 className="text-base font-black text-slate-900">ตารางวิเคราะห์ดุลสถานภาพเอกสาร (Operational Snapshot)</h2>
+            <p className="text-xs text-slate-400 font-bold mt-0.5">จำแนกปริมาณบิลที่หมุนเวียนในระบบเพื่อตัดยอดบัญชีสต็อกรายวัน</p>
           </div>
           {overviewUI.loaded && (
             <div className="flex items-center gap-3">
-              <span className="text-[11px] text-zinc-500 font-mono">UPDATED: {formatTimeAgo(overviewUI.lastLoadedAt)}</span>
+              <span className="text-[11px] text-slate-400 font-mono font-bold">เช็คข้อมูลเมื่อ: {formatTimeAgo(overviewUI.lastLoadedAt)}</span>
               <Button variant="subtle" onClick={safeLoadOverview} disabled={overviewUI.loading}>
-                {overviewUI.loading ? 'กำลังโหลด...' : 'รีเฟรช'}
+                {overviewUI.loading ? 'กำลังเรียก...' : 'รีเฟรชสเตตัส'}
               </Button>
             </div>
           )}
@@ -558,8 +560,8 @@ const PurchaseDashboardPage = () => {
 
         {!overviewUI.loaded && (
           <EmptyBox
-            title="ยังไม่ได้โหลดข้อมูลภาพรวมเอกสาร"
-            desc={overviewUI.error || 'แตะที่กล่องนี้เพื่อสั่ง Query จำนวนใบสั่งซื้อ PO ทั้งหมดจากฐานข้อมูล'}
+            title="ภาพรวมเอกสารยังไม่ได้รับการโหลดสิทธิ์"
+            desc={overviewUI.error || 'กรุณาแตะที่กล่องผืนผ้านี้ หรือกดปุ่มโหลดข้อมูลทั้งหมดด้านบนเพื่อเริ่มต้นทำ Aggregation ดึงข้อมูล'}
             clickable
             loading={overviewUI.loading}
             onClick={safeLoadOverview}
@@ -569,32 +571,32 @@ const PurchaseDashboardPage = () => {
         {overviewUI.loaded && overviewUI.data && (
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             <SummaryCard
-              label="Open (PENDING)"
-              value={`${overviewUI.data.openPO} รายการ`}
+              label="รอส่งของ (PENDING)"
+              value={`${overviewUI.data.openPO} ใบ`}
               clickable
               onClick={() => navigate(`/${shopSlug}/pos/purchases/list?status=pending`)}
             />
             <SummaryCard
-              label="Awaiting Receipt"
-              value={`${overviewUI.data.awaitingReceipt} รายการ`}
+              label="ของถึงคลังรอตรวจบิล"
+              value={`${overviewUI.data.awaitingReceipt} ใบ`}
               clickable
               onClick={() => navigate(`/${shopSlug}/pos/purchases/list?status=partially_received,received`)}
             />
             <SummaryCard
-              label="Ready to Close (PAID)"
-              value={`${overviewUI.data.readyToClose} รายการ`}
+              label="จ่ายเงินแล้วรอปิด (PAID)"
+              value={`${overviewUI.data.readyToClose} ใบ`}
               clickable
               onClick={() => navigate(`/${shopSlug}/pos/purchases/list?status=paid`)}
             />
             <SummaryCard
-              label="Completed"
-              value={`${overviewUI.data.completed} รายการ`}
+              label="เสร็จสมบูรณ์ (COMPLETED)"
+              value={`${overviewUI.data.completed} ใบ`}
               clickable
               onClick={() => navigate(`/${shopSlug}/pos/purchases/list?status=completed`)}
             />
             <SummaryCard
-              label="Cancelled"
-              value={`${overviewUI.data.cancelled} รายการ`}
+              label="ยกเลิกบิลทิ้ง (CANCELLED)"
+              value={`${overviewUI.data.cancelled} ใบ`}
               clickable
               onClick={() => navigate(`/${shopSlug}/pos/purchases/list?status=cancelled`)}
             />
@@ -602,59 +604,59 @@ const PurchaseDashboardPage = () => {
         )}
       </div>
 
-      {/* ================= Layer 3: Insight Section ================= */}
-      <div className="bg-zinc-900 border border-zinc-800/80 p-6 rounded-2xl shadow-sm space-y-4">
-        <div>
-          <h2 className="text-base font-black text-white">Procurement Insights & Analysis</h2>
-          <p className="text-xs text-zinc-400 mt-0.5 font-medium">สรุปยอดวงเงินการสั่งซื้อสะสมและซัพพลายเออร์หลักประจำเขตพื้นที่</p>
+      {/* ================= Layer 4: Analytics Deep Dive Insights ================= */}
+      <div className="bg-white border border-slate-200/80 p-6 rounded-3xl shadow-[0_4px_25px_rgba(0,0,0,0.01)] space-y-4">
+        <div className="select-none">
+          <h2 className="text-base font-black text-slate-900">Procurement Insights & Volumetric Analysis</h2>
+          <p className="text-xs text-slate-400 font-bold mt-0.5">กราฟวิเคราะห์ยอดราคาทุนสะสมและการจัดลำดับสัดส่วนมูลค่าบริษัทคู่ค้าหลัก</p>
         </div>
 
         <Tabs defaultValue="monthly" className="w-full">
-          <TabsList className="bg-zinc-800 p-1 rounded-xl border border-zinc-700/60">
-            <TabsTrigger value="monthly" className="rounded-lg text-xs font-bold px-4 py-2 data-[state=active]:bg-gradient-to-b data-[state=active]:from-amber-400 data-[state=active]:to-orange-500 data-[state=active]:text-white text-zinc-400">
-              ยอดรวมรายเดือน
+          <TabsList className="bg-slate-100 p-1 rounded-2xl border border-slate-200/60 w-fit select-none">
+            <TabsTrigger value="monthly" className="rounded-xl text-xs font-black px-5 py-2 data-[state=active]:bg-slate-900 data-[state=active]:text-white text-slate-500 transition-all duration-200">
+              วิเคราะห์วงเงินรายเดือน
             </TabsTrigger>
-            <TabsTrigger value="top-suppliers" className="rounded-lg text-xs font-bold px-4 py-2 data-[state=active]:bg-gradient-to-b data-[state=active]:from-amber-400 data-[state=active]:to-orange-500 data-[state=active]:text-white text-zinc-400">
-              Supplier ยอดนิยม
+            <TabsTrigger value="top-suppliers" className="rounded-xl text-xs font-black px-5 py-2 data-[state=active]:bg-slate-900 data-[state=active]:text-white text-slate-500 transition-all duration-200">
+              อันดับ Supplier ยอดนิยม
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="monthly" className="outline-none pt-2">
+          <TabsContent value="monthly" className="outline-none pt-2 animate-fadeIn">
             {!monthlyUI.loaded ? (
               <EmptyBox
-                title="ยังไม่ได้โหลดข้อมูลยอดรวมรายเดือน"
-                desc="ใน Task นี้เรายก Executive layer ให้ครบก่อน — กราฟจะเชื่อม aggregation ใน Task ถัดไป"
+                title="ข้อมูลกราฟราคาทุนรายเดือนยังไม่ได้โหลดสิทธิ์"
+                desc="โมดูล Aggregation เลเยอร์การเงินพร้อมสแตนด์บาย — กดเพื่อเรียกดูภาพจำลองข้อมูลเฟสถัดไป"
                 clickable
                 loading={monthlyUI.loading}
                 onClick={() => setMonthlyUI((prev) => ({ ...prev, loaded: true, lastLoadedAt: new Date() }))}
               />
             ) : (
-              <Card className="border border-zinc-800 bg-zinc-900/40 rounded-2xl shadow-none">
+              <Card className="border border-slate-200 bg-slate-50/50 rounded-2xl shadow-none">
                 <CardContent className="p-5">
-                  <div className="text-sm font-bold text-zinc-200">วิเคราะห์ทิศทางวงเงินการจัดซื้อรายเดือน</div>
-                  <div className="text-xs text-zinc-400 mt-1.5 leading-relaxed font-medium">
-                    (Placeholder) — ในเฟสถัดไปจะเพิ่มการคำนวณ 2 มิติหลัก: จำนวน PO + มูลค่าเงินหมุนเวียนสุทธิ พร้อมช่วงคัดกรองเวลา 30 วัน, 90 วัน และรอบปีบัญชีปัจจุบัน
+                  <div className="text-sm font-black text-slate-900">แนวโน้มงบประมาณวงเงินการจัดซื้อสะสมรายสัปดาห์</div>
+                  <div className="text-xs text-slate-500 mt-1.5 leading-relaxed font-bold">
+                    (📊 แผงวิเคราะห์เสมือน) — ในแผนงานพาร์ตถัดไปจะทำการเรนเดอร์โครงสร้างแผนภูมิกราฟ 2 มิติ เชื่อมต่อแกนหาจำนวนใบสั่งซื้อ PO ร่วมกับยอดรวมตัวเลข Net Amount ประจำงวดงบประมาณ 30 วัน และ 90 วัน เพื่อความคมชัดสูงสุด
                   </div>
                 </CardContent>
               </Card>
             )}
           </TabsContent>
 
-          <TabsContent value="top-suppliers" className="outline-none pt-2">
+          <TabsContent value="top-suppliers" className="outline-none pt-2 animate-fadeIn">
             {!supplierUI.loaded ? (
               <EmptyBox
-                title="ยังไม่ได้โหลดรายชื่อ Supplier ยอดนิยม"
-                desc="ใน Task นี้ยังไม่เพิ่ม query ใหม่ — จะทำระบบจัดอันดับมูลค่าคู่ค้า Supplier ใน Task ถัดไป"
+                title="ข้อมูลสถิติมูลค่าการค้าซัพพลายเออร์ยังไม่ได้โหลดสิทธิ์"
+                desc="โมดูลสถิติสัดส่วนพาร์ตเนอร์พร้อมเปิดงาน — กดเพื่อเรียกดูภาพจำลองข้อมูลเฟสถัดไป"
                 clickable
                 loading={supplierUI.loading}
                 onClick={() => setSupplierUI((prev) => ({ ...prev, loaded: true, lastLoadedAt: new Date() }))}
               />
             ) : (
-              <Card className="border border-zinc-800 bg-zinc-900/40 rounded-2xl shadow-none">
+              <Card className="border border-slate-200 bg-slate-50/50 rounded-2xl shadow-none">
                 <CardContent className="p-5">
-                  <div className="text-sm font-bold text-zinc-200">อันดับคู่ค้า / ซัพพลายเออร์ที่มียอดสั่งซื้อสูงสุด</div>
-                  <div className="text-xs text-zinc-400 mt-1.5 leading-relaxed font-medium">
-                    (Placeholder) — ระบบ Agent สแตนด์บายรอผูกกับ API ดึงตารางรายชื่อบริษัทคู่ค้าและสัดส่วนเปอร์เซ็นต์ความคุ้มค่าในการกระจายคลังสินค้า
+                  <div className="text-sm font-black text-slate-900">การจัดอันดับบริษัทคู่ค้าซัพพลายเออร์ที่มียอดสั่งซื้อสูงสุด (Top Share)</div>
+                  <div className="text-xs text-slate-500 mt-1.5 leading-relaxed font-bold">
+                    (📊 แผงวิเคราะห์เสมือน) — แผงคอนโซลกลาง Agent รอดึงฐานข้อมูลมาคำนวณแยกสัดส่วนจัดอันดับยอดส่งพัสดุรายบริษัท เพื่อให้เจ้าของร้านเห็นภาพชัดเจนว่าร้านค้าพึ่งพาการกระจายคลังสินค้าไปที่ Supplier เจ้าไหนมากที่สุด
                   </div>
                 </CardContent>
               </Card>

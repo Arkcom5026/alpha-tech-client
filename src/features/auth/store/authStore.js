@@ -5,14 +5,13 @@ import { persist } from 'zustand/middleware';
 import {
   loginUser,
   registerUser, 
-  verifySession,
   requestPasswordReset,
   resetPassword,
   logoutSession,
   logoutAllSessions,
 } from '../api/authApi';
 
-// 🟢 LINK CORE INSTANCE: นำเข้าตัวแกนหลักเพื่อควบคุมพอร์ต 5000
+// 🟢 LINK CORE INSTANCE: นำเข้าตัวแกนหลักเพื่อควบคุมพอร์ต 5000[cite: 25]
 import apiClient from '@/utils/apiClient';
 
 import { buildRoleContext, can as canCap, P1_CAP } from '../rbac/rbacClient';
@@ -104,7 +103,7 @@ const clearLegacyAuthStorage = () => {
 
 export const useAuthStore = create(
   persist(
-    (set) => ({
+    (set, get) => ({ // 🟢 เพิ่ม get เข้ามาควบคุมสเตตัสข้ามเลเยอร์
       ...getEmptyAuthState(),
 
       setUser: ({ token, accessToken, role, profileType, employee, customer, rememberMe = false, session = null }) =>
@@ -283,7 +282,7 @@ export const useAuthStore = create(
       },
 
       verifySessionAction: async () => {
-        const state = useAuthStore.getState();
+        const state = get(); // ใช้ค่าขอบเขตปัจจุบัน
         const token = state.accessToken || state.token;
 
         if (!token) {
@@ -294,7 +293,7 @@ export const useAuthStore = create(
         try {
           set({ isBootstrappingAuth: true, authError: null });
 
-          const res = await apiClient.get('/auth/me'); // 🟢 บังคับคุยผ่านตัวอินสแตนซ์ศูนย์กลางล็อกพอร์ต
+          const res = await apiClient.get('/auth/me'); // 🟢 บังคับคุยผ่านตัวอินสแตนซ์ศูนย์กลางล็อกพอร์ต[cite: 25]
           const profile = res?.data?.profile || null;
           const serverRole = normalizeRole(res?.data?.role || state.role);
           const serverProfileType = (res?.data?.profileType || state.profileType || '').toString();
@@ -381,7 +380,12 @@ export const useAuthStore = create(
               : serverMsg || error?.message || 'ตรวจสอบเซสชันไม่สำเร็จ';
 
           console.error('❌ verifySessionAction failed:', error);
-          useAuthStore.getState().resetAuthStateAction();
+          
+          // 🟢 REMOVE FORCE RESET: ตัดการสั่งล้างอัตโนมัติออกชั่วคราว เพื่อเปิดเลนทางเดินให้ Silent Refresh ฝั่ง apiClient ทำงานชุบชีวิตได้[cite: 24, 25]
+          if (status !== 401) {
+            get().resetAuthStateAction();
+          }
+
           set({
             authError: friendlyMessage,
             isBootstrappingAuth: false,
@@ -392,7 +396,7 @@ export const useAuthStore = create(
       },
 
       bootstrapAuthAction: async () => {
-        const state = useAuthStore.getState();
+        const state = get();
         set({ isBootstrappingAuth: true, authError: null });
 
         if (state.accessToken || state.token) {
@@ -400,7 +404,7 @@ export const useAuthStore = create(
         }
 
         try {
-          // 🟢 FIXED: เรียกส่งตัวแปรผ่าน apiClient ศูนย์กลาง เพื่อล็อกเป้าเชื่อม 127.0.0.1:5000 แก้อาการ 401 Loop
+          // 🟢 INTENTIONAL SILENT INTERCEPTOR: รันผ่านอินสแตนซ์ศูนย์กลาง เพื่อใช้ท่อหมุนเวียนคุ้กกี้ที่ปลอดภัยร่วมกัน[cite: 24, 25]
           const res = await apiClient.post('/auth/refresh');
           const accessToken = res?.data?.accessToken || res?.data?.token || null;
 
@@ -416,7 +420,7 @@ export const useAuthStore = create(
             session: res?.data?.session || null,
           });
 
-          return await useAuthStore.getState().verifySessionAction();
+          return await get().verifySessionAction();
         } catch {
           set({
             token: null,
@@ -429,7 +433,7 @@ export const useAuthStore = create(
       },
 
       resetAuthStateAction: () => {
-        const state = useAuthStore.getState();
+        const state = get();
         const preservedRememberMe = !!state.rememberMe;
         const preservedIdentifier = preservedRememberMe ? (state.lastLoginIdentifier || '') : '';
 
@@ -447,7 +451,7 @@ export const useAuthStore = create(
         } catch (error) {
           console.error('❌ logout failed:', error);
         } finally { 
-          useAuthStore.getState().resetAuthStateAction();
+          get().resetAuthStateAction();
         }
       },
 
@@ -457,7 +461,7 @@ export const useAuthStore = create(
         } catch (error) {
           console.error('❌ logoutAction failed:', error);
         } finally { 
-          useAuthStore.getState().resetAuthStateAction();
+          get().resetAuthStateAction();
           window.location.href = '/login';
         }
       },
@@ -468,16 +472,16 @@ export const useAuthStore = create(
         } catch (error) {
           console.error('❌ logoutAllDevicesAction failed:', error);
         } finally { 
-          useAuthStore.getState().resetAuthStateAction();
+          get().resetAuthStateAction();
         }
       },
 
       clearStorage: () => {
-        useAuthStore.getState().resetAuthStateAction();
+        get().resetAuthStateAction();
       },
 
       isLoggedIn: () => {
-        const state = useAuthStore.getState();
+        const state = get();
         return !!(state.accessToken || state.token) && !!state.authChecked && !state.isBootstrappingAuth;
       },
 
@@ -521,7 +525,7 @@ export const useAuthStore = create(
           if (['employee', 'admin'].includes(effectiveRole) && !branchIdFromServer) {
             const msg = 'บัญชีพนักงานต้องมีสาขา (branchId) ก่อนเข้า POS (กรุณาให้แอดมินกำหนดสาขาใน EmployeeProfile)';
             set({ authError: msg });
-            useAuthStore.getState().resetAuthStateAction();
+            get().resetAuthStateAction();
             throw new Error(msg);
           }
 
@@ -596,16 +600,16 @@ export const useAuthStore = create(
       },
 
       isAuthenticatedSelector: () => {
-        const state = useAuthStore.getState();
+        const state = get();
         return !!(state.accessToken || state.token) && !!state.authChecked && !state.isBootstrappingAuth;
       },
       isOnlineCustomerAuthenticatedSelector: () => {
-        const state = useAuthStore.getState();
+        const state = get();
         return !!(state.accessToken || state.token) && !!state.authChecked && !state.isBootstrappingAuth && normalizeRole(state.role) === 'customer' && !!state.customer?.id;
       },
-      isSuperAdminSelector: () => normalizeRole(useAuthStore.getState().role) === 'superadmin',
+      isSuperAdminSelector: () => normalizeRole(get().role) === 'superadmin',
       isAdminOrAboveSelector: () => {
-        const state = useAuthStore.getState();
+        const state = get();
         const r = normalizeRole(state.role);
 
         if (r === 'admin' || r === 'superadmin') return true;
@@ -625,9 +629,9 @@ export const useAuthStore = create(
         }
       },
 
-      getRole: () => normalizeRole(useAuthStore.getState().role),
+      getRole: () => normalizeRole(get().role),
       canManageProductOrdering: () => {
-        const state = useAuthStore.getState();
+        const state = get();
         const r = normalizeRole(state.role);
 
         if (r === 'admin' || r === 'superadmin') return true;
@@ -643,7 +647,7 @@ export const useAuthStore = create(
       },
 
       getRoleContextSelector: () => {
-        const state = useAuthStore.getState();
+        const state = get();
         const branchState = useBranchStore.getState?.() || {};
 
         const branch = branchState.branch || branchState.currentBranch || branchState.activeBranch || null;
@@ -658,19 +662,19 @@ export const useAuthStore = create(
       },
 
       canSelector: (capKey) => {
-        const ctx = useAuthStore.getState().getRoleContextSelector();
+        const ctx = get().getRoleContextSelector();
         return canCap(ctx, capKey);
       },
 
-      capsSelector: () => useAuthStore.getState().getRoleContextSelector().capabilities,
-      canManageEmployeesSelector: () => useAuthStore.getState().canSelector(P1_CAP.MANAGE_EMPLOYEES),
-      canManageProductsSelector: () => useAuthStore.getState().canSelector(P1_CAP.MANAGE_PRODUCTS),
-      canEditPricingSelector: () => useAuthStore.getState().canSelector(P1_CAP.EDIT_PRICING),
-      canPurchasingSelector: () => useAuthStore.getState().canSelector(P1_CAP.PURCHASING),
-      canReceiveStockSelector: () => useAuthStore.getState().canSelector(P1_CAP.RECEIVE_STOCK),
-      canPosSaleSelector: () => useAuthStore.getState().canSelector(P1_CAP.POS_SALE),
-      canStockAuditSelector: () => useAuthStore.getState().canSelector(P1_CAP.STOCK_AUDIT),
-      canViewReportsSelector: () => useAuthStore.getState().canSelector(P1_CAP.VIEW_REPORTS),
+      capsSelector: () => get().getRoleContextSelector().capabilities,
+      canManageEmployeesSelector: () => get().canSelector(P1_CAP.MANAGE_EMPLOYEES),
+      canManageProductsSelector: () => get().canSelector(P1_CAP.MANAGE_PRODUCTS),
+      canEditPricingSelector: () => get().canSelector(P1_CAP.EDIT_PRICING),
+      canPurchasingSelector: () => get().canSelector(P1_CAP.PURCHASING),
+      canReceiveStockSelector: () => get().canSelector(P1_CAP.RECEIVE_STOCK),
+      canPosSaleSelector: () => get().canSelector(P1_CAP.POS_SALE),
+      canStockAuditSelector: () => get().canSelector(P1_CAP.STOCK_AUDIT),
+      canViewReportsSelector: () => get().canSelector(P1_CAP.VIEW_REPORTS),
     }),
     {
       name: 'auth-storage',

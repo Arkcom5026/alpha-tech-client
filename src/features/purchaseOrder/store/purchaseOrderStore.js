@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { calculatePurchaseTotals, isWithinCreditLimit } from '../engines/liveCalculatorEngine';
-import { procurementService } from '../services/procurementService'; // เรียกใช้บริการจริง
+import apiClient from '@/utils/apiClient'; // 🟢 ดึงท่อเชื่อมโยงตรงเข้าพอร์ต 5000 เพื่อความปลอดภัยสูงสุด
 
 export const usePurchaseOrderStore = create((set, get) => ({
   // =========================================================
@@ -9,6 +9,7 @@ export const usePurchaseOrderStore = create((set, get) => ({
   historyList: [],
   isLoading: false,
   error: null,
+  purchaseOrder: null, // เก็บรายละเอียดใบสั่งซื้อเดี่ยวสำหรับโหมดดู/แก้ไข
 
   fetchHistoryLegacy: async (apiCallback) => {
     set({ isLoading: true, error: null });
@@ -22,15 +23,50 @@ export const usePurchaseOrderStore = create((set, get) => ({
 
   // =========================================================
   // [NEW OFFICIAL LIVE ACTION - v2 STABLE IMPLEMENTATION]
-  // ดึงข้อมูลจริงผ่านบริการ API เครือข่ายคลังสินค้าพอร์ต 4000/5000
   // =========================================================
   fetchAllPurchaseOrdersAction: async () => {
     set({ isLoading: true, error: null });
     try {
-      const data = await procurementService.getAllPurchaseOrders();
-      set({ historyList: data, isLoading: false });
+      const res = await apiClient.get('/purchase-orders');
+      const actualData = res?.data?.data || res?.data || [];
+      set({ historyList: actualData, isLoading: false });
     } catch (err) {
       set({ error: err.message || 'กระบวนการเชื่อมต่อดึงประวัติจริงล้มเหลว', isLoading: false });
+    }
+  },
+
+  fetchPurchaseOrderById: async (id) => {
+    set({ isLoading: true, error: null, purchaseOrder: null });
+    try {
+      const res = await apiClient.get(`/purchase-orders/${id}`);
+      set({ purchaseOrder: res.data, isLoading: false });
+    } catch (err) {
+      set({ error: err.message || 'ไม่สามารถโหลดข้อมูลใบสั่งซื้อนี้ได้', isLoading: false });
+    }
+  },
+
+  // 🚀 [ADDED ACTIONS] ซ่อมท่อทางส่งข้อมูลเชื่อมต่อ API หน้าบ้าน ให้ยิงบันทึกใบสั่งซื้อ PO ลงฐานข้อมูลได้จริงพอร์ต 5000
+  createPurchaseOrder: async (payload) => {
+    set({ isLoading: true, error: null });
+    try {
+      const res = await apiClient.post('/purchase-orders', payload);
+      set({ isLoading: false });
+      return res.data; // ส่งออบเจกต์ใบสั่งซื้อใหม่ที่มี .id กลับคืนให้ Hook นำไปเปลี่ยนเส้นทางพาธพิมพ์บิลต่อ
+    } catch (err) {
+      set({ error: err.message || 'เกิดข้อผิดพลาดระหว่างส่งบันทึกใบสั่งซื้อ', isLoading: false });
+      throw err;
+    }
+  },
+
+  updatePurchaseOrder: async (id, payload) => {
+    set({ isLoading: true, error: null });
+    try {
+      const res = await apiClient.put(`/purchase-orders/${id}`, payload);
+      set({ isLoading: false });
+      return res.data;
+    } catch (err) {
+      set({ error: err.message || 'เกิดข้อผิดพลาดระหว่างอัปเดตใบสั่งซื้อ', isLoading: false });
+      throw err;
     }
   },
 
@@ -146,6 +182,7 @@ export const usePurchaseOrderStore = create((set, get) => ({
         netTotal: 0,
       },
       isCreditLimitExceeded: false,
+      purchaseOrder: null,
     });
   }
 }));

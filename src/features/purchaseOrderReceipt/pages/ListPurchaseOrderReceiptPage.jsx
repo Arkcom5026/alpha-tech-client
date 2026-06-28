@@ -1,18 +1,16 @@
 // src/features/purchaseOrderReceipt/pages/ListPurchaseOrderReceiptPage.jsx
 // 🏛️ Next-Gen Multi-Tenant Goods Receipt: (Fixed Store Variable Binding & Safe Tenant API Influx)
+
 import React, { useEffect } from 'react';
-// 🟢 [IMPORT FIXED] ดึง useParams ประจำการเพื่อดักจับค่าบริษัท/สาขาคั่นกลาง URL ป้องกันสิทธิ์หลุดเลน
 import { useParams } from 'react-router-dom';
 import { ClipboardList, AlertCircle, RefreshCw } from 'lucide-react';
 import PurchaseOrderReceiptTable from '../components/purchaseOrderReceiptTable';
 import usePurchaseOrderReceiptStore from '../store/purchaseOrderReceiptStore'; 
 
 const ListPurchaseOrderReceiptPage = () => {
-  // 🟢 [SLUG ACTIVATED] แกะคีย์ชื่อร้านค้าคั่น URL จากระบบกลางเพื่อประคองความเสถียรรายสาขา
   const { shopSlug } = useParams();
   const store = usePurchaseOrderReceiptStore();
   
-  // 🟢 [STORE VARIABLE BINDING FIXED] สลับจับคีย์ตัวแปรให้ตรงตามระเบียบใหม่ v2 ของ Store ตัวจริง (purchaseOrdersForReceipt)
   const purchaseOrders = store?.purchaseOrdersForReceipt || []; 
   const loading = store?.loading || false;
   const error = store?.error || null;
@@ -21,17 +19,21 @@ const ListPurchaseOrderReceiptPage = () => {
   const fetchAction = store?.fetchPurchaseOrdersForReceiptAction || store?.fetchPurchaseOrdersForReceipt;
 
   useEffect(() => {
+    // 🟢 ENTERPRISE GUARD: สั่งล้างเคลียร์เออเร่อค้างเก่าในสโตร์ก่อนดึงทราฟฟิกใหม่ทุกครั้ง ป้องกันปัญหา UI บล็อก
+    if (typeof clearErrorAction === 'function') {
+      clearErrorAction();
+    }
+
     if (typeof fetchAction === 'function') {
-      // 🟢 [LIVE API INFLUX WITH SLUG] สั่งส่งข้อมูลแบรนด์/สาขาติดพ่วงเข้าไปกับ API กลาง เพื่อทะลวงดึงข้อมูลจริงขึ้นมาสแตนด์บาย
       const targetSlug = shopSlug || 'advancetech';
       fetchAction({ shopSlug: targetSlug });
     } else {
       console.warn("⚠️ ไม่พบฟังก์ชันดึงใบสั่งซื้อที่รอตรวจรับใน Store");
     }
-  }, [fetchAction, shopSlug]); // 🟢 ดักสิทธิ์การทำงานร่วมกับ shopSlug ป้องกันสัญญานดับระเบิดหลุดลูป
+  }, [fetchAction, shopSlug, clearErrorAction]); // 🚀 ผูกความสัมพันธ์ครอบคลุมสิทธิ์ความปลอดภัยรอบด้าน
 
   return (
-    <div className="space-y-6 animate-fadeIn selection:bg-orange-500 selection:text-white p-6 max-w-[1400px] mx-auto">
+    <div className="space-y-6 animate-fadeIn selection:bg-orange-500 selection:text-white p-4 md:p-6 max-w-[1400px] mx-auto font-sans">
       
       {/* 🟦 1. ส่วนหัวแผงควบคุมสไตล์ Glassmorphic */}
       <div className="bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl border border-slate-200/80 dark:border-zinc-800/80 p-6 rounded-3xl shadow-[0_4px_20px_rgba(0,0,0,0.02)] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 transition-all duration-300 hover:shadow-md relative overflow-hidden group">

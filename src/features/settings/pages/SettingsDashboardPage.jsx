@@ -1,4 +1,7 @@
 // src/features/settings/pages/SettingsDashboardPage.jsx
+// 🏛️ Advanced Multi-Tenant Settings Dashboard Hub
+// 🎨 Minimal Platinum Light Mode Edition (User Feedback Optimized — High Contrast Text)
+
 import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Users, UserPlus, ShieldAlert, Building2, Landmark, ArrowRight, KeyRound } from 'lucide-react';
@@ -11,37 +14,41 @@ const SettingTile = ({ title, desc, icon: Icon, onClick, isHighlight = false }) 
     <button
       type="button"
       onClick={onClick}
-      // 🟢 FIXED: เปลี่ยนโครงสีไทล์เมนูธรรมดาจาก bg-white เป็นสีมืดเข้มรับธีมพรีเมียม (bg-zinc-900/60)
+      // 🟢 PLATINUM TILE REFIT: เปลี่ยนผิวกระเบื้องปุ่มกดเป็นเฉดสว่าง คมชัดสูง อ่านง่ายสบายตา
       className={`group w-full border rounded-2xl p-5 text-left flex items-start justify-between gap-4 transition-all duration-200 shadow-sm hover:shadow-md hover:-translate-y-0.5 ${
         isHighlight 
           ? 'bg-gradient-to-br from-slate-900 to-zinc-900 border-orange-500/30 shadow-orange-500/5 hover:border-orange-500/60' 
-          : 'bg-zinc-900/60 border-zinc-800/80 text-white hover:border-zinc-700'
+          : 'bg-white border-slate-200/80 text-slate-700 hover:bg-slate-50 hover:border-orange-500/40'
       }`}
     >
       <div className="flex items-center gap-4 min-w-0">
         <div className={`p-3 rounded-xl shrink-0 transition-colors ${
           isHighlight
             ? 'bg-orange-500/10 text-orange-400 group-hover:bg-orange-500/20'
-            : 'bg-zinc-800 text-zinc-300 group-hover:bg-amber-500/10 group-hover:text-amber-400'
+            : 'bg-slate-100 text-slate-500 group-hover:bg-orange-500/10 group-hover:text-orange-600'
         }`}>
           <Icon className="w-5 h-5" />
         </div>
         <div className="min-w-0">
-          <div className="font-bold text-sm text-white tracking-tight truncate flex items-center gap-2">
+          <div className={`font-black text-sm tracking-tight truncate flex items-center gap-2 ${
+            isHighlight ? 'text-white' : 'text-slate-900'
+          }`}>
             {title}
             {isHighlight && (
-              <span className="text-[9px] bg-orange-500/10 border border-orange-500/20 text-orange-400 font-black px-1.5 py-0.5 rounded-md uppercase tracking-wider">
+              <span className="text-[9px] bg-orange-500/10 border border-orange-500/20 text-orange-400 font-black px-1.5 py-0.5 rounded-md uppercase tracking-wider select-none">
                 Active Engine
               </span>
             )}
           </div>
-          {desc && <div className="text-xs text-zinc-400 mt-0.5 font-medium leading-snug">{desc}</div>}
+          {desc && <div className={`text-xs mt-0.5 font-bold leading-snug ${
+            isHighlight ? 'text-zinc-400' : 'text-slate-400'
+          }`}>{desc}</div>}
         </div>
       </div>
       <ArrowRight className={`w-4 h-4 mt-1 shrink-0 transition-colors ${
         isHighlight 
           ? 'text-orange-400/50 group-hover:text-orange-400' 
-          : 'text-zinc-600 group-hover:text-zinc-400'
+          : 'text-slate-300 group-hover:text-slate-600'
       }`} />
     </button>
   );
@@ -55,27 +62,25 @@ const SettingsDashboardPage = () => {
   const { shopSlug } = useParams(); // 🟢 แกะรหัสพาร์ตเนอร์เพื่อสืบทอดเลน URL มิติคู่ขนาน
 
   return (
-    // 🟢 FIXED: เพิ่ม padding ภายในครอบตัวเพจ (p-6) และกำหนดพื้นหลังสีมืดสนิท (bg-slate-950) เต็มความสูงพื้นที่ทำงาน
-    <div className="space-y-6 animate-fadeIn p-6 bg-slate-950 min-h-screen">
+    // 🟢 PLATINUM MAIN CONTAINER: แปลงเป็นโครงสร้างสีสว่างสลักเฉดสีเงิน Slate-50 สวยงามนุ่มนวลต่อสายตา
+    <div className="space-y-6 animate-fadeIn p-4 md:p-6 bg-slate-50 min-h-screen text-slate-800 font-sans">
       
       {/* ================= HEADER LAYOUT CLEAN ================= */}
-      {/* 🟢 FIXED: ล้าง bg-white ออก เปลี่ยนร่างเป็นการ์ดสีมืดระดับพรีเมียม (bg-zinc-900) ดุดันและคมคายขึ้นทันที */}
-      <div className="bg-zinc-900 border border-zinc-800/80 p-6 rounded-2xl shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="bg-white border border-slate-200/80 p-6 rounded-3xl shadow-[0_4px_25px_rgba(0,0,0,0.01)] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 transition-all">
         <div className="min-w-0">
-          <h1 className="text-xl font-black text-white">ศูนย์การตั้งค่าระบบร้านค้า</h1>
-          <p className="text-xs text-zinc-400 mt-0.5 font-medium">จัดการบุคลากร ตรวจสอบข้อมูลสาขาออนไลน์ และช่องทางธุรกรรมสำหรับพาร์ตเนอร์ร้านค้า</p>
+          <h1 className="text-xl font-black text-slate-900 tracking-tight">ศูนย์การตั้งค่าระบบร้านค้า</h1>
+          <p className="text-xs text-slate-400 font-bold mt-0.5 tracking-wide">จัดการบุคลากร ตรวจสอบข้อมูลสาขาออนไลน์ และช่องทางธุรกรรมสำหรับพาร์ตเนอร์ร้านค้า</p>
         </div>
-        <div className="bg-zinc-800 text-amber-400 font-bold text-xs px-3 py-1.5 rounded-xl border border-zinc-700 shrink-0 self-start sm:self-center">
+        <div className="bg-slate-100 text-orange-700 font-black text-xs px-3 py-1.5 rounded-xl border border-slate-200 shadow-sm shrink-0 self-start sm:self-center select-none">
           ⚙️ ตั้งค่าระบบ
         </div>
       </div>
 
       {/* ================= SETTINGS GRID TILES ================= */}
-      {/* 🟢 FIXED: ล้างสี bg-white ออก สวมรอยด้วยสกินสีมืดรับการขยายตัวชนขอบจออย่างสมบูรณ์ */}
-      <div className="bg-zinc-900 border border-zinc-800/80 p-6 rounded-2xl shadow-sm space-y-4">
-        <div>
-          <h2 className="text-base font-black text-white">เมนูจัดการระบบ</h2>
-          <p className="text-xs text-zinc-400 mt-0.5 font-medium">เลือกหัวข้อหลักที่ต้องการแก้ไขสิทธิ์และตรวจสอบข้อมูลเชิงโครงสร้าง</p>
+      <div className="bg-white border border-slate-200/80 p-6 rounded-3xl shadow-[0_4px_25px_rgba(0,0,0,0.01)] space-y-4">
+        <div className="select-none">
+          <h2 className="text-base font-black text-slate-900">เมนูจัดการระบบ</h2>
+          <p className="text-xs text-slate-400 font-bold mt-0.5">เลือกหัวข้อหลักที่ต้องการแก้ไขสิทธิ์และตรวจสอบข้อมูลเชิงโครงสร้าง</p>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-2">

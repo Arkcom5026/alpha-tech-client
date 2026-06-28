@@ -47,6 +47,11 @@ const PartnerPosMasterLayout = () => {
 const AppRouter = [
   {
     path: '',
+    // 🟢 FIXED AUTO-REDIRECT: สับรางหน้าแรกสุดตัวเปล่า บังคับให้ดีดตัวเข้าสู่หน้าแดชบอร์ดร้านค้าพันธมิตรทันที 
+    element: <Navigate to="/advancetech/pos/dashboard" replace />,
+  },
+  {
+    path: 'marketplace-portal', // 🟢 ย้ายพาธหน้าเว็บเปล่าเดิมไปติดคีย์นี้แทนเพื่อไม่ให้ทับซ้อนหน้าหลัก
     element: <MarketplacePortalPage />,
   },
   {

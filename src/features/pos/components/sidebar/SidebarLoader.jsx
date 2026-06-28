@@ -1,5 +1,6 @@
 // src/features/pos/components/sidebar/SidebarLoader.jsx
 // 🏛️ P1 POS Sidebar — Dark Enterprise + Brass Gold (Header-Matched Final Polish)
+// 🟢 [FIXED AUTO-REDIRECT] ล็อกสิทธิ์เส้นทางเดินรถเมนูรายงานหลัก ไม่ดีดเด้งข้ามเลนอัตโนมัติ 100%
 import React from 'react';
 import { useParams, useLocation, NavLink } from 'react-router-dom';
 import {
@@ -124,12 +125,21 @@ const SidebarLoader = () => {
 
   const menuConfig = getSidebarMenuConfig(shopSlug);
 
+  // 🟢 FIXED LOGIC: แก้ไขลอจิกคัดกรอง Active Module ป้องกันหน้าจอกระโดดหลุดเลนอัตโนมัติ 
   const activeModule = React.useMemo(() => {
     const segments = pathname.split('/').filter(Boolean);
     const posIdx = segments.indexOf('pos');
 
     if (posIdx !== -1 && segments[posIdx + 1]) {
-      return segments[posIdx + 1];
+      const moduleKey = segments[posIdx + 1];
+      
+      // 🔥 ตรวจดักจับ: หากผู้ใช้งานกดเข้าแท็บเมนูรายงานตรง ๆ ผ่าน Header ด้านบน 
+      // บังคับล็อกสิทธิ์ให้อยู่ที่หน้าหลักพอร์ต 'reports' เสมอ ห้ามดีดตัวไปโมดูลย่อยอื่นโดยพลการ 
+      if (moduleKey === 'reports' && segments.length === (posIdx + 2)) {
+        return 'reports';
+      }
+      
+      return moduleKey;
     }
 
     return 'purchases';
@@ -211,10 +221,7 @@ const SidebarLoader = () => {
 
               <ul className="space-y-1.5">
                 {(section.items || []).map((item, itemIdx) => {
-                  // 🟢 [LONGEST MATCH WINS]
-                  // ป้องกัน Active ซ้ำเมื่อ URL เป็น route ซ้อน เช่น /receipt และ /receipt/items
                   const isItemActive = normalizePath(item.to) === normalizePath(activeItemPath);
-
                   const ItemIcon = getItemIcon(item.label);
 
                   return (
@@ -241,9 +248,7 @@ const SidebarLoader = () => {
                                 'before:bg-gradient-to-r before:from-transparent before:via-white/10 before:to-transparent before:opacity-100 after:bg-amber-400/55 after:opacity-0',
                                 'hover:-translate-y-px hover:border-[#d6a84a]/85 hover:bg-white/10 hover:text-white hover:shadow-[0_0_0_1px_rgba(251,191,36,0.18),0_0_16px_rgba(212,168,74,0.24)] hover:after:opacity-100',
                               ].join(' '),
-
                           ].join(' ')
-
                         }
                       >
                         <span className="relative z-10 flex min-w-0 items-center gap-3">

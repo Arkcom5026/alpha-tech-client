@@ -8,6 +8,7 @@ import {
   getSupplierById,
 } from '../api/supplierApi';
 import { useBranchStore } from '@/features/branch/store/branchStore';
+import { useAuthStore } from '@/features/auth/store/authStore'; // 🟢 ดึงข้อมูลสิทธิ์ผู้ใช้งานร่วมสมทบความปลอดภัย
 
 const useSupplierStore = create((set, get) => ({
   suppliers: [],
@@ -19,13 +20,20 @@ const useSupplierStore = create((set, get) => ({
   getSupplierOptions: () =>
     (get().suppliers || []).map(s => ({ id: Number(s.id), name: s?.name ?? '-' })),
 
-  // ✅ โหลด supplier ทั้งหมด (ตามสาขาปัจจุบัน)
-  fetchSuppliersAction: async () => {
-    const branchId = useBranchStore.getState().selectedBranchId;
-    if (!branchId) return;
+  // ✅ โหลด supplier ทั้งหมด (ตามสาขาปัจจุบันที่ดึงมาจากพารามิเตอร์หรือระบบยืนยันตัวตน)
+  fetchSuppliersAction: async (explicitBranchId) => {
+    // 🟢 DYNAMIC BRANCH RESOLVER: ดึงไอดีสาขาจากพารามิเตอร์ตรง หรือ fallback ไปหาสเตตความปลอดภัยหลัก
+    const authState = useAuthStore.getState();
+    const resolvedBranchId = explicitBranchId || authState.employee?.branchId || useBranchStore.getState().selectedBranchId;
+    
+    if (!resolvedBranchId) {
+      console.warn('⚠️ [supplierStore] ไม่สามารถดึงซัพพลายเออร์ได้เนื่องจากไม่ระบุ branchId');
+      return;
+    }
+
     set({ isSupplierLoading: true, supplierError: null });
     try {
-      const data = await getAllSuppliers({ branchId });
+      const data = await getAllSuppliers({ branchId: Number(resolvedBranchId) });
       const safe = Array.isArray(data) ? data : [];
       // กันชื่อว่าง & เรียง A-Z
       const sorted = [...safe].sort((a, b) =>

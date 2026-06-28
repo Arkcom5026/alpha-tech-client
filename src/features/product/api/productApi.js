@@ -36,10 +36,6 @@ export const updateProduct = async (id, payload) => {
   } catch (err) { throw parseApiError(err); }
 };
   
-/**
- * Patch แล้วดึงข้อมูลสินค้าล่าสุดกลับมาในคำสั่งเดียว (แก้ปัญหา UI ไม่อัพเดตทันทีหลังบันทึก)
- * ใช้ในหน้า EditProductPage เพื่อ reset ฟอร์มด้วยค่าล่าสุดหลังบันทึกสำเร็จ
- */
 export const updateProductAndGet = async (id, payload) => {
   try {
     await apiClient.patch(`products/${id}`, payload);
@@ -79,7 +75,6 @@ export const enableProduct = async (id) => {
 // Dropdowns (โหลดครั้งเดียว ใช้ทั้งระบบ)
 export const getProductDropdownsPublic = async () => {
   try {
-    // ✅ Online Shop uses PUBLIC endpoint (no auth)
     const { data } = await apiClient.get('products/online/dropdowns', { params: { _ts: Date.now() }});
     return data;
   } catch (err) { throw parseApiError(err); }
@@ -87,7 +82,6 @@ export const getProductDropdownsPublic = async () => {
 
 export const getProductDropdowns = async () => {
   try {
-    // ✅ POS / internal master dropdowns (ต้องมี mapping เช่น productTypeBrands)
     const { data } = await apiClient.get('products/dropdowns', { params: { _ts: Date.now() }});
     return data;
   } catch (err) {
@@ -97,7 +91,6 @@ export const getProductDropdowns = async () => {
 
 export const getCatalogDropdowns = async ({ scope = 'pos' } = {}) => {
   try {
-    // ✅ default = POS เพราะ ProductForm ต้องใช้ mapping productTypeBrands
     const raw = scope === 'online'
       ? await getProductDropdownsPublic()
       : await getProductDropdowns();
@@ -111,7 +104,7 @@ export const getCatalogDropdowns = async ({ scope = 'pos' } = {}) => {
       productTypeBrandMap = {},
       units = [],
       productTemplates,
-      templates = [], // alias (compat)
+      templates = [],
     } = raw || {};
 
     const tpl = Array.isArray(productTemplates) ? productTemplates : (templates || []);
@@ -132,7 +125,7 @@ export const getCatalogDropdowns = async ({ scope = 'pos' } = {}) => {
 };
 
 // =============================
-// Online Catalog (มาตรฐาน productTemplateId)
+// Online Catalog
 // =============================
 const __buildOnlineParams = (obj = {}) => Object.fromEntries(
   Object.entries(obj).filter(([, v]) => v !== '' && v !== undefined && v !== null)
@@ -147,19 +140,19 @@ export const getOnlineProducts = async ({
   productTypeId,
   productProfileId,
   productTemplateId,
-  branch, // slug (public)
+  branch,
 } = {}) => {
   try {
     const params = __buildOnlineParams({ search, page, pageSize, sort, categoryId, productTypeId, productProfileId, productTemplateId, branch, _ts: Date.now() });
     const { data } = await apiClient.get('products/online/search', { params });
-    return data; // { items, total, page, pageSize }
+    return data;
   } catch (err) { throw parseApiError(err); }
 };
 
 export const getProductOnlineById = async (id, { branch } = {}) => {
   try {
     const params = __buildOnlineParams({ branch, _ts: Date.now() });
-    const { data } = await apiClient.get(`products/online/detail/${id}`, { params });
+    const { data = {} } = await apiClient.get(`products/online/detail/${id}`, { params });
     return data;
   } catch (err) { throw parseApiError(err); }
 };
@@ -200,13 +193,17 @@ export const getProductsForPos = async (filters = {}) => {
     const sanitized = Object.fromEntries(
       Object.entries(filters).filter(([, v]) => v !== '' && v !== undefined && v !== null)
     );
+    
+    // 🟢 SECURITY SANITIZATION: ตัด branchId ออกก่อนยิงส่ง เพื่อปล่อยให้ระบบหลังบ้านแกะเช็กสิทธิ์พนักงานตรง ป้องกัน 401 ลูปค้าง
+    delete sanitized.branchId;
+
     const params = { ...sanitized, _ts: Date.now() };
     const { data } = await apiClient.get('products/pos/search', { params });
     return data;
   } catch (err) { throw parseApiError(err); }
 };
 
-// Migration: STRUCTURED (SN) -> SIMPLE (quantity)
+// Migration
 export const migrateSnToSimple = async (productId) => {
   try {
     const { data } = await apiClient.post(`products/${productId}/migrate-to-simple`);
@@ -217,7 +214,6 @@ export const migrateSnToSimple = async (productId) => {
 // ==================================================
 // Ready-to-sell (summary)
 // ==================================================
-// GET products/ready-to-sell?branchId=&q=&mode=&page=&pageSize=&sort=
 export const getReadyToSell = async ({ branchId, q = '', mode = 'ALL', page = 1, pageSize = 50, sort = 'receivedAt_desc' } = {}) => {
   try {
     if (!branchId) {
@@ -237,7 +233,7 @@ export const getReadyToSell = async ({ branchId, q = '', mode = 'ALL', page = 1,
     };
 
     const { data } = await apiClient.get('products/ready-to-sell', { params });
-    return data; // { items, total, page, pageSize }
+    return data;
   } catch (err) {
     throw parseApiError(err);
   }
@@ -246,7 +242,6 @@ export const getReadyToSell = async ({ branchId, q = '', mode = 'ALL', page = 1,
 // ==================================================
 // Ready-to-sell (STRUCTURED details)
 // ==================================================
-// GET products/ready-to-sell/structured/:productId?q=
 export const getReadyToSellStructuredDetails = async ({ branchId, productId, q = '' } = {}) => {
   try {
     if (!branchId) {
@@ -267,7 +262,7 @@ export const getReadyToSellStructuredDetails = async ({ branchId, productId, q =
     };
 
     const { data } = await apiClient.get(`products/ready-to-sell/structured/${productId}`, { params });
-    return data; // { items, total }
+    return data;
   } catch (err) {
     throw parseApiError(err);
   }

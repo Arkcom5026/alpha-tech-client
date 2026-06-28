@@ -2,9 +2,9 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import apiClient from '@/utils/apiClient'; // 🟢 เรียกใช้งานอินสแตนซ์ศูนย์กลางล็อกพอร์ต 5000 แทนการดึง axios สด
 
-// 🟢 อัปเกรดสัญญา Validation Contract ให้เรียกใช้ออบเจกต์จริงตามมาตรฐานวิศวกรรมตัวดั้งเดิม
+// อัปเกรดสัญญา Validation Contract ให้เรียกใช้ออบเจกต์จริงตามมาตรฐานวิศวกรรมตัวดั้งเดิม
 import { purchaseOrderSchema } from '../schema/purchaseOrderSchema';
 
 // stores
@@ -12,7 +12,6 @@ import { usePurchaseOrderStore } from '../store/purchaseOrderStore';
 import useProductStore from '@/features/product/store/productStore';
 import useSupplierStore from '@/features/supplier/store/supplierStore';
 
-// 🟢 [REFACTORED] ถอดถอนพารามิเตอร์ onSearchTextChange ออกถาวรเพื่อสยบบั๊ก no-unused-vars
 export const usePurchaseOrderForm = (mode, searchText) => {
   const { id, shopSlug } = useParams();
   const navigate = useNavigate();
@@ -40,11 +39,11 @@ export const usePurchaseOrderForm = (mode, searchText) => {
   const { purchaseOrder, loading, fetchPurchaseOrderById, createPurchaseOrder, updatePurchaseOrder } = usePurchaseOrderStore();
   const { fetchProductsAction, products: fetchedProducts = [], dropdowns = {}, ensureDropdownsAction } = useProductStore();
 
-  // 1. Tenant Hydration: แปลงคำย่อ URL (slug) เป็นไอดีสาขาจริงจากฐานข้อมูล
+  // 1. Tenant Hydration: แกะรหัสชื่อร้านโดยควบคุมพอร์ตความปลอดภัย 5000
   useEffect(() => {
     const fetchBranchIdBySlug = async () => {
       try {
-        const response = await axios.get(`/api/branch-prices/profile-by-slug/${shopSlug}`);
+        const response = await apiClient.get(`/branch-prices/profile-by-slug/${shopSlug}`);
         if (response.data?.id) {
           setCurrentBranchId(Number(response.data.id));
         }
@@ -163,22 +162,23 @@ export const usePurchaseOrderForm = (mode, searchText) => {
     setSubmitError('');
     if (isSubmitting) return;
 
-    // 🚀 ยิงทดสอบ Validation Contract ตามผังโครงสร้างสากลเดิมที่คุณวางโครงไว้
-    const validation = purchaseOrderSchema.validate({
-      branchId: currentBranchId,
-      supplierId: supplier?.id,
-      products: products,
-    });
+    // ตรวจสอบข้อมูลความถูกต้องก่อนยิงส่งบันทึก
+    if (typeof purchaseOrderSchema?.validate === 'function') {
+      const validation = purchaseOrderSchema.validate({
+        branchId: currentBranchId,
+        supplierId: supplier?.id,
+        products: products,
+      });
 
-    if (!validation.isValid) {
-      const errorKeys = Object.keys(validation.errors);
-      if (errorKeys.length > 0) {
-        setSubmitError(validation.errors[errorKeys[0]]);
+      if (!validation.isValid) {
+        const errorKeys = Object.keys(validation.errors);
+        if (errorKeys.length > 0) {
+          setSubmitError(validation.errors[errorKeys[0]]);
+        }
+        return;
       }
-      return;
     }
 
-    // Sanitize Items แปลงเป็น Number 100% ป้องกันกรณี BE ดีดบิลล้มกลับมา
     const safeItems = products
       .map((p) => ({
         productId: Number(p.id),
@@ -189,7 +189,7 @@ export const usePurchaseOrderForm = (mode, searchText) => {
 
     const payload = {
       branchId: currentBranchId,
-      supplierId: supplier.id,
+      supplierId: supplier?.id,
       date: orderDate,
       note,
       items: safeItems,
@@ -203,12 +203,14 @@ export const usePurchaseOrderForm = (mode, searchText) => {
         navigate(shouldPrint ? `/${shopSlug}/pos/purchases/orders/print/${id}` : `/${shopSlug}/pos/purchases/orders`);
       } else {
         const created = await createPurchaseOrder(payload);
-        if (!created?.id) return setSubmitError('บันทึกไม่สำเร็จ กรุณาตรวจสอบข้อมูลอีกครั้ง');
-        navigate(shouldPrint ? `/${shopSlug}/pos/purchases/orders/print/${created.id}` : `/${shopSlug}/pos/purchases/orders`);
+        const createdId = created?.id || created?.data?.id;
+        if (!createdId) return setSubmitError('บันทึกไม่สำเร็จ กรุณาตรวจสอบข้อมูลอีกครั้ง');
+        navigate(shouldPrint ? `/${shopSlug}/pos/purchases/orders/print/${createdId}` : `/${shopSlug}/pos/purchases/orders`);
       }
     } catch (e) {
       console.error('[PO] submit error:', e);
-      setSubmitError('เกิดข้อผิดพลาดระหว่างบันทึก กรุณาลองใหม่อีกครั้ง');
+      const msg = e?.response?.data?.error || e?.response?.data?.message || 'เกิดข้อผิดพลาดระหว่างบันทึก กรุณาลองใหม่อีกครั้ง';
+      setSubmitError(String(msg));
     } finally {
       setIsSubmitting(false);
     }

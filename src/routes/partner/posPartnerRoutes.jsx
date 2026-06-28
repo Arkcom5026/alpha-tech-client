@@ -1,5 +1,6 @@
 // src/routes/partner/posPartnerRoutes.jsx
 // 🏛️ Clean Architecture Routing: Unified Premium Integration (Safe Emergency Rollback Edition)
+// 🎨 Minimal Platinum Light Mode Edition Integrated — Fix Blank Screen Loop
 import React from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 
@@ -12,10 +13,13 @@ import { customerPartnerRoutes } from './customerPartnerRoutes';
 
 // 🟢 2. นำเข้าโมดูลย่อยและคอมโพเนนต์ตัวจริงในระบบ ผ่านระบบสัญกรณ์ Alias @features
 import DashboardPage from '@features/pos/pages/DashboardPage'; 
-import ServicesDashboardPage from '@features/pos/pages/services/ServicesDashboardPage';
+import ServicesDashboardPage from '@/features/pos/pages/dashboard/ServicesDashboardPage';
 import LogoutPos from '@features/pos/pages/LogoutPos';
 import FinanceDashboardPage from '@/features/finance/pages/FinanceDashboardPage';
 import SettingsDashboardPage from '@/features/settings/pages/SettingsDashboardPage';
+
+// 🟢 [LIVE REPORTS PAGE INTEGRATION]: นำเข้าคอมโพเนนต์แดชบอร์ดรายงานโหมดสว่างสไตล์ Platinum
+import { ReportsDashboardPage } from '@/features/pos/pages/dashboard/ReportsDashboardPage';
 
 // 🟢 [LIVE FINANCE PAGES]
 import DailyClosingPage from '@/features/finance/pages/DailyClosingPage';
@@ -51,6 +55,7 @@ import { EditBankPage } from '@/features/bank/page/EditBankPage';
 // 🟢 [LIVE SETTINGS/BRANCH PAGES]
 import ListBranchPage from '@/features/settings/pages/ListBranchPage';
 
+
 // 🟡 แผ่นป้ายสแตนด์บายฉุกเฉินภายในไฟล์ (Inline Temporary Component) 
 const TempReportPage = ({ title }) => (
   <div className="p-6 font-black text-orange-400 bg-slate-900/50 border border-orange-500/10 rounded-2xl shadow-inner text-xs md:text-sm font-sans animate-fadeIn">
@@ -78,12 +83,15 @@ export const posPartnerRoutes = [
   salesRoutes,     // 🛍️ งานขาย
   stockRoutes,     // 📦 คลังสินค้า
 
-  // 📈 4. โมดูลระบบรายงาน
+  // 📈 4. โมดูลระบบรายงาน (แก้ไขล้างคราบลูปดีดอัตโนมัติ)
   {
     path: 'reports',
     element: <Outlet />,
     children: [
-      { index: true, element: <Navigate to="sales/list" replace /> },
+      // 🔥 FIX DEPLOY: เมื่อผู้ใช้งานคลิกปุ่มใหญ่เมนู "รายงาน" บังคับให้เปิดบอร์ดแสดงผลกราฟโหมดสว่างทันที ไม่ดีดเด้งหนีไปไหนอีกต่อไป
+      { index: true, element: <ReportsDashboardPage /> },
+      
+      { path: 'sales', element: <ReportsDashboardPage /> }, // ดักรองรับท่อส่งจากเมนูปุ่มนำทางย่อย
       { path: 'sales/list', element: <TempReportPage title="📑 รายการเอกสารและบิลใบเสร็จงานขาย" /> },
       { path: 'sales/products', element: <TempReportPage title="📦 รายงานวิเคราะห์อันดับสินค้าขายดี" /> },
       { path: 'purchase', element: <TempReportPage title="🚚 รายงานวิเคราะห์ประวัติการจัดซื้อสินค้า" /> },
@@ -129,10 +137,9 @@ export const posPartnerRoutes = [
       { path: 'roles', element: <ManageRolesPage /> },
       
       // 🟢 [ADDED HIGH-ACCURACY PORT]: ช่องทางเรียกหน้าจอจัดสรรสิทธิ์และสร้างไอดีพนักงานย่อยแชร์สาขา
-      // พิกัด URL จริงบนเบราว์เซอร์: /:shopSlug/pos/settings/staff
       { path: 'staff', element: <StaffSettingsPage /> },
       
-      // 🟢 [POSITION MODULE ACTIVE]: เชื่อมแผงตารางสิทธิ์ตำแหน่งพนักงานตัวจริงหน้าร้าน
+      // 🟢 [POSITION MODULE ACTIVE]: 
       {
         path: 'positions',
         children: [
@@ -160,6 +167,7 @@ export const posPartnerRoutes = [
   // 🛠️ 7. โมดูลบริการหลังการขาย (Service)
   {
     path: 'services',
+    element: <Outlet />, // 🟢 FIXED: เติมสิทธิ์เปิดช่องทางสตรีมเลเอาต์ลงไป ป้องกันหน้าจอบริการค้างหรือหลุดเฟรมซ้อนเบิ้ล
     children: [
       { index: true, element: <ServicesDashboardPage /> }
     ]

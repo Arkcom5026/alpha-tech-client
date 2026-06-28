@@ -1,5 +1,5 @@
 // src/utils/apiClient.js
-// 🏛️ Enterprise Multi-Tenant API Client (Strict Proxy Domain Routing Edition)
+// 🏛️ Enterprise Multi-Tenant API Client (Vercel Env & Proxy Routing Edition)
 import axios from 'axios';
 import { useAuthStore } from '@/features/auth/store/authStore';
 
@@ -32,28 +32,33 @@ const applyAuthorizationHeader = (config, bearerToken) => {
   return config;
 };
 
-// 🟢 1. CORRECTED RUNTIME DETECTOR: วิ่งเข้าตรงผ่านโดเมนหลัก (ไม่ผ่าน api. ซับโดเมน)
+// 🟢 1. STRICT API DETECTOR: รองรับทั้ง Env บน Vercel และสลับโหมดอัตโนมัติ
 const getRuntimeBaseURL = () => {
+  // 1.1 ลำดับแรก: ดึงค่าจากตัวแปรบน Vercel ที่แก้ใหม่ (VITE_API_URL หรือ VITE_API_BASE_URL)
+  const envURL = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL;
+  if (envURL) {
+    return `${envURL.replace(/\/$/, '')}/api/`;
+  }
+
+  // 1.2 ลำดับสอง: ตรวจสอบระดับบราวเซอร์แบบ Runtime (Fallback กันหลุด)
   if (typeof window !== 'undefined' && window.location) {
     const currentHostname = window.location.hostname;
 
-    // A. ถ้าเปิดบนเว็บจริง (saduaksabuy.com) หรือลิงก์พรีวิวของ Vercel
-    // บังคับชี้เข้าหา /api ของโดเมนหลักตามโครงสร้าง Proxy ระบบทันที
+    // ถ้าเปิดบนโดเมนระบบหลัก บังคับวิ่งเข้าพอร์ต /api ของโดเมนหลักทันที
     if (currentHostname.includes('saduaksabuy.com') || currentHostname.includes('vercel.app')) {
       return 'https://saduaksabuy.com/api/';
     }
 
-    // B. สำหรับทีมพัฒนา: รันข้ามเครื่องในวง LAN (ส่องผ่าน IP เครื่องหลัก)
+    // สำหรับทีมพัฒนา: รันข้ามเครื่องในวง LAN ข้าม IP พอร์ต 5000
     if (currentHostname !== 'localhost' && currentHostname !== '127.0.0.1') {
       return `http://${currentHostname}:5000/api/`;
     }
   }
 
-  // C. ค่าเริ่มต้นสำหรับเครื่อง Dev (Localhost)
+  // 1.3 ค่า Fallback ปลอดภัยที่สุดสำหรับเครื่อง Developer (Localhost)
   return 'http://localhost:5000/api/';
 };
 
-// สเตทเริ่มต้นของ Axios Client
 const apiClient = axios.create({
   baseURL: 'http://localhost:5000/api/',
   timeout: 30000,
@@ -63,7 +68,7 @@ const apiClient = axios.create({
   },
 });
 
-// 🟢 2. REALTIME BASEURL OVERRIDE (บังคับพิกัด URL ใหม่ทุกครั้งที่มีการกดส่งข้อมูล)
+// 🟢 2. DYNAMIC BASEURL BINDING (แทรกแซงทุก Request เปลี่ยนเป้าหมายให้ตรงจุดตลอดเวลา)
 apiClient.interceptors.request.use(
   (config) => {
     config.baseURL = getRuntimeBaseURL();

@@ -1,5 +1,5 @@
 // src/utils/apiClient.js
-// 🏛️ Enterprise Multi-Tenant API Client (Dynamic Network Binding Edition)
+// 🏛️ Enterprise Multi-Tenant API Client (Dynamic Vercel & Local Hybrid Edition)
 import axios from 'axios';
 import { useAuthStore } from '@/features/auth/store/authStore';
 
@@ -32,22 +32,23 @@ const applyAuthorizationHeader = (config, bearerToken) => {
   return config;
 };
 
-// 🟢 1. HYBRID API DETECTOR: รองรับทั้ง Local Dev และ Production Server อัตโนมัติ
+// 🟢 1. DYNAMIC API DETECTOR: รองรับ Vercel Env (Production) และ Local Dev ควบคู่กัน
 const detectBaseURL = () => {
-  // 1.1 ถ้ามีการระบุ VITE_API_URL ใน .env ให้ดึงค่านั้นมาใช้งานเป็นอันดับแรก
+  // 1.1 ลำดับแรก: ถ้ามี VITE_API_URL ในระบบ (เช่น บน Vercel Setup) ให้ใช้ค่านั้นทันที
   if (import.meta.env.VITE_API_URL) {
     return `${import.meta.env.VITE_API_URL.replace(/\/$/, '')}/api/`;
   }
   
-  // 1.2 หากเปิดบนบราวเซอร์และพบว่าเป็นโดเมน Production ให้วิ่งเข้าเซิร์ฟเวอร์หลักทันที
+  // 1.2 ลำดับสอง: สำหรับเคสทีมพัฒนาเปิดเครื่องรัน Local Dev ข้ามเครื่องในวง LAN 
   if (typeof window !== 'undefined' && window.location) {
     const currentHostname = window.location.hostname;
-    if (currentHostname === 'saduaksabuy.com' || currentHostname === 'www.saduaksabuy.com') {
-      return 'https://saduaksabuy.com/api/';
+    // ถ้าไม่ใช่เครื่องตัวเอง และไม่ใช่โดเมนหลัก ให้เดาว่าเป็น IP วง LAN พอร์ต 5000
+    if (currentHostname !== 'localhost' && currentHostname !== '127.0.0.1' && !currentHostname.includes('saduaksabuy.com')) {
+      return `http://${currentHostname}:5000/api/`;
     }
   }
 
-  // 1.3 ค่า Fallback สำหรับเครื่อง Developer (Localhost)
+  // 1.3 ลำดับสุดท้าย: ค่า Fallback ปลอดภัยสำหรับเครื่อง Developer (Localhost)
   return 'http://localhost:5000/api/';
 };
 
@@ -55,7 +56,6 @@ const baseURL = detectBaseURL();
 
 const refreshAccessToken = async () => {
   if (!refreshPromise) {
-    // 🟢 2. FIXED PATH: การันตีการเรียกท่อหมุน Token ผ่านตัวแปร baseURL ที่คำนวณมาอย่างแม่นยำ
     refreshPromise = axios.post(
       `${baseURL}auth/refresh`,
       {},

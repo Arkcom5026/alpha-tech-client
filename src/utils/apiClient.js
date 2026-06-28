@@ -1,5 +1,5 @@
 // src/utils/apiClient.js
-// 🏛️ Enterprise Multi-Tenant API Client (Dynamic Interceptor Routing Edition)
+// 🏛️ Enterprise Multi-Tenant API Client (Strict Proxy Domain Routing Edition)
 import axios from 'axios';
 import { useAuthStore } from '@/features/auth/store/authStore';
 
@@ -32,27 +32,28 @@ const applyAuthorizationHeader = (config, bearerToken) => {
   return config;
 };
 
-// 🟢 1. RUNTIME DETECTOR FUNCTION
+// 🟢 1. CORRECTED RUNTIME DETECTOR: วิ่งเข้าตรงผ่านโดเมนหลัก (ไม่ผ่าน api. ซับโดเมน)
 const getRuntimeBaseURL = () => {
   if (typeof window !== 'undefined' && window.location) {
     const currentHostname = window.location.hostname;
 
-    // A. ถ้าเปิดบน Production Domain หรือ Vercel URL ของระบบ ให้ชี้เข้า API หลักทันที
-    if (currentHostname.includes('saduaksabuy.com')) {
-      return 'https://api.saduaksabuy.com/api/';
+    // A. ถ้าเปิดบนเว็บจริง (saduaksabuy.com) หรือลิงก์พรีวิวของ Vercel
+    // บังคับชี้เข้าหา /api ของโดเมนหลักตามโครงสร้าง Proxy ระบบทันที
+    if (currentHostname.includes('saduaksabuy.com') || currentHostname.includes('vercel.app')) {
+      return 'https://saduaksabuy.com/api/';
     }
 
-    // B. สำหรับทีมพัฒนา: รันข้ามเครื่องในวง LAN (ไม่ใช่ localhost แต่เปิดผ่าน IP เครื่อง dev)
+    // B. สำหรับทีมพัฒนา: รันข้ามเครื่องในวง LAN (ส่องผ่าน IP เครื่องหลัก)
     if (currentHostname !== 'localhost' && currentHostname !== '127.0.0.1') {
       return `http://${currentHostname}:5000/api/`;
     }
   }
 
-  // C. ถ้าหลุดจากเงื่อนไขด้านบน (เช่น รัน npm run dev บนเครื่องตัวเองตรง ๆ) ให้ชี้เข้า Localhost
+  // C. ค่าเริ่มต้นสำหรับเครื่อง Dev (Localhost)
   return 'http://localhost:5000/api/';
 };
 
-// ตั้งค่าเริ่มต้นแบบชั่วคราว (จะถูกทับด้วย Interceptor เสมอเมื่อมีการส่ง Request)
+// สเตทเริ่มต้นของ Axios Client
 const apiClient = axios.create({
   baseURL: 'http://localhost:5000/api/',
   timeout: 30000,
@@ -62,10 +63,9 @@ const apiClient = axios.create({
   },
 });
 
-// 🟢 2. DYNAMIC BASEURL BINDING (เปลี่ยนพิกัดหลังบ้านแบบ Realtime ก่อนกดส่ง Request)
+// 🟢 2. REALTIME BASEURL OVERRIDE (บังคับพิกัด URL ใหม่ทุกครั้งที่มีการกดส่งข้อมูล)
 apiClient.interceptors.request.use(
   (config) => {
-    // สลับ URL ตามโดเมนบราวเซอร์ที่เปิดอยู่ ณ วินาทีนั้นจริง ๆ
     config.baseURL = getRuntimeBaseURL();
 
     const token = getToken();
@@ -180,7 +180,6 @@ apiClient.interceptors.response.use(
         const bearerToken = nextAccessToken ? `Bearer ${nextAccessToken}` : null;
         applyAuthorizationHeader(originalRequest, bearerToken);
         
-        // อัปเดต baseURL ให้ถูกต้องก่อนยิงซ้ำอีกรอบ
         originalRequest.baseURL = getRuntimeBaseURL();
         return apiClient(originalRequest);
       } catch (refreshError) {

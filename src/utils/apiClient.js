@@ -1,5 +1,5 @@
 // src/utils/apiClient.js
-// 🏛️ Enterprise Multi-Tenant API Client (Strict Build-Mode Router Edition)
+// 🏛️ Enterprise Multi-Tenant API Client (Dynamic Interceptor Routing Edition)
 import axios from 'axios';
 import { useAuthStore } from '@/features/auth/store/authStore';
 
@@ -32,35 +32,61 @@ const applyAuthorizationHeader = (config, bearerToken) => {
   return config;
 };
 
-// 🟢 1. STRICT MODE DETECTOR: การันตีแยกสาย Local / Production ผ่านระบบ Build-Mode ของ Vite
-const detectBaseURL = () => {
-  // 1.1 ถ้ากำลังรันในโหมดพัฒนาสด ๆ (Local Development เช่น npm run dev บนเครื่องเรา)
-  if (import.meta.env.DEV) {
-    if (typeof window !== 'undefined' && window.location) {
-      const currentHostname = window.location.hostname;
-      // รองรับการเทสข้ามเครื่องในวง LAN สำหรับทีมพัฒนา
-      if (currentHostname !== 'localhost' && currentHostname !== '127.0.0.1') {
-        return `http://${currentHostname}:5000/api/`;
-      }
+// 🟢 1. RUNTIME DETECTOR FUNCTION
+const getRuntimeBaseURL = () => {
+  if (typeof window !== 'undefined' && window.location) {
+    const currentHostname = window.location.hostname;
+
+    // A. ถ้าเปิดบน Production Domain หรือ Vercel URL ของระบบ ให้ชี้เข้า API หลักทันที
+    if (currentHostname.includes('saduaksabuy.com')) {
+      return 'https://api.saduaksabuy.com/api/';
     }
-    return 'http://localhost:5000/api/';
+
+    // B. สำหรับทีมพัฒนา: รันข้ามเครื่องในวง LAN (ไม่ใช่ localhost แต่เปิดผ่าน IP เครื่อง dev)
+    if (currentHostname !== 'localhost' && currentHostname !== '127.0.0.1') {
+      return `http://${currentHostname}:5000/api/`;
+    }
   }
 
-  // 1.2 ถ้าผ่านการ Build เป็น Production แล้ว (เช่น สั่ง build ขึ้น Vercel/Server จริง)
-  // บังคับชี้เข้า API ของเว็บหลักเสมอ เพื่อแก้ปัญหา ERR_CONNECTION_REFUSED ที่เครื่องลูกค้า
-  return 'https://api.saduaksabuy.com/api/';
+  // C. ถ้าหลุดจากเงื่อนไขด้านบน (เช่น รัน npm run dev บนเครื่องตัวเองตรง ๆ) ให้ชี้เข้า Localhost
+  return 'http://localhost:5000/api/';
 };
 
-const baseURL = detectBaseURL();
+// ตั้งค่าเริ่มต้นแบบชั่วคราว (จะถูกทับด้วย Interceptor เสมอเมื่อมีการส่ง Request)
+const apiClient = axios.create({
+  baseURL: 'http://localhost:5000/api/',
+  timeout: 30000,
+  withCredentials: true,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+// 🟢 2. DYNAMIC BASEURL BINDING (เปลี่ยนพิกัดหลังบ้านแบบ Realtime ก่อนกดส่ง Request)
+apiClient.interceptors.request.use(
+  (config) => {
+    // สลับ URL ตามโดเมนบราวเซอร์ที่เปิดอยู่ ณ วินาทีนั้นจริง ๆ
+    config.baseURL = getRuntimeBaseURL();
+
+    const token = getToken();
+    if (token) {
+      applyAuthorizationHeader(config, token);
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
 
 const refreshAccessToken = async () => {
   if (!refreshPromise) {
+    const currentBaseURL = getRuntimeBaseURL();
+    
     refreshPromise = axios.post(
-      `${baseURL}auth/refresh`,
+      `${currentBaseURL}auth/refresh`,
       {},
       {
         withCredentials: true,
-        timeout: 20000,
+        timeout: 30000,
         headers: {
           'Content-Type': 'application/json',
         },
@@ -106,26 +132,6 @@ function getToken() {
   const token = state?.accessToken || state?.token;
   return token ? `Bearer ${token}` : null;
 }
-
-const apiClient = axios.create({
-  baseURL,
-  timeout: 20000,
-  withCredentials: true,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
-
-apiClient.interceptors.request.use(
-  (config) => {
-    const token = getToken();
-    if (token) {
-      applyAuthorizationHeader(config, token);
-    }
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
 
 apiClient.interceptors.response.use(
   (response) => response,
@@ -173,6 +179,9 @@ apiClient.interceptors.response.use(
         const nextAccessToken = await refreshAccessToken();
         const bearerToken = nextAccessToken ? `Bearer ${nextAccessToken}` : null;
         applyAuthorizationHeader(originalRequest, bearerToken);
+        
+        // อัปเดต baseURL ให้ถูกต้องก่อนยิงซ้ำอีกรอบ
+        originalRequest.baseURL = getRuntimeBaseURL();
         return apiClient(originalRequest);
       } catch (refreshError) {
         return Promise.reject(refreshError);

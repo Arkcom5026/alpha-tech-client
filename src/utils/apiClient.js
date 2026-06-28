@@ -32,16 +32,18 @@ const applyAuthorizationHeader = (config, bearerToken) => {
   return config;
 };
 
-// src/utils/apiClient.js (ฉบับขจัด Network Error ถาวร)
-
-// 🟢 1. STRICT API DETECTOR: ล็อกอันดับตามตัวแปรอัปเดตล่าสุดบน Vercel และแก้ไอพีภายในเครื่อง
+// 🟢 1. STRICT API DETECTOR (อัปเดตแกนนำทางตรงตัว)
 const getRuntimeBaseURL = () => {
-  // สลับเอา VITE_API_BASE_URL (ตัวที่เพิ่งอัปเดตล่าสุด) ขึ้นมาเช็คเป็นด่านแรกเพื่อความถูกต้องบน Cloud
+  // ตรวจจับค่าตัวแปรสิ่งแวดล้อมจากระบบ Cloud Production (Vercel) เป็นลำดับแรก
+  // 💡 ล็อกอันดับเอาคีย์อัปเดตล่าสุดชี้ขาดขึ้นก่อนเสมอ
   const envURL = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL;
-  if (envURL) {
+  
+  if (envURL && envURL.trim() !== '') {
+    // ล้างเครื่องหมาย / ท้ายสุดออกแล้วเติมพ่วง /api/ เข้าไปให้ได้มาตรฐานเดียวกัน
     return `${envURL.replace(/\/$/, '')}/api/`;
   }
 
+  // 💡 ลำดับสอง: รองรับการรันเทสระบบบนวง LAN ผ่านอุปกรณ์อื่น
   if (typeof window !== 'undefined' && window.location) {
     const currentHostname = window.location.hostname;
     if (currentHostname !== 'localhost' && currentHostname !== '127.0.0.1') {
@@ -49,13 +51,13 @@ const getRuntimeBaseURL = () => {
     }
   }
 
-  // 🟢 FIXED: เปลี่ยนจาก localhost เป็น 127.0.0.1 เพื่อบังคับวิ่งเลน IPv4 ตรงล็อกเดียวกับ authApi.js ทันที
+  // 💡 ลำดับสุดท้าย: Fallback ปลอดภัยสำหรับเครื่องคอมพิวเตอร์พาร์ตเนอร์ บังคับวิ่ง IPv4 ตรงเป้า
   return 'http://127.0.0.1:5000/api/';
 };
 
+// 🟢 2. INITIAL INSTANCE BUILD
 const apiClient = axios.create({
-  // 🟢 FIXED: บังคับไอพีเริ่มต้นเป็น 127.0.0.1 เพื่อป้องกัน Windows แปลงค่าเป็น IPv6 (::1) แล้วสายหลุด
-  baseURL: 'http://127.0.0.1:5000/api/',
+  baseURL: getRuntimeBaseURL(), // ให้ดึงค่าที่คัดกรองแล้วมาใช้ตั้งแต่ก้าวแรก
   timeout: 30000,
   withCredentials: true,
   headers: {
@@ -63,9 +65,10 @@ const apiClient = axios.create({
   },
 });
 
-// 🟢 2. REALTIME BASEURL OVERRIDE (บังคับพิกัด URL ใหม่ทุกครั้งที่มีการกดส่งข้อมูล)
+// 🟢 3. REALTIME BASEURL OVERRIDE INTERCEPTOR
 apiClient.interceptors.request.use(
   (config) => {
+    // บังคับทับค่าใหม่อีกครั้งก่อนปล่อยสัญญาณออกไป เพื่อความปลอดภัย 100% บนทุก Environment
     config.baseURL = getRuntimeBaseURL();
 
     const token = getToken();
@@ -156,7 +159,7 @@ apiClient.interceptors.response.use(
     }
 
     if (!error?.response && (error?.code === 'ERR_NETWORK' || error?.message === 'Network Error')) {
-      const enhanced = new Error('Network Error: ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้');
+      const enhanced = new Error('Network Error: ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์หลังบ้านได้ กรุณาตรวจสอบการตั้งค่า API');
       enhanced.original = error;
       return Promise.reject(enhanced);
     }

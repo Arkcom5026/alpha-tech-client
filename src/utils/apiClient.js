@@ -1,4 +1,5 @@
 // src/utils/apiClient.js
+// 🏛️ Enterprise Multi-Tenant API Client (Dynamic Network Binding Edition)
 import axios from 'axios';
 import { useAuthStore } from '@/features/auth/store/authStore';
 
@@ -31,16 +32,33 @@ const applyAuthorizationHeader = (config, bearerToken) => {
   return config;
 };
 
-// 🟢 ABSOLUTE DIRECT IP FOR POS: ล็อกเป็น 127.0.0.1 ป้องกันคุกกี้สิทธิ์หลุดบน Windows Localhost
-const coreBaseURL = 'http://127.0.0.1:5000/api';
+// 🟢 1. DYNAMIC API DETECTOR: ค้นหาพิกัดหลังบ้านอัจฉริยะ รองรับการใช้งานข้ามเครื่องในวง LAN
+const detectBaseURL = () => {
+  // 1.1 ถ้ามีการระบุ VITE_API_URL ใน .env ให้ดึงค่านั้นมาใช้งานเป็นอันดับแรก
+  if (import.meta.env.VITE_API_URL) {
+    return `${import.meta.env.VITE_API_URL.replace(/\/$/, '')}/api/`;
+  }
+  
+  // 1.2 หากรันบนบราวเซอร์ลูกค้า ให้ดึงชื่อ Host/IP เครื่องหลักจาก URL มาดัดแปลงเข้าพอร์ต 5000 อัตโนมัติ
+  if (typeof window !== 'undefined' && window.location) {
+    const currentHostname = window.location.hostname; // จะได้เลข IP เช่น 192.168.1.50
+    return `http://${currentHostname}:5000/api/`;
+  }
+
+  // 1.3 ค่า Fallback ปลอดภัยสำหรับเครื่อง Developer
+  return 'http://localhost:5000/api/';
+};
+
+const baseURL = detectBaseURL();
 
 const refreshAccessToken = async () => {
   if (!refreshPromise) {
-    // ใช้ Instance สดใหม่ที่ระบุสิทธิ์เด็ดขาด
-    refreshPromise = axios.create({ withCredentials: true }).post(
-      `${coreBaseURL}/auth/refresh`,
+    // 🟢 2. FIXED PATH: การันตีการเรียกท่อหมุน Token ผ่านตัวแปร baseURL ที่คำนวณมาอย่างแม่นยำ
+    refreshPromise = axios.post(
+      `${baseURL}auth/refresh`,
       {},
       {
+        withCredentials: true,
         timeout: 20000,
         headers: {
           'Content-Type': 'application/json',
@@ -69,10 +87,9 @@ const refreshAccessToken = async () => {
           console.error('[apiClient] refreshAccessToken failed', {
             message: error?.message,
             status: error?.response?.status,
+            data: error?.response?.data,
           });
         }
-        // 🟢 CLEAR STORE IMMEDIATELY: สั่งล้าง Zustand สเตตัสสิทธิ์ทันทีที่ท่อต่ออายุพังพินาศ
-        useAuthStore.setState({ token: null, accessToken: null, user: null, session: null });
         throw error;
       })
       .finally(() => {
@@ -86,40 +103,55 @@ const refreshAccessToken = async () => {
 function getToken() {
   const state = useAuthStore.getState();
   const token = state?.accessToken || state?.token;
-  return token ? token : null;
+  return token ? `Bearer ${token}` : null;
 }
 
 const apiClient = axios.create({
-  baseURL: coreBaseURL,
-  timeout: 30000, 
-  withCredentials: true, // ⛳️ บังคับอนุญาตส่ง Cookie แนบไปทุกรอบคำขอ
+  baseURL,
+  timeout: 20000,
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// Request interceptor
 apiClient.interceptors.request.use(
   (config) => {
-    config.baseURL = coreBaseURL;
-
     const token = getToken();
     if (token) {
-      const bearerToken = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
-      applyAuthorizationHeader(config, bearerToken);
+      applyAuthorizationHeader(config, token);
     }
-
     return config;
   },
   (error) => Promise.reject(error)
 );
 
-// Response interceptor
 apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
+    if (import.meta.env?.DEV) {
+      const requestUrlForLog = error?.config?.url || '';
+      const statusForLog = error?.response?.status;
+      const isExpectedGuestRefresh401 = isRefreshEndpoint(requestUrlForLog) && statusForLog === 401;
+
+      if (!isExpectedGuestRefresh401) {
+        console.error('[apiClient] error', {
+          message: error?.message,
+          code: error?.code,
+          name: error?.name,
+          url: error?.config?.url,
+          baseURL: error?.config?.baseURL,
+          method: error?.config?.method,
+          status: error?.response?.status,
+          data: error?.response?.data,
+        });
+      }
+    }
+
     if (!error?.response && (error?.code === 'ERR_NETWORK' || error?.message === 'Network Error')) {
-      return Promise.reject(error);
+      const enhanced = new Error('Network Error: ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้');
+      enhanced.original = error;
+      return Promise.reject(enhanced);
     }
 
     const originalRequest = error?.config;
@@ -140,26 +172,8 @@ apiClient.interceptors.response.use(
         const nextAccessToken = await refreshAccessToken();
         const bearerToken = nextAccessToken ? `Bearer ${nextAccessToken}` : null;
         applyAuthorizationHeader(originalRequest, bearerToken);
-        
-        originalRequest.baseURL = coreBaseURL;
         return apiClient(originalRequest);
       } catch (refreshError) {
-        // 🚀 HARD RESOLVE FIX: ปิดวงจรลูปอุบาทว์รัวๆ 401 กลางอากาศ
-        console.warn('🚨 [apiClient] สิทธิ์คุกกี้สลายตัวถาวร — ทำลายล้างเซสชันขยะหน้าร้านและพาเด้งกลับจุดสตาร์ท');
-        
-        // 1. กวาดล้างข้อมูลใน Zustand Store
-        useAuthStore.setState({ token: null, accessToken: null, user: null, session: null });
-        
-        // 2. ล้างหน่วยความจำตกค้างใน Browser Cache
-        localStorage.removeItem('pos_accessToken');
-        localStorage.removeItem('pos_token');
-        localStorage.removeItem('pos_user_profile');
-        
-        // 3. ดีดผู้ใช้งานกลับหน้า ล็อกอิน ป้องกันกระสุนยิงถล่ม API
-        if (!window.location.pathname.includes('/login')) {
-          window.location.href = '/login?expired=true';
-        }
-
         return Promise.reject(refreshError);
       }
     }

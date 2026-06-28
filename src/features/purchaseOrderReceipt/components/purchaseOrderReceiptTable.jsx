@@ -3,7 +3,7 @@
 import React, { useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Search, ClipboardCheck, Layers, Calendar, User, SlidersHorizontal, AlertCircle, XCircle } from 'lucide-react';
-import usePurchaseOrderReceiptStore from '../store/purchaseOrderReceiptStore'; //[cite: 16]
+import usePurchaseOrderReceiptStore from '../store/purchaseOrderReceiptStore'; 
 
 const formatDateTh = (value) => {
   try {
@@ -20,10 +20,10 @@ const formatDateTh = (value) => {
   }
 };
 
-const normalizeStatus = (status) => String(status || '').toUpperCase(); //[cite: 16]
+const normalizeStatus = (status) => String(status || '').toUpperCase(); 
 
 const renderStatusBadge = (statusRaw) => {
-  const s = normalizeStatus(statusRaw); //[cite: 16]
+  const s = normalizeStatus(statusRaw); 
   if (s === 'PENDING') {
     return (
       <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-slate-100 text-slate-700 border border-slate-200 select-none">
@@ -53,36 +53,36 @@ const renderStatusBadge = (statusRaw) => {
 };
 
 const canReceive = (po) => {
-  const s = normalizeStatus(po?.status); //[cite: 16]
-  return s === 'PENDING' || s === 'PARTIALLY_RECEIVED'; //[cite: 16]
+  const s = normalizeStatus(po?.status); 
+  return s === 'PENDING' || s === 'PARTIALLY_RECEIVED'; 
 };
 
 const PurchaseOrderReceiptTable = ({ purchaseOrders, loading }) => {
-  const navigate = useNavigate(); //[cite: 16]
-  const { shopSlug } = useParams(); //[cite: 16]
+  const navigate = useNavigate(); 
+  const { shopSlug } = useParams();
   const { cancelPurchaseOrderAction } = usePurchaseOrderReceiptStore(); 
-  const [searchText = '', setSearchText] = useState(''); //[cite: 16]
-  const [statusFilter = 'ALL', setStatusFilter] = useState('ALL'); //[cite: 16]
+  const [searchText = '', setSearchText] = useState(''); 
+  const [statusFilter = 'ALL', setStatusFilter] = useState('ALL'); 
   const [cancelingId, setCancelingId] = useState(null); 
 
   const filtered = useMemo(() => {
-    const list = Array.isArray(purchaseOrders) ? purchaseOrders : []; //[cite: 16]
-    const q = String(searchText || '').trim().toLowerCase(); //[cite: 16]
+    const list = Array.isArray(purchaseOrders) ? purchaseOrders : []; 
+    const q = String(searchText || '').trim().toLowerCase(); 
 
     return list.filter((po) => {
-      const supplierName = String(po?.supplier?.name || '').toLowerCase(); //[cite: 16]
-      const poCode = String(po?.code || po?.poNumber || '').toLowerCase(); //[cite: 16]
+      const supplierName = String(po?.supplier?.name || '').toLowerCase(); 
+      const poCode = String(po?.code || po?.poNumber || '').toLowerCase(); 
 
-      const matchText = !q || supplierName.includes(q) || poCode.includes(q); //[cite: 16]
+      const matchText = !q || supplierName.includes(q) || poCode.includes(q); 
       const matchStatus =
-        statusFilter === 'ALL' || normalizeStatus(po?.status) === normalizeStatus(statusFilter); //[cite: 16]
+        statusFilter === 'ALL' || normalizeStatus(po?.status) === normalizeStatus(statusFilter); 
 
-      return matchText && matchStatus; //[cite: 16]
+      return matchText && matchStatus; 
     });
-  }, [purchaseOrders, searchText, statusFilter]); //[cite: 16]
+  }, [purchaseOrders, searchText, statusFilter]); 
 
   return (
-    <div className="border border-slate-200 rounded-2xl overflow-hidden shadow-[0_4px_25px_rgba(0,0,0,0.01)] bg-white"> //[cite: 16]
+    <div className="border border-slate-200 rounded-2xl overflow-hidden shadow-[0_4px_25px_rgba(0,0,0,0.01)] bg-white"> 
       
       {/* 🟦 TOP CONTROL CONTAINER */}
       <div className="flex justify-between items-center p-4 flex-wrap gap-4 bg-slate-50/70 border-b border-slate-100 font-sans">
@@ -91,9 +91,9 @@ const PurchaseOrderReceiptTable = ({ purchaseOrders, loading }) => {
           <input
             type="text"
             placeholder="ค้นหา Supplier / เลขที่ใบสั่งซื้อ..."
-            value={searchText} //[cite: 16]
-            onChange={(e) => setSearchText(e.target.value)} //[cite: 16]
-            className="pl-10 pr-4 py-2 w-64 bg-white border border-slate-200 focus:border-orange-500 text-sm font-bold rounded-xl outline-none transition-all shadow-inner" //[cite: 16]
+            value={searchText} 
+            onChange={(e) => setSearchText(e.target.value)} 
+            className="pl-10 pr-4 py-2 w-64 bg-white border border-slate-200 focus:border-orange-500 text-sm font-bold rounded-xl outline-none transition-all shadow-inner" 
           />
         </div>
 
@@ -105,9 +105,9 @@ const PurchaseOrderReceiptTable = ({ purchaseOrders, loading }) => {
               type="radio"
               name="poReceiptStatusFilter"
               value="ALL"
-              checked={statusFilter === 'ALL'} //[cite: 16]
-              onChange={(e) => setStatusFilter(e.target.value)} //[cite: 16]
-              className="w-4 h-4 text-orange-500 border-slate-300 accent-orange-500 cursor-pointer" //[cite: 16]
+              checked={statusFilter === 'ALL'} 
+              onChange={(e) => setStatusFilter(e.target.value)} 
+              className="w-4 h-4 text-orange-500 border-slate-300 accent-orange-500 cursor-pointer" 
             />
             <span>ทั้งหมด</span>
           </label>
@@ -116,9 +116,9 @@ const PurchaseOrderReceiptTable = ({ purchaseOrders, loading }) => {
               type="radio"
               name="poReceiptStatusFilter"
               value="PENDING"
-              checked={statusFilter === 'PENDING'} //[cite: 16]
-              onChange={(e) => setStatusFilter(e.target.value)} //[cite: 16]
-              className="w-4 h-4 text-orange-500 border-slate-300 accent-orange-500 cursor-pointer" //[cite: 16]
+              checked={statusFilter === 'PENDING'} 
+              onChange={(e) => setStatusFilter(e.target.value)} 
+              className="w-4 h-4 text-orange-500 border-slate-300 accent-orange-500 cursor-pointer" 
             />
             <span>รอดำเนินการ</span>
           </label>
@@ -127,9 +127,9 @@ const PurchaseOrderReceiptTable = ({ purchaseOrders, loading }) => {
               type="radio"
               name="poReceiptStatusFilter"
               value="PARTIALLY_RECEIVED"
-              checked={statusFilter === 'PARTIALLY_RECEIVED'} //[cite: 16]
-              onChange={(e) => setStatusFilter(e.target.value)} //[cite: 16]
-              className="w-4 h-4 text-orange-500 border-slate-300 accent-orange-500 cursor-pointer" //[cite: 16]
+              checked={statusFilter === 'PARTIALLY_RECEIVED'} 
+              onChange={(e) => setStatusFilter(e.target.value)} 
+              className="w-4 h-4 text-orange-500 border-slate-300 accent-orange-500 cursor-pointer" 
             />
             <span>รับบางส่วน</span>
           </label>
@@ -138,9 +138,9 @@ const PurchaseOrderReceiptTable = ({ purchaseOrders, loading }) => {
               type="radio"
               name="poReceiptStatusFilter"
               value="COMPLETED"
-              checked={statusFilter === 'COMPLETED'} //[cite: 16]
-              onChange={(e) => setStatusFilter(e.target.value)} //[cite: 16]
-              className="w-4 h-4 text-orange-500 border-slate-300 accent-orange-500 cursor-pointer" //[cite: 16]
+              checked={statusFilter === 'COMPLETED'} 
+              onChange={(e) => setStatusFilter(e.target.value)} 
+              className="w-4 h-4 text-orange-500 border-slate-300 accent-orange-500 cursor-pointer" 
             />
             <span>เสร็จสมบูรณ์</span>
           </label>
@@ -184,7 +184,7 @@ const PurchaseOrderReceiptTable = ({ purchaseOrders, loading }) => {
 
             {!loading &&
               filtered.map((po, index) => {
-                const disabled = !canReceive(po); //[cite: 16]
+                const disabled = !canReceive(po); 
                 const isCanceling = cancelingId === po.id;
                 const canCancel = normalizeStatus(po?.status) === 'PENDING' || normalizeStatus(po?.status) === 'PARTIALLY_RECEIVED';
 
@@ -222,8 +222,8 @@ const PurchaseOrderReceiptTable = ({ purchaseOrders, loading }) => {
                           disabled={disabled || isCanceling}
                           onClick={() => {
                             if (disabled) return;
-                            const targetSlug = shopSlug || 'advancetech'; //[cite: 16]
-                            navigate(`/${targetSlug}/pos/purchases/receipt/create/${po.id}`); //[cite: 16]
+                            const targetSlug = shopSlug || 'advancetech'; 
+                            navigate(`/${targetSlug}/pos/purchases/receipt/create/${po.id}`); 
                           }}
                           className={`px-2.5 py-1 rounded-lg text-xs font-black border tracking-wide transition-all duration-200 ease-out transform active:scale-95 flex items-center gap-1 shadow-sm whitespace-nowrap shrink-0 ${
                             disabled

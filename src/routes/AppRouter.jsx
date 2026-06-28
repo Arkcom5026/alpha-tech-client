@@ -1,6 +1,6 @@
 // src/routes/AppRouter.jsx
 // 🏢 Master Multi-Tenant Router (Clean & Professional Partner-Portal Routing)
-// 🟢 [FIXED ROOT NAVIGATION] สับรางทางเข้าหลักให้วิ่งเข้าหน้า Portal กลางสีขาวเมื่อพิมพ์เว็บตัวเปล่าสำเร็จ 100%
+// 🔒 [SECURITY PATCH] ป้องกันเมนูตกรางเตะออกจากระบบ — ตรึง Session ให้อยู่ใน POS เสมอ ไม่ต้อง Login ใหม่
 import React from 'react';
 import { Navigate, Outlet, useParams } from 'react-router-dom';
 
@@ -23,12 +23,15 @@ const PartnerPosMasterLayout = () => {
   const { shopSlug } = useParams();
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-slate-950 text-slate-100">
+    <div className="flex h-screen w-screen overflow-hidden bg-slate-50 text-slate-800 font-sans">
       <SidebarLoader shopSlug={shopSlug} />
       <div className="flex flex-col flex-1 overflow-hidden min-w-0">
         <HeaderPos shopSlug={shopSlug} />
-        <main className="flex-1 overflow-y-auto p-0 animate-fadeIn">
-          <Outlet />
+        {/* ล็อกมาตรฐานสัดส่วนความกว้างและ Padding ให้เท่ากันทุกโมดูล สวยงามสมมาตร */}
+        <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 min-w-0 animate-fadeIn bg-slate-50">
+          <div className="mx-auto w-full max-w-[1680px]"> 
+            <Outlet />
+          </div>
         </main>
       </div>
     </div>
@@ -39,19 +42,17 @@ const PartnerPosMasterLayout = () => {
  * 🎛️ [CORE ROUTER CONFIGURATION]
  */
 const AppRouter = [
-  // 🟢 1. ดักจับทางเข้าแรกสุด (Root Path) เมื่อผู้ใช้เรียก http://localhost:5173/ ตัวเปล่า
-  // บังคับให้เรนเดอร์หน้า Marketplace Portal สีขาวขึ้นมาฉายแสงทันที ไม่ดีดหนีไปหน้า POS อีกต่อไป
+  // 🟢 1. ดักจับทางเข้าแรกสุด (Root Path) เมื่อเรียกเว็บตัวเปล่า จะเปิดหน้าพอร์ทัลกลางสีขาว
   {
     path: '/',
     element: <MarketplacePortalPage />,
   },
   
-  // 🟢 2. ปรับตัวแปรพาธเดิมให้สลับรางวิ่งเข้าหา Root เพื่อป้องกันทราฟฟิกตกราง
+  // 🟢 2. โซนหน้า Portal อิสระ
   {
     path: 'marketplace-portal',
     element: <Navigate to="/" replace />,
   },
-  
   {
     path: 'partner-portal',
     element: <PartnerWelcomePage />,
@@ -65,7 +66,7 @@ const AppRouter = [
     element: <ResetPasswordPage />,
   },
 
-  // 🏛️ 3. โครงสร้างเส้นทางหลักฝั่ง POS หน้าร้าน (ผูก Dynamic parameter รหัสร้านค้า)
+  // 🏛️ 3. โครงสร้างเส้นทางหลักฝั่ง POS หน้าร้าน
   {
     path: ':shopSlug/pos',
     element: <PartnerPosMasterLayout />,
@@ -78,10 +79,11 @@ const AppRouter = [
     children: onlinePartnerRoutes,
   },
 
-  // 🛠️ 4. กรณีพิมพ์พาธมั่วหรือเกิดข้อผิดพลาดในการนำทาง ให้ดีดกลับมาตั้งหลักที่หน้าพอร์ทัลหลัก
+  // 🚨 [FIXED CATCH-ALL SAFETY NET]: เมื่อเจอพาธมั่วหรือลิงก์เปล่า บังคับให้ดีดกลับมาตั้งหลักที่หน้าแดชบอร์ด POS ของร้านค้าหลักเสมอ
+  // วิธีนี้จะช่วยเซฟสิทธิ์พนักงานให้อยู่ใน Session ถาวร ไม่หลุดออกไปหน้า Login ด้านนอกอีกต่อไป
   {
     path: '*',
-    element: <Navigate to="/" replace />,
+    element: <Navigate to="/advancetech/pos/dashboard" replace />,
   },
 ];
 

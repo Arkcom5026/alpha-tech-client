@@ -1,20 +1,63 @@
-// src/features/auth/api/authApi.js
+// src/utils/apiClient.js
+// 🏛️ Enterprise Multi-Tenant API Client (Strict Custom Environment Routing Edition)
 import axios from 'axios';
+import { useAuthStore } from '@/features/auth/store/authStore';
 
-// 🟢 DYNAMIC API ROUTER: ตรวจจับ Environment เพื่อแยกท่อส่งข้อมูลระหว่างเครื่องตัวเองกับบน Cloud
-const getAuthBaseURL = () => {
-  // 1. ถ้าอยู่บน Cloud Production ดึงค่าโดเมนจากตัวแปรระบบ Vercel ทันที
-  const envURL = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL;
-  if (envURL && envURL.trim() !== '') {
-    return `${envURL.replace(/\/$/, '')}/api`;
-  }
+let refreshPromise = null;
 
-  // 2. ถ้าอยู่บนเครื่อง Localhost สลับกลับมาใช้ IPv4 เลนด่วนอย่างปลอดภัย
-  return 'http://127.0.0.1:5000/api';
+const isRefreshEndpoint = (url = '') => String(url).includes('/auth/refresh');
+const isLogoutEndpoint = (url = '') => String(url).includes('/auth/logout');
+const isAuthBypassEndpoint = (url = '') => {
+  const normalizedUrl = String(url || '');
+  return [
+    '/auth/login',
+    '/auth/register',
+    '/auth/forgot-password',
+    '/auth/reset-password',
+    '/auth/refresh',
+    '/auth/logout',
+  ].some((path) => normalizedUrl.includes(path));
 };
 
-const authApiClient = axios.create({
-  baseURL: getAuthBaseURL(), // 🟢 สวิตช์พิกัดปลายทางแบบอัตโนมัติ 100%
+const applyAuthorizationHeader = (config, bearerToken) => {
+  if (!bearerToken) return config;
+
+  if (config.headers && typeof config.headers.set === 'function') {
+    config.headers.set('Authorization', bearerToken);
+  } else {
+    config.headers = config.headers || {};
+    config.headers.Authorization = bearerToken;
+  }
+
+  return config;
+};
+
+// 🟢 1. STRICT API DETECTOR (อัปเดตแกนนำทางตรงตัว)
+const getRuntimeBaseURL = () => {
+  // ตรวจจับค่าตัวแปรสิ่งแวดล้อมจากระบบ Cloud Production (Vercel) เป็นลำดับแรก
+  // 💡 ล็อกอันดับเอาคีย์อัปเดตล่าสุดชี้ขาดขึ้นก่อนเสมอ
+  const envURL = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL;
+  
+  if (envURL && envURL.trim() !== '') {
+    // ล้างเครื่องหมาย / ท้ายสุดออกแล้วเติมพ่วง /api/ เข้าไปให้ได้มาตรฐานเดียวกัน
+    return `${envURL.replace(/\/$/, '')}/api/`;
+  }
+
+  // 💡 ลำดับสอง: รองรับการรันเทสระบบบนวง LAN ผ่านอุปกรณ์อื่น
+  if (typeof window !== 'undefined' && window.location) {
+    const currentHostname = window.location.hostname;
+    if (currentHostname !== 'localhost' && currentHostname !== '127.0.0.1') {
+      return `http://${currentHostname}:5000/api/`;
+    }
+  }
+
+  // 💡 ลำดับสุดท้าย: Fallback ปลอดภัยสำหรับเครื่องคอมพิวเตอร์พาร์ตเนอร์ บังคับวิ่ง IPv4 ตรงเป้า
+  return 'http://127.0.0.1:5000/api/';
+};
+
+// 🟢 2. INITIAL INSTANCE BUILD
+const apiClient = axios.create({
+  baseURL: getRuntimeBaseURL(), // ให้ดึงค่าที่คัดกรองแล้วมาใช้ตั้งแต่ก้าวแรก
   timeout: 30000,
   withCredentials: true,
   headers: {
@@ -22,94 +65,133 @@ const authApiClient = axios.create({
   },
 });
 
-// 🚀 เพิ่ม Interceptor เผื่อเหนียวดักทับช่วง Runtime อีกหนึ่งสเต็ป
-authApiClient.interceptors.request.use(
+// 🟢 3. REALTIME BASEURL OVERRIDE INTERCEPTOR
+apiClient.interceptors.request.use(
   (config) => {
-    config.baseURL = getAuthBaseURL();
+    // บังคับทับค่าใหม่อีกครั้งก่อนปล่อยสัญญาณออกไป เพื่อความปลอดภัย 100% บนทุก Environment
+    config.baseURL = getRuntimeBaseURL();
+
+    const token = getToken();
+    if (token) {
+      applyAuthorizationHeader(config, token);
+    }
     return config;
   },
   (error) => Promise.reject(error)
 );
 
-export async function registerUser(data) {
-  try {
-    const res = await authApiClient.post('/auth/register', data);
-    return res;
-  } catch (err) {
-    console.error('🔴 registerUser error:', err);
-    throw err;
+const refreshAccessToken = async () => {
+  if (!refreshPromise) {
+    const currentBaseURL = getRuntimeBaseURL();
+    
+    refreshPromise = axios.post(
+      `${currentBaseURL}auth/refresh`,
+      {},
+      {
+        withCredentials: true,
+        timeout: 30000,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }
+    )
+      .then((res) => {
+        const nextAccessToken = res?.data?.accessToken || res?.data?.token || null;
+
+        if (!nextAccessToken) {
+          throw new Error('Refresh succeeded but access token is missing');
+        }
+
+        useAuthStore.setState((state) => ({
+          ...state,
+          token: nextAccessToken,
+          accessToken: nextAccessToken,
+          rememberMe: !!res?.data?.session?.rememberMe,
+          session: res?.data?.session || state.session || null,
+        }));
+
+        return nextAccessToken;
+      })
+      .catch((error) => {
+        if (import.meta.env?.DEV) {
+          console.error('[apiClient] refreshAccessToken failed', {
+            message: error?.message,
+            status: error?.response?.status,
+            data: error?.response?.data,
+          });
+        }
+        throw error;
+      })
+      .finally(() => {
+        refreshPromise = null;
+      });
   }
+
+  return refreshPromise;
+};
+
+function getToken() {
+  const state = useAuthStore.getState();
+  const token = state?.accessToken || state?.token;
+  return token ? `Bearer ${token}` : null;
 }
 
-export async function loginUser(data) {
-  try {
-    const res = await authApiClient.post('/auth/login', data);
-    return res;
-  } catch (err) {
-    console.error('🔴 loginUser error:', err);
-    throw err;
-  }
-}
+apiClient.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    if (import.meta.env?.DEV) {
+      const requestUrlForLog = error?.config?.url || '';
+      const statusForLog = error?.response?.status;
+      const isExpectedGuestRefresh401 = isRefreshEndpoint(requestUrlForLog) && statusForLog === 401;
 
-export async function verifySession() {
-  try {
-    const res = await authApiClient.get('/auth/me');
-    return res;
-  } catch (err) {
-    console.error('🔴 verifySession error:', err);
-    throw err;
-  }
-}
-
-export async function refreshSession() {
-  try {
-    const res = await authApiClient.post('/auth/refresh');
-    return res;
-  } catch (err) {
-    const status = err?.response?.status;
-    if (status !== 401) {
-      console.error('🔴 refreshSession error:', err);
+      if (!isExpectedGuestRefresh401) {
+        console.error('[apiClient] error', {
+          message: error?.message,
+          code: error?.code,
+          name: error?.name,
+          url: error?.config?.url,
+          baseURL: error?.config?.baseURL,
+          method: error?.config?.method,
+          status: error?.response?.status,
+          data: error?.response?.data,
+        });
+      }
     }
-    throw err;
-  }
-}
 
-export async function logoutSession() {
-  try {
-    const res = await authApiClient.post('/auth/logout');
-    return res;
-  } catch (err) {
-    console.error('🔴 logoutSession error:', err);
-    throw err;
-  }
-}
+    if (!error?.response && (error?.code === 'ERR_NETWORK' || error?.message === 'Network Error')) {
+      const enhanced = new Error('Network Error: ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์หลังบ้านได้ กรุณาตรวจสอบการตั้งค่า API');
+      enhanced.original = error;
+      return Promise.reject(enhanced);
+    }
 
-export async function logoutAllSessions() {
-  try {
-    const res = await authApiClient.post('/auth/logout-all');
-    return res;
-  } catch (err) {
-    console.error('🔴 logoutAllSessions error:', err);
-    throw err;
-  }
-}
+    const originalRequest = error?.config;
+    const status = error?.response?.status;
+    const requestUrl = originalRequest?.url || '';
 
-export async function requestPasswordReset(data) {
-  try {
-    const res = await authApiClient.post('/auth/forgot-password', data);
-    return res;
-  } catch (err) {
-    console.error('🔴 requestPasswordReset error:', err);
-    throw err;
-  }
-}
+    if (
+      status === 401 &&
+      originalRequest &&
+      !originalRequest._retry &&
+      !isAuthBypassEndpoint(requestUrl) &&
+      !isRefreshEndpoint(requestUrl) &&
+      !isLogoutEndpoint(requestUrl)
+    ) {
+      originalRequest._retry = true;
 
-export async function resetPassword(data) {
-  try {
-    const res = await authApiClient.post('/auth/reset-password', data);
-    return res;
-  } catch (err) {
-    console.error('🔴 resetPassword error:', err);
-    throw err;
+      try {
+        const nextAccessToken = await refreshAccessToken();
+        const bearerToken = nextAccessToken ? `Bearer ${nextAccessToken}` : null;
+        applyAuthorizationHeader(originalRequest, bearerToken);
+        
+        originalRequest.baseURL = getRuntimeBaseURL();
+        return apiClient(originalRequest);
+      } catch (refreshError) {
+        return Promise.reject(refreshError);
+      }
+    }
+
+    return Promise.reject(error);
   }
-}
+);
+
+export default apiClient;

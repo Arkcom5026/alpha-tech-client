@@ -1,15 +1,35 @@
 // src/features/auth/api/authApi.js
 import axios from 'axios';
 
-// 🟢 HARDCODED DIRECT IP: เปลี่ยน localhost เป็น 127.0.0.1 เพื่อบังคับวิ่งเข้า IPv4 ตรงๆ ไม่ผ่านระบบแปลชื่อของ Windows
+// 🟢 DYNAMIC API ROUTER: ตรวจจับ Environment เพื่อแยกท่อส่งข้อมูลระหว่างเครื่องตัวเองกับบน Cloud
+const getAuthBaseURL = () => {
+  // 1. ถ้าอยู่บน Cloud Production ดึงค่าโดเมนจากตัวแปรระบบ Vercel ทันที
+  const envURL = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL;
+  if (envURL && envURL.trim() !== '') {
+    return `${envURL.replace(/\/$/, '')}/api`;
+  }
+
+  // 2. ถ้าอยู่บนเครื่อง Localhost สลับกลับมาใช้ IPv4 เลนด่วนอย่างปลอดภัย
+  return 'http://127.0.0.1:5000/api';
+};
+
 const authApiClient = axios.create({
-  baseURL: 'http://127.0.0.1:5000/api',
+  baseURL: getAuthBaseURL(), // 🟢 สวิตช์พิกัดปลายทางแบบอัตโนมัติ 100%
   timeout: 30000,
   withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
   },
 });
+
+// 🚀 เพิ่ม Interceptor เผื่อเหนียวดักทับช่วง Runtime อีกหนึ่งสเต็ป
+authApiClient.interceptors.request.use(
+  (config) => {
+    config.baseURL = getAuthBaseURL();
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
 
 export async function registerUser(data) {
   try {

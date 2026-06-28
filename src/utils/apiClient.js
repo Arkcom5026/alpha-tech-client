@@ -32,20 +32,22 @@ const applyAuthorizationHeader = (config, bearerToken) => {
   return config;
 };
 
-// 🟢 1. DYNAMIC API DETECTOR: ค้นหาพิกัดหลังบ้านอัจฉริยะ รองรับการใช้งานข้ามเครื่องในวง LAN
+// 🟢 1. HYBRID API DETECTOR: รองรับทั้ง Local Dev และ Production Server อัตโนมัติ
 const detectBaseURL = () => {
   // 1.1 ถ้ามีการระบุ VITE_API_URL ใน .env ให้ดึงค่านั้นมาใช้งานเป็นอันดับแรก
   if (import.meta.env.VITE_API_URL) {
     return `${import.meta.env.VITE_API_URL.replace(/\/$/, '')}/api/`;
   }
   
-  // 1.2 หากรันบนบราวเซอร์ลูกค้า ให้ดึงชื่อ Host/IP เครื่องหลักจาก URL มาดัดแปลงเข้าพอร์ต 5000 อัตโนมัติ
+  // 1.2 หากเปิดบนบราวเซอร์และพบว่าเป็นโดเมน Production ให้วิ่งเข้าเซิร์ฟเวอร์หลักทันที
   if (typeof window !== 'undefined' && window.location) {
-    const currentHostname = window.location.hostname; // จะได้เลข IP เช่น 192.168.1.50
-    return `http://${currentHostname}:5000/api/`;
+    const currentHostname = window.location.hostname;
+    if (currentHostname === 'saduaksabuy.com' || currentHostname === 'www.saduaksabuy.com') {
+      return 'https://saduaksabuy.com/api/';
+    }
   }
 
-  // 1.3 ค่า Fallback ปลอดภัยสำหรับเครื่อง Developer
+  // 1.3 ค่า Fallback สำหรับเครื่อง Developer (Localhost)
   return 'http://localhost:5000/api/';
 };
 

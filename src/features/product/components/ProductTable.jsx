@@ -17,6 +17,7 @@ const ProductTable = ({
   deleting,
   canDelete = false,
   density = 'normal',
+  productTypes = [],
 }) => {
   const handleEdit = onEdit;
   const isDeleting = (id) => (typeof deleting === 'boolean' ? deleting : String(deleting) === String(id));
@@ -33,7 +34,7 @@ const ProductTable = ({
 
   const rowClass = density === 'compact' ? 'text-xs' : 'text-sm';
   const cellPad = density === 'compact' ? 'py-1.5 px-3' : 'py-3 px-4';
-  const colCount = 11; 
+  const colCount = 9; 
 
   const toNumOrNull = (v) => {
     if (v === '' || v === null || v === undefined) return null;
@@ -68,15 +69,28 @@ const ProductTable = ({
     return null;
   };
 
+  const resolveProductTypeName = (item) => {
+    if (typeof item?.productType === 'string' && item.productType.trim()) return item.productType;
+    if (item?.productType?.name) return item.productType.name;
+    if (item?.productTypeName) return item.productTypeName;
+    if (item?.typeName) return item.typeName;
+
+    const productTypeId = item?.productTypeId ?? item?.productType?.id ?? item?.product_type_id;
+    if (productTypeId != null && Array.isArray(productTypes)) {
+      const found = productTypes.find((type) => Number(type?.id) === Number(productTypeId));
+      if (found?.name) return found.name;
+    }
+
+    return '-';
+  };
+
   return (
     <div className="w-full overflow-x-auto rounded-xl">
-      <Table className={`${rowClass} min-w-[1200px] border-collapse`}>
+      <Table className={`${rowClass} min-w-[980px] border-collapse`}>
         <TableHeader className="bg-zinc-100 dark:bg-zinc-800/80 sticky top-0 z-10 border-b border-zinc-200 dark:border-zinc-700">
           <TableRow className="hover:bg-transparent border-none">
-            <TableHead className={`text-center font-semibold text-zinc-800 dark:text-zinc-200 ${cellPad}`}>หมวดหมู่สินค้า</TableHead>
             <TableHead className={`text-center font-semibold text-zinc-800 dark:text-zinc-200 ${cellPad}`}>ประเภทสินค้า</TableHead>
             <TableHead className={`text-center font-semibold text-zinc-800 dark:text-zinc-200 ${cellPad}`}>แบรนด์</TableHead>
-            <TableHead className={`text-center font-semibold text-zinc-600 dark:text-zinc-400 ${cellPad}`}>SKU/รุ่น</TableHead>
             <TableHead className={`text-left font-semibold text-zinc-800 dark:text-zinc-200 ${cellPad}`}>ชื่อสินค้า</TableHead>
             <TableHead className={`text-right font-semibold text-zinc-800 dark:text-zinc-200 ${cellPad} tabular-nums`}>ราคาทุน</TableHead>
             <TableHead className={`text-right font-semibold text-zinc-800 dark:text-zinc-200 ${cellPad} tabular-nums`}>ราคาส่ง</TableHead>
@@ -97,10 +111,8 @@ const ProductTable = ({
                   key={item.id}
                   className={`bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800/60 transition-colors border-zinc-200 dark:border-zinc-800 ${rowClass} ${!isActive ? 'opacity-50' : ''}`}
                 >
-                  <TableCell className={`text-center text-zinc-700 dark:text-zinc-300 ${cellPad}`}>{item?.category ?? item?.categoryName ?? '-'}</TableCell>
-                  <TableCell className={`text-center text-zinc-700 dark:text-zinc-300 ${cellPad}`}>{item?.productType ?? item?.productTypeName ?? '-'}</TableCell>
+                  <TableCell className={`text-center text-zinc-700 dark:text-zinc-300 ${cellPad}`}>{resolveProductTypeName(item)}</TableCell>
                   <TableCell className={`text-center text-zinc-700 dark:text-zinc-300 ${cellPad}`}>{item?.brand ?? item?.brandName ?? '-'}</TableCell>
-                  <TableCell className={`text-center font-mono text-zinc-600 dark:text-zinc-400 ${cellPad}`}>{item.sku || item.model || '-'}</TableCell>
                   <TableCell className={`text-left font-medium text-zinc-900 dark:text-zinc-100 ${cellPad}`}>{item.name || '-'}</TableCell>
                   
                   <TableCell className={`text-right tabular-nums ${cellPad}`}>{priceCell(resolveBranchPrice(item)?.costPrice ?? item.costPrice)}</TableCell>

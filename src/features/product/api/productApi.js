@@ -1,13 +1,19 @@
-// ✅ src/features/product/api/productApi.js
+// src/features/product/api/productApi.js
 import apiClient from '@/utils/apiClient';
 import { parseApiError } from '@/utils/uiHelpers';
 
 // LIST
-export const getProducts = async ({ search, status } = {}) => {
+export const getProducts = async ({ search, status, categoryId, productTypeId, brandId, take, takeNum, page, skipNum } = {}) => {
   try {
     const params = { _ts: Date.now() };
     if (search?.trim()) params.search = search.trim();
     if (status && status !== 'all') params.status = status;
+    if (categoryId) params.categoryId = categoryId;
+    if (productTypeId) params.productTypeId = productTypeId;
+    if (brandId) params.brandId = brandId;
+    if (take || takeNum) params.take = take || takeNum;
+    if (page) params.page = page;
+    if (skipNum !== undefined) params.skipNum = skipNum;
     const { data } = await apiClient.get('products', { params });
     return data;
   } catch (err) { throw parseApiError(err); }
@@ -267,3 +273,55 @@ export const getReadyToSellStructuredDetails = async ({ branchId, productId, q =
     throw parseApiError(err);
   }
 };
+
+// ==================================================
+// QUICK STOCK IMPORT (กู้คืนสต๊อกด่วนรายเม็ด)
+// ==================================================
+export const enrollQuickStock = async (payload) => {
+  try {
+    if (import.meta.env?.DEV) console.log('[productApi] enrollQuickStock payload', payload);
+    const { data } = await apiClient.post('quick-stock/quick-enroll', payload);
+    return data;
+  } catch (err) {
+    throw parseApiError(err);
+  }
+};
+
+// ==================================================
+// 🟢 QUICK STOCK ALL-IN-ONE (เพิ่มสินค้าแม่และเปิดบิลคลังด่วน)
+// ==================================================
+export const quickStockInAllInOneApi = async (payload) => {
+  try {
+    if (import.meta.env?.DEV) console.log('[productApi] quickStockInAllInOneApi payload', payload);
+    
+    // 🛡️ ป้องกันความปลอดภัยสากล: ลบข้อมูลสาขาออกจาก payload ก่อนส่งข้ามฝั่ง ปล่อยหลังบ้านคัดกรองจาก Token เอง
+    const sanitizedPayload = { ...payload };
+    delete sanitizedPayload.branchId;
+
+    const { data } = await apiClient.post('quick-stock/all-in-one', sanitizedPayload);
+    return data;
+  } catch (err) {
+    throw parseApiError(err);
+  }
+};
+
+// ==================================================
+// QUICK STOCK EXISTING PRODUCT INTAKE
+// รับสินค้าเข้าจาก Product เดิม: Recovery / Quick Receive / Manufacture
+// ==================================================
+export const quickReceiveExistingProductApi = async (payload) => {
+  try {
+    if (import.meta.env?.DEV) console.log('[productApi] quickReceiveExistingProductApi payload', payload);
+
+    const sanitizedPayload = { ...payload };
+    delete sanitizedPayload.branchId;
+
+    const { data } = await apiClient.post('quick-stock/existing', sanitizedPayload);
+    return data;
+  } catch (err) {
+    throw parseApiError(err);
+  }
+};
+
+// Backward-compatible alias for current QuickStockPage
+export const quickStockIntakeExistingApi = quickReceiveExistingProductApi;

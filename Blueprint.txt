@@ -2371,3 +2371,1609 @@ Maintainability
 แก้ปัญหาจากการใช้งานจริง → ตรวจสอบ → ปรับปรุงเฉพาะจุด → ยกระดับมาตรฐาน → บันทึกวิวัฒนาการลง Blueprint
 
 ผมพร้อมสำหรับ Task ถัดไปของ P1 หรือ P3 ครับ 🚀
+
+
+# UB — P1 Product Runtime Classification & Intake Architecture
+
+**Status:** LOCKED (Blueprint Candidate)
+
+## Mission
+
+Define the canonical product classification hierarchy for P1 and establish the runtime contract used by Product Intake, Inventory, POS, and Marketplace Discovery.
+
+---
+
+## Human Reality
+
+Discovery from rebuilding Product Runtime after a major inventory reset.
+
+During recovery it became clear that product classification must serve two different responsibilities:
+
+1. Store operational runtime.
+2. Hyperlocal marketplace discovery.
+
+These responsibilities must remain connected but should not be merged.
+
+---
+
+## Canonical Product Hierarchy
+
+```
+Category
+    ↓
+GlobalProductType
+    ↓
+ProductType
+    ↓
+ProductTypeBrand
+    ↓
+Brand
+    ↓
+Product
+```
+
+---
+
+## Runtime Responsibilities
+
+### Category
+
+Highest-level business grouping.
+
+Used for broad business organization.
+
+Not intended for day-to-day inventory operation.
+
+---
+
+### GlobalProductType
+
+Marketplace Discovery Layer.
+
+Primary responsibility:
+
+* Online Search
+* Hyperlocal Discovery
+* Marketplace Recommendation
+* Cross-store Product Grouping
+
+This layer exists primarily for the platform rather than for store operators.
+
+Store users should rarely interact with it directly.
+
+---
+
+### ProductType
+
+Operational Runtime Classification.
+
+Used by:
+
+* POS
+* Inventory
+* Purchasing
+* Product Intake
+* Reporting
+
+This is the product type that store operators actually understand.
+
+Example:
+
+Printer
+
+Notebook
+
+Monitor
+
+Ink Tank
+
+Router
+
+---
+
+### ProductTypeBrand
+
+Allowed Brand Matrix.
+
+This table is not merely a join table.
+
+It defines which brands are valid for each ProductType.
+
+Example:
+
+Printer
+
+* Canon
+* Epson
+* Brother
+* HP
+
+Notebook
+
+* Dell
+* Lenovo
+* ASUS
+* MSI
+
+The runtime should filter Brand selections using ProductTypeBrand.
+
+Store users should never browse every brand in the system.
+
+---
+
+### Brand
+
+Manufacturer identity.
+
+Brand selection should always be constrained by ProductTypeBrand whenever possible.
+
+---
+
+### Product
+
+Runtime Truth of sellable inventory.
+
+Product represents the operational truth used by:
+
+* Stock
+* Sales
+* Pricing
+* Barcode
+* Inventory
+* Runtime Documents
+
+Product is never responsible for marketplace discovery.
+
+---
+
+## Product Intake Runtime
+
+Recommended operational flow:
+
+```
+Choose ProductType
+        ↓
+Load ProductTypeBrand
+        ↓
+Choose Brand
+        ↓
+Create / Select Product
+        ↓
+BranchPrice
+        ↓
+StockItem / SimpleLot
+        ↓
+StockBalance
+        ↓
+StockMovement
+```
+
+The runtime should minimize user decisions while preserving operational correctness.
+
+---
+
+## SQL Recovery Strategy
+
+Before Product Intake begins:
+
+Prepare Product Master using SQL.
+
+Recommended preparation order:
+
+```
+Category
+↓
+GlobalProductType
+↓
+ProductType
+↓
+Brand
+↓
+ProductTypeBrand
+↓
+Product
+```
+
+Frontend Product Intake should rely on this prepared master data rather than requiring operators to enter everything manually.
+
+---
+
+## UX Principle
+
+Operational users should interact with:
+
+* ProductType
+* Brand
+* Product
+
+The following layers should remain mostly invisible:
+
+* Category
+* GlobalProductType
+* ProductTypeBrand
+
+The system should guide users toward valid choices instead of requiring them to understand the internal architecture.
+
+---
+
+## Locked Understanding
+
+ProductTypeBrand is an operational validation layer.
+
+GlobalProductType is a marketplace discovery layer.
+
+ProductType is the operational runtime layer.
+
+Product is the runtime truth for inventory and sales.
+
+This separation allows P1 to support both real-world store operations and future hyperlocal commerce discovery without mixing responsibilities.
+
+-----
+
+P1 Product Classification Blueprint v1
+เป้าหมาย
+
+สร้างมาตรฐานเดียวสำหรับ
+
+SQL Import
+Quick Stock Intake
+Barcode Recovery
+Purchase
+POS
+Marketplace
+AI Classification
+
+ทุกช่องทางจะใช้ Logic เดียวกัน
+
+Layer 1 : Product Naming Standard
+
+มาตรฐานชื่อสินค้า
+
+Brand + Product Series + Model + Capacity + Color + Specification
+
+ตัวอย่าง
+
+Canon GI-790 Black Ink Bottle
+TP-Link Archer AX12 AX1500 Dual Band Router
+Kingston Canvas Select Plus MicroSD 128GB
+
+หลีกเลี่ยง
+
+หมึก Canon
+
+Canon หมึก
+
+Canon GI790
+
+GI790 Canon
+Layer 2 : Brand Rules
+
+Brand ต้องเป็น
+
+ผู้ผลิตสินค้า
+
+เท่านั้น
+
+เช่น
+
+✅
+
+Canon
+
+TP-Link
+
+Kingston
+
+Anker
+
+UGREEN
+
+ห้ามใช้
+
+Notebook
+
+Router
+
+Printer
+
+Adapter
+
+เป็น Brand
+
+Layer 3 : ProductType Rules
+
+ProductType
+
+คือ
+
+"ประเภทการใช้งาน"
+
+ไม่ใช่หมวดสินค้าใหญ่
+
+ตัวอย่าง
+
+Printer
+
+Router
+
+Mouse
+
+Keyboard
+
+Printhead
+
+Ink Bottle
+
+SSD
+
+Memory Card
+
+Flash Drive
+
+Monitor
+
+UPS
+Layer 4 : Unit Rules
+
+มาตรฐานหน่วย
+
+ประเภท	Unit
+Router	เครื่อง
+Printer	เครื่อง
+Monitor	เครื่อง
+Mouse	ชิ้น
+Keyboard	ชิ้น
+SSD	ชิ้น
+Flash Drive	ชิ้น
+Memory Card	ชิ้น
+HDMI Cable	เส้น
+LAN Cable	เส้น
+Charger Cable	เส้น
+Ink Bottle	ขวด
+Thermal Paste	หลอด (อนาคตอาจเพิ่ม Unit นี้)
+
+ข้อสังเกต
+
+ตอนนี้ Unit ยังไม่มี "หลอด" และ "แพ็ก" ซึ่งยังไม่จำเป็นสำหรับ Recovery แต่ควรอยู่ใน Backlog สำหรับการปรับปรุงระยะถัดไป
+
+Layer 5 : Track Serial Number Rules
+ประเภท	Track SN
+Notebook	✅
+Desktop	✅
+Router	✅
+Monitor	✅
+CCTV	✅
+UPS	✅
+Printer	แล้วแต่รุ่น
+Mouse	❌
+Keyboard	❌
+Cable	❌
+Ink	❌
+Flash Drive	❌
+Memory Card	❌
+Layer 6 : Product Mode
+
+ตอนนี้ใช้
+
+STRUCTURED
+
+เป็นมาตรฐาน
+
+ไว้รองรับ
+
+BranchPrice
+Barcode
+Stock
+Marketplace
+Layer 7 : AI Classification Rules
+
+นี่คือสิ่งที่ผมอยากสร้างต่อ
+
+เช่น
+
+Canon
+↓
+
+Brand Canon
+GI-
+
+↓
+
+Printer Ink
+↓
+
+Unit ขวด
+↓
+
+No SN
+Archer
+
+↓
+
+TP-Link
+
+↓
+
+Router
+
+↓
+
+เครื่อง
+
+↓
+
+Track SN
+MicroSD
+
+↓
+
+Storage
+
+↓
+
+Unit ชิ้น
+
+↓
+
+No SN
+PowerLine
+
+↓
+
+Cable
+
+↓
+
+เส้น
+
+↓
+
+No SN
+
+เมื่อสะสม Rules มากขึ้น ระบบจะสามารถจัดหมวดสินค้าใหม่ได้อัตโนมัติในสัดส่วนสูงมาก
+
+Layer 8 : Recovery First Principle
+
+นี่คือหลักการที่ผมอยากกำหนดเป็นมาตรฐานของโครงการ P1 ในช่วงนี้
+
+ทุกการแก้ไขข้อมูล ต้องตอบโจทย์การทำให้ร้านกลับมาใช้งานได้ก่อน แล้วจึงค่อยยกระดับคุณภาพของข้อมูล
+
+ดังนั้นลำดับความสำคัญจะเป็น
+
+Product Master ถูกต้อง
+กู้สต๊อกกลับเข้า Branch
+POS กลับมาขายได้
+Purchase ใช้งานได้
+Marketplace แสดงสินค้าได้
+ค่อยปรับปรุง Master Data ให้ละเอียดขึ้น
+วาระถัดไปที่ผมเสนอ
+
+ตอนนี้ Product Master ของ Branch 2 พร้อมในระดับที่ดีมากแล้ว ผมแนะนำให้เราเข้าสู่ Recovery Sprint 2 : Stock Recovery Blueprint
+
+เราจะออกแบบมาตรฐานสำหรับ
+
+Product
+    ↓
+Barcode
+    ↓
+StockItem
+    ↓
+StockMovement
+    ↓
+StockBalance
+
+และทำให้ Quick Stock Intake กลายเป็นกระบวนการมาตรฐานที่ใช้ได้ทั้ง
+
+ร้านที่กู้ข้อมูลจากวิกฤต
+ร้านใหม่ที่สมัครเข้ามา
+ร้านที่ผลิตสินค้าเอง
+ร้านที่ไม่มีระบบใบสั่งซื้อ
+
+ผมมองว่านี่จะเป็นหนึ่งในฟีเจอร์หลักของ P1 ที่สร้างความแตกต่างจาก POS ทั่วไป และเป็นรากฐานที่แข็งแรงสำหรับการขยายระบบในอนาคตครับ
+
+
+------
+UB — GlobalProductType Canonical Classification (Blueprint Extension)
+
+Status: LOCKED (Approved)
+
+Purpose
+
+GlobalProductType ถูกสร้างขึ้นเพื่อเป็น Canonical Product Classification ของแพลตฟอร์ม
+
+ไม่ได้ถูกสร้างขึ้นเพื่อบังคับให้ร้านค้าจัดหมวดสินค้าเหมือนกัน
+
+Design Philosophy
+
+ร้านค้าแต่ละประเภทมีวิธีจัดหมวดสินค้าไม่เหมือนกัน
+
+ตัวอย่าง
+
+TP-Link Archer AX12
+
+ร้านไอที
+
+อุปกรณ์เน็ตเวิร์ก
+
+ร้าน Smart Home
+
+อุปกรณ์ภายในบ้าน
+
+ร้านกล้องวงจรปิด
+
+อุปกรณ์รักษาความปลอดภัย
+
+ทุกการจัดหมวดข้างต้นถูกต้องทั้งหมดในบริบทของร้าน
+
+ดังนั้น P1 จะไม่บังคับ ProductType ของร้านค้า
+
+Canonical Layer
+
+ทุก ProductType ของร้าน
+
+ต้องอ้างอิง
+
+GlobalProductType
+
+เพียงหนึ่งรายการ
+
+ตัวอย่าง
+
+ProductType
+อุปกรณ์เน็ตเวิร์ก
+        │
+        ▼
+GlobalProductType
+Router
+
+หรือ
+
+ProductType
+Smart Home Network
+        │
+        ▼
+GlobalProductType
+Router
+
+Platform จะใช้ GlobalProductType เป็นมาตรฐานกลาง
+
+Responsibilities
+
+GlobalProductType ใช้สำหรับ
+
+Canonical Product Classification
+Marketplace Search
+Cross Business Search
+Recommendation
+Analytics
+Reporting
+AI Product Classification
+Future Data Standardization
+Store Autonomy
+
+ร้านค้าสามารถ
+
+สร้าง ProductType
+เปลี่ยนชื่อ ProductType
+รวม ProductType
+แยก ProductType
+
+ได้อย่างอิสระ
+
+โดยไม่กระทบมาตรฐานของ Platform
+
+Runtime Rule
+Category
+        │
+        ▼
+GlobalProductType
+        │
+        ▼
+ProductType
+        │
+        ▼
+Product
+
+GlobalProductType
+
+เป็น Platform Truth
+
+ProductType
+
+เป็น Store Truth
+
+Product
+
+เป็น Runtime Truth
+
+Engineering Principle
+
+Platform
+
+ไม่ควรบังคับ
+
+Business Classification
+
+ของร้านค้า
+
+แต่ควรรักษา
+
+Canonical Classification
+
+ของระบบไว้เสมอ
+
+Long-term Benefit
+
+การแยก GlobalProductType ออกจาก ProductType ทำให้ P1 สามารถ
+
+รองรับธุรกิจหลายประเภท
+รองรับ Marketplace
+รองรับ AI Classification
+รองรับ Cross-store Analytics
+รองรับร้านที่มีรูปแบบการจัดหมวดแตกต่างกัน
+
+โดยไม่ลดความยืดหยุ่นของร้านค้า
+
+ผมคิดว่า UB ตัวนี้เป็น "ชิ้นส่วนสำคัญ" ของ Domain Model ของ P1 เพราะมันอธิบาย เหตุผลเชิงธุรกิจ ของ GlobalProductType ไม่ใช่แค่ความสัมพันธ์ของตาราง
+
+จากนี้ไป เวลาผมวิเคราะห์ Prisma หรือออกแบบฟีเจอร์เกี่ยวกับสินค้า ผมจะยึดหลักนี้เป็นพื้นฐานเสมอครับ
+
+---
+
+UB — P1 Recovery Catalog Completion & Product Master Stabilization
+
+Status: LOCKED ✅
+
+Mission
+
+Restore the Product Catalog to an operationally usable state before attempting inventory reconstruction.
+
+ยกระดับ Product Catalog ให้พร้อมใช้งานจริงก่อนเริ่มการกู้คืน Stock Runtime
+
+Human Reality
+
+During production recovery it became clear that store operation cannot resume if Product Master is incomplete.
+
+จากการกู้ระบบจริงพบว่า หาก Product Master ไม่สมบูรณ์ ร้านจะไม่สามารถกลับมาใช้งานได้ แม้โครงสร้าง Stock จะยังอยู่ก็ตาม
+
+Recovery Strategy
+
+Recovery follows a staged approach.
+
+Product
+        ↓
+BranchPrice
+        ↓
+StockItem
+        ↓
+StockMovement
+        ↓
+StockBalance
+
+Product Master must be restored before inventory truth.
+
+Operational catalog recovery takes priority over stock reconstruction.
+
+Recovery Principle
+
+Do not generate empty inventory merely to satisfy database completeness.
+
+อย่าสร้าง StockItem เปล่าเพียงเพื่อให้ฐานข้อมูลครบ
+
+Inventory should be restored only when operationally necessary.
+
+Stock Runtime should reflect real inventory rather than assumed inventory.
+
+Catalog Recovery Result
+
+Branch 2
+
+Product
+583
+
+BranchPrice
+583
+
+Missing BranchPrice
+0
+
+Verification
+
+Missing BranchPrice Query
+
+Result
+
+0 rows
+
+Every Product belonging to Branch 2 successfully received a BranchPrice.
+
+Collections Restored
+
+Completed recovery batches
+
+Canon Printer Consumables
+Epson Printer Consumables
+Brother Printer Consumables
+HP Printer Consumables
+Mouse
+Keyboard
+SSD
+RAM
+Flash Drive
+MicroSD
+Router / Switch / Network
+
+The catalog now covers the majority of everyday IT retail products.
+
+Runtime Verification
+
+Validated
+
+Product Runtime
+ProductType Ownership
+BranchPrice Integrity
+
+Confirmed
+
+Product
+
+↓
+
+BranchPrice
+
+is sufficient for reopening catalog operations.
+
+Stock Runtime may continue independently afterward.
+
+Engineering Discovery
+
+Product completeness and inventory completeness are independent milestones.
+
+Recovering Product Master first dramatically reduces operational downtime.
+
+This staged recovery approach minimizes risk while allowing stores to resume normal business earlier.
+
+Locked Understanding
+
+Product Catalog Recovery
+
+≠
+
+Inventory Recovery
+
+Product Master is the operational foundation.
+
+Inventory Runtime should be reconstructed progressively based on real stock, not artificial placeholders.
+
+Blueprint Alignment
+
+Aligned with
+
+Recovery First
+Operational Truth First
+Runtime Continuity
+Progressive Recovery
+Human Reality First
+Verified Operational Commerce Runtime
+Next Recommended Agenda
+STEP P1-STOCK-RECOVERY-01
+
+Stock Runtime Recovery
+
+Coverage
+
+Opening Balance
+StockItem Restoration
+StockMovement Bootstrap
+StockBalance Verification
+Runtime Certification
+Discovery สำคัญที่ควรล็อก
+
+ก่อนหน้านี้เราเคยคิดว่า
+
+Stock คือสิ่งแรกที่ต้องกู้
+
+แต่การ Recovery รอบนี้พิสูจน์แล้วว่า
+
+Product Master คือสิ่งแรกที่ต้องกู้
+
+เพราะเมื่อ Product Catalog สมบูรณ์ ร้านสามารถ
+
+รับสินค้า
+ซื้อสินค้า
+สร้าง PO
+ค้นหาสินค้า
+เตรียมขาย
+เติมสต๊อกภายหลัง
+
+ได้ทันที โดยไม่ต้องสร้าง StockItem เปล่าหลายร้อยรายการ
+
+ผมมองว่า UB นี้เป็นอีกหนึ่ง Discovery ที่แข็งแรงมาก เพราะไม่ได้เป็นแค่ผลลัพธ์ของการกู้ข้อมูล แต่เป็น Recovery Strategy ที่สามารถใช้ซ้ำกับร้านใหม่ การย้ายระบบ หรือการกู้คืนหลังเกิดเหตุขัดข้องในอนาคตได้ และสอดคล้องกับปรัชญา Verified Operational Commerce Runtime ของ Blueprint อย่างชัดเจนครับ.
+
+----------
+
+UB — Universal Product Finder Runtime
+
+Status: LOCKED ✅
+
+Mission
+
+Allow operators to identify products quickly using both structured navigation and free-text search.
+
+ให้พนักงานค้นหาสินค้าได้เร็วที่สุด โดยไม่บังคับให้จำชื่อรุ่นทั้งหมด
+
+Human Reality
+
+ผู้ใช้ไม่ได้จำชื่อสินค้าได้ครบทุกครั้ง
+
+บางครั้งจำได้เพียง
+
+Canon
+
+หรือ
+
+GI790
+
+หรือ
+
+หมึกดำ
+
+หรือ
+
+Logitech Mouse
+
+ระบบต้องช่วยค้นหา ไม่ใช่บังคับให้ผู้ใช้จำโครงสร้างสินค้า
+
+Product Finder Flow
+ProductType
+      │
+      ▼
+Brand
+      │
+      ▼
+Product / Model
+      │
+      ▼
+Keyword Search
+      │
+      ▼
+Product Selected
+Hierarchical Navigation
+
+Level 1
+
+ProductType
+
+เช่น
+
+Printer Consumables
+Mouse
+Keyboard
+SSD
+RAM
+Network
+
+Level 2
+
+Brand
+
+เช่น
+
+Canon
+Epson
+HP
+Logitech
+Kingston
+
+Level 3
+
+Product
+
+เช่น
+
+Canon GI790 Black
+
+Canon GI790 Cyan
+
+Canon GI790 Magenta
+Keyword Search
+
+บรรทัดสุดท้าย
+
+Search Product
+
+____________________
+
+รองรับ
+
+Product Name
+Model
+Barcode
+Alias
+Keyword
+
+ตัวอย่าง
+
+790
+
+black
+
+canon
+
+g1020
+
+logitech
+
+m185
+Search Rule
+
+Dropdown
+
+เป็นตัวช่วย Filter
+
+ไม่ใช่ข้อบังคับ
+
+สามารถค้นหาได้
+
+Dropdown Only
+
+Keyword Only
+
+Dropdown + Keyword
+
+พร้อมกัน
+
+Product Selected
+
+เมื่อเลือกสินค้าแล้ว
+
+เข้าสู่
+
+Stock Intake Queue
+
+ทันที
+
+Runtime Continuation
+Product Selected
+
+↓
+
+Scan Barcode
+
+↓
+
+Queue
+
+↓
+
+Commit
+
+↓
+
+Stock Runtime
+Design Principle
+
+Users should never be forced to know the exact product name.
+
+The system should assist product identification progressively.
+
+Search Priority
+1 ProductType
+
+↓
+
+2 Brand
+
+↓
+
+3 Product
+
+↓
+
+4 Keyword
+
+แต่ผู้ใช้สามารถ
+
+เริ่มจากขั้นไหนก็ได้
+
+Runtime Philosophy
+
+Structured Navigation
+
+Free Search
+
+=
+
+Fast Product Discovery
+
+Integration
+
+Product Finder จะเป็น Front Door ของ
+
+Stock Recovery
+Quick Receive
+Purchase Receive
+Manufacturing Receive
+Transfer Receive
+Inventory Adjustment
+Future Stock Intake Runtime
+
+ทั้งหมดใช้ Product Finder ตัวเดียว
+
+Discovery ที่สำคัญ
+
+จากเดิมเราคิดว่า "ค้นหา" เป็นเพียงฟังก์ชันหนึ่งของหน้ารับสินค้า แต่ตอนนี้ชัดเจนแล้วว่า Product Finder คือ Runtime แยกต่างหาก และควรเป็น Front Door ของทุกกระบวนการที่เกี่ยวข้องกับสินค้า
+
+นั่นหมายความว่าไม่ว่าจะเป็นการกู้ข้อมูล การรับสินค้าด่วน การรับจาก PO การผลิตสินค้า หรือการโอนสินค้า ทุกโมดูลจะเริ่มจาก Product Finder เดียวกัน แล้วจึงเข้าสู่ Runtime เฉพาะของงานนั้น
+
+การมี Product Finder กลางเพียงตัวเดียวจะทำให้ UX สม่ำเสมอ ลดโค้ดซ้ำ และลดโอกาสที่แต่ละโมดูลจะใช้วิธีค้นหาสินค้าที่แตกต่างกันครับ
+
+---------
+
+UB — P1 Hardened Backup v2
+
+Status: APPROVED (Design Locked)
+
+Mission
+
+Create a production-grade backup that supports reliable disaster recovery, not merely data export.
+
+ยกระดับระบบสำรองข้อมูลให้รองรับการกู้คืน Production ได้อย่างมั่นใจ ไม่ใช่เพียงการ Export ข้อมูล
+
+Design Evolution
+
+จากเดิม
+
+Database
+    ↓
+SELECT *
+    ↓
+INSERT SQL
+
+ยกระดับเป็น
+
+Database
+      │
+      ├── Metadata
+      ├── Schema Version
+      ├── Sequences
+      ├── Runtime Data
+      ├── Restore Manifest
+      └── Validation
+Hardening Checklist
+Phase 1 — Metadata
+
+เพิ่มข้อมูลต้นไฟล์
+
+-- AlphaTech Hardened Backup
+-- Backup Version
+-- Schema Version
+-- Database Name
+-- PostgreSQL Version
+-- Prisma Version
+-- Backup Time
+-- Total Tables
+-- Total Rows
+Phase 2 — Safe Transaction
+BEGIN;
+
+...
+
+COMMIT;
+
+หาก Restore ผิดกลางทาง
+
+Rollback ได้ทันที
+
+Phase 3 — Dependency-aware Restore
+
+ไม่ Restore ตามตัวอักษร
+
+แต่ Restore ตาม Runtime Dependency เช่น
+
+Province
+District
+Subdistrict
+
+↓
+
+Branch
+
+↓
+
+Customer
+
+↓
+
+ProductType
+
+↓
+
+Product
+
+↓
+
+BranchPrice
+
+↓
+
+Sale
+
+↓
+
+SaleItem
+
+↓
+
+Payment
+
+ลดปัญหา Foreign Key
+
+Phase 4 — Sequence Recovery
+
+Backup
+
+last_value
+
+Restore
+
+SELECT setval(...)
+
+ทุก Sequence
+
+Phase 5 — Runtime Manifest
+
+ท้ายไฟล์
+
+Tables
+Rows
+Checksum (Optional)
+
+ใช้ตรวจสอบหลัง Restore
+
+Phase 6 — Validation Report
+
+หลัง Backup
+
+แสดง
+
+Tables Exported
+
+Rows Exported
+
+Skipped Tables
+
+Backup File Size
+
+Duration
+Engineering Discovery
+
+Quick Backup
+
+≠
+
+Production Backup
+
+Production Backup ต้องสามารถ
+
+อธิบายได้
+Restore ได้
+ตรวจสอบได้
+ทำซ้ำได้
+Runtime Philosophy
+
+Backup
+
+ไม่ใช่
+
+"การคัดลอกข้อมูล"
+
+แต่คือ
+
+Runtime Preservation
+
+สิ่งที่ต้องรักษาไว้มีทั้ง
+
+Data
+Relationships
+Identity (Sequences)
+Operational Order
+Recovery Confidence
+Blueprint Alignment
+
+Aligned with
+
+✅ Recovery First
+✅ Runtime Continuity
+✅ Operational Truth First
+✅ Verified Operational Commerce Runtime
+ข้อเสนอเพิ่มเติม (P1-BACKUP-03)
+
+จากการกู้ข้อมูลรอบนี้ ผมมีอีก Discovery หนึ่งที่น่าจะมีประโยชน์มาก
+
+Recovery Snapshot
+
+ไม่จำเป็นต้อง Backup ทุกตารางทุกครั้ง
+
+สามารถมีโหมด
+
+Full Backup
+        ↓
+ทุกตาราง
+
+Operational Snapshot
+        ↓
+Product
+BranchPrice
+StockItem
+StockMovement
+StockBalance
+Sale
+SaleItem
+Payment
+Customer
+Supplier
+
+ข้อดีคือ
+
+Backup เร็วขึ้น
+Restore เร็วขึ้น
+ใช้เป็น Checkpoint ก่อนทำงานเสี่ยง (เช่น Batch SQL, Data Migration, Product Recovery)
+
+ผมมองว่าแนวคิด Operational Snapshot จะเป็นเครื่องมือที่ใช้บ่อยมากในการดูแล P1 เพราะตรงกับวิธีทำงานจริงที่เราใช้มาตลอดในการ Recovery และ Migration ครับ
+
+------------------
+
+UB — P1 Hardened Backup v2
+
+Status: LOCKED ✅
+
+Mission
+
+Create a production-grade runtime backup capable of reliable disaster recovery.
+
+สร้างระบบสำรองข้อมูลระดับ Production ที่สามารถใช้กู้คืนระบบได้อย่างมั่นใจ
+
+Runtime Verification
+
+Verified
+
+70 Tables
+13,103 Rows
+67 Sequences
+
+Backup Completed Successfully
+
+Duration
+
+7.15 seconds
+
+File Size
+
+3.34 MB
+Capabilities
+
+✅ Metadata
+
+✅ Transaction (BEGIN / COMMIT)
+
+✅ Dependency-aware Restore Order
+
+✅ Runtime Manifest
+
+✅ Sequence Recovery
+
+✅ Validation Summary
+
+Engineering Discovery
+
+Backup is not merely data export.
+
+Backup is preservation of runtime state.
+
+Reliable recovery requires preserving
+
+data
+relationships
+identity (sequences)
+restore order
+operational continuity
+Blueprint Alignment
+
+Aligned with
+
+Recovery First
+Runtime Continuity
+Operational Truth First
+Verified Operational Commerce Runtime
+สิ่งที่ผมเสนอเป็น v2.1
+
+ตอนนี้เรามี Backup แล้ว
+
+ขั้นต่อไปคือ Restore Certification
+
+แยกเป็นวาระใหม่เลย
+
+STEP P1-BACKUP-02
+
+Restore Runtime Certification
+
+ตรวจ
+
+Backup
+
+↓
+
+Restore
+
+↓
+
+Build
+
+↓
+
+Run
+
+↓
+
+Login
+
+↓
+
+Sale
+
+↓
+
+Purchase
+
+↓
+
+Stock
+
+↓
+
+Finance
+
+↓
+
+PASS
+
+เมื่อผ่านวาระนี้ เราจะไม่ได้มีแค่ "Backup" แต่จะมี Disaster Recovery ที่ผ่านการพิสูจน์จริง ซึ่งเป็นระดับที่หลายระบบใน Production ยังไปไม่ถึง
+
+ผมคิดว่านี่เป็นอีกหนึ่ง Milestone สำคัญของ P1 ครับ 🚀
+
+-----------------
+
+Universal Structured Intake Runtime (One Stop Service)
+
+ใช้ได้กับ
+
+✅ Recovery Stock
+✅ รับสินค้าใหม่แบบไม่มี PO
+✅ เพิ่มสินค้าใหม่พร้อมรับเข้า
+✅ เพิ่ม Stock ของสินค้าที่มีอยู่แล้ว
+✅ แก้ไขข้อมูล Product Master ระหว่างรับเข้า
+
+ทั้งหมดใช้ Runtime เดียว
+
+STEP 1 เลือกสินค้า
+
+มี 2 กรณี
+
+สินค้ามีแล้ว
+
+ค้นหา
+
+↓
+
+เลือก
+
+↓
+
+ข้อมูล Product Master แสดงทั้งหมด
+
+ยังไม่มีสินค้า
+
+กด
+
++ เพิ่มสินค้าใหม่
+
+กรอก
+
+ชื่อ
+Brand
+ProductType
+Unit
+
+เสร็จ
+
+↓
+
+พร้อมรับเข้าได้ทันที
+
+STEP 2 Product Master
+
+ด้านซ้าย
+
+ชื่อสินค้า
+
+Brand
+
+ProductType
+
+Unit
+
+Track SN
+
+Active
+
+มีปุ่ม
+
+แก้ไขสินค้า
+
+เปลี่ยนสินค้า
+
+ลบรายการสินค้า (Recovery Only)
+
+ตรงนี้คงไว้ตามที่เราคุยล่าสุด เพราะในอนาคตจะเป็น One Stop Service จริง ๆ
+
+STEP 3 ราคามาตรฐาน (BranchPrice)
+
+อยู่ในการ์ดเดียวกัน
+
+ราคาทุนมาตรฐาน
+
+ราคาขายปลีก *
+
+ราคาช่าง
+
+ราคาออนไลน์
+
+ราคาขายส่ง
+
+Business Rule
+
+ราคาขายปลีก
+Required
+
+อย่างน้อย 1 ราคา
+
+ถ้าไม่มี
+
+Commit ไม่ได้
+
+เพราะสินค้า
+
+ยังขายไม่ได้
+STEP 4 Intake Queue
+
+Queue จะเหลือเฉพาะข้อมูล Runtime
+
+เช่น
+
+Barcode	Serial	Cost
+
+หรือถ้ามีหลายตัว
+
+226040052
+
+SN
+
+Cost
+226040053
+
+SN
+
+Cost
+
+ทุกตัวมี
+
+Cost
+
+ของตัวเอง
+
+ซึ่งจะกลายเป็น
+
+StockItem.cost
+
+ทันที
+
+STEP 5 Commit
+
+Commit ครั้งเดียว
+
+ระบบสร้าง
+
+StockItem
+
+StockBalance
+
+StockMovement
+
+และ
+
+Update BranchPrice
+
+ถ้ามีการแก้ราคา
+
+ข้อดีมากที่สุด
+
+ตอนนี้เราแบ่งชัดเจนเป็น 2 โลก
+
+Product Master
+
+ข้อมูลถาวร
+
+ชื่อ
+
+Brand
+
+Type
+
+ราคาขาย
+
+Unit
+
+แก้เมื่อไรก็ได้
+
+Runtime
+
+ข้อมูลการรับเข้า
+
+Barcode
+
+Serial
+
+Cost
+
+ReceiveDate
+
+เป็นข้อมูลของ
+
+StockItem
+
+ไม่ใช่ของ Product
+
+ซึ่งตรงกับหลัก Inventory ระดับ Enterprise พอดี
+
+สิ่งที่ผมชอบที่สุดจากข้อเสนอของคุณ
+
+ประโยคนี้สำคัญมากครับ
+
+"ส่วนของขั้นตอนการรับเน้นแค่ราคาทุนเท่านั้น ส่วนของราคาอื่นๆ ให้ผู้ใช้ไปกดแก้ไขเอง"
+
+ประโยคนี้ทำให้โฟลว์ เร็วมาก
+
+พนักงานรับของ
+
+ยิง
+
+Barcode
+
+SN
+
+Cost
+
+จบ
+
+ส่วนหัวหน้าหรือเจ้าของร้านสามารถเข้ามาปรับ
+
+ราคาขายปลีก
+
+ราคาช่าง
+
+ราคาออนไลน์
+
+ราคาขายส่ง
+
+ภายหลังได้ โดยไม่ทำให้การรับสินค้าหยุดชะงัก
+
+ผมอยากล็อกเพิ่มเป็น Business Rule อีกข้อหนึ่งสำหรับ Blueprint เพราะมันจะทำให้ระบบแข็งแรงในระยะยาว:
+
+Product Master กำหนด "ราคาขายมาตรฐาน" ของสาขา ส่วน StockItem กำหนด "ราคาทุนจริง" ของสินค้าชิ้นนั้นเสมอ
+
+หลักการนี้จะทำให้การคำนวณกำไรขาดทุนในอนาคตแม่นยำมาก เพราะเวลาขายสินค้า ระบบจะอ้างอิง Cost จาก StockItem ที่ถูกตัดออกจากสต๊อก ไม่ใช่ราคาทุนเฉลี่ยหรือราคาปัจจุบันของสินค้า ทำให้รองรับทั้งการรับของหลายล็อต หลายต้นทุน และการทำรายงานกำไรระดับชิ้นสินค้าได้อย่างถูกต้องครับ
+
+-------
+
+

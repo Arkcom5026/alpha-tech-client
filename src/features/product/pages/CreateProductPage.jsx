@@ -1,9 +1,8 @@
+// ✅ src/features/product/pages/CreateProductPage.jsx
+// ✅ Create Product Page — Current hierarchy:
+// Business → ProductType → Brand → Product
 
-
-
-// ✅ src/features/product/pages/CreateProductPage.jsx (full width)
-
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useBranchStore } from '@/features/branch/store/branchStore';
 import useProductStore from '../store/productStore';
 import ProductForm from '../components/ProductForm';
@@ -12,6 +11,7 @@ import ProcessingDialog from '@/components/shared/dialogs/ProcessingDialog';
 
 const CreateProductPage = () => {
   const branchId = useBranchStore((state) => state.selectedBranchId);
+
   const {
     saveProduct,
     uploadImages,
@@ -19,6 +19,7 @@ const CreateProductPage = () => {
     dropdownsLoaded,
     error: storeError,
   } = useProductStore();
+
   const [error, setError] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
@@ -29,13 +30,14 @@ const CreateProductPage = () => {
   const [previewUrls, setPreviewUrls] = useState([]);
   const [captions, setCaptions] = useState([]);
   const [coverIndex, setCoverIndex] = useState(null);
+
   // ✅ เลื่อนการโหลด dropdowns: รอให้ branchId พร้อมก่อน + กัน StrictMode ยิงซ้ำ
   const dropdownsFetchRef = useRef({ branchId: null, done: false });
+
   useEffect(() => {
     if (!branchId) return;
     if (dropdownsLoaded === true) return;
 
-    // reset เมื่อสลับสาขา
     if (dropdownsFetchRef.current.branchId !== branchId) {
       dropdownsFetchRef.current = { branchId, done: false };
     }
@@ -43,35 +45,40 @@ const CreateProductPage = () => {
     if (dropdownsFetchRef.current.done) return;
     dropdownsFetchRef.current.done = true;
 
-    // ✅ อย่าให้ error ของ dropdowns ทำให้หน้า crash
     Promise.resolve(ensureDropdownsAction?.()).catch(() => {});
   }, [branchId, dropdownsLoaded, ensureDropdownsAction]);
-  // ✅ Normalize files ให้เป็น Array<File> เสมอ (กัน "e.forEach is not a function")
-  // รองรับ: Array, FileList, single File/object, null/undefined
+
   const normalizeFiles = (input) => {
     if (!input) return [];
     if (Array.isArray(input)) return input;
-    // FileList จาก input[type=file]
     if (typeof FileList !== 'undefined' && input instanceof FileList) return Array.from(input);
     return [input];
   };
 
   const handleCreate = async (formData) => {
-    // ✅ ถ้าเคยบันทึกสำเร็จแล้วและผู้ใช้แก้ไขข้อมูลใหม่ → ปลดล็อกก่อนบันทึกซ้ำ
     if (saveLocked) setSaveLocked(false);
 
     try {
       setIsProcessing(true);
       setError('');
 
-      const payload = { ...formData, branchId };
+      // ✅ ProductForm รุ่นใหม่ไม่ส่ง categoryId / profile / template แล้ว
+      // ✅ branchId ยังส่งให้ BE resolve BranchPrice context
+      const payload = {
+        ...formData,
+        branchId,
+      };
+
       const created = await saveProduct(payload);
 
-      // ✅ กัน selectedFiles เป็น FileList/object เดี่ยว แล้วทำให้ forEach พังใน flow อัปโหลด
       const filesToUpload = normalizeFiles(selectedFiles);
 
       if (filesToUpload.length && typeof uploadImages === 'function' && created?.id) {
-        await uploadImages(created.id, { files: filesToUpload, captions, coverIndex });
+        await uploadImages(created.id, {
+          files: filesToUpload,
+          captions,
+          coverIndex,
+        });
       }
 
       setShowSuccess(true);
@@ -103,7 +110,7 @@ const CreateProductPage = () => {
           </div>
         ) : null}
 
-        <p className="text-gray-600">กำลังโหลดรายการตัวเลือก (หมวด / ประเภท / ลักษณะ / รูปแบบ)...</p>
+        <p className="text-gray-600">กำลังโหลดรายการตัวเลือก (ประเภทสินค้า / แบรนด์ / หน่วยนับ)...</p>
 
         <div className="mt-4">
           <button
@@ -121,71 +128,71 @@ const CreateProductPage = () => {
   return (
     <div className="w-full max-w-[1600px] mx-auto px-4 lg:px-8">
       <h2 className="text-xl font-bold mb-4">เพิ่มสินค้า</h2>
+
       {error && (
         <div className="mb-4 rounded border border-red-200 bg-red-50 text-red-700 px-4 py-2">
           {error}
         </div>
       )}
 
-      {/* ✅ Full-width layout: รูปภาพเต็มกว้างด้านบน / ฟอร์มเต็มกว้างด้านล่าง */}
       <div className="grid grid-cols-1 gap-6">
-        <div>
-          <ProductImage
-            ref={imageRef}
-            files={selectedFiles}
-            setFiles={(updaterOrValue) => {
-              // ✅ รองรับทั้ง setState(value) และ setState((prev) => next)
-              // เพราะ ProductImage เรียก setFiles((prev)=>...) และเราต้องไม่ไป normalize ฟังก์ชันเป็นไฟล์
-              if (typeof updaterOrValue === 'function') {
-                setSelectedFiles((prev) => {
-                  const prevArr = normalizeFiles(prev);
-                  const next = updaterOrValue(prevArr);
-                  return normalizeFiles(next);
-                });
-                return;
-              }
-              setSelectedFiles(normalizeFiles(updaterOrValue));
-            }}
-            previewUrls={previewUrls}
-            setPreviewUrls={setPreviewUrls}
-            captions={captions}
-            setCaptions={setCaptions}
-            coverIndex={coverIndex}
-            setCoverIndex={setCoverIndex}
-            oldImages={[]}
-            setOldImages={() => {}}
-          />
-        </div>
+        <ProductImage
+          ref={imageRef}
+          files={selectedFiles}
+          setFiles={(updaterOrValue) => {
+            if (typeof updaterOrValue === 'function') {
+              setSelectedFiles((prev) => {
+                const prevArr = normalizeFiles(prev);
+                const next = updaterOrValue(prevArr);
+                return normalizeFiles(next);
+              });
+              return;
+            }
 
-        <div>
-          <ProductForm
-            onSubmit={handleCreate}
-            mode="create"
-            // ✅ หลังบันทึกสำเร็จ ให้ disable ปุ่มบันทึก (กันกดย้ำ)
-            submitDisabled={isProcessing || saveLocked}
-            submitLabel={saveLocked ? 'บันทึกแล้ว' : undefined}
-            onAnyChange={() => {
-              if (saveLocked) setSaveLocked(false);
-              if (showSuccess) setShowSuccess(false);
-            }}
-            defaultValues={{
-              name: '',
-              description: '',
-              spec: '',
-              productTemplateId: '',
-              productProfileId: '',
-              productTypeId: '',
-              categoryId: '',
+            setSelectedFiles(normalizeFiles(updaterOrValue));
+          }}
+          previewUrls={previewUrls}
+          setPreviewUrls={setPreviewUrls}
+          captions={captions}
+          setCaptions={setCaptions}
+          coverIndex={coverIndex}
+          setCoverIndex={setCoverIndex}
+          oldImages={[]}
+          setOldImages={() => {}}
+        />
 
-              // ✅ Brand (optional)
-              brandId: '',
-              noSN: false,
-              initialQty: '',
-              active: true,
-              cost: '',
-            }}
-          />
-        </div>
+        <ProductForm
+          onSubmit={handleCreate}
+          mode="create"
+          submitDisabled={isProcessing || saveLocked}
+          submitLabel={saveLocked ? 'บันทึกแล้ว' : undefined}
+          onAnyChange={() => {
+            if (saveLocked) setSaveLocked(false);
+            if (showSuccess) setShowSuccess(false);
+          }}
+          defaultValues={{
+            name: '',
+            description: '',
+            spec: '',
+
+            productTypeId: '',
+            brandId: '',
+            unitId: '',
+
+            mode: 'STRUCTURED',
+            noSN: false,
+            trackSerialNumber: true,
+            active: true,
+
+            branchPrice: {
+              costPrice: '',
+              priceRetail: '',
+              priceTechnician: '',
+              priceOnline: '',
+              priceWholesale: '',
+            },
+          }}
+        />
       </div>
 
       <ProcessingDialog
@@ -199,8 +206,3 @@ const CreateProductPage = () => {
 };
 
 export default CreateProductPage;
-
-
-
-
-

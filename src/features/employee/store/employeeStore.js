@@ -1,7 +1,12 @@
-// ✅ employeeStore.js (แก้ key persist ไม่ให้ชนกับ auth-store)
+// ✅ src/features/employee/store/employeeStore.js
+// ✅ Employee Store = HR / Employee Management only
+// ✅ Auth / current login branch Source of Truth อยู่ที่ authStore.employee.branchId
+// ✅ Branch detail / selected branch อยู่ที่ branchStore
+// ✅ ไฟล์นี้ไม่ persist session/branch/token/role อีกต่อไป เพื่อลดข้อมูลซ้ำซ้อน
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+
 import {
   createEmployee,
   deleteEmployee,
@@ -14,14 +19,21 @@ import {
   getBranchDropdowns,
 } from '../api/employeeApi';
 
+const initialEmployeeSessionCompat = {
+  // ⚠️ Deprecated compatibility fields:
+  // ห้ามใช้เป็น Source of Truth สำหรับ session ปัจจุบัน
+  // ถ้าต้องการ branchId ของผู้ login อยู่ ให้ใช้ authStore.employee.branchId
+  employee: null,
+  branch: null,
+  position: null,
+  token: '',
+  role: '',
+};
+
 const useEmployeeStore = create(
   persist(
     (set) => ({
-      employee: null,
-      branch: null,
-      position: null,
-      token: '',
-      role: '',
+      ...initialEmployeeSessionCompat,
 
       employees: [],
       employeesLoading: false,
@@ -32,21 +44,20 @@ const useEmployeeStore = create(
       fetchPositionsAction: async () => {
         try {
           const res = await getPositions();
-          set({ positions: res });
+          set({ positions: Array.isArray(res) ? res : [] });
         } catch (err) {
-          // eslint-disable-next-line no-console
           console.error('โหลดตำแหน่งไม่สำเร็จ', err);
         }
       },
 
-      // ✅ รายการสาขาสำหรับตัวกรอง (เฉพาะ superadmin จะเรียก endpoint นี้ได้)
+      // ✅ รายการสาขาสำหรับตัวกรอง/ตั้งค่าพนักงาน
+      // ใช้สำหรับงาน HR/Settings เท่านั้น ไม่ใช่ session branch
       branchOptions: [],
       fetchBranchOptionsAction: async () => {
         try {
           const rows = await getBranchDropdowns();
           set({ branchOptions: Array.isArray(rows) ? rows : [] });
         } catch (err) {
-          // eslint-disable-next-line no-console
           console.error('โหลดสาขาไม่สำเร็จ', err);
         }
       },
@@ -55,7 +66,6 @@ const useEmployeeStore = create(
         try {
           await approveEmployee(payload);
         } catch (err) {
-          // eslint-disable-next-line no-console
           console.error('❌ approveEmployeeAction error:', err);
           throw err;
         }
@@ -66,30 +76,25 @@ const useEmployeeStore = create(
           const user = await findUserByEmail(email);
           return user;
         } catch (err) {
-          // eslint-disable-next-line no-console
           console.error('❌ findUserByEmailAction error:', err);
           throw err;
         }
       },
 
-      setSession: ({ token, role, position, branch, employee }) => {
-        const fullBranch = branch
-          ? {
-              id: branch.id,
-              name: branch.name,
-              address: branch.address,
-              phone: branch.phone,
-              fax: branch.fax,
-              email: branch.email,
-              taxId: branch.taxId,
-              vatRate: branch.vatRate || 7,
-            }
-          : null;
-        set({ token, role, position, branch: fullBranch, employee });
+      // ⚠️ Deprecated compatibility only.
+      // คงไว้กัน component เก่ายังเรียกอยู่ แต่ไม่ใช้เป็น SSoT แล้ว
+      setSession: ({ position, employee } = {}) => {
+        set({
+          employee: employee || null,
+          position: position || null,
+          branch: null,
+          token: '',
+          role: '',
+        });
       },
 
       clearSession: () => {
-        set({ token: '', role: '', position: null, branch: null, employee: null });
+        set({ ...initialEmployeeSessionCompat });
       },
 
       setEmployee: (employee) => set({ employee }),
@@ -99,9 +104,10 @@ const useEmployeeStore = create(
       getEmployees: async (params = {}) => {
         try {
           set({ employeesLoading: true, employeeError: null });
-          const data = await getAllEmployees(params);
 
+          const data = await getAllEmployees(params);
           const items = Array.isArray(data) ? data : (data?.items || []);
+
           const normalized = items.map((e) => ({
             ...e,
             id: e.id ?? e.userId,
@@ -120,10 +126,19 @@ const useEmployeeStore = create(
                 pages: Number(data?.pages || data?.meta?.pages || 1),
               };
 
-          set({ employees: normalized, employeesMeta: meta, employeesLoading: false });
+          set({
+            employees: normalized,
+            employeesMeta: meta,
+            employeesLoading: false,
+            employeeError: null,
+          });
+
           return { items: normalized, meta };
         } catch (err) {
-          set({ employeesLoading: false, employeeError: err?.response?.data?.error || err?.message || 'โหลดข้อมูลล้มเหลว' });
+          set({
+            employeesLoading: false,
+            employeeError: err?.response?.data?.error || err?.message || 'โหลดข้อมูลล้มเหลว',
+          });
           return null;
         }
       },
@@ -167,39 +182,45 @@ const useEmployeeStore = create(
       updateUserRoleAction: async (userId, nextRole) => {
         const allowed = ['admin', 'employee'];
         const roleLower = String(nextRole || '').toLowerCase();
+
         if (!allowed.includes(roleLower)) {
           throw new Error('Allowed role: admin หรือ employee เท่านั้น');
         }
+
         try {
           await apiUpdateUserRole(Number(userId), roleLower);
+
           set((state) => ({
             employees: state.employees.map((e) => {
               const match = (e.id ?? e.userId) === Number(userId);
               if (!match) return e;
+
               const updated = { ...e, role: roleLower };
               if (updated.user) updated.user = { ...updated.user, role: roleLower };
+
               return updated;
             }),
           }));
+
           return true;
         } catch (err) {
-          // eslint-disable-next-line no-console
           console.error('❌ updateUserRoleAction error:', err);
           throw err;
         }
       },
     }),
     {
-      name: 'employee-storage', // ✅ ไม่ชนกับ auth-storage
-      partialize: (state) => ({
-        employee: state.employee,
-        branch: state.branch,
-        position: state.position,
-        // ไม่จำเป็นต้อง persist token/role ซ้ำ หาก authStore ดูแลอยู่แล้ว
-      }),
+      name: 'employee-storage',
+      version: 2,
+
+      // ✅ ตัด persisted session/branch/token/role เก่าทิ้งเมื่อ migrate
+      migrate: () => ({}),
+
+      // ✅ ไม่ persist session ปัจจุบันใน employeeStore อีก
+      // HR data ไม่จำเป็นต้องค้างข้าม reload
+      partialize: () => ({}),
     }
   )
 );
 
 export default useEmployeeStore;
-

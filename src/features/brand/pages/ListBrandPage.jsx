@@ -1,18 +1,33 @@
 // src/features/settings/pages/ListBranchPage.jsx
-import { useEffect, useMemo } from "react";
-import { useNavigate, useParams } from "react-router-dom"; // 🟢 [DYNAMIC PARAM FIX] นำเข้า useParams มาร่วมทีม
+// ✅ Branch/Auth SSoT cleanup:
+// - authStore.employee.branchId = branchId ของผู้ login
+// - branchStore = รายการ/รายละเอียดสาขา
+// - employeeStore ไม่ใช่แหล่งข้อมูล branch/token/role แล้ว
+// - ใช้ relative navigation เพื่อไม่ผูก path กับ /:shopSlug ตรง ๆ
+
+import { useEffect, useMemo } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+
 import { useAuthStore } from '@/features/auth/store/authStore.js';
-import AddressDisplay from "@/features/address/components/AddressDisplay";
+import { useBranchStore } from '@/features/branch/store/branchStore';
+import AddressDisplay from '@/features/address/components/AddressDisplay';
 
 const businessTypeTh = (bt) => {
   const key = String(bt || '').toUpperCase();
+
   switch (key) {
-    case 'IT': return 'ไอที/คอมพิวเตอร์';
-    case 'ELECTRONICS': return 'อิเล็กทรอนิกส์';
-    case 'CONSTRUCTION': return 'วัสดุก่อสร้าง';
-    case 'GROCERY': return 'มินิมาร์ท/ของชำ';
-    case 'GENERAL': return 'ทั่วไป';
-    default: return key || '-';
+    case 'IT':
+      return 'ไอที/คอมพิวเตอร์';
+    case 'ELECTRONICS':
+      return 'อิเล็กทรอนิกส์';
+    case 'CONSTRUCTION':
+      return 'วัสดุก่อสร้าง';
+    case 'GROCERY':
+      return 'มินิมาร์ท/ของชำ';
+    case 'GENERAL':
+      return 'ทั่วไป';
+    default:
+      return key || '-';
   }
 };
 
@@ -26,15 +41,32 @@ const FeaturesBadge = ({ features }) => {
   const mode = features?.mode;
   const sn = features?.trackSerialNumber === true;
   const templ = features?.enableTemplates !== false; // default true
+
   return (
     <div className="flex flex-wrap gap-1 text-xs">
       {mode && (
-        <span className="px-2 py-0.5 rounded bg-gray-100 border border-gray-200 text-gray-700">โหมด: {mode}</span>
+        <span className="px-2 py-0.5 rounded bg-gray-100 border border-gray-200 text-gray-700">
+          โหมด: {mode}
+        </span>
       )}
-      <span className={`px-2 py-0.5 rounded border ${sn ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-gray-100 border-gray-200 text-gray-600'}`}>
+
+      <span
+        className={`px-2 py-0.5 rounded border ${
+          sn
+            ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+            : 'bg-gray-100 border-gray-200 text-gray-600'
+        }`}
+      >
         SN: {sn ? 'ติดตาม' : 'ไม่ติดตาม'}
       </span>
-      <span className={`px-2 py-0.5 rounded border ${templ ? 'bg-indigo-50 border-indigo-200 text-indigo-700' : 'bg-gray-100 border-gray-200 text-gray-600'}`}>
+
+      <span
+        className={`px-2 py-0.5 rounded border ${
+          templ
+            ? 'bg-indigo-50 border-indigo-200 text-indigo-700'
+            : 'bg-gray-100 border-gray-200 text-gray-600'
+        }`}
+      >
         Template: {templ ? 'เปิด' : 'ปิด'}
       </span>
     </div>
@@ -42,35 +74,69 @@ const FeaturesBadge = ({ features }) => {
 };
 
 const ListBranchPage = () => {
-  // 🟢 [LINK BINDING] ดึงค่า shopSlug ผ่าน useParams มาสแตนด์บายป้อนปุ่มควบคุมเลนวิ่งตารางหลัก
   const { shopSlug } = useParams();
   const navigate = useNavigate();
+
   const branches = useBranchStore((state) => state.branches) || [];
   const loadAllBranchesAction = useBranchStore((state) => state.loadAllBranchesAction);
 
-  // 🔐 RBAC
+  // 🔐 RBAC / Session SSoT
   const role = useAuthStore((s) => s.role);
-  const currentBranchId = useAuthStore((s) => s.branchId);
+  const authBranchId = useAuthStore((s) => s.employee?.branchId);
   const isSuperAdmin = String(role || '').toLowerCase() === 'superadmin';
 
+  const currentBranchId = useMemo(() => {
+    const n = Number(authBranchId);
+    return Number.isFinite(n) && n > 0 ? n : null;
+  }, [authBranchId]);
+
   useEffect(() => {
+    if (typeof loadAllBranchesAction !== 'function') return;
     loadAllBranchesAction();
   }, [loadAllBranchesAction]);
 
   const visibleBranches = useMemo(() => {
-    // ปลอดภัยไว้ก่อน: ถ้าไม่ใช่ superadmin แสดงเฉพาะสาขาที่ login
-    return isSuperAdmin ? branches : branches.filter((b) => b?.id === currentBranchId);
+    if (isSuperAdmin) return branches;
+    if (!currentBranchId) return [];
+
+    return branches.filter((b) => Number(b?.id) === Number(currentBranchId));
   }, [branches, isSuperAdmin, currentBranchId]);
+
+  const goCreate = () => {
+    if (!isSuperAdmin) return;
+
+    // ✅ relative from /:shopSlug/pos/settings/branches
+    navigate('create');
+  };
+
+  const goEdit = (branchId) => {
+    if (!isSuperAdmin) return;
+
+    const id = Number(branchId);
+    if (!Number.isFinite(id) || id <= 0) return;
+
+    // ✅ relative from /:shopSlug/pos/settings/branches
+    navigate(`edit/${id}`);
+  };
 
   return (
     <div className="p-4 max-w-7xl mx-auto">
       <div className="flex justify-between items-center mb-4">
-        <h1 className="text-xl font-bold">จัดการสาขา</h1>
-        
-        {/* 🟢 [BUG FIX ONADD LINK] ล้างคอมเมนต์ผิดไวยากรณ์ออก และสับท่อเลนวิ่งปุ่มเพิ่มสาขาให้พ่วงสัญญาณชื่อร้านค้าเสถียร 100% */}
+        <div>
+          <h1 className="text-xl font-bold">จัดการสาขา</h1>
+          <p className="mt-1 text-xs text-gray-500">
+            ร้าน: {shopSlug || '-'} • สิทธิ์: {role || '-'}
+            {!isSuperAdmin && currentBranchId ? ` • สาขาปัจจุบัน: ${currentBranchId}` : ''}
+          </p>
+        </div>
+
         <button
-          onClick={() => isSuperAdmin && navigate(`/${shopSlug}/pos/settings/branches/create`)}
-          className={`px-4 py-2 rounded text-white ${isSuperAdmin ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-300 cursor-not-allowed'}`}
+          type="button"
+          onClick={goCreate}
+          className={`px-4 py-2 rounded text-white ${
+            isSuperAdmin ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-300 cursor-not-allowed'
+          }`}
+          disabled={!isSuperAdmin}
           aria-disabled={!isSuperAdmin}
           title={isSuperAdmin ? 'เพิ่มสาขาใหม่' : 'ต้องเป็น Super Admin'}
         >
@@ -88,6 +154,7 @@ const ListBranchPage = () => {
             <col className="w-[110px]" />
             <col className="w-[90px]" />
           </colgroup>
+
           <thead className="bg-gray-100">
             <tr>
               <th className="text-left px-4 py-2 border-b w-[200px]">ชื่อสาขา</th>
@@ -98,14 +165,20 @@ const ListBranchPage = () => {
               <th className="text-center px-4 py-2 border-b w-[90px]">จัดการ</th>
             </tr>
           </thead>
+
           <tbody>
             {visibleBranches.map((branch) => (
               <tr key={branch.id} className="border-t hover:bg-gray-50">
                 <td className="px-4 py-2 whitespace-nowrap font-medium">{branch.name}</td>
+
                 <td className="px-4 py-2 whitespace-nowrap">
                   <BusinessTypeBadge value={branch.businessType} />
                 </td>
-                <td className="px-4 py-2 align-top min-w-[340px]"><FeaturesBadge features={branch.features} /></td>
+
+                <td className="px-4 py-2 align-top min-w-[340px]">
+                  <FeaturesBadge features={branch.features} />
+                </td>
+
                 <td className="px-4 py-2 text-sm text-gray-700 align-middle">
                   <div
                     className="max-w-[400px] truncate"
@@ -126,13 +199,17 @@ const ListBranchPage = () => {
                     />
                   </div>
                 </td>
+
                 <td className="px-4 py-2 whitespace-nowrap">{branch.phone || '-'}</td>
+
                 <td className="px-4 py-2 text-center">
-                  
-                  {/* 🟢 [BUG FIX ONEDIT LINK] ล้างคอมเมนต์หลุดลักไก่ในแท็กออก และครอบเลนนำทางแก้ไขสาขาให้เสถียร ไม่ดีดเด้ง */}
                   <button
-                    onClick={() => isSuperAdmin && navigate(`/${shopSlug}/pos/settings/branches/edit/${branch.id}`)}
-                    className={`${isSuperAdmin ? 'text-blue-600 hover:underline' : 'text-gray-400 cursor-not-allowed'}`}
+                    type="button"
+                    onClick={() => goEdit(branch.id)}
+                    className={`${
+                      isSuperAdmin ? 'text-blue-600 hover:underline' : 'text-gray-400 cursor-not-allowed'
+                    }`}
+                    disabled={!isSuperAdmin}
                     aria-disabled={!isSuperAdmin}
                     title={isSuperAdmin ? 'แก้ไขสาขา' : 'ต้องเป็น Super Admin'}
                   >
@@ -141,6 +218,7 @@ const ListBranchPage = () => {
                 </td>
               </tr>
             ))}
+
             {visibleBranches.length === 0 && (
               <tr>
                 <td colSpan={6} className="text-center py-8 text-gray-400">

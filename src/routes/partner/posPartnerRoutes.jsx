@@ -57,6 +57,8 @@ import { EditBankPage } from '@/features/bank/page/EditBankPage';
 // 🟢 [LIVE SETTINGS/BRANCH PAGES]
 import ListBranchPage from '@/features/settings/pages/ListBranchPage';
 
+// 🟢 FIXED FEATURE PORT: อิมพอร์ตหน้าจอตัวจริงของการนำเข้าสินค้าด่วนจากโมดูลสินค้า
+import QuickStockPage from '@features/product/pages/QuickStockPage';
 
 // 🟡 แผ่นป้ายสแตนด์บายฉุกเฉินภายในไฟล์ (Inline Temporary Component) 
 const TempReportPage = ({ title }) => (
@@ -81,9 +83,15 @@ export const posPartnerRoutes = [
   },
 
   // 🟢 [THE BIG THREE - FLAT ROUTING]
-  purchasesRoutes, // 🛒 จัดซื้อ
+  purchasesRoutes, // 🛒 จัดซื้อ (ตอนนี้ปุ่มลัดด้านในชี้เข้า QuickStockPage แล้ว 🟢)
   salesRoutes,     // 🛍️ งานขาย
   stockRoutes,     // 📦 คลังสินค้า
+
+  // 🟢 FIXED PORT: ช่องทางเข้าสู่หน้าจอลงทะเบียนเม็ดสต๊อกด่วนผ่านโมดูลคลังสินค้าหลัก
+  {
+    path: 'stock/quick-input',
+    element: <QuickStockPage />
+  },
 
   // 📈 4. โมดูลระบบรายงาน
   {
@@ -136,7 +144,7 @@ export const posPartnerRoutes = [
       { path: 'approve', element: <ApproveEmployeePage /> },
       { path: 'roles', element: <ManageRolesPage /> },
       
-      // 🟢 [ADDED HIGH-ACCURACY PORT]: ช่องทางเรียกหน้าจอจัดสรรสิทธิ์และสร้างไอดีพนักงานย่อยแชร์สาขา
+      // 🟢 ช่องทางเรียกหน้าจอจัดสรรสิทธิ์และสร้างไอดีพนักงานย่อยแชร์สาขา
       { path: 'staff', element: <StaffSettingsPage /> },
       
       // 🟢 [POSITION MODULE ACTIVE]: 

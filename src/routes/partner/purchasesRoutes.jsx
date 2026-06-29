@@ -22,9 +22,12 @@ import PreviewBarcodePage from '@/features/barcode/pages/PreviewBarcodePage';
 import PrintBarcodeBatchPage from '@/features/barcode/pages/PrintBarcodeBatchPage';
 import BarcodeRangePrintPage from '@/features/barcode/pages/BarcodeRangePrintPage';
 
-// 🟢 [IMPORT PATH FIXED] ปรับแต่งพาธให้ชี้ตรงดิ่งไปที่โฟลเดอร์ stockItem ตามพิกัดจริงในเครื่อง
+// 🟢 ปรับแต่งพาธให้ชี้ตรงดิ่งไปที่โฟลเดอร์ stockItem ตามพิกัดจริงในเครื่อง
 import ListReceiptItemsToScanPage from '@/features/stockItem/pages/ListReceiptItemsToScanPage';
 import ScanBarcodeListPage from '@/features/stockItem/pages/ScanBarcodeListPage';
+
+// 🟢 FIXED PORT: อิมพอร์ตหน้าจอควิกสต๊อกตัวจริงเข้าสับรางแทนที่คอมโพเนนต์เก่าฝั่งจัดซื้อ
+import QuickStockPage from '@features/product/pages/QuickStockPage';
 
 const purchasesRoutes = {
   path: 'purchases',
@@ -52,7 +55,9 @@ const purchasesRoutes = {
         { path: 'print/:id', element: <ListPurchaseOrderReceiptPage /> },
         { path: 'items', element: <ListReceiptItemsToScanPage /> },
         { path: 'items/scan/:receiptId', element: <ScanBarcodeListPage /> },
-        { path: 'quick-receive', element: <ListPurchaseOrderReceiptPage /> }
+        
+        // 🟢 FIXED INTERCEPTOR: สับรางเปลี่ยนจากหน้าตรวจรับ PO เดิม ให้เปิดหน้าจอควิกสต๊อกตัวจริงทันที!
+        { path: 'quick-receive', element: <QuickStockPage /> }
       ]
     },
     {

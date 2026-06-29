@@ -400,40 +400,64 @@ export const useAuthStore = create(
 
       bootstrapAuthAction: async () => {
         const state = get();
+      
         set({ isBootstrappingAuth: true, authError: null });
-
+      
         if (state.accessToken || state.token) {
           return state.verifySessionAction();
         }
-
+      
         try {
-          // 🟢 INTENTIONAL SILENT INTERCEPTOR: รันผ่านอินสแตนซ์ศูนย์กลาง เพื่อใช้ท่อหมุนเวียนคุ้กกี้ที่ปลอดภัยร่วมกัน[cite: 24, 25]
           const res = await apiClient.post('/auth/refresh');
           const accessToken = res?.data?.accessToken || res?.data?.token || null;
-
+      
           if (!accessToken) {
-            set({ authChecked: false, isBootstrappingAuth: false });
+            set({
+              token: null,
+              accessToken: null,
+              authChecked: true,
+              isBootstrappingAuth: false,
+              authError: null,
+            });
             return false;
           }
-
+      
           set({
             token: accessToken,
             accessToken,
             rememberMe: !!res?.data?.session?.rememberMe,
             session: res?.data?.session || null,
+            authError: null,
           });
-
+      
           return await get().verifySessionAction();
-        } catch {
+        } catch (error) {
+          const status = error?.response?.status;
+      
+          if (status === 401 || status === 403) {
+            set({
+              token: null,
+              accessToken: null,
+              authChecked: true,
+              isBootstrappingAuth: false,
+              authError: null,
+            });
+            return false;
+          }
+      
+          console.error('❌ bootstrapAuthAction failed:', error);
+      
           set({
             token: null,
             accessToken: null,
-            authChecked: false,
+            authChecked: true,
             isBootstrappingAuth: false,
+            authError: error?.response?.data?.message || error?.message || 'ตรวจสอบสถานะเข้าสู่ระบบไม่สำเร็จ',
           });
+      
           return false;
         }
-      },
+      },  
 
       resetAuthStateAction: () => {
         const state = get();

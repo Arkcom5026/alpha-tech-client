@@ -7,14 +7,34 @@ Status: CERTIFIED BASELINE
 Frontend certification has completed its baseline phase.
 
 Current status:
-
 - Frontend Architecture Certification: ✅ COMPLETE
 - Frontend Runtime Certification: ✅ COMPLETE
 - Implementation Readiness Review: ✅ APPROVED
 - Backend Auth Refactor: 🔒 LOCKED
 
-## Certification Roadmap
+## Quick Boot For New Tasks
 
+When starting a brand new ChatGPT task or conversation:
+
+Step 1
+- Read this file first.
+
+Step 2
+- Read `docs/frontend/Implementation_Readiness_Review.md`.
+
+Step 3
+- Read `docs/frontend/Architecture_Decision_Log.md`.
+
+Step 4
+- Report:
+  - Current certification status
+  - Current implementation phase
+  - Locked decisions
+  - Recommended next action
+
+Do not propose code changes before completing the boot sequence.
+
+## Certification Roadmap
 1. Blueprint
 2. Architecture Certification
 3. Runtime Certification
@@ -45,7 +65,6 @@ Current status:
 - Implementation_Readiness_Review.md
 
 ## Approved Engineering Principles
-
 - Frontend First
 - Certification before Implementation
 - One file at a time
@@ -58,6 +77,5 @@ Current status:
 
 Phase 1: Logout Runtime Standardization
 
-This phase will follow the Engineering Change Protocol (ECP):
-
+Engineering Change Protocol (ECP):
 Blueprint → Certification → ADR → Approval → Implementation → Verification → Blueprint Update

@@ -53,7 +53,7 @@ Status: ACTIVE
 Responsibilities:
 - Define mission packages.
 - Define scope and deliverables.
-- Review reports.
+- Review reports from Git inbox.
 - Identify risks.
 - Decide next mission package.
 - Keep implementation locked until approved.
@@ -73,10 +73,10 @@ Responsibilities:
 - Identify entry points and exit points.
 - Identify API calls and store mutations.
 - Identify missing runtime behavior.
-- Report findings back to the user.
+- Submit findings to Git inbox.
 
 Restrictions:
-- Do not edit code.
+- Do not edit application code.
 - Do not propose patches unless asked.
 - Do not expand scope without approval.
 
@@ -168,12 +168,52 @@ RT-001 Report
 8. Next Recommended Inspection
 ```
 
+Report destination:
+
+```txt
+docs/mission-b/inbox/RT-001.md
+```
+
+ROLE-RUNTIME should create or update the report in Git and notify the user only with the file path and commit SHA.
+
 Exit criteria:
 ROLE-RUNTIME can explain the product onboarding flow from Template Search to branch operational readiness without guessing.
 
 ---
 
-## 7. Current Working Rules
+## 7. Mission Inbox Workflow
+
+Goal:
+Allow tasks to send reports through Git so the user does not need to copy/paste reports between tasks.
+
+Workflow:
+
+```txt
+ROLE-ARCH updates BLACKBOARD.md
+  ↓
+User opens assigned task
+  ↓
+Assigned task reads BLACKBOARD.md
+  ↓
+Assigned task performs discovery
+  ↓
+Assigned task writes report to docs/mission-b/inbox/<REPORT-ID>.md
+  ↓
+User tells ROLE-ARCH to read that report path
+  ↓
+ROLE-ARCH reviews report and updates BLACKBOARD.md / next decision
+```
+
+Inbox rules:
+
+1. Inbox files are reports, not implementation patches.
+2. Inbox reports must not modify runtime source code.
+3. Inbox reports must include mission ID, role, scope, findings, risks, and next recommended inspection.
+4. ROLE-ARCH reviews reports from inbox; reports are not automatically approved.
+
+---
+
+## 8. Current Working Rules
 
 1. Product Template is for search and clone source only.
 2. Operational Product is the store runtime source of truth.
@@ -182,10 +222,11 @@ ROLE-RUNTIME can explain the product onboarding flow from Template Search to bra
 5. Do not edit implementation before B1 discovery is complete.
 6. One file at a time for future implementation.
 7. Minimal patch only when implementation is approved.
+8. Task reports should be sent through Git inbox when possible.
 
 ---
 
-## 8. Current Success Criteria
+## 9. Current Success Criteria
 
 Mission B succeeds when a branch can:
 
@@ -209,13 +250,19 @@ Ready for branch operation
 
 ---
 
-## 9. Handoff Instruction For New Tasks
+## 10. Handoff Instruction For New Tasks
 
 New Mission B tasks should start with:
 
 ```txt
 Read docs/mission-b/BLACKBOARD.md
-Then report your role, assigned mission package, implementation lock status, files in scope, and expected deliverables.
+Then report your role, assigned mission package, implementation lock status, files in scope, expected deliverables, and report destination.
+```
+
+After completing the assigned discovery, write the report to:
+
+```txt
+docs/mission-b/inbox/RT-001.md
 ```
 
 Do not begin implementation unless the blackboard explicitly says Implementation: APPROVED.

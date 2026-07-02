@@ -44,10 +44,12 @@ const ProductMasterPanel = ({
         </div>
 
         <div className="rounded-xl border border-amber-200 bg-white/70 p-3 text-xs text-amber-900 space-y-1">
-          <div>เมื่อ Commit ครั้งแรก ระบบจะ:</div>
-          <div>✓ Clone Product เข้า Branch ปัจจุบัน</div>
+          <div>สถานะปัจจุบัน:</div>
+          <div>สินค้านี้ยังเป็น Template เท่านั้น และยังไม่ใช่ Operational Product ของร้าน</div>
+          <div className="pt-1">ก่อนรับเข้า Stock ต้องมีขั้นตอนถัดไป:</div>
+          <div>✓ สร้างหรือ Clone Product เข้า Branch ปัจจุบัน</div>
           <div>✓ สร้าง/บันทึก BranchPrice ของร้าน</div>
-          <div>✓ รับสินค้าเข้า Stock Runtime</div>
+          <div>✓ จากนั้นจึงรับสินค้าเข้า Stock Runtime ได้</div>
         </div>
 
         <button

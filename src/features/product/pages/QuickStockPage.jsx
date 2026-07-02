@@ -1,6 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import useProductStore from "@/features/product/store/productStore";
-import { getTemplateProductsForPos } from "@/features/product/api/productApi";
+import {
+  getOperationalProductByTemplateId,
+  getTemplateProductsForPos,
+} from "@/features/product/api/productApi";
 import { toast } from "react-toastify";
 
 import ProductFinderPanel from "../components/quick-stock/ProductFinderPanel";
@@ -95,6 +98,30 @@ const extractProductList = (response) => {
   return [];
 };
 
+const extractSingleProduct = (response) => {
+  if (!response) return null;
+  if (Array.isArray(response)) return response[0] || null;
+
+  const candidates = [
+    response?.product,
+    response?.data?.product,
+    response?.data?.item,
+    response?.data,
+    response?.result?.product,
+    response?.result?.item,
+    response?.result,
+    response?.item,
+  ];
+
+  for (const candidate of candidates) {
+    if (candidate && typeof candidate === "object" && !Array.isArray(candidate)) {
+      return candidate;
+    }
+  }
+
+  return null;
+};
+
 const normalizeTemplateProduct = (product) => {
   if (!product || typeof product !== "object") return product;
 
@@ -137,6 +164,14 @@ const normalizeTemplateProduct = (product) => {
 const normalizeTemplateProductList = (response) =>
   extractProductList(response).map(normalizeTemplateProduct).filter(Boolean);
 
+const normalizeOperationalProduct = (product) => {
+  if (!product || typeof product !== "object") return null;
+  return {
+    ...product,
+    isTemplateProduct: false,
+  };
+};
+
 const buildProductFormFromProduct = (product) => ({
   name: product?.name || "",
   productTypeId: String(getProductTypeId(product) || ""),
@@ -168,12 +203,10 @@ const buildPriceFormFromProduct = (product) => {
 const isTemplateCatalogProduct = (product) => {
   if (!product) return false;
 
-  // Search result from Template Catalog / T01 must never be rendered as Operational Product.
   if (product.isTemplateProduct === true) return true;
   if (String(product.templateBranchCode || "").toUpperCase() === "T01") return true;
   if (Number(product.templateBranchId) === 1) return true;
 
-  // Current template-search API maps templateProductId to self id.
   if (
     product.templateProductId != null &&
     product.id != null &&
@@ -190,8 +223,12 @@ const isOperationalBranchProduct = (product) => {
   return !isTemplateCatalogProduct(product);
 };
 
+const getTemplateLookupId = (product) =>
+  product?.templateProductId ?? product?.template_product_id ?? product?.id ?? null;
+
 const ONBOARDING_STATES = {
   NO_SELECTION: "NO_SELECTION",
+  CHECKING_OPERATIONAL_PRODUCT: "CHECKING_OPERATIONAL_PRODUCT",
   TEMPLATE_SELECTED_NOT_CREATED: "TEMPLATE_SELECTED_NOT_CREATED",
   OPERATIONAL_READY: "OPERATIONAL_READY",
   INTAKE_READY: "INTAKE_READY",
@@ -225,6 +262,8 @@ const QuickStockPage = () => {
   const [showSearchResult, setShowSearchResult] = useState(true);
   const [runtimeSearchProducts, setRuntimeSearchProducts] = useState([]);
   const [templateDropdownProducts, setTemplateDropdownProducts] = useState([]);
+  const [adoptedOperationalProduct, setAdoptedOperationalProduct] = useState(null);
+  const [isCheckingOperationalProduct, setIsCheckingOperationalProduct] = useState(false);
 
   const [barcode, setBarcode] = useState("");
   const [barcodeQueue, setBarcodeQueue] = useState([]);
@@ -242,21 +281,13 @@ const QuickStockPage = () => {
   const [priceForm, setPriceForm] = useState(buildPriceFormFromProduct(null));
 
   const productList = useMemo(() => {
-    // Quick Receive search must render only results searched on this page.
-    // Do not fallback to global product store because it may contain Operational Product List
-    // from /pos/stock/products and will leak stale results into this page.
     return normalizeTemplateProductList(runtimeSearchProducts);
   }, [runtimeSearchProducts]);
 
   const templateDropdownList = useMemo(() => {
-    // Dropdown source must be stable and independent from current search result.
-    // It is loaded once from Template Catalog scope and kept for ProductType / Brand options.
     return normalizeTemplateProductList(templateDropdownProducts);
   }, [templateDropdownProducts]);
 
-  // ✅ Template Catalog Dropdowns:
-  // Quick Receive / Intake Search ต้องใช้ ProductType และ Brand จาก Template Catalog Scope เท่านั้น
-  // ไม่ใช้ Global Dropdown เพื่อป้องกัน Type/Brand ข้าม Branch หรือข้าม Catalog หลุดเข้า Intake Runtime
   const templateProductTypes = useMemo(() => {
     const map = new Map();
 
@@ -315,20 +346,8 @@ const QuickStockPage = () => {
     };
 
     try {
-      if (import.meta.env?.DEV) {
-        console.log("[QuickStock] Template Search params", params);
-      }
-
       const response = await getTemplateProductsForPos(params);
       const list = normalizeTemplateProductList(response);
-
-      if (import.meta.env?.DEV) {
-        console.log("[QuickStock] Template Search result", {
-          raw: response,
-          count: list.length,
-        });
-      }
-
       setRuntimeSearchProducts(list);
       return list;
     } catch (err) {
@@ -348,13 +367,6 @@ const QuickStockPage = () => {
 
       const list = normalizeTemplateProductList(response);
       setTemplateDropdownProducts(list);
-
-      if (import.meta.env?.DEV) {
-        console.log("[QuickStock] Template Dropdown Catalog result", {
-          count: list.length,
-        });
-      }
-
       return list;
     } catch (err) {
       console.error("QuickStock template dropdown load failed:", err);
@@ -410,20 +422,66 @@ const QuickStockPage = () => {
     return (productList || []).find((product) => Number(product?.id) === Number(id)) || null;
   }, [productList, selectedProductId]);
 
-  // Runtime Product Separation:
-  // selectedProduct here is the product selected from search.
-  // If it comes from T01 / Template Catalog, it is selectedTemplateProduct only.
-  // It must NOT be shown or edited as Operational Product of the branch.
   const selectedTemplateProduct = useMemo(
     () => (isTemplateCatalogProduct(selectedProduct) ? selectedProduct : null),
     [selectedProduct]
   );
 
-  const operationalProduct = useMemo(
+  const selectedSearchOperationalProduct = useMemo(
     () => (isOperationalBranchProduct(selectedProduct) ? selectedProduct : null),
     [selectedProduct]
   );
 
+  useEffect(() => {
+    let cancelled = false;
+
+    const lookupTemplateOperationalProduct = async () => {
+      if (!selectedTemplateProduct) {
+        setAdoptedOperationalProduct(null);
+        setIsCheckingOperationalProduct(false);
+        return;
+      }
+
+      const templateProductId = getTemplateLookupId(selectedTemplateProduct);
+      if (!templateProductId) {
+        setAdoptedOperationalProduct(null);
+        setIsCheckingOperationalProduct(false);
+        return;
+      }
+
+      setAdoptedOperationalProduct(null);
+      setIsCheckingOperationalProduct(true);
+
+      try {
+        const response = await getOperationalProductByTemplateId(templateProductId);
+        if (cancelled) return;
+
+        const operationalCandidate = normalizeOperationalProduct(extractSingleProduct(response));
+        if (operationalCandidate?.id && isOperationalBranchProduct(operationalCandidate)) {
+          setAdoptedOperationalProduct(operationalCandidate);
+          return;
+        }
+
+        setAdoptedOperationalProduct(null);
+      } catch (err) {
+        if (cancelled) return;
+        console.warn("QuickStock operational lookup did not find a branch product:", err);
+        setAdoptedOperationalProduct(null);
+      } finally {
+        if (!cancelled) {
+          setIsCheckingOperationalProduct(false);
+        }
+      }
+    };
+
+    lookupTemplateOperationalProduct();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedTemplateProduct]);
+
+  const operationalProduct = selectedSearchOperationalProduct || adoptedOperationalProduct;
   const isTemplateOnlySelection = !!selectedTemplateProduct && !operationalProduct;
   const isOperationalSelection = !!operationalProduct?.id;
 
@@ -435,8 +493,6 @@ const QuickStockPage = () => {
 
   useEffect(() => {
     if (!operationalProduct) {
-      // Template Product is search/clone source only.
-      // Do not hydrate Product Detail / BranchPrice editor from template.
       setProductForm(buildProductFormFromProduct(null));
       setPriceForm(buildPriceFormFromProduct(null));
       setDefaultCost("");
@@ -469,6 +525,7 @@ const QuickStockPage = () => {
   const clearProductSelection = () => {
     setSelectedProductId("");
     setShowSearchResult(true);
+    setAdoptedOperationalProduct(null);
     setIsEditingProduct(false);
     setProductForm(buildProductFormFromProduct(null));
     setPriceForm(buildPriceFormFromProduct(null));
@@ -487,6 +544,7 @@ const QuickStockPage = () => {
 
   const selectProduct = (productId) => {
     setSelectedProductId(String(productId));
+    setAdoptedOperationalProduct(null);
     setShowSearchResult(false);
     resetQueue();
 
@@ -604,22 +662,6 @@ const QuickStockPage = () => {
         },
       });
 
-      const savedCostPrice = toMoneyNumber(priceForm.costPrice);
-      const savedPriceRetail = toMoneyNumber(priceForm.priceRetail);
-      const savedPriceWholesale = toMoneyNumber(priceForm.priceWholesale);
-      const savedPriceTechnician = toMoneyNumber(priceForm.priceTechnician);
-      const savedPriceOnline = toMoneyNumber(priceForm.priceOnline);
-
-      const nextBranchPrice = {
-        ...(getFirstBranchPrice(operationalProduct) || {}),
-        costPrice: savedCostPrice,
-        priceRetail: savedPriceRetail,
-        priceWholesale: savedPriceWholesale,
-        priceTechnician: savedPriceTechnician,
-        priceOnline: savedPriceOnline,
-        isActive: true,
-      };
-
       const nextProduct = {
         ...operationalProduct,
         name,
@@ -628,14 +670,24 @@ const QuickStockPage = () => {
         unitId: toNumberOrNull(productForm.unitId),
         trackSerialNumber: !!productForm.trackSerialNumber,
         active: !!productForm.active,
-        costPrice: savedCostPrice,
-        priceRetail: savedPriceRetail,
-        priceWholesale: savedPriceWholesale,
-        priceTechnician: savedPriceTechnician,
-        priceOnline: savedPriceOnline,
+        costPrice: toMoneyNumber(priceForm.costPrice),
+        priceRetail: toMoneyNumber(priceForm.priceRetail),
+        priceWholesale: toMoneyNumber(priceForm.priceWholesale),
+        priceTechnician: toMoneyNumber(priceForm.priceTechnician),
+        priceOnline: toMoneyNumber(priceForm.priceOnline),
         hasPrice: true,
         branchPriceActive: true,
-        branchPrice: [nextBranchPrice],
+        branchPrice: [
+          {
+            ...(getFirstBranchPrice(operationalProduct) || {}),
+            costPrice: toMoneyNumber(priceForm.costPrice),
+            priceRetail: toMoneyNumber(priceForm.priceRetail),
+            priceWholesale: toMoneyNumber(priceForm.priceWholesale),
+            priceTechnician: toMoneyNumber(priceForm.priceTechnician),
+            priceOnline: toMoneyNumber(priceForm.priceOnline),
+            isActive: true,
+          },
+        ],
       };
 
       setRuntimeSearchProducts((prev) =>
@@ -645,10 +697,13 @@ const QuickStockPage = () => {
             )
           : prev
       );
+      setAdoptedOperationalProduct((prev) =>
+        prev && Number(prev?.id) === Number(nextProduct.id) ? { ...prev, ...nextProduct } : prev
+      );
 
       setProductForm(buildProductFormFromProduct(nextProduct));
       setPriceForm(buildPriceFormFromProduct(nextProduct));
-      setDefaultCost(String(savedCostPrice || ""));
+      setDefaultCost(String(nextProduct.costPrice || ""));
 
       toast.success("บันทึกข้อมูลสินค้าเรียบร้อย");
       setIsEditingProduct(false);
@@ -684,8 +739,7 @@ const QuickStockPage = () => {
       }
 
       toast.success("ลบสินค้าเรียบร้อย");
-      setSelectedProductId("");
-      resetQueue();
+      clearProductSelection();
       await executeProductSearch();
     } catch (err) {
       console.error("Delete product failed:", err);
@@ -753,21 +807,13 @@ const QuickStockPage = () => {
       productName: operationalProduct.name,
       mode: "STRUCTURED",
       trackSerialNumber: !!operationalProduct.trackSerialNumber,
-
-      // Runtime Intake v2:
-      // Frontend does not send movementType/source.
-      // Backend owns RECEIVE/source metadata.
       note,
       quantity: cleanQueueItems.length,
-
-      // Runtime Session Price is the single source of truth.
       costPrice: sessionCost,
       priceRetail: toMoneyNumber(priceForm.priceRetail),
       priceWholesale: toMoneyNumber(priceForm.priceWholesale),
       priceTechnician: toMoneyNumber(priceForm.priceTechnician),
       priceOnline: toMoneyNumber(priceForm.priceOnline),
-
-      // Queue Item contains only per-item identity.
       items: cleanQueueItems,
       barcodes: cleanQueueItems,
     };
@@ -800,20 +846,22 @@ const QuickStockPage = () => {
     toMoneyNumber(defaultCost || priceForm.costPrice) > 0 &&
     toMoneyNumber(priceForm.priceRetail) > 0;
   const productReady = isOperationalSelection && hasRequiredIntakePrices;
-  const canScanBarcode = isOperationalSelection && !isCommitting;
-  const canCommitExistingIntake = productReady && queueReady && !isCommitting;
+  const canScanBarcode = isOperationalSelection && !isCommitting && !isCheckingOperationalProduct;
+  const canCommitExistingIntake = productReady && queueReady && !isCommitting && !isCheckingOperationalProduct;
 
   const onboardingState = isCommitting
     ? ONBOARDING_STATES.INTAKE_COMMITTING
-    : !selectedProduct
-      ? ONBOARDING_STATES.NO_SELECTION
-      : isTemplateOnlySelection
-        ? ONBOARDING_STATES.TEMPLATE_SELECTED_NOT_CREATED
-        : canCommitExistingIntake
-          ? ONBOARDING_STATES.INTAKE_READY
-          : isOperationalSelection
-            ? ONBOARDING_STATES.OPERATIONAL_READY
-            : ONBOARDING_STATES.ERROR_RECOVERABLE;
+    : isCheckingOperationalProduct
+      ? ONBOARDING_STATES.CHECKING_OPERATIONAL_PRODUCT
+      : !selectedProduct
+        ? ONBOARDING_STATES.NO_SELECTION
+        : isTemplateOnlySelection
+          ? ONBOARDING_STATES.TEMPLATE_SELECTED_NOT_CREATED
+          : canCommitExistingIntake
+            ? ONBOARDING_STATES.INTAKE_READY
+            : isOperationalSelection
+              ? ONBOARDING_STATES.OPERATIONAL_READY
+              : ONBOARDING_STATES.ERROR_RECOVERABLE;
 
   const intakeRuntimeProduct = canScanBarcode ? operationalProduct : null;
   const commitRuntimeProduct = canCommitExistingIntake ? operationalProduct : null;
@@ -824,7 +872,6 @@ const QuickStockPage = () => {
 
   return (
     <div className="w-full min-h-screen bg-slate-50 p-4 xl:p-6 space-y-4">
-
       <div className="grid grid-cols-1 2xl:grid-cols-12 gap-4">
         <div className="2xl:col-span-4 space-y-4">
           <ProductFinderPanel
@@ -839,11 +886,12 @@ const QuickStockPage = () => {
             filteredProducts={filteredProducts}
             selectedProductId={selectedProductId}
             dropdownsLoading={dropdownsLoading}
-            isLoading={isLoading}
+            isLoading={isLoading || isCheckingOperationalProduct}
             onProductTypeChange={(value) => {
               setSelectedProductTypeId(value);
               setSelectedBrandId("");
               setSelectedProductId("");
+              setAdoptedOperationalProduct(null);
               setShowSearchResult(true);
               resetQueue();
               executeProductSearch({ productTypeId: value, brandId: "", search: committedKeyword });
@@ -851,6 +899,7 @@ const QuickStockPage = () => {
             onBrandChange={(value) => {
               setSelectedBrandId(value);
               setSelectedProductId("");
+              setAdoptedOperationalProduct(null);
               setShowSearchResult(true);
               resetQueue();
               executeProductSearch({ brandId: value, search: committedKeyword });
@@ -858,6 +907,7 @@ const QuickStockPage = () => {
             onKeywordChange={(value) => {
               setKeyword(value);
               setSelectedProductId("");
+              setAdoptedOperationalProduct(null);
               setShowSearchResult(true);
               resetQueue();
             }}

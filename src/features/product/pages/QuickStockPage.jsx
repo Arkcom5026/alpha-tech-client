@@ -226,6 +226,46 @@ const isOperationalBranchProduct = (product) => {
 const getTemplateLookupId = (product) =>
   product?.templateProductId ?? product?.template_product_id ?? product?.id ?? null;
 
+const addDefinedField = (target, key, value) => {
+  if (value === undefined || value === null || value === "") return;
+  target[key] = value;
+};
+
+const buildCreateOperationalProductPayload = (templateProduct) => {
+  const templateProductId = toNumberOrNull(getTemplateLookupId(templateProduct));
+  if (!templateProductId) return null;
+
+  const payload = {
+    templateProductId,
+    sourceCatalog: "TEMPLATE",
+  };
+
+  addDefinedField(payload, "name", templateProduct?.name || templateProduct?.title);
+  addDefinedField(payload, "productTypeId", toNumberOrNull(getProductTypeId(templateProduct)));
+  addDefinedField(payload, "brandId", toNumberOrNull(getProductBrandId(templateProduct)));
+  addDefinedField(payload, "unitId", toNumberOrNull(getProductUnitId(templateProduct)));
+  addDefinedField(payload, "mode", templateProduct?.mode || "STRUCTURED");
+  addDefinedField(payload, "trackSerialNumber", !!templateProduct?.trackSerialNumber);
+  addDefinedField(payload, "categoryId", toNumberOrNull(templateProduct?.categoryId));
+  addDefinedField(payload, "codeType", templateProduct?.codeType);
+  addDefinedField(payload, "warrantyDays", toNumberOrNull(templateProduct?.warrantyDays));
+  addDefinedField(payload, "productConfig", templateProduct?.productConfig);
+  addDefinedField(payload, "active", templateProduct?.active !== false);
+
+  return payload;
+};
+
+const isValidOperationalProductForAdoption = (product, templateProduct) => {
+  const operationalProductId = toNumberOrNull(product?.id);
+  const templateProductId = toNumberOrNull(getTemplateLookupId(templateProduct));
+
+  if (!operationalProductId) return false;
+  if (isTemplateCatalogProduct(product)) return false;
+  if (templateProductId && Number(operationalProductId) === Number(templateProductId)) return false;
+
+  return true;
+};
+
 const ONBOARDING_STATES = {
   NO_SELECTION: "NO_SELECTION",
   CHECKING_OPERATIONAL_PRODUCT: "CHECKING_OPERATIONAL_PRODUCT",
@@ -248,6 +288,7 @@ const QuickStockPage = () => {
     updateProduct,
     deleteProductAction,
     quickStockIntakeExistingAction,
+    createOperationalProductFromTemplateAction,
   } = useProductStore();
 
   const productTypes = dropdowns?.productTypes || dropdowns?.types || [];
@@ -264,6 +305,7 @@ const QuickStockPage = () => {
   const [templateDropdownProducts, setTemplateDropdownProducts] = useState([]);
   const [adoptedOperationalProduct, setAdoptedOperationalProduct] = useState(null);
   const [isCheckingOperationalProduct, setIsCheckingOperationalProduct] = useState(false);
+  const [isCreatingOperationalProduct, setIsCreatingOperationalProduct] = useState(false);
 
   const [barcode, setBarcode] = useState("");
   const [barcodeQueue, setBarcodeQueue] = useState([]);
@@ -456,8 +498,12 @@ const QuickStockPage = () => {
         const response = await getOperationalProductByTemplateId(templateProductId);
         if (cancelled) return;
 
-        const operationalCandidate = normalizeOperationalProduct(extractSingleProduct(response));
-        if (operationalCandidate?.id && isOperationalBranchProduct(operationalCandidate)) {
+        const rawCandidate = extractSingleProduct(response);
+        const operationalCandidate = normalizeOperationalProduct(rawCandidate);
+        if (
+          operationalCandidate?.id &&
+          isValidOperationalProductForAdoption(rawCandidate, selectedTemplateProduct)
+        ) {
           setAdoptedOperationalProduct(operationalCandidate);
           return;
         }
@@ -619,6 +665,46 @@ const QuickStockPage = () => {
         item.id === id ? { ...item, [field]: value } : item
       )
     );
+  };
+
+  const handleCreateOperationalProductFromTemplate = async () => {
+    if (!selectedTemplateProduct || operationalProduct) return;
+
+    if (typeof createOperationalProductFromTemplateAction !== "function") {
+      toast.error("ยังไม่พบ action สำหรับสร้าง Operational Product จาก Template");
+      return;
+    }
+
+    const payload = buildCreateOperationalProductPayload(selectedTemplateProduct);
+    if (!payload?.templateProductId) {
+      toast.error("ไม่พบ Template Product ID สำหรับสร้างสินค้าในร้าน");
+      return;
+    }
+
+    setIsCreatingOperationalProduct(true);
+
+    try {
+      const response = await createOperationalProductFromTemplateAction(payload);
+      const rawCreatedProduct = extractSingleProduct(response);
+
+      if (!isValidOperationalProductForAdoption(rawCreatedProduct, selectedTemplateProduct)) {
+        toast.error("สร้างสินค้าแล้ว แต่ข้อมูลที่ตอบกลับยังไม่ใช่ Operational Product ที่ถูกต้อง");
+        return;
+      }
+
+      const nextOperationalProduct = normalizeOperationalProduct(rawCreatedProduct);
+      setAdoptedOperationalProduct(nextOperationalProduct);
+      setProductForm(buildProductFormFromProduct(nextOperationalProduct));
+      setPriceForm(buildPriceFormFromProduct(nextOperationalProduct));
+      setDefaultCost(buildPriceFormFromProduct(nextOperationalProduct).costPrice || "");
+      toast.success("สร้าง Operational Product จาก Template เรียบร้อย");
+      setTimeout(() => barcodeInputRef.current?.focus(), 50);
+    } catch (err) {
+      console.error("Create operational product from template failed:", err);
+      toast.error(err?.message || "สร้าง Operational Product จาก Template ไม่สำเร็จ");
+    } finally {
+      setIsCreatingOperationalProduct(false);
+    }
   };
 
   const handleSaveProductInline = async () => {
@@ -846,12 +932,12 @@ const QuickStockPage = () => {
     toMoneyNumber(defaultCost || priceForm.costPrice) > 0 &&
     toMoneyNumber(priceForm.priceRetail) > 0;
   const productReady = isOperationalSelection && hasRequiredIntakePrices;
-  const canScanBarcode = isOperationalSelection && !isCommitting && !isCheckingOperationalProduct;
-  const canCommitExistingIntake = productReady && queueReady && !isCommitting && !isCheckingOperationalProduct;
+  const canScanBarcode = isOperationalSelection && !isCommitting && !isCheckingOperationalProduct && !isCreatingOperationalProduct;
+  const canCommitExistingIntake = productReady && queueReady && !isCommitting && !isCheckingOperationalProduct && !isCreatingOperationalProduct;
 
   const onboardingState = isCommitting
     ? ONBOARDING_STATES.INTAKE_COMMITTING
-    : isCheckingOperationalProduct
+    : isCheckingOperationalProduct || isCreatingOperationalProduct
       ? ONBOARDING_STATES.CHECKING_OPERATIONAL_PRODUCT
       : !selectedProduct
         ? ONBOARDING_STATES.NO_SELECTION
@@ -886,7 +972,7 @@ const QuickStockPage = () => {
             filteredProducts={filteredProducts}
             selectedProductId={selectedProductId}
             dropdownsLoading={dropdownsLoading}
-            isLoading={isLoading || isCheckingOperationalProduct}
+            isLoading={isLoading || isCheckingOperationalProduct || isCreatingOperationalProduct}
             onProductTypeChange={(value) => {
               setSelectedProductTypeId(value);
               setSelectedBrandId("");
@@ -954,6 +1040,25 @@ const QuickStockPage = () => {
             onProductFieldChange={updateProductForm}
             onPriceFieldChange={updatePriceForm}
           />
+
+          {isTemplateOnlySelection && (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 space-y-3">
+              <div>
+                <p className="font-semibold text-amber-900">สินค้านี้ยังเป็น Template</p>
+                <p className="text-sm text-amber-800">
+                  สร้าง Operational Product ของร้านก่อน จึงจะรับบาร์โค้ดหรือบันทึก Stock Intake ได้
+                </p>
+              </div>
+              <button
+                type="button"
+                className="w-full rounded-lg bg-amber-600 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+                disabled={isCreatingOperationalProduct || isCheckingOperationalProduct}
+                onClick={handleCreateOperationalProductFromTemplate}
+              >
+                {isCreatingOperationalProduct ? "กำลังสร้างสินค้าในร้าน..." : "สร้าง Operational Product จาก Template"}
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="2xl:col-span-8 space-y-4">

@@ -20,6 +20,7 @@ import {
   enrollQuickStock, 
   quickStockInAllInOneApi, // 🟢 IMPORT: ตัวเชื่อมพอร์ต All-in-One ชุดใหม่
   quickReceiveExistingProductApi,
+  createOperationalProductFromTemplateApi,
 } from '../api/productApi';
 
 import {
@@ -216,6 +217,24 @@ const useProductStore = create((set, get) => ({
     } catch (error) {
       console.error('❌ quickStockInAllInOneAction error:', error);
       const mappedError = get().normalizeError(error, 'ดำเนินการระบบควิกสต๊อกออลอินวันล้มเหลว');
+      set({ quickStockLoading: false, quickStockError: mappedError });
+      throw error;
+    }
+  },
+
+  createOperationalProductFromTemplateAction: async (payload) => {
+    set({ quickStockLoading: true, quickStockError: null });
+    try {
+      const response = await createOperationalProductFromTemplateApi(payload);
+      set({
+        quickStockLoading: false,
+        quickStockError: null,
+        quickStockResult: response?.data ?? response,
+      });
+      return response;
+    } catch (error) {
+      console.error('❌ createOperationalProductFromTemplateAction error:', error);
+      const mappedError = get().normalizeError(error, 'สร้าง Operational Product จาก Template ไม่สำเร็จ');
       set({ quickStockLoading: false, quickStockError: mappedError });
       throw error;
     }

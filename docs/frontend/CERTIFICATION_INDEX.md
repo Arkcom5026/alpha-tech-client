@@ -16,6 +16,14 @@ Current status:
 
 Boot is COMPLETE only after reading all required documents.
 
+### Boot Operating Doctrines
+
+- **Workflow-Centric Mission**: Every mission is defined by a complete operational workflow, not by Frontend/Backend separation. FE, BE, DB, Runtime, Testing, and Migration are implementation domains inside the same mission.
+- **Mission Completion Rule**: A mission is complete only when the end-to-end workflow works for the operator in production, not when one technical layer is finished.
+- **Production First**: The current production runtime remains the operational source of truth.
+- **Incremental Architecture Migration**: Grow new modules alongside the legacy runtime. Reuse new modules where available, avoid forced migration, and keep every intermediate state deployable.
+- **Compatibility Before Migration**: New features must preserve production compatibility while gradually moving responsibilities into the new architecture.
+
 Required Boot Documents
 - ✅ CERTIFICATION_INDEX.md
 - ✅ Implementation_Readiness_Review.md
@@ -26,6 +34,9 @@ Boot Report Template
 - Certification Status
 - Implementation Status
 - Current Phase
+- Current Mission
+- Current Workflow Checkpoint
+- Current Blocking Point
 - Locked Decisions
 - Next Required Reads
 - Ready for Analysis? (YES/NO)

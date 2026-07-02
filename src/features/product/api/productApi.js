@@ -329,6 +329,28 @@ export const getOperationalProductByTemplateId = async (templateProductId) => {
 };
 
 // ==================================================
+// CREATE OPERATIONAL PRODUCT FROM TEMPLATE
+// สร้าง Operational Product ของ Branch ปัจจุบันจาก Template Product
+// ==================================================
+export const createOperationalProductFromTemplateApi = async (payload = {}) => {
+  try {
+    if (import.meta.env?.DEV) console.log('[productApi] createOperationalProductFromTemplateApi payload', payload);
+
+    const sanitizedPayload = { ...payload };
+
+    // Runtime Contract:
+    // templateProductId ต้องคงอยู่เพื่อระบุต้นทาง Template
+    // branchId ต้องให้ Backend แกะจาก session/runtime context เท่านั้น
+    delete sanitizedPayload.branchId;
+
+    const { data } = await apiClient.post('products/pos/create-from-template', sanitizedPayload);
+    return data;
+  } catch (err) {
+    throw parseApiError(err);
+  }
+};
+
+// ==================================================
 // QUICK STOCK EXISTING PRODUCT INTAKE
 // รับสินค้าเข้าจาก Product เดิม: Recovery / Quick Receive / Manufacture
 // ==================================================

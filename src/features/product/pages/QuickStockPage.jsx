@@ -73,7 +73,6 @@ const getBrandName = (product) =>
   product?.brand_name ??
   "-";
 
-
 const extractProductList = (response) => {
   if (Array.isArray(response)) return response;
 
@@ -191,24 +190,27 @@ const isOperationalBranchProduct = (product) => {
   return !isTemplateCatalogProduct(product);
 };
 
+const ONBOARDING_STATES = {
+  NO_SELECTION: "NO_SELECTION",
+  TEMPLATE_SELECTED_NOT_CREATED: "TEMPLATE_SELECTED_NOT_CREATED",
+  OPERATIONAL_READY: "OPERATIONAL_READY",
+  INTAKE_READY: "INTAKE_READY",
+  INTAKE_COMMITTING: "INTAKE_COMMITTING",
+  ERROR_RECOVERABLE: "ERROR_RECOVERABLE",
+};
+
 const QuickStockPage = () => {
   const barcodeInputRef = useRef(null);
   const serialInputRefs = useRef({});
 
   const {
-    products = [],
     dropdowns = {},
     dropdownsLoading,
     isLoading,
-    error,
-
     fetchDropdownsAction,
-    fetchProducts,
-    fetchProductsAction,
     updateProduct,
     deleteProductAction,
     quickStockIntakeExistingAction,
-    quickStockInAllInOneAction,
   } = useProductStore();
 
   const productTypes = dropdowns?.productTypes || dropdowns?.types || [];
@@ -422,6 +424,9 @@ const QuickStockPage = () => {
     [selectedProduct]
   );
 
+  const isTemplateOnlySelection = !!selectedTemplateProduct && !operationalProduct;
+  const isOperationalSelection = !!operationalProduct?.id;
+
   const runtimeStatus = !selectedProduct
     ? "IDLE"
     : operationalProduct
@@ -490,13 +495,18 @@ const QuickStockPage = () => {
     }, 150);
   };
 
-
   const addBarcodeToQueue = (rawBarcode) => {
     const cleanBarcode = String(rawBarcode || "").trim();
     if (!cleanBarcode) return;
 
-    if (!selectedProduct) {
-      toast.error("กรุณาเลือกสินค้าก่อนสแกนบาร์โค้ด");
+    if (!isOperationalSelection) {
+      toast.error(
+        isTemplateOnlySelection
+          ? "สินค้านี้ยังเป็น Template กรุณาสร้าง Operational Product ของร้านก่อนรับเข้า"
+          : "กรุณาเลือกสินค้า Operational Product ก่อนสแกนบาร์โค้ด"
+      );
+      setBarcode("");
+      barcodeInputRef.current?.focus();
       return;
     }
 
@@ -628,15 +638,13 @@ const QuickStockPage = () => {
         branchPrice: [nextBranchPrice],
       };
 
-      // Update Zustand products list directly.
-      // selectedProduct เป็น useMemo จาก products + selectedProductId จึงไม่มี setSelectedProduct
-      useProductStore.setState((state) => ({
-        products: Array.isArray(state.products)
-          ? state.products.map((p) =>
+      setRuntimeSearchProducts((prev) =>
+        Array.isArray(prev)
+          ? prev.map((p) =>
               Number(p?.id) === Number(nextProduct.id) ? { ...p, ...nextProduct } : p
             )
-          : state.products,
-      }));
+          : prev
+      );
 
       setProductForm(buildProductFormFromProduct(nextProduct));
       setPriceForm(buildPriceFormFromProduct(nextProduct));
@@ -694,6 +702,15 @@ const QuickStockPage = () => {
       return false;
     }
 
+    if (!operationalProduct?.id) {
+      toast.error(
+        isTemplateOnlySelection
+          ? "สินค้านี้ยังเป็น Template และยังไม่ใช่ Operational Product ของร้าน"
+          : "กรุณาเลือกสินค้า Operational Product ก่อนบันทึก"
+      );
+      return false;
+    }
+
     if (toMoneyNumber(defaultCost || priceForm.costPrice) <= 0) {
       toast.error("ราคาทุนรับเข้าต้องมากกว่า 0 ก่อนรับเข้า");
       return false;
@@ -732,10 +749,10 @@ const QuickStockPage = () => {
     }));
 
     const payload = {
-      productId: Number(selectedProduct.id),
-      productName: selectedProduct.name,
+      productId: Number(operationalProduct.id),
+      productName: operationalProduct.name,
       mode: "STRUCTURED",
-      trackSerialNumber: !!selectedProduct.trackSerialNumber,
+      trackSerialNumber: !!operationalProduct.trackSerialNumber,
 
       // Runtime Intake v2:
       // Frontend does not send movementType/source.
@@ -765,11 +782,6 @@ const QuickStockPage = () => {
         return;
       }
 
-      if (typeof quickStockInAllInOneAction === "function") {
-        toast.error("ยังไม่มี Backend action สำหรับรับเข้า Product เดิม กรุณาเพิ่ม quickStockIntakeExistingAction ก่อนใช้งานจริง");
-        return;
-      }
-
       toast.error("ยังไม่พบ action สำหรับบันทึก Stock Intake");
     } catch (err) {
       console.error("Quick Stock Commit Error:", err);
@@ -784,10 +796,31 @@ const QuickStockPage = () => {
   ).length;
   const needDataCount = barcodeQueue.length - readyCount;
   const queueReady = barcodeQueue.length > 0 && needDataCount === 0;
-  const productReady =
-    !!selectedProduct &&
+  const hasRequiredIntakePrices =
     toMoneyNumber(defaultCost || priceForm.costPrice) > 0 &&
     toMoneyNumber(priceForm.priceRetail) > 0;
+  const productReady = isOperationalSelection && hasRequiredIntakePrices;
+  const canScanBarcode = isOperationalSelection && !isCommitting;
+  const canCommitExistingIntake = productReady && queueReady && !isCommitting;
+
+  const onboardingState = isCommitting
+    ? ONBOARDING_STATES.INTAKE_COMMITTING
+    : !selectedProduct
+      ? ONBOARDING_STATES.NO_SELECTION
+      : isTemplateOnlySelection
+        ? ONBOARDING_STATES.TEMPLATE_SELECTED_NOT_CREATED
+        : canCommitExistingIntake
+          ? ONBOARDING_STATES.INTAKE_READY
+          : isOperationalSelection
+            ? ONBOARDING_STATES.OPERATIONAL_READY
+            : ONBOARDING_STATES.ERROR_RECOVERABLE;
+
+  const intakeRuntimeProduct = canScanBarcode ? operationalProduct : null;
+  const commitRuntimeProduct = canCommitExistingIntake ? operationalProduct : null;
+
+  if (import.meta.env?.DEV) {
+    console.log("[QuickStock] onboarding state", onboardingState);
+  }
 
   return (
     <div className="w-full min-h-screen bg-slate-50 p-4 xl:p-6 space-y-4">
@@ -875,7 +908,7 @@ const QuickStockPage = () => {
 
         <div className="2xl:col-span-8 space-y-4">
           <IntakeControlPanel
-            selectedProduct={selectedProduct}
+            selectedProduct={intakeRuntimeProduct}
             barcodeInputRef={barcodeInputRef}
             barcode={barcode}
             setBarcode={setBarcode}
@@ -907,7 +940,7 @@ const QuickStockPage = () => {
           />
 
           <CommitBar
-            selectedProduct={selectedProduct}
+            selectedProduct={commitRuntimeProduct}
             barcodeQueue={barcodeQueue}
             productReady={productReady}
             queueReady={queueReady}

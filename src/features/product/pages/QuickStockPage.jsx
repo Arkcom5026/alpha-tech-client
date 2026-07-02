@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import useProductStore from "@/features/product/store/productStore";
+import { getTemplateProductsForPos } from "@/features/product/api/productApi";
 import { toast } from "react-toastify";
 
 import ProductFinderPanel from "../components/quick-stock/ProductFinderPanel";
@@ -33,22 +34,109 @@ const toMoneyNumber = (value) => {
 };
 
 const getProductBrandId = (product) =>
-  product?.brandId ?? product?.brand?.id ?? null;
+  product?.brandId ??
+  product?.brand_id ??
+  (product?.brand && typeof product.brand === "object" ? product.brand.id : null) ??
+  null;
 
 const getProductTypeId = (product) =>
-  product?.productTypeId ?? product?.productType?.id ?? null;
+  product?.productTypeId ??
+  product?.product_type_id ??
+  (product?.productType && typeof product.productType === "object" ? product.productType.id : null) ??
+  null;
 
 const getProductUnitId = (product) =>
-  product?.unitId ?? product?.unit?.id ?? null;
+  product?.unitId ??
+  product?.unit_id ??
+  (product?.unit && typeof product.unit === "object" ? product.unit.id : null) ??
+  null;
 
 const getProductUnitName = (product) =>
-  product?.unit?.name ?? product?.unitName ?? "-";
+  (product?.unit && typeof product.unit === "object" ? product.unit.name : null) ??
+  (typeof product?.unit === "string" ? product.unit : null) ??
+  product?.unitName ??
+  product?.unit_name ??
+  "-";
 
 const getProductTypeName = (product) =>
-  product?.productType?.name ?? product?.productTypeName ?? "-";
+  (product?.productType && typeof product.productType === "object" ? product.productType.name : null) ??
+  (typeof product?.productType === "string" ? product.productType : null) ??
+  product?.productTypeName ??
+  product?.product_type_name ??
+  product?.typeName ??
+  "-";
 
 const getBrandName = (product) =>
-  product?.brand?.name ?? product?.brandName ?? "-";
+  (product?.brand && typeof product.brand === "object" ? product.brand.name : null) ??
+  (typeof product?.brand === "string" ? product.brand : null) ??
+  product?.brandName ??
+  product?.brand_name ??
+  "-";
+
+
+const extractProductList = (response) => {
+  if (Array.isArray(response)) return response;
+
+  const candidates = [
+    response?.items,
+    response?.products,
+    response?.data,
+    response?.data?.items,
+    response?.data?.products,
+    response?.data?.data,
+    response?.result,
+    response?.result?.items,
+    response?.result?.products,
+  ];
+
+  for (const candidate of candidates) {
+    if (Array.isArray(candidate)) return candidate;
+  }
+
+  return [];
+};
+
+const normalizeTemplateProduct = (product) => {
+  if (!product || typeof product !== "object") return product;
+
+  const productTypeId = getProductTypeId(product);
+  const productTypeName = getProductTypeName(product);
+  const brandId = getProductBrandId(product);
+  const brandName = getBrandName(product);
+  const unitId = getProductUnitId(product);
+  const unitName = getProductUnitName(product);
+
+  return {
+    ...product,
+
+    productTypeId,
+    productTypeName: productTypeName !== "-" ? productTypeName : product?.productTypeName,
+    productType:
+      productTypeId || productTypeName !== "-"
+        ? { id: productTypeId, name: productTypeName !== "-" ? productTypeName : null }
+        : product.productType,
+
+    brandId,
+    brandName: brandName !== "-" ? brandName : product?.brandName,
+    brand:
+      brandId || brandName !== "-"
+        ? { id: brandId, name: brandName !== "-" ? brandName : null }
+        : product.brand,
+
+    unitId,
+    unitName: unitName !== "-" ? unitName : product?.unitName,
+    unit:
+      unitId || unitName !== "-"
+        ? { id: unitId, name: unitName !== "-" ? unitName : null }
+        : product.unit,
+
+    isTemplateProduct: product.isTemplateProduct === true || product.templateProductId != null,
+    templateProductId: product.templateProductId ?? product.id,
+  };
+};
+
+const normalizeTemplateProductList = (response) =>
+  extractProductList(response).map(normalizeTemplateProduct).filter(Boolean);
 
 const buildProductFormFromProduct = (product) => ({
   name: product?.name || "",
@@ -131,7 +219,10 @@ const QuickStockPage = () => {
   const [selectedBrandId, setSelectedBrandId] = useState("");
   const [selectedProductId, setSelectedProductId] = useState("");
   const [keyword, setKeyword] = useState("");
+  const [committedKeyword, setCommittedKeyword] = useState("");
   const [showSearchResult, setShowSearchResult] = useState(true);
+  const [runtimeSearchProducts, setRuntimeSearchProducts] = useState([]);
+  const [templateDropdownProducts, setTemplateDropdownProducts] = useState([]);
 
   const [barcode, setBarcode] = useState("");
   const [barcodeQueue, setBarcodeQueue] = useState([]);
@@ -149,50 +240,126 @@ const QuickStockPage = () => {
   const [priceForm, setPriceForm] = useState(buildPriceFormFromProduct(null));
 
   const productList = useMemo(() => {
-    const payload = products?.data ?? products;
-    if (Array.isArray(payload)) return payload;
-    if (Array.isArray(payload?.items)) return payload.items;
-    if (Array.isArray(payload?.products)) return payload.products;
-    if (Array.isArray(payload?.data)) return payload.data;
-    return [];
-  }, [products]);
+    // Quick Receive search must render only results searched on this page.
+    // Do not fallback to global product store because it may contain Operational Product List
+    // from /pos/stock/products and will leak stale results into this page.
+    return normalizeTemplateProductList(runtimeSearchProducts);
+  }, [runtimeSearchProducts]);
+
+  const templateDropdownList = useMemo(() => {
+    // Dropdown source must be stable and independent from current search result.
+    // It is loaded once from Template Catalog scope and kept for ProductType / Brand options.
+    return normalizeTemplateProductList(templateDropdownProducts);
+  }, [templateDropdownProducts]);
+
+  // ✅ Template Catalog Dropdowns:
+  // Quick Receive / Intake Search ต้องใช้ ProductType และ Brand จาก Template Catalog Scope เท่านั้น
+  // ไม่ใช้ Global Dropdown เพื่อป้องกัน Type/Brand ข้าม Branch หรือข้าม Catalog หลุดเข้า Intake Runtime
+  const templateProductTypes = useMemo(() => {
+    const map = new Map();
+
+    (Array.isArray(templateDropdownList) ? templateDropdownList : []).forEach((p) => {
+      const id = getProductTypeId(p);
+      const name = getProductTypeName(p);
+      const n = toNumberOrNull(id);
+
+      if (!n || !name || name === "-") return;
+      if (!map.has(n)) {
+        map.set(n, { id: n, name });
+      }
+    });
+
+    return Array.from(map.values()).sort((a, b) =>
+      String(a.name || "").localeCompare(String(b.name || ""), "th")
+    );
+  }, [templateDropdownList]);
+
+  const templateBrands = useMemo(() => {
+    const map = new Map();
+    const currentTypeId = toNumberOrNull(selectedProductTypeId);
+
+    (Array.isArray(templateDropdownList) ? templateDropdownList : [])
+      .filter((p) => {
+        if (!currentTypeId) return true;
+        return Number(getProductTypeId(p)) === Number(currentTypeId);
+      })
+      .forEach((p) => {
+        const id = getProductBrandId(p);
+        const name = getBrandName(p);
+        const n = toNumberOrNull(id);
+
+        if (!n || !name || name === "-") return;
+        if (!map.has(n)) {
+          map.set(n, { id: n, name });
+        }
+      });
+
+    return Array.from(map.values()).sort((a, b) =>
+      String(a.name || "").localeCompare(String(b.name || ""), "th")
+    );
+  }, [templateDropdownList, selectedProductTypeId]);
 
   const executeProductSearch = useCallback(async ({
     productTypeId = selectedProductTypeId,
     brandId = selectedBrandId,
-    search = keyword,
+    search = committedKeyword,
   } = {}) => {
     const params = {
       productTypeId: productTypeId || undefined,
       brandId: brandId || undefined,
       search: String(search || "").trim() || undefined,
-
-      // Product Template Runtime:
-      // บังคับค้นหาจาก Template Branch (T01)
-      // Backend จะ Auto Clone เข้า Branch จริงตอน Commit
-      template: true,
-
       takeNum: 1000,
       skipNum: 0,
     };
 
     try {
-      if (typeof fetchProductsAction === "function") {
       if (import.meta.env?.DEV) {
-      console.log('[QuickStock] Runtime Search params', params);
-    }
-    await fetchProductsAction(params);
-      return;
-    }
-
-      if (typeof fetchProductsAction === "function") {
-        await fetchProductsAction(params);
+        console.log("[QuickStock] Template Search params", params);
       }
+
+      const response = await getTemplateProductsForPos(params);
+      const list = normalizeTemplateProductList(response);
+
+      if (import.meta.env?.DEV) {
+        console.log("[QuickStock] Template Search result", {
+          raw: response,
+          count: list.length,
+        });
+      }
+
+      setRuntimeSearchProducts(list);
+      return list;
     } catch (err) {
       console.error("QuickStock product search failed:", err);
+      setRuntimeSearchProducts([]);
       toast.error(err?.message || "ค้นหาสินค้าไม่สำเร็จ");
+      return [];
     }
-  }, [fetchProducts, fetchProductsAction, selectedProductTypeId, selectedBrandId, keyword]);
+  }, [selectedProductTypeId, selectedBrandId, committedKeyword]);
+
+  const loadTemplateDropdownCatalog = useCallback(async () => {
+    try {
+      const response = await getTemplateProductsForPos({
+        takeNum: 1000,
+        skipNum: 0,
+      });
+
+      const list = normalizeTemplateProductList(response);
+      setTemplateDropdownProducts(list);
+
+      if (import.meta.env?.DEV) {
+        console.log("[QuickStock] Template Dropdown Catalog result", {
+          count: list.length,
+        });
+      }
+
+      return list;
+    } catch (err) {
+      console.error("QuickStock template dropdown load failed:", err);
+      setTemplateDropdownProducts([]);
+      return [];
+    }
+  }, []);
 
   useEffect(() => {
     if (typeof fetchDropdownsAction === "function") {
@@ -200,25 +367,14 @@ const QuickStockPage = () => {
     }
   }, [fetchDropdownsAction]);
 
-  const filteredBrands = useMemo(() => {
-    const ptId = toNumberOrNull(selectedProductTypeId);
-    if (!ptId) return brands;
-
-    const productBrandIds = new Set(
-      (productList || [])
-        .filter((p) => Number(getProductTypeId(p)) === Number(ptId))
-        .map((p) => Number(getProductBrandId(p)))
-        .filter(Boolean)
-    );
-
-    if (productBrandIds.size === 0) return brands;
-    return brands.filter((brand) => productBrandIds.has(Number(brand?.id)));
-  }, [brands, productList, selectedProductTypeId]);
+  useEffect(() => {
+    loadTemplateDropdownCatalog();
+  }, [loadTemplateDropdownCatalog]);
 
   const filteredProducts = useMemo(() => {
     const ptId = toNumberOrNull(selectedProductTypeId);
     const brandId = toNumberOrNull(selectedBrandId);
-    const q = normalizeText(keyword);
+    const q = normalizeText(committedKeyword);
 
     return (productList || [])
       .filter((product) => {
@@ -244,7 +400,7 @@ const QuickStockPage = () => {
         return searchable.includes(q);
       })
       .sort((a, b) => String(a?.name || "").localeCompare(String(b?.name || "")));
-  }, [productList, selectedProductTypeId, selectedBrandId, keyword]);
+  }, [productList, selectedProductTypeId, selectedBrandId, committedKeyword]);
 
   const selectedProduct = useMemo(() => {
     const id = toNumberOrNull(selectedProductId);
@@ -635,18 +791,6 @@ const QuickStockPage = () => {
 
   return (
     <div className="w-full min-h-screen bg-slate-50 p-4 xl:p-6 space-y-4">
-      <div className="bg-white rounded-2xl shadow-sm border p-5">
-        <h1 className="text-2xl font-bold text-gray-900">📦 Stock Intake Runtime</h1>
-        <p className="text-sm text-gray-500 mt-1">
-          Universal Structured Intake — กู้คืนสต๊อก / รับด่วน / รับสินค้าใหม่แบบไม่ผ่าน PO
-        </p>
-      </div>
-
-      {error && (
-        <div className="p-4 bg-red-50 text-red-700 rounded-lg border border-red-200">
-          {typeof error === "string" ? error : error?.message || "เกิดข้อผิดพลาด"}
-        </div>
-      )}
 
       <div className="grid grid-cols-1 2xl:grid-cols-12 gap-4">
         <div className="2xl:col-span-4 space-y-4">
@@ -654,8 +798,8 @@ const QuickStockPage = () => {
             selectedProduct={selectedProduct}
             showSearchResult={showSearchResult}
             onShowSearchResult={() => setShowSearchResult(true)}
-            productTypes={productTypes}
-            brands={filteredBrands}
+            productTypes={templateProductTypes}
+            brands={templateBrands}
             selectedProductTypeId={selectedProductTypeId}
             selectedBrandId={selectedBrandId}
             keyword={keyword}
@@ -669,14 +813,14 @@ const QuickStockPage = () => {
               setSelectedProductId("");
               setShowSearchResult(true);
               resetQueue();
-              executeProductSearch({ productTypeId: value, brandId: "" });
+              executeProductSearch({ productTypeId: value, brandId: "", search: committedKeyword });
             }}
             onBrandChange={(value) => {
               setSelectedBrandId(value);
               setSelectedProductId("");
               setShowSearchResult(true);
               resetQueue();
-              executeProductSearch({ brandId: value });
+              executeProductSearch({ brandId: value, search: committedKeyword });
             }}
             onKeywordChange={(value) => {
               setKeyword(value);
@@ -685,12 +829,16 @@ const QuickStockPage = () => {
               resetQueue();
             }}
             onSearch={() => {
+              const nextKeyword = String(keyword || "").trim();
+              setCommittedKeyword(nextKeyword);
               setShowSearchResult(true);
-              executeProductSearch();
+              executeProductSearch({ search: nextKeyword });
             }}
             onKeywordEnter={(value) => {
+              const nextKeyword = String(value || "").trim();
+              setCommittedKeyword(nextKeyword);
               setShowSearchResult(true);
-              executeProductSearch({ search: value });
+              executeProductSearch({ search: nextKeyword });
             }}
             onSelectProduct={selectProduct}
             getBrandName={getBrandName}

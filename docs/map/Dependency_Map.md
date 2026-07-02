@@ -1,6 +1,6 @@
 # P1 Dependency Map — Frontend Architecture Certification
 
-Status: DRAFT / AUTH + BRANCH + POS HEADER VERIFIED
+Status: DRAFT / API TRANSPORT VERIFIED
 Scope: Frontend only
 Repository: alpha-tech-client
 Active Blueprint: `docs/blueprint/Active_Blueprint.md`
@@ -61,6 +61,8 @@ This document is not a refactor plan yet.
 - `src/features/auth/store/authStore.js`
 - `src/features/branch/store/branchStore.js`
 - `src/features/pos/components/header/HeaderPos.jsx`
+- `src/utils/apiClient.js`
+- `src/features/auth/api/authApi.js`
 
 ### Related Focused Verification
 
@@ -133,16 +135,22 @@ Primary file:
 src/utils/apiClient.js
 ```
 
-Current role:
+Verified role:
 
-- Owns axios transport configuration.
-- Reads auth token from authStore.
-- Handles refresh/retry behavior on 401.
+- Owns runtime baseURL resolution.
+- Forces `withCredentials=true` on requests.
+- Reads bearer token from authStore through `useAuthStore.getState()`.
+- Attaches Authorization header to non-auth-bypass requests.
+- Owns 401 handling with one shared refresh queue.
+- Calls `/auth/refresh` directly with axios, not apiClient, to avoid interceptor loops.
+- Updates authStore token/session after refresh succeeds.
+- Retries the original request once after refresh.
+- Does not reset authStore automatically on refresh failure.
 
 Current risk:
 
 - VERY HIGH. Most API modules depend on `apiClient`.
-- Changes here can affect every feature surface.
+- Session continuity depends heavily on cookie transport, refresh endpoint behavior, and refresh queue correctness.
 
 ---
 
@@ -604,6 +612,59 @@ Risk:
 
 ---
 
+### 7.2 Auth API Surface
+
+Reviewed file:
+
+```txt
+src/features/auth/api/authApi.js
+```
+
+Verified endpoints:
+
+```txt
+POST /auth/register
+POST /auth/login
+GET  /auth/me
+POST /auth/refresh
+POST /auth/logout
+POST /auth/logout-all
+POST /auth/forgot-password
+POST /auth/reset-password
+```
+
+Interpretation:
+
+- authApi is a thin wrapper over apiClient.
+- authStore uses some imported authApi functions and also calls apiClient directly for `/auth/me`, `/auth/refresh`, and `/auth/add-sub-employee`.
+
+Risk:
+
+- Auth API calls are not fully centralized in authApi because authStore also calls apiClient directly.
+- During refactor, endpoint ownership should be standardized only after mapping is complete.
+
+---
+
+### 7.3 apiClient Refresh Behavior
+
+Verified behavior:
+
+- Request interceptor resolves baseURL dynamically on every request.
+- Request interceptor sends `withCredentials=true` on every request.
+- Request interceptor attaches bearer token from authStore except auth bypass endpoints.
+- Response interceptor only attempts refresh on 401 for non-auth-bypass, non-refresh, non-logout requests.
+- Refresh uses a shared `refreshPromise` so concurrent 401s share one refresh call.
+- Refresh success updates authStore token/accessToken/session and marks `authChecked=true`.
+- Original request is retried once with the new bearer token.
+
+Risk:
+
+- Session continuity depends on refresh cookie presence and host consistency.
+- If refresh succeeds, only token/session are updated; full identity rebuild still depends on authStore verify/bootstrap behavior.
+- If refresh fails, authStore is not automatically cleared by apiClient; caller receives refresh error.
+
+---
+
 ## 8. Route Guard / Permission Dependency Inventory
 
 ### 8.1 ProtectedRoute File Verification
@@ -912,6 +973,38 @@ Impact:
 
 ---
 
+### DISC-FE-TRANSPORT-001 — apiClient owns refresh queue and retry
+
+Status: VERIFIED BY FILE READ
+
+Evidence:
+
+- apiClient keeps a module-level `refreshPromise`.
+- On eligible 401, it calls `/auth/refresh`, updates authStore token/session, and retries the original request once.
+
+Impact:
+
+- Token continuity is already partially handled at transport level.
+- Full identity/branch recovery still depends on authStore verify/bootstrap.
+
+---
+
+### DISC-FE-TRANSPORT-002 — apiClient bypasses auth endpoints from refresh retry
+
+Status: VERIFIED BY FILE READ
+
+Evidence:
+
+- Login, register, forgot-password, reset-password, refresh, and logout endpoints are auth-bypass endpoints.
+- apiClient does not attach bearer token or retry refresh for these endpoints.
+
+Impact:
+
+- This helps prevent refresh loops.
+- Logout and refresh behavior must be coordinated with authStore because auth endpoints bypass retry.
+
+---
+
 ### DISC-FE-BRANCH-001 — branchHelpers appears online/geo-selection oriented
 
 Status: VERIFIED BY FILE READ
@@ -1026,6 +1119,7 @@ Impact:
 9. Should authStore own redirects in logoutAction, or should callers own navigation?
 10. Should HeaderPos reload branch from `employee.branchId` instead of `selectedBranchId`?
 11. Should BranchStore separate POS identity branch from online selected branch in the future?
+12. Should authStore use authApi wrappers consistently instead of mixing authApi and direct apiClient calls?
 
 ---
 
@@ -1034,11 +1128,11 @@ Impact:
 Open and review these files next:
 
 ```txt
-src/utils/apiClient.js
-src/features/auth/api/authApi.js
 src/features/auth/components/SubEmployeeManager.jsx
 src/features/auth/pages/LoginPage.jsx
 src/features/online/order/components/LoginForm.jsx
+src/features/online/order/pages/CheckoutPage.jsx
+src/features/pos/components/sidebar/SidebarLoader.jsx
 ```
 
 Search next:
@@ -1070,7 +1164,7 @@ AuthStore affects POS, online checkout, product/master-data, employee/settings, 
 
 BranchStore affects POS shell, online branch selection, product/supplier pages, and report/print pages.
 
-apiClient is a system-wide transport dependency.
+apiClient is a system-wide transport dependency and owns refresh queue/retry behavior.
 
 ProtectedRoute exists but appears not mounted in the reviewed active POS route files.
 

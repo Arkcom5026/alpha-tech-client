@@ -1,6 +1,6 @@
 # P1 Dependency Map — Frontend Architecture Certification
 
-Status: DRAFT / INITIAL DEPENDENCY INVENTORY
+Status: DRAFT / PROTECTED ROUTE VERIFIED
 Scope: Frontend only
 Repository: alpha-tech-client
 Active Blueprint: `docs/blueprint/Active_Blueprint.md`
@@ -42,6 +42,12 @@ This document is not a refactor plan yet.
 - `usePermission`
 - `RequirePermission`
 - `IfPermission`
+
+### Completed File Reviews
+
+- `src/features/auth/components/ProtectedRoute.jsx`
+- `src/routes/AppRouter.jsx`
+- `src/routes/partner/posPartnerRoutes.jsx`
 
 ### Important Note
 
@@ -258,7 +264,7 @@ Risk:
 
 ---
 
-### 4.7 Purchase / Print Consumers
+### 4.7 Operational / Print Consumers
 
 ```txt
 src/features/purchaseOrder/components/PurchaseOrderSupplierSelector.jsx
@@ -534,24 +540,52 @@ Risk:
 
 ## 8. Route Guard / Permission Dependency Inventory
 
-### 8.1 Confirmed Guard Candidate
+### 8.1 ProtectedRoute — Verified Candidate
+
+Reviewed file:
 
 ```txt
 src/features/auth/components/ProtectedRoute.jsx
 ```
 
+Observed behavior:
+
+- Reads `isAuthenticatedSelector`, `isBootstrappingAuth`, `role`, and `token` from authStore.
+- While `isBootstrappingAuth` is true, returns `null` and does not redirect.
+- If a token exists but `isAuthenticated` is false, returns `null` and waits.
+- If unauthenticated, redirects to `/login`.
+- If `allowedRoles` is provided and role is not allowed, redirects to `/unauthorized`.
+- If allowed, renders `children` or `<Outlet />`.
+
+### 8.2 Active Route Mount Status
+
+Reviewed files:
+
+```txt
+src/routes/AppRouter.jsx
+src/routes/partner/posPartnerRoutes.jsx
+```
+
+Current finding:
+
+- `AppRouter.jsx` does not import or mount `ProtectedRoute`.
+- `posPartnerRoutes.jsx` does not import or mount `ProtectedRoute`.
+- Repository search for `ProtectedRoute` found only the component file plus documentation references.
+- POS route tree mounts `PartnerPosMasterLayout` directly under `/:shopSlug/pos`.
+
 Interpretation:
 
-- A ProtectedRoute component exists.
-- Its actual runtime usage in AppRouter has not yet been confirmed from current search results.
+- `ProtectedRoute` exists and is defensive against premature bootstrap redirect, but appears dormant in the active route tree during this pass.
+- Current POS route access appears to rely mainly on app bootstrap, authStore, apiClient refresh/retry, and page-level behavior rather than a mounted route guard.
 
 Risk:
 
-- Do not assume route guarding is active until route files are reviewed directly.
+- HIGH. If POS pages render without a mounted guard, invalid/missing auth may only be detected after page/API behavior.
+- HIGH. If a guard is later mounted too broadly, it may affect all POS modules at once.
 
 ---
 
-### 8.2 Permission Candidate Files
+### 8.3 Permission Candidate Files
 
 ```txt
 src/hooks/usePermission.js
@@ -684,9 +718,11 @@ Risk:
 - `src/features/auth/pages/LoginPage.jsx`
 - `src/features/pos/components/header/HeaderPos.jsx`
 - `src/routes/AppRouter.jsx`
+- `src/features/auth/components/ProtectedRoute.jsx` if activated
 
 Reason:
-These files sit at runtime entry, identity, branch context, transport, or shell level.
+
+These files sit at runtime entry, identity, branch context, transport, guard, or shell level.
 
 ---
 
@@ -699,6 +735,7 @@ These files sit at runtime entry, identity, branch context, transport, or shell 
 - Employee/settings pages.
 
 Reason:
+
 These files are runtime consumers and may break if store shape or branch ownership changes.
 
 ---
@@ -713,13 +750,18 @@ These files are runtime consumers and may break if store shape or branch ownersh
 
 ## 11. Open Questions
 
-1. Is `ProtectedRoute.jsx` mounted anywhere in the active route tree?
-2. Which pages read `employee.branchId` as operational branch truth?
-3. Which pages read `selectedBranchId` as online branch selection only?
-4. Which pages mutate branch state directly?
-5. Does any feature call `logoutAction` outside the known navigation components?
-6. Does any print page bypass normal bootstrap assumptions?
-7. Should `shopSlug` be derived from logged-in branch or remain URL-driven?
+1. Which pages read `employee.branchId` as operational branch truth?
+2. Which pages read `selectedBranchId` as online branch selection only?
+3. Which pages mutate branch state directly?
+4. Does any feature call `logoutAction` outside the known navigation components?
+5. Does any print page bypass normal bootstrap assumptions?
+6. Should `shopSlug` be derived from logged-in branch or remain URL-driven?
+7. Is `employeeStore` still runtime identity, or only employee management state?
+
+Confirmed:
+
+- `ProtectedRoute.jsx` exists.
+- `ProtectedRoute` currently appears not mounted in `AppRouter.jsx` or `posPartnerRoutes.jsx`.
 
 ---
 
@@ -728,7 +770,10 @@ These files are runtime consumers and may break if store shape or branch ownersh
 Open and review these files next:
 
 ```txt
-src/features/auth/components/ProtectedRoute.jsx
+src/features/employee/store/employeeStore.js
+src/hooks/usePermission.js
+src/components/auth/RequirePermission.jsx
+src/components/auth/IfPermission.jsx
 src/store/rootStore.js
 src/utils/branchHelpers.js
 src/features/auth/pages/StaffSettingsPage.jsx
@@ -750,5 +795,7 @@ AuthStore affects POS, online checkout, product/master-data, employee/settings, 
 BranchStore affects POS shell, online branch selection, product/supplier pages, and report/print pages.
 
 apiClient is a system-wide transport dependency.
+
+ProtectedRoute exists but currently appears dormant in the active route tree reviewed.
 
 Therefore, the current Login/Auth stabilization must continue as read-only architecture mapping before any refactor.

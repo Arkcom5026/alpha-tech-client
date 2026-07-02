@@ -1,634 +1,754 @@
-# Dependency Map — Frontend Architecture Certification
+# P1 Dependency Map — Frontend Architecture Certification
 
-Status: DRAFT / INITIAL SEARCH PASS
-Scope: Frontend dependency discovery for Auth, Branch, API transport, guard, and permission surfaces
+Status: DRAFT / INITIAL DEPENDENCY INVENTORY
+Scope: Frontend only
 Repository: alpha-tech-client
+Active Blueprint: `docs/blueprint/Active_Blueprint.md`
 
 ---
 
 ## 1. Purpose
 
-This map records which frontend files depend on major runtime layers before any Login/Auth refactor.
+This map records frontend runtime dependencies before any Login/Auth refactor.
 
-เป้าหมายคือระบุว่าไฟล์ใดพึ่งพา Runtime หลักก่อนแก้ Login/Auth เพื่อป้องกันผลกระทบที่มองไม่เห็น
+เป้าหมายคือทำให้เห็นว่า Runtime หลักของ Frontend ถูกเรียกใช้จากไฟล์ไหนบ้าง ก่อนแก้ระบบ Login/Auth เพื่อป้องกัน Regression
 
----
+This document is not a refactor plan yet.
 
-## 2. Current Certification Context
-
-Active agenda:
-
-`STEP P1-FE-AUTH-CERT-01 — Frontend Authentication Architecture Certification`
-
-Related command center:
-
-`docs/blueprint/Active_Blueprint.md`
-
-Related maps:
-
-- `docs/map/Frontend_Auth_Runtime_Map`
-- `docs/map/Frontend_Navigation_Route_Surface_Map.md`
-
-Naming note:
-
-Future map filenames should prefer short names such as `Auth_Runtime_Map.md`, `Navigation_Route_Map.md`, and `Dependency_Map.md` because frontend and backend are separated by repository.
+เอกสารนี้ยังไม่ใช่แผนแก้โค้ด แต่เป็นแผนที่ผลกระทบ
 
 ---
 
-## 3. Dependency Classes
-
-### READ
-
-A file reads runtime state but does not directly change it.
-
-### WRITE / MUTATE
-
-A file calls an action that changes runtime state.
-
-### TRANSPORT
-
-A file sends requests through the API layer.
-
-### GUARD
-
-A file decides whether a user can access or render a surface.
-
-### PERMISSION
-
-A file participates in permission or RBAC behavior.
-
----
-
-## 4. AuthStore Dependency Surface
-
-Search target:
-
-`useAuthStore`
-
-Initial search found many consumers, including:
-
-- `src/App.jsx`
-- `src/store/rootStore.js`
-- `src/features/auth/pages/LoginPage.jsx`
-- `src/utils/apiClient.js`
-- `src/features/auth/components/ProtectedRoute.jsx`
-- `src/features/pos/components/header/HeaderPos.jsx`
-- `src/components/common/UnifiedMainNav.jsx`
-- `src/components/LogoutButton.jsx`
-- many feature pages and stores
-
-### Interpretation
-
-`authStore` is a high-impact runtime dependency.
-
-Any structural change to `authStore` must be treated as high risk until all consumers are grouped by read/write behavior.
-
-### Initial Impact Level
-
-HIGH
-
-Reason:
-
-AuthStore touches app bootstrap, login, transport, POS header, protected route candidate, online checkout, admin/superadmin surfaces, product pages, employee pages, supplier store, and shared navigation.
-
----
-
-## 5. AuthStore Action Dependencies
-
-### bootstrapAuthAction
-
-Search target:
-
-`bootstrapAuthAction`
-
-Confirmed usage:
-
-- `src/App.jsx`
-- `src/features/auth/store/authStore.js`
-
-Interpretation:
-
-Auth bootstrap currently starts at application root.
-
-Risk:
-
-If bootstrap timing changes, the whole app startup behavior may change.
-
----
-
-### loginAction
-
-Search target:
-
-`loginAction`
-
-Confirmed usage:
-
-- `src/features/auth/pages/LoginPage.jsx`
-- `src/features/online/order/components/LoginForm.jsx`
-- `src/features/auth/store/authStore.js`
-
-Interpretation:
-
-Login exists in both partner/POS login and online order login surfaces.
-
-Risk:
-
-Changing loginAction payload or return shape may affect both POS login and online checkout login.
-
----
-
-### verifySessionAction
-
-Search target:
-
-`verifySessionAction`
-
-Confirmed usage:
-
-- `src/features/auth/store/authStore.js`
-
-Interpretation:
-
-Session verification appears internally owned by authStore during this initial pass.
-
-Risk:
-
-Medium. It is central, but fewer direct external consumers were found.
-
----
-
-### logoutAction
-
-Search target:
-
-`logoutAction`
-
-Confirmed usage:
-
-- `src/features/auth/store/authStore.js`
-- `src/features/auth/pages/LoginPage.jsx`
-- `src/features/pos/components/header/HeaderPos.jsx`
-- `src/components/common/UnifiedMainNav.jsx`
-- `src/features/superadmin/sidebar/SidebarSuperAdmin.jsx`
-
-Interpretation:
-
-Logout behavior is triggered from multiple navigation surfaces.
-
-Risk:
-
-High. Logout redirect and state clearing must be standardized before changes.
-
----
-
-### isAuthenticatedSelector
-
-Search target:
-
-`isAuthenticatedSelector`
-
-Confirmed usage:
-
-- `src/features/auth/store/authStore.js`
-- `src/features/auth/components/ProtectedRoute.jsx`
-- `src/features/pos/components/header/HeaderPos.jsx`
-- `src/features/product/components/ProductForm.jsx`
-- `src/features/auth/pages/LoginPage.jsx`
-
-Interpretation:
-
-Authentication state affects route protection, header rendering, product form behavior, and login redirect behavior.
-
-Risk:
-
-High. Selector semantics must remain stable during certification.
-
----
-
-## 6. Direct AuthStore getState Dependencies
-
-Search target:
-
-`useAuthStore getState`
-
-Confirmed usage:
-
-- `src/utils/apiClient.js`
-- `src/features/auth/pages/LoginPage.jsx`
-- `src/features/online/cart/store/cartStore.js`
-- `src/features/supplier/store/supplierStore.js`
-- `src/features/online/order/pages/CheckoutPage.jsx`
-- `src/features/auth/store/authStore.js`
-- `src/features/productTemplate/pages/ListProductTemplatePage.jsx`
-- `src/features/product/pages/ListProductPage.jsx`
-
-### Interpretation
-
-Some consumers bypass React selectors and read auth state imperatively.
-
-This is important because these consumers may not re-render when auth state changes.
-
-### Risk
-
-HIGH
-
-Reason:
-
-Imperative access can hide dependencies from normal component flow and can preserve stale assumptions.
-
----
-
-## 7. BranchStore Dependency Surface
-
-Search target:
-
-`useBranchStore`
-
-Initial search found many consumers, including:
-
-- `src/store/rootStore.js`
-- `src/utils/branchHelpers.js`
-- `src/features/branch/store/branchStore.js`
-- `src/features/pos/components/header/HeaderPos.jsx`
-- `src/features/online/components/SidebarOnline.jsx`
-- `src/features/online/order/pages/CheckoutPage.jsx`
-- `src/features/online/order/components/LoginForm.jsx`
-- `src/features/online/productOnline/store/productOnlineStore.jsx`
-- `src/features/online/productOnline/pages/ProductOnlineListPage.jsx`
-- `src/features/online/productOnline/pages/ProductOnlineDetailPage.jsx`
-- `src/features/product/pages/ListProductPage.jsx`
-- `src/features/product/pages/CreateProductPage.jsx`
-- `src/features/product/pages/ViewProductPage.jsx`
-- `src/features/product/pages/ReadyToSellListPage.jsx`
-- `src/features/product/pages/ReadyToSellStructuredDetailsPage.jsx`
-- `src/features/supplier/pages/*`
-- `src/features/inputTaxReport/pages/*`
-- `src/features/salesTaxReport/pages/*`
-- `src/features/settings/pages/ListBranchPage.jsx`
-
-### Interpretation
-
-BranchStore is used by both POS/internal surfaces and online/shop surfaces.
-
-### Risk
-
-HIGH
-
-Reason:
-
-Online branch selection and POS branch identity may be mixed if ownership rules are not clarified.
-
----
-
-## 8. Direct BranchStore getState Dependencies
-
-Search target:
-
-`useBranchStore getState`
-
-Confirmed usage:
-
-- `src/utils/branchHelpers.js`
-- `src/features/supplier/store/supplierStore.js`
-- `src/features/online/components/SidebarOnline.jsx`
-- `src/features/online/order/pages/CheckoutPage.jsx`
-- `src/features/auth/store/authStore.js`
-- `src/features/online/productOnline/store/productOnlineStore.jsx`
-- `src/features/product/pages/ListProductPage.jsx`
-
-### Interpretation
-
-Branch runtime is also accessed imperatively.
-
-### Risk
-
-HIGH
-
-Reason:
-
-Imperative branch reads can make branch context drift harder to detect.
-
----
-
-## 9. Branch Runtime Action Dependencies
-
-### loadAndSetBranchById
-
-Search target:
-
-`loadAndSetBranchById`
-
-Confirmed usage:
-
-- `src/features/branch/store/branchStore.js`
-- `src/features/auth/store/authStore.js`
-- `src/features/pos/components/header/HeaderPos.jsx`
-- `src/features/purchaseOrder/pages/PrintPurchaseOrderPage.jsx`
-
-Interpretation:
-
-Branch details can be loaded by auth runtime, POS header, and print surfaces.
-
-Risk:
-
-High. POS branch identity should not drift from the logged-in employee branch.
-
----
-
-### clearBranch
-
-Search target:
-
-`clearBranch`
-
-Confirmed usage:
-
-- `src/features/branch/store/branchStore.js`
-- `src/features/pos/components/header/HeaderPos.jsx`
-- `src/components/common/UnifiedMainNav.jsx`
-
-Interpretation:
-
-Branch clearing can happen from more than one navigation surface.
-
-Risk:
-
-Medium to High. Logout sequence must be standardized.
-
----
-
-## 10. API Transport Dependency Surface
-
-Search target:
-
-`apiClient`
-
-Initial search found broad API dependency usage across:
-
-- `src/utils/apiClient.js`
-- `src/features/auth/api/authApi.js`
-- `src/features/sales/api/saleApi.js`
-- `src/features/stock/api/stockApi.js`
-- `src/features/finance/api/financeApi.js`
-- `src/features/payment/api/paymentApi.js`
-- `src/features/branch/api/branchApi.jsx`
-- `src/features/product/api/productApi.js`
-- `src/features/quickReceive/api/quickReceiveApi.js`
-- `src/features/purchaseOrder/api/purchaseOrderApi.js`
-- `src/features/customer/api/customerApi.js`
-- `src/features/customerReceipt/api/customerReceiptApi.js`
-- `src/features/deliveryNote/api/deliveryNoteApi.js`
-- `src/features/online/order/api/orderOnlineApi.js`
-- `src/features/online/cart/api/cartApi.js`
-- many other domain API files
-
-### Interpretation
-
-apiClient is a global transport dependency.
-
-Any change to token injection, refresh handling, baseURL, or withCredentials affects most domain API calls.
-
-### Risk
-
-VERY HIGH
-
-Reason:
-
-apiClient is shared by operational modules across sales, stock, finance, purchasing, online, auth, and settings domains.
-
----
-
-## 11. Guard / Route Protection Surface
-
-### ProtectedRoute
-
-Search target:
-
-`ProtectedRoute`
-
-Confirmed file:
-
-- `src/features/auth/components/ProtectedRoute.jsx`
-
-### AuthGate / RequireAuth / PrivateRoute / ProtectRoute
-
-Search target:
-
-`AuthGate RequireAuth PrivateRoute ProtectRoute`
-
-Initial search did not find additional concrete guard files beyond existing documentation references and `ProtectedRoute`.
-
-### Interpretation
-
-A route protection component exists, but it has not yet been confirmed as mounted in the active route tree.
-
-### Risk
-
-HIGH until verified.
-
-Reason:
-
-If ProtectedRoute is unused, POS relies mostly on app bootstrap and apiClient recovery. If it is used somewhere, its bootstrap timing and redirect behavior may be a root cause of perceived session loss.
-
----
-
-## 12. Permission / RBAC Dependency Surface
-
-Search targets:
-
-- `P1_CAP`
+## 2. Current Investigation Status
+
+### Completed Initial Searches
+
+- `useAuthStore`
+- `useBranchStore`
+- `useAuthStore.getState`
+- `useBranchStore.getState`
+- `loginAction`
+- `logoutAction`
+- `bootstrapAuthAction`
+- `verifySessionAction`
+- `selectedBranchId`
+- `currentBranch`
+- `employee.branchId`
+- `employee.branchSlug`
+- `shopSlug`
+- `apiClient`
+- `ProtectedRoute`
+- `AuthGate`, `RequireAuth`, `PrivateRoute`, `ProtectRoute`
 - `usePermission`
 - `RequirePermission`
 - `IfPermission`
 
-Confirmed files:
+### Important Note
 
-- `src/features/auth/rbac/rbacClient.js`
+Search results are broad and must be reviewed file-by-file before making architectural claims final.
+
+ผลการค้นหาเป็นรอบแรก ยังต้องเปิดอ่านไฟล์สำคัญทีละไฟล์ก่อนล็อกข้อสรุป
+
+---
+
+## 3. Core Runtime Owners
+
+### 3.1 Auth Runtime Owner
+
+Primary file:
+
+```txt
+src/features/auth/store/authStore.js
+```
+
+Current role:
+
+- Owns token/session state.
+- Owns role/profile identity state.
+- Owns employee/customer identity state.
+- Exposes login, verify, bootstrap, logout, and reset actions.
+
+Current risk:
+
+- High impact. Many files import or read `useAuthStore`.
+- Must not refactor until dependency categories are verified.
+
+---
+
+### 3.2 Branch Runtime Owner
+
+Primary file:
+
+```txt
+src/features/branch/store/branchStore.js
+```
+
+Current role:
+
+- Owns `currentBranch`.
+- Owns `selectedBranchId`.
+- Owns branch loading and branch selection behavior.
+
+Current risk:
+
+- High impact for POS because POS branch truth must not drift from logged-in employee branch.
+- Online branch selection and POS branch identity must be separated clearly.
+
+---
+
+### 3.3 Transport Runtime Owner
+
+Primary file:
+
+```txt
+src/utils/apiClient.js
+```
+
+Current role:
+
+- Owns axios transport configuration.
+- Reads auth token from authStore.
+- Handles refresh/retry behavior on 401.
+
+Current risk:
+
+- Very high impact. Most API modules depend on `apiClient`.
+- Changes here can affect every feature surface.
+
+---
+
+## 4. AuthStore Dependency Inventory
+
+### 4.1 Root / Runtime Bootstrap Consumers
+
+```txt
+src/App.jsx
+src/store/rootStore.js
+src/utils/apiClient.js
+```
+
+Interpretation:
+
+- `App.jsx` is the global bootstrap caller.
+- `apiClient.js` is a transport-level consumer of auth token/session state.
+- `rootStore.js` aggregates stores and must be reviewed for re-export behavior.
+
+Risk:
+
+- Changing authStore action names or state shape can break bootstrap or transport.
+
+---
+
+### 4.2 Login / Auth Page Consumers
+
+```txt
+src/features/auth/pages/LoginPage.jsx
+src/features/auth/pages/ForgotPasswordPage.jsx
+src/features/auth/pages/ResetPasswordPage.jsx
+src/features/auth/pages/PartnerWelcomePage.jsx
+src/features/auth/pages/StaffSettingsPage.jsx
+src/features/online/order/components/LoginForm.jsx
+```
+
+Interpretation:
+
+- LoginPage is the main POS/partner login entry.
+- Online order LoginForm also calls auth login behavior.
+- StaffSettingsPage may read employee/branch identity and requires detailed review.
+
+Risk:
+
+- Login behavior affects both POS and online checkout login surfaces.
+- Do not assume Login/Auth is POS-only.
+
+---
+
+### 4.3 POS Shell / Navigation Consumers
+
+```txt
+src/features/pos/components/header/HeaderPos.jsx
+src/components/common/UnifiedMainNav.jsx
+src/components/LogoutButton.jsx
+src/features/superadmin/sidebar/SidebarSuperAdmin.jsx
+```
+
+Interpretation:
+
+- HeaderPos displays session and triggers logout.
+- UnifiedMainNav and LogoutButton may also trigger session changes.
+- SidebarSuperAdmin uses logout/session state for the superadmin surface.
+
+Risk:
+
+- Logout behavior is not isolated to one component.
+- A logout refactor must identify every caller, not only HeaderPos.
+
+---
+
+### 4.4 Product / Master Data Consumers
+
+```txt
+src/features/product/pages/ListProductPage.jsx
+src/features/product/components/ProductForm.jsx
+src/features/productTemplate/pages/ListProductTemplatePage.jsx
+src/features/productTemplate/pages/EditProductTemplatePage.jsx
+src/features/productType/pages/ListProductTypePage.jsx
+src/features/productType/pages/CreateProductTypePage.jsx
+src/features/productType/pages/EditProductTypePage.jsx
+src/features/productProfile/pages/CreateProductProfilePage.jsx
+src/features/productProfile/pages/ListProductProfilePage.jsx
+src/features/category/pages/ListCategoryPage.jsx
+src/features/brand/pages/ListBrandPage.jsx
+src/features/bank/page/ListBankPage.jsx
+```
+
+Interpretation:
+
+- Product/master-data pages read auth state directly.
+- Some of these pages may use auth only for branchId, role, or UI display.
+
+Risk:
+
+- Product and master-data surfaces are likely indirect Auth Runtime consumers.
+- This increases risk of changing `employee`, `role`, or branch fields in authStore.
+
+---
+
+### 4.5 Employee / Settings Consumers
+
+```txt
+src/features/employee/pages/ListEmployeePage.jsx
+src/features/employee/pages/EditEmployeePage.jsx
+src/features/employee/pages/EmployeeFormPage.jsx
+src/features/employee/pages/ManageRolesPage.jsx
+src/features/employee/components/EmployeeTable.jsx
+src/features/auth/components/SubEmployeeManager.jsx
+```
+
+Interpretation:
+
+- Employee/settings surfaces have auth dependencies.
+- Some may overlap with future RBAC or position capability work.
+
+Risk:
+
+- Keep RBAC out of the current Auth stabilization scope.
+- These files should be reviewed before changing role/profile fields.
+
+---
+
+### 4.6 Online / Customer Consumers
+
+```txt
+src/features/online/cart/components/CartPanel.jsx
+src/features/online/cart/pages/CartPage.jsx
+src/features/online/order/pages/CheckoutPage.jsx
+src/features/online/order/components/CustomerInfoForm.jsx
+src/features/customer/components/CheckoutForm.jsx
+```
+
+Interpretation:
+
+- AuthStore affects online customer checkout and cart surfaces.
+- Auth refactor must preserve customer login and checkout behavior.
+
+Risk:
+
+- POS session work could accidentally break online customer flow.
+
+---
+
+### 4.7 Purchase / Print Consumers
+
+```txt
+src/features/purchaseOrder/components/PurchaseOrderSupplierSelector.jsx
+src/features/purchaseOrder/pages/PrintPurchaseOrderPage.jsx
+src/features/inputTaxReport/pages/PrintInputTaxReportPage.jsx
+```
+
+Interpretation:
+
+- Some operational and print surfaces read auth/employee/branch context.
+
+Risk:
+
+- Print pages often run on direct open/refresh, so bootstrap timing matters.
+
+---
+
+## 5. AuthStore Action Dependency Inventory
+
+### 5.1 `bootstrapAuthAction`
+
+Known consumers:
+
+```txt
+src/App.jsx
+src/features/auth/store/authStore.js
+```
+
+Interpretation:
+
+- App-level bootstrap appears centralized.
+
+Risk:
+
+- If bootstrap changes, initial page rendering and refresh recovery are affected.
+
+---
+
+### 5.2 `verifySessionAction`
+
+Known consumers:
+
+```txt
+src/features/auth/store/authStore.js
+```
+
+Interpretation:
+
+- Verify appears internally owned by authStore.
+
+Risk:
+
+- Good isolation, but must read implementation before changing refresh/verify flow.
+
+---
+
+### 5.3 `loginAction`
+
+Known consumers:
+
+```txt
+src/features/auth/pages/LoginPage.jsx
+src/features/online/order/components/LoginForm.jsx
+src/features/auth/store/authStore.js
+```
+
+Interpretation:
+
+- Login is shared by POS/partner login and online checkout login.
+
+Risk:
+
+- Do not change login return shape without checking both surfaces.
+
+---
+
+### 5.4 `logoutAction`
+
+Known consumers:
+
+```txt
+src/features/auth/store/authStore.js
+src/features/auth/pages/LoginPage.jsx
+src/features/pos/components/header/HeaderPos.jsx
+src/components/common/UnifiedMainNav.jsx
+src/features/superadmin/sidebar/SidebarSuperAdmin.jsx
+```
+
+Interpretation:
+
+- Logout has multiple UI triggers.
+
+Risk:
+
+- Logout clean-state work must be coordinated with branchStore clearing and redirects.
+
+---
+
+## 6. BranchStore Dependency Inventory
+
+### 6.1 Core / Utility Consumers
+
+```txt
+src/store/rootStore.js
+src/utils/branchHelpers.js
+src/features/branch/store/branchStore.js
+src/features/auth/store/authStore.js
+```
+
+Interpretation:
+
+- AuthStore calls branchStore behavior after login/verify.
+- branchHelpers directly reads branch store state.
+
+Risk:
+
+- Branch logic exists outside branchStore itself.
+- branchHelpers must be reviewed before changing branch ownership.
+
+---
+
+### 6.2 POS Shell Consumers
+
+```txt
+src/features/pos/components/header/HeaderPos.jsx
+src/components/common/UnifiedMainNav.jsx
+```
+
+Interpretation:
+
+- Header and navigation display branch context.
+- Header may also trigger branch loading or clearing.
+
+Risk:
+
+- POS branch display must follow logged-in employee branch, not arbitrary selected branch.
+
+---
+
+### 6.3 Online Branch Consumers
+
+```txt
+src/features/online/components/SidebarOnline.jsx
+src/features/online/order/pages/CheckoutPage.jsx
+src/features/online/order/components/LoginForm.jsx
+src/features/online/productOnline/pages/ProductOnlineListPage.jsx
+src/features/online/productOnline/pages/ProductOnlineDetailPage.jsx
+src/features/online/productOnline/components/ProductCardOnline.jsx
+src/features/online/productOnline/store/productOnlineStore.jsx
+```
+
+Interpretation:
+
+- Online surfaces depend heavily on branchStore.
+
+Risk:
+
+- Online branch selection must not be treated the same as POS login branch identity.
+
+---
+
+### 6.4 Product / Supplier / Stock Consumers
+
+```txt
+src/features/product/pages/ListProductPage.jsx
+src/features/product/pages/ViewProductPage.jsx
+src/features/product/pages/CreateProductPage.jsx
+src/features/product/pages/ReadyToSellListPage.jsx
+src/features/product/pages/ReadyToSellStructuredDetailsPage.jsx
+src/features/productTemplate/pages/CreateProductTemplatePage.jsx
+src/features/productTemplate/pages/EditProductTemplatePage.jsx
+src/features/supplier/pages/ListSupplierPage.jsx
+src/features/supplier/pages/CreateSupplierPage.jsx
+src/features/supplier/pages/EditSupplierPage.jsx
+src/features/supplier/pages/UpdateSupplierPage.jsx
+src/features/supplier/pages/ViewSupplierPage.jsx
+src/features/supplier/components/SupplierForm.jsx
+src/features/supplier/store/supplierStore.js
+```
+
+Interpretation:
+
+- Product, supplier, and related stock surfaces depend on branch runtime.
+
+Risk:
+
+- Branch context mistakes can affect product filtering, supplier views, and stock operations.
+
+---
+
+### 6.5 Reports / Print Consumers
+
+```txt
+src/features/inputTaxReport/pages/ListInputTaxReportPage.jsx
+src/features/inputTaxReport/pages/PrintInputTaxReportPage.jsx
+src/features/salesTaxReport/pages/PrintSalesTaxReportPage.jsx
+src/features/purchaseOrder/pages/PrintPurchaseOrderPage.jsx
+```
+
+Interpretation:
+
+- Reporting and print surfaces need branch context.
+
+Risk:
+
+- Direct refresh/open behavior requires stable bootstrap and branch recovery.
+
+---
+
+## 7. Transport Dependency Inventory
+
+### 7.1 apiClient Direct Consumers
+
+API and service modules using `apiClient` include:
+
+```txt
+src/features/auth/api/authApi.js
+src/features/branch/api/branchApi.jsx
+src/features/unit/api/unitApi.js
+src/features/product/api/productApi.js
+src/features/product/api/productImagesApi.js
+src/features/productLookup/api/productLookupApi.js
+src/features/productType/api/productTypeApi.js
+src/features/productTemplate/api/productTemplateApi.js
+src/features/productProfile/api/productProfileApi.js
+src/features/category/api/categoryApi.js
+src/features/brand/api/brandApi.js
+src/features/bank/api/bankApi.js
+src/store/bankStore.js
+src/features/sales/api/saleApi.js
+src/features/salesReport/api/salesReportApi.js
+src/features/salesTaxReport/api/salesTaxReportApi.js
+src/features/saleReturn/api/saleReturnApi.js
+src/features/stock/api/stockApi.js
+src/features/stockAudit/api/stockAuditApi.js
+src/features/stockItem/api/stockItemApi.js
+src/features/quickReceive/api/quickReceiveApi.js
+src/features/quickReceive/store/quickReceiveStore.js
+src/features/purchaseOrder/api/purchaseOrderApi.js
+src/features/purchaseOrder/services/procurementService.js
+src/features/purchaseOrder/store/purchaseOrderStore.js
+src/features/purchaseReport/api/purchaseReportApi.js
+src/features/purchaseOrderReceipt/api/purchaseOrderReceiptApi.js
+src/features/purchaseOrderReceiptItem/api/purchaseOrderReceiptItemApi.js
+src/features/payment/api/paymentApi.js
+src/features/paymentOnline/api/paymentOnlineApi.js
+src/features/finance/api/financeApi.js
+src/features/customer/api/customerApi.js
+src/features/customerReceipt/api/customerReceiptApi.js
+src/features/customerDeposit/api/customerDepositApi.js
+src/features/online/cart/api/cartApi.js
+src/features/online/order/api/orderOnlineApi.js
+src/features/online/productOnline/api/productOnlineApi.jsx
+src/features/address/api/addressApi.js
+src/features/employee/api/employeeApi.js
+src/features/position/api/positionApi.js
+src/features/supplier/api/supplierApi.js
+src/features/supplierPayment/api/supplierPaymentApi.js
+src/features/deliveryNote/api/deliveryNoteApi.js
+src/features/barcode/api/barcodeApi.js
+src/features/combinedBilling/api/combinedBillingApi.js
+```
+
+Interpretation:
+
+- apiClient is a system-wide transport dependency.
+
+Risk:
+
+- Any apiClient refresh/interceptor change is broad-impact and must be tested across modules.
+
+---
+
+## 8. Route Guard / Permission Dependency Inventory
+
+### 8.1 Confirmed Guard Candidate
+
+```txt
+src/features/auth/components/ProtectedRoute.jsx
+```
+
+Interpretation:
+
+- A ProtectedRoute component exists.
+- Its actual runtime usage in AppRouter has not yet been confirmed from current search results.
+
+Risk:
+
+- Do not assume route guarding is active until route files are reviewed directly.
+
+---
+
+### 8.2 Permission Candidate Files
+
+```txt
+src/hooks/usePermission.js
+src/components/auth/RequirePermission.jsx
+src/components/auth/IfPermission.jsx
+src/features/auth/rbac/rbacClient.js
+```
+
+Interpretation:
+
+- Permission/RBAC infrastructure exists.
+- Current user guidance: RBAC is not used as real runtime for the current Auth stabilization agenda.
+
+Risk:
+
+- Do not activate or refactor RBAC during Login/Auth stability work.
+
+---
+
+## 9. Branch Truth Dependencies
+
+### 9.1 `selectedBranchId`
+
+Known consumers include:
+
+```txt
+src/utils/branchHelpers.js
+src/features/branch/store/branchStore.js
+src/features/pos/components/header/HeaderPos.jsx
+src/features/online/components/SidebarOnline.jsx
+src/features/online/order/pages/CheckoutPage.jsx
+src/features/online/productOnline/pages/ProductOnlineListPage.jsx
+src/features/online/productOnline/pages/ProductOnlineDetailPage.jsx
+src/features/product/pages/ListProductPage.jsx
+src/features/product/pages/ViewProductPage.jsx
+src/features/product/pages/ReadyToSellListPage.jsx
+src/features/product/pages/ReadyToSellStructuredDetailsPage.jsx
+src/features/supplier/pages/ListSupplierPage.jsx
+src/features/supplier/store/supplierStore.js
+```
+
+Risk:
+
+- `selectedBranchId` may represent online branch selection, POS branch context, or admin-selected branch depending on surface.
+- This must be clarified before any branch/auth refactor.
+
+---
+
+### 9.2 `employee.branchId`
+
+Known consumers include:
+
+```txt
+src/features/auth/store/authStore.js
+src/features/auth/pages/LoginPage.jsx
+src/features/employee/store/employeeStore.js
+src/features/brand/pages/ListBrandPage.jsx
+src/features/inputTaxReport/pages/PrintInputTaxReportPage.jsx
+src/features/purchaseOrder/pages/PrintPurchaseOrderPage.jsx
+```
+
+Risk:
+
+- This appears closer to POS identity branch truth than `selectedBranchId`.
+- Must be treated carefully as candidate canonical POS branch source.
+
+---
+
+### 9.3 `employee.branchSlug`
+
+Known consumers include:
+
+```txt
+src/features/auth/pages/StaffSettingsPage.jsx
+```
+
+Also documented in existing maps, but direct runtime usage appears limited from initial search.
+
+Risk:
+
+- URL `shopSlug` is widely used while `employee.branchSlug` direct search appears limited.
+- This suggests slug canonicalization needs deeper route-level review.
+
+---
+
+### 9.4 `shopSlug`
+
+Known broad consumers include:
+
+```txt
+src/routes/AppRouter.jsx
+src/config/sidebarMenuConfig.js
+src/config/sidebarStockItems.js
+src/features/pos/components/sidebar/SidebarLoader.jsx
+src/features/purchaseOrder/hooks/usePurchaseOrderForm.js
+src/features/purchaseOrderReceipt/store/purchaseOrderReceiptStore.js
+src/features/salesReport/pages/SalesDashboardPage.jsx
+src/features/salesReport/pages/SalesListPage.jsx
+src/features/salesReport/pages/SalesDetailPage.jsx
+src/features/employee/pages/ListEmployeePage.jsx
+src/features/employee/pages/EditEmployeePage.jsx
+src/features/employee/pages/EmployeeFormPage.jsx
+src/features/brand/pages/CreateBrandPage.jsx
+src/features/brand/pages/EditBrandPage.jsx
+src/features/brand/pages/ListBrandPage.jsx
+src/features/category/pages/CreateCategoryPage.jsx
+src/features/productTemplate/pages/ListProductTemplatePage.jsx
+src/features/unit/pages/CreateUnitPage.jsx
+src/features/unit/pages/EditUnitPage.jsx
+src/features/unit/pages/ListUnitPage.jsx
+src/features/barcode/pages/BarcodeReceiptListPage.jsx
+src/features/customerReceipt/pages/PrintCustomerReceiptPage.jsx
+```
+
+Risk:
+
+- URL slug is a major navigation dependency.
+- If POS canonical branch slug changes, many route-building components may be affected.
+
+---
+
+## 10. Preliminary Dependency Risk Matrix
+
+### High Risk
+
 - `src/features/auth/store/authStore.js`
+- `src/features/branch/store/branchStore.js`
+- `src/utils/apiClient.js`
+- `src/App.jsx`
+- `src/features/auth/pages/LoginPage.jsx`
 - `src/features/pos/components/header/HeaderPos.jsx`
-- `src/hooks/usePermission.js`
-- `src/components/auth/RequirePermission.jsx`
-- `src/components/auth/IfPermission.jsx`
-- multiple sidebar config files containing `P1_CAP`
-
-### Interpretation
-
-Permission/RBAC helper code exists, but current agenda treats RBAC as out of scope.
-
-### Risk
-
-Medium if dormant.
-
-Very High if activated during Login/Auth stabilization.
+- `src/routes/AppRouter.jsx`
 
 Reason:
-
-Permission rollout would mix authorization changes with authentication/session stabilization.
+These files sit at runtime entry, identity, branch context, transport, or shell level.
 
 ---
 
-## 13. Employee / Legacy Identity Surface
+### Medium Risk
 
-Search target:
-
-`employeeStore`
-
-Confirmed files include:
-
-- `src/features/employee/store/employeeStore.js`
-- `src/hooks/usePermission.js`
-- `src/features/employee/pages/ViewEmployeePage.jsx`
-- `src/features/employee/pages/ApproveEmployeePage.jsx`
-- `src/features/employee/utils/employeeAccess.js`
-- `src/features/brand/pages/ListBrandPage.jsx`
-- `src/features/purchaseOrder/pages/PrintPurchaseOrderPage.jsx`
-
-### Interpretation
-
-There may be legacy or parallel employee identity/runtime code outside authStore.
-
-### Risk
-
-HIGH until reviewed.
+- Product/master-data pages using authStore or branchStore.
+- Supplier pages and supplierStore.
+- Online checkout and online product pages.
+- Report/print pages.
+- Employee/settings pages.
 
 Reason:
-
-If employeeStore and authStore both represent employee/session concepts, they may create competing sources of truth.
-
----
-
-## 14. Current High-Risk Dependency Clusters
-
-### Cluster A — AuthStore Runtime
-
-Includes:
-
-- App bootstrap
-- Login surfaces
-- POS header
-- ProtectedRoute candidate
-- apiClient
-- Logout navigation
-- Online checkout
-- Supplier and cart stores
-
-Risk:
-
-Changing authStore shape or selectors can break many unrelated surfaces.
+These files are runtime consumers and may break if store shape or branch ownership changes.
 
 ---
 
-### Cluster B — BranchStore Runtime
+### Low Risk For Current Agenda
 
-Includes:
-
-- POS header
-- Online branch selection
-- Product pages
-- Supplier pages
-- Report print pages
-- Purchase order print page
-- Branch helpers
-
-Risk:
-
-POS branch identity and online branch selection must be separated by rule.
+- RBAC helper files if kept dormant.
+- Sidebar menu config files if not changing permission behavior.
+- Static page-level components that only display state and do not mutate runtime.
 
 ---
 
-### Cluster C — apiClient Transport
+## 11. Open Questions
 
-Includes:
-
-- Auth API
-- Sales API
-- Stock API
-- Finance API
-- Purchase API
-- Online API
-- Product API
-- Upload / media / report APIs
-
-Risk:
-
-Any change to refresh, token attachment, baseURL, or credentials can affect the entire app.
+1. Is `ProtectedRoute.jsx` mounted anywhere in the active route tree?
+2. Which pages read `employee.branchId` as operational branch truth?
+3. Which pages read `selectedBranchId` as online branch selection only?
+4. Which pages mutate branch state directly?
+5. Does any feature call `logoutAction` outside the known navigation components?
+6. Does any print page bypass normal bootstrap assumptions?
+7. Should `shopSlug` be derived from logged-in branch or remain URL-driven?
 
 ---
 
-### Cluster D — Guard / Permission Candidate Code
+## 12. Next Investigation
 
-Includes:
+Open and review these files next:
 
-- ProtectedRoute
-- usePermission
-- RequirePermission
-- IfPermission
-- rbacClient
-- sidebar capability configs
+```txt
+src/features/auth/components/ProtectedRoute.jsx
+src/store/rootStore.js
+src/utils/branchHelpers.js
+src/features/auth/pages/StaffSettingsPage.jsx
+src/components/LogoutButton.jsx
+src/components/common/UnifiedMainNav.jsx
+src/features/superadmin/sidebar/SidebarSuperAdmin.jsx
+```
 
-Risk:
-
-Must be reviewed, but should not be activated during current Login/Auth stability work.
-
----
-
-## 15. Initial Conclusions
-
-1. AuthStore is not isolated.
-
-AuthStore is used by core app startup, navigation, login, transport, checkout, product, supplier, employee, and admin/superadmin surfaces.
-
-2. BranchStore has mixed online and POS relevance.
-
-This is acceptable only if ownership rules are explicit.
-
-3. apiClient is a global dependency.
-
-Transport refactor must be treated as very high risk.
-
-4. ProtectedRoute exists.
-
-The next step is to read it and confirm whether it is actually mounted in active routes.
-
-5. RBAC/permission helpers exist.
-
-They should remain out of scope during session stabilization.
-
-6. employeeStore exists.
-
-This must be reviewed before declaring authStore the only identity owner.
+After that, update this map with verified READ / WRITE / MUTATE classifications.
 
 ---
 
-## 16. Next Investigation Checklist
+## 13. Working Conclusion
 
-Read next:
+The frontend Auth and Branch runtime surface is broader than LoginPage and HeaderPos.
 
-- `src/features/auth/components/ProtectedRoute.jsx`
-- `src/hooks/usePermission.js`
-- `src/components/auth/RequirePermission.jsx`
-- `src/components/auth/IfPermission.jsx`
-- `src/features/employee/store/employeeStore.js`
-- `src/store/rootStore.js`
-- `src/utils/branchHelpers.js`
-- `src/components/LogoutButton.jsx`
-- `src/components/common/UnifiedMainNav.jsx`
+AuthStore affects POS, online checkout, product/master-data, employee/settings, and print surfaces.
 
-Confirm next:
+BranchStore affects POS shell, online branch selection, product/supplier pages, and report/print pages.
 
-- Is ProtectedRoute mounted in active router?
-- Is employeeStore still used as runtime identity?
-- Which files mutate branch selection?
-- Which files call logoutAction or clearBranch?
-- Which pages read selectedBranchId directly?
-- Which pages read employee.branchId directly?
-- Which API files bypass apiClient, if any?
+apiClient is a system-wide transport dependency.
 
----
-
-## 17. Working Rule
-
-No AuthStore, BranchStore, apiClient, or route guard refactor should begin until this Dependency Map has been expanded from search results into reviewed dependency groups.
-
-ห้ามเริ่ม Refactor authStore, branchStore, apiClient หรือ route guard จนกว่า Dependency Map จะถูกขยายจากผลการค้นหาเป็นกลุ่ม Dependency ที่ผ่านการอ่านไฟล์จริงแล้ว
+Therefore, the current Login/Auth stabilization must continue as read-only architecture mapping before any refactor.

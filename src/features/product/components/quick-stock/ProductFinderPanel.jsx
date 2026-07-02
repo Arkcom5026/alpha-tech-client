@@ -1,5 +1,22 @@
 import React from "react";
 
+const isTemplateCandidate = (product) => {
+  if (!product) return false;
+  if (product.isTemplateProduct === true) return true;
+  if (String(product.templateBranchCode || "").toUpperCase() === "T01") return true;
+  if (Number(product.templateBranchId) === 1) return true;
+
+  if (
+    product.templateProductId != null &&
+    product.id != null &&
+    Number(product.templateProductId) === Number(product.id)
+  ) {
+    return true;
+  }
+
+  return false;
+};
+
 const ProductFinderPanel = ({
   selectedProduct,
   showSearchResult = true,
@@ -120,6 +137,8 @@ const ProductFinderPanel = ({
             <div className="divide-y max-h-80 overflow-auto">
               {filteredProducts.map((product) => {
                 const isSelected = Number(product?.id) === Number(selectedProductId);
+                const showTemplateBadge = isTemplateCandidate(product);
+
                 return (
                   <button
                     key={product.id}
@@ -127,7 +146,14 @@ const ProductFinderPanel = ({
                     className={`w-full text-left px-3 py-3 hover:bg-blue-50 ${isSelected ? "bg-blue-50" : "bg-white"}`}
                     onClick={() => onSelectProduct(product.id)}
                   >
-                    <div className="font-semibold text-sm text-gray-900">{product.name}</div>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="font-semibold text-sm text-gray-900 min-w-0">{product.name}</div>
+                      {showTemplateBadge && (
+                        <span className="shrink-0 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700">
+                          Template · ต้องสร้างในร้านก่อน
+                        </span>
+                      )}
+                    </div>
                     <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-1 text-xs text-gray-500">
                       <div>ยี่ห้อ: {getBrandName(product)}</div>
                       <div>ประเภท: {getProductTypeName(product)}</div>

@@ -11,6 +11,7 @@ import {
   getProductById,
   getProducts,
   getProductsForPos,
+  getTemplateProductsForPos,
   getCatalogDropdowns,
   disableProduct,
   enableProduct,
@@ -260,8 +261,12 @@ const useProductStore = create((set, get) => ({
   fetchProducts: async (filters = {}) => {
     set({ isLoading: true, error: null });
     try {
-      const data = await getProducts(filters);
-      set({ products: data, isLoading: false });
+      const isTemplateSearch = filters?.template === true || String(filters?.template).toLowerCase() === 'true';
+      const data = isTemplateSearch
+        ? await getTemplateProductsForPos(filters)
+        : await getProducts(filters);
+
+      set({ products: get().normalizePosProductList(data), isLoading: false });
     } catch (error) {
       console.error('❌ fetchProducts error:', error);
       set({ error: get().normalizeError(error, 'โหลดสินค้าภาพรวมไม่สำเร็จ'), isLoading: false });
@@ -765,7 +770,13 @@ const useProductStore = create((set, get) => ({
     });
   },
 
-  fetchProductsAction: async (filters = {}) => {
+
+  // ==================================================
+  // PRODUCT CATALOG ACTIONS — EXPLICIT RUNTIME SPLIT
+  // ==================================================
+  // Operational Product = สินค้าที่ถูกใช้งานจริงใน Branch ปัจจุบัน
+  // ใช้กับ Stock / Sales / Repair / Service / Product List
+  fetchOperationalProductsAction: async (filters = {}) => {
     set({ isLoading: true, error: null });
     try {
       const toNum = (v) => {
@@ -780,10 +791,11 @@ const useProductStore = create((set, get) => ({
         ...filters,
         productTypeId: toNum(filters?.productTypeId),
         brandId: toNum(filters?.brandId),
-        searchText: (filters?.searchText ?? '').toString().trim() || undefined,
+        searchText: (filters?.searchText ?? filters?.search ?? '').toString().trim() || undefined,
       };
 
       delete params.categoryId;
+      delete params.template;
 
       Object.keys(params).forEach((k) => {
         if (params[k] === undefined) delete params[k];
@@ -792,35 +804,65 @@ const useProductStore = create((set, get) => ({
       const raw = await getProductsForPos(params);
       const list = get().normalizePosProductList(raw);
 
-      const deduped = (() => {
-        const map = new Map();
-        for (const item of list) {
-          const key = item?.id;
-          if (!key) continue;
-
-          const prev = map.get(key);
-          if (!prev) {
-            map.set(key, item);
-            continue;
-          }
-
-          const prevCost = Number(prev?.costPrice ?? 0);
-          const nextCost = Number(item?.costPrice ?? 0);
-
-          if ((Number.isFinite(nextCost) && nextCost > 0) && (!Number.isFinite(prevCost) || prevCost <= 0)) {
-            map.set(key, { ...prev, ...item });
-          } else {
-            map.set(key, { ...item, ...prev });
-          }
-        }
-        return Array.from(map.values());
-      })();
-
-      set({ products: deduped, isLoading: false });
+      set({ products: list, isLoading: false, error: null });
+      return list;
     } catch (error) {
-      console.error('❌ fetchProductsAction error:', error);
-      set({ error: get().normalizeError(error, 'โหลดสินค้าสำหรับ POS ไม่สำเร็จ'), isLoading: false });
+      console.error('❌ fetchOperationalProductsAction error:', error);
+      set({ error: get().normalizeError(error, 'โหลด Operational Products ไม่สำเร็จ'), isLoading: false });
+      return [];
     }
+  },
+
+  // Template Product = สินค้าต้นแบบจาก T01
+  // ใช้กับ QuickStock / PO Runtime / Recovery / Clone Flow เท่านั้น
+  fetchTemplateProductsAction: async (filters = {}) => {
+    set({ isLoading: true, error: null });
+    try {
+      const toNum = (v) => {
+        if (v == null) return undefined;
+        const s = String(v).trim();
+        if (!s) return undefined;
+        const n = Number(s);
+        return Number.isFinite(n) ? n : undefined;
+      };
+
+      const params = {
+        ...filters,
+        productTypeId: toNum(filters?.productTypeId),
+        brandId: toNum(filters?.brandId),
+        search: (filters?.search ?? filters?.searchText ?? '').toString().trim() || undefined,
+      };
+
+      delete params.categoryId;
+
+      Object.keys(params).forEach((k) => {
+        if (params[k] === undefined) delete params[k];
+      });
+
+      const raw = await getTemplateProductsForPos(params);
+      const list = get().normalizePosProductList(raw);
+
+      set({ products: list, isLoading: false, error: null });
+      return list;
+    } catch (error) {
+      console.error('❌ fetchTemplateProductsAction error:', error);
+      set({ error: get().normalizeError(error, 'โหลด Template Products ไม่สำเร็จ'), isLoading: false });
+      return [];
+    }
+  },
+
+  fetchProductsAction: async (filters = {}) => {
+    // Deprecated compatibility layer:
+    // - template=true  -> Template Runtime Search
+    // - otherwise      -> Operational Branch Search
+    const isTemplateSearch =
+      filters?.template === true || String(filters?.template).toLowerCase() === 'true';
+
+    if (isTemplateSearch) {
+      return get().fetchTemplateProductsAction(filters);
+    }
+
+    return get().fetchOperationalProductsAction(filters);
   },
 
   fetchSimpleProductsAction: async (filters = {}) => {

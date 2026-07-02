@@ -7,11 +7,8 @@ const QueueRow = ({
   barcodeInputRef,
   onUpdateQueueItemField,
   onRemoveQueueItem,
-  toMoneyNumber,
 }) => {
-  const rowReady =
-    String(item.barcode || "").trim() &&
-    toMoneyNumber(item.costPrice) > 0;
+  const rowReady = String(item.barcode || "").trim();
 
   return (
     <tr className={rowReady ? "bg-white" : "bg-red-50"}>
@@ -43,20 +40,12 @@ const QueueRow = ({
         />
       </td>
       <td className="px-3 py-2">
-        <input
-          type="number"
-          className="w-32 border rounded p-2"
-          value={item.costPrice}
-          onChange={(event) => onUpdateQueueItemField(item.id, "costPrice", event.target.value)}
-        />
-      </td>
-      <td className="px-3 py-2">
         <span className={`px-2 py-1 rounded-full text-[11px] ${
           rowReady
             ? "bg-green-50 text-green-700 border border-green-200"
             : "bg-red-50 text-red-700 border border-red-200"
         }`}>
-          {rowReady ? "Ready" : "Need Cost"}
+          {rowReady ? "Ready" : "Need Barcode"}
         </span>
       </td>
       <td className="px-3 py-2 text-right">

@@ -8,7 +8,6 @@ import IntakeControlPanel from "../components/quick-stock/IntakeControlPanel";
 import IntakeQueueTable from "../components/quick-stock/IntakeQueueTable";
 import QueueSummary from "../components/quick-stock/QueueSummary";
 import CommitBar from "../components/quick-stock/CommitBar";
-import ImportTextarea from "../components/quick-stock/ImportTextarea";
 
 const normalizeText = (value) =>
   String(value ?? "")
@@ -60,17 +59,52 @@ const buildProductFormFromProduct = (product) => ({
   active: product?.active !== false,
 });
 
-const buildPriceFormFromProduct = (product) => ({
-  costPrice: toMoneyString(product?.costPrice ?? product?.branchPrice?.costPrice),
-  priceRetail: toMoneyString(product?.priceRetail ?? product?.branchPrice?.priceRetail),
-  priceWholesale: toMoneyString(product?.priceWholesale ?? product?.branchPrice?.priceWholesale),
-  priceTechnician: toMoneyString(product?.priceTechnician ?? product?.branchPrice?.priceTechnician),
-  priceOnline: toMoneyString(product?.priceOnline ?? product?.branchPrice?.priceOnline),
-});
+const getFirstBranchPrice = (product) => {
+  if (!product) return null;
+  if (Array.isArray(product.branchPrice)) return product.branchPrice[0] || null;
+  if (product.branchPrice && typeof product.branchPrice === "object") return product.branchPrice;
+  return null;
+};
+
+const buildPriceFormFromProduct = (product) => {
+  const bp = getFirstBranchPrice(product);
+
+  return {
+    costPrice: toMoneyString(product?.costPrice ?? bp?.costPrice),
+    priceRetail: toMoneyString(product?.priceRetail ?? bp?.priceRetail),
+    priceWholesale: toMoneyString(product?.priceWholesale ?? bp?.priceWholesale),
+    priceTechnician: toMoneyString(product?.priceTechnician ?? bp?.priceTechnician),
+    priceOnline: toMoneyString(product?.priceOnline ?? bp?.priceOnline),
+  };
+};
+
+const isTemplateCatalogProduct = (product) => {
+  if (!product) return false;
+
+  // Search result from Template Catalog / T01 must never be rendered as Operational Product.
+  if (product.isTemplateProduct === true) return true;
+  if (String(product.templateBranchCode || "").toUpperCase() === "T01") return true;
+  if (Number(product.templateBranchId) === 1) return true;
+
+  // Current template-search API maps templateProductId to self id.
+  if (
+    product.templateProductId != null &&
+    product.id != null &&
+    Number(product.templateProductId) === Number(product.id)
+  ) {
+    return true;
+  }
+
+  return false;
+};
+
+const isOperationalBranchProduct = (product) => {
+  if (!product) return false;
+  return !isTemplateCatalogProduct(product);
+};
 
 const QuickStockPage = () => {
   const barcodeInputRef = useRef(null);
-  const importTextRef = useRef(null);
   const serialInputRefs = useRef({});
 
   const {
@@ -104,8 +138,7 @@ const QuickStockPage = () => {
   const [autoFocusSerial, setAutoFocusSerial] = useState(false);
   const [defaultCost, setDefaultCost] = useState("");
 
-  const [movementType, setMovementType] = useState("RECOVERY_RECEIVE");
-  const [note, setNote] = useState("Recovery receive from legacy barcode");
+  const [note, setNote] = useState("Manual stock intake");
 
   const [isCommitting, setIsCommitting] = useState(false);
   const [isEditingProduct, setIsEditingProduct] = useState(false);
@@ -133,15 +166,24 @@ const QuickStockPage = () => {
       productTypeId: productTypeId || undefined,
       brandId: brandId || undefined,
       search: String(search || "").trim() || undefined,
+
+      // Product Template Runtime:
+      // บังคับค้นหาจาก Template Branch (T01)
+      // Backend จะ Auto Clone เข้า Branch จริงตอน Commit
+      template: true,
+
       takeNum: 1000,
       skipNum: 0,
     };
 
     try {
-      if (typeof fetchProducts === "function") {
-        await fetchProducts(params);
-        return;
-      }
+      if (typeof fetchProductsAction === "function") {
+      if (import.meta.env?.DEV) {
+      console.log('[QuickStock] Runtime Search params', params);
+    }
+    await fetchProductsAction(params);
+      return;
+    }
 
       if (typeof fetchProductsAction === "function") {
         await fetchProductsAction(params);
@@ -210,24 +252,51 @@ const QuickStockPage = () => {
     return (productList || []).find((product) => Number(product?.id) === Number(id)) || null;
   }, [productList, selectedProductId]);
 
+  // Runtime Product Separation:
+  // selectedProduct here is the product selected from search.
+  // If it comes from T01 / Template Catalog, it is selectedTemplateProduct only.
+  // It must NOT be shown or edited as Operational Product of the branch.
+  const selectedTemplateProduct = useMemo(
+    () => (isTemplateCatalogProduct(selectedProduct) ? selectedProduct : null),
+    [selectedProduct]
+  );
+
+  const operationalProduct = useMemo(
+    () => (isOperationalBranchProduct(selectedProduct) ? selectedProduct : null),
+    [selectedProduct]
+  );
+
+  const runtimeStatus = !selectedProduct
+    ? "IDLE"
+    : operationalProduct
+      ? "READY"
+      : "NOT_CREATED";
+
   useEffect(() => {
-    if (!selectedProduct) {
+    if (!operationalProduct) {
+      // Template Product is search/clone source only.
+      // Do not hydrate Product Detail / BranchPrice editor from template.
       setProductForm(buildProductFormFromProduct(null));
       setPriceForm(buildPriceFormFromProduct(null));
       setDefaultCost("");
       setIsEditingProduct(false);
+
+      if (selectedTemplateProduct) {
+        setTimeout(() => barcodeInputRef.current?.focus(), 50);
+      }
+
       return;
     }
 
-    const nextProductForm = buildProductFormFromProduct(selectedProduct);
-    const nextPriceForm = buildPriceFormFromProduct(selectedProduct);
+    const nextProductForm = buildProductFormFromProduct(operationalProduct);
+    const nextPriceForm = buildPriceFormFromProduct(operationalProduct);
 
     setProductForm(nextProductForm);
     setPriceForm(nextPriceForm);
     setDefaultCost(nextPriceForm.costPrice || "");
     setIsEditingProduct(false);
     setTimeout(() => barcodeInputRef.current?.focus(), 50);
-  }, [selectedProduct]);
+  }, [operationalProduct, selectedTemplateProduct]);
 
   const resetQueue = () => {
     setBarcodeQueue([]);
@@ -239,6 +308,10 @@ const QuickStockPage = () => {
   const clearProductSelection = () => {
     setSelectedProductId("");
     setShowSearchResult(true);
+    setIsEditingProduct(false);
+    setProductForm(buildProductFormFromProduct(null));
+    setPriceForm(buildPriceFormFromProduct(null));
+    setDefaultCost("");
     resetQueue();
   };
 
@@ -261,14 +334,6 @@ const QuickStockPage = () => {
     }, 150);
   };
 
-  const applyDefaultCostToQueue = () => {
-    setBarcodeQueue((prev) =>
-      prev.map((item) => ({
-        ...item,
-        costPrice: defaultCost,
-      }))
-    );
-  };
 
   const addBarcodeToQueue = (rawBarcode) => {
     const cleanBarcode = String(rawBarcode || "").trim();
@@ -298,7 +363,6 @@ const QuickStockPage = () => {
         id: rowId,
         barcode: cleanBarcode,
         serialNumber: "",
-        costPrice: defaultCost || priceForm.costPrice || "",
         status: "Ready",
       },
     ]);
@@ -321,63 +385,6 @@ const QuickStockPage = () => {
     addBarcodeToQueue(barcode);
   };
 
-  const handleImportText = () => {
-    const raw = importTextRef.current?.value || "";
-    const lines = raw
-      .split(/\r?\n/)
-      .map((line) => line.trim())
-      .filter(Boolean);
-
-    if (!lines.length) {
-      toast.warning("ยังไม่มีรายการบาร์โค้ดสำหรับ Import");
-      return;
-    }
-
-    if (!selectedProduct) {
-      toast.error("กรุณาเลือกสินค้าก่อน Import");
-      return;
-    }
-
-    let added = 0;
-    let duplicated = 0;
-
-    setBarcodeQueue((prev) => {
-      const existing = new Set(prev.map((item) => normalizeText(item.barcode)));
-      const next = [...prev];
-
-      for (const line of lines) {
-        const [rawBarcodeValue, rawSerialNumber, rawCost] = line.split(",");
-        const barcodeValue = rawBarcodeValue?.trim();
-        const serialNumberValue = rawSerialNumber?.trim() || "";
-        const costValue = rawCost?.trim() || defaultCost || priceForm.costPrice || "";
-
-        if (!barcodeValue) continue;
-
-        const key = normalizeText(barcodeValue);
-        if (existing.has(key)) {
-          duplicated += 1;
-          continue;
-        }
-
-        existing.add(key);
-        added += 1;
-        next.push({
-          id: `${barcodeValue}-${Date.now()}-${added}`,
-          barcode: barcodeValue,
-          serialNumber: serialNumberValue,
-          costPrice: costValue,
-          status: "Ready",
-        });
-      }
-
-      return next;
-    });
-
-    if (importTextRef.current) importTextRef.current.value = "";
-    toast.success(`เพิ่ม ${added} รายการ${duplicated ? `, ข้ามซ้ำ ${duplicated} รายการ` : ""}`);
-    barcodeInputRef.current?.focus();
-  };
-
   const removeQueueItem = (id) => {
     setBarcodeQueue((prev) => prev.filter((item) => item.id !== id));
   };
@@ -391,7 +398,7 @@ const QuickStockPage = () => {
   };
 
   const handleSaveProductInline = async () => {
-    if (!selectedProduct?.id) return;
+    if (!operationalProduct?.id) return;
 
     const name = String(productForm.name || "").trim();
     if (!name) {
@@ -412,7 +419,7 @@ const QuickStockPage = () => {
     setIsSavingProduct(true);
 
     try {
-      await updateProduct(selectedProduct.id, {
+      await updateProduct(operationalProduct.id, {
         name,
         productTypeId: toNumberOrNull(productForm.productTypeId),
         brandId: toNumberOrNull(productForm.brandId),
@@ -431,9 +438,56 @@ const QuickStockPage = () => {
         },
       });
 
+      const savedCostPrice = toMoneyNumber(priceForm.costPrice);
+      const savedPriceRetail = toMoneyNumber(priceForm.priceRetail);
+      const savedPriceWholesale = toMoneyNumber(priceForm.priceWholesale);
+      const savedPriceTechnician = toMoneyNumber(priceForm.priceTechnician);
+      const savedPriceOnline = toMoneyNumber(priceForm.priceOnline);
+
+      const nextBranchPrice = {
+        ...(getFirstBranchPrice(operationalProduct) || {}),
+        costPrice: savedCostPrice,
+        priceRetail: savedPriceRetail,
+        priceWholesale: savedPriceWholesale,
+        priceTechnician: savedPriceTechnician,
+        priceOnline: savedPriceOnline,
+        isActive: true,
+      };
+
+      const nextProduct = {
+        ...operationalProduct,
+        name,
+        productTypeId: toNumberOrNull(productForm.productTypeId),
+        brandId: toNumberOrNull(productForm.brandId),
+        unitId: toNumberOrNull(productForm.unitId),
+        trackSerialNumber: !!productForm.trackSerialNumber,
+        active: !!productForm.active,
+        costPrice: savedCostPrice,
+        priceRetail: savedPriceRetail,
+        priceWholesale: savedPriceWholesale,
+        priceTechnician: savedPriceTechnician,
+        priceOnline: savedPriceOnline,
+        hasPrice: true,
+        branchPriceActive: true,
+        branchPrice: [nextBranchPrice],
+      };
+
+      // Update Zustand products list directly.
+      // selectedProduct เป็น useMemo จาก products + selectedProductId จึงไม่มี setSelectedProduct
+      useProductStore.setState((state) => ({
+        products: Array.isArray(state.products)
+          ? state.products.map((p) =>
+              Number(p?.id) === Number(nextProduct.id) ? { ...p, ...nextProduct } : p
+            )
+          : state.products,
+      }));
+
+      setProductForm(buildProductFormFromProduct(nextProduct));
+      setPriceForm(buildPriceFormFromProduct(nextProduct));
+      setDefaultCost(String(savedCostPrice || ""));
+
       toast.success("บันทึกข้อมูลสินค้าเรียบร้อย");
       setIsEditingProduct(false);
-      await executeProductSearch();
       setTimeout(() => barcodeInputRef.current?.focus(), 50);
     } catch (err) {
       console.error("Quick edit product failed:", err);
@@ -444,10 +498,10 @@ const QuickStockPage = () => {
   };
 
   const handleDeleteSelectedProductForRecovery = async () => {
-    if (!selectedProduct?.id) return;
+    if (!operationalProduct?.id) return;
 
     const ok = window.confirm(
-      `ยืนยันลบสินค้าในช่วง Recovery?\n\n${selectedProduct.name}\n\nควรใช้เฉพาะรายการซ้ำ/ผิด และยังไม่มีประวัติรับเข้าเท่านั้น`
+      `ยืนยันลบสินค้าในช่วง Recovery?\n\n${operationalProduct.name}\n\nควรใช้เฉพาะรายการซ้ำ/ผิด และยังไม่มีประวัติรับเข้าเท่านั้น`
     );
     if (!ok) return;
 
@@ -459,7 +513,7 @@ const QuickStockPage = () => {
     setIsDeletingProduct(true);
 
     try {
-      const result = await deleteProductAction(selectedProduct.id);
+      const result = await deleteProductAction(operationalProduct.id);
       if (result === false) {
         toast.error("ลบสินค้าไม่สำเร็จ อาจมีประวัติใช้งานแล้ว");
         return;
@@ -484,6 +538,11 @@ const QuickStockPage = () => {
       return false;
     }
 
+    if (toMoneyNumber(defaultCost || priceForm.costPrice) <= 0) {
+      toast.error("ราคาทุนรับเข้าต้องมากกว่า 0 ก่อนรับเข้า");
+      return false;
+    }
+
     if (toMoneyNumber(priceForm.priceRetail) <= 0) {
       toast.error("ราคาขายปลีกต้องมากกว่า 0 ก่อนรับเข้า");
       return false;
@@ -501,11 +560,6 @@ const QuickStockPage = () => {
         toast.error(`แถว ${rowNo}: Barcode ห้ามว่าง`);
         return false;
       }
-
-      if (toMoneyNumber(item.costPrice) <= 0) {
-        toast.error(`แถว ${rowNo}: ราคาทุนต้องมากกว่า 0`);
-        return false;
-      }
     }
 
     return true;
@@ -514,37 +568,35 @@ const QuickStockPage = () => {
   const handleCommit = async () => {
     if (!validateBeforeCommit()) return;
 
-    const lastItem = barcodeQueue[barcodeQueue.length - 1];
+    const sessionCost = toMoneyNumber(defaultCost || priceForm.costPrice);
+
+    const cleanQueueItems = barcodeQueue.map((item) => ({
+      barcode: String(item.barcode || "").trim(),
+      serialNumber: String(item.serialNumber || "").trim() || null,
+    }));
 
     const payload = {
       productId: Number(selectedProduct.id),
       productName: selectedProduct.name,
       mode: "STRUCTURED",
       trackSerialNumber: !!selectedProduct.trackSerialNumber,
-      movementType,
-      refType: movementType,
+
+      // Runtime Intake v2:
+      // Frontend does not send movementType/source.
+      // Backend owns RECEIVE/source metadata.
       note,
-      quantity: barcodeQueue.length,
+      quantity: cleanQueueItems.length,
 
-      unitCost: toMoneyNumber(lastItem.costPrice),
-      costPrice: toMoneyNumber(lastItem.costPrice),
-
+      // Runtime Session Price is the single source of truth.
+      costPrice: sessionCost,
       priceRetail: toMoneyNumber(priceForm.priceRetail),
       priceWholesale: toMoneyNumber(priceForm.priceWholesale),
       priceTechnician: toMoneyNumber(priceForm.priceTechnician),
       priceOnline: toMoneyNumber(priceForm.priceOnline),
 
-      items: barcodeQueue.map((item) => ({
-        barcode: String(item.barcode || "").trim(),
-        serialNumber: String(item.serialNumber || "").trim() || null,
-        costPrice: toMoneyNumber(item.costPrice),
-      })),
-
-      barcodes: barcodeQueue.map((item) => ({
-        barcode: String(item.barcode || "").trim(),
-        serialNumber: String(item.serialNumber || "").trim() || null,
-        costPrice: toMoneyNumber(item.costPrice),
-      })),
+      // Queue Item contains only per-item identity.
+      items: cleanQueueItems,
+      barcodes: cleanQueueItems,
     };
 
     setIsCommitting(true);
@@ -572,11 +624,14 @@ const QuickStockPage = () => {
   };
 
   const readyCount = barcodeQueue.filter(
-    (item) => String(item.barcode || "").trim() && toMoneyNumber(item.costPrice) > 0
+    (item) => String(item.barcode || "").trim()
   ).length;
-  const needCostCount = barcodeQueue.length - readyCount;
-  const queueReady = barcodeQueue.length > 0 && needCostCount === 0;
-  const productReady = !!selectedProduct && toMoneyNumber(priceForm.priceRetail) > 0;
+  const needDataCount = barcodeQueue.length - readyCount;
+  const queueReady = barcodeQueue.length > 0 && needDataCount === 0;
+  const productReady =
+    !!selectedProduct &&
+    toMoneyNumber(defaultCost || priceForm.costPrice) > 0 &&
+    toMoneyNumber(priceForm.priceRetail) > 0;
 
   return (
     <div className="w-full min-h-screen bg-slate-50 p-4 xl:p-6 space-y-4">
@@ -644,7 +699,9 @@ const QuickStockPage = () => {
           />
 
           <ProductMasterPanel
-            selectedProduct={selectedProduct}
+            selectedProduct={operationalProduct}
+            selectedTemplateProduct={selectedTemplateProduct}
+            runtimeStatus={runtimeStatus}
             productTypes={productTypes}
             brands={brands}
             units={units}
@@ -655,9 +712,9 @@ const QuickStockPage = () => {
             isDeletingProduct={isDeletingProduct}
             onEditStart={() => setIsEditingProduct(true)}
             onEditCancel={() => {
-              setProductForm(buildProductFormFromProduct(selectedProduct));
-              setPriceForm(buildPriceFormFromProduct(selectedProduct));
-              setDefaultCost(buildPriceFormFromProduct(selectedProduct).costPrice || "");
+              setProductForm(buildProductFormFromProduct(operationalProduct));
+              setPriceForm(buildPriceFormFromProduct(operationalProduct));
+              setDefaultCost(buildPriceFormFromProduct(operationalProduct).costPrice || "");
               setIsEditingProduct(false);
             }}
             onSaveProduct={handleSaveProductInline}
@@ -678,19 +735,18 @@ const QuickStockPage = () => {
             setAutoFocusSerial={setAutoFocusSerial}
             defaultCost={defaultCost}
             setDefaultCost={setDefaultCost}
-            movementType={movementType}
-            setMovementType={setMovementType}
+            priceForm={priceForm}
+            onPriceFieldChange={updatePriceForm}
             note={note}
             setNote={setNote}
             isCommitting={isCommitting}
             onBarcodeSubmit={handleBarcodeSubmit}
-            onApplyDefaultCostToQueue={applyDefaultCostToQueue}
           />
 
           <QueueSummary
             total={barcodeQueue.length}
             readyCount={readyCount}
-            needCostCount={needCostCount}
+            needDataCount={needDataCount}
             productReady={productReady}
           />
 
@@ -700,7 +756,6 @@ const QuickStockPage = () => {
             barcodeInputRef={barcodeInputRef}
             onUpdateQueueItemField={updateQueueItemField}
             onRemoveQueueItem={removeQueueItem}
-            toMoneyNumber={toMoneyNumber}
           />
 
           <CommitBar
@@ -711,12 +766,6 @@ const QuickStockPage = () => {
             isCommitting={isCommitting}
             onResetQueue={resetQueue}
             onCommit={handleCommit}
-          />
-
-          <ImportTextarea
-            selectedProduct={selectedProduct}
-            importTextRef={importTextRef}
-            onImportText={handleImportText}
           />
         </div>
       </div>

@@ -3,7 +3,7 @@ import React from "react";
 const QueueSummary = ({
   total = 0,
   readyCount = 0,
-  needCostCount = 0,
+  needDataCount = 0,
   productReady = false,
 }) => {
   return (
@@ -17,13 +17,13 @@ const QueueSummary = ({
         <div className="text-2xl font-bold text-green-700">{readyCount}</div>
       </div>
       <div className="bg-white border rounded-2xl p-4">
-        <div className="text-xs text-gray-500">Need Cost</div>
-        <div className="text-2xl font-bold text-red-600">{needCostCount}</div>
+        <div className="text-xs text-gray-500">Need Barcode</div>
+        <div className="text-2xl font-bold text-red-600">{needDataCount}</div>
       </div>
       <div className="bg-white border rounded-2xl p-4">
-        <div className="text-xs text-gray-500">ราคาขายปลีก</div>
+        <div className="text-xs text-gray-500">ราคาทุน + ราคาปลีก</div>
         <div className={`text-lg font-bold ${productReady ? "text-green-700" : "text-red-600"}`}>
-          {productReady ? "พร้อมขาย" : "ยังไม่ครบ"}
+          {productReady ? "พร้อมรับเข้า" : "ยังไม่ครบ"}
         </div>
       </div>
     </section>

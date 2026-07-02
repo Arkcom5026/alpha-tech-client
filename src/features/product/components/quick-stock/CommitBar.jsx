@@ -21,7 +21,7 @@ const CommitBar = ({
       <div>
         <div className="font-semibold text-gray-800">สรุปก่อนบันทึก</div>
         <div className="text-xs text-gray-500">
-          {barcodeQueue.length} รายการใน Queue · ราคาขายปลีก {productReady ? "พร้อม" : "ยังไม่ครบ"} · ราคาทุน {queueReady ? "ครบ" : "ยังไม่ครบ"}
+          {barcodeQueue.length} รายการใน Queue · ราคาทุน/ราคาปลีก {productReady ? "พร้อม" : "ยังไม่ครบ"} · Queue {queueReady ? "พร้อม" : "ยังไม่ครบ"}
         </div>
       </div>
 
@@ -40,7 +40,7 @@ const CommitBar = ({
           disabled={!canCommit}
           onClick={onCommit}
         >
-          {isCommitting ? "กำลังบันทึก..." : `Commit Recovery ${barcodeQueue.length} รายการ`}
+          {isCommitting ? "กำลังบันทึก..." : `Commit ${barcodeQueue.length} รายการ`}
         </button>
       </div>
     </section>

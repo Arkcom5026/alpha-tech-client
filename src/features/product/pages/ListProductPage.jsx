@@ -70,8 +70,7 @@ export default function ListProductPage() {
 
   const {
     products,
-    fetchProductsAction,
-    fetchProducts,
+    fetchOperationalProductsAction,
     dropdowns,
     dropdownsLoaded,
     ensureDropdownsAction,
@@ -79,9 +78,12 @@ export default function ListProductPage() {
     deleteProduct,
   } = useProductStore();
 
-  // ✅ SUPERADMIN: ไม่อ้างอิงสาขา แต่ยังต้องสามารถโหลด “Global products” ได้
+  // ✅ Catalog Ownership Rule:
+  // ListProductPage เป็น Operational Catalog Surface เสมอ
+  // SUPERADMIN มีสิทธิ์จัดการมากกว่า แต่ไม่ควรเปลี่ยนไปใช้ Global/Template Catalog
+  // เพื่อป้องกัน Template Product หลุดเข้า Product List
   // IMPORTANT: ต้องประกาศหลัง destructure store เพื่อกัน TDZ
-  const fetchForList = isSuperAdmin ? fetchProducts : fetchProductsAction;
+  const fetchForList = fetchOperationalProductsAction;
 
   // ✅ Step 1: เราใช้ allProducts เป็นแหล่งข้อมูลหลักในหน้านี้ (products ใน store จะถูก overwrite ทีละหน้า)
   // eslint-disable-next-line no-unused-vars
@@ -94,7 +96,7 @@ export default function ListProductPage() {
 
   useEffect(() => {
     if (!hasLoaded) return;
-    if (!isSuperAdmin && !branchId) return;
+    if (!branchId) return;
     if (dropdownsLoaded === true) return;
 
     // reset เมื่อสลับสาขา
@@ -295,7 +297,7 @@ export default function ListProductPage() {
   // ✅ Step 1: โหลดสินค้าทั้งหมด (วนทีละหน้า) แล้วเก็บไว้ที่ allProducts
   // IMPORTANT: ต้องประกาศก่อน useEffect ที่อ้างถึง เพื่อกัน TDZ (Temporal Dead Zone)
   const loadAllProductsOnce = useCallback(async () => {
-    if (!isSuperAdmin && !branchId) return;
+    if (!branchId) return;
     if (loadingAllRef.current) return;
 
     loadingAllRef.current = true;
@@ -352,7 +354,10 @@ export default function ListProductPage() {
           const bp = Array.isArray(p?.branchPrice) ? p.branchPrice[0] : p?.branchPrice;
           const sb = Array.isArray(p?.stockBalances) ? p.stockBalances[0] : p?.stockBalances;
 
-          const typeName = p?.productType?.name ?? p?.productTypeName ?? p?.typeName ?? p?.product_type_name ?? null;
+          const typeName =
+            typeof p?.productType === 'string'
+              ? p.productType
+              : p?.productType?.name ?? p?.productTypeName ?? p?.typeName ?? p?.product_type_name ?? null;
           const profileName = p?.productProfile?.name ?? p?.profileName ?? p?.product_profile_name ?? null;
           const templateName = p?.template?.name ?? p?.templateName ?? p?.template_name ?? null;
 
@@ -414,7 +419,7 @@ export default function ListProductPage() {
   // แต่จะเริ่มทำงานหลังผู้ใช้กด “แสดงข้อมูล” เท่านั้น
   useEffect(() => {
     if (!hasLoaded) return;
-    if (!isSuperAdmin && !branchId) return;
+    if (!branchId) return;
     loadAllProductsOnce();
   }, [isSuperAdmin, branchId, hasLoaded, loadAllProductsOnce]);
 
@@ -422,7 +427,7 @@ export default function ListProductPage() {
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const refresh = params.get('refresh');
-    if (refresh && (isSuperAdmin || branchId)) {
+    if (refresh && branchId) {
       loadAllProductsOnce();
       params.delete('refresh');
       navigate({ pathname: location.pathname, search: params.toString() }, { replace: true });
@@ -681,6 +686,7 @@ export default function ListProductPage() {
             canDelete={isSuperAdmin}
             density={density}
             showAllPrices={showAllPrices}
+            productTypes={dropdowns?.productTypes || []}
             hideCategory
           />
         </div>

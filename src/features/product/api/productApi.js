@@ -305,6 +305,29 @@ export const quickStockInAllInOneApi = async (payload) => {
   }
 };
 
+
+// ==================================================
+// RUNTIME PRODUCT LOOKUP
+// หา Operational Product ของ Branch ปัจจุบันจาก Template Product
+// ==================================================
+export const getOperationalProductByTemplateId = async (templateProductId) => {
+  try {
+    if (!templateProductId) {
+      const e = new Error('ไม่พบ templateProductId');
+      e.code = 'TEMPLATE_PRODUCT_ID_MISSING';
+      throw e;
+    }
+
+    const { data } = await apiClient.get(`products/pos/runtime-by-template/${templateProductId}`, {
+      params: { _ts: Date.now() },
+    });
+
+    return data;
+  } catch (err) {
+    throw parseApiError(err);
+  }
+};
+
 // ==================================================
 // QUICK STOCK EXISTING PRODUCT INTAKE
 // รับสินค้าเข้าจาก Product เดิม: Recovery / Quick Receive / Manufacture
@@ -314,7 +337,42 @@ export const quickReceiveExistingProductApi = async (payload) => {
     if (import.meta.env?.DEV) console.log('[productApi] quickReceiveExistingProductApi payload', payload);
 
     const sanitizedPayload = { ...payload };
+
+    // Security / Runtime Contract:
+    // branchId และ movementType ต้องถูกกำหนดโดย Backend จาก session/runtime context เท่านั้น
     delete sanitizedPayload.branchId;
+    delete sanitizedPayload.movementType;
+    delete sanitizedPayload.source;
+
+    // Quick Receive Runtime v2:
+    // Queue Item ต้องมีเฉพาะ barcode / serialNumber
+    // ราคาทั้งหมดอยู่ระดับ Runtime Session เท่านั้น
+    const queue = Array.isArray(payload?.items)
+      ? payload.items
+      : Array.isArray(payload?.queue)
+        ? payload.queue
+        : Array.isArray(payload?.barcodes)
+          ? payload.barcodes
+          : [];
+
+    const cleanItems = queue
+      .map((item) => {
+        if (typeof item === 'string') {
+          return {
+            barcode: item.trim(),
+            serialNumber: null,
+          };
+        }
+
+        return {
+          barcode: String(item?.barcode || item?.code || '').trim(),
+          serialNumber: item?.serialNumber || item?.sn || null,
+        };
+      })
+      .filter((item) => item.barcode);
+
+    sanitizedPayload.items = cleanItems;
+    sanitizedPayload.barcodes = cleanItems;
 
     const { data } = await apiClient.post('quick-stock/existing', sanitizedPayload);
     return data;
@@ -322,6 +380,45 @@ export const quickReceiveExistingProductApi = async (payload) => {
     throw parseApiError(err);
   }
 };
+
+// ==================================================
+// TEMPLATE PRODUCT SEARCH / INTAKE CATALOG
+// ใช้เฉพาะ QuickStock / PO / Recovery / Clone Flow
+// ห้ามใช้กับ Product List / Product Detail / Store Runtime
+// ==================================================
+export const searchTemplateProducts = async (filters = {}) => {
+  try {
+    const sanitized = Object.fromEntries(
+      Object.entries(filters).filter(
+        ([, value]) => value !== '' && value !== undefined && value !== null
+      )
+    );
+
+    // Security: ไม่ให้ FE ส่ง branchId เอง
+    delete sanitized.branchId;
+
+    // Runtime Catalog Separation:
+    // Template Catalog ต้องยิงเข้า endpoint แยกโดยตรง
+    // ไม่ใช้ products/pos/search?template=true อีกต่อไป
+    delete sanitized.template;
+
+    const params = {
+      ...sanitized,
+      _ts: Date.now(),
+    };
+
+    const { data } = await apiClient.get('products/template/search', {
+      params,
+    });
+
+    return data;
+  } catch (err) {
+    throw parseApiError(err);
+  }
+};
+
+// Backward-compatible alias for current QuickStockPage / legacy callers
+export const getTemplateProductsForPos = searchTemplateProducts;
 
 // Backward-compatible alias for current QuickStockPage
 export const quickStockIntakeExistingApi = quickReceiveExistingProductApi;

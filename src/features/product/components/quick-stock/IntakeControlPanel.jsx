@@ -10,20 +10,30 @@ const IntakeControlPanel = ({
   setAutoFocusSerial,
   defaultCost,
   setDefaultCost,
-  movementType,
-  setMovementType,
+  priceForm = {},
+  onPriceFieldChange,
   note,
   setNote,
   isCommitting,
   onBarcodeSubmit,
-  onApplyDefaultCostToQueue,
 }) => {
+  const updatePrice = (field, value) => {
+    if (typeof onPriceFieldChange === "function") {
+      onPriceFieldChange(field, value);
+    }
+  };
+
+  const handleCostChange = (value) => {
+    setDefaultCost(value);
+    updatePrice("costPrice", value);
+  };
+
   return (
     <section className="bg-white rounded-2xl shadow-sm border p-5 space-y-4">
       <div className="border-b pb-3">
         <h2 className="font-semibold text-gray-800">2. รับสินค้าเข้า</h2>
         <p className="text-xs text-gray-500">
-          ยิง Barcode / Serial และกำหนดราคาทุนจริงของสินค้าชิ้นนั้น
+          1 รอบรับเข้า = 1 สินค้า · กำหนดราคาทุนและราคาขายของรอบนี้ แล้วสแกน Barcode / Serial
         </p>
       </div>
 
@@ -38,60 +48,84 @@ const IntakeControlPanel = ({
         onBarcodeSubmit={onBarcodeSubmit}
       />
 
-      <div className="grid grid-cols-1 xl:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 xl:grid-cols-5 gap-3">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">ราคาทุนรับเข้า *</label>
           <input
             type="number"
             className="w-full border rounded-lg p-2"
             value={defaultCost}
-            onChange={(event) => setDefaultCost(event.target.value)}
+            onChange={(event) => handleCostChange(event.target.value)}
             placeholder="เช่น 120"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">ประเภทการรับเข้า</label>
-          <select
-            className="w-full border rounded-lg p-2 bg-white"
-            value={movementType}
-            onChange={(event) => setMovementType(event.target.value)}
-          >
-            <option value="RECOVERY_RECEIVE">RECOVERY_RECEIVE</option>
-            <option value="QUICK_RECEIVE">QUICK_RECEIVE</option>
-            <option value="RECEIVE">RECEIVE</option>
-            <option value="MANUFACTURE">MANUFACTURE</option>
-          </select>
+          <label className="block text-sm font-medium text-gray-700 mb-1">ราคาขายปลีก *</label>
+          <input
+            type="number"
+            className="w-full border rounded-lg p-2"
+            value={priceForm.priceRetail || ""}
+            onChange={(event) => updatePrice("priceRetail", event.target.value)}
+            placeholder="เช่น 250"
+          />
         </div>
 
-        <div className="xl:col-span-2 flex items-end gap-2">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">ราคาส่ง</label>
+          <input
+            type="number"
+            className="w-full border rounded-lg p-2"
+            value={priceForm.priceWholesale || ""}
+            onChange={(event) => updatePrice("priceWholesale", event.target.value)}
+            placeholder="Optional"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">ราคาช่าง</label>
+          <input
+            type="number"
+            className="w-full border rounded-lg p-2"
+            value={priceForm.priceTechnician || ""}
+            onChange={(event) => updatePrice("priceTechnician", event.target.value)}
+            placeholder="Optional"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">ราคาออนไลน์</label>
+          <input
+            type="number"
+            className="w-full border rounded-lg p-2"
+            value={priceForm.priceOnline || ""}
+            onChange={(event) => updatePrice("priceOnline", event.target.value)}
+            placeholder="Optional"
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-4 gap-3">
+        <div className="xl:col-span-3">
+          <label className="block text-sm font-medium text-gray-700 mb-1">หมายเหตุ</label>
+          <input
+            className="w-full border rounded-lg p-2"
+            value={note}
+            onChange={(event) => setNote(event.target.value)}
+            placeholder="Optional"
+          />
+        </div>
+
+        <div className="flex items-end">
           <button
             type="button"
-            className="flex-1 border rounded-lg p-2 hover:bg-gray-50"
+            className="w-full border rounded-lg p-2 hover:bg-gray-50"
             onClick={() => barcodeInputRef.current?.focus()}
           >
             Focus Scanner
           </button>
-          <button
-            type="button"
-            className="flex-1 border rounded-lg p-2 hover:bg-gray-50"
-            onClick={onApplyDefaultCostToQueue}
-          >
-            ใช้ทุนนี้กับ Queue
-          </button>
         </div>
       </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">หมายเหตุ</label>
-        <input
-          className="w-full border rounded-lg p-2"
-          value={note}
-          onChange={(event) => setNote(event.target.value)}
-        />
-      </div>
-
-
     </section>
   );
 };

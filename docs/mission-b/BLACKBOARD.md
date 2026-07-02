@@ -15,7 +15,7 @@ This file is the shared blackboard for Mission B.
 
 Any new task assigned to Mission B should read this file first to understand the current mission, scope, rules, and assigned work.
 
-Tasks do not communicate with each other. The user coordinates all task reports. ROLE-ARCH defines mission packages and reviews results.
+Tasks do not communicate with each other. The user coordinates all task reports. ROLE-ARCH defines work packages and reviews results.
 
 ---
 
@@ -44,18 +44,79 @@ Implementation remains locked until discovery reports are reviewed and approved.
 
 ---
 
-## 4. Active Roles
+## 4. Task Registry
+
+### ROLE-ARCH
+
+Task Name: Architect / Mission Controller Support
+Status: ACTIVE
+Current Work: WP-003 Product Onboarding Gap Analysis
+Responsibility:
+- Mission planning
+- Work package creation
+- Review
+- Decision
+- Certification
+- Blackboard updates
+
+---
+
+### TASK-01
+
+Task Name: Runtime Analysis Squad
+Role: ROLE-RUNTIME
+Status: WAITING
+Last Completed Work: WP-001 Runtime Discovery
+Last Report: docs/mission-b/inbox/RT-001.md
+Responsibility:
+- Runtime Flow
+- API Flow
+- Store Flow
+- State Flow
+- Component Runtime
+- Frontend Runtime behavior
+
+Not responsible for:
+- UX
+- User Journey
+- UI Review
+
+---
+
+### TASK-02
+
+Task Name: User Journey Squad
+Role: ROLE-RUNTIME
+Status: WAITING
+Last Completed Work: WP-002 User Flow Discovery
+Last Report: docs/mission-b/inbox/UI-001.md
+Responsibility:
+- User Journey
+- Screen Flow
+- Navigation
+- User Decision
+- UX risk
+- User expectation
+
+Not responsible for:
+- API
+- Store
+- Backend
+
+---
+
+## 5. Active Roles
 
 ### ROLE-ARCH
 
 Status: ACTIVE
 
 Responsibilities:
-- Define mission packages.
+- Define work packages.
 - Define scope and deliverables.
 - Review reports from Git inbox.
 - Identify risks.
-- Decide next mission package.
+- Decide next work package.
 - Keep implementation locked until approved.
 
 Restrictions:
@@ -69,10 +130,9 @@ Status: ACTIVE
 
 Responsibilities:
 - Inspect only assigned runtime files.
-- Map runtime flow.
+- Map runtime flow or user journey according to assigned squad responsibility.
 - Identify entry points and exit points.
-- Identify API calls and store mutations.
-- Identify missing runtime behavior.
+- Identify missing runtime or missing user flow.
 - Submit findings to Git inbox.
 
 Restrictions:
@@ -94,7 +154,7 @@ Restrictions:
 
 ---
 
-## 5. Reserved Future Roles
+## 6. Reserved Future Roles
 
 These roles are not active yet:
 
@@ -107,81 +167,24 @@ Open only when evidence from B1 shows the role is needed.
 
 ---
 
-## 6. Mission Package B1-001
+## 7. Current Work Package Status
 
-Mission ID: B1-001
-Mission Name: Product Onboarding Flow Discovery
-Assigned Role: ROLE-RUNTIME
-Implementation: LOCKED
+| Work Package | Owner | Status | Report |
+|---|---|---|---|
+| WP-001 Runtime Discovery | TASK-01 Runtime Analysis Squad | COMPLETE / APPROVED | docs/mission-b/inbox/RT-001.md |
+| WP-002 User Flow Discovery | TASK-02 User Journey Squad | COMPLETE / APPROVED | docs/mission-b/inbox/UI-001.md |
+| WP-003 Product Onboarding Gap Analysis | ROLE-ARCH | ACTIVE | docs/mission-b/inbox/GAP-001.md |
 
-Objective:
-Understand the current product onboarding runtime from Template Search to Operational Product readiness.
-
-Files to inspect:
+Current assignment:
 
 ```txt
-QuickStockPage
-ProductFinderPanel
-productStore
-productApi
+No new assignment for TASK-01 or TASK-02.
+ROLE-ARCH is responsible for WP-003 synthesis.
 ```
-
-Search targets:
-
-```txt
-template/search
-runtimeSearchProducts
-ProductFinderPanel
-QuickStockPage
-clone
-BranchPrice
-branchPrice
-productStore
-productApi
-```
-
-Questions to answer:
-
-1. Where does product onboarding start?
-2. Which component owns Template Search?
-3. Which API endpoint is used for Template Search?
-4. Where does clone or create-from-template happen?
-5. When is Operational Product created?
-6. When is BranchPrice created?
-7. Is Stock created or only prepared for receiving?
-8. Why can a branch not create its own product yet?
-9. Which runtime path is missing or incomplete?
-10. What files are likely affected if this flow is completed?
-
-Expected report:
-
-```txt
-RT-001 Report
-
-1. Runtime Flow
-2. Entry Point
-3. Exit Point
-4. API Calls
-5. Store Updates
-6. Missing Runtime
-7. Risks
-8. Next Recommended Inspection
-```
-
-Report destination:
-
-```txt
-docs/mission-b/inbox/RT-001.md
-```
-
-ROLE-RUNTIME should create or update the report in Git and notify the user only with the file path and commit SHA.
-
-Exit criteria:
-ROLE-RUNTIME can explain the product onboarding flow from Template Search to branch operational readiness without guessing.
 
 ---
 
-## 7. Mission Inbox Workflow
+## 8. Mission Inbox Workflow
 
 Goal:
 Allow tasks to send reports through Git so the user does not need to copy/paste reports between tasks.
@@ -191,9 +194,9 @@ Workflow:
 ```txt
 ROLE-ARCH updates BLACKBOARD.md
   ↓
-User opens assigned task
+User sends assignment to the named task
   ↓
-Assigned task reads BLACKBOARD.md
+Assigned task reads BLACKBOARD.md and assigned WP file
   ↓
 Assigned task performs discovery
   ↓
@@ -213,7 +216,7 @@ Inbox rules:
 
 ---
 
-## 8. Current Working Rules
+## 9. Current Working Rules
 
 1. Product Template is for search and clone source only.
 2. Operational Product is the store runtime source of truth.
@@ -223,10 +226,11 @@ Inbox rules:
 6. One file at a time for future implementation.
 7. Minimal patch only when implementation is approved.
 8. Task reports should be sent through Git inbox when possible.
+9. Task assignment must name the exact task owner: TASK-01, TASK-02, or ROLE-ARCH.
 
 ---
 
-## 9. Current Success Criteria
+## 10. Current Success Criteria
 
 Mission B succeeds when a branch can:
 
@@ -250,19 +254,13 @@ Ready for branch operation
 
 ---
 
-## 10. Handoff Instruction For New Tasks
+## 11. Handoff Instruction For New Tasks
 
 New Mission B tasks should start with:
 
 ```txt
 Read docs/mission-b/BLACKBOARD.md
-Then report your role, assigned mission package, implementation lock status, files in scope, expected deliverables, and report destination.
-```
-
-After completing the assigned discovery, write the report to:
-
-```txt
-docs/mission-b/inbox/RT-001.md
+Then report your task name, role, current assignment, implementation lock status, files in scope, expected deliverables, and report destination.
 ```
 
 Do not begin implementation unless the blackboard explicitly says Implementation: APPROVED.

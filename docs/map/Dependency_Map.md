@@ -1,6 +1,6 @@
 # P1 Dependency Map — Frontend Architecture Certification
 
-Status: DRAFT / PERMISSION HELPERS VERIFIED
+Status: DRAFT / STAFF + LOGOUT SURFACES VERIFIED
 Scope: Frontend only
 Repository: alpha-tech-client
 Active Blueprint: `docs/blueprint/Active_Blueprint.md`
@@ -54,6 +54,10 @@ This document is not a refactor plan yet.
 - `src/hooks/usePermission.js`
 - `src/components/auth/RequirePermission.jsx`
 - `src/components/auth/IfPermission.jsx`
+- `src/features/auth/pages/StaffSettingsPage.jsx`
+- `src/components/LogoutButton.jsx`
+- `src/components/common/UnifiedMainNav.jsx`
+- `src/features/superadmin/sidebar/SidebarSuperAdmin.jsx`
 
 ### Related Focused Verification
 
@@ -200,16 +204,17 @@ Interpretation:
 
 - LoginPage is the main POS/partner login entry.
 - Online order LoginForm also calls auth login behavior.
-- StaffSettingsPage may read employee/branch identity and requires detailed review.
+- StaffSettingsPage reads employee from authStore and checks `isAdminOrAboveSelector` for UI-level access.
 
 Risk:
 
 - Login behavior affects both POS and online checkout login surfaces.
 - Do not assume Login/Auth is POS-only.
+- StaffSettingsPage is UI-gated by authStore selector, not by route guard.
 
 ---
 
-### 4.3 POS Shell / Navigation Consumers
+### 4.3 POS / Shared Shell / Navigation Consumers
 
 ```txt
 src/features/pos/components/header/HeaderPos.jsx
@@ -221,13 +226,16 @@ src/features/superadmin/sidebar/SidebarSuperAdmin.jsx
 Interpretation:
 
 - HeaderPos displays session and triggers logout.
-- UnifiedMainNav and LogoutButton may also trigger session changes.
-- SidebarSuperAdmin uses logout/session state for the superadmin surface.
+- UnifiedMainNav triggers logout and logout-all-devices for online/shared navigation.
+- LogoutButton calls `state.logout`, not `logoutAction`, and redirects to `/login`.
+- SidebarSuperAdmin calls `logoutAction` but does not navigate itself.
 
 Risk:
 
 - Logout behavior is not isolated to one component.
 - A logout refactor must identify every caller, not only HeaderPos.
+- `LogoutButton` may be stale or incompatible if authStore no longer exposes `logout`.
+- Logout redirects differ across surfaces: `/`, `/login`, or internal logoutAction behavior.
 
 ---
 
@@ -396,10 +404,13 @@ src/features/superadmin/sidebar/SidebarSuperAdmin.jsx
 Interpretation:
 
 - Logout has multiple UI triggers.
+- UnifiedMainNav also calls `logoutAllDevicesAction`.
+- LogoutButton uses `logout`, not `logoutAction`.
 
 Risk:
 
 - Logout clean-state work must be coordinated with branchStore clearing and redirects.
+- Naming inconsistency between `logout`, `logoutAction`, and `logoutAllDevicesAction` must be verified in authStore before any cleanup.
 
 ---
 
@@ -428,7 +439,7 @@ Risk:
 
 ---
 
-### 6.2 POS Shell Consumers
+### 6.2 POS / Shared Shell Consumers
 
 ```txt
 src/features/pos/components/header/HeaderPos.jsx
@@ -439,10 +450,12 @@ Interpretation:
 
 - Header and navigation display branch context.
 - Header may also trigger branch loading or clearing.
+- UnifiedMainNav clears branch storage via `clearStorage` during online/shared logout.
 
 Risk:
 
 - POS branch display must follow logged-in employee branch, not arbitrary selected branch.
+- Branch cleanup names differ across surfaces and require verification: `clearBranch`, `clearStorage`.
 
 ---
 
@@ -724,11 +737,13 @@ Known consumers include:
 src/features/auth/pages/StaffSettingsPage.jsx
 ```
 
-Also documented in existing maps, but direct runtime usage appears limited from initial search.
+Verified use:
+
+- StaffSettingsPage displays `@employee.branchSlug` or fallback `สาขาหลัก`.
 
 Risk:
 
-- URL `shopSlug` is widely used while `employee.branchSlug` direct search appears limited.
+- URL `shopSlug` is widely used while `employee.branchSlug` direct runtime usage appears limited.
 - This suggests slug canonicalization needs deeper route-level review.
 
 ---
@@ -781,9 +796,10 @@ Risk:
 - `src/features/pos/components/header/HeaderPos.jsx`
 - `src/routes/AppRouter.jsx`
 - `src/features/auth/components/ProtectedRoute.jsx` if mounted later
+- Logout surfaces using inconsistent actions or redirects
 
 Reason:
-These files sit at runtime entry, identity, branch context, transport, shell, or guard level.
+These files sit at runtime entry, identity, branch context, transport, shell, guard, or session cleanup level.
 
 ---
 
@@ -797,9 +813,10 @@ These files sit at runtime entry, identity, branch context, transport, shell, or
 - `src/features/employee/store/employeeStore.js` compatibility fields.
 - `src/store/rootStore.js` if still imported anywhere.
 - `src/utils/branchHelpers.js` because it may contain stale branch imports/field names.
+- `src/features/auth/pages/StaffSettingsPage.jsx` because it is UI-gated, not route-gated.
 
 Reason:
-These files are runtime consumers or compatibility surfaces and may break if store shape or branch ownership changes.
+These files are runtime consumers or compatibility surfaces and may break if store shape, permission logic, or branch ownership changes.
 
 ---
 
@@ -878,6 +895,41 @@ Impact:
 
 ---
 
+### DISC-FE-LOGOUT-001 — Logout behavior is split across multiple surfaces
+
+Status: VERIFIED BY FILE READ
+
+Evidence:
+
+- UnifiedMainNav calls `logoutAction`, clears cart, clears branch storage, then navigates to `/`.
+- UnifiedMainNav also calls `logoutAllDevicesAction`.
+- LogoutButton calls `logout`, then navigates to `/login`.
+- SidebarSuperAdmin calls `logoutAction` but does not navigate.
+
+Impact:
+
+- Logout must be standardized before Auth cleanup.
+- Need to verify actual authStore action names and route expectations.
+
+---
+
+### DISC-FE-STAFF-001 — StaffSettingsPage uses authStore UI-gating
+
+Status: VERIFIED BY FILE READ
+
+Evidence:
+
+- StaffSettingsPage reads `employee` from authStore.
+- StaffSettingsPage reads `isAdminOrAboveSelector` from authStore.
+- If not admin-or-above, it renders access-denied UI instead of redirecting.
+
+Impact:
+
+- Staff access is UI-gated at page level, not route-guarded.
+- Role selector semantics must remain stable until authorization is redesigned.
+
+---
+
 ## 12. Open Questions
 
 1. Is `rootStore.js` still imported by active components?
@@ -888,6 +940,8 @@ Impact:
 6. Does any print page bypass normal bootstrap assumptions?
 7. Should `shopSlug` be derived from logged-in branch or remain URL-driven?
 8. Which old components still read deprecated employeeStore compatibility fields?
+9. Does authStore expose `logout`, `logoutAction`, and `logoutAllDevicesAction`, or are some callers stale?
+10. Does branchStore expose both `clearBranch` and `clearStorage`, or are some callers stale?
 
 ---
 
@@ -896,10 +950,10 @@ Impact:
 Open and review these files next:
 
 ```txt
-src/features/auth/pages/StaffSettingsPage.jsx
-src/components/LogoutButton.jsx
-src/components/common/UnifiedMainNav.jsx
-src/features/superadmin/sidebar/SidebarSuperAdmin.jsx
+src/features/auth/store/authStore.js
+src/features/branch/store/branchStore.js
+src/features/pos/components/header/HeaderPos.jsx
+src/features/auth/components/SubEmployeeManager.jsx
 ```
 
 Search next:
@@ -915,6 +969,8 @@ useEmployeeStore.getState
 setSession
 clearSession
 setEmployee
+logoutAllDevicesAction
+clearStorage
 ```
 
 After that, update this map with verified READ / WRITE / MUTATE classifications.
@@ -938,5 +994,7 @@ employeeStore documents itself as HR/Employee Management only and should not be 
 branchHelpers appears online/geo branch selection oriented and may have stale import/field assumptions.
 
 Permission helpers exist but appear dormant and currently derive identity from employeeStore/customerStore instead of authStore.
+
+Logout behavior is split across multiple surfaces and must be standardized before Auth cleanup.
 
 Therefore, the current Login/Auth stabilization must continue as read-only architecture mapping before any refactor.

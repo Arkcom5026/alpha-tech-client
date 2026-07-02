@@ -1,6 +1,6 @@
 # P1 Dependency Map — Frontend Architecture Certification
 
-Status: DRAFT / STAFF + LOGOUT SURFACES VERIFIED
+Status: DRAFT / AUTH + BRANCH + POS HEADER VERIFIED
 Scope: Frontend only
 Repository: alpha-tech-client
 Active Blueprint: `docs/blueprint/Active_Blueprint.md`
@@ -58,6 +58,9 @@ This document is not a refactor plan yet.
 - `src/components/LogoutButton.jsx`
 - `src/components/common/UnifiedMainNav.jsx`
 - `src/features/superadmin/sidebar/SidebarSuperAdmin.jsx`
+- `src/features/auth/store/authStore.js`
+- `src/features/branch/store/branchStore.js`
+- `src/features/pos/components/header/HeaderPos.jsx`
 
 ### Related Focused Verification
 
@@ -83,17 +86,19 @@ Primary file:
 src/features/auth/store/authStore.js
 ```
 
-Current role:
+Verified role:
 
-- Owns token/session state.
-- Owns role/profile identity state.
-- Owns employee/customer identity state.
-- Exposes login, verify, bootstrap, logout, and reset actions.
+- Owns token/session state: `token`, `accessToken`, `session`, `rememberMe`, `lastLoginIdentifier`.
+- Owns identity state: `role`, `profileType`, `employee`, `customer`, `isSuperAdmin`.
+- Owns auth lifecycle actions: `loginAction`, `verifySessionAction`, `bootstrapAuthAction`, `logout`, `logoutAction`, `logoutAllDevicesAction`, `resetAuthStateAction`.
+- Imports `apiClient` and calls `/auth/me`, `/auth/refresh`, and `/auth/add-sub-employee` through frontend transport.
+- Imports `useBranchStore` and calls `loadAndSetBranchById` after login/verify when branchId exists.
+- Persists only `rememberMe` and `lastLoginIdentifier`.
 
 Current risk:
 
-- High impact. Many files import or read `useAuthStore`.
-- Must not refactor until dependency categories are verified.
+- HIGH. AuthStore controls app bootstrap, login, verify, refresh, logout, identity, and branch handoff.
+- Any AuthStore refactor can affect both POS and online customer flows.
 
 ---
 
@@ -105,16 +110,18 @@ Primary file:
 src/features/branch/store/branchStore.js
 ```
 
-Current role:
+Verified role:
 
-- Owns `currentBranch`.
-- Owns `selectedBranchId`.
-- Owns branch loading and branch selection behavior.
+- Owns `branches`, `currentBranch`, `selectedBranchId`, and `version`.
+- Owns loading branch list and branch by id.
+- Owns online branch auto-selection through geolocation and last-selected localStorage key.
+- Owns `clearBranch` and `clearStorage`.
+- Persists `currentBranch`, `selectedBranchId`, and `version`.
 
 Current risk:
 
-- High impact for POS because POS branch truth must not drift from logged-in employee branch.
-- Online branch selection and POS branch identity must be separated clearly.
+- HIGH. BranchStore mixes POS branch detail handoff from authStore with online branch auto-selection behavior.
+- POS identity branch must not drift from logged-in employee branch.
 
 ---
 
@@ -134,7 +141,7 @@ Current role:
 
 Current risk:
 
-- Very high impact. Most API modules depend on `apiClient`.
+- VERY HIGH. Most API modules depend on `apiClient`.
 - Changes here can affect every feature surface.
 
 ---
@@ -226,6 +233,8 @@ src/features/superadmin/sidebar/SidebarSuperAdmin.jsx
 Interpretation:
 
 - HeaderPos displays session and triggers logout.
+- HeaderPos reads `employee`, `user`, `logoutAction`, `isAuthenticatedSelector`, and `role` from authStore.
+- HeaderPos reads `currentBranch.name`, `selectedBranchId`, `clearBranch`, and `loadAndSetBranchById` from branchStore.
 - UnifiedMainNav triggers logout and logout-all-devices for online/shared navigation.
 - LogoutButton calls `state.logout`, not `logoutAction`, and redirects to `/login`.
 - SidebarSuperAdmin calls `logoutAction` but does not navigate itself.
@@ -234,8 +243,9 @@ Risk:
 
 - Logout behavior is not isolated to one component.
 - A logout refactor must identify every caller, not only HeaderPos.
-- `LogoutButton` may be stale or incompatible if authStore no longer exposes `logout`.
-- Logout redirects differ across surfaces: `/`, `/login`, or internal logoutAction behavior.
+- `logoutAction` already forces `window.location.href = '/login'`, so components that call it and also navigate may create competing redirects.
+- `LogoutButton` uses `logout`, which exists, but has different redirect ownership than `logoutAction`.
+- HeaderPos branch reload logic currently uses `selectedBranchId`, not directly `employee.branchId`, which may drift from POS login identity branch.
 
 ---
 
@@ -330,87 +340,85 @@ Risk:
 
 ---
 
-## 5. AuthStore Action Dependency Inventory
+## 5. AuthStore Lifecycle Inventory
 
 ### 5.1 `bootstrapAuthAction`
 
-Known consumers:
+Verified behavior:
 
-```txt
-src/App.jsx
-src/features/auth/store/authStore.js
-```
-
-Interpretation:
-
-- App-level bootstrap appears centralized.
+- Sets `isBootstrappingAuth=true`.
+- If access token already exists in memory, calls `verifySessionAction`.
+- If no token exists, calls `/auth/refresh` through `apiClient.post`.
+- If refresh returns accessToken, stores token/session and then calls `verifySessionAction`.
+- If refresh returns 401/403, clears token/accessToken and marks `authChecked=true`.
 
 Risk:
 
-- If bootstrap changes, initial page rendering and refresh recovery are affected.
+- Bootstrap depends on refresh cookie/backend behavior.
+- Since authStore persists only rememberMe and lastLoginIdentifier, reload recovery depends on `/auth/refresh` and cookie transport.
 
 ---
 
 ### 5.2 `verifySessionAction`
 
-Known consumers:
+Verified behavior:
 
-```txt
-src/features/auth/store/authStore.js
-```
-
-Interpretation:
-
-- Verify appears internally owned by authStore.
+- Requires in-memory `accessToken || token`.
+- Calls `/auth/me` through apiClient.
+- Derives effective role/profile from server role, profile type, employee position, and branch data.
+- Requires branchId for `employee` or `admin` before POS access.
+- Builds `employee` or `customer` identity object in authStore.
+- Calls `branchStore.loadAndSetBranchById(branchId)` if branchId exists.
+- On error, it does not force reset for 401 to allow apiClient silent refresh path, but sets `authChecked=false`.
 
 Risk:
 
-- Good isolation, but must read implementation before changing refresh/verify flow.
+- `authChecked=false` after verify failure may make UI look unauthenticated even if apiClient is trying to refresh.
+- Role/position derivation is central and affects StaffSettingsPage, HeaderPos, and future permission gates.
 
 ---
 
 ### 5.3 `loginAction`
 
-Known consumers:
+Verified behavior:
 
-```txt
-src/features/auth/pages/LoginPage.jsx
-src/features/online/order/components/LoginForm.jsx
-src/features/auth/store/authStore.js
-```
-
-Interpretation:
-
-- Login is shared by POS/partner login and online checkout login.
+- Calls `loginUser(credentials)`.
+- Derives effective role/profile type similarly to verify.
+- Requires branchId for employee/admin.
+- Stores token/accessToken/session/identity.
+- Calls `branchStore.loadAndSetBranchById(targetBranchId)` after login.
+- Returns token, role, profileType, and profile.
 
 Risk:
 
-- Do not change login return shape without checking both surfaces.
+- Login response shape is critical for POS and online login.
+- Branch handoff to branchStore is part of login runtime and must remain stable until branch ownership is redesigned.
 
 ---
 
-### 5.4 `logoutAction`
+### 5.4 Logout Actions
 
-Known consumers:
+Verified actions:
 
 ```txt
-src/features/auth/store/authStore.js
-src/features/auth/pages/LoginPage.jsx
-src/features/pos/components/header/HeaderPos.jsx
-src/components/common/UnifiedMainNav.jsx
-src/features/superadmin/sidebar/SidebarSuperAdmin.jsx
+logout
+logoutAction
+logoutAllDevicesAction
+resetAuthStateAction
+clearStorage
 ```
 
-Interpretation:
+Verified behavior:
 
-- Logout has multiple UI triggers.
-- UnifiedMainNav also calls `logoutAllDevicesAction`.
-- LogoutButton uses `logout`, not `logoutAction`.
+- `logout` calls `logoutSession()` then `resetAuthStateAction()`.
+- `logoutAction` calls `logoutSession()`, then `resetAuthStateAction()`, then forces `window.location.href = '/login'`.
+- `logoutAllDevicesAction` calls `logoutAllSessions()` then `resetAuthStateAction()`.
+- `resetAuthStateAction` preserves rememberMe and lastLoginIdentifier depending on rememberMe, clears all other auth state, and removes legacy localStorage `token` and `role`.
 
 Risk:
 
-- Logout clean-state work must be coordinated with branchStore clearing and redirects.
-- Naming inconsistency between `logout`, `logoutAction`, and `logoutAllDevicesAction` must be verified in authStore before any cleanup.
+- Different UI surfaces call different logout actions and also perform their own navigation.
+- `logoutAction` owning `window.location.href` makes it harder for callers to control redirect consistently.
 
 ---
 
@@ -435,7 +443,7 @@ Risk:
 
 - Branch logic exists outside branchStore itself.
 - branchHelpers imports `useBranchStore` from `@/stores/branchStore`, which looks inconsistent with the reviewed feature-store path and must be verified before use.
-- branchHelpers reads `allBranches`, while the active branchStore map previously described `branches/currentBranch/selectedBranchId`; this may indicate stale code or naming drift.
+- branchHelpers reads `allBranches`, while current branchStore owns `branches`; this may indicate stale code or naming drift.
 
 ---
 
@@ -456,6 +464,7 @@ Risk:
 
 - POS branch display must follow logged-in employee branch, not arbitrary selected branch.
 - Branch cleanup names differ across surfaces and require verification: `clearBranch`, `clearStorage`.
+- Both `clearBranch` and `clearStorage` exist and currently perform the same reset of branch state plus localStorage branch-storage removal.
 
 ---
 
@@ -474,10 +483,12 @@ src/features/online/productOnline/store/productOnlineStore.jsx
 Interpretation:
 
 - Online surfaces depend heavily on branchStore.
+- BranchStore contains explicit online auto-select behavior and localStorage key `online_last_branch_id`.
 
 Risk:
 
 - Online branch selection must not be treated the same as POS login branch identity.
+- `ensureSelectedBranchAction` can select last branch, geo branch, or first branch. This must not override POS identity branch unless explicitly allowed.
 
 ---
 
@@ -667,6 +678,7 @@ Interpretation:
 - Permission/RBAC helper code exists but appears dormant in this pass.
 - Permission helpers currently derive identity from employeeStore/customerStore, not authStore.
 - Because employeeStore is documented as HR/Employee Management only, permission identity source is not certified for active runtime gating.
+- AuthStore itself also exposes capability selectors through rbacClient. These are currently consumed by some UI selectors such as `isAdminOrAboveSelector`.
 
 Risk:
 
@@ -706,6 +718,7 @@ Risk:
 
 - `selectedBranchId` may represent online branch selection, POS branch context, or admin-selected branch depending on surface.
 - This must be clarified before any branch/auth refactor.
+- HeaderPos currently reloads branch from `selectedBranchId` when employee/authenticated conditions pass.
 
 ---
 
@@ -722,10 +735,16 @@ src/features/inputTaxReport/pages/PrintInputTaxReportPage.jsx
 src/features/purchaseOrder/pages/PrintPurchaseOrderPage.jsx
 ```
 
+Verified role:
+
+- AuthStore derives this from login and `/auth/me` responses.
+- AuthStore requires branchId for employee/admin.
+- AuthStore passes branchId to branchStore after login/verify.
+
 Risk:
 
-- This appears closer to POS identity branch truth than `selectedBranchId`.
-- Must be treated carefully as candidate canonical POS branch source.
+- This is the strongest candidate canonical POS branch identity source.
+- BranchStore selectedBranchId must not override it without explicit authorized branch-switch behavior.
 
 ---
 
@@ -757,6 +776,7 @@ src/routes/AppRouter.jsx
 src/config/sidebarMenuConfig.js
 src/config/sidebarStockItems.js
 src/features/pos/components/sidebar/SidebarLoader.jsx
+src/features/pos/components/header/HeaderPos.jsx
 src/features/purchaseOrder/hooks/usePurchaseOrderForm.js
 src/features/purchaseOrderReceipt/store/purchaseOrderReceiptStore.js
 src/features/salesReport/pages/SalesDashboardPage.jsx
@@ -780,6 +800,7 @@ src/features/customerReceipt/pages/PrintCustomerReceiptPage.jsx
 Risk:
 
 - URL slug is a major navigation dependency.
+- HeaderPos builds all top nav paths from URL `shopSlug`.
 - If POS canonical branch slug changes, many route-building components may be affected.
 
 ---
@@ -862,6 +883,35 @@ Impact:
 
 ---
 
+### DISC-FE-AUTH-003 — authStore persists only rememberMe and lastLoginIdentifier
+
+Status: VERIFIED BY FILE READ
+
+Evidence:
+
+- `authStore` persist partialize includes only `rememberMe` and `lastLoginIdentifier`.
+- Token/session/employee/customer are not persisted by Zustand.
+
+Impact:
+
+- Browser reload session recovery depends on `/auth/refresh` and cookie transport, not local Zustand persistence.
+
+---
+
+### DISC-FE-AUTH-004 — AuthStore owns branch handoff after login/verify
+
+Status: VERIFIED BY FILE READ
+
+Evidence:
+
+- `loginAction` and `verifySessionAction` call `useBranchStore.getState().loadAndSetBranchById(...)` when branchId exists.
+
+Impact:
+
+- BranchStore runtime details are derived from AuthStore employee branch identity after login/verify.
+
+---
+
 ### DISC-FE-BRANCH-001 — branchHelpers appears online/geo-selection oriented
 
 Status: VERIFIED BY FILE READ
@@ -875,6 +925,23 @@ Impact:
 
 - This should not be mixed with POS identity branch ownership.
 - Import path and field names need verification before treating it as active runtime.
+
+---
+
+### DISC-FE-BRANCH-002 — branchStore mixes POS branch details and online auto-select
+
+Status: VERIFIED BY FILE READ
+
+Evidence:
+
+- `loadAndSetBranchById` sets `currentBranch` and `selectedBranchId`.
+- `ensureSelectedBranchAction` can select branch from current branch, last online branch, geolocation, or first branch.
+- branchStore persists `currentBranch` and `selectedBranchId`.
+
+Impact:
+
+- POS branch identity must be anchored by `authStore.employee.branchId`.
+- Online branch auto-selection must not override POS branch context unless explicitly authorized.
 
 ---
 
@@ -905,11 +972,12 @@ Evidence:
 - UnifiedMainNav also calls `logoutAllDevicesAction`.
 - LogoutButton calls `logout`, then navigates to `/login`.
 - SidebarSuperAdmin calls `logoutAction` but does not navigate.
+- HeaderPos calls `clearBranch`, then `logoutAction`, then `navigate('/')`.
 
 Impact:
 
 - Logout must be standardized before Auth cleanup.
-- Need to verify actual authStore action names and route expectations.
+- Need to decide whether authStore or caller owns redirect.
 
 ---
 
@@ -930,6 +998,21 @@ Impact:
 
 ---
 
+### DISC-FE-HEADER-001 — HeaderPos can reload branch using selectedBranchId
+
+Status: VERIFIED BY FILE READ
+
+Evidence:
+
+- HeaderPos effect checks authenticated employee and calls `loadAndSetBranchById(selectedBranchId)`.
+
+Impact:
+
+- Potential branch drift risk if selectedBranchId differs from authStore.employee.branchId.
+- This must be reviewed before changing branch ownership.
+
+---
+
 ## 12. Open Questions
 
 1. Is `rootStore.js` still imported by active components?
@@ -940,8 +1023,9 @@ Impact:
 6. Does any print page bypass normal bootstrap assumptions?
 7. Should `shopSlug` be derived from logged-in branch or remain URL-driven?
 8. Which old components still read deprecated employeeStore compatibility fields?
-9. Does authStore expose `logout`, `logoutAction`, and `logoutAllDevicesAction`, or are some callers stale?
-10. Does branchStore expose both `clearBranch` and `clearStorage`, or are some callers stale?
+9. Should authStore own redirects in logoutAction, or should callers own navigation?
+10. Should HeaderPos reload branch from `employee.branchId` instead of `selectedBranchId`?
+11. Should BranchStore separate POS identity branch from online selected branch in the future?
 
 ---
 
@@ -950,10 +1034,11 @@ Impact:
 Open and review these files next:
 
 ```txt
-src/features/auth/store/authStore.js
-src/features/branch/store/branchStore.js
-src/features/pos/components/header/HeaderPos.jsx
+src/utils/apiClient.js
+src/features/auth/api/authApi.js
 src/features/auth/components/SubEmployeeManager.jsx
+src/features/auth/pages/LoginPage.jsx
+src/features/online/order/components/LoginForm.jsx
 ```
 
 Search next:
@@ -996,5 +1081,9 @@ branchHelpers appears online/geo branch selection oriented and may have stale im
 Permission helpers exist but appear dormant and currently derive identity from employeeStore/customerStore instead of authStore.
 
 Logout behavior is split across multiple surfaces and must be standardized before Auth cleanup.
+
+AuthStore persists only rememberMe and lastLoginIdentifier, so reload recovery depends on refresh cookie and `/auth/refresh`.
+
+BranchStore currently mixes POS branch detail storage with online branch auto-selection.
 
 Therefore, the current Login/Auth stabilization must continue as read-only architecture mapping before any refactor.

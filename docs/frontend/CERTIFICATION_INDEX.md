@@ -12,27 +12,36 @@ Current status:
 - Implementation Readiness Review: ✅ APPROVED
 - Backend Auth Refactor: 🔒 LOCKED
 
-## Quick Boot For New Tasks
+## Project Boot Protocol (PBP-FE-001)
 
-When starting a brand new ChatGPT task or conversation:
+Boot is COMPLETE only after reading all required documents.
 
-Step 1
-- Read this file first.
+Required Boot Documents
+- ✅ CERTIFICATION_INDEX.md
+- ✅ Implementation_Readiness_Review.md
+- ✅ Architecture_Decision_Log.md
 
-Step 2
-- Read `docs/frontend/Implementation_Readiness_Review.md`.
+Boot Report Template
+- Repository
+- Certification Status
+- Implementation Status
+- Current Phase
+- Locked Decisions
+- Next Required Reads
+- Ready for Analysis? (YES/NO)
 
-Step 3
-- Read `docs/frontend/Architecture_Decision_Log.md`.
+Boot Progress Example
+- STEP 1/3: CERTIFICATION_INDEX.md
+- STEP 2/3: Implementation_Readiness_Review.md
+- STEP 3/3: Architecture_Decision_Log.md
 
-Step 4
-- Report:
-  - Current certification status
-  - Current implementation phase
-  - Locked decisions
-  - Recommended next action
+Only after Boot COMPLETE may the assistant:
+- Analyze implementation
+- Recommend refactoring
+- Suggest code changes
+- Review runtime behavior
 
-Do not propose code changes before completing the boot sequence.
+Do not propose code changes before Boot COMPLETE.
 
 ## Certification Roadmap
 1. Blueprint
@@ -45,7 +54,6 @@ Do not propose code changes before completing the boot sequence.
 8. Blueprint & ADR Update
 
 ## Core Documents
-
 ### Architecture
 - README.md
 - Frontend_Upgrade_Master_Plan.md

@@ -1,6 +1,6 @@
 # P1 Dependency Map — Frontend Architecture Certification
 
-Status: DRAFT / ROOT + BRANCH + EMPLOYEE STORES VERIFIED
+Status: DRAFT / PERMISSION HELPERS VERIFIED
 Scope: Frontend only
 Repository: alpha-tech-client
 Active Blueprint: `docs/blueprint/Active_Blueprint.md`
@@ -51,6 +51,15 @@ This document is not a refactor plan yet.
 - `src/store/rootStore.js`
 - `src/utils/branchHelpers.js`
 - `src/features/employee/store/employeeStore.js`
+- `src/hooks/usePermission.js`
+- `src/components/auth/RequirePermission.jsx`
+- `src/components/auth/IfPermission.jsx`
+
+### Related Focused Verification
+
+```txt
+docs/map/Permission_Identity_Dependency_Verification.md
+```
 
 ### Important Note
 
@@ -621,6 +630,8 @@ Risk:
 
 ### 8.3 Permission Candidate Files
 
+Reviewed files:
+
 ```txt
 src/hooks/usePermission.js
 src/components/auth/RequirePermission.jsx
@@ -628,14 +639,31 @@ src/components/auth/IfPermission.jsx
 src/features/auth/rbac/rbacClient.js
 ```
 
+Verified behavior:
+
+- `usePermission` reads `employee` from employeeStore and `customer` from customerStore.
+- `usePermission` derives `activeUser` as `employee || customer`.
+- `usePermission` does not read identity from authStore.
+- `RequirePermission` uses `usePermission()` and returns `null` if role/permission checks fail.
+- `IfPermission` uses `usePermission()` and returns `null` if permission checks fail.
+- `RequirePermission` and `IfPermission` do not redirect, do not call APIs, and do not mutate state.
+- Repository search found only their own files and documentation references during this pass.
+
 Interpretation:
 
-- Permission/RBAC infrastructure exists.
-- Current user guidance: RBAC is not used as real runtime for the current Auth stabilization agenda.
+- Permission/RBAC helper code exists but appears dormant in this pass.
+- Permission helpers currently derive identity from employeeStore/customerStore, not authStore.
+- Because employeeStore is documented as HR/Employee Management only, permission identity source is not certified for active runtime gating.
 
 Risk:
 
-- Do not activate or refactor RBAC during Login/Auth stability work.
+- LOW if dormant.
+- HIGH if mounted without identity-source migration.
+- VERY HIGH if activated during Login/Auth stabilization.
+
+Working rule:
+
+Do not activate or refactor RBAC / permission gating during current Login/Auth stability work.
 
 ---
 
@@ -806,7 +834,7 @@ Status: VERIFIED BY FILE HEADER AND PERSIST CONFIG
 
 Evidence:
 
-- `employeeStore.js` states HR / Employee Management only.
+- `employeeStore.js` file header explicitly documents HR / Employee Management only.
 - It states Auth/current login branch Source of Truth is `authStore.employee.branchId`.
 - It does not persist session/branch/token/role.
 
@@ -833,6 +861,23 @@ Impact:
 
 ---
 
+### DISC-FE-PERM-001 — Permission helpers are dormant and use non-auth identity source
+
+Status: VERIFIED IN CURRENT SEARCH PASS
+
+Evidence:
+
+- `usePermission` reads employeeStore/customerStore, not authStore.
+- `RequirePermission` and `IfPermission` only wrap children and do not mutate state.
+- Search did not find active mounted usage beyond their own files and docs during this pass.
+
+Impact:
+
+- Do not activate RBAC / permission gating during Login/Auth stabilization.
+- If permission gating is required later, identity source must be redesigned around authStore or a verified capability runtime.
+
+---
+
 ## 12. Open Questions
 
 1. Is `rootStore.js` still imported by active components?
@@ -851,9 +896,6 @@ Impact:
 Open and review these files next:
 
 ```txt
-src/hooks/usePermission.js
-src/components/auth/RequirePermission.jsx
-src/components/auth/IfPermission.jsx
 src/features/auth/pages/StaffSettingsPage.jsx
 src/components/LogoutButton.jsx
 src/components/common/UnifiedMainNav.jsx
@@ -868,6 +910,11 @@ from '@/stores/branchStore'
 from './authStore'
 from './branchStore'
 allBranches
+useEmployeeStore((state) => state.employee)
+useEmployeeStore.getState
+setSession
+clearSession
+setEmployee
 ```
 
 After that, update this map with verified READ / WRITE / MUTATE classifications.
@@ -889,5 +936,7 @@ ProtectedRoute exists but appears not mounted in the reviewed active POS route f
 employeeStore documents itself as HR/Employee Management only and should not be treated as active session source of truth.
 
 branchHelpers appears online/geo branch selection oriented and may have stale import/field assumptions.
+
+Permission helpers exist but appear dormant and currently derive identity from employeeStore/customerStore instead of authStore.
 
 Therefore, the current Login/Auth stabilization must continue as read-only architecture mapping before any refactor.

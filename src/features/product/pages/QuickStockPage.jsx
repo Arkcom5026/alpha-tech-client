@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import useProductStore from "@/features/product/store/productStore";
 import {
-  createLocalOperationalProductApi,
   createOperationalProductFromTemplateApi,
   getOperationalProductByTemplateId,
   getProductsForPos,
@@ -275,6 +274,7 @@ const QuickStockPage = () => {
     deleteProductAction,
     quickStockIntakeExistingAction,
     createOperationalProductFromTemplateAction,
+    createLocalOperationalProductAction,
   } = useProductStore();
 
   const productTypes = dropdowns?.productTypes || dropdowns?.types || [];
@@ -575,7 +575,7 @@ const QuickStockPage = () => {
 
     setIsCreatingOperationalProduct(true);
     try {
-      const response = await createLocalOperationalProductApi(payload);
+      const response = await createLocalOperationalProductAction(payload);
       const rawCreatedProduct = extractSingleProduct(response);
       if (!adoptOperationalProduct(rawCreatedProduct, null)) {
         toast.error("สร้างสินค้าแล้ว แต่ข้อมูลที่ตอบกลับยังไม่ใช่ Operational Product ที่ถูกต้อง");

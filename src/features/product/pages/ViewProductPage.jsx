@@ -5,6 +5,22 @@ import { useBranchStore } from '@/features/branch/store/branchStore';
 import { Alert } from '@/components/ui/alert';
 import useProductStore from '../store/productStore';
 
+const isTemplateRuntimeProduct = (product) => {
+  if (!product) return false;
+  if (product.isTemplateProduct === true) return true;
+  if (product.isOperationalProduct === false) return true;
+  if (String(product.templateBranchCode || '').toUpperCase() === 'T01') return true;
+  if (Number(product.templateBranchId) === 1) return true;
+  if (
+    product.templateProductId != null &&
+    product.id != null &&
+    Number(product.templateProductId) === Number(product.id)
+  ) {
+    return true;
+  }
+  return false;
+};
+
 export default function ViewProductPage() {
   const { id } = useParams();
   const branchId = useBranchStore((state) => state.selectedBranchId);
@@ -17,6 +33,8 @@ export default function ViewProductPage() {
     const fetchProduct = async () => {
       if (!id || isNaN(id)) {
         console.error('❌ Product ID ไม่ถูกต้อง:', id);
+        setError('Product ID ไม่ถูกต้อง');
+        setLoading(false);
         return;
       }
 
@@ -24,6 +42,11 @@ export default function ViewProductPage() {
 
       try {
         const data = await fetchProductById(id);
+        if (isTemplateRuntimeProduct(data)) {
+          setError('ไม่สามารถเปิด Product Template เป็นรายละเอียดสินค้าของสาขาได้');
+          setProduct(null);
+          return;
+        }
         setProduct(data);
       } catch (err) {
         setError('ไม่สามารถโหลดข้อมูลสินค้า');

@@ -16,6 +16,44 @@ Your task is not to implement immediately.
 
 Your first task is to design the missing QuickStock runtime flows.
 
+## ROLE-ARCH Operating Model
+
+Repository is the single source of truth.
+
+ROLE-ARCH does not dispatch work directly to FE/BE roles through chat.
+
+ROLE-ARCH responsibilities are:
+
+```txt
+Analyze Mission
+Produce Decisions
+Produce Assignments
+Update Mission State
+Perform Audit
+Issue Certification
+Prepare Successor Boot
+```
+
+ROLE-ARCH completes its responsibility by updating Git documentation in the correct workspace.
+
+Mission Coordinator is responsible for notifying the next Role to boot and read its assignment from Git.
+
+All Roles follow the same lifecycle:
+
+```txt
+Boot
+↓
+Read Git
+↓
+Perform Assignment
+↓
+Write Deliverable to Git
+↓
+Complete Role
+```
+
+This means chat instructions are coordination signals only. The durable instruction source is the repository.
+
 ## Mission B Current State
 
 ```txt

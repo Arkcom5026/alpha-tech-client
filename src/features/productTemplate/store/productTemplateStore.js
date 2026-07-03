@@ -11,6 +11,7 @@ const getErrorMessage = (error, fallback) =>
 const initialState = {
   items: [],
   currentTemplate: null,
+  masterOptions: { productTypes: [], brands: [], categories: [], units: [], errors: [] },
   page: 1,
   limit: 20,
   totalPages: 1,
@@ -19,6 +20,7 @@ const initialState = {
   search: '',
   isLoading: false,
   isSaving: false,
+  isLoadingMasters: false,
   error: null,
   lastQuery: null,
 };
@@ -32,39 +34,34 @@ const useProductTemplateStore = create(devtools((set, get) => ({
   setSearchAction: (txt) => set({ search: txt ?? '' }),
   clearCurrentTemplateAction: () => set({ currentTemplate: null, error: null }),
 
+  fetchMasterOptionsAction: async () => {
+    set({ isLoadingMasters: true });
+    try {
+      const masterOptions = await productTemplateApi.getCatalogMasterOptions();
+      set({ masterOptions });
+      return masterOptions;
+    } catch (error) {
+      console.error('[productTemplateStore] fetchMasterOptionsAction error:', error);
+      set({ error: getErrorMessage(error, 'ไม่สามารถโหลด Catalog Master ได้') });
+      return null;
+    } finally {
+      set({ isLoadingMasters: false });
+    }
+  },
+
   fetchListAction: async (overrides = {}) => {
     const base = get();
-
     const page = Number(overrides.page ?? base.page) || 1;
     const limit = Number(overrides.limit ?? base.limit) || 20;
     const includeInactive = !!(overrides.includeInactive ?? base.includeInactive);
     const search = (overrides.search ?? base.search) ?? '';
+    const params = { page, limit, includeInactive, search: String(search || '') || undefined };
 
-    const params = {
-      page,
-      limit,
-      includeInactive,
-      search: String(search || '') || undefined,
-    };
-
-    set({
-      page,
-      limit,
-      includeInactive,
-      search,
-      isLoading: true,
-      error: null,
-      lastQuery: params,
-    });
-
+    set({ page, limit, includeInactive, search, isLoading: true, error: null, lastQuery: params });
     try {
       const res = await productTemplateApi.getProductTemplates(params);
       const { items = [], totalPages = 1, totalItems = 0 } = res || {};
-      set({
-        items,
-        totalPages: Number(totalPages) || 1,
-        totalItems: Number(totalItems) || items.length,
-      });
+      set({ items, totalPages: Number(totalPages) || 1, totalItems: Number(totalItems) || items.length });
       return res;
     } catch (error) {
       console.error('[productTemplateStore] fetchListAction error:', error);
@@ -77,12 +74,7 @@ const useProductTemplateStore = create(devtools((set, get) => ({
 
   refreshTemplatesAction: async () => {
     const base = get();
-    return base.fetchListAction(base.lastQuery || {
-      page: base.page,
-      limit: base.limit,
-      includeInactive: base.includeInactive,
-      search: base.search,
-    });
+    return base.fetchListAction(base.lastQuery || { page: base.page, limit: base.limit, includeInactive: base.includeInactive, search: base.search });
   },
 
   getTemplateByIdAction: async (id) => {
@@ -139,7 +131,6 @@ const useProductTemplateStore = create(devtools((set, get) => ({
       await get().refreshTemplatesAction();
       return updated;
     } catch (error) {
-      console.error('[productTemplateStore] archiveTemplateAction error:', error);
       set({ error: getErrorMessage(error, 'ไม่สามารถปิดใช้งาน Template ได้') });
       return null;
     } finally {
@@ -155,7 +146,6 @@ const useProductTemplateStore = create(devtools((set, get) => ({
       await get().refreshTemplatesAction();
       return updated;
     } catch (error) {
-      console.error('[productTemplateStore] restoreTemplateAction error:', error);
       set({ error: getErrorMessage(error, 'ไม่สามารถเปิดใช้งาน Template ได้') });
       return null;
     } finally {
@@ -171,7 +161,6 @@ const useProductTemplateStore = create(devtools((set, get) => ({
       await get().refreshTemplatesAction();
       return updated;
     } catch (error) {
-      console.error('[productTemplateStore] toggleActiveAction error:', error);
       set({ error: getErrorMessage(error, 'ไม่สามารถเปลี่ยนสถานะได้') });
       return null;
     } finally {
@@ -179,13 +168,7 @@ const useProductTemplateStore = create(devtools((set, get) => ({
     }
   },
 
-  resetFiltersAction: () =>
-    set({
-      page: 1,
-      includeInactive: false,
-      search: '',
-      lastQuery: null,
-    }),
+  resetFiltersAction: () => set({ page: 1, includeInactive: false, search: '', lastQuery: null }),
 })), { name: 'product-template-governance-store' });
 
 export default useProductTemplateStore;

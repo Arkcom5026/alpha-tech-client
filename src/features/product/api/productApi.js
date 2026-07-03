@@ -351,6 +351,36 @@ export const createOperationalProductFromTemplateApi = async (payload = {}) => {
 };
 
 // ==================================================
+// CREATE LOCAL OPERATIONAL PRODUCT
+// สร้าง Operational Product เฉพาะ Branch ปัจจุบันเมื่อไม่มี Template ที่เหมาะสม
+// ==================================================
+export const createLocalOperationalProductApi = async (payload = {}) => {
+  try {
+    if (import.meta.env?.DEV) console.log('[productApi] createLocalOperationalProductApi payload', payload);
+
+    const sanitizedPayload = { ...payload };
+
+    // Runtime Contract:
+    // Local product ต้องไม่มี templateProductId และ branchId ต้องมาจาก backend session เท่านั้น
+    delete sanitizedPayload.branchId;
+    delete sanitizedPayload.templateProductId;
+    delete sanitizedPayload.productTemplateId;
+    delete sanitizedPayload.items;
+    delete sanitizedPayload.barcodes;
+    delete sanitizedPayload.queue;
+    delete sanitizedPayload.quantity;
+    delete sanitizedPayload.stock;
+    delete sanitizedPayload.movementType;
+    delete sanitizedPayload.source;
+
+    const { data } = await apiClient.post('products/pos/create-local', sanitizedPayload);
+    return data;
+  } catch (err) {
+    throw parseApiError(err);
+  }
+};
+
+// ==================================================
 // QUICK STOCK EXISTING PRODUCT INTAKE
 // รับสินค้าเข้าจาก Product เดิม: Recovery / Quick Receive / Manufacture
 // ==================================================

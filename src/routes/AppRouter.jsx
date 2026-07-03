@@ -16,6 +16,10 @@ import ResetPasswordPage from '@/features/auth/pages/ResetPasswordPage';
 import HeaderPos from '@/features/pos/components/header/HeaderPos';
 import SidebarLoader from '@/features/pos/components/sidebar/SidebarLoader';
 
+// 🟢 Mission C — Local Product Evolution / Catalog Governance
+import CandidateReviewPage from '@/features/templateCandidate/pages/CandidateReviewPage';
+import CandidateDetailPage from '@/features/templateCandidate/pages/CandidateDetailPage';
+
 /**
  * 🏛️ [THE PREMIUM UNIFIED LAYOUT CONTAINER]
  */
@@ -36,6 +40,14 @@ const PartnerPosMasterLayout = () => {
       </div>
     </div>
   );
+};
+
+const missionCTemplateCandidateRoutes = {
+  path: 'template-candidates',
+  children: [
+    { index: true, element: <CandidateReviewPage /> },
+    { path: ':id', element: <CandidateDetailPage /> },
+  ],
 };
 
 /**
@@ -71,7 +83,8 @@ const AppRouter = [
     path: ':shopSlug/pos',
     element: <PartnerPosMasterLayout />,
     children: [
-      ...posPartnerRoutes
+      ...posPartnerRoutes,
+      missionCTemplateCandidateRoutes,
     ],
   },
   {

@@ -8,6 +8,7 @@ import CandidateDetailPage from '@/features/templateCandidate/pages/CandidateDet
 import ProductTemplateGovernanceListPage from '@/features/productTemplate/pages/ProductTemplateGovernanceListPage';
 import ProductTemplateGovernanceDetailPage from '@/features/productTemplate/pages/ProductTemplateGovernanceDetailPage';
 import ProductTemplateGovernanceEditPage from '@/features/productTemplate/pages/ProductTemplateGovernanceEditPage';
+import ProductTemplateGovernanceCreatePage from '@/features/productTemplate/pages/ProductTemplateGovernanceCreatePage';
 
 const SuperAdminPlaceholderPage = ({ title, description }) => (
   <div className="space-y-4">
@@ -37,6 +38,7 @@ export const superAdminRoutes = [
         path: 'templates',
         children: [
           { index: true, element: <ProductTemplateGovernanceListPage /> },
+          { path: 'new', element: <ProductTemplateGovernanceCreatePage /> },
           { path: ':id', element: <ProductTemplateGovernanceDetailPage /> },
           { path: ':id/edit', element: <ProductTemplateGovernanceEditPage /> },
         ],

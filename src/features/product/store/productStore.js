@@ -242,8 +242,6 @@ const useProductStore = create((set, get) => ({
   },
 
 
-
-  
   createLocalOperationalProductAction: async (payload) => {
     set({ quickStockLoading: true, quickStockError: null });
     try {
@@ -262,7 +260,9 @@ const useProductStore = create((set, get) => ({
     }
   },
 
-// 🟢 รับสินค้าเข้าจาก Product เดิม: Recovery / Quick Receive / Manufacture
+
+
+  // 🟢 รับสินค้าเข้าจาก Product เดิม: Recovery / Quick Receive / Manufacture
   quickReceiveExistingProductAction: async (payload) => {
     set({ quickStockLoading: true, quickStockError: null });
     try {

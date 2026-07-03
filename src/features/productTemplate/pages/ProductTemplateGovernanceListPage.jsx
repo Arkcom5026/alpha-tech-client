@@ -49,6 +49,7 @@ const ProductTemplateGovernanceListPage = () => {
   }, []);
 
   const basePath = shopSlug ? `/${shopSlug}/superadmin/catalog/templates` : '/superadmin/catalog/templates';
+  const newTemplatePath = `${basePath}/new`;
   const activeVisible = items.filter((item) => getTemplateStatus(item) === 'ACTIVE').length;
   const inactiveVisible = items.length - activeVisible;
 
@@ -90,8 +91,17 @@ const ProductTemplateGovernanceListPage = () => {
               Template Catalog กลางที่ผ่านการดูแลแล้ว ใช้เป็นแหล่งค้นหาและ clone source สำหรับ Operational Product ของสาขา
             </p>
           </div>
-          <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-black uppercase tracking-[0.14em] text-amber-700">
-            Operational runtime is not edited here
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <button
+              type="button"
+              onClick={() => navigate(newTemplatePath)}
+              className="rounded-2xl bg-orange-500 px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-white shadow-sm transition hover:bg-orange-600"
+            >
+              + New Template
+            </button>
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-black uppercase tracking-[0.14em] text-amber-700">
+              Operational runtime is not edited here
+            </div>
           </div>
         </div>
       </section>

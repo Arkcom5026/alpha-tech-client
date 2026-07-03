@@ -22,11 +22,41 @@ const optionalNumber = (value) => {
   return Number.isFinite(n) && n > 0 ? n : undefined;
 };
 
+const MasterSelect = ({ label, required = false, value, options = [], onChange, placeholder }) => (
+  <label className="space-y-2">
+    <span className="text-xs font-black uppercase tracking-[0.12em] text-slate-500">{label}{required ? ' *' : ''}</span>
+    <select
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+      required={required}
+      className="min-h-11 w-full rounded-2xl border border-slate-200 px-4 text-sm font-semibold outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-200"
+    >
+      <option value="">{placeholder || `Select ${label}`}</option>
+      {options.map((item) => (
+        <option key={item.id} value={item.id}>
+          {item.name} · ID {item.id}{item.branchId ? ` · Branch ${item.branchId}` : ''}
+        </option>
+      ))}
+    </select>
+  </label>
+);
+
 const ProductTemplateGovernanceCreatePage = () => {
   const { shopSlug } = useParams();
   const navigate = useNavigate();
-  const { isSaving, error, addTemplateAction } = useProductTemplateStore();
+  const {
+    isSaving,
+    isLoadingMasters,
+    error,
+    masterOptions,
+    addTemplateAction,
+    fetchMasterOptionsAction,
+  } = useProductTemplateStore();
   const [form, setForm] = React.useState(emptyForm);
+
+  React.useEffect(() => {
+    fetchMasterOptionsAction();
+  }, [fetchMasterOptionsAction]);
 
   const listPath = shopSlug ? `/${shopSlug}/superadmin/catalog/templates` : '/superadmin/catalog/templates';
   const setField = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
@@ -72,18 +102,25 @@ const ProductTemplateGovernanceCreatePage = () => {
         </p>
       </section>
 
-      {error && (
-        <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-700">
-          {String(error)}
+      {error && <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-700">{String(error)}</div>}
+      {masterOptions?.errors?.length > 0 && (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-bold text-amber-700">
+          โหลด Catalog Master บางส่วนไม่สำเร็จ: {masterOptions.errors.join(', ')}
         </div>
       )}
 
       <form onSubmit={handleSubmit} className="space-y-5">
         <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h2 className="text-base font-black text-slate-900">Required Template Data</h2>
-          <p className="mt-1 text-sm font-medium text-slate-500">
-            ระยะแรกใช้ ID ของ master data ก่อน แล้วค่อยเปลี่ยนเป็น selector เมื่อ Catalog Master พร้อม
-          </p>
+          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+            <div>
+              <h2 className="text-base font-black text-slate-900">Required Template Data</h2>
+              <p className="mt-1 text-sm font-medium text-slate-500">
+                เลือกข้อมูลจาก Catalog Master เพื่อป้องกัน ID ผิดและทำให้ Template พร้อมใช้ใน Search/Clone
+              </p>
+            </div>
+            {isLoadingMasters && <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-black text-slate-500">Loading masters...</span>}
+          </div>
+
           <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             <label className="space-y-2 md:col-span-2 xl:col-span-3">
               <span className="text-xs font-black uppercase tracking-[0.12em] text-slate-500">Template Name *</span>
@@ -96,50 +133,10 @@ const ProductTemplateGovernanceCreatePage = () => {
               />
             </label>
 
-            <label className="space-y-2">
-              <span className="text-xs font-black uppercase tracking-[0.12em] text-slate-500">Product Type ID *</span>
-              <input
-                type="number"
-                min="1"
-                value={form.productTypeId}
-                onChange={(event) => setField('productTypeId', event.target.value)}
-                required
-                className="min-h-11 w-full rounded-2xl border border-slate-200 px-4 text-sm font-semibold outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-200"
-              />
-            </label>
-
-            <label className="space-y-2">
-              <span className="text-xs font-black uppercase tracking-[0.12em] text-slate-500">Brand ID</span>
-              <input
-                type="number"
-                min="1"
-                value={form.brandId}
-                onChange={(event) => setField('brandId', event.target.value)}
-                className="min-h-11 w-full rounded-2xl border border-slate-200 px-4 text-sm font-semibold outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-200"
-              />
-            </label>
-
-            <label className="space-y-2">
-              <span className="text-xs font-black uppercase tracking-[0.12em] text-slate-500">Category ID</span>
-              <input
-                type="number"
-                min="1"
-                value={form.categoryId}
-                onChange={(event) => setField('categoryId', event.target.value)}
-                className="min-h-11 w-full rounded-2xl border border-slate-200 px-4 text-sm font-semibold outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-200"
-              />
-            </label>
-
-            <label className="space-y-2">
-              <span className="text-xs font-black uppercase tracking-[0.12em] text-slate-500">Unit ID</span>
-              <input
-                type="number"
-                min="1"
-                value={form.unitId}
-                onChange={(event) => setField('unitId', event.target.value)}
-                className="min-h-11 w-full rounded-2xl border border-slate-200 px-4 text-sm font-semibold outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-200"
-              />
-            </label>
+            <MasterSelect label="Product Type" required value={form.productTypeId} options={masterOptions.productTypes} onChange={(value) => setField('productTypeId', value)} />
+            <MasterSelect label="Brand" value={form.brandId} options={masterOptions.brands} onChange={(value) => setField('brandId', value)} />
+            <MasterSelect label="Category" value={form.categoryId} options={masterOptions.categories} onChange={(value) => setField('categoryId', value)} />
+            <MasterSelect label="Unit" value={form.unitId} options={masterOptions.units} onChange={(value) => setField('unitId', value)} />
 
             <label className="space-y-2">
               <span className="text-xs font-black uppercase tracking-[0.12em] text-slate-500">Mode</span>
@@ -185,18 +182,8 @@ const ProductTemplateGovernanceCreatePage = () => {
         </section>
 
         <div className="flex justify-end gap-3 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
-          <button
-            type="button"
-            onClick={() => navigate(listPath)}
-            className="rounded-2xl border border-slate-200 px-5 py-3 text-sm font-black text-slate-700 transition hover:bg-slate-50"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={isSaving || !String(form.name || '').trim() || !form.productTypeId}
-            className="rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white transition hover:bg-orange-500 disabled:opacity-60"
-          >
+          <button type="button" onClick={() => navigate(listPath)} className="rounded-2xl border border-slate-200 px-5 py-3 text-sm font-black text-slate-700 transition hover:bg-slate-50">Cancel</button>
+          <button type="submit" disabled={isSaving || !String(form.name || '').trim() || !form.productTypeId} className="rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white transition hover:bg-orange-500 disabled:opacity-60">
             {isSaving ? 'Creating...' : 'Create Template'}
           </button>
         </div>

@@ -10,6 +10,8 @@ This certification covers ROLE-ARCH handover readiness for Mission B planning an
 
 It does not certify Mission B complete.
 
+It does not authorize the current ROLE-ARCH to continue into the next assignment.
+
 It certifies that Mission B now has:
 
 ```txt
@@ -17,8 +19,8 @@ Role workspace structure
 ROLE-ARCH self handover
 ROLE-ARCH audit
 Mission status
-Next owner identified
-Next assignment path defined
+Successor boot
+Responsibility boundary correction
 ```
 
 ## Certification Result
@@ -32,9 +34,10 @@ CERTIFIED WITH DEBT
 1. Mission B is workflow-centric, not FE/BE split.
 2. B-Flow 1 is operationally working in real use.
 3. Backend does not currently need a new patch before the next FE flow design.
-4. The next meaningful work belongs to FE-01 Runtime Owner.
+4. The next likely responsibility area is FE runtime flow design, but the successor ROLE-ARCH must decide the actual assignment.
 5. ROLE-ARCH workspace exists and can be used for future handover/audit/certification.
 6. Mission B role workspaces exist for FE-01, FE-02, BE-01, BE-02, and ROLE-ARCH.
+7. Premature ASSIGNMENT-018 was retracted and is not active.
 
 ## Remaining Debt
 
@@ -54,22 +57,29 @@ docs/mission-b/assignments/<ROLE-ID>/
 docs/mission-b/inbox/<ROLE-ID>/
 ```
 
-## Required Next Step
-
-Create FE-01 assignment:
+Corrected debt:
 
 ```txt
 docs/mission-b/assignments/FE-01/ASSIGNMENT-018.md
 ```
 
-Expected deliverable:
+This file exists but is RETRACTED and must not be executed.
+
+## Required Next Step For Successor ROLE-ARCH
+
+Successor ROLE-ARCH must boot and decide whether to create a new FE-01 assignment.
+
+Possible next responsibility area:
 
 ```txt
-docs/mission-b/inbox/FE-01/FLOW-DESIGN-001.md
+QuickStock existing branch product edit/update flow design
+Store-created local product flow design when no ProductTemplate exists
 ```
+
+No assignment is active from this certification.
 
 ## Certification Gate
 
-ROLE-ARCH can proceed to successor boot and next assignment creation.
+Current ROLE-ARCH has completed handover baseline and must STOP after successor boot.
 
 Final mission completion certification remains pending until Mission B flows are complete and verified.

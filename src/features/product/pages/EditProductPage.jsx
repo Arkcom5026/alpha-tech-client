@@ -1,6 +1,3 @@
-
-
-
 // ✅ src/features/product/pages/EditProductPage.jsx
 
 import { useEffect, useState, useRef, useMemo } from 'react';
@@ -9,6 +6,22 @@ import ProductForm from '../components/ProductForm';
 import ProductImage from '../components/ProductImage';
 
 import useProductStore from '../store/productStore';
+
+const isTemplateRuntimeProduct = (product) => {
+  if (!product) return false;
+  if (product.isTemplateProduct === true) return true;
+  if (product.isOperationalProduct === false) return true;
+  if (String(product.templateBranchCode || '').toUpperCase() === 'T01') return true;
+  if (Number(product.templateBranchId) === 1) return true;
+  if (
+    product.templateProductId != null &&
+    product.id != null &&
+    Number(product.templateProductId) === Number(product.id)
+  ) {
+    return true;
+  }
+  return false;
+};
 
 const EditProductPage = () => {
   const [previewUrls, setPreviewUrls] = useState([]);
@@ -46,15 +59,11 @@ const EditProductPage = () => {
       };
     });
   
-
-
-
   useEffect(() => {
     if (!dropdownsLoaded) {
       ensureDropdownsAction();
     }
   }, [dropdownsLoaded, ensureDropdownsAction]);
-
 
   useEffect(() => {
     if (!id || hasFetched.current) return;
@@ -66,6 +75,11 @@ const EditProductPage = () => {
 
         if (!data) {
           setError('ไม่พบข้อมูลสินค้า หรืออาจถูกลบไปแล้ว');
+          return;
+        }
+
+        if (isTemplateRuntimeProduct(data)) {
+          setError('ไม่สามารถแก้ไข Product Template ในหน้าสินค้าของสาขาได้');
           return;
         }
 
@@ -154,13 +168,16 @@ const EditProductPage = () => {
         }
       }
       
-
       // บันทึกสินค้า
       await updateProduct(id, formData);
 
       // 🔄 โหลดข้อมูลล่าสุดกลับมาโชว์
       try {
         const fresh = await getProductById(id);
+        if (fresh && isTemplateRuntimeProduct(fresh)) {
+          setError('ไม่สามารถแก้ไข Product Template ในหน้าสินค้าของสาขาได้');
+          return;
+        }
         if (fresh) {
           const serverImages = Array.isArray(fresh.images)
             ? fresh.images
@@ -263,10 +280,3 @@ const EditProductPage = () => {
 };
 
 export default EditProductPage;
-
-
-
-
-
-
-

@@ -11,6 +11,7 @@ Application source:
 
 ```txt
 src/features/product/pages/QuickStockPage.jsx
+src/features/product/components/quick-stock/ProductFinderPanel.jsx
 ```
 
 Verification report:
@@ -21,55 +22,33 @@ docs/mission-b/inbox/FE-01/PRODUCT-DISCOVERY-COMPLETION-001.md
 
 No backend files were modified.
 No AuthStore, BranchStore, apiClient, route guard, RBAC, or menu permission files were modified.
-No stock intake path was created.
+No new stock intake path was created.
 
 ## 2. Product discovery behavior implemented
 
-QuickStock Product Finder is no longer Template-only.
+QuickStock Product Discovery is no longer Template-only.
 
-The search path now queries both:
-
-```txt
-GET /api/products/pos/search
-GET /api/products/template/search
-```
-
-Implementation in `QuickStockPage.jsx`:
+Search now covers:
 
 ```txt
-executeProductSearch
--> Promise.allSettled([
-     getProductsForPos(commonParams),
-     getTemplateProductsForPos(commonParams),
-   ])
--> normalize Operational Products as OPERATIONAL
--> normalize Template Products as TEMPLATE
--> merge and dedupe discovery results
--> render through existing ProductFinderPanel
+Operational Product search: GET /api/products/pos/search
+Template Product search: GET /api/products/template/search
 ```
 
-Operational results are sorted before Template results so existing branch products become directly selectable first.
+QuickStockPage executes both searches through:
+
+```txt
+Promise.allSettled([
+  getProductsForPos(commonParams),
+  getTemplateProductsForPos(commonParams),
+])
+```
+
+The merged result is normalized into one Product Finder list, with Operational Products ordered before Template Products.
 
 ## 3. Operational Product search behavior
 
-Operational Product search is implemented through existing FE API wrapper:
-
-```txt
-getProductsForPos(commonParams)
-```
-
-Search parameters include:
-
-```txt
-productTypeId
-brandId
-search
-searchText
-takeNum
-skipNum
-```
-
-Returned results are normalized as:
+Operational Product results are normalized with:
 
 ```txt
 isTemplateProduct: false
@@ -77,162 +56,171 @@ isOperationalProduct: true
 __quickStockDiscoverySource: OPERATIONAL
 ```
 
-Selecting an Operational Product now directly resolves:
+Operational results are selectable directly from ProductFinderPanel.
+
+Selection now uses a discovery key:
 
 ```txt
-selectedSearchOperationalProduct
--> operationalProduct
--> ProductMasterPanel selectedProduct
--> IntakeControlPanel selectedProduct when scan-ready
--> CommitBar selectedProduct when commit-ready
+OPERATIONAL:<productId>
+```
+
+This prevents collision with Template results that may have the same numeric id under a different source.
+
+When an Operational Product is selected:
+
+```txt
+selectedSearchOperationalProduct -> operationalProduct
+isOperationalSelection -> true
+ProductMasterPanel shows branch operational product
+IntakeControlPanel receives operationalProduct
+CommitBar receives operationalProduct only when price + queue are ready
 ```
 
 ## 4. Template Product behavior
 
-Template Product search remains intact through:
+Template Product search remains active and is still treated as catalog/search/clone source only.
 
-```txt
-getTemplateProductsForPos(commonParams)
-```
-
-Template results remain catalog/search/clone source only and are normalized as:
+Template results are normalized with:
 
 ```txt
 isTemplateProduct: true
 isOperationalProduct: false
 __quickStockDiscoverySource: TEMPLATE
+templateProductId: product.templateProductId ?? product.id
 ```
 
-Selecting a Template Product still follows the existing safe path:
+Template selection still follows the existing safe path:
 
 ```txt
 Template selected
 -> getOperationalProductByTemplateId(templateProductId)
--> if existing Operational Product found: adopt
+-> if branch Operational Product exists: adopt it
 -> if none: TEMPLATE_SELECTED_NOT_CREATED
--> user can create Operational Product from Template
--> receive through /api/quick-stock/existing only after operationalProduct exists
+-> operator can create Operational Product from Template
+-> receive uses adopted operationalProduct.id
 ```
 
-Template Product data is not mutated.
+Template Product mutation remains blocked.
 
 ## 5. Local Product search-after-create behavior
 
-The local-create behavior from ASSIGNMENT-022 remains active.
+ASSIGNMENT-022 local-create/adopt behavior remains intact.
 
-After successful local create:
+This assignment adds the missing discovery closure:
 
 ```txt
-createLocalOperationalProductApi(payload)
--> validate returned Operational Product
--> adoptOperationalProduct(rawProduct)
--> insert adopted Operational Product into runtimeSearchProducts
--> selectedProductId = OPERATIONAL:<id>
+Local Product created earlier
+-> later appears through GET /api/products/pos/search
+-> normalized as OPERATIONAL
+-> selectable directly
+-> receive uses operationalProduct.id
 ```
 
-Because Product Finder now includes `getProductsForPos`, a Local Operational Product created earlier should be discoverable later through Operational Product search after backend persistence is available.
-
-Live search-after-create database verification was not executed in this connector-only task.
+The current task is static source verification only, so live runtime/database proof remains for E2E.
 
 ## 6. Adoption behavior
 
-Adoption validator requires:
+Adoption is source-aware:
+
+```txt
+Operational result -> selectedSearchOperationalProduct -> operationalProduct
+Template result -> lookup/adopt/create-from-template -> adoptedOperationalProduct
+Local create response -> adoptedOperationalProduct
+```
+
+The shared adoption validator requires:
 
 ```txt
 finite product id
 not Template-like
-not the same id as source Template when source exists
+if Template source exists, returned id must not equal Template id
 ```
 
-Operational Product direct selection does not require clone/adopt API because the selected result itself is already Operational and receive-ready.
-
-Template-created and Local-created products still use:
+ProductFinderPanel now sends source-aware ids:
 
 ```txt
-adoptOperationalProduct(rawProduct, sourceProduct)
+OPERATIONAL:<id>
+TEMPLATE:<id>
 ```
 
-Adoption inserts the Operational Product into discovery state and hydrates:
-
-```txt
-ProductMasterPanel forms
-priceForm
-defaultCost
-selectedProductId = OPERATIONAL:<id>
-```
+QuickStockPage resolves these keys against the merged discovery list.
 
 ## 7. Receive behavior
 
-Receive behavior remains unchanged in destination and queue contract:
+Receive path remains unchanged:
 
 ```txt
-handleCommit
--> quickStockIntakeExistingAction(payload)
--> /api/quick-stock/existing
+quickStockIntakeExistingAction(payload)
+POST /api/quick-stock/existing
 ```
 
-Receive payload still uses:
+Receive still uses:
 
 ```txt
 productId: Number(operationalProduct.id)
 ```
 
-This applies to all paths:
+This applies to all discovery paths:
 
 ```txt
-Flow A Template -> resolve/adopt/create -> Operational Product -> receive operationalProduct.id
-Flow B Existing Operational Product -> select directly -> receive operationalProduct.id
-Flow C Local Product -> create/adopt -> receive operationalProduct.id
+Flow A Template -> adopt/create Operational Product -> receive operationalProduct.id
+Flow B Existing Operational Product -> receive operationalProduct.id
+Flow C Local Product -> adopt/create Operational Product -> receive operationalProduct.id
 ```
 
-Template Product id is not used as receive productId.
+No Template Product id is sent into receive from the Product Finder path.
 
 ## 8. Empty state behavior
 
-Local Create empty state now depends on true discovery emptiness:
+Local Create empty state now depends on the merged discovery results.
+
+Because the merged list includes both Operational and Template results, the local create card appears only when:
 
 ```txt
-showSearchResult
+showSearchResult is true
 committedKeyword exists
 filteredProducts.length === 0
-!isLoading
-!operationalProduct
+not loading
+no operationalProduct is currently adopted
 ```
 
-Because `filteredProducts` now includes both Operational and Template results, Local Create is not offered while an Operational Product result exists.
+Therefore local create is not offered while Operational Product results exist.
 
 ## 9. Verification performed
 
-Static verification through GitHub Connector:
+Source verification performed through GitHub Connector:
 
 ```txt
 Read ASSIGNMENT-025
 Read AUDIT-FE01-FLOW-INTEGRATION-001
-Inspected productApi create-local and runtime lookup/search wrappers
-Patched QuickStockPage.jsx
-Re-read QuickStockPage.jsx after commit
+Inspected productApi existing contracts
+Patched QuickStockPage search/adoption logic
+Patched ProductFinderPanel selection key + badges
+Updated this verification report
 ```
 
 Verified by source inspection:
 
 ```txt
-Operational Product search path exists in FE via getProductsForPos.
-Template Product search path still exists via getTemplateProductsForPos.
-Existing Operational Product can be selected directly into operationalProduct.
-Local-created Operational Product is inserted into runtime discovery state after create/adopt.
-Receive uses operationalProduct.id.
-Empty state uses combined discovery results.
-No backend/AuthStore/BranchStore/apiClient/route guard/RBAC files changed.
+Operational Product search path exists in FE through getProductsForPos
+Template search path still exists through getTemplateProductsForPos
+Search runs both Operational + Template requests
+Operational results are normalized and prioritized
+ProductFinderPanel sends source-aware discovery key
+Selecting Operational Product resolves directly into operationalProduct
+Receive payload still uses operationalProduct.id
+Empty local-create state uses merged result count
+No Auth/BranchStore/apiClient/route guard/RBAC files changed
 ```
 
-Runtime API/database verification was not available in this task and remains for E2E phase.
+Runtime API/database verification was not performed in this connector-only task.
 
 ## 10. Known risks
 
-1. Runtime API/database verification is still required to prove that backend `/products/pos/search` returns all newly local-created products as expected.
-2. ProductFinderPanel was not changed, so visual grouping labels for Operational vs Template are not yet explicit. The runtime sort places Operational first, but future UX improvement may add badges/groups.
-3. The current patch keeps implementation inside QuickStockPage to avoid broad refactor. A later cleanup may move discovery composition into store if ROLE-ARCH wants centralized search orchestration.
-4. If backend search uses only one of `search` or `searchText`, FE sends both for compatibility; this should be harmless but should be verified in live E2E.
+1. Runtime API/database verification is still required to prove branch-specific Operational Product results are returned by backend in a running environment.
+2. ProductFinderPanel now shows Operational and Template badges, but grouping into separate visual sections is not implemented to keep this patch minimal.
+3. QuickStockPage remains a large runtime file; this patch avoided broad refactor per assignment constraints.
+4. Search result quality depends on backend `GET /api/products/pos/search` supporting the supplied filters (`search/searchText`, productTypeId, brandId).
 
 ## 11. PASS / NEEDS_DECISION conclusion
 
@@ -243,21 +231,22 @@ PASS WITH E2E VERIFICATION DEBT
 Reason:
 
 ```txt
-Source-level FE Product Discovery now covers Template, Existing Operational, and Local Product paths.
-Live runtime/database verification remains outside this connector-only task.
+Source-level FE Product Discovery now covers Template Product, Existing Operational Product, and Local Product search-after-create paths.
+Live runtime/database confirmation remains for E2E.
 ```
 
 ## 12. Next recommended owner
 
 ```txt
-FE-01 + BE-01 E2E Verification
+FE-01 + BE-01 during E2E verification
 ```
 
 Recommended next checkpoint:
 
 ```txt
-Run Mission B E2E Product Discovery test:
-1. Search existing Operational Product and receive.
-2. Search Template Product, create/adopt, and receive.
-3. Search no-result, create Local Product, receive, then search again to confirm Operational visibility.
+Run Mission B E2E Product Discovery verification:
+1. Search a product already in branch and confirm Operational result is selectable.
+2. Search a Template-only product and confirm create/adopt path.
+3. Create Local Product and confirm later search finds it as Operational.
+4. Receive stock in all paths and confirm productId is operationalProduct.id.
 ```

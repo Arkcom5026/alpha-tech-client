@@ -1,9 +1,8 @@
 // src/features/pos/components/header/HeaderPos.jsx
-// 🏛️ P1 POS Header — Dark Enterprise + Amber Premium
-// Principle: clear module state, calm operational surface, premium but not distracting.
+// P1 Header — POS Runtime + Superadmin Governance navigation
 
 import { useEffect, useState } from 'react';
-import { NavLink, useNavigate, useParams } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
   Activity,
   BarChart3,
@@ -24,11 +23,11 @@ import {
 } from 'lucide-react';
 
 import { useAuthStore } from '@/features/auth/store/authStore';
-import { P1_CAP } from '@/features/auth/rbac/rbacClient';
 import { useBranchStore } from '@/features/branch/store/branchStore';
 
 const HeaderPos = () => {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const { shopSlug } = useParams();
 
   const employee = useAuthStore((state) => state.employee);
@@ -42,16 +41,18 @@ const HeaderPos = () => {
   const clearBranch = useBranchStore((state) => state.clearBranch);
   const loadAndSetBranchById = useBranchStore((state) => state.loadAndSetBranchById);
 
+  const isSuperAdmin = String(role || '').toLowerCase() === 'superadmin';
+  const isSuperAdminRoute = pathname.includes('/superadmin');
+  const isGlobalSuperAdmin = isSuperAdmin || isSuperAdminRoute;
+
   const displayBranchName =
     employee?.branchName ||
     fallbackBranchName ||
     (shopSlug ? `ร้านค้าพันธมิตร (${shopSlug})` : 'ไม่ระบุสาขา');
 
-  const isSuperAdmin = String(role || '').toLowerCase() === 'superadmin';
-  const isGlobalSuperAdmin = isSuperAdmin;
   const displayName = employee?.name || user?.username || user?.email || 'ผู้ใช้';
 
-   const [showMenu, setShowMenu] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
 
   const handleLogout = () => {
     clearBranch();
@@ -69,21 +70,40 @@ const HeaderPos = () => {
     }
   }, [isSuperAdmin, isAuthenticated, role, employee?.branchId, selectedBranchId, loadAndSetBranchById]);
 
-  const getRoutePath = (subPath) => {
+  const getPosRoutePath = (subPath = '') => {
     return shopSlug ? `/${shopSlug}/pos${subPath}` : `/pos${subPath}`;
   };
 
-  // 🟢 FIXED: ปลดล็อกสวิตช์ฟิลเตอร์เมนูหลักด้านบน เปิดโล่ง show: true ให้ผู้ใช้งานกดใช้งานได้ครบทุกโมดูล
-  const navItems = [
-    { label: 'หน้าหลัก', path: getRoutePath(''), end: true, show: true, icon: Home },
-    { label: 'จัดซื้อ', path: getRoutePath('/purchases'), show: true, icon: ShoppingCart },
-    { label: 'การขาย', path: getRoutePath('/sales'), show: true, icon: ClipboardList },
-    { label: 'บริการ', path: getRoutePath('/services'), show: true, icon: Wrench },
-    { label: 'สต๊อก', path: getRoutePath('/stock'), show: true, icon: Package },
-    { label: 'รายงาน', path: getRoutePath('/reports'), show: true, icon: BarChart3 },
-    { label: 'การเงิน', path: getRoutePath('/finance'), show: true, icon: CircleDollarSign },
-    { label: 'ตั้งค่าระบบ', path: getRoutePath('/settings'), show: true, icon: Settings },
-  ].filter((item) => item.show);
+  const getSuperAdminRoutePath = (subPath = '') => {
+    return shopSlug ? `/${shopSlug}/superadmin${subPath}` : `/superadmin${subPath}`;
+  };
+
+  const getRoutePath = isGlobalSuperAdmin ? getSuperAdminRoutePath : getPosRoutePath;
+
+  const posNavItems = [
+    { label: 'หน้าหลัก', path: getPosRoutePath(''), end: true, show: true, icon: Home },
+    { label: 'จัดซื้อ', path: getPosRoutePath('/purchases'), show: true, icon: ShoppingCart },
+    { label: 'การขาย', path: getPosRoutePath('/sales'), show: true, icon: ClipboardList },
+    { label: 'บริการ', path: getPosRoutePath('/services'), show: true, icon: Wrench },
+    { label: 'สต๊อก', path: getPosRoutePath('/stock'), show: true, icon: Package },
+    { label: 'รายงาน', path: getPosRoutePath('/reports'), show: true, icon: BarChart3 },
+    { label: 'การเงิน', path: getPosRoutePath('/finance'), show: true, icon: CircleDollarSign },
+    { label: 'ตั้งค่าระบบ', path: getPosRoutePath('/settings'), show: true, icon: Settings },
+  ];
+
+  const superAdminNavItems = [
+    { label: 'Dashboard', path: getSuperAdminRoutePath(''), end: true, show: true, icon: Home },
+    { label: 'Catalog', path: getSuperAdminRoutePath('/catalog'), show: true, icon: Store },
+    { label: 'Governance', path: getSuperAdminRoutePath('/governance'), show: true, icon: ShieldCheck },
+    { label: 'Analytics', path: getSuperAdminRoutePath('/analytics'), show: true, icon: BarChart3 },
+    { label: 'Settings', path: getSuperAdminRoutePath('/settings'), show: true, icon: Settings },
+  ];
+
+  const navItems = (isGlobalSuperAdmin ? superAdminNavItems : posNavItems).filter((item) => item.show);
+  const headerModeLabel = isGlobalSuperAdmin ? 'SUPERADMIN' : 'POS';
+  const mobileMenuLabel = isGlobalSuperAdmin ? 'เมนู Superadmin' : 'เมนู POS';
+  const userRoleLabel = isGlobalSuperAdmin ? 'Catalog Admin' : 'POS Operator';
+  const logoutLabel = isGlobalSuperAdmin ? 'ออกจากระบบ Superadmin' : 'ออกจากระบบ POS';
 
   const navLinkClass = ({ isActive }) =>
     [
@@ -116,7 +136,6 @@ const HeaderPos = () => {
         <div className="pointer-events-none absolute inset-x-1/4 bottom-0 h-10 bg-amber-500/14 blur-2xl" />
 
         <div className="relative mx-auto flex h-[76px] max-w-[1680px] items-center gap-4 px-6 xl:px-8">
-          {/* Mobile selector */}
           <div className="flex items-center gap-2 md:hidden">
             <div className="flex h-9 w-9 items-center justify-center rounded-2xl border border-[#b7791f]/65 bg-slate-950/40 text-orange-300 shadow-inner">
               <Menu className="h-4 w-4" />
@@ -128,7 +147,7 @@ const HeaderPos = () => {
               defaultValue=""
             >
               <option value="" disabled hidden>
-                เมนู POS
+                {mobileMenuLabel}
               </option>
               {navItems.map((item) => (
                 <option key={item.path} value={item.path}>
@@ -138,16 +157,14 @@ const HeaderPos = () => {
             </select>
           </div>
 
-          {/* POS identity badge */}
           <div className="hidden items-center gap-3 md:flex">
             <div className="flex h-10 items-center gap-2 rounded-2xl border border-[#b7791f]/70 bg-slate-950/38 px-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_0_18px_rgba(245,158,11,0.12)]">
               <span className="h-1.5 w-1.5 rounded-full bg-amber-400 shadow-[0_0_0_4px_rgba(245,158,11,0.14)]" />
-              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white">POS</span>
+              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white">{headerModeLabel}</span>
             </div>
             <div className="h-8 w-px bg-gradient-to-b from-transparent via-amber-400/28 to-transparent" />
           </div>
 
-          {/* Desktop navigation */}
           <nav className="hidden min-w-0 flex-1 items-center gap-1.5 md:flex">
             {navItems.map((item) => {
               const Icon = item.icon;
@@ -163,7 +180,6 @@ const HeaderPos = () => {
 
           <div className="hidden h-9 w-px shrink-0 bg-gradient-to-b from-transparent via-amber-300/25 to-transparent xl:block" />
 
-          {/* Right control panel */}
           <div className="ml-auto flex shrink-0 items-center justify-end gap-2">
             {displayBranchName && !isGlobalSuperAdmin && (
               <div className="hidden max-w-[320px] items-center gap-2 rounded-full border border-[#b7791f]/65 bg-slate-950/28 px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur lg:flex">
@@ -195,7 +211,7 @@ const HeaderPos = () => {
                   onClick={() => setShowMenu((value) => !value)}
                   className="flex h-11 items-center gap-2 rounded-full border border-[#b7791f]/65 bg-slate-950/28 px-3 text-left text-slate-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] transition hover:border-amber-400/80 hover:bg-white/10 hover:shadow-[0_0_0_1px_rgba(251,191,36,0.10)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400/70"
                   aria-expanded={showMenu}
-                  aria-label="เปิดเมนูผู้ใช้งาน POS"
+                  aria-label="เปิดเมนูผู้ใช้งาน"
                 >
                   <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-900 text-slate-300 ring-1 ring-amber-400/30">
                     <UserCircle className="h-4 w-4" />
@@ -203,7 +219,7 @@ const HeaderPos = () => {
 
                   <div className="hidden min-w-0 sm:block">
                     <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-slate-500">
-                      POS Operator
+                      {userRoleLabel}
                     </p>
                     <p className="max-w-[130px] truncate text-xs font-black">{displayName}</p>
                   </div>
@@ -216,13 +232,12 @@ const HeaderPos = () => {
                     <div className="px-3 py-2">
                       <p className="truncate text-sm font-black">{displayName}</p>
                       <p className="mt-0.5 truncate text-[11px] font-semibold text-slate-500">
-                        {displayBranchName}
+                        {isGlobalSuperAdmin ? 'Catalog Governance' : displayBranchName}
                       </p>
                     </div>
 
                     <div className="my-1 h-px bg-gradient-to-r from-transparent via-amber-300/28 to-transparent" />
 
-                    {/* 🟢 FIXED: ถอดเงื่อนไข canSettings ออกเพื่อให้ปุ่มตั้งค่าระบบแสดงผลกับทุกคนเสมอ */}
                     <button
                       type="button"
                       onClick={() => {
@@ -232,7 +247,7 @@ const HeaderPos = () => {
                       className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-xs font-bold text-slate-300 transition hover:bg-white/10 hover:text-white"
                     >
                       <Settings className="h-3.5 w-3.5 text-orange-300" />
-                      ตั้งค่าระบบ
+                      {isGlobalSuperAdmin ? 'Settings' : 'ตั้งค่าระบบ'}
                     </button>
 
                     <div className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-xs font-bold text-emerald-300">
@@ -246,7 +261,7 @@ const HeaderPos = () => {
                       className="mt-1 flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-xs font-black text-red-300 transition hover:bg-red-500/10"
                     >
                       <LogOut className="h-3.5 w-3.5" />
-                      ออกจากระบบ POS
+                      {logoutLabel}
                     </button>
                   </div>
                 )}

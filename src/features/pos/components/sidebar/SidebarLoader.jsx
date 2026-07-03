@@ -1,6 +1,5 @@
 // src/features/pos/components/sidebar/SidebarLoader.jsx
-// 🏛️ P1 POS Sidebar — Dark Enterprise + Brass Gold (Header-Matched Final Polish)
-// 🔓 [UNLOCKED & INJECTION FIXED] แก้ไขลูปดีดเด้งหน้า Dashboard ปลดปล่อยเมนูนำทางสมบูรณ์แบบ 100%
+// P1 Sidebar — POS Runtime + Superadmin Governance contextual sidebar
 import React from 'react';
 import { useParams, useLocation, NavLink } from 'react-router-dom';
 import {
@@ -73,17 +72,48 @@ const moduleMeta = {
     subtitle: 'System Settings',
     icon: ShieldCheck,
   },
+  superadminDashboard: {
+    title: 'Dashboard',
+    subtitle: 'Admin Console',
+    icon: LayoutDashboard,
+  },
+  superadminCatalog: {
+    title: 'Catalog',
+    subtitle: 'Catalog Governance',
+    icon: Box,
+  },
+  superadminGovernance: {
+    title: 'Governance',
+    subtitle: 'Review Control',
+    icon: ShieldCheck,
+  },
+  superadminAnalytics: {
+    title: 'Analytics',
+    subtitle: 'Catalog Intelligence',
+    icon: Gauge,
+  },
+  superadminSettings: {
+    title: 'Settings',
+    subtitle: 'System Control',
+    icon: ShieldCheck,
+  },
 };
 
 const itemIconMap = [
   { keywords: ['Dashboard', 'ภาพรวม', 'หน้าหลัก'], icon: LayoutDashboard },
+  { keywords: ['Candidate', 'Review Queue', 'Promotion', 'Merge'], icon: ShieldCheck },
+  { keywords: ['Template', 'Catalog'], icon: Box },
+  { keywords: ['Brand', 'Category', 'Type', 'Unit'], icon: Tags },
+  { keywords: ['Analytics', 'Stats', 'Growth', 'Adoption'], icon: Gauge },
+  { keywords: ['Audit'], icon: FileText },
+  { keywords: ['Permission', 'System', 'Settings'], icon: ShieldCheck },
   { keywords: ['ขายสินค้า', 'ขาย'], icon: ShoppingCart },
   { keywords: ['ใบเสร็จ', 'ใบส่ง', 'บิล', 'พิมพ์'], icon: ReceiptText },
   { keywords: ['ออนไลน์'], icon: Truck },
   { keywords: ['คืนสินค้า', 'คืน'], icon: PackageCheck },
   { keywords: ['ลูกค้า'], icon: Users },
   { keywords: ['สินค้า', 'บริการ'], icon: Box },
-  { keywords: ['โปรโมชัน', 'ส่วนลด'], icon: Tags },
+  { keywords: ['โปรโมชัน', 'ส่วนลด'], icon: BadgePercent },
   { keywords: ['พนักงาน', 'อนุมัติ'], icon: UserCheck },
   { keywords: ['ตำแหน่ง', 'สิทธิ์'], icon: ShieldCheck },
   { keywords: ['สาขา', 'บริษัท', 'ร้าน'], icon: Building2 },
@@ -119,36 +149,47 @@ const findBestActiveItemPath = (pathname, sections = []) => {
   return matches[0]?.to || null;
 };
 
+const getSuperadminActiveModule = (pathname) => {
+  const segments = pathname.split('/').filter(Boolean);
+  const superadminIdx = segments.indexOf('superadmin');
+  const moduleKey = segments[superadminIdx + 1] || 'dashboard';
+
+  if (moduleKey === 'catalog') return 'superadminCatalog';
+  if (moduleKey === 'governance') return 'superadminGovernance';
+  if (moduleKey === 'analytics') return 'superadminAnalytics';
+  if (moduleKey === 'settings') return 'superadminSettings';
+  return 'superadminDashboard';
+};
+
+const getPosActiveModule = (pathname) => {
+  const segments = pathname.split('/').filter(Boolean);
+  const posIdx = segments.indexOf('pos');
+  return posIdx !== -1 && segments[posIdx + 1] ? segments[posIdx + 1] : 'purchases';
+};
+
 const SidebarLoader = () => {
   const { shopSlug } = useParams();
   const { pathname } = useLocation();
 
   const menuConfig = getSidebarMenuConfig(shopSlug);
+  const isSuperadmin = pathname.includes('/superadmin');
 
-  // 🟢 FIXED LOGIC: ป้องกันโมดูลจมหายหรือตกรางเมื่อเจอกลุ่มคำสั่งสลับหน้า
   const activeModule = React.useMemo(() => {
-    const segments = pathname.split('/').filter(Boolean);
-    const posIdx = segments.indexOf('pos');
+    if (isSuperadmin) return getSuperadminActiveModule(pathname);
+    return getPosActiveModule(pathname);
+  }, [isSuperadmin, pathname]);
 
-    if (posIdx !== -1 && segments[posIdx + 1]) {
-      const moduleKey = segments[posIdx + 1];
-      
-      if (moduleKey === 'reports' && segments.length === (posIdx + 2)) {
-        return 'reports';
-      }
-      
-      return moduleKey;
+  const currentMenuItems = React.useMemo(() => {
+    if (isSuperadmin) {
+      return menuConfig[activeModule] || menuConfig.superadminDashboard || [];
     }
 
-    return 'purchases';
-  }, [pathname]);
+    return menuConfig[activeModule] || menuConfig.reports || menuConfig.purchases || [];
+  }, [activeModule, isSuperadmin, menuConfig]);
 
-  // 🔥 [FALLBACK SAFETY INJECTION]: ดักจับถ้าหน้าหลักไม่มีชุดเมนูย่อย ให้ดึงเอาโครงสร้างเมนู 'reports' มารองรับทันที ป้องกันหน้าจอแช่แข็งค้าง
-  const currentMenuItems = menuConfig[activeModule] || menuConfig['reports'] || menuConfig['purchases'] || [];
-  
   const currentModule = moduleMeta[activeModule] || {
-    title: 'POS',
-    subtitle: 'Operations',
+    title: isSuperadmin ? 'Superadmin' : 'POS',
+    subtitle: isSuperadmin ? 'Admin Console' : 'Operations',
     icon: CircleDot,
   };
   const ModuleIcon = currentModule.icon;
@@ -164,22 +205,20 @@ const SidebarLoader = () => {
       <div className="pointer-events-none absolute inset-y-0 right-0 w-px bg-gradient-to-b from-transparent via-amber-400/75 to-transparent" />
       <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-16 bg-amber-500/8 blur-2xl" />
 
-      {/* System anchor */}
       <div className="relative flex h-[76px] shrink-0 items-center border-b border-[#7a5b21]/50 bg-slate-950/76 px-5">
         <div className="flex min-w-0 items-center gap-3">
           <span className="h-2 w-2 shrink-0 rounded-full bg-orange-400 shadow-[0_0_0_4px_rgba(245,158,11,0.12),0_0_12px_rgba(245,158,11,0.55)]" />
           <div className="min-w-0">
             <p className="truncate text-base font-black uppercase tracking-[0.11em] text-white">
-              POS System
+              {isSuperadmin ? 'Admin Console' : 'POS System'}
             </p>
             <p className="mt-0.5 truncate text-[9px] font-black uppercase tracking-[0.2em] text-amber-400/65">
-              Enterprise command rail
+              {isSuperadmin ? 'Governance command rail' : 'Enterprise command rail'}
             </p>
           </div>
         </div>
       </div>
 
-      {/* Current module card */}
       <div className="relative px-4 py-4">
         <div className="overflow-hidden rounded-2xl border border-[#7a5b21]/72 bg-slate-950/42 p-3.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.055),0_0_22px_rgba(245,158,11,0.10)]">
           <div className="absolute inset-x-7 top-[16px] h-px bg-gradient-to-r from-transparent via-amber-300/40 to-transparent" />
@@ -191,7 +230,7 @@ const SidebarLoader = () => {
 
             <div className="min-w-0">
               <p className="text-[10px] font-black text-amber-300/80">
-                โมดูลปัจจุบัน
+                {isSuperadmin ? 'พื้นที่ปัจจุบัน' : 'โมดูลปัจจุบัน'}
               </p>
               <h2 className="truncate text-lg font-black leading-tight text-orange-400">
                 {currentModule.title}
@@ -204,7 +243,6 @@ const SidebarLoader = () => {
         </div>
       </div>
 
-      {/* Menu sections */}
       <div className="relative flex-1 overflow-y-auto px-4 pb-4 pr-3 scrollbar-none">
         <div className="space-y-5">
           {currentMenuItems.map((section, idx) => (
@@ -225,91 +263,60 @@ const SidebarLoader = () => {
                   const ItemIcon = getItemIcon(item.label);
 
                   return (
-                    <li key={`item-${itemIdx}`}>
+                    <li key={`${item.to}-${itemIdx}`}>
                       <NavLink
                         to={item.to}
-                        className={() =>
-                          [
-                            'group relative flex items-center justify-between gap-3 overflow-visible rounded-2xl border px-4 py-2.5',
-                            'text-[13px] font-black transition-all duration-200',
-                            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950',
-                            'before:absolute before:inset-x-3 before:top-0 before:h-px before:rounded-full before:transition-opacity before:duration-200',
-                            'after:absolute after:left-5 after:right-5 after:-bottom-[3px] after:h-[2px] after:rounded-full after:transition-all after:duration-200',
-
-                            isItemActive
-                              ? [
-                                'border-amber-300/58 bg-gradient-to-b from-amber-400/90 to-orange-500/95 text-white',
-                                'shadow-[0_0_0_1px_rgba(251,191,36,0.16),0_0_12px_rgba(245,158,11,0.22),0_6px_14px_rgba(249,115,22,0.12)]',
-                                'before:bg-amber-100/35 before:opacity-100 after:bg-amber-200/80 after:opacity-100 after:shadow-[0_0_6px_rgba(251,191,36,0.32)]',
-                              ].join(' ')
-                              : [
-                                'border-[#7a5b21]/80 bg-slate-950/34 text-slate-100',
-                                'shadow-[inset_0_1px_0_rgba(255,255,255,0.055),0_0_0_1px_rgba(120,53,15,0.14)]',
-                                'before:bg-gradient-to-r before:from-transparent before:via-white/10 before:to-transparent before:opacity-100 after:bg-amber-400/55 after:opacity-0',
-                                'hover:-translate-y-px hover:border-[#d6a84a]/85 hover:bg-white/10 hover:text-white hover:shadow-[0_0_0_1px_rgba(251,191,36,0.18),0_0_16px_rgba(212,168,74,0.24)] hover:after:opacity-100',
-                              ].join(' '),
-                          ].join(' ')
-                        }
+                        end={item.end}
+                        className={[
+                          'group relative flex items-center gap-3 overflow-hidden rounded-2xl border px-3 py-3 text-[13px] font-black transition-all duration-200',
+                          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950',
+                          isItemActive
+                            ? 'border-amber-300/90 bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-[0_0_0_1px_rgba(251,191,36,0.24),0_0_20px_rgba(245,158,11,0.32)]'
+                            : 'border-[#7a5b21]/80 bg-slate-950/42 text-slate-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] hover:-translate-y-px hover:border-amber-400/80 hover:bg-white/10 hover:text-white hover:shadow-[0_0_0_1px_rgba(251,191,36,0.12),0_0_14px_rgba(245,158,11,0.18)]',
+                        ].join(' ')}
                       >
-                        <span className="relative z-10 flex min-w-0 items-center gap-3">
-                          <span
-                            className={`flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-xl transition ${isItemActive
-                                ? 'bg-[#fff3c4]/14 text-amber-100 ring-1 ring-amber-200/18'
-                                : 'text-amber-300 group-hover:text-amber-200'
-                              }`}
-                          >
-                            <ItemIcon className="h-4 w-4" />
-                          </span>
-                          <span className="truncate">{item.label}</span>
+                        <span className="pointer-events-none absolute inset-x-3 top-0 h-px bg-gradient-to-r from-transparent via-white/12 to-transparent" />
+
+                        <span
+                          className={[
+                            'flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border transition-all duration-200',
+                            isItemActive
+                              ? 'border-white/20 bg-white/16 text-white shadow-inner'
+                              : 'border-[#7a5b21]/60 bg-slate-900/60 text-amber-300 group-hover:border-amber-400/60 group-hover:bg-amber-500/10',
+                          ].join(' ')}
+                        >
+                          <ItemIcon className="h-4 w-4" />
                         </span>
 
-                        <span className="relative z-10 flex shrink-0 items-center">
-                          {isItemActive ? (
-                            <span className="h-1.5 w-1.5 rounded-full bg-amber-200 shadow-[0_0_6px_rgba(251,191,36,0.55)]" />
-                          ) : (
-                            <ChevronRight className="h-4 w-4 text-amber-300/45 transition group-hover:translate-x-0.5 group-hover:text-amber-200" />
-                          )}
-                        </span>
+                        <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                        <ChevronRight
+                          className={[
+                            'h-3.5 w-3.5 shrink-0 transition-all duration-200',
+                            isItemActive ? 'translate-x-0 text-white' : 'text-amber-300/60 group-hover:translate-x-0.5 group-hover:text-amber-200',
+                          ].join(' ')}
+                        />
                       </NavLink>
                     </li>
                   );
                 })}
               </ul>
-
-              {idx < currentMenuItems.length - 1 && (
-                <div className="pt-2">
-                  <div className="h-px bg-gradient-to-r from-transparent via-[#7a5b21]/42 to-transparent" />
-                </div>
-              )}
             </div>
           ))}
         </div>
-
-        {/* Favorite / quick access block */}
-        {currentMenuItems.length > 0 && (
-          <div className="mt-5 rounded-2xl border border-[#7a5b21]/80 bg-slate-950/34 px-4 py-3 text-amber-100/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.045)]">
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex min-w-0 items-center gap-3">
-                <Star className="h-4 w-4 shrink-0 text-amber-300" />
-                <span className="truncate text-xs font-black">เมนูโปรด</span>
-              </div>
-              <ChevronRight className="h-4 w-4 shrink-0 text-amber-300/60" />
-            </div>
-          </div>
-        )}
       </div>
 
-      {/* Collapse affordance */}
-      <div className="relative shrink-0 border-t border-[#7a5b21]/45 bg-slate-950/68 p-4">
-        <button
-          type="button"
-          className="flex w-full items-center gap-3 rounded-2xl border border-[#7a5b21]/80 bg-slate-950/34 px-4 py-2.5 text-xs font-black text-amber-100/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.045)] transition hover:border-[#d6a84a]/85 hover:bg-white/8 hover:text-white"
+      <div className="relative border-t border-[#7a5b21]/55 bg-slate-950/72 p-4">
+        <NavLink
+          to={isSuperadmin ? `/${shopSlug || 'advancetech'}/superadmin/settings` : `/${shopSlug || 'advancetech'}/pos/settings`}
+          className="group flex items-center gap-3 rounded-2xl border border-[#7a5b21]/78 bg-slate-950/48 px-3 py-3 text-[13px] font-black text-slate-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] transition-all hover:-translate-y-px hover:border-amber-400/85 hover:bg-white/10 hover:text-white"
         >
-          <span className="flex h-7 w-7 items-center justify-center rounded-full border border-[#b7791f]/70 text-amber-300">
-            <ChevronLeft className="h-3.5 w-3.5" />
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-[#b7791f]/65 bg-orange-500/10 text-amber-300 transition group-hover:border-amber-300/70">
+            <ChevronLeft className="h-4 w-4" />
           </span>
-          <span>ซ่อนเมนู</span>
-        </button>
+          <span className="min-w-0 flex-1 truncate">
+            {isSuperadmin ? 'Settings' : 'ซ่อนเมนู'}
+          </span>
+        </NavLink>
       </div>
     </aside>
   );

@@ -5,6 +5,8 @@ import { Navigate } from 'react-router-dom';
 
 import CandidateReviewPage from '@/features/templateCandidate/pages/CandidateReviewPage';
 import CandidateDetailPage from '@/features/templateCandidate/pages/CandidateDetailPage';
+import ProductTemplateGovernanceListPage from '@/features/productTemplate/pages/ProductTemplateGovernanceListPage';
+import ProductTemplateGovernanceDetailPage from '@/features/productTemplate/pages/ProductTemplateGovernanceDetailPage';
 
 const SuperAdminPlaceholderPage = ({ title, description }) => (
   <div className="space-y-4">
@@ -29,17 +31,20 @@ export const superAdminRoutes = [
   {
     path: 'catalog',
     children: [
-      { index: true, element: <Navigate to="candidates" replace /> },
+      { index: true, element: <Navigate to="templates" replace /> },
+      {
+        path: 'templates',
+        children: [
+          { index: true, element: <ProductTemplateGovernanceListPage /> },
+          { path: ':id', element: <ProductTemplateGovernanceDetailPage /> },
+        ],
+      },
       {
         path: 'candidates',
         children: [
           { index: true, element: <CandidateReviewPage /> },
           { path: ':id', element: <CandidateDetailPage /> },
         ],
-      },
-      {
-        path: 'templates',
-        element: <SuperAdminPlaceholderPage title="Product Templates" description="Template Catalog กลางที่ผ่านการอนุมัติแล้ว" />,
       },
       {
         path: 'brands',

@@ -575,6 +575,11 @@ const QuickStockPage = () => {
 
     setIsCreatingOperationalProduct(true);
     try {
+      if (typeof createLocalOperationalProductAction !== "function") {
+        toast.error("ยังไม่พบ createLocalOperationalProductAction");
+        return;
+      }
+
       const response = await createLocalOperationalProductAction(payload);
       const rawCreatedProduct = extractSingleProduct(response);
       if (!adoptOperationalProduct(rawCreatedProduct, null)) {

@@ -21,10 +21,15 @@ export const getSidebarSuperadminItems = (shopSlug) => {
 
     superadminCatalog: [
       {
-        label: 'Catalog',
+        label: 'Template Catalog',
         items: [
-          { label: 'Product Candidates', to: `${basePath}/catalog/candidates` },
           { label: 'Product Templates', to: `${basePath}/catalog/templates` },
+          { label: 'Product Candidates', to: `${basePath}/catalog/candidates` },
+        ],
+      },
+      {
+        label: 'Catalog Master',
+        items: [
           { label: 'Brands', to: `${basePath}/catalog/brands` },
           { label: 'Categories', to: `${basePath}/catalog/categories` },
           { label: 'Product Types', to: `${basePath}/catalog/product-types` },

@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import useProductTemplateStore from '../store/productTemplateStore';
+import CatalogMasterSelect from '../components/CatalogMasterSelect';
 
 const emptyForm = {
   name: '',
@@ -21,25 +22,6 @@ const optionalNumber = (value) => {
   const n = Number(value);
   return Number.isFinite(n) && n > 0 ? n : undefined;
 };
-
-const MasterSelect = ({ label, required = false, value, options = [], onChange, placeholder }) => (
-  <label className="space-y-2">
-    <span className="text-xs font-black uppercase tracking-[0.12em] text-slate-500">{label}{required ? ' *' : ''}</span>
-    <select
-      value={value}
-      onChange={(event) => onChange(event.target.value)}
-      required={required}
-      className="min-h-11 w-full rounded-2xl border border-slate-200 px-4 text-sm font-semibold outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-200"
-    >
-      <option value="">{placeholder || `Select ${label}`}</option>
-      {options.map((item) => (
-        <option key={item.id} value={item.id}>
-          {item.name} · ID {item.id}{item.branchId ? ` · Branch ${item.branchId}` : ''}
-        </option>
-      ))}
-    </select>
-  </label>
-);
 
 const ProductTemplateGovernanceCreatePage = () => {
   const { shopSlug } = useParams();
@@ -133,10 +115,10 @@ const ProductTemplateGovernanceCreatePage = () => {
               />
             </label>
 
-            <MasterSelect label="Product Type" required value={form.productTypeId} options={masterOptions.productTypes} onChange={(value) => setField('productTypeId', value)} />
-            <MasterSelect label="Brand" value={form.brandId} options={masterOptions.brands} onChange={(value) => setField('brandId', value)} />
-            <MasterSelect label="Category" value={form.categoryId} options={masterOptions.categories} onChange={(value) => setField('categoryId', value)} />
-            <MasterSelect label="Unit" value={form.unitId} options={masterOptions.units} onChange={(value) => setField('unitId', value)} />
+            <CatalogMasterSelect label="Product Type" required value={form.productTypeId} options={masterOptions.productTypes} onChange={(value) => setField('productTypeId', value)} disabled={isLoadingMasters} />
+            <CatalogMasterSelect label="Brand" value={form.brandId} options={masterOptions.brands} onChange={(value) => setField('brandId', value)} disabled={isLoadingMasters} />
+            <CatalogMasterSelect label="Category" value={form.categoryId} options={masterOptions.categories} onChange={(value) => setField('categoryId', value)} disabled={isLoadingMasters} />
+            <CatalogMasterSelect label="Unit" value={form.unitId} options={masterOptions.units} onChange={(value) => setField('unitId', value)} disabled={isLoadingMasters} />
 
             <label className="space-y-2">
               <span className="text-xs font-black uppercase tracking-[0.12em] text-slate-500">Mode</span>

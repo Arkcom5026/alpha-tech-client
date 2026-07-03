@@ -1,6 +1,6 @@
 # AUDIT-001 — ROLE-ARCH Handover Audit / Mission B
 
-Status: DRAFT
+Status: PASS WITH DEBT
 Owner: ROLE-ARCH
 Audit target: HANDOVER-001
 
@@ -14,7 +14,10 @@ Implementation / Documentation
 → Audit
 → Certification
 → Successor Boot
+→ STOP
 ```
+
+A handing-over ROLE-ARCH must stop after successor boot. The successor ROLE-ARCH decides and creates the next assignment after accepting handover.
 
 ## 1. Mission Integrity
 
@@ -38,13 +41,32 @@ Result: PASS
 ## 3. Responsibility Integrity
 
 - ROLE-ARCH did not assign BE patch prematurely: PASS
-- Next owner identified as FE-01: PASS
+- Next likely owner identified for successor consideration: PASS
 - FE-02/BE-01 support roles identified conditionally: PASS
 - BE-02 remains PLANNED: PASS
 
 Result: PASS
 
-## 4. Workspace Integrity
+## 4. Responsibility Boundary Audit
+
+- ROLE-ARCH self-handover created: PASS
+- ROLE-ARCH audit created: PASS
+- ROLE-ARCH certification created: PASS
+- ROLE-ARCH successor boot created: PASS
+- ROLE-ARCH must not continue Mission after handover: PASS
+- Premature FE-01 assignment was identified: FAIL THEN CORRECTED
+- Premature FE-01 assignment was retracted: PASS
+
+Boundary finding:
+
+```txt
+ASSIGNMENT-018 was created before successor ROLE-ARCH accepted handover.
+It is now RETRACTED and must not be executed.
+```
+
+Result: PASS WITH CORRECTED DEBT
+
+## 5. Workspace Integrity
 
 - Mission B workspace protocol exists: PASS
 - Role-specific assignment/inbox paths exist: PASS
@@ -56,7 +78,7 @@ Historical reports remain in shared inbox. New work should use role workspaces.
 
 Result: PASS WITH DEBT
 
-## 5. Runtime Integrity
+## 6. Runtime Integrity
 
 - Current backend runtime understanding is documented: PASS
 - BranchPrice contract reviewed: PASS
@@ -72,18 +94,23 @@ Result: PASS
 PASS WITH DEBT
 ```
 
-Delivery can proceed to Certification if:
+Delivery may proceed because the responsibility boundary issue was corrected.
+
+## Required Follow-up For Successor ROLE-ARCH
+
+Successor ROLE-ARCH must:
 
 ```txt
-1. Certification document is created.
-2. Successor Boot document is created.
-3. Next Assignment is created under FE-01 workspace.
+1. Read MISSION-STATUS.md
+2. Read HANDOVER-001.md
+3. Read AUDIT-001.md
+4. Read CERTIFICATION-001.md
+5. Read SUCCESSOR-BOOT-001.md
+6. Decide whether to create a new FE-01 assignment
 ```
 
-## Required Follow-up Before Final Handover
+Important:
 
 ```txt
-docs/mission-b/inbox/ROLE-ARCH/CERTIFICATION-001.md
-docs/mission-b/inbox/ROLE-ARCH/SUCCESSOR-BOOT-001.md
-docs/mission-b/assignments/FE-01/ASSIGNMENT-018.md
+docs/mission-b/assignments/FE-01/ASSIGNMENT-018.md is RETRACTED and must not be executed.
 ```

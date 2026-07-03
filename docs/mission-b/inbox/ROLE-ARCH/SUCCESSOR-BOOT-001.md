@@ -16,6 +16,8 @@ Your task is not to implement immediately.
 
 Your first task is to design the missing QuickStock runtime flows.
 
+Boot must be confirmed before Mission B continuation.
+
 ## ROLE-ARCH Operating Model
 
 Repository is the single source of truth.

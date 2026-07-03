@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import useProductTemplateStore from '../store/productTemplateStore';
 import CatalogMasterSelect from '../components/CatalogMasterSelect';
+import TemplatePriceSnapshotForm from '../components/TemplatePriceSnapshotForm';
 
 const emptyForm = {
   name: '',
@@ -15,12 +16,23 @@ const emptyForm = {
   noSN: false,
   warrantyDays: '',
   codeType: '',
+  costPrice: '',
+  priceRetail: '',
+  priceWholesale: '',
+  priceOnline: '',
+  priceTechnician: '',
+  templateBranchCode: 'T01',
 };
 
 const optionalNumber = (value) => {
   if (value === undefined || value === null || value === '') return undefined;
   const n = Number(value);
-  return Number.isFinite(n) && n > 0 ? n : undefined;
+  return Number.isFinite(n) && n >= 0 ? n : undefined;
+};
+
+const optionalId = (value) => {
+  const n = optionalNumber(value);
+  return n && n > 0 ? n : undefined;
 };
 
 const ProductTemplateGovernanceCreatePage = () => {
@@ -47,16 +59,22 @@ const ProductTemplateGovernanceCreatePage = () => {
     event.preventDefault();
     const payload = {
       name: String(form.name || '').trim(),
-      productTypeId: optionalNumber(form.productTypeId),
-      brandId: optionalNumber(form.brandId),
-      categoryId: optionalNumber(form.categoryId),
-      unitId: optionalNumber(form.unitId),
+      productTypeId: optionalId(form.productTypeId),
+      brandId: optionalId(form.brandId),
+      categoryId: optionalId(form.categoryId),
+      unitId: optionalId(form.unitId),
       mode: form.mode,
       active: !!form.active,
       trackSerialNumber: !!form.trackSerialNumber,
       noSN: !!form.noSN,
       codeType: String(form.codeType || '').trim() || undefined,
-      warrantyDays: form.warrantyDays === '' ? undefined : Number(form.warrantyDays),
+      warrantyDays: optionalNumber(form.warrantyDays),
+      costPrice: optionalNumber(form.costPrice),
+      priceRetail: optionalNumber(form.priceRetail),
+      priceWholesale: optionalNumber(form.priceWholesale),
+      priceOnline: optionalNumber(form.priceOnline),
+      priceTechnician: optionalNumber(form.priceTechnician),
+      templateBranchCode: String(form.templateBranchCode || '').trim() || undefined,
     };
 
     const created = await addTemplateAction(payload);
@@ -70,11 +88,7 @@ const ProductTemplateGovernanceCreatePage = () => {
   return (
     <div className="space-y-5">
       <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-        <button
-          type="button"
-          onClick={() => navigate(listPath)}
-          className="mb-4 rounded-2xl border border-slate-200 px-4 py-2 text-xs font-black text-slate-600 transition hover:bg-slate-50"
-        >
+        <button type="button" onClick={() => navigate(listPath)} className="mb-4 rounded-2xl border border-slate-200 px-4 py-2 text-xs font-black text-slate-600 transition hover:bg-slate-50">
           ← Back to Templates
         </button>
         <p className="text-[11px] font-black uppercase tracking-[0.18em] text-orange-500">Template Governance</p>
@@ -106,13 +120,7 @@ const ProductTemplateGovernanceCreatePage = () => {
           <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             <label className="space-y-2 md:col-span-2 xl:col-span-3">
               <span className="text-xs font-black uppercase tracking-[0.12em] text-slate-500">Template Name *</span>
-              <input
-                value={form.name}
-                onChange={(event) => setField('name', event.target.value)}
-                required
-                className="min-h-11 w-full rounded-2xl border border-slate-200 px-4 text-sm font-semibold outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-200"
-                placeholder="เช่น กล้องวงจรปิด VSTARCAM CG49 3MP SIM Indoor"
-              />
+              <input value={form.name} onChange={(event) => setField('name', event.target.value)} required className="min-h-11 w-full rounded-2xl border border-slate-200 px-4 text-sm font-semibold outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-200" placeholder="เช่น กล้องวงจรปิด VSTARCAM CG49 3MP SIM Indoor" />
             </label>
 
             <CatalogMasterSelect label="Product Type" required value={form.productTypeId} options={masterOptions.productTypes} onChange={(value) => setField('productTypeId', value)} disabled={isLoadingMasters} />
@@ -122,11 +130,7 @@ const ProductTemplateGovernanceCreatePage = () => {
 
             <label className="space-y-2">
               <span className="text-xs font-black uppercase tracking-[0.12em] text-slate-500">Mode</span>
-              <select
-                value={form.mode}
-                onChange={(event) => setField('mode', event.target.value)}
-                className="min-h-11 w-full rounded-2xl border border-slate-200 px-4 text-sm font-semibold outline-none"
-              >
+              <select value={form.mode} onChange={(event) => setField('mode', event.target.value)} className="min-h-11 w-full rounded-2xl border border-slate-200 px-4 text-sm font-semibold outline-none">
                 <option value="STRUCTURED">STRUCTURED</option>
                 <option value="SIMPLE">SIMPLE</option>
               </select>
@@ -134,32 +138,19 @@ const ProductTemplateGovernanceCreatePage = () => {
 
             <label className="space-y-2">
               <span className="text-xs font-black uppercase tracking-[0.12em] text-slate-500">Warranty Days</span>
-              <input
-                type="number"
-                min="0"
-                value={form.warrantyDays}
-                onChange={(event) => setField('warrantyDays', event.target.value)}
-                className="min-h-11 w-full rounded-2xl border border-slate-200 px-4 text-sm font-semibold outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-200"
-              />
+              <input type="number" min="0" value={form.warrantyDays} onChange={(event) => setField('warrantyDays', event.target.value)} className="min-h-11 w-full rounded-2xl border border-slate-200 px-4 text-sm font-semibold outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-200" />
             </label>
           </div>
         </section>
 
+        <TemplatePriceSnapshotForm form={form} setField={setField} />
+
         <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
           <h2 className="text-base font-black text-slate-900">Governance Flags</h2>
           <div className="mt-4 grid gap-3 md:grid-cols-3">
-            <label className="flex items-center gap-3 rounded-2xl border border-slate-200 p-4 text-sm font-bold text-slate-700">
-              <input type="checkbox" checked={!!form.active} onChange={(event) => setField('active', event.target.checked)} />
-              Active Template
-            </label>
-            <label className="flex items-center gap-3 rounded-2xl border border-slate-200 p-4 text-sm font-bold text-slate-700">
-              <input type="checkbox" checked={!!form.trackSerialNumber} onChange={(event) => setField('trackSerialNumber', event.target.checked)} />
-              Track Serial Number
-            </label>
-            <label className="flex items-center gap-3 rounded-2xl border border-slate-200 p-4 text-sm font-bold text-slate-700">
-              <input type="checkbox" checked={!!form.noSN} onChange={(event) => setField('noSN', event.target.checked)} />
-              No Serial Number
-            </label>
+            <label className="flex items-center gap-3 rounded-2xl border border-slate-200 p-4 text-sm font-bold text-slate-700"><input type="checkbox" checked={!!form.active} onChange={(event) => setField('active', event.target.checked)} />Active Template</label>
+            <label className="flex items-center gap-3 rounded-2xl border border-slate-200 p-4 text-sm font-bold text-slate-700"><input type="checkbox" checked={!!form.trackSerialNumber} onChange={(event) => setField('trackSerialNumber', event.target.checked)} />Track Serial Number</label>
+            <label className="flex items-center gap-3 rounded-2xl border border-slate-200 p-4 text-sm font-bold text-slate-700"><input type="checkbox" checked={!!form.noSN} onChange={(event) => setField('noSN', event.target.checked)} />No Serial Number</label>
           </div>
         </section>
 

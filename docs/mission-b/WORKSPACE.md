@@ -12,11 +12,13 @@ Use role-specific workspaces for new Mission B assignments and reports:
 ```txt
 docs/mission-b/
   assignments/
+    ROLE-ARCH/
     FE-01/
     FE-02/
     BE-01/
     BE-02/
   inbox/
+    ROLE-ARCH/
     FE-01/
     FE-02/
     BE-01/
@@ -35,10 +37,31 @@ New work should prefer role workspace paths.
 ## Active Mission B Roles
 
 ```txt
+ROLE-ARCH Mission Architect
 FE-01 Runtime Owner
 FE-02 UX Owner
 BE-01 Backend Runtime Owner
-ROLE-ARCH Mission Architect
+```
+
+## Planned Mission B Roles
+
+```txt
+BE-02 Backend Architecture Owner
+```
+
+## ROLE-ARCH Workspace Purpose
+
+ROLE-ARCH workspace stores mission planning, assignment queue, architecture decisions, self handover, audit, certification, and successor boot.
+
+Typical paths:
+
+```txt
+docs/mission-b/assignments/ROLE-ARCH/
+docs/mission-b/inbox/ROLE-ARCH/MISSION-STATUS.md
+docs/mission-b/inbox/ROLE-ARCH/HANDOVER-###.md
+docs/mission-b/inbox/ROLE-ARCH/AUDIT-###.md
+docs/mission-b/inbox/ROLE-ARCH/CERTIFICATION-###.md
+docs/mission-b/inbox/ROLE-ARCH/SUCCESSOR-BOOT-###.md
 ```
 
 ## Assignment Path Rule
@@ -71,6 +94,7 @@ docs/mission-b/inbox/FE-01/FLOW-DESIGN-001.md
 
 ## Role Boundary Rule
 
+- ROLE-ARCH owns mission direction, assignment, audit, certification, and successor boot.
 - FE-01 owns runtime flow and FE/BE integration behavior.
 - FE-02 owns UX, operator language, and visual/operator clarity.
 - BE-01 owns backend runtime behavior and verification.
@@ -120,3 +144,4 @@ assignment file
 
 Backend roles must also read backend maps.
 Frontend roles must also read frontend boot/certification documents.
+ROLE-ARCH must also read ROLE-ARCH state, handover, audit, and certification documents when performing transfer or successor boot.

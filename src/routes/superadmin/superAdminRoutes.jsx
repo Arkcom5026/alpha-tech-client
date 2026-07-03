@@ -7,6 +7,7 @@ import CandidateReviewPage from '@/features/templateCandidate/pages/CandidateRev
 import CandidateDetailPage from '@/features/templateCandidate/pages/CandidateDetailPage';
 import ProductTemplateGovernanceListPage from '@/features/productTemplate/pages/ProductTemplateGovernanceListPage';
 import ProductTemplateGovernanceDetailPage from '@/features/productTemplate/pages/ProductTemplateGovernanceDetailPage';
+import ProductTemplateGovernanceEditPage from '@/features/productTemplate/pages/ProductTemplateGovernanceEditPage';
 
 const SuperAdminPlaceholderPage = ({ title, description }) => (
   <div className="space-y-4">
@@ -37,6 +38,7 @@ export const superAdminRoutes = [
         children: [
           { index: true, element: <ProductTemplateGovernanceListPage /> },
           { path: ':id', element: <ProductTemplateGovernanceDetailPage /> },
+          { path: ':id/edit', element: <ProductTemplateGovernanceEditPage /> },
         ],
       },
       {

@@ -59,7 +59,9 @@ const ProductTemplateGovernanceDetailPage = () => {
   const template = currentTemplate || {};
   const name = template.name || template.title || template.productName || 'Product Template';
   const active = template.active !== false;
-  const backPath = shopSlug ? `/${shopSlug}/superadmin/catalog/templates` : '/superadmin/catalog/templates';
+  const basePath = shopSlug ? `/${shopSlug}/superadmin/catalog/templates` : '/superadmin/catalog/templates';
+  const backPath = basePath;
+  const editPath = `${basePath}/${id}/edit`;
   const images = Array.isArray(template.images) ? template.images : [];
   const coverUrl = template.imageUrl || images.find((image) => image.isCover)?.secure_url || images.find((image) => image.isCover)?.url || images[0]?.secure_url || images[0]?.url;
 
@@ -107,6 +109,14 @@ const ProductTemplateGovernanceDetailPage = () => {
           </div>
 
           <div className="flex flex-col gap-2">
+            <button
+              type="button"
+              onClick={() => navigate(editPath)}
+              disabled={isSaving || !id}
+              className="rounded-2xl border border-orange-200 bg-orange-50 px-5 py-3 text-sm font-black text-orange-700 transition hover:bg-orange-100 disabled:opacity-60"
+            >
+              Edit Template
+            </button>
             {active ? (
               <button
                 type="button"

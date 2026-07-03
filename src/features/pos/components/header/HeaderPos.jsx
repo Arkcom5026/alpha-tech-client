@@ -70,6 +70,15 @@ const HeaderPos = () => {
     }
   }, [isSuperAdmin, isAuthenticated, role, employee?.branchId, selectedBranchId, loadAndSetBranchById]);
 
+  useEffect(() => {
+    if (!isSuperAdmin || isSuperAdminRoute || !shopSlug) return;
+
+    const isPosRuntimeRoute = pathname.includes(`/${shopSlug}/pos`) || pathname.includes('/pos');
+    if (isPosRuntimeRoute) {
+      navigate(`/${shopSlug}/superadmin`, { replace: true });
+    }
+  }, [isSuperAdmin, isSuperAdminRoute, navigate, pathname, shopSlug]);
+
   const getPosRoutePath = (subPath = '') => {
     return shopSlug ? `/${shopSlug}/pos${subPath}` : `/pos${subPath}`;
   };

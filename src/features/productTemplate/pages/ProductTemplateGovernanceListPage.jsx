@@ -7,6 +7,13 @@ const formatValue = (value, fallback = '-') => {
   return String(value);
 };
 
+const formatDate = (value) => {
+  if (!value) return '-';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return date.toLocaleString('th-TH', { dateStyle: 'medium', timeStyle: 'short' });
+};
+
 const getTemplateName = (template) =>
   formatValue(template?.name ?? template?.title ?? template?.productName, 'Untitled Template');
 
@@ -42,11 +49,17 @@ const ProductTemplateGovernanceListPage = () => {
   }, []);
 
   const basePath = shopSlug ? `/${shopSlug}/superadmin/catalog/templates` : '/superadmin/catalog/templates';
+  const activeVisible = items.filter((item) => getTemplateStatus(item) === 'ACTIVE').length;
+  const inactiveVisible = items.length - activeVisible;
 
   const handleSearch = (event) => {
     event.preventDefault();
     setPageAction(1);
     fetchListAction({ page: 1, limit, includeInactive, search });
+  };
+
+  const handleRefresh = () => {
+    fetchListAction({ page, limit, includeInactive, search });
   };
 
   const handleIncludeInactive = (checked) => {
@@ -83,6 +96,21 @@ const ProductTemplateGovernanceListPage = () => {
         </div>
       </section>
 
+      <section className="grid gap-3 md:grid-cols-3">
+        <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+          <p className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">Total Templates</p>
+          <p className="mt-2 text-2xl font-black text-slate-900">{totalItems || items.length}</p>
+        </div>
+        <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+          <p className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">Active Visible</p>
+          <p className="mt-2 text-2xl font-black text-emerald-700">{activeVisible}</p>
+        </div>
+        <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+          <p className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">Inactive Visible</p>
+          <p className="mt-2 text-2xl font-black text-slate-700">{inactiveVisible}</p>
+        </div>
+      </section>
+
       <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
         <form onSubmit={handleSearch} className="flex flex-col gap-3 lg:flex-row lg:items-center">
           <input
@@ -108,6 +136,14 @@ const ProductTemplateGovernanceListPage = () => {
               <option key={value} value={value}>{value} / page</option>
             ))}
           </select>
+          <button
+            type="button"
+            onClick={handleRefresh}
+            className="min-h-11 rounded-2xl border border-slate-200 px-5 text-sm font-black text-slate-700 transition hover:bg-slate-50 disabled:opacity-60"
+            disabled={isLoading}
+          >
+            Refresh
+          </button>
           <button
             type="submit"
             className="min-h-11 rounded-2xl bg-slate-950 px-5 text-sm font-black text-white transition hover:bg-orange-500 disabled:opacity-60"
@@ -152,12 +188,12 @@ const ProductTemplateGovernanceListPage = () => {
                   <div className="min-w-0">
                     <p className="truncate text-sm font-black text-slate-900">{getTemplateName(template)}</p>
                     <p className="mt-1 truncate text-xs font-semibold text-slate-500">
-                      Unit: {formatValue(template?.unitName ?? template?.unit?.name)} · Mode: {formatValue(template?.mode)}
+                      Unit: {formatValue(template?.unitName ?? template?.unit?.name)} · Mode: {formatValue(template?.mode)} · ID: {formatValue(id)}
                     </p>
                   </div>
                   <div className="truncate text-sm font-bold text-slate-600">{formatValue(template?.brandName ?? template?.brand?.name)}</div>
                   <div className="truncate text-sm font-bold text-slate-600">{formatValue(template?.productTypeName ?? template?.productType?.name)}</div>
-                  <div className="truncate text-sm font-bold text-slate-500">{formatValue(template?.updatedAt ?? template?.createdAt)}</div>
+                  <div className="truncate text-sm font-bold text-slate-500">{formatDate(template?.updatedAt ?? template?.createdAt)}</div>
                   <div>
                     <span className={`inline-flex rounded-full px-3 py-1 text-[11px] font-black ${status === 'ACTIVE' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>
                       {status}

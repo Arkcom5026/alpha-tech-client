@@ -1,8 +1,12 @@
+// src/features/productTemplate/store/productTemplateStore.js
+// Mission C — Product Template Governance Store
 
-// ✅ src/features/productTemplate/store/productTemplateStore.js
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import * as productTemplateApi from '../api/productTemplateApi';
+
+const getErrorMessage = (error, fallback) =>
+  error?.response?.data?.message || error?.response?.data?.error || error?.message || fallback;
 
 const initialState = {
   items: [],
@@ -14,6 +18,7 @@ const initialState = {
   includeInactive: false,
   search: '',
   isLoading: false,
+  isSaving: false,
   error: null,
   lastQuery: null,
 };
@@ -21,13 +26,12 @@ const initialState = {
 const useProductTemplateStore = create(devtools((set, get) => ({
   ...initialState,
 
-  // ✅ setters (Action suffix)
   setPageAction: (n) => set({ page: Number(n) || 1 }),
   setLimitAction: (n) => set({ limit: Number(n) || 20 }),
   setIncludeInactiveAction: (v) => set({ includeInactive: !!v }),
   setSearchAction: (txt) => set({ search: txt ?? '' }),
+  clearCurrentTemplateAction: () => set({ currentTemplate: null, error: null }),
 
-  // ✅ fetch list (supports override params from Page)
   fetchListAction: async (overrides = {}) => {
     const base = get();
 
@@ -61,23 +65,19 @@ const useProductTemplateStore = create(devtools((set, get) => ({
         totalPages: Number(totalPages) || 1,
         totalItems: Number(totalItems) || items.length,
       });
-    } catch (e) {
-      console.error('[productTemplateStore] fetchListAction error:', e);
-      set({ error: e?.message || 'ไม่สามารถโหลดข้อมูลได้' });
+      return res;
+    } catch (error) {
+      console.error('[productTemplateStore] fetchListAction error:', error);
+      set({ error: getErrorMessage(error, 'ไม่สามารถโหลดข้อมูลได้') });
+      return null;
     } finally {
       set({ isLoading: false });
     }
   },
 
-  // ✅ refresh current list with lastQuery (or current state)
   refreshTemplatesAction: async () => {
     const base = get();
-    const { lastQuery } = base;
-
-    if (lastQuery) return await base.fetchListAction(lastQuery);
-
-    // fall back to current state (prevents recursion)
-    return await base.fetchListAction({
+    return base.fetchListAction(base.lastQuery || {
       page: base.page,
       limit: base.limit,
       includeInactive: base.includeInactive,
@@ -85,84 +85,100 @@ const useProductTemplateStore = create(devtools((set, get) => ({
     });
   },
 
-
-  // ✅ get by id
   getTemplateByIdAction: async (id) => {
     set({ isLoading: true, error: null });
     try {
       const template = await productTemplateApi.getProductTemplateById(id);
       set({ currentTemplate: template });
       return template;
-    } catch (e) {
-      console.error('[productTemplateStore] getTemplateByIdAction error:', e);
-      set({ error: e?.message || 'ไม่สามารถดึงข้อมูลได้' });
+    } catch (error) {
+      console.error('[productTemplateStore] getTemplateByIdAction error:', error);
+      set({ error: getErrorMessage(error, 'ไม่สามารถดึงข้อมูลได้') });
       return null;
     } finally {
       set({ isLoading: false });
     }
   },
 
-  // ✅ add
   addTemplateAction: async (data) => {
-    set({ isLoading: true, error: null });
+    set({ isSaving: true, error: null });
     try {
       const newTemplate = await productTemplateApi.createProductTemplate(data);
       await get().refreshTemplatesAction();
       return newTemplate;
-    } catch (e) {
-      console.error('[productTemplateStore] addTemplateAction error:', e);
-      set({ error: e?.message || 'ไม่สามารถเพิ่มข้อมูลได้' });
+    } catch (error) {
+      console.error('[productTemplateStore] addTemplateAction error:', error);
+      set({ error: getErrorMessage(error, 'ไม่สามารถเพิ่มข้อมูลได้') });
       return null;
     } finally {
-      set({ isLoading: false });
+      set({ isSaving: false });
     }
   },
 
-
-  // ✅ update
   updateTemplateAction: async (id, data) => {
-    set({ isLoading: true, error: null });
+    set({ isSaving: true, error: null });
     try {
-      await productTemplateApi.updateProductTemplate(id, data);
+      const updated = await productTemplateApi.updateProductTemplate(id, data);
+      set({ currentTemplate: updated });
       await get().refreshTemplatesAction();
-      return true;
-    } catch (e) {
-      console.error('[productTemplateStore] updateTemplateAction error:', e);
-      set({ error: e?.message || 'ไม่สามารถอัปเดตข้อมูลได้' });
-      return false;
+      return updated;
+    } catch (error) {
+      console.error('[productTemplateStore] updateTemplateAction error:', error);
+      set({ error: getErrorMessage(error, 'ไม่สามารถอัปเดตข้อมูลได้') });
+      return null;
     } finally {
-      set({ isLoading: false });
+      set({ isSaving: false });
     }
   },
 
-  // ✅ delete
-  deleteTemplateAction: async (id) => {
-    set({ isLoading: true, error: null });
+  archiveTemplateAction: async (id) => {
+    set({ isSaving: true, error: null });
     try {
-      await productTemplateApi.deleteProductTemplate(id);
+      const updated = await productTemplateApi.archiveProductTemplate(id);
+      set({ currentTemplate: updated });
       await get().refreshTemplatesAction();
-      return true;
-    } catch (e) {
-      console.error('[productTemplateStore] deleteTemplateAction error:', e);
-      set({ error: e?.message || 'ไม่สามารถลบข้อมูลได้' });
-      return false;
+      return updated;
+    } catch (error) {
+      console.error('[productTemplateStore] archiveTemplateAction error:', error);
+      set({ error: getErrorMessage(error, 'ไม่สามารถปิดใช้งาน Template ได้') });
+      return null;
     } finally {
-      set({ isLoading: false });
+      set({ isSaving: false });
     }
   },
 
-  // ✅ toggle active
+  restoreTemplateAction: async (id) => {
+    set({ isSaving: true, error: null });
+    try {
+      const updated = await productTemplateApi.restoreProductTemplate(id);
+      set({ currentTemplate: updated });
+      await get().refreshTemplatesAction();
+      return updated;
+    } catch (error) {
+      console.error('[productTemplateStore] restoreTemplateAction error:', error);
+      set({ error: getErrorMessage(error, 'ไม่สามารถเปิดใช้งาน Template ได้') });
+      return null;
+    } finally {
+      set({ isSaving: false });
+    }
+  },
+
   toggleActiveAction: async (id) => {
+    set({ isSaving: true, error: null });
     try {
-      await productTemplateApi.toggleActive(id);
+      const updated = await productTemplateApi.toggleActive(id);
+      set({ currentTemplate: updated });
       await get().refreshTemplatesAction();
-    } catch (e) {
-      console.error('[productTemplateStore] toggleActiveAction error:', e);
-      set({ error: e?.message || 'ไม่สามารถเปลี่ยนสถานะได้' });
+      return updated;
+    } catch (error) {
+      console.error('[productTemplateStore] toggleActiveAction error:', error);
+      set({ error: getErrorMessage(error, 'ไม่สามารถเปลี่ยนสถานะได้') });
+      return null;
+    } finally {
+      set({ isSaving: false });
     }
   },
 
-  // ✅ reset filters
   resetFiltersAction: () =>
     set({
       page: 1,
@@ -170,9 +186,6 @@ const useProductTemplateStore = create(devtools((set, get) => ({
       search: '',
       lastQuery: null,
     }),
-}))
-);
+})), { name: 'product-template-governance-store' });
 
 export default useProductTemplateStore;
-
-

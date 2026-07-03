@@ -561,8 +561,9 @@ const QuickStockPage = () => {
   const updateLocalProductForm = (field, value) => setLocalProductForm((prev) => ({ ...prev, [field]: value }));
   const updateLocalPriceForm = (field, value) => setLocalPriceForm((prev) => ({ ...prev, [field]: value }));
 
-  const selectProduct = (productKey) => {
-    setSelectedProductId(String(productKey));
+  const selectProduct = (productId) => {
+    const nextSelected = productList.find((product) => `${product.__quickStockDiscoverySource}:${product.id}` === String(productId) || String(product.id) === String(productId));
+    setSelectedProductId(nextSelected ? `${nextSelected.__quickStockDiscoverySource}:${nextSelected.id}` : String(productId));
     setAdoptedOperationalProduct(null);
     setIsLocalCreateOpen(false);
     setShowSearchResult(false);
@@ -574,11 +575,12 @@ const QuickStockPage = () => {
     if (!isValidOperationalProductForAdoption(rawProduct, sourceProduct)) return false;
     const nextOperationalProduct = normalizeOperationalProduct(rawProduct);
     setAdoptedOperationalProduct(nextOperationalProduct);
+    setRuntimeSearchProducts((prev) => dedupeDiscoveryProducts([nextOperationalProduct, ...(Array.isArray(prev) ? prev : [])]));
     setProductForm(buildProductFormFromProduct(nextOperationalProduct));
     const nextPriceForm = buildPriceFormFromProduct(nextOperationalProduct);
     setPriceForm(nextPriceForm);
     setDefaultCost(nextPriceForm.costPrice || "");
-    setSelectedProductId("");
+    setSelectedProductId(`OPERATIONAL:${nextOperationalProduct.id}`);
     setIsLocalCreateOpen(false);
     resetQueue();
     setTimeout(() => barcodeInputRef.current?.focus(), 50);
@@ -594,9 +596,7 @@ const QuickStockPage = () => {
     }
     setIsCreatingOperationalProduct(true);
     try {
-      const action = typeof createOperationalProductFromTemplateAction === "function"
-        ? createOperationalProductFromTemplateAction
-        : createOperationalProductFromTemplateApi;
+      const action = typeof createOperationalProductFromTemplateAction === "function" ? createOperationalProductFromTemplateAction : createOperationalProductFromTemplateApi;
       const response = await action(payload);
       const rawCreatedProduct = extractSingleProduct(response);
       if (!adoptOperationalProduct(rawCreatedProduct, selectedTemplateProduct)) {
@@ -614,29 +614,18 @@ const QuickStockPage = () => {
 
   const handleCreateLocalOperationalProduct = async () => {
     const payload = buildLocalOperationalProductPayload({ productForm: localProductForm, priceForm: localPriceForm });
-    if (!payload.name) {
-      toast.error("กรุณาระบุชื่อสินค้า");
-      return;
-    }
-    if (!payload.productTypeId) {
-      toast.error("กรุณาเลือกประเภทสินค้า");
-      return;
-    }
-    if (payload.costPrice <= 0 || payload.priceRetail <= 0) {
-      toast.error("กรุณาระบุราคาทุนและราคาขายปลีกก่อนสร้างสินค้า");
-      return;
-    }
+    if (!payload.name) return toast.error("กรุณาระบุชื่อสินค้า");
+    if (!payload.productTypeId) return toast.error("กรุณาเลือกประเภทสินค้า");
+    if (payload.costPrice <= 0 || payload.priceRetail <= 0) return toast.error("กรุณาระบุราคาทุนและราคาขายปลีกก่อนสร้างสินค้า");
 
     setIsCreatingOperationalProduct(true);
     try {
-      const action = typeof createLocalOperationalProductAction === "function"
-        ? createLocalOperationalProductAction
-        : null;
-      if (!action) {
-        toast.error("ยังไม่พบ action สำหรับสร้างสินค้า Local");
+      if (typeof createLocalOperationalProductAction !== "function") {
+        toast.error("ยังไม่พบ createLocalOperationalProductAction");
         return;
       }
-      const response = await action(payload);
+
+      const response = await createLocalOperationalProductAction(payload);
       const rawCreatedProduct = extractSingleProduct(response);
       if (!adoptOperationalProduct(rawCreatedProduct, null)) {
         toast.error("สร้างสินค้าแล้ว แต่ข้อมูลที่ตอบกลับยังไม่ใช่ Operational Product ที่ถูกต้อง");
@@ -734,6 +723,7 @@ const QuickStockPage = () => {
         branchPrice: [{ ...(getFirstBranchPrice(operationalProduct) || {}), costPrice: toMoneyNumber(priceForm.costPrice), priceRetail: toMoneyNumber(priceForm.priceRetail), priceWholesale: toMoneyNumber(priceForm.priceWholesale), priceTechnician: toMoneyNumber(priceForm.priceTechnician), priceOnline: toMoneyNumber(priceForm.priceOnline), isActive: true }],
       };
       setAdoptedOperationalProduct((prev) => (prev && Number(prev?.id) === Number(nextProduct.id) ? { ...prev, ...nextProduct } : prev));
+      setRuntimeSearchProducts((prev) => dedupeDiscoveryProducts([normalizeOperationalProduct(nextProduct), ...(Array.isArray(prev) ? prev : [])]));
       setProductForm(buildProductFormFromProduct(nextProduct));
       setPriceForm(buildPriceFormFromProduct(nextProduct));
       setDefaultCost(String(nextProduct.costPrice || ""));
@@ -952,7 +942,7 @@ const QuickStockPage = () => {
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="font-semibold text-slate-900">สร้างสินค้า Local ของร้าน</p>
-                  <p className="text-sm text-slate-600">ใช้เมื่อไม่มี Template ที่เหมาะสม ระบบจะสร้าง Operational Product ก่อนรับเข้า</p>
+                  <p className="text-sm text-slate-600">ใช้เมื่อไม่มี Template หรือสินค้าในร้านที่เหมาะสม ระบบจะสร้าง Operational Product ก่อนรับเข้า</p>
                 </div>
                 {!isLocalCreateOpen && (
                   <button type="button" className="rounded-lg border px-3 py-1.5 text-sm" onClick={() => {
@@ -1019,9 +1009,7 @@ const QuickStockPage = () => {
           />
 
           <QueueSummary total={barcodeQueue.length} readyCount={readyCount} needDataCount={needDataCount} productReady={productReady} />
-
           <IntakeQueueTable barcodeQueue={barcodeQueue} serialInputRefs={serialInputRefs} barcodeInputRef={barcodeInputRef} onUpdateQueueItemField={updateQueueItemField} onRemoveQueueItem={removeQueueItem} />
-
           <CommitBar selectedProduct={commitRuntimeProduct} barcodeQueue={barcodeQueue} productReady={productReady} queueReady={queueReady} isCommitting={isCommitting} onResetQueue={resetQueue} onCommit={handleCommit} />
         </div>
       </div>

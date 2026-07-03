@@ -70,6 +70,10 @@ const getLogicalMatchKeys = (product) => {
   const productTypeId = toFiniteNumber(getProductTypeId(product));
   const brandId = toFiniteNumber(getProductBrandId(product));
 
+  if (name) {
+    keys.push(`name:${name}`);
+  }
+
   if (name && productTypeId && brandId) {
     keys.push(`signature:${name}:${productTypeId}:${brandId}`);
   }
@@ -196,7 +200,6 @@ const ProductFinderPanel = ({
   const templateProducts = filteredProducts.filter((product) => isTemplateCandidate(product));
   const visibleTemplateProducts = hideTemplatesCoveredByOperationalProducts(templateProducts, operationalProducts);
   const visibleProductCount = operationalProducts.length + visibleTemplateProducts.length;
-  const hiddenTemplateCount = templateProducts.length - visibleTemplateProducts.length;
 
   return (
     <section className="bg-white rounded-2xl shadow-sm border p-5 space-y-4">
@@ -291,11 +294,6 @@ const ProductFinderPanel = ({
             </div>
           </div>
 
-          {hiddenTemplateCount > 0 && (
-            <div className="px-3 py-2 border-b bg-emerald-50 text-[11px] text-emerald-700">
-              ซ่อน Template {hiddenTemplateCount} รายการ เพราะพบสินค้าในร้านที่ตรงกันแล้ว
-            </div>
-          )}
 
           {visibleProductCount === 0 ? (
             <div className="p-5 text-center text-sm text-gray-400">ยังไม่มีผลการค้นหา</div>

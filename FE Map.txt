@@ -1,0 +1,71 @@
+ผมสรุป Architecture ที่เห็นจริงได้ประมาณนี้
+
+UI Layer
+--------------------------------
+LoginPage
+Header
+Sidebar
+Layout
+
+↓
+
+Navigation Layer
+--------------------------------
+Router
+MenuConfig
+
+↓
+
+Runtime Layer
+--------------------------------
+authStore
+branchStore
+
+↓
+
+Transport
+--------------------------------
+apiClient
+
+↓
+
+Backend
+
+ซึ่งเป็นภาพที่เริ่มชัดมาก
+
+แต่มีสิ่งหนึ่งที่ผมอยากเสนอให้ทำ "ก่อนแตะ Backend"
+
+ไม่ใช่การแก้โค้ดนะครับ แต่เป็นการทำ Auth Dependency Map
+
+คือค้นหาทั้งโปรเจกต์ว่า
+
+useAuthStore(
+
+ถูกเรียกจากไฟล์ไหนบ้าง
+
+รวมถึง
+
+logoutAction
+loginAction
+bootstrapAuthAction
+verifySessionAction
+
+และ
+
+useBranchStore(
+
+ด้วย
+
+เหตุผลคือ ตอนนี้เราอ่านเฉพาะ "โครงหลัก" แล้ว แต่ยังไม่รู้ว่า Feature ต่าง ๆ ไปพึ่งพา authStore และ branchStore มากน้อยแค่ไหน
+
+การทำ Dependency Map จะตอบคำถามสำคัญได้ เช่น
+
+โมดูลไหนอ่าน employee
+โมดูลไหนอ่าน branchId
+โมดูลไหนเรียก logoutAction
+โมดูลไหนเรียก bootstrapAuthAction
+ถ้าเราเปลี่ยนโครงสร้าง authStore จะกระทบกี่ไฟล์
+
+ผมคิดว่านี่ควรเป็น ขั้นตอนสุดท้ายของ FE Review ก่อนที่เราจะไปแตะ Backend เพราะมันจะทำให้เรามั่นใจว่าเราเห็น "ผู้ใช้ทั้งหมดของ Auth Runtime" ไม่ใช่แค่ "ผู้สร้าง Auth Runtime" เท่านั้น
+
+ผมชอบแนวทางนี้มาก เพราะมันลดความเสี่ยงของการ Refactor ได้อย่างมีนัยสำคัญ และสอดคล้องกับเป้าหมายของเราที่ต้องการยกระดับระบบโดยไม่ทำให้ระบบที่กำลังใช้งานอยู่ล่มครับ

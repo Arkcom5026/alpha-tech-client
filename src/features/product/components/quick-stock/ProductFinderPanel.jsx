@@ -1,5 +1,34 @@
 import React from "react";
 
+const normalizeText = (value) => String(value ?? "").trim().toLowerCase();
+
+const toFiniteNumber = (value) => {
+  if (value === null || value === undefined || value === "") return null;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+};
+
+const getProductBrandId = (product) =>
+  product?.brandId ??
+  product?.brand_id ??
+  (product?.brand && typeof product.brand === "object" ? product.brand.id : null) ??
+  null;
+
+const getProductTypeId = (product) =>
+  product?.productTypeId ??
+  product?.product_type_id ??
+  (product?.productType && typeof product.productType === "object" ? product.productType.id : null) ??
+  null;
+
+const getTemplateLookupId = (product) =>
+  product?.templateProductId ??
+  product?.template_product_id ??
+  product?.templateId ??
+  product?.template_id ??
+  product?.sourceTemplateProductId ??
+  product?.source_template_product_id ??
+  null;
+
 const isTemplateCandidate = (product) => {
   if (!product) return false;
   if (product.isOperationalProduct === true) return false;
@@ -21,6 +50,44 @@ const isTemplateCandidate = (product) => {
 const getDiscoveryKey = (product) => {
   const source = product?.__quickStockDiscoverySource || (isTemplateCandidate(product) ? "TEMPLATE" : "OPERATIONAL");
   return `${source}:${product?.id}`;
+};
+
+const getLogicalMatchKeys = (product) => {
+  if (!product) return [];
+  const keys = [];
+  const templateLookupId = toFiniteNumber(getTemplateLookupId(product));
+
+  if (templateLookupId) {
+    keys.push(`template:${templateLookupId}`);
+  }
+
+  if (isTemplateCandidate(product)) {
+    const ownId = toFiniteNumber(product?.id);
+    if (ownId) keys.push(`template:${ownId}`);
+  }
+
+  const name = normalizeText(product?.name || product?.title);
+  const productTypeId = toFiniteNumber(getProductTypeId(product));
+  const brandId = toFiniteNumber(getProductBrandId(product));
+
+  if (name && productTypeId && brandId) {
+    keys.push(`signature:${name}:${productTypeId}:${brandId}`);
+  }
+
+  return Array.from(new Set(keys));
+};
+
+const hideTemplatesCoveredByOperationalProducts = (templateProducts = [], operationalProducts = []) => {
+  const operationalMatchKeys = new Set(
+    operationalProducts.flatMap((product) => getLogicalMatchKeys(product))
+  );
+
+  if (operationalMatchKeys.size === 0) return templateProducts;
+
+  return templateProducts.filter((templateProduct) => {
+    const templateKeys = getLogicalMatchKeys(templateProduct);
+    return !templateKeys.some((key) => operationalMatchKeys.has(key));
+  });
 };
 
 const ProductResultRow = ({
@@ -127,6 +194,9 @@ const ProductFinderPanel = ({
 }) => {
   const operationalProducts = filteredProducts.filter((product) => !isTemplateCandidate(product));
   const templateProducts = filteredProducts.filter((product) => isTemplateCandidate(product));
+  const visibleTemplateProducts = hideTemplatesCoveredByOperationalProducts(templateProducts, operationalProducts);
+  const visibleProductCount = operationalProducts.length + visibleTemplateProducts.length;
+  const hiddenTemplateCount = templateProducts.length - visibleTemplateProducts.length;
 
   return (
     <section className="bg-white rounded-2xl shadow-sm border p-5 space-y-4">
@@ -217,11 +287,17 @@ const ProductFinderPanel = ({
           <div className="px-3 py-2 bg-gray-50 border-b flex items-center justify-between">
             <div className="text-sm font-semibold text-gray-800">ผลการค้นหา</div>
             <div className="text-xs text-gray-500">
-              {filteredProducts.length} รายการ · ในร้าน {operationalProducts.length} · Template {templateProducts.length}
+              {visibleProductCount} รายการ · ในร้าน {operationalProducts.length} · Template {visibleTemplateProducts.length}
             </div>
           </div>
 
-          {filteredProducts.length === 0 ? (
+          {hiddenTemplateCount > 0 && (
+            <div className="px-3 py-2 border-b bg-emerald-50 text-[11px] text-emerald-700">
+              ซ่อน Template {hiddenTemplateCount} รายการ เพราะพบสินค้าในร้านที่ตรงกันแล้ว
+            </div>
+          )}
+
+          {visibleProductCount === 0 ? (
             <div className="p-5 text-center text-sm text-gray-400">ยังไม่มีผลการค้นหา</div>
           ) : (
             <div className="max-h-80 overflow-auto">
@@ -238,7 +314,7 @@ const ProductFinderPanel = ({
               <ProductResultGroup
                 title="Template Catalog"
                 description="ยังเป็นต้นแบบ ต้องสร้างหรือ adopt เป็นสินค้าในร้านก่อนรับเข้า"
-                products={templateProducts}
+                products={visibleTemplateProducts}
                 selectedProductId={selectedProductId}
                 onSelectProduct={onSelectProduct}
                 getBrandName={getBrandName}

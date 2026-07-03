@@ -4,6 +4,7 @@ import {
   createLocalOperationalProductApi,
   createOperationalProductFromTemplateApi,
   getOperationalProductByTemplateId,
+  getProductsForPos,
   getTemplateProductsForPos,
 } from "@/features/product/api/productApi";
 import { toast } from "react-toastify";
@@ -114,6 +115,19 @@ const extractSingleProduct = (response) => {
   return null;
 };
 
+const isTemplateCatalogProduct = (product) => {
+  if (!product) return false;
+  if (product.isOperationalProduct === true) return false;
+  if (product.isTemplateProduct === true) return true;
+  if (String(product.templateBranchCode || "").toUpperCase() === "T01") return true;
+  if (Number(product.templateBranchId) === 1) return true;
+  if (product.templateProductId != null && product.id != null && Number(product.templateProductId) === Number(product.id)) return true;
+  return false;
+};
+
+const isOperationalBranchProduct = (product) => !!product && !isTemplateCatalogProduct(product);
+const getTemplateLookupId = (product) => product?.templateProductId ?? product?.template_product_id ?? product?.id ?? null;
+
 const normalizeTemplateProduct = (product) => {
   if (!product || typeof product !== "object") return product;
   const productTypeId = getProductTypeId(product);
@@ -137,16 +151,37 @@ const normalizeTemplateProduct = (product) => {
     unitId,
     unitName: unitName !== "-" ? unitName : product?.unitName,
     unit: unitId || unitName !== "-" ? { id: unitId, name: unitName !== "-" ? unitName : null } : product.unit,
-    isTemplateProduct: product.isTemplateProduct === true || product.templateProductId != null,
+    isTemplateProduct: true,
+    isOperationalProduct: false,
     templateProductId: product.templateProductId ?? product.id,
+    __quickStockDiscoverySource: "TEMPLATE",
+  };
+};
+
+const normalizeOperationalProduct = (product) => {
+  if (!product || typeof product !== "object") return null;
+  return {
+    ...product,
+    isTemplateProduct: false,
+    isOperationalProduct: true,
+    __quickStockDiscoverySource: "OPERATIONAL",
   };
 };
 
 const normalizeTemplateProductList = (response) => extractProductList(response).map(normalizeTemplateProduct).filter(Boolean);
+const normalizeOperationalProductList = (response) => extractProductList(response).map(normalizeOperationalProduct).filter((p) => p?.id);
 
-const normalizeOperationalProduct = (product) => {
-  if (!product || typeof product !== "object") return null;
-  return { ...product, isTemplateProduct: false, isOperationalProduct: true };
+const dedupeDiscoveryProducts = (products = []) => {
+  const seen = new Set();
+  const result = [];
+  products.forEach((product) => {
+    if (!product?.id) return;
+    const key = `${product.__quickStockDiscoverySource || (isTemplateCatalogProduct(product) ? "TEMPLATE" : "OPERATIONAL")}:${product.id}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    result.push(product);
+  });
+  return result;
 };
 
 const buildProductFormFromProduct = (product) => ({
@@ -175,18 +210,6 @@ const buildPriceFormFromProduct = (product) => {
     priceOnline: toMoneyString(product?.priceOnline ?? bp?.priceOnline),
   };
 };
-
-const isTemplateCatalogProduct = (product) => {
-  if (!product) return false;
-  if (product.isTemplateProduct === true) return true;
-  if (String(product.templateBranchCode || "").toUpperCase() === "T01") return true;
-  if (Number(product.templateBranchId) === 1) return true;
-  if (product.templateProductId != null && product.id != null && Number(product.templateProductId) === Number(product.id)) return true;
-  return false;
-};
-
-const isOperationalBranchProduct = (product) => !!product && !isTemplateCatalogProduct(product);
-const getTemplateLookupId = (product) => product?.templateProductId ?? product?.template_product_id ?? product?.id ?? null;
 
 const addDefinedField = (target, key, value) => {
   if (value === undefined || value === null || value === "") return;
@@ -287,7 +310,7 @@ const QuickStockPage = () => {
   const [localProductForm, setLocalProductForm] = useState({ name: "", productTypeId: "", brandId: "", unitId: "", trackSerialNumber: false, active: true });
   const [localPriceForm, setLocalPriceForm] = useState({ costPrice: "", priceRetail: "", priceWholesale: "", priceTechnician: "", priceOnline: "" });
 
-  const productList = useMemo(() => normalizeTemplateProductList(runtimeSearchProducts), [runtimeSearchProducts]);
+  const productList = useMemo(() => dedupeDiscoveryProducts(runtimeSearchProducts), [runtimeSearchProducts]);
   const templateDropdownList = useMemo(() => normalizeTemplateProductList(templateDropdownProducts), [templateDropdownProducts]);
 
   const templateProductTypes = useMemo(() => {
@@ -297,8 +320,12 @@ const QuickStockPage = () => {
       const name = getProductTypeName(p);
       if (id && name && name !== "-" && !map.has(id)) map.set(id, { id, name });
     });
+    productTypes.forEach((p) => {
+      const id = toNumberOrNull(p?.id);
+      if (id && p?.name && !map.has(id)) map.set(id, { id, name: p.name });
+    });
     return Array.from(map.values()).sort((a, b) => String(a.name || "").localeCompare(String(b.name || ""), "th"));
-  }, [templateDropdownList]);
+  }, [templateDropdownList, productTypes]);
 
   const templateBrands = useMemo(() => {
     const map = new Map();
@@ -310,16 +337,50 @@ const QuickStockPage = () => {
         const name = getBrandName(p);
         if (id && name && name !== "-" && !map.has(id)) map.set(id, { id, name });
       });
+    brands.forEach((b) => {
+      const id = toNumberOrNull(b?.id);
+      if (id && b?.name && !map.has(id)) map.set(id, { id, name: b.name });
+    });
     return Array.from(map.values()).sort((a, b) => String(a.name || "").localeCompare(String(b.name || ""), "th"));
-  }, [templateDropdownList, selectedProductTypeId]);
+  }, [templateDropdownList, selectedProductTypeId, brands]);
 
   const executeProductSearch = useCallback(async ({ productTypeId = selectedProductTypeId, brandId = selectedBrandId, search = committedKeyword } = {}) => {
-    const params = { productTypeId: productTypeId || undefined, brandId: brandId || undefined, search: String(search || "").trim() || undefined, takeNum: 1000, skipNum: 0 };
+    const cleanSearch = String(search || "").trim() || undefined;
+    const commonParams = {
+      productTypeId: productTypeId || undefined,
+      brandId: brandId || undefined,
+      search: cleanSearch,
+      searchText: cleanSearch,
+      takeNum: 1000,
+      skipNum: 0,
+    };
+
     try {
-      const response = await getTemplateProductsForPos(params);
-      const list = normalizeTemplateProductList(response);
-      setRuntimeSearchProducts(list);
-      return list;
+      const [operationalResult, templateResult] = await Promise.allSettled([
+        getProductsForPos(commonParams),
+        getTemplateProductsForPos(commonParams),
+      ]);
+
+      const operationalList = operationalResult.status === "fulfilled"
+        ? normalizeOperationalProductList(operationalResult.value)
+        : [];
+      const templateList = templateResult.status === "fulfilled"
+        ? normalizeTemplateProductList(templateResult.value)
+        : [];
+
+      if (operationalResult.status === "rejected") {
+        console.warn("QuickStock operational product search failed:", operationalResult.reason);
+      }
+      if (templateResult.status === "rejected") {
+        console.warn("QuickStock template product search failed:", templateResult.reason);
+      }
+      if (operationalResult.status === "rejected" && templateResult.status === "rejected") {
+        throw operationalResult.reason || templateResult.reason;
+      }
+
+      const merged = dedupeDiscoveryProducts([...operationalList, ...templateList]);
+      setRuntimeSearchProducts(merged);
+      return merged;
     } catch (err) {
       console.error("QuickStock product search failed:", err);
       setRuntimeSearchProducts([]);
@@ -356,13 +417,17 @@ const QuickStockPage = () => {
         const searchable = [product?.name, product?.title, product?.sku, product?.barcode, product?.model, product?.code, getBrandName(product), getProductTypeName(product)].filter(Boolean).join(" ").toLowerCase();
         return searchable.includes(q);
       })
-      .sort((a, b) => String(a?.name || "").localeCompare(String(b?.name || "")));
+      .sort((a, b) => {
+        const sourceRankA = a.__quickStockDiscoverySource === "OPERATIONAL" ? 0 : 1;
+        const sourceRankB = b.__quickStockDiscoverySource === "OPERATIONAL" ? 0 : 1;
+        if (sourceRankA !== sourceRankB) return sourceRankA - sourceRankB;
+        return String(a?.name || "").localeCompare(String(b?.name || ""));
+      });
   }, [productList, selectedProductTypeId, selectedBrandId, committedKeyword]);
 
   const selectedProduct = useMemo(() => {
-    const id = toNumberOrNull(selectedProductId);
-    if (!id) return null;
-    return productList.find((product) => Number(product?.id) === Number(id)) || null;
+    if (!selectedProductId) return null;
+    return productList.find((product) => `${product.__quickStockDiscoverySource}:${product.id}` === selectedProductId || String(product.id) === String(selectedProductId)) || null;
   }, [productList, selectedProductId]);
 
   const selectedTemplateProduct = useMemo(() => (isTemplateCatalogProduct(selectedProduct) ? selectedProduct : null), [selectedProduct]);
@@ -452,7 +517,8 @@ const QuickStockPage = () => {
   const updateLocalPriceForm = (field, value) => setLocalPriceForm((prev) => ({ ...prev, [field]: value }));
 
   const selectProduct = (productId) => {
-    setSelectedProductId(String(productId));
+    const nextSelected = productList.find((product) => `${product.__quickStockDiscoverySource}:${product.id}` === String(productId) || String(product.id) === String(productId));
+    setSelectedProductId(nextSelected ? `${nextSelected.__quickStockDiscoverySource}:${nextSelected.id}` : String(productId));
     setAdoptedOperationalProduct(null);
     setIsLocalCreateOpen(false);
     setShowSearchResult(false);
@@ -464,11 +530,12 @@ const QuickStockPage = () => {
     if (!isValidOperationalProductForAdoption(rawProduct, sourceProduct)) return false;
     const nextOperationalProduct = normalizeOperationalProduct(rawProduct);
     setAdoptedOperationalProduct(nextOperationalProduct);
+    setRuntimeSearchProducts((prev) => dedupeDiscoveryProducts([nextOperationalProduct, ...(Array.isArray(prev) ? prev : [])]));
     setProductForm(buildProductFormFromProduct(nextOperationalProduct));
     const nextPriceForm = buildPriceFormFromProduct(nextOperationalProduct);
     setPriceForm(nextPriceForm);
     setDefaultCost(nextPriceForm.costPrice || "");
-    setSelectedProductId("");
+    setSelectedProductId(`OPERATIONAL:${nextOperationalProduct.id}`);
     setIsLocalCreateOpen(false);
     resetQueue();
     setTimeout(() => barcodeInputRef.current?.focus(), 50);
@@ -484,9 +551,7 @@ const QuickStockPage = () => {
     }
     setIsCreatingOperationalProduct(true);
     try {
-      const action = typeof createOperationalProductFromTemplateAction === "function"
-        ? createOperationalProductFromTemplateAction
-        : createOperationalProductFromTemplateApi;
+      const action = typeof createOperationalProductFromTemplateAction === "function" ? createOperationalProductFromTemplateAction : createOperationalProductFromTemplateApi;
       const response = await action(payload);
       const rawCreatedProduct = extractSingleProduct(response);
       if (!adoptOperationalProduct(rawCreatedProduct, selectedTemplateProduct)) {
@@ -504,18 +569,9 @@ const QuickStockPage = () => {
 
   const handleCreateLocalOperationalProduct = async () => {
     const payload = buildLocalOperationalProductPayload({ productForm: localProductForm, priceForm: localPriceForm });
-    if (!payload.name) {
-      toast.error("กรุณาระบุชื่อสินค้า");
-      return;
-    }
-    if (!payload.productTypeId) {
-      toast.error("กรุณาเลือกประเภทสินค้า");
-      return;
-    }
-    if (payload.costPrice <= 0 || payload.priceRetail <= 0) {
-      toast.error("กรุณาระบุราคาทุนและราคาขายปลีกก่อนสร้างสินค้า");
-      return;
-    }
+    if (!payload.name) return toast.error("กรุณาระบุชื่อสินค้า");
+    if (!payload.productTypeId) return toast.error("กรุณาเลือกประเภทสินค้า");
+    if (payload.costPrice <= 0 || payload.priceRetail <= 0) return toast.error("กรุณาระบุราคาทุนและราคาขายปลีกก่อนสร้างสินค้า");
 
     setIsCreatingOperationalProduct(true);
     try {
@@ -617,6 +673,7 @@ const QuickStockPage = () => {
         branchPrice: [{ ...(getFirstBranchPrice(operationalProduct) || {}), costPrice: toMoneyNumber(priceForm.costPrice), priceRetail: toMoneyNumber(priceForm.priceRetail), priceWholesale: toMoneyNumber(priceForm.priceWholesale), priceTechnician: toMoneyNumber(priceForm.priceTechnician), priceOnline: toMoneyNumber(priceForm.priceOnline), isActive: true }],
       };
       setAdoptedOperationalProduct((prev) => (prev && Number(prev?.id) === Number(nextProduct.id) ? { ...prev, ...nextProduct } : prev));
+      setRuntimeSearchProducts((prev) => dedupeDiscoveryProducts([normalizeOperationalProduct(nextProduct), ...(Array.isArray(prev) ? prev : [])]));
       setProductForm(buildProductFormFromProduct(nextProduct));
       setPriceForm(buildPriceFormFromProduct(nextProduct));
       setDefaultCost(String(nextProduct.costPrice || ""));
@@ -835,7 +892,7 @@ const QuickStockPage = () => {
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="font-semibold text-slate-900">สร้างสินค้า Local ของร้าน</p>
-                  <p className="text-sm text-slate-600">ใช้เมื่อไม่มี Template ที่เหมาะสม ระบบจะสร้าง Operational Product ก่อนรับเข้า</p>
+                  <p className="text-sm text-slate-600">ใช้เมื่อไม่มี Template หรือสินค้าในร้านที่เหมาะสม ระบบจะสร้าง Operational Product ก่อนรับเข้า</p>
                 </div>
                 {!isLocalCreateOpen && (
                   <button type="button" className="rounded-lg border px-3 py-1.5 text-sm" onClick={() => {
@@ -902,9 +959,7 @@ const QuickStockPage = () => {
           />
 
           <QueueSummary total={barcodeQueue.length} readyCount={readyCount} needDataCount={needDataCount} productReady={productReady} />
-
           <IntakeQueueTable barcodeQueue={barcodeQueue} serialInputRefs={serialInputRefs} barcodeInputRef={barcodeInputRef} onUpdateQueueItemField={updateQueueItemField} onRemoveQueueItem={removeQueueItem} />
-
           <CommitBar selectedProduct={commitRuntimeProduct} barcodeQueue={barcodeQueue} productReady={productReady} queueReady={queueReady} isCommitting={isCommitting} onResetQueue={resetQueue} onCommit={handleCommit} />
         </div>
       </div>

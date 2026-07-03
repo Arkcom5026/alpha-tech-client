@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import useProductTemplateStore from '../store/productTemplateStore';
+import TemplatePriceSnapshotPanel from '../components/TemplatePriceSnapshotPanel';
 
 const formatValue = (value, fallback = '-') => {
   if (value === undefined || value === null || value === '') return fallback;
@@ -88,11 +89,7 @@ const ProductTemplateGovernanceDetailPage = () => {
   return (
     <div className="space-y-5">
       <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-        <button
-          type="button"
-          onClick={() => navigate(backPath)}
-          className="mb-4 rounded-2xl border border-slate-200 px-4 py-2 text-xs font-black text-slate-600 transition hover:bg-slate-50"
-        >
+        <button type="button" onClick={() => navigate(backPath)} className="mb-4 rounded-2xl border border-slate-200 px-4 py-2 text-xs font-black text-slate-600 transition hover:bg-slate-50">
           ← Back to Templates
         </button>
 
@@ -109,30 +106,15 @@ const ProductTemplateGovernanceDetailPage = () => {
           </div>
 
           <div className="flex flex-col gap-2">
-            <button
-              type="button"
-              onClick={() => navigate(editPath)}
-              disabled={isSaving || !id}
-              className="rounded-2xl border border-orange-200 bg-orange-50 px-5 py-3 text-sm font-black text-orange-700 transition hover:bg-orange-100 disabled:opacity-60"
-            >
+            <button type="button" onClick={() => navigate(editPath)} disabled={isSaving || !id} className="rounded-2xl border border-orange-200 bg-orange-50 px-5 py-3 text-sm font-black text-orange-700 transition hover:bg-orange-100 disabled:opacity-60">
               Edit Template
             </button>
             {active ? (
-              <button
-                type="button"
-                onClick={handleArchive}
-                disabled={isSaving}
-                className="rounded-2xl bg-slate-900 px-5 py-3 text-sm font-black text-white transition hover:bg-slate-950 disabled:opacity-60"
-              >
+              <button type="button" onClick={handleArchive} disabled={isSaving} className="rounded-2xl bg-slate-900 px-5 py-3 text-sm font-black text-white transition hover:bg-slate-950 disabled:opacity-60">
                 {isSaving ? 'Saving...' : 'Deactivate Template'}
               </button>
             ) : (
-              <button
-                type="button"
-                onClick={handleRestore}
-                disabled={isSaving}
-                className="rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-black text-white transition hover:bg-emerald-700 disabled:opacity-60"
-              >
+              <button type="button" onClick={handleRestore} disabled={isSaving} className="rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-black text-white transition hover:bg-emerald-700 disabled:opacity-60">
                 {isSaving ? 'Saving...' : 'Activate Template'}
               </button>
             )}
@@ -143,21 +125,13 @@ const ProductTemplateGovernanceDetailPage = () => {
         </div>
       </section>
 
-      {error && (
-        <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-700">
-          {String(error)}
-        </div>
-      )}
+      {error && <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-700">{String(error)}</div>}
 
       <div className="grid gap-5 xl:grid-cols-[280px_1fr]">
         <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
           <h2 className="text-base font-black text-slate-900">Template Image</h2>
           <div className="mt-4 flex aspect-square items-center justify-center overflow-hidden rounded-3xl border border-slate-100 bg-slate-50">
-            {coverUrl ? (
-              <img src={coverUrl} alt={name} className="h-full w-full object-cover" />
-            ) : (
-              <div className="px-6 text-center text-sm font-bold text-slate-400">No image</div>
-            )}
+            {coverUrl ? <img src={coverUrl} alt={name} className="h-full w-full object-cover" /> : <div className="px-6 text-center text-sm font-bold text-slate-400">No image</div>}
           </div>
           <p className="mt-3 text-xs font-semibold text-slate-500">Images: {images.length}</p>
         </section>
@@ -183,14 +157,7 @@ const ProductTemplateGovernanceDetailPage = () => {
         </div>
       </div>
 
-      <Section title="Template Price Snapshot" description="ราคาใน Template เป็นข้อมูลอ้างอิง ไม่ใช่ BranchPrice runtime ของร้าน">
-        <Field label="Cost" value={template.costPrice != null ? Number(template.costPrice).toLocaleString() : '-'} />
-        <Field label="Retail" value={template.priceRetail != null ? Number(template.priceRetail).toLocaleString() : '-'} />
-        <Field label="Wholesale" value={template.priceWholesale != null ? Number(template.priceWholesale).toLocaleString() : '-'} />
-        <Field label="Online" value={template.priceOnline != null ? Number(template.priceOnline).toLocaleString() : '-'} />
-        <Field label="Technician" value={template.priceTechnician != null ? Number(template.priceTechnician).toLocaleString() : '-'} />
-        <Field label="Template Branch" value={template.templateBranchCode || 'T01'} />
-      </Section>
+      <TemplatePriceSnapshotPanel template={template} />
 
       <Section title="Governance Lifecycle" description="สถานะเชิงสถาปัตยกรรมของ Template ใน Mission C">
         <Field label="Clone Source" value="Template Search" />

@@ -2,6 +2,7 @@ import React from "react";
 
 const isTemplateCandidate = (product) => {
   if (!product) return false;
+  if (product.isOperationalProduct === true) return false;
   if (product.isTemplateProduct === true) return true;
   if (String(product.templateBranchCode || "").toUpperCase() === "T01") return true;
   if (Number(product.templateBranchId) === 1) return true;
@@ -15,6 +16,11 @@ const isTemplateCandidate = (product) => {
   }
 
   return false;
+};
+
+const getDiscoveryKey = (product) => {
+  const source = product?.__quickStockDiscoverySource || (isTemplateCandidate(product) ? "TEMPLATE" : "OPERATIONAL");
+  return `${source}:${product?.id}`;
 };
 
 const ProductFinderPanel = ({
@@ -136,21 +142,26 @@ const ProductFinderPanel = ({
           ) : (
             <div className="divide-y max-h-80 overflow-auto">
               {filteredProducts.map((product) => {
-                const isSelected = Number(product?.id) === Number(selectedProductId);
+                const discoveryKey = getDiscoveryKey(product);
+                const isSelected = String(selectedProductId) === discoveryKey || String(selectedProductId) === String(product?.id);
                 const showTemplateBadge = isTemplateCandidate(product);
 
                 return (
                   <button
-                    key={product.id}
+                    key={discoveryKey}
                     type="button"
                     className={`w-full text-left px-3 py-3 hover:bg-blue-50 ${isSelected ? "bg-blue-50" : "bg-white"}`}
-                    onClick={() => onSelectProduct(product.id)}
+                    onClick={() => onSelectProduct(discoveryKey)}
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="font-semibold text-sm text-gray-900 min-w-0">{product.name}</div>
-                      {showTemplateBadge && (
+                      {showTemplateBadge ? (
                         <span className="shrink-0 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700">
                           Template · ต้องสร้างในร้านก่อน
+                        </span>
+                      ) : (
+                        <span className="shrink-0 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700">
+                          Operational · พร้อมรับเข้า
                         </span>
                       )}
                     </div>

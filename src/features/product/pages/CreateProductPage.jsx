@@ -2,34 +2,24 @@
 // ✅ Create Product Page — Current hierarchy:
 // Business → ProductType → Brand → Product
 
-import React, { useEffect, useRef } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
-import { useBranchStore } from '@/features/branch/store/branchStore';
-import useProductStore from '../store/productStore';
-import useProductCreateRuntimeStore from '../store/productCreateRuntimeStore';
+import useProductCreateRuntimeController from '../hooks/useProductCreateRuntimeController';
 import ProductForm from '../components/ProductForm';
 import ProductImage from '../components/ProductImage';
 import ProcessingDialog from '@/components/shared/dialogs/ProcessingDialog';
 
-const extractCreatedProduct = (response) => {
-  if (!response) return null;
-  if (response?.data && typeof response.data === 'object') return response.data;
-  if (response?.product && typeof response.product === 'object') return response.product;
-  if (response?.item && typeof response.item === 'object') return response.item;
-  if (response?.id) return response;
-  return null;
-};
-
 const CreateProductPage = () => {
-  const branchId = useBranchStore((state) => state.selectedBranchId);
-
   const {
-    createLocalOperationalProductAction,
-    uploadImages,
-    ensureDropdownsAction,
+    branchId,
     dropdownsLoaded,
-    error: storeError,
-  } = useProductStore();
+    storeError,
+    imageRef,
+    runtime,
+    handleCreate,
+    handleStartNextCreate,
+    retryLoadDropdowns,
+  } = useProductCreateRuntimeController();
 
   const {
     isProcessing,
@@ -42,89 +32,13 @@ const CreateProductPage = () => {
     previewUrls,
     captions,
     coverIndex,
-    beginCreate,
-    finishCreateSuccess,
-    finishCreateError,
     unlockAfterChange,
     closeSuccessDialog,
-    resetForNextCreate,
-    resetRuntime,
     setSelectedFiles,
     setPreviewUrls,
     setCaptions,
     setCoverIndex,
-  } = useProductCreateRuntimeStore();
-
-  const imageRef = useRef();
-
-  // ✅ เลื่อนการโหลด dropdowns: รอให้ branchId พร้อมก่อน + กัน StrictMode ยิงซ้ำ
-  const dropdownsFetchRef = useRef({ branchId: null, done: false });
-
-  useEffect(() => {
-    if (!branchId) return;
-    if (dropdownsLoaded === true) return;
-
-    if (dropdownsFetchRef.current.branchId !== branchId) {
-      dropdownsFetchRef.current = { branchId, done: false };
-    }
-
-    if (dropdownsFetchRef.current.done) return;
-    dropdownsFetchRef.current.done = true;
-
-    Promise.resolve(ensureDropdownsAction?.()).catch(() => {});
-  }, [branchId, dropdownsLoaded, ensureDropdownsAction]);
-
-  useEffect(() => {
-    return () => {
-      resetRuntime();
-    };
-  }, [resetRuntime]);
-
-  const handleCreate = async (formData) => {
-    beginCreate();
-
-    try {
-      // Runtime Migration:
-      // Normal Product Create now creates branch-owned Operational Product.
-      // branchId remains local context only; productApi strips it before request.
-      const payload = {
-        ...formData,
-        branchId,
-      };
-
-      if (typeof createLocalOperationalProductAction !== 'function') {
-        throw new Error('ยังไม่พบ Runtime Create Action สำหรับสร้างสินค้าในสาขา');
-      }
-
-      const response = await createLocalOperationalProductAction(payload);
-      const created = extractCreatedProduct(response);
-
-      if (!created?.id) {
-        throw new Error('สร้างสินค้าแล้วแต่ไม่พบ productId สำหรับอัปโหลดรูปภาพ');
-      }
-
-      if (selectedFiles.length && typeof uploadImages === 'function') {
-        await uploadImages(created.id, {
-          files: selectedFiles,
-          captions,
-          coverIndex,
-        });
-      }
-
-      finishCreateSuccess(created);
-    } catch (err) {
-      finishCreateError(err?.message || 'เกิดข้อผิดพลาดในการบันทึกสินค้า');
-    }
-  };
-
-  const handleStartNextCreate = () => {
-    resetForNextCreate();
-    if (imageRef.current && typeof imageRef.current.reset === 'function') {
-      try {
-        imageRef.current.reset();
-      } catch (_) {}
-    }
-  };
+  } = runtime;
 
   if (!branchId) {
     return (
@@ -152,7 +66,7 @@ const CreateProductPage = () => {
           <button
             type="button"
             className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700"
-            onClick={() => Promise.resolve(ensureDropdownsAction?.()).catch(() => {})}
+            onClick={retryLoadDropdowns}
           >
             โหลดรายการอีกครั้ง
           </button>

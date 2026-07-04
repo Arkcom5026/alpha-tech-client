@@ -6,6 +6,7 @@ const initialState = {
   saveLocked: false,
   createdProduct: null,
   formResetKey: 0,
+  errorMessage: '',
   selectedFiles: [],
   previewUrls: [],
   captions: [],
@@ -28,6 +29,7 @@ const useProductCreateRuntimeStore = create((set, get) => ({
       showSuccess: false,
       saveLocked: false,
       createdProduct: null,
+      errorMessage: '',
     }),
 
   finishCreateSuccess: (createdProduct) =>
@@ -36,18 +38,23 @@ const useProductCreateRuntimeStore = create((set, get) => ({
       showSuccess: true,
       saveLocked: true,
       createdProduct: createdProduct || null,
+      errorMessage: '',
     }),
 
-  finishCreateError: () =>
+  finishCreateError: (message) =>
     set({
       isProcessing: false,
+      errorMessage: message || 'Save failed',
     }),
+
+  clearError: () => set({ errorMessage: '' }),
 
   unlockAfterChange: () =>
     set({
       showSuccess: false,
       saveLocked: false,
       createdProduct: null,
+      errorMessage: '',
     }),
 
   closeSuccessDialog: () =>
@@ -99,6 +106,7 @@ const useProductCreateRuntimeStore = create((set, get) => ({
       saveLocked: false,
       createdProduct: null,
       formResetKey: state.formResetKey + 1,
+      errorMessage: '',
       selectedFiles: [],
       previewUrls: [],
       captions: [],

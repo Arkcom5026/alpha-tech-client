@@ -9,11 +9,20 @@ import ProductForm from '../components/ProductForm';
 import ProductImage from '../components/ProductImage';
 import ProcessingDialog from '@/components/shared/dialogs/ProcessingDialog';
 
+const extractCreatedProduct = (response) => {
+  if (!response) return null;
+  if (response?.data && typeof response.data === 'object') return response.data;
+  if (response?.product && typeof response.product === 'object') return response.product;
+  if (response?.item && typeof response.item === 'object') return response.item;
+  if (response?.id) return response;
+  return null;
+};
+
 const CreateProductPage = () => {
   const branchId = useBranchStore((state) => state.selectedBranchId);
 
   const {
-    saveProduct,
+    createLocalOperationalProductAction,
     uploadImages,
     ensureDropdownsAction,
     dropdownsLoaded,
@@ -62,18 +71,28 @@ const CreateProductPage = () => {
       setIsProcessing(true);
       setError('');
 
-      // ✅ ProductForm รุ่นใหม่ไม่ส่ง categoryId / profile / template แล้ว
-      // ✅ branchId ยังส่งให้ BE resolve BranchPrice context
+      // Runtime Migration:
+      // Normal Product Create now creates branch-owned Operational Product.
+      // branchId remains local context only; productApi strips it before request.
       const payload = {
         ...formData,
         branchId,
       };
 
-      const created = await saveProduct(payload);
+      if (typeof createLocalOperationalProductAction !== 'function') {
+        throw new Error('ยังไม่พบ Runtime Create Action สำหรับสร้างสินค้าในสาขา');
+      }
+
+      const response = await createLocalOperationalProductAction(payload);
+      const created = extractCreatedProduct(response);
+
+      if (!created?.id) {
+        throw new Error('สร้างสินค้าแล้วแต่ไม่พบ productId สำหรับอัปโหลดรูปภาพ');
+      }
 
       const filesToUpload = normalizeFiles(selectedFiles);
 
-      if (filesToUpload.length && typeof uploadImages === 'function' && created?.id) {
+      if (filesToUpload.length && typeof uploadImages === 'function') {
         await uploadImages(created.id, {
           files: filesToUpload,
           captions,

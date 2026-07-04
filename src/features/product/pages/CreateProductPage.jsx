@@ -6,6 +6,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useBranchStore } from '@/features/branch/store/branchStore';
 import useProductStore from '../store/productStore';
+import useProductCreateRuntimeStore from '../store/productCreateRuntimeStore';
 import ProductForm from '../components/ProductForm';
 import ProductImage from '../components/ProductImage';
 import ProcessingDialog from '@/components/shared/dialogs/ProcessingDialog';
@@ -30,12 +31,21 @@ const CreateProductPage = () => {
     error: storeError,
   } = useProductStore();
 
+  const {
+    isProcessing,
+    showSuccess,
+    saveLocked,
+    createdProduct,
+    formResetKey,
+    beginCreate,
+    finishCreateSuccess,
+    finishCreateError,
+    unlockAfterChange,
+    closeSuccessDialog,
+    resetForNextCreate,
+  } = useProductCreateRuntimeStore();
+
   const [error, setError] = useState('');
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
-  const [saveLocked, setSaveLocked] = useState(false);
-  const [createdProduct, setCreatedProduct] = useState(null);
-  const [formResetKey, setFormResetKey] = useState(0);
 
   const imageRef = useRef();
   const [selectedFiles, setSelectedFiles] = useState([]);
@@ -68,12 +78,10 @@ const CreateProductPage = () => {
   };
 
   const handleCreate = async (formData) => {
-    if (saveLocked) setSaveLocked(false);
+    beginCreate();
 
     try {
-      setIsProcessing(true);
       setError('');
-      setCreatedProduct(null);
 
       // Runtime Migration:
       // Normal Product Create now creates branch-owned Operational Product.
@@ -104,25 +112,19 @@ const CreateProductPage = () => {
         });
       }
 
-      setCreatedProduct(created);
-      setShowSuccess(true);
-      setSaveLocked(true);
+      finishCreateSuccess(created);
     } catch (err) {
+      finishCreateError();
       setError(err?.message || 'เกิดข้อผิดพลาดในการบันทึกสินค้า');
-    } finally {
-      setIsProcessing(false);
     }
   };
 
   const handleStartNextCreate = () => {
-    setSaveLocked(false);
-    setShowSuccess(false);
-    setCreatedProduct(null);
+    resetForNextCreate();
     setSelectedFiles([]);
     setPreviewUrls([]);
     setCaptions([]);
     setCoverIndex(null);
-    setFormResetKey((value) => value + 1);
     if (imageRef.current && typeof imageRef.current.reset === 'function') {
       try {
         imageRef.current.reset();
@@ -237,11 +239,7 @@ const CreateProductPage = () => {
           mode="create"
           submitDisabled={isProcessing || saveLocked}
           submitLabel={saveLocked ? 'บันทึกแล้ว' : undefined}
-          onAnyChange={() => {
-            if (saveLocked) setSaveLocked(false);
-            if (showSuccess) setShowSuccess(false);
-            if (createdProduct) setCreatedProduct(null);
-          }}
+          onAnyChange={unlockAfterChange}
           defaultValues={{
             name: '',
             description: '',
@@ -271,7 +269,7 @@ const CreateProductPage = () => {
         open={isProcessing || showSuccess}
         isLoading={isProcessing}
         message={isProcessing ? 'ระบบกำลังบันทึกข้อมูล กรุณารอสักครู่...' : '✅ บันทึกข้อมูลเรียบร้อยแล้ว'}
-        onClose={() => setShowSuccess(false)}
+        onClose={closeSuccessDialog}
       />
     </div>
   );

@@ -15,6 +15,7 @@ import ProductInventorySection from './form/ProductInventorySection';
 import ProductSubmitBar from './form/ProductSubmitBar';
 import ProductDetailsSection from './form/ProductDetailsSection';
 import ProductBasicSection from './form/ProductBasicSection';
+import ProductExistingModelsPanel from './form/ProductExistingModelsPanel';
 
 
 const toId = (value) => {
@@ -134,7 +135,21 @@ const ProductForm = ({
   const productTypes = useMemo(() => {
     const raw = dropdowns?.productTypes ?? dropdowns?.types ?? [];
     const arr = Array.isArray(raw) ? raw : [];
-    return _.sortBy(arr.filter((item) => item && item.id != null), (item) => String(item?.name ?? ''));
+
+    const normalized = arr
+      .filter((item) => item && item.id != null)
+      .map((item) => ({
+        ...item,
+        name: String(item?.name ?? '').trim(),
+      }))
+      .filter((item) => item.name);
+
+    const unique = _.uniqBy(
+      normalized,
+      (item) => item.name.toLowerCase()
+    );
+
+    return _.sortBy(unique, (item) => item.name);
   }, [dropdowns?.productTypes, dropdowns?.types]);
 
   const units = useMemo(() => {
@@ -199,6 +214,7 @@ const ProductForm = ({
   } = methods;
 
   const watchedProductTypeId = useWatch({ control, name: 'productTypeId' });
+  const watchedBrandId = useWatch({ control, name: 'brandId' });
 
   const toStr = (value) => (value === '' || value == null ? '' : String(value));
 
@@ -800,6 +816,11 @@ const ProductForm = ({
             </div>
           </div>
         </section>
+
+        <ProductExistingModelsPanel
+          productTypeId={watchedProductTypeId}
+          brandId={watchedBrandId}
+        />
 
         <ProductInventorySection control={control} register={register} />
 

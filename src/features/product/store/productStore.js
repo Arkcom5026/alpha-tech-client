@@ -96,6 +96,18 @@ const normalizeProductTypeBrandMapFromObject = (input = {}) => {
   return rows;
 };
 
+const normalizeProductTypeRows = (input = []) => {
+  const rows = Array.isArray(input) ? input : [];
+  return rows
+    .map((row) => {
+      const id = toFiniteNumber(row?.id ?? row?.productTypeId ?? row?.typeId ?? row?.product_type_id);
+      const name = String(row?.name ?? row?.title ?? row?.label ?? row?.productTypeName ?? row?.typeName ?? '').trim();
+      if (id == null || !name) return null;
+      return { ...row, id, name };
+    })
+    .filter(Boolean);
+};
+
 const normalizeProductTypeBrandRowsFromTypes = (productTypes = []) => {
   const types = Array.isArray(productTypes) ? productTypes : [];
   const rows = [];
@@ -474,8 +486,12 @@ const useProductStore = create((set, get) => ({
         for (const x of xs) {
           if (Array.isArray(x)) return x;
           if (x && Array.isArray(x.items)) return x.items;
+          if (x && Array.isArray(x.rows)) return x.rows;
+          if (x && Array.isArray(x.records)) return x.records;
           if (x && Array.isArray(x.data)) return x.data;
           if (x && x.data && Array.isArray(x.data.items)) return x.data.items;
+          if (x && x.data && Array.isArray(x.data.rows)) return x.data.rows;
+          if (x && x.data && Array.isArray(x.data.records)) return x.data.records;
           if (x && x.data && Array.isArray(x.data.data)) return x.data.data;
         }
         return [];
@@ -491,14 +507,29 @@ const useProductStore = create((set, get) => ({
         raw?.items?.categories
       );
 
-      const productTypes = pickArrDeep(
-        raw?.productTypes,
-        raw?.productTypeList,
-        raw?.product_types,
-        raw?.types,
-        raw?.data?.productTypes,
-        raw?.list?.productTypes,
-        raw?.items?.productTypes
+      const productTypes = _.sortBy(
+        _.uniqBy(
+          normalizeProductTypeRows([
+            ...pickArrDeep(raw?.productTypes),
+            ...pickArrDeep(raw?.productTypeList),
+            ...pickArrDeep(raw?.product_type_list),
+            ...pickArrDeep(raw?.product_types),
+            ...pickArrDeep(raw?.ProductType),
+            ...pickArrDeep(raw?.productType),
+            ...pickArrDeep(raw?.types),
+            ...pickArrDeep(raw?.typeList),
+            ...pickArrDeep(raw?.data?.productTypes),
+            ...pickArrDeep(raw?.data?.productTypeList),
+            ...pickArrDeep(raw?.data?.product_type_list),
+            ...pickArrDeep(raw?.data?.product_types),
+            ...pickArrDeep(raw?.data?.ProductType),
+            ...pickArrDeep(raw?.data?.productType),
+            ...pickArrDeep(raw?.list?.productTypes),
+            ...pickArrDeep(raw?.items?.productTypes),
+          ]),
+          (item) => String(item.id)
+        ),
+        (item) => String(item?.name ?? '')
       );
 
       const brands = pickArrDeep(

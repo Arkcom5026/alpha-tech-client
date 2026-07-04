@@ -35,6 +35,7 @@ const CreateProductPage = () => {
   const [showSuccess, setShowSuccess] = useState(false);
   const [saveLocked, setSaveLocked] = useState(false);
   const [createdProduct, setCreatedProduct] = useState(null);
+  const [formResetKey, setFormResetKey] = useState(0);
 
   const imageRef = useRef();
   const [selectedFiles, setSelectedFiles] = useState([]);
@@ -121,6 +122,7 @@ const CreateProductPage = () => {
     setPreviewUrls([]);
     setCaptions([]);
     setCoverIndex(null);
+    setFormResetKey((value) => value + 1);
     if (imageRef.current && typeof imageRef.current.reset === 'function') {
       try {
         imageRef.current.reset();
@@ -230,6 +232,7 @@ const CreateProductPage = () => {
         />
 
         <ProductForm
+          key={`create-product-form-${formResetKey}`}
           onSubmit={handleCreate}
           mode="create"
           submitDisabled={isProcessing || saveLocked}

@@ -3,6 +3,7 @@
 // Business → ProductType → Brand → Product
 
 import React, { useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useBranchStore } from '@/features/branch/store/branchStore';
 import useProductStore from '../store/productStore';
 import ProductForm from '../components/ProductForm';
@@ -33,6 +34,7 @@ const CreateProductPage = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [saveLocked, setSaveLocked] = useState(false);
+  const [createdProduct, setCreatedProduct] = useState(null);
 
   const imageRef = useRef();
   const [selectedFiles, setSelectedFiles] = useState([]);
@@ -70,6 +72,7 @@ const CreateProductPage = () => {
     try {
       setIsProcessing(true);
       setError('');
+      setCreatedProduct(null);
 
       // Runtime Migration:
       // Normal Product Create now creates branch-owned Operational Product.
@@ -100,12 +103,28 @@ const CreateProductPage = () => {
         });
       }
 
+      setCreatedProduct(created);
       setShowSuccess(true);
       setSaveLocked(true);
     } catch (err) {
       setError(err?.message || 'เกิดข้อผิดพลาดในการบันทึกสินค้า');
     } finally {
       setIsProcessing(false);
+    }
+  };
+
+  const handleStartNextCreate = () => {
+    setSaveLocked(false);
+    setShowSuccess(false);
+    setCreatedProduct(null);
+    setSelectedFiles([]);
+    setPreviewUrls([]);
+    setCaptions([]);
+    setCoverIndex(null);
+    if (imageRef.current && typeof imageRef.current.reset === 'function') {
+      try {
+        imageRef.current.reset();
+      } catch (_) {}
     }
   };
 
@@ -154,6 +173,36 @@ const CreateProductPage = () => {
         </div>
       )}
 
+      {createdProduct?.id && (
+        <div className="mb-4 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-900">
+          <div className="font-semibold">สร้างสินค้าในสาขาเรียบร้อยแล้ว</div>
+          <div className="mt-1 text-green-800">
+            Product #{createdProduct.id} · {createdProduct.name || 'ไม่ระบุชื่อสินค้า'}
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Link
+              to={`/pos/stock/products/edit/${createdProduct.id}`}
+              className="rounded-lg border border-green-300 bg-white px-3 py-1.5 text-xs font-medium hover:bg-green-100"
+            >
+              เปิดหน้าแก้ไขสินค้า
+            </Link>
+            <Link
+              to="/pos/stock/products"
+              className="rounded-lg border border-green-300 bg-white px-3 py-1.5 text-xs font-medium hover:bg-green-100"
+            >
+              ไป Product List
+            </Link>
+            <button
+              type="button"
+              onClick={handleStartNextCreate}
+              className="rounded-lg border border-green-300 bg-white px-3 py-1.5 text-xs font-medium hover:bg-green-100"
+            >
+              เพิ่มสินค้ารายการถัดไป
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 gap-6">
         <ProductImage
           ref={imageRef}
@@ -188,6 +237,7 @@ const CreateProductPage = () => {
           onAnyChange={() => {
             if (saveLocked) setSaveLocked(false);
             if (showSuccess) setShowSuccess(false);
+            if (createdProduct) setCreatedProduct(null);
           }}
           defaultValues={{
             name: '',

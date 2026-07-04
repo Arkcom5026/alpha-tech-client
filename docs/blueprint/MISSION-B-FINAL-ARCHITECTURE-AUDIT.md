@@ -1,16 +1,17 @@
 # Mission B Final Architecture Audit — Backend Runtime
 
-Status: DRAFT AUDIT / READY FOR FINAL CODE REVIEW
+Status: CLOSED / MISSION B RUNTIME MIGRATION COMPLETE
 
 Repository under audit: `Arkcom5026/alpha-tech-server`
 
-Reference checkpoint: `fa1049d Checkpoint`
+Final runtime commit: `d5a8839 refactor(product-runtime): complete controller adapter migration`
 
 Related standard:
 
 - `docs/blueprint/P1-RUNTIME-MIGRATION-DOCTRINE.md`
 - `docs/blueprint/P1-BACKEND-MODULE-STANDARD.md`
 - `docs/blueprint/P1-BACKEND-MIGRATION-PLAYBOOK.md`
+- `docs/blueprint/MISSION-B-LESSONS-LEARNED.md`
 
 ---
 
@@ -18,7 +19,7 @@ Related standard:
 
 This audit records the Mission B backend runtime migration status after Product Runtime was migrated from legacy route/controller-heavy structure into layered module architecture.
 
-Mission B is treated as the first reference backend module for future P1 legacy migration.
+Mission B is treated as the first reference backend runtime module for future P1 legacy migration.
 
 This audit does not introduce new feature scope.
 
@@ -50,14 +51,15 @@ Out of scope:
 - approval/rejection workflow
 - global catalog governance
 - FE UX redesign
+- full Product CRUD legacy cleanup outside Operational Runtime
 
 These out-of-scope items belong to Mission C or later missions.
 
 ---
 
-## 3. Target Architecture
+## 3. Final Target Architecture
 
-Target backend runtime shape:
+Mission B reached the target backend runtime shape:
 
 ```txt
 Route
@@ -67,13 +69,13 @@ Route
         -> Prisma
 ```
 
-Mission B has reached this target shape for the main Product Runtime capabilities.
+Runtime behavior remains on the existing `/api/products` contract while internal responsibility has been separated.
 
 ---
 
-## 4. Current Reference Files
+## 4. Final Reference Files
 
-Expected runtime files in `alpha-tech-server`:
+Reference runtime files in `alpha-tech-server`:
 
 ```txt
 routes/productRoutes.js
@@ -82,66 +84,15 @@ src/modules/product/services/operationalProductRuntimeService.js
 src/modules/product/repositories/operationalProductRuntimeRepository.js
 ```
 
-Role of each file:
+Mission B closes with this safe state:
 
-### `routes/productRoutes.js`
+- legacy route remains mounted at `/api/products`
+- runtime controller functions are adapters
+- runtime service owns operational runtime decisions
+- runtime repository owns data access
+- full physical relocation of mixed legacy controller/route is deferred to a separate Product Legacy Cleanup task
 
-Expected role:
-
-- route registration
-- middleware wiring
-- thin adapter for route-local compatibility endpoints
-
-Expected not to own:
-
-- Prisma
-- runtime helper mapping
-- heavy business logic
-
-### `controllers/productController.js`
-
-Expected role:
-
-- HTTP adapter
-- call runtime service
-- normalize HTTP response/error
-
-Expected not to own:
-
-- Product Runtime business logic
-- Product Runtime query orchestration
-- Product Runtime persistence
-
-### `operationalProductRuntimeService.js`
-
-Expected role:
-
-- operational runtime validation
-- business decisions
-- branch runtime rules
-- service orchestration
-- response meaning
-
-Expected not to own long-term:
-
-- broad raw Prisma query
-- direct HTTP concerns
-
-### `operationalProductRuntimeRepository.js`
-
-Expected role:
-
-- Prisma access
-- select/include
-- data retrieval
-- persistence helpers
-- transaction helpers
-
-Expected not to own:
-
-- business decision
-- HTTP response
-- UI response meaning
+This is intentional because `productController.js` still contains non-Mission-B legacy CRUD responsibilities. Moving the entire file now would mix scopes.
 
 ---
 
@@ -149,9 +100,7 @@ Expected not to own:
 
 ### 5.1 Route Layer
 
-Status: PASS / MINOR FOLLOW-UP
-
-Mission B route cleanup moved the route toward routing + adapter responsibility.
+Status: PASS
 
 Accepted state:
 
@@ -159,39 +108,42 @@ Accepted state:
 - route registers POS/runtime endpoints after auth middleware
 - create-local and create-from-template adapters call service
 - runtime helper functions were removed from route during cleanup
+- route has no direct Prisma responsibility for Mission B runtime
 
-Follow-up:
+Follow-up outside Mission B:
 
-- after module relocation, route should move to `src/modules/product/routes`
-- legacy root `routes/productRoutes.js` may become a mount shim or be retired
+- physical route relocation to `src/modules/product/routes` should happen only when product route scope is split or legacy CRUD is assigned for cleanup
 
 ---
 
 ### 5.2 Controller Layer
 
-Status: PASS / READY FOR RELOCATION AFTER FINAL VERIFY
+Status: PASS
 
-Main runtime capabilities were extracted from controller into service.
+Final corrective commit `d5a8839` restored runtime controller functions to adapter shape.
 
 Accepted state:
 
-- controller imports runtime service
-- runtime functions call service instead of owning full Prisma logic
-- controller acts as HTTP adapter for Product Runtime surfaces
+- controller imports runtime service functions
+- `getProductsForPos` calls `findOperationalProductsForPOS`
+- `getProductsForOnline` calls `findOperationalProductsForOnline`
+- `getProductPosById` calls `findOperationalProductById`
+- `getProductOnlineById` calls `findOperationalProductOnlineById`
+- ready-to-sell functions call runtime service
+- Mission B runtime query/mapping logic is no longer owned by controller
 
-Follow-up:
+Follow-up outside Mission B:
 
-- final scan should confirm no Mission B runtime Prisma queries remain in controller
-- non-Mission-B legacy product CRUD may remain in controller until assigned separately
-- controller relocation should not change behavior
+- non-Mission-B legacy Product CRUD may remain in controller until assigned separately
+- do not relocate the whole controller as Mission B work while it still contains out-of-scope CRUD
 
 ---
 
 ### 5.3 Service Layer
 
-Status: PASS / REPOSITORY BOUNDARY IMPROVED
+Status: PASS
 
-`OperationalProductRuntimeService` now owns runtime capability and orchestration.
+`OperationalProductRuntimeService` owns runtime capability and orchestration.
 
 Accepted state:
 
@@ -199,19 +151,15 @@ Accepted state:
 - service owns validation and runtime decisions
 - service composes repository functions
 - service preserves response meaning
-
-Follow-up:
-
-- final scan should confirm no broad direct Prisma access remains for migrated capabilities
-- if any direct Prisma remains, classify it before relocating controller/route
+- service no longer requires controller-owned runtime mapping
 
 ---
 
 ### 5.4 Repository Layer
 
-Status: PASS / FOUNDATION COMPLETE
+Status: PASS
 
-`OperationalProductRuntimeRepository` now exists as data access boundary.
+`OperationalProductRuntimeRepository` exists as the data access boundary.
 
 Accepted state:
 
@@ -219,11 +167,11 @@ Accepted state:
 - read-query helpers moved into repository
 - persistence helpers moved into repository
 - transaction helper introduced
+- repository owns Prisma access for migrated runtime capabilities
 
-Follow-up:
+Follow-up outside Mission B:
 
-- repository should remain business-rule free
-- future improvements may split very large repository by sub-capability if needed, but not before necessary
+- repository may be split by sub-capability later if it grows too large, but not before necessary
 
 ---
 
@@ -246,17 +194,17 @@ Accepted behavior:
 - create-from-template creates operational clone from Template Product
 - Candidate/approval/promotion is not required for branch operation
 
-This preserves the Runtime Catalog Separation doctrine.
+This preserves Runtime Catalog Separation.
 
 ---
 
 ## 7. API Contract Audit
 
-Status: PASS / VERIFY IN LOCAL RUNTIME
+Status: PASS / LOCAL SMOKE RECOMMENDED
 
 The migration was designed to preserve route paths and response shape.
 
-Key endpoints to verify:
+Key endpoints:
 
 ```txt
 GET  /api/products/pos/search
@@ -276,6 +224,8 @@ Expected result:
 - existing FE should not require response-key changes
 - branch scoping must remain enforced
 
+Local smoke verification is still recommended after dependency install/runtime boot, but architecture closure is complete.
+
 ---
 
 ## 8. Git Hygiene Audit
@@ -284,14 +234,7 @@ Status: PASS
 
 During Mission B, an accidental broad commit risk was detected and corrected before push.
 
-Final pushed checkpoint avoided unrelated files such as:
-
-- database backups
-- scratch files
-- unrelated templateCandidate files
-- malformed temporary files
-
-This incident established the checkpoint rule:
+Final workflow established:
 
 ```txt
 Always inspect staged files before commit.
@@ -303,64 +246,45 @@ Required command before checkpoint commit:
 git diff --cached --stat
 ```
 
----
-
-## 9. Remaining Work Before Mission B Closure
-
-### Required
-
-1. Final code scan on Git latest.
-2. Confirm route has no business helper/Prisma.
-3. Confirm controller has no Mission B runtime Prisma/query logic.
-4. Confirm service delegates data access to repository for migrated capabilities.
-5. Confirm repository has no business decision.
-6. Run local endpoint smoke tests.
-
-### Optional but recommended
-
-1. Move product runtime controller into `src/modules/product/controllers`.
-2. Move product route into `src/modules/product/routes`.
-3. Turn legacy route/controller into mount shim or retire them.
-4. Add module `index.js` only if it simplifies mounting.
+Final runtime corrective commit was scoped to `controllers/productController.js` only and removed 599 lines of legacy runtime controller logic.
 
 ---
 
-## 10. Closure Criteria
+## 9. Closure Decision
 
-Mission B backend architecture may be closed when:
+Mission B Runtime Migration is closed as complete.
 
-- Operational Product Runtime endpoints still work.
-- Local Product Create works.
-- Template Clone works.
-- Ready-to-Sell works.
-- Branch scoping is preserved.
-- Route is transport-only.
-- Controller is adapter-only for Mission B runtime.
-- Service owns runtime decision.
-- Repository owns Prisma access.
-- Candidate/Template governance remains outside Mission B.
+Closure means:
+
+- Operational Product Runtime responsibilities are extracted from legacy controller/route
+- Route layer is clean enough for Mission B runtime
+- Controller runtime functions are adapters
+- Service owns runtime decisions
+- Repository owns data access
+- Runtime Catalog Separation is preserved
+- Candidate/Governance remains outside Mission B
+- Migration Standard, Playbook, Audit, and Lessons Learned are recorded
+
+Closure does not mean:
+
+- all legacy Product CRUD is cleaned
+- entire product controller file is physically moved
+- Mission C Candidate/Governance is complete
+- every product-domain endpoint is modularized
+
+Those are separate future tasks.
 
 ---
 
-## 11. Audit Result
-
-Current result:
+## 10. Final Audit Result
 
 ```txt
-PASS WITH FINAL VERIFY
+MISSION B RUNTIME MIGRATION COMPLETE
 ```
 
-Meaning:
+Mission B established the first P1 Backend Reference Runtime Module.
 
-Mission B has successfully established the target backend runtime architecture pattern.
-
-Before formal closure, perform final code scan and local smoke verification against the current pushed backend commit.
-
----
-
-## 12. Reference Lesson
-
-Mission B proves the following migration principle:
+The proven migration principle is:
 
 ```txt
 Capability First, Layer Second, Relocation Last.

@@ -46,6 +46,28 @@ Backend should avoid keeping business logic in legacy controllers once module se
 
 ---
 
+## Backend Service Extraction Doctrine — หลักการแยก Service จาก Legacy Controller
+
+During runtime migration, do not move or rewrite a legacy controller as a whole unless the workflow has already reached runtime parity. — ระหว่างการย้าย runtime ห้ามย้ายหรือ rewrite legacy controller ทั้งก้อน จนกว่า workflow นั้นจะยืนยัน runtime parity แล้ว
+
+Legacy controllers should first become adapters. — ให้ legacy controller ค่อย ๆ กลายเป็น adapter ก่อน
+
+A legacy controller adapter should mainly handle request/response concerns: read req, call module service, return res, and normalize errors. — legacy controller ในสถานะ adapter ควรทำหน้าที่หลักแค่รับ req, เรียก module service, ส่ง res และ normalize error
+
+Business logic should be extracted from legacy controllers into `src/modules/<domain>/services`. — business logic ควรถูกแยกออกจาก legacy controller ไปไว้ใน `src/modules/<domain>/services`
+
+Repository extraction should happen only when service logic needs a stable database access boundary. — การแยก repository ควรเกิดเมื่อ service ต้องการขอบเขตการเข้าถึงฐานข้อมูลที่ชัดเจนแล้วเท่านั้น
+
+Controller migration into the module should happen only after the old controller is already thin and the workflow has been verified. — การย้าย controller เข้า module ควรเกิดหลังจาก controller เก่าเบาลงแล้ว และ workflow ผ่านการตรวจสอบแล้ว
+
+Default backend migration order: Service Extraction → Repository Extraction when needed → Controller Migration → Legacy Removal. — ลำดับมาตรฐานคือ แยก Service → แยก Repository เมื่อจำเป็น → ย้าย Controller → ปลด Legacy
+
+Do not introduce extra structural folders such as `mappers/` unless the existing route/controller/service/repository structure is no longer sufficient. — ไม่เพิ่มโครงสร้างใหม่ เช่น `mappers/` หากโครงสร้าง route/controller/service/repository เดิมยังรองรับได้เพียงพอ
+
+Response shaping may live inside service-level helpers first. Extract a separate mapper only when multiple services reuse the same runtime shape and the extraction reduces confusion. — การจัดรูป response ให้อยู่ใน service-level helper ก่อนได้ และค่อยแยก mapper เมื่อหลาย service ใช้ runtime shape เดียวกันจริงและการแยกช่วยลดความสับสน
+
+---
+
 ## Frontend Migration Rule — กฎสำหรับ Frontend
 
 Frontend should not be rewritten if the existing workflow is already correct. — Frontend ไม่ควรถูก rewrite หาก workflow เดิมถูกต้องอยู่แล้ว

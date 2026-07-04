@@ -96,11 +96,20 @@ const pickDropdownItems = (raw) => {
   return [];
 };
 
+const getDropdownId = (item) => item?.id ?? item?.value ?? item?.productTypeId ?? item?.typeId ?? item?.product_type_id;
+const getDropdownName = (item) => item?.name ?? item?.label ?? item?.title ?? item?.text ?? item?.productTypeName ?? item?.typeName;
+
 const mergeUniqueById = (...lists) => {
   const map = new Map();
   lists.flat().forEach((item) => {
-    if (!item || item.id == null) return;
-    map.set(String(item.id), item);
+    const id = getDropdownId(item);
+    const name = getDropdownName(item);
+    if (id == null || !String(name ?? '').trim()) return;
+    map.set(String(id), {
+      ...item,
+      id: Number.isFinite(Number(id)) ? Number(id) : id,
+      name: String(name).trim(),
+    });
   });
   return Array.from(map.values());
 };

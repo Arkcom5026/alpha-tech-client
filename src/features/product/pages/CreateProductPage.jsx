@@ -2,7 +2,7 @@
 // ✅ Create Product Page — Current hierarchy:
 // Business → ProductType → Brand → Product
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useBranchStore } from '@/features/branch/store/branchStore';
 import useProductStore from '../store/productStore';
@@ -37,6 +37,7 @@ const CreateProductPage = () => {
     saveLocked,
     createdProduct,
     formResetKey,
+    errorMessage,
     selectedFiles,
     previewUrls,
     captions,
@@ -52,8 +53,6 @@ const CreateProductPage = () => {
     setCaptions,
     setCoverIndex,
   } = useProductCreateRuntimeStore();
-
-  const [error, setError] = useState('');
 
   const imageRef = useRef();
 
@@ -78,8 +77,6 @@ const CreateProductPage = () => {
     beginCreate();
 
     try {
-      setError('');
-
       // Runtime Migration:
       // Normal Product Create now creates branch-owned Operational Product.
       // branchId remains local context only; productApi strips it before request.
@@ -109,8 +106,7 @@ const CreateProductPage = () => {
 
       finishCreateSuccess(created);
     } catch (err) {
-      finishCreateError();
-      setError(err?.message || 'เกิดข้อผิดพลาดในการบันทึกสินค้า');
+      finishCreateError(err?.message || 'เกิดข้อผิดพลาดในการบันทึกสินค้า');
     }
   };
 
@@ -162,9 +158,9 @@ const CreateProductPage = () => {
     <div className="w-full max-w-[1600px] mx-auto px-4 lg:px-8">
       <h2 className="text-xl font-bold mb-4">เพิ่มสินค้า</h2>
 
-      {error && (
+      {errorMessage && (
         <div className="mb-4 rounded border border-red-200 bg-red-50 text-red-700 px-4 py-2">
-          {error}
+          {errorMessage}
         </div>
       )}
 

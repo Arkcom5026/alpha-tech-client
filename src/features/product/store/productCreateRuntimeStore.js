@@ -6,9 +6,20 @@ const initialState = {
   saveLocked: false,
   createdProduct: null,
   formResetKey: 0,
+  selectedFiles: [],
+  previewUrls: [],
+  captions: [],
+  coverIndex: null,
 };
 
-const useProductCreateRuntimeStore = create((set) => ({
+const normalizeFiles = (input) => {
+  if (!input) return [];
+  if (Array.isArray(input)) return input;
+  if (typeof FileList !== 'undefined' && input instanceof FileList) return Array.from(input);
+  return [input];
+};
+
+const useProductCreateRuntimeStore = create((set, get) => ({
   ...initialState,
 
   beginCreate: () =>
@@ -44,6 +55,43 @@ const useProductCreateRuntimeStore = create((set) => ({
       showSuccess: false,
     }),
 
+  setSelectedFiles: (updaterOrValue) => {
+    if (typeof updaterOrValue === 'function') {
+      const prevArr = normalizeFiles(get().selectedFiles);
+      const next = updaterOrValue(prevArr);
+      set({ selectedFiles: normalizeFiles(next) });
+      return;
+    }
+
+    set({ selectedFiles: normalizeFiles(updaterOrValue) });
+  },
+
+  setPreviewUrls: (updaterOrValue) => {
+    if (typeof updaterOrValue === 'function') {
+      set((state) => ({ previewUrls: updaterOrValue(state.previewUrls) }));
+      return;
+    }
+    set({ previewUrls: Array.isArray(updaterOrValue) ? updaterOrValue : [] });
+  },
+
+  setCaptions: (updaterOrValue) => {
+    if (typeof updaterOrValue === 'function') {
+      set((state) => ({ captions: updaterOrValue(state.captions) }));
+      return;
+    }
+    set({ captions: Array.isArray(updaterOrValue) ? updaterOrValue : [] });
+  },
+
+  setCoverIndex: (coverIndex) => set({ coverIndex }),
+
+  resetUploadRuntime: () =>
+    set({
+      selectedFiles: [],
+      previewUrls: [],
+      captions: [],
+      coverIndex: null,
+    }),
+
   resetForNextCreate: () =>
     set((state) => ({
       isProcessing: false,
@@ -51,6 +99,10 @@ const useProductCreateRuntimeStore = create((set) => ({
       saveLocked: false,
       createdProduct: null,
       formResetKey: state.formResetKey + 1,
+      selectedFiles: [],
+      previewUrls: [],
+      captions: [],
+      coverIndex: null,
     })),
 
   resetRuntime: () => set({ ...initialState }),

@@ -10,26 +10,12 @@ import _ from 'lodash';
 import useProductStore from '../store/productStore';
 import useBrandStore from '@/features/brand/store/brandStore';
 import { useAuthStore } from '@/features/auth/store/authStore';
+import ProductPriceSection from './form/ProductPriceSection';
+import ProductInventorySection from './form/ProductInventorySection';
+import ProductSubmitBar from './form/ProductSubmitBar';
+import ProductDetailsSection from './form/ProductDetailsSection';
+import ProductBasicSection from './form/ProductBasicSection';
 
-const PaymentInput = ({ title, value, onChange, disabled = false, required = false }) => {
-  return (
-    <div>
-      <label className="block font-medium mb-1 text-gray-700">
-        {title} {required ? <span className="text-red-500">*</span> : null}
-      </label>
-      <input
-        type="number"
-        className="w-full p-2 border rounded-md focus:ring-blue-400 focus:border-blue-400 text-gray-800 text-right"
-        placeholder="0.00"
-        step="0.01"
-        min="0"
-        value={value === 0 ? '' : value ?? ''}
-        onChange={(e) => onChange?.(e.target.value)}
-        disabled={disabled}
-      />
-    </div>
-  );
-};
 
 const toId = (value) => {
   if (value === '' || value === null || value === undefined) return '';
@@ -600,19 +586,7 @@ const ProductForm = ({
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="md:col-span-3">
-              <label htmlFor="name" className="block font-medium mb-1 text-gray-700">
-                ชื่อสินค้า <span className="text-red-500">*</span>
-              </label>
-              <input
-                id="name"
-                type="text"
-                placeholder="เช่น Canon PIXMA G2010, Kingston NV2 1TB"
-                {...register('name', { required: 'กรุณาระบุชื่อสินค้า' })}
-                className="w-full p-2 border rounded-md focus:ring-blue-400 focus:border-blue-400 text-gray-800"
-              />
-              {errors.name && <p className="text-red-500 text-sm mt-1">{String(errors.name.message)}</p>}
-            </div>
+            <ProductBasicSection register={register} errors={errors} />
 
             <div>
               <label htmlFor="productTypeId" className="block font-medium mb-1 text-gray-700">
@@ -827,222 +801,18 @@ const ProductForm = ({
           </div>
         </section>
 
-        <section className="rounded-xl border bg-white p-5 shadow-sm">
-          <div className="mb-4">
-            <div className="font-semibold text-gray-800 flex items-center gap-2">
-              ⚙️ <span>Stock Behavior</span>
-            </div>
-            <div className="text-sm text-gray-500">
-              กำหนดพฤติกรรมสต๊อกของสินค้า ไม่ใช่ตัวตนของสินค้า
-            </div>
-          </div>
+        <ProductInventorySection control={control} register={register} />
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div>
-              <label htmlFor="product-mode" className="block font-medium mb-1 text-gray-700">
-                โหมดสต๊อกสินค้า
-              </label>
-              <Controller
-                name="mode"
-                control={control}
-                defaultValue="STRUCTURED"
-                render={({ field }) => (
-                  <select
-                    id="product-mode"
-                    className="w-full p-2 border rounded-md focus:ring-blue-400 focus:border-blue-400 text-gray-800"
-                    value={field.value || 'STRUCTURED'}
-                    onChange={(e) => field.onChange(e.target.value)}
-                  >
-                    <option value="STRUCTURED">STRUCTURED / แยกรายชิ้น</option>
-                    <option value="SIMPLE">SIMPLE / นับจำนวน</option>
-                  </select>
-                )}
-              />
-              <div className="mt-1 text-xs text-gray-500">
-                * ค่าเริ่มต้นเป็น STRUCTURED ตามโครงสร้างสินค้าปัจจุบัน
-              </div>
-            </div>
+        <ProductPriceSection control={control} errors={errors} />
 
-            <div className="flex items-end">
-              <label className="inline-flex items-center gap-2 text-sm text-gray-700">
-                <input id="active" type="checkbox" className="h-4 w-4" {...register('active')} />
-                เปิดใช้งานสินค้า
-              </label>
-            </div>
-          </div>
-        </section>
+        <ProductDetailsSection register={register} />
 
-        <section className="rounded-xl border bg-white p-5 shadow-sm">
-          <div className="mb-4">
-            <div className="font-semibold text-gray-800 flex items-center gap-2">
-              💰 <span>ราคามาตรฐาน</span>
-            </div>
-            <div className="text-sm text-gray-500">
-              ใช้เป็นราคาเริ่มต้นของสินค้า ส่วนต้นทุนจริงรายชิ้นจะถูก Fix ตอนรับสินค้าเข้า
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
-            <div>
-              <Controller
-                name="branchPrice.costPrice"
-                control={control}
-                rules={{
-                  validate: (value) => {
-                    if (value === '' || value == null) return true;
-                    const n = Number(value);
-                    if (!Number.isFinite(n)) return 'รูปแบบตัวเลขไม่ถูกต้อง';
-                    return n >= 0 || 'ราคาทุนต้องไม่ติดลบ';
-                  },
-                }}
-                render={({ field }) => (
-                  <PaymentInput title="ราคาทุนอ้างอิง" value={field.value ?? ''} onChange={(value) => field.onChange(value)} />
-                )}
-              />
-              {errors.branchPrice?.costPrice && (
-                <p className="text-red-500 text-sm mt-1">{String(errors.branchPrice.costPrice.message)}</p>
-              )}
-            </div>
-
-            <div>
-              <Controller
-                name="branchPrice.priceRetail"
-                control={control}
-                rules={{
-                  validate: (value) => {
-                    const n = Number(value);
-                    if (!Number.isFinite(n)) return 'กรุณาระบุราคาขายปลีก';
-                    return n > 0 || 'ราคาขายปลีกต้องมากกว่า 0';
-                  },
-                }}
-                render={({ field }) => (
-                  <PaymentInput title="ราคาขายปลีก" required value={field.value ?? ''} onChange={(value) => field.onChange(value)} />
-                )}
-              />
-              {errors.branchPrice?.priceRetail && (
-                <p className="text-red-500 text-sm mt-1">{String(errors.branchPrice.priceRetail.message)}</p>
-              )}
-            </div>
-
-            <div>
-              <Controller
-                name="branchPrice.priceTechnician"
-                control={control}
-                rules={{
-                  validate: (value) => {
-                    if (value === '' || value == null) return true;
-                    const n = Number(value);
-                    if (!Number.isFinite(n)) return 'รูปแบบตัวเลขไม่ถูกต้อง';
-                    return n >= 0 || 'ราคาช่างต้องไม่ติดลบ';
-                  },
-                }}
-                render={({ field }) => (
-                  <PaymentInput title="ราคาช่าง" value={field.value ?? ''} onChange={(value) => field.onChange(value)} />
-                )}
-              />
-              {errors.branchPrice?.priceTechnician && (
-                <p className="text-red-500 text-sm mt-1">{String(errors.branchPrice.priceTechnician.message)}</p>
-              )}
-            </div>
-
-            <div>
-              <Controller
-                name="branchPrice.priceOnline"
-                control={control}
-                rules={{
-                  validate: (value) => {
-                    if (value === '' || value == null) return true;
-                    const n = Number(value);
-                    if (!Number.isFinite(n)) return 'รูปแบบตัวเลขไม่ถูกต้อง';
-                    return n >= 0 || 'ราคาออนไลน์ต้องไม่ติดลบ';
-                  },
-                }}
-                render={({ field }) => (
-                  <PaymentInput title="ราคาออนไลน์" value={field.value ?? ''} onChange={(value) => field.onChange(value)} />
-                )}
-              />
-              {errors.branchPrice?.priceOnline && (
-                <p className="text-red-500 text-sm mt-1">{String(errors.branchPrice.priceOnline.message)}</p>
-              )}
-            </div>
-
-            <div>
-              <Controller
-                name="branchPrice.priceWholesale"
-                control={control}
-                rules={{
-                  validate: (value) => {
-                    if (value === '' || value == null) return true;
-                    const n = Number(value);
-                    if (!Number.isFinite(n)) return 'รูปแบบตัวเลขไม่ถูกต้อง';
-                    return n >= 0 || 'ราคาขายส่งต้องไม่ติดลบ';
-                  },
-                }}
-                render={({ field }) => (
-                  <PaymentInput title="ราคาขายส่ง" value={field.value ?? ''} onChange={(value) => field.onChange(value)} />
-                )}
-              />
-              {errors.branchPrice?.priceWholesale && (
-                <p className="text-red-500 text-sm mt-1">{String(errors.branchPrice.priceWholesale.message)}</p>
-              )}
-            </div>
-          </div>
-        </section>
-
-        <section className="rounded-xl border bg-white p-5 shadow-sm">
-          <div className="mb-4">
-            <div className="font-semibold text-gray-800 flex items-center gap-2">
-              📝 <span>รายละเอียดเพิ่มเติม</span>
-            </div>
-            <div className="text-sm text-gray-500">
-              ไม่บังคับ ใช้สำหรับข้อมูลสินค้าและรายละเอียดเชิงเทคนิค
-            </div>
-          </div>
-
-          <div>
-            <label htmlFor="description" className="block font-medium mb-1 text-gray-700">
-              รายละเอียดสินค้า
-            </label>
-            <textarea
-              id="description"
-              {...register('description')}
-              rows={2}
-              placeholder="แนะนำสินค้าโดยย่อ เช่น ขนาด น้ำหนัก ความสามารถ"
-              className="w-full p-3 border rounded-md focus:ring-blue-400 focus:border-blue-400 text-gray-800"
-            />
-          </div>
-
-          <div className="mt-4">
-            <label htmlFor="spec" className="block font-medium mb-1 text-gray-700">
-              รายละเอียดสเปก
-            </label>
-            <textarea
-              id="spec"
-              {...register('spec')}
-              rows={3}
-              placeholder="รายละเอียดเชิงเทคนิค เช่น CPU, RAM, ความจุ, จอภาพ"
-              className="w-full p-3 border rounded-md font-mono focus:ring-blue-400 focus:border-blue-400 text-gray-800"
-            />
-          </div>
-        </section>
-
-        <div className="flex justify-end border-t pt-6">
-          <button
-            type="submit"
-            disabled={Boolean(isSubmitting || submitDisabled)}
-            className={`px-4 py-2 rounded bg-blue-600 text-white font-semibold ${
-              isSubmitting || submitDisabled ? 'opacity-50 cursor-not-allowed' : ''
-            }`}
-          >
-            {isSubmitting
-              ? 'กำลังบันทึก...'
-              : submitLabel
-                ? submitLabel
-                : mode === 'edit'
-                  ? 'บันทึกการแก้ไข'
-                  : 'เพิ่มสินค้า'}
-          </button>
-        </div>
+        <ProductSubmitBar
+          isSubmitting={isSubmitting}
+          submitDisabled={submitDisabled}
+          submitLabel={submitLabel}
+          mode={mode}
+        />
       </form>
     </FormProvider>
   );

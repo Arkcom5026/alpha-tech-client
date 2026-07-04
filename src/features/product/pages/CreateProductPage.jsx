@@ -48,6 +48,7 @@ const CreateProductPage = () => {
     unlockAfterChange,
     closeSuccessDialog,
     resetForNextCreate,
+    resetRuntime,
     setSelectedFiles,
     setPreviewUrls,
     setCaptions,
@@ -72,6 +73,12 @@ const CreateProductPage = () => {
 
     Promise.resolve(ensureDropdownsAction?.()).catch(() => {});
   }, [branchId, dropdownsLoaded, ensureDropdownsAction]);
+
+  useEffect(() => {
+    return () => {
+      resetRuntime();
+    };
+  }, [resetRuntime]);
 
   const handleCreate = async (formData) => {
     beginCreate();

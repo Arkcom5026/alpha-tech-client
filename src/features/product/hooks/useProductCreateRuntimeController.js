@@ -25,6 +25,7 @@ const useProductCreateRuntimeController = () => {
   } = useProductStore();
 
   const runtime = useProductCreateRuntimeStore();
+  const resetRuntime = useProductCreateRuntimeStore((state) => state.resetRuntime);
   const imageRef = useRef();
   const dropdownsFetchRef = useRef({ branchId: null, done: false });
 
@@ -44,9 +45,9 @@ const useProductCreateRuntimeController = () => {
 
   useEffect(() => {
     return () => {
-      runtime.resetRuntime();
+      resetRuntime();
     };
-  }, [runtime]);
+  }, [resetRuntime]);
 
   const handleCreate = async (formData) => {
     runtime.beginCreate();

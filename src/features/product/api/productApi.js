@@ -1,8 +1,7 @@
-// src/features/product/api/productApi.js
 import apiClient from '@/utils/apiClient';
 import { parseApiError } from '@/utils/uiHelpers';
+import { getProductTypeDropdowns } from '@/features/productType/api/productTypeApi';
 
-// LIST
 export const getProducts = async ({ search, status, categoryId, productTypeId, brandId, take, takeNum, page, skipNum } = {}) => {
   try {
     const params = { _ts: Date.now() };
@@ -51,7 +50,6 @@ export const updateProductAndGet = async (id, payload) => {
   } catch (err) { throw parseApiError(err); }
 };
 
-// alias สั้น ๆ
 export const saveProduct = updateProductAndGet;
 
 export const deleteProduct = async (id) => {
@@ -61,9 +59,6 @@ export const deleteProduct = async (id) => {
   } catch (err) { throw parseApiError(err); }
 };
 
-// =============================
-// Enable / Disable (แยก API)
-// =============================
 export const disableProduct = async (id) => {
   try {
     const { data } = await apiClient.post(`products/${id}/disable`);
@@ -78,7 +73,6 @@ export const enableProduct = async (id) => {
   } catch (err) { throw parseApiError(err); }
 };
 
-// Dropdowns (โหลดครั้งเดียว ใช้ทั้งระบบ)
 export const getProductDropdownsPublic = async () => {
   try {
     const { data } = await apiClient.get('products/online/dropdowns', { params: { _ts: Date.now() }});
@@ -93,6 +87,24 @@ export const getProductDropdowns = async () => {
   } catch (err) {
     throw parseApiError(err);
   }
+};
+
+const pickDropdownItems = (raw) => {
+  if (Array.isArray(raw)) return raw;
+  if (Array.isArray(raw?.items)) return raw.items;
+  if (Array.isArray(raw?.data)) return raw.data;
+  if (Array.isArray(raw?.data?.items)) return raw.data.items;
+  if (Array.isArray(raw?.data?.data)) return raw.data.data;
+  return [];
+};
+
+const mergeUniqueById = (...lists) => {
+  const map = new Map();
+  lists.flat().forEach((item) => {
+    if (!item || item.id == null) return;
+    map.set(String(item.id), item);
+  });
+  return Array.from(map.values());
 };
 
 export const getCatalogDropdowns = async ({ scope = 'pos' } = {}) => {
@@ -113,11 +125,20 @@ export const getCatalogDropdowns = async ({ scope = 'pos' } = {}) => {
       templates = [],
     } = raw || {};
 
+    let productTypeDropdowns = [];
+    if (scope !== 'online') {
+      try {
+        productTypeDropdowns = pickDropdownItems(await getProductTypeDropdowns({ active: true }));
+      } catch (_) {
+        productTypeDropdowns = [];
+      }
+    }
+
     const tpl = Array.isArray(productTemplates) ? productTemplates : (templates || []);
 
     return {
       categories,
-      productTypes,
+      productTypes: mergeUniqueById(productTypes, productTypeDropdowns),
       profiles: productProfiles,
       productProfiles,
       brands,
@@ -130,9 +151,6 @@ export const getCatalogDropdowns = async ({ scope = 'pos' } = {}) => {
   } catch (err) { throw parseApiError(err); }
 };
 
-// =============================
-// Online Catalog
-// =============================
 const __buildOnlineParams = (obj = {}) => Object.fromEntries(
   Object.entries(obj).filter(([, v]) => v !== '' && v !== undefined && v !== null)
 );
@@ -163,7 +181,6 @@ export const getProductOnlineById = async (id, { branch } = {}) => {
   } catch (err) { throw parseApiError(err); }
 };
 
-// Prices
 export const getProductPrices = async (productId) => {
   try {
     const { data } = await apiClient.get(`products/${productId}/prices`, { params: { _ts: Date.now() }});
@@ -193,14 +210,11 @@ export const deleteProductPrice = async (productId, priceId) => {
   } catch (err) { throw parseApiError(err); }
 };
 
-// POS Search
 export const getProductsForPos = async (filters = {}) => {
   try {
     const sanitized = Object.fromEntries(
       Object.entries(filters).filter(([, v]) => v !== '' && v !== undefined && v !== null)
     );
-    
-    // 🟢 SECURITY SANITIZATION: ตัด branchId ออกก่อนยิงส่ง เพื่อปล่อยให้ระบบหลังบ้านแกะเช็กสิทธิ์พนักงานตรง ป้องกัน 401 ลูปค้าง
     delete sanitized.branchId;
 
     const params = { ...sanitized, _ts: Date.now() };
@@ -209,7 +223,6 @@ export const getProductsForPos = async (filters = {}) => {
   } catch (err) { throw parseApiError(err); }
 };
 
-// Migration
 export const migrateSnToSimple = async (productId) => {
   try {
     const { data } = await apiClient.post(`products/${productId}/migrate-to-simple`);
@@ -217,9 +230,6 @@ export const migrateSnToSimple = async (productId) => {
   } catch (err) { throw parseApiError(err); }
 };
 
-// ==================================================
-// Ready-to-sell (summary)
-// ==================================================
 export const getReadyToSell = async ({ branchId, q = '', mode = 'ALL', page = 1, pageSize = 50, sort = 'receivedAt_desc' } = {}) => {
   try {
     if (!branchId) {
@@ -245,9 +255,6 @@ export const getReadyToSell = async ({ branchId, q = '', mode = 'ALL', page = 1,
   }
 };
 
-// ==================================================
-// Ready-to-sell (STRUCTURED details)
-// ==================================================
 export const getReadyToSellStructuredDetails = async ({ branchId, productId, q = '' } = {}) => {
   try {
     if (!branchId) {
@@ -274,9 +281,6 @@ export const getReadyToSellStructuredDetails = async ({ branchId, productId, q =
   }
 };
 
-// ==================================================
-// QUICK STOCK IMPORT (กู้คืนสต๊อกด่วนรายเม็ด)
-// ==================================================
 export const enrollQuickStock = async (payload) => {
   try {
     if (import.meta.env?.DEV) console.log('[productApi] enrollQuickStock payload', payload);
@@ -287,14 +291,9 @@ export const enrollQuickStock = async (payload) => {
   }
 };
 
-// ==================================================
-// 🟢 QUICK STOCK ALL-IN-ONE (เพิ่มสินค้าแม่และเปิดบิลคลังด่วน)
-// ==================================================
 export const quickStockInAllInOneApi = async (payload) => {
   try {
     if (import.meta.env?.DEV) console.log('[productApi] quickStockInAllInOneApi payload', payload);
-    
-    // 🛡️ ป้องกันความปลอดภัยสากล: ลบข้อมูลสาขาออกจาก payload ก่อนส่งข้ามฝั่ง ปล่อยหลังบ้านคัดกรองจาก Token เอง
     const sanitizedPayload = { ...payload };
     delete sanitizedPayload.branchId;
 
@@ -305,11 +304,6 @@ export const quickStockInAllInOneApi = async (payload) => {
   }
 };
 
-
-// ==================================================
-// RUNTIME PRODUCT LOOKUP
-// หา Operational Product ของ Branch ปัจจุบันจาก Template Product
-// ==================================================
 export const getOperationalProductByTemplateId = async (templateProductId) => {
   try {
     if (!templateProductId) {
@@ -328,19 +322,11 @@ export const getOperationalProductByTemplateId = async (templateProductId) => {
   }
 };
 
-// ==================================================
-// CREATE OPERATIONAL PRODUCT FROM TEMPLATE
-// สร้าง Operational Product ของ Branch ปัจจุบันจาก Template Product
-// ==================================================
 export const createOperationalProductFromTemplateApi = async (payload = {}) => {
   try {
     if (import.meta.env?.DEV) console.log('[productApi] createOperationalProductFromTemplateApi payload', payload);
 
     const sanitizedPayload = { ...payload };
-
-    // Runtime Contract:
-    // templateProductId ต้องคงอยู่เพื่อระบุต้นทาง Template
-    // branchId ต้องให้ Backend แกะจาก session/runtime context เท่านั้น
     delete sanitizedPayload.branchId;
 
     const { data } = await apiClient.post('products/pos/create-from-template', sanitizedPayload);
@@ -350,18 +336,12 @@ export const createOperationalProductFromTemplateApi = async (payload = {}) => {
   }
 };
 
-// ==================================================
-// CREATE LOCAL OPERATIONAL PRODUCT
-// สร้าง Operational Product เฉพาะ Branch ปัจจุบันเมื่อไม่มี Template ที่เหมาะสม
-// ==================================================
 export const createLocalOperationalProductApi = async (payload = {}) => {
   try {
     if (import.meta.env?.DEV) console.log('[productApi] createLocalOperationalProductApi payload', payload);
 
     const sanitizedPayload = { ...payload };
 
-    // Runtime Contract:
-    // Local product ต้องไม่มี templateProductId และ branchId ต้องมาจาก backend session เท่านั้น
     delete sanitizedPayload.branchId;
     delete sanitizedPayload.templateProductId;
     delete sanitizedPayload.productTemplateId;
@@ -379,98 +359,3 @@ export const createLocalOperationalProductApi = async (payload = {}) => {
     throw parseApiError(err);
   }
 };
-
-// ==================================================
-// QUICK STOCK EXISTING PRODUCT INTAKE
-// รับสินค้าเข้าจาก Product เดิม: Recovery / Quick Receive / Manufacture
-// ==================================================
-export const quickReceiveExistingProductApi = async (payload) => {
-  try {
-    if (import.meta.env?.DEV) console.log('[productApi] quickReceiveExistingProductApi payload', payload);
-
-    const sanitizedPayload = { ...payload };
-
-    // Security / Runtime Contract:
-    // branchId และ movementType ต้องถูกกำหนดโดย Backend จาก session/runtime context เท่านั้น
-    delete sanitizedPayload.branchId;
-    delete sanitizedPayload.movementType;
-    delete sanitizedPayload.source;
-
-    // Quick Receive Runtime v2:
-    // Queue Item ต้องมีเฉพาะ barcode / serialNumber
-    // ราคาทั้งหมดอยู่ระดับ Runtime Session เท่านั้น
-    const queue = Array.isArray(payload?.items)
-      ? payload.items
-      : Array.isArray(payload?.queue)
-        ? payload.queue
-        : Array.isArray(payload?.barcodes)
-          ? payload.barcodes
-          : [];
-
-    const cleanItems = queue
-      .map((item) => {
-        if (typeof item === 'string') {
-          return {
-            barcode: item.trim(),
-            serialNumber: null,
-          };
-        }
-
-        return {
-          barcode: String(item?.barcode || item?.code || '').trim(),
-          serialNumber: item?.serialNumber || item?.sn || null,
-        };
-      })
-      .filter((item) => item.barcode);
-
-    sanitizedPayload.items = cleanItems;
-    sanitizedPayload.barcodes = cleanItems;
-
-    const { data } = await apiClient.post('quick-stock/existing', sanitizedPayload);
-    return data;
-  } catch (err) {
-    throw parseApiError(err);
-  }
-};
-
-// ==================================================
-// TEMPLATE PRODUCT SEARCH / INTAKE CATALOG
-// ใช้เฉพาะ QuickStock / PO / Recovery / Clone Flow
-// ห้ามใช้กับ Product List / Product Detail / Store Runtime
-// ==================================================
-export const searchTemplateProducts = async (filters = {}) => {
-  try {
-    const sanitized = Object.fromEntries(
-      Object.entries(filters).filter(
-        ([, value]) => value !== '' && value !== undefined && value !== null
-      )
-    );
-
-    // Security: ไม่ให้ FE ส่ง branchId เอง
-    delete sanitized.branchId;
-
-    // Runtime Catalog Separation:
-    // Template Catalog ต้องยิงเข้า endpoint แยกโดยตรง
-    // ไม่ใช้ products/pos/search?template=true อีกต่อไป
-    delete sanitized.template;
-
-    const params = {
-      ...sanitized,
-      _ts: Date.now(),
-    };
-
-    const { data } = await apiClient.get('products/template/search', {
-      params,
-    });
-
-    return data;
-  } catch (err) {
-    throw parseApiError(err);
-  }
-};
-
-// Backward-compatible alias for current QuickStockPage / legacy callers
-export const getTemplateProductsForPos = searchTemplateProducts;
-
-// Backward-compatible alias for current QuickStockPage
-export const quickStockIntakeExistingApi = quickReceiveExistingProductApi;

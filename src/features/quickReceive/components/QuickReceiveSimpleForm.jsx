@@ -1,71 +1,92 @@
 // =============================================================================
 // File: src/features/quickReceive/components/QuickReceiveSimpleForm.jsx
 // =============================================================================
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import _ from 'lodash';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import CascadingFilterGroup from '@/components/shared/form/CascadingFilterGroup';
 import ProductSearchSimpleTable from './ProductSearchSimpleTable';
 import QuickReceiveSimpleTable from './QuickReceiveSimpleTable';
 import useProductStore from '@/features/product/store/productStore';
 
+const toSelectId = (value) => {
+  if (value === '' || value === null || value === undefined) return '';
+  const n = Number(value);
+  return Number.isFinite(n) ? n : '';
+};
+
 const QuickReceiveSimpleForm = ({ searchText, onSearchTextChange }) => {
   const [items, setItems] = useState([]);
-
-  // cascading filters (category → type → profile → template)
   const [filter, setFilter] = useState({
-    categoryId: '',
     productTypeId: '',
-    productProfileId: '',
-    productTemplateId: '',
   });
 
-  // product store selectors
   const fetchSimpleProductsAction = useProductStore((s) => s.fetchSimpleProductsAction);
   const dropdowns = useProductStore((s) => s.dropdowns);
+  const dropdownsLoaded = useProductStore((s) => s.dropdownsLoaded);
+  const dropdownsLoading = useProductStore((s) => s.dropdownsLoading);
   const ensureDropdownsAction = useProductStore((s) => s.ensureDropdownsAction);
+  const fetchDropdownsAction = useProductStore((s) => s.fetchDropdownsAction);
   const simpleProducts = useProductStore((s) => s.simpleProducts);
 
-  // ensure dropdowns loaded once
   useEffect(() => {
-    if (typeof ensureDropdownsAction === 'function') {
-      ensureDropdownsAction();
-    }
-  }, [ensureDropdownsAction]);
+    const hasProductTypes = Array.isArray(dropdowns?.productTypes) && dropdowns.productTypes.length > 0;
+    if (dropdownsLoaded || dropdownsLoading || hasProductTypes) return;
+
+    const fn =
+      (typeof ensureDropdownsAction === 'function' && ensureDropdownsAction) ||
+      (typeof fetchDropdownsAction === 'function' && fetchDropdownsAction);
+
+    if (fn) Promise.resolve(fn()).catch(() => {});
+  }, [
+    dropdownsLoaded,
+    dropdownsLoading,
+    dropdowns?.productTypes?.length,
+    ensureDropdownsAction,
+    fetchDropdownsAction,
+  ]);
+
+  const productTypes = useMemo(() => {
+    const raw = dropdowns?.productTypes ?? dropdowns?.types ?? [];
+    const arr = Array.isArray(raw) ? raw : [];
+
+    const normalized = arr
+      .filter((item) => item && item.id != null)
+      .map((item) => ({
+        ...item,
+        id: Number(item.id),
+        name: String(item?.name ?? '').trim(),
+      }))
+      .filter((item) => Number.isFinite(item.id) && item.name);
+
+    const unique = _.uniqBy(normalized, (item) => item.name.toLowerCase());
+    return _.sortBy(unique, (item) => item.name);
+  }, [dropdowns?.productTypes, dropdowns?.types]);
+
+  const handleProductTypeChange = useCallback((event) => {
+    const productTypeId = toSelectId(event.target.value);
+    setFilter({ productTypeId });
+  }, []);
 
   const handleSearch = useCallback(() => {
-    if (
-      !searchText?.trim() &&
-      !filter.categoryId &&
-      !filter.productTypeId &&
-      !filter.productProfileId &&
-      !filter.productTemplateId
-    ) {
-      return;
-    }
+    if (!searchText?.trim() && !filter.productTypeId) return;
 
     const params = {
       searchText: searchText?.trim() || undefined,
       activeOnly: true,
-      categoryId: filter.categoryId !== '' ? Number(filter.categoryId) : undefined,
       productTypeId: filter.productTypeId !== '' ? Number(filter.productTypeId) : undefined,
-      productProfileId: filter.productProfileId !== '' ? Number(filter.productProfileId) : undefined,
-      productTemplateId: filter.productTemplateId !== '' ? Number(filter.productTemplateId) : undefined,
     };
-    fetchSimpleProductsAction(params);
-  }, [searchText, filter, fetchSimpleProductsAction]);
 
-  // auto-search when filter or searchText changes (debounced)
+    fetchSimpleProductsAction(params);
+  }, [searchText, filter.productTypeId, fetchSimpleProductsAction]);
+
   useEffect(() => {
-    const hasAnyFilter = (searchText?.trim()?.length > 0)
-      || filter.categoryId !== ''
-      || filter.productTypeId !== ''
-      || filter.productProfileId !== ''
-      || filter.productTemplateId !== '';
+    const hasAnyFilter = (searchText?.trim()?.length > 0) || filter.productTypeId !== '';
     if (!hasAnyFilter) return;
+
     const t = setTimeout(() => handleSearch(), 200);
     return () => clearTimeout(t);
-  }, [handleSearch, searchText, filter]);
+  }, [handleSearch, searchText, filter.productTypeId]);
 
   const handleSelectProduct = (item) => {
     setItems((prev) => {
@@ -100,7 +121,23 @@ const QuickReceiveSimpleForm = ({ searchText, onSearchTextChange }) => {
 
   return (
     <div className="space-y-4 text-sm">
-      <CascadingFilterGroup value={filter} onChange={setFilter} dropdowns={dropdowns} />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-1">
+          <label className="text-sm font-medium">ประเภทสินค้า</label>
+          <select
+            aria-label="ประเภทสินค้า"
+            value={filter.productTypeId === '' ? '' : filter.productTypeId}
+            onChange={handleProductTypeChange}
+            className="border px-3 py-2 rounded w-full text-sm bg-white"
+          >
+            <option value="">-- เลือกประเภทสินค้า --</option>
+            {productTypes.map((type) => (
+              <option key={type.id} value={type.id}>{type.name}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
       <div className="flex items-center gap-2">
         <Input
           type="text"
@@ -111,6 +148,7 @@ const QuickReceiveSimpleForm = ({ searchText, onSearchTextChange }) => {
         />
         <Button className="h-9" onClick={handleSearch}>ค้นหา</Button>
       </div>
+
       <ProductSearchSimpleTable products={simpleProducts} onSelect={handleSelectProduct} />
       <QuickReceiveSimpleTable items={items} setItems={setItems} />
       <div className="flex justify-end gap-2 pt-2">

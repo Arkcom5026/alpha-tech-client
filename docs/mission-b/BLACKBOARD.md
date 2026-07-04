@@ -4,8 +4,8 @@ Status: ACTIVE
 Mission: Product Platform Certification
 Current Objective: Restore Complete Product Onboarding Flow
 Mission Controller: User
-Architect Role: This task / ROLE-ARCH
-Implementation: LOCKED
+Architect Role: User-directed runtime planning with AI execution support
+Implementation: CONTROLLED BY MISSION CONTROLLER
 
 ---
 
@@ -15,7 +15,42 @@ This file is the shared blackboard for Mission B.
 
 Any new task assigned to Mission B should read this file first to understand the current mission, scope, rules, and assigned work.
 
-Tasks do not communicate with each other. The user coordinates all task reports. ROLE-ARCH defines work packages and reviews results.
+Tasks do not communicate with each other. The user coordinates all task reports and acts as Mission Controller. Runtime planning, implementation analysis, and verification should follow the active Blueprint doctrine and the Mission Controller's direct instruction.
+
+---
+
+## 1.1 Runtime Migration Doctrine Reference
+
+Mission B must follow:
+
+```txt
+docs/blueprint/P1-RUNTIME-MIGRATION-DOCTRINE.md
+```
+
+Doctrine status:
+
+```txt
+APPROVED / BLUEPRINT ADDENDUM
+```
+
+Mission B interpretation:
+
+```txt
+P1 does not rewrite proven workflows from zero.
+Mission B preserves the existing correct user workflow first, then improves internal responsibility separation.
+Frontend must keep user flow, route behavior, and screen intent stable when the workflow is already correct.
+Backend migration may be structural when responsibilities must be isolated.
+Legacy code is removed only after equivalent runtime flow is safely replaced and verified.
+Mission B closes only when branches can create branch-owned Operational Product without requiring Candidate or Template approval.
+Promotion to Candidate belongs to Mission C, not Mission B.
+```
+
+Execution rule:
+
+```txt
+Use small safe migrations, one workflow at a time.
+Architecture improves underneath stable user behavior.
+```
 
 ---
 
@@ -36,111 +71,130 @@ Mission B closes only when branch users can create branch-owned Operational Prod
 ## 3. Current Phase
 
 Phase ID: B1
-Phase Name: Product Flow Discovery
+Phase Name: Product Flow Discovery / Runtime Migration
 Status: ACTIVE
 
 Goal:
-Understand the Product Onboarding Runtime before implementation.
+Restore and harden the Product Onboarding Runtime using the P1 Runtime Migration Doctrine.
 
-Implementation remains locked until discovery reports are reviewed and approved.
+Implementation is allowed only when explicitly directed by the Mission Controller and must stay within the approved workflow scope.
 
 ---
 
 ## 4. Task Registry
 
-### ROLE-ARCH
+### MISSION-CONTROLLER
 
-Task Name: Architect / Mission Controller Support
+Task Name: Mission Controller / Architecture Decision Owner
 Status: ACTIVE
-Current Work: WP-003 Product Onboarding Gap Analysis
+Current Work: Directing Mission B runtime migration
 Responsibility:
-- Mission planning
-- Work package creation
-- Review
-- Decision
-- Certification
-- Blackboard updates
+- Mission priority
+- Scope approval
+- Architecture decision when trade-off is real
+- Final acceptance
+- Blueprint / doctrine direction
 
 ---
 
-### TASK-01
+### FE-01
+
+Task Name: Frontend Runtime Owner
+Role: FE-RUNTIME
+Status: ACTIVE
+Last Completed Work: OPERATIONAL-FIRST-DISCOVERY-001
+Last Report: docs/mission-b/inbox/FE-01/OPERATIONAL-FIRST-DISCOVERY-001.md
+Responsibility:
+- QuickStock runtime behavior
+- Product Discovery runtime UI
+- Product List / Detail operational-only behavior
+- Store-owned frontend runtime actions
+- Frontend migration by responsibility while preserving existing user workflow
+
+Not responsible for:
+- Backend contract changes
+- Database migration
+- Candidate / Template governance
+
+---
+
+### BE-01
+
+Task Name: Backend Runtime Owner
+Role: BE-RUNTIME
+Status: ACTIVE AS ASSIGNED
+Last Completed Work: Backend create-from-template / runtime contract support
+Responsibility:
+- Backend route/controller/service/repository migration
+- Operational Product creation contracts
+- BranchPrice readiness contracts
+- Backend runtime verification
+
+Not responsible for:
+- Frontend UX behavior
+- Candidate promotion
+
+---
+
+### LEGACY TASK-01
 
 Task Name: Runtime Analysis Squad
 Role: ROLE-RUNTIME
-Status: WAITING
+Status: RETIRED / REPLACED BY DIRECT FE-01 / BE-01 EXECUTION
 Last Completed Work: WP-001 Runtime Discovery
 Last Report: docs/mission-b/inbox/RT-001.md
 Responsibility:
-- Runtime Flow
-- API Flow
-- Store Flow
-- State Flow
-- Component Runtime
-- Frontend Runtime behavior
-
-Not responsible for:
-- UX
-- User Journey
-- UI Review
+- Historical runtime discovery reference
 
 ---
 
-### TASK-02
+### LEGACY TASK-02
 
 Task Name: User Journey Squad
 Role: ROLE-RUNTIME
-Status: WAITING
+Status: RETIRED / REPLACED BY DIRECT MISSION CONTROLLER REVIEW
 Last Completed Work: WP-002 User Flow Discovery
 Last Report: docs/mission-b/inbox/UI-001.md
 Responsibility:
-- User Journey
-- Screen Flow
-- Navigation
-- User Decision
-- UX risk
-- User expectation
-
-Not responsible for:
-- API
-- Store
-- Backend
+- Historical user journey discovery reference
 
 ---
 
 ## 5. Active Roles
 
-### ROLE-ARCH
+### MISSION-CONTROLLER
 
 Status: ACTIVE
 
 Responsibilities:
-- Define work packages.
-- Define scope and deliverables.
-- Review reports from Git inbox.
-- Identify risks.
-- Decide next work package.
-- Keep implementation locked until approved.
+- Define mission goal and priority.
+- Approve major architecture direction.
+- Decide when a real Architecture Decision Point appears.
+- Accept or redirect completed work.
 
 Restrictions:
-- Do not implement code unless explicitly approved by the user.
+- None. Mission Controller is the final authority for Mission B direction.
 
 ---
 
-### ROLE-RUNTIME
+### FE-01 / BE-01 RUNTIME EXECUTION
 
-Status: ACTIVE
+Status: ACTIVE AS DIRECTED
 
 Responsibilities:
-- Inspect only assigned runtime files.
-- Map runtime flow or user journey according to assigned squad responsibility.
-- Identify entry points and exit points.
-- Identify missing runtime or missing user flow.
-- Submit findings to Git inbox.
+- Analyze before implementation.
+- Work one workflow at a time.
+- Use minimal safe patches.
+- Preserve existing correct user workflow.
+- Avoid broad refactor unless explicitly approved.
+- Verify Product Discovery and Receive Flow regressions when relevant.
+- Submit concise Git inbox reports for completed implementation.
 
 Restrictions:
-- Do not edit application code.
-- Do not propose patches unless asked.
-- Do not expand scope without approval.
+- Do not change backend from FE scope.
+- Do not change frontend from BE scope unless explicitly approved.
+- Do not implement Candidate promotion in Mission B.
+- Do not rewrite proven workflow from zero.
 
 ---
 
@@ -149,126 +203,11 @@ Restrictions:
 Status: ON-DEMAND
 
 Responsibilities:
-- Update blueprint, ADR, risk, and certification documents after a phase is reviewed.
+- Update blueprint, doctrine, ADR, risk, and certification documents when directed.
 
 Restrictions:
-- Not active as a standing role yet.
+- Not active as a standing role unless explicitly assigned.
 
 ---
 
 ## 6. Reserved Future Roles
-
-These roles are not active yet:
-
-- ROLE-UI
-- ROLE-DATA
-- ROLE-RECOVERY
-
-Activation rule:
-Open only when evidence from B1 shows the role is needed.
-
----
-
-## 7. Current Work Package Status
-
-| Work Package | Owner | Status | Report |
-|---|---|---|---|
-| WP-001 Runtime Discovery | TASK-01 Runtime Analysis Squad | COMPLETE / APPROVED | docs/mission-b/inbox/RT-001.md |
-| WP-002 User Flow Discovery | TASK-02 User Journey Squad | COMPLETE / APPROVED | docs/mission-b/inbox/UI-001.md |
-| WP-003 Product Onboarding Gap Analysis | ROLE-ARCH | ACTIVE | docs/mission-b/inbox/GAP-001.md |
-
-Current assignment:
-
-```txt
-No new assignment for TASK-01 or TASK-02.
-ROLE-ARCH is responsible for WP-003 synthesis.
-```
-
----
-
-## 8. Mission Inbox Workflow
-
-Goal:
-Allow tasks to send reports through Git so the user does not need to copy/paste reports between tasks.
-
-Workflow:
-
-```txt
-ROLE-ARCH updates BLACKBOARD.md
-  ↓
-User sends assignment to the named task
-  ↓
-Assigned task reads BLACKBOARD.md and assigned WP file
-  ↓
-Assigned task performs discovery
-  ↓
-Assigned task writes report to docs/mission-b/inbox/<REPORT-ID>.md
-  ↓
-User tells ROLE-ARCH to read that report path
-  ↓
-ROLE-ARCH reviews report and updates BLACKBOARD.md / next decision
-```
-
-Inbox rules:
-
-1. Inbox files are reports, not implementation patches.
-2. Inbox reports must not modify runtime source code.
-3. Inbox reports must include mission ID, role, scope, findings, risks, and next recommended inspection.
-4. ROLE-ARCH reviews reports from inbox; reports are not automatically approved.
-
----
-
-## 9. Current Working Rules
-
-1. Product Template is for search and clone source only.
-2. Operational Product is the store runtime source of truth.
-3. Product detail, BranchPrice, stock, barcode, serial, warranty, cost, retail price, and documents must use Operational Product, not Template Product.
-4. Do not activate unrelated Login/Auth work during Mission B.
-5. Do not edit implementation before B1 discovery is complete.
-6. One file at a time for future implementation.
-7. Minimal patch only when implementation is approved.
-8. Task reports should be sent through Git inbox when possible.
-9. Task assignment must name the exact task owner: TASK-01, TASK-02, or ROLE-ARCH.
-10. Runtime Migration Doctrine is canonical for Mission B migration: docs/blueprint/P1-RUNTIME-MIGRATION-DOCTRINE.md
-11. Backend may migrate into new module structure, but Frontend should preserve the existing correct workflow and split files by responsibility.
-12. Branch-created Product belongs to Operational Runtime; Promotion to Candidate is Mission C.
-
----
-
-## 10. Current Success Criteria
-
-Mission B succeeds when a branch can:
-
-```txt
-Template exists:
-Template Search
-  ↓
-Clone to Operational Product
-  ↓
-Create BranchPrice
-  ↓
-Ready for branch operation
-
-Template missing:
-Create branch-specific Operational Product
-  ↓
-Create BranchPrice
-  ↓
-Ready for branch operation
-```
-
-Branch-specific Product creation is part of Mission B completion.
-Candidate submission, Template approval, and Promotion/Governance are Mission C responsibilities.
-
----
-
-## 11. Handoff Instruction For New Tasks
-
-New Mission B tasks should start with:
-
-```txt
-Read docs/mission-b/BLACKBOARD.md
-Then report your task name, role, current assignment, implementation lock status, files in scope, expected deliverables, and report destination.
-```
-
-Do not begin implementation unless the blackboard explicitly says Implementation: APPROVED.

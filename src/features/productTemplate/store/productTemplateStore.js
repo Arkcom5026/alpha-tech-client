@@ -4,6 +4,7 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import * as productTemplateApi from '../api/productTemplateApi';
+import * as templateImageApi from '../api/templateImageApi';
 
 const getErrorMessage = (error, fallback) =>
   error?.response?.data?.message || error?.response?.data?.error || error?.message || fallback;
@@ -20,6 +21,7 @@ const initialState = {
   search: '',
   isLoading: false,
   isSaving: false,
+  isUploadingImage: false,
   isLoadingMasters: false,
   error: null,
   lastQuery: null,
@@ -120,6 +122,51 @@ const useProductTemplateStore = create(devtools((set, get) => ({
       return null;
     } finally {
       set({ isSaving: false });
+    }
+  },
+
+  uploadTemplateImageAction: async (id, file) => {
+    if (!id || !file) return null;
+    set({ isUploadingImage: true, error: null });
+    try {
+      await templateImageApi.uploadTemplateImage(id, file);
+      return await get().getTemplateByIdAction(id);
+    } catch (error) {
+      console.error('[productTemplateStore] uploadTemplateImageAction error:', error);
+      set({ error: getErrorMessage(error, 'ไม่สามารถอัปโหลดรูป Template ได้') });
+      return null;
+    } finally {
+      set({ isUploadingImage: false });
+    }
+  },
+
+  deleteTemplateImageAction: async (id, image) => {
+    if (!id || !image) return null;
+    set({ isUploadingImage: true, error: null });
+    try {
+      await templateImageApi.deleteTemplateImage(id, image);
+      return await get().getTemplateByIdAction(id);
+    } catch (error) {
+      console.error('[productTemplateStore] deleteTemplateImageAction error:', error);
+      set({ error: getErrorMessage(error, 'ไม่สามารถลบรูป Template ได้') });
+      return null;
+    } finally {
+      set({ isUploadingImage: false });
+    }
+  },
+
+  setTemplateCoverImageAction: async (id, imageId) => {
+    if (!id || !imageId) return null;
+    set({ isUploadingImage: true, error: null });
+    try {
+      await templateImageApi.setTemplateCoverImage(id, imageId);
+      return await get().getTemplateByIdAction(id);
+    } catch (error) {
+      console.error('[productTemplateStore] setTemplateCoverImageAction error:', error);
+      set({ error: getErrorMessage(error, 'ไม่สามารถตั้งรูปปก Template ได้') });
+      return null;
+    } finally {
+      set({ isUploadingImage: false });
     }
   },
 

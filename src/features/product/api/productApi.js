@@ -40,7 +40,7 @@ export const updateProduct = async (id, payload) => {
     return data;
   } catch (err) { throw parseApiError(err); }
 };
-  
+
 export const updateProductAndGet = async (id, payload) => {
   try {
     await apiClient.patch(`products/${id}`, payload);
@@ -84,9 +84,7 @@ export const getProductDropdowns = async () => {
   try {
     const { data } = await apiClient.get('products/dropdowns', { params: { _ts: Date.now() }});
     return data;
-  } catch (err) {
-    throw parseApiError(err);
-  }
+  } catch (err) { throw parseApiError(err); }
 };
 
 const pickDropdownItems = (raw) => {
@@ -223,6 +221,22 @@ export const getProductsForPos = async (filters = {}) => {
   } catch (err) { throw parseApiError(err); }
 };
 
+export const searchTemplateProducts = async (filters = {}) => {
+  try {
+    const sanitized = Object.fromEntries(
+      Object.entries(filters).filter(([, v]) => v !== '' && v !== undefined && v !== null)
+    );
+    delete sanitized.branchId;
+    delete sanitized.template;
+
+    const params = { ...sanitized, _ts: Date.now() };
+    const { data } = await apiClient.get('products/template/search', { params });
+    return data;
+  } catch (err) { throw parseApiError(err); }
+};
+
+export const getTemplateProductsForPos = searchTemplateProducts;
+
 export const migrateSnToSimple = async (productId) => {
   try {
     const { data } = await apiClient.post(`products/${productId}/migrate-to-simple`);
@@ -250,9 +264,7 @@ export const getReadyToSell = async ({ branchId, q = '', mode = 'ALL', page = 1,
 
     const { data } = await apiClient.get('products/ready-to-sell', { params });
     return data;
-  } catch (err) {
-    throw parseApiError(err);
-  }
+  } catch (err) { throw parseApiError(err); }
 };
 
 export const getReadyToSellStructuredDetails = async ({ branchId, productId, q = '' } = {}) => {
@@ -276,9 +288,7 @@ export const getReadyToSellStructuredDetails = async ({ branchId, productId, q =
 
     const { data } = await apiClient.get(`products/ready-to-sell/structured/${productId}`, { params });
     return data;
-  } catch (err) {
-    throw parseApiError(err);
-  }
+  } catch (err) { throw parseApiError(err); }
 };
 
 export const enrollQuickStock = async (payload) => {
@@ -286,9 +296,7 @@ export const enrollQuickStock = async (payload) => {
     if (import.meta.env?.DEV) console.log('[productApi] enrollQuickStock payload', payload);
     const { data } = await apiClient.post('quick-stock/quick-enroll', payload);
     return data;
-  } catch (err) {
-    throw parseApiError(err);
-  }
+  } catch (err) { throw parseApiError(err); }
 };
 
 export const quickStockInAllInOneApi = async (payload) => {
@@ -299,10 +307,42 @@ export const quickStockInAllInOneApi = async (payload) => {
 
     const { data } = await apiClient.post('quick-stock/all-in-one', sanitizedPayload);
     return data;
-  } catch (err) {
-    throw parseApiError(err);
-  }
+  } catch (err) { throw parseApiError(err); }
 };
+
+export const quickReceiveExistingProductApi = async (payload = {}) => {
+  try {
+    if (import.meta.env?.DEV) console.log('[productApi] quickReceiveExistingProductApi payload', payload);
+
+    const sanitizedPayload = { ...payload };
+    delete sanitizedPayload.branchId;
+    delete sanitizedPayload.movementType;
+    delete sanitizedPayload.source;
+
+    const rawItems = sanitizedPayload.items ?? sanitizedPayload.barcodes ?? sanitizedPayload.queue ?? [];
+    const items = Array.isArray(rawItems)
+      ? rawItems
+          .map((item) => {
+            if (typeof item === 'string') {
+              return { barcode: item, serialNumber: item };
+            }
+            const barcode = item?.barcode ?? item?.serialNumber ?? item?.sn ?? '';
+            const serialNumber = item?.serialNumber ?? item?.barcode ?? item?.sn ?? '';
+            return { ...item, barcode, serialNumber };
+          })
+          .filter((item) => item?.barcode || item?.serialNumber)
+      : [];
+
+    sanitizedPayload.items = items;
+    delete sanitizedPayload.barcodes;
+    delete sanitizedPayload.queue;
+
+    const { data } = await apiClient.post('quick-stock/existing', sanitizedPayload);
+    return data;
+  } catch (err) { throw parseApiError(err); }
+};
+
+export const quickStockIntakeExistingApi = quickReceiveExistingProductApi;
 
 export const getOperationalProductByTemplateId = async (templateProductId) => {
   try {
@@ -317,9 +357,7 @@ export const getOperationalProductByTemplateId = async (templateProductId) => {
     });
 
     return data;
-  } catch (err) {
-    throw parseApiError(err);
-  }
+  } catch (err) { throw parseApiError(err); }
 };
 
 export const createOperationalProductFromTemplateApi = async (payload = {}) => {
@@ -331,9 +369,7 @@ export const createOperationalProductFromTemplateApi = async (payload = {}) => {
 
     const { data } = await apiClient.post('products/pos/create-from-template', sanitizedPayload);
     return data;
-  } catch (err) {
-    throw parseApiError(err);
-  }
+  } catch (err) { throw parseApiError(err); }
 };
 
 export const createLocalOperationalProductApi = async (payload = {}) => {
@@ -341,7 +377,6 @@ export const createLocalOperationalProductApi = async (payload = {}) => {
     if (import.meta.env?.DEV) console.log('[productApi] createLocalOperationalProductApi payload', payload);
 
     const sanitizedPayload = { ...payload };
-
     delete sanitizedPayload.branchId;
     delete sanitizedPayload.templateProductId;
     delete sanitizedPayload.productTemplateId;
@@ -355,7 +390,5 @@ export const createLocalOperationalProductApi = async (payload = {}) => {
 
     const { data } = await apiClient.post('products/pos/create-local', sanitizedPayload);
     return data;
-  } catch (err) {
-    throw parseApiError(err);
-  }
+  } catch (err) { throw parseApiError(err); }
 };

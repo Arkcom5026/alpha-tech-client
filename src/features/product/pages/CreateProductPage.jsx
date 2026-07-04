@@ -37,21 +37,25 @@ const CreateProductPage = () => {
     saveLocked,
     createdProduct,
     formResetKey,
+    selectedFiles,
+    previewUrls,
+    captions,
+    coverIndex,
     beginCreate,
     finishCreateSuccess,
     finishCreateError,
     unlockAfterChange,
     closeSuccessDialog,
     resetForNextCreate,
+    setSelectedFiles,
+    setPreviewUrls,
+    setCaptions,
+    setCoverIndex,
   } = useProductCreateRuntimeStore();
 
   const [error, setError] = useState('');
 
   const imageRef = useRef();
-  const [selectedFiles, setSelectedFiles] = useState([]);
-  const [previewUrls, setPreviewUrls] = useState([]);
-  const [captions, setCaptions] = useState([]);
-  const [coverIndex, setCoverIndex] = useState(null);
 
   // ✅ เลื่อนการโหลด dropdowns: รอให้ branchId พร้อมก่อน + กัน StrictMode ยิงซ้ำ
   const dropdownsFetchRef = useRef({ branchId: null, done: false });
@@ -69,13 +73,6 @@ const CreateProductPage = () => {
 
     Promise.resolve(ensureDropdownsAction?.()).catch(() => {});
   }, [branchId, dropdownsLoaded, ensureDropdownsAction]);
-
-  const normalizeFiles = (input) => {
-    if (!input) return [];
-    if (Array.isArray(input)) return input;
-    if (typeof FileList !== 'undefined' && input instanceof FileList) return Array.from(input);
-    return [input];
-  };
 
   const handleCreate = async (formData) => {
     beginCreate();
@@ -102,11 +99,9 @@ const CreateProductPage = () => {
         throw new Error('สร้างสินค้าแล้วแต่ไม่พบ productId สำหรับอัปโหลดรูปภาพ');
       }
 
-      const filesToUpload = normalizeFiles(selectedFiles);
-
-      if (filesToUpload.length && typeof uploadImages === 'function') {
+      if (selectedFiles.length && typeof uploadImages === 'function') {
         await uploadImages(created.id, {
-          files: filesToUpload,
+          files: selectedFiles,
           captions,
           coverIndex,
         });
@@ -121,10 +116,6 @@ const CreateProductPage = () => {
 
   const handleStartNextCreate = () => {
     resetForNextCreate();
-    setSelectedFiles([]);
-    setPreviewUrls([]);
-    setCaptions([]);
-    setCoverIndex(null);
     if (imageRef.current && typeof imageRef.current.reset === 'function') {
       try {
         imageRef.current.reset();
@@ -211,18 +202,7 @@ const CreateProductPage = () => {
         <ProductImage
           ref={imageRef}
           files={selectedFiles}
-          setFiles={(updaterOrValue) => {
-            if (typeof updaterOrValue === 'function') {
-              setSelectedFiles((prev) => {
-                const prevArr = normalizeFiles(prev);
-                const next = updaterOrValue(prevArr);
-                return normalizeFiles(next);
-              });
-              return;
-            }
-
-            setSelectedFiles(normalizeFiles(updaterOrValue));
-          }}
+          setFiles={setSelectedFiles}
           previewUrls={previewUrls}
           setPreviewUrls={setPreviewUrls}
           captions={captions}

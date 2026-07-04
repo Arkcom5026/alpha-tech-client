@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 
 import { useBranchStore } from '@/features/branch/store/branchStore';
+import { createLocalOperationalProductRuntimeApi } from '../api/productRuntimeApi';
 import useProductStore from '../store/productStore';
 import useProductCreateRuntimeStore from '../store/productCreateRuntimeStore';
 
@@ -17,7 +18,6 @@ const useProductCreateRuntimeController = () => {
   const branchId = useBranchStore((state) => state.selectedBranchId);
 
   const {
-    createLocalOperationalProductAction,
     uploadImages,
     ensureDropdownsAction,
     dropdownsLoaded,
@@ -58,11 +58,7 @@ const useProductCreateRuntimeController = () => {
         branchId,
       };
 
-      if (typeof createLocalOperationalProductAction !== 'function') {
-        throw new Error('ยังไม่พบ Runtime Create Action สำหรับสร้างสินค้าในสาขา');
-      }
-
-      const response = await createLocalOperationalProductAction(payload);
+      const response = await createLocalOperationalProductRuntimeApi(payload);
       const created = extractCreatedProduct(response);
 
       if (!created?.id) {

@@ -2,6 +2,8 @@ import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import useProductTemplateStore from '../store/productTemplateStore';
 import TemplatePriceSnapshotPanel from '../components/TemplatePriceSnapshotPanel';
+import TemplateImageGalleryPanel from '../components/TemplateImageGalleryPanel';
+import TemplateGovernanceSummaryPanel from '../components/TemplateGovernanceSummaryPanel';
 
 const formatValue = (value, fallback = '-') => {
   if (value === undefined || value === null || value === '') return fallback;
@@ -63,8 +65,6 @@ const ProductTemplateGovernanceDetailPage = () => {
   const basePath = shopSlug ? `/${shopSlug}/superadmin/catalog/templates` : '/superadmin/catalog/templates';
   const backPath = basePath;
   const editPath = `${basePath}/${id}/edit`;
-  const images = Array.isArray(template.images) ? template.images : [];
-  const coverUrl = template.imageUrl || images.find((image) => image.isCover)?.secure_url || images.find((image) => image.isCover)?.url || images[0]?.secure_url || images[0]?.url;
 
   const handleArchive = async () => {
     if (!id || isSaving) return;
@@ -127,14 +127,10 @@ const ProductTemplateGovernanceDetailPage = () => {
 
       {error && <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-700">{String(error)}</div>}
 
-      <div className="grid gap-5 xl:grid-cols-[280px_1fr]">
-        <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h2 className="text-base font-black text-slate-900">Template Image</h2>
-          <div className="mt-4 flex aspect-square items-center justify-center overflow-hidden rounded-3xl border border-slate-100 bg-slate-50">
-            {coverUrl ? <img src={coverUrl} alt={name} className="h-full w-full object-cover" /> : <div className="px-6 text-center text-sm font-bold text-slate-400">No image</div>}
-          </div>
-          <p className="mt-3 text-xs font-semibold text-slate-500">Images: {images.length}</p>
-        </section>
+      <TemplateGovernanceSummaryPanel template={template} />
+
+      <div className="grid gap-5 xl:grid-cols-[320px_1fr]">
+        <TemplateImageGalleryPanel template={template} />
 
         <div className="space-y-5">
           <Section title="General" description="ข้อมูลหลักของ Template Catalog">

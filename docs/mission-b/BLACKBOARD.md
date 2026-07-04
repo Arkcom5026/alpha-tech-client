@@ -29,6 +29,8 @@ Restore the complete product onboarding workflow so every branch can:
 4. Make the product operational immediately.
 5. Create a branch-specific product when no suitable Template exists.
 
+Mission B closes only when branch users can create branch-owned Operational Product without requiring Candidate or Template approval.
+
 ---
 
 ## 3. Current Phase
@@ -227,6 +229,9 @@ Inbox rules:
 7. Minimal patch only when implementation is approved.
 8. Task reports should be sent through Git inbox when possible.
 9. Task assignment must name the exact task owner: TASK-01, TASK-02, or ROLE-ARCH.
+10. Runtime Migration Doctrine is canonical for Mission B migration: docs/blueprint/P1-RUNTIME-MIGRATION-DOCTRINE.md
+11. Backend may migrate into new module structure, but Frontend should preserve the existing correct workflow and split files by responsibility.
+12. Branch-created Product belongs to Operational Runtime; Promotion to Candidate is Mission C.
 
 ---
 
@@ -251,6 +256,9 @@ Create BranchPrice
   ↓
 Ready for branch operation
 ```
+
+Branch-specific Product creation is part of Mission B completion.
+Candidate submission, Template approval, and Promotion/Governance are Mission C responsibilities.
 
 ---
 

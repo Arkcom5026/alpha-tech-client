@@ -68,7 +68,9 @@ const ProductForm = ({
   const dropdownsRequestedRef = useRef(false);
 
   useEffect(() => {
-    if (!hasToken) return;
+    // Product Create runs inside POS. Do not gate dropdown loading only by online/customer auth state.
+    // apiClient handles employee session / silent refresh; while auth is bootstrapping, wait.
+    if (isBootstrappingAuth) return;
     if (dropdownsRequestedRef.current) return;
 
     const hasAny =
@@ -85,9 +87,11 @@ const ProductForm = ({
     if (!fn) return;
 
     dropdownsRequestedRef.current = true;
-    Promise.resolve(fn()).catch(() => {});
+    Promise.resolve(fn()).catch(() => {
+      dropdownsRequestedRef.current = false;
+    });
   }, [
-    hasToken,
+    isBootstrappingAuth,
     dropdownsLoaded,
     dropdownsLoading,
     dropdowns?.productTypes?.length,
@@ -98,8 +102,8 @@ const ProductForm = ({
   ]);
 
   useEffect(() => {
-    if (!hasToken) dropdownsRequestedRef.current = false;
-  }, [hasToken]);
+    if (!hasToken && !isBootstrappingAuth) dropdownsRequestedRef.current = false;
+  }, [hasToken, isBootstrappingAuth]);
 
   const brandItems = useBrandStore((s) => s?.items ?? s?.brands ?? s?.list ?? []);
   const createBrandAction = useBrandStore(
@@ -245,7 +249,7 @@ const ProductForm = ({
   const lastBrandTypeIdRef = useRef('__INIT__');
 
   useEffect(() => {
-    if (!hasToken) return;
+    if (isBootstrappingAuth) return;
 
     const nextTypeKey = watchedProductTypeId === '' || watchedProductTypeId == null ? '' : String(watchedProductTypeId);
     const typeChanged = lastBrandTypeIdRef.current !== nextTypeKey;
@@ -262,7 +266,7 @@ const ProductForm = ({
 
     brandsRequestedRef.current = true;
     requestBrands(nextTypeKey ? Number(nextTypeKey) : undefined);
-  }, [hasToken, requestBrands, watchedProductTypeId, brandItems]);
+  }, [isBootstrappingAuth, requestBrands, watchedProductTypeId, brandItems]);
 
   const safeBrands = useMemo(() => {
     const storeBrands = Array.isArray(brandItems) ? brandItems : [];
@@ -519,321 +523,73 @@ const ProductForm = ({
     const modeValue = String(data?.mode || '').trim().toUpperCase();
     const resolvedMode = modeValue === 'SIMPLE' ? 'SIMPLE' : 'STRUCTURED';
 
-    const branchPrice = data?.branchPrice ?? {};
-
     const payload = {
-      name: toNullableText(data?.name),
-      productTypeId: toNullableId(data?.productTypeId),
-      brandId: toNullableId(data?.brandId),
-      unitId: toNullableId(data?.unitId),
-
+      name: toNullableText(data.name),
+      productTypeId: toNullableId(data.productTypeId),
+      brandId: toNullableId(data.brandId),
+      unitId: toNullableId(data.unitId),
       mode: resolvedMode,
       noSN: resolvedMode === 'SIMPLE',
       trackSerialNumber: resolvedMode === 'STRUCTURED',
-      active: data?.active !== false,
-
-      description: toNullableText(data?.description),
-      spec: toNullableText(data?.spec),
-
+      active: data.active !== false,
       branchPrice: {
-        costPrice: toNullableMoney(branchPrice.costPrice),
-        priceRetail: toNullableMoney(branchPrice.priceRetail),
-        priceTechnician: toNullableMoney(branchPrice.priceTechnician),
-        priceOnline: toNullableMoney(branchPrice.priceOnline),
-        priceWholesale: toNullableMoney(branchPrice.priceWholesale),
+        costPrice: toNullableMoney(data.branchPrice?.costPrice),
+        priceRetail: toNullableMoney(data.branchPrice?.priceRetail),
+        priceTechnician: toNullableMoney(data.branchPrice?.priceTechnician),
+        priceOnline: toNullableMoney(data.branchPrice?.priceOnline),
+        priceWholesale: toNullableMoney(data.branchPrice?.priceWholesale),
+        isActive: true,
       },
+      description: toNullableText(data.description),
+      spec: toNullableText(data.spec),
     };
 
     await onSubmit(payload);
   };
 
+  const isBusy = isSubmitting || submitDisabled;
+
   return (
     <FormProvider {...methods}>
-      <form
-        onSubmit={handleSubmit(handleFormSubmit)}
-        onChange={() => {
-          try {
-            if (!isSubmitting && typeof onAnyChange === 'function') onAnyChange();
-          } catch (_) {}
-        }}
-        className="space-y-6"
-      >
-        {isSubmitting && (
-          <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-blue-900">
-            <div className="font-semibold">กำลังบันทึกข้อมูลสินค้า…</div>
-            <div className="text-sm opacity-90">ระบบกำลังประมวลผล กรุณารอสักครู่</div>
-          </div>
-        )}
-
-        {isBootstrappingAuth && (
-          <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-blue-900">
-            <div className="font-semibold">กำลังตรวจสอบสิทธิ์การใช้งาน…</div>
-            <div className="text-sm opacity-90">ระบบกำลังเตรียมข้อมูลก่อนโหลดรายการอ้างอิงของสินค้า</div>
-          </div>
-        )}
-
+      <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-5" onChange={onAnyChange}>
         {dropdownsError && (
-          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-red-800">
-            <div className="font-semibold">โหลดข้อมูล Dropdown ไม่สำเร็จ</div>
-            <div className="text-sm opacity-90">{String(dropdownsError)}</div>
+          <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+            โหลดรายการตัวเลือกไม่สำเร็จ: {dropdownsError?.message || String(dropdownsError)}
           </div>
         )}
 
-        {(errors?.productTypeId || errors?.brandId || errors?.unitId || errors?.name) && (
-          <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-amber-900">
-            <div className="font-semibold">กรุณากรอกข้อมูลหลักสินค้าให้ครบ</div>
-            <div className="text-sm opacity-90">
-              {errors?.name?.message ? `• ${String(errors.name.message)} ` : ''}
-              {errors?.productTypeId?.message ? `• ${String(errors.productTypeId.message)} ` : ''}
-              {errors?.brandId?.message ? `• ${String(errors.brandId.message)} ` : ''}
-              {errors?.unitId?.message ? `• ${String(errors.unitId.message)}` : ''}
-            </div>
-          </div>
-        )}
-
-        <section className="rounded-xl border bg-white p-5 shadow-sm">
-          <div className="mb-4">
-            <div className="font-semibold text-gray-800 flex items-center gap-2">
-              🧱 <span>ข้อมูลหลักสินค้า</span>
-            </div>
-            <div className="text-sm text-gray-500">
-              โครงสร้างปัจจุบัน: ประเภทสินค้า → แบรนด์ → สินค้า
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <ProductBasicSection register={register} errors={errors} />
-
-            <div>
-              <label htmlFor="productTypeId" className="block font-medium mb-1 text-gray-700">
-                ประเภทสินค้า <span className="text-red-500">*</span>
-              </label>
-              <Controller
-                name="productTypeId"
-                control={control}
-                defaultValue=""
-                rules={{ required: 'กรุณาเลือกประเภทสินค้า' }}
-                render={({ field }) => (
-                  <select
-                    id="productTypeId"
-                    className="w-full p-2 border rounded-md focus:ring-blue-400 focus:border-blue-400 text-gray-800"
-                    value={field.value === '' || field.value == null ? '' : String(field.value)}
-                    disabled={dropdownsLoading}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      field.onChange(value === '' ? '' : Number(value));
-                    }}
-                  >
-                    <option value="">-- เลือกประเภทสินค้า --</option>
-                    {productTypes.map((type) => (
-                      <option key={`type_${String(type.id)}`} value={String(type.id)}>
-                        {type.name}
-                      </option>
-                    ))}
-                  </select>
-                )}
-              />
-              {errors.productTypeId && <p className="text-red-500 text-sm mt-1">{String(errors.productTypeId.message)}</p>}
-            </div>
-
-            <div>
-              <label htmlFor="brandId" className="block font-medium mb-1 text-gray-700">
-                แบรนด์ <span className="text-red-500">*</span>
-              </label>
-              <Controller
-                name="brandId"
-                control={control}
-                defaultValue=""
-                rules={{ required: 'กรุณาเลือกแบรนด์' }}
-                render={({ field }) => (
-                  <select
-                    id="brandId"
-                    className="w-full p-2 border rounded-md focus:ring-blue-400 focus:border-blue-400 text-gray-800"
-                    value={field.value === '' || field.value == null ? '' : String(field.value)}
-                    disabled={dropdownsLoading || !toStr(watchedProductTypeId)}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      field.onChange(value === '' ? '' : Number(value));
-                    }}
-                  >
-                    <option value="">-- เลือกแบรนด์ --</option>
-                    {brandsForSelect.map((brand) => (
-                      <option key={`brand_${String(brand.id)}`} value={String(brand.id)}>
-                        {brand.name}
-                      </option>
-                    ))}
-                  </select>
-                )}
-              />
-              {errors.brandId && <p className="text-red-500 text-sm mt-1">{String(errors.brandId.message)}</p>}
-
-              <div className="mt-2 flex flex-wrap items-center gap-3 text-xs">
-                <span className="text-gray-500">
-                  {toStr(watchedProductTypeId)
-                    ? `แบรนด์ที่พร้อมใช้งาน: ${brandsForSelect.length} รายการ`
-                    : '* กรุณาเลือกประเภทสินค้าก่อน'}
-                </span>
-
-                <button
-                  type="button"
-                  className="text-blue-700 underline underline-offset-2 hover:text-blue-900 disabled:text-gray-400"
-                  disabled={!activeProductTypeId || brandHelperSaving}
-                  onClick={() => {
-                    setBrandHelperError('');
-                    setBrandHelperSuccess('');
-                    setShowCreateBrandHelper((prev) => !prev);
-                    if (showExistingBrandHelper) setShowExistingBrandHelper(false);
-                  }}
-                >
-                  + เพิ่มแบรนด์ใหม่
-                </button>
-
-                <button
-                  type="button"
-                  className="text-blue-700 underline underline-offset-2 hover:text-blue-900 disabled:text-gray-400"
-                  disabled={!activeProductTypeId || brandHelperSaving}
-                  onClick={() => {
-                    setBrandHelperError('');
-                    setBrandHelperSuccess('');
-                    setShowExistingBrandHelper((prev) => !prev);
-                    if (showCreateBrandHelper) setShowCreateBrandHelper(false);
-                  }}
-                >
-                  ไม่พบแบรนด์ที่ต้องการ?
-                </button>
-              </div>
-
-              {brandHelperError ? (
-                <div className="mt-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">
-                  {brandHelperError}
-                </div>
-              ) : null}
-
-              {brandHelperSuccess ? (
-                <div className="mt-2 rounded-md border border-green-200 bg-green-50 px-3 py-2 text-xs text-green-800">
-                  {brandHelperSuccess}
-                </div>
-              ) : null}
-
-              {showCreateBrandHelper ? (
-                <div className="mt-3 rounded-lg border border-blue-200 bg-blue-50 p-3">
-                  <div className="font-medium text-sm text-blue-900">เพิ่มแบรนด์ใหม่</div>
-                  <div className="mt-1 text-xs text-blue-800">
-                    ระบบจะสร้างแบรนด์ใหม่ แล้วเพิ่มเข้า mapping ของประเภทสินค้าที่เลือกให้อัตโนมัติ
-                  </div>
-                  <div className="mt-3 flex flex-col gap-2 md:flex-row">
-                    <input
-                      type="text"
-                      value={newBrandName}
-                      onChange={(e) => setNewBrandName(e.target.value)}
-                      placeholder="เช่น Canon, JBL, Logitech"
-                      className="w-full rounded-md border border-blue-200 bg-white p-2 text-sm text-gray-800"
-                    />
-                    <button
-                      type="button"
-                      onClick={handleCreateBrandAndAttach}
-                      disabled={brandHelperSaving || !activeProductTypeId}
-                      className="rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      {brandHelperSaving ? 'กำลังบันทึก...' : 'สร้างและผูกแบรนด์'}
-                    </button>
-                  </div>
-                </div>
-              ) : null}
-
-              {showExistingBrandHelper ? (
-                <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3">
-                  <div className="font-medium text-sm text-amber-900">
-                    ค้นหาแบรนด์ที่มีอยู่แล้ว แต่ยังไม่ได้ผูกกับประเภทสินค้านี้
-                  </div>
-                  <div className="mt-3">
-                    <input
-                      type="text"
-                      value={brandSearch}
-                      onChange={(e) => setBrandSearch(e.target.value)}
-                      placeholder="ค้นหาชื่อแบรนด์..."
-                      className="w-full rounded-md border border-amber-200 bg-white p-2 text-sm text-gray-800"
-                    />
-                  </div>
-                  <div className="mt-3 max-h-56 overflow-auto rounded-md border border-amber-200 bg-white">
-                    {unmappedExistingBrands.length === 0 ? (
-                      <div className="px-3 py-3 text-sm text-gray-500">
-                        ไม่พบแบรนด์ที่ยังไม่ได้ผูกกับประเภทสินค้านี้
-                      </div>
-                    ) : (
-                      unmappedExistingBrands.slice(0, 50).map((brand) => (
-                        <div
-                          key={`unmapped_brand_${String(brand.id)}`}
-                          className="flex items-center justify-between border-b border-gray-100 px-3 py-2 last:border-b-0"
-                        >
-                          <div className="text-sm text-gray-800">{brand.name}</div>
-                          <button
-                            type="button"
-                            onClick={() => handleAttachExistingBrand(brand)}
-                            disabled={brandHelperSaving}
-                            className="rounded-md border border-amber-300 bg-amber-100 px-2 py-1 text-xs font-medium text-amber-900 disabled:cursor-not-allowed disabled:opacity-50"
-                          >
-                            เพิ่มเข้า mapping และเลือกใช้งาน
-                          </button>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-              ) : null}
-            </div>
-
-            <div>
-              <label htmlFor="unitId" className="block font-medium mb-1 text-gray-700">
-                หน่วยนับ <span className="text-red-500">*</span>
-              </label>
-              <Controller
-                name="unitId"
-                control={control}
-                defaultValue=""
-                rules={{ required: 'กรุณาเลือกหน่วยนับ' }}
-                render={({ field }) => (
-                  <select
-                    id="unitId"
-                    className="w-full p-2 border rounded-md focus:ring-blue-400 focus:border-blue-400 text-gray-800"
-                    value={field.value === '' || field.value == null ? '' : String(field.value)}
-                    disabled={dropdownsLoading}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      field.onChange(value === '' ? '' : Number(value));
-                    }}
-                  >
-                    <option value="">-- เลือกหน่วยนับ --</option>
-                    {units.map((unit) => (
-                      <option key={`unit_${String(unit.id)}`} value={String(unit.id)}>
-                        {unit.name}
-                      </option>
-                    ))}
-                  </select>
-                )}
-              />
-              {errors.unitId && <p className="text-red-500 text-sm mt-1">{String(errors.unitId.message)}</p>}
-            </div>
-          </div>
-        </section>
+        <ProductBasicSection
+          register={register}
+          errors={errors}
+          productTypes={productTypes}
+          brands={brandsForSelect}
+          units={units}
+          watchedProductTypeId={watchedProductTypeId}
+          showCreateBrandHelper={showCreateBrandHelper}
+          setShowCreateBrandHelper={setShowCreateBrandHelper}
+          showExistingBrandHelper={showExistingBrandHelper}
+          setShowExistingBrandHelper={setShowExistingBrandHelper}
+          brandSearch={brandSearch}
+          setBrandSearch={setBrandSearch}
+          newBrandName={newBrandName}
+          setNewBrandName={setNewBrandName}
+          brandHelperError={brandHelperError}
+          brandHelperSuccess={brandHelperSuccess}
+          brandHelperSaving={brandHelperSaving}
+          onCreateBrandAndAttach={handleCreateBrandAndAttach}
+          onAttachExistingBrand={handleAttachExistingBrand}
+          unmappedExistingBrands={unmappedExistingBrands}
+        />
 
         <ProductExistingModelsPanel
           productTypeId={watchedProductTypeId}
           brandId={watchedBrandId}
         />
 
-        <ProductInventorySection control={control} register={register} />
-
-        <ProductPriceSection control={control} errors={errors} />
-
-        <ProductDetailsSection register={register} />
-
-        <ProductSubmitBar
-          isSubmitting={isSubmitting}
-          submitDisabled={submitDisabled}
-          submitLabel={submitLabel}
-          mode={mode}
-        />
+        <ProductInventorySection register={register} errors={errors} />
+        <ProductPriceSection register={register} errors={errors} />
+        <ProductDetailsSection register={register} errors={errors} />
+        <ProductSubmitBar isBusy={isBusy} submitLabel={submitLabel} mode={mode} />
       </form>
     </FormProvider>
   );

@@ -6390,3 +6390,189 @@ Template Product
 -----------
 
 
+ผมขอสรุป Architecture ที่จะใช้ต่อจากนี้เป็นมาตรฐาน เพื่อให้ไม่ย้อนกลับไปใช้โครงสร้างเดิมอีก
+
+Product Module
+features/
+└── product/
+    ├── api/
+    │    productApi.js
+    │    productSearchApi.js
+    │    productEditApi.js
+    │    productRuntimeApi.js
+    │
+    ├── create/
+    │    ├── api/
+    │    ├── components/
+    │    ├── hooks/
+    │    ├── pages/
+    │    └── store/
+    │
+    ├── edit/
+    │    ├── api/
+    │    ├── components/
+    │    ├── hooks/
+    │    ├── pages/
+    │    └── store/
+    │
+    ├── runtime/
+    ├── search/
+    └── ...
+Create Module
+create/
+    api/
+        productCreateApi.js
+
+    hooks/
+        useProductCreateRuntimeController.js
+
+    store/
+        productCreateRuntimeStore.js
+
+    pages/
+        CreateProductPage.jsx
+
+    components/
+
+        ProductCreateImageSection.jsx
+
+        ProductCreateBasicSection.jsx
+
+        ProductCreateBrandSection.jsx
+
+        ProductCreateExistingModelsPanel.jsx
+
+        ProductCreateInventorySection.jsx
+
+        ProductCreatePriceSection.jsx
+
+        ProductCreateSubmitBar.jsx
+Controller
+
+Controller จะเหลือหน้าที่เพียง
+
+โหลด Dropdown
+
+โหลด Runtime
+
+เรียก API
+
+handle Submit
+
+handle Reset
+
+handle Retry
+
+จะไม่มี JSX อยู่ใน Controller
+
+Store
+
+Store จะเก็บเฉพาะ Runtime
+
+selectedFiles
+
+previewUrls
+
+captions
+
+coverIndex
+
+processing
+
+error
+
+createdProduct
+
+dropdowns
+
+loading
+
+ไม่มี Business Logic
+
+Components
+
+แต่ละ Component ดูแลตัวเอง
+
+ตัวอย่าง
+
+ProductCreateBasicSection
+
+↓
+
+ชื่อสินค้า
+
+ประเภทสินค้า
+
+แบรนด์
+
+หน่วยนับ
+ProductCreatePriceSection
+
+↓
+
+Cost
+
+Retail
+
+Technician
+
+Online
+
+Wholesale
+ProductCreateInventorySection
+
+↓
+
+Track SN
+
+No SN
+
+Mode
+
+Active
+
+ไม่เรียก API
+
+ไม่รู้จัก Controller
+
+ไม่รู้จักส่วนอื่น
+
+API
+productCreateApi.js
+
+จะเป็น API ของ Create ทั้งหมด เช่น
+
+getDropdowns()
+
+getBrandsByProductType()
+
+previewExistingModels()
+
+createProduct()
+
+uploadImages()
+
+...
+
+จะไม่มีการเรียก productApi.js อีกในหน้า Create
+
+เป้าหมายสุดท้าย
+
+เมื่อ Refactor เสร็จ
+
+Create Module จะสามารถย้ายออกจาก Project ไปอีก Project ได้ทันที
+
+เพราะ
+
+ไม่มี dependency กับ ProductForm
+ไม่มี dependency กับ ProductImage
+ไม่มี dependency กับ Component กลาง
+ไม่มี dependency กับ Hook กลาง
+
+ทุกอย่างอยู่ภายใต้
+
+product/create
+
+100%
+
+ผมเห็นด้วยกับแนวทางนี้เต็มที่ครับ เพราะจะทำให้ระบบของเราเป็น Domain-based Architecture อย่างแท้จริง และเมื่อเราทำ product/edit, product/search, quick-stock ต่อ ก็จะใช้รูปแบบเดียวกันทั้งระบบ ทำให้ดูแลและขยายระบบในระยะยาวได้ง่ายมากครับ

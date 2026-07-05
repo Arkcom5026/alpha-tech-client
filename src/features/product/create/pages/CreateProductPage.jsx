@@ -1,13 +1,18 @@
-// ✅ src/features/product/pages/CreateProductPage.jsx
-// ✅ Create Product Page — Current hierarchy:
-// Business → ProductType → Brand → Product
+// src/features/product/create/pages/CreateProductPage.jsx
 
 import React from 'react';
 import { Link } from 'react-router-dom';
-import useProductCreateRuntimeController from '../../hooks/useProductCreateRuntimeController';
-import ProductForm from '../../components/ProductForm';
-import ProductImage from '../../components/ProductImage';
+
 import ProcessingDialog from '@/components/shared/dialogs/ProcessingDialog';
+
+import ProductCreateBasicSection from '../components/ProductCreateBasicSection';
+import ProductCreateBrandSection from '../components/ProductCreateBrandSection';
+import ProductCreateExistingModelsPanel from '../components/ProductCreateExistingModelsPanel';
+import ProductCreateImageSection from '../components/ProductCreateImageSection';
+import ProductCreateInventorySection from '../components/ProductCreateInventorySection';
+import ProductCreatePriceSection from '../components/ProductCreatePriceSection';
+import ProductCreateSubmitBar from '../components/ProductCreateSubmitBar';
+import useProductCreateRuntimeController from '../hooks/useProductCreateRuntimeController';
 
 const CreateProductPage = () => {
   const {
@@ -16,9 +21,13 @@ const CreateProductPage = () => {
     storeError,
     imageRef,
     runtime,
+    handleFieldChange,
     handleCreate,
     handleStartNextCreate,
     retryLoadDropdowns,
+    refreshBrands,
+    refreshExistingModels,
+    selectExistingModel,
   } = useProductCreateRuntimeController();
 
   const {
@@ -28,11 +37,16 @@ const CreateProductPage = () => {
     createdProduct,
     formResetKey,
     errorMessage,
+    formValues,
+    formErrors,
+    dropdowns,
+    brandsLoading,
+    existingModels,
+    existingModelsLoading,
     selectedFiles,
     previewUrls,
     captions,
     coverIndex,
-    unlockAfterChange,
     closeSuccessDialog,
     setSelectedFiles,
     setPreviewUrls,
@@ -42,30 +56,30 @@ const CreateProductPage = () => {
 
   if (!branchId) {
     return (
-      <div className="w-full max-w-[1600px] mx-auto px-4 lg:px-8">
-        <h2 className="text-xl font-bold mb-4">เพิ่มสินค้า</h2>
-        <p className="text-red-500 font-medium">กำลังโหลดข้อมูลสาขา...</p>
+      <div className="mx-auto w-full max-w-[1600px] px-4 lg:px-8">
+        <h2 className="mb-4 text-xl font-bold">เพิ่มสินค้า</h2>
+        <p className="font-medium text-red-500">กำลังโหลดข้อมูลสาขา...</p>
       </div>
     );
   }
 
   if (!dropdownsLoaded) {
     return (
-      <div className="w-full max-w-[1600px] mx-auto px-4 lg:px-8">
-        <h2 className="text-xl font-bold mb-4">เพิ่มสินค้า</h2>
+      <div className="mx-auto w-full max-w-[1600px] px-4 lg:px-8">
+        <h2 className="mb-4 text-xl font-bold">เพิ่มสินค้า</h2>
 
         {storeError?.message ? (
-          <div className="mb-4 rounded border border-red-200 bg-red-50 text-red-700 px-4 py-2">
+          <div className="mb-4 rounded border border-red-200 bg-red-50 px-4 py-2 text-red-700">
             {storeError.message}
           </div>
         ) : null}
 
-        <p className="text-gray-600">กำลังโหลดรายการตัวเลือก (ประเภทสินค้า / แบรนด์ / หน่วยนับ)...</p>
+        <p className="text-gray-600">กำลังโหลดรายการตัวเลือกสำหรับเพิ่มสินค้า...</p>
 
         <div className="mt-4">
           <button
             type="button"
-            className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700"
+            className="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
             onClick={retryLoadDropdowns}
           >
             โหลดรายการอีกครั้ง
@@ -76,11 +90,16 @@ const CreateProductPage = () => {
   }
 
   return (
-    <div className="w-full max-w-[1600px] mx-auto px-4 lg:px-8">
-      <h2 className="text-xl font-bold mb-4">เพิ่มสินค้า</h2>
+    <div className="mx-auto w-full max-w-[1600px] px-4 lg:px-8">
+      <div className="mb-4 flex flex-col gap-1">
+        <h2 className="text-xl font-bold">เพิ่มสินค้า</h2>
+        <p className="text-sm text-slate-500">
+          Product Create Runtime ใช้ API และ Component เฉพาะของงานเพิ่มสินค้า
+        </p>
+      </div>
 
       {errorMessage && (
-        <div className="mb-4 rounded border border-red-200 bg-red-50 text-red-700 px-4 py-2">
+        <div className="mb-4 rounded border border-red-200 bg-red-50 px-4 py-2 text-red-700">
           {errorMessage}
         </div>
       )}
@@ -115,52 +134,70 @@ const CreateProductPage = () => {
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-6">
-        <ProductImage
-          ref={imageRef}
-          files={selectedFiles}
-          setFiles={setSelectedFiles}
+      <form
+        key={`create-product-form-${formResetKey}`}
+        onSubmit={handleCreate}
+        className="grid grid-cols-1 gap-6"
+      >
+        <ProductCreateImageSection
+          imageRef={imageRef}
+          selectedFiles={selectedFiles}
+          setSelectedFiles={setSelectedFiles}
           previewUrls={previewUrls}
           setPreviewUrls={setPreviewUrls}
           captions={captions}
           setCaptions={setCaptions}
           coverIndex={coverIndex}
           setCoverIndex={setCoverIndex}
-          oldImages={[]}
-          setOldImages={() => {}}
         />
 
-        <ProductForm
-          key={`create-product-form-${formResetKey}`}
-          onSubmit={handleCreate}
-          mode="create"
-          submitDisabled={isProcessing || saveLocked}
-          submitLabel={saveLocked ? 'บันทึกแล้ว' : undefined}
-          onAnyChange={unlockAfterChange}
-          defaultValues={{
-            name: '',
-            description: '',
-            spec: '',
-
-            productTypeId: '',
-            brandId: '',
-            unitId: '',
-
-            mode: 'STRUCTURED',
-            noSN: false,
-            trackSerialNumber: true,
-            active: true,
-
-            branchPrice: {
-              costPrice: '',
-              priceRetail: '',
-              priceTechnician: '',
-              priceOnline: '',
-              priceWholesale: '',
-            },
-          }}
+        <ProductCreateBasicSection
+          values={formValues}
+          dropdowns={dropdowns}
+          errors={formErrors}
+          disabled={isProcessing || saveLocked}
+          onChange={handleFieldChange}
         />
-      </div>
+
+        <ProductCreateBrandSection
+          values={formValues}
+          brands={dropdowns.brands}
+          errors={formErrors}
+          loading={brandsLoading}
+          disabled={isProcessing || saveLocked}
+          onChange={handleFieldChange}
+          onRefreshBrands={refreshBrands}
+        />
+
+        <ProductCreateExistingModelsPanel
+          items={existingModels}
+          loading={existingModelsLoading}
+          productTypeId={formValues.productTypeId}
+          brandId={formValues.brandId}
+          onSelect={selectExistingModel}
+          onRefresh={refreshExistingModels}
+        />
+
+        <ProductCreateInventorySection
+          values={formValues}
+          errors={formErrors}
+          disabled={isProcessing || saveLocked}
+          onChange={handleFieldChange}
+        />
+
+        <ProductCreatePriceSection
+          values={formValues}
+          errors={formErrors}
+          disabled={isProcessing || saveLocked}
+          onChange={handleFieldChange}
+        />
+
+        <ProductCreateSubmitBar
+          loading={isProcessing}
+          disabled={isProcessing || saveLocked}
+          submitLabel={saveLocked ? 'บันทึกแล้ว' : 'บันทึกสินค้า'}
+        />
+      </form>
 
       <ProcessingDialog
         open={isProcessing || showSuccess}

@@ -122,6 +122,8 @@ const useProductCreateRuntimeController = () => {
   const {
     formValues,
 
+    setRuntimeError,
+    clearRuntimeError,
     setDropdownsLoading,
     setDropdowns,
     setBrandsLoading,
@@ -148,15 +150,16 @@ const useProductCreateRuntimeController = () => {
       const raw = await getProductCreateDropdowns();
       const dropdowns = normalizeDropdownPayload(raw);
       setDropdowns(dropdowns);
+      clearRuntimeError();
       return dropdowns;
     } catch (err) {
       setDropdownsLoading(false);
-      finishCreateError(
+      setRuntimeError(
         getApiErrorMessage(err, 'โหลดรายการตัวเลือกสำหรับเพิ่มสินค้าไม่สำเร็จ')
       );
       return null;
     }
-  }, [branchId, setDropdownsLoading, setDropdowns, finishCreateError]);
+  }, [branchId, setDropdownsLoading, setDropdowns, setRuntimeError, clearRuntimeError]);
 
   const loadBrands = useCallback(async () => {
     const productTypeId = formValues.productTypeId;
@@ -172,10 +175,11 @@ const useProductCreateRuntimeController = () => {
       const raw = await getProductCreateBrands({ productTypeId });
       const brands = normalizeBrandsPayload(raw);
       setBrands(brands);
+      clearRuntimeError();
       return brands;
     } catch (err) {
       setBrandsLoading(false);
-      finishCreateError(
+      setRuntimeError(
         getApiErrorMessage(err, 'โหลดแบรนด์ตามประเภทสินค้าไม่สำเร็จ')
       );
       return [];
@@ -184,7 +188,8 @@ const useProductCreateRuntimeController = () => {
     formValues.productTypeId,
     setBrands,
     setBrandsLoading,
-    finishCreateError,
+    setRuntimeError,
+    clearRuntimeError,
   ]);
 
   const loadExistingModels = useCallback(async () => {
@@ -238,8 +243,9 @@ const useProductCreateRuntimeController = () => {
 
   const handleFieldChange = useCallback((field, value) => {
     unlockAfterChange();
+    clearRuntimeError();
     setFormValue(field, value);
-  }, [unlockAfterChange, setFormValue]);
+  }, [unlockAfterChange, clearRuntimeError, setFormValue]);
 
   const handleSelectExistingModel = useCallback((item) => {
     if (!item) return;

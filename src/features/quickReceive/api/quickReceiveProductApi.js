@@ -9,10 +9,24 @@ const stripEmptyParams = (obj = {}) => Object.fromEntries(
   Object.entries(obj).filter(([, value]) => value !== '' && value !== undefined && value !== null)
 );
 
+const hasSearchIntent = (params = {}) => {
+  const productTypeId = Number(params.productTypeId);
+  const brandId = Number(params.brandId);
+  const search = String(params.search || params.searchText || params.keyword || '').trim();
+  return Boolean((Number.isFinite(productTypeId) && productTypeId > 0) || (Number.isFinite(brandId) && brandId > 0) || search);
+};
+
+const emptySearchResponse = Object.freeze({ items: [], products: [], total: 0, source: 'quick-receive-idle' });
+
 export const getQuickReceiveOperationalProducts = async (filters = {}) => {
   try {
     const sanitized = stripEmptyParams({ ...filters });
     delete sanitized.branchId;
+
+    if (!hasSearchIntent(sanitized)) {
+      return emptySearchResponse;
+    }
+
     const params = { ...sanitized, _ts: Date.now() };
     const { data } = await apiClient.get('products/pos/search', { params });
     return data;
@@ -26,6 +40,11 @@ export const getQuickReceiveTemplateProducts = async (filters = {}) => {
     const sanitized = stripEmptyParams({ ...filters });
     delete sanitized.branchId;
     delete sanitized.template;
+
+    if (!hasSearchIntent(sanitized)) {
+      return emptySearchResponse;
+    }
+
     const params = { ...sanitized, _ts: Date.now() };
     const { data } = await apiClient.get('products/template/search', { params });
     return data;

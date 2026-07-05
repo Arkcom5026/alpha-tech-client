@@ -1,12 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import useProductStore from "@/features/product/store/productStore";
-import {
-  createOperationalProductFromTemplateApi,
-  getOperationalProductByTemplateId,
-  getProductsForPos,
-  getTemplateProductsForPos,
-} from "@/features/product/api/productApi";
 import { toast } from "react-toastify";
+
+import useQuickReceiveStore from "@/features/quickReceive/store/quickReceiveStore";
 
 import ProductFinderPanel from "../components/quick-stock/ProductFinderPanel";
 import ProductMasterPanel from "../components/quick-stock/ProductMasterPanel";
@@ -76,7 +71,7 @@ const getBrandName = (product) =>
   product?.brand_name ??
   "-";
 
-const extractProductList = (response) => {
+const extractList = (response) => {
   if (Array.isArray(response)) return response;
   const candidates = [
     response?.items,
@@ -95,7 +90,7 @@ const extractProductList = (response) => {
   return [];
 };
 
-const extractSingleProduct = (response) => {
+const extractSingle = (response) => {
   if (!response) return null;
   if (Array.isArray(response)) return response[0] || null;
   const candidates = [
@@ -128,7 +123,7 @@ const isOperationalBranchProduct = (product) => !!product && !isTemplateCatalogP
 const getTemplateLookupId = (product) => product?.templateProductId ?? product?.template_product_id ?? product?.id ?? null;
 
 const normalizeTemplateProduct = (product) => {
-  if (!product || typeof product !== "object") return product;
+  if (!product || typeof product !== "object") return null;
   const productTypeId = getProductTypeId(product);
   const productTypeName = getProductTypeName(product);
   const brandId = getProductBrandId(product);
@@ -140,10 +135,7 @@ const normalizeTemplateProduct = (product) => {
     ...product,
     productTypeId,
     productTypeName: productTypeName !== "-" ? productTypeName : product?.productTypeName,
-    productType:
-      productTypeId || productTypeName !== "-"
-        ? { id: productTypeId, name: productTypeName !== "-" ? productTypeName : null }
-        : product.productType,
+    productType: productTypeId || productTypeName !== "-" ? { id: productTypeId, name: productTypeName !== "-" ? productTypeName : null } : product.productType,
     brandId,
     brandName: brandName !== "-" ? brandName : product?.brandName,
     brand: brandId || brandName !== "-" ? { id: brandId, name: brandName !== "-" ? brandName : null } : product.brand,
@@ -167,8 +159,8 @@ const normalizeOperationalProduct = (product) => {
   };
 };
 
-const normalizeTemplateProductList = (response) => extractProductList(response).map(normalizeTemplateProduct).filter(Boolean);
-const normalizeOperationalProductList = (response) => extractProductList(response).map(normalizeOperationalProduct).filter((p) => p?.id);
+const normalizeTemplateProductList = (response) => extractList(response).map(normalizeTemplateProduct).filter(Boolean);
+const normalizeOperationalProductList = (response) => extractList(response).map(normalizeOperationalProduct).filter((p) => p?.id);
 
 const dedupeDiscoveryProducts = (products = []) => {
   const seen = new Set();
@@ -184,16 +176,10 @@ const dedupeDiscoveryProducts = (products = []) => {
 };
 
 const getDiscoveryTemplateId = (product) =>
-  toNumberOrNull(
-    product?.templateProductId ??
-      product?.template_product_id ??
-      product?.sourceTemplateProductId ??
-      product?.source_template_product_id
-  );
+  toNumberOrNull(product?.templateProductId ?? product?.template_product_id ?? product?.sourceTemplateProductId ?? product?.source_template_product_id);
 
 const getDiscoveryIdentityKey = (product) => {
   if (!product) return "";
-
   const templateId = getDiscoveryTemplateId(product);
   if (templateId) return `template:${templateId}`;
 
@@ -212,19 +198,9 @@ const getDiscoveryIdentityKey = (product) => {
 };
 
 const hideTemplateResultsWhenOperationalExists = (products = []) => {
-  const operationalKeys = new Set(
-    products
-      .filter(isOperationalBranchProduct)
-      .map(getDiscoveryIdentityKey)
-      .filter(Boolean)
-  );
-
+  const operationalKeys = new Set(products.filter(isOperationalBranchProduct).map(getDiscoveryIdentityKey).filter(Boolean));
   if (operationalKeys.size === 0) return products;
-
-  return products.filter((product) => {
-    if (!isTemplateCatalogProduct(product)) return true;
-    return !operationalKeys.has(getDiscoveryIdentityKey(product));
-  });
+  return products.filter((product) => !isTemplateCatalogProduct(product) || !operationalKeys.has(getDiscoveryIdentityKey(product)));
 };
 
 const buildProductFormFromProduct = (product) => ({
@@ -313,15 +289,17 @@ const QuickStockPage = () => {
     dropdowns = {},
     dropdownsLoading,
     isLoading,
-    fetchDropdownsAction,
-    updateProduct,
-    deleteProductAction,
+    loadDropdownsAction,
+    searchProductsAction,
+    getOperationalProductByTemplateIdAction,
+    updateOperationalProductAction,
+    deleteOperationalProductAction,
     quickStockIntakeExistingAction,
     createOperationalProductFromTemplateAction,
     createLocalOperationalProductAction,
-  } = useProductStore();
+  } = useQuickReceiveStore();
 
-  const productTypes = dropdowns?.productTypes || dropdowns?.types || [];
+  const productTypes = dropdowns?.productTypes || [];
   const brands = dropdowns?.brands || [];
   const units = dropdowns?.units || [];
 
@@ -332,7 +310,6 @@ const QuickStockPage = () => {
   const [committedKeyword, setCommittedKeyword] = useState("");
   const [showSearchResult, setShowSearchResult] = useState(true);
   const [runtimeSearchProducts, setRuntimeSearchProducts] = useState([]);
-  const [templateDropdownProducts, setTemplateDropdownProducts] = useState([]);
   const [adoptedOperationalProduct, setAdoptedOperationalProduct] = useState(null);
   const [isCheckingOperationalProduct, setIsCheckingOperationalProduct] = useState(false);
   const [isCreatingOperationalProduct, setIsCreatingOperationalProduct] = useState(false);
@@ -355,42 +332,10 @@ const QuickStockPage = () => {
   const [localPriceForm, setLocalPriceForm] = useState({ costPrice: "", priceRetail: "", priceWholesale: "", priceTechnician: "", priceOnline: "" });
 
   const productList = useMemo(() => dedupeDiscoveryProducts(runtimeSearchProducts), [runtimeSearchProducts]);
-  const templateDropdownList = useMemo(() => normalizeTemplateProductList(templateDropdownProducts), [templateDropdownProducts]);
-
-  const templateProductTypes = useMemo(() => {
-    const map = new Map();
-    templateDropdownList.forEach((p) => {
-      const id = toNumberOrNull(getProductTypeId(p));
-      const name = getProductTypeName(p);
-      if (id && name && name !== "-" && !map.has(id)) map.set(id, { id, name });
-    });
-    productTypes.forEach((p) => {
-      const id = toNumberOrNull(p?.id);
-      if (id && p?.name && !map.has(id)) map.set(id, { id, name: p.name });
-    });
-    return Array.from(map.values()).sort((a, b) => String(a.name || "").localeCompare(String(b.name || ""), "th"));
-  }, [templateDropdownList, productTypes]);
-
-  const templateBrands = useMemo(() => {
-    const map = new Map();
-    const currentTypeId = toNumberOrNull(selectedProductTypeId);
-    templateDropdownList
-      .filter((p) => !currentTypeId || Number(getProductTypeId(p)) === Number(currentTypeId))
-      .forEach((p) => {
-        const id = toNumberOrNull(getProductBrandId(p));
-        const name = getBrandName(p);
-        if (id && name && name !== "-" && !map.has(id)) map.set(id, { id, name });
-      });
-    brands.forEach((b) => {
-      const id = toNumberOrNull(b?.id);
-      if (id && b?.name && !map.has(id)) map.set(id, { id, name: b.name });
-    });
-    return Array.from(map.values()).sort((a, b) => String(a.name || "").localeCompare(String(b.name || ""), "th"));
-  }, [templateDropdownList, selectedProductTypeId, brands]);
 
   const executeProductSearch = useCallback(async ({ productTypeId = selectedProductTypeId, brandId = selectedBrandId, search = committedKeyword } = {}) => {
     const cleanSearch = String(search || "").trim() || undefined;
-    const commonParams = {
+    const params = {
       productTypeId: productTypeId || undefined,
       brandId: brandId || undefined,
       search: cleanSearch,
@@ -400,28 +345,9 @@ const QuickStockPage = () => {
     };
 
     try {
-      const [operationalResult, templateResult] = await Promise.allSettled([
-        getProductsForPos(commonParams),
-        getTemplateProductsForPos(commonParams),
-      ]);
-
-      const operationalList = operationalResult.status === "fulfilled"
-        ? normalizeOperationalProductList(operationalResult.value)
-        : [];
-      const templateList = templateResult.status === "fulfilled"
-        ? normalizeTemplateProductList(templateResult.value)
-        : [];
-
-      if (operationalResult.status === "rejected") {
-        console.warn("QuickStock operational product search failed:", operationalResult.reason);
-      }
-      if (templateResult.status === "rejected") {
-        console.warn("QuickStock template product search failed:", templateResult.reason);
-      }
-      if (operationalResult.status === "rejected" && templateResult.status === "rejected") {
-        throw operationalResult.reason || templateResult.reason;
-      }
-
+      const result = await searchProductsAction(params);
+      const operationalList = normalizeOperationalProductList(result?.operationalProducts || []);
+      const templateList = normalizeTemplateProductList(result?.templateProducts || []);
       const merged = dedupeDiscoveryProducts([...operationalList, ...templateList]);
       setRuntimeSearchProducts(merged);
       return merged;
@@ -431,23 +357,13 @@ const QuickStockPage = () => {
       toast.error(err?.message || "ค้นหาสินค้าไม่สำเร็จ");
       return [];
     }
-  }, [selectedProductTypeId, selectedBrandId, committedKeyword]);
+  }, [selectedProductTypeId, selectedBrandId, committedKeyword, searchProductsAction]);
 
-  const loadTemplateDropdownCatalog = useCallback(async () => {
-    try {
-      const response = await getTemplateProductsForPos({ takeNum: 1000, skipNum: 0 });
-      const list = normalizeTemplateProductList(response);
-      setTemplateDropdownProducts(list);
-      return list;
-    } catch (err) {
-      console.error("QuickStock template dropdown load failed:", err);
-      setTemplateDropdownProducts([]);
-      return [];
-    }
-  }, []);
+  useEffect(() => {
+    if (typeof loadDropdownsAction === "function") loadDropdownsAction({ productTypeId: selectedProductTypeId });
+  }, [loadDropdownsAction, selectedProductTypeId]);
 
-  useEffect(() => { if (typeof fetchDropdownsAction === "function") fetchDropdownsAction(); }, [fetchDropdownsAction]);
-  useEffect(() => { loadTemplateDropdownCatalog(); }, [loadTemplateDropdownCatalog]);
+  useEffect(() => { executeProductSearch({}); }, [executeProductSearch]);
 
   const filteredProducts = useMemo(() => {
     const ptId = toNumberOrNull(selectedProductTypeId);
@@ -461,13 +377,12 @@ const QuickStockPage = () => {
         const searchable = [product?.name, product?.title, product?.sku, product?.barcode, product?.model, product?.code, getBrandName(product), getProductTypeName(product)].filter(Boolean).join(" ").toLowerCase();
         return searchable.includes(q);
       })
-    )
-      .sort((a, b) => {
-        const sourceRankA = a.__quickStockDiscoverySource === "OPERATIONAL" ? 0 : 1;
-        const sourceRankB = b.__quickStockDiscoverySource === "OPERATIONAL" ? 0 : 1;
-        if (sourceRankA !== sourceRankB) return sourceRankA - sourceRankB;
-        return String(a?.name || "").localeCompare(String(b?.name || ""));
-      });
+    ).sort((a, b) => {
+      const sourceRankA = a.__quickStockDiscoverySource === "OPERATIONAL" ? 0 : 1;
+      const sourceRankB = b.__quickStockDiscoverySource === "OPERATIONAL" ? 0 : 1;
+      if (sourceRankA !== sourceRankB) return sourceRankA - sourceRankB;
+      return String(a?.name || "").localeCompare(String(b?.name || ""));
+    });
   }, [productList, selectedProductTypeId, selectedBrandId, committedKeyword]);
 
   const selectedProduct = useMemo(() => {
@@ -491,9 +406,9 @@ const QuickStockPage = () => {
       setAdoptedOperationalProduct(null);
       setIsCheckingOperationalProduct(true);
       try {
-        const response = await getOperationalProductByTemplateId(templateProductId);
+        const response = await getOperationalProductByTemplateIdAction(templateProductId);
         if (cancelled) return;
-        const rawCandidate = extractSingleProduct(response);
+        const rawCandidate = extractSingle(response);
         if (isValidOperationalProductForAdoption(rawCandidate, selectedTemplateProduct)) {
           setAdoptedOperationalProduct(normalizeOperationalProduct(rawCandidate));
           return;
@@ -510,7 +425,7 @@ const QuickStockPage = () => {
     };
     lookupTemplateOperationalProduct();
     return () => { cancelled = true; };
-  }, [selectedTemplateProduct]);
+  }, [selectedTemplateProduct, getOperationalProductByTemplateIdAction]);
 
   const operationalProduct = selectedSearchOperationalProduct || adoptedOperationalProduct;
   const isTemplateOnlySelection = !!selectedTemplateProduct && !operationalProduct;
@@ -590,19 +505,12 @@ const QuickStockPage = () => {
   const handleCreateOperationalProductFromTemplate = async () => {
     if (!selectedTemplateProduct || operationalProduct) return;
     const payload = buildCreateOperationalProductPayload(selectedTemplateProduct);
-    if (!payload?.templateProductId) {
-      toast.error("ไม่พบ Template Product ID สำหรับสร้างสินค้าในร้าน");
-      return;
-    }
+    if (!payload?.templateProductId) return toast.error("ไม่พบ Template Product ID สำหรับสร้างสินค้าในร้าน");
     setIsCreatingOperationalProduct(true);
     try {
-      const action = typeof createOperationalProductFromTemplateAction === "function" ? createOperationalProductFromTemplateAction : createOperationalProductFromTemplateApi;
-      const response = await action(payload);
-      const rawCreatedProduct = extractSingleProduct(response);
-      if (!adoptOperationalProduct(rawCreatedProduct, selectedTemplateProduct)) {
-        toast.error("สร้างสินค้าแล้ว แต่ข้อมูลที่ตอบกลับยังไม่ใช่ Operational Product ที่ถูกต้อง");
-        return;
-      }
+      const response = await createOperationalProductFromTemplateAction(payload);
+      const rawCreatedProduct = extractSingle(response);
+      if (!adoptOperationalProduct(rawCreatedProduct, selectedTemplateProduct)) return toast.error("สร้างสินค้าแล้ว แต่ข้อมูลที่ตอบกลับยังไม่ใช่ Operational Product ที่ถูกต้อง");
       toast.success("สร้าง Operational Product จาก Template เรียบร้อย");
     } catch (err) {
       console.error("Create operational product from template failed:", err);
@@ -617,20 +525,11 @@ const QuickStockPage = () => {
     if (!payload.name) return toast.error("กรุณาระบุชื่อสินค้า");
     if (!payload.productTypeId) return toast.error("กรุณาเลือกประเภทสินค้า");
     if (payload.costPrice <= 0 || payload.priceRetail <= 0) return toast.error("กรุณาระบุราคาทุนและราคาขายปลีกก่อนสร้างสินค้า");
-
     setIsCreatingOperationalProduct(true);
     try {
-      if (typeof createLocalOperationalProductAction !== "function") {
-        toast.error("ยังไม่พบ createLocalOperationalProductAction");
-        return;
-      }
-
       const response = await createLocalOperationalProductAction(payload);
-      const rawCreatedProduct = extractSingleProduct(response);
-      if (!adoptOperationalProduct(rawCreatedProduct, null)) {
-        toast.error("สร้างสินค้าแล้ว แต่ข้อมูลที่ตอบกลับยังไม่ใช่ Operational Product ที่ถูกต้อง");
-        return;
-      }
+      const rawCreatedProduct = extractSingle(response);
+      if (!adoptOperationalProduct(rawCreatedProduct, null)) return toast.error("สร้างสินค้าแล้ว แต่ข้อมูลที่ตอบกลับยังไม่ใช่ Operational Product ที่ถูกต้อง");
       setLocalProductForm({ name: "", productTypeId: "", brandId: "", unitId: "", trackSerialNumber: false, active: true });
       setLocalPriceForm({ costPrice: "", priceRetail: "", priceWholesale: "", priceTechnician: "", priceOnline: "" });
       toast.success("สร้างสินค้า Local ของร้านเรียบร้อย");
@@ -683,11 +582,9 @@ const QuickStockPage = () => {
     const name = String(productForm.name || "").trim();
     if (!name) return toast.error("ชื่อสินค้าห้ามว่าง");
     if (toMoneyNumber(priceForm.priceRetail) <= 0) return toast.error("ราคาขายปลีกต้องมากกว่า 0");
-    if (typeof updateProduct !== "function") return toast.error("ยังไม่พบ updateProduct ใน productStore");
-
     setIsSavingProduct(true);
     try {
-      await updateProduct(operationalProduct.id, {
+      await updateOperationalProductAction(operationalProduct.id, {
         name,
         productTypeId: toNumberOrNull(productForm.productTypeId),
         brandId: toNumberOrNull(productForm.brandId),
@@ -742,10 +639,9 @@ const QuickStockPage = () => {
     if (!operationalProduct?.id) return;
     const ok = window.confirm(`ยืนยันลบสินค้าในช่วง Recovery?\n\n${operationalProduct.name}\n\nควรใช้เฉพาะรายการซ้ำ/ผิด และยังไม่มีประวัติรับเข้าเท่านั้น`);
     if (!ok) return;
-    if (typeof deleteProductAction !== "function") return toast.error("ยังไม่พบ deleteProductAction ใน productStore");
     setIsDeletingProduct(true);
     try {
-      const result = await deleteProductAction(operationalProduct.id);
+      const result = await deleteOperationalProductAction(operationalProduct.id);
       if (result === false) return toast.error("ลบสินค้าไม่สำเร็จ อาจมีประวัติใช้งานแล้ว");
       toast.success("ลบสินค้าเรียบร้อย");
       clearProductSelection();
@@ -793,13 +689,9 @@ const QuickStockPage = () => {
     };
     setIsCommitting(true);
     try {
-      if (typeof quickStockIntakeExistingAction === "function") {
-        await quickStockIntakeExistingAction(payload);
-        toast.success(`บันทึกรับเข้า ${barcodeQueue.length} รายการเรียบร้อย`);
-        resetQueue();
-        return;
-      }
-      toast.error("ยังไม่พบ action สำหรับบันทึก Stock Intake");
+      await quickStockIntakeExistingAction(payload);
+      toast.success(`บันทึกรับเข้า ${barcodeQueue.length} รายการเรียบร้อย`);
+      resetQueue();
     } catch (err) {
       console.error("Quick Stock Commit Error:", err);
       toast.error(err?.message || "บันทึกรับเข้าไม่สำเร็จ");
@@ -845,8 +737,8 @@ const QuickStockPage = () => {
             selectedProduct={selectedProduct}
             showSearchResult={showSearchResult}
             onShowSearchResult={() => setShowSearchResult(true)}
-            productTypes={templateProductTypes}
-            brands={templateBrands}
+            productTypes={productTypes}
+            brands={brands}
             selectedProductTypeId={selectedProductTypeId}
             selectedBrandId={selectedBrandId}
             keyword={keyword}

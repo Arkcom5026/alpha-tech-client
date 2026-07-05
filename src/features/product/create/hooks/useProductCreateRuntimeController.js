@@ -109,81 +109,114 @@ const buildPayload = (values = {}, branchId) => ({
   },
 });
 
+const getApiErrorMessage = (err, fallback) =>
+  err?.response?.data?.message ||
+  err?.message ||
+  fallback;
+
 const useProductCreateRuntimeController = () => {
   const branchId = useBranchStore((state) => state.selectedBranchId);
   const runtime = useProductCreateRuntimeStore();
-  const resetRuntime = useProductCreateRuntimeStore((state) => state.resetRuntime);
   const imageRef = useRef();
+
+  const {
+    formValues,
+
+    setDropdownsLoading,
+    setDropdowns,
+    setBrandsLoading,
+    setBrands,
+    setExistingModelsLoading,
+    setExistingModels,
+
+    setFormValue,
+    setFormErrors,
+    unlockAfterChange,
+    beginCreate,
+    finishCreateSuccess,
+    finishCreateError,
+    resetForNextCreate,
+    resetRuntime,
+  } = runtime;
 
   const loadDropdowns = useCallback(async () => {
     if (!branchId) return null;
 
-    runtime.setDropdownsLoading(true);
+    setDropdownsLoading(true);
 
     try {
       const raw = await getProductCreateDropdowns();
       const dropdowns = normalizeDropdownPayload(raw);
-      runtime.setDropdowns(dropdowns);
+      setDropdowns(dropdowns);
       return dropdowns;
     } catch (err) {
-      runtime.setDropdownsLoading(false);
-      runtime.finishCreateError(
-        err?.response?.data?.message ||
-          err?.message ||
-          'โหลดรายการตัวเลือกสำหรับเพิ่มสินค้าไม่สำเร็จ'
+      setDropdownsLoading(false);
+      finishCreateError(
+        getApiErrorMessage(err, 'โหลดรายการตัวเลือกสำหรับเพิ่มสินค้าไม่สำเร็จ')
       );
       return null;
     }
-  }, [branchId, runtime]);
+  }, [branchId, setDropdownsLoading, setDropdowns, finishCreateError]);
 
   const loadBrands = useCallback(async () => {
-    const productTypeId = runtime.formValues.productTypeId;
+    const productTypeId = formValues.productTypeId;
+
     if (!productTypeId) {
-      runtime.setBrands([]);
+      setBrands([]);
       return [];
     }
 
-    runtime.setBrandsLoading(true);
+    setBrandsLoading(true);
 
     try {
       const raw = await getProductCreateBrands({ productTypeId });
       const brands = normalizeBrandsPayload(raw);
-      runtime.setBrands(brands);
+      setBrands(brands);
       return brands;
     } catch (err) {
-      runtime.setBrandsLoading(false);
-      runtime.finishCreateError(
-        err?.response?.data?.message ||
-          err?.message ||
-          'โหลดแบรนด์ตามประเภทสินค้าไม่สำเร็จ'
+      setBrandsLoading(false);
+      finishCreateError(
+        getApiErrorMessage(err, 'โหลดแบรนด์ตามประเภทสินค้าไม่สำเร็จ')
       );
       return [];
     }
-  }, [runtime]);
+  }, [
+    formValues.productTypeId,
+    setBrands,
+    setBrandsLoading,
+    finishCreateError,
+  ]);
 
   const loadExistingModels = useCallback(async () => {
-    if (!branchId || !runtime.formValues.productTypeId) {
-      runtime.setExistingModels([]);
+    if (!branchId || !formValues.productTypeId) {
+      setExistingModels([]);
       return [];
     }
 
-    runtime.setExistingModelsLoading(true);
+    setExistingModelsLoading(true);
 
     try {
       const raw = await getExistingOperationalModels({
         targetBranchId: branchId,
-        productTypeId: runtime.formValues.productTypeId,
-        brandId: runtime.formValues.brandId,
-        search: runtime.formValues.name,
+        productTypeId: formValues.productTypeId,
+        brandId: formValues.brandId,
+        search: formValues.name,
       });
       const items = normalizeExistingModelsPayload(raw);
-      runtime.setExistingModels(items);
+      setExistingModels(items);
       return items;
     } catch (_) {
-      runtime.setExistingModels([]);
+      setExistingModels([]);
       return [];
     }
-  }, [branchId, runtime]);
+  }, [
+    branchId,
+    formValues.productTypeId,
+    formValues.brandId,
+    formValues.name,
+    setExistingModels,
+    setExistingModelsLoading,
+  ]);
 
   useEffect(() => {
     loadDropdowns();
@@ -191,11 +224,11 @@ const useProductCreateRuntimeController = () => {
 
   useEffect(() => {
     loadBrands();
-  }, [runtime.formValues.productTypeId]);
+  }, [loadBrands]);
 
   useEffect(() => {
     loadExistingModels();
-  }, [runtime.formValues.productTypeId, runtime.formValues.brandId]);
+  }, [loadExistingModels]);
 
   useEffect(() => {
     return () => {
@@ -203,32 +236,32 @@ const useProductCreateRuntimeController = () => {
     };
   }, [resetRuntime]);
 
-  const handleFieldChange = (field, value) => {
-    runtime.unlockAfterChange();
-    runtime.setFormValue(field, value);
-  };
+  const handleFieldChange = useCallback((field, value) => {
+    unlockAfterChange();
+    setFormValue(field, value);
+  }, [unlockAfterChange, setFormValue]);
 
-  const handleSelectExistingModel = (item) => {
+  const handleSelectExistingModel = useCallback((item) => {
     if (!item) return;
-    runtime.setFormValue('name', item.name || '');
-    if (item.unitId) runtime.setFormValue('unitId', String(item.unitId));
-  };
+    setFormValue('name', item.name || '');
+    if (item.unitId) setFormValue('unitId', String(item.unitId));
+  }, [setFormValue]);
 
-  const handleCreate = async (event) => {
+  const handleCreate = useCallback(async (event) => {
     event?.preventDefault?.();
 
-    const errors = validateForm(runtime.formValues);
-    runtime.setFormErrors(errors);
+    const errors = validateForm(formValues);
+    setFormErrors(errors);
 
     if (Object.keys(errors).length > 0) {
-      runtime.finishCreateError('กรุณาตรวจสอบข้อมูลที่จำเป็นก่อนบันทึก');
+      finishCreateError('กรุณาตรวจสอบข้อมูลที่จำเป็นก่อนบันทึก');
       return;
     }
 
-    runtime.beginCreate();
+    beginCreate();
 
     try {
-      const payload = buildPayload(runtime.formValues, branchId);
+      const payload = buildPayload(formValues, branchId);
       const response = await createLocalOperationalProductCreateApi(payload);
       const created = extractCreatedProduct(response);
 
@@ -244,14 +277,26 @@ const useProductCreateRuntimeController = () => {
         });
       }
 
-      runtime.finishCreateSuccess(created);
+      finishCreateSuccess(created);
     } catch (err) {
-      runtime.finishCreateError(err?.message || 'เกิดข้อผิดพลาดในการบันทึกสินค้า');
+      finishCreateError(
+        getApiErrorMessage(err, 'เกิดข้อผิดพลาดในการบันทึกสินค้า')
+      );
     }
-  };
+  }, [
+    formValues,
+    branchId,
+    runtime.selectedFiles,
+    runtime.captions,
+    runtime.coverIndex,
+    setFormErrors,
+    beginCreate,
+    finishCreateSuccess,
+    finishCreateError,
+  ]);
 
-  const handleStartNextCreate = () => {
-    runtime.resetForNextCreate();
+  const handleStartNextCreate = useCallback(() => {
+    resetForNextCreate();
 
     if (imageRef.current && typeof imageRef.current.reset === 'function') {
       try {
@@ -260,7 +305,7 @@ const useProductCreateRuntimeController = () => {
     }
 
     loadDropdowns();
-  };
+  }, [resetForNextCreate, loadDropdowns]);
 
   return {
     branchId,

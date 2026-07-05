@@ -54,6 +54,8 @@ const CreateProductPage = () => {
     setCoverIndex,
   } = runtime;
 
+  const formDisabled = isProcessing || saveLocked;
+
   if (!branchId) {
     return (
       <div className="mx-auto w-full max-w-[1600px] px-4 lg:px-8">
@@ -149,13 +151,14 @@ const CreateProductPage = () => {
           setCaptions={setCaptions}
           coverIndex={coverIndex}
           setCoverIndex={setCoverIndex}
+          disabled={formDisabled}
         />
 
         <ProductCreateBasicSection
           values={formValues}
           dropdowns={dropdowns}
           errors={formErrors}
-          disabled={isProcessing || saveLocked}
+          disabled={formDisabled}
           onChange={handleFieldChange}
         />
 
@@ -164,7 +167,7 @@ const CreateProductPage = () => {
           brands={dropdowns.brands}
           errors={formErrors}
           loading={brandsLoading}
-          disabled={isProcessing || saveLocked}
+          disabled={formDisabled}
           onChange={handleFieldChange}
           onRefreshBrands={refreshBrands}
         />
@@ -181,20 +184,20 @@ const CreateProductPage = () => {
         <ProductCreateInventorySection
           values={formValues}
           errors={formErrors}
-          disabled={isProcessing || saveLocked}
+          disabled={formDisabled}
           onChange={handleFieldChange}
         />
 
         <ProductCreatePriceSection
           values={formValues}
           errors={formErrors}
-          disabled={isProcessing || saveLocked}
+          disabled={formDisabled}
           onChange={handleFieldChange}
         />
 
         <ProductCreateSubmitBar
           loading={isProcessing}
-          disabled={isProcessing || saveLocked}
+          disabled={formDisabled}
           submitLabel={saveLocked ? 'บันทึกแล้ว' : 'บันทึกสินค้า'}
         />
       </form>

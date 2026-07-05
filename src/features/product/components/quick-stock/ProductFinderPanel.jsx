@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import apiClient from "@/utils/apiClient";
+import { getQuickReceiveDropdowns } from "@/features/quickReceive/api/quickReceiveApi";
 
 const normalizeText = (value) => String(value ?? "").trim().toLowerCase();
 const toNum = (value) => {
@@ -136,9 +136,7 @@ const ProductFinderPanel = ({
     const load = async () => {
       setWorkflowLoading(true);
       try {
-        const params = { _ts: Date.now() };
-        if (selectedProductTypeId) params.productTypeId = selectedProductTypeId;
-        const { data } = await apiClient.get("quick-stock/dropdowns", { params });
+        const data = await getQuickReceiveDropdowns({ productTypeId: selectedProductTypeId });
         if (!cancelled) {
           setWorkflowDropdowns({
             productTypes: dedupeOptions(data?.productTypes || []),

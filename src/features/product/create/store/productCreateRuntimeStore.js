@@ -58,6 +58,16 @@ const initialState = {
 const useProductCreateRuntimeStore = create((set, get) => ({
   ...initialState,
 
+  setRuntimeError: (message) =>
+    set({
+      errorMessage: message || '',
+    }),
+
+  clearRuntimeError: () =>
+    set({
+      errorMessage: '',
+    }),
+
   setFormValue: (field, value) =>
     set((state) => {
       if (field === 'branchPrice') {
@@ -108,6 +118,7 @@ const useProductCreateRuntimeStore = create((set, get) => ({
       },
       dropdownsLoaded: true,
       dropdownsLoading: false,
+      errorMessage: '',
     }),
 
   setBrandsLoading: (brandsLoading) => set({ brandsLoading }),
@@ -118,6 +129,7 @@ const useProductCreateRuntimeStore = create((set, get) => ({
         brands: Array.isArray(brands) ? brands : [],
       },
       brandsLoading: false,
+      errorMessage: '',
     })),
 
   setExistingModelsLoading: (existingModelsLoading) => set({ existingModelsLoading }),

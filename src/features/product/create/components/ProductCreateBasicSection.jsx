@@ -23,7 +23,9 @@ const ProductCreateBasicSection = ({
     <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
       <div className="mb-4">
         <h3 className="text-sm font-semibold text-slate-900">📦 ข้อมูลหลักสินค้า</h3>
-        <p className="text-xs text-slate-500">โครงสร้างพื้นฐาน: ประเภทสินค้า → แบรนด์ → สินค้า</p>
+        <p className="text-xs text-slate-500">
+          กำหนดชื่อสินค้า ประเภทสินค้า และหน่วยนับ ส่วนแบรนด์จัดการใน Brand Section แยกต่างหาก
+        </p>
       </div>
 
       <div className="grid grid-cols-1 gap-4">
@@ -42,7 +44,7 @@ const ProductCreateBasicSection = ({
           {errors.name ? <p className="mt-1 text-xs text-red-600">{errors.name}</p> : null}
         </label>
 
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <label className="block">
             <span className="mb-1 block text-sm font-medium text-slate-700">
               ประเภทสินค้า <span className="text-red-500">*</span>
@@ -62,15 +64,6 @@ const ProductCreateBasicSection = ({
             </select>
             {errors.productTypeId ? <p className="mt-1 text-xs text-red-600">{errors.productTypeId}</p> : null}
           </label>
-
-          <div className="block">
-            <span className="mb-1 block text-sm font-medium text-slate-700">
-              แบรนด์ <span className="text-red-500">*</span>
-            </span>
-            <p className="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-500">
-              จัดการใน ProductCreateBrandSection
-            </p>
-          </div>
 
           <label className="block">
             <span className="mb-1 block text-sm font-medium text-slate-700">

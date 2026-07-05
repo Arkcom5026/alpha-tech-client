@@ -1,6 +1,6 @@
 import apiClient from '@/utils/apiClient';
 import { parseApiError } from '@/utils/uiHelpers';
-import { getProductTypeDropdowns } from '@/features/productType/api/productTypeApi';
+import { getProductTypeDropdowns, getProductTypes } from '@/features/productType/api/productTypeApi';
 
 export const getProducts = async ({ search, status, categoryId, productTypeId, brandId, take, takeNum, page, skipNum } = {}) => {
   try {
@@ -90,8 +90,12 @@ export const getProductDropdowns = async () => {
 const pickDropdownItems = (raw) => {
   if (Array.isArray(raw)) return raw;
   if (Array.isArray(raw?.items)) return raw.items;
+  if (Array.isArray(raw?.rows)) return raw.rows;
+  if (Array.isArray(raw?.records)) return raw.records;
   if (Array.isArray(raw?.data)) return raw.data;
   if (Array.isArray(raw?.data?.items)) return raw.data.items;
+  if (Array.isArray(raw?.data?.rows)) return raw.data.rows;
+  if (Array.isArray(raw?.data?.records)) return raw.data.records;
   if (Array.isArray(raw?.data?.data)) return raw.data.data;
   return [];
 };
@@ -111,7 +115,20 @@ const mergeUniqueById = (...lists) => {
       name: String(name).trim(),
     });
   });
-  return Array.from(map.values());
+  return Array.from(map.values()).sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'th'));
+};
+
+const loadProductCreateTypeOptions = async () => {
+  const results = await Promise.allSettled([
+    getProductTypeDropdowns({ active: true }),
+    getProductTypes({ includeInactive: false, limit: 1000 }),
+  ]);
+
+  return mergeUniqueById(
+    ...results
+      .filter((result) => result.status === 'fulfilled')
+      .map((result) => pickDropdownItems(result.value))
+  );
 };
 
 export const getCatalogDropdowns = async ({ scope = 'pos' } = {}) => {
@@ -135,7 +152,7 @@ export const getCatalogDropdowns = async ({ scope = 'pos' } = {}) => {
     let productTypeDropdowns = [];
     if (scope !== 'online') {
       try {
-        productTypeDropdowns = pickDropdownItems(await getProductTypeDropdowns({ active: true }));
+        productTypeDropdowns = await loadProductCreateTypeOptions();
       } catch (_) {
         productTypeDropdowns = [];
       }
@@ -351,28 +368,8 @@ export const quickReceiveExistingProductApi = async (payload = {}) => {
   } catch (err) { throw parseApiError(err); }
 };
 
-export const quickStockIntakeExistingApi = quickReceiveExistingProductApi;
-
-export const getOperationalProductByTemplateId = async (templateProductId) => {
-  try {
-    if (!templateProductId) {
-      const e = new Error('ไม่พบ templateProductId');
-      e.code = 'TEMPLATE_PRODUCT_ID_MISSING';
-      throw e;
-    }
-
-    const { data } = await apiClient.get(`products/pos/runtime-by-template/${templateProductId}`, {
-      params: { _ts: Date.now() },
-    });
-
-    return data;
-  } catch (err) { throw parseApiError(err); }
-};
-
 export const createOperationalProductFromTemplateApi = async (payload = {}) => {
   try {
-    if (import.meta.env?.DEV) console.log('[productApi] createOperationalProductFromTemplateApi payload', payload);
-
     const sanitizedPayload = { ...payload };
     delete sanitizedPayload.branchId;
 
@@ -383,8 +380,6 @@ export const createOperationalProductFromTemplateApi = async (payload = {}) => {
 
 export const createLocalOperationalProductApi = async (payload = {}) => {
   try {
-    if (import.meta.env?.DEV) console.log('[productApi] createLocalOperationalProductApi payload', payload);
-
     const sanitizedPayload = { ...payload };
     delete sanitizedPayload.branchId;
     delete sanitizedPayload.templateProductId;

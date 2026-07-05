@@ -3,12 +3,12 @@
 import { useCallback, useEffect, useRef } from 'react';
 
 import { useBranchStore } from '@/features/branch/store/branchStore';
-import { uploadImagesProduct } from '../../api/productImagesApi';
-import { createLocalOperationalProductRuntimeApi } from '../../api/productRuntimeApi';
 import {
+  createLocalOperationalProductCreateApi,
   getExistingOperationalModels,
   getProductCreateBrands,
   getProductCreateDropdowns,
+  uploadProductCreateImages,
 } from '../api/productCreateApi';
 import useProductCreateRuntimeStore from '../store/productCreateRuntimeStore';
 
@@ -229,7 +229,7 @@ const useProductCreateRuntimeController = () => {
 
     try {
       const payload = buildPayload(runtime.formValues, branchId);
-      const response = await createLocalOperationalProductRuntimeApi(payload);
+      const response = await createLocalOperationalProductCreateApi(payload);
       const created = extractCreatedProduct(response);
 
       if (!created?.id) {
@@ -237,7 +237,11 @@ const useProductCreateRuntimeController = () => {
       }
 
       if (runtime.selectedFiles.length) {
-        await uploadImagesProduct(runtime.selectedFiles, runtime.captions, runtime.coverIndex);
+        await uploadProductCreateImages(created.id, {
+          files: runtime.selectedFiles,
+          captions: runtime.captions,
+          coverIndex: runtime.coverIndex,
+        });
       }
 
       runtime.finishCreateSuccess(created);

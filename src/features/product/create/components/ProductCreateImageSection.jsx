@@ -1,6 +1,6 @@
 // src/features/product/create/components/ProductCreateImageSection.jsx
 
-import ProductImage from '../../components/ProductImage';
+import ProductCreateImageUploader from './ProductCreateImageUploader';
 
 const ProductCreateImageSection = ({
   imageRef,
@@ -12,17 +12,18 @@ const ProductCreateImageSection = ({
   setCaptions,
   coverIndex,
   setCoverIndex,
+  disabled = false,
 }) => {
   return (
     <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
       <div className="mb-3">
         <h3 className="text-sm font-semibold text-slate-900">🖼️ รูปภาพสินค้า</h3>
         <p className="text-xs text-slate-500">
-          รูปภาพเป็นส่วนหนึ่งของ Product Create flow แต่แยก section เพื่อให้เปลี่ยนเงื่อนไขได้ง่าย
+          รูปภาพอยู่ภายใน Product Create Runtime โดยตรง ไม่พึ่ง Component กลางของ Product เดิม
         </p>
       </div>
 
-      <ProductImage
+      <ProductCreateImageUploader
         ref={imageRef}
         files={selectedFiles}
         setFiles={setSelectedFiles}
@@ -32,8 +33,7 @@ const ProductCreateImageSection = ({
         setCaptions={setCaptions}
         coverIndex={coverIndex}
         setCoverIndex={setCoverIndex}
-        oldImages={[]}
-        setOldImages={() => {}}
+        disabled={disabled}
       />
     </section>
   );

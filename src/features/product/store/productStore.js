@@ -157,6 +157,15 @@ const useProductStore = create((set, get) => ({
     return _.sortBy(uniq, (b) => String(b?.name ?? ''));
   },
 
+  hasUsableDropdowns: () => {
+    const dropdowns = get().dropdowns || {};
+    return {
+      productTypes: Array.isArray(dropdowns.productTypes) && dropdowns.productTypes.length > 0,
+      brands: Array.isArray(dropdowns.brands) && dropdowns.brands.length > 0,
+      units: Array.isArray(dropdowns.units) && dropdowns.units.length > 0,
+    };
+  },
+
   products: [],              
   simpleProducts: [],        
   currentProduct: null,
@@ -606,10 +615,16 @@ const useProductStore = create((set, get) => ({
     }
   },
 
-  ensureDropdownsAction: async () => {
-    if (!get().dropdownsLoaded) {
+  ensureDropdownsAction: async ({ force = false } = {}) => {
+    const usable = get().hasUsableDropdowns();
+
+    // A previous dropdown request may have completed with an empty ProductType list.
+    // In that state dropdownsLoaded can be true, but the Create Product page still
+    // has no usable "ประเภทสินค้า" options. Treat that state as stale and reload.
+    if (force || !get().dropdownsLoaded || !usable.productTypes) {
       await get().fetchDropdownsAction(true);
     }
+
     return get().dropdowns;
   },
 

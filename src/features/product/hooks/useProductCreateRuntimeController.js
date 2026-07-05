@@ -20,7 +20,9 @@ const useProductCreateRuntimeController = () => {
   const {
     uploadImages,
     ensureDropdownsAction,
+    fetchDropdownsAction,
     dropdownsLoaded,
+    dropdowns,
     error: storeError,
   } = useProductStore();
 
@@ -29,19 +31,14 @@ const useProductCreateRuntimeController = () => {
   const imageRef = useRef();
   const dropdownsFetchRef = useRef({ branchId: null, done: false });
 
+  const productTypesReady =
+    Array.isArray(dropdowns?.productTypes) && dropdowns.productTypes.length > 0;
+
   useEffect(() => {
     if (!branchId) return;
-    if (dropdownsLoaded === true) return;
 
-    if (dropdownsFetchRef.current.branchId !== branchId) {
-      dropdownsFetchRef.current = { branchId, done: false };
-    }
-
-    if (dropdownsFetchRef.current.done) return;
-    dropdownsFetchRef.current.done = true;
-
-    Promise.resolve(ensureDropdownsAction?.()).catch(() => {});
-  }, [branchId, dropdownsLoaded, ensureDropdownsAction]);
+    Promise.resolve(fetchDropdownsAction?.(true)).catch(() => {});
+  }, [branchId, fetchDropdownsAction]);
 
   useEffect(() => {
     return () => {
@@ -89,7 +86,8 @@ const useProductCreateRuntimeController = () => {
     }
   };
 
-  const retryLoadDropdowns = () => Promise.resolve(ensureDropdownsAction?.()).catch(() => {});
+  const retryLoadDropdowns = () =>
+    Promise.resolve(fetchDropdownsAction?.(true)).catch(() => {});
 
   return {
     branchId,

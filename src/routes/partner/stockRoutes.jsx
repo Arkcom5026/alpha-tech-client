@@ -4,7 +4,7 @@ import React from 'react';
 // 🟢 [LIVE API CORE IMPORTS] นำเข้าคอมโพเนนต์คลังสินค้าของจริงทั้งหมดจากห้องเครื่อง
 import StockDashboardPage from '@/features/stock/pages/StockDashboardPage';
 import ListProductPage from '@/features/product/pages/ListProductPage';
-import CreateProductPage from '@/features/product/pages/CreateProductPage';
+import CreateProductPage from '@/features/product/create/pages/CreateProductPage';
 import EditProductPage from '@/features/product/pages/EditProductPage';
 
 import ListCategoryPage from '@/features/category/pages/ListCategoryPage';

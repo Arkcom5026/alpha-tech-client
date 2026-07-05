@@ -4,9 +4,9 @@
 
 import React from 'react';
 import { Link } from 'react-router-dom';
-import useProductCreateRuntimeController from '../hooks/useProductCreateRuntimeController';
-import ProductForm from '../components/ProductForm';
-import ProductImage from '../components/ProductImage';
+import useProductCreateRuntimeController from '../../hooks/useProductCreateRuntimeController';
+import ProductForm from '../../components/ProductForm';
+import ProductImage from '../../components/ProductImage';
 import ProcessingDialog from '@/components/shared/dialogs/ProcessingDialog';
 
 const CreateProductPage = () => {

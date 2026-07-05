@@ -58,7 +58,7 @@ import { EditBankPage } from '@/features/bank/page/EditBankPage';
 import ListBranchPage from '@/features/settings/pages/ListBranchPage';
 
 // 🟢 FIXED FEATURE PORT: อิมพอร์ตหน้าจอตัวจริงของการนำเข้าสินค้าด่วนจากโมดูลสินค้า
-import QuickStockPage from '@features/product/pages/QuickStockPage';
+import QuickStockPage from '@/features/product/quick-stock/pages/QuickStockPage';
 
 // 🟡 แผ่นป้ายสแตนด์บายฉุกเฉินภายในไฟล์ (Inline Temporary Component) 
 const TempReportPage = ({ title }) => (

@@ -118,6 +118,7 @@ const useProductCreateRuntimeController = () => {
   const branchId = useBranchStore((state) => state.selectedBranchId);
   const runtime = useProductCreateRuntimeStore();
   const imageRef = useRef();
+  const latestFormValuesRef = useRef(runtime.formValues);
 
   const {
     formValues,
@@ -140,6 +141,10 @@ const useProductCreateRuntimeController = () => {
     resetForNextCreate,
     resetRuntime,
   } = runtime;
+
+  useEffect(() => {
+    latestFormValuesRef.current = formValues;
+  }, [formValues]);
 
   const loadDropdowns = useCallback(async () => {
     if (!branchId) return null;
@@ -193,7 +198,9 @@ const useProductCreateRuntimeController = () => {
   ]);
 
   const loadExistingModels = useCallback(async () => {
-    if (!branchId || !formValues.productTypeId) {
+    const latestFormValues = latestFormValuesRef.current || {};
+
+    if (!branchId || !latestFormValues.productTypeId) {
       setExistingModels([]);
       return [];
     }
@@ -203,9 +210,9 @@ const useProductCreateRuntimeController = () => {
     try {
       const raw = await getExistingOperationalModels({
         targetBranchId: branchId,
-        productTypeId: formValues.productTypeId,
-        brandId: formValues.brandId,
-        search: formValues.name,
+        productTypeId: latestFormValues.productTypeId,
+        brandId: latestFormValues.brandId,
+        search: latestFormValues.name,
       });
       const items = normalizeExistingModelsPayload(raw);
       setExistingModels(items);
@@ -218,7 +225,6 @@ const useProductCreateRuntimeController = () => {
     branchId,
     formValues.productTypeId,
     formValues.brandId,
-    formValues.name,
     setExistingModels,
     setExistingModelsLoading,
   ]);
@@ -231,6 +237,8 @@ const useProductCreateRuntimeController = () => {
     loadBrands();
   }, [loadBrands]);
 
+  // Existing model check should not run on every product-name keystroke.
+  // It refreshes when ProductType/Brand changes and can still be triggered manually by the panel button.
   useEffect(() => {
     loadExistingModels();
   }, [loadExistingModels]);

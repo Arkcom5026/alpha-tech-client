@@ -138,7 +138,12 @@ export const getExistingOperationalModels = async ({
 export const createLocalOperationalProductCreateApi = async (payload = {}) => {
   try {
     const sanitizedPayload = stripCreateRuntimeContext(payload);
-    const { data } = await apiClient.post('products/pos/create-local', sanitizedPayload);
+
+    const { data } = await apiClient.post(
+      'product-create/create-local',
+      sanitizedPayload
+    );
+
     return data;
   } catch (err) {
     throw parseApiError(err);
@@ -150,7 +155,11 @@ export const createOperationalProductFromTemplateCreateApi = async (payload = {}
     const sanitizedPayload = { ...payload };
     delete sanitizedPayload.branchId;
 
-    const { data } = await apiClient.post('products/pos/create-from-template', sanitizedPayload);
+    const { data } = await apiClient.post(
+      'product-create/create-from-template',
+      sanitizedPayload
+    );
+
     return data;
   } catch (err) {
     throw parseApiError(err);

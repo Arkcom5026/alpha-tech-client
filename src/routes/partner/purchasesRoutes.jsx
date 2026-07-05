@@ -27,7 +27,7 @@ import ListReceiptItemsToScanPage from '@/features/stockItem/pages/ListReceiptIt
 import ScanBarcodeListPage from '@/features/stockItem/pages/ScanBarcodeListPage';
 
 // 🟢 FIXED PORT: อิมพอร์ตหน้าจอควิกสต๊อกตัวจริงเข้าสับรางแทนที่คอมโพเนนต์เก่าฝั่งจัดซื้อ
-import QuickStockPage from '@features/product/pages/QuickStockPage';
+import QuickStockPage from '@/features/product/quick-stock/pages/QuickStockPage';
 
 const purchasesRoutes = {
   path: 'purchases',

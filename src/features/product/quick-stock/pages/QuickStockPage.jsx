@@ -3,12 +3,12 @@ import { toast } from "react-toastify";
 
 import useQuickReceiveStore from "@/features/quickReceive/store/quickReceiveStore";
 
-import ProductFinderPanel from "../components/quick-stock/ProductFinderPanel";
-import ProductMasterPanel from "../components/quick-stock/ProductMasterPanel";
-import IntakeControlPanel from "../components/quick-stock/IntakeControlPanel";
-import IntakeQueueTable from "../components/quick-stock/IntakeQueueTable";
-import QueueSummary from "../components/quick-stock/QueueSummary";
-import CommitBar from "../components/quick-stock/CommitBar";
+import ProductFinderPanel from "../components/QuickStockFinderPanel";
+import ProductMasterPanel from "../components/QuickStockReceiveTable";
+import IntakeControlPanel from "../components/QuickStockToolbar";
+import IntakeQueueTable from "../components/QuickStockSerialDialog";
+import QueueSummary from "../components/QuickStockSummary";
+import CommitBar from "../components/QuickStockCommitBar";
 
 const ONBOARDING_STATES = {
   NO_SELECTION: "NO_SELECTION",

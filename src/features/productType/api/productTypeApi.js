@@ -1,4 +1,3 @@
-
 // src/features/productType/api/productTypeApi.js
 import apiClient from '@/utils/apiClient';
 
@@ -33,7 +32,7 @@ export const getProductTypes = async (params = {}) => {
 // GET BY ID
 export const getProductTypeById = async (id) => {
   try {
-    const { data } = await apiClient.get(`product-types/${id}`);
+    const { data } = await apiClient.get(`product-types/${id}`, { params: { _ts: Date.now() } });
     return data;
   } catch (error) {
     throw parseApiError(error);
@@ -85,6 +84,7 @@ export const getProductTypeDropdowns = async (opts = { active: true, categoryId:
     const params = {
       active: opts.active !== false,
       ...(opts.categoryId ? { categoryId: opts.categoryId } : {}),
+      _ts: Date.now(),
     };
     const { data } = await apiClient.get('product-types/dropdowns', withParams(params));
     return data;
@@ -92,4 +92,3 @@ export const getProductTypeDropdowns = async (opts = { active: true, categoryId:
     throw parseApiError(error);
   }
 };
-

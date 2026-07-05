@@ -1,16 +1,14 @@
-
-
-
-// ===============================================
-// FE: src/features/quickReceive/api/quickReceiveApi.js
-// API สำหรับ Quick Receive (Simple)
-// - ใช้ apiClient แทน fetch ตรง ๆ (ตามมาตรฐานโปรเจกต์)
-// - รองรับ X-Idempotency-Key เพื่อกัน double submit
+// src/features/quickReceive/api/quickReceiveApi.js
+// API สำหรับ Quick Receive workflow เท่านั้น
+// - ไม่ใช้ Product Create dropdown/API
 // - ไม่รับ branchId/employeeId จาก FE — ให้ BE ดึงจาก JWT
-// - ชื่อฟิลด์รายการใช้ { productId, quantity, unitCost, vatRate }
-// ===============================================
 
 import apiClient from '@/utils/apiClient';
+import { parseApiError } from '@/utils/uiHelpers';
+
+const stripEmptyParams = (obj = {}) => Object.fromEntries(
+  Object.entries(obj).filter(([, value]) => value !== '' && value !== undefined && value !== null)
+);
 
 /**
  * สร้าง idempotency key สำหรับกันการกดซ้ำ/ยิงซ้ำ
@@ -32,6 +30,29 @@ function normalizeItems(items) {
     .filter((it) => Number.isFinite(it.productId) && it.productId > 0 && Number.isFinite(it.quantity) && it.quantity > 0);
 }
 
+const normalizeBarcodeItems = (items) => {
+  if (!Array.isArray(items)) return [];
+  return items
+    .map((item) => {
+      if (typeof item === 'string') {
+        return { barcode: item, serialNumber: item };
+      }
+      const barcode = item?.barcode ?? item?.serialNumber ?? item?.sn ?? '';
+      const serialNumber = item?.serialNumber ?? item?.barcode ?? item?.sn ?? '';
+      return { ...item, barcode, serialNumber };
+    })
+    .filter((item) => item?.barcode || item?.serialNumber);
+};
+
+export const getQuickReceiveDropdowns = async ({ productTypeId } = {}) => {
+  try {
+    const params = stripEmptyParams({ productTypeId, _ts: Date.now() });
+    const { data } = await apiClient.get('quick-stock/dropdowns', { params });
+    return data;
+  } catch (err) {
+    throw parseApiError(err);
+  }
+};
 
 /**
  * Preview คำนวณยอดและตรวจสอบข้อมูลก่อนบันทึก (ไม่เขียน DB)
@@ -76,3 +97,23 @@ export async function createQuickReceive(payload, opts = {}) {
   }
 }
 
+export const quickReceiveExistingProduct = async (payload = {}) => {
+  try {
+    const sanitizedPayload = { ...payload };
+    delete sanitizedPayload.branchId;
+    delete sanitizedPayload.movementType;
+    delete sanitizedPayload.source;
+
+    const rawItems = sanitizedPayload.items ?? sanitizedPayload.barcodes ?? sanitizedPayload.queue ?? [];
+    sanitizedPayload.items = normalizeBarcodeItems(rawItems);
+    delete sanitizedPayload.barcodes;
+    delete sanitizedPayload.queue;
+
+    const { data } = await apiClient.post('quick-stock/existing', sanitizedPayload);
+    return data;
+  } catch (err) {
+    throw parseApiError(err);
+  }
+};
+
+export const quickStockIntakeExistingApi = quickReceiveExistingProduct;

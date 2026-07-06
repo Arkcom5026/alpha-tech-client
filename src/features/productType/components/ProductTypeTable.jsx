@@ -21,6 +21,11 @@ const ActionButton = ({ className = '', children, ...props }) => (
   </button>
 );
 
+const toCount = (value) => {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : 0;
+};
+
 const ProductTypeTable = ({ data = [], loading, error, page = 1, limit = 20, onEdit, canManage = false }) => {
   const { archiveProductTypeAction, restoreProductTypeAction, isSubmitting } = useProductTypeStore();
   // ❌ ไม่เช็ค auth ใน Table (ให้ Page ตัดสินสิทธิ์)
@@ -58,8 +63,10 @@ const ProductTypeTable = ({ data = [], loading, error, page = 1, limit = 20, onE
           <thead className="text-left text-zinc-600 bg-zinc-50 dark:bg-zinc-800">
             <tr className="border-b border-zinc-200 dark:border-zinc-800">
               <th className="px-4 py-2 w-[60px] text-center">#</th>
-              <th className="px-4 py-2 w-[40%]">ชื่อประเภทสินค้า</th>
-              <th className="px-4 py-2 w-[30%]">หมวดหมู่สินค้า</th>
+              <th className="px-4 py-2 w-[32%]">ชื่อประเภทสินค้า</th>
+              <th className="px-4 py-2 w-[24%]">หมวดหมู่สินค้า</th>
+              <th className="px-4 py-2 w-[90px] text-center">แบรนด์</th>
+              <th className="px-4 py-2 w-[90px] text-center">สินค้า</th>
               <th className="px-4 py-2 w-[10%] text-center">สถานะ</th>
               <th className="px-4 py-2 text-right w-[20%]">การจัดการ</th>
             </tr>
@@ -67,7 +74,7 @@ const ProductTypeTable = ({ data = [], loading, error, page = 1, limit = 20, onE
           <tbody>
             {!loading && rows.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-zinc-500">ไม่พบข้อมูล</td>
+                <td colSpan={7} className="px-4 py-8 text-center text-zinc-500">ไม่พบข้อมูล</td>
               </tr>
             )}
 
@@ -77,6 +84,8 @@ const ProductTypeTable = ({ data = [], loading, error, page = 1, limit = 20, onE
               const canEdit = canManage && !isSystem && isActive;
               const canArchive = canManage && !isSystem && isActive;
               const canRestore = canManage && !isSystem && !isActive;
+              const brandCount = toCount(row.brandCount ?? row?._count?.productTypeBrands ?? row?.brands?.length);
+              const productCount = toCount(row.productCount ?? row?._count?.Product);
 
               return (
                 <tr
@@ -93,6 +102,8 @@ const ProductTypeTable = ({ data = [], loading, error, page = 1, limit = 20, onE
                     </div>
                   </td>
                   <td className="px-4 py-3">{row.category?.name || '-'}</td>
+                  <td className="px-4 py-3 text-center font-medium text-zinc-700 dark:text-zinc-200">{brandCount}</td>
+                  <td className="px-4 py-3 text-center font-medium text-zinc-700 dark:text-zinc-200">{productCount}</td>
                   <td className="px-4 py-3 text-center">
                     {isActive ? (
                       <Badge className="bg-emerald-50 text-emerald-700 ring-emerald-600/20 dark:bg-emerald-900/30 dark:text-emerald-300 dark:ring-emerald-400/30">ใช้งาน</Badge>
@@ -138,7 +149,7 @@ const ProductTypeTable = ({ data = [], loading, error, page = 1, limit = 20, onE
 
             {loading && (
               <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-zinc-500">กำลังโหลดข้อมูล...</td>
+                <td colSpan={7} className="px-4 py-8 text-center text-zinc-500">กำลังโหลดข้อมูล...</td>
               </tr>
             )}
           </tbody>
@@ -165,4 +176,3 @@ const ProductTypeTable = ({ data = [], loading, error, page = 1, limit = 20, onE
 };
 
 export default ProductTypeTable;
-

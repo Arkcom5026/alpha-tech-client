@@ -1,6 +1,3 @@
-
-// branchStore.js
-
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import haversine from 'haversine-distance';
@@ -12,7 +9,6 @@ import {
   updateBranch,
 } from '../api/branchApi';
 
-// ✅ Online branch auto-select must never end as null
 const ONLINE_LAST_BRANCH_KEY = 'online_last_branch_id';
 
 const safeSetLastBranchId = (branchId) => {
@@ -48,14 +44,13 @@ export const useBranchStore = create(
           const data = await getAllBranches();
           set({ branches: Array.isArray(data) ? data : [] });
 
-          // ✅ ensure branch selected after branches loaded
           try {
             await get().ensureSelectedBranchAction();
           } catch (innerErr) {
-            console.warn('⚠️ ensureSelectedBranchAction failed:', innerErr);
+            console.warn('ensureSelectedBranchAction failed:', innerErr);
           }
         } catch (err) {
-          console.error('❌ loadAllBranchesAction error:', err);
+          console.error('loadAllBranchesAction error:', err);
         }
       },
 
@@ -67,10 +62,7 @@ export const useBranchStore = create(
         if (!branch || !branch.id) {
           set({ currentBranch: null, selectedBranchId: null });
         } else {
-          set({
-            currentBranch: branch,
-            selectedBranchId: branch.id,
-          });
+          set({ currentBranch: branch, selectedBranchId: branch.id });
         }
       },
 
@@ -86,15 +78,33 @@ export const useBranchStore = create(
 
       loadAndSetBranchById: async (branchId) => {
         try {
-          const branch = await getBranchById(branchId);
+          const targetId = normalizeNumber(branchId);
+          if (!targetId) return null;
+
+          const cachedBranch = get().currentBranch;
+          if (cachedBranch?.id && Number(cachedBranch.id) === targetId) {
+            set({ currentBranch: cachedBranch, selectedBranchId: targetId });
+
+            Promise.resolve()
+              .then(async () => {
+                const freshBranch = await getBranchById(targetId);
+                if (freshBranch?.id && Number(get().selectedBranchId) === targetId) {
+                  set({ currentBranch: freshBranch, selectedBranchId: freshBranch.id });
+                }
+              })
+              .catch((refreshErr) => {
+                console.warn('background branch refresh failed:', refreshErr);
+              });
+
+            return cachedBranch;
+          }
+
+          const branch = await getBranchById(targetId);
           console.log('loadAndSetBranchById : ', branch);
-          set({
-            currentBranch: branch,
-            selectedBranchId: branch.id,
-          });
+          set({ currentBranch: branch, selectedBranchId: branch.id });
           return branch;
         } catch (err) {
-          console.error('❌ loadAndSetBranchById error:', err);
+          console.error('loadAndSetBranchById error:', err);
           return null;
         }
       },
@@ -120,44 +130,37 @@ export const useBranchStore = create(
         return found ? found.name : 'ไม่พบสาขา';
       },
 
-      // ✅ Online: ensure selected branch always exists (no blocking UI)
       ensureSelectedBranchAction: async () => {
         const state = get();
         const list = Array.isArray(state.branches) ? state.branches : [];
         if (list.length === 0) return false;
 
-        // 1) already selected and exists
         if (state.selectedBranchId && list.some((b) => Number(b.id) === Number(state.selectedBranchId))) {
           return true;
         }
 
-        // 2) currentBranch exists
         if (state.currentBranch?.id && list.some((b) => Number(b.id) === Number(state.currentBranch.id))) {
           state.setSelectedBranchId(state.currentBranch.id);
           return true;
         }
 
-        // 3) last selected (localStorage)
         const last = safeGetLastBranchId();
         if (last && list.some((b) => Number(b.id) === Number(last))) {
           state.setSelectedBranchId(last);
           return true;
         }
 
-        // 4) try geo (best effort)
         try {
           const ok = await state.autoDetectAndSetBranchByGeo();
           if (ok && get().selectedBranchId) return true;
         } catch (_) {}
 
-        // 5) final fallback: first branch
         state.setSelectedBranchId(list[0].id);
         return true;
       },
 
       autoDetectAndSetBranchByGeo: async () => {
         try {
-          console.log('🌐 [DEBUG] เริ่มตรวจหาสาขาจากพิกัด...');
           const { findNearestBranchByLocation, setSelectedBranchId } = get();
           if (!navigator.geolocation) return false;
 
@@ -166,42 +169,32 @@ export const useBranchStore = create(
               (pos) => {
                 const lat = normalizeNumber(pos.coords.latitude);
                 const lng = normalizeNumber(pos.coords.longitude);
-                console.log('📍 [DEBUG] พิกัดผู้ใช้:', { lat, lng });
 
                 if (lat == null || lng == null) {
-                  console.warn('⚠️ [DEBUG] พิกัดไม่ถูกต้อง');
                   resolve(false);
                   return;
                 }
 
                 const nearest = findNearestBranchByLocation(lat, lng);
-                console.log('🏬 [DEBUG] สาขาใกล้ที่สุด:', nearest);
-
                 if (nearest) {
                   set({ currentBranch: nearest });
                   setSelectedBranchId(nearest.id);
-                  console.log('✅ [DEBUG] ตั้งค่าสาขา:', nearest.id);
                   resolve(true);
                 } else {
-                  console.warn('⚠️ [DEBUG] ไม่พบสาขาใกล้เคียง');
                   resolve(false);
                 }
               },
-              (err) => {
-                console.warn('📍 ไม่สามารถใช้ตำแหน่ง:', err);
-                resolve(false);
-              }
+              () => resolve(false)
             );
           });
         } catch (err) {
-          console.error('❌ autoDetectAndSetBranchByGeo error:', err);
+          console.error('autoDetectAndSetBranchByGeo error:', err);
           return false;
         }
       },
 
       findNearestBranchByLocation: (lat, lng) => {
         const { branches } = get();
-        console.log('📦 [DEBUG] findNearestBranchByLocation → branches:', branches);
         if (!branches.length) return null;
 
         const userLat = normalizeNumber(lat);
@@ -219,7 +212,6 @@ export const useBranchStore = create(
 
           const branchLoc = { latitude: bLat, longitude: bLng };
           const dist = haversine(userLoc, branchLoc);
-          console.log(`📏 [DEBUG] ${b.name} ห่าง ${Math.round(dist)} เมตร`);
           if (dist < minDist) {
             minDist = dist;
             nearest = b;
@@ -238,7 +230,7 @@ export const useBranchStore = create(
         try {
           return await getBranchById(id);
         } catch (err) {
-          console.error('❌ getBranchByIdAction error:', err);
+          console.error('getBranchByIdAction error:', err);
           return null;
         }
       },
@@ -247,21 +239,9 @@ export const useBranchStore = create(
         try {
           const newBranch = await createBranch(data);
           set((state) => ({ branches: [...state.branches, newBranch] }));
-
-          try {
-            await fetch('/api/branch-prices/clone', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ sourceBranchId: 2, targetBranchId: newBranch.id }),
-            });
-            console.log('✅ Clone ราคาสำเร็จจากสาขาหลัก');
-          } catch (cloneErr) {
-            console.warn('⚠️ Clone BranchPrice ล้มเหลว:', cloneErr);
-          }
-
           return newBranch;
         } catch (err) {
-          console.error('❌ createBranchAction error:', err);
+          console.error('createBranchAction error:', err);
           throw err;
         }
       },
@@ -269,12 +249,10 @@ export const useBranchStore = create(
       updateBranchAction: async (id, data) => {
         try {
           const updated = await updateBranch(id, data);
-          set((state) => ({
-            branches: state.branches.map((b) => (b.id === id ? updated : b)),
-          }));
+          set((state) => ({ branches: state.branches.map((b) => (b.id === id ? updated : b)) }));
           return updated;
         } catch (err) {
-          console.error('❌ updateBranchAction error:', err);
+          console.error('updateBranchAction error:', err);
           throw err;
         }
       },
@@ -282,11 +260,9 @@ export const useBranchStore = create(
       deleteBranchAction: async (id) => {
         try {
           await deleteBranch(id);
-          set((state) => ({
-            branches: state.branches.filter((b) => b.id !== id),
-          }));
+          set((state) => ({ branches: state.branches.filter((b) => b.id !== id) }));
         } catch (err) {
-          console.error('❌ deleteBranchAction error:', err);
+          console.error('deleteBranchAction error:', err);
           throw err;
         }
       },
@@ -301,9 +277,3 @@ export const useBranchStore = create(
     }
   )
 );
-
-
-
-
-
-

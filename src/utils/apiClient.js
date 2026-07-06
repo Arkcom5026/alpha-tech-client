@@ -80,12 +80,14 @@ const isAuthBypassEndpoint = (url = '') => {
     '/auth/reset-password',
     '/auth/refresh',
     '/auth/logout',
+    '/auth/logout-all',
     'auth/login',
     'auth/register',
     'auth/forgot-password',
     'auth/reset-password',
     'auth/refresh',
     'auth/logout',
+    'auth/logout-all',
   ].some((path) => normalizedUrl.includes(path));
 };
 
@@ -193,6 +195,15 @@ const refreshAccessToken = async () => {
               ? 'ไม่พบ refresh cookie ใน Browser: กรุณา login ใหม่หลังจากล้าง cookie เก่าของ 127.0.0.1/localhost'
               : serverMessage || 'Refresh session ไม่สำเร็จ',
         });
+
+        useAuthStore.setState((state) => ({
+          ...state,
+          token: null,
+          accessToken: null,
+          authChecked: true,
+          isBootstrappingAuth: false,
+          authError: enhanced?.friendlyMessage || 'Refresh session ไม่สำเร็จ',
+        }));
 
         if (import.meta.env?.DEV) {
           console.error('[apiClient] refreshAccessToken failed', {

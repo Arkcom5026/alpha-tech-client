@@ -11,6 +11,17 @@ import { useAuthStore } from '@/features/auth/store/authStore';
 
 let refreshPromise = null;
 
+const AUTH_REFRESH_LOCK_KEY = 'alpha_auth_refresh_lock_v1';
+const AUTH_REFRESH_RESULT_KEY = 'alpha_auth_refresh_result_v1';
+const TAB_ID = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+const REFRESH_LOCK_TTL_MS = 10000;
+const REFRESH_WAIT_TIMEOUT_MS = 12000;
+
+const authDebugEnabled = () => import.meta.env?.DEV && import.meta.env?.VITE_AUTH_DEBUG === 'true';
+const authDebug = (...args) => {
+  if (authDebugEnabled()) console.info('[auth-flow]', ...args);
+};
+
 const ensureTrailingSlash = (value) => {
   const s = String(value || '').trim();
   if (!s) return '';
@@ -20,6 +31,108 @@ const ensureTrailingSlash = (value) => {
 const stripTrailingSlash = (value) => String(value || '').replace(/\/+$/, '');
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const safeReadJson = (key) => {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : null;
+  } catch (_) {
+    return null;
+  }
+};
+
+const safeWriteJson = (key, value) => {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch (_) {}
+};
+
+const safeRemove = (key) => {
+  try {
+    localStorage.removeItem(key);
+  } catch (_) {}
+};
+
+const getActiveRefreshLock = () => {
+  const lock = safeReadJson(AUTH_REFRESH_LOCK_KEY);
+  if (!lock?.owner || !lock?.expiresAt) return null;
+  if (Number(lock.expiresAt) <= Date.now()) {
+    safeRemove(AUTH_REFRESH_LOCK_KEY);
+    return null;
+  }
+  return lock;
+};
+
+const acquireRefreshLock = () => {
+  const activeLock = getActiveRefreshLock();
+  if (activeLock && activeLock.owner !== TAB_ID) return false;
+
+  safeWriteJson(AUTH_REFRESH_LOCK_KEY, {
+    owner: TAB_ID,
+    createdAt: Date.now(),
+    expiresAt: Date.now() + REFRESH_LOCK_TTL_MS,
+  });
+
+  const confirmed = getActiveRefreshLock();
+  return confirmed?.owner === TAB_ID;
+};
+
+const releaseRefreshLock = () => {
+  const activeLock = getActiveRefreshLock();
+  if (!activeLock || activeLock.owner === TAB_ID) {
+    safeRemove(AUTH_REFRESH_LOCK_KEY);
+  }
+};
+
+const publishRefreshResult = (data) => {
+  safeWriteJson(AUTH_REFRESH_RESULT_KEY, {
+    owner: TAB_ID,
+    createdAt: Date.now(),
+    accessToken: data?.accessToken || data?.token || null,
+    session: data?.session || null,
+  });
+};
+
+const waitForCrossTabRefreshResult = async () => {
+  const startedAt = Date.now();
+
+  while (Date.now() - startedAt < REFRESH_WAIT_TIMEOUT_MS) {
+    const lock = getActiveRefreshLock();
+    const result = safeReadJson(AUTH_REFRESH_RESULT_KEY);
+
+    if (!lock) {
+      if (result?.accessToken && Number(result.createdAt || 0) >= startedAt - 1000) {
+        return result;
+      }
+      return null;
+    }
+
+    if (result?.accessToken && Number(result.createdAt || 0) >= startedAt - 1000) {
+      return result;
+    }
+
+    await sleep(80);
+  }
+
+  return null;
+};
+
+const applyRefreshResultToStore = ({ accessToken, session }) => {
+  if (!accessToken) return null;
+
+  useAuthStore.setState((state) => ({
+    ...state,
+    token: accessToken,
+    accessToken,
+    rememberMe: !!session?.rememberMe,
+    session: session || state.session || null,
+    authChecked: true,
+    isBootstrappingAuth: false,
+    authError: null,
+  }));
+
+  return accessToken;
+};
 
 const normalizeEnvBaseURL = (raw) => {
   const value = String(raw || '').trim();
@@ -155,6 +268,15 @@ apiClient.interceptors.request.use(
       applyAuthorizationHeader(config, token);
     }
 
+    if (authDebugEnabled()) {
+      authDebug('request', {
+        method: config.method,
+        url: config.url,
+        hasToken: !!token,
+        isAuthBypass: isAuthBypassEndpoint(config.url),
+      });
+    }
+
     if (import.meta.env?.DEV) {
       // ช่วยตรวจว่า baseURL ไม่หลุดกลับไป 127/api/simple อีก
       if (String(config.baseURL).includes('/api/simple')) {
@@ -169,21 +291,33 @@ apiClient.interceptors.request.use(
 
 const refreshAccessToken = async () => {
   if (!refreshPromise) {
-    const refreshURL = `${getRuntimeBaseURL()}auth/refresh`;
+    refreshPromise = (async () => {
+      const refreshURL = `${getRuntimeBaseURL()}auth/refresh`;
 
-    refreshPromise = axios
-      .post(
-        refreshURL,
-        {},
-        {
-          withCredentials: true,
-          timeout: 30000,
-          headers: {
-            'Content-Type': 'application/json',
-          },
+      if (!acquireRefreshLock()) {
+        authDebug('refresh:wait-cross-tab');
+        const crossTabResult = await waitForCrossTabRefreshResult();
+        if (crossTabResult?.accessToken) {
+          authDebug('refresh:use-cross-tab-result');
+          return applyRefreshResultToStore(crossTabResult);
         }
-      )
-      .then((res) => {
+        authDebug('refresh:cross-tab-timeout-fallback');
+      }
+
+      try {
+        authDebug('refresh:start', { refreshURL });
+        const res = await axios.post(
+          refreshURL,
+          {},
+          {
+            withCredentials: true,
+            timeout: 30000,
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          }
+        );
+
         const nextAccessToken = res?.data?.accessToken || res?.data?.token || null;
 
         if (!nextAccessToken) {
@@ -192,20 +326,12 @@ const refreshAccessToken = async () => {
           });
         }
 
-        useAuthStore.setState((state) => ({
-          ...state,
-          token: nextAccessToken,
-          accessToken: nextAccessToken,
-          rememberMe: !!res?.data?.session?.rememberMe,
-          session: res?.data?.session || state.session || null,
-          authChecked: true,
-          isBootstrappingAuth: false,
-          authError: null,
-        }));
+        publishRefreshResult(res?.data || {});
+        applyRefreshResultToStore({ accessToken: nextAccessToken, session: res?.data?.session || null });
+        authDebug('refresh:success');
 
         return nextAccessToken;
-      })
-      .catch((error) => {
+      } catch (error) {
         const serverMessage =
           error?.response?.data?.message ||
           error?.response?.data?.error ||
@@ -241,10 +367,11 @@ const refreshAccessToken = async () => {
         }
 
         throw enhanced;
-      })
-      .finally(() => {
+      } finally {
+        releaseRefreshLock();
         refreshPromise = null;
-      });
+      }
+    })();
   }
 
   return refreshPromise;

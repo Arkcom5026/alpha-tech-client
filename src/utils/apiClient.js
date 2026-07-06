@@ -279,6 +279,7 @@ const normalizeRequestUrl = (url = '') => {
 
 const isRefreshEndpoint = (url = '') => String(url).includes('/auth/refresh') || String(url).includes('auth/refresh');
 const isLogoutEndpoint = (url = '') => String(url).includes('/auth/logout') || String(url).includes('auth/logout');
+const isAuthMeEndpoint = (url = '') => String(url).includes('/auth/me') || String(url).includes('auth/me');
 
 const isAuthBypassEndpoint = (url = '') => {
   const normalizedUrl = String(url || '');
@@ -356,7 +357,8 @@ apiClient.interceptors.request.use(
     // On hard reload the app intentionally keeps accessToken in memory only.
     // App.jsx starts bootstrapAuthAction(), but pages/stores may fire protected APIs immediately.
     // Without this gate those protected APIs hit 401 and create extra refresh attempts.
-    if (!isAuthBypassEndpoint(config.url)) {
+    // /auth/me is the verifier used by bootstrap itself, so it must not wait on bootstrap.
+    if (!isAuthBypassEndpoint(config.url) && !isAuthMeEndpoint(config.url)) {
       await waitForAuthBootstrapToFinish();
     }
 
@@ -371,6 +373,7 @@ apiClient.interceptors.request.use(
         url: config.url,
         hasToken: !!token,
         isAuthBypass: isAuthBypassEndpoint(config.url),
+        isAuthMe: isAuthMeEndpoint(config.url),
       });
     }
 

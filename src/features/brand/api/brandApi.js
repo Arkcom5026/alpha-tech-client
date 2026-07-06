@@ -36,13 +36,14 @@ const __buildParams = (obj = {}) =>
 // =============================
 // LIST (table / manage page)
 // =============================
-export const getBrands = async ({ q = '', page = 1, pageSize = 20, includeInactive = false } = {}) => {
+export const getBrands = async ({ q = '', page = 1, pageSize = 20, includeInactive = false, productTypeId } = {}) => {
   try {
     const params = __buildParams({
       q: q?.trim() || undefined,
       page,
       pageSize,
       includeInactive: includeInactive ? 'true' : 'false',
+      productTypeId: productTypeId || undefined,
       _ts: Date.now(),
     });
 
@@ -139,6 +140,7 @@ export const getBrandDropdowns = async ({ includeInactive = false, productTypeId
       page: 1,
       pageSize: 1000,
       includeInactive: includeInactive ? 'true' : 'false',
+      productTypeId: productTypeId || undefined,
       _ts: Date.now(),
     });
 
@@ -181,8 +183,5 @@ export default {
   getBrandsForDropdown, // alias
   attachBrandToProductType,
 };
-
-
-
 
 

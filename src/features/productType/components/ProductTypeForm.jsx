@@ -96,6 +96,10 @@ const ProductTypeForm = ({
     return globalOptions.find((item) => Number(item.id) === id) || null;
   }, [globalOptions, selectedGlobalProductTypeId]);
 
+  const templateCountLabel = globalOptionsLoading
+    ? 'กำลังโหลด Template...'
+    : `Template ประเภทสินค้า (${globalOptions.length} รายการ)`;
+
   const handleTemplateModeChange = (nextMode) => {
     setTemplateMode(nextMode);
     setFormError('');
@@ -108,6 +112,7 @@ const ProductTypeForm = ({
   const handleTemplateChange = (event) => {
     const value = event.target.value;
     setSelectedGlobalProductTypeId(value);
+    setFormError('');
 
     const selected = globalOptions.find((item) => String(item.id) === String(value));
     if (selected?.name) {
@@ -201,7 +206,10 @@ const ProductTypeForm = ({
 
       {templateMode === 'template' && mode === 'create' && (
         <div>
-          <label className="block mb-1 text-sm text-zinc-700 dark:text-zinc-300">Template ประเภทสินค้า *</label>
+          <div className="mb-1 flex items-center justify-between gap-2">
+            <label className="text-sm text-zinc-700 dark:text-zinc-300">Template ประเภทสินค้า *</label>
+            <span className="text-xs text-zinc-500 dark:text-zinc-400">{templateCountLabel}</span>
+          </div>
           <select
             value={selectedGlobalProductTypeId}
             onChange={handleTemplateChange}
@@ -213,6 +221,12 @@ const ProductTypeForm = ({
               <option key={item.id} value={item.id}>{item.name}</option>
             ))}
           </select>
+          {selectedGlobalOption?.name && (
+            <div className="mt-2 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-xs text-blue-700 dark:border-blue-900/50 dark:bg-blue-950/30 dark:text-blue-200">
+              จะสร้าง ProductType ของร้านนี้โดยอ้างอิง Template: <span className="font-semibold">{selectedGlobalOption.name}</span>
+              <br />ชื่อด้านล่างสามารถแก้ไขให้เหมาะกับร้านนี้ได้ก่อนบันทึก
+            </div>
+          )}
           {!globalOptionsLoading && globalOptions.length === 0 && (
             <p className="mt-1 text-sm text-amber-600">ยังไม่มี Template ประเภทสินค้าสำหรับประเภทธุรกิจนี้</p>
           )}

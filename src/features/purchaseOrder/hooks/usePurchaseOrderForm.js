@@ -1,23 +1,102 @@
 // src/features/purchaseOrder/hooks/usePurchaseOrderForm.js
+// Purchase Order Form Hook
+//
+// Module isolation rule:
+// - Purchase Order flow must not import/use Product store or Supplier store.
+// - Purchase Order flow resolves current branch from authenticated employee state.
+// - No shopSlug -> branch profile mapping.
+// - No /branch-prices/profile-by-slug request.
 
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import apiClient from '@/utils/apiClient'; // 🟢 เรียกใช้งานอินสแตนซ์ศูนย์กลางล็อกพอร์ต 5000 แทนการดึง axios สด
+import apiClient from '@/utils/apiClient';
 
-// อัปเกรดสัญญา Validation Contract ให้เรียกใช้ออบเจกต์จริงตามมาตรฐานวิศวกรรมตัวดั้งเดิม
 import { purchaseOrderSchema } from '../schema/purchaseOrderSchema';
-
-// stores
 import { usePurchaseOrderStore } from '../store/purchaseOrderStore';
-import useProductStore from '@/features/product/store/productStore';
-import useSupplierStore from '@/features/supplier/store/supplierStore';
+import { useAuthStore } from '@/features/auth/store/authStore';
+
+const toPositiveInt = (value) => {
+  const n = Number(value);
+  return Number.isInteger(n) && n > 0 ? n : null;
+};
+
+const pickArray = (payload) => {
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.items)) return payload.items;
+  if (Array.isArray(payload?.data)) return payload.data;
+  if (Array.isArray(payload?.data?.items)) return payload.data.items;
+  if (Array.isArray(payload?.rows)) return payload.rows;
+  if (Array.isArray(payload?.records)) return payload.records;
+  return [];
+};
+
+const normalizeProductTypeOption = (row) => {
+  const id = toPositiveInt(row?.id ?? row?.productTypeId ?? row?.typeId);
+  const name = String(row?.name ?? row?.label ?? row?.title ?? '').trim();
+  if (!id || !name) return null;
+  return {
+    ...row,
+    id,
+    name,
+    active: row?.active ?? row?.isActive ?? true,
+  };
+};
+
+const normalizeBrandOption = (row) => {
+  const id = toPositiveInt(row?.id ?? row?.brandId);
+  const name = String(row?.name ?? row?.label ?? row?.title ?? '').trim();
+  if (!id || !name) return null;
+  return {
+    ...row,
+    id,
+    name,
+    active: row?.active ?? row?.isActive ?? true,
+  };
+};
+
+const normalizeProductRow = (row) => {
+  const id = toPositiveInt(row?.id ?? row?.productId);
+  if (!id) return null;
+
+  const brandName =
+    row?.brand?.name ??
+    row?.brandName ??
+    row?.brand ??
+    row?.productProfile ??
+    '-';
+
+  return {
+    ...row,
+    id,
+    productId: id,
+    name: row?.name ?? row?.title ?? '-',
+    category: row?.category?.name ?? row?.categoryName ?? row?.category ?? '-',
+    productType: row?.productType?.name ?? row?.productTypeName ?? row?.productType ?? '-',
+    productProfile: brandName,
+    brandId: row?.brand?.id ?? row?.brandId ?? null,
+    brandName,
+    productTemplate: row?.productTemplate?.name ?? row?.templateName ?? row?.productTemplate ?? '-',
+    model: row?.model ?? row?.spec ?? '-',
+    description: row?.description ?? '',
+    costPrice: Number(row?.costPrice ?? row?.cost ?? row?.receivedCost ?? 0) || 0,
+  };
+};
 
 export const usePurchaseOrderForm = (mode, searchText) => {
   const { id, shopSlug } = useParams();
   const navigate = useNavigate();
 
-  // Local States
-  const [currentBranchId, setCurrentBranchId] = useState(null);
+  const authBranchId = useAuthStore((s) => (
+    s?.employee?.branchId ??
+    s?.employee?.branch?.id ??
+    s?.currentEmployee?.branchId ??
+    s?.currentEmployee?.branch?.id ??
+    s?.branch?.id ??
+    s?.branchId
+  ));
+
+  const currentBranchId = toPositiveInt(authBranchId);
+
   const [supplier, setSupplier] = useState(null);
   const [creditHint, setCreditHint] = useState(null);
   const [orderDate, setOrderDate] = useState(() => new Date().toISOString().substring(0, 10));
@@ -27,51 +106,174 @@ export const usePurchaseOrderForm = (mode, searchText) => {
   const [submitError, setSubmitError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [committedSearchText, setCommittedSearchText] = useState('');
-  
+
+  const [supplierList, setSupplierList] = useState([]);
+  const [suppliersLoading, setSuppliersLoading] = useState(false);
+
+  const [dropdowns, setDropdowns] = useState({
+    productTypes: [],
+    brands: [],
+  });
+  const [dropdownsLoading, setDropdownsLoading] = useState(false);
+
+  const [fetchedProducts, setFetchedProducts] = useState([]);
+  const [productsLoading, setProductsLoading] = useState(false);
+
   const [filter, setFilter] = useState({
-    categoryId: '',
     productTypeId: '',
     brandId: '',
   });
 
-  // Stores Binding
-  const { suppliers: supplierList = [] } = useSupplierStore();
-  const { purchaseOrder, loading, fetchPurchaseOrderById, createPurchaseOrder, updatePurchaseOrder } = usePurchaseOrderStore();
-  const { fetchProductsAction, products: fetchedProducts = [], dropdowns = {}, ensureDropdownsAction } = useProductStore();
+  const {
+    purchaseOrder,
+    loading: poLoading,
+    fetchPurchaseOrderById,
+    createPurchaseOrder,
+    updatePurchaseOrder,
+  } = usePurchaseOrderStore();
 
-  // 1. Tenant Hydration: แกะรหัสชื่อร้านโดยควบคุมพอร์ตความปลอดภัย 5000
+  // Branch guard: use employee login branch only.
   useEffect(() => {
-    const fetchBranchIdBySlug = async () => {
-      try {
-        const response = await apiClient.get(`/branch-prices/profile-by-slug/${shopSlug}`);
-        if (response.data?.id) {
-          setCurrentBranchId(Number(response.data.id));
-        }
-      } catch (err) {
-        console.error('[PO Form Tenant Mapping Error]', err);
-        setSubmitError('ล้มเหลว: ไม่สามารถระบุเลขรหัสประจำร้านค้าจาก Database ได้');
-      }
+    if (!currentBranchId) {
+      setSubmitError('ไม่พบข้อมูลสาขาของพนักงาน กรุณาเข้าสู่ระบบใหม่');
+    } else {
+      setSubmitError((prev) =>
+        prev === 'ไม่พบข้อมูลสาขาของพนักงาน กรุณาเข้าสู่ระบบใหม่' ? '' : prev
+      );
+    }
+  }, [currentBranchId]);
+
+  // Load suppliers owned by Purchase flow.
+  useEffect(() => {
+    if (!currentBranchId) {
+      setSupplierList([]);
+      return;
+    }
+
+    let alive = true;
+    setSuppliersLoading(true);
+
+    apiClient
+      .get('suppliers', {
+        params: {
+          branchId: currentBranchId,
+          _ts: Date.now(),
+        },
+      })
+      .then(({ data }) => {
+        if (!alive) return;
+        setSupplierList(pickArray(data));
+      })
+      .catch((err) => {
+        if (!alive) return;
+        console.error('[PO] load suppliers failed:', err);
+        setSupplierList([]);
+      })
+      .finally(() => {
+        if (alive) setSuppliersLoading(false);
+      });
+
+    return () => {
+      alive = false;
     };
-    if (shopSlug) fetchBranchIdBySlug();
-  }, [shopSlug]);
+  }, [currentBranchId]);
 
-  // 2. Ensure Dropdowns Ready
+  // Load purchase-owned dropdown options without Product store.
   useEffect(() => {
-    try { ensureDropdownsAction(); } catch { /* no-op */ }
-  }, [ensureDropdownsAction]);
+    if (!currentBranchId) return;
 
+    let alive = true;
+    setDropdownsLoading(true);
+
+    Promise.allSettled([
+      apiClient.get('product-types/dropdowns', {
+        params: {
+          includeInactive: 'false',
+          _ts: Date.now(),
+        },
+      }),
+      apiClient.get('brands/dropdowns', {
+        params: {
+          includeInactive: 'false',
+          _ts: Date.now(),
+        },
+      }),
+    ])
+      .then((results) => {
+        if (!alive) return;
+
+        const productTypesResult = results[0];
+        const brandsResult = results[1];
+
+        const productTypes =
+          productTypesResult.status === 'fulfilled'
+            ? pickArray(productTypesResult.value?.data).map(normalizeProductTypeOption).filter(Boolean)
+            : [];
+
+        const brands =
+          brandsResult.status === 'fulfilled'
+            ? pickArray(brandsResult.value?.data).map(normalizeBrandOption).filter(Boolean)
+            : [];
+
+        setDropdowns({
+          productTypes,
+          brands,
+        });
+      })
+      .catch((err) => {
+        if (!alive) return;
+        console.error('[PO] load dropdowns failed:', err);
+        setDropdowns({ productTypes: [], brands: [] });
+      })
+      .finally(() => {
+        if (alive) setDropdownsLoading(false);
+      });
+
+    return () => {
+      alive = false;
+    };
+  }, [currentBranchId]);
+
+  // Reload brand options when ProductType changes.
   useEffect(() => {
-    try {
-      if (filter.categoryId) {
-        ensureDropdownsAction({ categoryId: Number(filter.categoryId) });
-      }
-    } catch { /* no-op */ }
-  }, [filter.categoryId, ensureDropdownsAction]);
+    const productTypeId = toPositiveInt(filter.productTypeId);
+    if (!currentBranchId || !productTypeId) return;
 
-  // 3. Load Data for Edit Mode
+    let alive = true;
+
+    apiClient
+      .get('brands/dropdowns', {
+        params: {
+          productTypeId,
+          includeInactive: 'false',
+          _ts: Date.now(),
+        },
+      })
+      .then(({ data }) => {
+        if (!alive) return;
+        const brands = pickArray(data).map(normalizeBrandOption).filter(Boolean);
+        setDropdowns((prev) => ({ ...prev, brands }));
+      })
+      .catch((err) => {
+        if (!alive) return;
+        console.error('[PO] load brands by product type failed:', err);
+      });
+
+    return () => {
+      alive = false;
+    };
+  }, [currentBranchId, filter.productTypeId]);
+
+  // Load data for edit mode.
   useEffect(() => {
     if (mode === 'edit' && id) {
-      (async () => { try { await fetchPurchaseOrderById(id); } catch { /* no-op */ } })();
+      (async () => {
+        try {
+          await fetchPurchaseOrderById(id);
+        } catch {
+          // no-op
+        }
+      })();
     }
   }, [mode, id, fetchPurchaseOrderById]);
 
@@ -82,6 +284,7 @@ export const usePurchaseOrderForm = (mode, searchText) => {
       setNote(purchaseOrder.note || '');
       const enriched = (purchaseOrder.items || []).map((item) => ({
         id: item.productId,
+        productId: item.productId,
         name: item.product?.name || '-',
         model: item.product?.model || '-',
         category: item.product?.category || '-',
@@ -95,31 +298,61 @@ export const usePurchaseOrderForm = (mode, searchText) => {
     }
   }, [mode, purchaseOrder, orderDate]);
 
-  // 4. Supplier Credit Watcher
+  // Supplier credit watcher.
   useEffect(() => {
     if (!supplier?.id) {
       setCreditHint(null);
       return;
     }
-    const s = supplierList.find((x) => x.id === supplier.id);
+
+    const s = supplierList.find((x) => Number(x.id) === Number(supplier.id));
     setCreditHint(s ? { used: s.creditBalance || 0, total: s.creditLimit || 0 } : null);
   }, [supplier, supplierList]);
 
-  // 5. Products Multi-Filter Search Watcher
+  // Product search owned by Purchase flow.
   useEffect(() => {
-    const hasFilter = filter.categoryId || filter.productTypeId || filter.brandId;
-    if (hasFilter || committedSearchText) {
-      const params = {
-        categoryId: filter.categoryId ? Number(filter.categoryId) : undefined,
-        productTypeId: filter.productTypeId ? Number(filter.productTypeId) : undefined,
-        brandId: filter.brandId ? Number(filter.brandId) : undefined,
-        searchText: committedSearchText || undefined,
-      };
-      try { fetchProductsAction(params); } catch { /* no-op */ }
-    }
-  }, [filter, committedSearchText, fetchProductsAction]);
+    const productTypeId = toPositiveInt(filter.productTypeId);
+    const brandId = toPositiveInt(filter.brandId);
+    const search = (committedSearchText || '').trim();
 
-  // Handlers
+    const hasFilter = productTypeId || brandId || search;
+    if (!currentBranchId || !hasFilter) {
+      setFetchedProducts([]);
+      return;
+    }
+
+    let alive = true;
+    setProductsLoading(true);
+
+    apiClient
+      .get('products', {
+        params: {
+          productTypeId: productTypeId || undefined,
+          brandId: brandId || undefined,
+          search: search || undefined,
+          take: 50,
+          _ts: Date.now(),
+        },
+      })
+      .then(({ data }) => {
+        if (!alive) return;
+        const rows = pickArray(data).map(normalizeProductRow).filter(Boolean);
+        setFetchedProducts(rows);
+      })
+      .catch((err) => {
+        if (!alive) return;
+        console.error('[PO] product search failed:', err);
+        setFetchedProducts([]);
+      })
+      .finally(() => {
+        if (alive) setProductsLoading(false);
+      });
+
+    return () => {
+      alive = false;
+    };
+  }, [currentBranchId, filter, committedSearchText]);
+
   const handleCancel = useCallback(() => {
     navigate(`/${shopSlug}/pos/purchases`);
   }, [navigate, shopSlug]);
@@ -127,9 +360,14 @@ export const usePurchaseOrderForm = (mode, searchText) => {
   const handleFilterChange = useCallback((patch) => {
     setFilter((prev) => {
       const updated = { ...prev, ...patch };
-      if (Object.prototype.hasOwnProperty.call(patch, 'categoryId') && patch.categoryId !== prev.categoryId) {
-        updated.productTypeId = '';
+
+      if (
+        Object.prototype.hasOwnProperty.call(patch, 'productTypeId') &&
+        patch.productTypeId !== prev.productTypeId
+      ) {
+        updated.brandId = '';
       }
+
       return updated;
     });
   }, []);
@@ -140,16 +378,21 @@ export const usePurchaseOrderForm = (mode, searchText) => {
 
   const addProductToOrder = useCallback((product) => {
     setProducts((prev) => {
-      if (prev.some((p) => p.id === product.id)) return prev;
+      const nextProductId = Number(product.productId || product.id);
+      if (prev.some((p) => Number(p.productId || p.id) === nextProductId)) return prev;
+
       return [
         ...prev,
         {
-          id: product.id,
+          id: nextProductId,
+          productId: nextProductId,
           name: product.name || '-',
           model: product.model || '-',
           category: product.category || '-',
           productType: product.productType || '-',
           productProfile: product.productProfile || '-',
+          brandId: product.brandId ?? null,
+          brandName: product.brandName || product.productProfile || '-',
           productTemplate: product.productTemplate || '-',
           quantity: product.quantity || 1,
           costPrice: product.costPrice || 0,
@@ -162,12 +405,16 @@ export const usePurchaseOrderForm = (mode, searchText) => {
     setSubmitError('');
     if (isSubmitting) return;
 
-    // ตรวจสอบข้อมูลความถูกต้องก่อนยิงส่งบันทึก
+    if (!currentBranchId) {
+      setSubmitError('ไม่พบข้อมูลสาขาของพนักงาน กรุณาเข้าสู่ระบบใหม่');
+      return;
+    }
+
     if (typeof purchaseOrderSchema?.validate === 'function') {
       const validation = purchaseOrderSchema.validate({
         branchId: currentBranchId,
         supplierId: supplier?.id,
-        products: products,
+        products,
       });
 
       if (!validation.isValid) {
@@ -181,7 +428,7 @@ export const usePurchaseOrderForm = (mode, searchText) => {
 
     const safeItems = products
       .map((p) => ({
-        productId: Number(p.id),
+        productId: Number(p.productId || p.id),
         quantity: Number.parseInt(String(p.quantity ?? '1'), 10),
         costPrice: Number.parseFloat(String(p.costPrice ?? '0')),
       }))
@@ -209,17 +456,54 @@ export const usePurchaseOrderForm = (mode, searchText) => {
       }
     } catch (e) {
       console.error('[PO] submit error:', e);
-      const msg = e?.response?.data?.error || e?.response?.data?.message || 'เกิดข้อผิดพลาดระหว่างบันทึก กรุณาลองใหม่อีกครั้ง';
+      const msg =
+        e?.response?.data?.error ||
+        e?.response?.data?.message ||
+        'เกิดข้อผิดพลาดระหว่างบันทึก กรุณาลองใหม่อีกครั้ง';
       setSubmitError(String(msg));
     } finally {
       setIsSubmitting(false);
     }
-  }, [currentBranchId, supplier, products, orderDate, note, mode, id, shouldPrint, updatePurchaseOrder, createPurchaseOrder, navigate, isSubmitting, shopSlug]);
+  }, [
+    currentBranchId,
+    supplier,
+    products,
+    orderDate,
+    note,
+    mode,
+    id,
+    shouldPrint,
+    updatePurchaseOrder,
+    createPurchaseOrder,
+    navigate,
+    isSubmitting,
+    shopSlug,
+  ]);
 
   return {
-    loading, supplier, setSupplier, creditHint, orderDate, setOrderDate,
-    products, setProducts, filter, handleFilterChange, handleCommitSearch,
-    fetchedProducts, addProductToOrder, shouldPrint, setShouldPrint,
-    submitError, handleCancel, handleSubmit, isSubmitting, dropdowns
+    loading: poLoading || dropdownsLoading || suppliersLoading,
+    supplier,
+    setSupplier,
+    suppliers: supplierList,
+    suppliersLoading,
+    creditHint,
+    orderDate,
+    setOrderDate,
+    products,
+    setProducts,
+    filter,
+    handleFilterChange,
+    handleCommitSearch,
+    fetchedProducts,
+    productsLoading,
+    addProductToOrder,
+    shouldPrint,
+    setShouldPrint,
+    submitError,
+    handleCancel,
+    handleSubmit,
+    isSubmitting,
+    dropdowns,
+    currentBranchId,
   };
 };

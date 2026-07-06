@@ -1,20 +1,14 @@
-
-
-
-
-
-// ✅ src/features/stock/brand/api/brandApi.js
+// src/features/brand/api/brandApi.js
 import apiClient from '@/utils/apiClient';
 import { parseApiError } from '@/utils/uiHelpers';
 
 // =============================
-// Mappers (compat active -> isActive)
+// Mappers
 // =============================
 const mapBrandFromApi = (b) => {
   if (!b || typeof b !== 'object') return b;
   const out = { ...b };
 
-  // compat: BE บางจุดอาจยังส่ง `active` มา
   if (Object.prototype.hasOwnProperty.call(out, 'active') && !Object.prototype.hasOwnProperty.call(out, 'isActive')) {
     out.isActive = !!out.active;
   }
@@ -29,12 +23,51 @@ const mapBrandsPayloadFromApi = (payload) => {
   return mapBrandFromApi(payload);
 };
 
-// helper: build params แบบเดียวกับ productApi (ไม่ส่งค่า empty)
+const mapProductTypeFromApi = (item) => {
+  if (!item || typeof item !== 'object') return item;
+  return {
+    ...item,
+    id: Number(item.id),
+    name: item.name || item.label || '-',
+    active: item.active ?? item.isActive ?? true,
+  };
+};
+
 const __buildParams = (obj = {}) =>
   Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== '' && v !== undefined && v !== null));
 
+const __extractArray = (mapped) => {
+  if (Array.isArray(mapped)) return mapped;
+  if (Array.isArray(mapped?.items)) return mapped.items;
+  if (Array.isArray(mapped?.data)) return mapped.data;
+  return [];
+};
+
 // =============================
-// LIST (table / manage page)
+// Runtime ProductTypes for Brand page
+// ดึง ProductType ของสาขาปัจจุบันจาก BE module ใหม่โดยตรง
+// ไม่ใช้ productTypeStore เก่าในหน้านี้
+// =============================
+export const getRuntimeProductTypes = async ({ includeInactive = false, pageSize = 100, q = '' } = {}) => {
+  try {
+    const params = __buildParams({
+      page: 1,
+      limit: pageSize,
+      pageSize,
+      search: q?.trim() || undefined,
+      includeInactive: includeInactive ? 'true' : 'false',
+      _ts: Date.now(),
+    });
+
+    const { data } = await apiClient.get('product-types', { params });
+    return __extractArray(data).map(mapProductTypeFromApi).filter((item) => item?.id && item?.name);
+  } catch (err) {
+    throw parseApiError(err);
+  }
+};
+
+// =============================
+// LIST
 // =============================
 export const getBrands = async ({ q = '', page = 1, pageSize = 20, includeInactive = false, productTypeId } = {}) => {
   try {
@@ -47,7 +80,6 @@ export const getBrands = async ({ q = '', page = 1, pageSize = 20, includeInacti
       _ts: Date.now(),
     });
 
-    // ✅ no leading slash
     const { data } = await apiClient.get('brands', { params });
     return mapBrandsPayloadFromApi(data);
   } catch (err) {
@@ -55,9 +87,6 @@ export const getBrands = async ({ q = '', page = 1, pageSize = 20, includeInacti
   }
 };
 
-// =============================
-// GET BY ID (optional helper)
-// =============================
 export const getBrandById = async (id) => {
   try {
     const { data } = await apiClient.get(`brands/${id}`, { params: { _ts: Date.now() } });
@@ -67,9 +96,6 @@ export const getBrandById = async (id) => {
   }
 };
 
-// =============================
-// CREATE / UPDATE
-// =============================
 export const createBrand = async ({ name }) => {
   try {
     const payload = { name: name?.trim() || '' };
@@ -90,30 +116,14 @@ export const updateBrand = async ({ id, name }) => {
   }
 };
 
-// =============================
-// TOGGLE ACTIVE
-// =============================
 export const toggleBrandActive = async ({ id, isActive }) => {
   try {
-    // ส่ง active ให้ตรง Prisma + ส่ง isActive เผื่อ BE รองรับ compat
     const payload = { active: !!isActive, isActive: !!isActive };
     const { data } = await apiClient.patch(`brands/${id}/toggle`, payload);
     return mapBrandsPayloadFromApi(data);
   } catch (err) {
     throw parseApiError(err);
   }
-};
-
-// =============================
-// DROPDOWNS (ตามแนวทาง productApi)
-// - พยายามเรียก endpoint เฉพาะ: GET brands/dropdowns
-// - ถ้า BE ยังไม่มี endpoint นี้ → fallback ไปใช้ list (pageSize=1000)
-// - คืนค่าเป็น array เสมอ
-// =============================
-const __extractArray = (mapped) => {
-  if (Array.isArray(mapped)) return mapped;
-  if (Array.isArray(mapped?.items)) return mapped.items;
-  return [];
 };
 
 export const getBrandDropdowns = async ({ includeInactive = false, productTypeId } = {}) => {
@@ -123,18 +133,15 @@ export const getBrandDropdowns = async ({ includeInactive = false, productTypeId
     _ts: Date.now(),
   });
 
-  // 1) preferred: dedicated dropdown endpoint
   try {
     const { data } = await apiClient.get('brands/dropdowns', { params });
     const mapped = mapBrandsPayloadFromApi(data);
     return __extractArray(mapped);
   } catch (err) {
-    // fallback เฉพาะกรณี "ไม่พบ endpoint" (404)
     const status = err?.response?.status;
     if (status !== 404) throw parseApiError(err);
   }
 
-  // 2) fallback: list endpoint (stable, but heavier)
   try {
     const listParams = __buildParams({
       page: 1,
@@ -155,13 +162,48 @@ export const getBrandDropdowns = async ({ includeInactive = false, productTypeId
 // =============================
 // MAPPING: ProductType ↔ Brand
 // =============================
-export const attachBrandToProductType = async ({ productTypeId, brandId }) => {
+export const getProductTypeBrandLinks = async ({ productTypeId, includeInactive = false } = {}) => {
   try {
-    const payload = {
-      productTypeId: Number(productTypeId),
-      brandId: Number(brandId),
-    };
+    const params = __buildParams({
+      productTypeId: Number(productTypeId) || undefined,
+      includeInactive: includeInactive ? 'true' : 'false',
+      _ts: Date.now(),
+    });
+    const { data } = await apiClient.get('brands/product-type-brands', { params });
+    return data;
+  } catch (err) {
+    const status = err?.response?.status;
+    if (status !== 404) throw parseApiError(err);
+  }
 
+  try {
+    const params = __buildParams({
+      productTypeId: Number(productTypeId) || undefined,
+      includeInactive: includeInactive ? 'true' : 'false',
+      _ts: Date.now(),
+    });
+    const { data } = await apiClient.get('product-type-brands', { params });
+    return data;
+  } catch (err) {
+    throw parseApiError(err);
+  }
+};
+
+export const attachBrandToProductType = async ({ productTypeId, brandId }) => {
+  const payload = {
+    productTypeId: Number(productTypeId),
+    brandId: Number(brandId),
+  };
+
+  try {
+    const { data } = await apiClient.post('brands/product-type-brands', payload);
+    return data;
+  } catch (err) {
+    const status = err?.response?.status;
+    if (status !== 404) throw parseApiError(err);
+  }
+
+  try {
     const { data } = await apiClient.post('product-type-brands', payload);
     return data;
   } catch (err) {
@@ -169,19 +211,35 @@ export const attachBrandToProductType = async ({ productTypeId, brandId }) => {
   }
 };
 
-// Alias (backward-compatible)
+export const detachBrandFromProductType = async ({ id }) => {
+  try {
+    const { data } = await apiClient.delete(`brands/product-type-brands/${id}`);
+    return data;
+  } catch (err) {
+    const status = err?.response?.status;
+    if (status !== 404) throw parseApiError(err);
+  }
+
+  try {
+    const { data } = await apiClient.delete(`product-type-brands/${id}`);
+    return data;
+  } catch (err) {
+    throw parseApiError(err);
+  }
+};
+
 export const getBrandsForDropdown = getBrandDropdowns;
 
-// ✅ default export for backward-compatible imports
 export default {
+  getRuntimeProductTypes,
   getBrands,
   getBrandById,
   createBrand,
   updateBrand,
   toggleBrandActive,
   getBrandDropdowns,
-  getBrandsForDropdown, // alias
+  getBrandsForDropdown,
+  getProductTypeBrandLinks,
   attachBrandToProductType,
+  detachBrandFromProductType,
 };
-
-

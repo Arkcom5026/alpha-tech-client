@@ -6576,3 +6576,321 @@ product/create
 100%
 
 ผมเห็นด้วยกับแนวทางนี้เต็มที่ครับ เพราะจะทำให้ระบบของเราเป็น Domain-based Architecture อย่างแท้จริง และเมื่อเราทำ product/edit, product/search, quick-stock ต่อ ก็จะใช้รูปแบบเดียวกันทั้งระบบ ทำให้ดูแลและขยายระบบในระยะยาวได้ง่ายมากครับ
+
+
+FE:
+docs/P1_QUICKSTOCK_RUNTIME_PROGRESS.md
+commit: 6d0fb237
+
+BE:
+docs/P1_QUICKSTOCK_RUNTIME_PROGRESS.md
+commit: 0601e2f
+
+เปิด Task ใหม่ต่อได้จาก 2 ไฟล์นี้เลยครับ ทั้งสถานะปัจจุบัน, จุดที่เสร็จแล้ว, จุดที่ต้องทำต่อ, และลำดับ commit ถัดไปใส่ไว้ครบแล้วครับ.
+
+
+-------------
+
+Authentication Stabilization — Runtime Lessons (Locked)
+1. Bootstrap Authority
+
+Bootstrap มีหน้าที่เพียง
+
+Restore Authentication Context
+Restore Runtime Identity
+
+Bootstrap ต้องไม่ รอการโหลดข้อมูลธุรกิจ (Business Data)
+
+Authentication Ready และ Business Ready เป็นคนละสถานะ
+
+2. Critical Path Rule
+
+Critical Path ของ Authentication จำกัดอยู่เพียง
+
+Refresh Token
+        ↓
+Access Token
+        ↓
+/auth/me
+        ↓
+Auth Ready
+
+สิ่งต่อไปนี้ ไม่อยู่ใน Critical Path
+
+Branch
+Permission
+Product
+Organization Data
+Dashboard Data
+
+โหลดภายหลัง (Background) ได้
+
+3. Bootstrap Deadlock Prevention
+
+ห้ามให้ API ที่ใช้ตรวจสอบ Authentication
+
+/auth/me
+
+ถูกบังคับให้รอ
+
+isBootstrappingAuth
+
+เพราะจะเกิด
+
+Bootstrap
+      ↓
+wait
+      ↓
+/auth/me
+      ↓
+wait bootstrap
+
+ซึ่งเป็น Circular Dependency
+
+แนวทางมาตรฐานคือ
+
+/auth/me
+
+สามารถผ่าน Bootstrap Gate ได้ แต่ยังใช้ Authorization Header ตามปกติ
+
+4. Runtime Gate Principle
+
+Bootstrap Gate
+
+มีหน้าที่
+
+กัน Protected API
+
+ไม่ให้ยิงก่อน Authentication พร้อม
+
+ไม่ใช่
+
+กัน Authentication API
+
+เอง
+
+Authentication API คือผู้สร้าง Runtime
+
+ไม่ใช่ผู้รอ Runtime
+
+5. Engineering Decision
+
+Authentication Flow ปัจจุบันถือว่า Stable เมื่อ
+
+Refresh Token ทำงาน
+Silent Refresh ทำงาน
+Cross-tab Refresh ทำงาน
+Refresh Queue ทำงาน
+/auth/me ไม่เกิด Bootstrap Deadlock
+ไม่พบ warning
+auth bootstrap wait timed out
+
+จากการทดสอบใช้งาน
+
+ผมคิดว่าหัวข้อนี้เหมาะจะอยู่ในส่วน Locked Engineering Decisions ของ Blueprint P1 มากที่สุด เพราะเป็น "หลักการออกแบบ" ที่ได้จากการแก้ปัญหาจริง ไม่ใช่เพียงรายละเอียดของ implementation และจะช่วยให้การพัฒนาในอนาคตยังคงรักษาแนวทางนี้ไว้ได้ครับ
+
+------------
+
+UB — AlphaTech Disaster Recovery & Business Continuity
+
+Status: IN PROGRESS 🔒
+
+Mission
+
+สร้างระบบ Backup และ Restore ที่สามารถกู้คืนระบบ AlphaTech ทั้งหมดได้อย่างเชื่อถือได้ โดยไม่ขึ้นกับเครื่องพัฒนา และสามารถทดสอบได้จริง
+
+Success Criteria
+
+เมื่อถึงสถานะ "Completed" จะต้องทำได้ทั้งหมดดังนี้
+
+Phase 1 — Backup Engine ✅ (ใกล้เสร็จ)
+Backup ทุกตาราง
+Backup Sequence
+Backup Constraint
+Backup Manifest
+SHA256 Verification
+PostgreSQL Type-aware
+Generic Self-reference FK
+Verify Backup
+
+สถานะปัจจุบัน: ผ่านการทดสอบแล้ว
+
+Phase 2 — Restore Engine ✅ (ผ่านแล้ว)
+Restore ลง DB ว่าง
+Prisma Schema
+Restore Data
+Verify
+ไม่พึ่ง psql
+ใช้ Node.js อย่างเดียว
+
+สถานะปัจจุบัน: ผ่านการทดสอบแล้ว
+
+Phase 3 — Integrity Verification
+
+สิ่งที่ยังต้องเพิ่ม
+
+เปรียบเทียบจำนวนแถวทุกตาราง
+เปรียบเทียบ Sequence
+ตรวจ FK หลัง Restore
+ตรวจ NULL ที่ไม่ควรเป็น NULL
+รายงานผลเป็น Report
+
+เช่น
+
+Product             OK
+BranchPrice         OK
+StockItem           OK
+Sale                OK
+SaleItem            OK
+
+Result
+
+PASS
+Phase 4 — Automated Backup
+
+เป้าหมาย
+
+ทุก 6 ชั่วโมง
+
+↓
+
+Backup
+
+↓
+
+Verify
+
+↓
+
+Upload Cloud
+
+↓
+
+Log
+
+ไม่มีคนกด
+
+ไม่มีเครื่องเปิด
+
+ทำงานเองทั้งหมด
+
+Phase 5 — Cloud Backup
+
+เก็บหลายชุด เช่น
+
+Today
+Yesterday
+7 days
+30 days
+Monthly
+
+พร้อม Retention Policy
+
+Phase 6 — Recovery Drill
+
+อันนี้สำคัญมาก
+
+ทำการทดสอบจริงเป็นระยะ
+
+สร้าง DB ใหม่
+
+↓
+
+Restore
+
+↓
+
+Deploy
+
+↓
+
+เปิด POS
+
+↓
+
+Login
+
+↓
+
+ขายสินค้า
+
+↓
+
+จบ
+
+ถ้าผ่านทั้งหมด แสดงว่า Recovery ใช้งานได้จริง
+
+Phase 7 — One-click Recovery
+
+สุดท้าย
+
+เลือก Backup
+
+↓
+
+Restore
+
+↓
+
+Verify
+
+↓
+
+Deploy
+
+↓
+
+Done
+
+ไม่ต้องพิมพ์คำสั่ง
+
+Definition of Done
+
+ผมเสนอว่า วาระนี้จะถือว่าจบ ก็ต่อเมื่อผ่านเกณฑ์ทั้งหมดนี้
+
+✅ Backup อัตโนมัติทุก 6 ชั่วโมง
+✅ ไม่ผูกกับเครื่องใดเครื่องหนึ่ง
+✅ Backup ถูก Verify ทุกครั้ง
+✅ เก็บไฟล์หลายรุ่นตามนโยบาย
+✅ Restore ลงฐานใหม่ได้จริง
+✅ ระบบ AlphaTech ใช้งานบนฐานที่ Restore แล้วได้ครบ (Login, POS, Sales, Purchase, Reports ฯลฯ)
+✅ มี Recovery Drill ที่ทำซ้ำได้
+✅ มีเอกสารขั้นตอนและรายงานผลการทดสอบ
+
+ผมอยากเพิ่มหลักการอีกข้อหนึ่งไว้เป็นแกนของวาระนี้ เพราะสะท้อนสิ่งที่เราพิสูจน์กันมาตลอดวันนี้:
+
+Backup จะถือว่าสำเร็จ ก็ต่อเมื่อ Restore ได้จริงและระบบใช้งานได้จริง
+
+นั่นหมายความว่าใน AlphaTech จะไม่มีการวัดความสำเร็จจากการสร้างไฟล์ .sql เพียงอย่างเดียว แต่จะวัดจากการที่สามารถกู้คืนฐานข้อมูลบนสภาพแวดล้อมใหม่และนำระบบกลับมาให้บริการได้จริง ซึ่งเป็นมาตรฐานที่สูงกว่าและเหมาะกับระบบ Production ครับ
+
+
+------------
+
+
+ได้เลยครับ ผมจะถือเป็น กฎสถาปัตยกรรมหลัก (Core Architecture Rule) ของโปรเจ็กต์นี้ และใช้กับทุกโมดูลต่อจากนี้ โดยสอดคล้องกับแนวทางที่เราวางไว้ก่อนหน้านี้เรื่องการแยกโมดูลตาม Domain และการลดการพึ่งพาข้ามโมดูล
+
+กฎสถาปัตยกรรม: Module Isolation
+1 Module = 1 Responsibility = 1 Ownership
+
+กฎที่ยึดถือมีดังนี้
+
+แต่ละโมดูลเป็นเจ้าของ Business Logic ของตัวเองทั้งหมด
+แต่ละโมดูลมี routes / controllers / services / repositories / validators / dto / api / store / pages ของตัวเองตามความเหมาะสม
+ห้าม import store, api, service หรือ business logic ของโมดูลอื่นโดยตรง
+หากโมดูลหนึ่งต้องใช้ข้อมูลของอีกโมดูล ให้เรียกผ่าน API/Endpoint ของโมดูลนั้น ไม่ใช่เรียกใช้โค้ดภายในกันโดยตรง
+การแก้ไขโมดูลหนึ่งต้องไม่ทำให้โมดูลอื่นต้องแก้ตาม หรือเกิดผลกระทบโดยไม่จำเป็น
+Dependency ระหว่างโมดูลต้องต่ำ (Low Coupling) และแต่ละโมดูลต้องมีความเป็นอิสระสูง (High Cohesion)
+การย้ายหรือ Refactor โมดูลใด ต้องไม่เปลี่ยนพฤติกรรมของโมดูลอื่นโดยไม่ตั้งใจ
+
+ตัวอย่างที่เราคุยกันวันนี้คือ
+
+✅ Brand มี brandApi, brandStore, BrandService, BrandRepository ของตัวเอง
+✅ หากหน้า Brand ต้องเลือกประเภทสินค้า ให้เรียก endpoint ของ Brand เช่น GET /api/brands/product-type-options
+❌ ไม่ให้ Brand ไป import useProductTypeStore หรือเรียก ProductTypeService โดยตรง
+
+ผมจะใช้กฎนี้เป็นมาตรฐานเดียวกันกับทุกโมดูลที่จะพัฒนาต่อ เช่น Supplier, Customer, Product, Stock, Purchase, Sale, Repair, Finance, Report และโมดูลอื่น ๆ เพื่อให้ระบบสามารถขยายและบำรุงรักษาได้ง่ายในระยะยาว โดยไม่สร้างการพึ่งพาข้ามโมดูลที่ทำให้การแก้ไขในอนาคตซับซ้อนขึ้นครับ
+
+
+-------------
+
+

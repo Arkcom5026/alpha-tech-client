@@ -100,6 +100,15 @@ const clearLegacyAuthStorage = () => {
     console.error('❌ clearLegacyAuthStorage failed:', _error);
   }
 };
+const loadBranchInBackground = (branchId, reason = 'auth') => {
+  if (!branchId) return;
+
+  Promise.resolve()
+    .then(() => useBranchStore.getState().loadAndSetBranchById(Number(branchId)))
+    .catch((error) => {
+      console.warn(`⚠️ loadAndSetBranchById background failed (${reason}):`, error);
+    });
+};
 
 let verifySessionPromise = null;
 let bootstrapAuthPromise = null;
@@ -352,9 +361,6 @@ export const useAuthStore = create(
               branchSlug: branchSlugFromServer || null,
             };
 
-            if (branchIdFromServer) {
-              await useBranchStore.getState().loadAndSetBranchById(Number(branchIdFromServer));
-            }
           }
 
           if (effectiveRole === 'customer') {
@@ -378,6 +384,10 @@ export const useAuthStore = create(
             authChecked: true,
             isBootstrappingAuth: false,
           });
+
+          if (branchIdFromServer && ['employee', 'admin', 'superadmin'].includes(effectiveRole)) {
+            loadBranchInBackground(Number(branchIdFromServer), 'verify-session');
+          }
 
           return true;
         } catch (error) {

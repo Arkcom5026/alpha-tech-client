@@ -101,6 +101,9 @@ const clearLegacyAuthStorage = () => {
   }
 };
 
+let verifySessionPromise = null;
+let bootstrapAuthPromise = null;
+
 export const useAuthStore = create(
   persist(
     (set, get) => ({ // 🟢 เพิ่ม get เข้ามาควบคุมสเตตัสข้ามเลเยอร์
@@ -285,6 +288,9 @@ export const useAuthStore = create(
       },
 
       verifySessionAction: async () => {
+        if (verifySessionPromise) return verifySessionPromise;
+
+        verifySessionPromise = (async () => {
         const state = get(); // ใช้ค่าขอบเขตปัจจุบัน
         const token = state.accessToken || state.token;
 
@@ -396,9 +402,17 @@ export const useAuthStore = create(
           });
           return false;
         }
+        })().finally(() => {
+          verifySessionPromise = null;
+        });
+
+        return verifySessionPromise;
       },
 
       bootstrapAuthAction: async () => {
+        if (bootstrapAuthPromise) return bootstrapAuthPromise;
+
+        bootstrapAuthPromise = (async () => {
         const state = get();
       
         set({ isBootstrappingAuth: true, authError: null });
@@ -457,7 +471,12 @@ export const useAuthStore = create(
       
           return false;
         }
-      },  
+        })().finally(() => {
+          bootstrapAuthPromise = null;
+        });
+
+        return bootstrapAuthPromise;
+      },
 
       resetAuthStateAction: () => {
         const state = get();

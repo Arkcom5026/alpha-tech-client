@@ -82,10 +82,8 @@ const ListProductTypePage = () => {
     }
   }, [hasSearched, page, limit, search, includeInactive, categoryId, params, setParams]);
 
-  
-
-  const handleEdit = (row) => navigate(`/pos/stock/types/edit/${row.id}`);
-  const handleCreate = () => navigate(`/${shopSlug}/pos/stock/types/create`);
+  const handleEdit = (row) => navigate(`edit/${row.id}`);
+  const handleCreate = () => navigate('create');
 
   const onPrev = () => {
     if (!hasSearched) return;
@@ -216,8 +214,6 @@ const ListProductTypePage = () => {
           </div>
         </div>
 
-        
-
         <>
             <div className="border rounded-xl p-3 shadow-sm bg-white dark:bg-zinc-900">
               <ProductTypeTable
@@ -252,14 +248,3 @@ const ListProductTypePage = () => {
 };
 
 export default ListProductTypePage;
-
-
-
-
-
-
-
-
-
-
-

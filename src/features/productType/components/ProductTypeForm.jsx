@@ -5,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 
 import { parseApiError } from '@/utils/uiHelpers';
-import { getGlobalProductTypeOptions } from '../api/productTypeApi';
+import { getTemplateProductTypeOptions } from '../api/productTypeApi';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 
@@ -21,11 +21,12 @@ const ProductTypeForm = ({
   isSubmitting = false,
 }) => {
   const [formError, setFormError] = useState('');
-  const [templateMode, setTemplateMode] = useState('manual'); // manual | template
+  const [createMode, setCreateMode] = useState('manual'); // manual | central
   const [branchCategory, setBranchCategory] = useState(defaultValues?.category || null);
-  const [globalOptions, setGlobalOptions] = useState([]);
-  const [globalOptionsLoading, setGlobalOptionsLoading] = useState(false);
-  const [selectedGlobalProductTypeId, setSelectedGlobalProductTypeId] = useState('');
+  const [templateBranch, setTemplateBranch] = useState(null);
+  const [centralTypeOptions, setCentralTypeOptions] = useState([]);
+  const [centralTypeOptionsLoading, setCentralTypeOptionsLoading] = useState(false);
+  const [selectedCentralProductTypeId, setSelectedCentralProductTypeId] = useState('');
   const navigate = useNavigate();
 
   const {
@@ -50,30 +51,31 @@ const ProductTypeForm = ({
         name: defaultValues?.name ?? '',
       });
       if (defaultValues?.category) setBranchCategory(defaultValues.category);
-      if (defaultValues?.globalProductTypeId) setSelectedGlobalProductTypeId(String(defaultValues.globalProductTypeId));
+      if (defaultValues?.globalProductTypeId) setSelectedCentralProductTypeId(String(defaultValues.globalProductTypeId));
     }
   }, [defaultValues, reset]);
 
   useEffect(() => {
     let alive = true;
 
-    const loadGlobalOptions = async () => {
-      setGlobalOptionsLoading(true);
+    const loadCentralTypeOptions = async () => {
+      setCentralTypeOptionsLoading(true);
       setFormError('');
       try {
-        const payload = await getGlobalProductTypeOptions();
+        const payload = await getTemplateProductTypeOptions();
         if (!alive) return;
         setBranchCategory(payload?.category || null);
-        setGlobalOptions(Array.isArray(payload?.items) ? payload.items : []);
+        setTemplateBranch(payload?.templateBranch || null);
+        setCentralTypeOptions(Array.isArray(payload?.items) ? payload.items : []);
       } catch (err) {
         if (!alive) return;
-        setFormError(parseApiError(err)?.message || 'ไม่สามารถโหลด Template ประเภทสินค้าได้');
+        setFormError(parseApiError(err)?.message || 'ไม่สามารถโหลดประเภทสินค้ากลางได้');
       } finally {
-        if (alive) setGlobalOptionsLoading(false);
+        if (alive) setCentralTypeOptionsLoading(false);
       }
     };
 
-    loadGlobalOptions();
+    loadCentralTypeOptions();
 
     return () => {
       alive = false;
@@ -90,31 +92,31 @@ const ProductTypeForm = ({
 
   const resolvedCategoryName = branchCategory?.name || defaultValues?.category?.name || '-';
 
-  const selectedGlobalOption = useMemo(() => {
-    const id = Number(selectedGlobalProductTypeId);
+  const selectedCentralType = useMemo(() => {
+    const id = Number(selectedCentralProductTypeId);
     if (!Number.isFinite(id) || id <= 0) return null;
-    return globalOptions.find((item) => Number(item.id) === id) || null;
-  }, [globalOptions, selectedGlobalProductTypeId]);
+    return centralTypeOptions.find((item) => Number(item.id) === id) || null;
+  }, [centralTypeOptions, selectedCentralProductTypeId]);
 
-  const templateCountLabel = globalOptionsLoading
-    ? 'กำลังโหลด Template...'
-    : `Template ประเภทสินค้า (${globalOptions.length} รายการ)`;
+  const centralCountLabel = centralTypeOptionsLoading
+    ? 'กำลังโหลดประเภทสินค้ากลาง...'
+    : `ประเภทสินค้ากลาง (${centralTypeOptions.length} รายการ)`;
 
-  const handleTemplateModeChange = (nextMode) => {
-    setTemplateMode(nextMode);
+  const handleCreateModeChange = (nextMode) => {
+    setCreateMode(nextMode);
     setFormError('');
 
     if (nextMode === 'manual') {
-      setSelectedGlobalProductTypeId('');
+      setSelectedCentralProductTypeId('');
     }
   };
 
-  const handleTemplateChange = (event) => {
+  const handleCentralTypeChange = (event) => {
     const value = event.target.value;
-    setSelectedGlobalProductTypeId(value);
+    setSelectedCentralProductTypeId(value);
     setFormError('');
 
-    const selected = globalOptions.find((item) => String(item.id) === String(value));
+    const selected = centralTypeOptions.find((item) => String(item.id) === String(value));
     if (selected?.name) {
       setValue('name', selected.name, { shouldDirty: true, shouldValidate: true });
     }
@@ -134,8 +136,8 @@ const ProductTypeForm = ({
       return;
     }
 
-    if (templateMode === 'template' && !selectedGlobalOption?.id) {
-      setFormError('กรุณาเลือก Template ประเภทสินค้า');
+    if (createMode === 'central' && !selectedCentralType?.id) {
+      setFormError('กรุณาเลือกประเภทสินค้ากลาง');
       return;
     }
 
@@ -143,8 +145,8 @@ const ProductTypeForm = ({
       const payload = {
         name: data.name?.trim(),
         categoryId: Number(resolvedCategoryId),
-        ...(templateMode === 'template' && selectedGlobalOption?.id
-          ? { globalProductTypeId: Number(selectedGlobalOption.id) }
+        ...(createMode === 'central' && selectedCentralType?.globalProductTypeId
+          ? { globalProductTypeId: Number(selectedCentralType.globalProductTypeId) }
           : {}),
       };
       await onSubmit(payload);
@@ -166,7 +168,7 @@ const ProductTypeForm = ({
 
       <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-600 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300">
         <div className="text-xs text-zinc-500 dark:text-zinc-400">ประเภทธุรกิจของร้าน</div>
-        <div className="mt-0.5 font-medium text-zinc-800 dark:text-zinc-100">{globalOptionsLoading ? 'กำลังโหลด...' : resolvedCategoryName}</div>
+        <div className="mt-0.5 font-medium text-zinc-800 dark:text-zinc-100">{centralTypeOptionsLoading ? 'กำลังโหลด...' : resolvedCategoryName}</div>
       </div>
 
       {mode === 'create' && (
@@ -175,10 +177,10 @@ const ProductTypeForm = ({
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             <button
               type="button"
-              onClick={() => handleTemplateModeChange('manual')}
+              onClick={() => handleCreateModeChange('manual')}
               disabled={isBusy}
               className={`rounded-lg border px-3 py-2 text-left text-sm transition ${
-                templateMode === 'manual'
+                createMode === 'manual'
                   ? 'border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-200'
                   : 'border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-200'
               }`}
@@ -189,46 +191,47 @@ const ProductTypeForm = ({
 
             <button
               type="button"
-              onClick={() => handleTemplateModeChange('template')}
+              onClick={() => handleCreateModeChange('central')}
               disabled={isBusy}
               className={`rounded-lg border px-3 py-2 text-left text-sm transition ${
-                templateMode === 'template'
+                createMode === 'central'
                   ? 'border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-200'
                   : 'border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-200'
               }`}
             >
-              <div className="font-medium">นำเข้าจาก Template</div>
-              <div className="mt-0.5 text-xs opacity-75">อ้างอิง GlobalProductType แล้วสร้างเป็นของร้านนี้</div>
+              <div className="font-medium">เลือกประเภทสินค้ากลาง</div>
+              <div className="mt-0.5 text-xs opacity-75">คัดลอกจากสาขาต้นแบบ แล้วสร้างเป็นของร้านนี้</div>
             </button>
           </div>
         </div>
       )}
 
-      {templateMode === 'template' && mode === 'create' && (
+      {createMode === 'central' && mode === 'create' && (
         <div>
           <div className="mb-1 flex items-center justify-between gap-2">
-            <label className="text-sm text-zinc-700 dark:text-zinc-300">Template ประเภทสินค้า *</label>
-            <span className="text-xs text-zinc-500 dark:text-zinc-400">{templateCountLabel}</span>
+            <label className="text-sm text-zinc-700 dark:text-zinc-300">ประเภทสินค้ากลาง *</label>
+            <span className="text-xs text-zinc-500 dark:text-zinc-400">{centralCountLabel}</span>
           </div>
           <select
-            value={selectedGlobalProductTypeId}
-            onChange={handleTemplateChange}
-            disabled={isBusy || globalOptionsLoading}
+            value={selectedCentralProductTypeId}
+            onChange={handleCentralTypeChange}
+            disabled={isBusy || centralTypeOptionsLoading}
             className="w-full border rounded px-3 py-2 bg-white dark:bg-zinc-900 border-zinc-300 dark:border-zinc-700"
           >
-            <option value="">-- เลือก Template ประเภทสินค้า --</option>
-            {globalOptions.map((item) => (
+            <option value="">-- เลือกประเภทสินค้ากลาง --</option>
+            {centralTypeOptions.map((item) => (
               <option key={item.id} value={item.id}>{item.name}</option>
             ))}
           </select>
-          {selectedGlobalOption?.name && (
+          {selectedCentralType?.name && (
             <div className="mt-2 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-xs text-blue-700 dark:border-blue-900/50 dark:bg-blue-950/30 dark:text-blue-200">
-              จะสร้าง ProductType ของร้านนี้โดยอ้างอิง Template: <span className="font-semibold">{selectedGlobalOption.name}</span>
+              จะสร้างประเภทสินค้าของร้านนี้ โดยคัดลอกจากสาขาต้นแบบ: <span className="font-semibold">{selectedCentralType.name}</span>
+              {templateBranch?.name ? <span> ({templateBranch.name})</span> : null}
               <br />ชื่อด้านล่างสามารถแก้ไขให้เหมาะกับร้านนี้ได้ก่อนบันทึก
             </div>
           )}
-          {!globalOptionsLoading && globalOptions.length === 0 && (
-            <p className="mt-1 text-sm text-amber-600">ยังไม่มี Template ประเภทสินค้าสำหรับประเภทธุรกิจนี้</p>
+          {!centralTypeOptionsLoading && centralTypeOptions.length === 0 && (
+            <p className="mt-1 text-sm text-amber-600">ยังไม่มีประเภทสินค้ากลางสำหรับประเภทธุรกิจนี้</p>
           )}
         </div>
       )}
@@ -253,7 +256,7 @@ const ProductTypeForm = ({
         )}
         <Button
           type="submit"
-          disabled={isBusy || globalOptionsLoading || !nameVal?.trim() || !resolvedCategoryId || (templateMode === 'template' && !selectedGlobalOption?.id)}
+          disabled={isBusy || centralTypeOptionsLoading || !nameVal?.trim() || !resolvedCategoryId || (createMode === 'central' && !selectedCentralType?.id)}
         >
           {isBusy ? 'กำลังบันทึก…' : mode === 'edit' ? 'บันทึกการแก้ไข' : 'บันทึก'}
         </Button>

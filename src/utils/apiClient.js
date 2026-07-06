@@ -10,12 +10,17 @@ import axios from 'axios';
 import { useAuthStore } from '@/features/auth/store/authStore';
 
 let refreshPromise = null;
+let silentRefreshTimerId = null;
+let lastScheduledAccessToken = null;
+let authStoreSubscribed = false;
 
 const AUTH_REFRESH_LOCK_KEY = 'alpha_auth_refresh_lock_v1';
 const AUTH_REFRESH_RESULT_KEY = 'alpha_auth_refresh_result_v1';
 const TAB_ID = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 const REFRESH_LOCK_TTL_MS = 10000;
 const REFRESH_WAIT_TIMEOUT_MS = 12000;
+const SILENT_REFRESH_SKEW_MS = 5 * 60 * 1000;
+const SILENT_REFRESH_MIN_DELAY_MS = 30 * 1000;
 
 const authDebugEnabled = () => import.meta.env?.DEV && import.meta.env?.VITE_AUTH_DEBUG === 'true';
 const authDebug = (...args) => {
@@ -51,6 +56,94 @@ const safeRemove = (key) => {
   try {
     localStorage.removeItem(key);
   } catch (_) {}
+};
+
+const decodeJwtPayload = (token) => {
+  try {
+    const payload = String(token || '').split('.')[1];
+    if (!payload) return null;
+    const normalized = payload.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = normalized.padEnd(normalized.length + ((4 - (normalized.length % 4)) % 4), '=');
+    return JSON.parse(atob(padded));
+  } catch (_) {
+    return null;
+  }
+};
+
+const clearSilentRefreshTimer = () => {
+  if (silentRefreshTimerId) {
+    window.clearTimeout(silentRefreshTimerId);
+    silentRefreshTimerId = null;
+  }
+  lastScheduledAccessToken = null;
+};
+
+const scheduleSilentRefreshForToken = (accessToken, source = 'store-change') => {
+  if (typeof window === 'undefined') return;
+
+  if (!accessToken) {
+    clearSilentRefreshTimer();
+    return;
+  }
+
+  if (accessToken === lastScheduledAccessToken && silentRefreshTimerId) return;
+
+  const payload = decodeJwtPayload(accessToken);
+  const expMs = payload?.exp ? Number(payload.exp) * 1000 : null;
+
+  if (!expMs || !Number.isFinite(expMs)) {
+    authDebug('silent-refresh:skip-no-exp', { source });
+    clearSilentRefreshTimer();
+    return;
+  }
+
+  const now = Date.now();
+  const refreshAt = expMs - SILENT_REFRESH_SKEW_MS;
+  const delayMs = Math.max(refreshAt - now, SILENT_REFRESH_MIN_DELAY_MS);
+
+  if (expMs <= now) {
+    authDebug('silent-refresh:skip-expired-token', { source });
+    clearSilentRefreshTimer();
+    return;
+  }
+
+  if (silentRefreshTimerId) window.clearTimeout(silentRefreshTimerId);
+  lastScheduledAccessToken = accessToken;
+
+  authDebug('silent-refresh:scheduled', {
+    source,
+    delayMs,
+    expiresInMs: expMs - now,
+  });
+
+  silentRefreshTimerId = window.setTimeout(() => {
+    silentRefreshTimerId = null;
+    authDebug('silent-refresh:timer-fired');
+
+    refreshAccessToken('timer').catch((error) => {
+      authDebug('silent-refresh:timer-failed', {
+        message: error?.friendlyMessage || error?.message,
+        status: error?.response?.status,
+      });
+    });
+  }, delayMs);
+};
+
+const ensureAuthStoreSubscription = () => {
+  if (authStoreSubscribed || typeof window === 'undefined' || typeof useAuthStore?.subscribe !== 'function') return;
+  authStoreSubscribed = true;
+
+  useAuthStore.subscribe((state, prevState) => {
+    const token = state?.accessToken || state?.token || null;
+    const prevToken = prevState?.accessToken || prevState?.token || null;
+
+    if (token !== prevToken) {
+      scheduleSilentRefreshForToken(token, 'auth-store-token-change');
+    }
+  });
+
+  const currentState = useAuthStore.getState?.();
+  scheduleSilentRefreshForToken(currentState?.accessToken || currentState?.token || null, 'auth-store-initial');
 };
 
 const getActiveRefreshLock = () => {
@@ -130,6 +223,8 @@ const applyRefreshResultToStore = ({ accessToken, session }) => {
     isBootstrappingAuth: false,
     authError: null,
   }));
+
+  scheduleSilentRefreshForToken(accessToken, 'refresh-result');
 
   return accessToken;
 };
@@ -251,6 +346,8 @@ const apiClient = axios.create({
 
 apiClient.interceptors.request.use(
   async (config) => {
+    ensureAuthStoreSubscription();
+
     config.baseURL = getRuntimeBaseURL();
     config.withCredentials = true;
     config.url = normalizeRequestUrl(config.url);
@@ -289,23 +386,25 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-const refreshAccessToken = async () => {
+const refreshAccessToken = async (reason = '401') => {
+  ensureAuthStoreSubscription();
+
   if (!refreshPromise) {
     refreshPromise = (async () => {
       const refreshURL = `${getRuntimeBaseURL()}auth/refresh`;
 
       if (!acquireRefreshLock()) {
-        authDebug('refresh:wait-cross-tab');
+        authDebug('refresh:wait-cross-tab', { reason });
         const crossTabResult = await waitForCrossTabRefreshResult();
         if (crossTabResult?.accessToken) {
-          authDebug('refresh:use-cross-tab-result');
+          authDebug('refresh:use-cross-tab-result', { reason });
           return applyRefreshResultToStore(crossTabResult);
         }
-        authDebug('refresh:cross-tab-timeout-fallback');
+        authDebug('refresh:cross-tab-timeout-fallback', { reason });
       }
 
       try {
-        authDebug('refresh:start', { refreshURL });
+        authDebug('refresh:start', { reason, refreshURL });
         const res = await axios.post(
           refreshURL,
           {},
@@ -328,7 +427,7 @@ const refreshAccessToken = async () => {
 
         publishRefreshResult(res?.data || {});
         applyRefreshResultToStore({ accessToken: nextAccessToken, session: res?.data?.session || null });
-        authDebug('refresh:success');
+        authDebug('refresh:success', { reason });
 
         return nextAccessToken;
       } catch (error) {
@@ -355,9 +454,11 @@ const refreshAccessToken = async () => {
           isBootstrappingAuth: false,
           authError: enhanced?.friendlyMessage || 'Refresh session ไม่สำเร็จ',
         }));
+        clearSilentRefreshTimer();
 
         if (import.meta.env?.DEV) {
           console.error('[apiClient] refreshAccessToken failed', {
+            reason,
             refreshURL,
             message: enhanced?.message,
             friendlyMessage: enhanced?.friendlyMessage,
@@ -402,7 +503,7 @@ apiClient.interceptors.response.use(
       originalRequest._retry = true;
 
       try {
-        const nextAccessToken = await refreshAccessToken();
+        const nextAccessToken = await refreshAccessToken('401');
         const bearerToken = nextAccessToken ? `Bearer ${nextAccessToken}` : null;
 
         originalRequest.baseURL = getRuntimeBaseURL();

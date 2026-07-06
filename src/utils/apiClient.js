@@ -19,6 +19,8 @@ const ensureTrailingSlash = (value) => {
 
 const stripTrailingSlash = (value) => String(value || '').replace(/\/+$/, '');
 
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
 const normalizeEnvBaseURL = (raw) => {
   const value = String(raw || '').trim();
   if (!value) return '';
@@ -91,6 +93,21 @@ const isAuthBypassEndpoint = (url = '') => {
   ].some((path) => normalizedUrl.includes(path));
 };
 
+const waitForAuthBootstrapToFinish = async ({ timeoutMs = 5000, intervalMs = 50 } = {}) => {
+  const startedAt = Date.now();
+
+  while (useAuthStore.getState()?.isBootstrappingAuth) {
+    if (Date.now() - startedAt >= timeoutMs) {
+      if (import.meta.env?.DEV) {
+        console.warn('[apiClient] auth bootstrap wait timed out; request will continue');
+      }
+      return;
+    }
+
+    await sleep(intervalMs);
+  }
+};
+
 const applyAuthorizationHeader = (config, bearerToken) => {
   if (!bearerToken) return config;
 
@@ -120,10 +137,18 @@ const apiClient = axios.create({
 });
 
 apiClient.interceptors.request.use(
-  (config) => {
+  async (config) => {
     config.baseURL = getRuntimeBaseURL();
     config.withCredentials = true;
     config.url = normalizeRequestUrl(config.url);
+
+    // ✅ Bootstrap gate:
+    // On hard reload the app intentionally keeps accessToken in memory only.
+    // App.jsx starts bootstrapAuthAction(), but pages/stores may fire protected APIs immediately.
+    // Without this gate those protected APIs hit 401 and create extra refresh attempts.
+    if (!isAuthBypassEndpoint(config.url)) {
+      await waitForAuthBootstrapToFinish();
+    }
 
     const token = getToken();
     if (token && !isAuthBypassEndpoint(config.url)) {

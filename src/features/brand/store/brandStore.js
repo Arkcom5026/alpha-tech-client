@@ -154,6 +154,7 @@ export const useBrandStore = create(
             page: override.page ?? state.page,
             pageSize: override.pageSize ?? state.pageSize,
             includeInactive: override.includeInactive ?? state.includeInactive,
+            productTypeId: override.productTypeId,
           })
 
           const safeItems = Array.isArray(data?.items) ? data.items : []
@@ -258,20 +259,8 @@ export const useBrandStore = create(
         const items = get().items
         return Array.isArray(items) ? items : []
       },
-
-      hasBrandDropdownsAction: () => {
-        const state = get()
-        return !!(state.dropdownsLoaded && Array.isArray(state.items) && state.items.length > 0)
-      },
-    }),
-    { name: 'brandStore' }
+    })
   )
 )
 
-// ✅ Default export for backward-compatible imports
 export default useBrandStore
-
-
-
-
-

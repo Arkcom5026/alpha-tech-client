@@ -4,7 +4,6 @@ import { Link, useNavigate } from 'react-router-dom';
 import PageHeader from '@/components/shared/layout/PageHeader';
 import ProductTypeForm from '../components/ProductTypeForm';
 import useProductTypeStore from '../store/productTypeStore';
-import useProductProfileStore from '@/features/productProfile/store/productProfileStore';
 import { useAuthStore } from '@/features/auth/store/authStore';
 
 import { parseApiError } from '@/utils/uiHelpers';
@@ -17,9 +16,6 @@ const CreateProductTypePage = () => {
   const canManage = useMemo(() => isSuperAdmin || canManageProductOrdering(), [isSuperAdmin, canManageProductOrdering]);
 
   const { createProductTypeAction, isSubmitting } = useProductTypeStore();
-
-  // ✅ ใช้ข้อมูลจาก Cascading (dropdowns รวม) ที่โหลดมาแล้วใน store เดียว
-  const { dropdowns } = useProductProfileStore();
 
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
@@ -80,7 +76,6 @@ const CreateProductTypePage = () => {
             mode="create"
             isSubmitting={isSubmitting}
             onSubmit={handleSubmit}
-            dropdowns={dropdowns}               // ⬅️ ส่ง dropdowns ให้ฟอร์ม (ใช้ CascadingFilterGroup ภายในฟอร์ม)
           />
         </div>
       </div>

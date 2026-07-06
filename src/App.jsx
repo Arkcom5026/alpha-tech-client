@@ -10,15 +10,32 @@ import AppRouter from './routes/AppRouter';
 
 const router = createBrowserRouter(AppRouter);
 
+let initialAuthBootstrapPromise = null;
+let initialAuthBootstrapStarted = false;
+
+const runInitialAuthBootstrapOnce = (bootstrapAuthAction) => {
+  if (initialAuthBootstrapStarted || initialAuthBootstrapPromise) {
+    return initialAuthBootstrapPromise;
+  }
+
+  initialAuthBootstrapStarted = true;
+  initialAuthBootstrapPromise = Promise.resolve()
+    .then(() => bootstrapAuthAction?.())
+    .catch((error) => {
+      console.error('❌ bootstrapAuthAction failed in App:', error);
+    })
+    .finally(() => {
+      initialAuthBootstrapPromise = null;
+    });
+
+  return initialAuthBootstrapPromise;
+};
+
 const App = () => {
   const bootstrapAuthAction = useAuthStore((state) => state.bootstrapAuthAction);
 
   useEffect(() => {
-    try {
-      bootstrapAuthAction?.();
-    } catch (error) {
-      console.error('❌ bootstrapAuthAction failed in App:', error);
-    }
+    runInitialAuthBootstrapOnce(bootstrapAuthAction);
   }, [bootstrapAuthAction]);
 
   return (

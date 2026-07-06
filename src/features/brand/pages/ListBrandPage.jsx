@@ -1,10 +1,11 @@
 // src/features/brand/pages/ListBrandPage.jsx
 // Brand List Page (branch-scoped catalog master)
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { useBrandStore } from '../store/brandStore';
+import useProductTypeStore from '@/features/productType/store/productTypeStore';
 
 const normalizeActive = (brand) => brand?.isActive ?? brand?.active ?? true;
 
@@ -22,6 +23,7 @@ const StatusBadge = ({ active }) => (
 
 const ListBrandPage = () => {
   const navigate = useNavigate();
+  const [productTypeId, setProductTypeId] = useState('');
 
   const items = useBrandStore((state) => state.items) || [];
   const page = useBrandStore((state) => state.page) || 1;
@@ -41,6 +43,16 @@ const ListBrandPage = () => {
   const clearErrorAction = useBrandStore((state) => state.clearErrorAction);
   const toggleBrandActiveAction = useBrandStore((state) => state.toggleBrandActiveAction);
 
+  const productTypes = useProductTypeStore((state) => state.items) || [];
+  const productTypesLoading = useProductTypeStore((state) => state.isLoading) || false;
+  const fetchProductTypesAction = useProductTypeStore((state) => state.fetchListAction);
+  const setProductTypeLimitAction = useProductTypeStore((state) => state.setLimitAction);
+
+  const selectedProductTypeId = useMemo(() => {
+    const n = Number(productTypeId);
+    return Number.isFinite(n) && n > 0 ? n : undefined;
+  }, [productTypeId]);
+
   const totalPages = useMemo(() => Math.max(1, Math.ceil(Number(total || 0) / Number(pageSize || 20))), [total, pageSize]);
 
   useEffect(() => {
@@ -48,11 +60,21 @@ const ListBrandPage = () => {
   }, [clearErrorAction]);
 
   useEffect(() => {
-    fetchBrandsAction?.({ q, page, pageSize, includeInactive });
-  }, [fetchBrandsAction, q, page, pageSize, includeInactive]);
+    setProductTypeLimitAction?.(100);
+    fetchProductTypesAction?.();
+  }, [fetchProductTypesAction, setProductTypeLimitAction]);
+
+  useEffect(() => {
+    fetchBrandsAction?.({ q, page, pageSize, includeInactive, productTypeId: selectedProductTypeId });
+  }, [fetchBrandsAction, q, page, pageSize, includeInactive, selectedProductTypeId]);
 
   const onSearchChange = (event) => {
     setQueryAction?.(event.target.value);
+  };
+
+  const onProductTypeChange = (event) => {
+    setProductTypeId(event.target.value);
+    setPageAction?.(1);
   };
 
   const onIncludeInactiveChange = (event) => {
@@ -66,7 +88,7 @@ const ListBrandPage = () => {
   const onToggle = async (brand) => {
     if (!brand?.id || saving) return;
     await toggleBrandActiveAction?.({ id: brand.id, isActive: !normalizeActive(brand) });
-    await fetchBrandsAction?.({ q, page, pageSize, includeInactive });
+    await fetchBrandsAction?.({ q, page, pageSize, includeInactive, productTypeId: selectedProductTypeId });
   };
 
   return (
@@ -88,12 +110,26 @@ const ListBrandPage = () => {
       </div>
 
       <div className="mb-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-[280px_1fr_auto_auto] lg:items-center">
+          <select
+            value={productTypeId}
+            onChange={onProductTypeChange}
+            className="rounded border border-slate-200 px-3 py-2 text-sm"
+            disabled={productTypesLoading}
+          >
+            <option value="">-- ประเภทสินค้าทั้งหมด --</option>
+            {productTypes.map((type) => (
+              <option key={type.id} value={type.id}>
+                {type.name}
+              </option>
+            ))}
+          </select>
+
           <input
             value={q}
             onChange={onSearchChange}
             placeholder="ค้นหาแบรนด์"
-            className="min-w-[240px] flex-1 rounded border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
+            className="rounded border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
           />
 
           <label className="inline-flex items-center gap-2 text-sm text-slate-600">

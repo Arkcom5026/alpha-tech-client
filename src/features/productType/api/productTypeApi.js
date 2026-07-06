@@ -13,6 +13,9 @@ export const parseApiError = (error) => {
     HAS_REFERENCES: 'ไม่สามารถดำเนินการได้ เนื่องจากมีข้อมูลที่เชื่อมโยงอยู่',
     IS_SYSTEM_LOCKED: 'ไม่สามารถแก้ไข/ปิดใช้งานได้ เนื่องจากเป็นข้อมูลระบบ (ล็อก)',
     DUPLICATE: 'มีข้อมูลชื่อ/slug ซ้ำในระบบ',
+    GLOBAL_PRODUCT_TYPE_REQUIRED: 'กรุณาเลือก Template ประเภทสินค้า',
+    INVALID_GLOBAL_PRODUCT_TYPE: 'Template ประเภทสินค้าไม่ถูกต้องหรือไม่ตรงกับประเภทธุรกิจของร้าน',
+    BRANCH_CATEGORY_REQUIRED: 'ไม่พบประเภทธุรกิจของร้าน กรุณาตรวจสอบข้อมูลสาขาก่อน',
   };
   return { code, message: map[code] || messageFromServer || fallback.message };
 };
@@ -34,6 +37,16 @@ export const getProductTypeById = async (id) => {
   try {
     const { data } = await apiClient.get(`product-types/${id}`, { params: { _ts: Date.now() } });
     return data;
+  } catch (error) {
+    throw parseApiError(error);
+  }
+};
+
+// TEMPLATE / GLOBAL OPTIONS
+export const getGlobalProductTypeOptions = async () => {
+  try {
+    const { data } = await apiClient.get('product-types/global-options', { params: { _ts: Date.now() } });
+    return data; // { category, items }
   } catch (error) {
     throw parseApiError(error);
   }

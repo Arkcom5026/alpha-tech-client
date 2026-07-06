@@ -11,10 +11,6 @@ import { Button } from '@/components/ui/button';
 
 const schema = z.object({
   name: z.string().min(1, 'กรุณาระบุชื่อประเภทสินค้า'),
-  categoryId: z.coerce
-    .number({ required_error: 'กรุณาเลือกหมวดหมู่สินค้า' })
-    .int('หมวดหมู่ไม่ถูกต้อง')
-    .positive('หมวดหมู่ไม่ถูกต้อง'),
 });
 
 const ProductTypeForm = ({
@@ -38,7 +34,6 @@ const ProductTypeForm = ({
     resolver: zodResolver(schema),
     defaultValues: {
       name: defaultValues?.name ?? '',
-      categoryId: defaultValues?.categoryId ?? '',
     },
   });
 
@@ -48,12 +43,11 @@ const ProductTypeForm = ({
     if (defaultValues && Object.keys(defaultValues).length > 0) {
       reset({
         name: defaultValues?.name ?? '',
-        categoryId: defaultValues?.categoryId ?? '',
       });
     }
   }, [defaultValues, reset]);
 
-  const { dropdowns: storeDropdowns = {}, dropdownsLoaded, ensureDropdownsAction } = useProductStore();
+  const { dropdowns: storeDropdowns = {}, ensureDropdownsAction } = useProductStore();
 
   useEffect(() => {
     const propEmpty = !Array.isArray(dropdowns?.categories) || dropdowns.categories.length === 0;
@@ -70,23 +64,40 @@ const ProductTypeForm = ({
 
     return source
       .filter((category) => category && category.id != null)
-      .sort((a, b) => String(a?.name ?? '').localeCompare(String(b?.name ?? '')));
+      .sort((a, b) => String(a?.name ?? '').localeCompare(String(b?.name ?? ''), 'th'));
   }, [dropdowns?.categories, storeDropdowns?.categories]);
+
+  const resolvedCategoryId = useMemo(() => {
+    const fromDefault = Number(defaultValues?.categoryId);
+    if (Number.isFinite(fromDefault) && fromDefault > 0) return fromDefault;
+
+    const first = Number(categories?.[0]?.id);
+    return Number.isFinite(first) && first > 0 ? first : null;
+  }, [defaultValues?.categoryId, categories]);
+
+  const resolvedCategoryName = useMemo(() => {
+    const found = categories.find((category) => Number(category.id) === Number(resolvedCategoryId));
+    return found?.name || defaultValues?.category?.name || '-';
+  }, [categories, resolvedCategoryId, defaultValues?.category?.name]);
 
   const handleFormSubmit = async (data) => {
     setFormError('');
 
     const nameOk = (data.name || '').trim().length > 0;
-    const catOk = data.categoryId !== '' && data.categoryId != null;
-    if (mode !== 'edit' && (!catOk || !nameOk)) {
-      setFormError('กรุณาเลือกหมวดหมู่และกรอกชื่อให้ครบก่อนบันทึก');
+    if (!nameOk) {
+      setFormError('กรุณากรอกชื่อประเภทสินค้า');
+      return;
+    }
+
+    if (!resolvedCategoryId) {
+      setFormError('ไม่พบประเภทธุรกิจของร้าน กรุณาตรวจสอบข้อมูลพื้นฐานก่อนบันทึก');
       return;
     }
 
     try {
       const payload = {
         name: data.name?.trim(),
-        categoryId: Number(data.categoryId),
+        categoryId: Number(resolvedCategoryId),
       };
       await onSubmit(payload);
     } catch (err) {
@@ -94,7 +105,6 @@ const ProductTypeForm = ({
     }
   };
 
-  const categoryId = watch('categoryId');
   const nameVal = watch('name');
   const effectiveOnCancel = onCancel ?? (() => navigate(-1));
 
@@ -106,24 +116,9 @@ const ProductTypeForm = ({
         </div>
       )}
 
-      <div>
-        <label htmlFor="categoryId" className="block mb-1 text-sm text-zinc-700 dark:text-zinc-300">
-          หมวดหมู่สินค้า *
-        </label>
-        <select
-          id="categoryId"
-          {...register('categoryId')}
-          disabled={isBusy || !dropdownsLoaded}
-          className="w-full border rounded px-3 py-2 bg-white dark:bg-zinc-900 border-zinc-300 dark:border-zinc-700"
-        >
-          <option value="">-- เลือกหมวดหมู่สินค้า --</option>
-          {categories.map((category) => (
-            <option key={`category_${String(category.id)}`} value={String(category.id)}>
-              {category.name}
-            </option>
-          ))}
-        </select>
-        {errors.categoryId && <p className="text-red-500 text-sm mt-1">{errors.categoryId.message}</p>}
+      <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-600 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300">
+        <div className="text-xs text-zinc-500 dark:text-zinc-400">ประเภทธุรกิจของร้าน</div>
+        <div className="mt-0.5 font-medium text-zinc-800 dark:text-zinc-100">{resolvedCategoryName}</div>
       </div>
 
       <div>
@@ -144,7 +139,7 @@ const ProductTypeForm = ({
             ยกเลิก
           </Button>
         )}
-        <Button type="submit" disabled={isBusy || !nameVal?.trim() || categoryId === '' || categoryId == null}>
+        <Button type="submit" disabled={isBusy || !nameVal?.trim() || !resolvedCategoryId}>
           {isBusy ? 'กำลังบันทึก…' : mode === 'edit' ? 'บันทึกการแก้ไข' : 'บันทึก'}
         </Button>
       </div>

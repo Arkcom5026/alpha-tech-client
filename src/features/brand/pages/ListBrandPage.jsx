@@ -24,6 +24,7 @@ const StatusBadge = ({ active }) => (
 const ListBrandPage = () => {
   const navigate = useNavigate();
   const [productTypeId, setProductTypeId] = useState('');
+  const [didAutoSelectProductType, setDidAutoSelectProductType] = useState(false);
 
   const items = useBrandStore((state) => state.items) || [];
   const page = useBrandStore((state) => state.page) || 1;
@@ -65,6 +66,14 @@ const ListBrandPage = () => {
   }, [fetchProductTypesAction, setProductTypeLimitAction]);
 
   useEffect(() => {
+    if (didAutoSelectProductType || productTypeId || !Array.isArray(productTypes) || productTypes.length === 0) return;
+
+    setProductTypeId(String(productTypes[0].id));
+    setDidAutoSelectProductType(true);
+    setPageAction?.(1);
+  }, [didAutoSelectProductType, productTypeId, productTypes, setPageAction]);
+
+  useEffect(() => {
     fetchBrandsAction?.({ q, page, pageSize, includeInactive, productTypeId: selectedProductTypeId });
   }, [fetchBrandsAction, q, page, pageSize, includeInactive, selectedProductTypeId]);
 
@@ -74,6 +83,7 @@ const ListBrandPage = () => {
 
   const onProductTypeChange = (event) => {
     setProductTypeId(event.target.value);
+    setDidAutoSelectProductType(true);
     setPageAction?.(1);
   };
 
@@ -117,7 +127,7 @@ const ListBrandPage = () => {
             className="rounded border border-slate-200 px-3 py-2 text-sm"
             disabled={productTypesLoading}
           >
-            <option value="">-- ประเภทสินค้าทั้งหมด --</option>
+            <option value="">-- แบรนด์ทั้งหมด (Global) --</option>
             {productTypes.map((type) => (
               <option key={type.id} value={type.id}>
                 {type.name}

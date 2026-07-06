@@ -51,7 +51,7 @@ const ProductTypeForm = ({
         name: defaultValues?.name ?? '',
       });
       if (defaultValues?.category) setBranchCategory(defaultValues.category);
-      if (defaultValues?.globalProductTypeId) setSelectedCentralProductTypeId(String(defaultValues.globalProductTypeId));
+      if (defaultValues?.sourceProductTypeId) setSelectedCentralProductTypeId(String(defaultValues.sourceProductTypeId));
     }
   }, [defaultValues, reset]);
 
@@ -145,8 +145,14 @@ const ProductTypeForm = ({
       const payload = {
         name: data.name?.trim(),
         categoryId: Number(resolvedCategoryId),
-        ...(createMode === 'central' && selectedCentralType?.globalProductTypeId
-          ? { globalProductTypeId: Number(selectedCentralType.globalProductTypeId) }
+        ...(createMode === 'central' && selectedCentralType?.id
+          ? {
+              sourceProductTypeId: Number(selectedCentralType.id),
+              templateProductTypeId: Number(selectedCentralType.id), // backward-compatible alias for BE/local migration
+              ...(selectedCentralType?.globalProductTypeId
+                ? { globalProductTypeId: Number(selectedCentralType.globalProductTypeId) }
+                : {}),
+            }
           : {}),
       };
       await onSubmit(payload);

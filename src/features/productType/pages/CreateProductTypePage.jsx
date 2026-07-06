@@ -31,7 +31,7 @@ const CreateProductTypePage = () => {
     try {
       await createProductTypeAction(formData);
       setSuccessMsg('บันทึกประเภทสินค้าเรียบร้อยแล้ว');
-      setTimeout(() => navigate(`/${shopSlug}/pos/stock/types`), 600);
+      setTimeout(() => navigate('..'), 600);
     } catch (err) {
       setErrorMsg(parseApiError(err));
     }
@@ -56,7 +56,7 @@ const CreateProductTypePage = () => {
               </button>
               <Link
                 className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-sm font-medium text-blue-700 hover:bg-blue-100"
-                to={shopSlug ? `/${shopSlug}/pos/stock/types` : `/pos/stock/types`}
+                to=".."
               >
                 กลับไปหน้ารายการ
               </Link>
@@ -89,7 +89,3 @@ const CreateProductTypePage = () => {
 };
 
 export default CreateProductTypePage;
-
-
-
-

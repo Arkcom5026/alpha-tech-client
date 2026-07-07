@@ -6,6 +6,11 @@
 // - Purchase Order flow resolves current branch from authenticated employee state.
 // - No shopSlug -> branch profile mapping.
 // - No /branch-prices/profile-by-slug request.
+//
+// Cost price rule:
+// - Product search for PO must use POS runtime endpoint:
+//   GET /api/products/pos/search
+// - This endpoint returns branch-scoped costPrice from BranchPrice / StockBalance runtime.
 
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -20,14 +25,54 @@ const toPositiveInt = (value) => {
   return Number.isInteger(n) && n > 0 ? n : null;
 };
 
+const toNumber = (value, fallback = 0) => {
+  if (value === '' || value === null || value === undefined) return fallback;
+  const n = Number(String(value).replace(/,/g, ''));
+  return Number.isFinite(n) ? n : fallback;
+};
+
+const firstArray = (...values) => {
+  for (const value of values) {
+    if (Array.isArray(value)) return value;
+  }
+  return [];
+};
+
 const pickArray = (payload) => {
   if (Array.isArray(payload)) return payload;
-  if (Array.isArray(payload?.items)) return payload.items;
-  if (Array.isArray(payload?.data)) return payload.data;
-  if (Array.isArray(payload?.data?.items)) return payload.data.items;
-  if (Array.isArray(payload?.rows)) return payload.rows;
-  if (Array.isArray(payload?.records)) return payload.records;
-  return [];
+  return firstArray(
+    payload?.items,
+    payload?.products,
+    payload?.data,
+    payload?.data?.items,
+    payload?.data?.products,
+    payload?.rows,
+    payload?.records
+  );
+};
+
+const pickCostPrice = (row) => {
+  const branchPrice = Array.isArray(row?.branchPrice)
+    ? row.branchPrice[0]
+    : row?.branchPrice;
+
+  const branchPrices = Array.isArray(row?.branchPrices)
+    ? row.branchPrices[0]
+    : row?.branchPrices;
+
+  const stockBalance = row?.stockBalance || row?.stockBalances?.[0] || null;
+
+  return toNumber(
+    row?.costPrice ??
+      row?.cost ??
+      row?.receivedCost ??
+      row?.lastReceivedCost ??
+      row?.purchaseCost ??
+      branchPrice?.costPrice ??
+      branchPrices?.costPrice ??
+      stockBalance?.lastReceivedCost,
+    0
+  );
 };
 
 const normalizeProductTypeOption = (row) => {
@@ -65,6 +110,8 @@ const normalizeProductRow = (row) => {
     row?.productProfile ??
     '-';
 
+  const costPrice = pickCostPrice(row);
+
   return {
     ...row,
     id,
@@ -78,7 +125,9 @@ const normalizeProductRow = (row) => {
     productTemplate: row?.productTemplate?.name ?? row?.templateName ?? row?.productTemplate ?? '-',
     model: row?.model ?? row?.spec ?? '-',
     description: row?.description ?? '',
-    costPrice: Number(row?.costPrice ?? row?.cost ?? row?.receivedCost ?? 0) || 0,
+    costPrice,
+    branchPrice: row?.branchPrice ?? row?.branchPrices ?? [],
+    stockBalance: row?.stockBalance ?? null,
   };
 };
 
@@ -132,7 +181,6 @@ export const usePurchaseOrderForm = (mode, searchText) => {
     updatePurchaseOrder,
   } = usePurchaseOrderStore();
 
-  // Branch guard: use employee login branch only.
   useEffect(() => {
     if (!currentBranchId) {
       setSubmitError('ไม่พบข้อมูลสาขาของพนักงาน กรุณาเข้าสู่ระบบใหม่');
@@ -143,7 +191,6 @@ export const usePurchaseOrderForm = (mode, searchText) => {
     }
   }, [currentBranchId]);
 
-  // Load suppliers owned by Purchase flow.
   useEffect(() => {
     if (!currentBranchId) {
       setSupplierList([]);
@@ -178,7 +225,6 @@ export const usePurchaseOrderForm = (mode, searchText) => {
     };
   }, [currentBranchId]);
 
-  // Load purchase-owned dropdown options without Product store.
   useEffect(() => {
     if (!currentBranchId) return;
 
@@ -234,7 +280,6 @@ export const usePurchaseOrderForm = (mode, searchText) => {
     };
   }, [currentBranchId]);
 
-  // Reload brand options when ProductType changes.
   useEffect(() => {
     const productTypeId = toPositiveInt(filter.productTypeId);
     if (!currentBranchId || !productTypeId) return;
@@ -264,7 +309,6 @@ export const usePurchaseOrderForm = (mode, searchText) => {
     };
   }, [currentBranchId, filter.productTypeId]);
 
-  // Load data for edit mode.
   useEffect(() => {
     if (mode === 'edit' && id) {
       (async () => {
@@ -298,7 +342,6 @@ export const usePurchaseOrderForm = (mode, searchText) => {
     }
   }, [mode, purchaseOrder, orderDate]);
 
-  // Supplier credit watcher.
   useEffect(() => {
     if (!supplier?.id) {
       setCreditHint(null);
@@ -310,6 +353,7 @@ export const usePurchaseOrderForm = (mode, searchText) => {
   }, [supplier, supplierList]);
 
   // Product search owned by Purchase flow.
+  // Important: use POS runtime endpoint so costPrice is available.
   useEffect(() => {
     const productTypeId = toPositiveInt(filter.productTypeId);
     const brandId = toPositiveInt(filter.brandId);
@@ -325,12 +369,14 @@ export const usePurchaseOrderForm = (mode, searchText) => {
     setProductsLoading(true);
 
     apiClient
-      .get('products', {
+      .get('products/pos/search', {
         params: {
           productTypeId: productTypeId || undefined,
           brandId: brandId || undefined,
           search: search || undefined,
           take: 50,
+          pageSize: 50,
+          activeOnly: 'true',
           _ts: Date.now(),
         },
       })
@@ -395,7 +441,7 @@ export const usePurchaseOrderForm = (mode, searchText) => {
           brandName: product.brandName || product.productProfile || '-',
           productTemplate: product.productTemplate || '-',
           quantity: product.quantity || 1,
-          costPrice: product.costPrice || 0,
+          costPrice: pickCostPrice(product),
         },
       ];
     });

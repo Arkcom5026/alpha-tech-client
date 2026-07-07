@@ -43,6 +43,17 @@ export const getProductTypeById = async (id) => {
   }
 };
 
+
+// GLOBAL PRODUCT TYPE OPTIONS
+export const getGlobalProductTypeOptions = async () => {
+  try {
+    const { data } = await apiClient.get('product-types/global-options', { params: { _ts: Date.now() } });
+    return data; // { branch, items }
+  } catch (error) {
+    throw parseApiError(error);
+  }
+};
+
 // TEMPLATE BRANCH PRODUCT TYPE OPTIONS
 export const getTemplateProductTypeOptions = async () => {
   try {

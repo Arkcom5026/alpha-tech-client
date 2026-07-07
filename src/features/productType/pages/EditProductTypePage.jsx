@@ -13,6 +13,8 @@ import { useAuthStore } from '@/features/auth/store/authStore';
 // - เรียก API ผ่าน Store เท่านั้น (Standard #61)
 // - ครอบ try...catch ทุกการทำงาน และใช้ parseApiError
 
+const PRODUCT_TYPE_LIST_PATH = '/pos/stock/types';
+
 const EditProductTypePage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -21,7 +23,7 @@ const EditProductTypePage = () => {
   const [formData, setFormData] = useState(null);
   const [isFetching, setIsFetching] = useState(true);
 
-    // ✅ Guard สิทธิ์ (P1-safe): canManageProductOrdering เป็น selector function
+  // ✅ Guard สิทธิ์ (P1-safe): canManageProductOrdering เป็น selector function
   const { isSuperAdmin, canManageProductOrdering } = useAuthStore();
   const canManage = useMemo(
     () => isSuperAdmin || canManageProductOrdering(),
@@ -59,13 +61,13 @@ const EditProductTypePage = () => {
     try {
       await updateProductTypeAction(Number(id), payload);
       setSuccessMsg('อัปเดตประเภทสินค้าเรียบร้อยแล้ว');
-      setTimeout(() => navigate(`/${shopSlug}/pos/stock/types`), 600);
+      setTimeout(() => navigate(PRODUCT_TYPE_LIST_PATH), 600);
     } catch (err) {
       setErrorMsg(parseApiError(err) || 'ไม่สามารถอัปเดตประเภทสินค้าได้');
     }
   };
 
-    if (!canManage) {
+  if (!canManage) {
     return (
       <div className="p-6 w-full flex flex-col items-center">
         <div className="w-full max-w-3xl">
@@ -84,7 +86,7 @@ const EditProductTypePage = () => {
               </button>
               <Link
                 className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-sm font-medium text-blue-700 hover:bg-blue-100"
-                to={shopSlug ? `/${shopSlug}/pos/stock/types` : `/pos/stock/types`}
+                to={PRODUCT_TYPE_LIST_PATH}
               >
                 กลับไปหน้ารายการ
               </Link>
@@ -132,7 +134,3 @@ const EditProductTypePage = () => {
 };
 
 export default EditProductTypePage;
-
-
-
-

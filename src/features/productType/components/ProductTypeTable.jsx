@@ -63,8 +63,7 @@ const ProductTypeTable = ({ data = [], loading, error, page = 1, limit = 20, onE
           <thead className="text-left text-zinc-600 bg-zinc-50 dark:bg-zinc-800">
             <tr className="border-b border-zinc-200 dark:border-zinc-800">
               <th className="px-4 py-2 w-[60px] text-center">#</th>
-              <th className="px-4 py-2 w-[32%]">ชื่อประเภทสินค้า</th>
-              <th className="px-4 py-2 w-[24%]">หมวดหมู่สินค้า</th>
+              <th className="px-4 py-2 w-[42%]">ชื่อประเภทสินค้า</th>
               <th className="px-4 py-2 w-[90px] text-center">แบรนด์</th>
               <th className="px-4 py-2 w-[90px] text-center">สินค้า</th>
               <th className="px-4 py-2 w-[10%] text-center">สถานะ</th>
@@ -74,7 +73,7 @@ const ProductTypeTable = ({ data = [], loading, error, page = 1, limit = 20, onE
           <tbody>
             {!loading && rows.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-zinc-500">ไม่พบข้อมูล</td>
+                <td colSpan={6} className="px-4 py-8 text-center text-zinc-500">ไม่พบข้อมูล</td>
               </tr>
             )}
 
@@ -101,7 +100,6 @@ const ProductTypeTable = ({ data = [], loading, error, page = 1, limit = 20, onE
                       )}
                     </div>
                   </td>
-                  <td className="px-4 py-3">{row.category?.name || '-'}</td>
                   <td className="px-4 py-3 text-center font-medium text-zinc-700 dark:text-zinc-200">{brandCount}</td>
                   <td className="px-4 py-3 text-center font-medium text-zinc-700 dark:text-zinc-200">{productCount}</td>
                   <td className="px-4 py-3 text-center">
@@ -149,7 +147,7 @@ const ProductTypeTable = ({ data = [], loading, error, page = 1, limit = 20, onE
 
             {loading && (
               <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-zinc-500">กำลังโหลดข้อมูล...</td>
+                <td colSpan={6} className="px-4 py-8 text-center text-zinc-500">กำลังโหลดข้อมูล...</td>
               </tr>
             )}
           </tbody>

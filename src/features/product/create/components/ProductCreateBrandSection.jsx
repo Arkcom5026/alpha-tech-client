@@ -19,7 +19,7 @@ const ProductCreateBrandSection = ({
         <div>
           <h3 className="text-sm font-semibold text-slate-900">🏷️ แบรนด์สินค้า</h3>
           <p className="text-xs text-slate-500">
-            แบรนด์ถูกกรองจาก Product Create API ตามประเภทสินค้าที่เลือก
+            แบรนด์ถูกกรองจาก Mapping ของร้านตามประเภทสินค้าที่เลือก
           </p>
         </div>
 
@@ -63,7 +63,7 @@ const ProductCreateBrandSection = ({
           <p className="mt-1 text-xs text-red-600">{errors.brandId}</p>
         ) : (
           <p className="mt-1 text-xs text-slate-500">
-            ถ้าไม่พบแบรนด์ ให้ตรวจ Template Catalog หรือเพิ่ม Mapping ตาม Flow ของ Product Create
+            ถ้าไม่พบแบรนด์ ให้เพิ่ม/ตรวจ Mapping แบรนด์ของร้านก่อนบันทึกสินค้า
           </p>
         )}
       </label>

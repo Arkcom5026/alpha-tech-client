@@ -16,7 +16,7 @@ const ProductCreateExistingModelsPanel = ({
         <div>
           <h3 className="text-sm font-semibold text-slate-900">รายการรุ่นสินค้าที่มีอยู่แล้ว</h3>
           <p className="text-xs text-slate-500">
-            เลือกประเภทสินค้าและแบรนด์ก่อน ระบบจะแสดงชื่อรุ่นที่มีอยู่แล้วเพื่อช่วยป้องกันการเพิ่มซ้ำ
+            เลือกประเภทสินค้าและแบรนด์ก่อน ระบบจะแสดงรุ่นสินค้าที่มีอยู่แล้วในร้านนี้เพื่อช่วยป้องกันการเพิ่มซ้ำ
           </p>
         </div>
 
@@ -33,7 +33,7 @@ const ProductCreateExistingModelsPanel = ({
       </div>
 
       {!ready ? (
-        <p className="text-sm text-slate-500">เลือกประเภทสินค้าก่อน</p>
+        <p className="text-sm text-slate-500">เลือกประเภทสินค้าของร้านก่อน</p>
       ) : loading ? (
         <p className="text-sm text-slate-500">กำลังโหลดรายการรุ่นสินค้า...</p>
       ) : items.length === 0 ? (

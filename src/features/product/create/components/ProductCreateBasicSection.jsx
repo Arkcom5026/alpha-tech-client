@@ -24,7 +24,7 @@ const ProductCreateBasicSection = ({
       <div className="mb-4">
         <h3 className="text-sm font-semibold text-slate-900">📦 ข้อมูลหลักสินค้า</h3>
         <p className="text-xs text-slate-500">
-          กำหนดชื่อสินค้า ประเภทสินค้า และหน่วยนับ ส่วนแบรนด์จัดการใน Brand Section แยกต่างหาก
+          กำหนดชื่อสินค้า ประเภทสินค้า และหน่วยนับจากข้อมูลของร้านเท่านั้น ไม่ใช้ Template Catalog
         </p>
       </div>
 
@@ -55,7 +55,9 @@ const ProductCreateBasicSection = ({
               disabled={disabled}
               className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:bg-slate-100"
             >
-              <option value="">-- เลือกประเภทสินค้า --</option>
+              <option value="">
+                {productTypes.length ? '-- เลือกประเภทสินค้า --' : '-- ไม่พบประเภทสินค้าของร้าน --'}
+              </option>
               {productTypes.map((item) => (
                 <option key={item.id} value={item.id}>
                   {item.name}
@@ -91,3 +93,4 @@ const ProductCreateBasicSection = ({
 };
 
 export default ProductCreateBasicSection;
+  

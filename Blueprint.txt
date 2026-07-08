@@ -6894,3 +6894,44 @@ Dependency ระหว่างโมดูลต้องต่ำ (Low Coupli
 -------------
 
 
+
+UB — P3 ProductType Slug Removal & Catalog Source of Truth
+
+Status: LOCKED ✅
+
+ProductType.slug removal completed.
+
+Confirmed final state:
+
+✅ ProductType.slug removed from Database
+✅ ProductType.slug removed from Prisma schema
+✅ ProductType slug unique constraint removed
+✅ ProductType slug index removed
+✅ Prisma Client generated successfully
+✅ Prisma schema validated successfully
+✅ Migration history synced
+✅ Database schema up to date
+✅ Git pushed to origin/main
+
+Migration applied/resolved:
+
+20260707195000_drop_product_type_slug
+
+Final Prisma migration status:
+
+3 migrations found in prisma/migrations
+Database schema is up to date!
+
+Final ProductType identity rule:
+
+ProductType runtime identity =
+branchId + globalProductTypeId + normalizedName
+
+Keep:
+
+Branch.slug
+tenantSlug
+
+Do not reintroduce ProductType.slug.
+
+--------

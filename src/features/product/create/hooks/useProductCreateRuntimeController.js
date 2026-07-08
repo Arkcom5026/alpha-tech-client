@@ -21,21 +21,30 @@ const extractCreatedProduct = (response) => {
   return null;
 };
 
-const normalizeDropdownPayload = (raw = {}) => {
+const normalizeDropdownPayload = (raw = {}, branchId) => {
   const payload = raw?.data && typeof raw.data === 'object' ? raw.data : raw;
 
   return {
-    categories: Array.isArray(payload?.categories) ? payload.categories : [],
-    productTypes: Array.isArray(payload?.productTypes)
-      ? payload.productTypes
-      : Array.isArray(payload?.productTypeList)
-        ? payload.productTypeList
-        : [],
-    brands: Array.isArray(payload?.brands)
-      ? payload.brands
-      : Array.isArray(payload?.brandList)
-        ? payload.brandList
-        : [],
+    categories: keepOperationalItemsForBranch(
+      Array.isArray(payload?.categories) ? payload.categories : [],
+      branchId
+    ),
+    productTypes: keepOperationalItemsForBranch(
+      Array.isArray(payload?.productTypes)
+        ? payload.productTypes
+        : Array.isArray(payload?.productTypeList)
+          ? payload.productTypeList
+          : [],
+      branchId
+    ),
+    brands: keepOperationalItemsForBranch(
+      Array.isArray(payload?.brands)
+        ? payload.brands
+        : Array.isArray(payload?.brandList)
+          ? payload.brandList
+          : [],
+      branchId
+    ),
     units: Array.isArray(payload?.units)
       ? payload.units
       : Array.isArray(payload?.unitList)
@@ -44,13 +53,19 @@ const normalizeDropdownPayload = (raw = {}) => {
   };
 };
 
-const normalizeBrandsPayload = (raw = {}) => {
+const normalizeBrandsPayload = (raw = {}, branchId) => {
   const payload = raw?.data && typeof raw.data === 'object' ? raw.data : raw;
-  if (Array.isArray(payload)) return payload;
-  if (Array.isArray(payload?.items)) return payload.items;
-  if (Array.isArray(payload?.brands)) return payload.brands;
-  if (Array.isArray(payload?.brandList)) return payload.brandList;
-  return [];
+  const items = Array.isArray(payload)
+    ? payload
+    : Array.isArray(payload?.items)
+      ? payload.items
+      : Array.isArray(payload?.brands)
+        ? payload.brands
+        : Array.isArray(payload?.brandList)
+          ? payload.brandList
+          : [];
+
+  return keepOperationalItemsForBranch(items, branchId);
 };
 
 const normalizeExistingModelsPayload = (raw = {}) => {
@@ -64,6 +79,32 @@ const toNumberOrNull = (value) => {
   if (value === undefined || value === null || value === '') return null;
   const n = Number(value);
   return Number.isFinite(n) ? n : null;
+};
+
+const isTemplateSource = (item = {}) => {
+  const source = String(item?.source || '').trim().toUpperCase();
+  const branchCode = String(item?.branch?.branchCode || item?.branchCode || '').trim().toUpperCase();
+
+  return (
+    source.includes('TEMPLATE') ||
+    branchCode === 'T01' ||
+    item?.isTemplate === true ||
+    item?.template === true
+  );
+};
+
+const keepOperationalItemsForBranch = (items = [], branchId) => {
+  const brId = toNumberOrNull(branchId);
+
+  return items.filter((item) => {
+    if (!item?.id) return false;
+    if (isTemplateSource(item)) return false;
+
+    const itemBranchId = toNumberOrNull(item.branchId);
+    if (!itemBranchId) return true;
+
+    return !brId || itemBranchId === brId;
+  });
 };
 
 const validateForm = (values = {}) => {
@@ -152,8 +193,8 @@ const useProductCreateRuntimeController = () => {
     setDropdownsLoading(true);
 
     try {
-      const raw = await getProductCreateDropdowns();
-      const dropdowns = normalizeDropdownPayload(raw);
+      const raw = await getProductCreateDropdowns({ branchId });
+      const dropdowns = normalizeDropdownPayload(raw, branchId);
       setDropdowns(dropdowns);
       clearRuntimeError();
       return dropdowns;
@@ -177,8 +218,8 @@ const useProductCreateRuntimeController = () => {
     setBrandsLoading(true);
 
     try {
-      const raw = await getProductCreateBrands({ productTypeId });
-      const brands = normalizeBrandsPayload(raw);
+      const raw = await getProductCreateBrands({ productTypeId, branchId });
+      const brands = normalizeBrandsPayload(raw, branchId);
       setBrands(brands);
       clearRuntimeError();
       return brands;

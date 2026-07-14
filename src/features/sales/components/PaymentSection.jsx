@@ -154,7 +154,7 @@ const PaymentSection = ({
       hasValidCustomerId &&
       !hasImmediatePayment);
 
-  const handleConfirm = useCallback(async () => {
+  const handleConfirm = useCallback(async (confirmContext = {}) => {
     let result = null;
     if (confirmLockRef.current) return null;
     confirmLockRef.current = true;
@@ -248,9 +248,14 @@ const PaymentSection = ({
           paymentList: finalValidPayments,
         });
 
-        const computedSaleOption = isCreditSale ? 'DELIVERY_NOTE' : saleOption === 'NONE' ? 'RECEIPT' : saleOption;
+        const computedSaleOption = isCreditSale
+          ? 'DELIVERY_NOTE'
+          : saleOption === 'NONE'
+            ? 'RECEIPT'
+            : saleOption;
+
         if (typeof onSaleConfirmed === 'function') {
-          onSaleConfirmed(saleId, computedSaleOption);
+          onSaleConfirmed(saleId, computedSaleOption, confirmContext);
         }
 
         result = { saleId, saleOption: computedSaleOption };

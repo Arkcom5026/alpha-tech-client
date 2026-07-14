@@ -2,7 +2,6 @@
 // 🏛️ Premium Next-Gen POS Payment Summary: (Pure High-Contrast & Premium Dark Layout Center)
 
 import React, { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import PropTypes from 'prop-types';
 
 import BillPrintOptions, { PRINT_OPTION, SALE_MODE } from './BillPrintOptions';
@@ -27,9 +26,6 @@ const PaymentSummary = ({
   setCurrentSaleMode,
   hasValidCustomerId = false,
 }) => {
-  const navigate = useNavigate();
-
-  const DELIVERY_NOTE_PRINT_ROUTE = '/pos/sales/delivery-note/print';
   const totalNum = Number(totalToPay) || 0;
   const paidNum = Number(grandTotalPaid) || 0;
   const changeNum = Number(safeChangeAmount) || 0;
@@ -143,19 +139,35 @@ const PaymentSummary = ({
           type="button"
           onClick={async () => {
             if (!isConfirmEnabled || isSubmitting) return;
+
+            // Reserve the print tab while this click is still a direct user gesture.
+            // Reusing it after async sale/payment completion avoids browser popup blocking.
+            const shouldOpenDocument =
+              isCredit ||
+              saleOption === PRINT_OPTION.RECEIPT ||
+              saleOption === PRINT_OPTION.TAX_INVOICE ||
+              saleOption === PRINT_OPTION.DELIVERY_NOTE;
+
+            const printWindow = shouldOpenDocument
+              ? window.open('', '_blank')
+              : null;
+
+            if (printWindow) {
+              printWindow.document.title = 'กำลังเตรียมเอกสาร...';
+              printWindow.document.body.innerHTML =
+                '<div style="font-family:Tahoma,Arial,sans-serif;padding:24px;text-align:center">กำลังบันทึกการขายและเตรียมเอกสาร...</div>';
+            }
+
             try {
-              const created = await onConfirm?.();
-              const shouldPrintDeliveryNote = isCredit || saleOption === PRINT_OPTION.DELIVERY_NOTE;
-              if (!shouldPrintDeliveryNote) return;
+              const created = await onConfirm?.({ printWindow });
 
-              const createdSale = created?.sale ?? created;
-              const saleId = createdSale?.id ?? created?.saleId ?? created?.id;
-              if (!saleId) return;
-
-              navigate(`${DELIVERY_NOTE_PRINT_ROUTE}/${saleId}`, {
-                state: { sale: createdSale },
-              });
+              if (!created && printWindow && !printWindow.closed) {
+                printWindow.close();
+              }
             } catch (err) {
+              if (printWindow && !printWindow.closed) {
+                printWindow.close();
+              }
               console.error('[PaymentSummary] confirm sale error', err);
             }
           }}

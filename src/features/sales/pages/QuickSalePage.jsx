@@ -173,28 +173,38 @@ const QuickSalePage = () => {
 
   const lastPrintKeyRef = useRef('');
 
-  const handleSaleConfirmed = (saleId, option) => {
+  const handleSaleConfirmed = (saleId, option, printContext = {}) => {
     const finalOption = option || saleOption;
 
     if (saleId && finalOption && finalOption !== 'NONE') {
       const printKey = `${String(saleId)}::${String(finalOption)}`;
-      if (lastPrintKeyRef.current === printKey) return;
+      if (lastPrintKeyRef.current !== printKey) {
+        let printUrl = '';
 
-      let printUrl = '';
-      if (finalOption === 'RECEIPT') {
-        // 🟢 FIXED: ซ่อมแซมสับเปลี่ยนพาสพิมพ์สลิปสั้นให้ผูกวิ่งตาม Dynamic targetSlug สาขาคู่ค้าจริง
-        printUrl = `/${targetSlug}/pos/sales/bill/print-short/${saleId}`;
-      } else if (finalOption === 'TAX_INVOICE') {
-        // 🟢 FIXED: ซ่อมแซมสับเปลี่ยนพาสพิมพ์สลิปเต็มใบภาษีให้ผูกวิ่งตาม Dynamic targetSlug สาขาคู่ค้าจริง
-        printUrl = `/${targetSlug}/pos/sales/bill/print-full/${saleId}`;
-      } else if (finalOption === 'DELIVERY_NOTE') {
-        setBarcodeError('ℹ️ ใบส่งของยังไม่พร้อมใช้งานในเวอร์ชันนี้');
-        printUrl = '';
-      }
+        if (finalOption === 'RECEIPT') {
+          printUrl = `/${targetSlug}/pos/sales/print-short/${saleId}`;
+        } else if (finalOption === 'TAX_INVOICE') {
+          printUrl = `/${targetSlug}/pos/sales/print-full/${saleId}`;
+        } else if (finalOption === 'DELIVERY_NOTE') {
+          printUrl = `/${targetSlug}/pos/sales/delivery-note/print/${saleId}`;
+        }
 
-      if (printUrl) {
-        lastPrintKeyRef.current = printKey;
-        window.open(printUrl, '_blank', 'noopener,noreferrer');
+        if (printUrl) {
+          lastPrintKeyRef.current = printKey;
+
+          const reservedPrintWindow = printContext?.printWindow;
+          if (reservedPrintWindow && !reservedPrintWindow.closed) {
+            reservedPrintWindow.location.replace(printUrl);
+            reservedPrintWindow.focus?.();
+          } else {
+            const opened = window.open(printUrl, '_blank', 'noopener,noreferrer');
+            if (!opened) {
+              // Popup may be blocked after an async sale/payment flow.
+              // Fall back to same-tab navigation so the document is never lost.
+              navigate(printUrl);
+            }
+          }
+        }
       }
     }
 

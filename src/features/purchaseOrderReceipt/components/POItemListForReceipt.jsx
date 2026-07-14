@@ -344,11 +344,19 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, formData, items }
 
             <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
               {(listItems || []).map((item) => {
-                const catName = item.categoryName ?? item.product?.category?.name ?? '-';
-                const typeName = item.productTypeName ?? item.product?.productType?.name ?? '-';
-                const brandName = item.brandName ?? item.product?.brand?.name ?? '-';
-                const profileName = item.profileName ?? item.product?.productProfile?.name ?? '-';
-                const templateName = item.templateName ?? item.product?.template?.name ?? '-';
+                const catName =
+                  item.categoryName ??
+                  item.product?.categoryName ??
+                  item.product?.productType?.globalProductType?.category?.name ??
+                  '-';
+                const typeName = item.productTypeName ?? item.product?.productTypeName ?? item.product?.productType?.name ?? '-';
+                const brandName = item.brandName ?? item.product?.brandName ?? item.product?.brand?.name ?? '-';
+                const profileName = item.profileName ?? item.product?.productProfileName ?? '-';
+                const templateName =
+                  item.templateName ??
+                  item.product?.templateName ??
+                  item.product?.templateProduct?.name ??
+                  '-';
                 const productName = item.productName ?? item.product?.name ?? item.name ?? '-';
 
                 const received = Number(item.receivedQuantity || 0);

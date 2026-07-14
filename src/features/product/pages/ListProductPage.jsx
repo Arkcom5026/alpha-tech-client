@@ -357,27 +357,49 @@ export default function ListProductPage() {
           const typeName =
             typeof p?.productType === 'string'
               ? p.productType
-              : p?.productType?.name ?? p?.productTypeName ?? p?.typeName ?? p?.product_type_name ?? null;
-          const profileName = p?.productProfile?.name ?? p?.profileName ?? p?.product_profile_name ?? null;
-          const templateName = p?.template?.name ?? p?.templateName ?? p?.template_name ?? null;
+              : p?.productTypeName ??
+                p?.productType?.name ??
+                p?.typeName ??
+                p?.product_type_name ??
+                null;
 
-          const brandName = p?.brand?.name ?? p?.brandName ?? p?.brand_name ?? null;
+          const categoryName =
+            p?.categoryName ??
+            p?.productType?.globalProductType?.category?.name ??
+            null;
+
+          const brandName =
+            p?.brandName ??
+            p?.brand?.name ??
+            p?.brand_name ??
+            null;
+
+          const templateTraceName =
+            p?.templateName ??
+            p?.productTemplateName ??
+            p?.templateProduct?.name ??
+            null;
+
+          const unitName =
+            p?.unitName ??
+            p?.unit?.name ??
+            null;
 
           return {
             ...p,
 
-            // ✅ Table fields (string)
+            // Operational Product display fields.
             productType: typeName,
-
-            // ✅ Brand (string)
+            productTypeName: typeName,
+            categoryName,
             brandName,
+            unitName,
 
-            // ✅ Keep legacy field for other UI parts (if any)
-            productProfile: profileName,
-            templateName,
+            // Template is trace metadata only, never operational truth.
+            templateName: templateTraceName,
 
-            // ✅ SKU/spec
-            sku: p?.sku ?? p?.model ?? p?.spec ?? templateName ?? null,
+            // SKU/spec must come from the operational product first.
+            sku: p?.sku ?? p?.model ?? p?.spec ?? null,
 
             // ✅ Prices (branch-scoped)
             costPrice: bp?.costPrice ?? p?.costPrice ?? null,

@@ -78,7 +78,7 @@ const PurchaseOrderTable = ({ products = [], setProducts = () => {}, editable = 
                     <TableCell>
                       <div className="font-black text-slate-900 text-sm tracking-tight">{product.name}</div>
                       <div className="text-[10px] font-black text-slate-400 mt-1 uppercase tracking-wide">
-                        หมวด: {product.category} • ประเภท: {product.productType} • สเปก: {product.productTemplate || '-'}
+                        หมวด: {product.category || '-'} • ประเภท: {product.productType || '-'} • แบรนด์: {product.brandName || '-'}
                       </div>
                     </TableCell>
                     

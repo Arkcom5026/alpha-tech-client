@@ -47,14 +47,18 @@ const CreatePurchaseOrderReceiptPage = () => {
     const p = it?.product || it?.purchaseOrderItem?.product || null;
     const getName = (obj) => (obj && typeof obj === 'object' ? (obj.name ?? obj.label ?? obj.title ?? null) : null);
 
-    const categoryName = getName(p?.category) || getName(p?.productCategory) || it?.categoryName || null;
-    const productTypeName = getName(p?.productType) || it?.productTypeName || null;
-    const brandName = getName(p?.brand) || it?.brandName || null;
-    const profileName = getName(p?.productProfile) || getName(p?.profile) || it?.profileName || null;
-    const templateName = getName(p?.template) || it?.templateName || null;
+    const categoryName =
+      it?.categoryName ||
+      p?.categoryName ||
+      getName(p?.productType?.globalProductType?.category) ||
+      null;
+    const productTypeName = it?.productTypeName || p?.productTypeName || getName(p?.productType) || null;
+    const brandName = it?.brandName || p?.brandName || getName(p?.brand) || null;
+    const profileName = it?.profileName || p?.productProfileName || null;
+    const templateName = it?.templateName || p?.templateName || getName(p?.templateProduct) || null;
 
     const productName = p?.name || it?.productName || it?.name || null;
-    const unitName = getName(p?.unit) || getName(p?.template?.unit) || it?.unitName || null;
+    const unitName = it?.unitName || p?.unitName || getName(p?.unit) || null;
 
     return {
       ...it,

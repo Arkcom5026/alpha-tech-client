@@ -360,11 +360,17 @@ const useProductStore = create((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const cleanedPayload = { ...payload };
-      delete cleanedPayload.branchId;      
-      if (cleanedPayload?.templateId === '' || cleanedPayload?.templateId == null) delete cleanedPayload.templateId
-      if (cleanedPayload?.productProfileId === '' || cleanedPayload?.productProfileId == null) delete cleanedPayload.productProfileId
+      delete cleanedPayload.branchId;
+      delete cleanedPayload.categoryId;
+      delete cleanedPayload.productProfileId;
       delete cleanedPayload.productTemplateId;
+      delete cleanedPayload.templateId;
+      delete cleanedPayload.templateProductId;
+      delete cleanedPayload.category;
+      delete cleanedPayload.productType;
+      delete cleanedPayload.brand;
       delete cleanedPayload.unit;
+      delete cleanedPayload.templateProduct;
 
       const data = await createProduct(cleanedPayload);
       set({ isLoading: false });
@@ -380,7 +386,17 @@ const useProductStore = create((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const cleanedPayload = { ...payload };
+      delete cleanedPayload.branchId;
+      delete cleanedPayload.categoryId;
+      delete cleanedPayload.productProfileId;
+      delete cleanedPayload.productTemplateId;
+      delete cleanedPayload.templateId;
+      delete cleanedPayload.templateProductId;
+      delete cleanedPayload.category;
+      delete cleanedPayload.productType;
+      delete cleanedPayload.brand;
       delete cleanedPayload.unit;
+      delete cleanedPayload.templateProduct;
 
       try {
         const data = await updateProduct(id, cleanedPayload);

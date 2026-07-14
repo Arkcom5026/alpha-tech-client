@@ -113,18 +113,17 @@ const EditProductPage = () => {
     const resolveMode = (p) => {
       if (p?.mode) return p.mode; // ค่าจากเซิร์ฟเวอร์มีสิทธิ์สูงสุด
       if (typeof p?.noSN === 'boolean') return p.noSN ? 'SIMPLE' : 'STRUCTURED';
-      if (p?.productTemplateId) return 'STRUCTURED';
+      if (p?.trackSerialNumber === true) return 'STRUCTURED';
       return 'SIMPLE';
     };
 
     return {
       ...product,
       mode: resolveMode(product),
-      unitId: product.unitId ?? '',
-      productProfileId: product.productProfileId ?? '',
-      categoryId: product.categoryId ?? '',
-      productTypeId: product.productTypeId ?? '',
-      productTemplateId: product.productTemplateId ?? '',
+      productTypeId: product.productTypeId ?? product.productType?.id ?? '',
+      brandId: product.brandId ?? product.brand?.id ?? '',
+      unitId: product.unitId ?? product.unit?.id ?? '',
+      templateProductId: product.templateProductId ?? null,
     };
   }, [product]);
 
@@ -134,9 +133,9 @@ const EditProductPage = () => {
 
     setIsUpdating(true);
 
-    // ✅ หากเลือก SIMPLE ให้ตัดการผูกกับ Template ออก (ระดับ Product เท่านั้น)
+    // Stock mode changes must not rewrite Template trace identity.
+    // templateProductId is preserved by the backend and is not part of this normal edit payload.
     if (formData?.mode === 'SIMPLE') {
-      formData.productTemplateId = null;
       formData.noSN = true;
       formData.trackSerialNumber = false;
     } else if (formData?.mode === 'STRUCTURED') {

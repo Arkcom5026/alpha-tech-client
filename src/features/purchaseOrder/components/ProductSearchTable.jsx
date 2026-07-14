@@ -48,20 +48,27 @@ const ProductSearchTable = ({ results = [], onAdd }) => {
       return;
     }
     
-    const brandLabel = product?.brand?.name ?? product?.brandName ?? product?.brand ?? product?.productProfile ?? '-';
+    const brandLabel =
+      product?.brandName ??
+      product?.brand?.name ??
+      (typeof product?.brand === 'string' ? product.brand : null) ??
+      '-';
 
     // 🟢 ENTERPRISE CONTRACT: บีบคีย์เป็น productId สากล สยบบั๊กเลเยอร์นับยอดเงินสะสม
     onAdd({
       id: pId,
       productId: pId, 
       name: product.name,
-      category: product.category || '-',
-      productType: product.productType || '-',
-      productProfile: brandLabel,
-      brandId: product?.brand?.id ?? product?.brandId ?? null,
+      category: product.categoryName || product.category || '-',
+      productType: product.productTypeName || product.productType || '-',
+      brandId: product?.brandId ?? product?.brand?.id ?? null,
       brandName: brandLabel,
-      productTemplate: product.productTemplate || '-',
-      model: product.model || '-',
+      templateTrace:
+        product.templateName ||
+        product.productTemplateName ||
+        product.templateProduct?.name ||
+        null,
+      model: product.model || product.spec || '-',
       description: product.description || '',
       quantity: qty,
       costPrice: cost,

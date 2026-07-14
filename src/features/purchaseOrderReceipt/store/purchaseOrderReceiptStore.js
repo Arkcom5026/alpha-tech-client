@@ -224,13 +224,17 @@ const usePurchaseOrderReceiptStore = create((set, get) => ({
       const items = Array.isArray(res?.items) ? res.items : [];
       const normalizedItems = items.map((it) => {
         const p = it?.product || {};
-        const categoryName = it?.categoryName ?? p?.category?.name ?? p?.categoryName ?? '-';
-        const productTypeName = it?.productTypeName ?? p?.productType?.name ?? p?.productTypeName ?? '-';
-        const brandName = it?.brandName ?? p?.brand?.name ?? p?.brandName ?? '-';
-        const profileName = it?.profileName ?? p?.productProfile?.name ?? p?.productProfileName ?? '-';
-        const templateName = it?.templateName ?? p?.template?.name ?? p?.templateName ?? '-';
+        const categoryName =
+          it?.categoryName ??
+          p?.categoryName ??
+          p?.productType?.globalProductType?.category?.name ??
+          '-';
+        const productTypeName = it?.productTypeName ?? p?.productTypeName ?? p?.productType?.name ?? '-';
+        const brandName = it?.brandName ?? p?.brandName ?? p?.brand?.name ?? '-';
+        const profileName = it?.profileName ?? p?.productProfileName ?? '-';
+        const templateName = it?.templateName ?? p?.templateName ?? p?.templateProduct?.name ?? '-';
         const productName = it?.productName ?? p?.name ?? '-';
-        const fontName = it?.unitName ?? p?.unit?.name ?? p?.template?.unit?.name ?? '-';
+        const fontName = it?.unitName ?? p?.unitName ?? p?.unit?.name ?? '-';
 
         return {
           ...it,

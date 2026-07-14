@@ -214,7 +214,7 @@ export const useBillStore = create((set, get) => ({
             productName: resolveSaleItemProductName(i),
             productModel: i?.stockItem?.product?.model || 'ไม่พบสเปกสินค้า (SKU)',
             quantity: qty,
-            unit: i?.stockItem?.product?.template?.unit?.name || i?.stockItem?.product?.unit?.name || '-',
+            unit: i?.stockItem?.product?.unit?.name || i?.unitName || '-',
             amount: amountVatIncl,
             unitPriceExVat: round2(unitEx),
             totalExVat: round2(lineEx),

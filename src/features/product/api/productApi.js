@@ -2,6 +2,34 @@ import apiClient from '@/utils/apiClient';
 import { parseApiError } from '@/utils/uiHelpers';
 import { getProductTypeDropdowns, getProductTypes } from '@/features/productType/api/productTypeApi';
 
+const sanitizeOperationalProductWritePayload = (payload = {}) => {
+  const sanitized = { ...(payload || {}) };
+
+  // Branch authority comes from the authenticated backend context.
+  delete sanitized.branchId;
+
+  // Removed/legacy Product fields. They are not part of the current Prisma Product model.
+  delete sanitized.categoryId;
+  delete sanitized.productProfileId;
+  delete sanitized.productTemplateId;
+  delete sanitized.templateId;
+
+  // Template linkage is created only by the dedicated clone flow.
+  // Normal create/edit must not attach, detach, or rewrite that trace relation.
+  delete sanitized.templateProductId;
+
+  // Display-only relation objects must never be submitted back to Prisma.
+  delete sanitized.category;
+  delete sanitized.productType;
+  delete sanitized.brand;
+  delete sanitized.unit;
+  delete sanitized.templateProduct;
+  delete sanitized.productProfile;
+  delete sanitized.productTemplate;
+
+  return sanitized;
+};
+
 export const getProducts = async ({ search, status, categoryId, productTypeId, brandId, take, takeNum, page, skipNum } = {}) => {
   try {
     const params = { _ts: Date.now() };
@@ -28,22 +56,25 @@ export const getProductById = async (id) => {
 
 export const createProduct = async (payload) => {
   try {
-    if (import.meta.env?.DEV) console.log('[productApi] createProduct payload', payload);
-    const { data } = await apiClient.post('products', payload);
+    const sanitizedPayload = sanitizeOperationalProductWritePayload(payload);
+    if (import.meta.env?.DEV) console.log('[productApi] createProduct payload', sanitizedPayload);
+    const { data } = await apiClient.post('products', sanitizedPayload);
     return data;
   } catch (err) { throw parseApiError(err); }
 };
 
 export const updateProduct = async (id, payload) => {
   try {
-    const { data } = await apiClient.patch(`products/${id}`, payload);
+    const sanitizedPayload = sanitizeOperationalProductWritePayload(payload);
+    const { data } = await apiClient.patch(`products/${id}`, sanitizedPayload);
     return data;
   } catch (err) { throw parseApiError(err); }
 };
 
 export const updateProductAndGet = async (id, payload) => {
   try {
-    await apiClient.patch(`products/${id}`, payload);
+    const sanitizedPayload = sanitizeOperationalProductWritePayload(payload);
+    await apiClient.patch(`products/${id}`, sanitizedPayload);
     const { data: fresh } = await apiClient.get(`products/${id}`, { params: { _ts: Date.now(), v: 'full' } });
     if (import.meta.env?.DEV) console.log('[productApi] updateProductAndGet fresh', id, fresh);
     return fresh;

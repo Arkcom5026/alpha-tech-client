@@ -194,8 +194,18 @@ const ReadyToSellStructuredDetailsPage = () => {
     const first = items?.[0] || {};
 
     const brandName = first?.brandName ?? first?.brand?.name ?? first?.product?.brand?.name ?? '-';
-    const categoryName = first?.categoryName ?? first?.category?.name ?? first?.product?.category?.name ?? '-';
-    const productTypeName = first?.productTypeName ?? first?.productType?.name ?? first?.product?.productType?.name ?? '-';
+    const categoryName =
+      first?.categoryName ??
+      first?.product?.categoryName ??
+      first?.productType?.globalProductType?.category?.name ??
+      first?.product?.productType?.globalProductType?.category?.name ??
+      '-';
+    const productTypeName =
+      first?.productTypeName ??
+      first?.product?.productTypeName ??
+      first?.productType?.name ??
+      first?.product?.productType?.name ??
+      '-';
 
     const sku = first?.sku ?? first?.productSku ?? first?.code ?? first?.product?.sku ?? first?.product?.productConfig?.sku ?? '-';
     const model = first?.model ?? first?.productModel ?? first?.product?.model ?? first?.product?.productConfig?.model ?? '-';

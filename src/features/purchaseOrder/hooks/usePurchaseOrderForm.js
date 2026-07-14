@@ -103,12 +103,28 @@ const normalizeProductRow = (row) => {
   const id = toPositiveInt(row?.id ?? row?.productId);
   if (!id) return null;
 
-  const brandName =
-    row?.brand?.name ??
-    row?.brandName ??
-    row?.brand ??
-    row?.productProfile ??
+  const categoryName =
+    row?.categoryName ??
+    row?.productType?.globalProductType?.category?.name ??
+    (typeof row?.category === 'string' ? row.category : row?.category?.name) ??
     '-';
+
+  const productTypeName =
+    row?.productTypeName ??
+    (typeof row?.productType === 'string' ? row.productType : row?.productType?.name) ??
+    '-';
+
+  const brandName =
+    row?.brandName ??
+    row?.brand?.name ??
+    (typeof row?.brand === 'string' ? row.brand : null) ??
+    '-';
+
+  const templateTrace =
+    row?.templateName ??
+    row?.productTemplateName ??
+    row?.templateProduct?.name ??
+    null;
 
   const costPrice = pickCostPrice(row);
 
@@ -117,12 +133,13 @@ const normalizeProductRow = (row) => {
     id,
     productId: id,
     name: row?.name ?? row?.title ?? '-',
-    category: row?.category?.name ?? row?.categoryName ?? row?.category ?? '-',
-    productType: row?.productType?.name ?? row?.productTypeName ?? row?.productType ?? '-',
-    productProfile: brandName,
-    brandId: row?.brand?.id ?? row?.brandId ?? null,
+    category: categoryName,
+    categoryName,
+    productType: productTypeName,
+    productTypeName,
+    brandId: row?.brandId ?? row?.brand?.id ?? null,
     brandName,
-    productTemplate: row?.productTemplate?.name ?? row?.templateName ?? row?.productTemplate ?? '-',
+    templateTrace,
     model: row?.model ?? row?.spec ?? '-',
     description: row?.description ?? '',
     costPrice,
@@ -326,18 +343,40 @@ export const usePurchaseOrderForm = (mode, searchText) => {
       setSupplier(purchaseOrder.supplier);
       setOrderDate(purchaseOrder.date?.substring(0, 10) || orderDate);
       setNote(purchaseOrder.note || '');
-      const enriched = (purchaseOrder.items || []).map((item) => ({
-        id: item.productId,
-        productId: item.productId,
-        name: item.product?.name || '-',
-        model: item.product?.model || '-',
-        category: item.product?.category || '-',
-        productType: item.product?.productType || '-',
-        productProfile: item.product?.productProfile || '-',
-        productTemplate: item.product?.productTemplate || '-',
-        quantity: item.quantity,
-        costPrice: item.costPrice,
-      }));
+      const enriched = (purchaseOrder.items || []).map((item) => {
+        const product = item.product || {};
+
+        return {
+          id: item.productId,
+          productId: item.productId,
+          name: product.name || item.productName || '-',
+          model: product.model || item.productModel || '-',
+          category:
+            item.categoryName ||
+            product.categoryName ||
+            product.productType?.globalProductType?.category?.name ||
+            '-',
+          productType:
+            item.productTypeName ||
+            product.productTypeName ||
+            product.productType?.name ||
+            '-',
+          brandId: product.brandId ?? product.brand?.id ?? null,
+          brandName:
+            item.brandName ||
+            product.brandName ||
+            product.brand?.name ||
+            '-',
+          templateTrace:
+            item.productTemplateName ||
+            product.templateName ||
+            product.templateProduct?.name ||
+            null,
+          quantity: item.quantity,
+          costPrice: item.costPrice,
+          receivedQuantity: item.receivedQuantity ?? 0,
+        };
+      });
       setProducts(enriched);
     }
   }, [mode, purchaseOrder, orderDate]);
@@ -434,12 +473,11 @@ export const usePurchaseOrderForm = (mode, searchText) => {
           productId: nextProductId,
           name: product.name || '-',
           model: product.model || '-',
-          category: product.category || '-',
-          productType: product.productType || '-',
-          productProfile: product.productProfile || '-',
+          category: product.categoryName || product.category || '-',
+          productType: product.productTypeName || product.productType || '-',
           brandId: product.brandId ?? null,
-          brandName: product.brandName || product.productProfile || '-',
-          productTemplate: product.productTemplate || '-',
+          brandName: product.brandName || '-',
+          templateTrace: product.templateTrace || null,
           quantity: product.quantity || 1,
           costPrice: pickCostPrice(product),
         },

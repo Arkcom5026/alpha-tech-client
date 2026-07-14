@@ -9,7 +9,7 @@ import {
   updateMultipleBranchPrices, // 🟢 FIXED: เพิ่มการอิมพอร์ตตรงนี้ไว้ที่หัวเสา
 } from '../api/branchPriceApi';
 
-const useBranchPriceStore = create((set) => ({
+const useBranchPriceStore = create((set, get) => ({
   __lastFetchKey: null,
   branchPrices: [],
   allProductsWithPrice: [],
@@ -46,41 +46,43 @@ const useBranchPriceStore = create((set) => ({
 
   // ✅ โหลดสินค้าทั้งหมดพร้อมราคาจาก token context (POS)
   fetchAllProductsWithPriceByTokenAction: async (filters = {}) => {
-    set({ loading: true, error: null });
+    const toOptionalNumber = (value) => {
+      if (value === '' || value === null || value === undefined) return undefined;
+      const parsed = Number(value);
+      return Number.isFinite(parsed) ? parsed : undefined;
+    };
+
+    const params = {
+      categoryId: toOptionalNumber(filters.categoryId),
+      productTypeId: toOptionalNumber(filters.productTypeId),
+      brandId: toOptionalNumber(filters.brandId),
+      searchText: String(filters.searchText || '').trim() || undefined,
+      includeInactive: filters.includeInactive === true,
+      page: toOptionalNumber(filters.page),
+      limit: toOptionalNumber(filters.limit),
+    };
+
+    const nextKey = JSON.stringify(params);
+    if (get().__lastFetchKey === nextKey) return;
+
+    set({ loading: true, error: null, __lastFetchKey: nextKey });
+
     try {
-      // 🧹 Sanitize filters (centralized)
-      const toNum = (v) => (v === '' || v === null || v === undefined ? undefined : Number(v));
-      const params = {
-        categoryId: toNum(filters.categoryId),
-        productTypeId: toNum(filters.productTypeId),
-        productProfileId: toNum(filters.productProfileId),
-        productTemplateId: toNum(filters.productTemplateId),
-        searchText: (filters.searchText || '').trim() || undefined,
-        includeInactive: filters.includeInactive ?? false,
-        page: filters.page ?? undefined,
-        limit: filters.limit ?? undefined,
-      };
-
-      // 🛑 Skip duplicate requests with same params
-      set((state) => {
-        const nextKey = JSON.stringify(params);
-        if (state.__lastFetchKey === nextKey) {
-          // same params, no need to hit API again
-          throw { __skip: true };
-        }
-        return { __lastFetchKey: nextKey };
-      });
-
-      console.log('🔎 [branchPriceStore] fetchAllProductsWithPrice params →', params);
       const res = await getAllProductsWithBranchPrice(params);
-      set({ allProductsWithPrice: res.data });
+      const payload = res?.data;
+      const rows = Array.isArray(payload)
+        ? payload
+        : Array.isArray(payload?.items)
+          ? payload.items
+          : [];
+
+      set({ allProductsWithPrice: rows });
     } catch (err) {
-      if (err && err.__skip) {
-        // skipped duplicate fetch silently
-      } else {
-        console.error('❌ fetchAllProductsWithPriceByTokenAction error:', err);
-        set({ error: 'ไม่สามารถโหลดข้อมูลสินค้าได้' });
-      }
+      console.error('❌ fetchAllProductsWithPriceByTokenAction error:', err);
+      set({
+        error: err?.response?.data?.message || 'ไม่สามารถโหลดข้อมูลสินค้าได้',
+        __lastFetchKey: null,
+      });
     } finally {
       set({ loading: false });
     }

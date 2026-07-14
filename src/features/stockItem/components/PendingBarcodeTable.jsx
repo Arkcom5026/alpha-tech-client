@@ -23,11 +23,26 @@ const normalizeRow = (b) => {
     sku: safeText(stockItem?.product?.sku || stockItem?.sku || ''),
 
     // hierarchy (optional)
-    categoryName: safeText(stockItem?.product?.category?.name || stockItem?.categoryName || ''),
-    productTypeName: safeText(stockItem?.product?.productType?.name || stockItem?.productTypeName || ''),
-    brandName: safeText(stockItem?.product?.brand?.name || stockItem?.brandName || ''),
-    profileName: safeText(stockItem?.product?.profile?.name || stockItem?.profileName || ''),
-    templateName: safeText(stockItem?.product?.template?.name || stockItem?.templateName || ''),
+    categoryName: safeText(
+      stockItem?.categoryName ||
+        stockItem?.product?.categoryName ||
+        stockItem?.product?.productType?.globalProductType?.category?.name ||
+        ''
+    ),
+    productTypeName: safeText(
+      stockItem?.productTypeName ||
+        stockItem?.product?.productTypeName ||
+        stockItem?.product?.productType?.name ||
+        ''
+    ),
+    brandName: safeText(stockItem?.brandName || stockItem?.product?.brandName || stockItem?.product?.brand?.name || ''),
+    profileName: safeText(stockItem?.profileName || stockItem?.product?.productProfileName || ''),
+    templateName: safeText(
+      stockItem?.templateName ||
+        stockItem?.product?.templateName ||
+        stockItem?.product?.templateProduct?.name ||
+        ''
+    ),
 
     // scan status
     stockItemId: b?.stockItemId ?? stockItem?.id ?? null,

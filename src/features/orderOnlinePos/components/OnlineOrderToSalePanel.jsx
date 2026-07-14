@@ -46,9 +46,15 @@ const OnlineOrderToSalePanel = () => {
           <div className="text-sm text-gray-500">รหัสสินค้า: {item.product?.code || '-'}</div>
           <div className="text-sm text-gray-500">บาร์โค้ด: {item.product?.barcode || '-'}</div>
           <div className="text-sm text-gray-500">หน่วย: {item.product?.unit || '-'}</div>
-          <div className="text-sm text-gray-500">หมวดหมู่: {item.product?.template?.productProfile?.productType?.category?.name || '-'}</div>
-          <div className="text-sm text-gray-500">ประเภท: {item.product?.template?.productProfile?.productType?.name || '-'}</div>
-          <div className="text-sm text-gray-500">ลักษณะ: {item.product?.template?.productProfile?.name || '-'}</div>
+          <div className="text-sm text-gray-500">
+            หมวดหมู่: {item.product?.categoryName || item.product?.productType?.globalProductType?.category?.name || '-'}
+          </div>
+          <div className="text-sm text-gray-500">
+            ประเภท: {item.product?.productTypeName || item.product?.productType?.name || '-'}
+          </div>
+          <div className="text-sm text-gray-500">
+            แบรนด์: {item.product?.brandName || item.product?.brand?.name || '-'}
+          </div>
           <div className="text-sm text-gray-500">ราคาขาย: {item.product?.branchPrice?.[0]?.price?.toLocaleString() || '-'}</div>
         </div>
       ))}

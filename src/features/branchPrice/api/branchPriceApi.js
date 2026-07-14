@@ -34,11 +34,25 @@ export const getActiveBranchPrice = async (productId) => {
 // ✅ ดึงสินค้าทั้งหมด พร้อมราคาสำหรับสาขานี้ (แม้บางตัวจะยังไม่มีราคา)
 export const getAllProductsWithBranchPrice = async (filters = {}) => {
   try {
+    const allowedKeys = [
+      'categoryId',
+      'productTypeId',
+      'brandId',
+      'searchText',
+      'includeInactive',
+      'page',
+      'limit',
+    ];
+
     const cleanFilters = Object.fromEntries(
-      Object.entries(filters).filter(([_, v]) => v !== undefined)
+      allowedKeys
+        .map((key) => [key, filters?.[key]])
+        .filter(([, value]) => value !== undefined && value !== null && value !== '')
     );
-    const queryParams = new URLSearchParams(cleanFilters).toString();
-   
+
+    const queryParams = new URLSearchParams(
+      Object.entries(cleanFilters).map(([key, value]) => [key, String(value)])
+    ).toString();
 
     const url = `/branch-prices/all-products${queryParams ? `?${queryParams}` : ''}`;
     return await apiClient.get(url);

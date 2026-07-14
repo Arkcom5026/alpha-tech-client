@@ -31,8 +31,7 @@ const ManageBranchPricePage = () => {
   const [filter, setFilter] = useState({
     categoryId: '',
     productTypeId: '',
-    productProfileId: '',
-    productTemplateId: '',
+    brandId: '',
     searchText: '',
   });
 
@@ -57,11 +56,16 @@ const ManageBranchPricePage = () => {
     fetchAllProductsWithPriceByTokenAction({
       categoryId: filter.categoryId || undefined,
       productTypeId: filter.productTypeId || undefined,
-      productProfileId: filter.productProfileId || undefined,
-      productTemplateId: filter.productTemplateId || undefined,
+      brandId: filter.brandId || undefined,
       searchText: committedSearchText?.trim() || undefined,
     });
-  }, [filter.categoryId, filter.productTypeId, filter.productProfileId, filter.productTemplateId, committedSearchText, fetchAllProductsWithPriceByTokenAction]);
+  }, [
+    filter.categoryId,
+    filter.productTypeId,
+    filter.brandId,
+    committedSearchText,
+    fetchAllProductsWithPriceByTokenAction,
+  ]);
 
   const handleConfirmOne = (productId, newEntry) => {
     console.log('✅ handleConfirmOne: เพิ่มไปยัง pendingList →', newEntry);
@@ -107,8 +111,7 @@ const ManageBranchPricePage = () => {
         fetchAllProductsWithPriceByTokenAction({
           categoryId: filter.categoryId || undefined,
           productTypeId: filter.productTypeId || undefined,
-          productProfileId: filter.productProfileId || undefined,
-          productTemplateId: filter.productTemplateId || undefined,
+          brandId: filter.brandId || undefined,
           searchText: committedSearchText?.trim() || undefined,
         });
       } catch (error) {
@@ -122,18 +125,43 @@ const ManageBranchPricePage = () => {
       <h1 className="text-xl font-semibold mb-3">จัดการราคาสินค้าสาขานี้</h1>
 
       <div className='p-2'>
-        <CascadingFilterGroup
-          value={filter}
-          onChange={(next) => {
-            setFilter(next);
-            setCommittedSearchText('');
-          }}
-          dropdowns={dropdowns}
-          showSearch
-          searchText={filter.searchText}
-          onSearchTextChange={(text) => setFilter({ ...filter, searchText: text })}
-          onSearchCommit={(text) => setCommittedSearchText(text)}
-        />
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(220px,0.35fr)]">
+          <CascadingFilterGroup
+            value={filter}
+            onChange={(next) => {
+              setFilter((prev) => ({
+                ...prev,
+                categoryId: next.categoryId ?? '',
+                productTypeId: next.productTypeId ?? '',
+              }));
+            }}
+            dropdowns={dropdowns}
+            hiddenFields={['product']}
+            showSearch
+            searchText={filter.searchText}
+            onSearchTextChange={(text) => setFilter((prev) => ({ ...prev, searchText: text }))}
+            onSearchCommit={(text) => setCommittedSearchText(text)}
+          />
+
+          <select
+            aria-label="แบรนด์สินค้า"
+            value={filter.brandId}
+            onChange={(event) =>
+              setFilter((prev) => ({
+                ...prev,
+                brandId: event.target.value,
+              }))
+            }
+            className="h-10 rounded border px-3 text-sm"
+          >
+            <option value="">-- เลือกแบรนด์ --</option>
+            {(dropdowns?.brands || []).map((brand) => (
+              <option key={brand.id} value={brand.id}>
+                {brand.name}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {loading && <p>กำลังโหลด...</p>}

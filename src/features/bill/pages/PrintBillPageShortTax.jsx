@@ -200,6 +200,8 @@ const PrintBillPageShortTax = () => {
         return
       }
 
+      // ✅ Clear same-sale cache before reloading updated document lines.
+      resetAction()
       await reloadSaleForPrint()
 
       setEditingLineKey(null)

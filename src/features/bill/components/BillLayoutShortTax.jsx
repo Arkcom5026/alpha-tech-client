@@ -11,6 +11,28 @@ const formatCurrency = (val) =>
     maximumFractionDigits: 2,
   })
 
+const buildBranchFullAddress = (branch, fallbackAddress = '-') => {
+  const subdistrict = branch?.subdistrict || null
+  const district = subdistrict?.district || null
+  const province = district?.province || null
+
+  const structuredAddress = [
+    branch?.address,
+    subdistrict?.nameTh ? `ต.${subdistrict.nameTh}` : null,
+    district?.nameTh ? `อ.${district.nameTh}` : null,
+    province?.nameTh ? `จ.${province.nameTh}` : null,
+    subdistrict?.postcode,
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .trim()
+
+  if (structuredAddress) return structuredAddress
+
+  const fallback = typeof fallbackAddress === 'string' ? fallbackAddress.trim() : ''
+  return fallback || '-'
+}
+
 const n = (v) => {
   const x = Number(v)
   return Number.isFinite(x) ? x : 0
@@ -262,6 +284,9 @@ const BillLayoutShortTax = ({
 
   if (!sale || !saleItems || !payments || !config) return null
 
+  // ✅ Branch address truth: prefer structured Sale.branch relation, then config fallback.
+  const branchAddress = buildBranchFullAddress(sale?.branch, config?.address)
+
   const vatRate = Number.isFinite(Number(sale?.vatRate))
     ? Number(sale.vatRate)
     : typeof config?.vatRate === 'number'
@@ -452,7 +477,7 @@ const BillLayoutShortTax = ({
           >
             {config.branchName}
           </div>
-          {config.address && <div className="small wrap">{config.address}</div>}
+          {branchAddress !== '-' && <div className="small wrap">{branchAddress}</div>}
           <div className="small mono muted" style={{ letterSpacing: '0.05px' }}>
             {config.phone ? `โทร. ${config.phone}` : ''}
           </div>

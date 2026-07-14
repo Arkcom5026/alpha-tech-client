@@ -53,6 +53,25 @@ const buildPrintableProductName = (documentLine) =>
     .filter(Boolean)
     .join('\n');
 
+const buildBranchFullAddress = (branch = {}) => {
+  const subdistrict = branch?.subdistrict || null;
+  const district = subdistrict?.district || null;
+  const province = district?.province || null;
+
+  const fullAddress = [
+    branch?.address,
+    subdistrict?.nameTh ? `ต.${subdistrict.nameTh}` : null,
+    district?.nameTh ? `อ.${district.nameTh}` : null,
+    province?.nameTh ? `จ.${province.nameTh}` : null,
+    subdistrict?.postcode,
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .trim();
+
+  return fullAddress || '-';
+};
+
 const PrintDeliveryNotePage = () => {
   const { saleId } = useParams();
   const location = useLocation();
@@ -330,7 +349,7 @@ const PrintDeliveryNotePage = () => {
   const branch = currentSale.branch || {};
   const preparedConfig = {
     branchName: branch.companyName || branch.name || '-',
-    address: branch.address || '-',
+    address: buildBranchFullAddress(branch),
     phone: branch.phone || '-',
     taxId: branch.taxId || currentSale.branchTaxId || '-',
   };

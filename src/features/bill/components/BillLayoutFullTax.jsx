@@ -10,6 +10,28 @@ const formatCurrency = (val) => (Number(val) || 0).toLocaleString('th-TH', {
   maximumFractionDigits: 2,
 });
 
+const buildBranchFullAddress = (branch, fallbackAddress = '-') => {
+  const subdistrict = branch?.subdistrict || null;
+  const district = subdistrict?.district || null;
+  const province = district?.province || null;
+
+  const structuredAddress = [
+    branch?.address,
+    subdistrict?.nameTh ? `ต.${subdistrict.nameTh}` : null,
+    district?.nameTh ? `อ.${district.nameTh}` : null,
+    province?.nameTh ? `จ.${province.nameTh}` : null,
+    subdistrict?.postcode,
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .trim();
+
+  if (structuredAddress) return structuredAddress;
+
+  const fallback = typeof fallbackAddress === 'string' ? fallbackAddress.trim() : '';
+  return fallback || '-';
+};
+
 // ✅ rounding helper (2 decimals) to prevent float drift on print
 const round2 = (n) => Number((Number(n || 0)).toFixed(2));
 
@@ -127,6 +149,9 @@ const BillLayoutFullTax = ({
   );
 
   if (!sale || !saleItems || !payments || !config) return null;
+
+  // ✅ Branch address truth: prefer structured Sale.branch relation, then config fallback.
+  const branchAddress = buildBranchFullAddress(sale?.branch, config?.address);
 
   // ✅ VAT rate: prefer Sale snapshot, fallback to config, then 7
   const vatRate = Number.isFinite(Number(sale?.vatRate))
@@ -407,7 +432,7 @@ const BillLayoutFullTax = ({
             ) : null}
             <div>
               <h2 className="font-bold text-[16px] leading-tight">{config.branchName}</h2>
-              <p>ที่อยู่: {config.address}</p>
+              <p>ที่อยู่: {branchAddress}</p>
               <p>โทร: {config.phone}</p>
               <p>เลขประจำตัวผู้เสียภาษี: {config.taxId}</p>
             </div>

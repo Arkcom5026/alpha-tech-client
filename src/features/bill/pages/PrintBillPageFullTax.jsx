@@ -195,17 +195,8 @@ const PrintBillPageFullTax = () => {
         return
       }
       
-      // ✅ Force reload: clear billStore cache before loading same saleId again
+      // ✅ Force reload: clear billStore cache before loading the same saleId again.
       resetAction()
-      await reloadSaleForPrint()
-   
-      setEditingLineKey(null)
-      setLineDrafts((prev) => {
-        const next = { ...(prev || {}) }
-        delete next[key]
-        return next
-      })
-
       await reloadSaleForPrint()
 
       setEditingLineKey(null)

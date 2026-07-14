@@ -4,6 +4,25 @@
 import React from 'react';
 import { buildCustomerFullAddress } from '@features/customer/utils/customerAddressFormatter';
 
+const buildBranchFullAddress = (branch = {}) => {
+  const subdistrict = branch?.subdistrict || null;
+  const district = subdistrict?.district || null;
+  const province = district?.province || null;
+
+  const fullAddress = [
+    branch?.address,
+    subdistrict?.nameTh ? `ต.${subdistrict.nameTh}` : null,
+    district?.nameTh ? `อ.${district.nameTh}` : null,
+    province?.nameTh ? `จ.${province.nameTh}` : null,
+    subdistrict?.postcode,
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .trim();
+
+  return fullAddress || '-';
+};
+
 const DeliveryNoteForm = ({
   sale,
   saleItems,
@@ -23,6 +42,11 @@ const DeliveryNoteForm = ({
   if (!sale || !saleItems || !config) {
     return <div className="p-4 text-center text-gray-600">ไม่พบข้อมูลใบส่งของ</div>;
   }
+
+  const branchAddress =
+    config.address && config.address !== '-'
+      ? config.address
+      : buildBranchFullAddress(sale?.branch);
 
   const formatThaiDate = (dateString) => {
     if (!dateString) return '-';
@@ -316,7 +340,7 @@ const DeliveryNoteForm = ({
             <div className="flex justify-between items-center border-b pb-2 mb-2 dn-no-break">
               <div>
                 <h2 className="font-bold text-sm">{config.branchName}</h2>
-                <p>ที่อยู่: {config.address}</p>
+                <p>ที่อยู่: {branchAddress}</p>
                 <p>โทร: {config.phone}</p>
                 <p>เลขประจำตัวผู้เสียภาษี: {config.taxId}</p>
               </div>

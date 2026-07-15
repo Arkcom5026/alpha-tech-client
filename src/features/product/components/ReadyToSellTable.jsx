@@ -60,12 +60,28 @@ const ReadyToSellTable = ({ items = [], loading = false, onViewDetails }) => {
         r?.sku ??
         '-';
 
-      const name = r?.productName ?? r?.name ?? '-';
-      const type = r?.productTypeName ?? r?.productType ?? '-';
+      const name =
+        r?.productName ??
+        r?.name ??
+        r?.product?.name ??
+        '-';
+
+      const type =
+        r?.productTypeName ??
+        r?.product?.productTypeName ??
+        (typeof r?.productType === 'string'
+          ? r.productType
+          : r?.productType?.name) ??
+        r?.product?.productType?.name ??
+        '-';
 
       const brand =
         r?.brandName ??
-        (typeof r?.brand === 'string' ? r.brand : r?.brand?.name) ??
+        r?.product?.brandName ??
+        (typeof r?.brand === 'string'
+          ? r.brand
+          : r?.brand?.name) ??
+        r?.product?.brand?.name ??
         '-';
 
       const sellPrice = r?.sellPrice ?? r?.price ?? null;
@@ -139,7 +155,7 @@ const ReadyToSellTable = ({ items = [], loading = false, onViewDetails }) => {
               ))
             ) : viewRows.length === 0 ? (
               <tr>
-                <td className="px-4 py-10 text-center text-gray-500" colSpan={8}>
+                <td className="px-4 py-10 text-center text-gray-500" colSpan={10}>
                   ไม่พบสินค้าพร้อมขายในเงื่อนไขนี้
                 </td>
               </tr>

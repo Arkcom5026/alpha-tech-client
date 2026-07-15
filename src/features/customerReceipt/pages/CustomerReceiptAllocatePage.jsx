@@ -12,8 +12,15 @@ import CustomerReceiptDetailCard from '../components/CustomerReceiptDetailCard';
 import CustomerReceiptAllocateForm from '../components/CustomerReceiptAllocateForm';
 
 const CustomerReceiptAllocatePage = () => {
-  const { id } = useParams();
+  const { id, shopSlug } = useParams();
   const navigate = useNavigate();
+
+  const receiptListPath = shopSlug
+    ? `/${shopSlug}/pos/finance/customer-receipts`
+    : '/pos/finance/customer-receipts';
+
+  const buildReceiptPath = (segment = '') =>
+    `${receiptListPath}${segment}`;
 
   const selectedItem = useCustomerReceiptStore((state) => state.selectedItem);
   const allocationCandidates = useCustomerReceiptStore((state) => state.allocationCandidates);
@@ -115,7 +122,7 @@ const CustomerReceiptAllocatePage = () => {
     }
 
     if (result?.receipt?.id || receiptId) {
-      navigate(`/pos/finance/customer-receipts/${result?.receipt?.id || receiptId}/print`);
+      navigate(buildReceiptPath(`/${result?.receipt?.id || receiptId}/print`));
     }
 
     return result;
@@ -143,7 +150,7 @@ const CustomerReceiptAllocatePage = () => {
           </p>
           <div className="mt-4">
             <Link
-              to={shopSlug ? `/${shopSlug}/pos/finance/customer-receipts` : `/pos/finance/customer-receipts`}
+              to={receiptListPath}
               className="inline-flex items-center justify-center rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
             >
               กลับไปรายการ
@@ -206,14 +213,14 @@ const CustomerReceiptAllocatePage = () => {
             <h2 className="text-base font-semibold text-gray-900">ทางลัด</h2>
             <div className="mt-4 flex flex-col gap-2">
               <Link
-                to={`/pos/finance/customer-receipts/${selectedItem.id}`}
+                to={buildReceiptPath(`/${selectedItem.id}`)}
                 className="inline-flex items-center justify-center rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
               >
                 กลับหน้ารายละเอียดใบรับเงิน
               </Link>
 
               <Link
-                to={shopSlug ? `/${shopSlug}/pos/finance/customer-receipts` : `/pos/finance/customer-receipts`}
+                to={receiptListPath}
                 className="inline-flex items-center justify-center rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
               >
                 กลับไปรายการทั้งหมด
@@ -230,7 +237,7 @@ const CustomerReceiptAllocatePage = () => {
       <div className="flex flex-col gap-4 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm md:flex-row md:items-start md:justify-between">
         <div className="space-y-1">
           <div className="flex items-center gap-2 text-sm text-gray-500">
-            <Link to={shopSlug ? `/${shopSlug}/pos/finance/customer-receipts` : `/pos/finance/customer-receipts`} className="transition hover:text-gray-700">
+            <Link to={receiptListPath} className="transition hover:text-gray-700">
               รายการรับชำระลูกหนี้
             </Link>
             <span>/</span>

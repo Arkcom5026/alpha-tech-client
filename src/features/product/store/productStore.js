@@ -806,6 +806,7 @@ const useProductStore = create((set, get) => ({
   },
 
   fetchReadyToSellAction: async ({
+    branchId,
     q = '',
     mode = 'ALL',
     page = 1,
@@ -814,7 +815,15 @@ const useProductStore = create((set, get) => ({
   } = {}) => {
     set({ readyToSellLoading: true, readyToSellError: null });
     try {
+      const normalizedBranchId = toFiniteNumber(branchId);
+      if (normalizedBranchId == null) {
+        throw Object.assign(new Error('ไม่พบ branchId กรุณา login ใหม่'), {
+          code: 'BRANCH_ID_MISSING',
+        });
+      }
+
       const data = await getReadyToSell({
+        branchId: normalizedBranchId,
         q: (q ?? '').toString().trim(),
         mode,
         page,
@@ -831,12 +840,29 @@ const useProductStore = create((set, get) => ({
     }
   },
 
-  fetchReadyToSellStructuredDetailsAction: async ({ productId, q = '' } = {}) => {
+  fetchReadyToSellStructuredDetailsAction: async ({ branchId, productId, q = '' } = {}) => {
     set({ readyToSellStructuredDetailsLoading: true, readyToSellStructuredDetailsError: null });
     try {
-      if (!productId) throw Object.assign(new Error('ไม่พบ productId'), { code: 'PRODUCT_ID_MISSING' });
+      const normalizedBranchId = toFiniteNumber(branchId);
+      const normalizedProductId = toFiniteNumber(productId);
 
-      const data = await getReadyToSellStructuredDetails({ productId, q });
+      if (normalizedBranchId == null) {
+        throw Object.assign(new Error('ไม่พบ branchId กรุณา login ใหม่'), {
+          code: 'BRANCH_ID_MISSING',
+        });
+      }
+
+      if (normalizedProductId == null) {
+        throw Object.assign(new Error('ไม่พบ productId'), {
+          code: 'PRODUCT_ID_MISSING',
+        });
+      }
+
+      const data = await getReadyToSellStructuredDetails({
+        branchId: normalizedBranchId,
+        productId: normalizedProductId,
+        q: (q ?? '').toString().trim(),
+      });
       const payload = data?.data ?? data;
       const items = Array.isArray(payload?.items) ? payload.items : [];
       const total = Number(payload?.total ?? items.length);
@@ -844,7 +870,7 @@ const useProductStore = create((set, get) => ({
       const normalized = {
         items,
         total: Number.isFinite(total) ? total : items.length,
-        productId: Number(productId),
+        productId: normalizedProductId,
       };
       set({ readyToSellStructuredDetails: normalized, readyToSellStructuredDetailsLoading: false, readyToSellStructuredDetailsError: null });
       return normalized;

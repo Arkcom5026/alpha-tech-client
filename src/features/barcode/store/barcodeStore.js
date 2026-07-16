@@ -201,9 +201,8 @@ const useBarcodeStore = create((set, get) => ({
       console.error('[fetchPrintBatchAction]', err);
       set({ error: err?.message || 'โหลดบาร์โค้ดแบบหลายใบล้มเหลว', loading: false });
       return [];
-    } finally { // ✅ บล็อกแก้ไขคำสะกดผิดเรียบร้อย (เสถียร 100% เคลียร์สเตตัสได้ทุกกรณี)
+    } finally {
       set({ loading: false });
-      inFlightLoadRef.current = false;
     }
   },
 

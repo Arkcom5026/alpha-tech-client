@@ -6,7 +6,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import usePurchaseOrderReceiptStore from '@/features/purchaseOrderReceipt/store/purchaseOrderReceiptStore';
 import useSupplierStore from '@/features/supplier/store/supplierStore';
 import BarcodePrintTable from '../controllers/BarcodePrintTable';
-import { RefreshCw, Barcode, SlidersHorizontal, Tag, Search, ArrowRight, AlertCircle, X } from 'lucide-react';
+import { RefreshCw, Barcode, SlidersHorizontal, Tag, Search, ArrowRight, AlertCircle, X, User } from 'lucide-react';
 
 const BarcodeReceiptListPage = () => {
   const navigate = useNavigate();

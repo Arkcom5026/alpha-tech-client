@@ -122,7 +122,7 @@ export const useBillStore = create((set, get) => ({
 
   printBillAction: (billId, format) => {
     const targetUrl = format === 'SHORT' ? `/pos/sales/bill/print-short/${billId}` : `/pos/sales/bill/print-full/${billId}`;
-    window.open(targetUrl, '_blank', 'noopener,noreferrer');
+    window.location.assign(targetUrl);
   },
 
   syncBillsStatusAction: async () => {

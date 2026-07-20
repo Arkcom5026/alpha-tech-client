@@ -350,8 +350,7 @@ const BillLayoutShortTax = ({
             width: 80mm;
           }
           @page {
-            size: 80mm auto;
-            margin: 3mm 3mm 3mm 3mm;
+            margin: 0;
           }
 
           .no-break {

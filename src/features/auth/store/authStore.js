@@ -312,9 +312,14 @@ export const useAuthStore = create(
           set({ isBootstrappingAuth: true, authError: null });
 
           const res = await apiClient.get('/auth/me'); // 🟢 บังคับคุยผ่านตัวอินสแตนซ์ศูนย์กลางล็อกพอร์ต[cite: 25]
+
+          // อ่าน state ล่าสุดหลัง request สำเร็จ เพราะ apiClient อาจทำ Silent Refresh
+          // และอัปเดต access token ระหว่างที่ /auth/me กำลัง retry อยู่
+          const latestState = get();
+
           const profile = res?.data?.profile || null;
-          const serverRole = normalizeRole(res?.data?.role || state.role);
-          const serverProfileType = (res?.data?.profileType || state.profileType || '').toString();
+          const serverRole = normalizeRole(res?.data?.role || latestState.role);
+          const serverProfileType = (res?.data?.profileType || latestState.profileType || '').toString();
           const positionName = pickPositionName(profile);
           const positionKey = pickPositionKey(profile);
           const effectiveProfileType = deriveEffectiveProfileType(serverProfileType, profile, serverRole);
@@ -333,13 +338,13 @@ export const useAuthStore = create(
             res?.data?.branchId ??
             profile?.branchId ??
             profile?.branch?.id ??
-            state.employee?.branchId ??
+            latestState.employee?.branchId ??
             null;
 
           const branchSlugFromServer =
             res?.data?.branch?.slug ??
             profile?.branch?.slug ??
-            state.employee?.branchSlug ??
+            latestState.employee?.branchSlug ??
             null;
 
           if (['employee', 'admin'].includes(effectiveRole) && !branchIdFromServer) {
@@ -372,9 +377,9 @@ export const useAuthStore = create(
             };
           }
 
+          // verifySessionAction มีหน้าที่ยืนยัน profile/สิทธิ์เท่านั้น
+          // ห้ามเขียน token ที่อ่านไว้ก่อน request กลับทับ token ใหม่จาก Silent Refresh
           set({
-            token,
-            accessToken: token,
             role: effectiveRole,
             profileType: effectiveProfileType,
             employee,

@@ -250,7 +250,29 @@ const PrintBillPageShortTax = () => {
   return (
     <>
       <style>{`
-        .bill-print-root { font-family: 'THSarabunNew', 'TH Sarabun New', 'Sarabun', system-ui, sans-serif; }
+        .bill-print-root {
+          font-family: 'THSarabunNew', 'TH Sarabun New', 'Sarabun', system-ui, sans-serif;
+        }
+
+        @media print {
+          html,
+          body,
+          #root {
+            width: 80mm !important;
+            height: auto !important;
+            min-height: 0 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            overflow: visible !important;
+            background: #fff !important;
+          }
+
+          .bill-print-root {
+            height: auto !important;
+            min-height: 0 !important;
+            margin: 0 auto !important;
+          }
+        }
       `}</style>
 
       {/* 🎛️ เครื่องมือควบคุมด้านบนของเอกสารพิมพ์ */}
@@ -268,13 +290,13 @@ const PrintBillPageShortTax = () => {
 
       {/* 🟢 FIXED: สลักคลาส CSS ตัดสิทธิ์ควบคุมความมืด บังคับให้หน้ากระดาษเป็นสีขาว ตัวหนังสือสีดำสนิท 100% */}
       {/* เติมคลาส bg-white text-black dark:bg-white dark:text-black คลุมหมดจดทั่วทั้งแผ่นม้วนกระดาษ */}
-      <div className="w-full min-h-screen bg-white text-black dark:bg-white dark:text-black py-6 px-4 print:p-0 print:bg-white">
+      <div className="w-full bg-white text-black dark:bg-white dark:text-black py-6 px-4 print:p-0 print:m-0 print:min-h-0 print:h-auto print:bg-white">
         <div className="bill-print-root mx-auto max-w-[80mm] bg-white text-black dark:bg-white dark:text-black p-4 rounded-xl border border-zinc-200 shadow-sm print:p-0 print:border-none print:shadow-none">
           <BillLayoutShortTax
             sale={sale}
             saleItems={saleItems}
             payments={payment ? [payment] : []}
-            config={{ ...config, hideDate: true }}
+            config={{ ...config, hideDate: false }}
             hideContactName={hideContactName}
             editableDocumentLines
             editingLineKey={editingLineKey}

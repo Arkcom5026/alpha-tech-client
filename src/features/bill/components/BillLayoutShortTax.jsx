@@ -97,6 +97,150 @@ const BillLayoutShortTax = ({
   onSaveDocumentLine,
 }) => {
   const receiptTitle = 'ใบกำกับภาษีอย่างย่อ / ใบเสร็จรับเงิน'
+  const receiptRootRef = React.useRef(null)
+
+  React.useEffect(() => {
+    const pxToMm = (px) => Math.round(((Number(px) || 0) * 25.4 / 96) * 100) / 100
+
+    const readElement = (name, element) => {
+      if (!element) return { name, missing: true }
+
+      const rect = element.getBoundingClientRect()
+      const style = window.getComputedStyle(element)
+
+      return {
+        name,
+        tagName: element.tagName,
+        className: element.className,
+        rectPx: {
+          x: Math.round(rect.x * 100) / 100,
+          y: Math.round(rect.y * 100) / 100,
+          width: Math.round(rect.width * 100) / 100,
+          height: Math.round(rect.height * 100) / 100,
+          bottom: Math.round(rect.bottom * 100) / 100,
+        },
+        rectMm: {
+          width: pxToMm(rect.width),
+          height: pxToMm(rect.height),
+          bottom: pxToMm(rect.bottom),
+        },
+        layoutPx: {
+          clientWidth: element.clientWidth,
+          clientHeight: element.clientHeight,
+          offsetWidth: element.offsetWidth,
+          offsetHeight: element.offsetHeight,
+          scrollWidth: element.scrollWidth,
+          scrollHeight: element.scrollHeight,
+        },
+        computed: {
+          display: style.display,
+          position: style.position,
+          width: style.width,
+          maxWidth: style.maxWidth,
+          height: style.height,
+          minHeight: style.minHeight,
+          margin: style.margin,
+          padding: style.padding,
+          overflow: style.overflow,
+          boxSizing: style.boxSizing,
+          transform: style.transform,
+          pageBreakBefore: style.pageBreakBefore,
+          pageBreakAfter: style.pageBreakAfter,
+          pageBreakInside: style.pageBreakInside,
+          breakBefore: style.breakBefore,
+          breakAfter: style.breakAfter,
+          breakInside: style.breakInside,
+        },
+      }
+    }
+
+    const logSnapshot = (phase) => {
+      const root = receiptRootRef.current
+      const inner = root?.querySelector('.receipt-inner') || null
+      const billPrintRoot = root?.closest('.bill-print-root') || null
+      const outerWrapper = billPrintRoot?.parentElement || null
+
+      const payload = {
+        phase,
+        timestamp: new Date().toISOString(),
+        url: window.location.href,
+        viewport: {
+          innerWidth: window.innerWidth,
+          innerHeight: window.innerHeight,
+          devicePixelRatio: window.devicePixelRatio,
+        },
+        document: {
+          compatMode: document.compatMode,
+          readyState: document.readyState,
+          bodyScrollHeight: document.body?.scrollHeight,
+          bodyOffsetHeight: document.body?.offsetHeight,
+          documentScrollHeight: document.documentElement?.scrollHeight,
+          documentOffsetHeight: document.documentElement?.offsetHeight,
+        },
+        media: {
+          print: window.matchMedia('print').matches,
+          screen: window.matchMedia('screen').matches,
+        },
+        elements: [
+          readElement('html', document.documentElement),
+          readElement('body', document.body),
+          readElement('#root', document.getElementById('root')),
+          readElement('outer-wrapper', outerWrapper),
+          readElement('.bill-print-root', billPrintRoot),
+          readElement('.receipt-root', root),
+          readElement('.receipt-inner', inner),
+        ],
+      }
+
+      console.groupCollapsed(`[ShortTaxPrintDebug] ${phase}`)
+      console.log(payload)
+      console.table(
+        payload.elements.map((item) => ({
+          element: item.name,
+          missing: Boolean(item.missing),
+          widthPx: item.rectPx?.width,
+          heightPx: item.rectPx?.height,
+          widthMm: item.rectMm?.width,
+          heightMm: item.rectMm?.height,
+          scrollHeight: item.layoutPx?.scrollHeight,
+          offsetHeight: item.layoutPx?.offsetHeight,
+          display: item.computed?.display,
+          position: item.computed?.position,
+          minHeight: item.computed?.minHeight,
+          overflow: item.computed?.overflow,
+          transform: item.computed?.transform,
+        }))
+      )
+      console.groupEnd()
+
+      window.__SHORT_TAX_PRINT_DEBUG__ = payload
+    }
+
+    const onBeforePrint = () => {
+      logSnapshot('beforeprint-immediate')
+      requestAnimationFrame(() => logSnapshot('beforeprint-next-frame'))
+    }
+
+    const onAfterPrint = () => logSnapshot('afterprint')
+    const printMedia = window.matchMedia('print')
+    const onPrintMediaChange = (event) => {
+      logSnapshot(event.matches ? 'matchMedia-print-enter' : 'matchMedia-print-exit')
+    }
+
+    const initialTimer = window.setTimeout(() => logSnapshot('mounted-stable'), 500)
+
+    window.addEventListener('beforeprint', onBeforePrint)
+    window.addEventListener('afterprint', onAfterPrint)
+    printMedia.addEventListener?.('change', onPrintMediaChange)
+
+    return () => {
+      window.clearTimeout(initialTimer)
+      window.removeEventListener('beforeprint', onBeforePrint)
+      window.removeEventListener('afterprint', onAfterPrint)
+      printMedia.removeEventListener?.('change', onPrintMediaChange)
+      delete window.__SHORT_TAX_PRINT_DEBUG__
+    }
+  }, [sale?.id, saleItems?.length, payments?.length, config])
 
   const getAdaptiveTitleStyle = (text) => {
     const len = String(text || '').trim().length
@@ -325,9 +469,12 @@ const BillLayoutShortTax = ({
 
   return (
     <div
+      ref={receiptRootRef}
+      data-print-debug="short-tax-receipt-root"
       className="mx-auto receipt-root"
       style={{
-        width: '76mm',
+        width: '72mm',
+        maxWidth: '72mm',
         minHeight: 'auto',
         fontFamily: 'Tahoma, Arial, sans-serif',
         fontSize: config?.thermalFontSize || '13px',
@@ -363,23 +510,23 @@ const BillLayoutShortTax = ({
 
         .receipt-root {
           color: #000;
-          width: 76mm;
-          max-width: 76mm;
+          width: 72mm;
+          max-width: 72mm;
           margin: 0 auto;
         }
 
         @media print {
           .receipt-root {
             margin: 0 auto !important;
-            width: 76mm !important;
-            max-width: 76mm !important;
+            width: 72mm !important;
+            max-width: 72mm !important;
           }
         }
 
         .receipt-inner {
           width: 100%;
-          padding-left: 2.8mm;
-          padding-right: 2.8mm;
+          padding-left: 2mm;
+          padding-right: 2mm;
         }
 
         .mono {
@@ -665,6 +812,7 @@ const BillLayoutShortTax = ({
             {config?.footerCode || sale.code}
           </div>
         </div>
+
       </div>
     </div>
   )

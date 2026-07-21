@@ -5,12 +5,17 @@
 
 import { Navigate, Outlet } from 'react-router-dom';
 import { useAuthStore } from '@/features/auth/store/authStore';
+import { traceRouteGuard } from '@/utils/authTrace';
 
 const ProtectedRoute = ({ allowedRoles = [], children }) => {
+  const state = useAuthStore.getState();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticatedSelector?.());
   const isBootstrappingAuth = useAuthStore((state) => state.isBootstrappingAuth);
   const role = useAuthStore((state) => state.role);
   const token = useAuthStore((state) => state.token);
+
+  // ⚠️ TEMPORARY TRACE
+  traceRouteGuard(state);
 
   // ✅ ระหว่างกำลัง bootstrap session อยู่ ยังไม่รีบ redirect
   if (isBootstrappingAuth) {

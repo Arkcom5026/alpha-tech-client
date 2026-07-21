@@ -16,6 +16,7 @@ import apiClient from '@/utils/apiClient';
 
 import { buildRoleContext, can as canCap, P1_CAP } from '../rbac/rbacClient';
 import { useBranchStore } from '@/features/branch/store/branchStore';
+import { traceStoreMutation, traceLogout, traceFlowMarker } from '@/utils/authTrace';
 
 const normalizeRole = (r) => {
   const v = (r || '').toString().trim().toLowerCase();
@@ -118,8 +119,9 @@ export const useAuthStore = create(
     (set, get) => ({ // 🟢 เพิ่ม get เข้ามาควบคุมสเตตัสข้ามเลเยอร์
       ...getEmptyAuthState(),
 
-      setUser: ({ token, accessToken, role, profileType, employee, customer, rememberMe = false, session = null }) =>
-        set({
+      setUser: ({ token, accessToken, role, profileType, employee, customer, rememberMe = false, session = null }) => {
+        const prevState = get();
+        const nextState = {
           token: accessToken || token || null,
           accessToken: accessToken || token || null,
           rememberMe,
@@ -131,7 +133,10 @@ export const useAuthStore = create(
           authError: null,
           isSuperAdmin: normalizeRole(role) === 'superadmin',
           authChecked: true,
-        }),
+        };
+        traceStoreMutation(prevState, nextState, 'setUser');
+        set(nextState);
+      },
 
       markAuthCheckedAction: () => set({ authChecked: true }),
       setBootstrappingAuthAction: (isBootstrappingAuth) => set({ isBootstrappingAuth }),
@@ -430,13 +435,16 @@ export const useAuthStore = create(
         bootstrapAuthPromise = (async () => {
         const state = get();
       
+        traceFlowMarker('bootstrapAuthAction:start', { hasToken: !!(state.accessToken || state.token) });
         set({ isBootstrappingAuth: true, authError: null });
       
         if (state.accessToken || state.token) {
+          traceFlowMarker('bootstrapAuthAction:hasToken-calling-verifySession');
           return state.verifySessionAction();
         }
       
         try {
+          traceFlowMarker('bootstrapAuthAction:noToken-calling-refresh');
           const res = await apiClient.post('/auth/refresh');
           const accessToken = res?.data?.accessToken || res?.data?.token || null;
       
@@ -498,15 +506,18 @@ export const useAuthStore = create(
         const preservedRememberMe = !!state.rememberMe;
         const preservedIdentifier = preservedRememberMe ? (state.lastLoginIdentifier || '') : '';
 
-        set({
+        const nextState = {
           ...getEmptyAuthState(),
           rememberMe: preservedRememberMe,
           lastLoginIdentifier: preservedIdentifier,
-        });
+        };
+        traceStoreMutation(state, nextState, 'resetAuthStateAction');
+        set(nextState);
         clearLegacyAuthStorage();
       },
 
       logout: async () => {
+        traceLogout('logout() called', 'authStore.logout');
         try {
           await logoutSession();
         } catch (error) {
@@ -517,6 +528,7 @@ export const useAuthStore = create(
       },
 
       logoutAction: async () => {
+        traceLogout('logoutAction() called', 'authStore.logoutAction');
         try {
           await logoutSession();
         } catch (error) {
@@ -528,6 +540,7 @@ export const useAuthStore = create(
       },
 
       logoutAllDevicesAction: async () => {
+        traceLogout('logoutAllDevicesAction() called', 'authStore.logoutAllDevicesAction');
         try {
           await logoutAllSessions();
         } catch (error) {

@@ -8,6 +8,21 @@
 
 import axios from 'axios';
 import { useAuthStore } from '@/features/auth/store/authStore';
+import {
+  traceRequest,
+  traceResponse,
+  traceError,
+  traceRefreshStart,
+  traceRefreshSuccess,
+  traceRefreshFailed,
+  traceStoreMutation,
+  initAuthTrace,
+} from '@/utils/authTrace';
+
+// ⚠️ TEMPORARY: Initialize auth trace
+if (typeof window !== 'undefined') {
+  initAuthTrace();
+}
 
 let refreshPromise = null;
 let silentRefreshTimerId = null;
@@ -347,6 +362,10 @@ const apiClient = axios.create({
 
 apiClient.interceptors.request.use(
   async (config) => {
+    // ⚠️ TEMPORARY TRACE
+    config._traceId = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    traceRequest(config);
+
     ensureAuthStoreSubscription();
 
     config.baseURL = getRuntimeBaseURL();
@@ -396,6 +415,9 @@ const refreshAccessToken = async (reason = '401') => {
     refreshPromise = (async () => {
       const refreshURL = `${getRuntimeBaseURL()}auth/refresh`;
 
+      // ⚠️ TEMPORARY TRACE
+      traceRefreshStart(reason, refreshURL);
+
       if (!acquireRefreshLock()) {
         authDebug('refresh:wait-cross-tab', { reason });
         const crossTabResult = await waitForCrossTabRefreshResult();
@@ -427,6 +449,9 @@ const refreshAccessToken = async (reason = '401') => {
             code: 'REFRESH_ACCESS_TOKEN_MISSING',
           });
         }
+
+        // ⚠️ TEMPORARY TRACE
+        traceRefreshSuccess(nextAccessToken);
 
         publishRefreshResult(res?.data || {});
         applyRefreshResultToStore({ accessToken: nextAccessToken, session: res?.data?.session || null });
@@ -482,8 +507,15 @@ const refreshAccessToken = async (reason = '401') => {
 };
 
 apiClient.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // ⚠️ TEMPORARY TRACE
+    traceResponse(response);
+    return response;
+  },
   async (error) => {
+    // ⚠️ TEMPORARY TRACE
+    traceError(error);
+
     if (!error?.response && (error?.code === 'ERR_NETWORK' || error?.message === 'Network Error')) {
       const enhanced = new Error('Network Error: ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์หลังบ้านได้ กรุณาตรวจสอบการตั้งค่า API');
       enhanced.original = error;

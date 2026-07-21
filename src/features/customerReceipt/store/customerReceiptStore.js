@@ -19,6 +19,8 @@ import {
   searchCustomerProfilesForReceipt,
 } from '../api/customerReceiptApi';
 
+import { traceFlowMarker } from '@/utils/authTrace';
+
 const DEFAULT_FILTERS = {
   keyword: '',
   status: '',
@@ -187,6 +189,8 @@ export const useCustomerReceiptStore = create((set, get) => ({
     const rawKeyword = String(mergedSearch.keyword || '').trim();
     const mode = String(mergedSearch.mode || 'NAME').toUpperCase();
 
+    traceFlowMarker('searchCustomersForReceiptAction:start', { mode, keyword: rawKeyword });
+
     if (!rawKeyword) {
       set({
         customerSearch: {
@@ -354,6 +358,7 @@ export const useCustomerReceiptStore = create((set, get) => ({
   },
 
   createCustomerReceiptAction: async (payload) => {
+    traceFlowMarker('createCustomerReceiptAction:start', { payload: JSON.stringify(payload).slice(0, 200) });
     set({
       submitting: true,
       error: '',
@@ -364,6 +369,8 @@ export const useCustomerReceiptStore = create((set, get) => ({
       const response = await createCustomerReceipt(payload);
       const createdItem = response?.data || null;
 
+      traceFlowMarker('createCustomerReceiptAction:success', { receiptId: createdItem?.id });
+
       set({
         selectedItem: createdItem,
         submitting: false,
@@ -373,6 +380,7 @@ export const useCustomerReceiptStore = create((set, get) => ({
       return createdItem;
     } catch (error) {
       const message = extractErrorMessage(error, 'ไม่สามารถสร้างรายการรับชำระได้');
+      traceFlowMarker('createCustomerReceiptAction:error', { message });
       set({
         submitting: false,
         error: message,

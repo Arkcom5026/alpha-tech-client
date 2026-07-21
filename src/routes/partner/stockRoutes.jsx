@@ -35,6 +35,7 @@ import ManageBranchPricePage from '@/features/branchPrice/pages/ManageBranchPric
 import ReadyToSellAuditPage from '@/features/stockAudit/pages/ReadyToSellAuditPage';
 import ReadyToSellListPage from '@/features/product/pages/ReadyToSellListPage';
 import ReadyToSellStructuredDetailsPage from '@/features/product/pages/ReadyToSellStructuredDetailsPage';
+import { ProductTracePage } from '@/features/product/trace';
 
 /**
  * 🎛️ [MASTER FLAT STOCK ROUTE]
@@ -156,7 +157,13 @@ const stockRoutes = {
       element: <ReadyToSellStructuredDetailsPage />,
     },
 
-    // 📌 11. เมนู: จัดการหน่วยนับ (Units)
+    // 📌 11. เมนู: ประวัติสินค้า (Product Trace)
+    {
+      path: 'product-trace',
+      element: <ProductTracePage />,
+    },
+
+    // 📌 12. เมนู: จัดการหน่วยนับ (Units)
     {
       path: 'units',
       element: <ListUnitPage />,

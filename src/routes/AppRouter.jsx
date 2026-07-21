@@ -16,12 +16,14 @@ import ResetPasswordPage from '@/features/auth/pages/ResetPasswordPage';
 import HeaderPos from '@/features/pos/components/header/HeaderPos';
 import SidebarLoader from '@/features/pos/components/sidebar/SidebarLoader';
 import LayoutSuperAdmin from '@/features/pos/layouts/superadmin/LayoutSuperAdmin';
+import PosKeyboardRuntime from '@/features/pos/runtime/PosKeyboardRuntime';
 
 const PartnerPosMasterLayout = () => {
   const { shopSlug } = useParams();
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-slate-50 text-slate-800 font-sans">
+      <PosKeyboardRuntime />
       <SidebarLoader shopSlug={shopSlug} />
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <HeaderPos shopSlug={shopSlug} />

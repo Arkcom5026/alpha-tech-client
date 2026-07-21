@@ -6,7 +6,6 @@ import { useParams, useSearchParams } from 'react-router-dom'
 import BillLayoutShortTax from '../components/BillLayoutShortTax'
 import { useBillStore } from '@/features/bill/store/billStore'
 import useSalesStore from '@/features/sales/store/salesStore'
-import DocumentToolbar from '@/features/documents/components/DocumentToolbar'
 
 const normalizeDocumentText = (value) => {
   if (typeof value !== 'string') return ''
@@ -22,6 +21,7 @@ const PrintBillPageShortTax = () => {
   const params = useParams()
   const saleId = params.id || params.saleId
   const printedRef = useRef(false)
+  const printRootRef = useRef(null)
 
   const [searchParams] = useSearchParams()
 
@@ -88,6 +88,51 @@ const PrintBillPageShortTax = () => {
   useEffect(() => {
     printedRef.current = false
   }, [saleId, autoPrint])
+
+  useEffect(() => {
+    const updatePrintHeight = () => {
+      const element = printRootRef.current
+      if (!element || typeof document === 'undefined') return
+
+      const rect = element.getBoundingClientRect()
+      const measuredHeight = Math.max(
+        Math.ceil(rect.height || 0),
+        element.scrollHeight || 0,
+        element.offsetHeight || 0
+      )
+
+      if (measuredHeight > 0) {
+        document.documentElement.style.setProperty(
+          '--short-tax-receipt-height',
+          `${measuredHeight}px`
+        )
+      }
+    }
+
+    updatePrintHeight()
+
+    const frameId = window.requestAnimationFrame(updatePrintHeight)
+    const timerId = window.setTimeout(updatePrintHeight, 150)
+
+    const resizeObserver =
+      typeof ResizeObserver !== 'undefined'
+        ? new ResizeObserver(updatePrintHeight)
+        : null
+
+    if (printRootRef.current && resizeObserver) {
+      resizeObserver.observe(printRootRef.current)
+    }
+
+    window.addEventListener('beforeprint', updatePrintHeight)
+
+    return () => {
+      window.cancelAnimationFrame(frameId)
+      window.clearTimeout(timerId)
+      window.removeEventListener('beforeprint', updatePrintHeight)
+      resizeObserver?.disconnect()
+      document.documentElement.style.removeProperty('--short-tax-receipt-height')
+    }
+  }, [sale?.id, saleItems?.length, payment?.id, config])
 
   useEffect(() => {
     if (!autoPrint) return
@@ -254,44 +299,86 @@ const PrintBillPageShortTax = () => {
           font-family: 'THSarabunNew', 'TH Sarabun New', 'Sarabun', system-ui, sans-serif;
         }
 
+        @page {
+          size: 80mm auto;
+          margin: 0;
+        }
+
         @media print {
           html,
           body,
           #root {
             width: 80mm !important;
-            height: auto !important;
-            min-height: 0 !important;
+            height: var(--short-tax-receipt-height, auto) !important;
+            min-height: var(--short-tax-receipt-height, 0) !important;
+            max-height: var(--short-tax-receipt-height, none) !important;
             margin: 0 !important;
             padding: 0 !important;
             overflow: visible !important;
             background: #fff !important;
           }
 
+          html,
+          body {
+            position: relative !important;
+          }
+
+          body * {
+            visibility: hidden !important;
+          }
+
+          .bill-print-root,
+          .bill-print-root * {
+            visibility: visible !important;
+          }
+
           .bill-print-root {
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            display: block !important;
+            width: 80mm !important;
+            max-width: 80mm !important;
             height: auto !important;
             min-height: 0 !important;
-            margin: 0 auto !important;
+            max-height: none !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            overflow: visible !important;
+            border: 0 !important;
+            border-radius: 0 !important;
+            box-shadow: none !important;
+            background: #fff !important;
           }
         }
       `}</style>
 
-      {/* 🎛️ เครื่องมือควบคุมด้านบนของเอกสารพิมพ์ */}
-      <DocumentToolbar
-        actions={[
-          {
-            key: 'print-receipt-short',
-            label: 'พิมพ์ใบเสร็จ',
-            onClick: handlePrint,
-            variant: 'primary',
-          },
-        ]}
-        note={autoPrint ? 'Auto print เปิดอยู่' : undefined}
-      />
+      {/* เครื่องมือควบคุมเฉพาะหน้าใบเสร็จย่อ — ไม่พึ่ง Shared DocumentToolbar */}
+      <div className="w-full bg-slate-900 px-4 py-4 print:hidden">
+        <div className="mx-auto flex max-w-[80mm] items-center justify-between gap-3">
+          <button
+            type="button"
+            onClick={handlePrint}
+            className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 focus:ring-offset-slate-900"
+          >
+            พิมพ์ใบเสร็จ
+          </button>
+
+          {autoPrint ? (
+            <span className="text-xs font-medium text-emerald-300">
+              Auto print เปิดอยู่
+            </span>
+          ) : null}
+        </div>
+      </div>
 
       {/* 🟢 FIXED: สลักคลาส CSS ตัดสิทธิ์ควบคุมความมืด บังคับให้หน้ากระดาษเป็นสีขาว ตัวหนังสือสีดำสนิท 100% */}
       {/* เติมคลาส bg-white text-black dark:bg-white dark:text-black คลุมหมดจดทั่วทั้งแผ่นม้วนกระดาษ */}
-      <div className="w-full bg-white text-black dark:bg-white dark:text-black py-6 px-4 print:p-0 print:m-0 print:min-h-0 print:h-auto print:bg-white">
-        <div className="bill-print-root mx-auto max-w-[80mm] bg-white text-black dark:bg-white dark:text-black p-4 rounded-xl border border-zinc-200 shadow-sm print:p-0 print:border-none print:shadow-none">
+      <div className="w-full bg-white text-black dark:bg-white dark:text-black py-6 px-4 print:w-auto print:p-0 print:m-0 print:min-h-0 print:h-auto print:bg-white">
+        <div
+          ref={printRootRef}
+          className="bill-print-root mx-auto w-[80mm] max-w-[80mm] bg-white text-black dark:bg-white dark:text-black p-4 rounded-xl border border-zinc-200 shadow-sm print:p-0 print:border-none print:shadow-none"
+        >
           <BillLayoutShortTax
             sale={sale}
             saleItems={saleItems}

@@ -31,6 +31,7 @@ export const getSidebarStockItems = (shopSlug) => {
         { label: 'รายการสินค้า', to: `${prefix}/stock/products`, cap: P1_CAP.MANAGE_PRODUCTS },                   
         { label: 'เช็คสต๊อก', to: `${prefix}/stock/stock-audit`, cap: P1_CAP.STOCK_AUDIT },
         { label: 'สินค้าพร้อมขาย', to: `${prefix}/stock/ready-to-sell`, cap: P1_CAP.VIEW_REPORTS },
+        { label: 'ประวัติสินค้า', to: `${prefix}/stock/product-trace`, cap: P1_CAP.VIEW_REPORTS },
         
         // 🟢 FIXED PORT: เพิ่มปุ่มกดนำเข้าสินค้าด่วน ล็อกสิทธิ์เฉพาะผู้มีอำนาจตรวจนับและคัดกรองคลัง (STOCK_AUDIT)
         { label: 'นำเข้าสินค้าด่วน', to: `${prefix}/stock/quick-input`, cap: P1_CAP.STOCK_AUDIT },

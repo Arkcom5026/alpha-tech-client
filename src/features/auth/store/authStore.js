@@ -12,7 +12,7 @@ import {
 } from '../api/authApi';
 
 // 🟢 LINK CORE INSTANCE: นำเข้าตัวแกนหลักเพื่อควบคุมพอร์ต 5000[cite: 25]
-import apiClient from '@/utils/apiClient';
+import apiClient, { refreshAccessToken } from '@/utils/apiClient';
 
 import { buildRoleContext, can as canCap, P1_CAP } from '../rbac/rbacClient';
 import { useBranchStore } from '@/features/branch/store/branchStore';
@@ -81,6 +81,7 @@ const getEmptyAuthState = () => ({
   authChecked: false,
   isSuperAdmin: false,
   isBootstrappingAuth: false,
+  authBootstrapState: 'idle', // 'idle' | 'loading' | 'authenticated' | 'unauthenticated' | 'failed'
   isRegisterLoading: false,
   registerError: null,
   isSubEmployeeLoading: false,
@@ -436,38 +437,47 @@ export const useAuthStore = create(
         const state = get();
       
         traceFlowMarker('bootstrapAuthAction:start', { hasToken: !!(state.accessToken || state.token) });
-        set({ isBootstrappingAuth: true, authError: null });
+        set({ isBootstrappingAuth: true, authBootstrapState: 'loading', authError: null });
       
         if (state.accessToken || state.token) {
           traceFlowMarker('bootstrapAuthAction:hasToken-calling-verifySession');
-          return state.verifySessionAction();
+          try {
+            const result = await state.verifySessionAction();
+            if (result) {
+              set({ authBootstrapState: 'authenticated' });
+            } else {
+              set({ authBootstrapState: 'unauthenticated' });
+            }
+            return result;
+          } catch (error) {
+            set({ authBootstrapState: 'failed' });
+            throw error;
+          }
         }
       
         try {
-          traceFlowMarker('bootstrapAuthAction:noToken-calling-refresh');
-          const res = await apiClient.post('/auth/refresh');
-          const accessToken = res?.data?.accessToken || res?.data?.token || null;
+          traceFlowMarker('bootstrapAuthAction:noToken-calling-refreshAccessToken');
+          const nextAccessToken = await refreshAccessToken('bootstrap');
       
-          if (!accessToken) {
+          if (!nextAccessToken) {
             set({
               token: null,
               accessToken: null,
               authChecked: true,
               isBootstrappingAuth: false,
+              authBootstrapState: 'unauthenticated',
               authError: null,
             });
             return false;
           }
       
-          set({
-            token: accessToken,
-            accessToken,
-            rememberMe: !!res?.data?.session?.rememberMe,
-            session: res?.data?.session || null,
-            authError: null,
-          });
-      
-          return await get().verifySessionAction();
+          const verifyResult = await get().verifySessionAction();
+          if (verifyResult) {
+            set({ authBootstrapState: 'authenticated' });
+          } else {
+            set({ authBootstrapState: 'unauthenticated' });
+          }
+          return verifyResult;
         } catch (error) {
           const status = error?.response?.status;
       
@@ -477,6 +487,7 @@ export const useAuthStore = create(
               accessToken: null,
               authChecked: true,
               isBootstrappingAuth: false,
+              authBootstrapState: 'unauthenticated',
               authError: null,
             });
             return false;
@@ -489,7 +500,8 @@ export const useAuthStore = create(
             accessToken: null,
             authChecked: true,
             isBootstrappingAuth: false,
-            authError: error?.response?.data?.message || error?.message || 'ตรวจสอบสถานะเข้าสู่ระบบไม่สำเร็จ',
+            authBootstrapState: 'failed',
+            authError: error?.friendlyMessage || error?.response?.data?.message || error?.message || 'ตรวจสอบสถานะเข้าสู่ระบบไม่สำเร็จ',
           });
       
           return false;
@@ -535,7 +547,7 @@ export const useAuthStore = create(
           console.error('❌ logoutAction failed:', error);
         } finally { 
           get().resetAuthStateAction();
-          window.location.href = '/login';
+          window.location.href = '/';
         }
       },
 
@@ -564,7 +576,7 @@ export const useAuthStore = create(
           set({ authError: null, authChecked: false, isBootstrappingAuth: false });
           const rememberMe = !!credentials?.rememberMe;
           const res = await loginUser(credentials);
-          console.log('✅ loginUser response:', res);
+          console.log('✅ loginUser success', { role: res?.data?.role, profileType: res?.data?.profileType });
 
           const profile = res.data.profile;
           const serverRole = normalizeRole(res.data.role);

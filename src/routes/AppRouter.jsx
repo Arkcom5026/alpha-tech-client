@@ -10,6 +10,7 @@ import { superAdminRoutes } from './superadmin/superAdminRoutes';
 
 import MarketplacePortalPage from '@/features/online/pages/MarketplacePortalPage';
 import PartnerWelcomePage from '@/features/auth/pages/PartnerWelcomePage';
+import LoginPage from '@/features/auth/pages/LoginPage';
 import ForgotPasswordPage from '@/features/auth/pages/ForgotPasswordPage';
 import ResetPasswordPage from '@/features/auth/pages/ResetPasswordPage';
 
@@ -71,6 +72,10 @@ const AppRouter = [
   {
     path: ':shopSlug/shop',
     children: onlinePartnerRoutes,
+  },
+  {
+    path: 'login',
+    element: <LoginPage />,
   },
   {
     path: '*',

@@ -1,0 +1,50 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": false,
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "target": "ES2020",
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "skipLibCheck": true,
+    "types": ["vite/client"],
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"],
+      "@features/*": ["src/features/*"],
+      "@features/pos/*": ["src/features/pos/*"],
+      "@features/stock/*": ["src/features/stock/*"],
+      "@features/admin/*": ["src/features/admin/*"],
+      "@features/auth/*": ["src/features/auth/*"],
+      "@features/user/*": ["src/features/user/*"],
+      "@features/product/*": ["src/features/product/*"],
+      "@features/supplier/*": ["src/features/supplier/*"],
+      "@features/purchase/*": ["src/features/purchase/*"],
+      "@features/shared/*": ["src/features/shared/*"],
+      "@store/*": ["src/store/*"],
+      "@utils/*": ["src/utils/*"],
+      "@routes/*": ["src/routes/*"]
+    }
+  },
+  "include": [
+    "src/**/*.js",
+    "src/**/*.jsx",
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "vite.config.js",
+    "eslint.config.js"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "coverage",
+    "e2e",
+    "src/features/branch/page/ListBranchPage.jsx",
+    "src/features/product/trace/routeIntegration.example.jsx"
+  ]
+}

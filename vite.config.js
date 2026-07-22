@@ -28,5 +28,16 @@ export default defineConfig({
   },
   server: {
     historyApiFallback: true
+  },
+  test: {
+    include: [
+      'src/**/*.{test,spec}.{js,jsx,ts,tsx}'
+    ],
+    exclude: [
+      '**/node_modules/**',
+      '**/dist/**',
+      'e2e/**',
+      '**/*.e2e.*'
+    ]
   }
 })

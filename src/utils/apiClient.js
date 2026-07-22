@@ -317,10 +317,28 @@ const isAuthBypassEndpoint = (url = '') => {
   ].some((path) => normalizedUrl.includes(path));
 };
 
-const waitForAuthBootstrapToFinish = async ({ timeoutMs = 5000, intervalMs = 50 } = {}) => {
+const waitForAuthBootstrapToFinish = async ({ timeoutMs = 15000, intervalMs = 50 } = {}) => {
   const startedAt = Date.now();
 
-  while (useAuthStore.getState()?.isBootstrappingAuth) {
+  while (true) {
+    const state = useAuthStore.getState();
+    const bootstrapState = state?.authBootstrapState;
+
+    // Terminal states: request can proceed
+    if (bootstrapState === 'authenticated' || bootstrapState === 'unauthenticated' || bootstrapState === 'failed') {
+      return;
+    }
+
+    // If not loading/idle, also proceed (safety net)
+    if (bootstrapState !== 'loading' && bootstrapState !== 'idle') {
+      return;
+    }
+
+    // If not bootstrapping at all, proceed
+    if (!state?.isBootstrappingAuth && bootstrapState === 'idle') {
+      return;
+    }
+
     if (Date.now() - startedAt >= timeoutMs) {
       if (import.meta.env?.DEV) {
         console.warn('[apiClient] auth bootstrap wait timed out; request will continue');
@@ -364,7 +382,7 @@ apiClient.interceptors.request.use(
   async (config) => {
     // ⚠️ TEMPORARY TRACE
     config._traceId = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-    traceRequest(config);
+    traceRequest(config).catch(() => {});
 
     ensureAuthStoreSubscription();
 
@@ -416,7 +434,7 @@ const refreshAccessToken = async (reason = '401') => {
       const refreshURL = `${getRuntimeBaseURL()}auth/refresh`;
 
       // ⚠️ TEMPORARY TRACE
-      traceRefreshStart(reason, refreshURL);
+      traceRefreshStart(reason, refreshURL).catch(() => {});
 
       if (!acquireRefreshLock()) {
         authDebug('refresh:wait-cross-tab', { reason });
@@ -451,7 +469,7 @@ const refreshAccessToken = async (reason = '401') => {
         }
 
         // ⚠️ TEMPORARY TRACE
-        traceRefreshSuccess(nextAccessToken);
+        traceRefreshSuccess(nextAccessToken).catch(() => {});
 
         publishRefreshResult(res?.data || {});
         applyRefreshResultToStore({ accessToken: nextAccessToken, session: res?.data?.session || null });
@@ -491,7 +509,7 @@ const refreshAccessToken = async (reason = '401') => {
             message: enhanced?.message,
             friendlyMessage: enhanced?.friendlyMessage,
             status: enhanced?.response?.status,
-            data: enhanced?.response?.data,
+            hasData: enhanced?.response?.data ? 'YES' : 'NO',
           });
         }
 
@@ -565,7 +583,7 @@ apiClient.interceptors.response.use(
           baseURL: originalRequest?.baseURL,
           method: originalRequest?.method,
           status,
-          data: error?.response?.data,
+          hasData: error?.response?.data ? 'YES' : 'NO',
         });
       }
     }
@@ -574,4 +592,5 @@ apiClient.interceptors.response.use(
   }
 );
 
+export { refreshAccessToken };
 export default apiClient;

@@ -1,5 +1,5 @@
 // src/App.jsx
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAuthStore } from '@/features/auth/store/authStore';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
@@ -33,10 +33,46 @@ const runInitialAuthBootstrapOnce = (bootstrapAuthAction) => {
 
 const App = () => {
   const bootstrapAuthAction = useAuthStore((state) => state.bootstrapAuthAction);
+  const authBootstrapState = useAuthStore((state) => state.authBootstrapState);
+  const [bootstrapReady, setBootstrapReady] = useState(false);
 
   useEffect(() => {
-    runInitialAuthBootstrapOnce(bootstrapAuthAction);
+    const promise = runInitialAuthBootstrapOnce(bootstrapAuthAction);
+    if (promise) {
+      promise.finally(() => setBootstrapReady(true));
+    } else {
+      // If bootstrap already completed synchronously, mark ready
+      const state = useAuthStore.getState();
+      if (state.authBootstrapState !== 'idle' && state.authBootstrapState !== 'loading') {
+        setBootstrapReady(true);
+      }
+    }
   }, [bootstrapAuthAction]);
+
+  // Also check if bootstrap already reached terminal state outside the effect
+  useEffect(() => {
+    if (!bootstrapReady) {
+      const state = useAuthStore.getState();
+      if (state.authBootstrapState !== 'idle' && state.authBootstrapState !== 'loading') {
+        setBootstrapReady(true);
+      }
+    }
+  }, [authBootstrapState, bootstrapReady]);
+
+  // Bootstrap gate: wait until bootstrap reaches a terminal state before rendering RouterProvider
+  if (!bootstrapReady) {
+    return (
+      <>
+        <ToastContainer />
+        <div className="flex h-screen w-screen items-center justify-center bg-slate-50">
+          <div className="text-center">
+            <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-4 border-blue-500 border-t-transparent" />
+            <p className="text-sm text-slate-500">กำลังตรวจสอบสถานะ...</p>
+          </div>
+        </div>
+      </>
+    );
+  }
 
   return (
     <>

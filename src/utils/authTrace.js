@@ -5,30 +5,23 @@
 const TRACE_PREFIX = '[AUTH-TRACE]';
 const ENABLED = true;
 
-const sha256 = async (str) => {
-  try {
-    const buf = new TextEncoder().encode(str);
-    const hash = await crypto.subtle.digest('SHA-256', buf);
-    return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('').slice(0, 8).toUpperCase();
-  } catch { return str ? str.slice(0, 8).toUpperCase() : 'NULL'; }
-};
-
 const fingerprintCache = new Map();
-const getFingerprint = (token) => {
+
+// Secure SHA-256 fingerprint for token correlation.
+// Uses SubtleCrypto (async) with a synchronous fallback that only emits a boolean.
+const getFingerprint = async (token) => {
   if (!token) return 'NULL';
   if (fingerprintCache.has(token)) return fingerprintCache.get(token);
-  // Synchronous first 8 chars of hex of first bytes
   try {
-    let hash = 0;
-    for (let i = 0; i < token.length; i++) {
-      const chr = token.charCodeAt(i);
-      hash = ((hash << 5) - hash) + chr;
-      hash |= 0;
-    }
-    const fp = Math.abs(hash).toString(16).slice(0, 8).toUpperCase().padStart(8, '0');
+    const buf = new TextEncoder().encode(token);
+    const hash = await crypto.subtle.digest('SHA-256', buf);
+    const fp = Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('').slice(0, 12).toUpperCase();
     fingerprintCache.set(token, fp);
     return fp;
-  } catch { return token.slice(0, 8).toUpperCase(); }
+  } catch {
+    // Synchronous fallback: emit only tokenPresent boolean, never a token substring
+    return 'PRESENT';
+  }
 };
 
 const now = () => new Date().toISOString().slice(11, 23);
@@ -38,14 +31,11 @@ const trace = (category, ...args) => {
   console.log(`${TRACE_PREFIX} [${now()}] [${category}]`, ...args);
 };
 
-// Store a reference to the latest auth state for tracing
-let lastAuthState = null;
-
 export const initAuthTrace = () => {
   trace('INIT', 'Auth trace initialized');
 };
 
-export const traceRequest = (config) => {
+export const traceRequest = async (config) => {
   const state = typeof window !== 'undefined' ? 
     (window.__authStoreState ? JSON.parse(window.__authStoreState) : {}) : {};
   trace('REQUEST', 
@@ -53,7 +43,7 @@ export const traceRequest = (config) => {
     `${(config.method || 'GET').toUpperCase()}`,
     `${config.url || '?'}`,
     `Bearer=${config.headers?.Authorization ? 'YES' : 'NO'}`,
-    `token=${getFingerprint(state.accessToken || state.token)}`,
+    `token=${await getFingerprint(state.accessToken || state.token)}`,
     `authChecked=${state.authChecked}`,
     `bootstrapping=${state.isBootstrappingAuth}`
   );
@@ -69,42 +59,46 @@ export const traceResponse = (response) => {
 
 export const traceError = (error) => {
   const req = error.config || {};
+  const status = error.response?.status || 'NETWORK_ERROR';
+  const hasData = error.response?.data ? 'YES' : 'NO';
   trace('RESPONSE',
     `id=${req._traceId || '?'}`,
-    `${error.response?.status || 'NETWORK_ERROR'}`,
+    `${status}`,
     `${req.url || '?'}`,
-    `body=${JSON.stringify(error.response?.data || {})}`
+    `hasBody=${hasData}`
   );
 };
 
-export const traceRefreshStart = (reason, originalUrl) => {
+export const traceRefreshStart = async (reason, originalUrl) => {
   const state = typeof window !== 'undefined' ? 
     (window.__authStoreState ? JSON.parse(window.__authStoreState) : {}) : {};
   trace('REFRESH', 'START',
     `reason=${reason}`,
     `original=${originalUrl || '?'}`,
-    `token=${getFingerprint(state.accessToken || state.token)}`,
+    `token=${await getFingerprint(state.accessToken || state.token)}`,
     `cookie=refreshToken (HttpOnly)`
   );
 };
 
-export const traceRefreshSuccess = (newToken) => {
+export const traceRefreshSuccess = async (newToken) => {
   trace('REFRESH', 'SUCCESS',
-    `newToken=${getFingerprint(newToken)}`
+    `newToken=${await getFingerprint(newToken)}`
   );
 };
 
 export const traceRefreshFailed = (error) => {
+  const status = error?.response?.status || '?';
+  const hasData = error?.response?.data ? 'YES' : 'NO';
   trace('REFRESH', 'FAILED',
     `reason=${error?.friendlyMessage || error?.message || '?'}`,
-    `status=${error?.response?.status || '?'}`,
-    `body=${JSON.stringify(error?.response?.data || {})}`
+    `status=${status}`,
+    `hasBody=${hasData}`
   );
 };
 
-export const traceStoreMutation = (prevState, nextState, trigger) => {
-  const prevToken = getFingerprint(prevState?.accessToken || prevState?.token);
-  const nextToken = getFingerprint(nextState?.accessToken || nextState?.token);
+export const traceStoreMutation = async (prevState, nextState, trigger) => {
+  const prevToken = await getFingerprint(prevState?.accessToken || prevState?.token);
+  const nextToken = await getFingerprint(nextState?.accessToken || nextState?.token);
   const prevAuthChecked = prevState?.authChecked;
   const nextAuthChecked = nextState?.authChecked;
   const prevBootstrapping = prevState?.isBootstrappingAuth;
@@ -132,12 +126,12 @@ export const traceStoreMutation = (prevState, nextState, trigger) => {
   }
 };
 
-export const traceRouteGuard = (state) => {
+export const traceRouteGuard = async (state) => {
   const token = state?.accessToken || state?.token;
   const isAuthenticated = !!(token) && !!state?.authChecked && !state?.isBootstrappingAuth;
   
   trace('ROUTE_GUARD',
-    `token=${getFingerprint(token)}`,
+    `token=${await getFingerprint(token)}`,
     `authChecked=${state?.authChecked}`,
     `bootstrapping=${state?.isBootstrappingAuth}`,
     `isAuthenticated=${isAuthenticated}`

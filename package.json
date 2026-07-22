@@ -3,14 +3,21 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-"scripts": {
-  "dev": "vite",
-  "build": "vite build",
-  "lint": "eslint .",
-  "preview": "vite preview",
-  "test": "vitest",
-  "test:run": "vitest run"
-},
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "typecheck": "tsc -p tsconfig.check.json --noEmit",
+    "verify": "npm run typecheck && npm run build && npm run test:run",
+    "lint": "eslint .",
+    "preview": "vite preview",
+
+    "test": "vitest",
+    "test:run": "vitest run",
+
+    "test:auth-receipt": "vitest run src/features/customerReceipt/__tests__/customerReceiptAuthRegression.test.js",
+    "test:auth-receipt:watch": "vitest src/features/customerReceipt/__tests__/customerReceiptAuthRegression.test.js",
+    "test:e2e:auth-receipt": "playwright test e2e/customer-receipt-auth-regression.spec.js"
+  },
   "dependencies": {
     "@cloudinary/react": "1.14.1",
     "@cloudinary/url-gen": "1.21.0",
@@ -96,6 +103,7 @@
     "path": "0.12.7",
     "postcss": "8.5.3",
     "tailwindcss": "3.4.17",
+    "typescript": "^5.9.2",
     "vite": "5.2.10",
     "vitest": "^4.1.7"
   },

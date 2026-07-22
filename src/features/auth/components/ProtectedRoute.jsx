@@ -2,8 +2,7 @@
 
 // ✅ src/features/auth/components/ProtectedRoute.jsx
 
-
-import { Navigate, Outlet } from 'react-router-dom';
+import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuthStore } from '@/features/auth/store/authStore';
 import { traceRouteGuard } from '@/utils/authTrace';
 
@@ -13,6 +12,7 @@ const ProtectedRoute = ({ allowedRoles = [], children }) => {
   const isBootstrappingAuth = useAuthStore((state) => state.isBootstrappingAuth);
   const role = useAuthStore((state) => state.role);
   const token = useAuthStore((state) => state.token);
+  const location = useLocation();
 
   // ⚠️ TEMPORARY TRACE
   traceRouteGuard(state);
@@ -28,7 +28,13 @@ const ProtectedRoute = ({ allowedRoles = [], children }) => {
   }
 
   // ✅ ใช้สถานะ authenticated จาก store กลางเท่านั้น
-  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  // ✅ ถ้าอยู่ที่ /login อยู่แล้ว ไม่ต้อง redirect ซ้ำ
+  if (!isAuthenticated) {
+    if (location.pathname === '/login') {
+      return null;
+    }
+    return <Navigate to="/login" replace />;
+  }
 
   // ✅ ถ้ามีการจำกัด role → ตรวจสอบสิทธิ์
   if (allowedRoles.length > 0 && !allowedRoles.includes(role)) {

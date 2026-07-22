@@ -3,6 +3,7 @@
 // 🎨 Minimal Platinum Light Mode Edition Integrated — Fix Blank Screen Loop
 import React from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
+import ProtectedRoute from '@/features/auth/components/ProtectedRoute';
 
 // 🟢 1. ดึงท่อสัญญานระบบย่อยระดับ Live API (เรียงหน้ากระดานแบบ Flat โครงสร้างเดี่ยว)
 import purchasesRoutes from './purchasesRoutes'; // 🛒 จัดซื้อ
@@ -68,6 +69,9 @@ const TempReportPage = ({ title }) => (
 );
 
 export const posPartnerRoutes = [
+  {
+    element: <ProtectedRoute />,
+    children: [
   { index: true, element: <Navigate to="dashboard" replace /> },
 
   // 📊 1. โมดูลหน้าหลักภาพรวม
@@ -183,4 +187,6 @@ export const posPartnerRoutes = [
 
   // 🛠️ 8. เส้นทางกลางและคำสั่งทางออกจากระบบ
   { path: 'logout', element: <LogoutPos /> }
+    ]
+  }
 ];

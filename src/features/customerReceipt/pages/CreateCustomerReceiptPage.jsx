@@ -14,17 +14,16 @@ const CreateCustomerReceiptPage = () => {
   const selectedItem = useCustomerReceiptStore((state) => state.selectedItem);
   
   const createCustomerReceiptAction = useCustomerReceiptStore((state) => state.createCustomerReceiptAction);
+  const resetCustomerReceiptCreateSessionAction = useCustomerReceiptStore((state) => state.resetCustomerReceiptCreateSessionAction);
   const clearCustomerReceiptMessagesAction = useCustomerReceiptStore((state) => state.clearCustomerReceiptMessagesAction);
-  const clearSelectedCustomerReceiptAction = useCustomerReceiptStore((state) => state.clearSelectedCustomerReceiptAction);
 
   useEffect(() => {
-    clearCustomerReceiptMessagesAction();
-    clearSelectedCustomerReceiptAction();
+    resetCustomerReceiptCreateSessionAction();
 
     return () => {
       clearCustomerReceiptMessagesAction();
     };
-  }, [clearCustomerReceiptMessagesAction, clearSelectedCustomerReceiptAction]);
+  }, [resetCustomerReceiptCreateSessionAction, clearCustomerReceiptMessagesAction]);
 
   // 🟢 [DYNAMIC BACK PATH]: แกะรอยตำแหน่ง URL ปัจจุบันเพื่อใช้ถอยหลังกลับไปหน้าตารางรวมอย่างแม่นยำ ป้องกันปัญหารหัสร้านลอยพัง
   const getBackUrl = () => {

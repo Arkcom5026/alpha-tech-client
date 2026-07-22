@@ -97,16 +97,21 @@ const CustomerReceiptForm = ({
   }, [clearCustomerReceiptCustomerSearchAction]);
 
   useEffect(() => {
-    if (!selectedCustomer?.id) return;
+    if (selectedCustomer?.id) {
+      const isOrganizationCustomer = Boolean(selectedCustomer.companyName);
 
-    const isOrganizationCustomer = Boolean(selectedCustomer.companyName);
-
-    setForm((prev) => ({
-      ...prev,
-      customerId: String(selectedCustomer.id),
-      paymentMethod:
-        isOrganizationCustomer && !initialValues?.paymentMethod ? 'CHEQUE' : prev.paymentMethod,
-    }));
+      setForm((prev) => ({
+        ...prev,
+        customerId: String(selectedCustomer.id),
+        paymentMethod:
+          isOrganizationCustomer && !initialValues?.paymentMethod ? 'CHEQUE' : prev.paymentMethod,
+      }));
+    } else {
+      setForm((prev) => ({
+        ...prev,
+        customerId: '',
+      }));
+    }
   }, [initialValues?.paymentMethod, selectedCustomer]);
 
   const handleChange = (key) => (event) => {

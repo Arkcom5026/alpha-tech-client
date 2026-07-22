@@ -594,20 +594,24 @@ The following observations are noted but are **not Authentication Baseline block
 | `src/features/customerReceipt.zip` | Deletion requires human decision — pre-existing deletion |
 | `customer-receipt-auth-tests-frontend.diff` | Redundant patch artifact — changes already applied |
 
-## 17. Commit SHA Placeholder
+## 17. Baseline Commit References
 
 ```
-BASELINE_COMMIT_SHA: PENDING_COMMIT
+IMPLEMENTATION_BASELINE_COMMIT_SHA:
+966e769f553c8cd9c8a94044df7079575e99123a
 ```
+
+- **Implementation baseline commit**: `966e769f553c8cd9c8a94044df7079575e99123a`
+- **Documentation closure commit**: to be created by this mission
 
 ## 18. Commit and Verification Status
 
 | Check | Status |
 |---|---|
-| Typecheck | PENDING |
-| Build | PENDING |
-| Tests | PENDING |
-| Focused auth tests | PENDING |
-| Staged diff check | PENDING |
-| Commit created | PENDING |
+| Typecheck | PASS |
+| Build | PASS |
+| Tests | PASS — 3 test files, 21 tests |
+| Focused auth tests | PASS — 15/15 |
+| Staged diff check | PASS |
+| Commit created | YES — `966e769f553c8cd9c8a94044df7079575e99123a` |
 | Push performed | NO |

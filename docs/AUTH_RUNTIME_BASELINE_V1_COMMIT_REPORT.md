@@ -152,20 +152,21 @@ See `docs/AUTH_RUNTIME_BASELINE_V1.md` section 13 for full runtime evidence tabl
 
 | Check | Result |
 |---|---|
-| Typecheck (`npm run typecheck`) | PENDING |
-| Build (`npm run build`) | PENDING |
-| Tests (`npm run test:run`) | PENDING |
-| Focused auth tests (`npm run test:auth-receipt`) | PENDING |
-| `git diff --check` | PENDING |
+| Typecheck (`npm run typecheck`) | PASS |
+| Build (`npm run build`) | PASS |
+| Tests (`npm run test:run`) | PASS — 3 test files, 21 tests |
+| Focused auth tests (`npm run test:auth-receipt`) | PASS — 15/15 |
+| `git diff --check` | PASS (pre-existing CRLF warnings noted separately) |
 
 ## Staged Diff Review
 
-PENDING — will be performed after staging.
+PASS — All staged changes reviewed and verified. No unintended modifications present.
 
 ## Commit SHA
 
 ```
-BASELINE_COMMIT_SHA: PENDING_COMMIT
+IMPLEMENTATION_BASELINE_COMMIT_SHA:
+966e769f553c8cd9c8a94044df7079575e99123a
 ```
 
 ## Commit Message
@@ -176,7 +177,17 @@ feat(auth): establish verified authentication runtime baseline v1
 
 ## Post-Commit Working-Tree Status
 
-PENDING — will be captured after commit.
+DIRTY — intentionally excluded working-tree changes remain:
+
+```
+D src/features/customerReceipt.zip
+?? customer-receipt-auth-tests-frontend.diff
+```
+
+- `src/features/customerReceipt.zip` — deleted in working tree only; deletion was NOT committed. No unexplained deletion was committed.
+- `customer-receipt-auth-tests-frontend.diff` — untracked redundant patch artifact; changes already applied.
+
+**Do not describe this state as CLEAN.**
 
 ## Files Still Intentionally Uncommitted
 

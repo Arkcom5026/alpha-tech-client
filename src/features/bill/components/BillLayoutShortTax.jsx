@@ -98,6 +98,42 @@ const BillLayoutShortTax = ({
 }) => {
   const receiptTitle = 'ใบกำกับภาษีอย่างย่อ / ใบเสร็จรับเงิน'
   const receiptRootRef = React.useRef(null)
+  const branchNameRef = React.useRef(null)
+
+  const fitBranchName = React.useCallback(() => {
+    const element = branchNameRef.current
+    if (!element) return
+
+    const maxFontSize = 16
+    const minFontSize = 8
+    let nextFontSize = maxFontSize
+
+    element.style.fontSize = `${maxFontSize}px`
+    while (element.scrollWidth > element.clientWidth && nextFontSize > minFontSize) {
+      nextFontSize = Math.max(minFontSize, nextFontSize - 0.25)
+      element.style.fontSize = `${nextFontSize}px`
+    }
+  }, [])
+
+  React.useLayoutEffect(() => {
+    fitBranchName()
+
+    const element = branchNameRef.current
+    const container = element?.parentElement
+    const resizeObserver =
+      container && typeof ResizeObserver !== 'undefined'
+        ? new ResizeObserver(fitBranchName)
+        : null
+
+    resizeObserver?.observe(container)
+    window.addEventListener('beforeprint', fitBranchName)
+    document.fonts?.ready?.then(fitBranchName).catch(() => {})
+
+    return () => {
+      resizeObserver?.disconnect()
+      window.removeEventListener('beforeprint', fitBranchName)
+    }
+  }, [config?.branchName, fitBranchName])
 
   React.useEffect(() => {
     const pxToMm = (px) => Math.round(((Number(px) || 0) * 25.4 / 96) * 100) / 100
@@ -258,52 +294,6 @@ const BillLayoutShortTax = ({
     if (len >= 22) return { fontSize: '17px', letterSpacing: '0.05px', gap: '10px' }
 
     return { fontSize: '18px', letterSpacing: '0.1px', gap: '12px' }
-  }
-
-  const getAdaptiveBranchNameStyle = (text) => {
-    const len = String(text || '').trim().replace(/\s+/g, ' ').length
-
-    if (len >= 46) {
-      return {
-        fontSize: '12.6px',
-        lineHeight: 1.18,
-        letterSpacing: '-0.45px',
-        transform: 'scaleX(0.94)',
-        transformOrigin: 'center',
-      }
-    }
-
-    if (len >= 40) {
-      return {
-        fontSize: '13.2px',
-        lineHeight: 1.18,
-        letterSpacing: '-0.35px',
-        transform: 'scaleX(0.96)',
-        transformOrigin: 'center',
-      }
-    }
-
-    if (len >= 34) {
-      return {
-        fontSize: '14px',
-        lineHeight: 1.18,
-        letterSpacing: '-0.2px',
-      }
-    }
-
-    if (len >= 28) {
-      return {
-        fontSize: '15px',
-        lineHeight: 1.18,
-        letterSpacing: '-0.05px',
-      }
-    }
-
-    return {
-      fontSize: '16px',
-      lineHeight: 1.18,
-      letterSpacing: '0.1px',
-    }
   }
 
   const getCustomerPhoneText = (customer) => {
@@ -612,13 +602,16 @@ const BillLayoutShortTax = ({
         <div className="text-center no-break tight">
           {config.logoUrl && <img src={config.logoUrl} alt="logo" className="h-10 mx-auto mb-1" />}
           <div
+            ref={branchNameRef}
             className="font-bold"
             style={{
-              ...getAdaptiveBranchNameStyle(config.branchName),
               marginBottom: 3,
+              width: '100%',
               maxWidth: '100%',
               whiteSpace: 'nowrap',
-              overflow: 'visible',
+              overflow: 'hidden',
+              lineHeight: 1.18,
+              letterSpacing: '0px',
             }}
           >
             {config.branchName}

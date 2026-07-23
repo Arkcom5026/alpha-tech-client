@@ -1,8 +1,8 @@
 // src/features/bill/pages/PrintBillPageShortTax.jsx
 // 🏛️ Premium Next-Gen POS Print Page: (Short Thermal Receipt Core Logic Restored)
 
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { useParams, useSearchParams } from 'react-router-dom'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import BillLayoutShortTax from '../components/BillLayoutShortTax'
 import { useBillStore } from '@/features/bill/store/billStore'
 import useSalesStore from '@/features/sales/store/salesStore'
@@ -19,7 +19,9 @@ const nullableDocumentText = (value) => {
 
 const PrintBillPageShortTax = () => {
   const params = useParams()
+  const navigate = useNavigate()
   const saleId = params.id || params.saleId
+  const saleRoute = `/${params.shopSlug || 'advancetech'}/pos/sales/sale`
   const printedRef = useRef(false)
   const printRootRef = useRef(null)
 
@@ -134,36 +136,49 @@ const PrintBillPageShortTax = () => {
     }
   }, [sale?.id, saleItems?.length, payment?.id, config])
 
+  const returnToSale = useCallback(() => {
+    navigate(saleRoute, { replace: true })
+  }, [navigate, saleRoute])
+
+  const printAndReturnToSale = useCallback(() => {
+    let returned = false
+    const returnOnce = () => {
+      if (returned) return
+      returned = true
+      window.removeEventListener('afterprint', returnOnce)
+      returnToSale()
+    }
+
+    window.addEventListener('afterprint', returnOnce, { once: true })
+
+    try {
+      window.focus?.()
+      window.print?.()
+    } catch {
+      // Navigation still returns the operator to the active sale lane.
+    } finally {
+      window.setTimeout(returnOnce, 0)
+    }
+  }, [returnToSale])
+
   useEffect(() => {
     if (!autoPrint) return
     if (printedRef.current) return
     if (!sale?.id) return
     if (!config) return
     if (!saleItems?.length) return
-    if (!payment) return
+    if (!payment?.id) return
 
     printedRef.current = true
 
     const t = setTimeout(() => {
-      try {
-        window.focus?.()
-        window.print?.()
-      } catch {
-        // ignore
-      }
+      printAndReturnToSale()
     }, 300)
 
     return () => clearTimeout(t)
-  }, [autoPrint, sale?.id, config, saleItems?.length, payment?.id])
+  }, [autoPrint, sale?.id, config, saleItems?.length, payment?.id, printAndReturnToSale])
 
-  const handlePrint = () => {
-    try {
-      window.focus?.()
-      window.print?.()
-    } catch {
-      // ignore
-    }
-  }
+  const handlePrint = printAndReturnToSale
 
   const handleToggleDocumentLineEdit = (item) => {
     const key = item?.documentLineKey || item?.id
@@ -354,15 +369,25 @@ const PrintBillPageShortTax = () => {
       `}</style>
 
       {/* เครื่องมือควบคุมเฉพาะหน้าใบเสร็จย่อ — ไม่พึ่ง Shared DocumentToolbar */}
-      <div className="w-full bg-slate-900 px-4 py-4 print:hidden">
+      <div className="w-full bg-white px-4 py-3 print:hidden">
         <div className="mx-auto flex max-w-[80mm] items-center justify-between gap-3">
-          <button
-            type="button"
-            onClick={handlePrint}
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={returnToSale}
+              className="inline-flex items-center justify-center rounded-lg border border-slate-600 bg-slate-800 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-400"
+            >
+              กลับหน้าขายสินค้า
+            </button>
+
+            <button
+              type="button"
+              onClick={handlePrint}
             className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 focus:ring-offset-slate-900"
           >
             พิมพ์ใบเสร็จ
           </button>
+          </div>
 
           {autoPrint ? (
             <span className="text-xs font-medium text-emerald-300">

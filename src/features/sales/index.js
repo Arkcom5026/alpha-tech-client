@@ -10,3 +10,4 @@ export { openCompletedSaleDocument } from './documents/services/saleDocumentWork
 export { default as CreateSalePage } from './create/pages/CreateSalePage';
 export { default as SalesDashboardPage } from './history/pages/SalesDashboardPage';
 export { default as useSalesStore } from './store/salesStore';
+export * from './return';

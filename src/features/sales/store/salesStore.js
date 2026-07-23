@@ -3,7 +3,6 @@
 import { create } from 'zustand';
 
 import {
-  completeSaleOrder,
   getAllSales,
   getSaleById,
   returnSale,
@@ -12,6 +11,8 @@ import {
   convertOrderOnlineToSale,
   updateSaleDocumentLines,
 } from '../api/saleApi';
+import { executeSaleCompletion } from '../create/workflows/saleCompletionWorkflow';
+import { clearSaleCompletionIdentity } from '../create/workflows/saleCompletionIdentity';
 
 // ✅ Defensive normalizer (production-grade)
 const normalizeStockItemId = (item) => {
@@ -24,7 +25,7 @@ const normalizeStockItemId = (item) => {
 const devError = (...args) => {
   try {
     if (import.meta?.env?.DEV) console.error(...args);
-  } catch (_) {
+  } catch {
     // ignore
   }
 };
@@ -322,9 +323,7 @@ const useSalesStore = create((set, get) => ({
       return { error: msg };
     }
 
-    const commandId = get().completionCommandId ||
-      (globalThis.crypto?.randomUUID?.() || `sale-${Date.now()}-${Math.random().toString(36).slice(2)}`);
-    set({ loading: true, error: null, completionState: 'validating', completionCommandId: commandId });
+    set({ loading: true, error: null, completionState: 'validating' });
 
     try {
       const vatRate = 7;
@@ -384,10 +383,10 @@ const useSalesStore = create((set, get) => ({
       };
 
       set({ completionState: 'submitting' });
-      const data = await completeSaleOrder({
-        commandId,
+      const data = await executeSaleCompletion({
         sale: payload,
         payment: opts.paymentIntent || { paymentItems: [] },
+        onIdentity: ({ commandId }) => set({ completionCommandId: commandId }),
       });
       const saleId = data?.saleId ?? data?.id ?? data?.saleOrderId ?? data?.sale?.id ?? null;
 
@@ -639,6 +638,7 @@ const useSalesStore = create((set, get) => ({
   },
 
   resetSaleOrderAction: () => {
+    clearSaleCompletionIdentity();
     set({
       saleItems: [],
       paymentList: [

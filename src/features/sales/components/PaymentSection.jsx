@@ -91,7 +91,9 @@ const PaymentSection = ({
       setPaymentAmount?.('TRANSFER', '');
       setPaymentAmount?.('CARD', '');
       setCardRef?.('');
-    } catch (_) {}
+    } catch {
+      // Compatibility setters are optional during historical document rendering.
+    }
   }, [isCreditSale, setPaymentAmount, setCardRef]);
 
   const handleDepositUsedChange = useCallback(
@@ -226,7 +228,6 @@ const PaymentSection = ({
           deliveryNoteMode: isCreditSale ? 'PRINT' : undefined,
           saleType: customerType === 'GOVERNMENT' ? 'GOVERNMENT' : undefined,
           paymentIntent: {
-            receivedAt: new Date().toISOString(),
             paymentItems: finalValidPayments.map((payment) => ({
               paymentMethod: payment.method,
               amount: payment.amount,
@@ -329,7 +330,6 @@ const PaymentSection = ({
     resetSaleOrderAction,
     safeBillDiscount,
     safeDepositUsed,
-    safeFinalPrice,
     saleOption,
     selectedDeposit?.id,
     setBillDiscount,
@@ -343,6 +343,7 @@ const PaymentSection = ({
     isCreditSale,
     customerType,
     calc?.safeChangeAmount,
+    cardRef,
     hasImmediatePayment,
   ]);
 

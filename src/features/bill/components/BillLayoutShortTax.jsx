@@ -14,7 +14,6 @@ const formatCurrency = (val) =>
 const buildBranchFullAddress = (branch, fallbackAddress = '-') => {
   const subdistrict = branch?.subdistrict || null
   const district = subdistrict?.district || null
-  const province = district?.province || null
 
   const structuredAddress = [
     branch?.address,

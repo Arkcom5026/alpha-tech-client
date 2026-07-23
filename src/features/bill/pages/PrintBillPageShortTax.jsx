@@ -167,7 +167,7 @@ const PrintBillPageShortTax = () => {
     if (!sale?.id) return
     if (!config) return
     if (!saleItems?.length) return
-    if (!payment) return
+    if (!payment?.id) return
 
     printedRef.current = true
 

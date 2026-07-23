@@ -10,7 +10,24 @@ import { useAddressStore } from '@/features/address/store/addressStore';
 import AddressForm from '@/features/address/components/AddressForm';
 import { User, Search, Phone, RefreshCw, ShieldCheck, Mail, MapPin } from 'lucide-react';
 
-const CustomerSection = ({ productSearchRef, clearTrigger, hideCustomerDetails, onSaleModeSelect }) => {
+const REGION_NAME_SETS = {
+  NORTH: new Set(['เชียงใหม่','เชียงราย','แม่ฮ่องสอน','ลำพูน','ลำปาง','แพร่','น่าน','พะเยา','อุตรดิตถ์','ตาก','นครสวรรค์','อุทัยธานี','กำแพงเพชร','สุโขทัย','พิษณุโลก','พิจิตร','เพชรบูรณ์']),
+  NORTHEAST: new Set(['เลย','หนองบัวลำภู','อุดรธานี','หนองคาย','บึงกาฬ','สกลนคร','นครพนม','มุกดาหาร','ขอนแก่น','กาฬสินธุ์','มหาสารคาม','ร้อยเอ็ด','ชัยภูมิ','ยโสธร','อำนาจเจริญ','ศรีสะเกษ','อุบลราชธานี','สุรินทร์','บุรีรัมย์','นครราชสีมา']),
+  CENTRAL: new Set(['กรุงเทพมหานคร','นนทบุรี','ปทุมธานี','สมุทรปราการ','พระนครศรีอยุธยา','อ่างทอง','ลพบุรี','สิงห์บุรี','ชัยนาท','สระบุรี','นครนายก','สุพรรณบุรี','นครปฐม','สมุทรสาคร','สมุทรสงคราม']),
+  EAST: new Set(['ฉะเชิงเทรา','ชลบุรี','ระยอง','จันทบุรี','ตราด','ปราจีนบุรี','สระแก้ว']),
+  WEST: new Set(['กาญจนบุรี','ราชบุรี','เพชรบุรี','ประจวบคีรีขันธ์']),
+  SOUTH: new Set(['ชุมพร','สุราษฎร์ธานี','นครศรีธรรมราช','กระบี่','พังงา','ภูเก็ต','ระนอง','ตรัง','พัทลุง','สงขลา','สตูล','ปัตตานี','ยะลา','นราธิวาส']),
+};
+
+const provinceBelongsToRegion = (province, region) => {
+  if (!region) return true;
+  if (!province) return false;
+  const nameText = String(province.nameTh || province.name_th || province.name || '').trim();
+  const provinceSet = REGION_NAME_SETS[region];
+  return provinceSet ? provinceSet.has(nameText) : true;
+};
+
+const CustomerSection = ({ productSearchRef, clearTrigger, onSaleModeSelect }) => {
   // ---- อินพุตข้อมูลสมาชิกและรายละเอียดหลัก
   const [phone, setPhone] = useState('');
   const [rawPhone, setRawPhone] = useState('');
@@ -44,7 +61,7 @@ const CustomerSection = ({ productSearchRef, clearTrigger, hideCustomerDetails, 
   const [postalCode, setPostalCode] = useState('');
 
   // ---- Region Filter Module
-  const [regionFilter, setRegionFilter] = useState('');
+  const [regionFilter] = useState('');
   const REGION_OPTIONS = [
     { value: '', label: 'ทุกภาค' },
     { value: 'NORTH', label: 'ภาคเหนือ' },
@@ -54,28 +71,6 @@ const CustomerSection = ({ productSearchRef, clearTrigger, hideCustomerDetails, 
     { value: 'WEST', label: 'ภาคตะวันตก' },
     { value: 'SOUTH', label: 'ภาคใต้' },
   ];
-  const REGION_NAME_SETS = {
-    NORTH: new Set(['เชียงใหม่','เชียงราย','แม่ฮ่องสอน','ลำพูน','ลำปาง','แพร่','น่าน','พะเยา','อุตรดิตถ์','ตาก','นครสวรรค์','อุทัยธานี','กำแพงเพชร','สุโขทัย','พิษณุโลก','พิจิตร','เพชรบูรณ์']),
-    NORTHEAST: new Set(['เลย','หนองบัวลำภู','อุดรธานี','หนองคาย','บึงกาฬ','สกลนคร','นครพนม','มุกดาหาร','ขอนแก่น','กาฬสินธุ์','มหาสารคาม','ร้อยเอ็ด','ชัยภูมิ','ยโสธร','อำนาจเจริญ','ศรีสะเกษ','อุบลราชธานี','สุรินทร์','บุรีรัมย์','นครราชสีมา']),
-    CENTRAL: new Set(['กรุงเทพมหานคร','นนทบุรี','ปทุมธานี','สมุทรปราการ','พระนครศรีอยุธยา','อ่างทอง','ลพบุรี','สิงห์บุรี','ชัยนาท','สระบุรี','นครนายก','สุพรรณบุรี','นครปฐม','สมุทรสาคร','สมุทรสงคราม']),
-    EAST: new Set(['ฉะเชิงเทรา','ชลบุรี','ระยอง','จันทบุรี','ตราด','ปราจีนบุรี','สระแก้ว']),
-    WEST: new Set(['กาญจนบุรี','ราชบุรี','เพชรบุรี','ประจวบคีรีขันธ์']),
-    SOUTH: new Set(['ชุมพร','สุราษฎร์ธานี','นครศรีธรรมราช','กระบี่','พังงา','ภูเก็ต','ระนอง','ตรัง','พัทลุง','สงขลา','สตูล','ปัตตานี','ยะลา','นราธิวาส']),
-  };
-
-  function provinceBelongsToRegion(p, region) {
-    if (!region) return true;
-    if (!p) return false;
-    var nameText = '';
-    if (p && p.nameTh) nameText = String(p.nameTh);
-    else if (p && p.name_th) nameText = String(p.name_th);
-    else if (p && p.name) nameText = String(p.name);
-    nameText = nameText.trim();
-    var setObj = REGION_NAME_SETS[region];
-    if (!setObj) return true;
-    return setObj.has(nameText);
-  }
-
   const provinceFilterFn = useMemo(function () {
     if (!regionFilter) return undefined;
     return function(p){ return provinceBelongsToRegion(p, regionFilter); };
@@ -124,7 +119,7 @@ const CustomerSection = ({ productSearchRef, clearTrigger, hideCustomerDetails, 
       if (ensureProvincesAction) {
         try { 
           await ensureProvincesAction(); 
-        } catch (err) {
+        } catch {
           // noop
         }
       }
@@ -181,7 +176,7 @@ const CustomerSection = ({ productSearchRef, clearTrigger, hideCustomerDetails, 
           // ให้สั่งข้ามเลนไปใช้สิทธิ์ของกลไก Fallback ทันทีโดยแอบส่งรหัสปลอม '0' ไปแทน เพื่อบล็อกไม่ให้สัญญานระเบิดสีแดง 404 โผล่ขึ้นมาบนหน้า Console ครับ!
           const secureSubCode = (rawString && !selectedCustomer.provinceCode) ? '0' : subCode;
           info = await resolveBySubdistrictCodeAction(secureSubCode, rawString);
-        } catch (err) {
+        } catch {
           info = null;
         }
         
@@ -323,12 +318,12 @@ const CustomerSection = ({ productSearchRef, clearTrigger, hideCustomerDetails, 
         if (searchCustomerByCustomerIdAndDepositAction) {
           fullPayload = await searchCustomerByCustomerIdAndDepositAction(customer.id);
         }
-      } catch (e) {
+      } catch {
         fullPayload = null;
       }
 
       processSelectedCustomer(fullPayload || customer);
-    } catch (err) {
+    } catch {
       setFormError('ดึงข้อมูลลูกค้าไม่สำเร็จ');
     } finally {
       setCustomerLoading(false);
@@ -354,7 +349,7 @@ const CustomerSection = ({ productSearchRef, clearTrigger, hideCustomerDetails, 
       setIsModified(false);
       setFormError('');
       setFormInfo('อัปเดตข้อมูลลูกค้าสำเร็จ');
-    } catch (err) {
+    } catch {
       setFormInfo('');
       setFormError('อัปเดตข้อมูลลูกค้าไม่สำเร็จ');
     }

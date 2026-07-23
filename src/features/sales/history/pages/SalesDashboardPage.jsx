@@ -199,7 +199,7 @@ const SalesDashboardPage = () => {
       if (clearSalesOverviewErrorAction) clearSalesOverviewErrorAction();
       const data = await fetchSalesDashboardOverviewAction({ scope: 'today' });
       setOverviewUI({ loaded: true, data: data || null });
-    } catch (err) {
+    } catch {
       setOverviewUI((prev) => ({ ...prev, loaded: prev.loaded || false }));
     }
   }, [salesOverviewLoading, fetchSalesDashboardOverviewAction, clearSalesOverviewErrorAction]);

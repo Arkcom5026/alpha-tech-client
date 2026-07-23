@@ -3,18 +3,7 @@
 
 import React, { useEffect, useMemo } from 'react';
 import PropTypes from 'prop-types';
-
-export const PRINT_OPTION = {
-  NONE: 'NONE',
-  RECEIPT: 'RECEIPT',
-  TAX_INVOICE: 'TAX_INVOICE',
-  DELIVERY_NOTE: 'DELIVERY_NOTE',
-};
-
-export const SALE_MODE = {
-  CASH: 'CASH',
-  CREDIT: 'CREDIT',
-};
+import { PRINT_OPTION, SALE_MODE } from '../contracts/salePrintOptions';
 
 const BillPrintOptions = ({
   saleOption,
@@ -23,7 +12,10 @@ const BillPrintOptions = ({
   currentSaleMode = SALE_MODE.CASH,
 }) => {
   const isValidSetter = typeof setSaleOption === 'function';
-  const setSaleOptionSafe = isValidSetter ? setSaleOption : () => {};
+  const setSaleOptionSafe = useMemo(
+    () => (isValidSetter ? setSaleOption : () => {}),
+    [isValidSetter, setSaleOption]
+  );
   const isCash = currentSaleMode === SALE_MODE.CASH;
   const isCredit = currentSaleMode === SALE_MODE.CREDIT;
 

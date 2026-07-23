@@ -137,7 +137,7 @@ export const buildProductTraceEventCounters = (timeline = []) => {
       result.ready += 1;
     }
 
-    if (category === 'SALES' || type.includes('SOLD') || title.includes('ขาย')) {
+    if (category === 'SALES' || type.includes('SOLD')) {
       result.sold += 1;
     }
 

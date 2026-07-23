@@ -354,7 +354,7 @@ const PrintBillPageShortTax = () => {
       `}</style>
 
       {/* เครื่องมือควบคุมเฉพาะหน้าใบเสร็จย่อ — ไม่พึ่ง Shared DocumentToolbar */}
-      <div className="w-full bg-slate-900 px-4 py-4 print:hidden">
+      <div className="w-full bg-white px-4 py-3 print:hidden">
         <div className="mx-auto flex max-w-[80mm] items-center justify-between gap-3">
           <button
             type="button"

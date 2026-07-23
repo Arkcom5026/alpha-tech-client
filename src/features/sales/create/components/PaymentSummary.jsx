@@ -4,7 +4,8 @@
 import React, { useEffect } from 'react';
 import PropTypes from 'prop-types';
 
-import BillPrintOptions, { PRINT_OPTION, SALE_MODE } from './BillPrintOptions';
+import BillPrintOptions from './BillPrintOptions';
+import { PRINT_OPTION, SALE_MODE } from '../contracts/salePrintOptions';
 
 const fmt = (n) =>
   Number(n || 0).toLocaleString('th-TH', {

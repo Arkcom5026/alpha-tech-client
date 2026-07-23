@@ -1,0 +1,11 @@
+export const PRINT_OPTION = {
+  NONE: 'NONE',
+  RECEIPT: 'RECEIPT',
+  TAX_INVOICE: 'TAX_INVOICE',
+  DELIVERY_NOTE: 'DELIVERY_NOTE',
+};
+
+export const SALE_MODE = {
+  CASH: 'CASH',
+  CREDIT: 'CREDIT',
+};

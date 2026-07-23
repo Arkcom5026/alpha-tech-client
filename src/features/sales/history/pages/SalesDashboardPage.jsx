@@ -1,4 +1,4 @@
-// src/features/sales/pages/SalesDashboardPage.jsx
+// src/features/sales/history/pages/SalesDashboardPage.jsx
 // 🏛️ Clean Architecture Multi-Tenant Sales Dashboard Hub
 // 🎨 Minimal Platinum Light Mode Edition (User Feedback Optimized — Clear Reading Text)
 
@@ -199,7 +199,7 @@ const SalesDashboardPage = () => {
       if (clearSalesOverviewErrorAction) clearSalesOverviewErrorAction();
       const data = await fetchSalesDashboardOverviewAction({ scope: 'today' });
       setOverviewUI({ loaded: true, data: data || null });
-    } catch (err) {
+    } catch {
       setOverviewUI((prev) => ({ ...prev, loaded: prev.loaded || false }));
     }
   }, [salesOverviewLoading, fetchSalesDashboardOverviewAction, clearSalesOverviewErrorAction]);

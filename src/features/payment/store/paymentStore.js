@@ -101,7 +101,8 @@ const usePaymentStore = create(devtools((set, get) => ({
       return true;
     } catch (err) {
       console.error('❌ Payment Error:', err);
-      set({ isSubmitting: false, error: 'ไม่สามารถบันทึกการชำระเงินได้' });
+      set({ isSubmitting: false, error: err?.message || 'Payment failed' });
+      throw err;
     }
   },
 
@@ -145,7 +146,8 @@ const usePaymentStore = create(devtools((set, get) => ({
       return true;
     } catch (err) {
       console.error('❌ MultiPayment Error:', err);
-      set({ isSubmitting: false, error: 'บันทึกการชำระเงินแบบหลายช่องทางล้มเหลว' });
+      set({ isSubmitting: false, error: err?.message || 'Multi-payment failed' });
+      throw err;
     }
   },
 

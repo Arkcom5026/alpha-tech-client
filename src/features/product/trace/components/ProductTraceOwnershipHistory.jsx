@@ -3,7 +3,14 @@ import { formatProductTraceDateTime } from '../utils/productTraceFormat';
 
 const normalize = (value) => String(value || '').trim().toUpperCase();
 
-const buildOwnershipEntries = ({ identity, timeline = [], procurement, sales } = {}) => {
+const isReturnTransitionEvent = (event = {}) => {
+  const type = normalize(event.type);
+  return type === 'PRODUCT_RETURNED' || (
+    type.includes('RETURN') && !type.includes('REFUND')
+  );
+};
+
+export const buildOwnershipEntries = ({ identity, timeline = [], procurement, sales } = {}) => {
   const entries = [];
 
   if (procurement?.supplier?.name) {
@@ -30,8 +37,9 @@ const buildOwnershipEntries = ({ identity, timeline = [], procurement, sales } =
     });
   }
 
-  const sale = sales?.sale;
-  if (sale) {
+  for (const cycle of sales?.cycles || (sales?.sale ? [sales] : [])) {
+    const sale = cycle?.sale;
+    if (!sale) continue;
     entries.push({
       id: `sale-${sale.id || sale.code || 'customer'}`,
       label: 'ลูกค้า',
@@ -44,18 +52,28 @@ const buildOwnershipEntries = ({ identity, timeline = [], procurement, sales } =
     });
   }
 
+  const returnDocuments = new Set();
   timeline.forEach((event, index) => {
     const type = normalize(event?.type);
     const category = normalize(event?.category);
 
-    if (category === 'RETURN' || type.includes('RETURN')) {
-      entries.push({
-        id: `return-${event.id || index}`,
-        label: 'ร้านค้า',
-        holder: 'รับสินค้าคืน',
-        occurredAt: event.occurredAt,
-        source: event?.document?.code || null,
-      });
+    if (isReturnTransitionEvent(event)) {
+      const returnKey = String(
+        event?.document?.id ??
+        event?.document?.code ??
+        event?.id ??
+        index
+      );
+      if (!returnDocuments.has(returnKey)) {
+        returnDocuments.add(returnKey);
+        entries.push({
+          id: `return-${returnKey}`,
+          label: 'ร้านค้า',
+          holder: 'รับสินค้าคืน',
+          occurredAt: event.occurredAt,
+          source: event?.document?.code || null,
+        });
+      }
     }
 
     if (category === 'CLAIM' || type.includes('CLAIM')) {
@@ -80,6 +98,7 @@ const buildOwnershipEntries = ({ identity, timeline = [], procurement, sales } =
   });
 
   const currentCustody = normalize(identity?.currentCustody);
+  const latestSale = sales?.sale;
   const hasCurrentCustomer = entries.some((item) => item.label === 'ลูกค้า');
 
   if (currentCustody === 'CUSTOMER' && !hasCurrentCustomer) {
@@ -87,8 +106,8 @@ const buildOwnershipEntries = ({ identity, timeline = [], procurement, sales } =
       id: 'current-customer',
       label: 'ลูกค้า',
       holder: 'ผู้ครอบครองปัจจุบัน',
-      occurredAt: sale?.soldAt || null,
-      source: sale?.code || null,
+      occurredAt: latestSale?.soldAt || null,
+      source: latestSale?.code || null,
     });
   }
 

@@ -1,0 +1,58 @@
+import { describe, expect, it } from 'vitest';
+import {
+  buildProductTraceCurrentOwner,
+  buildProductTraceEventCounters,
+} from '../utils/productTraceInsights';
+import { buildOwnershipEntries } from '../components/ProductTraceOwnershipHistory';
+
+const returnEvent = {
+  id: 'returned-1',
+  type: 'PRODUCT_RETURNED',
+  category: 'RETURN',
+  occurredAt: '2026-07-23T10:43:00.000Z',
+  document: { id: 1, code: 'RT-0001' },
+};
+
+const refundEvent = {
+  id: 'refund-1',
+  type: 'PRODUCT_REFUNDED',
+  category: 'RETURN',
+  occurredAt: '2026-07-23T10:43:01.000Z',
+  document: { id: 1, code: 'RT-0001' },
+};
+
+describe('Product Trace return projection', () => {
+  it('uses branch custody after a completed return even when sale history exists', () => {
+    const owner = buildProductTraceCurrentOwner({
+      identity: { currentCustody: 'BRANCH', receivedAt: '2026-07-01T00:00:00.000Z' },
+      sales: {
+        sale: {
+          code: 'SL-0001',
+          soldAt: '2026-07-20T00:00:00.000Z',
+          customer: { name: 'Customer' },
+        },
+      },
+      timeline: [returnEvent, refundEvent],
+    });
+
+    expect(owner).toMatchObject({
+      type: 'BRANCH',
+      name: 'ร้านค้า',
+      since: returnEvent.occurredAt,
+      documentCode: 'RT-0001',
+    });
+  });
+
+  it('counts return transition once and does not count refund evidence as another return', () => {
+    expect(buildProductTraceEventCounters([returnEvent, refundEvent]).returned).toBe(1);
+  });
+
+  it('creates one ownership transition per return document', () => {
+    const entries = buildOwnershipEntries({
+      identity: { currentCustody: 'BRANCH' },
+      timeline: [returnEvent, refundEvent, { ...returnEvent, id: 'returned-duplicate' }],
+    });
+
+    expect(entries.filter((entry) => entry.source === 'RT-0001')).toHaveLength(1);
+  });
+});

@@ -20,6 +20,9 @@ export const getReturnableSales = async () => {
   }
 };
 
+// Legacy compatibility alias used by the canonical Sales API facade.
+export { getReturnableSales as getSaleReturns };
+
 export const getSaleReturnEligibility = async (saleId) => {
   try {
     const response = await apiClient.get(`/sales/returns/eligible/${saleId}`);

@@ -13,6 +13,13 @@ const differenceInDays = (endValue, startValue = new Date()) => {
   return Math.ceil((end.getTime() - start.getTime()) / 86400000);
 };
 
+const isReturnTransitionEvent = (event = {}) => {
+  const type = normalize(event.type);
+  return type === 'PRODUCT_RETURNED' || (
+    type.includes('RETURN') && !type.includes('REFUND')
+  );
+};
+
 export const buildProductTraceWarranty = (trace = {}) => {
   const explicit = trace?.warranty || {};
   const startDate =
@@ -69,7 +76,7 @@ export const buildProductTraceCurrentOwner = (trace = {}) => {
   const sale = trace?.sales?.sale;
   const customer = sale?.customer;
 
-  if (custody === 'CUSTOMER' || sale) {
+  if (custody === 'CUSTOMER') {
     return {
       type: 'CUSTOMER',
       name: customer?.companyName || customer?.name || 'ลูกค้า',
@@ -79,12 +86,24 @@ export const buildProductTraceCurrentOwner = (trace = {}) => {
     };
   }
 
+  const latestReturnEvent = safeArray(trace?.timeline)
+    .filter(isReturnTransitionEvent)
+    .sort((a, b) => new Date(b?.occurredAt || 0) - new Date(a?.occurredAt || 0))[0];
+  const branchName =
+    trace?.identity?.branch?.name ||
+    trace?.inventory?.branch?.name ||
+    trace?.procurement?.branch?.name ||
+    'ร้านค้า';
+
   return {
     type: custody || 'STORE',
-    name: custody === 'STORE' ? 'ร้านค้า' : null,
+    name: ['BRANCH', 'STORE', 'INVENTORY'].includes(custody) ? branchName : null,
     phone: null,
-    since: trace?.identity?.receivedAt || null,
-    documentCode: trace?.procurement?.receipt?.code || null,
+    since: latestReturnEvent?.occurredAt || trace?.identity?.receivedAt || null,
+    documentCode:
+      latestReturnEvent?.document?.code ||
+      trace?.procurement?.receipt?.code ||
+      null,
   };
 };
 
@@ -99,6 +118,7 @@ export const buildProductTraceEventCounters = (timeline = []) => {
     transferred: 0,
     damagedOrLost: 0,
   };
+  const returnDocuments = new Set();
 
   safeArray(timeline).forEach((event) => {
     const type = normalize(event?.type);
@@ -121,8 +141,15 @@ export const buildProductTraceEventCounters = (timeline = []) => {
       result.sold += 1;
     }
 
-    if (category === 'RETURN' || type.includes('RETURN')) {
-      result.returned += 1;
+    if (isReturnTransitionEvent(event)) {
+      const returnKey =
+        event?.document?.id ??
+        event?.document?.code ??
+        event?.id;
+      if (!returnDocuments.has(String(returnKey))) {
+        returnDocuments.add(String(returnKey));
+        result.returned += 1;
+      }
     }
 
     if (category === 'CLAIM' || type.includes('CLAIM')) {

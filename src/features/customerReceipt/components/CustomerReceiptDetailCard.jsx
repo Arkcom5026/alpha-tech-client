@@ -76,7 +76,7 @@ const CustomerReceiptDetailCard = ({ item }) => {
   const allocationCount = Array.isArray(item?.allocations) ? item.allocations.length : 0;
 
   return (
-    <div className="space-y-6">
+    <div data-testid="detail-page-identity" className="space-y-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div className="space-y-2">
           <div className="flex flex-wrap items-center gap-2">

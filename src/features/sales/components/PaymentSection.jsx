@@ -2,7 +2,6 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import useSalesStore from '@/features/sales/store/salesStore';
 import useCustomerDepositStore from '@/features/customerDeposit/store/customerDepositStore';
-import usePaymentStore from '@/features/payment/store/paymentStore';
 import PaymentSummary from './PaymentSummary';
 import PaymentMethodInput from './PaymentMethodInput';
 import CalculationDetails from './CalculationDetails';
@@ -29,7 +28,6 @@ const PaymentSection = ({
     resetSaleOrderAction,
   } = useSalesStore();
 
-  const { submitMultiPaymentAction } = usePaymentStore();
   const {
     customerDepositAmount,
     selectedCustomer,
@@ -209,13 +207,39 @@ const PaymentSection = ({
           return null;
         }
 
+        const updatedPayments = [...paymentsSnapshot];
+        if (safeDepositUsed > 0 && selectedDeposit?.id) {
+          updatedPayments.push({
+            method: 'DEPOSIT',
+            amount: safeDepositUsed,
+            customerDepositId: selectedDeposit.id,
+            note: 'customer deposit',
+          });
+        }
+        const finalValidPayments = updatedPayments.filter((p) => parseMoney(p.amount) > 0);
+        if (currentSaleMode === 'CASH' && finalValidPayments.length === 0) {
+          setPaymentError('Payment evidence is required');
+          return null;
+        }
+
         const res = await onConfirmSale({
           deliveryNoteMode: isCreditSale ? 'PRINT' : undefined,
           saleType: customerType === 'GOVERNMENT' ? 'GOVERNMENT' : undefined,
+          paymentIntent: {
+            receivedAt: new Date().toISOString(),
+            paymentItems: finalValidPayments.map((payment) => ({
+              paymentMethod: payment.method,
+              amount: payment.amount,
+              note: payment.note || null,
+              cardRef: payment.cardRef || (payment.method === 'CREDIT' ? cardRef : null),
+              customerDepositId: payment.customerDepositId || null,
+            })),
+          },
         });
 
         if (res?.error) {
-          setPaymentError(res.error);
+          setPaymentError(`${res.code ? `[${res.code}] ` : ''}${res.error}`);
+          confirmContext?.printWindow?.close?.();
           return null;
         }
 
@@ -225,7 +249,8 @@ const PaymentSection = ({
           return null;
         }
 
-        const updatedPayments = [...paymentsSnapshot];
+        /*
+        const updatedPaymentsLegacy = [...paymentsSnapshot];
         if (safeDepositUsed > 0 && selectedDeposit?.id) {
           updatedPayments.push({
             method: 'DEPOSIT',
@@ -247,6 +272,7 @@ const PaymentSection = ({
           saleId: Number(saleId),
           paymentList: finalValidPayments,
         });
+        */
 
         const computedSaleOption = isCreditSale
           ? 'DELIVERY_NOTE'
@@ -262,6 +288,7 @@ const PaymentSection = ({
         didSucceed = true;
         return result;
       } catch (err) {
+        confirmContext?.printWindow?.close?.();
         setPaymentError('❌ ยืนยันการขายล้มเหลว: ' + (err?.message || 'เกิดข้อผิดพลาด'));
         return null;
       } finally {
@@ -311,7 +338,6 @@ const PaymentSection = ({
     setCustomerIdAction,
     setDepositUsed,
     setIsSubmitting,
-    submitMultiPaymentAction,
     totalOriginalPrice,
     validSaleItems.length,
     isCreditSale,

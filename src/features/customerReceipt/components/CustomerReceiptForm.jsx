@@ -253,6 +253,7 @@ const CustomerReceiptForm = ({
               </label>
               <input
                 id="customer-receipt-customer-search-keyword"
+                data-testid="customer-search-input"
                 type="text"
                 value={customerSearchKeyword}
                 onChange={handleSearchKeywordChange}
@@ -307,6 +308,7 @@ const CustomerReceiptForm = ({
                     <button
                       key={customer.id}
                       type="button"
+                      data-testid={`customer-result-row-${customer.id}`}
                       onClick={() => handleSelectCustomer(customer)}
                       className={`block w-full px-4 py-3 text-left transition ${
                         isSelected ? 'bg-blue-50' : 'hover:bg-gray-50'
@@ -347,7 +349,7 @@ const CustomerReceiptForm = ({
               <div>
                 <p className="text-sm font-medium text-gray-900">ลูกค้าที่เลือก</p>
                 {selectedCustomer ? (
-                  <div className="mt-1 space-y-1 text-xs text-gray-600">
+                  <div data-testid="selected-customer-identity" className="mt-1 space-y-1 text-xs text-gray-600">
                     <p>
                       ชื่อ/หน่วยงาน:{' '}
                       <span className="font-medium text-gray-900">
@@ -406,6 +408,7 @@ const CustomerReceiptForm = ({
             </label>
             <input
               id="customer-receipt-total-amount"
+              data-testid="amount-input"
               type="number"
               className={`${fieldClassName} text-right`}
               placeholder="0.00"
@@ -427,6 +430,7 @@ const CustomerReceiptForm = ({
             
             <select
               id="customer-receipt-payment-method"
+              data-testid="payment-method-select"
               value={form.paymentMethod}
               onChange={handleChange('paymentMethod')}
               disabled={submitting}
@@ -504,6 +508,7 @@ const CustomerReceiptForm = ({
       <div className="flex flex-wrap items-center justify-end gap-2 pt-1">
         <button
           type="submit"
+          data-testid="submit-receipt-button"
           disabled={submitting}
           className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
         >

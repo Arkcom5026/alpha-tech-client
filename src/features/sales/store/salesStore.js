@@ -3,7 +3,7 @@
 import { create } from 'zustand';
 
 import {
-  createSaleOrder,
+  completeSaleOrder,
   getAllSales,
   getSaleById,
   returnSale,
@@ -88,6 +88,8 @@ const useSalesStore = create((set, get) => ({
   printableSales: [],
 
   lastCreatedSaleId: null,
+  completionState: 'idle',
+  completionCommandId: null,
   setLastCreatedSaleIdAction: (id) => set({ lastCreatedSaleId: id || null }),
 
   paymentList: [
@@ -320,7 +322,9 @@ const useSalesStore = create((set, get) => ({
       return { error: msg };
     }
 
-    set({ loading: true, error: null });
+    const commandId = get().completionCommandId ||
+      (globalThis.crypto?.randomUUID?.() || `sale-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+    set({ loading: true, error: null, completionState: 'validating', completionCommandId: commandId });
 
     try {
       const vatRate = 7;
@@ -379,19 +383,17 @@ const useSalesStore = create((set, get) => ({
         deliveryNoteMode: isCredit ? 'PRINT' : undefined,
       };
 
-      const data = await createSaleOrder(payload);
+      set({ completionState: 'submitting' });
+      const data = await completeSaleOrder({
+        commandId,
+        sale: payload,
+        payment: opts.paymentIntent || { paymentItems: [] },
+      });
       const saleId = data?.saleId ?? data?.id ?? data?.saleOrderId ?? data?.sale?.id ?? null;
 
       set({
-        saleItems: [],
-        customerId: null,
         lastCreatedSaleId: saleId,
-        paymentList: [
-          { method: 'CASH', amount: 0 },
-          { method: 'TRANSFER', amount: 0 },
-          { method: 'CREDIT', amount: 0 },
-          { method: 'DEPOSIT', amount: 0 },
-        ],
+        completionState: 'succeeded',
       });
 
       return { saleId, data, deliveryNoteMode: isCredit ? 'PRINT' : undefined };
@@ -401,14 +403,14 @@ const useSalesStore = create((set, get) => ({
 
       if (status === 409) {
         const msg = payload?.message || 'มีบางรายการไม่สามารถทำรายการขายได้ (อาจถูกขายไปแล้ว)';
-        set({ error: msg });
+        set({ error: msg, completionState: 'failed' });
         return { error: msg, code: payload?.code, details: payload };
       }
 
       const msg = payload?.error || payload?.message || err?.message || 'เกิดข้อผิดพลาดในการขาย';
       devError('❌ [confirmSaleOrderAction]', err);
-      set({ error: msg });
-      return { error: msg };
+      set({ error: msg, completionState: 'failed' });
+      return { error: msg, code: err?.code || payload?.code, details: err?.details || payload?.details };
     } finally {
       // 🟢 FIXED SYNTAX: คืนค่าไวยากรณ์สากล finally ครอบปิดบล็อกได้อย่างราบรื่น
       set({ loading: false });
@@ -649,6 +651,8 @@ const useSalesStore = create((set, get) => ({
       sharedBillDiscountPerItem: 0,
       cardRef: '',
       customerId: null,
+      completionState: 'idle',
+      completionCommandId: null,
     });
   },
 

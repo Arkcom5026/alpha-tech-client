@@ -20,8 +20,6 @@ const buildBranchFullAddress = (branch, fallbackAddress = '-') => {
     branch?.address,
     subdistrict?.nameTh ? `ต.${subdistrict.nameTh}` : null,
     district?.nameTh ? `อ.${district.nameTh}` : null,
-    province?.nameTh ? `จ.${province.nameTh}` : null,
-    subdistrict?.postcode,
   ]
     .filter(Boolean)
     .join(' ')
@@ -31,6 +29,21 @@ const buildBranchFullAddress = (branch, fallbackAddress = '-') => {
 
   const fallback = typeof fallbackAddress === 'string' ? fallbackAddress.trim() : ''
   return fallback || '-'
+}
+
+
+const buildBranchContactLocation = (branch) => {
+  const subdistrict = branch?.subdistrict || null
+  const district = subdistrict?.district || null
+  const province = district?.province || null
+
+  return [
+    province?.nameTh ? `จ.${province.nameTh}` : null,
+    subdistrict?.postcode,
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .trim()
 }
 
 const n = (v) => {
@@ -420,6 +433,7 @@ const BillLayoutShortTax = ({
 
   // ✅ Branch address truth: prefer structured Sale.branch relation, then config fallback.
   const branchAddress = buildBranchFullAddress(sale?.branch, config?.address)
+  const branchContactLocation = buildBranchContactLocation(sale?.branch)
 
   const vatRate = Number.isFinite(Number(sale?.vatRate))
     ? Number(sale.vatRate)
@@ -617,8 +631,13 @@ const BillLayoutShortTax = ({
             {config.branchName}
           </div>
           {branchAddress !== '-' && <div className="small wrap">{branchAddress}</div>}
-          <div className="small mono muted" style={{ letterSpacing: '0.05px' }}>
-            {config.phone ? `โทร. ${config.phone}` : ''}
+          <div
+            className="small mono muted"
+            style={{ letterSpacing: '0.05px', whiteSpace: 'nowrap' }}
+          >
+            {[branchContactLocation, config.phone ? `โทร. ${config.phone}` : null]
+              .filter(Boolean)
+              .join('   ')}
           </div>
           {config.taxId && <div className="small mono muted">เลขผู้เสียภาษี {config.taxId}</div>}
         </div>

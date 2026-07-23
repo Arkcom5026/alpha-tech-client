@@ -1,13 +1,13 @@
 // src/routes/partner/salesRoutes.jsx
 import React from 'react';
 
-import SalesDashboardPage from '@/features/sales/pages/SalesDashboardPage';
+import SalesDashboardPage from '@/features/sales/history/pages/SalesDashboardPage';
 import PrintBillListPage from '@/features/bill/pages/PrintBillListPage';
 import PrintBillPageShortTax from '@/features/bill/pages/PrintBillPageShortTax';
 import PrintBillPageFullTax from '@/features/bill/pages/PrintBillPageFullTax';
 import ReturnSearchPage from '@/features/saleReturn/pages/ReturnSearchPage';
 import CreateReturnPage from '@/features/saleReturn/pages/CreateReturnPage';
-import QuickSalePage from '@/features/sales/pages/QuickSalePage';
+import CreateSalePage from '@/features/sales/create/pages/CreateSalePage';
 import PrintDeliveryNotePage from '@/features/deliveryNote/pages/PrintDeliveryNotePage';
 import CombinedBillingPage from '@/features/combinedBilling/pages/CombinedBillingPage';
 import DeliveryNoteListPage from '@/features/deliveryNote/pages/DeliveryNoteListPage';
@@ -20,7 +20,7 @@ const salesRoutes = {
   children: [
     { index: true, element: <SalesDashboardPage /> },
     { path: 'dashboard', element: <SalesDashboardPage /> },
-    { path: 'sale', element: <QuickSalePage /> },
+    { path: 'sale', element: <CreateSalePage /> },
     { path: 'bill', element: <PrintBillListPage /> },
 
     // 📌 ดึงกลับเข้าล็อกเมนูย่อยงานขาย เพื่อให้ปุ่มเมนูรอบข้างไม่หายไปไหน

@@ -1,4 +1,4 @@
-// src/features/sales/pages/QuickSalePage.jsx
+// src/features/sales/create/pages/CreateSalePage.jsx
 // 🏛️ Premium Next-Gen POS Sales Master Center: (Unified Pure Core Single-File Edition)
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
@@ -10,9 +10,9 @@ import CustomerSection from '../components/CustomerSection';
 import PaymentSection from '../components/PaymentSection';
 import SaleItemTable from '../components/SaleItemTable';
 import { ShoppingBag, Search } from 'lucide-react';
-import { openCompletedSaleDocument } from '../documents/services/saleDocumentWorkflow';
+import { openCompletedSaleDocument } from '../../documents/services/saleDocumentWorkflow';
 
-const QuickSalePage = () => {
+const CreateSalePage = () => {
   const barcodeInputRef = useRef(null);
   const phoneInputRef = useRef(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -300,4 +300,4 @@ const QuickSalePage = () => {
   );
 };
 
-export default QuickSalePage;
+export default CreateSalePage;

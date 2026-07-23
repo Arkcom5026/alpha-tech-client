@@ -141,34 +141,9 @@ const PaymentSummary = ({
           onClick={async () => {
             if (!isConfirmEnabled || isSubmitting) return;
 
-            // Reserve the print tab while this click is still a direct user gesture.
-            // Reusing it after async sale/payment completion avoids browser popup blocking.
-            const shouldOpenDocument =
-              isCredit ||
-              saleOption === PRINT_OPTION.RECEIPT ||
-              saleOption === PRINT_OPTION.TAX_INVOICE ||
-              saleOption === PRINT_OPTION.DELIVERY_NOTE;
-
-            const printWindow = shouldOpenDocument
-              ? window.open('', '_blank')
-              : null;
-
-            if (printWindow) {
-              printWindow.document.title = 'กำลังเตรียมเอกสาร...';
-              printWindow.document.body.innerHTML =
-                '<div style="font-family:Tahoma,Arial,sans-serif;padding:24px;text-align:center">กำลังบันทึกการขายและเตรียมเอกสาร...</div>';
-            }
-
             try {
-              const created = await onConfirm?.({ printWindow });
-
-              if (!created && printWindow && !printWindow.closed) {
-                printWindow.close();
-              }
+              await onConfirm?.();
             } catch (err) {
-              if (printWindow && !printWindow.closed) {
-                printWindow.close();
-              }
               console.error('[PaymentSummary] confirm sale error', err);
             }
           }}

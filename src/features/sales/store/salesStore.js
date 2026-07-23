@@ -3,7 +3,6 @@
 import { create } from 'zustand';
 
 import {
-  createSaleOrder,
   getAllSales,
   getSaleById,
   returnSale,
@@ -12,6 +11,8 @@ import {
   convertOrderOnlineToSale,
   updateSaleDocumentLines,
 } from '../api/saleApi';
+import { executeSaleCompletion } from '../create/workflows/saleCompletionWorkflow';
+import { clearSaleCompletionIdentity } from '../create/workflows/saleCompletionIdentity';
 
 // ✅ Defensive normalizer (production-grade)
 const normalizeStockItemId = (item) => {
@@ -24,7 +25,7 @@ const normalizeStockItemId = (item) => {
 const devError = (...args) => {
   try {
     if (import.meta?.env?.DEV) console.error(...args);
-  } catch (_) {
+  } catch {
     // ignore
   }
 };
@@ -88,6 +89,8 @@ const useSalesStore = create((set, get) => ({
   printableSales: [],
 
   lastCreatedSaleId: null,
+  completionState: 'idle',
+  completionCommandId: null,
   setLastCreatedSaleIdAction: (id) => set({ lastCreatedSaleId: id || null }),
 
   paymentList: [
@@ -320,7 +323,7 @@ const useSalesStore = create((set, get) => ({
       return { error: msg };
     }
 
-    set({ loading: true, error: null });
+    set({ loading: true, error: null, completionState: 'validating' });
 
     try {
       const vatRate = 7;
@@ -379,19 +382,17 @@ const useSalesStore = create((set, get) => ({
         deliveryNoteMode: isCredit ? 'PRINT' : undefined,
       };
 
-      const data = await createSaleOrder(payload);
+      set({ completionState: 'submitting' });
+      const data = await executeSaleCompletion({
+        sale: payload,
+        payment: opts.paymentIntent || { paymentItems: [] },
+        onIdentity: ({ commandId }) => set({ completionCommandId: commandId }),
+      });
       const saleId = data?.saleId ?? data?.id ?? data?.saleOrderId ?? data?.sale?.id ?? null;
 
       set({
-        saleItems: [],
-        customerId: null,
         lastCreatedSaleId: saleId,
-        paymentList: [
-          { method: 'CASH', amount: 0 },
-          { method: 'TRANSFER', amount: 0 },
-          { method: 'CREDIT', amount: 0 },
-          { method: 'DEPOSIT', amount: 0 },
-        ],
+        completionState: 'succeeded',
       });
 
       return { saleId, data, deliveryNoteMode: isCredit ? 'PRINT' : undefined };
@@ -401,14 +402,14 @@ const useSalesStore = create((set, get) => ({
 
       if (status === 409) {
         const msg = payload?.message || 'มีบางรายการไม่สามารถทำรายการขายได้ (อาจถูกขายไปแล้ว)';
-        set({ error: msg });
+        set({ error: msg, completionState: 'failed' });
         return { error: msg, code: payload?.code, details: payload };
       }
 
       const msg = payload?.error || payload?.message || err?.message || 'เกิดข้อผิดพลาดในการขาย';
       devError('❌ [confirmSaleOrderAction]', err);
-      set({ error: msg });
-      return { error: msg };
+      set({ error: msg, completionState: 'failed' });
+      return { error: msg, code: err?.code || payload?.code, details: err?.details || payload?.details };
     } finally {
       // 🟢 FIXED SYNTAX: คืนค่าไวยากรณ์สากล finally ครอบปิดบล็อกได้อย่างราบรื่น
       set({ loading: false });
@@ -637,6 +638,7 @@ const useSalesStore = create((set, get) => ({
   },
 
   resetSaleOrderAction: () => {
+    clearSaleCompletionIdentity();
     set({
       saleItems: [],
       paymentList: [
@@ -649,6 +651,8 @@ const useSalesStore = create((set, get) => ({
       sharedBillDiscountPerItem: 0,
       cardRef: '',
       customerId: null,
+      completionState: 'idle',
+      completionCommandId: null,
     });
   },
 

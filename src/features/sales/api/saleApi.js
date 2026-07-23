@@ -1,6 +1,7 @@
 // 📁 FILE: src/features/sales/api/saleApi.js
 
 import apiClient from '@/utils/apiClient';
+import { submitSaleCompletion } from '../create/api/saleCompletionApi';
 
 // ✅ Policy: ต้องมี try/catch ครอบทุกจุดเสี่ยง (Production)
 // ✅ No console.log/console.error ใน production path
@@ -11,7 +12,7 @@ const attachApiContext = (err, context) => {
       if (!err._apiContext) err._apiContext = context;
       if (!err._apiAt) err._apiAt = new Date().toISOString();
     }
-  } catch (_) {
+  } catch {
     // ignore
   }
   return err;
@@ -135,4 +136,8 @@ export const convertOrderOnlineToSale = async (orderOnlineId, stockSelections) =
   } catch (err) {
     throw attachApiContext(err, 'saleApi.convertOrderOnlineToSale');
   }
+};
+
+export const completeSaleOrder = async (command) => {
+  return submitSaleCompletion(command);
 };

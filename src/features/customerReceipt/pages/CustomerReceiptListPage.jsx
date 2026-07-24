@@ -178,7 +178,7 @@ const CustomerReceiptListPage = () => {
             <button onClick={handleReset} className="h-8 px-2.5 bg-slate-50 border border-slate-200 text-slate-500 font-bold text-xs rounded-lg hover:bg-slate-100 transition-all active:scale-95">
               ล้างตัวกรอง
             </button>
-            <button onClick={() => navigate(getDynamicFinanceUrl('/create'))} className="h-8 px-3 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-black text-xs rounded-lg active:scale-95 transition-all shadow-sm flex items-center gap-1 border border-orange-400/10">
+            <button data-testid="create-new-receipt-button" onClick={() => navigate(getDynamicFinanceUrl('/create'))} className="h-8 px-3 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-black text-xs rounded-lg active:scale-95 transition-all shadow-sm flex items-center gap-1 border border-orange-400/10">
               <Plus className="w-3.5 h-3.5" /> สร้างใบรับเงิน
             </button>
           </div>

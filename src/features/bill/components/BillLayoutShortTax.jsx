@@ -14,11 +14,14 @@ const formatCurrency = (val) =>
 const buildBranchFullAddress = (branch, fallbackAddress = '-') => {
   const subdistrict = branch?.subdistrict || null
   const district = subdistrict?.district || null
+  const province = district?.province || null
 
   const structuredAddress = [
     branch?.address,
     subdistrict?.nameTh ? `ต.${subdistrict.nameTh}` : null,
     district?.nameTh ? `อ.${district.nameTh}` : null,
+    province?.nameTh ? `จ.${province.nameTh}` : null,
+    subdistrict?.postcode,
   ]
     .filter(Boolean)
     .join(' ')
@@ -28,21 +31,6 @@ const buildBranchFullAddress = (branch, fallbackAddress = '-') => {
 
   const fallback = typeof fallbackAddress === 'string' ? fallbackAddress.trim() : ''
   return fallback || '-'
-}
-
-
-const buildBranchContactLocation = (branch) => {
-  const subdistrict = branch?.subdistrict || null
-  const district = subdistrict?.district || null
-  const province = district?.province || null
-
-  return [
-    province?.nameTh ? `จ.${province.nameTh}` : null,
-    subdistrict?.postcode,
-  ]
-    .filter(Boolean)
-    .join(' ')
-    .trim()
 }
 
 const n = (v) => {
@@ -110,42 +98,6 @@ const BillLayoutShortTax = ({
 }) => {
   const receiptTitle = 'ใบกำกับภาษีอย่างย่อ / ใบเสร็จรับเงิน'
   const receiptRootRef = React.useRef(null)
-  const branchNameRef = React.useRef(null)
-
-  const fitBranchName = React.useCallback(() => {
-    const element = branchNameRef.current
-    if (!element) return
-
-    const maxFontSize = 16
-    const minFontSize = 8
-    let nextFontSize = maxFontSize
-
-    element.style.fontSize = `${maxFontSize}px`
-    while (element.scrollWidth > element.clientWidth && nextFontSize > minFontSize) {
-      nextFontSize = Math.max(minFontSize, nextFontSize - 0.25)
-      element.style.fontSize = `${nextFontSize}px`
-    }
-  }, [])
-
-  React.useLayoutEffect(() => {
-    fitBranchName()
-
-    const element = branchNameRef.current
-    const container = element?.parentElement
-    const resizeObserver =
-      container && typeof ResizeObserver !== 'undefined'
-        ? new ResizeObserver(fitBranchName)
-        : null
-
-    resizeObserver?.observe(container)
-    window.addEventListener('beforeprint', fitBranchName)
-    document.fonts?.ready?.then(fitBranchName).catch(() => {})
-
-    return () => {
-      resizeObserver?.disconnect()
-      window.removeEventListener('beforeprint', fitBranchName)
-    }
-  }, [config?.branchName, fitBranchName])
 
   React.useEffect(() => {
     const pxToMm = (px) => Math.round(((Number(px) || 0) * 25.4 / 96) * 100) / 100
@@ -308,6 +260,29 @@ const BillLayoutShortTax = ({
     return { fontSize: '18px', letterSpacing: '0.1px', gap: '12px' }
   }
 
+  const getAdaptiveBranchNameStyle = (text) => {
+    const normalized = String(text || '').trim().replace(/\s+/g, ' ')
+    const len = normalized.length
+
+    // Keep the complete branch/company name on one thermal-receipt line.
+    // Font size is reduced progressively instead of using scaleX because
+    // CSS transforms shrink only the painted text, not its layout width.
+    const fontSize = Math.max(9.5, Math.min(16, 540 / Math.max(len, 1)))
+    const letterSpacing =
+      len >= 52 ? -0.75 :
+      len >= 46 ? -0.6 :
+      len >= 40 ? -0.4 :
+      len >= 34 ? -0.2 :
+      len >= 28 ? -0.05 :
+      0.1
+
+    return {
+      fontSize: `${Math.round(fontSize * 10) / 10}px`,
+      lineHeight: 1.15,
+      letterSpacing: `${letterSpacing}px`,
+    }
+  }
+
   const getCustomerPhoneText = (customer) => {
     if (!customer) return '-'
     return customer.user?.loginId || customer.phone || customer.phoneNumber || '-'
@@ -432,7 +407,6 @@ const BillLayoutShortTax = ({
 
   // ✅ Branch address truth: prefer structured Sale.branch relation, then config fallback.
   const branchAddress = buildBranchFullAddress(sale?.branch, config?.address)
-  const branchContactLocation = buildBranchContactLocation(sale?.branch)
 
   const vatRate = Number.isFinite(Number(sale?.vatRate))
     ? Number(sale.vatRate)
@@ -615,28 +589,23 @@ const BillLayoutShortTax = ({
         <div className="text-center no-break tight">
           {config.logoUrl && <img src={config.logoUrl} alt="logo" className="h-10 mx-auto mb-1" />}
           <div
-            ref={branchNameRef}
             className="font-bold"
             style={{
+              ...getAdaptiveBranchNameStyle(config.branchName),
               marginBottom: 3,
               width: '100%',
               maxWidth: '100%',
               whiteSpace: 'nowrap',
               overflow: 'hidden',
-              lineHeight: 1.18,
-              letterSpacing: '0px',
+              textOverflow: 'clip',
+              textAlign: 'center',
             }}
           >
             {config.branchName}
           </div>
           {branchAddress !== '-' && <div className="small wrap">{branchAddress}</div>}
-          <div
-            className="small mono muted"
-            style={{ letterSpacing: '0.05px', whiteSpace: 'nowrap' }}
-          >
-            {[branchContactLocation, config.phone ? `โทร. ${config.phone}` : null]
-              .filter(Boolean)
-              .join('   ')}
+          <div className="small mono muted" style={{ letterSpacing: '0.05px' }}>
+            {config.phone ? `โทร. ${config.phone}` : ''}
           </div>
           {config.taxId && <div className="small mono muted">เลขผู้เสียภาษี {config.taxId}</div>}
         </div>

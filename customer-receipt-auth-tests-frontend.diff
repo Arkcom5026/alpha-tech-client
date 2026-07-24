@@ -1,0 +1,16 @@
+diff --git a/package.json b/package.json
+index 3ed9c2d..45fcdd9 100644
+--- a/package.json
++++ b/package.json
+@@ -9,7 +9,10 @@
+   "lint": "eslint .",
+   "preview": "vite preview",
+   "test": "vitest",
+-  "test:run": "vitest run"
++  "test:run": "vitest run",
++  "test:auth-receipt": "vitest run src/features/customerReceipt/__tests__/customerReceiptAuthRegression.test.js",
++  "test:auth-receipt:watch": "vitest src/features/customerReceipt/__tests__/customerReceiptAuthRegression.test.js",
++  "test:e2e:auth-receipt": "playwright test e2e/customer-receipt-auth-regression.spec.js"
+ },
+   "dependencies": {
+     "@cloudinary/react": "1.14.1",

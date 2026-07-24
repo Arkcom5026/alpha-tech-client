@@ -61,6 +61,9 @@ import ListBranchPage from '@/features/settings/pages/ListBranchPage';
 // 🟢 FIXED FEATURE PORT: อิมพอร์ตหน้าจอตัวจริงของการนำเข้าสินค้าด่วนจากโมดูลสินค้า
 import QuickStockPage from '@/features/product/quick-stock/pages/QuickStockPage';
 
+import { repairRouteConfigs } from './repairRouteConfig';
+
+
 // 🟡 แผ่นป้ายสแตนด์บายฉุกเฉินภายในไฟล์ (Inline Temporary Component) 
 const TempReportPage = ({ title }) => (
   <div className="p-6 font-black text-orange-400 bg-slate-900/50 border border-orange-500/10 rounded-2xl shadow-inner text-xs md:text-sm font-sans animate-fadeIn">
@@ -179,9 +182,10 @@ export const posPartnerRoutes = [
   // 🛠️ 7. โมดูลบริการหลังการขาย (Service)
   {
     path: 'services',
-    element: <Outlet />, 
+    element: <Outlet />,
     children: [
-      { index: true, element: <ServicesDashboardPage /> }
+      { index: true, element: <ServicesDashboardPage /> },
+      ...repairRouteConfigs,
     ]
   },
 

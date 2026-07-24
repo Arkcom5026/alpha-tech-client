@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getReturnableSales } from '../api/saleReturnApi';
 
@@ -9,16 +9,9 @@ const ReturnSearchPage = () => {
   const [query, setQuery] = useState('');
   const [error, setError] = useState('');
 
-  const load = useCallback(async () => {
-    setError('');
-    try {
-      setSales(await getReturnableSales());
-    } catch (err) {
-      setError(err.response?.data?.message || err.message);
-    }
+  useEffect(() => {
+    getReturnableSales().then(setSales).catch((err) => setError(err.response?.data?.message || err.message));
   }, []);
-
-  useEffect(() => { load(); }, [load]);
 
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -31,13 +24,8 @@ const ReturnSearchPage = () => {
   return (
     <main className="p-6 space-y-5">
       <section className="rounded-2xl border bg-white p-5 shadow-sm">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <h1 className="text-xl font-black">คืนสินค้า</h1>
-            <p className="mt-1 text-sm text-slate-500">ค้นหาใบขายเดิม แล้วเลือกรายการและจำนวนที่ต้องการคืน</p>
-          </div>
-          <button type="button" className="rounded-xl border px-4 py-2 font-bold" onClick={load}>โหลดใหม่</button>
-        </div>
+        <h1 className="text-xl font-black">คืนสินค้า</h1>
+        <p className="mt-1 text-sm text-slate-500">ค้นหาใบขายเดิม แล้วเลือกรายการและจำนวนที่ต้องการคืน</p>
         <input
           className="mt-4 w-full rounded-xl border px-4 py-3"
           value={query}
@@ -66,9 +54,6 @@ const ReturnSearchPage = () => {
                 </td>
               </tr>
             ))}
-            {!filtered.length && (
-              <tr><td colSpan={5} className="p-8 text-center text-slate-500">ไม่พบใบขายที่ค้นหา</td></tr>
-            )}
           </tbody>
         </table>
       </section>

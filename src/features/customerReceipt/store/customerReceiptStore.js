@@ -247,6 +247,19 @@ export const useCustomerReceiptStore = create((set, get) => ({
     });
   },
 
+  resetCustomerReceiptCreateSessionAction: () => {
+    set({
+      selectedCustomer: null,
+      customerSearch: { ...DEFAULT_CUSTOMER_SEARCH },
+      customerSearchResults: [],
+      customerSearchLoading: false,
+      customerSearchError: '',
+      selectedItem: null,
+      error: '',
+      successMessage: '',
+    });
+  },
+
   clearCustomerReceiptMessagesAction: () => {
     set({
       error: '',

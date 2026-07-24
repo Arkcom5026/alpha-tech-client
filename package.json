@@ -10,13 +10,15 @@
     "verify": "npm run typecheck && npm run build && npm run test:run",
     "lint": "eslint .",
     "preview": "vite preview",
-
     "test": "vitest",
     "test:run": "vitest run",
-
     "test:auth-receipt": "vitest run src/features/customerReceipt/__tests__/customerReceiptAuthRegression.test.js",
     "test:auth-receipt:watch": "vitest src/features/customerReceipt/__tests__/customerReceiptAuthRegression.test.js",
-    "test:e2e:auth-receipt": "playwright test e2e/customer-receipt-auth-regression.spec.js"
+    "test:e2e:auth-receipt": "playwright test e2e/customer-receipt-auth-regression.spec.js",
+    "test:e2e": "playwright test",
+    "test:e2e:customer-receipt": "playwright test e2e/create-session-reset.spec.js e2e/multiple-customers-sequential.spec.js e2e/duplicate-submit-protection.spec.js e2e/request-isolation.spec.js",
+    "test:e2e:customer-receipt:headed": "playwright test e2e/create-session-reset.spec.js e2e/multiple-customers-sequential.spec.js e2e/duplicate-submit-protection.spec.js e2e/request-isolation.spec.js --headed",
+    "test:e2e:customer-receipt:debug": "playwright test e2e/create-session-reset.spec.js e2e/multiple-customers-sequential.spec.js e2e/duplicate-submit-protection.spec.js e2e/request-isolation.spec.js --debug"
   },
   "dependencies": {
     "@cloudinary/react": "1.14.1",
@@ -88,6 +90,7 @@
   },
   "devDependencies": {
     "@eslint/js": "9.22.0",
+    "@playwright/test": "^1.61.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@types/react": "19.0.10",

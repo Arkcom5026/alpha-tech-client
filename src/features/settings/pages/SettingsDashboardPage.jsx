@@ -6,46 +6,29 @@ import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Users, ShieldAlert, Building2, Landmark, ArrowRight, KeyRound } from 'lucide-react';
 
-const SettingTile = ({ title, desc, icon: Icon, onClick, isHighlight = false }) => {
+const SettingTile = ({ title, desc, icon: Icon, onClick }) => {
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`group w-full border rounded-2xl p-5 text-left flex items-start justify-between gap-4 transition-all duration-200 shadow-sm hover:shadow-md hover:-translate-y-0.5 ${
-        isHighlight
-          ? 'bg-gradient-to-br from-slate-900 to-zinc-900 border-orange-500/30 shadow-orange-500/5 hover:border-orange-500/60'
-          : 'bg-white border-slate-200/80 text-slate-700 hover:bg-slate-50 hover:border-orange-500/40'
-      }`}
+      className="group w-full border border-slate-200/80 rounded-2xl bg-white p-5 text-left text-slate-700 flex items-start justify-between gap-4 transition-all duration-200 shadow-sm hover:shadow-md hover:-translate-y-0.5 hover:bg-slate-50 hover:border-orange-500/40"
     >
       <div className="flex items-center gap-4 min-w-0">
-        <div className={`p-3 rounded-xl shrink-0 transition-colors ${
-          isHighlight
-            ? 'bg-orange-500/10 text-orange-400 group-hover:bg-orange-500/20'
-            : 'bg-slate-100 text-slate-500 group-hover:bg-orange-500/10 group-hover:text-orange-600'
-        }`}>
+        <div className="p-3 rounded-xl shrink-0 bg-slate-100 text-slate-500 transition-colors group-hover:bg-orange-500/10 group-hover:text-orange-600">
           <Icon className="w-5 h-5" />
         </div>
         <div className="min-w-0">
-          <div className={`font-black text-sm tracking-tight truncate flex items-center gap-2 ${
-            isHighlight ? 'text-white' : 'text-slate-900'
-          }`}>
+          <div className="font-black text-sm tracking-tight truncate text-slate-900">
             {title}
-            {isHighlight && (
-              <span className="text-[9px] bg-orange-500/10 border border-orange-500/20 text-orange-400 font-black px-1.5 py-0.5 rounded-md uppercase tracking-wider select-none">
-                เริ่มที่นี่
-              </span>
-            )}
           </div>
-          {desc && <div className={`text-xs mt-0.5 font-bold leading-snug ${
-            isHighlight ? 'text-zinc-400' : 'text-slate-400'
-          }`}>{desc}</div>}
+          {desc && (
+            <div className="text-xs mt-0.5 font-bold leading-snug text-slate-400">
+              {desc}
+            </div>
+          )}
         </div>
       </div>
-      <ArrowRight className={`w-4 h-4 mt-1 shrink-0 transition-colors ${
-        isHighlight
-          ? 'text-orange-400/50 group-hover:text-orange-400'
-          : 'text-slate-300 group-hover:text-slate-600'
-      }`} />
+      <ArrowRight className="w-4 h-4 mt-1 shrink-0 text-slate-300 transition-colors group-hover:text-slate-600" />
     </button>
   );
 };
@@ -77,7 +60,6 @@ const SettingsDashboardPage = () => {
             title="เพิ่มพนักงาน"
             desc="สร้างบัญชี กำหนดบทบาท และส่งข้อมูลเข้าสู่ระบบให้พนักงานในครั้งเดียว"
             icon={KeyRound}
-            isHighlight={true}
             onClick={() => navigate(`/${shopSlug}/pos/settings/staff`)}
           />
 

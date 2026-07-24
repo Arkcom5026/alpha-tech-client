@@ -21,6 +21,5 @@ export { default as useSaleReturnRuntimeStore } from './store/saleReturnRuntimeS
 export { runCompleteSaleReturn } from './workflows/completeSaleReturnWorkflow';
 export {
   clearSaleReturnCommandId,
-  fingerprintSaleReturn,
-  getSaleReturnIdentity,
+  getSaleReturnCommandId,
 } from './workflows/saleReturnIdentity';

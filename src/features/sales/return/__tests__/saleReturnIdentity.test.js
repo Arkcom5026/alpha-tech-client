@@ -1,43 +1,48 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   clearSaleReturnCommandId,
-  fingerprintSaleReturn,
-  getSaleReturnIdentity,
+  getSaleReturnCommandId,
 } from '../workflows/saleReturnIdentity';
 
 const storage = new Map();
 
 beforeEach(() => {
   storage.clear();
+
   vi.stubGlobal('sessionStorage', {
-    getItem: (key) => storage.get(key) || null,
-    setItem: (key, value) => storage.set(key, value),
+    getItem: (key) => storage.get(key) ?? null,
+    setItem: (key, value) => storage.set(key, String(value)),
     removeItem: (key) => storage.delete(key),
+    clear: () => storage.clear(),
+    key: (index) => Array.from(storage.keys())[index] ?? null,
+    get length() {
+      return storage.size;
+    },
   });
 });
 
-describe('sale return durable identity', () => {
-  it('keeps command identity when material payload is unchanged', () => {
-    const first = getSaleReturnIdentity(1, { reason: 'คืน', items: [{ id: 1 }] });
-    const replay = getSaleReturnIdentity(1, { items: [{ id: 1 }], reason: 'คืน' });
-    expect(replay.commandId).toBe(first.commandId);
+describe('sale return command identity', () => {
+  it('reuses the same command id for the same sale', () => {
+    const first = getSaleReturnCommandId(1);
+    const second = getSaleReturnCommandId(1);
+
+    expect(second).toBe(first);
   });
 
-  it('rotates command identity when material payload changes', () => {
-    const first = getSaleReturnIdentity(1, { refund: 100 });
-    const changed = getSaleReturnIdentity(1, { refund: 90 });
-    expect(changed.commandId).not.toBe(first.commandId);
+  it('keeps command ids isolated by sale', () => {
+    const firstSale = getSaleReturnCommandId(1);
+    const secondSale = getSaleReturnCommandId(2);
+
+    expect(secondSale).not.toBe(firstSale);
   });
 
-  it('clears identity only when explicitly requested', () => {
-    const first = getSaleReturnIdentity(1, { refund: 100 });
+  it('creates a new command id after explicit clear', () => {
+    const first = getSaleReturnCommandId(1);
+
     clearSaleReturnCommandId(1);
-    const next = getSaleReturnIdentity(1, { refund: 100 });
-    expect(next.commandId).not.toBe(first.commandId);
-  });
 
-  it('fingerprints object keys deterministically', () => {
-    expect(fingerprintSaleReturn({ b: 2, a: 1 }))
-      .toBe(fingerprintSaleReturn({ a: 1, b: 2 }));
+    const next = getSaleReturnCommandId(1);
+
+    expect(next).not.toBe(first);
   });
 });

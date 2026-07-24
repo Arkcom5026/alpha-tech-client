@@ -261,48 +261,25 @@ const BillLayoutShortTax = ({
   }
 
   const getAdaptiveBranchNameStyle = (text) => {
-    const len = String(text || '').trim().replace(/\s+/g, ' ').length
+    const normalized = String(text || '').trim().replace(/\s+/g, ' ')
+    const len = normalized.length
 
-    if (len >= 46) {
-      return {
-        fontSize: '12.6px',
-        lineHeight: 1.18,
-        letterSpacing: '-0.45px',
-        transform: 'scaleX(0.94)',
-        transformOrigin: 'center',
-      }
-    }
-
-    if (len >= 40) {
-      return {
-        fontSize: '13.2px',
-        lineHeight: 1.18,
-        letterSpacing: '-0.35px',
-        transform: 'scaleX(0.96)',
-        transformOrigin: 'center',
-      }
-    }
-
-    if (len >= 34) {
-      return {
-        fontSize: '14px',
-        lineHeight: 1.18,
-        letterSpacing: '-0.2px',
-      }
-    }
-
-    if (len >= 28) {
-      return {
-        fontSize: '15px',
-        lineHeight: 1.18,
-        letterSpacing: '-0.05px',
-      }
-    }
+    // Keep the complete branch/company name on one thermal-receipt line.
+    // Font size is reduced progressively instead of using scaleX because
+    // CSS transforms shrink only the painted text, not its layout width.
+    const fontSize = Math.max(9.5, Math.min(16, 540 / Math.max(len, 1)))
+    const letterSpacing =
+      len >= 52 ? -0.75 :
+      len >= 46 ? -0.6 :
+      len >= 40 ? -0.4 :
+      len >= 34 ? -0.2 :
+      len >= 28 ? -0.05 :
+      0.1
 
     return {
-      fontSize: '16px',
-      lineHeight: 1.18,
-      letterSpacing: '0.1px',
+      fontSize: `${Math.round(fontSize * 10) / 10}px`,
+      lineHeight: 1.15,
+      letterSpacing: `${letterSpacing}px`,
     }
   }
 
@@ -616,9 +593,12 @@ const BillLayoutShortTax = ({
             style={{
               ...getAdaptiveBranchNameStyle(config.branchName),
               marginBottom: 3,
+              width: '100%',
               maxWidth: '100%',
               whiteSpace: 'nowrap',
-              overflow: 'visible',
+              overflow: 'hidden',
+              textOverflow: 'clip',
+              textAlign: 'center',
             }}
           >
             {config.branchName}

@@ -1,9 +1,6 @@
 // src/config/sidebarServicesItems.js
 import { P1_CAP } from '@/features/auth/rbac/rbacClient';
 
-/**
- * 🟢 [DYNAMIC FIXED] แปลงเป็นฟังก์ชันรับค่า shopSlug เพื่อรักษามิติพาธงานบริการไม่ให้หน้าจอขาว
- */
 export const getSidebarServicesItems = (shopSlug) => {
   const prefix = shopSlug ? `/${shopSlug}/pos` : '/pos';
 
@@ -12,7 +9,13 @@ export const getSidebarServicesItems = (shopSlug) => {
       label: 'บริการ',
       items: [
         { label: 'ภาพรวมบริการ', to: `${prefix}/services`, cap: P1_CAP.VIEW_REPORTS },
-        { label: 'งานซ่อม', to: `${prefix}/services/repairs`, cap: P1_CAP.POS_SALE },
+
+        // Runtime Operations
+        { label: 'รับซ่อม / รับเคลม', to: `${prefix}/services/repair-intake`, cap: P1_CAP.POS_SALE },
+        { label: 'คิวงานซ่อม', to: `${prefix}/services/repairs`, cap: P1_CAP.POS_SALE },
+        { label: 'คิวงานเคลม', to: `${prefix}/services/warranty-claims`, cap: P1_CAP.POS_SALE },
+
+        // Supporting Service Modules
         { label: 'ลูกค้า', to: `${prefix}/services/customers`, cap: P1_CAP.POS_SALE },
         { label: 'นัดหมาย', to: `${prefix}/services/appointments`, cap: P1_CAP.POS_SALE },
         { label: 'อะไหล่และวัสดุ', to: `${prefix}/services/parts`, cap: P1_CAP.MANAGE_PRODUCTS },

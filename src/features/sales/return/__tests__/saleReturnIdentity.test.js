@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
-  clearSaleReturnIdentity,
+  clearSaleReturnCommandId,
   fingerprintSaleReturn,
   getSaleReturnIdentity,
 } from '../workflows/saleReturnIdentity';
@@ -31,7 +31,7 @@ describe('sale return durable identity', () => {
 
   it('clears identity only when explicitly requested', () => {
     const first = getSaleReturnIdentity(1, { refund: 100 });
-    clearSaleReturnIdentity(1);
+    clearSaleReturnCommandId(1);
     const next = getSaleReturnIdentity(1, { refund: 100 });
     expect(next.commandId).not.toBe(first.commandId);
   });

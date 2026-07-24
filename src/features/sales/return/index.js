@@ -20,7 +20,7 @@ export { default as ReturnSearchPage } from './pages/ReturnSearchPage';
 export { default as useSaleReturnRuntimeStore } from './store/saleReturnRuntimeStore';
 export { runCompleteSaleReturn } from './workflows/completeSaleReturnWorkflow';
 export {
-  clearSaleReturnIdentity,
+  clearSaleReturnCommandId,
   fingerprintSaleReturn,
   getSaleReturnIdentity,
 } from './workflows/saleReturnIdentity';

@@ -1,6 +1,7 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import './index.css';
+import './styles/posNavigationLight.css';
 import App from './App.jsx';
 
 // ✅ main.jsx ต้องทำหน้าที่ bootstrap app เท่านั้น

@@ -10,7 +10,7 @@ import {
 } from '../policies/saleReturnUiPolicy';
 import useSaleReturnRuntimeStore from '../store/saleReturnRuntimeStore';
 import { runCompleteSaleReturn } from '../workflows/completeSaleReturnWorkflow';
-import { clearSaleReturnIdentity } from '../workflows/saleReturnIdentity';
+import { clearSaleReturnCommandId } from '../workflows/saleReturnIdentity';
 
 const useSaleReturnRuntimeController = (saleId) => {
   const runtime = useSaleReturnRuntimeStore();
@@ -71,7 +71,7 @@ const useSaleReturnRuntimeController = (saleId) => {
   };
 
   const reset = () => {
-    clearSaleReturnIdentity(saleId);
+    clearSaleReturnCommandId(saleId);
     runtime.reset();
   };
 

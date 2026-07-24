@@ -10,7 +10,7 @@ import CustomerSection from '../components/CustomerSection';
 import PaymentSection from '../components/PaymentSection';
 import SaleItemTable from '../components/SaleItemTable';
 import { ShoppingBag, Search } from 'lucide-react';
-import { openCompletedSaleDocument } from '../documents/services/saleDocumentWorkflow';
+import { openCompletedSaleDocument } from '../../documents/services/saleDocumentWorkflow';
 
 const QuickSalePage = () => {
   const barcodeInputRef = useRef(null);

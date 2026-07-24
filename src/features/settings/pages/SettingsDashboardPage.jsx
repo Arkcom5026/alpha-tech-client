@@ -52,27 +52,27 @@ const SettingsDashboardPage = () => {
       <div className="bg-white border border-slate-200/80 p-6 rounded-3xl shadow-[0_4px_25px_rgba(0,0,0,0.01)] space-y-4">
         <div className="select-none">
           <h2 className="text-base font-black text-slate-900">เมนูจัดการระบบ</h2>
-          <p className="text-xs text-slate-400 font-bold mt-0.5">เพิ่มพนักงานได้ทันทีโดยไม่ต้องผ่านขั้นตอนอนุมัติซ้ำ</p>
+          <p className="text-xs text-slate-400 font-bold mt-0.5">เพิ่มพนักงานใหม่ได้ทันที และจัดการข้อมูลภายหลังได้จากหน้ารวมพนักงาน</p>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-2">
           <SettingTile
-            title="เพิ่มพนักงาน"
-            desc="สร้างบัญชี กำหนดบทบาท และส่งข้อมูลเข้าสู่ระบบให้พนักงานในครั้งเดียว"
+            title="เพิ่มพนักงานใหม่"
+            desc="สร้างบัญชี กำหนดบทบาท และส่งข้อมูลเข้าสู่ระบบให้พร้อมใช้งานในครั้งเดียว"
             icon={KeyRound}
             onClick={() => navigate(`/${shopSlug}/pos/settings/staff`)}
           />
 
           <SettingTile
-            title="รายชื่อพนักงาน"
-            desc="แก้ไขข้อมูล เปลี่ยนสถานะ และดูพนักงานภายในสาขา"
+            title="จัดการพนักงาน"
+            desc="ดูรายชื่อ แก้ไขข้อมูล เปลี่ยนสถานะ และจัดการพนักงานภายในสาขา"
             icon={Users}
             onClick={() => navigate(`/${shopSlug}/pos/settings/employee`)}
           />
 
           <SettingTile
-            title="ตำแหน่งงานและสิทธิ์"
-            desc="กำหนดตำแหน่งและขอบเขตการเข้าถึงงานภายในร้าน"
+            title="ตำแหน่งงาน"
+            desc="กำหนดและจัดระเบียบตำแหน่งงานภายในร้าน"
             icon={ShieldAlert}
             onClick={() => navigate(`/${shopSlug}/pos/settings/positions`)}
           />

@@ -14,13 +14,17 @@
   --ads-radius-full: 9999px;
   --ads-shadow-xs: 0 1px 2px rgb(15 23 42 / 0.05);
   --ads-shadow-sm: 0 1px 3px rgb(15 23 42 / 0.08), 0 1px 2px rgb(15 23 42 / 0.04);
+  --ads-shadow-md: 0 12px 28px rgb(15 23 42 / 0.14), 0 4px 10px rgb(15 23 42 / 0.08);
   --ads-control-sm: 2rem;
   --ads-control-md: 2.5rem;
   --ads-control-lg: 3rem;
+  --ads-motion-fast: 140ms;
+  --ads-motion-normal: 200ms;
   --ads-surface-canvas: 210 40% 98%;
   --ads-surface-base: 0 0% 100%;
   --ads-surface-subtle: 210 40% 96%;
   --ads-surface-raised: 0 0% 100%;
+  --ads-surface-overlay: 222 47% 7%;
   --ads-text-strong: 222 47% 11%;
   --ads-text-default: 215 28% 17%;
   --ads-text-muted: 215 16% 47%;
@@ -45,6 +49,7 @@
   --ads-surface-base: 222 47% 9%;
   --ads-surface-subtle: 217 33% 14%;
   --ads-surface-raised: 217 33% 16%;
+  --ads-surface-overlay: 0 0% 0%;
   --ads-text-strong: 210 40% 98%;
   --ads-text-default: 214 32% 91%;
   --ads-text-muted: 215 20% 65%;

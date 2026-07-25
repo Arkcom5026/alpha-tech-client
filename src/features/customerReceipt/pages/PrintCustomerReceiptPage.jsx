@@ -1,116 +1,206 @@
-// src/features/customerReceipt/pages/PrintCustomerReceiptPage.jsx
-// 🏛️ Tenant-Safe Premium Printer Terminal: (Real-Time Short Slip / Full A4 Switcher Engine)
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import {
+  AlertTriangle,
+  ArrowLeft,
+  FileCheck,
+  FileText,
+  Loader2,
+  Printer,
+  Smartphone,
+} from 'lucide-react'
 
-import { useEffect, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-
-import useCustomerReceiptStore from '../store/customerReceiptStore';
-import CustomerReceiptPrintLayout from '../components/CustomerReceiptPrintLayout';
-// 🟢 [DYNAMIC INJECTION]: นำเข้าคอมโพเนนต์เลย์เอาต์สลิปอย่างย่อยของระบบการเงิน (ถ้ามี หรือสลับดีไซน์ในตัว)
-import { ArrowLeft, Printer, Loader2, AlertTriangle, FileCheck, Smartphone, FileText } from 'lucide-react';
+import useCustomerReceiptStore from '../store/customerReceiptStore'
+import CustomerReceiptPrintLayout from '../components/CustomerReceiptPrintLayout'
+import CustomerReceiptShortPrintLayout from '../components/CustomerReceiptShortPrintLayout'
 
 const PrintCustomerReceiptPage = () => {
-  const { id, shopSlug } = useParams();
-  const navigate = useNavigate();
-  const printedRef = useRef(false);
+  const { id } = useParams()
+  const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const printedRef = useRef(false)
+  const printRootRef = useRef(null)
 
-  // 🟦 [THE CONTROL STATE]: 'FULL' = ใบเสร็จเต็มรูป A4 | 'SHORT' = สลิปความร้อนอย่างย่อ
-  const [printMode, setPrintMode] = useState('FULL');
+  const [printMode, setPrintMode] = useState('FULL')
 
-  const selectedItem = useCustomerReceiptStore((state) => state.selectedItem);
-  const detailLoading = useCustomerReceiptStore((state) => state.detailLoading);
-  const printLoading = useCustomerReceiptStore((state) => state.printLoading);
-  const error = useCustomerReceiptStore((state) => state.error);
-  
+  const autoPrint = useMemo(() => {
+    const value = String(searchParams.get('autoPrint') || '').toLowerCase()
+    return value === '1' || value === 'true' || value === 'yes'
+  }, [searchParams])
+
+  const selectedItem = useCustomerReceiptStore((state) => state.selectedItem)
+  const detailLoading = useCustomerReceiptStore((state) => state.detailLoading)
+  const printLoading = useCustomerReceiptStore((state) => state.printLoading)
+  const error = useCustomerReceiptStore((state) => state.error)
+
   const loadCustomerReceiptForPrintAction = useCustomerReceiptStore(
     (state) => state.loadCustomerReceiptForPrintAction
-  );
+  )
   const clearCustomerReceiptMessagesAction = useCustomerReceiptStore(
     (state) => state.clearCustomerReceiptMessagesAction
-  );
+  )
   const clearSelectedCustomerReceiptAction = useCustomerReceiptStore(
     (state) => state.clearSelectedCustomerReceiptAction
-  );
+  )
 
   useEffect(() => {
-    printedRef.current = false;
-    clearCustomerReceiptMessagesAction();
+    printedRef.current = false
+    clearCustomerReceiptMessagesAction()
 
-    if (!id) return undefined;
+    if (!id) return undefined
 
-    loadCustomerReceiptForPrintAction(Number(id)).catch(() => null);
+    loadCustomerReceiptForPrintAction(Number(id)).catch(() => null)
 
     return () => {
-      clearCustomerReceiptMessagesAction();
-      clearSelectedCustomerReceiptAction();
-    };
+      clearCustomerReceiptMessagesAction()
+      clearSelectedCustomerReceiptAction()
+    }
   }, [
     id,
     loadCustomerReceiptForPrintAction,
     clearCustomerReceiptMessagesAction,
     clearSelectedCustomerReceiptAction,
-  ]);
+  ])
 
   useEffect(() => {
-    if (detailLoading || printLoading) return;
-    if (error) return;
-    if (!selectedItem?.id) return;
-    if (Number(selectedItem.id) !== Number(id)) return;
-    if (printedRef.current) return;
+    const updatePrintHeight = () => {
+      if (printMode !== 'SHORT') return
+      if (typeof document === 'undefined') return
 
-    // หมายเหตุ: เอาออกหรือคงไว้สำหรับการ auto-print จังหวะแรกที่เข้ามา
-    printedRef.current = true;
+      const element = printRootRef.current
+      if (!element) return
+
+      const rect = element.getBoundingClientRect()
+      const measuredHeight = Math.max(
+        Math.ceil(rect.height || 0),
+        element.scrollHeight || 0,
+        element.offsetHeight || 0
+      )
+
+      if (measuredHeight > 0) {
+        document.documentElement.style.setProperty(
+          '--customer-receipt-short-height',
+          `${measuredHeight}px`
+        )
+      }
+    }
+
+    updatePrintHeight()
+
+    const frameId = window.requestAnimationFrame(updatePrintHeight)
+    const timerId = window.setTimeout(updatePrintHeight, 150)
+    const resizeObserver =
+      typeof ResizeObserver !== 'undefined'
+        ? new ResizeObserver(updatePrintHeight)
+        : null
+
+    if (printRootRef.current && resizeObserver) {
+      resizeObserver.observe(printRootRef.current)
+    }
+
+    window.addEventListener('beforeprint', updatePrintHeight)
+
+    return () => {
+      window.cancelAnimationFrame(frameId)
+      window.clearTimeout(timerId)
+      window.removeEventListener('beforeprint', updatePrintHeight)
+      resizeObserver?.disconnect()
+      document.documentElement.style.removeProperty('--customer-receipt-short-height')
+    }
+  }, [printMode, selectedItem?.id, selectedItem?.allocations?.length])
+
+  useEffect(() => {
+    if (!autoPrint) return
+    if (detailLoading || printLoading) return
+    if (error) return
+    if (!selectedItem?.id) return
+    if (Number(selectedItem.id) !== Number(id)) return
+    if (printedRef.current) return
+
+    printedRef.current = true
     const timer = window.setTimeout(() => {
-      window.print();
-    }, 400);
+      window.focus?.()
+      window.print?.()
+    }, 300)
 
-    return () => window.clearTimeout(timer);
-  }, [detailLoading, printLoading, error, id, selectedItem, printMode]);
+    return () => window.clearTimeout(timer)
+  }, [autoPrint, detailLoading, printLoading, error, id, selectedItem?.id, printMode])
 
   const handleBack = () => {
-    const currentPath = window.location.pathname;
-    if (selectedItem?.id) {
-      const baseDetailPath = currentPath.substring(0, currentPath.indexOf('/print'));
-      navigate(baseDetailPath);
-      return;
+    const currentPath = window.location.pathname
+    const printIndex = currentPath.indexOf('/print')
+
+    if (printIndex >= 0) {
+      navigate(currentPath.substring(0, printIndex))
+      return
     }
-    const baseListPath = currentPath.substring(0, currentPath.indexOf(`/customer-receipts`));
-    navigate(`${baseListPath}/customer-receipts`);
-  };
+
+    const listIndex = currentPath.indexOf('/customer-receipts')
+    if (listIndex >= 0) {
+      navigate(`${currentPath.substring(0, listIndex)}/customer-receipts`)
+      return
+    }
+
+    navigate(-1)
+  }
+
+  const handlePrint = () => {
+    window.focus?.()
+    window.print?.()
+  }
 
   if (!id) {
     return (
-      // 🟢 FIXED: รีสกินหน้า Error ให้กลืนโหมดมืดพรีเมียมสมมาตรเท่ากัน
-      <div className="min-h-screen bg-slate-900 p-6 flex items-center justify-center font-sans text-white">
-        <div className="w-full max-w-md rounded-3xl border border-zinc-800 bg-zinc-900 p-6 text-center shadow-xl space-y-4">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-500/10 text-rose-400 border border-rose-500/20">
-            <AlertTriangle className="w-5 h-5" />
+      <div className="flex min-h-screen items-center justify-center bg-slate-900 p-6 font-sans text-white">
+        <div className="w-full max-w-md space-y-4 rounded-3xl border border-zinc-800 bg-zinc-900 p-6 text-center shadow-xl">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl border border-rose-500/20 bg-rose-500/10 text-rose-400">
+            <AlertTriangle className="h-5 w-5" />
           </div>
           <div>
-            <h1 className="text-base font-black text-white tracking-tight">ไม่พบเลขที่ใบรับเงิน</h1>
-            <p className="mt-1 text-xs font-bold text-zinc-400">กรุณาตรวจสอบพิกัดเส้นทางเอกสารก่อนพิมพ์อีกครั้ง</p>
+            <h1 className="text-base font-black tracking-tight text-white">ไม่พบเลขที่ใบรับเงิน</h1>
+            <p className="mt-1 text-xs font-bold text-zinc-400">
+              กรุณาตรวจสอบเส้นทางเอกสารก่อนพิมพ์อีกครั้ง
+            </p>
           </div>
           <button
             type="button"
             onClick={handleBack}
-            className="w-full inline-flex items-center justify-center gap-1.5 rounded-xl border border-zinc-700 bg-zinc-800 px-4 py-2.5 text-xs font-black text-zinc-200 hover:bg-zinc-700 hover:text-white transform active:scale-98 transition-all"
+            className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-zinc-700 bg-zinc-800 px-4 py-2.5 text-xs font-black text-zinc-200 transition hover:bg-zinc-700 hover:text-white"
           >
-            <ArrowLeft className="w-3.5 h-3.5" />
+            <ArrowLeft className="h-3.5 w-3.5" />
             <span>กลับไปหน้ารายการใบรับเงิน</span>
           </button>
         </div>
       </div>
-    );
+    )
   }
 
   return (
     <>
       <style>{`
+        @page {
+          size: ${printMode === 'SHORT' ? '80mm auto' : 'A4'};
+          margin: ${printMode === 'SHORT' ? '0' : '10mm'};
+        }
+
         @media print {
-          html, body {
+          html,
+          body,
+          #root {
+            width: ${printMode === 'SHORT' ? '80mm' : 'auto'} !important;
+            height: ${
+              printMode === 'SHORT'
+                ? 'var(--customer-receipt-short-height, auto)'
+                : 'auto'
+            } !important;
+            min-height: ${
+              printMode === 'SHORT'
+                ? 'var(--customer-receipt-short-height, 0)'
+                : '0'
+            } !important;
             margin: 0 !important;
             padding: 0 !important;
-            height: auto !important;
+            overflow: visible !important;
             background: #fff !important;
           }
 
@@ -125,132 +215,130 @@ const PrintCustomerReceiptPage = () => {
 
           #customer-receipt-print-root {
             position: absolute !important;
-            left: 0 !important;
             top: 0 !important;
-            width: 100% !important;
-            margin: 0 !important;
-            padding: 0 !important;
-          }
-
-          /* 🟢 [DYNAMIC MEDIA ADJUSTMENT]: ปรับเปลี่ยนโครงสร้างขนาดหน้ากระดาษตามสเตตสวิตช์วิทยุเรียบลื่น */
-          @page {
-            size: ${printMode === 'SHORT' ? '80mm auto' : 'A4'} ;
-            margin: ${printMode === 'SHORT' ? '0mm' : '10mm'} ;
-          }
-
-          .customer-receipt-print-page {
-            margin: 0 !important;
-            padding: 0 !important;
-            min-height: auto !important;
+            left: 0 !important;
+            display: block !important;
+            width: ${printMode === 'SHORT' ? '80mm' : '100%'} !important;
+            max-width: ${printMode === 'SHORT' ? '80mm' : 'none'} !important;
             height: auto !important;
+            min-height: 0 !important;
+            margin: 0 !important;
+            padding: 0 !important;
             overflow: visible !important;
+            border: 0 !important;
+            border-radius: 0 !important;
+            box-shadow: none !important;
             background: #fff !important;
           }
         }
       `}</style>
 
-      {/* 🟢 FIXED: เปลี่ยนพื้นหลังเพจหลักเป็น bg-slate-900 และคง p-6 ไว้เพื่อดันมิติการ์ดลอยแบบ Layered Depth ที่ต้องการ */}
-      <div className="customer-receipt-print-page min-h-screen bg-slate-900 p-6 print:bg-white print:p-0 font-sans text-white">
-        
-        {/* 🟦 TOP ACTION BAR: รีสกินแถบควบคุมด้านบนให้เป็นดีไซน์ดาร์กพรีเมียมสลักขอบสีบางประณีต */}
-        <div className="mx-auto mb-6 flex max-w-5xl flex-col sm:flex-row items-center justify-between gap-4 bg-zinc-900 border border-zinc-800/80 p-4 rounded-2xl shadow-lg backdrop-blur-md print:hidden">
+      <div className="min-h-screen bg-slate-900 p-6 font-sans text-white print:min-h-0 print:bg-white print:p-0">
+        <div className="mx-auto mb-6 flex max-w-5xl flex-col items-center justify-between gap-4 rounded-2xl border border-zinc-800/80 bg-zinc-900 p-4 shadow-lg backdrop-blur-md print:hidden sm:flex-row">
           <div className="min-w-0 self-start sm:self-center">
-            <h1 className="text-base font-black text-white tracking-tight flex items-center gap-1.5">
-              <FileCheck className="w-4 h-4 text-orange-400" /> พิมพ์ใบเสร็จรับเงินลูกหนี้
+            <h1 className="flex items-center gap-1.5 text-base font-black tracking-tight text-white">
+              <FileCheck className="h-4 w-4 text-orange-400" />
+              พิมพ์ใบเสร็จรับเงินลูกหนี้
             </h1>
-            <p className="text-xs font-bold text-zinc-400 mt-0.5">เลขที่อ้างอิงภายในระบบคลังการเงิน: <span className="text-amber-400 font-mono font-black">{selectedItem?.code || '—'}</span></p>
+            <p className="mt-0.5 text-xs font-bold text-zinc-400">
+              เลขที่อ้างอิง:{' '}
+              <span className="font-mono font-black text-amber-400">
+                {selectedItem?.code || '—'}
+              </span>
+            </p>
           </div>
 
-          {/* 🎛️ SEGMENTED MODE TOGGLE BAR: รีสกินปุ่มสลับโหมดให้หรูหราคมคายรับโหมดมืด */}
-          <div className="flex items-center bg-zinc-950 p-1 rounded-xl border border-zinc-800 select-none shrink-0 w-full sm:w-auto justify-center">
+          <div className="flex w-full shrink-0 select-none items-center justify-center rounded-xl border border-zinc-800 bg-zinc-950 p-1 sm:w-auto">
             <button
               type="button"
               onClick={() => setPrintMode('SHORT')}
-              className={`px-3 h-7 rounded-md text-xs font-black transition-all flex items-center justify-center gap-1 w-full sm:w-auto ${
-                printMode === 'SHORT' ? 'bg-gradient-to-b from-amber-400 to-orange-500 text-white shadow-sm' : 'text-zinc-400 hover:text-white'
+              className={`flex h-7 w-full items-center justify-center gap-1 rounded-md px-3 text-xs font-black transition-all sm:w-auto ${
+                printMode === 'SHORT'
+                  ? 'bg-gradient-to-b from-amber-400 to-orange-500 text-white shadow-sm'
+                  : 'text-zinc-400 hover:text-white'
               }`}
             >
-              <Smartphone className="w-3.5 h-3.5" /> สลิปสั้นย่อ
+              <Smartphone className="h-3.5 w-3.5" /> สลิป 80mm
             </button>
             <button
               type="button"
               onClick={() => setPrintMode('FULL')}
-              className={`px-3 h-7 rounded-md text-xs font-black transition-all flex items-center justify-center gap-1 w-full sm:w-auto ${
-                printMode === 'FULL' ? 'bg-gradient-to-b from-amber-400 to-orange-500 text-white shadow-sm' : 'text-zinc-400 hover:text-white'
+              className={`flex h-7 w-full items-center justify-center gap-1 rounded-md px-3 text-xs font-black transition-all sm:w-auto ${
+                printMode === 'FULL'
+                  ? 'bg-gradient-to-b from-amber-400 to-orange-500 text-white shadow-sm'
+                  : 'text-zinc-400 hover:text-white'
               }`}
             >
-              <FileText className="w-3.5 h-3.5" /> ใบเสร็จเต็มรูป A4
+              <FileText className="h-3.5 w-3.5" /> ใบเสร็จ A4
             </button>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto">
+          <div className="flex w-full shrink-0 items-center gap-2 sm:w-auto">
             <button
               type="button"
               onClick={handleBack}
-              className="inline-flex w-full sm:w-auto items-center justify-center gap-1 px-4 h-9 text-xs font-black bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 rounded-xl transform active:scale-95 transition-all shadow-sm"
+              className="inline-flex h-9 w-full items-center justify-center gap-1 rounded-xl border border-zinc-700 bg-zinc-800 px-4 text-xs font-black text-zinc-200 shadow-sm transition hover:bg-zinc-700 sm:w-auto"
             >
-              <ArrowLeft className="w-3.5 h-3.5" />
+              <ArrowLeft className="h-3.5 w-3.5" />
               <span>กลับ</span>
             </button>
-            
+
             <button
               type="button"
-              onClick={() => window.print()}
+              onClick={handlePrint}
               disabled={detailLoading || printLoading || !selectedItem?.id}
-              className="inline-flex w-full sm:w-auto items-center justify-center gap-1.5 px-4 h-9 text-xs font-black bg-gradient-to-b from-amber-400 to-orange-500 hover:shadow-[0_0_20px_rgba(245,158,11,0.2)] text-white border border-amber-500/20 rounded-xl shadow-md transform hover:-translate-y-0.5 active:scale-95 transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50 disabled:transform-none disabled:shadow-none"
+              className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-xl border border-amber-500/20 bg-gradient-to-b from-amber-400 to-orange-500 px-4 text-xs font-black text-white shadow-md transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50 disabled:transform-none disabled:shadow-none sm:w-auto"
             >
-              <Printer className="w-3.5 h-3.5" />
-              <span>พิมพ์ใบเสร็จ ({printMode === 'SHORT' ? 'ย่อ' : 'เต็ม'})</span>
+              <Printer className="h-3.5 w-3.5" />
+              <span>พิมพ์ ({printMode === 'SHORT' ? '80mm' : 'A4'})</span>
             </button>
           </div>
         </div>
 
-        {/* LOADING & ERROR STATES */}
         {detailLoading || printLoading ? (
-          <div className="mx-auto max-w-5xl rounded-3xl border border-zinc-800 bg-zinc-900 p-12 text-center text-sm font-bold text-zinc-400 shadow-sm print:hidden flex flex-col items-center justify-center gap-3 select-none">
-            <Loader2 className="w-6 h-6 animate-spin text-orange-400" />
-            <span>กำลังเรียกค้นข้อมูลพิกัดใบรับเงินจากเซิร์ฟเวอร์กลาง...</span>
+          <div className="mx-auto flex max-w-5xl select-none flex-col items-center justify-center gap-3 rounded-3xl border border-zinc-800 bg-zinc-900 p-12 text-center text-sm font-bold text-zinc-400 shadow-sm print:hidden">
+            <Loader2 className="h-6 w-6 animate-spin text-orange-400" />
+            <span>กำลังโหลดข้อมูลใบรับเงิน...</span>
           </div>
         ) : error ? (
-          <div className="mx-auto max-w-5xl rounded-3xl border border-rose-500/20 bg-zinc-900 p-6 text-center shadow-sm print:hidden space-y-4">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-500/10 text-rose-400 border border-rose-500/20">
-              <AlertTriangle className="w-5 h-5" />
+          <div className="mx-auto max-w-5xl space-y-4 rounded-3xl border border-rose-500/20 bg-zinc-900 p-6 text-center shadow-sm print:hidden">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl border border-rose-500/20 bg-rose-500/10 text-rose-400">
+              <AlertTriangle className="h-5 w-5" />
             </div>
             <div>
-              <h2 className="text-base font-black text-white tracking-tight">ไม่สามารถโหลดข้อมูลใบรับเงินได้</h2>
+              <h2 className="text-base font-black tracking-tight text-white">ไม่สามารถโหลดข้อมูลใบรับเงินได้</h2>
               <p className="mt-1 text-xs font-bold text-rose-400">{error}</p>
             </div>
           </div>
         ) : !selectedItem?.id ? (
-          <div className="mx-auto max-w-5xl rounded-3xl border border-amber-500/20 bg-zinc-900 p-6 text-center shadow-sm print:hidden space-y-4">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-400 border border-amber-500/20">
-              <AlertTriangle className="w-5 h-5" />
+          <div className="mx-auto max-w-5xl space-y-4 rounded-3xl border border-amber-500/20 bg-zinc-900 p-6 text-center shadow-sm print:hidden">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl border border-amber-500/20 bg-amber-500/10 text-amber-400">
+              <AlertTriangle className="h-5 w-5" />
             </div>
-            <div>
-              <h2 className="text-base font-black text-white tracking-tight">ไม่พบข้อมูลใบรับเงินพอร์ตระบบคลัง</h2>
-            </div>
+            <h2 className="text-base font-black tracking-tight text-white">ไม่พบข้อมูลใบรับเงิน</h2>
           </div>
         ) : (
-          /* CORE PRINT VALUE RENDER ROOT */
-          /* 🟢 FIXED: บังคับทับสิทธิ์ CSS ให้แผ่นกระดาษตัวคอนเทนต์ใบเสร็จตรงกลางเป็นพื้นสีขาว ตัวอักษรสีดำสนิท 100% เสมอ */
-          /* สกัดกั้นคราบสีจากโหมดมืดด้วยการระบุ bg-white text-black dark:bg-white dark:text-black ครอบคลุมพิกัดแผ่นฟอร์มพิมพ์ทั้งหมด */
-          <div id="customer-receipt-print-root" className="animate-fadeIn w-full overflow-x-auto p-1 bg-slate-900 print:bg-white text-black">
-            {printMode === 'SHORT' ? (
-              /* 🟩 [SHORT SLIP RECEIPT RENDER]: จัดกรอบพื้นที่สลิปย่อกระชับพิกัด 80mm ให้เป็นสีขาวสะอาดยามเปิดหน้าจอ */
-              <div className="max-w-[340px] mx-auto bg-white text-black dark:bg-white dark:text-black p-4 border border-zinc-200 rounded-2xl shadow-inner text-xs print:border-0 print:shadow-none print:p-0">
-                <CustomerReceiptPrintLayout receipt={selectedItem} layoutMode="short" />
-              </div>
-            ) : (
-              /* 🟦 [FULL A4 TAX RECEIPT RENDER]: บังคับแผ่นฟอร์ม A4 ตัวเต็มให้อยู่บนพื้นสีขาว ตัวหนังสือดำคมกริบ */
-              <div className="max-w-[794px] mx-auto bg-white text-black dark:bg-white dark:text-black p-6 rounded-2xl border border-zinc-200 shadow-sm print:border-0 print:shadow-none print:p-0 print:rounded-none">
-                <CustomerReceiptPrintLayout receipt={selectedItem} layoutMode="full" />
-              </div>
-            )}
+          <div className="w-full overflow-x-auto bg-slate-900 p-1 text-black print:bg-white">
+            <div
+              id="customer-receipt-print-root"
+              ref={printRootRef}
+              className={
+                printMode === 'SHORT'
+                  ? 'mx-auto w-[80mm] max-w-[80mm] bg-white text-black shadow-sm print:shadow-none'
+                  : 'mx-auto max-w-[210mm] bg-white text-black shadow-sm print:max-w-none print:shadow-none'
+              }
+            >
+              {printMode === 'SHORT' ? (
+                <CustomerReceiptShortPrintLayout receipt={selectedItem} />
+              ) : (
+                <CustomerReceiptPrintLayout receipt={selectedItem} />
+              )}
+            </div>
           </div>
         )}
       </div>
     </>
-  );
-};
+  )
+}
 
-export default PrintCustomerReceiptPage;
+export default PrintCustomerReceiptPage

@@ -1,13 +1,7 @@
 import { useEffect, useState } from 'react';
 
 import { getPurchaseOrders } from '../api/purchaseOrderApi';
-
-const pickPurchaseOrderList = (payload) => {
-  if (Array.isArray(payload)) return payload;
-  if (Array.isArray(payload?.data)) return payload.data;
-  if (Array.isArray(payload?.items)) return payload.items;
-  return [];
-};
+import { pickPurchaseOrderList } from '../projections/purchaseOrderListProjection';
 
 export const usePurchaseOrderList = () => {
   const [purchaseOrders, setPurchaseOrders] = useState([]);

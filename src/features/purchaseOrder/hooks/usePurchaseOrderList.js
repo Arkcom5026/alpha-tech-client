@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 
 import { getPurchaseOrders } from '../api/purchaseOrderApi';
+import { buildPurchaseOrderListQuery } from '../policies/purchaseOrderListPolicy';
 import { pickPurchaseOrderList } from '../projections/purchaseOrderListProjection';
 
 export const usePurchaseOrderList = () => {
@@ -18,10 +19,9 @@ export const usePurchaseOrderList = () => {
         setIsLoading(true);
         setError('');
 
-        const payload = await getPurchaseOrders({
-          search: searchQuery,
-          status: showAllHistory ? 'all' : 'PENDING,PARTIALLY_RECEIVED',
-        });
+        const payload = await getPurchaseOrders(
+          buildPurchaseOrderListQuery({ searchQuery, showAllHistory })
+        );
 
         if (alive) setPurchaseOrders(pickPurchaseOrderList(payload));
       } catch (err) {

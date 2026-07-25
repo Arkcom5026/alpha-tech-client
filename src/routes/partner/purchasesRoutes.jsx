@@ -7,7 +7,7 @@ import PurchaseOrderListPage from '../../features/purchaseOrder/list/pages/Purch
 import CreatePurchaseOrderPage from '../../features/purchaseOrder/create/pages/CreatePurchaseOrderPage';
 import EditPurchaseOrderPage from '../../features/purchaseOrder/edit/pages/EditPurchaseOrderPage';
 import PurchaseOrderDetailPage from '../../features/purchaseOrder/detail/pages/PurchaseOrderDetailPage';
-import PrintPurchaseOrderPage from '../../features/purchaseOrder/pages/PrintPurchaseOrderPage';
+import PrintPurchaseOrderPage from '../../features/purchaseOrder/print/pages/PrintPurchaseOrderPage';
 
 import CreateSupplierPage from '@/features/supplier/pages/CreateSupplierPage';
 import EditSupplierPage from '@/features/supplier/pages/EditSupplierPage';

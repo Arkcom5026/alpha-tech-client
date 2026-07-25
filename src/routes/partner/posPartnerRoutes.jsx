@@ -26,6 +26,7 @@ import CreateCustomerReceiptPage from '@features/customerReceipt/pages/CreateCus
 import CustomerReceiptDetailPage from '@features/customerReceipt/pages/CustomerReceiptDetailPage';
 import CustomerReceiptAllocatePage from '@features/customerReceipt/pages/CustomerReceiptAllocatePage';
 import PrintCustomerReceiptPage from '@features/customerReceipt/pages/PrintCustomerReceiptPage';
+import ReprintCustomerReceiptPage from '@features/customerReceipt/reprint/pages/ReprintCustomerReceiptPage';
 
 import ListEmployeePage from '@features/employee/pages/ListEmployeePage';
 import EditEmployeePage from '@features/employee/pages/EditEmployeePage';
@@ -89,6 +90,7 @@ export const posPartnerRoutes = [
               { path: ':id', element: <CustomerReceiptDetailPage /> },
               { path: ':id/allocate', element: <CustomerReceiptAllocatePage /> },
               { path: ':id/print', element: <PrintCustomerReceiptPage /> },
+              { path: ':id/reprint', element: <ReprintCustomerReceiptPage /> },
             ],
           },
         ],

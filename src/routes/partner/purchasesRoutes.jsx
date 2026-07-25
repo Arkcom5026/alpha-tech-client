@@ -4,8 +4,8 @@ import React from 'react';
 
 import PurchaseDashboardPage from '../../features/purchaseOrder/pages/PurchaseDashboardPage';
 import PurchaseOrderListPage from '../../features/purchaseOrder/list/pages/PurchaseOrderListPage';
-import CreatePurchaseOrderPage from '../../features/purchaseOrder/pages/CreatePurchaseOrderPage';
-import EditPurchaseOrderPage from '../../features/purchaseOrder/pages/EditPurchaseOrderPage';
+import CreatePurchaseOrderPage from '../../features/purchaseOrder/create/pages/CreatePurchaseOrderPage';
+import EditPurchaseOrderPage from '../../features/purchaseOrder/edit/pages/EditPurchaseOrderPage';
 import PurchaseOrderDetailPage from '../../features/purchaseOrder/pages/PurchaseOrderDetailPage';
 import PrintPurchaseOrderPage from '../../features/purchaseOrder/pages/PrintPurchaseOrderPage';
 

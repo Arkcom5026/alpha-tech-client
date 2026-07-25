@@ -6,6 +6,7 @@ import PurchaseDashboardPage from '../../features/purchaseOrder/pages/PurchaseDa
 import PurchaseOrderListPage from '../../features/purchaseOrder/pages/PurchaseOrderListPage';
 import CreatePurchaseOrderPage from '../../features/purchaseOrder/pages/CreatePurchaseOrderPage';
 import EditPurchaseOrderPage from '../../features/purchaseOrder/pages/EditPurchaseOrderPage';
+import PurchaseOrderDetailPage from '../../features/purchaseOrder/pages/PurchaseOrderDetailPage';
 import PrintPurchaseOrderPage from '../../features/purchaseOrder/pages/PrintPurchaseOrderPage';
 
 import CreateSupplierPage from '@/features/supplier/pages/CreateSupplierPage';
@@ -37,11 +38,7 @@ const purchasesRoutes = {
         { index: true, element: <PurchaseOrderListPage /> },
         { path: 'create', element: <CreatePurchaseOrderPage /> },
         { path: 'edit/:id', element: <EditPurchaseOrderPage /> },
-
-        // Detail page still depends on stale store keys. Keep the public URL stable
-        // until the detail capability is migrated to the canonical API contract.
-        { path: 'view/:id', element: <PurchaseOrderListPage /> },
-
+        { path: 'view/:id', element: <PurchaseOrderDetailPage /> },
         { path: 'print/:id', element: <PrintPurchaseOrderPage /> },
       ],
     },

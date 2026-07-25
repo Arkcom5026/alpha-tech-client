@@ -1,15 +1,24 @@
 import { create } from 'zustand';
 import { calculatePurchaseTotals, isWithinCreditLimit } from '../engines/liveCalculatorEngine';
-import apiClient from '@/utils/apiClient'; // 🟢 ดึงท่อเชื่อมโยงตรงเข้าพอร์ต 5000 เพื่อความปลอดภัยสูงสุด
+import {
+  createPurchaseOrder as createPurchaseOrderRequest,
+  getPurchaseOrderById,
+  getPurchaseOrders,
+  updatePurchaseOrder as updatePurchaseOrderRequest,
+} from '../api/purchaseOrderApi';
+
+const pickPurchaseOrderList = (payload) => {
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.data)) return payload.data;
+  if (Array.isArray(payload?.items)) return payload.items;
+  return [];
+};
 
 export const usePurchaseOrderStore = create((set, get) => ({
-  // =========================================================
-  // [LEGACY STATE & ACTIONS - BACKWARD COMPATIBILITY PRESERVED]
-  // =========================================================
   historyList: [],
   isLoading: false,
   error: null,
-  purchaseOrder: null, // เก็บรายละเอียดใบสั่งซื้อเดี่ยวสำหรับโหมดดู/แก้ไข
+  purchaseOrder: null,
 
   fetchHistoryLegacy: async (apiCallback) => {
     set({ isLoading: true, error: null });
@@ -17,43 +26,52 @@ export const usePurchaseOrderStore = create((set, get) => ({
       const data = await apiCallback();
       set({ historyList: data, isLoading: false });
     } catch (err) {
-      set({ error: err.message || 'ระบบไม่สามารถเข้าถึงข้อมูลประวัติการจัดซื้อเดิมได้', isLoading: false });
+      set({
+        error: err.message || 'ระบบไม่สามารถเข้าถึงข้อมูลประวัติการจัดซื้อเดิมได้',
+        isLoading: false,
+      });
     }
   },
 
-  // =========================================================
-  // [NEW OFFICIAL LIVE ACTION - v2 STABLE IMPLEMENTATION]
-  // =========================================================
   fetchAllPurchaseOrdersAction: async () => {
     set({ isLoading: true, error: null });
     try {
-      const res = await apiClient.get('/purchase-orders');
-      const actualData = res?.data?.data || res?.data || [];
-      set({ historyList: actualData, isLoading: false });
+      const payload = await getPurchaseOrders();
+      set({ historyList: pickPurchaseOrderList(payload), isLoading: false });
     } catch (err) {
-      set({ error: err.message || 'กระบวนการเชื่อมต่อดึงประวัติจริงล้มเหลว', isLoading: false });
+      set({
+        error: err.message || 'กระบวนการเชื่อมต่อดึงประวัติจริงล้มเหลว',
+        isLoading: false,
+      });
     }
   },
 
   fetchPurchaseOrderById: async (id) => {
     set({ isLoading: true, error: null, purchaseOrder: null });
     try {
-      const res = await apiClient.get(`/purchase-orders/${id}`);
-      set({ purchaseOrder: res.data, isLoading: false });
+      const purchaseOrder = await getPurchaseOrderById(id);
+      set({ purchaseOrder, isLoading: false });
+      return purchaseOrder;
     } catch (err) {
-      set({ error: err.message || 'ไม่สามารถโหลดข้อมูลใบสั่งซื้อนี้ได้', isLoading: false });
+      set({
+        error: err.message || 'ไม่สามารถโหลดข้อมูลใบสั่งซื้อนี้ได้',
+        isLoading: false,
+      });
+      throw err;
     }
   },
 
-  // 🚀 [ADDED ACTIONS] ซ่อมท่อทางส่งข้อมูลเชื่อมต่อ API หน้าบ้าน ให้ยิงบันทึกใบสั่งซื้อ PO ลงฐานข้อมูลได้จริงพอร์ต 5000
   createPurchaseOrder: async (payload) => {
     set({ isLoading: true, error: null });
     try {
-      const res = await apiClient.post('/purchase-orders', payload);
+      const created = await createPurchaseOrderRequest(payload);
       set({ isLoading: false });
-      return res.data; // ส่งออบเจกต์ใบสั่งซื้อใหม่ที่มี .id กลับคืนให้ Hook นำไปเปลี่ยนเส้นทางพาธพิมพ์บิลต่อ
+      return created;
     } catch (err) {
-      set({ error: err.message || 'เกิดข้อผิดพลาดระหว่างส่งบันทึกใบสั่งซื้อ', isLoading: false });
+      set({
+        error: err.message || 'เกิดข้อผิดพลาดระหว่างส่งบันทึกใบสั่งซื้อ',
+        isLoading: false,
+      });
       throw err;
     }
   },
@@ -61,18 +79,18 @@ export const usePurchaseOrderStore = create((set, get) => ({
   updatePurchaseOrder: async (id, payload) => {
     set({ isLoading: true, error: null });
     try {
-      const res = await apiClient.put(`/purchase-orders/${id}`, payload);
+      const updated = await updatePurchaseOrderRequest(id, payload);
       set({ isLoading: false });
-      return res.data;
+      return updated;
     } catch (err) {
-      set({ error: err.message || 'เกิดข้อผิดพลาดระหว่างอัปเดตใบสั่งซื้อ', isLoading: false });
+      set({
+        error: err.message || 'เกิดข้อผิดพลาดระหว่างอัปเดตใบสั่งซื้อ',
+        isLoading: false,
+      });
       throw err;
     }
   },
 
-  // =========================================================
-  // [NEW STATE - v2 STABLE IMPLEMENTATION]
-  // =========================================================
   cartItems: [],
   supplierInfo: {
     id: null,
@@ -87,9 +105,6 @@ export const usePurchaseOrderStore = create((set, get) => ({
   },
   isCreditLimitExceeded: false,
 
-  // =========================================================
-  // [NEW ACTIONS - v2 STABLE IMPLEMENTATION]
-  // =========================================================
   setSupplier: (supplier) => {
     set({
       supplierInfo: {
@@ -105,7 +120,7 @@ export const usePurchaseOrderStore = create((set, get) => ({
   addToCart: (product) => {
     set((state) => {
       const existingIndex = state.cartItems.findIndex((item) => item.productId === product.id);
-      let updatedCart = [...state.cartItems];
+      const updatedCart = [...state.cartItems];
 
       if (existingIndex > -1) {
         updatedCart[existingIndex] = {
@@ -131,7 +146,9 @@ export const usePurchaseOrderStore = create((set, get) => ({
   updateCartQuantity: (productId, quantity) => {
     set((state) => ({
       cartItems: state.cartItems.map((item) =>
-        item.productId === productId ? { ...item, quantity: Math.max(1, Number(quantity)) } : item
+        item.productId === productId
+          ? { ...item, quantity: Math.max(1, Number(quantity)) }
+          : item
       ),
     }));
     get().recalculate();
@@ -140,7 +157,9 @@ export const usePurchaseOrderStore = create((set, get) => ({
   updateCartDiscount: (productId, discountAmount) => {
     set((state) => ({
       cartItems: state.cartItems.map((item) =>
-        item.productId === productId ? { ...item, discountAmount: Math.max(0, Number(discountAmount)) } : item
+        item.productId === productId
+          ? { ...item, discountAmount: Math.max(0, Number(discountAmount)) }
+          : item
       ),
     }));
     get().recalculate();
@@ -156,7 +175,6 @@ export const usePurchaseOrderStore = create((set, get) => ({
   recalculate: () => {
     const { cartItems, supplierInfo } = get();
     const totals = calculatePurchaseTotals(cartItems);
-
     const isExceeded = !isWithinCreditLimit(
       totals.netTotal,
       supplierInfo.creditLimit,
@@ -184,5 +202,5 @@ export const usePurchaseOrderStore = create((set, get) => ({
       isCreditLimitExceeded: false,
       purchaseOrder: null,
     });
-  }
+  },
 }));

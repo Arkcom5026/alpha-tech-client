@@ -272,6 +272,10 @@ const CustomerReceiptListPage = () => {
                             className="h-5 px-2 bg-slate-50 border border-slate-200 hover:bg-slate-100 text-slate-600 font-black text-[10px] rounded shadow-sm transition-all active:scale-95">
                             ดีเทล
                           </button>
+                          <button type="button" onClick={() => navigate(getDynamicFinanceUrl(`/${item.id}/reprint`))}
+                            className="h-5 px-2 bg-amber-50 border border-amber-200 hover:bg-amber-100 text-amber-700 font-black text-[10px] rounded shadow-sm transition-all active:scale-95">
+                            พิมพ์
+                          </button>
                           {!isCancelled && remains > 0 && (
                             <button type="button" onClick={() => navigate(getDynamicFinanceUrl(`/${item.id}/allocate`))}
                               className="h-5 px-2 bg-slate-900 hover:bg-slate-800 text-white font-black text-[10px] rounded shadow-sm transition-all active:scale-95">

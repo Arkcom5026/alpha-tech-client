@@ -5,19 +5,14 @@ import {
   buildCreatePurchaseOrderPayload,
   buildUpdatePurchaseOrderPayload,
 } from '../builders/purchaseOrderPayloadBuilder';
+import { mapProductToPurchaseOrderEditorItem } from '../mappers/purchaseOrderEditorProductMapper';
 import { mapPurchaseOrderItems } from '../mappers/purchaseOrderItemMapper';
 import {
   canEditPurchaseOrder,
   getPurchaseOrderEditBlockedReason,
 } from '../policies/purchaseOrderEditPolicy';
-import { pickPurchaseOrderCostPrice } from '../policies/purchaseOrderPricingPolicy';
 import { purchaseOrderSchema } from '../schema/purchaseOrderSchema';
 import { usePurchaseOrderStore } from '../store/purchaseOrderStore';
-
-const toPositiveInt = (value) => {
-  const number = Number(value);
-  return Number.isInteger(number) && number > 0 ? number : null;
-};
 
 export const usePurchaseOrderEditor = ({ mode, currentBranchId, suppliers }) => {
   const { id, shopSlug } = useParams();
@@ -82,28 +77,12 @@ export const usePurchaseOrderEditor = ({ mode, currentBranchId, suppliers }) => 
 
   const addProductToOrder = useCallback((product) => {
     setProducts((previous) => {
-      const nextProductId = toPositiveInt(product?.productId ?? product?.id);
-      if (!nextProductId) return previous;
-      if (previous.some((row) => Number(row.productId || row.id) === nextProductId)) {
+      const nextItem = mapProductToPurchaseOrderEditorItem(product);
+      if (!nextItem) return previous;
+      if (previous.some((row) => Number(row.productId || row.id) === nextItem.productId)) {
         return previous;
       }
-
-      return [
-        ...previous,
-        {
-          id: nextProductId,
-          productId: nextProductId,
-          name: product?.name || '-',
-          model: product?.model || '-',
-          category: product?.categoryName || product?.category || '-',
-          productType: product?.productTypeName || product?.productType || '-',
-          brandId: product?.brandId ?? null,
-          brandName: product?.brandName || '-',
-          templateTrace: product?.templateTrace || null,
-          quantity: product?.quantity || 1,
-          costPrice: pickPurchaseOrderCostPrice(product),
-        },
-      ];
+      return [...previous, nextItem];
     });
   }, []);
 

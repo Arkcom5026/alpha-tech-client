@@ -1,23 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
-import {
-  buildCreatePurchaseOrderPayload,
-  buildUpdatePurchaseOrderPayload,
-} from '../builders/purchaseOrderPayloadBuilder';
+import { executePurchaseOrderSubmit } from '../controllers/purchaseOrderSubmitController';
+import { mapProductToPurchaseOrderEditorItem } from '../mappers/purchaseOrderEditorProductMapper';
 import { mapPurchaseOrderItems } from '../mappers/purchaseOrderItemMapper';
 import {
-  canEditPurchaseOrder,
-  getPurchaseOrderEditBlockedReason,
-} from '../policies/purchaseOrderEditPolicy';
-import { pickPurchaseOrderCostPrice } from '../policies/purchaseOrderPricingPolicy';
-import { purchaseOrderSchema } from '../schema/purchaseOrderSchema';
+  projectPurchaseOrderEditorState,
+  projectPurchaseOrderSupplierCreditHint,
+} from '../projections/purchaseOrderEditorProjection';
 import { usePurchaseOrderStore } from '../store/purchaseOrderStore';
-
-const toPositiveInt = (value) => {
-  const number = Number(value);
-  return Number.isInteger(number) && number > 0 ? number : null;
-};
 
 export const usePurchaseOrderEditor = ({ mode, currentBranchId, suppliers }) => {
   const { id, shopSlug } = useParams();
@@ -59,51 +50,31 @@ export const usePurchaseOrderEditor = ({ mode, currentBranchId, suppliers }) => 
 
   useEffect(() => {
     if (mode !== 'edit' || !purchaseOrder) return;
-    setSupplier(purchaseOrder.supplier || null);
-    setOrderDate(
-      purchaseOrder.createdAt?.substring(0, 10) ||
+
+    const projected = projectPurchaseOrderEditorState(
+      purchaseOrder,
       new Date().toISOString().substring(0, 10)
     );
-    setNote(purchaseOrder.note || '');
-    setProducts(mapPurchaseOrderItems(purchaseOrder.items));
+
+    setSupplier(projected.supplier);
+    setOrderDate(projected.orderDate);
+    setNote(projected.note);
+    setProducts(mapPurchaseOrderItems(projected.items));
   }, [mode, purchaseOrder]);
 
-  const creditHint = useMemo(() => {
-    if (!supplier?.id) return null;
-    const matchedSupplier = suppliers.find(
-      (row) => Number(row.id) === Number(supplier.id)
-    );
-    if (!matchedSupplier) return null;
-    return {
-      used: Number(matchedSupplier.creditBalance) || 0,
-      total: Number(matchedSupplier.creditLimit) || 0,
-    };
-  }, [supplier, suppliers]);
+  const creditHint = useMemo(
+    () => projectPurchaseOrderSupplierCreditHint(supplier, suppliers),
+    [supplier, suppliers]
+  );
 
   const addProductToOrder = useCallback((product) => {
     setProducts((previous) => {
-      const nextProductId = toPositiveInt(product?.productId ?? product?.id);
-      if (!nextProductId) return previous;
-      if (previous.some((row) => Number(row.productId || row.id) === nextProductId)) {
+      const nextItem = mapProductToPurchaseOrderEditorItem(product);
+      if (!nextItem) return previous;
+      if (previous.some((row) => Number(row.productId || row.id) === nextItem.productId)) {
         return previous;
       }
-
-      return [
-        ...previous,
-        {
-          id: nextProductId,
-          productId: nextProductId,
-          name: product?.name || '-',
-          model: product?.model || '-',
-          category: product?.categoryName || product?.category || '-',
-          productType: product?.productTypeName || product?.productType || '-',
-          brandId: product?.brandId ?? null,
-          brandName: product?.brandName || '-',
-          templateTrace: product?.templateTrace || null,
-          quantity: product?.quantity || 1,
-          costPrice: pickPurchaseOrderCostPrice(product),
-        },
-      ];
+      return [...previous, nextItem];
     });
   }, []);
 
@@ -115,76 +86,28 @@ export const usePurchaseOrderEditor = ({ mode, currentBranchId, suppliers }) => 
     setSubmitError('');
     if (isSubmitting) return;
 
-    if (!currentBranchId) {
-      setSubmitError('ไม่พบข้อมูลสาขาของพนักงาน กรุณาเข้าสู่ระบบใหม่');
-      return;
-    }
-
-    if (mode === 'edit' && purchaseOrder && !canEditPurchaseOrder(purchaseOrder)) {
-      setSubmitError(getPurchaseOrderEditBlockedReason(purchaseOrder));
-      return;
-    }
-
-    if (typeof purchaseOrderSchema?.validate === 'function') {
-      const validation = purchaseOrderSchema.validate({
-        mode,
-        branchId: currentBranchId,
-        supplierId: supplier?.id,
-        products,
-      });
-      if (!validation.isValid) {
-        const firstError = Object.values(validation.errors || {})[0];
-        if (firstError) setSubmitError(firstError);
-        return;
-      }
-    }
-
-    const payload =
-      mode === 'edit'
-        ? buildUpdatePurchaseOrderPayload({ note, products })
-        : buildCreatePurchaseOrderPayload({ supplierId: supplier?.id, note, products });
-
-    if (payload.items.length !== products.length) {
-      setSubmitError('กรุณาตรวจสอบจำนวนและราคาทุนของสินค้าทุกรายการ');
-      return;
-    }
-
     setIsSubmitting(true);
     try {
-      if (mode === 'edit' && id) {
-        const updated = await updatePurchaseOrder(id, payload);
-        if (!updated?.success) {
-          setSubmitError('บันทึกไม่สำเร็จ กรุณาตรวจสอบข้อมูลอีกครั้ง');
-          return;
-        }
-        navigate(
-          shouldPrint
-            ? `/${shopSlug}/pos/purchases/orders/print/${id}`
-            : `/${shopSlug}/pos/purchases/orders`
-        );
+      const result = await executePurchaseOrderSubmit({
+        mode,
+        id,
+        currentBranchId,
+        supplier,
+        products,
+        note,
+        shouldPrint,
+        purchaseOrder,
+        createPurchaseOrder,
+        updatePurchaseOrder,
+        shopSlug,
+      });
+
+      if (!result.ok) {
+        if (result.error) setSubmitError(result.error);
         return;
       }
 
-      const created = await createPurchaseOrder(payload);
-      const createdId = created?.id || created?.data?.id;
-      if (!createdId) {
-        setSubmitError('บันทึกไม่สำเร็จ กรุณาตรวจสอบข้อมูลอีกครั้ง');
-        return;
-      }
-      navigate(
-        shouldPrint
-          ? `/${shopSlug}/pos/purchases/orders/print/${createdId}`
-          : `/${shopSlug}/pos/purchases/orders`
-      );
-    } catch (error) {
-      console.error('[PO] submit error:', error);
-      setSubmitError(
-        String(
-          error?.response?.data?.error ||
-          error?.response?.data?.message ||
-          'เกิดข้อผิดพลาดระหว่างบันทึก กรุณาลองใหม่อีกครั้ง'
-        )
-      );
+      navigate(result.destination);
     } finally {
       setIsSubmitting(false);
     }

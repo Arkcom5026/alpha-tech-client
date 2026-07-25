@@ -1,5 +1,6 @@
 import React from 'react';
-import PurchaseOrderForm from '../components/PurchaseOrderForm';
+
+import PurchaseOrderForm from '../../components/PurchaseOrderForm';
 
 const EditPurchaseOrderPage = () => {
   return (

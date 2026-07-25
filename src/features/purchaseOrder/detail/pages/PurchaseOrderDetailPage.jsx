@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { getPurchaseOrderById } from '../api/purchaseOrderApi';
+import { getPurchaseOrderById } from '../../api/purchaseOrderApi';
 
 const formatMoney = (value) => {
   const n = Number(value);
@@ -59,11 +59,12 @@ const PurchaseOrderDetailPage = () => {
   );
 
   const total = useMemo(
-    () => items.reduce((sum, item) => {
-      const quantity = Number(item?.quantity ?? 0);
-      const costPrice = Number(item?.costPrice ?? 0);
-      return sum + quantity * costPrice;
-    }, 0),
+    () =>
+      items.reduce((sum, item) => {
+        const quantity = Number(item?.quantity ?? 0);
+        const costPrice = Number(item?.costPrice ?? 0);
+        return sum + quantity * costPrice;
+      }, 0),
     [items]
   );
 
@@ -86,9 +87,7 @@ const PurchaseOrderDetailPage = () => {
           <Button variant="outline" onClick={() => navigate(-1)}>
             ย้อนกลับ
           </Button>
-          <Button onClick={() => navigate(`../print/${po.id}`)}>
-            พิมพ์
-          </Button>
+          <Button onClick={() => navigate(`../print/${po.id}`)}>พิมพ์</Button>
         </div>
       </div>
 
@@ -127,7 +126,10 @@ const PurchaseOrderDetailPage = () => {
             <tbody>
               {items.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="py-6 text-center text-muted-foreground">
+                  <td
+                    colSpan={5}
+                    className="py-6 text-center text-muted-foreground"
+                  >
                     ไม่มีรายการสินค้า
                   </td>
                 </tr>
@@ -136,12 +138,21 @@ const PurchaseOrderDetailPage = () => {
                   const quantity = Number(item?.quantity ?? 0);
                   const costPrice = Number(item?.costPrice ?? 0);
                   return (
-                    <tr key={item?.id ?? `${item?.productId ?? 'item'}-${index}`} className="border-b">
+                    <tr
+                      key={
+                        item?.id ?? `${item?.productId ?? 'item'}-${index}`
+                      }
+                      className="border-b"
+                    >
                       <td className="py-2">{index + 1}</td>
                       <td>{item.product?.name || item.productName || '-'}</td>
-                      <td className="text-right">{quantity.toLocaleString('th-TH')}</td>
+                      <td className="text-right">
+                        {quantity.toLocaleString('th-TH')}
+                      </td>
                       <td className="text-right">{formatMoney(costPrice)} ฿</td>
-                      <td className="text-right">{formatMoney(quantity * costPrice)} ฿</td>
+                      <td className="text-right">
+                        {formatMoney(quantity * costPrice)} ฿
+                      </td>
                     </tr>
                   );
                 })
@@ -149,7 +160,9 @@ const PurchaseOrderDetailPage = () => {
             </tbody>
             <tfoot>
               <tr className="font-semibold">
-                <td colSpan={4} className="pt-4 text-right">รวมทั้งสิ้น</td>
+                <td colSpan={4} className="pt-4 text-right">
+                  รวมทั้งสิ้น
+                </td>
                 <td className="pt-4 text-right">{formatMoney(total)} ฿</td>
               </tr>
             </tfoot>

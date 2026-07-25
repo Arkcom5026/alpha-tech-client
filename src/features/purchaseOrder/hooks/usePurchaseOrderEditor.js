@@ -172,6 +172,7 @@ export const usePurchaseOrderEditor = ({ mode, currentBranchId, suppliers }) => 
 
     if (typeof purchaseOrderSchema?.validate === 'function') {
       const validation = purchaseOrderSchema.validate({
+        mode,
         branchId: currentBranchId,
         supplierId: supplier?.id,
         products,

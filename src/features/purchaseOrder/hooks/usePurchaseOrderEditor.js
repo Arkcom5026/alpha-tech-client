@@ -1,21 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
-import {
-  buildCreatePurchaseOrderPayload,
-  buildUpdatePurchaseOrderPayload,
-} from '../builders/purchaseOrderPayloadBuilder';
+import { executePurchaseOrderSubmit } from '../controllers/purchaseOrderSubmitController';
 import { mapProductToPurchaseOrderEditorItem } from '../mappers/purchaseOrderEditorProductMapper';
 import { mapPurchaseOrderItems } from '../mappers/purchaseOrderItemMapper';
-import {
-  canEditPurchaseOrder,
-  getPurchaseOrderEditBlockedReason,
-} from '../policies/purchaseOrderEditPolicy';
 import {
   projectPurchaseOrderEditorState,
   projectPurchaseOrderSupplierCreditHint,
 } from '../projections/purchaseOrderEditorProjection';
-import { purchaseOrderSchema } from '../schema/purchaseOrderSchema';
 import { usePurchaseOrderStore } from '../store/purchaseOrderStore';
 
 export const usePurchaseOrderEditor = ({ mode, currentBranchId, suppliers }) => {
@@ -94,76 +86,28 @@ export const usePurchaseOrderEditor = ({ mode, currentBranchId, suppliers }) => 
     setSubmitError('');
     if (isSubmitting) return;
 
-    if (!currentBranchId) {
-      setSubmitError('ไม่พบข้อมูลสาขาของพนักงาน กรุณาเข้าสู่ระบบใหม่');
-      return;
-    }
-
-    if (mode === 'edit' && purchaseOrder && !canEditPurchaseOrder(purchaseOrder)) {
-      setSubmitError(getPurchaseOrderEditBlockedReason(purchaseOrder));
-      return;
-    }
-
-    if (typeof purchaseOrderSchema?.validate === 'function') {
-      const validation = purchaseOrderSchema.validate({
-        mode,
-        branchId: currentBranchId,
-        supplierId: supplier?.id,
-        products,
-      });
-      if (!validation.isValid) {
-        const firstError = Object.values(validation.errors || {})[0];
-        if (firstError) setSubmitError(firstError);
-        return;
-      }
-    }
-
-    const payload =
-      mode === 'edit'
-        ? buildUpdatePurchaseOrderPayload({ note, products })
-        : buildCreatePurchaseOrderPayload({ supplierId: supplier?.id, note, products });
-
-    if (payload.items.length !== products.length) {
-      setSubmitError('กรุณาตรวจสอบจำนวนและราคาทุนของสินค้าทุกรายการ');
-      return;
-    }
-
     setIsSubmitting(true);
     try {
-      if (mode === 'edit' && id) {
-        const updated = await updatePurchaseOrder(id, payload);
-        if (!updated?.success) {
-          setSubmitError('บันทึกไม่สำเร็จ กรุณาตรวจสอบข้อมูลอีกครั้ง');
-          return;
-        }
-        navigate(
-          shouldPrint
-            ? `/${shopSlug}/pos/purchases/orders/print/${id}`
-            : `/${shopSlug}/pos/purchases/orders`
-        );
+      const result = await executePurchaseOrderSubmit({
+        mode,
+        id,
+        currentBranchId,
+        supplier,
+        products,
+        note,
+        shouldPrint,
+        purchaseOrder,
+        createPurchaseOrder,
+        updatePurchaseOrder,
+        shopSlug,
+      });
+
+      if (!result.ok) {
+        if (result.error) setSubmitError(result.error);
         return;
       }
 
-      const created = await createPurchaseOrder(payload);
-      const createdId = created?.id || created?.data?.id;
-      if (!createdId) {
-        setSubmitError('บันทึกไม่สำเร็จ กรุณาตรวจสอบข้อมูลอีกครั้ง');
-        return;
-      }
-      navigate(
-        shouldPrint
-          ? `/${shopSlug}/pos/purchases/orders/print/${createdId}`
-          : `/${shopSlug}/pos/purchases/orders`
-      );
-    } catch (error) {
-      console.error('[PO] submit error:', error);
-      setSubmitError(
-        String(
-          error?.response?.data?.error ||
-          error?.response?.data?.message ||
-          'เกิดข้อผิดพลาดระหว่างบันทึก กรุณาลองใหม่อีกครั้ง'
-        )
-      );
+      navigate(result.destination);
     } finally {
       setIsSubmitting(false);
     }

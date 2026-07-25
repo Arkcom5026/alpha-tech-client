@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import { calculatePurchaseTotals, isWithinCreditLimit } from '../engines/liveCalculatorEngine';
 import {
   createPurchaseOrder as createPurchaseOrderRequest,
   getPurchaseOrderById,
@@ -14,7 +13,7 @@ const pickPurchaseOrderList = (payload) => {
   return [];
 };
 
-export const usePurchaseOrderStore = create((set, get) => ({
+export const usePurchaseOrderStore = create((set) => ({
   historyList: [],
   isLoading: false,
   error: null,
@@ -91,116 +90,5 @@ export const usePurchaseOrderStore = create((set, get) => ({
     }
   },
 
-  cartItems: [],
-  supplierInfo: {
-    id: null,
-    name: '',
-    creditLimit: 0,
-    outstandingBalance: 0,
-  },
-  financials: {
-    subtotal: 0,
-    tax: 0,
-    netTotal: 0,
-  },
-  isCreditLimitExceeded: false,
-
-  setSupplier: (supplier) => {
-    set({
-      supplierInfo: {
-        id: supplier.id || null,
-        name: supplier.name || '',
-        creditLimit: Number(supplier.creditLimit) || 0,
-        outstandingBalance: Number(supplier.outstandingBalance) || 0,
-      },
-    });
-    get().recalculate();
-  },
-
-  addToCart: (product) => {
-    set((state) => {
-      const existingIndex = state.cartItems.findIndex((item) => item.productId === product.id);
-      const updatedCart = [...state.cartItems];
-
-      if (existingIndex > -1) {
-        updatedCart[existingIndex] = {
-          ...updatedCart[existingIndex],
-          quantity: updatedCart[existingIndex].quantity + (product.quantity || 1),
-        };
-      } else {
-        updatedCart.push({
-          productId: product.id,
-          name: product.name,
-          unitPrice: Number(product.costPrice) || 0,
-          quantity: Number(product.quantity) || 1,
-          discountAmount: 0,
-          productType: product.type || 'SIMPLE',
-          serialNumbers: [],
-        });
-      }
-      return { cartItems: updatedCart };
-    });
-    get().recalculate();
-  },
-
-  updateCartQuantity: (productId, quantity) => {
-    set((state) => ({
-      cartItems: state.cartItems.map((item) =>
-        item.productId === productId
-          ? { ...item, quantity: Math.max(1, Number(quantity)) }
-          : item
-      ),
-    }));
-    get().recalculate();
-  },
-
-  updateCartDiscount: (productId, discountAmount) => {
-    set((state) => ({
-      cartItems: state.cartItems.map((item) =>
-        item.productId === productId
-          ? { ...item, discountAmount: Math.max(0, Number(discountAmount)) }
-          : item
-      ),
-    }));
-    get().recalculate();
-  },
-
-  removeFromCart: (productId) => {
-    set((state) => ({
-      cartItems: state.cartItems.filter((item) => item.productId !== productId),
-    }));
-    get().recalculate();
-  },
-
-  recalculate: () => {
-    const { cartItems, supplierInfo } = get();
-    const totals = calculatePurchaseTotals(cartItems);
-    const isExceeded = !isWithinCreditLimit(
-      totals.netTotal,
-      supplierInfo.creditLimit,
-      supplierInfo.outstandingBalance
-    );
-
-    set({
-      financials: {
-        subtotal: totals.subtotal,
-        tax: totals.tax,
-        netTotal: totals.netTotal,
-      },
-      isCreditLimitExceeded: isExceeded,
-    });
-  },
-
-  clearStore: () => {
-    set({
-      cartItems: [],
-      financials: {
-        subtotal: 0,
-        tax: 0,
-        netTotal: 0,
-      },
-      isCreditLimitExceeded: false,
-      purchaseOrder: null,
-    });
-  },
+  clearPurchaseOrder: () => set({ purchaseOrder: null, error: null }),
 }));

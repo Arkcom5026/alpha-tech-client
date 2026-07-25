@@ -41,6 +41,12 @@ const toNullableMoney = (value) => {
   return Number.isFinite(n) ? n : null;
 };
 
+const toNullableNonNegativeInteger = (value) => {
+  if (value === '' || value === null || value === undefined) return null;
+  const n = Number(value);
+  return Number.isInteger(n) && n >= 0 ? n : null;
+};
+
 const ProductForm = ({
   onSubmit,
   defaultValues,
@@ -182,6 +188,7 @@ const ProductForm = ({
       unitId: toId(data?.unitId ?? data?.unit?.id),
       mode: resolvedMode === 'SIMPLE' ? 'SIMPLE' : 'STRUCTURED',
       active: data?.active !== false,
+      warrantyDays: data?.warrantyDays ?? '',
       branchPrice: {
         costPrice: branchPriceSource?.costPrice ?? data?.costPrice ?? data?.cost ?? '',
         priceRetail: branchPriceSource?.priceRetail ?? data?.priceRetail ?? '',
@@ -532,6 +539,7 @@ const ProductForm = ({
       noSN: resolvedMode === 'SIMPLE',
       trackSerialNumber: resolvedMode === 'STRUCTURED',
       active: data.active !== false,
+      warrantyDays: toNullableNonNegativeInteger(data.warrantyDays),
       branchPrice: {
         costPrice: toNullableMoney(data.branchPrice?.costPrice),
         priceRetail: toNullableMoney(data.branchPrice?.priceRetail),

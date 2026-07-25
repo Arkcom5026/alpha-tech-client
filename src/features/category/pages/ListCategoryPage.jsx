@@ -1,11 +1,22 @@
-// ✅ src/features/category/pages/ListCategoryPage.jsx
+// src/features/category/pages/ListCategoryPage.jsx
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import CategoryTable from '../components/CategoryTable';
 
-import StandardActionButtons from '@/components/shared/buttons/StandardActionButtons';
+import CategoryTable from '../components/CategoryTable';
 import { useCategoryStore } from '../Store/CategoryStore';
 import { useAuthStore } from '@/features/auth/store/authStore';
+import {
+  Button,
+  Card,
+  CardBody,
+  EmptyState,
+  ErrorState,
+  Input,
+  LoadingState,
+  Page,
+  PageHeader,
+  Stack,
+} from '@/design-system';
 
 const ListCategoryPage = () => {
   const navigate = useNavigate();
@@ -26,7 +37,6 @@ const ListCategoryPage = () => {
     refreshAction,
   } = useCategoryStore();
 
-  // โหลดรายการตาม page/search
   useEffect(() => {
     fetchListAction();
   }, [page, search, fetchListAction]);
@@ -37,68 +47,102 @@ const ListCategoryPage = () => {
   };
 
   const paginationText = (() => {
-    if (!total) return '';
+    if (!total) return 'ยังไม่มีรายการ';
     const start = (page - 1) * limit + 1;
     const end = Math.min(page * limit, total);
     return `${start}–${end} / ${total}`;
   })();
 
+  const canGoNext = Number(page || 1) * Number(limit || 1) < Number(total || 0);
+
   return (
-    <div className="p-6 w-full flex flex-col items-center">
-      <div className="w-full max-w-4xl">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold text-zinc-800 dark:text-white">รายการหมวดหมู่สินค้า</h2>
-          {canManage && (
-            <StandardActionButtons onAdd={() => navigate('create')} />
-          )}
-        </div>
+    <Page>
+      <div className="mx-auto w-full max-w-4xl">
+        <PageHeader
+          title="รายการหมวดหมู่สินค้า"
+          description="จัดการหมวดหมู่ที่ใช้จัดกลุ่มสินค้าในสาขาปัจจุบัน"
+          actions={
+            canManage ? (
+              <Button onClick={() => navigate('create')}>เพิ่มหมวดหมู่</Button>
+            ) : null
+          }
+        />
 
-        <div className="flex items-center gap-2 mb-4">
-          <input
-            type="text"
-            placeholder="ค้นหาหมวดหมู่..."
-            value={search}
-            onChange={(e) => setSearchAction(e.target.value)}
-            className="border px-3 py-2 rounded min-w-[300px]"
-          />
-          <button
-            className="px-3 py-2 border rounded disabled:opacity-50"
-            onClick={refreshAction}
-            disabled={loading}
-          >
-            Refresh
-          </button>
-        </div>
+        <Stack gap={4}>
+          <Card>
+            <CardBody>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                <Input
+                  type="search"
+                  placeholder="ค้นหาหมวดหมู่..."
+                  value={search}
+                  onChange={(event) => setSearchAction(event.target.value)}
+                  className="sm:max-w-md"
+                />
+                <Button variant="secondary" onClick={refreshAction} disabled={loading}>
+                  รีเฟรช
+                </Button>
+              </div>
+            </CardBody>
+          </Card>
 
-        {(error) && (
-          <div className="mb-3 p-3 rounded border bg-rose-50 border-rose-200 text-sm text-rose-800">
-            {error}
+          {error ? (
+            <ErrorState
+              title="โหลดรายการหมวดหมู่ไม่สำเร็จ"
+              description={String(error)}
+              actionLabel="ลองใหม่"
+              onAction={refreshAction}
+            />
+          ) : null}
+
+          <Card className="overflow-hidden">
+            {loading ? (
+              <LoadingState label="กำลังโหลดรายการหมวดหมู่…" />
+            ) : items.length === 0 ? (
+              <CardBody>
+                <EmptyState
+                  title={search ? 'ไม่พบหมวดหมู่ที่ค้นหา' : 'ยังไม่มีหมวดหมู่สินค้า'}
+                  description={
+                    search
+                      ? 'ลองเปลี่ยนคำค้นหา หรือรีเฟรชข้อมูลอีกครั้ง'
+                      : 'เริ่มสร้างหมวดหมู่เพื่อใช้จัดกลุ่มสินค้าในระบบ'
+                  }
+                  actionLabel={!search && canManage ? 'เพิ่มหมวดหมู่' : undefined}
+                  onAction={!search && canManage ? () => navigate('create') : undefined}
+                />
+              </CardBody>
+            ) : (
+              <CategoryTable data={items} onEdit={canManage ? handleEdit : undefined} />
+            )}
+          </Card>
+
+          <div className="flex flex-col gap-3 text-sm text-[hsl(var(--ads-text-muted))] sm:flex-row sm:items-center sm:justify-between">
+            <span>{paginationText}</span>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={loading || page <= 1}
+                onClick={() => setPageAction(page - 1)}
+              >
+                ก่อนหน้า
+              </Button>
+              <span className="min-w-20 text-center text-[hsl(var(--ads-text-default))]">
+                หน้า {page}
+              </span>
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={loading || !canGoNext}
+                onClick={() => setPageAction(page + 1)}
+              >
+                ถัดไป
+              </Button>
+            </div>
           </div>
-        )}
-
-        <CategoryTable data={items} onEdit={canManage ? handleEdit : undefined} />
-
-        <div className="flex items-center justify-between text-sm text-gray-600 mt-4">
-          <span>{paginationText}</span>
-          <div className="inline-flex border rounded overflow-hidden">
-            <button
-              className="px-3 py-1 disabled:opacity-50"
-              disabled={page <= 1}
-              onClick={() => setPageAction(page - 1)}
-            >
-              ก่อนหน้า
-            </button>
-            <span className="px-3 py-1 border-l border-r">หน้า {page}</span>
-            <button
-              className="px-3 py-1"
-              onClick={() => setPageAction(page + 1)}
-            >
-              ถัดไป
-            </button>
-          </div>
-        </div>
+        </Stack>
       </div>
-    </div>
+    </Page>
   );
 };
 

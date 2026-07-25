@@ -2,7 +2,7 @@
 
 import React from 'react';
 
-import PurchaseDashboardPage from '../../features/purchaseOrder/pages/PurchaseDashboardPage';
+import PurchaseDashboardPage from '../../features/purchaseOrder/dashboard/pages/PurchaseDashboardPage';
 import PurchaseOrderListPage from '../../features/purchaseOrder/list/pages/PurchaseOrderListPage';
 import CreatePurchaseOrderPage from '../../features/purchaseOrder/create/pages/CreatePurchaseOrderPage';
 import EditPurchaseOrderPage from '../../features/purchaseOrder/edit/pages/EditPurchaseOrderPage';

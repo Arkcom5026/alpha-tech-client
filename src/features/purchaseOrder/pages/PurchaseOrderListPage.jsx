@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   Calendar,
@@ -14,48 +14,38 @@ import {
 } from 'lucide-react';
 
 import { usePurchaseOrderList } from '../hooks/usePurchaseOrderList';
+import { projectPurchaseOrderListRows } from '../list/projections/purchaseOrderListRowProjection';
 
 const renderStatusBadge = (status) => {
-  const normalized = String(status || '').toUpperCase();
-
-  if (normalized === 'PENDING') {
+  if (status.tone === 'pending') {
     return (
       <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-300 bg-slate-100 px-3 py-1 text-xs font-black text-slate-700">
-        <span className="h-1.5 w-1.5 rounded-full bg-slate-500" /> รอดำเนินการ
+        <span className="h-1.5 w-1.5 rounded-full bg-slate-500" /> {status.label}
       </span>
     );
   }
 
-  if (normalized === 'PARTIALLY_RECEIVED') {
+  if (status.tone === 'partial') {
     return (
       <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/20 bg-amber-500/10 px-3 py-1 text-xs font-black text-amber-700">
-        <span className="h-1.5 w-1.5 rounded-full bg-amber-500" /> รับของแล้วบางส่วน
+        <span className="h-1.5 w-1.5 rounded-full bg-amber-500" /> {status.label}
       </span>
     );
   }
 
-  if (normalized === 'RECEIVED' || normalized === 'COMPLETED') {
+  if (status.tone === 'completed') {
     return (
       <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-700">
-        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> เสร็จสมบูรณ์
+        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> {status.label}
       </span>
     );
   }
 
   return (
     <span className="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-500">
-      {status || '-'}
+      {status.label}
     </span>
   );
-};
-
-const formatMoney = (value) => {
-  const amount = Number(value);
-  if (!Number.isFinite(amount)) return '0.00';
-  return amount.toLocaleString('th-TH', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
 };
 
 export default function PurchaseOrderListPage() {
@@ -72,6 +62,11 @@ export default function PurchaseOrderListPage() {
     showAllHistory,
     setShowAllHistory,
   } = usePurchaseOrderList();
+
+  const rows = useMemo(
+    () => projectPurchaseOrderListRows(purchaseOrders),
+    [purchaseOrders]
+  );
 
   const orderPath = (action, id) =>
     `/${targetSlug}/pos/purchases/orders/${action}/${id}`;
@@ -148,69 +143,59 @@ export default function PurchaseOrderListPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {!isLoading && purchaseOrders.length === 0 ? (
+              {!isLoading && rows.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="p-10 text-center text-sm font-bold italic text-slate-400">
                     ไม่พบข้อมูลใบสั่งซื้อ
                   </td>
                 </tr>
               ) : (
-                purchaseOrders.map((po) => {
-                  const isPending = String(po?.status || '').toUpperCase() === 'PENDING';
-
-                  return (
-                    <tr key={po.id} className="group transition hover:bg-slate-50/80">
-                      <td className="p-4 text-sm font-semibold text-slate-500">
-                        {po.createdAt
-                          ? new Date(po.createdAt).toLocaleDateString('th-TH', {
-                              year: 'numeric',
-                              month: 'short',
-                              day: 'numeric',
-                            })
-                          : '-'}
-                      </td>
-                      <td className="p-4 text-sm font-black text-slate-900">
-                        {po.code || '-'}
-                      </td>
-                      <td className="p-4 text-sm font-bold text-slate-700">
-                        {po.supplier?.name || 'ไม่ระบุคู่ค้า'}
-                      </td>
-                      <td className="p-4 text-right text-sm font-black text-slate-950">
-                        ฿{formatMoney(po.totalAmount)}
-                      </td>
-                      <td className="p-4 text-center">{renderStatusBadge(po.status)}</td>
-                      <td className="p-4">
-                        <div className="flex items-center justify-center gap-1.5">
-                          <button
-                            type="button"
-                            title="ดูรายละเอียด"
-                            onClick={() => navigate(orderPath('view', po.id))}
-                            className="rounded-lg border border-slate-200 p-2 text-slate-600 transition hover:bg-slate-100"
-                          >
-                            <Eye className="h-4 w-4" />
-                          </button>
-                          <button
-                            type="button"
-                            title={isPending ? 'แก้ไข' : 'แก้ไขได้เฉพาะสถานะรอดำเนินการ'}
-                            disabled={!isPending}
-                            onClick={() => navigate(orderPath('edit', po.id))}
-                            className="rounded-lg border border-slate-200 p-2 text-slate-600 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-35"
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </button>
-                          <button
-                            type="button"
-                            title="พิมพ์"
-                            onClick={() => navigate(orderPath('print', po.id))}
-                            className="rounded-lg border border-slate-200 p-2 text-slate-600 transition hover:bg-slate-100"
-                          >
-                            <Printer className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
+                rows.map((row) => (
+                  <tr key={row.id} className="group transition hover:bg-slate-50/80">
+                    <td className="p-4 text-sm font-semibold text-slate-500">
+                      {row.createdAtLabel}
+                    </td>
+                    <td className="p-4 text-sm font-black text-slate-900">
+                      {row.code}
+                    </td>
+                    <td className="p-4 text-sm font-bold text-slate-700">
+                      {row.supplierName}
+                    </td>
+                    <td className="p-4 text-right text-sm font-black text-slate-950">
+                      ฿{row.totalAmountLabel}
+                    </td>
+                    <td className="p-4 text-center">{renderStatusBadge(row.status)}</td>
+                    <td className="p-4">
+                      <div className="flex items-center justify-center gap-1.5">
+                        <button
+                          type="button"
+                          title="ดูรายละเอียด"
+                          onClick={() => navigate(orderPath('view', row.id))}
+                          className="rounded-lg border border-slate-200 p-2 text-slate-600 transition hover:bg-slate-100"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          title={row.canEdit ? 'แก้ไข' : 'แก้ไขได้เฉพาะสถานะรอดำเนินการ'}
+                          disabled={!row.canEdit}
+                          onClick={() => navigate(orderPath('edit', row.id))}
+                          className="rounded-lg border border-slate-200 p-2 text-slate-600 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-35"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          title="พิมพ์"
+                          onClick={() => navigate(orderPath('print', row.id))}
+                          className="rounded-lg border border-slate-200 p-2 text-slate-600 transition hover:bg-slate-100"
+                        >
+                          <Printer className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
               )}
             </tbody>
           </table>

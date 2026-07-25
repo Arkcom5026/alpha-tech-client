@@ -1,553 +1,69 @@
-// src/features/purchaseOrder/hooks/usePurchaseOrderForm.js
-// Purchase Order Form Hook
-//
-// Module isolation rule:
-// - Purchase Order flow must not import/use Product store or Supplier store.
-// - Purchase Order flow resolves current branch from authenticated employee state.
-// - No shopSlug -> branch profile mapping.
-// - No /branch-prices/profile-by-slug request.
-//
-// Cost price rule:
-// - Product search for PO must use POS runtime endpoint:
-//   GET /api/products/pos/search
-// - This endpoint returns branch-scoped costPrice from BranchPrice / StockBalance runtime.
-
-import { useState, useEffect, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-
-import { purchaseOrderSchema } from '../schema/purchaseOrderSchema';
-import { usePurchaseOrderStore } from '../store/purchaseOrderStore';
-import {
-  getPurchaseOrderBrandsByProductType,
-  getPurchaseOrderDropdowns,
-  getSuppliers,
-  searchPurchaseOrderProducts,
-} from '../api/purchaseOrderApi';
 import { useAuthStore } from '@/features/auth/store/authStore';
+
+import { usePurchaseOrderEditor } from './usePurchaseOrderEditor';
+import { usePurchaseOrderProductSearch } from './usePurchaseOrderProductSearch';
+import { usePurchaseOrderReferenceData } from './usePurchaseOrderReferenceData';
 
 const toPositiveInt = (value) => {
   const n = Number(value);
   return Number.isInteger(n) && n > 0 ? n : null;
 };
 
-const toNumber = (value, fallback = 0) => {
-  if (value === '' || value === null || value === undefined) return fallback;
-  const n = Number(String(value).replace(/,/g, ''));
-  return Number.isFinite(n) ? n : fallback;
-};
-
-const firstArray = (...values) => {
-  for (const value of values) {
-    if (Array.isArray(value)) return value;
-  }
-  return [];
-};
-
-const pickArray = (payload) => {
-  if (Array.isArray(payload)) return payload;
-  return firstArray(
-    payload?.items,
-    payload?.products,
-    payload?.data,
-    payload?.data?.items,
-    payload?.data?.products,
-    payload?.rows,
-    payload?.records
-  );
-};
-
-const pickCostPrice = (row) => {
-  const branchPrice = Array.isArray(row?.branchPrice)
-    ? row.branchPrice[0]
-    : row?.branchPrice;
-
-  const branchPrices = Array.isArray(row?.branchPrices)
-    ? row.branchPrices[0]
-    : row?.branchPrices;
-
-  const stockBalance = row?.stockBalance || row?.stockBalances?.[0] || null;
-
-  return toNumber(
-    row?.costPrice ??
-      row?.cost ??
-      row?.receivedCost ??
-      row?.lastReceivedCost ??
-      row?.purchaseCost ??
-      branchPrice?.costPrice ??
-      branchPrices?.costPrice ??
-      stockBalance?.lastReceivedCost,
-    0
-  );
-};
-
-const normalizeProductTypeOption = (row) => {
-  const id = toPositiveInt(row?.id ?? row?.productTypeId ?? row?.typeId);
-  const name = String(row?.name ?? row?.label ?? row?.title ?? '').trim();
-  if (!id || !name) return null;
-  return {
-    ...row,
-    id,
-    name,
-    active: row?.active ?? row?.isActive ?? true,
-  };
-};
-
-const normalizeBrandOption = (row) => {
-  const id = toPositiveInt(row?.id ?? row?.brandId);
-  const name = String(row?.name ?? row?.label ?? row?.title ?? '').trim();
-  if (!id || !name) return null;
-  return {
-    ...row,
-    id,
-    name,
-    active: row?.active ?? row?.isActive ?? true,
-  };
-};
-
-const normalizeProductRow = (row) => {
-  const id = toPositiveInt(row?.id ?? row?.productId);
-  if (!id) return null;
-
-  const categoryName =
-    row?.categoryName ??
-    row?.productType?.globalProductType?.category?.name ??
-    (typeof row?.category === 'string' ? row.category : row?.category?.name) ??
-    '-';
-
-  const productTypeName =
-    row?.productTypeName ??
-    (typeof row?.productType === 'string' ? row.productType : row?.productType?.name) ??
-    '-';
-
-  const brandName =
-    row?.brandName ??
-    row?.brand?.name ??
-    (typeof row?.brand === 'string' ? row.brand : null) ??
-    '-';
-
-  const templateTrace =
-    row?.templateName ??
-    row?.productTemplateName ??
-    row?.templateProduct?.name ??
-    null;
-
-  const costPrice = pickCostPrice(row);
-
-  return {
-    ...row,
-    id,
-    productId: id,
-    name: row?.name ?? row?.title ?? '-',
-    category: categoryName,
-    categoryName,
-    productType: productTypeName,
-    productTypeName,
-    brandId: row?.brandId ?? row?.brand?.id ?? null,
-    brandName,
-    templateTrace,
-    model: row?.model ?? row?.spec ?? '-',
-    description: row?.description ?? '',
-    costPrice,
-    branchPrice: row?.branchPrice ?? row?.branchPrices ?? [],
-    stockBalance: row?.stockBalance ?? null,
-  };
-};
-
 export const usePurchaseOrderForm = (mode, searchText) => {
-  const { id, shopSlug } = useParams();
-  const navigate = useNavigate();
-
-  const authBranchId = useAuthStore((s) => (
-    s?.employee?.branchId ??
-    s?.employee?.branch?.id ??
-    s?.currentEmployee?.branchId ??
-    s?.currentEmployee?.branch?.id ??
-    s?.branch?.id ??
-    s?.branchId
+  const authBranchId = useAuthStore((state) => (
+    state?.employee?.branchId ??
+    state?.employee?.branch?.id ??
+    state?.currentEmployee?.branchId ??
+    state?.currentEmployee?.branch?.id ??
+    state?.branch?.id ??
+    state?.branchId
   ));
 
   const currentBranchId = toPositiveInt(authBranchId);
 
-  const [supplier, setSupplier] = useState(null);
-  const [creditHint, setCreditHint] = useState(null);
-  const [orderDate, setOrderDate] = useState(() => new Date().toISOString().substring(0, 10));
-  const [note, setNote] = useState('');
-  const [products, setProducts] = useState([]);
-  const [shouldPrint, setShouldPrint] = useState(true);
-  const [submitError, setSubmitError] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [committedSearchText, setCommittedSearchText] = useState('');
-
-  const [supplierList, setSupplierList] = useState([]);
-  const [suppliersLoading, setSuppliersLoading] = useState(false);
-
-  const [dropdowns, setDropdowns] = useState({
-    productTypes: [],
-    brands: [],
-  });
-  const [dropdownsLoading, setDropdownsLoading] = useState(false);
-
-  const [fetchedProducts, setFetchedProducts] = useState([]);
-  const [productsLoading, setProductsLoading] = useState(false);
-
-  const [filter, setFilter] = useState({
-    productTypeId: '',
-    brandId: '',
-  });
-
-  const {
-    purchaseOrder,
-    loading: poLoading,
-    fetchPurchaseOrderById,
-    createPurchaseOrder,
-    updatePurchaseOrder,
-  } = usePurchaseOrderStore();
-
-  useEffect(() => {
-    if (!currentBranchId) {
-      setSubmitError('ไม่พบข้อมูลสาขาของพนักงาน กรุณาเข้าสู่ระบบใหม่');
-    } else {
-      setSubmitError((prev) =>
-        prev === 'ไม่พบข้อมูลสาขาของพนักงาน กรุณาเข้าสู่ระบบใหม่' ? '' : prev
-      );
-    }
-  }, [currentBranchId]);
-
-  useEffect(() => {
-    if (!currentBranchId) {
-      setSupplierList([]);
-      return;
-    }
-
-    let alive = true;
-    setSuppliersLoading(true);
-
-    getSuppliers({ branchId: currentBranchId, _ts: Date.now() })
-      .then((data) => {
-        if (!alive) return;
-        setSupplierList(pickArray(data));
-      })
-      .catch((err) => {
-        if (!alive) return;
-        console.error('[PO] load suppliers failed:', err);
-        setSupplierList([]);
-      })
-      .finally(() => {
-        if (alive) setSuppliersLoading(false);
-      });
-
-    return () => {
-      alive = false;
-    };
-  }, [currentBranchId]);
-
-  useEffect(() => {
-    if (!currentBranchId) return;
-
-    let alive = true;
-    setDropdownsLoading(true);
-
-    getPurchaseOrderDropdowns()
-      .then((payload) => {
-        if (!alive) return;
-        setDropdowns({
-          productTypes: pickArray(payload?.productTypes)
-            .map(normalizeProductTypeOption)
-            .filter(Boolean),
-          brands: pickArray(payload?.brands)
-            .map(normalizeBrandOption)
-            .filter(Boolean),
-        });
-      })
-      .catch((err) => {
-        if (!alive) return;
-        console.error('[PO] load dropdowns failed:', err);
-        setDropdowns({ productTypes: [], brands: [] });
-      })
-      .finally(() => {
-        if (alive) setDropdownsLoading(false);
-      });
-
-    return () => {
-      alive = false;
-    };
-  }, [currentBranchId]);
-
-  useEffect(() => {
-    const productTypeId = toPositiveInt(filter.productTypeId);
-    if (!currentBranchId || !productTypeId) return;
-
-    let alive = true;
-
-    getPurchaseOrderBrandsByProductType(productTypeId)
-      .then((data) => {
-        if (!alive) return;
-        const brands = pickArray(data).map(normalizeBrandOption).filter(Boolean);
-        setDropdowns((prev) => ({ ...prev, brands }));
-      })
-      .catch((err) => {
-        if (!alive) return;
-        console.error('[PO] load brands by product type failed:', err);
-      });
-
-    return () => {
-      alive = false;
-    };
-  }, [currentBranchId, filter.productTypeId]);
-
-  useEffect(() => {
-    if (mode === 'edit' && id) {
-      (async () => {
-        try {
-          await fetchPurchaseOrderById(id);
-        } catch {
-          // no-op
-        }
-      })();
-    }
-  }, [mode, id, fetchPurchaseOrderById]);
-
-  useEffect(() => {
-    if (mode === 'edit' && purchaseOrder) {
-      setSupplier(purchaseOrder.supplier);
-      setOrderDate(purchaseOrder.date?.substring(0, 10) || orderDate);
-      setNote(purchaseOrder.note || '');
-      const enriched = (purchaseOrder.items || []).map((item) => {
-        const product = item.product || {};
-
-        return {
-          id: item.productId,
-          productId: item.productId,
-          name: product.name || item.productName || '-',
-          model: product.model || item.productModel || '-',
-          category:
-            item.categoryName ||
-            product.categoryName ||
-            product.productType?.globalProductType?.category?.name ||
-            '-',
-          productType:
-            item.productTypeName ||
-            product.productTypeName ||
-            product.productType?.name ||
-            '-',
-          brandId: product.brandId ?? product.brand?.id ?? null,
-          brandName:
-            item.brandName ||
-            product.brandName ||
-            product.brand?.name ||
-            '-',
-          templateTrace:
-            item.productTemplateName ||
-            product.templateName ||
-            product.templateProduct?.name ||
-            null,
-          quantity: item.quantity,
-          costPrice: item.costPrice,
-          receivedQuantity: item.receivedQuantity ?? 0,
-        };
-      });
-      setProducts(enriched);
-    }
-  }, [mode, purchaseOrder, orderDate]);
-
-  useEffect(() => {
-    if (!supplier?.id) {
-      setCreditHint(null);
-      return;
-    }
-
-    const s = supplierList.find((x) => Number(x.id) === Number(supplier.id));
-    setCreditHint(s ? { used: s.creditBalance || 0, total: s.creditLimit || 0 } : null);
-  }, [supplier, supplierList]);
-
-  useEffect(() => {
-    const productTypeId = toPositiveInt(filter.productTypeId);
-    const brandId = toPositiveInt(filter.brandId);
-    const search = (committedSearchText || '').trim();
-
-    const hasFilter = productTypeId || brandId || search;
-    if (!currentBranchId || !hasFilter) {
-      setFetchedProducts([]);
-      return;
-    }
-
-    let alive = true;
-    setProductsLoading(true);
-
-    searchPurchaseOrderProducts({
-      productTypeId,
-      brandId,
-      search,
-    })
-      .then((data) => {
-        if (!alive) return;
-        const rows = pickArray(data).map(normalizeProductRow).filter(Boolean);
-        setFetchedProducts(rows);
-      })
-      .catch((err) => {
-        if (!alive) return;
-        console.error('[PO] product search failed:', err);
-        setFetchedProducts([]);
-      })
-      .finally(() => {
-        if (alive) setProductsLoading(false);
-      });
-
-    return () => {
-      alive = false;
-    };
-  }, [currentBranchId, filter, committedSearchText]);
-
-  const handleCancel = useCallback(() => {
-    navigate(`/${shopSlug}/pos/purchases`);
-  }, [navigate, shopSlug]);
-
-  const handleFilterChange = useCallback((patch) => {
-    setFilter((prev) => {
-      const updated = { ...prev, ...patch };
-
-      if (
-        Object.prototype.hasOwnProperty.call(patch, 'productTypeId') &&
-        patch.productTypeId !== prev.productTypeId
-      ) {
-        updated.brandId = '';
-      }
-
-      return updated;
-    });
-  }, []);
-
-  const handleCommitSearch = useCallback(() => {
-    setCommittedSearchText((searchText || '').trim());
-  }, [searchText]);
-
-  const addProductToOrder = useCallback((product) => {
-    setProducts((prev) => {
-      const nextProductId = Number(product.productId || product.id);
-      if (prev.some((p) => Number(p.productId || p.id) === nextProductId)) return prev;
-
-      return [
-        ...prev,
-        {
-          id: nextProductId,
-          productId: nextProductId,
-          name: product.name || '-',
-          model: product.model || '-',
-          category: product.categoryName || product.category || '-',
-          productType: product.productTypeName || product.productType || '-',
-          brandId: product.brandId ?? null,
-          brandName: product.brandName || '-',
-          templateTrace: product.templateTrace || null,
-          quantity: product.quantity || 1,
-          costPrice: pickCostPrice(product),
-        },
-      ];
-    });
-  }, []);
-
-  const handleSubmit = useCallback(async () => {
-    setSubmitError('');
-    if (isSubmitting) return;
-
-    if (!currentBranchId) {
-      setSubmitError('ไม่พบข้อมูลสาขาของพนักงาน กรุณาเข้าสู่ระบบใหม่');
-      return;
-    }
-
-    if (typeof purchaseOrderSchema?.validate === 'function') {
-      const validation = purchaseOrderSchema.validate({
-        branchId: currentBranchId,
-        supplierId: supplier?.id,
-        products,
-      });
-
-      if (!validation.isValid) {
-        const errorKeys = Object.keys(validation.errors);
-        if (errorKeys.length > 0) {
-          setSubmitError(validation.errors[errorKeys[0]]);
-        }
-        return;
-      }
-    }
-
-    const safeItems = products
-      .map((p) => ({
-        productId: Number(p.productId || p.id),
-        quantity: Number.parseInt(String(p.quantity ?? '1'), 10),
-        costPrice: Number.parseFloat(String(p.costPrice ?? '0')),
-      }))
-      .filter((it) => Number.isFinite(it.productId) && it.productId > 0);
-
-    const payload = {
-      branchId: currentBranchId,
-      supplierId: supplier?.id,
-      date: orderDate,
-      note,
-      items: safeItems,
-    };
-
-    setIsSubmitting(true);
-    try {
-      if (mode === 'edit' && id) {
-        const updated = await updatePurchaseOrder(id, payload);
-        if (!updated) return setSubmitError('บันทึกไม่สำเร็จ กรุณาตรวจสอบข้อมูลอีกครั้ง');
-        navigate(shouldPrint ? `/${shopSlug}/pos/purchases/orders/print/${id}` : `/${shopSlug}/pos/purchases/orders`);
-      } else {
-        const created = await createPurchaseOrder(payload);
-        const createdId = created?.id || created?.data?.id;
-        if (!createdId) return setSubmitError('บันทึกไม่สำเร็จ กรุณาตรวจสอบข้อมูลอีกครั้ง');
-        navigate(shouldPrint ? `/${shopSlug}/pos/purchases/orders/print/${createdId}` : `/${shopSlug}/pos/purchases/orders`);
-      }
-    } catch (e) {
-      console.error('[PO] submit error:', e);
-      const msg =
-        e?.response?.data?.error ||
-        e?.response?.data?.message ||
-        'เกิดข้อผิดพลาดระหว่างบันทึก กรุณาลองใหม่อีกครั้ง';
-      setSubmitError(String(msg));
-    } finally {
-      setIsSubmitting(false);
-    }
-  }, [
+  const productSearch = usePurchaseOrderProductSearch({
     currentBranchId,
-    supplier,
-    products,
-    orderDate,
-    note,
+    searchText,
+  });
+
+  const referenceData = usePurchaseOrderReferenceData({
+    currentBranchId,
+    productTypeId: productSearch.productTypeId,
+  });
+
+  const editor = usePurchaseOrderEditor({
     mode,
-    id,
-    shouldPrint,
-    updatePurchaseOrder,
-    createPurchaseOrder,
-    navigate,
-    isSubmitting,
-    shopSlug,
-  ]);
+    currentBranchId,
+    suppliers: referenceData.suppliers,
+  });
 
   return {
-    loading: poLoading || dropdownsLoading || suppliersLoading,
-    supplier,
-    setSupplier,
-    suppliers: supplierList,
-    suppliersLoading,
-    creditHint,
-    orderDate,
-    setOrderDate,
-    products,
-    setProducts,
-    filter,
-    handleFilterChange,
-    handleCommitSearch,
-    fetchedProducts,
-    productsLoading,
-    addProductToOrder,
-    shouldPrint,
-    setShouldPrint,
-    submitError,
-    handleCancel,
-    handleSubmit,
-    isSubmitting,
-    dropdowns,
+    loading:
+      editor.poLoading ||
+      referenceData.dropdownsLoading ||
+      referenceData.suppliersLoading,
+    supplier: editor.supplier,
+    setSupplier: editor.setSupplier,
+    suppliers: referenceData.suppliers,
+    suppliersLoading: referenceData.suppliersLoading,
+    creditHint: editor.creditHint,
+    orderDate: editor.orderDate,
+    setOrderDate: editor.setOrderDate,
+    products: editor.products,
+    setProducts: editor.setProducts,
+    filter: productSearch.filter,
+    handleFilterChange: productSearch.handleFilterChange,
+    handleCommitSearch: productSearch.handleCommitSearch,
+    fetchedProducts: productSearch.fetchedProducts,
+    productsLoading: productSearch.productsLoading,
+    addProductToOrder: editor.addProductToOrder,
+    shouldPrint: editor.shouldPrint,
+    setShouldPrint: editor.setShouldPrint,
+    submitError: editor.submitError,
+    handleCancel: editor.handleCancel,
+    handleSubmit: editor.handleSubmit,
+    isSubmitting: editor.isSubmitting,
+    dropdowns: referenceData.dropdowns,
     currentBranchId,
   };
 };

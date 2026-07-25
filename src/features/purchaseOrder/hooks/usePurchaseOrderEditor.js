@@ -1,65 +1,23 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
+import {
+  buildCreatePurchaseOrderPayload,
+  buildUpdatePurchaseOrderPayload,
+} from '../builders/purchaseOrderPayloadBuilder';
+import { mapPurchaseOrderItems } from '../mappers/purchaseOrderItemMapper';
+import {
+  canEditPurchaseOrder,
+  getPurchaseOrderEditBlockedReason,
+} from '../policies/purchaseOrderEditPolicy';
+import { pickPurchaseOrderCostPrice } from '../policies/purchaseOrderPricingPolicy';
 import { purchaseOrderSchema } from '../schema/purchaseOrderSchema';
 import { usePurchaseOrderStore } from '../store/purchaseOrderStore';
-import { pickPurchaseOrderCostPrice } from './usePurchaseOrderProductSearch';
 
 const toPositiveInt = (value) => {
-  const n = Number(value);
-  return Number.isInteger(n) && n > 0 ? n : null;
+  const number = Number(value);
+  return Number.isInteger(number) && number > 0 ? number : null;
 };
-
-const mapPurchaseOrderItem = (item) => {
-  const product = item?.product || {};
-  return {
-    id: item?.productId,
-    productId: item?.productId,
-    name: product.name || item?.productName || '-',
-    model: product.model || item?.productModel || '-',
-    category:
-      item?.categoryName ||
-      product.categoryName ||
-      product.productType?.globalProductType?.category?.name ||
-      '-',
-    productType:
-      item?.productTypeName ||
-      product.productTypeName ||
-      product.productType?.name ||
-      '-',
-    brandId: product.brandId ?? product.brand?.id ?? null,
-    brandName:
-      item?.brandName ||
-      product.brandName ||
-      product.brand?.name ||
-      '-',
-    templateTrace:
-      item?.productTemplateName ||
-      product.templateName ||
-      product.templateProduct?.name ||
-      null,
-    quantity: item?.quantity,
-    costPrice: item?.costPrice,
-    receivedQuantity: item?.receivedQuantity ?? 0,
-  };
-};
-
-const buildPurchaseOrderItems = (products) =>
-  products
-    .map((product) => ({
-      productId: Number(product.productId || product.id),
-      quantity: Number.parseInt(String(product.quantity ?? '1'), 10),
-      costPrice: Number.parseFloat(String(product.costPrice ?? '0')),
-    }))
-    .filter(
-      (item) =>
-        Number.isFinite(item.productId) &&
-        item.productId > 0 &&
-        Number.isInteger(item.quantity) &&
-        item.quantity > 0 &&
-        Number.isFinite(item.costPrice) &&
-        item.costPrice >= 0
-    );
 
 export const usePurchaseOrderEditor = ({ mode, currentBranchId, suppliers }) => {
   const { id, shopSlug } = useParams();
@@ -107,7 +65,7 @@ export const usePurchaseOrderEditor = ({ mode, currentBranchId, suppliers }) => 
       new Date().toISOString().substring(0, 10)
     );
     setNote(purchaseOrder.note || '');
-    setProducts((purchaseOrder.items || []).map(mapPurchaseOrderItem));
+    setProducts(mapPurchaseOrderItems(purchaseOrder.items));
   }, [mode, purchaseOrder]);
 
   const creditHint = useMemo(() => {
@@ -162,12 +120,9 @@ export const usePurchaseOrderEditor = ({ mode, currentBranchId, suppliers }) => 
       return;
     }
 
-    if (mode === 'edit' && purchaseOrder) {
-      const status = String(purchaseOrder.status || '').toUpperCase();
-      if (status !== 'PENDING') {
-        setSubmitError('แก้ไขได้เฉพาะใบสั่งซื้อที่อยู่ในสถานะรอดำเนินการ');
-        return;
-      }
+    if (mode === 'edit' && purchaseOrder && !canEditPurchaseOrder(purchaseOrder)) {
+      setSubmitError(getPurchaseOrderEditBlockedReason(purchaseOrder));
+      return;
     }
 
     if (typeof purchaseOrderSchema?.validate === 'function') {
@@ -184,8 +139,12 @@ export const usePurchaseOrderEditor = ({ mode, currentBranchId, suppliers }) => 
       }
     }
 
-    const items = buildPurchaseOrderItems(products);
-    if (items.length !== products.length) {
+    const payload =
+      mode === 'edit'
+        ? buildUpdatePurchaseOrderPayload({ note, products })
+        : buildCreatePurchaseOrderPayload({ supplierId: supplier?.id, note, products });
+
+    if (payload.items.length !== products.length) {
       setSubmitError('กรุณาตรวจสอบจำนวนและราคาทุนของสินค้าทุกรายการ');
       return;
     }
@@ -193,10 +152,7 @@ export const usePurchaseOrderEditor = ({ mode, currentBranchId, suppliers }) => 
     setIsSubmitting(true);
     try {
       if (mode === 'edit' && id) {
-        const updated = await updatePurchaseOrder(id, {
-          note,
-          items,
-        });
+        const updated = await updatePurchaseOrder(id, payload);
         if (!updated?.success) {
           setSubmitError('บันทึกไม่สำเร็จ กรุณาตรวจสอบข้อมูลอีกครั้ง');
           return;
@@ -209,11 +165,7 @@ export const usePurchaseOrderEditor = ({ mode, currentBranchId, suppliers }) => 
         return;
       }
 
-      const created = await createPurchaseOrder({
-        supplierId: supplier?.id,
-        note,
-        items,
-      });
+      const created = await createPurchaseOrder(payload);
       const createdId = created?.id || created?.data?.id;
       if (!createdId) {
         setSubmitError('บันทึกไม่สำเร็จ กรุณาตรวจสอบข้อมูลอีกครั้ง');

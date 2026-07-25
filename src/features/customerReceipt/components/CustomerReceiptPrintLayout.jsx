@@ -12,6 +12,33 @@ import {
 
 const round2 = (value) => Number((Number(value || 0)).toFixed(2))
 
+const buildStructuredBranchAddress = (branch, fallbackAddress = '-') => {
+  const subdistrict = branch?.subdistrict || null
+  const district = subdistrict?.district || null
+  const province = district?.province || null
+
+  const structuredAddress = [
+    branch?.address,
+    subdistrict?.nameTh ? `ต.${subdistrict.nameTh}` : null,
+    district?.nameTh ? `อ.${district.nameTh}` : null,
+    province?.nameTh ? `จ.${province.nameTh}` : null,
+    subdistrict?.postcode,
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .trim()
+
+  if (structuredAddress) return structuredAddress
+
+  const mappedAddress = buildCustomerReceiptBranchAddress(branch)
+  if (typeof mappedAddress === 'string' && mappedAddress.trim() && mappedAddress.trim() !== '-') {
+    return mappedAddress.trim()
+  }
+
+  const fallback = typeof fallbackAddress === 'string' ? fallbackAddress.trim() : ''
+  return fallback || '-'
+}
+
 const bahtText = (amount) => {
   const number = Number(amount)
   if (!Number.isFinite(number)) return 'ศูนย์บาทถ้วน'
@@ -75,13 +102,19 @@ const bahtText = (amount) => {
   return bahtPart + satangPart
 }
 
-const CustomerReceiptPrintLayout = ({ receipt }) => {
+const CustomerReceiptPrintLayout = ({ receipt, config = null }) => {
   const customer = receipt?.customer || null
   const branch = receipt?.branch || null
   const allocations = Array.isArray(receipt?.allocations) ? receipt.allocations : []
   const lineItems = buildCustomerReceiptLineItems(allocations)
   const { total, vatRate, vatAmount, beforeVat } = getCustomerReceiptVatSummary(receipt)
   const emptyRowCount = Math.max(20 - lineItems.length, 0)
+
+  const branchName = config?.branchName || branch?.name || branch?.branchName || '-'
+  const branchAddress = buildStructuredBranchAddress(branch, config?.address)
+  const branchPhone = config?.phone || branch?.phone || '-'
+  const branchTaxId = config?.taxId || branch?.taxId || '-'
+  const branchLogoUrl = config?.logoUrl || branch?.receiptConfig?.logoUrl || null
 
   return (
     <>
@@ -116,11 +149,16 @@ const CustomerReceiptPrintLayout = ({ receipt }) => {
         style={{ width: '210mm', minHeight: '297mm', height: 'auto', fontFamily: 'Tahoma, Arial, sans-serif' }}
       >
         <div className="customer-receipt-no-break mb-2 flex items-start justify-between gap-3 border-b pb-2">
-          <div>
-            <h2 className="text-[16px] font-bold leading-tight">{branch?.name || branch?.branchName || '-'}</h2>
-            <p>ที่อยู่: {buildCustomerReceiptBranchAddress(branch)}</p>
-            <p>โทร: {branch?.phone || '-'}</p>
-            <p>เลขประจำตัวผู้เสียภาษี: {branch?.taxId || '-'}</p>
+          <div className="flex items-start gap-3">
+            {branchLogoUrl ? (
+              <img src={branchLogoUrl} alt="logo" className="h-16 w-16 object-contain print:mt-1" />
+            ) : null}
+            <div>
+              <h2 className="text-[16px] font-bold leading-tight">{branchName}</h2>
+              <p>ที่อยู่: {branchAddress}</p>
+              <p>โทร: {branchPhone}</p>
+              <p>เลขประจำตัวผู้เสียภาษี: {branchTaxId}</p>
+            </div>
           </div>
 
           <div className="text-right">

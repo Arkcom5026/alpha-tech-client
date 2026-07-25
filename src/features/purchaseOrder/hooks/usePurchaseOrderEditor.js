@@ -11,6 +11,10 @@ import {
   canEditPurchaseOrder,
   getPurchaseOrderEditBlockedReason,
 } from '../policies/purchaseOrderEditPolicy';
+import {
+  projectPurchaseOrderEditorState,
+  projectPurchaseOrderSupplierCreditHint,
+} from '../projections/purchaseOrderEditorProjection';
 import { purchaseOrderSchema } from '../schema/purchaseOrderSchema';
 import { usePurchaseOrderStore } from '../store/purchaseOrderStore';
 
@@ -54,26 +58,22 @@ export const usePurchaseOrderEditor = ({ mode, currentBranchId, suppliers }) => 
 
   useEffect(() => {
     if (mode !== 'edit' || !purchaseOrder) return;
-    setSupplier(purchaseOrder.supplier || null);
-    setOrderDate(
-      purchaseOrder.createdAt?.substring(0, 10) ||
+
+    const projected = projectPurchaseOrderEditorState(
+      purchaseOrder,
       new Date().toISOString().substring(0, 10)
     );
-    setNote(purchaseOrder.note || '');
-    setProducts(mapPurchaseOrderItems(purchaseOrder.items));
+
+    setSupplier(projected.supplier);
+    setOrderDate(projected.orderDate);
+    setNote(projected.note);
+    setProducts(mapPurchaseOrderItems(projected.items));
   }, [mode, purchaseOrder]);
 
-  const creditHint = useMemo(() => {
-    if (!supplier?.id) return null;
-    const matchedSupplier = suppliers.find(
-      (row) => Number(row.id) === Number(supplier.id)
-    );
-    if (!matchedSupplier) return null;
-    return {
-      used: Number(matchedSupplier.creditBalance) || 0,
-      total: Number(matchedSupplier.creditLimit) || 0,
-    };
-  }, [supplier, suppliers]);
+  const creditHint = useMemo(
+    () => projectPurchaseOrderSupplierCreditHint(supplier, suppliers),
+    [supplier, suppliers]
+  );
 
   const addProductToOrder = useCallback((product) => {
     setProducts((previous) => {

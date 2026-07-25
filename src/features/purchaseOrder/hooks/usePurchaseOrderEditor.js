@@ -44,6 +44,23 @@ const mapPurchaseOrderItem = (item) => {
   };
 };
 
+const buildPurchaseOrderItems = (products) =>
+  products
+    .map((product) => ({
+      productId: Number(product.productId || product.id),
+      quantity: Number.parseInt(String(product.quantity ?? '1'), 10),
+      costPrice: Number.parseFloat(String(product.costPrice ?? '0')),
+    }))
+    .filter(
+      (item) =>
+        Number.isFinite(item.productId) &&
+        item.productId > 0 &&
+        Number.isInteger(item.quantity) &&
+        item.quantity > 0 &&
+        Number.isFinite(item.costPrice) &&
+        item.costPrice >= 0
+    );
+
 export const usePurchaseOrderEditor = ({ mode, currentBranchId, suppliers }) => {
   const { id, shopSlug } = useParams();
   const navigate = useNavigate();
@@ -86,7 +103,6 @@ export const usePurchaseOrderEditor = ({ mode, currentBranchId, suppliers }) => 
     if (mode !== 'edit' || !purchaseOrder) return;
     setSupplier(purchaseOrder.supplier || null);
     setOrderDate(
-      purchaseOrder.date?.substring(0, 10) ||
       purchaseOrder.createdAt?.substring(0, 10) ||
       new Date().toISOString().substring(0, 10)
     );
@@ -146,6 +162,14 @@ export const usePurchaseOrderEditor = ({ mode, currentBranchId, suppliers }) => 
       return;
     }
 
+    if (mode === 'edit' && purchaseOrder) {
+      const status = String(purchaseOrder.status || '').toUpperCase();
+      if (status !== 'PENDING') {
+        setSubmitError('แก้ไขได้เฉพาะใบสั่งซื้อที่อยู่ในสถานะรอดำเนินการ');
+        return;
+      }
+    }
+
     if (typeof purchaseOrderSchema?.validate === 'function') {
       const validation = purchaseOrderSchema.validate({
         branchId: currentBranchId,
@@ -159,27 +183,20 @@ export const usePurchaseOrderEditor = ({ mode, currentBranchId, suppliers }) => 
       }
     }
 
-    const items = products
-      .map((product) => ({
-        productId: Number(product.productId || product.id),
-        quantity: Number.parseInt(String(product.quantity ?? '1'), 10),
-        costPrice: Number.parseFloat(String(product.costPrice ?? '0')),
-      }))
-      .filter((item) => Number.isFinite(item.productId) && item.productId > 0);
-
-    const payload = {
-      branchId: currentBranchId,
-      supplierId: supplier?.id,
-      date: orderDate,
-      note,
-      items,
-    };
+    const items = buildPurchaseOrderItems(products);
+    if (items.length !== products.length) {
+      setSubmitError('กรุณาตรวจสอบจำนวนและราคาทุนของสินค้าทุกรายการ');
+      return;
+    }
 
     setIsSubmitting(true);
     try {
       if (mode === 'edit' && id) {
-        const updated = await updatePurchaseOrder(id, payload);
-        if (!updated) {
+        const updated = await updatePurchaseOrder(id, {
+          note,
+          items,
+        });
+        if (!updated?.success) {
           setSubmitError('บันทึกไม่สำเร็จ กรุณาตรวจสอบข้อมูลอีกครั้ง');
           return;
         }
@@ -191,7 +208,11 @@ export const usePurchaseOrderEditor = ({ mode, currentBranchId, suppliers }) => 
         return;
       }
 
-      const created = await createPurchaseOrder(payload);
+      const created = await createPurchaseOrder({
+        supplierId: supplier?.id,
+        note,
+        items,
+      });
       const createdId = created?.id || created?.data?.id;
       if (!createdId) {
         setSubmitError('บันทึกไม่สำเร็จ กรุณาตรวจสอบข้อมูลอีกครั้ง');
@@ -218,11 +239,11 @@ export const usePurchaseOrderEditor = ({ mode, currentBranchId, suppliers }) => 
     currentBranchId,
     supplier,
     products,
-    orderDate,
     note,
     mode,
     id,
     shouldPrint,
+    purchaseOrder,
     updatePurchaseOrder,
     createPurchaseOrder,
     navigate,

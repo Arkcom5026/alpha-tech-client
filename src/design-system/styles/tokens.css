@@ -1,0 +1,59 @@
+/* Alpha Design System — clean foundation tokens */
+:root {
+  --ads-font-sans: "Noto Sans Thai", "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --ads-space-1: 0.25rem;
+  --ads-space-2: 0.5rem;
+  --ads-space-3: 0.75rem;
+  --ads-space-4: 1rem;
+  --ads-space-5: 1.25rem;
+  --ads-space-6: 1.5rem;
+  --ads-space-8: 2rem;
+  --ads-radius-sm: 0.5rem;
+  --ads-radius-md: 0.75rem;
+  --ads-radius-lg: 1rem;
+  --ads-radius-full: 9999px;
+  --ads-shadow-xs: 0 1px 2px rgb(15 23 42 / 0.05);
+  --ads-shadow-sm: 0 1px 3px rgb(15 23 42 / 0.08), 0 1px 2px rgb(15 23 42 / 0.04);
+  --ads-control-sm: 2rem;
+  --ads-control-md: 2.5rem;
+  --ads-control-lg: 3rem;
+  --ads-surface-canvas: 210 40% 98%;
+  --ads-surface-base: 0 0% 100%;
+  --ads-surface-subtle: 210 40% 96%;
+  --ads-surface-raised: 0 0% 100%;
+  --ads-text-strong: 222 47% 11%;
+  --ads-text-default: 215 28% 17%;
+  --ads-text-muted: 215 16% 47%;
+  --ads-border-default: 214 32% 91%;
+  --ads-border-strong: 215 20% 78%;
+  --ads-brand: 221 83% 53%;
+  --ads-brand-hover: 224 76% 48%;
+  --ads-brand-foreground: 0 0% 100%;
+  --ads-success: 142 71% 35%;
+  --ads-success-subtle: 138 76% 97%;
+  --ads-warning: 32 95% 44%;
+  --ads-warning-subtle: 48 100% 96%;
+  --ads-danger: 0 72% 51%;
+  --ads-danger-subtle: 0 86% 97%;
+  --ads-info: 199 89% 40%;
+  --ads-info-subtle: 204 100% 97%;
+  --ads-focus: 221 83% 53%;
+}
+
+.dark {
+  --ads-surface-canvas: 222 47% 7%;
+  --ads-surface-base: 222 47% 9%;
+  --ads-surface-subtle: 217 33% 14%;
+  --ads-surface-raised: 217 33% 16%;
+  --ads-text-strong: 210 40% 98%;
+  --ads-text-default: 214 32% 91%;
+  --ads-text-muted: 215 20% 65%;
+  --ads-border-default: 217 33% 19%;
+  --ads-border-strong: 215 20% 35%;
+  --ads-brand: 217 91% 60%;
+  --ads-brand-hover: 213 94% 68%;
+  --ads-success-subtle: 144 61% 10%;
+  --ads-warning-subtle: 32 81% 10%;
+  --ads-danger-subtle: 0 63% 12%;
+  --ads-info-subtle: 202 80% 12%;
+}

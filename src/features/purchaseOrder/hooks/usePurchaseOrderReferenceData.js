@@ -5,54 +5,15 @@ import {
   getPurchaseOrderDropdowns,
   getSuppliers,
 } from '../api/purchaseOrderApi';
+import {
+  mapPurchaseOrderBrandsResponse,
+  mapPurchaseOrderDropdownsResponse,
+  mapPurchaseOrderSuppliersResponse,
+} from '../mappers/purchaseOrderReferenceDataMapper';
 
 const toPositiveInt = (value) => {
   const n = Number(value);
   return Number.isInteger(n) && n > 0 ? n : null;
-};
-
-const firstArray = (...values) => {
-  for (const value of values) {
-    if (Array.isArray(value)) return value;
-  }
-  return [];
-};
-
-const pickArray = (payload) => {
-  if (Array.isArray(payload)) return payload;
-  return firstArray(
-    payload?.items,
-    payload?.products,
-    payload?.data,
-    payload?.data?.items,
-    payload?.data?.products,
-    payload?.rows,
-    payload?.records
-  );
-};
-
-const normalizeProductTypeOption = (row) => {
-  const id = toPositiveInt(row?.id ?? row?.productTypeId ?? row?.typeId);
-  const name = String(row?.name ?? row?.label ?? row?.title ?? '').trim();
-  if (!id || !name) return null;
-  return {
-    ...row,
-    id,
-    name,
-    active: row?.active ?? row?.isActive ?? true,
-  };
-};
-
-const normalizeBrandOption = (row) => {
-  const id = toPositiveInt(row?.id ?? row?.brandId);
-  const name = String(row?.name ?? row?.label ?? row?.title ?? '').trim();
-  if (!id || !name) return null;
-  return {
-    ...row,
-    id,
-    name,
-    active: row?.active ?? row?.isActive ?? true,
-  };
 };
 
 export const usePurchaseOrderReferenceData = ({ currentBranchId, productTypeId }) => {
@@ -77,7 +38,7 @@ export const usePurchaseOrderReferenceData = ({ currentBranchId, productTypeId }
 
     getSuppliers({ branchId: currentBranchId, _ts: Date.now() })
       .then((data) => {
-        if (alive) setSupplierList(pickArray(data));
+        if (alive) setSupplierList(mapPurchaseOrderSuppliersResponse(data));
       })
       .catch((error) => {
         if (!alive) return;
@@ -105,14 +66,7 @@ export const usePurchaseOrderReferenceData = ({ currentBranchId, productTypeId }
     getPurchaseOrderDropdowns()
       .then((payload) => {
         if (!alive) return;
-        setDropdowns({
-          productTypes: pickArray(payload?.productTypes)
-            .map(normalizeProductTypeOption)
-            .filter(Boolean),
-          brands: pickArray(payload?.brands)
-            .map(normalizeBrandOption)
-            .filter(Boolean),
-        });
+        setDropdowns(mapPurchaseOrderDropdownsResponse(payload));
       })
       .catch((error) => {
         if (!alive) return;
@@ -136,7 +90,7 @@ export const usePurchaseOrderReferenceData = ({ currentBranchId, productTypeId }
     getPurchaseOrderBrandsByProductType(normalizedProductTypeId)
       .then((data) => {
         if (!alive) return;
-        const brands = pickArray(data).map(normalizeBrandOption).filter(Boolean);
+        const brands = mapPurchaseOrderBrandsResponse(data);
         setDropdowns((previous) => ({ ...previous, brands }));
       })
       .catch((error) => {

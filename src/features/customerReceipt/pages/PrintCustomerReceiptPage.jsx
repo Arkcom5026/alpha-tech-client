@@ -1,14 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import {
-  AlertTriangle,
-  ArrowLeft,
-  FileCheck,
-  FileText,
-  Loader2,
-  Printer,
-  Smartphone,
-} from 'lucide-react'
 
 import useCustomerReceiptStore from '../store/customerReceiptStore'
 import CustomerReceiptPrintLayout from '../components/CustomerReceiptPrintLayout'
@@ -20,7 +11,6 @@ const PrintCustomerReceiptPage = () => {
   const [searchParams] = useSearchParams()
   const printedRef = useRef(false)
   const printRootRef = useRef(null)
-
   const [printMode, setPrintMode] = useState('FULL')
 
   const autoPrint = useMemo(() => {
@@ -28,11 +18,15 @@ const PrintCustomerReceiptPage = () => {
     return value === '1' || value === 'true' || value === 'yes'
   }, [searchParams])
 
+  const requestedMode = useMemo(() => {
+    const value = String(searchParams.get('mode') || '').toUpperCase()
+    return value === 'SHORT' ? 'SHORT' : 'FULL'
+  }, [searchParams])
+
   const selectedItem = useCustomerReceiptStore((state) => state.selectedItem)
   const detailLoading = useCustomerReceiptStore((state) => state.detailLoading)
   const printLoading = useCustomerReceiptStore((state) => state.printLoading)
   const error = useCustomerReceiptStore((state) => state.error)
-
   const loadCustomerReceiptForPrintAction = useCustomerReceiptStore(
     (state) => state.loadCustomerReceiptForPrintAction
   )
@@ -42,6 +36,10 @@ const PrintCustomerReceiptPage = () => {
   const clearSelectedCustomerReceiptAction = useCustomerReceiptStore(
     (state) => state.clearSelectedCustomerReceiptAction
   )
+
+  useEffect(() => {
+    setPrintMode(requestedMode)
+  }, [requestedMode])
 
   useEffect(() => {
     printedRef.current = false
@@ -86,13 +84,10 @@ const PrintCustomerReceiptPage = () => {
     }
 
     updatePrintHeight()
-
     const frameId = window.requestAnimationFrame(updatePrintHeight)
     const timerId = window.setTimeout(updatePrintHeight, 150)
     const resizeObserver =
-      typeof ResizeObserver !== 'undefined'
-        ? new ResizeObserver(updatePrintHeight)
-        : null
+      typeof ResizeObserver !== 'undefined' ? new ResizeObserver(updatePrintHeight) : null
 
     if (printRootRef.current && resizeObserver) {
       resizeObserver.observe(printRootRef.current)
@@ -109,24 +104,7 @@ const PrintCustomerReceiptPage = () => {
     }
   }, [printMode, selectedItem?.id, selectedItem?.allocations?.length])
 
-  useEffect(() => {
-    if (!autoPrint) return
-    if (detailLoading || printLoading) return
-    if (error) return
-    if (!selectedItem?.id) return
-    if (Number(selectedItem.id) !== Number(id)) return
-    if (printedRef.current) return
-
-    printedRef.current = true
-    const timer = window.setTimeout(() => {
-      window.focus?.()
-      window.print?.()
-    }, 300)
-
-    return () => window.clearTimeout(timer)
-  }, [autoPrint, detailLoading, printLoading, error, id, selectedItem?.id, printMode])
-
-  const handleBack = () => {
+  const handleBack = useCallback(() => {
     const currentPath = window.location.pathname
     const printIndex = currentPath.indexOf('/print')
 
@@ -142,35 +120,58 @@ const PrintCustomerReceiptPage = () => {
     }
 
     navigate(-1)
-  }
+  }, [navigate])
 
-  const handlePrint = () => {
-    window.focus?.()
-    window.print?.()
-  }
+  const handlePrint = useCallback(() => {
+    try {
+      window.focus?.()
+      window.print?.()
+    } catch {
+      // Ignore browser print failures; the document remains available for retry.
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!autoPrint) return
+    if (detailLoading || printLoading) return
+    if (error) return
+    if (!selectedItem?.id) return
+    if (Number(selectedItem.id) !== Number(id)) return
+    if (printedRef.current) return
+
+    printedRef.current = true
+    const timer = window.setTimeout(handlePrint, 300)
+    return () => window.clearTimeout(timer)
+  }, [autoPrint, detailLoading, printLoading, error, id, selectedItem?.id, handlePrint])
 
   if (!id) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-900 p-6 font-sans text-white">
-        <div className="w-full max-w-md space-y-4 rounded-3xl border border-zinc-800 bg-zinc-900 p-6 text-center shadow-xl">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl border border-rose-500/20 bg-rose-500/10 text-rose-400">
-            <AlertTriangle className="h-5 w-5" />
-          </div>
-          <div>
-            <h1 className="text-base font-black tracking-tight text-white">ไม่พบเลขที่ใบรับเงิน</h1>
-            <p className="mt-1 text-xs font-bold text-zinc-400">
-              กรุณาตรวจสอบเส้นทางเอกสารก่อนพิมพ์อีกครั้ง
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={handleBack}
-            className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-zinc-700 bg-zinc-800 px-4 py-2.5 text-xs font-black text-zinc-200 transition hover:bg-zinc-700 hover:text-white"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" />
-            <span>กลับไปหน้ารายการใบรับเงิน</span>
-          </button>
-        </div>
+      <div className="min-h-screen bg-slate-900 p-8 text-center font-bold text-rose-400">
+        ไม่พบเลขที่ใบรับเงิน
+      </div>
+    )
+  }
+
+  if (detailLoading || printLoading) {
+    return (
+      <div className="min-h-screen bg-slate-900 p-8 text-center font-bold text-zinc-400">
+        กำลังโหลดข้อมูลใบรับเงิน...
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-slate-900 p-8 text-center font-bold text-rose-400">
+        เกิดข้อผิดพลาด: {error}
+      </div>
+    )
+  }
+
+  if (!selectedItem?.id) {
+    return (
+      <div className="min-h-screen bg-slate-900 p-8 text-center font-bold text-zinc-400">
+        ไม่พบข้อมูลใบรับเงินตามรหัสอ้างอิง
       </div>
     )
   }
@@ -178,6 +179,10 @@ const PrintCustomerReceiptPage = () => {
   return (
     <>
       <style>{`
+        .customer-receipt-print-root {
+          font-family: 'THSarabunNew', 'TH Sarabun New', 'Sarabun', system-ui, sans-serif;
+        }
+
         @page {
           size: ${printMode === 'SHORT' ? '80mm auto' : 'A4'};
           margin: ${printMode === 'SHORT' ? '0' : '10mm'};
@@ -208,12 +213,12 @@ const PrintCustomerReceiptPage = () => {
             visibility: hidden !important;
           }
 
-          #customer-receipt-print-root,
-          #customer-receipt-print-root * {
+          .customer-receipt-print-root,
+          .customer-receipt-print-root * {
             visibility: visible !important;
           }
 
-          #customer-receipt-print-root {
+          .customer-receipt-print-root {
             position: absolute !important;
             top: 0 !important;
             left: 0 !important;
@@ -233,109 +238,74 @@ const PrintCustomerReceiptPage = () => {
         }
       `}</style>
 
-      <div className="min-h-screen bg-slate-900 p-6 font-sans text-white print:min-h-0 print:bg-white print:p-0">
-        <div className="mx-auto mb-6 flex max-w-5xl flex-col items-center justify-between gap-4 rounded-2xl border border-zinc-800/80 bg-zinc-900 p-4 shadow-lg backdrop-blur-md print:hidden sm:flex-row">
-          <div className="min-w-0 self-start sm:self-center">
-            <h1 className="flex items-center gap-1.5 text-base font-black tracking-tight text-white">
-              <FileCheck className="h-4 w-4 text-orange-400" />
-              พิมพ์ใบเสร็จรับเงินลูกหนี้
-            </h1>
-            <p className="mt-0.5 text-xs font-bold text-zinc-400">
-              เลขที่อ้างอิง:{' '}
-              <span className="font-mono font-black text-amber-400">
-                {selectedItem?.code || '—'}
-              </span>
-            </p>
-          </div>
-
-          <div className="flex w-full shrink-0 select-none items-center justify-center rounded-xl border border-zinc-800 bg-zinc-950 p-1 sm:w-auto">
-            <button
-              type="button"
-              onClick={() => setPrintMode('SHORT')}
-              className={`flex h-7 w-full items-center justify-center gap-1 rounded-md px-3 text-xs font-black transition-all sm:w-auto ${
-                printMode === 'SHORT'
-                  ? 'bg-gradient-to-b from-amber-400 to-orange-500 text-white shadow-sm'
-                  : 'text-zinc-400 hover:text-white'
-              }`}
-            >
-              <Smartphone className="h-3.5 w-3.5" /> สลิป 80mm
-            </button>
-            <button
-              type="button"
-              onClick={() => setPrintMode('FULL')}
-              className={`flex h-7 w-full items-center justify-center gap-1 rounded-md px-3 text-xs font-black transition-all sm:w-auto ${
-                printMode === 'FULL'
-                  ? 'bg-gradient-to-b from-amber-400 to-orange-500 text-white shadow-sm'
-                  : 'text-zinc-400 hover:text-white'
-              }`}
-            >
-              <FileText className="h-3.5 w-3.5" /> ใบเสร็จ A4
-            </button>
-          </div>
-
-          <div className="flex w-full shrink-0 items-center gap-2 sm:w-auto">
+      <div className="w-full bg-white px-4 py-3 print:hidden">
+        <div className="mx-auto flex max-w-[210mm] flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
               onClick={handleBack}
-              className="inline-flex h-9 w-full items-center justify-center gap-1 rounded-xl border border-zinc-700 bg-zinc-800 px-4 text-xs font-black text-zinc-200 shadow-sm transition hover:bg-zinc-700 sm:w-auto"
+              className="inline-flex items-center justify-center rounded-lg border border-slate-600 bg-slate-800 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700"
             >
-              <ArrowLeft className="h-3.5 w-3.5" />
-              <span>กลับ</span>
+              กลับ
             </button>
-
             <button
               type="button"
               onClick={handlePrint}
-              disabled={detailLoading || printLoading || !selectedItem?.id}
-              className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-xl border border-amber-500/20 bg-gradient-to-b from-amber-400 to-orange-500 px-4 text-xs font-black text-white shadow-md transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50 disabled:transform-none disabled:shadow-none sm:w-auto"
+              className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-blue-700"
             >
-              <Printer className="h-3.5 w-3.5" />
-              <span>พิมพ์ ({printMode === 'SHORT' ? '80mm' : 'A4'})</span>
+              พิมพ์ใบเสร็จ
             </button>
           </div>
-        </div>
 
-        {detailLoading || printLoading ? (
-          <div className="mx-auto flex max-w-5xl select-none flex-col items-center justify-center gap-3 rounded-3xl border border-zinc-800 bg-zinc-900 p-12 text-center text-sm font-bold text-zinc-400 shadow-sm print:hidden">
-            <Loader2 className="h-6 w-6 animate-spin text-orange-400" />
-            <span>กำลังโหลดข้อมูลใบรับเงิน...</span>
-          </div>
-        ) : error ? (
-          <div className="mx-auto max-w-5xl space-y-4 rounded-3xl border border-rose-500/20 bg-zinc-900 p-6 text-center shadow-sm print:hidden">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl border border-rose-500/20 bg-rose-500/10 text-rose-400">
-              <AlertTriangle className="h-5 w-5" />
-            </div>
-            <div>
-              <h2 className="text-base font-black tracking-tight text-white">ไม่สามารถโหลดข้อมูลใบรับเงินได้</h2>
-              <p className="mt-1 text-xs font-bold text-rose-400">{error}</p>
-            </div>
-          </div>
-        ) : !selectedItem?.id ? (
-          <div className="mx-auto max-w-5xl space-y-4 rounded-3xl border border-amber-500/20 bg-zinc-900 p-6 text-center shadow-sm print:hidden">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl border border-amber-500/20 bg-amber-500/10 text-amber-400">
-              <AlertTriangle className="h-5 w-5" />
-            </div>
-            <h2 className="text-base font-black tracking-tight text-white">ไม่พบข้อมูลใบรับเงิน</h2>
-          </div>
-        ) : (
-          <div className="w-full overflow-x-auto bg-slate-900 p-1 text-black print:bg-white">
-            <div
-              id="customer-receipt-print-root"
-              ref={printRootRef}
-              className={
-                printMode === 'SHORT'
-                  ? 'mx-auto w-[80mm] max-w-[80mm] bg-white text-black shadow-sm print:shadow-none'
-                  : 'mx-auto max-w-[210mm] bg-white text-black shadow-sm print:max-w-none print:shadow-none'
-              }
+          <div className="flex items-center rounded-lg border border-slate-200 bg-slate-50 p-1">
+            <button
+              type="button"
+              onClick={() => setPrintMode('FULL')}
+              className={`rounded-md px-3 py-1.5 text-sm font-bold ${
+                printMode === 'FULL' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'
+              }`}
             >
-              {printMode === 'SHORT' ? (
-                <CustomerReceiptShortPrintLayout receipt={selectedItem} />
-              ) : (
-                <CustomerReceiptPrintLayout receipt={selectedItem} />
-              )}
-            </div>
+              A4
+            </button>
+            <button
+              type="button"
+              onClick={() => setPrintMode('SHORT')}
+              className={`rounded-md px-3 py-1.5 text-sm font-bold ${
+                printMode === 'SHORT' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'
+              }`}
+            >
+              80mm
+            </button>
           </div>
-        )}
+
+          <div className="text-right text-xs font-medium text-slate-500">
+            <div>{selectedItem?.code || '-'}</div>
+            {autoPrint ? <div className="text-emerald-600">Auto print เปิดอยู่</div> : null}
+          </div>
+        </div>
+      </div>
+
+      <div
+        className={`w-full bg-white text-black dark:bg-white dark:text-black ${
+          printMode === 'SHORT'
+            ? 'px-4 py-6 print:m-0 print:h-auto print:min-h-0 print:w-auto print:p-0'
+            : 'px-4 py-8 print:p-0'
+        }`}
+      >
+        <div
+          ref={printRootRef}
+          className={`customer-receipt-print-root mx-auto bg-white text-black dark:bg-white dark:text-black ${
+            printMode === 'SHORT'
+              ? 'w-[80mm] max-w-[80mm] rounded-xl border border-zinc-200 shadow-sm print:border-none print:shadow-none'
+              : 'max-w-[210mm] rounded-2xl border border-zinc-200 shadow-sm print:border-none print:shadow-none'
+          }`}
+        >
+          {printMode === 'SHORT' ? (
+            <CustomerReceiptShortPrintLayout receipt={selectedItem} />
+          ) : (
+            <CustomerReceiptPrintLayout receipt={selectedItem} />
+          )}
+        </div>
       </div>
     </>
   )

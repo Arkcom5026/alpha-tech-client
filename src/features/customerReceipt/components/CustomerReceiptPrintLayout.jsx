@@ -10,6 +10,71 @@ import {
   getCustomerReceiptVatSummary,
 } from '../utils/customerReceiptDocumentMapper'
 
+const round2 = (value) => Number((Number(value || 0)).toFixed(2))
+
+const bahtText = (amount) => {
+  const number = Number(amount)
+  if (!Number.isFinite(number)) return 'ศูนย์บาทถ้วน'
+
+  const fixed = round2(number)
+  const absolute = Math.abs(fixed)
+  const baht = Math.floor(absolute)
+  const satang = Math.round((absolute - baht) * 100)
+  const digits = ['ศูนย์', 'หนึ่ง', 'สอง', 'สาม', 'สี่', 'ห้า', 'หก', 'เจ็ด', 'แปด', 'เก้า']
+  const units = ['', 'สิบ', 'ร้อย', 'พัน', 'หมื่น', 'แสน']
+
+  const readUnderMillion = (value) => {
+    if (!value) return ''
+
+    const text = String(value).padStart(6, '0')
+    let result = ''
+
+    for (let index = 0; index < 6; index += 1) {
+      const digit = Number(text[index])
+      const position = 5 - index
+      if (digit === 0) continue
+
+      if (position === 1) {
+        if (digit === 1) result += 'สิบ'
+        else if (digit === 2) result += 'ยี่สิบ'
+        else result += `${digits[digit]}สิบ`
+      } else if (position === 0) {
+        if (digit === 1 && value > 1 && Number(text[4]) !== 0) result += 'เอ็ด'
+        else result += digits[digit]
+      } else {
+        result += `${digits[digit]}${units[position]}`
+      }
+    }
+
+    return result
+  }
+
+  const readNumber = (value) => {
+    if (value === 0) return 'ศูนย์'
+
+    let remaining = value
+    let result = ''
+    let firstChunk = true
+
+    while (remaining > 0) {
+      const chunk = remaining % 1_000_000
+      if (chunk) {
+        const chunkText = readUnderMillion(chunk)
+        result = firstChunk ? chunkText + result : `${chunkText}ล้าน${result}`
+      }
+      remaining = Math.floor(remaining / 1_000_000)
+      firstChunk = false
+    }
+
+    return result
+  }
+
+  const sign = fixed < 0 ? 'ลบ' : ''
+  const bahtPart = `${sign}${readNumber(baht)}บาท`
+  const satangPart = satang === 0 ? 'ถ้วน' : `${readNumber(satang)}สตางค์`
+  return bahtPart + satangPart
+}
+
 const CustomerReceiptPrintLayout = ({ receipt }) => {
   const customer = receipt?.customer || null
   const branch = receipt?.branch || null
@@ -19,109 +84,161 @@ const CustomerReceiptPrintLayout = ({ receipt }) => {
   const emptyRowCount = Math.max(20 - lineItems.length, 0)
 
   return (
-    <div
-      className="customer-receipt-full-root mx-auto flex min-h-[297mm] w-[210mm] flex-col overflow-hidden bg-white px-5 pb-4 pt-4 text-black"
-      style={{ fontFamily: "'THSarabunNew', 'TH Sarabun New', 'Sarabun', system-ui, sans-serif" }}
-    >
-      <div className="mb-2 flex items-start justify-between gap-4 border-b border-black pb-2">
-        <div className="leading-tight">
-          <h2 className="text-[18px] font-black">{branch?.name || branch?.branchName || '-'}</h2>
-          <p className="mt-0.5 text-[13px]">{buildCustomerReceiptBranchAddress(branch)}</p>
-          <p className="text-[13px]">โทร {branch?.phone || '-'}</p>
-          <p className="text-[13px] font-bold">เลขประจำตัวผู้เสียภาษี {branch?.taxId || '-'}</p>
-        </div>
-        <div className="rounded border border-black px-3 py-1 text-center text-[12px] font-bold leading-tight">
-          ต้นฉบับลูกค้า
-          <br />
-          CUSTOMER ORIGINAL
-        </div>
-      </div>
+    <>
+      <style>{`
+        @media print {
+          .customer-receipt-full-root {
+            width: 210mm !important;
+            min-height: 297mm !important;
+            height: auto !important;
+          }
 
-      <div className="mb-4 mt-2 text-center leading-tight">
-        <h1 className="text-[24px] font-black underline">ใบเสร็จรับเงินลูกหนี้</h1>
-        <div className="text-[12px] tracking-wide">CUSTOMER RECEIPT</div>
-      </div>
+          .customer-receipt-no-break {
+            page-break-inside: avoid;
+            break-inside: avoid;
+          }
 
-      <div className="mb-3 grid grid-cols-[2.7fr_1.5fr] gap-4 text-[13px] leading-snug">
-        <div className="rounded border border-black p-2.5">
-          <p><span className="font-bold">ลูกค้า:</span> {buildCustomerReceiptCustomerName(customer)}</p>
-          <p><span className="font-bold">ที่อยู่:</span> {buildCustomerReceiptCustomerAddress(customer)}</p>
-          <p><span className="font-bold">โทร:</span> {customer?.user?.loginId || customer?.phone || customer?.phoneNumber || '-'}</p>
-          <p><span className="font-bold">เลขประจำตัวผู้เสียภาษี:</span> {customer?.taxId || customer?.taxNo || '-'}</p>
-        </div>
-        <div className="rounded border border-black p-2.5">
-          <p><span className="font-bold">วันที่:</span> {formatCustomerReceiptDate(receipt?.receivedAt)}</p>
-          <p><span className="font-bold">เลขที่:</span> {receipt?.code || '-'}</p>
-          <p><span className="font-bold">วิธีรับชำระ:</span> {receipt?.paymentMethod || '-'}</p>
-        </div>
-      </div>
+          .customer-receipt-full-root table {
+            page-break-inside: auto;
+          }
 
-      <table className="mb-2 w-full table-fixed border-collapse text-[12px] leading-snug">
-        <thead>
-          <tr>
-            <th className="h-[28px] w-[7%] border border-black px-1 text-center">ลำดับ</th>
-            <th className="h-[28px] w-[18%] border border-black px-2 text-left">เลขที่บิล</th>
-            <th className="h-[28px] w-[35%] border border-black px-2 text-left">รายละเอียด</th>
-            <th className="h-[28px] w-[10%] border border-black px-1 text-center">จำนวน</th>
-            <th className="h-[28px] w-[8%] border border-black px-1 text-center">หน่วย</th>
-            <th className="h-[28px] w-[11%] border border-black px-2 text-right">ราคาต่อหน่วย</th>
-            <th className="h-[28px] w-[11%] border border-black px-2 text-right">จำนวนเงิน</th>
-          </tr>
-        </thead>
-        <tbody>
-          {lineItems.map((item, index) => (
-            <tr key={item.key || index}>
-              <td className="h-[28px] border border-black px-1 text-center">{index + 1}</td>
-              <td className="h-[28px] border border-black px-2">{item.saleCode}</td>
-              <td className="h-[28px] border border-black px-2 font-bold">
-                {item.productName}
-                {item.productModel ? <span className="ml-1 font-normal">รุ่น {item.productModel}</span> : null}
-              </td>
-              <td className="h-[28px] border border-black px-1 text-center">{item.quantity}</td>
-              <td className="h-[28px] border border-black px-1 text-center">{item.unit}</td>
-              <td className="h-[28px] border border-black px-2 text-right">{formatCustomerReceiptCurrency(item.unitPrice)}</td>
-              <td className="h-[28px] border border-black px-2 text-right font-bold">{formatCustomerReceiptCurrency(item.amount)}</td>
-            </tr>
-          ))}
-          {Array.from({ length: emptyRowCount }).map((_, index) => (
-            <tr key={`empty-${index}`}>
-              {Array.from({ length: 7 }).map((__, columnIndex) => (
-                <td key={columnIndex} className="h-[28px] border border-black">&nbsp;</td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
+          .customer-receipt-full-root tr,
+          .customer-receipt-full-root td,
+          .customer-receipt-full-root th {
+            page-break-inside: avoid;
+            break-inside: avoid;
+          }
+        }
+      `}</style>
 
-      <div className="mt-auto grid grid-cols-2 gap-4 border-t border-dashed border-slate-300 pt-3 text-[13px]">
-        <div className="flex items-center justify-center rounded bg-slate-50 p-3 text-center">
+      <div
+        className="customer-receipt-full-root mx-auto flex w-full flex-col overflow-hidden rounded-md border border-gray-600 bg-white px-5 pb-3 pt-4 text-sm text-black"
+        style={{ width: '210mm', minHeight: '297mm', height: 'auto', fontFamily: 'Tahoma, Arial, sans-serif' }}
+      >
+        <div className="customer-receipt-no-break mb-2 flex items-start justify-between gap-3 border-b pb-2">
           <div>
-            <div className="text-[12px] font-bold text-slate-600">ยอดรับชำระสุทธิ</div>
-            <div className="mt-1 text-[19px] font-black">{formatCustomerReceiptCurrency(total)} บาท</div>
+            <h2 className="text-[16px] font-bold leading-tight">{branch?.name || branch?.branchName || '-'}</h2>
+            <p>ที่อยู่: {buildCustomerReceiptBranchAddress(branch)}</p>
+            <p>โทร: {branch?.phone || '-'}</p>
+            <p>เลขประจำตัวผู้เสียภาษี: {branch?.taxId || '-'}</p>
           </div>
-        </div>
-        <div className="space-y-1">
-          <div className="flex justify-between border-b border-slate-200 py-0.5">
-            <span>มูลค่าก่อนภาษี</span>
-            <span>{formatCustomerReceiptCurrency(beforeVat)} บาท</span>
-          </div>
-          <div className="flex justify-between border-b border-slate-200 py-0.5">
-            <span>ภาษีมูลค่าเพิ่ม {vatRate}%</span>
-            <span>{formatCustomerReceiptCurrency(vatAmount)} บาท</span>
-          </div>
-          <div className="flex justify-between border-b border-black bg-slate-50 px-1 py-1 text-[15px] font-black">
-            <span>รวมทั้งสิ้น</span>
-            <span>{formatCustomerReceiptCurrency(total)} บาท</span>
-          </div>
-        </div>
-      </div>
 
-      <div className="mt-8 border-t border-slate-200 pt-4 text-center text-[12px]">
-        <div className="mx-auto w-[42%] border-t border-dashed border-black pt-1.5 font-bold">
-          เจ้าหน้าที่ผู้รับชำระเงิน
+          <div className="text-right">
+            <p className="rounded-md border border-gray-400 px-3 py-2 text-[13px] font-bold leading-tight">
+              ต้นฉบับลูกค้า
+              <br />
+              CUSTOMER ORIGINAL
+            </p>
+          </div>
+        </div>
+
+        <h1 className="mb-4 text-center text-[20px] font-bold leading-tight underline">
+          ใบเสร็จรับเงินลูกหนี้
+          <br />
+          CUSTOMER RECEIPT
+        </h1>
+
+        <div className="customer-receipt-no-break mb-4 grid grid-cols-[2.8fr_1.7fr] gap-4 text-[15px]">
+          <div className="space-y-1.5 rounded-lg border border-black p-3 leading-tight">
+            <p>ลูกค้า: {buildCustomerReceiptCustomerName(customer)}</p>
+            <p>ที่อยู่: {buildCustomerReceiptCustomerAddress(customer)}</p>
+            <p>โทร: {customer?.user?.loginId || customer?.phone || customer?.phoneNumber || '-'}</p>
+            <p>เลขประจำตัวผู้เสียภาษี: {customer?.taxId || customer?.taxNo || '-'}</p>
+          </div>
+
+          <div className="space-y-1.5 rounded-lg border border-black p-3 leading-tight">
+            <p>วันที่: {formatCustomerReceiptDate(receipt?.receivedAt || receipt?.createdAt)}</p>
+            <p>เลขที่: {receipt?.code || '-'}</p>
+            <p>วิธีรับชำระ: {receipt?.paymentMethod || '-'}</p>
+          </div>
+        </div>
+
+        <table className="mb-3 w-full table-fixed border border-black text-xs">
+          <thead className="bg-gray-100">
+            <tr className="border-b border-black">
+              <th className="h-[28px] w-[7%] border border-black px-1 leading-tight">ลำดับ<br />ITEM</th>
+              <th className="h-[28px] w-[18%] border border-black px-2 leading-tight">เลขที่บิล<br />BILL NO.</th>
+              <th className="h-[28px] w-[31%] border border-black px-2 leading-tight">รายการ<br />DESCRIPTION</th>
+              <th className="h-[28px] w-[9%] border border-black px-1 leading-tight">จำนวน<br />QTY</th>
+              <th className="h-[28px] w-[8%] border border-black px-1 leading-tight">หน่วย<br />UNIT</th>
+              <th className="h-[28px] w-[13.5%] border border-black px-2 text-right leading-tight">ราคาต่อหน่วย<br />UNIT PRICE</th>
+              <th className="h-[28px] w-[13.5%] border border-black px-2 text-right leading-tight">จำนวนเงิน<br />AMOUNT</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {lineItems.map((item, index) => (
+              <tr key={item.key || index}>
+                <td className="h-[28px] border border-black px-1 text-center align-top">{index + 1}</td>
+                <td className="h-[28px] border border-black px-2 align-top">{item.saleCode}</td>
+                <td className="h-[28px] border border-black px-2 align-top whitespace-normal break-words">
+                  {item.productName}
+                  {item.productModel ? <span className="ml-1">รุ่น {item.productModel}</span> : null}
+                </td>
+                <td className="h-[28px] border border-black px-1 text-center align-top">{item.quantity}</td>
+                <td className="h-[28px] border border-black px-1 text-center align-top">{item.unit}</td>
+                <td className="h-[28px] border border-black px-2 text-right align-top tabular-nums">
+                  {formatCustomerReceiptCurrency(item.unitPrice)}
+                </td>
+                <td className="h-[28px] border border-black px-2 text-right align-top tabular-nums">
+                  {formatCustomerReceiptCurrency(item.amount)}
+                </td>
+              </tr>
+            ))}
+
+            {Array.from({ length: emptyRowCount }).map((_, index) => (
+              <tr key={`empty-${index}`}>
+                {Array.from({ length: 7 }).map((__, columnIndex) => (
+                  <td key={columnIndex} className="h-[28px] border border-black">&nbsp;</td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        <div
+          className="customer-receipt-no-break mt-auto grid grid-cols-2 gap-5 pt-3 text-[13px]"
+          style={{ minHeight: '110px' }}
+        >
+          <div className="flex flex-col items-center justify-start pt-3 text-center leading-tight">
+            <p className="font-bold">จำนวนเงินเป็นตัวอักษร</p>
+            <p className="text-[18px] font-semibold italic">({bahtText(total)})</p>
+          </div>
+
+          <div>
+            <p className="flex justify-between border-b border-t border-black py-1 text-[14px]">
+              <span>รวมเงิน</span>
+              <span>{formatCustomerReceiptCurrency(beforeVat)} ฿</span>
+            </p>
+            <p className="flex justify-between border-b border-black py-1 text-[14px]">
+              <span>ภาษีมูลค่าเพิ่ม {vatRate}%</span>
+              <span>{formatCustomerReceiptCurrency(vatAmount)} ฿</span>
+            </p>
+            <p className="flex justify-between border-b border-black bg-gray-100 py-1 text-[18px] font-extrabold tabular-nums">
+              <span>จำนวนเงินรวมทั้งสิ้น</span>
+              <span>{formatCustomerReceiptCurrency(total)} ฿</span>
+            </p>
+          </div>
+        </div>
+
+        <div
+          className="customer-receipt-no-break mt-2 grid grid-cols-2 gap-12 text-center text-[15px]"
+          style={{ minHeight: '92px' }}
+        >
+          <div className="flex h-[92px] flex-col justify-end">
+            <div className="flex min-h-[28px] flex-col items-center justify-start border-t border-dashed border-black pt-1">
+              <span className="mt-1">ผู้ชำระเงิน / PAID BY</span>
+            </div>
+          </div>
+
+          <div className="flex h-[92px] flex-col justify-end">
+            <div className="flex min-h-[28px] flex-col items-center justify-start border-t border-dashed border-black pt-1">
+              <span className="mt-1">ผู้รับชำระเงิน / RECEIVED BY</span>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
+    </>
   )
 }
 

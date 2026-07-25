@@ -14,10 +14,15 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import apiClient from '@/utils/apiClient';
 
 import { purchaseOrderSchema } from '../schema/purchaseOrderSchema';
 import { usePurchaseOrderStore } from '../store/purchaseOrderStore';
+import {
+  getPurchaseOrderBrandsByProductType,
+  getPurchaseOrderDropdowns,
+  getSuppliers,
+  searchPurchaseOrderProducts,
+} from '../api/purchaseOrderApi';
 import { useAuthStore } from '@/features/auth/store/authStore';
 
 const toPositiveInt = (value) => {
@@ -217,14 +222,8 @@ export const usePurchaseOrderForm = (mode, searchText) => {
     let alive = true;
     setSuppliersLoading(true);
 
-    apiClient
-      .get('suppliers', {
-        params: {
-          branchId: currentBranchId,
-          _ts: Date.now(),
-        },
-      })
-      .then(({ data }) => {
+    getSuppliers({ branchId: currentBranchId, _ts: Date.now() })
+      .then((data) => {
         if (!alive) return;
         setSupplierList(pickArray(data));
       })
@@ -248,39 +247,16 @@ export const usePurchaseOrderForm = (mode, searchText) => {
     let alive = true;
     setDropdownsLoading(true);
 
-    Promise.allSettled([
-      apiClient.get('product-types/dropdowns', {
-        params: {
-          includeInactive: 'false',
-          _ts: Date.now(),
-        },
-      }),
-      apiClient.get('brands/dropdowns', {
-        params: {
-          includeInactive: 'false',
-          _ts: Date.now(),
-        },
-      }),
-    ])
-      .then((results) => {
+    getPurchaseOrderDropdowns()
+      .then((payload) => {
         if (!alive) return;
-
-        const productTypesResult = results[0];
-        const brandsResult = results[1];
-
-        const productTypes =
-          productTypesResult.status === 'fulfilled'
-            ? pickArray(productTypesResult.value?.data).map(normalizeProductTypeOption).filter(Boolean)
-            : [];
-
-        const brands =
-          brandsResult.status === 'fulfilled'
-            ? pickArray(brandsResult.value?.data).map(normalizeBrandOption).filter(Boolean)
-            : [];
-
         setDropdowns({
-          productTypes,
-          brands,
+          productTypes: pickArray(payload?.productTypes)
+            .map(normalizeProductTypeOption)
+            .filter(Boolean),
+          brands: pickArray(payload?.brands)
+            .map(normalizeBrandOption)
+            .filter(Boolean),
         });
       })
       .catch((err) => {
@@ -303,15 +279,8 @@ export const usePurchaseOrderForm = (mode, searchText) => {
 
     let alive = true;
 
-    apiClient
-      .get('brands/dropdowns', {
-        params: {
-          productTypeId,
-          includeInactive: 'false',
-          _ts: Date.now(),
-        },
-      })
-      .then(({ data }) => {
+    getPurchaseOrderBrandsByProductType(productTypeId)
+      .then((data) => {
         if (!alive) return;
         const brands = pickArray(data).map(normalizeBrandOption).filter(Boolean);
         setDropdowns((prev) => ({ ...prev, brands }));
@@ -391,8 +360,6 @@ export const usePurchaseOrderForm = (mode, searchText) => {
     setCreditHint(s ? { used: s.creditBalance || 0, total: s.creditLimit || 0 } : null);
   }, [supplier, supplierList]);
 
-  // Product search owned by Purchase flow.
-  // Important: use POS runtime endpoint so costPrice is available.
   useEffect(() => {
     const productTypeId = toPositiveInt(filter.productTypeId);
     const brandId = toPositiveInt(filter.brandId);
@@ -407,19 +374,12 @@ export const usePurchaseOrderForm = (mode, searchText) => {
     let alive = true;
     setProductsLoading(true);
 
-    apiClient
-      .get('products/pos/search', {
-        params: {
-          productTypeId: productTypeId || undefined,
-          brandId: brandId || undefined,
-          search: search || undefined,
-          take: 50,
-          pageSize: 50,
-          activeOnly: 'true',
-          _ts: Date.now(),
-        },
-      })
-      .then(({ data }) => {
+    searchPurchaseOrderProducts({
+      productTypeId,
+      brandId,
+      search,
+    })
+      .then((data) => {
         if (!alive) return;
         const rows = pickArray(data).map(normalizeProductRow).filter(Boolean);
         setFetchedProducts(rows);

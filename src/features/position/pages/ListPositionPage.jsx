@@ -1,199 +1,236 @@
-
-// --- filepath: src/features/position/pages/ListPositionPage.jsx
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { usePositionStore } from '../stores/positionStore.js';
-
-// Reusable tiny UI (align with ProductTemplateTable style)
-const Badge = ({ children, className = '' }) => (
-  <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${className}`}>{children}</span>
-);
-
-const ActionButton = ({ children, className = '', type = 'button', ...rest }) => (
-  <button
-    type={type}
-    className={`px-3 py-1.5 rounded-md text-sm font-medium transition focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 ${className}`}
-    {...rest}
-  >
-    {children}
-  </button>
-);
+import {
+  Badge,
+  Button,
+  Card,
+  CardBody,
+  Dialog,
+  EmptyState,
+  ErrorState,
+  Input,
+  Page,
+  PageHeader,
+  Select,
+  Stack,
+} from '@/design-system';
 
 const ListPositionPage = () => {
   const navigate = useNavigate();
   const { list, meta, error, message, fetchListAction, toggleActiveAction } = usePositionStore();
 
-  // 🔧 ใช้ state ภายในสำหรับ pagination/filters เพื่อตัด loop
   const [page, setPage] = useState(1);
   const [limit] = useState(20);
   const [search, setSearch] = useState('');
-  const [active, setActive] = useState('all'); // all | true | false
-  const [confirm, setConfirm] = useState(null); // {row, nextActive}
+  const [active, setActive] = useState('all');
+  const [confirm, setConfirm] = useState(null);
+  const [isSaving, setIsSaving] = useState(false);
 
-  // ดึงข้อมูลเมื่อ state เหล่านี้เปลี่ยน (จะไม่วนลูปจาก meta ที่ store อัปเดต)
   useEffect(() => {
-    fetchListAction({ page, limit, search, active: active === 'all' ? undefined : active === 'true' });
+    fetchListAction({
+      page,
+      limit,
+      search,
+      active: active === 'all' ? undefined : active === 'true',
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, limit, search, active]);
 
-  const onEdit = (row) => navigate(`edit/${row.id}`);
+  const rows = Array.isArray(list) ? list : [];
+  const totalPages = Math.max(Number(meta?.pages || 1), 1);
+
+  const visiblePages = useMemo(() => {
+    if (totalPages <= 7) return Array.from({ length: totalPages }, (_, index) => index + 1);
+
+    const start = Math.max(1, Math.min(page - 2, totalPages - 4));
+    return Array.from({ length: 5 }, (_, index) => start + index);
+  }, [page, totalPages]);
 
   const handleToggle = (row) => {
-    const nextActive = !row?.isActive;
-    setConfirm({ row, nextActive });
+    setConfirm({ row, nextActive: !row?.isActive });
   };
 
   const proceedToggle = async () => {
-    if (!confirm?.row) return setConfirm(null);
-    await toggleActiveAction(confirm.row.id);
-    setConfirm(null);
+    if (!confirm?.row || isSaving) return;
+
+    setIsSaving(true);
+    try {
+      await toggleActiveAction(confirm.row.id);
+      setConfirm(null);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const rows = Array.isArray(list) ? list : [];
-
   return (
-    <div className="w-full flex justify-center mt-4">
-      <div className="w-[1100px] bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm rounded-xl overflow-hidden">
-        {/* Header */}
-        <div className="px-4 py-3 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-800/60 sticky top-0 z-10">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <h1 className="text-base font-semibold text-zinc-800 dark:text-zinc-100">ตำแหน่งพนักงาน</h1>
-              {message && <span className="text-xs text-green-600">{message}</span>}
-              {error && <span className="text-xs text-rose-600">{error}</span>}
+    <Page>
+      <div className="mx-auto w-full max-w-6xl">
+        <PageHeader
+          title="ตำแหน่งพนักงาน"
+          description="กำหนดตำแหน่งงานและสถานะการใช้งานสำหรับพนักงานของร้าน"
+          actions={<Button onClick={() => navigate('create')}>เพิ่มตำแหน่ง</Button>}
+        />
+
+        <Stack gap={4}>
+          {message ? <Badge tone="success">{message}</Badge> : null}
+
+          {error ? (
+            <ErrorState
+              title="โหลดข้อมูลตำแหน่งไม่สำเร็จ"
+              description={String(error)}
+              actionLabel="ลองใหม่"
+              onAction={() => fetchListAction({ page, limit, search, active: active === 'all' ? undefined : active === 'true' })}
+            />
+          ) : null}
+
+          <Card>
+            <CardBody>
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_220px]">
+                <Input
+                  placeholder="ค้นหาชื่อตำแหน่ง..."
+                  value={search}
+                  onChange={(event) => {
+                    setSearch(event.target.value);
+                    setPage(1);
+                  }}
+                />
+                <Select
+                  value={active}
+                  onChange={(event) => {
+                    setActive(event.target.value);
+                    setPage(1);
+                  }}
+                >
+                  <option value="all">ทั้งหมด</option>
+                  <option value="true">ใช้งานอยู่</option>
+                  <option value="false">ปิดใช้งาน</option>
+                </Select>
+              </div>
+            </CardBody>
+          </Card>
+
+          <Card>
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead className="border-b border-[hsl(var(--ads-border-default))] bg-[hsl(var(--ads-surface-subtle))] text-left text-[hsl(var(--ads-text-muted))]">
+                  <tr>
+                    <th className="w-16 px-4 py-3 text-center font-semibold">#</th>
+                    <th className="w-[35%] px-4 py-3 font-semibold">ชื่อตำแหน่ง</th>
+                    <th className="px-4 py-3 font-semibold">คำอธิบาย</th>
+                    <th className="w-32 px-4 py-3 text-center font-semibold">สถานะ</th>
+                    <th className="w-52 px-4 py-3 text-right font-semibold">การจัดการ</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((row, index) => (
+                    <tr
+                      key={row.id}
+                      className="border-b border-[hsl(var(--ads-border-default))] last:border-b-0 hover:bg-[hsl(var(--ads-surface-subtle))]"
+                    >
+                      <td className="px-4 py-3 text-center text-[hsl(var(--ads-text-muted))]">
+                        {(page - 1) * limit + index + 1}
+                      </td>
+                      <td className="px-4 py-3 font-medium text-[hsl(var(--ads-text-strong))]">{row.name || '-'}</td>
+                      <td className="px-4 py-3 text-[hsl(var(--ads-text-default))]">{row.description || '-'}</td>
+                      <td className="px-4 py-3 text-center">
+                        <Badge tone={row.isActive ? 'success' : 'neutral'}>
+                          {row.isActive ? 'ใช้งาน' : 'ปิดใช้งาน'}
+                        </Badge>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-wrap justify-end gap-2">
+                          <Button size="sm" variant="secondary" onClick={() => navigate(`edit/${row.id}`)}>
+                            แก้ไข
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant={row.isActive ? 'danger' : 'primary'}
+                            onClick={() => handleToggle(row)}
+                          >
+                            {row.isActive ? 'ปิดใช้งาน' : 'กู้คืน'}
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-            <div className="flex items-center gap-2">
-              
-              <ActionButton className="bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500" onClick={() => navigate('create')}>
-                เพิ่มตำแหน่ง
-              </ActionButton>
-            </div>
-          </div>
-        </div>
 
-        {/* Toolbar */}
-        <div className="px-4 py-3 flex items-center gap-2">
-          <input
-            className="border border-zinc-300 dark:border-zinc-700 rounded-md px-3 py-2 w-full max-w-md bg-white dark:bg-zinc-900"
-            placeholder="ค้นหาชื่อตำแหน่ง..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-          <select
-            className="border border-zinc-300 dark:border-zinc-700 rounded-md px-3 py-2 bg-white dark:bg-zinc-900"
-            value={active}
-            onChange={(e) => setActive(e.target.value)}
-          >
-            <option value="all">ทั้งหมด</option>
-            <option value="true">ใช้งานอยู่</option>
-            <option value="false">ปิดใช้งาน</option>
-          </select>
-        </div>
+            {rows.length === 0 && !error ? (
+              <CardBody>
+                <EmptyState
+                  title={search ? 'ไม่พบตำแหน่งที่ค้นหา' : 'ยังไม่มีข้อมูลตำแหน่งพนักงาน'}
+                  description={search ? 'ลองเปลี่ยนคำค้นหาหรือตัวกรองสถานะ' : 'เพิ่มตำแหน่งแรกเพื่อเริ่มกำหนดโครงสร้างพนักงาน'}
+                  actionLabel={!search ? 'เพิ่มตำแหน่ง' : undefined}
+                  onAction={!search ? () => navigate('create') : undefined}
+                />
+              </CardBody>
+            ) : null}
+          </Card>
 
-        {/* Table */}
-        <table className="min-w-full text-sm">
-          <thead className="text-left text-zinc-600 bg-zinc-50 dark:bg-zinc-800">
-            <tr className="border-b border-zinc-200 dark:border-zinc-800">
-              <th className="px-4 py-2 w-[60px] text-center">#</th>
-              <th className="px-4 py-2 w-[40%]">ชื่อตำแหน่ง</th>
-              <th className="px-4 py-2">คำอธิบาย</th>
-              
-              <th className="px-4 py-2 w-[10%] text-center">สถานะ</th>
-              <th className="px-4 py-2 text-right w-[20%]">การจัดการ</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.length === 0 && (
-              <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-zinc-500">ไม่พบข้อมูล</td>
-              </tr>
-            )}
-
-            {rows.map((row, idx) => (
-            <tr
-              key={row.id}
-              className={`border-b border-zinc-100 dark:border-zinc-800 hover:bg-zinc-50/60 dark:hover:bg-zinc-800/50 ${idx % 2 === 1 ? 'bg-white dark:bg-zinc-900' : 'bg-zinc-50/40 dark:bg-zinc-900/40'}`}
-            >
-              {/* # ลำดับ */}
-              <td className="px-4 py-3 text-center">{(page - 1) * limit + idx + 1}</td>
-
-              {/* ชื่อตำแหน่ง */}
-              <td className="px-4 py-3">{row.name || '-'}</td>
-
-              {/* คำอธิบาย */}
-              <td className="px-4 py-3">{row.description || '-'}</td>
-
-              {/* สถานะ */}
-              <td className="px-4 py-3 text-center">
-                {row.isActive ? (
-                  <Badge className="bg-emerald-50 text-emerald-700 ring-emerald-600/20 dark:bg-emerald-900/30 dark:text-emerald-300 dark:ring-emerald-400/30">ใช้งาน</Badge>
-                ) : (
-                  <Badge className="bg-zinc-200 text-zinc-800 ring-zinc-400/40 dark:bg-zinc-700 dark:text-zinc-200 dark:ring-zinc-500/40">ปิดใช้งาน</Badge>
-                )}
-              </td>
-
-              {/* การจัดการ */}
-              <td className="px-4 py-3 text-right whitespace-nowrap">
-                <div className="inline-flex items-center gap-2 justify-end min-w-[220px]">
-                  <ActionButton
-                    className="border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-                    onClick={() => onEdit(row)}
+          {totalPages > 1 ? (
+            <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-[hsl(var(--ads-text-muted))]">
+              <span>
+                หน้า {page} / {totalPages}
+              </span>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  disabled={page <= 1}
+                  onClick={() => setPage((current) => Math.max(1, current - 1))}
+                >
+                  ก่อนหน้า
+                </Button>
+                {visiblePages.map((pageNumber) => (
+                  <Button
+                    key={pageNumber}
+                    size="sm"
+                    variant={pageNumber === page ? 'primary' : 'secondary'}
+                    onClick={() => setPage(pageNumber)}
                   >
-                    แก้ไข
-                  </ActionButton>
-                  <ActionButton
-                    className={`text-white ${row.isActive ? 'bg-rose-600 hover:bg-rose-700 focus:ring-rose-500' : 'bg-emerald-600 hover:bg-emerald-700 focus:ring-emerald-500'}`}
-                    onClick={() => handleToggle(row)}
-                  >
-                    {row.isActive ? 'ปิดใช้งาน' : 'กู้คืน'}
-                  </ActionButton>
-                </div>
-              </td>
-            </tr>
-          ))}
-          </tbody>
-        </table>
-
-        {/* Pagination */}
-        {meta?.pages > 1 && (
-          <div className="flex gap-2 p-4 justify-center border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50/60 dark:bg-zinc-800/40">
-            {Array.from({ length: meta.pages }, (_, i) => i + 1).map((p) => (
-              <button
-                key={p}
-                className={`px-3 py-1.5 border rounded ${p === page ? 'bg-gray-200 dark:bg-zinc-700' : ''}`}
-                onClick={() => setPage(p)}
-              >
-                {p}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* Inline confirm (same pattern as ProductTemplateTable) */}
-        {confirm && (
-          <div className="px-4 py-3 flex items-center justify-between bg-amber-50/90 dark:bg-amber-900/30 border-t border-amber-200 dark:border-amber-800">
-            <div className="text-sm text-amber-900 dark:text-amber-200">
-              ยืนยันการ{confirm.nextActive ? 'กู้คืน' : 'ปิดใช้งาน'} ตำแหน่ง “{confirm.row?.name}” หรือไม่?
+                    {pageNumber}
+                  </Button>
+                ))}
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  disabled={page >= totalPages}
+                  onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
+                >
+                  ถัดไป
+                </Button>
+              </div>
             </div>
-            <div className="flex gap-2">
-              <ActionButton className="border border-amber-300 text-amber-900 hover:bg-amber-100" onClick={() => setConfirm(null)}>
-                ยกเลิก
-              </ActionButton>
-              <ActionButton className="bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500" onClick={proceedToggle}>
-                ยืนยัน
-              </ActionButton>
-            </div>
-          </div>
-        )}
+          ) : null}
+        </Stack>
       </div>
-    </div>
+
+      <Dialog
+        open={Boolean(confirm)}
+        onClose={() => !isSaving && setConfirm(null)}
+        title={`${confirm?.nextActive ? 'กู้คืน' : 'ปิดใช้งาน'}ตำแหน่ง`}
+        description={`ยืนยันการ${confirm?.nextActive ? 'กู้คืน' : 'ปิดใช้งาน'}ตำแหน่ง “${confirm?.row?.name || ''}” หรือไม่?`}
+        footer={(
+          <>
+            <Button variant="secondary" onClick={() => setConfirm(null)} disabled={isSaving}>
+              ยกเลิก
+            </Button>
+            <Button
+              variant={confirm?.nextActive ? 'primary' : 'danger'}
+              loading={isSaving}
+              loadingLabel="กำลังบันทึก..."
+              onClick={proceedToggle}
+            >
+              ยืนยัน
+            </Button>
+          </>
+        )}
+      />
+    </Page>
   );
 };
 
 export default ListPositionPage;
-
-
-
-
-
-

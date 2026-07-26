@@ -4,23 +4,21 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import ProductTypeTable from '../components/ProductTypeTable.jsx';
 
 import {
-  Button,
   Card,
   CardBody,
   CrudPage,
   CrudPagination,
   CrudPrimaryAction,
   CrudToolbar,
-  EmptyState,
   ErrorState,
+  Input,
   Select,
 } from '@/design-system';
 import useProductTypeStore from '../store/productTypeStore.js';
 import { useAuthStore } from '@/features/auth/store/authStore.js';
 
 const ListProductTypePage = () => {
-  const [hasSearched, setHasSearched] = React.useState(false);
-  const didFetchRef = React.useRef(false);
+  const [isHydratedFromUrl, setIsHydratedFromUrl] = React.useState(false);
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
 
@@ -31,6 +29,8 @@ const ListProductTypePage = () => {
     items,
     page,
     limit,
+    total,
+    totalPages,
     search,
     includeInactive,
     isLoading,
@@ -43,27 +43,32 @@ const ListProductTypePage = () => {
   } = useProductTypeStore();
 
   React.useEffect(() => {
-    const p = Number(params.get('page') || 1);
-    const s = params.get('search') || '';
-    const inc = params.get('includeInactive') === 'true';
+    const nextPage = Math.max(Number(params.get('page') || 1), 1);
+    const nextLimit = Math.max(Number(params.get('limit') || 20), 1);
+    const nextSearch = params.get('search') || '';
+    const nextIncludeInactive = params.get('includeInactive') === 'true';
 
-    setPageAction(p);
-    setSearchAction(s);
-    setIncludeInactiveAction(inc);
-  }, [params, setPageAction, setSearchAction, setIncludeInactiveAction]);
+    setPageAction(nextPage);
+    setLimitAction(nextLimit);
+    setSearchAction(nextSearch);
+    setIncludeInactiveAction(nextIncludeInactive);
+    setIsHydratedFromUrl(true);
+    // URL parameters are intentionally read once when entering the page.
+    // Subsequent changes are driven by the store and synchronized below.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   React.useEffect(() => {
-    if (!hasSearched || didFetchRef.current) return;
-
-    didFetchRef.current = true;
+    if (!isHydratedFromUrl) return;
     fetchListAction();
-  }, [hasSearched, fetchListAction]);
+  }, [isHydratedFromUrl, page, limit, search, includeInactive, fetchListAction]);
 
   React.useEffect(() => {
-    if (!hasSearched) return;
+    if (!isHydratedFromUrl) return;
 
     const next = new URLSearchParams(params);
     next.set('page', String(page));
+    next.set('limit', String(limit));
 
     if (search) next.set('search', search);
     else next.delete('search');
@@ -76,60 +81,10 @@ const ListProductTypePage = () => {
     if (next.toString() !== params.toString()) {
       setParams(next, { replace: true });
     }
-  }, [hasSearched, page, search, includeInactive, params, setParams]);
+  }, [isHydratedFromUrl, page, limit, search, includeInactive, params, setParams]);
 
   const handleEdit = (row) => navigate(`edit/${row.id}`);
   const handleCreate = () => navigate('create');
-
-  const filteredItems = React.useMemo(() => {
-    if (!hasSearched) return [];
-
-    const isRowActive = (row) => {
-      const value = row?.isActive ?? row?.active ?? row?.enabled;
-      return value === undefined ? true : value !== false;
-    };
-
-    return (items || [])
-      .filter((row) => includeInactive || isRowActive(row))
-      .filter((row) => {
-        const query = (search || '').trim().toLowerCase();
-        if (!query) return true;
-        const name = String(row?.name ?? row?.typeName ?? '').toLowerCase();
-        return name.includes(query);
-      });
-  }, [hasSearched, items, includeInactive, search]);
-
-  const totalPagesClient = React.useMemo(() => {
-    if (!hasSearched) return 1;
-    return Math.max(Math.ceil(filteredItems.length / Math.max(limit || 1, 1)), 1);
-  }, [hasSearched, filteredItems.length, limit]);
-
-  const pageItems = React.useMemo(() => {
-    if (!hasSearched) return [];
-    const safePage = Math.min(Math.max(page || 1, 1), totalPagesClient);
-    const start = (safePage - 1) * limit;
-    return filteredItems.slice(start, start + limit);
-  }, [hasSearched, filteredItems, page, limit, totalPagesClient]);
-
-  const handleInitialSearch = () => {
-    if (hasSearched) return;
-
-    didFetchRef.current = false;
-    setHasSearched(true);
-    setPageAction(1);
-
-    const next = new URLSearchParams(params);
-    next.set('page', '1');
-
-    if (search) next.set('search', search);
-    else next.delete('search');
-
-    if (includeInactive) next.set('includeInactive', 'true');
-    else next.delete('includeInactive');
-
-    next.delete('categoryId');
-    setParams(next, { replace: true });
-  };
 
   return (
     <CrudPage
@@ -142,8 +97,20 @@ const ListProductTypePage = () => {
       }
       maxWidth="6xl"
     >
-      <CrudToolbar columns="auto" bodyClassName="lg:grid-cols-[1fr_auto_auto] lg:items-end">
-        <label className="inline-flex items-center gap-2 text-sm text-[hsl(var(--ads-text-default))]">
+      <CrudToolbar columns="auto" bodyClassName="lg:grid-cols-[minmax(0,1fr)_auto_auto] lg:items-end">
+        <label className="flex min-w-0 flex-col gap-1 text-sm text-[hsl(var(--ads-text-muted))]">
+          <span>ค้นหา</span>
+          <Input
+            value={search}
+            onChange={(event) => {
+              setSearchAction(event.target.value);
+              setPageAction(1);
+            }}
+            placeholder="ค้นหาชื่อประเภทสินค้า"
+          />
+        </label>
+
+        <label className="inline-flex min-h-10 items-center gap-2 text-sm text-[hsl(var(--ads-text-default))]">
           <input
             type="checkbox"
             className="h-4 w-4 rounded border-[hsl(var(--ads-border-default))] accent-[hsl(var(--ads-brand))]"
@@ -172,10 +139,6 @@ const ListProductTypePage = () => {
             ))}
           </Select>
         </label>
-
-        <Button loading={isLoading} disabled={hasSearched} onClick={handleInitialSearch}>
-          แสดงข้อมูล
-        </Button>
       </CrudToolbar>
 
       {error ? (
@@ -183,23 +146,13 @@ const ListProductTypePage = () => {
           title="ไม่สามารถโหลดประเภทสินค้าได้"
           description={typeof error === 'string' ? error : 'กรุณาลองใหม่อีกครั้ง'}
           actionLabel="ลองใหม่"
-          onAction={() => {
-            didFetchRef.current = false;
-            fetchListAction();
-          }}
-        />
-      ) : !hasSearched ? (
-        <EmptyState
-          title="ยังไม่ได้แสดงข้อมูล"
-          description="กดปุ่ม “แสดงข้อมูล” เพื่อโหลดรายการประเภทสินค้า"
-          actionLabel="แสดงข้อมูล"
-          onAction={handleInitialSearch}
+          onAction={fetchListAction}
         />
       ) : (
         <Card>
           <CardBody className="p-0">
             <ProductTypeTable
-              data={pageItems}
+              data={items || []}
               loading={isLoading}
               error={null}
               page={page}
@@ -211,15 +164,13 @@ const ListProductTypePage = () => {
         </Card>
       )}
 
-      {hasSearched ? (
-        <CrudPagination
-          page={page}
-          totalPages={totalPagesClient}
-          onPageChange={setPageAction}
-          disabled={isLoading}
-          summary={`${filteredItems.length} รายการ`}
-        />
-      ) : null}
+      <CrudPagination
+        page={page}
+        totalPages={Math.max(Number(totalPages || 1), 1)}
+        onPageChange={setPageAction}
+        disabled={isLoading}
+        summary={`${Number(total || 0)} รายการ`}
+      />
     </CrudPage>
   );
 };

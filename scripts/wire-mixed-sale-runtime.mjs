@@ -41,9 +41,18 @@ if (legacyPrepared.test(page)) page = page.replace(legacyPrepared, mixedPrepared
 else if (!page.includes('lineId: foundLineId')) throw new Error('Expected source not found: prepared cart item');
 
 if (!page.includes('s.add(`LINE:${String(lineId)}`)')) {
-  const keyPattern = /       const sid = it\?\.stockItemId;\r?\n       const bc = it\?\.barcode;\r?\n       if \(sid != null\) s\.add\(`SID:\$\{String\(sid\)\}`\);/;
-  if (!keyPattern.test(page)) throw new Error('Expected source not found: sale item key set');
-  page = page.replace(keyPattern, "       const lineId = it?.lineId || (it?.stockItemId ? `stock-${it.stockItemId}` : null);\n       const sid = it?.stockItemId;\n       const bc = it?.barcode;\n       if (lineId) s.add(`LINE:${String(lineId)}`);\n       if (sid != null) s.add(`SID:${String(sid)}`);");
+  const keyPattern = /^(\s*)const sid = it\?\.stockItemId;\r?\n\1const bc = it\?\.barcode;\r?\n\1if \(sid != null\) s\.add\(`SID:\$\{String\(sid\)\}`\);/m;
+  const keyMatch = page.match(keyPattern);
+  if (!keyMatch) throw new Error('Expected source not found: sale item key set');
+  const indent = keyMatch[1];
+  const replacement = [
+    `${indent}const lineId = it?.lineId || (it?.stockItemId ? \`stock-${'${it.stockItemId}'}\` : null);`,
+    `${indent}const sid = it?.stockItemId;`,
+    `${indent}const bc = it?.barcode;`,
+    `${indent}if (lineId) s.add(\`LINE:${'${String(lineId)}'}\`);`,
+    `${indent}if (sid != null) s.add(\`SID:${'${String(sid)}'}\`);`,
+  ].join('\n');
+  page = page.replace(keyPattern, replacement);
 }
 
 staged.set(pagePath, page);

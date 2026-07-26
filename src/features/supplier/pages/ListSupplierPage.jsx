@@ -8,10 +8,9 @@ import {
   Button,
   Card,
   CardBody,
+  CrudPage,
   EmptyState,
   LoadingState,
-  Page,
-  PageHeader,
 } from '@/design-system';
 import { useAuthStore } from '@/features/auth/store/authStore';
 import { useBranchStore } from '@/features/branch/store/branchStore';
@@ -65,22 +64,19 @@ const ListSupplierPage = () => {
   }, [token, selectedBranchId, fetchSuppliersAction]);
 
   return (
-    <Page>
-      <div className="mx-auto w-full max-w-[1600px]">
-        <PageHeader
-          title="บัญชีรายชื่อผู้ขาย"
-          description="จัดการบริษัทคู่ค้าและซัพพลายเออร์สำหรับใบสั่งซื้อและใบรับสินค้า"
-          actions={
-            selectedBranchId ? (
-              <Button onClick={() => navigate(createSupplierPath)}>
-                <Plus className="h-4 w-4" aria-hidden="true" />
-                เพิ่มผู้ขาย
-              </Button>
-            ) : null
-          }
-        />
-
-        {!selectedBranchId ? (
+    <CrudPage
+      title="บัญชีรายชื่อผู้ขาย"
+      description="จัดการบริษัทคู่ค้าและซัพพลายเออร์สำหรับใบสั่งซื้อและใบรับสินค้า"
+      actions={
+        selectedBranchId ? (
+          <Button onClick={() => navigate(createSupplierPath)}>
+            <Plus className="h-4 w-4" aria-hidden="true" />
+            เพิ่มผู้ขาย
+          </Button>
+        ) : null
+      }
+      notices={
+        !selectedBranchId ? (
           <Alert tone="warning" title="ยังไม่ได้เลือกสาขา">
             กรุณาเลือกสาขาของร้านค้าก่อนเรียกดูบัญชีรายชื่อผู้ขาย
           </Alert>
@@ -93,7 +89,13 @@ const ListSupplierPage = () => {
               </Button>
             </div>
           </Alert>
-        ) : loading ? (
+        ) : null
+      }
+      maxWidth="full"
+      contentClassName="max-w-[1600px]"
+    >
+      {selectedBranchId && !error ? (
+        loading ? (
           <Card>
             <CardBody>
               <LoadingState label="กำลังเรียกตรวจบัญชีทะเบียนคู่ค้าส่วนกลาง…" />
@@ -111,9 +113,9 @@ const ListSupplierPage = () => {
           <Card className="overflow-hidden">
             <SupplierTable suppliers={suppliers} onDelete={handleDeleteSupplier} />
           </Card>
-        )}
-      </div>
-    </Page>
+        )
+      ) : null}
+    </CrudPage>
   );
 };
 

@@ -48,7 +48,10 @@ function Get-LatestVerificationReport {
   }
 
   return Get-ChildItem -LiteralPath $ArtifactDirectory -Filter 'alde-*.json' -File |
-    Where-Object { $_.LastWriteTime -ge $NotBefore.AddSeconds(-2) } |
+    Where-Object {
+      $_.Name -match '^alde-\d{8}-\d{6}\.json$' -and
+      $_.LastWriteTime -ge $NotBefore.AddSeconds(-2)
+    } |
     Sort-Object LastWriteTime -Descending |
     Select-Object -First 1
 }
@@ -193,7 +196,7 @@ finally {
 }
 
 if (-not $report) {
-  Write-Warning 'No ALDE verification report created during this runner invocation.'
+  Write-Warning 'No timestamped ALDE verification report was created during this runner invocation.'
 }
 
 exit $exitCode

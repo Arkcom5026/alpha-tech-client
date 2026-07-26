@@ -9,6 +9,7 @@ import {
   CardBody,
   CrudPage,
   CrudPagination,
+  CrudPrimaryAction,
   CrudToolbar,
   EmptyState,
   ErrorState,
@@ -134,7 +135,11 @@ const ListProductTypePage = () => {
     <CrudPage
       title="จัดการประเภทสินค้า"
       description="เรียกดูและจัดการประเภทสินค้าที่ใช้ในระบบสต็อก"
-      actions={canManage ? <Button onClick={handleCreate}>เพิ่มประเภทสินค้า</Button> : null}
+      actions={
+        canManage ? (
+          <CrudPrimaryAction onClick={handleCreate}>เพิ่มประเภทสินค้า</CrudPrimaryAction>
+        ) : null
+      }
       maxWidth="6xl"
     >
       <CrudToolbar columns="auto" bodyClassName="lg:grid-cols-[1fr_auto_auto] lg:items-end">
@@ -192,7 +197,7 @@ const ListProductTypePage = () => {
         />
       ) : (
         <Card>
-          <CardBody className="p-3">
+          <CardBody className="p-0">
             <ProductTypeTable
               data={pageItems}
               loading={isLoading}

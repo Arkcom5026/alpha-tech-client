@@ -11,6 +11,12 @@ on:
         options:
           - SyncAndCertify
           - Certify
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/alde-local-certify.yml'
+      - 'tools/runner/invoke-alde.ps1'
 
 permissions:
   contents: read
@@ -28,6 +34,8 @@ jobs:
       - X64
       - alpha-tech-local
     timeout-minutes: 45
+    env:
+      ALDE_MODE: ${{ github.event_name == 'workflow_dispatch' && inputs.mode || 'SyncAndCertify' }}
 
     steps:
       - name: Checkout workflow source
@@ -42,7 +50,7 @@ jobs:
           & "$env:GITHUB_WORKSPACE\tools\runner\invoke-alde.ps1" `
             -ClientPath 'D:\alpha-tech\client' `
             -ServerPath 'D:\alpha-tech\server' `
-            -Mode '${{ inputs.mode }}' `
+            -Mode "$env:ALDE_MODE" `
             -RequiredBranch 'main' `
             -EvidencePath "$env:GITHUB_WORKSPACE\alde-evidence"
 

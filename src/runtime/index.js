@@ -4,3 +4,5 @@ export {
   normalizeRuntimeError,
 } from './errors/normalizeRuntimeError';
 export { handleRuntimeError } from './errors/runtimeErrorHandler';
+export { loading } from './loading/loadingController';
+export { withLoading } from './loading/withLoading';

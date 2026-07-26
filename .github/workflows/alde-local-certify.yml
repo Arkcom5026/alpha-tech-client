@@ -96,15 +96,20 @@ jobs:
               Accept = 'application/vnd.github+json'
               'X-GitHub-Api-Version' = '2022-11-28'
             }
-            $uri = "https://api.github.com/repos/$env:GITHUB_REPOSITORY/contents/$Path"
+            $escapedPath = (($Path -split '/') | ForEach-Object { [uri]::EscapeDataString($_) }) -join '/'
+            $uri = "https://api.github.com/repos/$env:GITHUB_REPOSITORY/contents/$escapedPath"
             $existingSha = $null
 
             try {
-              $existing = Invoke-RestMethod -Method Get -Uri "$uri?ref=alde-results" -Headers $headers
+              $existing = Invoke-RestMethod -Method Get -Uri "${uri}?ref=alde-results" -Headers $headers
               $existingSha = $existing.sha
             }
             catch {
-              if (-not $_.Exception.Response -or [int]$_.Exception.Response.StatusCode -ne 404) {
+              $statusCode = $null
+              if ($_.Exception.Response) {
+                $statusCode = [int]$_.Exception.Response.StatusCode
+              }
+              if ($statusCode -ne 404) {
                 throw
               }
             }
@@ -128,7 +133,8 @@ jobs:
 
           $metadata = Read-JsonFileSafely -Path $env:ALDE_METADATA_PATH
           $report = Read-JsonFileSafely -Path $env:ALDE_REPORT_PATH
-          $resolvedStatus = if ($env:ALDE_STATUS) { $env:ALDE_STATUS } elseif ($metadata.status) { $metadata.status } else { 'UNKNOWN' }
+          $metadataStatus = if ($null -ne $metadata -and $metadata.PSObject.Properties['status']) { [string]$metadata.status } else { '' }
+          $resolvedStatus = if ($env:ALDE_STATUS) { $env:ALDE_STATUS } elseif ($metadataStatus) { $metadataStatus } else { 'UNKNOWN' }
 
           $result = [ordered]@{
             schemaVersion = 1

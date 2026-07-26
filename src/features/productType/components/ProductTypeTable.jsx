@@ -1,175 +1,163 @@
+import { useMemo, useState } from 'react';
 
-
-// ✅ src/features/productType/components/ProductTypeTable.jsx
-import React, { useMemo, useState } from 'react';
+import {
+  Badge,
+  ConfirmActionDialog,
+  CrudTableAction,
+  CrudTableActions,
+  LoadingState,
+} from '@/design-system';
 import useProductTypeStore from '@/features/productType/store/productTypeStore.js';
-
-// ✅ Lightweight UI helpers (P1-safe): avoid missing imports in early-stage project
-const Badge = ({ className = '', children }) => (
-  <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${className}`.trim()}>
-    {children}
-  </span>
-);
-
-const ActionButton = ({ className = '', children, ...props }) => (
-  <button
-    type="button"
-    className={`inline-flex items-center justify-center rounded-lg px-3 py-1.5 text-sm font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-60 ${className}`.trim()}
-    {...props}
-  >
-    {children}
-  </button>
-);
 
 const toCount = (value) => {
   const n = Number(value);
   return Number.isFinite(n) ? n : 0;
 };
 
-const ProductTypeTable = ({ data = [], loading, error, page = 1, limit = 20, onEdit, canManage = false }) => {
-  const { archiveProductTypeAction, restoreProductTypeAction, isSubmitting } = useProductTypeStore();
-  // ❌ ไม่เช็ค auth ใน Table (ให้ Page ตัดสินสิทธิ์)
-  // ใช้ canManage จาก props เท่านั้น
-
+const ProductTypeTable = ({
+  data = [],
+  loading,
+  error,
+  page = 1,
+  limit = 20,
+  onEdit,
+  canManage = false,
+}) => {
+  const { archiveProductTypeAction, restoreProductTypeAction, isSubmitting } =
+    useProductTypeStore();
   const rows = useMemo(() => (Array.isArray(data) ? data : []), [data]);
-  const [confirm, setConfirm] = useState(null); // { type: 'archive'|'restore', row }
-
-  const handleArchive = (row) => setConfirm({ type: 'archive', row });
-  const handleRestore = (row) => setConfirm({ type: 'restore', row });
+  const [confirm, setConfirm] = useState(null);
 
   const proceed = async () => {
-    if (!confirm?.row) return;
+    if (!confirm?.row || isSubmitting) return;
     if (confirm.type === 'archive') await archiveProductTypeAction(confirm.row.id);
     if (confirm.type === 'restore') await restoreProductTypeAction(confirm.row.id);
     setConfirm(null);
   };
 
+  const isArchive = confirm?.type === 'archive';
+
   return (
-    <div className="w-full flex justify-center mt-4">
-      <div className="w-[1100px] bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm rounded-xl overflow-hidden">
-        {/* table header */}
-        <div className="px-4 py-3 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-800/60 sticky top-0 z-10">
-          <div className="flex items-center justify-between">
-            <div className="text-sm text-zinc-600 dark:text-zinc-300">รายการ</div>
-            <div className="text-xs text-zinc-500">ทั้งหมด {rows.length} รายการ</div>
-          </div>
+    <>
+      <div className="overflow-x-auto">
+        <div className="flex items-center justify-between border-b border-[hsl(var(--ads-border-default))] px-4 py-3 text-sm text-[hsl(var(--ads-text-muted))]">
+          <span>รายการประเภทสินค้า</span>
+          <span>ทั้งหมด {rows.length} รายการ</span>
         </div>
 
-        {error && (
-          <div className="px-4 py-2 text-sm text-red-600 dark:text-red-400">{String(error)}</div>
-        )}
+        {error ? (
+          <div className="border-b border-[hsl(var(--ads-border-default))] px-4 py-3 text-sm text-[hsl(var(--ads-danger))]">
+            {String(error)}
+          </div>
+        ) : null}
 
-        <table className="min-w-full text-sm">
-          <thead className="text-left text-zinc-600 bg-zinc-50 dark:bg-zinc-800">
-            <tr className="border-b border-zinc-200 dark:border-zinc-800">
-              <th className="px-4 py-2 w-[60px] text-center">#</th>
-              <th className="px-4 py-2 w-[42%]">ชื่อประเภทสินค้า</th>
-              <th className="px-4 py-2 w-[90px] text-center">แบรนด์</th>
-              <th className="px-4 py-2 w-[90px] text-center">สินค้า</th>
-              <th className="px-4 py-2 w-[10%] text-center">สถานะ</th>
-              <th className="px-4 py-2 text-right w-[20%]">การจัดการ</th>
-            </tr>
-          </thead>
-          <tbody>
-            {!loading && rows.length === 0 && (
+        {loading ? (
+          <LoadingState label="กำลังโหลดข้อมูลประเภทสินค้า…" />
+        ) : (
+          <table className="min-w-full text-sm">
+            <thead className="bg-[hsl(var(--ads-surface-subtle))] text-left text-[hsl(var(--ads-text-muted))]">
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-zinc-500">ไม่พบข้อมูล</td>
+                <th className="w-16 px-4 py-3 text-center font-semibold">#</th>
+                <th className="px-4 py-3 font-semibold">ชื่อประเภทสินค้า</th>
+                <th className="w-24 px-4 py-3 text-center font-semibold">แบรนด์</th>
+                <th className="w-24 px-4 py-3 text-center font-semibold">สินค้า</th>
+                <th className="w-32 px-4 py-3 text-center font-semibold">สถานะ</th>
+                <th className="w-52 px-4 py-3 text-right font-semibold">การจัดการ</th>
               </tr>
-            )}
-
-            {rows.map((row, idx) => {
-              const isActive = !!row.active;
-              const isSystem = !!row.isSystem;
-              const canEdit = canManage && !isSystem && isActive;
-              const canArchive = canManage && !isSystem && isActive;
-              const canRestore = canManage && !isSystem && !isActive;
-              const brandCount = toCount(row.brandCount ?? row?._count?.productTypeBrands ?? row?.brands?.length);
-              const productCount = toCount(row.productCount ?? row?._count?.Product);
-
-              return (
-                <tr
-                  key={row.id}
-                  className={`border-b border-zinc-100 dark:border-zinc-800 hover:bg-zinc-50/60 dark:hover:bg-zinc-800/50 ${idx % 2 === 1 ? 'bg-white dark:bg-zinc-900' : 'bg-zinc-50/40 dark:bg-zinc-900/40'}`}
-                >
-                  <td className="px-4 py-3 text-center">{(page - 1) * limit + idx + 1}</td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-zinc-800 dark:text-zinc-100">{row.name}</span>
-                      {isSystem && (
-                        <Badge className="bg-indigo-50 text-indigo-700 ring-indigo-600/20 dark:bg-indigo-900/30 dark:text-indigo-300 dark:ring-indigo-400/30">ประเภทระบบ</Badge>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-center font-medium text-zinc-700 dark:text-zinc-200">{brandCount}</td>
-                  <td className="px-4 py-3 text-center font-medium text-zinc-700 dark:text-zinc-200">{productCount}</td>
-                  <td className="px-4 py-3 text-center">
-                    {isActive ? (
-                      <Badge className="bg-emerald-50 text-emerald-700 ring-emerald-600/20 dark:bg-emerald-900/30 dark:text-emerald-300 dark:ring-emerald-400/30">ใช้งาน</Badge>
-                    ) : (
-                      <Badge className="bg-zinc-200 text-zinc-800 ring-zinc-400/40 dark:bg-zinc-700 dark:text-zinc-200 dark:ring-zinc-500/40">ปิดใช้งาน</Badge>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <div className="inline-flex items-center gap-2">
-                      <ActionButton
-                        className="border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:cursor-not-allowed"
-                        disabled={!canEdit}
-                        onClick={() => onEdit?.(row)}
-                        title={!canManage ? 'สำหรับผู้มีสิทธิ์เท่านั้น' : isSystem ? 'ประเภทระบบถูกล็อก' : !isActive ? 'ต้องเป็นสถานะใช้งาน' : 'แก้ไข'}
-                      >
-                        แก้ไข
-                      </ActionButton>
-
-                      {isActive ? (
-                        <ActionButton
-                          className="bg-rose-600 text-white hover:bg-rose-700 focus:ring-rose-500 disabled:bg-rose-400"
-                          disabled={!canArchive}
-                          onClick={() => handleArchive(row)}
-                          title={isSystem ? 'ประเภทระบบถูกล็อก' : ''}
-                        >
-                          ปิดใช้งาน
-                        </ActionButton>
-                      ) : (
-                        <ActionButton
-                          className="bg-emerald-600 text-white hover:bg-emerald-700 focus:ring-emerald-500 disabled:bg-emerald-400"
-                          disabled={!canRestore}
-                          onClick={() => handleRestore(row)}
-                          title={isSystem ? 'ประเภทระบบถูกล็อก' : ''}
-                        >
-                          กู้คืน
-                        </ActionButton>
-                      )}
-                    </div>
+            </thead>
+            <tbody className="divide-y divide-[hsl(var(--ads-border-default))]">
+              {rows.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-4 py-10 text-center text-[hsl(var(--ads-text-muted))]">
+                    ไม่พบข้อมูล
                   </td>
                 </tr>
-              );
-            })}
+              ) : null}
 
-            {loading && (
-              <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-zinc-500">กำลังโหลดข้อมูล...</td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+              {rows.map((row, index) => {
+                const isActive = Boolean(row.active);
+                const isSystem = Boolean(row.isSystem);
+                const canEdit = canManage && !isSystem && isActive;
+                const canArchive = canManage && !isSystem && isActive;
+                const canRestore = canManage && !isSystem && !isActive;
+                const brandCount = toCount(
+                  row.brandCount ?? row?._count?.productTypeBrands ?? row?.brands?.length,
+                );
+                const productCount = toCount(row.productCount ?? row?._count?.Product);
 
-        {confirm && (
-          <div className="px-4 py-3 flex items-center justify-between bg-amber-50/90 dark:bg-amber-900/30 border-t border-amber-200 dark:border-amber-800">
-            <div className="text-sm text-amber-900 dark:text-amber-200">
-              ยืนยันการ{confirm.type === 'archive' ? 'ปิดใช้งาน' : 'กู้คืน'} ประเภทสินค้า “{confirm.row?.name}” หรือไม่?
-            </div>
-            <div className="flex gap-2">
-              <ActionButton className="border border-amber-300 text-amber-900 hover:bg-amber-100" onClick={() => setConfirm(null)}>
-                ยกเลิก
-              </ActionButton>
-              <ActionButton className="bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500" onClick={proceed} disabled={isSubmitting}>
-                ยืนยัน
-              </ActionButton>
-            </div>
-          </div>
+                return (
+                  <tr key={row.id} className="hover:bg-[hsl(var(--ads-surface-subtle))]">
+                    <td className="px-4 py-3 text-center text-[hsl(var(--ads-text-muted))]">
+                      {(page - 1) * limit + index + 1}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-medium text-[hsl(var(--ads-text-strong))]">
+                          {row.name}
+                        </span>
+                        {isSystem ? <Badge tone="brand">ประเภทระบบ</Badge> : null}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-center text-[hsl(var(--ads-text-default))]">
+                      {brandCount}
+                    </td>
+                    <td className="px-4 py-3 text-center text-[hsl(var(--ads-text-default))]">
+                      {productCount}
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <Badge tone={isActive ? 'success' : 'neutral'}>
+                        {isActive ? 'ใช้งาน' : 'ปิดใช้งาน'}
+                      </Badge>
+                    </td>
+                    <td className="px-4 py-3">
+                      <CrudTableActions>
+                        <CrudTableAction
+                          action="edit"
+                          disabled={!canEdit}
+                          onClick={() => onEdit?.(row)}
+                          title={
+                            !canManage
+                              ? 'สำหรับผู้มีสิทธิ์เท่านั้น'
+                              : isSystem
+                                ? 'ประเภทระบบถูกล็อก'
+                                : !isActive
+                                  ? 'ต้องเป็นสถานะใช้งาน'
+                                  : 'แก้ไข'
+                          }
+                        >
+                          แก้ไข
+                        </CrudTableAction>
+                        <CrudTableAction
+                          action={isActive ? 'destructive' : 'restore'}
+                          disabled={isActive ? !canArchive : !canRestore}
+                          onClick={() =>
+                            setConfirm({ type: isActive ? 'archive' : 'restore', row })
+                          }
+                          title={isSystem ? 'ประเภทระบบถูกล็อก' : undefined}
+                        >
+                          {isActive ? 'ปิดใช้งาน' : 'กู้คืน'}
+                        </CrudTableAction>
+                      </CrudTableActions>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         )}
       </div>
-    </div>
+
+      <ConfirmActionDialog
+        open={Boolean(confirm)}
+        onClose={() => setConfirm(null)}
+        onConfirm={proceed}
+        title={`${isArchive ? 'ปิดใช้งาน' : 'กู้คืน'}ประเภทสินค้า`}
+        description={`ยืนยันการ${isArchive ? 'ปิดใช้งาน' : 'กู้คืน'}ประเภทสินค้า “${confirm?.row?.name || ''}” หรือไม่?`}
+        confirmLabel={isArchive ? 'ปิดใช้งาน' : 'กู้คืน'}
+        confirmVariant={isArchive ? 'danger' : 'primary'}
+        loading={isSubmitting}
+      />
+    </>
   );
 };
 

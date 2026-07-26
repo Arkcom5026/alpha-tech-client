@@ -1,0 +1,234 @@
+{
+    "schemaVersion":  1,
+    "status":  "PASS",
+    "repository":  "Arkcom5026/alpha-tech-client",
+    "sourceBranch":  "main",
+    "sourceSha":  "21182b9e67c34902a6a9410096fb27e883cd890a",
+    "eventName":  "push",
+    "workflow":  "ALDE Local Certification",
+    "workflowRunId":  30218988708,
+    "workflowRunAttempt":  1,
+    "workflowRunUrl":  "https://github.com/Arkcom5026/alpha-tech-client/actions/runs/30218988708",
+    "publishedAt":  "2026-07-26T20:28:13.7942711Z",
+    "runner":  {
+                   "name":  "ALDE-WIN01",
+                   "os":  "Windows",
+                   "architecture":  "X64"
+               },
+    "metadata":  {
+                     "schemaVersion":  3,
+                     "status":  "PASS",
+                     "mode":  "SyncAndCertify",
+                     "startedAt":  "2026-07-26T20:27:07.3537828Z",
+                     "finishedAt":  "2026-07-26T20:28:09.4108072Z",
+                     "runnerName":  "ALDE-WIN01",
+                     "workflowRunId":  "30218988708",
+                     "clientPath":  "D:\\alpha-tech\\client",
+                     "serverPath":  "D:\\alpha-tech\\server",
+                     "clientHead":  "21182b9e67c34902a6a9410096fb27e883cd890a",
+                     "serverHead":  "89d3e84ec26b12034c960d3ba3e3569f183292f2",
+                     "runnerPolicy":  {
+                                          "status":  "PASS",
+                                          "policyVersion":  1,
+                                          "runnerName":  "ALDE-WIN01",
+                                          "runnerOS":  "Windows",
+                                          "powershell":  "5.1.19041.6157",
+                                          "git":  "git version 2.49.0.windows.1",
+                                          "node":  "v20.19.0",
+                                          "npm":  "10.8.2",
+                                          "requirements":  {
+                                                               "windowsRunner":  true,
+                                                               "minimumPowerShell":  "5.1.0",
+                                                               "minimumNode":  "20.0.0",
+                                                               "minimumNpm":  "10.0.0",
+                                                               "requiredBranch":  "main",
+                                                               "cleanCommitBoundCertification":  true
+                                                           }
+                                      },
+                     "reportFile":  "alde-20260727-032809.json",
+                     "reportPath":  "D:\\alpha-tech\\client\\.artifacts\\verification\\alde-20260727-032809.json",
+                     "publishedReportPath":  "C:\\actions-runner\\actions-runner\\_work\\alpha-tech-client\\alpha-tech-client\\alde-evidence\\alde-20260727-032809.json",
+                     "exitCode":  0
+                 },
+    "verificationReport":  {
+                               "schemaVersion":  3,
+                               "engine":  {
+                                              "name":  "Alpha-Tech Local Development Engine",
+                                              "version":  "1.1.1-phase1",
+                                              "workflow":  "Git-first E2E Increment Full Certification",
+                                              "mode":  "SyncAndCertify",
+                                              "executionPolicy":  "full-certification",
+                                              "runtimeCompatibility":  "Windows PowerShell 5.1+"
+                                          },
+                               "status":  "PASS",
+                               "failureMessage":  "",
+                               "failedGateCount":  0,
+                               "startedAt":  "2026-07-27T03:27:07.8985302+07:00",
+                               "finishedAt":  "2026-07-27T03:28:08.7761813+07:00",
+                               "environment":  {
+                                                   "machine":  "DESKTOP-8GBTJDF",
+                                                   "user":  "Administrator",
+                                                   "powershell":  "5.1.19041.6157",
+                                                   "node":  "v20.19.0",
+                                                   "npm":  "10.8.2"
+                                               },
+                               "repositories":  {
+                                                    "client":  {
+                                                                   "path":  "D:\\alpha-tech\\client",
+                                                                   "branch":  "main",
+                                                                   "head":  "21182b9e67c34902a6a9410096fb27e883cd890a",
+                                                                   "clean":  true,
+                                                                   "status":  [
+
+                                                                              ]
+                                                               },
+                                                    "server":  {
+                                                                   "path":  "D:\\alpha-tech\\server",
+                                                                   "branch":  "main",
+                                                                   "head":  "89d3e84ec26b12034c960d3ba3e3569f183292f2",
+                                                                   "clean":  true,
+                                                                   "status":  [
+
+                                                                              ]
+                                                               }
+                                                },
+                               "certifiedHeads":  {
+                                                      "client":  "21182b9e67c34902a6a9410096fb27e883cd890a",
+                                                      "server":  "89d3e84ec26b12034c960d3ba3e3569f183292f2"
+                                                  },
+                               "gates":  [
+                                             {
+                                                 "name":  "Frontend typecheck",
+                                                 "status":  "PASS",
+                                                 "durationSeconds":  6.86,
+                                                 "detail":  ""
+                                             },
+                                             {
+                                                 "name":  "Frontend lint",
+                                                 "status":  "PASS",
+                                                 "durationSeconds":  0.76,
+                                                 "detail":  ""
+                                             },
+                                             {
+                                                 "name":  "Frontend build",
+                                                 "status":  "PASS",
+                                                 "durationSeconds":  17.05,
+                                                 "detail":  ""
+                                             },
+                                             {
+                                                 "name":  "Frontend test:run",
+                                                 "status":  "PASS",
+                                                 "durationSeconds":  4.61,
+                                                 "detail":  ""
+                                             },
+                                             {
+                                                 "name":  "Backend entry syntax check",
+                                                 "status":  "PASS",
+                                                 "durationSeconds":  0.07,
+                                                 "detail":  ""
+                                             },
+                                             {
+                                                 "name":  "Prisma validate",
+                                                 "status":  "PASS",
+                                                 "durationSeconds":  4.11,
+                                                 "detail":  ""
+                                             },
+                                             {
+                                                 "name":  "Prisma generate",
+                                                 "status":  "PASS",
+                                                 "durationSeconds":  5.97,
+                                                 "detail":  ""
+                                             },
+                                             {
+                                                 "name":  "Backend regression tests",
+                                                 "status":  "PASS",
+                                                 "durationSeconds":  0.95,
+                                                 "detail":  ""
+                                             },
+                                             {
+                                                 "name":  "Backend verify:employee-lifecycle",
+                                                 "status":  "PASS",
+                                                 "durationSeconds":  1.32,
+                                                 "detail":  ""
+                                             },
+                                             {
+                                                 "name":  "Backend verify:product-backend-migration",
+                                                 "status":  "PASS",
+                                                 "durationSeconds":  1.64,
+                                                 "detail":  ""
+                                             },
+                                             {
+                                                 "name":  "Backend verify:product-create-compatibility",
+                                                 "status":  "PASS",
+                                                 "durationSeconds":  0.6,
+                                                 "detail":  ""
+                                             },
+                                             {
+                                                 "name":  "Backend verify:product-runtime-controller",
+                                                 "status":  "PASS",
+                                                 "durationSeconds":  0.59,
+                                                 "detail":  ""
+                                             },
+                                             {
+                                                 "name":  "Backend startup smoke test",
+                                                 "status":  "PASS",
+                                                 "durationSeconds":  1.31,
+                                                 "detail":  ""
+                                             },
+                                             {
+                                                 "name":  "Frontend startup smoke test",
+                                                 "status":  "PASS",
+                                                 "durationSeconds":  0.03,
+                                                 "detail":  ""
+                                             }
+                                         ],
+                               "executedCommands":  [
+                                                        "git -C D:\\alpha-tech\\client branch --show-current",
+                                                        "git -C D:\\alpha-tech\\client rev-parse HEAD",
+                                                        "git -C D:\\alpha-tech\\client status --porcelain=v1 --untracked-files=all",
+                                                        "git -C D:\\alpha-tech\\server branch --show-current",
+                                                        "git -C D:\\alpha-tech\\server rev-parse HEAD",
+                                                        "git -C D:\\alpha-tech\\server status --porcelain=v1 --untracked-files=all",
+                                                        "git -C D:\\alpha-tech\\client branch --show-current",
+                                                        "git -C D:\\alpha-tech\\client rev-parse HEAD",
+                                                        "git -C D:\\alpha-tech\\client status --porcelain=v1 --untracked-files=all",
+                                                        "git -C D:\\alpha-tech\\client fetch origin --prune",
+                                                        "git -C D:\\alpha-tech\\client rev-list --left-right --count HEAD...origin/main",
+                                                        "git -C D:\\alpha-tech\\client pull --ff-only origin main",
+                                                        "git -C D:\\alpha-tech\\server branch --show-current",
+                                                        "git -C D:\\alpha-tech\\server rev-parse HEAD",
+                                                        "git -C D:\\alpha-tech\\server status --porcelain=v1 --untracked-files=all",
+                                                        "git -C D:\\alpha-tech\\server fetch origin --prune",
+                                                        "git -C D:\\alpha-tech\\server rev-list --left-right --count HEAD...origin/main",
+                                                        "git -C D:\\alpha-tech\\server pull --ff-only origin main",
+                                                        "[D:\\alpha-tech\\client] npm run typecheck",
+                                                        "[D:\\alpha-tech\\client] npm run lint",
+                                                        "[D:\\alpha-tech\\client] npm run build",
+                                                        "[D:\\alpha-tech\\client] npm run test:run",
+                                                        "[D:\\alpha-tech\\server] node --check server.js",
+                                                        "[D:\\alpha-tech\\server] npx prisma validate",
+                                                        "[D:\\alpha-tech\\server] npx prisma generate",
+                                                        "[D:\\alpha-tech\\server] npm run test",
+                                                        "[D:\\alpha-tech\\server] npm run verify:employee-lifecycle",
+                                                        "[D:\\alpha-tech\\server] npm run verify:product-backend-migration",
+                                                        "[D:\\alpha-tech\\server] npm run verify:product-create-compatibility",
+                                                        "[D:\\alpha-tech\\server] npm run verify:product-runtime-controller",
+                                                        "[D:\\alpha-tech\\server] C:\\Program Files\\nodejs\\node.exe server.js",
+                                                        "[D:\\alpha-tech\\client] C:\\Program Files\\nodejs\\npm.cmd run dev -- --host 127.0.0.1 --port 5173 --strictPort",
+                                                        "git -C D:\\alpha-tech\\client branch --show-current",
+                                                        "git -C D:\\alpha-tech\\client rev-parse HEAD",
+                                                        "git -C D:\\alpha-tech\\client status --porcelain=v1 --untracked-files=all",
+                                                        "git -C D:\\alpha-tech\\server branch --show-current",
+                                                        "git -C D:\\alpha-tech\\server rev-parse HEAD",
+                                                        "git -C D:\\alpha-tech\\server status --porcelain=v1 --untracked-files=all",
+                                                        "git -C D:\\alpha-tech\\client branch --show-current",
+                                                        "git -C D:\\alpha-tech\\client rev-parse HEAD",
+                                                        "git -C D:\\alpha-tech\\client status --porcelain=v1 --untracked-files=all",
+                                                        "git -C D:\\alpha-tech\\server branch --show-current",
+                                                        "git -C D:\\alpha-tech\\server rev-parse HEAD",
+                                                        "git -C D:\\alpha-tech\\server status --porcelain=v1 --untracked-files=all",
+                                                        "node --version",
+                                                        "npm --version"
+                                                    ]
+                           }
+}

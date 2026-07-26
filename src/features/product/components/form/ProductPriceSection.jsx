@@ -49,7 +49,7 @@ const ProductPriceSection = ({ control, errors = {} }) => {
               validate: (value) => validateOptionalMoney(value, 'ราคาทุนต้องไม่ติดลบ'),
             }}
             render={({ field }) => (
-              <PaymentInput title="ราคาทุนอ้างอิง" value={field.value ?? ''} onChange={(value) => field.onChange(value)} />
+              <PaymentInput title="ราคาทุนอ้างอิง" value={field.value ?? 0} onChange={(value) => field.onChange(value)} />
             )}
           />
           {errors.branchPrice?.costPrice && (

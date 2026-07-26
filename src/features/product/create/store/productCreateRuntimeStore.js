@@ -17,7 +17,7 @@ const initialFormValues = {
   active: true,
 
   branchPrice: {
-    costPrice: '',
+    costPrice: 0,
     priceRetail: '',
     priceTechnician: '',
     priceOnline: '',

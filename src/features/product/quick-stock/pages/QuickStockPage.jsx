@@ -181,7 +181,7 @@ const QuickStockPage = () => {
             onEditCancel={() => {
               setProductForm(buildProductFormFromProduct(operationalProduct));
               setPriceForm(buildPriceFormFromProduct(operationalProduct));
-              setDefaultCost(buildPriceFormFromProduct(operationalProduct).costPrice || "");
+              setDefaultCost(buildPriceFormFromProduct(operationalProduct).costPrice ?? 0);
               setIsEditingProduct(false);
             }}
             onSaveProduct={handleSaveProductInline}

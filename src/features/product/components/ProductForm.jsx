@@ -183,7 +183,7 @@ const ProductForm = ({
       mode: resolvedMode === 'SIMPLE' ? 'SIMPLE' : 'STRUCTURED',
       active: data?.active !== false,
       branchPrice: {
-        costPrice: branchPriceSource?.costPrice ?? data?.costPrice ?? data?.cost ?? '',
+        costPrice: branchPriceSource?.costPrice ?? data?.costPrice ?? data?.cost ?? 0,
         priceRetail: branchPriceSource?.priceRetail ?? data?.priceRetail ?? '',
         priceTechnician: branchPriceSource?.priceTechnician ?? data?.priceTechnician ?? '',
         priceOnline: branchPriceSource?.priceOnline ?? data?.priceOnline ?? '',

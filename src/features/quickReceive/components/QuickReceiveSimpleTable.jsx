@@ -99,7 +99,7 @@ const QuickReceiveSimpleTable = ({ items = [], setItems, onSaveRow, onRemoveRow,
                       min={0}
                       className="w-24 h-8 text-right border rounded p-1"
                       placeholder="0.00"
-                      value={it.costPrice === 0 ? '' : (it.costPrice ?? '')}
+                      value={it.costPrice ?? 0}
                       disabled={lockInputs}
                       onChange={(e) => handleCostPriceChange(it.id, e.target.value)}
                     />

@@ -46,7 +46,7 @@ const ProductSearchSimpleTable = ({ products = [], onSelect, autoHideSelected = 
                 <TableCell>{item.name || '-'}</TableCell>
                 <TableCell>{item.model || '-'}</TableCell>
                 <TableCell className="text-center">{item.mode === 'SIMPLE' ? 'Simple' : (item.mode === 'STRUCTURED' ? 'Structure' : '-')}</TableCell>
-                <TableCell className="text-right">{fmt(item.costPrice)}</TableCell>
+                <TableCell className="text-right">{fmt(item.costPrice ?? 0)}</TableCell>
                 <TableCell className="text-right">{fmt(item.priceWholesale)}</TableCell>
                 <TableCell className="text-right">{fmt(item.priceTechnician)}</TableCell>
                 <TableCell className="text-right">{fmt(item.priceRetail)}</TableCell>

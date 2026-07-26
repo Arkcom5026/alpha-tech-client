@@ -48,7 +48,7 @@ const useQuickStockProductController = ({
   const [isSavingProduct, setIsSavingProduct] = useState(false);
   const [isDeletingProduct, setIsDeletingProduct] = useState(false);
 
-  const [defaultCost, setDefaultCost] = useState("");
+  const [defaultCost, setDefaultCost] = useState(0);
 
   const [productForm, setProductForm] = useState(buildProductFormFromProduct(null));
   const [priceForm, setPriceForm] = useState(buildPriceFormFromProduct(null));
@@ -61,7 +61,7 @@ const useQuickStockProductController = ({
     active: true,
   });
   const [localPriceForm, setLocalPriceForm] = useState({
-    costPrice: "",
+    costPrice: 0,
     priceRetail: "",
     priceWholesale: "",
     priceTechnician: "",
@@ -131,7 +131,7 @@ const useQuickStockProductController = ({
 
     setProductForm(nextProductForm);
     setPriceForm(nextPriceForm);
-    setDefaultCost(nextPriceForm.costPrice || "");
+    setDefaultCost(nextPriceForm.costPrice ?? 0);
     setIsEditingProduct(false);
   }, [operationalProduct]);
 
@@ -192,7 +192,7 @@ const useQuickStockProductController = ({
     setProductForm(buildProductFormFromProduct(nextOperationalProduct));
     const nextPriceForm = buildPriceFormFromProduct(nextOperationalProduct);
     setPriceForm(nextPriceForm);
-    setDefaultCost(nextPriceForm.costPrice || "");
+    setDefaultCost(nextPriceForm.costPrice ?? 0);
     setSelectedProductId(`OPERATIONAL:${nextOperationalProduct.id}`);
     setIsLocalCreateOpen(false);
     resetQueue();
@@ -242,7 +242,7 @@ const useQuickStockProductController = ({
 
     if (!payload.name) return toast.error("กรุณาระบุชื่อสินค้า");
     if (!payload.productTypeId) return toast.error("กรุณาเลือกประเภทสินค้า");
-    if (payload.costPrice <= 0 || payload.priceRetail <= 0) {
+    if (payload.costPrice == null || payload.priceRetail <= 0) {
       return toast.error("กรุณาระบุราคาทุนและราคาขายปลีกก่อนสร้างสินค้า");
     }
 
@@ -266,7 +266,7 @@ const useQuickStockProductController = ({
         active: true,
       });
       setLocalPriceForm({
-        costPrice: "",
+        costPrice: 0,
         priceRetail: "",
         priceWholesale: "",
         priceTechnician: "",
@@ -347,7 +347,7 @@ const useQuickStockProductController = ({
       );
       setProductForm(buildProductFormFromProduct(nextProduct));
       setPriceForm(buildPriceFormFromProduct(nextProduct));
-      setDefaultCost(String(nextProduct.costPrice || ""));
+      setDefaultCost(String(nextProduct.costPrice ?? 0));
       toast.success("บันทึกข้อมูลสินค้าเรียบร้อย");
       setIsEditingProduct(false);
     } catch (err) {

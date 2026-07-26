@@ -120,7 +120,7 @@ const BranchPriceEditTable = ({
                 <td className="border px-2 py-2">
                   <input
                     type="number"
-                    value={editable.costPrice ?? product.branchPrice?.costPrice ?? ''}
+                    value={editable.costPrice ?? product.branchPrice?.costPrice ?? 0}
                     onChange={(e) => handlePriceChange(productId, 'costPrice', e.target.value)}
                     className="w-full border px-2 py-1 rounded text-right"
                   />

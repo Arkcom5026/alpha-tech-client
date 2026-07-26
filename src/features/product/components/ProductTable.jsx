@@ -43,9 +43,9 @@ const ProductTable = ({
     return n;
   };
 
-  const priceCell = (v) => {
+  const priceCell = (v, preserveZero = false) => {
     const n = toNumOrNull(v);
-    const isMissing = n == null || n === 0;
+    const isMissing = n == null || (!preserveZero && n === 0);
     const text = isMissing ? '—' : n.toLocaleString('th-TH');
     return <span className={isMissing ? 'text-zinc-400 dark:text-zinc-600' : 'text-zinc-900 dark:text-zinc-100 font-medium'}>{text}</span>;
   };
@@ -115,7 +115,7 @@ const ProductTable = ({
                   <TableCell className={`text-center text-zinc-700 dark:text-zinc-300 ${cellPad}`}>{item?.brand ?? item?.brandName ?? '-'}</TableCell>
                   <TableCell className={`text-left font-medium text-zinc-900 dark:text-zinc-100 ${cellPad}`}>{item.name || '-'}</TableCell>
                   
-                  <TableCell className={`text-right tabular-nums ${cellPad}`}>{priceCell(resolveBranchPrice(item)?.costPrice ?? item.costPrice)}</TableCell>
+                  <TableCell className={`text-right tabular-nums ${cellPad}`}>{priceCell(resolveBranchPrice(item)?.costPrice ?? item.costPrice ?? 0, true)}</TableCell>
                   <TableCell className={`text-right tabular-nums ${cellPad}`}>{priceCell(resolveBranchPrice(item)?.priceWholesale ?? item.priceWholesale)}</TableCell>
                   <TableCell className={`text-right tabular-nums ${cellPad}`}>{priceCell(resolveBranchPrice(item)?.priceTechnician ?? item.priceTechnician)}</TableCell>
                   <TableCell className={`text-right tabular-nums ${cellPad}`}>{priceCell(resolveBranchPrice(item)?.priceRetail ?? item.priceRetail)}</TableCell>

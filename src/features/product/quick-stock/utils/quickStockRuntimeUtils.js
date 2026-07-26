@@ -261,7 +261,7 @@ export const getFirstBranchPrice = (product) => {
 export const buildPriceFormFromProduct = (product) => {
   const bp = getFirstBranchPrice(product);
   return {
-    costPrice: toMoneyString(product?.costPrice ?? bp?.costPrice),
+    costPrice: toMoneyString(product?.costPrice ?? bp?.costPrice ?? 0),
     priceRetail: toMoneyString(product?.priceRetail ?? bp?.priceRetail),
     priceWholesale: toMoneyString(product?.priceWholesale ?? bp?.priceWholesale),
     priceTechnician: toMoneyString(product?.priceTechnician ?? bp?.priceTechnician),

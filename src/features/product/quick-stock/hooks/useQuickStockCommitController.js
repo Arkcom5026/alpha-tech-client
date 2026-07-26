@@ -22,8 +22,10 @@ const useQuickStockCommitController = ({
   const [note, setNote] = useState("Manual stock intake");
   const [isCommitting, setIsCommitting] = useState(false);
 
+  const resolvedCostPrice = defaultCost ?? priceForm.costPrice;
   const hasRequiredIntakePrices =
-    toMoneyNumber(defaultCost || priceForm.costPrice) > 0 &&
+    resolvedCostPrice != null &&
+    toMoneyNumber(resolvedCostPrice) >= 0 &&
     toMoneyNumber(priceForm.priceRetail) > 0;
 
   const productReady = isOperationalSelection && hasRequiredIntakePrices;
@@ -41,8 +43,8 @@ const useQuickStockCommitController = ({
       return false;
     }
 
-    if (toMoneyNumber(defaultCost || priceForm.costPrice) <= 0) {
-      toast.error("ราคาทุนรับเข้าต้องมากกว่า 0 ก่อนรับเข้า");
+    if (resolvedCostPrice == null) {
+      toast.error("กรุณาระบุราคาทุนรับเข้าก่อนรับเข้า");
       return false;
     }
 
@@ -81,7 +83,7 @@ const useQuickStockCommitController = ({
       trackSerialNumber: !!operationalProduct.trackSerialNumber,
       note,
       quantity: cleanQueueItems.length,
-      costPrice: toMoneyNumber(defaultCost || priceForm.costPrice),
+      costPrice: toMoneyNumber(resolvedCostPrice),
       priceRetail: toMoneyNumber(priceForm.priceRetail),
       priceWholesale: toMoneyNumber(priceForm.priceWholesale),
       priceTechnician: toMoneyNumber(priceForm.priceTechnician),

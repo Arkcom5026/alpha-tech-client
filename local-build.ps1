@@ -23,8 +23,8 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 $script:EngineName = 'Alpha-Tech Local Development Engine'
-$script:EngineVersion = '1.0.1-phase1'
-$script:WorkflowName = 'Git-first E2E Increment Certification'
+$script:EngineVersion = '1.1.0-phase1'
+$script:WorkflowName = 'Git-first E2E Increment Full Certification'
 $script:StartedAt = Get-Date
 $script:Results = [System.Collections.Generic.List[object]]::new()
 $script:ExecutedCommands = [System.Collections.Generic.List[string]]::new()
@@ -85,20 +85,20 @@ function Invoke-NativeCommand {
   try {
     if ($CaptureOutput) {
       $output = & $Command @Arguments 2>&1
-      $exitCode = $LASTEXITCODE
+      $nativeExitCode = $LASTEXITCODE
 
-      if ($exitCode -ne 0) {
-        throw "$Command exited with code $exitCode.`n$($output -join [Environment]::NewLine)"
+      if ($nativeExitCode -ne 0) {
+        throw "$Command exited with code $nativeExitCode.`n$($output -join [Environment]::NewLine)"
       }
 
       return @($output)
     }
 
     & $Command @Arguments
-    $exitCode = $LASTEXITCODE
+    $nativeExitCode = $LASTEXITCODE
 
-    if ($exitCode -ne 0) {
-      throw "$Command exited with code $exitCode."
+    if ($nativeExitCode -ne 0) {
+      throw "$Command exited with code $nativeExitCode."
     }
   }
   finally {
@@ -112,7 +112,7 @@ function Add-GateResult {
   param(
     [Parameter(Mandatory)][string]$Name,
     [Parameter(Mandatory)][ValidateSet('PASS', 'FAIL', 'SKIP')][string]$Status,
-    [double]$DurationSeconds,
+    [double]$DurationSeconds = 0,
     [string]$Detail = ''
   )
 
@@ -138,13 +138,35 @@ function Invoke-Gate {
     $watch.Stop()
     Add-GateResult -Name $Name -Status 'PASS' -DurationSeconds $watch.Elapsed.TotalSeconds
     Write-Host "[PASS] $Name" -ForegroundColor Green
+    return $true
   }
   catch {
     $watch.Stop()
     Add-GateResult -Name $Name -Status 'FAIL' -DurationSeconds $watch.Elapsed.TotalSeconds -Detail $_.Exception.Message
-    Write-Host "[FAIL] $Name" -ForegroundColor Red
-    throw
+    Write-Host "[FAIL] $Name - $($_.Exception.Message)" -ForegroundColor Red
+    return $false
   }
+}
+
+function Add-SkippedGate {
+  param(
+    [Parameter(Mandatory)][string]$Name,
+    [Parameter(Mandatory)][string]$Reason
+  )
+
+  Add-GateResult -Name $Name -Status 'SKIP' -Detail $Reason
+  Write-Host "[SKIP] $Name - $Reason" -ForegroundColor DarkYellow
+}
+
+function Test-GatePassed {
+  param([Parameter(Mandatory)][string]$Name)
+
+  $result = $script:Results | Where-Object { $_.name -eq $Name } | Select-Object -Last 1
+  return $null -ne $result -and $result.status -eq 'PASS'
+}
+
+function Get-FailedGateCount {
+  return @($script:Results | Where-Object { $_.status -eq 'FAIL' }).Count
 }
 
 function Invoke-NpmScriptGate {
@@ -154,7 +176,7 @@ function Invoke-NpmScriptGate {
     [Parameter(Mandatory)][string]$ScriptName
   )
 
-  Invoke-Gate -Name $GateName -Action {
+  return Invoke-Gate -Name $GateName -Action {
     Invoke-NativeCommand -Command 'npm' -Arguments @('run', $ScriptName) -WorkingDirectory $ProjectPath
   }
 }
@@ -172,6 +194,22 @@ function Test-NpmScript {
 
   $packageJson = Get-Content $packageJsonPath -Raw | ConvertFrom-Json
   return $null -ne $packageJson.scripts.PSObject.Properties[$ScriptName]
+}
+
+function Invoke-RequiredNpmScriptGate {
+  param(
+    [Parameter(Mandatory)][string]$GateName,
+    [Parameter(Mandatory)][string]$ProjectPath,
+    [Parameter(Mandatory)][string]$ScriptName
+  )
+
+  if (-not (Test-NpmScript -ProjectPath $ProjectPath -ScriptName $ScriptName)) {
+    Add-GateResult -Name $GateName -Status 'FAIL' -Detail "package.json does not define '$ScriptName'."
+    Write-Host "[FAIL] $GateName - package.json does not define '$ScriptName'." -ForegroundColor Red
+    return $false
+  }
+
+  return Invoke-NpmScriptGate -GateName $GateName -ProjectPath $ProjectPath -ScriptName $ScriptName
 }
 
 function Resolve-ProjectPath {
@@ -262,6 +300,7 @@ function Sync-Repository {
 
   $countsLine = (Get-GitOutput $RepositoryPath @('rev-list', '--left-right', '--count', "HEAD...$Remote/$Branch") | Select-Object -First 1).Trim()
   $parts = $countsLine -split '\s+'
+
   if ($parts.Count -lt 2) {
     throw "Could not determine divergence for $RepositoryPath. Received: $countsLine"
   }
@@ -367,20 +406,13 @@ function Invoke-FrontendGate {
   Write-Section 'FRONTEND REPOSITORY GATE'
 
   if ($Install) {
-    Invoke-Gate 'Frontend dependency install' {
+    [void](Invoke-Gate 'Frontend dependency install' {
       Invoke-NativeCommand -Command 'npm' -Arguments @('ci') -WorkingDirectory $Path
-    }
+    })
   }
 
   foreach ($scriptName in @('typecheck', 'lint', 'build', 'test:run')) {
-    if (-not (Test-NpmScript $Path $scriptName)) {
-      throw "Frontend package.json does not define '$scriptName'."
-    }
-
-    Invoke-NpmScriptGate `
-      -GateName "Frontend $scriptName" `
-      -ProjectPath $Path `
-      -ScriptName $scriptName
+    [void](Invoke-RequiredNpmScriptGate -GateName "Frontend $scriptName" -ProjectPath $Path -ScriptName $scriptName)
   }
 }
 
@@ -390,36 +422,37 @@ function Invoke-BackendGate {
   Write-Section 'BACKEND REPOSITORY GATE'
 
   if ($Install) {
-    Invoke-Gate 'Backend dependency install' {
+    [void](Invoke-Gate 'Backend dependency install' {
       Invoke-NativeCommand -Command 'npm' -Arguments @('ci') -WorkingDirectory $Path
-    }
+    })
   }
 
   $serverEntry = Join-Path $Path 'server.js'
   if (Test-Path $serverEntry) {
-    Invoke-Gate 'Backend entry syntax check' {
+    [void](Invoke-Gate 'Backend entry syntax check' {
       Invoke-NativeCommand -Command 'node' -Arguments @('--check', 'server.js') -WorkingDirectory $Path
-    }
+    })
+  }
+  else {
+    Add-SkippedGate -Name 'Backend entry syntax check' -Reason 'server.js was not found.'
   }
 
   $schemaPath = Join-Path $Path 'prisma\schema.prisma'
   if (Test-Path $schemaPath) {
-    Invoke-Gate 'Prisma validate' {
+    [void](Invoke-Gate 'Prisma validate' {
       Invoke-NativeCommand -Command 'npx' -Arguments @('prisma', 'validate') -WorkingDirectory $Path
-    }
+    })
 
-    Invoke-Gate 'Prisma generate' {
+    [void](Invoke-Gate 'Prisma generate' {
       Invoke-NativeCommand -Command 'npx' -Arguments @('prisma', 'generate') -WorkingDirectory $Path
-    }
+    })
+  }
+  else {
+    Add-SkippedGate -Name 'Prisma validate' -Reason 'prisma/schema.prisma was not found.'
+    Add-SkippedGate -Name 'Prisma generate' -Reason 'prisma/schema.prisma was not found.'
   }
 
-  if (-not (Test-NpmScript $Path 'test')) {
-    throw "Backend package.json does not define 'test'."
-  }
-
-  Invoke-Gate 'Backend regression tests' {
-    Invoke-NativeCommand -Command 'npm' -Arguments @('test') -WorkingDirectory $Path
-  }
+  [void](Invoke-RequiredNpmScriptGate -GateName 'Backend regression tests' -ProjectPath $Path -ScriptName 'test')
 
   if ($RunAllBackendVerifiers) {
     $packageJson = Get-Content (Join-Path $Path 'package.json') -Raw | ConvertFrom-Json
@@ -430,11 +463,12 @@ function Invoke-BackendGate {
         Sort-Object
     )
 
+    if ($verifyScripts.Count -eq 0) {
+      Add-SkippedGate -Name 'Backend verify:* scripts' -Reason 'No verify:* scripts were defined.'
+    }
+
     foreach ($verifyScript in $verifyScripts) {
-      Invoke-NpmScriptGate `
-        -GateName "Backend $verifyScript" `
-        -ProjectPath $Path `
-        -ScriptName $verifyScript
+      [void](Invoke-NpmScriptGate -GateName "Backend $verifyScript" -ProjectPath $Path -ScriptName $verifyScript)
     }
   }
 }
@@ -450,33 +484,30 @@ function Invoke-RuntimeGate {
   $nodeExecutable = Resolve-Executable @('node.exe', 'node')
   $npmExecutable = Resolve-Executable @('npm.cmd', 'npm.exe', 'npm')
 
-  Invoke-Gate 'Backend startup smoke test' {
-    $backendProcess = Start-TrackedProcess `
-      -Executable $nodeExecutable `
-      -Arguments @('server.js') `
-      -WorkingDirectory $ServerRepositoryPath `
-      -Environment @{ PORT = $BackendPort; CORS_ALLOW_ALL = 'true'; NODE_ENV = 'test' }
+  [void](Invoke-Gate 'Backend startup smoke test' {
+    $backendProcess = Start-TrackedProcess -Executable $nodeExecutable -Arguments @('server.js') -WorkingDirectory $ServerRepositoryPath -Environment @{
+      PORT = $BackendPort
+      CORS_ALLOW_ALL = 'true'
+      NODE_ENV = 'test'
+    }
 
     Wait-HttpReady -Uri "http://127.0.0.1:$BackendPort/api/__alde_probe__"
 
     if ($backendProcess.HasExited) {
       throw "Backend exited during startup smoke test with code $($backendProcess.ExitCode)."
     }
-  }
+  })
 
   if (-not $SkipFrontend) {
-    Invoke-Gate 'Frontend startup smoke test' {
-      $frontendProcess = Start-TrackedProcess `
-        -Executable $npmExecutable `
-        -Arguments @('run', 'dev', '--', '--host', '127.0.0.1', '--port', "$FrontendPort", '--strictPort') `
-        -WorkingDirectory $ClientRepositoryPath
+    [void](Invoke-Gate 'Frontend startup smoke test' {
+      $frontendProcess = Start-TrackedProcess -Executable $npmExecutable -Arguments @('run', 'dev', '--', '--host', '127.0.0.1', '--port', "$FrontendPort", '--strictPort') -WorkingDirectory $ClientRepositoryPath
 
       Wait-HttpReady -Uri "http://127.0.0.1:$FrontendPort"
 
       if ($frontendProcess.HasExited) {
         throw "Frontend exited during startup smoke test with code $($frontendProcess.ExitCode)."
       }
-    }
+    })
   }
 }
 
@@ -486,17 +517,37 @@ function Invoke-OperationalGate {
   Write-Section 'OPERATIONAL E2E GATE'
 
   if (-not $IncludeRuntime) {
-    throw 'Operational E2E requires -IncludeRuntime so the browser has a running frontend.'
+    Add-SkippedGate -Name 'Playwright browser E2E' -Reason 'Operational E2E requires -IncludeRuntime.'
+    return
   }
 
-  if (-not (Test-NpmScript $Path 'test:e2e')) {
-    throw "Frontend package.json does not define 'test:e2e'."
+  $runtimePrerequisites = @('Backend startup smoke test')
+  if (-not $SkipFrontend) {
+    $runtimePrerequisites += 'Frontend startup smoke test'
   }
 
-  Invoke-NpmScriptGate `
-    -GateName 'Playwright browser E2E' `
-    -ProjectPath $Path `
-    -ScriptName 'test:e2e'
+  $failedPrerequisites = @($runtimePrerequisites | Where-Object { -not (Test-GatePassed -Name $_) })
+
+  if ($failedPrerequisites.Count -gt 0) {
+    Add-SkippedGate -Name 'Playwright browser E2E' -Reason "Runtime prerequisite did not pass: $($failedPrerequisites -join ', ')"
+    return
+  }
+
+  [void](Invoke-RequiredNpmScriptGate -GateName 'Playwright browser E2E' -ProjectPath $Path -ScriptName 'test:e2e')
+}
+
+function Get-ToolVersionSafely {
+  param(
+    [Parameter(Mandatory)][string]$Command,
+    [Parameter(Mandatory)][string[]]$Arguments
+  )
+
+  try {
+    return (Invoke-NativeCommand -Command $Command -Arguments $Arguments -CaptureOutput | Select-Object -First 1)
+  }
+  catch {
+    return "unavailable: $($_.Exception.Message)"
+  }
 }
 
 function Write-VerificationReport {
@@ -517,23 +568,25 @@ function Write-VerificationReport {
   }
 
   $report = [ordered]@{
-    schemaVersion = 2
+    schemaVersion = 3
     engine = [ordered]@{
       name = $script:EngineName
       version = $script:EngineVersion
       workflow = $script:WorkflowName
       mode = $Mode
+      executionPolicy = 'full-certification'
     }
     status = $FinalStatus
     failureMessage = $FailureMessage
+    failedGateCount = Get-FailedGateCount
     startedAt = $script:StartedAt.ToString('o')
     finishedAt = (Get-Date).ToString('o')
     environment = [ordered]@{
       machine = $env:COMPUTERNAME
       user = $env:USERNAME
       powershell = $PSVersionTable.PSVersion.ToString()
-      node = ((Invoke-NativeCommand -Command 'node' -Arguments @('--version') -CaptureOutput) | Select-Object -First 1)
-      npm = ((Invoke-NativeCommand -Command 'npm' -Arguments @('--version') -CaptureOutput) | Select-Object -First 1)
+      node = Get-ToolVersionSafely -Command 'node' -Arguments @('--version')
+      npm = Get-ToolVersionSafely -Command 'npm' -Arguments @('--version')
     }
     repositories = [ordered]@{
       client = $clientState
@@ -598,6 +651,7 @@ $resolvedClientPath = $null
 $resolvedServerPath = $null
 $finalStatus = 'FAIL'
 $failureMessage = ''
+$processExitCode = 1
 $shouldSync = $Mode -in @('Sync', 'SyncAndCertify')
 $shouldCertify = $Mode -in @('Certify', 'SyncAndCertify', 'CertifyAndPublish')
 $shouldPublish = $Mode -eq 'CertifyAndPublish'
@@ -606,23 +660,17 @@ try {
   Write-Section "$($script:EngineName) $($script:EngineVersion)"
   Write-Host "Workflow : $($script:WorkflowName)"
   Write-Host "Mode     : $Mode"
-  Write-Host 'Policy   : Complete an E2E increment, commit locally, certify the clean HEAD, then publish.'
+  Write-Host 'Policy   : Run all safe gates, collect complete evidence, then decide PASS or FAIL.'
   Write-Host 'Safety   : This engine never stages files and never creates commits.'
 
-  $resolvedClientPath = Resolve-ProjectPath `
-    -ExplicitPath $ClientPath `
-    -Candidates @($PSScriptRoot) `
-    -ProjectLabel 'Frontend'
+  $resolvedClientPath = Resolve-ProjectPath -ExplicitPath $ClientPath -Candidates @($PSScriptRoot) -ProjectLabel 'Frontend'
 
   if (-not $SkipBackend) {
-    $resolvedServerPath = Resolve-ProjectPath `
-      -ExplicitPath $ServerPath `
-      -Candidates @(
-        (Join-Path $resolvedClientPath '..\server'),
-        (Join-Path $resolvedClientPath '..\alpha-tech-server'),
-        'D:\alpha-tech\server'
-      ) `
-      -ProjectLabel 'Backend'
+    $resolvedServerPath = Resolve-ProjectPath -ExplicitPath $ServerPath -Candidates @(
+      (Join-Path $resolvedClientPath '..\server'),
+      (Join-Path $resolvedClientPath '..\alpha-tech-server'),
+      'D:\alpha-tech\server'
+    ) -ProjectLabel 'Backend'
   }
 
   $repositories = [ordered]@{ client = $resolvedClientPath }
@@ -655,6 +703,7 @@ try {
 
   if ($Mode -eq 'Sync') {
     $finalStatus = 'PASS'
+    $processExitCode = 0
     Write-Section 'SYNCHRONIZATION PASS'
   }
 
@@ -669,74 +718,83 @@ try {
 
     if ($IncludeRuntime) {
       if ($SkipBackend) {
-        throw 'Runtime verification requires the backend repository.'
+        Add-SkippedGate -Name 'Backend startup smoke test' -Reason 'Runtime verification requires the backend repository.'
       }
-      Invoke-RuntimeGate -ClientRepositoryPath $resolvedClientPath -ServerRepositoryPath $resolvedServerPath
+      else {
+        Invoke-RuntimeGate -ClientRepositoryPath $resolvedClientPath -ServerRepositoryPath $resolvedServerPath
+      }
     }
 
     if ($IncludeOperationalE2E) {
       if ($SkipFrontend) {
-        throw 'Operational E2E requires the frontend repository.'
+        Add-SkippedGate -Name 'Playwright browser E2E' -Reason 'Operational E2E requires the frontend repository.'
       }
-      Invoke-OperationalGate -Path $resolvedClientPath
+      else {
+        Invoke-OperationalGate -Path $resolvedClientPath
+      }
     }
 
-    foreach ($entry in $repositories.GetEnumerator()) {
-      $stateAfterCertification = Get-RepositoryState $entry.Value
+    $failedGateCount = Get-FailedGateCount
 
-      if (-not $AllowDirtyCertification) {
-        Assert-CleanWorkingTree -State $stateAfterCertification -Reason 'after certification'
+    if ($failedGateCount -eq 0) {
+      foreach ($entry in $repositories.GetEnumerator()) {
+        $stateAfterCertification = Get-RepositoryState $entry.Value
+
+        if (-not $AllowDirtyCertification) {
+          Assert-CleanWorkingTree -State $stateAfterCertification -Reason 'after certification'
+        }
+
+        $script:CertifiedHeads[$entry.Key] = $stateAfterCertification.head
       }
 
-      $script:CertifiedHeads[$entry.Key] = $stateAfterCertification.head
+      $finalStatus = 'PASS'
+      $processExitCode = 0
+      Write-Section 'LOCAL CERTIFICATION PASS'
+    }
+    else {
+      $finalStatus = 'FAIL'
+      $failureMessage = "$failedGateCount certification gate(s) failed."
+      $processExitCode = 1
+      Write-Section 'LOCAL CERTIFICATION FAIL'
     }
 
-    $finalStatus = 'PASS'
-    Write-Section 'LOCAL CERTIFICATION PASS'
     $script:Results | Format-Table -AutoSize
   }
 
   if ($shouldPublish) {
-    Write-Section 'PUBLISH GUARD'
-    foreach ($entry in $repositories.GetEnumerator()) {
-      Publish-CertifiedRepository `
-        -RepositoryPath $entry.Value `
-        -RepositoryKey $entry.Key `
-        -Remote $RemoteName `
-        -Branch $RequiredBranch
+    if ($finalStatus -ne 'PASS') {
+      Write-Section 'PUBLISH BLOCKED'
+      Write-Host 'One or more certification gates failed. No repository was pushed.' -ForegroundColor Red
     }
-
-    Write-Section 'CERTIFICATION AND PUBLISH PASS'
+    else {
+      Write-Section 'PUBLISH GUARD'
+      foreach ($entry in $repositories.GetEnumerator()) {
+        Publish-CertifiedRepository -RepositoryPath $entry.Value -RepositoryKey $entry.Key -Remote $RemoteName -Branch $RequiredBranch
+      }
+      Write-Section 'CERTIFICATION AND PUBLISH PASS'
+    }
   }
-
-  Write-VerificationReport `
-    -ClientRepositoryPath $resolvedClientPath `
-    -ServerRepositoryPath $resolvedServerPath `
-    -FinalStatus $finalStatus
-
-  exit 0
 }
 catch {
   $failureMessage = $_.Exception.Message
+  $finalStatus = 'FAIL'
+  $processExitCode = 1
+
   Write-Host ''
   Write-Host "ALDE FAILED: $failureMessage" -ForegroundColor Red
   $script:Results | Format-Table -AutoSize
+}
+finally {
+  Stop-TrackedProcesses
 
   if ($resolvedClientPath) {
     try {
-      Write-VerificationReport `
-        -ClientRepositoryPath $resolvedClientPath `
-        -ServerRepositoryPath $resolvedServerPath `
-        -FinalStatus 'FAIL' `
-        -FailureMessage $failureMessage
+      Write-VerificationReport -ClientRepositoryPath $resolvedClientPath -ServerRepositoryPath $resolvedServerPath -FinalStatus $finalStatus -FailureMessage $failureMessage
     }
     catch {
       Write-Warning "Could not write verification report: $($_.Exception.Message)"
     }
   }
+}
 
-  exit 1
-}
-finally {
-  Stop-TrackedProcesses
-}
+exit $processExitCode

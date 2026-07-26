@@ -3,13 +3,13 @@
     "status":  "PASS",
     "repository":  "Arkcom5026/alpha-tech-client",
     "sourceBranch":  "main",
-    "sourceSha":  "506e63cac8a0ce45777e891101729fd626429534",
+    "sourceSha":  "ce2f9d455958587046bc6d2a18de35b82216e5ab",
     "eventName":  "push",
     "workflow":  "ALDE Local Certification",
-    "workflowRunId":  30219544847,
+    "workflowRunId":  30220672218,
     "workflowRunAttempt":  1,
-    "workflowRunUrl":  "https://github.com/Arkcom5026/alpha-tech-client/actions/runs/30219544847",
-    "publishedAt":  "2026-07-26T20:43:41.3727286Z",
+    "workflowRunUrl":  "https://github.com/Arkcom5026/alpha-tech-client/actions/runs/30220672218",
+    "publishedAt":  "2026-07-26T21:16:16.0400625Z",
     "runner":  {
                    "name":  "ALDE-WIN01",
                    "os":  "Windows",
@@ -19,14 +19,14 @@
                      "schemaVersion":  3,
                      "status":  "PASS",
                      "mode":  "SyncAndCertify",
-                     "startedAt":  "2026-07-26T20:42:38.8696477Z",
-                     "finishedAt":  "2026-07-26T20:43:37.4998843Z",
+                     "startedAt":  "2026-07-26T21:15:07.3430402Z",
+                     "finishedAt":  "2026-07-26T21:16:06.9074270Z",
                      "runnerName":  "ALDE-WIN01",
-                     "workflowRunId":  "30219544847",
+                     "workflowRunId":  "30220672218",
                      "clientPath":  "D:\\alpha-tech\\client",
                      "serverPath":  "D:\\alpha-tech\\server",
-                     "clientHead":  "506e63cac8a0ce45777e891101729fd626429534",
-                     "serverHead":  "039143ad3fe63e4e817b0e855f088145f575b2af",
+                     "clientHead":  "ce2f9d455958587046bc6d2a18de35b82216e5ab",
+                     "serverHead":  "e585ad60dcb822d6f9c34705576ef3d1e00a195b",
                      "runnerPolicy":  {
                                           "status":  "PASS",
                                           "policyVersion":  1,
@@ -45,9 +45,9 @@
                                                                "cleanCommitBoundCertification":  true
                                                            }
                                       },
-                     "reportFile":  "alde-20260727-034337.json",
-                     "reportPath":  "D:\\alpha-tech\\client\\.artifacts\\verification\\alde-20260727-034337.json",
-                     "publishedReportPath":  "C:\\actions-runner\\actions-runner\\_work\\alpha-tech-client\\alpha-tech-client\\alde-evidence\\alde-20260727-034337.json",
+                     "reportFile":  "alde-20260727-041606.json",
+                     "reportPath":  "D:\\alpha-tech\\client\\.artifacts\\verification\\alde-20260727-041606.json",
+                     "publishedReportPath":  "C:\\actions-runner\\actions-runner\\_work\\alpha-tech-client\\alpha-tech-client\\alde-evidence\\alde-20260727-041606.json",
                      "exitCode":  0
                  },
     "verificationReport":  {
@@ -63,8 +63,8 @@
                                "status":  "PASS",
                                "failureMessage":  "",
                                "failedGateCount":  0,
-                               "startedAt":  "2026-07-27T03:42:39.4240728+07:00",
-                               "finishedAt":  "2026-07-27T03:43:36.8604731+07:00",
+                               "startedAt":  "2026-07-27T04:15:07.9624960+07:00",
+                               "finishedAt":  "2026-07-27T04:16:06.3005875+07:00",
                                "environment":  {
                                                    "machine":  "DESKTOP-8GBTJDF",
                                                    "user":  "Administrator",
@@ -76,7 +76,7 @@
                                                     "client":  {
                                                                    "path":  "D:\\alpha-tech\\client",
                                                                    "branch":  "main",
-                                                                   "head":  "506e63cac8a0ce45777e891101729fd626429534",
+                                                                   "head":  "ce2f9d455958587046bc6d2a18de35b82216e5ab",
                                                                    "clean":  true,
                                                                    "status":  [
 
@@ -85,7 +85,7 @@
                                                     "server":  {
                                                                    "path":  "D:\\alpha-tech\\server",
                                                                    "branch":  "main",
-                                                                   "head":  "039143ad3fe63e4e817b0e855f088145f575b2af",
+                                                                   "head":  "e585ad60dcb822d6f9c34705576ef3d1e00a195b",
                                                                    "clean":  true,
                                                                    "status":  [
 
@@ -93,32 +93,32 @@
                                                                }
                                                 },
                                "certifiedHeads":  {
-                                                      "client":  "506e63cac8a0ce45777e891101729fd626429534",
-                                                      "server":  "039143ad3fe63e4e817b0e855f088145f575b2af"
+                                                      "client":  "ce2f9d455958587046bc6d2a18de35b82216e5ab",
+                                                      "server":  "e585ad60dcb822d6f9c34705576ef3d1e00a195b"
                                                   },
                                "gates":  [
                                              {
                                                  "name":  "Frontend typecheck",
                                                  "status":  "PASS",
-                                                 "durationSeconds":  6.84,
+                                                 "durationSeconds":  7.36,
                                                  "detail":  ""
                                              },
                                              {
                                                  "name":  "Frontend lint",
                                                  "status":  "PASS",
-                                                 "durationSeconds":  0.82,
+                                                 "durationSeconds":  0.78,
                                                  "detail":  ""
                                              },
                                              {
                                                  "name":  "Frontend build",
                                                  "status":  "PASS",
-                                                 "durationSeconds":  16.06,
+                                                 "durationSeconds":  16.3,
                                                  "detail":  ""
                                              },
                                              {
                                                  "name":  "Frontend test:run",
                                                  "status":  "PASS",
-                                                 "durationSeconds":  4.74,
+                                                 "durationSeconds":  4.58,
                                                  "detail":  ""
                                              },
                                              {
@@ -130,31 +130,31 @@
                                              {
                                                  "name":  "Prisma validate",
                                                  "status":  "PASS",
-                                                 "durationSeconds":  4.17,
+                                                 "durationSeconds":  4.12,
                                                  "detail":  ""
                                              },
                                              {
                                                  "name":  "Prisma generate",
                                                  "status":  "PASS",
-                                                 "durationSeconds":  5.93,
+                                                 "durationSeconds":  5.9,
                                                  "detail":  ""
                                              },
                                              {
                                                  "name":  "Backend regression tests",
                                                  "status":  "PASS",
-                                                 "durationSeconds":  1.43,
+                                                 "durationSeconds":  1.04,
                                                  "detail":  ""
                                              },
                                              {
                                                  "name":  "Backend verify:employee-lifecycle",
                                                  "status":  "PASS",
-                                                 "durationSeconds":  1.25,
+                                                 "durationSeconds":  1.27,
                                                  "detail":  ""
                                              },
                                              {
                                                  "name":  "Backend verify:product-backend-migration",
                                                  "status":  "PASS",
-                                                 "durationSeconds":  1.69,
+                                                 "durationSeconds":  1.63,
                                                  "detail":  ""
                                              },
                                              {
@@ -166,13 +166,13 @@
                                              {
                                                  "name":  "Backend verify:product-runtime-controller",
                                                  "status":  "PASS",
-                                                 "durationSeconds":  0.57,
+                                                 "durationSeconds":  0.58,
                                                  "detail":  ""
                                              },
                                              {
                                                  "name":  "Backend startup smoke test",
                                                  "status":  "PASS",
-                                                 "durationSeconds":  1.71,
+                                                 "durationSeconds":  1.67,
                                                  "detail":  ""
                                              },
                                              {

@@ -1,16 +1,16 @@
 // src/features/unit/pages/ListUnitPage.jsx
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import useUnitStore from '../store/unitStore';
+
 import {
   Button,
   Card,
-  Dialog,
+  ConfirmActionDialog,
+  CrudPage,
   EmptyState,
   LoadingState,
-  Page,
-  PageHeader,
 } from '@/design-system';
+import useUnitStore from '../store/unitStore';
 
 const ListUnitPage = () => {
   const { shopSlug } = useParams();
@@ -24,6 +24,7 @@ const ListUnitPage = () => {
   }, [fetchUnits]);
 
   const selectedUnit = units.find((unit) => unit.id === confirmId);
+  const createUnitPath = `/${shopSlug}/pos/stock/units/create`;
 
   const handleDelete = async () => {
     if (!confirmId || isDeleting) return;
@@ -38,17 +39,12 @@ const ListUnitPage = () => {
   };
 
   return (
-    <Page className="mx-auto w-full max-w-5xl">
-      <PageHeader
-        title="รายการหน่วยนับ"
-        description="จัดการหน่วยนับที่ใช้กับสินค้าในระบบ"
-        actions={
-          <Button onClick={() => navigate(`/${shopSlug}/pos/stock/units/create`)}>
-            เพิ่มหน่วยนับ
-          </Button>
-        }
-      />
-
+    <CrudPage
+      title="รายการหน่วยนับ"
+      description="จัดการหน่วยนับที่ใช้กับสินค้าในระบบ"
+      maxWidth="5xl"
+      actions={<Button onClick={() => navigate(createUnitPath)}>เพิ่มหน่วยนับ</Button>}
+    >
       <Card className="overflow-hidden">
         {isLoading ? (
           <LoadingState label="กำลังโหลดรายการหน่วยนับ…" />
@@ -57,7 +53,7 @@ const ListUnitPage = () => {
             title="ยังไม่มีหน่วยนับ"
             description="เพิ่มหน่วยนับรายการแรกเพื่อเริ่มใช้งานกับสินค้า"
             actionLabel="เพิ่มหน่วยนับ"
-            onAction={() => navigate(`/${shopSlug}/pos/stock/units/create`)}
+            onAction={() => navigate(createUnitPath)}
           />
         ) : (
           <div className="overflow-x-auto">
@@ -75,9 +71,7 @@ const ListUnitPage = () => {
                     key={unit.id}
                     className="bg-[hsl(var(--ads-surface-raised))] transition-colors hover:bg-[hsl(var(--ads-surface-subtle))]"
                   >
-                    <td className="px-5 py-4 text-[hsl(var(--ads-text-muted))]">
-                      {index + 1}
-                    </td>
+                    <td className="px-5 py-4 text-[hsl(var(--ads-text-muted))]">{index + 1}</td>
                     <td className="px-5 py-4 font-medium text-[hsl(var(--ads-text-strong))]">
                       {unit.name}
                     </td>
@@ -86,17 +80,11 @@ const ListUnitPage = () => {
                         <Button
                           variant="secondary"
                           size="sm"
-                          onClick={() =>
-                            navigate(`/${shopSlug}/pos/stock/units/edit/${unit.id}`)
-                          }
+                          onClick={() => navigate(`/${shopSlug}/pos/stock/units/edit/${unit.id}`)}
                         >
                           แก้ไข
                         </Button>
-                        <Button
-                          variant="danger"
-                          size="sm"
-                          onClick={() => setConfirmId(unit.id)}
-                        >
+                        <Button variant="danger" size="sm" onClick={() => setConfirmId(unit.id)}>
                           ลบ
                         </Button>
                       </div>
@@ -109,42 +97,22 @@ const ListUnitPage = () => {
         )}
       </Card>
 
-      <Dialog
+      <ConfirmActionDialog
         open={Boolean(confirmId)}
-        onClose={() => {
-          if (!isDeleting) setConfirmId(null);
-        }}
+        onClose={() => setConfirmId(null)}
+        onConfirm={handleDelete}
         title="ยืนยันการลบหน่วยนับ"
         description={
           selectedUnit
-            ? `คุณกำลังจะลบ “${selectedUnit.name}” การดำเนินการนี้ไม่สามารถย้อนกลับได้`
-            : 'การดำเนินการนี้ไม่สามารถย้อนกลับได้'
+            ? `คุณกำลังจะลบ “${selectedUnit.name}” การดำเนินการนี้ไม่สามารถย้อนกลับได้ โปรดตรวจสอบชื่อหน่วยนับให้ถูกต้องก่อนยืนยัน`
+            : 'การดำเนินการนี้ไม่สามารถย้อนกลับได้ โปรดตรวจสอบข้อมูลให้ถูกต้องก่อนยืนยัน'
         }
-        footer={
-          <>
-            <Button
-              variant="secondary"
-              onClick={() => setConfirmId(null)}
-              disabled={isDeleting}
-            >
-              ยกเลิก
-            </Button>
-            <Button
-              variant="danger"
-              loading={isDeleting}
-              loadingLabel="กำลังลบ…"
-              onClick={handleDelete}
-            >
-              ยืนยันการลบ
-            </Button>
-          </>
-        }
-      >
-        <p className="text-sm text-[hsl(var(--ads-text-muted))]">
-          ตรวจสอบชื่อหน่วยนับให้ถูกต้องก่อนยืนยัน
-        </p>
-      </Dialog>
-    </Page>
+        confirmLabel="ยืนยันการลบ"
+        confirmVariant="danger"
+        loading={isDeleting}
+        loadingLabel="กำลังลบ…"
+      />
+    </CrudPage>
   );
 };
 

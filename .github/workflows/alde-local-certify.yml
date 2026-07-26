@@ -19,7 +19,7 @@ on:
       - 'tools/runner/invoke-alde.ps1'
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: alde-local-certification
@@ -64,3 +64,104 @@ jobs:
             ${{ steps.alde.outputs.metadata_path }}
           if-no-files-found: error
           retention-days: 14
+
+      - name: Publish ALDE result bridge
+        if: always()
+        shell: powershell
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ALDE_STATUS: ${{ steps.alde.outputs.status }}
+          ALDE_REPORT_PATH: ${{ steps.alde.outputs.report_path }}
+          ALDE_METADATA_PATH: ${{ steps.alde.outputs.metadata_path }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          function Read-JsonFileSafely {
+            param([string]$Path)
+            if (-not $Path -or -not (Test-Path -LiteralPath $Path -PathType Leaf)) {
+              return $null
+            }
+            return Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json
+          }
+
+          function Publish-ResultFile {
+            param(
+              [Parameter(Mandatory)][string]$Path,
+              [Parameter(Mandatory)][string]$Content,
+              [Parameter(Mandatory)][string]$Message
+            )
+
+            $headers = @{
+              Authorization = "Bearer $env:GH_TOKEN"
+              Accept = 'application/vnd.github+json'
+              'X-GitHub-Api-Version' = '2022-11-28'
+            }
+            $uri = "https://api.github.com/repos/$env:GITHUB_REPOSITORY/contents/$Path"
+            $existingSha = $null
+
+            try {
+              $existing = Invoke-RestMethod -Method Get -Uri "$uri?ref=alde-results" -Headers $headers
+              $existingSha = $existing.sha
+            }
+            catch {
+              if (-not $_.Exception.Response -or [int]$_.Exception.Response.StatusCode -ne 404) {
+                throw
+              }
+            }
+
+            $payload = [ordered]@{
+              message = $Message
+              branch = 'alde-results'
+              content = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($Content))
+            }
+            if ($existingSha) {
+              $payload.sha = $existingSha
+            }
+
+            Invoke-RestMethod `
+              -Method Put `
+              -Uri $uri `
+              -Headers $headers `
+              -ContentType 'application/json' `
+              -Body ($payload | ConvertTo-Json -Depth 5) | Out-Null
+          }
+
+          $metadata = Read-JsonFileSafely -Path $env:ALDE_METADATA_PATH
+          $report = Read-JsonFileSafely -Path $env:ALDE_REPORT_PATH
+          $resolvedStatus = if ($env:ALDE_STATUS) { $env:ALDE_STATUS } elseif ($metadata.status) { $metadata.status } else { 'UNKNOWN' }
+
+          $result = [ordered]@{
+            schemaVersion = 1
+            status = $resolvedStatus
+            repository = $env:GITHUB_REPOSITORY
+            sourceBranch = $env:GITHUB_REF_NAME
+            sourceSha = $env:GITHUB_SHA
+            eventName = $env:GITHUB_EVENT_NAME
+            workflow = $env:GITHUB_WORKFLOW
+            workflowRunId = [long]$env:GITHUB_RUN_ID
+            workflowRunAttempt = [int]$env:GITHUB_RUN_ATTEMPT
+            workflowRunUrl = "$env:GITHUB_SERVER_URL/$env:GITHUB_REPOSITORY/actions/runs/$env:GITHUB_RUN_ID"
+            publishedAt = (Get-Date).ToUniversalTime().ToString('o')
+            runner = [ordered]@{
+              name = $env:RUNNER_NAME
+              os = $env:RUNNER_OS
+              architecture = $env:RUNNER_ARCH
+            }
+            metadata = $metadata
+            verificationReport = $report
+          }
+
+          $json = $result | ConvertTo-Json -Depth 20
+          $historyPath = ".alde/history/run-$env:GITHUB_RUN_ID-attempt-$env:GITHUB_RUN_ATTEMPT.json"
+
+          Publish-ResultFile `
+            -Path $historyPath `
+            -Content $json `
+            -Message "chore(alde-results): publish run $env:GITHUB_RUN_ID attempt $env:GITHUB_RUN_ATTEMPT"
+
+          Publish-ResultFile `
+            -Path '.alde/latest-result.json' `
+            -Content $json `
+            -Message "chore(alde-results): update latest result to run $env:GITHUB_RUN_ID"
+
+          Write-Host "ALDE result bridge published: status=$resolvedStatus run=$env:GITHUB_RUN_ID"

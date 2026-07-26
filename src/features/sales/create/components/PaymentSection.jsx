@@ -1,6 +1,6 @@
 // src/features/sales/components/PaymentSection.jsx
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import useSalesStore from '@/features/sales/store/salesStore';
+import useSaleCreateStore from '@/features/sales/create/store/saleCreateStore';
 import useCustomerDepositStore from '@/features/customerDeposit/store/customerDepositStore';
 import PaymentSummary from './PaymentSummary';
 import PaymentMethodInput from './PaymentMethodInput';
@@ -26,7 +26,7 @@ const PaymentSection = ({
     cardRef,
     setCardRef,
     resetSaleOrderAction,
-  } = useSalesStore();
+  } = useSaleCreateStore();
 
   const {
     customerDepositAmount,

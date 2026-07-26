@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import useSalesStore from '@/features/sales/store/salesStore';
+import useSaleCreateStore from '@/features/sales/create/store/saleCreateStore';
 
 const lineIdentity = (item) => item?.lineId || (item?.stockItemId ? `stock-${item.stockItemId}` : null);
 const isSimpleLine = (item) => String(item?.lineType || '').toUpperCase() === 'SIMPLE' || !item?.stockItemId;
@@ -10,7 +10,7 @@ const SaleItemTable = ({ items = [], onRemove, billDiscount = 0 }) => {
     setSharedBillDiscountPerItemAction,
     updateSaleItemAction,
     updateQuantityAction,
-  } = useSalesStore();
+  } = useSaleCreateStore();
 
   const toNumber = (raw) => {
     if (raw === '' || raw === null || raw === undefined) return 0;

@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import useSalesStore from '@/features/sales/store/salesStore';
+import useSaleCreateStore from '@/features/sales/create/store/saleCreateStore';
 import useStockItemStore from '@/features/stockItem/store/stockItemStore';
 
 import CustomerSection from '../components/CustomerSection';
@@ -40,7 +40,7 @@ const QuickSalePage = () => {
     sharedBillDiscountPerItem,
     billDiscount,
     clearErrorAction: clearSaleErrorAction,
-  } = useSalesStore();
+  } = useSaleCreateStore();
 
   const {
     searchStockItemAction,
@@ -58,8 +58,10 @@ const QuickSalePage = () => {
   const saleItemKeySet = useMemo(() => {
     const s = new Set();
     (saleItems || []).forEach((it) => {
+      const lineId = it?.lineId || (it?.stockItemId ? `stock-${it.stockItemId}` : null);
       const sid = it?.stockItemId;
       const bc = it?.barcode;
+      if (lineId) s.add(`LINE:${String(lineId)}`);
       if (sid != null) s.add(`SID:${String(sid)}`);
       if (bc) s.add(`BC:${String(bc).trim()}`);
     });
@@ -100,14 +102,6 @@ const QuickSalePage = () => {
         barcodeInputRef.current?.focus();
         return;
       }
-
-      if (foundItem.kind === 'LOT' || foundItem.simpleLotId || !foundItem.id || !foundItem.barcode) {
-        setBarcodeError('❌ สินค้าประเภทจำนวน/LOT ยังไม่รองรับในหน้าขายนี้ กรุณาใช้สินค้าที่มี SN ก่อน');
-        e.target.value = '';
-        barcodeInputRef.current?.focus();
-        return;
-      }
-
       const status = foundItem.status || foundItem.stockItem?.status;
       if (status && status !== 'IN_STOCK') {
         if (status === 'SOLD') {
@@ -120,7 +114,16 @@ const QuickSalePage = () => {
         return;
       }
 
-      const duplicated = saleItemKeySet.has(`SID:${String(foundItem.id)}`) || (foundItem.barcode && saleItemKeySet.has(`BC:${String(foundItem.barcode).trim()}`));
+      const foundLineType = (foundItem.kind === 'LOT' || foundItem.simpleLotId || foundItem.product?.mode === 'SIMPLE') ? 'SIMPLE' : 'STOCK_ITEM';
+      const foundProductId = Number(foundItem.productId ?? foundItem.product?.id ?? foundItem.simpleLot?.productId ?? 0) || null;
+      const foundStockItemId = foundLineType === 'STOCK_ITEM' ? Number(foundItem.stockItemId ?? foundItem.id ?? foundItem.stockItem?.id ?? 0) || null : null;
+      const foundSimpleLotId = foundLineType === 'SIMPLE' ? Number(foundItem.simpleLotId ?? foundItem.simpleLot?.id ?? foundItem.id ?? 0) || null : null;
+      const foundLineId = foundLineType === 'STOCK_ITEM'
+        ? `stock-${foundStockItemId}`
+        : foundSimpleLotId
+          ? `simple-${foundProductId}-lot-${foundSimpleLotId}`
+          : `simple-${foundProductId}`;
+      const duplicated = saleItemKeySet.has(`LINE:${foundLineId}`) || (foundItem.barcode && saleItemKeySet.has(`BC:${String(foundItem.barcode).trim()}`));
       if (duplicated) {
         setBarcodeError('⚠️ บาร์โค้ดนี้ถูกเพิ่มในรายการขายในตะกร้าปัจจุบันแล้ว');
         e.target.value = '';
@@ -128,14 +131,22 @@ const QuickSalePage = () => {
         return;
       }
 
+      const selectedPrice = Number(foundItem.prices?.[selectedPriceType] ?? foundItem.price ?? foundItem.product?.prices?.[selectedPriceType] ?? 0) || 0;
       const preparedItem = {
-        stockItemId: foundItem.id,
-        barcode: foundItem.barcode,
-        productName: foundItem.product?.name || '',
-        model: foundItem.product?.model || '',
-        price: foundItem.prices?.[selectedPriceType] || 0,
-        originalPrice: foundItem.prices?.[selectedPriceType] || 0,
-        sellingPrice: foundItem.prices?.[selectedPriceType] || 0,
+        lineId: foundLineId,
+        lineType: foundLineType,
+        stockItemId: foundStockItemId,
+        productId: foundProductId,
+        simpleLotId: foundSimpleLotId,
+        quantity: 1,
+        unitPrice: selectedPrice,
+        barcode: foundItem.barcode || foundItem.simpleLot?.barcode || '',
+        productName: foundItem.product?.name || foundItem.productName || '',
+        model: foundItem.product?.model || foundItem.model || '',
+        kind: foundItem.kind || (foundLineType === 'SIMPLE' ? 'LOT' : 'SN'),
+        price: selectedPrice,
+        originalPrice: selectedPrice,
+        sellingPrice: selectedPrice,
         discount: 0,
         discountWithoutBill: 0,
         billShare: 0,

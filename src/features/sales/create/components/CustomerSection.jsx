@@ -3,7 +3,7 @@
 
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import InputMask from 'react-input-mask';
-import useSalesStore from '@/features/sales/store/salesStore';
+import useSaleCreateStore from '@/features/sales/create/store/saleCreateStore';
 import useCustomerDepositStore from '@/features/customerDeposit/store/customerDepositStore';
 import useCustomerStore from '@/features/customer/store/customerStore';
 import { useAddressStore } from '@/features/address/store/addressStore';

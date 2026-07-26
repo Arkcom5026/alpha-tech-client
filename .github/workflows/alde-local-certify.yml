@@ -1,0 +1,56 @@
+name: ALDE Local Certification
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: ALDE execution mode
+        required: true
+        default: SyncAndCertify
+        type: choice
+        options:
+          - SyncAndCertify
+          - Certify
+
+permissions:
+  contents: read
+
+concurrency:
+  group: alde-local-certification
+  cancel-in-progress: false
+
+jobs:
+  certify:
+    name: Certify on Alpha-Tech local machine
+    runs-on:
+      - self-hosted
+      - Windows
+      - X64
+      - alpha-tech-local
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout workflow source
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Run ALDE local certification
+        id: alde
+        shell: powershell
+        run: |
+          & "$env:GITHUB_WORKSPACE\tools\runner\invoke-alde.ps1" `
+            -ClientPath 'D:\alpha-tech\client' `
+            -ServerPath 'D:\alpha-tech\server' `
+            -Mode '${{ inputs.mode }}' `
+            -RequiredBranch 'main' `
+            -EvidencePath "$env:GITHUB_WORKSPACE\alde-evidence"
+
+      - name: Upload ALDE evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: alde-local-certification-${{ github.run_id }}
+          path: alde-evidence/*.json
+          if-no-files-found: error
+          retention-days: 14

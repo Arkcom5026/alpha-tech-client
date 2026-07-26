@@ -53,16 +53,30 @@ function Get-LatestVerificationReport {
     Select-Object -First 1
 }
 
+function Write-GitHubOutput {
+  param(
+    [Parameter(Mandatory)][string]$Name,
+    [AllowEmptyString()][string]$Value
+  )
+
+  if (-not $env:GITHUB_OUTPUT) { return }
+  Add-Content -LiteralPath $env:GITHUB_OUTPUT -Value "$Name=$Value" -Encoding UTF8
+}
+
 function Write-GitHubSummary {
   param(
     [Parameter(Mandatory)][string]$Status,
     [Parameter(Mandatory)][string]$ClientHead,
     [Parameter(Mandatory)][string]$ServerHead,
-    [string]$ReportName = ''
+    [string]$ReportPath = '',
+    [string]$MetadataPath = ''
   )
 
   $summaryPath = $env:GITHUB_STEP_SUMMARY
   if (-not $summaryPath) { return }
+
+  $reportDisplay = if ($ReportPath) { Split-Path -Leaf $ReportPath } else { 'not created' }
+  $metadataDisplay = if ($MetadataPath) { Split-Path -Leaf $MetadataPath } else { 'not created' }
 
   $lines = @(
     '# Alpha-Tech Local Certification',
@@ -71,12 +85,10 @@ function Write-GitHubSummary {
     "- Client HEAD: ``$ClientHead``",
     "- Server HEAD: ``$ServerHead``",
     "- Runner: ``$env:RUNNER_NAME``",
-    "- Workflow run: ``$env:GITHUB_RUN_ID``"
+    "- Workflow run: ``$env:GITHUB_RUN_ID``",
+    "- Verification report: ``$reportDisplay``",
+    "- Runner metadata: ``$metadataDisplay``"
   )
-
-  if ($ReportName) {
-    $lines += "- Verification report: ``$ReportName``"
-  }
 
   Add-Content -LiteralPath $summaryPath -Value ($lines -join [Environment]::NewLine) -Encoding UTF8
 }
@@ -114,6 +126,9 @@ $startedAt = Get-Date
 $exitCode = 0
 $status = 'FAIL'
 $report = $null
+$metadataPath = Join-Path $EvidencePath 'runner-result.json'
+$clientHead = ''
+$serverHead = ''
 
 try {
   & $aldeScript `
@@ -141,12 +156,11 @@ finally {
   $artifactDirectory = Join-Path $ClientPath '.artifacts\verification'
   $report = Get-LatestVerificationReport -ArtifactDirectory $artifactDirectory -NotBefore $startedAt
 
-  if ($report) {
-    Copy-Item -LiteralPath $report.FullName -Destination (Join-Path $EvidencePath $report.Name) -Force
-  }
+  try { $clientHead = (& git -C $ClientPath rev-parse HEAD).Trim() } catch { $clientHead = 'unavailable' }
+  try { $serverHead = (& git -C $ServerPath rev-parse HEAD).Trim() } catch { $serverHead = 'unavailable' }
 
   $metadata = [ordered]@{
-    schemaVersion = 1
+    schemaVersion = 2
     status = $status
     mode = $Mode
     startedAt = $startedAt.ToUniversalTime().ToString('o')
@@ -155,20 +169,27 @@ finally {
     workflowRunId = $env:GITHUB_RUN_ID
     clientPath = $ClientPath
     serverPath = $ServerPath
-    clientHead = (& git -C $ClientPath rev-parse HEAD).Trim()
-    serverHead = (& git -C $ServerPath rev-parse HEAD).Trim()
+    clientHead = $clientHead
+    serverHead = $serverHead
     reportFile = if ($report) { $report.Name } else { $null }
+    reportPath = if ($report) { $report.FullName } else { $null }
     exitCode = $exitCode
   }
 
-  $metadataPath = Join-Path $EvidencePath 'runner-result.json'
   $metadata | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $metadataPath -Encoding UTF8
+
+  Write-GitHubOutput -Name 'status' -Value $status
+  Write-GitHubOutput -Name 'client_head' -Value $clientHead
+  Write-GitHubOutput -Name 'server_head' -Value $serverHead
+  Write-GitHubOutput -Name 'report_path' -Value $(if ($report) { $report.FullName } else { '' })
+  Write-GitHubOutput -Name 'metadata_path' -Value $metadataPath
 
   Write-GitHubSummary `
     -Status $status `
-    -ClientHead $metadata.clientHead `
-    -ServerHead $metadata.serverHead `
-    -ReportName $metadata.reportFile
+    -ClientHead $clientHead `
+    -ServerHead $serverHead `
+    -ReportPath $(if ($report) { $report.FullName } else { '' }) `
+    -MetadataPath $metadataPath
 }
 
 if (-not $report) {

@@ -9,6 +9,7 @@ import {
   Card,
   CardBody,
   CrudPage,
+  CrudPrimaryAction,
   EmptyState,
   LoadingState,
 } from '@/design-system';
@@ -69,10 +70,10 @@ const ListSupplierPage = () => {
       description="จัดการบริษัทคู่ค้าและซัพพลายเออร์สำหรับใบสั่งซื้อและใบรับสินค้า"
       actions={
         selectedBranchId ? (
-          <Button onClick={() => navigate(createSupplierPath)}>
+          <CrudPrimaryAction onClick={() => navigate(createSupplierPath)}>
             <Plus className="h-4 w-4" aria-hidden="true" />
             เพิ่มผู้ขาย
-          </Button>
+          </CrudPrimaryAction>
         ) : null
       }
       notices={

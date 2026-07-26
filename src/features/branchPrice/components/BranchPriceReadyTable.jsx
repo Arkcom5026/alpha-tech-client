@@ -1,6 +1,12 @@
 // 📄 BranchPriceReadyTable.jsx
 import React from 'react';
 
+const displayPrice = (value) => {
+  if (value === '' || value === null || value === undefined) return 0;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : 0;
+};
+
 const BranchPriceReadyTable = ({ readyEntries, onRemove }) => {
   return (
     <div className="overflow-x-auto text-sm">
@@ -25,11 +31,11 @@ const BranchPriceReadyTable = ({ readyEntries, onRemove }) => {
               <td className="border px-2 py-2">{item.product?.id}</td>
               <td className="border px-2 py-2">{item.product?.name}</td>
               <td className="border px-2 py-2">{item.product?.model}</td>
-              <td className="border px-2 py-2 text-right">{item.costPrice}</td>
-              <td className="border px-2 py-2 text-right">{item.wholesalePrice}</td>
-              <td className="border px-2 py-2 text-right">{item.technicianPrice}</td>
-              <td className="border px-2 py-2 text-right">{item.retailPrice}</td>
-              <td className="border px-2 py-2 text-right">{item.priceOnline}</td>
+              <td className="border px-2 py-2 text-right">{displayPrice(item.costPrice)}</td>
+              <td className="border px-2 py-2 text-right">{displayPrice(item.wholesalePrice)}</td>
+              <td className="border px-2 py-2 text-right">{displayPrice(item.technicianPrice)}</td>
+              <td className="border px-2 py-2 text-right">{displayPrice(item.retailPrice)}</td>
+              <td className="border px-2 py-2 text-right">{displayPrice(item.priceOnline)}</td>
               <td className="border px-2 py-2 text-center">
                 <button
                   onClick={() => onRemove(item.product?.id)}

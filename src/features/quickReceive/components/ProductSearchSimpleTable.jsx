@@ -1,12 +1,14 @@
-
-
 // =============================================================================
 // File: src/features/quickReceive/components/ProductSearchSimpleTable.jsx
 // =============================================================================
 import React, { useEffect, useState } from 'react';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 
-const fmt = (v) => (typeof v === 'number' ? v.toLocaleString() : (v ?? '-'));
+const fmt = (value) => {
+  if (value === '' || value === null || value === undefined) return '0';
+  const number = Number(value);
+  return Number.isFinite(number) ? number.toLocaleString('th-TH') : '0';
+};
 
 const ProductSearchSimpleTable = ({ products = [], onSelect, autoHideSelected = true }) => {
   const [rows, setRows] = useState(products);
@@ -46,7 +48,7 @@ const ProductSearchSimpleTable = ({ products = [], onSelect, autoHideSelected = 
                 <TableCell>{item.name || '-'}</TableCell>
                 <TableCell>{item.model || '-'}</TableCell>
                 <TableCell className="text-center">{item.mode === 'SIMPLE' ? 'Simple' : (item.mode === 'STRUCTURED' ? 'Structure' : '-')}</TableCell>
-                <TableCell className="text-right">{fmt(item.costPrice ?? 0)}</TableCell>
+                <TableCell className="text-right">{fmt(item.costPrice)}</TableCell>
                 <TableCell className="text-right">{fmt(item.priceWholesale)}</TableCell>
                 <TableCell className="text-right">{fmt(item.priceTechnician)}</TableCell>
                 <TableCell className="text-right">{fmt(item.priceRetail)}</TableCell>
@@ -75,5 +77,3 @@ const ProductSearchSimpleTable = ({ products = [], onSelect, autoHideSelected = 
 };
 
 export default ProductSearchSimpleTable;
-
-

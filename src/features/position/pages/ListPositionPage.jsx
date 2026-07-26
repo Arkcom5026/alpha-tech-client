@@ -3,12 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { usePositionStore } from '../stores/positionStore.js';
 import {
   Badge,
-  Button,
   Card,
   CardBody,
   ConfirmActionDialog,
   CrudPage,
   CrudPagination,
+  CrudPrimaryAction,
+  CrudTableAction,
+  CrudTableActions,
   CrudToolbar,
   EmptyState,
   ErrorState,
@@ -69,7 +71,7 @@ const ListPositionPage = () => {
     <CrudPage
       title="ตำแหน่งพนักงาน"
       description="กำหนดตำแหน่งงานและสถานะการใช้งานสำหรับพนักงานของร้าน"
-      actions={<Button onClick={() => navigate('create')}>เพิ่มตำแหน่ง</Button>}
+      actions={<CrudPrimaryAction onClick={() => navigate('create')}>เพิ่มตำแหน่ง</CrudPrimaryAction>}
       notices={message ? <Badge tone="success">{message}</Badge> : null}
     >
       {error ? (
@@ -132,18 +134,17 @@ const ListPositionPage = () => {
                     </Badge>
                   </td>
                   <td className="px-4 py-3">
-                    <div className="flex flex-wrap justify-end gap-2">
-                      <Button size="sm" variant="secondary" onClick={() => navigate(`edit/${row.id}`)}>
+                    <CrudTableActions>
+                      <CrudTableAction action="edit" onClick={() => navigate(`edit/${row.id}`)}>
                         แก้ไข
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant={row.isActive ? 'danger' : 'primary'}
+                      </CrudTableAction>
+                      <CrudTableAction
+                        action={row.isActive ? 'destructive' : 'restore'}
                         onClick={() => handleToggle(row)}
                       >
                         {row.isActive ? 'ปิดใช้งาน' : 'กู้คืน'}
-                      </Button>
-                    </div>
+                      </CrudTableAction>
+                    </CrudTableActions>
                   </td>
                 </tr>
               ))}

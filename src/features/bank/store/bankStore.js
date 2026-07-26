@@ -1,4 +1,3 @@
-// ✅ bankStore.js – จัดการสถานะธนาคารด้วย Zustand (CRUD + ฟิลเตอร์)
 import { create } from 'zustand';
 import {
   getAllBanks,
@@ -9,111 +8,113 @@ import {
 } from '@/features/bank/api/bankApi';
 
 const sortByNameAsc = (arr) =>
-  [...arr].sort((a, b) => String(a?.name || '').localeCompare(String(b?.name || ''), 'th')); // เรียงตามชื่อ (ไทย/อังกฤษ)
+  [...arr].sort((a, b) => String(a?.name || '').localeCompare(String(b?.name || ''), 'th'));
+
+const parseBankError = (err, fallback) =>
+  err?.response?.data?.error?.message ||
+  err?.response?.data?.message ||
+  err?.response?.data?.error ||
+  err?.message ||
+  fallback;
 
 const useBankStore = create((set, get) => ({
-  // --- state ---
   banks: [],
   bankLoading: false,
-  bankSaving: false, // ใช้ตอน create/update
-  bankDeletingId: null, // ใช้ตอน delete เฉพาะรายการ
+  bankSaving: false,
+  bankDeletingId: null,
   bankError: null,
 
-  // ฟิลเตอร์การค้นหา
   query: '',
   includeInactive: false,
-
-  // รายการที่เลือก (สำหรับหน้าแก้ไข/รายละเอียด)
   selectedBank: null,
 
-  // --- actions ---
-  setQuery: (q) => set({ query: q ?? '' }),
-  setIncludeInactive: (val) => set({ includeInactive: !!val }),
-  clearError: () => set({ bankError: null }),
-  clearBanks: () => set({ banks: [] }),
+  setQueryAction: (query) => set({ query: query ?? '' }),
+  setIncludeInactiveAction: (includeInactive) => set({ includeInactive: Boolean(includeInactive) }),
+  clearErrorAction: () => set({ bankError: null }),
+  clearBanksAction: () => set({ banks: [] }),
 
-  // โหลดรายการธนาคารทั้งหมดตามฟิลเตอร์
   fetchBanksAction: async (params = {}) => {
+    const q = params.q ?? get().query;
+    const includeInactive = params.includeInactive ?? get().includeInactive;
+
+    set({ bankLoading: true, bankError: null, query: q, includeInactive });
     try {
-      const q = params.q ?? get().query;
-      const includeInactive = params.includeInactive ?? get().includeInactive;
-      set({ bankLoading: true, bankError: null });
       const banks = await getAllBanks({ q, includeInactive });
-      set({ banks: sortByNameAsc(banks) });
+      const normalized = Array.isArray(banks) ? banks : banks?.items || banks?.data || [];
+      set({ banks: sortByNameAsc(normalized), bankLoading: false });
+      return normalized;
     } catch (err) {
-      console.error('❌ โหลดธนาคารล้มเหลว:', err);
-      set({ bankError: 'ไม่สามารถโหลดรายชื่อธนาคารได้' });
-    } finally {
-      set({ bankLoading: false });
+      set({
+        bankLoading: false,
+        bankError: parseBankError(err, 'ไม่สามารถโหลดรายชื่อธนาคารได้'),
+      });
+      return null;
     }
   },
 
-  // โหลดธนาคารรายตัวเพื่อแก้ไข/ดูรายละเอียด
   fetchBankByIdAction: async (id) => {
+    set({ bankLoading: true, bankError: null, selectedBank: null });
     try {
-      set({ bankLoading: true, bankError: null, selectedBank: null });
       const bank = await getBankById(id);
-      set({ selectedBank: bank });
+      set({ selectedBank: bank, bankLoading: false });
       return bank;
     } catch (err) {
-      console.error('❌ โหลดธนาคารรายตัวล้มเหลว:', err);
-      set({ bankError: 'ไม่สามารถโหลดข้อมูลธนาคารได้' });
+      set({
+        bankLoading: false,
+        bankError: parseBankError(err, 'ไม่สามารถโหลดข้อมูลธนาคารได้'),
+      });
       return null;
-    } finally {
-      set({ bankLoading: false });
     }
   },
 
-  // สร้างธนาคารใหม่
   createBankAction: async (payload) => {
+    set({ bankSaving: true, bankError: null });
     try {
-      set({ bankSaving: true, bankError: null });
       const created = await createBank(payload);
-      const next = sortByNameAsc([...(get().banks || []), created]);
-      set({ banks: next });
+      set({ banks: sortByNameAsc([...(get().banks || []), created]), bankSaving: false });
       return created;
     } catch (err) {
-      console.error('❌ สร้างธนาคารไม่สำเร็จ:', err);
-      // โยน error ต่อเพื่อให้หน้า UI แสดงข้อความจาก backend ได้ (เช่น 409 ซ้ำ)
-      set({ bankError: 'สร้างธนาคารไม่สำเร็จ' });
+      set({ bankSaving: false, bankError: parseBankError(err, 'สร้างธนาคารไม่สำเร็จ') });
       throw err;
-    } finally {
-      set({ bankSaving: false });
     }
   },
 
-  // อัปเดตธนาคาร
   updateBankAction: async (id, payload) => {
+    set({ bankSaving: true, bankError: null });
     try {
-      set({ bankSaving: true, bankError: null });
       const updated = await apiUpdateBank(id, payload);
-      const next = (get().banks || []).map((b) => (b.id === updated.id ? updated : b));
-      set({ banks: sortByNameAsc(next), selectedBank: updated });
+      const next = (get().banks || []).map((bank) => (bank.id === updated.id ? updated : bank));
+      set({ banks: sortByNameAsc(next), selectedBank: updated, bankSaving: false });
       return updated;
     } catch (err) {
-      console.error('❌ แก้ไขธนาคารไม่สำเร็จ:', err);
-      set({ bankError: 'แก้ไขธนาคารไม่สำเร็จ' });
+      set({ bankSaving: false, bankError: parseBankError(err, 'แก้ไขธนาคารไม่สำเร็จ') });
       throw err;
-    } finally {
-      set({ bankSaving: false });
     }
   },
 
-  // ลบธนาคาร
+  toggleBankActiveAction: async (id) => {
+    const current = (get().banks || []).find((bank) => bank.id === id);
+    if (!current) return null;
+
+    return get().updateBankAction(id, { active: !Boolean(current.active) });
+  },
+
   deleteBankAction: async (id) => {
+    set({ bankDeletingId: id, bankError: null });
     try {
-      set({ bankDeletingId: id, bankError: null });
       await apiDeleteBank(id);
-      const next = (get().banks || []).filter((b) => b.id !== id);
-      set({ banks: next });
-      if (get().selectedBank?.id === id) set({ selectedBank: null });
+      set((state) => ({
+        banks: state.banks.filter((bank) => bank.id !== id),
+        selectedBank: state.selectedBank?.id === id ? null : state.selectedBank,
+        bankDeletingId: null,
+      }));
       return true;
     } catch (err) {
-      console.error('❌ ลบธนาคารไม่สำเร็จ:', err);
-      set({ bankError: 'ลบธนาคารไม่สำเร็จ' });
+      set({
+        bankDeletingId: null,
+        bankError: parseBankError(err, 'ลบธนาคารไม่สำเร็จ'),
+      });
       throw err;
-    } finally {
-      set({ bankDeletingId: null });
     }
   },
 }));

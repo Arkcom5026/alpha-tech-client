@@ -129,6 +129,7 @@ $startedAt = Get-Date
 $exitCode = 0
 $status = 'FAIL'
 $report = $null
+$publishedReportPath = ''
 $metadataPath = Join-Path $EvidencePath 'runner-result.json'
 $clientHead = ''
 $serverHead = ''
@@ -159,6 +160,12 @@ finally {
   $artifactDirectory = Join-Path $ClientPath '.artifacts\verification'
   $report = Get-LatestVerificationReport -ArtifactDirectory $artifactDirectory -NotBefore $startedAt
 
+  if ($report) {
+    $publishedReportPath = Join-Path $EvidencePath $report.Name
+    Copy-Item -LiteralPath $report.FullName -Destination $publishedReportPath -Force
+    Write-Host "Published verification report: $publishedReportPath"
+  }
+
   try { $clientHead = (& git -C $ClientPath rev-parse HEAD).Trim() } catch { $clientHead = 'unavailable' }
   try { $serverHead = (& git -C $ServerPath rev-parse HEAD).Trim() } catch { $serverHead = 'unavailable' }
 
@@ -176,6 +183,7 @@ finally {
     serverHead = $serverHead
     reportFile = if ($report) { $report.Name } else { $null }
     reportPath = if ($report) { $report.FullName } else { $null }
+    publishedReportPath = if ($publishedReportPath) { $publishedReportPath } else { $null }
     exitCode = $exitCode
   }
 
@@ -184,14 +192,14 @@ finally {
   Write-GitHubOutput -Name 'status' -Value $status
   Write-GitHubOutput -Name 'client_head' -Value $clientHead
   Write-GitHubOutput -Name 'server_head' -Value $serverHead
-  Write-GitHubOutput -Name 'report_path' -Value $(if ($report) { $report.FullName } else { '' })
+  Write-GitHubOutput -Name 'report_path' -Value $publishedReportPath
   Write-GitHubOutput -Name 'metadata_path' -Value $metadataPath
 
   Write-GitHubSummary `
     -Status $status `
     -ClientHead $clientHead `
     -ServerHead $serverHead `
-    -ReportPath $(if ($report) { $report.FullName } else { '' }) `
+    -ReportPath $publishedReportPath `
     -MetadataPath $metadataPath
 }
 

@@ -20,6 +20,7 @@ import {
   transitionTaxPeriod,
 } from '../api/taxPeriodApi';
 import TaxPeriodDetailPanel from '../detail/TaxPeriodDetailPanel';
+import TaxPeriodListFilters from '../list/TaxPeriodListFilters';
 
 const STATUS_META = {
   OPEN: { label: 'เปิดใช้งาน', className: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
@@ -86,6 +87,9 @@ const TaxPeriodManagementPage = () => {
   const [summary, setSummary] = useState(null);
   const [periods, setPeriods] = useState([]);
   const [statusFilter, setStatusFilter] = useState('');
+  const [searchText, setSearchText] = useState('');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
   const [loading, setLoading] = useState(true);
   const [busyKey, setBusyKey] = useState('');
   const [error, setError] = useState('');
@@ -98,7 +102,12 @@ const TaxPeriodManagementPage = () => {
     try {
       const [summaryResult, listResult] = await Promise.all([
         getTaxPeriodSummary({ branchId }),
-        listTaxPeriods({ branchId, status: statusFilter || undefined }),
+        listTaxPeriods({
+          branchId,
+          status: statusFilter || undefined,
+          fromDate: fromDate || undefined,
+          toDate: toDate || undefined,
+        }),
       ]);
       setSummary(summaryResult || null);
       setPeriods(Array.isArray(listResult?.periods) ? listResult.periods : []);
@@ -109,7 +118,7 @@ const TaxPeriodManagementPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [branchId, statusFilter]);
+  }, [branchId, fromDate, statusFilter, toDate]);
 
   useEffect(() => {
     if (!branchId) {
@@ -121,9 +130,29 @@ const TaxPeriodManagementPage = () => {
 
   useEffect(() => {
     setSelectedPeriodId(null);
+    setStatusFilter('');
+    setSearchText('');
+    setFromDate('');
+    setToDate('');
   }, [branchId]);
 
   const totals = useMemo(() => summary?.countsByStatus || {}, [summary]);
+  const statusOptions = useMemo(
+    () => Object.entries(STATUS_META).map(([value, meta]) => ({ value, label: meta.label })),
+    [],
+  );
+  const visiblePeriods = useMemo(() => {
+    const keyword = searchText.trim().toLowerCase();
+    if (!keyword) return periods;
+    return periods.filter((period) => String(period?.periodCode || '').toLowerCase().includes(keyword));
+  }, [periods, searchText]);
+
+  const handleResetFilters = () => {
+    setStatusFilter('');
+    setSearchText('');
+    setFromDate('');
+    setToDate('');
+  };
 
   const handleEnsureCurrentPeriod = async () => {
     if (!branchId) return;
@@ -233,17 +262,22 @@ const TaxPeriodManagementPage = () => {
           <div className="flex flex-col gap-3 border-b border-slate-200 p-4 md:flex-row md:items-center md:justify-between">
             <div>
               <h2 className="font-black text-slate-900">รายการรอบภาษี</h2>
-              <p className="text-xs text-slate-500">แสดง {periods.length} รายการ</p>
+              <p className="text-xs text-slate-500">แสดง {visiblePeriods.length} จาก {periods.length} รายการ</p>
             </div>
-            <select
-              value={statusFilter}
-              onChange={(event) => setStatusFilter(event.target.value)}
-              className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 outline-none focus:border-blue-500"
-            >
-              <option value="">ทุกสถานะ</option>
-              {Object.entries(STATUS_META).map(([status, meta]) => <option key={status} value={status}>{meta.label}</option>)}
-            </select>
           </div>
+
+          <TaxPeriodListFilters
+            searchText={searchText}
+            status={statusFilter}
+            fromDate={fromDate}
+            toDate={toDate}
+            statusOptions={statusOptions}
+            onSearchTextChange={setSearchText}
+            onStatusChange={setStatusFilter}
+            onFromDateChange={setFromDate}
+            onToDateChange={setToDate}
+            onReset={handleResetFilters}
+          />
 
           {error && <div className="border-b border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">{error}</div>}
 
@@ -261,9 +295,9 @@ const TaxPeriodManagementPage = () => {
               <tbody className="divide-y divide-slate-100">
                 {loading ? (
                   <tr><td colSpan="5" className="px-4 py-10 text-center text-slate-500">กำลังโหลดรอบภาษี...</td></tr>
-                ) : periods.length === 0 ? (
-                  <tr><td colSpan="5" className="px-4 py-10 text-center text-slate-500">ยังไม่มีรอบภาษีตามเงื่อนไขที่เลือก</td></tr>
-                ) : periods.map((period) => {
+                ) : visiblePeriods.length === 0 ? (
+                  <tr><td colSpan="5" className="px-4 py-10 text-center text-slate-500">ไม่พบรอบภาษีตามเงื่อนไขที่เลือก</td></tr>
+                ) : visiblePeriods.map((period) => {
                   const actions = Array.isArray(period.availableActions) ? period.availableActions : [];
                   const latestEvent = period.submittedAt || period.lockedAt || period.reopenedAt || period.closedAt || period.updatedAt;
                   return (

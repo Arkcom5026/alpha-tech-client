@@ -20,6 +20,7 @@ import { ReportsDashboardPage } from '@/features/pos/pages/dashboard/ReportsDash
 import DailyClosingPage from '@/features/finance/pages/DailyClosingPage';
 import AccountsReceivablePage from '@/features/finance/pages/AccountsReceivablePage';
 import CustomerCreditPage from '@/features/finance/pages/CustomerCreditPage';
+import TaxPeriodManagementPage from '@/features/tax/periods/pages/TaxPeriodManagementPage';
 
 import CustomerReceiptListPage from '@features/customerReceipt/pages/CustomerReceiptListPage';
 import CreateCustomerReceiptPage from '@features/customerReceipt/pages/CreateCustomerReceiptPage';
@@ -82,6 +83,7 @@ export const posPartnerRoutes = [
           { path: 'daily-closing', element: <DailyClosingPage /> },
           { path: 'ar', border: 'none', element: <AccountsReceivablePage /> },
           { path: 'customer-credit', element: <CustomerCreditPage /> },
+          { path: 'tax-periods', element: <TaxPeriodManagementPage /> },
           {
             path: 'customer-receipts',
             children: [

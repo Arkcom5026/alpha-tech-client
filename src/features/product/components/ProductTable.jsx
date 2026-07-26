@@ -34,20 +34,17 @@ const ProductTable = ({
 
   const rowClass = density === 'compact' ? 'text-xs' : 'text-sm';
   const cellPad = density === 'compact' ? 'py-1.5 px-3' : 'py-3 px-4';
-  const colCount = 9; 
+  const colCount = 9;
 
-  const toNumOrNull = (v) => {
-    if (v === '' || v === null || v === undefined) return null;
-    const n = Number(v);
-    if (!Number.isFinite(n)) return null;
-    return n;
+  const toDisplayPrice = (value) => {
+    if (value === '' || value === null || value === undefined) return 0;
+    const number = Number(value);
+    return Number.isFinite(number) ? number : 0;
   };
 
-  const priceCell = (v, preserveZero = false) => {
-    const n = toNumOrNull(v);
-    const isMissing = n == null || (!preserveZero && n === 0);
-    const text = isMissing ? '—' : n.toLocaleString('th-TH');
-    return <span className={isMissing ? 'text-zinc-400 dark:text-zinc-600' : 'text-zinc-900 dark:text-zinc-100 font-medium'}>{text}</span>;
+  const priceCell = (value) => {
+    const number = toDisplayPrice(value);
+    return <span className="text-zinc-900 dark:text-zinc-100 font-medium">{number.toLocaleString('th-TH')}</span>;
   };
 
   const resolveBranchPrice = (item) => {
@@ -114,8 +111,8 @@ const ProductTable = ({
                   <TableCell className={`text-center text-zinc-700 dark:text-zinc-300 ${cellPad}`}>{resolveProductTypeName(item)}</TableCell>
                   <TableCell className={`text-center text-zinc-700 dark:text-zinc-300 ${cellPad}`}>{item?.brand ?? item?.brandName ?? '-'}</TableCell>
                   <TableCell className={`text-left font-medium text-zinc-900 dark:text-zinc-100 ${cellPad}`}>{item.name || '-'}</TableCell>
-                  
-                  <TableCell className={`text-right tabular-nums ${cellPad}`}>{priceCell(resolveBranchPrice(item)?.costPrice ?? item.costPrice ?? 0, true)}</TableCell>
+
+                  <TableCell className={`text-right tabular-nums ${cellPad}`}>{priceCell(resolveBranchPrice(item)?.costPrice ?? item.costPrice)}</TableCell>
                   <TableCell className={`text-right tabular-nums ${cellPad}`}>{priceCell(resolveBranchPrice(item)?.priceWholesale ?? item.priceWholesale)}</TableCell>
                   <TableCell className={`text-right tabular-nums ${cellPad}`}>{priceCell(resolveBranchPrice(item)?.priceTechnician ?? item.priceTechnician)}</TableCell>
                   <TableCell className={`text-right tabular-nums ${cellPad}`}>{priceCell(resolveBranchPrice(item)?.priceRetail ?? item.priceRetail)}</TableCell>

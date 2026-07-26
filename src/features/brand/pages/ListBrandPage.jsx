@@ -13,8 +13,12 @@ import {
   ConfirmActionDialog,
   CrudPage,
   CrudPagination,
+  CrudPrimaryAction,
+  CrudTableAction,
+  CrudTableActions,
   CrudToolbar,
   EmptyState,
+  ErrorState,
   Input,
   LoadingState,
   Select,
@@ -51,6 +55,7 @@ const ListBrandPage = () => {
 
   const fetchRuntimeProductTypesAction = useBrandStore((state) => state.fetchRuntimeProductTypesAction);
   const fetchBrandsAction = useBrandStore((state) => state.fetchBrandsAction);
+  const refreshAction = useBrandStore((state) => state.refreshAction);
   const setQueryAction = useBrandStore((state) => state.setQueryAction);
   const setIncludeInactiveAction = useBrandStore((state) => state.setIncludeInactiveAction);
   const setPageAction = useBrandStore((state) => state.setPageAction);
@@ -105,6 +110,9 @@ const ListBrandPage = () => {
     [allBrandOptions, linkedBrandIds]
   );
 
+  const hasFilters = Boolean(q) || includeInactive;
+  const runtimeBusy = loading || saving;
+
   useEffect(() => {
     clearErrorAction?.();
   }, [clearErrorAction]);
@@ -141,11 +149,14 @@ const ListBrandPage = () => {
     setBrandToAttachId('');
   }, [fetchProductTypeBrandLinksAction, selectedProductTypeId]);
 
+  const handleRefresh = async () => {
+    await refreshAction?.({ productTypeId: selectedProductTypeId });
+  };
+
   const onToggle = async (brand) => {
     if (!brand?.id || saving) return;
-    await toggleBrandActiveAction?.({ id: brand.id, isActive: !normalizeActive(brand) });
-    await fetchBrandsAction?.({ q, page, pageSize, includeInactive, productTypeId: selectedProductTypeId });
-    await fetchAllBrandOptionsAction?.({ includeInactive: false });
+    const result = await toggleBrandActiveAction?.({ id: brand.id, isActive: !normalizeActive(brand) });
+    if (result?.ok) await handleRefresh();
   };
 
   const onAttachBrand = async () => {
@@ -156,17 +167,20 @@ const ListBrandPage = () => {
       brandId: brandToAttachId,
     });
 
-    if (result?.ok) setBrandToAttachId('');
+    if (result?.ok) {
+      setBrandToAttachId('');
+      await fetchAllBrandOptionsAction?.({ includeInactive: false });
+    }
   };
 
   const onConfirmDetachBrand = async () => {
     if (!linkToDetach?.id || !selectedProductTypeId || saving) return;
 
-    await detachBrandFromProductTypeAction?.({
+    const result = await detachBrandFromProductTypeAction?.({
       id: linkToDetach.id,
       productTypeId: selectedProductTypeId,
     });
-    setLinkToDetach(null);
+    if (result?.ok) setLinkToDetach(null);
   };
 
   const detachBrandName = getLinkBrand(linkToDetach)?.name || 'แบรนด์นี้';
@@ -177,14 +191,14 @@ const ListBrandPage = () => {
       description="ผูกแบรนด์กับประเภทสินค้าของสาขาปัจจุบัน เพื่อให้หน้าสินค้าเลือกแบรนด์ได้ถูกต้อง"
       maxWidth="7xl"
       actions={
-        <Button onClick={() => navigate('create')} disabled={saving}>
-          + เพิ่มแบรนด์
-        </Button>
+        <CrudPrimaryAction onClick={() => navigate('create')} disabled={saving}>
+          เพิ่มแบรนด์
+        </CrudPrimaryAction>
       }
     >
       <CrudToolbar
         columns="auto"
-        bodyClassName="lg:grid-cols-[280px_minmax(0,1fr)_auto_auto] lg:items-center"
+        bodyClassName="lg:grid-cols-[280px_minmax(0,1fr)_220px_160px_auto] lg:items-center"
       >
         <Select
           value={productTypeId}
@@ -193,7 +207,7 @@ const ListBrandPage = () => {
             setDidAutoSelectProductType(true);
             setPageAction?.(1);
           }}
-          disabled={runtimeProductTypesLoading}
+          disabled={runtimeProductTypesLoading || saving}
         >
           <option value="">-- เลือกประเภทสินค้า --</option>
           {runtimeProductTypes.map((type) => (
@@ -204,25 +218,36 @@ const ListBrandPage = () => {
         </Select>
 
         <Input
+          type="search"
           value={q}
           onChange={(event) => setQueryAction?.(event.target.value)}
           placeholder="ค้นหาแบรนด์ที่ผูกกับประเภทสินค้านี้"
+          disabled={!selectedProductTypeId || saving}
         />
 
-        <label className="inline-flex items-center gap-2 text-sm text-[hsl(var(--ads-text-muted))]">
-          <input
-            type="checkbox"
-            checked={includeInactive}
-            onChange={(event) => setIncludeInactiveAction?.(event.target.checked)}
-          />
-          แสดงรายการที่ปิดใช้งานด้วย
-        </label>
+        <Select
+          value={includeInactive ? 'all' : 'active'}
+          onChange={(event) => setIncludeInactiveAction?.(event.target.value === 'all')}
+          disabled={!selectedProductTypeId || saving}
+        >
+          <option value="active">เฉพาะที่ใช้งานอยู่</option>
+          <option value="all">แสดงทั้งหมด</option>
+        </Select>
 
-        <Select value={pageSize} onChange={(event) => setPageSizeAction?.(event.target.value)}>
+        <Select
+          value={pageSize}
+          onChange={(event) => setPageSizeAction?.(Number(event.target.value))}
+          disabled={!selectedProductTypeId || saving}
+        >
+          <option value={10}>10 / หน้า</option>
           <option value={20}>20 / หน้า</option>
           <option value={50}>50 / หน้า</option>
           <option value={100}>100 / หน้า</option>
         </Select>
+
+        <Button variant="secondary" onClick={handleRefresh} disabled={!selectedProductTypeId || runtimeBusy}>
+          รีเฟรช
+        </Button>
       </CrudToolbar>
 
       {selectedProductTypeId ? (
@@ -292,85 +317,105 @@ const ListBrandPage = () => {
       )}
 
       {error ? (
-        <Alert title="เกิดข้อผิดพลาด" tone="danger">
-          <span className="break-words">{error}</span>
-        </Alert>
-      ) : null}
-
-      <Card>
-        <div className="flex items-center justify-between border-b border-[hsl(var(--ads-border-default))] px-4 py-3 text-sm text-[hsl(var(--ads-text-muted))]">
-          <span>รายการแบรนด์ที่ผูกกับประเภทสินค้านี้</span>
-          <span>{loading ? 'กำลังโหลด...' : `ทั้งหมด ${total} รายการ`}</span>
-        </div>
-
-        {loading ? (
-          <LoadingState label="กำลังโหลดรายการแบรนด์…" />
-        ) : items.length === 0 ? (
-          <CardBody>
-            <EmptyState
-              title={selectedProductTypeId ? 'ยังไม่มีแบรนด์ที่ผูกกับประเภทสินค้านี้' : 'กรุณาเลือกประเภทสินค้า'}
-              description="เลือกประเภทสินค้าและผูกแบรนด์ที่อนุญาตให้ใช้งาน"
-            />
-          </CardBody>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead className="bg-[hsl(var(--ads-surface-subtle))] text-left text-[hsl(var(--ads-text-muted))]">
-                <tr>
-                  <th className="w-16 px-4 py-3 font-semibold">#</th>
-                  <th className="px-4 py-3 font-semibold">ชื่อแบรนด์</th>
-                  <th className="w-36 px-4 py-3 text-center font-semibold">สถานะ</th>
-                  <th className="w-44 px-4 py-3 text-center font-semibold">การจัดการ</th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((brand, index) => {
-                  const active = normalizeActive(brand);
-                  const rowNo = (Number(page || 1) - 1) * Number(pageSize || 20) + index + 1;
-
-                  return (
-                    <tr
-                      key={brand.id}
-                      className="border-t border-[hsl(var(--ads-border-default))] hover:bg-[hsl(var(--ads-surface-subtle))]"
-                    >
-                      <td className="px-4 py-3 text-[hsl(var(--ads-text-muted))]">{rowNo}</td>
-                      <td className="px-4 py-3 font-medium text-[hsl(var(--ads-text-strong))]">
-                        {brand.name || '-'}
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <Badge tone={active ? 'success' : 'neutral'}>{active ? 'ใช้งาน' : 'ปิดใช้งาน'}</Badge>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex justify-center gap-2">
-                          <Button size="sm" variant="secondary" onClick={() => navigate(`edit/${brand.id}`)}>
-                            แก้ไข
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant={active ? 'danger' : 'primary'}
-                            onClick={() => onToggle(brand)}
-                            disabled={saving}
-                          >
-                            {active ? 'ปิดใช้งาน' : 'เปิดใช้งาน'}
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+        <ErrorState
+          title="โหลดข้อมูลแบรนด์ไม่สำเร็จ"
+          description={String(error)}
+          actionLabel="ลองใหม่"
+          onAction={handleRefresh}
+        />
+      ) : (
+        <Card className="overflow-hidden">
+          <div className="flex items-center justify-between border-b border-[hsl(var(--ads-border-default))] px-4 py-3 text-sm text-[hsl(var(--ads-text-muted))]">
+            <span>รายการแบรนด์ที่ผูกกับประเภทสินค้านี้</span>
+            <span>{loading ? 'กำลังโหลด...' : `ทั้งหมด ${total} รายการ`}</span>
           </div>
-        )}
-      </Card>
 
-      <CrudPagination
-        page={page}
-        totalPages={totalPages}
-        summary={paginationSummary}
-        disabled={loading}
-        onPageChange={(nextPage) => setPageAction?.(nextPage)}
-      />
+          {loading && items.length === 0 ? (
+            <LoadingState label="กำลังโหลดรายการแบรนด์…" />
+          ) : items.length === 0 ? (
+            <CardBody>
+              <EmptyState
+                title={
+                  !selectedProductTypeId
+                    ? 'กรุณาเลือกประเภทสินค้า'
+                    : hasFilters
+                      ? 'ไม่พบแบรนด์ที่ตรงกับเงื่อนไข'
+                      : 'ยังไม่มีแบรนด์ที่ผูกกับประเภทสินค้านี้'
+                }
+                description={
+                  !selectedProductTypeId
+                    ? 'เลือกประเภทสินค้าก่อน เพื่อดูและจัดการแบรนด์ที่อนุญาตให้ใช้งาน'
+                    : hasFilters
+                      ? 'ลองเปลี่ยนคำค้นหาหรือตัวกรองสถานะ แล้วรีเฟรชข้อมูลอีกครั้ง'
+                      : 'เลือกแบรนด์จากส่วนด้านบนเพื่อผูกเข้ากับประเภทสินค้านี้'
+                }
+              />
+            </CardBody>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead className="bg-[hsl(var(--ads-surface-subtle))] text-left text-[hsl(var(--ads-text-muted))]">
+                  <tr>
+                    <th className="w-16 px-4 py-3 font-semibold">#</th>
+                    <th className="px-4 py-3 font-semibold">ชื่อแบรนด์</th>
+                    <th className="w-36 px-4 py-3 text-center font-semibold">สถานะ</th>
+                    <th className="w-44 px-4 py-3 text-right font-semibold">การจัดการ</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[hsl(var(--ads-border-default))]">
+                  {items.map((brand, index) => {
+                    const active = normalizeActive(brand);
+                    const rowNo = (Number(page || 1) - 1) * Number(pageSize || 20) + index + 1;
+
+                    return (
+                      <tr
+                        key={brand.id}
+                        className="bg-[hsl(var(--ads-surface-raised))] hover:bg-[hsl(var(--ads-surface-subtle))]"
+                      >
+                        <td className="px-4 py-3 text-[hsl(var(--ads-text-muted))]">{rowNo}</td>
+                        <td className="px-4 py-3 font-medium text-[hsl(var(--ads-text-strong))]">
+                          {brand.name || '-'}
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <Badge tone={active ? 'success' : 'neutral'}>{active ? 'ใช้งาน' : 'ปิดใช้งาน'}</Badge>
+                        </td>
+                        <td className="px-4 py-3">
+                          <CrudTableActions>
+                            <CrudTableAction
+                              action="edit"
+                              onClick={() => navigate(`edit/${brand.id}`)}
+                              disabled={runtimeBusy}
+                            >
+                              แก้ไข
+                            </CrudTableAction>
+                            <CrudTableAction
+                              action={active ? 'destructive' : 'restore'}
+                              onClick={() => onToggle(brand)}
+                              disabled={runtimeBusy}
+                            >
+                              {active ? 'ปิดใช้งาน' : 'เปิดใช้งาน'}
+                            </CrudTableAction>
+                          </CrudTableActions>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Card>
+      )}
+
+      {!error ? (
+        <CrudPagination
+          page={page}
+          totalPages={totalPages}
+          summary={paginationSummary}
+          disabled={runtimeBusy}
+          onPageChange={(nextPage) => setPageAction?.(nextPage)}
+        />
+      ) : null}
 
       <ConfirmActionDialog
         open={Boolean(linkToDetach)}

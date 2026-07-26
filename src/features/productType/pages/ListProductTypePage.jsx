@@ -7,12 +7,12 @@ import {
   Button,
   Card,
   CardBody,
+  CrudPage,
+  CrudPagination,
+  CrudToolbar,
   EmptyState,
   ErrorState,
-  Page,
-  PageHeader,
   Select,
-  Stack,
 } from '@/design-system';
 import useProductTypeStore from '../store/productTypeStore.js';
 import { useAuthStore } from '@/features/auth/store/authStore.js';
@@ -131,116 +131,91 @@ const ListProductTypePage = () => {
   };
 
   return (
-    <Page>
-      <div className="mx-auto w-full max-w-6xl">
-        <PageHeader
-          title="จัดการประเภทสินค้า"
-          description="เรียกดูและจัดการประเภทสินค้าที่ใช้ในระบบสต็อก"
-          actions={canManage ? <Button onClick={handleCreate}>เพิ่มประเภทสินค้า</Button> : null}
+    <CrudPage
+      title="จัดการประเภทสินค้า"
+      description="เรียกดูและจัดการประเภทสินค้าที่ใช้ในระบบสต็อก"
+      actions={canManage ? <Button onClick={handleCreate}>เพิ่มประเภทสินค้า</Button> : null}
+      maxWidth="6xl"
+    >
+      <CrudToolbar columns="auto" bodyClassName="lg:grid-cols-[1fr_auto_auto] lg:items-end">
+        <label className="inline-flex items-center gap-2 text-sm text-[hsl(var(--ads-text-default))]">
+          <input
+            type="checkbox"
+            className="h-4 w-4 rounded border-[hsl(var(--ads-border-default))] accent-[hsl(var(--ads-brand))]"
+            checked={Boolean(includeInactive)}
+            onChange={(event) => {
+              setIncludeInactiveAction(event.target.checked);
+              setPageAction(1);
+            }}
+          />
+          แสดงข้อมูลที่ถูกปิดใช้งานด้วย
+        </label>
+
+        <label className="flex flex-col gap-1 text-sm text-[hsl(var(--ads-text-muted))]">
+          <span>แถวต่อหน้า</span>
+          <Select
+            value={limit}
+            onChange={(event) => {
+              setLimitAction(Number(event.target.value));
+              setPageAction(1);
+            }}
+          >
+            {[10, 20, 50, 100].map((value) => (
+              <option key={value} value={value}>
+                {value}
+              </option>
+            ))}
+          </Select>
+        </label>
+
+        <Button loading={isLoading} disabled={hasSearched} onClick={handleInitialSearch}>
+          แสดงข้อมูล
+        </Button>
+      </CrudToolbar>
+
+      {error ? (
+        <ErrorState
+          title="ไม่สามารถโหลดประเภทสินค้าได้"
+          description={typeof error === 'string' ? error : 'กรุณาลองใหม่อีกครั้ง'}
+          actionLabel="ลองใหม่"
+          onAction={() => {
+            didFetchRef.current = false;
+            fetchListAction();
+          }}
         />
-
-        <Stack gap={4}>
-          <Card>
-            <CardBody>
-              <Stack gap={4}>
-                <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-                  <label className="inline-flex items-center gap-2 text-sm text-[hsl(var(--ads-text-default))]">
-                    <input
-                      type="checkbox"
-                      className="h-4 w-4 rounded border-[hsl(var(--ads-border-default))] accent-[hsl(var(--ads-brand))]"
-                      checked={Boolean(includeInactive)}
-                      onChange={(event) => {
-                        setIncludeInactiveAction(event.target.checked);
-                        setPageAction(1);
-                      }}
-                    />
-                    แสดงข้อมูลที่ถูกปิดใช้งานด้วย
-                  </label>
-
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-                    <label className="flex flex-col gap-1 text-sm text-[hsl(var(--ads-text-muted))]">
-                      <span>แถวต่อหน้า</span>
-                      <Select
-                        value={limit}
-                        onChange={(event) => {
-                          setLimitAction(Number(event.target.value));
-                          setPageAction(1);
-                        }}
-                      >
-                        {[10, 20, 50, 100].map((value) => (
-                          <option key={value} value={value}>
-                            {value}
-                          </option>
-                        ))}
-                      </Select>
-                    </label>
-
-                    <Button loading={isLoading} disabled={hasSearched} onClick={handleInitialSearch}>
-                      แสดงข้อมูล
-                    </Button>
-                  </div>
-                </div>
-              </Stack>
-            </CardBody>
-          </Card>
-
-          {error ? (
-            <ErrorState
-              title="ไม่สามารถโหลดประเภทสินค้าได้"
-              description={typeof error === 'string' ? error : 'กรุณาลองใหม่อีกครั้ง'}
-              actionLabel="ลองใหม่"
-              onAction={() => {
-                didFetchRef.current = false;
-                fetchListAction();
-              }}
+      ) : !hasSearched ? (
+        <EmptyState
+          title="ยังไม่ได้แสดงข้อมูล"
+          description="กดปุ่ม “แสดงข้อมูล” เพื่อโหลดรายการประเภทสินค้า"
+          actionLabel="แสดงข้อมูล"
+          onAction={handleInitialSearch}
+        />
+      ) : (
+        <Card>
+          <CardBody className="p-3">
+            <ProductTypeTable
+              data={pageItems}
+              loading={isLoading}
+              error={null}
+              page={page}
+              limit={limit}
+              canManage={canManage}
+              onEdit={canManage ? handleEdit : undefined}
             />
-          ) : !hasSearched ? (
-            <EmptyState
-              title="ยังไม่ได้แสดงข้อมูล"
-              description="กดปุ่ม “แสดงข้อมูล” เพื่อโหลดรายการประเภทสินค้า"
-              actionLabel="แสดงข้อมูล"
-              onAction={handleInitialSearch}
-            />
-          ) : (
-            <Card>
-              <CardBody className="p-3">
-                <ProductTypeTable
-                  data={pageItems}
-                  loading={isLoading}
-                  error={null}
-                  page={page}
-                  limit={limit}
-                  canManage={canManage}
-                  onEdit={canManage ? handleEdit : undefined}
-                />
-              </CardBody>
-            </Card>
-          )}
+          </CardBody>
+        </Card>
+      )}
 
-          <div className="flex flex-col gap-3 text-sm sm:flex-row sm:items-center sm:justify-between">
-            <div className="text-[hsl(var(--ads-text-muted))]">
-              หน้า {page} / {totalPagesClient}
-            </div>
-            <div className="flex gap-2">
-              <Button
-                variant="secondary"
-                onClick={() => page > 1 && setPageAction(page - 1)}
-                disabled={!hasSearched || page <= 1 || isLoading}
-              >
-                ก่อนหน้า
-              </Button>
-              <Button
-                variant="secondary"
-                onClick={() => page < totalPagesClient && setPageAction(page + 1)}
-                disabled={!hasSearched || page >= totalPagesClient || isLoading}
-              >
-                ถัดไป
-              </Button>
-            </div>
-          </div>
-        </Stack>
-      </div>
-    </Page>
+      {hasSearched ? (
+        <CrudPagination
+          page={page}
+          totalPages={totalPagesClient}
+          onPageChange={setPageAction}
+          disabled={isLoading}
+          summary={`${filteredItems.length} รายการ`}
+        />
+      ) : null}
+    </CrudPage>
   );
 };
 

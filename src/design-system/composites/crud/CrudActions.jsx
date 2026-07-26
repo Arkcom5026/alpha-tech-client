@@ -36,7 +36,7 @@ export function CrudTableActions({ align = 'end', className = '', ...props }) {
   return (
     <div
       className={join(
-        'flex flex-wrap items-center gap-2',
+        'flex flex-nowrap items-center gap-2 whitespace-nowrap',
         alignment[align] || alignment.end,
         className,
       )}
@@ -54,7 +54,7 @@ export const CrudTableAction = React.forwardRef(function CrudTableAction(
       ref={ref}
       size="sm"
       variant={actionVariant[action] || actionVariant.secondary}
-      className={join('min-w-20', className)}
+      className={join('min-w-20 shrink-0 whitespace-nowrap', className)}
       {...props}
     />
   );

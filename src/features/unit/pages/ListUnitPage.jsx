@@ -3,10 +3,12 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import {
-  Button,
   Card,
   ConfirmActionDialog,
   CrudPage,
+  CrudPrimaryAction,
+  CrudTableAction,
+  CrudTableActions,
   EmptyState,
   LoadingState,
 } from '@/design-system';
@@ -43,7 +45,11 @@ const ListUnitPage = () => {
       title="รายการหน่วยนับ"
       description="จัดการหน่วยนับที่ใช้กับสินค้าในระบบ"
       maxWidth="5xl"
-      actions={<Button onClick={() => navigate(createUnitPath)}>เพิ่มหน่วยนับ</Button>}
+      actions={
+        <CrudPrimaryAction onClick={() => navigate(createUnitPath)}>
+          เพิ่มหน่วยนับ
+        </CrudPrimaryAction>
+      }
     >
       <Card className="overflow-hidden">
         {isLoading ? (
@@ -76,18 +82,17 @@ const ListUnitPage = () => {
                       {unit.name}
                     </td>
                     <td className="px-5 py-4">
-                      <div className="flex flex-wrap justify-end gap-2">
-                        <Button
-                          variant="secondary"
-                          size="sm"
+                      <CrudTableActions>
+                        <CrudTableAction
+                          action="edit"
                           onClick={() => navigate(`/${shopSlug}/pos/stock/units/edit/${unit.id}`)}
                         >
                           แก้ไข
-                        </Button>
-                        <Button variant="danger" size="sm" onClick={() => setConfirmId(unit.id)}>
+                        </CrudTableAction>
+                        <CrudTableAction action="destructive" onClick={() => setConfirmId(unit.id)}>
                           ลบ
-                        </Button>
-                      </div>
+                        </CrudTableAction>
+                      </CrudTableActions>
                     </td>
                   </tr>
                 ))}

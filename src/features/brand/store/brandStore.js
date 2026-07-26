@@ -198,6 +198,29 @@ export const useBrandStore = create(
         }
       },
 
+      refreshAction: async ({ productTypeId } = {}) => {
+        const state = get();
+        const ptId = normalizeId(productTypeId);
+        const listResult = await get().fetchBrandsAction({
+          q: state.q,
+          page: state.page,
+          pageSize: state.pageSize,
+          includeInactive: state.includeInactive,
+          productTypeId: ptId,
+        });
+
+        if (!ptId) return listResult;
+
+        const linksResult = await get().fetchProductTypeBrandLinksAction({
+          productTypeId: ptId,
+          includeInactive: true,
+        });
+
+        return listResult?.ok && linksResult?.ok
+          ? { ok: true, items: listResult.items, links: linksResult.items }
+          : { ok: false, error: get().error || listResult?.error || linksResult?.error };
+      },
+
       fetchAllBrandOptionsAction: async (override = {}) => {
         set({ allBrandOptionsLoading: true, error: null });
         try {

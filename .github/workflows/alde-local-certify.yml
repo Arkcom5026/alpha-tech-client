@@ -17,6 +17,7 @@ on:
     paths:
       - '.github/workflows/alde-local-certify.yml'
       - 'tools/runner/invoke-alde.ps1'
+      - '.alde/trigger.json'
 
 permissions:
   contents: write

@@ -9,6 +9,9 @@
 /dist-ssr
 /.next
 
+# Local ALDE verification evidence
+/.artifacts/
+
 # Logs
 logs
 *.log

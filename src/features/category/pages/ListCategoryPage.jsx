@@ -11,6 +11,7 @@ import {
   CardBody,
   CrudPage,
   CrudPagination,
+  CrudPrimaryAction,
   CrudToolbar,
   EmptyState,
   ErrorState,
@@ -62,7 +63,7 @@ const ListCategoryPage = () => {
       maxWidth="4xl"
       actions={
         canManage ? (
-          <Button onClick={() => navigate('create')}>เพิ่มหมวดหมู่</Button>
+          <CrudPrimaryAction onClick={() => navigate('create')}>เพิ่มหมวดหมู่</CrudPrimaryAction>
         ) : null
       }
     >

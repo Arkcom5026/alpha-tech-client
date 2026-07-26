@@ -5,11 +5,13 @@ import { useAuthStore } from '@/features/auth/store/authStore';
 import useBankStore from '@/features/bank/store/bankStore';
 import {
   Badge,
-  Button,
   Card,
   CardBody,
   ConfirmActionDialog,
   CrudPage,
+  CrudPrimaryAction,
+  CrudTableAction,
+  CrudTableActions,
   CrudToolbar,
   EmptyState,
   Input,
@@ -72,13 +74,13 @@ const ListBankPage = () => {
       description="กำหนดข้อมูลธนาคารรับและจ่ายเงินของหน่วยงาน โดยการเพิ่มหรือเปลี่ยนสถานะจำกัดเฉพาะ SuperAdmin"
       maxWidth="5xl"
       actions={
-        <Button
+        <CrudPrimaryAction
           onClick={() => isSuperAdmin && navigate(`${currentPath}/create`)}
           disabled={!isSuperAdmin}
           title={!isSuperAdmin ? 'สิทธิ์ไม่ถึงระดับ SuperAdmin' : undefined}
         >
           เพิ่มธนาคารใหม่
-        </Button>
+        </CrudPrimaryAction>
       }
     >
       <CrudToolbar columns="search-filter" bodyClassName="md:grid-cols-[minmax(0,1fr)_260px]">
@@ -112,7 +114,7 @@ const ListBankPage = () => {
                     <th className="w-16 px-4 py-3 text-center font-semibold">#</th>
                     <th className="px-4 py-3 font-semibold">ชื่อธนาคาร</th>
                     <th className="w-36 px-4 py-3 text-center font-semibold">สถานะ</th>
-                    <th className="w-56 px-4 py-3 text-center font-semibold">การจัดการ</th>
+                    <th className="w-56 px-4 py-3 text-right font-semibold">การจัดการ</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[hsl(var(--ads-border-default))]">
@@ -126,21 +128,20 @@ const ListBankPage = () => {
                         </Badge>
                       </td>
                       <td className="px-4 py-3">
-                        <div className="flex flex-wrap justify-center gap-2">
-                          <Button variant="secondary" size="sm" onClick={() => onEdit(row)}>
+                        <CrudTableActions>
+                          <CrudTableAction action="edit" onClick={() => onEdit(row)}>
                             แก้ไขข้อมูล
-                          </Button>
+                          </CrudTableAction>
                           {isSuperAdmin ? (
-                            <Button
-                              variant={row.active ? 'danger' : 'primary'}
-                              size="sm"
+                            <CrudTableAction
+                              action={row.active ? 'destructive' : 'restore'}
                               onClick={() => handleToggle(row)}
                               disabled={saving}
                             >
                               {row.active ? 'ปิดใช้งาน' : 'เปิดใช้งาน'}
-                            </Button>
+                            </CrudTableAction>
                           ) : null}
-                        </div>
+                        </CrudTableActions>
                       </td>
                     </tr>
                   ))}

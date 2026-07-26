@@ -37,6 +37,102 @@ function Assert-ProjectRepository {
   }
 }
 
+function Get-CommandVersion {
+  param(
+    [Parameter(Mandatory)][string]$Command,
+    [Parameter(Mandatory)][string[]]$Arguments
+  )
+
+  $resolved = Get-Command $Command -ErrorAction SilentlyContinue | Select-Object -First 1
+  if (-not $resolved) {
+    throw "Required executable is not available: $Command"
+  }
+
+  $output = & $Command @Arguments 2>&1
+  if ($LASTEXITCODE -ne 0) {
+    throw "$Command version check failed with exit code $LASTEXITCODE."
+  }
+
+  return ([string]($output | Select-Object -First 1)).Trim()
+}
+
+function ConvertTo-SemanticVersion {
+  param(
+    [Parameter(Mandatory)][string]$Value,
+    [Parameter(Mandatory)][string]$Label
+  )
+
+  $match = [regex]::Match($Value, '(\d+)\.(\d+)(?:\.(\d+))?')
+  if (-not $match.Success) {
+    throw "Could not parse $Label version from '$Value'."
+  }
+
+  $patch = if ($match.Groups[3].Success) { [int]$match.Groups[3].Value } else { 0 }
+  return [version]::new([int]$match.Groups[1].Value, [int]$match.Groups[2].Value, $patch)
+}
+
+function Invoke-RunnerPolicyGate {
+  Write-RunnerSection 'ALDE RUNNER POLICY GATE'
+
+  $minimumPowerShell = [version]'5.1.0'
+  $minimumNode = [version]'20.0.0'
+  $minimumNpm = [version]'10.0.0'
+
+  $powerShellVersion = $PSVersionTable.PSVersion
+  if ($powerShellVersion -lt $minimumPowerShell) {
+    throw "PowerShell $powerShellVersion is below required version $minimumPowerShell."
+  }
+
+  if ($env:GITHUB_ACTIONS -eq 'true') {
+    if ($env:RUNNER_OS -ne 'Windows') {
+      throw "ALDE requires a Windows runner; received '$env:RUNNER_OS'."
+    }
+    if (-not $env:RUNNER_NAME) {
+      throw 'GitHub Actions runner name is unavailable.'
+    }
+  }
+
+  $gitText = Get-CommandVersion -Command 'git' -Arguments @('--version')
+  $nodeText = Get-CommandVersion -Command 'node' -Arguments @('--version')
+  $npmText = Get-CommandVersion -Command 'npm' -Arguments @('--version')
+  $nodeVersion = ConvertTo-SemanticVersion -Value $nodeText -Label 'Node.js'
+  $npmVersion = ConvertTo-SemanticVersion -Value $npmText -Label 'npm'
+
+  if ($nodeVersion -lt $minimumNode) {
+    throw "Node.js $nodeVersion is below required version $minimumNode."
+  }
+  if ($npmVersion -lt $minimumNpm) {
+    throw "npm $npmVersion is below required version $minimumNpm."
+  }
+
+  $policy = [ordered]@{
+    status = 'PASS'
+    policyVersion = 1
+    runnerName = $env:RUNNER_NAME
+    runnerOS = $env:RUNNER_OS
+    powershell = $powerShellVersion.ToString()
+    git = $gitText
+    node = $nodeText
+    npm = $npmText
+    requirements = [ordered]@{
+      windowsRunner = $true
+      minimumPowerShell = $minimumPowerShell.ToString()
+      minimumNode = $minimumNode.ToString()
+      minimumNpm = $minimumNpm.ToString()
+      requiredBranch = $RequiredBranch
+      cleanCommitBoundCertification = $true
+    }
+  }
+
+  Write-Host "[PASS] Runner policy v$($policy.policyVersion)" -ForegroundColor Green
+  Write-Host "[TOOL] $gitText" -ForegroundColor DarkGreen
+  Write-Host "[TOOL] Node.js $nodeText" -ForegroundColor DarkGreen
+  Write-Host "[TOOL] npm $npmText" -ForegroundColor DarkGreen
+  Write-Host "[TOOL] PowerShell $powerShellVersion" -ForegroundColor DarkGreen
+
+  return $policy
+}
+
 function Get-LatestVerificationReport {
   param(
     [Parameter(Mandatory)][string]$ArtifactDirectory,
@@ -72,7 +168,8 @@ function Write-GitHubSummary {
     [Parameter(Mandatory)][string]$ClientHead,
     [Parameter(Mandatory)][string]$ServerHead,
     [string]$ReportPath = '',
-    [string]$MetadataPath = ''
+    [string]$MetadataPath = '',
+    [string]$PolicyStatus = 'NOT_RUN'
   )
 
   $summaryPath = $env:GITHUB_STEP_SUMMARY
@@ -85,6 +182,7 @@ function Write-GitHubSummary {
     '# Alpha-Tech Local Certification',
     '',
     "- Status: **$Status**",
+    "- Runner policy: **$PolicyStatus**",
     "- Client HEAD: ``$ClientHead``",
     "- Server HEAD: ``$ServerHead``",
     "- Runner: ``$env:RUNNER_NAME``",
@@ -133,8 +231,11 @@ $publishedReportPath = ''
 $metadataPath = Join-Path $EvidencePath 'runner-result.json'
 $clientHead = ''
 $serverHead = ''
+$runnerPolicy = $null
 
 try {
+  $runnerPolicy = Invoke-RunnerPolicyGate
+
   & $aldeScript `
     -Mode $Mode `
     -ClientPath $ClientPath `
@@ -170,7 +271,7 @@ finally {
   try { $serverHead = (& git -C $ServerPath rev-parse HEAD).Trim() } catch { $serverHead = 'unavailable' }
 
   $metadata = [ordered]@{
-    schemaVersion = 2
+    schemaVersion = 3
     status = $status
     mode = $Mode
     startedAt = $startedAt.ToUniversalTime().ToString('o')
@@ -181,13 +282,14 @@ finally {
     serverPath = $ServerPath
     clientHead = $clientHead
     serverHead = $serverHead
+    runnerPolicy = $runnerPolicy
     reportFile = if ($report) { $report.Name } else { $null }
     reportPath = if ($report) { $report.FullName } else { $null }
     publishedReportPath = if ($publishedReportPath) { $publishedReportPath } else { $null }
     exitCode = $exitCode
   }
 
-  $metadata | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $metadataPath -Encoding UTF8
+  $metadata | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $metadataPath -Encoding UTF8
 
   Write-GitHubOutput -Name 'status' -Value $status
   Write-GitHubOutput -Name 'client_head' -Value $clientHead
@@ -195,12 +297,14 @@ finally {
   Write-GitHubOutput -Name 'report_path' -Value $publishedReportPath
   Write-GitHubOutput -Name 'metadata_path' -Value $metadataPath
 
+  $policyStatus = if ($runnerPolicy) { [string]$runnerPolicy.status } else { 'FAIL' }
   Write-GitHubSummary `
     -Status $status `
     -ClientHead $clientHead `
     -ServerHead $serverHead `
     -ReportPath $publishedReportPath `
-    -MetadataPath $metadataPath
+    -MetadataPath $metadataPath `
+    -PolicyStatus $policyStatus
 }
 
 if (-not $report) {

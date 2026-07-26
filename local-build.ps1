@@ -23,7 +23,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 $script:EngineName = 'Alpha-Tech Local Development Engine'
-$script:EngineVersion = '1.0.0-phase1'
+$script:EngineVersion = '1.0.1-phase1'
 $script:WorkflowName = 'Git-first E2E Increment Certification'
 $script:StartedAt = Get-Date
 $script:Results = [System.Collections.Generic.List[object]]::new()
@@ -144,6 +144,18 @@ function Invoke-Gate {
     Add-GateResult -Name $Name -Status 'FAIL' -DurationSeconds $watch.Elapsed.TotalSeconds -Detail $_.Exception.Message
     Write-Host "[FAIL] $Name" -ForegroundColor Red
     throw
+  }
+}
+
+function Invoke-NpmScriptGate {
+  param(
+    [Parameter(Mandatory)][string]$GateName,
+    [Parameter(Mandatory)][string]$ProjectPath,
+    [Parameter(Mandatory)][string]$ScriptName
+  )
+
+  Invoke-Gate -Name $GateName -Action {
+    Invoke-NativeCommand -Command 'npm' -Arguments @('run', $ScriptName) -WorkingDirectory $ProjectPath
   }
 }
 
@@ -365,9 +377,10 @@ function Invoke-FrontendGate {
       throw "Frontend package.json does not define '$scriptName'."
     }
 
-    Invoke-Gate "Frontend $scriptName" {
-      Invoke-NativeCommand -Command 'npm' -Arguments @('run', $scriptName) -WorkingDirectory $Path
-    }.GetNewClosure()
+    Invoke-NpmScriptGate `
+      -GateName "Frontend $scriptName" `
+      -ProjectPath $Path `
+      -ScriptName $scriptName
   }
 }
 
@@ -418,9 +431,10 @@ function Invoke-BackendGate {
     )
 
     foreach ($verifyScript in $verifyScripts) {
-      Invoke-Gate "Backend $verifyScript" {
-        Invoke-NativeCommand -Command 'npm' -Arguments @('run', $verifyScript) -WorkingDirectory $Path
-      }.GetNewClosure()
+      Invoke-NpmScriptGate `
+        -GateName "Backend $verifyScript" `
+        -ProjectPath $Path `
+        -ScriptName $verifyScript
     }
   }
 }
@@ -479,9 +493,10 @@ function Invoke-OperationalGate {
     throw "Frontend package.json does not define 'test:e2e'."
   }
 
-  Invoke-Gate 'Playwright browser E2E' {
-    Invoke-NativeCommand -Command 'npm' -Arguments @('run', 'test:e2e') -WorkingDirectory $Path
-  }
+  Invoke-NpmScriptGate `
+    -GateName 'Playwright browser E2E' `
+    -ProjectPath $Path `
+    -ScriptName 'test:e2e'
 }
 
 function Write-VerificationReport {
@@ -560,8 +575,7 @@ function Publish-CertifiedRepository {
   Invoke-NativeCommand -Command 'git' -Arguments @('-C', $RepositoryPath, 'fetch', $Remote, '--prune')
 
   $remoteHead = (Get-GitOutput $RepositoryPath @('rev-parse', "$Remote/$Branch") | Select-Object -First 1).Trim()
-  $baseCheck = Get-GitOutput $RepositoryPath @('merge-base', '--is-ancestor', $remoteHead, $state.head)
-  $null = $baseCheck
+  $null = Get-GitOutput $RepositoryPath @('merge-base', '--is-ancestor', $remoteHead, $state.head)
 
   if ($remoteHead -ne $state.head) {
     Invoke-NativeCommand -Command 'git' -Arguments @('-C', $RepositoryPath, 'push', $Remote, "HEAD:$Branch")

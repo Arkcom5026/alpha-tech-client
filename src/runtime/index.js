@@ -6,3 +6,4 @@ export {
 export { handleRuntimeError } from './errors/runtimeErrorHandler';
 export { loading } from './loading/loadingController';
 export { withLoading } from './loading/withLoading';
+export { confirmation } from './confirmation/confirmationController';

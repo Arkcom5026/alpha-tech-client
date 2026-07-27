@@ -21,10 +21,39 @@ describe('QuickReceiptSessionPanel executable workflow contract', () => {
     expect(source).toContain('ยืนยันรับสินค้าครบแล้ว');
   });
 
-  it('resumes a server draft from full receipt detail', () => {
-    expect(source).toContain('getQuickReceipt');
+  it('resumes a server draft from full receipt and tax detail', () => {
     expect(source).toMatch(/const detail = await getQuickReceipt\(draft\.id\)/);
     expect(source).toMatch(/setReceipt\(detail\)/);
+    expect(source).toMatch(/setHeader\(toHeader\(detail\)\)/);
+    expect(source).toContain('documentSubtotal');
+    expect(source).toContain('documentVatAmount');
+    expect(source).toContain('documentTotalAmount');
+  });
+
+  it('allows a persisted draft line to be removed before finalization', () => {
+    expect(source).toContain('deleteQuickReceiptItem');
+    expect(source).toMatch(/await deleteQuickReceiptItem\(receipt\.id, itemId\)/);
+    expect(source).toMatch(/item\.id && <button/);
+  });
+
+  it('supports cancelling a server draft and starting a clean receipt', () => {
+    expect(source).toContain('cancelQuickReceipt');
+    expect(source).toMatch(/await cancelQuickReceipt\(receipt\.id/);
+    expect(source).toContain('ยกเลิกใบรับนี้');
+    expect(source).toContain('เริ่มใบรับใหม่');
+    expect(source).toMatch(/setHeader\(emptyHeader\)/);
+  });
+
+  it('supports finding a resumable draft by supplier or delivery note', () => {
+    expect(source).toContain('draftSearch');
+    expect(source).toContain('ค้นหาจาก Supplier หรือเลขที่ใบส่งของ');
+    expect(source).toMatch(/supplierName[\s\S]*deliveryNoteNumber/);
+  });
+
+  it('updates an existing draft header before saving or finalizing', () => {
+    expect(source).toContain('updateQuickReceiptDraft');
+    expect(source).toMatch(/await updateQuickReceiptDraft\(active\.id/);
+    expect(source).toMatch(/await updateQuickReceiptDraft\(receipt\.id/);
   });
 
   it('retains recovery data when finalization fails and clears it only after success', () => {

@@ -11,6 +11,7 @@ const initialState = {
   intakeContext: null,
   intakeNotFound: false,
   intakeNotFoundLookup: '',
+  searchResults: { devices: [], customers: [], counts: { devices: 0, customers: 0, total: 0 } },
   selectedCustomer: null,
   customerWarrantyAssets: [],
   jobs: [],
@@ -34,6 +35,7 @@ const useRepairRuntimeStore = create((set, get) => ({
     intakeContext: null,
     intakeNotFound: false,
     intakeNotFoundLookup: '',
+    searchResults: { devices: [], customers: [], counts: { devices: 0, customers: 0, total: 0 } },
     selectedCustomer: null,
     customerWarrantyAssets: [],
     error: null,
@@ -80,6 +82,47 @@ const useRepairRuntimeStore = create((set, get) => ({
     };
     set({ intakeContext: syntheticContext, error: null, errorCode: null });
     return syntheticContext;
+  },
+
+  searchDirectory: async (queryInput) => {
+    const query = String(queryInput ?? get().intakeLookup).trim();
+    if (!query) {
+      set({ error: 'กรุณาระบุคำค้นหา', errorCode: 'REPAIR_INVALID_LOOKUP' });
+      return null;
+    }
+
+    set({
+      loading: true,
+      error: null,
+      errorCode: null,
+      intakeLookup: query,
+      intakeNotFound: false,
+      intakeNotFoundLookup: '',
+    });
+    try {
+      const payload = await repairApi.searchIntake(query);
+      const searchResults = {
+        devices: Array.isArray(payload?.devices) ? payload.devices : [],
+        customers: Array.isArray(payload?.customers) ? payload.customers : [],
+        counts: payload?.counts || { devices: 0, customers: 0, total: 0 },
+      };
+      set({
+        searchResults,
+        loading: false,
+        intakeNotFound: searchResults.counts.total === 0,
+        intakeNotFoundLookup: searchResults.counts.total === 0 ? query : '',
+        lastLoadedAt: new Date().toISOString(),
+      });
+      return searchResults;
+    } catch (error) {
+      set({
+        searchResults: { devices: [], customers: [], counts: { devices: 0, customers: 0, total: 0 } },
+        loading: false,
+        error: error.message,
+        errorCode: error.code,
+      });
+      return null;
+    }
   },
 
   searchIntake: async (lookupInput) => {

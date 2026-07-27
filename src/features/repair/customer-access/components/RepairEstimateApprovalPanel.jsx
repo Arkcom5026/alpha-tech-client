@@ -1,0 +1,136 @@
+import React, { useCallback, useEffect, useState } from 'react';
+import repairApi from '../../api/repairApi';
+
+const money = (value) =>
+  new Intl.NumberFormat('th-TH', {
+    style: 'currency',
+    currency: 'THB',
+    minimumFractionDigits: 2,
+  }).format(Number(value || 0));
+
+const STATUS_LABELS = {
+  PENDING: 'รอลูกค้าตอบกลับ',
+  APPROVED: 'ลูกค้าอนุมัติแล้ว',
+  REJECTED: 'ลูกค้าไม่อนุมัติ',
+  SUPERSEDED: 'ถูกแทนที่ด้วยราคาฉบับใหม่',
+  EXPIRED: 'หมดอายุ',
+};
+
+const RepairEstimateApprovalPanel = ({ repairJobId, job }) => {
+  const [approval, setApproval] = useState(null);
+  const [requestNote, setRequestNote] = useState('');
+  const [state, setState] = useState({ loading: true, error: '', notice: '' });
+
+  const load = useCallback(async () => {
+    setState((current) => ({ ...current, loading: true, error: '' }));
+    try {
+      const payload = await repairApi.getEstimateApproval(repairJobId);
+      setApproval(payload?.approval || null);
+      setState({ loading: false, error: '', notice: '' });
+    } catch (error) {
+      setState({ loading: false, error: error.message, notice: '' });
+    }
+  }, [repairJobId]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const publish = async () => {
+    if (!window.confirm('ยืนยันส่งราคาประเมินปัจจุบันให้ลูกค้าพิจารณา?')) return;
+    setState({ loading: true, error: '', notice: '' });
+    try {
+      const payload = await repairApi.publishEstimateApproval(repairJobId, {
+        expiryDays: 14,
+        requestNote,
+      });
+      setApproval(payload?.approval || null);
+      setRequestNote('');
+      setState({
+        loading: false,
+        error: '',
+        notice: 'สร้างคำขออนุมัติราคาแล้ว ลูกค้าตอบกลับได้จากลิงก์ติดตามงาน',
+      });
+    } catch (error) {
+      setState({ loading: false, error: error.message, notice: '' });
+    }
+  };
+
+  return (
+    <section className="rounded-2xl border border-amber-200 bg-amber-50/60 p-4 shadow-sm sm:p-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="text-xs font-black uppercase tracking-[0.16em] text-amber-700">
+            Customer Estimate Decision
+          </p>
+          <h2 className="mt-1 text-lg font-black text-slate-950">ส่งราคาประเมินให้ลูกค้าอนุมัติ</h2>
+          <p className="mt-1 text-sm text-slate-600">
+            ระบบจะล็อกยอดเป็น snapshot ลูกค้าอนุมัติหรือปฏิเสธจากลิงก์ติดตามงาน
+          </p>
+        </div>
+        <button
+          type="button"
+          disabled={state.loading || Number(job?.estimatedCost || 0) <= 0}
+          onClick={publish}
+          className="min-h-11 rounded-xl bg-amber-600 px-5 text-sm font-black text-white disabled:opacity-40"
+        >
+          {state.loading ? 'กำลังดำเนินการ' : approval?.status === 'PENDING' ? 'ส่งราคาใหม่' : 'ส่งให้ลูกค้า'}
+        </button>
+      </div>
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-3">
+        <Metric label="ราคาประเมินปัจจุบัน" value={money(job?.estimatedCost)} />
+        <Metric label="มัดจำ" value={money(job?.depositPaid)} />
+        <Metric
+          label="ยอดคงเหลือ"
+          value={money(Math.max(Number(job?.estimatedCost || 0) - Number(job?.depositPaid || 0), 0))}
+        />
+      </div>
+
+      <label className="mt-4 block space-y-1">
+        <span className="text-xs font-black text-slate-600">ข้อความถึงลูกค้า</span>
+        <textarea
+          rows={2}
+          value={requestNote}
+          onChange={(event) => setRequestNote(event.target.value)}
+          placeholder="เช่น รวมค่าแรงและอะไหล่แล้ว รับประกันงานซ่อม 30 วัน"
+          className="w-full rounded-xl border border-amber-200 bg-white px-4 py-3"
+        />
+      </label>
+
+      {approval ? (
+        <div className="mt-4 rounded-xl border border-amber-200 bg-white p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="font-black text-slate-950">
+              ราคาฉบับล่าสุด {money(approval.estimateAmount)}
+            </p>
+            <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-black text-amber-800">
+              {STATUS_LABELS[approval.status] || approval.status}
+            </span>
+          </div>
+          {approval.confirmedByName ? (
+            <p className="mt-2 text-sm text-slate-600">
+              ผู้ตอบกลับ: {approval.confirmedByName}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+
+      {state.notice ? (
+        <p className="mt-3 rounded-xl bg-emerald-50 p-3 text-sm font-bold text-emerald-700">{state.notice}</p>
+      ) : null}
+      {state.error ? (
+        <p className="mt-3 rounded-xl bg-red-50 p-3 text-sm font-bold text-red-700">{state.error}</p>
+      ) : null}
+    </section>
+  );
+};
+
+const Metric = ({ label, value }) => (
+  <div className="rounded-xl bg-white p-3">
+    <p className="text-xs font-black text-slate-500">{label}</p>
+    <p className="mt-1 font-black text-slate-950">{value}</p>
+  </div>
+);
+
+export default RepairEstimateApprovalPanel;

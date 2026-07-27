@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import TrackingTimeline from '../components/TrackingTimeline';
 import { getPublicRepairTracking } from '../api/repairTrackingPublicApi';
+import EstimateDecisionCard from '../components/EstimateDecisionCard';
 
 const money = (value) =>
   new Intl.NumberFormat('th-TH', {
@@ -158,6 +159,20 @@ const CustomerRepairTrackingPage = () => {
           </div>
           <p className="mt-3 text-xs leading-5 text-slate-400">ยอดจริงอาจเปลี่ยนแปลงตามผลตรวจสอบและการยืนยันของลูกค้า</p>
         </section>
+
+        <EstimateDecisionCard
+          token={token}
+          approval={repair.estimateApproval}
+          onChanged={(approval) =>
+            setTracking((current) => ({
+              ...current,
+              repair: {
+                ...current.repair,
+                estimateApproval: approval,
+              },
+            }))
+          }
+        />
 
         {repair.claim ? (
           <section className="rounded-3xl border border-violet-200 bg-violet-50 p-5">

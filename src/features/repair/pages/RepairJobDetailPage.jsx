@@ -6,6 +6,7 @@ import RuntimeStatePanel from '../components/RuntimeStatePanel';
 import JobRuntimePanel from '../components/JobRuntimePanel';
 import RepairTrackingAccessPanel from '../customer-access/components/RepairTrackingAccessPanel';
 import IntakeEvidencePanel from '../components/IntakeEvidencePanel';
+import RepairEstimateApprovalPanel from '../customer-access/components/RepairEstimateApprovalPanel';
 
 const RepairJobDetailPage = () => {
   const navigate = useNavigate();
@@ -63,6 +64,7 @@ const RepairJobDetailPage = () => {
           onOpenClaim={handleOpenClaim}
         />
           <RepairTrackingAccessPanel repairJobId={repairJobId} jobNo={activeJob.jobNo} />
+          <RepairEstimateApprovalPanel repairJobId={repairJobId} job={activeJob} />
           <IntakeEvidencePanel
             repairJobId={repairJobId}
             warning={location.state?.evidenceWarning}

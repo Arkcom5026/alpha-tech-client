@@ -105,6 +105,18 @@ export const repairApi = {
       'ไม่สามารถยกเลิกลิงก์ติดตามงานได้'
     ),
 
+  getEstimateApproval: (id) =>
+    request(
+      () => apiClient.get(`/repairs/jobs/${id}/estimate-approval`),
+      'ไม่สามารถโหลดสถานะการอนุมัติราคาได้'
+    ),
+
+  publishEstimateApproval: (id, payload = {}) =>
+    request(
+      () => apiClient.post(`/repairs/jobs/${id}/estimate-approval`, payload),
+      'ไม่สามารถส่งราคาประเมินให้ลูกค้าได้'
+    ),
+
   transitionJob: (id, payload) =>
     request(
       () => apiClient.patch(`/repairs/jobs/${id}/status`, payload),

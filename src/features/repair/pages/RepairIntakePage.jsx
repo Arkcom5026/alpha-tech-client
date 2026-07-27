@@ -189,6 +189,7 @@ const RepairIntakePage = () => {
                     loading={runtime.loading}
                     onSelectCustomer={selectCustomer}
                     onClearCustomer={clearCustomer}
+                    createOnly
                   />
                   <CustomerWarrantyAssets
                     customer={runtime.selectedCustomer}

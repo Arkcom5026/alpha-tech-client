@@ -9,6 +9,7 @@ import CustomerWarrantyAssets from '../components/CustomerWarrantyAssets';
 import RepairIntakeContactForm from '../components/RepairIntakeContactForm';
 import IntakeProjection from '../components/IntakeProjection';
 import ExternalDeviceIntakeForm from '../components/ExternalDeviceIntakeForm';
+import MobileIntakeProgress from '../components/MobileIntakeProgress';
 
 const emptyContact = {
   contactName: '',
@@ -154,6 +155,12 @@ const RepairIntakePage = () => {
         eyebrow="After-sales Runtime"
         title="รับซ่อมและรับเคลม"
         description="เลือกลูกค้าและอุปกรณ์ พร้อมบันทึกรายละเอียดรับเรื่องให้จบในหน้าจอเดียว"
+      />
+
+      <MobileIntakeProgress
+        hasCustomer={Boolean(runtime.selectedCustomer?.id)}
+        hasDevice={Boolean(runtime.intakeContext)}
+        enteringDetails={externalMode || createOpen}
       />
 
       <div className="grid items-start gap-5 xl:grid-cols-[minmax(320px,0.76fr)_minmax(0,1.55fr)]">

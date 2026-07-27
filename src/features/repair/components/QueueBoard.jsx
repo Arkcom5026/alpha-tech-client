@@ -31,7 +31,9 @@ const QueueBoard = ({ lanes, type, onOpen }) => (
                   <p className="mt-1 line-clamp-2 text-sm text-slate-700">
                     {type === 'repair'
                       ? item.deviceModel || item.reportedSymptoms
-                      : item.stockItem?.product?.name || item.reason}
+                      : item.stockItem?.product?.name ||
+                        [item.device?.brand, item.device?.model].filter(Boolean).join(' ') ||
+                        item.reason}
                   </p>
                   <p className="mt-2 text-xs text-slate-500">
                     {formatDateTime(type === 'repair' ? item.updatedAt || item.createdAt : item.updatedAt || item.openedAt)}

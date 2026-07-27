@@ -6,11 +6,16 @@ import {
   normalizeBrandActive,
   projectBrandErrorMessage,
 } from './ListBrandPage';
+import {
+  buildEditBrandToggleConfirmationKey,
+  normalizeEditBrandActive,
+} from './EditBrandPage';
 
-describe('ListBrandPage ADS confirmation and error projection', () => {
+describe('Brand pages ADS confirmation and error projection', () => {
   it('creates stable operation-scoped confirmation keys', () => {
     expect(buildBrandToggleConfirmationKey(7)).toBe('brand.toggleActive.7');
     expect(buildBrandDetachConfirmationKey(31)).toBe('brand.detachFromProductType.31');
+    expect(buildEditBrandToggleConfirmationKey(7)).toBe('brand.edit.toggleActive.7');
   });
 
   it('projects normalized runtime errors without rendering object values directly', () => {
@@ -31,5 +36,8 @@ describe('ListBrandPage ADS confirmation and error projection', () => {
     expect(normalizeBrandActive({ isActive: false, active: true })).toBe(false);
     expect(normalizeBrandActive({ active: false })).toBe(false);
     expect(normalizeBrandActive({})).toBe(true);
+    expect(normalizeEditBrandActive({ isActive: false, active: true })).toBe(false);
+    expect(normalizeEditBrandActive({ active: false })).toBe(false);
+    expect(normalizeEditBrandActive({})).toBe(true);
   });
 });

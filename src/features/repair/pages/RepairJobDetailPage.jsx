@@ -4,6 +4,7 @@ import useRepairRuntimeStore from '../store/repairRuntimeStore';
 import RepairShellHeader from '../components/RepairShellHeader';
 import RuntimeStatePanel from '../components/RuntimeStatePanel';
 import JobRuntimePanel from '../components/JobRuntimePanel';
+import RepairTrackingAccessPanel from '../customer-access/components/RepairTrackingAccessPanel';
 
 const RepairJobDetailPage = () => {
   const navigate = useNavigate();
@@ -51,6 +52,7 @@ const RepairJobDetailPage = () => {
       />
 
       {activeJob ? (
+        <div className="space-y-4">
         <JobRuntimePanel
           job={activeJob}
           submitting={submitting}
@@ -58,6 +60,8 @@ const RepairJobDetailPage = () => {
           onAddPart={(payload) => addPart(repairJobId, payload)}
           onOpenClaim={handleOpenClaim}
         />
+          <RepairTrackingAccessPanel repairJobId={repairJobId} jobNo={activeJob.jobNo} />
+        </div>
       ) : null}
     </div>
   );

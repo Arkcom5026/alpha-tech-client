@@ -8,6 +8,7 @@ import RepairCustomerSection from '../components/RepairCustomerSection';
 import CustomerWarrantyAssets from '../components/CustomerWarrantyAssets';
 import RepairIntakeContactForm from '../components/RepairIntakeContactForm';
 import IntakeProjection from '../components/IntakeProjection';
+import ExternalDeviceIntakeForm from '../components/ExternalDeviceIntakeForm';
 
 const emptyContact = {
   contactName: '',
@@ -33,6 +34,7 @@ const RepairIntakePage = () => {
     technicianNotes: '',
   });
   const [createOpen, setCreateOpen] = useState(false);
+  const [externalMode, setExternalMode] = useState(false);
 
   const identity = runtime.intakeContext?.identity || {};
   const selectedStockItemId = identity?.id || '';
@@ -95,12 +97,31 @@ const RepairIntakePage = () => {
     runtime.clearSelectedCustomer();
     setIntakeContact(emptyContact);
     setCreateOpen(false);
+    setExternalMode(false);
   };
 
   const resetAll = () => {
     runtime.resetIntake();
     setIntakeContact(emptyContact);
     setCreateOpen(false);
+    setExternalMode(false);
+  };
+
+  const startExternalIntake = () => {
+    if (!runtime.selectedCustomer?.id) {
+      setSearchPath('CUSTOMER');
+      return;
+    }
+    runtime.clearError();
+    setCreateOpen(false);
+    setExternalMode(true);
+  };
+
+  const createExternalIntake = async (payload) => {
+    const created = await runtime.createExternalIntake(payload);
+    if (created?.repairJob?.id) {
+      navigate(`/${shopSlug}/pos/services/repairs/${created.repairJob.id}`);
+    }
   };
 
   const retryCurrentSearch = () =>
@@ -182,6 +203,22 @@ const RepairIntakePage = () => {
                 </div>
               )}
             </div>
+
+            <div className="border-t border-slate-200 bg-slate-50 p-4">
+              <button
+                type="button"
+                disabled={!runtime.selectedCustomer?.id}
+                onClick={startExternalIntake}
+                className="min-h-11 w-full rounded-xl border border-dashed border-blue-300 bg-white px-4 text-sm font-black text-blue-700 hover:border-blue-600 hover:bg-blue-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400"
+              >
+                + เพิ่มอุปกรณ์ภายนอกร้าน
+              </button>
+              {!runtime.selectedCustomer?.id ? (
+                <p className="mt-2 text-center text-xs text-slate-500">
+                  เลือกลูกค้าก่อนเพิ่มอุปกรณ์ภายนอก
+                </p>
+              ) : null}
+            </div>
           </section>
         </aside>
 
@@ -194,7 +231,11 @@ const RepairIntakePage = () => {
                 </p>
                 <h2 className="mt-1 text-lg font-black text-slate-950">รายการรับซ่อม</h2>
               </div>
-              {runtime.intakeContext ? (
+              {externalMode ? (
+                <span className="w-fit rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-black text-blue-700">
+                  อุปกรณ์ภายนอกร้าน
+                </span>
+              ) : runtime.intakeContext ? (
                 <span className="w-fit rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-700">
                   เลือกอุปกรณ์แล้ว
                 </span>
@@ -206,7 +247,15 @@ const RepairIntakePage = () => {
             </div>
 
             <div className="p-5">
-              {runtime.error || runtime.loading ? (
+              {externalMode ? (
+                <ExternalDeviceIntakeForm
+                  customer={runtime.selectedCustomer}
+                  submitting={runtime.submitting}
+                  error={runtime.error}
+                  onCancel={() => setExternalMode(false)}
+                  onSubmit={createExternalIntake}
+                />
+              ) : runtime.error || runtime.loading ? (
                 <RuntimeStatePanel
                   loading={runtime.loading}
                   error={runtime.error}

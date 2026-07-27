@@ -47,6 +47,7 @@ const RepairCustomerSection = ({
   loading,
   onSelectCustomer,
   onClearCustomer,
+  createOnly = false,
 }) => {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
@@ -73,12 +74,12 @@ const RepairCustomerSection = ({
   const effectiveLoading = busy || loading;
 
   useEffect(() => {
-    if (!selectedCustomer) {
+    if (!selectedCustomer && !createOnly) {
       const timer = setTimeout(() => queryRef.current?.focus(), 120);
       return () => clearTimeout(timer);
     }
     return undefined;
-  }, [selectedCustomer]);
+  }, [selectedCustomer, createOnly]);
 
   useEffect(() => {
     if (!selectedCustomer) return;
@@ -350,9 +351,13 @@ const RepairCustomerSection = ({
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-700">Customer Intake</p>
-          <h2 className="mt-1 text-lg font-black text-slate-950">ค้นหาและเพิ่มลูกค้า</h2>
+          <h2 className="mt-1 text-lg font-black text-slate-950">
+            {selectedCustomer ? 'ข้อมูลลูกค้าที่เลือก' : createOnly ? 'เพิ่มลูกค้าใหม่' : 'ค้นหาและเพิ่มลูกค้า'}
+          </h2>
           <p className="mt-1 text-xs text-slate-500">
-            ช่องเดียวค้นจากชื่อ เบอร์โทร บริษัท หรือหน่วยงาน และเพิ่มลูกค้าได้ทันทีเมื่อไม่พบ
+            {createOnly
+              ? 'ใช้แผงนี้สำหรับเพิ่มข้อมูลลูกค้าใหม่ การค้นหาใช้ช่องรวมด้านบน'
+              : 'ช่องเดียวค้นจากชื่อ เบอร์โทร บริษัท หรือหน่วยงาน และเพิ่มลูกค้าได้ทันทีเมื่อไม่พบ'}
           </p>
         </div>
         {selectedCustomer ? (
@@ -405,6 +410,8 @@ const RepairCustomerSection = ({
           </div>
           {editingSelected ? renderCustomerForm({ updateMode: true }) : null}
         </>
+      ) : createOnly ? (
+        renderCustomerForm()
       ) : (
         <>
           <form onSubmit={submitSearch} className="mt-3 flex flex-col gap-2 sm:flex-row">

@@ -97,7 +97,7 @@ const RepairIntakePage = () => {
     if (!runtime.selectedCustomer?.id && device?.latestCustomer?.id) {
       await runtime.selectCustomer(device.latestCustomer);
     }
-    const lookup = device?.serialNumber || device?.barcode || device?.id;
+    const lookup = device?.barcode || device?.serialNumber || device?.id;
     if (lookup) await runtime.searchIntake(lookup);
   };
 

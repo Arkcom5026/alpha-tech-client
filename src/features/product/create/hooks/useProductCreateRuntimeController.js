@@ -115,6 +115,13 @@ const validateForm = (values = {}) => {
   if (!toNumberOrNull(values.brandId)) errors.brandId = 'กรุณาเลือกแบรนด์';
   if (!toNumberOrNull(values.unitId)) errors.unitId = 'กรุณาเลือกหน่วยนับ';
 
+  if (values.mode === 'STRUCTURED' && values.inventoryBehavior === 'NON_STOCK') {
+    errors.inventoryBehavior = 'NON_STOCK ใช้ได้เฉพาะสินค้า SIMPLE';
+  }
+  if (values.mode === 'STRUCTURED' && String(values.saleBarcode || '').trim()) {
+    errors.saleBarcode = 'บาร์โค้ดขายซ้ำใช้ได้เฉพาะสินค้า SIMPLE';
+  }
+
   const priceRetail = toNumberOrNull(values.branchPrice?.priceRetail);
   if (priceRetail == null || priceRetail < 0) {
     errors.branchPrice = {
@@ -136,6 +143,8 @@ const buildPayload = (values = {}, branchId) => ({
   unitId: toNumberOrNull(values.unitId),
 
   mode: values.mode || 'STRUCTURED',
+  inventoryBehavior: values.mode === 'STRUCTURED' ? 'TRACKED' : (values.inventoryBehavior || 'TRACKED'),
+  saleBarcode: values.mode === 'SIMPLE' ? (String(values.saleBarcode || '').trim() || null) : null,
   noSN: Boolean(values.noSN),
   trackSerialNumber: values.mode === 'SIMPLE' ? false : values.trackSerialNumber !== false,
   active: values.active !== false,

@@ -12,6 +12,8 @@ const initialFormValues = {
   unitId: '',
 
   mode: 'STRUCTURED',
+  inventoryBehavior: 'TRACKED',
+  saleBarcode: '',
   noSN: false,
   trackSerialNumber: true,
   active: true,

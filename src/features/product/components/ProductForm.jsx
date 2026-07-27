@@ -181,6 +181,8 @@ const ProductForm = ({
       brandId: toId(data?.brandId ?? data?.brand?.id),
       unitId: toId(data?.unitId ?? data?.unit?.id),
       mode: resolvedMode === 'SIMPLE' ? 'SIMPLE' : 'STRUCTURED',
+      inventoryBehavior: String(data?.inventoryBehavior || 'TRACKED').toUpperCase() === 'NON_STOCK' ? 'NON_STOCK' : 'TRACKED',
+      saleBarcode: data?.saleBarcode ?? '',
       active: data?.active !== false,
       branchPrice: {
         costPrice: branchPriceSource?.costPrice ?? data?.costPrice ?? data?.cost ?? 0,
@@ -529,6 +531,10 @@ const ProductForm = ({
       brandId: toNullableId(data.brandId),
       unitId: toNullableId(data.unitId),
       mode: resolvedMode,
+      inventoryBehavior: resolvedMode === 'STRUCTURED'
+        ? 'TRACKED'
+        : (String(data.inventoryBehavior || 'TRACKED').toUpperCase() === 'NON_STOCK' ? 'NON_STOCK' : 'TRACKED'),
+      saleBarcode: resolvedMode === 'SIMPLE' ? toNullableText(data.saleBarcode) : null,
       noSN: resolvedMode === 'SIMPLE',
       trackSerialNumber: resolvedMode === 'STRUCTURED',
       active: data.active !== false,
@@ -586,7 +592,7 @@ const ProductForm = ({
           brandId={watchedBrandId}
         />
 
-        <ProductInventorySection register={register} errors={errors} />
+        <ProductInventorySection control={control} register={register} setValue={setValue} errors={errors} />
         <ProductPriceSection register={register} errors={errors} />
         <ProductDetailsSection register={register} errors={errors} />
         <ProductSubmitBar isBusy={isBusy} submitLabel={submitLabel} mode={mode} />

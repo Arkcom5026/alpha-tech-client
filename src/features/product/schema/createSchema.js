@@ -18,6 +18,11 @@ export const createProductSchema = z.object({
   brandId: nullableId.optional(),
   unitId: nullableId.optional(),
   mode: z.enum(['SIMPLE', 'STRUCTURED']).default('STRUCTURED'),
+  inventoryBehavior: z.enum(['TRACKED', 'NON_STOCK']).default('TRACKED'),
+  saleBarcode: z.preprocess(
+    (value) => (String(value ?? '').trim() ? String(value).trim() : null),
+    z.string().max(120, 'บาร์โค้ดยาวเกินกำหนด').nullable()
+  ),
   noSN: z.boolean().optional(),
   trackSerialNumber: z.boolean().optional(),
   active: z.boolean().optional(),
@@ -41,6 +46,13 @@ export const createProductSchema = z.object({
       })
     )
     .optional(),
+}).superRefine((value, context) => {
+  if (value.mode === 'STRUCTURED' && value.inventoryBehavior === 'NON_STOCK') {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ['inventoryBehavior'], message: 'NON_STOCK ใช้ได้เฉพาะสินค้า SIMPLE' });
+  }
+  if (value.mode === 'STRUCTURED' && value.saleBarcode) {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ['saleBarcode'], message: 'บาร์โค้ดขายซ้ำใช้ได้เฉพาะสินค้า SIMPLE' });
+  }
 });
 
 // Backward-compatible export name used by older form imports.

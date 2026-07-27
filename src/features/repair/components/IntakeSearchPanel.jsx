@@ -1,42 +1,125 @@
 import React from 'react';
 
-const IntakeSearchPanel = ({ value, loading, onChange, onSearch, onReset }) => {
+const customerName = (customer) =>
+  customer.companyName || customer.name || `ลูกค้า #${customer.id}`;
+
+const deviceName = (device) =>
+  [device.product?.brand?.name, device.product?.name].filter(Boolean).join(' ') ||
+  device.serialNumber ||
+  device.barcode;
+
+const IntakeSearchPanel = ({
+  value,
+  loading,
+  results,
+  onChange,
+  onSearch,
+  onReset,
+  onSelectDevice,
+  onSelectCustomer,
+}) => {
   const submit = (event) => {
     event.preventDefault();
     onSearch(value);
   };
 
-  return (
-    <form onSubmit={submit} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-      <p className="text-sm font-black text-slate-800">ค้นหาอุปกรณ์เพื่อเริ่มงานบริการ</p>
-      <p className="mt-1 text-xs text-slate-500">
-        ระบบจะค้นหาสินค้า ลูกค้า ประกัน งานซ่อม และงานเคลมที่เกี่ยวข้อง
-      </p>
+  const devices = results?.devices || [];
+  const customers = results?.customers || [];
+  const hasResults = devices.length > 0 || customers.length > 0;
 
-      <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-        <input
-          autoFocus
-          value={value}
-          onChange={(event) => onChange(event.target.value)}
-          placeholder="บาร์โค้ด, Serial Number, IMEI หรือ Service Tag"
-          className="min-h-12 flex-1 rounded-xl border border-slate-300 px-4 text-base outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
-        />
-        <button
-          type="submit"
-          disabled={loading}
-          className="min-h-12 rounded-xl bg-blue-700 px-7 font-black text-white disabled:opacity-50"
-        >
-          {loading ? 'กำลังค้นหา' : 'ค้นหา'}
-        </button>
-        <button
-          type="button"
-          onClick={onReset}
-          className="min-h-12 rounded-xl border border-slate-300 px-5 font-black text-slate-700"
-        >
-          ล้าง
-        </button>
-      </div>
-    </form>
+  return (
+    <div className="space-y-3">
+      <form onSubmit={submit} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <p className="text-sm font-black text-slate-800">ค้นหาลูกค้าหรืออุปกรณ์</p>
+        <p className="mt-1 text-xs text-slate-500">
+          ชื่อ เบอร์โทร บริษัท รุ่น ยี่ห้อ Barcode, Serial Number หรือ Service Tag
+        </p>
+
+        <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+          <input
+            autoFocus
+            value={value}
+            onChange={(event) => onChange(event.target.value)}
+            placeholder="พิมพ์หรือสแกนข้อมูลที่มี"
+            className="min-h-12 flex-1 rounded-xl border border-slate-300 px-4 text-base outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+          />
+          <button
+            type="submit"
+            disabled={loading}
+            className="min-h-12 rounded-xl bg-blue-700 px-6 font-black text-white disabled:opacity-50"
+          >
+            {loading ? 'กำลังค้นหา' : 'ค้นหา'}
+          </button>
+          <button
+            type="button"
+            onClick={onReset}
+            className="min-h-12 rounded-xl border border-slate-300 px-4 font-black text-slate-700"
+          >
+            ล้าง
+          </button>
+        </div>
+      </form>
+
+      {hasResults ? (
+        <div className="space-y-3">
+          {devices.length > 0 ? (
+            <section className="rounded-2xl border border-blue-200 bg-blue-50/60 p-3">
+              <p className="text-xs font-black text-blue-800">อุปกรณ์ที่พบ {devices.length} รายการ</p>
+              <div className="mt-2 space-y-2">
+                {devices.map((device) => (
+                  <button
+                    key={device.id}
+                    type="button"
+                    onClick={() => onSelectDevice(device)}
+                    className="w-full rounded-xl border border-blue-100 bg-white p-3 text-left hover:border-blue-400"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="truncate font-black text-slate-900">{deviceName(device)}</p>
+                        <p className="mt-1 truncate text-xs font-bold text-slate-500">
+                          {device.serialNumber ? `SN: ${device.serialNumber}` : `Barcode: ${device.barcode}`}
+                        </p>
+                        {device.latestCustomer ? (
+                          <p className="mt-1 truncate text-xs text-emerald-700">
+                            ลูกค้าล่าสุด: {customerName(device.latestCustomer)}
+                          </p>
+                        ) : null}
+                      </div>
+                      {device.exactIdentifierMatch ? (
+                        <span className="shrink-0 rounded-full bg-blue-100 px-2 py-1 text-[10px] font-black text-blue-700">
+                          รหัสตรงกัน
+                        </span>
+                      ) : null}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </section>
+          ) : null}
+
+          {customers.length > 0 ? (
+            <section className="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-3">
+              <p className="text-xs font-black text-emerald-800">ลูกค้าที่พบ {customers.length} รายการ</p>
+              <div className="mt-2 space-y-2">
+                {customers.map((customer) => (
+                  <button
+                    key={customer.id}
+                    type="button"
+                    onClick={() => onSelectCustomer(customer)}
+                    className="w-full rounded-xl border border-emerald-100 bg-white p-3 text-left hover:border-emerald-400"
+                  >
+                    <p className="truncate font-black text-slate-900">{customerName(customer)}</p>
+                    <p className="mt-1 truncate text-xs font-bold text-slate-500">
+                      {customer.phone || customer.email || 'ไม่มีข้อมูลติดต่อ'}
+                    </p>
+                  </button>
+                ))}
+              </div>
+            </section>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
   );
 };
 

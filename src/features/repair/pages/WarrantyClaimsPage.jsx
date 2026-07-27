@@ -31,6 +31,10 @@ const WarrantyClaimsPage = () => {
         claim.externalClaimRef,
         claim.trackingNumber,
         claim.supplier?.name,
+        claim.device?.brand,
+        claim.device?.model,
+        claim.device?.serialNumber,
+        claim.device?.imei,
       ]
         .filter(Boolean)
         .some((value) => String(value).toLowerCase().includes(normalized))

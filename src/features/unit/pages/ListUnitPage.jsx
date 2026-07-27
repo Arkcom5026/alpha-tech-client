@@ -1,31 +1,58 @@
 // src/features/unit/pages/ListUnitPage.jsx
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom'; // 🟢 [DYNAMIC PARAM FIX] นำเข้า useParams มาร่วมทีม
+import { useNavigate, useParams } from 'react-router-dom';
 import useUnitStore from '../store/unitStore';
 import StandardActionButtons from '@/components/shared/buttons/StandardActionButtons';
 import ConfirmDeleteDialog from '@/components/shared/dialogs/ConfirmDeleteDialog';
+import { confirmation } from '@/runtime';
 
 const ListUnitPage = () => {
-  const { shopSlug } = useParams(); // 🟢 [LINK BINDING] แกะรหัสชื่อร้านค้าจาก URL สแตนด์บายเพื่อคุมทางวิ่งปุ่มกด
+  const { shopSlug } = useParams();
   const navigate = useNavigate();
-  const { units, fetchUnits, deleteUnit, isLoading } = useUnitStore();
+  const { units, fetchUnits, deleteUnit, isLoading, error } = useUnitStore();
   const [confirmId, setConfirmId] = useState(null);
 
   useEffect(() => {
     fetchUnits();
   }, [fetchUnits]);
 
-  const handleDelete = async (id) => {
-    await deleteUnit(id);
+  const requestDelete = async (id) => {
+    const key = `unit.delete.${id}`;
+    setConfirmId(id);
+
+    const accepted = await confirmation.confirm({ key });
+    if (!accepted) {
+      setConfirmId((current) => (current === id ? null : current));
+      return;
+    }
+
+    try {
+      await deleteUnit(id);
+    } finally {
+      setConfirmId((current) => (current === id ? null : current));
+    }
+  };
+
+  const cancelDelete = () => {
+    if (confirmId) confirmation.cancel(`unit.delete.${confirmId}`);
+  };
+
+  const acceptDelete = () => {
+    if (confirmId) confirmation.resolve(`unit.delete.${confirmId}`, true);
   };
 
   return (
     <div className="p-4 max-w-3xl mx-auto">
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-xl font-bold">รายการหน่วยนับ</h1>
-        {/* 🟢 [CLEAN ENGINE LINK] สับรางปุ่มกดสร้างข้อมูล ล้างสแลชท้ายคำออกให้ราบเรียบตรงล็อกเราเตอร์ */}
         <StandardActionButtons onAdd={() => navigate(`/${shopSlug}/pos/stock/units/create`)} />
       </div>
+
+      {error ? (
+        <div className="mb-4 rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+          {error?.message || String(error)}
+        </div>
+      ) : null}
 
       {isLoading ? (
         <p className="text-center text-gray-500">กำลังโหลดข้อมูล...</p>
@@ -48,7 +75,7 @@ const ListUnitPage = () => {
                     <div className="flex justify-center items-center gap-2">
                       <StandardActionButtons
                         onEdit={() => navigate(`/${shopSlug}/pos/stock/units/edit/${unit.id}`)}
-                        onDelete={() => setConfirmId(unit.id)}
+                        onDelete={() => void requestDelete(unit.id)}
                       />
                     </div>
                   </td>
@@ -62,11 +89,8 @@ const ListUnitPage = () => {
       <ConfirmDeleteDialog
         open={!!confirmId}
         itemLabel="หน่วยนับ"
-        onConfirm={() => {
-          handleDelete(confirmId);
-          setConfirmId(null);
-        }}
-        onCancel={() => setConfirmId(null)}
+        onConfirm={acceptDelete}
+        onCancel={cancelDelete}
       />
     </div>
   );

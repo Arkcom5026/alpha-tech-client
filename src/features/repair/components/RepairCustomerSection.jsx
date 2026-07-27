@@ -48,7 +48,6 @@ const RepairCustomerSection = ({
   onSelectCustomer,
   onClearCustomer,
 }) => {
-  const [searchMode, setSearchMode] = useState('phone');
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
   const [pendingCreate, setPendingCreate] = useState(false);
@@ -145,16 +144,19 @@ const RepairCustomerSection = ({
 
     const text = String(query || '').trim();
     if (!text) {
-      setFormError(searchMode === 'phone' ? 'กรุณากรอกเบอร์โทรลูกค้า' : 'กรุณากรอกชื่อหรือบริษัท');
+      setFormError('กรุณากรอกชื่อ เบอร์โทร บริษัท หรือหน่วยงาน');
       return;
     }
 
     setBusy(true);
     try {
-      if (searchMode === 'phone') {
+      const compact = text.replace(/[\s()+-]/g, '');
+      const isPhoneQuery = /^\d+$/.test(compact);
+
+      if (isPhoneQuery) {
         const cleanPhone = text.replace(/\D/g, '');
         if (!/^[0-9]{10}$/.test(cleanPhone)) {
-          setFormError('กรุณากรอกเบอร์โทรให้ครบ 10 หลัก');
+          setFormError('กรุณากรอกเบอร์โทรให้ครบ 10 หลัก หรือค้นด้วยชื่อแทน');
           return;
         }
 
@@ -350,7 +352,7 @@ const RepairCustomerSection = ({
           <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-700">Customer Intake</p>
           <h2 className="mt-1 text-lg font-black text-slate-950">ค้นหาและเพิ่มลูกค้า</h2>
           <p className="mt-1 text-xs text-slate-500">
-            ใช้ Customer authority เดิม: ค้นจากเบอร์โทรหรือชื่อ เลือกลูกค้า และเพิ่มลูกค้าได้เมื่อไม่พบ
+            ช่องเดียวค้นจากชื่อ เบอร์โทร บริษัท หรือหน่วยงาน และเพิ่มลูกค้าได้ทันทีเมื่อไม่พบ
           </p>
         </div>
         {selectedCustomer ? (
@@ -405,26 +407,15 @@ const RepairCustomerSection = ({
         </>
       ) : (
         <>
-          <div className="mt-4 flex flex-wrap gap-4 text-xs font-black text-slate-500">
-            <label className="flex cursor-pointer items-center gap-2">
-              <input type="radio" checked={searchMode === 'phone'} onChange={() => { setSearchMode('phone'); setQuery(''); setResults([]); }} />
-              ค้นจากเบอร์โทร
-            </label>
-            <label className="flex cursor-pointer items-center gap-2">
-              <input type="radio" checked={searchMode === 'name'} onChange={() => { setSearchMode('name'); setQuery(''); setResults([]); }} />
-              ค้นจากชื่อ/บริษัท
-            </label>
-          </div>
-
           <form onSubmit={submitSearch} className="mt-3 flex flex-col gap-2 sm:flex-row">
             <div className="relative flex-1">
-              {searchMode === 'phone' ? <Phone className="absolute left-3 top-3.5 h-4 w-4 text-slate-400" /> : <Search className="absolute left-3 top-3.5 h-4 w-4 text-slate-400" />}
+              <Search className="absolute left-3 top-3.5 h-4 w-4 text-slate-400" />
               <input
                 ref={queryRef}
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder={searchMode === 'phone' ? 'เบอร์โทรลูกค้า 10 หลัก' : 'ชื่อ นามสกุล หรือชื่อบริษัท'}
-                inputMode={searchMode === 'phone' ? 'tel' : 'text'}
+                placeholder="ชื่อ เบอร์โทร บริษัท หรือหน่วยงาน"
+                inputMode="search"
                 className="min-h-12 w-full rounded-xl border border-slate-300 pl-10 pr-4 outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
               />
             </div>

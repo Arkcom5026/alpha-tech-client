@@ -10,6 +10,11 @@ export const ONBOARDING_STATES = {
   ERROR_RECOVERABLE: "ERROR_RECOVERABLE",
 };
 
+export const INVENTORY_BEHAVIORS = {
+  TRACKED: "TRACKED",
+  NON_STOCK: "NON_STOCK",
+};
+
 export const normalizeText = (value) => String(value ?? "").trim().toLowerCase();
 
 export const toNumberOrNull = (value) => {
@@ -69,6 +74,16 @@ export const getBrandName = (product) =>
   product?.brandName ??
   product?.brand_name ??
   "-";
+
+export const getProductInventoryBehavior = (product) => {
+  if (!product || String(product.mode || "").toUpperCase() !== "SIMPLE") return null;
+  const raw = String(
+    product.inventoryBehavior ?? product.productConfig?.inventoryBehavior ?? INVENTORY_BEHAVIORS.TRACKED
+  ).trim().toUpperCase();
+  return raw === INVENTORY_BEHAVIORS.NON_STOCK
+    ? INVENTORY_BEHAVIORS.NON_STOCK
+    : INVENTORY_BEHAVIORS.TRACKED;
+};
 
 export const extractList = (response) => {
   if (Array.isArray(response)) return response;
@@ -174,8 +189,10 @@ export const normalizeTemplateProduct = (product) => {
 
 export const normalizeOperationalProduct = (product) => {
   if (!product || typeof product !== "object") return null;
+  const inventoryBehavior = getProductInventoryBehavior(product);
   return {
     ...product,
+    ...(inventoryBehavior ? { inventoryBehavior } : {}),
     isTemplateProduct: false,
     isOperationalProduct: true,
     __quickStockDiscoverySource: "OPERATIONAL",
@@ -242,14 +259,19 @@ export const hideTemplateResultsWhenOperationalExists = (products = []) => {
   );
 };
 
-export const buildProductFormFromProduct = (product) => ({
-  name: product?.name || "",
-  productTypeId: String(getProductTypeId(product) || ""),
-  brandId: String(getProductBrandId(product) || ""),
-  unitId: String(getProductUnitId(product) || ""),
-  trackSerialNumber: !!product?.trackSerialNumber,
-  active: product?.active !== false,
-});
+export const buildProductFormFromProduct = (product) => {
+  const mode = String(product?.mode || (product?.trackSerialNumber ? "STRUCTURED" : "SIMPLE")).toUpperCase();
+  return {
+    name: product?.name || "",
+    productTypeId: String(getProductTypeId(product) || ""),
+    brandId: String(getProductBrandId(product) || ""),
+    unitId: String(getProductUnitId(product) || ""),
+    mode,
+    inventoryBehavior: getProductInventoryBehavior(product) || INVENTORY_BEHAVIORS.TRACKED,
+    trackSerialNumber: mode === "STRUCTURED" ? true : !!product?.trackSerialNumber,
+    active: product?.active !== false,
+  };
+};
 
 export const getFirstBranchPrice = (product) => {
   if (!product) return null;
@@ -286,6 +308,7 @@ export const buildCreateOperationalProductPayload = (templateProduct) => {
   addDefinedField(payload, "unitId", toNumberOrNull(getProductUnitId(templateProduct)));
   addDefinedField(payload, "mode", templateProduct?.mode || "STRUCTURED");
   addDefinedField(payload, "trackSerialNumber", !!templateProduct?.trackSerialNumber);
+  addDefinedField(payload, "inventoryBehavior", getProductInventoryBehavior(templateProduct));
   addDefinedField(payload, "categoryId", toNumberOrNull(templateProduct?.categoryId));
   addDefinedField(payload, "codeType", templateProduct?.codeType);
   addDefinedField(payload, "warrantyDays", toNumberOrNull(templateProduct?.warrantyDays));
@@ -296,12 +319,18 @@ export const buildCreateOperationalProductPayload = (templateProduct) => {
 };
 
 export const buildLocalOperationalProductPayload = ({ productForm, priceForm }) => {
+  const mode = String(
+    productForm.mode || (productForm.trackSerialNumber ? "STRUCTURED" : "SIMPLE")
+  ).toUpperCase();
+  const inventoryBehavior = mode === "SIMPLE"
+    ? String(productForm.inventoryBehavior || INVENTORY_BEHAVIORS.TRACKED).toUpperCase()
+    : null;
   const payload = {
     name: String(productForm.name || "").trim(),
     productTypeId: toNumberOrNull(productForm.productTypeId),
-    mode: productForm.trackSerialNumber ? "STRUCTURED" : "SIMPLE",
-    noSN: !productForm.trackSerialNumber,
-    trackSerialNumber: !!productForm.trackSerialNumber,
+    mode,
+    noSN: mode === "SIMPLE",
+    trackSerialNumber: mode === "STRUCTURED",
     active: productForm.active !== false,
     costPrice: toMoneyNumber(priceForm.costPrice),
     priceRetail: toMoneyNumber(priceForm.priceRetail),
@@ -310,6 +339,7 @@ export const buildLocalOperationalProductPayload = ({ productForm, priceForm }) 
     priceOnline: toMoneyNumber(priceForm.priceOnline),
   };
 
+  if (inventoryBehavior) payload.inventoryBehavior = inventoryBehavior;
   addDefinedField(payload, "brandId", toNumberOrNull(productForm.brandId));
   addDefinedField(payload, "unitId", toNumberOrNull(productForm.unitId));
 

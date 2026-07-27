@@ -8,13 +8,13 @@ import {
   archiveProductType,
   restoreProductType,
 } from '../api/productTypeApi';
-import { parseApiError } from '@/utils/uiHelpers';
+import { normalizeRuntimeError } from '@/runtime';
 
 // ✅ Standardized Product Type Store (Production-ready)
 // - No hard delete (archive/restore only)
 // - All API calls via productTypeApi
 // - Actions suffixed with `Action`
-// - try...catch everywhere + parseApiError
+// - try...catch everywhere + ADS runtime error normalization
 // - Supports page, limit, search, includeInactive, categoryId
 
 const useProductTypeStore = create(
@@ -64,7 +64,7 @@ const useProductTypeStore = create(
                 .split('.')
                 .reduce((acc, k) => (acc && acc[k] !== undefined ? acc[k] : undefined), obj);
               if (v !== undefined) return v;
-            } catch { 
+            } catch {
               // ignore
             }
           }
@@ -127,7 +127,7 @@ const useProductTypeStore = create(
           isLoading: false,
         });
       } catch (err) {
-        set({ isLoading: false, error: parseApiError(err) });
+        set({ isLoading: false, error: normalizeRuntimeError(err) });
         throw err;
       }
     },
@@ -139,7 +139,7 @@ const useProductTypeStore = create(
         set({ current: data, isLoading: false });
         return data;
       } catch (err) {
-        set({ isLoading: false, error: parseApiError(err) });
+        set({ isLoading: false, error: normalizeRuntimeError(err) });
         throw err;
       }
     },
@@ -153,7 +153,7 @@ const useProductTypeStore = create(
         await get().fetchListAction();
         return created;
       } catch (err) {
-        set({ isSubmitting: false, error: parseApiError(err) });
+        set({ isSubmitting: false, error: normalizeRuntimeError(err) });
         throw err;
       }
     },
@@ -166,7 +166,7 @@ const useProductTypeStore = create(
         await get().fetchListAction();
         return updated;
       } catch (err) {
-        set({ isSubmitting: false, error: parseApiError(err) });
+        set({ isSubmitting: false, error: normalizeRuntimeError(err) });
         throw err;
       }
     },
@@ -178,7 +178,7 @@ const useProductTypeStore = create(
         set({ isSubmitting: false });
         await get().fetchListAction();
       } catch (err) {
-        set({ isSubmitting: false, error: parseApiError(err) });
+        set({ isSubmitting: false, error: normalizeRuntimeError(err) });
         throw err;
       }
     },
@@ -190,7 +190,7 @@ const useProductTypeStore = create(
         set({ isSubmitting: false });
         await get().fetchListAction();
       } catch (err) {
-        set({ isSubmitting: false, error: parseApiError(err) });
+        set({ isSubmitting: false, error: normalizeRuntimeError(err) });
         throw err;
       }
     },
@@ -198,4 +198,3 @@ const useProductTypeStore = create(
 );
 
 export default useProductTypeStore;
-

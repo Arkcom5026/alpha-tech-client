@@ -56,6 +56,39 @@ const buildSaleDocumentLineDescription = (item) => {
   return documentDescription || resolveSaleItemProductName(item);
 };
 
+const buildPrintableSaleItem = (item, { lineType, vatRate }) => {
+  const quantity = Number(item?.quantity ?? 1) || 1;
+  // Both SaleItem and SaleItemSimple persist price as the whole line amount (VAT included).
+  const amountVatIncl = Number(item?.price ?? item?.amount ?? 0);
+  const unitIncl = amountVatIncl / quantity;
+  const unitEx = unitIncl / (1 + vatRate / 100);
+  const totalExVat = amountVatIncl / (1 + vatRate / 100);
+  const documentDescriptionRaw = normalizeDocumentText(item?.documentDescription);
+
+  return {
+    id: item?.id,
+    documentLineKey: `${lineType}-${item?.id}`,
+    saleItemIds: lineType === 'sale-item' && item?.id ? [Number(item.id)] : [],
+    simpleItemIds: lineType === 'simple-item' && item?.id ? [Number(item.id)] : [],
+    documentPrefix: normalizeDocumentText(item?.documentPrefix),
+    documentDescriptionRaw,
+    documentDescription: buildSaleDocumentLineDescription(item),
+    documentSuffix: normalizeDocumentText(item?.documentSuffix),
+    hasDocumentLine: Boolean(
+      normalizeDocumentText(item?.documentPrefix) ||
+        documentDescriptionRaw ||
+        normalizeDocumentText(item?.documentSuffix)
+    ),
+    productName: resolveSaleItemProductName(item),
+    productModel: item?.stockItem?.product?.model || item?.product?.model || 'ไม่พบสเปกสินค้า (SKU)',
+    quantity,
+    unit: item?.stockItem?.product?.unit?.name || item?.product?.unit?.name || item?.unitName || '-',
+    amount: amountVatIncl,
+    unitPriceExVat: round2(unitEx),
+    totalExVat: round2(totalExVat),
+  };
+};
+
 const loadSaleForPrintWithAuthRetry = async (saleId, params) => {
   try {
     return await getSaleById(saleId, params);
@@ -185,41 +218,12 @@ export const useBillStore = create((set, get) => ({
         const branch = sale?.branch || {};
         const rc = branch?.receiptConfig || {};
         const vatRate = typeof rc.vatRate === 'number' ? rc.vatRate : 7;
-        const items = Array.isArray(sale?.items) ? sale.items : [];
-
-        const saleItems = items.map((i) => {
-          const qty = 1;
-          const amountVatIncl = Number(i?.price ?? i?.amount ?? 0);
-          const unitIncl = qty ? amountVatIncl / qty : 0;
-          const unitEx = unitIncl / (1 + vatRate / 100);
-          const lineEx = unitEx * qty;
-
-          const documentDescriptionRaw = normalizeDocumentText(i?.documentDescription);
-          const documentDescription = buildSaleDocumentLineDescription(i);
-
-          return {
-            id: i?.id,
-            documentLineKey: `sale-item-${i?.id}`,
-            saleItemIds: i?.id ? [Number(i.id)] : [],
-            simpleItemIds: [],
-            documentPrefix: normalizeDocumentText(i?.documentPrefix),
-            documentDescriptionRaw,
-            documentDescription,
-            documentSuffix: normalizeDocumentText(i?.documentSuffix),
-            hasDocumentLine: Boolean(
-              normalizeDocumentText(i?.documentPrefix) ||
-                documentDescriptionRaw ||
-                normalizeDocumentText(i?.documentSuffix)
-            ),
-            productName: resolveSaleItemProductName(i),
-            productModel: i?.stockItem?.product?.model || 'ไม่พบสเปกสินค้า (SKU)',
-            quantity: qty,
-            unit: i?.stockItem?.product?.unit?.name || i?.unitName || '-',
-            amount: amountVatIncl,
-            unitPriceExVat: round2(unitEx),
-            totalExVat: round2(lineEx),
-          };
-        });
+        const stockItems = Array.isArray(sale?.items) ? sale.items : [];
+        const simpleItems = Array.isArray(sale?.simpleItems) ? sale.simpleItems : [];
+        const saleItems = [
+          ...stockItems.map((item) => buildPrintableSaleItem(item, { lineType: 'sale-item', vatRate })),
+          ...simpleItems.map((item) => buildPrintableSaleItem(item, { lineType: 'simple-item', vatRate })),
+        ];
 
         const total = round2(saleItems.reduce((s, x) => s + (Number(x.amount) || 0), 0));
         const beforeVat = round2(saleItems.reduce((s, x) => s + (Number(x.totalExVat) || 0), 0));

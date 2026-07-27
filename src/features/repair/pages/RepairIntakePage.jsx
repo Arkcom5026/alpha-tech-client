@@ -22,7 +22,7 @@ const RepairIntakePage = () => {
   const navigate = useNavigate();
   const { shopSlug } = useParams();
   const runtime = useRepairRuntimeStore();
-  const [searchPath, setSearchPath] = useState('DEVICE');
+  const [customerPanelOpen, setCustomerPanelOpen] = useState(false);
   const [intakeContact, setIntakeContact] = useState(emptyContact);
   const [draft, setDraft] = useState({
     customerId: '',
@@ -89,8 +89,8 @@ const RepairIntakePage = () => {
   };
 
   const selectCustomer = async (customer) => {
-    setSearchPath('CUSTOMER');
     await runtime.selectCustomer(customer);
+    setCustomerPanelOpen(true);
   };
 
   const selectSearchDevice = async (device) => {
@@ -106,6 +106,7 @@ const RepairIntakePage = () => {
     setIntakeContact(emptyContact);
     setCreateOpen(false);
     setExternalMode(false);
+    setCustomerPanelOpen(false);
   };
 
   const resetAll = () => {
@@ -113,11 +114,12 @@ const RepairIntakePage = () => {
     setIntakeContact(emptyContact);
     setCreateOpen(false);
     setExternalMode(false);
+    setCustomerPanelOpen(false);
   };
 
   const startExternalIntake = () => {
     if (!runtime.selectedCustomer?.id) {
-      setSearchPath('CUSTOMER');
+      setCustomerPanelOpen(true);
       return;
     }
     runtime.clearError();
@@ -133,9 +135,7 @@ const RepairIntakePage = () => {
   };
 
   const retryCurrentSearch = () =>
-    searchPath === 'CUSTOMER'
-      ? runtime.loadCustomerWarrantyAssets()
-      : runtime.searchDirectory(runtime.intakeLookup);
+    runtime.searchDirectory(runtime.intakeLookup);
 
   return (
     <div>
@@ -158,45 +158,32 @@ const RepairIntakePage = () => {
               </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-1 border-b border-slate-200 bg-slate-50 p-2">
-              <button
-                type="button"
-                onClick={() => setSearchPath('CUSTOMER')}
-                className={`min-h-10 rounded-lg px-3 text-sm font-black ${
-                  searchPath === 'CUSTOMER'
-                    ? 'bg-white text-emerald-700 shadow-sm ring-1 ring-emerald-200'
-                    : 'text-slate-500 hover:bg-white'
-                }`}
-              >
-                ค้นหาลูกค้า
-              </button>
-              <button
-                type="button"
-                onClick={() => setSearchPath('DEVICE')}
-                className={`min-h-10 rounded-lg px-3 text-sm font-black ${
-                  searchPath === 'DEVICE'
-                    ? 'bg-white text-blue-700 shadow-sm ring-1 ring-blue-200'
-                    : 'text-slate-500 hover:bg-white'
-                }`}
-              >
-                สแกนอุปกรณ์
-              </button>
-            </div>
+            <div className="space-y-4 p-4">
+              <RepairDeviceSearchPanel
+                value={runtime.intakeLookup}
+                loading={runtime.loading}
+                results={runtime.searchResults}
+                onChange={runtime.setIntakeLookup}
+                onSearch={runtime.searchDirectory}
+                onSelectDevice={selectSearchDevice}
+                onSelectCustomer={selectCustomer}
+                onReset={resetAll}
+              />
 
-            <div className="p-4">
-              {searchPath === 'DEVICE' ? (
-                <RepairDeviceSearchPanel
-                  value={runtime.intakeLookup}
-                  loading={runtime.loading}
-                  results={runtime.searchResults}
-                  onChange={runtime.setIntakeLookup}
-                  onSearch={runtime.searchDirectory}
-                  onSelectDevice={selectSearchDevice}
-                  onSelectCustomer={selectCustomer}
-                  onReset={resetAll}
-                />
-              ) : (
-                <div className="space-y-4">
+              <button
+                type="button"
+                onClick={() => setCustomerPanelOpen((open) => !open)}
+                className="min-h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm font-black text-slate-700 hover:border-emerald-300 hover:bg-emerald-50"
+              >
+                {customerPanelOpen
+                  ? 'ซ่อนข้อมูลลูกค้า'
+                  : runtime.selectedCustomer?.id
+                    ? 'ดูข้อมูลลูกค้าที่เลือก'
+                    : '+ เพิ่มลูกค้าใหม่'}
+              </button>
+
+              {customerPanelOpen ? (
+                <div className="space-y-4 border-t border-slate-200 pt-4">
                   <RepairCustomerSection
                     selectedCustomer={runtime.selectedCustomer}
                     loading={runtime.loading}
@@ -212,7 +199,7 @@ const RepairIntakePage = () => {
                     onRefresh={runtime.loadCustomerWarrantyAssets}
                   />
                 </div>
-              )}
+              ) : null}
             </div>
 
             <div className="border-t border-slate-200 bg-slate-50 p-4">
@@ -292,7 +279,7 @@ const RepairIntakePage = () => {
                   <div className="mt-5 flex flex-col gap-2 sm:flex-row">
                     <button
                       type="button"
-                      onClick={() => setSearchPath('CUSTOMER')}
+                      onClick={() => setCustomerPanelOpen(true)}
                       className="min-h-11 rounded-xl border border-slate-300 bg-white px-5 text-sm font-black text-slate-700"
                     >
                       ค้นหาหรือเพิ่มลูกค้า

@@ -25,7 +25,17 @@ const RepairJobsPage = () => {
     if (!normalized) return jobs;
 
     return jobs.filter((job) =>
-      [job.jobNo, job.deviceModel, job.reportedSymptoms, job.customerName]
+      [
+        job.jobNo,
+        job.deviceModel,
+        job.reportedSymptoms,
+        job.customerName,
+        job.stockItem?.barcode,
+        job.stockItem?.serialNumber,
+        job.device?.barcode,
+        job.device?.serialNumber,
+        job.device?.imei,
+      ]
         .filter(Boolean)
         .some((value) => String(value).toLowerCase().includes(normalized))
     );

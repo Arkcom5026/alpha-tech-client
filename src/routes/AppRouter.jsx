@@ -13,6 +13,7 @@ import PartnerWelcomePage from '@/features/auth/pages/PartnerWelcomePage';
 import LoginPage from '@/features/auth/pages/LoginPage';
 import ForgotPasswordPage from '@/features/auth/pages/ForgotPasswordPage';
 import ResetPasswordPage from '@/features/auth/pages/ResetPasswordPage';
+import CustomerRepairTrackingPage from '@/features/repair/customer-tracking/pages/CustomerRepairTrackingPage';
 
 import HeaderPos from '@/features/pos/components/header/HeaderPos';
 import SidebarLoader from '@/features/pos/components/sidebar/SidebarLoader';
@@ -46,6 +47,10 @@ const AppRouter = [
   {
     path: 'marketplace-portal',
     element: <Navigate to="/" replace />,
+  },
+  {
+    path: 'repair/track/:token',
+    element: <CustomerRepairTrackingPage />,
   },
   {
     path: 'partner-portal',

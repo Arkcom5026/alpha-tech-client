@@ -22,6 +22,8 @@ const api = await import('./quickReceiptSessionApi');
 describe('quickReceiptSessionApi', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    api.__resetQuickReceiptCommandKeysForTest();
+    mocks.makeIdempotencyKey.mockReturnValue('cmd-test-001');
   });
 
   it('loads and normalizes supplier rows', async () => {
@@ -48,6 +50,21 @@ describe('quickReceiptSessionApi', () => {
     );
   });
 
+  it('reuses the same one-shot command key after a failed request', async () => {
+    const payload = { supplierId: 1, deliveryNoteNumber: 'DN-RETRY', items: [{ productId: 10 }] };
+    mocks.post
+      .mockRejectedValueOnce(new Error('network failed'))
+      .mockResolvedValueOnce({ data: { data: { id: 90, status: 'COMPLETED' } } });
+
+    await expect(api.completeQuickReceipt(payload)).rejects.toThrow('network failed');
+    await expect(api.completeQuickReceipt({ items: [{ productId: 10 }], deliveryNoteNumber: 'DN-RETRY', supplierId: 1 }))
+      .resolves.toEqual({ id: 90, status: 'COMPLETED' });
+
+    expect(mocks.makeIdempotencyKey).toHaveBeenCalledTimes(1);
+    expect(mocks.post.mock.calls[0][2]).toEqual({ headers: { 'X-Idempotency-Key': 'cmd-test-001' } });
+    expect(mocks.post.mock.calls[1][2]).toEqual({ headers: { 'X-Idempotency-Key': 'cmd-test-001' } });
+  });
+
   it('finalizes a server draft with an idempotency key', async () => {
     mocks.post.mockResolvedValue({ data: { data: { id: 77, status: 'COMPLETED' } } });
     await api.finalizeQuickReceipt(77);
@@ -56,6 +73,18 @@ describe('quickReceiptSessionApi', () => {
       {},
       { headers: { 'X-Idempotency-Key': 'cmd-test-001' } }
     );
+  });
+
+  it('reuses the same finalize command key until the draft finalizes successfully', async () => {
+    mocks.post
+      .mockRejectedValueOnce(new Error('timeout'))
+      .mockResolvedValueOnce({ data: { data: { id: 77, status: 'COMPLETED' } } });
+
+    await expect(api.finalizeQuickReceipt(77)).rejects.toThrow('timeout');
+    await expect(api.finalizeQuickReceipt('77')).resolves.toEqual({ id: 77, status: 'COMPLETED' });
+
+    expect(mocks.makeIdempotencyKey).toHaveBeenCalledTimes(1);
+    expect(mocks.post.mock.calls[0][2]).toEqual(mocks.post.mock.calls[1][2]);
   });
 
   it('preserves parsed API errors', async () => {

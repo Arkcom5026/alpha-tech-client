@@ -48,3 +48,17 @@ export async function decidePublicRepairEstimate(token, payload) {
     throw normalizeError(error);
   }
 }
+
+export async function confirmPublicRepairPickup(token, payload) {
+  try {
+    const baseURL = getRuntimeBaseURL();
+    const response = await axios.post(
+      `${baseURL}repairs/public/tracking/${encodeURIComponent(String(token || '').trim())}/pickup-confirmation`,
+      payload,
+      { timeout: 30000, withCredentials: false, headers: { 'Content-Type': 'application/json' } }
+    );
+    return response?.data?.data ?? null;
+  } catch (error) {
+    throw normalizeError(error);
+  }
+}

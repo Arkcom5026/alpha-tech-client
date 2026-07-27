@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import TrackingTimeline from '../components/TrackingTimeline';
 import { getPublicRepairTracking } from '../api/repairTrackingPublicApi';
 import EstimateDecisionCard from '../components/EstimateDecisionCard';
+import PickupConfirmationCard from '../components/PickupConfirmationCard';
 
 const money = (value) =>
   new Intl.NumberFormat('th-TH', {
@@ -170,6 +171,17 @@ const CustomerRepairTrackingPage = () => {
                 ...current.repair,
                 estimateApproval: approval,
               },
+            }))
+          }
+        />
+        <PickupConfirmationCard
+          token={token}
+          status={status}
+          handover={repair.handover}
+          onChanged={(handover) =>
+            setTracking((current) => ({
+              ...current,
+              repair: { ...current.repair, handover },
             }))
           }
         />

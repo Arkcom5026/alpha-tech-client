@@ -117,6 +117,15 @@ export const repairApi = {
       'ไม่สามารถส่งราคาประเมินให้ลูกค้าได้'
     ),
 
+  getHandover: (id) =>
+    request(() => apiClient.get(`/repairs/jobs/${id}/handover`), 'ไม่สามารถโหลดสถานะส่งมอบได้'),
+
+  finalizeHandover: (id, payload) =>
+    request(
+      () => apiClient.post(`/repairs/jobs/${id}/handover/finalize`, payload),
+      'ไม่สามารถยืนยันการส่งมอบได้'
+    ),
+
   transitionJob: (id, payload) =>
     request(
       () => apiClient.patch(`/repairs/jobs/${id}/status`, payload),

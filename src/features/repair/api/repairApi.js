@@ -64,6 +64,24 @@ export const repairApi = {
       'ไม่สามารถรับอุปกรณ์ภายนอกได้'
     ),
 
+  createTrackingAccess: (id, payload = {}) =>
+    request(
+      () => apiClient.post(`/repairs/jobs/${id}/tracking-access`, payload),
+      'ไม่สามารถสร้างลิงก์ติดตามงานได้'
+    ),
+
+  rotateTrackingAccess: (id, payload = {}) =>
+    request(
+      () => apiClient.post(`/repairs/jobs/${id}/tracking-access/rotate`, payload),
+      'ไม่สามารถออกลิงก์ติดตามงานใหม่ได้'
+    ),
+
+  revokeTrackingAccess: (id) =>
+    request(
+      () => apiClient.delete(`/repairs/jobs/${id}/tracking-access`),
+      'ไม่สามารถยกเลิกลิงก์ติดตามงานได้'
+    ),
+
   transitionJob: (id, payload) =>
     request(
       () => apiClient.patch(`/repairs/jobs/${id}/status`, payload),

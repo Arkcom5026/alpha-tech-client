@@ -93,6 +93,14 @@ const RepairIntakePage = () => {
     await runtime.selectCustomer(customer);
   };
 
+  const selectSearchDevice = async (device) => {
+    if (!runtime.selectedCustomer?.id && device?.latestCustomer?.id) {
+      await runtime.selectCustomer(device.latestCustomer);
+    }
+    const lookup = device?.serialNumber || device?.barcode || device?.id;
+    if (lookup) await runtime.searchIntake(lookup);
+  };
+
   const clearCustomer = () => {
     runtime.clearSelectedCustomer();
     setIntakeContact(emptyContact);
@@ -127,7 +135,7 @@ const RepairIntakePage = () => {
   const retryCurrentSearch = () =>
     searchPath === 'CUSTOMER'
       ? runtime.loadCustomerWarrantyAssets()
-      : runtime.searchIntake(runtime.intakeLookup);
+      : runtime.searchDirectory(runtime.intakeLookup);
 
   return (
     <div>
@@ -180,8 +188,11 @@ const RepairIntakePage = () => {
                 <RepairDeviceSearchPanel
                   value={runtime.intakeLookup}
                   loading={runtime.loading}
+                  results={runtime.searchResults}
                   onChange={runtime.setIntakeLookup}
-                  onSearch={runtime.searchIntake}
+                  onSearch={runtime.searchDirectory}
+                  onSelectDevice={selectSearchDevice}
+                  onSelectCustomer={selectCustomer}
                   onReset={resetAll}
                 />
               ) : (

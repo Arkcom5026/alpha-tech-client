@@ -158,11 +158,15 @@ const PrintDeliveryNotePage = () => {
   const preparedSaleItems = useMemo(() => {
     if (!currentSale) return [];
 
-    const src = Array.isArray(currentSale.simpleItems) && currentSale.simpleItems.length > 0
-      ? currentSale.simpleItems
-      : Array.isArray(currentSale.items)
-        ? currentSale.items
-        : [];
+    // `saleLines` is the document projection returned by the current API.  Keep
+    // the legacy fallback for older responses, but merge both line stores: a
+    // sale may contain serialised stock and SIMPLE products in the same bill.
+    const src = Array.isArray(currentSale.saleLines) && currentSale.saleLines.length > 0
+      ? currentSale.saleLines
+      : [
+          ...(Array.isArray(currentSale.items) ? currentSale.items : []),
+          ...(Array.isArray(currentSale.simpleItems) ? currentSale.simpleItems : []),
+        ];
 
     const grouped = new Map();
 

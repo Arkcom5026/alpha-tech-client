@@ -80,13 +80,28 @@ export const buildCustomerReceiptCustomerAddress = (customer) => {
   return parts || '-'
 }
 
+const resolveSaleDocumentLines = (sale) => {
+  if (Array.isArray(sale?.saleLines) && sale.saleLines.length > 0) {
+    return sale.saleLines
+  }
+
+  // `saleItems` is retained for older customer-receipt responses.  It only
+  // represents stock/serial rows, so SIMPLE rows must be appended explicitly.
+  const stockItems = Array.isArray(sale?.saleItems)
+    ? sale.saleItems
+    : Array.isArray(sale?.items)
+      ? sale.items
+      : []
+  const simpleItems = Array.isArray(sale?.simpleItems) ? sale.simpleItems : []
+
+  return [...stockItems, ...simpleItems]
+}
+
 export const buildCustomerReceiptLineItems = (allocations = []) => {
   const lines = []
 
   allocations.forEach((allocation, allocationIndex) => {
-    const saleItems = Array.isArray(allocation?.sale?.saleItems)
-      ? allocation.sale.saleItems
-      : []
+    const saleItems = resolveSaleDocumentLines(allocation?.sale)
 
     if (saleItems.length > 0) {
       saleItems.forEach((saleItem, saleItemIndex) => {

@@ -97,7 +97,18 @@ const RepairIntakePage = () => {
     if (!runtime.selectedCustomer?.id && device?.latestCustomer?.id) {
       await runtime.selectCustomer(device.latestCustomer);
     }
-    const lookup = device?.barcode || device?.serialNumber || device?.id;
+
+    if (device?.sourceType === 'REGISTERED_DEVICE' && device?.latestRepairJob?.id) {
+      navigate(`/${shopSlug}/pos/services/repairs/${device.latestRepairJob.id}`);
+      return;
+    }
+
+    const lookup =
+      device?.barcode ||
+      device?.serialNumber ||
+      device?.imei ||
+      device?.serviceTag ||
+      device?.id;
     if (lookup) await runtime.searchIntake(lookup);
   };
 

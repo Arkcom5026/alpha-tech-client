@@ -8,6 +8,17 @@ import {
   updatePosition,
   toggleActivePosition,
 } from '../api/positionApi.js';
+import { normalizeRuntimeError, withLoading } from '@/runtime';
+
+const POSITION_LOADING_KEYS = {
+  fetchList: 'position.fetchList',
+  fetchDropdowns: 'position.fetchDropdowns',
+  fetchById: 'position.fetchById',
+  create: 'position.create',
+  update: 'position.update',
+  updateRole: 'position.updateRole',
+  toggleActive: 'position.toggleActive',
+};
 
 export const usePositionStore = create((set) => ({
   list: [],
@@ -17,13 +28,12 @@ export const usePositionStore = create((set) => ({
   loading: false,
   error: null,
   message: null,
-  roles: ['employee', 'admin'], // ใช้ในหน้า Positions สำหรับจัดการ role ของตำแหน่ง
+  roles: ['employee', 'admin'],
 
-  // Load list (มี normalize ให้มีคีย์ role เสมอ)
   fetchListAction: async (params = {}) => {
     try {
       set({ loading: true, error: null, message: null });
-      const data = await getPositions(params);
+      const data = await withLoading(POSITION_LOADING_KEYS.fetchList, () => getPositions(params));
 
       const items = Array.isArray(data) ? data : (data?.items || []);
       const normalized = items.map((it) => ({
@@ -37,112 +47,114 @@ export const usePositionStore = create((set) => ({
 
       set({ list: normalized, meta, loading: false });
       return { items: normalized, meta };
-    } catch (e) {
-      set({ loading: false, error: e?.response?.data?.error || e?.message || 'โหลดข้อมูลล้มเหลว' });
+    } catch (error) {
+      set({ loading: false, error: normalizeRuntimeError(error) });
       return null;
     }
   },
 
-  // Dropdowns (active only by default)
   fetchDropdownsAction: async (active = true) => {
     try {
-      const items = await getPositionDropdowns(active);
+      const items = await withLoading(POSITION_LOADING_KEYS.fetchDropdowns, () => getPositionDropdowns(active));
       set({ dropdowns: items || [] });
       return items;
-    } catch (e) {
-      set({ error: e?.response?.data?.error || e?.message || 'โหลด dropdown ล้มเหลว' });
+    } catch (error) {
+      set({ error: normalizeRuntimeError(error) });
       return [];
     }
   },
 
-  // Get by id (normalize role)
   fetchByIdAction: async (id) => {
     try {
       set({ loading: true, error: null });
-      const item = await getPositionById(id);
-      const normalized = item ? { ...item, role: item?.role ?? item?.defaultRole ?? item?.systemRole ?? null } : null;
+      const item = await withLoading(POSITION_LOADING_KEYS.fetchById, () => getPositionById(id));
+      const normalized = item
+        ? { ...item, role: item?.role ?? item?.defaultRole ?? item?.systemRole ?? null }
+        : null;
       set({ current: normalized, loading: false });
       return normalized;
-    } catch (e) {
-      set({ loading: false, error: e?.response?.data?.error || e?.message || 'ไม่พบข้อมูล' });
+    } catch (error) {
+      set({ loading: false, error: normalizeRuntimeError(error) });
       return null;
     }
   },
 
-  // Create
   createAction: async (payload) => {
     try {
       set({ loading: true, error: null, message: null });
-      const created = await createPosition(payload);
+      const created = await withLoading(POSITION_LOADING_KEYS.create, () => createPosition(payload));
       set({ loading: false, message: 'สร้างตำแหน่งเรียบร้อย' });
       return created;
-    } catch (e) {
-      set({ loading: false, error: e?.response?.data?.error || e?.message || 'สร้างไม่สำเร็จ' });
+    } catch (error) {
+      set({ loading: false, error: normalizeRuntimeError(error) });
       return null;
     }
   },
 
-  // Update (รองรับส่ง { role } มาด้วย)
   updateAction: async (id, payload) => {
     try {
       set({ loading: true, error: null, message: null });
-      const updated = await updatePosition(id, payload);
-      const normalized = updated ? { ...updated, role: updated?.role ?? updated?.defaultRole ?? updated?.systemRole ?? null } : null;
+      const updated = await withLoading(POSITION_LOADING_KEYS.update, () => updatePosition(id, payload));
+      const normalized = updated
+        ? { ...updated, role: updated?.role ?? updated?.defaultRole ?? updated?.systemRole ?? null }
+        : null;
 
-      // refresh current list quickly (immutable update)
-      set((s) => ({
-        list: s.list.map((it) => (it.id === id ? { ...it, ...normalized } : it)),
+      set((state) => ({
+        list: state.list.map((it) => (it.id === id ? { ...it, ...normalized } : it)),
         loading: false,
         message: 'บันทึกการแก้ไขเรียบร้อย',
       }));
       return normalized;
-    } catch (e) {
-      set({ loading: false, error: e?.response?.data?.error || e?.message || 'แก้ไขไม่สำเร็จ' });
+    } catch (error) {
+      set({ loading: false, error: normalizeRuntimeError(error) });
       return null;
     }
   },
 
-  // อัปเดต Role ของตำแหน่ง (จำกัด admin/employee)
   updateRoleAction: async (id, role) => {
     try {
       const allowed = ['admin', 'employee'];
-      if (!allowed.includes(String(role))) throw new Error('Allowed role: admin หรือ employee เท่านั้น');
+      if (!allowed.includes(String(role))) {
+        throw new Error('Allowed role: admin หรือ employee เท่านั้น');
+      }
 
       set({ loading: true, error: null, message: null });
-      const updated = await updatePosition(id, { role });
-      const normalized = updated ? { ...updated, role: updated?.role ?? updated?.defaultRole ?? updated?.systemRole ?? null } : null;
+      const updated = await withLoading(POSITION_LOADING_KEYS.updateRole, () => updatePosition(id, { role }));
+      const normalized = updated
+        ? { ...updated, role: updated?.role ?? updated?.defaultRole ?? updated?.systemRole ?? null }
+        : null;
 
-      set((s) => ({
-        list: s.list.map((it) => (it.id === id ? { ...it, ...normalized } : it)),
+      set((state) => ({
+        list: state.list.map((it) => (it.id === id ? { ...it, ...normalized } : it)),
         loading: false,
         message: 'อัปเดต Role สำเร็จ',
       }));
       return normalized;
-    } catch (e) {
-      set({ loading: false, error: e?.response?.data?.error || e?.message || 'อัปเดต Role ไม่สำเร็จ' });
+    } catch (error) {
+      set({ loading: false, error: normalizeRuntimeError(error) });
       return null;
     }
   },
 
-  // Toggle active
   toggleActiveAction: async (id) => {
     try {
       set({ loading: true, error: null, message: null });
-      const updated = await toggleActivePosition(id);
-      const normalized = updated ? { ...updated, role: updated?.role ?? updated?.defaultRole ?? updated?.systemRole ?? null } : null;
+      const updated = await withLoading(POSITION_LOADING_KEYS.toggleActive, () => toggleActivePosition(id));
+      const normalized = updated
+        ? { ...updated, role: updated?.role ?? updated?.defaultRole ?? updated?.systemRole ?? null }
+        : null;
 
-      set((s) => ({
-        list: s.list.map((it) => (it.id === id ? { ...it, ...normalized } : it)),
+      set((state) => ({
+        list: state.list.map((it) => (it.id === id ? { ...it, ...normalized } : it)),
         loading: false,
         message: 'อัปเดตสถานะสำเร็จ',
       }));
       return normalized;
-    } catch (e) {
-      set({ loading: false, error: e?.response?.data?.error || e?.message || 'อัปเดตสถานะไม่สำเร็จ' });
+    } catch (error) {
+      set({ loading: false, error: normalizeRuntimeError(error) });
       return null;
     }
   },
 
-  // Helper
   resetCurrentAction: () => set({ current: null, error: null, message: null }),
 }));

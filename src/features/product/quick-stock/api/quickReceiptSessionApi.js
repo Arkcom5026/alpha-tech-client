@@ -4,6 +4,28 @@ import { getAllSuppliers } from '@/features/supplier/api/supplierApi';
 import { makeIdempotencyKey } from '@/features/quickReceive/api/quickReceiveApi';
 
 const unwrap = (response) => response?.data?.data ?? response?.data ?? response;
+const pendingCommandKeys = new Map();
+
+const stablePayload = (value) => {
+  if (Array.isArray(value)) return value.map(stablePayload);
+  if (!value || typeof value !== 'object') return value;
+  return Object.keys(value)
+    .sort()
+    .reduce((result, key) => {
+      result[key] = stablePayload(value[key]);
+      return result;
+    }, {});
+};
+
+const commandFingerprint = (scope, payload) => `${scope}:${JSON.stringify(stablePayload(payload))}`;
+const getCommandKey = (fingerprint, explicitKey) => {
+  if (explicitKey) return explicitKey;
+  if (!pendingCommandKeys.has(fingerprint)) pendingCommandKeys.set(fingerprint, makeIdempotencyKey());
+  return pendingCommandKeys.get(fingerprint);
+};
+const completeCommand = (fingerprint, explicitKey) => {
+  if (!explicitKey) pendingCommandKeys.delete(fingerprint);
+};
 
 export const loadQuickReceiptSuppliers = async () => {
   try {
@@ -42,13 +64,16 @@ export const createQuickReceiptDraft = async (payload) => {
   }
 };
 
-export const completeQuickReceipt = async (payload) => {
+export const completeQuickReceipt = async (payload, commandKey) => {
+  const fingerprint = commandFingerprint('complete', payload);
+  const key = getCommandKey(fingerprint, commandKey);
   try {
     const response = await apiClient.post(
       'quick-stock/receipts/complete',
       payload,
-      { headers: { 'X-Idempotency-Key': makeIdempotencyKey() } }
+      { headers: { 'X-Idempotency-Key': key } }
     );
+    completeCommand(fingerprint, commandKey);
     return unwrap(response);
   } catch (error) {
     throw parseApiError(error);
@@ -82,13 +107,16 @@ export const deleteQuickReceiptItem = async (id, itemId) => {
   }
 };
 
-export const finalizeQuickReceipt = async (id) => {
+export const finalizeQuickReceipt = async (id, commandKey) => {
+  const fingerprint = commandFingerprint('finalize', { id: Number(id) });
+  const key = getCommandKey(fingerprint, commandKey);
   try {
     const response = await apiClient.post(
       `quick-stock/receipts/${id}/finalize`,
       {},
-      { headers: { 'X-Idempotency-Key': makeIdempotencyKey() } }
+      { headers: { 'X-Idempotency-Key': key } }
     );
+    completeCommand(fingerprint, commandKey);
     return unwrap(response);
   } catch (error) {
     throw parseApiError(error);
@@ -103,3 +131,5 @@ export const cancelQuickReceipt = async (id, reason) => {
     throw parseApiError(error);
   }
 };
+
+export const __resetQuickReceiptCommandKeysForTest = () => pendingCommandKeys.clear();

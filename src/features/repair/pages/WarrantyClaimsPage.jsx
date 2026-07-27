@@ -31,6 +31,19 @@ const WarrantyClaimsPage = () => {
         claim.externalClaimRef,
         claim.trackingNumber,
         claim.supplier?.name,
+        claim.serviceProvider,
+        claim.source?.referenceNo,
+        claim.repairJob?.customerName,
+        claim.repairJob?.customer?.phone,
+        claim.repairJob?.customer?.email,
+        claim.claimAsset?.displayName,
+        claim.claimAsset?.brand,
+        claim.claimAsset?.category,
+        claim.claimAsset?.model,
+        claim.claimAsset?.barcode,
+        claim.claimAsset?.serialNumber,
+        claim.claimAsset?.imei,
+        claim.stockItem?.product?.name,
         claim.device?.brand,
         claim.device?.model,
         claim.device?.serialNumber,
@@ -59,7 +72,7 @@ const WarrantyClaimsPage = () => {
           <input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="ค้นหาเลขเคลม เหตุผล Supplier Tracking หรือเลขอ้างอิง"
+            placeholder="ค้นหาเลขเคลม ลูกค้า อุปกรณ์ Supplier Tracking หรือเลขอ้างอิง"
             className="min-h-12 flex-1 rounded-xl border border-slate-300 px-4"
           />
 

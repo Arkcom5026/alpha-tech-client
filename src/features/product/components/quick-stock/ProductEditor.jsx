@@ -10,6 +10,9 @@ const ProductEditor = ({
   onProductFieldChange,
   onPriceFieldChange,
 }) => {
+  const mode = String(productForm?.mode || "SIMPLE").toUpperCase();
+  const isSimple = mode === "SIMPLE";
+
   return (
     <>
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
@@ -68,11 +71,42 @@ const ProductEditor = ({
           </select>
         </div>
 
+        <div>
+          <label className="block text-xs text-green-700 mb-1">รูปแบบสินค้า</label>
+          <select
+            className="w-full border rounded-lg p-2 bg-white disabled:bg-green-50"
+            value={mode}
+            disabled={!isEditingProduct}
+            onChange={(event) => onProductFieldChange("mode", event.target.value)}
+          >
+            <option value="STRUCTURED">สินค้า Serial / รายชิ้น</option>
+            <option value="SIMPLE">สินค้าแบบจำนวน / ค่าบริการ</option>
+          </select>
+        </div>
+
+        {isSimple && (
+          <div>
+            <label className="block text-xs text-green-700 mb-1">การควบคุมสต็อก</label>
+            <select
+              className="w-full border rounded-lg p-2 bg-white disabled:bg-green-50"
+              value={productForm.inventoryBehavior || "TRACKED"}
+              disabled={!isEditingProduct}
+              onChange={(event) => onProductFieldChange("inventoryBehavior", event.target.value)}
+            >
+              <option value="TRACKED">ควบคุมจำนวนคงเหลือ</option>
+              <option value="NON_STOCK">ค่าบริการ / ไม่ควบคุมสต็อก</option>
+            </select>
+            <p className="mt-1 text-[11px] text-green-700">
+              NON_STOCK จะไม่รับเข้า ไม่สร้างยอดคงเหลือ และไม่สร้าง Stock Movement
+            </p>
+          </div>
+        )}
+
         <div className="flex items-center gap-4 pt-5">
           <label className="inline-flex items-center gap-2 text-xs text-green-800">
             <input
               type="checkbox"
-              checked={productForm.trackSerialNumber}
+              checked={mode === "STRUCTURED"}
               disabled={!isEditingProduct}
               onChange={(event) => onProductFieldChange("trackSerialNumber", event.target.checked)}
             />
@@ -141,7 +175,7 @@ const ProductEditor = ({
           </div>
         </div>
         <div className="text-xs text-green-700 mt-2">
-          * ราคาขายปลีกจำเป็น เพื่อให้สินค้าพร้อมขายหลังรับเข้า
+          * ราคาขายปลีกจำเป็น เพื่อให้สินค้าพร้อมขาย
         </div>
       </div>
     </>

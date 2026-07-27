@@ -5,15 +5,16 @@ const unwrap = (response) => response?.data?.data ?? response?.data ?? null;
 const normalizeError = (error, fallback) => {
   const payload = error?.response?.data;
   const normalized = new Error(
-    payload?.error ||
-      payload?.message ||
+    payload?.message ||
+      payload?.error?.message ||
       error?.message ||
       fallback
   );
 
   normalized.code =
-    payload?.error?.code ||
     payload?.code ||
+    payload?.error?.code ||
+    (typeof payload?.error === 'string' ? payload.error : null) ||
     error?.code ||
     'REPAIR_REQUEST_FAILED';
   normalized.details = payload?.error?.details || payload?.details || null;

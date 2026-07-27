@@ -4,9 +4,19 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
+import { confirmation } from '@/runtime';
 import { useBrandStore } from '../store/brandStore';
 
-const normalizeActive = (brand) => brand?.isActive ?? brand?.active ?? true;
+export const normalizeBrandActive = (brand) => brand?.isActive ?? brand?.active ?? true;
+
+export const projectBrandErrorMessage = (error) => {
+  if (!error) return '';
+  if (typeof error === 'string') return error;
+  return error?.message || error?.code || error?.error || 'เกิดข้อผิดพลาดในการจัดการแบรนด์';
+};
+
+export const buildBrandToggleConfirmationKey = (brandId) => `brand.toggleActive.${brandId}`;
+export const buildBrandDetachConfirmationKey = (linkId) => `brand.detachFromProductType.${linkId}`;
 
 const StatusBadge = ({ active }) => (
   <span
@@ -24,10 +34,10 @@ const getLinkBrand = (link) => link?.brand || link;
 
 const ListBrandPage = () => {
   const navigate = useNavigate();
-
   const [productTypeId, setProductTypeId] = useState('');
   const [didAutoSelectProductType, setDidAutoSelectProductType] = useState(false);
   const [brandToAttachId, setBrandToAttachId] = useState('');
+  const [pendingConfirmation, setPendingConfirmation] = useState(null);
 
   const items = useBrandStore((state) => state.items) || [];
   const page = useBrandStore((state) => state.page) || 1;
@@ -38,10 +48,8 @@ const ListBrandPage = () => {
   const loading = useBrandStore((state) => state.loading) || false;
   const saving = useBrandStore((state) => state.saving) || false;
   const error = useBrandStore((state) => state.error);
-
   const runtimeProductTypes = useBrandStore((state) => state.runtimeProductTypes) || [];
   const runtimeProductTypesLoading = useBrandStore((state) => state.runtimeProductTypesLoading) || false;
-
   const allBrandOptions = useBrandStore((state) => state.allBrandOptions) || [];
   const allBrandOptionsLoading = useBrandStore((state) => state.allBrandOptionsLoading) || false;
   const productTypeBrandLinks = useBrandStore((state) => state.productTypeBrandLinks) || [];
@@ -55,15 +63,14 @@ const ListBrandPage = () => {
   const setPageSizeAction = useBrandStore((state) => state.setPageSizeAction);
   const clearErrorAction = useBrandStore((state) => state.clearErrorAction);
   const toggleBrandActiveAction = useBrandStore((state) => state.toggleBrandActiveAction);
-
   const fetchAllBrandOptionsAction = useBrandStore((state) => state.fetchAllBrandOptionsAction);
   const fetchProductTypeBrandLinksAction = useBrandStore((state) => state.fetchProductTypeBrandLinksAction);
   const attachBrandToProductTypeAction = useBrandStore((state) => state.attachBrandToProductTypeAction);
   const detachBrandFromProductTypeAction = useBrandStore((state) => state.detachBrandFromProductTypeAction);
 
   const selectedProductTypeId = useMemo(() => {
-    const n = Number(productTypeId);
-    return Number.isFinite(n) && n > 0 ? n : undefined;
+    const value = Number(productTypeId);
+    return Number.isFinite(value) && value > 0 ? value : undefined;
   }, [productTypeId]);
 
   const selectedProductType = useMemo(
@@ -76,22 +83,24 @@ const ListBrandPage = () => {
     [total, pageSize]
   );
 
-  const linkedBrandIds = useMemo(() => {
-    return new Set(
-      productTypeBrandLinks
-        .map((link) => Number(link?.brandId || link?.brand?.id))
-        .filter((id) => Number.isFinite(id) && id > 0)
-    );
-  }, [productTypeBrandLinks]);
+  const linkedBrandIds = useMemo(
+    () =>
+      new Set(
+        productTypeBrandLinks
+          .map((link) => Number(link?.brandId || link?.brand?.id))
+          .filter((id) => Number.isFinite(id) && id > 0)
+      ),
+    [productTypeBrandLinks]
+  );
 
-  const attachableBrandOptions = useMemo(() => {
-    return allBrandOptions.filter((brand) => {
-      const id = Number(brand?.id);
-      if (!Number.isFinite(id) || id <= 0) return false;
-      if (linkedBrandIds.has(id)) return false;
-      return normalizeActive(brand);
-    });
-  }, [allBrandOptions, linkedBrandIds]);
+  const attachableBrandOptions = useMemo(
+    () =>
+      allBrandOptions.filter((brand) => {
+        const id = Number(brand?.id);
+        return Number.isFinite(id) && id > 0 && !linkedBrandIds.has(id) && normalizeBrandActive(brand);
+      }),
+    [allBrandOptions, linkedBrandIds]
+  );
 
   useEffect(() => {
     clearErrorAction?.();
@@ -103,15 +112,7 @@ const ListBrandPage = () => {
   }, [fetchAllBrandOptionsAction, fetchRuntimeProductTypesAction]);
 
   useEffect(() => {
-    if (
-      didAutoSelectProductType ||
-      productTypeId ||
-      !Array.isArray(runtimeProductTypes) ||
-      runtimeProductTypes.length === 0
-    ) {
-      return;
-    }
-
+    if (didAutoSelectProductType || productTypeId || runtimeProductTypes.length === 0) return;
     setProductTypeId(String(runtimeProductTypes[0].id));
     setDidAutoSelectProductType(true);
     setPageAction?.(1);
@@ -122,62 +123,79 @@ const ListBrandPage = () => {
   }, [fetchBrandsAction, q, page, pageSize, includeInactive, selectedProductTypeId]);
 
   useEffect(() => {
-    fetchProductTypeBrandLinksAction?.({
-      productTypeId: selectedProductTypeId,
-      includeInactive: true,
-    });
+    fetchProductTypeBrandLinksAction?.({ productTypeId: selectedProductTypeId, includeInactive: true });
     setBrandToAttachId('');
   }, [fetchProductTypeBrandLinksAction, selectedProductTypeId]);
 
-  const onSearchChange = (event) => {
-    setQueryAction?.(event.target.value);
+  const runConfirmation = async (request) => {
+    setPendingConfirmation(request);
+    const accepted = await confirmation.confirm({ key: request.key });
+    if (!accepted) {
+      setPendingConfirmation((current) => (current?.key === request.key ? null : current));
+      return false;
+    }
+    return true;
   };
 
-  const onProductTypeChange = (event) => {
-    setProductTypeId(event.target.value);
-    setDidAutoSelectProductType(true);
-    setPageAction?.(1);
+  const finishConfirmation = (key) => {
+    setPendingConfirmation((current) => (current?.key === key ? null : current));
   };
 
-  const onIncludeInactiveChange = (event) => {
-    setIncludeInactiveAction?.(event.target.checked);
+  const cancelConfirmation = () => {
+    if (pendingConfirmation?.key) confirmation.cancel(pendingConfirmation.key);
   };
 
-  const onPageSizeChange = (event) => {
-    setPageSizeAction?.(event.target.value);
+  const acceptConfirmation = () => {
+    if (pendingConfirmation?.key) confirmation.resolve(pendingConfirmation.key, true);
   };
 
   const onToggle = async (brand) => {
     if (!brand?.id || saving) return;
-    await toggleBrandActiveAction?.({ id: brand.id, isActive: !normalizeActive(brand) });
-    await fetchBrandsAction?.({ q, page, pageSize, includeInactive, productTypeId: selectedProductTypeId });
-    await fetchAllBrandOptionsAction?.({ includeInactive: false });
+    const nextActive = !normalizeBrandActive(brand);
+    const key = buildBrandToggleConfirmationKey(brand.id);
+    const accepted = await runConfirmation({
+      key,
+      title: nextActive ? 'ยืนยันการเปิดใช้งานแบรนด์' : 'ยืนยันการปิดใช้งานแบรนด์',
+      message: `ต้องการ${nextActive ? 'เปิด' : 'ปิด'}ใช้งานแบรนด์ “${brand.name || '-'}” หรือไม่?`,
+    });
+    if (!accepted) return;
+
+    try {
+      const result = await toggleBrandActiveAction?.({ id: brand.id, isActive: nextActive });
+      if (result?.ok) {
+        await fetchBrandsAction?.({ q, page, pageSize, includeInactive, productTypeId: selectedProductTypeId });
+        await fetchAllBrandOptionsAction?.({ includeInactive: false });
+      }
+    } finally {
+      finishConfirmation(key);
+    }
   };
 
   const onAttachBrand = async () => {
     if (!selectedProductTypeId || !brandToAttachId || saving) return;
-
     const result = await attachBrandToProductTypeAction?.({
       productTypeId: selectedProductTypeId,
       brandId: brandToAttachId,
     });
-
-    if (result?.ok) {
-      setBrandToAttachId('');
-    }
+    if (result?.ok) setBrandToAttachId('');
   };
 
   const onDetachBrand = async (link) => {
     if (!link?.id || !selectedProductTypeId || saving) return;
-
     const brandName = getLinkBrand(link)?.name || 'แบรนด์นี้';
-    const ok = window.confirm(`ต้องการถอด "${brandName}" ออกจากประเภทสินค้า "${selectedProductType?.name || ''}" หรือไม่?`);
-    if (!ok) return;
-
-    await detachBrandFromProductTypeAction?.({
-      id: link.id,
-      productTypeId: selectedProductTypeId,
+    const key = buildBrandDetachConfirmationKey(link.id);
+    const accepted = await runConfirmation({
+      key,
+      title: 'ยืนยันการถอดแบรนด์',
+      message: `ต้องการถอด “${brandName}” ออกจากประเภทสินค้า “${selectedProductType?.name || '-'}” หรือไม่?`,
     });
+    if (!accepted) return;
+
+    try {
+      await detachBrandFromProductTypeAction?.({ id: link.id, productTypeId: selectedProductTypeId });
+    } finally {
+      finishConfirmation(key);
+    }
   };
 
   return (
@@ -189,7 +207,6 @@ const ListBrandPage = () => {
             ผูกแบรนด์กับประเภทสินค้าของสาขาปัจจุบัน เพื่อให้หน้าสินค้าเลือกแบรนด์ได้ถูกต้อง
           </p>
         </div>
-
         <button
           type="button"
           onClick={() => navigate('create')}
@@ -204,33 +221,36 @@ const ListBrandPage = () => {
         <div className="grid grid-cols-1 gap-3 lg:grid-cols-[280px_1fr_auto_auto] lg:items-center">
           <select
             value={productTypeId}
-            onChange={onProductTypeChange}
+            onChange={(event) => {
+              setProductTypeId(event.target.value);
+              setDidAutoSelectProductType(true);
+              setPageAction?.(1);
+            }}
             className="rounded border border-slate-200 px-3 py-2 text-sm"
             disabled={runtimeProductTypesLoading}
           >
             <option value="">-- เลือกประเภทสินค้า --</option>
             {runtimeProductTypes.map((type) => (
-              <option key={type.id} value={type.id}>
-                {type.name}
-              </option>
+              <option key={type.id} value={type.id}>{type.name}</option>
             ))}
           </select>
-
           <input
             value={q}
-            onChange={onSearchChange}
+            onChange={(event) => setQueryAction?.(event.target.value)}
             placeholder="ค้นหาแบรนด์ที่ผูกกับประเภทสินค้านี้"
             className="rounded border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
           />
-
           <label className="inline-flex items-center gap-2 text-sm text-slate-600">
-            <input type="checkbox" checked={includeInactive} onChange={onIncludeInactiveChange} />
+            <input
+              type="checkbox"
+              checked={includeInactive}
+              onChange={(event) => setIncludeInactiveAction?.(event.target.checked)}
+            />
             แสดงรายการที่ปิดใช้งานด้วย
           </label>
-
           <select
             value={pageSize}
-            onChange={onPageSizeChange}
+            onChange={(event) => setPageSizeAction?.(event.target.value)}
             className="rounded border border-slate-200 px-3 py-2 text-sm"
           >
             <option value={20}>20 / หน้า</option>
@@ -242,44 +262,30 @@ const ListBrandPage = () => {
 
       {selectedProductTypeId ? (
         <div className="mb-4 rounded-xl border border-blue-100 bg-blue-50/60 p-4 shadow-sm">
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <div className="text-sm font-semibold text-blue-900">
-                ผูกแบรนด์กับประเภทสินค้า: {selectedProductType?.name || '-'}
-              </div>
-              <div className="mt-1 text-xs text-blue-700">
-                {productTypeBrandLinksLoading
-                  ? 'กำลังโหลดรายการแบรนด์ที่ผูกอยู่...'
-                  : `ผูกไว้แล้ว ${productTypeBrandLinks.length} แบรนด์`}
-              </div>
-            </div>
+          <div className="mb-3 text-sm font-semibold text-blue-900">
+            ผูกแบรนด์กับประเภทสินค้า: {selectedProductType?.name || '-'}
           </div>
-
           <div className="grid grid-cols-1 gap-2 lg:grid-cols-[1fr_auto]">
             <select
               value={brandToAttachId}
               onChange={(event) => setBrandToAttachId(event.target.value)}
-              className="rounded border border-blue-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-400"
+              className="rounded border border-blue-200 bg-white px-3 py-2 text-sm"
               disabled={saving || allBrandOptionsLoading}
             >
               <option value="">-- เลือกแบรนด์เพื่อผูกกับประเภทสินค้านี้ --</option>
               {attachableBrandOptions.map((brand) => (
-                <option key={brand.id} value={brand.id}>
-                  {brand.name}
-                </option>
+                <option key={brand.id} value={brand.id}>{brand.name}</option>
               ))}
             </select>
-
             <button
               type="button"
               onClick={onAttachBrand}
               disabled={!brandToAttachId || saving}
-              className="rounded bg-blue-700 px-4 py-2 text-sm font-medium text-white hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded bg-blue-700 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
             >
               ผูกแบรนด์
             </button>
           </div>
-
           <div className="mt-3 flex flex-wrap gap-2">
             {productTypeBrandLinks.map((link) => {
               const brand = getLinkBrand(link);
@@ -291,9 +297,9 @@ const ListBrandPage = () => {
                   {brand?.name || `Brand #${link.brandId}`}
                   <button
                     type="button"
-                    onClick={() => onDetachBrand(link)}
+                    onClick={() => void onDetachBrand(link)}
                     disabled={saving}
-                    className="rounded-full px-1 text-blue-500 hover:bg-blue-50 hover:text-rose-600 disabled:opacity-50"
+                    className="rounded-full px-1 text-blue-500 hover:text-rose-600 disabled:opacity-50"
                     title="ถอดแบรนด์"
                   >
                     ×
@@ -301,7 +307,6 @@ const ListBrandPage = () => {
                 </span>
               );
             })}
-
             {!productTypeBrandLinksLoading && productTypeBrandLinks.length === 0 ? (
               <span className="text-xs text-blue-700">ยังไม่มีแบรนด์ที่ผูกกับประเภทสินค้านี้</span>
             ) : null}
@@ -316,7 +321,7 @@ const ListBrandPage = () => {
       {error ? (
         <div className="mb-4 rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">
           <div className="font-medium">เกิดข้อผิดพลาด</div>
-          <div className="mt-1 break-words">{error}</div>
+          <div className="mt-1 break-words">{projectBrandErrorMessage(error)}</div>
         </div>
       ) : null}
 
@@ -325,7 +330,6 @@ const ListBrandPage = () => {
           <span>รายการแบรนด์ที่ผูกกับประเภทสินค้านี้</span>
           <span>{loading ? 'กำลังโหลด...' : `ทั้งหมด ${total} รายการ`}</span>
         </div>
-
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm">
             <thead className="bg-slate-50 text-left text-slate-600">
@@ -338,31 +342,27 @@ const ListBrandPage = () => {
             </thead>
             <tbody>
               {items.map((brand, index) => {
-                const active = normalizeActive(brand);
-                const rowNo = (Number(page || 1) - 1) * Number(pageSize || 20) + index + 1;
-
+                const active = normalizeBrandActive(brand);
                 return (
                   <tr key={brand.id} className="border-t border-slate-100 hover:bg-slate-50">
-                    <td className="px-4 py-3 text-slate-500">{rowNo}</td>
+                    <td className="px-4 py-3 text-slate-500">{(page - 1) * pageSize + index + 1}</td>
                     <td className="px-4 py-3 font-medium text-slate-900">{brand.name || '-'}</td>
-                    <td className="px-4 py-3 text-center">
-                      <StatusBadge active={active} />
-                    </td>
+                    <td className="px-4 py-3 text-center"><StatusBadge active={active} /></td>
                     <td className="px-4 py-3">
                       <div className="flex justify-center gap-2">
                         <button
                           type="button"
                           onClick={() => navigate(`edit/${brand.id}`)}
-                          className="rounded border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                          className="rounded border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-700"
                         >
                           แก้ไข
                         </button>
                         <button
                           type="button"
-                          onClick={() => onToggle(brand)}
+                          onClick={() => void onToggle(brand)}
                           disabled={saving}
                           className={`rounded px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60 ${
-                            active ? 'bg-rose-600 hover:bg-rose-700' : 'bg-emerald-600 hover:bg-emerald-700'
+                            active ? 'bg-rose-600' : 'bg-emerald-600'
                           }`}
                         >
                           {active ? 'ปิดใช้งาน' : 'เปิดใช้งาน'}
@@ -372,7 +372,6 @@ const ListBrandPage = () => {
                   </tr>
                 );
               })}
-
               {!loading && items.length === 0 ? (
                 <tr>
                   <td colSpan={4} className="px-4 py-10 text-center text-slate-400">
@@ -386,28 +385,51 @@ const ListBrandPage = () => {
       </div>
 
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm text-slate-600">
-        <span>
-          หน้า {page} / {totalPages}
-        </span>
+        <span>หน้า {page} / {totalPages}</span>
         <div className="flex gap-2">
           <button
             type="button"
-            onClick={() => setPageAction?.(Math.max(1, Number(page || 1) - 1))}
-            disabled={loading || Number(page || 1) <= 1}
-            className="rounded border border-slate-200 px-3 py-1.5 disabled:cursor-not-allowed disabled:opacity-50"
+            onClick={() => setPageAction?.(Math.max(1, page - 1))}
+            disabled={loading || page <= 1}
+            className="rounded border border-slate-200 px-3 py-1.5 disabled:opacity-50"
           >
             ก่อนหน้า
           </button>
           <button
             type="button"
-            onClick={() => setPageAction?.(Math.min(totalPages, Number(page || 1) + 1))}
-            disabled={loading || Number(page || 1) >= totalPages}
-            className="rounded border border-slate-200 px-3 py-1.5 disabled:cursor-not-allowed disabled:opacity-50"
+            onClick={() => setPageAction?.(Math.min(totalPages, page + 1))}
+            disabled={loading || page >= totalPages}
+            className="rounded border border-slate-200 px-3 py-1.5 disabled:opacity-50"
           >
             ถัดไป
           </button>
         </div>
       </div>
+
+      {pendingConfirmation ? (
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4">
+          <div>
+            <div className="text-sm font-semibold text-amber-900">{pendingConfirmation.title}</div>
+            <div className="mt-1 text-sm text-amber-800">{pendingConfirmation.message}</div>
+          </div>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={cancelConfirmation}
+              className="rounded border border-amber-300 px-3 py-1.5 text-sm text-amber-900"
+            >
+              ยกเลิก
+            </button>
+            <button
+              type="button"
+              onClick={acceptConfirmation}
+              className="rounded bg-blue-700 px-3 py-1.5 text-sm font-medium text-white"
+            >
+              ยืนยัน
+            </button>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 };

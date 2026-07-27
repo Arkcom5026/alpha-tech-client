@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useCallback, useState } from 'react';
+import MobileDeviceScanner from './MobileDeviceScanner';
 
 const customerName = (customer) =>
   customer.companyName || customer.name || `ลูกค้า #${customer.id}`;
@@ -34,6 +35,15 @@ const IntakeSearchPanel = ({
     event.preventDefault();
     onSearch(value);
   };
+  const [scannerOpen, setScannerOpen] = useState(false);
+  const handleDetected = useCallback(
+    (detectedValue) => {
+      setScannerOpen(false);
+      onChange(detectedValue);
+      onSearch(detectedValue);
+    },
+    [onChange, onSearch]
+  );
 
   const devices = results?.devices || [];
   const customers = results?.customers || [];
@@ -46,6 +56,15 @@ const IntakeSearchPanel = ({
         <p className="mt-1 text-xs text-slate-500">
           ชื่อ เบอร์โทร บริษัท รุ่น ยี่ห้อ Barcode, Serial Number หรือ Service Tag
         </p>
+
+        <button
+          type="button"
+          onClick={() => setScannerOpen(true)}
+          className="mt-3 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-4 font-black text-blue-700 sm:hidden"
+        >
+          <span aria-hidden="true">▣</span>
+          เปิดกล้องสแกน Barcode / QR
+        </button>
 
         <div className="mt-3 flex flex-col gap-2 sm:flex-row">
           <input
@@ -138,6 +157,11 @@ const IntakeSearchPanel = ({
           ) : null}
         </div>
       ) : null}
+      <MobileDeviceScanner
+        open={scannerOpen}
+        onClose={() => setScannerOpen(false)}
+        onDetected={handleDetected}
+      />
     </div>
   );
 };

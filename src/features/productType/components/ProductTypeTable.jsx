@@ -1,8 +1,7 @@
-
-
 // ✅ src/features/productType/components/ProductTypeTable.jsx
 import React, { useMemo, useState } from 'react';
 import useProductTypeStore from '@/features/productType/store/productTypeStore.js';
+import { confirmation } from '@/runtime';
 
 // ✅ Lightweight UI helpers (P1-safe): avoid missing imports in early-stage project
 const Badge = ({ className = '', children }) => (
@@ -32,16 +31,35 @@ const ProductTypeTable = ({ data = [], loading, error, page = 1, limit = 20, onE
   // ใช้ canManage จาก props เท่านั้น
 
   const rows = useMemo(() => (Array.isArray(data) ? data : []), [data]);
-  const [confirm, setConfirm] = useState(null); // { type: 'archive'|'restore', row }
+  const [confirm, setConfirm] = useState(null); // { type: 'archive'|'restore', row, key }
 
-  const handleArchive = (row) => setConfirm({ type: 'archive', row });
-  const handleRestore = (row) => setConfirm({ type: 'restore', row });
+  const requestLifecycleConfirmation = async (type, row) => {
+    const key = `productType.${type}.${row.id}`;
+    setConfirm({ type, row, key });
 
-  const proceed = async () => {
-    if (!confirm?.row) return;
-    if (confirm.type === 'archive') await archiveProductTypeAction(confirm.row.id);
-    if (confirm.type === 'restore') await restoreProductTypeAction(confirm.row.id);
-    setConfirm(null);
+    const accepted = await confirmation.confirm({ key });
+    if (!accepted) {
+      setConfirm((current) => (current?.key === key ? null : current));
+      return;
+    }
+
+    try {
+      if (type === 'archive') await archiveProductTypeAction(row.id);
+      if (type === 'restore') await restoreProductTypeAction(row.id);
+    } finally {
+      setConfirm((current) => (current?.key === key ? null : current));
+    }
+  };
+
+  const handleArchive = (row) => void requestLifecycleConfirmation('archive', row);
+  const handleRestore = (row) => void requestLifecycleConfirmation('restore', row);
+
+  const cancelConfirmation = () => {
+    if (confirm?.key) confirmation.cancel(confirm.key);
+  };
+
+  const acceptConfirmation = () => {
+    if (confirm?.key) confirmation.resolve(confirm.key, true);
   };
 
   return (
@@ -159,10 +177,10 @@ const ProductTypeTable = ({ data = [], loading, error, page = 1, limit = 20, onE
               ยืนยันการ{confirm.type === 'archive' ? 'ปิดใช้งาน' : 'กู้คืน'} ประเภทสินค้า “{confirm.row?.name}” หรือไม่?
             </div>
             <div className="flex gap-2">
-              <ActionButton className="border border-amber-300 text-amber-900 hover:bg-amber-100" onClick={() => setConfirm(null)}>
+              <ActionButton className="border border-amber-300 text-amber-900 hover:bg-amber-100" onClick={cancelConfirmation}>
                 ยกเลิก
               </ActionButton>
-              <ActionButton className="bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500" onClick={proceed} disabled={isSubmitting}>
+              <ActionButton className="bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500" onClick={acceptConfirmation} disabled={isSubmitting}>
                 ยืนยัน
               </ActionButton>
             </div>

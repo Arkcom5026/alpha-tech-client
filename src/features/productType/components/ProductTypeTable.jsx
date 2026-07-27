@@ -74,7 +74,9 @@ const ProductTypeTable = ({ data = [], loading, error, page = 1, limit = 20, onE
         </div>
 
         {error && (
-          <div className="px-4 py-2 text-sm text-red-600 dark:text-red-400">{String(error)}</div>
+          <div className="px-4 py-2 text-sm text-red-600 dark:text-red-400">
+            {error?.message || String(error)}
+          </div>
         )}
 
         <table className="min-w-full text-sm">

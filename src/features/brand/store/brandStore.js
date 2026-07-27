@@ -301,18 +301,29 @@ export const useBrandStore = create(
         const bId = normalizeId(brandId);
         set({ saving: true, error: null });
         try {
-          if (!ptId || !bId) throw new Error('INVALID_PRODUCTTYPE_OR_BRAND');
-          const res = await brandApi.attachBrandToProductType({ productTypeId: ptId, brandId: bId });
-          await get().fetchProductTypeBrandLinksAction({ productTypeId: ptId, includeInactive: true });
-          await get().fetchBrandsAction({
-            q: get().q,
-            page: get().page,
-            pageSize: get().pageSize,
-            includeInactive: get().includeInactive,
-            productTypeId: ptId,
-          });
-          set({ saving: false });
-          return { ok: true, data: res };
+          return await withBrandRuntime(
+            BRAND_RUNTIME_OPERATIONS.ATTACH_TO_PRODUCT_TYPE,
+            async () => {
+              if (!ptId || !bId) throw new Error('INVALID_PRODUCTTYPE_OR_BRAND');
+              const res = await brandApi.attachBrandToProductType({
+                productTypeId: ptId,
+                brandId: bId,
+              });
+              await get().fetchProductTypeBrandLinksAction({
+                productTypeId: ptId,
+                includeInactive: true,
+              });
+              await get().fetchBrandsAction({
+                q: get().q,
+                page: get().page,
+                pageSize: get().pageSize,
+                includeInactive: get().includeInactive,
+                productTypeId: ptId,
+              });
+              set({ saving: false });
+              return { ok: true, data: res };
+            }
+          );
         } catch (err) {
           const normalized = normalizeBrandRuntimeError(err);
           set({ saving: false, error: normalized });
@@ -325,20 +336,28 @@ export const useBrandStore = create(
         const ptId = normalizeId(productTypeId);
         set({ saving: true, error: null });
         try {
-          if (!linkId) throw new Error('INVALID_ID');
-          const res = await brandApi.detachBrandFromProductType({ id: linkId });
-          if (ptId) {
-            await get().fetchProductTypeBrandLinksAction({ productTypeId: ptId, includeInactive: true });
-            await get().fetchBrandsAction({
-              q: get().q,
-              page: get().page,
-              pageSize: get().pageSize,
-              includeInactive: get().includeInactive,
-              productTypeId: ptId,
-            });
-          }
-          set({ saving: false });
-          return { ok: true, data: res };
+          return await withBrandRuntime(
+            BRAND_RUNTIME_OPERATIONS.DETACH_FROM_PRODUCT_TYPE,
+            async () => {
+              if (!linkId) throw new Error('INVALID_ID');
+              const res = await brandApi.detachBrandFromProductType({ id: linkId });
+              if (ptId) {
+                await get().fetchProductTypeBrandLinksAction({
+                  productTypeId: ptId,
+                  includeInactive: true,
+                });
+                await get().fetchBrandsAction({
+                  q: get().q,
+                  page: get().page,
+                  pageSize: get().pageSize,
+                  includeInactive: get().includeInactive,
+                  productTypeId: ptId,
+                });
+              }
+              set({ saving: false });
+              return { ok: true, data: res };
+            }
+          );
         } catch (err) {
           const normalized = normalizeBrandRuntimeError(err);
           set({ saving: false, error: normalized });

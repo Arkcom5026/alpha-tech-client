@@ -235,6 +235,10 @@ const RepairIntakePage = () => {
                 <span className="w-fit rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-black text-blue-700">
                   อุปกรณ์ภายนอกร้าน
                 </span>
+              ) : runtime.intakeNotFound ? (
+                <span className="w-fit rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-black text-amber-700">
+                  ไม่พบอุปกรณ์ในระบบ
+                </span>
               ) : runtime.intakeContext ? (
                 <span className="w-fit rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-700">
                   เลือกอุปกรณ์แล้ว
@@ -262,6 +266,41 @@ const RepairIntakePage = () => {
                   empty={false}
                   onRetry={retryCurrentSearch}
                 />
+              ) : runtime.intakeNotFound ? (
+                <div className="flex min-h-[320px] flex-col items-center justify-center rounded-xl border border-dashed border-amber-300 bg-amber-50/60 px-6 text-center">
+                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-2xl shadow-sm">
+                    🔎
+                  </div>
+                  <h3 className="mt-4 text-lg font-black text-slate-900">
+                    ไม่พบอุปกรณ์ “{runtime.intakeNotFoundLookup}”
+                  </h3>
+                  <p className="mt-2 max-w-lg text-sm leading-6 text-slate-600">
+                    รายการนี้ไม่ใช่ข้อผิดพลาดของระบบ หากเป็นอุปกรณ์ของลูกค้าที่ไม่ได้ซื้อจากร้าน
+                    ให้เลือกลูกค้าแล้วลงทะเบียนเป็นอุปกรณ์ภายนอก
+                  </p>
+                  <div className="mt-5 flex flex-col gap-2 sm:flex-row">
+                    <button
+                      type="button"
+                      onClick={() => setSearchPath('CUSTOMER')}
+                      className="min-h-11 rounded-xl border border-slate-300 bg-white px-5 text-sm font-black text-slate-700"
+                    >
+                      ค้นหาและเลือกลูกค้า
+                    </button>
+                    <button
+                      type="button"
+                      disabled={!runtime.selectedCustomer?.id}
+                      onClick={startExternalIntake}
+                      className="min-h-11 rounded-xl bg-blue-700 px-5 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      เพิ่มอุปกรณ์ภายนอกร้าน
+                    </button>
+                  </div>
+                  {!runtime.selectedCustomer?.id ? (
+                    <p className="mt-3 text-xs text-slate-500">
+                      ต้องเลือกลูกค้าก่อนจึงจะลงทะเบียนอุปกรณ์ได้
+                    </p>
+                  ) : null}
+                </div>
               ) : runtime.intakeContext ? (
                 <div className="space-y-5">
                   <IntakeProjection

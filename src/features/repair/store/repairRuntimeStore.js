@@ -9,6 +9,8 @@ const normalizeCustomer = (payload) => {
 const initialState = {
   intakeLookup: '',
   intakeContext: null,
+  intakeNotFound: false,
+  intakeNotFoundLookup: '',
   selectedCustomer: null,
   customerWarrantyAssets: [],
   jobs: [],
@@ -27,7 +29,16 @@ const useRepairRuntimeStore = create((set, get) => ({
 
   setIntakeLookup: (value) => set({ intakeLookup: String(value || '') }),
   clearError: () => set({ error: null, errorCode: null }),
-  resetIntake: () => set({ intakeLookup: '', intakeContext: null, selectedCustomer: null, customerWarrantyAssets: [], error: null, errorCode: null }),
+  resetIntake: () => set({
+    intakeLookup: '',
+    intakeContext: null,
+    intakeNotFound: false,
+    intakeNotFoundLookup: '',
+    selectedCustomer: null,
+    customerWarrantyAssets: [],
+    error: null,
+    errorCode: null,
+  }),
 
   clearSelectedCustomer: () =>
     set({ selectedCustomer: null, customerWarrantyAssets: [], intakeContext: null, error: null, errorCode: null }),
@@ -78,14 +89,44 @@ const useRepairRuntimeStore = create((set, get) => ({
       return null;
     }
 
-    set({ loading: true, error: null, errorCode: null, intakeLookup: lookup });
+    set({
+      loading: true,
+      error: null,
+      errorCode: null,
+      intakeLookup: lookup,
+      intakeNotFound: false,
+      intakeNotFoundLookup: '',
+    });
     try {
       const intakeContext = await repairApi.getIntakeContext(lookup);
-      set({ intakeContext, loading: false, lastLoadedAt: new Date().toISOString() });
+      set({
+        intakeContext,
+        intakeNotFound: false,
+        intakeNotFoundLookup: '',
+        loading: false,
+        lastLoadedAt: new Date().toISOString(),
+      });
       return intakeContext;
     } catch (error) {
+      if (
+        error.status === 404 ||
+        error.code === 'REPAIR_STOCK_ITEM_NOT_FOUND'
+      ) {
+        set({
+          intakeContext: null,
+          intakeNotFound: true,
+          intakeNotFoundLookup: lookup,
+          loading: false,
+          error: null,
+          errorCode: error.code,
+        });
+        return null;
+      }
+
       set({
         intakeContext: null,
+        intakeNotFound: false,
+        intakeNotFoundLookup: '',
         loading: false,
         error: error.message,
         errorCode: error.code,

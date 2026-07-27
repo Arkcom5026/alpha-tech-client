@@ -31,6 +31,7 @@ const initialDraft = {
   model: '',
   serialNumber: '',
   imei: '',
+  barcode: '',
   customerProblem: '',
   internalRemark: '',
   depositPaid: 0,
@@ -78,6 +79,7 @@ const ExternalDeviceIntakeForm = ({
         model: draft.model,
         serialNumber: draft.serialNumber,
         imei: draft.imei,
+        barcode: draft.barcode,
       },
       customerProblem: draft.customerProblem,
       internalRemark: draft.internalRemark,
@@ -165,6 +167,19 @@ const ExternalDeviceIntakeForm = ({
             placeholder="สำหรับโทรศัพท์หรือแท็บเล็ต"
             className="min-h-12 w-full rounded-xl border border-slate-300 px-4"
           />
+        </label>
+
+        <label className="space-y-1 md:col-span-2">
+          <span className="text-xs font-black text-slate-600">Barcode / QR ของร้าน</span>
+          <input
+            value={draft.barcode}
+            onChange={(event) => patch('barcode', event.target.value)}
+            placeholder="เว้นว่างเพื่อให้ระบบสร้างรหัสอุปกรณ์ของร้านอัตโนมัติ"
+            className="min-h-12 w-full rounded-xl border border-slate-300 px-4"
+          />
+          <span className="block text-[11px] text-slate-500">
+            ใช้รหัสเดียวกันพิมพ์เป็น Barcode หรือ QR เพื่อติดที่ตัวอุปกรณ์ได้
+          </span>
         </label>
 
         <label className="space-y-1 md:col-span-2">

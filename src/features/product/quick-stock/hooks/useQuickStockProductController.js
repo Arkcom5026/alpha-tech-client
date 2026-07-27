@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { toast } from "react-toastify";
 
 import {
+  INVENTORY_BEHAVIORS,
   buildCreateOperationalProductPayload,
   buildLocalOperationalProductPayload,
   buildPriceFormFromProduct,
@@ -11,12 +12,32 @@ import {
   dedupeDiscoveryProducts,
   extractSingle,
   getFirstBranchPrice,
+  getProductInventoryBehavior,
   getTemplateLookupId,
   isValidOperationalProductForAdoption,
   normalizeOperationalProduct,
   toMoneyNumber,
   toNumberOrNull,
 } from "../utils/quickStockRuntimeUtils";
+
+const buildEmptyLocalProductForm = () => ({
+  name: "",
+  productTypeId: "",
+  brandId: "",
+  unitId: "",
+  mode: "SIMPLE",
+  inventoryBehavior: INVENTORY_BEHAVIORS.TRACKED,
+  trackSerialNumber: false,
+  active: true,
+});
+
+const buildEmptyLocalPriceForm = () => ({
+  costPrice: 0,
+  priceRetail: "",
+  priceWholesale: "",
+  priceTechnician: "",
+  priceOnline: "",
+});
 
 const useQuickStockProductController = ({
   selectedProduct,
@@ -52,21 +73,8 @@ const useQuickStockProductController = ({
 
   const [productForm, setProductForm] = useState(buildProductFormFromProduct(null));
   const [priceForm, setPriceForm] = useState(buildPriceFormFromProduct(null));
-  const [localProductForm, setLocalProductForm] = useState({
-    name: "",
-    productTypeId: "",
-    brandId: "",
-    unitId: "",
-    trackSerialNumber: false,
-    active: true,
-  });
-  const [localPriceForm, setLocalPriceForm] = useState({
-    costPrice: 0,
-    priceRetail: "",
-    priceWholesale: "",
-    priceTechnician: "",
-    priceOnline: "",
-  });
+  const [localProductForm, setLocalProductForm] = useState(buildEmptyLocalProductForm);
+  const [localPriceForm, setLocalPriceForm] = useState(buildEmptyLocalPriceForm);
 
   const operationalProduct = selectedSearchOperationalProduct || adoptedOperationalProduct;
   const isTemplateOnlySelection = !!selectedTemplateProduct && !operationalProduct;
@@ -148,7 +156,31 @@ const useQuickStockProductController = ({
   }, [resetQueue, setSelectedProductId, setShowSearchResult]);
 
   const updateProductForm = useCallback((field, value) => {
-    setProductForm((prev) => ({ ...prev, [field]: value }));
+    setProductForm((prev) => {
+      if (field === "mode") {
+        const mode = String(value || "SIMPLE").toUpperCase();
+        return {
+          ...prev,
+          mode,
+          trackSerialNumber: mode === "STRUCTURED",
+          inventoryBehavior:
+            mode === "SIMPLE"
+              ? prev.inventoryBehavior || INVENTORY_BEHAVIORS.TRACKED
+              : INVENTORY_BEHAVIORS.TRACKED,
+        };
+      }
+      if (field === "trackSerialNumber") {
+        return {
+          ...prev,
+          trackSerialNumber: !!value,
+          mode: value ? "STRUCTURED" : "SIMPLE",
+          inventoryBehavior: value
+            ? INVENTORY_BEHAVIORS.TRACKED
+            : prev.inventoryBehavior || INVENTORY_BEHAVIORS.TRACKED,
+        };
+      }
+      return { ...prev, [field]: value };
+    });
   }, []);
 
   const updatePriceForm = useCallback((field, value) => {
@@ -157,7 +189,31 @@ const useQuickStockProductController = ({
   }, []);
 
   const updateLocalProductForm = useCallback((field, value) => {
-    setLocalProductForm((prev) => ({ ...prev, [field]: value }));
+    setLocalProductForm((prev) => {
+      if (field === "mode") {
+        const mode = String(value || "SIMPLE").toUpperCase();
+        return {
+          ...prev,
+          mode,
+          trackSerialNumber: mode === "STRUCTURED",
+          inventoryBehavior:
+            mode === "SIMPLE"
+              ? prev.inventoryBehavior || INVENTORY_BEHAVIORS.TRACKED
+              : INVENTORY_BEHAVIORS.TRACKED,
+        };
+      }
+      if (field === "trackSerialNumber") {
+        return {
+          ...prev,
+          trackSerialNumber: !!value,
+          mode: value ? "STRUCTURED" : "SIMPLE",
+          inventoryBehavior: value
+            ? INVENTORY_BEHAVIORS.TRACKED
+            : prev.inventoryBehavior || INVENTORY_BEHAVIORS.TRACKED,
+        };
+      }
+      return { ...prev, [field]: value };
+    });
   }, []);
 
   const updateLocalPriceForm = useCallback((field, value) => {
@@ -242,8 +298,9 @@ const useQuickStockProductController = ({
 
     if (!payload.name) return toast.error("กรุณาระบุชื่อสินค้า");
     if (!payload.productTypeId) return toast.error("กรุณาเลือกประเภทสินค้า");
-    if (payload.costPrice == null || payload.priceRetail <= 0) {
-      return toast.error("กรุณาระบุราคาทุนและราคาขายปลีกก่อนสร้างสินค้า");
+    if (payload.priceRetail <= 0) return toast.error("กรุณาระบุราคาขายปลีกก่อนสร้างสินค้า");
+    if (payload.inventoryBehavior !== INVENTORY_BEHAVIORS.NON_STOCK && payload.costPrice < 0) {
+      return toast.error("ราคาทุนต้องไม่ต่ำกว่า 0");
     }
 
     setIsCreatingOperationalProduct(true);
@@ -257,23 +314,14 @@ const useQuickStockProductController = ({
         return;
       }
 
-      setLocalProductForm({
-        name: "",
-        productTypeId: "",
-        brandId: "",
-        unitId: "",
-        trackSerialNumber: false,
-        active: true,
-      });
-      setLocalPriceForm({
-        costPrice: 0,
-        priceRetail: "",
-        priceWholesale: "",
-        priceTechnician: "",
-        priceOnline: "",
-      });
+      setLocalProductForm(buildEmptyLocalProductForm());
+      setLocalPriceForm(buildEmptyLocalPriceForm());
 
-      toast.success("สร้างสินค้า Local ของร้านเรียบร้อย");
+      toast.success(
+        payload.inventoryBehavior === INVENTORY_BEHAVIORS.NON_STOCK
+          ? "สร้างค่าบริการแบบไม่ควบคุมสต็อกเรียบร้อย"
+          : "สร้างสินค้า Local ของร้านเรียบร้อย"
+      );
     } catch (err) {
       console.error("Create local operational product failed:", err);
       toast.error(err?.message || "สร้างสินค้า Local ไม่สำเร็จ");
@@ -289,6 +337,11 @@ const useQuickStockProductController = ({
     if (!name) return toast.error("ชื่อสินค้าห้ามว่าง");
     if (toMoneyNumber(priceForm.priceRetail) <= 0) return toast.error("ราคาขายปลีกต้องมากกว่า 0");
 
+    const mode = String(productForm.mode || operationalProduct.mode || "SIMPLE").toUpperCase();
+    const inventoryBehavior = mode === "SIMPLE"
+      ? String(productForm.inventoryBehavior || INVENTORY_BEHAVIORS.TRACKED).toUpperCase()
+      : null;
+
     setIsSavingProduct(true);
 
     try {
@@ -297,9 +350,10 @@ const useQuickStockProductController = ({
         productTypeId: toNumberOrNull(productForm.productTypeId),
         brandId: toNumberOrNull(productForm.brandId),
         unitId: toNumberOrNull(productForm.unitId),
-        mode: operationalProduct.mode || (productForm.trackSerialNumber ? "STRUCTURED" : "SIMPLE"),
-        noSN: operationalProduct.noSN ?? !productForm.trackSerialNumber,
-        trackSerialNumber: !!productForm.trackSerialNumber,
+        mode,
+        ...(inventoryBehavior ? { inventoryBehavior } : {}),
+        noSN: mode === "SIMPLE",
+        trackSerialNumber: mode === "STRUCTURED",
         active: !!productForm.active,
         branchPrice: {
           costPrice: toMoneyNumber(priceForm.costPrice),
@@ -311,13 +365,16 @@ const useQuickStockProductController = ({
         },
       });
 
-      const nextProduct = {
+      const nextProduct = normalizeOperationalProduct({
         ...operationalProduct,
         name,
         productTypeId: toNumberOrNull(productForm.productTypeId),
         brandId: toNumberOrNull(productForm.brandId),
         unitId: toNumberOrNull(productForm.unitId),
-        trackSerialNumber: !!productForm.trackSerialNumber,
+        mode,
+        ...(inventoryBehavior ? { inventoryBehavior } : {}),
+        noSN: mode === "SIMPLE",
+        trackSerialNumber: mode === "STRUCTURED",
         active: !!productForm.active,
         costPrice: toMoneyNumber(priceForm.costPrice),
         priceRetail: toMoneyNumber(priceForm.priceRetail),
@@ -337,13 +394,13 @@ const useQuickStockProductController = ({
             isActive: true,
           },
         ],
-      };
+      });
 
       setAdoptedOperationalProduct((prev) =>
         prev && Number(prev?.id) === Number(nextProduct.id) ? { ...prev, ...nextProduct } : prev
       );
       setRuntimeSearchProducts((prev) =>
-        dedupeDiscoveryProducts([normalizeOperationalProduct(nextProduct), ...(Array.isArray(prev) ? prev : [])])
+        dedupeDiscoveryProducts([nextProduct, ...(Array.isArray(prev) ? prev : [])])
       );
       setProductForm(buildProductFormFromProduct(nextProduct));
       setPriceForm(buildPriceFormFromProduct(nextProduct));
@@ -352,7 +409,11 @@ const useQuickStockProductController = ({
       setIsEditingProduct(false);
     } catch (err) {
       console.error("Quick edit product failed:", err);
-      toast.error(err?.message || "บันทึกข้อมูลสินค้าไม่สำเร็จ");
+      if (err?.code === "PRODUCT_OPERATIONAL_POLICY_LOCKED") {
+        toast.error("ไม่สามารถเปลี่ยนโหมดหรือการควบคุมสต็อกได้ เพราะสินค้านี้มีประวัติใช้งานแล้ว");
+      } else {
+        toast.error(err?.message || "บันทึกข้อมูลสินค้าไม่สำเร็จ");
+      }
     } finally {
       setIsSavingProduct(false);
     }
@@ -438,6 +499,7 @@ const useQuickStockProductController = ({
     handleSaveProductInline,
     handleDeleteSelectedProductForRecovery,
     openLocalCreateForm,
+    getProductInventoryBehavior,
   };
 };
 

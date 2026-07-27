@@ -146,6 +146,7 @@ const useRepairRuntimeStore = create((set, get) => ({
         intakeContext,
         intakeNotFound: false,
         intakeNotFoundLookup: '',
+        searchResults: { devices: [], customers: [], counts: { devices: 0, customers: 0, total: 0 } },
         loading: false,
         lastLoadedAt: new Date().toISOString(),
       });

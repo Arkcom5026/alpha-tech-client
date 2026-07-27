@@ -42,6 +42,19 @@ export const createQuickReceiptDraft = async (payload) => {
   }
 };
 
+export const completeQuickReceipt = async (payload) => {
+  try {
+    const response = await apiClient.post(
+      'quick-stock/receipts/complete',
+      payload,
+      { headers: { 'X-Idempotency-Key': makeIdempotencyKey() } }
+    );
+    return unwrap(response);
+  } catch (error) {
+    throw parseApiError(error);
+  }
+};
+
 export const updateQuickReceiptDraft = async (id, payload) => {
   try {
     const response = await apiClient.patch(`quick-stock/receipts/${id}`, payload);

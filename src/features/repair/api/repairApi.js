@@ -64,6 +64,29 @@ export const repairApi = {
       'ไม่สามารถรับอุปกรณ์ภายนอกได้'
     ),
 
+  getIntakeEvidence: (id) =>
+    request(
+      () => apiClient.get(`/repairs/jobs/${id}/intake-evidence`),
+      'ไม่สามารถโหลดหลักฐานการรับเครื่องได้'
+    ),
+
+  saveIntakeEvidence: (id, evidence = {}) => {
+    const form = new FormData();
+    (evidence.photos || []).forEach((photo) => form.append('photos', photo));
+    [
+      'confirmed',
+      'customerSignature',
+      'allowDataErase',
+      'allowFactoryReset',
+      'allowDisassembly',
+      'allowOutsourceRepair',
+    ].forEach((field) => form.append(field, String(evidence[field] ?? '')));
+    return request(
+      () => apiClient.post(`/repairs/jobs/${id}/intake-evidence`, form),
+      'ไม่สามารถบันทึกหลักฐานการรับเครื่องได้'
+    );
+  },
+
   createTrackingAccess: (id, payload = {}) =>
     request(
       () => apiClient.post(`/repairs/jobs/${id}/tracking-access`, payload),

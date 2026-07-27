@@ -1,13 +1,15 @@
 import React, { useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import useRepairRuntimeStore from '../store/repairRuntimeStore';
 import RepairShellHeader from '../components/RepairShellHeader';
 import RuntimeStatePanel from '../components/RuntimeStatePanel';
 import JobRuntimePanel from '../components/JobRuntimePanel';
 import RepairTrackingAccessPanel from '../customer-access/components/RepairTrackingAccessPanel';
+import IntakeEvidencePanel from '../components/IntakeEvidencePanel';
 
 const RepairJobDetailPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { shopSlug, repairJobId } = useParams();
 
   const activeJob = useRepairRuntimeStore((state) => state.activeJob);
@@ -61,6 +63,10 @@ const RepairJobDetailPage = () => {
           onOpenClaim={handleOpenClaim}
         />
           <RepairTrackingAccessPanel repairJobId={repairJobId} jobNo={activeJob.jobNo} />
+          <IntakeEvidencePanel
+            repairJobId={repairJobId}
+            warning={location.state?.evidenceWarning}
+          />
         </div>
       ) : null}
     </div>

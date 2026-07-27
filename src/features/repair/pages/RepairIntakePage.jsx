@@ -10,6 +10,7 @@ import RepairIntakeContactForm from '../components/RepairIntakeContactForm';
 import IntakeProjection from '../components/IntakeProjection';
 import ExternalDeviceIntakeForm from '../components/ExternalDeviceIntakeForm';
 import MobileIntakeProgress from '../components/MobileIntakeProgress';
+import repairApi from '../api/repairApi';
 
 const emptyContact = {
   contactName: '',
@@ -140,8 +141,17 @@ const RepairIntakePage = () => {
   };
 
   const createExternalIntake = async (payload) => {
-    const created = await runtime.createExternalIntake(payload);
+    const { intakeEvidence, ...intakePayload } = payload;
+    const created = await runtime.createExternalIntake(intakePayload);
     if (created?.repairJob?.id) {
+      try {
+        await repairApi.saveIntakeEvidence(created.repairJob.id, intakeEvidence);
+      } catch (error) {
+        navigate(`/${shopSlug}/pos/services/repairs/${created.repairJob.id}`, {
+          state: { evidenceWarning: error.message },
+        });
+        return;
+      }
       navigate(`/${shopSlug}/pos/services/repairs/${created.repairJob.id}`);
     }
   };

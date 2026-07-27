@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import MobileIntakeEvidenceFields from './MobileIntakeEvidenceFields';
 
 const DEVICE_CATEGORIES = [
   ['NOTEBOOK', 'โน้ตบุ๊ก'],
@@ -38,6 +39,16 @@ const initialDraft = {
   estimatedCost: 0,
 };
 
+const initialEvidence = {
+  photos: [],
+  confirmed: false,
+  customerSignature: '',
+  allowDataErase: false,
+  allowFactoryReset: false,
+  allowDisassembly: false,
+  allowOutsourceRepair: false,
+};
+
 const ExternalDeviceIntakeForm = ({
   customer,
   submitting,
@@ -47,6 +58,7 @@ const ExternalDeviceIntakeForm = ({
 }) => {
   const [draft, setDraft] = useState(initialDraft);
   const [selectedAccessories, setSelectedAccessories] = useState([]);
+  const [intakeEvidence, setIntakeEvidence] = useState(initialEvidence);
 
   const canSubmit = useMemo(
     () =>
@@ -54,9 +66,11 @@ const ExternalDeviceIntakeForm = ({
         customer?.id &&
           draft.model.trim() &&
           draft.customerProblem.trim() &&
+          intakeEvidence.confirmed &&
+          intakeEvidence.customerSignature.trim() &&
           !submitting
       ),
-    [customer, draft.model, draft.customerProblem, submitting]
+    [customer, draft.model, draft.customerProblem, intakeEvidence, submitting]
   );
 
   const patch = (field, value) =>
@@ -89,6 +103,7 @@ const ExternalDeviceIntakeForm = ({
         accessoryType,
         quantity: 1,
       })),
+      intakeEvidence,
     });
   };
 
@@ -193,6 +208,11 @@ const ExternalDeviceIntakeForm = ({
           />
         </label>
       </div>
+
+      <MobileIntakeEvidenceFields
+        value={intakeEvidence}
+        onChange={setIntakeEvidence}
+      />
 
       <section>
         <p className="text-xs font-black text-slate-600">อุปกรณ์ที่นำมาด้วย</p>

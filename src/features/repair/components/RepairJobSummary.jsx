@@ -27,8 +27,14 @@ const RepairJobSummary = ({ job }) => (
       <Item label="อัปเดตล่าสุด" value={formatRepairDateTime(job.updatedAt)} />
       <Item label="มัดจำ" value={formatRepairMoney(job.depositPaid)} />
       <Item label="ราคาประเมิน" value={formatRepairMoney(job.estimatedCost)} />
-      <Item label="บาร์โค้ด" value={job.stockItem?.barcode} />
-      <Item label="Serial" value={job.stockItem?.serialNumber} />
+      <Item
+        label="บาร์โค้ด"
+        value={job.stockItem?.barcode || job.device?.barcode}
+      />
+      <Item
+        label="Serial"
+        value={job.stockItem?.serialNumber || job.device?.serialNumber}
+      />
     </div>
 
     <div className="mt-4 rounded-xl border border-slate-200 p-4">

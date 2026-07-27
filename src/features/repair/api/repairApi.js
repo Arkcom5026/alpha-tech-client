@@ -51,6 +51,12 @@ export const repairApi = {
   createJob: (payload) =>
     request(() => apiClient.post('/repairs/jobs', payload), 'ไม่สามารถเปิดใบรับซ่อมได้'),
 
+  createExternalIntake: (payload) =>
+    request(
+      () => apiClient.post('/repairs/intakes/external-device', payload),
+      'ไม่สามารถรับอุปกรณ์ภายนอกได้'
+    ),
+
   transitionJob: (id, payload) =>
     request(
       () => apiClient.patch(`/repairs/jobs/${id}/status`, payload),

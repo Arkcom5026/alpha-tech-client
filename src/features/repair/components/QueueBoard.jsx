@@ -18,28 +18,62 @@ const QueueBoard = ({ lanes, type, onOpen }) => (
 
           <div className="mt-3 space-y-3">
             {lane.items.length ? (
-              lane.items.map((item) => (
-                <button
-                  type="button"
-                  key={item.id}
-                  onClick={() => onOpen(item)}
-                  className="w-full rounded-xl border border-slate-200 bg-white p-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-md"
-                >
-                  <p className="font-black text-slate-950">
-                    {type === 'repair' ? item.jobNo : item.claimNo}
-                  </p>
-                  <p className="mt-1 line-clamp-2 text-sm text-slate-700">
-                    {type === 'repair'
-                      ? item.deviceModel || item.reportedSymptoms
-                      : item.stockItem?.product?.name ||
-                        [item.device?.brand, item.device?.model].filter(Boolean).join(' ') ||
-                        item.reason}
-                  </p>
-                  <p className="mt-2 text-xs text-slate-500">
-                    {formatDateTime(type === 'repair' ? item.updatedAt || item.createdAt : item.updatedAt || item.openedAt)}
-                  </p>
-                </button>
-              ))
+              lane.items.map((item) => {
+                const customerName =
+                  type === 'repair'
+                    ? item.customer?.name || item.customerName || `ลูกค้า #${item.customerId}`
+                    : item.repairJob?.customerName || null;
+                const customerContact =
+                  type === 'repair' ? item.customer?.phone || item.customer?.email : null;
+
+                return (
+                  <button
+                    type="button"
+                    key={item.id}
+                    onClick={() => onOpen(item)}
+                    className="w-full rounded-xl border border-slate-200 bg-white p-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-md"
+                  >
+                    <p className="font-black text-slate-950">
+                      {type === 'repair' ? item.jobNo : item.claimNo}
+                    </p>
+
+                    {customerName ? (
+                      <div className="mt-2 rounded-lg bg-slate-50 px-2.5 py-2">
+                        <p className="line-clamp-1 text-sm font-black text-slate-800">
+                          {customerName}
+                        </p>
+                        {customerContact ? (
+                          <p className="mt-0.5 line-clamp-1 text-xs text-slate-500">
+                            {customerContact}
+                          </p>
+                        ) : null}
+                      </div>
+                    ) : null}
+
+                    <p className="mt-2 line-clamp-1 text-sm font-bold text-slate-700">
+                      {type === 'repair'
+                        ? item.deviceModel || item.stockItem?.product?.name || 'ไม่ระบุอุปกรณ์'
+                        : item.stockItem?.product?.name ||
+                          [item.device?.brand, item.device?.model].filter(Boolean).join(' ') ||
+                          item.reason}
+                    </p>
+
+                    {type === 'repair' && item.reportedSymptoms ? (
+                      <p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-500">
+                        อาการ: {item.reportedSymptoms}
+                      </p>
+                    ) : null}
+
+                    <p className="mt-2 text-xs text-slate-400">
+                      {formatDateTime(
+                        type === 'repair'
+                          ? item.updatedAt || item.createdAt
+                          : item.updatedAt || item.openedAt
+                      )}
+                    </p>
+                  </button>
+                );
+              })
             ) : (
               <div className="rounded-xl border border-dashed border-slate-300 bg-white/70 p-5 text-center text-xs text-slate-400">
                 ไม่มีรายการ

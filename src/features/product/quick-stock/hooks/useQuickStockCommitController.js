@@ -3,7 +3,11 @@
 import { useCallback, useState } from "react";
 import { toast } from "react-toastify";
 
-import { ONBOARDING_STATES, toMoneyNumber } from "../utils/quickStockRuntimeUtils";
+import {
+  ONBOARDING_STATES,
+  getProductInventoryBehavior,
+  toMoneyNumber,
+} from "../utils/quickStockRuntimeUtils";
 
 const useQuickStockCommitController = ({
   operationalProduct,
@@ -22,15 +26,17 @@ const useQuickStockCommitController = ({
   const [note, setNote] = useState("Manual stock intake");
   const [isCommitting, setIsCommitting] = useState(false);
 
+  const inventoryBehavior = getProductInventoryBehavior(operationalProduct);
+  const isNonStockProduct = inventoryBehavior === "NON_STOCK";
   const resolvedCostPrice = defaultCost ?? priceForm.costPrice;
   const hasRequiredIntakePrices =
     resolvedCostPrice != null &&
     toMoneyNumber(resolvedCostPrice) >= 0 &&
     toMoneyNumber(priceForm.priceRetail) > 0;
 
-  const productReady = isOperationalSelection && hasRequiredIntakePrices;
+  const productReady = isOperationalSelection && !isNonStockProduct && hasRequiredIntakePrices;
   const isBusy = isCommitting || isCheckingOperationalProduct || isCreatingOperationalProduct;
-  const canScanBarcode = isOperationalSelection && !isBusy;
+  const canScanBarcode = isOperationalSelection && !isNonStockProduct && !isBusy;
   const canCommitExistingIntake = productReady && queueReady && !isBusy;
 
   const validateBeforeCommit = useCallback(() => {
@@ -40,6 +46,11 @@ const useQuickStockCommitController = ({
           ? "สินค้านี้ยังเป็น Template และยังไม่ใช่ Operational Product ของร้าน"
           : "กรุณาเลือกสินค้า Operational Product ก่อนบันทึก"
       );
+      return false;
+    }
+
+    if (isNonStockProduct) {
+      toast.error("ค่าบริการหรือสินค้าแบบไม่ควบคุมสต็อกไม่สามารถรับเข้า QuickStock ได้");
       return false;
     }
 
@@ -66,7 +77,7 @@ const useQuickStockCommitController = ({
     }
 
     return true;
-  }, [operationalProduct, isTemplateOnlySelection, defaultCost, priceForm, barcodeQueue]);
+  }, [operationalProduct, isTemplateOnlySelection, isNonStockProduct, resolvedCostPrice, priceForm, barcodeQueue]);
 
   const handleCommit = useCallback(async () => {
     if (!validateBeforeCommit()) return;
@@ -80,6 +91,7 @@ const useQuickStockCommitController = ({
       productId: Number(operationalProduct.id),
       productName: operationalProduct.name,
       mode: operationalProduct.mode || "STRUCTURED",
+      inventoryBehavior,
       trackSerialNumber: !!operationalProduct.trackSerialNumber,
       note,
       quantity: cleanQueueItems.length,
@@ -108,8 +120,9 @@ const useQuickStockCommitController = ({
     validateBeforeCommit,
     barcodeQueue,
     operationalProduct,
+    inventoryBehavior,
     note,
-    defaultCost,
+    resolvedCostPrice,
     priceForm,
     quickStockIntakeExistingAction,
     resetQueue,
@@ -138,6 +151,8 @@ const useQuickStockCommitController = ({
     isCommitting,
     setIsCommitting,
 
+    inventoryBehavior,
+    isNonStockProduct,
     hasRequiredIntakePrices,
     productReady,
     isBusy,

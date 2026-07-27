@@ -4,9 +4,21 @@ const customerName = (customer) =>
   customer.companyName || customer.name || `ลูกค้า #${customer.id}`;
 
 const deviceName = (device) =>
-  [device.product?.brand?.name, device.product?.name].filter(Boolean).join(' ') ||
+  [device.product?.brand?.name || device.brand, device.product?.name || device.model]
+    .filter(Boolean)
+    .join(' ') ||
   device.serialNumber ||
-  device.barcode;
+  device.imei ||
+  device.barcode ||
+  `อุปกรณ์ #${device.id}`;
+
+const deviceIdentifiers = (device) =>
+  [
+    device.barcode ? `Barcode: ${device.barcode}` : '',
+    device.serialNumber ? `SN: ${device.serialNumber}` : '',
+    device.imei ? `IMEI: ${device.imei}` : '',
+    device.serviceTag ? `Service Tag: ${device.serviceTag}` : '',
+  ].filter(Boolean).join(' • ');
 
 const IntakeSearchPanel = ({
   value,
@@ -68,7 +80,7 @@ const IntakeSearchPanel = ({
               <div className="mt-2 space-y-2">
                 {devices.map((device) => (
                   <button
-                    key={device.id}
+                    key={`${device.sourceType || 'STOCK_ITEM'}-${device.id}`}
                     type="button"
                     onClick={() => onSelectDevice(device)}
                     className="w-full rounded-xl border border-blue-100 bg-white p-3 text-left hover:border-blue-400"
@@ -77,7 +89,7 @@ const IntakeSearchPanel = ({
                       <div className="min-w-0">
                         <p className="truncate font-black text-slate-900">{deviceName(device)}</p>
                         <p className="mt-1 truncate text-xs font-bold text-slate-500">
-                          {device.serialNumber ? `SN: ${device.serialNumber}` : `Barcode: ${device.barcode}`}
+                          {deviceIdentifiers(device) || 'ยังไม่มีรหัสประจำอุปกรณ์'}
                         </p>
                         {device.latestCustomer ? (
                           <p className="mt-1 truncate text-xs text-emerald-700">
@@ -85,11 +97,18 @@ const IntakeSearchPanel = ({
                           </p>
                         ) : null}
                       </div>
-                      {device.exactIdentifierMatch ? (
-                        <span className="shrink-0 rounded-full bg-blue-100 px-2 py-1 text-[10px] font-black text-blue-700">
-                          รหัสตรงกัน
-                        </span>
-                      ) : null}
+                      <div className="flex shrink-0 flex-col items-end gap-1">
+                        {device.sourceType === 'REGISTERED_DEVICE' ? (
+                          <span className="rounded-full bg-violet-100 px-2 py-1 text-[10px] font-black text-violet-700">
+                            อุปกรณ์ลงทะเบียน
+                          </span>
+                        ) : null}
+                        {device.exactIdentifierMatch ? (
+                          <span className="rounded-full bg-blue-100 px-2 py-1 text-[10px] font-black text-blue-700">
+                            รหัสตรงกัน
+                          </span>
+                        ) : null}
+                      </div>
                     </div>
                   </button>
                 ))}

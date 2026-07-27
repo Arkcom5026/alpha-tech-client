@@ -6,11 +6,6 @@ import RuntimeStatePanel from '../components/RuntimeStatePanel';
 import QueueBoard from '../components/QueueBoard';
 import { CLAIM_LANES, groupByStatus } from '../utils/repairRuntime';
 
-const prioritizeActiveLanes = (lanes = []) => [
-  ...lanes.filter((lane) => lane.items.length > 0),
-  ...lanes.filter((lane) => lane.items.length === 0),
-];
-
 const WarrantyClaimsPage = () => {
   const navigate = useNavigate();
   const { shopSlug } = useParams();
@@ -63,8 +58,8 @@ const WarrantyClaimsPage = () => {
     );
   }, [claims, query]);
 
-  const lanes = useMemo(
-    () => prioritizeActiveLanes(groupByStatus(filtered, CLAIM_LANES)),
+  const activeLanes = useMemo(
+    () => groupByStatus(filtered, CLAIM_LANES).filter((lane) => lane.items.length > 0),
     [filtered]
   );
 
@@ -98,14 +93,14 @@ const WarrantyClaimsPage = () => {
       <RuntimeStatePanel
         loading={loading}
         error={error}
-        empty={!loading && !error && !claims.length}
-        emptyText="ยังไม่มีงานเคลมในระบบ"
+        empty={!loading && !error && !filtered.length}
+        emptyText={query.trim() ? 'ไม่พบงานเคลมที่ตรงกับคำค้นหา' : 'ยังไม่มีงานเคลมในระบบ'}
         onRetry={() => loadClaims()}
       />
 
-      {!loading && !error && claims.length ? (
+      {!loading && !error && activeLanes.length ? (
         <QueueBoard
-          lanes={lanes}
+          lanes={activeLanes}
           type="claim"
           onOpen={(claim) =>
             navigate(`/${shopSlug}/pos/services/warranty-claims/${claim.id}`)

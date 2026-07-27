@@ -259,7 +259,7 @@ const ExternalDeviceIntakeForm = ({
         type="button"
         disabled={!canSubmit}
         onClick={submit}
-        className="min-h-12 w-full rounded-xl bg-blue-700 px-6 font-black text-white shadow-sm disabled:cursor-not-allowed disabled:opacity-40"
+        className="sticky bottom-0 z-20 min-h-14 w-full rounded-xl bg-blue-700 px-6 font-black text-white shadow-lg disabled:cursor-not-allowed disabled:opacity-40 md:static md:min-h-12 md:shadow-sm"
       >
         {submitting ? 'กำลังรับเครื่องและเปิดใบงาน' : 'ยืนยันรับอุปกรณ์ภายนอก'}
       </button>

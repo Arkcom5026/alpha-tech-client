@@ -1,6 +1,6 @@
 import { normalizeRuntimeError, withLoading } from '@/runtime';
 
-export const BRAND_RUNTIME_OPERATION = Object.freeze({
+export const BRAND_RUNTIME_OPERATIONS = Object.freeze({
   FETCH_RUNTIME_PRODUCT_TYPES: 'brand.fetchRuntimeProductTypes',
   FETCH_DROPDOWNS: 'brand.fetchDropdowns',
   FETCH_LIST: 'brand.fetchList',
@@ -12,6 +12,9 @@ export const BRAND_RUNTIME_OPERATION = Object.freeze({
   ATTACH_TO_PRODUCT_TYPE: 'brand.attachToProductType',
   DETACH_FROM_PRODUCT_TYPE: 'brand.detachFromProductType',
 });
+
+// Compatibility alias for the original foundation contract.
+export const BRAND_RUNTIME_OPERATION = BRAND_RUNTIME_OPERATIONS;
 
 export const normalizeBrandRuntimeError = (error) => normalizeRuntimeError(error);
 

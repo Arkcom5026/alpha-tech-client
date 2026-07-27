@@ -1,30 +1,68 @@
 import React from 'react';
 import { formatDateTime } from '../utils/repairRuntime';
 
-const getRepairProductName = (item) =>
-  item.stockItem?.product?.name ||
-  item.deviceModel ||
-  [item.device?.brand, item.device?.model].filter(Boolean).join(' ') ||
-  'ไม่ระบุสินค้า/อุปกรณ์';
+const getRepairAsset = (item) => {
+  if (item.repairAsset) return item.repairAsset;
 
-const getRepairProductMeta = (item) =>
+  if (item.stockItem) {
+    return {
+      sourceType: 'STOCK_ITEM',
+      displayName:
+        item.stockItem?.product?.name ||
+        item.deviceModel ||
+        'สินค้าในร้าน',
+      brand: item.stockItem?.product?.brand || null,
+      category: item.stockItem?.product?.productType || null,
+      model: item.deviceModel || null,
+      barcode: item.stockItem?.barcode || item.device?.barcode || null,
+      serialNumber:
+        item.stockItem?.serialNumber || item.device?.serialNumber || null,
+      imei: item.device?.imei || null,
+    };
+  }
+
+  if (item.device) {
+    return {
+      sourceType: 'CUSTOMER_DEVICE',
+      displayName:
+        [item.device.brand, item.device.model].filter(Boolean).join(' ') ||
+        item.deviceModel ||
+        'อุปกรณ์ของลูกค้า',
+      brand: item.device.brand || null,
+      category: item.device.category || null,
+      model: item.device.model || item.deviceModel || null,
+      barcode: item.device.barcode || null,
+      serialNumber: item.device.serialNumber || null,
+      imei: item.device.imei || null,
+    };
+  }
+
+  return {
+    sourceType: 'DESCRIBED_DEVICE',
+    displayName: item.deviceModel || 'อุปกรณ์ที่ลูกค้านำมาซ่อม',
+    brand: null,
+    category: null,
+    model: item.deviceModel || null,
+    barcode: null,
+    serialNumber: null,
+    imei: null,
+  };
+};
+
+const getRepairAssetMeta = (asset) =>
+  [asset.brand, asset.category].filter(Boolean).join(' • ');
+
+const getRepairAssetIdentity = (asset) =>
   [
-    item.stockItem?.product?.brand,
-    item.stockItem?.product?.productType,
-  ]
-    .filter(Boolean)
-    .join(' • ');
-
-const getRepairIdentity = (item) => {
-  const barcode = item.stockItem?.barcode || item.device?.barcode;
-  const serialNumber = item.stockItem?.serialNumber || item.device?.serialNumber;
-  const imei = item.device?.imei;
-
-  return [
-    barcode ? `Barcode: ${barcode}` : null,
-    serialNumber ? `Serial: ${serialNumber}` : null,
-    imei ? `IMEI: ${imei}` : null,
+    asset.barcode ? `Barcode: ${asset.barcode}` : null,
+    asset.serialNumber ? `Serial: ${asset.serialNumber}` : null,
+    asset.imei ? `IMEI: ${asset.imei}` : null,
   ].filter(Boolean);
+
+const getRepairAssetSourceLabel = (sourceType) => {
+  if (sourceType === 'STOCK_ITEM') return 'สินค้าที่ซื้อจากร้าน';
+  if (sourceType === 'CUSTOMER_DEVICE') return 'อุปกรณ์ของลูกค้า';
+  return 'ข้อมูลจากใบรับซ่อม';
 };
 
 const QueueBoard = ({ lanes, type, onOpen }) => (
@@ -51,9 +89,9 @@ const QueueBoard = ({ lanes, type, onOpen }) => (
                     : item.repairJob?.customerName || null;
                 const customerContact =
                   type === 'repair' ? item.customer?.phone || item.customer?.email : null;
-                const productName = type === 'repair' ? getRepairProductName(item) : null;
-                const productMeta = type === 'repair' ? getRepairProductMeta(item) : null;
-                const productIdentity = type === 'repair' ? getRepairIdentity(item) : [];
+                const repairAsset = type === 'repair' ? getRepairAsset(item) : null;
+                const assetMeta = repairAsset ? getRepairAssetMeta(repairAsset) : null;
+                const assetIdentity = repairAsset ? getRepairAssetIdentity(repairAsset) : [];
 
                 return (
                   <button
@@ -81,17 +119,22 @@ const QueueBoard = ({ lanes, type, onOpen }) => (
 
                     {type === 'repair' ? (
                       <div className="mt-2 rounded-lg border border-slate-100 px-2.5 py-2">
-                        <p className="line-clamp-2 text-sm font-black text-slate-800">
-                          {productName}
-                        </p>
-                        {productMeta ? (
+                        <div className="flex items-start justify-between gap-2">
+                          <p className="line-clamp-2 text-sm font-black text-slate-800">
+                            {repairAsset.displayName}
+                          </p>
+                          <span className="shrink-0 rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-black text-blue-700">
+                            {getRepairAssetSourceLabel(repairAsset.sourceType)}
+                          </span>
+                        </div>
+                        {assetMeta ? (
                           <p className="mt-1 line-clamp-1 text-xs text-slate-500">
-                            {productMeta}
+                            {assetMeta}
                           </p>
                         ) : null}
-                        {productIdentity.length ? (
+                        {assetIdentity.length ? (
                           <div className="mt-1 space-y-0.5 text-[11px] text-slate-500">
-                            {productIdentity.map((value) => (
+                            {assetIdentity.map((value) => (
                               <p key={value} className="line-clamp-1">{value}</p>
                             ))}
                           </div>

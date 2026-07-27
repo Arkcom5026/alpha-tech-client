@@ -31,6 +31,12 @@ const request = async (work, fallback) => {
 };
 
 export const repairApi = {
+  searchIntake: (query) =>
+    request(
+      () => apiClient.get('/repairs/intake-search', { params: { q: String(query).trim() } }),
+      'ไม่สามารถค้นหาลูกค้าหรืออุปกรณ์ได้'
+    ),
+
   getIntakeContext: (lookup) =>
     request(
       () => apiClient.get(`/repairs/intake-context/${encodeURIComponent(String(lookup).trim())}`),

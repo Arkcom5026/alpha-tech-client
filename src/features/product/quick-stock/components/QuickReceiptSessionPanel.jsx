@@ -3,12 +3,15 @@ import { toast } from 'react-toastify';
 
 import {
   addQuickReceiptItem,
+  cancelQuickReceipt,
   completeQuickReceipt,
   createQuickReceiptDraft,
+  deleteQuickReceiptItem,
   finalizeQuickReceipt,
   getQuickReceipt,
   listQuickReceiptDrafts,
   loadQuickReceiptSuppliers,
+  updateQuickReceiptDraft,
 } from '../api/quickReceiptSessionApi';
 
 const STORAGE_KEY = 'alpha-tech.quick-receipt.local-draft.v2';
@@ -44,6 +47,20 @@ const buildLine = ({ operationalProduct, barcodeQueue, defaultCost, priceForm, n
   })),
 });
 
+const toHeader = (detail) => ({
+  supplierId: String(detail?.supplierId || ''),
+  deliveryNoteNumber: detail?.deliveryNoteNumber || '',
+  deliveryNoteDate: detail?.deliveryNoteDate ? String(detail.deliveryNoteDate).slice(0, 10) : '',
+  note: detail?.note || '',
+  taxDocumentMode: detail?.taxDocumentMode || 'NOT_RECEIVED',
+  supplierTaxInvoiceNumber: detail?.supplierTaxInvoiceNumber || '',
+  supplierTaxInvoiceDate: detail?.supplierTaxInvoiceDate ? String(detail.supplierTaxInvoiceDate).slice(0, 10) : '',
+  taxPricingMode: detail?.taxPricingMode || 'VAT_INCLUDED',
+  documentSubtotal: detail?.documentSubtotal ?? '',
+  documentVatAmount: detail?.documentVatAmount ?? '',
+  documentTotalAmount: detail?.documentTotalAmount ?? '',
+});
+
 const QuickReceiptSessionPanel = ({
   operationalProduct,
   barcodeQueue = [],
@@ -56,8 +73,14 @@ const QuickReceiptSessionPanel = ({
   const [localLines, setLocalLines] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
   const [drafts, setDrafts] = useState([]);
+  const [draftSearch, setDraftSearch] = useState('');
   const [receipt, setReceipt] = useState(null);
   const [isBusy, setIsBusy] = useState(false);
+
+  const refreshDrafts = async () => {
+    const rows = await listQuickReceiptDrafts({ status: 'DRAFT' });
+    setDrafts(Array.isArray(rows) ? rows : []);
+  };
 
   useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
@@ -77,8 +100,9 @@ const QuickReceiptSessionPanel = ({
   }, []);
 
   useEffect(() => {
+    if (receipt?.id) return;
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ header, lines: localLines }));
-  }, [header, localLines]);
+  }, [header, localLines, receipt?.id]);
 
   const serverLines = receipt?.items || [];
   const allLines = [...serverLines, ...localLines];
@@ -86,12 +110,26 @@ const QuickReceiptSessionPanel = ({
     () => allLines.reduce((sum, item) => sum + Number(item.quantity || 0), 0),
     [allLines]
   );
+  const visibleDrafts = useMemo(() => {
+    const keyword = draftSearch.trim().toLowerCase();
+    if (!keyword) return drafts;
+    return drafts.filter((draft) =>
+      `${draft.supplierName || ''} ${draft.deliveryNoteNumber || ''}`.toLowerCase().includes(keyword)
+    );
+  }, [draftSearch, drafts]);
 
   const updateHeader = (field, value) => setHeader((current) => ({ ...current, [field]: value }));
   const validateHeader = () => {
     if (!header.supplierId || !String(header.deliveryNoteNumber || '').trim()) {
       throw new Error('กรุณาเลือก Supplier และกรอกเลขที่ใบส่งของก่อน');
     }
+  };
+
+  const resetReceipt = () => {
+    setReceipt(null);
+    setHeader(emptyHeader);
+    setLocalLines([]);
+    localStorage.removeItem(STORAGE_KEY);
   };
 
   const handleAddCurrentLine = () => {
@@ -123,9 +161,12 @@ const QuickReceiptSessionPanel = ({
       let active = receipt;
       if (!active?.id) {
         active = await createQuickReceiptDraft({ ...header, supplierId: Number(header.supplierId) });
+      } else {
+        active = await updateQuickReceiptDraft(active.id, { ...header, supplierId: Number(header.supplierId) });
       }
       active = await uploadLocalLines(active);
-      setDrafts((current) => [active, ...current.filter((item) => item.id !== active.id)]);
+      setHeader(toHeader(active));
+      await refreshDrafts();
       toast.success('เก็บรายการไว้รับต่อภายหลังแล้ว');
     } catch (error) {
       toast.error(error?.message || 'บันทึกรายการรับต่อภายหลังไม่สำเร็จ');
@@ -142,7 +183,8 @@ const QuickReceiptSessionPanel = ({
 
       let completed;
       if (receipt?.id) {
-        const active = await uploadLocalLines(receipt);
+        let active = await updateQuickReceiptDraft(receipt.id, { ...header, supplierId: Number(header.supplierId) });
+        active = await uploadLocalLines(active);
         completed = await finalizeQuickReceipt(active.id);
       } else {
         completed = await completeQuickReceipt({
@@ -153,9 +195,10 @@ const QuickReceiptSessionPanel = ({
       }
 
       setReceipt(completed);
+      setHeader(toHeader(completed));
       setLocalLines([]);
       localStorage.removeItem(STORAGE_KEY);
-      setDrafts((current) => current.filter((item) => item.id !== completed.id));
+      await refreshDrafts();
       toast.success('ยืนยันรับสินค้าครบแล้ว และนำสินค้าเข้าสต๊อกเรียบร้อย');
     } catch (error) {
       toast.error(error?.message || 'ยืนยันรับสินค้าไม่สำเร็จ');
@@ -170,15 +213,8 @@ const QuickReceiptSessionPanel = ({
       const detail = await getQuickReceipt(draft.id);
       setReceipt(detail);
       setLocalLines([]);
-      setHeader((current) => ({
-        ...current,
-        supplierId: String(detail.supplierId || ''),
-        deliveryNoteNumber: detail.deliveryNoteNumber || '',
-        deliveryNoteDate: detail.deliveryNoteDate ? String(detail.deliveryNoteDate).slice(0, 10) : '',
-        taxDocumentMode: detail.taxDocumentMode || 'NOT_RECEIVED',
-        supplierTaxInvoiceNumber: detail.supplierTaxInvoiceNumber || '',
-        supplierTaxInvoiceDate: detail.supplierTaxInvoiceDate ? String(detail.supplierTaxInvoiceDate).slice(0, 10) : '',
-      }));
+      setHeader(toHeader(detail));
+      localStorage.removeItem(STORAGE_KEY);
     } catch (error) {
       toast.error(error?.message || 'เปิดรายการรับต่อไม่สำเร็จ');
     } finally {
@@ -188,6 +224,37 @@ const QuickReceiptSessionPanel = ({
 
   const removeLocalLine = (localId) => setLocalLines((current) => current.filter((line) => line.localId !== localId));
 
+  const removeServerLine = async (itemId) => {
+    if (!receipt?.id) return;
+    setIsBusy(true);
+    try {
+      const updated = await deleteQuickReceiptItem(receipt.id, itemId);
+      setReceipt(updated);
+      toast.success('ลบสินค้าออกจากใบรับแล้ว');
+    } catch (error) {
+      toast.error(error?.message || 'ลบสินค้าไม่สำเร็จ');
+    } finally {
+      setIsBusy(false);
+    }
+  };
+
+  const handleCancelDraft = async () => {
+    if (!receipt?.id || receipt.status !== 'DRAFT') return;
+    setIsBusy(true);
+    try {
+      await cancelQuickReceipt(receipt.id, 'ยกเลิกจากหน้ารับสินค้าด่วน');
+      resetReceipt();
+      await refreshDrafts();
+      toast.success('ยกเลิกรายการรับสินค้าด่วนแล้ว');
+    } catch (error) {
+      toast.error(error?.message || 'ยกเลิกรายการไม่สำเร็จ');
+    } finally {
+      setIsBusy(false);
+    }
+  };
+
+  const locked = receipt?.status === 'COMPLETED' || receipt?.status === 'CANCELLED';
+
   return (
     <section className="rounded-xl border border-indigo-200 bg-white p-4 shadow-sm space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -195,36 +262,40 @@ const QuickReceiptSessionPanel = ({
           <h2 className="font-semibold text-slate-900">ใบรับสินค้าด่วนตามใบส่งของ</h2>
           <p className="text-sm text-slate-600">รวบรวมสินค้าให้ครบก่อน แล้วเลือกเก็บไว้รับต่อหรือยืนยันทั้งใบครั้งเดียว</p>
         </div>
-        {receipt?.code && <div className="rounded-lg bg-indigo-50 px-3 py-2 text-sm text-indigo-900">{receipt.code} · {receipt.status}</div>}
+        <div className="flex items-center gap-2">
+          {receipt?.code && <div className="rounded-lg bg-indigo-50 px-3 py-2 text-sm text-indigo-900">{receipt.code} · {receipt.status}</div>}
+          {locked && <button type="button" className="rounded-lg border px-3 py-2 text-sm" onClick={resetReceipt}>เริ่มใบรับใหม่</button>}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
-        <select className="rounded-lg border px-3 py-2 text-sm" value={header.supplierId} disabled={!!receipt?.id || isBusy} onChange={(e) => updateHeader('supplierId', e.target.value)}>
+        <select className="rounded-lg border px-3 py-2 text-sm" value={header.supplierId} disabled={isBusy || locked} onChange={(e) => updateHeader('supplierId', e.target.value)}>
           <option value="">เลือก Supplier</option>
           {suppliers.map((supplier) => <option key={supplier.id} value={supplier.id}>{supplier.name}</option>)}
         </select>
-        <input className="rounded-lg border px-3 py-2 text-sm" placeholder="เลขที่ใบส่งของ" value={header.deliveryNoteNumber} disabled={!!receipt?.id || isBusy} onChange={(e) => updateHeader('deliveryNoteNumber', e.target.value)} />
-        <input type="date" className="rounded-lg border px-3 py-2 text-sm" value={header.deliveryNoteDate} disabled={!!receipt?.id || isBusy} onChange={(e) => updateHeader('deliveryNoteDate', e.target.value)} />
+        <input className="rounded-lg border px-3 py-2 text-sm" placeholder="เลขที่ใบส่งของ" value={header.deliveryNoteNumber} disabled={isBusy || locked} onChange={(e) => updateHeader('deliveryNoteNumber', e.target.value)} />
+        <input type="date" className="rounded-lg border px-3 py-2 text-sm" value={header.deliveryNoteDate} disabled={isBusy || locked} onChange={(e) => updateHeader('deliveryNoteDate', e.target.value)} />
       </div>
 
       <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
-        <select className="rounded-lg border px-3 py-2 text-sm" value={header.taxDocumentMode} disabled={!!receipt?.id || isBusy} onChange={(e) => updateHeader('taxDocumentMode', e.target.value)}>
+        <select className="rounded-lg border px-3 py-2 text-sm" value={header.taxDocumentMode} disabled={isBusy || locked} onChange={(e) => updateHeader('taxDocumentMode', e.target.value)}>
           <option value="NOT_RECEIVED">ยังไม่มีใบกำกับภาษี</option>
           <option value="RECEIVED_WITH_GOODS">ได้รับใบกำกับภาษีพร้อมสินค้า</option>
           <option value="NON_VAT_DOCUMENT">ไม่มี VAT</option>
           <option value="NO_INPUT_TAX_CLAIM">ไม่ใช้สิทธิภาษีซื้อ</option>
         </select>
         {header.taxDocumentMode === 'RECEIVED_WITH_GOODS' && <>
-          <input className="rounded-lg border px-3 py-2 text-sm" placeholder="เลขที่ใบกำกับภาษี" value={header.supplierTaxInvoiceNumber} disabled={!!receipt?.id || isBusy} onChange={(e) => updateHeader('supplierTaxInvoiceNumber', e.target.value)} />
-          <input type="date" className="rounded-lg border px-3 py-2 text-sm" value={header.supplierTaxInvoiceDate} disabled={!!receipt?.id || isBusy} onChange={(e) => updateHeader('supplierTaxInvoiceDate', e.target.value)} />
+          <input className="rounded-lg border px-3 py-2 text-sm" placeholder="เลขที่ใบกำกับภาษี" value={header.supplierTaxInvoiceNumber} disabled={isBusy || locked} onChange={(e) => updateHeader('supplierTaxInvoiceNumber', e.target.value)} />
+          <input type="date" className="rounded-lg border px-3 py-2 text-sm" value={header.supplierTaxInvoiceDate} disabled={isBusy || locked} onChange={(e) => updateHeader('supplierTaxInvoiceDate', e.target.value)} />
         </>}
       </div>
 
       {!!drafts.length && !receipt?.id && (
-        <div className="rounded-lg border border-slate-200 p-3">
-          <p className="mb-2 text-sm font-medium text-slate-700">รายการที่ยังรับไม่ครบ</p>
+        <div className="rounded-lg border border-slate-200 p-3 space-y-2">
+          <p className="text-sm font-medium text-slate-700">รายการที่ยังรับไม่ครบ</p>
+          <input className="w-full rounded-lg border px-3 py-2 text-sm" placeholder="ค้นหาจาก Supplier หรือเลขที่ใบส่งของ" value={draftSearch} onChange={(e) => setDraftSearch(e.target.value)} />
           <div className="flex flex-wrap gap-2">
-            {drafts.slice(0, 8).map((draft) => (
+            {visibleDrafts.slice(0, 20).map((draft) => (
               <button key={draft.id} type="button" className="rounded-lg border px-3 py-2 text-left text-sm hover:bg-slate-50" onClick={() => resumeDraft(draft)}>
                 {draft.supplierName || `Supplier #${draft.supplierId}`} · {draft.deliveryNoteNumber}
               </button>
@@ -243,7 +314,8 @@ const QuickReceiptSessionPanel = ({
               <span>{item.productName}</span>
               <div className="flex items-center gap-2">
                 <span>{item.quantity} ชิ้น</span>
-                {item.localId && <button type="button" className="text-rose-600" onClick={() => removeLocalLine(item.localId)}>ลบ</button>}
+                {!locked && item.localId && <button type="button" className="text-rose-600" onClick={() => removeLocalLine(item.localId)}>ลบ</button>}
+                {!locked && item.id && <button type="button" className="text-rose-600" disabled={isBusy} onClick={() => removeServerLine(item.id)}>ลบ</button>}
               </div>
             </div>
           ))}
@@ -251,15 +323,10 @@ const QuickReceiptSessionPanel = ({
       )}
 
       <div className="flex flex-wrap justify-end gap-2">
-        <button type="button" className="rounded-lg border px-4 py-2 text-sm font-semibold disabled:opacity-50" disabled={isBusy || receipt?.status === 'COMPLETED'} onClick={handleAddCurrentLine}>
-          เพิ่มสินค้าปัจจุบันในรายการ
-        </button>
-        <button type="button" className="rounded-lg border border-indigo-300 px-4 py-2 text-sm font-semibold text-indigo-700 disabled:opacity-50" disabled={isBusy || !allLines.length || receipt?.status === 'COMPLETED'} onClick={handleSaveForLater}>
-          เก็บไว้รับต่อภายหลัง
-        </button>
-        <button type="button" className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50" disabled={isBusy || !allLines.length || receipt?.status === 'COMPLETED'} onClick={handleFinalize}>
-          ยืนยันรับสินค้าครบแล้ว
-        </button>
+        {receipt?.status === 'DRAFT' && <button type="button" className="rounded-lg border border-rose-300 px-4 py-2 text-sm font-semibold text-rose-700 disabled:opacity-50" disabled={isBusy} onClick={handleCancelDraft}>ยกเลิกใบรับนี้</button>}
+        <button type="button" className="rounded-lg border px-4 py-2 text-sm font-semibold disabled:opacity-50" disabled={isBusy || locked} onClick={handleAddCurrentLine}>เพิ่มสินค้าปัจจุบันในรายการ</button>
+        <button type="button" className="rounded-lg border border-indigo-300 px-4 py-2 text-sm font-semibold text-indigo-700 disabled:opacity-50" disabled={isBusy || !allLines.length || locked} onClick={handleSaveForLater}>เก็บไว้รับต่อภายหลัง</button>
+        <button type="button" className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50" disabled={isBusy || !allLines.length || locked} onClick={handleFinalize}>ยืนยันรับสินค้าครบแล้ว</button>
       </div>
     </section>
   );

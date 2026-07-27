@@ -24,7 +24,9 @@ const ClaimRuntimePanel = ({ claim, submitting, onTransition, onOpenRepair }) =>
             <p className="text-xs font-black uppercase tracking-[0.18em] text-indigo-600">Claim Runtime</p>
             <h2 className="mt-1 text-2xl font-black text-slate-950">{claim.claimNo}</h2>
             <p className="mt-1 text-sm text-slate-500">
-              {claim.stockItem?.product?.name || `Stock #${claim.stockItemId}`}
+              {claim.stockItem?.product?.name ||
+                [claim.device?.brand, claim.device?.model].filter(Boolean).join(' ') ||
+                (claim.stockItemId ? `Stock #${claim.stockItemId}` : `Device #${claim.deviceId}`)}
             </p>
           </div>
           <span className="w-fit rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-xs font-black text-indigo-700">
@@ -37,6 +39,10 @@ const ClaimRuntimePanel = ({ claim, submitting, onTransition, onOpenRepair }) =>
           <Info label="ศูนย์บริการ" value={claim.serviceProvider} />
           <Info label="Tracking" value={claim.trackingNumber} />
           <Info label="เลขอ้างอิง" value={claim.externalClaimRef} />
+          <Info
+            label="Serial"
+            value={claim.stockItem?.serialNumber || claim.device?.serialNumber}
+          />
           <Info label="เปิดเมื่อ" value={formatDateTime(claim.openedAt)} />
           <Info label="ศูนย์รับเมื่อ" value={formatDateTime(claim.providerReceivedAt)} />
           <Info label="ปิดเมื่อ" value={formatDateTime(claim.resolvedAt)} />

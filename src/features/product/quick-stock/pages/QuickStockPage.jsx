@@ -6,20 +6,18 @@ import IntakeControlPanel from "../components/QuickStockToolbar";
 import IntakeQueueTable from "../components/QuickStockSerialDialog";
 import QueueSummary from "../components/QuickStockSummary";
 import CommitBar from "../components/QuickStockCommitBar";
+import QuickReceiptSessionPanel from "../components/QuickReceiptSessionPanel";
 import useQuickStockRuntimeController from "../hooks/useQuickStockRuntimeController";
 
 const QuickStockPage = () => {
   const {
     barcodeInputRef,
     serialInputRefs,
-
     dropdownsLoading,
     isLoading,
-
     productTypes,
     brands,
     units,
-
     selectedProductTypeId,
     setSelectedProductTypeId,
     selectedBrandId,
@@ -35,49 +33,40 @@ const QuickStockPage = () => {
     setAdoptedOperationalProduct,
     isLocalCreateOpen,
     setIsLocalCreateOpen,
-
     barcode,
     setBarcode,
     barcodeQueue,
     autoFocusSerial,
     setAutoFocusSerial,
-
     defaultCost,
     setDefaultCost,
     note,
     setNote,
-
     isCommitting,
     isEditingProduct,
     setIsEditingProduct,
     isSavingProduct,
     isDeletingProduct,
-
     productForm,
     setProductForm,
     priceForm,
     setPriceForm,
-
     localProductForm,
     localPriceForm,
-
     filteredProducts,
     selectedProduct,
     selectedTemplateProduct,
     operationalProduct,
     isTemplateOnlySelection,
     runtimeStatus,
-
     readyCount,
     needDataCount,
     queueReady,
     productReady,
     isBusy,
     noSearchResults,
-
     intakeRuntimeProduct,
     commitRuntimeProduct,
-
     executeProductSearch,
     resetQueue,
     clearProductSelection,
@@ -95,7 +84,6 @@ const QuickStockPage = () => {
     handleDeleteSelectedProductForRecovery,
     handleCommit,
     openLocalCreateForm,
-
     getBrandName,
     getProductTypeName,
     getProductUnitName,
@@ -105,6 +93,18 @@ const QuickStockPage = () => {
 
   return (
     <div className="w-full min-h-screen bg-slate-50 p-4 xl:p-6 space-y-4">
+      <QuickReceiptSessionPanel
+        operationalProduct={operationalProduct}
+        barcodeQueue={barcodeQueue}
+        defaultCost={defaultCost}
+        priceForm={priceForm}
+        note={note}
+        onCurrentLineSaved={() => {
+          resetQueue();
+          clearProductSelection();
+        }}
+      />
+
       <div className="grid grid-cols-1 2xl:grid-cols-12 gap-4">
         <div className="2xl:col-span-4 space-y-4">
           <ProductFinderPanel
@@ -220,11 +220,7 @@ const QuickStockPage = () => {
                   </p>
                 </div>
                 {!isLocalCreateOpen && (
-                  <button
-                    type="button"
-                    className="rounded-lg border px-3 py-1.5 text-sm"
-                    onClick={openLocalCreateForm}
-                  >
+                  <button type="button" className="rounded-lg border px-3 py-1.5 text-sm" onClick={openLocalCreateForm}>
                     เปิดฟอร์ม
                   </button>
                 )}
@@ -232,96 +228,32 @@ const QuickStockPage = () => {
 
               {isLocalCreateOpen && (
                 <div className="space-y-3">
-                  <input
-                    className="w-full rounded-lg border px-3 py-2 text-sm"
-                    placeholder="ชื่อสินค้า"
-                    value={localProductForm.name}
-                    onChange={(e) => updateLocalProductForm("name", e.target.value)}
-                  />
-
+                  <input className="w-full rounded-lg border px-3 py-2 text-sm" placeholder="ชื่อสินค้า" value={localProductForm.name} onChange={(e) => updateLocalProductForm("name", e.target.value)} />
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                    <select
-                      className="rounded-lg border px-3 py-2 text-sm"
-                      value={localProductForm.productTypeId}
-                      onChange={(e) => updateLocalProductForm("productTypeId", e.target.value)}
-                    >
+                    <select className="rounded-lg border px-3 py-2 text-sm" value={localProductForm.productTypeId} onChange={(e) => updateLocalProductForm("productTypeId", e.target.value)}>
                       <option value="">เลือกประเภทสินค้า</option>
-                      {productTypes.map((type) => (
-                        <option key={type.id} value={type.id}>
-                          {type.name}
-                        </option>
-                      ))}
+                      {productTypes.map((type) => <option key={type.id} value={type.id}>{type.name}</option>)}
                     </select>
-
-                    <select
-                      className="rounded-lg border px-3 py-2 text-sm"
-                      value={localProductForm.brandId}
-                      onChange={(e) => updateLocalProductForm("brandId", e.target.value)}
-                    >
+                    <select className="rounded-lg border px-3 py-2 text-sm" value={localProductForm.brandId} onChange={(e) => updateLocalProductForm("brandId", e.target.value)}>
                       <option value="">เลือกแบรนด์</option>
-                      {brands.map((brand) => (
-                        <option key={brand.id} value={brand.id}>
-                          {brand.name}
-                        </option>
-                      ))}
+                      {brands.map((brand) => <option key={brand.id} value={brand.id}>{brand.name}</option>)}
                     </select>
-
-                    <select
-                      className="rounded-lg border px-3 py-2 text-sm"
-                      value={localProductForm.unitId}
-                      onChange={(e) => updateLocalProductForm("unitId", e.target.value)}
-                    >
+                    <select className="rounded-lg border px-3 py-2 text-sm" value={localProductForm.unitId} onChange={(e) => updateLocalProductForm("unitId", e.target.value)}>
                       <option value="">เลือกหน่วย</option>
-                      {units.map((unit) => (
-                        <option key={unit.id} value={unit.id}>
-                          {unit.name}
-                        </option>
-                      ))}
+                      {units.map((unit) => <option key={unit.id} value={unit.id}>{unit.name}</option>)}
                     </select>
-
                     <label className="flex items-center gap-2 rounded-lg border px-3 py-2 text-sm">
-                      <input
-                        type="checkbox"
-                        checked={localProductForm.trackSerialNumber}
-                        onChange={(e) => updateLocalProductForm("trackSerialNumber", e.target.checked)}
-                      />
+                      <input type="checkbox" checked={localProductForm.trackSerialNumber} onChange={(e) => updateLocalProductForm("trackSerialNumber", e.target.checked)} />
                       ติดตาม Serial Number
                     </label>
                   </div>
-
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                    <input
-                      className="rounded-lg border px-3 py-2 text-sm"
-                      placeholder="ราคาทุน"
-                      value={localPriceForm.costPrice}
-                      onChange={(e) => updateLocalPriceForm("costPrice", e.target.value)}
-                    />
-                    <input
-                      className="rounded-lg border px-3 py-2 text-sm"
-                      placeholder="ราคาขายปลีก"
-                      value={localPriceForm.priceRetail}
-                      onChange={(e) => updateLocalPriceForm("priceRetail", e.target.value)}
-                    />
-                    <input
-                      className="rounded-lg border px-3 py-2 text-sm"
-                      placeholder="ราคาส่ง"
-                      value={localPriceForm.priceWholesale}
-                      onChange={(e) => updateLocalPriceForm("priceWholesale", e.target.value)}
-                    />
-                    <input
-                      className="rounded-lg border px-3 py-2 text-sm"
-                      placeholder="ราคาช่าง"
-                      value={localPriceForm.priceTechnician}
-                      onChange={(e) => updateLocalPriceForm("priceTechnician", e.target.value)}
-                    />
+                    <input className="rounded-lg border px-3 py-2 text-sm" placeholder="ราคาทุน" value={localPriceForm.costPrice} onChange={(e) => updateLocalPriceForm("costPrice", e.target.value)} />
+                    <input className="rounded-lg border px-3 py-2 text-sm" placeholder="ราคาขายปลีก" value={localPriceForm.priceRetail} onChange={(e) => updateLocalPriceForm("priceRetail", e.target.value)} />
+                    <input className="rounded-lg border px-3 py-2 text-sm" placeholder="ราคาส่ง" value={localPriceForm.priceWholesale} onChange={(e) => updateLocalPriceForm("priceWholesale", e.target.value)} />
+                    <input className="rounded-lg border px-3 py-2 text-sm" placeholder="ราคาช่าง" value={localPriceForm.priceTechnician} onChange={(e) => updateLocalPriceForm("priceTechnician", e.target.value)} />
                   </div>
-
-                  <button
-                    type="button"
-                    className="w-full rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
-                    disabled={isBusy}
-                    onClick={handleCreateLocalOperationalProduct}
-                  >
+                  <button type="button" className="w-full rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60" disabled={isBusy} onClick={handleCreateLocalOperationalProduct}>
                     {isBusy ? "กำลังสร้างสินค้า Local..." : "สร้างสินค้า Local และ Adopt เข้า QuickStock"}
                   </button>
                 </div>
@@ -347,14 +279,7 @@ const QuickStockPage = () => {
             isCommitting={isCommitting}
             onBarcodeSubmit={handleBarcodeSubmit}
           />
-
-          <QueueSummary
-            total={barcodeQueue.length}
-            readyCount={readyCount}
-            needDataCount={needDataCount}
-            productReady={productReady}
-          />
-
+          <QueueSummary total={barcodeQueue.length} readyCount={readyCount} needDataCount={needDataCount} productReady={productReady} />
           <IntakeQueueTable
             barcodeQueue={barcodeQueue}
             serialInputRefs={serialInputRefs}
@@ -362,7 +287,6 @@ const QuickStockPage = () => {
             onUpdateQueueItemField={updateQueueItemField}
             onRemoveQueueItem={removeQueueItem}
           />
-
           <CommitBar
             selectedProduct={commitRuntimeProduct}
             barcodeQueue={barcodeQueue}

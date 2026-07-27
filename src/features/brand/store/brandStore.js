@@ -207,20 +207,22 @@ export const useBrandStore = create(
       createBrandAction: async ({ name }) => {
         set({ saving: true, error: null });
         try {
-          const created = await brandApi.createBrand({ name });
-          const items = [...get().items, created]
-            .filter(Boolean)
-            .sort((a, b) => {
-              const aAct = (a?.active ?? a?.isActive) ? 1 : 0;
-              const bAct = (b?.active ?? b?.isActive) ? 1 : 0;
-              if (aAct !== bAct) return bAct - aAct;
-              return String(a.name || '').localeCompare(String(b.name || ''), 'th');
-            });
-          const allBrandOptions = [...get().allBrandOptions, created]
-            .filter(Boolean)
-            .sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'th'));
-          set({ items, allBrandOptions, saving: false });
-          return { ok: true, data: created };
+          return await withBrandRuntime(BRAND_RUNTIME_OPERATIONS.CREATE, async () => {
+            const created = await brandApi.createBrand({ name });
+            const items = [...get().items, created]
+              .filter(Boolean)
+              .sort((a, b) => {
+                const aAct = (a?.active ?? a?.isActive) ? 1 : 0;
+                const bAct = (b?.active ?? b?.isActive) ? 1 : 0;
+                if (aAct !== bAct) return bAct - aAct;
+                return String(a.name || '').localeCompare(String(b.name || ''), 'th');
+              });
+            const allBrandOptions = [...get().allBrandOptions, created]
+              .filter(Boolean)
+              .sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'th'));
+            set({ items, allBrandOptions, saving: false });
+            return { ok: true, data: created };
+          });
         } catch (err) {
           const normalized = normalizeBrandRuntimeError(err);
           set({ saving: false, error: normalized });
@@ -231,13 +233,15 @@ export const useBrandStore = create(
       updateBrandAction: async ({ id, name }) => {
         set({ saving: true, error: null });
         try {
-          const updated = await brandApi.updateBrand({ id, name });
-          const items = get().items.map((it) => (it?.id === updated?.id ? updated : it));
-          const allBrandOptions = get().allBrandOptions.map((it) =>
-            it?.id === updated?.id ? updated : it
-          );
-          set({ items, allBrandOptions, saving: false });
-          return { ok: true, data: updated };
+          return await withBrandRuntime(BRAND_RUNTIME_OPERATIONS.UPDATE, async () => {
+            const updated = await brandApi.updateBrand({ id, name });
+            const items = get().items.map((it) => (it?.id === updated?.id ? updated : it));
+            const allBrandOptions = get().allBrandOptions.map((it) =>
+              it?.id === updated?.id ? updated : it
+            );
+            set({ items, allBrandOptions, saving: false });
+            return { ok: true, data: updated };
+          });
         } catch (err) {
           const normalized = normalizeBrandRuntimeError(err);
           set({ saving: false, error: normalized });
@@ -248,13 +252,15 @@ export const useBrandStore = create(
       toggleBrandActiveAction: async ({ id, isActive }) => {
         set({ saving: true, error: null });
         try {
-          const updated = await brandApi.toggleBrandActive({ id, isActive });
-          const items = get().items.map((it) => (it?.id === updated?.id ? updated : it));
-          const allBrandOptions = get().allBrandOptions.map((it) =>
-            it?.id === updated?.id ? updated : it
-          );
-          set({ items, allBrandOptions, saving: false });
-          return { ok: true, data: updated };
+          return await withBrandRuntime(BRAND_RUNTIME_OPERATIONS.TOGGLE_ACTIVE, async () => {
+            const updated = await brandApi.toggleBrandActive({ id, isActive });
+            const items = get().items.map((it) => (it?.id === updated?.id ? updated : it));
+            const allBrandOptions = get().allBrandOptions.map((it) =>
+              it?.id === updated?.id ? updated : it
+            );
+            set({ items, allBrandOptions, saving: false });
+            return { ok: true, data: updated };
+          });
         } catch (err) {
           const normalized = normalizeBrandRuntimeError(err);
           set({ saving: false, error: normalized });

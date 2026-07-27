@@ -12,6 +12,7 @@ export const CLAIM_LANES = [
   { key: 'IN_TRANSIT', label: 'ระหว่างขนส่ง', description: 'กำลังส่งไปศูนย์' },
   { key: 'RECEIVED_BY_PROVIDER', label: 'ศูนย์รับแล้ว', description: 'ศูนย์รับสินค้าแล้ว' },
   { key: 'INSPECTING', label: 'กำลังตรวจสอบ', description: 'ศูนย์กำลังประเมิน' },
+  { key: 'APPROVED', label: 'อนุมัติเคลม', description: 'ศูนย์อนุมัติและรอดำเนินการ' },
   { key: 'REPAIRING', label: 'กำลังซ่อม', description: 'ศูนย์กำลังซ่อมสินค้า' },
   { key: 'REPLACEMENT_PENDING', label: 'รอสินค้าทดแทน', description: 'กำลังรอของเปลี่ยน' },
   { key: 'CREDIT_PENDING', label: 'รอเครดิต', description: 'กำลังรอเอกสารเครดิต' },

@@ -20,6 +20,30 @@ const formatDateTime = (value) => {
   }).format(new Date(value));
 };
 
+const getCustomerFacingStatus = (status = {}, handover = null) => {
+  if (handover?.status === 'DELIVERED') {
+    return {
+      ...status,
+      code: 'DELIVERED',
+      label: 'ส่งมอบอุปกรณ์เรียบร้อยแล้ว',
+      description: 'ร้านส่งมอบอุปกรณ์คืนให้ผู้รับเรียบร้อยแล้ว',
+      stage: 4,
+    };
+  }
+
+  if (handover?.customerConfirmedAt) {
+    return {
+      ...status,
+      code: 'PICKUP_CONFIRMED',
+      label: 'ยืนยันรับอุปกรณ์แล้ว',
+      description: 'ร้านกำลังตรวจสอบและยืนยันการส่งมอบขั้นสุดท้าย',
+      stage: 4,
+    };
+  }
+
+  return status;
+};
+
 const ACCESSORY_LABELS = {
   CHARGER: 'ที่ชาร์จ',
   POWER_ADAPTER: 'อะแดปเตอร์',
@@ -87,7 +111,7 @@ const CustomerRepairTrackingPage = () => {
 
   const repair = tracking.repair;
   const device = repair.device || {};
-  const status = repair.status || {};
+  const status = getCustomerFacingStatus(repair.status || {}, repair.handover);
   const stage = Number(status.stage || 0);
 
   return (

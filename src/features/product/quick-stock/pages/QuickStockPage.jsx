@@ -103,6 +103,10 @@ const QuickStockPage = () => {
     buildPriceFormFromProduct,
   } = useQuickStockRuntimeController();
 
+  const isLocalNonStock =
+    String(localProductForm.mode || "SIMPLE").toUpperCase() === "SIMPLE" &&
+    String(localProductForm.inventoryBehavior || "TRACKED").toUpperCase() === "NON_STOCK";
+
   return (
     <div className="w-full min-h-screen bg-slate-50 p-4 xl:p-6 space-y-4">
       <div className="grid grid-cols-1 2xl:grid-cols-12 gap-4">
@@ -216,7 +220,7 @@ const QuickStockPage = () => {
                 <div>
                   <p className="font-semibold text-slate-900">สร้างสินค้า Local ของร้าน</p>
                   <p className="text-sm text-slate-600">
-                    ใช้เมื่อไม่มี Template หรือสินค้าในร้านที่เหมาะสม ระบบจะสร้าง Operational Product ก่อนรับเข้า
+                    รองรับสินค้าควบคุมสต็อก สินค้า Serial และค่าบริการแบบไม่ควบคุมสต็อก
                   </p>
                 </div>
                 {!isLocalCreateOpen && (
@@ -234,7 +238,7 @@ const QuickStockPage = () => {
                 <div className="space-y-3">
                   <input
                     className="w-full rounded-lg border px-3 py-2 text-sm"
-                    placeholder="ชื่อสินค้า"
+                    placeholder="ชื่อสินค้า / ชื่อค่าบริการ"
                     value={localProductForm.name}
                     onChange={(e) => updateLocalProductForm("name", e.target.value)}
                   />
@@ -279,20 +283,37 @@ const QuickStockPage = () => {
                       ))}
                     </select>
 
-                    <label className="flex items-center gap-2 rounded-lg border px-3 py-2 text-sm">
-                      <input
-                        type="checkbox"
-                        checked={localProductForm.trackSerialNumber}
-                        onChange={(e) => updateLocalProductForm("trackSerialNumber", e.target.checked)}
-                      />
-                      ติดตาม Serial Number
-                    </label>
+                    <select
+                      className="rounded-lg border px-3 py-2 text-sm"
+                      value={localProductForm.mode || "SIMPLE"}
+                      onChange={(e) => updateLocalProductForm("mode", e.target.value)}
+                    >
+                      <option value="STRUCTURED">สินค้า Serial / รายชิ้น</option>
+                      <option value="SIMPLE">สินค้าแบบจำนวน / ค่าบริการ</option>
+                    </select>
+
+                    {String(localProductForm.mode || "SIMPLE").toUpperCase() === "SIMPLE" && (
+                      <select
+                        className="rounded-lg border px-3 py-2 text-sm md:col-span-2"
+                        value={localProductForm.inventoryBehavior || "TRACKED"}
+                        onChange={(e) => updateLocalProductForm("inventoryBehavior", e.target.value)}
+                      >
+                        <option value="TRACKED">ควบคุมจำนวนคงเหลือ</option>
+                        <option value="NON_STOCK">ค่าบริการ / ไม่ควบคุมสต็อก</option>
+                      </select>
+                    )}
                   </div>
+
+                  {isLocalNonStock && (
+                    <div className="rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-800">
+                      ค่าบริการนี้จะพร้อมใช้ในหน้าขายทันที และจะไม่รับเข้า ไม่สร้างยอดคงเหลือ หรือ Stock Movement
+                    </div>
+                  )}
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                     <input
                       className="rounded-lg border px-3 py-2 text-sm"
-                      placeholder="ราคาทุน"
+                      placeholder={isLocalNonStock ? "ต้นทุนอ้างอิง (ใส่ 0 ได้)" : "ราคาทุน"}
                       value={localPriceForm.costPrice}
                       onChange={(e) => updateLocalPriceForm("costPrice", e.target.value)}
                     />
@@ -322,7 +343,11 @@ const QuickStockPage = () => {
                     disabled={isBusy}
                     onClick={handleCreateLocalOperationalProduct}
                   >
-                    {isBusy ? "กำลังสร้างสินค้า Local..." : "สร้างสินค้า Local และ Adopt เข้า QuickStock"}
+                    {isBusy
+                      ? "กำลังสร้าง..."
+                      : isLocalNonStock
+                        ? "สร้างค่าบริการและพร้อมขาย"
+                        : "สร้างสินค้า Local และ Adopt เข้า QuickStock"}
                   </button>
                 </div>
               )}
@@ -369,7 +394,6 @@ const QuickStockPage = () => {
             productReady={productReady}
             queueReady={queueReady}
             isCommitting={isCommitting}
-            onResetQueue={resetQueue}
             onCommit={handleCommit}
           />
         </div>

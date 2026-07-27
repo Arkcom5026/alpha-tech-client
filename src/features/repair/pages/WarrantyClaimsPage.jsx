@@ -6,6 +6,11 @@ import RuntimeStatePanel from '../components/RuntimeStatePanel';
 import QueueBoard from '../components/QueueBoard';
 import { CLAIM_LANES, groupByStatus } from '../utils/repairRuntime';
 
+const prioritizeActiveLanes = (lanes = []) => [
+  ...lanes.filter((lane) => lane.items.length > 0),
+  ...lanes.filter((lane) => lane.items.length === 0),
+];
+
 const WarrantyClaimsPage = () => {
   const navigate = useNavigate();
   const { shopSlug } = useParams();
@@ -32,8 +37,9 @@ const WarrantyClaimsPage = () => {
         claim.trackingNumber,
         claim.supplier?.name,
         claim.serviceProvider,
-        claim.source?.referenceNo,
+        claim.repairJob?.jobNo,
         claim.repairJob?.customerName,
+        claim.repairJob?.customer?.name,
         claim.repairJob?.customer?.phone,
         claim.repairJob?.customer?.email,
         claim.claimAsset?.displayName,
@@ -44,8 +50,11 @@ const WarrantyClaimsPage = () => {
         claim.claimAsset?.serialNumber,
         claim.claimAsset?.imei,
         claim.stockItem?.product?.name,
+        claim.stockItem?.barcode,
+        claim.stockItem?.serialNumber,
         claim.device?.brand,
         claim.device?.model,
+        claim.device?.barcode,
         claim.device?.serialNumber,
         claim.device?.imei,
       ]
@@ -55,7 +64,7 @@ const WarrantyClaimsPage = () => {
   }, [claims, query]);
 
   const lanes = useMemo(
-    () => groupByStatus(filtered, CLAIM_LANES),
+    () => prioritizeActiveLanes(groupByStatus(filtered, CLAIM_LANES)),
     [filtered]
   );
 
@@ -72,7 +81,7 @@ const WarrantyClaimsPage = () => {
           <input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="ค้นหาเลขเคลม ลูกค้า อุปกรณ์ Supplier Tracking หรือเลขอ้างอิง"
+            placeholder="ค้นหาเลขเคลม เหตุผล Supplier Tracking หรือเลขอ้างอิง"
             className="min-h-12 flex-1 rounded-xl border border-slate-300 px-4"
           />
 

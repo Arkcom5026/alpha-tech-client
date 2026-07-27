@@ -248,7 +248,7 @@ const RepairIntakePage = () => {
                 </span>
               ) : runtime.intakeNotFound ? (
                 <span className="w-fit rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-black text-amber-700">
-                  ไม่พบอุปกรณ์ในระบบ
+                  ไม่พบผลการค้นหา
                 </span>
               ) : runtime.intakeContext ? (
                 <span className="w-fit rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-700">
@@ -283,11 +283,11 @@ const RepairIntakePage = () => {
                     🔎
                   </div>
                   <h3 className="mt-4 text-lg font-black text-slate-900">
-                    ไม่พบอุปกรณ์ “{runtime.intakeNotFoundLookup}”
+                    ไม่พบลูกค้าหรืออุปกรณ์ “{runtime.intakeNotFoundLookup}”
                   </h3>
                   <p className="mt-2 max-w-lg text-sm leading-6 text-slate-600">
-                    รายการนี้ไม่ใช่ข้อผิดพลาดของระบบ หากเป็นอุปกรณ์ของลูกค้าที่ไม่ได้ซื้อจากร้าน
-                    ให้เลือกลูกค้าแล้วลงทะเบียนเป็นอุปกรณ์ภายนอก
+                    รายการนี้ไม่ใช่ข้อผิดพลาดของระบบ สามารถเพิ่มลูกค้าใหม่ หรือหากเป็นอุปกรณ์
+                    ที่ไม่ได้ซื้อจากร้าน ให้เลือกลูกค้าแล้วลงทะเบียนเป็นอุปกรณ์ภายนอก
                   </p>
                   <div className="mt-5 flex flex-col gap-2 sm:flex-row">
                     <button
@@ -295,7 +295,7 @@ const RepairIntakePage = () => {
                       onClick={() => setSearchPath('CUSTOMER')}
                       className="min-h-11 rounded-xl border border-slate-300 bg-white px-5 text-sm font-black text-slate-700"
                     >
-                      ค้นหาและเลือกลูกค้า
+                      ค้นหาหรือเพิ่มลูกค้า
                     </button>
                     <button
                       type="button"

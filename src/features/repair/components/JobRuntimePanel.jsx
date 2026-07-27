@@ -32,8 +32,14 @@ const JobRuntimePanel = ({ job, submitting, onTransition, onAddPart, onOpenClaim
           <Info label="อัปเดตล่าสุด" value={formatDateTime(job.updatedAt)} />
           <Info label="มัดจำ" value={formatMoney(job.depositPaid)} />
           <Info label="ราคาประเมิน" value={formatMoney(job.estimatedCost)} />
-          <Info label="บาร์โค้ด" value={job.stockItem?.barcode} />
-          <Info label="Serial" value={job.stockItem?.serialNumber} />
+          <Info
+            label="บาร์โค้ด"
+            value={job.stockItem?.barcode || job.device?.barcode}
+          />
+          <Info
+            label="Serial"
+            value={job.stockItem?.serialNumber || job.device?.serialNumber}
+          />
         </div>
 
         <div className="mt-4 rounded-xl border border-slate-200 p-4">
@@ -137,7 +143,8 @@ const JobRuntimePanel = ({ job, submitting, onTransition, onAddPart, onOpenClaim
               เปิดรายการเคลม
             </button>
           </div>
-        ) : job.stockItemId && !['COMPLETED', 'CANCELLED'].includes(job.status) ? (
+        ) : (job.stockItemId || job.deviceId) &&
+          !['COMPLETED', 'CANCELLED'].includes(job.status) ? (
           <div className="mt-4 grid gap-3 md:grid-cols-2">
             <textarea
               rows={3}

@@ -9,8 +9,8 @@ const source = fs.readFileSync(path.join(path.dirname(filename), 'QuickReceiptSe
 describe('QuickReceiptSessionPanel executable workflow contract', () => {
   it('persists the whole local receipt cart, not only the header', () => {
     expect(source).toContain("alpha-tech.quick-receipt.local-draft.v2");
-    expect(source).toMatch(/JSON\.stringify\(\{\s*header,\s*lines\s*\}\)/);
-    expect(source).toMatch(/setLines\(Array\.isArray\(parsed\.lines\)/);
+    expect(source).toMatch(/JSON\.stringify\(\{\s*header,\s*lines: localLines\s*\}\)/);
+    expect(source).toMatch(/setLocalLines\(Array\.isArray\(parsed\.lines\)/);
   });
 
   it('keeps one-shot and resumable flows separate at the UI boundary', () => {
@@ -27,14 +27,17 @@ describe('QuickReceiptSessionPanel executable workflow contract', () => {
     expect(source).toMatch(/setReceipt\(detail\)/);
   });
 
-  it('retains recovery data when completion fails and clears it only after success', () => {
-    const completeStart = source.indexOf('const handleComplete = async');
-    const completeEnd = source.indexOf('const resumeDraft', completeStart);
-    const completeFlow = source.slice(completeStart, completeEnd);
-    expect(completeFlow).toContain('await completeQuickReceipt');
-    expect(completeFlow).toContain('localStorage.removeItem(STORAGE_KEY)');
-    expect(completeFlow).toContain('catch (error)');
-    expect(completeFlow).not.toMatch(/catch \(error\)[\s\S]*localStorage\.removeItem/);
+  it('retains recovery data when finalization fails and clears it only after success', () => {
+    const finalizeStart = source.indexOf('const handleFinalize = async');
+    const finalizeEnd = source.indexOf('const resumeDraft', finalizeStart);
+    const finalizeFlow = source.slice(finalizeStart, finalizeEnd);
+    const clearIndex = finalizeFlow.indexOf('localStorage.removeItem(STORAGE_KEY)');
+    const catchIndex = finalizeFlow.indexOf('catch (error)');
+
+    expect(finalizeFlow).toContain('await completeQuickReceipt');
+    expect(finalizeFlow).toContain('await finalizeQuickReceipt');
+    expect(clearIndex).toBeGreaterThan(0);
+    expect(catchIndex).toBeGreaterThan(clearIndex);
   });
 
   it('builds each line with product, quantity, prices and barcode units', () => {

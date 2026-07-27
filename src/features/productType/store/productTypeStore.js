@@ -8,13 +8,22 @@ import {
   archiveProductType,
   restoreProductType,
 } from '../api/productTypeApi';
-import { normalizeRuntimeError } from '@/runtime';
+import { normalizeRuntimeError, withLoading } from '@/runtime';
+
+const PRODUCT_TYPE_LOADING_KEYS = {
+  list: 'productType.fetchList',
+  detail: 'productType.fetchById',
+  create: 'productType.create',
+  update: 'productType.update',
+  archive: 'productType.archive',
+  restore: 'productType.restore',
+};
 
 // ✅ Standardized Product Type Store (Production-ready)
 // - No hard delete (archive/restore only)
 // - All API calls via productTypeApi
 // - Actions suffixed with `Action`
-// - try...catch everywhere + ADS runtime error normalization
+// - try...catch everywhere + ADS runtime error/loading contracts
 // - Supports page, limit, search, includeInactive, categoryId
 
 const useProductTypeStore = create(
@@ -54,7 +63,9 @@ const useProductTypeStore = create(
       const { page, limit, search, includeInactive, categoryId } = get();
       set({ isLoading: true, error: null });
       try {
-        const res = await getProductTypes({ page, limit, search, includeInactive, categoryId });
+        const res = await withLoading(PRODUCT_TYPE_LOADING_KEYS.list, () =>
+          getProductTypes({ page, limit, search, includeInactive, categoryId }),
+        );
 
         // ---- Normalize various BE response shapes (deep-safe) ----
         const pick = (obj, paths = []) => {
@@ -135,7 +146,9 @@ const useProductTypeStore = create(
     fetchByIdAction: async (id) => {
       set({ isLoading: true, error: null });
       try {
-        const data = await getProductTypeById(id);
+        const data = await withLoading(PRODUCT_TYPE_LOADING_KEYS.detail, () =>
+          getProductTypeById(id),
+        );
         set({ current: data, isLoading: false });
         return data;
       } catch (err) {
@@ -148,7 +161,9 @@ const useProductTypeStore = create(
     createProductTypeAction: async (payload) => {
       set({ isSubmitting: true, error: null });
       try {
-        const created = await createProductType(payload);
+        const created = await withLoading(PRODUCT_TYPE_LOADING_KEYS.create, () =>
+          createProductType(payload),
+        );
         set({ isSubmitting: false });
         await get().fetchListAction();
         return created;
@@ -161,7 +176,9 @@ const useProductTypeStore = create(
     updateProductTypeAction: async (id, payload) => {
       set({ isSubmitting: true, error: null });
       try {
-        const updated = await updateProductType(id, payload);
+        const updated = await withLoading(PRODUCT_TYPE_LOADING_KEYS.update, () =>
+          updateProductType(id, payload),
+        );
         set({ isSubmitting: false });
         await get().fetchListAction();
         return updated;
@@ -174,7 +191,7 @@ const useProductTypeStore = create(
     archiveProductTypeAction: async (id) => {
       set({ isSubmitting: true, error: null });
       try {
-        await archiveProductType(id);
+        await withLoading(PRODUCT_TYPE_LOADING_KEYS.archive, () => archiveProductType(id));
         set({ isSubmitting: false });
         await get().fetchListAction();
       } catch (err) {
@@ -186,7 +203,7 @@ const useProductTypeStore = create(
     restoreProductTypeAction: async (id) => {
       set({ isSubmitting: true, error: null });
       try {
-        await restoreProductType(id);
+        await withLoading(PRODUCT_TYPE_LOADING_KEYS.restore, () => restoreProductType(id));
         set({ isSubmitting: false });
         await get().fetchListAction();
       } catch (err) {

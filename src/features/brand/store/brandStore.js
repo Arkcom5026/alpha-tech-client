@@ -1,22 +1,12 @@
-// src/features/brand/store/brandStore.js
-// Zustand Store (Production-grade)
-
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 
 import * as brandApi from '../api/brandApi';
-
-const normalizeErrorMessage = (err) => {
-  if (!err) return null;
-  if (typeof err === 'string') return err;
-  if (err.message) return String(err.message);
-  if (err.status && err.raw) return String(err.message || 'REQUEST_FAILED');
-  try {
-    return JSON.stringify(err);
-  } catch {
-    return 'REQUEST_FAILED';
-  }
-};
+import {
+  BRAND_RUNTIME_OPERATIONS,
+  normalizeBrandRuntimeError,
+  withBrandRuntime,
+} from '../runtime/brandRuntime';
 
 const normalizeId = (value) => {
   if (value === '' || value === null || value === undefined) return undefined;
@@ -62,19 +52,21 @@ export const useBrandStore = create(
       fetchRuntimeProductTypesAction: async (override = {}) => {
         set({ runtimeProductTypesLoading: true, error: null });
         try {
-          const items = await brandApi.getRuntimeProductTypes({
-            includeInactive: override.includeInactive ?? false,
-            pageSize: override.pageSize ?? 100,
-            q: override.q ?? '',
-          });
-          const safeItems = Array.isArray(items) ? items : [];
-          set({
-            runtimeProductTypes: safeItems,
-            runtimeProductTypesLoading: false,
-          });
-          return { ok: true, items: safeItems };
+          return await withBrandRuntime(
+            BRAND_RUNTIME_OPERATIONS.FETCH_RUNTIME_PRODUCT_TYPES,
+            async () => {
+              const items = await brandApi.getRuntimeProductTypes({
+                includeInactive: override.includeInactive ?? false,
+                pageSize: override.pageSize ?? 100,
+                q: override.q ?? '',
+              });
+              const safeItems = Array.isArray(items) ? items : [];
+              set({ runtimeProductTypes: safeItems, runtimeProductTypesLoading: false });
+              return { ok: true, items: safeItems };
+            }
+          );
         } catch (err) {
-          const normalized = normalizeErrorMessage(err);
+          const normalized = normalizeBrandRuntimeError(err);
           set({ runtimeProductTypesLoading: false, error: normalized });
           return { ok: false, error: normalized };
         }
@@ -111,26 +103,23 @@ export const useBrandStore = create(
 
         set({ loading: true, dropdownsLoading: true, error: null });
         try {
-          const items = await brandApi.getBrandDropdowns({
-            includeInactive,
-            productTypeId,
+          return await withBrandRuntime(BRAND_RUNTIME_OPERATIONS.FETCH_DROPDOWNS, async () => {
+            const items = await brandApi.getBrandDropdowns({ includeInactive, productTypeId });
+            const safeItems = Array.isArray(items) ? items : [];
+            set({
+              items: safeItems,
+              page: 1,
+              pageSize: safeItems.length,
+              total: safeItems.length,
+              loading: false,
+              dropdownsLoading: false,
+              dropdownsLoaded: safeItems.length > 0,
+              lastFetchKey: fetchKey,
+            });
+            return { ok: true, items: safeItems };
           });
-          const safeItems = Array.isArray(items) ? items : [];
-
-          set({
-            items: safeItems,
-            page: 1,
-            pageSize: safeItems.length,
-            total: safeItems.length,
-            loading: false,
-            dropdownsLoading: false,
-            dropdownsLoaded: safeItems.length > 0,
-            lastFetchKey: fetchKey,
-          });
-
-          return { ok: true, items: safeItems };
         } catch (err) {
-          const normalized = normalizeErrorMessage(err);
+          const normalized = normalizeBrandRuntimeError(err);
           set({
             loading: false,
             dropdownsLoading: false,
@@ -170,29 +159,28 @@ export const useBrandStore = create(
         const state = get();
         set({ loading: true, error: null });
         try {
-          const data = await brandApi.getBrands({
-            q: override.q ?? state.q,
-            page: override.page ?? state.page,
-            pageSize: override.pageSize ?? state.pageSize,
-            includeInactive: override.includeInactive ?? state.includeInactive,
-            productTypeId: normalizeId(override.productTypeId),
+          return await withBrandRuntime(BRAND_RUNTIME_OPERATIONS.FETCH_LIST, async () => {
+            const data = await brandApi.getBrands({
+              q: override.q ?? state.q,
+              page: override.page ?? state.page,
+              pageSize: override.pageSize ?? state.pageSize,
+              includeInactive: override.includeInactive ?? state.includeInactive,
+              productTypeId: normalizeId(override.productTypeId),
+            });
+            const safeItems = Array.isArray(data?.items) ? data.items : [];
+            set({
+              items: safeItems,
+              page: Number(data?.page) || (override.page ?? state.page),
+              pageSize: Number(data?.pageSize) || (override.pageSize ?? state.pageSize),
+              total: Number(data?.total) || 0,
+              loading: false,
+              dropdownsLoaded: safeItems.length > 0,
+              lastFetchKey: null,
+            });
+            return { ok: true, items: safeItems };
           });
-
-          const safeItems = Array.isArray(data?.items) ? data.items : [];
-
-          set({
-            items: safeItems,
-            page: Number(data?.page) || (override.page ?? state.page),
-            pageSize: Number(data?.pageSize) || (override.pageSize ?? state.pageSize),
-            total: Number(data?.total) || 0,
-            loading: false,
-            dropdownsLoaded: safeItems.length > 0,
-            lastFetchKey: null,
-          });
-
-          return { ok: true, items: safeItems };
         } catch (err) {
-          const normalized = normalizeErrorMessage(err);
+          const normalized = normalizeBrandRuntimeError(err);
           set({ loading: false, error: normalized });
           return { ok: false, error: normalized };
         }
@@ -201,17 +189,16 @@ export const useBrandStore = create(
       fetchAllBrandOptionsAction: async (override = {}) => {
         set({ allBrandOptionsLoading: true, error: null });
         try {
-          const items = await brandApi.getBrandDropdowns({
-            includeInactive: override.includeInactive ?? false,
+          return await withBrandRuntime(BRAND_RUNTIME_OPERATIONS.FETCH_ALL_OPTIONS, async () => {
+            const items = await brandApi.getBrandDropdowns({
+              includeInactive: override.includeInactive ?? false,
+            });
+            const safeItems = Array.isArray(items) ? items : [];
+            set({ allBrandOptions: safeItems, allBrandOptionsLoading: false });
+            return { ok: true, items: safeItems };
           });
-          const safeItems = Array.isArray(items) ? items : [];
-          set({
-            allBrandOptions: safeItems,
-            allBrandOptionsLoading: false,
-          });
-          return { ok: true, items: safeItems };
         } catch (err) {
-          const normalized = normalizeErrorMessage(err);
+          const normalized = normalizeBrandRuntimeError(err);
           set({ allBrandOptionsLoading: false, error: normalized });
           return { ok: false, error: normalized };
         }
@@ -221,7 +208,6 @@ export const useBrandStore = create(
         set({ saving: true, error: null });
         try {
           const created = await brandApi.createBrand({ name });
-
           const items = [...get().items, created]
             .filter(Boolean)
             .sort((a, b) => {
@@ -230,15 +216,13 @@ export const useBrandStore = create(
               if (aAct !== bAct) return bAct - aAct;
               return String(a.name || '').localeCompare(String(b.name || ''), 'th');
             });
-
           const allBrandOptions = [...get().allBrandOptions, created]
             .filter(Boolean)
             .sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'th'));
-
           set({ items, allBrandOptions, saving: false });
           return { ok: true, data: created };
         } catch (err) {
-          const normalized = normalizeErrorMessage(err);
+          const normalized = normalizeBrandRuntimeError(err);
           set({ saving: false, error: normalized });
           return { ok: false, error: normalized };
         }
@@ -248,13 +232,14 @@ export const useBrandStore = create(
         set({ saving: true, error: null });
         try {
           const updated = await brandApi.updateBrand({ id, name });
-
           const items = get().items.map((it) => (it?.id === updated?.id ? updated : it));
-          const allBrandOptions = get().allBrandOptions.map((it) => (it?.id === updated?.id ? updated : it));
+          const allBrandOptions = get().allBrandOptions.map((it) =>
+            it?.id === updated?.id ? updated : it
+          );
           set({ items, allBrandOptions, saving: false });
           return { ok: true, data: updated };
         } catch (err) {
-          const normalized = normalizeErrorMessage(err);
+          const normalized = normalizeBrandRuntimeError(err);
           set({ saving: false, error: normalized });
           return { ok: false, error: normalized };
         }
@@ -264,13 +249,14 @@ export const useBrandStore = create(
         set({ saving: true, error: null });
         try {
           const updated = await brandApi.toggleBrandActive({ id, isActive });
-
           const items = get().items.map((it) => (it?.id === updated?.id ? updated : it));
-          const allBrandOptions = get().allBrandOptions.map((it) => (it?.id === updated?.id ? updated : it));
+          const allBrandOptions = get().allBrandOptions.map((it) =>
+            it?.id === updated?.id ? updated : it
+          );
           set({ items, allBrandOptions, saving: false });
           return { ok: true, data: updated };
         } catch (err) {
-          const normalized = normalizeErrorMessage(err);
+          const normalized = normalizeBrandRuntimeError(err);
           set({ saving: false, error: normalized });
           return { ok: false, error: normalized };
         }
@@ -285,18 +271,20 @@ export const useBrandStore = create(
 
         set({ productTypeBrandLinksLoading: true, error: null });
         try {
-          const data = await brandApi.getProductTypeBrandLinks({
-            productTypeId: ptId,
-            includeInactive: includeInactive ?? get().includeInactive,
-          });
-          const items = Array.isArray(data?.items) ? data.items : [];
-          set({
-            productTypeBrandLinks: items,
-            productTypeBrandLinksLoading: false,
-          });
-          return { ok: true, items };
+          return await withBrandRuntime(
+            BRAND_RUNTIME_OPERATIONS.FETCH_PRODUCT_TYPE_LINKS,
+            async () => {
+              const data = await brandApi.getProductTypeBrandLinks({
+                productTypeId: ptId,
+                includeInactive: includeInactive ?? get().includeInactive,
+              });
+              const items = Array.isArray(data?.items) ? data.items : [];
+              set({ productTypeBrandLinks: items, productTypeBrandLinksLoading: false });
+              return { ok: true, items };
+            }
+          );
         } catch (err) {
-          const normalized = normalizeErrorMessage(err);
+          const normalized = normalizeBrandRuntimeError(err);
           set({ productTypeBrandLinksLoading: false, error: normalized });
           return { ok: false, error: normalized };
         }
@@ -305,18 +293,10 @@ export const useBrandStore = create(
       attachBrandToProductTypeAction: async ({ productTypeId, brandId }) => {
         const ptId = normalizeId(productTypeId);
         const bId = normalizeId(brandId);
-
         set({ saving: true, error: null });
         try {
-          if (!ptId || !bId) {
-            throw new Error('INVALID_PRODUCTTYPE_OR_BRAND');
-          }
-
-          const res = await brandApi.attachBrandToProductType({
-            productTypeId: ptId,
-            brandId: bId,
-          });
-
+          if (!ptId || !bId) throw new Error('INVALID_PRODUCTTYPE_OR_BRAND');
+          const res = await brandApi.attachBrandToProductType({ productTypeId: ptId, brandId: bId });
           await get().fetchProductTypeBrandLinksAction({ productTypeId: ptId, includeInactive: true });
           await get().fetchBrandsAction({
             q: get().q,
@@ -325,11 +305,10 @@ export const useBrandStore = create(
             includeInactive: get().includeInactive,
             productTypeId: ptId,
           });
-
           set({ saving: false });
           return { ok: true, data: res };
         } catch (err) {
-          const normalized = normalizeErrorMessage(err);
+          const normalized = normalizeBrandRuntimeError(err);
           set({ saving: false, error: normalized });
           return { ok: false, error: normalized };
         }
@@ -338,13 +317,10 @@ export const useBrandStore = create(
       detachBrandFromProductTypeAction: async ({ id, productTypeId }) => {
         const linkId = normalizeId(id);
         const ptId = normalizeId(productTypeId);
-
         set({ saving: true, error: null });
         try {
           if (!linkId) throw new Error('INVALID_ID');
-
           const res = await brandApi.detachBrandFromProductType({ id: linkId });
-
           if (ptId) {
             await get().fetchProductTypeBrandLinksAction({ productTypeId: ptId, includeInactive: true });
             await get().fetchBrandsAction({
@@ -355,11 +331,10 @@ export const useBrandStore = create(
               productTypeId: ptId,
             });
           }
-
           set({ saving: false });
           return { ok: true, data: res };
         } catch (err) {
-          const normalized = normalizeErrorMessage(err);
+          const normalized = normalizeBrandRuntimeError(err);
           set({ saving: false, error: normalized });
           return { ok: false, error: normalized };
         }

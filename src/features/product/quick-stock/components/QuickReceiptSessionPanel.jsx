@@ -16,6 +16,9 @@ import {
 
 const STORAGE_KEY = 'alpha-tech.quick-receipt.local-draft.v2';
 
+const normalizeTaxDocumentMode = (value) =>
+  value === 'RECEIVED_WITH_GOODS' ? 'RECEIVED' : (value || 'NOT_RECEIVED');
+
 const emptyHeader = {
   supplierId: '',
   deliveryNoteNumber: '',
@@ -52,7 +55,7 @@ const toHeader = (detail) => ({
   deliveryNoteNumber: detail?.deliveryNoteNumber || '',
   deliveryNoteDate: detail?.deliveryNoteDate ? String(detail.deliveryNoteDate).slice(0, 10) : '',
   note: detail?.note || '',
-  taxDocumentMode: detail?.taxDocumentMode || 'NOT_RECEIVED',
+  taxDocumentMode: normalizeTaxDocumentMode(detail?.taxDocumentMode),
   supplierTaxInvoiceNumber: detail?.supplierTaxInvoiceNumber || '',
   supplierTaxInvoiceDate: detail?.supplierTaxInvoiceDate ? String(detail.supplierTaxInvoiceDate).slice(0, 10) : '',
   taxPricingMode: detail?.taxPricingMode || 'VAT_INCLUDED',
@@ -87,7 +90,11 @@ const QuickReceiptSessionPanel = ({
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        setHeader((current) => ({ ...current, ...(parsed.header || {}) }));
+        setHeader((current) => ({
+          ...current,
+          ...(parsed.header || {}),
+          taxDocumentMode: normalizeTaxDocumentMode(parsed.header?.taxDocumentMode),
+        }));
         setLocalLines(Array.isArray(parsed.lines) ? parsed.lines : []);
       } catch (_error) {}
     }
@@ -280,11 +287,11 @@ const QuickReceiptSessionPanel = ({
       <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
         <select className="rounded-lg border px-3 py-2 text-sm" value={header.taxDocumentMode} disabled={isBusy || locked} onChange={(e) => updateHeader('taxDocumentMode', e.target.value)}>
           <option value="NOT_RECEIVED">ยังไม่มีใบกำกับภาษี</option>
-          <option value="RECEIVED_WITH_GOODS">ได้รับใบกำกับภาษีพร้อมสินค้า</option>
+          <option value="RECEIVED">ได้รับใบกำกับภาษีพร้อมสินค้า</option>
           <option value="NON_VAT_DOCUMENT">ไม่มี VAT</option>
           <option value="NO_INPUT_TAX_CLAIM">ไม่ใช้สิทธิภาษีซื้อ</option>
         </select>
-        {header.taxDocumentMode === 'RECEIVED_WITH_GOODS' && <>
+        {header.taxDocumentMode === 'RECEIVED' && <>
           <input className="rounded-lg border px-3 py-2 text-sm" placeholder="เลขที่ใบกำกับภาษี" value={header.supplierTaxInvoiceNumber} disabled={isBusy || locked} onChange={(e) => updateHeader('supplierTaxInvoiceNumber', e.target.value)} />
           <input type="date" className="rounded-lg border px-3 py-2 text-sm" value={header.supplierTaxInvoiceDate} disabled={isBusy || locked} onChange={(e) => updateHeader('supplierTaxInvoiceDate', e.target.value)} />
         </>}

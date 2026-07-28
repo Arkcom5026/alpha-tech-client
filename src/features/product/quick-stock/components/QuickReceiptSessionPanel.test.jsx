@@ -21,6 +21,13 @@ describe('QuickReceiptSessionPanel executable workflow contract', () => {
     expect(source).toContain('ยืนยันรับสินค้าครบแล้ว');
   });
 
+  it('uses the unified input-tax document mode and recovers legacy drafts', () => {
+    expect(source).toContain('<option value="RECEIVED">');
+    expect(source).toContain("value === 'RECEIVED_WITH_GOODS' ? 'RECEIVED'");
+    expect(source).toMatch(/taxDocumentMode: normalizeTaxDocumentMode/);
+    expect(source).not.toContain('<option value="RECEIVED_WITH_GOODS">');
+  });
+
   it('resumes a server draft from full receipt and tax detail', () => {
     expect(source).toMatch(/const detail = await getQuickReceipt\(draft\.id\)/);
     expect(source).toMatch(/setReceipt\(detail\)/);

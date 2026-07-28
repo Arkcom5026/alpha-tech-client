@@ -26,6 +26,7 @@ const PaymentSummary = ({
   currentSaleMode,
   setCurrentSaleMode,
   hasValidCustomerId = false,
+  onSaveHeldCart,
 }) => {
   const totalNum = Number(totalToPay) || 0;
   const paidNum = Number(grandTotalPaid) || 0;
@@ -118,7 +119,7 @@ const PaymentSummary = ({
           disabled={isSubmitting}
           className="accent-slate-900 h-3.5 w-3.5"
         />
-        <span>เปิดเลนขายแบบ เครดิต/หน่วยงาน</span>
+        <span>เครดิต/หน่วยงาน</span>
         {!hasValidCustomerId && isCredit && (
           <span className="text-[10px] text-rose-500 font-medium">(กรุณาเลือกชื่อลูกค้าก่อน)</span>
         )}
@@ -134,8 +135,16 @@ const PaymentSummary = ({
         />
       </div>
 
-      {/* ปุ่มสั่งการกดยืนยันการขายพรีเมียมสีเข้มองค์กร */}
-      <div className="pt-1 select-none">
+      {/* ปุ่มบันทึกการจองและบันทึกการขาย */}
+      <div className="grid grid-cols-2 gap-2 pt-1 select-none">
+        <button
+          type="button"
+          onClick={onSaveHeldCart}
+          disabled={isSubmitting}
+          className="h-9 border border-orange-300 bg-orange-50 hover:bg-orange-100 text-orange-700 font-black text-xs rounded-xl active:scale-[0.99] transition-all disabled:opacity-40 disabled:transform-none"
+        >
+          บันทึกการจอง
+        </button>
         <button
           type="button"
           onClick={async () => {
@@ -148,9 +157,9 @@ const PaymentSummary = ({
             }
           }}
           disabled={!isConfirmEnabled || isSubmitting}
-          className="w-full h-9 bg-slate-900 hover:bg-slate-800 text-white font-black text-xs rounded-xl active:scale-[0.99] transition-all shadow-md disabled:opacity-40 disabled:transform-none disabled:shadow-none"
+          className="h-9 bg-slate-900 hover:bg-slate-800 text-white font-black text-xs rounded-xl active:scale-[0.99] transition-all shadow-md disabled:opacity-40 disabled:transform-none disabled:shadow-none"
         >
-          {isSubmitting ? '⏳ กำลังประมวลผลตัดคลังสินค้า...' : '🛒 ยืนยันปิดยอดการขายสินค้า'}
+          {isSubmitting ? '⏳ กำลังบันทึก...' : 'บันทึกการขาย'}
         </button>
       </div>
     </div>
@@ -175,6 +184,7 @@ PaymentSummary.propTypes = {
   currentSaleMode: PropTypes.oneOf([SALE_MODE.CASH, SALE_MODE.CREDIT]).isRequired,
   setCurrentSaleMode: PropTypes.func.isRequired,
   hasValidCustomerId: PropTypes.bool,
+  onSaveHeldCart: PropTypes.func.isRequired,
 };
 
 export default PaymentSummary;

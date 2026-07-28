@@ -13,6 +13,7 @@ export const getSidebarFinanceItems = (shopSlug) => {
       items: [
         { label: 'สรุปปิดร้าน', to: `${prefix}/finance/daily-closing`, cap: P1_CAP.VIEW_REPORTS },
         { label: 'เอกสารภาษี', to: `${prefix}/finance/tax-intake`, cap: P1_CAP.VIEW_REPORTS },
+        { label: 'ติดตามภาษีซื้อ', to: `${prefix}/finance/input-tax-receipts`, cap: P1_CAP.VIEW_REPORTS },
         { label: 'รอบภาษี', to: `${prefix}/finance/tax-periods`, cap: P1_CAP.VIEW_REPORTS },
         { label: 'ลูกหนี้/ยอดค้าง', to: `${prefix}/finance/ar`, cap: P1_CAP.VIEW_REPORTS },
         { label: 'เครดิตลูกค้า', to: `${prefix}/finance/customer-credit`, cap: P1_CAP.VIEW_REPORTS },

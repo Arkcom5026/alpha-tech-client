@@ -4,9 +4,11 @@ import { toast } from 'react-toastify';
 import { useBranchStore } from '@/features/branch/store/branchStore';
 import {
   getTaxDocumentDetail,
+  getTaxIntakeErrorDetails,
   getTaxIntakeErrorMessage,
   listTaxCandidates,
   listTaxDocuments,
+  transitionTaxDocument,
 } from '../api/taxIntakeApi';
 
 const formatDateTime = (value) => {
@@ -33,6 +35,57 @@ const badgeClass = (status) => ({
   CANCELLED: 'bg-slate-100 text-slate-500',
 }[status] || 'bg-slate-100 text-slate-600');
 
+const lifecycleActions = Object.freeze({
+  DRAFT: [{ status: 'REGISTERED', label: 'ลงทะเบียนเอกสาร' }],
+  REGISTERED: [{ status: 'UNDER_REVIEW', label: 'ส่งตรวจสอบ' }],
+  UNDER_REVIEW: [
+    { status: 'APPROVED', label: 'อนุมัติ', primary: true },
+    { status: 'REJECTED', label: 'ส่งกลับแก้ไข' },
+  ],
+  REJECTED: [{ status: 'UNDER_REVIEW', label: 'ส่งตรวจสอบอีกครั้ง' }],
+});
+
+const ReconciliationCard = ({ reconciliation }) => {
+  if (!reconciliation) return null;
+  const rows = [
+    ['ยอดก่อน VAT', 'subtotalAmount'],
+    ['VAT', 'vatAmount'],
+    ['ยอดรวม', 'totalAmount'],
+  ];
+  return (
+    <div className={`rounded-2xl border p-4 ${reconciliation.canApprove ? 'border-emerald-200 bg-emerald-50' : 'border-amber-200 bg-amber-50'}`}>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <p className={`font-black ${reconciliation.canApprove ? 'text-emerald-800' : 'text-amber-900'}`}>
+            {reconciliation.canApprove ? 'ยอดตรงกัน พร้อมอนุมัติ' : 'ยอดยังไม่ตรงกัน'}
+          </p>
+          <p className="text-xs text-slate-600">ผูกใบรับสินค้าแล้ว {reconciliation.receiptCount || 0} ใบ</p>
+        </div>
+        <span className={`rounded-full px-3 py-1 text-xs font-black ${reconciliation.canApprove ? 'bg-emerald-600 text-white' : 'bg-amber-200 text-amber-900'}`}>
+          {reconciliation.status}
+        </span>
+      </div>
+      <div className="mt-4 overflow-x-auto">
+        <table className="w-full min-w-[520px] text-sm">
+          <thead><tr className="text-left text-xs text-slate-500"><th className="pb-2">รายการ</th><th className="pb-2 text-right">เอกสารภาษี</th><th className="pb-2 text-right">ยอดที่ผูก</th><th className="pb-2 text-right">ผลต่าง</th></tr></thead>
+          <tbody>
+            {rows.map(([label, key]) => (
+              <tr key={key} className="border-t border-black/5">
+                <td className="py-2 font-bold text-slate-700">{label}</td>
+                <td className="py-2 text-right">{formatMoney(reconciliation.documentAmount?.[key])}</td>
+                <td className="py-2 text-right">{formatMoney(reconciliation.allocatedAmount?.[key])}</td>
+                <td className={`py-2 text-right font-black ${Math.abs(Number(reconciliation.variance?.[key] || 0)) > Number(reconciliation.tolerance || 0.01) ? 'text-rose-700' : 'text-emerald-700'}`}>
+                  {formatMoney(reconciliation.variance?.[key])}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
+
 const TaxIntakeWorkspacePage = () => {
   const selectedBranchId = useBranchStore((state) => state.selectedBranchId);
   const currentBranch = useBranchStore((state) => state.currentBranch);
@@ -46,6 +99,8 @@ const TaxIntakeWorkspacePage = () => {
   const [error, setError] = useState('');
   const [candidateStatus, setCandidateStatus] = useState('');
   const [documentStatus, setDocumentStatus] = useState('');
+  const [transitioning, setTransitioning] = useState(false);
+  const [transitionError, setTransitionError] = useState(null);
 
   const loadData = useCallback(async () => {
     if (!branchId) return;
@@ -83,8 +138,35 @@ const TaxIntakeWorkspacePage = () => {
     try {
       const detail = await getTaxDocumentDetail({ branchId, taxDocumentId: document.id });
       setSelectedDocument(detail);
+      setTransitionError(null);
     } catch (requestError) {
       toast.error(getTaxIntakeErrorMessage(requestError));
+    }
+  };
+
+  const handleTransition = async (targetStatus) => {
+    if (!selectedDocument?.id) return;
+    setTransitioning(true);
+    setTransitionError(null);
+    try {
+      await transitionTaxDocument({
+        branchId,
+        taxDocumentId: selectedDocument.id,
+        targetStatus,
+      });
+      const detail = await getTaxDocumentDetail({ branchId, taxDocumentId: selectedDocument.id });
+      setSelectedDocument(detail);
+      await loadData();
+      toast.success(`เปลี่ยนสถานะเป็น ${targetStatus} แล้ว`);
+    } catch (requestError) {
+      const message = getTaxIntakeErrorMessage(requestError);
+      setTransitionError({
+        message,
+        details: getTaxIntakeErrorDetails(requestError),
+      });
+      toast.error(message);
+    } finally {
+      setTransitioning(false);
     }
   };
 
@@ -138,7 +220,52 @@ const TaxIntakeWorkspacePage = () => {
         </div>
       </div>
 
-      {selectedDocument && <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><div className="flex items-center gap-2"><FileSearch size={18} className="text-blue-600" /><h2 className="font-black text-slate-900">รายละเอียดเอกสาร {selectedDocument.document?.documentNumber || selectedDocument.documentNumber}</h2></div><pre className="mt-4 max-h-96 overflow-auto rounded-xl bg-slate-950 p-4 text-xs text-slate-100">{JSON.stringify(selectedDocument, null, 2)}</pre></div>}
+      {selectedDocument && (
+        <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <FileSearch size={18} className="text-blue-600" />
+              <div>
+                <h2 className="font-black text-slate-900">รายละเอียดเอกสาร {selectedDocument.documentNumber}</h2>
+                <p className="text-xs text-slate-500">{selectedDocument.documentType} · {formatDateTime(selectedDocument.occurredAt)}</p>
+              </div>
+            </div>
+            <span className={`rounded-full px-3 py-1 text-xs font-black ${badgeClass(selectedDocument.status)}`}>{selectedDocument.status}</span>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="rounded-xl bg-slate-50 p-3"><p className="text-xs text-slate-500">ยอดก่อน VAT</p><p className="font-black">{formatMoney(selectedDocument.subtotalAmount)}</p></div>
+            <div className="rounded-xl bg-slate-50 p-3"><p className="text-xs text-slate-500">VAT</p><p className="font-black">{formatMoney(selectedDocument.taxAmount)}</p></div>
+            <div className="rounded-xl bg-slate-50 p-3"><p className="text-xs text-slate-500">ยอดรวม</p><p className="font-black">{formatMoney(selectedDocument.totalAmount)}</p></div>
+          </div>
+
+          <ReconciliationCard reconciliation={transitionError?.details || selectedDocument.inputTaxReconciliation} />
+          {transitionError && <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm font-bold text-rose-700">{transitionError.message}</div>}
+
+          <div className="flex flex-wrap gap-2 border-t border-slate-100 pt-4">
+            {(lifecycleActions[selectedDocument.status] || []).map((action) => {
+              const approvalBlocked = action.status === 'APPROVED'
+                && selectedDocument.inputTaxReconciliation
+                && !selectedDocument.inputTaxReconciliation.canApprove;
+              return (
+                <button
+                  type="button"
+                  key={action.status}
+                  onClick={() => handleTransition(action.status)}
+                  disabled={transitioning || approvalBlocked}
+                  title={approvalBlocked ? 'ต้องผูกใบรับสินค้าและกระทบยอดให้ตรงก่อนอนุมัติ' : ''}
+                  className={`rounded-xl px-4 py-2.5 text-sm font-black disabled:cursor-not-allowed disabled:opacity-50 ${action.primary ? 'bg-emerald-600 text-white hover:bg-emerald-700' : 'border border-slate-300 bg-white text-slate-700 hover:bg-slate-50'}`}
+                >
+                  {action.label}
+                </button>
+              );
+            })}
+            {selectedDocument.status === 'UNDER_REVIEW' && selectedDocument.inputTaxReconciliation && !selectedDocument.inputTaxReconciliation.canApprove && (
+              <p className="self-center text-xs font-bold text-amber-700">อนุมัติได้เมื่อยอดใบรับสินค้าตรงกับเอกสารภาษี</p>
+            )}
+          </div>
+        </div>
+      )}
     </section>
   );
 };

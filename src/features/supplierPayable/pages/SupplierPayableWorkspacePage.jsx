@@ -3,6 +3,7 @@ import { AlertTriangle, RefreshCw, WalletCards } from 'lucide-react';
 import { toast } from 'react-toastify';
 import {
   createSupplierPayableFromReceipts,
+  getSupplierPayableAging,
   getSupplierPayableErrorMessage,
   listSupplierPayableCandidates,
   listSupplierPayables,
@@ -46,6 +47,9 @@ const SupplierPayableWorkspacePage = () => {
   const [candidates, setCandidates] = useState([]);
   const [selectedIds, setSelectedIds] = useState([]);
   const [status, setStatus] = useState('');
+  const [aging, setAging] = useState(null);
+  const [agingSupplierId, setAgingSupplierId] = useState('');
+  const [agingAsOf, setAgingAsOf] = useState(new Date().toISOString().slice(0, 10));
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [settlements, setSettlements] = useState([]);
@@ -82,22 +86,27 @@ const SupplierPayableWorkspacePage = () => {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [payableResult, candidateResult, settlementResult, advanceResult] = await Promise.all([
+      const [payableResult, candidateResult, settlementResult, advanceResult, agingResult] = await Promise.all([
         listSupplierPayables({ status: status || undefined }),
         listSupplierPayableCandidates(),
         listSupplierSettlements(),
         listSupplierAdvances(),
+        getSupplierPayableAging({
+          supplierId: agingSupplierId || undefined,
+          asOf: agingAsOf,
+        }),
       ]);
       setPayables(Array.isArray(payableResult) ? payableResult : []);
       setCandidates(Array.isArray(candidateResult) ? candidateResult : []);
       setSettlements(Array.isArray(settlementResult) ? settlementResult : []);
       setAdvances(Array.isArray(advanceResult) ? advanceResult : []);
+      setAging(agingResult || null);
     } catch (error) {
       toast.error(getSupplierPayableErrorMessage(error));
     } finally {
       setLoading(false);
     }
-  }, [status]);
+  }, [agingAsOf, agingSupplierId, status]);
 
   useEffect(() => { load(); }, [load]);
   useEffect(() => { Promise.resolve(fetchSuppliersAction()).catch(() => {}); }, [fetchSuppliersAction]);
@@ -324,6 +333,60 @@ const SupplierPayableWorkspacePage = () => {
         <div className="rounded-2xl border bg-white p-4"><p className="text-xs text-slate-500">รายการเจ้าหนี้</p><p className="text-2xl font-black">{payables.length}</p></div>
         <div className="rounded-2xl border bg-white p-4"><p className="text-xs text-slate-500">ยอดคงค้าง</p><p className="text-2xl font-black text-rose-600">{money(payables.reduce((sum, item) => sum + Number(item.outstandingAmount || 0), 0))}</p></div>
         <div className="rounded-2xl border bg-white p-4"><p className="text-xs text-slate-500">ใบรับที่ยังไม่ตั้งหนี้</p><p className="text-2xl font-black text-amber-600">{candidates.length}</p></div>
+      </div>
+
+      <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <h2 className="font-black">Supplier Statement & Aging</h2>
+            <p className="text-xs text-slate-500">ยอดคงค้างตามอายุหนี้ ณ วันที่เลือก และเครดิต Advance ที่พร้อมใช้</p>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <select value={agingSupplierId} onChange={(event) => setAgingSupplierId(event.target.value)} className="rounded-xl border px-3 py-2 text-sm">
+              <option value="">Supplier ทั้งหมด</option>
+              {suppliers.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+            </select>
+            <input type="date" value={agingAsOf} onChange={(event) => setAgingAsOf(event.target.value)} className="rounded-xl border px-3 py-2 text-sm" />
+          </div>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <div className="rounded-xl bg-rose-50 p-3"><p className="text-xs text-rose-600">หนี้คงค้างรวม</p><strong className="text-lg text-rose-700">{money(aging?.totals?.grossOutstanding)}</strong></div>
+          <div className="rounded-xl bg-orange-50 p-3"><p className="text-xs text-orange-600">Advance พร้อมใช้</p><strong className="text-lg text-orange-700">{money(aging?.totals?.availableAdvance)}</strong></div>
+          <div className="rounded-xl bg-slate-100 p-3"><p className="text-xs text-slate-600">Net Exposure</p><strong className="text-lg text-slate-900">{money(aging?.totals?.netExposure)}</strong></div>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="min-w-[980px] w-full text-left text-sm">
+            <thead className="border-b text-xs text-slate-500">
+              <tr>
+                <th className="px-2 py-2">Supplier</th>
+                <th className="px-2 py-2 text-right">ยังไม่ครบ</th>
+                <th className="px-2 py-2 text-right">1–30 วัน</th>
+                <th className="px-2 py-2 text-right">31–60 วัน</th>
+                <th className="px-2 py-2 text-right">61–90 วัน</th>
+                <th className="px-2 py-2 text-right">&gt; 90 วัน</th>
+                <th className="px-2 py-2 text-right">ไม่ระบุวัน</th>
+                <th className="px-2 py-2 text-right">Advance</th>
+                <th className="px-2 py-2 text-right">สุทธิ</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y">
+              {(aging?.suppliers || []).map((item) => (
+                <tr key={item.supplierId}>
+                  <td className="px-2 py-3"><strong>{item.supplierName}</strong><span className="block text-xs text-slate-500">{item.payableCount} รายการ</span></td>
+                  <td className="px-2 py-3 text-right">{money(item.buckets?.notDue)}</td>
+                  <td className="px-2 py-3 text-right">{money(item.buckets?.overdue1To30)}</td>
+                  <td className="px-2 py-3 text-right">{money(item.buckets?.overdue31To60)}</td>
+                  <td className="px-2 py-3 text-right">{money(item.buckets?.overdue61To90)}</td>
+                  <td className="px-2 py-3 text-right text-rose-600">{money(item.buckets?.overdue90Plus)}</td>
+                  <td className="px-2 py-3 text-right">{money(item.buckets?.noDueDate)}</td>
+                  <td className="px-2 py-3 text-right text-orange-600">{money(item.availableAdvance)}</td>
+                  <td className="px-2 py-3 text-right font-black">{money(item.netExposure)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {!loading && !(aging?.suppliers || []).length && <p className="py-6 text-center text-sm text-slate-500">ไม่มีหนี้คงค้างหรือ Advance ตามตัวกรอง</p>}
+        </div>
       </div>
 
       <div className="grid gap-5 xl:grid-cols-[1.2fr_0.8fr]">

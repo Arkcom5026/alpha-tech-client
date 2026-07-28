@@ -19,6 +19,16 @@ export const listSupplierPayableCandidates = async ({ supplierId } = {}) => {
   return unwrap(response);
 };
 
+export const getSupplierPayableAging = async ({ supplierId, asOf } = {}) => {
+  const response = await apiClient.get('/supplier-payables/aging', {
+    params: {
+      ...(supplierId ? { supplierId } : {}),
+      ...(asOf ? { asOf } : {}),
+    },
+  });
+  return unwrap(response);
+};
+
 export const createSupplierPayableFromReceipts = async (payload) => {
   const response = await apiClient.post('/supplier-payables/from-receipts', payload);
   return unwrap(response);
@@ -35,6 +45,7 @@ export const getSupplierPayableErrorMessage = (error) => {
     SUPPLIER_PAYABLE_DATE_INVALID: 'วันที่เอกสารหรือวันครบกำหนดไม่ถูกต้อง',
     SUPPLIER_PAYABLE_DUE_DATE_INVALID: 'วันครบกำหนดต้องไม่ก่อนวันที่เอกสาร',
     SUPPLIER_PAYABLE_TOTAL_REQUIRED: 'ใบรับสินค้าที่เลือกไม่มียอดสำหรับตั้งหนี้',
+    SUPPLIER_AGING_DATE_INVALID: 'วันที่สำหรับรายงานอายุหนี้ไม่ถูกต้อง',
   };
   return messages[code] || message || 'ไม่สามารถดำเนินการรายการเจ้าหนี้ได้';
 };

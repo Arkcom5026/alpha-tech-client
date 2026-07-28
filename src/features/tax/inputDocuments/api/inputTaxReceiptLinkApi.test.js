@@ -62,4 +62,10 @@ describe('input tax receipt link API contract', () => {
     expect(mocks.patch).toHaveBeenCalledWith('/tax/documents/10/receipt-links/8', expect.any(Object));
     expect(mocks.post).toHaveBeenCalledWith('/tax/documents/10/receipt-links/8/cancel', expect.objectContaining({ reason: 'ผูกผิดใบ' }));
   });
+
+  it('maps document allocation overflow to an actionable message', () => {
+    expect(api.inputTaxReceiptLinkErrorMessage({
+      response: { data: { code: 'INPUT_TAX_LINK_DOCUMENT_ALLOCATION_EXCEEDED' } },
+    })).toContain('เกินยอดใบกำกับภาษี');
+  });
 });

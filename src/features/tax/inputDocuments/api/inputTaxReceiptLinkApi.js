@@ -121,6 +121,7 @@ export const inputTaxReceiptLinkErrorMessage = (error) => {
     INPUT_TAX_LINK_BRANCH_FORBIDDEN: 'ไม่สามารถจัดการข้อมูลของสาขาอื่นได้',
     INPUT_TAX_LINK_SUPPLIER_MISMATCH: 'ใบรับสินค้าที่เลือกต้องเป็น Supplier เดียวกัน',
     INPUT_TAX_LINK_ALLOCATION_EXCEEDED: 'ยอดจัดสรรรวมเกินยอดของใบรับสินค้า',
+    INPUT_TAX_LINK_DOCUMENT_ALLOCATION_EXCEEDED: 'ยอดจัดสรรจากใบรับสินค้ารวมกันเกินยอดใบกำกับภาษี',
     INPUT_TAX_LINK_ALREADY_ACTIVE: 'ใบรับสินค้านี้ผูกกับเอกสารแล้ว กรุณาแก้ยอดจัดสรรเดิม',
     INPUT_TAX_LINK_PERIOD_LOCKED: 'รอบภาษีถูกล็อกหรือยื่นแล้ว ต้องใช้กระบวนการแก้ไขเอกสาร',
     INPUT_TAX_LINK_DOCUMENT_LOCKED: 'เอกสารอยู่ในสถานะที่แก้ไขโดยตรงไม่ได้',

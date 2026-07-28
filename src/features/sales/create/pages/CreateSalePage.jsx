@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Archive, Search, ShoppingBag } from 'lucide-react';
+import { Search, ShoppingBag } from 'lucide-react';
 
 import useSalesStore from '@/features/sales/store/salesStore';
 import CustomerSection from '../components/CustomerSection';
@@ -369,7 +369,6 @@ const QuickSalePage = () => {
           <strong className="text-orange-800">{activeHeldCart ? `กำลังทำต่อ ${activeHeldCart.code}` : 'รายการขายใหม่'}</strong>
           {activeHeldCart && <span className="ml-2 text-[10px] font-bold text-orange-600">{heldCartSaveState === 'saving' ? 'กำลังบันทึก...' : heldCartSaveState === 'failed' ? 'บันทึกไม่สำเร็จ' : heldCartSaveState === 'pending' ? 'รอบันทึก' : 'บันทึกอัตโนมัติแล้ว'}</span>}
         </div>
-        <button type="button" onClick={() => setHeldCartPanelOpen(true)} className="inline-flex items-center gap-2 rounded-xl bg-orange-500 px-4 py-2 text-xs font-black text-white"><Archive size={16} /> พักรายการ / เปิดใบจอง</button>
       </div>
       {activeHeldCart && heldCartValidation && (
         <div className={`rounded-xl border px-3 py-2 text-xs font-bold ${heldCartValidation.ready ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-rose-200 bg-rose-50 text-rose-700'}`}>
@@ -468,6 +467,7 @@ const QuickSalePage = () => {
           saleOption={saleOption}
           onSaleOptionChange={setSaleOption}
           onConfirmSale={handleConfirmSale}
+          onSaveHeldCart={() => setHeldCartPanelOpen(true)}
         />
       </div>
       <PosHeldCartPanel

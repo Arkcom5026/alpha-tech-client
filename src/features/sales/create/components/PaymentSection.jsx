@@ -17,6 +17,7 @@ const PaymentSection = ({
   saleOption,
   onSaleOptionChange,
   onConfirmSale,
+  onSaveHeldCart,
 }) => {
   const {
     billDiscount,
@@ -420,6 +421,7 @@ const PaymentSection = ({
               currentSaleMode={currentSaleMode}
               setCurrentSaleMode={handleSetCurrentSaleMode}
               hasValidCustomerId={hasValidCustomerId}
+              onSaveHeldCart={onSaveHeldCart}
             />
           </div>
         </div>

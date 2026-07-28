@@ -71,7 +71,7 @@ const InputTaxReceiptWorkspacePage = () => {
   const eligibleDocuments = useMemo(() => {
     if (!selectedSupplierId) return documents;
     return documents.filter((document) => (
-      Number(document?.snapshot?.supplierId || 0) === Number(selectedSupplierId)
+      Number(document?.supplierId || document?.snapshot?.supplierId || 0) === Number(selectedSupplierId)
     ));
   }, [documents, selectedSupplierId]);
   const suppliers = useMemo(() => {

@@ -5,6 +5,57 @@ export const remainingReceiptAmount = (receipt) => Math.max(
   0,
 );
 
+const allocationFields = [
+  ['subtotalAmount', 'allocatedSubtotal'],
+  ['vatAmount', 'allocatedVatAmount'],
+  ['totalAmount', 'allocatedTotalAmount'],
+];
+
+export const sumReceiptAllocations = (items = []) => allocationFields.reduce(
+  (totals, [totalField, allocationField]) => ({
+    ...totals,
+    [totalField]: items.reduce(
+      (sum, item) => sum + Number(item?.[allocationField] || 0),
+      0,
+    ),
+  }),
+  {},
+);
+
+export const projectDocumentAllocation = ({ document, activeLinks, pendingReceipts }) => {
+  const limits = {
+    subtotalAmount: Number(document?.subtotalAmount || 0),
+    vatAmount: Number(document?.taxAmount || 0),
+    totalAmount: Number(document?.totalAmount || 0),
+  };
+  const existing = sumReceiptAllocations(
+    (activeLinks || []).filter((link) => link.state === 'ACTIVE'),
+  );
+  const pending = sumReceiptAllocations(pendingReceipts || []);
+  const projected = {};
+  const remaining = {};
+  let overflow = false;
+
+  allocationFields.forEach(([field]) => {
+    projected[field] = existing[field] + pending[field];
+    remaining[field] = limits[field] > 0
+      ? limits[field] - projected[field]
+      : null;
+    if (limits[field] > 0 && projected[field] > limits[field] + 0.001) {
+      overflow = true;
+    }
+  });
+
+  return {
+    limits,
+    existing,
+    pending,
+    projected,
+    remaining,
+    overflow,
+  };
+};
+
 export const formatTaxMoney = (value) => new Intl.NumberFormat('th-TH', {
   style: 'currency',
   currency: 'THB',

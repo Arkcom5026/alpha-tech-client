@@ -14,7 +14,13 @@ import {
 import InputTaxReceiptCandidateTable from '../components/InputTaxReceiptCandidateTable';
 import InputTaxReceiptFilters from '../components/InputTaxReceiptFilters';
 import InputTaxDocumentLinkPanel from '../components/InputTaxDocumentLinkPanel';
-import { formatTaxMoney, receiptIdentity, remainingReceiptAmount } from '../utils/inputTaxReceiptLink';
+import InputTaxAllocationSummary from '../components/InputTaxAllocationSummary';
+import {
+  formatTaxMoney,
+  projectDocumentAllocation,
+  receiptIdentity,
+  remainingReceiptAmount,
+} from '../utils/inputTaxReceiptLink';
 
 const initialFilters = {
   keyword: '',
@@ -51,6 +57,7 @@ const InputTaxReceiptWorkspacePage = () => {
   const [selected, setSelected] = useState({});
   const [selectedDocumentId, setSelectedDocumentId] = useState('');
   const [links, setLinks] = useState([]);
+  const [linksLoading, setLinksLoading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [busyLinkId, setBusyLinkId] = useState(null);
@@ -68,6 +75,15 @@ const InputTaxReceiptWorkspacePage = () => {
   const selectedDocumentMutable = selectedDocument
     ? mutableDocumentStatuses.has(String(selectedDocument.status).toUpperCase())
     : false;
+  const allocationProjection = useMemo(() => (
+    selectedDocument
+      ? projectDocumentAllocation({
+        document: selectedDocument,
+        activeLinks: links,
+        pendingReceipts: selectedReceipts,
+      })
+      : null
+  ), [links, selectedDocument, selectedReceipts]);
   const eligibleDocuments = useMemo(() => {
     if (!selectedSupplierId) return documents;
     return documents.filter((document) => (
@@ -111,13 +127,18 @@ const InputTaxReceiptWorkspacePage = () => {
   const loadLinks = useCallback(async (taxDocumentId = selectedDocumentId) => {
     if (!branchId || !taxDocumentId) {
       setLinks([]);
+      setLinksLoading(false);
       return;
     }
+    setLinks([]);
+    setLinksLoading(true);
     try {
       const result = await listInputTaxDocumentReceiptLinks({ branchId, taxDocumentId });
       setLinks(normalizeList(result, 'links'));
     } catch (error) {
       toast.error(inputTaxReceiptLinkErrorMessage(error));
+    } finally {
+      setLinksLoading(false);
     }
   }, [branchId, selectedDocumentId]);
 
@@ -179,7 +200,9 @@ const InputTaxReceiptWorkspacePage = () => {
   const attachSelected = async () => {
     if (!selectedDocumentId) return toast.warning('กรุณาเลือกใบกำกับภาษี');
     if (!selectedDocumentMutable) return toast.warning('เอกสารนี้อยู่ในสถานะอ่านอย่างเดียว');
+    if (linksLoading) return toast.warning('กำลังตรวจสอบยอดที่ผูกอยู่ กรุณารอสักครู่');
     if (selectedReceipts.length === 0) return toast.warning('กรุณาเลือกใบรับสินค้าอย่างน้อย 1 ใบ');
+    if (allocationProjection?.overflow) return toast.warning('ยอดจัดสรรรวมเกินยอดใบกำกับภาษี');
     setSubmitting(true);
     try {
       await attachInputTaxDocumentReceiptLinks({
@@ -282,7 +305,7 @@ const InputTaxReceiptWorkspacePage = () => {
         <label><span className="mb-1 block text-xs font-bold text-slate-600">ใบกำกับภาษีซื้อที่จะผูก</span><select value={selectedDocumentId} onChange={(event) => setSelectedDocumentId(event.target.value)} className="w-full rounded-xl border border-blue-200 bg-white px-3 py-2.5 text-sm"><option value="">เลือกใบกำกับภาษี</option>{eligibleDocuments.map((document) => <option key={document.id} value={document.id}>{document.documentNumber} · {formatTaxMoney(document.totalAmount)} · {document.status}</option>)}</select></label>
         <div className="flex flex-wrap gap-2">
           <button type="button" onClick={() => setShowCreateDocument((value) => !value)} disabled={!selectedSupplierId} className="inline-flex items-center gap-2 rounded-xl border border-blue-300 bg-white px-4 py-2.5 text-sm font-bold text-blue-700 disabled:opacity-40"><FilePlus2 size={17} /> สร้างใบกำกับภาษี</button>
-          <button type="button" onClick={attachSelected} disabled={submitting || !selectedDocumentId || !selectedDocumentMutable || selectedReceipts.length === 0} className="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-black text-white disabled:opacity-40">ผูก {selectedReceipts.length} ใบ</button>
+          <button type="button" onClick={attachSelected} disabled={submitting || linksLoading || !selectedDocumentId || !selectedDocumentMutable || selectedReceipts.length === 0 || allocationProjection?.overflow} className="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-black text-white disabled:opacity-40">ผูก {selectedReceipts.length} ใบ</button>
         </div>
       </div>
       {selectedDocument && !selectedDocumentMutable && (
@@ -306,6 +329,7 @@ const InputTaxReceiptWorkspacePage = () => {
       )}
 
       <InputTaxReceiptCandidateTable receipts={receipts} selected={selected} selectedSupplierId={selectedSupplierId} loading={loading} onToggle={toggleReceipt} onAllocationChange={changeAllocation} />
+      {selectedDocument && <InputTaxAllocationSummary projection={allocationProjection} />}
       {selectedDocumentId && <InputTaxDocumentLinkPanel links={links} busyLinkId={busyLinkId} readOnly={!selectedDocumentMutable} onReallocate={reallocate} onCancel={cancelLink} />}
     </section>
   );

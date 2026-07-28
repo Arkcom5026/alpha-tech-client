@@ -54,9 +54,26 @@ export const getTaxDocumentDetail = async ({ branchId, taxDocumentId }) => {
   return unwrapData(response);
 };
 
+export const transitionTaxDocument = async ({ branchId, taxDocumentId, targetStatus, reason }) => {
+  const response = await apiClient.post(
+    `/tax/documents/${requirePositiveId(taxDocumentId, 'taxDocumentId')}/transition`,
+    {
+      branchId: requirePositiveId(branchId, 'branchId'),
+      targetStatus: String(targetStatus || '').trim().toUpperCase(),
+      ...(String(reason || '').trim() ? { reason: String(reason).trim() } : {}),
+    },
+  );
+  return unwrapData(response);
+};
+
+export const getTaxIntakeErrorDetails = (error) => (
+  error?.response?.data?.error?.details || error?.response?.data?.details || null
+);
+
 export const getTaxIntakeErrorMessage = (error) => {
   const responseData = error?.response?.data;
-  const code = error?.code || responseData?.error || responseData?.code || responseData?.error?.code;
+  const code = error?.code || responseData?.error?.code || responseData?.code
+    || (typeof responseData?.error === 'string' ? responseData.error : null);
   const message = responseData?.message || responseData?.error?.message || error?.message;
   const messages = {
     TAX_INTAKE_CLIENT_VALIDATION_ERROR: message || 'ข้อมูลไม่ถูกต้อง',
@@ -64,6 +81,7 @@ export const getTaxIntakeErrorMessage = (error) => {
     TAX_ADMINISTRATIVE_BRANCH_FORBIDDEN: 'ไม่สามารถเข้าถึงข้อมูลภาษีของสาขาอื่นได้',
     TAX_DOCUMENT_NOT_FOUND: 'ไม่พบเอกสารภาษีที่เลือก',
     TAX_DOCUMENT_IDENTITY_CONFLICT: 'มีเอกสารภาษีเลขที่นี้อยู่แล้ว',
+    INPUT_TAX_RECONCILIATION_REQUIRED: 'ยังอนุมัติไม่ได้: ยอดใบรับสินค้าที่ผูกไว้ยังไม่ตรงกับยอดเอกสารภาษี',
   };
   return messages[code] || message || 'ไม่สามารถดำเนินการในระบบรับเอกสารภาษีได้';
 };

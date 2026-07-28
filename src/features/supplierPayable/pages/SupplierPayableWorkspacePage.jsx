@@ -7,6 +7,12 @@ import {
   listSupplierPayableCandidates,
   listSupplierPayables,
 } from '../api/supplierPayableApi';
+import {
+  createSupplierSettlement,
+  getSupplierSettlementErrorMessage,
+  listSupplierSettlements,
+  voidSupplierSettlement,
+} from '../api/supplierSettlementApi';
 
 const money = (value) => new Intl.NumberFormat('th-TH', {
   style: 'currency',
@@ -33,6 +39,15 @@ const SupplierPayableWorkspacePage = () => {
   const [status, setStatus] = useState('');
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [settlements, setSettlements] = useState([]);
+  const [paymentAllocations, setPaymentAllocations] = useState({});
+  const [paymentForm, setPaymentForm] = useState({
+    paidAt: new Date().toISOString().slice(0, 10),
+    method: 'TRANSFER',
+    paymentRef: '',
+    note: '',
+  });
+  const [voidReason, setVoidReason] = useState('');
   const [form, setForm] = useState({
     documentNumber: '',
     documentDate: '',
@@ -43,12 +58,14 @@ const SupplierPayableWorkspacePage = () => {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [payableResult, candidateResult] = await Promise.all([
+      const [payableResult, candidateResult, settlementResult] = await Promise.all([
         listSupplierPayables({ status: status || undefined }),
         listSupplierPayableCandidates(),
+        listSupplierSettlements(),
       ]);
       setPayables(Array.isArray(payableResult) ? payableResult : []);
       setCandidates(Array.isArray(candidateResult) ? candidateResult : []);
+      setSettlements(Array.isArray(settlementResult) ? settlementResult : []);
     } catch (error) {
       toast.error(getSupplierPayableErrorMessage(error));
     } finally {
@@ -64,6 +81,12 @@ const SupplierPayableWorkspacePage = () => {
   );
   const selectedSupplierId = selected[0]?.supplierId || null;
   const selectedTotal = selected.reduce((sum, item) => sum + Number(item.totalAmount || 0), 0);
+  const paymentSelection = payables.filter((item) => paymentAllocations[item.id] != null);
+  const paymentSupplierId = paymentSelection[0]?.supplierId || null;
+  const paymentTotal = paymentSelection.reduce(
+    (sum, item) => sum + Number(paymentAllocations[item.id] || 0),
+    0,
+  );
 
   const toggle = (candidate) => {
     setSelectedIds((current) => {
@@ -91,6 +114,62 @@ const SupplierPayableWorkspacePage = () => {
       await load();
     } catch (error) {
       toast.error(getSupplierPayableErrorMessage(error));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const togglePayment = (payable) => {
+    setPaymentAllocations((current) => {
+      if (current[payable.id] != null) {
+        const next = { ...current };
+        delete next[payable.id];
+        return next;
+      }
+      if (paymentSupplierId && paymentSupplierId !== payable.supplierId) {
+        toast.info('การชำระหนึ่งครั้งต้องเป็น Supplier รายเดียวกัน');
+        return current;
+      }
+      return { ...current, [payable.id]: Number(payable.outstandingAmount || 0) };
+    });
+  };
+
+  const confirmPayment = async () => {
+    if (!paymentSelection.length) return;
+    setSaving(true);
+    try {
+      await createSupplierSettlement({
+        supplierId: paymentSupplierId,
+        ...paymentForm,
+        allocations: paymentSelection.map((item) => ({
+          payableId: item.id,
+          amount: Number(paymentAllocations[item.id] || 0),
+        })),
+      });
+      toast.success('ยืนยันการชำระและจัดสรรยอดเจ้าหนี้แล้ว');
+      setPaymentAllocations({});
+      setPaymentForm({ ...paymentForm, paymentRef: '', note: '' });
+      await load();
+    } catch (error) {
+      toast.error(getSupplierSettlementErrorMessage(error));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const voidPayment = async (paymentId) => {
+    if (!voidReason.trim()) {
+      toast.info('กรุณาระบุเหตุผลในการยกเลิกก่อน');
+      return;
+    }
+    setSaving(true);
+    try {
+      await voidSupplierSettlement({ paymentId, reason: voidReason });
+      toast.success('ยกเลิกรายการชำระและคืนยอดคงค้างแล้ว');
+      setVoidReason('');
+      await load();
+    } catch (error) {
+      toast.error(getSupplierSettlementErrorMessage(error));
     } finally {
       setSaving(false);
     }
@@ -127,10 +206,26 @@ const SupplierPayableWorkspacePage = () => {
             {payables.map((item) => (
               <div key={item.id} className="p-4">
                 <div className="flex items-start justify-between gap-3">
-                  <div><p className="font-black">{item.code} · {item.supplier?.name}</p><p className="text-xs text-slate-500">ครบกำหนด {date(item.dueDate)} · ใบรับ {item.receipts?.length || 0} ใบ</p></div>
+                  <div className="flex items-start gap-3">
+                    {['OPEN', 'PARTIALLY_PAID'].includes(item.status) && (
+                      <input type="checkbox" className="mt-1" checked={paymentAllocations[item.id] != null} onChange={() => togglePayment(item)} />
+                    )}
+                    <div><p className="font-black">{item.code} · {item.supplier?.name}</p><p className="text-xs text-slate-500">ครบกำหนด {date(item.dueDate)} · ใบรับ {item.receipts?.length || 0} ใบ</p></div>
+                  </div>
                   <span className={`rounded-full px-2.5 py-1 text-xs font-black ${statusClass(item.status)}`}>{item.status}</span>
                 </div>
                 <div className="mt-3 flex justify-between text-sm"><span>ยอดหนี้ {money(item.totalAmount)}</span><strong className="text-rose-600">คงเหลือ {money(item.outstandingAmount)}</strong></div>
+                {paymentAllocations[item.id] != null && (
+                  <input
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    max={item.outstandingAmount}
+                    value={paymentAllocations[item.id]}
+                    onChange={(event) => setPaymentAllocations({ ...paymentAllocations, [item.id]: event.target.value })}
+                    className="mt-3 w-full rounded-xl border px-3 py-2 text-right text-sm font-bold"
+                  />
+                )}
               </div>
             ))}
             {!loading && !payables.length && <div className="p-8 text-center text-sm text-slate-500">ยังไม่มีรายการเจ้าหนี้</div>}
@@ -157,6 +252,35 @@ const SupplierPayableWorkspacePage = () => {
             <input value={form.note} onChange={(event) => setForm({ ...form, note: event.target.value })} placeholder="หมายเหตุ" className="rounded-xl border px-3 py-2 text-sm" />
           </div>
           <div className="flex items-center justify-between"><strong>รวม {money(selectedTotal)}</strong><button type="button" onClick={createPayable} disabled={!selected.length || saving} className="rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-black text-white disabled:opacity-50">{saving ? 'กำลังบันทึก...' : 'ตั้งรายการเจ้าหนี้'}</button></div>
+        </div>
+      </div>
+
+      <div className="grid gap-5 xl:grid-cols-2">
+        <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4">
+          <div><h2 className="font-black">ยืนยันการชำระ Supplier</h2><p className="text-xs text-slate-500">เลือก Payable ด้านบนได้หลายรายการจาก Supplier เดียวกัน</p></div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <input type="date" value={paymentForm.paidAt} onChange={(event) => setPaymentForm({ ...paymentForm, paidAt: event.target.value })} className="rounded-xl border px-3 py-2 text-sm" />
+            <select value={paymentForm.method} onChange={(event) => setPaymentForm({ ...paymentForm, method: event.target.value })} className="rounded-xl border px-3 py-2 text-sm">
+              <option value="TRANSFER">โอนเงิน</option><option value="CASH">เงินสด</option><option value="QR">QR</option><option value="CHEQUE">เช็ค</option><option value="OTHER">อื่น ๆ</option>
+            </select>
+            <input value={paymentForm.paymentRef} onChange={(event) => setPaymentForm({ ...paymentForm, paymentRef: event.target.value })} placeholder="เลขอ้างอิงการชำระ" className="rounded-xl border px-3 py-2 text-sm" />
+            <input value={paymentForm.note} onChange={(event) => setPaymentForm({ ...paymentForm, note: event.target.value })} placeholder="หมายเหตุ" className="rounded-xl border px-3 py-2 text-sm" />
+          </div>
+          <div className="flex items-center justify-between"><strong>ยอดชำระ {money(paymentTotal)}</strong><button type="button" onClick={confirmPayment} disabled={!paymentSelection.length || paymentTotal <= 0 || saving} className="rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-black text-white disabled:opacity-50">ยืนยันการชำระ</button></div>
+        </div>
+
+        <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4">
+          <div><h2 className="font-black">ประวัติการชำระ</h2><p className="text-xs text-slate-500">รายการยืนยันแล้วจะยกเลิกด้วย Reversal เท่านั้น</p></div>
+          <input value={voidReason} onChange={(event) => setVoidReason(event.target.value)} placeholder="เหตุผลสำหรับการยกเลิก (สิทธิ์ OWNER)" className="w-full rounded-xl border px-3 py-2 text-sm" />
+          <div className="max-h-80 divide-y overflow-auto">
+            {settlements.map((item) => (
+              <div key={item.id} className="py-3">
+                <div className="flex items-start justify-between gap-3"><div><p className="font-bold">{item.code} · {item.supplier?.name}</p><p className="text-xs text-slate-500">{date(item.paidAt)} · {item.method} · จัดสรร {item.allocations?.length || 0} รายการ</p></div><strong>{money(item.amount)}</strong></div>
+                <div className="mt-2 flex items-center justify-between"><span className={`rounded-full px-2 py-1 text-[10px] font-black ${item.lifecycleStatus === 'VOIDED' ? 'bg-slate-100 text-slate-500' : 'bg-emerald-50 text-emerald-700'}`}>{item.lifecycleStatus}</span>{item.lifecycleStatus === 'CONFIRMED' && <button type="button" onClick={() => voidPayment(item.id)} disabled={saving} className="text-xs font-black text-rose-600 disabled:opacity-50">ยกเลิกรายการ</button>}</div>
+              </div>
+            ))}
+            {!loading && !settlements.length && <p className="py-6 text-center text-sm text-slate-500">ยังไม่มีประวัติการชำระผ่าน Payable</p>}
+          </div>
         </div>
       </div>
     </section>

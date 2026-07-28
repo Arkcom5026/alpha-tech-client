@@ -1,7 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { formatTaxMoney, sourceTypeLabel } from '../utils/inputTaxReceiptLink';
 
-const InputTaxDocumentLinkPanel = ({ links, busyLinkId, onReallocate, onCancel }) => {
+const InputTaxDocumentLinkPanel = ({
+  links,
+  busyLinkId,
+  readOnly = false,
+  onReallocate,
+  onCancel,
+}) => {
   const [drafts, setDrafts] = useState({});
   const [cancelDraft, setCancelDraft] = useState({ linkId: null, reason: '' });
   useEffect(() => {
@@ -25,7 +31,7 @@ const InputTaxDocumentLinkPanel = ({ links, busyLinkId, onReallocate, onCancel }
                 <div><p className="font-bold text-slate-900">{link.receiptCode}</p><p className="text-xs text-slate-500">{sourceTypeLabel[link.sourceType]} · {link.deliveryNoteNumber || 'ไม่มีเลขใบส่งสินค้า'}</p></div>
                 <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${active ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>{active ? 'ใช้งานอยู่' : 'ยกเลิกแล้ว'}</span>
               </div>
-              {active ? (
+              {active && !readOnly ? (
                 <>
                   <div className="grid gap-2 sm:grid-cols-3">
                     {[
@@ -66,7 +72,13 @@ const InputTaxDocumentLinkPanel = ({ links, busyLinkId, onReallocate, onCancel }
                     </div>
                   )}
                 </>
-              ) : <p className="text-sm text-slate-500">ยอดเดิม {formatTaxMoney(link.allocatedTotalAmount)} · {link.cancelReason || 'ไม่มีเหตุผลกำกับ'}</p>}
+              ) : (
+                <p className="text-sm text-slate-500">
+                  ยอดจัดสรร {formatTaxMoney(link.allocatedTotalAmount)}
+                  {!active && ` · ${link.cancelReason || 'ไม่มีเหตุผลกำกับ'}`}
+                  {active && readOnly && ' · เอกสารอยู่ในสถานะอ่านอย่างเดียว'}
+                </p>
+              )}
             </div>
           );
         })}

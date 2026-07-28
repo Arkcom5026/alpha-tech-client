@@ -23,6 +23,14 @@ import {
   voidSupplierAdvance,
 } from '../api/supplierAdvanceApi';
 import useSupplierStore from '@/features/supplier/store/supplierStore';
+import {
+  createSupplierAdjustment,
+  getSupplierDisputeErrorMessage,
+  listSupplierDisputes,
+  openSupplierDispute,
+  resolveSupplierDispute,
+  voidSupplierAdjustment,
+} from '../api/supplierDisputeApi';
 
 const money = (value) => new Intl.NumberFormat('th-TH', {
   style: 'currency',
@@ -47,6 +55,16 @@ const SupplierPayableWorkspacePage = () => {
   const [candidates, setCandidates] = useState([]);
   const [selectedIds, setSelectedIds] = useState([]);
   const [status, setStatus] = useState('');
+  const [disputeHistory, setDisputeHistory] = useState({ disputes: [], adjustments: [] });
+  const [disputeForm, setDisputeForm] = useState({ payableId: '', disputedAmount: '', reason: '' });
+  const [resolutionForm, setResolutionForm] = useState({
+    note: '', amount: '', direction: 'CREDIT', type: 'CREDIT_NOTE', documentNumber: '',
+  });
+  const [adjustmentForm, setAdjustmentForm] = useState({
+    payableId: '', amount: '', direction: 'CREDIT', type: 'CREDIT_NOTE',
+    documentNumber: '', documentDate: '', note: '',
+  });
+  const [adjustmentVoidReason, setAdjustmentVoidReason] = useState('');
   const [aging, setAging] = useState(null);
   const [agingSupplierId, setAgingSupplierId] = useState('');
   const [agingAsOf, setAgingAsOf] = useState(new Date().toISOString().slice(0, 10));
@@ -86,7 +104,7 @@ const SupplierPayableWorkspacePage = () => {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [payableResult, candidateResult, settlementResult, advanceResult, agingResult] = await Promise.all([
+      const [payableResult, candidateResult, settlementResult, advanceResult, agingResult, disputeResult] = await Promise.all([
         listSupplierPayables({ status: status || undefined }),
         listSupplierPayableCandidates(),
         listSupplierSettlements(),
@@ -95,12 +113,14 @@ const SupplierPayableWorkspacePage = () => {
           supplierId: agingSupplierId || undefined,
           asOf: agingAsOf,
         }),
+        listSupplierDisputes(),
       ]);
       setPayables(Array.isArray(payableResult) ? payableResult : []);
       setCandidates(Array.isArray(candidateResult) ? candidateResult : []);
       setSettlements(Array.isArray(settlementResult) ? settlementResult : []);
       setAdvances(Array.isArray(advanceResult) ? advanceResult : []);
       setAging(agingResult || null);
+      setDisputeHistory(disputeResult || { disputes: [], adjustments: [] });
     } catch (error) {
       toast.error(getSupplierPayableErrorMessage(error));
     } finally {
@@ -316,6 +336,75 @@ const SupplierPayableWorkspacePage = () => {
     }
   };
 
+  const openDispute = async () => {
+    setSaving(true);
+    try {
+      await openSupplierDispute({
+        payableId: Number(disputeForm.payableId),
+        disputedAmount: Number(disputeForm.disputedAmount),
+        reason: disputeForm.reason,
+      });
+      toast.success('เปิดข้อโต้แย้งและระงับการชำระรายการนี้แล้ว');
+      setDisputeForm({ payableId: '', disputedAmount: '', reason: '' });
+      await load();
+    } catch (error) {
+      toast.error(getSupplierDisputeErrorMessage(error));
+    } finally { setSaving(false); }
+  };
+
+  const createAdjustment = async () => {
+    setSaving(true);
+    try {
+      await createSupplierAdjustment({
+        ...adjustmentForm,
+        payableId: Number(adjustmentForm.payableId),
+        amount: Number(adjustmentForm.amount),
+      });
+      toast.success('บันทึกรายการปรับยอดเจ้าหนี้แล้ว');
+      setAdjustmentForm({ ...adjustmentForm, amount: '', documentNumber: '', documentDate: '', note: '' });
+      await load();
+    } catch (error) {
+      toast.error(getSupplierDisputeErrorMessage(error));
+    } finally { setSaving(false); }
+  };
+
+  const resolveDispute = async (disputeId) => {
+    setSaving(true);
+    try {
+      const amountValue = Number(resolutionForm.amount);
+      await resolveSupplierDispute({
+        disputeId,
+        resolutionNote: resolutionForm.note,
+        ...(amountValue > 0 ? {
+          adjustment: {
+            amount: amountValue,
+            direction: resolutionForm.direction,
+            type: resolutionForm.type,
+            documentNumber: resolutionForm.documentNumber,
+          },
+        } : {}),
+      });
+      toast.success('ปิดข้อโต้แย้งและคืนรายการเข้าสู่กระบวนการเจ้าหนี้แล้ว');
+      setResolutionForm({ note: '', amount: '', direction: 'CREDIT', type: 'CREDIT_NOTE', documentNumber: '' });
+      await load();
+    } catch (error) {
+      toast.error(getSupplierDisputeErrorMessage(error));
+    } finally { setSaving(false); }
+  };
+
+  const voidAdjustment = async (adjustmentId) => {
+    if (!adjustmentVoidReason.trim()) return toast.info('กรุณาระบุเหตุผลในการย้อน Adjustment');
+    setSaving(true);
+    try {
+      await voidSupplierAdjustment({ adjustmentId, reason: adjustmentVoidReason });
+      toast.success('ย้อน Adjustment และคืนยอดเจ้าหนี้แล้ว');
+      setAdjustmentVoidReason('');
+      await load();
+    } catch (error) {
+      toast.error(getSupplierDisputeErrorMessage(error));
+    } finally { setSaving(false); }
+  };
+
   return (
     <section className="space-y-5">
       <header className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:flex-row md:items-center md:justify-between">
@@ -349,8 +438,9 @@ const SupplierPayableWorkspacePage = () => {
             <input type="date" value={agingAsOf} onChange={(event) => setAgingAsOf(event.target.value)} className="rounded-xl border px-3 py-2 text-sm" />
           </div>
         </div>
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <div className="rounded-xl bg-rose-50 p-3"><p className="text-xs text-rose-600">หนี้คงค้างรวม</p><strong className="text-lg text-rose-700">{money(aging?.totals?.grossOutstanding)}</strong></div>
+          <div className="rounded-xl bg-yellow-50 p-3"><p className="text-xs text-yellow-700">อยู่ระหว่างโต้แย้ง</p><strong className="text-lg text-yellow-800">{money(aging?.totals?.disputedOutstanding)}</strong></div>
           <div className="rounded-xl bg-orange-50 p-3"><p className="text-xs text-orange-600">Advance พร้อมใช้</p><strong className="text-lg text-orange-700">{money(aging?.totals?.availableAdvance)}</strong></div>
           <div className="rounded-xl bg-slate-100 p-3"><p className="text-xs text-slate-600">Net Exposure</p><strong className="text-lg text-slate-900">{money(aging?.totals?.netExposure)}</strong></div>
         </div>
@@ -461,6 +551,55 @@ const SupplierPayableWorkspacePage = () => {
             <input value={form.note} onChange={(event) => setForm({ ...form, note: event.target.value })} placeholder="หมายเหตุ" className="rounded-xl border px-3 py-2 text-sm" />
           </div>
           <div className="flex items-center justify-between"><strong>รวม {money(selectedTotal)}</strong><button type="button" onClick={createPayable} disabled={!selected.length || saving} className="rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-black text-white disabled:opacity-50">{saving ? 'กำลังบันทึก...' : 'ตั้งรายการเจ้าหนี้'}</button></div>
+        </div>
+      </div>
+
+      <div className="space-y-4 rounded-2xl border border-rose-200 bg-white p-4">
+        <div><h2 className="font-black">ข้อโต้แย้งและการปรับยอด Supplier</h2><p className="text-xs text-slate-500">รายการที่อยู่ระหว่างโต้แย้งจะไม่สามารถชำระหรือใช้ Advance จนกว่าจะปิดข้อโต้แย้ง</p></div>
+        <div className="grid gap-4 xl:grid-cols-2">
+          <div className="space-y-3 rounded-xl bg-rose-50 p-3">
+            <h3 className="text-sm font-black text-rose-700">เปิดข้อโต้แย้ง</h3>
+            <select value={disputeForm.payableId} onChange={(event) => setDisputeForm({ ...disputeForm, payableId: event.target.value })} className="w-full rounded-xl border px-3 py-2 text-sm">
+              <option value="">เลือก Payable</option>
+              {payables.filter((item) => ['OPEN', 'PARTIALLY_PAID'].includes(item.status)).map((item) => <option key={item.id} value={item.id}>{item.code} · {item.supplier?.name} · {money(item.outstandingAmount)}</option>)}
+            </select>
+            <input type="number" min="0.01" step="0.01" value={disputeForm.disputedAmount} onChange={(event) => setDisputeForm({ ...disputeForm, disputedAmount: event.target.value })} placeholder="ยอดที่โต้แย้ง" className="w-full rounded-xl border px-3 py-2 text-sm" />
+            <input value={disputeForm.reason} onChange={(event) => setDisputeForm({ ...disputeForm, reason: event.target.value })} placeholder="เหตุผล เช่น สินค้าขาด ราคาไม่ตรง หรือเสียหาย" className="w-full rounded-xl border px-3 py-2 text-sm" />
+            <button type="button" onClick={openDispute} disabled={!disputeForm.payableId || Number(disputeForm.disputedAmount) <= 0 || !disputeForm.reason.trim() || saving} className="w-full rounded-xl bg-rose-600 px-4 py-2.5 text-sm font-black text-white disabled:opacity-50">เปิดข้อโต้แย้ง</button>
+          </div>
+          <div className="space-y-3 rounded-xl bg-blue-50 p-3">
+            <h3 className="text-sm font-black text-blue-700">Credit / Debit Adjustment โดยตรง</h3>
+            <select value={adjustmentForm.payableId} onChange={(event) => setAdjustmentForm({ ...adjustmentForm, payableId: event.target.value })} className="w-full rounded-xl border px-3 py-2 text-sm">
+              <option value="">เลือก Payable</option>
+              {payables.filter((item) => item.status !== 'CANCELLED').map((item) => <option key={item.id} value={item.id}>{item.code} · {item.supplier?.name}</option>)}
+            </select>
+            <div className="grid gap-2 sm:grid-cols-3">
+              <select value={adjustmentForm.direction} onChange={(event) => setAdjustmentForm({ ...adjustmentForm, direction: event.target.value })} className="rounded-xl border px-3 py-2 text-sm"><option value="CREDIT">ลดหนี้ (Credit)</option><option value="DEBIT">เพิ่มหนี้ (Debit)</option></select>
+              <select value={adjustmentForm.type} onChange={(event) => setAdjustmentForm({ ...adjustmentForm, type: event.target.value })} className="rounded-xl border px-3 py-2 text-sm"><option value="CREDIT_NOTE">Credit Note</option><option value="DEBIT_NOTE">Debit Note</option><option value="PRICE_CORRECTION">แก้ราคา</option><option value="SHORTAGE">สินค้าขาด</option><option value="DAMAGE">สินค้าเสียหาย</option><option value="DISCOUNT">ส่วนลด</option><option value="OTHER">อื่น ๆ</option></select>
+              <input type="number" min="0.01" step="0.01" value={adjustmentForm.amount} onChange={(event) => setAdjustmentForm({ ...adjustmentForm, amount: event.target.value })} placeholder="จำนวนเงิน" className="rounded-xl border px-3 py-2 text-sm" />
+            </div>
+            <div className="grid gap-2 sm:grid-cols-2"><input value={adjustmentForm.documentNumber} onChange={(event) => setAdjustmentForm({ ...adjustmentForm, documentNumber: event.target.value })} placeholder="เลขที่เอกสาร" className="rounded-xl border px-3 py-2 text-sm" /><input type="date" value={adjustmentForm.documentDate} onChange={(event) => setAdjustmentForm({ ...adjustmentForm, documentDate: event.target.value })} className="rounded-xl border px-3 py-2 text-sm" /></div>
+            <input value={adjustmentForm.note} onChange={(event) => setAdjustmentForm({ ...adjustmentForm, note: event.target.value })} placeholder="หมายเหตุ" className="w-full rounded-xl border px-3 py-2 text-sm" />
+            <button type="button" onClick={createAdjustment} disabled={!adjustmentForm.payableId || Number(adjustmentForm.amount) <= 0 || saving} className="w-full rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-black text-white disabled:opacity-50">ยืนยันการปรับยอด</button>
+          </div>
+        </div>
+        <div className="grid gap-4 xl:grid-cols-2">
+          <div className="space-y-3">
+            <h3 className="text-sm font-black">ข้อโต้แย้งที่เปิดอยู่</h3>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <input value={resolutionForm.note} onChange={(event) => setResolutionForm({ ...resolutionForm, note: event.target.value })} placeholder="ผลการเจรจา/เหตุผลปิดข้อโต้แย้ง" className="rounded-xl border px-3 py-2 text-sm sm:col-span-2" />
+              <select value={resolutionForm.direction} onChange={(event) => setResolutionForm({ ...resolutionForm, direction: event.target.value })} className="rounded-xl border px-3 py-2 text-sm"><option value="CREDIT">ลดหนี้</option><option value="DEBIT">เพิ่มหนี้</option></select>
+              <select value={resolutionForm.type} onChange={(event) => setResolutionForm({ ...resolutionForm, type: event.target.value })} className="rounded-xl border px-3 py-2 text-sm"><option value="CREDIT_NOTE">Credit Note</option><option value="DEBIT_NOTE">Debit Note</option><option value="PRICE_CORRECTION">แก้ราคา</option><option value="SHORTAGE">สินค้าขาด</option><option value="DAMAGE">สินค้าเสียหาย</option><option value="DISCOUNT">ส่วนลด</option><option value="OTHER">อื่น ๆ</option></select>
+              <input type="number" min="0.01" step="0.01" value={resolutionForm.amount} onChange={(event) => setResolutionForm({ ...resolutionForm, amount: event.target.value })} placeholder="ยอดปรับ (เว้นว่างได้)" className="rounded-xl border px-3 py-2 text-sm" />
+              <input value={resolutionForm.documentNumber} onChange={(event) => setResolutionForm({ ...resolutionForm, documentNumber: event.target.value })} placeholder="เลข Credit/Debit Note" className="rounded-xl border px-3 py-2 text-sm" />
+            </div>
+            {(disputeHistory.disputes || []).filter((item) => item.status === 'OPEN').map((item) => <div key={item.id} className="rounded-xl border p-3"><div className="flex justify-between gap-3"><div><strong>{item.payableCode} · {item.supplierName}</strong><p className="text-xs text-slate-500">{item.reason}</p></div><strong className="text-rose-600">{money(item.disputedAmount)}</strong></div><button type="button" onClick={() => resolveDispute(item.id)} disabled={!resolutionForm.note.trim() || saving} className="mt-2 text-xs font-black text-blue-600 disabled:opacity-50">ปิดข้อโต้แย้ง{Number(resolutionForm.amount) > 0 ? 'พร้อมปรับยอด' : ''}</button></div>)}
+          </div>
+          <div className="space-y-3">
+            <h3 className="text-sm font-black">ประวัติ Adjustment</h3>
+            <input value={adjustmentVoidReason} onChange={(event) => setAdjustmentVoidReason(event.target.value)} placeholder="เหตุผลย้อนรายการ (OWNER)" className="w-full rounded-xl border px-3 py-2 text-sm" />
+            <div className="max-h-72 divide-y overflow-auto">{(disputeHistory.adjustments || []).map((item) => <div key={item.id} className="py-3"><div className="flex justify-between gap-3"><div><strong>{item.code} · {item.payableCode}</strong><p className="text-xs text-slate-500">{item.type} · {item.direction} · {item.documentNumber || 'ไม่มีเลขเอกสาร'}</p></div><strong className={item.direction === 'CREDIT' ? 'text-emerald-600' : 'text-rose-600'}>{item.direction === 'CREDIT' ? '-' : '+'}{money(item.amount)}</strong></div><div className="mt-2 flex justify-between"><span className="text-[10px] font-black">{item.status}</span>{item.status === 'CONFIRMED' && <button type="button" onClick={() => voidAdjustment(item.id)} disabled={saving} className="text-xs font-black text-rose-600 disabled:opacity-50">ย้อนรายการ</button>}</div></div>)}</div>
+          </div>
         </div>
       </div>
 

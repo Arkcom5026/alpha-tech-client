@@ -13,6 +13,15 @@ import {
   listSupplierSettlements,
   voidSupplierSettlement,
 } from '../api/supplierSettlementApi';
+import {
+  activateLegacySupplierAdvance,
+  applySupplierAdvance,
+  createSupplierAdvance,
+  getSupplierAdvanceErrorMessage,
+  listSupplierAdvances,
+  voidSupplierAdvance,
+} from '../api/supplierAdvanceApi';
+import useSupplierStore from '@/features/supplier/store/supplierStore';
 
 const money = (value) => new Intl.NumberFormat('th-TH', {
   style: 'currency',
@@ -48,6 +57,21 @@ const SupplierPayableWorkspacePage = () => {
     note: '',
   });
   const [voidReason, setVoidReason] = useState('');
+  const [advances, setAdvances] = useState([]);
+  const [selectedAdvanceId, setSelectedAdvanceId] = useState(null);
+  const [advanceAllocations, setAdvanceAllocations] = useState({});
+  const [reviewAmount, setReviewAmount] = useState('');
+  const [advanceVoidReason, setAdvanceVoidReason] = useState('');
+  const [advanceForm, setAdvanceForm] = useState({
+    supplierId: '',
+    amount: '',
+    paidAt: new Date().toISOString().slice(0, 10),
+    method: 'TRANSFER',
+    paymentRef: '',
+    note: '',
+  });
+  const suppliers = useSupplierStore((state) => state.suppliers);
+  const fetchSuppliersAction = useSupplierStore((state) => state.fetchSuppliersAction);
   const [form, setForm] = useState({
     documentNumber: '',
     documentDate: '',
@@ -58,14 +82,16 @@ const SupplierPayableWorkspacePage = () => {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [payableResult, candidateResult, settlementResult] = await Promise.all([
+      const [payableResult, candidateResult, settlementResult, advanceResult] = await Promise.all([
         listSupplierPayables({ status: status || undefined }),
         listSupplierPayableCandidates(),
         listSupplierSettlements(),
+        listSupplierAdvances(),
       ]);
       setPayables(Array.isArray(payableResult) ? payableResult : []);
       setCandidates(Array.isArray(candidateResult) ? candidateResult : []);
       setSettlements(Array.isArray(settlementResult) ? settlementResult : []);
+      setAdvances(Array.isArray(advanceResult) ? advanceResult : []);
     } catch (error) {
       toast.error(getSupplierPayableErrorMessage(error));
     } finally {
@@ -74,6 +100,7 @@ const SupplierPayableWorkspacePage = () => {
   }, [status]);
 
   useEffect(() => { load(); }, [load]);
+  useEffect(() => { Promise.resolve(fetchSuppliersAction()).catch(() => {}); }, [fetchSuppliersAction]);
 
   const selected = useMemo(
     () => candidates.filter((item) => selectedIds.includes(item.id)),
@@ -85,6 +112,12 @@ const SupplierPayableWorkspacePage = () => {
   const paymentSupplierId = paymentSelection[0]?.supplierId || null;
   const paymentTotal = paymentSelection.reduce(
     (sum, item) => sum + Number(paymentAllocations[item.id] || 0),
+    0,
+  );
+  const selectedAdvance = advances.find((item) => item.id === selectedAdvanceId) || null;
+  const advanceSelection = payables.filter((item) => advanceAllocations[item.id] != null);
+  const advanceTotal = advanceSelection.reduce(
+    (sum, item) => sum + Number(advanceAllocations[item.id] || 0),
     0,
   );
 
@@ -175,6 +208,105 @@ const SupplierPayableWorkspacePage = () => {
     }
   };
 
+  const toggleAdvanceAllocation = (payable) => {
+    if (!selectedAdvance || selectedAdvance.status !== 'ACTIVE') {
+      toast.info('กรุณาเลือก Advance ที่พร้อมใช้งานก่อน');
+      return;
+    }
+    if (selectedAdvance.supplierId !== payable.supplierId) {
+      toast.info('Advance และ Payable ต้องเป็น Supplier รายเดียวกัน');
+      return;
+    }
+    setAdvanceAllocations((current) => {
+      if (current[payable.id] != null) {
+        const next = { ...current };
+        delete next[payable.id];
+        return next;
+      }
+      return {
+        ...current,
+        [payable.id]: Math.min(
+          Number(payable.outstandingAmount || 0),
+          Number(selectedAdvance.availableAmount || 0),
+        ),
+      };
+    });
+  };
+
+  const createAdvance = async () => {
+    setSaving(true);
+    try {
+      await createSupplierAdvance({
+        ...advanceForm,
+        supplierId: Number(advanceForm.supplierId),
+        amount: Number(advanceForm.amount),
+      });
+      toast.success('บันทึกเงินจ่ายล่วงหน้า Supplier แล้ว');
+      setAdvanceForm({ ...advanceForm, amount: '', paymentRef: '', note: '' });
+      await load();
+    } catch (error) {
+      toast.error(getSupplierAdvanceErrorMessage(error));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const applyAdvance = async () => {
+    if (!selectedAdvance || !advanceSelection.length) return;
+    setSaving(true);
+    try {
+      await applySupplierAdvance({
+        advanceId: selectedAdvance.id,
+        supplierId: selectedAdvance.supplierId,
+        allocations: advanceSelection.map((item) => ({
+          payableId: item.id,
+          amount: Number(advanceAllocations[item.id] || 0),
+        })),
+      });
+      toast.success('นำ Advance ไปตัดยอดเจ้าหนี้แล้ว');
+      setAdvanceAllocations({});
+      await load();
+    } catch (error) {
+      toast.error(getSupplierAdvanceErrorMessage(error));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const activateAdvance = async (advanceId) => {
+    setSaving(true);
+    try {
+      await activateLegacySupplierAdvance({ advanceId, availableAmount: Number(reviewAmount) });
+      toast.success('รับรองยอด Advance เดิมแล้ว');
+      setReviewAmount('');
+      await load();
+    } catch (error) {
+      toast.error(getSupplierAdvanceErrorMessage(error));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const voidAdvance = async (advanceId) => {
+    if (!advanceVoidReason.trim()) {
+      toast.info('กรุณาระบุเหตุผลในการยกเลิก Advance');
+      return;
+    }
+    setSaving(true);
+    try {
+      await voidSupplierAdvance({ advanceId, reason: advanceVoidReason });
+      toast.success('ยกเลิก Advance และย้อนยอดที่จัดสรรแล้ว');
+      setAdvanceVoidReason('');
+      setAdvanceAllocations({});
+      if (selectedAdvanceId === advanceId) setSelectedAdvanceId(null);
+      await load();
+    } catch (error) {
+      toast.error(getSupplierAdvanceErrorMessage(error));
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <section className="space-y-5">
       <header className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:flex-row md:items-center md:justify-between">
@@ -208,7 +340,10 @@ const SupplierPayableWorkspacePage = () => {
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-start gap-3">
                     {['OPEN', 'PARTIALLY_PAID'].includes(item.status) && (
-                      <input type="checkbox" className="mt-1" checked={paymentAllocations[item.id] != null} onChange={() => togglePayment(item)} />
+                      <div className="mt-1 flex flex-col gap-1 text-[10px] font-bold text-slate-500">
+                        <label className="flex items-center gap-1"><input type="checkbox" checked={paymentAllocations[item.id] != null} onChange={() => togglePayment(item)} /> เงินจ่าย</label>
+                        <label className="flex items-center gap-1"><input type="checkbox" checked={advanceAllocations[item.id] != null} onChange={() => toggleAdvanceAllocation(item)} /> Advance</label>
+                      </div>
                     )}
                     <div><p className="font-black">{item.code} · {item.supplier?.name}</p><p className="text-xs text-slate-500">ครบกำหนด {date(item.dueDate)} · ใบรับ {item.receipts?.length || 0} ใบ</p></div>
                   </div>
@@ -224,6 +359,17 @@ const SupplierPayableWorkspacePage = () => {
                     value={paymentAllocations[item.id]}
                     onChange={(event) => setPaymentAllocations({ ...paymentAllocations, [item.id]: event.target.value })}
                     className="mt-3 w-full rounded-xl border px-3 py-2 text-right text-sm font-bold"
+                  />
+                )}
+                {advanceAllocations[item.id] != null && (
+                  <input
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    max={Math.min(Number(item.outstandingAmount || 0), Number(selectedAdvance?.availableAmount || 0))}
+                    value={advanceAllocations[item.id]}
+                    onChange={(event) => setAdvanceAllocations({ ...advanceAllocations, [item.id]: event.target.value })}
+                    className="mt-2 w-full rounded-xl border border-orange-200 bg-orange-50 px-3 py-2 text-right text-sm font-bold"
                   />
                 )}
               </div>
@@ -281,6 +427,48 @@ const SupplierPayableWorkspacePage = () => {
             ))}
             {!loading && !settlements.length && <p className="py-6 text-center text-sm text-slate-500">ยังไม่มีประวัติการชำระผ่าน Payable</p>}
           </div>
+        </div>
+      </div>
+
+      <div className="grid gap-5 xl:grid-cols-[0.8fr_1.2fr]">
+        <div className="space-y-4 rounded-2xl border border-orange-200 bg-white p-4">
+          <div><h2 className="font-black">บันทึกเงินจ่ายล่วงหน้า</h2><p className="text-xs text-slate-500">สร้างเครดิตที่นำไปตัด Payable ภายหลังได้</p></div>
+          <select value={advanceForm.supplierId} onChange={(event) => setAdvanceForm({ ...advanceForm, supplierId: event.target.value })} className="w-full rounded-xl border px-3 py-2 text-sm">
+            <option value="">เลือก Supplier</option>
+            {suppliers.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+          </select>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <input type="number" min="0.01" step="0.01" value={advanceForm.amount} onChange={(event) => setAdvanceForm({ ...advanceForm, amount: event.target.value })} placeholder="จำนวนเงิน" className="rounded-xl border px-3 py-2 text-sm" />
+            <input type="date" value={advanceForm.paidAt} onChange={(event) => setAdvanceForm({ ...advanceForm, paidAt: event.target.value })} className="rounded-xl border px-3 py-2 text-sm" />
+            <select value={advanceForm.method} onChange={(event) => setAdvanceForm({ ...advanceForm, method: event.target.value })} className="rounded-xl border px-3 py-2 text-sm"><option value="TRANSFER">โอนเงิน</option><option value="CASH">เงินสด</option><option value="QR">QR</option><option value="CHEQUE">เช็ค</option><option value="OTHER">อื่น ๆ</option></select>
+            <input value={advanceForm.paymentRef} onChange={(event) => setAdvanceForm({ ...advanceForm, paymentRef: event.target.value })} placeholder="เลขอ้างอิง" className="rounded-xl border px-3 py-2 text-sm" />
+          </div>
+          <input value={advanceForm.note} onChange={(event) => setAdvanceForm({ ...advanceForm, note: event.target.value })} placeholder="หมายเหตุ" className="w-full rounded-xl border px-3 py-2 text-sm" />
+          <button type="button" onClick={createAdvance} disabled={!advanceForm.supplierId || Number(advanceForm.amount) <= 0 || saving} className="w-full rounded-xl bg-orange-500 px-4 py-2.5 text-sm font-black text-white disabled:opacity-50">ยืนยันเงินจ่ายล่วงหน้า</button>
+        </div>
+
+        <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4">
+          <div><h2 className="font-black">Advance Credit</h2><p className="text-xs text-slate-500">เลือกรายการ ACTIVE แล้วเลือก Payable ด้านบนเพื่อจัดสรร</p></div>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <input value={reviewAmount} onChange={(event) => setReviewAmount(event.target.value)} type="number" min="0.01" step="0.01" placeholder="ยอดคงเหลือที่ OWNER รับรอง" className="rounded-xl border px-3 py-2 text-sm" />
+            <input value={advanceVoidReason} onChange={(event) => setAdvanceVoidReason(event.target.value)} placeholder="เหตุผลยกเลิก Advance" className="rounded-xl border px-3 py-2 text-sm" />
+          </div>
+          <div className="max-h-96 divide-y overflow-auto">
+            {advances.map((item) => (
+              <div key={item.id} className={`py-3 ${selectedAdvanceId === item.id ? 'bg-orange-50' : ''}`}>
+                <div className="flex items-start gap-3">
+                  {item.status === 'ACTIVE' && <input type="radio" name="selectedAdvance" className="mt-1" checked={selectedAdvanceId === item.id} onChange={() => { setSelectedAdvanceId(item.id); setAdvanceAllocations({}); }} />}
+                  <div className="min-w-0 flex-1"><p className="font-bold">{item.code} · {item.supplier?.name}</p><p className="text-xs text-slate-500">ตั้งต้น {money(item.originalAmount)} · ใช้แล้ว {money(item.usedAmount)}</p></div>
+                  <div className="text-right"><strong className="block text-orange-600">{money(item.availableAmount)}</strong><span className="text-[10px] font-black">{item.status}</span></div>
+                </div>
+                <div className="mt-2 flex justify-end gap-3">
+                  {item.status === 'REVIEW_REQUIRED' && <button type="button" onClick={() => activateAdvance(item.id)} disabled={Number(reviewAmount) <= 0 || saving} className="text-xs font-black text-blue-600 disabled:opacity-50">รับรองยอดเดิม</button>}
+                  {item.status !== 'VOIDED' && <button type="button" onClick={() => voidAdvance(item.id)} disabled={saving} className="text-xs font-black text-rose-600 disabled:opacity-50">ยกเลิก</button>}
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="flex items-center justify-between border-t pt-3"><span className="text-sm">ใช้ Advance {money(advanceTotal)} / คงเหลือ {money(selectedAdvance?.availableAmount)}</span><button type="button" onClick={applyAdvance} disabled={!selectedAdvance || !advanceSelection.length || advanceTotal <= 0 || advanceTotal > Number(selectedAdvance.availableAmount || 0) || saving} className="rounded-xl bg-orange-500 px-4 py-2.5 text-sm font-black text-white disabled:opacity-50">ตัดยอดด้วย Advance</button></div>
         </div>
       </div>
     </section>

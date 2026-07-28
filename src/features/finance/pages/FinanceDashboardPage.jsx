@@ -3,7 +3,7 @@
 
 import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Wallet, FileText, UserCheck, ArrowRight, Landmark, BadgeAlert } from 'lucide-react';
+import { Wallet, FileText, UserCheck, ArrowRight, Landmark, BadgeAlert, Building2 } from 'lucide-react';
 
 // 🟢 PLATINUM SUMMARY CARD: รีสกินเป็นสีขาวนวลลอยเด่น คมชัด อ่านง่าย ตัวหนังสือไม่ล้าสายตา
 const SummaryCard = ({ label, value, hint, icon: Icon, tone = 'red' }) => {
@@ -132,6 +132,14 @@ const FinanceDashboardPage = () => {
             icon={BadgeAlert}
             color="purple"
             onClick={() => navigate(`/${shopSlug}/pos/finance/customer-credit`)} //[cite: 22]
+          />
+
+          <ActionButton
+            title="จัดการเจ้าหนี้ Supplier"
+            desc="ตั้งหนี้จากใบรับสินค้าและตรวจสอบยอดคงค้าง"
+            icon={Building2}
+            color="blue"
+            onClick={() => navigate(`/${shopSlug}/pos/finance/supplier-payables`)}
           />
         </div>
       </div>

@@ -32,6 +32,9 @@ export const getSupplierPayableErrorMessage = (error) => {
     SUPPLIER_PAYABLE_RECEIPT_CONFLICT: 'มีใบรับสินค้าบางใบถูกนำไปตั้งหนี้แล้ว กรุณาโหลดข้อมูลใหม่',
     SUPPLIER_PAYABLE_SUPPLIER_MISMATCH: 'ใบรับสินค้าทั้งหมดต้องเป็นของ Supplier รายเดียวกัน',
     SUPPLIER_PAYABLE_RECEIPTS_REQUIRED: 'กรุณาเลือกใบรับสินค้าอย่างน้อยหนึ่งใบ',
+    SUPPLIER_PAYABLE_DATE_INVALID: 'วันที่เอกสารหรือวันครบกำหนดไม่ถูกต้อง',
+    SUPPLIER_PAYABLE_DUE_DATE_INVALID: 'วันครบกำหนดต้องไม่ก่อนวันที่เอกสาร',
+    SUPPLIER_PAYABLE_TOTAL_REQUIRED: 'ใบรับสินค้าที่เลือกไม่มียอดสำหรับตั้งหนี้',
   };
   return messages[code] || message || 'ไม่สามารถดำเนินการรายการเจ้าหนี้ได้';
 };

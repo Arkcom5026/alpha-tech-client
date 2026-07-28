@@ -42,17 +42,12 @@ export default function ProductReservationListPage() {
 
   return (
     <div className="w-full max-w-[1600px] mx-auto p-3 md:p-5 space-y-4 text-slate-800">
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-        <div>
-          <div className="flex items-center gap-2">
-            <ClipboardList className="w-5 h-5" />
-            <h1 className="text-lg md:text-xl font-black">ใบบันทึกการจองสินค้า</h1>
-          </div>
-          <p className="text-xs text-slate-500 mt-1">ติดตามสถานะสินค้าและดำเนินการส่งมอบหรือแปลงเป็นการขาย</p>
+      <div>
+        <div className="flex items-center gap-2">
+          <ClipboardList className="w-5 h-5" />
+          <h1 className="text-lg md:text-xl font-black">ใบบันทึกการจองสินค้า</h1>
         </div>
-        <Link to={`/${shopSlug}/pos/sales/reservations/create`} className="px-4 py-2 rounded-xl bg-slate-900 text-white text-sm font-black text-center">
-          + สร้างใบจอง
-        </Link>
+        <p className="text-xs text-slate-500 mt-1">ติดตามสถานะสินค้าและดำเนินการส่งมอบหรือแปลงเป็นการขาย</p>
       </div>
 
       <div className="bg-white border border-slate-200 rounded-2xl p-3 shadow-sm flex flex-col md:flex-row gap-2">

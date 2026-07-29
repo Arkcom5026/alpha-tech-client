@@ -18,6 +18,14 @@ const cartIndexPath = path.join(
   root,
   'src/features/sales/create/cart/index.js'
 );
+const itemSearchHookPath = path.join(
+  root,
+  'src/features/sales/create/item-search/hooks/useSaleItemSearch.js'
+);
+const itemSearchIndexPath = path.join(
+  root,
+  'src/features/sales/create/item-search/index.js'
+);
 
 const read = (filePath) => fs.readFileSync(filePath, 'utf8');
 const assert = (condition, message) => {
@@ -29,12 +37,16 @@ const assert = (condition, message) => {
   missionPath,
   cartHookPath,
   cartIndexPath,
+  itemSearchHookPath,
+  itemSearchIndexPath,
 ].forEach((filePath) => assert(fs.existsSync(filePath), `${filePath} must exist`));
 
 const contract = read(contractPath);
 const mission = read(missionPath);
 const cartHook = read(cartHookPath);
 const cartIndex = read(cartIndexPath);
+const itemSearchHook = read(itemSearchHookPath);
+const itemSearchIndex = read(itemSearchIndexPath);
 
 [
   'useCreateSaleWorkflow',
@@ -69,6 +81,17 @@ assert(cartHook.includes('const clear = useCallback'), 'Cart editor must own cle
 assert(!cartHook.includes('searchSaleItems'), 'Cart editor must not own item search');
 assert(!cartHook.includes('executeSaleCompletion'), 'Cart editor must not own completion');
 assert(cartIndex.includes('useSaleCartEditor'), 'Cart editor must be publicly exported');
+
+assert(itemSearchHook.includes('searchSaleItems'), 'Item search owner must execute sale item search');
+assert(itemSearchHook.includes('mapSaleSearchItemToCartLine'), 'Item search owner must map search results');
+assert(itemSearchHook.includes('itemKeySet.has'), 'Item search owner must prevent duplicate lines');
+assert(itemSearchHook.includes("case 'STOCK'"), 'Item search owner must support stock items');
+assert(itemSearchHook.includes("case 'SIMPLE'"), 'Item search owner must support simple items');
+assert(itemSearchHook.includes('resetInput'), 'Item search owner must own input reset and focus handoff');
+assert(itemSearchHook.includes('setError'), 'Item search owner must own search feedback delegation');
+assert(!itemSearchHook.includes('useState'), 'Item search owner must not duplicate cart or page state');
+assert(!itemSearchHook.includes('executeSaleCompletion'), 'Item search owner must not own completion');
+assert(itemSearchIndex.includes('useSaleItemSearch'), 'Item search owner must be publicly exported');
 
 assert(
   mission.includes('CreateSalePage.jsx` remains the route-level composition surface'),

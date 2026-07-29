@@ -2,30 +2,17 @@ const fs = require('fs');
 const path = require('path');
 
 const root = path.resolve(__dirname, '..');
-const contractPath = path.join(
-  root,
-  'src/features/sales/create/contracts/createSaleAtomicCutoverContract.js'
-);
-const missionPath = path.join(
-  root,
-  'docs/missions/sale-create-workflow-responsibility-extraction.md'
-);
-const cartHookPath = path.join(
-  root,
-  'src/features/sales/create/cart/hooks/useSaleCartEditor.js'
-);
-const cartIndexPath = path.join(
-  root,
-  'src/features/sales/create/cart/index.js'
-);
-const itemSearchHookPath = path.join(
-  root,
-  'src/features/sales/create/item-search/hooks/useSaleItemSearch.js'
-);
-const itemSearchIndexPath = path.join(
-  root,
-  'src/features/sales/create/item-search/index.js'
-);
+const contractPath = path.join(root, 'src/features/sales/create/contracts/createSaleAtomicCutoverContract.js');
+const missionPath = path.join(root, 'docs/missions/sale-create-workflow-responsibility-extraction.md');
+const cartHookPath = path.join(root, 'src/features/sales/create/cart/hooks/useSaleCartEditor.js');
+const cartIndexPath = path.join(root, 'src/features/sales/create/cart/index.js');
+const itemSearchHookPath = path.join(root, 'src/features/sales/create/item-search/hooks/useSaleItemSearch.js');
+const itemSearchIndexPath = path.join(root, 'src/features/sales/create/item-search/index.js');
+const completionHookPath = path.join(root, 'src/features/sales/create/completion/hooks/useSaleCompletion.js');
+const completionControllerPath = path.join(root, 'src/features/sales/create/completion/controllers/saleCompletionController.js');
+const completionPayloadPath = path.join(root, 'src/features/sales/create/completion/services/saleCompletionPayload.js');
+const completionValidationPath = path.join(root, 'src/features/sales/create/completion/services/saleCompletionValidation.js');
+const completionIndexPath = path.join(root, 'src/features/sales/create/completion/index.js');
 
 const read = (filePath) => fs.readFileSync(filePath, 'utf8');
 const assert = (condition, message) => {
@@ -39,6 +26,11 @@ const assert = (condition, message) => {
   cartIndexPath,
   itemSearchHookPath,
   itemSearchIndexPath,
+  completionHookPath,
+  completionControllerPath,
+  completionPayloadPath,
+  completionValidationPath,
+  completionIndexPath,
 ].forEach((filePath) => assert(fs.existsSync(filePath), `${filePath} must exist`));
 
 const contract = read(contractPath);
@@ -47,6 +39,11 @@ const cartHook = read(cartHookPath);
 const cartIndex = read(cartIndexPath);
 const itemSearchHook = read(itemSearchHookPath);
 const itemSearchIndex = read(itemSearchIndexPath);
+const completionHook = read(completionHookPath);
+const completionController = read(completionControllerPath);
+const completionPayload = read(completionPayloadPath);
+const completionValidation = read(completionValidationPath);
+const completionIndex = read(completionIndexPath);
 
 [
   'useCreateSaleWorkflow',
@@ -92,6 +89,25 @@ assert(itemSearchHook.includes('setError'), 'Item search owner must own search f
 assert(!itemSearchHook.includes('useState'), 'Item search owner must not duplicate cart or page state');
 assert(!itemSearchHook.includes('executeSaleCompletion'), 'Item search owner must not own completion');
 assert(itemSearchIndex.includes('useSaleItemSearch'), 'Item search owner must be publicly exported');
+
+assert(completionHook.includes('useState(false)'), 'Completion owner must own submitting state');
+assert(completionHook.includes('executeCreateSaleCompletion'), 'Completion hook must delegate execution to controller');
+assert(completionHook.includes('setIsSubmitting(true)'), 'Completion hook must enter submitting state');
+assert(completionHook.includes('setIsSubmitting(false)'), 'Completion hook must leave submitting state');
+assert(completionController.includes('validateSaleCompletion'), 'Completion controller must validate preconditions');
+assert(completionController.includes('buildSaleCompletionPayload'), 'Completion controller must delegate payload construction');
+assert(completionController.includes('persistHeldCart'), 'Completion controller must persist an active Held Cart');
+assert(completionController.includes('revalidateHeldCart'), 'Completion controller must revalidate an active Held Cart');
+assert(completionController.includes('projectHeldCartCompletionGuard'), 'Completion controller must preserve Held Cart completion guard');
+assert(completionController.includes('executeSaleCompletion'), 'Completion controller must execute sale completion');
+assert(!completionController.includes('useState'), 'Completion controller must remain framework-independent');
+assert(completionPayload.includes('sourceHeldCartId'), 'Completion payload must preserve source Held Cart authority');
+assert(completionPayload.includes('vatRate = 7'), 'Completion payload must preserve VAT calculation');
+assert(completionPayload.includes("item.lineType === 'SIMPLE'"), 'Completion payload must preserve Simple quantity semantics');
+assert(completionValidation.includes("saleMode === 'CREDIT'"), 'Completion validation must require customer for credit sale');
+assert(completionValidation.includes('SIMPLE_LOT_NOT_SELLABLE'), 'Completion validation must preserve SimpleLot guard');
+assert(completionIndex.includes('useSaleCompletion'), 'Completion owner must be publicly exported');
+assert(completionIndex.includes('executeCreateSaleCompletion'), 'Completion controller must be publicly exported');
 
 assert(
   mission.includes('CreateSalePage.jsx` remains the route-level composition surface'),

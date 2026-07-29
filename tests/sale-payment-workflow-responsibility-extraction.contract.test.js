@@ -8,6 +8,8 @@ const calculationPath = path.join(root, 'src/features/sales/create/payment/servi
 const validationPath = path.join(root, 'src/features/sales/create/payment/services/salePaymentValidation.js');
 const mapperPath = path.join(root, 'src/features/sales/create/payment/services/salePaymentIntentMapper.js');
 const controllerPath = path.join(root, 'src/features/sales/create/payment/controllers/salePaymentConfirmationController.js');
+const hookPath = path.join(root, 'src/features/sales/create/payment/hooks/useSalePaymentWorkflow.js');
+const projectionPath = path.join(root, 'src/features/sales/create/payment/projections/salePaymentWorkflowProjection.js');
 const indexPath = path.join(root, 'src/features/sales/create/payment/index.js');
 
 const read = (filePath) => fs.readFileSync(filePath, 'utf8');
@@ -22,6 +24,8 @@ const assert = (condition, message) => {
   validationPath,
   mapperPath,
   controllerPath,
+  hookPath,
+  projectionPath,
   indexPath,
 ].forEach((filePath) => assert(fs.existsSync(filePath), `${filePath} must exist`));
 
@@ -31,6 +35,8 @@ const calculation = read(calculationPath);
 const validation = read(validationPath);
 const mapper = read(mapperPath);
 const controller = read(controllerPath);
+const hook = read(hookPath);
+const projection = read(projectionPath);
 const index = read(indexPath);
 
 [
@@ -38,6 +44,7 @@ const index = read(indexPath);
   'validateSalePaymentConfirmation',
   'mapSalePaymentIntent',
   'executeSalePaymentConfirmation',
+  'useSalePaymentWorkflow',
   'projectSalePaymentWorkflow',
 ].forEach((symbol) => {
   assert(mission.includes(symbol), `${symbol} must be represented in the mission`);
@@ -79,10 +86,33 @@ assert(controller.includes('onSaleConfirmed?.'), 'Controller must coordinate com
 assert(!controller.includes('useState'), 'Controller must remain framework-independent');
 assert(!controller.includes('useCallback'), 'Controller must remain framework-independent');
 
+assert(hook.includes('useRef(false)'), 'Workflow hook must own confirmation lock');
+assert(hook.includes("useState('')"), 'Workflow hook must own payment error feedback');
+assert(hook.includes('useState(false)'), 'Workflow hook must own deposit touched lifecycle');
+assert(hook.includes('projectSalePaymentCalculation'), 'Workflow hook must delegate payment calculation');
+assert(hook.includes('executeSalePaymentConfirmation'), 'Workflow hook must delegate confirmation execution');
+assert(hook.includes('setDepositUsed(Math.min'), 'Workflow hook must own deposit suggestion and cap');
+assert(hook.includes("setPaymentAmount?.('CASH', '')"), 'Workflow hook must clear immediate payment when switching to credit');
+assert(hook.includes('resetSaleOrderAction?.()'), 'Workflow hook must coordinate sale reset');
+assert(hook.includes('clearCustomerAndDeposit?.()'), 'Workflow hook must coordinate customer deposit reset');
+assert(hook.includes("onSaleModeChange?.('CASH')"), 'Workflow hook must restore cash mode after success');
+assert(hook.includes("onSaleOptionChange?.('NONE')"), 'Workflow hook must reset document option after success');
+assert(hook.includes('projectSalePaymentWorkflow'), 'Workflow hook must delegate public projection');
+
+assert(projection.includes('calculation'), 'Projection must expose calculation');
+assert(projection.includes('feedback:'), 'Projection must expose payment feedback');
+assert(projection.includes('confirmation:'), 'Projection must expose confirmation state and command');
+assert(projection.includes('deposit:'), 'Projection must expose deposit command');
+assert(projection.includes('saleMode:'), 'Projection must expose sale mode command');
+assert(projection.includes('discount:'), 'Projection must expose bill discount command');
+assert(!projection.includes('useState'), 'Projection must remain framework-independent');
+
 assert(index.includes('projectSalePaymentCalculation'), 'Calculation must be publicly exported');
 assert(index.includes('validateSalePaymentConfirmation'), 'Validation must be publicly exported');
 assert(index.includes('mapSalePaymentIntent'), 'Mapper must be publicly exported');
 assert(index.includes('executeSalePaymentConfirmation'), 'Controller must be publicly exported');
+assert(index.includes('useSalePaymentWorkflow'), 'Workflow hook must be publicly exported');
+assert(index.includes('projectSalePaymentWorkflow'), 'Workflow projection must be publicly exported');
 
 assert(
   mission.includes('Runtime PASS and Operational PASS require executable evidence'),

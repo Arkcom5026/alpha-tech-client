@@ -236,7 +236,7 @@ const PrintBillListPage = () => {
                     <td className="p-2.5 text-center">
                       <button
                         type="button"
-                        onClick={() => navigate(printFormat === 'full' ? `/bills/${row.id}/full` : `/bills/${row.id}/short`)}
+                        onClick={() => navigate(printFormat === 'full' ? `../bill/print-full/${row.id}` : `../bill/print-short/${row.id}`)}
                         className="inline-flex items-center gap-1 rounded-lg bg-slate-900 px-3 py-1.5 text-[10px] font-black text-white hover:bg-slate-800"
                       >
                         <Printer className="h-3 w-3" /> พิมพ์

@@ -1,9 +1,10 @@
 // src/features/deliveryNote/pages/PrintDeliveryNotePage.jsx
-// 🏛️ Premium Next-Gen POS Delivery Note Workspace: (Force Re-Hydration Core Version)
+// 🏛️ Premium Next-Gen POS Delivery Note Workspace: (Server Authority Edition)
 
-import { useEffect, useMemo, useState } from 'react';
-import { useParams, useLocation } from 'react-router-dom';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useParams } from 'react-router-dom';
 import useSalesStore from '@/features/sales/store/salesStore';
+import { loadSaleDocument } from '@/features/sales/documents/workspace';
 import DeliveryNoteForm from '../components/DeliveryNoteForm';
 
 const normalizeDocumentText = (value) => {
@@ -74,16 +75,9 @@ const buildBranchFullAddress = (branch = {}) => {
 
 const PrintDeliveryNotePage = () => {
   const { saleId } = useParams();
-  const location = useLocation();
+  const { updateSaleDocumentLinesAction } = useSalesStore();
 
-  const saleStore = useSalesStore();
-  const {
-    getSaleByIdAction,
-    updateSaleDocumentLinesAction,
-    currentSale,
-    setCurrentSale,
-  } = saleStore;
-
+  const [currentSale, setCurrentSale] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [hideDate, setHideDate] = useState(false);
@@ -92,57 +86,45 @@ const PrintDeliveryNotePage = () => {
   const [lineDrafts, setLineDrafts] = useState({});
   const [savingLineKey, setSavingLineKey] = useState(null);
 
-  const navSale = useMemo(() => location.state?.sale || null, [location.key]);
-
-  // 🟢 [DYNAMIC RESET CONTROL]: บังคับล้างสถานะใบขายเก่าในคลัง Store ทุกครั้งที่กดเปลี่ยนเลข saleId ป้องกันอาการจอนิ่ง
-  useEffect(() => {
-    if (saleId && typeof setCurrentSale === 'function') {
+  const reloadSaleDocument = useCallback(async () => {
+    if (!saleId) {
       setCurrentSale(null);
+      return null;
     }
-  }, [saleId, setCurrentSale]);
+
+    const sale = await loadSaleDocument(saleId);
+    setCurrentSale(sale || null);
+    return sale || null;
+  }, [saleId]);
 
   useEffect(() => {
     let isMounted = true;
 
     const fetchData = async () => {
       if (!saleId) {
-        if (isMounted) setIsLoading(false);
+        if (isMounted) {
+          setCurrentSale(null);
+          setIsLoading(false);
+        }
         return;
       }
 
       setIsLoading(true);
       setError('');
+      setCurrentSale(null);
 
       try {
-        if (navSale && String(navSale.id) === String(saleId)) {
-          setCurrentSale(navSale);
-
-          const navBranch = navSale?.branch || null;
-          const hasTaxId = Boolean(navBranch?.taxId || navSale?.branchTaxId);
-          const hasBranchBasics = Boolean(
-            navBranch?.address ||
-            navBranch?.phone ||
-            navBranch?.name ||
-            navBranch?.companyName
-          );
-
-          const navHasItems =
-            (Array.isArray(navSale?.items) && navSale.items.length > 0) ||
-            (Array.isArray(navSale?.simpleItems) && navSale.simpleItems.length > 0);
-
-          const needHydrate = !hasTaxId || !hasBranchBasics || !navHasItems;
-
-          if (!needHydrate) {
-            if (isMounted) setIsLoading(false);
-            return;
-          }
-        }
-
-        if (typeof getSaleByIdAction === 'function') {
-          await getSaleByIdAction(saleId);
-        }
+        const sale = await loadSaleDocument(saleId);
+        if (isMounted) setCurrentSale(sale || null);
       } catch (err) {
-        if (isMounted) setError('ไม่สามารถโหลดข้อมูลใบส่งของได้');
+        if (isMounted) {
+          setError(
+            err?.response?.data?.error ||
+              err?.response?.data?.message ||
+              err?.message ||
+              'ไม่สามารถโหลดข้อมูลใบส่งของได้'
+          );
+        }
       } finally {
         if (isMounted) setIsLoading(false);
       }
@@ -153,14 +135,13 @@ const PrintDeliveryNotePage = () => {
     return () => {
       isMounted = false;
     };
-  }, [saleId, navSale, getSaleByIdAction, setCurrentSale]);
+  }, [saleId]);
 
   const preparedSaleItems = useMemo(() => {
     if (!currentSale) return [];
 
-    // `saleLines` is the document projection returned by the current API.  Keep
-    // the legacy fallback for older responses, but merge both line stores: a
-    // sale may contain serialised stock and SIMPLE products in the same bill.
+    // `saleLines` is the preferred server document projection. Keep the legacy
+    // fallback for older responses and merge serialised and SIMPLE line stores.
     const src = Array.isArray(currentSale.saleLines) && currentSale.saleLines.length > 0
       ? currentSale.saleLines
       : [
@@ -226,14 +207,14 @@ const PrintDeliveryNotePage = () => {
           serialNumber: '-',
         });
       } else {
-        const agg = grouped.get(key);
-        if (isSnItem && item?.id) agg.saleItemIds.push(Number(item.id));
-        if (!isSnItem && item?.id) agg.simpleItemIds.push(Number(item.id));
+        const aggregate = grouped.get(key);
+        if (isSnItem && item?.id) aggregate.saleItemIds.push(Number(item.id));
+        if (!isSnItem && item?.id) aggregate.simpleItemIds.push(Number(item.id));
       }
 
-      const agg = grouped.get(key);
-      agg.quantity += quantity;
-      agg.discount += discountEach;
+      const aggregate = grouped.get(key);
+      aggregate.quantity += quantity;
+      aggregate.discount += discountEach;
     }
 
     return Array.from(grouped.values());
@@ -246,8 +227,8 @@ const PrintDeliveryNotePage = () => {
     setEditingLineKey((current) => {
       if (current === key) return null;
 
-      setLineDrafts((prev) => ({
-        ...prev,
+      setLineDrafts((previous) => ({
+        ...previous,
         [key]: {
           documentPrefix: item?.documentPrefix || '',
           documentDescriptionRaw: item?.documentDescriptionRaw || '',
@@ -263,13 +244,13 @@ const PrintDeliveryNotePage = () => {
     const key = item?.documentLineKey || item?.id;
     if (!key) return;
 
-    setLineDrafts((prev) => ({
-      ...prev,
+    setLineDrafts((previous) => ({
+      ...previous,
       [key]: {
         documentPrefix: item?.documentPrefix || '',
         documentDescriptionRaw: item?.documentDescriptionRaw || '',
         documentSuffix: item?.documentSuffix || '',
-        ...(prev?.[key] || {}),
+        ...(previous?.[key] || {}),
         [field]: value,
       },
     }));
@@ -301,7 +282,7 @@ const PrintDeliveryNotePage = () => {
       documentSuffix: nullableDocumentText(draft.documentSuffix),
     });
 
-    setSavingLineKey(key)
+    setSavingLineKey(key);
     setError('');
 
     try {
@@ -311,7 +292,7 @@ const PrintDeliveryNotePage = () => {
           items: saleItemIds.map(makePayloadLine),
           simpleItems: simpleItemIds.map(makePayloadLine),
         },
-        { refresh: true }
+        { refresh: false }
       );
 
       if (!result?.ok) {
@@ -319,25 +300,25 @@ const PrintDeliveryNotePage = () => {
         return;
       }
 
+      await reloadSaleDocument();
       setEditingLineKey(null);
-      setLineDrafts((prev) => {
-        const next = { ...(prev || {}) };
+      setLineDrafts((previous) => {
+        const next = { ...(previous || {}) };
         delete next[key];
         return next;
       });
     } catch (err) {
-      const msg =
+      setError(
         err?.response?.data?.error ||
-        err?.response?.data?.message ||
-        err?.message ||
-        'บันทึกข้อความก่อน/หลังสินค้าไม่สำเร็จ';
-      setError(msg);
+          err?.response?.data?.message ||
+          err?.message ||
+          'บันทึกข้อความก่อน/หลังสินค้าไม่สำเร็จ'
+      );
     } finally {
       setSavingLineKey(null);
     }
   };
 
-  // 🟢 FIXED: ปรับเปลี่ยนข้อความแจ้งสถานะโหลดข้อมูล ไม่ให้จมหายในเลเยอร์โหมดมืด
   if (isLoading) {
     return <div className="p-8 text-center text-zinc-400 font-bold bg-slate-900 min-h-screen">⏳ กำลังสตรีมโครงสร้างใบส่งของ A4...</div>;
   }
@@ -359,8 +340,6 @@ const PrintDeliveryNotePage = () => {
   };
 
   return (
-    // 🟢 FIXED: สลักคลาส CSS ตัดสิทธิ์ควบคุมความมืด ปรับพื้นที่หน้ากระดาษพิมพ์ A4 ตรงกลางให้เป็นสีขาว ตัวอักษรสีดำสนิท 100%
-    // เติมคลาส bg-white text-black dark:bg-white dark:text-black ครอบคลุมพิกัดแผ่นฟอร์ม DeliveryNoteForm ทั้งผืน
     <div className="w-full min-h-screen bg-white text-black dark:bg-white dark:text-black py-8 px-4 print:p-0 print:bg-white animate-fadeIn">
       <div className="mx-auto max-w-[210mm] bg-white text-black dark:bg-white dark:text-black p-2 print:p-0">
         <DeliveryNoteForm

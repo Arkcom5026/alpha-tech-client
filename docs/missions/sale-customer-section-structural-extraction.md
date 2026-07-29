@@ -1,25 +1,54 @@
-# Sale Customer Section Structural Extraction
+# Sale Customer Section Responsibility Extraction
 
 ## Mission
 
-Extract the search surface and search result list from the oversized Sale `CustomerSection.jsx` without changing runtime behavior.
+Decompose the oversized Sale `CustomerSection.jsx` by real runtime responsibility, not by line count or visual fragments, while preserving current behavior.
 
-## Authority
+## Architecture Goal
 
-This increment follows the Purchase Order frontend pattern:
+`CustomerSection.jsx` must become a thin composition shell. Each workflow responsibility must have one explicit owner:
 
-- feature-owned components
-- explicit public exports
-- orchestration remains in the owning feature
-- behavior-preserving structural movement before behavior change
+- customer search state and execution
+- customer editor state and save validation
+- customer/deposit hydration and Sale handoff
+- UI projection
+- presentation components
 
-## Authorized Scope
+This follows the Purchase Order composition model while preserving Sale feature ownership.
 
-- `src/features/sales/create/customer/components/SaleCustomerSearch.jsx`
-- `src/features/sales/create/customer/components/SaleCustomerSearchResults.jsx`
-- `src/features/sales/create/customer/index.js`
-- wiring changes in `src/features/sales/create/components/CustomerSection.jsx`
+## Authorized Structure
+
+- `components/SaleCustomerSearch.jsx`
+- `components/SaleCustomerSearchResults.jsx`
+- `hooks/useSaleCustomerSearch.js`
+- `hooks/useSaleCustomerEditor.js`
+- `hooks/useSaleCustomerHydration.js`
+- `projections/saleCustomerSectionProjection.js`
+- `index.js`
+- later wiring changes in `src/features/sales/create/components/CustomerSection.jsx`
 - focused repository contract evidence
+
+## Responsibility Boundaries
+
+### Search Owner
+
+`useSaleCustomerSearch` owns search mode, query values, result state, minimum validation, search execution, not-found signaling, and loading/error state.
+
+### Editor Owner
+
+`useSaleCustomerEditor` owns customer fields, address fields, dirty state, payload construction, create/update save validation, hydration, and reset.
+
+### Hydration and Handoff Owner
+
+`useSaleCustomerHydration` owns loading the full customer/deposit context after selection, setting the Sale customer ID, projecting deposit state, selecting the default Sale mode, and focusing product search.
+
+### Projection Owner
+
+`saleCustomerSectionProjection` owns the stable view model consumed by the composition shell and presentation components.
+
+### Component Owners
+
+Presentation components render delegated state and emit intent. They must not call APIs, own Deposit logic, own Sale state, or access Repair workflows.
 
 ## Required Invariants
 
@@ -28,8 +57,9 @@ This increment follows the Purchase Order frontend pattern:
 3. Existing Customer Deposit hydration remains unchanged.
 4. Existing create/update/address behavior remains unchanged.
 5. Existing Sale customer selection and product-search focus handoff remain unchanged.
-6. Components remain owned by the Sale create flow; no shared Repair component is introduced.
-7. Unified search behavior is deferred to the next stacked increment.
+6. Sale owns this workflow; no shared Repair component is introduced.
+7. Unified single-field search is deferred to the next stacked increment.
+8. Extraction is incomplete until the legacy shell delegates to these owners and duplicate responsibilities are removed.
 
 ## Non-goals
 
@@ -43,4 +73,4 @@ This increment follows the Purchase Order frontend pattern:
 
 ## Verification Boundary
 
-Repository evidence can prove file ownership, exports, and structural scope. Runtime and Operational PASS require executable evidence.
+Repository evidence can prove responsibility ownership, public exports, isolation, and delegation contracts. Runtime and Operational PASS require executable evidence.

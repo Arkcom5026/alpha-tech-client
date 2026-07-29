@@ -7,6 +7,7 @@ const LAST_HELD_CART_LINE_MESSAGE =
 
 export const useSaleCartEditor = ({
   activeHeldCart,
+  activeHeldCartRef,
   onError,
   initialItems = [],
 } = {}) => {
@@ -26,8 +27,9 @@ export const useSaleCartEditor = ({
 
   const remove = useCallback((lineId) => {
     setItems((current) => {
+      const heldCartAuthority = activeHeldCartRef?.current || activeHeldCart;
       if (!canRemoveSaleItemFromHeldCart({
-        activeHeldCart,
+        activeHeldCart: heldCartAuthority,
         itemCount: current.length,
       })) {
         onError?.(LAST_HELD_CART_LINE_MESSAGE);
@@ -35,7 +37,7 @@ export const useSaleCartEditor = ({
       }
       return current.filter((item) => item.lineId !== lineId);
     });
-  }, [activeHeldCart, onError]);
+  }, [activeHeldCart, activeHeldCartRef, onError]);
 
   const update = useCallback((lineId, nextValues) => {
     setItems((current) => current.map((item) => (

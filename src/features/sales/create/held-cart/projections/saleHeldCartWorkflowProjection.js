@@ -7,22 +7,22 @@ export const projectSaleHeldCartWorkflow = ({
   saleItems,
   customerId,
   selectedPriceType,
-}) => ({
-  ...projectSaleHeldCart({
+}) => {
+  const base = projectSaleHeldCart({
     session,
     saleItems,
     customerId,
     selectedPriceType,
-  }),
-  commands: {
-    ...projectSaleHeldCart({
-      session,
-      saleItems,
-      customerId,
-      selectedPriceType,
-    }).commands,
-    load: recovery.load,
-    persist: autosave.persist,
-    cancelScheduled: autosave.cancelScheduled,
-  },
-});
+  });
+
+  return {
+    ...base,
+    commands: {
+      ...base.commands,
+      load: recovery.load,
+      persist: autosave.persist,
+      cancelScheduled: autosave.cancelScheduled,
+      setValidation: session.setValidation,
+    },
+  };
+};

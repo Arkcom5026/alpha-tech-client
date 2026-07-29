@@ -1,3 +1,5 @@
+import { buildCanonicalSaleDocumentLines } from '@/features/sales/documents/utils/saleDocumentLineMapper'
+
 const normalizeText = (value) => {
   if (value === null || value === undefined) return ''
   return String(value).trim()
@@ -80,77 +82,25 @@ export const buildCustomerReceiptCustomerAddress = (customer) => {
   return parts || '-'
 }
 
-const resolveSaleDocumentLines = (sale) => {
-  if (Array.isArray(sale?.saleLines) && sale.saleLines.length > 0) {
-    return sale.saleLines
-  }
-
-  // `saleItems` is retained for older customer-receipt responses.  It only
-  // represents stock/serial rows, so SIMPLE rows must be appended explicitly.
-  const stockItems = Array.isArray(sale?.saleItems)
-    ? sale.saleItems
-    : Array.isArray(sale?.items)
-      ? sale.items
-      : []
-  const simpleItems = Array.isArray(sale?.simpleItems) ? sale.simpleItems : []
-
-  return [...stockItems, ...simpleItems]
-}
-
 export const buildCustomerReceiptLineItems = (allocations = []) => {
   const lines = []
 
   allocations.forEach((allocation, allocationIndex) => {
-    const saleItems = resolveSaleDocumentLines(allocation?.sale)
+    const saleItems = buildCanonicalSaleDocumentLines(allocation?.sale)
 
     if (saleItems.length > 0) {
       saleItems.forEach((saleItem, saleItemIndex) => {
-        const quantity = numberValue(
-          saleItem?.quantity ?? saleItem?.qty ?? saleItem?.count ?? saleItem?.itemQty ?? 1
-        )
-        const unitPrice = numberValue(
-          saleItem?.unitPriceIncVat ??
-            saleItem?.unitPrice ??
-            saleItem?.price ??
-            saleItem?.sellingPrice ??
-            saleItem?.salePrice
-        )
-        const amount = numberValue(
-          saleItem?.amount ??
-            saleItem?.totalAmount ??
-            saleItem?.total ??
-            saleItem?.lineTotal ??
-            saleItem?.subtotal ??
-            unitPrice * quantity
-        )
+        const quantity = saleItem.quantity
+        const unitPrice = saleItem.unitPrice
+        const amount = saleItem.lineTotal
 
         lines.push({
           key: `${allocation?.id || allocationIndex}-${saleItem?.id || saleItemIndex}`,
           saleCode: allocation?.sale?.code || allocation?.saleCode || '-',
-          productName:
-            saleItem?.documentDescription ||
-            saleItem?.productName ||
-            saleItem?.name ||
-            saleItem?.description ||
-            saleItem?.title ||
-            saleItem?.itemName ||
-            saleItem?.stockItem?.product?.name ||
-            saleItem?.product?.name ||
-            '-',
-          productModel:
-            saleItem?.productModel ||
-            saleItem?.model ||
-            saleItem?.stockItem?.product?.productModel ||
-            saleItem?.product?.productModel ||
-            '',
+          productName: saleItem.productName,
+          productModel: saleItem.productModel,
           quantity,
-          unit:
-            saleItem?.unit ||
-            saleItem?.unitName ||
-            saleItem?.stockItem?.product?.unit?.name ||
-            saleItem?.product?.unit?.name ||
-            saleItem?.unitObj?.name ||
-            '-',
+          unit: saleItem.unit,
           unitPrice,
           amount,
         })

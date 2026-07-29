@@ -153,6 +153,7 @@ const QuickSalePage = () => {
                   items={sale.cart.items}
                   onRemove={sale.cart.remove}
                   onUpdate={sale.cart.update}
+                  onChangeSimpleQuantity={sale.cart.setSimpleQuantity}
                   billDiscount={sale.presentation.billDiscount}
                 />
               </div>

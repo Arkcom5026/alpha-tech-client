@@ -3,26 +3,38 @@ export const mapHeldCartLinesToSaleItems = ({ cart, validation }) => {
     (validation?.lines || []).map((item) => [item.lineKey, item])
   );
 
-  return (cart?.lines || []).map((line) => ({
-    lineId: line.lineKey,
-    lineType: line.lineType,
-    type: line.lineType === 'STOCK_ITEM' ? 'STOCK' : 'SIMPLE',
-    stockItemId: line.stockItemId,
-    simpleLotId: line.simpleLotId,
-    productId: line.productId,
-    quantity: Number(line.quantity),
-    quantityAvailable: Number(line.quantity),
-    barcode: line.barcode || '',
-    productName: line.productName || '',
-    model: line.modelName || '',
-    price: Number(line.unitPrice),
-    originalPrice: Number(line.unitPrice),
-    sellingPrice: Number(line.unitPrice),
-    discount: Number(line.discount || 0),
-    discountWithoutBill: Number(line.discount || 0),
-    billShare: 0,
-    heldCartAvailability: validationByKey.get(line.lineKey) || null,
-  }));
+  return (cart?.lines || []).map((line) => {
+    const availability = validationByKey.get(line.lineKey) || null;
+
+    return {
+      lineId: line.lineKey,
+      lineType: line.lineType,
+      type: line.lineType === 'STOCK_ITEM' ? 'STOCK' : 'SIMPLE',
+      stockItemId: line.stockItemId,
+      simpleLotId: line.simpleLotId,
+      productId: line.productId,
+      quantity: Number(line.quantity),
+      quantityAvailable: Number(
+        availability?.quantityAvailable ??
+          availability?.availableQuantity ??
+          availability?.qtyRemaining ??
+          line.quantityAvailable ??
+          line.availableQuantity ??
+          line.qtyRemaining ??
+          line.quantity
+      ),
+      barcode: line.barcode || '',
+      productName: line.productName || '',
+      model: line.modelName || '',
+      price: Number(line.unitPrice),
+      originalPrice: Number(line.unitPrice),
+      sellingPrice: Number(line.unitPrice),
+      discount: Number(line.discount || 0),
+      discountWithoutBill: Number(line.discount || 0),
+      billShare: 0,
+      heldCartAvailability: availability,
+    };
+  });
 };
 
 export const projectHeldCartWarning = (validation) => {

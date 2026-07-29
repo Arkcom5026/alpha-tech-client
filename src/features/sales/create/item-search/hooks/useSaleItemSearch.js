@@ -40,6 +40,12 @@ export const useSaleItemSearch = ({
 
       const preparedItem = mapSaleSearchItemToCartLine(foundItem, selectedPriceType);
       if (itemKeySet.has(preparedItem.lineId)) {
+        if (preparedItem.lineType === 'SIMPLE') {
+          addItem(preparedItem);
+          resetInput(event.target);
+          return;
+        }
+
         setError('⚠️ บาร์โค้ดนี้ถูกเพิ่มในรายการขายแล้ว');
         resetInput(event.target);
         return;

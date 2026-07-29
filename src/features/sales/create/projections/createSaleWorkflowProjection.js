@@ -15,6 +15,7 @@ export const projectCreateSaleWorkflow = ({
     add: cart.add,
     remove: cart.remove,
     update: cart.update,
+    setSimpleQuantity: cart.setSimpleQuantity,
     clear: cart.clear,
   },
   itemSearch: {

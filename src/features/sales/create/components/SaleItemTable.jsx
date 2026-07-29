@@ -6,7 +6,7 @@ const toNumber = (raw) => {
   return Number.isFinite(number) ? number : 0;
 };
 
-const SaleItemTable = ({ items = [], onRemove, onUpdate, billDiscount = 0 }) => {
+const SaleItemTable = ({ items = [], onRemove, onUpdate, onChangeSimpleQuantity, billDiscount = 0 }) => {
   useEffect(() => {
     if (!Array.isArray(items) || items.length === 0 || typeof onUpdate !== 'function') return;
 
@@ -76,6 +76,10 @@ const SaleItemTable = ({ items = [], onRemove, onUpdate, billDiscount = 0 }) => 
     });
   };
 
+  const handleSimpleQuantityChange = (item, input) => {
+    onChangeSimpleQuantity?.(item.lineId, toNumber(input?.target?.value));
+  };
+
   const headers = (
     <tr>
       <th className="p-2.5 text-center w-12">#</th>
@@ -134,7 +138,21 @@ const SaleItemTable = ({ items = [], onRemove, onUpdate, billDiscount = 0 }) => 
               </td>
               <td className="p-2.5 text-slate-500">{item.lineType === 'SIMPLE' ? 'แบบจำนวน' : 'รายชิ้น/SN'}</td>
               <td className="p-2.5 border-l border-slate-100 font-mono text-center select-all">{item.barcode}</td>
-              <td className="p-2.5 text-center font-mono">{quantity}</td>
+              <td className="p-2.5 text-center font-mono">
+                {item.lineType === 'SIMPLE' ? (
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    min="1"
+                    max={item.quantityAvailable}
+                    step="1"
+                    className="w-16 h-7 border border-slate-200 rounded-lg px-1.5 text-center font-mono font-black text-slate-900 bg-white focus:border-slate-900 outline-none text-xs"
+                    value={quantity}
+                    onChange={(event) => handleSimpleQuantityChange(item, event)}
+                    aria-label={`จำนวน ${item.productName || 'สินค้าแบบจำนวน'}`}
+                  />
+                ) : quantity}
+              </td>
               <td className="p-2.5 font-mono text-right text-slate-400">{basePrice.toFixed(2)}</td>
               <td className="p-2.5 text-right">
                 <input

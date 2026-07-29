@@ -9,7 +9,11 @@ export const validateSaleCompletion = ({ saleItems, saleMode, customerId, isSubm
 
   const invalidSimple = (saleItems || []).find((item) => (
     item.lineType === 'SIMPLE' && (
-      !item.simpleLotId || !item.productId || Number(item.quantityAvailable) <= 0
+      !item.simpleLotId ||
+      !item.productId ||
+      Number(item.quantityAvailable) <= 0 ||
+      Number(item.quantity) <= 0 ||
+      Number(item.quantity) > Number(item.quantityAvailable)
     )
   ));
 

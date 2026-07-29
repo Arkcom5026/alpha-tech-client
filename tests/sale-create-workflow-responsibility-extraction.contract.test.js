@@ -4,6 +4,7 @@ const path = require('path');
 const root = path.resolve(__dirname, '..');
 const contractPath = path.join(root, 'src/features/sales/create/contracts/createSaleAtomicCutoverContract.js');
 const missionPath = path.join(root, 'docs/missions/sale-create-workflow-responsibility-extraction.md');
+const runtimeEntrypointPath = path.join(root, 'src/features/sales/create/pages/CreateSalePage.jsx');
 const cartHookPath = path.join(root, 'src/features/sales/create/cart/hooks/useSaleCartEditor.js');
 const cartIndexPath = path.join(root, 'src/features/sales/create/cart/index.js');
 const itemSearchHookPath = path.join(root, 'src/features/sales/create/item-search/hooks/useSaleItemSearch.js');
@@ -27,6 +28,7 @@ const assert = (condition, message) => {
 [
   contractPath,
   missionPath,
+  runtimeEntrypointPath,
   cartHookPath,
   cartIndexPath,
   itemSearchHookPath,
@@ -45,6 +47,7 @@ const assert = (condition, message) => {
 
 const contract = read(contractPath);
 const mission = read(missionPath);
+const runtimeEntrypoint = read(runtimeEntrypointPath);
 const cartHook = read(cartHookPath);
 const cartIndex = read(cartIndexPath);
 const itemSearchHook = read(itemSearchHookPath);
@@ -79,9 +82,23 @@ const createIndex = read(createIndexPath);
   'const buildCompletionPayload =',
   'const handleConfirmSale =',
   'const handleSaleConfirmed =',
+  'searchSaleItems',
+  'mapSaleSearchItemToCartLine',
+  'executeSaleCompletion',
+  'openCompletedSaleDocument',
+  'revalidatePosHeldCart',
 ].forEach((legacyOwner) => {
   assert(contract.includes(legacyOwner), `${legacyOwner} must be forbidden after atomic cutover`);
+  assert(!runtimeEntrypoint.includes(legacyOwner), `${legacyOwner} must be removed from CreateSalePage`);
 });
+
+assert(runtimeEntrypoint.includes("from '../index'"), 'CreateSalePage must import the Create Sale public boundary');
+assert(runtimeEntrypoint.includes('useCreateSaleWorkflow({'), 'CreateSalePage must consume the Create Sale workflow');
+assert(runtimeEntrypoint.includes('sale.cart.items'), 'CreateSalePage must consume projected cart state');
+assert(runtimeEntrypoint.includes('sale.itemSearch.handleBarcodeSearch'), 'CreateSalePage must delegate barcode search');
+assert(runtimeEntrypoint.includes('sale.completion.confirm'), 'CreateSalePage must delegate completion');
+assert(runtimeEntrypoint.includes('sale.documentHandoff.handleConfirmed'), 'CreateSalePage must delegate document handoff');
+assert(runtimeEntrypoint.includes('sale.heldCart.commands.load'), 'CreateSalePage must delegate Held Cart loading');
 
 assert(cartHook.includes('useState(initialItems)'), 'Cart editor must own sale item state');
 assert(cartHook.includes('itemKeySet'), 'Cart editor must own duplicate-key projection');

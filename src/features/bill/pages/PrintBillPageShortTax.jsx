@@ -1,21 +1,13 @@
 // src/features/bill/pages/PrintBillPageShortTax.jsx
 // 🏛️ Premium Next-Gen POS Print Page: (Short Thermal Receipt Core Logic Restored)
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import BillLayoutShortTax from '../components/BillLayoutShortTax'
 import { useBillStore } from '@/features/bill/store/billStore'
-import useSalesStore from '@/features/sales/store/salesStore'
+import { useSaleDocumentLineEditor } from '@/features/sales/documents/workspace'
 
-const normalizeDocumentText = (value) => {
-  if (typeof value !== 'string') return ''
-  return value.trim()
-}
-
-const nullableDocumentText = (value) => {
-  const normalized = normalizeDocumentText(value)
-  return normalized || null
-}
+const PRINT_RETURN_FALLBACK_MS = 60_000
 
 const PrintBillPageShortTax = () => {
   const params = useParams()
@@ -28,13 +20,13 @@ const PrintBillPageShortTax = () => {
   const [searchParams] = useSearchParams()
 
   const paymentId = useMemo(() => {
-    const v = searchParams.get('paymentId')
-    return v ? String(v) : null
+    const value = searchParams.get('paymentId')
+    return value ? String(value) : null
   }, [searchParams])
 
   const autoPrint = useMemo(() => {
-    const v = String(searchParams.get('autoPrint') || '').toLowerCase()
-    return v === '1' || v === 'true' || v === 'yes'
+    const value = String(searchParams.get('autoPrint') || '').toLowerCase()
+    return value === '1' || value === 'true' || value === 'yes'
   }, [searchParams])
 
   const {
@@ -48,17 +40,11 @@ const PrintBillPageShortTax = () => {
     resetAction,
   } = useBillStore()
 
-  const { updateSaleDocumentLinesAction } = useSalesStore()
+  const reloadSaleForPrint = useCallback(async () => {
+    if (!saleId) return null
 
-  const [pageError, setPageError] = useState('')
-  const [editingLineKey, setEditingLineKey] = useState(null)
-  const [lineDrafts, setLineDrafts] = useState({})
-  const [savingLineKey, setSavingLineKey] = useState(null)
-
-  const reloadSaleForPrint = async () => {
-    if (!saleId) return
-
-    await loadSaleByIdAction(
+    resetAction()
+    return loadSaleByIdAction(
       saleId,
       paymentId
         ? {
@@ -67,15 +53,20 @@ const PrintBillPageShortTax = () => {
           }
         : undefined
     )
-  }
+  }, [loadSaleByIdAction, paymentId, resetAction, saleId])
+
+  const documentLineEditor = useSaleDocumentLineEditor({
+    saleId,
+    reload: reloadSaleForPrint,
+  })
 
   useEffect(() => {
     const run = async () => {
       try {
-        setPageError('')
+        documentLineEditor.actions.clearError()
         await reloadSaleForPrint()
       } catch {
-        // error handled in store
+        // billStore owns load errors
       }
     }
 
@@ -84,8 +75,7 @@ const PrintBillPageShortTax = () => {
     return () => {
       resetAction()
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [saleId, paymentId])
+  }, [reloadSaleForPrint, resetAction])
 
   useEffect(() => {
     printedRef.current = false
@@ -115,7 +105,6 @@ const PrintBillPageShortTax = () => {
 
     const frameId = window.requestAnimationFrame(updatePrintHeight)
     const timerId = window.setTimeout(updatePrintHeight, 150)
-
     const resizeObserver =
       typeof ResizeObserver !== 'undefined'
         ? new ResizeObserver(updatePrintHeight)
@@ -142,10 +131,20 @@ const PrintBillPageShortTax = () => {
 
   const printAndReturnToSale = useCallback(() => {
     let returned = false
+    let fallbackTimerId = null
+
+    const cleanup = () => {
+      window.removeEventListener('afterprint', returnOnce)
+      if (fallbackTimerId !== null) {
+        window.clearTimeout(fallbackTimerId)
+        fallbackTimerId = null
+      }
+    }
+
     const returnOnce = () => {
       if (returned) return
       returned = true
-      window.removeEventListener('afterprint', returnOnce)
+      cleanup()
       returnToSale()
     }
 
@@ -154,10 +153,14 @@ const PrintBillPageShortTax = () => {
     try {
       window.focus?.()
       window.print?.()
+
+      // `afterprint` is the lifecycle authority. The long fallback only protects
+      // browsers that never dispatch it; it must not navigate away while the
+      // print dialog is still opening or being used.
+      fallbackTimerId = window.setTimeout(returnOnce, PRINT_RETURN_FALLBACK_MS)
     } catch {
-      // Navigation still returns the operator to the active sale lane.
-    } finally {
-      window.setTimeout(returnOnce, 0)
+      cleanup()
+      returnOnce()
     }
   }, [returnToSale])
 
@@ -171,125 +174,21 @@ const PrintBillPageShortTax = () => {
 
     printedRef.current = true
 
-    const t = setTimeout(() => {
+    const timerId = setTimeout(() => {
       printAndReturnToSale()
     }, 300)
 
-    return () => clearTimeout(t)
+    return () => clearTimeout(timerId)
   }, [autoPrint, sale?.id, config, saleItems?.length, payment?.id, printAndReturnToSale])
 
-  const handlePrint = printAndReturnToSale
+  const workspaceError = error || documentLineEditor.error
 
-  const handleToggleDocumentLineEdit = (item) => {
-    const key = item?.documentLineKey || item?.id
-    if (!key) return
-
-    setEditingLineKey((current) => {
-      if (current === key) return null
-
-      setLineDrafts((prev) => ({
-        ...prev,
-        [key]: {
-          documentPrefix: item?.documentPrefix || '',
-          documentDescriptionRaw: item?.documentDescriptionRaw || '',
-          documentSuffix: item?.documentSuffix || '',
-        },
-      }))
-
-      return key
-    })
-  }
-
-  const handleChangeDocumentLineDraft = (item, field, value) => {
-    const key = item?.documentLineKey || item?.id
-    if (!key) return
-
-    setLineDrafts((prev) => ({
-      ...prev,
-      [key]: {
-        documentPrefix: item?.documentPrefix || '',
-        documentDescriptionRaw: item?.documentDescriptionRaw || '',
-        documentSuffix: item?.documentSuffix || '',
-        ...(prev?.[key] || {}),
-        [field]: value,
-      },
-    }))
-  }
-
-  const handleSaveDocumentLine = async (item) => {
-    const key = item?.documentLineKey || item?.id
-    if (!key || !saleId) return
-
-    if (typeof updateSaleDocumentLinesAction !== 'function') {
-      setPageError('ไม่พบ action สำหรับบันทึกข้อความก่อน/หลังสินค้า')
-      return
-    }
-
-    const draft = {
-      documentPrefix: item?.documentPrefix || '',
-      documentDescriptionRaw: item?.documentDescriptionRaw || '',
-      documentSuffix: item?.documentSuffix || '',
-      ...(lineDrafts?.[key] || {}),
-    }
-
-    const saleItemIds = Array.isArray(item?.saleItemIds) ? item.saleItemIds : []
-    const simpleItemIds = Array.isArray(item?.simpleItemIds) ? item.simpleItemIds : []
-
-    const makePayloadLine = (id) => ({
-      id,
-      documentPrefix: nullableDocumentText(draft.documentPrefix),
-      documentDescription: nullableDocumentText(draft.documentDescriptionRaw),
-      documentSuffix: nullableDocumentText(draft.documentSuffix),
-    })
-
-    setSavingLineKey(key)
-    setPageError('')
-
-    try {
-      const result = await updateSaleDocumentLinesAction(
-        saleId,
-        {
-          items: saleItemIds.map(makePayloadLine),
-          simpleItems: simpleItemIds.map(makePayloadLine),
-        },
-        { refresh: false }
-      )
-
-      if (!result?.ok) {
-        setPageError(result?.error || 'บันทึกข้อความก่อน/หลังสินค้าไม่สำเร็จ')
-        return
-      }
-
-      // ✅ Clear same-sale cache before reloading updated document lines.
-      resetAction()
-      await reloadSaleForPrint()
-
-      setEditingLineKey(null)
-      setLineDrafts((prev) => {
-        const next = { ...(prev || {}) }
-        delete next[key]
-        return next
-      })
-    } catch (err) {
-      const msg =
-        err?.response?.data?.error ||
-        err?.response?.data?.message ||
-        err?.message ||
-        'บันทึกข้อความก่อน/หลังสินค้าไม่สำเร็จ'
-
-      setPageError(msg)
-    } finally {
-      setSavingLineKey(null)
-    }
-  }
-
-  // 🟢 FIXED: สับเปลี่ยนกล่องสถานะขณะประมวลผลให้อ่านชัดเจน ไม่จมหายในเลเยอร์โหมดมืด
   if (loading) {
     return <div className="text-center p-8 text-zinc-400 font-bold bg-slate-900 min-h-screen">⏳ กำลังโหลดข้อมูลใบเสร็จรับเงิน...</div>
   }
 
-  if (error || pageError) {
-    return <div className="text-center p-8 text-rose-400 font-bold bg-slate-900 min-h-screen">เกิดข้อผิดพลาด: {error || pageError}</div>
+  if (workspaceError) {
+    return <div className="text-center p-8 text-rose-400 font-bold bg-slate-900 min-h-screen">เกิดข้อผิดพลาด: {workspaceError}</div>
   }
 
   if (!sale || !saleItems?.length || !config) {
@@ -368,7 +267,6 @@ const PrintBillPageShortTax = () => {
         }
       `}</style>
 
-      {/* เครื่องมือควบคุมเฉพาะหน้าใบเสร็จย่อ — ไม่พึ่ง Shared DocumentToolbar */}
       <div className="w-full bg-white px-4 py-3 print:hidden">
         <div className="mx-auto flex max-w-[80mm] items-center justify-between gap-3">
           <div className="flex items-center gap-2">
@@ -382,11 +280,11 @@ const PrintBillPageShortTax = () => {
 
             <button
               type="button"
-              onClick={handlePrint}
-            className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 focus:ring-offset-slate-900"
-          >
-            พิมพ์ใบเสร็จ
-          </button>
+              onClick={printAndReturnToSale}
+              className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 focus:ring-offset-slate-900"
+            >
+              พิมพ์ใบเสร็จ
+            </button>
           </div>
 
           {autoPrint ? (
@@ -397,8 +295,6 @@ const PrintBillPageShortTax = () => {
         </div>
       </div>
 
-      {/* 🟢 FIXED: สลักคลาส CSS ตัดสิทธิ์ควบคุมความมืด บังคับให้หน้ากระดาษเป็นสีขาว ตัวหนังสือสีดำสนิท 100% */}
-      {/* เติมคลาส bg-white text-black dark:bg-white dark:text-black คลุมหมดจดทั่วทั้งแผ่นม้วนกระดาษ */}
       <div className="w-full bg-white text-black dark:bg-white dark:text-black py-6 px-4 print:w-auto print:p-0 print:m-0 print:min-h-0 print:h-auto print:bg-white">
         <div
           ref={printRootRef}
@@ -407,16 +303,16 @@ const PrintBillPageShortTax = () => {
           <BillLayoutShortTax
             sale={sale}
             saleItems={saleItems}
-            payments={payment ? [payment] : []}
+            payments={[payment]}
             config={{ ...config, hideDate: false }}
             hideContactName={hideContactName}
             editableDocumentLines
-            editingLineKey={editingLineKey}
-            lineDrafts={lineDrafts}
-            savingLineKey={savingLineKey}
-            onToggleDocumentLineEdit={handleToggleDocumentLineEdit}
-            onChangeDocumentLineDraft={handleChangeDocumentLineDraft}
-            onSaveDocumentLine={handleSaveDocumentLine}
+            editingLineKey={documentLineEditor.editingLineKey}
+            lineDrafts={documentLineEditor.lineDrafts}
+            savingLineKey={documentLineEditor.savingLineKey}
+            onToggleDocumentLineEdit={documentLineEditor.actions.toggle}
+            onChangeDocumentLineDraft={documentLineEditor.actions.change}
+            onSaveDocumentLine={documentLineEditor.actions.save}
           />
         </div>
       </div>

@@ -1,19 +1,17 @@
 // src/features/deliveryNote/pages/PrintDeliveryNotePage.jsx
-// 🏛️ Premium Next-Gen POS Delivery Note Workspace: (Force Re-Hydration Core Version)
+// 🏛️ Premium Next-Gen POS Delivery Note Workspace: (Server Authority Edition)
 
-import { useEffect, useMemo, useState } from 'react';
-import { useParams, useLocation } from 'react-router-dom';
-import useSalesStore from '@/features/sales/store/salesStore';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useParams } from 'react-router-dom';
+import {
+  loadSaleDocument,
+  useSaleDocumentLineEditor,
+} from '@/features/sales/documents/workspace';
 import DeliveryNoteForm from '../components/DeliveryNoteForm';
 
 const normalizeDocumentText = (value) => {
   if (typeof value !== 'string') return '';
   return value.trim();
-};
-
-const nullableDocumentText = (value) => {
-  const normalized = normalizeDocumentText(value);
-  return normalized || null;
 };
 
 const resolveSaleItemProductName = (item) => {
@@ -74,75 +72,63 @@ const buildBranchFullAddress = (branch = {}) => {
 
 const PrintDeliveryNotePage = () => {
   const { saleId } = useParams();
-  const location = useLocation();
 
-  const saleStore = useSalesStore();
-  const {
-    getSaleByIdAction,
-    updateSaleDocumentLinesAction,
-    currentSale,
-    setCurrentSale,
-  } = saleStore;
-
+  const [currentSale, setCurrentSale] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [pageError, setPageError] = useState('');
   const [hideDate, setHideDate] = useState(false);
 
-  const [editingLineKey, setEditingLineKey] = useState(null);
-  const [lineDrafts, setLineDrafts] = useState({});
-  const [savingLineKey, setSavingLineKey] = useState(null);
-
-  const navSale = useMemo(() => location.state?.sale || null, [location.key]);
-
-  // 🟢 [DYNAMIC RESET CONTROL]: บังคับล้างสถานะใบขายเก่าในคลัง Store ทุกครั้งที่กดเปลี่ยนเลข saleId ป้องกันอาการจอนิ่ง
-  useEffect(() => {
-    if (saleId && typeof setCurrentSale === 'function') {
+  const reloadSaleDocument = useCallback(async () => {
+    if (!saleId) {
       setCurrentSale(null);
+      return null;
     }
-  }, [saleId, setCurrentSale]);
+
+    const sale = await loadSaleDocument({ saleId });
+    setCurrentSale(sale || null);
+    return sale || null;
+  }, [saleId]);
+
+  const {
+    editingLineKey,
+    lineDrafts,
+    savingLineKey,
+    error: editorError,
+    actions: documentLineActions,
+  } = useSaleDocumentLineEditor({
+    saleId,
+    reload: reloadSaleDocument,
+  });
 
   useEffect(() => {
     let isMounted = true;
 
     const fetchData = async () => {
       if (!saleId) {
-        if (isMounted) setIsLoading(false);
+        if (isMounted) {
+          setCurrentSale(null);
+          setIsLoading(false);
+        }
         return;
       }
 
       setIsLoading(true);
-      setError('');
+      setPageError('');
+      documentLineActions.clearError();
+      setCurrentSale(null);
 
       try {
-        if (navSale && String(navSale.id) === String(saleId)) {
-          setCurrentSale(navSale);
-
-          const navBranch = navSale?.branch || null;
-          const hasTaxId = Boolean(navBranch?.taxId || navSale?.branchTaxId);
-          const hasBranchBasics = Boolean(
-            navBranch?.address ||
-            navBranch?.phone ||
-            navBranch?.name ||
-            navBranch?.companyName
-          );
-
-          const navHasItems =
-            (Array.isArray(navSale?.items) && navSale.items.length > 0) ||
-            (Array.isArray(navSale?.simpleItems) && navSale.simpleItems.length > 0);
-
-          const needHydrate = !hasTaxId || !hasBranchBasics || !navHasItems;
-
-          if (!needHydrate) {
-            if (isMounted) setIsLoading(false);
-            return;
-          }
-        }
-
-        if (typeof getSaleByIdAction === 'function') {
-          await getSaleByIdAction(saleId);
-        }
+        const sale = await loadSaleDocument({ saleId });
+        if (isMounted) setCurrentSale(sale || null);
       } catch (err) {
-        if (isMounted) setError('ไม่สามารถโหลดข้อมูลใบส่งของได้');
+        if (isMounted) {
+          setPageError(
+            err?.response?.data?.error ||
+              err?.response?.data?.message ||
+              err?.message ||
+              'ไม่สามารถโหลดข้อมูลใบส่งของได้'
+          );
+        }
       } finally {
         if (isMounted) setIsLoading(false);
       }
@@ -153,14 +139,13 @@ const PrintDeliveryNotePage = () => {
     return () => {
       isMounted = false;
     };
-  }, [saleId, navSale, getSaleByIdAction, setCurrentSale]);
+  }, [saleId]);
 
   const preparedSaleItems = useMemo(() => {
     if (!currentSale) return [];
 
-    // `saleLines` is the document projection returned by the current API.  Keep
-    // the legacy fallback for older responses, but merge both line stores: a
-    // sale may contain serialised stock and SIMPLE products in the same bill.
+    // `saleLines` is the preferred server document projection. Keep the legacy
+    // fallback for older responses and merge serialised and SIMPLE line stores.
     const src = Array.isArray(currentSale.saleLines) && currentSale.saleLines.length > 0
       ? currentSale.saleLines
       : [
@@ -170,7 +155,7 @@ const PrintDeliveryNotePage = () => {
 
     const grouped = new Map();
 
-    for (const item of src) {
+    for (const [sourceIndex, item] of src.entries()) {
       const product = item?.product || item?.stockItem?.product || item?.productSnapshot || null;
       const productIdRaw = product?.id ?? item?.productId ?? item?.stockItem?.productId ?? null;
       const productId = productIdRaw == null ? null : String(productIdRaw);
@@ -181,7 +166,7 @@ const PrintDeliveryNotePage = () => {
       });
 
       const key = [
-        productId ? `product-${productId}` : `unknown-${item?.id ?? Math.random()}`,
+        productId ? `product-${productId}` : `unknown-${item?.id ?? sourceIndex}`,
         `prefix-${documentLine.documentPrefix}`,
         `description-${documentLine.documentDescription}`,
         `suffix-${documentLine.documentSuffix}`,
@@ -202,7 +187,7 @@ const PrintDeliveryNotePage = () => {
         : (Number(item?.discount ?? item?.discountAmount ?? 0) || 0);
 
       if (!grouped.has(key)) {
-        const stableId = productId ? `product-${productId}-${grouped.size}` : `unknown-${item?.id ?? grouped.size}`;
+        const stableId = productId ? `product-${productId}-${grouped.size}` : `unknown-${item?.id ?? sourceIndex}`;
 
         grouped.set(key, {
           id: stableId,
@@ -226,118 +211,21 @@ const PrintDeliveryNotePage = () => {
           serialNumber: '-',
         });
       } else {
-        const agg = grouped.get(key);
-        if (isSnItem && item?.id) agg.saleItemIds.push(Number(item.id));
-        if (!isSnItem && item?.id) agg.simpleItemIds.push(Number(item.id));
+        const aggregate = grouped.get(key);
+        if (isSnItem && item?.id) aggregate.saleItemIds.push(Number(item.id));
+        if (!isSnItem && item?.id) aggregate.simpleItemIds.push(Number(item.id));
       }
 
-      const agg = grouped.get(key);
-      agg.quantity += quantity;
-      agg.discount += discountEach;
+      const aggregate = grouped.get(key);
+      aggregate.quantity += quantity;
+      aggregate.discount += discountEach;
     }
 
     return Array.from(grouped.values());
   }, [currentSale]);
 
-  const handleToggleDocumentLineEdit = (item) => {
-    const key = item?.documentLineKey || item?.id;
-    if (!key) return;
+  const error = pageError || editorError;
 
-    setEditingLineKey((current) => {
-      if (current === key) return null;
-
-      setLineDrafts((prev) => ({
-        ...prev,
-        [key]: {
-          documentPrefix: item?.documentPrefix || '',
-          documentDescriptionRaw: item?.documentDescriptionRaw || '',
-          documentSuffix: item?.documentSuffix || '',
-        },
-      }));
-
-      return key;
-    });
-  };
-
-  const handleChangeDocumentLineDraft = (item, field, value) => {
-    const key = item?.documentLineKey || item?.id;
-    if (!key) return;
-
-    setLineDrafts((prev) => ({
-      ...prev,
-      [key]: {
-        documentPrefix: item?.documentPrefix || '',
-        documentDescriptionRaw: item?.documentDescriptionRaw || '',
-        documentSuffix: item?.documentSuffix || '',
-        ...(prev?.[key] || {}),
-        [field]: value,
-      },
-    }));
-  };
-
-  const handleSaveDocumentLine = async (item) => {
-    const key = item?.documentLineKey || item?.id;
-    if (!key || !saleId) return;
-
-    if (typeof updateSaleDocumentLinesAction !== 'function') {
-      setError('ไม่พบ action สำหรับบันทึกข้อความก่อน/หลังสินค้า');
-      return;
-    }
-
-    const draft = {
-      documentPrefix: item?.documentPrefix || '',
-      documentDescriptionRaw: item?.documentDescriptionRaw || '',
-      documentSuffix: item?.documentSuffix || '',
-      ...(lineDrafts?.[key] || {}),
-    };
-
-    const saleItemIds = Array.isArray(item?.saleItemIds) ? item.saleItemIds : [];
-    const simpleItemIds = Array.isArray(item?.simpleItemIds) ? item.simpleItemIds : [];
-
-    const makePayloadLine = (id) => ({
-      id,
-      documentPrefix: nullableDocumentText(draft.documentPrefix),
-      documentDescription: nullableDocumentText(draft.documentDescriptionRaw),
-      documentSuffix: nullableDocumentText(draft.documentSuffix),
-    });
-
-    setSavingLineKey(key)
-    setError('');
-
-    try {
-      const result = await updateSaleDocumentLinesAction(
-        saleId,
-        {
-          items: saleItemIds.map(makePayloadLine),
-          simpleItems: simpleItemIds.map(makePayloadLine),
-        },
-        { refresh: true }
-      );
-
-      if (!result?.ok) {
-        setError(result?.error || 'บันทึกข้อความก่อน/หลังสินค้าไม่สำเร็จ');
-        return;
-      }
-
-      setEditingLineKey(null);
-      setLineDrafts((prev) => {
-        const next = { ...(prev || {}) };
-        delete next[key];
-        return next;
-      });
-    } catch (err) {
-      const msg =
-        err?.response?.data?.error ||
-        err?.response?.data?.message ||
-        err?.message ||
-        'บันทึกข้อความก่อน/หลังสินค้าไม่สำเร็จ';
-      setError(msg);
-    } finally {
-      setSavingLineKey(null);
-    }
-  };
-
-  // 🟢 FIXED: ปรับเปลี่ยนข้อความแจ้งสถานะโหลดข้อมูล ไม่ให้จมหายในเลเยอร์โหมดมืด
   if (isLoading) {
     return <div className="p-8 text-center text-zinc-400 font-bold bg-slate-900 min-h-screen">⏳ กำลังสตรีมโครงสร้างใบส่งของ A4...</div>;
   }
@@ -359,8 +247,6 @@ const PrintDeliveryNotePage = () => {
   };
 
   return (
-    // 🟢 FIXED: สลักคลาส CSS ตัดสิทธิ์ควบคุมความมืด ปรับพื้นที่หน้ากระดาษพิมพ์ A4 ตรงกลางให้เป็นสีขาว ตัวอักษรสีดำสนิท 100%
-    // เติมคลาส bg-white text-black dark:bg-white dark:text-black ครอบคลุมพิกัดแผ่นฟอร์ม DeliveryNoteForm ทั้งผืน
     <div className="w-full min-h-screen bg-white text-black dark:bg-white dark:text-black py-8 px-4 print:p-0 print:bg-white animate-fadeIn">
       <div className="mx-auto max-w-[210mm] bg-white text-black dark:bg-white dark:text-black p-2 print:p-0">
         <DeliveryNoteForm
@@ -373,9 +259,9 @@ const PrintDeliveryNotePage = () => {
           editingLineKey={editingLineKey}
           lineDrafts={lineDrafts}
           savingLineKey={savingLineKey}
-          onToggleDocumentLineEdit={handleToggleDocumentLineEdit}
-          onChangeDocumentLineDraft={handleChangeDocumentLineDraft}
-          onSaveDocumentLine={handleSaveDocumentLine}
+          onToggleDocumentLineEdit={documentLineActions.toggle}
+          onChangeDocumentLineDraft={documentLineActions.change}
+          onSaveDocumentLine={documentLineActions.save}
         />
       </div>
     </div>

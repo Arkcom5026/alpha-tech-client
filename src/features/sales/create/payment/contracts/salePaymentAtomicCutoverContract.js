@@ -1,0 +1,25 @@
+export const SALE_PAYMENT_ATOMIC_CUTOVER_CONTRACT = Object.freeze({
+  runtimeEntrypoint: 'src/features/sales/create/components/PaymentSection.jsx',
+  requiredImport: "from '../payment'",
+  requiredSymbols: ['useSalePaymentWorkflow'],
+  requiredOwners: [
+    'projectSalePaymentCalculation',
+    'validateSalePaymentConfirmation',
+    'mapSalePaymentIntent',
+    'executeSalePaymentConfirmation',
+    'projectSalePaymentWorkflow',
+  ],
+  forbiddenComponentOwnership: [
+    'const round2 =',
+    'function parseMoney',
+    'const totalOriginalPrice =',
+    'const totalDiscountOnly =',
+    'const safeFinalPrice =',
+    'const vatAmount =',
+    'const priceBeforeVat =',
+    'const calc = useMemo',
+    'const handleConfirm = useCallback',
+    'const paymentsSnapshot =',
+    "if (method === 'CARD') method = 'CREDIT'",
+  ],
+});

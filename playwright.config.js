@@ -34,7 +34,4 @@ export default defineConfig({
       },
     },
   ],
-  // Customer Receipt suite runs serially to maintain deterministic state
-  // across Customer A → B → C scenarios
-  grepInvert: null,
 });

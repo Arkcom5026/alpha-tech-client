@@ -1,0 +1,25 @@
+export const SALES_DASHBOARD_STORE_ATOMIC_CUTOVER_CONTRACT = Object.freeze({
+  runtimeEntrypoint: 'src/features/sales/history/pages/SalesDashboardPage.jsx',
+  requiredImport: "from '../dashboard'",
+  requiredSymbols: ['useSalesDashboardWorkflow'],
+  forbiddenLegacyImport: "@/features/sales/store/salesStore",
+  forbiddenLegacySelectors: [
+    'fetchSalesDashboardOverviewAction',
+    'salesOverviewLoading',
+    'salesOverviewError',
+    'salesOverviewLastLoadedAt',
+    'clearSalesOverviewErrorAction',
+  ],
+  requiredProjectedSurface: [
+    'dashboard.overview',
+    'dashboard.loaded',
+    'dashboard.loading',
+    'dashboard.error',
+    'dashboard.lastLoadedAt',
+    'dashboard.health',
+    'dashboard.actions.loadOverview',
+    'dashboard.actions.loadAll',
+  ],
+  legacyStoreDeletionAllowed: false,
+  compatibilitySurfaceMustRemainAvailable: true,
+});

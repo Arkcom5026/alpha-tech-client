@@ -11,7 +11,7 @@
 // Usage: npx playwright test e2e/customer-receipt-auth-regression.spec.js
 
 // @ts-check
-const { test, expect } = require('@playwright/test');
+import { test, expect } from '@playwright/test';
 
 // ============================================================
 // Configuration

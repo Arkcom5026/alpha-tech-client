@@ -2,11 +2,11 @@
 
 import { create } from 'zustand';
 import {
+  searchCustomers as searchCustomersApi,
   getCustomerByPhone,
   createCustomer,
   updateCustomerProfileOnline as updateCustomerProfileOnlineApi,
   updateCustomerProfilePos as updateCustomerProfilePosApi,
-  getCustomerByName,
   getMyCustomerProfileOnline as getMyCustomerProfileOnlineApi,
   getMyCustomerProfilePos as getMyCustomerProfilePosApi,
 } from '../api/customerApi';
@@ -20,13 +20,20 @@ const useCustomerStore = create((set) => ({
   isSearching: false,
   searchError: null,
 
-  // 🔎 Search
+  // 🔎 Unified customer-only search for POS and other customer consumers
   searchCustomers: async (query) => {
     set({ isSearching: true, searchError: null });
     try {
-      const data = await getCustomerByName(query);
-      set({ searchedCustomers: data });
-      return data;
+      const data = await searchCustomersApi(query);
+      const rows = Array.isArray(data?.results)
+        ? data.results
+        : Array.isArray(data)
+          ? data
+          : data
+            ? [data]
+            : [];
+      set({ searchedCustomers: rows });
+      return rows;
     } catch (err) {
       set({ searchedCustomers: [], searchError: 'ไม่สามารถค้นหาลูกค้าได้' });
       throw err;
@@ -39,7 +46,7 @@ const useCustomerStore = create((set) => ({
     set({ searchedCustomers: [], searchError: null });
   },
 
-  // ☎️ Lookup by phone (POS scope)
+  // ☎️ Lookup by phone (legacy POS compatibility)
   getCustomerByPhone: async (phone) => {
     set({ isLoading: true, error: null });
     try {

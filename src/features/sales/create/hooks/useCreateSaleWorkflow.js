@@ -21,10 +21,7 @@ export const useCreateSaleWorkflow = ({
   const [saleMode, setSaleMode] = useState('CASH');
   const [error, setError] = useState('');
 
-  const cart = useSaleCartEditor({
-    activeHeldCart: null,
-    onError: setError,
-  });
+  const cart = useSaleCartEditor({ onError: setError });
 
   const heldCartArgs = createSaleHeldCartWorkflowAdapter({
     saleItems: cart.items,
@@ -38,23 +35,19 @@ export const useCreateSaleWorkflow = ({
   });
   const heldCart = useSaleHeldCartWorkflow(heldCartArgs);
 
-  const cartWithHeldCartAuthority = useSaleCartEditor({
-    activeHeldCart: heldCart.panel.activeCart,
-    onError: setError,
-    initialItems: cart.items,
-  });
+  cart.activeHeldCartRef = heldCart.panel.activeCartRef;
 
   const itemSearch = useSaleItemSearch({
     selectedPriceType,
-    itemKeySet: cartWithHeldCartAuthority.itemKeySet,
-    addItem: cartWithHeldCartAuthority.add,
+    itemKeySet: cart.itemKeySet,
+    addItem: cart.add,
     clearSaleError,
     setError,
     productSearchRef,
   });
 
   const completion = useSaleCompletion({
-    saleItems: cartWithHeldCartAuthority.items,
+    saleItems: cart.items,
     customerId,
     saleMode,
     activeHeldCart: heldCart.panel.activeCart,
@@ -68,14 +61,14 @@ export const useCreateSaleWorkflow = ({
   const documentHandoff = useSaleDocumentHandoff({
     shopSlug,
     navigate,
-    clearCart: cartWithHeldCartAuthority.clear,
+    clearCart: cart.clear,
     clearHeldCart: heldCart.commands.clearActiveCart,
     setHideCustomerDetails,
     productSearchRef,
   });
 
   return projectCreateSaleWorkflow({
-    cart: cartWithHeldCartAuthority,
+    cart,
     itemSearch: { ...itemSearch, error, setError },
     completion,
     documentHandoff,

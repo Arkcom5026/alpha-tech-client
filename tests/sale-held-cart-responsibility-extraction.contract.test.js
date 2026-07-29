@@ -4,11 +4,15 @@ const path = require('path');
 const root = path.resolve(__dirname, '..');
 const base = path.join(root, 'src/features/sales/create/held-cart');
 const paths = {
+  workflowHook: path.join(base, 'hooks/useSaleHeldCartWorkflow.js'),
   sessionHook: path.join(base, 'hooks/useSaleHeldCart.js'),
   autosaveHook: path.join(base, 'hooks/useSaleHeldCartAutosave.js'),
+  recoveryHook: path.join(base, 'hooks/useSaleHeldCartRecovery.js'),
+  loadController: path.join(base, 'controllers/saleHeldCartLoadController.js'),
   recovery: path.join(base, 'services/saleHeldCartRecovery.js'),
   integration: path.join(base, 'services/saleHeldCartIntegration.js'),
   projection: path.join(base, 'projections/saleHeldCartProjection.js'),
+  workflowProjection: path.join(base, 'projections/saleHeldCartWorkflowProjection.js'),
   index: path.join(base, 'index.js'),
 };
 
@@ -21,12 +25,22 @@ Object.entries(paths).forEach(([name, filePath]) => {
   assert(fs.existsSync(filePath), `${name} must exist`);
 });
 
+const workflowHook = read(paths.workflowHook);
 const sessionHook = read(paths.sessionHook);
 const autosaveHook = read(paths.autosaveHook);
+const recoveryHook = read(paths.recoveryHook);
+const loadController = read(paths.loadController);
 const recovery = read(paths.recovery);
 const integration = read(paths.integration);
 const projection = read(paths.projection);
+const workflowProjection = read(paths.workflowProjection);
 const index = read(paths.index);
+
+assert(workflowHook.includes('useSaleHeldCart()'), 'Workflow hook must compose the session owner');
+assert(workflowHook.includes('useSaleHeldCartAutosave'), 'Workflow hook must compose autosave');
+assert(workflowHook.includes('useSaleHeldCartRecovery'), 'Workflow hook must compose recovery');
+assert(workflowHook.includes('projectSaleHeldCartWorkflow'), 'Workflow hook must delegate its public projection');
+assert(!workflowHook.includes('useState'), 'Workflow hook must orchestrate owners rather than duplicate state');
 
 assert(sessionHook.includes('activeHeldCartRef'), 'Session owner must own active cart authority');
 assert(sessionHook.includes('panelOpen'), 'Session owner must own panel state');
@@ -41,6 +55,17 @@ assert(autosaveHook.includes("setSaveState('saved')"), 'Autosave must own saved 
 assert(autosaveHook.includes("setSaveState('failed')"), 'Autosave must own failed state');
 assert(autosaveHook.includes('promiseRef'), 'Autosave must serialize persistence');
 assert(autosaveHook.includes('timerRef'), 'Autosave must own debounce scheduling');
+
+assert(loadController.includes('Promise.all'), 'Load controller must load and revalidate together');
+assert(loadController.includes('mapHeldCartLinesToSaleItems'), 'Load controller must delegate persisted-line mapping');
+assert(loadController.includes('projectHeldCartWarning'), 'Load controller must delegate warning projection');
+assert(!loadController.includes('useState'), 'Load controller must remain framework-independent');
+
+assert(recoveryHook.includes('executeSaleHeldCartLoad'), 'Recovery hook must delegate load execution to controller');
+assert(recoveryHook.includes('setSaleItems'), 'Recovery hook must restore sale lines');
+assert(recoveryHook.includes('setCustomerId'), 'Recovery hook must restore customer identity');
+assert(recoveryHook.includes('setSelectedPriceType'), 'Recovery hook must restore price type');
+assert(recoveryHook.includes('productSearchRef'), 'Recovery hook must own focus handoff');
 
 assert(recovery.includes('mapHeldCartLinesToSaleItems'), 'Recovery owner must map persisted lines');
 assert(recovery.includes('heldCartAvailability'), 'Recovery must preserve availability projection');
@@ -59,16 +84,23 @@ assert(projection.includes('projectSaleHeldCart'), 'Projection owner must expose
 assert(projection.includes('panel'), 'Projection must include panel state');
 assert(projection.includes('snapshot'), 'Projection must include sale snapshot');
 assert(projection.includes('commands'), 'Projection must include delegated commands');
+assert(workflowProjection.includes('projectSaleHeldCartWorkflow'), 'Workflow projection must expose the public workflow view');
+assert(workflowProjection.includes('recovery.load'), 'Workflow projection must expose recovery command');
+assert(workflowProjection.includes('autosave.persist'), 'Workflow projection must expose persistence command');
 
 [
+  'useSaleHeldCartWorkflow',
   'useSaleHeldCart',
   'useSaleHeldCartAutosave',
+  'useSaleHeldCartRecovery',
+  'executeSaleHeldCartLoad',
   'mapHeldCartLinesToSaleItems',
   'projectHeldCartWarning',
   'buildHeldCartRestoreResult',
   'canRemoveSaleItemFromHeldCart',
   'projectHeldCartCompletionGuard',
   'projectSaleHeldCart',
+  'projectSaleHeldCartWorkflow',
 ].forEach((symbol) => assert(index.includes(symbol), `${symbol} must be publicly exported`));
 
 console.log('Sale held cart responsibility extraction contract: PASS');

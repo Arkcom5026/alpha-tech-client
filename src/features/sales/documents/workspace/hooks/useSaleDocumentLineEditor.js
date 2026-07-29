@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { executeSaleDocumentLineUpdate } from '../controllers/saleDocumentLineUpdateController';
 
@@ -7,10 +7,19 @@ export const useSaleDocumentLineEditor = ({ saleId, reload } = {}) => {
   const [lineDrafts, setLineDrafts] = useState({});
   const [savingLineKey, setSavingLineKey] = useState(null);
   const [error, setError] = useState('');
+  const savingLineKeyRef = useRef(null);
+
+  useEffect(() => {
+    savingLineKeyRef.current = null;
+    setEditingLineKey(null);
+    setLineDrafts({});
+    setSavingLineKey(null);
+    setError('');
+  }, [saleId]);
 
   const toggle = useCallback((item) => {
     const key = item?.documentLineKey || item?.id;
-    if (!key) return;
+    if (!key || savingLineKeyRef.current === key) return;
 
     setEditingLineKey((current) => {
       if (current === key) return null;
@@ -28,7 +37,7 @@ export const useSaleDocumentLineEditor = ({ saleId, reload } = {}) => {
 
   const change = useCallback((item, field, value) => {
     const key = item?.documentLineKey || item?.id;
-    if (!key) return;
+    if (!key || savingLineKeyRef.current === key) return;
 
     setLineDrafts((previous) => ({
       ...previous,
@@ -46,6 +55,14 @@ export const useSaleDocumentLineEditor = ({ saleId, reload } = {}) => {
     const key = item?.documentLineKey || item?.id;
     if (!key) return { ok: false, error: 'ไม่พบรายการเอกสาร' };
 
+    if (savingLineKeyRef.current === key) {
+      return {
+        ok: false,
+        code: 'SALE_DOCUMENT_LINE_UPDATE_IN_PROGRESS',
+        error: 'กำลังบันทึกรายการเอกสารนี้อยู่',
+      };
+    }
+
     const draft = {
       documentPrefix: item?.documentPrefix || '',
       documentDescriptionRaw: item?.documentDescriptionRaw || '',
@@ -53,6 +70,7 @@ export const useSaleDocumentLineEditor = ({ saleId, reload } = {}) => {
       ...(lineDrafts?.[key] || {}),
     };
 
+    savingLineKeyRef.current = key;
     setSavingLineKey(key);
     setError('');
 
@@ -78,15 +96,18 @@ export const useSaleDocumentLineEditor = ({ saleId, reload } = {}) => {
       });
       return result;
     } finally {
+      savingLineKeyRef.current = null;
       setSavingLineKey(null);
     }
   }, [lineDrafts, reload, saleId]);
+
+  const clearError = useCallback(() => setError(''), []);
 
   return {
     editingLineKey,
     lineDrafts,
     savingLineKey,
     error,
-    actions: { toggle, change, save, clearError: () => setError('') },
+    actions: { toggle, change, save, clearError },
   };
 };

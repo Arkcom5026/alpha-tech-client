@@ -15,6 +15,9 @@ const completionValidationPath = path.join(root, 'src/features/sales/create/comp
 const completionIndexPath = path.join(root, 'src/features/sales/create/completion/index.js');
 const documentHandoffHookPath = path.join(root, 'src/features/sales/create/document-handoff/hooks/useSaleDocumentHandoff.js');
 const documentHandoffIndexPath = path.join(root, 'src/features/sales/create/document-handoff/index.js');
+const workflowHookPath = path.join(root, 'src/features/sales/create/hooks/useCreateSaleWorkflow.js');
+const workflowProjectionPath = path.join(root, 'src/features/sales/create/projections/createSaleWorkflowProjection.js');
+const createIndexPath = path.join(root, 'src/features/sales/create/index.js');
 
 const read = (filePath) => fs.readFileSync(filePath, 'utf8');
 const assert = (condition, message) => {
@@ -35,6 +38,9 @@ const assert = (condition, message) => {
   completionIndexPath,
   documentHandoffHookPath,
   documentHandoffIndexPath,
+  workflowHookPath,
+  workflowProjectionPath,
+  createIndexPath,
 ].forEach((filePath) => assert(fs.existsSync(filePath), `${filePath} must exist`));
 
 const contract = read(contractPath);
@@ -50,6 +56,9 @@ const completionValidation = read(completionValidationPath);
 const completionIndex = read(completionIndexPath);
 const documentHandoffHook = read(documentHandoffHookPath);
 const documentHandoffIndex = read(documentHandoffIndexPath);
+const workflowHook = read(workflowHookPath);
+const workflowProjection = read(workflowProjectionPath);
+const createIndex = read(createIndexPath);
 
 [
   'useCreateSaleWorkflow',
@@ -77,6 +86,7 @@ const documentHandoffIndex = read(documentHandoffIndexPath);
 assert(cartHook.includes('useState(initialItems)'), 'Cart editor must own sale item state');
 assert(cartHook.includes('itemKeySet'), 'Cart editor must own duplicate-key projection');
 assert(cartHook.includes('canRemoveSaleItemFromHeldCart'), 'Cart editor must delegate Held Cart final-line policy');
+assert(cartHook.includes('activeHeldCartRef'), 'Cart editor must support Held Cart authority without a second cart owner');
 assert(cartHook.includes('const add = useCallback'), 'Cart editor must own add command');
 assert(cartHook.includes('const remove = useCallback'), 'Cart editor must own remove command');
 assert(cartHook.includes('const update = useCallback'), 'Cart editor must own update command');
@@ -125,6 +135,23 @@ assert(documentHandoffHook.includes('setHideCustomerDetails(true)'), 'Document h
 assert(documentHandoffHook.includes('productSearchRef?.current?.focus?.()'), 'Document handoff must return focus to product search');
 assert(!documentHandoffHook.includes('executeSaleCompletion'), 'Document handoff must not own sale completion execution');
 assert(documentHandoffIndex.includes('useSaleDocumentHandoff'), 'Document handoff must be publicly exported');
+
+assert(workflowHook.includes('useSaleCartEditor'), 'Workflow must compose cart owner');
+assert(workflowHook.includes('useSaleItemSearch'), 'Workflow must compose item search owner');
+assert(workflowHook.includes('useSaleCompletion'), 'Workflow must compose completion owner');
+assert(workflowHook.includes('useSaleDocumentHandoff'), 'Workflow must compose document handoff owner');
+assert(workflowHook.includes('useSaleHeldCartWorkflow'), 'Workflow must compose Held Cart owner');
+assert(workflowHook.includes('projectCreateSaleWorkflow'), 'Workflow must delegate public projection');
+assert((workflowHook.match(/useSaleCartEditor\(/g) || []).length === 1, 'Workflow must create exactly one cart owner');
+assert(workflowHook.includes('activeHeldCartAuthorityRef'), 'Workflow must bridge Held Cart authority through a ref');
+assert(workflowProjection.includes('projectCreateSaleWorkflow'), 'Workflow projection must expose the Create Sale view model');
+assert(workflowProjection.includes('cart:'), 'Workflow projection must expose cart state and commands');
+assert(workflowProjection.includes('itemSearch:'), 'Workflow projection must expose item search state and commands');
+assert(workflowProjection.includes('completion:'), 'Workflow projection must expose completion state and commands');
+assert(workflowProjection.includes('documentHandoff:'), 'Workflow projection must expose document handoff state and commands');
+assert(workflowProjection.includes('heldCart'), 'Workflow projection must expose Held Cart composition');
+assert(createIndex.includes('useCreateSaleWorkflow'), 'Create Sale workflow must be publicly exported');
+assert(createIndex.includes('projectCreateSaleWorkflow'), 'Create Sale projection must be publicly exported');
 
 assert(
   mission.includes('CreateSalePage.jsx` remains the route-level composition surface'),

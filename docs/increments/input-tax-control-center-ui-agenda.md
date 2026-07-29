@@ -157,43 +157,181 @@ Each queue must drill down to the affected TaxDocument list and detail.
 
 ### Increment 1 — Control Center Foundation
 
+Status: **Repository implementation complete**
+
 - module route and navigation
 - API adapter and frontend contract normalization
 - period selector
 - headline, comparison, quality, distributions, recent documents
 - loading/error/empty states
-- contract-focused tests
 
 ### Increment 2 — Document List and Detail
 
+Status: **Repository implementation complete**
+
 - TaxDocument list
-- filters and period-view switching
-- detail drawer/page
-- source traceability and status explanations
+- filters
+- detail page
+- source traceability and reconciliation display
+- lifecycle/audit presentation
 
 ### Increment 3 — Filing Workspace and Period Authority
 
-- ready/selected/blocked/filed queues
-- selection/removal mutations
-- close/reopen integration
-- mutation guards and server revalidation
+Status: **Readiness and period-authority UI complete; filing mutations deferred by backend HTTP contract gap**
+
+- ready/selected/blocked/filed summaries
+- period state and mutation-blocked warning
+- existing close/reopen/lock/submit period UI preserved and integrated
+- no browser-owned filing mutation authority
+
+Deferred contract gap:
+
+- no confirmed HTTP route/controller for select document, remove document, or mark filing batch filed
+- corresponding UI mutation controls must not be enabled until the backend publishes an authoritative contract
 
 ### Increment 4 — Quality, Duplicate, and Replacement Operations
 
-- quality queues
-- duplicate review
-- replacement-chain visualization
-- drill-down continuity
+Status: **Read/review/drill-down UI complete; decision mutations deferred by backend HTTP contract gap**
+
+- quality queues and counts
+- blocker summary
+- duplicate and replacement authority displayed through backend projections
+- TaxDocument drill-down continuity
+
+Deferred contract gap:
+
+- no confirmed HTTP mutation contract for duplicate review decisions
+- no confirmed HTTP mutation contract for replacement-chain edits
+- the UI must not invent these actions or reproduce server fingerprint/chain rules
 
 ### Increment 5 — Integration and Operational Polish
 
-- navigation migration
-- legacy compatibility
-- permissions
-- responsive behavior
-- accessibility
-- repository integration review
-- owner-executable runtime and production verification checklist
+Status: **Repository integration complete; runtime certification pending owner execution**
+
+- finance navigation includes Control Center, document list, filing readiness, and quality review
+- existing tax intake, receipt-link, and tax-period routes remain reachable
+- route and public export wiring completed inside the tax module
+- active-shop branch scoping retained across new API adapters and pages
+- responsive layouts, loading, empty, error, and missing-branch states represented
+- Repository Integration Review completed against PR changed-file scope
+- owner-executable verification checklist documented below
+
+## Repository Integration Review
+
+### Changed Surface
+
+- `src/features/tax/inputTaxControlCenter/**`
+- `src/features/tax/inputTaxDocuments/**`
+- `src/features/tax/inputTaxFiling/**`
+- `src/features/tax/inputTaxQuality/**`
+- `src/features/tax/index.js`
+- `src/routes/partner/posPartnerRoutes.jsx`
+- `src/config/sidebarFinanceItems.js`
+
+### Navigation Continuity
+
+New routes:
+
+- `/:shopSlug/pos/finance/input-tax`
+- `/:shopSlug/pos/finance/input-tax-documents`
+- `/:shopSlug/pos/finance/input-tax-documents/:taxDocumentId`
+- `/:shopSlug/pos/finance/input-tax-filing`
+- `/:shopSlug/pos/finance/input-tax-quality`
+
+Preserved routes:
+
+- `/:shopSlug/pos/finance/tax-intake`
+- `/:shopSlug/pos/finance/input-tax-receipts`
+- `/:shopSlug/pos/finance/tax-periods`
+
+### Authority Review
+
+- Backend remains the authority for reconciliation, eligibility, duplicate, replacement, filing, and period transitions.
+- Frontend calculations are presentation-only formatting and local list totals where no business decision is derived.
+- Every new query requires the active branch context.
+- Missing filing/duplicate/replacement mutation endpoints are recorded as explicit contract gaps rather than hidden behind mock behavior.
+- No production deployment, merge, or runtime certification is implied by this review.
+
+## Owner Runtime / Operational / Production Verification Checklist
+
+Execute after checking out the PR branch or after explicit merge approval.
+
+### A. Local Runtime Gate
+
+1. Install dependencies using the repository-standard package manager.
+2. Run configured lint checks.
+3. Run configured frontend tests.
+4. Run the production build.
+5. Confirm no unresolved imports from the new tax module paths.
+6. Confirm browser console has no render, hook, router, or request errors.
+7. Run `git diff --check` against the reviewed head.
+
+Record:
+
+- Node and package-manager versions
+- command outputs
+- tested commit SHA
+- pass/fail and any baseline failures unrelated to this agenda
+
+### B. Authentication and Shop Scope
+
+1. Sign in as an account with tax/report authority.
+2. Select a valid branch.
+3. Open all new Input Tax routes.
+4. Switch branches and confirm every page reloads using the new branch ID.
+5. Confirm no document from another branch appears.
+6. Test an account lacking required authority and confirm server errors are rendered safely.
+
+### C. Control Center
+
+1. Open the Input Tax Control Center.
+2. Verify `DOCUMENT`, `RECEIVED`, `CLAIM`, and `FILED` period views.
+3. Change date ranges and confirm KPI, quality, readiness, and recent-document data refresh together.
+4. Verify loading, empty, and backend-error states.
+5. Compare a sample KPI against the backend response or database authority.
+
+### D. TaxDocument List and Detail
+
+1. Open the list and exercise status and document-type filters.
+2. Open at least one document detail.
+3. Confirm document identity, amounts, supplier tax ID, source/candidate, reconciliation, and lifecycle events.
+4. Verify malformed or cross-branch document IDs are rejected safely.
+5. Confirm back navigation returns to the list without breaking the shop-scoped route.
+
+### E. Filing and Period Authority
+
+1. Open Filing Readiness and compare counts/amounts with the Control Center.
+2. Confirm CLOSED, LOCKED, or SUBMITTED periods display mutation-blocked guidance.
+3. Open Tax Period Management.
+4. Exercise supported close/reopen/lock/submit transitions only in a safe test period.
+5. Confirm every period mutation refreshes from the server.
+6. Do not expect select/remove/file batch buttons until the backend HTTP filing contract is implemented.
+
+### F. Quality, Duplicate, and Replacement Review
+
+1. Open Quality Center and verify missing tax ID, missing number, duplicate risk, replacement, and attention counts.
+2. Verify blocker summaries and VAT values.
+3. Search recent documents and drill into TaxDocument detail.
+4. Confirm duplicate/replacement data shown matches backend projections.
+5. Do not expect review-decision mutations until authoritative endpoints are implemented.
+
+### G. Compatibility
+
+1. Confirm Tax Intake remains reachable and functional.
+2. Confirm Input-tax Receipt Links remains reachable and functional.
+3. Confirm Tax Period Management remains reachable and functional.
+4. Check existing bookmarks for these routes.
+5. Verify unrelated Finance pages and sidebar entries remain unaffected.
+
+### H. Production Verification
+
+1. Confirm the deployed frontend commit SHA equals the approved merge commit.
+2. Confirm the deployed backend contains server PR #77 authority.
+3. Verify API base URL and authentication token handling.
+4. Run one read-only pass across all new routes using real production data.
+5. Perform period mutation tests only with an explicitly approved safe period.
+6. Capture screenshots, network evidence, console output, and affected branch/period/document IDs.
+7. Report any data mismatch before enabling additional tax operations.
 
 ## Definition of Done
 
@@ -204,22 +342,26 @@ Repository Complete requires:
 - no browser-owned duplicate, eligibility, filing, or period business authority
 - active-shop isolation on every query and mutation
 - existing tax workflows remain reachable
-- focused tests pass
-- build/lint/type checks pass where configured
-- `git diff --check` passes
-- runtime and production verification checklist is documented
+- runtime and production verification checklist documented
+- all known backend HTTP contract gaps explicitly recorded
+
+Runtime Complete additionally requires owner evidence that configured lint, tests, and build pass.
+
+Operational Complete additionally requires browser-to-API verification across the new routes using an authorized branch context.
+
+Production Complete additionally requires deployed commit authority and production evidence.
 
 ## Merge Policy
 
-- Keep the PR Draft while the agenda is incomplete.
-- Do not merge intermediate increments separately.
+- Keep the PR Draft until Repository Complete is reviewed.
 - Do not deploy from the working branch.
-- Merge only after Repository Complete and explicit product-owner approval.
+- Merge only after explicit product-owner approval.
 - Runtime, Operational, and Production verification remain separate gates and must not be implied by repository review.
 
 ## Out of Scope
 
 - changing backend tax business rules without an explicit contract gap
+- inventing frontend filing, duplicate, or replacement mutations
 - production database migration
 - redesigning purchase order or quick receipt workflows
 - output-tax UI work

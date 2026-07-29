@@ -9,9 +9,11 @@ const workspaceApi = read('src/features/sales/documents/workspace/api/saleDocume
 const routes = read('src/routes/partner/salesRoutes.jsx');
 
 describe('Delivery Note server authority cutover contract', () => {
-  it('uses the shared document workspace boundary for server loading', () => {
+  it('uses the shared document workspace boundary with the required command shape', () => {
     expect(page).toContain("from '@/features/sales/documents/workspace'");
-    expect(page).toContain('loadSaleDocument(saleId)');
+    expect(page).toContain('loadSaleDocument({ saleId })');
+    expect(page).not.toContain('loadSaleDocument(saleId)');
+    expect(workspaceApi).toContain('loadSaleDocument = async ({ saleId, paymentId } = {})');
     expect(workspaceApi).toContain('getSaleById');
   });
 
@@ -35,9 +37,10 @@ describe('Delivery Note server authority cutover contract', () => {
     expect(page).toContain('setCurrentSale(null)');
   });
 
-  it('reloads from the server after the temporary legacy mutation path succeeds', () => {
-    expect(page).toContain('await reloadSaleDocument()');
-    expect(page).toContain('{ refresh: false }');
+  it('reloads from the server through the shared editor after mutation', () => {
+    expect(page).toContain('reload: reloadSaleDocument');
+    expect(page).toContain('useSaleDocumentLineEditor');
+    expect(page).not.toContain('updateSaleDocumentLinesAction');
   });
 
   it('preserves the Delivery Note projection and renderer', () => {
@@ -46,10 +49,5 @@ describe('Delivery Note server authority cutover contract', () => {
     expect(page).toContain('<DeliveryNoteForm');
     expect(page).toContain('hideDate={hideDate}');
     expect(page).toContain('saleItems={preparedSaleItems}');
-  });
-
-  it('keeps document-line mutation compatibility for the next atomic slice', () => {
-    expect(page).toContain('updateSaleDocumentLinesAction');
-    expect(page).toContain("from '@/features/sales/store/salesStore'");
   });
 });

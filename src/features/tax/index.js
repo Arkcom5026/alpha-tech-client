@@ -8,3 +8,4 @@ export { default as InputTaxDocumentListPage } from './inputTaxDocuments/pages/I
 export { default as InputTaxDocumentDetailPage } from './inputTaxDocuments/pages/InputTaxDocumentDetailPage';
 export * from './inputTaxDocuments/api/inputTaxDocumentApi';
 export { default as InputTaxFilingWorkspacePage } from './inputTaxFiling/pages/InputTaxFilingWorkspacePage';
+export { default as InputTaxQualityCenterPage } from './inputTaxQuality/pages/InputTaxQualityCenterPage';

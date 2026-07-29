@@ -7,3 +7,4 @@ export * from './inputTaxControlCenter/api/inputTaxControlCenterApi';
 export { default as InputTaxDocumentListPage } from './inputTaxDocuments/pages/InputTaxDocumentListPage';
 export { default as InputTaxDocumentDetailPage } from './inputTaxDocuments/pages/InputTaxDocumentDetailPage';
 export * from './inputTaxDocuments/api/inputTaxDocumentApi';
+export { default as InputTaxFilingWorkspacePage } from './inputTaxFiling/pages/InputTaxFilingWorkspacePage';

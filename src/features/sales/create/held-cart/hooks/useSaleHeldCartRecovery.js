@@ -16,6 +16,11 @@ export const useSaleHeldCartRecovery = ({
   getErrorMessage,
   productSearchRef,
 }) => {
+  const revalidate = useCallback(
+    (heldCartId) => revalidateHeldCart(heldCartId),
+    [revalidateHeldCart]
+  );
+
   const load = useCallback(async (heldCartId) => {
     const result = await executeSaleHeldCartLoad({
       heldCartId,
@@ -54,5 +59,5 @@ export const useSaleHeldCartRecovery = ({
     setValidation,
   ]);
 
-  return { load };
+  return { load, revalidate };
 };

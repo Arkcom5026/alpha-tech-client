@@ -217,7 +217,7 @@ const QuickSalePage = () => {
         heldCart.commands.cancelScheduled();
         const saved = await heldCart.commands.persist(saleItems);
         const validation = await revalidatePosHeldCart(saved.id);
-        heldCart.setValidation(validation);
+        heldCart.commands.setValidation(validation);
         const guard = projectHeldCartCompletionGuard(validation);
         if (!guard.ready) return guard;
       }

@@ -6,9 +6,25 @@ Extract the held-cart workflow from `CreateSalePage.jsx` by runtime responsibili
 
 ## Architecture Goal
 
-`CreateSalePage.jsx` must remain the Sale create composition page while delegating held-cart behavior to explicit feature-owned owners.
+Follow the established Purchase Order composition model:
+
+```text
+CreateSalePage
+  -> useSaleHeldCartWorkflow
+      -> useSaleHeldCart
+      -> useSaleHeldCartAutosave
+      -> useSaleHeldCartRecovery
+      -> executeSaleHeldCartLoad
+      -> projectSaleHeldCartWorkflow
+```
+
+`CreateSalePage.jsx` remains the Sale create composition page while consuming one held-cart public workflow boundary.
 
 ## Responsibility Owners
+
+### Workflow Orchestrator
+
+`useSaleHeldCartWorkflow` composes the session, autosave, and recovery owners and returns the projected public workflow state. It must not duplicate state owned by child hooks.
 
 ### Held Cart Session Owner
 
@@ -16,40 +32,54 @@ Owns active cart identity, validation snapshot, save state, panel visibility, an
 
 ### Autosave Owner
 
-Owns debounce scheduling, serialized persistence, pending/saving/saved/failed transitions, and autosave cleanup.
+Owns debounce scheduling, serialized persistence, pending/saving/saved/failed transitions, optimistic version authority, and autosave cleanup.
 
-### Recovery Owner
+### Recovery Runtime Owner
 
-Owns loading a held cart, server revalidation, mapping persisted lines back to sale lines, replacement protection, customer/price restoration, and focus handoff.
+Owns applying a loaded held cart to the active Sale runtime: sale lines, customer identity, price type, warning, panel close, save state, and product-search focus handoff.
 
-### Projection Owner
+### Load Controller
 
-Owns the stable view model consumed by the Create Sale composition page and held-cart presentation.
+`executeSaleHeldCartLoad` owns the framework-independent load/revalidate execution and returns a stable result contract.
+
+### Pure Recovery and Integration Policies
+
+Own persisted-line mapping, warning projection, final-line removal policy, restore result composition, and completion guard without React or Store ownership.
+
+### Workflow Projection Owner
+
+Owns the stable state and command surface consumed by the Create Sale composition page.
 
 ### Presentation Owner
 
-`PosHeldCartPanel` remains presentation/workspace UI. It must receive commands and state from the held-cart workflow owner rather than causing `CreateSalePage` to own recovery internals.
+`PosHeldCartPanel` remains presentation/workspace UI. It receives commands and state from the held-cart workflow boundary rather than causing `CreateSalePage` to own recovery internals.
 
 ## Required Invariants
 
 1. Existing held-cart search/list panel remains available.
-2. Existing autosave behavior remains.
+2. Existing autosave behavior remains debounced and serialized.
 3. Existing optimistic-version persistence remains.
 4. Existing server revalidation before sale completion remains.
 5. Existing unavailable-item and changed-price warnings remain.
 6. Existing customer, price type, and sale line restoration remain.
 7. Existing requirement that an active held cart cannot be reduced to zero lines remains.
-8. No Customer, Payment, Repair, or backend behavior is redesigned in this increment.
-9. This increment is stacked on PR #26 and must not be merged before its base responsibility extraction.
+8. `CreateSalePage` must consume one workflow boundary and must not directly compose the child owners after cutover.
+9. No Customer, Payment, Repair, or backend behavior is redesigned in this increment.
+10. This increment is stacked on PR #26 and must not be merged before its base responsibility extraction.
 
 ## Authorized Structure
 
+- `src/features/sales/create/held-cart/hooks/useSaleHeldCartWorkflow.js`
 - `src/features/sales/create/held-cart/hooks/useSaleHeldCart.js`
 - `src/features/sales/create/held-cart/hooks/useSaleHeldCartAutosave.js`
+- `src/features/sales/create/held-cart/hooks/useSaleHeldCartRecovery.js`
+- `src/features/sales/create/held-cart/controllers/saleHeldCartLoadController.js`
 - `src/features/sales/create/held-cart/services/saleHeldCartRecovery.js`
+- `src/features/sales/create/held-cart/services/saleHeldCartIntegration.js`
 - `src/features/sales/create/held-cart/projections/saleHeldCartProjection.js`
+- `src/features/sales/create/held-cart/projections/saleHeldCartWorkflowProjection.js`
 - `src/features/sales/create/held-cart/index.js`
-- focused wiring changes in `src/features/sales/create/pages/CreateSalePage.jsx`
+- focused atomic wiring changes in `src/features/sales/create/pages/CreateSalePage.jsx`
 - repository contract evidence
 
 ## Non-goals
@@ -63,4 +93,4 @@ Owns the stable view model consumed by the Create Sale composition page and held
 
 ## Verification Boundary
 
-Repository evidence can prove ownership, isolation, exports, and entrypoint delegation. Runtime and Operational PASS require executable evidence.
+Repository evidence can prove ownership, isolation, exports, orchestration shape, and later entrypoint delegation. Runtime and Operational PASS require executable evidence.

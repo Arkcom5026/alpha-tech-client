@@ -1,7 +1,10 @@
-const fs = require('fs');
-const path = require('path');
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { test } from 'vitest';
 
-const root = path.resolve(__dirname, '..');
+test('Sale held cart workflow responsibility extraction contract', () => {
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const base = path.join(root, 'src/features/sales/create/held-cart');
 const paths = {
   workflowHook: path.join(base, 'hooks/useSaleHeldCartWorkflow.js'),
@@ -101,12 +104,15 @@ assert(adapter.includes('updatePosHeldCart'), 'Adapter must bind held cart updat
 assert(!adapter.includes('useState'), 'Adapter must remain framework-independent');
 
 assert(cutoverContract.includes('forbiddenLegacySymbols'), 'Cutover contract must define forbidden legacy ownership');
-assert(runtimeEntrypoint.includes("from '../held-cart'"), 'Create Sale must consume held-cart public boundary');
-assert(runtimeEntrypoint.includes('createSaleHeldCartWorkflowAdapter'), 'Create Sale must bind the workflow through the adapter');
-assert(runtimeEntrypoint.includes('useSaleHeldCartWorkflow'), 'Create Sale must consume the workflow orchestrator');
-assert(runtimeEntrypoint.includes('heldCart.commands.load'), 'Create Sale panel must delegate recovery command');
-assert(runtimeEntrypoint.includes('heldCart.commands.persist'), 'Create Sale completion must delegate persistence');
-assert(runtimeEntrypoint.includes('heldCart.commands.setValidation'), 'Create Sale must delegate validation state to workflow owner');
+const workflowHookSource = read(path.join(root, 'src/features/sales/create/hooks/useCreateSaleWorkflow.js'));
+assert(runtimeEntrypoint.includes('useCreateSaleWorkflow'), 'Create Sale must consume the workflow boundary');
+assert(workflowHookSource.includes("from '../held-cart'"), 'Create Sale workflow must consume held-cart public boundary');
+assert(workflowHookSource.includes('createSaleHeldCartWorkflowAdapter'), 'Create Sale workflow must bind the adapter');
+assert(workflowHookSource.includes('useSaleHeldCartWorkflow'), 'Create Sale workflow must consume the held-cart orchestrator');
+assert(workflowHookSource.includes('heldCart,'), 'Create Sale workflow must expose held-cart commands through its boundary');
+assert(runtimeEntrypoint.includes('sale.heldCart.commands.load'), 'Create Sale panel must delegate recovery command');
+assert(runtimeEntrypoint.includes('sale.heldCart.commands.openPanel'), 'Create Sale must delegate held-cart persistence panel command');
+assert(runtimeEntrypoint.includes('sale.heldCart.commands.clearActiveCart'), 'Create Sale must delegate held-cart cleanup command');
 [
   'autosaveTimerRef',
   'autosavePromiseRef',
@@ -139,3 +145,4 @@ assert(runtimeEntrypoint.includes('heldCart.commands.setValidation'), 'Create Sa
 ].forEach((symbol) => assert(index.includes(symbol), `${symbol} must be publicly exported`));
 
 console.log('Sale held cart workflow responsibility extraction contract: PASS');
+});

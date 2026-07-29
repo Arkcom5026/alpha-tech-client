@@ -1,7 +1,10 @@
-const fs = require('fs');
-const path = require('path');
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { test } from 'vitest';
 
-const root = path.resolve(__dirname, '..');
+test('Sales dashboard store extraction contract', () => {
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const pagePath = path.join(root, 'src/features/sales/history/pages/SalesDashboardPage.jsx');
 const indexPath = path.join(root, 'src/features/sales/history/dashboard/index.js');
 const hookPath = path.join(root, 'src/features/sales/history/dashboard/hooks/useSalesDashboardWorkflow.js');
@@ -70,3 +73,4 @@ assert(!dateRange.includes('zustand'), 'Date range projection must remain framew
 ].forEach((symbol) => assert(legacyStore.includes(symbol), `${symbol} must remain as compatibility surface`));
 
 console.log('Sales dashboard store extraction contract: PASS');
+});

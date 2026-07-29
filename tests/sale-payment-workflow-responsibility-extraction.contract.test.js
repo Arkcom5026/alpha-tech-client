@@ -1,7 +1,10 @@
-const fs = require('fs');
-const path = require('path');
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { test } from 'vitest';
 
-const root = path.resolve(__dirname, '..');
+test('Sale payment workflow responsibility extraction contract', () => {
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const missionPath = path.join(root, 'docs/missions/sale-payment-workflow-responsibility-extraction.md');
 const contractPath = path.join(root, 'src/features/sales/create/payment/contracts/salePaymentAtomicCutoverContract.js');
 const calculationPath = path.join(root, 'src/features/sales/create/payment/services/salePaymentCalculation.js');
@@ -153,3 +156,4 @@ assert(
 );
 
 console.log('Sale payment workflow responsibility extraction contract: PASS');
+});

@@ -29,9 +29,32 @@ export const executeSaleDocumentLineUpdate = async ({
     simpleItems: (Array.isArray(simpleItemIds) ? simpleItemIds : []).map((id) => mapLine(id, draft)),
   };
 
+  if (payload.items.length === 0 && payload.simpleItems.length === 0) {
+    return {
+      ok: false,
+      code: 'SALE_DOCUMENT_LINE_IDS_REQUIRED',
+      error: 'ไม่พบรายการเอกสารสำหรับบันทึก',
+    };
+  }
+
   try {
     const data = await saveSaleDocumentLines({ saleId, payload });
-    if (typeof reload === 'function') await reload();
+    if (typeof reload === 'function') {
+      try {
+        await reload();
+      } catch (error) {
+        return {
+          ok: false,
+          mutationApplied: true,
+          code: error?.code || error?.response?.data?.code || 'SALE_DOCUMENT_LINE_RELOAD_FAILED',
+          error:
+            error?.response?.data?.error ||
+            error?.response?.data?.message ||
+            error?.message ||
+            'บันทึกสำเร็จแล้ว แต่ไม่สามารถโหลดเอกสารล่าสุดได้',
+        };
+      }
+    }
     return { ok: true, data };
   } catch (error) {
     return {

@@ -1,7 +1,10 @@
-const fs = require('fs');
-const path = require('path');
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { test } from 'vitest';
 
-const root = path.resolve(__dirname, '..');
+test('Sale customer responsibility extraction contract', () => {
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const base = path.join(root, 'src/features/sales/create/customer');
 const paths = {
   shell: path.join(base, 'SaleCustomerSection.jsx'),
@@ -93,3 +96,4 @@ assert(!createSalePage.includes("from '../components/CustomerSection'"), 'Create
 ].forEach((symbol) => assert(index.includes(symbol), `${symbol} must be publicly exported`));
 
 console.log('Sale customer responsibility extraction contract: PASS');
+});

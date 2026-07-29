@@ -1,7 +1,10 @@
-const fs = require('fs');
-const path = require('path');
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { test } from 'vitest';
 
-const root = path.resolve(__dirname, '..');
+test('Bill document search cutover contract', () => {
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const pagePath = path.join(root, 'src/features/bill/pages/PrintBillListPage.jsx');
 const indexPath = path.join(root, 'src/features/sales/documents/search/index.js');
 const policyPath = path.join(root, 'src/features/sales/documents/search/policies/billDocumentSearchPolicy.js');
@@ -50,3 +53,4 @@ assert(routes.includes("path: 'bill/print-short/:saleId'"), 'Short bill route mu
 assert(routes.includes("path: 'bill/print-full/:saleId'"), 'Full bill route must exist');
 
 console.log('Bill document search cutover contract: PASS');
+});

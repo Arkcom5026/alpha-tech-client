@@ -1,7 +1,10 @@
-const fs = require('fs');
-const path = require('path');
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { test } from 'vitest';
 
-const root = path.resolve(__dirname, '..');
+test('Delivery Note document search cutover contract', () => {
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const pagePath = path.join(root, 'src/features/deliveryNote/pages/DeliveryNoteListPage.jsx');
 const billPagePath = path.join(root, 'src/features/bill/pages/PrintBillListPage.jsx');
 const indexPath = path.join(root, 'src/features/sales/documents/search/index.js');
@@ -54,3 +57,4 @@ assert(routes.includes("path: 'delivery-note'"), 'Delivery Note route group must
 assert(routes.includes("path: 'print/:saleId'"), 'Delivery Note print route must exist');
 
 console.log('Delivery Note document search cutover contract: PASS');
+});

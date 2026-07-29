@@ -1,7 +1,10 @@
-const fs = require('fs');
-const path = require('path');
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { test } from 'vitest';
 
-const root = path.resolve(__dirname, '..');
+test('Sale document search ownership audit contract', () => {
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const missionPath = path.join(root, 'docs/missions/sale-document-search-ownership-audit.md');
 const contractPath = path.join(
   root,
@@ -43,11 +46,12 @@ assert(contract.includes('mergeRenderers: false'), 'Renderers must remain separa
 assert(contract.includes('mergeDocumentWorkspaces: false'), 'Workspaces must remain separate');
 assert(contract.includes('legacyPrintableDeletionAllowed: false'), 'Audit must forbid legacy deletion');
 
-assert(billList.includes('onlyPaid: 1'), 'Bill list currently proves paid search policy');
-assert(deliveryList.includes('onlyUnpaid: 1'), 'Delivery Note list currently proves unpaid search policy');
-assert(billList.includes("useSalesStore"), 'Bill list legacy dependency must remain visible before cutover');
-assert(deliveryList.includes("useSalesStore"), 'Delivery Note legacy dependency must remain visible before cutover');
+assert(billList.includes('BILL_DOCUMENT_SEARCH_POLICY'), 'Bill list must select the paid document policy');
+assert(deliveryList.includes('DELIVERY_NOTE_SEARCH_POLICY'), 'Delivery Note list must select the unpaid document policy');
+assert(!billList.includes("useSalesStore"), 'Bill list must remain cut over from the legacy Sales Store');
+assert(!deliveryList.includes("useSalesStore"), 'Delivery Note list must remain cut over from the legacy Sales Store');
 assert(legacyStore.includes('printableSales:'), 'Legacy printable rows must remain available');
 assert(legacyStore.includes('loadPrintableSalesAction:'), 'Legacy printable action must remain available');
 
 console.log('Sale document search ownership audit contract: PASS');
+});

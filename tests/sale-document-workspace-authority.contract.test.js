@@ -1,7 +1,10 @@
-const fs = require('fs');
-const path = require('path');
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { test } from 'vitest';
 
-const root = path.resolve(__dirname, '..');
+test('Sale document workspace authority foundation contract', () => {
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = (relativePath) => fs.readFileSync(path.join(root, relativePath), 'utf8');
 const assert = (condition, message) => {
   if (!condition) throw new Error(message);
@@ -70,3 +73,4 @@ assert(
 );
 
 console.log('Sale document workspace authority foundation contract: PASS');
+});

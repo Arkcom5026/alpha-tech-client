@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import test from 'node:test';
+import { test } from 'vitest';
 import assert from 'node:assert/strict';
 
 const root = process.cwd();
@@ -40,6 +40,7 @@ test('server authority uses the workspace command shape and preserves the render
   assert.doesNotMatch(page, /loadSaleDocument\(saleId\)/);
   assert.match(workspaceApi, /loadSaleDocument = async \(\{ saleId, paymentId \} = \{\}\)/);
   assert.match(page, /setCurrentSale\(sale \|\| null\)/);
+  assert.doesNotMatch(page, /Math\.random\(\)/);
   assert.match(page, /<DeliveryNoteForm/);
   assert.match(page, /saleItems=\{preparedSaleItems\}/);
   assert.match(page, /hideDate=\{hideDate\}/);

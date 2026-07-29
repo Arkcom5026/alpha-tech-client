@@ -13,6 +13,8 @@ const useSaleDocumentSearchStore = create((set, get) => ({
   error: null,
   lastQuery: null,
   lastSearchedAt: null,
+  activePolicyId: null,
+  activeRequestId: 0,
 
   clearError: () => set({ error: null }),
   reset: () => set({
@@ -21,6 +23,8 @@ const useSaleDocumentSearchStore = create((set, get) => ({
     error: null,
     lastQuery: null,
     lastSearchedAt: null,
+    activePolicyId: null,
+    activeRequestId: 0,
   }),
 
   search: async ({ policy, ...input } = {}) => {
@@ -37,7 +41,23 @@ const useSaleDocumentSearchStore = create((set, get) => ({
     }
 
     const query = projectSaleDocumentSearchQuery({ ...input, policy });
-    set({ loading: true, error: null, lastQuery: query });
+    const requestId = get().activeRequestId + 1;
+    const policyId = policy.id || null;
+    const isActiveRequest = () => {
+      const state = get();
+      return state.activeRequestId === requestId && state.activePolicyId === policyId;
+    };
+
+    // A shared store must not display the prior workspace's rows while a new
+    // policy is loading, nor allow an older request to overwrite newer state.
+    set({
+      rows: [],
+      loading: true,
+      error: null,
+      lastQuery: query,
+      activePolicyId: policyId,
+      activeRequestId: requestId,
+    });
 
     try {
       const response = await searchSaleDocuments(query);
@@ -47,7 +67,7 @@ const useSaleDocumentSearchStore = create((set, get) => ({
         .map((sale) => policy.projectRow(sale));
 
       const lastSearchedAt = new Date().toISOString();
-      set({ rows, lastSearchedAt });
+      if (isActiveRequest()) set({ rows, lastSearchedAt });
       return { ok: true, rows, query, lastSearchedAt };
     } catch (error) {
       const message =
@@ -55,10 +75,10 @@ const useSaleDocumentSearchStore = create((set, get) => ({
         error?.response?.data?.message ||
         error?.message ||
         'ค้นหาเอกสารการขายไม่สำเร็จ';
-      set({ rows: [], error: message });
+      if (isActiveRequest()) set({ rows: [], error: message });
       return { ok: false, error: message, rows: [] };
     } finally {
-      set({ loading: false });
+      if (isActiveRequest()) set({ loading: false });
     }
   },
 

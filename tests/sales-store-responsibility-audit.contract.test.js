@@ -1,7 +1,10 @@
-const fs = require('fs');
-const path = require('path');
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { test } from 'vitest';
 
-const root = path.resolve(__dirname, '..');
+test('Sales store responsibility audit contract', () => {
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const missionPath = path.join(root, 'docs/missions/sales-store-responsibility-audit.md');
 const storePath = path.join(root, 'src/features/sales/store/salesStore.js');
 const contractPath = path.join(root, 'src/features/sales/store/contracts/salesStoreResponsibilityAuditContract.js');
@@ -80,3 +83,4 @@ assert(
 );
 
 console.log('Sales store responsibility audit contract: PASS');
+});

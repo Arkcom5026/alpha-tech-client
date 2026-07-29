@@ -155,7 +155,7 @@ const PrintDeliveryNotePage = () => {
 
     const grouped = new Map();
 
-    for (const item of src) {
+    for (const [sourceIndex, item] of src.entries()) {
       const product = item?.product || item?.stockItem?.product || item?.productSnapshot || null;
       const productIdRaw = product?.id ?? item?.productId ?? item?.stockItem?.productId ?? null;
       const productId = productIdRaw == null ? null : String(productIdRaw);
@@ -166,7 +166,7 @@ const PrintDeliveryNotePage = () => {
       });
 
       const key = [
-        productId ? `product-${productId}` : `unknown-${item?.id ?? Math.random()}`,
+        productId ? `product-${productId}` : `unknown-${item?.id ?? sourceIndex}`,
         `prefix-${documentLine.documentPrefix}`,
         `description-${documentLine.documentDescription}`,
         `suffix-${documentLine.documentSuffix}`,
@@ -187,7 +187,7 @@ const PrintDeliveryNotePage = () => {
         : (Number(item?.discount ?? item?.discountAmount ?? 0) || 0);
 
       if (!grouped.has(key)) {
-        const stableId = productId ? `product-${productId}-${grouped.size}` : `unknown-${item?.id ?? grouped.size}`;
+        const stableId = productId ? `product-${productId}-${grouped.size}` : `unknown-${item?.id ?? sourceIndex}`;
 
         grouped.set(key, {
           id: stableId,

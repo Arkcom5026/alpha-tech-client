@@ -1,7 +1,10 @@
-const fs = require('fs');
-const path = require('path');
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { test } from 'vitest';
 
-const root = path.resolve(__dirname, '..');
+test('Sale create workflow responsibility extraction contract', () => {
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const contractPath = path.join(root, 'src/features/sales/create/contracts/createSaleAtomicCutoverContract.js');
 const missionPath = path.join(root, 'docs/missions/sale-create-workflow-responsibility-extraction.md');
 const runtimeEntrypointPath = path.join(root, 'src/features/sales/create/pages/CreateSalePage.jsx');
@@ -180,3 +183,4 @@ assert(
 );
 
 console.log('Sale create workflow responsibility extraction contract: PASS');
+});

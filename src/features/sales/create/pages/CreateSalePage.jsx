@@ -4,6 +4,12 @@ import { Search, ShoppingBag } from 'lucide-react';
 
 import useSalesStore from '@/features/sales/store/salesStore';
 import { SaleCustomerSection as CustomerSection } from '../customer';
+import {
+  canRemoveSaleItemFromHeldCart,
+  createSaleHeldCartWorkflowAdapter,
+  projectHeldCartCompletionGuard,
+  useSaleHeldCartWorkflow,
+} from '../held-cart';
 import PaymentSection from '../components/PaymentSection';
 import SaleItemTable from '../components/SaleItemTable';
 import { executeSaleCompletion } from '../workflows/saleCompletionWorkflow';
@@ -13,12 +19,7 @@ import {
 } from '../../item-search/api/saleItemSearchApi';
 import { openCompletedSaleDocument } from '../../documents/services/saleDocumentWorkflow';
 import PosHeldCartPanel from '../../held-cart/components/PosHeldCartPanel';
-import {
-  getPosHeldCart,
-  getPosHeldCartErrorMessage,
-  revalidatePosHeldCart,
-  updatePosHeldCart,
-} from '../../held-cart/api/posHeldCartApi';
+import { revalidatePosHeldCart } from '../../held-cart/api/posHeldCartApi';
 
 const round2 = (value) => Number((Number(value) || 0).toFixed(2));
 
@@ -26,9 +27,6 @@ const QuickSalePage = () => {
   const barcodeInputRef = useRef(null);
   const phoneInputRef = useRef(null);
   const lastPrintKeyRef = useRef('');
-  const autosaveTimerRef = useRef(null);
-  const autosavePromiseRef = useRef(Promise.resolve());
-  const activeHeldCartRef = useRef(null);
 
   const [saleItems, setSaleItems] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -38,10 +36,6 @@ const QuickSalePage = () => {
   const [barcodeError, setBarcodeError] = useState('');
   const [saleMode, setSaleMode] = useState('CASH');
   const [saleOption, setSaleOption] = useState('NONE');
-  const [heldCartPanelOpen, setHeldCartPanelOpen] = useState(false);
-  const [activeHeldCart, setActiveHeldCart] = useState(null);
-  const [heldCartValidation, setHeldCartValidation] = useState(null);
-  const [heldCartSaveState, setHeldCartSaveState] = useState('idle');
 
   const customerId = useSalesStore((state) => state.customerId);
   const billDiscount = useSalesStore((state) => state.billDiscount);
@@ -52,6 +46,18 @@ const QuickSalePage = () => {
   const navigate = useNavigate();
   const targetSlug = shopSlug || 'advancetech';
 
+  const heldCartWorkflowArgs = createSaleHeldCartWorkflowAdapter({
+    saleItems,
+    setSaleItems,
+    customerId,
+    setCustomerId: setCustomerIdAction,
+    selectedPriceType,
+    setSelectedPriceType,
+    setError: setBarcodeError,
+    productSearchRef: barcodeInputRef,
+  });
+  const heldCart = useSaleHeldCartWorkflow(heldCartWorkflowArgs);
+
   useEffect(() => {
     if (clearPhoneTrigger) setHideCustomerDetails(false);
   }, [clearPhoneTrigger]);
@@ -60,54 +66,6 @@ const QuickSalePage = () => {
     const timer = setTimeout(() => barcodeInputRef.current?.focus?.(), 150);
     return () => clearTimeout(timer);
   }, []);
-
-  useEffect(() => {
-    activeHeldCartRef.current = activeHeldCart;
-  }, [activeHeldCart]);
-
-  const heldSnapshot = (items = saleItems) => ({
-    customerId: customerId ? Number(customerId) : null,
-    customerName: activeHeldCartRef.current?.customerName || null,
-    customerPhone: activeHeldCartRef.current?.customerPhone || null,
-    note: activeHeldCartRef.current?.note || null,
-    priceType: selectedPriceType,
-    items,
-  });
-
-  const persistActiveHeldCart = async (items = saleItems) => {
-    const pending = autosavePromiseRef.current.then(async () => {
-      const cart = activeHeldCartRef.current;
-      if (!cart?.id || !items.length) return cart;
-      setHeldCartSaveState('saving');
-      const updated = await updatePosHeldCart(cart.id, {
-        ...heldSnapshot(items),
-        expectedVersion: cart.version,
-      });
-      activeHeldCartRef.current = updated;
-      setActiveHeldCart(updated);
-      setHeldCartSaveState('saved');
-      return updated;
-    });
-    autosavePromiseRef.current = pending.catch(() => {});
-    try {
-      return await pending;
-    } catch (error) {
-      setHeldCartSaveState('failed');
-      throw error;
-    }
-  };
-
-  useEffect(() => {
-    if (!activeHeldCart?.id || !saleItems.length) return undefined;
-    clearTimeout(autosaveTimerRef.current);
-    setHeldCartSaveState('pending');
-    autosaveTimerRef.current = setTimeout(() => {
-      persistActiveHeldCart(saleItems).catch((error) => {
-        setBarcodeError(`❌ Autosave: ${getPosHeldCartErrorMessage(error)}`);
-      });
-    }, 700);
-    return () => clearTimeout(autosaveTimerRef.current);
-  }, [activeHeldCart?.id, customerId, saleItems, selectedPriceType]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const saleItemKeySet = useMemo(
     () => new Set((saleItems || []).map((item) => String(item.lineId))),
@@ -123,7 +81,10 @@ const QuickSalePage = () => {
 
   const removeSaleItem = (lineId) => {
     setSaleItems((current) => {
-      if (activeHeldCartRef.current?.id && current.length === 1) {
+      if (!canRemoveSaleItemFromHeldCart({
+        activeHeldCart: heldCart.panel.activeCart,
+        itemCount: current.length,
+      })) {
         setBarcodeError('⚠️ ใบพักรายการต้องมีสินค้าอย่างน้อย 1 รายการ หากไม่ต้องการใช้ต่อให้ยกเลิกใบพักรายการ');
         return current;
       }
@@ -216,7 +177,7 @@ const QuickSalePage = () => {
 
     return {
       customerId: customerId ? Number(customerId) : null,
-      sourceHeldCartId: activeHeldCartRef.current?.id || null,
+      sourceHeldCartId: heldCart.panel.activeCart?.id || null,
       totalBeforeDiscount,
       totalDiscount,
       vat,
@@ -252,14 +213,13 @@ const QuickSalePage = () => {
 
     try {
       setIsSubmitting(true);
-      if (activeHeldCartRef.current?.id) {
-        clearTimeout(autosaveTimerRef.current);
-        const saved = await persistActiveHeldCart(saleItems);
+      if (heldCart.panel.activeCart?.id) {
+        heldCart.commands.cancelScheduled();
+        const saved = await heldCart.commands.persist(saleItems);
         const validation = await revalidatePosHeldCart(saved.id);
-        setHeldCartValidation(validation);
-        if (!validation.ready) {
-          return { error: 'ใบพักมีสินค้าที่ไม่พร้อมขาย กรุณาลบหรือเลือกสินค้าทดแทน', code: 'HELD_CART_ITEM_UNAVAILABLE' };
-        }
+        heldCart.setValidation(validation);
+        const guard = projectHeldCartCompletionGuard(validation);
+        if (!guard.ready) return guard;
       }
       const data = await executeSaleCompletion({
         sale: buildCompletionPayload(opts),
@@ -297,68 +257,17 @@ const QuickSalePage = () => {
     }
 
     setSaleItems([]);
-    activeHeldCartRef.current = null;
-    setActiveHeldCart(null);
-    setHeldCartValidation(null);
-    setHeldCartSaveState('idle');
+    heldCart.commands.clearActiveCart();
     setTimeout(() => {
       setHideCustomerDetails(true);
       barcodeInputRef.current?.focus?.();
     }, 200);
   };
 
-  const loadHeldCart = async (heldCartId) => {
-    if (saleItems.length && !window.confirm('หน้าขายมีรายการอยู่ กด “ยกเลิก” แล้วพักรายการปัจจุบันก่อน หรือกด “ตกลง” เพื่อแทนที่ด้วยใบพักที่เลือก')) return;
-    try {
-      const [cart, validation] = await Promise.all([
-        getPosHeldCart(heldCartId),
-        revalidatePosHeldCart(heldCartId),
-      ]);
-      const validationByKey = new Map((validation.lines || []).map((item) => [item.lineKey, item]));
-      const restored = (cart.lines || []).map((line) => ({
-        lineId: line.lineKey,
-        lineType: line.lineType,
-        type: line.lineType === 'STOCK_ITEM' ? 'STOCK' : 'SIMPLE',
-        stockItemId: line.stockItemId,
-        simpleLotId: line.simpleLotId,
-        productId: line.productId,
-        quantity: Number(line.quantity),
-        quantityAvailable: Number(line.quantity),
-        barcode: line.barcode || '',
-        productName: line.productName || '',
-        model: line.modelName || '',
-        price: Number(line.unitPrice),
-        originalPrice: Number(line.unitPrice),
-        sellingPrice: Number(line.unitPrice),
-        discount: Number(line.discount || 0),
-        discountWithoutBill: Number(line.discount || 0),
-        billShare: 0,
-        heldCartAvailability: validationByKey.get(line.lineKey) || null,
-      }));
-      activeHeldCartRef.current = cart;
-      setActiveHeldCart(cart);
-      setHeldCartValidation(validation);
-      setSaleItems(restored);
-      setSelectedPriceType(cart.priceType || 'retail');
-      setCustomerIdAction?.(cart.customerId || null);
-      setHeldCartPanelOpen(false);
-      setHeldCartSaveState('saved');
-      if (!validation.ready) setBarcodeError('⚠️ ใบพักมีสินค้าที่ไม่พร้อมขาย กรุณาลบหรือเลือกสินค้าทดแทน');
-      else if (validation.priceChanged) setBarcodeError('⚠️ ราคาปัจจุบันเปลี่ยนจากวันที่พักรายการ กรุณาตรวจสอบก่อนขาย');
-      else setBarcodeError('');
-      requestAnimationFrame(() => barcodeInputRef.current?.focus?.());
-    } catch (error) {
-      setBarcodeError(`❌ ${getPosHeldCartErrorMessage(error)}`);
-    }
-  };
-
   const heldCartSavedAndClear = () => {
     setSaleItems([]);
     setCustomerIdAction?.(null);
-    setHeldCartValidation(null);
-    setActiveHeldCart(null);
-    activeHeldCartRef.current = null;
-    setHeldCartSaveState('idle');
+    heldCart.commands.clearActiveCart();
     setTimeout(() => barcodeInputRef.current?.focus?.(), 100);
   };
 
@@ -366,14 +275,14 @@ const QuickSalePage = () => {
     <div className="w-full h-full p-2 md:p-3 space-y-3 max-w-[1600px] mx-auto text-slate-800 selection:bg-orange-500 selection:text-white animate-fadeIn text-xs md:text-sm antialiased font-sans">
       <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-orange-200 bg-orange-50 px-4 py-2.5">
         <div>
-          <strong className="text-orange-800">{activeHeldCart ? `กำลังทำต่อ ${activeHeldCart.code}` : 'รายการขายใหม่'}</strong>
-          {activeHeldCart && <span className="ml-2 text-[10px] font-bold text-orange-600">{heldCartSaveState === 'saving' ? 'กำลังบันทึก...' : heldCartSaveState === 'failed' ? 'บันทึกไม่สำเร็จ' : heldCartSaveState === 'pending' ? 'รอบันทึก' : 'บันทึกอัตโนมัติแล้ว'}</span>}
+          <strong className="text-orange-800">{heldCart.panel.activeCart ? `กำลังทำต่อ ${heldCart.panel.activeCart.code}` : 'รายการขายใหม่'}</strong>
+          {heldCart.panel.activeCart && <span className="ml-2 text-[10px] font-bold text-orange-600">{heldCart.panel.saveState === 'saving' ? 'กำลังบันทึก...' : heldCart.panel.saveState === 'failed' ? 'บันทึกไม่สำเร็จ' : heldCart.panel.saveState === 'pending' ? 'รอบันทึก' : 'บันทึกอัตโนมัติแล้ว'}</span>}
         </div>
       </div>
-      {activeHeldCart && heldCartValidation && (
-        <div className={`rounded-xl border px-3 py-2 text-xs font-bold ${heldCartValidation.ready ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-rose-200 bg-rose-50 text-rose-700'}`}>
-          {heldCartValidation.ready ? 'สินค้าจากใบพักยังพร้อมขาย' : `มีสินค้าไม่พร้อม ${(heldCartValidation.lines || []).filter((item) => !item.available).length} รายการ`}
-          {heldCartValidation.priceChanged ? ' · มีราคาเปลี่ยน กรุณาตรวจสอบ' : ''}
+      {heldCart.panel.activeCart && heldCart.panel.validation && (
+        <div className={`rounded-xl border px-3 py-2 text-xs font-bold ${heldCart.panel.validation.ready ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-rose-200 bg-rose-50 text-rose-700'}`}>
+          {heldCart.panel.validation.ready ? 'สินค้าจากใบพักยังพร้อมขาย' : `มีสินค้าไม่พร้อม ${(heldCart.panel.validation.lines || []).filter((item) => !item.available).length} รายการ`}
+          {heldCart.panel.validation.priceChanged ? ' · มีราคาเปลี่ยน กรุณาตรวจสอบ' : ''}
         </div>
       )}
       <div className="grid grid-cols-12 gap-3 items-start">
@@ -467,16 +376,16 @@ const QuickSalePage = () => {
           saleOption={saleOption}
           onSaleOptionChange={setSaleOption}
           onConfirmSale={handleConfirmSale}
-          onSaveHeldCart={() => setHeldCartPanelOpen(true)}
+          onSaveHeldCart={heldCart.commands.openPanel}
         />
       </div>
       <PosHeldCartPanel
-        open={heldCartPanelOpen}
-        onClose={() => setHeldCartPanelOpen(false)}
+        open={heldCart.panel.open}
+        onClose={heldCart.commands.closePanel}
         currentItems={saleItems}
         currentCustomerId={customerId}
         currentPriceType={selectedPriceType}
-        onLoad={loadHeldCart}
+        onLoad={heldCart.commands.load}
         onSavedAndClear={heldCartSavedAndClear}
       />
     </div>

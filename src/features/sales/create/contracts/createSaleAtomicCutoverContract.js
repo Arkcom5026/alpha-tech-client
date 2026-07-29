@@ -1,0 +1,31 @@
+export const CREATE_SALE_ATOMIC_CUTOVER_CONTRACT = Object.freeze({
+  runtimeEntrypoint: 'src/features/sales/create/pages/CreateSalePage.jsx',
+  requiredImport: "from '../workflow'",
+  requiredSymbols: [
+    'useCreateSaleWorkflow',
+  ],
+  forbiddenPageOwnership: [
+    'const [saleItems, setSaleItems] = useState',
+    'const [isSubmitting, setIsSubmitting] = useState',
+    'const [selectedPriceType, setSelectedPriceType] = useState',
+    'const [barcodeError, setBarcodeError] = useState',
+    'const [saleOption, setSaleOption] = useState',
+    'const saleItemKeySet = useMemo',
+    'const addSaleItem =',
+    'const removeSaleItem =',
+    'const updateSaleItem =',
+    'const resetBarcodeInput =',
+    'const handleBarcodeSearch =',
+    'const buildCompletionPayload =',
+    'const handleConfirmSale =',
+    'const handleSaleConfirmed =',
+  ],
+  requiredWorkflowOwners: [
+    'useSaleCartEditor',
+    'useSaleItemSearch',
+    'useSaleCompletion',
+    'useSaleDocumentHandoff',
+    'useSaleHeldCartWorkflow',
+    'projectCreateSaleWorkflow',
+  ],
+});

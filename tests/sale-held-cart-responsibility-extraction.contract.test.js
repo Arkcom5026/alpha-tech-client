@@ -7,6 +7,7 @@ const paths = {
   sessionHook: path.join(base, 'hooks/useSaleHeldCart.js'),
   autosaveHook: path.join(base, 'hooks/useSaleHeldCartAutosave.js'),
   recovery: path.join(base, 'services/saleHeldCartRecovery.js'),
+  integration: path.join(base, 'services/saleHeldCartIntegration.js'),
   projection: path.join(base, 'projections/saleHeldCartProjection.js'),
   index: path.join(base, 'index.js'),
 };
@@ -23,6 +24,7 @@ Object.entries(paths).forEach(([name, filePath]) => {
 const sessionHook = read(paths.sessionHook);
 const autosaveHook = read(paths.autosaveHook);
 const recovery = read(paths.recovery);
+const integration = read(paths.integration);
 const projection = read(paths.projection);
 const index = read(paths.index);
 
@@ -46,6 +48,13 @@ assert(recovery.includes('projectHeldCartWarning'), 'Recovery must own warning p
 assert(recovery.includes('priceChanged'), 'Recovery must preserve changed-price warning');
 assert(!recovery.includes('useSalesStore'), 'Recovery mapper must remain pure');
 
+assert(integration.includes('buildHeldCartRestoreResult'), 'Integration owner must compose recovery result');
+assert(integration.includes('canRemoveSaleItemFromHeldCart'), 'Integration owner must own final-line removal policy');
+assert(integration.includes('projectHeldCartCompletionGuard'), 'Integration owner must own completion guard');
+assert(integration.includes('HELD_CART_ITEM_UNAVAILABLE'), 'Completion guard must preserve failure code');
+assert(!integration.includes('useState'), 'Integration policy must remain framework-independent');
+assert(!integration.includes('useSalesStore'), 'Integration policy must not own Sales store');
+
 assert(projection.includes('projectSaleHeldCart'), 'Projection owner must expose view model');
 assert(projection.includes('panel'), 'Projection must include panel state');
 assert(projection.includes('snapshot'), 'Projection must include sale snapshot');
@@ -56,6 +65,9 @@ assert(projection.includes('commands'), 'Projection must include delegated comma
   'useSaleHeldCartAutosave',
   'mapHeldCartLinesToSaleItems',
   'projectHeldCartWarning',
+  'buildHeldCartRestoreResult',
+  'canRemoveSaleItemFromHeldCart',
+  'projectHeldCartCompletionGuard',
   'projectSaleHeldCart',
 ].forEach((symbol) => assert(index.includes(symbol), `${symbol} must be publicly exported`));
 

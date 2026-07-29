@@ -4,8 +4,6 @@ const path = require('path');
 const root = path.resolve(__dirname, '..');
 const base = path.join(root, 'src/features/sales/create/held-cart');
 const paths = {
-  adapter: path.join(base, 'adapters/createSaleHeldCartWorkflowAdapter.js'),
-  atomicCutoverContract: path.join(base, 'contracts/saleHeldCartAtomicCutoverContract.js'),
   workflowHook: path.join(base, 'hooks/useSaleHeldCartWorkflow.js'),
   sessionHook: path.join(base, 'hooks/useSaleHeldCart.js'),
   autosaveHook: path.join(base, 'hooks/useSaleHeldCartAutosave.js'),
@@ -15,6 +13,9 @@ const paths = {
   integration: path.join(base, 'services/saleHeldCartIntegration.js'),
   projection: path.join(base, 'projections/saleHeldCartProjection.js'),
   workflowProjection: path.join(base, 'projections/saleHeldCartWorkflowProjection.js'),
+  adapter: path.join(base, 'adapters/createSaleHeldCartWorkflowAdapter.js'),
+  cutoverContract: path.join(base, 'contracts/saleHeldCartAtomicCutoverContract.js'),
+  runtimeEntrypoint: path.join(root, 'src/features/sales/create/pages/CreateSalePage.jsx'),
   index: path.join(base, 'index.js'),
 };
 
@@ -27,8 +28,6 @@ Object.entries(paths).forEach(([name, filePath]) => {
   assert(fs.existsSync(filePath), `${name} must exist`);
 });
 
-const adapter = read(paths.adapter);
-const atomicCutoverContract = read(paths.atomicCutoverContract);
 const workflowHook = read(paths.workflowHook);
 const sessionHook = read(paths.sessionHook);
 const autosaveHook = read(paths.autosaveHook);
@@ -38,15 +37,10 @@ const recovery = read(paths.recovery);
 const integration = read(paths.integration);
 const projection = read(paths.projection);
 const workflowProjection = read(paths.workflowProjection);
+const adapter = read(paths.adapter);
+const cutoverContract = read(paths.cutoverContract);
+const runtimeEntrypoint = read(paths.runtimeEntrypoint);
 const index = read(paths.index);
-
-assert(adapter.includes('getPosHeldCart'), 'Adapter must own held-cart API binding');
-assert(adapter.includes('revalidatePosHeldCart'), 'Adapter must own revalidation API binding');
-assert(adapter.includes('updatePosHeldCart'), 'Adapter must own update API binding');
-assert(!adapter.includes('useState'), 'Adapter must remain framework-independent');
-assert(atomicCutoverContract.includes('forbiddenLegacySymbols'), 'Atomic cutover contract must list legacy ownership symbols');
-assert(atomicCutoverContract.includes('autosaveTimerRef'), 'Atomic cutover must remove legacy timer ownership');
-assert(atomicCutoverContract.includes('const loadHeldCart ='), 'Atomic cutover must remove legacy recovery ownership');
 
 assert(workflowHook.includes('useSaleHeldCart()'), 'Workflow hook must compose the session owner');
 assert(workflowHook.includes('useSaleHeldCartAutosave'), 'Workflow hook must compose autosave');
@@ -99,6 +93,34 @@ assert(projection.includes('commands'), 'Projection must include delegated comma
 assert(workflowProjection.includes('projectSaleHeldCartWorkflow'), 'Workflow projection must expose the public workflow view');
 assert(workflowProjection.includes('recovery.load'), 'Workflow projection must expose recovery command');
 assert(workflowProjection.includes('autosave.persist'), 'Workflow projection must expose persistence command');
+assert(workflowProjection.includes('session.setValidation'), 'Workflow projection must expose validation update command');
+
+assert(adapter.includes('getPosHeldCart'), 'Adapter must bind held cart load API');
+assert(adapter.includes('revalidatePosHeldCart'), 'Adapter must bind held cart validation API');
+assert(adapter.includes('updatePosHeldCart'), 'Adapter must bind held cart update API');
+assert(!adapter.includes('useState'), 'Adapter must remain framework-independent');
+
+assert(cutoverContract.includes('forbiddenLegacySymbols'), 'Cutover contract must define forbidden legacy ownership');
+assert(runtimeEntrypoint.includes("from '../held-cart'"), 'Create Sale must consume held-cart public boundary');
+assert(runtimeEntrypoint.includes('createSaleHeldCartWorkflowAdapter'), 'Create Sale must bind the workflow through the adapter');
+assert(runtimeEntrypoint.includes('useSaleHeldCartWorkflow'), 'Create Sale must consume the workflow orchestrator');
+assert(runtimeEntrypoint.includes('heldCart.commands.load'), 'Create Sale panel must delegate recovery command');
+assert(runtimeEntrypoint.includes('heldCart.commands.persist'), 'Create Sale completion must delegate persistence');
+assert(runtimeEntrypoint.includes('heldCart.commands.setValidation'), 'Create Sale must delegate validation state to workflow owner');
+[
+  'autosaveTimerRef',
+  'autosavePromiseRef',
+  'heldCartPanelOpen',
+  'setHeldCartPanelOpen',
+  'activeHeldCartRef = useRef',
+  'activeHeldCart, setActiveHeldCart',
+  'heldCartValidation, setHeldCartValidation',
+  'heldCartSaveState, setHeldCartSaveState',
+  'const heldSnapshot =',
+  'const persistActiveHeldCart =',
+  'const loadHeldCart =',
+  'const validationByKey = new Map',
+].forEach((symbol) => assert(!runtimeEntrypoint.includes(symbol), `${symbol} must be removed from Create Sale`));
 
 [
   'createSaleHeldCartWorkflowAdapter',
@@ -116,4 +138,4 @@ assert(workflowProjection.includes('autosave.persist'), 'Workflow projection mus
   'projectSaleHeldCartWorkflow',
 ].forEach((symbol) => assert(index.includes(symbol), `${symbol} must be publicly exported`));
 
-console.log('Sale held cart responsibility extraction contract: PASS');
+console.log('Sale held cart workflow responsibility extraction contract: PASS');

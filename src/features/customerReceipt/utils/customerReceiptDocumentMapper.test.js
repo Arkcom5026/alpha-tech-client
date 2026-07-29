@@ -32,7 +32,8 @@ describe('buildCustomerReceiptLineItems', () => {
       productName: 'สินค้า SIMPLE',
       quantity: 3,
       unit: 'กล่อง',
-      amount: 90,
+      unitPrice: 90,
+      amount: 270,
     })
   })
 
@@ -59,7 +60,8 @@ describe('buildCustomerReceiptLineItems', () => {
       expect.objectContaining({
         productName: 'สินค้า SIMPLE จาก saleLines',
         quantity: 2,
-        amount: 50,
+        unitPrice: 50,
+        amount: 100,
       }),
     ])
   })

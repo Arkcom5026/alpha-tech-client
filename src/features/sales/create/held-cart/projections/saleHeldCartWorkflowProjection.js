@@ -22,6 +22,7 @@ export const projectSaleHeldCartWorkflow = ({
       load: recovery.load,
       persist: autosave.persist,
       cancelScheduled: autosave.cancelScheduled,
+      revalidate: recovery.revalidate,
       setValidation: session.setValidation,
     },
   };

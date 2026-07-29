@@ -10,17 +10,31 @@ const missionPath = path.join(
   root,
   'docs/missions/sale-create-workflow-responsibility-extraction.md'
 );
+const cartHookPath = path.join(
+  root,
+  'src/features/sales/create/cart/hooks/useSaleCartEditor.js'
+);
+const cartIndexPath = path.join(
+  root,
+  'src/features/sales/create/cart/index.js'
+);
 
 const read = (filePath) => fs.readFileSync(filePath, 'utf8');
 const assert = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-assert(fs.existsSync(contractPath), 'Create Sale atomic-cutover contract must exist');
-assert(fs.existsSync(missionPath), 'Create Sale mission must exist');
+[
+  contractPath,
+  missionPath,
+  cartHookPath,
+  cartIndexPath,
+].forEach((filePath) => assert(fs.existsSync(filePath), `${filePath} must exist`));
 
 const contract = read(contractPath);
 const mission = read(missionPath);
+const cartHook = read(cartHookPath);
+const cartIndex = read(cartIndexPath);
 
 [
   'useCreateSaleWorkflow',
@@ -44,6 +58,17 @@ const mission = read(missionPath);
 ].forEach((legacyOwner) => {
   assert(contract.includes(legacyOwner), `${legacyOwner} must be forbidden after atomic cutover`);
 });
+
+assert(cartHook.includes('useState(initialItems)'), 'Cart editor must own sale item state');
+assert(cartHook.includes('itemKeySet'), 'Cart editor must own duplicate-key projection');
+assert(cartHook.includes('canRemoveSaleItemFromHeldCart'), 'Cart editor must delegate Held Cart final-line policy');
+assert(cartHook.includes('const add = useCallback'), 'Cart editor must own add command');
+assert(cartHook.includes('const remove = useCallback'), 'Cart editor must own remove command');
+assert(cartHook.includes('const update = useCallback'), 'Cart editor must own update command');
+assert(cartHook.includes('const clear = useCallback'), 'Cart editor must own clear command');
+assert(!cartHook.includes('searchSaleItems'), 'Cart editor must not own item search');
+assert(!cartHook.includes('executeSaleCompletion'), 'Cart editor must not own completion');
+assert(cartIndex.includes('useSaleCartEditor'), 'Cart editor must be publicly exported');
 
 assert(
   mission.includes('CreateSalePage.jsx` remains the route-level composition surface'),

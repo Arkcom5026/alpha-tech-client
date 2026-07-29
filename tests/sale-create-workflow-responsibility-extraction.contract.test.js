@@ -13,6 +13,8 @@ const completionControllerPath = path.join(root, 'src/features/sales/create/comp
 const completionPayloadPath = path.join(root, 'src/features/sales/create/completion/services/saleCompletionPayload.js');
 const completionValidationPath = path.join(root, 'src/features/sales/create/completion/services/saleCompletionValidation.js');
 const completionIndexPath = path.join(root, 'src/features/sales/create/completion/index.js');
+const documentHandoffHookPath = path.join(root, 'src/features/sales/create/document-handoff/hooks/useSaleDocumentHandoff.js');
+const documentHandoffIndexPath = path.join(root, 'src/features/sales/create/document-handoff/index.js');
 
 const read = (filePath) => fs.readFileSync(filePath, 'utf8');
 const assert = (condition, message) => {
@@ -31,6 +33,8 @@ const assert = (condition, message) => {
   completionPayloadPath,
   completionValidationPath,
   completionIndexPath,
+  documentHandoffHookPath,
+  documentHandoffIndexPath,
 ].forEach((filePath) => assert(fs.existsSync(filePath), `${filePath} must exist`));
 
 const contract = read(contractPath);
@@ -44,6 +48,8 @@ const completionController = read(completionControllerPath);
 const completionPayload = read(completionPayloadPath);
 const completionValidation = read(completionValidationPath);
 const completionIndex = read(completionIndexPath);
+const documentHandoffHook = read(documentHandoffHookPath);
+const documentHandoffIndex = read(documentHandoffIndexPath);
 
 [
   'useCreateSaleWorkflow',
@@ -108,6 +114,17 @@ assert(completionValidation.includes("saleMode === 'CREDIT'"), 'Completion valid
 assert(completionValidation.includes('SIMPLE_LOT_NOT_SELLABLE'), 'Completion validation must preserve SimpleLot guard');
 assert(completionIndex.includes('useSaleCompletion'), 'Completion owner must be publicly exported');
 assert(completionIndex.includes('executeCreateSaleCompletion'), 'Completion controller must be publicly exported');
+
+assert(documentHandoffHook.includes("useState('NONE')"), 'Document handoff must own sale option state');
+assert(documentHandoffHook.includes("useRef('')"), 'Document handoff must own duplicate-open authority');
+assert(documentHandoffHook.includes('openCompletedSaleDocument'), 'Document handoff must open the completed document');
+assert(documentHandoffHook.includes('lastDocumentKeyRef.current !== printKey'), 'Document handoff must prevent duplicate document opening');
+assert(documentHandoffHook.includes('clearCart()'), 'Document handoff must clear the sale cart after confirmation');
+assert(documentHandoffHook.includes('clearHeldCart()'), 'Document handoff must clear active Held Cart state after confirmation');
+assert(documentHandoffHook.includes('setHideCustomerDetails(true)'), 'Document handoff must coordinate customer reset presentation');
+assert(documentHandoffHook.includes('productSearchRef?.current?.focus?.()'), 'Document handoff must return focus to product search');
+assert(!documentHandoffHook.includes('executeSaleCompletion'), 'Document handoff must not own sale completion execution');
+assert(documentHandoffIndex.includes('useSaleDocumentHandoff'), 'Document handoff must be publicly exported');
 
 assert(
   mission.includes('CreateSalePage.jsx` remains the route-level composition surface'),

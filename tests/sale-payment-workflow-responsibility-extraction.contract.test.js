@@ -11,6 +11,7 @@ const controllerPath = path.join(root, 'src/features/sales/create/payment/contro
 const hookPath = path.join(root, 'src/features/sales/create/payment/hooks/useSalePaymentWorkflow.js');
 const projectionPath = path.join(root, 'src/features/sales/create/payment/projections/salePaymentWorkflowProjection.js');
 const indexPath = path.join(root, 'src/features/sales/create/payment/index.js');
+const entrypointPath = path.join(root, 'src/features/sales/create/components/PaymentSection.jsx');
 
 const read = (filePath) => fs.readFileSync(filePath, 'utf8');
 const assert = (condition, message) => {
@@ -27,6 +28,7 @@ const assert = (condition, message) => {
   hookPath,
   projectionPath,
   indexPath,
+  entrypointPath,
 ].forEach((filePath) => assert(fs.existsSync(filePath), `${filePath} must exist`));
 
 const mission = read(missionPath);
@@ -38,6 +40,7 @@ const controller = read(controllerPath);
 const hook = read(hookPath);
 const projection = read(projectionPath);
 const index = read(indexPath);
+const entrypoint = read(entrypointPath);
 
 [
   'projectSalePaymentCalculation',
@@ -113,6 +116,36 @@ assert(index.includes('mapSalePaymentIntent'), 'Mapper must be publicly exported
 assert(index.includes('executeSalePaymentConfirmation'), 'Controller must be publicly exported');
 assert(index.includes('useSalePaymentWorkflow'), 'Workflow hook must be publicly exported');
 assert(index.includes('projectSalePaymentWorkflow'), 'Workflow projection must be publicly exported');
+
+assert(entrypoint.includes("from '../payment'"), 'PaymentSection must import the public payment boundary');
+assert(entrypoint.includes('useSalePaymentWorkflow'), 'PaymentSection must consume the payment workflow');
+assert(entrypoint.includes('payment.calculation'), 'PaymentSection must consume projected calculation');
+assert(entrypoint.includes('payment.confirmation.confirm'), 'PaymentSection must delegate confirmation');
+assert(entrypoint.includes('payment.deposit.changeUsed'), 'PaymentSection must delegate deposit changes');
+assert(entrypoint.includes('payment.saleMode.change'), 'PaymentSection must delegate sale-mode changes');
+assert(entrypoint.includes('payment.discount.changeBillDiscount'), 'PaymentSection must delegate bill-discount changes');
+
+[
+  'const round2 =',
+  'function parseMoney',
+  'const totalOriginalPrice =',
+  'const totalDiscountOnly =',
+  'const safeFinalPrice =',
+  'const vatAmount =',
+  'const priceBeforeVat =',
+  'const calc = useMemo',
+  'const handleConfirm = useCallback',
+  'const paymentsSnapshot =',
+  "if (method === 'CARD') method = 'CREDIT'",
+  'submitMultiPaymentAction',
+  'updatedPaymentsLegacy',
+].forEach((legacyOwner) => {
+  assert(!entrypoint.includes(legacyOwner), `${legacyOwner} must be removed from PaymentSection`);
+});
+
+assert(!entrypoint.includes('validateSalePaymentConfirmation'), 'PaymentSection must not call validation directly');
+assert(!entrypoint.includes('mapSalePaymentIntent'), 'PaymentSection must not map payment intent directly');
+assert(!entrypoint.includes('executeSalePaymentConfirmation'), 'PaymentSection must not execute confirmation directly');
 
 assert(
   mission.includes('Runtime PASS and Operational PASS require executable evidence'),

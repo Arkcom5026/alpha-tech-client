@@ -84,7 +84,7 @@ const PrintDeliveryNotePage = () => {
       return null;
     }
 
-    const sale = await loadSaleDocument(saleId);
+    const sale = await loadSaleDocument({ saleId });
     setCurrentSale(sale || null);
     return sale || null;
   }, [saleId]);
@@ -118,7 +118,7 @@ const PrintDeliveryNotePage = () => {
       setCurrentSale(null);
 
       try {
-        const sale = await loadSaleDocument(saleId);
+        const sale = await loadSaleDocument({ saleId });
         if (isMounted) setCurrentSale(sale || null);
       } catch (err) {
         if (isMounted) {

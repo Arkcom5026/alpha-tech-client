@@ -7,6 +7,8 @@ import BillLayoutShortTax from '../components/BillLayoutShortTax'
 import { useBillStore } from '@/features/bill/store/billStore'
 import { useSaleDocumentLineEditor } from '@/features/sales/documents/workspace'
 
+const PRINT_RETURN_FALLBACK_MS = 60_000
+
 const PrintBillPageShortTax = () => {
   const params = useParams()
   const navigate = useNavigate()
@@ -129,10 +131,20 @@ const PrintBillPageShortTax = () => {
 
   const printAndReturnToSale = useCallback(() => {
     let returned = false
+    let fallbackTimerId = null
+
+    const cleanup = () => {
+      window.removeEventListener('afterprint', returnOnce)
+      if (fallbackTimerId !== null) {
+        window.clearTimeout(fallbackTimerId)
+        fallbackTimerId = null
+      }
+    }
+
     const returnOnce = () => {
       if (returned) return
       returned = true
-      window.removeEventListener('afterprint', returnOnce)
+      cleanup()
       returnToSale()
     }
 
@@ -141,10 +153,14 @@ const PrintBillPageShortTax = () => {
     try {
       window.focus?.()
       window.print?.()
+
+      // `afterprint` is the lifecycle authority. The long fallback only protects
+      // browsers that never dispatch it; it must not navigate away while the
+      // print dialog is still opening or being used.
+      fallbackTimerId = window.setTimeout(returnOnce, PRINT_RETURN_FALLBACK_MS)
     } catch {
-      // Navigation still returns the operator to the active sale lane.
-    } finally {
-      window.setTimeout(returnOnce, 0)
+      cleanup()
+      returnOnce()
     }
   }, [returnToSale])
 

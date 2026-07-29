@@ -4,3 +4,6 @@ export { default as TaxPeriodManagementPage } from './periods/pages/TaxPeriodMan
 export * from './periods/api/taxPeriodApi';
 export { default as InputTaxControlCenterPage } from './inputTaxControlCenter/pages/InputTaxControlCenterPage';
 export * from './inputTaxControlCenter/api/inputTaxControlCenterApi';
+export { default as InputTaxDocumentListPage } from './inputTaxDocuments/pages/InputTaxDocumentListPage';
+export { default as InputTaxDocumentDetailPage } from './inputTaxDocuments/pages/InputTaxDocumentDetailPage';
+export * from './inputTaxDocuments/api/inputTaxDocumentApi';

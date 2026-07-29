@@ -3,18 +3,15 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import useSalesStore from '@/features/sales/store/salesStore';
-import { loadSaleDocument } from '@/features/sales/documents/workspace';
+import {
+  loadSaleDocument,
+  useSaleDocumentLineEditor,
+} from '@/features/sales/documents/workspace';
 import DeliveryNoteForm from '../components/DeliveryNoteForm';
 
 const normalizeDocumentText = (value) => {
   if (typeof value !== 'string') return '';
   return value.trim();
-};
-
-const nullableDocumentText = (value) => {
-  const normalized = normalizeDocumentText(value);
-  return normalized || null;
 };
 
 const resolveSaleItemProductName = (item) => {
@@ -75,16 +72,11 @@ const buildBranchFullAddress = (branch = {}) => {
 
 const PrintDeliveryNotePage = () => {
   const { saleId } = useParams();
-  const { updateSaleDocumentLinesAction } = useSalesStore();
 
   const [currentSale, setCurrentSale] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [pageError, setPageError] = useState('');
   const [hideDate, setHideDate] = useState(false);
-
-  const [editingLineKey, setEditingLineKey] = useState(null);
-  const [lineDrafts, setLineDrafts] = useState({});
-  const [savingLineKey, setSavingLineKey] = useState(null);
 
   const reloadSaleDocument = useCallback(async () => {
     if (!saleId) {
@@ -96,6 +88,17 @@ const PrintDeliveryNotePage = () => {
     setCurrentSale(sale || null);
     return sale || null;
   }, [saleId]);
+
+  const {
+    editingLineKey,
+    lineDrafts,
+    savingLineKey,
+    error: editorError,
+    actions: documentLineActions,
+  } = useSaleDocumentLineEditor({
+    saleId,
+    reload: reloadSaleDocument,
+  });
 
   useEffect(() => {
     let isMounted = true;
@@ -110,7 +113,8 @@ const PrintDeliveryNotePage = () => {
       }
 
       setIsLoading(true);
-      setError('');
+      setPageError('');
+      documentLineActions.clearError();
       setCurrentSale(null);
 
       try {
@@ -118,7 +122,7 @@ const PrintDeliveryNotePage = () => {
         if (isMounted) setCurrentSale(sale || null);
       } catch (err) {
         if (isMounted) {
-          setError(
+          setPageError(
             err?.response?.data?.error ||
               err?.response?.data?.message ||
               err?.message ||
@@ -220,104 +224,7 @@ const PrintDeliveryNotePage = () => {
     return Array.from(grouped.values());
   }, [currentSale]);
 
-  const handleToggleDocumentLineEdit = (item) => {
-    const key = item?.documentLineKey || item?.id;
-    if (!key) return;
-
-    setEditingLineKey((current) => {
-      if (current === key) return null;
-
-      setLineDrafts((previous) => ({
-        ...previous,
-        [key]: {
-          documentPrefix: item?.documentPrefix || '',
-          documentDescriptionRaw: item?.documentDescriptionRaw || '',
-          documentSuffix: item?.documentSuffix || '',
-        },
-      }));
-
-      return key;
-    });
-  };
-
-  const handleChangeDocumentLineDraft = (item, field, value) => {
-    const key = item?.documentLineKey || item?.id;
-    if (!key) return;
-
-    setLineDrafts((previous) => ({
-      ...previous,
-      [key]: {
-        documentPrefix: item?.documentPrefix || '',
-        documentDescriptionRaw: item?.documentDescriptionRaw || '',
-        documentSuffix: item?.documentSuffix || '',
-        ...(previous?.[key] || {}),
-        [field]: value,
-      },
-    }));
-  };
-
-  const handleSaveDocumentLine = async (item) => {
-    const key = item?.documentLineKey || item?.id;
-    if (!key || !saleId) return;
-
-    if (typeof updateSaleDocumentLinesAction !== 'function') {
-      setError('ไม่พบ action สำหรับบันทึกข้อความก่อน/หลังสินค้า');
-      return;
-    }
-
-    const draft = {
-      documentPrefix: item?.documentPrefix || '',
-      documentDescriptionRaw: item?.documentDescriptionRaw || '',
-      documentSuffix: item?.documentSuffix || '',
-      ...(lineDrafts?.[key] || {}),
-    };
-
-    const saleItemIds = Array.isArray(item?.saleItemIds) ? item.saleItemIds : [];
-    const simpleItemIds = Array.isArray(item?.simpleItemIds) ? item.simpleItemIds : [];
-
-    const makePayloadLine = (id) => ({
-      id,
-      documentPrefix: nullableDocumentText(draft.documentPrefix),
-      documentDescription: nullableDocumentText(draft.documentDescriptionRaw),
-      documentSuffix: nullableDocumentText(draft.documentSuffix),
-    });
-
-    setSavingLineKey(key);
-    setError('');
-
-    try {
-      const result = await updateSaleDocumentLinesAction(
-        saleId,
-        {
-          items: saleItemIds.map(makePayloadLine),
-          simpleItems: simpleItemIds.map(makePayloadLine),
-        },
-        { refresh: false }
-      );
-
-      if (!result?.ok) {
-        setError(result?.error || 'บันทึกข้อความก่อน/หลังสินค้าไม่สำเร็จ');
-        return;
-      }
-
-      await reloadSaleDocument();
-      setEditingLineKey(null);
-      setLineDrafts((previous) => {
-        const next = { ...(previous || {}) };
-        delete next[key];
-        return next;
-      });
-    } catch (err) {
-      setError(
-        err?.response?.data?.error ||
-          err?.response?.data?.message ||
-          err?.message ||
-          'บันทึกข้อความก่อน/หลังสินค้าไม่สำเร็จ'
-      );
-    } finally {
-      setSavingLineKey(null);
-    }
-  };
+  const error = pageError || editorError;
 
   if (isLoading) {
     return <div className="p-8 text-center text-zinc-400 font-bold bg-slate-900 min-h-screen">⏳ กำลังสตรีมโครงสร้างใบส่งของ A4...</div>;
@@ -352,9 +259,9 @@ const PrintDeliveryNotePage = () => {
           editingLineKey={editingLineKey}
           lineDrafts={lineDrafts}
           savingLineKey={savingLineKey}
-          onToggleDocumentLineEdit={handleToggleDocumentLineEdit}
-          onChangeDocumentLineDraft={handleChangeDocumentLineDraft}
-          onSaveDocumentLine={handleSaveDocumentLine}
+          onToggleDocumentLineEdit={documentLineActions.toggle}
+          onChangeDocumentLineDraft={documentLineActions.change}
+          onSaveDocumentLine={documentLineActions.save}
         />
       </div>
     </div>

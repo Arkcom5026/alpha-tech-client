@@ -1,6 +1,6 @@
 export const CREATE_SALE_ATOMIC_CUTOVER_CONTRACT = Object.freeze({
   runtimeEntrypoint: 'src/features/sales/create/pages/CreateSalePage.jsx',
-  requiredImport: "from '../workflow'",
+  requiredImport: "from '../index'",
   requiredSymbols: [
     'useCreateSaleWorkflow',
   ],
@@ -19,6 +19,11 @@ export const CREATE_SALE_ATOMIC_CUTOVER_CONTRACT = Object.freeze({
     'const buildCompletionPayload =',
     'const handleConfirmSale =',
     'const handleSaleConfirmed =',
+    'searchSaleItems',
+    'mapSaleSearchItemToCartLine',
+    'executeSaleCompletion',
+    'openCompletedSaleDocument',
+    'revalidatePosHeldCart',
   ],
   requiredWorkflowOwners: [
     'useSaleCartEditor',

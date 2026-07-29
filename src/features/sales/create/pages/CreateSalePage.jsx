@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Search, ShoppingBag } from 'lucide-react';
 
 import useSalesStore from '@/features/sales/store/salesStore';
-import CustomerSection from '../components/CustomerSection';
+import { SaleCustomerSection as CustomerSection } from '../customer';
 import PaymentSection from '../components/PaymentSection';
 import SaleItemTable from '../components/SaleItemTable';
 import { executeSaleCompletion } from '../workflows/saleCompletionWorkflow';

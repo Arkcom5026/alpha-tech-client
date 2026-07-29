@@ -7,6 +7,7 @@ const contractPath = path.join(root, 'src/features/sales/create/payment/contract
 const calculationPath = path.join(root, 'src/features/sales/create/payment/services/salePaymentCalculation.js');
 const validationPath = path.join(root, 'src/features/sales/create/payment/services/salePaymentValidation.js');
 const mapperPath = path.join(root, 'src/features/sales/create/payment/services/salePaymentIntentMapper.js');
+const controllerPath = path.join(root, 'src/features/sales/create/payment/controllers/salePaymentConfirmationController.js');
 const indexPath = path.join(root, 'src/features/sales/create/payment/index.js');
 
 const read = (filePath) => fs.readFileSync(filePath, 'utf8');
@@ -20,6 +21,7 @@ const assert = (condition, message) => {
   calculationPath,
   validationPath,
   mapperPath,
+  controllerPath,
   indexPath,
 ].forEach((filePath) => assert(fs.existsSync(filePath), `${filePath} must exist`));
 
@@ -28,6 +30,7 @@ const contract = read(contractPath);
 const calculation = read(calculationPath);
 const validation = read(validationPath);
 const mapper = read(mapperPath);
+const controller = read(controllerPath);
 const index = read(indexPath);
 
 [
@@ -64,9 +67,22 @@ assert(mapper.includes("method === 'CASH'"), 'Mapper must apply cash change');
 assert(mapper.includes('paymentItems'), 'Mapper must return payment intent items');
 assert(!mapper.includes('useCallback'), 'Mapper must remain framework-independent');
 
+assert(controller.includes('mapSalePaymentIntent'), 'Controller must construct payment intent through mapper');
+assert(controller.includes('validateSalePaymentConfirmation'), 'Controller must validate before execution');
+assert(controller.indexOf('validateSalePaymentConfirmation') < controller.indexOf('onConfirmSale({'), 'Controller must validate before sale execution');
+assert(controller.includes("saleMode === 'CREDIT' ? 'PRINT'"), 'Controller must preserve credit delivery-note mode');
+assert(controller.includes("customerType === 'GOVERNMENT'"), 'Controller must preserve government sale type');
+assert(controller.includes("return 'DELIVERY_NOTE'"), 'Controller must preserve credit document handoff');
+assert(controller.includes("saleOption === 'NONE' ? 'RECEIPT'"), 'Controller must preserve receipt fallback');
+assert(controller.includes('printWindow?.close?.()'), 'Controller must close reserved print window on failure');
+assert(controller.includes('onSaleConfirmed?.'), 'Controller must coordinate completed-sale handoff');
+assert(!controller.includes('useState'), 'Controller must remain framework-independent');
+assert(!controller.includes('useCallback'), 'Controller must remain framework-independent');
+
 assert(index.includes('projectSalePaymentCalculation'), 'Calculation must be publicly exported');
 assert(index.includes('validateSalePaymentConfirmation'), 'Validation must be publicly exported');
 assert(index.includes('mapSalePaymentIntent'), 'Mapper must be publicly exported');
+assert(index.includes('executeSalePaymentConfirmation'), 'Controller must be publicly exported');
 
 assert(
   mission.includes('Runtime PASS and Operational PASS require executable evidence'),

@@ -26,6 +26,7 @@ assert(contract.includes('optimisticSnapshotAuthority: false'), 'Navigation snap
 
 assert(api.includes('getSaleById'), 'Workspace API must own sale document loading');
 assert(api.includes('updateSaleDocumentLines'), 'Workspace API must own document-line mutation');
+assert(api.includes('loadSaleDocument = async ({ saleId, paymentId } = {})'), 'Workspace load API must accept a command object');
 assert(identity.includes('routeSaleId'), 'Identity service must resolve route saleId');
 assert(identity.includes("dataAuthority: 'SERVER_REVALIDATED_SALE'"), 'Identity result must expose authority');
 
@@ -38,6 +39,9 @@ assert(editor.includes('executeSaleDocumentLineUpdate'), 'Editor hook must deleg
 assert(editor.includes('editingLineKey'), 'Editor hook must own edit identity');
 assert(editor.includes('lineDrafts'), 'Editor hook must own drafts');
 assert(editor.includes('savingLineKey'), 'Editor hook must own saving state');
+assert(editor.includes('savingLineKeyRef'), 'Editor hook must prevent duplicate saves');
+assert(editor.includes("code: 'SALE_DOCUMENT_LINE_UPDATE_IN_PROGRESS'"), 'Duplicate save refusal must be explicit');
+assert(editor.includes('}, [saleId]);'), 'Editor state must reset when route saleId changes');
 
 [
   'loadSaleDocument',
@@ -48,10 +52,12 @@ assert(editor.includes('savingLineKey'), 'Editor hook must own saving state');
 ].forEach((symbol) => assert(index.includes(symbol), `${symbol} must be publicly exported`));
 
 assert(legacyStore.includes('updateSaleDocumentLinesAction'), 'Legacy document-line action must remain for compatibility');
-assert(billShort.includes('loadSaleByIdAction'), 'Bill Short must still use server loading before cutover');
-assert(billFull.includes('loadSaleByIdAction'), 'Bill Full must still use server loading before cutover');
-assert(deliveryNote.includes('location.state?.sale'), 'Delivery Note hybrid snapshot must remain visible until atomic cutover');
-assert(deliveryNote.includes('getSaleByIdAction'), 'Delivery Note must still expose server hydration path');
+assert(billShort.includes('loadSaleByIdAction'), 'Bill Short must retain billStore server hydration authority');
+assert(billFull.includes('loadSaleByIdAction'), 'Bill Full must retain billStore server hydration authority');
+assert(deliveryNote.includes('loadSaleDocument({ saleId })'), 'Delivery Note must load through the Workspace command API');
+assert(!deliveryNote.includes('location.state'), 'Delivery Note must not use navigation snapshot authority');
+assert(!deliveryNote.includes('getSaleByIdAction'), 'Delivery Note must not use legacy hydration authority');
+assert(deliveryNote.includes('useSaleDocumentLineEditor'), 'Delivery Note must use the shared editor');
 
 assert(!api.includes('BillLayout'), 'Workspace API must not depend on Bill renderer');
 assert(!api.includes('DeliveryNoteForm'), 'Workspace API must not depend on Delivery Note renderer');

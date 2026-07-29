@@ -24,6 +24,7 @@ import {
 
 import { useAuthStore } from '@/features/auth/store/authStore';
 import { useBranchStore } from '@/features/branch/store/branchStore';
+import OperationalStatusBadge from '@/features/system/operational-status/components/OperationalStatusBadge';
 
 const HeaderPos = () => {
   const navigate = useNavigate();
@@ -41,7 +42,10 @@ const HeaderPos = () => {
   const clearBranch = useBranchStore((state) => state.clearBranch);
   const loadAndSetBranchById = useBranchStore((state) => state.loadAndSetBranchById);
 
-  const isSuperAdmin = String(role || '').toLowerCase() === 'superadmin';
+  const normalizedRole = String(role || '').toLowerCase();
+  const isSuperAdmin = normalizedRole === 'superadmin';
+  const isAdmin = normalizedRole === 'admin';
+  const canViewOperationalStatus = isAuthenticated && (isSuperAdmin || isAdmin);
   const isSuperAdminRoute = pathname.includes('/superadmin');
   const isGlobalSuperAdmin = isSuperAdmin || isSuperAdminRoute;
 
@@ -63,12 +67,10 @@ const HeaderPos = () => {
   useEffect(() => {
     if (isSuperAdmin) return;
 
-    const roleLower = String(role || '').toLowerCase();
-
-    if (isAuthenticated && roleLower === 'employee' && employee?.branchId && selectedBranchId) {
+    if (isAuthenticated && normalizedRole === 'employee' && employee?.branchId && selectedBranchId) {
       loadAndSetBranchById(selectedBranchId);
     }
-  }, [isSuperAdmin, isAuthenticated, role, employee?.branchId, selectedBranchId, loadAndSetBranchById]);
+  }, [isSuperAdmin, isAuthenticated, normalizedRole, employee?.branchId, selectedBranchId, loadAndSetBranchById]);
 
   useEffect(() => {
     if (!isSuperAdmin || isSuperAdminRoute || !shopSlug) return;
@@ -190,6 +192,8 @@ const HeaderPos = () => {
           <div className="hidden h-9 w-px shrink-0 bg-gradient-to-b from-transparent via-amber-300/25 to-transparent xl:block" />
 
           <div className="ml-auto flex shrink-0 items-center justify-end gap-2">
+            <OperationalStatusBadge enabled={canViewOperationalStatus} />
+
             {displayBranchName && !isGlobalSuperAdmin && (
               <div className="hidden max-w-[320px] items-center gap-2 rounded-full border border-[#b7791f]/65 bg-slate-950/28 px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur lg:flex">
                 <div className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-orange-500/10 text-orange-300 ring-1 ring-amber-400/35">

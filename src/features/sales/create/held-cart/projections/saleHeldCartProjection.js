@@ -7,6 +7,7 @@ export const projectSaleHeldCart = ({
   panel: {
     open: session.panelOpen,
     activeCart: session.activeHeldCart,
+    activeCartRef: session.activeHeldCartRef,
     validation: session.validation,
     saveState: session.saveState,
   },

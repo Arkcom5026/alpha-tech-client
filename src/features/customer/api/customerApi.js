@@ -1,8 +1,19 @@
-
-
 // src/features/customer/api/customerApi.js
 
 import apiClient from '@/utils/apiClient';
+
+// ค้นหาลูกค้าแบบช่องเดียว: ชื่อ เบอร์บางส่วน บริษัท หรือเลขผู้เสียภาษี
+export const searchCustomers = async (keyword) => {
+  try {
+    const res = await apiClient.get('/customers/search', {
+      params: { q: String(keyword || '').trim() },
+    });
+    return res.data;
+  } catch (error) {
+    console.error('❌ [searchCustomers] error:', error);
+    throw error;
+  }
+};
 
 // ค้นหาลูกค้าด้วยเบอร์โทร
 export const getCustomerByPhone = async (phone) => {
@@ -70,11 +81,11 @@ export const getMyCustomerProfilePos = async () => {
   }
 };
 
-// 🔍 ค้นหาลูกค้าด้วยชื่อหรือนามสกุล
+// 🔍 ค้นหาลูกค้าด้วยชื่อหรือนามสกุล (legacy compatibility)
 export const getCustomerByName = async (keyword) => {
   try {
-    const res = await apiClient.get(`/customers/by-name`, {
-      params: { q: keyword }
+    const res = await apiClient.get('/customers/by-name', {
+      params: { q: keyword },
     });
     return res.data;
   } catch (error) {
@@ -82,5 +93,3 @@ export const getCustomerByName = async (keyword) => {
     throw error;
   }
 };
-
-

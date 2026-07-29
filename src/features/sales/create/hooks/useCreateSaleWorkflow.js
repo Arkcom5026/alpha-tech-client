@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 
 import { createSaleHeldCartWorkflowAdapter, useSaleHeldCartWorkflow } from '../held-cart';
 import { useSaleCartEditor } from '../cart';
@@ -20,8 +20,12 @@ export const useCreateSaleWorkflow = ({
   const [selectedPriceType, setSelectedPriceType] = useState('retail');
   const [saleMode, setSaleMode] = useState('CASH');
   const [error, setError] = useState('');
+  const activeHeldCartAuthorityRef = useRef(null);
 
-  const cart = useSaleCartEditor({ onError: setError });
+  const cart = useSaleCartEditor({
+    activeHeldCartRef: activeHeldCartAuthorityRef,
+    onError: setError,
+  });
 
   const heldCartArgs = createSaleHeldCartWorkflowAdapter({
     saleItems: cart.items,
@@ -34,8 +38,7 @@ export const useCreateSaleWorkflow = ({
     productSearchRef,
   });
   const heldCart = useSaleHeldCartWorkflow(heldCartArgs);
-
-  cart.activeHeldCartRef = heldCart.panel.activeCartRef;
+  activeHeldCartAuthorityRef.current = heldCart.panel.activeCart;
 
   const itemSearch = useSaleItemSearch({
     selectedPriceType,

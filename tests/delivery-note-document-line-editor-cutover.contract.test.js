@@ -8,6 +8,7 @@ const read = (relativePath) => fs.readFileSync(path.join(root, relativePath), 'u
 
 const pagePath = 'src/features/deliveryNote/pages/PrintDeliveryNotePage.jsx';
 const workspaceIndexPath = 'src/features/sales/documents/workspace/index.js';
+const workspaceApiPath = 'src/features/sales/documents/workspace/api/saleDocumentWorkspaceApi.js';
 const legacyStorePath = 'src/features/sales/store/salesStore.js';
 
 test('Delivery Note consumes the shared document line editor', () => {
@@ -31,10 +32,13 @@ test('Delivery Note no longer imports or calls the legacy Sales Store', () => {
   assert.doesNotMatch(page, /setSavingLineKey/);
 });
 
-test('server authority and renderer remain unchanged', () => {
+test('server authority uses the workspace command shape and preserves the renderer', () => {
   const page = read(pagePath);
+  const workspaceApi = read(workspaceApiPath);
 
-  assert.match(page, /loadSaleDocument\(saleId\)/);
+  assert.match(page, /loadSaleDocument\(\{ saleId \}\)/);
+  assert.doesNotMatch(page, /loadSaleDocument\(saleId\)/);
+  assert.match(workspaceApi, /loadSaleDocument = async \(\{ saleId, paymentId \} = \{\}\)/);
   assert.match(page, /setCurrentSale\(sale \|\| null\)/);
   assert.match(page, /<DeliveryNoteForm/);
   assert.match(page, /saleItems=\{preparedSaleItems\}/);

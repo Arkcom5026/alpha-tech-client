@@ -53,6 +53,13 @@ describe('Bill document-line editor atomic cutover contract', () => {
     expect(fullPage).toContain('autoPrint');
   });
 
+  it('makes afterprint authoritative and forbids immediate return navigation', () => {
+    expect(shortPage).toContain('const PRINT_RETURN_FALLBACK_MS = 60_000');
+    expect(shortPage).toContain('fallbackTimerId = window.setTimeout(returnOnce, PRINT_RETURN_FALLBACK_MS)');
+    expect(shortPage).toContain("window.removeEventListener('afterprint', returnOnce)");
+    expect(shortPage).not.toContain('window.setTimeout(returnOnce, 0)');
+  });
+
   it('keeps the legacy action available only as a compatibility surface', () => {
     expect(legacyStore).toContain('updateSaleDocumentLinesAction');
     expect(workspaceIndex).toContain('useSaleDocumentLineEditor');

@@ -1,3 +1,4 @@
+export { createSaleHeldCartWorkflowAdapter } from './adapters/createSaleHeldCartWorkflowAdapter';
 export { useSaleHeldCartWorkflow } from './hooks/useSaleHeldCartWorkflow';
 export { useSaleHeldCart } from './hooks/useSaleHeldCart';
 export { useSaleHeldCartAutosave } from './hooks/useSaleHeldCartAutosave';

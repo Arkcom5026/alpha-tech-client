@@ -7,7 +7,7 @@ const purchaseOrder = {
   id: 644,
   status: 'APPROVED',
   items: [
-    { id: 11, quantity: 2, receivedQuantity: 0, costPrice: 25 },
+    { id: 11, quantity: 2, receivedQuantity: 0, costPrice: 25, product: { name: 'หมึกพิมพ์' } },
     { id: 12, quantity: 1, receivedQuantity: 1, costPrice: 100 },
   ],
 };
@@ -20,7 +20,7 @@ const createApi = () => ({
 });
 
 describe('usePurchaseReceiptPage', () => {
-  it('projects source items into module-owned row view models', () => {
+  it('projects source items into the flat presentation row contract', () => {
     const api = createApi();
     const { result } = renderHook(() => usePurchaseReceiptPage({ purchaseOrder, api }));
 
@@ -32,12 +32,18 @@ describe('usePurchaseReceiptPage', () => {
     });
     expect(result.current.viewModel.rows).toHaveLength(2);
     expect(result.current.viewModel.rows[0]).toMatchObject({
-      item: { id: 11 },
+      id: 11,
+      name: 'หมึกพิมพ์',
+      ordered: 2,
+      receivedBeforeInput: 0,
+      remainingBeforeInput: 2,
+      draftQuantity: '',
+      draftCostPrice: 25,
       isSaving: false,
       isSaved: false,
       error: null,
+      sourceItem: { id: 11 },
     });
-    expect(result.current.viewModel.rows[0].state.remainingBeforeInput).toBe(2);
   });
 
   it('composes row editing, first-save draft creation, and finalize eligibility', async () => {

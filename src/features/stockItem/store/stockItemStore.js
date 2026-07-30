@@ -1,17 +1,15 @@
-
-
-
-
-// ✅ stockItemStore.js — จัดการ SN ที่ยิงเข้าสต๊อก และค้นหา SN สำหรับขาย
+// stockItemStore.js — compatibility store while StockItem capabilities migrate to owned slices
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import {
   markStockItemsAsSold,
-  receiveStockItem,
-  receiveAllPendingNoSN,
   searchStockItem,
-  getAvailableStockItemsByProduct
+  getAvailableStockItemsByProduct,
 } from '../api/stockItemApi';
+import {
+  receiveAllPendingStockItems,
+  receiveScannedStockItem,
+} from '../receive';
 
 const useStockItemStore = create(
   devtools((set, get) => ({
@@ -19,7 +17,6 @@ const useStockItemStore = create(
     loading: false,
     error: null,
 
-    // ✅ ฟังก์ชันยิง SN เข้าสต๊อก
     receiveSNAction: async ({ barcode, serialNumber, receiptItemId, keepSN } = {}) => {
       const normalizedBarcode = String(barcode || '').trim();
       const normalizedSerialNumber = String(serialNumber || '').trim();
@@ -27,9 +24,9 @@ const useStockItemStore = create(
       const code = normalizedBarcode;
 
       if (!code) {
-        set((s) => ({
+        set((state) => ({
           scannedList: [
-            ...s.scannedList,
+            ...state.scannedList,
             { barcode: '', status: 'error', error: 'กรุณาระบุบาร์โค้ด' },
           ],
         }));
@@ -37,152 +34,141 @@ const useStockItemStore = create(
       }
 
       if (shouldKeepSN && !normalizedSerialNumber) {
-        set((s) => ({
+        set((state) => ({
           scannedList: [
-            ...s.scannedList,
-            { barcode: String(code), status: 'error', error: 'กรุณาระบุ SN' },
+            ...state.scannedList,
+            { barcode: code, status: 'error', error: 'กรุณาระบุ SN' },
           ],
         }));
         return;
       }
 
-      // กันสแกนซ้ำภายในรอบนี้ (เฉพาะที่สำเร็จไปแล้ว)
-      const already = get().scannedList.some((x) => x.barcode === String(code) && x.status === 'success');
-      if (already) {
-        set((s) => ({
+      const alreadyReceived = get().scannedList.some(
+        (item) => item.barcode === code && item.status === 'success'
+      );
+
+      if (alreadyReceived) {
+        set((state) => ({
           scannedList: [
-            ...s.scannedList,
-            { barcode: String(code), status: 'error', error: 'สแกนซ้ำในรอบนี้' },
+            ...state.scannedList,
+            { barcode: code, status: 'error', error: 'สแกนซ้ำในรอบนี้' },
           ],
         }));
         return;
       }
 
       set({ loading: true, error: null });
-      try {
-        const payload = shouldKeepSN
-          ? {
-              barcode: String(code),
-              serialNumber: normalizedSerialNumber,
-              receiptItemId,
-              keepSN: true,
-            }
-          : {
-              barcode: String(code),
-              receiptItemId,
-              keepSN: false,
-            };
 
-        const data = await receiveStockItem(payload);
-        const kind = data?.stockItem ? 'SN' : (data?.lot ? 'LOT' : undefined);
-        const extra = kind === 'SN'
-          ? { stockItemId: data?.stockItem?.id }
-          : kind === 'LOT'
-            ? { activated: true, receiptItemId: data?.lot?.receiptItemId, quantity: data?.lot?.quantity }
-            : {};
+      try {
+        const result = await receiveScannedStockItem({
+          barcode: code,
+          serialNumber: normalizedSerialNumber,
+          receiptItemId,
+          keepSN: shouldKeepSN,
+        });
+        const data = result?.sourceResponse ?? result;
+        const kind = data?.stockItem ? 'SN' : data?.lot ? 'LOT' : undefined;
+        const extra =
+          kind === 'SN'
+            ? { stockItemId: data?.stockItem?.id }
+            : kind === 'LOT'
+              ? {
+                  activated: true,
+                  receiptItemId: data?.lot?.receiptItemId,
+                  quantity: data?.lot?.quantity,
+                }
+              : {};
 
         set((state) => ({
           scannedList: [
             ...state.scannedList,
-            { barcode: String(code), kind, status: 'success', ...extra, data },
+            { barcode: code, kind, status: 'success', ...extra, data },
           ],
         }));
+
+        return result;
       } catch (error) {
+        const message = error?.message || 'รับสินค้าไม่สำเร็จ';
         console.error('[receiveSNAction]', error);
         set((state) => ({
+          error: message,
           scannedList: [
             ...state.scannedList,
-            { barcode: String(code), status: 'error', error: error?.message || 'รับสินค้าไม่สำเร็จ' },
+            { barcode: code, status: 'error', error: message },
           ],
         }));
+        throw error;
       } finally {
         set({ loading: false });
       }
     },
 
-    // ✅ ฟังก์ชันลับ: รับสินค้าค้างรับทั้งหมดในครั้งเดียว
-    // ปัจจุบัน backend รองรับ bulk receive ได้ทั้ง SIMPLE และ STRUCTURED
     receiveAllPendingNoSNAction: async ({ receiptId } = {}) => {
-      const normalizedReceiptId = Number(receiptId);
-      if (!Number.isFinite(normalizedReceiptId) || normalizedReceiptId <= 0) {
-        const e = new Error('receiptId ไม่ถูกต้อง');
-        set({ error: e.message });
-        throw e;
-      }
-
       set({ loading: true, error: null });
+
       try {
-        const res = await receiveAllPendingNoSN({ receiptId: normalizedReceiptId });
-        return res;
-      } catch (err) {
-        const message = err?.response?.data?.message || err?.message || 'รับสินค้าค้างรับทั้งหมดไม่สำเร็จ';
+        return await receiveAllPendingStockItems({ receiptId });
+      } catch (error) {
+        const message =
+          error?.response?.data?.message ||
+          error?.message ||
+          'รับสินค้าค้างรับทั้งหมดไม่สำเร็จ';
         set({ error: message });
-        console.error('❌ receiveAllPendingNoSNAction ล้มเหลว:', err);
-        throw err;
+        console.error('❌ receiveAllPendingNoSNAction ล้มเหลว:', error);
+        throw error;
       } finally {
         set({ loading: false });
       }
     },
 
-    // ✅ ฟังก์ชันอัปเดตสถานะสินค้าเป็นขายแล้ว
-    // Production hardening:
-    // - รองรับ backend 409: ขายไม่ได้/ขายซ้ำ/สถานะไม่ใช่ IN_STOCK
-    // - เซ็ต error ใน store เพื่อให้ UI แสดงเป็น error block ได้
     updateStockItemsToSoldAction: async (stockItemIds = []) => {
-      // validate input
       const ids = Array.isArray(stockItemIds)
-        ? [...new Set(stockItemIds.map((x) => Number(x)).filter(Number.isFinite))]
+        ? [...new Set(stockItemIds.map((value) => Number(value)).filter(Number.isFinite))]
         : [];
 
       if (ids.length === 0) {
-        const e = new Error('ไม่มีรายการสินค้าที่ต้องอัปเดตเป็นขายแล้ว');
-        set({ error: e.message });
-        throw e;
+        const error = new Error('ไม่มีรายการสินค้าที่ต้องอัปเดตเป็นขายแล้ว');
+        set({ error: error.message });
+        throw error;
       }
 
       set({ loading: true, error: null });
-      try {
-        const res = await markStockItemsAsSold(ids); // ✅ ส่ง array ไปอย่างถูกต้อง
-        return res;
-      } catch (err) {
-        const status = err?.response?.status;
-        const payload = err?.response?.data;
 
-        // ✅ 409 = อัปเดตไม่ครบ/ขายซ้ำ/ไม่อยู่ในสาขา/ไม่ใช่ IN_STOCK
+      try {
+        return await markStockItemsAsSold(ids);
+      } catch (error) {
+        const status = error?.response?.status;
+        const payload = error?.response?.data;
+
         if (status === 409) {
           const message = payload?.message || 'มีบางรายการไม่สามารถเปลี่ยนเป็นขายแล้วได้';
           set({ error: message });
 
-          const mapped = new Error(message);
-          mapped.name = 'StockItemNotSellableError';
-          mapped.status = 409;
-          mapped.code = payload?.code;
-          mapped.details = payload;
-          throw mapped;
+          const mappedError = new Error(message);
+          mappedError.name = 'StockItemNotSellableError';
+          mappedError.status = 409;
+          mappedError.code = payload?.code;
+          mappedError.details = payload;
+          throw mappedError;
         }
 
-        // 400/401/500 ฯลฯ
-        const message = payload?.message || err?.message || 'อัปเดตสถานะขายแล้วไม่สำเร็จ';
+        const message = payload?.message || error?.message || 'อัปเดตสถานะขายแล้วไม่สำเร็จ';
         set({ error: message });
-        console.error('❌ อัปเดต stockItem ล้มเหลว:', err);
-        throw err;
+        console.error('❌ อัปเดต stockItem ล้มเหลว:', error);
+        throw error;
       } finally {
         set({ loading: false });
       }
     },
 
-    // ✅ ฟังก์ชันค้นหาสินค้าจาก barcode เพื่อใช้งานทั่วไป เช่น หน้าขาย / เคลม / ตัดสต๊อก
-    // - ถ้าพบว่า barcode มีอยู่แต่ "ไม่พร้อมขาย" (เช่น SOLD/CLAIMED/LOST) จะคืนค่า object แบบ notSellable ให้ UI แสดงข้อความได้ชัด
     searchStockItemAction: async (barcode) => {
       try {
         const item = await searchStockItem(barcode);
-        console.log('🔍 ค้นหาสินค้าสำหรับขาย:', item);
         return item || null;
-      } catch (err) {
-        const statusCode = err?.response?.status;
-        const payload = err?.response?.data;
+      } catch (error) {
+        const statusCode = error?.response?.status;
+        const payload = error?.response?.data;
 
-        // ✅ แยกเคส: มีบาร์โค้ด แต่ไม่พร้อมขาย
         if (statusCode === 409) {
           return {
             notSellable: true,
@@ -192,41 +178,30 @@ const useStockItemStore = create(
           };
         }
 
-        // 404 = ไม่พบจริง ๆ
         if (statusCode === 404) return null;
 
-        console.error('❌ ค้นหา stockItem ล้มเหลว:', err);
+        console.error('❌ ค้นหา stockItem ล้มเหลว:', error);
         return null;
       }
     },
 
-    // ✅ ฟังก์ชันโหลด stockItem ที่พร้อมขายตาม productId
     loadAvailableStockItemsAction: async (productId) => {
       try {
-        const data = await getAvailableStockItemsByProduct(productId);
-        return data;
-      } catch (err) {
-        console.error('❌ ดึง stockItem ที่พร้อมขายล้มเหลว:', err);
+        return await getAvailableStockItemsByProduct(productId);
+      } catch (error) {
+        console.error('❌ ดึง stockItem ที่พร้อมขายล้มเหลว:', error);
         return [];
       }
     },
 
-    // ✅ ฟังก์ชันล้างรายการ SN ที่ยิงแล้ว (ถ้าต้องการใช้)
     clearScannedList: () => set({ scannedList: [] }),
-
-    // ลบรายการตาม barcode (เผื่อยิงผิด)
-    removeScannedItem: (barcode) => set((s) => ({ scannedList: s.scannedList.filter((x) => x.barcode !== barcode) })),
-
-    // ย้อนกลับ 1 รายการล่าสุดที่สแกน
-    undoLastScan: () => set((s) => ({ scannedList: s.scannedList.slice(0, -1) })),
+    removeScannedItem: (barcode) =>
+      set((state) => ({
+        scannedList: state.scannedList.filter((item) => item.barcode !== barcode),
+      })),
+    undoLastScan: () =>
+      set((state) => ({ scannedList: state.scannedList.slice(0, -1) })),
   }))
 );
 
 export default useStockItemStore;
-
-
-
-
-
-
-

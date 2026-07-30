@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { savePurchaseReceiptItem } from './savePurchaseReceiptItem';
+import {
+  PurchaseReceiptItemSaveError,
+  savePurchaseReceiptItem,
+} from './savePurchaseReceiptItem';
 
 describe('savePurchaseReceiptItem', () => {
   it('creates a receipt header before saving the first item', async () => {
@@ -47,16 +50,49 @@ describe('savePurchaseReceiptItem', () => {
 
   it('preserves the created receipt identity when item saving fails', async () => {
     const createReceipt = vi.fn().mockResolvedValue({ id: 92 });
-    const addReceiptItem = vi.fn().mockRejectedValue(new Error('item save failed'));
+    const originalError = new Error('item save failed');
+    const addReceiptItem = vi.fn().mockRejectedValue(originalError);
+
+    let failure;
+    try {
+      await savePurchaseReceiptItem({
+        purchaseOrderId: 644,
+        item: { id: 14, quantity: 1, costPrice: 10 },
+        createReceipt,
+        addReceiptItem,
+      });
+    } catch (error) {
+      failure = error;
+    }
+
+    expect(failure).toBeInstanceOf(PurchaseReceiptItemSaveError);
+    expect(failure).toMatchObject({
+      message: 'item save failed',
+      stage: 'SAVE_ITEM',
+      receiptId: 92,
+      createdReceipt: { id: 92 },
+      cause: originalError,
+    });
+    expect(createReceipt).toHaveBeenCalledOnce();
+    expect(addReceiptItem).toHaveBeenCalledWith(expect.objectContaining({ purchaseOrderReceiptId: 92 }));
+  });
+
+  it('identifies header creation failures without inventing a receipt identity', async () => {
+    const createReceipt = vi.fn().mockRejectedValue(new Error('header failed'));
+    const addReceiptItem = vi.fn();
 
     await expect(savePurchaseReceiptItem({
       purchaseOrderId: 644,
-      item: { id: 14, quantity: 1, costPrice: 10 },
+      item: { id: 15, quantity: 1, costPrice: 10 },
       createReceipt,
       addReceiptItem,
-    })).rejects.toThrow('item save failed');
+    })).rejects.toMatchObject({
+      name: 'PurchaseReceiptItemSaveError',
+      stage: 'CREATE_RECEIPT',
+      receiptId: null,
+      message: 'header failed',
+    });
 
-    expect(createReceipt).toHaveBeenCalledOnce();
-    expect(addReceiptItem).toHaveBeenCalledWith(expect.objectContaining({ purchaseOrderReceiptId: 92 }));
+    expect(addReceiptItem).not.toHaveBeenCalled();
   });
 });

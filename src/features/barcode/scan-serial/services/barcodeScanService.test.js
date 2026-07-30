@@ -6,15 +6,15 @@ import {
 } from './barcodeScanService';
 
 describe('barcode scan service', () => {
-  it('projects receive payload before calling transport', async () => {
-    const api = vi.fn().mockResolvedValue({ ok: true });
+  it('projects receive payload before delegating to StockItem receive boundary', async () => {
+    const receive = vi.fn().mockResolvedValue({ ok: true });
     await receiveScannedStockItem(
       { barcode: ' BC-01 ', serialNumber: ' SN-01 ', keepSN: true },
       undefined,
-      { receiveScannedStockItemApi: api }
+      { receiveScannedStockItem: receive }
     );
 
-    expect(api).toHaveBeenCalledWith({
+    expect(receive).toHaveBeenCalledWith({
       barcode: { barcode: 'BC-01', serialNumber: 'SN-01' },
       keepSN: true,
     });

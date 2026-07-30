@@ -14,14 +14,16 @@ describe('stock item receive ownership contract', () => {
   it('keeps receive-into-stock runtime owned by StockItem', () => {
     const stockReceiveIndex = read('src/features/stockItem/receive/index.js');
     const stockReceiveApi = read('src/features/stockItem/receive/api/receiveStockItemApi.js');
-    const barcodeApi = read('src/features/barcode/api/barcodeApi.js');
+    const barcodeScanApi = read('src/features/barcode/scan-serial/api/barcodeScanApi.js');
+    const barcodeScanService = read('src/features/barcode/scan-serial/services/barcodeScanService.js');
 
     expect(stockReceiveIndex).toMatch(/receiveScannedStockItem/);
     expect(stockReceiveApi).toMatch(/\/stock-items\/receive-sn/);
-    expect(barcodeApi).toMatch(/@\/features\/stockItem\/receive/);
-    expect(barcodeApi).not.toMatch(/from ['"]\.\.\/scan['"]/);
+    expect(barcodeScanApi).not.toMatch(/\/stock-items\/receive-sn/);
+    expect(barcodeScanService).toMatch(/@\/features\/stockItem\/receive/);
 
     for (const retiredPath of [
+      'src/features/barcode/api/barcodeApi.js',
       'src/features/barcode/scan/index.js',
       'src/features/barcode/scan/api/receiveStockItemApi.js',
       'src/features/barcode/scan/projections/stockItemReceiveProjection.js',

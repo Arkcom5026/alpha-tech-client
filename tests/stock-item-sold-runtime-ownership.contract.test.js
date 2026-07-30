@@ -31,13 +31,20 @@ describe('StockItem sold lifecycle runtime ownership contract', () => {
     expect(serviceSource).toContain('ไม่มีรายการสินค้าที่ต้องอัปเดตเป็นขายแล้ว');
   });
 
-  it('requires the compatibility store to consume the sold public boundary', () => {
+  it('owns the sold action runtime in its store slice and keeps the compatibility store compose-only', () => {
+    const soldStoreSlice = read(
+      'src/features/stockItem/sold/store/createStockItemSoldSlice.js'
+    );
     const storeSource = read(
       'src/features/stockItem/store/stockItemStore.js'
     );
 
-    expect(storeSource).toContain("from '../sold'");
-    expect(storeSource).toContain('markStockItemsAsSold(stockItemIds)');
+    expect(soldStoreSlice).toContain("from '..'");
+    expect(soldStoreSlice).toContain('updateStockItemsToSoldAction: async');
+    expect(soldStoreSlice).toContain('markStockItemsAsSold(stockItemIds)');
+    expect(storeSource).toContain("from '../sold/store/createStockItemSoldSlice'");
+    expect(storeSource).toContain('...createStockItemSoldSlice(set, get)');
+    expect(storeSource).not.toContain('updateStockItemsToSoldAction: async');
     expect(storeSource).not.toContain("from '../api/stockItemApi'");
     expect(storeSource).not.toContain("'/stock-items/mark-sold'");
   });

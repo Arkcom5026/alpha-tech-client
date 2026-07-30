@@ -1,13 +1,27 @@
-import { generateMissingBarcodes as generateMissingBarcodesLegacy } from '../../api/barcodeApi';
+import apiClient from '@/utils/apiClient';
 
 /**
- * Module-owned API boundary for barcode generation.
- *
- * The legacy API implementation remains the HTTP transport authority during
- * additive migration. Consumers of the generation slice should depend on this
- * boundary instead of importing the broad barcode API directly.
+ * Module-owned HTTP transport boundary for barcode generation.
  */
-export const generateMissingBarcodesApi = async (receiptId, options = {}) =>
-  generateMissingBarcodesLegacy(receiptId, options);
+export const generateMissingBarcodesApi = async (receiptId, options = {}) => {
+  if (!receiptId) throw new Error('Missing receiptId');
+
+  const { dryRun = false, lotLabelPerLot = 1 } = options || {};
+  const payload = {
+    dryRun: Boolean(dryRun),
+    lotLabelPerLot: Number(lotLabelPerLot) || 1,
+  };
+
+  try {
+    const { data } = await apiClient.post(
+      `/barcodes/generate-missing/${receiptId}`,
+      payload,
+    );
+    return data;
+  } catch (error) {
+    console.error('❌ generateMissingBarcodesApi error:', error);
+    throw error;
+  }
+};
 
 export default generateMissingBarcodesApi;

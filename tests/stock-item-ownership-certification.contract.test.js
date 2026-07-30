@@ -6,11 +6,14 @@ const root = process.cwd();
 const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 
 describe('stock item ownership certification contract', () => {
-  it('keeps receive-into-stock runtime owned by StockItem', () => {
+  it('keeps receive-into-stock runtime owned by StockItem receive slice', () => {
     const receiveIndex = read('src/features/stockItem/receive/index.js');
     const receiveService = read('src/features/stockItem/receive/services/receiveScannedStockItem.js');
     const receiveApi = read('src/features/stockItem/receive/api/receiveStockItemApi.js');
     const receiveAllApi = read('src/features/stockItem/receive/api/receiveAllPendingStockItemsApi.js');
+    const receiveStoreSlice = read(
+      'src/features/stockItem/receive/store/createStockItemReceiveSlice.js'
+    );
     const stockItemStore = read('src/features/stockItem/store/stockItemStore.js');
 
     expect(receiveIndex).toContain('receiveScannedStockItem');
@@ -18,9 +21,13 @@ describe('stock item ownership certification contract', () => {
     expect(receiveService).toContain('receiveStockItemApi');
     expect(receiveApi).toContain('/stock-items/receive-sn');
     expect(receiveAllApi).toContain('/stock-items/receive-all-no-sn');
-    expect(stockItemStore).toContain("from '../receive'");
-    expect(stockItemStore).toContain('receiveSNAction');
-    expect(stockItemStore).toContain('receiveAllPendingNoSNAction');
+    expect(receiveStoreSlice).toContain('receiveSNAction');
+    expect(receiveStoreSlice).toContain('receiveAllPendingNoSNAction');
+    expect(receiveStoreSlice).toContain('clearScannedList');
+    expect(stockItemStore).toContain("from '../receive/store/createStockItemReceiveSlice'");
+    expect(stockItemStore).toContain('...createStockItemReceiveSlice(set, get)');
+    expect(stockItemStore).not.toContain('receiveSNAction: async');
+    expect(stockItemStore).not.toContain('receiveAllPendingNoSNAction: async');
   });
 
   it('keeps ready-for-sale queries and stock lifecycle transitions in StockItem slices', () => {
@@ -40,7 +47,7 @@ describe('stock item ownership certification contract', () => {
     expect(stockItemStore).toContain('updateStockItemsToSoldAction');
   });
 
-  it('prevents upstream procurement modules from owning StockItem transport', () => {
+  it('prevents upstream procurement modules from owning StockItem transport or receive store internals', () => {
     const barcodeStore = read('src/features/barcode/store/barcodeStore.js');
     const barcodeScanApi = read('src/features/barcode/scan-serial/api/barcodeScanApi.js');
     const barcodeScanService = read('src/features/barcode/scan-serial/services/barcodeScanService.js');
@@ -53,6 +60,7 @@ describe('stock item ownership certification contract', () => {
       expect(source).not.toContain('/stock-items/receive-all-no-sn');
       expect(source).not.toContain('receiveStockItemApi');
       expect(source).not.toContain('receiveScannedStockItemApi');
+      expect(source).not.toContain('createStockItemReceiveSlice');
     }
 
     expect(barcodeScanService).toContain("from '@/features/stockItem/receive'");

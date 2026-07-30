@@ -29,14 +29,29 @@ export const usePurchaseReceiptPage = ({
     onSaveFailure: draft.rememberSaveFailure,
   });
 
-  const rows = useMemo(() => sourceItems.map((item) => ({
-    item,
-    draft: itemWorkflow.draftRows[item?.id] || {},
-    state: itemWorkflow.projectRow(item),
-    isSaving: itemWorkflow.savingRowId === item?.id,
-    isSaved: Boolean(itemWorkflow.savedRows[item?.id]),
-    error: itemWorkflow.rowErrors[item?.id] || null,
-  })), [
+  const rows = useMemo(() => sourceItems.map((item) => {
+    const rowDraft = itemWorkflow.draftRows[item?.id] || {};
+    const state = itemWorkflow.projectRow(item);
+
+    return {
+      id: item?.id,
+      name: item?.product?.name || item?.name,
+      productName: item?.productName,
+      ordered: state.ordered,
+      receivedBeforeInput: state.receivedBeforeInput,
+      remainingBeforeInput: state.remainingBeforeInput,
+      draftQuantity: rowDraft.quantity ?? '',
+      draftCostPrice: rowDraft.costPrice ?? item?.costPrice ?? '',
+      isOverReceive: state.isOverReceive,
+      canSave: state.canSave,
+      isSaving: itemWorkflow.savingRowId === item?.id,
+      isSaved: Boolean(itemWorkflow.savedRows[item?.id]),
+      error: itemWorkflow.rowErrors[item?.id] || null,
+      sourceItem: item,
+      item,
+      state,
+    };
+  }), [
     sourceItems,
     itemWorkflow.draftRows,
     itemWorkflow.projectRow,

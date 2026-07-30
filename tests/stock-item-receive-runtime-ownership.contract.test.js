@@ -40,7 +40,7 @@ describe('StockItem receive runtime ownership contract', () => {
     expect(store).not.toContain('/stock-items/receive-sn');
     expect(store).not.toContain('/stock-items/receive-all-no-sn');
 
-    expect(receiveStoreSlice).toContain("from '../index'");
+    expect(receiveStoreSlice).toMatch(/from\s+['"]\.\.['"]/);
     expect(receiveStoreSlice).toContain('receiveScannedStockItem');
     expect(receiveStoreSlice).toContain('receiveAllPendingStockItems');
   });

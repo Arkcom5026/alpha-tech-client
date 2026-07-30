@@ -3,12 +3,13 @@ import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import { loadAvailableStockItems } from '../availability';
 import { createStockItemReceiveSlice } from '../receive/store/createStockItemReceiveSlice';
-import { searchStockItem } from '../search';
+import { createStockItemSearchSlice } from '../search/store/createStockItemSearchSlice';
 import { markStockItemsAsSold } from '../sold';
 
 const useStockItemStore = create(
   devtools((set, get) => ({
     ...createStockItemReceiveSlice(set, get),
+    ...createStockItemSearchSlice(set, get),
 
     updateStockItemsToSoldAction: async (stockItemIds = []) => {
       set({ loading: true, error: null });
@@ -22,15 +23,6 @@ const useStockItemStore = create(
         throw error;
       } finally {
         set({ loading: false });
-      }
-    },
-
-    searchStockItemAction: async (query) => {
-      try {
-        return await searchStockItem(query);
-      } catch (error) {
-        console.error('❌ ค้นหา stockItem ล้มเหลว:', error);
-        return null;
       }
     },
 

@@ -47,17 +47,25 @@ describe('stock item ownership certification contract', () => {
     expect(stockItemStore).not.toContain('/stock-items/search');
   });
 
-  it('keeps ready-for-sale queries and stock lifecycle transitions in StockItem slices', () => {
+  it('keeps ready-for-sale queries and sold transitions in owned StockItem slices', () => {
     const availabilityApi = read('src/features/stockItem/availability/api/getAvailableStockItemsApi.js');
     const soldApi = read('src/features/stockItem/sold/api/markStockItemsAsSoldApi.js');
+    const soldStoreSlice = read(
+      'src/features/stockItem/sold/store/createStockItemSoldSlice.js'
+    );
     const stockItemStore = read('src/features/stockItem/store/stockItemStore.js');
 
     expect(availabilityApi).toContain('/stock-items/available');
     expect(soldApi).toContain('/stock-items/mark-sold');
     expect(stockItemStore).toContain("from '../availability'");
-    expect(stockItemStore).toContain("from '../sold'");
     expect(stockItemStore).toContain('loadAvailableStockItemsAction');
-    expect(stockItemStore).toContain('updateStockItemsToSoldAction');
+    expect(soldStoreSlice).toContain("from '..'");
+    expect(soldStoreSlice).toContain('updateStockItemsToSoldAction: async');
+    expect(soldStoreSlice).toContain('markStockItemsAsSold(stockItemIds)');
+    expect(stockItemStore).toContain("from '../sold/store/createStockItemSoldSlice'");
+    expect(stockItemStore).toContain('...createStockItemSoldSlice(set, get)');
+    expect(stockItemStore).not.toContain('updateStockItemsToSoldAction: async');
+    expect(stockItemStore).not.toContain('/stock-items/mark-sold');
   });
 
   it('prevents upstream procurement modules from owning StockItem transport or receive store internals', () => {

@@ -18,6 +18,7 @@ import {
   searchReceiptsForReprint,
 } from '../print-reprint';
 import { commitReceiptScans } from '../receipt-completion';
+import { auditReceiptBarcodes as auditReceiptBarcodesSlice } from '../audit';
 
 export const generateMissingBarcodes = async (receiptId, options = {}) => {
   const result = await generateReceiptBarcodes({ receiptId, options });
@@ -29,17 +30,10 @@ export const getBarcodesByReceiptId = async (receiptId, opts = {}) => {
   return result?.sourceResponse ?? { barcodes: result?.barcodes ?? [] };
 };
 
-export const auditReceiptBarcodes = async (receiptId, { includeDetails = true } = {}) => {
-  if (!receiptId) throw new Error('Missing receiptId');
-  try {
-    const res = await apiClient.get(`/barcodes/receipt/${receiptId}/audit`, {
-      params: { includeDetails: includeDetails ? 1 : 0 },
-    });
-    return res.data;
-  } catch (err) {
-    console.error('❌ auditReceiptBarcodes error:', err);
-    throw err;
-  }
+// Legacy compatibility boundary now delegates to the audit slice.
+export const auditReceiptBarcodes = async (receiptId, options = {}) => {
+  const result = await auditReceiptBarcodesSlice(receiptId, options);
+  return result?.sourceResponse;
 };
 
 // Legacy compatibility boundary now delegates to the receipt-listing slice.

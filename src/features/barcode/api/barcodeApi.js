@@ -7,6 +7,10 @@ import { generateReceiptBarcodes } from '../generation';
 import { loadReceiptBarcodes } from '../receipt-detail';
 import { listReceiptsWithBarcodes } from '../receipt-listing';
 import {
+  listReceiptsReadyToScan,
+  listReceiptsReadyToScanSn,
+} from '../scan-listing';
+import {
   markReceiptBarcodesPrinted,
   reprintReceiptBarcodes,
   searchReceiptsForReprint,
@@ -41,32 +45,15 @@ export const getReceiptsWithBarcodes = async (opts = {}) => {
   return result?.sourceResponse ?? result?.receipts ?? [];
 };
 
+// Legacy compatibility boundaries now delegate to the scan-listing slice.
 export const getReceiptsReadyToScanSN = async () => {
-  try {
-    const res = await apiClient.get('/barcodes/receipts-ready-to-scan-sn');
-    return res.data;
-  } catch (err) {
-    if (err?.response?.status === 404) {
-      const res2 = await apiClient.get('/barcodes/ready-to-scan-sn');
-      return res2.data;
-    }
-    console.error('❌ getReceiptsReadyToScanSN error:', err);
-    throw err;
-  }
+  const result = await listReceiptsReadyToScanSn();
+  return result?.sourceResponse ?? result?.receipts ?? [];
 };
 
 export const getReceiptsReadyToScan = async () => {
-  try {
-    const res = await apiClient.get('/barcodes/receipts-ready-to-scan');
-    return res.data;
-  } catch (err) {
-    if (err?.response?.status === 404) {
-      const res2 = await apiClient.get('/barcodes/ready-to-scan');
-      return res2.data;
-    }
-    console.error('❌ getReceiptsReadyToScan error:', err);
-    throw err;
-  }
+  const result = await listReceiptsReadyToScan();
+  return result?.sourceResponse ?? result?.receipts ?? [];
 };
 
 export const receiveStockItem = async (input, maybeSerialNumber) => {

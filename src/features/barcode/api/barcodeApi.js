@@ -10,6 +10,7 @@ import {
   listReceiptsReadyToScan,
   listReceiptsReadyToScanSn,
 } from '../scan-listing';
+import { updateBarcodeSerialNumber } from '../serial';
 import {
   markReceiptBarcodesPrinted,
   reprintReceiptBarcodes,
@@ -98,18 +99,10 @@ export const receiveStockItem = async (input, maybeSerialNumber) => {
   }
 };
 
+// Legacy compatibility boundary now delegates to the serial slice.
 export const updateSerialNumber = async (barcode, serialNumber) => {
-  if (!barcode) throw new Error('Missing barcode');
-  try {
-    const res = await apiClient.patch('/barcodes/update-serial-number', {
-      barcode,
-      serialNumber,
-    });
-    return res.data;
-  } catch (err) {
-    console.error('❌ updateSerialNumber error:', err);
-    throw err;
-  }
+  const result = await updateBarcodeSerialNumber({ barcode, serialNumber });
+  return result?.sourceResponse ?? result;
 };
 
 // Legacy compatibility boundaries now delegate to the print-reprint slice.

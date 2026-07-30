@@ -1,6 +1,5 @@
 // src/features/barcode/api/barcodeApi.js
-// ES Module API client for barcode & receipt operations
-// All requests go through utils/apiClient (axios instance)
+// Compatibility facade for legacy barcode consumers.
 
 import { generateReceiptBarcodes } from '../generation';
 import { loadReceiptBarcodes } from '../receipt-detail';
@@ -18,7 +17,6 @@ import {
 } from '../print-reprint';
 import { commitReceiptScans } from '../receipt-completion';
 import { auditReceiptBarcodes as auditReceiptBarcodesSlice } from '../audit';
-import { finalizeReceipt } from '../finalization';
 
 export const generateMissingBarcodes = async (receiptId, options = {}) => {
   const result = await generateReceiptBarcodes({ receiptId, options });
@@ -79,12 +77,6 @@ export const reprintBarcodes = async (receiptId) => {
 export const searchReprintReceipts = async (opts = {}) => {
   const result = await searchReceiptsForReprint(opts);
   return Array.isArray(result?.receipts) ? result.receipts : [];
-};
-
-// Legacy compatibility boundary now delegates to the finalization slice.
-export const finalizeReceiptIfNeeded = async (receiptId) => {
-  const result = await finalizeReceipt(receiptId);
-  return result?.sourceResponse;
 };
 
 // Legacy compatibility boundary now delegates to the receipt-completion slice.

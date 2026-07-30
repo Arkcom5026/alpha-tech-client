@@ -8,7 +8,7 @@ import {
   listReceiptsReadyToScan,
   listReceiptsReadyToScanSn,
 } from '../scan-listing';
-import { receiveScannedStockItem } from '../scan';
+import { receiveScannedStockItem } from '@/features/stockItem/receive';
 import { updateBarcodeSerialNumber } from '../serial';
 import {
   markReceiptBarcodesPrinted,
@@ -51,7 +51,7 @@ export const getReceiptsReadyToScan = async () => {
   return result?.sourceResponse ?? result?.receipts ?? [];
 };
 
-// Legacy compatibility boundary now delegates to the scan slice.
+// Temporary compatibility boundary only. StockItem owns receive-into-stock runtime.
 export const receiveStockItem = async (input, maybeSerialNumber) => {
   const result = await receiveScannedStockItem(input, maybeSerialNumber);
   return result?.sourceResponse ?? result?.stockItem ?? result;

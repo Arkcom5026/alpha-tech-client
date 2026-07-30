@@ -4,7 +4,7 @@ const { finalizeReceipt } = vi.hoisted(() => ({
   finalizeReceipt: vi.fn(),
 }));
 
-vi.mock('@/features/barcode/finalization', () => ({
+vi.mock('../finalization', () => ({
   finalizeReceipt,
 }));
 
@@ -19,21 +19,19 @@ vi.mock('@/utils/apiClient', () => ({
 
 import { finalizeReceiptIfNeeded } from './purchaseOrderReceiptApi';
 
-describe('purchaseOrderReceiptApi barcode finalization cutover', () => {
+describe('purchaseOrderReceiptApi finalization cutover', () => {
   beforeEach(() => {
     finalizeReceipt.mockReset();
   });
 
-  it('delegates to the barcode finalization slice and preserves the legacy response', async () => {
+  it('delegates to the PurchaseOrderReceipt finalization slice and preserves the legacy response', async () => {
     const sourceResponse = { ok: true, status: 'FINALIZED' };
     finalizeReceipt.mockResolvedValue({
       sourceResponse,
       command: { receiptId: 'receipt-1' },
     });
 
-    await expect(finalizeReceiptIfNeeded('receipt-1')).resolves.toEqual(
-      sourceResponse,
-    );
+    await expect(finalizeReceiptIfNeeded('receipt-1')).resolves.toEqual(sourceResponse);
     expect(finalizeReceipt).toHaveBeenCalledWith('receipt-1');
   });
 
@@ -45,15 +43,33 @@ describe('purchaseOrderReceiptApi barcode finalization cutover', () => {
 
   it('propagates backend failures', async () => {
     const error = new Error('backend failed');
-    finalizeReceipt.mockRejectedValue(error);
+    finalizeReceipt.mockImplementationOnce(async () => {
+      throw error;
+    });
 
-    await expect(finalizeReceiptIfNeeded('receipt-1')).rejects.toBe(error);
+    let received;
+    try {
+      await finalizeReceiptIfNeeded('receipt-1');
+    } catch (caught) {
+      received = caught;
+    }
+
+    expect(received).toBe(error);
   });
 
   it('propagates network failures', async () => {
     const error = new TypeError('Network Error');
-    finalizeReceipt.mockRejectedValue(error);
+    finalizeReceipt.mockImplementationOnce(async () => {
+      throw error;
+    });
 
-    await expect(finalizeReceiptIfNeeded('receipt-1')).rejects.toBe(error);
+    let received;
+    try {
+      await finalizeReceiptIfNeeded('receipt-1');
+    } catch (caught) {
+      received = caught;
+    }
+
+    expect(received).toBe(error);
   });
 });

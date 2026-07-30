@@ -8,7 +8,6 @@ import {
   listReceiptsReadyToScan,
   listReceiptsReadyToScanSn,
 } from '../scan-listing';
-import { receiveScannedStockItem } from '../scan';
 import { updateBarcodeSerialNumber } from '../serial';
 import {
   markReceiptBarcodesPrinted,
@@ -49,12 +48,6 @@ export const getReceiptsReadyToScanSN = async () => {
 export const getReceiptsReadyToScan = async () => {
   const result = await listReceiptsReadyToScan();
   return result?.sourceResponse ?? result?.receipts ?? [];
-};
-
-// Legacy compatibility boundary now delegates to the scan slice.
-export const receiveStockItem = async (input, maybeSerialNumber) => {
-  const result = await receiveScannedStockItem(input, maybeSerialNumber);
-  return result?.sourceResponse ?? result?.stockItem ?? result;
 };
 
 // Legacy compatibility boundary now delegates to the serial slice.

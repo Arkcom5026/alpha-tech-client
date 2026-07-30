@@ -78,13 +78,6 @@ export const getPurchaseOrders = async (opts = {}) => {
   return res.data;
 };
 
-export const getEligiblePurchaseOrders = async () => {
-  const res = await apiClient.get('/purchase-orders', {
-    params: { status: 'PENDING,PARTIALLY_RECEIVED' },
-  });
-  return res.data;
-};
-
 export const getPurchaseOrderById = async (id) => {
   const res = await apiClient.get(`/purchase-orders/${id}`);
   return unwrapData(res.data);
@@ -109,12 +102,5 @@ export const updatePurchaseOrderStatus = async ({ id, status }) => {
 
 export const deletePurchaseOrder = async (id) => {
   const res = await apiClient.delete(`/purchase-orders/${id}`);
-  return res.data;
-};
-
-export const getPurchaseOrdersBySupplier = async (supplierId) => {
-  const res = await apiClient.get('/purchase-orders/by-supplier', {
-    params: { supplierId },
-  });
   return res.data;
 };

@@ -1,21 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { finalizeReceiptApi } = vi.hoisted(() => ({
-  finalizeReceiptApi: vi.fn(),
-}));
+const { finalizeReceiptApi } = vi.hoisted(() => ({ finalizeReceiptApi: vi.fn() }));
 
-vi.mock('../api/finalizeReceiptApi', () => ({
-  finalizeReceiptApi,
-}));
+vi.mock('../api/finalizeReceiptApi', () => ({ finalizeReceiptApi }));
 
 import { finalizeReceipt } from './finalizeReceipt';
 
 describe('finalizeReceipt', () => {
-  beforeEach(() => {
-    finalizeReceiptApi.mockReset();
-  });
+  beforeEach(() => finalizeReceiptApi.mockReset());
 
-  it('returns the source response and command owned by the slice', async () => {
+  it('returns the source response and command owned by PurchaseOrderReceipt', async () => {
     const sourceResponse = { ok: true, status: 'FINALIZED' };
     finalizeReceiptApi.mockResolvedValue(sourceResponse);
 
@@ -23,7 +17,6 @@ describe('finalizeReceipt', () => {
       sourceResponse,
       command: { receiptId: 'receipt-1' },
     });
-
     expect(finalizeReceiptApi).toHaveBeenCalledWith({ receiptId: 'receipt-1' });
   });
 
@@ -32,17 +25,19 @@ describe('finalizeReceipt', () => {
     expect(finalizeReceiptApi).not.toHaveBeenCalled();
   });
 
-  it('propagates backend failures', async () => {
-    const error = new Error('backend failed');
-    finalizeReceiptApi.mockRejectedValue(error);
-
-    await expect(finalizeReceipt('receipt-1')).rejects.toBe(error);
-  });
-
-  it('propagates network failures', async () => {
+  it('propagates backend and network failures', async () => {
     const error = new TypeError('Network Error');
-    finalizeReceiptApi.mockRejectedValue(error);
+    finalizeReceiptApi.mockImplementationOnce(async () => {
+      throw error;
+    });
 
-    await expect(finalizeReceipt('receipt-1')).rejects.toBe(error);
+    let received;
+    try {
+      await finalizeReceipt('receipt-1');
+    } catch (caught) {
+      received = caught;
+    }
+
+    expect(received).toBe(error);
   });
 });

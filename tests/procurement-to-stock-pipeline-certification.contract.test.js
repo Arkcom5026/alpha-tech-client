@@ -11,6 +11,8 @@ const receiptStore = () => read('src/features/purchaseOrderReceipt/store/purchas
 const barcodeStore = () => read('src/features/barcode/store/barcodeStore.js');
 const barcodeScanService = () => read('src/features/barcode/scan-serial/services/barcodeScanService.js');
 const stockItemStore = () => read('src/features/stockItem/store/stockItemStore.js');
+const stockItemReceiveStoreSlice = () =>
+  read('src/features/stockItem/receive/store/createStockItemReceiveSlice.js');
 const stockItemReceiveBoundary = () => read('src/features/stockItem/receive/index.js');
 const stockItemReceiveApi = () => read('src/features/stockItem/receive/api/receiveStockItemApi.js');
 const stockItemReceiveAllApi = () =>
@@ -37,7 +39,9 @@ describe('procurement-to-stock pipeline ownership certification', () => {
     expect(stockItemReceiveApi()).toContain('/stock-items/receive-sn');
     expect(stockItemReceiveAllApi()).toContain('/stock-items/receive-all-no-sn');
     expect(stockItemAvailabilityApi()).toContain('/stock-items/available');
-    expect(stockItemStore()).toContain('receiveSNAction');
+    expect(stockItemReceiveStoreSlice()).toContain('receiveSNAction');
+    expect(stockItemReceiveStoreSlice()).toContain('receiveAllPendingNoSNAction');
+    expect(stockItemStore()).toContain('...createStockItemReceiveSlice(set, get)');
     expect(stockItemReceiveBoundary()).toContain('receiveScannedStockItem');
     expect(stockItemReceiveBoundary()).toContain('receiveAllPendingStockItems');
   });
@@ -60,6 +64,7 @@ describe('procurement-to-stock pipeline ownership certification', () => {
     const barcodeSources = [barcodeStore(), barcodeScanService()];
     const stockSources = [
       stockItemStore(),
+      stockItemReceiveStoreSlice(),
       stockItemReceiveBoundary(),
       stockItemReceiveApi(),
       stockItemReceiveAllApi(),

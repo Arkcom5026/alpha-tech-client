@@ -1,13 +1,13 @@
 // stockItemStore.js — compatibility store while StockItem capabilities migrate to owned slices
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
-import { markStockItemsAsSold } from '../api/stockItemApi';
 import { loadAvailableStockItems } from '../availability';
 import {
   receiveAllPendingStockItems,
   receiveScannedStockItem,
 } from '../receive';
 import { searchStockItem } from '../search';
+import { markStockItemsAsSold } from '../sold';
 
 const useStockItemStore = create(
   devtools((set, get) => ({
@@ -120,37 +120,12 @@ const useStockItemStore = create(
     },
 
     updateStockItemsToSoldAction: async (stockItemIds = []) => {
-      const ids = Array.isArray(stockItemIds)
-        ? [...new Set(stockItemIds.map((value) => Number(value)).filter(Number.isFinite))]
-        : [];
-
-      if (ids.length === 0) {
-        const error = new Error('ไม่มีรายการสินค้าที่ต้องอัปเดตเป็นขายแล้ว');
-        set({ error: error.message });
-        throw error;
-      }
-
       set({ loading: true, error: null });
 
       try {
-        return await markStockItemsAsSold(ids);
+        return await markStockItemsAsSold(stockItemIds);
       } catch (error) {
-        const status = error?.response?.status;
-        const payload = error?.response?.data;
-
-        if (status === 409) {
-          const message = payload?.message || 'มีบางรายการไม่สามารถเปลี่ยนเป็นขายแล้วได้';
-          set({ error: message });
-
-          const mappedError = new Error(message);
-          mappedError.name = 'StockItemNotSellableError';
-          mappedError.status = 409;
-          mappedError.code = payload?.code;
-          mappedError.details = payload;
-          throw mappedError;
-        }
-
-        const message = payload?.message || error?.message || 'อัปเดตสถานะขายแล้วไม่สำเร็จ';
+        const message = error?.message || 'อัปเดตสถานะขายแล้วไม่สำเร็จ';
         set({ error: message });
         console.error('❌ อัปเดต stockItem ล้มเหลว:', error);
         throw error;

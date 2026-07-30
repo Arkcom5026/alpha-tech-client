@@ -49,6 +49,9 @@ describe('stock item ownership certification contract', () => {
 
   it('keeps ready-for-sale queries and sold transitions in owned StockItem slices', () => {
     const availabilityApi = read('src/features/stockItem/availability/api/getAvailableStockItemsApi.js');
+    const availabilityStoreSlice = read(
+      'src/features/stockItem/availability/store/createStockItemAvailabilitySlice.js'
+    );
     const soldApi = read('src/features/stockItem/sold/api/markStockItemsAsSoldApi.js');
     const soldStoreSlice = read(
       'src/features/stockItem/sold/store/createStockItemSoldSlice.js'
@@ -56,9 +59,17 @@ describe('stock item ownership certification contract', () => {
     const stockItemStore = read('src/features/stockItem/store/stockItemStore.js');
 
     expect(availabilityApi).toContain('/stock-items/available');
+    expect(availabilityStoreSlice).toContain("from '..'");
+    expect(availabilityStoreSlice).toContain('loadAvailableStockItemsAction: async');
+    expect(availabilityStoreSlice).toContain('loadAvailableStockItems(productId)');
+    expect(stockItemStore).toContain(
+      "from '../availability/store/createStockItemAvailabilitySlice'"
+    );
+    expect(stockItemStore).toContain('...createStockItemAvailabilitySlice(set, get)');
+    expect(stockItemStore).not.toContain('loadAvailableStockItemsAction: async');
+    expect(stockItemStore).not.toContain('/stock-items/available');
+
     expect(soldApi).toContain('/stock-items/mark-sold');
-    expect(stockItemStore).toContain("from '../availability'");
-    expect(stockItemStore).toContain('loadAvailableStockItemsAction');
     expect(soldStoreSlice).toContain("from '..'");
     expect(soldStoreSlice).toContain('updateStockItemsToSoldAction: async');
     expect(soldStoreSlice).toContain('markStockItemsAsSold(stockItemIds)');

@@ -18,10 +18,12 @@ Each stage is a separate module and a separate business responsibility.
 ### Purchase Order
 Owns supplier ordering, ordered quantities, agreed prices, and purchase-order lifecycle.
 
-Must not own barcode generation or stock activation.
+It may own supplier, product-type, brand, and product reference-data access when those files were created specifically for the Purchase Order workflow.
+
+Must not own receipt-entry eligibility, receipt-specific detail projections, barcode generation, or stock activation.
 
 ### Purchase Order Receipt
-Owns receipt documents, receipt items, partial/full receipt progress, and receipt finalization.
+Owns receipt documents, receipt items, partial/full receipt progress, receipt-entry eligibility, receipt-specific purchase-order projections, and receipt finalization.
 
 Must not generate barcodes internally and must not create or activate StockItem records.
 
@@ -35,6 +37,10 @@ Owns receiving into stock, creating/activating sellable stock records, serial ow
 
 ## Cross-Module Rule
 
+File ownership follows business responsibility, not the domain from which the file reads data.
+
+A module may own an adapter, query, mapper, hook, or helper that reads another domain when that file exists specifically to complete the owning module's workflow.
+
 A module may initiate the next business step from its UI, but it must call the public boundary of the target module. It must not import the target module's internal service, repository, projection, or implementation details.
 
 ## Initial Audit Finding
@@ -45,13 +51,28 @@ This means StockItem receiving is currently implemented inside a Barcode slice e
 
 The user-facing sequence remains valid: a user can scan from the Barcode workflow and then trigger stock receipt. The correction is to move runtime ownership to StockItem while Barcode only coordinates the transition through StockItem's public interface.
 
+## Purchase Order Upstream Audit
+
+The Purchase Order API contained a generic `getEligiblePurchaseOrders` query using `PENDING,PARTIALLY_RECEIVED` status filtering. Its purpose was to supply PurchaseOrderReceipt entry rather than to operate the Purchase Order workflow itself.
+
+PurchaseOrderReceipt already owns explicit receipt-facing boundaries:
+
+- `/purchase-orders/eligible-for-receipt`
+- `/purchase-orders/:poId/detail-for-receipt`
+
+The generic receipt-entry helper was therefore removed from `purchaseOrderApi.js`. A repository contract now locks the following decisions:
+
+- Receipt eligibility and receipt-specific purchase-order detail belong to PurchaseOrderReceipt.
+- Supplier, product-type, brand, and product queries created for Purchase Order creation remain owned by Purchase Order even though they read other domains.
+- Purchase Order remains the upstream owner of ordering and purchase-order lifecycle only.
+
 ## Increment Order
 
 1. Establish this authority map and audit all four module surfaces.
-2. Move StockItem receiving ownership out of Barcode without changing UI behavior.
-3. Separate serial-number ownership according to whether the serial belongs to a pending barcode or an activated StockItem.
-4. Verify Purchase Order and Purchase Order Receipt do not own downstream operations.
-5. Verify Barcode owns only barcode responsibilities.
+2. Audit and certify Purchase Order as the upstream owner; move receipt-entry concerns to PurchaseOrderReceipt.
+3. Audit PurchaseOrderReceipt ownership and remove Barcode-facing or StockItem-facing files that do not belong to receipt confirmation.
+4. Verify Barcode owns only barcode identity, generation, printing, validation, audit, and scan input.
+5. Verify StockItem owns receiving, activation, availability, and stock lifecycle.
 6. Run focused tests, module regression, and production build.
 
 ## Completion Standard

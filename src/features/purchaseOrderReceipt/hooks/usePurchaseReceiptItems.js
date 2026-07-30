@@ -4,6 +4,8 @@ import { projectPurchaseReceiptError } from '../projections/purchaseReceiptError
 import { projectPurchaseReceiptItemState } from '../projections/purchaseReceiptItemProjection';
 import { savePurchaseReceiptItem } from '../services/savePurchaseReceiptItem';
 
+const SAVE_ITEM_ERROR_FALLBACK = 'บันทึกรายการรับสินค้าไม่สำเร็จ';
+
 export const usePurchaseReceiptItems = ({
   purchaseOrderId,
   receiptId,
@@ -68,7 +70,7 @@ export const usePurchaseReceiptItems = ({
       onReceiptResolved?.(result.receiptId, result.createdReceipt);
       return result;
     } catch (error) {
-      const message = projectPurchaseReceiptError(error);
+      const message = projectPurchaseReceiptError(error, SAVE_ITEM_ERROR_FALLBACK);
       setRowErrors((current) => ({ ...current, [itemId]: message }));
       onSaveFailure?.(error);
       throw error;

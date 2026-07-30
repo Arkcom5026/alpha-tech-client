@@ -1,26 +1,17 @@
-
-
-
 // src/features/barcode/api/barcodeApi.js
 // ES Module API client for barcode & receipt operations
 // All requests go through utils/apiClient (axios instance)
 
 import apiClient from '@/utils/apiClient';
+import { generateReceiptBarcodes } from '../generation';
 
 // ---------------------------------------------
 // Generate barcodes that are missing for a receipt
+// Legacy compatibility boundary now delegates to the generation slice.
 // ---------------------------------------------
 export const generateMissingBarcodes = async (receiptId, options = {}) => {
-  if (!receiptId) throw new Error('Missing receiptId');
-  const { dryRun = false, lotLabelPerLot = 1 } = options || {};
-  try {
-    const payload = { dryRun: !!dryRun, lotLabelPerLot: Number(lotLabelPerLot) || 1 };
-    const res = await apiClient.post(`/barcodes/generate-missing/${receiptId}`, payload);
-    return res.data;
-  } catch (err) {
-    console.error('❌ generateMissingBarcodes error:', err);
-    throw err;
-  }
+  const result = await generateReceiptBarcodes({ receiptId, options });
+  return result?.sourceResponse ?? { barcodes: result?.barcodes ?? [] };
 };
 
 // ---------------------------------------------
@@ -75,7 +66,6 @@ export const getReceiptsWithBarcodes = async (opts = {}) => {
     });
     return res.data;
   } catch (err) {
-    // ✅ backward-compatible fallback
     if (err && err.response && err.response.status === 404) {
       const printed = opts?.printed;
       const limit = opts?.limit;
@@ -132,11 +122,6 @@ export const getReceiptsReadyToScan = async () => {
 // Receive stock item by scanning barcode (server decides SN policy)
 // ---------------------------------------------
 export const receiveStockItem = async (input, maybeSerialNumber) => {
-  // ✅ Backward compatible:
-  // - receiveStockItem('BARCODE')
-  // - receiveStockItem('BARCODE', 'SN-123')
-  // - receiveStockItem({ barcode: 'BARCODE', serialNumber: 'SN-123', keepSN: true })
-  // - receiveStockItem({ barcode: { barcode: 'BARCODE', serialNumber: 'SN-123' }, keepSN: true })
   const isObjectInput = typeof input === 'object' && input !== null;
   const nested = isObjectInput ? input.barcode : null;
 
@@ -240,7 +225,6 @@ export const searchReprintReceipts = async (opts = {}) => {
   const q = String(query || '').trim();
   const sup = String(supplierKeyword || '').trim();
 
-  // ✅ allow supplier-only search (ERP-scale)
   if (!q && !sup) return [];
 
   const lim = (() => {
@@ -249,7 +233,6 @@ export const searchReprintReceipts = async (opts = {}) => {
     return Math.min(Math.max(Math.trunc(n), 1), 50);
   })();
 
-  // ✅ mode guard (prevent unexpected values)
   const m = String(mode || 'RC').toUpperCase();
   const safeMode = m === 'PO' ? 'PO' : 'RC';
 
@@ -290,12 +273,10 @@ export const finalizeReceiptIfNeeded = async (receiptId) => {
 // ---------------------------------------------
 // BULK: commit scans (local-first → backend)
 // items: Array<{ barcode: string, sn?: string|null }>
-// returns: { ok: boolean, committed: string[], errors: Array<{ barcode, sn?, code?, message? }>, message?: string }
 // ---------------------------------------------
 export const commitScans = async (receiptId, items) => {
   if (!receiptId) throw new Error('Missing receiptId');
 
-  // ✅ payload guard: keep only valid scan rows
   const payload = Array.isArray(items)
     ? items
         .map((it) => {
@@ -329,6 +310,3 @@ export const commitScans = async (receiptId, items) => {
     return { ok: false, committed: [], errors: [], message: 'Network error' };
   }
 };
-
-
-

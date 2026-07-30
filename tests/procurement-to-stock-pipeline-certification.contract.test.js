@@ -13,6 +13,8 @@ const barcodeScanService = () => read('src/features/barcode/scan-serial/services
 const stockItemStore = () => read('src/features/stockItem/store/stockItemStore.js');
 const stockItemReceiveBoundary = () => read('src/features/stockItem/receive/index.js');
 const stockItemReceiveApi = () => read('src/features/stockItem/receive/api/receiveStockItemApi.js');
+const stockItemReceiveAllApi = () =>
+  read('src/features/stockItem/receive/api/receiveAllPendingStockItemsApi.js');
 const stockItemAvailabilityApi = () => read('src/features/stockItem/availability/api/getAvailableStockItemsApi.js');
 
 const expectAbsentFromAll = (token, sources) => {
@@ -33,10 +35,11 @@ describe('procurement-to-stock pipeline ownership certification', () => {
     expect(barcodeStore()).toContain('generateBarcodesAction');
 
     expect(stockItemReceiveApi()).toContain('/stock-items/receive-sn');
-    expect(stockItemReceiveApi()).toContain('/stock-items/receive-all-no-sn');
+    expect(stockItemReceiveAllApi()).toContain('/stock-items/receive-all-no-sn');
     expect(stockItemAvailabilityApi()).toContain('/stock-items/available');
     expect(stockItemStore()).toContain('receiveSNAction');
     expect(stockItemReceiveBoundary()).toContain('receiveScannedStockItem');
+    expect(stockItemReceiveBoundary()).toContain('receiveAllPendingStockItems');
   });
 
   it('prevents upstream modules from owning downstream runtime', () => {
@@ -59,6 +62,7 @@ describe('procurement-to-stock pipeline ownership certification', () => {
       stockItemStore(),
       stockItemReceiveBoundary(),
       stockItemReceiveApi(),
+      stockItemReceiveAllApi(),
       stockItemAvailabilityApi(),
     ];
 
@@ -76,6 +80,7 @@ describe('procurement-to-stock pipeline ownership certification', () => {
     expect(barcode).toContain('@/features/purchaseOrderReceipt/api/purchaseOrderReceiptApi');
     expect(scanService).toContain("@/features/stockItem/receive");
     expect(stockBoundary).toContain("export { receiveScannedStockItem }");
+    expect(stockBoundary).toContain("export { receiveAllPendingStockItems }");
 
     expect(barcode).not.toContain('/stock-items/');
     expect(scanService).not.toContain('/stock-items/');

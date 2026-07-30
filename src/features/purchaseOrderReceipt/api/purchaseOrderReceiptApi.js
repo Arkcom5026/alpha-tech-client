@@ -1,10 +1,6 @@
-
-
-
-
-
 // ✅ purchaseOrderReceiptApi.js — API ฝั่งใบรับสินค้า (ESM)
 import apiClient from '@/utils/apiClient';
+import { finalizeReceipt as finalizeBarcodeReceipt } from '@/features/barcode/finalization';
 
 // ────────────────────────────────────────────────────────────────────────────────
 // Receipts (เดิม)
@@ -99,14 +95,11 @@ export const markReceiptAsCompleted = async (receiptId) => {
   }
 };
 
+// Compatibility boundary for barcode scan flow. Runtime ownership lives in
+// features/barcode/finalization.
 export const finalizeReceiptIfNeeded = async (receiptId) => {
-  try {
-    const { data } = await apiClient.patch(`/purchase-order-receipts/${receiptId}/finalize`);
-    return data;
-  } catch (error) {
-    console.error('❌ finalizeReceiptIfNeeded error:', error);
-    throw error;
-  }
+  const result = await finalizeBarcodeReceipt(receiptId);
+  return result?.sourceResponse;
 };
 
 export const markReceiptAsPrinted = async (receiptId) => {
@@ -210,7 +203,8 @@ export const updateReceiptItemReceived = async (receiptId, itemId, payload) => {
   }
 };
 
-// Finalize receipt + (optionally) update PO status on server
+// Finalize receipt + (optionally) update PO status on server.
+// This broader purchase-order workflow contract remains owned by this module.
 export const finalizeReceipt = async (receiptId, payload = {}) => {
   try {
     const { data } = await apiClient.patch(`/purchase-order-receipts/${receiptId}/finalize`, payload);
@@ -220,12 +214,3 @@ export const finalizeReceipt = async (receiptId, payload = {}) => {
     throw error;
   }
 };
-
-
-
-
-
-
-
-
-

@@ -10,11 +10,21 @@ describe('StockItem availability runtime ownership contract', () => {
     expect(api).toContain("apiClient.get('/stock-items/available'");
   });
 
-  it('routes availability consumers through the public boundary', () => {
+  it('owns the availability action inside the availability store slice', () => {
+    const storeSlice = read(
+      'src/features/stockItem/availability/store/createStockItemAvailabilitySlice.js'
+    );
     const store = read('src/features/stockItem/store/stockItemStore.js');
 
-    expect(store).toContain("from '../availability'");
-    expect(store).toContain('loadAvailableStockItems(productId)');
+    expect(storeSlice).toContain("from '..'");
+    expect(storeSlice).toContain('loadAvailableStockItemsAction: async');
+    expect(storeSlice).toContain('loadAvailableStockItems(productId)');
+    expect(store).toContain(
+      "from '../availability/store/createStockItemAvailabilitySlice'"
+    );
+    expect(store).toContain('...createStockItemAvailabilitySlice(set, get)');
+    expect(store).not.toContain('loadAvailableStockItemsAction: async');
+    expect(store).not.toContain('loadAvailableStockItems(productId)');
     expect(store).not.toContain('getAvailableStockItemsByProduct');
   });
 

@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const commitReceiptScansApi = vi.fn();
+const { commitReceiptScansApi } = vi.hoisted(() => ({
+  commitReceiptScansApi: vi.fn(),
+}));
 
 vi.mock('../api/commitReceiptScansApi', () => ({
   commitReceiptScansApi,

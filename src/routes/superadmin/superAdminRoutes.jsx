@@ -9,6 +9,7 @@ import ProductTemplateGovernanceListPage from '@/features/productTemplate/pages/
 import ProductTemplateGovernanceDetailPage from '@/features/productTemplate/pages/ProductTemplateGovernanceDetailPage';
 import ProductTemplateGovernanceEditPage from '@/features/productTemplate/pages/ProductTemplateGovernanceEditPage';
 import ProductTemplateGovernanceCreatePage from '@/features/productTemplate/pages/ProductTemplateGovernanceCreatePage';
+import PartnerStoreApplicationReviewPage from '@/features/partnerStoreApplication/pages/PartnerStoreApplicationReviewPage';
 
 const SuperAdminPlaceholderPage = ({ title, description }) => (
   <div className="space-y-4">
@@ -89,6 +90,10 @@ export const superAdminRoutes = [
         element: <SuperAdminPlaceholderPage title="Audit Log" description="ประวัติการตัดสินใจและการเปลี่ยนสถานะของ Catalog Governance" />,
       },
     ],
+  },
+  {
+    path: 'partner-store-applications',
+    element: <PartnerStoreApplicationReviewPage />,
   },
   {
     path: 'analytics',

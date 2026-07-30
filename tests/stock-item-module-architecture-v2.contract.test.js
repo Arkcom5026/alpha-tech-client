@@ -19,16 +19,22 @@ const walk = (dir) => {
 describe('StockItem module architecture v2 contract', () => {
   it('retires the broad API facade while keeping the compatibility store on public slice boundaries', () => {
     const store = read('src/features/stockItem/store/stockItemStore.js');
+    const receiveStoreSlice = read(
+      'src/features/stockItem/receive/store/createStockItemReceiveSlice.js'
+    );
 
     expect(exists('src/features/stockItem/api/stockItemApi.js')).toBe(false);
-    expect(store).toContain("from '../receive'");
+    expect(store).toContain("from '../receive/store/createStockItemReceiveSlice'");
     expect(store).toContain("from '../search'");
     expect(store).toContain("from '../availability'");
     expect(store).toContain("from '../sold'");
     expect(store).not.toContain('../api/stockItemApi');
 
-    expect(store).toContain('receiveSNAction');
-    expect(store).toContain('receiveAllPendingNoSNAction');
+    expect(store).toContain('...createStockItemReceiveSlice(set, get)');
+    expect(store).not.toContain('receiveSNAction: async');
+    expect(store).not.toContain('receiveAllPendingNoSNAction: async');
+    expect(receiveStoreSlice).toContain('receiveSNAction: async');
+    expect(receiveStoreSlice).toContain('receiveAllPendingNoSNAction: async');
     expect(store).toContain('searchStockItemAction');
     expect(store).toContain('loadAvailableStockItemsAction');
     expect(store).toContain('updateStockItemsToSoldAction');
@@ -39,11 +45,17 @@ describe('StockItem module architecture v2 contract', () => {
     const receiveApi = read('src/features/stockItem/receive/api/receiveStockItemApi.js');
     const receiveService = read('src/features/stockItem/receive/services/receiveScannedStockItem.js');
     const receiveProjection = read('src/features/stockItem/receive/projections/stockItemReceiveProjection.js');
+    const receiveStoreSlice = read(
+      'src/features/stockItem/receive/store/createStockItemReceiveSlice.js'
+    );
 
     expect(receiveIndex).toContain('receiveScannedStockItem');
     expect(receiveApi).toContain('/stock-items/receive-sn');
     expect(receiveService).toContain('receiveStockItemApi');
     expect(receiveProjection).toContain('project');
+    expect(receiveStoreSlice).toContain("from '..'");
+    expect(receiveStoreSlice).toContain('receiveScannedStockItem');
+    expect(receiveStoreSlice).toContain('receiveAllPendingStockItems');
   });
 
   it('prevents Barcode and PurchaseOrderReceipt from owning StockItem transport or importing StockItem internals', () => {
@@ -62,7 +74,7 @@ describe('StockItem module architecture v2 contract', () => {
 
       expect(source, file).not.toContain('/stock-items/receive-sn');
       expect(source, file).not.toContain('/stock-items/receive-all-no-sn');
-      expect(source, file).not.toMatch(/features\/stockItem\/(api|store|receive\/(api|services|projections))/);
+      expect(source, file).not.toMatch(/features\/stockItem\/(api|store|receive\/(api|services|projections|store))/);
     }
 
     const barcodeScanService = read(

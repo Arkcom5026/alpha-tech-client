@@ -50,7 +50,11 @@ describe('StockItem legacy API facade retirement contract', () => {
     expect(storeSource).toContain("from '../search/store/createStockItemSearchSlice'");
     expect(storeSource).toContain('createStockItemSearchSlice');
     expect(storeSource).not.toContain('searchStockItemAction: async');
-    expect(storeSource).toContain("from '../availability'");
+    expect(storeSource).toContain(
+      "from '../availability/store/createStockItemAvailabilitySlice'"
+    );
+    expect(storeSource).toContain('createStockItemAvailabilitySlice');
+    expect(storeSource).not.toContain('loadAvailableStockItemsAction: async');
     expect(storeSource).toContain("from '../sold/store/createStockItemSoldSlice'");
     expect(storeSource).toContain('createStockItemSoldSlice');
     expect(storeSource).not.toContain('updateStockItemsToSoldAction: async');

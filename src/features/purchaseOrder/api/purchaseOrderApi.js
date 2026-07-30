@@ -104,10 +104,3 @@ export const deletePurchaseOrder = async (id) => {
   const res = await apiClient.delete(`/purchase-orders/${id}`);
   return res.data;
 };
-
-export const getPurchaseOrdersBySupplier = async (supplierId) => {
-  const res = await apiClient.get('/purchase-orders/by-supplier', {
-    params: { supplierId },
-  });
-  return res.data;
-};

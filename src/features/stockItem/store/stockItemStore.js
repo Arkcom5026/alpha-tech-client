@@ -3,13 +3,13 @@ import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import {
   markStockItemsAsSold,
-  searchStockItem,
   getAvailableStockItemsByProduct,
 } from '../api/stockItemApi';
 import {
   receiveAllPendingStockItems,
   receiveScannedStockItem,
 } from '../receive';
+import { searchStockItem } from '../search';
 
 const useStockItemStore = create(
   devtools((set, get) => ({
@@ -161,25 +161,10 @@ const useStockItemStore = create(
       }
     },
 
-    searchStockItemAction: async (barcode) => {
+    searchStockItemAction: async (query) => {
       try {
-        const item = await searchStockItem(barcode);
-        return item || null;
+        return await searchStockItem(query);
       } catch (error) {
-        const statusCode = error?.response?.status;
-        const payload = error?.response?.data;
-
-        if (statusCode === 409) {
-          return {
-            notSellable: true,
-            status: payload?.status,
-            code: payload?.code,
-            message: payload?.message || 'สินค้านี้ไม่พร้อมขาย',
-          };
-        }
-
-        if (statusCode === 404) return null;
-
         console.error('❌ ค้นหา stockItem ล้มเหลว:', error);
         return null;
       }

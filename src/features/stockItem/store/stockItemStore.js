@@ -1,10 +1,8 @@
 // stockItemStore.js — compatibility store while StockItem capabilities migrate to owned slices
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
-import {
-  markStockItemsAsSold,
-  getAvailableStockItemsByProduct,
-} from '../api/stockItemApi';
+import { markStockItemsAsSold } from '../api/stockItemApi';
+import { loadAvailableStockItems } from '../availability';
 import {
   receiveAllPendingStockItems,
   receiveScannedStockItem,
@@ -172,7 +170,7 @@ const useStockItemStore = create(
 
     loadAvailableStockItemsAction: async (productId) => {
       try {
-        return await getAvailableStockItemsByProduct(productId);
+        return await loadAvailableStockItems(productId);
       } catch (error) {
         console.error('❌ ดึง stockItem ที่พร้อมขายล้มเหลว:', error);
         return [];

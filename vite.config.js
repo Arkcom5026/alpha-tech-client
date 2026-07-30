@@ -30,6 +30,8 @@ export default defineConfig({
     historyApiFallback: true
   },
   test: {
+    environment: 'jsdom',
+    setupFiles: ['./vitest.setup.js'],
     include: [
       'src/**/*.{test,spec}.{js,jsx,ts,tsx}',
       'tests/**/*.{test,spec}.{js,jsx,ts,tsx}'

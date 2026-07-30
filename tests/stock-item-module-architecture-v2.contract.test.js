@@ -145,11 +145,14 @@ describe('StockItem module architecture v2 contract', () => {
     expect(barcodeScanService).toContain("from '@/features/stockItem/receive'");
   });
 
-  it('documents the current receive workflow composition boundary and completed facade retirement', () => {
+  it('documents the receive store boundary cutover and completed facade retirement', () => {
     const page = read('src/features/stockItem/pages/ScanBarcodeListPage.jsx');
     const audit = read('docs/missions/stock-item-consumer-and-ownership-audit.md');
 
-    expect(page).toContain("@/features/stockItem/store/stockItemStore");
+    expect(page).toContain(
+      '@/features/stockItem/receive/store/useStockItemReceiveStore'
+    );
+    expect(page).not.toContain('@/features/stockItem/store/stockItemStore');
     expect(page).toContain('receiveSNAction');
     expect(page).toContain('receiveAllPendingNoSNAction');
 

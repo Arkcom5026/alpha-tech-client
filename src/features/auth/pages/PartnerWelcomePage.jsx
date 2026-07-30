@@ -3,6 +3,7 @@
 // 🎨 Warm Luxury Style - Fully Synced with Marketplace Design Language
 
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   FaStore, 
   FaChartLine, 
@@ -213,7 +214,7 @@ const PartnerWelcomePage = () => {
 
                 <div className="space-y-3 pt-1">
                   <button 
-                    onClick={() => resetRegisterForm('register')}
+                    onClick={() => navigate('/partner-portal/apply')}
                     className="w-full bg-[#111625] hover:bg-slate-800 text-white py-3.5 px-4 rounded-xl font-bold text-xs transition-all duration-200 shadow-md flex items-center justify-center gap-2 active:scale-[0.98] group"
                   >
                     <FaUserPlus className="text-xs text-orange-400" /> 

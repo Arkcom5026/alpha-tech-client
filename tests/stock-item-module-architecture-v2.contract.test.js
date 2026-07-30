@@ -1,0 +1,84 @@
+import { describe, expect, it } from 'vitest';
+import fs from 'node:fs';
+import path from 'node:path';
+
+const root = process.cwd();
+const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
+
+const walk = (dir) => {
+  const absolute = path.join(root, dir);
+  if (!fs.existsSync(absolute)) return [];
+
+  return fs.readdirSync(absolute, { withFileTypes: true }).flatMap((entry) => {
+    const relative = path.join(dir, entry.name);
+    return entry.isDirectory() ? walk(relative) : [relative];
+  });
+};
+
+describe('StockItem module architecture v2 contract', () => {
+  it('keeps the current broad API and store identified as compatibility surfaces', () => {
+    const api = read('src/features/stockItem/api/stockItemApi.js');
+    const store = read('src/features/stockItem/store/stockItemStore.js');
+
+    expect(api).toContain('/stock-items/receive-sn');
+    expect(api).toContain('/stock-items/receive-all-no-sn');
+    expect(api).toContain('/stock-items/search');
+    expect(api).toContain('/stock-items/available');
+    expect(api).toContain('/stock-items/mark-sold');
+
+    expect(store).toContain('receiveSNAction');
+    expect(store).toContain('receiveAllPendingNoSNAction');
+    expect(store).toContain('searchStockItemAction');
+    expect(store).toContain('loadAvailableStockItemsAction');
+    expect(store).toContain('updateStockItemsToSoldAction');
+  });
+
+  it('locks receive ownership to the StockItem receive slice', () => {
+    const receiveIndex = read('src/features/stockItem/receive/index.js');
+    const receiveApi = read('src/features/stockItem/receive/api/receiveStockItemApi.js');
+    const receiveService = read('src/features/stockItem/receive/services/receiveScannedStockItem.js');
+    const receiveProjection = read('src/features/stockItem/receive/projections/stockItemReceiveProjection.js');
+
+    expect(receiveIndex).toContain('receiveScannedStockItem');
+    expect(receiveApi).toContain('/stock-items/receive-sn');
+    expect(receiveService).toContain('receiveStockItemApi');
+    expect(receiveProjection).toContain('project');
+  });
+
+  it('prevents Barcode and PurchaseOrderReceipt from owning StockItem transport or importing StockItem internals', () => {
+    const protectedRoots = [
+      'src/features/barcode',
+      'src/features/purchaseOrderReceipt',
+      'src/features/purchaseOrder',
+    ];
+
+    const sourceFiles = protectedRoots
+      .flatMap(walk)
+      .filter((file) => /\.(js|jsx|ts|tsx)$/.test(file));
+
+    for (const file of sourceFiles) {
+      const source = read(file);
+
+      expect(source, file).not.toContain('/stock-items/receive-sn');
+      expect(source, file).not.toContain('/stock-items/receive-all-no-sn');
+      expect(source, file).not.toMatch(/features\/stockItem\/(api|store|receive\/(api|services|projections))/);
+    }
+
+    const barcodeScanService = read(
+      'src/features/barcode/scan-serial/services/barcodeScanService.js'
+    );
+    expect(barcodeScanService).toContain("from '@/features/stockItem/receive'");
+  });
+
+  it('documents the current receive workflow composition boundary and the next cutover target', () => {
+    const page = read('src/features/stockItem/pages/ScanBarcodeListPage.jsx');
+    const audit = read('docs/missions/stock-item-consumer-and-ownership-audit.md');
+
+    expect(page).toContain("@/features/stockItem/store/stockItemStore");
+    expect(page).toContain('receiveSNAction');
+    expect(page).toContain('receiveAllPendingNoSNAction');
+
+    expect(audit).toContain('StockItem owns receive-into-inventory mutations');
+    expect(audit).toContain('The broad root facade/store may be retired only after all consumers are proven migrated');
+  });
+});

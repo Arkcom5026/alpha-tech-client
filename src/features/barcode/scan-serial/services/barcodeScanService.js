@@ -1,6 +1,6 @@
+import { receiveScannedStockItem as receiveStockItem } from '@/features/stockItem/receive';
 import {
   commitReceiptScansApi,
-  receiveScannedStockItemApi,
   updateBarcodeSerialNumberApi,
 } from '../api/barcodeScanApi';
 import {
@@ -17,8 +17,8 @@ const normalizeReceiptId = (receiptId) => {
 };
 
 export const receiveScannedStockItem = async (input, maybeSerialNumber, dependencies = {}) => {
-  const api = dependencies.receiveScannedStockItemApi || receiveScannedStockItemApi;
-  return api(projectReceivePayload(input, maybeSerialNumber));
+  const receive = dependencies.receiveScannedStockItem || receiveStockItem;
+  return receive(projectReceivePayload(input, maybeSerialNumber));
 };
 
 export const assignBarcodeSerialNumber = async (input, dependencies = {}) => {

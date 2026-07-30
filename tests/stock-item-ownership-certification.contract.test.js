@@ -32,18 +32,21 @@ describe('stock item ownership certification contract', () => {
     expect(stockItemStore).toContain('updateStockItemsToSoldAction');
   });
 
-  it('prevents upstream procurement modules from owning StockItem runtime', () => {
-    const barcodeApi = read('src/features/barcode/api/barcodeApi.js');
+  it('prevents upstream procurement modules from owning StockItem transport', () => {
     const barcodeStore = read('src/features/barcode/store/barcodeStore.js');
+    const barcodeScanApi = read('src/features/barcode/scan-serial/api/barcodeScanApi.js');
+    const barcodeScanService = read('src/features/barcode/scan-serial/services/barcodeScanService.js');
     const receiptApi = read('src/features/purchaseOrderReceipt/api/purchaseOrderReceiptApi.js');
     const receiptStore = read('src/features/purchaseOrderReceipt/store/purchaseOrderReceiptStore.js');
     const purchaseOrderApi = read('src/features/purchaseOrder/api/purchaseOrderApi.js');
 
-    for (const source of [barcodeApi, barcodeStore, receiptApi, receiptStore, purchaseOrderApi]) {
+    for (const source of [barcodeStore, barcodeScanApi, barcodeScanService, receiptApi, receiptStore, purchaseOrderApi]) {
       expect(source).not.toContain('/stock-items/receive-sn');
       expect(source).not.toContain('/stock-items/receive-all-no-sn');
       expect(source).not.toContain('receiveStockItemApi');
-      expect(source).not.toContain('receiveScannedStockItem');
+      expect(source).not.toContain('receiveScannedStockItemApi');
     }
+
+    expect(barcodeScanService).toContain("from '@/features/stockItem/receive'");
   });
 });

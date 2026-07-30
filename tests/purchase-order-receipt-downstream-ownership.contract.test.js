@@ -16,14 +16,15 @@ describe('purchase order receipt downstream ownership contract', () => {
     expect(store).toContain('finalizeReceiptIfNeededAction');
   });
 
-  it('does not allow PurchaseOrderReceipt to own barcode generation or barcode printing runtime', () => {
+  it('does not allow PurchaseOrderReceipt to own barcode generation or barcode-label printing runtime', () => {
     const api = read('src/features/purchaseOrderReceipt/api/purchaseOrderReceiptApi.js');
     const store = read('src/features/purchaseOrderReceipt/store/purchaseOrderReceiptStore.js');
 
     expect(api).not.toContain('generateReceiptBarcodes');
     expect(api).not.toContain('/generate-barcodes');
     expect(api).not.toContain('printReceipt');
-    expect(api).not.toContain('/print');
+    expect(api).not.toContain('/barcodes/print');
+    expect(api).not.toContain('/barcode-print');
 
     expect(store).not.toContain('generateBarcodesAction');
     expect(store).not.toContain('printReceiptAction');

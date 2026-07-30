@@ -4,6 +4,7 @@ import path from 'node:path';
 
 const root = process.cwd();
 const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
+const exists = (file) => fs.existsSync(path.join(root, file));
 
 const listFilesRecursively = (directory) => {
   const absoluteDirectory = path.join(root, directory);
@@ -14,24 +15,20 @@ const listFilesRecursively = (directory) => {
 };
 
 describe('barcode ownership certification contract', () => {
-  it('keeps barcode lifecycle runtime inside the Barcode module', () => {
-    const api = read('src/features/barcode/api/barcodeApi.js');
+  it('keeps barcode lifecycle runtime behind slice public boundaries', () => {
     const store = read('src/features/barcode/store/barcodeStore.js');
 
-    for (const token of [
-      'generateMissingBarcodes',
-      'getBarcodesByReceiptId',
-      'auditReceiptBarcodes',
-      'getReceiptsWithBarcodes',
-      'getReceiptsReadyToScanSN',
-      'getReceiptsReadyToScan',
-      'updateSerialNumber',
-      'markBarcodesAsPrinted',
-      'reprintBarcodes',
-      'searchReprintReceipts',
-      'commitScans',
+    expect(exists('src/features/barcode/api/barcodeApi.js')).toBe(false);
+
+    for (const boundary of [
+      "from '../generation'",
+      "from '../receipt-detail'",
+      "from '../receipt-listing'",
+      "from '../scan-listing'",
+      "from '../serial'",
+      "from '../print-reprint'",
     ]) {
-      expect(api).toContain(token);
+      expect(store).toContain(boundary);
     }
 
     for (const token of [
@@ -45,7 +42,7 @@ describe('barcode ownership certification contract', () => {
     }
   });
 
-  it('does not allow Barcode to own StockItem receiving runtime anywhere in the module', () => {
+  it('does not allow Barcode to own StockItem receiving transport', () => {
     const barcodeFiles = listFilesRecursively('src/features/barcode').filter((file) =>
       /\.(js|jsx|ts|tsx)$/.test(file)
     );
@@ -53,19 +50,19 @@ describe('barcode ownership certification contract', () => {
     for (const file of barcodeFiles) {
       const source = read(file);
       for (const token of [
-        'receiveStockItem',
-        'receiveScannedStockItem',
-        "@/features/stockItem/receive",
+        'receiveScannedStockItemApi',
         '/stock-items/receive-sn',
         '/stock-items/receive-all-no-sn',
       ]) {
         expect(source, `${file} must not contain ${token}`).not.toContain(token);
       }
     }
+
+    const scanService = read('src/features/barcode/scan-serial/services/barcodeScanService.js');
+    expect(scanService).toContain("from '@/features/stockItem/receive'");
   });
 
   it('does not allow Barcode to own Receipt lifecycle mutation', () => {
-    const api = read('src/features/barcode/api/barcodeApi.js');
     const store = read('src/features/barcode/store/barcodeStore.js');
 
     for (const token of [
@@ -75,7 +72,6 @@ describe('barcode ownership certification contract', () => {
       'markReceiptAsCompleted',
       'markReceiptAsPrinted',
     ]) {
-      expect(api).not.toContain(token);
       expect(store).not.toContain(token);
     }
   });

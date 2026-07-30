@@ -45,7 +45,8 @@ describe('StockItem legacy API facade retirement contract', () => {
     const storePath = path.join(sourceRoot, 'features', 'stockItem', 'store', 'stockItemStore.js');
     const storeSource = fs.readFileSync(storePath, 'utf8');
 
-    expect(storeSource).toContain("from '../receive'");
+    expect(storeSource).toContain("from '../receive/store/createStockItemReceiveSlice'");
+    expect(storeSource).toContain('createStockItemReceiveSlice');
     expect(storeSource).toContain("from '../search'");
     expect(storeSource).toContain("from '../availability'");
     expect(storeSource).toContain("from '../sold'");

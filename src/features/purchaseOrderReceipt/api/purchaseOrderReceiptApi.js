@@ -61,16 +61,6 @@ export const deleteReceipt = async (id) => {
   }
 };
 
-export const getReceiptBarcodeSummaries = async (params = {}) => {
-  try {
-    const { data } = await apiClient.get('/purchase-order-receipts/receipt-barcode-summaries', { params });
-    return data;
-  } catch (error) {
-    console.error('❌ getReceiptBarcodeSummaries error:', error);
-    throw error;
-  }
-};
-
 export const getReceiptsReadyToPay = async (params = {}) => {
   try {
     const { data } = await apiClient.get('/purchase-order-receipts/ready-to-pay', { params });
@@ -122,26 +112,6 @@ export const createQuickReceipt = async (payload) => {
     return data;
   } catch (error) {
     console.error('❌ createQuickReceipt error:', error);
-    throw error;
-  }
-};
-
-export const generateReceiptBarcodes = async (receiptId) => {
-  try {
-    const { data } = await apiClient.post(`/purchase-order-receipts/${receiptId}/generate-barcodes`);
-    return data;
-  } catch (error) {
-    console.error('❌ generateReceiptBarcodes error:', error);
-    throw error;
-  }
-};
-
-export const printReceipt = async (receiptId, options = {}) => {
-  try {
-    const { data } = await apiClient.post(`/purchase-order-receipts/${receiptId}/print`, options);
-    return data;
-  } catch (error) {
-    console.error('❌ printReceipt error:', error);
     throw error;
   }
 };

@@ -4,9 +4,10 @@ import path from 'node:path';
 
 const root = process.cwd();
 const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
+const exists = (file) => fs.existsSync(path.join(root, file));
 
 describe('stock item ownership certification contract', () => {
-  it('keeps receive-into-stock runtime owned by StockItem receive slice', () => {
+  it('keeps receive-into-stock runtime owned by StockItem receive slice and store', () => {
     const receiveIndex = read('src/features/stockItem/receive/index.js');
     const receiveService = read('src/features/stockItem/receive/services/receiveScannedStockItem.js');
     const receiveApi = read('src/features/stockItem/receive/api/receiveStockItemApi.js');
@@ -14,7 +15,9 @@ describe('stock item ownership certification contract', () => {
     const receiveStoreSlice = read(
       'src/features/stockItem/receive/store/createStockItemReceiveSlice.js'
     );
-    const stockItemStore = read('src/features/stockItem/store/stockItemStore.js');
+    const receiveStore = read(
+      'src/features/stockItem/receive/store/useStockItemReceiveStore.js'
+    );
 
     expect(receiveIndex).toContain('receiveScannedStockItem');
     expect(receiveIndex).toContain('receiveAllPendingStockItems');
@@ -24,10 +27,8 @@ describe('stock item ownership certification contract', () => {
     expect(receiveStoreSlice).toContain('receiveSNAction');
     expect(receiveStoreSlice).toContain('receiveAllPendingNoSNAction');
     expect(receiveStoreSlice).toContain('clearScannedList');
-    expect(stockItemStore).toContain("from '../receive/store/createStockItemReceiveSlice'");
-    expect(stockItemStore).toContain('...createStockItemReceiveSlice(set, get)');
-    expect(stockItemStore).not.toContain('receiveSNAction: async');
-    expect(stockItemStore).not.toContain('receiveAllPendingNoSNAction: async');
+    expect(receiveStore).toContain('createStockItemReceiveSlice');
+    expect(exists('src/features/stockItem/store/stockItemStore.js')).toBe(false);
   });
 
   it('keeps search action runtime owned by the StockItem search slice', () => {
@@ -35,16 +36,11 @@ describe('stock item ownership certification contract', () => {
     const searchStoreSlice = read(
       'src/features/stockItem/search/store/createStockItemSearchSlice.js'
     );
-    const stockItemStore = read('src/features/stockItem/store/stockItemStore.js');
 
     expect(searchApi).toContain('/stock-items/search');
     expect(searchStoreSlice).toContain("from '..'");
     expect(searchStoreSlice).toContain('searchStockItemAction: async');
     expect(searchStoreSlice).toContain('searchStockItem(query)');
-    expect(stockItemStore).toContain("from '../search/store/createStockItemSearchSlice'");
-    expect(stockItemStore).toContain('...createStockItemSearchSlice(set, get)');
-    expect(stockItemStore).not.toContain('searchStockItemAction: async');
-    expect(stockItemStore).not.toContain('/stock-items/search');
   });
 
   it('keeps ready-for-sale queries and sold transitions in owned StockItem slices', () => {
@@ -56,27 +52,16 @@ describe('stock item ownership certification contract', () => {
     const soldStoreSlice = read(
       'src/features/stockItem/sold/store/createStockItemSoldSlice.js'
     );
-    const stockItemStore = read('src/features/stockItem/store/stockItemStore.js');
 
     expect(availabilityApi).toContain('/stock-items/available');
     expect(availabilityStoreSlice).toContain("from '..'");
     expect(availabilityStoreSlice).toContain('loadAvailableStockItemsAction: async');
     expect(availabilityStoreSlice).toContain('loadAvailableStockItems(productId)');
-    expect(stockItemStore).toContain(
-      "from '../availability/store/createStockItemAvailabilitySlice'"
-    );
-    expect(stockItemStore).toContain('...createStockItemAvailabilitySlice(set, get)');
-    expect(stockItemStore).not.toContain('loadAvailableStockItemsAction: async');
-    expect(stockItemStore).not.toContain('/stock-items/available');
 
     expect(soldApi).toContain('/stock-items/mark-sold');
     expect(soldStoreSlice).toContain("from '..'");
     expect(soldStoreSlice).toContain('updateStockItemsToSoldAction: async');
     expect(soldStoreSlice).toContain('markStockItemsAsSold(stockItemIds)');
-    expect(stockItemStore).toContain("from '../sold/store/createStockItemSoldSlice'");
-    expect(stockItemStore).toContain('...createStockItemSoldSlice(set, get)');
-    expect(stockItemStore).not.toContain('updateStockItemsToSoldAction: async');
-    expect(stockItemStore).not.toContain('/stock-items/mark-sold');
   });
 
   it('prevents upstream procurement modules from owning StockItem transport or receive store internals', () => {

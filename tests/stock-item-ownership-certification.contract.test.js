@@ -30,19 +30,32 @@ describe('stock item ownership certification contract', () => {
     expect(stockItemStore).not.toContain('receiveAllPendingNoSNAction: async');
   });
 
-  it('keeps ready-for-sale queries and stock lifecycle transitions in StockItem slices', () => {
+  it('keeps search action runtime owned by the StockItem search slice', () => {
     const searchApi = read('src/features/stockItem/search/api/searchStockItemApi.js');
+    const searchStoreSlice = read(
+      'src/features/stockItem/search/store/createStockItemSearchSlice.js'
+    );
+    const stockItemStore = read('src/features/stockItem/store/stockItemStore.js');
+
+    expect(searchApi).toContain('/stock-items/search');
+    expect(searchStoreSlice).toContain("from '..'");
+    expect(searchStoreSlice).toContain('searchStockItemAction: async');
+    expect(searchStoreSlice).toContain('searchStockItem(query)');
+    expect(stockItemStore).toContain("from '../search/store/createStockItemSearchSlice'");
+    expect(stockItemStore).toContain('...createStockItemSearchSlice(set, get)');
+    expect(stockItemStore).not.toContain('searchStockItemAction: async');
+    expect(stockItemStore).not.toContain('/stock-items/search');
+  });
+
+  it('keeps ready-for-sale queries and stock lifecycle transitions in StockItem slices', () => {
     const availabilityApi = read('src/features/stockItem/availability/api/getAvailableStockItemsApi.js');
     const soldApi = read('src/features/stockItem/sold/api/markStockItemsAsSoldApi.js');
     const stockItemStore = read('src/features/stockItem/store/stockItemStore.js');
 
-    expect(searchApi).toContain('/stock-items/search');
     expect(availabilityApi).toContain('/stock-items/available');
     expect(soldApi).toContain('/stock-items/mark-sold');
-    expect(stockItemStore).toContain("from '../search'");
     expect(stockItemStore).toContain("from '../availability'");
     expect(stockItemStore).toContain("from '../sold'");
-    expect(stockItemStore).toContain('searchStockItemAction');
     expect(stockItemStore).toContain('loadAvailableStockItemsAction');
     expect(stockItemStore).toContain('updateStockItemsToSoldAction');
   });

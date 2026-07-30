@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const receiveScannedStockItemMock = vi.fn();
 
-vi.mock('../scan', () => ({
+vi.mock('@/features/stockItem/receive', () => ({
   receiveScannedStockItem: receiveScannedStockItemMock,
 }));
 
@@ -43,7 +43,7 @@ vi.mock('@/utils/apiClient', () => ({
 
 const { receiveStockItem } = await import('./barcodeApi');
 
-describe('legacy receive stock scan runtime boundary', () => {
+describe('legacy receive stock compatibility boundary', () => {
   beforeEach(() => {
     receiveScannedStockItemMock.mockReset();
   });
@@ -58,7 +58,7 @@ describe('legacy receive stock scan runtime boundary', () => {
     expect(result).toBe(sourceResponse);
   });
 
-  it('delegates object and nested barcode input to the scan slice', async () => {
+  it('delegates object and nested barcode input to the StockItem public boundary', async () => {
     const input = {
       barcode: {
         barcode: 'BC-002',
@@ -80,7 +80,7 @@ describe('legacy receive stock scan runtime boundary', () => {
     await expect(receiveStockItem({ barcode: 'BC-003' })).resolves.toBe(stockItem);
   });
 
-  it('preserves scan failures for the store recovery boundary', async () => {
+  it('preserves receive failures for the store recovery boundary', async () => {
     const error = new Error('receive failed');
     receiveScannedStockItemMock.mockRejectedValue(error);
 

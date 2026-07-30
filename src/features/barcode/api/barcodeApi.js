@@ -5,6 +5,7 @@
 import apiClient from '@/utils/apiClient';
 import { generateReceiptBarcodes } from '../generation';
 import { loadReceiptBarcodes } from '../receipt-detail';
+import { listReceiptsWithBarcodes } from '../receipt-listing';
 import {
   markReceiptBarcodesPrinted,
   reprintReceiptBarcodes,
@@ -34,36 +35,10 @@ export const auditReceiptBarcodes = async (receiptId, { includeDetails = true } 
   }
 };
 
+// Legacy compatibility boundary now delegates to the receipt-listing slice.
 export const getReceiptsWithBarcodes = async (opts = {}) => {
-  try {
-    const printed = opts?.printed;
-    const limit = opts?.limit;
-    const params = {
-      ...(typeof printed === 'boolean' ? { printed } : {}),
-      ...(limit != null ? { limit: Math.min(Math.max(Number(limit) || 50, 1), 100) } : {}),
-    };
-
-    const res = await apiClient.get('/barcodes/receipts-with-barcodes', {
-      params: Object.keys(params).length ? params : undefined,
-    });
-    return res.data;
-  } catch (err) {
-    if (err?.response?.status === 404) {
-      const printed = opts?.printed;
-      const limit = opts?.limit;
-      const params = {
-        ...(typeof printed === 'boolean' ? { printed } : {}),
-        ...(limit != null ? { limit: Math.min(Math.max(Number(limit) || 50, 1), 100) } : {}),
-      };
-
-      const res2 = await apiClient.get('/barcodes/with-barcodes', {
-        params: Object.keys(params).length ? params : undefined,
-      });
-      return res2.data;
-    }
-    console.error('❌ getReceiptsWithBarcodes error:', err);
-    throw err;
-  }
+  const result = await listReceiptsWithBarcodes(opts);
+  return result?.sourceResponse ?? result?.receipts ?? [];
 };
 
 export const getReceiptsReadyToScanSN = async () => {

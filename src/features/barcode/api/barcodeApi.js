@@ -10,6 +10,7 @@ import {
   listReceiptsReadyToScan,
   listReceiptsReadyToScanSn,
 } from '../scan-listing';
+import { receiveScannedStockItem } from '../scan';
 import { updateBarcodeSerialNumber } from '../serial';
 import {
   markReceiptBarcodesPrinted,
@@ -57,46 +58,10 @@ export const getReceiptsReadyToScan = async () => {
   return result?.sourceResponse ?? result?.receipts ?? [];
 };
 
+// Legacy compatibility boundary now delegates to the scan slice.
 export const receiveStockItem = async (input, maybeSerialNumber) => {
-  const isObjectInput = typeof input === 'object' && input !== null;
-  const nested = isObjectInput ? input.barcode : null;
-
-  const barcode = (() => {
-    if (nested && typeof nested === 'object') return String(nested.barcode || '').trim();
-    if (isObjectInput) return String(input.barcode || '').trim();
-    return String(input || '').trim();
-  })();
-
-  if (!barcode) throw new Error('Missing barcode');
-
-  const serialNumber = (() => {
-    if (nested && typeof nested === 'object') return String(nested.serialNumber ?? '').trim();
-    if (isObjectInput) return String(input.serialNumber ?? '').trim();
-    return String(maybeSerialNumber ?? '').trim();
-  })();
-
-  const keepSN = Boolean(
-    (nested && typeof nested === 'object' && nested.keepSN === true) ||
-    (isObjectInput && input.keepSN === true)
-  );
-
-  try {
-    const payload = keepSN || serialNumber
-      ? {
-          barcode: {
-            barcode,
-            ...(serialNumber ? { serialNumber } : {}),
-          },
-          keepSN,
-        }
-      : { barcode };
-
-    const res = await apiClient.post('/stock-items/receive-sn', payload);
-    return res.data;
-  } catch (err) {
-    console.error('❌ receiveStockItem error:', err);
-    throw err;
-  }
+  const result = await receiveScannedStockItem(input, maybeSerialNumber);
+  return result?.sourceResponse ?? result?.stockItem ?? result;
 };
 
 // Legacy compatibility boundary now delegates to the serial slice.

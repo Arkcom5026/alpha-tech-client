@@ -40,7 +40,7 @@ Other modules retain their own business authority:
 7. Runtime cutover
 8. Legacy path retirement
 
-## Current Increment — Renderer Ownership
+## Completed Increment — Renderer Ownership
 
 New authority:
 
@@ -53,4 +53,23 @@ Compatibility shims retained:
 - `src/components/shared/barcode/BarcodeRenderer.jsx`
 - `src/components/shared/barcode/BarcodeWithQRRenderer.jsx`
 
-This increment is structural only. It does not alter routes, API contracts, barcode output rules, print behavior, or production runtime ownership.
+Focused production build evidence: PASS at commit `c5195d853fb8949839bec4bfaa4438c884e3582e`.
+
+## Current Increment — Generation Foundation
+
+New testable boundary:
+
+- `src/features/barcode/generation/api/generateMissingBarcodesApi.js`
+- `src/features/barcode/generation/services/generateReceiptBarcodes.js`
+- `src/features/barcode/generation/projections/barcodeGenerationProjection.js`
+- `src/features/barcode/generation/index.js`
+
+Focused contracts:
+
+- receipt identity is normalized and validated before transport
+- generation options are deterministic
+- generated rows retain source evidence
+- generic Axios status text is not exposed as a user-facing error
+- API failures remain available to the caller for recovery decisions
+
+The legacy Zustand store remains runtime authority. No route, API payload, print behavior, or production runtime ownership has been switched in this increment.

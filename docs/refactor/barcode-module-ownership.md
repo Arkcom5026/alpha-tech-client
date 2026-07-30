@@ -126,7 +126,7 @@ Focused verification at commit `00c86be61d09aa8ac685a30ba1a6bbcc65365d5e`:
 - 7 tests passed
 - production build passed
 
-## Current Increment — Scan / Serial Assignment Foundation
+## Completed Increment — Scan / Serial Assignment Foundation
 
 New testable boundary:
 
@@ -135,7 +135,7 @@ New testable boundary:
 - `src/features/barcode/scan-serial/projections/barcodeScanProjection.js`
 - `src/features/barcode/scan-serial/index.js`
 
-Focused contracts:
+Verified contracts:
 
 - legacy string and object scan inputs normalize to one deterministic shape
 - receive payload keeps backward-compatible SN and keepSN behavior
@@ -144,4 +144,28 @@ Focused contracts:
 - backend partial commit failures remain structured and retain source evidence
 - generic Axios and network messages are replaced with a workflow-specific UI fallback
 
-The legacy Barcode store, pages, and controllers remain runtime authority. No route, UI behavior, endpoint, payload, scanning behavior, stock lifecycle authority, or production runtime ownership has been switched.
+Focused verification at commit `449dce9542ca5e201412c4a7242a03d1a8806d77`:
+
+- 2 test files passed
+- 7 tests passed
+- production build passed
+
+## Current Increment — Audit / Receipt Completion Foundation
+
+New testable boundary:
+
+- `src/features/barcode/audit-completion/api/barcodeAuditCompletionApi.js`
+- `src/features/barcode/audit-completion/services/barcodeAuditCompletionService.js`
+- `src/features/barcode/audit-completion/projections/barcodeAuditCompletionProjection.js`
+- `src/features/barcode/audit-completion/index.js`
+
+Focused contracts:
+
+- receipt identity and audit detail options are normalized before transport
+- audit counts and detail rows retain original source evidence
+- receipt finalization remains an integration call to Purchase Order Receipt authority
+- unhealthy audit evidence prevents finalization
+- healthy audit evidence allows idempotent finalization
+- generic transport messages are replaced with a workflow-specific UI fallback
+
+The legacy Barcode store, pages, and controllers remain runtime authority. Purchase Order Receipt remains the business owner of finalization. No route, UI behavior, endpoint, payload, completion policy, or production runtime ownership has been switched.

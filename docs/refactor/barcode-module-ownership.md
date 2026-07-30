@@ -102,7 +102,7 @@ Focused verification at commit `f0dc2f3e1876f70362f6aada14bd9b8ec8b66895`:
 - 5 tests passed
 - production build passed
 
-## Current Increment — Print / Reprint Foundation
+## Completed Increment — Print / Reprint Foundation
 
 New testable boundary:
 
@@ -111,7 +111,7 @@ New testable boundary:
 - `src/features/barcode/print-reprint/projections/barcodePrintProjection.js`
 - `src/features/barcode/print-reprint/index.js`
 
-Focused contracts:
+Verified contracts:
 
 - receipt identity is normalized before print, reprint, and mark-printed transport
 - reprint search mode and criteria are normalized deterministically
@@ -120,4 +120,28 @@ Focused contracts:
 - LOT suggested label counts expand deterministically
 - generic Axios status text is replaced by a workflow-specific fallback
 
-The legacy Barcode store, pages, and controllers remain runtime authority. No route, UI behavior, endpoint, payload, print layout, or production runtime ownership has been switched.
+Focused verification at commit `00c86be61d09aa8ac685a30ba1a6bbcc65365d5e`:
+
+- 2 test files passed
+- 7 tests passed
+- production build passed
+
+## Current Increment — Scan / Serial Assignment Foundation
+
+New testable boundary:
+
+- `src/features/barcode/scan-serial/api/barcodeScanApi.js`
+- `src/features/barcode/scan-serial/services/barcodeScanService.js`
+- `src/features/barcode/scan-serial/projections/barcodeScanProjection.js`
+- `src/features/barcode/scan-serial/index.js`
+
+Focused contracts:
+
+- legacy string and object scan inputs normalize to one deterministic shape
+- receive payload keeps backward-compatible SN and keepSN behavior
+- serial assignment requires both barcode and serial number
+- invalid commit rows are removed before transport
+- backend partial commit failures remain structured and retain source evidence
+- generic Axios and network messages are replaced with a workflow-specific UI fallback
+
+The legacy Barcode store, pages, and controllers remain runtime authority. No route, UI behavior, endpoint, payload, scanning behavior, stock lifecycle authority, or production runtime ownership has been switched.

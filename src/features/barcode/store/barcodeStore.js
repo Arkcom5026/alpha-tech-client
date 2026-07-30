@@ -1,17 +1,64 @@
 // src/features/barcode/store/barcodeStore.js
 import { create } from 'zustand';
+import { generateReceiptBarcodes } from '../generation';
+import { loadReceiptBarcodes } from '../receipt-detail';
+import { listReceiptsWithBarcodes } from '../receipt-listing';
 import {
-  getBarcodesByReceiptId,
-  generateMissingBarcodes,
-  reprintBarcodes,
-  getReceiptsWithBarcodes,
-  getReceiptsReadyToScan,
-  getReceiptsReadyToScanSN,
-  updateSerialNumber,
-  markBarcodesAsPrinted,
-  searchReprintReceipts,
-} from '../api/barcodeApi';
+  listReceiptsReadyToScan,
+  listReceiptsReadyToScanSn,
+} from '../scan-listing';
+import { updateBarcodeSerialNumber } from '../serial';
+import {
+  markReceiptBarcodesPrinted,
+  reprintReceiptBarcodes,
+  searchReceiptsForReprint,
+} from '../print-reprint';
 import { finalizeReceiptIfNeeded, getReceiptById } from '@/features/purchaseOrderReceipt/api/purchaseOrderReceiptApi';
+
+const getBarcodesByReceiptId = async (receiptId, opts = {}) => {
+  const result = await loadReceiptBarcodes({ receiptId, ...opts });
+  return result?.sourceResponse ?? { barcodes: result?.barcodes ?? [] };
+};
+
+const generateMissingBarcodes = async (receiptId, options = {}) => {
+  const result = await generateReceiptBarcodes({ receiptId, options });
+  return result?.sourceResponse ?? { barcodes: result?.barcodes ?? [] };
+};
+
+const reprintBarcodes = async (receiptId) => {
+  const result = await reprintReceiptBarcodes(receiptId);
+  return result?.sourceResponse ?? { barcodes: result?.rows ?? [] };
+};
+
+const getReceiptsWithBarcodes = async (opts = {}) => {
+  const result = await listReceiptsWithBarcodes(opts);
+  return result?.sourceResponse ?? result?.receipts ?? [];
+};
+
+const getReceiptsReadyToScanSN = async () => {
+  const result = await listReceiptsReadyToScanSn();
+  return result?.sourceResponse ?? result?.receipts ?? [];
+};
+
+const getReceiptsReadyToScan = async () => {
+  const result = await listReceiptsReadyToScan();
+  return result?.sourceResponse ?? result?.receipts ?? [];
+};
+
+const updateSerialNumber = async (barcode, serialNumber) => {
+  const result = await updateBarcodeSerialNumber({ barcode, serialNumber });
+  return result?.sourceResponse ?? result;
+};
+
+const markBarcodesAsPrinted = async (purchaseOrderReceiptId) => {
+  const result = await markReceiptBarcodesPrinted(purchaseOrderReceiptId);
+  return result?.sourceResponse ?? result;
+};
+
+const searchReprintReceipts = async (opts = {}) => {
+  const result = await searchReceiptsForReprint(opts);
+  return Array.isArray(result?.receipts) ? result.receipts : [];
+};
 
 const normalizeBarcodeItem = (b) => {
   const finalStockItemId = b?.stockItem?.id ?? b?.stockItemId ?? null;
@@ -143,7 +190,6 @@ const useBarcodeStore = create((set, get) => ({
 
   fetchPrintBatchAction: async (receiptIds = [], opts = {}) => {
     const ids = Array.isArray(receiptIds) ? receiptIds.map((x) => Number(x)).filter((x) => Number.isFinite(x)) : [];
-    const force = Boolean(opts?.force);
     const concurrency = Math.max(1, Number(opts?.concurrency || 3));
 
     set({ loading: true, error: null });

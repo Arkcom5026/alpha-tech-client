@@ -6,7 +6,7 @@ const requireFunction = (value, name) => {
 
 export class PurchaseReceiptItemSaveError extends Error {
   constructor(message, { stage, receiptId = null, createdReceipt = null, cause = null } = {}) {
-    super(message, cause ? { cause } : undefined);
+    super(message);
     this.name = 'PurchaseReceiptItemSaveError';
     this.stage = stage || 'UNKNOWN';
     this.receiptId = receiptId;

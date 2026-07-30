@@ -1,10 +1,6 @@
-// ✅ purchaseOrderReceiptApi.js — API ฝั่งใบรับสินค้า (ESM)
 import apiClient from '@/utils/apiClient';
-import { finalizeReceipt as finalizeBarcodeReceipt } from '@/features/barcode/finalization';
+import { finalizeReceipt as finalizeReceiptRuntime } from '../finalization';
 
-// ────────────────────────────────────────────────────────────────────────────────
-// Receipts (เดิม)
-// ────────────────────────────────────────────────────────────────────────────────
 export const getAllReceipts = async (params = {}) => {
   try {
     const { data } = await apiClient.get('/purchase-order-receipts', { params });
@@ -95,10 +91,8 @@ export const markReceiptAsCompleted = async (receiptId) => {
   }
 };
 
-// Compatibility boundary for barcode scan flow. Runtime ownership lives in
-// features/barcode/finalization.
 export const finalizeReceiptIfNeeded = async (receiptId) => {
-  const result = await finalizeBarcodeReceipt(receiptId);
+  const result = await finalizeReceiptRuntime(receiptId);
   return result?.sourceResponse;
 };
 
@@ -122,9 +116,6 @@ export const getReceiptSummaries = async (params = {}) => {
   }
 };
 
-// ────────────────────────────────────────────────────────────────────────────────
-// QUICK + Barcode + Commit (SIMPLE & STRUCTURED)
-// ────────────────────────────────────────────────────────────────────────────────
 export const createQuickReceipt = async (payload) => {
   try {
     const { data } = await apiClient.post('/quick-receipts', payload);
@@ -165,10 +156,6 @@ export const commitReceipt = async (receiptId) => {
   }
 };
 
-// ────────────────────────────────────────────────────────────────────────────────
-// Purchase Orders for Receipt (NEW)
-// NOTE: used by purchaseOrderReceiptStore
-// ────────────────────────────────────────────────────────────────────────────────
 export const getEligiblePurchaseOrders = async (params = {}) => {
   try {
     const { data } = await apiClient.get('/purchase-orders/eligible-for-receipt', { params });
@@ -189,12 +176,11 @@ export const getPurchaseOrderDetailById = async (poId) => {
   }
 };
 
-// Update received qty/price for a specific receipt item (server decides rules)
 export const updateReceiptItemReceived = async (receiptId, itemId, payload) => {
   try {
     const { data } = await apiClient.patch(
       `/purchase-order-receipts/${receiptId}/items/${itemId}`,
-      payload
+      payload,
     );
     return data;
   } catch (error) {
@@ -203,8 +189,6 @@ export const updateReceiptItemReceived = async (receiptId, itemId, payload) => {
   }
 };
 
-// Finalize receipt + (optionally) update PO status on server.
-// This broader purchase-order workflow contract remains owned by this module.
 export const finalizeReceipt = async (receiptId, payload = {}) => {
   try {
     const { data } = await apiClient.patch(`/purchase-order-receipts/${receiptId}/finalize`, payload);

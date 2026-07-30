@@ -150,7 +150,7 @@ Focused verification at commit `449dce9542ca5e201412c4a7242a03d1a8806d77`:
 - 7 tests passed
 - production build passed
 
-## Current Increment — Audit / Receipt Completion Foundation
+## Completed Increment — Audit / Receipt Completion Foundation
 
 New testable boundary:
 
@@ -159,7 +159,7 @@ New testable boundary:
 - `src/features/barcode/audit-completion/projections/barcodeAuditCompletionProjection.js`
 - `src/features/barcode/audit-completion/index.js`
 
-Focused contracts:
+Verified contracts:
 
 - receipt identity and audit detail options are normalized before transport
 - audit counts and detail rows retain original source evidence
@@ -168,4 +168,27 @@ Focused contracts:
 - healthy audit evidence allows idempotent finalization
 - generic transport messages are replaced with a workflow-specific UI fallback
 
-The legacy Barcode store, pages, and controllers remain runtime authority. Purchase Order Receipt remains the business owner of finalization. No route, UI behavior, endpoint, payload, completion policy, or production runtime ownership has been switched.
+Focused verification at commit `7bb9ff79190af8719c52694838413cf0284eba0b`:
+
+- 2 test files passed
+- 7 tests passed
+- production build passed
+
+## Current Increment — Runtime Cutover Planning
+
+Cutover authority document:
+
+- `docs/refactor/barcode-runtime-cutover-plan.md`
+
+The plan defines reversible runtime increments for:
+
+1. Generation action compatibility adapter
+2. Barcode receipt loading
+3. Receipt query page
+4. Print / reprint actions
+5. Scan / serial actions
+6. Audit / completion integration
+7. Page and controller import migration
+8. Legacy store retirement
+
+The first approved implementation target is the Generation action adapter because it has the smallest rollback surface. The legacy Barcode store, pages, and controllers remain runtime authority in this planning increment. No route, UI behavior, endpoint, payload, print layout, scan behavior, stock lifecycle rule, completion policy, or production runtime ownership has been switched.

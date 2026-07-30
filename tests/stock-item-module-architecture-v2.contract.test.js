@@ -17,10 +17,12 @@ const walk = (dir) => {
 };
 
 describe('StockItem module architecture v2 contract', () => {
-  it('retires the broad API facade while keeping the compatibility store on owned store slices and public boundaries', () => {
-    const store = read('src/features/stockItem/store/stockItemStore.js');
+  it('retires the broad API facade and compatibility store while preserving owned slice boundaries', () => {
     const receiveStoreSlice = read(
       'src/features/stockItem/receive/store/createStockItemReceiveSlice.js'
+    );
+    const receiveStore = read(
+      'src/features/stockItem/receive/store/useStockItemReceiveStore.js'
     );
     const searchStoreSlice = read(
       'src/features/stockItem/search/store/createStockItemSearchSlice.js'
@@ -33,23 +35,9 @@ describe('StockItem module architecture v2 contract', () => {
     );
 
     expect(exists('src/features/stockItem/api/stockItemApi.js')).toBe(false);
-    expect(store).toContain("from '../receive/store/createStockItemReceiveSlice'");
-    expect(store).toContain("from '../search/store/createStockItemSearchSlice'");
-    expect(store).toContain(
-      "from '../availability/store/createStockItemAvailabilitySlice'"
-    );
-    expect(store).toContain("from '../sold/store/createStockItemSoldSlice'");
-    expect(store).not.toContain('../api/stockItemApi');
+    expect(exists('src/features/stockItem/store/stockItemStore.js')).toBe(false);
 
-    expect(store).toContain('...createStockItemReceiveSlice(set, get)');
-    expect(store).toContain('...createStockItemSearchSlice(set, get)');
-    expect(store).toContain('...createStockItemAvailabilitySlice(set, get)');
-    expect(store).toContain('...createStockItemSoldSlice(set, get)');
-    expect(store).not.toContain('receiveSNAction: async');
-    expect(store).not.toContain('receiveAllPendingNoSNAction: async');
-    expect(store).not.toContain('searchStockItemAction: async');
-    expect(store).not.toContain('loadAvailableStockItemsAction: async');
-    expect(store).not.toContain('updateStockItemsToSoldAction: async');
+    expect(receiveStore).toContain('createStockItemReceiveSlice');
     expect(receiveStoreSlice).toContain('receiveSNAction: async');
     expect(receiveStoreSlice).toContain('receiveAllPendingNoSNAction: async');
     expect(searchStoreSlice).toContain('searchStockItemAction: async');
@@ -80,14 +68,11 @@ describe('StockItem module architecture v2 contract', () => {
     const searchStoreSlice = read(
       'src/features/stockItem/search/store/createStockItemSearchSlice.js'
     );
-    const store = read('src/features/stockItem/store/stockItemStore.js');
 
     expect(searchIndex).toContain('searchStockItem');
     expect(searchStoreSlice).toContain("from '..'");
     expect(searchStoreSlice).toContain('searchStockItemAction: async');
     expect(searchStoreSlice).toContain('searchStockItem(query)');
-    expect(store).toContain('...createStockItemSearchSlice(set, get)');
-    expect(store).not.toContain('searchStockItemAction: async');
   });
 
   it('locks availability action ownership to the StockItem availability slice', () => {
@@ -95,14 +80,11 @@ describe('StockItem module architecture v2 contract', () => {
     const availabilityStoreSlice = read(
       'src/features/stockItem/availability/store/createStockItemAvailabilitySlice.js'
     );
-    const store = read('src/features/stockItem/store/stockItemStore.js');
 
     expect(availabilityIndex).toContain('loadAvailableStockItems');
     expect(availabilityStoreSlice).toContain("from '..'");
     expect(availabilityStoreSlice).toContain('loadAvailableStockItemsAction: async');
     expect(availabilityStoreSlice).toContain('loadAvailableStockItems(productId)');
-    expect(store).toContain('...createStockItemAvailabilitySlice(set, get)');
-    expect(store).not.toContain('loadAvailableStockItemsAction: async');
   });
 
   it('locks sold action ownership to the StockItem sold slice', () => {
@@ -110,14 +92,11 @@ describe('StockItem module architecture v2 contract', () => {
     const soldStoreSlice = read(
       'src/features/stockItem/sold/store/createStockItemSoldSlice.js'
     );
-    const store = read('src/features/stockItem/store/stockItemStore.js');
 
     expect(soldIndex).toContain('markStockItemsAsSold');
     expect(soldStoreSlice).toContain("from '..'");
     expect(soldStoreSlice).toContain('updateStockItemsToSoldAction: async');
     expect(soldStoreSlice).toContain('markStockItemsAsSold(stockItemIds)');
-    expect(store).toContain('...createStockItemSoldSlice(set, get)');
-    expect(store).not.toContain('updateStockItemsToSoldAction: async');
   });
 
   it('prevents Barcode and PurchaseOrderReceipt from owning StockItem transport or importing StockItem internals', () => {
@@ -145,7 +124,7 @@ describe('StockItem module architecture v2 contract', () => {
     expect(barcodeScanService).toContain("from '@/features/stockItem/receive'");
   });
 
-  it('documents the receive store boundary cutover and completed facade retirement', () => {
+  it('documents the receive store boundary cutover and compatibility store retirement', () => {
     const page = read('src/features/stockItem/pages/ScanBarcodeListPage.jsx');
     const audit = read('docs/missions/stock-item-consumer-and-ownership-audit.md');
 

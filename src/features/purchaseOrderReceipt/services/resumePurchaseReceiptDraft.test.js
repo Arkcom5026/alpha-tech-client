@@ -22,29 +22,18 @@ describe('resumePurchaseReceiptDraft', () => {
   });
 
   it('resumes a known open receipt draft', async () => {
-    const getReceipt = vi.fn().mockResolvedValue({
-      id: 91,
-      purchaseOrderId: 644,
-      statusReceipt: 'PENDING',
-    });
+    const getReceipt = vi.fn().mockResolvedValue({ id: 91, purchaseOrderId: 644, statusReceipt: 'PENDING' });
 
     await expect(resumePurchaseReceiptDraft({
       purchaseOrderId: 644,
       receiptId: 91,
       getReceipt,
-    })).resolves.toMatchObject({
-      resumed: true,
-      receiptId: 91,
-      reason: 'RESUMED_KNOWN_DRAFT',
-    });
+    })).resolves.toMatchObject({ resumed: true, receiptId: 91, reason: 'RESUMED_KNOWN_DRAFT' });
     expect(getReceipt).toHaveBeenCalledWith(91);
   });
 
   it('recovers the receipt identity preserved by an item-save failure', async () => {
-    const previousFailure = {
-      stage: 'SAVE_ITEM',
-      receiptId: 92,
-    };
+    const previousFailure = { stage: 'SAVE_ITEM', receiptId: 92 };
     const getReceipt = vi.fn().mockResolvedValue({
       id: 92,
       purchaseOrder: { id: 644 },
@@ -63,11 +52,7 @@ describe('resumePurchaseReceiptDraft', () => {
   });
 
   it('rejects a receipt that belongs to another purchase order', async () => {
-    const getReceipt = vi.fn().mockResolvedValue({
-      id: 93,
-      purchaseOrderId: 999,
-      statusReceipt: 'PENDING',
-    });
+    const getReceipt = vi.fn().mockResolvedValue({ id: 93, purchaseOrderId: 999, statusReceipt: 'PENDING' });
 
     await expect(resumePurchaseReceiptDraft({
       purchaseOrderId: 644,
@@ -81,29 +66,40 @@ describe('resumePurchaseReceiptDraft', () => {
     });
   });
 
-  it('rejects completed drafts and preserves lookup failure context', async () => {
-    const completedLookup = vi.fn().mockResolvedValue({
-      id: 94,
-      purchaseOrderId: 644,
-      statusReceipt: 'COMPLETED',
-    });
+  it('rejects completed drafts', async () => {
+    const getReceipt = vi.fn().mockResolvedValue({ id: 94, purchaseOrderId: 644, statusReceipt: 'COMPLETED' });
 
     await expect(resumePurchaseReceiptDraft({
       purchaseOrderId: 644,
       receiptId: 94,
-      getReceipt: completedLookup,
-    })).rejects.toBeInstanceOf(PurchaseReceiptDraftResumeError);
+      getReceipt,
+    })).rejects.toMatchObject({
+      name: 'PurchaseReceiptDraftResumeError',
+      code: 'RECEIPT_NOT_RESUMABLE',
+      receiptId: 94,
+      purchaseOrderId: 644,
+    });
+  });
 
+  it('preserves receipt lookup failure context', async () => {
     const failure = new Error('network failed');
-    const failedLookup = vi.fn().mockRejectedValue(failure);
+    const getReceipt = vi.fn().mockRejectedValue(failure);
+
     await expect(resumePurchaseReceiptDraft({
       purchaseOrderId: 644,
       receiptId: 95,
-      getReceipt: failedLookup,
+      getReceipt,
     })).rejects.toMatchObject({
       code: 'RECEIPT_LOOKUP_FAILED',
       receiptId: 95,
       cause: failure,
     });
+  });
+
+  it('requires a purchase-order identity before attempting resume', async () => {
+    await expect(resumePurchaseReceiptDraft({
+      receiptId: 91,
+      getReceipt: vi.fn(),
+    })).rejects.toBeInstanceOf(PurchaseReceiptDraftResumeError);
   });
 });

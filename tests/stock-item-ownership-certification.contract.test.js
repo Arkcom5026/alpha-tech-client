@@ -9,24 +9,30 @@ describe('stock item ownership certification contract', () => {
   it('keeps receive-into-stock runtime owned by StockItem', () => {
     const receiveIndex = read('src/features/stockItem/receive/index.js');
     const receiveService = read('src/features/stockItem/receive/services/receiveScannedStockItem.js');
-    const stockItemApi = read('src/features/stockItem/api/stockItemApi.js');
+    const receiveApi = read('src/features/stockItem/receive/api/receiveStockItemApi.js');
     const stockItemStore = read('src/features/stockItem/store/stockItemStore.js');
 
     expect(receiveIndex).toContain('receiveScannedStockItem');
     expect(receiveService).toContain('receiveStockItemApi');
-    expect(stockItemApi).toContain('/stock-items/receive-sn');
-    expect(stockItemApi).toContain('/stock-items/receive-all-no-sn');
+    expect(receiveApi).toContain('/stock-items/receive-sn');
+    expect(receiveApi).toContain('/stock-items/receive-all-no-sn');
+    expect(stockItemStore).toContain("from '../receive'");
     expect(stockItemStore).toContain('receiveSNAction');
     expect(stockItemStore).toContain('receiveAllPendingNoSNAction');
   });
 
-  it('keeps ready-for-sale queries and stock lifecycle transitions in StockItem', () => {
-    const stockItemApi = read('src/features/stockItem/api/stockItemApi.js');
+  it('keeps ready-for-sale queries and stock lifecycle transitions in StockItem slices', () => {
+    const searchApi = read('src/features/stockItem/search/api/searchStockItemApi.js');
+    const availabilityApi = read('src/features/stockItem/availability/api/getAvailableStockItemsApi.js');
+    const soldApi = read('src/features/stockItem/sold/api/markStockItemsAsSoldApi.js');
     const stockItemStore = read('src/features/stockItem/store/stockItemStore.js');
 
-    expect(stockItemApi).toContain('/stock-items/search');
-    expect(stockItemApi).toContain('/stock-items/available');
-    expect(stockItemApi).toContain('/stock-items/mark-sold');
+    expect(searchApi).toContain('/stock-items/search');
+    expect(availabilityApi).toContain('/stock-items/available');
+    expect(soldApi).toContain('/stock-items/mark-sold');
+    expect(stockItemStore).toContain("from '../search'");
+    expect(stockItemStore).toContain("from '../availability'");
+    expect(stockItemStore).toContain("from '../sold'");
     expect(stockItemStore).toContain('searchStockItemAction');
     expect(stockItemStore).toContain('loadAvailableStockItemsAction');
     expect(stockItemStore).toContain('updateStockItemsToSoldAction');

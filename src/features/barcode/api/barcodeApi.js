@@ -4,6 +4,7 @@
 
 import apiClient from '@/utils/apiClient';
 import { generateReceiptBarcodes } from '../generation';
+import { loadReceiptBarcodes } from '../receipt-detail';
 
 // ---------------------------------------------
 // Generate barcodes that are missing for a receipt
@@ -16,20 +17,12 @@ export const generateMissingBarcodes = async (receiptId, options = {}) => {
 
 // ---------------------------------------------
 // Fetch barcodes for a receipt (with optional filters)
-// opts: { kind?: 'SN'|'LOT', onlyUnscanned?: boolean }
+// Legacy compatibility boundary now delegates to the receipt-detail slice.
+// opts: { kind?: 'SN'|'LOT', onlyUnscanned?: boolean, onlyUnactivated?: boolean }
 // ---------------------------------------------
 export const getBarcodesByReceiptId = async (receiptId, opts = {}) => {
-  if (!receiptId) throw new Error('Missing receiptId');
-  try {
-    const params = {};
-    if (opts.kind) params.kind = String(opts.kind).toUpperCase();
-    if (opts.onlyUnscanned) params.onlyUnscanned = 1;
-    const res = await apiClient.get(`/barcodes/by-receipt/${receiptId}`, { params });
-    return res.data;
-  } catch (err) {
-    console.error('❌ getBarcodesByReceiptId error:', err);
-    throw err;
-  }
+  const result = await loadReceiptBarcodes({ receiptId, ...opts });
+  return result?.sourceResponse ?? { barcodes: result?.barcodes ?? [] };
 };
 
 // ---------------------------------------------

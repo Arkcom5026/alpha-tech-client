@@ -4,6 +4,7 @@ import path from 'node:path';
 
 const root = process.cwd();
 const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
+const exists = (file) => fs.existsSync(path.join(root, file));
 
 const walk = (dir) => {
   const absolute = path.join(root, dir);
@@ -16,15 +17,15 @@ const walk = (dir) => {
 };
 
 describe('StockItem module architecture v2 contract', () => {
-  it('keeps the current broad API and store identified as compatibility surfaces', () => {
-    const api = read('src/features/stockItem/api/stockItemApi.js');
+  it('retires the broad API facade while keeping the compatibility store on public slice boundaries', () => {
     const store = read('src/features/stockItem/store/stockItemStore.js');
 
-    expect(api).toContain('/stock-items/receive-sn');
-    expect(api).toContain('/stock-items/receive-all-no-sn');
-    expect(api).toContain('/stock-items/search');
-    expect(api).toContain('/stock-items/available');
-    expect(api).toContain('/stock-items/mark-sold');
+    expect(exists('src/features/stockItem/api/stockItemApi.js')).toBe(false);
+    expect(store).toContain("from '../receive'");
+    expect(store).toContain("from '../search'");
+    expect(store).toContain("from '../availability'");
+    expect(store).toContain("from '../sold'");
+    expect(store).not.toContain('../api/stockItemApi');
 
     expect(store).toContain('receiveSNAction');
     expect(store).toContain('receiveAllPendingNoSNAction');
@@ -70,7 +71,7 @@ describe('StockItem module architecture v2 contract', () => {
     expect(barcodeScanService).toContain("from '@/features/stockItem/receive'");
   });
 
-  it('documents the current receive workflow composition boundary and the next cutover target', () => {
+  it('documents the current receive workflow composition boundary and completed facade retirement', () => {
     const page = read('src/features/stockItem/pages/ScanBarcodeListPage.jsx');
     const audit = read('docs/missions/stock-item-consumer-and-ownership-audit.md');
 
@@ -79,6 +80,5 @@ describe('StockItem module architecture v2 contract', () => {
     expect(page).toContain('receiveAllPendingNoSNAction');
 
     expect(audit).toContain('StockItem owns receive-into-inventory mutations');
-    expect(audit).toContain('The broad root facade/store may be retired only after all consumers are proven migrated');
   });
 });

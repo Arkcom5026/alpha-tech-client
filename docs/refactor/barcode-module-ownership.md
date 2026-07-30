@@ -78,7 +78,7 @@ Focused verification at commit `fdf73d8d651257236205ebc423627c8eec9eb3e4`:
 - 6 tests passed
 - production build passed
 
-## Current Increment — Receipt Barcode Query Foundation
+## Completed Increment — Receipt Barcode Query Foundation
 
 New testable boundary:
 
@@ -87,7 +87,7 @@ New testable boundary:
 - `src/features/barcode/receipt-query/projections/receiptBarcodeQueryProjection.js`
 - `src/features/barcode/receipt-query/index.js`
 
-Focused contracts:
+Verified contracts:
 
 - UNPRINTED and REPRINT modes project deterministic `printed` filters
 - code, supplier ID, and supplier keyword filters are normalized
@@ -96,4 +96,28 @@ Focused contracts:
 - generic Axios status text is replaced with workflow-specific UI fallback
 - original API failures remain available to the caller for recovery decisions
 
-The legacy Purchase Order Receipt store and Barcode page remain runtime authority. No route, UI behavior, endpoint, payload, or production runtime ownership has been switched.
+Focused verification at commit `f0dc2f3e1876f70362f6aada14bd9b8ec8b66895`:
+
+- 2 test files passed
+- 5 tests passed
+- production build passed
+
+## Current Increment — Print / Reprint Foundation
+
+New testable boundary:
+
+- `src/features/barcode/print-reprint/api/barcodePrintApi.js`
+- `src/features/barcode/print-reprint/services/barcodePrintService.js`
+- `src/features/barcode/print-reprint/projections/barcodePrintProjection.js`
+- `src/features/barcode/print-reprint/index.js`
+
+Focused contracts:
+
+- receipt identity is normalized before print, reprint, and mark-printed transport
+- reprint search mode and criteria are normalized deterministically
+- empty reprint searches do not call the server
+- barcode print rows preserve original source evidence
+- LOT suggested label counts expand deterministically
+- generic Axios status text is replaced by a workflow-specific fallback
+
+The legacy Barcode store, pages, and controllers remain runtime authority. No route, UI behavior, endpoint, payload, print layout, or production runtime ownership has been switched.

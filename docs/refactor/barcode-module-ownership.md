@@ -55,7 +55,7 @@ Compatibility shims retained:
 
 Focused production build evidence: PASS at commit `c5195d853fb8949839bec4bfaa4438c884e3582e`.
 
-## Current Increment — Generation Foundation
+## Completed Increment — Generation Foundation
 
 New testable boundary:
 
@@ -64,7 +64,7 @@ New testable boundary:
 - `src/features/barcode/generation/projections/barcodeGenerationProjection.js`
 - `src/features/barcode/generation/index.js`
 
-Focused contracts:
+Verified contracts:
 
 - receipt identity is normalized and validated before transport
 - generation options are deterministic
@@ -72,4 +72,28 @@ Focused contracts:
 - generic Axios status text is not exposed as a user-facing error
 - API failures remain available to the caller for recovery decisions
 
-The legacy Zustand store remains runtime authority. No route, API payload, print behavior, or production runtime ownership has been switched in this increment.
+Focused verification at commit `fdf73d8d651257236205ebc423627c8eec9eb3e4`:
+
+- 2 test files passed
+- 6 tests passed
+- production build passed
+
+## Current Increment — Receipt Barcode Query Foundation
+
+New testable boundary:
+
+- `src/features/barcode/receipt-query/api/getReceiptBarcodeSummariesApi.js`
+- `src/features/barcode/receipt-query/services/queryReceiptBarcodes.js`
+- `src/features/barcode/receipt-query/projections/receiptBarcodeQueryProjection.js`
+- `src/features/barcode/receipt-query/index.js`
+
+Focused contracts:
+
+- UNPRINTED and REPRINT modes project deterministic `printed` filters
+- code, supplier ID, and supplier keyword filters are normalized
+- supplier ID takes precedence over supplier text
+- result rows retain original receipt and response evidence
+- generic Axios status text is replaced with workflow-specific UI fallback
+- original API failures remain available to the caller for recovery decisions
+
+The legacy Purchase Order Receipt store and Barcode page remain runtime authority. No route, UI behavior, endpoint, payload, or production runtime ownership has been switched.

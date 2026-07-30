@@ -66,6 +66,18 @@ The generic receipt-entry helper was therefore removed from `purchaseOrderApi.js
 - Supplier, product-type, brand, and product queries created for Purchase Order creation remain owned by Purchase Order even though they read other domains.
 - Purchase Order remains the upstream owner of ordering and purchase-order lifecycle only.
 
+The complete Purchase Order surface was then reviewed across API, store, hooks, components, schema, mappers, policies, projections, controllers, and pages. No downstream implementation import from PurchaseOrderReceipt, Barcode, or StockItem was found in the certified runtime surface.
+
+An unused `getPurchaseOrdersBySupplier` API helper was removed because no Purchase Order workflow consumed it. The ownership contract now also prevents downstream module imports/endpoints and prevents that unused helper from returning without an explicit business owner.
+
+Repository conclusion for Purchase Order:
+
+- Business ownership is self-contained.
+- Cross-domain reference data remains locally owned because it exists for Purchase Order creation/editing.
+- Receipt-entry operations are excluded.
+- Barcode and StockItem runtime operations are excluded.
+- Runtime and production-build certification remain pending local execution evidence.
+
 ## Increment Order
 
 1. Establish this authority map and audit all four module surfaces.

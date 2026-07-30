@@ -1,5 +1,4 @@
 export {
-  receiveScannedStockItemApi,
   updateBarcodeSerialNumberApi,
   commitReceiptScansApi,
 } from './api/barcodeScanApi';

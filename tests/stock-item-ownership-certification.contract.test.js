@@ -10,12 +10,14 @@ describe('stock item ownership certification contract', () => {
     const receiveIndex = read('src/features/stockItem/receive/index.js');
     const receiveService = read('src/features/stockItem/receive/services/receiveScannedStockItem.js');
     const receiveApi = read('src/features/stockItem/receive/api/receiveStockItemApi.js');
+    const receiveAllApi = read('src/features/stockItem/receive/api/receiveAllPendingStockItemsApi.js');
     const stockItemStore = read('src/features/stockItem/store/stockItemStore.js');
 
     expect(receiveIndex).toContain('receiveScannedStockItem');
+    expect(receiveIndex).toContain('receiveAllPendingStockItems');
     expect(receiveService).toContain('receiveStockItemApi');
     expect(receiveApi).toContain('/stock-items/receive-sn');
-    expect(receiveApi).toContain('/stock-items/receive-all-no-sn');
+    expect(receiveAllApi).toContain('/stock-items/receive-all-no-sn');
     expect(stockItemStore).toContain("from '../receive'");
     expect(stockItemStore).toContain('receiveSNAction');
     expect(stockItemStore).toContain('receiveAllPendingNoSNAction');

@@ -24,7 +24,17 @@ describe('finalizeReceiptApi', () => {
 
   it('propagates API failures', async () => {
     const error = new Error('finalization failed');
-    patch.mockRejectedValue(error);
-    await expect(finalizeReceiptApi({ receiptId: 'receipt-1' })).rejects.toBe(error);
+    patch.mockImplementationOnce(async () => {
+      throw error;
+    });
+
+    let received;
+    try {
+      await finalizeReceiptApi({ receiptId: 'receipt-1' });
+    } catch (caught) {
+      received = caught;
+    }
+
+    expect(received).toBe(error);
   });
 });

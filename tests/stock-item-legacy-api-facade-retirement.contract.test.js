@@ -11,6 +11,13 @@ const retiredFacadePath = path.join(
   'api',
   'stockItemApi.js'
 );
+const retiredStorePath = path.join(
+  sourceRoot,
+  'features',
+  'stockItem',
+  'store',
+  'stockItemStore.js'
+);
 
 const walkFiles = (directory) => {
   if (!fs.existsSync(directory)) return [];
@@ -22,11 +29,12 @@ const walkFiles = (directory) => {
 };
 
 describe('StockItem legacy API facade retirement contract', () => {
-  it('removes the retired broad StockItem API facade', () => {
+  it('removes the retired broad StockItem API facade and compatibility store', () => {
     expect(fs.existsSync(retiredFacadePath)).toBe(false);
+    expect(fs.existsSync(retiredStorePath)).toBe(false);
   });
 
-  it('prevents source consumers from importing the retired facade path', () => {
+  it('prevents source consumers from importing retired StockItem facade paths', () => {
     const sourceFiles = walkFiles(sourceRoot).filter((filePath) => /\.(js|jsx|ts|tsx)$/.test(filePath));
     const violations = sourceFiles
       .map((filePath) => ({
@@ -34,30 +42,27 @@ describe('StockItem legacy API facade retirement contract', () => {
         content: fs.readFileSync(filePath, 'utf8'),
       }))
       .filter(({ content }) =>
-        /(?:from\s+['"][^'"]*stockItem\/api\/stockItemApi['"]|import\s*\(\s*['"][^'"]*stockItem\/api\/stockItemApi['"]\s*\))/.test(content)
+        /(?:from\s+['"][^'"]*stockItem\/(?:api\/stockItemApi|store\/stockItemStore)['"]|import\s*\(\s*['"][^'"]*stockItem\/(?:api\/stockItemApi|store\/stockItemStore)['"]\s*\))/.test(content)
       )
       .map(({ filePath }) => path.relative(projectRoot, filePath));
 
     expect(violations).toEqual([]);
   });
 
-  it('keeps runtime consumers on owned StockItem slice boundaries', () => {
-    const storePath = path.join(sourceRoot, 'features', 'stockItem', 'store', 'stockItemStore.js');
-    const storeSource = fs.readFileSync(storePath, 'utf8');
-
-    expect(storeSource).toContain("from '../receive/store/createStockItemReceiveSlice'");
-    expect(storeSource).toContain('createStockItemReceiveSlice');
-    expect(storeSource).toContain("from '../search/store/createStockItemSearchSlice'");
-    expect(storeSource).toContain('createStockItemSearchSlice');
-    expect(storeSource).not.toContain('searchStockItemAction: async');
-    expect(storeSource).toContain(
-      "from '../availability/store/createStockItemAvailabilitySlice'"
+  it('keeps runtime consumers on owned StockItem boundaries', () => {
+    const receiveStorePath = path.join(
+      sourceRoot,
+      'features',
+      'stockItem',
+      'receive',
+      'store',
+      'useStockItemReceiveStore.js'
     );
-    expect(storeSource).toContain('createStockItemAvailabilitySlice');
-    expect(storeSource).not.toContain('loadAvailableStockItemsAction: async');
-    expect(storeSource).toContain("from '../sold/store/createStockItemSoldSlice'");
-    expect(storeSource).toContain('createStockItemSoldSlice');
-    expect(storeSource).not.toContain('updateStockItemsToSoldAction: async');
-    expect(storeSource).not.toContain('../api/stockItemApi');
+    const receiveStoreSource = fs.readFileSync(receiveStorePath, 'utf8');
+
+    expect(receiveStoreSource).toContain("from './createStockItemReceiveSlice'");
+    expect(receiveStoreSource).toContain('createStockItemReceiveSlice');
+    expect(receiveStoreSource).not.toContain('../api/stockItemApi');
+    expect(receiveStoreSource).not.toContain('../../store/stockItemStore');
   });
 });

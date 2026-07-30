@@ -4,6 +4,17 @@ const requireFunction = (value, name) => {
   }
 };
 
+export class PurchaseReceiptItemSaveError extends Error {
+  constructor(message, { stage, receiptId = null, createdReceipt = null, cause = null } = {}) {
+    super(message, cause ? { cause } : undefined);
+    this.name = 'PurchaseReceiptItemSaveError';
+    this.stage = stage || 'UNKNOWN';
+    this.receiptId = receiptId;
+    this.createdReceipt = createdReceipt;
+    this.cause = cause;
+  }
+}
+
 export const savePurchaseReceiptItem = async ({
   receiptId,
   purchaseOrderId,
@@ -20,30 +31,54 @@ export const savePurchaseReceiptItem = async ({
   const costPrice = Number(item?.costPrice);
 
   if (!purchaseOrderItemId || !Number.isFinite(quantity) || quantity <= 0 || !Number.isFinite(costPrice) || costPrice < 0) {
-    throw new Error('ข้อมูลรายการรับสินค้าไม่ถูกต้อง');
+    throw new PurchaseReceiptItemSaveError('ข้อมูลรายการรับสินค้าไม่ถูกต้อง', {
+      stage: 'VALIDATION',
+      receiptId: Number(receiptId) || null,
+    });
   }
 
   let activeReceiptId = Number(receiptId) || null;
   let createdReceipt = null;
 
   if (!activeReceiptId) {
-    createdReceipt = await createReceipt({
-      purchaseOrderId: Number(purchaseOrderId),
-      ...(receiptHeader || {}),
-    });
+    try {
+      createdReceipt = await createReceipt({
+        purchaseOrderId: Number(purchaseOrderId),
+        ...(receiptHeader || {}),
+      });
+    } catch (error) {
+      throw new PurchaseReceiptItemSaveError(error?.message || 'สร้างหัวใบรับสินค้าไม่สำเร็จ', {
+        stage: 'CREATE_RECEIPT',
+        cause: error,
+      });
+    }
+
     activeReceiptId = Number(createdReceipt?.id);
     if (!activeReceiptId) {
-      throw new Error('createReceipt returned empty id');
+      throw new PurchaseReceiptItemSaveError('createReceipt returned empty id', {
+        stage: 'CREATE_RECEIPT',
+        createdReceipt,
+      });
     }
   }
 
-  const savedItem = await addReceiptItem({
-    purchaseOrderReceiptId: activeReceiptId,
-    purchaseOrderItemId,
-    quantity,
-    costPrice,
-    forceAccept: Boolean(item?.forceAccept),
-  });
+  let savedItem;
+  try {
+    savedItem = await addReceiptItem({
+      purchaseOrderReceiptId: activeReceiptId,
+      purchaseOrderItemId,
+      quantity,
+      costPrice,
+      forceAccept: Boolean(item?.forceAccept),
+    });
+  } catch (error) {
+    throw new PurchaseReceiptItemSaveError(error?.message || 'บันทึกรายการรับสินค้าไม่สำเร็จ', {
+      stage: 'SAVE_ITEM',
+      receiptId: activeReceiptId,
+      createdReceipt,
+      cause: error,
+    });
+  }
 
   return {
     receiptId: activeReceiptId,

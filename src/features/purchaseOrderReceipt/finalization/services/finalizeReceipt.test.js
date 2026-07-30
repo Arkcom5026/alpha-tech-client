@@ -27,7 +27,17 @@ describe('finalizeReceipt', () => {
 
   it('propagates backend and network failures', async () => {
     const error = new TypeError('Network Error');
-    finalizeReceiptApi.mockRejectedValue(error);
-    await expect(finalizeReceipt('receipt-1')).rejects.toBe(error);
+    finalizeReceiptApi.mockImplementationOnce(async () => {
+      throw error;
+    });
+
+    let received;
+    try {
+      await finalizeReceipt('receipt-1');
+    } catch (caught) {
+      received = caught;
+    }
+
+    expect(received).toBe(error);
   });
 });

@@ -17,13 +17,20 @@ describe('stock item search runtime ownership contract', () => {
     expect(searchIndex).toContain('searchStockItem');
   });
 
-  it('routes the compatibility store through the public search boundary', () => {
+  it('routes the compatibility store through the owned search store slice', () => {
     const stockItemStore = read('src/features/stockItem/store/stockItemStore.js');
+    const searchStoreSlice = read(
+      'src/features/stockItem/search/store/createStockItemSearchSlice.js'
+    );
 
-    expect(stockItemStore).toContain("from '../search'");
-    expect(stockItemStore).toContain('searchStockItemAction');
-    expect(stockItemStore).not.toContain("searchStockItem,\n  getAvailableStockItemsByProduct");
+    expect(stockItemStore).toContain("from '../search/store/createStockItemSearchSlice'");
+    expect(stockItemStore).toContain('...createStockItemSearchSlice(set, get)');
+    expect(stockItemStore).not.toContain('searchStockItemAction: async');
     expect(stockItemStore).not.toContain('/stock-items/search');
+
+    expect(searchStoreSlice).toContain("from '..'");
+    expect(searchStoreSlice).toContain('searchStockItemAction: async');
+    expect(searchStoreSlice).toContain('searchStockItem(query)');
   });
 
   it('preserves not-sellable and not-found query semantics in the slice', () => {

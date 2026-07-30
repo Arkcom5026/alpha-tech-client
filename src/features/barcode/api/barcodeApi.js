@@ -17,6 +17,7 @@ import {
   reprintReceiptBarcodes,
   searchReceiptsForReprint,
 } from '../print-reprint';
+import { commitReceiptScans } from '../receipt-completion';
 
 export const generateMissingBarcodes = async (receiptId, options = {}) => {
   const result = await generateReceiptBarcodes({ receiptId, options });
@@ -97,40 +98,14 @@ export const finalizeReceiptIfNeeded = async (receiptId) => {
   }
 };
 
+// Legacy compatibility boundary now delegates to the receipt-completion slice.
 export const commitScans = async (receiptId, items) => {
-  if (!receiptId) throw new Error('Missing receiptId');
+  const result = await commitReceiptScans(receiptId, items);
 
-  const payload = Array.isArray(items)
-    ? items
-        .map((it) => {
-          const barcode = String(it?.barcode ?? '').trim();
-          const sn = String(it?.sn ?? it?.serialNumber ?? '').trim();
-          if (!barcode) return null;
-          return sn ? { barcode, sn } : { barcode };
-        })
-        .filter(Boolean)
-    : [];
-
-  try {
-    const res = await apiClient.post(`/receipts/${receiptId}/commit-scans`, { items: payload });
-    const data = res?.data || {};
-    return {
-      ok: Boolean(data.ok),
-      committed: Array.isArray(data.committed) ? data.committed : [],
-      errors: Array.isArray(data.errors) ? data.errors : [],
-      message: data.message,
-    };
-  } catch (err) {
-    console.error('❌ commitScans error:', err);
-    if (err?.response?.data) {
-      const data = err.response.data;
-      return {
-        ok: Boolean(data.ok),
-        committed: Array.isArray(data.committed) ? data.committed : [],
-        errors: Array.isArray(data.errors) ? data.errors : [],
-        message: data.message || 'Server error',
-      };
-    }
-    return { ok: false, committed: [], errors: [], message: 'Network error' };
-  }
+  return {
+    ok: Boolean(result?.ok),
+    committed: Array.isArray(result?.committed) ? result.committed : [],
+    errors: Array.isArray(result?.errors) ? result.errors : [],
+    message: result?.message,
+  };
 };

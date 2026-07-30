@@ -2,7 +2,6 @@
 // ES Module API client for barcode & receipt operations
 // All requests go through utils/apiClient (axios instance)
 
-import apiClient from '@/utils/apiClient';
 import { generateReceiptBarcodes } from '../generation';
 import { loadReceiptBarcodes } from '../receipt-detail';
 import { listReceiptsWithBarcodes } from '../receipt-listing';
@@ -19,6 +18,7 @@ import {
 } from '../print-reprint';
 import { commitReceiptScans } from '../receipt-completion';
 import { auditReceiptBarcodes as auditReceiptBarcodesSlice } from '../audit';
+import { finalizeReceipt } from '../finalization';
 
 export const generateMissingBarcodes = async (receiptId, options = {}) => {
   const result = await generateReceiptBarcodes({ receiptId, options });
@@ -81,15 +81,10 @@ export const searchReprintReceipts = async (opts = {}) => {
   return Array.isArray(result?.receipts) ? result.receipts : [];
 };
 
+// Legacy compatibility boundary now delegates to the finalization slice.
 export const finalizeReceiptIfNeeded = async (receiptId) => {
-  if (!receiptId) throw new Error('Missing receiptId');
-  try {
-    const res = await apiClient.patch(`/purchase-order-receipts/${receiptId}/finalize`);
-    return res.data;
-  } catch (err) {
-    console.error('❌ finalizeReceiptIfNeeded error:', err);
-    throw err;
-  }
+  const result = await finalizeReceipt(receiptId);
+  return result?.sourceResponse;
 };
 
 // Legacy compatibility boundary now delegates to the receipt-completion slice.

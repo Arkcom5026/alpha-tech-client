@@ -4,7 +4,7 @@
 import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import useBarcodeStore from '@/features/barcode/store/barcodeStore';
-import useStockItemStore from '@/features/stockItem/store/stockItemStore';
+import useStockItemReceiveStore from '@/features/stockItem/receive/store/useStockItemReceiveStore';
 import { ArrowLeft, Box, CheckCircle2, AlertCircle, HelpCircle, ShieldCheck, CreditCard, Barcode, Search } from 'lucide-react';
 
 const SECRET_RECEIVE_ALL_CODE = 'all';
@@ -57,7 +57,7 @@ const ScanBarcodeListPage = () => {
   const {
     receiveSNAction,
     receiveAllPendingNoSNAction,
-  } = useStockItemStore();
+  } = useStockItemReceiveStore();
 
   const isScanned = (b) => {
     const snScanned = b?.stockItemId != null;
@@ -315,58 +315,73 @@ const ScanBarcodeListPage = () => {
       receiveAllPendingNoSNAction({ receiptId })
         .then(async () => {
           await loadBarcodesAction(receiptId);
-          setPageMessage({ type: 'success', text: '✅ รับสินค้าค้างทั้งหมดเรียบร้อยแล้ว' });
+          setPageMessage({ type: 'success', text: '✅ รับสินค้าค้างรับทั้งหมดสำเร็จ' });
           playBeep();
         })
         .catch((err) => {
-          setPageMessage({ type: 'error', text: `❌ รับสินค้าค้างทั้งหมดไม่สำเร็จ: ${err?.message || 'เกิดข้อผิดพลาด'}` });
+          setPageMessage({ type: 'error', text: `❌ รับสินค้าค้างรับทั้งหมดไม่สำเร็จ: ${err?.message || 'เกิดข้อผิดพลาด'}` });
           playErrorBeep();
         })
         .finally(() => {
           setSubmitting(false);
           setBarcodeInput('');
+          setSnInput('');
           focusBarcodeInput();
         });
       return;
     }
 
-    if (enqueueScan({ barcode, serialNumber, keepSN })) {
-      processQueue();
-    }
+    if (!enqueueScan({ barcode, serialNumber, keepSN })) return;
+    processQueue();
   }, [barcodeInput, currentExpectedPlaceholder, enqueueScan, focusBarcodeInput, keepSN, loadBarcodesAction, processQueue, receiptId, receiveAllPendingNoSNAction, secretAllArmedAt, snInput]);
 
-  useEffect(() => {
-    if (!keepSN) return;
-    const serialNumber = String(snInput || '').trim();
-    if (!serialNumber) return;
+  const handleBarcodeChange = (event) => {
+    const value = event.target.value;
+    if (!inputStartTime && value) setInputStartTime(Date.now());
+    setBarcodeInput(value);
+  };
 
-    if (autoSubmitTimeoutRef.current) clearTimeout(autoSubmitTimeoutRef.current);
-    autoSubmitTimeoutRef.current = setTimeout(() => {
+  const handleBarcodeKeyDown = (event) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
       submitCurrentInput();
-    }, 180);
+    }
+  };
 
-    return () => {
-      if (autoSubmitTimeoutRef.current) clearTimeout(autoSubmitTimeoutRef.current);
-    };
-  }, [keepSN, snInput, submitCurrentInput]);
+  const handleSnKeyDown = (event) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      submitCurrentInput();
+    }
+  };
 
-  const handleEditSN = async () => {
-    if (!editingBarcodeReceiptId) return;
-    const serialNumber = String(editingSN || '').trim();
-    if (!serialNumber) {
-      setPageMessage({ type: 'error', text: 'กรุณาระบุ SN ใหม่' });
+  const handleEditSN = (row) => {
+    setEditingBarcodeReceiptId(row.id);
+    setEditingSN(row.serialNumber || '');
+  };
+
+  const handleCancelEditSN = () => {
+    setEditingBarcodeReceiptId(null);
+    setEditingSN('');
+  };
+
+  const handleSaveEditSN = async (row) => {
+    const nextSN = String(editingSN || '').trim();
+    if (!nextSN) {
+      setPageMessage({ type: 'error', text: 'กรุณาระบุ SN' });
       return;
     }
 
     setEditingSubmitting(true);
     try {
-      await updateReceivedSNAction({ barcodeReceiptId: editingBarcodeReceiptId, serialNumber, receiptId });
+      await updateReceivedSNAction(row.id, nextSN);
+      await loadBarcodesAction(receiptId);
       setEditingBarcodeReceiptId(null);
       setEditingSN('');
-      setPageMessage({ type: 'success', text: '✅ อัปเดต SN เรียบร้อยแล้ว' });
+      setPageMessage({ type: 'success', text: '✅ แก้ไข SN สำเร็จ' });
       playBeep();
     } catch (err) {
-      setPageMessage({ type: 'error', text: `❌ อัปเดต SN ไม่สำเร็จ: ${err?.message || 'เกิดข้อผิดพลาด'}` });
+      setPageMessage({ type: 'error', text: `❌ แก้ไข SN ไม่สำเร็จ: ${err?.message || 'เกิดข้อผิดพลาด'}` });
       playErrorBeep();
     } finally {
       setEditingSubmitting(false);
@@ -374,139 +389,194 @@ const ScanBarcodeListPage = () => {
     }
   };
 
+  useEffect(() => {
+    return () => {
+      if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current);
+      if (autoSubmitTimeoutRef.current) clearTimeout(autoSubmitTimeoutRef.current);
+    };
+  }, []);
+
+  const receiptLabel = currentReceipt?.purchaseOrder?.code || currentReceipt?.code || purchaseOrderCode || receiptId || '-';
+
   return (
-    <div className="min-h-screen bg-slate-950 text-white">
-      <div className="mx-auto max-w-7xl px-4 py-6">
-        <div className="mb-6 flex items-center justify-between gap-4">
+    <div className="min-h-screen bg-slate-950 text-slate-100">
+      <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6 lg:px-8">
+        <header className="mb-5 flex flex-col gap-4 rounded-2xl border border-slate-800 bg-slate-900/80 p-5 shadow-2xl backdrop-blur sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-3">
+            <button
+              type="button"
+              onClick={() => navigate(-1)}
+              className="mt-1 rounded-xl border border-slate-700 bg-slate-800 p-2 text-slate-200 transition hover:bg-slate-700"
+              aria-label="ย้อนกลับ"
+            >
+              <ArrowLeft size={20} />
+            </button>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-400">Stock Influx Terminal</p>
+              <h1 className="mt-1 text-2xl font-bold text-white">สแกนรับสินค้าเข้าสต๊อก</h1>
+              <p className="mt-1 text-sm text-slate-400">ใบรับสินค้า: {receiptLabel}{shopSlug ? ` · ${shopSlug}` : ''}</p>
+            </div>
+          </div>
           <button
             type="button"
-            onClick={() => navigate(-1)}
-            className="inline-flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-900 px-4 py-2 text-sm font-medium hover:bg-slate-800"
+            onClick={handleFinalize}
+            disabled={submitting || pendingCount > 0}
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 py-3 font-semibold text-slate-950 transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <ArrowLeft size={18} /> กลับ
+            <ShieldCheck size={18} />
+            ปิดยอดใบรับสินค้า
           </button>
-          <div className="text-right">
-            <div className="text-sm text-slate-400">ใบรับสินค้า</div>
-            <div className="text-lg font-semibold">{currentReceipt?.code || purchaseOrderCode || receiptId || '-'}</div>
+        </header>
+
+        <section className="mb-5 grid gap-3 sm:grid-cols-3">
+          <div className="rounded-2xl border border-slate-800 bg-slate-900 p-4">
+            <div className="flex items-center gap-2 text-slate-400"><Box size={18} /> ทั้งหมด</div>
+            <div className="mt-2 text-3xl font-bold">{totalCount}</div>
           </div>
-        </div>
+          <div className="rounded-2xl border border-emerald-900/70 bg-emerald-950/40 p-4">
+            <div className="flex items-center gap-2 text-emerald-300"><CheckCircle2 size={18} /> รับแล้ว</div>
+            <div className="mt-2 text-3xl font-bold text-emerald-200">{scannedCount}</div>
+          </div>
+          <div className="rounded-2xl border border-amber-900/70 bg-amber-950/40 p-4">
+            <div className="flex items-center gap-2 text-amber-300"><AlertCircle size={18} /> ค้างรับ</div>
+            <div className="mt-2 text-3xl font-bold text-amber-200">{pendingCount}</div>
+          </div>
+        </section>
 
         {pageMessage && (
-          <div className={`mb-4 rounded-xl border px-4 py-3 text-sm ${pageMessage.type === 'error' ? 'border-red-500/40 bg-red-500/10 text-red-200' : pageMessage.type === 'warning' ? 'border-amber-500/40 bg-amber-500/10 text-amber-200' : 'border-emerald-500/40 bg-emerald-500/10 text-emerald-200'}`}>
+          <div className={`mb-5 rounded-xl border p-4 text-sm ${pageMessage.type === 'success' ? 'border-emerald-700 bg-emerald-950/60 text-emerald-200' : pageMessage.type === 'warning' ? 'border-amber-700 bg-amber-950/60 text-amber-200' : 'border-rose-700 bg-rose-950/60 text-rose-200'}`}>
             {pageMessage.text}
           </div>
         )}
 
-        <div className="grid gap-4 md:grid-cols-3">
-          <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
-            <div className="text-sm text-slate-400">ทั้งหมด</div>
-            <div className="mt-2 text-3xl font-bold">{totalCount}</div>
+        <section className="mb-5 rounded-2xl border border-slate-800 bg-slate-900 p-5 shadow-xl">
+          <div className="mb-4 flex items-center gap-2">
+            <Barcode className="text-cyan-400" size={22} />
+            <h2 className="text-lg font-semibold">จุดสแกนหลัก</h2>
           </div>
-          <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4">
-            <div className="text-sm text-emerald-200">เข้าสต๊อกแล้ว</div>
-            <div className="mt-2 text-3xl font-bold">{scannedCount}</div>
-          </div>
-          <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4">
-            <div className="text-sm text-amber-200">ค้างรับ</div>
-            <div className="mt-2 text-3xl font-bold">{pendingCount}</div>
-          </div>
-        </div>
 
-        <div className="mt-6 rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
-          <div className="mb-4 flex flex-wrap items-center gap-3">
-            <label className="inline-flex items-center gap-2 text-sm text-slate-300">
-              <input type="checkbox" checked={keepSN} onChange={(e) => setKeepSN(e.target.checked)} />
-              โหมดเก็บ SN
+          <div className="grid gap-4 lg:grid-cols-[1fr_1fr_auto] lg:items-end">
+            <label className="block">
+              <span className="mb-2 block text-sm font-medium text-slate-300">บาร์โค้ด</span>
+              <input
+                ref={barcodeInputRef}
+                value={barcodeInput}
+                onChange={handleBarcodeChange}
+                onKeyDown={handleBarcodeKeyDown}
+                placeholder={currentExpectedPlaceholder || 'สแกนหรือกรอกบาร์โค้ด'}
+                disabled={submitting}
+                className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-lg outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20"
+              />
             </label>
-            <button
-              type="button"
-              onClick={handleFinalize}
-              disabled={submitting}
-              className="ml-auto rounded-xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 disabled:opacity-50"
-            >
-              ปิดยอดใบรับ
-            </button>
-          </div>
 
-          <div className="grid gap-3 md:grid-cols-[1fr_1fr_auto]">
-            <input
-              ref={barcodeInputRef}
-              value={barcodeInput}
-              onChange={(e) => setBarcodeInput(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') submitCurrentInput(); }}
-              placeholder={currentExpectedPlaceholder ? `บาร์โค้ดที่คาด: ${currentExpectedPlaceholder}` : 'สแกนบาร์โค้ด'}
-              className="rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 outline-none focus:border-cyan-400"
-            />
-            <input
-              ref={snInputRef}
-              value={snInput}
-              onChange={(e) => { setSnInput(e.target.value); setSnError(''); }}
-              onKeyDown={(e) => { if (e.key === 'Enter') submitCurrentInput(); }}
-              placeholder="Serial Number"
-              disabled={!keepSN}
-              className="rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 outline-none focus:border-cyan-400 disabled:opacity-50"
-            />
+            <label className="block">
+              <span className="mb-2 flex items-center justify-between text-sm font-medium text-slate-300">
+                <span>Serial Number</span>
+                <span className="text-xs text-slate-500">{keepSN ? 'จำเป็น' : 'ไม่บังคับ'}</span>
+              </span>
+              <input
+                ref={snInputRef}
+                value={snInput}
+                onChange={(event) => { setSnInput(event.target.value); setSnError(''); }}
+                onKeyDown={handleSnKeyDown}
+                placeholder="กรอก SN"
+                disabled={submitting}
+                className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-lg outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20"
+              />
+              {snError && <span className="mt-1 block text-xs text-rose-400">{snError}</span>}
+            </label>
+
             <button
               type="button"
               onClick={submitCurrentInput}
-              disabled={submitting}
-              className="rounded-xl bg-cyan-400 px-5 py-3 font-semibold text-slate-950 disabled:opacity-50"
+              disabled={submitting || pendingCount === 0}
+              className="inline-flex h-[52px] items-center justify-center gap-2 rounded-xl bg-cyan-500 px-6 font-bold text-slate-950 transition hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              รับเข้าสต๊อก
+              <CreditCard size={18} />
+              {submitting ? 'กำลังบันทึก…' : 'บันทึกรับเข้า'}
             </button>
           </div>
-          {snError && <div className="mt-2 text-sm text-red-300">{snError}</div>}
-        </div>
+        </section>
 
-        <div className="mt-6 rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
-          <div className="mb-4 flex items-center gap-3">
-            <Search size={18} className="text-slate-400" />
-            <input
-              ref={filterInputRef}
-              value={textFilter}
-              onChange={(e) => setTextFilter(e.target.value)}
-              placeholder="ค้นหาชื่อสินค้า บาร์โค้ด หรือ SKU"
-              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2 outline-none focus:border-cyan-400"
-            />
-          </div>
-
-          <div className="space-y-3">
-            {pendingList.map((item) => (
-              <div key={item.id || item.barcode} className={`rounded-xl border p-4 ${lastFlashBarcode === item.barcode ? 'border-emerald-400 bg-emerald-500/10' : 'border-slate-800 bg-slate-950/70'}`}>
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <div className="font-semibold">{resolveProductName(item)}</div>
-                    <div className="mt-1 text-sm text-slate-400">{item.barcode || '-'}</div>
-                  </div>
-                  <div className="text-sm text-amber-300">ค้างรับ</div>
-                </div>
+        <section className="grid gap-5 xl:grid-cols-2">
+          <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5 shadow-xl">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <HelpCircle className="text-amber-400" size={20} />
+                <h2 className="font-semibold">รายการค้างรับ</h2>
               </div>
-            ))}
-
-            {pendingList.length === 0 && (
-              <div className="rounded-xl border border-dashed border-slate-700 p-8 text-center text-slate-400">
-                ไม่มีรายการค้างรับ
-              </div>
-            )}
-          </div>
-        </div>
-
-        {editingBarcodeReceiptId && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-            <div className="w-full max-w-md rounded-2xl border border-slate-700 bg-slate-900 p-5">
-              <div className="text-lg font-semibold">แก้ไข Serial Number</div>
-              <input
-                value={editingSN}
-                onChange={(e) => setEditingSN(e.target.value)}
-                className="mt-4 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 outline-none focus:border-cyan-400"
-              />
-              <div className="mt-4 flex justify-end gap-3">
-                <button type="button" onClick={() => setEditingBarcodeReceiptId(null)} className="rounded-xl border border-slate-700 px-4 py-2">ยกเลิก</button>
-                <button type="button" onClick={handleEditSN} disabled={editingSubmitting} className="rounded-xl bg-cyan-400 px-4 py-2 font-semibold text-slate-950 disabled:opacity-50">บันทึก</button>
+              <div className="relative w-full max-w-xs">
+                <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
+                <input
+                  ref={filterInputRef}
+                  value={textFilter}
+                  onChange={(event) => setTextFilter(event.target.value)}
+                  placeholder="ค้นหาสินค้า / SKU / Barcode"
+                  className="w-full rounded-xl border border-slate-700 bg-slate-950 py-2 pl-9 pr-3 text-sm outline-none focus:border-cyan-500"
+                />
               </div>
             </div>
+
+            <div className="max-h-[560px] space-y-2 overflow-y-auto pr-1">
+              {pendingList.length === 0 ? (
+                <p className="rounded-xl border border-dashed border-slate-700 p-6 text-center text-sm text-slate-500">ไม่มีรายการค้างรับ</p>
+              ) : pendingList.map((row, index) => (
+                <div key={row.id ?? `${row.barcode}-${index}`} className="rounded-xl border border-slate-800 bg-slate-950/70 p-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="font-medium text-slate-100">{resolveProductName(row)}</p>
+                      <p className="mt-1 font-mono text-sm text-cyan-300">{row.barcode || '-'}</p>
+                    </div>
+                    <span className="rounded-full bg-amber-500/15 px-2.5 py-1 text-xs font-semibold text-amber-300">ค้างรับ</span>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
-        )}
+
+          <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5 shadow-xl">
+            <div className="mb-4 flex items-center gap-2">
+              <CheckCircle2 className="text-emerald-400" size={20} />
+              <h2 className="font-semibold">รายการรับแล้ว</h2>
+            </div>
+
+            <div className="max-h-[560px] space-y-2 overflow-y-auto pr-1">
+              {scannedList.length === 0 ? (
+                <p className="rounded-xl border border-dashed border-slate-700 p-6 text-center text-sm text-slate-500">ยังไม่มีรายการรับเข้า</p>
+              ) : scannedList.map((row, index) => {
+                const isEditing = editingBarcodeReceiptId === row.id;
+                return (
+                  <div key={row.id ?? `${row.barcode}-${index}`} className={`rounded-xl border p-3 transition ${lastFlashBarcode === String(row.barcode || '') ? 'border-emerald-400 bg-emerald-950/60' : 'border-slate-800 bg-slate-950/70'}`}>
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <p className="font-medium text-slate-100">{resolveProductName(row)}</p>
+                        <p className="mt-1 font-mono text-sm text-cyan-300">{row.barcode || '-'}</p>
+                      </div>
+
+                      {isEditing ? (
+                        <div className="flex flex-wrap items-center gap-2">
+                          <input
+                            value={editingSN}
+                            onChange={(event) => setEditingSN(event.target.value)}
+                            className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm outline-none focus:border-cyan-500"
+                          />
+                          <button type="button" disabled={editingSubmitting} onClick={() => handleSaveEditSN(row)} className="rounded-lg bg-emerald-500 px-3 py-2 text-sm font-semibold text-slate-950 disabled:opacity-50">บันทึก</button>
+                          <button type="button" disabled={editingSubmitting} onClick={handleCancelEditSN} className="rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-300 disabled:opacity-50">ยกเลิก</button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <span className="rounded-full bg-emerald-500/15 px-2.5 py-1 text-xs font-semibold text-emerald-300">พร้อมขาย</span>
+                          <span className="font-mono text-sm text-slate-300">SN: {row.serialNumber || '-'}</span>
+                          <button type="button" onClick={() => handleEditSN(row)} className="rounded-lg border border-slate-700 px-3 py-1.5 text-xs text-slate-300 transition hover:bg-slate-800">แก้ไข SN</button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </section>
       </div>
     </div>
   );

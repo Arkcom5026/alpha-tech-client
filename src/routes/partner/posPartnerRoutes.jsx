@@ -45,7 +45,7 @@ import ListBankPage from '@/features/bank/page/ListBankPage';
 import { CreateBankPage } from '@/features/bank/page/CreateBankPage';
 import { EditBankPage } from '@/features/bank/page/EditBankPage';
 import ListBranchPage from '@/features/settings/pages/ListBranchPage';
-import QuickStockPage from '@/features/product/quick-stock/pages/QuickStockPage';
+import QuickStockPage from '@/features/receiving/quick-stock/pages/QuickStockPage';
 import { repairRouteConfigs } from './repairRouteConfig';
 
 const TempReportPage = ({ title }) => (

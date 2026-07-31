@@ -1,5 +1,6 @@
 import React from "react";
-import ProductEditor from "./ProductEditor";
+import OperationalProductPanel from "./OperationalProductPanel";
+import TemplateProductStatePanel from "./TemplateProductStatePanel";
 
 const ProductMasterPanel = ({
   selectedProduct,
@@ -23,43 +24,11 @@ const ProductMasterPanel = ({
 }) => {
   if (selectedTemplateProduct && !selectedProduct) {
     return (
-      <section className="bg-amber-50 border border-amber-200 rounded-2xl p-5 text-sm space-y-4">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <div className="font-semibold text-amber-900">
-              ยังไม่มี Operational Product ของร้าน
-            </div>
-            <div className="mt-1 text-amber-950 text-base font-bold truncate">
-              {selectedTemplateProduct.name}
-            </div>
-            <div className="mt-2 text-xs text-amber-800 leading-relaxed">
-              รายการนี้มาจาก Template Catalog (T01) ใช้สำหรับค้นหาและ Clone เท่านั้น
-              จึงไม่แสดง/ไม่แก้ไขรายละเอียดสินค้าและราคาเดิมของร้านในส่วนนี้
-            </div>
-          </div>
-
-          <span className="shrink-0 text-xs px-2 py-1 rounded-full bg-white border border-amber-200 text-amber-700">
-            {runtimeStatus === "LOADING" ? "LOADING" : "NOT CREATED"}
-          </span>
-        </div>
-
-        <div className="rounded-xl border border-amber-200 bg-white/70 p-3 text-xs text-amber-900 space-y-1">
-          <div>สถานะปัจจุบัน:</div>
-          <div>สินค้านี้ยังเป็น Template เท่านั้น และยังไม่ใช่ Operational Product ของร้าน</div>
-          <div className="pt-1">ก่อนรับเข้า Stock ต้องมีขั้นตอนถัดไป:</div>
-          <div>✓ สร้างหรือ Clone Product เข้า Branch ปัจจุบัน</div>
-          <div>✓ สร้าง/บันทึก BranchPrice ของร้าน</div>
-          <div>✓ จากนั้นจึงรับสินค้าเข้า Stock Runtime ได้</div>
-        </div>
-
-        <button
-          type="button"
-          className="text-xs text-red-600 hover:underline"
-          onClick={onClearProduct}
-        >
-          เปลี่ยนสินค้า
-        </button>
-      </section>
+      <TemplateProductStatePanel
+        selectedTemplateProduct={selectedTemplateProduct}
+        runtimeStatus={runtimeStatus}
+        onClearProduct={onClearProduct}
+      />
     );
   }
 
@@ -74,87 +43,24 @@ const ProductMasterPanel = ({
   }
 
   return (
-    <section className="bg-green-50 border border-green-200 rounded-2xl p-5 text-sm space-y-4">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="font-semibold text-green-800">
-            Operational Product ของร้าน
-          </div>
-          <div className="mt-1 text-green-950 text-base font-bold truncate">
-            {productForm.name || selectedProduct.name}
-          </div>
-          {!isEditingProduct && (
-            <div className="mt-1 text-xs text-green-700">
-              ข้อมูลนี้มาจาก Product ของร้านเท่านั้น ไม่ใช่ Template Product
-            </div>
-          )}
-        </div>
-        <span className="text-xs px-2 py-1 rounded-full bg-white border border-green-200 text-green-700">
-          OPERATIONAL
-        </span>
-      </div>
-
-      {isEditingProduct && (
-        <ProductEditor
-          productTypes={productTypes}
-          brands={brands}
-          units={units}
-          productForm={productForm}
-          priceForm={priceForm}
-          isEditingProduct={isEditingProduct}
-          onProductFieldChange={onProductFieldChange}
-          onPriceFieldChange={onPriceFieldChange}
-        />
-      )}
-
-      <div className="flex flex-wrap items-center gap-3">
-        {!isEditingProduct ? (
-          <button
-            type="button"
-            className="px-3 py-2 rounded-lg border bg-white text-blue-700 text-xs font-medium hover:bg-blue-50"
-            onClick={onEditStart}
-          >
-            ✏️ แก้ไขรายละเอียดสินค้า
-          </button>
-        ) : (
-          <>
-            <button
-              type="button"
-              className="px-3 py-2 rounded-lg bg-blue-600 text-white text-xs font-medium hover:bg-blue-700 disabled:opacity-50"
-              onClick={onSaveProduct}
-              disabled={isSavingProduct}
-            >
-              {isSavingProduct ? "กำลังบันทึก..." : "บันทึกข้อมูลสินค้า"}
-            </button>
-            <button
-              type="button"
-              className="px-3 py-2 rounded-lg border bg-white text-xs hover:bg-gray-50"
-              onClick={onEditCancel}
-            >
-              ยกเลิกแก้ไข
-            </button>
-          </>
-        )}
-
-        <button
-          type="button"
-          className="text-xs text-red-600 hover:underline"
-          onClick={onClearProduct}
-        >
-          เปลี่ยนสินค้า
-        </button>
-
-        <button
-          type="button"
-          className="text-xs text-red-700 hover:underline font-semibold disabled:opacity-50"
-          onClick={onDeleteProduct}
-          disabled={isDeletingProduct}
-          title="ใช้เฉพาะช่วง Recovery สำหรับรายการซ้ำ/ผิดที่ยังไม่มีประวัติ"
-        >
-          {isDeletingProduct ? "กำลังลบ..." : "🗑️ ลบรายการสินค้า"}
-        </button>
-      </div>
-    </section>
+    <OperationalProductPanel
+      selectedProduct={selectedProduct}
+      productTypes={productTypes}
+      brands={brands}
+      units={units}
+      productForm={productForm}
+      priceForm={priceForm}
+      isEditingProduct={isEditingProduct}
+      isSavingProduct={isSavingProduct}
+      isDeletingProduct={isDeletingProduct}
+      onEditStart={onEditStart}
+      onEditCancel={onEditCancel}
+      onSaveProduct={onSaveProduct}
+      onClearProduct={onClearProduct}
+      onDeleteProduct={onDeleteProduct}
+      onProductFieldChange={onProductFieldChange}
+      onPriceFieldChange={onPriceFieldChange}
+    />
   );
 };
 

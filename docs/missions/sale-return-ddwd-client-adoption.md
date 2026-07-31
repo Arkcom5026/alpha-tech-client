@@ -8,7 +8,7 @@ Adopt the Documentation-Driven Workflow Development Standard (DDWD) for the Sale
 
 Provide module-owned operational guidance for returning serialized and SIMPLE sale items, refund evidence, deduction approval, stock restoration, retry recovery, and return history without duplicating Server authority.
 
-## Client Authority Discovered
+## Client Authority Confirmed
 
 Canonical runtime owner:
 
@@ -30,7 +30,7 @@ Runtime route proof:
 - `src/routes/partner/salesRoutes.jsx` imports `CreateReturnPage` and `ReturnSearchPage` from `@/features/sales/return`.
 - POS routes mount `sales/sale-return` and `sales/sale-return/create/:saleId` to the canonical pages.
 
-Legacy/compatibility feature still present:
+Legacy/compatibility feature retained temporarily:
 
 - `src/features/saleReturn/api/saleReturnApi.js`
 - `src/features/saleReturn/store/saleReturnStore.js`
@@ -41,50 +41,46 @@ Legacy/compatibility feature still present:
 - `src/features/sales/return` is the active Client runtime owner.
 - `src/features/saleReturn` is a legacy feature path and is not mounted by the current POS sales router.
 - The legacy feature is retained temporarily because Server compatibility routes remain active and external/deep-link usage has not been disproven.
-- This DDWD Increment records the retirement boundary but does not delete the legacy feature or compatibility endpoint.
 - Retirement requires a separately approved implementation increment with repository/runtime usage evidence.
 
-## Planned Scope
+## Implemented Scope
 
-- Operational User Guide
-- in-app Help owned by the active Sale Return module
-- eligibility and remaining-returnable guidance
-- serialized and SIMPLE quantity selection
-- refund channels and source-payment evidence
-- deducted-refund reason and approval guidance
-- stock-restoration outcome and conflict recovery
-- command identity, safe retry, and duplicate prevention
-- return history/list/detail guidance
-- credit note, tax adjustment, and accounting-boundary guidance only where supported by Server authority
-- focused contract and CI gate after implementation is complete
-- Human Operational Test Pack
+- Operational User Guide: `docs/workflows/sale-return-operational-user-guide.md`
+- Human Operational Test Pack: `docs/workflows/sale-return-human-operational-test-pack.md`
+- module-owned help content: `src/features/sales/return/help/saleReturnHelpContent.js`
+- module-owned Help Drawer: `src/features/sales/return/help/SaleReturnHelpDrawer.jsx`
+- contextual `คู่มือ` entry on both canonical runtime pages
+- serialized and SIMPLE return guidance
+- refund source, deduction, and approval guidance
+- stock conflict and safe-retry guidance
+- Credit Note and tax boundary guidance without claiming unsupported runtime behavior
+- focused contract: `tests/sale-return-help.contract.test.js`
 
-## Explicit Exclusions
+## Runtime Impact
 
-- No assumption that Credit Note or tax adjustment is implemented.
-- No deletion of legacy API or route paths in this documentation phase.
-- No Sales Store, API contract, stock mutation, refund posting, or production-data behavior change unless opened as a separately justified implementation increment.
+Documentation projection, contextual Help UI, and a focused repository contract only. No Sales Store, API contract, eligibility calculation, refund posting, stock mutation, completion workflow, Prisma, migration, or production-data behavior change.
 
 ## Verification Strategy
 
-- Continue repository discovery and documentation implementation first.
-- CI checks are intentionally deferred until the implementation package is complete.
-- Final certification will run once on the final Client and Server SHAs.
+- Implementation and documentation package is complete.
+- Focused contract exists but has not yet been executed in this phase.
+- CI and final certification remain intentionally deferred until final Client and Server SHAs are stable.
 - Human Operational Test and explicit merge approval remain mandatory.
 
 ## Completion Criteria
 
 - [x] Dedicated branch exists.
 - [x] Draft PR exists.
-- [x] Initial Client API authority discovery is recorded.
 - [x] Active UI/router/store owner is proven.
 - [x] Canonical versus legacy usage decision is recorded.
-- [ ] Operational User Guide exists.
-- [ ] Contextual in-app guidance is implemented where appropriate.
-- [ ] Focused contract and final certification are recorded.
+- [x] Operational User Guide exists.
+- [x] Contextual in-app guidance is implemented.
+- [x] Human Operational Test Pack exists.
+- [x] Focused contract exists.
+- [ ] Focused contract execution and final certification are recorded.
 - [ ] Human Operational Test is recorded.
 - [ ] Review and explicit merge decision are recorded.
 
 ## Current State
 
-`IN PROGRESS` — active Client owner and hybrid boundary are confirmed; documentation, help projection, acceptance, and merge remain pending.
+`IN PROGRESS` — Client implementation and documentation are complete; focused execution, final certification, Human Operational Test, review, and merge remain pending.

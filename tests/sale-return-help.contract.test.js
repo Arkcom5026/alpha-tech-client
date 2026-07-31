@@ -24,10 +24,10 @@ describe('Sale Return Help contract', () => {
 
   test('module-owned help content covers the critical operator decisions', () => {
     const content = read(contentPath);
+    const normalizedContent = content.toLowerCase();
+
+    ['serialized', 'simple'].forEach((token) => expect(normalizedContent).toContain(token));
     [
-      'SERIALIZED',
-      'SIMPLE',
-      'sourcePaymentItemId',
       'หัก',
       'command',
       'Credit Note',

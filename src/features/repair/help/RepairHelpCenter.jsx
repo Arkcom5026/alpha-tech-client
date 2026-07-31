@@ -5,6 +5,15 @@ import {
   inferRepairHelpSection,
   repairHelpSections,
 } from './repairHelpContent';
+import warrantyClaimHelpSection from './warrantyClaimHelpContent';
+
+const resolvedRepairHelpSections = repairHelpSections.map((section) =>
+  section.id === warrantyClaimHelpSection.id ? warrantyClaimHelpSection : section
+);
+
+const getResolvedRepairHelpSection = (sectionId) =>
+  resolvedRepairHelpSections.find((section) => section.id === sectionId) ||
+  getRepairHelpSection(sectionId);
 
 const normalizeSearchText = (section) =>
   [
@@ -80,8 +89,8 @@ const RepairHelpCenter = ({ open, onClose }) => {
 
   const filteredSections = useMemo(() => {
     const normalized = query.trim().toLowerCase();
-    if (!normalized) return repairHelpSections;
-    return repairHelpSections.filter((section) =>
+    if (!normalized) return resolvedRepairHelpSections;
+    return resolvedRepairHelpSections.filter((section) =>
       normalizeSearchText(section).includes(normalized)
     );
   }, [query]);
@@ -95,7 +104,7 @@ const RepairHelpCenter = ({ open, onClose }) => {
 
   if (!open) return null;
 
-  const activeSection = getRepairHelpSection(activeSectionId);
+  const activeSection = getResolvedRepairHelpSection(activeSectionId);
 
   return (
     <div className="fixed inset-0 z-[100]" role="dialog" aria-modal="true" aria-label="คู่มืองานรับซ่อม">

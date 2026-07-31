@@ -26,6 +26,9 @@ jobs:
     - name: 🧪 ตรวจสัญญาคู่มือภายในงานรับซ่อม
       run: npm run test:repair-in-app-help
 
+    - name: 🧪 ตรวจสัญญาคู่มืองานเคลม
+      run: npm run test:warranty-claim-help
+
     - name: 🔐 ผูกเงื่อนไขความลับผ่านระบบกระจกเงาสะท้อน (Injecting Secrets)
       run: |
         echo "VITE_API_URL=https://api.saduaksabuy.com/api/v2/procurement" >> .env

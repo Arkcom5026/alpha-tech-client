@@ -1,36 +1,50 @@
+import { describe, expect, it } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const root = path.resolve(__dirname, '..');
+const filename = fileURLToPath(import.meta.url);
+const root = path.resolve(path.dirname(filename), '..');
 const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
-const assert = (condition, message) => {
-  if (!condition) throw new Error(message);
-};
 
 const header = read('src/features/repair/components/RepairShellHeader.jsx');
 const helpCenter = read('src/features/repair/help/RepairHelpCenter.jsx');
 const content = read('src/features/repair/help/repairHelpContent.js');
 
-assert(header.includes("import RepairHelpCenter from '../help/RepairHelpCenter'"), 'Repair header must own the help center entry point');
-assert(header.includes('คู่มือ'), 'Repair header must expose a Thai guide button');
-assert(header.includes('aria-haspopup="dialog"'), 'Guide button must declare dialog behavior');
-assert(header.includes('<RepairHelpCenter'), 'Repair header must render the help center');
+describe('Repair in-app help center contract', () => {
+  it('exposes the help center from the repair shell', () => {
+    expect(header).toContain("import RepairHelpCenter from '../help/RepairHelpCenter'");
+    expect(header).toContain('คู่มือ');
+    expect(header).toContain('aria-haspopup="dialog"');
+    expect(header).toContain('<RepairHelpCenter');
+  });
 
-assert(helpCenter.includes('role="dialog"'), 'Help center must render as an accessible dialog');
-assert(helpCenter.includes('aria-modal="true"'), 'Help center must be modal while open');
-assert(helpCenter.includes("event.key === 'Escape'"), 'Help center must close with Escape');
-assert(helpCenter.includes("document.body.style.overflow = 'hidden'"), 'Help center must prevent background scrolling');
-assert(helpCenter.includes('ค้นหาในคู่มือ'), 'Help center must provide search');
-assert(helpCenter.includes('inferRepairHelpSection(location.pathname)'), 'Help center must infer contextual content from the current route');
+  it('renders an accessible contextual help dialog', () => {
+    expect(helpCenter).toContain('role="dialog"');
+    expect(helpCenter).toContain('aria-modal="true"');
+    expect(helpCenter).toContain("event.key === 'Escape'");
+    expect(helpCenter).toContain("document.body.style.overflow = 'hidden'");
+    expect(helpCenter).toContain('ค้นหาในคู่มือ');
+    expect(helpCenter).toContain('inferRepairHelpSection(location.pathname)');
+  });
 
-['overview', 'intake', 'queue', 'estimate', 'claim', 'control-center', 'tracking', 'handover', 'troubleshooting'].forEach((sectionId) => {
-  assert(content.includes(`id: '${sectionId}'`), `Missing repair guide section: ${sectionId}`);
+  it('covers every repair workflow section and route context', () => {
+    for (const sectionId of [
+      'overview',
+      'intake',
+      'queue',
+      'estimate',
+      'claim',
+      'control-center',
+      'tracking',
+      'handover',
+      'troubleshooting',
+    ]) {
+      expect(content, `Missing repair guide section: ${sectionId}`).toContain(`id: '${sectionId}'`);
+    }
+
+    expect(content).toContain("pathname.includes('repair-intake')");
+    expect(content).toContain("pathname.includes('warranty-claims')");
+    expect(content).toContain("pathname.includes('/repairs')");
+  });
 });
-assert(content.includes("pathname.includes('repair-intake')"), 'Intake route must open intake guidance');
-assert(content.includes("pathname.includes('warranty-claims')"), 'Claim route must open claim guidance');
-assert(content.includes("pathname.includes('/repairs')"), 'Repair queue route must open control-center guidance');
-
-console.log('Repair in-app help center contract: PASS');

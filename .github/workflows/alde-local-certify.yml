@@ -16,7 +16,8 @@ on:
       - main
     paths:
       - '.github/workflows/alde-local-certify.yml'
-      - 'tools/runner/invoke-alde.ps1'
+      - 'tools/runner/invoke-alde-pipeline.ps1'
+      - 'tools/runner/classify-alde-failures.ps1'
       - '.alde/trigger.json'
 
 permissions:
@@ -44,11 +45,11 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Run ALDE local certification
+      - name: Run ALDE transcript-aware certification
         id: alde
         shell: powershell
         run: |
-          & "$env:GITHUB_WORKSPACE\tools\runner\invoke-alde.ps1" `
+          & "$env:GITHUB_WORKSPACE\tools\runner\invoke-alde-pipeline.ps1" `
             -ClientPath 'D:\alpha-tech\client' `
             -ServerPath 'D:\alpha-tech\server' `
             -Mode "$env:ALDE_MODE" `
@@ -63,6 +64,7 @@ jobs:
           path: |
             ${{ steps.alde.outputs.report_path }}
             ${{ steps.alde.outputs.metadata_path }}
+            ${{ steps.alde.outputs.transcript_path }}
           if-no-files-found: error
           retention-days: 14
 
@@ -138,7 +140,7 @@ jobs:
           $resolvedStatus = if ($env:ALDE_STATUS) { $env:ALDE_STATUS } elseif ($metadataStatus) { $metadataStatus } else { 'UNKNOWN' }
 
           $result = [ordered]@{
-            schemaVersion = 1
+            schemaVersion = 2
             status = $resolvedStatus
             repository = $env:GITHUB_REPOSITORY
             sourceBranch = $env:GITHUB_REF_NAME
@@ -158,7 +160,7 @@ jobs:
             verificationReport = $report
           }
 
-          $json = $result | ConvertTo-Json -Depth 20
+          $json = $result | ConvertTo-Json -Depth 30
           $historyPath = ".alde/history/run-$env:GITHUB_RUN_ID-attempt-$env:GITHUB_RUN_ATTEMPT.json"
 
           Publish-ResultFile `

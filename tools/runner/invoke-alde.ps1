@@ -107,7 +107,7 @@ function Invoke-RunnerPolicyGate {
 
   $policy = [ordered]@{
     status = 'PASS'
-    policyVersion = 1
+    policyVersion = 2
     runnerName = $env:RUNNER_NAME
     runnerOS = $env:RUNNER_OS
     powershell = $powerShellVersion.ToString()
@@ -121,6 +121,8 @@ function Invoke-RunnerPolicyGate {
       minimumNpm = $minimumNpm.ToString()
       requiredBranch = $RequiredBranch
       cleanCommitBoundCertification = $true
+      outcomeTaxonomy = @('PASS', 'FAIL', 'BLOCKED')
+      failureClasses = @('REGRESSION', 'ENVIRONMENT_BLOCKER', 'SAFETY_GUARD')
     }
   }
 
@@ -152,6 +154,82 @@ function Get-LatestVerificationReport {
     Select-Object -First 1
 }
 
+function Get-GateFailureClass {
+  param(
+    [Parameter(Mandatory)][string]$Name,
+    [string]$Detail = ''
+  )
+
+  $text = "$Name`n$Detail"
+
+  if ($text -match '(?i)TEST_DATABASE_AUTHORITY_REJECTED|RESTORE_DATABASE_ENVIRONMENT|RESTORE_DATABASE_PROJECT_REF|RESTORE_DATABASE_WRITE_APPROVAL|ALLOW_PARTNER_STORE_RUNTIME_TEST') {
+    return 'SAFETY_GUARD'
+  }
+
+  if ($text -match '(?i)EPERM|EBUSY|operation not permitted|file.*(lock|locked)|port.*already in use|EADDRINUSE|access is denied|permission denied') {
+    return 'ENVIRONMENT_BLOCKER'
+  }
+
+  return 'REGRESSION'
+}
+
+function Add-OutcomeAssessment {
+  param([Parameter(Mandatory)][object]$VerificationReport)
+
+  $classifiedGates = @()
+  foreach ($gate in @($VerificationReport.gates)) {
+    $failureClass = $null
+    if ([string]$gate.status -eq 'FAIL') {
+      $failureClass = Get-GateFailureClass -Name ([string]$gate.name) -Detail ([string]$gate.detail)
+    }
+
+    $classifiedGates += [ordered]@{
+      name = [string]$gate.name
+      status = [string]$gate.status
+      failureClass = $failureClass
+      durationSeconds = $gate.durationSeconds
+      detail = [string]$gate.detail
+    }
+  }
+
+  $regressionCount = @($classifiedGates | Where-Object { $_.failureClass -eq 'REGRESSION' }).Count
+  $environmentBlockerCount = @($classifiedGates | Where-Object { $_.failureClass -eq 'ENVIRONMENT_BLOCKER' }).Count
+  $safetyGuardCount = @($classifiedGates | Where-Object { $_.failureClass -eq 'SAFETY_GUARD' }).Count
+  $failedCount = @($classifiedGates | Where-Object { $_.status -eq 'FAIL' }).Count
+
+  $authorityStatus = if ($failedCount -eq 0) {
+    'PASS'
+  }
+  elseif ($regressionCount -gt 0) {
+    'FAIL'
+  }
+  else {
+    'BLOCKED'
+  }
+
+  $assessment = [ordered]@{
+    schemaVersion = 1
+    authorityStatus = $authorityStatus
+    regressionCount = $regressionCount
+    environmentBlockerCount = $environmentBlockerCount
+    safetyGuardCount = $safetyGuardCount
+    failedGateCount = $failedCount
+    interpretation = if ($authorityStatus -eq 'PASS') {
+      'All certification gates passed.'
+    }
+    elseif ($authorityStatus -eq 'BLOCKED') {
+      'No source regression was identified, but certification is blocked by environment or explicit safety authority requirements.'
+    }
+    else {
+      'At least one source or executable-contract regression requires correction before certification can pass.'
+    }
+    gates = $classifiedGates
+  }
+
+  $VerificationReport | Add-Member -NotePropertyName assessment -NotePropertyValue $assessment -Force
+  return $assessment
+}
+
 function Write-GitHubOutput {
   param(
     [Parameter(Mandatory)][string]$Name,
@@ -169,7 +247,8 @@ function Write-GitHubSummary {
     [Parameter(Mandatory)][string]$ServerHead,
     [string]$ReportPath = '',
     [string]$MetadataPath = '',
-    [string]$PolicyStatus = 'NOT_RUN'
+    [string]$PolicyStatus = 'NOT_RUN',
+    [object]$Assessment = $null
   )
 
   $summaryPath = $env:GITHUB_STEP_SUMMARY
@@ -181,7 +260,7 @@ function Write-GitHubSummary {
   $lines = @(
     '# Alpha-Tech Local Certification',
     '',
-    "- Status: **$Status**",
+    "- Authority status: **$Status**",
     "- Runner policy: **$PolicyStatus**",
     "- Client HEAD: ``$ClientHead``",
     "- Server HEAD: ``$ServerHead``",
@@ -190,6 +269,19 @@ function Write-GitHubSummary {
     "- Verification report: ``$reportDisplay``",
     "- Runner metadata: ``$metadataDisplay``"
   )
+
+  if ($Assessment) {
+    $lines += @(
+      '',
+      '## Failure classification',
+      '',
+      "- Regressions: **$($Assessment.regressionCount)**",
+      "- Environment blockers: **$($Assessment.environmentBlockerCount)**",
+      "- Safety guards: **$($Assessment.safetyGuardCount)**",
+      '',
+      $Assessment.interpretation
+    )
+  }
 
   Add-Content -LiteralPath $summaryPath -Value ($lines -join [Environment]::NewLine) -Encoding UTF8
 }
@@ -232,6 +324,7 @@ $metadataPath = Join-Path $EvidencePath 'runner-result.json'
 $clientHead = ''
 $serverHead = ''
 $runnerPolicy = $null
+$assessment = $null
 
 try {
   $runnerPolicy = Invoke-RunnerPolicyGate
@@ -262,16 +355,30 @@ finally {
   $report = Get-LatestVerificationReport -ArtifactDirectory $artifactDirectory -NotBefore $startedAt
 
   if ($report) {
+    $reportData = Get-Content -LiteralPath $report.FullName -Raw | ConvertFrom-Json
+    $assessment = Add-OutcomeAssessment -VerificationReport $reportData
+    $status = [string]$assessment.authorityStatus
+    if ($status -eq 'PASS') {
+      $exitCode = 0
+    }
+    elseif ($status -eq 'BLOCKED') {
+      $exitCode = 2
+    }
+    else {
+      $exitCode = 1
+    }
+
     $publishedReportPath = Join-Path $EvidencePath $report.Name
-    Copy-Item -LiteralPath $report.FullName -Destination $publishedReportPath -Force
-    Write-Host "Published verification report: $publishedReportPath"
+    $reportData | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $publishedReportPath -Encoding UTF8
+    Write-Host "Published classified verification report: $publishedReportPath"
+    Write-Host "[ASSESS] authority=$status regressions=$($assessment.regressionCount) environment=$($assessment.environmentBlockerCount) safety=$($assessment.safetyGuardCount)" -ForegroundColor Cyan
   }
 
   try { $clientHead = (& git -C $ClientPath rev-parse HEAD).Trim() } catch { $clientHead = 'unavailable' }
   try { $serverHead = (& git -C $ServerPath rev-parse HEAD).Trim() } catch { $serverHead = 'unavailable' }
 
   $metadata = [ordered]@{
-    schemaVersion = 3
+    schemaVersion = 4
     status = $status
     mode = $Mode
     startedAt = $startedAt.ToUniversalTime().ToString('o')
@@ -283,13 +390,14 @@ finally {
     clientHead = $clientHead
     serverHead = $serverHead
     runnerPolicy = $runnerPolicy
+    assessment = $assessment
     reportFile = if ($report) { $report.Name } else { $null }
     reportPath = if ($report) { $report.FullName } else { $null }
     publishedReportPath = if ($publishedReportPath) { $publishedReportPath } else { $null }
     exitCode = $exitCode
   }
 
-  $metadata | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $metadataPath -Encoding UTF8
+  $metadata | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $metadataPath -Encoding UTF8
 
   Write-GitHubOutput -Name 'status' -Value $status
   Write-GitHubOutput -Name 'client_head' -Value $clientHead
@@ -304,7 +412,8 @@ finally {
     -ServerHead $serverHead `
     -ReportPath $publishedReportPath `
     -MetadataPath $metadataPath `
-    -PolicyStatus $policyStatus
+    -PolicyStatus $policyStatus `
+    -Assessment $assessment
 }
 
 if (-not $report) {

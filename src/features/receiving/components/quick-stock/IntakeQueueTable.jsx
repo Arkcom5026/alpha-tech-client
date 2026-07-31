@@ -1,5 +1,7 @@
 import React from "react";
-import QueueRow from "./QueueRow";
+import QueueEmptyState from "./QueueEmptyState";
+import QueueTableBody from "./QueueTableBody";
+import QueueTableHeader from "./QueueTableHeader";
 
 const IntakeQueueTable = ({
   barcodeQueue = [],
@@ -22,32 +24,18 @@ const IntakeQueueTable = ({
       </div>
 
       {barcodeQueue.length === 0 ? (
-        <div className="p-8 text-center text-gray-400 text-sm">ยังไม่มีบาร์โค้ดใน Queue</div>
+        <QueueEmptyState />
       ) : (
         <div className="overflow-auto">
           <table className="min-w-[680px] w-full text-xs">
-            <thead className="bg-gray-50 text-gray-600">
-              <tr>
-                <th className="px-3 py-2 text-left w-10">#</th>
-                <th className="px-3 py-2 text-left">Barcode *</th>
-                <th className="px-3 py-2 text-left">Serial Number</th>
-                <th className="px-3 py-2 text-left">Status</th>
-                <th className="px-3 py-2 text-right">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {barcodeQueue.map((item, index) => (
-                <QueueRow
-                  key={item.id}
-                  item={item}
-                  index={index}
-                  serialInputRefs={serialInputRefs}
-                  barcodeInputRef={barcodeInputRef}
-                  onUpdateQueueItemField={onUpdateQueueItemField}
-                  onRemoveQueueItem={onRemoveQueueItem}
-                />
-              ))}
-            </tbody>
+            <QueueTableHeader />
+            <QueueTableBody
+              barcodeQueue={barcodeQueue}
+              serialInputRefs={serialInputRefs}
+              barcodeInputRef={barcodeInputRef}
+              onUpdateQueueItemField={onUpdateQueueItemField}
+              onRemoveQueueItem={onRemoveQueueItem}
+            />
           </table>
         </div>
       )}

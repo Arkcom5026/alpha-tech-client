@@ -13,6 +13,10 @@ import {
   loadQuickReceiptSuppliers,
   updateQuickReceiptDraft,
 } from '../api/quickReceiptSessionApi';
+import QuickReceiptActions from './QuickReceiptActions';
+import QuickReceiptDraftPicker from './QuickReceiptDraftPicker';
+import QuickReceiptHeaderFields from './QuickReceiptHeaderFields';
+import QuickReceiptLineSummary from './QuickReceiptLineSummary';
 
 const STORAGE_KEY = 'alpha-tech.quick-receipt.local-draft.v2';
 
@@ -270,71 +274,54 @@ const QuickReceiptSessionPanel = ({
           <p className="text-sm text-slate-600">รวบรวมสินค้าให้ครบก่อน แล้วเลือกเก็บไว้รับต่อหรือยืนยันทั้งใบครั้งเดียว</p>
         </div>
         <div className="flex items-center gap-2">
-          {receipt?.code && <div className="rounded-lg bg-indigo-50 px-3 py-2 text-sm text-indigo-900">{receipt.code} · {receipt.status}</div>}
-          {locked && <button type="button" className="rounded-lg border px-3 py-2 text-sm" onClick={resetReceipt}>เริ่มใบรับใหม่</button>}
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
-        <select className="rounded-lg border px-3 py-2 text-sm" value={header.supplierId} disabled={isBusy || locked} onChange={(e) => updateHeader('supplierId', e.target.value)}>
-          <option value="">เลือก Supplier</option>
-          {suppliers.map((supplier) => <option key={supplier.id} value={supplier.id}>{supplier.name}</option>)}
-        </select>
-        <input className="rounded-lg border px-3 py-2 text-sm" placeholder="เลขที่ใบส่งของ" value={header.deliveryNoteNumber} disabled={isBusy || locked} onChange={(e) => updateHeader('deliveryNoteNumber', e.target.value)} />
-        <input type="date" className="rounded-lg border px-3 py-2 text-sm" value={header.deliveryNoteDate} disabled={isBusy || locked} onChange={(e) => updateHeader('deliveryNoteDate', e.target.value)} />
-      </div>
-
-      <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
-        <select className="rounded-lg border px-3 py-2 text-sm" value={header.taxDocumentMode} disabled={isBusy || locked} onChange={(e) => updateHeader('taxDocumentMode', e.target.value)}>
-          <option value="NOT_RECEIVED">ยังไม่มีใบกำกับภาษี</option>
-          <option value="RECEIVED">ได้รับใบกำกับภาษีพร้อมสินค้า</option>
-          <option value="NON_VAT_DOCUMENT">ไม่มี VAT</option>
-          <option value="NO_INPUT_TAX_CLAIM">ไม่ใช้สิทธิภาษีซื้อ</option>
-        </select>
-        {header.taxDocumentMode === 'RECEIVED' && <>
-          <input className="rounded-lg border px-3 py-2 text-sm" placeholder="เลขที่ใบกำกับภาษี" value={header.supplierTaxInvoiceNumber} disabled={isBusy || locked} onChange={(e) => updateHeader('supplierTaxInvoiceNumber', e.target.value)} />
-          <input type="date" className="rounded-lg border px-3 py-2 text-sm" value={header.supplierTaxInvoiceDate} disabled={isBusy || locked} onChange={(e) => updateHeader('supplierTaxInvoiceDate', e.target.value)} />
-        </>}
-      </div>
-
-      {!!drafts.length && !receipt?.id && (
-        <div className="rounded-lg border border-slate-200 p-3 space-y-2">
-          <p className="text-sm font-medium text-slate-700">รายการที่ยังรับไม่ครบ</p>
-          <input className="w-full rounded-lg border px-3 py-2 text-sm" placeholder="ค้นหาจาก Supplier หรือเลขที่ใบส่งของ" value={draftSearch} onChange={(e) => setDraftSearch(e.target.value)} />
-          <div className="flex flex-wrap gap-2">
-            {visibleDrafts.slice(0, 20).map((draft) => (
-              <button key={draft.id} type="button" className="rounded-lg border px-3 py-2 text-left text-sm hover:bg-slate-50" onClick={() => resumeDraft(draft)}>
-                {draft.supplierName || `Supplier #${draft.supplierId}`} · {draft.deliveryNoteNumber}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {!!allLines.length && (
-        <div className="rounded-lg border border-slate-200 p-3 text-sm">
-          <div className="flex flex-wrap justify-between gap-2 font-medium">
-            <span>สินค้า {allLines.length} ประเภท</span><span>รวม {totalQuantity} ชิ้น</span>
-          </div>
-          {allLines.map((item) => (
-            <div key={item.id || item.localId} className="mt-2 flex items-center justify-between gap-3 border-t pt-2 text-slate-700">
-              <span>{item.productName}</span>
-              <div className="flex items-center gap-2">
-                <span>{item.quantity} ชิ้น</span>
-                {!locked && item.localId && <button type="button" className="text-rose-600" onClick={() => removeLocalLine(item.localId)}>ลบ</button>}
-                {!locked && item.id && <button type="button" className="text-rose-600" disabled={isBusy} onClick={() => removeServerLine(item.id)}>ลบ</button>}
-              </div>
+          {receipt?.code && (
+            <div className="rounded-lg bg-indigo-50 px-3 py-2 text-sm text-indigo-900">
+              {receipt.code} · {receipt.status}
             </div>
-          ))}
+          )}
+          {locked && (
+            <button type="button" className="rounded-lg border px-3 py-2 text-sm" onClick={resetReceipt}>
+              เริ่มใบรับใหม่
+            </button>
+          )}
         </div>
+      </div>
+
+      <QuickReceiptHeaderFields
+        header={header}
+        suppliers={suppliers}
+        disabled={isBusy || locked}
+        onHeaderChange={updateHeader}
+      />
+
+      {!receipt?.id && (
+        <QuickReceiptDraftPicker
+          drafts={visibleDrafts}
+          search={draftSearch}
+          onSearchChange={setDraftSearch}
+          onResumeDraft={resumeDraft}
+        />
       )}
 
-      <div className="flex flex-wrap justify-end gap-2">
-        {receipt?.status === 'DRAFT' && <button type="button" className="rounded-lg border border-rose-300 px-4 py-2 text-sm font-semibold text-rose-700 disabled:opacity-50" disabled={isBusy} onClick={handleCancelDraft}>ยกเลิกใบรับนี้</button>}
-        <button type="button" className="rounded-lg border px-4 py-2 text-sm font-semibold disabled:opacity-50" disabled={isBusy || locked} onClick={handleAddCurrentLine}>เพิ่มสินค้าปัจจุบันในรายการ</button>
-        <button type="button" className="rounded-lg border border-indigo-300 px-4 py-2 text-sm font-semibold text-indigo-700 disabled:opacity-50" disabled={isBusy || !allLines.length || locked} onClick={handleSaveForLater}>เก็บไว้รับต่อภายหลัง</button>
-        <button type="button" className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50" disabled={isBusy || !allLines.length || locked} onClick={handleFinalize}>ยืนยันรับสินค้าครบแล้ว</button>
-      </div>
+      <QuickReceiptLineSummary
+        lines={allLines}
+        totalQuantity={totalQuantity}
+        locked={locked}
+        isBusy={isBusy}
+        onRemoveLocalLine={removeLocalLine}
+        onRemoveServerLine={removeServerLine}
+      />
+
+      <QuickReceiptActions
+        receipt={receipt}
+        isBusy={isBusy}
+        locked={locked}
+        hasLines={allLines.length > 0}
+        onCancelDraft={handleCancelDraft}
+        onAddCurrentLine={handleAddCurrentLine}
+        onSaveForLater={handleSaveForLater}
+        onFinalize={handleFinalize}
+      />
     </section>
   );
 };

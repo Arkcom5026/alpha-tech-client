@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { TriangleAlert } from 'lucide-react';
 import InputTaxReceiptCandidateTable from '../components/InputTaxReceiptCandidateTable';
 import InputTaxReceiptFilters from '../components/InputTaxReceiptFilters';
@@ -13,6 +13,10 @@ import useInputTaxReceiptWorkspaceController from '../hooks/useInputTaxReceiptWo
 const InputTaxReceiptWorkspacePage = () => {
   const controller = useInputTaxReceiptWorkspaceController();
 
+  const activeLinkCount = useMemo(() => controller.links.filter((link) => (
+    String(link.status || '').toUpperCase() !== 'CANCELLED'
+  )).length, [controller.links]);
+
   if (!controller.branchId) {
     return (
       <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-amber-800">
@@ -23,10 +27,6 @@ const InputTaxReceiptWorkspacePage = () => {
       </div>
     );
   }
-
-  const activeLinkCount = controller.links.filter((link) => (
-    String(link.status || '').toUpperCase() !== 'CANCELLED'
-  )).length;
 
   return (
     <section className="space-y-5">

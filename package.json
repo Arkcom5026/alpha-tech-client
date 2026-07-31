@@ -23,7 +23,8 @@
     "test:e2e:customer-receipt:debug": "playwright test e2e/create-session-reset.spec.js e2e/multiple-customers-sequential.spec.js e2e/duplicate-submit-protection.spec.js e2e/request-isolation.spec.js --debug",
     "test:partner-store-application-ui": "node tests/partner-store-application-ui.contract.test.js",
     "test:repair-in-app-help": "node tests/repair-in-app-help-center.contract.test.js",
-    "test:warranty-claim-help": "node tests/warranty-claim-help.contract.test.js"
+    "test:warranty-claim-help": "node tests/warranty-claim-help.contract.test.js",
+    "test:quick-receipt-help": "node tests/quick-receipt-help.contract.test.js"
   },
   "dependencies": {
     "@cloudinary/react": "1.14.1",
@@ -68,7 +69,7 @@
     "lucide-react": "0.503.0",
     "moment": "2.30.1",
     "motion": "12.9.4",
-    "numeral": "2.0.6",
+    "numeral": "2.0.2",
     "rc-slider": "11.1.8",
     "react": "^18.3.1",
     "react-datepicker": "^8.3.0",

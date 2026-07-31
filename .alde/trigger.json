@@ -2,6 +2,6 @@
   "schemaVersion": 1,
   "requestedBy": "ChatGPT",
   "mode": "SyncAndCertify",
-  "requestedAt": "2026-08-01T01:31:00+07:00",
-  "reason": "Re-run ALDE SyncAndCertify after confirming ALDE-WIN01 service online and local client/server main branches clean"
+  "requestedAt": "2026-08-01T02:29:00+07:00",
+  "reason": "Run ALDE through the Windows Service-backed transcript-aware certification pipeline after confirming ALDE-WIN01 is listening and both local repositories are on clean main"
 }

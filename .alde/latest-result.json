@@ -1,20 +1,171 @@
 {
     "schemaVersion":  2,
-    "status":  "UNKNOWN",
+    "status":  "FAIL",
     "repository":  "Arkcom5026/alpha-tech-client",
     "sourceBranch":  "main",
-    "sourceSha":  "daddd258322f8c3a2d87a20feff3466730fc3045",
+    "sourceSha":  "e01154887670cab54ea1485f0a22e3339ab00d88",
     "eventName":  "push",
     "workflow":  "ALDE Local Certification",
-    "workflowRunId":  30669004396,
+    "workflowRunId":  30669213956,
     "workflowRunAttempt":  1,
-    "workflowRunUrl":  "https://github.com/Arkcom5026/alpha-tech-client/actions/runs/30669004396",
-    "publishedAt":  "2026-07-31T22:09:24.1006932Z",
+    "workflowRunUrl":  "https://github.com/Arkcom5026/alpha-tech-client/actions/runs/30669213956",
+    "publishedAt":  "2026-07-31T22:13:11.5757652Z",
     "runner":  {
                    "name":  "ALDE-WIN01",
                    "os":  "Windows",
                    "architecture":  "X64"
                },
-    "metadata":  null,
-    "verificationReport":  null
+    "metadata":  {
+                     "schemaVersion":  5,
+                     "status":  "FAIL",
+                     "mode":  "SyncAndCertify",
+                     "startedAt":  "2026-07-31T22:13:02.8985957Z",
+                     "finishedAt":  "2026-07-31T22:13:07.9085788Z",
+                     "runnerName":  "ALDE-WIN01",
+                     "workflowRunId":  "30669213956",
+                     "clientPath":  "D:\\alpha-tech\\client",
+                     "serverPath":  "D:\\alpha-tech\\server",
+                     "clientHead":  "daddd258322f8c3a2d87a20feff3466730fc3045",
+                     "serverHead":  "e56c05dd243bc4d2eaf475582e66ccad408b15e3",
+                     "engineExitCode":  1,
+                     "pipelineExitCode":  1,
+                     "pipelineError":  "",
+                     "assessment":  {
+                                        "schemaVersion":  2,
+                                        "classifier":  {
+                                                           "name":  "ALDE Transcript-Aware Failure Classification Engine",
+                                                           "version":  "1.1.0",
+                                                           "evidenceSources":  [
+                                                                                   "gate.name",
+                                                                                   "gate.detail",
+                                                                                   "execution transcript"
+                                                                               ],
+                                                           "conservativeUnknownPolicy":  "UNCLASSIFIED is certification-failing until reviewed.",
+                                                           "earlyFailurePolicy":  "Preflight failures without normal gates are preserved as a synthetic ALDE preflight gate."
+                                                       },
+                                        "authorityStatus":  "FAIL",
+                                        "regressionCount":  0,
+                                        "environmentBlockerCount":  0,
+                                        "safetyGuardCount":  0,
+                                        "unclassifiedCount":  1,
+                                        "failedGateCount":  1,
+                                        "interpretation":  "A source/executable-contract regression or unclassified failure requires correction or review.",
+                                        "gates":  [
+                                                      {
+                                                          "name":  "ALDE preflight",
+                                                          "status":  "FAIL",
+                                                          "failureClass":  "UNCLASSIFIED",
+                                                          "reasonCode":  "INSUFFICIENT_FAILURE_EVIDENCE",
+                                                          "matchedPattern":  null,
+                                                          "durationSeconds":  null,
+                                                          "detail":  "",
+                                                          "transcriptEvidence":  "==============================================================================\r\n Alpha-Tech Local Development Engine 1.1.1-phase1\r\n==============================================================================\r\nWorkflow : Git-first E2E Increment Full Certification\r\nMode     : SyncAndCertify\r\nPolicy   : Run all safe gates, collect complete evidence, then decide PASS or FAIL.\r\nSafety   : This engine never stages files and never creates commits.\r\n\r\n==============================================================================\r\n GIT GUARD\r\n==============================================================================\r\n[CMD ] git -C D:\\alpha-tech\\client branch --show-current\r\n[CMD ] git -C D:\\alpha-tech\\client rev-parse HEAD\r\n[CMD ] git -C D:\\alpha-tech\\client status --porcelain=v1 --untracked-files=all\r\n[REPO] client: branch=main head=daddd258322f8c3a2d87a20feff3466730fc3045 clean=True\r\n[CMD ] git -C D:\\alpha-tech\\server branch --show-current\r\n[CMD ] git -C D:\\alpha-tech\\server rev-parse HEAD\r\n[CMD ] git -C D:\\alpha-tech\\server status --porcelain=v1 --untracked-files=all\r\n[REPO] server: branch=main head=e56c05dd243bc4d2eaf475582e66ccad408b15e3 clean=True\r\n\r\n==============================================================================\r\n GIT SYNCHRONIZATION\r\n==============================================================================\r\n[CMD ] git -C D:\\alpha-tech\\client branch --show-current\r\n[CMD ] git -C D:\\alpha-tech\\client rev-parse HEAD\r\n[CMD ] git -C D:\\alpha-tech\\client status --porcelain=v1 --untracked-files=all\r\n[CMD ] git -C D:\\alpha-tech\\client fetch origin --prune\r\n\r\nALDE FAILED: From ssh://ssh.github.com:443/Arkcom5026/alpha-tech-client\r\n[CMD ] git -C D:\\alpha-tech\\client branch --show-current\r\n[CMD ] git -C D:\\alpha-tech\\client rev-parse HEAD\r\n[CMD ] git -C D:\\alpha-tech\\client status --porcelain=v1 --untracked-files=all\r\n[CMD ] git -C D:\\alpha-tech\\server branch --show-current\r\n[CMD ] git -C D:\\alpha-tech\\server rev-parse HEAD\r\n[CMD ] git -C D:\\alpha-tech\\server status --porcelain=v1 --untracked-files=all\r\n[CMD ] node --version\r\n[CMD ] npm --version\r\nVerification report: D:\\alpha-tech\\client\\.artifacts\\verification\\alde-20260801-051307.json"
+                                                      }
+                                                  ]
+                                    },
+                     "reportPath":  "D:\\alde\\actions-runner\\_work\\alpha-tech-client\\alpha-tech-client\\alde-evidence\\alde-20260801-051307.json",
+                     "transcriptPath":  "D:\\alde\\actions-runner\\_work\\alpha-tech-client\\alpha-tech-client\\alde-evidence\\alde-transcript-20260801-051302.log"
+                 },
+    "verificationReport":  {
+                               "schemaVersion":  3,
+                               "engine":  {
+                                              "name":  "Alpha-Tech Local Development Engine",
+                                              "version":  "1.1.1-phase1",
+                                              "workflow":  "Git-first E2E Increment Full Certification",
+                                              "mode":  "SyncAndCertify",
+                                              "executionPolicy":  "full-certification",
+                                              "runtimeCompatibility":  "Windows PowerShell 5.1+"
+                                          },
+                               "status":  "FAIL",
+                               "failureMessage":  "From ssh://ssh.github.com:443/Arkcom5026/alpha-tech-client",
+                               "failedGateCount":  0,
+                               "startedAt":  "2026-08-01T05:13:02.9425932+07:00",
+                               "finishedAt":  "2026-08-01T05:13:07.2373458+07:00",
+                               "environment":  {
+                                                   "machine":  "DESKTOP-8GBTJDF",
+                                                   "user":  "Administrator",
+                                                   "powershell":  "5.1.19041.6157",
+                                                   "node":  "v20.19.0",
+                                                   "npm":  "10.8.2"
+                                               },
+                               "repositories":  {
+                                                    "client":  {
+                                                                   "path":  "D:\\alpha-tech\\client",
+                                                                   "branch":  "main",
+                                                                   "head":  "daddd258322f8c3a2d87a20feff3466730fc3045",
+                                                                   "clean":  true,
+                                                                   "status":  [
+
+                                                                              ]
+                                                               },
+                                                    "server":  {
+                                                                   "path":  "D:\\alpha-tech\\server",
+                                                                   "branch":  "main",
+                                                                   "head":  "e56c05dd243bc4d2eaf475582e66ccad408b15e3",
+                                                                   "clean":  true,
+                                                                   "status":  [
+
+                                                                              ]
+                                                               }
+                                                },
+                               "certifiedHeads":  {
+
+                                                  },
+                               "gates":  [
+
+                                         ],
+                               "executedCommands":  [
+                                                        "git -C D:\\alpha-tech\\client branch --show-current",
+                                                        "git -C D:\\alpha-tech\\client rev-parse HEAD",
+                                                        "git -C D:\\alpha-tech\\client status --porcelain=v1 --untracked-files=all",
+                                                        "git -C D:\\alpha-tech\\server branch --show-current",
+                                                        "git -C D:\\alpha-tech\\server rev-parse HEAD",
+                                                        "git -C D:\\alpha-tech\\server status --porcelain=v1 --untracked-files=all",
+                                                        "git -C D:\\alpha-tech\\client branch --show-current",
+                                                        "git -C D:\\alpha-tech\\client rev-parse HEAD",
+                                                        "git -C D:\\alpha-tech\\client status --porcelain=v1 --untracked-files=all",
+                                                        "git -C D:\\alpha-tech\\client fetch origin --prune",
+                                                        "git -C D:\\alpha-tech\\client branch --show-current",
+                                                        "git -C D:\\alpha-tech\\client rev-parse HEAD",
+                                                        "git -C D:\\alpha-tech\\client status --porcelain=v1 --untracked-files=all",
+                                                        "git -C D:\\alpha-tech\\server branch --show-current",
+                                                        "git -C D:\\alpha-tech\\server rev-parse HEAD",
+                                                        "git -C D:\\alpha-tech\\server status --porcelain=v1 --untracked-files=all",
+                                                        "node --version",
+                                                        "npm --version"
+                                                    ],
+                               "assessment":  {
+                                                  "schemaVersion":  2,
+                                                  "classifier":  {
+                                                                     "name":  "ALDE Transcript-Aware Failure Classification Engine",
+                                                                     "version":  "1.1.0",
+                                                                     "evidenceSources":  [
+                                                                                             "gate.name",
+                                                                                             "gate.detail",
+                                                                                             "execution transcript"
+                                                                                         ],
+                                                                     "conservativeUnknownPolicy":  "UNCLASSIFIED is certification-failing until reviewed.",
+                                                                     "earlyFailurePolicy":  "Preflight failures without normal gates are preserved as a synthetic ALDE preflight gate."
+                                                                 },
+                                                  "authorityStatus":  "FAIL",
+                                                  "regressionCount":  0,
+                                                  "environmentBlockerCount":  0,
+                                                  "safetyGuardCount":  0,
+                                                  "unclassifiedCount":  1,
+                                                  "failedGateCount":  1,
+                                                  "interpretation":  "A source/executable-contract regression or unclassified failure requires correction or review.",
+                                                  "gates":  [
+                                                                {
+                                                                    "name":  "ALDE preflight",
+                                                                    "status":  "FAIL",
+                                                                    "failureClass":  "UNCLASSIFIED",
+                                                                    "reasonCode":  "INSUFFICIENT_FAILURE_EVIDENCE",
+                                                                    "matchedPattern":  null,
+                                                                    "durationSeconds":  null,
+                                                                    "detail":  "",
+                                                                    "transcriptEvidence":  "==============================================================================\r\n Alpha-Tech Local Development Engine 1.1.1-phase1\r\n==============================================================================\r\nWorkflow : Git-first E2E Increment Full Certification\r\nMode     : SyncAndCertify\r\nPolicy   : Run all safe gates, collect complete evidence, then decide PASS or FAIL.\r\nSafety   : This engine never stages files and never creates commits.\r\n\r\n==============================================================================\r\n GIT GUARD\r\n==============================================================================\r\n[CMD ] git -C D:\\alpha-tech\\client branch --show-current\r\n[CMD ] git -C D:\\alpha-tech\\client rev-parse HEAD\r\n[CMD ] git -C D:\\alpha-tech\\client status --porcelain=v1 --untracked-files=all\r\n[REPO] client: branch=main head=daddd258322f8c3a2d87a20feff3466730fc3045 clean=True\r\n[CMD ] git -C D:\\alpha-tech\\server branch --show-current\r\n[CMD ] git -C D:\\alpha-tech\\server rev-parse HEAD\r\n[CMD ] git -C D:\\alpha-tech\\server status --porcelain=v1 --untracked-files=all\r\n[REPO] server: branch=main head=e56c05dd243bc4d2eaf475582e66ccad408b15e3 clean=True\r\n\r\n==============================================================================\r\n GIT SYNCHRONIZATION\r\n==============================================================================\r\n[CMD ] git -C D:\\alpha-tech\\client branch --show-current\r\n[CMD ] git -C D:\\alpha-tech\\client rev-parse HEAD\r\n[CMD ] git -C D:\\alpha-tech\\client status --porcelain=v1 --untracked-files=all\r\n[CMD ] git -C D:\\alpha-tech\\client fetch origin --prune\r\n\r\nALDE FAILED: From ssh://ssh.github.com:443/Arkcom5026/alpha-tech-client\r\n[CMD ] git -C D:\\alpha-tech\\client branch --show-current\r\n[CMD ] git -C D:\\alpha-tech\\client rev-parse HEAD\r\n[CMD ] git -C D:\\alpha-tech\\client status --porcelain=v1 --untracked-files=all\r\n[CMD ] git -C D:\\alpha-tech\\server branch --show-current\r\n[CMD ] git -C D:\\alpha-tech\\server rev-parse HEAD\r\n[CMD ] git -C D:\\alpha-tech\\server status --porcelain=v1 --untracked-files=all\r\n[CMD ] node --version\r\n[CMD ] npm --version\r\nVerification report: D:\\alpha-tech\\client\\.artifacts\\verification\\alde-20260801-051307.json"
+                                                                }
+                                                            ]
+                                              }
+                           }
 }

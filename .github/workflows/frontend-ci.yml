@@ -23,6 +23,9 @@ jobs:
     - name: 📦 บรรจุและติดตั้ง Packages ฝั่งหน้าบ้าน
       run: npm ci
 
+    - name: 🧪 ตรวจสัญญาคู่มือภายในงานรับซ่อม
+      run: npm run test:repair-in-app-help
+
     - name: 🔐 ผูกเงื่อนไขความลับผ่านระบบกระจกเงาสะท้อน (Injecting Secrets)
       run: |
         echo "VITE_API_URL=https://api.saduaksabuy.com/api/v2/procurement" >> .env

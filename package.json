@@ -24,7 +24,8 @@
     "test:partner-store-application-ui": "node tests/partner-store-application-ui.contract.test.js",
     "test:repair-in-app-help": "node tests/repair-in-app-help-center.contract.test.js",
     "test:warranty-claim-help": "node tests/warranty-claim-help.contract.test.js",
-    "test:quick-receipt-help": "node tests/quick-receipt-help.contract.test.js"
+    "test:quick-receipt-help": "node tests/quick-receipt-help.contract.test.js",
+    "test:sale-return-help": "node tests/sale-return-help.contract.test.js"
   },
   "dependencies": {
     "@cloudinary/react": "1.14.1",
@@ -100,7 +101,7 @@
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@types/react": "19.0.10",
-    "@types/react-dom": "19.0.4",
+    "@types/react-dom": "19.0.10",
     "@vitejs/plugin-react": "4.3.2",
     "autoprefixer": "10.4.21",
     "eslint": "9.26.0",

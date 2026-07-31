@@ -14,23 +14,23 @@ Elevate the existing contextual Claim section in the Repair Help Center into com
 - The `warranty-claims` route opens the Claim help section contextually.
 - Shared search, drawer, accessibility, and close behavior already exist.
 
-## Planned Scope
+## Implemented Scope
 
-- expand Claim-specific in-app guidance
-- document lifecycle/status meanings and next actions
-- add operational checklist
-- add FAQ and troubleshooting/recovery guidance
-- strengthen focused contract coverage
-- run focused verification and production build before readiness
+- Claim-specific in-app guidance
+- lifecycle/status meanings and next actions
+- operational checklist
+- FAQ and troubleshooting/recovery guidance
+- focused contract coverage
+- dedicated npm test command
 
 ## Documentation Status
 
 - Business manual: companion Server adoption increment
-- User guide: planned
-- In-app help: planned
+- User guide: implemented in Claim section
+- In-app help: implemented through module-owned Claim content projection
 - Workflow Assistant: NOT APPLICABLE in this documentation increment; runtime-aware assistance requires separate authority review
-- Runtime checklist: static operational checklist planned; runtime-backed checklist is follow-up
-- FAQ / troubleshooting: planned
+- Runtime checklist: static operational checklist implemented; runtime-backed checklist is follow-up
+- FAQ / troubleshooting: implemented
 - Known limitation: global mobile POS shell remains a separate agenda
 
 ## Runtime Impact
@@ -40,9 +40,9 @@ Documentation projection and focused contract only. No API, Prisma, migration, r
 ## Completion Criteria
 
 - [x] Mission pack exists.
-- [ ] Draft PR is opened.
-- [ ] Claim guidance is expanded.
-- [ ] Focused contract is updated.
+- [x] Draft PR is opened.
+- [x] Claim guidance is expanded.
+- [x] Focused contract is added.
 - [ ] Focused verification passes.
 - [ ] Production build passes.
 - [ ] Review and merge decision are recorded.

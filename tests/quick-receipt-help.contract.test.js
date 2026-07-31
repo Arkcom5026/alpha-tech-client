@@ -1,35 +1,43 @@
-import assert from 'node:assert/strict';
+import { describe, expect, it } from 'vitest';
 
 import quickReceiptHelpContent from '../src/features/receiving/quick-stock/help/quickReceiptHelpContent.js';
 
-const modeCodes = quickReceiptHelpContent.modes.map((mode) => mode.code);
-assert.deepEqual(modeCodes, ['RESUMABLE_SESSION', 'ONE_SHOT_COMPLETE']);
+describe('Quick Receipt DDWD help contract', () => {
+  it('documents both supported operating modes', () => {
+    expect(quickReceiptHelpContent.modes.map((mode) => mode.code)).toEqual([
+      'RESUMABLE_SESSION',
+      'ONE_SHOT_COMPLETE',
+    ]);
+  });
 
-const statusCodes = quickReceiptHelpContent.statuses.map(([code]) => code);
-for (const requiredStatus of ['LOCAL_DRAFT', 'DRAFT', 'FINALIZING', 'COMPLETED', 'CANCELLED']) {
-  assert.ok(statusCodes.includes(requiredStatus), `missing status guidance: ${requiredStatus}`);
-}
+  it('covers the complete receipt lifecycle and authority guidance', () => {
+    const statusCodes = quickReceiptHelpContent.statuses.map(([code]) => code);
+    for (const requiredStatus of ['LOCAL_DRAFT', 'DRAFT', 'FINALIZING', 'COMPLETED', 'CANCELLED']) {
+      expect(statusCodes, `missing status guidance: ${requiredStatus}`).toContain(requiredStatus);
+    }
 
-const searchableText = JSON.stringify(quickReceiptHelpContent).toLowerCase();
-for (const requiredText of [
-  'supplier',
-  'เลขที่ใบส่งของ',
-  'ร้านปัจจุบัน',
-  'structured product',
-  'simple product',
-  'barcode',
-  'serial',
-  'idempotency',
-  'local storage',
-  'เก็บไว้รับต่อภายหลัง',
-  'ยืนยันรับสินค้าครบ',
-]) {
-  assert.ok(searchableText.includes(requiredText.toLowerCase()), `missing DDWD guidance: ${requiredText}`);
-}
+    const searchableText = JSON.stringify(quickReceiptHelpContent).toLowerCase();
+    for (const requiredText of [
+      'supplier',
+      'เลขที่ใบส่งของ',
+      'ร้านปัจจุบัน',
+      'structured product',
+      'simple product',
+      'barcode',
+      'serial',
+      'idempotency',
+      'local storage',
+      'เก็บไว้รับต่อภายหลัง',
+      'ยืนยันรับสินค้าครบ',
+    ]) {
+      expect(searchableText, `missing DDWD guidance: ${requiredText}`).toContain(requiredText.toLowerCase());
+    }
+  });
 
-assert.ok(quickReceiptHelpContent.steps.length >= 6, 'workflow steps are incomplete');
-assert.ok(quickReceiptHelpContent.checklist.length >= 8, 'operational checklist is incomplete');
-assert.ok(quickReceiptHelpContent.faq.length >= 5, 'FAQ/recovery guidance is incomplete');
-assert.ok(quickReceiptHelpContent.notes.length >= 4, 'authority notes are incomplete');
-
-console.log('Quick Receipt DDWD help contract: PASS');
+  it('provides operationally complete steps, checklist, recovery and authority notes', () => {
+    expect(quickReceiptHelpContent.steps.length).toBeGreaterThanOrEqual(6);
+    expect(quickReceiptHelpContent.checklist.length).toBeGreaterThanOrEqual(8);
+    expect(quickReceiptHelpContent.faq.length).toBeGreaterThanOrEqual(5);
+    expect(quickReceiptHelpContent.notes.length).toBeGreaterThanOrEqual(4);
+  });
+});

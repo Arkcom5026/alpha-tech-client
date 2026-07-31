@@ -24,6 +24,8 @@ const TaxIntakeDocumentDetailPanel = ({
   if (!document) return null;
 
   const actions = taxDocumentLifecycleActions[document.status] || [];
+  const reconciliation = document.inputTaxReconciliation;
+  const approvalBlocked = Boolean(reconciliation && !reconciliation.canApprove);
 
   return (
     <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -50,7 +52,7 @@ const TaxIntakeDocumentDetailPanel = ({
         <DetailMetric label="ยอดรวม" value={formatTaxIntakeMoney(document.totalAmount)} />
       </div>
 
-      <TaxIntakeReconciliationCard reconciliation={document.inputTaxReconciliation} />
+      <TaxIntakeReconciliationCard reconciliation={reconciliation} />
 
       {transitionError && (
         <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
@@ -63,21 +65,31 @@ const TaxIntakeDocumentDetailPanel = ({
         </div>
       )}
 
+      {approvalBlocked && actions.some((action) => action.status === 'APPROVED') && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+          ต้องตรวจสอบและปรับยอดที่ผูกให้ตรงกับใบกำกับภาษีก่อนอนุมัติเอกสาร
+        </div>
+      )}
+
       {actions.length > 0 && (
         <div className="flex flex-wrap gap-2">
-          {actions.map((action) => (
-            <button
-              key={action.status}
-              type="button"
-              onClick={() => onTransition(action.status)}
-              disabled={transitioning}
-              className={action.primary
-                ? 'rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-black text-white disabled:opacity-50'
-                : 'rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 disabled:opacity-50'}
-            >
-              {action.label}
-            </button>
-          ))}
+          {actions.map((action) => {
+            const disabled = transitioning || (action.status === 'APPROVED' && approvalBlocked);
+
+            return (
+              <button
+                key={action.status}
+                type="button"
+                onClick={() => onTransition(action.status)}
+                disabled={disabled}
+                className={action.primary
+                  ? 'rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-50'
+                  : 'rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 disabled:cursor-not-allowed disabled:opacity-50'}
+              >
+                {action.label}
+              </button>
+            );
+          })}
         </div>
       )}
     </div>

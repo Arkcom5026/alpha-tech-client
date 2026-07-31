@@ -132,6 +132,10 @@ $pipelineError = ''
 
 try {
   Write-Section 'ALDE ENGINE EXECUTION'
+  # Keep the native stderr stream separate. Git writes successful fetch progress
+  # (for example, "From ssh://...") to stderr; merging all streams here causes
+  # Windows PowerShell 5.1 with ErrorActionPreference=Stop to treat that progress
+  # as a terminating pipeline error before LASTEXITCODE can be evaluated.
   & $aldeScript `
     -Mode $Mode `
     -ClientPath $ClientPath `
@@ -139,7 +143,7 @@ try {
     -RemoteName 'origin' `
     -RequiredBranch $RequiredBranch `
     -RunAllBackendVerifiers `
-    -IncludeRuntime *>&1 |
+    -IncludeRuntime |
     Tee-Object -FilePath $transcriptPath
 
   $engineExitCode = $LASTEXITCODE

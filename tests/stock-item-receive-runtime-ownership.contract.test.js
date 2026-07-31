@@ -27,21 +27,17 @@ describe('StockItem receive runtime ownership contract', () => {
     expect(bulkTransport).toContain('/stock-items/receive-all-no-sn');
   });
 
-  it('keeps the compatibility store as a composition consumer instead of a receive transport owner', () => {
-    const store = read('src/features/stockItem/store/stockItemStore.js');
+  it('keeps receive actions owned directly by the receive store slice', () => {
     const receiveStoreSlice = read(
       'src/features/stockItem/receive/store/createStockItemReceiveSlice.js'
     );
 
-    expect(store).toContain("from '../receive/store/createStockItemReceiveSlice'");
-    expect(store).toContain('...createStockItemReceiveSlice(set, get)');
-    expect(store).not.toContain('receiveScannedStockItem');
-    expect(store).not.toContain('receiveAllPendingStockItems');
-    expect(store).not.toContain('/stock-items/receive-sn');
-    expect(store).not.toContain('/stock-items/receive-all-no-sn');
-
     expect(receiveStoreSlice).toMatch(/from\s+['"]\.\.['"]/);
+    expect(receiveStoreSlice).toContain('receiveSNAction: async');
+    expect(receiveStoreSlice).toContain('receiveAllPendingNoSNAction: async');
     expect(receiveStoreSlice).toContain('receiveScannedStockItem');
     expect(receiveStoreSlice).toContain('receiveAllPendingStockItems');
+    expect(receiveStoreSlice).not.toContain('/stock-items/receive-sn');
+    expect(receiveStoreSlice).not.toContain('/stock-items/receive-all-no-sn');
   });
 });

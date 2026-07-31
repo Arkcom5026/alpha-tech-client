@@ -10,25 +10,39 @@ Provide module-owned operational guidance for returning serialized and SIMPLE sa
 
 ## Client Authority Discovered
 
-Canonical API owner:
+Canonical runtime owner:
 
+- `src/features/sales/return/index.js`
+- `src/features/sales/return/pages/ReturnSearchPage.jsx`
+- `src/features/sales/return/pages/CreateReturnPage.jsx`
+- `src/features/sales/return/store/saleReturnRuntimeStore.js`
+- `src/features/sales/return/hooks/useSaleReturnRuntimeController.js`
 - `src/features/sales/return/api/saleReturnApi.js`
+
+Canonical API paths:
+
 - eligibility: `GET /sales/returns/eligible/:saleId`
 - completion: `POST /sales/returns/complete`
 - returnable-sale lookup: `GET /sales/return`
 
-Legacy/compatibility API still present:
+Runtime route proof:
+
+- `src/routes/partner/salesRoutes.jsx` imports `CreateReturnPage` and `ReturnSearchPage` from `@/features/sales/return`.
+- POS routes mount `sales/sale-return` and `sales/sale-return/create/:saleId` to the canonical pages.
+
+Legacy/compatibility feature still present:
 
 - `src/features/saleReturn/api/saleReturnApi.js`
-- completion: `POST /sale-returns/create`
-- list/detail: `/sale-returns/...`
+- `src/features/saleReturn/store/saleReturnStore.js`
+- legacy API targets `/sale-returns/...`
 
-## Hybrid State Under Assessment
+## Canonical versus Legacy Decision
 
-- Two Client API namespaces exist for Sale Return.
-- The canonical nested Sales feature and legacy top-level feature must be traced to actual page/router/store usage.
-- No legacy file or compatibility endpoint may be removed until usage and backward-compatibility evidence are complete.
-- The DDWD adoption may record a retirement decision, but does not pre-authorize runtime removal.
+- `src/features/sales/return` is the active Client runtime owner.
+- `src/features/saleReturn` is a legacy feature path and is not mounted by the current POS sales router.
+- The legacy feature is retained temporarily because Server compatibility routes remain active and external/deep-link usage has not been disproven.
+- This DDWD Increment records the retirement boundary but does not delete the legacy feature or compatibility endpoint.
+- Retirement requires a separately approved implementation increment with repository/runtime usage evidence.
 
 ## Planned Scope
 
@@ -45,9 +59,8 @@ Legacy/compatibility API still present:
 - focused contract and CI gate after implementation is complete
 - Human Operational Test Pack
 
-## Explicit Exclusions Until Discovery Completes
+## Explicit Exclusions
 
-- No assumption that the legacy or canonical UI is the sole runtime owner without usage evidence.
 - No assumption that Credit Note or tax adjustment is implemented.
 - No deletion of legacy API or route paths in this documentation phase.
 - No Sales Store, API contract, stock mutation, refund posting, or production-data behavior change unless opened as a separately justified implementation increment.
@@ -62,10 +75,10 @@ Legacy/compatibility API still present:
 ## Completion Criteria
 
 - [x] Dedicated branch exists.
-- [ ] Draft PR exists.
+- [x] Draft PR exists.
 - [x] Initial Client API authority discovery is recorded.
-- [ ] Active UI/router/store owner is proven.
-- [ ] Canonical versus legacy usage decision is recorded.
+- [x] Active UI/router/store owner is proven.
+- [x] Canonical versus legacy usage decision is recorded.
 - [ ] Operational User Guide exists.
 - [ ] Contextual in-app guidance is implemented where appropriate.
 - [ ] Focused contract and final certification are recorded.
@@ -74,4 +87,4 @@ Legacy/compatibility API still present:
 
 ## Current State
 
-`IN PROGRESS` — Client authority discovery has begun; active UI ownership, documentation, help projection, hybrid-state decision, acceptance, and merge remain pending.
+`IN PROGRESS` — active Client owner and hybrid boundary are confirmed; documentation, help projection, acceptance, and merge remain pending.

@@ -1,0 +1,37 @@
+{
+    "schemaVersion":  1,
+    "status":  "FAIL",
+    "repository":  "Arkcom5026/alpha-tech-client",
+    "sourceBranch":  "main",
+    "sourceSha":  "b0f9d55d5dd6a2b6b58e2b4aadf4e4aabeadeb74",
+    "eventName":  "push",
+    "workflow":  "ALDE Local Certification",
+    "workflowRunId":  30655551621,
+    "workflowRunAttempt":  1,
+    "workflowRunUrl":  "https://github.com/Arkcom5026/alpha-tech-client/actions/runs/30655551621",
+    "publishedAt":  "2026-07-31T18:32:47.3170939Z",
+    "runner":  {
+                   "name":  "ALDE-WIN01",
+                   "os":  "Windows",
+                   "architecture":  "X64"
+               },
+    "metadata":  {
+                     "schemaVersion":  3,
+                     "status":  "FAIL",
+                     "mode":  "SyncAndCertify",
+                     "startedAt":  "2026-07-31T18:32:42.0221362Z",
+                     "finishedAt":  "2026-07-31T18:32:43.4165321Z",
+                     "runnerName":  "ALDE-WIN01",
+                     "workflowRunId":  "30655551621",
+                     "clientPath":  "D:\\alpha-tech\\client",
+                     "serverPath":  "D:\\alpha-tech\\server",
+                     "clientHead":  "unavailable",
+                     "serverHead":  "unavailable",
+                     "runnerPolicy":  null,
+                     "reportFile":  null,
+                     "reportPath":  null,
+                     "publishedReportPath":  null,
+                     "exitCode":  1
+                 },
+    "verificationReport":  null
+}

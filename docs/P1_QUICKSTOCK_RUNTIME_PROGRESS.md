@@ -40,7 +40,7 @@ src/features/product/
 
 ## Important architecture decisions
 
-1. QuickStock is now isolated under `src/features/product/quick-stock/`.
+1. QuickStock is now isolated under `src/features/receiving/quick-stock/`.
 2. `QuickStockPage.jsx` is now primarily a UI composition page.
 3. Runtime behavior is split by domain hooks:
    - Discovery: search, filters, selected product/template/operational product.

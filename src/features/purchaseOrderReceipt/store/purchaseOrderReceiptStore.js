@@ -4,7 +4,6 @@
 import { create } from 'zustand';
 import {
   getAllReceipts,
-  getReceiptBarcodeSummaries,
   createReceipt,
   updateReceipt,
   deleteReceipt,
@@ -12,12 +11,12 @@ import {
   finalizeReceiptIfNeeded,
   markReceiptAsPrinted,
   createQuickReceipt,
-  generateReceiptBarcodes,
-  printReceipt,
   commitReceipt,
   getReceiptById,
+  getEligiblePurchaseOrders,
+  getPurchaseOrderDetailById,
 } from '@/features/purchaseOrderReceipt/api/purchaseOrderReceiptApi';
-import { getEligiblePurchaseOrders, getPurchaseOrderDetailById, updatePurchaseOrderStatus } from '@/features/purchaseOrder/api/purchaseOrderApi';
+import { updatePurchaseOrderStatus } from '@/features/purchaseOrder/api/purchaseOrderApi';
 import { addReceiptItem, updateReceiptItem, deleteReceiptItem } from '@/features/purchaseOrderReceiptItem/api/purchaseOrderReceiptItemApi';
 
 let _createReceiptInFlight = null;
@@ -25,18 +24,15 @@ let _createReceiptInFlight = null;
 const usePurchaseOrderReceiptStore = create((set, get) => ({
 
   receipts: [],
-  receiptBarcodeSummaries: [],
-  receiptSummaries: [], 
+  receiptSummaries: [],
   purchaseOrdersForReceipt: [],
   receiptsReadyToPay: [],
-  barcodePreview: [], 
   currentReceipt: null,
   currentOrder: null,
   poItems: [],
   receiptItems: [],
   loading: false,
   creatingReceipt: false,
-  receiptBarcodeLoading: false,
   receiptSummariesLoading: false,
   error: null,
 
@@ -60,7 +56,7 @@ const usePurchaseOrderReceiptStore = create((set, get) => ({
       if (typeof wantPrinted === 'boolean') params.printed = wantPrinted;
       if (opts.q) params.q = opts.q;
       if (opts.supplier) params.supplier = opts.supplier;
-      if (opts.shopSlug) params.shopSlug = opts.shopSlug; 
+      if (opts.shopSlug) params.shopSlug = opts.shopSlug;
       if (Number.isFinite(Number(opts.supplierId))) params.supplierId = Number(opts.supplierId);
       if (Number.isFinite(Number(opts.limit))) params.limit = Number(opts.limit);
 
@@ -93,20 +89,6 @@ const usePurchaseOrderReceiptStore = create((set, get) => ({
     } catch (error) {
       console.error('📛 loadReceiptSummariesAction error:', error);
       set({ error, loading: false, receiptSummariesLoading: false });
-      return [];
-    }
-  },
-
-  loadReceiptBarcodeSummariesAction: async (opts = {}) => {
-    try {
-      set({ loading: true, receiptBarcodeLoading: true, error: null });
-      const params = { printed: opts.printed ?? false, shopSlug: opts.shopSlug };
-      const data = await getReceiptBarcodeSummaries(params);
-      set({ receiptBarcodeSummaries: data, loading: false, receiptBarcodeLoading: false, error: null });
-      return data;
-    } catch (error) {
-      console.error('📛 loadReceiptBarcodeSummariesAction error:', error);
-      set({ error, loading: false, receiptBarcodeLoading: false });
       return [];
     }
   },
@@ -180,20 +162,20 @@ const usePurchaseOrderReceiptStore = create((set, get) => ({
   fetchPurchaseOrdersForReceiptAction: async (opts = {}) => {
     try {
       set({ loading: true, error: null });
-      
+
       const params = {
         status: 'PENDING,PARTIALLY_RECEIVED',
-        ...(opts.shopSlug ? { shopSlug: opts.shopSlug } : {})
+        ...(opts.shopSlug ? { shopSlug: opts.shopSlug } : {}),
       };
 
       const res = await getEligiblePurchaseOrders(params);
-      
-      const rawList = Array.isArray(res) 
-        ? res 
-        : Array.isArray(res?.data) 
-          ? res.data 
-          : Array.isArray(res?.items) 
-            ? res.items 
+
+      const rawList = Array.isArray(res)
+        ? res
+        : Array.isArray(res?.data)
+          ? res.data
+          : Array.isArray(res?.items)
+            ? res.items
             : [];
 
       const normalizedOrders = rawList.map((po) => ({
@@ -203,8 +185,8 @@ const usePurchaseOrderReceiptStore = create((set, get) => ({
         status: po.status || 'PENDING',
         supplier: {
           id: po.supplier?.id || po.supplierId || null,
-          name: po.supplier?.name || po.supplierName || po.Supplier?.name || 'ไม่ระบุชื่อคู่ค้าซัพพลายเออร์'
-        }
+          name: po.supplier?.name || po.supplierName || po.Supplier?.name || 'ไม่ระบุชื่อคู่ค้าซัพพลายเออร์',
+        },
       }));
 
       set({ purchaseOrdersForReceipt: normalizedOrders, loading: false, error: null });
@@ -257,24 +239,17 @@ const usePurchaseOrderReceiptStore = create((set, get) => ({
     }
   },
 
-  /**
-   * 🚀 NEW COMPLIANCE ACTION: ส่งคำสั่งสับสวิตช์ยกเลิกใบสั่งซื้อ (Cancel PO) ส่งตรงพอร์ต 5000
-   * มีกลไกตัดจบแถว Reactive State เพื่อให้รายการที่ยกเลิกเด้งออกจากหน้าจอตรวจรับทันที
-   */
   cancelPurchaseOrderAction: async (poId) => {
     try {
       set({ loading: true, error: null });
-      
-      // อัปเดตสถานะตรงไปยังฐานข้อมูลกลางหลังบ้านให้เป็น CANCELLED
       const res = await updatePurchaseOrderStatus({ id: Number(poId), status: 'CANCELLED' });
-      
-      // ประมวลผลล้างแถวข้อมูลออกจากสเตตตะกร้ารอรับของแบบเรียลไทม์
+
       set((state) => ({
         purchaseOrdersForReceipt: state.purchaseOrdersForReceipt.filter((po) => po.id !== Number(poId)),
         loading: false,
-        error: null
+        error: null,
       }));
-      
+
       return res;
     } catch (err) {
       console.error('❌ ดำเนินการยกเลิกเอกสารใบสั่งซื้อจัดคลังไม่สำเร็จ:', err);
@@ -356,9 +331,6 @@ const usePurchaseOrderReceiptStore = create((set, get) => ({
       set((state) => ({
         receipts: state.receipts.map((r) => (r.id === receiptId ? res : r)),
         currentReceipt: res,
-        receiptBarcodeSummaries: state.receiptBarcodeSummaries.map((s) =>
-          s.id === receiptId ? { ...s, printed: true } : s
-        ),
         receiptSummaries: Array.isArray(state.receiptSummaries)
           ? state.receiptSummaries.filter((s) => s.id !== receiptId)
           : state.receiptSummaries,
@@ -415,32 +387,6 @@ const usePurchaseOrderReceiptStore = create((set, get) => ({
       return res;
     } catch (err) {
       console.error('❌ createQuickReceiptAction error:', err);
-      set({ error: err, loading: false });
-      throw err;
-    }
-  },
-
-  generateBarcodesAction: async (receiptId) => {
-    set({ loading: true, error: null });
-    try {
-      const res = await generateReceiptBarcodes(receiptId);
-      set({ loading: false });
-      return res;
-    } catch (err) {
-      console.error('❌ generateBarcodesAction error:', err);
-      set({ error: err, loading: false });
-      throw err;
-    }
-  },
-
-  printReceiptAction: async (receiptId, options = {}) => {
-    set({ loading: true, error: null });
-    try {
-      const res = await printReceipt(receiptId, options);
-      set({ barcodePreview: res?.barcodes ?? [], loading: false });
-      return res;
-    } catch (err) {
-      console.error('❌ printReceiptAction error:', err);
       set({ error: err, loading: false });
       throw err;
     }

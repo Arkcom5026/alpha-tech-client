@@ -13,7 +13,7 @@
     "preview": "vite preview",
     "test": "vitest",
     "test:run": "vitest run",
-    "test:quick-receipt": "vitest run src/features/product/quick-stock/api/quickReceiptSessionApi.test.js src/features/product/quick-stock/components/QuickReceiptSessionPanel.test.jsx src/features/product/quick-stock/pages/QuickStockPage.test.jsx",
+    "test:quick-receipt": "vitest run src/features/receiving/quick-stock/api/quickReceiptSessionApi.test.js src/features/receiving/quick-stock/components/QuickReceiptSessionPanel.test.jsx src/features/receiving/quick-stock/pages/QuickStockPage.test.jsx",
     "test:auth-receipt": "vitest run src/features/customerReceipt/__tests__/customerReceiptAuthRegression.test.js",
     "test:auth-receipt:watch": "vitest src/features/customerReceipt/__tests__/customerReceiptAuthRegression.test.js",
     "test:e2e:auth-receipt": "playwright test e2e/customer-receipt-auth-regression.spec.js",

@@ -1,25 +1,67 @@
 // src/features/barcode/store/barcodeStore.js
 import { create } from 'zustand';
+import { generateReceiptBarcodes } from '../generation';
+import { loadReceiptBarcodes } from '../receipt-detail';
+import { listReceiptsWithBarcodes } from '../receipt-listing';
 import {
-  getBarcodesByReceiptId,
-  generateMissingBarcodes,
-  reprintBarcodes,
-  getReceiptsWithBarcodes,
-  getReceiptsReadyToScan,
-  getReceiptsReadyToScanSN,
-  receiveStockItem,
-  updateSerialNumber,
-  markBarcodesAsPrinted,
-  searchReprintReceipts,
-} from '../api/barcodeApi';
-import { receiveAllPendingNoSN } from '@/features/stockItem/api/stockItemApi';
+  listReceiptsReadyToScan,
+  listReceiptsReadyToScanSn,
+} from '../scan-listing';
+import { updateBarcodeSerialNumber } from '../serial';
+import {
+  markReceiptBarcodesPrinted,
+  reprintReceiptBarcodes,
+  searchReceiptsForReprint,
+} from '../print-reprint';
 import { finalizeReceiptIfNeeded, getReceiptById } from '@/features/purchaseOrderReceipt/api/purchaseOrderReceiptApi';
 
-// 🔧 ตัวช่วยให้ shape ของ barcodes สอดคล้องกันทุก endpoint (ฉบับแก้ ESLint no-unused-vars)
-const normalizeBarcodeItem = (b) => {
-  // 🟢 ยุบรวมให้กระชับและส่งต่อใช้งานทันที ไม่ประกาศตัวแปรทิ้งไว้เปล่า ๆ
-  const finalStockItemId = b?.stockItem?.id ?? b?.stockItemId ?? null;
+const getBarcodesByReceiptId = async (receiptId, opts = {}) => {
+  const result = await loadReceiptBarcodes({ receiptId, ...opts });
+  return result?.sourceResponse ?? { barcodes: result?.barcodes ?? [] };
+};
 
+const generateMissingBarcodes = async (receiptId, options = {}) => {
+  const result = await generateReceiptBarcodes({ receiptId, options });
+  return result?.sourceResponse ?? { barcodes: result?.barcodes ?? [] };
+};
+
+const reprintBarcodes = async (receiptId) => {
+  const result = await reprintReceiptBarcodes(receiptId);
+  return result?.sourceResponse ?? { barcodes: result?.rows ?? [] };
+};
+
+const getReceiptsWithBarcodes = async (opts = {}) => {
+  const result = await listReceiptsWithBarcodes(opts);
+  return result?.sourceResponse ?? result?.receipts ?? [];
+};
+
+const getReceiptsReadyToScanSN = async () => {
+  const result = await listReceiptsReadyToScanSn();
+  return result?.sourceResponse ?? result?.receipts ?? [];
+};
+
+const getReceiptsReadyToScan = async () => {
+  const result = await listReceiptsReadyToScan();
+  return result?.sourceResponse ?? result?.receipts ?? [];
+};
+
+const updateSerialNumber = async (barcode, serialNumber) => {
+  const result = await updateBarcodeSerialNumber({ barcode, serialNumber });
+  return result?.sourceResponse ?? result;
+};
+
+const markBarcodesAsPrinted = async (purchaseOrderReceiptId) => {
+  const result = await markReceiptBarcodesPrinted(purchaseOrderReceiptId);
+  return result?.sourceResponse ?? result;
+};
+
+const searchReprintReceipts = async (opts = {}) => {
+  const result = await searchReceiptsForReprint(opts);
+  return Array.isArray(result?.receipts) ? result.receipts : [];
+};
+
+const normalizeBarcodeItem = (b) => {
+  const finalStockItemId = b?.stockItem?.id ?? b?.stockItemId ?? null;
   const rawStatus = b?.stockItem?.status ?? b?.stockItemStatus ?? b?.status ?? 'IN_STOCK';
   let cleanStatus = String(rawStatus).toUpperCase().trim();
 
@@ -44,23 +86,23 @@ const normalizeBarcodeItem = (b) => {
     qtyLabelsSuggested,
     productName,
     productSpec,
-    stockItemId: finalStockItemId, // ✅ นำมาใช้งานตรงนี้เรียบร้อย
+    stockItemId: finalStockItemId,
     serialNumber,
     stockItemStatus: cleanStatus,
     stockItem: b?.stockItem
       ? {
-        ...b.stockItem,
-        id: finalStockItemId, // ✅ นำมาใช้งานตรงนี้เรียบร้อย
-        serialNumber,
-        barcode: b.stockItem.barcode ?? undefined,
-        status: cleanStatus,
-      }
+          ...b.stockItem,
+          id: finalStockItemId,
+          serialNumber,
+          barcode: b.stockItem.barcode ?? undefined,
+          status: cleanStatus,
+        }
       : {
-        id: finalStockItemId, // ✅ นำมาใช้งานตรงนี้เรียบร้อย
-        serialNumber,
-        barcode: undefined,
-        status: cleanStatus,
-      },
+          id: finalStockItemId,
+          serialNumber,
+          barcode: undefined,
+          status: cleanStatus,
+        },
   };
 };
 
@@ -109,27 +151,6 @@ const useBarcodeStore = create((set, get) => ({
   clearErrorAction: () => set({ error: null }),
   clearError: () => set({ error: null }),
 
-  receiveAllPendingNoSNAction: async ({ receiptId } = {}) => {
-    const normalizedReceiptId = Number(receiptId);
-    if (!Number.isFinite(normalizedReceiptId) || normalizedReceiptId <= 0) {
-      const e = new Error('receiptId ไม่ถูกต้อง');
-      set({ error: e.message });
-      throw e;
-    }
-
-    set({ loading: true, error: null });
-    try {
-      const res = await receiveAllPendingNoSN({ receiptId: normalizedReceiptId });
-      return res;
-    } catch (err) {
-      const message = err?.response?.data?.message || err?.message || 'รับสินค้าค้างรับทั้งหมดไม่สำเร็จ';
-      set({ error: message });
-      throw err;
-    } finally {
-      set({ loading: false });
-    }
-  },
-
   receiptId: null,
   draftScans: [],
   rowErrors: {},
@@ -169,7 +190,6 @@ const useBarcodeStore = create((set, get) => ({
 
   fetchPrintBatchAction: async (receiptIds = [], opts = {}) => {
     const ids = Array.isArray(receiptIds) ? receiptIds.map((x) => Number(x)).filter((x) => Number.isFinite(x)) : [];
-    const force = Boolean(opts?.force);
     const concurrency = Math.max(1, Number(opts?.concurrency || 3));
 
     set({ loading: true, error: null });
@@ -312,66 +332,6 @@ const useBarcodeStore = create((set, get) => ({
     }
   },
 
-  receiveSNAction: async (payload) => {
-    const isObjectPayload = typeof payload === 'object' && payload !== null;
-    const raw = isObjectPayload ? payload.barcode : payload;
-    const barcode = raw && typeof raw === 'object' ? raw.barcode : raw;
-    if (!barcode) return;
-
-    const serialNumber = (() => {
-      if (raw && typeof raw === 'object') return raw.serialNumber ?? null;
-      if (isObjectPayload) return payload.serialNumber ?? null;
-      return null;
-    })();
-    const keepSN = Boolean(
-      (raw && typeof raw === 'object' && raw.keepSN === true) ||
-      (isObjectPayload && payload.keepSN === true)
-    );
-
-    try {
-      set({ loading: true, error: null });
-      const res = await receiveStockItem({ barcode, serialNumber, keepSN });
-      const nextStockItem = res?.stockItem || res;
-
-      set((state) => {
-        const prevScanned = Array.isArray(state.scannedList) ? state.scannedList : [];
-
-        // 🟢 PRE-FORMAT ROW: ทำกระบวนการนอร์มอลไลซ์แถวใหม่เตรียมนับยอด
-        const newScannedRow = normalizeBarcodeItem({
-          barcode,
-          serialNumber: nextStockItem?.serialNumber ?? (keepSN ? (serialNumber ? String(serialNumber).trim() : null) : null),
-          stockItem: nextStockItem,
-          stockItemStatus: nextStockItem?.status,
-        });
-
-        return {
-          barcodes: Array.isArray(state.barcodes)
-            ? state.barcodes.map((b) =>
-              b.barcode === barcode
-                ? normalizeBarcodeItem({
-                  ...b,
-                  stockItem: nextStockItem,
-                  stockItemStatus: nextStockItem?.status ?? b.stockItemStatus ?? b.stockItem?.status,
-                  serialNumber: nextStockItem?.serialNumber ?? (keepSN ? (serialNumber ? String(serialNumber).trim() : null) : b?.serialNumber ?? null),
-                })
-                : b
-            )
-            : [],
-          // 🚀 HIGH PERFORMANCE INFLUX: ล้างบาง Anonymous Function ทิ้ง ยิงแอดต่อท้ายอาเรย์ตรง ๆ 
-          scannedList: [...prevScanned.filter((x) => x?.barcode !== barcode), newScannedRow],
-          loading: false
-        };
-      });
-
-      return res;
-    } catch (err) {
-      console.error('[receiveSNAction]', err);
-      const msg = err?.response?.data?.message || err?.response?.data?.error || err?.message || 'ยิงบาร์โค้ดล้มเหลว';
-      set({ error: msg, loading: false });
-      throw err;
-    }
-  },
-
   updateReceivedSNAction: async ({ stockItemId, serialNumber, barcodeReceiptId, receiptId } = {}) => {
     try {
       if (!serialNumber) throw new Error('serialNumber is required');
@@ -391,18 +351,18 @@ const useBarcodeStore = create((set, get) => ({
         barcodes: (state.barcodes || []).map((item) =>
           item.barcode === barcode
             ? normalizeBarcodeItem({
-              ...item,
-              serialNumber,
-              stockItemId: item.stockItemId ?? nextStockItem?.id ?? item.stockItem?.id ?? null,
-              stockItem: {
-                ...(item.stockItem || {}),
-                ...(nextStockItem || {}),
+                ...item,
                 serialNumber,
-                id: item.stockItem?.id ?? nextStockItem?.id ?? null,
-                status: nextStockItem?.status ?? item.stockItem?.status ?? item.stockItemStatus,
-              },
-              stockItemStatus: nextStockItem?.status ?? item.stockItemStatus ?? item.stockItem?.status,
-            })
+                stockItemId: item.stockItemId ?? nextStockItem?.id ?? item.stockItem?.id ?? null,
+                stockItem: {
+                  ...(item.stockItem || {}),
+                  ...(nextStockItem || {}),
+                  serialNumber,
+                  id: item.stockItem?.id ?? nextStockItem?.id ?? null,
+                  status: nextStockItem?.status ?? item.stockItem?.status ?? item.stockItemStatus,
+                },
+                stockItemStatus: nextStockItem?.status ?? item.stockItemStatus ?? item.stockItem?.status,
+              })
             : item
         ),
       }));
@@ -429,18 +389,18 @@ const useBarcodeStore = create((set, get) => ({
         barcodes: state.barcodes.map((item) =>
           item.barcode === barcode
             ? normalizeBarcodeItem({
-              ...item,
-              serialNumber,
-              stockItemId: item.stockItemId ?? nextStockItem?.id ?? item.stockItem?.id ?? null,
-              stockItem: {
-                ...(item.stockItem || {}),
-                ...(nextStockItem || {}),
+                ...item,
                 serialNumber,
-                id: item.stockItem?.id ?? nextStockItem?.id ?? null,
-                status: nextStockItem?.status ?? item.stockItem?.status ?? item.stockItemStatus,
-              },
-              stockItemStatus: nextStockItem?.status ?? item.stockItemStatus ?? item.stockItem?.status,
-            })
+                stockItemId: item.stockItemId ?? nextStockItem?.id ?? item.stockItem?.id ?? null,
+                stockItem: {
+                  ...(item.stockItem || {}),
+                  ...(nextStockItem || {}),
+                  serialNumber,
+                  id: item.stockItem?.id ?? nextStockItem?.id ?? null,
+                  status: nextStockItem?.status ?? item.stockItem?.status ?? item.stockItemStatus,
+                },
+                stockItemStatus: nextStockItem?.status ?? item.stockItemStatus ?? item.stockItem?.status,
+              })
             : item
         ),
       }));

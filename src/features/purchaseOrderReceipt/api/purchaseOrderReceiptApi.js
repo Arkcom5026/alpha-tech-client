@@ -1,14 +1,6 @@
-
-
-
-
-
-// ✅ purchaseOrderReceiptApi.js — API ฝั่งใบรับสินค้า (ESM)
 import apiClient from '@/utils/apiClient';
+import { finalizeReceipt as finalizeReceiptRuntime } from '../finalization';
 
-// ────────────────────────────────────────────────────────────────────────────────
-// Receipts (เดิม)
-// ────────────────────────────────────────────────────────────────────────────────
 export const getAllReceipts = async (params = {}) => {
   try {
     const { data } = await apiClient.get('/purchase-order-receipts', { params });
@@ -69,16 +61,6 @@ export const deleteReceipt = async (id) => {
   }
 };
 
-export const getReceiptBarcodeSummaries = async (params = {}) => {
-  try {
-    const { data } = await apiClient.get('/purchase-order-receipts/receipt-barcode-summaries', { params });
-    return data;
-  } catch (error) {
-    console.error('❌ getReceiptBarcodeSummaries error:', error);
-    throw error;
-  }
-};
-
 export const getReceiptsReadyToPay = async (params = {}) => {
   try {
     const { data } = await apiClient.get('/purchase-order-receipts/ready-to-pay', { params });
@@ -100,13 +82,8 @@ export const markReceiptAsCompleted = async (receiptId) => {
 };
 
 export const finalizeReceiptIfNeeded = async (receiptId) => {
-  try {
-    const { data } = await apiClient.patch(`/purchase-order-receipts/${receiptId}/finalize`);
-    return data;
-  } catch (error) {
-    console.error('❌ finalizeReceiptIfNeeded error:', error);
-    throw error;
-  }
+  const result = await finalizeReceiptRuntime(receiptId);
+  return result?.sourceResponse;
 };
 
 export const markReceiptAsPrinted = async (receiptId) => {
@@ -129,35 +106,12 @@ export const getReceiptSummaries = async (params = {}) => {
   }
 };
 
-// ────────────────────────────────────────────────────────────────────────────────
-// QUICK + Barcode + Commit (SIMPLE & STRUCTURED)
-// ────────────────────────────────────────────────────────────────────────────────
 export const createQuickReceipt = async (payload) => {
   try {
     const { data } = await apiClient.post('/quick-receipts', payload);
     return data;
   } catch (error) {
     console.error('❌ createQuickReceipt error:', error);
-    throw error;
-  }
-};
-
-export const generateReceiptBarcodes = async (receiptId) => {
-  try {
-    const { data } = await apiClient.post(`/purchase-order-receipts/${receiptId}/generate-barcodes`);
-    return data;
-  } catch (error) {
-    console.error('❌ generateReceiptBarcodes error:', error);
-    throw error;
-  }
-};
-
-export const printReceipt = async (receiptId, options = {}) => {
-  try {
-    const { data } = await apiClient.post(`/purchase-order-receipts/${receiptId}/print`, options);
-    return data;
-  } catch (error) {
-    console.error('❌ printReceipt error:', error);
     throw error;
   }
 };
@@ -172,10 +126,6 @@ export const commitReceipt = async (receiptId) => {
   }
 };
 
-// ────────────────────────────────────────────────────────────────────────────────
-// Purchase Orders for Receipt (NEW)
-// NOTE: used by purchaseOrderReceiptStore
-// ────────────────────────────────────────────────────────────────────────────────
 export const getEligiblePurchaseOrders = async (params = {}) => {
   try {
     const { data } = await apiClient.get('/purchase-orders/eligible-for-receipt', { params });
@@ -196,12 +146,11 @@ export const getPurchaseOrderDetailById = async (poId) => {
   }
 };
 
-// Update received qty/price for a specific receipt item (server decides rules)
 export const updateReceiptItemReceived = async (receiptId, itemId, payload) => {
   try {
     const { data } = await apiClient.patch(
       `/purchase-order-receipts/${receiptId}/items/${itemId}`,
-      payload
+      payload,
     );
     return data;
   } catch (error) {
@@ -210,7 +159,6 @@ export const updateReceiptItemReceived = async (receiptId, itemId, payload) => {
   }
 };
 
-// Finalize receipt + (optionally) update PO status on server
 export const finalizeReceipt = async (receiptId, payload = {}) => {
   try {
     const { data } = await apiClient.patch(`/purchase-order-receipts/${receiptId}/finalize`, payload);
@@ -220,12 +168,3 @@ export const finalizeReceipt = async (receiptId, payload = {}) => {
     throw error;
   }
 };
-
-
-
-
-
-
-
-
-

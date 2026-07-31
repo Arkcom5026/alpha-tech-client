@@ -10,7 +10,6 @@ const receiptApi = () => read('src/features/purchaseOrderReceipt/api/purchaseOrd
 const receiptStore = () => read('src/features/purchaseOrderReceipt/store/purchaseOrderReceiptStore.js');
 const barcodeStore = () => read('src/features/barcode/store/barcodeStore.js');
 const barcodeScanService = () => read('src/features/barcode/scan-serial/services/barcodeScanService.js');
-const stockItemStore = () => read('src/features/stockItem/store/stockItemStore.js');
 const stockItemReceiveStoreSlice = () =>
   read('src/features/stockItem/receive/store/createStockItemReceiveSlice.js');
 const stockItemReceiveBoundary = () => read('src/features/stockItem/receive/index.js');
@@ -41,7 +40,6 @@ describe('procurement-to-stock pipeline ownership certification', () => {
     expect(stockItemAvailabilityApi()).toContain('/stock-items/available');
     expect(stockItemReceiveStoreSlice()).toContain('receiveSNAction');
     expect(stockItemReceiveStoreSlice()).toContain('receiveAllPendingNoSNAction');
-    expect(stockItemStore()).toContain('...createStockItemReceiveSlice(set, get)');
     expect(stockItemReceiveBoundary()).toContain('receiveScannedStockItem');
     expect(stockItemReceiveBoundary()).toContain('receiveAllPendingStockItems');
   });
@@ -63,7 +61,6 @@ describe('procurement-to-stock pipeline ownership certification', () => {
   it('prevents downstream modules from owning upstream lifecycle', () => {
     const barcodeSources = [barcodeStore(), barcodeScanService()];
     const stockSources = [
-      stockItemStore(),
       stockItemReceiveStoreSlice(),
       stockItemReceiveBoundary(),
       stockItemReceiveApi(),

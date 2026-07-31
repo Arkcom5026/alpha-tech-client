@@ -6,6 +6,13 @@ const normalizeCustomer = (payload) => {
   return customer?.id ? customer : null;
 };
 
+const createCommandKey = (repairJobId, action) => {
+  const entropy = globalThis.crypto?.randomUUID
+    ? globalThis.crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  return `repair:${repairJobId}:${action}:${entropy}`;
+};
+
 const initialState = {
   intakeLookup: '',
   intakeContext: null,
@@ -18,6 +25,8 @@ const initialState = {
   claims: [],
   activeJob: null,
   activeClaim: null,
+  workflowStatus: null,
+  availableWorkflowActions: [],
   loading: false,
   submitting: false,
   error: null,
@@ -152,10 +161,7 @@ const useRepairRuntimeStore = create((set, get) => ({
       });
       return intakeContext;
     } catch (error) {
-      if (
-        error.status === 404 ||
-        error.code === 'REPAIR_STOCK_ITEM_NOT_FOUND'
-      ) {
+      if (error.status === 404 || error.code === 'REPAIR_STOCK_ITEM_NOT_FOUND') {
         set({
           intakeContext: null,
           intakeNotFound: true,
@@ -183,11 +189,7 @@ const useRepairRuntimeStore = create((set, get) => ({
     set({ loading: true, error: null, errorCode: null });
     try {
       const jobs = await repairApi.listJobs(params);
-      set({
-        jobs: Array.isArray(jobs) ? jobs : jobs?.items || [],
-        loading: false,
-        lastLoadedAt: new Date().toISOString(),
-      });
+      set({ jobs: Array.isArray(jobs) ? jobs : jobs?.items || [], loading: false, lastLoadedAt: new Date().toISOString() });
       return jobs;
     } catch (error) {
       set({ loading: false, error: error.message, errorCode: error.code });
@@ -199,11 +201,7 @@ const useRepairRuntimeStore = create((set, get) => ({
     set({ loading: true, error: null, errorCode: null });
     try {
       const claims = await repairApi.listClaims(params);
-      set({
-        claims: Array.isArray(claims) ? claims : claims?.items || [],
-        loading: false,
-        lastLoadedAt: new Date().toISOString(),
-      });
+      set({ claims: Array.isArray(claims) ? claims : claims?.items || [], loading: false, lastLoadedAt: new Date().toISOString() });
       return claims;
     } catch (error) {
       set({ loading: false, error: error.message, errorCode: error.code });
@@ -215,10 +213,22 @@ const useRepairRuntimeStore = create((set, get) => ({
     set({ loading: true, error: null, errorCode: null });
     try {
       const activeJob = await repairApi.getJob(id);
-      set({ activeJob, loading: false });
+      set({
+        activeJob,
+        workflowStatus: activeJob?.workflowStatus || null,
+        availableWorkflowActions: activeJob?.availableActions || [],
+        loading: false,
+      });
       return activeJob;
     } catch (error) {
-      set({ activeJob: null, loading: false, error: error.message, errorCode: error.code });
+      set({
+        activeJob: null,
+        workflowStatus: null,
+        availableWorkflowActions: [],
+        loading: false,
+        error: error.message,
+        errorCode: error.code,
+      });
       return null;
     }
   },
@@ -251,12 +261,7 @@ const useRepairRuntimeStore = create((set, get) => ({
     set({ submitting: true, error: null, errorCode: null });
     try {
       const created = await repairApi.createExternalIntake(payload);
-      set({
-        submitting: false,
-        activeJob: created?.repairJob || null,
-        intakeContext: null,
-        lastLoadedAt: new Date().toISOString(),
-      });
+      set({ submitting: false, activeJob: created?.repairJob || null, intakeContext: null, lastLoadedAt: new Date().toISOString() });
       return created;
     } catch (error) {
       set({ submitting: false, error: error.message, errorCode: error.code });
@@ -264,14 +269,39 @@ const useRepairRuntimeStore = create((set, get) => ({
     }
   },
 
-  transitionJob: async (id, payload) => {
+  transitionJob: async (id, input) => {
+    const action = String(input?.action || '').trim();
+    if (!action) {
+      set({ error: 'กรุณาเลือกขั้นตอนถัดไป', errorCode: 'INVALID_REPAIR_WORKFLOW_ACTION' });
+      return null;
+    }
+
+    const expectedWorkflowStatus = input?.expectedWorkflowStatus || get().workflowStatus || null;
+    const command = {
+      action,
+      commandKey: input?.commandKey || createCommandKey(id, action),
+      expectedWorkflowStatus,
+      correlationId: input?.correlationId || `repair-job:${id}`,
+      note: input?.note || null,
+      customerVisible: input?.customerVisible !== false,
+    };
+
     set({ submitting: true, error: null, errorCode: null });
     try {
-      const updated = await repairApi.transitionJob(id, payload);
-      set({ submitting: false, activeJob: updated });
-      return updated;
+      const result = await repairApi.transitionJob(id, command);
+      set({
+        submitting: false,
+        activeJob: result?.repairJob || get().activeJob,
+        workflowStatus: result?.status || null,
+        availableWorkflowActions: result?.availableActions || [],
+        lastLoadedAt: new Date().toISOString(),
+      });
+      return result;
     } catch (error) {
       set({ submitting: false, error: error.message, errorCode: error.code });
+      if (error.code === 'REPAIR_WORKFLOW_VERSION_CONFLICT') {
+        await get().loadJob(id);
+      }
       return null;
     }
   },

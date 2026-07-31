@@ -16,27 +16,36 @@ Add contextual, module-owned operational guidance for quick receiving without PO
 - local draft persistence for interrupted work
 - existing Quick Receipt component/API tests
 
-## Planned Scope
+## Implemented Scope
 
 - Receiving/Quick Receipt in-app help content
-- explain resumable session versus one-shot completion
-- supplier and delivery-note checklist
-- DRAFT/FINALIZING/COMPLETED/CANCELLED guidance
-- barcode, serial, quantity, and product-mode requirements
+- resumable session versus one-shot completion guidance
+- Supplier and delivery-note checklist
+- `DRAFT`, `FINALIZING`, `COMPLETED`, and `CANCELLED` guidance
+- Barcode, Serial Number, quantity, and product-mode requirements
 - idempotency, duplicate, and recovery guidance
 - tax-document capture boundary
 - focused contract and dedicated npm test command
-- CI gate before production build
+- independent CI gate before Production Build
 
 ## Documentation Status
 
 - Business manual: companion Server adoption increment
-- User guide: planned
-- In-app help: planned
+- User guide: implemented in the Receiving module Help Drawer
+- In-app help: implemented through `QuickReceiptSessionPanel`
 - Workflow Assistant: NOT APPLICABLE in this documentation increment
-- Runtime checklist: static operational checklist planned; runtime-backed checklist is follow-up
-- FAQ / troubleshooting: planned
+- Runtime checklist: static operational checklist implemented; runtime-backed checklist is follow-up
+- FAQ / troubleshooting: implemented
 - Known limitation: global mobile POS shell remains a separate agenda
+
+## Verification Evidence
+
+- GitHub Actions run: `30656320491`
+- Repair Help contract: PASS
+- Warranty Claim Help contract: PASS
+- Quick Receipt Help contract: PASS
+- Production Build: PASS
+- Certified head before this documentation-status commit: `92707f55f3e6b8a428e5cf5c952fd5e9e6a513ed`
 
 ## Runtime Impact
 
@@ -45,10 +54,10 @@ Documentation projection and focused contract only. No API, Prisma, migration, i
 ## Completion Criteria
 
 - [x] Mission pack exists.
-- [ ] Draft PR is opened.
-- [ ] Receiving guidance is implemented.
-- [ ] Focused contract is added.
-- [ ] Claim-independent CI gate is added.
-- [ ] Focused verification passes.
-- [ ] Production build passes.
+- [x] Draft PR is opened.
+- [x] Receiving guidance is implemented.
+- [x] Focused contract is added.
+- [x] Claim-independent CI gate is added.
+- [x] Focused verification passes.
+- [x] Production build passes.
 - [ ] Review and merge decision are recorded.

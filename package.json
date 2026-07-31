@@ -54,7 +54,7 @@
     "axios": "1.9.0",
     "class-variance-authority": "0.7.1",
     "cloudinary": "2.6.0",
-    "clsx": "^1.2.1",
+    "clsx": "^2.1.1",
     "date-fns": "^3.6.0",
     "dayjs": "^1.11.13",
     "dotenv": "16.5.0",
@@ -115,7 +115,7 @@
     "vite": "5.2.10",
     "vitest": "^4.1.7"
   },
-  "description": "This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.",
+  "description": "This template provides a minimal setup to get React working with Vite HMR.",
   "main": "eslint.config.js",
   "keywords": [],
   "author": "",

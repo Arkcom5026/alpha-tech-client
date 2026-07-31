@@ -1,5 +1,7 @@
 import React from "react";
 import BarcodeScanner from "./BarcodeScanner";
+import IntakePriceFields from "./IntakePriceFields";
+import IntakeNoteControls from "./IntakeNoteControls";
 
 const IntakeControlPanel = ({
   selectedProduct,
@@ -53,86 +55,18 @@ const IntakeControlPanel = ({
         onBarcodeSubmit={onBarcodeSubmit}
       />
 
-      <div className="grid grid-cols-1 xl:grid-cols-5 gap-3">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">ราคาทุนรับเข้า *</label>
-          <input
-            type="number"
-            className="w-full border rounded-lg p-2"
-            value={defaultCost}
-            onChange={(event) => handleCostChange(event.target.value)}
-            placeholder="เช่น 120"
-          />
-          <p className="mt-1 text-[11px] text-gray-500">ใช้กับรอบรับเข้านี้</p>
-        </div>
+      <IntakePriceFields
+        defaultCost={defaultCost}
+        onDefaultCostChange={handleCostChange}
+        priceForm={priceForm}
+        onPriceFieldChange={updatePrice}
+      />
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">ราคาขายปลีก *</label>
-          <input
-            type="number"
-            className="w-full border rounded-lg p-2"
-            value={priceForm.priceRetail || ""}
-            onChange={(event) => updatePrice("priceRetail", event.target.value)}
-            placeholder="เช่น 250"
-          />
-          <p className="mt-1 text-[11px] text-gray-500">ใช้เป็นราคาหลักของสินค้าในสาขา</p>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">ราคาส่ง</label>
-          <input
-            type="number"
-            className="w-full border rounded-lg p-2"
-            value={priceForm.priceWholesale || ""}
-            onChange={(event) => updatePrice("priceWholesale", event.target.value)}
-            placeholder="Optional"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">ราคาช่าง</label>
-          <input
-            type="number"
-            className="w-full border rounded-lg p-2"
-            value={priceForm.priceTechnician || ""}
-            onChange={(event) => updatePrice("priceTechnician", event.target.value)}
-            placeholder="Optional"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">ราคาออนไลน์</label>
-          <input
-            type="number"
-            className="w-full border rounded-lg p-2"
-            value={priceForm.priceOnline || ""}
-            onChange={(event) => updatePrice("priceOnline", event.target.value)}
-            placeholder="Optional"
-          />
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 xl:grid-cols-4 gap-3">
-        <div className="xl:col-span-3">
-          <label className="block text-sm font-medium text-gray-700 mb-1">หมายเหตุ</label>
-          <input
-            className="w-full border rounded-lg p-2"
-            value={note}
-            onChange={(event) => setNote(event.target.value)}
-            placeholder="Optional"
-          />
-        </div>
-
-        <div className="flex items-end">
-          <button
-            type="button"
-            className="w-full border rounded-lg p-2 hover:bg-gray-50"
-            onClick={() => barcodeInputRef.current?.focus()}
-          >
-            Focus Scanner
-          </button>
-        </div>
-      </div>
+      <IntakeNoteControls
+        note={note}
+        onNoteChange={setNote}
+        barcodeInputRef={barcodeInputRef}
+      />
     </section>
   );
 };

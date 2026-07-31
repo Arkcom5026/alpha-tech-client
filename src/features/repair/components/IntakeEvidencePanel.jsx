@@ -12,24 +12,34 @@ const emptyDraft = {
   allowOutsourceRepair: false,
 };
 
-const IntakeEvidencePanel = ({ repairJobId, warning }) => {
+const requirementLabels = {
+  CUSTOMER_CONSENT: 'คำยืนยันและชื่อผู้รับรองจากลูกค้า',
+  INTAKE_PHOTO: 'ภาพสภาพเครื่องขณะรับเข้า',
+};
+
+const IntakeEvidencePanel = ({ repairJobId, warning, onEvidenceChange }) => {
   const [evidence, setEvidence] = useState(null);
   const [draft, setDraft] = useState(emptyDraft);
   const [editing, setEditing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(warning || '');
 
+  const publishEvidence = useCallback((value) => {
+    setEvidence(value);
+    onEvidenceChange?.(value);
+  }, [onEvidenceChange]);
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      setEvidence(await repairApi.getIntakeEvidence(repairJobId));
+      publishEvidence(await repairApi.getIntakeEvidence(repairJobId));
       setError('');
     } catch (loadError) {
       setError(loadError.message);
     } finally {
       setLoading(false);
     }
-  }, [repairJobId]);
+  }, [publishEvidence, repairJobId]);
 
   useEffect(() => {
     load();
@@ -40,7 +50,7 @@ const IntakeEvidencePanel = ({ repairJobId, warning }) => {
     setError('');
     try {
       const saved = await repairApi.saveIntakeEvidence(repairJobId, draft);
-      setEvidence(saved);
+      publishEvidence(saved);
       setDraft(emptyDraft);
       setEditing(false);
     } catch (saveError) {
@@ -51,6 +61,7 @@ const IntakeEvidencePanel = ({ repairJobId, warning }) => {
   };
 
   const consent = evidence?.consent;
+  const completion = evidence?.completion;
 
   return (
     <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
@@ -70,6 +81,21 @@ const IntakeEvidencePanel = ({ repairJobId, warning }) => {
           {editing ? 'ยกเลิก' : '+ เพิ่มหลักฐาน'}
         </button>
       </div>
+
+      {completion ? (
+        <div className={`mt-4 rounded-xl border p-3 text-sm ${completion.complete ? 'border-emerald-200 bg-emerald-50 text-emerald-950' : 'border-amber-200 bg-amber-50 text-amber-900'}`}>
+          <p className="font-black">
+            {completion.complete ? '✓ รับเครื่องครบถ้วน พร้อมเข้าสู่ขั้นวินิจฉัย' : 'ยังรับเครื่องไม่ครบถ้วน'}
+          </p>
+          {!completion.complete ? (
+            <ul className="mt-2 list-disc space-y-1 pl-5 text-xs font-bold">
+              {(completion.missingRequirements || []).map((requirement) => (
+                <li key={requirement}>{requirementLabels[requirement] || requirement}</li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
+      ) : null}
 
       {error ? (
         <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm font-bold text-amber-800">

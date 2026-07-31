@@ -1,7 +1,10 @@
-const fs = require('fs');
-const path = require('path');
+import { describe, expect, test } from 'vitest';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const root = path.resolve(__dirname, '..');
+const filename = fileURLToPath(import.meta.url);
+const root = path.resolve(path.dirname(filename), '..');
 const read = (relativePath) => fs.readFileSync(path.join(root, relativePath), 'utf8');
 
 describe('Sale Return Help contract', () => {
@@ -36,7 +39,7 @@ describe('Sale Return Help contract', () => {
     const drawer = read(drawerPath);
     expect(drawer).toContain("from './saleReturnHelpContent'");
     expect(drawer).toContain('onClose');
-    expect(drawer).toContain('คู่มือการคืนสินค้า');
+    expect(drawer).toContain('คู่มือคืนสินค้าและคืนเงิน');
   });
 
   test('both canonical runtime pages expose the Sale Return Help Drawer', () => {
@@ -53,10 +56,10 @@ describe('Sale Return Help contract', () => {
     const searchPage = read(searchPagePath);
     const createPage = read(createPagePath);
 
-    expect(searchPage).toContain("getReturnableSales");
-    expect(createPage).toContain("getSaleReturnEligibility");
-    expect(createPage).toContain("runCompleteSaleReturn");
-    expect(createPage).toContain("ยืนยันคืนสินค้าและคืนเงิน");
+    expect(searchPage).toContain('getReturnableSales');
+    expect(createPage).toContain('getSaleReturnEligibility');
+    expect(createPage).toContain('runCompleteSaleReturn');
+    expect(createPage).toContain('ยืนยันคืนสินค้าและคืนเงิน');
   });
 
   test('legacy top-level feature is not imported into canonical runtime pages', () => {

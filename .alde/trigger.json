@@ -2,6 +2,6 @@
   "schemaVersion": 1,
   "requestedBy": "ChatGPT",
   "mode": "SyncAndCertify",
-  "requestedAt": "2026-07-31T16:41:00Z",
-  "reason": "Comprehensive verification for input-tax client architecture refactor: typecheck, production build, test suite, module resolution, and runtime certification evidence"
+  "requestedAt": "2026-08-01T01:22:00+07:00",
+  "reason": "Run ALDE SyncAndCertify after installing ALDE-WIN01 as a Windows Service on D:\\alde\\actions-runner"
 }

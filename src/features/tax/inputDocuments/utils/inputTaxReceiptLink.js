@@ -1,3 +1,8 @@
+import {
+  formatTaxDate as formatSharedTaxDate,
+  formatTaxMoney as formatSharedTaxMoney,
+} from '../../presentation/taxPresentation';
+
 export const receiptIdentity = (receipt) => `${receipt.sourceType}:${receipt.sourceId}`;
 
 export const remainingReceiptAmount = (receipt) => Math.max(
@@ -56,20 +61,8 @@ export const projectDocumentAllocation = ({ document, activeLinks, pendingReceip
   };
 };
 
-export const formatTaxMoney = (value) => new Intl.NumberFormat('th-TH', {
-  style: 'currency',
-  currency: 'THB',
-  minimumFractionDigits: 2,
-}).format(Number(value || 0));
-
-export const formatTaxDate = (value) => {
-  if (!value) return '-';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '-';
-  return new Intl.DateTimeFormat('th-TH', {
-    day: '2-digit', month: 'short', year: 'numeric',
-  }).format(date);
-};
+export const formatTaxMoney = formatSharedTaxMoney;
+export const formatTaxDate = formatSharedTaxDate;
 
 export const linkStateLabel = {
   ACTION_REQUIRED: 'ต้องดำเนินการ',

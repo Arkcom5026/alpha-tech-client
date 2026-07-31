@@ -72,6 +72,15 @@ const getAssetSourceLabel = (sourceType) => {
   return 'ข้อมูลจากใบรับซ่อม';
 };
 
+const EXCEPTION_LABELS = {
+  UNASSIGNED_TECHNICIAN: 'ยังไม่มอบหมายช่าง',
+  INTAKE_INCOMPLETE: 'หลักฐานรับเครื่องไม่ครบ',
+  WAITING_PARTS: 'รออะไหล่',
+  WAITING_CUSTOMER_APPROVAL: 'รอลูกค้าอนุมัติ',
+  WAITING_CUSTOMER_PICKUP: 'รอลูกค้ารับเครื่อง',
+  SLA_OVERDUE: 'เกิน SLA',
+};
+
 const CLAIM_LANE_STYLES = {
   DRAFT: 'border-slate-200 bg-slate-100/70',
   SUBMITTED: 'border-blue-200 bg-blue-50/70',
@@ -135,6 +144,7 @@ const QueueBoard = ({ lanes, type, onOpen }) => (
                 const supplierName = !isRepair
                   ? item.supplier?.name || item.serviceProvider
                   : null;
+                const operational = isRepair ? item.operational : null;
 
                 return (
                   <button
@@ -153,6 +163,29 @@ const QueueBoard = ({ lanes, type, onOpen }) => (
                         </span>
                       ) : null}
                     </div>
+
+                    {operational?.exceptions?.length ? (
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        {operational.exceptions.map((exception) => (
+                          <span
+                            key={exception}
+                            className={`rounded-full px-2 py-0.5 text-[10px] font-black ${
+                              exception === 'SLA_OVERDUE'
+                                ? 'bg-red-100 text-red-700'
+                                : 'bg-amber-100 text-amber-800'
+                            }`}
+                          >
+                            {EXCEPTION_LABELS[exception] || exception}
+                          </span>
+                        ))}
+                      </div>
+                    ) : null}
+
+                    {operational?.slaHours ? (
+                      <p className={`mt-2 text-[11px] font-bold ${operational.overdue ? 'text-red-600' : 'text-slate-500'}`}>
+                        อายุสถานะ {operational.ageHours} ชม. / SLA {operational.slaHours} ชม.
+                      </p>
+                    ) : null}
 
                     {source?.referenceNo ? (
                       <p className="mt-1 text-[11px] font-bold text-indigo-600">

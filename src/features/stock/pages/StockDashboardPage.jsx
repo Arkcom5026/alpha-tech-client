@@ -5,6 +5,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom'; // 🟢 ดึง useParams มาเพื่อแกะชื่อร้านพาร์ตเนอร์
 import useStockStore from '@/features/stock/store/stockStore';
+import StockValuationSummary from '@/features/stock/components/StockValuationSummary';
 
 // =============================
 // Small UI Components
@@ -643,6 +644,10 @@ const StockDashboardPage = () => {
             loading={overviewUI.loading}
             onClick={() => safeLoad('overview')}
           />
+        )}
+
+        {overviewUI.loaded && overviewUI.data && (
+          <StockValuationSummary data={overviewUI.data} />
         )}
 
         {overviewUI.loaded && overviewCards && (

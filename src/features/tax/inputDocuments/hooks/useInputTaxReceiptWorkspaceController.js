@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'react-toastify';
 import { useBranchStore } from '@/features/branch/store/branchStore';
+import { isTaxDocumentMutable } from '../../policies/taxDocumentMutability';
 import { listTaxDocuments, registerTaxCandidate } from '../../intake/api/taxIntakeApi';
 import {
   attachInputTaxDocumentReceiptLinks,
@@ -32,13 +33,6 @@ const initialInvoice = Object.freeze({
   taxAmount: '',
   totalAmount: '',
 });
-
-const mutableDocumentStatuses = new Set([
-  'DRAFT',
-  'REGISTERED',
-  'UNDER_REVIEW',
-  'REJECTED',
-]);
 
 const makeCommandKey = () => globalThis.crypto?.randomUUID?.()
   || `input-tax-link-${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -79,7 +73,7 @@ const useInputTaxReceiptWorkspaceController = () => {
     (document) => String(document.id) === String(selectedDocumentId),
   ) || null, [documents, selectedDocumentId]);
   const selectedDocumentMutable = selectedDocument
-    ? mutableDocumentStatuses.has(String(selectedDocument.status).toUpperCase())
+    ? isTaxDocumentMutable(selectedDocument.status)
     : false;
   const allocationProjection = useMemo(() => (
     selectedDocument

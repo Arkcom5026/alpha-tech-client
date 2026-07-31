@@ -1,15 +1,53 @@
 import React, { useMemo, useState } from 'react';
-import { REPAIR_LABELS, REPAIR_TRANSITIONS, formatDateTime, formatMoney } from '../utils/repairRuntime';
+import { REPAIR_LABELS, formatDateTime, formatMoney } from '../utils/repairRuntime';
 
-const JobRuntimePanel = ({ job, submitting, onTransition, onAddPart, onOpenClaim }) => {
-  const [transition, setTransition] = useState({ status: '', technicianNotes: '', technicianId: '' });
+const WORKFLOW_ACTION_LABELS = {
+  QUEUE_DIAGNOSIS: 'เข้าคิววินิจฉัย',
+  START_DIAGNOSIS: 'เริ่มวินิจฉัย',
+  COMPLETE_DIAGNOSIS: 'วินิจฉัยเสร็จ',
+  APPROVE_QUOTATION: 'อนุมัติใบเสนอราคา',
+  REJECT_QUOTATION: 'ปฏิเสธใบเสนอราคา',
+  START_REPAIR: 'เริ่มซ่อม',
+  WAIT_FOR_PARTS: 'รออะไหล่',
+  RESUME_REPAIR: 'กลับมาซ่อมต่อ',
+  COMPLETE_REPAIR: 'ซ่อมเสร็จ ส่งตรวจคุณภาพ',
+  PASS_QC: 'ผ่านการตรวจคุณภาพ',
+  FAIL_QC: 'ไม่ผ่านการตรวจคุณภาพ',
+  REWORK_AFTER_QC: 'ส่งกลับแก้ไข',
+  DELIVER: 'ส่งมอบเครื่อง',
+  CLOSE: 'ปิดงาน',
+  CANCEL: 'ยกเลิกงาน',
+};
+
+const JobRuntimePanel = ({
+  job,
+  workflowStatus,
+  availableWorkflowActions = [],
+  submitting,
+  onTransition,
+  onAddPart,
+  onOpenClaim,
+}) => {
+  const [transition, setTransition] = useState({ action: '', note: '' });
   const [part, setPart] = useState({ productId: '', qtyUsed: 1 });
   const [claim, setClaim] = useState({ reason: '', supplierId: '', serviceProvider: '', note: '' });
 
-  const nextStatuses = useMemo(() => REPAIR_TRANSITIONS[job.status] || [], [job.status]);
+  const actions = useMemo(
+    () => (Array.isArray(availableWorkflowActions) ? availableWorkflowActions : []),
+    [availableWorkflowActions]
+  );
   const activeClaim = (job.warrantyClaims || []).find(
     (item) => !['RESOLVED', 'CANCELLED'].includes(item.status)
   );
+
+  const submitTransition = async () => {
+    const result = await onTransition({
+      action: transition.action,
+      note: transition.note,
+      expectedWorkflowStatus: workflowStatus,
+    });
+    if (result) setTransition({ action: '', note: '' });
+  };
 
   return (
     <div className="space-y-5">
@@ -20,9 +58,16 @@ const JobRuntimePanel = ({ job, submitting, onTransition, onAddPart, onOpenClaim
             <h2 className="mt-1 text-2xl font-black text-slate-950">{job.jobNo}</h2>
             <p className="mt-1 text-sm text-slate-500">{job.deviceModel}</p>
           </div>
-          <span className="w-fit rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-black text-blue-700">
-            {REPAIR_LABELS[job.status] || job.status}
-          </span>
+          <div className="flex flex-col items-start gap-2 md:items-end">
+            <span className="w-fit rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-black text-blue-700">
+              {REPAIR_LABELS[job.status] || job.status}
+            </span>
+            {workflowStatus ? (
+              <span className="w-fit rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-700">
+                Workflow: {workflowStatus}
+              </span>
+            ) : null}
+          </div>
         </div>
 
         <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -32,14 +77,8 @@ const JobRuntimePanel = ({ job, submitting, onTransition, onAddPart, onOpenClaim
           <Info label="อัปเดตล่าสุด" value={formatDateTime(job.updatedAt)} />
           <Info label="มัดจำ" value={formatMoney(job.depositPaid)} />
           <Info label="ราคาประเมิน" value={formatMoney(job.estimatedCost)} />
-          <Info
-            label="บาร์โค้ด"
-            value={job.stockItem?.barcode || job.device?.barcode}
-          />
-          <Info
-            label="Serial"
-            value={job.stockItem?.serialNumber || job.device?.serialNumber}
-          />
+          <Info label="บาร์โค้ด" value={job.stockItem?.barcode || job.device?.barcode} />
+          <Info label="Serial" value={job.stockItem?.serialNumber || job.device?.serialNumber} />
         </div>
 
         <div className="mt-4 rounded-xl border border-slate-200 p-4">
@@ -50,37 +89,39 @@ const JobRuntimePanel = ({ job, submitting, onTransition, onAddPart, onOpenClaim
 
       <div className="grid gap-5 xl:grid-cols-2">
         <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h3 className="text-lg font-black text-slate-950">เปลี่ยนสถานะงาน</h3>
-          {nextStatuses.length ? (
+          <h3 className="text-lg font-black text-slate-950">ขั้นตอนงานซ่อม</h3>
+          {actions.length ? (
             <>
               <select
-                value={transition.status}
-                onChange={(event) => setTransition((current) => ({ ...current, status: event.target.value }))}
+                value={transition.action}
+                onChange={(event) => setTransition((current) => ({ ...current, action: event.target.value }))}
                 className="mt-4 w-full rounded-xl border border-slate-300 px-4 py-3"
               >
-                <option value="">เลือกสถานะถัดไป</option>
-                {nextStatuses.map((status) => (
-                  <option key={status} value={status}>{REPAIR_LABELS[status]}</option>
+                <option value="">เลือกคำสั่งถัดไป</option>
+                {actions.map((item) => (
+                  <option key={item.action} value={item.action}>
+                    {WORKFLOW_ACTION_LABELS[item.action] || item.action}
+                  </option>
                 ))}
               </select>
               <textarea
                 rows={3}
-                value={transition.technicianNotes}
-                onChange={(event) => setTransition((current) => ({ ...current, technicianNotes: event.target.value }))}
+                value={transition.note}
+                onChange={(event) => setTransition((current) => ({ ...current, note: event.target.value }))}
                 placeholder="บันทึกความคืบหน้า"
                 className="mt-3 w-full rounded-xl border border-slate-300 px-4 py-3"
               />
               <button
                 type="button"
-                disabled={!transition.status || submitting}
-                onClick={() => onTransition(transition)}
+                disabled={!transition.action || submitting}
+                onClick={submitTransition}
                 className="mt-3 rounded-xl bg-slate-900 px-5 py-3 font-black text-white disabled:opacity-40"
               >
-                บันทึกสถานะ
+                ดำเนินการขั้นตอน
               </button>
             </>
           ) : (
-            <p className="mt-3 text-sm text-slate-500">งานนี้อยู่ในสถานะปลายทางแล้ว</p>
+            <p className="mt-3 text-sm text-slate-500">ไม่มีคำสั่งถัดไปที่ Server อนุญาต</p>
           )}
         </section>
 
@@ -143,8 +184,7 @@ const JobRuntimePanel = ({ job, submitting, onTransition, onAddPart, onOpenClaim
               เปิดรายการเคลม
             </button>
           </div>
-        ) : (job.stockItemId || job.deviceId) &&
-          !['COMPLETED', 'CANCELLED'].includes(job.status) ? (
+        ) : (job.stockItemId || job.deviceId) && !['COMPLETED', 'CANCELLED'].includes(job.status) ? (
           <div className="mt-4 grid gap-3 md:grid-cols-2">
             <textarea
               rows={3}
@@ -176,12 +216,7 @@ const JobRuntimePanel = ({ job, submitting, onTransition, onAddPart, onOpenClaim
             <button
               type="button"
               disabled={submitting || !claim.reason.trim()}
-              onClick={() =>
-                onOpenClaim({
-                  ...claim,
-                  supplierId: claim.supplierId ? Number(claim.supplierId) : null,
-                })
-              }
+              onClick={() => onOpenClaim({ ...claim, supplierId: claim.supplierId ? Number(claim.supplierId) : null })}
               className="rounded-xl bg-indigo-700 px-5 py-3 font-black text-white md:col-span-2 disabled:opacity-40"
             >
               เปิดรายการเคลมจากงานซ่อม

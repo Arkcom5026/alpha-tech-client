@@ -1,4 +1,4 @@
-// src/features/product/quick-stock/utils/quickStockRuntimeUtils.js
+// src/features/receiving/quick-stock/utils/quickStockRuntimeUtils.js
 
 export const ONBOARDING_STATES = {
   NO_SELECTION: "NO_SELECTION",

@@ -1,4 +1,4 @@
-// src/features/product/quick-stock/hooks/useQuickStockProductController.js
+// src/features/receiving/quick-stock/hooks/useQuickStockProductController.js
 
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "react-toastify";

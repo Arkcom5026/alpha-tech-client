@@ -1,4 +1,4 @@
-// src/features/product/quick-stock/api/quickStockApi.js
+// src/features/receiving/quick-stock/api/quickStockApi.js
 //
 // QuickStock Runtime API boundary.
 //

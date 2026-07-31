@@ -1,4 +1,4 @@
-// src/features/product/quick-stock/components/QuickStockReceiveTable.jsx
+// src/features/receiving/quick-stock/components/QuickStockReceiveTable.jsx
 
 import ProductMasterPanel from "../../components/quick-stock/ProductMasterPanel";
 

@@ -1,4 +1,4 @@
-// src/features/product/quick-stock/store/quickStockRuntimeStore.js
+// src/features/receiving/quick-stock/store/quickStockRuntimeStore.js
 
 import { create } from "zustand";
 

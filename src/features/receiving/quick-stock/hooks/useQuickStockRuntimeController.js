@@ -1,4 +1,4 @@
-// src/features/product/quick-stock/hooks/useQuickStockRuntimeController.js
+// src/features/receiving/quick-stock/hooks/useQuickStockRuntimeController.js
 
 import useQuickStockRuntimeStore from "../store/quickStockRuntimeStore";
 

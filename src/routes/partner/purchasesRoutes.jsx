@@ -23,7 +23,7 @@ import BarcodeRangePrintPage from '@/features/barcode/pages/BarcodeRangePrintPag
 
 import ListReceiptItemsToScanPage from '@/features/stockItem/pages/ListReceiptItemsToScanPage';
 import ScanBarcodeListPage from '@/features/stockItem/pages/ScanBarcodeListPage';
-import QuickStockPage from '@/features/product/quick-stock/pages/QuickStockPage';
+import QuickStockPage from '@/features/receiving/quick-stock/pages/QuickStockPage';
 
 const purchasesRoutes = {
   path: 'purchases',

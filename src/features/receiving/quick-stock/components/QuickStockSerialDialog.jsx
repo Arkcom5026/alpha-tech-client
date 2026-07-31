@@ -1,4 +1,4 @@
-// src/features/product/quick-stock/components/QuickStockSerialDialog.jsx
+// src/features/receiving/quick-stock/components/QuickStockSerialDialog.jsx
 
 import IntakeQueueTable from "../../components/quick-stock/IntakeQueueTable";
 

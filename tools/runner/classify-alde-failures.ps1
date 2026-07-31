@@ -29,6 +29,23 @@ function Resolve-FailureClassification {
 
   $evidence = "$GateName`n$Detail`n$Transcript"
 
+  $preflightPatterns = @(
+    [ordered]@{ pattern = "Repository .* is on branch '.*';\s*expected '.*'"; reasonCode = 'REQUIRED_BRANCH_MISMATCH' },
+    [ordered]@{ pattern = 'working tree is not clean|Repository .* is dirty'; reasonCode = 'WORKING_TREE_NOT_CLEAN' },
+    [ordered]@{ pattern = 'does not exist:|is not a Git repository|does not contain package\.json'; reasonCode = 'REPOSITORY_PRECONDITION_FAILED' },
+    [ordered]@{ pattern = 'fatal: detected dubious ownership'; reasonCode = 'GIT_SAFE_DIRECTORY_REQUIRED' }
+  )
+
+  foreach ($rule in $preflightPatterns) {
+    if ($evidence -match "(?is)$($rule.pattern)") {
+      return [ordered]@{
+        failureClass = 'ENVIRONMENT_BLOCKER'
+        reasonCode = [string]$rule.reasonCode
+        matchedPattern = [string]$rule.pattern
+      }
+    }
+  }
+
   $safetyPatterns = @(
     'TEST_DATABASE_AUTHORITY_REJECTED',
     'RESTORE_DATABASE_ENVIRONMENT\s+must equal\s+TEST',
@@ -111,7 +128,10 @@ function Resolve-FailureClassification {
 }
 
 function Get-AuthorityStatus {
-  param([Parameter(Mandatory)][object[]]$Gates)
+  param(
+    [AllowEmptyCollection()]
+    [object[]]$Gates = @()
+  )
 
   $failed = @($Gates | Where-Object { $_.status -eq 'FAIL' })
   if ($failed.Count -eq 0) { return 'PASS' }
@@ -165,14 +185,45 @@ foreach ($gate in @($report.gates)) {
   }
 }
 
+# ALDE can fail during Git Guard or repository bootstrap before normal gates exist.
+# Preserve that failure as a synthetic preflight gate so the pipeline can still
+# publish metadata, transcript evidence, and a deterministic authority status.
+if ($classifiedGates.Count -eq 0 -and [string]$report.status -ne 'PASS') {
+  $reportDetail = ''
+  foreach ($propertyName in @('error', 'failure', 'message', 'summary')) {
+    $property = $report.PSObject.Properties[$propertyName]
+    if ($null -ne $property -and $null -ne $property.Value -and [string]$property.Value) {
+      $reportDetail = [string]$property.Value
+      break
+    }
+  }
+
+  $classification = Resolve-FailureClassification `
+    -GateName 'ALDE preflight' `
+    -Detail $reportDetail `
+    -Transcript $transcript
+
+  $classifiedGates += [ordered]@{
+    name = 'ALDE preflight'
+    status = 'FAIL'
+    failureClass = [string]$classification.failureClass
+    reasonCode = [string]$classification.reasonCode
+    matchedPattern = $classification.matchedPattern
+    durationSeconds = $null
+    detail = $reportDetail
+    transcriptEvidence = $transcript.Trim()
+  }
+}
+
 $authorityStatus = Get-AuthorityStatus -Gates $classifiedGates
 $assessment = [ordered]@{
   schemaVersion = 2
   classifier = [ordered]@{
     name = 'ALDE Transcript-Aware Failure Classification Engine'
-    version = '1.0.0'
+    version = '1.1.0'
     evidenceSources = @('gate.name', 'gate.detail', 'execution transcript')
     conservativeUnknownPolicy = 'UNCLASSIFIED is certification-failing until reviewed.'
+    earlyFailurePolicy = 'Preflight failures without normal gates are preserved as a synthetic ALDE preflight gate.'
   }
   authorityStatus = $authorityStatus
   regressionCount = @($classifiedGates | Where-Object { $_.failureClass -eq 'REGRESSION' }).Count
@@ -184,7 +235,7 @@ $assessment = [ordered]@{
     'All certification gates passed.'
   }
   elseif ($authorityStatus -eq 'BLOCKED') {
-    'No source regression was identified, but certification requires environment recovery or explicit safety authority.'
+    'No source regression was identified, but certification requires repository/environment recovery or explicit safety authority.'
   }
   else {
     'A source/executable-contract regression or unclassified failure requires correction or review.'

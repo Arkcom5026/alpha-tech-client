@@ -2,6 +2,6 @@
   "schemaVersion": 1,
   "requestedBy": "ChatGPT",
   "mode": "SyncAndCertify",
-  "requestedAt": "2026-08-01T12:16:00+07:00",
-  "reason": "Re-certify Backend Structure Migration Foundation after corrective server commits e084b0a568a572582ffcf44a732a2a0119a08489 and 3ea9d773d34d7cf52901ebedfdf3d37518de927f. Expected server main head is 3ea9d773d34d7cf52901ebedfdf3d37518de927f. Verify the Product Template Search capability-owned repository no longer imports the retired src/modules/product/repositories/productTemplateRepository.js path, employee onboarding controller export matches the lifecycle verifier contract, backend regression tests, employee lifecycle verification, partner-store HTTP E2E, backend startup smoke, exact client/server heads, and failed gates = 0."
+  "requestedAt": "2026-08-01T12:27:00+07:00",
+  "reason": "Final certification for Backend Structure Migration Foundation after local main verification passed. Expected server main head is e4f27df950d2e71d62b1767fae1dda8d3f2b4d2c. Verify exact client/server heads, clean main branches, frontend gates, Prisma validate/generate, backend regression tests, employee lifecycle, partner-store HTTP E2E, backend startup smoke, legacy root retirement, module runtime authority, and failed gates = 0."
 }

@@ -3,84 +3,95 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { test } from 'vitest';
 
-test('Sales store responsibility audit contract', () => {
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const missionPath = path.join(root, 'docs/missions/sales-store-responsibility-audit.md');
-const storePath = path.join(root, 'src/features/sales/store/salesStore.js');
-const contractPath = path.join(root, 'src/features/sales/store/contracts/salesStoreResponsibilityAuditContract.js');
-
-const read = (filePath) => fs.readFileSync(filePath, 'utf8');
+const read = (relativePath) => fs.readFileSync(path.join(root, relativePath), 'utf8');
 const assert = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-[missionPath, storePath, contractPath].forEach((filePath) => {
-  assert(fs.existsSync(filePath), `${filePath} must exist`);
-});
+test('Sales store responsibility audit contract', () => {
+  const store = read('src/features/sales/store/salesStore.js');
+  const contract = read(
+    'src/features/sales/store/contracts/salesStoreResponsibilityAuditContract.js'
+  );
 
-const mission = read(missionPath);
-const store = read(storePath);
-const contract = read(contractPath);
+  const retainedSymbols = [
+    'saleItems',
+    'customerId',
+    'paymentList',
+    'cardRef',
+    'billDiscount',
+    'completionState',
+    'confirmSaleOrderAction',
+    'resetSaleOrderAction',
+    'returnSaleAction',
+    'convertOrderOnlineToSaleAction',
+  ];
 
-const responsibilityClasses = [
-  'CREATE_SESSION',
-  'HISTORY_QUERY',
-  'PRINTABLE_QUERY',
-  'RETURN_AND_COLLECTION',
-  'DASHBOARD_OVERVIEW',
-  'ONLINE_ORDER_CONVERSION',
-  'COMPATIBILITY',
-];
+  retainedSymbols.forEach((symbol) => {
+    assert(store.includes(symbol), `${symbol} must remain in the root Sales Store`);
+    assert(contract.includes(symbol), `${symbol} must remain classified`);
+  });
 
-responsibilityClasses.forEach((name) => {
-  assert(mission.includes(name), `${name} must be documented in the mission`);
-  assert(contract.includes(name), `${name} must be represented in the contract`);
-});
+  const retiredSymbols = [
+    'salesOverviewLoading',
+    'salesOverviewError',
+    'salesOverviewLastLoadedAt',
+    'clearSalesOverviewErrorAction',
+    'fetchSalesDashboardOverviewAction',
+    'sales:',
+    'currentSale:',
+    'loadSalesAction',
+    'setCurrentSale:',
+    'setCurrentSaleAction',
+    'getSaleByIdAction',
+    'printableSales:',
+    'loadPrintableSalesAction',
+    'markSalePaidAction',
+    'updateSaleDocumentLinesAction',
+    'normalizePrintableRows',
+    'normalizeSaleDetail',
+  ];
 
-const classifiedSymbols = [
-  'saleItems',
-  'customerId',
-  'paymentList',
-  'cardRef',
-  'billDiscount',
-  'completionState',
-  'confirmSaleOrderAction',
-  'resetSaleOrderAction',
-  'sales',
-  'currentSale',
-  'printableSales',
-  'returnSaleAction',
-  'markSalePaidAction',
-  'salesOverviewLoading',
-  'fetchSalesDashboardOverviewAction',
-  'convertOrderOnlineToSaleAction',
-];
+  retiredSymbols.forEach((symbol) => {
+    assert(!store.includes(symbol), `${symbol} must not remain in the root Sales Store`);
+    assert(contract.includes(symbol), `${symbol} must be recorded as retired`);
+  });
 
-classifiedSymbols.forEach((symbol) => {
-  assert(store.includes(symbol), `${symbol} must exist in the current Sales Store authority`);
-  assert(contract.includes(symbol), `${symbol} must have a classified target owner`);
-});
+  [
+    'getAllSales',
+    'getSaleById',
+    'markSaleAsPaid',
+    'searchPrintableSales',
+    'updateSaleDocumentLines',
+  ].forEach((apiImport) => {
+    assert(!store.includes(apiImport), `${apiImport} must not remain imported by the root store`);
+  });
 
-assert(contract.includes('destructiveMigrationAllowed: false'), 'Audit must forbid destructive migration');
-assert(contract.includes('legacyDeletionAllowed: false'), 'Audit must forbid legacy deletion');
-assert(contract.includes('runtimeEvidenceRequiredForRemoval: true'), 'Removal must require runtime evidence');
-assert(contract.includes('compatibilitySurfaceMustRemainAvailable: true'), 'Compatibility surface must remain available');
+  [
+    'saleDashboardRuntimeCapability.js',
+    'saleHistoryQueryRuntimeCapability.js',
+    'salePrintableRuntimeCapability.js',
+    'saleSettlementRuntimeCapability.js',
+    'saleDocumentRuntimeSlice.js',
+  ].forEach((owner) => {
+    assert(contract.includes(owner), `${owner} must be recorded as the certified owner`);
+  });
 
-[
-  'saleCreateSessionStore.js',
-  'saleHistoryStore.js',
-  'printableSaleStore.js',
-  'saleReturnStore.js',
-  'salesDashboardStore.js',
-  'legacySalesStoreAdapter.js',
-].forEach((targetOwner) => {
-  assert(contract.includes(targetOwner), `${targetOwner} must be represented as a target owner`);
-});
-
-assert(
-  mission.includes('Runtime PASS and Operational PASS require executable evidence'),
-  'Mission must preserve verification gate separation'
-);
-
-console.log('Sales store responsibility audit contract: PASS');
+  assert(
+    contract.includes('destructiveMigrationAllowed: false'),
+    'Audit must still forbid destructive migration'
+  );
+  assert(
+    contract.includes('retirementRequiresCertifiedOwner: true'),
+    'Retirement must require a certified owner'
+  );
+  assert(
+    contract.includes('retirementRequiresConsumerAudit: true'),
+    'Retirement must require consumer evidence'
+  );
+  assert(
+    contract.includes('duplicateRuntimeAuthorityAllowed: false'),
+    'Duplicate runtime authority must remain forbidden'
+  );
 });

@@ -1,3 +1,4 @@
+import { readFile } from 'node:fs/promises';
 import { describe, expect, it, vi } from 'vitest';
 
 import {
@@ -123,6 +124,24 @@ describe('Sale Completion Recovery authority', () => {
     expect(capturedFailure.identity.commandId).toBe(capturedIdentity.commandId);
     expect(capturedFailure.failure.kind).toBe('UNCERTAIN');
     expect(capturedFailure.failure.retryable).toBe(true);
+  });
+
+  it('freezes checkout mutation surfaces while preserving the existing-command retry path', async () => {
+    const pageSource = await readFile(
+      new URL('../src/features/sales/create/pages/CreateSalePage.jsx', import.meta.url),
+      'utf8'
+    );
+    const summarySource = await readFile(
+      new URL('../src/features/sales/create/components/PaymentSummary.jsx', import.meta.url),
+      'utf8'
+    );
+
+    expect(pageSource).toContain('sale.completion.recovery?.preserveCheckout');
+    expect(pageSource).toContain("checkoutLocked ? 'pointer-events-none opacity-60' : ''");
+    expect(pageSource).toContain('disabled={checkoutLocked}');
+    expect(pageSource).toContain('{!checkoutLocked && (');
+    expect(summarySource).toContain("retryingExistingCommand\n              ? 'ตรวจสอบคำสั่งเดิมอีกครั้ง'");
+    expect(summarySource).toContain("recovery?.state === 'UNCERTAIN'");
   });
 
   it('allows explicit identity cleanup only through the identity authority', () => {

@@ -1,63 +1,68 @@
-# Sales Store Runtime Owner Matrix
+# Sales Runtime Owner Matrix
 
 ## Authority
 
 Repository: `Arkcom5026/alpha-tech-client`
 
-Branch: `agent/sales-store-responsibility-audit`
+Certified baseline:
 
-Legacy authority: `src/features/sales/store/salesStore.js`
+- Client SHA: `f15ae6d6edeeaecb8a123ea1c515589ce5829dfb`
+- Server SHA: `e4f27df950d2e71d62b1767fae1dda8d3f2b4d2c`
+- ALDE Run: `30690587018`
+- Mode: `SyncAndCertify`
+- Result: `PASS`
+- Failed gates: `0`
 
-## Matrix
+Root compatibility entrypoint:
 
-| Responsibility | Current owner | Observed consumers | Target owner | Migration risk | Decision |
-|---|---|---|---|---|---|
-| Create Sale cart/session | `salesStore.js` compatibility surface plus new Create Sale owners | `CreateSalePage`, `PaymentSection`, Customer Deposit integration | `sales/create/store/saleCreateSessionStore.js` or compatibility adapter | High | Do not extract first. Runtime proof required. |
-| Payment compatibility | `salesStore.js` plus `useSalePaymentWorkflow` | `PaymentSection` and historical document surfaces | Create Sale payment owner plus adapter | High | Keep legacy selectors during PR #29 runtime verification. |
-| Dashboard overview | `salesStore.js` | `SalesDashboardPage` | `sales/history/dashboard/store/salesDashboardStore.js` | Low/Medium | First extraction candidate. Consumer boundary is narrow and explicit. |
-| History/detail | `salesStore.js` | Bill, delivery note, and history/document pages | `sales/history/store/saleHistoryStore.js` | Medium/High | Defer until per-consumer contract is mapped. |
-| Printable sales | `salesStore.js` | Bill and delivery-note document/list screens | `sales/printable/store/printableSaleStore.js` | Medium/High | Defer. Search results show cross-module consumers. |
-| Return and collection | `salesStore.js` | No external consumer proven by current code search | `sales/returns/store/saleReturnStore.js` | Unknown | Do not declare dead; verify exact references and runtime paths. |
-| Online Order conversion | `salesStore.js` | `OnlineOrderToSalePanel` | `orderOnlinePos` conversion owner | Medium | Move with Online Order consumer cutover, not in Dashboard slice. |
+`src/features/sales/store/salesStore.js`
 
-## Repository Discovery Evidence
+## Current Runtime Ownership
 
-Current `useSalesStore` consumers span multiple modules:
+| Responsibility | Current certified owner | Runtime consumers | Decision |
+|---|---|---|---|
+| Create Sale session/cart/payment compatibility | `src/features/sales/store/salesStore.js` together with capability owners under `src/features/sales/create/` | Create Sale composition, Payment workflow, Customer Deposit integration | Retain until a separate consumer-proven retirement increment exists. |
+| Held Cart workflow | `src/features/sales/create/held-cart/` | Create Sale workflow | Certified owner. No duplicate page ownership. |
+| Sale completion | `src/features/sales/create/completion/` and `src/features/sales/create/workflows/` | Create Sale and payment composition | Certified owner. |
+| Dashboard overview | `src/features/sales/history/store/saleDashboardRuntimeCapability.js` | Sales Dashboard composition | Root-store authority retired. |
+| History query/detail | `src/features/sales/history/store/saleHistoryQueryRuntimeCapability.js` | Sale History and document compositions | Root-store authority retired. |
+| Printable query | `src/features/sales/history/store/salePrintableRuntimeCapability.js` and document-search owners under `src/features/sales/documents/search/` | Bill and Delivery Note search/list surfaces | Root-store authority retired. |
+| Settlement | `src/features/sales/history/store/saleSettlementRuntimeCapability.js` | Sale History settlement workflow | Root-store authority retired. |
+| Document-line update | `src/features/sales/documents/store/saleDocumentRuntimeSlice.js` and workspace owners under `src/features/sales/documents/workspace/` | Bill and Delivery Note document workspaces | Root-store authority retired. |
+| Return | `src/features/sales/store/salesStore.js` compatibility action plus Sale Return composition | Sale Return | Retain pending a dedicated Return authority audit. |
+| Online Order conversion | `src/features/sales/store/salesStore.js` compatibility action | `OnlineOrderToSalePanel` | Retain pending an Online Order conversion cutover increment. |
 
-- Create Sale
-- Payment
-- Sales Dashboard
-- Bill print/list
-- Delivery Note print/list
-- Online Order to Sale
-- Customer Deposit compatibility
+## Retired Root-Store Responsibilities
 
-Therefore `salesStore.js` is a cross-module compatibility boundary. A one-shot split would create a high regression risk and obscure runtime authority.
+The following symbols must not return to `salesStore.js`:
 
-## First Extraction Decision
+- Dashboard: `salesOverviewLoading`, `salesOverviewError`, `salesOverviewLastLoadedAt`, `clearSalesOverviewErrorAction`, `fetchSalesDashboardOverviewAction`
+- History: `sales`, `currentSale`, `loadSalesAction`, `setCurrentSale`, `setCurrentSaleAction`, `getSaleByIdAction`
+- Printable: `printableSales`, `loadPrintableSalesAction`, `normalizePrintableRows`, `normalizeSaleDetail`
+- Settlement: `markSalePaidAction`
+- Document line: `updateSaleDocumentLinesAction`
 
-The first low-risk owner is `DASHBOARD_OVERVIEW` because:
+The executable authority is locked by:
 
-1. Its consumer is explicitly concentrated in `SalesDashboardPage`.
-2. Its state is isolated: loading, error, last-loaded timestamp.
-3. Its command returns a self-contained overview projection.
-4. It does not mutate Create Sale cart/payment/completion state.
-5. It can be introduced behind a compatibility adapter before the page cutover.
+`src/features/sales/store/contracts/salesStoreResponsibilityAuditContract.js`
 
-## Next Slice
+## Final Audit Findings
 
-Create:
+1. History, Printable, Dashboard, Settlement, and Document Line responsibilities have certified owners outside the root store.
+2. Bill and Delivery Note consumers use their feature public boundaries and no longer consume the root Sales Store for retired responsibilities.
+3. Remaining root-store consumers are limited to retained Create, Return, and Online Order conversion responsibilities.
+4. Draft PRs #27, #28, and #29 are historical stacked working areas whose implementation intent has been superseded by the certified architecture on `main`; they must not be merged because doing so would reintroduce stale ancestry and governance ambiguity.
+5. PR #49 remains a separate documentation and Human Operational Test agenda and is not runtime migration debt.
 
-```text
-src/features/sales/history/dashboard/
-├── services/salesDashboardOverviewService.js
-├── store/salesDashboardStore.js
-├── contracts/salesDashboardStoreCutoverContract.js
-└── index.js
-```
+## Closure Decision
 
-Then atomically cut `SalesDashboardPage.jsx` from the legacy store while preserving legacy dashboard selectors temporarily for compatibility.
+The Sale History Runtime responsibility migration is repository-complete and ALDE-certified.
 
-## Verification Boundary
+Remaining work is intentionally separated into future agendas:
 
-This matrix is repository evidence only. Runtime PASS and Operational PASS require executable evidence.
+- Human Operational Test for the Sale workflow
+- Sale Return authority extraction, only when its value justifies a dedicated increment
+- Online Order conversion authority extraction, only when its consumer cutover is scheduled
+- Deployment and Production DB verification remain separate authorities
+
+This document is repository evidence. It does not claim Human Operational PASS or Production DB behavior.

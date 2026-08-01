@@ -17,7 +17,8 @@ const identity = read('src/features/sales/documents/workspace/services/saleDocum
 const controller = read('src/features/sales/documents/workspace/controllers/saleDocumentLineUpdateController.js');
 const editor = read('src/features/sales/documents/workspace/hooks/useSaleDocumentLineEditor.js');
 const index = read('src/features/sales/documents/workspace/index.js');
-const legacyStore = read('src/features/sales/store/salesStore.js');
+const rootStore = read('src/features/sales/store/salesStore.js');
+const documentSlice = read('src/features/sales/documents/store/saleDocumentRuntimeSlice.js');
 const billShort = read('src/features/bill/pages/PrintBillPageShortTax.jsx');
 const billFull = read('src/features/bill/pages/PrintBillPageFullTax.jsx');
 const deliveryNote = read('src/features/deliveryNote/pages/PrintDeliveryNotePage.jsx');
@@ -54,7 +55,8 @@ assert(editor.includes('}, [saleId]);'), 'Editor state must reset when route sal
   'resolveSaleDocumentWorkspaceIdentity',
 ].forEach((symbol) => assert(index.includes(symbol), `${symbol} must be publicly exported`));
 
-assert(legacyStore.includes('updateSaleDocumentLinesAction'), 'Legacy document-line action must remain for compatibility');
+assert(documentSlice.includes('updateSaleDocumentLinesAction'), 'Document slice must own document-line action');
+assert(!rootStore.includes('updateSaleDocumentLinesAction'), 'Root Sales Store must not duplicate document-line action');
 assert(billShort.includes('loadSaleByIdAction'), 'Bill Short must retain billStore server hydration authority');
 assert(billFull.includes('loadSaleByIdAction'), 'Bill Full must retain billStore server hydration authority');
 assert(deliveryNote.includes('loadSaleDocument({ saleId })'), 'Delivery Note must load through the Workspace command API');

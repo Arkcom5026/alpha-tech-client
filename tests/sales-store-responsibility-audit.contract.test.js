@@ -1,19 +1,15 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { test } from 'vitest';
+import { expect, test } from 'vitest';
+import { SALES_STORE_RESPONSIBILITY_AUDIT_CONTRACT } from '../src/features/sales/store/contracts/salesStoreResponsibilityAuditContract';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = (relativePath) => fs.readFileSync(path.join(root, relativePath), 'utf8');
-const assert = (condition, message) => {
-  if (!condition) throw new Error(message);
-};
 
 test('Sales store responsibility audit contract', () => {
   const store = read('src/features/sales/store/salesStore.js');
-  const contract = read(
-    'src/features/sales/store/contracts/salesStoreResponsibilityAuditContract.js'
-  );
+  const contract = SALES_STORE_RESPONSIBILITY_AUDIT_CONTRACT;
 
   const retainedSymbols = [
     'saleItems',
@@ -29,8 +25,8 @@ test('Sales store responsibility audit contract', () => {
   ];
 
   retainedSymbols.forEach((symbol) => {
-    assert(store.includes(symbol), `${symbol} must remain in the root Sales Store`);
-    assert(contract.includes(symbol), `${symbol} must remain classified`);
+    expect(store, `${symbol} must remain in the root Sales Store`).toContain(symbol);
+    expect(contract.retainedResponsibilitySymbols).toContain(symbol);
   });
 
   const retiredSymbols = [
@@ -39,13 +35,13 @@ test('Sales store responsibility audit contract', () => {
     'salesOverviewLastLoadedAt',
     'clearSalesOverviewErrorAction',
     'fetchSalesDashboardOverviewAction',
-    'sales:',
-    'currentSale:',
+    'sales',
+    'currentSale',
     'loadSalesAction',
-    'setCurrentSale:',
+    'setCurrentSale',
     'setCurrentSaleAction',
     'getSaleByIdAction',
-    'printableSales:',
+    'printableSales',
     'loadPrintableSalesAction',
     'markSalePaidAction',
     'updateSaleDocumentLinesAction',
@@ -54,8 +50,14 @@ test('Sales store responsibility audit contract', () => {
   ];
 
   retiredSymbols.forEach((symbol) => {
-    assert(!store.includes(symbol), `${symbol} must not remain in the root Sales Store`);
-    assert(contract.includes(symbol), `${symbol} must be recorded as retired`);
+    const sourceToken = ['sales', 'currentSale', 'printableSales'].includes(symbol)
+      ? `${symbol}:`
+      : symbol;
+
+    expect(store, `${symbol} must not remain in the root Sales Store`).not.toContain(
+      sourceToken
+    );
+    expect(contract.retiredResponsibilitySymbols).toContain(symbol);
   });
 
   [
@@ -65,33 +67,32 @@ test('Sales store responsibility audit contract', () => {
     'searchPrintableSales',
     'updateSaleDocumentLines',
   ].forEach((apiImport) => {
-    assert(!store.includes(apiImport), `${apiImport} must not remain imported by the root store`);
+    expect(store, `${apiImport} must not remain imported by the root store`).not.toContain(
+      apiImport
+    );
   });
 
-  [
-    'saleDashboardRuntimeCapability.js',
-    'saleHistoryQueryRuntimeCapability.js',
-    'salePrintableRuntimeCapability.js',
-    'saleSettlementRuntimeCapability.js',
-    'saleDocumentRuntimeSlice.js',
-  ].forEach((owner) => {
-    assert(contract.includes(owner), `${owner} must be recorded as the certified owner`);
-  });
+  expect(contract.certifiedOwners).toEqual(
+    expect.objectContaining({
+      DASHBOARD_OVERVIEW:
+        'src/features/sales/history/store/saleDashboardRuntimeCapability.js',
+      HISTORY_QUERY:
+        'src/features/sales/history/store/saleHistoryQueryRuntimeCapability.js',
+      PRINTABLE_QUERY:
+        'src/features/sales/history/store/salePrintableRuntimeCapability.js',
+      SETTLEMENT:
+        'src/features/sales/history/store/saleSettlementRuntimeCapability.js',
+      DOCUMENT_LINE:
+        'src/features/sales/documents/store/saleDocumentRuntimeSlice.js',
+    })
+  );
 
-  assert(
-    contract.includes('destructiveMigrationAllowed: false'),
-    'Audit must still forbid destructive migration'
-  );
-  assert(
-    contract.includes('retirementRequiresCertifiedOwner: true'),
-    'Retirement must require a certified owner'
-  );
-  assert(
-    contract.includes('retirementRequiresConsumerAudit: true'),
-    'Retirement must require consumer evidence'
-  );
-  assert(
-    contract.includes('duplicateRuntimeAuthorityAllowed: false'),
-    'Duplicate runtime authority must remain forbidden'
+  expect(contract.safetyRules).toEqual(
+    expect.objectContaining({
+      destructiveMigrationAllowed: false,
+      retirementRequiresCertifiedOwner: true,
+      retirementRequiresConsumerAudit: true,
+      duplicateRuntimeAuthorityAllowed: false,
+    })
   );
 });

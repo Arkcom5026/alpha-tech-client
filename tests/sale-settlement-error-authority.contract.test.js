@@ -8,12 +8,12 @@ import {
 } from '../src/features/sales/history/services/saleSettlementResult';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const runtimeSlicePath = path.join(
+const settlementCapabilityPath = path.join(
   root,
-  'src/features/sales/history/store/saleHistoryRuntimeSlice.js'
+  'src/features/sales/history/store/saleSettlementRuntimeCapability.js'
 );
 
-const runtimeSource = fs.readFileSync(runtimeSlicePath, 'utf8');
+const settlementCapabilitySource = fs.readFileSync(settlementCapabilityPath, 'utf8');
 
 describe('Sale settlement error authority contract', () => {
   test('projects canonical success', () => {
@@ -69,8 +69,14 @@ describe('Sale settlement error authority contract', () => {
   });
 
   test('runtime action returns projector results instead of swallowing errors', () => {
-    expect(runtimeSource).toContain('return projectSaleSettlementSuccess(data);');
-    expect(runtimeSource).toContain('return projectSaleSettlementFailure(err);');
-    expect(runtimeSource).not.toContain("await markSaleAsPaid(saleId);\n    } catch (err)");
+    expect(settlementCapabilitySource).toContain(
+      'return projectSaleSettlementSuccess(data);'
+    );
+    expect(settlementCapabilitySource).toContain(
+      'return projectSaleSettlementFailure(err);'
+    );
+    expect(settlementCapabilitySource).not.toContain(
+      "await markSaleAsPaid(saleId);\n    } catch (err)"
+    );
   });
 });

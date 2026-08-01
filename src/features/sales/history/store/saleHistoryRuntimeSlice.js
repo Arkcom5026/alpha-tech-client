@@ -1,25 +1,11 @@
-import { markSaleAsPaid } from '../api/saleHistoryApi';
-import {
-  projectSaleSettlementFailure,
-  projectSaleSettlementSuccess,
-} from '../services/saleSettlementResult';
-import { devError } from '../../shared/saleStoreSupport';
 import { createSaleDashboardRuntimeCapability } from './saleDashboardRuntimeCapability';
 import { createSaleHistoryQueryRuntimeCapability } from './saleHistoryQueryRuntimeCapability';
 import { createSalePrintableRuntimeCapability } from './salePrintableRuntimeCapability';
+import { createSaleSettlementRuntimeCapability } from './saleSettlementRuntimeCapability';
 
 export const createSaleHistoryRuntimeSlice = (set, get) => ({
   ...createSaleDashboardRuntimeCapability(set),
   ...createSaleHistoryQueryRuntimeCapability(set, get),
   ...createSalePrintableRuntimeCapability(set),
-
-  markSalePaidAction: async (saleId) => {
-    try {
-      const data = await markSaleAsPaid(saleId);
-      return projectSaleSettlementSuccess(data);
-    } catch (err) {
-      devError('❌ [markSalePaidAction]', err);
-      return projectSaleSettlementFailure(err);
-    }
-  },
+  ...createSaleSettlementRuntimeCapability(),
 });

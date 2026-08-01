@@ -12,15 +12,25 @@ const storePath = path.join(root, 'src/features/sales/history/dashboard/store/sa
 const datePath = path.join(root, 'src/features/sales/history/dashboard/services/salesDashboardDateRange.js');
 const projectionPath = path.join(root, 'src/features/sales/history/dashboard/services/salesDashboardOverviewProjection.js');
 const contractPath = path.join(root, 'src/features/sales/history/dashboard/contracts/salesDashboardStoreAtomicCutoverContract.js');
-const legacyStorePath = path.join(root, 'src/features/sales/store/salesStore.js');
+const rootStorePath = path.join(root, 'src/features/sales/store/salesStore.js');
+const dashboardCapabilityPath = path.join(root, 'src/features/sales/history/store/saleDashboardRuntimeCapability.js');
 
 const read = (filePath) => fs.readFileSync(filePath, 'utf8');
 const assert = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-[pagePath, indexPath, hookPath, storePath, datePath, projectionPath, contractPath, legacyStorePath]
-  .forEach((filePath) => assert(fs.existsSync(filePath), `${filePath} must exist`));
+[
+  pagePath,
+  indexPath,
+  hookPath,
+  storePath,
+  datePath,
+  projectionPath,
+  contractPath,
+  rootStorePath,
+  dashboardCapabilityPath,
+].forEach((filePath) => assert(fs.existsSync(filePath), `${filePath} must exist`));
 
 const page = read(pagePath);
 const index = read(indexPath);
@@ -28,11 +38,12 @@ const hook = read(hookPath);
 const store = read(storePath);
 const dateRange = read(datePath);
 const projection = read(projectionPath);
-const legacyStore = read(legacyStorePath);
+const rootStore = read(rootStorePath);
+const dashboardCapability = read(dashboardCapabilityPath);
 
 assert(page.includes("from '../dashboard'"), 'Dashboard page must import the dashboard public boundary');
 assert(page.includes('useSalesDashboardWorkflow'), 'Dashboard page must consume the workflow hook');
-assert(!page.includes("@/features/sales/store/salesStore"), 'Dashboard page must not import the legacy Sales Store');
+assert(!page.includes("@/features/sales/store/salesStore"), 'Dashboard page must not import the root Sales Store');
 [
   'fetchSalesDashboardOverviewAction',
   'salesOverviewLoading',
@@ -55,7 +66,7 @@ assert(!page.includes("@/features/sales/store/salesStore"), 'Dashboard page must
 
 assert(index.includes('useSalesDashboardStore'), 'Dashboard store must be publicly exported');
 assert(index.includes('useSalesDashboardWorkflow'), 'Dashboard workflow must be publicly exported');
-assert(store.includes("create((set, get)"), 'Dashboard store must own Zustand state');
+assert(store.includes('create((set, get)'), 'Dashboard store must own Zustand state');
 assert(store.includes('loadOverview'), 'Dashboard store must own overview loading');
 assert(store.includes('projectSalesDashboardOverview'), 'Dashboard store must delegate overview projection');
 assert(store.includes('projectSalesDashboardDateRange'), 'Dashboard store must delegate date range projection');
@@ -70,7 +81,10 @@ assert(!dateRange.includes('zustand'), 'Date range projection must remain framew
   'salesOverviewError',
   'salesOverviewLastLoadedAt',
   'clearSalesOverviewErrorAction',
-].forEach((symbol) => assert(legacyStore.includes(symbol), `${symbol} must remain as compatibility surface`));
+].forEach((symbol) => {
+  assert(dashboardCapability.includes(symbol), `${symbol} must belong to the Dashboard capability owner`);
+  assert(!rootStore.includes(symbol), `${symbol} must not remain in the root Sales Store`);
+});
 
 console.log('Sales dashboard store extraction contract: PASS');
 });

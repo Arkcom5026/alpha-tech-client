@@ -2,6 +2,6 @@
   "schemaVersion": 1,
   "requestedBy": "ChatGPT",
   "mode": "SyncAndCertify",
-  "requestedAt": "2026-08-01T10:52:00+07:00",
-  "reason": "Certify merged Missing Cost Resolution Prisma persistence foundation from server PR #224. Expected server main includes merge commit e87d34cb88cbe4277bcdf3592f75c44960fa2414. Verify client and server main synchronization, Prisma multi-file validation and generation, backend certification, frontend production build, runtime smoke gates, exact certified heads, and failed gates = 0."
+  "requestedAt": "2026-08-01T11:02:00+07:00",
+  "reason": "Retry merged Sale Settlement Error Authority certification after restoring ALDE-WIN01 server checkout to main and clean. Expected server main is e87d34cb88cbe4277bcdf3592f75c44960fa2414 and includes server PR #225 settlement error authority plus subsequent merged main work. Expected client main includes client PR #53 settlement result authority. Verify SyncAndCertify synchronization, focused Sale Settlement contracts, frontend production build, backend certification, runtime smoke gates, exact certified heads, and failed gates = 0."
 }

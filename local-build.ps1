@@ -343,7 +343,14 @@ function Invoke-BackendGate {
   if ($RunAllBackendVerifiers) {
     $packageJson = Get-Content (Join-Path $Path 'package.json') -Raw | ConvertFrom-Json
     $verifyScripts = @($packageJson.scripts.PSObject.Properties | Where-Object { $_.Name -like 'verify:*' } | Select-Object -ExpandProperty Name | Sort-Object)
+    $unsafeDirectVerifierScripts = @(
+      'verify:partner-store-application-runtime'
+    )
     foreach ($verifyScript in $verifyScripts) {
+      if ($unsafeDirectVerifierScripts -contains $verifyScript) {
+        Add-SkippedGate -Name "Backend $verifyScript" -Reason 'Direct runtime write verifier is intentionally excluded; use the dedicated :test wrapper with Test DB authority.'
+        continue
+      }
       [void](Invoke-NpmScriptGate -GateName "Backend $verifyScript" -ProjectPath $Path -ScriptName $verifyScript)
     }
   }
@@ -388,21 +395,18 @@ function Invoke-OperationalGate {
 function Get-ToolVersionSafely {
   param([string]$Command, [string[]]$Arguments)
   try { return ((Invoke-NativeCommand -Command $Command -Arguments $Arguments -CaptureOutput) | Select-Object -First 1) }
-  catch { return "unavailable: $($_.Exception.Message)" }
+  catch { return "unknown ($($_.Exception.Message))" }
 }
 
 function Write-VerificationReport {
   param(
-    [Parameter(Mandatory)][string]$ClientRepositoryPath,
-    [string]$ServerRepositoryPath,
-    [Parameter(Mandatory)][ValidateSet('PASS', 'FAIL')][string]$FinalStatus,
+    [Parameter(Mandatory)][string]$Status,
+    [Parameter(Mandatory)][object]$ClientState,
+    [Parameter(Mandatory)][object]$ServerState,
     [string]$FailureMessage = ''
   )
-  $artifactDirectory = Join-Path $ClientRepositoryPath '.artifacts\verification'
+  $artifactDirectory = Join-Path $ClientState.path '.artifacts\verification'
   New-Item -ItemType Directory -Force -Path $artifactDirectory | Out-Null
-  $clientState = Get-RepositoryState $ClientRepositoryPath
-  $serverState = $null
-  if ($ServerRepositoryPath) { $serverState = Get-RepositoryState $ServerRepositoryPath }
   $report = [ordered]@{
     schemaVersion = 3
     engine = [ordered]@{
@@ -413,7 +417,7 @@ function Write-VerificationReport {
       executionPolicy = 'full-certification'
       runtimeCompatibility = 'Windows PowerShell 5.1+'
     }
-    status = $FinalStatus
+    status = $Status
     failureMessage = $FailureMessage
     failedGateCount = Get-FailedGateCount
     startedAt = $script:StartedAt.ToString('o')
@@ -422,167 +426,100 @@ function Write-VerificationReport {
       machine = $env:COMPUTERNAME
       user = $env:USERNAME
       powershell = $PSVersionTable.PSVersion.ToString()
-      node = Get-ToolVersionSafely -Command 'node' -Arguments @('--version')
-      npm = Get-ToolVersionSafely -Command 'npm' -Arguments @('--version')
+      node = Get-ToolVersionSafely 'node' @('--version')
+      npm = Get-ToolVersionSafely 'npm' @('--version')
     }
-    repositories = [ordered]@{ client = $clientState; server = $serverState }
+    repositories = [ordered]@{
+      client = $ClientState
+      server = $ServerState
+    }
     certifiedHeads = $script:CertifiedHeads
-    gates = $script:Results
-    executedCommands = $script:ExecutedCommands
+    gates = @($script:Results)
+    executedCommands = @($script:ExecutedCommands)
   }
-  $timestamp = Get-Date -Format 'yyyyMMdd-HHmmss'
-  $reportPath = Join-Path $artifactDirectory "alde-$timestamp.json"
-  $latestPath = Join-Path $artifactDirectory 'alde-latest.json'
-  $json = $report | ConvertTo-Json -Depth 12
-  Set-Content -Path $reportPath -Value $json -Encoding utf8
-  Set-Content -Path $latestPath -Value $json -Encoding utf8
+  $reportPath = Join-Path $artifactDirectory ("alde-{0}.json" -f (Get-Date -Format 'yyyyMMdd-HHmmss'))
+  $report | ConvertTo-Json -Depth 20 | Set-Content -Path $reportPath -Encoding UTF8
   Write-Host "Verification report: $reportPath" -ForegroundColor Cyan
+  return $reportPath
 }
 
-function Publish-CertifiedRepository {
-  param(
-    [Parameter(Mandatory)][string]$RepositoryPath,
-    [Parameter(Mandatory)][string]$RepositoryKey,
-    [Parameter(Mandatory)][string]$Remote,
-    [Parameter(Mandatory)][string]$Branch
-  )
-  $state = Get-RepositoryState $RepositoryPath
-  Assert-RepositoryBranch -State $state -ExpectedBranch $Branch
-  Assert-CleanWorkingTree -State $state -Reason 'before publish'
-  $certifiedHead = [string]$script:CertifiedHeads[$RepositoryKey]
-  if (-not $certifiedHead -or $state.head -ne $certifiedHead) {
-    throw "$RepositoryKey HEAD changed after certification. Certified=$certifiedHead Current=$($state.head)"
-  }
-  Invoke-NativeCommand -Command 'git' -Arguments @('-C', $RepositoryPath, 'fetch', $Remote, '--prune')
-  $remoteHead = (Get-GitOutput $RepositoryPath @('rev-parse', "$Remote/$Branch") | Select-Object -First 1).Trim()
-  $null = Get-GitOutput $RepositoryPath @('merge-base', '--is-ancestor', $remoteHead, $state.head)
-  if ($remoteHead -ne $state.head) {
-    Invoke-NativeCommand -Command 'git' -Arguments @('-C', $RepositoryPath, 'push', $Remote, "HEAD:$Branch")
-  }
-  else { Write-Host "[PUSH] $RepositoryKey already matches $Remote/$Branch" -ForegroundColor DarkGreen }
-  Invoke-NativeCommand -Command 'git' -Arguments @('-C', $RepositoryPath, 'fetch', $Remote)
-  $verifiedRemoteHead = (Get-GitOutput $RepositoryPath @('rev-parse', "$Remote/$Branch") | Select-Object -First 1).Trim()
-  if ($verifiedRemoteHead -ne $state.head) {
-    throw "$RepositoryKey remote verification failed. Local=$($state.head) Remote=$verifiedRemoteHead"
-  }
-  Write-Host "[PASS] $RepositoryKey publish verified at $verifiedRemoteHead" -ForegroundColor Green
-}
-
-$resolvedClientPath = $null
-$resolvedServerPath = $null
-$finalStatus = 'FAIL'
+$clientRepositoryPath = $null
+$serverRepositoryPath = $null
+$clientState = $null
+$serverState = $null
 $failureMessage = ''
-$processExitCode = 1
-$shouldSync = $Mode -in @('Sync', 'SyncAndCertify')
-$shouldCertify = $Mode -in @('Certify', 'SyncAndCertify', 'CertifyAndPublish')
-$shouldPublish = $Mode -eq 'CertifyAndPublish'
 
 try {
-  Write-Section "$($script:EngineName) $($script:EngineVersion)"
-  Write-Host "Workflow : $($script:WorkflowName)"
+  $clientRepositoryPath = Resolve-ProjectPath -ExplicitPath $ClientPath -Candidates @($PSScriptRoot) -ProjectLabel 'Client'
+  $serverRepositoryPath = Resolve-ProjectPath -ExplicitPath $ServerPath -Candidates @((Join-Path $PSScriptRoot '..\server'), 'D:\alpha-tech\server') -ProjectLabel 'Server'
+
+  Write-Section "$script:EngineName $script:EngineVersion"
+  Write-Host "Workflow : $script:WorkflowName"
   Write-Host "Mode     : $Mode"
   Write-Host 'Policy   : Run all safe gates, collect complete evidence, then decide PASS or FAIL.'
   Write-Host 'Safety   : This engine never stages files and never creates commits.'
 
-  $resolvedClientPath = Resolve-ProjectPath -ExplicitPath $ClientPath -Candidates @($PSScriptRoot) -ProjectLabel 'Frontend'
-  if (-not $SkipBackend) {
-    $resolvedServerPath = Resolve-ProjectPath -ExplicitPath $ServerPath -Candidates @(
-      (Join-Path $resolvedClientPath '..\server'),
-      (Join-Path $resolvedClientPath '..\alpha-tech-server'),
-      'D:\alpha-tech\server'
-    ) -ProjectLabel 'Backend'
-  }
-
-  $repositories = [ordered]@{ client = $resolvedClientPath }
-  if ($resolvedServerPath) { $repositories.server = $resolvedServerPath }
-
   Write-Section 'GIT GUARD'
-  foreach ($entry in $repositories.GetEnumerator()) {
-    $state = Get-RepositoryState $entry.Value
-    Assert-RepositoryBranch -State $state -ExpectedBranch $RequiredBranch
-    if (($shouldSync -or $shouldPublish) -and -not $state.clean) {
-      Assert-CleanWorkingTree -State $state -Reason "for mode $Mode"
-    }
-    if ($shouldCertify -and -not $AllowDirtyCertification -and -not $state.clean) {
-      Assert-CleanWorkingTree -State $state -Reason 'for commit-bound certification'
-    }
-    Write-Host "[REPO] $($entry.Key): branch=$($state.branch) head=$($state.head) clean=$($state.clean)" -ForegroundColor Green
+  $clientState = Get-RepositoryState $clientRepositoryPath
+  $serverState = Get-RepositoryState $serverRepositoryPath
+  Assert-RepositoryBranch -State $clientState -ExpectedBranch $RequiredBranch
+  Assert-RepositoryBranch -State $serverState -ExpectedBranch $RequiredBranch
+  if (-not $AllowDirtyCertification) {
+    Assert-CleanWorkingTree -State $clientState -Reason "for mode $Mode"
+    Assert-CleanWorkingTree -State $serverState -Reason "for mode $Mode"
   }
 
-  if ($shouldSync) {
+  if ($Mode -in @('Sync', 'SyncAndCertify')) {
     Write-Section 'GIT SYNCHRONIZATION'
-    foreach ($entry in $repositories.GetEnumerator()) {
-      Sync-Repository -RepositoryPath $entry.Value -Remote $RemoteName -Branch $RequiredBranch
+    Sync-Repository -RepositoryPath $clientRepositoryPath -Remote $RemoteName -Branch $RequiredBranch
+    Sync-Repository -RepositoryPath $serverRepositoryPath -Remote $RemoteName -Branch $RequiredBranch
+  }
+
+  if ($Mode -in @('Certify', 'SyncAndCertify', 'CertifyAndPublish')) {
+    if (-not $SkipFrontend) { Invoke-FrontendGate -Path $clientRepositoryPath }
+    if (-not $SkipBackend) { Invoke-BackendGate -Path $serverRepositoryPath }
+    if ($IncludeRuntime) { Invoke-RuntimeGate -ClientRepositoryPath $clientRepositoryPath -ServerRepositoryPath $serverRepositoryPath }
+    if ($IncludeOperationalE2E) { Invoke-OperationalGate -Path $clientRepositoryPath }
+
+    Stop-TrackedProcesses
+
+    Write-Section 'POST-CERTIFICATION GIT GUARD'
+    $clientState = Get-RepositoryState $clientRepositoryPath
+    $serverState = Get-RepositoryState $serverRepositoryPath
+    Assert-RepositoryBranch -State $clientState -ExpectedBranch $RequiredBranch
+    Assert-RepositoryBranch -State $serverState -ExpectedBranch $RequiredBranch
+    if (-not $AllowDirtyCertification) {
+      Assert-CleanWorkingTree -State $clientState -Reason 'after certification'
+      Assert-CleanWorkingTree -State $serverState -Reason 'after certification'
+    }
+
+    if ((Get-FailedGateCount) -gt 0) {
+      throw "$(Get-FailedGateCount) certification gate(s) failed."
+    }
+
+    $script:CertifiedHeads = @{
+      client = $clientState.head
+      server = $serverState.head
     }
   }
 
-  if ($Mode -eq 'Sync') {
-    $finalStatus = 'PASS'
-    $processExitCode = 0
-    Write-Section 'SYNCHRONIZATION PASS'
-  }
-
-  if ($shouldCertify) {
-    if (-not $SkipFrontend) { Invoke-FrontendGate -Path $resolvedClientPath }
-    if (-not $SkipBackend) { Invoke-BackendGate -Path $resolvedServerPath }
-    if ($IncludeRuntime) {
-      if ($SkipBackend) { Add-SkippedGate -Name 'Backend startup smoke test' -Reason 'Runtime verification requires backend repository.' }
-      else { Invoke-RuntimeGate -ClientRepositoryPath $resolvedClientPath -ServerRepositoryPath $resolvedServerPath }
-    }
-    if ($IncludeOperationalE2E) {
-      if ($SkipFrontend) { Add-SkippedGate -Name 'Playwright browser E2E' -Reason 'Operational E2E requires frontend repository.' }
-      else { Invoke-OperationalGate -Path $resolvedClientPath }
-    }
-
-    $failedGateCount = Get-FailedGateCount
-    if ($failedGateCount -eq 0) {
-      foreach ($entry in $repositories.GetEnumerator()) {
-        $stateAfterCertification = Get-RepositoryState $entry.Value
-        if (-not $AllowDirtyCertification) {
-          Assert-CleanWorkingTree -State $stateAfterCertification -Reason 'after certification'
-        }
-        $script:CertifiedHeads[$entry.Key] = $stateAfterCertification.head
-      }
-      $finalStatus = 'PASS'
-      $processExitCode = 0
-      Write-Section 'LOCAL CERTIFICATION PASS'
-    }
-    else {
-      $finalStatus = 'FAIL'
-      $failureMessage = "$failedGateCount certification gate(s) failed."
-      $processExitCode = 1
-      Write-Section 'LOCAL CERTIFICATION FAIL'
-    }
-    $script:Results | Format-Table -AutoSize
-  }
-
-  if ($shouldPublish) {
-    if ($finalStatus -ne 'PASS') { throw 'Publish blocked because local certification did not pass.' }
-    Write-Section 'PUBLISH GUARD'
-    foreach ($entry in $repositories.GetEnumerator()) {
-      Publish-CertifiedRepository -RepositoryPath $entry.Value -RepositoryKey $entry.Key -Remote $RemoteName -Branch $RequiredBranch
-    }
-    Write-Section 'CERTIFICATION AND PUBLISH PASS'
-  }
-
-  Write-VerificationReport -ClientRepositoryPath $resolvedClientPath -ServerRepositoryPath $resolvedServerPath -FinalStatus $finalStatus -FailureMessage $failureMessage
+  $reportPath = Write-VerificationReport -Status 'PASS' -ClientState $clientState -ServerState $serverState
+  Write-Host ''
+  Write-Host 'ALDE CERTIFICATION: PASS' -ForegroundColor Green
+  Write-Host "Certified client SHA: $($script:CertifiedHeads.client)"
+  Write-Host "Certified server SHA: $($script:CertifiedHeads.server)"
+  Write-Host "Report: $reportPath"
+  exit 0
 }
 catch {
   $failureMessage = $_.Exception.Message
-  $finalStatus = 'FAIL'
-  $processExitCode = 1
+  Stop-TrackedProcesses
+  if (-not $clientState -and $clientRepositoryPath) { $clientState = Get-RepositoryState $clientRepositoryPath }
+  if (-not $serverState -and $serverRepositoryPath) { $serverState = Get-RepositoryState $serverRepositoryPath }
+  if ($clientState -and $serverState) {
+    [void](Write-VerificationReport -Status 'FAIL' -ClientState $clientState -ServerState $serverState -FailureMessage $failureMessage)
+  }
   Write-Host ''
   Write-Host "ALDE FAILED: $failureMessage" -ForegroundColor Red
-  $script:Results | Format-Table -AutoSize
-  if ($resolvedClientPath) {
-    try {
-      Write-VerificationReport -ClientRepositoryPath $resolvedClientPath -ServerRepositoryPath $resolvedServerPath -FinalStatus 'FAIL' -FailureMessage $failureMessage
-    }
-    catch { Write-Warning "Could not write verification report: $($_.Exception.Message)" }
-  }
+  exit 1
 }
-finally {
-  Stop-TrackedProcesses
-}
-
-exit $processExitCode

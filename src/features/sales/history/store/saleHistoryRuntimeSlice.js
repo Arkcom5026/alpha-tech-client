@@ -17,9 +17,9 @@ export const createSaleHistoryRuntimeSlice = (set, get) => ({
     try {
       const data = await markSaleAsPaid(saleId);
       return projectSaleSettlementSuccess(data);
-    } catch (error) {
-      devError('❌ [markSalePaidAction]', error);
-      return projectSaleSettlementFailure(error);
+    } catch (err) {
+      devError('❌ [markSalePaidAction]', err);
+      return projectSaleSettlementFailure(err);
     }
   },
 });

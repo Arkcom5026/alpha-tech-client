@@ -1,4 +1,5 @@
 import { execFileSync, spawnSync } from 'node:child_process'
+import fs from 'node:fs'
 import path from 'node:path'
 
 const LINTABLE_EXTENSIONS = new Set(['.js', '.jsx', '.mjs', '.cjs'])
@@ -85,12 +86,21 @@ for (const file of files) {
   console.log(`  - ${file}`)
 }
 
-const executable = process.platform === 'win32' ? 'npx.cmd' : 'npx'
-const result = spawnSync(executable, ['eslint', '--max-warnings=0', ...files], {
-  cwd: process.cwd(),
-  encoding: 'utf8',
-  stdio: 'inherit',
-})
+const eslintEntry = path.resolve(process.cwd(), 'node_modules', 'eslint', 'bin', 'eslint.js')
+if (!fs.existsSync(eslintEntry)) {
+  console.error(`[lint-ratchet] Local ESLint entry not found: ${eslintEntry}`)
+  process.exit(1)
+}
+
+const result = spawnSync(
+  process.execPath,
+  [eslintEntry, '--max-warnings=0', ...files],
+  {
+    cwd: process.cwd(),
+    encoding: 'utf8',
+    stdio: 'inherit',
+  },
+)
 
 if (result.error) {
   console.error(`[lint-ratchet] Unable to start ESLint: ${result.error.message}`)

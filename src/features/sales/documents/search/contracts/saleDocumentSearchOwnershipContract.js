@@ -3,7 +3,9 @@ export const SALE_DOCUMENT_SEARCH_OWNERSHIP_CONTRACT = Object.freeze({
     'src/features/bill/pages/PrintBillListPage.jsx',
     'src/features/deliveryNote/pages/DeliveryNoteListPage.jsx',
   ]),
-  legacyStorePath: 'src/features/sales/store/salesStore.js',
+  retiredRootStorePath: 'src/features/sales/store/salesStore.js',
+  printableCapabilityOwner:
+    'src/features/sales/history/store/salePrintableRuntimeCapability.js',
   sharedOwnerRoot: 'src/features/sales/documents/search',
   sharedResponsibilities: Object.freeze([
     'query-projection',
@@ -31,12 +33,13 @@ export const SALE_DOCUMENT_SEARCH_OWNERSHIP_CONTRACT = Object.freeze({
     selectionAuthority: 'saleId',
     serverRevalidationRequiredAfterSelection: true,
     navigationSnapshotMayBeOptimisticOnly: true,
+    duplicateRootPrintableAuthorityAllowed: false,
   }),
   safety: Object.freeze({
     mergeRenderers: false,
     mergeDocumentWorkspaces: false,
     moveDocumentLineEditingIntoSearch: false,
-    legacyPrintableDeletionAllowed: false,
-    runtimeEvidenceRequiredForLegacyRemoval: true,
+    rootPrintableAuthorityRetired: true,
+    runtimeEvidenceRequiredForAuthorityChange: true,
   }),
 });

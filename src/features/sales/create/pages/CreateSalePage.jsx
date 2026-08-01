@@ -166,7 +166,7 @@ const QuickSalePage = () => {
         <PaymentSection
           saleItems={sale.cart.items}
           isSubmitting={sale.completion.isSubmitting}
-          setIsSubmitting={sale.completion.setIsSubmitting}
+          recovery={sale.completion.recovery}
           onSaleConfirmed={sale.documentHandoff.handleConfirmed}
           setClearPhoneTrigger={setClearPhoneTrigger}
           currentSaleMode={sale.presentation.saleMode}

@@ -1,6 +1,6 @@
 export const SALES_STORE_RESPONSIBILITY_AUDIT_CONTRACT = Object.freeze({
   runtimeEntrypoint: 'src/features/sales/store/salesStore.js',
-  responsibilityClasses: Object.freeze({
+  retainedResponsibilities: Object.freeze({
     CREATE_SESSION: Object.freeze([
       'saleItems',
       'customerId',
@@ -21,29 +21,8 @@ export const SALES_STORE_RESPONSIBILITY_AUDIT_CONTRACT = Object.freeze({
       'confirmSaleOrderAction',
       'resetSaleOrderAction',
     ]),
-    HISTORY_QUERY: Object.freeze([
-      'sales',
-      'currentSale',
-      'fetchSalesAction',
-      'fetchSaleByIdAction',
-      'updateSaleDocumentLinesAction',
-    ]),
-    PRINTABLE_QUERY: Object.freeze([
-      'printableSales',
-      'searchPrintableSalesAction',
-      'normalizePrintableRows',
-      'normalizeSaleDetail',
-    ]),
-    RETURN_AND_COLLECTION: Object.freeze([
+    RETURN: Object.freeze([
       'returnSaleAction',
-      'markSalePaidAction',
-    ]),
-    DASHBOARD_OVERVIEW: Object.freeze([
-      'salesOverviewLoading',
-      'salesOverviewError',
-      'salesOverviewLastLoadedAt',
-      'clearSalesOverviewErrorAction',
-      'fetchSalesDashboardOverviewAction',
     ]),
     ONLINE_ORDER_CONVERSION: Object.freeze([
       'convertOrderOnlineToSaleAction',
@@ -59,19 +38,55 @@ export const SALES_STORE_RESPONSIBILITY_AUDIT_CONTRACT = Object.freeze({
       'clearSaleCompletionIdentity',
     ]),
   }),
+  retiredResponsibilities: Object.freeze({
+    DASHBOARD_OVERVIEW: Object.freeze({
+      owner: 'src/features/sales/history/store/saleDashboardRuntimeCapability.js',
+      symbols: Object.freeze([
+        'salesOverviewLoading',
+        'salesOverviewError',
+        'salesOverviewLastLoadedAt',
+        'clearSalesOverviewErrorAction',
+        'fetchSalesDashboardOverviewAction',
+      ]),
+    }),
+    HISTORY_QUERY: Object.freeze({
+      owner: 'src/features/sales/history/store/saleHistoryQueryRuntimeCapability.js',
+      symbols: Object.freeze([
+        'sales',
+        'currentSale',
+        'loadSalesAction',
+        'setCurrentSale',
+        'setCurrentSaleAction',
+        'getSaleByIdAction',
+      ]),
+    }),
+    PRINTABLE_QUERY: Object.freeze({
+      owner: 'src/features/sales/history/store/salePrintableRuntimeCapability.js',
+      symbols: Object.freeze([
+        'printableSales',
+        'loadPrintableSalesAction',
+        'normalizePrintableRows',
+        'normalizeSaleDetail',
+      ]),
+    }),
+    SETTLEMENT: Object.freeze({
+      owner: 'src/features/sales/history/store/saleSettlementRuntimeCapability.js',
+      symbols: Object.freeze([
+        'markSalePaidAction',
+      ]),
+    }),
+    DOCUMENT_LINES: Object.freeze({
+      owner: 'src/features/sales/documents/store/saleDocumentRuntimeSlice.js',
+      symbols: Object.freeze([
+        'updateSaleDocumentLinesAction',
+      ]),
+    }),
+  }),
   safetyRules: Object.freeze({
     destructiveMigrationAllowed: false,
-    legacyDeletionAllowed: false,
-    runtimeEvidenceRequiredForRemoval: true,
-    compatibilitySurfaceMustRemainAvailable: true,
-  }),
-  targetOwners: Object.freeze({
-    CREATE_SESSION: 'src/features/sales/create/store/saleCreateSessionStore.js',
-    HISTORY_QUERY: 'src/features/sales/history/store/saleHistoryStore.js',
-    PRINTABLE_QUERY: 'src/features/sales/printable/store/printableSaleStore.js',
-    RETURN_AND_COLLECTION: 'src/features/sales/returns/store/saleReturnStore.js',
-    DASHBOARD_OVERVIEW: 'src/features/sales/dashboard/store/salesDashboardStore.js',
-    ONLINE_ORDER_CONVERSION: 'src/features/orderOnline/conversion',
-    COMPATIBILITY: 'src/features/sales/shared/compatibility/legacySalesStoreAdapter.js',
+    retirementRequiresCertifiedOwner: true,
+    retirementRequiresConsumerAudit: true,
+    retainedRuntimeSurfaceMustRemainAvailable: true,
+    duplicateRuntimeAuthorityAllowed: false,
   }),
 });

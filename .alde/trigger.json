@@ -2,6 +2,6 @@
   "schemaVersion": 1,
   "requestedBy": "ChatGPT",
   "mode": "SyncAndCertify",
-  "requestedAt": "2026-08-01T15:00:00+07:00",
-  "reason": "Manual re-trigger for merged Missing Cost Resolution runtime read foundation from server PR #227. Expected server main includes merge commit 46882daff1b50ab1ad5cbc39282f553f5290ab95. Verify SyncAndCertify branch guards, clean-tree synchronization, Prisma validation/generation, backend tests and startup, read-only Missing Cost Resolution routes, strict branch isolation, non-leaking not-found behavior, exact certified client/server heads, and failed gates = 0."
+  "requestedAt": "2026-08-01T11:32:00+07:00",
+  "reason": "Certify merged Sale History Runtime Capability Separation from client PR #54. Expected client main includes merge commit 1bb4aaa5dfca435af57ba4d427ae5e93a40741d5. Verify SyncAndCertify branch guards, clean-tree synchronization, frontend typecheck/lint/build/test:run, focused sale-history runtime capability separation contract, Sale Settlement Error Authority regression, backend certification and startup smoke, exact certified client/server heads, and failed gates = 0."
 }

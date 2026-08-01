@@ -2,6 +2,6 @@
   "schemaVersion": 1,
   "requestedBy": "ChatGPT",
   "mode": "SyncAndCertify",
-  "requestedAt": "2026-08-01T07:31:00+07:00",
-  "reason": "Run ALDE SyncAndCertify after updating local-build.ps1 so raw partner-store runtime verification is safely skipped while Test DB wrapper verifiers remain authoritative"
+  "requestedAt": "2026-08-01T07:35:00+07:00",
+  "reason": "Run ALDE SyncAndCertify after merging Sale Return DDWD Client PR #51 and Server PR #211. Expected merged authorities: client merge bc8c4d621051f1135a4545da210ae27682daa974; server merge 75db731cf63dcf93443c83ff60e534f2a023a8a1."
 }

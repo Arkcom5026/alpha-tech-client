@@ -34,7 +34,7 @@
     "@cloudinary/react": "1.14.1",
     "@cloudinary/url-gen": "1.21.0",
     "@dnd-kit/core": "6.3.1",
-    "@dnd-kit/modifiers": "^6.3.1",
+    "@dnd-kit/modifiers": "9.0.0",
     "@dnd-kit/sortable": "10.0.0",
     "@dnd-kit/utilities": "3.2.2",
     "@emotion/react": "^11.14.0",
@@ -120,7 +120,7 @@
     "vite": "5.2.10",
     "vitest": "^4.1.7"
   },
-  "description": "This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.",
+  "description": "This template provides a minimal setup to get React working in Vite with HMR and ESLint rules.",
   "main": "eslint.config.js",
   "keywords": [],
   "author": "",

@@ -7,7 +7,8 @@ const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 
 const shortPage = read('src/features/bill/pages/PrintBillPageShortTax.jsx');
 const fullPage = read('src/features/bill/pages/PrintBillPageFullTax.jsx');
-const legacyStore = read('src/features/sales/store/salesStore.js');
+const rootStore = read('src/features/sales/store/salesStore.js');
+const documentSlice = read('src/features/sales/documents/store/saleDocumentRuntimeSlice.js');
 const workspaceIndex = read('src/features/sales/documents/workspace/index.js');
 
 const billPages = [shortPage, fullPage];
@@ -60,8 +61,9 @@ describe('Bill document-line editor atomic cutover contract', () => {
     expect(shortPage).not.toContain('window.setTimeout(returnOnce, 0)');
   });
 
-  it('keeps the legacy action available only as a compatibility surface', () => {
-    expect(legacyStore).toContain('updateSaleDocumentLinesAction');
+  it('keeps document-line mutation in its certified owner only', () => {
+    expect(documentSlice).toContain('updateSaleDocumentLinesAction');
+    expect(rootStore).not.toContain('updateSaleDocumentLinesAction');
     expect(workspaceIndex).toContain('useSaleDocumentLineEditor');
   });
 });

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getSaleReturnEligibility } from '../api/saleReturnApi';
+import SaleReturnHelpDrawer from '../help/SaleReturnHelpDrawer';
 import { runCompleteSaleReturn } from '../workflows/completeSaleReturnWorkflow';
 
 const money = (value) => Number(value || 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -14,6 +15,7 @@ const CreateReturnPage = () => {
   const [refunds, setRefunds] = useState([{ method: 'CASH', amount: 0, sourcePaymentItemId: '' }]);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
 
   useEffect(() => {
     getSaleReturnEligibility(saleId).then(setEligibility).catch((err) => setError(err.response?.data?.message || err.message));
@@ -88,8 +90,19 @@ const CreateReturnPage = () => {
   return (
     <main className="p-6 space-y-5">
       <section className="rounded-2xl border bg-white p-5 shadow-sm">
-        <h1 className="text-xl font-black">คืนสินค้าจากใบขาย {eligibility.sale.code}</h1>
-        <p className="text-sm text-slate-500">สินค้าจะกลับเข้าพร้อมขายทันทีเมื่อรายการสำเร็จ ประวัติการขายเดิมยังคงอยู่ทั้งหมด</p>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h1 className="text-xl font-black">คืนสินค้าจากใบขาย {eligibility.sale.code}</h1>
+            <p className="text-sm text-slate-500">สินค้าจะกลับเข้าพร้อมขายทันทีเมื่อรายการสำเร็จ ประวัติการขายเดิมยังคงอยู่ทั้งหมด</p>
+          </div>
+          <button
+            type="button"
+            className="rounded-xl border border-orange-200 bg-orange-50 px-4 py-2 font-bold text-orange-700"
+            onClick={() => setHelpOpen(true)}
+          >
+            คู่มือ
+          </button>
+        </div>
       </section>
       <section className="overflow-hidden rounded-2xl border bg-white shadow-sm">
         <table className="w-full text-sm">
@@ -143,6 +156,7 @@ const CreateReturnPage = () => {
         <button className="rounded-xl border px-5 py-3 font-bold" onClick={() => navigate(-1)}>ยกเลิก</button>
         <button className="rounded-xl bg-orange-500 px-6 py-3 font-black text-white disabled:opacity-50" disabled={submitting} onClick={submit}>{submitting ? 'กำลังดำเนินการ...' : 'ยืนยันคืนสินค้าและคืนเงิน'}</button>
       </div>
+      <SaleReturnHelpDrawer open={helpOpen} onClose={() => setHelpOpen(false)} />
     </main>
   );
 };

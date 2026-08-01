@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getReturnableSales } from '../api/saleReturnApi';
+import SaleReturnHelpDrawer from '../help/SaleReturnHelpDrawer';
 
 const ReturnSearchPage = () => {
   const navigate = useNavigate();
@@ -8,6 +9,7 @@ const ReturnSearchPage = () => {
   const [sales, setSales] = useState([]);
   const [query, setQuery] = useState('');
   const [error, setError] = useState('');
+  const [helpOpen, setHelpOpen] = useState(false);
 
   useEffect(() => {
     getReturnableSales().then(setSales).catch((err) => setError(err.response?.data?.message || err.message));
@@ -24,8 +26,19 @@ const ReturnSearchPage = () => {
   return (
     <main className="p-6 space-y-5">
       <section className="rounded-2xl border bg-white p-5 shadow-sm">
-        <h1 className="text-xl font-black">คืนสินค้า</h1>
-        <p className="mt-1 text-sm text-slate-500">ค้นหาใบขายเดิม แล้วเลือกรายการและจำนวนที่ต้องการคืน</p>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h1 className="text-xl font-black">คืนสินค้า</h1>
+            <p className="mt-1 text-sm text-slate-500">ค้นหาใบขายเดิม แล้วเลือกรายการและจำนวนที่ต้องการคืน</p>
+          </div>
+          <button
+            type="button"
+            className="rounded-xl border border-orange-200 bg-orange-50 px-4 py-2 font-bold text-orange-700"
+            onClick={() => setHelpOpen(true)}
+          >
+            คู่มือ
+          </button>
+        </div>
         <input
           className="mt-4 w-full rounded-xl border px-4 py-3"
           value={query}
@@ -57,6 +70,7 @@ const ReturnSearchPage = () => {
           </tbody>
         </table>
       </section>
+      <SaleReturnHelpDrawer open={helpOpen} onClose={() => setHelpOpen(false)} />
     </main>
   );
 };

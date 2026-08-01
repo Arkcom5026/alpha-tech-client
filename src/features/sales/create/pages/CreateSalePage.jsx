@@ -36,6 +36,10 @@ const QuickSalePage = () => {
     setHideCustomerDetails,
   });
 
+  const checkoutLocked = Boolean(
+    sale.completion.isSubmitting || sale.completion.recovery?.preserveCheckout
+  );
+
   useEffect(() => {
     if (clearPhoneTrigger) setHideCustomerDetails(false);
   }, [clearPhoneTrigger]);
@@ -46,6 +50,7 @@ const QuickSalePage = () => {
   }, []);
 
   const heldCartSavedAndClear = () => {
+    if (checkoutLocked) return;
     sale.cart.clear();
     sale.customer.setCustomerId?.(null);
     sale.heldCart.commands.clearActiveCart();
@@ -84,7 +89,10 @@ const QuickSalePage = () => {
 
       <div className="grid grid-cols-12 gap-3 items-start">
         <div className="col-span-12 lg:col-span-4 flex">
-          <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden w-full">
+          <div
+            className={`bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden w-full ${checkoutLocked ? 'pointer-events-none opacity-60' : ''}`}
+            aria-disabled={checkoutLocked}
+          >
             <CustomerSection
               phoneInputRef={phoneInputRef}
               productSearchRef={barcodeInputRef}
@@ -97,7 +105,10 @@ const QuickSalePage = () => {
           </div>
         </div>
 
-        <div className="col-span-12 lg:col-span-8 space-y-3">
+        <div
+          className={`col-span-12 lg:col-span-8 space-y-3 ${checkoutLocked ? 'pointer-events-none opacity-60' : ''}`}
+          aria-disabled={checkoutLocked}
+        >
           <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm space-y-3 select-none">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 pb-2 border-b border-slate-100">
               <div className="flex items-center gap-1.5">
@@ -116,6 +127,7 @@ const QuickSalePage = () => {
                         value={type}
                         checked={sale.presentation.selectedPriceType === type}
                         onChange={(event) => sale.presentation.setSelectedPriceType(event.target.value)}
+                        disabled={checkoutLocked}
                         className="accent-slate-900 h-3.5 w-3.5"
                       />
                       <span className={sale.presentation.selectedPriceType === type ? 'text-slate-900 font-black' : ''}>
@@ -134,6 +146,7 @@ const QuickSalePage = () => {
                 type="text"
                 placeholder="ยิงบาร์โค้ดสินค้าแบบชิ้นหรือแบบจำนวนเพื่อเพิ่มรายการขาย..."
                 onKeyDown={sale.itemSearch.handleBarcodeSearch}
+                disabled={checkoutLocked}
                 className="h-8 w-full pl-9 pr-4 text-xs font-mono font-black bg-slate-50 focus:bg-white border border-slate-200 focus:border-slate-900 rounded-lg outline-none shadow-inner transition-all"
               />
             </div>
@@ -178,15 +191,17 @@ const QuickSalePage = () => {
         />
       </div>
 
-      <PosHeldCartPanel
-        open={sale.heldCart.panel.open}
-        onClose={sale.heldCart.commands.closePanel}
-        currentItems={sale.cart.items}
-        currentCustomerId={sale.customer.customerId}
-        currentPriceType={sale.presentation.selectedPriceType}
-        onLoad={sale.heldCart.commands.load}
-        onSavedAndClear={heldCartSavedAndClear}
-      />
+      {!checkoutLocked && (
+        <PosHeldCartPanel
+          open={sale.heldCart.panel.open}
+          onClose={sale.heldCart.commands.closePanel}
+          currentItems={sale.cart.items}
+          currentCustomerId={sale.customer.customerId}
+          currentPriceType={sale.presentation.selectedPriceType}
+          onLoad={sale.heldCart.commands.load}
+          onSavedAndClear={heldCartSavedAndClear}
+        />
+      )}
     </div>
   );
 };

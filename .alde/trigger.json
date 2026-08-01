@@ -2,6 +2,6 @@
   "schemaVersion": 1,
   "requestedBy": "ChatGPT",
   "mode": "SyncAndCertify",
-  "requestedAt": "2026-08-01T10:04:00+07:00",
-  "reason": "Certify merged Sale Settlement Error Authority. Expected client main includes merge commit 6dab9078fdf994019466e37c64e4f6e54e7965ad; expected server main includes merge commit f6f28b294d55ed87fc1fa6b8261d0c72ed0fac25. Verify focused settlement contracts, frontend production build, backend certification and startup, runtime smoke gates, and failed gates = 0."
+  "requestedAt": "2026-08-01T10:52:00+07:00",
+  "reason": "Certify merged Missing Cost Resolution Prisma persistence foundation from server PR #224. Expected server main includes merge commit e87d34cb88cbe4277bcdf3592f75c44960fa2414. Verify client and server main synchronization, Prisma multi-file validation and generation, backend certification, frontend production build, runtime smoke gates, exact certified heads, and failed gates = 0."
 }

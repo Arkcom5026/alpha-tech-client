@@ -10,7 +10,7 @@ import CalculationDetails from './CalculationDetails';
 const PaymentSection = ({
   saleItems,
   isSubmitting,
-  setIsSubmitting,
+  recovery,
   onSaleConfirmed,
   setClearPhoneTrigger,
   currentSaleMode,
@@ -43,7 +43,7 @@ const PaymentSection = ({
   const payment = useSalePaymentWorkflow({
     saleItems,
     isSubmitting,
-    setIsSubmitting,
+    recovery,
     currentSaleMode,
     onSaleModeChange,
     saleOption,
@@ -126,6 +126,8 @@ const PaymentSection = ({
               isSubmitting={isSubmitting}
               onConfirm={payment.confirmation.confirm}
               paymentError={payment.feedback.error}
+              recovery={payment.feedback.recovery}
+              retryingExistingCommand={payment.confirmation.retryingExistingCommand}
               saleOption={saleOption}
               setSaleOption={onSaleOptionChange}
               currentSaleMode={currentSaleMode}

@@ -10,6 +10,16 @@ const read = (relativePath) => fs.readFileSync(path.join(root, relativePath), 'u
 test('Sales store responsibility audit contract', () => {
   const store = read('src/features/sales/store/salesStore.js');
   const contract = SALES_STORE_RESPONSIBILITY_AUDIT_CONTRACT;
+  const retainedContractSymbols = Object.values(contract.retainedResponsibilities).flat();
+  const retiredContractSymbols = Object.values(contract.retiredResponsibilities).flatMap(
+    (responsibility) => responsibility.symbols
+  );
+  const certifiedOwners = Object.fromEntries(
+    Object.entries(contract.retiredResponsibilities).map(([name, responsibility]) => [
+      name,
+      responsibility.owner,
+    ])
+  );
 
   const retainedSymbols = [
     'saleItems',
@@ -26,7 +36,7 @@ test('Sales store responsibility audit contract', () => {
 
   retainedSymbols.forEach((symbol) => {
     expect(store, `${symbol} must remain in the root Sales Store`).toContain(symbol);
-    expect(contract.retainedResponsibilitySymbols).toContain(symbol);
+    expect(retainedContractSymbols).toContain(symbol);
   });
 
   const retiredSymbols = [
@@ -57,7 +67,7 @@ test('Sales store responsibility audit contract', () => {
     expect(store, `${symbol} must not remain in the root Sales Store`).not.toContain(
       sourceToken
     );
-    expect(contract.retiredResponsibilitySymbols).toContain(symbol);
+    expect(retiredContractSymbols).toContain(symbol);
   });
 
   [
@@ -72,7 +82,7 @@ test('Sales store responsibility audit contract', () => {
     );
   });
 
-  expect(contract.certifiedOwners).toEqual(
+  expect(certifiedOwners).toEqual(
     expect.objectContaining({
       DASHBOARD_OVERVIEW:
         'src/features/sales/history/store/saleDashboardRuntimeCapability.js',
@@ -82,7 +92,7 @@ test('Sales store responsibility audit contract', () => {
         'src/features/sales/history/store/salePrintableRuntimeCapability.js',
       SETTLEMENT:
         'src/features/sales/history/store/saleSettlementRuntimeCapability.js',
-      DOCUMENT_LINE:
+      DOCUMENT_LINES:
         'src/features/sales/documents/store/saleDocumentRuntimeSlice.js',
     })
   );

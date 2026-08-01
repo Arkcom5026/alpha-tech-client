@@ -7,9 +7,9 @@
     "eventName":  "workflow_dispatch",
     "workflow":  "ALDE Local Certification",
     "workflowRunId":  30697912043,
-    "workflowRunAttempt":  1,
+    "workflowRunAttempt":  2,
     "workflowRunUrl":  "https://github.com/Arkcom5026/alpha-tech-client/actions/runs/30697912043",
-    "publishedAt":  "2026-08-01T11:35:36.8828651Z",
+    "publishedAt":  "2026-08-01T11:43:32.0724310Z",
     "runner":  {
                    "name":  "ALDE-WIN01",
                    "os":  "Windows",

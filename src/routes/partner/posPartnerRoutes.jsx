@@ -22,6 +22,7 @@ import AccountsReceivablePage from '@/features/finance/pages/AccountsReceivableP
 import CustomerCreditPage from '@/features/finance/pages/CustomerCreditPage';
 import TaxIntakeWorkspacePage from '@/features/tax/intake/pages/TaxIntakeWorkspacePage';
 import TaxPeriodManagementPage from '@/features/tax/periods/pages/TaxPeriodManagementPage';
+import TaxExpenseWorkspacePage from '@/features/tax/expenses/pages/TaxExpenseWorkspacePage';
 import InputTaxReceiptWorkspacePage from '@/features/tax/inputDocuments/pages/InputTaxReceiptWorkspacePage';
 import SupplierPayableWorkspacePage from '@/features/supplierPayable/pages/SupplierPayableWorkspacePage';
 
@@ -89,6 +90,7 @@ export const posPartnerRoutes = [
           { path: 'tax-intake', element: <TaxIntakeWorkspacePage /> },
           { path: 'input-tax-receipts', element: <InputTaxReceiptWorkspacePage /> },
           { path: 'tax-periods', element: <TaxPeriodManagementPage /> },
+          { path: 'tax-expenses', element: <TaxExpenseWorkspacePage /> },
           { path: 'supplier-payables', element: <SupplierPayableWorkspacePage /> },
           {
             path: 'customer-receipts',

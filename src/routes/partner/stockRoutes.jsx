@@ -36,6 +36,8 @@ import ReadyToSellAuditPage from '@/features/stockAudit/pages/ReadyToSellAuditPa
 import ReadyToSellListPage from '@/features/product/pages/ReadyToSellListPage';
 import ReadyToSellStructuredDetailsPage from '@/features/product/pages/ReadyToSellStructuredDetailsPage';
 import { ProductTracePage } from '@/features/product/trace';
+import MissingCostResolutionQueuePage from '@/features/inventoryRecovery/missingCostResolution/pages/MissingCostResolutionQueuePage';
+import MissingCostResolutionDetailPage from '@/features/inventoryRecovery/missingCostResolution/pages/MissingCostResolutionDetailPage';
 
 /**
  * 🎛️ [MASTER FLAT STOCK ROUTE]
@@ -163,7 +165,17 @@ const stockRoutes = {
       element: <ProductTracePage />,
     },
 
-    // 📌 12. เมนู: จัดการหน่วยนับ (Units)
+    // 📌 12. เมนู: รายการต้นทุนขาด (Missing Cost Recovery)
+    {
+      path: 'missing-cost-resolutions',
+      element: <MissingCostResolutionQueuePage />,
+    },
+    {
+      path: 'missing-cost-resolutions/:resolutionId',
+      element: <MissingCostResolutionDetailPage />,
+    },
+
+    // 📌 13. เมนู: จัดการหน่วยนับ (Units)
     {
       path: 'units',
       element: <ListUnitPage />,

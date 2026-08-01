@@ -1,86 +1,108 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { test } from 'vitest';
+import { expect, test } from 'vitest';
+import { SALES_STORE_RESPONSIBILITY_AUDIT_CONTRACT } from '../src/features/sales/store/contracts/salesStoreResponsibilityAuditContract';
+
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const read = (relativePath) => fs.readFileSync(path.join(root, relativePath), 'utf8');
 
 test('Sales store responsibility audit contract', () => {
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const missionPath = path.join(root, 'docs/missions/sales-store-responsibility-audit.md');
-const storePath = path.join(root, 'src/features/sales/store/salesStore.js');
-const contractPath = path.join(root, 'src/features/sales/store/contracts/salesStoreResponsibilityAuditContract.js');
+  const store = read('src/features/sales/store/salesStore.js');
+  const contract = SALES_STORE_RESPONSIBILITY_AUDIT_CONTRACT;
+  const retainedContractSymbols = Object.values(contract.retainedResponsibilities).flat();
+  const retiredContractSymbols = Object.values(contract.retiredResponsibilities).flatMap(
+    (responsibility) => responsibility.symbols
+  );
+  const certifiedOwners = Object.fromEntries(
+    Object.entries(contract.retiredResponsibilities).map(([name, responsibility]) => [
+      name,
+      responsibility.owner,
+    ])
+  );
 
-const read = (filePath) => fs.readFileSync(filePath, 'utf8');
-const assert = (condition, message) => {
-  if (!condition) throw new Error(message);
-};
+  const retainedSymbols = [
+    'saleItems',
+    'customerId',
+    'paymentList',
+    'cardRef',
+    'billDiscount',
+    'completionState',
+    'confirmSaleOrderAction',
+    'resetSaleOrderAction',
+    'returnSaleAction',
+    'convertOrderOnlineToSaleAction',
+  ];
 
-[missionPath, storePath, contractPath].forEach((filePath) => {
-  assert(fs.existsSync(filePath), `${filePath} must exist`);
-});
+  retainedSymbols.forEach((symbol) => {
+    expect(store, `${symbol} must remain in the root Sales Store`).toContain(symbol);
+    expect(retainedContractSymbols).toContain(symbol);
+  });
 
-const mission = read(missionPath);
-const store = read(storePath);
-const contract = read(contractPath);
+  const retiredSymbols = [
+    'salesOverviewLoading',
+    'salesOverviewError',
+    'salesOverviewLastLoadedAt',
+    'clearSalesOverviewErrorAction',
+    'fetchSalesDashboardOverviewAction',
+    'sales',
+    'currentSale',
+    'loadSalesAction',
+    'setCurrentSale',
+    'setCurrentSaleAction',
+    'getSaleByIdAction',
+    'printableSales',
+    'loadPrintableSalesAction',
+    'markSalePaidAction',
+    'updateSaleDocumentLinesAction',
+    'normalizePrintableRows',
+    'normalizeSaleDetail',
+  ];
 
-const responsibilityClasses = [
-  'CREATE_SESSION',
-  'HISTORY_QUERY',
-  'PRINTABLE_QUERY',
-  'RETURN_AND_COLLECTION',
-  'DASHBOARD_OVERVIEW',
-  'ONLINE_ORDER_CONVERSION',
-  'COMPATIBILITY',
-];
+  retiredSymbols.forEach((symbol) => {
+    const sourceToken = ['sales', 'currentSale', 'printableSales'].includes(symbol)
+      ? `${symbol}:`
+      : symbol;
 
-responsibilityClasses.forEach((name) => {
-  assert(mission.includes(name), `${name} must be documented in the mission`);
-  assert(contract.includes(name), `${name} must be represented in the contract`);
-});
+    expect(store, `${symbol} must not remain in the root Sales Store`).not.toContain(
+      sourceToken
+    );
+    expect(retiredContractSymbols).toContain(symbol);
+  });
 
-const classifiedSymbols = [
-  'saleItems',
-  'customerId',
-  'paymentList',
-  'cardRef',
-  'billDiscount',
-  'completionState',
-  'confirmSaleOrderAction',
-  'resetSaleOrderAction',
-  'sales',
-  'currentSale',
-  'printableSales',
-  'returnSaleAction',
-  'markSalePaidAction',
-  'salesOverviewLoading',
-  'fetchSalesDashboardOverviewAction',
-  'convertOrderOnlineToSaleAction',
-];
+  [
+    'getAllSales',
+    'getSaleById',
+    'markSaleAsPaid',
+    'searchPrintableSales',
+    'updateSaleDocumentLines',
+  ].forEach((apiImport) => {
+    expect(store, `${apiImport} must not remain imported by the root store`).not.toContain(
+      apiImport
+    );
+  });
 
-classifiedSymbols.forEach((symbol) => {
-  assert(store.includes(symbol), `${symbol} must exist in the current Sales Store authority`);
-  assert(contract.includes(symbol), `${symbol} must have a classified target owner`);
-});
+  expect(certifiedOwners).toEqual(
+    expect.objectContaining({
+      DASHBOARD_OVERVIEW:
+        'src/features/sales/history/store/saleDashboardRuntimeCapability.js',
+      HISTORY_QUERY:
+        'src/features/sales/history/store/saleHistoryQueryRuntimeCapability.js',
+      PRINTABLE_QUERY:
+        'src/features/sales/history/store/salePrintableRuntimeCapability.js',
+      SETTLEMENT:
+        'src/features/sales/history/store/saleSettlementRuntimeCapability.js',
+      DOCUMENT_LINES:
+        'src/features/sales/documents/store/saleDocumentRuntimeSlice.js',
+    })
+  );
 
-assert(contract.includes('destructiveMigrationAllowed: false'), 'Audit must forbid destructive migration');
-assert(contract.includes('legacyDeletionAllowed: false'), 'Audit must forbid legacy deletion');
-assert(contract.includes('runtimeEvidenceRequiredForRemoval: true'), 'Removal must require runtime evidence');
-assert(contract.includes('compatibilitySurfaceMustRemainAvailable: true'), 'Compatibility surface must remain available');
-
-[
-  'saleCreateSessionStore.js',
-  'saleHistoryStore.js',
-  'printableSaleStore.js',
-  'saleReturnStore.js',
-  'salesDashboardStore.js',
-  'legacySalesStoreAdapter.js',
-].forEach((targetOwner) => {
-  assert(contract.includes(targetOwner), `${targetOwner} must be represented as a target owner`);
-});
-
-assert(
-  mission.includes('Runtime PASS and Operational PASS require executable evidence'),
-  'Mission must preserve verification gate separation'
-);
-
-console.log('Sales store responsibility audit contract: PASS');
+  expect(contract.safetyRules).toEqual(
+    expect.objectContaining({
+      destructiveMigrationAllowed: false,
+      retirementRequiresCertifiedOwner: true,
+      retirementRequiresConsumerAudit: true,
+      duplicateRuntimeAuthorityAllowed: false,
+    })
+  );
 });

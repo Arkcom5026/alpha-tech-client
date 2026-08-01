@@ -29,7 +29,8 @@
     "test:sale-completion-recovery": "vitest run tests/sale-completion-recovery.contract.test.js",
     "test:sale-settlement-error-authority": "vitest run tests/sale-settlement-error-authority.contract.test.js",
     "test:sale-history-runtime-capability-separation": "vitest run tests/sale-history-runtime-capability-separation.contract.test.js",
-    "test:sale-settlement-runtime-capability": "vitest run tests/sale-settlement-runtime-capability.contract.test.js"
+    "test:sale-settlement-runtime-capability": "vitest run tests/sale-settlement-runtime-capability.contract.test.js",
+    "test:sale-root-store-history-authority-retirement": "vitest run tests/sale-root-store-history-authority-retirement.contract.test.js tests/sales-store-responsibility-audit.contract.test.js"
   },
   "dependencies": {
     "@cloudinary/react": "1.14.1",

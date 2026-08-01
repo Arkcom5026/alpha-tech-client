@@ -2,6 +2,6 @@
   "schemaVersion": 1,
   "requestedBy": "ChatGPT",
   "mode": "SyncAndCertify",
-  "requestedAt": "2026-08-01T12:53:00+07:00",
-  "reason": "Certify merged Sale Settlement Runtime Capability Extraction from client PR #55. Expected client main includes merge commit ccd224b0626267f97379d992b6864c6ad9d2dfeb. Verify clean main branches, exact certified client/server heads, frontend typecheck/lint/build/test:run, focused test:sale-settlement-runtime-capability, Sale Settlement Error Authority regression, Sale History Runtime Capability Separation regression, backend certification, startup smoke tests, and failed gates = 0. Human Operational Test remains separate."
+  "requestedAt": "2026-08-01T12:55:00+07:00",
+  "reason": "User-requested ALDE SyncAndCertify for merged Sale Settlement Runtime Capability Extraction from client PR #55. Expected clean local main repositories before runner pickup. Expected client main before this trigger includes merge commit ccd224b0626267f97379d992b6864c6ad9d2dfeb; expected server main is e4f27df950d2e71d62b1767fae1dda8d3f2b4d2c. Verify branch guards, fast-forward synchronization, exact certified client/server heads, frontend typecheck/lint/build/test:run, focused test:sale-settlement-runtime-capability, Sale Settlement Error Authority regression, Sale History Runtime Capability Separation regression, backend certification, startup smoke tests, and failed gates = 0. Human Operational Test remains separate."
 }

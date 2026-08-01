@@ -2,6 +2,6 @@
   "schemaVersion": 1,
   "requestedBy": "ChatGPT",
   "mode": "SyncAndCertify",
-  "requestedAt": "2026-08-01T12:27:00+07:00",
-  "reason": "Final certification for Backend Structure Migration Foundation after local main verification passed. Expected server main head is e4f27df950d2e71d62b1767fae1dda8d3f2b4d2c. Verify exact client/server heads, clean main branches, frontend gates, Prisma validate/generate, backend regression tests, employee lifecycle, partner-store HTTP E2E, backend startup smoke, legacy root retirement, module runtime authority, and failed gates = 0."
+  "requestedAt": "2026-08-01T12:53:00+07:00",
+  "reason": "Certify merged Sale Settlement Runtime Capability Extraction from client PR #55. Expected client main includes merge commit ccd224b0626267f97379d992b6864c6ad9d2dfeb. Verify clean main branches, exact certified client/server heads, frontend typecheck/lint/build/test:run, focused test:sale-settlement-runtime-capability, Sale Settlement Error Authority regression, Sale History Runtime Capability Separation regression, backend certification, startup smoke tests, and failed gates = 0. Human Operational Test remains separate."
 }

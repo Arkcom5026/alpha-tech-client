@@ -33,14 +33,18 @@ const createCommandId = () =>
   globalThis.crypto?.randomUUID?.() ||
   `sale-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
+export const readSaleCompletionIdentity = (storage = globalThis.sessionStorage) => {
+  try {
+    const current = JSON.parse(storage?.getItem(STORAGE_KEY) || 'null');
+    return current?.commandId ? current : null;
+  } catch {
+    return null;
+  }
+};
+
 export const getSaleCompletionIdentity = (payload, storage = globalThis.sessionStorage) => {
   const fingerprint = fingerprintSaleCompletion(payload);
-  let current = null;
-  try {
-    current = JSON.parse(storage?.getItem(STORAGE_KEY) || 'null');
-  } catch {
-    current = null;
-  }
+  const current = readSaleCompletionIdentity(storage);
   if (current?.commandId && current?.fingerprint === fingerprint) {
     if (current.receivedAt) return current;
     const upgraded = { ...current, receivedAt: new Date().toISOString() };

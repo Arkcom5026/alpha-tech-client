@@ -7,6 +7,7 @@ import {
 } from '../hooks/useMissingCostResolutionRead';
 import MissingCostResolutionWorkflowPanel from '../components/MissingCostResolutionWorkflowPanel';
 import MissingCostRecoveryPreviewPanel from '../components/MissingCostRecoveryPreviewPanel';
+import MissingCostRecoveryExecutionPanel from '../components/MissingCostRecoveryExecutionPanel';
 
 const formatNumber = (value) => new Intl.NumberFormat('th-TH', {
   minimumFractionDigits: 0,
@@ -54,6 +55,7 @@ const MissingCostResolutionDetailPage = () => {
       </header>
       <MissingCostResolutionWorkflowPanel detail={detail} />
       <MissingCostRecoveryPreviewPanel resolution={resolution} />
+      <MissingCostRecoveryExecutionPanel detail={detail} />
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
         <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm md:p-7">
           <div className="flex items-center gap-2"><FileText className="h-5 w-5 text-blue-600" /><h2 className="text-lg font-black text-slate-900">หลักฐานต้นทุน</h2></div>

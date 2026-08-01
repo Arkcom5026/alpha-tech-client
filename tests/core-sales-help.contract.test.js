@@ -47,7 +47,7 @@ assert.doesNotMatch(page, /SaleReturn|return workflow|คืนสินค้�
 const packageJson = JSON.parse(read('package.json'));
 assert.equal(
   packageJson.scripts['test:core-sales-help'],
-  'node tests/core-sales-help.contract.test.js',
+  'vitest run tests/core-sales-help.contract.test.js',
   'package.json must expose the dedicated Core Sales help contract command',
 );
 

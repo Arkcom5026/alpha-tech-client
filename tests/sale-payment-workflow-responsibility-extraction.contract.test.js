@@ -12,6 +12,7 @@ const validationPath = path.join(root, 'src/features/sales/create/payment/servic
 const mapperPath = path.join(root, 'src/features/sales/create/payment/services/salePaymentIntentMapper.js');
 const controllerPath = path.join(root, 'src/features/sales/create/payment/controllers/salePaymentConfirmationController.js');
 const hookPath = path.join(root, 'src/features/sales/create/payment/hooks/useSalePaymentWorkflow.js');
+const completionHookPath = path.join(root, 'src/features/sales/create/completion/hooks/useSaleCompletion.js');
 const projectionPath = path.join(root, 'src/features/sales/create/payment/projections/salePaymentWorkflowProjection.js');
 const indexPath = path.join(root, 'src/features/sales/create/payment/index.js');
 const entrypointPath = path.join(root, 'src/features/sales/create/components/PaymentSection.jsx');
@@ -29,6 +30,7 @@ const assert = (condition, message) => {
   mapperPath,
   controllerPath,
   hookPath,
+  completionHookPath,
   projectionPath,
   indexPath,
   entrypointPath,
@@ -41,6 +43,7 @@ const validation = read(validationPath);
 const mapper = read(mapperPath);
 const controller = read(controllerPath);
 const hook = read(hookPath);
+const completionHook = read(completionHookPath);
 const projection = read(projectionPath);
 const index = read(indexPath);
 const entrypoint = read(entrypointPath);
@@ -92,7 +95,12 @@ assert(controller.includes('onSaleConfirmed?.'), 'Controller must coordinate com
 assert(!controller.includes('useState'), 'Controller must remain framework-independent');
 assert(!controller.includes('useCallback'), 'Controller must remain framework-independent');
 
-assert(hook.includes('useRef(false)'), 'Workflow hook must own confirmation lock');
+assert(!hook.includes('useRef(false)'), 'Payment workflow must not own a duplicate confirmation lock');
+assert(hook.includes('if (isSubmitting) return null'), 'Payment workflow must respect the completion submission authority');
+assert(completionHook.includes('const [isSubmitting, setIsSubmitting] = useState(false)'), 'Completion hook must own submission state');
+assert(completionHook.includes('SALE_COMPLETION_ALREADY_SUBMITTING'), 'Completion hook must block duplicate submission');
+assert(completionHook.includes('setIsSubmitting(true)'), 'Completion hook must acquire the submission authority');
+assert(completionHook.includes('setIsSubmitting(false)'), 'Completion hook must release the submission authority');
 assert(hook.includes("useState('')"), 'Workflow hook must own payment error feedback');
 assert(hook.includes('useState(false)'), 'Workflow hook must own deposit touched lifecycle');
 assert(hook.includes('projectSalePaymentCalculation'), 'Workflow hook must delegate payment calculation');
@@ -103,6 +111,7 @@ assert(hook.includes('resetSaleOrderAction?.()'), 'Workflow hook must coordinate
 assert(hook.includes('clearCustomerAndDeposit?.()'), 'Workflow hook must coordinate customer deposit reset');
 assert(hook.includes("onSaleModeChange?.('CASH')"), 'Workflow hook must restore cash mode after success');
 assert(hook.includes("onSaleOptionChange?.('NONE')"), 'Workflow hook must reset document option after success');
+assert(hook.includes('if (!result?.saleId)'), 'Workflow hook must reject success without canonical saleId');
 assert(hook.includes('projectSalePaymentWorkflow'), 'Workflow hook must delegate public projection');
 
 assert(projection.includes('calculation'), 'Projection must expose calculation');

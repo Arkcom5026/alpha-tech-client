@@ -2,6 +2,6 @@
   "schemaVersion": 1,
   "requestedBy": "ChatGPT",
   "mode": "SyncAndCertify",
-  "requestedAt": "2026-08-01T11:02:00+07:00",
-  "reason": "Retry merged Sale Settlement Error Authority certification after restoring ALDE-WIN01 server checkout to main and clean. Expected server main is e87d34cb88cbe4277bcdf3592f75c44960fa2414 and includes server PR #225 settlement error authority plus subsequent merged main work. Expected client main includes client PR #53 settlement result authority. Verify SyncAndCertify synchronization, focused Sale Settlement contracts, frontend production build, backend certification, runtime smoke gates, exact certified heads, and failed gates = 0."
+  "requestedAt": "2026-08-01T11:17:00+07:00",
+  "reason": "Certify merged Missing Cost Resolution runtime read foundation from server PR #227. Expected server main includes merge commit 46882daff1b50ab1ad5cbc39282f553f5290ab95. Verify SyncAndCertify branch guards, clean-tree synchronization, Prisma validation/generation, backend tests and startup, read-only Missing Cost Resolution routes, branch isolation, non-leaking not-found behavior, exact certified client/server heads, and failed gates = 0."
 }

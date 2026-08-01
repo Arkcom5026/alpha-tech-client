@@ -10,7 +10,8 @@ const billPagePath = path.join(root, 'src/features/bill/pages/PrintBillListPage.
 const indexPath = path.join(root, 'src/features/sales/documents/search/index.js');
 const policyPath = path.join(root, 'src/features/sales/documents/search/policies/deliveryNoteSearchPolicy.js');
 const hookPath = path.join(root, 'src/features/sales/documents/search/hooks/useSaleDocumentSearch.js');
-const legacyStorePath = path.join(root, 'src/features/sales/store/salesStore.js');
+const rootStorePath = path.join(root, 'src/features/sales/store/salesStore.js');
+const printableCapabilityPath = path.join(root, 'src/features/sales/history/store/salePrintableRuntimeCapability.js');
 const routesPath = path.join(root, 'src/routes/partner/salesRoutes.jsx');
 
 const read = (filePath) => fs.readFileSync(filePath, 'utf8');
@@ -18,7 +19,7 @@ const assert = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-[pagePath, billPagePath, indexPath, policyPath, hookPath, legacyStorePath, routesPath].forEach((filePath) => {
+[pagePath, billPagePath, indexPath, policyPath, hookPath, rootStorePath, printableCapabilityPath, routesPath].forEach((filePath) => {
   assert(fs.existsSync(filePath), `${filePath} must exist`);
 });
 
@@ -27,7 +28,8 @@ const billPage = read(billPagePath);
 const index = read(indexPath);
 const policy = read(policyPath);
 const hook = read(hookPath);
-const legacyStore = read(legacyStorePath);
+const rootStore = read(rootStorePath);
+const printableCapability = read(printableCapabilityPath);
 const routes = read(routesPath);
 
 assert(page.includes("from '@/features/sales/documents/search'"), 'Delivery Note list must import document search public boundary');
@@ -51,8 +53,10 @@ assert(hook.includes('useSaleDocumentSearchStore'), 'Both consumers must share d
 assert(index.includes('DELIVERY_NOTE_SEARCH_POLICY'), 'Delivery Note policy must be publicly exported');
 assert(index.includes('useSaleDocumentSearch'), 'Document search hook must be publicly exported');
 
-assert(legacyStore.includes('printableSales:'), 'Legacy printable state must remain for compatibility');
-assert(legacyStore.includes('loadPrintableSalesAction:'), 'Legacy printable action must remain for compatibility');
+assert(printableCapability.includes('printableSales: []'), 'Printable capability must own printable state');
+assert(printableCapability.includes('loadPrintableSalesAction'), 'Printable capability must own printable loading');
+assert(!rootStore.includes('printableSales:'), 'Root Sales Store must not duplicate printable state');
+assert(!rootStore.includes('loadPrintableSalesAction'), 'Root Sales Store must not duplicate printable loading');
 assert(routes.includes("path: 'delivery-note'"), 'Delivery Note route group must exist');
 assert(routes.includes("path: 'print/:saleId'"), 'Delivery Note print route must exist');
 

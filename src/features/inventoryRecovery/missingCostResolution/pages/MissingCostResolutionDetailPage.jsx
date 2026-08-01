@@ -5,6 +5,7 @@ import {
   useMissingCostResolutionAuditHistory,
   useMissingCostResolutionDetail,
 } from '../hooks/useMissingCostResolutionRead';
+import MissingCostResolutionWorkflowPanel from '../components/MissingCostResolutionWorkflowPanel';
 
 const formatNumber = (value) => new Intl.NumberFormat('th-TH', {
   minimumFractionDigits: 0,
@@ -60,6 +61,8 @@ const MissingCostResolutionDetailPage = () => {
           <div className="rounded-2xl bg-slate-50 p-4"><dt className="text-xs font-bold text-slate-500">อัปเดตล่าสุด</dt><dd className="mt-1 text-sm font-bold">{formatDate(resolution?.updatedAt)}</dd></div>
         </dl>
       </header>
+
+      <MissingCostResolutionWorkflowPanel detail={detail} />
 
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
         <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm md:p-7">

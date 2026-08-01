@@ -38,6 +38,9 @@ jobs:
     - name: 🧪 ตรวจสัญญาการกู้คืนคำสั่งยืนยันการขาย
       run: npm run test:sale-completion-recovery
 
+    - name: 🧪 ตรวจสัญญา Sale Settlement Error Authority
+      run: npm run test:sale-settlement-error-authority
+
     - name: 🔐 ผูกเงื่อนไขความลับผ่านระบบกระจกเงาสะท้อน (Injecting Secrets)
       run: |
         echo "VITE_API_URL=https://api.saduaksabuy.com/api/v2/procurement" >> .env

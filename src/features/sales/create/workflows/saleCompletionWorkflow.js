@@ -10,6 +10,7 @@ export const executeSaleCompletion = async ({
   sale,
   payment,
   storage = globalThis.sessionStorage,
+  submit = submitSaleCompletion,
   onIdentity,
   onFailure,
 }) => {
@@ -18,7 +19,7 @@ export const executeSaleCompletion = async ({
   onIdentity?.(identity);
 
   try {
-    const result = await submitSaleCompletion({
+    const result = await submit({
       commandId: identity.commandId,
       sale,
       payment: {

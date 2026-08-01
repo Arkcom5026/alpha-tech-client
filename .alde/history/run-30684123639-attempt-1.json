@@ -1,0 +1,1020 @@
+{
+    "schemaVersion":  2,
+    "status":  "FAIL",
+    "repository":  "Arkcom5026/alpha-tech-client",
+    "sourceBranch":  "main",
+    "sourceSha":  "20daf57a2c7d9613dc90ae5d7c7d0100b5fb120f",
+    "eventName":  "push",
+    "workflow":  "ALDE Local Certification",
+    "workflowRunId":  30684123639,
+    "workflowRunAttempt":  1,
+    "workflowRunUrl":  "https://github.com/Arkcom5026/alpha-tech-client/actions/runs/30684123639",
+    "publishedAt":  "2026-08-01T04:34:33.8979673Z",
+    "runner":  {
+                   "name":  "ALDE-WIN01",
+                   "os":  "Windows",
+                   "architecture":  "X64"
+               },
+    "metadata":  {
+                     "schemaVersion":  5,
+                     "status":  "FAIL",
+                     "mode":  "SyncAndCertify",
+                     "startedAt":  "2026-08-01T04:32:19.3408974Z",
+                     "finishedAt":  "2026-08-01T04:34:25.2513521Z",
+                     "runnerName":  "ALDE-WIN01",
+                     "workflowRunId":  "30684123639",
+                     "clientPath":  "D:\\alpha-tech\\client",
+                     "serverPath":  "D:\\alpha-tech\\server",
+                     "clientHead":  "20daf57a2c7d9613dc90ae5d7c7d0100b5fb120f",
+                     "serverHead":  "46882daff1b50ab1ad5cbc39282f553f5290ab95",
+                     "engineExitCode":  1,
+                     "pipelineExitCode":  1,
+                     "pipelineError":  "",
+                     "assessment":  {
+                                        "schemaVersion":  2,
+                                        "classifier":  {
+                                                           "name":  "ALDE Transcript-Aware Failure Classification Engine",
+                                                           "version":  "1.1.0",
+                                                           "evidenceSources":  [
+                                                                                   "gate.name",
+                                                                                   "gate.detail",
+                                                                                   "execution transcript"
+                                                                               ],
+                                                           "conservativeUnknownPolicy":  "UNCLASSIFIED is certification-failing until reviewed.",
+                                                           "earlyFailurePolicy":  "Preflight failures without normal gates are preserved as a synthetic ALDE preflight gate."
+                                                       },
+                                        "authorityStatus":  "FAIL",
+                                        "regressionCount":  0,
+                                        "environmentBlockerCount":  0,
+                                        "safetyGuardCount":  0,
+                                        "unclassifiedCount":  1,
+                                        "failedGateCount":  1,
+                                        "interpretation":  "A source/executable-contract regression or unclassified failure requires correction or review.",
+                                        "gates":  [
+                                                      {
+                                                          "name":  "Frontend typecheck",
+                                                          "status":  "PASS",
+                                                          "failureClass":  null,
+                                                          "reasonCode":  null,
+                                                          "matchedPattern":  null,
+                                                          "durationSeconds":  7.7,
+                                                          "detail":  "",
+                                                          "transcriptEvidence":  ""
+                                                      },
+                                                      {
+                                                          "name":  "Frontend lint",
+                                                          "status":  "PASS",
+                                                          "failureClass":  null,
+                                                          "reasonCode":  null,
+                                                          "matchedPattern":  null,
+                                                          "durationSeconds":  0.88,
+                                                          "detail":  "",
+                                                          "transcriptEvidence":  ""
+                                                      },
+                                                      {
+                                                          "name":  "Frontend build",
+                                                          "status":  "PASS",
+                                                          "failureClass":  null,
+                                                          "reasonCode":  null,
+                                                          "matchedPattern":  null,
+                                                          "durationSeconds":  18.44,
+                                                          "detail":  "",
+                                                          "transcriptEvidence":  ""
+                                                      },
+                                                      {
+                                                          "name":  "Frontend test:run",
+                                                          "status":  "FAIL",
+                                                          "failureClass":  "UNCLASSIFIED",
+                                                          "reasonCode":  "INSUFFICIENT_FAILURE_EVIDENCE",
+                                                          "matchedPattern":  null,
+                                                          "durationSeconds":  15.61,
+                                                          "detail":  "npm exited with code 1.",
+                                                          "transcriptEvidence":  ""
+                                                      },
+                                                      {
+                                                          "name":  "Backend entry syntax check",
+                                                          "status":  "PASS",
+                                                          "failureClass":  null,
+                                                          "reasonCode":  null,
+                                                          "matchedPattern":  null,
+                                                          "durationSeconds":  0.07,
+                                                          "detail":  "",
+                                                          "transcriptEvidence":  ""
+                                                      },
+                                                      {
+                                                          "name":  "Prisma validate",
+                                                          "status":  "PASS",
+                                                          "failureClass":  null,
+                                                          "reasonCode":  null,
+                                                          "matchedPattern":  null,
+                                                          "durationSeconds":  4.12,
+                                                          "detail":  "",
+                                                          "transcriptEvidence":  ""
+                                                      },
+                                                      {
+                                                          "name":  "Prisma generate",
+                                                          "status":  "PASS",
+                                                          "failureClass":  null,
+                                                          "reasonCode":  null,
+                                                          "matchedPattern":  null,
+                                                          "durationSeconds":  7.54,
+                                                          "detail":  "",
+                                                          "transcriptEvidence":  ""
+                                                      },
+                                                      {
+                                                          "name":  "Backend regression tests",
+                                                          "status":  "PASS",
+                                                          "failureClass":  null,
+                                                          "reasonCode":  null,
+                                                          "matchedPattern":  null,
+                                                          "durationSeconds":  24.69,
+                                                          "detail":  "",
+                                                          "transcriptEvidence":  ""
+                                                      },
+                                                      {
+                                                          "name":  "Backend verify:device-aggregate",
+                                                          "status":  "PASS",
+                                                          "failureClass":  null,
+                                                          "reasonCode":  null,
+                                                          "matchedPattern":  null,
+                                                          "durationSeconds":  1.36,
+                                                          "detail":  "",
+                                                          "transcriptEvidence":  ""
+                                                      },
+                                                      {
+                                                          "name":  "Backend verify:employee-lifecycle",
+                                                          "status":  "PASS",
+                                                          "failureClass":  null,
+                                                          "reasonCode":  null,
+                                                          "matchedPattern":  null,
+                                                          "durationSeconds":  2.26,
+                                                          "detail":  "",
+                                                          "transcriptEvidence":  ""
+                                                      },
+                                                      {
+                                                          "name":  "Backend verify:partner-store-application-http-e2e:test",
+                                                          "status":  "PASS",
+                                                          "failureClass":  null,
+                                                          "reasonCode":  null,
+                                                          "matchedPattern":  null,
+                                                          "durationSeconds":  10.51,
+                                                          "detail":  "",
+                                                          "transcriptEvidence":  ""
+                                                      },
+                                                      {
+                                                          "name":  "Backend verify:partner-store-application-runtime",
+                                                          "status":  "SKIP",
+                                                          "failureClass":  null,
+                                                          "reasonCode":  null,
+                                                          "matchedPattern":  null,
+                                                          "durationSeconds":  0,
+                                                          "detail":  "Direct runtime write verifier is intentionally excluded; use the dedicated :test wrapper with Test DB authority.",
+                                                          "transcriptEvidence":  ""
+                                                      },
+                                                      {
+                                                          "name":  "Backend verify:partner-store-application-runtime:test",
+                                                          "status":  "PASS",
+                                                          "failureClass":  null,
+                                                          "reasonCode":  null,
+                                                          "matchedPattern":  null,
+                                                          "durationSeconds":  2.49,
+                                                          "detail":  "",
+                                                          "transcriptEvidence":  ""
+                                                      },
+                                                      {
+                                                          "name":  "Backend verify:product-backend-migration",
+                                                          "status":  "PASS",
+                                                          "failureClass":  null,
+                                                          "reasonCode":  null,
+                                                          "matchedPattern":  null,
+                                                          "durationSeconds":  1.83,
+                                                          "detail":  "",
+                                                          "transcriptEvidence":  ""
+                                                      },
+                                                      {
+                                                          "name":  "Backend verify:product-create-compatibility",
+                                                          "status":  "PASS",
+                                                          "failureClass":  null,
+                                                          "reasonCode":  null,
+                                                          "matchedPattern":  null,
+                                                          "durationSeconds":  0.6,
+                                                          "detail":  "",
+                                                          "transcriptEvidence":  ""
+                                                      },
+                                                      {
+                                                          "name":  "Backend verify:product-inventory-authority",
+                                                          "status":  "PASS",
+                                                          "failureClass":  null,
+                                                          "reasonCode":  null,
+                                                          "matchedPattern":  null,
+                                                          "durationSeconds":  0.54,
+                                                          "detail":  "",
+                                                          "transcriptEvidence":  ""
+                                                      },
+                                                      {
+                                                          "name":  "Backend verify:product-inventory-runtime",
+                                                          "status":  "PASS",
+                                                          "failureClass":  null,
+                                                          "reasonCode":  null,
+                                                          "matchedPattern":  null,
+                                                          "durationSeconds":  0.56,
+                                                          "detail":  "",
+                                                          "transcriptEvidence":  ""
+                                                      },
+                                                      {
+                                                          "name":  "Backend verify:product-mode-policy",
+                                                          "status":  "PASS",
+                                                          "failureClass":  null,
+                                                          "reasonCode":  null,
+                                                          "matchedPattern":  null,
+                                                          "durationSeconds":  0.52,
+                                                          "detail":  "",
+                                                          "transcriptEvidence":  ""
+                                                      },
+                                                      {
+                                                          "name":  "Backend verify:product-operational-smoke",
+                                                          "status":  "PASS",
+                                                          "failureClass":  null,
+                                                          "reasonCode":  null,
+                                                          "matchedPattern":  null,
+                                                          "durationSeconds":  0.53,
+                                                          "detail":  "",
+                                                          "transcriptEvidence":  ""
+                                                      },
+                                                      {
+                                                          "name":  "Backend verify:product-runtime-input",
+                                                          "status":  "PASS",
+                                                          "failureClass":  null,
+                                                          "reasonCode":  null,
+                                                          "matchedPattern":  null,
+                                                          "durationSeconds":  0.59,
+                                                          "detail":  "",
+                                                          "transcriptEvidence":  ""
+                                                      },
+                                                      {
+                                                          "name":  "Backend verify:product-runtime-mappers",
+                                                          "status":  "PASS",
+                                                          "failureClass":  null,
+                                                          "reasonCode":  null,
+                                                          "matchedPattern":  null,
+                                                          "durationSeconds":  0.54,
+                                                          "detail":  "",
+                                                          "transcriptEvidence":  ""
+                                                      },
+                                                      {
+                                                          "name":  "Backend verify:product-stock-availability",
+                                                          "status":  "PASS",
+                                                          "failureClass":  null,
+                                                          "reasonCode":  null,
+                                                          "matchedPattern":  null,
+                                                          "durationSeconds":  0.57,
+                                                          "detail":  "",
+                                                          "transcriptEvidence":  ""
+                                                      },
+                                                      {
+                                                          "name":  "Backend verify:product-vertical-slices",
+                                                          "status":  "PASS",
+                                                          "failureClass":  null,
+                                                          "reasonCode":  null,
+                                                          "matchedPattern":  null,
+                                                          "durationSeconds":  0.55,
+                                                          "detail":  "",
+                                                          "transcriptEvidence":  ""
+                                                      },
+                                                      {
+                                                          "name":  "Backend verify:repair-capability",
+                                                          "status":  "PASS",
+                                                          "failureClass":  null,
+                                                          "reasonCode":  null,
+                                                          "matchedPattern":  null,
+                                                          "durationSeconds":  1.59,
+                                                          "detail":  "",
+                                                          "transcriptEvidence":  ""
+                                                      },
+                                                      {
+                                                          "name":  "Backend verify:sale-simple-inventory-authority",
+                                                          "status":  "PASS",
+                                                          "failureClass":  null,
+                                                          "reasonCode":  null,
+                                                          "matchedPattern":  null,
+                                                          "durationSeconds":  0.76,
+                                                          "detail":  "",
+                                                          "transcriptEvidence":  ""
+                                                      },
+                                                      {
+                                                          "name":  "Backend verify:simple-adjustment-authority",
+                                                          "status":  "PASS",
+                                                          "failureClass":  null,
+                                                          "reasonCode":  null,
+                                                          "matchedPattern":  null,
+                                                          "durationSeconds":  0.63,
+                                                          "detail":  "",
+                                                          "transcriptEvidence":  ""
+                                                      },
+                                                      {
+                                                          "name":  "Backend verify:simple-receive-authority",
+                                                          "status":  "PASS",
+                                                          "failureClass":  null,
+                                                          "reasonCode":  null,
+                                                          "matchedPattern":  null,
+                                                          "durationSeconds":  0.63,
+                                                          "detail":  "",
+                                                          "transcriptEvidence":  ""
+                                                      },
+                                                      {
+                                                          "name":  "Backend verify:simple-transfer-authority",
+                                                          "status":  "PASS",
+                                                          "failureClass":  null,
+                                                          "reasonCode":  null,
+                                                          "matchedPattern":  null,
+                                                          "durationSeconds":  0.62,
+                                                          "detail":  "",
+                                                          "transcriptEvidence":  ""
+                                                      },
+                                                      {
+                                                          "name":  "Backend verify:tax-authority",
+                                                          "status":  "PASS",
+                                                          "failureClass":  null,
+                                                          "reasonCode":  null,
+                                                          "matchedPattern":  null,
+                                                          "durationSeconds":  1.33,
+                                                          "detail":  "",
+                                                          "transcriptEvidence":  ""
+                                                      },
+                                                      {
+                                                          "name":  "Backend verify:test-database-authority",
+                                                          "status":  "PASS",
+                                                          "failureClass":  null,
+                                                          "reasonCode":  null,
+                                                          "matchedPattern":  null,
+                                                          "durationSeconds":  0.63,
+                                                          "detail":  "",
+                                                          "transcriptEvidence":  ""
+                                                      },
+                                                      {
+                                                          "name":  "Backend startup smoke test",
+                                                          "status":  "PASS",
+                                                          "failureClass":  null,
+                                                          "reasonCode":  null,
+                                                          "matchedPattern":  null,
+                                                          "durationSeconds":  1.89,
+                                                          "detail":  "",
+                                                          "transcriptEvidence":  ""
+                                                      },
+                                                      {
+                                                          "name":  "Frontend startup smoke test",
+                                                          "status":  "PASS",
+                                                          "failureClass":  null,
+                                                          "reasonCode":  null,
+                                                          "matchedPattern":  null,
+                                                          "durationSeconds":  1.9,
+                                                          "detail":  "",
+                                                          "transcriptEvidence":  ""
+                                                      }
+                                                  ]
+                                    },
+                     "reportPath":  "D:\\alde\\actions-runner\\_work\\alpha-tech-client\\alpha-tech-client\\alde-evidence\\alde-20260801-113424.json",
+                     "transcriptPath":  "D:\\alde\\actions-runner\\_work\\alpha-tech-client\\alpha-tech-client\\alde-evidence\\alde-transcript-20260801-113219.log"
+                 },
+    "verificationReport":  {
+                               "schemaVersion":  3,
+                               "engine":  {
+                                              "name":  "Alpha-Tech Local Development Engine",
+                                              "version":  "1.1.1-phase1",
+                                              "workflow":  "Git-first E2E Increment Full Certification",
+                                              "mode":  "SyncAndCertify",
+                                              "executionPolicy":  "full-certification",
+                                              "runtimeCompatibility":  "Windows PowerShell 5.1+"
+                                          },
+                               "status":  "FAIL",
+                               "failureMessage":  "1 certification gate(s) failed.",
+                               "failedGateCount":  1,
+                               "startedAt":  "2026-08-01T11:32:19.3834564+07:00",
+                               "finishedAt":  "2026-08-01T11:34:24.2962100+07:00",
+                               "environment":  {
+                                                   "machine":  "DESKTOP-8GBTJDF",
+                                                   "user":  "Administrator",
+                                                   "powershell":  "5.1.19041.6157",
+                                                   "node":  "v20.19.0",
+                                                   "npm":  "10.8.2"
+                                               },
+                               "repositories":  {
+                                                    "client":  {
+                                                                   "path":  "D:\\alpha-tech\\client",
+                                                                   "branch":  "main",
+                                                                   "head":  "20daf57a2c7d9613dc90ae5d7c7d0100b5fb120f",
+                                                                   "clean":  true,
+                                                                   "status":  [
+
+                                                                              ]
+                                                               },
+                                                    "server":  {
+                                                                   "path":  "D:\\alpha-tech\\server",
+                                                                   "branch":  "main",
+                                                                   "head":  "46882daff1b50ab1ad5cbc39282f553f5290ab95",
+                                                                   "clean":  true,
+                                                                   "status":  [
+
+                                                                              ]
+                                                               }
+                                                },
+                               "certifiedHeads":  {
+
+                                                  },
+                               "gates":  [
+                                             {
+                                                 "name":  "Frontend typecheck",
+                                                 "status":  "PASS",
+                                                 "durationSeconds":  7.7,
+                                                 "detail":  ""
+                                             },
+                                             {
+                                                 "name":  "Frontend lint",
+                                                 "status":  "PASS",
+                                                 "durationSeconds":  0.88,
+                                                 "detail":  ""
+                                             },
+                                             {
+                                                 "name":  "Frontend build",
+                                                 "status":  "PASS",
+                                                 "durationSeconds":  18.44,
+                                                 "detail":  ""
+                                             },
+                                             {
+                                                 "name":  "Frontend test:run",
+                                                 "status":  "FAIL",
+                                                 "durationSeconds":  15.61,
+                                                 "detail":  "npm exited with code 1."
+                                             },
+                                             {
+                                                 "name":  "Backend entry syntax check",
+                                                 "status":  "PASS",
+                                                 "durationSeconds":  0.07,
+                                                 "detail":  ""
+                                             },
+                                             {
+                                                 "name":  "Prisma validate",
+                                                 "status":  "PASS",
+                                                 "durationSeconds":  4.12,
+                                                 "detail":  ""
+                                             },
+                                             {
+                                                 "name":  "Prisma generate",
+                                                 "status":  "PASS",
+                                                 "durationSeconds":  7.54,
+                                                 "detail":  ""
+                                             },
+                                             {
+                                                 "name":  "Backend regression tests",
+                                                 "status":  "PASS",
+                                                 "durationSeconds":  24.69,
+                                                 "detail":  ""
+                                             },
+                                             {
+                                                 "name":  "Backend verify:device-aggregate",
+                                                 "status":  "PASS",
+                                                 "durationSeconds":  1.36,
+                                                 "detail":  ""
+                                             },
+                                             {
+                                                 "name":  "Backend verify:employee-lifecycle",
+                                                 "status":  "PASS",
+                                                 "durationSeconds":  2.26,
+                                                 "detail":  ""
+                                             },
+                                             {
+                                                 "name":  "Backend verify:partner-store-application-http-e2e:test",
+                                                 "status":  "PASS",
+                                                 "durationSeconds":  10.51,
+                                                 "detail":  ""
+                                             },
+                                             {
+                                                 "name":  "Backend verify:partner-store-application-runtime",
+                                                 "status":  "SKIP",
+                                                 "durationSeconds":  0,
+                                                 "detail":  "Direct runtime write verifier is intentionally excluded; use the dedicated :test wrapper with Test DB authority."
+                                             },
+                                             {
+                                                 "name":  "Backend verify:partner-store-application-runtime:test",
+                                                 "status":  "PASS",
+                                                 "durationSeconds":  2.49,
+                                                 "detail":  ""
+                                             },
+                                             {
+                                                 "name":  "Backend verify:product-backend-migration",
+                                                 "status":  "PASS",
+                                                 "durationSeconds":  1.83,
+                                                 "detail":  ""
+                                             },
+                                             {
+                                                 "name":  "Backend verify:product-create-compatibility",
+                                                 "status":  "PASS",
+                                                 "durationSeconds":  0.6,
+                                                 "detail":  ""
+                                             },
+                                             {
+                                                 "name":  "Backend verify:product-inventory-authority",
+                                                 "status":  "PASS",
+                                                 "durationSeconds":  0.54,
+                                                 "detail":  ""
+                                             },
+                                             {
+                                                 "name":  "Backend verify:product-inventory-runtime",
+                                                 "status":  "PASS",
+                                                 "durationSeconds":  0.56,
+                                                 "detail":  ""
+                                             },
+                                             {
+                                                 "name":  "Backend verify:product-mode-policy",
+                                                 "status":  "PASS",
+                                                 "durationSeconds":  0.52,
+                                                 "detail":  ""
+                                             },
+                                             {
+                                                 "name":  "Backend verify:product-operational-smoke",
+                                                 "status":  "PASS",
+                                                 "durationSeconds":  0.53,
+                                                 "detail":  ""
+                                             },
+                                             {
+                                                 "name":  "Backend verify:product-runtime-input",
+                                                 "status":  "PASS",
+                                                 "durationSeconds":  0.59,
+                                                 "detail":  ""
+                                             },
+                                             {
+                                                 "name":  "Backend verify:product-runtime-mappers",
+                                                 "status":  "PASS",
+                                                 "durationSeconds":  0.54,
+                                                 "detail":  ""
+                                             },
+                                             {
+                                                 "name":  "Backend verify:product-stock-availability",
+                                                 "status":  "PASS",
+                                                 "durationSeconds":  0.57,
+                                                 "detail":  ""
+                                             },
+                                             {
+                                                 "name":  "Backend verify:product-vertical-slices",
+                                                 "status":  "PASS",
+                                                 "durationSeconds":  0.55,
+                                                 "detail":  ""
+                                             },
+                                             {
+                                                 "name":  "Backend verify:repair-capability",
+                                                 "status":  "PASS",
+                                                 "durationSeconds":  1.59,
+                                                 "detail":  ""
+                                             },
+                                             {
+                                                 "name":  "Backend verify:sale-simple-inventory-authority",
+                                                 "status":  "PASS",
+                                                 "durationSeconds":  0.76,
+                                                 "detail":  ""
+                                             },
+                                             {
+                                                 "name":  "Backend verify:simple-adjustment-authority",
+                                                 "status":  "PASS",
+                                                 "durationSeconds":  0.63,
+                                                 "detail":  ""
+                                             },
+                                             {
+                                                 "name":  "Backend verify:simple-receive-authority",
+                                                 "status":  "PASS",
+                                                 "durationSeconds":  0.63,
+                                                 "detail":  ""
+                                             },
+                                             {
+                                                 "name":  "Backend verify:simple-transfer-authority",
+                                                 "status":  "PASS",
+                                                 "durationSeconds":  0.62,
+                                                 "detail":  ""
+                                             },
+                                             {
+                                                 "name":  "Backend verify:tax-authority",
+                                                 "status":  "PASS",
+                                                 "durationSeconds":  1.33,
+                                                 "detail":  ""
+                                             },
+                                             {
+                                                 "name":  "Backend verify:test-database-authority",
+                                                 "status":  "PASS",
+                                                 "durationSeconds":  0.63,
+                                                 "detail":  ""
+                                             },
+                                             {
+                                                 "name":  "Backend startup smoke test",
+                                                 "status":  "PASS",
+                                                 "durationSeconds":  1.89,
+                                                 "detail":  ""
+                                             },
+                                             {
+                                                 "name":  "Frontend startup smoke test",
+                                                 "status":  "PASS",
+                                                 "durationSeconds":  1.9,
+                                                 "detail":  ""
+                                             }
+                                         ],
+                               "executedCommands":  [
+                                                        "git -C D:\\alpha-tech\\client branch --show-current",
+                                                        "git -C D:\\alpha-tech\\client rev-parse HEAD",
+                                                        "git -C D:\\alpha-tech\\client status --porcelain=v1 --untracked-files=all",
+                                                        "git -C D:\\alpha-tech\\server branch --show-current",
+                                                        "git -C D:\\alpha-tech\\server rev-parse HEAD",
+                                                        "git -C D:\\alpha-tech\\server status --porcelain=v1 --untracked-files=all",
+                                                        "git -C D:\\alpha-tech\\client branch --show-current",
+                                                        "git -C D:\\alpha-tech\\client rev-parse HEAD",
+                                                        "git -C D:\\alpha-tech\\client status --porcelain=v1 --untracked-files=all",
+                                                        "git -C D:\\alpha-tech\\client fetch origin --prune",
+                                                        "git -C D:\\alpha-tech\\client rev-list --left-right --count HEAD...origin/main",
+                                                        "git -C D:\\alpha-tech\\client pull --ff-only origin main",
+                                                        "git -C D:\\alpha-tech\\server branch --show-current",
+                                                        "git -C D:\\alpha-tech\\server rev-parse HEAD",
+                                                        "git -C D:\\alpha-tech\\server status --porcelain=v1 --untracked-files=all",
+                                                        "git -C D:\\alpha-tech\\server fetch origin --prune",
+                                                        "git -C D:\\alpha-tech\\server rev-list --left-right --count HEAD...origin/main",
+                                                        "[D:\\alpha-tech\\client] npm run typecheck",
+                                                        "[D:\\alpha-tech\\client] npm run lint",
+                                                        "[D:\\alpha-tech\\client] npm run build",
+                                                        "[D:\\alpha-tech\\client] npm run test:run",
+                                                        "[D:\\alpha-tech\\server] node --check server.js",
+                                                        "[D:\\alpha-tech\\server] npx prisma validate",
+                                                        "[D:\\alpha-tech\\server] npx prisma generate",
+                                                        "[D:\\alpha-tech\\server] npm run test",
+                                                        "[D:\\alpha-tech\\server] npm run verify:device-aggregate",
+                                                        "[D:\\alpha-tech\\server] npm run verify:employee-lifecycle",
+                                                        "[D:\\alpha-tech\\server] npm run verify:partner-store-application-http-e2e:test",
+                                                        "[D:\\alpha-tech\\server] npm run verify:partner-store-application-runtime:test",
+                                                        "[D:\\alpha-tech\\server] npm run verify:product-backend-migration",
+                                                        "[D:\\alpha-tech\\server] npm run verify:product-create-compatibility",
+                                                        "[D:\\alpha-tech\\server] npm run verify:product-inventory-authority",
+                                                        "[D:\\alpha-tech\\server] npm run verify:product-inventory-runtime",
+                                                        "[D:\\alpha-tech\\server] npm run verify:product-mode-policy",
+                                                        "[D:\\alpha-tech\\server] npm run verify:product-operational-smoke",
+                                                        "[D:\\alpha-tech\\server] npm run verify:product-runtime-input",
+                                                        "[D:\\alpha-tech\\server] npm run verify:product-runtime-mappers",
+                                                        "[D:\\alpha-tech\\server] npm run verify:product-stock-availability",
+                                                        "[D:\\alpha-tech\\server] npm run verify:product-vertical-slices",
+                                                        "[D:\\alpha-tech\\server] npm run verify:repair-capability",
+                                                        "[D:\\alpha-tech\\server] npm run verify:sale-simple-inventory-authority",
+                                                        "[D:\\alpha-tech\\server] npm run verify:simple-adjustment-authority",
+                                                        "[D:\\alpha-tech\\server] npm run verify:simple-receive-authority",
+                                                        "[D:\\alpha-tech\\server] npm run verify:simple-transfer-authority",
+                                                        "[D:\\alpha-tech\\server] npm run verify:tax-authority",
+                                                        "[D:\\alpha-tech\\server] npm run verify:test-database-authority",
+                                                        "[D:\\alpha-tech\\server] C:\\Program Files\\nodejs\\node.exe server.js",
+                                                        "[D:\\alpha-tech\\client] C:\\Program Files\\nodejs\\npm.cmd run dev -- --host 127.0.0.1 --port 5173 --strictPort",
+                                                        "git -C D:\\alpha-tech\\client branch --show-current",
+                                                        "git -C D:\\alpha-tech\\client rev-parse HEAD",
+                                                        "git -C D:\\alpha-tech\\client status --porcelain=v1 --untracked-files=all",
+                                                        "git -C D:\\alpha-tech\\server branch --show-current",
+                                                        "git -C D:\\alpha-tech\\server rev-parse HEAD",
+                                                        "git -C D:\\alpha-tech\\server status --porcelain=v1 --untracked-files=all",
+                                                        "node --version",
+                                                        "npm --version"
+                                                    ],
+                               "assessment":  {
+                                                  "schemaVersion":  2,
+                                                  "classifier":  {
+                                                                     "name":  "ALDE Transcript-Aware Failure Classification Engine",
+                                                                     "version":  "1.1.0",
+                                                                     "evidenceSources":  [
+                                                                                             "gate.name",
+                                                                                             "gate.detail",
+                                                                                             "execution transcript"
+                                                                                         ],
+                                                                     "conservativeUnknownPolicy":  "UNCLASSIFIED is certification-failing until reviewed.",
+                                                                     "earlyFailurePolicy":  "Preflight failures without normal gates are preserved as a synthetic ALDE preflight gate."
+                                                                 },
+                                                  "authorityStatus":  "FAIL",
+                                                  "regressionCount":  0,
+                                                  "environmentBlockerCount":  0,
+                                                  "safetyGuardCount":  0,
+                                                  "unclassifiedCount":  1,
+                                                  "failedGateCount":  1,
+                                                  "interpretation":  "A source/executable-contract regression or unclassified failure requires correction or review.",
+                                                  "gates":  [
+                                                                {
+                                                                    "name":  "Frontend typecheck",
+                                                                    "status":  "PASS",
+                                                                    "failureClass":  null,
+                                                                    "reasonCode":  null,
+                                                                    "matchedPattern":  null,
+                                                                    "durationSeconds":  7.7,
+                                                                    "detail":  "",
+                                                                    "transcriptEvidence":  ""
+                                                                },
+                                                                {
+                                                                    "name":  "Frontend lint",
+                                                                    "status":  "PASS",
+                                                                    "failureClass":  null,
+                                                                    "reasonCode":  null,
+                                                                    "matchedPattern":  null,
+                                                                    "durationSeconds":  0.88,
+                                                                    "detail":  "",
+                                                                    "transcriptEvidence":  ""
+                                                                },
+                                                                {
+                                                                    "name":  "Frontend build",
+                                                                    "status":  "PASS",
+                                                                    "failureClass":  null,
+                                                                    "reasonCode":  null,
+                                                                    "matchedPattern":  null,
+                                                                    "durationSeconds":  18.44,
+                                                                    "detail":  "",
+                                                                    "transcriptEvidence":  ""
+                                                                },
+                                                                {
+                                                                    "name":  "Frontend test:run",
+                                                                    "status":  "FAIL",
+                                                                    "failureClass":  "UNCLASSIFIED",
+                                                                    "reasonCode":  "INSUFFICIENT_FAILURE_EVIDENCE",
+                                                                    "matchedPattern":  null,
+                                                                    "durationSeconds":  15.61,
+                                                                    "detail":  "npm exited with code 1.",
+                                                                    "transcriptEvidence":  ""
+                                                                },
+                                                                {
+                                                                    "name":  "Backend entry syntax check",
+                                                                    "status":  "PASS",
+                                                                    "failureClass":  null,
+                                                                    "reasonCode":  null,
+                                                                    "matchedPattern":  null,
+                                                                    "durationSeconds":  0.07,
+                                                                    "detail":  "",
+                                                                    "transcriptEvidence":  ""
+                                                                },
+                                                                {
+                                                                    "name":  "Prisma validate",
+                                                                    "status":  "PASS",
+                                                                    "failureClass":  null,
+                                                                    "reasonCode":  null,
+                                                                    "matchedPattern":  null,
+                                                                    "durationSeconds":  4.12,
+                                                                    "detail":  "",
+                                                                    "transcriptEvidence":  ""
+                                                                },
+                                                                {
+                                                                    "name":  "Prisma generate",
+                                                                    "status":  "PASS",
+                                                                    "failureClass":  null,
+                                                                    "reasonCode":  null,
+                                                                    "matchedPattern":  null,
+                                                                    "durationSeconds":  7.54,
+                                                                    "detail":  "",
+                                                                    "transcriptEvidence":  ""
+                                                                },
+                                                                {
+                                                                    "name":  "Backend regression tests",
+                                                                    "status":  "PASS",
+                                                                    "failureClass":  null,
+                                                                    "reasonCode":  null,
+                                                                    "matchedPattern":  null,
+                                                                    "durationSeconds":  24.69,
+                                                                    "detail":  "",
+                                                                    "transcriptEvidence":  ""
+                                                                },
+                                                                {
+                                                                    "name":  "Backend verify:device-aggregate",
+                                                                    "status":  "PASS",
+                                                                    "failureClass":  null,
+                                                                    "reasonCode":  null,
+                                                                    "matchedPattern":  null,
+                                                                    "durationSeconds":  1.36,
+                                                                    "detail":  "",
+                                                                    "transcriptEvidence":  ""
+                                                                },
+                                                                {
+                                                                    "name":  "Backend verify:employee-lifecycle",
+                                                                    "status":  "PASS",
+                                                                    "failureClass":  null,
+                                                                    "reasonCode":  null,
+                                                                    "matchedPattern":  null,
+                                                                    "durationSeconds":  2.26,
+                                                                    "detail":  "",
+                                                                    "transcriptEvidence":  ""
+                                                                },
+                                                                {
+                                                                    "name":  "Backend verify:partner-store-application-http-e2e:test",
+                                                                    "status":  "PASS",
+                                                                    "failureClass":  null,
+                                                                    "reasonCode":  null,
+                                                                    "matchedPattern":  null,
+                                                                    "durationSeconds":  10.51,
+                                                                    "detail":  "",
+                                                                    "transcriptEvidence":  ""
+                                                                },
+                                                                {
+                                                                    "name":  "Backend verify:partner-store-application-runtime",
+                                                                    "status":  "SKIP",
+                                                                    "failureClass":  null,
+                                                                    "reasonCode":  null,
+                                                                    "matchedPattern":  null,
+                                                                    "durationSeconds":  0,
+                                                                    "detail":  "Direct runtime write verifier is intentionally excluded; use the dedicated :test wrapper with Test DB authority.",
+                                                                    "transcriptEvidence":  ""
+                                                                },
+                                                                {
+                                                                    "name":  "Backend verify:partner-store-application-runtime:test",
+                                                                    "status":  "PASS",
+                                                                    "failureClass":  null,
+                                                                    "reasonCode":  null,
+                                                                    "matchedPattern":  null,
+                                                                    "durationSeconds":  2.49,
+                                                                    "detail":  "",
+                                                                    "transcriptEvidence":  ""
+                                                                },
+                                                                {
+                                                                    "name":  "Backend verify:product-backend-migration",
+                                                                    "status":  "PASS",
+                                                                    "failureClass":  null,
+                                                                    "reasonCode":  null,
+                                                                    "matchedPattern":  null,
+                                                                    "durationSeconds":  1.83,
+                                                                    "detail":  "",
+                                                                    "transcriptEvidence":  ""
+                                                                },
+                                                                {
+                                                                    "name":  "Backend verify:product-create-compatibility",
+                                                                    "status":  "PASS",
+                                                                    "failureClass":  null,
+                                                                    "reasonCode":  null,
+                                                                    "matchedPattern":  null,
+                                                                    "durationSeconds":  0.6,
+                                                                    "detail":  "",
+                                                                    "transcriptEvidence":  ""
+                                                                },
+                                                                {
+                                                                    "name":  "Backend verify:product-inventory-authority",
+                                                                    "status":  "PASS",
+                                                                    "failureClass":  null,
+                                                                    "reasonCode":  null,
+                                                                    "matchedPattern":  null,
+                                                                    "durationSeconds":  0.54,
+                                                                    "detail":  "",
+                                                                    "transcriptEvidence":  ""
+                                                                },
+                                                                {
+                                                                    "name":  "Backend verify:product-inventory-runtime",
+                                                                    "status":  "PASS",
+                                                                    "failureClass":  null,
+                                                                    "reasonCode":  null,
+                                                                    "matchedPattern":  null,
+                                                                    "durationSeconds":  0.56,
+                                                                    "detail":  "",
+                                                                    "transcriptEvidence":  ""
+                                                                },
+                                                                {
+                                                                    "name":  "Backend verify:product-mode-policy",
+                                                                    "status":  "PASS",
+                                                                    "failureClass":  null,
+                                                                    "reasonCode":  null,
+                                                                    "matchedPattern":  null,
+                                                                    "durationSeconds":  0.52,
+                                                                    "detail":  "",
+                                                                    "transcriptEvidence":  ""
+                                                                },
+                                                                {
+                                                                    "name":  "Backend verify:product-operational-smoke",
+                                                                    "status":  "PASS",
+                                                                    "failureClass":  null,
+                                                                    "reasonCode":  null,
+                                                                    "matchedPattern":  null,
+                                                                    "durationSeconds":  0.53,
+                                                                    "detail":  "",
+                                                                    "transcriptEvidence":  ""
+                                                                },
+                                                                {
+                                                                    "name":  "Backend verify:product-runtime-input",
+                                                                    "status":  "PASS",
+                                                                    "failureClass":  null,
+                                                                    "reasonCode":  null,
+                                                                    "matchedPattern":  null,
+                                                                    "durationSeconds":  0.59,
+                                                                    "detail":  "",
+                                                                    "transcriptEvidence":  ""
+                                                                },
+                                                                {
+                                                                    "name":  "Backend verify:product-runtime-mappers",
+                                                                    "status":  "PASS",
+                                                                    "failureClass":  null,
+                                                                    "reasonCode":  null,
+                                                                    "matchedPattern":  null,
+                                                                    "durationSeconds":  0.54,
+                                                                    "detail":  "",
+                                                                    "transcriptEvidence":  ""
+                                                                },
+                                                                {
+                                                                    "name":  "Backend verify:product-stock-availability",
+                                                                    "status":  "PASS",
+                                                                    "failureClass":  null,
+                                                                    "reasonCode":  null,
+                                                                    "matchedPattern":  null,
+                                                                    "durationSeconds":  0.57,
+                                                                    "detail":  "",
+                                                                    "transcriptEvidence":  ""
+                                                                },
+                                                                {
+                                                                    "name":  "Backend verify:product-vertical-slices",
+                                                                    "status":  "PASS",
+                                                                    "failureClass":  null,
+                                                                    "reasonCode":  null,
+                                                                    "matchedPattern":  null,
+                                                                    "durationSeconds":  0.55,
+                                                                    "detail":  "",
+                                                                    "transcriptEvidence":  ""
+                                                                },
+                                                                {
+                                                                    "name":  "Backend verify:repair-capability",
+                                                                    "status":  "PASS",
+                                                                    "failureClass":  null,
+                                                                    "reasonCode":  null,
+                                                                    "matchedPattern":  null,
+                                                                    "durationSeconds":  1.59,
+                                                                    "detail":  "",
+                                                                    "transcriptEvidence":  ""
+                                                                },
+                                                                {
+                                                                    "name":  "Backend verify:sale-simple-inventory-authority",
+                                                                    "status":  "PASS",
+                                                                    "failureClass":  null,
+                                                                    "reasonCode":  null,
+                                                                    "matchedPattern":  null,
+                                                                    "durationSeconds":  0.76,
+                                                                    "detail":  "",
+                                                                    "transcriptEvidence":  ""
+                                                                },
+                                                                {
+                                                                    "name":  "Backend verify:simple-adjustment-authority",
+                                                                    "status":  "PASS",
+                                                                    "failureClass":  null,
+                                                                    "reasonCode":  null,
+                                                                    "matchedPattern":  null,
+                                                                    "durationSeconds":  0.63,
+                                                                    "detail":  "",
+                                                                    "transcriptEvidence":  ""
+                                                                },
+                                                                {
+                                                                    "name":  "Backend verify:simple-receive-authority",
+                                                                    "status":  "PASS",
+                                                                    "failureClass":  null,
+                                                                    "reasonCode":  null,
+                                                                    "matchedPattern":  null,
+                                                                    "durationSeconds":  0.63,
+                                                                    "detail":  "",
+                                                                    "transcriptEvidence":  ""
+                                                                },
+                                                                {
+                                                                    "name":  "Backend verify:simple-transfer-authority",
+                                                                    "status":  "PASS",
+                                                                    "failureClass":  null,
+                                                                    "reasonCode":  null,
+                                                                    "matchedPattern":  null,
+                                                                    "durationSeconds":  0.62,
+                                                                    "detail":  "",
+                                                                    "transcriptEvidence":  ""
+                                                                },
+                                                                {
+                                                                    "name":  "Backend verify:tax-authority",
+                                                                    "status":  "PASS",
+                                                                    "failureClass":  null,
+                                                                    "reasonCode":  null,
+                                                                    "matchedPattern":  null,
+                                                                    "durationSeconds":  1.33,
+                                                                    "detail":  "",
+                                                                    "transcriptEvidence":  ""
+                                                                },
+                                                                {
+                                                                    "name":  "Backend verify:test-database-authority",
+                                                                    "status":  "PASS",
+                                                                    "failureClass":  null,
+                                                                    "reasonCode":  null,
+                                                                    "matchedPattern":  null,
+                                                                    "durationSeconds":  0.63,
+                                                                    "detail":  "",
+                                                                    "transcriptEvidence":  ""
+                                                                },
+                                                                {
+                                                                    "name":  "Backend startup smoke test",
+                                                                    "status":  "PASS",
+                                                                    "failureClass":  null,
+                                                                    "reasonCode":  null,
+                                                                    "matchedPattern":  null,
+                                                                    "durationSeconds":  1.89,
+                                                                    "detail":  "",
+                                                                    "transcriptEvidence":  ""
+                                                                },
+                                                                {
+                                                                    "name":  "Frontend startup smoke test",
+                                                                    "status":  "PASS",
+                                                                    "failureClass":  null,
+                                                                    "reasonCode":  null,
+                                                                    "matchedPattern":  null,
+                                                                    "durationSeconds":  1.9,
+                                                                    "detail":  "",
+                                                                    "transcriptEvidence":  ""
+                                                                }
+                                                            ]
+                                              }
+                           }
+}

@@ -2,7 +2,6 @@
   "schemaVersion": 1,
   "requestedBy": "ChatGPT",
   "mode": "SyncAndCertify",
-  "requestedAt": "2026-08-01T11:36:00+07:00",
-  "reason": "Re-certify merged Sale History Runtime Capability Separation after corrective contract commit c8451c7b5e31177b9a9b24cd5bf5d6b231e88356. Expected client main includes merge commit 1bb4aaa5dfca435af57ba4d427ae5e93a40741d5 and updates the remaining legacy document consumer reference audit to inspect the new query and printable capability owners. Verify SyncAndCertify branch guards, clean-tree synchronization, frontend typecheck/lint/build/test:run, focused sale-history runtime capability separation contract, Sale Settlement Error Authority regression, backend certification and startup smoke, exact certified client/server heads, and failed gates = 0.
-"
+  "requestedAt": "2026-08-01T19:00:00+07:00",
+  "reason": "Certify Backend Structure Migration Foundation after server main merge commit 78e07f081a15a36cadb7b28628243437006e6f36. Verify required branch main, clean-tree synchronization, exact client/server heads, backend syntax and tests, Prisma validation/generation where applicable, startup smoke, legacy root controllers/routes/services retirement, module runtime authority, published ALDE evidence, and failed gates = 0."
 }

@@ -1,4 +1,8 @@
 import { getAllSales, getSaleById, markSaleAsPaid, searchPrintableSales } from '../api/saleHistoryApi';
+import {
+  projectSaleSettlementFailure,
+  projectSaleSettlementSuccess,
+} from '../services/saleSettlementResult';
 import { devError, normalizePrintableRows, normalizeSaleDetail } from '../../shared/saleStoreSupport';
 
 export const createSaleHistoryRuntimeSlice = (set, get) => ({
@@ -18,9 +22,11 @@ export const createSaleHistoryRuntimeSlice = (set, get) => ({
 
   markSalePaidAction: async (saleId) => {
     try {
-      await markSaleAsPaid(saleId);
+      const data = await markSaleAsPaid(saleId);
+      return projectSaleSettlementSuccess(data);
     } catch (err) {
       devError('❌ [markSalePaidAction]', err);
+      return projectSaleSettlementFailure(err);
     }
   },
 

@@ -129,15 +129,16 @@ $status = 'FAIL'
 $engineExitCode = 1
 $assessment = $null
 $pipelineError = ''
-
-# Establish the transcript artifact before engine execution so the evidence
-# contract remains valid even when the engine emits only host/native streams.
-New-Item -ItemType File -Path $transcriptPath -Force | Out-Null
+$transcriptStarted = $false
 
 try {
+  # Start-Transcript captures host/native console output without merging PowerShell
+  # streams. This preserves the engine's warning/error semantics while ensuring
+  # the transcript artifact exists for classification and publication.
+  Start-Transcript -LiteralPath $transcriptPath -Force | Out-Null
+  $transcriptStarted = $true
+
   Write-Section 'ALDE ENGINE EXECUTION'
-  # Capture all PowerShell streams into the transcript while preserving console
-  # visibility. Out-File appends because the transcript file is pre-created.
   & $aldeScript `
     -Mode $Mode `
     -ClientPath $ClientPath `
@@ -145,8 +146,7 @@ try {
     -RemoteName 'origin' `
     -RequiredBranch $RequiredBranch `
     -RunAllBackendVerifiers `
-    -IncludeRuntime *>&1 |
-    Tee-Object -FilePath $transcriptPath -Append
+    -IncludeRuntime
 
   $engineExitCode = $LASTEXITCODE
   if ($null -eq $engineExitCode) { $engineExitCode = 0 }
@@ -154,10 +154,21 @@ try {
 catch {
   $pipelineError = $_.Exception.Message
   if ($LASTEXITCODE -is [int]) { $engineExitCode = $LASTEXITCODE }
-  $_ | Out-String | Add-Content -LiteralPath $transcriptPath -Encoding UTF8
   Write-Warning "ALDE engine returned failure: $pipelineError"
 }
 finally {
+  if ($transcriptStarted) {
+    try {
+      Stop-Transcript | Out-Null
+    }
+    catch {
+      if (-not $pipelineError) { $pipelineError = $_.Exception.Message }
+    }
+  }
+  if (-not (Test-Path -LiteralPath $transcriptPath -PathType Leaf)) {
+    New-Item -ItemType File -Path $transcriptPath -Force | Out-Null
+  }
+
   $artifactDirectory = Join-Path $ClientPath '.artifacts\verification'
   $report = Get-LatestReport -Directory $artifactDirectory -NotBefore $startedAt
 

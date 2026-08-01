@@ -2,6 +2,6 @@
   "schemaVersion": 1,
   "requestedBy": "ChatGPT",
   "mode": "SyncAndCertify",
-  "requestedAt": "2026-08-01T09:29:00+07:00",
-  "reason": "Retry ALDE SyncAndCertify after local repository cleanup. Expected synchronized heads: client main 31c6f777039d50f2c460bca618bc58caf12e6c48; server main d878f7b97ddf1c950af44b1e09de698e7754110b. Both local repositories were confirmed on main, up to date with origin/main, and working trees clean before this trigger."
+  "requestedAt": "2026-08-01T09:34:00+07:00",
+  "reason": "Retry ALDE SyncAndCertify after aligning the legacy sale-payment responsibility contract with the new single submission authority. Expected client main includes contract correction ce7f0deec214235080da0036f2c033ccd82e7432; expected server main remains d878f7b97ddf1c950af44b1e09de698e7754110b. Verify all frontend tests, build, backend gates, runtime smoke tests, and failed gates = 0."
 }

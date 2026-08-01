@@ -2,6 +2,6 @@
   "schemaVersion": 1,
   "requestedBy": "ChatGPT",
   "mode": "SyncAndCertify",
-  "requestedAt": "2026-08-01T09:34:00+07:00",
-  "reason": "Retry ALDE SyncAndCertify after aligning the legacy sale-payment responsibility contract with the new single submission authority. Expected client main includes contract correction ce7f0deec214235080da0036f2c033ccd82e7432; expected server main remains d878f7b97ddf1c950af44b1e09de698e7754110b. Verify all frontend tests, build, backend gates, runtime smoke tests, and failed gates = 0."
+  "requestedAt": "2026-08-01T10:04:00+07:00",
+  "reason": "Certify merged Sale Settlement Error Authority. Expected client main includes merge commit 6dab9078fdf994019466e37c64e4f6e54e7965ad; expected server main includes merge commit f6f28b294d55ed87fc1fa6b8261d0c72ed0fac25. Verify focused settlement contracts, frontend production build, backend certification and startup, runtime smoke gates, and failed gates = 0."
 }

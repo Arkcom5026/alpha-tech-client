@@ -32,6 +32,9 @@ jobs:
     - name: 🧪 ตรวจสัญญาคู่มือรับสินค้าด่วน
       run: npm run test:quick-receipt-help
 
+    - name: 🧪 ตรวจสัญญาคู่มือการขายหลัก
+      run: npm run test:core-sales-help
+
     - name: 🧪 ตรวจสัญญาคู่มือคืนสินค้า
       run: npm run test:sale-return-help
 

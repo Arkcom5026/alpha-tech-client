@@ -8,6 +8,7 @@ import { SaleCustomerSection as CustomerSection } from '../customer';
 import PaymentSection from '../components/PaymentSection';
 import SaleItemTable from '../components/SaleItemTable';
 import PosHeldCartPanel from '../../held-cart/components/PosHeldCartPanel';
+import CoreSalesHelpDrawer from '../../help/CoreSalesHelpDrawer';
 
 const QuickSalePage = () => {
   const barcodeInputRef = useRef(null);
@@ -15,6 +16,7 @@ const QuickSalePage = () => {
 
   const [clearPhoneTrigger, setClearPhoneTrigger] = useState(null);
   const [hideCustomerDetails, setHideCustomerDetails] = useState(false);
+  const [isHelpOpen, setIsHelpOpen] = useState(false);
 
   const customerId = useSalesStore((state) => state.customerId);
   const billDiscount = useSalesStore((state) => state.billDiscount);
@@ -76,6 +78,15 @@ const QuickSalePage = () => {
             </span>
           )}
         </div>
+
+        <button
+          type="button"
+          onClick={() => setIsHelpOpen(true)}
+          className="rounded-xl border border-orange-200 bg-white px-3 py-2 text-xs font-black text-orange-700 shadow-sm hover:bg-orange-100"
+          aria-label="เปิดคู่มือการขายสินค้า"
+        >
+          คู่มือ
+        </button>
       </div>
 
       {sale.heldCart.panel.activeCart && sale.heldCart.panel.validation && (
@@ -202,6 +213,11 @@ const QuickSalePage = () => {
           onSavedAndClear={heldCartSavedAndClear}
         />
       )}
+
+      <CoreSalesHelpDrawer
+        open={isHelpOpen}
+        onClose={() => setIsHelpOpen(false)}
+      />
     </div>
   );
 };

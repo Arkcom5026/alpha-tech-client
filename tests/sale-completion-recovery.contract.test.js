@@ -115,13 +115,14 @@ describe('Sale Completion Recovery authority', () => {
         throw error;
       }),
       onIdentity: (identity) => { capturedIdentity = identity; },
-      onFailure: (failure) => { capturedFailure = failure; },
+      onFailure: (outcome) => { capturedFailure = outcome; },
     })).rejects.toThrow('timeout');
 
     const persisted = readSaleCompletionIdentity(storage);
     expect(persisted.commandId).toBe(capturedIdentity.commandId);
-    expect(capturedFailure.kind).toBe('UNCERTAIN');
-    expect(capturedFailure.retryable).toBe(true);
+    expect(capturedFailure.identity.commandId).toBe(capturedIdentity.commandId);
+    expect(capturedFailure.failure.kind).toBe('UNCERTAIN');
+    expect(capturedFailure.failure.retryable).toBe(true);
   });
 
   it('allows explicit identity cleanup only through the identity authority', () => {

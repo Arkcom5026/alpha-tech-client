@@ -26,18 +26,26 @@ describe('remaining legacy document consumer reference audit', () => {
     }
   });
 
-  it('retains compatibility declarations until runtime evidence permits deletion', () => {
+  it('retains compatibility declarations in their capability owners until runtime evidence permits deletion', () => {
     const historySlice = read(
       'src/features/sales/history/store/saleHistoryRuntimeSlice.js'
+    );
+    const historyQueryCapability = read(
+      'src/features/sales/history/store/saleHistoryQueryRuntimeCapability.js'
+    );
+    const printableCapability = read(
+      'src/features/sales/history/store/salePrintableRuntimeCapability.js'
     );
     const documentSlice = read(
       'src/features/sales/documents/store/saleDocumentRuntimeSlice.js'
     );
 
-    expect(historySlice).toContain('currentSale: null');
-    expect(historySlice).toContain('printableSales: []');
-    expect(historySlice).toContain('getSaleByIdAction');
-    expect(historySlice).toContain('loadPrintableSalesAction');
+    expect(historySlice).toContain('createSaleHistoryQueryRuntimeCapability');
+    expect(historySlice).toContain('createSalePrintableRuntimeCapability');
+    expect(historyQueryCapability).toContain('currentSale: null');
+    expect(historyQueryCapability).toContain('getSaleByIdAction');
+    expect(printableCapability).toContain('printableSales: []');
+    expect(printableCapability).toContain('loadPrintableSalesAction');
     expect(documentSlice).toContain('updateSaleDocumentLinesAction');
   });
 

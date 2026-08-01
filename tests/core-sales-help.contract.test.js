@@ -1,61 +1,68 @@
-import assert from 'node:assert/strict';
+import { describe, expect, test } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import coreSalesHelpContent from '../src/features/sales/help/coreSalesHelpContent.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const root = path.resolve(__dirname, '..');
+const filename = fileURLToPath(import.meta.url);
+const root = path.resolve(path.dirname(filename), '..');
 const read = (relativePath) => fs.readFileSync(path.join(root, relativePath), 'utf8');
 const flatten = (value) => JSON.stringify(value).toLowerCase();
-const text = flatten(coreSalesHelpContent);
 
-assert.equal(coreSalesHelpContent.title, 'คู่มือการขายสินค้าและปิดการขาย');
-assert.ok(coreSalesHelpContent.steps.length >= 8, 'core sales guide requires an end-to-end operator sequence');
-assert.ok(coreSalesHelpContent.lineTypes.length >= 3, 'guide must cover structured, tracked-simple, and non-stock lines');
-assert.ok(coreSalesHelpContent.modes.some(([code]) => code === 'CASH'));
-assert.ok(coreSalesHelpContent.modes.some(([code]) => code === 'CREDIT'));
-assert.ok(coreSalesHelpContent.statusGuide.some(([code]) => code === 'COMPLETED_PAID'));
-assert.ok(coreSalesHelpContent.statusGuide.some(([code]) => code === 'COMPLETED_CREDIT'));
-assert.ok(coreSalesHelpContent.statusGuide.some(([code]) => code === 'PARTIALLY_PAID'));
-assert.ok(coreSalesHelpContent.paymentChecklist.length >= 5);
-assert.ok(coreSalesHelpContent.heldCartChecklist.length >= 5);
-assert.ok(coreSalesHelpContent.recovery.length >= 5);
-assert.match(text, /stock_item/);
-assert.match(text, /simple lot/);
-assert.match(text, /non_stock/);
-assert.match(text, /command identity/);
-assert.match(text, /ร้านปัจจุบัน/);
-assert.match(text, /งานคืนสินค้าและคืนเงินเป็น workflow แยก/);
+describe('Core Sales Help contract', () => {
+  test('module-owned content covers the end-to-end Core Sales operator flow', () => {
+    const text = flatten(coreSalesHelpContent);
 
-const drawer = read('src/features/sales/help/CoreSalesHelpDrawer.jsx');
-assert.match(drawer, /coreSalesHelpContent/);
-assert.match(drawer, /role="dialog"/);
-assert.match(drawer, /aria-modal="true"/);
-assert.match(drawer, /onClose/);
+    expect(coreSalesHelpContent.title).toBe('คู่มือการขายสินค้าและปิดการขาย');
+    expect(coreSalesHelpContent.steps.length).toBeGreaterThanOrEqual(8);
+    expect(coreSalesHelpContent.lineTypes.length).toBeGreaterThanOrEqual(3);
+    expect(coreSalesHelpContent.modes.some(([code]) => code === 'CASH')).toBe(true);
+    expect(coreSalesHelpContent.modes.some(([code]) => code === 'CREDIT')).toBe(true);
+    expect(coreSalesHelpContent.statusGuide.some(([code]) => code === 'COMPLETED_PAID')).toBe(true);
+    expect(coreSalesHelpContent.statusGuide.some(([code]) => code === 'COMPLETED_CREDIT')).toBe(true);
+    expect(coreSalesHelpContent.statusGuide.some(([code]) => code === 'PARTIALLY_PAID')).toBe(true);
+    expect(coreSalesHelpContent.paymentChecklist.length).toBeGreaterThanOrEqual(5);
+    expect(coreSalesHelpContent.heldCartChecklist.length).toBeGreaterThanOrEqual(5);
+    expect(coreSalesHelpContent.recovery.length).toBeGreaterThanOrEqual(5);
+    expect(text).toMatch(/stock_item/);
+    expect(text).toMatch(/simple lot/);
+    expect(text).toMatch(/non_stock/);
+    expect(text).toMatch(/command identity/);
+    expect(text).toMatch(/ร้านปัจจุบัน/);
+    expect(text).toMatch(/งานคืนสินค้าและคืนเงินเป็น workflow แยก/);
+  });
 
-const page = read('src/features/sales/create/pages/CreateSalePage.jsx');
-assert.match(page, /CoreSalesHelpDrawer/);
-assert.match(page, /isHelpOpen/);
-assert.match(page, /เปิดคู่มือการขายสินค้า/);
-assert.match(page, /<PaymentSection/);
-assert.match(page, /<PosHeldCartPanel/);
-assert.doesNotMatch(page, /SaleReturn|return workflow|คืนสินค้าและคืนเงิน/);
+  test('drawer exposes an accessible close boundary and consumes module-owned content', () => {
+    const drawer = read('src/features/sales/help/CoreSalesHelpDrawer.jsx');
 
-const packageJson = JSON.parse(read('package.json'));
-assert.equal(
-  packageJson.scripts['test:core-sales-help'],
-  'node tests/core-sales-help.contract.test.js',
-  'package.json must expose the dedicated Core Sales help contract command',
-);
+    expect(drawer).toMatch(/coreSalesHelpContent/);
+    expect(drawer).toMatch(/role="dialog"/);
+    expect(drawer).toMatch(/aria-modal="true"/);
+    expect(drawer).toMatch(/onClose/);
+  });
 
-const workflow = read('.github/workflows/frontend-ci.yml');
-assert.match(workflow, /npm run test:core-sales-help/);
-assert.ok(
-  workflow.indexOf('npm run test:core-sales-help') < workflow.indexOf('npm run build'),
-  'Core Sales help contract must run before Production Build',
-);
+  test('Create Sale exposes contextual help without absorbing Sale Return ownership', () => {
+    const page = read('src/features/sales/create/pages/CreateSalePage.jsx');
 
-console.log('core-sales-help integration contract: PASS');
+    expect(page).toMatch(/CoreSalesHelpDrawer/);
+    expect(page).toMatch(/isHelpOpen/);
+    expect(page).toMatch(/เปิดคู่มือการขายสินค้า/);
+    expect(page).toMatch(/<PaymentSection/);
+    expect(page).toMatch(/<PosHeldCartPanel/);
+    expect(page).not.toMatch(/SaleReturn|return workflow|คืนสินค้าและคืนเงิน/);
+  });
+
+  test('package command and CI gate execute the focused contract before Production Build', () => {
+    const packageJson = JSON.parse(read('package.json'));
+    const workflow = read('.github/workflows/frontend-ci.yml');
+
+    expect(packageJson.scripts['test:core-sales-help']).toBe(
+      'vitest run tests/core-sales-help.contract.test.js',
+    );
+    expect(workflow).toMatch(/npm run test:core-sales-help/);
+    expect(workflow.indexOf('npm run test:core-sales-help')).toBeLessThan(
+      workflow.indexOf('npm run build'),
+    );
+  });
+});

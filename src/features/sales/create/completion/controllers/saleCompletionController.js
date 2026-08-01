@@ -41,12 +41,15 @@ export const executeCreateSaleCompletion = async ({
       options,
     }),
     payment: options.paymentIntent || { paymentItems: [] },
+    onIdentity: options.onCompletionIdentity,
+    onFailure: options.onCompletionFailure,
   });
 
   const saleId = data?.saleId ?? data?.id ?? data?.sale?.id ?? null;
   return {
     saleId,
     data,
+    recovery: data?.completionRecovery,
     deliveryNoteMode: saleMode === 'CREDIT' ? 'PRINT' : undefined,
   };
 };

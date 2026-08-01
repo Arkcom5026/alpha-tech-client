@@ -41,6 +41,9 @@ jobs:
     - name: 🧪 ตรวจสัญญา Sale Settlement Error Authority
       run: npm run test:sale-settlement-error-authority
 
+    - name: 🧪 ตรวจสัญญาการแยกความรับผิดชอบ Sale History Runtime
+      run: npm run test:sale-history-runtime-capability-separation
+
     - name: 🔐 ผูกเงื่อนไขความลับผ่านระบบกระจกเงาสะท้อน (Injecting Secrets)
       run: |
         echo "VITE_API_URL=https://api.saduaksabuy.com/api/v2/procurement" >> .env

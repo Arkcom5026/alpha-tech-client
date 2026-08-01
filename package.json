@@ -27,7 +27,8 @@
     "test:quick-receipt-help": "vitest run tests/quick-receipt-help.contract.test.js",
     "test:sale-return-help": "vitest run tests/sale-return-help.contract.test.js",
     "test:sale-completion-recovery": "vitest run tests/sale-completion-recovery.contract.test.js",
-    "test:sale-settlement-error-authority": "vitest run tests/sale-settlement-error-authority.contract.test.js"
+    "test:sale-settlement-error-authority": "vitest run tests/sale-settlement-error-authority.contract.test.js",
+    "test:sale-history-runtime-capability-separation": "vitest run tests/sale-history-runtime-capability-separation.contract.test.js"
   },
   "dependencies": {
     "@cloudinary/react": "1.14.1",

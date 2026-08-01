@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { executeSalePaymentConfirmation } from '../controllers/salePaymentConfirmationController';
 import { projectSalePaymentCalculation, parseSalePaymentMoney } from '../services/salePaymentCalculation';
@@ -7,7 +7,7 @@ import { projectSalePaymentWorkflow } from '../projections/salePaymentWorkflowPr
 export const useSalePaymentWorkflow = ({
   saleItems,
   isSubmitting,
-  setIsSubmitting,
+  recovery,
   currentSaleMode,
   onSaleModeChange,
   saleOption,
@@ -32,7 +32,6 @@ export const useSalePaymentWorkflow = ({
 }) => {
   const [paymentError, setPaymentError] = useState('');
   const [depositTouched, setDepositTouched] = useState(false);
-  const confirmLockRef = useRef(false);
 
   const effectiveCustomer = selectedCustomer || { id: null, name: 'ลูกค้าทั่วไป' };
   const hasValidCustomerId = Boolean(effectiveCustomer?.id);
@@ -71,6 +70,12 @@ export const useSalePaymentWorkflow = ({
     setCardRef?.('');
   }, [isCreditSale, setCardRef, setPaymentAmount]);
 
+  useEffect(() => {
+    if (recovery?.state === 'UNCERTAIN' && recovery?.message) {
+      setPaymentError(recovery.message);
+    }
+  }, [recovery?.message, recovery?.state]);
+
   const changeDepositUsed = useCallback((input) => {
     const raw = typeof input === 'number' ? input : input?.target?.value;
     setDepositTouched(true);
@@ -96,7 +101,7 @@ export const useSalePaymentWorkflow = ({
     if (discount <= calculation.totalOriginalPrice) setBillDiscount(discount);
   }, [calculation.totalOriginalPrice, setBillDiscount]);
 
-  const isConfirmEnabled = (
+  const isConfirmEnabled = !isSubmitting && (
     (currentSaleMode === 'CASH'
       && calculation.grandTotalPaid >= calculation.totalToPay
       && calculation.safeDepositUsed <= calculation.totalToPay
@@ -131,12 +136,10 @@ export const useSalePaymentWorkflow = ({
   ]);
 
   const confirm = useCallback(async (confirmContext = {}) => {
-    if (confirmLockRef.current) return null;
-    confirmLockRef.current = true;
+    if (isSubmitting) return null;
     setPaymentError('');
 
     try {
-      setIsSubmitting?.(true);
       const result = await executeSalePaymentConfirmation({
         calculation,
         saleMode: currentSaleMode,
@@ -154,7 +157,13 @@ export const useSalePaymentWorkflow = ({
       });
 
       if (!result?.ok) {
-        setPaymentError(`${result?.code ? `[${result.code}] ` : ''}${result?.error || 'ยืนยันการขายล้มเหลว'}`);
+        const recoveryMessage = result?.recovery?.message || result?.error || 'ยืนยันการขายล้มเหลว';
+        setPaymentError(`${result?.code ? `[${result.code}] ` : ''}${recoveryMessage}`);
+        return null;
+      }
+
+      if (!result?.saleId) {
+        setPaymentError('ไม่พบ ID ของรายการขายหลังจากยืนยัน');
         return null;
       }
 
@@ -164,9 +173,6 @@ export const useSalePaymentWorkflow = ({
       confirmContext?.printWindow?.close?.();
       setPaymentError(`❌ ยืนยันการขายล้มเหลว: ${error?.message || 'เกิดข้อผิดพลาด'}`);
       return null;
-    } finally {
-      setIsSubmitting?.(false);
-      confirmLockRef.current = false;
     }
   }, [
     calculation,
@@ -182,13 +188,13 @@ export const useSalePaymentWorkflow = ({
     resetAfterSuccess,
     saleOption,
     selectedDeposit,
-    setIsSubmitting,
   ]);
 
   return projectSalePaymentWorkflow({
     calculation,
     paymentError,
     isConfirmEnabled,
+    recovery,
     handlers: {
       confirm,
       changeDepositUsed,

@@ -120,7 +120,7 @@
     "vite": "5.2.10",
     "vitest": "^4.1.7"
   },
-  "description": "This template provides a minimal setup to get React working in Vite with HMR and ESLint rules.",
+  "description": "This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.",
   "main": "eslint.config.js",
   "keywords": [],
   "author": "",

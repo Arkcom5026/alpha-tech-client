@@ -21,6 +21,8 @@ const PaymentSummary = ({
   isSubmitting,
   onConfirm,
   paymentError,
+  recovery,
+  retryingExistingCommand = false,
   saleOption,
   setSaleOption,
   currentSaleMode,
@@ -49,8 +51,9 @@ const PaymentSummary = ({
   const changeClass =
     changeNum > 0 ? 'text-emerald-600 font-black' : changeNum < 0 ? 'text-rose-600 font-black' : 'text-slate-600 font-bold';
 
+  const commandSuffix = recovery?.commandId ? recovery.commandId.slice(-8) : '';
+
   return (
-    /* 🟢 [THEME UNIFICATION]: โยกสีมะนาวสว่างออก คุมด้วยฟอนต์ขวาสีเข้มพรีเมียม บอกยอดสุทธิชัดเจนระดับสากล */
     <div className="flex-1 w-full flex flex-col justify-between gap-3 text-xs font-bold text-slate-600">
       <div className="space-y-2">
         {isCash ? (
@@ -101,13 +104,20 @@ const PaymentSummary = ({
         )}
       </div>
 
+      {recovery?.state === 'UNCERTAIN' && (
+        <div className="bg-amber-50 border border-amber-300 text-amber-800 p-2.5 rounded-xl text-[11px] font-black animate-slideUp space-y-1">
+          <div>⏳ ผลการบันทึกยังไม่แน่นอน ระบบจะตรวจสอบด้วยคำสั่งเดิม</div>
+          {commandSuffix && <div className="font-mono text-[10px] opacity-75">คำสั่ง …{commandSuffix}</div>}
+          <div className="text-[10px] font-bold">ห้ามล้างตะกร้าหรือสร้างรายการใหม่จนกว่าจะยืนยันผลสำเร็จ</div>
+        </div>
+      )}
+
       {paymentError && (
         <div className="bg-rose-50 border border-rose-200 text-rose-600 p-2.5 rounded-xl text-[11px] font-black animate-slideUp">
           ⚠️ {paymentError}
         </div>
       )}
 
-      {/* สวิตช์สลับโหมดขายเครดิต */}
       <label className="inline-flex items-center gap-2 text-[11px] font-black text-slate-700 cursor-pointer select-none">
         <input
           type="checkbox"
@@ -125,7 +135,6 @@ const PaymentSummary = ({
         )}
       </label>
 
-      {/* แผงตัวเลือกการพิมพ์แบบเรียงแถวคลีนตา */}
       <div className="py-0.5">
         <BillPrintOptions
           saleOption={saleOption}
@@ -135,12 +144,11 @@ const PaymentSummary = ({
         />
       </div>
 
-      {/* ปุ่มบันทึกการจองและบันทึกการขาย */}
       <div className="grid grid-cols-2 gap-2 pt-1 select-none">
         <button
           type="button"
           onClick={onSaveHeldCart}
-          disabled={isSubmitting}
+          disabled={isSubmitting || recovery?.state === 'UNCERTAIN'}
           className="h-9 border border-orange-300 bg-orange-50 hover:bg-orange-100 text-orange-700 font-black text-xs rounded-xl active:scale-[0.99] transition-all disabled:opacity-40 disabled:transform-none"
         >
           บันทึกการจอง
@@ -159,7 +167,11 @@ const PaymentSummary = ({
           disabled={!isConfirmEnabled || isSubmitting}
           className="h-9 bg-slate-900 hover:bg-slate-800 text-white font-black text-xs rounded-xl active:scale-[0.99] transition-all shadow-md disabled:opacity-40 disabled:transform-none disabled:shadow-none"
         >
-          {isSubmitting ? '⏳ กำลังบันทึก...' : 'บันทึกการขาย'}
+          {isSubmitting
+            ? '⏳ กำลังบันทึก...'
+            : retryingExistingCommand
+              ? 'ตรวจสอบคำสั่งเดิมอีกครั้ง'
+              : 'บันทึกการขาย'}
         </button>
       </div>
     </div>
@@ -174,6 +186,13 @@ PaymentSummary.propTypes = {
   isSubmitting: PropTypes.bool.isRequired,
   onConfirm: PropTypes.func.isRequired,
   paymentError: PropTypes.oneOfType([PropTypes.string, PropTypes.node]),
+  recovery: PropTypes.shape({
+    state: PropTypes.string,
+    commandId: PropTypes.string,
+    retryable: PropTypes.bool,
+    message: PropTypes.string,
+  }),
+  retryingExistingCommand: PropTypes.bool,
   saleOption: PropTypes.oneOf([
     PRINT_OPTION.NONE,
     PRINT_OPTION.RECEIPT,

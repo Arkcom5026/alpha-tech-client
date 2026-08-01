@@ -9,7 +9,8 @@ const read = (relativePath) => fs.readFileSync(path.join(root, relativePath), 'u
 const pagePath = 'src/features/deliveryNote/pages/PrintDeliveryNotePage.jsx';
 const workspaceIndexPath = 'src/features/sales/documents/workspace/index.js';
 const workspaceApiPath = 'src/features/sales/documents/workspace/api/saleDocumentWorkspaceApi.js';
-const legacyStorePath = 'src/features/sales/store/salesStore.js';
+const rootStorePath = 'src/features/sales/store/salesStore.js';
+const documentSlicePath = 'src/features/sales/documents/store/saleDocumentRuntimeSlice.js';
 
 test('Delivery Note consumes the shared document line editor', () => {
   const page = read(pagePath);
@@ -51,7 +52,10 @@ test('workspace public boundary exports the shared editor', () => {
   assert.match(workspaceIndex, /useSaleDocumentLineEditor/);
 });
 
-test('legacy mutation action remains available only for compatibility', () => {
-  const legacyStore = read(legacyStorePath);
-  assert.match(legacyStore, /updateSaleDocumentLinesAction/);
+test('document-line mutation belongs only to the certified document slice', () => {
+  const rootStore = read(rootStorePath);
+  const documentSlice = read(documentSlicePath);
+
+  assert.match(documentSlice, /updateSaleDocumentLinesAction/);
+  assert.doesNotMatch(rootStore, /updateSaleDocumentLinesAction/);
 });

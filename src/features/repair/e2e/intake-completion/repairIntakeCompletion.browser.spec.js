@@ -31,10 +31,12 @@ const onePixelPng = Buffer.from(
 
 test.describe('Repair intake completion (Test DB)', () => {
   test('blocks work before evidence, then accepts completed intake evidence', async ({ page }) => {
-    test.skip(
-      missingEnvironment.length > 0,
-      `Set ${missingEnvironment.join(', ')} from the Test-DB fixture before running this Browser E2E.`
-    );
+    if (missingEnvironment.length > 0) {
+      throw new Error(
+        `Missing Repair Browser E2E environment: ${missingEnvironment.join(', ')}. `
+          + 'Use the values emitted by the Test-DB fixture before running this test.'
+      );
+    }
 
     await page.goto(`${baseUrl}/login`);
     await page.locator(repairIntakeSelectors.loginIdentity).fill(operatorEmail);

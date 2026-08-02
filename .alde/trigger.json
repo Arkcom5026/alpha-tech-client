@@ -2,9 +2,9 @@
   "schemaVersion": 2,
   "requestedBy": "ChatGPT",
   "mode": "SyncAndCertify",
-  "requestedAt": "2026-08-03T01:20:00+07:00",
+  "requestedAt": "2026-08-03T03:11:00+07:00",
   "triggerKind": "new-certification",
-  "expectedPreTriggerClientHead": "391cdce204991a0e5886596c70e185c32dca1e76",
-  "expectedServerHead": "4b69844e2500d8c22eb4ff81bd50e33b7df63c04",
-  "reason": "Certify Tax Expense nullable date-filter fix after server PR #251 merged to main. Required evidence: client sourceSha/clientHead must equal the trigger commit created by this file update; metadata.serverHead must equal 4b69844e2500d8c22eb4ff81bd50e33b7df63c04; runner must be ALDE-WIN01; mode must be SyncAndCertify; failedGateCount must be 0; runtime/startup/test evidence and latest/history Result Bridge records must match the same workflow run."
+  "expectedPreTriggerClientHead": "4ec7be4a7f5d77251c9a1ba0252182d0ea6023c2",
+  "expectedServerHead": "1e2d8ef6430252f495a1f368f8df6d536a8eae5a",
+  "reason": "Post-merge ALDE certification for Repair Intake Completion Browser E2E and Test-DB evidence. Required evidence: client sourceSha/clientHead must equal the trigger commit created by this file update; metadata.serverHead must equal 1e2d8ef6430252f495a1f368f8df6d536a8eae5a; runner must be ALDE-WIN01; mode must be SyncAndCertify; failedGateCount must be 0; runtime/startup/test evidence and latest/history Result Bridge records must match the same workflow run."
 }

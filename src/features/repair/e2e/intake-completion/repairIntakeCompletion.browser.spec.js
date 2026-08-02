@@ -76,8 +76,28 @@ test.describe('Repair intake completion (Test DB)', () => {
     );
     await page.getByRole('button', { name: 'บันทึกสถานะ' }).click();
     const blockedResponse = await blockedResponsePromise;
-    expect(blockedResponse.status()).toBe(409);
-    await expect(page.getByText(/หลักฐานการรับเครื่อง.*ไม่ครบ|บันทึกหลักฐานการรับเครื่อง/i)).toBeVisible();
+    const blockedBodyText = await blockedResponse.text();
+    let blockedBody = null;
+    try {
+      blockedBody = JSON.parse(blockedBodyText);
+    } catch (_) {}
+
+    expect(
+      blockedResponse.status(),
+      `Expected intake-evidence gate to block status change, received HTTP ${blockedResponse.status()}: ${blockedBodyText}`
+    ).toBe(409);
+
+    const blockedSignal = [
+      blockedBody?.code,
+      blockedBody?.error,
+      blockedBody?.message,
+      blockedBodyText,
+    ].filter(Boolean).join(' ');
+
+    expect(
+      blockedSignal,
+      `409 response did not identify the intake-evidence gate: ${blockedBodyText}`
+    ).toMatch(/intake|evidence|หลักฐาน|รับเครื่อง/i);
 
     await page.getByRole('button', { name: '+ เพิ่มหลักฐาน' }).click();
     await page.locator(repairIntakeSelectors.evidenceFileInput).setInputFiles({

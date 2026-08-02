@@ -17,6 +17,22 @@ $ViteOut = Join-Path $env:TEMP 'alphatech-repair-e2e-vite.out.log'
 $ViteErr = Join-Path $env:TEMP 'alphatech-repair-e2e-vite.err.log'
 $ViteProcess = $null
 
+$RequiredEnvironmentNames = @(
+  'E2E_TEST_USERNAME',
+  'E2E_TEST_PASSWORD',
+  'REPAIR_INTAKE_E2E_BRANCH_SLUG',
+  'REPAIR_INTAKE_E2E_JOB_ID',
+  'REPAIR_INTAKE_E2E_JOB_NO'
+)
+$MissingEnvironmentNames = @(
+  $RequiredEnvironmentNames | Where-Object {
+    [string]::IsNullOrWhiteSpace([Environment]::GetEnvironmentVariable($_, 'Process'))
+  }
+)
+if ($MissingEnvironmentNames.Count -gt 0) {
+  throw "Missing Repair Browser E2E environment: $($MissingEnvironmentNames -join ', '). Set the values emitted by the Test-DB fixture in this PowerShell session."
+}
+
 function Test-TcpPort {
   param(
     [Parameter(Mandatory = $true)]

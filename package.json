@@ -19,6 +19,7 @@
     "test:auth-receipt:watch": "vitest src/features/customerReceipt/__tests__/customerReceiptAuthRegression.test.js",
     "test:e2e:auth-receipt": "playwright test e2e/customer-receipt-auth-regression.spec.js",
     "test:e2e": "playwright test",
+    "test:e2e:pos-sale": "playwright test e2e/pos-sale-cash-happy-path.spec.js",
     "test:e2e:customer-receipt": "playwright test e2e/create-session-reset.spec.js e2e/multiple-customers-sequential.spec.js e2e/duplicate-submit-protection.spec.js e2e/request-isolation.spec.js",
     "test:e2e:customer-receipt:headed": "playwright test e2e/create-session-reset.spec.js e2e/multiple-customers-sequential.spec.js e2e/duplicate-submit-protection.spec.js e2e/request-isolation.spec.js --headed",
     "test:e2e:customer-receipt:debug": "playwright test e2e/create-session-reset.spec.js e2e/multiple-customers-sequential.spec.js e2e/duplicate-submit-protection.spec.js e2e/request-isolation.spec.js --debug",

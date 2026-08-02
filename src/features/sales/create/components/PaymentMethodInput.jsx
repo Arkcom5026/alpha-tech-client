@@ -33,6 +33,7 @@ const PaymentMethodInput = ({
         <label className="col-span-4 font-black text-slate-800 pl-1">💰 เงินสดรับมา</label>
         <input
           type="number"
+          data-testid="pos-sale-cash-input"
           inputMode="decimal"
           min="0"
           step="0.01"

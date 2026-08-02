@@ -38,7 +38,8 @@ export default defineConfig({
       '**/node_modules/**',
       '**/dist/**',
       'e2e/**',
-      '**/*.e2e.*'
+      '**/*.e2e.*',
+      'src/features/**/e2e/**/*.browser.spec.{js,jsx,ts,tsx}'
     ]
   }
 })

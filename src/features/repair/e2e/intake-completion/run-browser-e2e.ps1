@@ -11,7 +11,8 @@ $WebPort = if ($env:E2E_REPAIR_WEB_PORT) {
 } else {
   5174
 }
-$WebBaseUrl = "http://127.0.0.1:$WebPort"
+$WebHost = 'localhost'
+$WebBaseUrl = "http://$WebHost`:$WebPort"
 $ViteOut = Join-Path $env:TEMP 'alphatech-repair-e2e-vite.out.log'
 $ViteErr = Join-Path $env:TEMP 'alphatech-repair-e2e-vite.err.log'
 $ViteProcess = $null
@@ -50,7 +51,7 @@ try {
     throw "Test API is not listening at $TestApiBaseUrl. Start the Server with npm run start:test-database first."
   }
 
-  if (Test-TcpPort -HostName '127.0.0.1' -Port $WebPort) {
+  if (Test-TcpPort -HostName $WebHost -Port $WebPort) {
     throw "Dedicated Repair E2E web port $WebPort is already in use. Stop that process or set E2E_REPAIR_WEB_PORT to another free port."
   }
 
@@ -66,7 +67,7 @@ try {
 
   $ViteProcess = Start-Process `
     -FilePath 'npm.cmd' `
-    -ArgumentList @('run', 'dev', '--', '--host', '127.0.0.1', '--port', "$WebPort", '--strictPort') `
+    -ArgumentList @('run', 'dev', '--', '--host', $WebHost, '--port', "$WebPort", '--strictPort') `
     -WorkingDirectory $ClientRoot `
     -RedirectStandardOutput $ViteOut `
     -RedirectStandardError $ViteErr `

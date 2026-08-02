@@ -1,12 +1,16 @@
 // playwright.config.js
-// 🏛️ Customer Receipt Operational E2E — Playwright Configuration
-// All API requests are intercepted at the browser level.
-// No request reaches the real backend.
+// Browser E2E discovery covers both legacy root specs and module-owned packages.
+// Certification specs may use the real local Server and Test DB; individual specs
+// must declare whether interception is forbidden or intentionally used.
 
 import { defineConfig } from '@playwright/test';
 
 export default defineConfig({
-  testDir: './e2e',
+  testDir: '.',
+  testMatch: [
+    'e2e/**/*.spec.js',
+    'src/features/**/e2e/**/*.browser.spec.js',
+  ],
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,

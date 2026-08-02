@@ -188,6 +188,9 @@ finally {
 
   $artifactDirectory = Join-Path $ClientPath '.artifacts\verification'
   $report = Get-LatestReport -Directory $artifactDirectory -NotBefore $startedAt
+  if (-not $report -and (Test-Path -LiteralPath $preflightReportPath -PathType Leaf)) {
+    $report = Get-Item -LiteralPath $preflightReportPath
+  }
 
   if ($report) {
     $publishedReportPath = Join-Path $EvidencePath $report.Name

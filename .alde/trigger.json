@@ -2,9 +2,9 @@
   "schemaVersion": 2,
   "requestedBy": "ChatGPT",
   "mode": "SyncAndCertify",
-  "requestedAt": "2026-08-02T11:35:00+07:00",
+  "requestedAt": "2026-08-02T11:45:00+07:00",
   "triggerKind": "new-certification",
-  "expectedPreTriggerClientHead": "9db362ede599f6b398495698b74fbb27d6a8a7b5",
+  "expectedPreTriggerClientHead": "0fd149898a18918d1aab555bde251341ee1352fe",
   "expectedServerHead": "5a28ea57e84b329cefa2d2a2b032aa36a092f9a9",
-  "reason": "Certify ALDE Reliability Preflight & Evidence Policy after PR #63 merge. This is a New Trigger because the Client source authority changed. Preconditions: local client and server must be clean on main. Required evidence: clientHead/sourceSha must be this trigger commit; serverHead must equal expectedServerHead; reliability preflight must PASS; full gates must have failedGateCount 0; all skipped gates must be explicitly classified; latest and history Result Bridge records must match. No production database mutation or human operational testing is included."
+  "reason": "Certify the ALDE Reliability Preflight & Evidence Policy after PR #64 merged the blocked-preflight evidence fix. This is a New Trigger because the Client source authority changed after the previous attempt. Preconditions verified by operator: client and server are clean on main. Required evidence: sourceSha/clientHead must be this trigger commit; serverHead must equal expectedServerHead; preflight must PASS; full gates must have failedGateCount 0; every skipped gate must be explicitly classified; latest and history Result Bridge records must match."
 }

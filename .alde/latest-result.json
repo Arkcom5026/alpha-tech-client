@@ -3,13 +3,13 @@
     "status":  "FAIL",
     "repository":  "Arkcom5026/alpha-tech-client",
     "sourceBranch":  "main",
-    "sourceSha":  "9db362ede599f6b398495698b74fbb27d6a8a7b5",
+    "sourceSha":  "c2493c53b4817eea44791d7e79fe46b1d459b063",
     "eventName":  "push",
     "workflow":  "ALDE Local Certification",
-    "workflowRunId":  30732560729,
+    "workflowRunId":  30732570173,
     "workflowRunAttempt":  1,
-    "workflowRunUrl":  "https://github.com/Arkcom5026/alpha-tech-client/actions/runs/30732560729",
-    "publishedAt":  "2026-08-02T04:33:04.3366657Z",
+    "workflowRunUrl":  "https://github.com/Arkcom5026/alpha-tech-client/actions/runs/30732570173",
+    "publishedAt":  "2026-08-02T04:33:40.3364841Z",
     "runner":  {
                    "name":  "ALDE-WIN01",
                    "os":  "Windows",
@@ -19,10 +19,10 @@
                      "schemaVersion":  5,
                      "status":  "FAIL",
                      "mode":  "SyncAndCertify",
-                     "startedAt":  "2026-08-02T04:32:59.7037383Z",
-                     "finishedAt":  "2026-08-02T04:33:00.4723501Z",
+                     "startedAt":  "2026-08-02T04:33:35.8528138Z",
+                     "finishedAt":  "2026-08-02T04:33:36.6285799Z",
                      "runnerName":  "ALDE-WIN01",
-                     "workflowRunId":  "30732560729",
+                     "workflowRunId":  "30732570173",
                      "clientPath":  "D:\\alpha-tech\\client",
                      "serverPath":  "D:\\alpha-tech\\server",
                      "clientHead":  "6b42345be3610a548cfb01b888273ecd51d5d914",
@@ -34,7 +34,7 @@
                                        "schemaVersion":  1,
                                        "status":  "BLOCKED",
                                        "name":  "ALDE Reliability Preflight",
-                                       "startedAt":  "2026-08-02T04:33:00.1795332Z",
+                                       "startedAt":  "2026-08-02T04:33:36.3181271Z",
                                        "requiredBranch":  "main",
                                        "repositories":  {
                                                             "client":  {
@@ -76,11 +76,11 @@
                                                            "Stop only the identified Alpha-Tech server node process before rerunning if Prisma generate lock risk is reported."
                                                        ]
                                    },
-                     "preflightReportPath":  "D:\\alde\\actions-runner\\_work\\alpha-tech-client\\alpha-tech-client\\alde-evidence\\alde-preflight-20260802-113259.json",
+                     "preflightReportPath":  "D:\\alde\\actions-runner\\_work\\alpha-tech-client\\alpha-tech-client\\alde-evidence\\alde-preflight-20260802-113335.json",
                      "preflightExitCode":  2,
                      "assessment":  null,
                      "reportPath":  null,
-                     "transcriptPath":  "D:\\alde\\actions-runner\\_work\\alpha-tech-client\\alpha-tech-client\\alde-evidence\\alde-transcript-20260802-113259.log"
+                     "transcriptPath":  "D:\\alde\\actions-runner\\_work\\alpha-tech-client\\alpha-tech-client\\alde-evidence\\alde-transcript-20260802-113335.log"
                  },
     "verificationReport":  null
 }

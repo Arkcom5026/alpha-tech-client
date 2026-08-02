@@ -31,6 +31,15 @@ describe('Core Sales Help contract', () => {
     expect(text).toMatch(/command identity/);
     expect(text).toMatch(/ร้านปัจจุบัน/);
     expect(text).toMatch(/งานคืนสินค้าและคืนเงินเป็น workflow แยก/);
+    expect(text).toMatch(/ใบกำกับภาษีอย่างย่อหรือเต็มรูปได้เมื่อสถานะชำระเป็น paid เท่านั้น/);
+    expect(text).toMatch(/ห้ามออกใบกำกับภาษีก่อนชำระครบ/);
+  });
+
+  test('operational user guide states paid-only tax-invoice eligibility', () => {
+    const guide = read('docs/workflows/core-sales-operational-user-guide.md');
+
+    expect(guide).toMatch(/ใบกำกับภาษีอย่างย่อและใบกำกับภาษีเต็มรูป ออกได้เฉพาะ Sale ที่มีสถานะชำระ `PAID`/);
+    expect(guide).toMatch(/CREDIT, `UNPAID` หรือ `PARTIALLY_PAID` ออกได้เฉพาะ `DELIVERY_NOTE`/);
   });
 
   test('drawer exposes an accessible close boundary and consumes module-owned content', () => {

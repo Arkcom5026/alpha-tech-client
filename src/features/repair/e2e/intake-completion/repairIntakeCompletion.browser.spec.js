@@ -1,6 +1,6 @@
 // Real Browser E2E for Repair Intake Completion.
 // No API interception, mock response, or client-store injection is allowed.
-// Provision a fresh Test-DB fixture from the paired Server module before running.
+// Provision a fresh Test-DB fixture and run the paired Test-DB API server first.
 
 import { test, expect } from '@playwright/test';
 import { repairIntakeSelectors } from './repairIntakeCompletion.selectors';
@@ -42,7 +42,22 @@ test.describe('Repair intake completion (Test DB)', () => {
     await page.getByRole('button', { name: 'เข้าสู่ระบบด้วยรหัสผ่าน' }).click();
     await page.waitForURL(new RegExp(`/${branchSlug}/pos/`), { timeout: 15_000 });
 
+    const detailResponsePromise = page.waitForResponse(
+      (response) => response.request().method() === 'GET'
+        && response.url().includes(`/api/repairs/jobs/${repairJobId}`),
+      { timeout: 15_000 }
+    );
+
     await page.goto(`${baseUrl}/${branchSlug}/pos/services/repairs/${repairJobId}`);
+    const detailResponse = await detailResponsePromise;
+    const detailBody = await detailResponse.text();
+
+    expect(
+      detailResponse.ok(),
+      `Repair detail API failed with HTTP ${detailResponse.status()}: ${detailBody}. `
+        + 'Start the Server with npm run start:test-database so Browser runtime uses the same Test DB as the fixture.'
+    ).toBeTruthy();
+
     await expect(page.getByRole('heading', { name: repairJobNo })).toBeVisible();
 
     const statusSelect = page.locator(repairIntakeSelectors.statusSelect).first();

@@ -33,7 +33,8 @@ function Resolve-FailureClassification {
     [ordered]@{ pattern = "Repository .* is on branch '.*';\s*expected '.*'"; reasonCode = 'REQUIRED_BRANCH_MISMATCH' },
     [ordered]@{ pattern = 'working tree is not clean|Repository .* is dirty'; reasonCode = 'WORKING_TREE_NOT_CLEAN' },
     [ordered]@{ pattern = 'does not exist:|is not a Git repository|does not contain package\.json'; reasonCode = 'REPOSITORY_PRECONDITION_FAILED' },
-    [ordered]@{ pattern = 'fatal: detected dubious ownership'; reasonCode = 'GIT_SAFE_DIRECTORY_REQUIRED' }
+    [ordered]@{ pattern = 'fatal: detected dubious ownership'; reasonCode = 'GIT_SAFE_DIRECTORY_REQUIRED' },
+    [ordered]@{ pattern = 'PRISMA_GENERATE_LOCK_RISK|SERVER_NODE_PROCESS_ACTIVE'; reasonCode = 'PRISMA_GENERATE_LOCK_RISK' }
   )
 
   foreach ($rule in $preflightPatterns) {
@@ -127,20 +128,29 @@ function Resolve-FailureClassification {
   }
 }
 
+function Get-GatePolicy {
+  param([Parameter(Mandatory)][object]$Gate)
+
+  if ([string]$Gate.status -ne 'SKIP') { return 'REQUIRED' }
+  if (
+    [string]$Gate.name -eq 'Backend verify:partner-store-application-runtime' -and
+    [string]$Gate.detail -match 'Direct runtime write verifier is intentionally excluded'
+  ) {
+    return 'ADVISORY_SKIP'
+  }
+  return 'BLOCKING_SKIP'
+}
+
 function Get-AuthorityStatus {
-  param(
-    [AllowEmptyCollection()]
-    [object[]]$Gates = @()
-  )
+  param([AllowEmptyCollection()][object[]]$Gates = @())
 
   $failed = @($Gates | Where-Object { $_.status -eq 'FAIL' })
+  $blockingSkips = @($Gates | Where-Object { $_.gatePolicy -eq 'BLOCKING_SKIP' })
+  if ($blockingSkips.Count -gt 0) { return 'BLOCKED' }
   if ($failed.Count -eq 0) { return 'PASS' }
 
-  $defects = @($failed | Where-Object {
-    $_.failureClass -in @('REGRESSION', 'UNCLASSIFIED')
-  })
+  $defects = @($failed | Where-Object { $_.failureClass -in @('REGRESSION', 'UNCLASSIFIED') })
   if ($defects.Count -gt 0) { return 'FAIL' }
-
   return 'BLOCKED'
 }
 
@@ -182,18 +192,21 @@ foreach ($gate in @($report.gates)) {
     durationSeconds = $gate.durationSeconds
     detail = [string]$gate.detail
     transcriptEvidence = $gateTranscript
+    gatePolicy = ''
   }
 }
+
+foreach ($gate in $classifiedGates) { $gate.gatePolicy = Get-GatePolicy -Gate $gate }
 
 # ALDE can fail during Git Guard or repository bootstrap before normal gates exist.
 # Preserve that failure as a synthetic preflight gate so the pipeline can still
 # publish metadata, transcript evidence, and a deterministic authority status.
 if ($classifiedGates.Count -eq 0 -and [string]$report.status -ne 'PASS') {
   $reportDetail = ''
-  foreach ($propertyName in @('error', 'failure', 'message', 'summary')) {
+  foreach ($propertyName in @('error', 'failure', 'message', 'summary', 'issues')) {
     $property = $report.PSObject.Properties[$propertyName]
     if ($null -ne $property -and $null -ne $property.Value -and [string]$property.Value) {
-      $reportDetail = [string]$property.Value
+      $reportDetail = if ($property.Value -is [System.Collections.IEnumerable] -and $property.Value -isnot [string]) { @($property.Value) -join "`n" } else { [string]$property.Value }
       break
     }
   }
@@ -212,7 +225,9 @@ if ($classifiedGates.Count -eq 0 -and [string]$report.status -ne 'PASS') {
     durationSeconds = $null
     detail = $reportDetail
     transcriptEvidence = $transcript.Trim()
+    gatePolicy = ''
   }
+  $classifiedGates[$classifiedGates.Count - 1].gatePolicy = Get-GatePolicy -Gate $classifiedGates[$classifiedGates.Count - 1]
 }
 
 $authorityStatus = Get-AuthorityStatus -Gates $classifiedGates
@@ -231,6 +246,9 @@ $assessment = [ordered]@{
   safetyGuardCount = @($classifiedGates | Where-Object { $_.failureClass -eq 'SAFETY_GUARD' }).Count
   unclassifiedCount = @($classifiedGates | Where-Object { $_.failureClass -eq 'UNCLASSIFIED' }).Count
   failedGateCount = @($classifiedGates | Where-Object { $_.status -eq 'FAIL' }).Count
+  requiredPassedGateCount = @($classifiedGates | Where-Object { $_.status -eq 'PASS' -and $_.gatePolicy -eq 'REQUIRED' }).Count
+  advisorySkippedGateCount = @($classifiedGates | Where-Object { $_.gatePolicy -eq 'ADVISORY_SKIP' }).Count
+  blockingSkippedGateCount = @($classifiedGates | Where-Object { $_.gatePolicy -eq 'BLOCKING_SKIP' }).Count
   interpretation = if ($authorityStatus -eq 'PASS') {
     'All certification gates passed.'
   }

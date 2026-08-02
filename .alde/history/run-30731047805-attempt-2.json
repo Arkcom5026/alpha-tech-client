@@ -1,0 +1,161 @@
+{
+    "schemaVersion":  2,
+    "status":  "FAIL",
+    "repository":  "Arkcom5026/alpha-tech-client",
+    "sourceBranch":  "main",
+    "sourceSha":  "891d0cd38fa75c5104aa033c337b1736b91051c8",
+    "eventName":  "push",
+    "workflow":  "ALDE Local Certification",
+    "workflowRunId":  30731047805,
+    "workflowRunAttempt":  2,
+    "workflowRunUrl":  "https://github.com/Arkcom5026/alpha-tech-client/actions/runs/30731047805",
+    "publishedAt":  "2026-08-02T03:51:19.3352793Z",
+    "runner":  {
+                   "name":  "ALDE-WIN01",
+                   "os":  "Windows",
+                   "architecture":  "X64"
+               },
+    "metadata":  {
+                     "schemaVersion":  5,
+                     "status":  "FAIL",
+                     "mode":  "SyncAndCertify",
+                     "startedAt":  "2026-08-02T03:51:14.2558843Z",
+                     "finishedAt":  "2026-08-02T03:51:15.5966810Z",
+                     "runnerName":  "ALDE-WIN01",
+                     "workflowRunId":  "30731047805",
+                     "clientPath":  "D:\\alpha-tech\\client",
+                     "serverPath":  "D:\\alpha-tech\\server",
+                     "clientHead":  "891d0cd38fa75c5104aa033c337b1736b91051c8",
+                     "serverHead":  "9154f2bc03087fe5ce68010b5244ec695181c98c",
+                     "engineExitCode":  1,
+                     "pipelineExitCode":  1,
+                     "pipelineError":  "",
+                     "assessment":  {
+                                        "schemaVersion":  2,
+                                        "classifier":  {
+                                                           "name":  "ALDE Transcript-Aware Failure Classification Engine",
+                                                           "version":  "1.1.0",
+                                                           "evidenceSources":  [
+                                                                                   "gate.name",
+                                                                                   "gate.detail",
+                                                                                   "execution transcript"
+                                                                               ],
+                                                           "conservativeUnknownPolicy":  "UNCLASSIFIED is certification-failing until reviewed.",
+                                                           "earlyFailurePolicy":  "Preflight failures without normal gates are preserved as a synthetic ALDE preflight gate."
+                                                       },
+                                        "authorityStatus":  "FAIL",
+                                        "regressionCount":  0,
+                                        "environmentBlockerCount":  0,
+                                        "safetyGuardCount":  0,
+                                        "unclassifiedCount":  1,
+                                        "failedGateCount":  1,
+                                        "interpretation":  "A source/executable-contract regression or unclassified failure requires correction or review.",
+                                        "gates":  [
+                                                      {
+                                                          "name":  "ALDE preflight",
+                                                          "status":  "FAIL",
+                                                          "failureClass":  "UNCLASSIFIED",
+                                                          "reasonCode":  "INSUFFICIENT_FAILURE_EVIDENCE",
+                                                          "matchedPattern":  null,
+                                                          "durationSeconds":  null,
+                                                          "detail":  "",
+                                                          "transcriptEvidence":  "**********************\r\nWindows PowerShell transcript start\r\nStart time: 20260802105114\r\nUsername: DESKTOP-8GBTJDF\\Administrator\r\nRunAs User: DESKTOP-8GBTJDF\\Administrator\r\nConfiguration Name: \r\nMachine: DESKTOP-8GBTJDF (Microsoft Windows NT 10.0.19045.0)\r\nHost Application: C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.EXE -command . \u0027D:\\alde\\actions-runner\\_work\\_temp\\bb72cf0f-68ab-49e0-ad9c-aea767c5b764.ps1\u0027\r\nProcess ID: 17884\r\nPSVersion: 5.1.19041.6157\r\nPSEdition: Desktop\r\nPSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1.19041.6157\r\nBuildVersion: 10.0.19041.6157\r\nCLRVersion: 4.0.30319.42000\r\nWSManStackVersion: 3.0\r\nPSRemotingProtocolVersion: 2.3\r\nSerializationVersion: 1.1.0.1\r\n**********************\r\n\r\n==============================================================================\r\n ALDE ENGINE EXECUTION\r\n==============================================================================\r\n\r\n==============================================================================\r\n Alpha-Tech Local Development Engine 1.1.1-phase1\r\n==============================================================================\r\nWorkflow : Git-first E2E Increment Full Certification\r\nMode     : SyncAndCertify\r\nPolicy   : Run all safe gates, collect complete evidence, then decide PASS or FAIL.\r\nSafety   : This engine never stages files and never creates commits.\r\n\r\n==============================================================================\r\n GIT GUARD\r\n==============================================================================\r\n[CMD ] git -C D:\\alpha-tech\\client branch --show-current\r\n[CMD ] git -C D:\\alpha-tech\\client rev-parse HEAD\r\n[CMD ] git -C D:\\alpha-tech\\client status --porcelain=v1 --untracked-files=all\r\n[CMD ] git -C D:\\alpha-tech\\server branch --show-current\r\n[CMD ] git -C D:\\alpha-tech\\server rev-parse HEAD\r\n[CMD ] git -C D:\\alpha-tech\\server status --porcelain=v1 --untracked-files=all\r\nPS\u003eTerminatingError(): \"Repository D:\\alpha-tech\\server must be clean for mode SyncAndCertify.\n?? .artifacts/verification/prisma-generate-alde.log\"\r\n[CMD ] node --version\r\n[CMD ] npm --version\r\nVerification report: D:\\alpha-tech\\client\\.artifacts\\verification\\alde-20260802-105115.json\r\n\r\nALDE FAILED: Repository D:\\alpha-tech\\server must be clean for mode SyncAndCertify.\n?? .artifacts/verification/prisma-generate-alde.log\r\n**********************\r\nWindows PowerShell transcript end\r\nEnd time: 20260802105115\r\n**********************"
+                                                      }
+                                                  ]
+                                    },
+                     "reportPath":  "D:\\alde\\actions-runner\\_work\\alpha-tech-client\\alpha-tech-client\\alde-evidence\\alde-20260802-105115.json",
+                     "transcriptPath":  "D:\\alde\\actions-runner\\_work\\alpha-tech-client\\alpha-tech-client\\alde-evidence\\alde-transcript-20260802-105114.log"
+                 },
+    "verificationReport":  {
+                               "schemaVersion":  3,
+                               "engine":  {
+                                              "name":  "Alpha-Tech Local Development Engine",
+                                              "version":  "1.1.1-phase1",
+                                              "workflow":  "Git-first E2E Increment Full Certification",
+                                              "mode":  "SyncAndCertify",
+                                              "executionPolicy":  "full-certification",
+                                              "runtimeCompatibility":  "Windows PowerShell 5.1+"
+                                          },
+                               "status":  "FAIL",
+                               "failureMessage":  "Repository D:\\alpha-tech\\server must be clean for mode SyncAndCertify.\n?? .artifacts/verification/prisma-generate-alde.log",
+                               "failedGateCount":  0,
+                               "startedAt":  "2026-08-02T10:51:14.3186702+07:00",
+                               "finishedAt":  "2026-08-02T10:51:14.7087687+07:00",
+                               "environment":  {
+                                                   "machine":  "DESKTOP-8GBTJDF",
+                                                   "user":  "Administrator",
+                                                   "powershell":  "5.1.19041.6157",
+                                                   "node":  "v20.19.0",
+                                                   "npm":  "10.8.2"
+                                               },
+                               "repositories":  {
+                                                    "client":  {
+                                                                   "path":  "D:\\alpha-tech\\client",
+                                                                   "branch":  "main",
+                                                                   "head":  "891d0cd38fa75c5104aa033c337b1736b91051c8",
+                                                                   "clean":  true,
+                                                                   "status":  [
+
+                                                                              ]
+                                                               },
+                                                    "server":  {
+                                                                   "path":  "D:\\alpha-tech\\server",
+                                                                   "branch":  "main",
+                                                                   "head":  "9154f2bc03087fe5ce68010b5244ec695181c98c",
+                                                                   "clean":  false,
+                                                                   "status":  [
+                                                                                  "?? .artifacts/verification/prisma-generate-alde.log"
+                                                                              ]
+                                                               }
+                                                },
+                               "certifiedHeads":  {
+
+                                                  },
+                               "gates":  [
+
+                                         ],
+                               "executedCommands":  [
+                                                        "git -C D:\\alpha-tech\\client branch --show-current",
+                                                        "git -C D:\\alpha-tech\\client rev-parse HEAD",
+                                                        "git -C D:\\alpha-tech\\client status --porcelain=v1 --untracked-files=all",
+                                                        "git -C D:\\alpha-tech\\server branch --show-current",
+                                                        "git -C D:\\alpha-tech\\server rev-parse HEAD",
+                                                        "git -C D:\\alpha-tech\\server status --porcelain=v1 --untracked-files=all",
+                                                        "node --version",
+                                                        "npm --version"
+                                                    ],
+                               "assessment":  {
+                                                  "schemaVersion":  2,
+                                                  "classifier":  {
+                                                                     "name":  "ALDE Transcript-Aware Failure Classification Engine",
+                                                                     "version":  "1.1.0",
+                                                                     "evidenceSources":  [
+                                                                                             "gate.name",
+                                                                                             "gate.detail",
+                                                                                             "execution transcript"
+                                                                                         ],
+                                                                     "conservativeUnknownPolicy":  "UNCLASSIFIED is certification-failing until reviewed.",
+                                                                     "earlyFailurePolicy":  "Preflight failures without normal gates are preserved as a synthetic ALDE preflight gate."
+                                                                 },
+                                                  "authorityStatus":  "FAIL",
+                                                  "regressionCount":  0,
+                                                  "environmentBlockerCount":  0,
+                                                  "safetyGuardCount":  0,
+                                                  "unclassifiedCount":  1,
+                                                  "failedGateCount":  1,
+                                                  "interpretation":  "A source/executable-contract regression or unclassified failure requires correction or review.",
+                                                  "gates":  [
+                                                                {
+                                                                    "name":  "ALDE preflight",
+                                                                    "status":  "FAIL",
+                                                                    "failureClass":  "UNCLASSIFIED",
+                                                                    "reasonCode":  "INSUFFICIENT_FAILURE_EVIDENCE",
+                                                                    "matchedPattern":  null,
+                                                                    "durationSeconds":  null,
+                                                                    "detail":  "",
+                                                                    "transcriptEvidence":  "**********************\r\nWindows PowerShell transcript start\r\nStart time: 20260802105114\r\nUsername: DESKTOP-8GBTJDF\\Administrator\r\nRunAs User: DESKTOP-8GBTJDF\\Administrator\r\nConfiguration Name: \r\nMachine: DESKTOP-8GBTJDF (Microsoft Windows NT 10.0.19045.0)\r\nHost Application: C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.EXE -command . \u0027D:\\alde\\actions-runner\\_work\\_temp\\bb72cf0f-68ab-49e0-ad9c-aea767c5b764.ps1\u0027\r\nProcess ID: 17884\r\nPSVersion: 5.1.19041.6157\r\nPSEdition: Desktop\r\nPSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1.19041.6157\r\nBuildVersion: 10.0.19041.6157\r\nCLRVersion: 4.0.30319.42000\r\nWSManStackVersion: 3.0\r\nPSRemotingProtocolVersion: 2.3\r\nSerializationVersion: 1.1.0.1\r\n**********************\r\n\r\n==============================================================================\r\n ALDE ENGINE EXECUTION\r\n==============================================================================\r\n\r\n==============================================================================\r\n Alpha-Tech Local Development Engine 1.1.1-phase1\r\n==============================================================================\r\nWorkflow : Git-first E2E Increment Full Certification\r\nMode     : SyncAndCertify\r\nPolicy   : Run all safe gates, collect complete evidence, then decide PASS or FAIL.\r\nSafety   : This engine never stages files and never creates commits.\r\n\r\n==============================================================================\r\n GIT GUARD\r\n==============================================================================\r\n[CMD ] git -C D:\\alpha-tech\\client branch --show-current\r\n[CMD ] git -C D:\\alpha-tech\\client rev-parse HEAD\r\n[CMD ] git -C D:\\alpha-tech\\client status --porcelain=v1 --untracked-files=all\r\n[CMD ] git -C D:\\alpha-tech\\server branch --show-current\r\n[CMD ] git -C D:\\alpha-tech\\server rev-parse HEAD\r\n[CMD ] git -C D:\\alpha-tech\\server status --porcelain=v1 --untracked-files=all\r\nPS\u003eTerminatingError(): \"Repository D:\\alpha-tech\\server must be clean for mode SyncAndCertify.\n?? .artifacts/verification/prisma-generate-alde.log\"\r\n[CMD ] node --version\r\n[CMD ] npm --version\r\nVerification report: D:\\alpha-tech\\client\\.artifacts\\verification\\alde-20260802-105115.json\r\n\r\nALDE FAILED: Repository D:\\alpha-tech\\server must be clean for mode SyncAndCertify.\n?? .artifacts/verification/prisma-generate-alde.log\r\n**********************\r\nWindows PowerShell transcript end\r\nEnd time: 20260802105115\r\n**********************"
+                                                                }
+                                                            ]
+                                              }
+                           }
+}

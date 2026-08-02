@@ -135,7 +135,7 @@ Sale ที่ Commit สำเร็จแล้วเป็น authority ข�
 
 - CASH ที่ชำระครบ: `RECEIPT`
 - CREDIT: `DELIVERY_NOTE`
-- การขอ Tax Invoice ของ CASH ต้องเป็นไปตามตัวเลือกที่ผู้ใช้เลือกและ Runtime policy
+- ใบกำกับภาษีอย่างย่อและใบกำกับภาษีเต็มรูป ออกได้เฉพาะ Sale ที่มีสถานะชำระ `PAID`
 
 หลัง Completion สำเร็จ ให้เปิดเอกสารจากผลลัพธ์ของคำสั่งล่าสุด ห้ามสร้างยอดใหม่จากหน้าจอเอง
 
@@ -171,6 +171,7 @@ Sale ที่ Commit สำเร็จแล้วเป็น authority ข�
 | `CREDIT_CUSTOMER_REQUIRED` | ขายเชื่อไม่มีลูกค้า | เลือกลูกค้า |
 | `PAYMENT_TOTAL_REQUIRED` | CASH ชำระไม่ครบ | เติม Payment Evidence ให้ครบ |
 | `PAYMENT_EXCEEDS_TOTAL` | ยอดชำระเกิน | ลด Payment Item |
+| `TAX_SOURCE_SALE_PAYMENT_REQUIRED` | ยังชำระไม่ครบ จึงเข้า Tax Intake ไม่ได้ | รับชำระให้ครบจนสถานะเป็น `PAID` แล้วจึงออกเอกสารภาษี |
 | `DEPOSIT_NOT_USABLE` | เงินมัดจำไม่ตรงลูกค้า/ร้าน | เลือกเงินมัดจำที่ถูกต้อง |
 | `DEPOSIT_BALANCE_CONFLICT` | เงินมัดจำถูกใช้พร้อมกัน | โหลดข้อมูลล่าสุดและตรวจยอดคงเหลือ |
 | `HELD_CART_VERSION_CONFLICT` | ใบพักถูกแก้จากอีกเครื่อง | เปิดใบพักล่าสุดอีกครั้ง |
@@ -188,6 +189,7 @@ Sale ที่ Commit สำเร็จแล้วเป็น authority ข�
 - [ ] ตรวจจำนวน ราคา ส่วนลด VAT และยอดสุทธิ
 - [ ] CASH มี Payment Evidence ครบ
 - [ ] CREDIT ไม่มี immediate payment
+- [ ] Sale ที่ไม่ใช่ `PAID` เลือกได้เฉพาะ Delivery Note และไม่ออกใบกำกับภาษี
 - [ ] Held Cart ผ่าน revalidation
 - [ ] ตรวจ Receipt/Delivery Note option
 - [ ] หลังสำเร็จ บันทึกรหัส Sale และเปิดเอกสารจากผลลัพธ์จริง

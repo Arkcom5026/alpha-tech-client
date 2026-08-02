@@ -15,6 +15,7 @@ assert.match(preflight, /Stop only the identified Alpha-Tech server node process
 assert.match(pipeline, /ALDE RELIABILITY PREFLIGHT/);
 assert.match(pipeline, /preflightReportPath/);
 assert.match(pipeline, /preflight = \$preflight/);
+assert.match(pipeline, /Get-Item -LiteralPath \$preflightReportPath/);
 assert.match(classifier, /function Get-GatePolicy/);
 assert.match(classifier, /ADVISORY_SKIP/);
 assert.match(classifier, /BLOCKING_SKIP/);

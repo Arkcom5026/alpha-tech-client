@@ -1,7 +1,10 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "requestedBy": "ChatGPT",
   "mode": "SyncAndCertify",
-  "requestedAt": "2026-08-02T11:20:00+07:00",
-  "reason": "Certify the post-merge Tax Expense operating-expense E2E increment after targeted recovery. Preconditions: local client and server were confirmed on clean main branches. Expected pre-trigger client main is 891d0cd38fa75c5104aa033c337b1736b91051c8. Expected server main is 5a28ea57e84b329cefa2d2a2b032aa36a092f9a9, containing the minimal Procurement receipt-detail test-fixture alignment. Required evidence: SyncAndCertify must fast-forward both repositories, certify this trigger commit as clientHead and 5a28ea57e84b329cefa2d2a2b032aa36a092f9a9 as serverHead, complete full gates with failedGateCount 0, and publish matching latest and history result-bridge records. Human operational testing and production database mutation remain out of scope."
+  "requestedAt": "2026-08-02T11:35:00+07:00",
+  "triggerKind": "new-certification",
+  "expectedPreTriggerClientHead": "9db362ede599f6b398495698b74fbb27d6a8a7b5",
+  "expectedServerHead": "5a28ea57e84b329cefa2d2a2b032aa36a092f9a9",
+  "reason": "Certify ALDE Reliability Preflight & Evidence Policy after PR #63 merge. This is a New Trigger because the Client source authority changed. Preconditions: local client and server must be clean on main. Required evidence: clientHead/sourceSha must be this trigger commit; serverHead must equal expectedServerHead; reliability preflight must PASS; full gates must have failedGateCount 0; all skipped gates must be explicitly classified; latest and history Result Bridge records must match. No production database mutation or human operational testing is included."
 }

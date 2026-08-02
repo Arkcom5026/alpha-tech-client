@@ -123,12 +123,17 @@ test.describe('Repair intake completion (Test DB)', () => {
 
     const successResponsePromise = page.waitForResponse(
       (response) => response.request().method() === 'PATCH'
-        && response.url().includes(`/api/repairs/jobs/${repairJobId}/status`)
-        && response.ok(),
+        && response.url().includes(`/api/repairs/jobs/${repairJobId}/status`),
       { timeout: 15_000 }
     );
     await page.getByRole('button', { name: 'บันทึกสถานะ' }).click();
-    await successResponsePromise;
+    const successResponse = await successResponsePromise;
+    const successBodyText = await successResponse.text();
+
+    expect(
+      successResponse.ok(),
+      `Final status update failed with HTTP ${successResponse.status()}: ${successBodyText}`
+    ).toBeTruthy();
 
     await expect(page.getByText('กำลังตรวจ/ซ่อม', { exact: true })).toBeVisible();
   });

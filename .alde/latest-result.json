@@ -3,13 +3,13 @@
     "status":  "PASS",
     "repository":  "Arkcom5026/alpha-tech-client",
     "sourceBranch":  "main",
-    "sourceSha":  "eaf80959c88c7fa5bfeaedae1191d373d069ee07",
+    "sourceSha":  "9f5eccc85cd1e29a3f45eb10084262aab51c1263",
     "eventName":  "push",
     "workflow":  "ALDE Local Certification",
-    "workflowRunId":  30732745214,
+    "workflowRunId":  30732946695,
     "workflowRunAttempt":  1,
-    "workflowRunUrl":  "https://github.com/Arkcom5026/alpha-tech-client/actions/runs/30732745214",
-    "publishedAt":  "2026-08-02T04:42:03.0998817Z",
+    "workflowRunUrl":  "https://github.com/Arkcom5026/alpha-tech-client/actions/runs/30732946695",
+    "publishedAt":  "2026-08-02T04:48:52.1799792Z",
     "runner":  {
                    "name":  "ALDE-WIN01",
                    "os":  "Windows",
@@ -19,14 +19,14 @@
                      "schemaVersion":  5,
                      "status":  "PASS",
                      "mode":  "SyncAndCertify",
-                     "startedAt":  "2026-08-02T04:39:36.7651882Z",
-                     "finishedAt":  "2026-08-02T04:41:54.3546052Z",
+                     "startedAt":  "2026-08-02T04:46:31.3992609Z",
+                     "finishedAt":  "2026-08-02T04:48:43.5195183Z",
                      "runnerName":  "ALDE-WIN01",
-                     "workflowRunId":  "30732745214",
+                     "workflowRunId":  "30732946695",
                      "clientPath":  "D:\\alpha-tech\\client",
                      "serverPath":  "D:\\alpha-tech\\server",
-                     "clientHead":  "eaf80959c88c7fa5bfeaedae1191d373d069ee07",
-                     "serverHead":  "5a28ea57e84b329cefa2d2a2b032aa36a092f9a9",
+                     "clientHead":  "9f5eccc85cd1e29a3f45eb10084262aab51c1263",
+                     "serverHead":  "ed5ab3a5c2b27f7ddf752f2c165eb4e827eb09d8",
                      "engineExitCode":  0,
                      "pipelineExitCode":  0,
                      "pipelineError":  "",
@@ -34,14 +34,14 @@
                                        "schemaVersion":  1,
                                        "status":  "PASS",
                                        "name":  "ALDE Reliability Preflight",
-                                       "startedAt":  "2026-08-02T04:39:37.2158499Z",
+                                       "startedAt":  "2026-08-02T04:46:31.8471607Z",
                                        "requiredBranch":  "main",
                                        "repositories":  {
                                                             "client":  {
                                                                            "label":  "Client",
                                                                            "path":  "D:\\alpha-tech\\client",
                                                                            "branch":  "main",
-                                                                           "head":  "0fd149898a18918d1aab555bde251341ee1352fe",
+                                                                           "head":  "eaf80959c88c7fa5bfeaedae1191d373d069ee07",
                                                                            "clean":  true,
                                                                            "dirtyEntries":  [
 
@@ -76,7 +76,7 @@
                                                            "Stop only the identified Alpha-Tech server node process before rerunning if Prisma generate lock risk is reported."
                                                        ]
                                    },
-                     "preflightReportPath":  "D:\\alde\\actions-runner\\_work\\alpha-tech-client\\alpha-tech-client\\alde-evidence\\alde-preflight-20260802-113936.json",
+                     "preflightReportPath":  "D:\\alde\\actions-runner\\_work\\alpha-tech-client\\alpha-tech-client\\alde-evidence\\alde-preflight-20260802-114631.json",
                      "preflightExitCode":  0,
                      "assessment":  {
                                         "schemaVersion":  2,
@@ -108,7 +108,7 @@
                                                           "failureClass":  null,
                                                           "reasonCode":  null,
                                                           "matchedPattern":  null,
-                                                          "durationSeconds":  7.46,
+                                                          "durationSeconds":  6.53,
                                                           "detail":  "",
                                                           "transcriptEvidence":  "",
                                                           "gatePolicy":  "REQUIRED"
@@ -119,7 +119,7 @@
                                                           "failureClass":  null,
                                                           "reasonCode":  null,
                                                           "matchedPattern":  null,
-                                                          "durationSeconds":  0.77,
+                                                          "durationSeconds":  0.79,
                                                           "detail":  "",
                                                           "transcriptEvidence":  "",
                                                           "gatePolicy":  "REQUIRED"
@@ -130,7 +130,7 @@
                                                           "failureClass":  null,
                                                           "reasonCode":  null,
                                                           "matchedPattern":  null,
-                                                          "durationSeconds":  17.07,
+                                                          "durationSeconds":  16.51,
                                                           "detail":  "",
                                                           "transcriptEvidence":  "",
                                                           "gatePolicy":  "REQUIRED"
@@ -141,7 +141,7 @@
                                                           "failureClass":  null,
                                                           "reasonCode":  null,
                                                           "matchedPattern":  null,
-                                                          "durationSeconds":  19.2,
+                                                          "durationSeconds":  15.95,
                                                           "detail":  "",
                                                           "transcriptEvidence":  "",
                                                           "gatePolicy":  "REQUIRED"
@@ -152,7 +152,7 @@
                                                           "failureClass":  null,
                                                           "reasonCode":  null,
                                                           "matchedPattern":  null,
-                                                          "durationSeconds":  0.08,
+                                                          "durationSeconds":  0.07,
                                                           "detail":  "",
                                                           "transcriptEvidence":  "",
                                                           "gatePolicy":  "REQUIRED"
@@ -163,7 +163,7 @@
                                                           "failureClass":  null,
                                                           "reasonCode":  null,
                                                           "matchedPattern":  null,
-                                                          "durationSeconds":  4.42,
+                                                          "durationSeconds":  3.44,
                                                           "detail":  "",
                                                           "transcriptEvidence":  "",
                                                           "gatePolicy":  "REQUIRED"
@@ -174,7 +174,7 @@
                                                           "failureClass":  null,
                                                           "reasonCode":  null,
                                                           "matchedPattern":  null,
-                                                          "durationSeconds":  8.77,
+                                                          "durationSeconds":  7.83,
                                                           "detail":  "",
                                                           "transcriptEvidence":  "",
                                                           "gatePolicy":  "REQUIRED"
@@ -185,7 +185,7 @@
                                                           "failureClass":  null,
                                                           "reasonCode":  null,
                                                           "matchedPattern":  null,
-                                                          "durationSeconds":  25.41,
+                                                          "durationSeconds":  26.81,
                                                           "detail":  "",
                                                           "transcriptEvidence":  "",
                                                           "gatePolicy":  "REQUIRED"
@@ -196,7 +196,7 @@
                                                           "failureClass":  null,
                                                           "reasonCode":  null,
                                                           "matchedPattern":  null,
-                                                          "durationSeconds":  1.68,
+                                                          "durationSeconds":  1.15,
                                                           "detail":  "",
                                                           "transcriptEvidence":  "",
                                                           "gatePolicy":  "REQUIRED"
@@ -207,7 +207,7 @@
                                                           "failureClass":  null,
                                                           "reasonCode":  null,
                                                           "matchedPattern":  null,
-                                                          "durationSeconds":  5.28,
+                                                          "durationSeconds":  4.65,
                                                           "detail":  "",
                                                           "transcriptEvidence":  "",
                                                           "gatePolicy":  "REQUIRED"
@@ -218,7 +218,7 @@
                                                           "failureClass":  null,
                                                           "reasonCode":  null,
                                                           "matchedPattern":  null,
-                                                          "durationSeconds":  10.64,
+                                                          "durationSeconds":  10.07,
                                                           "detail":  "",
                                                           "transcriptEvidence":  "",
                                                           "gatePolicy":  "REQUIRED"
@@ -240,7 +240,7 @@
                                                           "failureClass":  null,
                                                           "reasonCode":  null,
                                                           "matchedPattern":  null,
-                                                          "durationSeconds":  2.57,
+                                                          "durationSeconds":  2.56,
                                                           "detail":  "",
                                                           "transcriptEvidence":  "",
                                                           "gatePolicy":  "REQUIRED"
@@ -251,7 +251,7 @@
                                                           "failureClass":  null,
                                                           "reasonCode":  null,
                                                           "matchedPattern":  null,
-                                                          "durationSeconds":  1.88,
+                                                          "durationSeconds":  1.57,
                                                           "detail":  "",
                                                           "transcriptEvidence":  "",
                                                           "gatePolicy":  "REQUIRED"
@@ -262,7 +262,7 @@
                                                           "failureClass":  null,
                                                           "reasonCode":  null,
                                                           "matchedPattern":  null,
-                                                          "durationSeconds":  0.65,
+                                                          "durationSeconds":  0.54,
                                                           "detail":  "",
                                                           "transcriptEvidence":  "",
                                                           "gatePolicy":  "REQUIRED"
@@ -273,7 +273,7 @@
                                                           "failureClass":  null,
                                                           "reasonCode":  null,
                                                           "matchedPattern":  null,
-                                                          "durationSeconds":  0.71,
+                                                          "durationSeconds":  0.54,
                                                           "detail":  "",
                                                           "transcriptEvidence":  "",
                                                           "gatePolicy":  "REQUIRED"
@@ -284,7 +284,7 @@
                                                           "failureClass":  null,
                                                           "reasonCode":  null,
                                                           "matchedPattern":  null,
-                                                          "durationSeconds":  0.73,
+                                                          "durationSeconds":  0.54,
                                                           "detail":  "",
                                                           "transcriptEvidence":  "",
                                                           "gatePolicy":  "REQUIRED"
@@ -295,7 +295,7 @@
                                                           "failureClass":  null,
                                                           "reasonCode":  null,
                                                           "matchedPattern":  null,
-                                                          "durationSeconds":  0.77,
+                                                          "durationSeconds":  0.54,
                                                           "detail":  "",
                                                           "transcriptEvidence":  "",
                                                           "gatePolicy":  "REQUIRED"
@@ -306,7 +306,7 @@
                                                           "failureClass":  null,
                                                           "reasonCode":  null,
                                                           "matchedPattern":  null,
-                                                          "durationSeconds":  0.55,
+                                                          "durationSeconds":  0.66,
                                                           "detail":  "",
                                                           "transcriptEvidence":  "",
                                                           "gatePolicy":  "REQUIRED"
@@ -317,7 +317,7 @@
                                                           "failureClass":  null,
                                                           "reasonCode":  null,
                                                           "matchedPattern":  null,
-                                                          "durationSeconds":  0.51,
+                                                          "durationSeconds":  0.55,
                                                           "detail":  "",
                                                           "transcriptEvidence":  "",
                                                           "gatePolicy":  "REQUIRED"
@@ -328,7 +328,7 @@
                                                           "failureClass":  null,
                                                           "reasonCode":  null,
                                                           "matchedPattern":  null,
-                                                          "durationSeconds":  0.57,
+                                                          "durationSeconds":  0.55,
                                                           "detail":  "",
                                                           "transcriptEvidence":  "",
                                                           "gatePolicy":  "REQUIRED"
@@ -339,7 +339,7 @@
                                                           "failureClass":  null,
                                                           "reasonCode":  null,
                                                           "matchedPattern":  null,
-                                                          "durationSeconds":  0.51,
+                                                          "durationSeconds":  0.54,
                                                           "detail":  "",
                                                           "transcriptEvidence":  "",
                                                           "gatePolicy":  "REQUIRED"
@@ -350,7 +350,7 @@
                                                           "failureClass":  null,
                                                           "reasonCode":  null,
                                                           "matchedPattern":  null,
-                                                          "durationSeconds":  0.61,
+                                                          "durationSeconds":  0.55,
                                                           "detail":  "",
                                                           "transcriptEvidence":  "",
                                                           "gatePolicy":  "REQUIRED"
@@ -361,7 +361,7 @@
                                                           "failureClass":  null,
                                                           "reasonCode":  null,
                                                           "matchedPattern":  null,
-                                                          "durationSeconds":  1.45,
+                                                          "durationSeconds":  1.32,
                                                           "detail":  "",
                                                           "transcriptEvidence":  "",
                                                           "gatePolicy":  "REQUIRED"
@@ -372,7 +372,7 @@
                                                           "failureClass":  null,
                                                           "reasonCode":  null,
                                                           "matchedPattern":  null,
-                                                          "durationSeconds":  0.83,
+                                                          "durationSeconds":  0.71,
                                                           "detail":  "",
                                                           "transcriptEvidence":  "",
                                                           "gatePolicy":  "REQUIRED"
@@ -383,7 +383,7 @@
                                                           "failureClass":  null,
                                                           "reasonCode":  null,
                                                           "matchedPattern":  null,
-                                                          "durationSeconds":  0.59,
+                                                          "durationSeconds":  0.55,
                                                           "detail":  "",
                                                           "transcriptEvidence":  "",
                                                           "gatePolicy":  "REQUIRED"
@@ -394,7 +394,7 @@
                                                           "failureClass":  null,
                                                           "reasonCode":  null,
                                                           "matchedPattern":  null,
-                                                          "durationSeconds":  0.65,
+                                                          "durationSeconds":  0.56,
                                                           "detail":  "",
                                                           "transcriptEvidence":  "",
                                                           "gatePolicy":  "REQUIRED"
@@ -405,7 +405,7 @@
                                                           "failureClass":  null,
                                                           "reasonCode":  null,
                                                           "matchedPattern":  null,
-                                                          "durationSeconds":  0.58,
+                                                          "durationSeconds":  0.57,
                                                           "detail":  "",
                                                           "transcriptEvidence":  "",
                                                           "gatePolicy":  "REQUIRED"
@@ -416,7 +416,7 @@
                                                           "failureClass":  null,
                                                           "reasonCode":  null,
                                                           "matchedPattern":  null,
-                                                          "durationSeconds":  1.24,
+                                                          "durationSeconds":  1.23,
                                                           "detail":  "",
                                                           "transcriptEvidence":  "",
                                                           "gatePolicy":  "REQUIRED"
@@ -427,7 +427,7 @@
                                                           "failureClass":  null,
                                                           "reasonCode":  null,
                                                           "matchedPattern":  null,
-                                                          "durationSeconds":  1.52,
+                                                          "durationSeconds":  1.48,
                                                           "detail":  "",
                                                           "transcriptEvidence":  "",
                                                           "gatePolicy":  "REQUIRED"
@@ -438,7 +438,7 @@
                                                           "failureClass":  null,
                                                           "reasonCode":  null,
                                                           "matchedPattern":  null,
-                                                          "durationSeconds":  1.09,
+                                                          "durationSeconds":  1.07,
                                                           "detail":  "",
                                                           "transcriptEvidence":  "",
                                                           "gatePolicy":  "REQUIRED"
@@ -449,7 +449,7 @@
                                                           "failureClass":  null,
                                                           "reasonCode":  null,
                                                           "matchedPattern":  null,
-                                                          "durationSeconds":  1.19,
+                                                          "durationSeconds":  1.16,
                                                           "detail":  "",
                                                           "transcriptEvidence":  "",
                                                           "gatePolicy":  "REQUIRED"
@@ -460,7 +460,7 @@
                                                           "failureClass":  null,
                                                           "reasonCode":  null,
                                                           "matchedPattern":  null,
-                                                          "durationSeconds":  0.58,
+                                                          "durationSeconds":  0.56,
                                                           "detail":  "",
                                                           "transcriptEvidence":  "",
                                                           "gatePolicy":  "REQUIRED"
@@ -471,7 +471,7 @@
                                                           "failureClass":  null,
                                                           "reasonCode":  null,
                                                           "matchedPattern":  null,
-                                                          "durationSeconds":  1.63,
+                                                          "durationSeconds":  1.37,
                                                           "detail":  "",
                                                           "transcriptEvidence":  "",
                                                           "gatePolicy":  "REQUIRED"
@@ -482,15 +482,15 @@
                                                           "failureClass":  null,
                                                           "reasonCode":  null,
                                                           "matchedPattern":  null,
-                                                          "durationSeconds":  1.16,
+                                                          "durationSeconds":  1.86,
                                                           "detail":  "",
                                                           "transcriptEvidence":  "",
                                                           "gatePolicy":  "REQUIRED"
                                                       }
                                                   ]
                                     },
-                     "reportPath":  "D:\\alde\\actions-runner\\_work\\alpha-tech-client\\alpha-tech-client\\alde-evidence\\alde-20260802-114153.json",
-                     "transcriptPath":  "D:\\alde\\actions-runner\\_work\\alpha-tech-client\\alpha-tech-client\\alde-evidence\\alde-transcript-20260802-113936.log"
+                     "reportPath":  "D:\\alde\\actions-runner\\_work\\alpha-tech-client\\alpha-tech-client\\alde-evidence\\alde-20260802-114843.json",
+                     "transcriptPath":  "D:\\alde\\actions-runner\\_work\\alpha-tech-client\\alpha-tech-client\\alde-evidence\\alde-transcript-20260802-114631.log"
                  },
     "verificationReport":  {
                                "schemaVersion":  3,
@@ -505,8 +505,8 @@
                                "status":  "PASS",
                                "failureMessage":  "",
                                "failedGateCount":  0,
-                               "startedAt":  "2026-08-02T11:39:37.3277632+07:00",
-                               "finishedAt":  "2026-08-02T11:41:53.1733735+07:00",
+                               "startedAt":  "2026-08-02T11:46:31.9507068+07:00",
+                               "finishedAt":  "2026-08-02T11:48:42.7180405+07:00",
                                "environment":  {
                                                    "machine":  "DESKTOP-8GBTJDF",
                                                    "user":  "Administrator",
@@ -518,7 +518,7 @@
                                                     "client":  {
                                                                    "path":  "D:\\alpha-tech\\client",
                                                                    "branch":  "main",
-                                                                   "head":  "eaf80959c88c7fa5bfeaedae1191d373d069ee07",
+                                                                   "head":  "9f5eccc85cd1e29a3f45eb10084262aab51c1263",
                                                                    "clean":  true,
                                                                    "status":  [
 
@@ -527,7 +527,7 @@
                                                     "server":  {
                                                                    "path":  "D:\\alpha-tech\\server",
                                                                    "branch":  "main",
-                                                                   "head":  "5a28ea57e84b329cefa2d2a2b032aa36a092f9a9",
+                                                                   "head":  "ed5ab3a5c2b27f7ddf752f2c165eb4e827eb09d8",
                                                                    "clean":  true,
                                                                    "status":  [
 
@@ -535,74 +535,74 @@
                                                                }
                                                 },
                                "certifiedHeads":  {
-                                                      "client":  "eaf80959c88c7fa5bfeaedae1191d373d069ee07",
-                                                      "server":  "5a28ea57e84b329cefa2d2a2b032aa36a092f9a9"
+                                                      "client":  "9f5eccc85cd1e29a3f45eb10084262aab51c1263",
+                                                      "server":  "ed5ab3a5c2b27f7ddf752f2c165eb4e827eb09d8"
                                                   },
                                "gates":  [
                                              {
                                                  "name":  "Frontend typecheck",
                                                  "status":  "PASS",
-                                                 "durationSeconds":  7.46,
+                                                 "durationSeconds":  6.53,
                                                  "detail":  ""
                                              },
                                              {
                                                  "name":  "Frontend lint",
                                                  "status":  "PASS",
-                                                 "durationSeconds":  0.77,
+                                                 "durationSeconds":  0.79,
                                                  "detail":  ""
                                              },
                                              {
                                                  "name":  "Frontend build",
                                                  "status":  "PASS",
-                                                 "durationSeconds":  17.07,
+                                                 "durationSeconds":  16.51,
                                                  "detail":  ""
                                              },
                                              {
                                                  "name":  "Frontend test:run",
                                                  "status":  "PASS",
-                                                 "durationSeconds":  19.2,
+                                                 "durationSeconds":  15.95,
                                                  "detail":  ""
                                              },
                                              {
                                                  "name":  "Backend entry syntax check",
                                                  "status":  "PASS",
-                                                 "durationSeconds":  0.08,
+                                                 "durationSeconds":  0.07,
                                                  "detail":  ""
                                              },
                                              {
                                                  "name":  "Prisma validate",
                                                  "status":  "PASS",
-                                                 "durationSeconds":  4.42,
+                                                 "durationSeconds":  3.44,
                                                  "detail":  ""
                                              },
                                              {
                                                  "name":  "Prisma generate",
                                                  "status":  "PASS",
-                                                 "durationSeconds":  8.77,
+                                                 "durationSeconds":  7.83,
                                                  "detail":  ""
                                              },
                                              {
                                                  "name":  "Backend regression tests",
                                                  "status":  "PASS",
-                                                 "durationSeconds":  25.41,
+                                                 "durationSeconds":  26.81,
                                                  "detail":  ""
                                              },
                                              {
                                                  "name":  "Backend verify:device-aggregate",
                                                  "status":  "PASS",
-                                                 "durationSeconds":  1.68,
+                                                 "durationSeconds":  1.15,
                                                  "detail":  ""
                                              },
                                              {
                                                  "name":  "Backend verify:employee-lifecycle",
                                                  "status":  "PASS",
-                                                 "durationSeconds":  5.28,
+                                                 "durationSeconds":  4.65,
                                                  "detail":  ""
                                              },
                                              {
                                                  "name":  "Backend verify:partner-store-application-http-e2e:test",
                                                  "status":  "PASS",
-                                                 "durationSeconds":  10.64,
+                                                 "durationSeconds":  10.07,
                                                  "detail":  ""
                                              },
                                              {
@@ -614,139 +614,139 @@
                                              {
                                                  "name":  "Backend verify:partner-store-application-runtime:test",
                                                  "status":  "PASS",
-                                                 "durationSeconds":  2.57,
+                                                 "durationSeconds":  2.56,
                                                  "detail":  ""
                                              },
                                              {
                                                  "name":  "Backend verify:product-backend-migration",
                                                  "status":  "PASS",
-                                                 "durationSeconds":  1.88,
+                                                 "durationSeconds":  1.57,
                                                  "detail":  ""
                                              },
                                              {
                                                  "name":  "Backend verify:product-create-compatibility",
                                                  "status":  "PASS",
-                                                 "durationSeconds":  0.65,
+                                                 "durationSeconds":  0.54,
                                                  "detail":  ""
                                              },
                                              {
                                                  "name":  "Backend verify:product-inventory-authority",
                                                  "status":  "PASS",
-                                                 "durationSeconds":  0.71,
+                                                 "durationSeconds":  0.54,
                                                  "detail":  ""
                                              },
                                              {
                                                  "name":  "Backend verify:product-inventory-runtime",
                                                  "status":  "PASS",
-                                                 "durationSeconds":  0.73,
+                                                 "durationSeconds":  0.54,
                                                  "detail":  ""
                                              },
                                              {
                                                  "name":  "Backend verify:product-mode-policy",
                                                  "status":  "PASS",
-                                                 "durationSeconds":  0.77,
+                                                 "durationSeconds":  0.54,
                                                  "detail":  ""
                                              },
                                              {
                                                  "name":  "Backend verify:product-operational-smoke",
                                                  "status":  "PASS",
-                                                 "durationSeconds":  0.55,
+                                                 "durationSeconds":  0.66,
                                                  "detail":  ""
                                              },
                                              {
                                                  "name":  "Backend verify:product-runtime-input",
                                                  "status":  "PASS",
-                                                 "durationSeconds":  0.51,
+                                                 "durationSeconds":  0.55,
                                                  "detail":  ""
                                              },
                                              {
                                                  "name":  "Backend verify:product-runtime-mappers",
                                                  "status":  "PASS",
-                                                 "durationSeconds":  0.57,
+                                                 "durationSeconds":  0.55,
                                                  "detail":  ""
                                              },
                                              {
                                                  "name":  "Backend verify:product-stock-availability",
                                                  "status":  "PASS",
-                                                 "durationSeconds":  0.51,
+                                                 "durationSeconds":  0.54,
                                                  "detail":  ""
                                              },
                                              {
                                                  "name":  "Backend verify:product-vertical-slices",
                                                  "status":  "PASS",
-                                                 "durationSeconds":  0.61,
+                                                 "durationSeconds":  0.55,
                                                  "detail":  ""
                                              },
                                              {
                                                  "name":  "Backend verify:repair-capability",
                                                  "status":  "PASS",
-                                                 "durationSeconds":  1.45,
+                                                 "durationSeconds":  1.32,
                                                  "detail":  ""
                                              },
                                              {
                                                  "name":  "Backend verify:sale-simple-inventory-authority",
                                                  "status":  "PASS",
-                                                 "durationSeconds":  0.83,
+                                                 "durationSeconds":  0.71,
                                                  "detail":  ""
                                              },
                                              {
                                                  "name":  "Backend verify:simple-adjustment-authority",
                                                  "status":  "PASS",
-                                                 "durationSeconds":  0.59,
+                                                 "durationSeconds":  0.55,
                                                  "detail":  ""
                                              },
                                              {
                                                  "name":  "Backend verify:simple-receive-authority",
                                                  "status":  "PASS",
-                                                 "durationSeconds":  0.65,
+                                                 "durationSeconds":  0.56,
                                                  "detail":  ""
                                              },
                                              {
                                                  "name":  "Backend verify:simple-transfer-authority",
                                                  "status":  "PASS",
-                                                 "durationSeconds":  0.58,
+                                                 "durationSeconds":  0.57,
                                                  "detail":  ""
                                              },
                                              {
                                                  "name":  "Backend verify:tax-authority",
                                                  "status":  "PASS",
-                                                 "durationSeconds":  1.24,
+                                                 "durationSeconds":  1.23,
                                                  "detail":  ""
                                              },
                                              {
                                                  "name":  "Backend verify:tax-expense-release-schema",
                                                  "status":  "PASS",
-                                                 "durationSeconds":  1.52,
+                                                 "durationSeconds":  1.48,
                                                  "detail":  ""
                                              },
                                              {
                                                  "name":  "Backend verify:tax-expense-tenant-preflight",
                                                  "status":  "PASS",
-                                                 "durationSeconds":  1.09,
+                                                 "durationSeconds":  1.07,
                                                  "detail":  ""
                                              },
                                              {
                                                  "name":  "Backend verify:tax-expense-tenant-schema",
                                                  "status":  "PASS",
-                                                 "durationSeconds":  1.19,
+                                                 "durationSeconds":  1.16,
                                                  "detail":  ""
                                              },
                                              {
                                                  "name":  "Backend verify:test-database-authority",
                                                  "status":  "PASS",
-                                                 "durationSeconds":  0.58,
+                                                 "durationSeconds":  0.56,
                                                  "detail":  ""
                                              },
                                              {
                                                  "name":  "Backend startup smoke test",
                                                  "status":  "PASS",
-                                                 "durationSeconds":  1.63,
+                                                 "durationSeconds":  1.37,
                                                  "detail":  ""
                                              },
                                              {
                                                  "name":  "Frontend startup smoke test",
                                                  "status":  "PASS",
-                                                 "durationSeconds":  1.16,
+                                                 "durationSeconds":  1.86,
                                                  "detail":  ""
                                              }
                                          ],
@@ -768,6 +768,7 @@
                                                         "git -C D:\\alpha-tech\\server status --porcelain=v1 --untracked-files=all",
                                                         "git -C D:\\alpha-tech\\server fetch origin --prune",
                                                         "git -C D:\\alpha-tech\\server rev-list --left-right --count HEAD...origin/main",
+                                                        "git -C D:\\alpha-tech\\server pull --ff-only origin main",
                                                         "[D:\\alpha-tech\\client] npm run typecheck",
                                                         "[D:\\alpha-tech\\client] npm run lint",
                                                         "[D:\\alpha-tech\\client] npm run build",
@@ -841,7 +842,7 @@
                                                                     "failureClass":  null,
                                                                     "reasonCode":  null,
                                                                     "matchedPattern":  null,
-                                                                    "durationSeconds":  7.46,
+                                                                    "durationSeconds":  6.53,
                                                                     "detail":  "",
                                                                     "transcriptEvidence":  "",
                                                                     "gatePolicy":  "REQUIRED"
@@ -852,7 +853,7 @@
                                                                     "failureClass":  null,
                                                                     "reasonCode":  null,
                                                                     "matchedPattern":  null,
-                                                                    "durationSeconds":  0.77,
+                                                                    "durationSeconds":  0.79,
                                                                     "detail":  "",
                                                                     "transcriptEvidence":  "",
                                                                     "gatePolicy":  "REQUIRED"
@@ -863,7 +864,7 @@
                                                                     "failureClass":  null,
                                                                     "reasonCode":  null,
                                                                     "matchedPattern":  null,
-                                                                    "durationSeconds":  17.07,
+                                                                    "durationSeconds":  16.51,
                                                                     "detail":  "",
                                                                     "transcriptEvidence":  "",
                                                                     "gatePolicy":  "REQUIRED"
@@ -874,7 +875,7 @@
                                                                     "failureClass":  null,
                                                                     "reasonCode":  null,
                                                                     "matchedPattern":  null,
-                                                                    "durationSeconds":  19.2,
+                                                                    "durationSeconds":  15.95,
                                                                     "detail":  "",
                                                                     "transcriptEvidence":  "",
                                                                     "gatePolicy":  "REQUIRED"
@@ -885,7 +886,7 @@
                                                                     "failureClass":  null,
                                                                     "reasonCode":  null,
                                                                     "matchedPattern":  null,
-                                                                    "durationSeconds":  0.08,
+                                                                    "durationSeconds":  0.07,
                                                                     "detail":  "",
                                                                     "transcriptEvidence":  "",
                                                                     "gatePolicy":  "REQUIRED"
@@ -896,7 +897,7 @@
                                                                     "failureClass":  null,
                                                                     "reasonCode":  null,
                                                                     "matchedPattern":  null,
-                                                                    "durationSeconds":  4.42,
+                                                                    "durationSeconds":  3.44,
                                                                     "detail":  "",
                                                                     "transcriptEvidence":  "",
                                                                     "gatePolicy":  "REQUIRED"
@@ -907,7 +908,7 @@
                                                                     "failureClass":  null,
                                                                     "reasonCode":  null,
                                                                     "matchedPattern":  null,
-                                                                    "durationSeconds":  8.77,
+                                                                    "durationSeconds":  7.83,
                                                                     "detail":  "",
                                                                     "transcriptEvidence":  "",
                                                                     "gatePolicy":  "REQUIRED"
@@ -918,7 +919,7 @@
                                                                     "failureClass":  null,
                                                                     "reasonCode":  null,
                                                                     "matchedPattern":  null,
-                                                                    "durationSeconds":  25.41,
+                                                                    "durationSeconds":  26.81,
                                                                     "detail":  "",
                                                                     "transcriptEvidence":  "",
                                                                     "gatePolicy":  "REQUIRED"
@@ -929,7 +930,7 @@
                                                                     "failureClass":  null,
                                                                     "reasonCode":  null,
                                                                     "matchedPattern":  null,
-                                                                    "durationSeconds":  1.68,
+                                                                    "durationSeconds":  1.15,
                                                                     "detail":  "",
                                                                     "transcriptEvidence":  "",
                                                                     "gatePolicy":  "REQUIRED"
@@ -940,7 +941,7 @@
                                                                     "failureClass":  null,
                                                                     "reasonCode":  null,
                                                                     "matchedPattern":  null,
-                                                                    "durationSeconds":  5.28,
+                                                                    "durationSeconds":  4.65,
                                                                     "detail":  "",
                                                                     "transcriptEvidence":  "",
                                                                     "gatePolicy":  "REQUIRED"
@@ -951,7 +952,7 @@
                                                                     "failureClass":  null,
                                                                     "reasonCode":  null,
                                                                     "matchedPattern":  null,
-                                                                    "durationSeconds":  10.64,
+                                                                    "durationSeconds":  10.07,
                                                                     "detail":  "",
                                                                     "transcriptEvidence":  "",
                                                                     "gatePolicy":  "REQUIRED"
@@ -973,7 +974,7 @@
                                                                     "failureClass":  null,
                                                                     "reasonCode":  null,
                                                                     "matchedPattern":  null,
-                                                                    "durationSeconds":  2.57,
+                                                                    "durationSeconds":  2.56,
                                                                     "detail":  "",
                                                                     "transcriptEvidence":  "",
                                                                     "gatePolicy":  "REQUIRED"
@@ -984,7 +985,7 @@
                                                                     "failureClass":  null,
                                                                     "reasonCode":  null,
                                                                     "matchedPattern":  null,
-                                                                    "durationSeconds":  1.88,
+                                                                    "durationSeconds":  1.57,
                                                                     "detail":  "",
                                                                     "transcriptEvidence":  "",
                                                                     "gatePolicy":  "REQUIRED"
@@ -995,7 +996,7 @@
                                                                     "failureClass":  null,
                                                                     "reasonCode":  null,
                                                                     "matchedPattern":  null,
-                                                                    "durationSeconds":  0.65,
+                                                                    "durationSeconds":  0.54,
                                                                     "detail":  "",
                                                                     "transcriptEvidence":  "",
                                                                     "gatePolicy":  "REQUIRED"
@@ -1006,7 +1007,7 @@
                                                                     "failureClass":  null,
                                                                     "reasonCode":  null,
                                                                     "matchedPattern":  null,
-                                                                    "durationSeconds":  0.71,
+                                                                    "durationSeconds":  0.54,
                                                                     "detail":  "",
                                                                     "transcriptEvidence":  "",
                                                                     "gatePolicy":  "REQUIRED"
@@ -1017,7 +1018,7 @@
                                                                     "failureClass":  null,
                                                                     "reasonCode":  null,
                                                                     "matchedPattern":  null,
-                                                                    "durationSeconds":  0.73,
+                                                                    "durationSeconds":  0.54,
                                                                     "detail":  "",
                                                                     "transcriptEvidence":  "",
                                                                     "gatePolicy":  "REQUIRED"
@@ -1028,7 +1029,7 @@
                                                                     "failureClass":  null,
                                                                     "reasonCode":  null,
                                                                     "matchedPattern":  null,
-                                                                    "durationSeconds":  0.77,
+                                                                    "durationSeconds":  0.54,
                                                                     "detail":  "",
                                                                     "transcriptEvidence":  "",
                                                                     "gatePolicy":  "REQUIRED"
@@ -1039,7 +1040,7 @@
                                                                     "failureClass":  null,
                                                                     "reasonCode":  null,
                                                                     "matchedPattern":  null,
-                                                                    "durationSeconds":  0.55,
+                                                                    "durationSeconds":  0.66,
                                                                     "detail":  "",
                                                                     "transcriptEvidence":  "",
                                                                     "gatePolicy":  "REQUIRED"
@@ -1050,7 +1051,7 @@
                                                                     "failureClass":  null,
                                                                     "reasonCode":  null,
                                                                     "matchedPattern":  null,
-                                                                    "durationSeconds":  0.51,
+                                                                    "durationSeconds":  0.55,
                                                                     "detail":  "",
                                                                     "transcriptEvidence":  "",
                                                                     "gatePolicy":  "REQUIRED"
@@ -1061,7 +1062,7 @@
                                                                     "failureClass":  null,
                                                                     "reasonCode":  null,
                                                                     "matchedPattern":  null,
-                                                                    "durationSeconds":  0.57,
+                                                                    "durationSeconds":  0.55,
                                                                     "detail":  "",
                                                                     "transcriptEvidence":  "",
                                                                     "gatePolicy":  "REQUIRED"
@@ -1072,7 +1073,7 @@
                                                                     "failureClass":  null,
                                                                     "reasonCode":  null,
                                                                     "matchedPattern":  null,
-                                                                    "durationSeconds":  0.51,
+                                                                    "durationSeconds":  0.54,
                                                                     "detail":  "",
                                                                     "transcriptEvidence":  "",
                                                                     "gatePolicy":  "REQUIRED"
@@ -1083,7 +1084,7 @@
                                                                     "failureClass":  null,
                                                                     "reasonCode":  null,
                                                                     "matchedPattern":  null,
-                                                                    "durationSeconds":  0.61,
+                                                                    "durationSeconds":  0.55,
                                                                     "detail":  "",
                                                                     "transcriptEvidence":  "",
                                                                     "gatePolicy":  "REQUIRED"
@@ -1094,7 +1095,7 @@
                                                                     "failureClass":  null,
                                                                     "reasonCode":  null,
                                                                     "matchedPattern":  null,
-                                                                    "durationSeconds":  1.45,
+                                                                    "durationSeconds":  1.32,
                                                                     "detail":  "",
                                                                     "transcriptEvidence":  "",
                                                                     "gatePolicy":  "REQUIRED"
@@ -1105,7 +1106,7 @@
                                                                     "failureClass":  null,
                                                                     "reasonCode":  null,
                                                                     "matchedPattern":  null,
-                                                                    "durationSeconds":  0.83,
+                                                                    "durationSeconds":  0.71,
                                                                     "detail":  "",
                                                                     "transcriptEvidence":  "",
                                                                     "gatePolicy":  "REQUIRED"
@@ -1116,7 +1117,7 @@
                                                                     "failureClass":  null,
                                                                     "reasonCode":  null,
                                                                     "matchedPattern":  null,
-                                                                    "durationSeconds":  0.59,
+                                                                    "durationSeconds":  0.55,
                                                                     "detail":  "",
                                                                     "transcriptEvidence":  "",
                                                                     "gatePolicy":  "REQUIRED"
@@ -1127,7 +1128,7 @@
                                                                     "failureClass":  null,
                                                                     "reasonCode":  null,
                                                                     "matchedPattern":  null,
-                                                                    "durationSeconds":  0.65,
+                                                                    "durationSeconds":  0.56,
                                                                     "detail":  "",
                                                                     "transcriptEvidence":  "",
                                                                     "gatePolicy":  "REQUIRED"
@@ -1138,7 +1139,7 @@
                                                                     "failureClass":  null,
                                                                     "reasonCode":  null,
                                                                     "matchedPattern":  null,
-                                                                    "durationSeconds":  0.58,
+                                                                    "durationSeconds":  0.57,
                                                                     "detail":  "",
                                                                     "transcriptEvidence":  "",
                                                                     "gatePolicy":  "REQUIRED"
@@ -1149,7 +1150,7 @@
                                                                     "failureClass":  null,
                                                                     "reasonCode":  null,
                                                                     "matchedPattern":  null,
-                                                                    "durationSeconds":  1.24,
+                                                                    "durationSeconds":  1.23,
                                                                     "detail":  "",
                                                                     "transcriptEvidence":  "",
                                                                     "gatePolicy":  "REQUIRED"
@@ -1160,7 +1161,7 @@
                                                                     "failureClass":  null,
                                                                     "reasonCode":  null,
                                                                     "matchedPattern":  null,
-                                                                    "durationSeconds":  1.52,
+                                                                    "durationSeconds":  1.48,
                                                                     "detail":  "",
                                                                     "transcriptEvidence":  "",
                                                                     "gatePolicy":  "REQUIRED"
@@ -1171,7 +1172,7 @@
                                                                     "failureClass":  null,
                                                                     "reasonCode":  null,
                                                                     "matchedPattern":  null,
-                                                                    "durationSeconds":  1.09,
+                                                                    "durationSeconds":  1.07,
                                                                     "detail":  "",
                                                                     "transcriptEvidence":  "",
                                                                     "gatePolicy":  "REQUIRED"
@@ -1182,7 +1183,7 @@
                                                                     "failureClass":  null,
                                                                     "reasonCode":  null,
                                                                     "matchedPattern":  null,
-                                                                    "durationSeconds":  1.19,
+                                                                    "durationSeconds":  1.16,
                                                                     "detail":  "",
                                                                     "transcriptEvidence":  "",
                                                                     "gatePolicy":  "REQUIRED"
@@ -1193,7 +1194,7 @@
                                                                     "failureClass":  null,
                                                                     "reasonCode":  null,
                                                                     "matchedPattern":  null,
-                                                                    "durationSeconds":  0.58,
+                                                                    "durationSeconds":  0.56,
                                                                     "detail":  "",
                                                                     "transcriptEvidence":  "",
                                                                     "gatePolicy":  "REQUIRED"
@@ -1204,7 +1205,7 @@
                                                                     "failureClass":  null,
                                                                     "reasonCode":  null,
                                                                     "matchedPattern":  null,
-                                                                    "durationSeconds":  1.63,
+                                                                    "durationSeconds":  1.37,
                                                                     "detail":  "",
                                                                     "transcriptEvidence":  "",
                                                                     "gatePolicy":  "REQUIRED"
@@ -1215,7 +1216,7 @@
                                                                     "failureClass":  null,
                                                                     "reasonCode":  null,
                                                                     "matchedPattern":  null,
-                                                                    "durationSeconds":  1.16,
+                                                                    "durationSeconds":  1.86,
                                                                     "detail":  "",
                                                                     "transcriptEvidence":  "",
                                                                     "gatePolicy":  "REQUIRED"

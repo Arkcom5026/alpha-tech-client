@@ -2,9 +2,9 @@
   "schemaVersion": 2,
   "requestedBy": "ChatGPT",
   "mode": "SyncAndCertify",
-  "requestedAt": "2026-08-03T03:11:00+07:00",
+  "requestedAt": "2026-08-03T03:18:00+07:00",
   "triggerKind": "new-certification",
-  "expectedPreTriggerClientHead": "4ec7be4a7f5d77251c9a1ba0252182d0ea6023c2",
-  "expectedServerHead": "1e2d8ef6430252f495a1f368f8df6d536a8eae5a",
-  "reason": "Post-merge ALDE certification for Repair Intake Completion Browser E2E and Test-DB evidence. Required evidence: client sourceSha/clientHead must equal the trigger commit created by this file update; metadata.serverHead must equal 1e2d8ef6430252f495a1f368f8df6d536a8eae5a; runner must be ALDE-WIN01; mode must be SyncAndCertify; failedGateCount must be 0; runtime/startup/test evidence and latest/history Result Bridge records must match the same workflow run."
+  "expectedPreTriggerClientHead": "53dea04b47f38afa012db07e6ac8b0c53d27cd95",
+  "expectedServerHead": "31e50bdae4b01aa7502e0fd99df8d4916659c7d6",
+  "reason": "Re-run post-merge ALDE certification after excluding module-owned Playwright Browser E2E specs from Vitest and making the POS Sale runtime outcome verifier contract-safe when no workflow fixture barcode is supplied. Required evidence: client sourceSha/clientHead must equal the trigger commit created by this file update; metadata.serverHead must equal 31e50bdae4b01aa7502e0fd99df8d4916659c7d6; runner must be ALDE-WIN01; mode must be SyncAndCertify; failedGateCount must be 0; latest/history Result Bridge records must match the same workflow run."
 }

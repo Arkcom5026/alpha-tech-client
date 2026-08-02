@@ -6,6 +6,17 @@ const normalizeCustomer = (payload) => {
   return customer?.id ? customer : null;
 };
 
+const emptyRepairSummary = {
+  total: 0,
+  active: 0,
+  overdue: 0,
+  unassigned: 0,
+  intakeIncomplete: 0,
+  waitingParts: 0,
+  waitingCustomerApproval: 0,
+  waitingCustomerPickup: 0,
+};
+
 const initialState = {
   intakeLookup: '',
   intakeContext: null,
@@ -15,6 +26,7 @@ const initialState = {
   selectedCustomer: null,
   customerWarrantyAssets: [],
   jobs: [],
+  repairSummary: emptyRepairSummary,
   claims: [],
   activeJob: null,
   activeClaim: null,
@@ -182,15 +194,18 @@ const useRepairRuntimeStore = create((set, get) => ({
   loadJobs: async (params = {}) => {
     set({ loading: true, error: null, errorCode: null });
     try {
-      const jobs = await repairApi.listJobs(params);
+      const payload = await repairApi.listJobs(params);
+      const jobs = Array.isArray(payload) ? payload : payload?.items || [];
+      const repairSummary = Array.isArray(payload) ? emptyRepairSummary : payload?.summary || emptyRepairSummary;
       set({
-        jobs: Array.isArray(jobs) ? jobs : jobs?.items || [],
+        jobs,
+        repairSummary,
         loading: false,
         lastLoadedAt: new Date().toISOString(),
       });
-      return jobs;
+      return payload;
     } catch (error) {
-      set({ loading: false, error: error.message, errorCode: error.code });
+      set({ jobs: [], repairSummary: emptyRepairSummary, loading: false, error: error.message, errorCode: error.code });
       return null;
     }
   },

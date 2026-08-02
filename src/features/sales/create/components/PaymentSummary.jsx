@@ -60,7 +60,7 @@ const PaymentSummary = ({
           <div className="space-y-1.5 border-b border-slate-100 pb-2">
             <div className="flex justify-between items-center bg-slate-900 text-white p-2 rounded-xl shadow-inner select-none">
               <span className="text-[11px] font-black tracking-wide uppercase opacity-70">ยอดสุทธิที่ต้องชำระ</span>
-              <span className="font-mono text-lg font-black text-teal-400">฿{fmt(totalNum)}</span>
+              <span data-testid="pos-sale-total-due" className="font-mono text-lg font-black text-teal-400">฿{fmt(totalNum)}</span>
             </div>
 
             <div className="flex justify-between items-center px-1 pt-1">
@@ -165,6 +165,7 @@ const PaymentSummary = ({
             }
           }}
           disabled={!isConfirmEnabled || isSubmitting}
+          data-testid="pos-sale-confirm-button"
           className="h-9 bg-slate-900 hover:bg-slate-800 text-white font-black text-xs rounded-xl active:scale-[0.99] transition-all shadow-md disabled:opacity-40 disabled:transform-none disabled:shadow-none"
         >
           {isSubmitting

@@ -2,9 +2,9 @@
   "schemaVersion": 2,
   "requestedBy": "ChatGPT",
   "mode": "SyncAndCertify",
-  "requestedAt": "2026-08-02T11:44:00+07:00",
+  "requestedAt": "2026-08-03T01:20:00+07:00",
   "triggerKind": "new-certification",
-  "expectedPreTriggerClientHead": "eaf80959c88c7fa5bfeaedae1191d373d069ee07",
-  "expectedServerHead": "ed5ab3a5c2b27f7ddf752f2c165eb4e827eb09d8",
-  "reason": "Certify Price Authority & Governance after server PR #238 merged to main. This is a New Trigger because the expected server source authority changed. Required evidence: client sourceSha/clientHead must equal the new trigger commit created by this file update; serverHead must equal ed5ab3a5c2b27f7ddf752f2c165eb4e827eb09d8; both repositories must be clean on main; preflight must PASS; full gates must have failedGateCount 0; every skipped gate must be explicitly classified; runtime/startup evidence and latest/history Result Bridge records must match this workflow run."
+  "expectedPreTriggerClientHead": "391cdce204991a0e5886596c70e185c32dca1e76",
+  "expectedServerHead": "4b69844e2500d8c22eb4ff81bd50e33b7df63c04",
+  "reason": "Certify Tax Expense nullable date-filter fix after server PR #251 merged to main. Required evidence: client sourceSha/clientHead must equal the trigger commit created by this file update; metadata.serverHead must equal 4b69844e2500d8c22eb4ff81bd50e33b7df63c04; runner must be ALDE-WIN01; mode must be SyncAndCertify; failedGateCount must be 0; runtime/startup/test evidence and latest/history Result Bridge records must match the same workflow run."
 }

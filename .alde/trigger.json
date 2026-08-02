@@ -2,6 +2,6 @@
   "schemaVersion": 1,
   "requestedBy": "ChatGPT",
   "mode": "SyncAndCertify",
-  "requestedAt": "2026-08-01T14:51:40+07:00",
-  "reason": "Re-certify Sale Root Store History Authority Retirement after aligning seven stale compatibility contracts with the certified Printable, Dashboard, and Document-Line capability owners. Expected client main before trigger is 5dfab478ad99a693238954ebf737c7d71173b532 and expected server main remains e4f27df950d2e71d62b1767fae1dda8d3f2b4d2c. Verify clean main branches, fast-forward synchronization, exact certified client/server heads, full frontend typecheck/lint/build/test:run including the seven corrected contracts, backend certification, Prisma validate/generate, Partner Store Test DB verifiers, backend and frontend startup smoke tests, and failed gates = 0. Human Operational Test remains separate and UNEXECUTED. No production database behavior is claimed by this certification."
+  "requestedAt": "2026-08-02T11:40:00+07:00",
+  "reason": "Certify the post-merge Tax Expense operating-expense E2E increment. Local ALDE repositories were confirmed on clean main branches before trigger. Expected pre-trigger client main is bac764e1dad868302f6ca902ed223e77e5760c66 (Tax Expense workspace merge) and expected server main is 9154f2bc03087fe5ce68010b5244ec695181c98c (Tax Expense runtime merge). SyncAndCertify must fast-forward both repositories, certify the trigger commit as clientHead and 9154f2bc03087fe5ce68010b5244ec695181c98c as serverHead, run the full certification gates and startup evidence, then publish latest and history result-bridge records. Do not claim human operational testing or production database mutation."
 }

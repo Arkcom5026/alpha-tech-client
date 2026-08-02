@@ -110,13 +110,33 @@ test.describe('Repair intake completion (Test DB)', () => {
 
     const evidenceResponsePromise = page.waitForResponse(
       (response) => response.request().method() === 'POST'
-        && response.url().includes(`/api/repairs/jobs/${repairJobId}/intake-evidence`)
-        && response.ok(),
+        && response.url().includes(`/api/repairs/jobs/${repairJobId}/intake-evidence`),
       { timeout: 30_000 }
     );
     await page.getByRole('button', { name: 'บันทึกหลักฐานดิจิทัล' }).click();
-    await evidenceResponsePromise;
+    const evidenceResponse = await evidenceResponsePromise;
+    const evidenceBodyText = await evidenceResponse.text();
+    let evidenceBody = null;
+    try {
+      evidenceBody = JSON.parse(evidenceBodyText);
+    } catch (_) {}
+
+    expect(
+      evidenceResponse.ok(),
+      `Saving intake evidence failed with HTTP ${evidenceResponse.status()}: ${evidenceBodyText}`
+    ).toBeTruthy();
+
+    const savedEvidence = evidenceBody?.data ?? evidenceBody;
+    expect(
+      savedEvidence?.photos?.length,
+      `Intake evidence API succeeded without persisting a condition photo: ${evidenceBodyText}`
+    ).toBeGreaterThan(0);
+    expect(savedEvidence?.completion?.hasConditionPhoto).toBe(true);
+    expect(savedEvidence?.completion?.hasConsent).toBe(true);
+
     await expect(page.getByText(/ยืนยันโดย Repair E2E Customer/)).toBeVisible();
+    await expect(page.getByText('ยังไม่มีภาพหลักฐาน')).toHaveCount(0);
+    await expect(page.getByRole('img', { name: /หลักฐานรับเครื่อง 1/i })).toBeVisible();
 
     await statusSelect.selectOption('IN_PROGRESS');
     await page.getByPlaceholder('บันทึกความคืบหน้า').fill('E2E intake evidence complete');

@@ -106,8 +106,10 @@ Assert-Repository -Path $ServerPath -Label 'Server'
 
 $aldeScript = Join-Path $ClientPath 'local-build.ps1'
 $classifierScript = Join-Path $ClientPath 'tools\runner\classify-alde-failures.ps1'
+$preflightScript = Join-Path $ClientPath 'tools\runner\invoke-alde-preflight.ps1'
 if (-not (Test-Path -LiteralPath $aldeScript -PathType Leaf)) { throw "ALDE engine does not exist: $aldeScript" }
 if (-not (Test-Path -LiteralPath $classifierScript -PathType Leaf)) { throw "ALDE classifier does not exist: $classifierScript" }
+if (-not (Test-Path -LiteralPath $preflightScript -PathType Leaf)) { throw "ALDE preflight does not exist: $preflightScript" }
 
 if (-not $EvidencePath) {
   $EvidencePath = if ($env:GITHUB_WORKSPACE) {
@@ -124,7 +126,10 @@ $startedAt = Get-Date
 $timestamp = $startedAt.ToString('yyyyMMdd-HHmmss')
 $transcriptPath = Join-Path $EvidencePath "alde-transcript-$timestamp.log"
 $metadataPath = Join-Path $EvidencePath 'runner-result.json'
+$preflightReportPath = Join-Path $EvidencePath "alde-preflight-$timestamp.json"
 $publishedReportPath = ''
+$preflight = $null
+$preflightExitCode = 1
 $status = 'FAIL'
 $engineExitCode = 1
 $assessment = $null
@@ -137,6 +142,18 @@ try {
   # the transcript artifact exists for classification and publication.
   Start-Transcript -LiteralPath $transcriptPath -Force | Out-Null
   $transcriptStarted = $true
+
+  Write-Section 'ALDE RELIABILITY PREFLIGHT'
+  & $preflightScript `
+    -ClientPath $ClientPath `
+    -ServerPath $ServerPath `
+    -RequiredBranch $RequiredBranch `
+    -ReportPath $preflightReportPath
+  $preflightExitCode = $LASTEXITCODE
+  $preflight = Get-Content -LiteralPath $preflightReportPath -Raw | ConvertFrom-Json
+  if ($preflightExitCode -ne 0) {
+    throw "ALDE preflight blocked certification."
+  }
 
   Write-Section 'ALDE ENGINE EXECUTION'
   & $aldeScript `
@@ -211,6 +228,9 @@ finally {
     engineExitCode = $engineExitCode
     pipelineExitCode = $exitCode
     pipelineError = $pipelineError
+    preflight = $preflight
+    preflightReportPath = $preflightReportPath
+    preflightExitCode = $preflightExitCode
     assessment = $assessment
     reportPath = if ($publishedReportPath) { $publishedReportPath } else { $null }
     transcriptPath = $transcriptPath

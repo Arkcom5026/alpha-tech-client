@@ -19,10 +19,10 @@ This directory is the module-owned Browser E2E package for repair intake complet
 
 Use the values emitted by the paired Server fixture command.
 
-## Run
+## Run from this package
 
 ```powershell
-npm run test:e2e:repair-intake
+.\src\features\repair\e2e\intake-completion\run-browser-e2e.ps1
 ```
 
-After Browser PASS, run the paired Server read-only verifier with the fixture run token.
+After Browser PASS, run the paired Server read-only verifier with the fixture RepairJob ID.

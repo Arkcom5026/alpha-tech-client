@@ -59,7 +59,7 @@ const RepairJobsPage = () => {
           <input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="ค้นหาเลขใบงาน รุ่น อาการ หรือลูกค้า"
+            placeholder="ค้นหาเลขใบงาน ลูกค้า รุ่น อาการ Barcode, Serial หรือ IMEI"
             className="min-h-12 flex-1 rounded-xl border border-slate-300 px-4"
           />
 

@@ -82,7 +82,11 @@ export const repairApi = {
       'allowOutsourceRepair',
     ].forEach((field) => form.append(field, String(evidence[field] ?? '')));
     return request(
-      () => apiClient.post(`/repairs/jobs/${id}/intake-evidence`, form),
+      () => apiClient.post(`/repairs/jobs/${id}/intake-evidence`, form, {
+        // apiClient defaults to application/json. Remove that default so Axios/the
+        // browser can generate multipart/form-data with the required boundary.
+        headers: { 'Content-Type': undefined },
+      }),
       'ไม่สามารถบันทึกหลักฐานการรับเครื่องได้'
     );
   },

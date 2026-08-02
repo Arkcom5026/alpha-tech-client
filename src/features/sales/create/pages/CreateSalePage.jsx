@@ -158,6 +158,7 @@ const QuickSalePage = () => {
                 placeholder="ยิงบาร์โค้ดสินค้าแบบชิ้นหรือแบบจำนวนเพื่อเพิ่มรายการขาย..."
                 onKeyDown={sale.itemSearch.handleBarcodeSearch}
                 disabled={checkoutLocked}
+                data-testid="pos-sale-barcode-input"
                 className="h-8 w-full pl-9 pr-4 text-xs font-mono font-black bg-slate-50 focus:bg-white border border-slate-200 focus:border-slate-900 rounded-lg outline-none shadow-inner transition-all"
               />
             </div>

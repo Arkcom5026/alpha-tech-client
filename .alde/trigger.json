@@ -2,6 +2,6 @@
   "schemaVersion": 1,
   "requestedBy": "ChatGPT",
   "mode": "SyncAndCertify",
-  "requestedAt": "2026-08-02T11:40:00+07:00",
-  "reason": "Certify the post-merge Tax Expense operating-expense E2E increment. Local ALDE repositories were confirmed on clean main branches before trigger. Expected pre-trigger client main is bac764e1dad868302f6ca902ed223e77e5760c66 (Tax Expense workspace merge) and expected server main is 9154f2bc03087fe5ce68010b5244ec695181c98c (Tax Expense runtime merge). SyncAndCertify must fast-forward both repositories, certify the trigger commit as clientHead and 9154f2bc03087fe5ce68010b5244ec695181c98c as serverHead, run the full certification gates and startup evidence, then publish latest and history result-bridge records. Do not claim human operational testing or production database mutation."
+  "requestedAt": "2026-08-02T11:20:00+07:00",
+  "reason": "Certify the post-merge Tax Expense operating-expense E2E increment after targeted recovery. Preconditions: local client and server were confirmed on clean main branches. Expected pre-trigger client main is 891d0cd38fa75c5104aa033c337b1736b91051c8. Expected server main is 5a28ea57e84b329cefa2d2a2b032aa36a092f9a9, containing the minimal Procurement receipt-detail test-fixture alignment. Required evidence: SyncAndCertify must fast-forward both repositories, certify this trigger commit as clientHead and 5a28ea57e84b329cefa2d2a2b032aa36a092f9a9 as serverHead, complete full gates with failedGateCount 0, and publish matching latest and history result-bridge records. Human operational testing and production database mutation remain out of scope."
 }

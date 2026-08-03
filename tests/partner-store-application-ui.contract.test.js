@@ -12,6 +12,7 @@ describe('partner store application UI contract', () => {
     const review = read('src/features/partnerStoreApplication/pages/PartnerStoreApplicationReviewPage.jsx');
     const router = read('src/routes/AppRouter.jsx');
     const superadmin = read('src/routes/superadmin/superAdminRoutes.jsx');
+    const superadminMenu = read('src/config/sidebarSuperadminItems.js');
 
     expect(api).toContain("'/public/partner-store-applications'");
     expect(api).toContain("'/partner-store/applications'");
@@ -27,7 +28,11 @@ describe('partner store application UI contract', () => {
     expect(review).toContain('อนุมัติและเปิดร้าน');
     expect(review).toContain('ปฏิเสธ');
     expect(router).toContain("'partner-portal/apply'");
-    expect(superadmin).toContain("'partner-store-applications'");
+    expect(superadmin).toContain("path: 'partner-store-applications'");
+    expect(superadmin).toContain('<PartnerStoreApplicationReviewPage />');
+    expect(superadmin).toContain('../governance/partner-store-applications');
+    expect(superadminMenu).toContain('ใบสมัครร้านพาร์ทเนอร์');
+    expect(superadminMenu).toContain('${basePath}/governance/partner-store-applications');
     expect(apply).not.toContain("'/auth/register'");
   });
 });

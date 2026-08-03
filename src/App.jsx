@@ -5,13 +5,39 @@ import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
-// เชื่อมต่อตรงเข้าหาผังเมืองหลักพิกัดใหม่ที่สะอาดที่สุด
 import AppRouter from './routes/AppRouter';
 
 const router = createBrowserRouter(AppRouter);
 
 let initialAuthBootstrapPromise = null;
 let initialAuthBootstrapStarted = false;
+
+const PUBLIC_AUTH_ENTRY_PATHS = new Set([
+  '/login',
+  '/partner-portal/forgot-password',
+  '/partner-portal/reset-password',
+]);
+
+const isPublicAuthEntryPath = (pathname) => {
+  const normalizedPath = String(pathname || '/').replace(/\/+$/, '') || '/';
+  return PUBLIC_AUTH_ENTRY_PATHS.has(normalizedPath);
+};
+
+const hasRecoverableSessionEvidence = (state) => Boolean(
+  state?.accessToken ||
+  state?.token ||
+  state?.session ||
+  state?.rememberMe,
+);
+
+const settlePublicUnauthenticatedBootstrap = () => {
+  useAuthStore.setState({
+    authChecked: true,
+    isBootstrappingAuth: false,
+    authBootstrapState: 'unauthenticated',
+    authError: null,
+  });
+};
 
 const runInitialAuthBootstrapOnce = (bootstrapAuthAction) => {
   if (initialAuthBootstrapStarted || initialAuthBootstrapPromise) {
@@ -37,19 +63,27 @@ const App = () => {
   const [bootstrapReady, setBootstrapReady] = useState(false);
 
   useEffect(() => {
+    const state = useAuthStore.getState();
+    const pathname = typeof window !== 'undefined' ? window.location.pathname : '/';
+
+    if (isPublicAuthEntryPath(pathname) && !hasRecoverableSessionEvidence(state)) {
+      settlePublicUnauthenticatedBootstrap();
+      initialAuthBootstrapStarted = true;
+      setBootstrapReady(true);
+      return;
+    }
+
     const promise = runInitialAuthBootstrapOnce(bootstrapAuthAction);
     if (promise) {
       promise.finally(() => setBootstrapReady(true));
     } else {
-      // If bootstrap already completed synchronously, mark ready
-      const state = useAuthStore.getState();
-      if (state.authBootstrapState !== 'idle' && state.authBootstrapState !== 'loading') {
+      const latestState = useAuthStore.getState();
+      if (latestState.authBootstrapState !== 'idle' && latestState.authBootstrapState !== 'loading') {
         setBootstrapReady(true);
       }
     }
   }, [bootstrapAuthAction]);
 
-  // Also check if bootstrap already reached terminal state outside the effect
   useEffect(() => {
     if (!bootstrapReady) {
       const state = useAuthStore.getState();
@@ -59,7 +93,6 @@ const App = () => {
     }
   }, [authBootstrapState, bootstrapReady]);
 
-  // Bootstrap gate: wait until bootstrap reaches a terminal state before rendering RouterProvider
   if (!bootstrapReady) {
     return (
       <>

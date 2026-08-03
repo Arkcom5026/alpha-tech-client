@@ -161,12 +161,14 @@ const SaleCustomerSection = ({ productSearchRef, clearTrigger, onClearFinish, on
       {view.feedback.formError && <div className="mb-2 rounded-md border border-rose-100 bg-rose-50 p-1.5 text-[10px] font-black text-rose-600">{view.feedback.formError}</div>}
       {view.feedback.formInfo && <div className="mb-2 rounded-md border border-emerald-100 bg-emerald-50 p-1.5 text-[10px] font-black text-emerald-700">{view.feedback.formInfo}</div>}
 
-      <SaleCustomerSearchResults
-        results={view.search.results}
-        selectedCustomerId={view.search.selectedResultId}
-        loading={view.search.loading}
-        onSelect={handleSelectResult}
-      />
+      {!view.selection.selectedCustomer && (
+        <SaleCustomerSearchResults
+          results={view.search.results}
+          selectedCustomerId={view.search.selectedResultId}
+          loading={view.search.loading}
+          onSelect={handleSelectResult}
+        />
+      )}
 
       {(view.selection.selectedCustomer || view.selection.pendingCreate) && (
         <SaleCustomerDetailsForm

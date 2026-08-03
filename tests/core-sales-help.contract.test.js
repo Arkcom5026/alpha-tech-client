@@ -75,10 +75,12 @@ describe('Core Sales Help contract', () => {
     expect(pack).toMatch(/Browser PASS โดยไม่มี Test-DB post-condition ยังไม่ถือว่า E2E PASS/);
   });
 
-  test('drawer exposes an accessible close boundary and consumes module-owned content', () => {
+  test('drawer exposes customer-search guidance and an accessible close boundary', () => {
     const drawer = read('src/features/sales/help/CoreSalesHelpDrawer.jsx');
 
     expect(drawer).toMatch(/coreSalesHelpContent/);
+    expect(drawer).toMatch(/coreSalesHelpContent\.customerSearch/);
+    expect(drawer).toMatch(/การค้นหาและเลือกลูกค้า/);
     expect(drawer).toMatch(/role="dialog"/);
     expect(drawer).toMatch(/aria-modal="true"/);
     expect(drawer).toMatch(/onClose/);

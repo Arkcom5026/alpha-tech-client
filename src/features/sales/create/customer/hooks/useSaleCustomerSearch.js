@@ -4,6 +4,8 @@ const normalizeResultList = (payload) => (
   Array.isArray(payload?.results) ? payload.results : Array.isArray(payload) ? payload : []
 );
 
+const isPhoneLikeQuery = (value) => /^[\d\s()+-]+$/.test(value);
+
 export const useSaleCustomerSearch = ({
   searchCustomers,
   onCustomerNotFound,
@@ -41,10 +43,11 @@ export const useSaleCustomerSearch = ({
         return;
       }
 
-      const digits = text.replace(/\D/g, '');
+      const phoneLike = isPhoneLikeQuery(text);
+      const digits = phoneLike ? text.replace(/\D/g, '') : '';
       await onCustomerNotFound({
-        mode: /^\d+$/.test(digits) && digits.length >= 4 ? 'phone' : 'name',
-        query: /^\d+$/.test(digits) ? digits : text,
+        mode: phoneLike && digits.length >= 4 ? 'phone' : 'name',
+        query: phoneLike ? digits : text,
       });
     } catch (searchError) {
       setError(

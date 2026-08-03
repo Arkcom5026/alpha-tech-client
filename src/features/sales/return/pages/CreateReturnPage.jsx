@@ -82,13 +82,12 @@ const CreateReturnPage = () => {
         })),
       });
 
-      const fullTaxInvoiceReturn = (
-        eligibility.sale?.isTaxInvoice === true
-        && Math.abs(eligibleTotal - Number(eligibility.sale.totalAmount || 0)) <= 0.005
+      const fullRefundReturn = (
+        Math.abs(eligibleTotal - Number(eligibility.sale.totalAmount || 0)) <= 0.005
         && Math.abs(refundTotal - Number(eligibility.sale.totalAmount || 0)) <= 0.005
         && deduction <= 0.005
       );
-      if (fullTaxInvoiceReturn) {
+      if (fullRefundReturn) {
         try {
           const creditNote = await issueCreditNoteForSaleReturn({
             branchId: completedReturn.branchId,
@@ -102,6 +101,11 @@ const CreateReturnPage = () => {
           );
           return;
         } catch (creditNoteError) {
+          const code = creditNoteError.response?.data?.code || creditNoteError.response?.data?.error;
+          if (code === 'TAX_CREDIT_NOTE_ORIGINAL_DOCUMENT_NOT_FOUND') {
+            navigate(`/${shopSlug}/pos/sales/sale-return`, { replace: true });
+            return;
+          }
           setError(
             `คืนสินค้าและคืนเงินสำเร็จแล้ว แต่ยังออกใบลดหนี้ไม่สำเร็จ: ${creditNoteError.response?.data?.message || creditNoteError.message}`,
           );

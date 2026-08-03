@@ -2,9 +2,9 @@
   "schemaVersion": 2,
   "requestedBy": "ChatGPT",
   "mode": "SyncAndCertify",
-  "requestedAt": "2026-08-03T03:18:00+07:00",
+  "requestedAt": "2026-08-03T14:09:00+07:00",
   "triggerKind": "new-certification",
-  "expectedPreTriggerClientHead": "53dea04b47f38afa012db07e6ac8b0c53d27cd95",
-  "expectedServerHead": "31e50bdae4b01aa7502e0fd99df8d4916659c7d6",
-  "reason": "Re-run post-merge ALDE certification after excluding module-owned Playwright Browser E2E specs from Vitest and making the POS Sale runtime outcome verifier contract-safe when no workflow fixture barcode is supplied. Required evidence: client sourceSha/clientHead must equal the trigger commit created by this file update; metadata.serverHead must equal 31e50bdae4b01aa7502e0fd99df8d4916659c7d6; runner must be ALDE-WIN01; mode must be SyncAndCertify; failedGateCount must be 0; latest/history Result Bridge records must match the same workflow run."
+  "expectedPreTriggerClientHead": "94c1703b54546016b8f7809f770a06fb866b81ce",
+  "expectedServerHead": "8705c85bb44dc3da62db5cf5797410c5b71c0792",
+  "reason": "Post-commit ALDE certification for the receiving stock scan ADS light-theme increment. Required evidence: workflow sourceSha and metadata.clientHead must equal the trigger commit created by this update; metadata.serverHead must equal 8705c85bb44dc3da62db5cf5797410c5b71c0792; runner must be ALDE-WIN01; mode must be SyncAndCertify; failedGateCount must be 0; latest/history Result Bridge records must identify the same workflow run. Scope authority: src/features/stockItem/pages/ScanBarcodeListPage.jsx presentation-layer modernization while preserving barcode, serial-number, queue, receive-all, SN edit, and finalize behavior."
 }

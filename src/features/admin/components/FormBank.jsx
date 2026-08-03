@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 
-import { toast } from 'react-toastify';
+import { notification } from '@/runtime';
 import { createBank } from '../api/bank';
 import useBankStore from '@/store/bankStore';
 import { useAuthStore } from '@/features/auth/store/authStore';
@@ -25,13 +25,13 @@ const FormBank = () => {
         //code
         e.preventDefault()
         if (!name) {
-            return toast.warning('Please fill data')
+            return notification.warning('Please fill data')
         }
         //console.log(token,{name})
         try {
             const res = await createBank(token, { name })
             console.log(res.data.name)
-            toast.success(`Add Bank ${res.data.name} Success!!!`)
+            notification.success(`Add Bank ${res.data.name} Success!!!`)
             getBank(token)
         } catch (err) {
             console.log(err)
@@ -44,7 +44,7 @@ const FormBank = () => {
         try {
             const res = await removeBank(token,id)
             console.log(res)
-            toast.success(`Deleted ${res.data.name} success`)
+            notification.success(`Deleted ${res.data.name} success`)
             getBank(token)
         } catch (err) {
             console.log(err)

@@ -23,6 +23,13 @@ jobs:
     - name: 📦 บรรจุและติดตั้ง Packages ฝั่งหน้าบ้าน
       run: npm ci
 
+    - name: 🧪 ตรวจสัญญา Sale Customer Search E2E Increment
+      run: >-
+        npx vitest run
+        tests/sale-customer-section-structural-extraction.contract.test.js
+        tests/sale-completion-customer-branch-error.contract.test.js
+        tests/sale-customer-first-association.contract.test.js
+
     - name: 🧪 ตรวจสัญญาคู่มือภายในงานรับซ่อม
       run: npm run test:repair-in-app-help
 

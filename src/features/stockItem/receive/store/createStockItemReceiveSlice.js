@@ -8,10 +8,9 @@ export const createStockItemReceiveSlice = (set, get) => ({
   loading: false,
   error: null,
 
-  receiveSNAction: async ({ barcode, serialNumber, receiptItemId, keepSN } = {}) => {
+  receiveSNAction: async ({ barcode, serialNumber, receiptItemId } = {}) => {
     const normalizedBarcode = String(barcode || '').trim();
     const normalizedSerialNumber = String(serialNumber || '').trim();
-    const shouldKeepSN = keepSN === true;
     const code = normalizedBarcode;
 
     if (!code) {
@@ -19,16 +18,6 @@ export const createStockItemReceiveSlice = (set, get) => ({
         scannedList: [
           ...state.scannedList,
           { barcode: '', status: 'error', error: 'กรุณาระบุบาร์โค้ด' },
-        ],
-      }));
-      return;
-    }
-
-    if (shouldKeepSN && !normalizedSerialNumber) {
-      set((state) => ({
-        scannedList: [
-          ...state.scannedList,
-          { barcode: code, status: 'error', error: 'กรุณาระบุ SN' },
         ],
       }));
       return;
@@ -53,9 +42,8 @@ export const createStockItemReceiveSlice = (set, get) => ({
     try {
       const result = await receiveScannedStockItem({
         barcode: code,
-        serialNumber: normalizedSerialNumber,
+        serialNumber: normalizedSerialNumber || null,
         receiptItemId,
-        keepSN: shouldKeepSN,
       });
       const data = result?.sourceResponse ?? result;
       const kind = data?.stockItem ? 'SN' : data?.lot ? 'LOT' : undefined;

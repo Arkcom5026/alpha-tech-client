@@ -17,6 +17,8 @@ const paths = {
   projection: path.join(base, 'projections/saleCustomerSectionProjection.js'),
   index: path.join(base, 'index.js'),
   createSalePage: path.join(root, 'src/features/sales/create/pages/CreateSalePage.jsx'),
+  customerApi: path.join(root, 'src/features/customer/api/customerApi.js'),
+  customerStore: path.join(root, 'src/features/customer/store/customerStore.js'),
 };
 
 const read = (filePath) => fs.readFileSync(filePath, 'utf8');
@@ -38,23 +40,32 @@ const hydrationHook = read(paths.hydrationHook);
 const projection = read(paths.projection);
 const index = read(paths.index);
 const createSalePage = read(paths.createSalePage);
+const customerApi = read(paths.customerApi);
+const customerStore = read(paths.customerStore);
 
-assert(searchComponent.includes("from 'react-input-mask'"), 'Search presentation must preserve phone mask behavior');
-assert(searchComponent.includes("searchMode === 'phone'"), 'Search presentation must preserve phone mode');
-assert(searchComponent.includes("searchMode === 'name'"), 'Search presentation must preserve name mode');
+assert(!searchComponent.includes('react-input-mask'), 'Unified search must not require a phone-only mask');
+assert(!searchComponent.includes('searchMode'), 'Unified search must not expose caller-selected modes');
+assert(searchComponent.includes('ชื่อ เบอร์โทร บริษัท หน่วยงาน อีเมล หรือเลขผู้เสียภาษี'), 'Search presentation must describe the customer-only fields');
+assert(searchComponent.includes('ไม่ค้นหาสินค้า บาร์โค้ด หรือหมายเลขอุปกรณ์'), 'Sale search must state the device-search boundary');
 assert(!searchComponent.includes('apiClient'), 'Search presentation must not call APIs');
 assert(!searchComponent.includes('useCustomerDepositStore'), 'Search presentation must not own Deposit state');
 assert(!resultsComponent.includes('apiClient'), 'Result presentation must not call APIs');
 assert(resultsComponent.includes('onSelect(customer)'), 'Result presentation must delegate selection intent');
+assert(resultsComponent.includes('customer.phone'), 'Results must expose phone evidence');
 assert(detailsComponent.includes('AddressForm'), 'Details presentation must own address rendering');
 assert(!detailsComponent.includes('apiClient'), 'Details presentation must not call APIs');
 
 assert(searchHook.includes('submitSearch'), 'Search hook must own search execution');
 assert(searchHook.includes('setResults'), 'Search hook must own result state');
 assert(searchHook.includes('onCustomerNotFound'), 'Search hook must own not-found signaling');
-assert(searchHook.includes('/^[0-9]{10}$/'), 'Current 10-digit phone search invariant must remain');
+assert(searchHook.includes('searchCustomers(text)'), 'Search hook must use unified customer authority');
+assert(!searchHook.includes('searchByPhone'), 'Search hook must retire phone-mode authority');
+assert(!searchHook.includes('searchByName'), 'Search hook must retire name-mode authority');
 assert(!searchHook.includes('useSalesStore'), 'Search hook must not own Sale state');
 assert(!searchHook.includes('useCustomerDepositStore'), 'Search hook must not own Deposit state');
+
+assert(customerApi.includes("apiClient.get('/customers/search'"), 'Customer API must call the unified search endpoint');
+assert(customerStore.includes('searchStoreCustomersAction'), 'Customer store must expose unified search authority');
 
 assert(editorHook.includes('validateForSave'), 'Editor hook must own save validation');
 assert(editorHook.includes('createPayload'), 'Editor hook must own payload projection');
@@ -62,16 +73,21 @@ assert(editorHook.includes('hydrateCustomer'), 'Editor hook must own customer fi
 assert(editorHook.includes('addressDetail'), 'Editor hook must own address fields');
 assert(!editorHook.includes('apiClient'), 'Editor hook must not call APIs directly');
 
-assert(hydrationHook.includes('searchByCustomerId'), 'Hydration hook must own full customer lookup delegation');
+assert(hydrationHook.includes('searchByCustomerId'), 'Hydration hook must own full customer/deposit lookup delegation');
 assert(hydrationHook.includes('setCustomerId'), 'Hydration hook must own Sale customer handoff');
 assert(hydrationHook.includes('setDepositAmount'), 'Hydration hook must own Deposit projection');
 assert(hydrationHook.includes('productSearchRef'), 'Hydration hook must own product-search focus handoff');
 assert(!hydrationHook.includes('/repairs/'), 'Hydration hook must not own Repair workflow');
 
 assert(projection.includes('projectSaleCustomerSection'), 'Projection must expose a stable Sale customer view model');
+assert(projection.includes('query: search.query'), 'Projection must expose the unified query');
 assert(projection.includes('selection'), 'Projection must include selection state');
 assert(projection.includes('feedback'), 'Projection must include feedback state');
 
+assert(shell.includes('searchStoreCustomersAction'), 'Composition shell must use Customer Search authority');
+assert(shell.includes('searchCustomerByCustomerIdAndDepositAction'), 'Deposit lookup must occur after selection');
+assert(!shell.includes('searchCustomerByPhoneAndDepositAction'), 'Deposit module must not own Sale search');
+assert(!shell.includes('searchCustomerByNameAndDepositAction'), 'Deposit module must not own Sale search');
 assert(shell.includes('useSaleCustomerSearch'), 'Composition shell must delegate search responsibility');
 assert(shell.includes('useSaleCustomerEditor'), 'Composition shell must delegate editor responsibility');
 assert(shell.includes('useSaleCustomerHydration'), 'Composition shell must delegate hydration responsibility');

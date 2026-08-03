@@ -1,0 +1,1344 @@
+{
+    "schemaVersion":  2,
+    "status":  "PASS",
+    "repository":  "Arkcom5026/alpha-tech-client",
+    "sourceBranch":  "main",
+    "sourceSha":  "b8deaeee7b7837ac9e572e89f7d692b3849a3624",
+    "eventName":  "push",
+    "workflow":  "ALDE Local Certification",
+    "workflowRunId":  30816641999,
+    "workflowRunAttempt":  1,
+    "workflowRunUrl":  "https://github.com/Arkcom5026/alpha-tech-client/actions/runs/30816641999",
+    "publishedAt":  "2026-08-03T13:12:22.6174271Z",
+    "runner":  {
+                   "name":  "ALDE-WIN01",
+                   "os":  "Windows",
+                   "architecture":  "X64"
+               },
+    "metadata":  {
+                     "schemaVersion":  5,
+                     "status":  "PASS",
+                     "mode":  "SyncAndCertify",
+                     "startedAt":  "2026-08-03T13:09:49.5879179Z",
+                     "finishedAt":  "2026-08-03T13:12:13.4867047Z",
+                     "runnerName":  "ALDE-WIN01",
+                     "workflowRunId":  "30816641999",
+                     "clientPath":  "D:\\alpha-tech\\client",
+                     "serverPath":  "D:\\alpha-tech\\server",
+                     "clientHead":  "b8deaeee7b7837ac9e572e89f7d692b3849a3624",
+                     "serverHead":  "6ece5c8f3e0158a764a45af6579a0ad26cd1531a",
+                     "engineExitCode":  0,
+                     "pipelineExitCode":  0,
+                     "pipelineError":  "",
+                     "preflight":  {
+                                       "schemaVersion":  1,
+                                       "status":  "PASS",
+                                       "name":  "ALDE Reliability Preflight",
+                                       "startedAt":  "2026-08-03T13:09:50.0900382Z",
+                                       "requiredBranch":  "main",
+                                       "repositories":  {
+                                                            "client":  {
+                                                                           "label":  "Client",
+                                                                           "path":  "D:\\alpha-tech\\client",
+                                                                           "branch":  "main",
+                                                                           "head":  "16fd542be86fa74f83cbeb0ebffcdaaeefa13bb7",
+                                                                           "clean":  true,
+                                                                           "dirtyEntries":  [
+
+                                                                                            ],
+                                                                           "issues":  [
+
+                                                                                      ]
+                                                                       },
+                                                            "server":  {
+                                                                           "label":  "Server",
+                                                                           "path":  "D:\\alpha-tech\\server",
+                                                                           "branch":  "main",
+                                                                           "head":  "6ece5c8f3e0158a764a45af6579a0ad26cd1531a",
+                                                                           "clean":  true,
+                                                                           "dirtyEntries":  [
+
+                                                                                            ],
+                                                                           "issues":  [
+
+                                                                                      ]
+                                                                       }
+                                                        },
+                                       "prismaGenerateLockSignals":  [
+
+                                                                     ],
+                                       "issues":  [
+
+                                                  ],
+                                       "remediation":  [
+                                                           "Keep both repositories on the required branch with clean working trees.",
+                                                           "Do not write verification logs into either repository working tree.",
+                                                           "Stop only the identified Alpha-Tech server node process before rerunning if Prisma generate lock risk is reported."
+                                                       ]
+                                   },
+                     "preflightReportPath":  "D:\\alde\\actions-runner\\_work\\alpha-tech-client\\alpha-tech-client\\alde-evidence\\alde-preflight-20260803-200949.json",
+                     "preflightExitCode":  0,
+                     "assessment":  {
+                                        "schemaVersion":  2,
+                                        "classifier":  {
+                                                           "name":  "ALDE Transcript-Aware Failure Classification Engine",
+                                                           "version":  "1.1.1",
+                                                           "evidenceSources":  [
+                                                                                   "gate.name",
+                                                                                   "gate.detail",
+                                                                                   "execution transcript",
+                                                                                   "preflight.issues"
+                                                                               ],
+                                                           "conservativeUnknownPolicy":  "UNCLASSIFIED is certification-failing until reviewed.",
+                                                           "earlyFailurePolicy":  "Preflight failures without normal gates are preserved as a synthetic ALDE preflight gate."
+                                                       },
+                                        "authorityStatus":  "PASS",
+                                        "regressionCount":  0,
+                                        "environmentBlockerCount":  0,
+                                        "safetyGuardCount":  0,
+                                        "unclassifiedCount":  0,
+                                        "failedGateCount":  0,
+                                        "requiredPassedGateCount":  38,
+                                        "advisorySkippedGateCount":  1,
+                                        "blockingSkippedGateCount":  0,
+                                        "interpretation":  "All certification gates passed.",
+                                        "gates":  [
+                                                      {
+                                                          "name":  "Frontend typecheck",
+                                                          "status":  "PASS",
+                                                          "failureClass":  null,
+                                                          "reasonCode":  null,
+                                                          "matchedPattern":  null,
+                                                          "durationSeconds":  7.62,
+                                                          "detail":  "",
+                                                          "transcriptEvidence":  "",
+                                                          "gatePolicy":  "REQUIRED"
+                                                      },
+                                                      {
+                                                          "name":  "Frontend lint",
+                                                          "status":  "PASS",
+                                                          "failureClass":  null,
+                                                          "reasonCode":  null,
+                                                          "matchedPattern":  null,
+                                                          "durationSeconds":  0.81,
+                                                          "detail":  "",
+                                                          "transcriptEvidence":  "",
+                                                          "gatePolicy":  "REQUIRED"
+                                                      },
+                                                      {
+                                                          "name":  "Frontend build",
+                                                          "status":  "PASS",
+                                                          "failureClass":  null,
+                                                          "reasonCode":  null,
+                                                          "matchedPattern":  null,
+                                                          "durationSeconds":  17.56,
+                                                          "detail":  "",
+                                                          "transcriptEvidence":  "",
+                                                          "gatePolicy":  "REQUIRED"
+                                                      },
+                                                      {
+                                                          "name":  "Frontend test:run",
+                                                          "status":  "PASS",
+                                                          "failureClass":  null,
+                                                          "reasonCode":  null,
+                                                          "matchedPattern":  null,
+                                                          "durationSeconds":  18.33,
+                                                          "detail":  "",
+                                                          "transcriptEvidence":  "",
+                                                          "gatePolicy":  "REQUIRED"
+                                                      },
+                                                      {
+                                                          "name":  "Backend entry syntax check",
+                                                          "status":  "PASS",
+                                                          "failureClass":  null,
+                                                          "reasonCode":  null,
+                                                          "matchedPattern":  null,
+                                                          "durationSeconds":  0.07,
+                                                          "detail":  "",
+                                                          "transcriptEvidence":  "",
+                                                          "gatePolicy":  "REQUIRED"
+                                                      },
+                                                      {
+                                                          "name":  "Prisma validate",
+                                                          "status":  "PASS",
+                                                          "failureClass":  null,
+                                                          "reasonCode":  null,
+                                                          "matchedPattern":  null,
+                                                          "durationSeconds":  4.21,
+                                                          "detail":  "",
+                                                          "transcriptEvidence":  "",
+                                                          "gatePolicy":  "REQUIRED"
+                                                      },
+                                                      {
+                                                          "name":  "Prisma generate",
+                                                          "status":  "PASS",
+                                                          "failureClass":  null,
+                                                          "reasonCode":  null,
+                                                          "matchedPattern":  null,
+                                                          "durationSeconds":  8.31,
+                                                          "detail":  "",
+                                                          "transcriptEvidence":  "",
+                                                          "gatePolicy":  "REQUIRED"
+                                                      },
+                                                      {
+                                                          "name":  "Backend regression tests",
+                                                          "status":  "PASS",
+                                                          "failureClass":  null,
+                                                          "reasonCode":  null,
+                                                          "matchedPattern":  null,
+                                                          "durationSeconds":  28.23,
+                                                          "detail":  "",
+                                                          "transcriptEvidence":  "",
+                                                          "gatePolicy":  "REQUIRED"
+                                                      },
+                                                      {
+                                                          "name":  "Backend verify:device-aggregate",
+                                                          "status":  "PASS",
+                                                          "failureClass":  null,
+                                                          "reasonCode":  null,
+                                                          "matchedPattern":  null,
+                                                          "durationSeconds":  1.22,
+                                                          "detail":  "",
+                                                          "transcriptEvidence":  "",
+                                                          "gatePolicy":  "REQUIRED"
+                                                      },
+                                                      {
+                                                          "name":  "Backend verify:employee-lifecycle",
+                                                          "status":  "PASS",
+                                                          "failureClass":  null,
+                                                          "reasonCode":  null,
+                                                          "matchedPattern":  null,
+                                                          "durationSeconds":  4.56,
+                                                          "detail":  "",
+                                                          "transcriptEvidence":  "",
+                                                          "gatePolicy":  "REQUIRED"
+                                                      },
+                                                      {
+                                                          "name":  "Backend verify:output-tax-issuance-outcome",
+                                                          "status":  "PASS",
+                                                          "failureClass":  null,
+                                                          "reasonCode":  null,
+                                                          "matchedPattern":  null,
+                                                          "durationSeconds":  0.84,
+                                                          "detail":  "",
+                                                          "transcriptEvidence":  "",
+                                                          "gatePolicy":  "REQUIRED"
+                                                      },
+                                                      {
+                                                          "name":  "Backend verify:output-tax-issuance-schema",
+                                                          "status":  "PASS",
+                                                          "failureClass":  null,
+                                                          "reasonCode":  null,
+                                                          "matchedPattern":  null,
+                                                          "durationSeconds":  1.36,
+                                                          "detail":  "",
+                                                          "transcriptEvidence":  "",
+                                                          "gatePolicy":  "REQUIRED"
+                                                      },
+                                                      {
+                                                          "name":  "Backend verify:partner-store-application-http-e2e:test",
+                                                          "status":  "PASS",
+                                                          "failureClass":  null,
+                                                          "reasonCode":  null,
+                                                          "matchedPattern":  null,
+                                                          "durationSeconds":  11.1,
+                                                          "detail":  "",
+                                                          "transcriptEvidence":  "",
+                                                          "gatePolicy":  "REQUIRED"
+                                                      },
+                                                      {
+                                                          "name":  "Backend verify:partner-store-application-runtime",
+                                                          "status":  "SKIP",
+                                                          "failureClass":  null,
+                                                          "reasonCode":  null,
+                                                          "matchedPattern":  null,
+                                                          "durationSeconds":  0,
+                                                          "detail":  "Direct runtime write verifier is intentionally excluded; use the dedicated :test wrapper with Test DB authority.",
+                                                          "transcriptEvidence":  "",
+                                                          "gatePolicy":  "ADVISORY_SKIP"
+                                                      },
+                                                      {
+                                                          "name":  "Backend verify:partner-store-application-runtime:test",
+                                                          "status":  "PASS",
+                                                          "failureClass":  null,
+                                                          "reasonCode":  null,
+                                                          "matchedPattern":  null,
+                                                          "durationSeconds":  5.15,
+                                                          "detail":  "",
+                                                          "transcriptEvidence":  "",
+                                                          "gatePolicy":  "REQUIRED"
+                                                      },
+                                                      {
+                                                          "name":  "Backend verify:pos-sale-e2e-outcome",
+                                                          "status":  "PASS",
+                                                          "failureClass":  null,
+                                                          "reasonCode":  null,
+                                                          "matchedPattern":  null,
+                                                          "durationSeconds":  0.58,
+                                                          "detail":  "",
+                                                          "transcriptEvidence":  "",
+                                                          "gatePolicy":  "REQUIRED"
+                                                      },
+                                                      {
+                                                          "name":  "Backend verify:product-backend-migration",
+                                                          "status":  "PASS",
+                                                          "failureClass":  null,
+                                                          "reasonCode":  null,
+                                                          "matchedPattern":  null,
+                                                          "durationSeconds":  1.59,
+                                                          "detail":  "",
+                                                          "transcriptEvidence":  "",
+                                                          "gatePolicy":  "REQUIRED"
+                                                      },
+                                                      {
+                                                          "name":  "Backend verify:product-create-compatibility",
+                                                          "status":  "PASS",
+                                                          "failureClass":  null,
+                                                          "reasonCode":  null,
+                                                          "matchedPattern":  null,
+                                                          "durationSeconds":  0.77,
+                                                          "detail":  "",
+                                                          "transcriptEvidence":  "",
+                                                          "gatePolicy":  "REQUIRED"
+                                                      },
+                                                      {
+                                                          "name":  "Backend verify:product-inventory-authority",
+                                                          "status":  "PASS",
+                                                          "failureClass":  null,
+                                                          "reasonCode":  null,
+                                                          "matchedPattern":  null,
+                                                          "durationSeconds":  0.59,
+                                                          "detail":  "",
+                                                          "transcriptEvidence":  "",
+                                                          "gatePolicy":  "REQUIRED"
+                                                      },
+                                                      {
+                                                          "name":  "Backend verify:product-inventory-runtime",
+                                                          "status":  "PASS",
+                                                          "failureClass":  null,
+                                                          "reasonCode":  null,
+                                                          "matchedPattern":  null,
+                                                          "durationSeconds":  0.59,
+                                                          "detail":  "",
+                                                          "transcriptEvidence":  "",
+                                                          "gatePolicy":  "REQUIRED"
+                                                      },
+                                                      {
+                                                          "name":  "Backend verify:product-mode-policy",
+                                                          "status":  "PASS",
+                                                          "failureClass":  null,
+                                                          "reasonCode":  null,
+                                                          "matchedPattern":  null,
+                                                          "durationSeconds":  0.57,
+                                                          "detail":  "",
+                                                          "transcriptEvidence":  "",
+                                                          "gatePolicy":  "REQUIRED"
+                                                      },
+                                                      {
+                                                          "name":  "Backend verify:product-operational-smoke",
+                                                          "status":  "PASS",
+                                                          "failureClass":  null,
+                                                          "reasonCode":  null,
+                                                          "matchedPattern":  null,
+                                                          "durationSeconds":  0.58,
+                                                          "detail":  "",
+                                                          "transcriptEvidence":  "",
+                                                          "gatePolicy":  "REQUIRED"
+                                                      },
+                                                      {
+                                                          "name":  "Backend verify:product-runtime-input",
+                                                          "status":  "PASS",
+                                                          "failureClass":  null,
+                                                          "reasonCode":  null,
+                                                          "matchedPattern":  null,
+                                                          "durationSeconds":  0.57,
+                                                          "detail":  "",
+                                                          "transcriptEvidence":  "",
+                                                          "gatePolicy":  "REQUIRED"
+                                                      },
+                                                      {
+                                                          "name":  "Backend verify:product-runtime-mappers",
+                                                          "status":  "PASS",
+                                                          "failureClass":  null,
+                                                          "reasonCode":  null,
+                                                          "matchedPattern":  null,
+                                                          "durationSeconds":  0.57,
+                                                          "detail":  "",
+                                                          "transcriptEvidence":  "",
+                                                          "gatePolicy":  "REQUIRED"
+                                                      },
+                                                      {
+                                                          "name":  "Backend verify:product-stock-availability",
+                                                          "status":  "PASS",
+                                                          "failureClass":  null,
+                                                          "reasonCode":  null,
+                                                          "matchedPattern":  null,
+                                                          "durationSeconds":  0.58,
+                                                          "detail":  "",
+                                                          "transcriptEvidence":  "",
+                                                          "gatePolicy":  "REQUIRED"
+                                                      },
+                                                      {
+                                                          "name":  "Backend verify:product-vertical-slices",
+                                                          "status":  "PASS",
+                                                          "failureClass":  null,
+                                                          "reasonCode":  null,
+                                                          "matchedPattern":  null,
+                                                          "durationSeconds":  0.56,
+                                                          "detail":  "",
+                                                          "transcriptEvidence":  "",
+                                                          "gatePolicy":  "REQUIRED"
+                                                      },
+                                                      {
+                                                          "name":  "Backend verify:repair-capability",
+                                                          "status":  "PASS",
+                                                          "failureClass":  null,
+                                                          "reasonCode":  null,
+                                                          "matchedPattern":  null,
+                                                          "durationSeconds":  1.36,
+                                                          "detail":  "",
+                                                          "transcriptEvidence":  "",
+                                                          "gatePolicy":  "REQUIRED"
+                                                      },
+                                                      {
+                                                          "name":  "Backend verify:sale-simple-inventory-authority",
+                                                          "status":  "PASS",
+                                                          "failureClass":  null,
+                                                          "reasonCode":  null,
+                                                          "matchedPattern":  null,
+                                                          "durationSeconds":  0.7,
+                                                          "detail":  "",
+                                                          "transcriptEvidence":  "",
+                                                          "gatePolicy":  "REQUIRED"
+                                                      },
+                                                      {
+                                                          "name":  "Backend verify:simple-adjustment-authority",
+                                                          "status":  "PASS",
+                                                          "failureClass":  null,
+                                                          "reasonCode":  null,
+                                                          "matchedPattern":  null,
+                                                          "durationSeconds":  0.54,
+                                                          "detail":  "",
+                                                          "transcriptEvidence":  "",
+                                                          "gatePolicy":  "REQUIRED"
+                                                      },
+                                                      {
+                                                          "name":  "Backend verify:simple-receive-authority",
+                                                          "status":  "PASS",
+                                                          "failureClass":  null,
+                                                          "reasonCode":  null,
+                                                          "matchedPattern":  null,
+                                                          "durationSeconds":  0.52,
+                                                          "detail":  "",
+                                                          "transcriptEvidence":  "",
+                                                          "gatePolicy":  "REQUIRED"
+                                                      },
+                                                      {
+                                                          "name":  "Backend verify:simple-transfer-authority",
+                                                          "status":  "PASS",
+                                                          "failureClass":  null,
+                                                          "reasonCode":  null,
+                                                          "matchedPattern":  null,
+                                                          "durationSeconds":  0.52,
+                                                          "detail":  "",
+                                                          "transcriptEvidence":  "",
+                                                          "gatePolicy":  "REQUIRED"
+                                                      },
+                                                      {
+                                                          "name":  "Backend verify:tax-authority",
+                                                          "status":  "PASS",
+                                                          "failureClass":  null,
+                                                          "reasonCode":  null,
+                                                          "matchedPattern":  null,
+                                                          "durationSeconds":  1.15,
+                                                          "detail":  "",
+                                                          "transcriptEvidence":  "",
+                                                          "gatePolicy":  "REQUIRED"
+                                                      },
+                                                      {
+                                                          "name":  "Backend verify:tax-expense-release-schema",
+                                                          "status":  "PASS",
+                                                          "failureClass":  null,
+                                                          "reasonCode":  null,
+                                                          "matchedPattern":  null,
+                                                          "durationSeconds":  1.43,
+                                                          "detail":  "",
+                                                          "transcriptEvidence":  "",
+                                                          "gatePolicy":  "REQUIRED"
+                                                      },
+                                                      {
+                                                          "name":  "Backend verify:tax-expense-tenant-preflight",
+                                                          "status":  "PASS",
+                                                          "failureClass":  null,
+                                                          "reasonCode":  null,
+                                                          "matchedPattern":  null,
+                                                          "durationSeconds":  1.04,
+                                                          "detail":  "",
+                                                          "transcriptEvidence":  "",
+                                                          "gatePolicy":  "REQUIRED"
+                                                      },
+                                                      {
+                                                          "name":  "Backend verify:tax-expense-tenant-schema",
+                                                          "status":  "PASS",
+                                                          "failureClass":  null,
+                                                          "reasonCode":  null,
+                                                          "matchedPattern":  null,
+                                                          "durationSeconds":  1.09,
+                                                          "detail":  "",
+                                                          "transcriptEvidence":  "",
+                                                          "gatePolicy":  "REQUIRED"
+                                                      },
+                                                      {
+                                                          "name":  "Backend verify:tax-issuer-profile-schema",
+                                                          "status":  "PASS",
+                                                          "failureClass":  null,
+                                                          "reasonCode":  null,
+                                                          "matchedPattern":  null,
+                                                          "durationSeconds":  1.58,
+                                                          "detail":  "",
+                                                          "transcriptEvidence":  "",
+                                                          "gatePolicy":  "REQUIRED"
+                                                      },
+                                                      {
+                                                          "name":  "Backend verify:test-database-authority",
+                                                          "status":  "PASS",
+                                                          "failureClass":  null,
+                                                          "reasonCode":  null,
+                                                          "matchedPattern":  null,
+                                                          "durationSeconds":  0.54,
+                                                          "detail":  "",
+                                                          "transcriptEvidence":  "",
+                                                          "gatePolicy":  "REQUIRED"
+                                                      },
+                                                      {
+                                                          "name":  "Backend startup smoke test",
+                                                          "status":  "PASS",
+                                                          "failureClass":  null,
+                                                          "reasonCode":  null,
+                                                          "matchedPattern":  null,
+                                                          "durationSeconds":  1.5,
+                                                          "detail":  "",
+                                                          "transcriptEvidence":  "",
+                                                          "gatePolicy":  "REQUIRED"
+                                                      },
+                                                      {
+                                                          "name":  "Frontend startup smoke test",
+                                                          "status":  "PASS",
+                                                          "failureClass":  null,
+                                                          "reasonCode":  null,
+                                                          "matchedPattern":  null,
+                                                          "durationSeconds":  1.59,
+                                                          "detail":  "",
+                                                          "transcriptEvidence":  "",
+                                                          "gatePolicy":  "REQUIRED"
+                                                      }
+                                                  ]
+                                    },
+                     "reportPath":  "D:\\alde\\actions-runner\\_work\\alpha-tech-client\\alpha-tech-client\\alde-evidence\\alde-20260803-201213.json",
+                     "transcriptPath":  "D:\\alde\\actions-runner\\_work\\alpha-tech-client\\alpha-tech-client\\alde-evidence\\alde-transcript-20260803-200949.log"
+                 },
+    "verificationReport":  {
+                               "schemaVersion":  3,
+                               "engine":  {
+                                              "name":  "Alpha-Tech Local Development Engine",
+                                              "version":  "1.1.1-phase1",
+                                              "workflow":  "Git-first E2E Increment Full Certification",
+                                              "mode":  "SyncAndCertify",
+                                              "executionPolicy":  "full-certification",
+                                              "runtimeCompatibility":  "Windows PowerShell 5.1+"
+                                          },
+                               "status":  "PASS",
+                               "failureMessage":  "",
+                               "failedGateCount":  0,
+                               "startedAt":  "2026-08-03T20:09:50.1929502+07:00",
+                               "finishedAt":  "2026-08-03T20:12:12.6315302+07:00",
+                               "environment":  {
+                                                   "machine":  "DESKTOP-8GBTJDF",
+                                                   "user":  "Administrator",
+                                                   "powershell":  "5.1.19041.6157",
+                                                   "node":  "v20.19.0",
+                                                   "npm":  "10.8.2"
+                                               },
+                               "repositories":  {
+                                                    "client":  {
+                                                                   "path":  "D:\\alpha-tech\\client",
+                                                                   "branch":  "main",
+                                                                   "head":  "b8deaeee7b7837ac9e572e89f7d692b3849a3624",
+                                                                   "clean":  true,
+                                                                   "status":  [
+
+                                                                              ]
+                                                               },
+                                                    "server":  {
+                                                                   "path":  "D:\\alpha-tech\\server",
+                                                                   "branch":  "main",
+                                                                   "head":  "6ece5c8f3e0158a764a45af6579a0ad26cd1531a",
+                                                                   "clean":  true,
+                                                                   "status":  [
+
+                                                                              ]
+                                                               }
+                                                },
+                               "certifiedHeads":  {
+                                                      "client":  "b8deaeee7b7837ac9e572e89f7d692b3849a3624",
+                                                      "server":  "6ece5c8f3e0158a764a45af6579a0ad26cd1531a"
+                                                  },
+                               "gates":  [
+                                             {
+                                                 "name":  "Frontend typecheck",
+                                                 "status":  "PASS",
+                                                 "durationSeconds":  7.62,
+                                                 "detail":  ""
+                                             },
+                                             {
+                                                 "name":  "Frontend lint",
+                                                 "status":  "PASS",
+                                                 "durationSeconds":  0.81,
+                                                 "detail":  ""
+                                             },
+                                             {
+                                                 "name":  "Frontend build",
+                                                 "status":  "PASS",
+                                                 "durationSeconds":  17.56,
+                                                 "detail":  ""
+                                             },
+                                             {
+                                                 "name":  "Frontend test:run",
+                                                 "status":  "PASS",
+                                                 "durationSeconds":  18.33,
+                                                 "detail":  ""
+                                             },
+                                             {
+                                                 "name":  "Backend entry syntax check",
+                                                 "status":  "PASS",
+                                                 "durationSeconds":  0.07,
+                                                 "detail":  ""
+                                             },
+                                             {
+                                                 "name":  "Prisma validate",
+                                                 "status":  "PASS",
+                                                 "durationSeconds":  4.21,
+                                                 "detail":  ""
+                                             },
+                                             {
+                                                 "name":  "Prisma generate",
+                                                 "status":  "PASS",
+                                                 "durationSeconds":  8.31,
+                                                 "detail":  ""
+                                             },
+                                             {
+                                                 "name":  "Backend regression tests",
+                                                 "status":  "PASS",
+                                                 "durationSeconds":  28.23,
+                                                 "detail":  ""
+                                             },
+                                             {
+                                                 "name":  "Backend verify:device-aggregate",
+                                                 "status":  "PASS",
+                                                 "durationSeconds":  1.22,
+                                                 "detail":  ""
+                                             },
+                                             {
+                                                 "name":  "Backend verify:employee-lifecycle",
+                                                 "status":  "PASS",
+                                                 "durationSeconds":  4.56,
+                                                 "detail":  ""
+                                             },
+                                             {
+                                                 "name":  "Backend verify:output-tax-issuance-outcome",
+                                                 "status":  "PASS",
+                                                 "durationSeconds":  0.84,
+                                                 "detail":  ""
+                                             },
+                                             {
+                                                 "name":  "Backend verify:output-tax-issuance-schema",
+                                                 "status":  "PASS",
+                                                 "durationSeconds":  1.36,
+                                                 "detail":  ""
+                                             },
+                                             {
+                                                 "name":  "Backend verify:partner-store-application-http-e2e:test",
+                                                 "status":  "PASS",
+                                                 "durationSeconds":  11.1,
+                                                 "detail":  ""
+                                             },
+                                             {
+                                                 "name":  "Backend verify:partner-store-application-runtime",
+                                                 "status":  "SKIP",
+                                                 "durationSeconds":  0,
+                                                 "detail":  "Direct runtime write verifier is intentionally excluded; use the dedicated :test wrapper with Test DB authority."
+                                             },
+                                             {
+                                                 "name":  "Backend verify:partner-store-application-runtime:test",
+                                                 "status":  "PASS",
+                                                 "durationSeconds":  5.15,
+                                                 "detail":  ""
+                                             },
+                                             {
+                                                 "name":  "Backend verify:pos-sale-e2e-outcome",
+                                                 "status":  "PASS",
+                                                 "durationSeconds":  0.58,
+                                                 "detail":  ""
+                                             },
+                                             {
+                                                 "name":  "Backend verify:product-backend-migration",
+                                                 "status":  "PASS",
+                                                 "durationSeconds":  1.59,
+                                                 "detail":  ""
+                                             },
+                                             {
+                                                 "name":  "Backend verify:product-create-compatibility",
+                                                 "status":  "PASS",
+                                                 "durationSeconds":  0.77,
+                                                 "detail":  ""
+                                             },
+                                             {
+                                                 "name":  "Backend verify:product-inventory-authority",
+                                                 "status":  "PASS",
+                                                 "durationSeconds":  0.59,
+                                                 "detail":  ""
+                                             },
+                                             {
+                                                 "name":  "Backend verify:product-inventory-runtime",
+                                                 "status":  "PASS",
+                                                 "durationSeconds":  0.59,
+                                                 "detail":  ""
+                                             },
+                                             {
+                                                 "name":  "Backend verify:product-mode-policy",
+                                                 "status":  "PASS",
+                                                 "durationSeconds":  0.57,
+                                                 "detail":  ""
+                                             },
+                                             {
+                                                 "name":  "Backend verify:product-operational-smoke",
+                                                 "status":  "PASS",
+                                                 "durationSeconds":  0.58,
+                                                 "detail":  ""
+                                             },
+                                             {
+                                                 "name":  "Backend verify:product-runtime-input",
+                                                 "status":  "PASS",
+                                                 "durationSeconds":  0.57,
+                                                 "detail":  ""
+                                             },
+                                             {
+                                                 "name":  "Backend verify:product-runtime-mappers",
+                                                 "status":  "PASS",
+                                                 "durationSeconds":  0.57,
+                                                 "detail":  ""
+                                             },
+                                             {
+                                                 "name":  "Backend verify:product-stock-availability",
+                                                 "status":  "PASS",
+                                                 "durationSeconds":  0.58,
+                                                 "detail":  ""
+                                             },
+                                             {
+                                                 "name":  "Backend verify:product-vertical-slices",
+                                                 "status":  "PASS",
+                                                 "durationSeconds":  0.56,
+                                                 "detail":  ""
+                                             },
+                                             {
+                                                 "name":  "Backend verify:repair-capability",
+                                                 "status":  "PASS",
+                                                 "durationSeconds":  1.36,
+                                                 "detail":  ""
+                                             },
+                                             {
+                                                 "name":  "Backend verify:sale-simple-inventory-authority",
+                                                 "status":  "PASS",
+                                                 "durationSeconds":  0.7,
+                                                 "detail":  ""
+                                             },
+                                             {
+                                                 "name":  "Backend verify:simple-adjustment-authority",
+                                                 "status":  "PASS",
+                                                 "durationSeconds":  0.54,
+                                                 "detail":  ""
+                                             },
+                                             {
+                                                 "name":  "Backend verify:simple-receive-authority",
+                                                 "status":  "PASS",
+                                                 "durationSeconds":  0.52,
+                                                 "detail":  ""
+                                             },
+                                             {
+                                                 "name":  "Backend verify:simple-transfer-authority",
+                                                 "status":  "PASS",
+                                                 "durationSeconds":  0.52,
+                                                 "detail":  ""
+                                             },
+                                             {
+                                                 "name":  "Backend verify:tax-authority",
+                                                 "status":  "PASS",
+                                                 "durationSeconds":  1.15,
+                                                 "detail":  ""
+                                             },
+                                             {
+                                                 "name":  "Backend verify:tax-expense-release-schema",
+                                                 "status":  "PASS",
+                                                 "durationSeconds":  1.43,
+                                                 "detail":  ""
+                                             },
+                                             {
+                                                 "name":  "Backend verify:tax-expense-tenant-preflight",
+                                                 "status":  "PASS",
+                                                 "durationSeconds":  1.04,
+                                                 "detail":  ""
+                                             },
+                                             {
+                                                 "name":  "Backend verify:tax-expense-tenant-schema",
+                                                 "status":  "PASS",
+                                                 "durationSeconds":  1.09,
+                                                 "detail":  ""
+                                             },
+                                             {
+                                                 "name":  "Backend verify:tax-issuer-profile-schema",
+                                                 "status":  "PASS",
+                                                 "durationSeconds":  1.58,
+                                                 "detail":  ""
+                                             },
+                                             {
+                                                 "name":  "Backend verify:test-database-authority",
+                                                 "status":  "PASS",
+                                                 "durationSeconds":  0.54,
+                                                 "detail":  ""
+                                             },
+                                             {
+                                                 "name":  "Backend startup smoke test",
+                                                 "status":  "PASS",
+                                                 "durationSeconds":  1.5,
+                                                 "detail":  ""
+                                             },
+                                             {
+                                                 "name":  "Frontend startup smoke test",
+                                                 "status":  "PASS",
+                                                 "durationSeconds":  1.59,
+                                                 "detail":  ""
+                                             }
+                                         ],
+                               "executedCommands":  [
+                                                        "git -C D:\\alpha-tech\\client branch --show-current",
+                                                        "git -C D:\\alpha-tech\\client rev-parse HEAD",
+                                                        "git -C D:\\alpha-tech\\client status --porcelain=v1 --untracked-files=all",
+                                                        "git -C D:\\alpha-tech\\server branch --show-current",
+                                                        "git -C D:\\alpha-tech\\server rev-parse HEAD",
+                                                        "git -C D:\\alpha-tech\\server status --porcelain=v1 --untracked-files=all",
+                                                        "git -C D:\\alpha-tech\\client branch --show-current",
+                                                        "git -C D:\\alpha-tech\\client rev-parse HEAD",
+                                                        "git -C D:\\alpha-tech\\client status --porcelain=v1 --untracked-files=all",
+                                                        "git -C D:\\alpha-tech\\client fetch origin --prune",
+                                                        "git -C D:\\alpha-tech\\client rev-list --left-right --count HEAD...origin/main",
+                                                        "git -C D:\\alpha-tech\\client pull --ff-only origin main",
+                                                        "git -C D:\\alpha-tech\\server branch --show-current",
+                                                        "git -C D:\\alpha-tech\\server rev-parse HEAD",
+                                                        "git -C D:\\alpha-tech\\server status --porcelain=v1 --untracked-files=all",
+                                                        "git -C D:\\alpha-tech\\server fetch origin --prune",
+                                                        "git -C D:\\alpha-tech\\server rev-list --left-right --count HEAD...origin/main",
+                                                        "[D:\\alpha-tech\\client] npm run typecheck",
+                                                        "[D:\\alpha-tech\\client] npm run lint",
+                                                        "[D:\\alpha-tech\\client] npm run build",
+                                                        "[D:\\alpha-tech\\client] npm run test:run",
+                                                        "[D:\\alpha-tech\\server] node --check server.js",
+                                                        "[D:\\alpha-tech\\server] npx prisma validate",
+                                                        "[D:\\alpha-tech\\server] npx prisma generate",
+                                                        "[D:\\alpha-tech\\server] npm run test",
+                                                        "[D:\\alpha-tech\\server] npm run verify:device-aggregate",
+                                                        "[D:\\alpha-tech\\server] npm run verify:employee-lifecycle",
+                                                        "[D:\\alpha-tech\\server] npm run verify:output-tax-issuance-outcome",
+                                                        "[D:\\alpha-tech\\server] npm run verify:output-tax-issuance-schema",
+                                                        "[D:\\alpha-tech\\server] npm run verify:partner-store-application-http-e2e:test",
+                                                        "[D:\\alpha-tech\\server] npm run verify:partner-store-application-runtime:test",
+                                                        "[D:\\alpha-tech\\server] npm run verify:pos-sale-e2e-outcome",
+                                                        "[D:\\alpha-tech\\server] npm run verify:product-backend-migration",
+                                                        "[D:\\alpha-tech\\server] npm run verify:product-create-compatibility",
+                                                        "[D:\\alpha-tech\\server] npm run verify:product-inventory-authority",
+                                                        "[D:\\alpha-tech\\server] npm run verify:product-inventory-runtime",
+                                                        "[D:\\alpha-tech\\server] npm run verify:product-mode-policy",
+                                                        "[D:\\alpha-tech\\server] npm run verify:product-operational-smoke",
+                                                        "[D:\\alpha-tech\\server] npm run verify:product-runtime-input",
+                                                        "[D:\\alpha-tech\\server] npm run verify:product-runtime-mappers",
+                                                        "[D:\\alpha-tech\\server] npm run verify:product-stock-availability",
+                                                        "[D:\\alpha-tech\\server] npm run verify:product-vertical-slices",
+                                                        "[D:\\alpha-tech\\server] npm run verify:repair-capability",
+                                                        "[D:\\alpha-tech\\server] npm run verify:sale-simple-inventory-authority",
+                                                        "[D:\\alpha-tech\\server] npm run verify:simple-adjustment-authority",
+                                                        "[D:\\alpha-tech\\server] npm run verify:simple-receive-authority",
+                                                        "[D:\\alpha-tech\\server] npm run verify:simple-transfer-authority",
+                                                        "[D:\\alpha-tech\\server] npm run verify:tax-authority",
+                                                        "[D:\\alpha-tech\\server] npm run verify:tax-expense-release-schema",
+                                                        "[D:\\alpha-tech\\server] npm run verify:tax-expense-tenant-preflight",
+                                                        "[D:\\alpha-tech\\server] npm run verify:tax-expense-tenant-schema",
+                                                        "[D:\\alpha-tech\\server] npm run verify:tax-issuer-profile-schema",
+                                                        "[D:\\alpha-tech\\server] npm run verify:test-database-authority",
+                                                        "[D:\\alpha-tech\\server] C:\\Program Files\\nodejs\\node.exe server.js",
+                                                        "[D:\\alpha-tech\\client] C:\\Program Files\\nodejs\\npm.cmd run dev -- --host 127.0.0.1 --port 5173 --strictPort",
+                                                        "git -C D:\\alpha-tech\\client branch --show-current",
+                                                        "git -C D:\\alpha-tech\\client rev-parse HEAD",
+                                                        "git -C D:\\alpha-tech\\client status --porcelain=v1 --untracked-files=all",
+                                                        "git -C D:\\alpha-tech\\server branch --show-current",
+                                                        "git -C D:\\alpha-tech\\server rev-parse HEAD",
+                                                        "git -C D:\\alpha-tech\\server status --porcelain=v1 --untracked-files=all",
+                                                        "node --version",
+                                                        "npm --version"
+                                                    ],
+                               "assessment":  {
+                                                  "schemaVersion":  2,
+                                                  "classifier":  {
+                                                                     "name":  "ALDE Transcript-Aware Failure Classification Engine",
+                                                                     "version":  "1.1.1",
+                                                                     "evidenceSources":  [
+                                                                                             "gate.name",
+                                                                                             "gate.detail",
+                                                                                             "execution transcript",
+                                                                                             "preflight.issues"
+                                                                                         ],
+                                                                     "conservativeUnknownPolicy":  "UNCLASSIFIED is certification-failing until reviewed.",
+                                                                     "earlyFailurePolicy":  "Preflight failures without normal gates are preserved as a synthetic ALDE preflight gate."
+                                                                 },
+                                                  "authorityStatus":  "PASS",
+                                                  "regressionCount":  0,
+                                                  "environmentBlockerCount":  0,
+                                                  "safetyGuardCount":  0,
+                                                  "unclassifiedCount":  0,
+                                                  "failedGateCount":  0,
+                                                  "requiredPassedGateCount":  38,
+                                                  "advisorySkippedGateCount":  1,
+                                                  "blockingSkippedGateCount":  0,
+                                                  "interpretation":  "All certification gates passed.",
+                                                  "gates":  [
+                                                                {
+                                                                    "name":  "Frontend typecheck",
+                                                                    "status":  "PASS",
+                                                                    "failureClass":  null,
+                                                                    "reasonCode":  null,
+                                                                    "matchedPattern":  null,
+                                                                    "durationSeconds":  7.62,
+                                                                    "detail":  "",
+                                                                    "transcriptEvidence":  "",
+                                                                    "gatePolicy":  "REQUIRED"
+                                                                },
+                                                                {
+                                                                    "name":  "Frontend lint",
+                                                                    "status":  "PASS",
+                                                                    "failureClass":  null,
+                                                                    "reasonCode":  null,
+                                                                    "matchedPattern":  null,
+                                                                    "durationSeconds":  0.81,
+                                                                    "detail":  "",
+                                                                    "transcriptEvidence":  "",
+                                                                    "gatePolicy":  "REQUIRED"
+                                                                },
+                                                                {
+                                                                    "name":  "Frontend build",
+                                                                    "status":  "PASS",
+                                                                    "failureClass":  null,
+                                                                    "reasonCode":  null,
+                                                                    "matchedPattern":  null,
+                                                                    "durationSeconds":  17.56,
+                                                                    "detail":  "",
+                                                                    "transcriptEvidence":  "",
+                                                                    "gatePolicy":  "REQUIRED"
+                                                                },
+                                                                {
+                                                                    "name":  "Frontend test:run",
+                                                                    "status":  "PASS",
+                                                                    "failureClass":  null,
+                                                                    "reasonCode":  null,
+                                                                    "matchedPattern":  null,
+                                                                    "durationSeconds":  18.33,
+                                                                    "detail":  "",
+                                                                    "transcriptEvidence":  "",
+                                                                    "gatePolicy":  "REQUIRED"
+                                                                },
+                                                                {
+                                                                    "name":  "Backend entry syntax check",
+                                                                    "status":  "PASS",
+                                                                    "failureClass":  null,
+                                                                    "reasonCode":  null,
+                                                                    "matchedPattern":  null,
+                                                                    "durationSeconds":  0.07,
+                                                                    "detail":  "",
+                                                                    "transcriptEvidence":  "",
+                                                                    "gatePolicy":  "REQUIRED"
+                                                                },
+                                                                {
+                                                                    "name":  "Prisma validate",
+                                                                    "status":  "PASS",
+                                                                    "failureClass":  null,
+                                                                    "reasonCode":  null,
+                                                                    "matchedPattern":  null,
+                                                                    "durationSeconds":  4.21,
+                                                                    "detail":  "",
+                                                                    "transcriptEvidence":  "",
+                                                                    "gatePolicy":  "REQUIRED"
+                                                                },
+                                                                {
+                                                                    "name":  "Prisma generate",
+                                                                    "status":  "PASS",
+                                                                    "failureClass":  null,
+                                                                    "reasonCode":  null,
+                                                                    "matchedPattern":  null,
+                                                                    "durationSeconds":  8.31,
+                                                                    "detail":  "",
+                                                                    "transcriptEvidence":  "",
+                                                                    "gatePolicy":  "REQUIRED"
+                                                                },
+                                                                {
+                                                                    "name":  "Backend regression tests",
+                                                                    "status":  "PASS",
+                                                                    "failureClass":  null,
+                                                                    "reasonCode":  null,
+                                                                    "matchedPattern":  null,
+                                                                    "durationSeconds":  28.23,
+                                                                    "detail":  "",
+                                                                    "transcriptEvidence":  "",
+                                                                    "gatePolicy":  "REQUIRED"
+                                                                },
+                                                                {
+                                                                    "name":  "Backend verify:device-aggregate",
+                                                                    "status":  "PASS",
+                                                                    "failureClass":  null,
+                                                                    "reasonCode":  null,
+                                                                    "matchedPattern":  null,
+                                                                    "durationSeconds":  1.22,
+                                                                    "detail":  "",
+                                                                    "transcriptEvidence":  "",
+                                                                    "gatePolicy":  "REQUIRED"
+                                                                },
+                                                                {
+                                                                    "name":  "Backend verify:employee-lifecycle",
+                                                                    "status":  "PASS",
+                                                                    "failureClass":  null,
+                                                                    "reasonCode":  null,
+                                                                    "matchedPattern":  null,
+                                                                    "durationSeconds":  4.56,
+                                                                    "detail":  "",
+                                                                    "transcriptEvidence":  "",
+                                                                    "gatePolicy":  "REQUIRED"
+                                                                },
+                                                                {
+                                                                    "name":  "Backend verify:output-tax-issuance-outcome",
+                                                                    "status":  "PASS",
+                                                                    "failureClass":  null,
+                                                                    "reasonCode":  null,
+                                                                    "matchedPattern":  null,
+                                                                    "durationSeconds":  0.84,
+                                                                    "detail":  "",
+                                                                    "transcriptEvidence":  "",
+                                                                    "gatePolicy":  "REQUIRED"
+                                                                },
+                                                                {
+                                                                    "name":  "Backend verify:output-tax-issuance-schema",
+                                                                    "status":  "PASS",
+                                                                    "failureClass":  null,
+                                                                    "reasonCode":  null,
+                                                                    "matchedPattern":  null,
+                                                                    "durationSeconds":  1.36,
+                                                                    "detail":  "",
+                                                                    "transcriptEvidence":  "",
+                                                                    "gatePolicy":  "REQUIRED"
+                                                                },
+                                                                {
+                                                                    "name":  "Backend verify:partner-store-application-http-e2e:test",
+                                                                    "status":  "PASS",
+                                                                    "failureClass":  null,
+                                                                    "reasonCode":  null,
+                                                                    "matchedPattern":  null,
+                                                                    "durationSeconds":  11.1,
+                                                                    "detail":  "",
+                                                                    "transcriptEvidence":  "",
+                                                                    "gatePolicy":  "REQUIRED"
+                                                                },
+                                                                {
+                                                                    "name":  "Backend verify:partner-store-application-runtime",
+                                                                    "status":  "SKIP",
+                                                                    "failureClass":  null,
+                                                                    "reasonCode":  null,
+                                                                    "matchedPattern":  null,
+                                                                    "durationSeconds":  0,
+                                                                    "detail":  "Direct runtime write verifier is intentionally excluded; use the dedicated :test wrapper with Test DB authority.",
+                                                                    "transcriptEvidence":  "",
+                                                                    "gatePolicy":  "ADVISORY_SKIP"
+                                                                },
+                                                                {
+                                                                    "name":  "Backend verify:partner-store-application-runtime:test",
+                                                                    "status":  "PASS",
+                                                                    "failureClass":  null,
+                                                                    "reasonCode":  null,
+                                                                    "matchedPattern":  null,
+                                                                    "durationSeconds":  5.15,
+                                                                    "detail":  "",
+                                                                    "transcriptEvidence":  "",
+                                                                    "gatePolicy":  "REQUIRED"
+                                                                },
+                                                                {
+                                                                    "name":  "Backend verify:pos-sale-e2e-outcome",
+                                                                    "status":  "PASS",
+                                                                    "failureClass":  null,
+                                                                    "reasonCode":  null,
+                                                                    "matchedPattern":  null,
+                                                                    "durationSeconds":  0.58,
+                                                                    "detail":  "",
+                                                                    "transcriptEvidence":  "",
+                                                                    "gatePolicy":  "REQUIRED"
+                                                                },
+                                                                {
+                                                                    "name":  "Backend verify:product-backend-migration",
+                                                                    "status":  "PASS",
+                                                                    "failureClass":  null,
+                                                                    "reasonCode":  null,
+                                                                    "matchedPattern":  null,
+                                                                    "durationSeconds":  1.59,
+                                                                    "detail":  "",
+                                                                    "transcriptEvidence":  "",
+                                                                    "gatePolicy":  "REQUIRED"
+                                                                },
+                                                                {
+                                                                    "name":  "Backend verify:product-create-compatibility",
+                                                                    "status":  "PASS",
+                                                                    "failureClass":  null,
+                                                                    "reasonCode":  null,
+                                                                    "matchedPattern":  null,
+                                                                    "durationSeconds":  0.77,
+                                                                    "detail":  "",
+                                                                    "transcriptEvidence":  "",
+                                                                    "gatePolicy":  "REQUIRED"
+                                                                },
+                                                                {
+                                                                    "name":  "Backend verify:product-inventory-authority",
+                                                                    "status":  "PASS",
+                                                                    "failureClass":  null,
+                                                                    "reasonCode":  null,
+                                                                    "matchedPattern":  null,
+                                                                    "durationSeconds":  0.59,
+                                                                    "detail":  "",
+                                                                    "transcriptEvidence":  "",
+                                                                    "gatePolicy":  "REQUIRED"
+                                                                },
+                                                                {
+                                                                    "name":  "Backend verify:product-inventory-runtime",
+                                                                    "status":  "PASS",
+                                                                    "failureClass":  null,
+                                                                    "reasonCode":  null,
+                                                                    "matchedPattern":  null,
+                                                                    "durationSeconds":  0.59,
+                                                                    "detail":  "",
+                                                                    "transcriptEvidence":  "",
+                                                                    "gatePolicy":  "REQUIRED"
+                                                                },
+                                                                {
+                                                                    "name":  "Backend verify:product-mode-policy",
+                                                                    "status":  "PASS",
+                                                                    "failureClass":  null,
+                                                                    "reasonCode":  null,
+                                                                    "matchedPattern":  null,
+                                                                    "durationSeconds":  0.57,
+                                                                    "detail":  "",
+                                                                    "transcriptEvidence":  "",
+                                                                    "gatePolicy":  "REQUIRED"
+                                                                },
+                                                                {
+                                                                    "name":  "Backend verify:product-operational-smoke",
+                                                                    "status":  "PASS",
+                                                                    "failureClass":  null,
+                                                                    "reasonCode":  null,
+                                                                    "matchedPattern":  null,
+                                                                    "durationSeconds":  0.58,
+                                                                    "detail":  "",
+                                                                    "transcriptEvidence":  "",
+                                                                    "gatePolicy":  "REQUIRED"
+                                                                },
+                                                                {
+                                                                    "name":  "Backend verify:product-runtime-input",
+                                                                    "status":  "PASS",
+                                                                    "failureClass":  null,
+                                                                    "reasonCode":  null,
+                                                                    "matchedPattern":  null,
+                                                                    "durationSeconds":  0.57,
+                                                                    "detail":  "",
+                                                                    "transcriptEvidence":  "",
+                                                                    "gatePolicy":  "REQUIRED"
+                                                                },
+                                                                {
+                                                                    "name":  "Backend verify:product-runtime-mappers",
+                                                                    "status":  "PASS",
+                                                                    "failureClass":  null,
+                                                                    "reasonCode":  null,
+                                                                    "matchedPattern":  null,
+                                                                    "durationSeconds":  0.57,
+                                                                    "detail":  "",
+                                                                    "transcriptEvidence":  "",
+                                                                    "gatePolicy":  "REQUIRED"
+                                                                },
+                                                                {
+                                                                    "name":  "Backend verify:product-stock-availability",
+                                                                    "status":  "PASS",
+                                                                    "failureClass":  null,
+                                                                    "reasonCode":  null,
+                                                                    "matchedPattern":  null,
+                                                                    "durationSeconds":  0.58,
+                                                                    "detail":  "",
+                                                                    "transcriptEvidence":  "",
+                                                                    "gatePolicy":  "REQUIRED"
+                                                                },
+                                                                {
+                                                                    "name":  "Backend verify:product-vertical-slices",
+                                                                    "status":  "PASS",
+                                                                    "failureClass":  null,
+                                                                    "reasonCode":  null,
+                                                                    "matchedPattern":  null,
+                                                                    "durationSeconds":  0.56,
+                                                                    "detail":  "",
+                                                                    "transcriptEvidence":  "",
+                                                                    "gatePolicy":  "REQUIRED"
+                                                                },
+                                                                {
+                                                                    "name":  "Backend verify:repair-capability",
+                                                                    "status":  "PASS",
+                                                                    "failureClass":  null,
+                                                                    "reasonCode":  null,
+                                                                    "matchedPattern":  null,
+                                                                    "durationSeconds":  1.36,
+                                                                    "detail":  "",
+                                                                    "transcriptEvidence":  "",
+                                                                    "gatePolicy":  "REQUIRED"
+                                                                },
+                                                                {
+                                                                    "name":  "Backend verify:sale-simple-inventory-authority",
+                                                                    "status":  "PASS",
+                                                                    "failureClass":  null,
+                                                                    "reasonCode":  null,
+                                                                    "matchedPattern":  null,
+                                                                    "durationSeconds":  0.7,
+                                                                    "detail":  "",
+                                                                    "transcriptEvidence":  "",
+                                                                    "gatePolicy":  "REQUIRED"
+                                                                },
+                                                                {
+                                                                    "name":  "Backend verify:simple-adjustment-authority",
+                                                                    "status":  "PASS",
+                                                                    "failureClass":  null,
+                                                                    "reasonCode":  null,
+                                                                    "matchedPattern":  null,
+                                                                    "durationSeconds":  0.54,
+                                                                    "detail":  "",
+                                                                    "transcriptEvidence":  "",
+                                                                    "gatePolicy":  "REQUIRED"
+                                                                },
+                                                                {
+                                                                    "name":  "Backend verify:simple-receive-authority",
+                                                                    "status":  "PASS",
+                                                                    "failureClass":  null,
+                                                                    "reasonCode":  null,
+                                                                    "matchedPattern":  null,
+                                                                    "durationSeconds":  0.52,
+                                                                    "detail":  "",
+                                                                    "transcriptEvidence":  "",
+                                                                    "gatePolicy":  "REQUIRED"
+                                                                },
+                                                                {
+                                                                    "name":  "Backend verify:simple-transfer-authority",
+                                                                    "status":  "PASS",
+                                                                    "failureClass":  null,
+                                                                    "reasonCode":  null,
+                                                                    "matchedPattern":  null,
+                                                                    "durationSeconds":  0.52,
+                                                                    "detail":  "",
+                                                                    "transcriptEvidence":  "",
+                                                                    "gatePolicy":  "REQUIRED"
+                                                                },
+                                                                {
+                                                                    "name":  "Backend verify:tax-authority",
+                                                                    "status":  "PASS",
+                                                                    "failureClass":  null,
+                                                                    "reasonCode":  null,
+                                                                    "matchedPattern":  null,
+                                                                    "durationSeconds":  1.15,
+                                                                    "detail":  "",
+                                                                    "transcriptEvidence":  "",
+                                                                    "gatePolicy":  "REQUIRED"
+                                                                },
+                                                                {
+                                                                    "name":  "Backend verify:tax-expense-release-schema",
+                                                                    "status":  "PASS",
+                                                                    "failureClass":  null,
+                                                                    "reasonCode":  null,
+                                                                    "matchedPattern":  null,
+                                                                    "durationSeconds":  1.43,
+                                                                    "detail":  "",
+                                                                    "transcriptEvidence":  "",
+                                                                    "gatePolicy":  "REQUIRED"
+                                                                },
+                                                                {
+                                                                    "name":  "Backend verify:tax-expense-tenant-preflight",
+                                                                    "status":  "PASS",
+                                                                    "failureClass":  null,
+                                                                    "reasonCode":  null,
+                                                                    "matchedPattern":  null,
+                                                                    "durationSeconds":  1.04,
+                                                                    "detail":  "",
+                                                                    "transcriptEvidence":  "",
+                                                                    "gatePolicy":  "REQUIRED"
+                                                                },
+                                                                {
+                                                                    "name":  "Backend verify:tax-expense-tenant-schema",
+                                                                    "status":  "PASS",
+                                                                    "failureClass":  null,
+                                                                    "reasonCode":  null,
+                                                                    "matchedPattern":  null,
+                                                                    "durationSeconds":  1.09,
+                                                                    "detail":  "",
+                                                                    "transcriptEvidence":  "",
+                                                                    "gatePolicy":  "REQUIRED"
+                                                                },
+                                                                {
+                                                                    "name":  "Backend verify:tax-issuer-profile-schema",
+                                                                    "status":  "PASS",
+                                                                    "failureClass":  null,
+                                                                    "reasonCode":  null,
+                                                                    "matchedPattern":  null,
+                                                                    "durationSeconds":  1.58,
+                                                                    "detail":  "",
+                                                                    "transcriptEvidence":  "",
+                                                                    "gatePolicy":  "REQUIRED"
+                                                                },
+                                                                {
+                                                                    "name":  "Backend verify:test-database-authority",
+                                                                    "status":  "PASS",
+                                                                    "failureClass":  null,
+                                                                    "reasonCode":  null,
+                                                                    "matchedPattern":  null,
+                                                                    "durationSeconds":  0.54,
+                                                                    "detail":  "",
+                                                                    "transcriptEvidence":  "",
+                                                                    "gatePolicy":  "REQUIRED"
+                                                                },
+                                                                {
+                                                                    "name":  "Backend startup smoke test",
+                                                                    "status":  "PASS",
+                                                                    "failureClass":  null,
+                                                                    "reasonCode":  null,
+                                                                    "matchedPattern":  null,
+                                                                    "durationSeconds":  1.5,
+                                                                    "detail":  "",
+                                                                    "transcriptEvidence":  "",
+                                                                    "gatePolicy":  "REQUIRED"
+                                                                },
+                                                                {
+                                                                    "name":  "Frontend startup smoke test",
+                                                                    "status":  "PASS",
+                                                                    "failureClass":  null,
+                                                                    "reasonCode":  null,
+                                                                    "matchedPattern":  null,
+                                                                    "durationSeconds":  1.59,
+                                                                    "detail":  "",
+                                                                    "transcriptEvidence":  "",
+                                                                    "gatePolicy":  "REQUIRED"
+                                                                }
+                                                            ]
+                                              }
+                           }
+}

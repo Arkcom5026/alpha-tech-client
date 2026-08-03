@@ -72,8 +72,8 @@ const SubEmployeeManager = () => {
       setError('กรุณากรอกข้อมูลบัญชี บทบาทในร้าน และตำแหน่งงานให้ครบถ้วน');
       return;
     }
-    if (payload.password.length < 6) {
-      setError('รหัสผ่านเริ่มต้นต้องมีความยาวอย่างน้อย 6 ตัวอักษร');
+    if (payload.password.length < 8) {
+      setError('รหัสผ่านเริ่มต้นต้องมีความยาวอย่างน้อย 8 ตัวอักษร');
       return;
     }
 
@@ -167,7 +167,7 @@ const SubEmployeeManager = () => {
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="อีเมลสำหรับเข้าสู่ระบบ" icon={<FaEnvelope />}><input type="email" value={form.email} onChange={(e) => updateField('email', e.target.value)} disabled={isLoading} placeholder="staff@example.com" className="w-full bg-transparent px-3 py-3 text-sm font-semibold outline-none" /></Field>
-            <Field label="รหัสผ่านเริ่มต้น" icon={<FaLock />}><input type="password" value={form.password} onChange={(e) => updateField('password', e.target.value)} disabled={isLoading} placeholder="อย่างน้อย 6 ตัวอักษร" className="w-full bg-transparent px-3 py-3 font-mono text-sm font-semibold outline-none" /></Field>
+            <Field label="รหัสผ่านเริ่มต้น" icon={<FaLock />}><input type="password" value={form.password} onChange={(e) => updateField('password', e.target.value)} disabled={isLoading} placeholder="อย่างน้อย 8 ตัวอักษร" className="w-full bg-transparent px-3 py-3 font-mono text-sm font-semibold outline-none" /></Field>
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

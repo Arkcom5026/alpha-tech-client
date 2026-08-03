@@ -1,70 +1,99 @@
-<svg width="900" height="500" viewBox="0 0 900 500" fill="none" xmlns="http://www.w3.org/2000/svg">
+<svg width="1100" height="620" viewBox="0 0 1100 620" fill="none" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="bg" x1="96" y1="46" x2="782" y2="456" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#FFF9F1"/>
-      <stop offset="1" stop-color="#FFE9D0"/>
+    <linearGradient id="blob" x1="140" y1="90" x2="920" y2="540" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFF8EF"/>
+      <stop offset="0.52" stop-color="#FFEED9"/>
+      <stop offset="1" stop-color="#FFE3C4"/>
     </linearGradient>
-    <linearGradient id="dark" x1="0" y1="0" x2="0" y2="1">
-      <stop stop-color="#3A3F46"/>
-      <stop offset="1" stop-color="#111317"/>
+    <linearGradient id="metal" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#4B5057"/>
+      <stop offset="0.5" stop-color="#2B2F35"/>
+      <stop offset="1" stop-color="#101215"/>
+    </linearGradient>
+    <linearGradient id="metalSoft" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#474D55"/>
+      <stop offset="1" stop-color="#1B1F24"/>
     </linearGradient>
     <linearGradient id="screen" x1="0" y1="0" x2="1" y2="1">
       <stop stop-color="#FFFFFF"/>
-      <stop offset="1" stop-color="#F4F7FA"/>
+      <stop offset="0.72" stop-color="#F6F8FB"/>
+      <stop offset="1" stop-color="#EDF1F5"/>
     </linearGradient>
     <linearGradient id="orange" x1="0" y1="0" x2="1" y2="1">
-      <stop stop-color="#FF8A1F"/>
-      <stop offset="1" stop-color="#F05A0A"/>
+      <stop stop-color="#FF9A35"/>
+      <stop offset="0.5" stop-color="#FF7417"/>
+      <stop offset="1" stop-color="#E94B05"/>
     </linearGradient>
-    <filter id="shadow" x="-30%" y="-30%" width="160%" height="170%">
-      <feDropShadow dx="0" dy="18" stdDeviation="18" flood-color="#0F172A" flood-opacity="0.26"/>
+    <linearGradient id="glass" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#425266"/>
+      <stop offset="1" stop-color="#1E2937"/>
+    </linearGradient>
+    <filter id="objectShadow" x="-35%" y="-35%" width="170%" height="190%">
+      <feDropShadow dx="0" dy="18" stdDeviation="18" flood-color="#0F172A" flood-opacity="0.30"/>
     </filter>
-    <filter id="soft" x="-30%" y="-30%" width="160%" height="160%">
-      <feGaussianBlur stdDeviation="14"/>
+    <filter id="softShadow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="22"/>
+    </filter>
+    <filter id="paperShadow" x="-40%" y="-40%" width="180%" height="180%">
+      <feDropShadow dx="0" dy="5" stdDeviation="5" flood-color="#64748B" flood-opacity="0.18"/>
     </filter>
   </defs>
 
-  <path d="M116 125C159 72 242 78 300 100C357 122 397 72 475 82C553 92 572 135 642 120C712 105 781 141 790 211C800 285 752 325 717 373C682 421 601 430 532 418C464 406 421 449 341 433C261 417 242 376 179 366C116 356 81 320 86 256C91 193 79 171 116 125Z" fill="url(#bg)"/>
-  <ellipse cx="447" cy="413" rx="313" ry="38" fill="#F3CDA7" opacity="0.42" filter="url(#soft)"/>
+  <path d="M125 152C173 84 282 78 357 111C430 143 478 88 575 91C672 94 706 152 797 135C888 118 982 168 982 273C982 365 919 404 873 476C826 548 710 551 626 528C541 505 493 566 389 542C285 518 263 469 181 451C100 434 58 380 69 302C80 223 78 219 125 152Z" fill="url(#blob)"/>
+  <ellipse cx="548" cy="522" rx="410" ry="52" fill="#EFC28E" opacity="0.34" filter="url(#softShadow)"/>
 
-  <g filter="url(#shadow)">
-    <rect x="302" y="292" width="322" height="112" rx="18" fill="url(#dark)"/>
-    <rect x="326" y="315" width="274" height="18" rx="9" fill="#535A64" opacity="0.48"/>
-    <rect x="355" y="349" width="94" height="9" rx="4.5" fill="#0B0D10"/>
-    <circle cx="522" cy="354" r="10" fill="#D8DEE7"/>
-    <circle cx="522" cy="354" r="4" fill="#1B1F24"/>
-    <rect x="546" y="349" width="43" height="9" rx="4.5" fill="#0B0D10"/>
+  <!-- Receipt printer -->
+  <g filter="url(#objectShadow)">
+    <path d="M126 345C126 323 144 305 166 305H328C350 305 368 323 368 345V482C368 506 349 525 325 525H169C145 525 126 506 126 482V345Z" fill="url(#metal)"/>
+    <path d="M143 351C143 338 154 327 167 327H327C340 327 351 338 351 351V374H143V351Z" fill="#555C65"/>
+    <rect x="145" y="367" width="204" height="18" rx="7" fill="#1A1D21"/>
+    <rect x="153" y="422" width="188" height="53" rx="9" fill="#090B0D"/>
+    <path d="M153 443H341" stroke="#252A30" stroke-width="4"/>
+    <rect x="178" y="486" width="138" height="10" rx="5" fill="#343A42" opacity="0.75"/>
+    <circle cx="324" cy="405" r="5" fill="#FF7A18"/>
+    <path d="M180 223H316L333 346H163L180 223Z" fill="#FFFFFF" stroke="#DFE4EA" stroke-width="3" filter="url(#paperShadow)"/>
+    <path d="M199 247H294" stroke="#D5DCE4" stroke-width="6" stroke-linecap="round"/>
+    <path d="M192 271H301" stroke="#D5DCE4" stroke-width="6" stroke-linecap="round"/>
+    <path d="M203 295H290" stroke="#D5DCE4" stroke-width="6" stroke-linecap="round"/>
+    <path d="M190 319H303" stroke="#D5DCE4" stroke-width="6" stroke-linecap="round"/>
+    <path d="M292 233L313 252" stroke="#EEF2F6" stroke-width="4" stroke-linecap="round"/>
+    <text x="248" y="239" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" font-weight="700" fill="#9AA4B2">SADUAKSABUY</text>
   </g>
 
-  <g filter="url(#shadow)">
-    <rect x="351" y="93" width="245" height="208" rx="20" fill="#2E3339"/>
-    <rect x="366" y="108" width="215" height="169" rx="8" fill="url(#screen)"/>
-    <circle cx="474" cy="288" r="5" fill="#777F89"/>
-    <rect x="430" y="300" width="90" height="27" rx="5" fill="#252A30"/>
-    <rect x="407" y="322" width="137" height="16" rx="7" fill="#171A1F"/>
-
-    <rect x="438" y="152" width="72" height="72" rx="18" fill="url(#orange)"/>
-    <text x="474" y="198" text-anchor="middle" font-family="Arial, sans-serif" font-size="29" font-weight="700" fill="white">SS</text>
-    <text x="474" y="245" text-anchor="middle" font-family="Arial, sans-serif" font-size="17" font-weight="800" letter-spacing="2" fill="#111827">SADUAKSABUY</text>
-    <text x="474" y="262" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" font-weight="700" letter-spacing="3" fill="#6B7280">HYPERLOCAL MARKET</text>
+  <!-- Cash drawer -->
+  <g filter="url(#objectShadow)">
+    <path d="M363 398C363 376 381 358 403 358H725C747 358 765 376 765 398V500C765 523 746 542 723 542H405C382 542 363 523 363 500V398Z" fill="url(#metal)"/>
+    <rect x="387" y="385" width="354" height="20" rx="10" fill="#5A626C" opacity="0.52"/>
+    <rect x="423" y="452" width="132" height="11" rx="5.5" fill="#090B0D"/>
+    <rect x="646" y="452" width="76" height="11" rx="5.5" fill="#090B0D"/>
+    <circle cx="600" cy="457" r="13" fill="#D7DCE3"/>
+    <circle cx="600" cy="457" r="5" fill="#1B1F24"/>
+    <path d="M385 493H741" stroke="#1E2329" stroke-width="3" opacity="0.7"/>
   </g>
 
-  <g filter="url(#shadow)">
-    <rect x="119" y="280" width="178" height="132" rx="22" fill="url(#dark)"/>
-    <rect x="138" y="300" width="140" height="26" rx="7" fill="#555C65" opacity="0.55"/>
-    <rect x="145" y="352" width="126" height="30" rx="7" fill="#0D0F12"/>
-    <path d="M157 203H256L269 302H144L157 203Z" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="3"/>
-    <path d="M178 227H239" stroke="#D6DCE3" stroke-width="5" stroke-linecap="round"/>
-    <path d="M172 246H243" stroke="#D6DCE3" stroke-width="5" stroke-linecap="round"/>
-    <path d="M180 265H235" stroke="#D6DCE3" stroke-width="5" stroke-linecap="round"/>
-    <path d="M170 284H244" stroke="#D6DCE3" stroke-width="5" stroke-linecap="round"/>
+  <!-- POS monitor -->
+  <g filter="url(#objectShadow)">
+    <rect x="405" y="79" width="307" height="293" rx="27" fill="#30353B"/>
+    <rect x="423" y="97" width="271" height="239" rx="12" fill="url(#screen)"/>
+    <path d="M438 111C478 98 629 95 678 111" stroke="#FFFFFF" stroke-width="7" stroke-linecap="round" opacity="0.5"/>
+    <rect x="514" y="158" width="90" height="90" rx="23" fill="url(#orange)"/>
+    <text x="559" y="214" text-anchor="middle" font-family="Arial, sans-serif" font-size="34" font-weight="700" fill="white">SS</text>
+    <text x="559" y="276" text-anchor="middle" font-family="Arial, sans-serif" font-size="21" font-weight="800" letter-spacing="2.4" fill="#111827">SADUAKSABUY</text>
+    <text x="559" y="297" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" font-weight="700" letter-spacing="3.2" fill="#768191">HYPERLOCAL MARKET</text>
+    <circle cx="559" cy="354" r="6" fill="#7F8893"/>
+    <rect x="513" y="371" width="92" height="54" rx="7" fill="#24282D"/>
+    <path d="M488 425H630L648 449H470L488 425Z" fill="#171A1E"/>
+    <rect x="455" y="446" width="208" height="22" rx="11" fill="#1A1D21"/>
   </g>
 
-  <g filter="url(#shadow)">
-    <path d="M707 195C737 186 768 203 774 233L792 323C798 353 779 381 750 386C720 391 692 372 688 342L676 250C673 225 684 202 707 195Z" fill="url(#dark)"/>
-    <rect x="699" y="214" width="49" height="37" rx="10" transform="rotate(-9 699 214)" fill="#4A5563" stroke="#6B7280"/>
-    <rect x="728" y="306" width="17" height="48" rx="8" transform="rotate(-9 728 306)" fill="#39414C"/>
-    <ellipse cx="741" cy="395" rx="48" ry="14" fill="#1B1E23"/>
-    <rect x="719" y="359" width="44" height="39" rx="14" fill="#262B31"/>
+  <!-- Barcode scanner -->
+  <g filter="url(#objectShadow)">
+    <path d="M835 210C880 198 929 222 939 266L948 305C953 326 942 347 922 355L893 367L920 472C926 495 912 519 888 524L863 529C840 534 817 519 813 496L792 370C789 350 800 330 819 322L840 314L828 257C824 236 827 217 835 210Z" fill="url(#metalSoft)"/>
+    <path d="M846 226C873 219 903 234 909 261L917 292C920 306 912 319 899 323L850 337L832 268C827 249 833 230 846 226Z" fill="#20252B"/>
+    <rect x="846" y="241" width="59" height="46" rx="12" transform="rotate(-14 846 241)" fill="url(#glass)" stroke="#64748B" stroke-width="2"/>
+    <path d="M858 253L894 244" stroke="#7F91A8" stroke-width="3" stroke-linecap="round" opacity="0.75"/>
+    <rect x="858" y="394" width="26" height="82" rx="13" transform="rotate(-10 858 394)" fill="#363D47"/>
+    <path d="M837 515C837 498 850 484 867 484H901C918 484 932 498 932 515V523H837V515Z" fill="#262B31"/>
+    <ellipse cx="884" cy="526" rx="70" ry="17" fill="#1A1D21"/>
   </g>
 </svg>

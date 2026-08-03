@@ -2,9 +2,9 @@
   "schemaVersion": 2,
   "requestedBy": "ChatGPT",
   "mode": "SyncAndCertify",
-  "requestedAt": "2026-08-03T20:01:00+07:00",
+  "requestedAt": "2026-08-03T20:10:00+07:00",
   "triggerKind": "new-certification",
-  "expectedPreTriggerClientHead": "7f91f5f978c9584b838347aae138fa6209b675cd",
+  "expectedPreTriggerClientHead": "50573c5a204b6e84c5e8da809c9921a19827a28d",
   "expectedServerHead": "6ece5c8f3e0158a764a45af6579a0ad26cd1531a",
-  "reason": "New ALDE certification after merging PR #265 (output-tax locking contract alignment) and PR #264 (controlled stock-receipt repair movement authority). Required evidence: workflow sourceSha and metadata.clientHead must equal this trigger commit; metadata.serverHead must equal 6ece5c8f3e0158a764a45af6579a0ad26cd1531a; runner must be ALDE-WIN01; mode must be SyncAndCertify; failedGateCount must be 0; latest and history Result Bridge records must identify the same workflow run."
+  "reason": "New ALDE certification after merging PR #72 (client stock serial and receive contract alignment), PR #265 (output-tax locking contract alignment), and PR #264 (controlled stock-receipt repair movement authority). Required evidence: workflow sourceSha and metadata.clientHead must equal this trigger commit; metadata.serverHead must equal 6ece5c8f3e0158a764a45af6579a0ad26cd1531a; runner must be ALDE-WIN01; mode must be SyncAndCertify; failedGateCount must be 0; latest and history Result Bridge records must identify the same workflow run."
 }

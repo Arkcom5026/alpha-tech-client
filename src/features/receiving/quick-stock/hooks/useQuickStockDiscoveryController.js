@@ -77,10 +77,6 @@ const useQuickStockDiscoveryController = ({
     }
   }, [loadDropdownsAction, selectedProductTypeId]);
 
-  useEffect(() => {
-    executeProductSearch({});
-  }, [executeProductSearch]);
-
   const filteredProducts = useMemo(() => {
     const ptId = toNumberOrNull(selectedProductTypeId);
     const brandId = toNumberOrNull(selectedBrandId);

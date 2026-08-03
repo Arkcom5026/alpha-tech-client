@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { getSaleReturnEligibility } from '../api/saleReturnApi';
+import {
+  getSaleReturnEligibility,
+  issueCreditNoteForSaleReturn,
+} from '../api/saleReturnApi';
 import SaleReturnHelpDrawer from '../help/SaleReturnHelpDrawer';
 import { runCompleteSaleReturn } from '../workflows/completeSaleReturnWorkflow';
 
@@ -68,7 +71,7 @@ const CreateReturnPage = () => {
     if (deduction > 0 && !reason.trim() && selectedItems.some((item) => !item.reason)) return setError('กรุณาระบุเหตุผลเมื่อคืนเงินไม่เต็มจำนวน');
     setSubmitting(true);
     try {
-      await runCompleteSaleReturn({
+      const completedReturn = await runCompleteSaleReturn({
         saleId,
         reason,
         items: selectedItems,
@@ -78,6 +81,38 @@ const CreateReturnPage = () => {
           sourcePaymentItemId: item.sourcePaymentItemId ? Number(item.sourcePaymentItemId) : null,
         })),
       });
+
+      const fullRefundReturn = (
+        Math.abs(eligibleTotal - Number(eligibility.sale.totalAmount || 0)) <= 0.005
+        && Math.abs(refundTotal - Number(eligibility.sale.totalAmount || 0)) <= 0.005
+        && deduction <= 0.005
+      );
+      if (fullRefundReturn) {
+        try {
+          const creditNote = await issueCreditNoteForSaleReturn({
+            branchId: completedReturn.branchId,
+            saleReturnId: completedReturn.saleReturnId,
+          });
+          const taxDocumentId = creditNote?.document?.id;
+          if (!taxDocumentId) throw new Error('Credit note issuance returned no document identity.');
+          navigate(
+            `/${shopSlug}/pos/sales/credit-note/print/${taxDocumentId}?branchId=${completedReturn.branchId}`,
+            { replace: true },
+          );
+          return;
+        } catch (creditNoteError) {
+          const code = creditNoteError.response?.data?.code || creditNoteError.response?.data?.error;
+          if (code === 'TAX_CREDIT_NOTE_ORIGINAL_DOCUMENT_NOT_FOUND') {
+            navigate(`/${shopSlug}/pos/sales/sale-return`, { replace: true });
+            return;
+          }
+          setError(
+            `คืนสินค้าและคืนเงินสำเร็จแล้ว แต่ยังออกใบลดหนี้ไม่สำเร็จ: ${creditNoteError.response?.data?.message || creditNoteError.message}`,
+          );
+          return;
+        }
+      }
+
       navigate(`/${shopSlug}/pos/sales/sale-return`, { replace: true });
     } catch (err) {
       setError(err.response?.data?.message || err.message);

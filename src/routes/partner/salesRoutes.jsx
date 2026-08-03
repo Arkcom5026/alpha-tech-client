@@ -5,6 +5,7 @@ import PrintBillPageShortTax from '@/features/bill/pages/PrintBillPageShortTax';
 import PrintBillPageFullTax from '@/features/bill/pages/PrintBillPageFullTax';
 import {
   CreateReturnPage,
+  PrintCreditNotePage,
   ReturnSearchPage,
 } from '@/features/sales/return';
 import CreateSalePage from '@/features/sales/create/pages/CreateSalePage';
@@ -36,6 +37,7 @@ const salesRoutes = {
     { path: 'combined-billing', element: <CombinedBillingPage /> },
     { path: 'sale-return', element: <ReturnSearchPage /> },
     { path: 'sale-return/create/:saleId', element: <CreateReturnPage /> },
+    { path: 'credit-note/print/:taxDocumentId', element: <PrintCreditNotePage /> },
     { path: 'order-online', element: <ListOrderOnlinePosPage /> },
     { path: 'order-online/convert/:id', element: <OnlineConvertOrderPage /> },
     { path: 'order-online/:id', element: <OrderOnlinePosDetailPage /> },

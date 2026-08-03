@@ -2,9 +2,9 @@
   "schemaVersion": 2,
   "requestedBy": "ChatGPT",
   "mode": "SyncAndCertify",
-  "requestedAt": "2026-08-03T14:52:00+07:00",
+  "requestedAt": "2026-08-03T15:02:00+07:00",
   "triggerKind": "new-certification",
-  "expectedPreTriggerClientHead": "8980bd0cf5858d36b4df7cfac11465c579889cda",
+  "expectedPreTriggerClientHead": "7c2d06a33147ca88785836f0214902e0a3d5461d",
   "expectedServerHead": "cc448c4d1af4c40f6eca77ee7dee31ea75fbbd1e",
-  "reason": "Post-merge ALDE certification for Partner Store first-merchant registration, SuperAdmin approval, safe legacy owner repair, public merchant login shell, public auth bootstrap guard, and first employee onboarding E2E. Required evidence: workflow sourceSha and metadata.clientHead must equal the trigger commit created by this update; metadata.serverHead must equal cc448c4d1af4c40f6eca77ee7dee31ea75fbbd1e; runner must be ALDE-WIN01; mode must be SyncAndCertify; failedGateCount must be 0; latest/history Result Bridge records must identify the same workflow run. Pre-trigger client main was 8980bd0cf5858d36b4df7cfac11465c579889cda."
+  "reason": "Retry post-merge ALDE certification for Partner Store first-merchant registration after the Alpha-Tech server process was stopped to clear the Prisma generate lock risk. Required evidence: workflow sourceSha and metadata.clientHead must equal the trigger commit created by this update; metadata.serverHead must equal cc448c4d1af4c40f6eca77ee7dee31ea75fbbd1e; runner must be ALDE-WIN01; mode must be SyncAndCertify; failedGateCount must be 0; latest/history Result Bridge records must identify the same workflow run. Pre-trigger client main was 7c2d06a33147ca88785836f0214902e0a3d5461d."
 }

@@ -1,4 +1,8 @@
 import { useCallback } from 'react';
+import {
+  clearSaleCustomerFirstAssociation,
+  storeSaleCustomerFirstAssociation,
+} from '../services/saleCustomerFirstAssociationSession';
 
 const normalizeCustomer = (payload) => payload?.customer || payload;
 
@@ -19,13 +23,27 @@ export const useSaleCustomerHydration = ({
     if (searchByCustomerId) {
       try {
         const payload = await searchByCustomerId(baseCustomer.id);
-        fullCustomer = normalizeCustomer(payload) || baseCustomer;
+        fullCustomer = {
+          ...(normalizeCustomer(payload) || baseCustomer),
+          firstAssociationToken:
+            baseCustomer.firstAssociationToken ||
+            normalizeCustomer(payload)?.firstAssociationToken ||
+            null,
+        };
       } catch {
         fullCustomer = baseCustomer;
       }
     }
 
     setCustomerId(fullCustomer.id);
+    if (fullCustomer.firstAssociationToken) {
+      storeSaleCustomerFirstAssociation({
+        customerId: fullCustomer.id,
+        token: fullCustomer.firstAssociationToken,
+      });
+    } else {
+      clearSaleCustomerFirstAssociation();
+    }
     hydrateEditor(fullCustomer);
 
     const depositAmount = Number(fullCustomer?.depositAmount || fullCustomer?.customerDepositAmount || 0);

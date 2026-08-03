@@ -11,9 +11,15 @@ describe('merchant login shell UI contract', () => {
     const shell = read('src/features/auth/layouts/MerchantLoginShell.jsx');
 
     expect(router).toContain("import MerchantLoginShell from '@/features/auth/layouts/MerchantLoginShell'");
-    expect(router).toContain('element: <MerchantLoginShell />');
-    expect(router).toContain("path: 'login'");
-    expect(router).not.toMatch(/path:\s*['\"]login['\"],\s*\n\s*element:\s*<LoginPage\s*\/>/);
+
+    const nestedLoginRoute = /\{\s*element:\s*<MerchantLoginShell\s*\/>,\s*children:\s*\[\s*\{\s*path:\s*['\"]login['\"],\s*element:\s*<LoginPage\s*\/>/s;
+    expect(router).toMatch(nestedLoginRoute);
+
+    const loginPageRouteCount = (router.match(/element:\s*<LoginPage\s*\/>/g) || []).length;
+    expect(loginPageRouteCount).toBe(1);
+
+    expect(router).toContain("path: 'partner-portal/forgot-password'");
+    expect(router).toContain("path: 'partner-portal/reset-password'");
 
     expect(shell).toContain('<Outlet />');
     expect(shell).toContain('POS SYSTEM');

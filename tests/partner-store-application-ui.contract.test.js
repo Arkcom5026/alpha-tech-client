@@ -6,7 +6,7 @@ const root = process.cwd();
 const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 
 describe('partner store application UI contract', () => {
-  it('preserves the approved application and review surfaces', () => {
+  it('supports self-contained merchant application and approval', () => {
     const api = read('src/features/partnerStoreApplication/api/partnerStoreApplicationApi.js');
     const apply = read('src/features/partnerStoreApplication/pages/PartnerStoreApplicationPage.jsx');
     const review = read('src/features/partnerStoreApplication/pages/PartnerStoreApplicationReviewPage.jsx');
@@ -19,9 +19,12 @@ describe('partner store application UI contract', () => {
     expect(api).toContain('/reject');
     expect(apply).toContain('businessAddress');
     expect(apply).toContain('contactPhone');
+    expect(apply).toContain('password');
+    expect(apply).toContain('confirmPassword');
+    expect(apply).toContain('รหัสผ่านต้องมีความยาวอย่างน้อย 8 ตัวอักษร');
     expect(apply).toContain('Application received');
-    expect(review).toContain('Owner User ID');
-    expect(review).toContain('อนุมัติ');
+    expect(review).not.toContain('Owner User ID');
+    expect(review).toContain('อนุมัติและเปิดร้าน');
     expect(review).toContain('ปฏิเสธ');
     expect(router).toContain("'partner-portal/apply'");
     expect(superadmin).toContain("'partner-store-applications'");

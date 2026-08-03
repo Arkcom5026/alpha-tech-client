@@ -1,87 +1,65 @@
 import { useCallback, useState } from 'react';
 
-const normalizeResultList = (result) => {
-  if (Array.isArray(result?.results)) return result.results;
-  if (Array.isArray(result)) return result;
-  return result ? [result] : [];
-};
+const normalizeResultList = (payload) => (
+  Array.isArray(payload?.results) ? payload.results : Array.isArray(payload) ? payload : []
+);
 
 export const useSaleCustomerSearch = ({
-  searchByPhone,
-  searchByName,
-  onCustomerFound,
+  searchCustomers,
   onCustomerNotFound,
 }) => {
-  const [phone, setPhone] = useState('');
-  const [rawPhone, setRawPhone] = useState('');
-  const [searchMode, setSearchMode] = useState('phone');
-  const [nameSearch, setNameSearch] = useState('');
+  const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
   const [selectedResultId, setSelectedResultId] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   const clearSearch = useCallback(() => {
-    setPhone('');
-    setRawPhone('');
-    setNameSearch('');
+    setQuery('');
     setResults([]);
     setSelectedResultId(null);
     setError('');
   }, []);
 
   const submitSearch = useCallback(async () => {
+    const text = String(query || '').trim();
     setError('');
     setResults([]);
     setSelectedResultId(null);
+
+    if (!text) {
+      setError('กรุณากรอกชื่อ เบอร์โทร บริษัท หน่วยงาน อีเมล หรือเลขผู้เสียภาษี');
+      return;
+    }
+
     setLoading(true);
-
     try {
-      if (searchMode === 'phone') {
-        const cleanPhone = phone.replace(/-/g, '');
-        if (!/^[0-9]{10}$/.test(cleanPhone)) {
-          setError('กรุณากรอกเบอร์โทรให้ถูกต้อง (10 หลัก)');
-          return;
-        }
-
-        setRawPhone(cleanPhone);
-        const found = await searchByPhone(cleanPhone);
-        if (found) {
-          await onCustomerFound(found);
-          return;
-        }
-
-        await onCustomerNotFound({ mode: 'phone', query: cleanPhone });
-        return;
-      }
-
-      const query = nameSearch.trim();
-      if (!query) {
-        setError('กรุณากรอกชื่อหรือนามสกุลเพื่อค้นหา');
-        return;
-      }
-
-      const resultList = normalizeResultList(await searchByName(query));
+      const payload = await searchCustomers(text);
+      const resultList = normalizeResultList(payload);
       if (resultList.length > 0) {
         setResults(resultList);
         return;
       }
 
-      await onCustomerNotFound({ mode: 'name', query });
+      const digits = text.replace(/\D/g, '');
+      await onCustomerNotFound({
+        mode: /^\d+$/.test(digits) && digits.length >= 4 ? 'phone' : 'name',
+        query: /^\d+$/.test(digits) ? digits : text,
+      });
+    } catch (searchError) {
+      setError(
+        searchError?.response?.data?.message ||
+        searchError?.message ||
+        'ค้นหาลูกค้าไม่สำเร็จ'
+      );
     } finally {
       setLoading(false);
     }
-  }, [nameSearch, onCustomerFound, onCustomerNotFound, phone, searchByName, searchByPhone, searchMode]);
+  }, [onCustomerNotFound, query, searchCustomers]);
 
   return {
-    phone,
-    setPhone,
-    rawPhone,
-    setRawPhone,
-    searchMode,
-    setSearchMode,
-    nameSearch,
-    setNameSearch,
+    query,
+    setQuery,
     results,
     setResults,
     selectedResultId,

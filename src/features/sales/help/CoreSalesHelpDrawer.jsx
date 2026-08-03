@@ -63,6 +63,8 @@ const CoreSalesHelpDrawer = ({ open, onClose }) => {
 
         <main className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
           <article className="mx-auto max-w-4xl space-y-7 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+            <GuideRows title="การค้นหาและเลือกลูกค้า" rows={coreSalesHelpContent.customerSearch} />
+
             <section>
               <h3 className="text-sm font-black text-slate-950">ลำดับการขาย</h3>
               <ol className="mt-3 list-decimal space-y-2 pl-5">

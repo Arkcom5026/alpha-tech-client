@@ -53,7 +53,7 @@ describe('Core Sales Help contract', () => {
     expect(guide).toMatch(/ไม่ค้นหา:[\s\S]*Barcode[\s\S]*Serial Number[\s\S]*IMEI[\s\S]*Service Tag/);
     expect(guide).toMatch(/first-association evidence/);
     expect(guide).toMatch(/SALE_CUSTOMER_NOT_ACCESSIBLE_IN_BRANCH/);
-    expect(guide).toMatch(/SALE_CUSTOMER_FIRST_ASSOCIATION_REQUIRED/);
+    expect(guide).not.toMatch(/SALE_CUSTOMER_FIRST_ASSOCIATION_REQUIRED/);
     expect(guide).toMatch(/CUSTOMER_PHONE_NOT_AVAILABLE_IN_BRANCH/);
     expect(guide).toMatch(/คงตะกร้าและข้อมูลการชำระไว้/);
     expect(guide).toMatch(/ใบกำกับภาษีอย่างย่อและเต็มรูปออกได้เฉพาะ Sale สถานะ `PAID`/);

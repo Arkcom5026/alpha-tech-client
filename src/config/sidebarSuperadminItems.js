@@ -40,7 +40,13 @@ export const getSidebarSuperadminItems = (shopSlug) => {
 
     superadminGovernance: [
       {
-        label: 'Review',
+        label: 'Partner Governance',
+        items: [
+          { label: 'ใบสมัครร้านพาร์ทเนอร์', to: `${basePath}/governance/partner-store-applications` },
+        ],
+      },
+      {
+        label: 'Catalog Review',
         items: [
           { label: 'Review Queue', to: `${basePath}/governance/review-queue` },
           { label: 'Merge Queue', to: `${basePath}/governance/merge-queue` },

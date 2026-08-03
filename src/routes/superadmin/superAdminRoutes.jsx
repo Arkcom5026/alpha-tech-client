@@ -72,7 +72,11 @@ export const superAdminRoutes = [
   {
     path: 'governance',
     children: [
-      { index: true, element: <Navigate to="review-queue" replace /> },
+      { index: true, element: <Navigate to="partner-store-applications" replace /> },
+      {
+        path: 'partner-store-applications',
+        element: <PartnerStoreApplicationReviewPage />,
+      },
       {
         path: 'review-queue',
         element: <SuperAdminPlaceholderPage title="Review Queue" description="คิวตรวจสอบ Candidate สำหรับ Reviewer และ Catalog Admin" />,
@@ -93,7 +97,7 @@ export const superAdminRoutes = [
   },
   {
     path: 'partner-store-applications',
-    element: <PartnerStoreApplicationReviewPage />,
+    element: <Navigate to="../governance/partner-store-applications" replace />,
   },
   {
     path: 'analytics',

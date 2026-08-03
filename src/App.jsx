@@ -12,15 +12,30 @@ const router = createBrowserRouter(AppRouter);
 let initialAuthBootstrapPromise = null;
 let initialAuthBootstrapStarted = false;
 
-const PUBLIC_AUTH_ENTRY_PATHS = new Set([
+const PUBLIC_UNAUTHENTICATED_EXACT_PATHS = new Set([
+  '/',
   '/login',
+  '/partner-portal',
+  '/partner-portal/apply',
   '/partner-portal/forgot-password',
   '/partner-portal/reset-password',
 ]);
 
-const isPublicAuthEntryPath = (pathname) => {
-  const normalizedPath = String(pathname || '/').replace(/\/+$/, '') || '/';
-  return PUBLIC_AUTH_ENTRY_PATHS.has(normalizedPath);
+const PUBLIC_UNAUTHENTICATED_PATH_PREFIXES = [
+  '/repair/track/',
+];
+
+const normalizePathname = (pathname) => (
+  String(pathname || '/').replace(/\/+$/, '') || '/'
+);
+
+const isPublicUnauthenticatedPath = (pathname) => {
+  const normalizedPath = normalizePathname(pathname);
+
+  return (
+    PUBLIC_UNAUTHENTICATED_EXACT_PATHS.has(normalizedPath) ||
+    PUBLIC_UNAUTHENTICATED_PATH_PREFIXES.some((prefix) => normalizedPath.startsWith(prefix))
+  );
 };
 
 const hasRecoverableSessionEvidence = (state) => Boolean(
@@ -66,9 +81,8 @@ const App = () => {
     const state = useAuthStore.getState();
     const pathname = typeof window !== 'undefined' ? window.location.pathname : '/';
 
-    if (isPublicAuthEntryPath(pathname) && !hasRecoverableSessionEvidence(state)) {
+    if (isPublicUnauthenticatedPath(pathname) && !hasRecoverableSessionEvidence(state)) {
       settlePublicUnauthenticatedBootstrap();
-      initialAuthBootstrapStarted = true;
       setBootstrapReady(true);
       return;
     }

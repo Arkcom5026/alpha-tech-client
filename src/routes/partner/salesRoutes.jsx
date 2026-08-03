@@ -15,6 +15,8 @@ import DeliveryNoteListPage from '@/features/deliveryNote/pages/DeliveryNoteList
 import ListOrderOnlinePosPage from '@/features/orderOnlinePos/pages/ListOrderOnlinePosPage';
 import OrderOnlinePosDetailPage from '@/features/orderOnlinePos/pages/OrderOnlinePosDetailPage';
 import OnlineConvertOrderPage from '@/features/orderOnlinePos/pages/OnlineConvertOrderPage';
+import ProductReservationListPage from '@/features/sales/reservation/pages/ProductReservationListPage';
+import ProductReservationDetailPage from '@/features/sales/reservation/pages/ProductReservationDetailPage';
 
 const salesRoutes = {
   path: 'sales',
@@ -22,6 +24,8 @@ const salesRoutes = {
     { index: true, element: <SalesDashboardPage /> },
     { path: 'dashboard', element: <SalesDashboardPage /> },
     { path: 'sale', element: <CreateSalePage /> },
+    { path: 'reservations', element: <ProductReservationListPage /> },
+    { path: 'reservations/:reservationId', element: <ProductReservationDetailPage /> },
     { path: 'bill', element: <PrintBillListPage /> },
     { path: 'bill/print-short/:saleId', element: <PrintBillPageShortTax /> },
     { path: 'bill/print-full/:saleId', element: <PrintBillPageFullTax /> },

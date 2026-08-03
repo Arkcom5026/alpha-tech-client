@@ -4,7 +4,7 @@ const normalizeResultList = (payload) => (
   Array.isArray(payload?.results) ? payload.results : Array.isArray(payload) ? payload : []
 );
 
-const isPhoneLikeQuery = (value) => /^[\d\s()+-]+$/.test(value);
+export const isPhoneLikeQuery = (value) => /^[\d\s()+-]+$/.test(value);
 
 export const useSaleCustomerSearch = ({
   searchCustomers,

@@ -6,7 +6,7 @@ const root = process.cwd();
 const read = (relativePath) => fs.readFileSync(path.join(root, relativePath), 'utf8');
 
 describe('merchant login shell UI contract', () => {
-  it('keeps /login inside the unauthenticated merchant management shell', () => {
+  it('keeps /login inside a public merchant auth shell without exposing POS surfaces', () => {
     const router = read('src/routes/AppRouter.jsx');
     const shell = read('src/features/auth/layouts/MerchantLoginShell.jsx');
 
@@ -22,10 +22,17 @@ describe('merchant login shell UI contract', () => {
     expect(router).toContain("path: 'partner-portal/reset-password'");
 
     expect(shell).toContain('<Outlet />');
-    expect(shell).toContain('POS SYSTEM');
-    expect(shell).toContain('ENTERPRISE COMMAND RAIL');
-    expect(shell).toContain('Merchant Center');
-    expect(shell).toContain('ระบบพร้อมใช้งาน');
+    expect(shell).toContain('SADUAKSABUY');
+    expect(shell).toContain('MERCHANT CENTER');
+    expect(shell).toContain('กลับหน้าพาร์ทเนอร์');
+    expect(shell).toContain('การเข้าสู่ระบบที่ปลอดภัยสำหรับร้านพาร์ทเนอร์');
+
+    expect(shell).not.toContain('POS SYSTEM');
+    expect(shell).not.toContain('ENTERPRISE COMMAND RAIL');
+    expect(shell).not.toContain('BRANCH ONLINE');
+    expect(shell).not.toContain('POS OPERATOR');
+    expect(shell).not.toContain('topItems');
+    expect(shell).not.toContain('sideItems');
     expect(shell).not.toContain('apiClient');
     expect(shell).not.toContain('useAuthStore');
   });

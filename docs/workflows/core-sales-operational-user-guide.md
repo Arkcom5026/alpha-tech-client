@@ -140,7 +140,7 @@ Server จะตรวจตามลำดับ:
 9. ส่ง Sale และ Document Defaults กลับ
 10. เผยแพร่ Tax Candidate เป็น downstream step
 
-หาก Server ตอบ `SALE_CUSTOMER_NOT_ACCESSIBLE_IN_BRANCH` ให้ค้นหาและเลือกลูกค้าของร้านอีกครั้ง ระบบต้องคงตะกร้าและข้อมูลการชำระไว้ ห้ามแก้ด้วยการส่ง Customer ID โดยตรง
+หาก Server ตอบ `SALE_CUSTOMER_NOT_ACCESSIBLE_IN_BRANCH` ให้ค้นหาและเลือกลูกค้าของร้านอีกครั้ง ระบบต้องคงตะกร้าและข้อมูลการชำระไว้ ห้ามแก้ด้วยการส่ง Customer ID โดยตรง กรณีลูกค้าใหม่ที่หลักฐานหมดอายุหรือไม่ตรงกับร้าน/พนักงานจะใช้ error เดียวกันเพื่อไม่เปิดเผยข้อมูลลูกค้าข้ามร้าน
 
 ## 10. Document Defaults
 
@@ -161,8 +161,7 @@ Server จะตรวจตามลำดับ:
 
 | Error | Meaning | Recovery |
 |---|---|---|
-| `SALE_CUSTOMER_NOT_ACCESSIBLE_IN_BRANCH` | Customer ID ไม่มีสิทธิ์ใช้ในร้านนี้ | ค้นหาและเลือกลูกค้าของร้านใหม่ ตะกร้าและ Payment ต้องไม่ถูกล้าง |
-| `SALE_CUSTOMER_FIRST_ASSOCIATION_REQUIRED` | ลูกค้าใหม่ไม่มีหรือใช้หลักฐาน first association ไม่ได้ | สร้าง/เลือกลูกค้าใหม่อีกครั้งใน session ปัจจุบัน |
+| `SALE_CUSTOMER_NOT_ACCESSIBLE_IN_BRANCH` | Customer ID ไม่มีสิทธิ์ใช้ในร้านนี้ หรือ first-association evidence ใช้ไม่ได้ | ค้นหาและเลือกลูกค้าของร้านใหม่ หรือสร้างลูกค้าใหม่อีกครั้งใน session ปัจจุบัน ตะกร้าและ Payment ต้องไม่ถูกล้าง |
 | `CUSTOMER_PHONE_NOT_AVAILABLE_IN_BRANCH` | เบอร์นี้เป็นลูกค้าของร้านอื่น | ห้ามดึงข้อมูลข้ามร้าน ให้ตรวจเบอร์หรือสร้างความสัมพันธ์ผ่าน workflow ที่ได้รับอนุญาต |
 | `CREDIT_CUSTOMER_REQUIRED` | ขายเชื่อไม่มีลูกค้า | เลือกลูกค้า |
 | `SALE_ITEMS_REQUIRED` | ไม่มีสินค้า | เพิ่มสินค้าอย่างน้อยหนึ่งรายการ |

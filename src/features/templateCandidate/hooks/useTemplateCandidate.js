@@ -1,4 +1,3 @@
-// src/features/product/templateCandidate/hooks/useTemplateCandidate.js
 import { useCallback, useEffect } from 'react';
 import useTemplateCandidateStore from '../store/templateCandidateStore';
 
@@ -7,7 +6,7 @@ export const useTemplateCandidate = ({ autoFetch = false, filters = {} } = {}) =
 
   const refresh = useCallback(
     (nextFilters = filters) => store.fetchTemplateCandidates(nextFilters),
-    [store, filters]
+    [store.fetchTemplateCandidates, filters]
   );
 
   useEffect(() => {
@@ -19,17 +18,18 @@ export const useTemplateCandidate = ({ autoFetch = false, filters = {} } = {}) =
     candidates: store.candidates,
     selectedCandidate: store.selectedCandidate,
     pagination: store.pagination,
+    summary: store.summary,
+    reviewerWorkload: store.reviewerWorkload,
     loading: store.loading,
-    submitting: store.submitting,
-    promoting: store.promoting,
+    mutating: store.mutating,
     error: store.error,
     refresh,
     fetchById: store.fetchTemplateCandidateById,
-    submitCandidate: store.submitTemplateCandidateAction,
-    promoteCandidate: store.promoteTemplateCandidateAction,
+    createCandidate: store.createTemplateCandidateAction,
+    startReview: store.startTemplateCandidateReviewAction,
     rejectCandidate: store.rejectTemplateCandidateAction,
-    requestRevision: store.requestTemplateCandidateRevisionAction,
     mergeCandidate: store.mergeTemplateCandidateAction,
+    promoteCandidate: store.promoteTemplateCandidateAction,
     clearError: store.clearTemplateCandidateError,
   };
 };

@@ -1,0 +1,20 @@
+{
+    "schemaVersion":  2,
+    "status":  "UNKNOWN",
+    "repository":  "Arkcom5026/alpha-tech-client",
+    "sourceBranch":  "main",
+    "sourceSha":  "7c2d06a33147ca88785836f0214902e0a3d5461d",
+    "eventName":  "push",
+    "workflow":  "ALDE Local Certification",
+    "workflowRunId":  30795422774,
+    "workflowRunAttempt":  1,
+    "workflowRunUrl":  "https://github.com/Arkcom5026/alpha-tech-client/actions/runs/30795422774",
+    "publishedAt":  "2026-08-03T07:55:52.8292188Z",
+    "runner":  {
+                   "name":  "ALDE-WIN01",
+                   "os":  "Windows",
+                   "architecture":  "X64"
+               },
+    "metadata":  null,
+    "verificationReport":  null
+}

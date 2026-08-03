@@ -5,19 +5,19 @@ import {
 } from './stockItemReceiveProjection';
 
 describe('stock item receive projection', () => {
-  it('projects a plain barcode into the legacy simple payload', () => {
+  it('projects a plain barcode without a serial number', () => {
     expect(projectStockItemReceiveCommand('  BC-001  ')).toEqual({
       barcode: 'BC-001',
-      serialNumber: '',
+      serialNumber: null,
       keepSN: false,
       payload: { barcode: 'BC-001' },
     });
   });
 
-  it('supports the legacy positional serial number argument', () => {
+  it('normalizes the positional serial number argument into a serial-preserving payload', () => {
     expect(projectStockItemReceiveCommand('BC-002', '  SN-002  ').payload).toEqual({
       barcode: { barcode: 'BC-002', serialNumber: 'SN-002' },
-      keepSN: false,
+      keepSN: true,
     });
   });
 
@@ -32,10 +32,12 @@ describe('stock item receive projection', () => {
     });
   });
 
-  it('preserves keepSN with no serial number', () => {
-    expect(projectStockItemReceiveCommand({ barcode: 'BC-004', keepSN: true }).payload).toEqual({
-      barcode: { barcode: 'BC-004' },
-      keepSN: true,
+  it('does not preserve a serial-number flag when no serial number exists', () => {
+    expect(projectStockItemReceiveCommand({ barcode: 'BC-004', keepSN: true })).toEqual({
+      barcode: 'BC-004',
+      serialNumber: null,
+      keepSN: false,
+      payload: { barcode: 'BC-004' },
     });
   });
 

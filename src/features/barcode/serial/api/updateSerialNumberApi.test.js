@@ -15,20 +15,29 @@ describe('updateSerialNumberApi', () => {
     patchMock.mockReset();
   });
 
-  it('patches the existing serial number endpoint with the legacy payload', async () => {
+  it('patches the stock-item serial endpoint with a normalized payload', async () => {
     const sourceResponse = { ok: true };
     patchMock.mockResolvedValue({ data: sourceResponse });
 
     const result = await updateSerialNumberApi({
-      barcode: 'BC-001',
-      serialNumber: 'SN-9',
+      barcode: ' BC-001 ',
+      serialNumber: ' SN-9 ',
     });
 
-    expect(patchMock).toHaveBeenCalledWith('/barcodes/update-serial-number', {
-      barcode: 'BC-001',
+    expect(patchMock).toHaveBeenCalledWith('/stock-items/update-sn/BC-001', {
       serialNumber: 'SN-9',
     });
     expect(result).toBe(sourceResponse);
+  });
+
+  it('normalizes an empty serial number to null', async () => {
+    patchMock.mockResolvedValue({ data: { ok: true } });
+
+    await updateSerialNumberApi({ barcode: 'BC-001', serialNumber: '   ' });
+
+    expect(patchMock).toHaveBeenCalledWith('/stock-items/update-sn/BC-001', {
+      serialNumber: null,
+    });
   });
 
   it('preserves api failures', async () => {

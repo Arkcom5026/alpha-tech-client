@@ -13,7 +13,7 @@ describe('receiveScannedStockItem', () => {
     receiveStockItemApiMock.mockReset();
   });
 
-  it('normalizes legacy input before receiving the stock item', async () => {
+  it('normalizes input with a serial number before receiving the stock item', async () => {
     const sourceResponse = { stockItem: { id: 1, serialNumber: 'SN-001' } };
     receiveStockItemApiMock.mockResolvedValue(sourceResponse);
 
@@ -32,14 +32,14 @@ describe('receiveScannedStockItem', () => {
     expect(result.command.barcode).toBe('BC-001');
   });
 
-  it('supports the legacy positional input contract', async () => {
+  it('normalizes the positional serial input into a serial-preserving command', async () => {
     receiveStockItemApiMock.mockResolvedValue({ id: 2, barcode: 'BC-002' });
 
     const result = await receiveScannedStockItem(' BC-002 ', ' SN-002 ');
 
     expect(receiveStockItemApiMock).toHaveBeenCalledWith({
       barcode: { barcode: 'BC-002', serialNumber: 'SN-002' },
-      keepSN: false,
+      keepSN: true,
     });
     expect(result.stockItem).toEqual({ id: 2, barcode: 'BC-002' });
   });

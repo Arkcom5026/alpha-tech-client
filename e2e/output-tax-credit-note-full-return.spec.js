@@ -59,7 +59,12 @@ test.describe('Output-tax Credit Note full-return flow (Test DB)', () => {
     const expectedTotal = expectedRetailTotal.toFixed(2);
 
     await page.goto(`${baseUrl}/login`);
-    await page.locator('input[placeholder="อีเมลหรือเบอร์โทรศัพท์"]').fill(operatorEmail);
+
+    // The active Merchant Center login has no legacy placeholder. Role locators
+    // deliberately support both its current accessible fields and the former POS login.
+    const loginTextboxes = page.getByRole('textbox');
+    await expect(loginTextboxes.first()).toBeVisible();
+    await loginTextboxes.first().fill(operatorEmail);
     await page.locator('input[type="password"]').fill(operatorPassword);
 
     const loginResponse = page.waitForResponse(
@@ -68,7 +73,7 @@ test.describe('Output-tax Credit Note full-return flow (Test DB)', () => {
         && response.ok(),
       { timeout: 15_000 },
     );
-    await page.getByRole('button', { name: 'เข้าสู่ระบบด้วยรหัสผ่าน' }).click();
+    await page.getByRole('button', { name: /เข้าสู่ระบบ(?:ด้วยรหัสผ่าน)?/ }).click();
     const loginBody = await (await loginResponse).json();
     const accessToken = loginBody?.accessToken || loginBody?.data?.accessToken;
     expect(accessToken, 'login must return an access token for live Test-DB setup').toBeTruthy();

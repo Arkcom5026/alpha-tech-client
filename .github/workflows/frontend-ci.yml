@@ -27,6 +27,7 @@ jobs:
       run: >-
         npx vitest run
         tests/sale-customer-section-structural-extraction.contract.test.js
+        tests/sale-customer-query-classification.contract.test.js
         tests/sale-completion-customer-branch-error.contract.test.js
         tests/sale-customer-first-association.contract.test.js
 

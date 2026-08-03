@@ -20,23 +20,23 @@ export const projectStockItemReceiveCommand = (input, maybeSerialNumber) => {
     return String(maybeSerialNumber ?? '').trim();
   })();
 
-  const keepSN = Boolean(
-    (nestedBarcode && typeof nestedBarcode === 'object' && nestedBarcode.keepSN === true) ||
-      (isObjectInput && input.keepSN === true)
-  );
+  const hasSerialNumber = Boolean(serialNumber);
+  const payload = hasSerialNumber
+    ? {
+        barcode: {
+          barcode,
+          serialNumber,
+        },
+        keepSN: true,
+      }
+    : { barcode };
 
-  const payload =
-    keepSN || serialNumber
-      ? {
-          barcode: {
-            barcode,
-            ...(serialNumber ? { serialNumber } : {}),
-          },
-          keepSN,
-        }
-      : { barcode };
-
-  return { barcode, serialNumber, keepSN, payload };
+  return {
+    barcode,
+    serialNumber: hasSerialNumber ? serialNumber : null,
+    keepSN: hasSerialNumber,
+    payload,
+  };
 };
 
 export const projectStockItemReceiveResult = (sourceResponse) => ({

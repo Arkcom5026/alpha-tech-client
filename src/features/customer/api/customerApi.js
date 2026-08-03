@@ -1,10 +1,19 @@
-
-
 // src/features/customer/api/customerApi.js
 
 import apiClient from '@/utils/apiClient';
 
-// ค้นหาลูกค้าด้วยเบอร์โทร
+export const searchStoreCustomers = async (query) => {
+  try {
+    const res = await apiClient.get('/customers/search', {
+      params: { q: String(query || '').trim() },
+    });
+    return res.data;
+  } catch (error) {
+    console.error('❌ [searchStoreCustomers] error:', error);
+    throw error;
+  }
+};
+
 export const getCustomerByPhone = async (phone) => {
   try {
     const res = await apiClient.get(`/customers/by-phone/${phone}`);
@@ -15,7 +24,6 @@ export const getCustomerByPhone = async (phone) => {
   }
 };
 
-// สร้างลูกค้าใหม่แบบด่วน
 export const createCustomer = async (data) => {
   try {
     const res = await apiClient.post('/customers', data);
@@ -26,7 +34,6 @@ export const createCustomer = async (data) => {
   }
 };
 
-// ✅ อัปเดตข้อมูลลูกค้า (Online)
 export const updateCustomerProfileOnline = async (data) => {
   try {
     const res = await apiClient.put('/customers/me', data);
@@ -37,7 +44,6 @@ export const updateCustomerProfileOnline = async (data) => {
   }
 };
 
-// ✅ อัปเดตข้อมูลลูกค้า (POS)
 export const updateCustomerProfilePos = async (id, data) => {
   try {
     const res = await apiClient.put(`/customers/${id}`, data);
@@ -48,7 +54,6 @@ export const updateCustomerProfilePos = async (id, data) => {
   }
 };
 
-// ✅ ดึงข้อมูลลูกค้าที่ login (Online)
 export const getMyCustomerProfileOnline = async () => {
   try {
     const res = await apiClient.get('/customers/me');
@@ -59,7 +64,6 @@ export const getMyCustomerProfileOnline = async () => {
   }
 };
 
-// ✅ ดึงข้อมูลลูกค้าที่ login (POS)
 export const getMyCustomerProfilePos = async () => {
   try {
     const res = await apiClient.get('/customers/me');
@@ -70,11 +74,10 @@ export const getMyCustomerProfilePos = async () => {
   }
 };
 
-// 🔍 ค้นหาลูกค้าด้วยชื่อหรือนามสกุล
 export const getCustomerByName = async (keyword) => {
   try {
-    const res = await apiClient.get(`/customers/by-name`, {
-      params: { q: keyword }
+    const res = await apiClient.get('/customers/by-name', {
+      params: { q: keyword },
     });
     return res.data;
   } catch (error) {
@@ -82,5 +85,3 @@ export const getCustomerByName = async (keyword) => {
     throw error;
   }
 };
-
-

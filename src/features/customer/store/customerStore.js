@@ -2,6 +2,7 @@
 
 import { create } from 'zustand';
 import {
+  searchStoreCustomers,
   getCustomerByPhone,
   createCustomer,
   updateCustomerProfileOnline as updateCustomerProfileOnlineApi,
@@ -15,12 +16,26 @@ const useCustomerStore = create((set) => ({
   customer: null,
   isLoading: false,
   error: null,
-
   searchedCustomers: [],
   isSearching: false,
   searchError: null,
 
-  // 🔎 Search
+  searchStoreCustomersAction: async (query) => {
+    set({ isSearching: true, searchError: null });
+    try {
+      const payload = await searchStoreCustomers(query);
+      const results = Array.isArray(payload?.results) ? payload.results : [];
+      set({ searchedCustomers: results });
+      return payload;
+    } catch (err) {
+      const message = err?.response?.data?.message || err?.message || 'ไม่สามารถค้นหาลูกค้าได้';
+      set({ searchedCustomers: [], searchError: message });
+      throw err;
+    } finally {
+      set({ isSearching: false });
+    }
+  },
+
   searchCustomers: async (query) => {
     set({ isSearching: true, searchError: null });
     try {
@@ -35,11 +50,8 @@ const useCustomerStore = create((set) => ({
     }
   },
 
-  clearSearchedCustomers: () => {
-    set({ searchedCustomers: [], searchError: null });
-  },
+  clearSearchedCustomers: () => set({ searchedCustomers: [], searchError: null }),
 
-  // ☎️ Lookup by phone (POS scope)
   getCustomerByPhone: async (phone) => {
     set({ isLoading: true, error: null });
     try {
@@ -54,7 +66,6 @@ const useCustomerStore = create((set) => ({
     }
   },
 
-  // ➕ Create
   createCustomer: async (customerData) => {
     set({ isLoading: true, error: null });
     try {
@@ -69,7 +80,6 @@ const useCustomerStore = create((set) => ({
     }
   },
 
-  // ✏️ Update (Online)
   updateCustomerProfileOnlineAction: async (data) => {
     set({ isLoading: true, error: null });
     try {
@@ -84,7 +94,6 @@ const useCustomerStore = create((set) => ({
     }
   },
 
-  // ✏️ Update (POS)
   updateCustomerProfilePosAction: async (id, data) => {
     set({ isLoading: true, error: null });
     try {
@@ -101,7 +110,6 @@ const useCustomerStore = create((set) => ({
     }
   },
 
-  // 👤 Get my profile (Online/Customer self)
   getMyCustomerProfileOnlineAction: async () => {
     set({ isLoading: true, error: null });
     try {
@@ -116,7 +124,6 @@ const useCustomerStore = create((set) => ({
     }
   },
 
-  // 👤 Get my profile (POS/staff viewing)
   getMyCustomerProfilePosAction: async () => {
     set({ isLoading: true, error: null });
     try {
@@ -131,29 +138,21 @@ const useCustomerStore = create((set) => ({
     }
   },
 
-  // 🧰 Setters
   setCustomer: (customer) => set({ customer }),
   resetCustomer: () => set({ customer: null, error: null }),
 
-  // 🔁 Backward-compatible aliases
-  createCustomerAction: async (data) => {
-    return await useCustomerStore.getState().createCustomer(data);
-  },
+  createCustomerAction: async (data) => useCustomerStore.getState().createCustomer(data),
   updateCustomerProfileAction: async (data, mode = 'online') => {
     if (mode === 'pos') {
       const { id, ...payload } = data || {};
       const safeId = Number(id);
       if (!Number.isFinite(safeId)) throw new Error('INVALID_CUSTOMER_ID');
-      return await useCustomerStore.getState().updateCustomerProfilePosAction(safeId, payload);
+      return useCustomerStore.getState().updateCustomerProfilePosAction(safeId, payload);
     }
-    return await useCustomerStore.getState().updateCustomerProfileOnlineAction(data);
+    return useCustomerStore.getState().updateCustomerProfileOnlineAction(data);
   },
-  getMyCustomerProfileOnline: async () => {
-    return await useCustomerStore.getState().getMyCustomerProfileOnlineAction();
-  },
-  getMyCustomerProfilePos: async () => {
-    return await useCustomerStore.getState().getMyCustomerProfilePosAction();
-  },
+  getMyCustomerProfileOnline: async () => useCustomerStore.getState().getMyCustomerProfileOnlineAction(),
+  getMyCustomerProfilePos: async () => useCustomerStore.getState().getMyCustomerProfilePosAction(),
 }));
 
 export default useCustomerStore;

@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 
 import { executeCreateSaleCompletion } from '../controllers/saleCompletionController';
 import { projectSaleCompletionRecovery } from '../services/saleCompletionRecovery';
+import { projectSaleCompletionErrorMessage } from '../presentation/saleCompletionErrorMessage';
 
 export const useSaleCompletion = ({
   saleItems,
@@ -60,11 +61,15 @@ export const useSaleCompletion = ({
       const payload = error?.response?.data;
       const failure = error?.saleCompletionFailure || null;
       const identity = error?.saleCompletionIdentity || null;
+      const code = payload?.code || error?.code || failure?.code;
       if (failure) setCompletionFailure(failure);
       if (identity) setCompletionIdentity(identity);
       return {
-        error: payload?.message || error?.message || 'ยืนยันการขายล้มเหลว',
-        code: payload?.code || error?.code || failure?.code,
+        error: projectSaleCompletionErrorMessage({
+          code,
+          message: payload?.message || error?.message,
+        }),
+        code,
         recovery: projectSaleCompletionRecovery({ identity, failure }),
       };
     } finally {

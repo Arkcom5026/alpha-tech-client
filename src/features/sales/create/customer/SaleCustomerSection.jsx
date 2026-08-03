@@ -13,16 +13,17 @@ import { useSaleCustomerSearch } from './hooks/useSaleCustomerSearch';
 import { projectSaleCustomerSection } from './projections/saleCustomerSectionProjection';
 
 const SaleCustomerSection = ({ productSearchRef, clearTrigger, onClearFinish, onSaleModeSelect }) => {
-  const localPhoneRef = useRef(null);
+  const customerSearchRef = useRef(null);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [pendingCreate, setPendingCreate] = useState(false);
   const [formInfo, setFormInfo] = useState('');
   const [formError, setFormError] = useState('');
 
   const ensureProvincesAction = useAddressStore((state) => state.ensureProvincesAction);
-  const searchByPhone = useCustomerDepositStore((state) => state.searchCustomerByPhoneAndDepositAction);
-  const searchByName = useCustomerDepositStore((state) => state.searchCustomerByNameAndDepositAction);
-  const searchByCustomerId = useCustomerDepositStore((state) => state.searchCustomerByCustomerIdAndDepositAction);
+  const searchCustomers = useCustomerStore((state) => state.searchStoreCustomersAction);
+  const searchByCustomerId = useCustomerDepositStore(
+    (state) => state.searchCustomerByCustomerIdAndDepositAction
+  );
   const setDepositAmount = useCustomerDepositStore((state) => state.setCustomerDepositAmount);
   const setSelectedDeposit = useCustomerDepositStore((state) => state.setSelectedDeposit);
   const clearCustomerAndDeposit = useCustomerDepositStore((state) => state.clearCustomerAndDeposit);
@@ -56,21 +57,19 @@ const SaleCustomerSection = ({ productSearchRef, clearTrigger, onClearFinish, on
     clearCustomerAndDeposit();
     setPendingCreate(true);
     editor.clearEditor(mode === 'phone' ? { phone: query } : { name: query });
-    setFormInfo('ไม่พบลูกค้า สามารถเพิ่มลูกค้าใหม่ได้');
+    setFormInfo('ไม่พบลูกค้าในร้านนี้ สามารถเพิ่มลูกค้าใหม่ได้');
     setFormError('');
     setTimeout(() => document.getElementById('customer-name-input')?.focus(), 80);
   }, [clearCustomerAndDeposit, editor, setCustomerId]);
 
   const search = useSaleCustomerSearch({
-    searchByPhone,
-    searchByName,
-    onCustomerFound: handleFound,
+    searchCustomers,
     onCustomerNotFound: handleNotFound,
   });
 
   useEffect(() => {
     ensureProvincesAction?.().catch(() => {});
-    const timer = setTimeout(() => localPhoneRef.current?.focus(), 120);
+    const timer = setTimeout(() => customerSearchRef.current?.focus(), 120);
     return () => clearTimeout(timer);
   }, [ensureProvincesAction]);
 
@@ -85,7 +84,7 @@ const SaleCustomerSection = ({ productSearchRef, clearTrigger, onClearFinish, on
     setCustomerId(null);
     clearCustomerAndDeposit();
     onClearFinish?.();
-    setTimeout(() => localPhoneRef.current?.focus(), 80);
+    setTimeout(() => customerSearchRef.current?.focus(), 80);
   }, [clearCustomerAndDeposit, clearTrigger, editor, onClearFinish, search, setCustomerId]);
 
   const handleSelectResult = async (candidate) => {
@@ -132,7 +131,7 @@ const SaleCustomerSection = ({ productSearchRef, clearTrigger, onClearFinish, on
     search.clearSearch();
     setFormInfo('');
     setFormError('');
-    setTimeout(() => localPhoneRef.current?.focus(), 80);
+    setTimeout(() => customerSearchRef.current?.focus(), 80);
   };
 
   const view = projectSaleCustomerSection({
@@ -145,34 +144,24 @@ const SaleCustomerSection = ({ productSearchRef, clearTrigger, onClearFinish, on
   const provinceFilter = useMemo(() => undefined, []);
 
   return (
-    <div className="w-full p-2.5 font-semibold text-slate-700 text-xs select-none bg-white border border-slate-200 rounded-2xl shadow-sm">
-      <div className="flex items-center gap-1.5 pb-1.5 border-b border-slate-100 mb-2">
-        <div className="p-1 bg-slate-900/5 text-slate-800 rounded-md"><User className="w-3.5 h-3.5" /></div>
+    <div className="w-full select-none rounded-2xl border border-slate-200 bg-white p-2.5 text-xs font-semibold text-slate-700 shadow-sm">
+      <div className="mb-2 flex items-center gap-1.5 border-b border-slate-100 pb-1.5">
+        <div className="rounded-md bg-slate-900/5 p-1 text-slate-800"><User className="h-3.5 w-3.5" /></div>
         <h2 className="text-xs font-black text-slate-900">ข้อมูลรายละเอียดผู้ซื้อ</h2>
       </div>
 
       <SaleCustomerSearch
-        clearKey={clearTrigger || 'sale-customer-search'}
-        phone={view.search.phone}
-        rawPhone={view.search.rawPhone}
-        searchMode={view.search.searchMode}
-        nameSearch={view.search.nameSearch}
+        query={view.search.query}
         customerLoading={view.search.loading}
-        phoneInputRef={localPhoneRef}
-        onSearchModeChange={view.search.setSearchMode}
-        onPhoneChange={(value) => {
-          view.search.setPhone(value);
-          view.search.setRawPhone(value.replace(/\D/g, ''));
-        }}
-        onNameSearchChange={view.search.setNameSearch}
+        inputRef={customerSearchRef}
+        onQueryChange={view.search.setQuery}
         onSubmit={view.search.submitSearch}
       />
 
-      {view.feedback.formError && <div className="bg-rose-50 border border-rose-100 p-1.5 rounded-md text-[10px] font-black text-rose-600 mb-2">{view.feedback.formError}</div>}
-      {view.feedback.formInfo && <div className="bg-emerald-50 border border-emerald-100 p-1.5 rounded-md text-[10px] font-black text-emerald-700 mb-2">{view.feedback.formInfo}</div>}
+      {view.feedback.formError && <div className="mb-2 rounded-md border border-rose-100 bg-rose-50 p-1.5 text-[10px] font-black text-rose-600">{view.feedback.formError}</div>}
+      {view.feedback.formInfo && <div className="mb-2 rounded-md border border-emerald-100 bg-emerald-50 p-1.5 text-[10px] font-black text-emerald-700">{view.feedback.formInfo}</div>}
 
       <SaleCustomerSearchResults
-        searchMode={view.search.searchMode}
         results={view.search.results}
         selectedCustomerId={view.search.selectedResultId}
         loading={view.search.loading}
@@ -193,9 +182,9 @@ const SaleCustomerSection = ({ productSearchRef, clearTrigger, onClearFinish, on
         />
       )}
 
-      <div className="p-1 bg-slate-50/40 border-t border-slate-100 text-[9px] font-bold text-slate-400 flex items-center gap-1 mt-2">
-        <ShieldCheck className="w-3 h-3 text-slate-400" />
-        <span>Real-time POS Multi-Terminal Synchronized</span>
+      <div className="mt-2 flex items-center gap-1 border-t border-slate-100 bg-slate-50/40 p-1 text-[9px] font-bold text-slate-400">
+        <ShieldCheck className="h-3 w-3 text-slate-400" />
+        <span>Store-scoped customer search and deposit hydration</span>
       </div>
     </div>
   );

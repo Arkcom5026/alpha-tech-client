@@ -31,8 +31,9 @@ function Resolve-FailureClassification {
 
   $preflightPatterns = @(
     [ordered]@{ pattern = "Repository .* is on branch '.*';\s*expected '.*'"; reasonCode = 'REQUIRED_BRANCH_MISMATCH' },
-    [ordered]@{ pattern = 'working tree is not clean|Repository .* is dirty'; reasonCode = 'WORKING_TREE_NOT_CLEAN' },
-    [ordered]@{ pattern = 'does not exist:|is not a Git repository|does not contain package\.json'; reasonCode = 'REPOSITORY_PRECONDITION_FAILED' },
+    [ordered]@{ pattern = 'REQUIRED_BRANCH_MISMATCH'; reasonCode = 'REQUIRED_BRANCH_MISMATCH' },
+    [ordered]@{ pattern = 'working tree is not clean|Repository .* is dirty|WORKING_TREE_NOT_CLEAN'; reasonCode = 'WORKING_TREE_NOT_CLEAN' },
+    [ordered]@{ pattern = 'REPOSITORY_PATH_MISSING|does not exist:|is not a Git repository|does not contain package\.json'; reasonCode = 'REPOSITORY_PRECONDITION_FAILED' },
     [ordered]@{ pattern = 'fatal: detected dubious ownership'; reasonCode = 'GIT_SAFE_DIRECTORY_REQUIRED' },
     [ordered]@{ pattern = 'PRISMA_GENERATE_LOCK_RISK|SERVER_NODE_PROCESS_ACTIVE'; reasonCode = 'PRISMA_GENERATE_LOCK_RISK' }
   )
@@ -69,20 +70,10 @@ function Resolve-FailureClassification {
   }
 
   $environmentPatterns = @(
-    'EPERM',
-    'EBUSY',
-    'EACCES',
-    'operation not permitted',
-    'access is denied',
-    'permission denied',
-    'resource busy',
-    'file.*(?:lock|locked)',
-    'query_engine-windows\.dll\.node',
-    'EADDRINUSE',
-    'port.*already in use',
-    'ECONNREFUSED',
-    'timed? out',
-    'network.*(?:unavailable|failure)',
+    'EPERM', 'EBUSY', 'EACCES', 'operation not permitted', 'access is denied',
+    'permission denied', 'resource busy', 'file.*(?:lock|locked)',
+    'query_engine-windows\.dll\.node', 'EADDRINUSE', 'port.*already in use',
+    'ECONNREFUSED', 'timed? out', 'network.*(?:unavailable|failure)',
     'Could not resolve host'
   )
 
@@ -97,18 +88,10 @@ function Resolve-FailureClassification {
   }
 
   $regressionPatterns = @(
-    'AssertionError',
-    'expected .* to (?:contain|match|equal|be)',
-    'Test Files?\s+\d+ failed',
-    'Tests?\s+\d+ failed',
-    'Cannot find module',
-    'Module not found',
-    'SyntaxError',
-    'TypeError',
-    'ReferenceError',
-    'TS\d{4}',
-    'Build failed',
-    'failed executable workflow contract'
+    'AssertionError', 'expected .* to (?:contain|match|equal|be)',
+    'Test Files?\s+\d+ failed', 'Tests?\s+\d+ failed',
+    'Cannot find module', 'Module not found', 'SyntaxError', 'TypeError',
+    'ReferenceError', 'TS\d{4}', 'Build failed', 'failed executable workflow contract'
   )
 
   foreach ($pattern in $regressionPatterns) {
@@ -130,12 +113,8 @@ function Resolve-FailureClassification {
 
 function Get-GatePolicy {
   param([Parameter(Mandatory)][object]$Gate)
-
   if ([string]$Gate.status -ne 'SKIP') { return 'REQUIRED' }
-  if (
-    [string]$Gate.name -eq 'Backend verify:partner-store-application-runtime' -and
-    [string]$Gate.detail -match 'Direct runtime write verifier is intentionally excluded'
-  ) {
+  if ([string]$Gate.name -eq 'Backend verify:partner-store-application-runtime' -and [string]$Gate.detail -match 'Direct runtime write verifier is intentionally excluded') {
     return 'ADVISORY_SKIP'
   }
   return 'BLOCKING_SKIP'
@@ -143,29 +122,25 @@ function Get-GatePolicy {
 
 function Get-AuthorityStatus {
   param([AllowEmptyCollection()][object[]]$Gates = @())
-
   $failed = @($Gates | Where-Object { $_.status -eq 'FAIL' })
   $blockingSkips = @($Gates | Where-Object { $_.gatePolicy -eq 'BLOCKING_SKIP' })
   if ($blockingSkips.Count -gt 0) { return 'BLOCKED' }
   if ($failed.Count -eq 0) { return 'PASS' }
-
   $defects = @($failed | Where-Object { $_.failureClass -in @('REGRESSION', 'UNCLASSIFIED') })
   if ($defects.Count -gt 0) { return 'FAIL' }
   return 'BLOCKED'
 }
 
-if (-not (Test-Path -LiteralPath $ReportPath -PathType Leaf)) {
-  throw "ALDE report does not exist: $ReportPath"
-}
-if (-not (Test-Path -LiteralPath $TranscriptPath -PathType Leaf)) {
-  throw "ALDE transcript does not exist: $TranscriptPath"
-}
+if (-not (Test-Path -LiteralPath $ReportPath -PathType Leaf)) { throw "ALDE report does not exist: $ReportPath" }
+if (-not (Test-Path -LiteralPath $TranscriptPath -PathType Leaf)) { throw "ALDE transcript does not exist: $TranscriptPath" }
 
 $report = Get-Content -LiteralPath $ReportPath -Raw | ConvertFrom-Json
 $transcript = Get-Content -LiteralPath $TranscriptPath -Raw
 $classifiedGates = @()
+$reportGatesProperty = $report.PSObject.Properties['gates']
+$reportGates = if ($null -ne $reportGatesProperty -and $null -ne $reportGatesProperty.Value) { @($reportGatesProperty.Value) } else { @() }
 
-foreach ($gate in @($report.gates)) {
+foreach ($gate in $reportGates) {
   $failureClass = $null
   $reasonCode = $null
   $matchedPattern = $null
@@ -173,11 +148,7 @@ foreach ($gate in @($report.gates)) {
 
   if ([string]$gate.status -eq 'FAIL') {
     $gateTranscript = Get-GateTranscript -Transcript $transcript -GateName ([string]$gate.name)
-    $classification = Resolve-FailureClassification `
-      -GateName ([string]$gate.name) `
-      -Detail ([string]$gate.detail) `
-      -Transcript $gateTranscript
-
+    $classification = Resolve-FailureClassification -GateName ([string]$gate.name) -Detail ([string]$gate.detail) -Transcript $gateTranscript
     $failureClass = [string]$classification.failureClass
     $reasonCode = [string]$classification.reasonCode
     $matchedPattern = $classification.matchedPattern
@@ -198,24 +169,17 @@ foreach ($gate in @($report.gates)) {
 
 foreach ($gate in $classifiedGates) { $gate.gatePolicy = Get-GatePolicy -Gate $gate }
 
-# ALDE can fail during Git Guard or repository bootstrap before normal gates exist.
-# Preserve that failure as a synthetic preflight gate so the pipeline can still
-# publish metadata, transcript evidence, and a deterministic authority status.
 if ($classifiedGates.Count -eq 0 -and [string]$report.status -ne 'PASS') {
   $reportDetail = ''
   foreach ($propertyName in @('error', 'failure', 'message', 'summary', 'issues')) {
     $property = $report.PSObject.Properties[$propertyName]
-    if ($null -ne $property -and $null -ne $property.Value -and [string]$property.Value) {
-      $reportDetail = if ($property.Value -is [System.Collections.IEnumerable] -and $property.Value -isnot [string]) { @($property.Value) -join "`n" } else { [string]$property.Value }
-      break
+    if ($null -ne $property -and $null -ne $property.Value) {
+      $valueText = if ($property.Value -is [System.Collections.IEnumerable] -and $property.Value -isnot [string]) { @($property.Value) -join "`n" } else { [string]$property.Value }
+      if ($valueText) { $reportDetail = $valueText; break }
     }
   }
 
-  $classification = Resolve-FailureClassification `
-    -GateName 'ALDE preflight' `
-    -Detail $reportDetail `
-    -Transcript $transcript
-
+  $classification = Resolve-FailureClassification -GateName 'ALDE preflight' -Detail $reportDetail -Transcript $transcript
   $classifiedGates += [ordered]@{
     name = 'ALDE preflight'
     status = 'FAIL'
@@ -225,9 +189,8 @@ if ($classifiedGates.Count -eq 0 -and [string]$report.status -ne 'PASS') {
     durationSeconds = $null
     detail = $reportDetail
     transcriptEvidence = $transcript.Trim()
-    gatePolicy = ''
+    gatePolicy = 'REQUIRED'
   }
-  $classifiedGates[$classifiedGates.Count - 1].gatePolicy = Get-GatePolicy -Gate $classifiedGates[$classifiedGates.Count - 1]
 }
 
 $authorityStatus = Get-AuthorityStatus -Gates $classifiedGates
@@ -235,8 +198,8 @@ $assessment = [ordered]@{
   schemaVersion = 2
   classifier = [ordered]@{
     name = 'ALDE Transcript-Aware Failure Classification Engine'
-    version = '1.1.0'
-    evidenceSources = @('gate.name', 'gate.detail', 'execution transcript')
+    version = '1.1.1'
+    evidenceSources = @('gate.name', 'gate.detail', 'execution transcript', 'preflight.issues')
     conservativeUnknownPolicy = 'UNCLASSIFIED is certification-failing until reviewed.'
     earlyFailurePolicy = 'Preflight failures without normal gates are preserved as a synthetic ALDE preflight gate.'
   }
@@ -249,21 +212,12 @@ $assessment = [ordered]@{
   requiredPassedGateCount = @($classifiedGates | Where-Object { $_.status -eq 'PASS' -and $_.gatePolicy -eq 'REQUIRED' }).Count
   advisorySkippedGateCount = @($classifiedGates | Where-Object { $_.gatePolicy -eq 'ADVISORY_SKIP' }).Count
   blockingSkippedGateCount = @($classifiedGates | Where-Object { $_.gatePolicy -eq 'BLOCKING_SKIP' }).Count
-  interpretation = if ($authorityStatus -eq 'PASS') {
-    'All certification gates passed.'
-  }
-  elseif ($authorityStatus -eq 'BLOCKED') {
-    'No source regression was identified, but certification requires repository/environment recovery or explicit safety authority.'
-  }
-  else {
-    'A source/executable-contract regression or unclassified failure requires correction or review.'
-  }
+  interpretation = if ($authorityStatus -eq 'PASS') { 'All certification gates passed.' } elseif ($authorityStatus -eq 'BLOCKED') { 'No source regression was identified, but certification requires repository/environment recovery or explicit safety authority.' } else { 'A source/executable-contract regression or unclassified failure requires correction or review.' }
   gates = $classifiedGates
 }
 
 $report | Add-Member -NotePropertyName assessment -NotePropertyValue $assessment -Force
 if (-not $OutputPath) { $OutputPath = $ReportPath }
 $report | ConvertTo-Json -Depth 30 | Set-Content -LiteralPath $OutputPath -Encoding UTF8
-
 Write-Host "[CLASSIFY] authority=$authorityStatus regressions=$($assessment.regressionCount) environment=$($assessment.environmentBlockerCount) safety=$($assessment.safetyGuardCount) unclassified=$($assessment.unclassifiedCount)" -ForegroundColor Cyan
 Write-Output $OutputPath

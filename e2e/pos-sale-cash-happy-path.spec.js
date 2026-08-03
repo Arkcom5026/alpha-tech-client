@@ -3,6 +3,7 @@
 // It never intercepts API calls and requires a fresh fixture from
 // `npm run provision:pos-sale-e2e-fixture` in alpha-tech-server.
 
+import process from 'node:process';
 import { test, expect } from '@playwright/test';
 
 const baseUrl = process.env.E2E_BASE_URL || 'http://localhost:5173';

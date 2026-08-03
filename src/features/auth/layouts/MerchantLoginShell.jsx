@@ -1,37 +1,6 @@
 import React from 'react';
-import { Outlet } from 'react-router-dom';
-import {
-  FaBox,
-  FaChartBar,
-  FaCheckCircle,
-  FaClipboardList,
-  FaCoins,
-  FaHome,
-  FaLock,
-  FaShoppingCart,
-  FaStore,
-  FaTools,
-} from 'react-icons/fa';
-
-const topItems = [
-  ['หน้าหลัก', FaHome],
-  ['สั่งซื้อ', FaShoppingCart],
-  ['การขาย', FaClipboardList],
-  ['บริการ', FaTools],
-  ['สต๊อก', FaBox],
-  ['รายงาน', FaChartBar],
-  ['การเงิน', FaCoins],
-  ['ตั้งค่าระบบ', FaTools],
-];
-
-const sideItems = [
-  ['หน้าหลัก', FaHome],
-  ['จัดการร้าน', FaStore],
-  ['จัดการสินค้า', FaBox],
-  ['จัดการสต๊อก', FaClipboardList],
-  ['รายงาน', FaChartBar],
-  ['การเงิน', FaCoins],
-];
+import { Link, Outlet } from 'react-router-dom';
+import { FaArrowLeft, FaLock } from 'react-icons/fa';
 
 const FeatureCard = ({ title, detail }) => (
   <div className="group rounded-2xl border border-orange-100 bg-white/95 px-4 py-5 text-center shadow-[0_8px_24px_rgba(15,23,42,0.05)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_12px_28px_rgba(15,23,42,0.09)]">
@@ -80,48 +49,24 @@ const PosHardwareArtwork = () => (
 
 const MerchantLoginShell = () => (
   <div className="min-h-screen bg-[#f8fafc] text-slate-900">
-    <header className="sticky top-0 z-20 border-b border-orange-100 bg-white/95 shadow-sm backdrop-blur">
-      <div className="flex min-h-[70px] items-center gap-3 px-4 lg:pl-[202px]">
-        <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto py-3 [scrollbar-width:none]">
-          <span className="inline-flex shrink-0 items-center gap-2 rounded-full border border-orange-200 bg-orange-50 px-4 py-2 text-xs font-black text-orange-700">
-            <FaCheckCircle /> POS
-          </span>
-          {topItems.map(([label, Icon]) => (
-            <span key={label} className="inline-flex shrink-0 items-center gap-2 rounded-full border border-orange-200 bg-white px-4 py-2 text-xs font-bold text-slate-700 shadow-sm">
-              <Icon className="text-orange-500" /> {label}
-            </span>
-          ))}
-        </div>
-        <div className="hidden shrink-0 items-center gap-3 xl:flex">
-          <span className="rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-xs font-black text-emerald-700">● ระบบพร้อมใช้งาน</span>
-          <span className="rounded-2xl border border-orange-200 bg-orange-50 px-4 py-2 text-[11px] font-bold text-slate-700">BRANCH ONLINE<br /><strong>ร้านทดสอบการสร้างร้านพาร์ทเนอร์</strong></span>
-          <span className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-600">POS OPERATOR⌄</span>
-        </div>
+    <header className="border-b border-orange-100 bg-white/95 shadow-sm backdrop-blur">
+      <div className="mx-auto flex min-h-[72px] max-w-[1280px] items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
+        <Link to="/partner-portal" className="flex items-center gap-3" aria-label="กลับหน้าพาร์ทเนอร์">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-orange-400 to-orange-600 text-sm font-black text-white shadow-md">SS</div>
+          <div>
+            <p className="text-sm font-black text-slate-950">SADUAKSABUY</p>
+            <p className="text-[9px] font-bold tracking-[0.18em] text-slate-500">MERCHANT CENTER</p>
+          </div>
+        </Link>
+
+        <Link to="/partner-portal" className="inline-flex items-center gap-2 rounded-full border border-orange-200 bg-white px-4 py-2 text-xs font-bold text-orange-600 transition hover:bg-orange-50">
+          <FaArrowLeft /> กลับหน้าพาร์ทเนอร์
+        </Link>
       </div>
     </header>
 
-    <aside className="fixed inset-y-0 left-0 z-30 hidden w-[180px] border-r border-orange-100 bg-[#fffaf4] lg:flex lg:flex-col">
-      <div className="border-b border-orange-100 px-6 py-7">
-        <p className="text-base font-black text-orange-600">POS SYSTEM</p>
-        <p className="mt-1 text-[9px] font-bold tracking-[0.16em] text-slate-500">ENTERPRISE COMMAND RAIL</p>
-      </div>
-      <div className="flex-1 px-3 py-5">
-        <p className="mb-3 px-3 text-[11px] font-black text-slate-600">เมนูหลัก</p>
-        <div className="space-y-2">
-          {sideItems.map(([label, Icon]) => (
-            <div key={label} className="flex items-center gap-3 rounded-xl border border-orange-100 bg-white px-4 py-3 text-xs font-bold text-slate-700 shadow-sm">
-              <Icon className="text-orange-500" /> {label}
-            </div>
-          ))}
-        </div>
-      </div>
-      <div className="p-3">
-        <div className="rounded-xl border border-orange-200 bg-white px-4 py-3 text-xs font-bold text-slate-700">← ซ่อนเมนู</div>
-      </div>
-    </aside>
-
-    <main className="lg:pl-[180px]">
-      <div className="mx-auto flex min-h-[calc(100vh-118px)] max-w-[1280px] items-center px-4 py-9 sm:px-6 lg:px-8">
+    <main>
+      <div className="mx-auto flex min-h-[calc(100vh-128px)] max-w-[1280px] items-center px-4 py-9 sm:px-6 lg:px-8">
         <section className="grid w-full overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_22px_60px_rgba(15,23,42,0.14)] lg:grid-cols-[1.08fr_0.92fr]">
           <div className="hidden min-h-[620px] flex-col bg-gradient-to-br from-[#fffaf4] via-[#fff8ef] to-white px-12 py-10 lg:flex xl:px-14">
             <div className="text-center">
@@ -149,10 +94,10 @@ const MerchantLoginShell = () => (
       </div>
     </main>
 
-    <footer className="border-t border-slate-200 bg-white py-4 text-center text-[11px] font-semibold text-slate-500 lg:pl-[180px]">
+    <footer className="border-t border-slate-200 bg-white py-4 text-center text-[11px] font-semibold text-slate-500">
       <div className="mx-auto flex max-w-[1280px] flex-wrap items-center justify-center gap-x-8 gap-y-2 px-4 sm:justify-between">
         <span>© 2026 SADUAKSABUY.COM. All rights reserved.</span>
-        <span>เวอร์ชัน 2.1.0 &nbsp; <strong className="text-emerald-600">● ระบบพร้อมใช้งาน</strong></span>
+        <span>การเข้าสู่ระบบที่ปลอดภัยสำหรับร้านพาร์ทเนอร์</span>
       </div>
     </footer>
   </div>

@@ -12,6 +12,7 @@ import MarketplacePortalPage from '@/features/online/pages/MarketplacePortalPage
 import PartnerWelcomePage from '@/features/auth/pages/PartnerWelcomePage';
 import PartnerStoreApplicationPage from '@/features/partnerStoreApplication/pages/PartnerStoreApplicationPage';
 import LoginPage from '@/features/auth/pages/LoginPage';
+import MerchantLoginShell from '@/features/auth/layouts/MerchantLoginShell';
 import ForgotPasswordPage from '@/features/auth/pages/ForgotPasswordPage';
 import ResetPasswordPage from '@/features/auth/pages/ResetPasswordPage';
 import CustomerRepairTrackingPage from '@/features/repair/customer-tracking/pages/CustomerRepairTrackingPage';
@@ -84,8 +85,13 @@ const AppRouter = [
     children: onlinePartnerRoutes,
   },
   {
-    path: 'login',
-    element: <LoginPage />,
+    element: <MerchantLoginShell />,
+    children: [
+      {
+        path: 'login',
+        element: <LoginPage />,
+      },
+    ],
   },
   {
     path: '*',

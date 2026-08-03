@@ -1,3 +1,5 @@
+import { readSaleCustomerFirstAssociation } from '../../customer/services/saleCustomerFirstAssociationSession';
+
 const round2 = (value) => Number((Number(value) || 0).toFixed(2));
 
 export const buildSaleCompletionPayload = ({
@@ -38,6 +40,7 @@ export const buildSaleCompletionPayload = ({
 
   return {
     customerId: customerId ? Number(customerId) : null,
+    customerFirstAssociationToken: readSaleCustomerFirstAssociation(customerId) || undefined,
     sourceHeldCartId: activeHeldCart?.id || null,
     totalBeforeDiscount,
     totalDiscount,

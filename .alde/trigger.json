@@ -2,9 +2,9 @@
   "schemaVersion": 2,
   "requestedBy": "ChatGPT",
   "mode": "SyncAndCertify",
-  "requestedAt": "2026-08-03T15:04:00+07:00",
+  "requestedAt": "2026-08-03T19:12:44+07:00",
   "triggerKind": "new-certification",
-  "expectedPreTriggerClientHead": "4087f447c156feedd4beb8a25afbad377300f78d",
-  "expectedServerHead": "8da12d341f1956676b5b0405adbae53c4a05d802",
-  "reason": "Re-run post-merge ALDE certification after aligning the Partner Store HTTP E2E verifier with the reserved disabled owner flow. Required evidence: workflow sourceSha and metadata.clientHead must equal the trigger commit created by this update; metadata.serverHead must equal 8da12d341f1956676b5b0405adbae53c4a05d802; runner must be ALDE-WIN01; mode must be SyncAndCertify; failedGateCount must be 0; latest/history Result Bridge records must identify the same workflow run. Pre-trigger client main was 4087f447c156feedd4beb8a25afbad377300f78d."
+  "expectedPreTriggerClientHead": "d16be9929972ffdc0b53724dc1a08599d406a2e0",
+  "expectedServerHead": "34a90feab60b8d7a39339823373b5188a25aec83",
+  "reason": "New post-merge ALDE certification for the closed output-tax issuance, paid-only tax-document printable projection, and Sales delivery-note print-projection agenda. Required evidence: workflow sourceSha and metadata.clientHead must equal this trigger commit; metadata.serverHead must equal 34a90feab60b8d7a39339823373b5188a25aec83; runner must be ALDE-WIN01; mode must be SyncAndCertify; failedGateCount must be 0; latest and history Result Bridge records must identify the same workflow run."
 }

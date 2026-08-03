@@ -2,9 +2,9 @@
   "schemaVersion": 2,
   "requestedBy": "ChatGPT",
   "mode": "SyncAndCertify",
-  "requestedAt": "2026-08-03T19:12:44+07:00",
+  "requestedAt": "2026-08-03T19:19:00+07:00",
   "triggerKind": "new-certification",
-  "expectedPreTriggerClientHead": "d16be9929972ffdc0b53724dc1a08599d406a2e0",
+  "expectedPreTriggerClientHead": "7f91f5f978c9584b838347aae138fa6209b675cd",
   "expectedServerHead": "34a90feab60b8d7a39339823373b5188a25aec83",
-  "reason": "New post-merge ALDE certification for the closed output-tax issuance, paid-only tax-document printable projection, and Sales delivery-note print-projection agenda. Required evidence: workflow sourceSha and metadata.clientHead must equal this trigger commit; metadata.serverHead must equal 34a90feab60b8d7a39339823373b5188a25aec83; runner must be ALDE-WIN01; mode must be SyncAndCertify; failedGateCount must be 0; latest and history Result Bridge records must identify the same workflow run."
+  "reason": "New post-recovery ALDE certification for output-tax atomic issuance, the paid-only tax-document printable projection, and the Sales delivery-note print projection. ALDE-WIN01 preflight was remediated: both local repositories are main and clean, and the identified server node process was stopped. Required evidence: workflow sourceSha and metadata.clientHead must equal this trigger commit; metadata.serverHead must equal 34a90feab60b8d7a39339823373b5188a25aec83; runner must be ALDE-WIN01; mode must be SyncAndCertify; failedGateCount must be 0; latest and history Result Bridge records must identify the same workflow run."
 }

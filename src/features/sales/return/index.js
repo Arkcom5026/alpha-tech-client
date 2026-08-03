@@ -16,6 +16,7 @@ export {
 } from './contracts/saleReturnContract';
 export { default as useSaleReturnRuntimeController } from './hooks/useSaleReturnRuntimeController';
 export { default as CreateReturnPage } from './pages/CreateReturnPage';
+export { default as PrintCreditNotePage } from './pages/PrintCreditNotePage';
 export { default as ReturnSearchPage } from './pages/ReturnSearchPage';
 export { default as useSaleReturnRuntimeStore } from './store/saleReturnRuntimeStore';
 export { runCompleteSaleReturn } from './workflows/completeSaleReturnWorkflow';

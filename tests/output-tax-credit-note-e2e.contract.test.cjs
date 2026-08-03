@@ -15,7 +15,7 @@ const api = fs.readFileSync(
   path.join(root, 'src/features/sales/return/api/saleReturnApi.js'),
   'utf8',
 );
-const routes = fs.readFileSync(
+const browserE2E = fs.readFileSync(\n  path.join(root, 'e2e/output-tax-credit-note-full-return.spec.js'),\n  'utf8',\n);\nconst routes = fs.readFileSync(
   path.join(root, 'src/routes/partner/salesRoutes.jsx'),
   'utf8',
 );

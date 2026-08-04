@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { BUSINESS_TYPE_OPTIONS, getBusinessTypeLabel } from '../utils/businessType';
 import useCanonicalProductGroups from '../hooks/useCanonicalProductGroups';
 
@@ -22,6 +23,8 @@ const statusClass = (status) =>
     : 'bg-amber-50 text-amber-700';
 
 const CandidateReviewPage = () => {
+  const navigate = useNavigate();
+  const { shopSlug } = useParams();
   const { groups, summary, pagination, templateBranch, categoryId, loading, error, refresh } =
     useCanonicalProductGroups();
   const [filters, setFilters] = React.useState({
@@ -46,6 +49,15 @@ const CandidateReviewPage = () => {
   const apply = (next) => {
     setFilters(next);
     load(next);
+  };
+
+  const openGroup = (group) => {
+    const groupKey = group.groupKey || group.groupFingerprint;
+    if (!groupKey) return;
+    const basePath = shopSlug
+      ? `/${shopSlug}/superadmin/catalog/candidates/groups`
+      : '/superadmin/catalog/candidates/groups';
+    navigate(`${basePath}/${encodeURIComponent(groupKey)}?businessType=${encodeURIComponent(filters.businessType)}`);
   };
 
   const page = pagination?.page || filters.page;
@@ -121,11 +133,11 @@ const CandidateReviewPage = () => {
             ) : (
               <div className="divide-y divide-slate-100">
                 {groups.map((group) => (
-                  <div key={group.groupFingerprint} className="grid grid-cols-[1.5fr_180px_130px_130px_190px] gap-3 px-4 py-4">
+                  <button key={group.groupKey || group.groupFingerprint} type="button" onClick={() => openGroup(group)} className="grid w-full grid-cols-[1.5fr_180px_130px_130px_190px] gap-3 px-4 py-4 text-left transition hover:bg-orange-50/60">
                     <div className="min-w-0">
                       <p className="truncate text-sm font-black text-slate-900">{group.canonicalName || '-'}</p>
-                      <p className="mt-1 truncate text-xs font-semibold text-slate-500">{group.brandName || 'ไม่ระบุแบรนด์'}</p>
-                      <p className="mt-1 truncate font-mono text-[10px] text-slate-400">{group.groupFingerprint}</p>
+                      <p className="mt-1 truncate text-xs font-semibold text-slate-500">{group.brandName || group.canonicalBrandName || 'ไม่ระบุแบรนด์'}</p>
+                      <p className="mt-1 truncate font-mono text-[10px] text-slate-400">{group.groupKey || group.groupFingerprint}</p>
                     </div>
                     <div className="text-sm font-bold text-slate-600">{group.productTypeName || '-'}</div>
                     <div className="text-lg font-black text-slate-900">{group.sourceProductCount || 0}</div>
@@ -134,7 +146,7 @@ const CandidateReviewPage = () => {
                       <span className={`inline-flex rounded-full px-3 py-1 text-[11px] font-black ${statusClass(group.reviewStatus)}`}>{statusLabel(group.reviewStatus)}</span>
                       {(group.reviewReasons || []).length > 0 && <p className="mt-2 text-xs font-semibold text-amber-700">{group.reviewReasons.join(', ')}</p>}
                     </div>
-                  </div>
+                  </button>
                 ))}
               </div>
             )}
@@ -147,7 +159,7 @@ const CandidateReviewPage = () => {
             </div>
           </section>
 
-          <section className="rounded-3xl border border-blue-200 bg-blue-50 p-5 text-sm font-bold text-blue-800">PT-GR-01 เป็น Workspace แบบอ่านอย่างเดียว การสร้าง Template, Merge, Split, Ignore และ Link Product จะเปิดใน Increment ถัดไปหลังตรวจ Group Projection แล้ว</section>
+          <section className="rounded-3xl border border-blue-200 bg-blue-50 p-5 text-sm font-bold text-blue-800">เลือก Canonical Group เพื่อเปิดรายละเอียดแบบอ่านอย่างเดียว ก่อนเข้าสู่ขั้นสร้าง Product Template</section>
         </>
       )}
     </div>

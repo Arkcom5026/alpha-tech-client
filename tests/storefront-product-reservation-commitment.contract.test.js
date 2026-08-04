@@ -20,6 +20,10 @@ assert(identitySource.includes('clearAnonymousCart(shopSlug)'), 'Committed cart 
 assert(identitySource.includes('reservation.code'), 'Success UI must expose the reservation reference');
 assert(identitySource.includes('reservation.expiresAt'), 'Success UI must expose reservation expiry');
 assert(identitySource.includes('retryReservation'), 'A failed network response after OTP verification must support idempotent retry');
+assert(identitySource.includes('COMMERCE_IDENTITY_CHALLENGE_NOT_PENDING'), 'Consumed identity challenge must be replaceable');
+assert(identitySource.includes('COMMERCE_IDENTITY_CHALLENGE_EXPIRED'), 'Expired identity challenge must be replaceable');
+assert(identitySource.includes('ขอรหัส OTP ใหม่'), 'Identity UI must let the customer request a replacement OTP');
+assert(identitySource.includes('setChallengeNeedsReplacement(true)'), 'Identity UI must leave the consumed challenge state safely');
 assert(!identitySource.includes('Increment ถัดไป'), 'Identity page must not stop at the former placeholder boundary');
 
 console.log('storefront product reservation commitment contract: PASS');

@@ -25,6 +25,15 @@ const PUBLIC_UNAUTHENTICATED_PATH_PREFIXES = [
   '/repair/track/',
 ];
 
+const PUBLIC_STOREFRONT_SLUG_PATTERN = /^\/[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const PUBLIC_STOREFRONT_RESERVED_SLUGS = new Set([
+  'api',
+  'login',
+  'partner-portal',
+  'marketplace-portal',
+  'repair',
+]);
+
 const normalizePathname = (pathname) => (
   String(pathname || '/').replace(/\/+$/, '') || '/'
 );
@@ -34,7 +43,9 @@ const isPublicUnauthenticatedPath = (pathname) => {
 
   return (
     PUBLIC_UNAUTHENTICATED_EXACT_PATHS.has(normalizedPath) ||
-    PUBLIC_UNAUTHENTICATED_PATH_PREFIXES.some((prefix) => normalizedPath.startsWith(prefix))
+    PUBLIC_UNAUTHENTICATED_PATH_PREFIXES.some((prefix) => normalizedPath.startsWith(prefix)) ||
+    (PUBLIC_STOREFRONT_SLUG_PATTERN.test(normalizedPath) &&
+      !PUBLIC_STOREFRONT_RESERVED_SLUGS.has(normalizedPath.slice(1)))
   );
 };
 

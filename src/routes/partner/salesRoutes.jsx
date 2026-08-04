@@ -24,8 +24,11 @@ const salesRoutes = {
     { index: true, element: <SalesDashboardPage /> },
     { path: 'dashboard', element: <SalesDashboardPage /> },
     { path: 'sale', element: <CreateSalePage /> },
+
+    // ProductReservation is the primary online-commerce work queue.
     { path: 'reservations', element: <ProductReservationInboxPage /> },
     { path: 'reservations/:reservationId', element: <ProductReservationDetailPage /> },
+
     { path: 'bill', element: <PrintBillListPage /> },
     { path: 'bill/print-short/:saleId', element: <PrintBillPageShortTax /> },
     { path: 'bill/print-full/:saleId', element: <PrintBillPageFullTax /> },
@@ -42,7 +45,11 @@ const salesRoutes = {
     { path: 'sale-return', element: <ReturnSearchPage /> },
     { path: 'sale-return/create/:saleId', element: <CreateReturnPage /> },
     { path: 'credit-note/print/:taxDocumentId', element: <PrintCreditNotePage /> },
-    { path: 'order-online', element: <ListOrderOnlinePosPage /> },
+
+    // Preserve the familiar POS entry path, but make ProductReservation the
+    // primary authority. Legacy OrderOnline remains explicitly separated.
+    { path: 'order-online', element: <ProductReservationInboxPage /> },
+    { path: 'order-online/legacy', element: <ListOrderOnlinePosPage /> },
     { path: 'order-online/convert/:id', element: <OnlineConvertOrderPage /> },
     { path: 'order-online/:id', element: <OrderOnlinePosDetailPage /> },
   ],

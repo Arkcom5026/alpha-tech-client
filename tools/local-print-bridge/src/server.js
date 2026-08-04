@@ -3,13 +3,17 @@ import http from 'node:http'
 import { createDefaultMockRegistry } from './printerRegistry.js'
 import { createMockPrinterAdapter } from './mockPrinterAdapter.js'
 import { validatePrintJob } from './printJobValidator.js'
+import { discoverWindowsPrinters } from './windowsPrinterDiscovery.js'
+import { createWindowsRawPrinterAdapter } from './windowsRawPrinterAdapter.js'
 
 const HOST = process.env.ALPHA_PRINT_BRIDGE_HOST || '127.0.0.1'
 const PORT = Number(process.env.ALPHA_PRINT_BRIDGE_PORT || 17451)
 const MAX_BODY_BYTES = 1_000_000
+const RAW_ENABLED = process.env.ALPHA_PRINT_BRIDGE_ENABLE_RAW === '1'
 
 const registry = createDefaultMockRegistry()
-const adapter = createMockPrinterAdapter()
+const mockAdapter = createMockPrinterAdapter()
+const rawAdapter = createWindowsRawPrinterAdapter({ enabled: RAW_ENABLED })
 
 const sendJson = (res, statusCode, payload) => {
   const body = JSON.stringify(payload)
@@ -27,7 +31,6 @@ const sendJson = (res, statusCode, payload) => {
 const readJsonBody = (req) => new Promise((resolve, reject) => {
   let size = 0
   const chunks = []
-
   req.on('data', (chunk) => {
     size += chunk.length
     if (size > MAX_BODY_BYTES) {
@@ -37,7 +40,6 @@ const readJsonBody = (req) => new Promise((resolve, reject) => {
     }
     chunks.push(chunk)
   })
-
   req.on('end', () => {
     try {
       const raw = Buffer.concat(chunks).toString('utf8')
@@ -46,66 +48,75 @@ const readJsonBody = (req) => new Promise((resolve, reject) => {
       reject(Object.assign(new Error('Invalid JSON body'), { statusCode: 400, cause: error }))
     }
   })
-
   req.on('error', reject)
 })
+
+const resolvePrinter = async (printerProfileId) => {
+  const mock = registry.get(printerProfileId)
+  if (mock) return mock
+  const windowsPrinters = await discoverWindowsPrinters()
+  return windowsPrinters.find((printer) => printer.id === printerProfileId) || null
+}
 
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url || '/', `http://${HOST}:${PORT}`)
 
-  if (req.method === 'OPTIONS') {
-    sendJson(res, 204, {})
-    return
-  }
+  if (req.method === 'OPTIONS') return sendJson(res, 204, {})
 
   if (req.method === 'GET' && url.pathname === '/health') {
-    sendJson(res, 200, {
+    return sendJson(res, 200, {
       ok: true,
       service: 'alpha-tech-local-print-bridge',
-      version: '0.1.0',
-      mode: 'MOCK',
+      version: '0.2.0',
+      mode: RAW_ENABLED ? 'WINDOWS_RAW_ENABLED' : 'MOCK_WITH_WINDOWS_DISCOVERY',
+      rawPrintingEnabled: RAW_ENABLED,
       host: HOST,
       port: PORT,
       timestamp: new Date().toISOString(),
     })
-    return
   }
 
   if (req.method === 'GET' && url.pathname === '/v1/printers') {
-    sendJson(res, 200, { printers: registry.list() })
-    return
+    try {
+      const windowsPrinters = await discoverWindowsPrinters()
+      return sendJson(res, 200, { printers: [...registry.list(), ...windowsPrinters] })
+    } catch (error) {
+      return sendJson(res, 200, {
+        printers: registry.list(),
+        warning: { code: 'WINDOWS_PRINTER_DISCOVERY_FAILED', message: error.message },
+      })
+    }
   }
 
   if (req.method === 'POST' && url.pathname === '/v1/print-jobs') {
     try {
       const printJob = validatePrintJob(await readJsonBody(req))
-      const printer = registry.get(printJob.printerProfileId)
-
+      const printer = await resolvePrinter(printJob.printerProfileId)
       if (!printer) {
-        sendJson(res, 404, {
+        return sendJson(res, 404, {
           code: 'PRINTER_PROFILE_NOT_FOUND',
           message: `Printer profile not found: ${printJob.printerProfileId}`,
         })
-        return
       }
 
+      const adapter = printer.connection === 'WINDOWS_QUEUE' ? rawAdapter : mockAdapter
       const result = await adapter.print({ printer, printJob })
-      sendJson(res, 202, { accepted: true, result })
+      return sendJson(res, 202, { accepted: true, result })
     } catch (error) {
-      sendJson(res, error.statusCode || 400, {
-        code: error.name === 'TypeError' ? 'INVALID_PRINT_JOB' : 'PRINT_JOB_REJECTED',
+      return sendJson(res, error.statusCode || 400, {
+        code: error.code || (error.name === 'TypeError' ? 'INVALID_PRINT_JOB' : 'PRINT_JOB_REJECTED'),
         message: error.message,
       })
     }
-    return
   }
 
-  sendJson(res, 404, { code: 'NOT_FOUND', message: 'Route not found' })
+  return sendJson(res, 404, { code: 'NOT_FOUND', message: 'Route not found' })
 })
 
 server.listen(PORT, HOST, () => {
   console.log(`[local-print-bridge] listening on http://${HOST}:${PORT}`)
-  console.log('[local-print-bridge] adapter=MOCK printer=mock-epson-tm-t82x')
+  console.log(`[local-print-bridge] rawPrintingEnabled=${RAW_ENABLED}`)
+  console.log('[local-print-bridge] physical RAW dispatch requires explicit ALPHA_PRINT_BRIDGE_ENABLE_RAW=1')
 })
 
 const shutdown = (signal) => {

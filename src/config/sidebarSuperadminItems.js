@@ -40,6 +40,12 @@ export const getSidebarSuperadminItems = (shopSlug) => {
 
     superadminGovernance: [
       {
+        label: 'Customer Governance',
+        items: [
+          { label: 'Platform Customers', to: `${basePath}/governance/customers` },
+        ],
+      },
+      {
         label: 'Partner Governance',
         items: [
           { label: 'ใบสมัครร้านพาร์ทเนอร์', to: `${basePath}/governance/partner-store-applications` },

@@ -21,6 +21,8 @@ const LoginPage = () => {
   const location = useLocation();
   const loginAction = useAuthStore((state) => state.loginAction);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticatedSelector?.());
+  const authChecked = useAuthStore((state) => state.authChecked);
+  const authBootstrapState = useAuthStore((state) => state.authBootstrapState);
   const isBootstrappingAuth = useAuthStore((state) => state.isBootstrappingAuth);
   const role = useAuthStore((state) => state.role);
   const profileType = useAuthStore((state) => state.profileType);
@@ -73,6 +75,7 @@ const LoginPage = () => {
 
   useEffect(() => {
     if (isBootstrappingAuth) return;
+    if (!authChecked || authBootstrapState !== 'authenticated') return;
 
     const currentPath = window.location.pathname;
     if (currentPath.includes('forgot-password') || currentPath.includes('reset-password')) return;
@@ -91,7 +94,7 @@ const LoginPage = () => {
       const targetDynamicPath = `/${branchSlug}/pos/dashboard`;
       if (currentPath !== targetDynamicPath) navigate(targetDynamicPath, { replace: true });
     }
-  }, [isLoggedIn, role, profileType, navigate, isBootstrappingAuth, employeeState, location.pathname, isAuthenticated]);
+  }, [isLoggedIn, role, profileType, navigate, isBootstrappingAuth, authChecked, authBootstrapState, employeeState, location.pathname, isAuthenticated]);
 
   const handleLogin = async (e) => {
     e.preventDefault();

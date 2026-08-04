@@ -15,6 +15,7 @@ import LoginPage from '@/features/auth/pages/LoginPage';
 import MerchantLoginShell from '@/features/auth/layouts/MerchantLoginShell';
 import ForgotPasswordPage from '@/features/auth/pages/ForgotPasswordPage';
 import ResetPasswordPage from '@/features/auth/pages/ResetPasswordPage';
+import { useAuthStore } from '@/features/auth/store/authStore';
 import CustomerRepairTrackingPage from '@/features/repair/customer-tracking/pages/CustomerRepairTrackingPage';
 import PublicStorefrontPage from '@/features/storefront/pages/PublicStorefrontPage';
 
@@ -28,6 +29,16 @@ const PartnerPosMasterLayout = () => {
   return <div className="flex h-screen w-screen overflow-hidden bg-slate-50 text-slate-800 font-sans"><PosKeyboardRuntime /><SidebarLoader shopSlug={shopSlug} /><div className="flex min-w-0 flex-1 flex-col overflow-hidden"><HeaderPos shopSlug={shopSlug} /><main className="min-w-0 flex-1 overflow-y-auto bg-slate-50 p-4 animate-fadeIn md:p-6 lg:p-8"><div className="mx-auto w-full max-w-[1680px]"><Outlet /></div></main></div></div>;
 };
 
+const SuperAdminEntryRedirect = () => {
+  const branchSlug = useAuthStore((state) => state.employee?.branchSlug);
+
+  if (!branchSlug) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return <Navigate to={`/${branchSlug}/superadmin`} replace />;
+};
+
 const AppRouter = [
   { path: '/', element: <MarketplacePortalPage /> },
   { path: 'marketplace-portal', element: <Navigate to="/" replace /> },
@@ -36,6 +47,7 @@ const AppRouter = [
   { path: 'partner-portal/apply', element: <PartnerStoreApplicationPage /> },
   { path: 'partner-portal/forgot-password', element: <ForgotPasswordPage /> },
   { path: 'partner-portal/reset-password', element: <ResetPasswordPage /> },
+  { path: 'superadmin/dashboard', element: <SuperAdminEntryRedirect /> },
   { path: ':shopSlug/pos', element: <PartnerPosMasterLayout />, children: [...posPartnerRoutes] },
   { path: ':shopSlug/superadmin', element: <LayoutSuperAdmin />, children: superAdminRoutes },
   { path: ':shopSlug/shop', element: <Navigate to="../" relative="path" replace /> },

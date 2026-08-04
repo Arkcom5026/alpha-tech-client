@@ -20,6 +20,7 @@ import { useAuthStore } from '@/features/auth/store/authStore';
 import CustomerRepairTrackingPage from '@/features/repair/customer-tracking/pages/CustomerRepairTrackingPage';
 import PublicStorefrontPage from '@/features/storefront/pages/PublicStorefrontPage';
 import PublicStorefrontProductPage from '@/features/storefront/pages/PublicStorefrontProductPage';
+import PublicStorefrontCartPage from '@/features/storefront/pages/PublicStorefrontCartPage';
 import NotFound from '@/pages/NotFound';
 
 import HeaderPos from '@/features/pos/components/header/HeaderPos';
@@ -59,6 +60,7 @@ const AppRouter = [
     children: [{ element: <LayoutSuperAdmin />, children: superAdminRoutes }],
   },
   { path: ':shopSlug/shop', element: <Navigate to="../" relative="path" replace /> },
+  { path: ':shopSlug/cart', element: <PublicStorefrontCartPage /> },
   { path: ':shopSlug/products/:productId', element: <PublicStorefrontProductPage /> },
   { path: ':shopSlug', element: <PublicStorefrontPage /> },
   { element: <MerchantLoginShell />, children: [{ path: 'login', element: <LoginPage /> }] },

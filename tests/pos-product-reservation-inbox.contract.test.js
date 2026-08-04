@@ -9,6 +9,9 @@ const read = (relativePath) => fs.readFileSync(path.join(root, relativePath), 'u
 const assertIncludes = (source, value, message) => {
   if (!source.includes(value)) throw new Error(message || `Expected source to include: ${value}`);
 };
+const assertExcludes = (source, value, message) => {
+  if (source.includes(value)) throw new Error(message || `Expected source to exclude: ${value}`);
+};
 
 const api = read('src/features/productReservation/merchant/api/productReservationMerchantApi.js');
 const inbox = read('src/features/productReservation/merchant/pages/ProductReservationInboxPage.jsx');
@@ -30,11 +33,14 @@ assertIncludes(inbox, 'reservation.expiresAt', 'Inbox must expose reservation ex
 assertIncludes(inbox, 'reservation.totalAmount', 'Inbox must expose reservation total');
 assertIncludes(inbox, 'reservation.itemCount', 'Inbox must expose line count');
 assertIncludes(inbox, 'reservation.totalQuantity', 'Inbox must expose total quantity');
-assertIncludes(inbox, '/pos/sales/reservations/${reservation.id}', 'Inbox rows must navigate to merchant detail');
+assertIncludes(inbox, 'const { shopSlug } = useParams()', 'Inbox must preserve the active shop route context');
+assertIncludes(inbox, 'reservationBasePath', 'Inbox must derive the reservation route from shop context');
+assertIncludes(inbox, 'to={`${reservationBasePath}/${reservation.id}`}', 'Inbox rows must navigate within the active shop');
+assertExcludes(inbox, 'to={`/pos/sales/reservations/${reservation.id}`}', 'Inbox must not drop shopSlug from detail links');
 
 assertIncludes(detail, 'getMerchantProductReservation', 'Detail page must load branch-scoped server authority');
 assertIncludes(detail, 'รายการสินค้า', 'Detail foundation must render reservation items');
-assertIncludes(detail, 'Timeline', 'Detail page must expose lifecycle evidence');
+assertIncludes(detail, 'Timeline ใบจอง', 'Detail foundation must retain lifecycle evidence');
 
 assertIncludes(hub, 'Online Commerce Work Center', 'POS must expose one online-commerce entry center');
 assertIncludes(hub, '<ProductReservationInboxPage />', 'ProductReservation must be the primary online work queue');

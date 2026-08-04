@@ -41,6 +41,7 @@ export const mapCandidateResponse = (response) => {
     targetTemplateProductId: toNumberOrNull(candidate.targetTemplateProductId),
     createdByEmployeeId: toNumberOrNull(candidate.createdByEmployeeId),
     reviewedByEmployeeId: toNumberOrNull(candidate.reviewedByEmployeeId),
+    businessType: candidate.sourceBranch?.businessType || sourceSnapshot.businessType || null,
     sourceProductName: candidate.sourceProduct?.name || sourceSnapshot.name || '-',
     sourceBranchName: candidate.sourceBranch?.name || sourceSnapshot.branchName || '-',
     targetTemplateBranchName: candidate.targetTemplateBranch?.name || '-',

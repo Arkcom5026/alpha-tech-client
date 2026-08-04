@@ -26,6 +26,9 @@ jobs:
     - name: 🧪 ตรวจสัญญา Sale Customer Search E2E Increment
       run: npm run test:sale-customer-search-e2e
 
+    - name: 🧪 ตรวจสัญญา Canonical Public Storefront
+      run: npm run test:canonical-storefront
+
     - name: 🧪 ตรวจสัญญาคู่มือภายในงานรับซ่อม
       run: npm run test:repair-in-app-help
 

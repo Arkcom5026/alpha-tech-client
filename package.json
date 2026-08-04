@@ -37,7 +37,8 @@
     "test:sale-root-store-history-authority-retirement": "vitest run tests/sale-root-store-history-authority-retirement.contract.test.js tests/sales-store-responsibility-audit.contract.test.js",
     "test:alde-reliability": "node tests/alde-reliability.contract.test.cjs",
     "test:output-tax-credit-note-e2e": "node tests/output-tax-credit-note-e2e.contract.test.cjs",
-    "test:e2e:output-tax-credit-note": "playwright test e2e/output-tax-credit-note-full-return.spec.js"
+    "test:e2e:output-tax-credit-note": "playwright test e2e/output-tax-credit-note-full-return.spec.js",
+    "test:canonical-storefront": "node tests/canonical-storefront-route.contract.test.js"
   },
   "dependencies": {
     "@cloudinary/react": "1.14.1",

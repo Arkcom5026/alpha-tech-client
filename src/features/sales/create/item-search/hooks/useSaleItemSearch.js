@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 
 import {
   mapSaleSearchItemToCartLine,
@@ -15,68 +15,95 @@ export const useSaleItemSearch = ({
   setError,
   productSearchRef,
 }) => {
-  const resetInput = useCallback((input) => {
-    if (input) input.value = '';
+  const [selection, setSelection] = useState({
+    open: false,
+    query: '',
+    items: [],
+    truncated: false,
+  });
+
+  const focusSearch = useCallback(() => {
     requestAnimationFrame(() => productSearchRef?.current?.focus?.());
   }, [productSearchRef]);
+
+  const clearInput = useCallback((input) => {
+    if (input) input.value = '';
+    focusSearch();
+  }, [focusSearch]);
+
+  const addSearchItem = useCallback((foundItem) => {
+    const preparedItem = mapSaleSearchItemToCartLine(foundItem, selectedPriceType);
+    if (itemKeySet.has(preparedItem.lineId)) {
+      if (preparedItem.lineType === 'SIMPLE') {
+        addItem(preparedItem);
+        return true;
+      }
+      setError('⚠️ สินค้าชิ้นนี้ถูกเพิ่มในรายการขายแล้ว');
+      return false;
+    }
+
+    addItem(preparedItem);
+    return true;
+  }, [addItem, itemKeySet, selectedPriceType, setError]);
+
+  const closeSelection = useCallback(() => {
+    setSelection({ open: false, query: '', items: [], truncated: false });
+    focusSearch();
+  }, [focusSearch]);
+
+  const selectSearchItem = useCallback((item) => {
+    setError('');
+    addSearchItem(item);
+    closeSelection();
+  }, [addSearchItem, closeSelection, setError]);
 
   const handleBarcodeSearch = useCallback(async (event) => {
     clearSaleError?.();
     if (event.key !== 'Enter') return;
+    event.preventDefault();
 
-    const barcode = event.target.value.trim();
-    if (!barcode) return;
+    const query = event.target.value.trim();
+    if (!query) return;
     setError('');
 
     try {
-      const result = await searchSaleItems(barcode);
-      const foundItem = result.items[0];
-
-      if (!foundItem) {
-        setError('❌ ไม่พบบาร์โค้ดนี้ในรายการสินค้าที่พร้อมขาย');
-        resetInput(event.target);
+      const result = await searchSaleItems(query);
+      if (!result.items.length) {
+        setError(`❌ ${result.message || 'ไม่พบสินค้าที่พร้อมขายจากข้อมูลค้นหานี้'}`);
         return;
       }
 
-      const preparedItem = mapSaleSearchItemToCartLine(foundItem, selectedPriceType);
-      if (itemKeySet.has(preparedItem.lineId)) {
-        if (preparedItem.lineType === 'SIMPLE') {
-          addItem(preparedItem);
-          resetInput(event.target);
-          return;
-        }
-
-        setError('⚠️ บาร์โค้ดนี้ถูกเพิ่มในรายการขายแล้ว');
-        resetInput(event.target);
+      if (result.autoSelect && result.items.length === 1) {
+        addSearchItem(result.items[0]);
+        clearInput(event.target);
         return;
       }
 
-      switch (foundItem.type) {
-        case 'STOCK':
-        case 'SIMPLE':
-          addItem(preparedItem);
-          break;
-        default:
-          throw new Error(`ไม่รองรับประเภทรายการขาย: ${foundItem.type || 'UNKNOWN'}`);
-      }
-
-      resetInput(event.target);
+      setSelection({
+        open: true,
+        query: result.query || query,
+        items: result.items,
+        truncated: result.truncated,
+      });
+      clearInput(event.target);
     } catch (error) {
       const payload = error?.response?.data;
       setError(`❌ ${payload?.message || error?.message || DEFAULT_SEARCH_ERROR}`);
-      resetInput(event.target);
+      focusSearch();
     }
   }, [
-    addItem,
+    addSearchItem,
+    clearInput,
     clearSaleError,
-    itemKeySet,
-    resetInput,
-    selectedPriceType,
+    focusSearch,
     setError,
   ]);
 
   return {
     handleBarcodeSearch,
-    resetInput,
+    resetInput: clearInput,
+    selection,
+    closeSelection,
+    selectSearchItem,
   };
 };

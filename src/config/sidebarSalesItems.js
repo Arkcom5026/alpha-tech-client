@@ -2,7 +2,7 @@
 import { P1_CAP } from '@/features/auth/rbac/rbacClient';
 
 /**
- * 🟢 [DYNAMIC FIXED & LINK ALIGNED] แปลงเป็นฟังก์ชันรับค่า shopSlug 
+ * 🟢 [DYNAMIC FIXED & LINK ALIGNED] แปลงเป็นฟังก์ชันรับค่า shopSlug
  * และเชื่อมท่อพาธให้ตรงตามโครงสร้างที่มีสแลชปิดท้ายของกัปตัน 100% ป้องกันอาการหลงมิติ
  */
 export const getSidebarSalesItems = (shopSlug) => {
@@ -21,7 +21,11 @@ export const getSidebarSalesItems = (shopSlug) => {
 
         // 📌 รักษาเครื่องหมาย / ปิดท้ายตามโครงสร้างเดิมของกัปตันเป๊ะๆ
         { label: 'คืนสินค้า', to: `${prefix}/sales/sale-return/`, cap: P1_CAP.POS_SALE },
-        { label: 'คำสั่งซื้อออนไลน์', to: `${prefix}/sales/order-online/`, cap: P1_CAP.POS_SALE },
+        {
+          label: 'ใบจองและคำสั่งซื้อออนไลน์',
+          to: `${prefix}/sales/order-online/`,
+          cap: P1_CAP.POS_SALE,
+        },
       ],
     },
   ];

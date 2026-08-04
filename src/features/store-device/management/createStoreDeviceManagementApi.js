@@ -8,13 +8,6 @@ const sanitize = (value) => {
     .map(([key, item]) => [key, sanitize(item)]))
 }
 
-const unavailable = (capability) => {
-  const error = new Error(`${capability} is not available in the durable Store Device API yet`)
-  error.code = 'STORE_DEVICE_CAPABILITY_NOT_AVAILABLE'
-  error.capability = capability
-  throw error
-}
-
 export const createStoreDeviceManagementApi = ({ http }) => {
   if (!http) throw new TypeError('http is required')
 
@@ -22,11 +15,41 @@ export const createStoreDeviceManagementApi = ({ http }) => {
 
   return Object.freeze({
     async overview() {
-      const [diagnostics, jobs] = await Promise.all([
+      const [diagnostics, jobs, devices] = await Promise.all([
         http.get(path('/diagnostics')),
         http.get(path('/jobs')),
+        http.get(path('/devices')),
       ])
-      return sanitize({ diagnostics, jobs })
+      return sanitize({ diagnostics, jobs, devices })
+    },
+
+    async listDevices() {
+      return sanitize(await http.get(path('/devices')))
+    },
+
+    async detailDevice(deviceId) {
+      return sanitize(await http.get(path(`/devices/${encodeURIComponent(deviceId)}`)))
+    },
+
+    async registerDevice(payload) {
+      return sanitize(await http.post(path('/devices'), payload))
+    },
+
+    async renameDevice({ deviceId, name }) {
+      return sanitize(await http.post(path(`/devices/${encodeURIComponent(deviceId)}/rename`), { name }))
+    },
+
+    async assignWorkstation({ deviceId, workstationId }) {
+      return sanitize(await http.post(path(`/devices/${encodeURIComponent(deviceId)}/workstation`), { workstationId }))
+    },
+
+    async revokeDevice({ deviceId, confirmation }) {
+      if (confirmation !== 'REVOKE') {
+        const error = new Error('explicit device revoke confirmation required')
+        error.code = 'STORE_DEVICE_REVOKE_CONFIRMATION_REQUIRED'
+        throw error
+      }
+      return sanitize(await http.post(path(`/devices/${encodeURIComponent(deviceId)}/revoke`), { confirmation }))
     },
 
     async listJobs() {
@@ -42,10 +65,7 @@ export const createStoreDeviceManagementApi = ({ http }) => {
     },
 
     async rotateGateway({ gatewayId, credentialVersion }) {
-      return sanitize(await http.post(
-        path(`/gateways/${encodeURIComponent(gatewayId)}/rotate`),
-        { credentialVersion },
-      ))
+      return sanitize(await http.post(path(`/gateways/${encodeURIComponent(gatewayId)}/rotate`), { credentialVersion }))
     },
 
     async revokeGateway({ gatewayId, confirmation }) {
@@ -54,18 +74,7 @@ export const createStoreDeviceManagementApi = ({ http }) => {
         error.code = 'STORE_DEVICE_REVOKE_CONFIRMATION_REQUIRED'
         throw error
       }
-      return sanitize(await http.post(
-        path(`/gateways/${encodeURIComponent(gatewayId)}/revoke`),
-        { confirmation },
-      ))
-    },
-
-    detailDevice() {
-      return unavailable('DEVICE_DETAIL')
-    },
-
-    assignWorkstation() {
-      return unavailable('WORKSTATION_ASSIGNMENT')
+      return sanitize(await http.post(path(`/gateways/${encodeURIComponent(gatewayId)}/revoke`), { confirmation }))
     },
   })
 }

@@ -5,8 +5,15 @@ import { verifyChallengeProof } from '../../../src/features/store-device/proof/p
 
 const encodeTextFrame = (value) => {
   const payload = Buffer.from(JSON.stringify(value), 'utf8')
-  if (payload.length >= 126) throw new Error('harness payload is too large')
-  return Buffer.concat([Buffer.from([0x81, payload.length]), payload])
+  if (payload.length < 126) return Buffer.concat([Buffer.from([0x81, payload.length]), payload])
+  if (payload.length <= 65_535) {
+    const header = Buffer.alloc(4)
+    header[0] = 0x81
+    header[1] = 126
+    header.writeUInt16BE(payload.length, 2)
+    return Buffer.concat([header, payload])
+  }
+  throw new Error('harness payload is too large')
 }
 
 const decodeClientFrames = (buffer) => {

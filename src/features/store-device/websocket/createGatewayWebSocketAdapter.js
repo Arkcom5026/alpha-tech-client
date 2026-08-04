@@ -15,6 +15,14 @@ const createGatewayWebSocketAdapter = ({ gatewayId, branchId, url, socketFactory
   let reconnectCursor = null
   const received = []
 
+  const assertNotRevoked = () => {
+    if (state === 'REVOKED') {
+      const error = new Error('websocket adapter is revoked')
+      error.code = 'WEBSOCKET_ADAPTER_REVOKED'
+      throw error
+    }
+  }
+
   const assertAuthority = (envelope) => {
     if (envelope.gatewayId !== gatewayId || envelope.branchId !== branchId) {
       const error = new Error('websocket envelope authority mismatch')
@@ -24,6 +32,7 @@ const createGatewayWebSocketAdapter = ({ gatewayId, branchId, url, socketFactory
   }
 
   const connect = () => {
+    assertNotRevoked()
     state = reconnectAttempt > 0 ? 'RECONNECTING' : 'CONNECTING'
     socket = socketFactory(url)
     socket.onopen = () => { state = 'CONNECTED'; reconnectAttempt = 0 }
@@ -42,16 +51,16 @@ const createGatewayWebSocketAdapter = ({ gatewayId, branchId, url, socketFactory
     get snapshot() { return Object.freeze({ gatewayId, branchId, url, state, reconnectAttempt, reconnectCursor }) },
     connect,
     send(envelope) {
-      if (state === 'REVOKED') throw new Error('websocket adapter is revoked')
+      assertNotRevoked()
       assertAuthority(envelope)
       if (!socket || socket.readyState !== SOCKET_OPEN) throw new Error('websocket must be open before send')
       socket.send(encodeGatewayWebSocketFrame({ envelope }))
       return true
     },
     drainReceived() { return received.splice(0).map((item) => Object.freeze(structuredClone(item))) },
-    disconnect() { if (socket) socket.close(); state = 'DISCONNECTED' },
+    disconnect() { if (socket) socket.close(); if (state !== 'REVOKED') state = 'DISCONNECTED' },
     scheduleReconnect(random = Math.random) {
-      if (state === 'REVOKED') throw new Error('websocket adapter is revoked')
+      assertNotRevoked()
       reconnectAttempt += 1
       state = 'RECONNECTING'
       return reconnectPolicy.delayForAttempt(reconnectAttempt - 1, random)

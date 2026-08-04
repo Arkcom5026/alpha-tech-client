@@ -19,6 +19,7 @@ import SuperAdminAuthorityGuard from '@/features/auth/guards/SuperAdminAuthority
 import { useAuthStore } from '@/features/auth/store/authStore';
 import CustomerRepairTrackingPage from '@/features/repair/customer-tracking/pages/CustomerRepairTrackingPage';
 import PublicStorefrontPage from '@/features/storefront/pages/PublicStorefrontPage';
+import NotFound from '@/pages/NotFound';
 
 import HeaderPos from '@/features/pos/components/header/HeaderPos';
 import SidebarLoader from '@/features/pos/components/sidebar/SidebarLoader';
@@ -49,6 +50,7 @@ const AppRouter = [
   { path: 'partner-portal/forgot-password', element: <ForgotPasswordPage /> },
   { path: 'partner-portal/reset-password', element: <ResetPasswordPage /> },
   { path: 'superadmin/dashboard', element: <SuperAdminEntryRedirect /> },
+  { path: ':shopSlug/pos/storefront', element: <Navigate to="../settings/storefront" relative="path" replace /> },
   { path: ':shopSlug/pos', element: <PartnerPosMasterLayout />, children: [...posPartnerRoutes] },
   {
     path: ':shopSlug/superadmin',
@@ -58,7 +60,7 @@ const AppRouter = [
   { path: ':shopSlug/shop', element: <Navigate to="../" relative="path" replace /> },
   { path: ':shopSlug', element: <PublicStorefrontPage /> },
   { element: <MerchantLoginShell />, children: [{ path: 'login', element: <LoginPage /> }] },
-  { path: '*', element: <Navigate to="/" replace /> },
+  { path: '*', element: <NotFound /> },
 ];
 
 export default AppRouter;

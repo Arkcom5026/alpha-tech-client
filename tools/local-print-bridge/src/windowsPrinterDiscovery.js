@@ -25,9 +25,7 @@ const discoverWindowsPrinters = async ({ execFileImpl = execFileAsync } = {}) =>
 
   const script = [
     '$ErrorActionPreference = "Stop"',
-    'Get-CimInstance Win32_Printer |',
-    'Select-Object Name,DriverName,PortName,Default,WorkOffline |',
-    'ConvertTo-Json -Compress',
+    'Get-CimInstance Win32_Printer | Select-Object Name,DriverName,PortName,Default,WorkOffline | ConvertTo-Json -Compress',
   ].join('; ')
 
   const { stdout } = await execFileImpl(

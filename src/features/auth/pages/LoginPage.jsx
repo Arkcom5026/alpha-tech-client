@@ -31,6 +31,7 @@ const LoginPage = () => {
   const rememberedIdentifier = useAuthStore((state) => state.lastLoginIdentifier);
   const rememberedSessionFlag = useAuthStore((state) => state.rememberMe);
 
+  const requestedPath = location.state?.from?.pathname || null;
   const isLocalhost = typeof window !== 'undefined' && window.location.hostname === 'localhost';
   const debugUsername = user?.username || user?.email || '';
 
@@ -68,33 +69,35 @@ const LoginPage = () => {
     setFieldErrors((prev) => ({ ...prev, emailOrPhone: nextEmailError }));
   }, [emailOrPhone, hasAtSign, hasDotAfterAt, looksLikePhoneInput, normalizedIdentifier, normalizedPhoneValue]);
 
-  const isLoggedIn = isAuthenticated;
-
   useEffect(() => { if (!emailOrPhone && rememberedIdentifier) setEmailOrPhone(rememberedIdentifier); }, [emailOrPhone, rememberedIdentifier]);
   useEffect(() => { if (rememberedSessionFlag || rememberedIdentifier) setRememberMe(true); }, [rememberedSessionFlag, rememberedIdentifier]);
 
   useEffect(() => {
     if (isBootstrappingAuth) return;
-    if (!authChecked || authBootstrapState !== 'authenticated') return;
+    if (!authChecked || authBootstrapState !== 'authenticated' || !isAuthenticated) return;
 
     const currentPath = window.location.pathname;
     if (currentPath.includes('forgot-password') || currentPath.includes('reset-password')) return;
-    if (!isAuthenticated) return;
 
     const r = normalizeRole(role);
     const pt = (profileType || '').toString().trim().toLowerCase();
 
+    if (requestedPath && requestedPath !== '/login') {
+      navigate(requestedPath, { replace: true });
+      return;
+    }
+
     if (isSuperAdminRole(r)) {
-      if (currentPath !== '/superadmin/dashboard') navigate('/superadmin/dashboard', { replace: true });
+      navigate('/superadmin/dashboard', { replace: true });
       return;
     }
 
     if (isPosStaffRole(r) || pt === 'employee') {
-      const branchSlug = employeeState?.branchSlug || 'general-pos';
-      const targetDynamicPath = `/${branchSlug}/pos/dashboard`;
-      if (currentPath !== targetDynamicPath) navigate(targetDynamicPath, { replace: true });
+      const branchSlug = employeeState?.branchSlug;
+      if (!branchSlug) return;
+      navigate(`/${branchSlug}/pos/dashboard`, { replace: true });
     }
-  }, [isLoggedIn, role, profileType, navigate, isBootstrappingAuth, authChecked, authBootstrapState, employeeState, location.pathname, isAuthenticated]);
+  }, [role, profileType, navigate, isBootstrappingAuth, authChecked, authBootstrapState, employeeState, isAuthenticated, requestedPath]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -121,6 +124,11 @@ const LoginPage = () => {
       const effectiveRole = normalizeRole(st.role);
       const effectiveProfileType = (st.profileType || '').toString().trim().toLowerCase();
 
+      if (requestedPath && requestedPath !== '/login') {
+        navigate(requestedPath, { replace: true });
+        return;
+      }
+
       if (isSuperAdminRole(effectiveRole)) {
         navigate('/superadmin/dashboard', { replace: true });
         return;
@@ -128,25 +136,21 @@ const LoginPage = () => {
 
       if (isPosStaffRole(effectiveRole) || effectiveProfileType === 'employee') {
         const branchId = st.employee?.branchId ?? null;
-        if (!branchId) {
-          setError('บัญชีพนักงานต้องมีสาขา (branchId) ก่อนเข้า POS');
-          useAuthStore.getState().logoutAction?.();
-          navigate('/partner-portal', { replace: true });
+        const currentSlug = st.employee?.branchSlug ?? null;
+        if (!branchId || !currentSlug) {
+          setError('กำลังเตรียมข้อมูลร้าน กรุณารอสักครู่แล้วลองอีกครั้ง');
           return;
         }
-        const currentSlug = st.employee?.branchSlug || 'general-pos';
         navigate(`/${currentSlug}/pos/dashboard`, { replace: true });
         return;
       }
 
       if (effectiveRole === 'customer' || effectiveProfileType === 'customer') {
-        navigate(location.state?.from?.pathname || '/', { replace: true });
+        navigate(requestedPath || '/', { replace: true });
         return;
       }
 
-      setError('ไม่สามารถระบุสิทธิ์ผู้ใช้งานได้');
-      useAuthStore.getState().logoutAction?.();
-      navigate('/partner-portal', { replace: true });
+      setError('ไม่สามารถระบุสิทธิ์ผู้ใช้งานได้ กรุณาติดต่อผู้ดูแลระบบ');
     } catch (err) {
       console.error('🔴 Login Error:', err);
       setError(useAuthStore.getState().authError || err?.response?.data?.message || err?.message || 'เกิดข้อผิดพลาด');

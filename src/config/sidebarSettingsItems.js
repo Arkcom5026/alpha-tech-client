@@ -13,6 +13,7 @@ export const getSidebarSettingsItems = (shopSlug) => {
       label: 'ตั้งค่าระบบ',
       items: [
         { label: 'หน้าหลักการตั้งค่า', to: `${prefix}/settings`, cap: P1_CAP.MANAGE_EMPLOYEES },
+        { label: 'ออกแบบหน้าร้านออนไลน์', to: `${prefix}/settings/storefront`, cap: P1_CAP.MANAGE_EMPLOYEES },
         { label: 'เพิ่มพนักงานใหม่', to: `${prefix}/settings/staff`, cap: P1_CAP.MANAGE_EMPLOYEES },
         { label: 'จัดการพนักงาน', to: `${prefix}/settings/employee`, cap: P1_CAP.MANAGE_EMPLOYEES },
         { label: 'ตำแหน่งงาน', to: `${prefix}/settings/positions`, cap: P1_CAP.MANAGE_EMPLOYEES },

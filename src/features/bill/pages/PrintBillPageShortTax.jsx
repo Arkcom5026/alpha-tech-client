@@ -8,6 +8,10 @@ import { useBillStore } from '@/features/bill/store/billStore'
 import { useSaleDocumentLineEditor } from '@/features/sales/documents/workspace'
 
 const PRINT_RETURN_FALLBACK_MS = 60_000
+const CSS_PIXELS_PER_MM = 96 / 25.4
+const RECEIPT_CUTTER_FEED_MM = 6
+const MINIMUM_RECEIPT_PAGE_HEIGHT_MM = 40
+const DYNAMIC_PAGE_STYLE_ID = 'short-tax-dynamic-page-size'
 
 const PrintBillPageShortTax = () => {
   const params = useParams()
@@ -82,29 +86,76 @@ const PrintBillPageShortTax = () => {
   }, [saleId, autoPrint])
 
   useEffect(() => {
+    const ensureDynamicPageStyle = () => {
+      let styleElement = document.getElementById(DYNAMIC_PAGE_STYLE_ID)
+      if (!styleElement) {
+        styleElement = document.createElement('style')
+        styleElement.id = DYNAMIC_PAGE_STYLE_ID
+        document.head.appendChild(styleElement)
+      }
+      return styleElement
+    }
+
     const updatePrintHeight = () => {
       const element = printRootRef.current
-      if (!element || typeof document === 'undefined') return
+      if (!element || typeof document === 'undefined') return null
 
       const rect = element.getBoundingClientRect()
-      const measuredHeight = Math.max(
+      const measuredHeightPx = Math.max(
         Math.ceil(rect.height || 0),
         element.scrollHeight || 0,
         element.offsetHeight || 0
       )
 
-      if (measuredHeight > 0) {
-        document.documentElement.style.setProperty(
-          '--short-tax-receipt-height',
-          `${measuredHeight}px`
-        )
+      if (measuredHeightPx <= 0) return null
+
+      const contentHeightMm = measuredHeightPx / CSS_PIXELS_PER_MM
+      const pageHeightMm = Math.max(
+        MINIMUM_RECEIPT_PAGE_HEIGHT_MM,
+        Math.ceil((contentHeightMm + RECEIPT_CUTTER_FEED_MM) * 10) / 10
+      )
+      const pageHeightValue = `${pageHeightMm}mm`
+
+      document.documentElement.style.setProperty(
+        '--short-tax-receipt-height',
+        `${measuredHeightPx}px`
+      )
+      document.documentElement.style.setProperty(
+        '--short-tax-page-height',
+        pageHeightValue
+      )
+
+      const styleElement = ensureDynamicPageStyle()
+      styleElement.textContent = `@page { size: 80mm ${pageHeightValue}; margin: 0; }`
+
+      window.__SHORT_TAX_PAGE_SIZE__ = {
+        measuredHeightPx,
+        contentHeightMm: Math.round(contentHeightMm * 10) / 10,
+        cutterFeedMm: RECEIPT_CUTTER_FEED_MM,
+        pageHeightMm,
+        cssPageRule: styleElement.textContent,
+        updatedAt: new Date().toISOString(),
       }
+
+      return window.__SHORT_TAX_PAGE_SIZE__
+    }
+
+    const updateAfterFonts = async () => {
+      try {
+        await document.fonts?.ready
+      } catch {
+        // Continue with the currently available font metrics.
+      }
+      updatePrintHeight()
+      window.requestAnimationFrame(updatePrintHeight)
     }
 
     updatePrintHeight()
+    updateAfterFonts()
 
     const frameId = window.requestAnimationFrame(updatePrintHeight)
     const timerId = window.setTimeout(updatePrintHeight, 150)
+    const settledTimerId = window.setTimeout(updatePrintHeight, 500)
     const resizeObserver =
       typeof ResizeObserver !== 'undefined'
         ? new ResizeObserver(updatePrintHeight)
@@ -119,9 +170,13 @@ const PrintBillPageShortTax = () => {
     return () => {
       window.cancelAnimationFrame(frameId)
       window.clearTimeout(timerId)
+      window.clearTimeout(settledTimerId)
       window.removeEventListener('beforeprint', updatePrintHeight)
       resizeObserver?.disconnect()
+      document.getElementById(DYNAMIC_PAGE_STYLE_ID)?.remove()
       document.documentElement.style.removeProperty('--short-tax-receipt-height')
+      document.documentElement.style.removeProperty('--short-tax-page-height')
+      delete window.__SHORT_TAX_PAGE_SIZE__
     }
   }, [sale?.id, saleItems?.length, payment?.id, config])
 
@@ -349,7 +404,7 @@ const PrintBillPageShortTax = () => {
         }
 
         @page {
-          size: 80mm auto;
+          size: 80mm 297mm;
           margin: 0;
         }
 
@@ -358,9 +413,9 @@ const PrintBillPageShortTax = () => {
           body,
           #root {
             width: 80mm !important;
-            height: var(--short-tax-receipt-height, auto) !important;
-            min-height: var(--short-tax-receipt-height, 0) !important;
-            max-height: var(--short-tax-receipt-height, none) !important;
+            height: var(--short-tax-page-height, var(--short-tax-receipt-height, auto)) !important;
+            min-height: var(--short-tax-page-height, var(--short-tax-receipt-height, 0)) !important;
+            max-height: var(--short-tax-page-height, none) !important;
             margin: 0 !important;
             padding: 0 !important;
             overflow: visible !important;

@@ -21,6 +21,7 @@ import CustomerRepairTrackingPage from '@/features/repair/customer-tracking/page
 import PublicStorefrontPage from '@/features/storefront/pages/PublicStorefrontPage';
 import PublicStorefrontProductPage from '@/features/storefront/pages/PublicStorefrontProductPage';
 import PublicStorefrontCartPage from '@/features/storefront/pages/PublicStorefrontCartPage';
+import PublicStorefrontIdentityPage from '@/features/storefront/pages/PublicStorefrontIdentityPage';
 import NotFound from '@/pages/NotFound';
 
 import HeaderPos from '@/features/pos/components/header/HeaderPos';
@@ -61,6 +62,7 @@ const AppRouter = [
   },
   { path: ':shopSlug/shop', element: <Navigate to="../" relative="path" replace /> },
   { path: ':shopSlug/cart', element: <PublicStorefrontCartPage /> },
+  { path: ':shopSlug/checkout/identity', element: <PublicStorefrontIdentityPage /> },
   { path: ':shopSlug/products/:productId', element: <PublicStorefrontProductPage /> },
   { path: ':shopSlug', element: <PublicStorefrontPage /> },
   { element: <MerchantLoginShell />, children: [{ path: 'login', element: <LoginPage /> }] },

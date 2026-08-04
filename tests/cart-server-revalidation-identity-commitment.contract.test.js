@@ -17,7 +17,9 @@ assert.match(cart, /checkout\/identity/);
 assert.match(identity, /Identity at Commitment/);
 assert.match(identity, /requestCommitmentIdentity/);
 assert.match(identity, /verifyCommitmentIdentity/);
-assert.match(identity, /ยังไม่สร้างคำสั่งซื้อและยังไม่จองสต๊อก/);
+assert.match(identity, /ระบบจะตรวจราคา สถานะขาย และสต๊อกกับ Server อีกครั้ง/);
+assert.match(identity, /commitProductReservation/);
+assert.match(identity, /ยืนยัน OTP และจองสินค้า/);
 assert.match(router, /:shopSlug\/checkout\/identity/);
 
 console.log('cart server revalidation and identity commitment contract: PASS');

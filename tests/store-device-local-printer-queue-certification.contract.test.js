@@ -36,7 +36,7 @@ test('rejects shared UNC and non-RAW printer authorities', () => {
     expectedPrinterId: localPrinter.id,
     expectedDeviceId: 'printer-front',
     expectedGatewayId: 'gw-store-2',
-  }), { code: 'STORE_DEVICE_QUEUE_IDENTITY_MISMATCH' })
+  }), { code: 'STORE_DEVICE_LOCAL_QUEUE_REQUIRED' })
 
   assert.throws(() => certifyLocalPrinterQueue({
     printer: { ...localPrinter, capabilities: { raw: false } },

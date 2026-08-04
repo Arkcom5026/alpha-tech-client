@@ -15,6 +15,12 @@ const money = (value) => Number(value || 0).toLocaleString('th-TH', {
   maximumFractionDigits: 2,
 });
 
+const replaceableChallengeCodes = new Set([
+  'COMMERCE_IDENTITY_CHALLENGE_NOT_PENDING',
+  'COMMERCE_IDENTITY_CHALLENGE_EXPIRED',
+  'COMMERCE_IDENTITY_CHALLENGE_NOT_FOUND',
+]);
+
 const PublicStorefrontIdentityPage = () => {
   const { shopSlug } = useParams();
   const [phone, setPhone] = useState('');
@@ -24,14 +30,18 @@ const PublicStorefrontIdentityPage = () => {
   const [reservation, setReservation] = useState(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [challengeNeedsReplacement, setChallengeNeedsReplacement] = useState(false);
 
   const requestOtp = async () => {
     setBusy(true);
     setError('');
+    setChallengeNeedsReplacement(false);
     try {
       const token = getAnonymousSessionToken(shopSlug);
       if (!token) throw new Error('ไม่พบ Shopping Session กรุณากลับไปตรวจสอบตะกร้าอีกครั้ง');
       const data = await requestCommitmentIdentity({ shopSlug, token, phone });
+      setOtp('');
+      setProofToken('');
       setChallenge(data);
     } catch (err) {
       setError(err?.response?.data?.message || err?.message || 'ไม่สามารถส่งรหัสยืนยันได้');
@@ -71,7 +81,14 @@ const PublicStorefrontIdentityPage = () => {
       setProofToken(data.proofToken);
       await createReservation(data.proofToken);
     } catch (err) {
-      setError(err?.response?.data?.message || err?.message || 'ไม่สามารถยืนยันและสร้างรายการจองได้');
+      const code = err?.response?.data?.code || err?.response?.data?.error;
+      if (replaceableChallengeCodes.has(code)) {
+        setChallengeNeedsReplacement(true);
+        setOtp('');
+        setError('รหัส OTP ชุดนี้ถูกใช้หรือหมดอายุแล้ว กรุณาขอรหัสใหม่');
+      } else {
+        setError(err?.response?.data?.message || err?.message || 'ไม่สามารถยืนยันและสร้างรายการจองได้');
+      }
     } finally {
       setBusy(false);
     }
@@ -123,11 +140,11 @@ const PublicStorefrontIdentityPage = () => {
             <div className="mt-8 space-y-5">
               <label className="block">
                 <span className="text-sm font-bold">เบอร์โทรศัพท์</span>
-                <input value={phone} onChange={(event) => setPhone(event.target.value)} disabled={Boolean(challenge)} placeholder="08XXXXXXXX" className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-600" />
+                <input value={phone} onChange={(event) => setPhone(event.target.value)} disabled={Boolean(challenge) && !challengeNeedsReplacement} placeholder="08XXXXXXXX" className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-600" />
               </label>
 
-              {!challenge ? (
-                <button type="button" onClick={requestOtp} disabled={busy || !phone.trim()} className="w-full rounded-xl bg-blue-600 px-5 py-3 font-black text-white disabled:bg-slate-300">{busy ? 'กำลังส่งรหัส...' : 'ส่งรหัส OTP'}</button>
+              {!challenge || challengeNeedsReplacement ? (
+                <button type="button" onClick={requestOtp} disabled={busy || !phone.trim()} className="w-full rounded-xl bg-blue-600 px-5 py-3 font-black text-white disabled:bg-slate-300">{busy ? 'กำลังส่งรหัส...' : challengeNeedsReplacement ? 'ขอรหัส OTP ใหม่' : 'ส่งรหัส OTP'}</button>
               ) : proofToken ? (
                 <div className="space-y-4">
                   <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">ยืนยัน OTP สำเร็จแล้ว แต่ยังสร้างรายการจองไม่สำเร็จ สามารถลองส่งคำสั่งเดิมซ้ำได้อย่างปลอดภัย</div>

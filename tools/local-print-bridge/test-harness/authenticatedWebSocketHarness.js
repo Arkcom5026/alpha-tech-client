@@ -13,9 +13,8 @@ const decodeClientFrames = (buffer) => {
   const messages = []
   let offset = 0
   while (buffer.length - offset >= 2) {
-    const first = buffer[offset]
     const second = buffer[offset + 1]
-    const opcode = first & 0x0f
+    const opcode = buffer[offset] & 0x0f
     const masked = (second & 0x80) !== 0
     let length = second & 0x7f
     let headerLength = 2
@@ -36,14 +35,7 @@ const decodeClientFrames = (buffer) => {
   return { messages, remaining: buffer.subarray(offset) }
 }
 
-const createAuthenticatedWebSocketHarness = ({
-  host = '127.0.0.1',
-  port = 18453,
-  gatewayId = 'gateway-auth-smoke-01',
-  branchId = 2,
-  credentialVersion = 1,
-  proofKey = 'non-production-proof-key-2026',
-} = {}) => {
+const createAuthenticatedWebSocketHarness = ({ host = '127.0.0.1', port = 18453, gatewayId = 'gateway-auth-smoke-01', branchId = 2, credentialVersion = 1, proofKey = 'non-production-proof-key-2026' } = {}) => {
   const stats = { connections: 0, challenges: 0, authenticated: 0, heartbeats: 0, rejected: 0, lastSessionId: null }
   const sockets = new Set()
   const server = http.createServer((req, res) => { res.writeHead(404); res.end() })
@@ -59,14 +51,11 @@ const createAuthenticatedWebSocketHarness = ({
     const now = new Date()
     const challengeId = `challenge-${stats.connections}`
     const sessionId = `session-${stats.connections}`
-    const challenge = createGatewayProtocolEnvelope({
-      messageId: `challenge-message-${stats.connections}`,
-      messageType: 'CHALLENGE', gatewayId, branchId, sequence: 1,
-      timestamp: now.toISOString(), expiresAt: new Date(now.getTime() + 30_000).toISOString(),
-      nonce: `challenge-nonce-${stats.connections}`, sessionId,
+    socket.write(encodeTextFrame(createGatewayProtocolEnvelope({
+      messageId: `challenge-message-${stats.connections}`, messageType: 'CHALLENGE', gatewayId, branchId, sequence: 1,
+      timestamp: now.toISOString(), expiresAt: new Date(now.getTime() + 30_000).toISOString(), nonce: `challenge-nonce-${stats.connections}`, sessionId,
       payload: { challengeId, credentialVersion },
-    })
-    socket.write(encodeTextFrame(challenge))
+    })))
     stats.challenges += 1
 
     let buffer = Buffer.alloc(0)
@@ -77,9 +66,9 @@ const createAuthenticatedWebSocketHarness = ({
       buffer = decoded.remaining
       for (const message of decoded.messages) {
         if (message.messageType === 'AUTHENTICATE') {
-          const valid = message.gatewayId === gatewayId && message.branchId === branchId &&
-            message.sessionId === sessionId && message.payload?.challengeId === challengeId &&
-            verifyChallengeProof({ envelope: message, proof: message.payload?.proof, expectedCredentialVersion: credentialVersion, proofKey })
+          const envelope = message.envelope
+          const valid = envelope?.gatewayId === gatewayId && envelope?.branchId === branchId && envelope?.sessionId === sessionId && envelope?.payload?.challengeId === challengeId &&
+            verifyChallengeProof({ envelope, proof: message.proof, expectedCredentialVersion: credentialVersion, proofKey })
           if (!valid) { stats.rejected += 1; socket.destroy(); continue }
           isAuthenticated = true
           stats.authenticated += 1

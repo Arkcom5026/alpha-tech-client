@@ -1,4 +1,5 @@
-import { Link, useParams } from 'react-router-dom';
+import { useState } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import PublicProductImage from '@/features/storefront/components/PublicProductImage';
 import {
   clearAnonymousCart,
@@ -8,14 +9,47 @@ import {
   updateAnonymousCartItemQuantity,
   useAnonymousCart,
 } from '@/features/storefront/cart/anonymousCartStore';
+import {
+  createAnonymousServerSession,
+  setAnonymousServerSessionItem,
+} from '@/features/storefront/api/storefrontCommitmentApi';
 
 const money = (value) => Number(value || 0).toLocaleString('th-TH');
 
 const PublicStorefrontCartPage = () => {
   const { shopSlug } = useParams();
+  const navigate = useNavigate();
   const cart = useAnonymousCart(shopSlug);
   const itemCount = getAnonymousCartItemCount(cart);
   const subtotal = getAnonymousCartSubtotal(cart);
+  const [commitmentState, setCommitmentState] = useState({ busy: false, error: '', validatedItems: [] });
+
+  const continueToIdentity = async () => {
+    setCommitmentState({ busy: true, error: '', validatedItems: [] });
+    try {
+      const created = await createAnonymousServerSession(shopSlug);
+      if (!created.token) throw new Error('ไม่สามารถสร้าง Shopping Session ได้');
+      let session = created.session;
+      for (const item of cart.items) {
+        session = await setAnonymousServerSessionItem({
+          shopSlug,
+          token: created.token,
+          productId: item.productId,
+          quantity: item.quantity,
+        });
+      }
+      const invalidItems = (session?.items || []).filter((item) => !item.valid);
+      if (invalidItems.length) throw new Error('มีสินค้าบางรายการที่ราคา หรือสต๊อกเปลี่ยนแปลง กรุณาตรวจสอบตะกร้าใหม่');
+      setCommitmentState({ busy: false, error: '', validatedItems: session?.items || [] });
+      navigate(`/${shopSlug}/checkout/identity`);
+    } catch (error) {
+      setCommitmentState({
+        busy: false,
+        error: error?.response?.data?.message || error?.message || 'ไม่สามารถตรวจสอบตะกร้ากับร้านได้',
+        validatedItems: [],
+      });
+    }
+  };
 
   return (
     <main className="min-h-screen bg-slate-50 text-slate-900">
@@ -73,7 +107,7 @@ const PublicStorefrontCartPage = () => {
                         <p className="text-xl font-black">฿{money(item.priceSnapshot * item.quantity)}</p>
                       </div>
                     </div>
-                    <p className="mt-3 text-xs text-amber-700">จำนวนและราคาจะถูกตรวจสอบใหม่กับร้านก่อนยืนยันคำสั่งซื้อ</p>
+                    <p className="mt-3 text-xs text-amber-700">จำนวนและราคาจะถูกตรวจสอบใหม่กับร้านก่อนยืนยันตัวตน</p>
                   </div>
                 </article>
               ))}
@@ -83,8 +117,9 @@ const PublicStorefrontCartPage = () => {
               <h3 className="text-xl font-black">สรุปตะกร้า</h3>
               <div className="mt-5 flex justify-between text-slate-600"><span>จำนวนสินค้า</span><span className="font-bold">{itemCount.toLocaleString('th-TH')} ชิ้น</span></div>
               <div className="mt-3 flex items-end justify-between border-t pt-5"><span className="font-bold">ยอดประมาณการ</span><span className="text-3xl font-black">฿{money(subtotal)}</span></div>
-              <button type="button" disabled className="mt-6 w-full rounded-xl bg-slate-300 px-5 py-3 font-black text-slate-600">ดำเนินการต่อ (ขั้นถัดไป)</button>
-              <p className="mt-3 text-xs leading-5 text-slate-500">ขั้นตอนนี้ยังไม่สร้าง Order หรือจองสต๊อก ระบบจะขอให้ยืนยันตัวตนเมื่อเข้าสู่จุดผูกพัน</p>
+              <button type="button" onClick={continueToIdentity} disabled={commitmentState.busy} className="mt-6 w-full rounded-xl bg-blue-600 px-5 py-3 font-black text-white disabled:bg-slate-300">{commitmentState.busy ? 'กำลังตรวจราคาและสต๊อก...' : 'ตรวจสอบและยืนยันตัวตน'}</button>
+              <p className="mt-3 text-xs leading-5 text-slate-500">Server จะตรวจร้าน ราคา สถานะขาย และสต๊อกใหม่ทั้งหมด ก่อนเข้าสู่ OTP โดยขั้นนี้ยังไม่สร้าง Order หรือ ProductReservation</p>
+              {commitmentState.error ? <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{commitmentState.error}</div> : null}
             </aside>
           </div>
         )}

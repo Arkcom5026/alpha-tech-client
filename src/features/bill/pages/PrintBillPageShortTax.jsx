@@ -167,6 +167,49 @@ const PrintBillPageShortTax = () => {
     }
   }, [sale?.id, sale?.customer?.companyName])
 
+  useEffect(() => {
+    const root = printRootRef.current
+    const branchName = String(config?.branchName || '').trim()
+    if (!root || !branchName) return undefined
+
+    const branchNameElement = Array.from(
+      root.querySelectorAll('.text-center.no-break.tight > .font-bold')
+    ).find((element) => element.textContent?.trim() === branchName)
+
+    if (!branchNameElement) return undefined
+
+    const previousStyle = {
+      fontSize: branchNameElement.style.fontSize,
+      lineHeight: branchNameElement.style.lineHeight,
+      letterSpacing: branchNameElement.style.letterSpacing,
+      whiteSpace: branchNameElement.style.whiteSpace,
+      overflow: branchNameElement.style.overflow,
+      textOverflow: branchNameElement.style.textOverflow,
+      overflowWrap: branchNameElement.style.overflowWrap,
+      wordBreak: branchNameElement.style.wordBreak,
+      textWrap: branchNameElement.style.textWrap,
+    }
+
+    const normalizedLength = branchName.replace(/\s+/g, ' ').length
+    const fontSize = normalizedLength >= 58 ? 12.5 : normalizedLength >= 42 ? 13.5 : normalizedLength >= 30 ? 14.5 : 16
+
+    Object.assign(branchNameElement.style, {
+      fontSize: `${fontSize}px`,
+      lineHeight: '1.2',
+      letterSpacing: '0px',
+      whiteSpace: 'normal',
+      overflow: 'visible',
+      textOverflow: 'clip',
+      overflowWrap: 'anywhere',
+      wordBreak: 'normal',
+      textWrap: 'balance',
+    })
+
+    return () => {
+      Object.assign(branchNameElement.style, previousStyle)
+    }
+  }, [config?.branchName, sale?.id])
+
   const returnToSale = useCallback(() => {
     navigate(saleRoute, { replace: true })
   }, [navigate, saleRoute])

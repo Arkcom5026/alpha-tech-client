@@ -84,9 +84,12 @@ export const verifyCommitmentIdentity = async ({ shopSlug, token, challengeId, o
     { challengeId, otp },
     { skipAuthBootstrap: true, headers: { 'X-Anonymous-Session-Token': token } },
   );
-  const data = response?.data?.data || null;
-  if (data?.proofToken) setCommerceIdentityProof(shopSlug, data.proofToken);
-  return data;
+  const proof = response?.data?.data || null;
+  const proofToken = response?.headers?.['x-commerce-identity-proof']
+    || response?.headers?.get?.('x-commerce-identity-proof')
+    || '';
+  if (proofToken) setCommerceIdentityProof(shopSlug, proofToken);
+  return proof ? { ...proof, proofToken } : (proofToken ? { proofToken } : null);
 };
 
 export const commitProductReservation = async ({ shopSlug, token, proofToken, commitmentKey }) => {

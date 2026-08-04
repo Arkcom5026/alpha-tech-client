@@ -5,6 +5,7 @@ import { validatePrintJob } from './printJobValidator.js'
 import { discoverWindowsPrinters } from './windowsPrinterDiscovery.js'
 import { createWindowsRawPrinterAdapter } from './windowsRawPrinterAdapter.js'
 import { createPhysicalPilotAdapter } from './physicalPilotAdapter.js'
+import { createGatewayStartupRuntime } from './gateway/createGatewayStartupRuntime.js'
 
 const HOST = process.env.ALPHA_PRINT_BRIDGE_HOST || '127.0.0.1'
 const PORT = Number(process.env.ALPHA_PRINT_BRIDGE_PORT || 17451)
@@ -17,6 +18,7 @@ const registry = createDefaultMockRegistry()
 const mockAdapter = createMockPrinterAdapter()
 const rawAdapter = createWindowsRawPrinterAdapter({ enabled: RAW_ENABLED })
 const physicalPilotAdapter = createPhysicalPilotAdapter()
+const gatewayRuntime = createGatewayStartupRuntime()
 
 const sendJson = (res, statusCode, payload) => {
   const body = JSON.stringify(payload)
@@ -75,11 +77,12 @@ const server = http.createServer(async (req, res) => {
     return sendJson(res, 200, {
       ok: true,
       service: 'alpha-tech-local-print-bridge',
-      version: '0.3.0',
+      version: '0.4.0',
       mode: PHYSICAL_PILOT_ENABLED ? 'PHYSICAL_PILOT_ARMED' : RAW_ENABLED ? 'WINDOWS_RAW_ENABLED' : 'MOCK_WITH_WINDOWS_DISCOVERY',
       rawPrintingEnabled: RAW_ENABLED,
       physicalPilotEnabled: PHYSICAL_PILOT_ENABLED,
       pilotPrinterId: PHYSICAL_PILOT_ENABLED ? PILOT_PRINTER_ID : null,
+      gateway: gatewayRuntime.diagnostics,
       host: HOST,
       port: PORT,
       timestamp: new Date().toISOString(),
@@ -144,11 +147,14 @@ server.listen(PORT, HOST, () => {
   console.log(`[local-print-bridge] listening on http://${HOST}:${PORT}`)
   console.log(`[local-print-bridge] rawPrintingEnabled=${RAW_ENABLED}`)
   console.log(`[local-print-bridge] physicalPilotEnabled=${PHYSICAL_PILOT_ENABLED}`)
+  console.log(`[local-print-bridge] gatewayEnabled=${gatewayRuntime.enabled}`)
   if (PHYSICAL_PILOT_ENABLED) console.log(`[local-print-bridge] pilotPrinterId=${PILOT_PRINTER_ID}`)
+  gatewayRuntime.start()
 })
 
 const shutdown = (signal) => {
   console.log(`[local-print-bridge] received ${signal}, shutting down`)
+  gatewayRuntime.stop()
   server.close((error) => {
     if (error) {
       console.error('[local-print-bridge] shutdown failed', error)
@@ -160,4 +166,4 @@ const shutdown = (signal) => {
 process.on('SIGINT', () => shutdown('SIGINT'))
 process.on('SIGTERM', () => shutdown('SIGTERM'))
 
-export { server }
+export { gatewayRuntime, server }

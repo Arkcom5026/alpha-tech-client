@@ -50,11 +50,11 @@ const createGatewayWebSocketAdapter = ({ gatewayId, branchId, url, socketFactory
     },
     drainReceived() { return received.splice(0).map((item) => Object.freeze(structuredClone(item))) },
     disconnect() { if (socket) socket.close(); state = 'DISCONNECTED' },
-    scheduleReconnect() {
+    scheduleReconnect(random = Math.random) {
       if (state === 'REVOKED') throw new Error('websocket adapter is revoked')
       reconnectAttempt += 1
       state = 'RECONNECTING'
-      return reconnectPolicy.nextDelayMs(reconnectAttempt)
+      return reconnectPolicy.delayForAttempt(reconnectAttempt - 1, random)
     },
     revoke() { state = 'REVOKED'; if (socket) socket.close() },
   })

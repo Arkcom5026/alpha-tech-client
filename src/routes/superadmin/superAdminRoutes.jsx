@@ -10,6 +10,7 @@ import ProductTemplateGovernanceDetailPage from '@/features/productTemplate/page
 import ProductTemplateGovernanceEditPage from '@/features/productTemplate/pages/ProductTemplateGovernanceEditPage';
 import ProductTemplateGovernanceCreatePage from '@/features/productTemplate/pages/ProductTemplateGovernanceCreatePage';
 import PartnerStoreApplicationReviewPage from '@/features/partnerStoreApplication/pages/PartnerStoreApplicationReviewPage';
+import PlatformCustomerOverviewPage from '@/features/platformCustomer/pages/PlatformCustomerOverviewPage';
 
 const SuperAdminPlaceholderPage = ({ title, description }) => (
   <div className="space-y-4">
@@ -72,7 +73,8 @@ export const superAdminRoutes = [
   {
     path: 'governance',
     children: [
-      { index: true, element: <Navigate to="partner-store-applications" replace /> },
+      { index: true, element: <Navigate to="customers" replace /> },
+      { path: 'customers', element: <PlatformCustomerOverviewPage /> },
       {
         path: 'partner-store-applications',
         element: <PartnerStoreApplicationReviewPage />,

@@ -10,16 +10,20 @@ const page = fs.readFileSync(
   'utf8'
 );
 
-assert.match(page, /storefront\.experience/, 'renderer must consume published experience');
-assert.match(page, /experience\.themeTokens/, 'renderer must apply published theme tokens');
-assert.match(page, /experience\.sectionConfiguration/, 'renderer must honor published section configuration');
-assert.match(page, /sales\/storefronts\/\$\{slug\}\/products/, 'renderer must load public store-scoped products');
-assert.match(page, /section\.type === 'HERO'/, 'renderer must support hero section');
-assert.match(page, /section\.type === 'FEATURED_PRODUCTS'/, 'renderer must support featured products');
-assert.match(page, /section\.type === 'PRODUCT_GRID'/, 'renderer must support product grid');
-assert.match(page, /section\.type === 'FULFILLMENT'/, 'renderer must support fulfillment');
-assert.match(page, /section\.type === 'CONTACT'/, 'renderer must support contact');
-assert.match(page, /experience\.layoutPreset === 'catalog-list'/, 'renderer must respect layout preset');
+const assertIncludes = (value, label) => {
+  assert.ok(page.includes(value), `${label} missing: ${value}`);
+};
+
+assertIncludes('state.storefront?.experience', 'renderer must consume published experience');
+assertIncludes('experience.themeTokens', 'renderer must apply published theme tokens');
+assertIncludes('experience.sectionConfiguration', 'renderer must honor published section configuration');
+assertIncludes('`/sales/storefronts/${slug}/products?page=1&pageSize=24`', 'renderer must load public store-scoped products');
+assertIncludes("section.type === 'HERO'", 'renderer must support hero section');
+assertIncludes("section.type === 'FEATURED_PRODUCTS'", 'renderer must support featured products');
+assertIncludes("section.type === 'PRODUCT_GRID'", 'renderer must support product grid');
+assertIncludes("section.type === 'FULFILLMENT'", 'renderer must support fulfillment');
+assertIncludes("section.type === 'CONTACT'", 'renderer must support contact');
+assertIncludes("experience.layoutPreset === 'catalog-list'", 'renderer must respect layout preset');
 assert.doesNotMatch(page, /costPrice|avgCost|lastReceivedCost/, 'public renderer must not expose internal cost data');
 
 console.log('public storefront experience renderer contract: PASS');

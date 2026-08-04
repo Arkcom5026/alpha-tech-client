@@ -34,8 +34,8 @@ export const createStoreDevicePrintPipeline = ({ resolveProfile, createJob }) =>
     async submit(prepared) {
       const idempotencyKey = `print:${prepared.branchId}:${prepared.documentType}:${prepared.snapshot.id}:${prepared.fingerprint}`
       return createJob({
-        branchId: prepared.branchId,
-        type: 'PRINT',
+        jobType: 'PRINT_DOCUMENT',
+        source: 'DOCUMENT_PRINT_PIPELINE',
         idempotencyKey,
         targetProfileId: prepared.profile.id,
         requestSnapshot: stableClone(prepared),

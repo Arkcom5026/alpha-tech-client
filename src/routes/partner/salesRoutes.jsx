@@ -17,6 +17,7 @@ import OrderOnlinePosDetailPage from '@/features/orderOnlinePos/pages/OrderOnlin
 import OnlineConvertOrderPage from '@/features/orderOnlinePos/pages/OnlineConvertOrderPage';
 import ProductReservationInboxPage from '@/features/productReservation/merchant/pages/ProductReservationInboxPage';
 import ProductReservationDetailPage from '@/features/productReservation/merchant/pages/ProductReservationDetailPage';
+import OnlineCommerceWorkCenterPage from '@/features/productReservation/merchant/pages/OnlineCommerceWorkCenterPage';
 
 const salesRoutes = {
   path: 'sales',
@@ -48,7 +49,7 @@ const salesRoutes = {
 
     // Preserve the familiar POS entry path, but make ProductReservation the
     // primary authority. Legacy OrderOnline remains explicitly separated.
-    { path: 'order-online', element: <ProductReservationInboxPage /> },
+    { path: 'order-online', element: <OnlineCommerceWorkCenterPage /> },
     { path: 'order-online/legacy', element: <ListOrderOnlinePosPage /> },
     { path: 'order-online/convert/:id', element: <OnlineConvertOrderPage /> },
     { path: 'order-online/:id', element: <OrderOnlinePosDetailPage /> },

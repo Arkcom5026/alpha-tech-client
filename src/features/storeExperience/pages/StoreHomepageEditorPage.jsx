@@ -2,8 +2,10 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   getPartnerStoreCapability,
   getStoreExperienceDraft,
+  publishStoreExperience,
   savePartnerStoreCapability,
   saveStoreExperienceDraft,
+  unpublishStoreExperience,
 } from '../api/storeExperienceApi';
 
 const SECTION_OPTIONS = [
@@ -49,11 +51,12 @@ const defaultDraft = {
 };
 
 const fieldClass = 'w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100';
+const actionClass = 'rounded-xl px-4 py-3 text-sm font-semibold shadow-sm transition disabled:cursor-not-allowed disabled:opacity-60';
 
 const StoreHomepageEditorPage = () => {
   const [capability, setCapability] = useState(defaultCapability);
   const [draft, setDraft] = useState(defaultDraft);
-  const [state, setState] = useState({ loading: true, saving: false, error: '', success: '' });
+  const [state, setState] = useState({ loading: true, busy: false, error: '', success: '' });
 
   useEffect(() => {
     let active = true;
@@ -67,15 +70,16 @@ const StoreHomepageEditorPage = () => {
           themeTokens: { ...defaultDraft.themeTokens, ...(nextDraft?.themeTokens || {}) },
           sectionConfiguration: nextDraft?.sectionConfiguration || defaultDraft.sectionConfiguration,
         });
-        setState({ loading: false, saving: false, error: '', success: '' });
+        setState({ loading: false, busy: false, error: '', success: '' });
       })
       .catch((error) => {
         if (!active) return;
-        setState({ loading: false, saving: false, error: error?.response?.data?.message || error.message, success: '' });
+        setState({ loading: false, busy: false, error: error?.response?.data?.message || error.message, success: '' });
       });
     return () => { active = false; };
   }, []);
 
+  const isPublished = draft.status === 'PUBLISHED';
   const enabledSections = useMemo(
     () => (draft.sectionConfiguration || []).filter((section) => section.enabled),
     [draft.sectionConfiguration]
@@ -93,43 +97,78 @@ const StoreHomepageEditorPage = () => {
     ),
   }));
 
-  const save = async () => {
-    setState((current) => ({ ...current, saving: true, error: '', success: '' }));
+  const capabilityPayload = (enabled = capability.storefrontEnabled) => ({
+    ...capability,
+    storefrontEnabled: enabled,
+    storefrontSlug: String(capability.storefrontSlug || '').trim().toLowerCase(),
+    displayName: String(capability.displayName || '').trim() || null,
+    contactPhone: String(capability.contactPhone || '').trim() || null,
+    fixedDeliveryFee: capability.deliveryEnabled && capability.deliveryFeeMode === 'FIXED'
+      ? Number(capability.fixedDeliveryFee || 0)
+      : null,
+    maxDeliveryDistanceKm: capability.deliveryEnabled && capability.serviceAreaMode === 'DISTANCE'
+      ? Number(capability.maxDeliveryDistanceKm || 0)
+      : null,
+    deliveryFeeMode: capability.deliveryEnabled ? capability.deliveryFeeMode : null,
+    serviceAreaMode: capability.deliveryEnabled ? capability.serviceAreaMode : 'PICKUP_ONLY',
+    serviceAreas: capability.deliveryEnabled && capability.serviceAreaMode === 'ADMIN_AREAS'
+      ? capability.serviceAreas || []
+      : [],
+  });
+
+  const draftPayload = () => ({
+    themePreset: draft.themePreset,
+    themeTokens: draft.themeTokens,
+    layoutPreset: draft.layoutPreset,
+    sectionConfiguration: draft.sectionConfiguration,
+  });
+
+  const run = async (operation) => {
+    setState((current) => ({ ...current, busy: true, error: '', success: '' }));
     try {
-      const capabilityPayload = {
-        ...capability,
-        storefrontSlug: String(capability.storefrontSlug || '').trim().toLowerCase(),
-        displayName: String(capability.displayName || '').trim() || null,
-        contactPhone: String(capability.contactPhone || '').trim() || null,
-        fixedDeliveryFee: capability.deliveryEnabled && capability.deliveryFeeMode === 'FIXED'
-          ? Number(capability.fixedDeliveryFee || 0)
-          : null,
-        maxDeliveryDistanceKm: capability.deliveryEnabled && capability.serviceAreaMode === 'DISTANCE'
-          ? Number(capability.maxDeliveryDistanceKm || 0)
-          : null,
-        deliveryFeeMode: capability.deliveryEnabled ? capability.deliveryFeeMode : null,
-        serviceAreaMode: capability.deliveryEnabled ? capability.serviceAreaMode : 'PICKUP_ONLY',
-        serviceAreas: capability.deliveryEnabled && capability.serviceAreaMode === 'ADMIN_AREAS'
-          ? capability.serviceAreas || []
-          : [],
-      };
-
-      const [savedCapability, savedDraft] = await Promise.all([
-        savePartnerStoreCapability(capabilityPayload),
-        saveStoreExperienceDraft({
-          themePreset: draft.themePreset,
-          themeTokens: draft.themeTokens,
-          layoutPreset: draft.layoutPreset,
-          sectionConfiguration: draft.sectionConfiguration,
-        }),
-      ]);
-
-      setCapability({ ...defaultCapability, ...(savedCapability || {}) });
-      setDraft((current) => ({ ...current, ...(savedDraft || {}) }));
-      setState({ loading: false, saving: false, error: '', success: 'บันทึกแบบร่างหน้าร้านเรียบร้อยแล้ว' });
+      await operation();
     } catch (error) {
-      setState({ loading: false, saving: false, error: error?.response?.data?.message || error.message, success: '' });
+      setState({ loading: false, busy: false, error: error?.response?.data?.message || error.message, success: '' });
     }
+  };
+
+  const save = () => run(async () => {
+    const [savedCapability, savedDraft] = await Promise.all([
+      savePartnerStoreCapability(capabilityPayload(false)),
+      saveStoreExperienceDraft(draftPayload()),
+    ]);
+    setCapability({ ...defaultCapability, ...(savedCapability || {}) });
+    setDraft((current) => ({ ...current, ...(savedDraft || {}) }));
+    setState({ loading: false, busy: false, error: '', success: 'บันทึกแบบร่างหน้าร้านเรียบร้อยแล้ว' });
+  });
+
+  const publish = () => run(async () => {
+    const [savedCapability, savedDraft] = await Promise.all([
+      savePartnerStoreCapability(capabilityPayload(true)),
+      saveStoreExperienceDraft(draftPayload()),
+    ]);
+    setCapability({ ...defaultCapability, ...(savedCapability || {}), storefrontEnabled: true });
+    setDraft((current) => ({ ...current, ...(savedDraft || {}) }));
+    const published = await publishStoreExperience();
+    setCapability((current) => ({ ...current, ...(published?.capability || {}), storefrontEnabled: true }));
+    setDraft((current) => ({ ...current, ...(published?.experience || {}), status: 'PUBLISHED' }));
+    setState({ loading: false, busy: false, error: '', success: 'เผยแพร่หน้าร้านเรียบร้อยแล้ว ลูกค้าสามารถเข้าชมได้ทันที' });
+  });
+
+  const unpublish = () => run(async () => {
+    const result = await unpublishStoreExperience();
+    setCapability((current) => ({ ...current, ...(result?.capability || {}), storefrontEnabled: false }));
+    setDraft((current) => ({ ...current, ...(result?.experience || {}), status: 'DRAFT' }));
+    setState({ loading: false, busy: false, error: '', success: 'ยกเลิกเผยแพร่แล้ว หน้าร้านกลับสู่แบบร่าง' });
+  });
+
+  const preview = () => {
+    const slug = String(capability.storefrontSlug || '').trim();
+    if (!slug) {
+      setState((current) => ({ ...current, error: 'กรุณาระบุ URL ร้านก่อนดูหน้าร้าน', success: '' }));
+      return;
+    }
+    window.open(`/${slug}`, '_blank', 'noopener,noreferrer');
   };
 
   if (state.loading) return <div className="rounded-2xl bg-white p-8 text-center shadow-sm">กำลังโหลดตัวแก้ไขหน้าร้าน...</div>;
@@ -138,13 +177,26 @@ const StoreHomepageEditorPage = () => {
     <div className="space-y-6">
       <section className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:flex-row md:items-center md:justify-between">
         <div>
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-600">Store Experience</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-600">Store Experience</p>
+            <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${isPublished ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+              {isPublished ? 'LIVE' : 'DRAFT'}
+            </span>
+          </div>
           <h1 className="mt-1 text-2xl font-bold text-slate-900">ออกแบบหน้าหลักของร้าน</h1>
-          <p className="mt-1 text-sm text-slate-500">ตั้งค่าข้อมูลร้าน ธีม และลำดับส่วนประกอบ ก่อนเผยแพร่สู่ลูกค้า</p>
+          <p className="mt-1 text-sm text-slate-500">บันทึกแบบร่าง ดูตัวอย่าง และเผยแพร่จากหน้าเดียว</p>
         </div>
-        <button type="button" onClick={save} disabled={state.saving} className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:opacity-60">
-          {state.saving ? 'กำลังบันทึก...' : 'บันทึกแบบร่าง'}
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button type="button" onClick={preview} className={`${actionClass} border border-slate-300 bg-white text-slate-700 hover:bg-slate-50`}>ดูหน้าร้าน</button>
+          {isPublished ? (
+            <button type="button" onClick={unpublish} disabled={state.busy} className={`${actionClass} bg-amber-500 text-white hover:bg-amber-600`}>ยกเลิกเผยแพร่</button>
+          ) : (
+            <>
+              <button type="button" onClick={save} disabled={state.busy} className={`${actionClass} bg-blue-600 text-white hover:bg-blue-700`}>บันทึกแบบร่าง</button>
+              <button type="button" onClick={publish} disabled={state.busy} className={`${actionClass} bg-emerald-600 text-white hover:bg-emerald-700`}>เผยแพร่หน้าร้าน</button>
+            </>
+          )}
+        </div>
       </section>
 
       {state.error ? <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{state.error}</div> : null}
@@ -155,19 +207,19 @@ const StoreHomepageEditorPage = () => {
           <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <h2 className="font-bold text-slate-900">ข้อมูลหน้าร้าน</h2>
             <div className="mt-4 grid gap-4">
-              <label className="text-sm font-medium text-slate-700">ชื่อที่แสดง<input className={`${fieldClass} mt-1`} value={capability.displayName || ''} onChange={(event) => setCapability((current) => ({ ...current, displayName: event.target.value }))} /></label>
-              <label className="text-sm font-medium text-slate-700">URL ร้าน<input className={`${fieldClass} mt-1`} value={capability.storefrontSlug || ''} onChange={(event) => setCapability((current) => ({ ...current, storefrontSlug: event.target.value }))} placeholder="advancetech" /></label>
-              <label className="text-sm font-medium text-slate-700">เบอร์ติดต่อ<input className={`${fieldClass} mt-1`} value={capability.contactPhone || ''} onChange={(event) => setCapability((current) => ({ ...current, contactPhone: event.target.value }))} /></label>
-              <label className="flex items-center justify-between rounded-xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-700"><span>เปิดหน้าร้านสาธารณะ</span><input type="checkbox" checked={Boolean(capability.storefrontEnabled)} onChange={(event) => setCapability((current) => ({ ...current, storefrontEnabled: event.target.checked }))} /></label>
+              <label className="text-sm font-medium text-slate-700">ชื่อที่แสดง<input disabled={isPublished} className={`${fieldClass} mt-1 disabled:bg-slate-100`} value={capability.displayName || ''} onChange={(event) => setCapability((current) => ({ ...current, displayName: event.target.value }))} /></label>
+              <label className="text-sm font-medium text-slate-700">URL ร้าน<input disabled={isPublished} className={`${fieldClass} mt-1 disabled:bg-slate-100`} value={capability.storefrontSlug || ''} onChange={(event) => setCapability((current) => ({ ...current, storefrontSlug: event.target.value }))} placeholder="advancetech" /></label>
+              <label className="text-sm font-medium text-slate-700">เบอร์ติดต่อ<input disabled={isPublished} className={`${fieldClass} mt-1 disabled:bg-slate-100`} value={capability.contactPhone || ''} onChange={(event) => setCapability((current) => ({ ...current, contactPhone: event.target.value }))} /></label>
+              <div className="rounded-xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-700">สถานะสาธารณะ: <strong>{isPublished ? 'เปิดใช้งาน' : 'ยังไม่เผยแพร่'}</strong></div>
             </div>
           </section>
 
           <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <h2 className="font-bold text-slate-900">รูปแบบและสี</h2>
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
-              <label className="text-sm font-medium text-slate-700">ธีม<select className={`${fieldClass} mt-1`} value={draft.themePreset} onChange={(event) => setDraft((current) => ({ ...current, themePreset: event.target.value }))}><option value="platform-default">มาตรฐานแพลตฟอร์ม</option><option value="modern-light">สว่างทันสมัย</option><option value="classic-slate">คลาสสิก</option></select></label>
-              <label className="text-sm font-medium text-slate-700">เลย์เอาต์<select className={`${fieldClass} mt-1`} value={draft.layoutPreset} onChange={(event) => setDraft((current) => ({ ...current, layoutPreset: event.target.value }))}><option value="platform-default">มาตรฐานแพลตฟอร์ม</option><option value="catalog-grid">กริดสินค้า</option><option value="catalog-list">รายการสินค้า</option></select></label>
-              {Object.entries(draft.themeTokens || {}).map(([key, value]) => <label key={key} className="text-sm font-medium text-slate-700">{key}<div className="mt-1 flex gap-2"><input type="color" value={value} onChange={(event) => updateToken(key, event.target.value)} className="h-11 w-14 rounded-lg border border-slate-200 bg-white p-1" /><input className={fieldClass} value={value} onChange={(event) => updateToken(key, event.target.value)} /></div></label>)}
+              <label className="text-sm font-medium text-slate-700">ธีม<select disabled={isPublished} className={`${fieldClass} mt-1 disabled:bg-slate-100`} value={draft.themePreset} onChange={(event) => setDraft((current) => ({ ...current, themePreset: event.target.value }))}><option value="platform-default">มาตรฐานแพลตฟอร์ม</option><option value="modern-light">สว่างทันสมัย</option><option value="classic-slate">คลาสสิก</option></select></label>
+              <label className="text-sm font-medium text-slate-700">เลย์เอาต์<select disabled={isPublished} className={`${fieldClass} mt-1 disabled:bg-slate-100`} value={draft.layoutPreset} onChange={(event) => setDraft((current) => ({ ...current, layoutPreset: event.target.value }))}><option value="platform-default">มาตรฐานแพลตฟอร์ม</option><option value="catalog-grid">กริดสินค้า</option><option value="catalog-list">รายการสินค้า</option></select></label>
+              {Object.entries(draft.themeTokens || {}).map(([key, value]) => <label key={key} className="text-sm font-medium text-slate-700">{key}<div className="mt-1 flex gap-2"><input disabled={isPublished} type="color" value={value} onChange={(event) => updateToken(key, event.target.value)} className="h-11 w-14 rounded-lg border border-slate-200 bg-white p-1 disabled:opacity-60" /><input disabled={isPublished} className={`${fieldClass} disabled:bg-slate-100`} value={value} onChange={(event) => updateToken(key, event.target.value)} /></div></label>)}
             </div>
           </section>
 
@@ -176,14 +228,14 @@ const StoreHomepageEditorPage = () => {
             <div className="mt-4 space-y-2">
               {SECTION_OPTIONS.map(([type, label]) => {
                 const section = (draft.sectionConfiguration || []).find((item) => item.type === type);
-                return <label key={type} className="flex items-center justify-between rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-700"><span>{label}</span><input type="checkbox" checked={Boolean(section?.enabled)} onChange={() => toggleSection(type)} /></label>;
+                return <label key={type} className="flex items-center justify-between rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-700"><span>{label}</span><input disabled={isPublished} type="checkbox" checked={Boolean(section?.enabled)} onChange={() => toggleSection(type)} /></label>;
               })}
             </div>
           </section>
         </div>
 
         <section className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 shadow-sm">
-          <div className="border-b border-slate-200 bg-white px-5 py-3"><p className="text-sm font-semibold text-slate-700">ตัวอย่างแบบร่าง</p></div>
+          <div className="border-b border-slate-200 bg-white px-5 py-3"><p className="text-sm font-semibold text-slate-700">ตัวอย่างหน้าร้าน</p></div>
           <div style={{ background: draft.themeTokens?.surface, color: draft.themeTokens?.text }} className="min-h-[720px]">
             <header style={{ background: draft.themeTokens?.brandPrimary }} className="px-6 py-5 text-white"><p className="text-xs opacity-75">/{capability.storefrontSlug || 'your-store'}</p><h2 className="mt-1 text-2xl font-bold">{capability.displayName || 'ชื่อร้านของคุณ'}</h2></header>
             <div className="space-y-6 p-6">

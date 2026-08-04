@@ -10,6 +10,8 @@ assert(apiSource.includes('/commitment'), 'Client must call the public ProductRe
 assert(apiSource.includes("'X-Anonymous-Session-Token'"), 'Commitment must send anonymous-session authority');
 assert(apiSource.includes("'X-Commerce-Identity-Proof'"), 'Commitment must send identity-proof authority');
 assert(apiSource.includes("'X-Idempotency-Key'"), 'Commitment must send idempotency authority');
+assert(apiSource.includes("response?.headers?.['x-commerce-identity-proof']"), 'OTP verification must read the identity-proof token from the server response header');
+assert(apiSource.includes('return proof ? { ...proof, proofToken }'), 'OTP verification must merge proof metadata with proof-token authority');
 assert(apiSource.includes('getOrCreateCommitmentIdempotencyKey'), 'Commitment key must survive retry for the same storefront command');
 assert(apiSource.includes('clearStorefrontCommitmentAuthority'), 'Consumed commitment authority must be cleared after success');
 

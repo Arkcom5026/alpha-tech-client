@@ -167,6 +167,99 @@ const PrintBillPageShortTax = () => {
     }
   }, [sale?.id, sale?.customer?.companyName])
 
+  useEffect(() => {
+    const root = printRootRef.current
+    const branchName = String(config?.branchName || '').trim().replace(/\s+/g, ' ')
+    if (!root || !branchName) return undefined
+
+    const branchNameElement = Array.from(
+      root.querySelectorAll('.text-center.no-break.tight > .font-bold')
+    ).find((element) => element.textContent?.trim().replace(/\s+/g, ' ') === branchName)
+
+    if (!branchNameElement) return undefined
+
+    const originalText = branchNameElement.textContent
+    const originalStyle = branchNameElement.getAttribute('style')
+
+    const designationMatch = branchName.match(
+      /\s*(\((?:สำนักงานใหญ่|สาขา(?:ที่)?[^)]*|สำนักงานสาขา[^)]*)\))\s*$/u
+    )
+    const designation = designationMatch?.[1] || ''
+    const legalName = designationMatch
+      ? branchName.slice(0, designationMatch.index).trim()
+      : branchName
+
+    branchNameElement.textContent = ''
+    Object.assign(branchNameElement.style, {
+      width: '100%',
+      maxWidth: '100%',
+      whiteSpace: 'normal',
+      overflow: 'visible',
+      textOverflow: 'clip',
+      textAlign: 'center',
+      lineHeight: '1.15',
+      letterSpacing: '0px',
+    })
+
+    const legalNameLine = document.createElement('span')
+    legalNameLine.textContent = legalName
+    Object.assign(legalNameLine.style, {
+      display: 'block',
+      width: '100%',
+      maxWidth: '100%',
+      whiteSpace: 'nowrap',
+      overflow: 'visible',
+      textAlign: 'center',
+      lineHeight: '1.15',
+      letterSpacing: '0px',
+    })
+    branchNameElement.appendChild(legalNameLine)
+
+    const normalizedLength = legalName.length
+    let fontSize = normalizedLength >= 58 ? 13 : normalizedLength >= 46 ? 14 : 16
+    const minimumSingleLineFontSize = 10.5
+    legalNameLine.style.fontSize = `${fontSize}px`
+
+    while (
+      legalNameLine.scrollWidth > legalNameLine.clientWidth + 1 &&
+      fontSize > minimumSingleLineFontSize
+    ) {
+      fontSize = Math.max(minimumSingleLineFontSize, fontSize - 0.5)
+      legalNameLine.style.fontSize = `${fontSize}px`
+    }
+
+    if (legalNameLine.scrollWidth > legalNameLine.clientWidth + 1) {
+      legalNameLine.style.whiteSpace = 'normal'
+      legalNameLine.style.overflowWrap = 'normal'
+      legalNameLine.style.wordBreak = 'normal'
+      legalNameLine.style.textWrap = 'balance'
+    }
+
+    if (designation) {
+      const designationLine = document.createElement('span')
+      designationLine.textContent = designation
+      Object.assign(designationLine.style, {
+        display: 'block',
+        width: '100%',
+        marginTop: '1px',
+        fontSize: `${Math.max(11, Math.min(13, fontSize - 0.5))}px`,
+        lineHeight: '1.1',
+        whiteSpace: 'nowrap',
+        textAlign: 'center',
+      })
+      branchNameElement.appendChild(designationLine)
+    }
+
+    return () => {
+      branchNameElement.textContent = originalText
+      if (originalStyle === null) {
+        branchNameElement.removeAttribute('style')
+      } else {
+        branchNameElement.setAttribute('style', originalStyle)
+      }
+    }
+  }, [config?.branchName, sale?.id])
+
   const returnToSale = useCallback(() => {
     navigate(saleRoute, { replace: true })
   }, [navigate, saleRoute])

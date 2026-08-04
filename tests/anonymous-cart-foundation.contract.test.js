@@ -20,8 +20,13 @@ assert.match(productPage, /addAnonymousCartItem/);
 assert.match(productPage, /ยังไม่จองสต๊อกและยังไม่สร้างคำสั่งซื้อ/);
 assert.match(productPage, /`\/\$\{shopSlug\}\/cart`/);
 assert.match(cartPage, /จำนวนและราคาจะถูกตรวจสอบใหม่กับร้าน/);
-assert.match(cartPage, /ดำเนินการต่อ \(ขั้นถัดไป\)/);
+assert.match(cartPage, /continueToIdentity/);
+assert.match(cartPage, /createAnonymousServerSession/);
+assert.match(cartPage, /setAnonymousServerSessionItem/);
+assert.match(cartPage, /ตรวจสอบและยืนยันตัวตน/);
+assert.match(cartPage, /ยังไม่สร้าง Order หรือ ProductReservation/);
 assert.match(router, /:shopSlug\/cart/);
+assert.match(router, /:shopSlug\/checkout\/identity/);
 assert.doesNotMatch(store, /orderId|reservationId|createOrder|createReservation/i);
 
 console.log('anonymous cart foundation contract: PASS');

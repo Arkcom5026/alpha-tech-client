@@ -26,7 +26,38 @@ describe('POS unified barcode search mapping', () => {
       productId: 99,
       quantity: 1,
       barcode: 'STOCK-421',
+      displayIdentifier: 'STOCK-421',
+      identifierType: 'BARCODE',
       price: 2500,
+    });
+  });
+
+  it('preserves an SN barcode authority as the cart display identity', () => {
+    const line = mapSaleSearchItemToCartLine({
+      type: 'STOCK',
+      lineType: 'STOCK_ITEM',
+      productId: 99,
+      stockItemId: 421,
+      simpleLotId: null,
+      barcode: '226070075',
+      serialNumber: null,
+      barcodeAuthority: {
+        barcode: 'AD1000-3241206829',
+        kind: 'SN',
+        status: 'ACTIVE',
+      },
+      quantityAvailable: 1,
+      status: 'IN_STOCK',
+      product: { id: 99, name: 'Adapter 12V 1.0A' },
+      prices: { retail: 150 },
+    });
+
+    expect(line).toMatchObject({
+      stockItemId: 421,
+      barcode: '226070075',
+      serialNumber: 'AD1000-3241206829',
+      displayIdentifier: 'AD1000-3241206829',
+      identifierType: 'SN',
     });
   });
 
@@ -54,6 +85,8 @@ describe('POS unified barcode search mapping', () => {
       quantity: 1,
       quantityAvailable: 9998,
       barcode: '888888',
+      displayIdentifier: '888888',
+      identifierType: 'BARCODE',
       price: 100,
     });
   });

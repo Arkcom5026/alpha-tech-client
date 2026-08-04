@@ -1,6 +1,9 @@
 import React from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { getCanonicalProductGroupApi } from '../api/templateCandidateApi';
+import {
+  getCanonicalProductGroupApi,
+  materializeCanonicalProductGroupsApi,
+} from '../api/templateCandidateApi';
 import { getBusinessTypeLabel } from '../utils/businessType';
 
 const statusLabel = (status) =>
@@ -19,6 +22,9 @@ const CanonicalGroupDetailPage = () => {
   const [detail, setDetail] = React.useState(null);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState(null);
+  const [materializing, setMaterializing] = React.useState(false);
+  const [materializeResult, setMaterializeResult] = React.useState(null);
+  const [materializeError, setMaterializeError] = React.useState(null);
 
   React.useEffect(() => {
     let active = true;
@@ -43,6 +49,25 @@ const CanonicalGroupDetailPage = () => {
     };
   }, [groupKey, businessType]);
 
+  const materializeGroup = async () => {
+    setMaterializing(true);
+    setMaterializeError(null);
+    setMaterializeResult(null);
+    try {
+      const response = await materializeCanonicalProductGroupsApi({
+        businessType,
+        apply: true,
+        limit: 500,
+        groupKey,
+      });
+      setMaterializeResult(response?.data || response);
+    } catch (requestError) {
+      setMaterializeError(requestError);
+    } finally {
+      setMaterializing(false);
+    }
+  };
+
   if (loading) {
     return <div className="rounded-3xl border border-slate-200 bg-white p-10 text-center text-sm font-bold text-slate-500">กำลังโหลดรายละเอียด Canonical Group...</div>;
   }
@@ -60,6 +85,7 @@ const CanonicalGroupDetailPage = () => {
   const sourceProducts = group.sourceProducts || detail.sourceProducts || [];
   const sourceBranches = detail.sourceBranches || group.sourceBranches || [];
   const templateBranch = detail.templateBranch || null;
+  const canMaterialize = group.reviewStatus === 'READY';
 
   return (
     <div className="min-h-screen space-y-5 bg-slate-50 p-4 xl:p-6">
@@ -89,6 +115,28 @@ const CanonicalGroupDetailPage = () => {
             <p className="mt-2 text-xl font-black text-slate-900">{value}</p>
           </div>
         ))}
+      </section>
+
+      <section className="rounded-3xl border border-orange-200 bg-orange-50 p-5 shadow-sm">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <p className="text-[11px] font-black uppercase tracking-[0.14em] text-orange-600">Candidate Materialization</p>
+            <h2 className="mt-1 text-lg font-black text-slate-900">สร้าง Candidate สำหรับตรวจและสร้าง Product Template</h2>
+            <p className="mt-2 text-sm font-semibold text-slate-600">ระบบจะสร้าง Candidate ผ่าน authority เดิมให้สินค้าต้นทางในกลุ่ม READY โดยไม่แก้สินค้า ราคา หรือสต๊อก</p>
+          </div>
+          <button type="button" disabled={!canMaterialize || materializing} onClick={materializeGroup} className="rounded-2xl bg-orange-500 px-5 py-3 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-40">
+            {materializing ? 'กำลังสร้าง Candidates...' : 'สร้าง Candidates จากกลุ่มนี้'}
+          </button>
+        </div>
+        {!canMaterialize && <p className="mt-3 text-sm font-bold text-amber-800">กลุ่มนี้ต้องแก้ Product Type ให้เป็น READY ก่อนจึงจะสร้าง Candidate ได้</p>}
+        {materializeError && <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-700">{materializeError.message || String(materializeError)}</div>}
+        {materializeResult && (
+          <div className="mt-4 grid gap-3 md:grid-cols-3">
+            <div className="rounded-2xl bg-white p-4"><p className="text-xs font-black text-slate-400">CREATED</p><p className="mt-1 text-2xl font-black text-emerald-700">{materializeResult.created?.length || 0}</p></div>
+            <div className="rounded-2xl bg-white p-4"><p className="text-xs font-black text-slate-400">SKIPPED</p><p className="mt-1 text-2xl font-black text-amber-700">{materializeResult.skipped?.length || 0}</p></div>
+            <div className="rounded-2xl bg-white p-4"><p className="text-xs font-black text-slate-400">FAILED</p><p className="mt-1 text-2xl font-black text-red-700">{materializeResult.failed?.length || 0}</p></div>
+          </div>
+        )}
       </section>
 
       {(group.reviewReasons || []).length > 0 && (
@@ -124,8 +172,6 @@ const CanonicalGroupDetailPage = () => {
           </table>
         </div>
       </section>
-
-      <section className="rounded-3xl border border-blue-200 bg-blue-50 p-5 text-sm font-bold text-blue-800">หน้ารายละเอียดนี้เป็นแบบอ่านอย่างเดียว ไม่มีการสร้าง Template หรือแก้ไขข้อมูลสินค้า</section>
     </div>
   );
 };

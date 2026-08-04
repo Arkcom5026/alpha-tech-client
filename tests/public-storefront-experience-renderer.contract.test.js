@@ -1,10 +1,14 @@
-'use strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import assert from 'node:assert';
+import { fileURLToPath } from 'node:url';
 
-const fs = require('fs');
-const path = require('path');
-const assert = require('assert');
-
-const page = fs.readFileSync(path.resolve(__dirname, '../src/features/storefront/pages/PublicStorefrontPage.jsx'), 'utf8');
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const page = fs.readFileSync(
+  path.resolve(__dirname, '../src/features/storefront/pages/PublicStorefrontPage.jsx'),
+  'utf8'
+);
 
 assert.match(page, /storefront\.experience/, 'renderer must consume published experience');
 assert.match(page, /experience\.themeTokens/, 'renderer must apply published theme tokens');

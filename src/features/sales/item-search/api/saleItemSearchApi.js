@@ -20,17 +20,48 @@ export const searchSaleItems = async (query) => {
   };
 };
 
+const resolveDisplayIdentifier = (item) => {
+  const authorityBarcode = String(item?.barcodeAuthority?.barcode || '');
+  const authorityKind = String(item?.barcodeAuthority?.kind || '').toUpperCase();
+  const directSerialNumber = String(item?.serialNumber || '');
+  const directBarcode = String(item?.barcode || '');
+
+  if (directSerialNumber) {
+    return { displayIdentifier: directSerialNumber, identifierType: 'SN' };
+  }
+
+  if (authorityBarcode && authorityKind === 'SN') {
+    return { displayIdentifier: authorityBarcode, identifierType: 'SN' };
+  }
+
+  if (authorityBarcode) {
+    return {
+      displayIdentifier: authorityBarcode,
+      identifierType: authorityKind === 'LOT' ? 'LOT' : 'BARCODE',
+    };
+  }
+
+  return {
+    displayIdentifier: directBarcode,
+    identifierType: directBarcode ? 'BARCODE' : 'IDENTIFIER',
+  };
+};
+
 export const mapSaleSearchItemToCartLine = (item, priceType = 'retail') => {
   const type = String(item?.type || '').toUpperCase();
   const unitPrice = Number(item?.prices?.[priceType] ?? 0) || 0;
   const productId = Number(item?.productId ?? item?.product?.id);
+  const resolvedIdentifier = resolveDisplayIdentifier(item);
   const common = {
     productId,
     quantity: 1,
     barcode: String(item?.barcode || ''),
-    serialNumber: item?.serialNumber || null,
+    serialNumber: item?.serialNumber || (resolvedIdentifier.identifierType === 'SN' ? resolvedIdentifier.displayIdentifier : null),
+    displayIdentifier: resolvedIdentifier.displayIdentifier,
+    identifierType: resolvedIdentifier.identifierType,
+    barcodeAuthority: item?.barcodeAuthority || null,
     productName: item?.product?.name || '',
-    model: item?.product?.model || item?.product?.codeType || '',
+    model: item?.product?.codeType || '',
     brandName: item?.product?.brandName || item?.product?.brand?.name || '',
     price: unitPrice,
     originalPrice: unitPrice,

@@ -1,6 +1,6 @@
-const fs = require('fs');
-const path = require('path');
-const assert = require('assert');
+import fs from 'node:fs';
+import path from 'node:path';
+import assert from 'node:assert/strict';
 
 const read = (relativePath) => fs.readFileSync(path.join(process.cwd(), relativePath), 'utf8');
 const apiSource = read('src/features/storefront/api/storefrontCommitmentApi.js');

@@ -1,8 +1,7 @@
-// src/features/product/templateCandidate/api/templateCandidateApi.js
 import apiClient from '@/utils/apiClient';
 import { parseApiError } from '@/utils/uiHelpers';
 
-const BASE_PATH = 'products/template-candidates';
+const BASE_PATH = 'product-templates/candidates';
 
 const cleanParams = (params = {}) =>
   Object.fromEntries(
@@ -13,82 +12,32 @@ const cleanParams = (params = {}) =>
     })
   );
 
-export const listTemplateCandidatesApi = async (params = {}) => {
+const request = async (operation) => {
   try {
-    const { data } = await apiClient.get(BASE_PATH, { params: cleanParams(params) });
+    const { data } = await operation();
     return data;
-  } catch (err) {
-    throw parseApiError(err);
+  } catch (error) {
+    throw parseApiError(error);
   }
 };
 
-export const getTemplateCandidateApi = async (id) => {
-  try {
-    const { data } = await apiClient.get(`${BASE_PATH}/${id}`, {
-      params: cleanParams(),
-    });
-    return data;
-  } catch (err) {
-    throw parseApiError(err);
-  }
-};
+export const listTemplateCandidatesApi = (params = {}) =>
+  request(() => apiClient.get(BASE_PATH, { params: cleanParams(params) }));
 
-export const submitTemplateCandidateApi = async (payload) => {
-  try {
-    if (import.meta.env?.DEV) {
-      console.log('[templateCandidateApi] submit payload', payload);
-    }
-    const { data } = await apiClient.post(BASE_PATH, payload);
-    return data;
-  } catch (err) {
-    throw parseApiError(err);
-  }
-};
+export const getTemplateCandidateApi = (id) =>
+  request(() => apiClient.get(`${BASE_PATH}/${id}`, { params: cleanParams() }));
 
-export const updateTemplateCandidateStatusApi = async (id, payload) => {
-  try {
-    const { data } = await apiClient.patch(`${BASE_PATH}/${id}/status`, payload);
-    return data;
-  } catch (err) {
-    throw parseApiError(err);
-  }
-};
+export const createTemplateCandidateApi = (payload) =>
+  request(() => apiClient.post(BASE_PATH, payload));
 
-export const promoteTemplateCandidateApi = async (id, payload = {}) => {
-  try {
-    if (import.meta.env?.DEV) {
-      console.log('[templateCandidateApi] promote', id, payload);
-    }
-    const { data } = await apiClient.post(`${BASE_PATH}/${id}/promote`, payload);
-    return data;
-  } catch (err) {
-    throw parseApiError(err);
-  }
-};
+export const startTemplateCandidateReviewApi = (id) =>
+  request(() => apiClient.post(`${BASE_PATH}/${id}/start-review`));
 
-export const rejectTemplateCandidateApi = async (id, payload = {}) => {
-  try {
-    const { data } = await apiClient.post(`${BASE_PATH}/${id}/reject`, payload);
-    return data;
-  } catch (err) {
-    throw parseApiError(err);
-  }
-};
+export const rejectTemplateCandidateApi = (id, payload = {}) =>
+  request(() => apiClient.post(`${BASE_PATH}/${id}/reject`, payload));
 
-export const requestTemplateCandidateRevisionApi = async (id, payload = {}) => {
-  try {
-    const { data } = await apiClient.post(`${BASE_PATH}/${id}/request-revision`, payload);
-    return data;
-  } catch (err) {
-    throw parseApiError(err);
-  }
-};
+export const mergeTemplateCandidateApi = (id, payload = {}) =>
+  request(() => apiClient.post(`${BASE_PATH}/${id}/merge`, payload));
 
-export const mergeTemplateCandidateApi = async (id, payload = {}) => {
-  try {
-    const { data } = await apiClient.post(`${BASE_PATH}/${id}/merge-existing`, payload);
-    return data;
-  } catch (err) {
-    throw parseApiError(err);
-  }
-};
+export const promoteTemplateCandidateApi = (id, payload = {}) =>
+  request(() => apiClient.post(`${BASE_PATH}/${id}/promote`, payload));

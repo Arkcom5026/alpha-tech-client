@@ -1,45 +1,47 @@
-// src/features/product/templateCandidate/store/templateCandidateStore.js
 import { create } from 'zustand';
 
 import {
   listTemplateCandidatesApi,
   getTemplateCandidateApi,
-  submitTemplateCandidateApi,
+  createTemplateCandidateApi,
+  startTemplateCandidateReviewApi,
   promoteTemplateCandidateApi,
   rejectTemplateCandidateApi,
-  requestTemplateCandidateRevisionApi,
   mergeTemplateCandidateApi,
 } from '../api/templateCandidateApi';
-
 import { mapCandidateListResponse, mapCandidateResponse } from '../utils/candidateMapper';
 
 const initialState = {
   candidates: [],
   selectedCandidate: null,
   pagination: null,
+  summary: { total: 0, byStatus: {} },
+  reviewerWorkload: [],
   loading: false,
-  submitting: false,
-  promoting: false,
+  mutating: false,
   error: null,
 };
 
-const useTemplateCandidateStore = create((set, get) => ({
+const replaceCandidate = (items, candidate) =>
+  candidate?.id
+    ? items.map((item) => (Number(item.id) === Number(candidate.id) ? { ...item, ...candidate } : item))
+    : items;
+
+const useTemplateCandidateStore = create((set) => ({
   ...initialState,
 
   clearTemplateCandidateError: () => set({ error: null }),
-
   resetTemplateCandidateState: () => set({ ...initialState }),
 
   fetchTemplateCandidates: async (params = {}) => {
     set({ loading: true, error: null });
     try {
-      const response = await listTemplateCandidatesApi(params);
-      const { candidates, pagination } = mapCandidateListResponse(response);
-      set({ candidates, pagination, loading: false });
-      return candidates;
-    } catch (err) {
-      set({ error: err, loading: false });
-      throw err;
+      const mapped = mapCandidateListResponse(await listTemplateCandidatesApi(params));
+      set({ ...mapped, loading: false });
+      return mapped;
+    } catch (error) {
+      set({ error, loading: false });
+      throw error;
     }
   },
 
@@ -49,99 +51,91 @@ const useTemplateCandidateStore = create((set, get) => ({
       const candidate = mapCandidateResponse(await getTemplateCandidateApi(id));
       set({ selectedCandidate: candidate, loading: false });
       return candidate;
-    } catch (err) {
-      set({ error: err, loading: false });
-      throw err;
+    } catch (error) {
+      set({ error, loading: false });
+      throw error;
     }
   },
 
-  submitTemplateCandidateAction: async (payload) => {
-    set({ submitting: true, error: null });
+  createTemplateCandidateAction: async (payload) => {
+    set({ mutating: true, error: null });
     try {
-      const candidate = mapCandidateResponse(await submitTemplateCandidateApi(payload));
+      const candidate = mapCandidateResponse(await createTemplateCandidateApi(payload));
       set((state) => ({
-        submitting: false,
+        mutating: false,
         selectedCandidate: candidate,
         candidates: candidate?.id
           ? [candidate, ...state.candidates.filter((item) => Number(item.id) !== Number(candidate.id))]
           : state.candidates,
       }));
       return candidate;
-    } catch (err) {
-      set({ error: err, submitting: false });
-      throw err;
+    } catch (error) {
+      set({ error, mutating: false });
+      throw error;
     }
   },
 
-  promoteTemplateCandidateAction: async (id, payload = {}) => {
-    set({ promoting: true, error: null });
+  startTemplateCandidateReviewAction: async (id) => {
+    set({ mutating: true, error: null });
     try {
-      const candidate = mapCandidateResponse(await promoteTemplateCandidateApi(id, payload));
+      const candidate = mapCandidateResponse(await startTemplateCandidateReviewApi(id));
       set((state) => ({
-        promoting: false,
+        mutating: false,
         selectedCandidate: candidate,
-        candidates: state.candidates.map((item) =>
-          Number(item.id) === Number(id) ? { ...item, ...candidate } : item
-        ),
+        candidates: replaceCandidate(state.candidates, candidate),
       }));
       return candidate;
-    } catch (err) {
-      set({ error: err, promoting: false });
-      throw err;
+    } catch (error) {
+      set({ error, mutating: false });
+      throw error;
     }
   },
 
   rejectTemplateCandidateAction: async (id, payload = {}) => {
-    set({ loading: true, error: null });
+    set({ mutating: true, error: null });
     try {
       const candidate = mapCandidateResponse(await rejectTemplateCandidateApi(id, payload));
       set((state) => ({
-        loading: false,
+        mutating: false,
         selectedCandidate: candidate,
-        candidates: state.candidates.map((item) =>
-          Number(item.id) === Number(id) ? { ...item, ...candidate } : item
-        ),
+        candidates: replaceCandidate(state.candidates, candidate),
       }));
       return candidate;
-    } catch (err) {
-      set({ error: err, loading: false });
-      throw err;
-    }
-  },
-
-  requestTemplateCandidateRevisionAction: async (id, payload = {}) => {
-    set({ loading: true, error: null });
-    try {
-      const candidate = mapCandidateResponse(await requestTemplateCandidateRevisionApi(id, payload));
-      set((state) => ({
-        loading: false,
-        selectedCandidate: candidate,
-        candidates: state.candidates.map((item) =>
-          Number(item.id) === Number(id) ? { ...item, ...candidate } : item
-        ),
-      }));
-      return candidate;
-    } catch (err) {
-      set({ error: err, loading: false });
-      throw err;
+    } catch (error) {
+      set({ error, mutating: false });
+      throw error;
     }
   },
 
   mergeTemplateCandidateAction: async (id, payload = {}) => {
-    set({ loading: true, error: null });
+    set({ mutating: true, error: null });
     try {
       const candidate = mapCandidateResponse(await mergeTemplateCandidateApi(id, payload));
       set((state) => ({
-        loading: false,
+        mutating: false,
         selectedCandidate: candidate,
-        candidates: state.candidates.map((item) =>
-          Number(item.id) === Number(id) ? { ...item, ...candidate } : item
-        ),
+        candidates: replaceCandidate(state.candidates, candidate),
       }));
       return candidate;
-    } catch (err) {
-      set({ error: err, loading: false });
-      throw err;
+    } catch (error) {
+      set({ error, mutating: false });
+      throw error;
+    }
+  },
+
+  promoteTemplateCandidateAction: async (id, payload = {}) => {
+    set({ mutating: true, error: null });
+    try {
+      const candidate = mapCandidateResponse(await promoteTemplateCandidateApi(id, payload));
+      set((state) => ({
+        mutating: false,
+        selectedCandidate: candidate,
+        candidates: replaceCandidate(state.candidates, candidate),
+      }));
+      return candidate;
+    } catch (error) {
+      set({ error, mutating: false });
+      throw error;
     }
   },
 }));

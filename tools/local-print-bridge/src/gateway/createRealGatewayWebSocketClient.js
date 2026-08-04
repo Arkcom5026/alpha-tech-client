@@ -3,24 +3,12 @@ import { createGatewayRuntimeDiagnostics } from './createGatewayRuntimeDiagnosti
 
 const SOCKET_OPEN = 1
 
-const createRealGatewayWebSocketClient = ({
-  config,
-  webSocketFactory,
-  createHeartbeatEnvelope,
-  onEnvelope = () => {},
-  scheduler = globalThis,
-  random = Math.random,
-  diagnostics = createGatewayRuntimeDiagnostics(),
-} = {}) => {
+const createRealGatewayWebSocketClient = ({ config, webSocketFactory, createHeartbeatEnvelope, onEnvelope = () => {}, scheduler = globalThis, random = Math.random, diagnostics = createGatewayRuntimeDiagnostics(), deferHeartbeatUntilAuthenticated = false } = {}) => {
   if (!config || typeof config !== 'object') throw new TypeError('config is required')
   if (typeof webSocketFactory !== 'function') throw new TypeError('webSocketFactory is required')
   if (typeof createHeartbeatEnvelope !== 'function') throw new TypeError('createHeartbeatEnvelope is required')
 
-  const reconnectPolicy = createReconnectBackoffPolicy({
-    initialDelayMs: config.reconnectInitialDelayMs,
-    maxDelayMs: config.reconnectMaxDelayMs,
-  })
-
+  const reconnectPolicy = createReconnectBackoffPolicy({ initialDelayMs: config.reconnectInitialDelayMs, maxDelayMs: config.reconnectMaxDelayMs })
   let socket = null
   let stopped = false
   let revoked = false
@@ -28,6 +16,7 @@ const createRealGatewayWebSocketClient = ({
   let reconnectTimer = null
   let heartbeatTimer = null
   let reconnectCursor = null
+  let heartbeatSessionId = null
 
   diagnostics.setPhysicalExecutionEnabled(config.physicalExecutionEnabled)
   if (!config.enabled) diagnostics.disabled()
@@ -42,7 +31,8 @@ const createRealGatewayWebSocketClient = ({
   const send = (envelope) => {
     if (revoked) throw new Error('gateway websocket client is revoked')
     if (!socket || socket.readyState !== SOCKET_OPEN) throw new Error('gateway websocket is not open')
-    if (envelope.gatewayId !== config.gatewayId || envelope.branchId !== config.branchId) {
+    const authority = envelope.envelope || envelope
+    if (authority.gatewayId !== config.gatewayId || authority.branchId !== config.branchId) {
       const error = new Error('gateway websocket authority mismatch')
       error.code = 'GATEWAY_WEBSOCKET_AUTHORITY_MISMATCH'
       throw error
@@ -51,11 +41,12 @@ const createRealGatewayWebSocketClient = ({
     return true
   }
 
-  const startHeartbeat = () => {
+  const startHeartbeat = ({ sessionId = heartbeatSessionId } = {}) => {
+    heartbeatSessionId = sessionId || null
     if (heartbeatTimer) scheduler.clearInterval(heartbeatTimer)
     heartbeatTimer = scheduler.setInterval(() => {
       if (!socket || socket.readyState !== SOCKET_OPEN || revoked || stopped) return
-      send(createHeartbeatEnvelope({ reconnectCursor }))
+      send(createHeartbeatEnvelope({ reconnectCursor, sessionId: heartbeatSessionId }))
       diagnostics.heartbeat()
     }, config.heartbeatIntervalMs)
   }
@@ -76,7 +67,7 @@ const createRealGatewayWebSocketClient = ({
     socket.onopen = () => {
       reconnectAttempt = 0
       diagnostics.connected()
-      startHeartbeat()
+      if (!deferHeartbeatUntilAuthenticated) startHeartbeat()
     }
     socket.onmessage = (event) => {
       const envelope = typeof event.data === 'string' ? JSON.parse(event.data) : event.data
@@ -91,13 +82,11 @@ const createRealGatewayWebSocketClient = ({
       diagnostics.message({ reconnectCursor })
       onEnvelope(envelope)
     }
-    socket.onerror = (error) => {
-      if (revoked) return
-      diagnostics.disconnected(error)
-    }
+    socket.onerror = (error) => { if (!revoked) diagnostics.disconnected(error) }
     socket.onclose = () => {
       if (heartbeatTimer) scheduler.clearInterval(heartbeatTimer)
       heartbeatTimer = null
+      heartbeatSessionId = null
       if (revoked) return
       diagnostics.disconnected()
       scheduleReconnect()
@@ -106,12 +95,11 @@ const createRealGatewayWebSocketClient = ({
   }
 
   return Object.freeze({
-    get snapshot() {
-      return Object.freeze({ ...diagnostics.snapshot, reconnectCursor, enabled: config.enabled })
-    },
+    get snapshot() { return Object.freeze({ ...diagnostics.snapshot, reconnectCursor, enabled: config.enabled }) },
     start() { stopped = false; return connect() },
     send,
-    markAuthenticated() { return diagnostics.authenticated() },
+    beginHeartbeat: startHeartbeat,
+    markAuthenticated(evidence) { return diagnostics.authenticated(evidence) },
     stop() { stopped = true; clearTimers(); if (socket) socket.close(); return diagnostics.disconnected() },
     revoke() { revoked = true; stopped = true; clearTimers(); diagnostics.revoke(); if (socket) socket.close() },
   })

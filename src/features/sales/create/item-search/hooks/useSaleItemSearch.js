@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useReducer } from 'react';
 
 import {
   mapSaleSearchItemToCartLine,
@@ -6,6 +6,24 @@ import {
 } from '../../../item-search/api/saleItemSearchApi';
 
 const DEFAULT_SEARCH_ERROR = 'ระบบค้นหาสินค้าขัดข้อง กรุณาลองใหม่อีกครั้ง';
+const CLOSED_SELECTION = Object.freeze({
+  open: false,
+  query: '',
+  items: [],
+  truncated: false,
+});
+
+const selectionReducer = (_state, action) => {
+  if (action.type === 'OPEN') {
+    return {
+      open: true,
+      query: action.query,
+      items: action.items,
+      truncated: action.truncated,
+    };
+  }
+  return CLOSED_SELECTION;
+};
 
 export const useSaleItemSearch = ({
   selectedPriceType,
@@ -15,12 +33,7 @@ export const useSaleItemSearch = ({
   setError,
   productSearchRef,
 }) => {
-  const [selection, setSelection] = useState({
-    open: false,
-    query: '',
-    items: [],
-    truncated: false,
-  });
+  const [selection, dispatchSelection] = useReducer(selectionReducer, CLOSED_SELECTION);
 
   const focusSearch = useCallback(() => {
     requestAnimationFrame(() => productSearchRef?.current?.focus?.());
@@ -32,6 +45,14 @@ export const useSaleItemSearch = ({
   }, [focusSearch]);
 
   const addSearchItem = useCallback((foundItem) => {
+    switch (foundItem?.type) {
+      case 'STOCK':
+      case 'SIMPLE':
+        break;
+      default:
+        throw new Error(`ไม่รองรับประเภทรายการขาย: ${foundItem?.type || 'UNKNOWN'}`);
+    }
+
     const preparedItem = mapSaleSearchItemToCartLine(foundItem, selectedPriceType);
     if (itemKeySet.has(preparedItem.lineId)) {
       if (preparedItem.lineType === 'SIMPLE') {
@@ -47,7 +68,7 @@ export const useSaleItemSearch = ({
   }, [addItem, itemKeySet, selectedPriceType, setError]);
 
   const closeSelection = useCallback(() => {
-    setSelection({ open: false, query: '', items: [], truncated: false });
+    dispatchSelection({ type: 'CLOSE' });
     focusSearch();
   }, [focusSearch]);
 
@@ -79,8 +100,8 @@ export const useSaleItemSearch = ({
         return;
       }
 
-      setSelection({
-        open: true,
+      dispatchSelection({
+        type: 'OPEN',
         query: result.query || query,
         items: result.items,
         truncated: result.truncated,

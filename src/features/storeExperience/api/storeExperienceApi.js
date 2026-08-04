@@ -13,3 +13,9 @@ export const getStoreExperienceDraft = async () =>
 
 export const saveStoreExperienceDraft = async (payload) =>
   unwrap(await apiClient.put('/store-experience/draft', payload));
+
+export const publishStoreExperience = async () =>
+  unwrap(await apiClient.post('/store-experience/publish'));
+
+export const unpublishStoreExperience = async () =>
+  unwrap(await apiClient.post('/store-experience/unpublish'));

@@ -1,3 +1,4 @@
+export * from './createAuthenticatedGatewayHandshake.js'
 export * from './createGatewayRuntimeConfig.js'
 export * from './createGatewayRuntimeDiagnostics.js'
 export * from './createGatewayStartupRuntime.js'

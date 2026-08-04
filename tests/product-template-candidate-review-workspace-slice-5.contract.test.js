@@ -56,7 +56,9 @@ describe('product template candidate review workspace slice 5 contract', () => {
     expect(queuePage).toMatch(/reviewerId/);
     expect(queuePage).toMatch(/status/);
     expect(queuePage).toMatch(/pageSize/);
-    expect(queuePage).toMatch(/navigate\([^)]*candidates/);
+    expect(queuePage).toMatch(/const detailBasePath/);
+    expect(queuePage).toMatch(/\/superadmin\/catalog\/candidates/);
+    expect(queuePage).toMatch(/navigate\(`\$\{detailBasePath\}\/\$\{candidate\.id\}`\)/);
     expect(queuePage).not.toMatch(/SUBMITTED|REQUEST_REVISION|REVISION_REQUESTED|APPROVED|MERGED_EXISTING/);
 
     expect(detailPage).toMatch(/startReview\(/);

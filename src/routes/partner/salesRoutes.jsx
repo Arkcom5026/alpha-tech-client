@@ -18,6 +18,7 @@ import OnlineConvertOrderPage from '@/features/orderOnlinePos/pages/OnlineConver
 import ProductReservationInboxPage from '@/features/productReservation/merchant/pages/ProductReservationInboxPage';
 import ProductReservationDetailPage from '@/features/productReservation/merchant/pages/ProductReservationDetailPage';
 import OnlineCommerceWorkCenterPage from '@/features/productReservation/merchant/pages/OnlineCommerceWorkCenterPage';
+import ReservationSaleBridgePage from '@/features/productReservation/merchant/pages/ReservationSaleBridgePage';
 
 const salesRoutes = {
   path: 'sales',
@@ -29,6 +30,7 @@ const salesRoutes = {
     // ProductReservation is the primary online-commerce work queue.
     { path: 'reservations', element: <ProductReservationInboxPage /> },
     { path: 'reservations/:reservationId', element: <ProductReservationDetailPage /> },
+    { path: 'reservations/:reservationId/sale', element: <ReservationSaleBridgePage /> },
 
     { path: 'bill', element: <PrintBillListPage /> },
     { path: 'bill/print-short/:saleId', element: <PrintBillPageShortTax /> },

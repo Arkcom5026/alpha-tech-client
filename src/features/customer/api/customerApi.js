@@ -14,6 +14,30 @@ export const searchStoreCustomers = async (query) => {
   }
 };
 
+export const listManagedCustomers = async ({ scope = 'STORE', query = '', limit = 100 } = {}) => {
+  try {
+    const res = await apiClient.get('/customers/management', {
+      params: { scope, q: String(query || '').trim(), limit },
+    });
+    return res.data;
+  } catch (error) {
+    console.error('❌ [listManagedCustomers] error:', error);
+    throw error;
+  }
+};
+
+export const claimUnassignedCustomer = async (customerProfileId) => {
+  try {
+    const res = await apiClient.post(
+      `/customers/management/unassigned/${customerProfileId}/claim`
+    );
+    return res.data;
+  } catch (error) {
+    console.error('❌ [claimUnassignedCustomer] error:', error);
+    throw error;
+  }
+};
+
 export const getCustomerByPhone = async (phone) => {
   try {
     const res = await apiClient.get(`/customers/by-phone/${phone}`);

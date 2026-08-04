@@ -178,90 +178,79 @@ const PrintBillPageShortTax = () => {
 
     if (!branchNameElement) return undefined
 
-    const designationMatch = branchName.match(
-      /\s*(\((?:สำนักงานใหญ่|สาขา[^)]*|สำนักงาน[^)]*)\))\s*$/
-    )
-    const branchDesignation = designationMatch?.[1] || ''
-    const legalBusinessName = designationMatch
-      ? branchName.slice(0, designationMatch.index).trim()
-      : branchName
-    const protectedLegalBusinessName = legalBusinessName.replace(
-      /\s+(จำกัด(?:\s*\(มหาชน\))?)$/,
-      '\u00a0$1'
-    )
-
     const originalText = branchNameElement.textContent
     const originalStyle = branchNameElement.getAttribute('style')
 
-    const normalizedLength = legalBusinessName.length
-    const fontSize =
-      normalizedLength >= 68
-        ? 12.5
-        : normalizedLength >= 52
-          ? 13
-          : normalizedLength >= 38
-            ? 14
-            : 16
+    const designationMatch = branchName.match(
+      /\s*(\((?:สำนักงานใหญ่|สาขา(?:ที่)?[^)]*|สำนักงานสาขา[^)]*)\))\s*$/u
+    )
+    const designation = designationMatch?.[1] || ''
+    const legalName = designationMatch
+      ? branchName.slice(0, designationMatch.index).trim()
+      : branchName
 
     branchNameElement.textContent = ''
     Object.assign(branchNameElement.style, {
-      fontSize: `${fontSize}px`,
-      lineHeight: '1.18',
-      letterSpacing: '0px',
+      width: '100%',
+      maxWidth: '100%',
       whiteSpace: 'normal',
       overflow: 'visible',
       textOverflow: 'clip',
-      overflowWrap: 'normal',
-      wordBreak: 'normal',
-      textWrap: 'wrap',
       textAlign: 'center',
+      lineHeight: '1.15',
+      letterSpacing: '0px',
     })
 
-    const legalNameLine = document.createElement('div')
-    legalNameLine.textContent = protectedLegalBusinessName
+    const legalNameLine = document.createElement('span')
+    legalNameLine.textContent = legalName
     Object.assign(legalNameLine.style, {
       display: 'block',
       width: '100%',
       maxWidth: '100%',
       whiteSpace: 'nowrap',
       overflow: 'visible',
-      overflowWrap: 'normal',
-      wordBreak: 'normal',
-      textWrap: 'nowrap',
       textAlign: 'center',
+      lineHeight: '1.15',
+      letterSpacing: '0px',
     })
     branchNameElement.appendChild(legalNameLine)
 
-    let designationLine = null
-    if (branchDesignation) {
-      designationLine = document.createElement('div')
-      designationLine.textContent = branchDesignation
+    const normalizedLength = legalName.length
+    let fontSize = normalizedLength >= 58 ? 13 : normalizedLength >= 46 ? 14 : 16
+    const minimumSingleLineFontSize = 10.5
+    legalNameLine.style.fontSize = `${fontSize}px`
+
+    while (
+      legalNameLine.scrollWidth > legalNameLine.clientWidth + 1 &&
+      fontSize > minimumSingleLineFontSize
+    ) {
+      fontSize = Math.max(minimumSingleLineFontSize, fontSize - 0.5)
+      legalNameLine.style.fontSize = `${fontSize}px`
+    }
+
+    if (legalNameLine.scrollWidth > legalNameLine.clientWidth + 1) {
+      legalNameLine.style.whiteSpace = 'normal'
+      legalNameLine.style.overflowWrap = 'normal'
+      legalNameLine.style.wordBreak = 'normal'
+      legalNameLine.style.textWrap = 'balance'
+    }
+
+    if (designation) {
+      const designationLine = document.createElement('span')
+      designationLine.textContent = designation
       Object.assign(designationLine.style, {
         display: 'block',
+        width: '100%',
         marginTop: '1px',
-        fontSize: `${Math.max(fontSize - 1, 11.5)}px`,
-        lineHeight: '1.15',
+        fontSize: `${Math.max(11, Math.min(13, fontSize - 0.5))}px`,
+        lineHeight: '1.1',
         whiteSpace: 'nowrap',
         textAlign: 'center',
       })
       branchNameElement.appendChild(designationLine)
     }
 
-    const allowNaturalLegalNameWrap = () => {
-      if (legalNameLine.scrollWidth <= legalNameLine.clientWidth + 1) return
-      Object.assign(legalNameLine.style, {
-        whiteSpace: 'normal',
-        overflowWrap: 'normal',
-        wordBreak: 'normal',
-        textWrap: 'balance',
-      })
-    }
-
-    allowNaturalLegalNameWrap()
-    const frameId = window.requestAnimationFrame(allowNaturalLegalNameWrap)
-
     return () => {
-      window.cancelAnimationFrame(frameId)
       branchNameElement.textContent = originalText
       if (originalStyle === null) {
         branchNameElement.removeAttribute('style')

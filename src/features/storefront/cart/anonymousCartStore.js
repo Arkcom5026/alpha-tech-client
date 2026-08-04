@@ -1,7 +1,8 @@
-import { useSyncExternalStore } from 'react';
+import { useMemo, useSyncExternalStore } from 'react';
 
 const STORAGE_KEY = 'alpha-tech:anonymous-cart:v1';
 const listeners = new Set();
+const EMPTY_STATE = Object.freeze({ version: 1, stores: Object.freeze({}) });
 let snapshot = null;
 
 const emptyState = () => ({ version: 1, stores: {} });
@@ -13,7 +14,7 @@ const sanitizeQuantity = (value, maximum = Number.MAX_SAFE_INTEGER) => {
 
 const readState = () => {
   if (snapshot) return snapshot;
-  if (typeof window === 'undefined') return emptyState();
+  if (typeof window === 'undefined') return EMPTY_STATE;
   try {
     const parsed = JSON.parse(window.localStorage.getItem(STORAGE_KEY) || 'null');
     snapshot = parsed?.version === 1 && parsed?.stores && typeof parsed.stores === 'object' ? parsed : emptyState();
@@ -31,9 +32,9 @@ const writeState = (next) => {
 
 const normalizeSlug = (value) => String(value || '').trim().toLowerCase();
 
-export const getAnonymousCart = (shopSlug) => {
+const selectAnonymousCart = (state, shopSlug) => {
   const slug = normalizeSlug(shopSlug);
-  const store = readState().stores[slug];
+  const store = state?.stores?.[slug];
   return {
     shopSlug: slug,
     storefrontName: store?.storefrontName || '',
@@ -41,6 +42,8 @@ export const getAnonymousCart = (shopSlug) => {
     updatedAt: store?.updatedAt || null,
   };
 };
+
+export const getAnonymousCart = (shopSlug) => selectAnonymousCart(readState(), shopSlug);
 
 export const addAnonymousCartItem = ({ shopSlug, storefrontName, product, quantity = 1 }) => {
   const slug = normalizeSlug(shopSlug);
@@ -113,8 +116,11 @@ export const subscribeAnonymousCart = (listener) => {
   return () => listeners.delete(listener);
 };
 
-export const useAnonymousCart = (shopSlug) =>
-  useSyncExternalStore(subscribeAnonymousCart, () => getAnonymousCart(shopSlug), () => getAnonymousCart(shopSlug));
+export const useAnonymousCart = (shopSlug) => {
+  const state = useSyncExternalStore(subscribeAnonymousCart, readState, () => EMPTY_STATE);
+  const slug = normalizeSlug(shopSlug);
+  return useMemo(() => selectAnonymousCart(state, slug), [state, slug]);
+};
 
 export const getAnonymousCartItemCount = (cart) =>
   (cart?.items || []).reduce((total, item) => total + Number(item.quantity || 0), 0);

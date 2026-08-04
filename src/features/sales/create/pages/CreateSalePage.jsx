@@ -7,6 +7,7 @@ import { useCreateSaleWorkflow } from '../index';
 import { SaleCustomerSection as CustomerSection } from '../customer';
 import PaymentSection from '../components/PaymentSection';
 import SaleItemTable from '../components/SaleItemTable';
+import SaleItemSearchDialog from '../item-search/components/SaleItemSearchDialog';
 import PosHeldCartPanel from '../../held-cart/components/PosHeldCartPanel';
 import CoreSalesHelpDrawer from '../../help/CoreSalesHelpDrawer';
 
@@ -126,7 +127,7 @@ const QuickSalePage = () => {
                 <div className="p-1 bg-slate-900/5 text-slate-800 rounded-md">
                   <ShoppingBag className="w-4 h-4" />
                 </div>
-                <h2 className="text-xs md:text-sm font-black text-slate-900">ตัวเลือกการคำนวณและโครงสร้างบาร์โค้ดขาย</h2>
+                <h2 className="text-xs md:text-sm font-black text-slate-900">ค้นหาและเพิ่มสินค้าเข้ารายการขาย</h2>
               </div>
 
               <div className="flex items-center gap-3 text-[11px] font-black text-slate-400">
@@ -155,7 +156,7 @@ const QuickSalePage = () => {
               <input
                 ref={barcodeInputRef}
                 type="text"
-                placeholder="ยิงบาร์โค้ดสินค้าแบบชิ้นหรือแบบจำนวนเพื่อเพิ่มรายการขาย..."
+                placeholder="ค้นหาด้วยบาร์โค้ด, SN, ชื่อ หรือรุ่นสินค้า (ชื่อ/รุ่นอย่างน้อย 3 ตัวอักษร)"
                 onKeyDown={sale.itemSearch.handleBarcodeSearch}
                 disabled={checkoutLocked}
                 data-testid="pos-sale-barcode-input"
@@ -214,6 +215,16 @@ const QuickSalePage = () => {
           onSavedAndClear={heldCartSavedAndClear}
         />
       )}
+
+      <SaleItemSearchDialog
+        open={sale.itemSearch.selection.open}
+        query={sale.itemSearch.selection.query}
+        items={sale.itemSearch.selection.items}
+        truncated={sale.itemSearch.selection.truncated}
+        priceType={sale.presentation.selectedPriceType}
+        onSelect={sale.itemSearch.selectSearchItem}
+        onClose={sale.itemSearch.closeSelection}
+      />
 
       <CoreSalesHelpDrawer
         open={isHelpOpen}

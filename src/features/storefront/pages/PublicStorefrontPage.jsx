@@ -48,17 +48,37 @@ const PublicStorefrontPage = () => {
   useEffect(() => {
     let active = true;
     const slug = encodeURIComponent(shopSlug || '');
-    Promise.all([
-      apiClient.get(`/sales/storefronts/${slug}`, { skipAuthBootstrap: true }),
-      apiClient.get(`/sales/storefronts/${slug}/products?page=1&pageSize=24`, { skipAuthBootstrap: true }),
-    ])
-      .then(([storeResponse, productResponse]) => {
+
+    const load = async () => {
+      try {
+        const storeResponse = await apiClient.get(`/sales/storefronts/${slug}`, { skipAuthBootstrap: true });
         if (!active) return;
+
         const storefront = storeResponse?.data?.data || null;
-        const productPayload = productResponse?.data?.data || {};
-        setState({ loading: false, storefront, products: productPayload.items || [], notFound: false, error: '' });
-      })
-      .catch((error) => {
+        if (!storefront) {
+          setState({ loading: false, storefront: null, products: [], notFound: true, error: '' });
+          return;
+        }
+
+        let products = [];
+        try {
+          const productResponse = await apiClient.get(
+            `/sales/storefronts/${slug}/products?page=1&pageSize=24`,
+            { skipAuthBootstrap: true }
+          );
+          products = productResponse?.data?.data?.items || [];
+        } catch (productError) {
+          console.warn('[PUBLIC-STOREFRONT] Product discovery unavailable; rendering published storefront without products.', {
+            slug: shopSlug,
+            status: productError?.response?.status,
+            code: productError?.response?.data?.code,
+          });
+        }
+
+        if (active) {
+          setState({ loading: false, storefront, products, notFound: false, error: '' });
+        }
+      } catch (error) {
         if (!active) return;
         const status = error?.response?.status;
         const code = error?.response?.data?.code;
@@ -66,8 +86,17 @@ const PublicStorefrontPage = () => {
           setState({ loading: false, storefront: null, products: [], notFound: true, error: '' });
           return;
         }
-        setState({ loading: false, storefront: null, products: [], notFound: false, error: error?.response?.data?.message || 'ไม่สามารถโหลดหน้าร้านได้ในขณะนี้' });
-      });
+        setState({
+          loading: false,
+          storefront: null,
+          products: [],
+          notFound: false,
+          error: error?.response?.data?.message || 'ไม่สามารถโหลดหน้าร้านได้ในขณะนี้',
+        });
+      }
+    };
+
+    load();
     return () => { active = false; };
   }, [shopSlug]);
 
@@ -82,6 +111,8 @@ const PublicStorefrontPage = () => {
 
   if (state.loading) return <main className="grid min-h-screen place-items-center bg-slate-50 p-8 text-center text-slate-600">กำลังโหลดหน้าร้าน...</main>;
 
+  if (state.error) return <main className="grid min-h-screen place-items-center bg-slate-50 p-8 text-center text-red-700">{state.error}</main>;
+
   if (state.notFound || !state.storefront) {
     return (
       <main className="grid min-h-screen place-items-center bg-slate-50 p-6">
@@ -94,8 +125,6 @@ const PublicStorefrontPage = () => {
       </main>
     );
   }
-
-  if (state.error) return <main className="grid min-h-screen place-items-center bg-slate-50 p-8 text-center text-red-700">{state.error}</main>;
 
   const { storefront, products } = state;
   const featured = products.filter((product) => product.availability?.status === 'AVAILABLE').slice(0, 3);

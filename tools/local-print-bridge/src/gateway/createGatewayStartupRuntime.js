@@ -1,5 +1,6 @@
 import { createGatewayRuntimeConfigFromEnv } from './createGatewayRuntimeConfig.js'
 import { createRealGatewayWebSocketClient } from './createRealGatewayWebSocketClient.js'
+import { createNodeWebSocketClient } from './createNodeWebSocketClient.js'
 
 const createHeartbeatEnvelopeFactory = (config, now = () => new Date()) => ({ reconnectCursor = null } = {}) => ({
   messageType: 'HEARTBEAT',
@@ -10,9 +11,13 @@ const createHeartbeatEnvelopeFactory = (config, now = () => new Date()) => ({ re
   physicalExecutionEnabled: false,
 })
 
+const defaultWebSocketFactory = (url) => typeof globalThis.WebSocket === 'function'
+  ? new globalThis.WebSocket(url)
+  : createNodeWebSocketClient(url)
+
 const createGatewayStartupRuntime = ({
   env = process.env,
-  webSocketFactory = (url) => new WebSocket(url),
+  webSocketFactory = defaultWebSocketFactory,
   clientFactory = createRealGatewayWebSocketClient,
   now,
 } = {}) => {
@@ -72,5 +77,5 @@ const createGatewayStartupRuntime = ({
   })
 }
 
-export { createGatewayStartupRuntime, createHeartbeatEnvelopeFactory }
+export { createGatewayStartupRuntime, createHeartbeatEnvelopeFactory, defaultWebSocketFactory }
 export default createGatewayStartupRuntime

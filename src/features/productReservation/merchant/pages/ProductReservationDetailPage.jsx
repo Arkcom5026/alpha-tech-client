@@ -9,6 +9,7 @@ const STATUS_META = Object.freeze({
   ACTIVE: { label: 'รอร้านรับใบจอง', tone: 'border-amber-200 bg-amber-50 text-amber-800' },
   ACCEPTED: { label: 'ร้านรับใบจองแล้ว', tone: 'border-blue-200 bg-blue-50 text-blue-800' },
   FULFILLMENT_READY: { label: 'เตรียมสินค้าเรียบร้อย', tone: 'border-emerald-200 bg-emerald-50 text-emerald-800' },
+  READY_FOR_PICKUP: { label: 'พร้อมให้ลูกค้ารับ', tone: 'border-emerald-200 bg-emerald-50 text-emerald-800' },
   CANCELLED: { label: 'ยกเลิกแล้ว', tone: 'border-rose-200 bg-rose-50 text-rose-800' },
   EXPIRED: { label: 'หมดอายุ', tone: 'border-slate-200 bg-slate-100 text-slate-700' },
 });
@@ -109,6 +110,7 @@ const ProductReservationDetailPage = () => {
 
   const canAccept = reservation.status === 'ACTIVE';
   const canCancel = ['ACTIVE', 'ACCEPTED'].includes(reservation.status);
+  const canOpenPosSale = ['ACCEPTED', 'FULFILLMENT_READY', 'READY_FOR_PICKUP'].includes(reservation.status);
 
   return (
     <main className="min-h-screen bg-slate-50 px-4 py-6 md:px-8">
@@ -137,8 +139,8 @@ const ProductReservationDetailPage = () => {
           {error ? <div className="mt-5 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm font-bold text-rose-700">{error}</div> : null}
           {success ? <div className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-bold text-emerald-700">{success}</div> : null}
 
-          {(canAccept || canCancel) ? (
-            <div className="mt-6 flex flex-col gap-3 border-t border-slate-200 pt-5 sm:flex-row">
+          {(canAccept || canCancel || canOpenPosSale) ? (
+            <div className="mt-6 flex flex-col gap-3 border-t border-slate-200 pt-5 sm:flex-row sm:flex-wrap">
               {canAccept ? (
                 <button
                   type="button"
@@ -148,6 +150,15 @@ const ProductReservationDetailPage = () => {
                 >
                   {submittingCommand === 'ACCEPT' ? 'กำลังรับใบจอง...' : 'รับใบจอง'}
                 </button>
+              ) : null}
+              {canOpenPosSale ? (
+                <Link
+                  to="sale"
+                  relative="path"
+                  className="rounded-xl bg-emerald-600 px-6 py-3 text-center text-sm font-black text-white transition hover:bg-emerald-700"
+                >
+                  นำใบจองเข้าสู่หน้าขาย POS
+                </Link>
               ) : null}
               {canCancel ? (
                 <button

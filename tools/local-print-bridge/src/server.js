@@ -6,6 +6,7 @@ import { discoverWindowsPrinters } from './windowsPrinterDiscovery.js'
 import { createWindowsRawPrinterAdapter } from './windowsRawPrinterAdapter.js'
 import { createPhysicalPilotAdapter } from './physicalPilotAdapter.js'
 import { createGatewayStartupRuntime } from './gateway/createGatewayStartupRuntime.js'
+import { createPhysicalPilotExecutionRuntime } from './pilot/createPhysicalPilotExecutionRuntime.js'
 
 const HOST = process.env.ALPHA_PRINT_BRIDGE_HOST || '127.0.0.1'
 const PORT = Number(process.env.ALPHA_PRINT_BRIDGE_PORT || 17451)
@@ -13,12 +14,54 @@ const MAX_BODY_BYTES = 1_000_000
 const RAW_ENABLED = process.env.ALPHA_PRINT_BRIDGE_ENABLE_RAW === '1'
 const PHYSICAL_PILOT_ENABLED = process.env.ALPHA_PRINT_BRIDGE_ENABLE_PHYSICAL_PILOT === '1'
 const PILOT_PRINTER_ID = process.env.ALPHA_PRINT_BRIDGE_PILOT_PRINTER_ID || ''
+const PILOT_BRANCH_ID = Number(process.env.ALPHA_PRINT_BRIDGE_PILOT_BRANCH_ID || 0)
+const PILOT_GATEWAY_ID = process.env.ALPHA_PRINT_BRIDGE_PILOT_GATEWAY_ID || ''
+const PILOT_DEVICE_ID = process.env.ALPHA_PRINT_BRIDGE_PILOT_DEVICE_ID || ''
+const PILOT_CONFIRMATION = process.env.ALPHA_PRINT_BRIDGE_PILOT_CONFIRMATION || ''
 
 const registry = createDefaultMockRegistry()
 const mockAdapter = createMockPrinterAdapter()
 const rawAdapter = createWindowsRawPrinterAdapter({ enabled: RAW_ENABLED })
 const physicalPilotAdapter = createPhysicalPilotAdapter()
 const gatewayRuntime = createGatewayStartupRuntime()
+
+const resolvePrinter = async (printerProfileId) => {
+  const mock = registry.get(printerProfileId)
+  if (mock) return mock
+  const windowsPrinters = await discoverWindowsPrinters()
+  return windowsPrinters.find((printer) => printer.id === printerProfileId) || null
+}
+
+const resolveRegisteredPilotDevice = async ({ branchId, gatewayId, deviceId }) => {
+  if (
+    branchId !== PILOT_BRANCH_ID ||
+    gatewayId !== PILOT_GATEWAY_ID ||
+    deviceId !== PILOT_DEVICE_ID
+  ) return null
+
+  return Object.freeze({
+    branchId,
+    gatewayId,
+    deviceId,
+    printerProfileId: PILOT_PRINTER_ID,
+    kind: 'PRINTER',
+    connectionState: 'ONLINE',
+    revokedAt: null,
+    capabilities: Object.freeze({ print: true }),
+  })
+}
+
+const physicalPilotRuntime = createPhysicalPilotExecutionRuntime({
+  enabled: PHYSICAL_PILOT_ENABLED,
+  allowedBranchId: PILOT_BRANCH_ID,
+  allowedGatewayId: PILOT_GATEWAY_ID,
+  allowedDeviceId: PILOT_DEVICE_ID,
+  allowedPrinterId: PILOT_PRINTER_ID,
+  confirmationToken: PILOT_CONFIRMATION,
+  resolveRegisteredDevice: resolveRegisteredPilotDevice,
+  resolvePrinter,
+  physicalAdapter: physicalPilotAdapter,
+})
 
 const sendJson = (res, statusCode, payload) => {
   const body = JSON.stringify(payload)
@@ -56,13 +99,6 @@ const readJsonBody = (req) => new Promise((resolve, reject) => {
   req.on('error', reject)
 })
 
-const resolvePrinter = async (printerProfileId) => {
-  const mock = registry.get(printerProfileId)
-  if (mock) return mock
-  const windowsPrinters = await discoverWindowsPrinters()
-  return windowsPrinters.find((printer) => printer.id === printerProfileId) || null
-}
-
 const sendError = (res, error) => sendJson(res, error.statusCode || 400, {
   code: error.code || (error.name === 'TypeError' ? 'INVALID_REQUEST' : 'REQUEST_REJECTED'),
   message: error.message,
@@ -77,11 +113,12 @@ const server = http.createServer(async (req, res) => {
     return sendJson(res, 200, {
       ok: true,
       service: 'alpha-tech-local-print-bridge',
-      version: '0.4.0',
-      mode: PHYSICAL_PILOT_ENABLED ? 'PHYSICAL_PILOT_ARMED' : RAW_ENABLED ? 'WINDOWS_RAW_ENABLED' : 'MOCK_WITH_WINDOWS_DISCOVERY',
+      version: '0.5.0',
+      mode: PHYSICAL_PILOT_ENABLED ? 'LIMITED_PHYSICAL_PILOT_ARMED' : RAW_ENABLED ? 'WINDOWS_RAW_ENABLED' : 'MOCK_WITH_WINDOWS_DISCOVERY',
       rawPrintingEnabled: RAW_ENABLED,
       physicalPilotEnabled: PHYSICAL_PILOT_ENABLED,
       pilotPrinterId: PHYSICAL_PILOT_ENABLED ? PILOT_PRINTER_ID : null,
+      physicalPilot: physicalPilotRuntime.diagnostics(),
       gateway: gatewayRuntime.diagnostics,
       host: HOST,
       port: PORT,
@@ -104,18 +141,14 @@ const server = http.createServer(async (req, res) => {
   if (req.method === 'POST' && url.pathname === '/v1/physical-pilot') {
     try {
       const request = await readJsonBody(req)
-      if (!request || typeof request !== 'object') throw new TypeError('request body is required')
-      const printerProfileId = String(request.printerProfileId || '')
-      if (!printerProfileId) throw new TypeError('printerProfileId is required')
-      const printer = await resolvePrinter(printerProfileId)
-      if (!printer || printer.connection !== 'WINDOWS_QUEUE') {
-        const error = new Error(`Windows printer queue not found: ${printerProfileId}`)
-        error.code = 'WINDOWS_PRINTER_NOT_FOUND'
-        error.statusCode = 404
-        throw error
-      }
-      const result = await physicalPilotAdapter.print({ printer, request })
-      return sendJson(res, 202, { accepted: true, result })
+      const result = await physicalPilotRuntime.execute({
+        branchId: request.branchId,
+        gatewayId: request.gatewayId,
+        deviceId: request.deviceId,
+        jobId: request.jobId,
+        requestSnapshot: request.requestSnapshot || {},
+      })
+      return sendJson(res, result.replayed ? 200 : 202, { accepted: true, result })
     } catch (error) {
       return sendError(res, error)
     }
@@ -148,7 +181,10 @@ server.listen(PORT, HOST, () => {
   console.log(`[local-print-bridge] rawPrintingEnabled=${RAW_ENABLED}`)
   console.log(`[local-print-bridge] physicalPilotEnabled=${PHYSICAL_PILOT_ENABLED}`)
   console.log(`[local-print-bridge] gatewayEnabled=${gatewayRuntime.enabled}`)
-  if (PHYSICAL_PILOT_ENABLED) console.log(`[local-print-bridge] pilotPrinterId=${PILOT_PRINTER_ID}`)
+  if (PHYSICAL_PILOT_ENABLED) {
+    console.log(`[local-print-bridge] pilotPrinterId=${PILOT_PRINTER_ID}`)
+    console.log(`[local-print-bridge] pilotScope=${PILOT_BRANCH_ID}/${PILOT_GATEWAY_ID}/${PILOT_DEVICE_ID}`)
+  }
   gatewayRuntime.start()
 })
 
@@ -166,4 +202,4 @@ const shutdown = (signal) => {
 process.on('SIGINT', () => shutdown('SIGINT'))
 process.on('SIGTERM', () => shutdown('SIGTERM'))
 
-export { gatewayRuntime, server }
+export { gatewayRuntime, physicalPilotRuntime, server }

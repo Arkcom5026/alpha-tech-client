@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Search, X } from 'lucide-react';
+import { ImageOff, Search, X } from 'lucide-react';
 
 const money = (value) => Number(value || 0).toLocaleString('th-TH', {
   minimumFractionDigits: 2,
@@ -27,32 +27,19 @@ const SaleItemSearchDialog = ({ open, query, items, truncated, priceType, onSele
       }
 
       if (!items.length) return;
-
       if (event.key === 'ArrowDown') {
         event.preventDefault();
         setActiveIndex((current) => Math.min(current + 1, items.length - 1));
-        return;
-      }
-
-      if (event.key === 'ArrowUp') {
+      } else if (event.key === 'ArrowUp') {
         event.preventDefault();
         setActiveIndex((current) => Math.max(current - 1, 0));
-        return;
-      }
-
-      if (event.key === 'Home') {
+      } else if (event.key === 'Home') {
         event.preventDefault();
         setActiveIndex(0);
-        return;
-      }
-
-      if (event.key === 'End') {
+      } else if (event.key === 'End') {
         event.preventDefault();
         setActiveIndex(items.length - 1);
-        return;
-      }
-
-      if (event.key === 'Enter') {
+      } else if (event.key === 'Enter') {
         event.preventDefault();
         onSelect(items[activeIndex]);
       }
@@ -119,19 +106,29 @@ const SaleItemSearchDialog = ({ open, query, items, truncated, priceType, onSele
                     ? 'border-orange-500 bg-orange-50 ring-2 ring-orange-200'
                     : 'border-slate-200 hover:border-orange-400 hover:bg-orange-50'}`}
                 >
-                  <div className="col-span-12 md:col-span-6">
-                    <div className="font-black text-slate-900">{product.name || 'ไม่ระบุชื่อสินค้า'}</div>
-                    <div className="mt-1 flex flex-wrap gap-2 text-[11px] text-slate-500">
-                      {product.brandName && <span>ยี่ห้อ: {product.brandName}</span>}
-                      {product.codeType && <span>รุ่น/รหัส: {product.codeType}</span>}
-                      {product.productTypeName && <span>ประเภท: {product.productTypeName}</span>}
-                      <span>{item.type === 'STOCK' ? 'สินค้าแยกชิ้น' : 'สินค้าแบบจำนวน'}</span>
+                  <div className="col-span-12 flex items-center gap-3 md:col-span-6">
+                    <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
+                      {product.coverImageUrl ? (
+                        <img src={product.coverImageUrl} alt="" className="h-full w-full object-cover" loading="lazy" />
+                      ) : (
+                        <ImageOff className="h-5 w-5 text-slate-300" />
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="truncate font-black text-slate-900">{product.name || 'ไม่ระบุชื่อสินค้า'}</div>
+                      <div className="mt-1 flex flex-wrap gap-2 text-[11px] text-slate-500">
+                        {product.brandName && <span>ยี่ห้อ: {product.brandName}</span>}
+                        {product.codeType && <span>รุ่น/รหัส: {product.codeType}</span>}
+                        {product.productTypeName && <span>ประเภท: {product.productTypeName}</span>}
+                        <span>{item.type === 'STOCK' ? 'สินค้าแยกชิ้น' : 'สินค้าแบบจำนวน'}</span>
+                      </div>
                     </div>
                   </div>
                   <div className="col-span-12 md:col-span-3 text-[11px] text-slate-600">
                     {item.serialNumber && <div>SN: <strong>{item.serialNumber}</strong></div>}
                     {item.barcode && <div>บาร์โค้ด: <strong>{item.barcode}</strong></div>}
                     <div>พร้อมขาย: <strong>{item.quantityAvailable}</strong></div>
+                    {item.barcodeAuthority && <div>แหล่งรหัส: <strong>{item.barcodeAuthority.kind}</strong></div>}
                   </div>
                   <div className="col-span-12 text-right md:col-span-3">
                     <div className="text-base font-black text-orange-700">

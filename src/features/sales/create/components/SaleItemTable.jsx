@@ -85,7 +85,7 @@ const SaleItemTable = ({ items = [], onRemove, onUpdate, onChangeSimpleQuantity,
       <th className="p-2.5 text-center w-12">#</th>
       <th className="p-2.5 w-[220px]">ชื่อสินค้ารายละเอียด</th>
       <th className="p-2.5 w-[110px]">ประเภท</th>
-      <th className="p-2.5 text-center w-28">บาร์โค้ด</th>
+      <th className="p-2.5 text-center w-36">บาร์โค้ด / SN</th>
       <th className="p-2.5 text-center w-16">จำนวน</th>
       <th className="p-2.5 text-right w-24">ราคาป้าย</th>
       <th className="p-2.5 text-right w-24">ขายจริง</th>
@@ -129,6 +129,8 @@ const SaleItemTable = ({ items = [], onRemove, onUpdate, onChangeSimpleQuantity,
             ? Number(item.sellingPrice)
             : Math.max(0, Number(item.price || 0) - discountWithoutBill);
           const net = Math.max(0, basePrice - discount);
+          const displayIdentifier = item.displayIdentifier || item.serialNumber || item.barcode || '-';
+          const identifierType = item.identifierType || (item.serialNumber ? 'SN' : 'BARCODE');
 
           return (
             <tr key={item.lineId} className="hover:bg-slate-50/50 transition-colors">
@@ -137,7 +139,10 @@ const SaleItemTable = ({ items = [], onRemove, onUpdate, onChangeSimpleQuantity,
                 {item.productName}
               </td>
               <td className="p-2.5 text-slate-500">{item.lineType === 'SIMPLE' ? 'แบบจำนวน' : 'รายชิ้น/SN'}</td>
-              <td className="p-2.5 border-l border-slate-100 font-mono text-center select-all">{item.barcode}</td>
+              <td className="p-2.5 border-l border-slate-100 text-center select-all">
+                <div className="font-mono font-black text-slate-800">{displayIdentifier}</div>
+                <div className="mt-0.5 text-[9px] font-bold uppercase text-slate-400">{identifierType}</div>
+              </td>
               <td className="p-2.5 text-center font-mono">
                 {item.lineType === 'SIMPLE' ? (
                   <input

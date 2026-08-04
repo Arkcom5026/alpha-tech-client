@@ -14,11 +14,11 @@ const toEpochMs = (value, fieldName) => {
 
 const assertClockAuthority = ({ envelope, now = Date.now(), maxClockSkewMs = DEFAULT_CLOCK_SKEW_MS }) => {
   if (!Number.isFinite(maxClockSkewMs) || maxClockSkewMs < 0) throw new TypeError('maxClockSkewMs must be non-negative')
-  const issuedAtMs = toEpochMs(envelope.issuedAt, 'issuedAt')
+  const timestampMs = toEpochMs(envelope.timestamp, 'timestamp')
   const expiresAtMs = toEpochMs(envelope.expiresAt, 'expiresAt')
 
-  if (issuedAtMs > now + maxClockSkewMs) {
-    const error = new Error('protocol message is issued too far in the future')
+  if (timestampMs > now + maxClockSkewMs) {
+    const error = new Error('protocol message timestamp is too far in the future')
     error.code = 'PROTOCOL_CLOCK_SKEW_EXCEEDED'
     throw error
   }
@@ -27,7 +27,7 @@ const assertClockAuthority = ({ envelope, now = Date.now(), maxClockSkewMs = DEF
     error.code = 'PROTOCOL_PROOF_EXPIRED'
     throw error
   }
-  if (expiresAtMs <= issuedAtMs) throw new TypeError('expiresAt must be later than issuedAt')
+  if (expiresAtMs <= timestampMs) throw new TypeError('expiresAt must be later than timestamp')
 
   return true
 }

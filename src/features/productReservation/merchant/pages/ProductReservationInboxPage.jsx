@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { listMerchantProductReservations } from '../api/productReservationMerchantApi';
 
 const STATUS_META = Object.freeze({
@@ -43,6 +43,10 @@ const remainingText = (expiresAt, now) => {
 };
 
 const ProductReservationInboxPage = () => {
+  const { shopSlug } = useParams();
+  const reservationBasePath = shopSlug
+    ? `/${shopSlug}/pos/sales/reservations`
+    : '/pos/sales/reservations';
   const [filterKey, setFilterKey] = useState('OPEN');
   const [reservations, setReservations] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -180,7 +184,7 @@ const ProductReservationInboxPage = () => {
                     </div>
 
                     <Link
-                      to={`/pos/sales/reservations/${reservation.id}`}
+                      to={`${reservationBasePath}/${reservation.id}`}
                       className="inline-flex min-w-32 items-center justify-center rounded-xl bg-slate-950 px-5 py-3 text-sm font-black text-white transition hover:bg-blue-700"
                     >
                       เปิดใบจอง

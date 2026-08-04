@@ -15,6 +15,7 @@ import LoginPage from '@/features/auth/pages/LoginPage';
 import MerchantLoginShell from '@/features/auth/layouts/MerchantLoginShell';
 import ForgotPasswordPage from '@/features/auth/pages/ForgotPasswordPage';
 import ResetPasswordPage from '@/features/auth/pages/ResetPasswordPage';
+import SuperAdminAuthorityGuard from '@/features/auth/guards/SuperAdminAuthorityGuard';
 import { useAuthStore } from '@/features/auth/store/authStore';
 import CustomerRepairTrackingPage from '@/features/repair/customer-tracking/pages/CustomerRepairTrackingPage';
 import PublicStorefrontPage from '@/features/storefront/pages/PublicStorefrontPage';
@@ -49,7 +50,11 @@ const AppRouter = [
   { path: 'partner-portal/reset-password', element: <ResetPasswordPage /> },
   { path: 'superadmin/dashboard', element: <SuperAdminEntryRedirect /> },
   { path: ':shopSlug/pos', element: <PartnerPosMasterLayout />, children: [...posPartnerRoutes] },
-  { path: ':shopSlug/superadmin', element: <LayoutSuperAdmin />, children: superAdminRoutes },
+  {
+    path: ':shopSlug/superadmin',
+    element: <SuperAdminAuthorityGuard />,
+    children: [{ element: <LayoutSuperAdmin />, children: superAdminRoutes }],
+  },
   { path: ':shopSlug/shop', element: <Navigate to="../" relative="path" replace /> },
   { path: ':shopSlug', element: <PublicStorefrontPage /> },
   { element: <MerchantLoginShell />, children: [{ path: 'login', element: <LoginPage /> }] },

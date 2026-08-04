@@ -91,10 +91,14 @@ const createRealGatewayWebSocketClient = ({
       diagnostics.message({ reconnectCursor })
       onEnvelope(envelope)
     }
-    socket.onerror = (error) => diagnostics.disconnected(error)
+    socket.onerror = (error) => {
+      if (revoked) return
+      diagnostics.disconnected(error)
+    }
     socket.onclose = () => {
       if (heartbeatTimer) scheduler.clearInterval(heartbeatTimer)
       heartbeatTimer = null
+      if (revoked) return
       diagnostics.disconnected()
       scheduleReconnect()
     }

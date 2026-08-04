@@ -6,15 +6,19 @@ import { createMockPrinterAdapter } from './mockPrinterAdapter.js'
 import { validatePrintJob } from './printJobValidator.js'
 import { discoverWindowsPrinters } from './windowsPrinterDiscovery.js'
 import { createWindowsRawPrinterAdapter } from './windowsRawPrinterAdapter.js'
+import { createPhysicalPilotAdapter } from './physicalPilotAdapter.js'
 
 const HOST = process.env.ALPHA_PRINT_BRIDGE_HOST || '127.0.0.1'
 const PORT = Number(process.env.ALPHA_PRINT_BRIDGE_PORT || 17451)
 const MAX_BODY_BYTES = 1_000_000
 const RAW_ENABLED = process.env.ALPHA_PRINT_BRIDGE_ENABLE_RAW === '1'
+const PHYSICAL_PILOT_ENABLED = process.env.ALPHA_PRINT_BRIDGE_ENABLE_PHYSICAL_PILOT === '1'
+const PILOT_PRINTER_ID = process.env.ALPHA_PRINT_BRIDGE_PILOT_PRINTER_ID || ''
 
 const registry = createDefaultMockRegistry()
 const mockAdapter = createMockPrinterAdapter()
 const rawAdapter = createWindowsRawPrinterAdapter({ enabled: RAW_ENABLED })
+const physicalPilotAdapter = createPhysicalPilotAdapter()
 
 const sendJson = (res, statusCode, payload) => {
   const body = JSON.stringify(payload)
@@ -59,6 +63,11 @@ const resolvePrinter = async (printerProfileId) => {
   return windowsPrinters.find((printer) => printer.id === printerProfileId) || null
 }
 
+const sendError = (res, error) => sendJson(res, error.statusCode || 400, {
+  code: error.code || (error.name === 'TypeError' ? 'INVALID_REQUEST' : 'REQUEST_REJECTED'),
+  message: error.message,
+})
+
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url || '/', `http://${HOST}:${PORT}`)
 
@@ -68,9 +77,11 @@ const server = http.createServer(async (req, res) => {
     return sendJson(res, 200, {
       ok: true,
       service: 'alpha-tech-local-print-bridge',
-      version: '0.2.0',
-      mode: RAW_ENABLED ? 'WINDOWS_RAW_ENABLED' : 'MOCK_WITH_WINDOWS_DISCOVERY',
+      version: '0.3.0',
+      mode: PHYSICAL_PILOT_ENABLED ? 'PHYSICAL_PILOT_ARMED' : RAW_ENABLED ? 'WINDOWS_RAW_ENABLED' : 'MOCK_WITH_WINDOWS_DISCOVERY',
       rawPrintingEnabled: RAW_ENABLED,
+      physicalPilotEnabled: PHYSICAL_PILOT_ENABLED,
+      pilotPrinterId: PHYSICAL_PILOT_ENABLED ? PILOT_PRINTER_ID : null,
       host: HOST,
       port: PORT,
       timestamp: new Date().toISOString(),
@@ -89,6 +100,26 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
+  if (req.method === 'POST' && url.pathname === '/v1/physical-pilot') {
+    try {
+      const request = await readJsonBody(req)
+      if (!request || typeof request !== 'object') throw new TypeError('request body is required')
+      const printerProfileId = String(request.printerProfileId || '')
+      if (!printerProfileId) throw new TypeError('printerProfileId is required')
+      const printer = await resolvePrinter(printerProfileId)
+      if (!printer || printer.connection !== 'WINDOWS_QUEUE') {
+        const error = new Error(`Windows printer queue not found: ${printerProfileId}`)
+        error.code = 'WINDOWS_PRINTER_NOT_FOUND'
+        error.statusCode = 404
+        throw error
+      }
+      const result = await physicalPilotAdapter.print({ printer, request })
+      return sendJson(res, 202, { accepted: true, result })
+    } catch (error) {
+      return sendError(res, error)
+    }
+  }
+
   if (req.method === 'POST' && url.pathname === '/v1/print-jobs') {
     try {
       const printJob = validatePrintJob(await readJsonBody(req))
@@ -104,10 +135,7 @@ const server = http.createServer(async (req, res) => {
       const result = await adapter.print({ printer, printJob })
       return sendJson(res, 202, { accepted: true, result })
     } catch (error) {
-      return sendJson(res, error.statusCode || 400, {
-        code: error.code || (error.name === 'TypeError' ? 'INVALID_PRINT_JOB' : 'PRINT_JOB_REJECTED'),
-        message: error.message,
-      })
+      return sendError(res, error)
     }
   }
 
@@ -117,7 +145,8 @@ const server = http.createServer(async (req, res) => {
 server.listen(PORT, HOST, () => {
   console.log(`[local-print-bridge] listening on http://${HOST}:${PORT}`)
   console.log(`[local-print-bridge] rawPrintingEnabled=${RAW_ENABLED}`)
-  console.log('[local-print-bridge] physical RAW dispatch requires explicit ALPHA_PRINT_BRIDGE_ENABLE_RAW=1')
+  console.log(`[local-print-bridge] physicalPilotEnabled=${PHYSICAL_PILOT_ENABLED}`)
+  if (PHYSICAL_PILOT_ENABLED) console.log(`[local-print-bridge] pilotPrinterId=${PILOT_PRINTER_ID}`)
 })
 
 const shutdown = (signal) => {

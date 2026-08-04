@@ -26,17 +26,17 @@ describe('product template candidate review workspace slice 5 contract', () => {
     expect(api).not.toMatch(/request-revision|merge-existing|\/status/);
 
     for (const currentStatus of ['DRAFT', 'UNDER_REVIEW', 'REJECTED', 'MERGED', 'PROMOTED', 'CANCELLED']) {
-      expect(status, `Missing status ${currentStatus}`).toMatch(new RegExp(`\\b${currentStatus}\\b`));
+      expect(status).toMatch(new RegExp(`\\b${currentStatus}\\b`));
     }
     expect(status).not.toMatch(/SUBMITTED|REVISION_REQUESTED|APPROVED|MERGED_EXISTING/);
 
     for (const action of ['startReview', 'rejectCandidate', 'mergeCandidate', 'promoteCandidate']) {
-      expect(hook, `Missing hook action ${action}`).toMatch(new RegExp(`\\b${action}\\b`));
+      expect(hook).toMatch(new RegExp(`\\b${action}\\b`));
     }
     expect(store).toMatch(/summary:/);
     expect(store).toMatch(/reviewerWorkload:/);
     expect(store).toMatch(/pagination:/);
-    expect(store).toMatch(/startReviewTemplateCandidateAction/);
+    expect(store).toMatch(/startTemplateCandidateReviewAction/);
     expect(store).toMatch(/rejectTemplateCandidateAction/);
     expect(store).toMatch(/mergeTemplateCandidateAction/);
     expect(store).toMatch(/promoteTemplateCandidateAction/);

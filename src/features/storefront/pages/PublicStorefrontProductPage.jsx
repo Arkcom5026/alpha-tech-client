@@ -2,6 +2,11 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import apiClient from '@/utils/apiClient';
 import PublicProductImage from '@/features/storefront/components/PublicProductImage';
+import {
+  addAnonymousCartItem,
+  getAnonymousCartItemCount,
+  useAnonymousCart,
+} from '@/features/storefront/cart/anonymousCartStore';
 
 const DEFAULT_TOKENS = { brandPrimary: '#1e40af', brandAccent: '#f59e0b', surface: '#ffffff', text: '#111827' };
 const money = (value) => Number(value || 0).toLocaleString('th-TH');
@@ -10,6 +15,9 @@ const PublicStorefrontProductPage = () => {
   const { shopSlug, productId } = useParams();
   const [state, setState] = useState({ loading: true, data: null, notFound: false, error: '' });
   const [selectedImage, setSelectedImage] = useState(0);
+  const [addedMessage, setAddedMessage] = useState('');
+  const cart = useAnonymousCart(shopSlug);
+  const cartCount = getAnonymousCartItemCount(cart);
 
   useEffect(() => {
     let active = true;
@@ -39,13 +47,22 @@ const PublicStorefrontProductPage = () => {
   const activeImage = images[selectedImage]?.url || product.coverImageUrl || null;
   const available = product.availability?.status === 'AVAILABLE';
 
+  const addToCart = () => {
+    addAnonymousCartItem({ shopSlug, storefrontName: storefront.name, product, quantity: 1 });
+    setAddedMessage('เพิ่มสินค้าลงตะกร้าแล้ว');
+    window.setTimeout(() => setAddedMessage(''), 2200);
+  };
+
   return <main className="min-h-screen" style={{ background: tokens.surface, color: tokens.text }}>
-    <header className="border-b border-white/10 text-white shadow-sm" style={{ background: tokens.brandPrimary }}><div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4"><Link to={`/${shopSlug}`}><p className="text-xs text-white/65">/{storefront.slug}</p><h1 className="text-xl font-black">{storefront.name}</h1></Link><Link to={`/${shopSlug}`} className="rounded-xl bg-white/10 px-4 py-2 text-sm font-bold">กลับหน้าร้าน</Link></div></header>
+    <header className="border-b border-white/10 text-white shadow-sm" style={{ background: tokens.brandPrimary }}><div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-5 py-4"><Link to={`/${shopSlug}`}><p className="text-xs text-white/65">/{storefront.slug}</p><h1 className="text-xl font-black">{storefront.name}</h1></Link><div className="flex items-center gap-2"><Link to={`/${shopSlug}/cart`} className="rounded-xl bg-white px-4 py-2 text-sm font-black text-blue-800">ตะกร้า {cartCount ? `(${cartCount})` : ''}</Link><Link to={`/${shopSlug}`} className="rounded-xl bg-white/10 px-4 py-2 text-sm font-bold">กลับหน้าร้าน</Link></div></div></header>
     <div className="mx-auto max-w-7xl px-5 py-8 md:py-12"><nav className="mb-6 text-sm text-slate-500"><Link to={`/${shopSlug}`} className="hover:underline">หน้าร้าน</Link><span className="mx-2">/</span><span>{product.name}</span></nav>
       <section className="grid gap-8 lg:grid-cols-2"><div><div className="aspect-square overflow-hidden rounded-3xl border border-slate-200 bg-slate-100 shadow-sm"><PublicProductImage src={activeImage} alt={product.name} className="h-full w-full object-contain" fallbackSize="text-7xl" /></div>{images.length > 1 ? <div className="mt-4 grid grid-cols-5 gap-3">{images.map((image, index) => <button key={image.id || image.url} type="button" onClick={() => setSelectedImage(index)} className={`aspect-square overflow-hidden rounded-xl border-2 bg-white ${selectedImage === index ? 'border-blue-600' : 'border-slate-200'}`}><PublicProductImage src={image.url} alt={image.caption || product.name} className="h-full w-full object-contain" fallbackSize="text-2xl" /></button>)}</div> : null}</div>
         <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm md:p-8"><p className="text-sm font-bold uppercase tracking-[0.16em] text-slate-400">{product.brand?.name || product.productType?.name || 'สินค้า'}</p><h2 className="mt-2 text-3xl font-black leading-tight text-slate-950 md:text-4xl">{product.name}</h2><p className="mt-3 text-sm text-slate-500">{[product.barcode, product.productType?.category?.name, product.unit?.name].filter(Boolean).join(' · ')}</p>
           <div className="mt-8 rounded-2xl p-6" style={{ background: tokens.brandAccent }}><p className="text-sm font-bold text-slate-700">ราคาออนไลน์</p><p className="mt-1 text-4xl font-black text-slate-950">฿{money(product.priceOnline)}</p></div>
           <div className="mt-6 grid gap-3 sm:grid-cols-2"><div className={`rounded-2xl border p-4 ${available ? 'border-emerald-200 bg-emerald-50' : 'border-slate-200 bg-slate-50'}`}><p className="text-xs font-bold text-slate-500">สถานะสินค้า</p><p className={`mt-1 text-lg font-black ${available ? 'text-emerald-700' : 'text-slate-600'}`}>{available ? 'พร้อมจำหน่าย' : 'สินค้าหมดชั่วคราว'}</p></div><div className="rounded-2xl border border-slate-200 bg-slate-50 p-4"><p className="text-xs font-bold text-slate-500">จำนวนพร้อมขาย</p><p className="mt-1 text-lg font-black">{Number(product.availability?.quantity || 0).toLocaleString('th-TH')} {product.unit?.name || 'รายการ'}</p></div></div>
+          <button type="button" disabled={!available} onClick={addToCart} className="mt-6 w-full rounded-2xl bg-blue-600 px-6 py-4 text-lg font-black text-white shadow-sm hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300">{available ? 'เพิ่มลงตะกร้า' : 'สินค้าหมดชั่วคราว'}</button>
+          {addedMessage ? <div className="mt-3 rounded-xl bg-emerald-50 px-4 py-3 text-center font-bold text-emerald-700">{addedMessage} · <Link to={`/${shopSlug}/cart`} className="underline">ดูตะกร้า</Link></div> : null}
+          <p className="mt-3 text-center text-xs text-slate-500">ยังไม่จองสต๊อกและยังไม่สร้างคำสั่งซื้อ ระบบจะตรวจราคาและจำนวนใหม่เมื่อดำเนินการต่อ</p>
           {product.warrantyDays ? <div className="mt-4 rounded-2xl border border-blue-100 bg-blue-50 p-4"><p className="text-sm font-bold text-blue-800">รับประกัน {Number(product.warrantyDays).toLocaleString('th-TH')} วัน</p></div> : null}
           <section className="mt-8 border-t border-slate-200 pt-6"><h3 className="text-lg font-black">วิธีรับสินค้า</h3><div className="mt-3 grid gap-3">{storefront.fulfillment?.pickup?.enabled ? <div className="rounded-2xl border p-4"><p className="font-bold">🏪 รับสินค้าที่ร้าน</p><p className="mt-1 text-sm text-slate-500">{storefront.fulfillment.pickup.instruction || 'รับสินค้าที่หน้าร้าน'}</p></div> : null}{storefront.fulfillment?.delivery?.enabled ? <div className="rounded-2xl border p-4"><p className="font-bold">🚚 จัดส่งสินค้า</p><p className="mt-1 text-sm text-slate-500">{storefront.fulfillment.delivery.instruction || 'ร้านมีบริการจัดส่งสินค้า'}</p></div> : null}</div></section>
         </div></section></div>

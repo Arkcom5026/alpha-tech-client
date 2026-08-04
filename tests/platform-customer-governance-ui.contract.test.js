@@ -17,8 +17,18 @@ assert.match(sidebar, /label:\s*'Platform Customers'/);
 assert.match(sidebar, /governance\/customers/);
 assert.match(page, /READ ONLY/);
 assert.match(page, /Platform Customer Overview/);
+assert.match(page, /จังหวัดของร้าน/);
+assert.match(page, /อำเภอของร้าน/);
+assert.match(page, /relationshipStatus/);
+assert.match(page, /customerType/);
+assert.match(page, /accountStatus/);
+assert.match(page, /Multi-store Identities/);
+assert.match(page, /ไม่ใช่ที่อยู่ส่วนตัวของลูกค้า/);
 assert.match(page, /ยังไม่ถูกสร้างจากธุรกรรมแพลตฟอร์ม/);
 assert.match(api, /\/customers\/platform\/overview/);
+assert.match(api, /provinceCode/);
+assert.match(api, /districtCode/);
+assert.match(api, /branchId/);
 assert.doesNotMatch(page, /แก้ไข|ลบลูกค้า|ย้ายร้าน|รวมลูกค้า/);
 
 console.log('platform-customer-governance-ui.contract: PASS');

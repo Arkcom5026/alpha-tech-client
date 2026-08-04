@@ -14,6 +14,7 @@ import DashboardPage from '@features/pos/pages/DashboardPage';
 import LogoutPos from '@features/pos/pages/LogoutPos';
 import FinanceDashboardPage from '@/features/finance/pages/FinanceDashboardPage';
 import SettingsDashboardPage from '@/features/settings/pages/SettingsDashboardPage';
+import StoreExperienceDraftEditorPage from '@/features/storeExperience/pages/StoreExperienceDraftEditorPage';
 import ServicesDashboardPage from '@/features/pos/pages/dashboard/ServicesDashboardPage';
 import { ReportsDashboardPage } from '@/features/pos/pages/dashboard/ReportsDashboardPage';
 
@@ -123,6 +124,7 @@ export const posPartnerRoutes = [
             ],
           },
           { path: 'branches', element: <ListBranchPage /> },
+          { path: 'store-experience', element: <StoreExperienceDraftEditorPage /> },
           {
             path: 'bank',
             children: [

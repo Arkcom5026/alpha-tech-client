@@ -4,7 +4,7 @@
 
 import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Users, ShieldAlert, Building2, Landmark, ArrowRight, KeyRound, Store } from 'lucide-react';
+import { Users, ShieldAlert, Building2, Landmark, ArrowRight, KeyRound, Store, ShoppingBag } from 'lucide-react';
 
 const SettingTile = ({ title, desc, icon: Icon, onClick }) => {
   return (
@@ -42,7 +42,7 @@ const SettingsDashboardPage = () => {
       <div className="bg-white border border-slate-200/80 p-6 rounded-3xl shadow-[0_4px_25px_rgba(0,0,0,0.01)] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 transition-all">
         <div className="min-w-0">
           <h1 className="text-xl font-black text-slate-900 tracking-tight">ศูนย์การตั้งค่าระบบร้านค้า</h1>
-          <p className="text-xs text-slate-400 font-bold mt-0.5 tracking-wide">จัดการหน้าร้าน พนักงาน ตำแหน่ง สาขา และช่องทางธุรกรรมของร้านจากจุดเดียว</p>
+          <p className="text-xs text-slate-400 font-bold mt-0.5 tracking-wide">จัดการหน้าร้าน สินค้าออนไลน์ พนักงาน ตำแหน่ง สาขา และช่องทางธุรกรรมของร้านจากจุดเดียว</p>
         </div>
         <div className="bg-slate-100 text-orange-700 font-black text-xs px-3 py-1.5 rounded-xl border border-slate-200 shadow-sm shrink-0 self-start sm:self-center select-none">
           ⚙️ ตั้งค่าระบบ
@@ -52,7 +52,7 @@ const SettingsDashboardPage = () => {
       <div className="bg-white border border-slate-200/80 p-6 rounded-3xl shadow-[0_4px_25px_rgba(0,0,0,0.01)] space-y-4">
         <div className="select-none">
           <h2 className="text-base font-black text-slate-900">เมนูจัดการระบบ</h2>
-          <p className="text-xs text-slate-400 font-bold mt-0.5">เปิดตัวแก้ไขหน้าร้านออนไลน์และจัดการข้อมูลสำคัญของร้านจากจุดเดียว</p>
+          <p className="text-xs text-slate-400 font-bold mt-0.5">เปิดตัวแก้ไขหน้าร้าน ตรวจความพร้อมสินค้าออนไลน์ และจัดการข้อมูลสำคัญของร้านจากจุดเดียว</p>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-2">
@@ -61,6 +61,13 @@ const SettingsDashboardPage = () => {
             desc="ตั้งค่าชื่อร้าน ธีม สี ส่วนประกอบ และตรวจตัวอย่างหน้าหลักก่อนเผยแพร่"
             icon={Store}
             onClick={() => navigate(`/${shopSlug}/pos/settings/storefront`)}
+          />
+
+          <SettingTile
+            title="จัดการสินค้าออนไลน์"
+            desc="ตรวจว่าสินค้าใดขึ้นหน้าร้านได้ พร้อมขาย หรือถูกบล็อกด้วยเหตุผลใด"
+            icon={ShoppingBag}
+            onClick={() => navigate(`/${shopSlug}/pos/settings/online-products`)}
           />
 
           <SettingTile

@@ -17,6 +17,7 @@ import SettingsDashboardPage from '@/features/settings/pages/SettingsDashboardPa
 import ServicesDashboardPage from '@/features/pos/pages/dashboard/ServicesDashboardPage';
 import { ReportsDashboardPage } from '@/features/pos/pages/dashboard/ReportsDashboardPage';
 import StoreHomepageEditorPage from '@/features/storeExperience/pages/StoreHomepageEditorPage';
+import OnlineProductVisibilityDashboardPage from '@/features/storeExperience/pages/OnlineProductVisibilityDashboardPage';
 
 import DailyClosingPage from '@/features/finance/pages/DailyClosingPage';
 import AccountsReceivablePage from '@/features/finance/pages/AccountsReceivablePage';
@@ -112,6 +113,7 @@ export const posPartnerRoutes = [
         children: [
           { index: true, element: <SettingsDashboardPage /> },
           { path: 'storefront', element: <StoreHomepageEditorPage /> },
+          { path: 'online-products', element: <OnlineProductVisibilityDashboardPage /> },
           { path: 'employee', element: <ListEmployeePage /> },
           { path: 'employee/edit/:id', element: <EditEmployeePage /> },
           { path: 'roles', element: <ManageRolesPage /> },

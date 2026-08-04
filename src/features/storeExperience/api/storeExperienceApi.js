@@ -11,6 +11,9 @@ export const savePartnerStoreCapability = async (payload) =>
     storefrontEnabled: false,
   }));
 
+export const getOnlineProductVisibilityAudit = async () =>
+  unwrap(await apiClient.get('/partner-store/online-products/visibility-audit'));
+
 export const getStoreExperienceDraft = async () =>
   unwrap(await apiClient.get('/store-experience/draft'));
 

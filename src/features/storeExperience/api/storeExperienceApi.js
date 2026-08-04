@@ -14,6 +14,9 @@ export const savePartnerStoreCapability = async (payload) =>
 export const getOnlineProductVisibilityAudit = async () =>
   unwrap(await apiClient.get('/partner-store/online-products/visibility-audit'));
 
+export const updateOnlineProductPrice = async (productId, payload) =>
+  unwrap(await apiClient.patch(`/partner-store/online-products/${productId}/price`, payload));
+
 export const getStoreExperienceDraft = async () =>
   unwrap(await apiClient.get('/store-experience/draft'));
 

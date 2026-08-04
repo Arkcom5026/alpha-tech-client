@@ -72,6 +72,14 @@ const createNonProductionWebSocketHarness = ({ host = '127.0.0.1', port = 18452,
     stats.connections += 1
     sockets.add(socket)
     let buffer = Buffer.alloc(0)
+
+    // Forced disconnect is part of this harness contract. On Windows it can
+    // surface as ECONNRESET on either peer, so consume only that expected reset
+    // while leaving unexpected socket errors observable.
+    socket.on('error', (error) => {
+      if (error?.code !== 'ECONNRESET') throw error
+    })
+
     socket.on('data', (chunk) => {
       buffer = Buffer.concat([buffer, chunk])
       const decoded = decodeClientFrames(buffer)

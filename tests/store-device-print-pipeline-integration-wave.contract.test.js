@@ -16,15 +16,17 @@ test('creates immutable snapshot and projects dynamic roll height', async () => 
   assert.equal(prepared.projectedHeightMm, 168)
 })
 
-test('creates stable idempotent PRINT job request', async () => {
+test('creates stable idempotent durable PRINT_DOCUMENT job request', async () => {
   const jobs = []
   const pipeline = createStoreDevicePrintPipeline({ resolveProfile, createJob: async (job) => { jobs.push(job); return job } })
   const input = { branchId: 2, document: { id: 875, total: 250 }, documentType: 'SHORT_TAX_INVOICE', profileId: 'receipt-80', contentHeightMm: 159 }
   const first = await pipeline.submit(await pipeline.prepare(input))
   const repeated = await pipeline.submit(await pipeline.prepare(input))
-  assert.equal(first.type, 'PRINT')
+  assert.equal(first.jobType, 'PRINT_DOCUMENT')
+  assert.equal(first.source, 'DOCUMENT_PRINT_PIPELINE')
   assert.equal(first.idempotencyKey, repeated.idempotencyKey)
   assert.equal(first.targetProfileId, 'receipt-80')
+  assert.equal('branchId' in first, false)
 })
 
 test('rejects incompatible document and preserves editable source', async () => {

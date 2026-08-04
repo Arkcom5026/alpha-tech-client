@@ -34,7 +34,7 @@ assertIncludes(inbox, '/pos/sales/reservations/${reservation.id}', 'Inbox rows m
 
 assertIncludes(detail, 'getMerchantProductReservation', 'Detail page must load branch-scoped server authority');
 assertIncludes(detail, 'รายการสินค้า', 'Detail foundation must render reservation items');
-assertIncludes(detail, 'Increment 2', 'Mutation controls must remain outside Increment 1');
+assertIncludes(detail, 'Timeline', 'Detail page must expose lifecycle evidence');
 
 assertIncludes(hub, 'Online Commerce Work Center', 'POS must expose one online-commerce entry center');
 assertIncludes(hub, '<ProductReservationInboxPage />', 'ProductReservation must be the primary online work queue');

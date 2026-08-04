@@ -8,6 +8,14 @@ const requireScope = ({ branchId, gatewayId, sessionId }) => {
   }
 }
 
+const requireJobId = (value) => {
+  if (!value?.jobId) {
+    const error = new Error('jobId is required')
+    error.code = 'STORE_DEVICE_DURABLE_JOB_REQUIRED'
+    throw error
+  }
+}
+
 export const createDurableStoreDeviceBinding = ({ transport }) => {
   if (!transport) throw new TypeError('transport is required')
 
@@ -15,8 +23,14 @@ export const createDurableStoreDeviceBinding = ({ transport }) => {
   const completed = new Map()
 
   return {
+    async list(scope) {
+      requireScope(scope)
+      return clone(await transport.list({ ...scope, reconnectCursor: cursor }))
+    },
+
     async lease(scope) {
       requireScope(scope)
+      requireJobId(scope)
       const response = await transport.lease({ ...scope, reconnectCursor: cursor })
       if (response.branchId !== scope.branchId) {
         const error = new Error('cross-branch lease rejected')

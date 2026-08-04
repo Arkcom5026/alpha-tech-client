@@ -37,6 +37,12 @@ const createPhysicalPilotAdapter = ({
       error.statusCode = 403
       throw error
     }
+    if (printer.queueAuthority !== 'LOCAL_QUEUE') {
+      const error = new Error('Physical ESC/POS pilot requires a local Windows queue on the USB host; shared printer connections are not accepted')
+      error.code = 'LOCAL_QUEUE_AUTHORITY_REQUIRED'
+      error.statusCode = 409
+      throw error
+    }
     if (!confirmationToken || request.confirmation !== confirmationToken) {
       const error = new Error('Physical pilot confirmation token is invalid')
       error.code = 'PILOT_CONFIRMATION_REQUIRED'

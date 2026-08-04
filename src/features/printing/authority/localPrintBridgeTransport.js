@@ -11,12 +11,12 @@ class LocalPrintBridgeUnavailableError extends Error {
 
 const withTimeout = async (promise, timeoutMs) => {
   const controller = new AbortController()
-  const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs)
+  const timeoutId = globalThis.setTimeout(() => controller.abort(), timeoutMs)
 
   try {
     return await promise(controller.signal)
   } finally {
-    window.clearTimeout(timeoutId)
+    globalThis.clearTimeout(timeoutId)
   }
 }
 

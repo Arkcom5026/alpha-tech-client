@@ -39,7 +39,7 @@ const createProtocolProofMaterial = ({ envelope, credentialVersion, challengeId 
     sessionId: envelope.sessionId,
     sequence: envelope.sequence,
     nonce: envelope.nonce,
-    issuedAt: envelope.issuedAt,
+    timestamp: envelope.timestamp,
     expiresAt: envelope.expiresAt,
     correlationId: envelope.correlationId || null,
     causationId: envelope.causationId || null,

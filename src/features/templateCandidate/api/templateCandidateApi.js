@@ -24,6 +24,13 @@ const request = async (operation) => {
 export const listCanonicalProductGroupsApi = (params = {}) =>
   request(() => apiClient.get(`${BASE_PATH}/groups`, { params: cleanParams(params) }));
 
+export const getCanonicalProductGroupApi = (groupKey, params = {}) =>
+  request(() =>
+    apiClient.get(`${BASE_PATH}/groups/${encodeURIComponent(groupKey)}`, {
+      params: cleanParams(params),
+    })
+  );
+
 export const listTemplateCandidatesApi = (params = {}) =>
   request(() => apiClient.get(BASE_PATH, { params: cleanParams(params) }));
 

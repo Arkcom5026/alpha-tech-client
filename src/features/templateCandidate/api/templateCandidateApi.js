@@ -31,6 +31,9 @@ export const getCanonicalProductGroupApi = (groupKey, params = {}) =>
     })
   );
 
+export const materializeCanonicalProductGroupsApi = (payload = {}) =>
+  request(() => apiClient.post(`${BASE_PATH}/discovery-materialize`, payload));
+
 export const listTemplateCandidatesApi = (params = {}) =>
   request(() => apiClient.get(BASE_PATH, { params: cleanParams(params) }));
 

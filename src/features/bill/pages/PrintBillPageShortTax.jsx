@@ -169,44 +169,105 @@ const PrintBillPageShortTax = () => {
 
   useEffect(() => {
     const root = printRootRef.current
-    const branchName = String(config?.branchName || '').trim()
+    const branchName = String(config?.branchName || '').trim().replace(/\s+/g, ' ')
     if (!root || !branchName) return undefined
 
     const branchNameElement = Array.from(
       root.querySelectorAll('.text-center.no-break.tight > .font-bold')
-    ).find((element) => element.textContent?.trim() === branchName)
+    ).find((element) => element.textContent?.trim().replace(/\s+/g, ' ') === branchName)
 
     if (!branchNameElement) return undefined
 
-    const previousStyle = {
-      fontSize: branchNameElement.style.fontSize,
-      lineHeight: branchNameElement.style.lineHeight,
-      letterSpacing: branchNameElement.style.letterSpacing,
-      whiteSpace: branchNameElement.style.whiteSpace,
-      overflow: branchNameElement.style.overflow,
-      textOverflow: branchNameElement.style.textOverflow,
-      overflowWrap: branchNameElement.style.overflowWrap,
-      wordBreak: branchNameElement.style.wordBreak,
-      textWrap: branchNameElement.style.textWrap,
-    }
+    const designationMatch = branchName.match(
+      /\s*(\((?:สำนักงานใหญ่|สาขา[^)]*|สำนักงาน[^)]*)\))\s*$/
+    )
+    const branchDesignation = designationMatch?.[1] || ''
+    const legalBusinessName = designationMatch
+      ? branchName.slice(0, designationMatch.index).trim()
+      : branchName
+    const protectedLegalBusinessName = legalBusinessName.replace(
+      /\s+(จำกัด(?:\s*\(มหาชน\))?)$/,
+      '\u00a0$1'
+    )
 
-    const normalizedLength = branchName.replace(/\s+/g, ' ').length
-    const fontSize = normalizedLength >= 58 ? 12.5 : normalizedLength >= 42 ? 13.5 : normalizedLength >= 30 ? 14.5 : 16
+    const originalText = branchNameElement.textContent
+    const originalStyle = branchNameElement.getAttribute('style')
 
+    const normalizedLength = legalBusinessName.length
+    const fontSize =
+      normalizedLength >= 68
+        ? 12.5
+        : normalizedLength >= 52
+          ? 13
+          : normalizedLength >= 38
+            ? 14
+            : 16
+
+    branchNameElement.textContent = ''
     Object.assign(branchNameElement.style, {
       fontSize: `${fontSize}px`,
-      lineHeight: '1.2',
+      lineHeight: '1.18',
       letterSpacing: '0px',
       whiteSpace: 'normal',
       overflow: 'visible',
       textOverflow: 'clip',
-      overflowWrap: 'anywhere',
+      overflowWrap: 'normal',
       wordBreak: 'normal',
-      textWrap: 'balance',
+      textWrap: 'wrap',
+      textAlign: 'center',
     })
 
+    const legalNameLine = document.createElement('div')
+    legalNameLine.textContent = protectedLegalBusinessName
+    Object.assign(legalNameLine.style, {
+      display: 'block',
+      width: '100%',
+      maxWidth: '100%',
+      whiteSpace: 'nowrap',
+      overflow: 'visible',
+      overflowWrap: 'normal',
+      wordBreak: 'normal',
+      textWrap: 'nowrap',
+      textAlign: 'center',
+    })
+    branchNameElement.appendChild(legalNameLine)
+
+    let designationLine = null
+    if (branchDesignation) {
+      designationLine = document.createElement('div')
+      designationLine.textContent = branchDesignation
+      Object.assign(designationLine.style, {
+        display: 'block',
+        marginTop: '1px',
+        fontSize: `${Math.max(fontSize - 1, 11.5)}px`,
+        lineHeight: '1.15',
+        whiteSpace: 'nowrap',
+        textAlign: 'center',
+      })
+      branchNameElement.appendChild(designationLine)
+    }
+
+    const allowNaturalLegalNameWrap = () => {
+      if (legalNameLine.scrollWidth <= legalNameLine.clientWidth + 1) return
+      Object.assign(legalNameLine.style, {
+        whiteSpace: 'normal',
+        overflowWrap: 'normal',
+        wordBreak: 'normal',
+        textWrap: 'balance',
+      })
+    }
+
+    allowNaturalLegalNameWrap()
+    const frameId = window.requestAnimationFrame(allowNaturalLegalNameWrap)
+
     return () => {
-      Object.assign(branchNameElement.style, previousStyle)
+      window.cancelAnimationFrame(frameId)
+      branchNameElement.textContent = originalText
+      if (originalStyle === null) {
+        branchNameElement.removeAttribute('style')
+      } else {
+        branchNameElement.setAttribute('style', originalStyle)
+      }
     }
   }, [config?.branchName, sale?.id])
 

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
+import apiClient from '@/utils/apiClient';
 
 const PublicStorefrontPage = () => {
   const { shopSlug } = useParams();
@@ -7,11 +8,10 @@ const PublicStorefrontPage = () => {
 
   useEffect(() => {
     let active = true;
-    fetch(`/api/sales/storefronts/${encodeURIComponent(shopSlug || '')}`)
-      .then(async (response) => {
-        if (!response.ok) throw new Error(response.status === 404 ? 'ไม่พบหน้าร้าน' : 'ไม่สามารถโหลดหน้าร้านได้');
-        return response.json();
-      })
+    apiClient.get(`/sales/storefronts/${encodeURIComponent(shopSlug || '')}`, {
+      skipAuthBootstrap: true,
+    })
+      .then((response) => response.data)
       .then((payload) => {
         if (active) setState({ loading: false, storefront: payload?.data || null, error: '' });
       })

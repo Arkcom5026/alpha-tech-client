@@ -164,7 +164,10 @@ const getSuperadminActiveModule = (pathname) => {
 const getPosActiveModule = (pathname) => {
   const segments = pathname.split('/').filter(Boolean);
   const posIdx = segments.indexOf('pos');
-  return posIdx !== -1 && segments[posIdx + 1] ? segments[posIdx + 1] : 'purchases';
+  const moduleKey = posIdx !== -1 && segments[posIdx + 1] ? segments[posIdx + 1] : 'purchases';
+
+  if (moduleKey === 'customers') return 'sales';
+  return moduleKey;
 };
 
 const SidebarLoader = () => {

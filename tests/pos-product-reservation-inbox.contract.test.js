@@ -13,7 +13,9 @@ const assertIncludes = (source, value, message) => {
 const api = read('src/features/productReservation/merchant/api/productReservationMerchantApi.js');
 const inbox = read('src/features/productReservation/merchant/pages/ProductReservationInboxPage.jsx');
 const detail = read('src/features/productReservation/merchant/pages/ProductReservationDetailPage.jsx');
+const hub = read('src/features/productReservation/merchant/pages/OnlineCommerceWorkCenterPage.jsx');
 const routes = read('src/routes/partner/salesRoutes.jsx');
+const sidebar = read('src/config/sidebarSalesItems.js');
 
 assertIncludes(api, "apiClient.get(`/sales/reservations", 'Inbox must use authenticated merchant reservation API');
 assertIncludes(api, 'status', 'Inbox API must support lifecycle status filtering');
@@ -34,9 +36,19 @@ assertIncludes(detail, 'getMerchantProductReservation', 'Detail page must load b
 assertIncludes(detail, 'รายการสินค้า', 'Detail foundation must render reservation items');
 assertIncludes(detail, 'Increment 2', 'Mutation controls must remain outside Increment 1');
 
-assertIncludes(routes, "path: 'reservations'", 'POS sales route must expose reservation inbox');
+assertIncludes(hub, 'Online Commerce Work Center', 'POS must expose one online-commerce entry center');
+assertIncludes(hub, '<ProductReservationInboxPage />', 'ProductReservation must be the primary online work queue');
+assertIncludes(hub, '/sales/order-online/legacy', 'Legacy OrderOnline must remain explicitly accessible');
+assertIncludes(hub, 'เปิดคำสั่งซื้อระบบเดิม', 'Legacy entry must be clear to POS users');
+
+assertIncludes(routes, "path: 'reservations'", 'POS sales route must expose reservation inbox alias');
 assertIncludes(routes, "path: 'reservations/:reservationId'", 'POS sales route must expose reservation detail');
-assertIncludes(routes, '<ProductReservationInboxPage />', 'Inbox page must be mounted');
+assertIncludes(routes, "path: 'order-online'", 'Familiar POS online entry path must remain available');
+assertIncludes(routes, '<OnlineCommerceWorkCenterPage />', 'Familiar online entry must open the unified work center');
+assertIncludes(routes, "path: 'order-online/legacy'", 'Legacy OrderOnline list must have an explicit sub-route');
 assertIncludes(routes, '<ProductReservationDetailPage />', 'Detail page must be mounted');
+
+assertIncludes(sidebar, 'ใบจองและคำสั่งซื้อออนไลน์', 'Sidebar must expose one unified online-commerce label');
+assertIncludes(sidebar, '/sales/order-online/', 'Sidebar must preserve the familiar online entry path');
 
 console.log('POS product reservation inbox contract: PASS');

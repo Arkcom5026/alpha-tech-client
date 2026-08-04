@@ -15,7 +15,10 @@ describe('product template canonical group detail contract', () => {
     expect(api).toContain('getCanonicalProductGroupApi');
     expect(api).toContain('encodeURIComponent(groupKey)');
     expect(listPage).toContain('openGroup');
-    expect(listPage).toContain('groups/${encodeURIComponent(groupKey)}');
+    expect(listPage).toContain("const basePath = shopSlug");
+    expect(listPage).toContain("catalog/candidates/groups");
+    expect(listPage).toContain('encodeURIComponent(groupKey)');
+    expect(listPage).toContain('businessType=${encodeURIComponent(filters.businessType)}');
     expect(detailPage).toContain('Canonical Group Detail');
     expect(detailPage).toContain('Source Products');
     expect(detailPage).toContain('แบบอ่านอย่างเดียว');

@@ -67,6 +67,15 @@ const itemIconMap = [
   { keywords: ['จัดซื้อ', 'สั่งซื้อ'], icon: BriefcaseBusiness },
 ];
 
+const itemAccentClasses = [
+  'bg-sky-50 text-sky-600 ring-sky-100',
+  'bg-violet-50 text-violet-600 ring-violet-100',
+  'bg-emerald-50 text-emerald-600 ring-emerald-100',
+  'bg-amber-50 text-amber-600 ring-amber-100',
+  'bg-rose-50 text-rose-600 ring-rose-100',
+  'bg-cyan-50 text-cyan-600 ring-cyan-100',
+];
+
 const getItemIcon = (label = '') => {
   const found = itemIconMap.find((entry) =>
     entry.keywords.some((keyword) => label.toLowerCase().includes(keyword.toLowerCase())),
@@ -146,12 +155,12 @@ const SidebarLoader = ({ collapsed = false, onToggle }) => {
   return (
     <aside
       className={[
-        'relative z-30 flex h-full shrink-0 select-none flex-col overflow-hidden border-r border-slate-200 bg-slate-50/90 text-slate-700',
+        'relative z-30 flex h-full shrink-0 select-none flex-col overflow-hidden border-r border-slate-200 bg-slate-100/90 text-slate-700 shadow-[4px_0_18px_rgba(15,23,42,0.035)]',
         collapsed ? 'w-16' : 'w-60',
       ].join(' ')}
       aria-label="เมนูงาน POS"
     >
-      <div className={['flex h-16 shrink-0 items-center border-b border-slate-200 bg-white', collapsed ? 'justify-center px-2' : 'px-4'].join(' ')}>
+      <div className={['flex h-16 shrink-0 items-center border-b border-slate-200 bg-white/95', collapsed ? 'justify-center px-2' : 'px-4'].join(' ')}>
         {collapsed ? (
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-600 text-sm font-semibold text-white" title="Saduaksabuy POS">
             SS
@@ -159,7 +168,7 @@ const SidebarLoader = ({ collapsed = false, onToggle }) => {
         ) : (
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold text-slate-950">SADUAKSABUY</p>
-            <p className="truncate text-[10px] font-medium uppercase tracking-[0.12em] text-slate-400">Merchant Operations</p>
+            <p className="truncate text-[10px] font-medium uppercase tracking-[0.12em] text-slate-500">Merchant Operations</p>
           </div>
         )}
       </div>
@@ -167,29 +176,34 @@ const SidebarLoader = ({ collapsed = false, onToggle }) => {
       <div className={collapsed ? 'flex justify-center px-2 py-3' : 'px-3 py-3'}>
         <div
           className={[
-            'flex items-center text-teal-800',
-            collapsed ? 'h-11 w-11 justify-center rounded-xl bg-teal-50' : 'gap-3 px-2 py-2',
+            'flex items-center border border-teal-100 bg-gradient-to-br from-teal-50 to-cyan-50 text-teal-800 shadow-sm',
+            collapsed ? 'h-11 w-11 justify-center rounded-xl' : 'w-full gap-3 rounded-2xl px-3 py-3',
           ].join(' ')}
           title={collapsed ? currentModule.title : undefined}
         >
-          <ModuleIcon className="h-5 w-5 shrink-0 text-teal-600" />
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/85 text-teal-600 ring-1 ring-inset ring-teal-100">
+            <ModuleIcon className="h-5 w-5" />
+          </div>
           {!collapsed && (
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold text-slate-900">{currentModule.title}</p>
-              <p className="truncate text-[11px] text-slate-500">{currentModule.subtitle}</p>
+              <p className="truncate text-[11px] text-slate-600">{currentModule.subtitle}</p>
             </div>
           )}
         </div>
       </div>
 
       <nav className={['min-h-0 flex-1 overflow-y-auto pb-3 scrollbar-none', collapsed ? 'px-2' : 'px-3'].join(' ')}>
-        <div className={collapsed ? 'space-y-2' : 'space-y-5'}>
+        <div className={collapsed ? 'space-y-2' : 'space-y-3'}>
           {currentMenuItems.map((section, sectionIndex) => (
-            <section key={`section-${sectionIndex}`} className={collapsed ? '' : 'space-y-2'}>
+            <section
+              key={`section-${sectionIndex}`}
+              className={collapsed ? '' : 'space-y-2 rounded-2xl border border-slate-200/80 bg-white/70 p-1.5 shadow-sm'}
+            >
               {!collapsed && (
-                <div className="flex items-center justify-between px-2">
-                  <h3 className="truncate text-[11px] font-medium text-slate-400">{section.label}</h3>
-                  <ChevronDown className="h-3.5 w-3.5 text-slate-300" />
+                <div className="flex items-center justify-between px-2.5 pt-1.5">
+                  <h3 className="truncate text-[11px] font-semibold text-slate-500">{section.label}</h3>
+                  <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
                 </div>
               )}
 
@@ -197,6 +211,7 @@ const SidebarLoader = ({ collapsed = false, onToggle }) => {
                 {(section.items || []).map((item, itemIndex) => {
                   const isItemActive = normalizePath(item.to) === normalizePath(activeItemPath);
                   const ItemIcon = getItemIcon(item.label);
+                  const accentClass = itemAccentClasses[(sectionIndex + itemIndex) % itemAccentClasses.length];
 
                   return (
                     <li key={`${item.to}-${itemIndex}`}>
@@ -206,19 +221,26 @@ const SidebarLoader = ({ collapsed = false, onToggle }) => {
                         title={collapsed ? item.label : undefined}
                         aria-label={collapsed ? item.label : undefined}
                         className={[
-                          'group relative flex transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2',
+                          'group relative flex border transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2',
                           collapsed
                             ? 'h-11 w-11 items-center justify-center rounded-xl'
-                            : 'min-h-11 items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium',
+                            : 'min-h-11 items-center gap-2.5 rounded-xl px-2.5 py-2 text-[13px] font-medium',
                           isItemActive
-                            ? 'bg-white text-slate-950 shadow-sm ring-1 ring-inset ring-slate-200'
-                            : 'text-slate-600 hover:bg-white hover:text-slate-950',
+                            ? 'border-teal-200 bg-teal-50 text-teal-950 shadow-sm'
+                            : 'border-transparent bg-white/65 text-slate-700 hover:border-slate-200 hover:bg-white hover:text-slate-950 hover:shadow-sm',
                         ].join(' ')}
                       >
                         {isItemActive && !collapsed && <span className="absolute inset-y-2 left-0 w-1 rounded-r-full bg-teal-500" />}
-                        <ItemIcon className={['h-[18px] w-[18px] shrink-0', isItemActive ? 'text-teal-600' : 'text-slate-400 group-hover:text-slate-600'].join(' ')} />
+                        <span
+                          className={[
+                            'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ring-1 ring-inset',
+                            isItemActive ? 'bg-white text-teal-600 ring-teal-100' : accentClass,
+                          ].join(' ')}
+                        >
+                          <ItemIcon className="h-[17px] w-[17px]" />
+                        </span>
                         {!collapsed && <span className="min-w-0 flex-1 truncate">{item.label}</span>}
-                        {!collapsed && <ChevronRight className="h-3.5 w-3.5 shrink-0 text-slate-300" />}
+                        {!collapsed && <ChevronRight className={['h-3.5 w-3.5 shrink-0', isItemActive ? 'text-teal-400' : 'text-slate-400'].join(' ')} />}
 
                         {collapsed && (
                           <span className="pointer-events-none absolute left-full z-50 ml-3 hidden whitespace-nowrap rounded-lg bg-slate-900 px-2.5 py-1.5 text-xs font-medium text-white shadow-lg group-hover:block group-focus-visible:block">
@@ -235,13 +257,13 @@ const SidebarLoader = ({ collapsed = false, onToggle }) => {
         </div>
       </nav>
 
-      <div className={['border-t border-slate-200 bg-white', collapsed ? 'p-2' : 'p-3'].join(' ')}>
+      <div className={['border-t border-slate-200 bg-white/95', collapsed ? 'p-2' : 'p-3'].join(' ')}>
         {onToggle ? (
           <button
             type="button"
             onClick={onToggle}
             className={[
-              'flex min-h-11 items-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500',
+              'flex min-h-11 items-center rounded-xl border border-transparent text-slate-600 transition hover:border-slate-200 hover:bg-slate-50 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500',
               collapsed ? 'w-11 justify-center' : 'w-full gap-3 px-3 text-[13px] font-medium',
             ].join(' ')}
             aria-label={collapsed ? 'ขยายเมนูด้านข้าง' : 'ย่อเมนูด้านข้าง'}
@@ -252,7 +274,7 @@ const SidebarLoader = ({ collapsed = false, onToggle }) => {
         ) : (
           <NavLink
             to={settingsPath}
-            className="flex min-h-11 w-full items-center gap-3 rounded-lg px-3 text-[13px] font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
+            className="flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-[13px] font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
           >
             <ShieldCheck className="h-5 w-5" />
             <span>ตั้งค่าระบบ</span>

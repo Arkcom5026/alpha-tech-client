@@ -17,7 +17,7 @@ import ViewSupplierPage from '@/features/supplier/pages/ViewSupplierPage';
 import ListPurchaseOrderReceiptPage from '@/features/purchaseOrderReceipt/pages/ListPurchaseOrderReceiptPage';
 import CreatePurchaseOrderReceiptPage from '@/features/purchaseOrderReceipt/pages/CreatePurchaseOrderReceiptPage';
 import BarcodeReceiptListPage from '@/features/barcode/pages/BarcodeReceiptListPage';
-import PreviewBarcodePage from '@/features/barcode/pages/PreviewBarcodePage';
+import BarcodePreviewWorkspacePage from '@/features/barcode/pages/BarcodePreviewWorkspacePage';
 import PrintBarcodeBatchPage from '@/features/barcode/pages/PrintBarcodeBatchPage';
 import BarcodeRangePrintPage from '@/features/barcode/pages/BarcodeRangePrintPage';
 
@@ -58,7 +58,7 @@ const purchasesRoutes = {
       path: 'barcodes',
       children: [
         { index: true, element: <BarcodeReceiptListPage /> },
-        { path: 'preview/:receiptId', element: <PreviewBarcodePage /> },
+        { path: 'preview/:receiptId', element: <BarcodePreviewWorkspacePage /> },
         { path: 'print', element: <PrintBarcodeBatchPage /> },
         { path: 'range-print', element: <BarcodeRangePrintPage /> },
       ],

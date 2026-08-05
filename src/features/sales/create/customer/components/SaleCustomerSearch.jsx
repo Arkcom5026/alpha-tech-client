@@ -28,7 +28,7 @@ const SaleCustomerSearch = ({
           autoComplete="off"
           value={query}
           onChange={(event) => onQueryChange(event.target.value)}
-          placeholder="ชื่อ เบอร์โทร บริษัท อีเมล หรือเลขผู้เสียภาษี"
+          placeholder="ชื่อ เบอร์โทร บริษัท หน่วยงาน อีเมล หรือเลขผู้เสียภาษี"
           className="h-11 w-full rounded-xl border border-teal-200 bg-teal-50/60 pl-10 pr-3 text-sm font-medium text-slate-900 outline-none transition focus:border-teal-500 focus:bg-white focus:ring-2 focus:ring-teal-100"
         />
       </div>
@@ -41,9 +41,10 @@ const SaleCustomerSearch = ({
         {customerLoading ? 'กำลังค้นหา' : 'ค้นหา'}
       </button>
     </div>
-    <p className="text-xs leading-5 text-slate-500">
-      ผลการค้นหาจะแสดงเฉพาะลูกค้าที่อยู่ภายใต้ร้านปัจจุบัน
-    </p>
+    <div className="space-y-1 text-xs leading-5 text-slate-500">
+      <p>ผลการค้นหาจะแสดงเฉพาะลูกค้าที่อยู่ภายใต้ร้านปัจจุบัน</p>
+      <p>ไม่ค้นหาสินค้า บาร์โค้ด หรือหมายเลขอุปกรณ์ ให้ใช้ช่องค้นหาสินค้าในขั้นตอนถัดไป</p>
+    </div>
   </form>
 );
 

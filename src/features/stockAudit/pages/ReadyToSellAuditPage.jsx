@@ -1,9 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 import useStockAuditStore from '../store/stockAuditStore';
-import ScanInput from '../components/ScanInput';
 import AuditTable from '../components/AuditTable';
 import StockAuditSessionSummary from '../components/workspace/StockAuditSessionSummary';
 import StockAuditActionBar from '../components/workspace/StockAuditActionBar';
+import StockAuditScannerWorkspace from '../components/workspace/StockAuditScannerWorkspace';
 import StockAuditListPanel from '../components/workspace/StockAuditListPanel';
 import ConfirmActionDialog from '@/components/shared/dialogs/ConfirmActionDialog';
 
@@ -287,21 +287,17 @@ const ReadyToSellAuditPage = () => {
         }
       } else if (duplicate) {
         await playDuplicate();
-      } else if (notFound) {
-        await playError();
       } else {
         await playError();
       }
     } catch (error) {
-      const { duplicate, notFound, resolvedPending } = classifyScanResult(null, error);
+      const { duplicate, resolvedPending } = classifyScanResult(null, error);
       if (resolvedPending) {
         await playSuccess();
         setBannerMessage('พบสินค้าค้างตรวจและปรับสถานะเรียบร้อยแล้ว');
         setTimeout(() => setBannerMessage(''), 2500);
       } else if (duplicate) {
         await playDuplicate();
-      } else if (notFound) {
-        await playError();
       } else {
         console.error('Scan error:', error);
         await playError();
@@ -363,51 +359,6 @@ const ReadyToSellAuditPage = () => {
     }
   };
 
-  const scanner = (
-    <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
-      <div>
-        <label className="mb-1.5 block text-xs font-semibold text-slate-600" htmlFor="stock-audit-scan-input">
-          สแกนสินค้า
-        </label>
-        <ScanInput
-          id="stock-audit-scan-input"
-          ref={scanRef}
-          onSubmit={handleScan}
-          disabled={isScanning || !sessionId || sessionClosed}
-          placeholder={sessionClosed
-            ? 'รอบนี้ถูกปิดแล้ว กรุณาเริ่มรอบใหม่'
-            : scanMode === 'SN'
-              ? 'สแกนหรือพิมพ์หมายเลขเครื่อง'
-              : 'สแกนบาร์โค้ดสินค้า'}
-          autoSubmit
-          delay={140}
-          className="min-h-12 w-full rounded-xl border border-teal-200 bg-white px-4 text-base text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 disabled:bg-slate-100"
-        />
-      </div>
-
-      <div>
-        <p className="mb-1.5 text-xs font-semibold text-slate-600">โหมดสแกน</p>
-        <div className="grid grid-cols-2 rounded-xl border border-teal-200 bg-teal-50 p-1 lg:min-w-[220px]">
-          {['BARCODE', 'SN'].map((mode) => {
-            const active = scanMode === mode;
-            return (
-              <button
-                key={mode}
-                type="button"
-                className={`min-h-10 rounded-lg px-4 text-sm font-semibold transition ${active
-                  ? 'bg-emerald-200 text-emerald-950 shadow-sm'
-                  : 'text-teal-900 hover:bg-white'}`}
-                onClick={() => setScanMode(mode)}
-              >
-                {mode === 'BARCODE' ? 'Barcode' : 'SN'}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-    </div>
-  );
-
   return (
     <div className="min-h-full bg-slate-50 p-3 md:p-5">
       <div className="mx-auto max-w-[1500px] space-y-4">
@@ -431,8 +382,18 @@ const ReadyToSellAuditPage = () => {
           onMarkPending={() => setOpenConfirmPending(true)}
         />
 
+        <StockAuditScannerWorkspace
+          ref={scanRef}
+          scanMode={scanMode}
+          onScanModeChange={setScanMode}
+          onSubmit={handleScan}
+          disabled={!sessionId}
+          sessionClosed={sessionClosed}
+          isScanning={isScanning}
+        />
+
         {(errorMessage || bannerMessage || lastScannedValue) ? (
-          <section className="grid gap-2 sm:grid-cols-2">
+          <section className="grid gap-2 sm:grid-cols-2" aria-live="polite">
             {errorMessage ? (
               <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900">
                 {errorMessage}
@@ -456,7 +417,6 @@ const ReadyToSellAuditPage = () => {
             title="รายการรอตรวจนับ"
             description="สินค้าที่คาดว่าจะพบและยังไม่ได้สแกนในรอบนี้"
             count={formatNum(expectedTotal)}
-            scanner={scanner}
           >
             <AuditTable
               items={expectedItems}

@@ -27,7 +27,7 @@ const SaleWorkspaceHeader = ({ title, description, status, tone = 'neutral', onH
             onClick={onHelp}
             className="inline-flex min-h-10 items-center justify-center rounded-xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-800 transition-colors hover:border-teal-300 hover:bg-teal-50 hover:text-teal-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2"
           >
-            คู่มือการขาย
+            เปิดคู่มือการขายสินค้า
           </button>
         )}
       </div>

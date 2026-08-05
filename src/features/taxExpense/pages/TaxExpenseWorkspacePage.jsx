@@ -46,7 +46,7 @@ const TaxExpenseWorkspacePage = () => {
       />
 
       <div className="grid gap-5 xl:grid-cols-[1.1fr_.9fr]">
-        <TaxExpenseCreateForm categories={categories} saving={saving} onSubmit={submitExpense} payeeConnectionReady={false} />
+        <TaxExpenseCreateForm categories={categories} payees={payees} saving={saving} onSubmit={submitExpense} />
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <h2 className="font-black text-slate-900">รายการล่าสุด</h2>
           <div className="mt-3 overflow-x-auto">

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Outlet, useLocation, useParams } from 'react-router-dom';
 import { X } from 'lucide-react';
 
@@ -13,6 +13,12 @@ const normalizePath = (value = '') => {
   return normalized || '/';
 };
 
+const isPathInsideModule = (pathname, modulePath) => {
+  const currentPath = normalizePath(pathname);
+  const targetPath = normalizePath(modulePath);
+  return currentPath === targetPath || currentPath.startsWith(`${targetPath}/`);
+};
+
 const readDesktopPreference = () => {
   if (typeof window === 'undefined') return true;
   const savedValue = window.localStorage.getItem(SIDEBAR_PREFERENCE_KEY);
@@ -22,29 +28,30 @@ const readDesktopPreference = () => {
 const PosAdaptiveShell = () => {
   const { shopSlug } = useParams();
   const { pathname } = useLocation();
+  const previousPathRef = useRef(pathname);
   const [desktopExpanded, setDesktopExpanded] = useState(readDesktopPreference);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [pendingMobileModulePath, setPendingMobileModulePath] = useState('');
 
   useEffect(() => {
-    if (!pendingMobileModulePath) {
-      setMobileOpen(false);
+    const previousPath = previousPathRef.current;
+    const routeChanged = normalizePath(previousPath) !== normalizePath(pathname);
+    previousPathRef.current = pathname;
+
+    if (pendingMobileModulePath) {
+      if (isPathInsideModule(pathname, pendingMobileModulePath)) {
+        setMobileOpen(true);
+        setPendingMobileModulePath('');
+      } else {
+        setMobileOpen(false);
+      }
       return;
     }
 
-    const currentPath = normalizePath(pathname);
-    const targetPath = normalizePath(pendingMobileModulePath);
-    const hasReachedModule =
-      currentPath === targetPath || currentPath.startsWith(`${targetPath}/`);
-
-    if (!hasReachedModule) {
+    if (routeChanged && mobileOpen) {
       setMobileOpen(false);
-      return;
     }
-
-    setMobileOpen(true);
-    setPendingMobileModulePath('');
-  }, [pathname, pendingMobileModulePath]);
+  }, [pathname, pendingMobileModulePath, mobileOpen]);
 
   useEffect(() => {
     if (!mobileOpen) return undefined;
@@ -74,6 +81,13 @@ const PosAdaptiveShell = () => {
   const handleMobileModuleSelect = (item) => {
     const targetPath = item?.path;
     if (!targetPath) return;
+
+    if (isPathInsideModule(pathname, targetPath)) {
+      setPendingMobileModulePath('');
+      setMobileOpen(true);
+      return;
+    }
+
     setPendingMobileModulePath(targetPath);
   };
 

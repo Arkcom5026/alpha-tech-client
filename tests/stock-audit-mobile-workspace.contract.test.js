@@ -20,8 +20,8 @@ const panel = read('src/features/stockAudit/components/workspace/StockAuditListP
 assertIncludes(page, 'StockAuditSessionSummary', 'Stock audit page must use the session summary workspace');
 assertIncludes(page, 'StockAuditActionBar', 'Stock audit page must use the operational action bar');
 assertIncludes(page, 'StockAuditListPanel', 'Stock audit page must use shared list panels');
-assertIncludes(page, "e.key === 'F2'", 'F2 focus authority must remain available');
-assertIncludes(page, "e.key === 'F3'", 'F3 scan-mode authority must remain available');
+assertIncludes(page, "event.key === 'F2'", 'F2 focus authority must remain available');
+assertIncludes(page, "event.key === 'F3'", 'F3 scan-mode authority must remain available');
 assertIncludes(page, "scanMode === 'BARCODE'", 'Barcode scan mode must remain available');
 assertIncludes(page, "scanMode === 'SN'", 'SN scan mode must remain available');
 assertIncludes(page, "confirmAuditAction('MARK_LOST')", 'Lost-stock close authority must remain available');

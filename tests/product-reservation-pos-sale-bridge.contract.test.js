@@ -18,6 +18,7 @@ const bridge = read('src/features/productReservation/merchant/pages/ReservationS
 const adapter = read('src/features/productReservation/merchant/adapters/productReservationSaleCartAdapter.js');
 const createSale = read('src/features/sales/create/pages/CreateSalePage.jsx');
 const workflow = read('src/features/sales/create/hooks/useCreateSaleWorkflow.js');
+const projection = read('src/features/sales/create/projections/createSaleWorkflowProjection.js');
 const payment = read('src/features/sales/create/components/PaymentSummary.jsx');
 const routes = read('src/routes/partner/salesRoutes.jsx');
 
@@ -45,6 +46,10 @@ for (const token of [
 
 assertIncludes(workflow, 'initialItems = []', 'Create-sale workflow must accept authoritative initial items');
 assertIncludes(workflow, 'initialItems,', 'Cart editor must receive authoritative initial items');
+assertIncludes(projection, 'selection: itemSearch.selection', 'Projection must preserve item-search dialog state for normal POS sale');
+assertIncludes(projection, 'closeSelection: itemSearch.closeSelection', 'Projection must preserve item-search close command');
+assertIncludes(projection, 'selectSearchItem: itemSearch.selectSearchItem', 'Projection must preserve item selection command');
+assertIncludes(projection, 'recovery: completion.recovery', 'Projection must preserve sale recovery authority');
 assertIncludes(createSale, 'sourceContext = null', 'POS page must expose source context');
 assertIncludes(createSale, 'sourceLocked = false', 'POS page must expose cart source lock');
 assertIncludes(createSale, 'heldCartDisabled={sourceLocked}', 'Online reservation must not create a duplicate held cart');

@@ -41,31 +41,40 @@ export default function PurchaseOrderListTable({ rows, isLoading, onView, onEdit
     <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm" aria-label="รายการใบสั่งซื้อ">
       <div className="space-y-3 p-3 md:hidden">
         {rows.map((row) => (
-          <article key={row.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+          <article key={row.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-3.5">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <p className="text-xs font-semibold text-slate-500">เลขที่ PO</p>
-                <h2 className="mt-1 break-all text-base font-bold text-slate-950">{row.code}</h2>
+                <p className="text-xs font-medium text-slate-500">เลขที่ PO</p>
+                <h2 className="mt-0.5 break-all text-base font-bold text-slate-950">{row.code}</h2>
               </div>
               <PurchaseOrderStatusBadge status={row.status} />
             </div>
 
-            <dl className="mt-4 grid gap-3 text-sm">
-              <div className="flex items-start gap-3">
-                <Calendar className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
-                <div><dt className="text-xs text-slate-500">วันที่</dt><dd className="font-semibold text-slate-800">{row.createdAtLabel}</dd></div>
-              </div>
-              <div className="flex items-start gap-3">
+            <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+              <div className="col-span-2 flex items-start gap-2.5">
                 <User className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
-                <div className="min-w-0"><dt className="text-xs text-slate-500">คู่ค้า</dt><dd className="break-words font-semibold text-slate-800">{row.supplierName}</dd></div>
+                <div className="min-w-0">
+                  <dt className="text-xs text-slate-500">คู่ค้า</dt>
+                  <dd className="break-words font-semibold text-slate-800">{row.supplierName}</dd>
+                </div>
               </div>
-              <div className="flex items-start gap-3">
+              <div className="flex items-start gap-2.5">
+                <Calendar className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
+                <div>
+                  <dt className="text-xs text-slate-500">วันที่</dt>
+                  <dd className="font-semibold text-slate-800">{row.createdAtLabel}</dd>
+                </div>
+              </div>
+              <div className="flex items-start justify-end gap-2.5 text-right">
                 <Layers className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
-                <div><dt className="text-xs text-slate-500">ยอดรวม</dt><dd className="font-bold tabular-nums text-slate-950">฿{row.totalAmountLabel}</dd></div>
+                <div>
+                  <dt className="text-xs text-slate-500">ยอดรวม</dt>
+                  <dd className="font-bold tabular-nums text-slate-950">฿{row.totalAmountLabel}</dd>
+                </div>
               </div>
             </dl>
 
-            <div className="mt-4 border-t border-slate-200 pt-4">
+            <div className="mt-3 border-t border-slate-200 pt-3">
               <PurchaseOrderActions row={row} onView={onView} onEdit={onEdit} onPrint={onPrint} />
             </div>
           </article>

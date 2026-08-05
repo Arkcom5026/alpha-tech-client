@@ -29,14 +29,14 @@ import {
 import { getSidebarMenuConfig } from '@/config/sidebarMenuConfig';
 
 const moduleMeta = {
-  dashboard: { title: 'หน้าหลัก', subtitle: 'System Dashboard', icon: LayoutDashboard },
-  purchases: { title: 'จัดซื้อ', subtitle: 'Procurement', icon: ShoppingCart },
-  sales: { title: 'การขาย', subtitle: 'Sales Operations', icon: ClipboardList },
-  services: { title: 'บริการ', subtitle: 'Service Desk', icon: Wrench },
-  stock: { title: 'สต๊อก', subtitle: 'Inventory Control', icon: Package },
-  reports: { title: 'รายงาน', subtitle: 'Reports Center', icon: Gauge },
-  finance: { title: 'การเงิน', subtitle: 'Finance Control', icon: Banknote },
-  settings: { title: 'ตั้งค่าระบบ', subtitle: 'System Settings', icon: ShieldCheck },
+  dashboard: { title: 'หน้าหลัก', subtitle: 'ภาพรวมการดำเนินงาน', icon: LayoutDashboard },
+  purchases: { title: 'จัดซื้อ', subtitle: 'งานจัดซื้อและรับสินค้า', icon: ShoppingCart },
+  sales: { title: 'การขาย', subtitle: 'งานขายและลูกค้า', icon: ClipboardList },
+  services: { title: 'บริการ', subtitle: 'งานบริการและซ่อม', icon: Wrench },
+  stock: { title: 'สต๊อก', subtitle: 'สินค้าและคลัง', icon: Package },
+  reports: { title: 'รายงาน', subtitle: 'รายงานและการวิเคราะห์', icon: Gauge },
+  finance: { title: 'การเงิน', subtitle: 'บัญชีและการเงิน', icon: Banknote },
+  settings: { title: 'ตั้งค่าระบบ', subtitle: 'การตั้งค่าและสิทธิ์', icon: ShieldCheck },
   superadminDashboard: { title: 'Dashboard', subtitle: 'Admin Console', icon: LayoutDashboard },
   superadminCatalog: { title: 'Catalog', subtitle: 'Catalog Governance', icon: Box },
   superadminGovernance: { title: 'Governance', subtitle: 'Review Control', icon: ShieldCheck },
@@ -146,19 +146,19 @@ const SidebarLoader = ({ collapsed = false, onToggle }) => {
   return (
     <aside
       className={[
-        'relative z-30 flex h-full shrink-0 select-none flex-col overflow-hidden border-r border-slate-200 bg-white text-slate-700 shadow-[8px_0_28px_rgba(15,23,42,0.06)]',
-        collapsed ? 'w-16' : 'w-64',
+        'relative z-30 flex h-full shrink-0 select-none flex-col overflow-hidden border-r border-slate-200 bg-slate-50/90 text-slate-700',
+        collapsed ? 'w-16' : 'w-60',
       ].join(' ')}
       aria-label="เมนูงาน POS"
     >
-      <div className={['flex h-[68px] shrink-0 items-center border-b border-slate-200', collapsed ? 'justify-center px-2' : 'px-4'].join(' ')}>
+      <div className={['flex h-16 shrink-0 items-center border-b border-slate-200 bg-white', collapsed ? 'justify-center px-2' : 'px-4'].join(' ')}>
         {collapsed ? (
-          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-teal-600 text-sm font-semibold text-white shadow-sm" title="Saduaksabuy POS">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-600 text-sm font-semibold text-white" title="Saduaksabuy POS">
             SS
           </div>
         ) : (
           <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-slate-900">SADUAKSABUY</p>
+            <p className="truncate text-sm font-semibold text-slate-950">SADUAKSABUY</p>
             <p className="truncate text-[10px] font-medium uppercase tracking-[0.12em] text-slate-400">Merchant Operations</p>
           </div>
         )}
@@ -167,16 +167,16 @@ const SidebarLoader = ({ collapsed = false, onToggle }) => {
       <div className={collapsed ? 'flex justify-center px-2 py-3' : 'px-3 py-3'}>
         <div
           className={[
-            'flex items-center border border-teal-100 bg-teal-50 text-teal-800',
-            collapsed ? 'h-11 w-11 justify-center rounded-2xl' : 'gap-3 rounded-2xl px-3 py-3',
+            'flex items-center text-teal-800',
+            collapsed ? 'h-11 w-11 justify-center rounded-xl bg-teal-50' : 'gap-3 px-2 py-2',
           ].join(' ')}
           title={collapsed ? currentModule.title : undefined}
         >
-          <ModuleIcon className="h-5 w-5 shrink-0" />
+          <ModuleIcon className="h-5 w-5 shrink-0 text-teal-600" />
           {!collapsed && (
             <div className="min-w-0">
-              <p className="truncate text-sm font-semibold">{currentModule.title}</p>
-              <p className="truncate text-[10px] text-teal-700/70">{currentModule.subtitle}</p>
+              <p className="truncate text-sm font-semibold text-slate-900">{currentModule.title}</p>
+              <p className="truncate text-[11px] text-slate-500">{currentModule.subtitle}</p>
             </div>
           )}
         </div>
@@ -208,16 +208,17 @@ const SidebarLoader = ({ collapsed = false, onToggle }) => {
                         className={[
                           'group relative flex transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2',
                           collapsed
-                            ? 'h-11 w-11 items-center justify-center rounded-2xl'
-                            : 'min-h-11 items-center gap-3 rounded-xl px-3 py-2.5 text-[13px] font-medium',
+                            ? 'h-11 w-11 items-center justify-center rounded-xl'
+                            : 'min-h-11 items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium',
                           isItemActive
-                            ? 'bg-teal-600 text-white shadow-sm'
-                            : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900',
+                            ? 'bg-white text-slate-950 shadow-sm ring-1 ring-inset ring-slate-200'
+                            : 'text-slate-600 hover:bg-white hover:text-slate-950',
                         ].join(' ')}
                       >
-                        <ItemIcon className="h-[18px] w-[18px] shrink-0" />
+                        {isItemActive && !collapsed && <span className="absolute inset-y-2 left-0 w-1 rounded-r-full bg-teal-500" />}
+                        <ItemIcon className={['h-[18px] w-[18px] shrink-0', isItemActive ? 'text-teal-600' : 'text-slate-400 group-hover:text-slate-600'].join(' ')} />
                         {!collapsed && <span className="min-w-0 flex-1 truncate">{item.label}</span>}
-                        {!collapsed && <ChevronRight className="h-3.5 w-3.5 shrink-0 opacity-50" />}
+                        {!collapsed && <ChevronRight className="h-3.5 w-3.5 shrink-0 text-slate-300" />}
 
                         {collapsed && (
                           <span className="pointer-events-none absolute left-full z-50 ml-3 hidden whitespace-nowrap rounded-lg bg-slate-900 px-2.5 py-1.5 text-xs font-medium text-white shadow-lg group-hover:block group-focus-visible:block">
@@ -240,7 +241,7 @@ const SidebarLoader = ({ collapsed = false, onToggle }) => {
             type="button"
             onClick={onToggle}
             className={[
-              'flex min-h-11 items-center rounded-xl text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500',
+              'flex min-h-11 items-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500',
               collapsed ? 'w-11 justify-center' : 'w-full gap-3 px-3 text-[13px] font-medium',
             ].join(' ')}
             aria-label={collapsed ? 'ขยายเมนูด้านข้าง' : 'ย่อเมนูด้านข้าง'}
@@ -251,7 +252,7 @@ const SidebarLoader = ({ collapsed = false, onToggle }) => {
         ) : (
           <NavLink
             to={settingsPath}
-            className="flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-[13px] font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
+            className="flex min-h-11 w-full items-center gap-3 rounded-lg px-3 text-[13px] font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
           >
             <ShieldCheck className="h-5 w-5" />
             <span>ตั้งค่าระบบ</span>

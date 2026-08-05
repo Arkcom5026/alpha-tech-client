@@ -119,17 +119,18 @@ const HeaderPos = () => {
 
   const navLinkClass = ({ isActive }) =>
     [
-      'inline-flex h-10 items-center justify-center gap-2 rounded-xl px-3 text-[13px] font-semibold whitespace-nowrap transition-colors',
-      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2',
+      'relative inline-flex h-16 items-center justify-center gap-2 px-3 text-[13px] font-medium whitespace-nowrap transition-colors',
+      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-teal-500',
+      'after:absolute after:inset-x-3 after:bottom-0 after:h-0.5 after:rounded-full after:transition-colors',
       isActive
-        ? 'bg-teal-50 text-teal-800 ring-1 ring-inset ring-teal-200'
-        : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900',
+        ? 'text-teal-700 after:bg-teal-500'
+        : 'text-slate-500 after:bg-transparent hover:text-slate-900 hover:after:bg-slate-200',
     ].join(' ');
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-slate-200 bg-white/95 text-slate-800 shadow-[0_1px_0_rgba(15,23,42,0.02)] backdrop-blur-xl">
+    <header className="sticky top-0 z-40 w-full border-b border-slate-200 bg-white/95 text-slate-800 backdrop-blur-xl">
       <div className="mx-auto flex h-16 max-w-[1680px] items-center gap-3 px-3 pl-16 sm:px-5 sm:pl-16 lg:px-6">
-        <nav className="hidden min-w-0 flex-1 items-center gap-1 overflow-x-auto scrollbar-none md:flex">
+        <nav className="hidden min-w-0 flex-1 items-center overflow-x-auto scrollbar-none md:flex">
           {navItems.map((item) => {
             const Icon = item.icon;
             return (
@@ -147,7 +148,7 @@ const HeaderPos = () => {
 
         <div className="ml-auto flex shrink-0 items-center gap-2">
           {!isGlobalSuperAdmin && (
-            <div className="hidden max-w-[180px] items-center rounded-full bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-700 sm:flex">
+            <div className="hidden max-w-[180px] items-center px-2 py-2 text-sm font-medium text-slate-700 sm:flex">
               <span className="truncate">{compactBranchName}</span>
             </div>
           )}
@@ -164,7 +165,7 @@ const HeaderPos = () => {
               <button
                 type="button"
                 onClick={() => setShowMenu((value) => !value)}
-                className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:border-teal-300 hover:bg-teal-50 hover:text-teal-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500"
+                className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 transition hover:border-teal-300 hover:text-teal-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500"
                 aria-expanded={showMenu}
                 aria-label="เปิดเมนูผู้ใช้งาน"
               >

@@ -11,7 +11,12 @@ import SaleItemSearchDialog from '../item-search/components/SaleItemSearchDialog
 import PosHeldCartPanel from '../../held-cart/components/PosHeldCartPanel';
 import CoreSalesHelpDrawer from '../../help/CoreSalesHelpDrawer';
 
-const QuickSalePage = () => {
+const QuickSalePage = ({
+  initialItems = [],
+  sourceContext = null,
+  sourceLocked = false,
+  saleExecutionDisabled = false,
+}) => {
   const barcodeInputRef = useRef(null);
   const phoneInputRef = useRef(null);
 
@@ -37,23 +42,26 @@ const QuickSalePage = () => {
     navigate,
     productSearchRef: barcodeInputRef,
     setHideCustomerDetails,
+    initialItems,
   });
 
   const checkoutLocked = Boolean(
     sale.completion.isSubmitting || sale.completion.recovery?.preserveCheckout
   );
+  const cartLocked = checkoutLocked || sourceLocked;
 
   useEffect(() => {
     if (clearPhoneTrigger) setHideCustomerDetails(false);
   }, [clearPhoneTrigger]);
 
   useEffect(() => {
+    if (sourceLocked) return undefined;
     const timer = setTimeout(() => barcodeInputRef.current?.focus?.(), 150);
     return () => clearTimeout(timer);
-  }, []);
+  }, [sourceLocked]);
 
   const heldCartSavedAndClear = () => {
-    if (checkoutLocked) return;
+    if (checkoutLocked || sourceLocked) return;
     sale.cart.clear();
     sale.customer.setCustomerId?.(null);
     sale.heldCart.commands.clearActiveCart();
@@ -62,12 +70,20 @@ const QuickSalePage = () => {
 
   return (
     <div className="w-full h-full p-2 md:p-3 space-y-3 max-w-[1600px] mx-auto text-slate-800 selection:bg-orange-500 selection:text-white animate-fadeIn text-xs md:text-sm antialiased font-sans">
-      <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-orange-200 bg-orange-50 px-4 py-2.5">
+      <div className={`flex flex-wrap items-center justify-between gap-2 rounded-2xl border px-4 py-2.5 ${sourceContext ? 'border-blue-200 bg-blue-50' : 'border-orange-200 bg-orange-50'}`}>
         <div>
-          <strong className="text-orange-800">
-            {sale.heldCart.panel.activeCart ? `กำลังทำต่อ ${sale.heldCart.panel.activeCart.code}` : 'รายการขายใหม่'}
+          <strong className={sourceContext ? 'text-blue-800' : 'text-orange-800'}>
+            {sourceContext
+              ? `รายการขายจากใบจอง ${sourceContext.sourceCode}`
+              : sale.heldCart.panel.activeCart
+                ? `กำลังทำต่อ ${sale.heldCart.panel.activeCart.code}`
+                : 'รายการขายใหม่'}
           </strong>
-          {sale.heldCart.panel.activeCart && (
+          {sourceContext ? (
+            <span className="ml-2 text-[10px] font-black text-blue-600">
+              {sourceContext.sourceType} #{sourceContext.sourceId} · ไม่สร้างใบจอง POS ซ้ำ
+            </span>
+          ) : sale.heldCart.panel.activeCart ? (
             <span className="ml-2 text-[10px] font-bold text-orange-600">
               {sale.heldCart.panel.saveState === 'saving'
                 ? 'กำลังบันทึก...'
@@ -77,18 +93,24 @@ const QuickSalePage = () => {
                     ? 'รอบันทึก'
                     : 'บันทึกอัตโนมัติแล้ว'}
             </span>
-          )}
+          ) : null}
         </div>
 
         <button
           type="button"
           onClick={() => setIsHelpOpen(true)}
-          className="rounded-xl border border-orange-200 bg-white px-3 py-2 text-xs font-black text-orange-700 shadow-sm hover:bg-orange-100"
+          className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 shadow-sm hover:bg-slate-100"
           aria-label="เปิดคู่มือการขายสินค้า"
         >
           คู่มือ
         </button>
       </div>
+
+      {sourceContext ? (
+        <div className="rounded-xl border border-blue-200 bg-white px-3 py-2 text-xs font-bold text-blue-800">
+          รายการสินค้าถูกโหลดจาก ProductReservation authority และล็อกไว้เพื่อรักษาจำนวน ราคา และ StockItem/SimpleLot ของใบจองเดิม
+        </div>
+      ) : null}
 
       {sale.heldCart.panel.activeCart && sale.heldCart.panel.validation && (
         <div className={`rounded-xl border px-3 py-2 text-xs font-bold ${sale.heldCart.panel.validation.ready ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-rose-200 bg-rose-50 text-rose-700'}`}>
@@ -118,8 +140,8 @@ const QuickSalePage = () => {
         </div>
 
         <div
-          className={`col-span-12 lg:col-span-8 space-y-3 ${checkoutLocked ? 'pointer-events-none opacity-60' : ''}`}
-          aria-disabled={checkoutLocked}
+          className={`col-span-12 lg:col-span-8 space-y-3 ${cartLocked ? 'pointer-events-none opacity-75' : ''}`}
+          aria-disabled={cartLocked}
         >
           <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm space-y-3 select-none">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 pb-2 border-b border-slate-100">
@@ -127,7 +149,9 @@ const QuickSalePage = () => {
                 <div className="p-1 bg-slate-900/5 text-slate-800 rounded-md">
                   <ShoppingBag className="w-4 h-4" />
                 </div>
-                <h2 className="text-xs md:text-sm font-black text-slate-900">ค้นหาและเพิ่มสินค้าเข้ารายการขาย</h2>
+                <h2 className="text-xs md:text-sm font-black text-slate-900">
+                  {sourceLocked ? 'รายการสินค้าจากใบจองออนไลน์' : 'ค้นหาและเพิ่มสินค้าเข้ารายการขาย'}
+                </h2>
               </div>
 
               <div className="flex items-center gap-3 text-[11px] font-black text-slate-400">
@@ -139,36 +163,30 @@ const QuickSalePage = () => {
                         value={type}
                         checked={sale.presentation.selectedPriceType === type}
                         onChange={(event) => sale.presentation.setSelectedPriceType(event.target.value)}
-                        disabled={checkoutLocked}
+                        disabled={cartLocked}
                         className="accent-slate-900 h-3.5 w-3.5"
                       />
-                      <span className={sale.presentation.selectedPriceType === type ? 'text-slate-900 font-black' : ''}>
-                        {type === 'wholesale' ? 'ราคาส่ง' : type === 'technician' ? 'ราคาช่าง' : 'ราคาปลีก'}
-                      </span>
+                      <span>{type === 'wholesale' ? 'ราคาส่ง' : type === 'technician' ? 'ราคาช่าง' : 'ราคาปลีก'}</span>
                     </label>
                   ))}
                 </div>
               </div>
             </div>
 
-            <div className="relative pt-0.5">
-              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-3 transform -translate-y-1/2" />
-              <input
-                ref={barcodeInputRef}
-                type="text"
-                placeholder="ค้นหาด้วยบาร์โค้ด, SN, ชื่อ หรือรุ่นสินค้า (ชื่อ/รุ่นอย่างน้อย 3 ตัวอักษร)"
-                onKeyDown={sale.itemSearch.handleBarcodeSearch}
-                disabled={checkoutLocked}
-                data-testid="pos-sale-barcode-input"
-                className="h-8 w-full pl-9 pr-4 text-xs font-mono font-black bg-slate-50 focus:bg-white border border-slate-200 focus:border-slate-900 rounded-lg outline-none shadow-inner transition-all"
-              />
-            </div>
-
-            {sale.itemSearch.error && (
-              <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-rose-600 font-black text-[11px] animate-slideUp">
-                {sale.itemSearch.error}
+            {!sourceLocked ? (
+              <div className="relative pt-0.5">
+                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-3 transform -translate-y-1/2" />
+                <input
+                  ref={barcodeInputRef}
+                  type="text"
+                  placeholder="ค้นหาด้วยบาร์โค้ด, SN, ชื่อ หรือรุ่นสินค้า"
+                  onKeyDown={sale.itemSearch.handleBarcodeSearch}
+                  disabled={checkoutLocked}
+                  data-testid="pos-sale-barcode-input"
+                  className="h-8 w-full pl-9 pr-4 text-xs font-mono font-black bg-slate-50 focus:bg-white border border-slate-200 focus:border-slate-900 rounded-lg outline-none shadow-inner transition-all"
+                />
               </div>
-            )}
+            ) : null}
           </div>
 
           <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm min-h-[380px] flex flex-col justify-between">
@@ -177,9 +195,9 @@ const QuickSalePage = () => {
               <div className="overflow-x-auto rounded-xl border border-slate-100">
                 <SaleItemTable
                   items={sale.cart.items}
-                  onRemove={sale.cart.remove}
-                  onUpdate={sale.cart.update}
-                  onChangeSimpleQuantity={sale.cart.setSimpleQuantity}
+                  onRemove={sourceLocked ? () => {} : sale.cart.remove}
+                  onUpdate={sourceLocked ? () => {} : sale.cart.update}
+                  onChangeSimpleQuantity={sourceLocked ? () => {} : sale.cart.setSimpleQuantity}
                   billDiscount={sale.presentation.billDiscount}
                 />
               </div>
@@ -201,10 +219,12 @@ const QuickSalePage = () => {
           onSaleOptionChange={sale.documentHandoff.setSaleOption}
           onConfirmSale={sale.completion.confirm}
           onSaveHeldCart={sale.heldCart.commands.openPanel}
+          heldCartDisabled={sourceLocked}
+          saleExecutionDisabled={saleExecutionDisabled}
         />
       </div>
 
-      {!checkoutLocked && (
+      {!checkoutLocked && !sourceLocked && (
         <PosHeldCartPanel
           open={sale.heldCart.panel.open}
           onClose={sale.heldCart.commands.closePanel}
@@ -216,15 +236,17 @@ const QuickSalePage = () => {
         />
       )}
 
-      <SaleItemSearchDialog
-        open={sale.itemSearch.selection.open}
-        query={sale.itemSearch.selection.query}
-        items={sale.itemSearch.selection.items}
-        truncated={sale.itemSearch.selection.truncated}
-        priceType={sale.presentation.selectedPriceType}
-        onSelect={sale.itemSearch.selectSearchItem}
-        onClose={sale.itemSearch.closeSelection}
-      />
+      {!sourceLocked ? (
+        <SaleItemSearchDialog
+          open={sale.itemSearch.selection.open}
+          query={sale.itemSearch.selection.query}
+          items={sale.itemSearch.selection.items}
+          truncated={sale.itemSearch.selection.truncated}
+          priceType={sale.presentation.selectedPriceType}
+          onSelect={sale.itemSearch.selectSearchItem}
+          onClose={sale.itemSearch.closeSelection}
+        />
+      ) : null}
 
       <CoreSalesHelpDrawer
         open={isHelpOpen}

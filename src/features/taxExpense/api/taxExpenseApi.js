@@ -11,6 +11,12 @@ export const createTaxExpenseCategory = async (payload) =>
 export const listExpensePayeeSuppliers = async ({ q } = {}) =>
   unwrap(await apiClient.get('/tax-expenses/expense-payees', { params: q ? { q } : undefined }));
 
+export const listTaxExpenseSupplierCandidates = async ({ q } = {}) =>
+  unwrap(await apiClient.get('/tax-expenses/setup/suppliers', { params: q ? { q } : undefined }));
+
+export const enableSupplierAsExpensePayee = async (supplierId) =>
+  unwrap(await apiClient.post(`/tax-expenses/setup/suppliers/${supplierId}/expense-payee`));
+
 export const listTaxExpenses = async ({ status, fromDate, toDate, q } = {}) =>
   unwrap(await apiClient.get('/tax-expenses', {
     params: {

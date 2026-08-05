@@ -63,12 +63,12 @@ const PosAdaptiveShell = () => {
       </div>
 
       {mobileOpen && (
-        <div className="fixed inset-0 z-[70] lg:hidden" role="dialog" aria-modal="true" aria-label="เมนู POS">
+        <div className="fixed inset-0 z-[70] lg:hidden" role="dialog" aria-modal="true" aria-label="เมนูย่อย POS">
           <button
             type="button"
             className="absolute inset-0 bg-slate-950/45 backdrop-blur-[2px]"
             onClick={() => setMobileOpen(false)}
-            aria-label="ปิดเมนู POS"
+            aria-label="ปิดเมนูย่อย POS"
           />
 
           <div className="absolute inset-y-0 left-0 w-[min(88vw,320px)] overflow-hidden bg-white shadow-2xl">
@@ -77,7 +77,7 @@ const PosAdaptiveShell = () => {
               type="button"
               onClick={() => setMobileOpen(false)}
               className="absolute right-3 top-3 flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-600 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500"
-              aria-label="ปิดเมนู POS"
+              aria-label="ปิดเมนูย่อย POS"
             >
               <X className="h-5 w-5" />
             </button>
@@ -87,12 +87,12 @@ const PosAdaptiveShell = () => {
 
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <div className="relative">
-          <HeaderPos shopSlug={shopSlug} />
+          <HeaderPos shopSlug={shopSlug} onMobileModuleSelect={() => setMobileOpen(true)} />
           <button
             type="button"
             onClick={() => setMobileOpen(true)}
-            className="absolute left-3 top-1/2 z-50 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:border-teal-300 hover:bg-teal-50 hover:text-teal-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 lg:hidden"
-            aria-label="เปิดเมนู POS"
+            className="absolute left-3 top-8 z-50 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:border-teal-300 hover:bg-teal-50 hover:text-teal-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 lg:hidden"
+            aria-label="เปิดเมนูย่อยของโมดูลปัจจุบัน"
             aria-expanded={mobileOpen}
           >
             <Menu className="h-5 w-5" />

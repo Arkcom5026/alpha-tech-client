@@ -1,6 +1,48 @@
 $ErrorActionPreference = 'Stop'
 
 $ClientRoot = Resolve-Path (Join-Path $PSScriptRoot '..\..\..\..\..')
+
+function Import-DotEnvFile {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string]$Path
+  )
+
+  if (-not (Test-Path $Path)) { return }
+
+  foreach ($Line in Get-Content $Path) {
+    $Trimmed = $Line.Trim()
+    if ([string]::IsNullOrWhiteSpace($Trimmed) -or $Trimmed.StartsWith('#')) { continue }
+
+    $SeparatorIndex = $Trimmed.IndexOf('=')
+    if ($SeparatorIndex -le 0) { continue }
+
+    $Name = $Trimmed.Substring(0, $SeparatorIndex).Trim()
+    $Value = $Trimmed.Substring($SeparatorIndex + 1).Trim()
+    if (
+      ($Value.StartsWith('"') -and $Value.EndsWith('"')) -or
+      ($Value.StartsWith("'") -and $Value.EndsWith("'"))
+    ) {
+      $Value = $Value.Substring(1, $Value.Length - 2)
+    }
+
+    if ([string]::IsNullOrWhiteSpace([Environment]::GetEnvironmentVariable($Name, 'Process'))) {
+      [Environment]::SetEnvironmentVariable($Name, $Value, 'Process')
+    }
+  }
+}
+
+# Runtime fixture values are more specific than stable local configuration.
+Import-DotEnvFile (Join-Path $ClientRoot '.env.e2e.runtime.local')
+Import-DotEnvFile (Join-Path $ClientRoot '.env.e2e.local')
+
+if ([string]::IsNullOrWhiteSpace($env:REPAIR_INTAKE_E2E_DATABASE_MODE)) {
+  $env:REPAIR_INTAKE_E2E_DATABASE_MODE = 'MAIN_TEST_TENANT'
+}
+if ([string]::IsNullOrWhiteSpace($env:REPAIR_INTAKE_E2E_BRANCH_SLUG)) {
+  $env:REPAIR_INTAKE_E2E_BRANCH_SLUG = 'test-shop'
+}
+
 $ApiBaseUrl = if ($env:E2E_REPAIR_API_BASE_URL) {
   $env:E2E_REPAIR_API_BASE_URL.TrimEnd('/')
 } elseif ($env:E2E_TEST_API_BASE_URL) {
@@ -30,7 +72,7 @@ $MissingEnvironmentNames = @(
   }
 )
 if ($MissingEnvironmentNames.Count -gt 0) {
-  throw "Missing Repair Browser E2E environment: $($MissingEnvironmentNames -join ', '). Set the values emitted by the paired Server fixture in this PowerShell session."
+  throw "Missing Repair Browser E2E environment: $($MissingEnvironmentNames -join ', '). Store stable values in .env.e2e.local and fixture values in .env.e2e.runtime.local."
 }
 
 if ($env:REPAIR_INTAKE_E2E_DATABASE_MODE -eq 'MAIN_TEST_TENANT') {
@@ -86,6 +128,7 @@ try {
 
   Write-Host "Starting dedicated Repair E2E client at $WebBaseUrl" -ForegroundColor Cyan
   Write-Host "Repair E2E API authority: $ApiBaseUrl" -ForegroundColor Cyan
+  Write-Host "Repair E2E fixture: $($env:REPAIR_INTAKE_E2E_JOB_NO) (ID $($env:REPAIR_INTAKE_E2E_JOB_ID))" -ForegroundColor Cyan
 
   $ViteProcess = Start-Process `
     -FilePath 'npm.cmd' `

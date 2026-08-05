@@ -14,6 +14,11 @@ const assertBefore = (source, first, second, message) => {
   const secondIndex = source.indexOf(second);
   if (firstIndex < 0 || secondIndex < 0 || firstIndex >= secondIndex) throw new Error(message);
 };
+const assertBeforeLast = (source, first, second, message) => {
+  const firstIndex = source.indexOf(first);
+  const secondIndex = source.lastIndexOf(second);
+  if (firstIndex < 0 || secondIndex < 0 || firstIndex >= secondIndex) throw new Error(message);
+};
 
 const page = read('src/features/stockAudit/pages/ReadyToSellAuditPage.jsx');
 const scannerInput = read('src/features/stockAudit/components/ScanInput.jsx');
@@ -28,6 +33,9 @@ assertIncludes(page, 'StockAuditActionBar', 'Stock audit page must use the opera
 assertIncludes(page, 'StockAuditScannerWorkspace', 'Stock audit page must use the primary scanner workspace');
 assertIncludes(page, 'StockAuditListPanel', 'Stock audit page must use shared list panels');
 assertBefore(page, '<StockAuditScannerWorkspace', '<StockAuditListPanel', 'Primary scanner must appear before audit result lists');
+assertIncludes(page, '!sessionId ? auditActionBar : null', 'Start-round action must appear before an audit session exists');
+assertIncludes(page, 'sessionId ? auditActionBar : null', 'Completion actions must appear only after an audit session exists');
+assertBeforeLast(page, '<StockAuditListPanel', 'sessionId ? auditActionBar : null', 'Completion actions must appear after audit result lists');
 assertIncludes(page, "event.key === 'F2'", 'F2 focus authority must remain available');
 assertIncludes(page, "event.key === 'F3'", 'F3 scan-mode authority must remain available');
 assertIncludes(page, "scanMode === 'SN'", 'SN execution path must remain available');

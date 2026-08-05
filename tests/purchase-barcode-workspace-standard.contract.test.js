@@ -18,9 +18,13 @@ const assertBefore = (source, first, second, message) => {
 const listHeader = read('src/features/barcode/components/BarcodeWorkspaceHeader.jsx');
 const toolbar = read('src/features/barcode/components/BarcodeListToolbar.jsx');
 const previewHeader = read('src/features/barcode/components/BarcodePreviewWorkspaceHeader.jsx');
+const previewSettings = read('src/features/barcode/components/BarcodePreviewSettings.jsx');
+const previewActionBar = read('src/features/barcode/components/BarcodePreviewActionBar.jsx');
 const table = read('src/features/barcode/controllers/BarcodePrintTable.jsx');
 const listPage = read('src/features/barcode/pages/BarcodeReceiptListPage.jsx');
+const previewWorkspacePage = read('src/features/barcode/pages/BarcodePreviewWorkspacePage.jsx');
 const previewPage = read('src/features/barcode/pages/PreviewBarcodePage.jsx');
+const purchaseRoutes = read('src/routes/partner/purchasesRoutes.jsx');
 
 assertIncludes(listHeader, 'รายการใบรับสินค้าที่รอพิมพ์บาร์โค้ด', 'Barcode list header must state its operational purpose');
 assertIncludes(listHeader, 'min-h-11', 'Barcode list actions must remain touch sized');
@@ -32,6 +36,9 @@ assertIncludes(toolbar, 'min-h-11', 'Barcode toolbar controls must remain touch 
 assertIncludes(previewHeader, 'พรีวิวบาร์โค้ด', 'Barcode preview header must remain explicit');
 assertIncludes(previewHeader, 'จำนวนฉลาก', 'Preview header must summarize label count');
 assertIncludes(previewHeader, 'พิมพ์แล้ว', 'Preview header must summarize printed progress');
+assertIncludes(previewSettings, 'ตั้งค่าการพิมพ์', 'Preview settings foundation must remain available');
+assertIncludes(previewActionBar, 'พิมพ์ฉลาก', 'Preview print action foundation must remain available');
+assertIncludes(previewActionBar, 'ยืนยันว่าพิมพ์แล้ว', 'Preview confirmation action foundation must remain available');
 
 assertIncludes(table, 'md:hidden', 'Barcode receipt results must expose mobile cards');
 assertIncludes(table, 'md:block', 'Barcode receipt results must preserve desktop table layout');
@@ -58,8 +65,19 @@ assertIncludes(listPage, 'supplierIdByNormalizedName', 'Supplier ID resolution a
 assertIncludes(listPage, 'setTimeout', 'Remote code search debounce must remain available');
 assertIncludes(listPage, "navigate(`/${targetSlug}/pos/purchases/barcodes/range-print`)", 'Range print route must remain tenant aware');
 assertIncludes(listPage, 'role="alert"', 'List loading errors must remain accessible');
+
+assertIncludes(previewWorkspacePage, 'BarcodePreviewWorkspaceHeader', 'Preview route must compose the workspace header');
+assertIncludes(previewWorkspacePage, '<PreviewBarcodePage />', 'Legacy renderer and print authority must remain mounted inside the workspace');
+assertBefore(previewWorkspacePage, '<BarcodePreviewWorkspaceHeader', '<PreviewBarcodePage />', 'Preview header must appear before the print workspace');
+assertIncludes(previewWorkspacePage, 'useBarcodeStore', 'Preview summary must project canonical barcode state');
+assertIncludes(previewWorkspacePage, 'print:hidden', 'Workspace chrome must remain excluded from printed output');
+assertIncludes(purchaseRoutes, 'BarcodePreviewWorkspacePage', 'Purchase routes must use the preview workspace composition');
+assertIncludes(purchaseRoutes, "path: 'preview/:receiptId'", 'Preview route contract must remain stable');
+
 assertIncludes(previewPage, 'markBarcodeAsPrintedAction', 'Barcode printed confirmation authority must remain available');
 assertIncludes(previewPage, 'markReceiptAsPrintedAction', 'Receipt printed confirmation authority must remain available');
 assertIncludes(previewPage, 'QrSvg', 'QR rendering authority must remain available');
+assertIncludes(previewPage, 'window.print', 'Browser print authority must remain available');
+assertIncludes(previewPage, 'SETTINGS_KEY', 'Persisted print settings authority must remain available');
 
 console.log('Purchase barcode workspace standard contract: PASS');

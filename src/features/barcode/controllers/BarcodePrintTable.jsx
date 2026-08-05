@@ -1,38 +1,36 @@
-// src/features/stockItem/components/BarcodePrintTable.jsx
-// 🏛️ Premium Next-Gen Barcode Table: (Fixed Multi-Tenant Redirection, Aurora Badges & Spring Physics Commands)
-
 import React, { useEffect, useMemo, useState } from 'react';
-// 🟢 [IMPORT FIXED] เรียกใช้งาน useParams ดักจับค่า shopSlug เพื่อรักษาเส้นทาง Multi-Tenant v2 สากล
 import { useNavigate, useParams } from 'react-router-dom';
+import { AlertCircle, Calendar, FileText, Printer, Sparkles, User } from 'lucide-react';
+
 import useBarcodeStore from '@/features/barcode/store/barcodeStore';
-import { Layers, Calendar, User, Printer, CheckCircle, AlertCircle, Sparkles, Search, X } from 'lucide-react';
 
 const formatDateTh = (value) => {
   try {
     if (!value) return '-';
-    const d = value instanceof Date ? value : new Date(value);
-    if (Number.isNaN(d.getTime())) return '-';
+    const date = value instanceof Date ? value : new Date(value);
+    if (Number.isNaN(date.getTime())) return '-';
     return new Intl.DateTimeFormat('th-TH', {
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',
-    }).format(d);
+    }).format(date);
   } catch {
     return '-';
   }
 };
 
-const getErrorMessage = (err) => {
-  if (!err) return 'เกิดข้อผิดพลาด';
-  if (typeof err === 'string') return err;
-  return err?.response?.data?.message || err?.message || 'เกิดข้อผิดพลาด';
+const getErrorMessage = (error) => {
+  if (!error) return 'เกิดข้อผิดพลาด';
+  if (typeof error === 'string') return error;
+  return error?.response?.data?.message || error?.message || 'เกิดข้อผิดพลาด';
 };
 
-const BarcodePrintTable = ({ mode = 'UNPRINTED', receipts }) => {
+const printButtonClass =
+  'inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border px-4 text-sm font-bold transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto';
+
+export default function BarcodePrintTable({ mode = 'UNPRINTED', receipts }) {
   const navigate = useNavigate();
-  // 🟢 [SLUG ACTIVATED] แกะรอยคีย์ shopSlug เพื่อคุมระนาบเส้นทางลัดรายสาขาให้แม่นยำ 100%
   const { shopSlug } = useParams();
-  
   const { generateBarcodesAction, reprintBarcodesAction } = useBarcodeStore();
 
   const [selectedIds, setSelectedIds] = useState([]);
@@ -41,34 +39,50 @@ const BarcodePrintTable = ({ mode = 'UNPRINTED', receipts }) => {
 
   const normalizedReceipts = useMemo(
     () =>
-      (Array.isArray(receipts) ? receipts : []).map((r) => ({
-        id: r.id,
-        purchaseOrderCode: r.purchaseOrderCode ?? r.orderCode ?? r.poCode ?? r.purchaseOrder?.code ?? '-',
-        code: r.code ?? r.receiptCode ?? r.purchaseOrderReceiptCode ?? r.poReceiptCode ?? '-',
-        supplier: typeof r.supplier === 'object' ? r.supplier?.name ?? '-' : r.supplier ?? r.supplierName ?? '-',
-        receivedAt: r.receivedAt ?? r.createdAt ?? r.date ?? null,
-        printed: Boolean(r.printed ?? r.isPrinted ?? false),
+      (Array.isArray(receipts) ? receipts : []).map((receipt) => ({
+        id: receipt.id,
+        purchaseOrderCode:
+          receipt.purchaseOrderCode ?? receipt.orderCode ?? receipt.poCode ?? receipt.purchaseOrder?.code ?? '-',
+        code: receipt.code ?? receipt.receiptCode ?? receipt.purchaseOrderReceiptCode ?? receipt.poReceiptCode ?? '-',
+        supplier:
+          typeof receipt.supplier === 'object'
+            ? receipt.supplier?.name ?? '-'
+            : receipt.supplier ?? receipt.supplierName ?? '-',
+        receivedAt: receipt.receivedAt ?? receipt.createdAt ?? receipt.date ?? null,
+        printed: Boolean(receipt.printed ?? receipt.isPrinted ?? false),
       })),
     [receipts]
   );
 
   const visibleReceipts = useMemo(() => {
-    if (mode === 'UNPRINTED') return normalizedReceipts.filter((r) => !r.printed);
+    if (mode === 'UNPRINTED') return normalizedReceipts.filter((receipt) => !receipt.printed);
     return normalizedReceipts;
   }, [normalizedReceipts, mode]);
 
   const isAllSelected =
-    mode === 'UNPRINTED' && visibleReceipts.length > 0 && visibleReceipts.every((r) => selectedIds.includes(r.id));
+    mode === 'UNPRINTED' &&
+    visibleReceipts.length > 0 &&
+    visibleReceipts.every((receipt) => selectedIds.includes(receipt.id));
 
-  const toggleSelect = (id) =>
-    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  const toggleSelect = (id) => {
+    setSelectedIds((current) =>
+      current.includes(id) ? current.filter((selectedId) => selectedId !== id) : [...current, id]
+    );
+  };
 
-  const toggleSelectAll = () => setSelectedIds(isAllSelected ? [] : visibleReceipts.map((r) => r.id));
+  const toggleSelectAll = () => {
+    setSelectedIds(isAllSelected ? [] : visibleReceipts.map((receipt) => receipt.id));
+  };
 
   useEffect(() => {
     setSelectedIds([]);
     setUiError('');
   }, [mode, receipts]);
+
+  const openPreview = (receiptId) => {
+    const targetSlug = shopSlug || 'advancetech';
+    navigate(`/${targetSlug}/pos/purchases/barcodes/preview/${receiptId}`);
+  };
 
   const handlePrintClick = async (receiptId) => {
     if (!receiptId) return;
@@ -76,13 +90,10 @@ const BarcodePrintTable = ({ mode = 'UNPRINTED', receipts }) => {
     try {
       setPrintingId(receiptId);
       await generateBarcodesAction(receiptId);
-      
-      // 🟢 [ROUTING FIXED] บังคับท่อส่งหน้าพรีวิวเดี่ยว ให้เกาะสาย Dynamic shopSlug ป้องกันการดีดเด้งหลุด
-      const targetSlug = shopSlug || 'advancetech';
-      navigate(`/${targetSlug}/pos/purchases/barcodes/preview/${receiptId}`);
-    } catch (err) {
-      if (import.meta?.env?.DEV) console.error('[handlePrintClick] ❌', err);
-      setUiError(getErrorMessage(err));
+      openPreview(receiptId);
+    } catch (error) {
+      if (import.meta?.env?.DEV) console.error('[handlePrintClick]', error);
+      setUiError(getErrorMessage(error));
     } finally {
       setPrintingId(null);
     }
@@ -94,142 +105,195 @@ const BarcodePrintTable = ({ mode = 'UNPRINTED', receipts }) => {
     try {
       setPrintingId(receiptId);
       await reprintBarcodesAction(receiptId);
-      
-      // 🟢 [ROUTING FIXED] บังคับท่อส่งหน้าพรีวิวพิมพ์ซ้ำเดี่ยว ให้เกาะสาย Dynamic shopSlug ป้องกันการดีดเด้งหลุด
-      const targetSlug = shopSlug || 'advancetech';
-      navigate(`/${targetSlug}/pos/purchases/barcodes/preview/${receiptId}`);
-    } catch (err) {
-      if (import.meta?.env?.DEV) console.error('[handleReprintClick] ❌', err);
-      setUiError(getErrorMessage(err));
+      openPreview(receiptId);
+    } catch (error) {
+      if (import.meta?.env?.DEV) console.error('[handleReprintClick]', error);
+      setUiError(getErrorMessage(error));
     } finally {
       setPrintingId(null);
     }
   };
 
+  const renderPrintAction = (receipt) => {
+    const isPrinting = printingId === receipt.id;
+    if (mode === 'UNPRINTED') {
+      return (
+        <button
+          type="button"
+          onClick={() => handlePrintClick(receipt.id)}
+          disabled={isPrinting}
+          className={`${printButtonClass} border-teal-700 bg-teal-700 text-white hover:bg-teal-800`}
+        >
+          <Printer className="h-4 w-4" />
+          {isPrinting ? 'กำลังสร้างฉลาก...' : 'พิมพ์ฉลาก'}
+        </button>
+      );
+    }
+
+    return (
+      <button
+        type="button"
+        onClick={() => handleReprintClick(receipt.id)}
+        disabled={isPrinting}
+        className={`${printButtonClass} border-slate-300 bg-white text-slate-700 hover:border-teal-300 hover:bg-teal-50 hover:text-teal-800`}
+      >
+        <Printer className="h-4 w-4" />
+        {isPrinting ? 'กำลังเตรียมงาน...' : 'พิมพ์ซ้ำ'}
+      </button>
+    );
+  };
+
+  if (visibleReceipts.length === 0) {
+    return (
+      <section className="rounded-2xl border border-dashed border-slate-300 bg-white px-5 py-12 text-center shadow-sm">
+        <FileText className="mx-auto h-10 w-10 text-slate-300" />
+        <h2 className="mt-3 text-base font-semibold text-slate-900">
+          {mode === 'UNPRINTED' ? 'ไม่มีรายการค้างพิมพ์บาร์โค้ด' : 'ไม่พบรายการพิมพ์ซ้ำ'}
+        </h2>
+        <p className="mt-1 text-sm text-slate-500">ลองเปลี่ยนคำค้นหาหรือตัวกรอง Supplier</p>
+      </section>
+    );
+  }
+
   return (
-    <div className="space-y-4 font-sans text-slate-800">
-      
-      {/* ⚠️ กล่องข้อความแจ้งเตือน Error UI */}
+    <div className="space-y-4 text-slate-800">
       {uiError && (
-        <div className="rounded-2xl border border-rose-200 bg-rose-50 p-3 text-xs font-black text-rose-600 flex items-center justify-between animate-fadeIn">
-          <div className="flex items-center gap-1.5">
-            <AlertCircle className="w-4 h-4 text-rose-500" />
-            <span>{uiError}</span>
+        <div role="alert" className="flex items-start justify-between gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
+          <div className="flex items-start gap-2">
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+            <span className="font-semibold">{uiError}</span>
           </div>
-          <button type="button" className="underline ml-2 text-slate-500 hover:text-slate-900" onClick={() => setUiError('')}>ปิด</button>
+          <button type="button" onClick={() => setUiError('')} className="min-h-11 shrink-0 px-2 font-semibold underline">
+            ปิด
+          </button>
         </div>
       )}
 
-      {/* 📊 CORE TABLE LAYOUT: จัดโฉมตารางโมเดิร์นคลีน โปร่งตา ขอบโค้งมนมีมิติ */}
-      <div className="overflow-hidden rounded-2xl border border-slate-200 shadow-[0_4px_25px_rgba(0,0,0,0.01)] bg-white">
-        <div className="w-full overflow-x-auto">
-          <table className="w-full text-xs sm:text-sm text-left border-collapse">
+      {mode === 'UNPRINTED' && (
+        <div className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 md:hidden">
+          <label className="inline-flex min-h-11 items-center gap-3 text-sm font-semibold text-slate-700">
+            <input type="checkbox" checked={isAllSelected} onChange={toggleSelectAll} className="h-5 w-5 accent-teal-700" />
+            เลือกทั้งหมด
+          </label>
+          <span className="text-sm text-slate-500">{selectedIds.length} รายการ</span>
+        </div>
+      )}
+
+      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm" aria-label="รายการใบรับสำหรับพิมพ์บาร์โค้ด">
+        <div className="space-y-3 p-3 md:hidden">
+          {visibleReceipts.map((receipt, index) => (
+            <article key={receipt.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <div className="flex items-start gap-3">
+                {mode === 'UNPRINTED' && (
+                  <input
+                    type="checkbox"
+                    aria-label={`เลือก ${receipt.code}`}
+                    checked={selectedIds.includes(receipt.id)}
+                    onChange={() => toggleSelect(receipt.id)}
+                    className="mt-1 h-5 w-5 shrink-0 accent-teal-700"
+                  />
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-semibold text-slate-500">ใบตรวจรับลำดับ {index + 1}</p>
+                  <h2 className="mt-1 break-all text-base font-bold text-slate-950">{receipt.code}</h2>
+                  <p className="mt-1 break-all text-xs font-medium text-slate-500">PO {receipt.purchaseOrderCode}</p>
+                </div>
+              </div>
+
+              <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                <div className="col-span-2 flex items-start gap-2">
+                  <User className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
+                  <div className="min-w-0">
+                    <dt className="text-xs text-slate-500">Supplier</dt>
+                    <dd className="break-words font-semibold text-slate-800">{receipt.supplier}</dd>
+                  </div>
+                </div>
+                <div className="flex items-start gap-2">
+                  <Calendar className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
+                  <div>
+                    <dt className="text-xs text-slate-500">วันที่รับของ</dt>
+                    <dd className="font-semibold text-slate-800">{formatDateTh(receipt.receivedAt)}</dd>
+                  </div>
+                </div>
+              </dl>
+
+              <div className="mt-4 border-t border-slate-200 pt-4">{renderPrintAction(receipt)}</div>
+            </article>
+          ))}
+        </div>
+
+        <div className="hidden overflow-x-auto md:block">
+          <table className="w-full min-w-[920px] border-collapse text-left text-sm">
             <thead>
-              <tr className="bg-slate-50/80 border-b border-slate-200/60 text-slate-500 text-xs font-black uppercase tracking-wider select-none">
-                <th className="p-3 w-12 text-center">
-                  {mode === 'UNPRINTED' ? (
-                    <input type="checkbox" onChange={toggleSelectAll} checked={isAllSelected} className="accent-orange-500 cursor-pointer h-4 w-4 rounded" />
-                  ) : (
-                    <span />
+              <tr className="border-b border-slate-200 bg-slate-50 text-xs font-semibold tracking-wide text-slate-500">
+                <th className="w-14 px-4 py-4 text-center">
+                  {mode === 'UNPRINTED' && (
+                    <input type="checkbox" checked={isAllSelected} onChange={toggleSelectAll} className="h-4 w-4 accent-teal-700" />
                   )}
                 </th>
-                <th className="p-3 w-16 text-center">ลำดับ</th>
-                <th className="p-3">เลขใบสั่งซื้อ PO</th>
-                <th className="p-3">เลขใบตรวจรับ RC</th>
-                <th className="p-3"><User className="w-3.5 h-3.5 inline mr-1 text-slate-400" /> Supplier</th>
-                <th className="p-3"><Calendar className="w-3.5 h-3.5 inline mr-1 text-slate-400" /> วันที่รับของ</th>
-                <th className="p-3 text-center w-32">การจัดพิมพ์</th>
+                <th className="w-16 px-4 py-4 text-center">ลำดับ</th>
+                <th className="px-4 py-4">เลขใบสั่งซื้อ PO</th>
+                <th className="px-4 py-4">เลขใบตรวจรับ RC</th>
+                <th className="px-4 py-4">Supplier</th>
+                <th className="px-4 py-4">วันที่รับของ</th>
+                <th className="px-4 py-4 text-right">การจัดพิมพ์</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 font-medium text-slate-600 text-xs sm:text-sm">
-              {visibleReceipts.map((r, index) => (
-                <tr key={r.id} className="hover:bg-slate-50/60 transition-colors duration-150 group">
-                  <td className="p-3 text-center">
-                    {mode === 'UNPRINTED' ? (
-                      <input type="checkbox" checked={selectedIds.includes(r.id)} onChange={() => toggleSelect(r.id)} className="accent-orange-500 cursor-pointer h-4 w-4 rounded" />
-                    ) : (
-                      <span />
+            <tbody className="divide-y divide-slate-100">
+              {visibleReceipts.map((receipt, index) => (
+                <tr key={receipt.id} className="transition hover:bg-teal-50/40">
+                  <td className="px-4 py-4 text-center">
+                    {mode === 'UNPRINTED' && (
+                      <input
+                        type="checkbox"
+                        aria-label={`เลือก ${receipt.code}`}
+                        checked={selectedIds.includes(receipt.id)}
+                        onChange={() => toggleSelect(receipt.id)}
+                        className="h-4 w-4 accent-teal-700"
+                      />
                     )}
                   </td>
-                  <td className="p-3 text-center font-bold text-slate-400 font-sans text-xs">{index + 1}</td>
-                  <td className="p-3 font-mono font-bold text-slate-400 text-xs">{r.purchaseOrderCode}</td>
-                  <td className="p-3 font-mono font-black text-slate-900 group-hover:text-orange-500 transition-colors text-xs sm:text-sm">{r.code}</td>
-                  <td className="p-3 font-bold text-slate-800">{r.supplier}</td>
-                  <td className="p-3 font-semibold text-slate-500 font-sans">{formatDateTh(r.receivedAt)}</td>
-                  <td className="p-3 text-center select-none">
-                    {mode === 'UNPRINTED' ? (
-                      <button
-                        type="button"
-                        onClick={() => handlePrintClick(r.id)}
-                        disabled={printingId === r.id}
-                        className={`px-4 py-1.5 text-xs font-black rounded-xl border tracking-wide shadow-sm active:scale-95 transform transition-all duration-200 ${
-                          printingId === r.id
-                            ? 'bg-orange-400 border-orange-400 text-white cursor-not-allowed shadow-none'
-                            : 'bg-slate-800 hover:bg-slate-900 text-white border-slate-900 hover:-translate-y-0.5'
-                        }`}
-                      >
-                        {printingId === r.id ? 'สร้างฉลาก...' : 'พิมพ์ฉลาก'}
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => handleReprintClick(r.id)}
-                        disabled={printingId === r.id}
-                        className={`px-4 py-1.5 text-xs font-black rounded-xl border tracking-wide shadow-sm active:scale-95 transform transition-all duration-200 ${
-                          printingId === r.id
-                            ? 'bg-blue-400 border-blue-400 text-white cursor-not-allowed shadow-none'
-                            : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200 hover:-translate-y-0.5'
-                        }`}
-                      >
-                        {printingId === r.id ? 'เตรียมงาน...' : 'พิมพ์ซ้ำ'}
-                      </button>
-                    )}
-                  </td>
+                  <td className="px-4 py-4 text-center text-xs font-semibold text-slate-400">{index + 1}</td>
+                  <td className="px-4 py-4 font-mono text-xs font-semibold text-slate-500">{receipt.purchaseOrderCode}</td>
+                  <td className="px-4 py-4 font-mono font-bold text-slate-950">{receipt.code}</td>
+                  <td className="px-4 py-4 font-semibold text-slate-800">{receipt.supplier}</td>
+                  <td className="px-4 py-4 font-medium text-slate-500">{formatDateTh(receipt.receivedAt)}</td>
+                  <td className="px-4 py-4 text-right">{renderPrintAction(receipt)}</td>
                 </tr>
               ))}
-
-              {visibleReceipts.length === 0 && (
-                <tr>
-                  <td colSpan={7} className="text-center text-slate-400 font-bold italic py-12 text-sm select-none">
-                    {mode === 'UNPRINTED' ? '✨ ไม่มีรายการบิลค้างพิมพ์บาร์โค้ดในระบบขณะนี้' : 'ไม่พบข้อมูลใบรับสินค้าที่ตรงกับตัวกรองค้นหา'}
-                  </td>
-                </tr>
-              )}
             </tbody>
           </table>
         </div>
-      </div>
+      </section>
 
-      {/* 🟦 3. แผงควบคุมคำสั่งพิมพ์กลุ่มอัจฉริยะท้ายบิล (Batch Print Action Tray Container) */}
       {mode === 'UNPRINTED' && selectedIds.length > 0 && (
-        <div className="bg-slate-800 border border-slate-900 rounded-2xl p-4 shadow-[0_10px_30px_rgba(30,41,59,0.15)] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 select-none animate-slideUp">
-          <div className="text-xs font-black text-slate-300 flex items-center gap-1.5">
-            <Sparkles className="w-4 h-4 text-orange-400 Regal-Breathing-Pulse" /> 
-            <span>เลือกบิลรวมเข้าแผงคิวงานแล้ว</span> 
-            <span className="text-white text-sm font-sans px-1.5 py-0.5 bg-slate-700 rounded-md shadow-inner">{selectedIds.length}</span> 
-            <span>ใบตรวจรับพัสดุ</span>
+        <aside className="sticky bottom-3 z-20 flex flex-col gap-3 rounded-2xl border border-slate-800 bg-slate-900 p-4 text-white shadow-xl sm:flex-row sm:items-center sm:justify-between" aria-label="คำสั่งพิมพ์รายการที่เลือก">
+          <div className="flex items-center gap-2 text-sm font-semibold">
+            <Sparkles className="h-4 w-4 text-teal-300" />
+            เลือกแล้ว {selectedIds.length} ใบตรวจรับ
           </div>
-          
-          <div className="flex items-center gap-2 select-none w-full sm:w-auto">
-            <button type="button" className="flex-1 sm:flex-none h-9 px-4 bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold text-xs rounded-xl active:scale-95 transition-all" onClick={() => setSelectedIds([])}>ยกเลิกการเลือก</button>
-            
-            {/* 🟢 [ROUTING FIXED] ปรับปุ่มพิมพ์กลุ่มพ่วงรหัสตัวแปร shopSlug ยิงพุ่งตรงเข้าเป้าหมายอย่างแม่นยำ ไร้อาการเด้งสะบัด */}
+          <div className="grid grid-cols-2 gap-2 sm:flex">
+            <button
+              type="button"
+              onClick={() => setSelectedIds([])}
+              className="min-h-11 rounded-xl border border-slate-600 bg-slate-800 px-4 text-sm font-semibold text-slate-100 hover:bg-slate-700"
+            >
+              ยกเลิกการเลือก
+            </button>
             <button
               type="button"
               onClick={() => {
                 const targetSlug = shopSlug || 'advancetech';
                 navigate(`/${targetSlug}/pos/purchases/barcodes/print?ids=${selectedIds.join(',')}`);
               }}
-              className="flex-1 sm:flex-none h-9 px-4 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-black text-xs rounded-xl border border-orange-400/10 shadow-lg transform active:scale-95 hover:-translate-y-0.5 transition-all duration-300 flex items-center justify-center gap-1"
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-teal-600 px-4 text-sm font-bold text-white hover:bg-teal-500"
             >
-              <Printer className="w-3.5 h-3.5 text-orange-100" />
-              <span>พิมพ์กลุ่มรายการที่เลือก ({selectedIds.length})</span>
+              <Printer className="h-4 w-4" />
+              พิมพ์ที่เลือก ({selectedIds.length})
             </button>
           </div>
-        </div>
+        </aside>
       )}
     </div>
   );
-};
-
-export default BarcodePrintTable;
+}

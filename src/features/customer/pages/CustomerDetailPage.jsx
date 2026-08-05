@@ -1,18 +1,17 @@
 import React from 'react';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
+
+import CustomerDetailWorkspace from '../components/workspace/CustomerDetailWorkspace';
 
 const CustomerDetailPage = () => {
+  const navigate = useNavigate();
   const { customerId } = useParams();
 
   return (
-    <div className="p-4">
-      <div className="text-lg font-bold">รายละเอียดลูกค้า</div>
-      <div className="text-sm text-gray-600 mt-1">Customer ID: {customerId}</div>
-
-      <div className="mt-4 text-sm">
-        แท็บ “เครดิต/ลูกหนี้” จะถูกวางในหน้านี้
-      </div>
-    </div>
+    <CustomerDetailWorkspace
+      customerId={customerId}
+      onBack={() => navigate('..')}
+    />
   );
 };
 

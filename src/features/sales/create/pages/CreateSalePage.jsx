@@ -1,12 +1,15 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Search, ShoppingBag } from 'lucide-react';
+import { Search } from 'lucide-react';
 
 import useSalesStore from '@/features/sales/store/salesStore';
 import { useCreateSaleWorkflow } from '../index';
 import { SaleCustomerSection as CustomerSection } from '../customer';
 import PaymentSection from '../components/PaymentSection';
 import SaleItemTable from '../components/SaleItemTable';
+import SaleWorkspaceHeader from '../components/workspace/SaleWorkspaceHeader';
+import SaleWorkspacePanel from '../components/workspace/SaleWorkspacePanel';
+import SalePriceTypeSelector from '../components/workspace/SalePriceTypeSelector';
 import SaleItemSearchDialog from '../item-search/components/SaleItemSearchDialog';
 import PosHeldCartPanel from '../../held-cart/components/PosHeldCartPanel';
 import CoreSalesHelpDrawer from '../../help/CoreSalesHelpDrawer';
@@ -68,64 +71,77 @@ const QuickSalePage = ({
     setTimeout(() => barcodeInputRef.current?.focus?.(), 100);
   };
 
+  const activeHeldCart = sale.heldCart.panel.activeCart;
+  const heldCartSaveState = sale.heldCart.panel.saveState;
+
+  const pageTitle = sourceContext
+    ? `ขายสินค้าจากใบจอง ${sourceContext.sourceCode}`
+    : activeHeldCart
+      ? `ทำรายการขายต่อ ${activeHeldCart.code}`
+      : 'ขายสินค้า';
+
+  const pageDescription = sourceContext
+    ? 'ตรวจสอบลูกค้า รายการสินค้า และการชำระเงินก่อนยืนยันการขายจากใบจอง'
+    : 'ค้นหาลูกค้า เพิ่มสินค้า รับชำระเงิน และออกเอกสารจากหน้าจอเดียว';
+
+  const pageStatus = sourceContext
+    ? `${sourceContext.sourceType} #${sourceContext.sourceId} · ล็อกรายการตามใบจอง`
+    : activeHeldCart
+      ? heldCartSaveState === 'saving'
+        ? 'กำลังบันทึกรายการพัก'
+        : heldCartSaveState === 'failed'
+          ? 'บันทึกรายการพักไม่สำเร็จ'
+          : heldCartSaveState === 'pending'
+            ? 'รายการพักรอบันทึก'
+            : 'บันทึกรายการพักอัตโนมัติแล้ว'
+      : 'พร้อมเริ่มรายการขายใหม่';
+
+  const pageTone = sourceContext
+    ? 'info'
+    : heldCartSaveState === 'failed'
+      ? 'critical'
+      : activeHeldCart
+        ? 'warn'
+        : 'good';
+
   return (
-    <div className="w-full h-full p-2 md:p-3 space-y-3 max-w-[1600px] mx-auto text-slate-800 selection:bg-orange-500 selection:text-white animate-fadeIn text-xs md:text-sm antialiased font-sans">
-      <div className={`flex flex-wrap items-center justify-between gap-2 rounded-2xl border px-4 py-2.5 ${sourceContext ? 'border-blue-200 bg-blue-50' : 'border-orange-200 bg-orange-50'}`}>
-        <div>
-          <strong className={sourceContext ? 'text-blue-800' : 'text-orange-800'}>
-            {sourceContext
-              ? `รายการขายจากใบจอง ${sourceContext.sourceCode}`
-              : sale.heldCart.panel.activeCart
-                ? `กำลังทำต่อ ${sale.heldCart.panel.activeCart.code}`
-                : 'รายการขายใหม่'}
-          </strong>
-          {sourceContext ? (
-            <span className="ml-2 text-[10px] font-black text-blue-600">
-              {sourceContext.sourceType} #{sourceContext.sourceId} · ไม่สร้างใบจอง POS ซ้ำ
-            </span>
-          ) : sale.heldCart.panel.activeCart ? (
-            <span className="ml-2 text-[10px] font-bold text-orange-600">
-              {sale.heldCart.panel.saveState === 'saving'
-                ? 'กำลังบันทึก...'
-                : sale.heldCart.panel.saveState === 'failed'
-                  ? 'บันทึกไม่สำเร็จ'
-                  : sale.heldCart.panel.saveState === 'pending'
-                    ? 'รอบันทึก'
-                    : 'บันทึกอัตโนมัติแล้ว'}
-            </span>
-          ) : null}
-        </div>
+    <div className="mx-auto min-h-full w-full max-w-[1600px] space-y-4 p-3 text-slate-800 selection:bg-teal-200 selection:text-teal-950 md:p-5">
+      <SaleWorkspaceHeader
+        title={pageTitle}
+        description={pageDescription}
+        status={pageStatus}
+        tone={pageTone}
+        onHelp={() => setIsHelpOpen(true)}
+      />
 
-        <button
-          type="button"
-          onClick={() => setIsHelpOpen(true)}
-          className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 shadow-sm hover:bg-slate-100"
-          aria-label="เปิดคู่มือการขายสินค้า"
-        >
-          คู่มือ
-        </button>
-      </div>
-
-      {sourceContext ? (
-        <div className="rounded-xl border border-blue-200 bg-white px-3 py-2 text-xs font-bold text-blue-800">
-          รายการสินค้าถูกโหลดจาก ProductReservation authority และล็อกไว้เพื่อรักษาจำนวน ราคา และ StockItem/SimpleLot ของใบจองเดิม
-        </div>
-      ) : null}
-
-      {sale.heldCart.panel.activeCart && sale.heldCart.panel.validation && (
-        <div className={`rounded-xl border px-3 py-2 text-xs font-bold ${sale.heldCart.panel.validation.ready ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-rose-200 bg-rose-50 text-rose-700'}`}>
-          {sale.heldCart.panel.validation.ready
-            ? 'สินค้าจากใบพักยังพร้อมขาย'
-            : `มีสินค้าไม่พร้อม ${(sale.heldCart.panel.validation.lines || []).filter((item) => !item.available).length} รายการ`}
-          {sale.heldCart.panel.validation.priceChanged ? ' · มีราคาเปลี่ยน กรุณาตรวจสอบ' : ''}
+      {sourceContext && (
+        <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm leading-6 text-blue-900">
+          รายการสินค้าถูกอ้างอิงจากใบจองเดิม จำนวน ราคา และรายการสต๊อกจึงถูกล็อกไว้จนกว่าจะยืนยันการขาย
         </div>
       )}
 
-      <div className="grid grid-cols-12 gap-3 items-start">
-        <div className="col-span-12 lg:col-span-4 flex">
-          <div
-            className={`bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden w-full ${checkoutLocked ? 'pointer-events-none opacity-60' : ''}`}
-            aria-disabled={checkoutLocked}
+      {activeHeldCart && sale.heldCart.panel.validation && (
+        <div
+          className={`rounded-xl border px-4 py-3 text-sm font-medium ${
+            sale.heldCart.panel.validation.ready
+              ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+              : 'border-rose-200 bg-rose-50 text-rose-800'
+          }`}
+        >
+          {sale.heldCart.panel.validation.ready
+            ? 'สินค้าจากรายการพักยังพร้อมขาย'
+            : `มีสินค้าไม่พร้อม ${(sale.heldCart.panel.validation.lines || []).filter((item) => !item.available).length} รายการ`}
+          {sale.heldCart.panel.validation.priceChanged ? ' · มีราคาเปลี่ยน กรุณาตรวจสอบก่อนยืนยัน' : ''}
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-12">
+        <div className="xl:col-span-4">
+          <SaleWorkspacePanel
+            title="ข้อมูลลูกค้า"
+            description="ค้นหาลูกค้าเดิมหรือกรอกข้อมูลที่จำเป็นสำหรับรายการขาย"
+            locked={checkoutLocked}
+            className="overflow-hidden"
           >
             <CustomerSection
               phoneInputRef={phoneInputRef}
@@ -136,46 +152,25 @@ const QuickSalePage = ({
               hideCustomerDetails={hideCustomerDetails}
               onSaleModeSelect={sale.presentation.setSaleMode}
             />
-          </div>
+          </SaleWorkspacePanel>
         </div>
 
-        <div
-          className={`col-span-12 lg:col-span-8 space-y-3 ${cartLocked ? 'pointer-events-none opacity-75' : ''}`}
-          aria-disabled={cartLocked}
-        >
-          <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm space-y-3 select-none">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 pb-2 border-b border-slate-100">
-              <div className="flex items-center gap-1.5">
-                <div className="p-1 bg-slate-900/5 text-slate-800 rounded-md">
-                  <ShoppingBag className="w-4 h-4" />
-                </div>
-                <h2 className="text-xs md:text-sm font-black text-slate-900">
-                  {sourceLocked ? 'รายการสินค้าจากใบจองออนไลน์' : 'ค้นหาและเพิ่มสินค้าเข้ารายการขาย'}
-                </h2>
-              </div>
-
-              <div className="flex items-center gap-3 text-[11px] font-black text-slate-400">
-                <div className="flex gap-3.5 items-center">
-                  {['wholesale', 'technician', 'retail'].map((type) => (
-                    <label key={type} className="flex items-center gap-1 cursor-pointer hover:text-slate-700 transition-colors">
-                      <input
-                        type="radio"
-                        value={type}
-                        checked={sale.presentation.selectedPriceType === type}
-                        onChange={(event) => sale.presentation.setSelectedPriceType(event.target.value)}
-                        disabled={cartLocked}
-                        className="accent-slate-900 h-3.5 w-3.5"
-                      />
-                      <span>{type === 'wholesale' ? 'ราคาส่ง' : type === 'technician' ? 'ราคาช่าง' : 'ราคาปลีก'}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {!sourceLocked ? (
-              <div className="relative pt-0.5">
-                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-3 transform -translate-y-1/2" />
+        <div className="space-y-4 xl:col-span-8">
+          <SaleWorkspacePanel
+            title={sourceLocked ? 'สินค้าจากใบจอง' : 'ค้นหาและเพิ่มสินค้า'}
+            description={sourceLocked ? 'รายการถูกล็อกตามข้อมูลในใบจองเดิม' : 'ค้นหาด้วยบาร์โค้ด หมายเลขเครื่อง ชื่อ หรือรุ่นสินค้า'}
+            locked={cartLocked}
+            action={
+              <SalePriceTypeSelector
+                value={sale.presentation.selectedPriceType}
+                onChange={sale.presentation.setSelectedPriceType}
+                disabled={cartLocked}
+              />
+            }
+          >
+            {!sourceLocked && (
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                 <input
                   ref={barcodeInputRef}
                   type="text"
@@ -183,30 +178,35 @@ const QuickSalePage = ({
                   onKeyDown={sale.itemSearch.handleBarcodeSearch}
                   disabled={checkoutLocked}
                   data-testid="pos-sale-barcode-input"
-                  className="h-8 w-full pl-9 pr-4 text-xs font-mono font-black bg-slate-50 focus:bg-white border border-slate-200 focus:border-slate-900 rounded-lg outline-none shadow-inner transition-all"
+                  className="h-11 w-full rounded-xl border border-slate-300 bg-white pl-10 pr-4 text-sm font-medium text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 disabled:cursor-not-allowed disabled:bg-slate-100"
                 />
               </div>
-            ) : null}
-          </div>
+            )}
+          </SaleWorkspacePanel>
 
-          <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm min-h-[380px] flex flex-col justify-between">
-            <div className="space-y-2">
-              <h2 className="text-xs md:text-sm font-black text-slate-900 uppercase tracking-wider select-none">รายการสินค้าในตะกร้าขาย</h2>
-              <div className="overflow-x-auto rounded-xl border border-slate-100">
-                <SaleItemTable
-                  items={sale.cart.items}
-                  onRemove={sourceLocked ? () => {} : sale.cart.remove}
-                  onUpdate={sourceLocked ? () => {} : sale.cart.update}
-                  onChangeSimpleQuantity={sourceLocked ? () => {} : sale.cart.setSimpleQuantity}
-                  billDiscount={sale.presentation.billDiscount}
-                />
-              </div>
+          <SaleWorkspacePanel
+            title="รายการสินค้าในตะกร้า"
+            description="ตรวจสอบจำนวน ราคา และส่วนลดก่อนรับชำระเงิน"
+            locked={cartLocked}
+            className="min-h-[360px]"
+          >
+            <div className="overflow-x-auto rounded-xl border border-slate-200">
+              <SaleItemTable
+                items={sale.cart.items}
+                onRemove={sourceLocked ? () => {} : sale.cart.remove}
+                onUpdate={sourceLocked ? () => {} : sale.cart.update}
+                onChangeSimpleQuantity={sourceLocked ? () => {} : sale.cart.setSimpleQuantity}
+                billDiscount={sale.presentation.billDiscount}
+              />
             </div>
-          </div>
+          </SaleWorkspacePanel>
         </div>
       </div>
 
-      <div className="w-full bg-white border border-slate-200 rounded-2xl shadow-sm p-1">
+      <SaleWorkspacePanel
+        title="สรุปยอดและรับชำระเงิน"
+        description="ตรวจสอบส่วนลด ภาษี วิธีรับชำระ และเอกสารก่อนยืนยันการขาย"
+      >
         <PaymentSection
           saleItems={sale.cart.items}
           isSubmitting={sale.completion.isSubmitting}
@@ -222,7 +222,7 @@ const QuickSalePage = ({
           heldCartDisabled={sourceLocked}
           saleExecutionDisabled={saleExecutionDisabled}
         />
-      </div>
+      </SaleWorkspacePanel>
 
       {!checkoutLocked && !sourceLocked && (
         <PosHeldCartPanel
@@ -236,7 +236,7 @@ const QuickSalePage = ({
         />
       )}
 
-      {!sourceLocked ? (
+      {!sourceLocked && (
         <SaleItemSearchDialog
           open={sale.itemSearch.selection.open}
           query={sale.itemSearch.selection.query}
@@ -246,12 +246,9 @@ const QuickSalePage = ({
           onSelect={sale.itemSearch.selectSearchItem}
           onClose={sale.itemSearch.closeSelection}
         />
-      ) : null}
+      )}
 
-      <CoreSalesHelpDrawer
-        open={isHelpOpen}
-        onClose={() => setIsHelpOpen(false)}
-      />
+      <CoreSalesHelpDrawer open={isHelpOpen} onClose={() => setIsHelpOpen(false)} />
     </div>
   );
 };

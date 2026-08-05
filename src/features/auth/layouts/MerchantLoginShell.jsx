@@ -2,99 +2,109 @@ import React from 'react';
 import { Link, Outlet } from 'react-router-dom';
 import {
   FaArrowLeft,
-  FaBolt,
-  FaBriefcase,
+  FaBoxes,
+  FaCheckCircle,
   FaShieldAlt,
+  FaStore,
 } from 'react-icons/fa';
 
-const features = [
+const values = [
   {
-    title: 'จัดการครบวงจร',
-    detail: 'ร้านค้า สินค้า สต๊อก และการขาย',
-    Icon: FaBriefcase,
+    title: 'ข้อมูลร้านเดียวกัน',
+    detail: 'สินค้า สต๊อก ราคา และการขายเชื่อมต่อในระบบเดียว',
+    Icon: FaBoxes,
+    tone: 'bg-sky-50 text-sky-700',
   },
   {
-    title: 'ใช้งานง่าย',
-    detail: 'ออกแบบมาเพื่อให้ใช้งานได้อย่างสะดวก',
-    Icon: FaBolt,
+    title: 'เข้าสู่ร้านที่ได้รับสิทธิ์',
+    detail: 'พนักงานเห็นเฉพาะร้านและขอบเขตงานของตนเอง',
+    Icon: FaStore,
+    tone: 'bg-violet-50 text-violet-700',
   },
   {
-    title: 'ปลอดภัย',
-    detail: 'ระบบรักษาความปลอดภัยมาตรฐานสากล',
+    title: 'ใช้งานอย่างมั่นใจ',
+    detail: 'ระบบตรวจสอบตัวตนและสิทธิ์ก่อนเข้าสู่ Merchant Center',
     Icon: FaShieldAlt,
+    tone: 'bg-emerald-50 text-emerald-700',
   },
 ];
 
-const FeatureCard = ({ title, detail, Icon }) => (
-  <div className="group rounded-[20px] border border-orange-100 bg-white/95 px-5 py-5 text-center shadow-[0_10px_30px_rgba(15,23,42,0.055)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_34px_rgba(15,23,42,0.09)]">
-    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-[15px] border border-orange-100 bg-[#fff5e9] text-lg text-orange-500 shadow-sm">
-      <Icon />
-    </div>
-    <p className="mt-3 text-sm font-black text-slate-950">{title}</p>
-    <p className="mt-1 text-[11px] font-semibold leading-5 text-slate-500">{detail}</p>
-  </div>
-);
-
 const MerchantLoginShell = () => (
-  <div className="min-h-screen bg-[radial-gradient(circle_at_50%_10%,#ffffff_0%,#f7fafc_45%,#f2f6fa_100%)] text-slate-900">
-    <header className="border-b border-slate-200/80 bg-white/95 shadow-sm backdrop-blur">
-      <div className="mx-auto flex min-h-[78px] max-w-[1440px] items-center justify-between gap-4 px-5 sm:px-8 lg:px-10">
-        <Link to="/partner-portal" className="flex items-center gap-3" aria-label="กลับหน้าพาร์ทเนอร์">
-          <div className="flex h-11 w-11 items-center justify-center rounded-[13px] bg-gradient-to-br from-orange-400 to-orange-600 text-base font-black text-white shadow-[0_8px_18px_rgba(234,88,12,0.25)]">SS</div>
+  <div className="min-h-screen bg-[#f6f7f6] font-sans text-slate-900 antialiased">
+    <header className="h-16 border-b border-slate-200 bg-white px-5">
+      <div className="mx-auto flex h-full max-w-6xl items-center justify-between gap-4">
+        <Link
+          to="/partner-portal"
+          className="flex items-center gap-3 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2"
+          aria-label="กลับหน้า Merchant Center"
+        >
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-600 text-xs font-black text-white shadow-sm">
+            SS
+          </span>
           <div>
-            <p className="text-[15px] font-black tracking-[0.02em] text-slate-950">SADUAKSABUY</p>
-            <p className="text-[9px] font-bold tracking-[0.2em] text-slate-500">HYPERLOCAL MARKET</p>
+            <p className="text-sm font-black tracking-tight text-slate-950">SADUAKSABUY</p>
+            <p className="text-[9px] font-extrabold tracking-[0.12em] text-slate-400">MERCHANT CENTER</p>
           </div>
         </Link>
 
-        <Link to="/partner-portal" className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-bold text-slate-700 shadow-sm transition hover:border-orange-200 hover:bg-orange-50 hover:text-orange-600">
-          <FaArrowLeft className="text-orange-500" /> กลับหน้าพาร์ทเนอร์
+        <Link
+          to="/partner-portal"
+          className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-bold text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500"
+        >
+          <FaArrowLeft className="text-[10px]" />
+          กลับหน้าสำหรับร้านค้า
         </Link>
       </div>
     </header>
 
-    <main>
-      <div className="mx-auto flex min-h-[calc(100vh-142px)] max-w-[1440px] items-center px-4 py-8 sm:px-7 lg:px-10">
-        <section className="grid w-full overflow-hidden rounded-[30px] border border-slate-200 bg-white shadow-[0_26px_72px_rgba(15,23,42,0.13)] lg:grid-cols-[1.12fr_0.88fr]">
-          <div className="hidden min-h-[700px] flex-col bg-gradient-to-br from-[#fffaf4] via-[#fff7ed] to-[#fffdf9] px-12 py-12 lg:flex xl:px-16">
-            <div className="text-center">
-              <h1 className="text-[36px] font-black leading-tight tracking-[-0.025em] text-slate-950">
-                <span className="text-orange-500">เข้าสู่ระบบ</span> Merchant Center
-              </h1>
-              <p className="mt-3 text-base font-semibold text-slate-600">จัดการร้านค้าของคุณได้อย่างมีประสิทธิภาพ</p>
-            </div>
+    <main className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-6xl items-center px-5 py-8">
+      <section className="grid w-full overflow-hidden rounded-[30px] border border-slate-200 bg-white shadow-[0_24px_64px_rgba(15,23,42,0.10)] lg:grid-cols-[minmax(0,1fr)_430px]">
+        <div className="relative hidden overflow-hidden border-r border-slate-100 bg-gradient-to-br from-white via-[#fbfcfb] to-sky-50/60 p-10 lg:flex lg:flex-col xl:p-12">
+          <div className="absolute -left-20 top-10 h-64 w-64 rounded-full bg-sky-100/65 blur-3xl" />
+          <div className="absolute -bottom-20 right-0 h-64 w-64 rounded-full bg-amber-100/45 blur-3xl" />
 
-            <div className="mx-auto mt-7 w-full max-w-[650px]">
-              <img
-                src="/assets/merchant-pos-hardware.svg"
-                alt="ชุดอุปกรณ์ POS สำหรับ Merchant Center"
-                className="h-auto w-full select-none drop-shadow-[0_20px_22px_rgba(15,23,42,0.12)]"
-                draggable="false"
-              />
-            </div>
-
-            <div className="mt-5 grid grid-cols-3 gap-5">
-              {features.map((feature) => (
-                <FeatureCard key={feature.title} {...feature} />
-              ))}
-            </div>
+          <div className="relative">
+            <p className="inline-flex rounded-full bg-amber-50 px-3 py-1.5 text-[10px] font-extrabold tracking-[0.08em] text-amber-700">
+              สำหรับเจ้าของร้านและทีมงาน
+            </p>
+            <h1 className="mt-5 max-w-xl text-4xl font-black leading-[1.08] tracking-[-0.045em] text-slate-950 xl:text-5xl">
+              เข้าสู่ร้านของคุณ
+              <span className="block text-slate-700">แล้วเริ่มทำงานต่อได้ทันที</span>
+            </h1>
+            <p className="mt-4 max-w-xl text-sm font-medium leading-7 text-slate-600">
+              ใช้อีเมลหรือเบอร์โทรศัพท์ที่ได้รับสิทธิ์ เพื่อเข้าสู่ร้านและพื้นที่ทำงานที่ถูกต้อง
+            </p>
           </div>
 
-          <div className="flex items-center bg-white px-5 py-8 sm:px-9 lg:px-12 xl:px-14">
-            <div className="mx-auto w-full max-w-[520px]">
-              <Outlet />
+          <div className="relative mt-8 grid gap-3">
+            {values.map(({ title, detail, Icon, tone }) => (
+              <div key={title} className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-sm">
+                <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${tone}`}>
+                  <Icon />
+                </span>
+                <div>
+                  <p className="text-sm font-extrabold text-slate-950">{title}</p>
+                  <p className="mt-1 text-[11px] font-medium leading-5 text-slate-500">{detail}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="relative mt-auto pt-8">
+            <div className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-2 text-[11px] font-bold text-emerald-700">
+              <FaCheckCircle />
+              ระบบจะพาเข้าสู่ร้านและหน้าที่ของคุณโดยอัตโนมัติ
             </div>
           </div>
-        </section>
-      </div>
+        </div>
+
+        <div className="flex items-center bg-white px-5 py-8 sm:px-8 lg:px-9 xl:px-10">
+          <div className="mx-auto w-full max-w-md">
+            <Outlet />
+          </div>
+        </div>
+      </section>
     </main>
-
-    <footer className="border-t border-slate-200 bg-white py-4 text-center text-[11px] font-semibold text-slate-500">
-      <div className="mx-auto flex max-w-[1440px] flex-wrap items-center justify-center gap-x-8 gap-y-2 px-5 sm:justify-between sm:px-8 lg:px-10">
-        <span>© 2026 SADUAKSABUY.COM. All rights reserved.</span>
-        <span>เวอร์ชัน 2.1.0</span>
-      </div>
-    </footer>
   </div>
 );
 

@@ -119,23 +119,60 @@ const HeaderPos = () => {
 
   const navLinkClass = ({ isActive }) =>
     [
-      'inline-flex h-11 items-center justify-center gap-2 rounded-xl border px-3 text-[13px] font-semibold whitespace-nowrap transition-colors',
+      'pos-header-nav-item inline-flex h-11 items-center justify-center gap-2 rounded-xl border px-3 text-[13px] font-semibold whitespace-nowrap transition-colors',
       'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2',
-      isActive
-        ? '!border-emerald-400 !bg-emerald-200 !text-emerald-950 hover:!bg-emerald-300'
-        : '!border-teal-200 !bg-teal-50 !text-teal-900 hover:!border-teal-300 hover:!bg-teal-100 hover:!text-teal-950',
+      isActive ? 'pos-header-nav-active' : 'pos-header-nav-idle',
     ].join(' ');
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-teal-200 bg-teal-50/95 text-slate-900 shadow-[0_1px_3px_rgba(13,148,136,0.08)] backdrop-blur-xl">
+    <header className="pos-header-shell sticky top-0 z-40 w-full border-b border-teal-200 bg-teal-50/95 text-slate-900 shadow-[0_1px_3px_rgba(13,148,136,0.08)] backdrop-blur-xl">
+      <style>{`
+        header.pos-header-shell nav.pos-header-nav a.pos-header-nav-item {
+          box-shadow: none !important;
+          text-shadow: none !important;
+          opacity: 1 !important;
+        }
+
+        header.pos-header-shell nav.pos-header-nav a.pos-header-nav-idle {
+          background-color: #ccfbf1 !important;
+          border-color: #5eead4 !important;
+          color: #134e4a !important;
+        }
+
+        header.pos-header-shell nav.pos-header-nav a.pos-header-nav-idle:hover {
+          background-color: #99f6e4 !important;
+          border-color: #2dd4bf !important;
+          color: #042f2e !important;
+        }
+
+        header.pos-header-shell nav.pos-header-nav a.pos-header-nav-active,
+        header.pos-header-shell nav.pos-header-nav a.pos-header-nav-active:hover {
+          background-color: #a7f3d0 !important;
+          border-color: #34d399 !important;
+          color: #064e3b !important;
+        }
+
+        header.pos-header-shell nav.pos-header-nav a.pos-header-nav-idle > span,
+        header.pos-header-shell nav.pos-header-nav a.pos-header-nav-idle > svg {
+          color: #134e4a !important;
+          stroke: currentColor !important;
+        }
+
+        header.pos-header-shell nav.pos-header-nav a.pos-header-nav-active > span,
+        header.pos-header-shell nav.pos-header-nav a.pos-header-nav-active > svg {
+          color: #064e3b !important;
+          stroke: currentColor !important;
+        }
+      `}</style>
+
       <div className="mx-auto flex h-16 max-w-[1680px] items-center gap-3 px-3 pl-16 sm:px-5 sm:pl-16 lg:px-5">
-        <nav className="hidden min-w-0 flex-1 items-center gap-2 overflow-x-auto py-2 scrollbar-none md:flex">
+        <nav className="pos-header-nav hidden min-w-0 flex-1 items-center gap-2 overflow-x-auto py-2 scrollbar-none md:flex">
           {navItems.map((item) => {
             const Icon = item.icon;
             return (
               <NavLink key={item.path} to={item.path} end={item.end} className={navLinkClass}>
-                <Icon className="h-4 w-4 shrink-0 text-current" />
-                <span className="text-current">{item.label}</span>
+                <Icon className="h-4 w-4 shrink-0" />
+                <span>{item.label}</span>
               </NavLink>
             );
           })}

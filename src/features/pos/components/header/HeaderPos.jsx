@@ -118,7 +118,13 @@ const HeaderPos = () => {
   const logoutLabel = isGlobalSuperAdmin ? 'ออกจากระบบ Superadmin' : 'ออกจากระบบ';
 
   const navLinkClass = ({ isActive }) =>
-    ['ads-nav-button', isActive ? 'ads-nav-button-active' : 'ads-nav-button-idle'].join(' ');
+    [
+      'inline-flex h-11 items-center justify-center gap-2 rounded-xl border px-3 text-[13px] font-semibold whitespace-nowrap transition-colors',
+      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2',
+      isActive
+        ? '!border-emerald-400 !bg-emerald-200 !text-emerald-950 hover:!bg-emerald-300'
+        : '!border-teal-200 !bg-teal-50 !text-teal-900 hover:!border-teal-300 hover:!bg-teal-100 hover:!text-teal-950',
+    ].join(' ');
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-teal-200 bg-teal-50/95 text-slate-900 shadow-[0_1px_3px_rgba(13,148,136,0.08)] backdrop-blur-xl">
@@ -128,8 +134,8 @@ const HeaderPos = () => {
             const Icon = item.icon;
             return (
               <NavLink key={item.path} to={item.path} end={item.end} className={navLinkClass}>
-                <Icon className="h-4 w-4 shrink-0" />
-                <span>{item.label}</span>
+                <Icon className="h-4 w-4 shrink-0 text-current" />
+                <span className="text-current">{item.label}</span>
               </NavLink>
             );
           })}

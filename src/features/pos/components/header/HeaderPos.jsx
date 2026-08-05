@@ -119,23 +119,22 @@ const HeaderPos = () => {
 
   const navLinkClass = ({ isActive }) =>
     [
-      'relative inline-flex h-16 items-center justify-center gap-2 px-3 text-[13px] font-medium whitespace-nowrap transition-colors',
-      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-teal-500',
-      'after:absolute after:inset-x-3 after:bottom-0 after:h-0.5 after:rounded-full after:transition-colors',
+      'group relative inline-flex h-11 items-center justify-center gap-2 rounded-xl border px-3.5 text-[13px] font-medium whitespace-nowrap transition-all duration-150',
+      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-50',
       isActive
-        ? 'text-teal-700 after:bg-teal-500'
-        : 'text-slate-500 after:bg-transparent hover:text-slate-900 hover:after:bg-slate-200',
+        ? '!border-teal-200 !bg-teal-50 !text-teal-800 shadow-[0_1px_2px_rgba(13,148,136,0.08)]'
+        : '!border-transparent !bg-white/70 !text-slate-600 hover:!border-slate-200 hover:!bg-white hover:!text-slate-950',
     ].join(' ');
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-slate-200 bg-white/95 text-slate-800 backdrop-blur-xl">
-      <div className="mx-auto flex h-16 max-w-[1680px] items-center gap-3 px-3 pl-16 sm:px-5 sm:pl-16 lg:px-6">
-        <nav className="hidden min-w-0 flex-1 items-center overflow-x-auto scrollbar-none md:flex">
+    <header className="sticky top-0 z-40 w-full border-b border-slate-200 bg-slate-50/95 text-slate-800 shadow-[0_1px_3px_rgba(15,23,42,0.04)] backdrop-blur-xl">
+      <div className="mx-auto flex h-16 max-w-[1680px] items-center gap-3 px-3 pl-16 sm:px-5 sm:pl-16 lg:px-5">
+        <nav className="hidden min-w-0 flex-1 items-center gap-1.5 overflow-x-auto py-2 scrollbar-none md:flex">
           {navItems.map((item) => {
             const Icon = item.icon;
             return (
               <NavLink key={item.path} to={item.path} end={item.end} className={navLinkClass}>
-                <Icon className="h-4 w-4 shrink-0" />
+                <Icon className="h-4 w-4 shrink-0 transition-colors group-hover:text-current" />
                 <span>{item.label}</span>
               </NavLink>
             );
@@ -148,13 +147,13 @@ const HeaderPos = () => {
 
         <div className="ml-auto flex shrink-0 items-center gap-2">
           {!isGlobalSuperAdmin && (
-            <div className="hidden max-w-[180px] items-center px-2 py-2 text-sm font-medium text-slate-700 sm:flex">
+            <div className="hidden max-w-[180px] items-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 sm:flex">
               <span className="truncate">{compactBranchName}</span>
             </div>
           )}
 
           {isGlobalSuperAdmin && (
-            <div className="hidden items-center gap-2 rounded-full bg-red-50 px-3 py-2 text-red-700 lg:flex">
+            <div className="hidden items-center gap-2 rounded-xl border border-red-100 bg-red-50 px-3 py-2 text-red-700 lg:flex">
               <Terminal className="h-3.5 w-3.5" />
               <span className="text-[10px] font-semibold uppercase tracking-[0.12em]">Superadmin</span>
             </div>
@@ -165,7 +164,7 @@ const HeaderPos = () => {
               <button
                 type="button"
                 onClick={() => setShowMenu((value) => !value)}
-                className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 transition hover:border-teal-300 hover:text-teal-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500"
+                className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:border-teal-300 hover:bg-teal-50 hover:text-teal-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500"
                 aria-expanded={showMenu}
                 aria-label="เปิดเมนูผู้ใช้งาน"
               >

@@ -41,7 +41,9 @@ assertIncludes(scanner, 'w-full', 'Scanner input must use available mobile width
 assertIncludes(scanner, 'valueRef', 'Scanner auto-submit must read the latest value');
 assertIncludes(scanner, 'autoComplete="off"', 'Scanner input must disable browser autocomplete');
 assertIncludes(table, 'md:hidden', 'Audit results must expose mobile cards');
-assertIncludes(table, 'hidden md:block', 'Audit results must preserve desktop table layout');
+assertIncludes(table, 'md:block', 'Audit results must expose a desktop-only region');
+assertIncludes(table, '<table', 'Audit results must preserve desktop table semantics');
+assertIncludes(table, 'overflow-x-auto', 'Desktop audit table must remain safe for narrower desktop widths');
 assertIncludes(table, 'break-all', 'Barcode and serial values must not overflow narrow screens');
 assertIncludes(table, 'min-h-11', 'Pagination controls must remain touch sized');
 

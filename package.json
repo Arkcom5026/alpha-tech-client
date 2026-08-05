@@ -17,6 +17,7 @@
     "test:purchase-workspace-standard": "node tests/purchase-workspace-standard.contract.test.js",
     "test:purchase-receipt-workspace-standard": "node tests/purchase-receipt-workspace-standard.contract.test.js",
     "test:purchase-barcode-workspace-standard": "node tests/purchase-barcode-workspace-standard.contract.test.js",
+    "test:purchase-stock-intake-workspace-standard": "node tests/purchase-stock-intake-workspace-standard.contract.test.js",
     "test:quick-receipt": "vitest run src/features/receiving/quick-stock/api/quickReceiptSessionApi.test.js src/features/receiving/quick-stock/components/QuickReceiptSessionPanel.test.jsx src/features/receiving/quick-stock/pages/QuickStockPage.test.jsx",
     "test:tax-expense": "vitest run src/features/taxExpense/api/taxExpenseApi.test.js",
     "test:auth-receipt": "vitest run src/features/customerReceipt/__tests__/customerReceiptAuthRegression.test.js",

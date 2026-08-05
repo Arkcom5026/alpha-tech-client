@@ -10,8 +10,7 @@ const newItem = () => ({
   withholdingTaxAmount: '0',
 });
 
-const TaxExpenseCreateForm = ({ categories, payees, saving, onSubmit }) => {
-  const [supplierId, setSupplierId] = useState('');
+const TaxExpenseCreateForm = ({ categories, saving, onSubmit, payeeConnectionReady = false }) => {
   const [documentNumber, setDocumentNumber] = useState('');
   const [expenseDate, setExpenseDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [note, setNote] = useState('');
@@ -31,13 +30,16 @@ const TaxExpenseCreateForm = ({ categories, payees, saving, onSubmit }) => {
   const submit = async (event) => {
     event.preventDefault();
     setFormError('');
-    if (!supplierId || !documentNumber || items.some((item) => !item.categoryId || !item.description || !item.unitAmount)) {
-      setFormError('กรุณาระบุผู้รับเงิน เลขเอกสาร และข้อมูลค่าใช้จ่ายทุกรายการ');
+    if (!payeeConnectionReady) {
+      setFormError('ฟอร์มบันทึกค่าใช้จ่ายกำลังรอการเชื่อม ExpensePayee อย่างเป็นทางการ');
+      return;
+    }
+    if (!documentNumber || items.some((item) => !item.categoryId || !item.description || !item.unitAmount)) {
+      setFormError('กรุณาระบุเลขเอกสารและข้อมูลค่าใช้จ่ายทุกรายการ');
       return;
     }
     try {
       await onSubmit({
-        supplierId: Number(supplierId),
         documentNumber,
         expenseDate,
         documentDate: expenseDate,
@@ -67,13 +69,13 @@ const TaxExpenseCreateForm = ({ categories, payees, saving, onSubmit }) => {
         <span className="text-sm font-black text-slate-900">฿{total.toLocaleString('th-TH', { minimumFractionDigits: 2 })}</span>
       </div>
 
+      {!payeeConnectionReady && <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs font-semibold text-amber-800">ขณะนี้สามารถจัดการผู้รับเงินค่าใช้จ่ายได้แล้ว แต่การบันทึกเอกสารจะเปิดใน Increment ถัดไปหลังเชื่อม <code>expensePayeeId</code> ครบทั้ง Client และ Server</div>}
       {formError && <div className="rounded-lg bg-rose-50 p-3 text-xs font-semibold text-rose-700">{formError}</div>}
 
       <div className="grid gap-3 md:grid-cols-3">
         <label className="text-xs font-bold text-slate-700">ผู้รับเงิน
-          <select value={supplierId} onChange={(event) => setSupplierId(event.target.value)} className="mt-1 h-9 w-full rounded-lg border border-slate-200 bg-white px-2">
-            <option value="">เลือก Supplier ที่รับค่าใช้จ่าย</option>
-            {payees.map((payee) => <option key={payee.id} value={payee.id}>{payee.name}{payee.taxId ? ` · ${payee.taxId}` : ''}</option>)}
+          <select disabled className="mt-1 h-9 w-full rounded-lg border border-slate-200 bg-slate-100 px-2 text-slate-500">
+            <option>รอเชื่อม ExpensePayee กับเอกสารค่าใช้จ่าย</option>
           </select>
         </label>
         <label className="text-xs font-bold text-slate-700">เลขที่เอกสาร
@@ -105,9 +107,8 @@ const TaxExpenseCreateForm = ({ categories, payees, saving, onSubmit }) => {
         <textarea value={note} onChange={(event) => setNote(event.target.value)} rows={2} className="mt-1 w-full rounded-lg border border-slate-200 p-2 text-xs" />
       </label>
 
-      <button type="submit" disabled={saving || !categories.length || !payees.length} className="inline-flex h-10 items-center gap-2 rounded-lg bg-slate-900 px-4 text-sm font-bold text-white disabled:bg-slate-300"><Save size={16} />{saving ? 'กำลังบันทึก...' : 'บันทึกค่าใช้จ่าย'}</button>
+      <button type="submit" disabled={saving || !categories.length || !payeeConnectionReady} className="inline-flex h-10 items-center gap-2 rounded-lg bg-slate-900 px-4 text-sm font-bold text-white disabled:bg-slate-300"><Save size={16} />{saving ? 'กำลังบันทึก...' : 'บันทึกค่าใช้จ่าย'}</button>
       {!categories.length && <p className="text-xs text-amber-700">ยังไม่มีหมวดค่าใช้จ่ายสำหรับร้านนี้</p>}
-      {!payees.length && <p className="text-xs text-amber-700">ยังไม่มี Supplier ที่กำหนดบทบาท EXPENSE_PAYEE</p>}
     </form>
   );
 };

@@ -2,8 +2,9 @@ import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'react-toastify';
 import { useBranchStore } from '@/features/branch/store/branchStore';
 import {
+  createExpensePayee,
   createTaxExpense,
-  listExpensePayeeSuppliers,
+  listExpensePayees,
   listTaxExpenseCategories,
   listTaxExpenses,
 } from '../api/taxExpenseApi';
@@ -20,9 +21,10 @@ const useTaxExpenseWorkspace = () => {
   const [payees, setPayees] = useState([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [savingPayee, setSavingPayee] = useState(false);
   const [error, setError] = useState('');
 
-  const load = useCallback(async () => {
+  const load = useCallback(async ({ payeeQuery = '' } = {}) => {
     if (!branchId) return;
     setLoading(true);
     setError('');
@@ -30,7 +32,7 @@ const useTaxExpenseWorkspace = () => {
       const [expenseData, categoryData, payeeData] = await Promise.all([
         listTaxExpenses(),
         listTaxExpenseCategories(),
-        listExpensePayeeSuppliers(),
+        listExpensePayees({ q: payeeQuery }),
       ]);
       setExpenses(list(expenseData));
       setCategories(list(categoryData));
@@ -52,6 +54,34 @@ const useTaxExpenseWorkspace = () => {
     load();
   }, [branchId, ensureSelectedBranchAction, load]);
 
+  const searchPayees = useCallback(async (q) => {
+    setLoading(true);
+    try {
+      setPayees(list(await listExpensePayees({ q })));
+    } catch (requestError) {
+      const message = requestError?.response?.data?.message || 'ไม่สามารถค้นหาผู้รับเงินค่าใช้จ่ายได้';
+      toast.error(message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const submitPayee = useCallback(async (payload) => {
+    setSavingPayee(true);
+    try {
+      const created = await createExpensePayee(payload);
+      setPayees((current) => [created, ...current.filter((item) => item.id !== created.id)]);
+      toast.success('เพิ่มผู้รับเงินค่าใช้จ่ายแล้ว');
+      return created;
+    } catch (requestError) {
+      const message = requestError?.response?.data?.message || 'ไม่สามารถเพิ่มผู้รับเงินค่าใช้จ่ายได้';
+      toast.error(message);
+      throw requestError;
+    } finally {
+      setSavingPayee(false);
+    }
+  }, []);
+
   const submitExpense = useCallback(async (payload) => {
     setSaving(true);
     try {
@@ -69,7 +99,19 @@ const useTaxExpenseWorkspace = () => {
   }, []);
 
   return {
-    branchId, currentBranch, expenses, categories, payees, loading, saving, error, load, submitExpense,
+    branchId,
+    currentBranch,
+    expenses,
+    categories,
+    payees,
+    loading,
+    saving,
+    savingPayee,
+    error,
+    load,
+    searchPayees,
+    submitPayee,
+    submitExpense,
   };
 };
 

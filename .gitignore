@@ -3,6 +3,9 @@
 .env.*
 !.env.example
 
+# Playwright local authentication state (contains session secrets)
+/playwright/.auth/
+
 # Build output
 /dist
 /build

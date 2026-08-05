@@ -20,8 +20,6 @@ $ViteErr = Join-Path $env:TEMP 'alphatech-repair-e2e-vite.err.log'
 $ViteProcess = $null
 
 $RequiredEnvironmentNames = @(
-  'E2E_TEST_USERNAME',
-  'E2E_TEST_PASSWORD',
   'REPAIR_INTAKE_E2E_BRANCH_SLUG',
   'REPAIR_INTAKE_E2E_JOB_ID',
   'REPAIR_INTAKE_E2E_JOB_NO'
@@ -117,6 +115,10 @@ try {
   if ((Get-Date) -ge $Deadline) {
     throw "Dedicated Repair E2E client did not become ready at $WebBaseUrl within 60 seconds."
   }
+
+  Write-Host 'Ensuring reusable Merchant E2E authentication state...' -ForegroundColor Cyan
+  node src/features/e2e/auth/ensureMerchantAuthState.js
+  if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
   npx playwright test src/features/repair/e2e/intake-completion/repairIntakeCompletion.browser.spec.js
   if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

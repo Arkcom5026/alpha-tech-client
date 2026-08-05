@@ -1,7 +1,9 @@
 $ErrorActionPreference = 'Stop'
 
 $ClientRoot = Resolve-Path (Join-Path $PSScriptRoot '..\..\..\..\..')
-$TestApiBaseUrl = if ($env:E2E_TEST_API_BASE_URL) {
+$ApiBaseUrl = if ($env:E2E_REPAIR_API_BASE_URL) {
+  $env:E2E_REPAIR_API_BASE_URL.TrimEnd('/')
+} elseif ($env:E2E_TEST_API_BASE_URL) {
   $env:E2E_TEST_API_BASE_URL.TrimEnd('/')
 } else {
   'http://localhost:3000'
@@ -30,7 +32,13 @@ $MissingEnvironmentNames = @(
   }
 )
 if ($MissingEnvironmentNames.Count -gt 0) {
-  throw "Missing Repair Browser E2E environment: $($MissingEnvironmentNames -join ', '). Set the values emitted by the Test-DB fixture in this PowerShell session."
+  throw "Missing Repair Browser E2E environment: $($MissingEnvironmentNames -join ', '). Set the values emitted by the paired Server fixture in this PowerShell session."
+}
+
+if ($env:REPAIR_INTAKE_E2E_DATABASE_MODE -eq 'MAIN_TEST_TENANT') {
+  if ($env:REPAIR_INTAKE_E2E_BRANCH_SLUG -ne 'test-shop') {
+    throw 'Main-DB Repair Browser E2E is fixed to slug test-shop.'
+  }
 }
 
 function Test-TcpPort {
@@ -56,7 +64,7 @@ function Test-TcpPort {
 
 Push-Location $ClientRoot
 try {
-  $ApiUri = [Uri]$TestApiBaseUrl
+  $ApiUri = [Uri]$ApiBaseUrl
   $ApiPort = if ($ApiUri.IsDefaultPort) {
     if ($ApiUri.Scheme -eq 'https') { 443 } else { 80 }
   } else {
@@ -64,7 +72,7 @@ try {
   }
 
   if (-not (Test-TcpPort -HostName $ApiUri.Host -Port $ApiPort)) {
-    throw "Test API is not listening at $TestApiBaseUrl. Start the Server with npm run start:test-database first."
+    throw "Repair E2E API is not listening at $ApiBaseUrl. Start the Server with the same runtime authority used by the fixture."
   }
 
   if (Test-TcpPort -HostName $WebHost -Port $WebPort) {
@@ -75,11 +83,11 @@ try {
 
   $PreviousViteApiBaseUrl = $env:VITE_API_BASE_URL
   $PreviousE2EBaseUrl = $env:E2E_BASE_URL
-  $env:VITE_API_BASE_URL = $TestApiBaseUrl
+  $env:VITE_API_BASE_URL = $ApiBaseUrl
   $env:E2E_BASE_URL = $WebBaseUrl
 
   Write-Host "Starting dedicated Repair E2E client at $WebBaseUrl" -ForegroundColor Cyan
-  Write-Host "Repair E2E API authority: $TestApiBaseUrl" -ForegroundColor Cyan
+  Write-Host "Repair E2E API authority: $ApiBaseUrl" -ForegroundColor Cyan
 
   $ViteProcess = Start-Process `
     -FilePath 'npm.cmd' `

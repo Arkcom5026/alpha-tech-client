@@ -40,7 +40,7 @@ const normalizePath = (value = '') => {
   return normalized || '/';
 };
 
-const HeaderPos = () => {
+const HeaderPos = ({ onMobileModuleSelect }) => {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const { shopSlug } = useParams();
@@ -129,44 +129,52 @@ const HeaderPos = () => {
     return currentPath === itemPath || currentPath.startsWith(`${itemPath}/`);
   };
 
+  const handleNavItemSelect = (item, mobile = false) => {
+    navigate(item.path);
+    if (mobile && !isGlobalSuperAdmin) onMobileModuleSelect?.(item);
+  };
+
+  const renderNavButton = (item, mobile = false) => {
+    const Icon = item.icon;
+    const isActive = isNavItemActive(item);
+
+    return (
+      <button
+        key={`${mobile ? 'mobile' : 'desktop'}-${item.path}`}
+        type="button"
+        onClick={() => handleNavItemSelect(item, mobile)}
+        aria-current={isActive ? 'page' : undefined}
+        className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl border px-3 text-[13px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2"
+        style={
+          isActive
+            ? {
+                backgroundColor: '#d1fae5',
+                borderColor: '#6ee7b7',
+                color: '#065f46',
+              }
+            : {
+                backgroundColor: '#f0fdfa',
+                borderColor: '#99f6e4',
+                color: '#134e4a',
+              }
+        }
+      >
+        <Icon className="h-4 w-4 shrink-0" style={{ color: 'currentColor' }} />
+        <span style={{ color: 'currentColor' }}>{item.label}</span>
+      </button>
+    );
+  };
+
   return (
     <header className="sticky top-0 z-40 w-full border-b border-slate-200 bg-slate-50 text-slate-900">
       <div className="mx-auto flex h-16 max-w-[1680px] items-center gap-3 px-3 pl-16 sm:px-5 sm:pl-16 lg:px-5">
         <nav className="hidden min-w-0 flex-1 items-center gap-2 overflow-x-auto py-2 scrollbar-none md:flex">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = isNavItemActive(item);
-
-            return (
-              <button
-                key={item.path}
-                type="button"
-                onClick={() => navigate(item.path)}
-                aria-current={isActive ? 'page' : undefined}
-                className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl border px-3 text-[13px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2"
-                style={
-                  isActive
-                    ? {
-                        backgroundColor: '#d1fae5',
-                        borderColor: '#6ee7b7',
-                        color: '#065f46',
-                      }
-                    : {
-                        backgroundColor: '#f0fdfa',
-                        borderColor: '#99f6e4',
-                        color: '#134e4a',
-                      }
-                }
-              >
-                <Icon className="h-4 w-4 shrink-0" style={{ color: 'currentColor' }} />
-                <span style={{ color: 'currentColor' }}>{item.label}</span>
-              </button>
-            );
-          })}
+          {navItems.map((item) => renderNavButton(item))}
         </nav>
 
         <div className="min-w-0 flex-1 md:hidden">
           <p className="truncate text-sm font-semibold text-slate-950">{compactBranchName}</p>
+          <p className="mt-0.5 text-[11px] text-slate-500">เลือกเมนูหลักจากแถบด้านล่าง</p>
         </div>
 
         <div className="ml-auto flex shrink-0 items-center gap-2">
@@ -232,6 +240,13 @@ const HeaderPos = () => {
           )}
         </div>
       </div>
+
+      <nav
+        className="flex items-center gap-2 overflow-x-auto border-t border-slate-200 bg-white px-3 py-2 scrollbar-none md:hidden"
+        aria-label="เมนูหลัก POS"
+      >
+        {navItems.map((item) => renderNavButton(item, true))}
+      </nav>
     </header>
   );
 };

@@ -4,9 +4,7 @@
 import { useEffect, useState } from 'react';
 import { NavLink, useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
-  Activity,
   BarChart3,
-  ChevronDown,
   CircleDollarSign,
   ClipboardList,
   Home,
@@ -24,7 +22,24 @@ import {
 
 import { useAuthStore } from '@/features/auth/store/authStore';
 import { useBranchStore } from '@/features/branch/store/branchStore';
-import OperationalStatusBadge from '@/features/system/operational-status/components/OperationalStatusBadge';
+
+const getCompactBranchName = (branchName = '', shopSlug = '') => {
+  const value = String(branchName || '').trim();
+
+  if (value.includes('แอดวานซ์ เทค')) {
+    return 'แอดวานซ์ เทค';
+  }
+
+  const compact = value
+    .replace(/^บริษัท\s*/u, '')
+    .replace(/\s*จำกัด.*$/u, '')
+    .replace(/\s*\([^)]*\)\s*$/u, '')
+    .trim();
+
+  if (compact) return compact;
+  if (shopSlug) return shopSlug;
+  return 'ร้านค้า';
+};
 
 const HeaderPos = () => {
   const navigate = useNavigate();
@@ -44,8 +59,6 @@ const HeaderPos = () => {
 
   const normalizedRole = String(role || '').toLowerCase();
   const isSuperAdmin = normalizedRole === 'superadmin';
-  const isAdmin = normalizedRole === 'admin';
-  const canViewOperationalStatus = isAuthenticated && (isSuperAdmin || isAdmin);
   const isSuperAdminRoute = pathname.includes('/superadmin');
   const isGlobalSuperAdmin = isSuperAdmin || isSuperAdminRoute;
 
@@ -53,7 +66,7 @@ const HeaderPos = () => {
     employee?.branchName ||
     fallbackBranchName ||
     (shopSlug ? `ร้านค้าพันธมิตร (${shopSlug})` : 'ไม่ระบุสาขา');
-
+  const compactBranchName = getCompactBranchName(displayBranchName, shopSlug);
   const displayName = employee?.name || user?.username || user?.email || 'ผู้ใช้';
 
   const [showMenu, setShowMenu] = useState(false);
@@ -111,15 +124,13 @@ const HeaderPos = () => {
   ];
 
   const navItems = (isGlobalSuperAdmin ? superAdminNavItems : posNavItems).filter((item) => item.show);
-  const headerModeLabel = isGlobalSuperAdmin ? 'SUPERADMIN' : 'POS';
   const mobileMenuLabel = isGlobalSuperAdmin ? 'เมนู Superadmin' : 'เมนู POS';
-  const userRoleLabel = isGlobalSuperAdmin ? 'Catalog Admin' : 'POS Operator';
   const logoutLabel = isGlobalSuperAdmin ? 'ออกจากระบบ Superadmin' : 'ออกจากระบบ POS';
 
   const navLinkClass = ({ isActive }) =>
     [
       'relative inline-flex items-center justify-center gap-2 overflow-visible rounded-2xl px-4 py-2.5',
-      'text-[13px] font-black whitespace-nowrap border transition-all duration-200',
+      'text-[13px] font-semibold whitespace-nowrap border transition-all duration-200',
       'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/70',
       'focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950',
       'before:absolute before:inset-x-3 before:top-0 before:h-px before:rounded-full before:transition-opacity before:duration-200',
@@ -146,15 +157,15 @@ const HeaderPos = () => {
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-amber-300/95 to-transparent" />
         <div className="pointer-events-none absolute inset-x-1/4 bottom-0 h-10 bg-amber-500/14 blur-2xl" />
 
-        <div className="relative mx-auto flex h-[76px] max-w-[1680px] items-center gap-4 px-6 xl:px-8">
+        <div className="relative mx-auto flex h-[68px] max-w-[1680px] items-center gap-3 px-4 sm:px-5 xl:px-7">
           <div className="flex items-center gap-2 md:hidden">
-            <div className="flex h-9 w-9 items-center justify-center rounded-2xl border border-[#b7791f]/65 bg-slate-950/40 text-orange-300 shadow-inner">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-[#b7791f]/65 bg-slate-950/40 text-orange-300 shadow-inner">
               <Menu className="h-4 w-4" />
             </div>
 
             <select
               onChange={(event) => navigate(event.target.value)}
-              className="h-10 rounded-2xl border border-[#b7791f]/65 bg-slate-900 px-3 text-sm font-black text-white outline-none transition focus:border-orange-400"
+              className="h-11 max-w-[150px] rounded-2xl border border-[#b7791f]/65 bg-slate-900 px-3 text-sm font-semibold text-white outline-none transition focus:border-orange-400"
               defaultValue=""
             >
               <option value="" disabled hidden>
@@ -166,14 +177,6 @@ const HeaderPos = () => {
                 </option>
               ))}
             </select>
-          </div>
-
-          <div className="hidden items-center gap-3 md:flex">
-            <div className="flex h-10 items-center gap-2 rounded-2xl border border-[#b7791f]/70 bg-slate-950/38 px-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_0_18px_rgba(245,158,11,0.12)]">
-              <span className="h-1.5 w-1.5 rounded-full bg-amber-400 shadow-[0_0_0_4px_rgba(245,158,11,0.14)]" />
-              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white">{headerModeLabel}</span>
-            </div>
-            <div className="h-8 w-px bg-gradient-to-b from-transparent via-amber-400/28 to-transparent" />
           </div>
 
           <nav className="hidden min-w-0 flex-1 items-center gap-1.5 md:flex">
@@ -189,31 +192,17 @@ const HeaderPos = () => {
             })}
           </nav>
 
-          <div className="hidden h-9 w-px shrink-0 bg-gradient-to-b from-transparent via-amber-300/25 to-transparent xl:block" />
-
           <div className="ml-auto flex shrink-0 items-center justify-end gap-2">
-            <OperationalStatusBadge enabled={canViewOperationalStatus} />
-
-            {displayBranchName && !isGlobalSuperAdmin && (
-              <div className="hidden max-w-[320px] items-center gap-2 rounded-full border border-[#b7791f]/65 bg-slate-950/28 px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur lg:flex">
-                <div className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-orange-500/10 text-orange-300 ring-1 ring-amber-400/35">
-                  <Activity className="h-3.5 w-3.5" />
-                  <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-emerald-400 ring-2 ring-slate-900 animate-[pulse_3.5s_ease-in-out_infinite]" />
-                </div>
-
-                <div className="min-w-0">
-                  <p className="text-[9px] font-black uppercase tracking-[0.18em] text-orange-300/85">
-                    Branch online
-                  </p>
-                  <p className="truncate text-xs font-black text-slate-100">{displayBranchName}</p>
-                </div>
+            {!isGlobalSuperAdmin && (
+              <div className="hidden max-w-[180px] items-center rounded-full border border-[#b7791f]/55 bg-slate-950/24 px-3 py-2 text-sm font-semibold text-slate-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] sm:flex">
+                <span className="truncate">{compactBranchName}</span>
               </div>
             )}
 
             {isGlobalSuperAdmin && (
               <div className="hidden items-center gap-2 rounded-full border border-red-400/20 bg-red-500/10 px-3 py-2 text-red-300 lg:flex">
                 <Terminal className="h-3.5 w-3.5" />
-                <span className="text-[10px] font-black uppercase tracking-[0.18em]">Superadmin</span>
+                <span className="text-[10px] font-semibold uppercase tracking-[0.12em]">Superadmin</span>
               </div>
             )}
 
@@ -222,29 +211,18 @@ const HeaderPos = () => {
                 <button
                   type="button"
                   onClick={() => setShowMenu((value) => !value)}
-                  className="flex h-11 items-center gap-2 rounded-full border border-[#b7791f]/65 bg-slate-950/28 px-3 text-left text-slate-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] transition hover:border-amber-400/80 hover:bg-white/10 hover:shadow-[0_0_0_1px_rgba(251,191,36,0.10)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400/70"
+                  className="flex h-11 w-11 items-center justify-center rounded-full border border-[#b7791f]/65 bg-slate-950/28 text-slate-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] transition hover:border-amber-400/80 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400/70"
                   aria-expanded={showMenu}
                   aria-label="เปิดเมนูผู้ใช้งาน"
                 >
-                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-900 text-slate-300 ring-1 ring-amber-400/30">
-                    <UserCircle className="h-4 w-4" />
-                  </div>
-
-                  <div className="hidden min-w-0 sm:block">
-                    <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-slate-500">
-                      {userRoleLabel}
-                    </p>
-                    <p className="max-w-[130px] truncate text-xs font-black">{displayName}</p>
-                  </div>
-
-                  <ChevronDown className={`h-3.5 w-3.5 text-slate-500 transition ${showMenu ? 'rotate-180' : ''}`} />
+                  <UserCircle className="h-6 w-6" />
                 </button>
 
                 {showMenu && (
                   <div className="absolute right-0 mt-2 w-56 overflow-hidden rounded-2xl border border-[#7a5b21]/85 bg-slate-950/95 p-2 text-slate-100 shadow-2xl shadow-slate-950/40 backdrop-blur-xl">
                     <div className="px-3 py-2">
-                      <p className="truncate text-sm font-black">{displayName}</p>
-                      <p className="mt-0.5 truncate text-[11px] font-semibold text-slate-500">
+                      <p className="truncate text-sm font-semibold">{displayName}</p>
+                      <p className="mt-0.5 truncate text-[11px] text-slate-400">
                         {isGlobalSuperAdmin ? 'Catalog Governance' : displayBranchName}
                       </p>
                     </div>
@@ -257,21 +235,16 @@ const HeaderPos = () => {
                         setShowMenu(false);
                         navigate(getRoutePath('/settings'));
                       }}
-                      className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-xs font-bold text-slate-300 transition hover:bg-white/10 hover:text-white"
+                      className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-xs font-medium text-slate-300 transition hover:bg-white/10 hover:text-white"
                     >
                       <Settings className="h-3.5 w-3.5 text-orange-300" />
                       {isGlobalSuperAdmin ? 'Settings' : 'ตั้งค่าระบบ'}
                     </button>
 
-                    <div className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-xs font-bold text-emerald-300">
-                      <ShieldCheck className="h-3.5 w-3.5" />
-                      Session พร้อมใช้งาน
-                    </div>
-
                     <button
                       type="button"
                       onClick={handleLogout}
-                      className="mt-1 flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-xs font-black text-red-300 transition hover:bg-red-500/10"
+                      className="mt-1 flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-xs font-semibold text-red-300 transition hover:bg-red-500/10"
                     >
                       <LogOut className="h-3.5 w-3.5" />
                       {logoutLabel}

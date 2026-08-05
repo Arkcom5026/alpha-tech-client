@@ -19,6 +19,8 @@ const PaymentSection = ({
   onSaleOptionChange,
   onConfirmSale,
   onSaveHeldCart,
+  heldCartDisabled = false,
+  saleExecutionDisabled = false,
 }) => {
   const {
     billDiscount,
@@ -108,9 +110,6 @@ const PaymentSection = ({
               <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 w-full h-full flex flex-col justify-center space-y-1 text-slate-400">
                 <div className="text-xs font-black text-slate-800">การรับเงิน (โหมดเครดิตหนี้)</div>
                 <div className="text-[11px] font-bold">🚫 ระบบปิดล็อกอินพุตรับเงินสด/เงินโอน/รูดบัตรเครดิตทันที</div>
-                <div className="text-[10px] font-medium text-slate-500 pt-2 border-t border-slate-200/60 mt-2">
-                  * อนุญาตให้ตัดสิทธิ์หักลบได้เฉพาะยอดเงินมัดจำล่วงหน้า (ถ้ามี) ผ่านช่องมัดจำในแผงซ้ายเท่านั้นครับ
-                </div>
               </div>
             )}
           </div>
@@ -122,7 +121,7 @@ const PaymentSection = ({
               totalToPay={calculation.totalToPay}
               grandTotalPaid={calculation.grandTotalPaid}
               safeChangeAmount={calculation.changeAmount}
-              isConfirmEnabled={payment.confirmation.enabled}
+              isConfirmEnabled={payment.confirmation.enabled && !saleExecutionDisabled}
               isSubmitting={isSubmitting}
               onConfirm={payment.confirmation.confirm}
               paymentError={payment.feedback.error}
@@ -134,6 +133,8 @@ const PaymentSection = ({
               setCurrentSaleMode={payment.saleMode.change}
               hasValidCustomerId={hasValidCustomerId}
               onSaveHeldCart={onSaveHeldCart}
+              heldCartDisabled={heldCartDisabled}
+              saleExecutionDisabled={saleExecutionDisabled}
             />
           </div>
         </div>

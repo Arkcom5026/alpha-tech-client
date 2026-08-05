@@ -1,10 +1,20 @@
 import React, { useEffect } from 'react';
+import { PackageOpen, Trash2 } from 'lucide-react';
 
 const toNumber = (raw) => {
   if (raw === '' || raw === null || raw === undefined) return 0;
   const number = Number(String(raw).replace(/,/g, ''));
   return Number.isFinite(number) ? number : 0;
 };
+
+const formatMoney = (value) =>
+  Number(value || 0).toLocaleString('th-TH', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+
+const inputClass =
+  'h-11 rounded-xl border border-slate-300 bg-white px-3 text-right font-mono text-sm font-semibold text-slate-900 outline-none transition focus:border-teal-600 focus:ring-2 focus:ring-teal-100';
 
 const SaleItemTable = ({ items = [], onRemove, onUpdate, onChangeSimpleQuantity, billDiscount = 0 }) => {
   useEffect(() => {
@@ -80,126 +90,179 @@ const SaleItemTable = ({ items = [], onRemove, onUpdate, onChangeSimpleQuantity,
     onChangeSimpleQuantity?.(item.lineId, toNumber(input?.target?.value));
   };
 
-  const headers = (
-    <tr>
-      <th className="p-2.5 text-center w-12">#</th>
-      <th className="p-2.5 w-[220px]">ชื่อสินค้ารายละเอียด</th>
-      <th className="p-2.5 w-[110px]">ประเภท</th>
-      <th className="p-2.5 text-center w-36">บาร์โค้ด / SN</th>
-      <th className="p-2.5 text-center w-16">จำนวน</th>
-      <th className="p-2.5 text-right w-24">ราคาป้าย</th>
-      <th className="p-2.5 text-right w-24">ขายจริง</th>
-      <th className="p-2.5 text-right w-20">ส่วนลด</th>
-      <th className="p-2.5 text-right w-20">ลดท้ายบิล</th>
-      <th className="p-2.5 text-right w-24">ราคาสุทธิ</th>
-      <th className="p-2.5 text-center w-16">จัดการ</th>
-    </tr>
-  );
-
   if (!Array.isArray(items) || items.length === 0) {
     return (
-      <table className="w-full text-left border border-slate-200 rounded-xl overflow-hidden">
-        <thead className="bg-slate-50 text-slate-500 text-[10px] font-black uppercase tracking-wider border-b border-slate-200 select-none">
-          {headers}
-        </thead>
-        <tbody>
-          <tr>
-            <td colSpan="11" className="p-10 text-center text-slate-400 italic font-bold select-none">
-              📭 ยังไม่มีรายการสินค้าในตะกร้าขายหน้าร้านปัจจุบัน
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      <div className="flex min-h-52 flex-col items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-5 text-center">
+        <PackageOpen className="h-9 w-9 text-slate-400" />
+        <p className="mt-3 font-semibold text-slate-800">ยังไม่มีสินค้าในรายการขาย</p>
+        <p className="mt-1 text-sm text-slate-500">ค้นหาหรือสแกนสินค้าเพื่อเพิ่มลงในตะกร้า</p>
+      </div>
     );
   }
 
-  return (
-    <table className="w-full text-left border-collapse border border-slate-200 text-xs md:text-sm">
-      <thead className="bg-slate-50 text-slate-500 text-[10px] font-black uppercase tracking-wider border-b border-slate-200 select-none">
-        {headers}
-      </thead>
-      <tbody className="divide-y divide-slate-100 font-semibold text-slate-600 text-[11px] sm:text-xs">
-        {items.map((item, index) => {
-          const quantity = Number(item.quantity || 1);
-          const basePrice = Number(item.price || 0) * quantity;
-          const discountWithoutBill = Number(item.discountWithoutBill || 0);
-          const billShare = Number(item.billShare || 0);
-          const discount = Number(item.discount || 0);
-          const sellingPrice = Number.isFinite(Number(item.sellingPrice))
-            ? Number(item.sellingPrice)
-            : Math.max(0, Number(item.price || 0) - discountWithoutBill);
-          const net = Math.max(0, basePrice - discount);
-          const displayIdentifier = item.displayIdentifier || item.serialNumber || item.barcode || '-';
-          const identifierType = item.identifierType || (item.serialNumber ? 'SN' : 'BARCODE');
+  const renderValues = (item) => {
+    const quantity = Number(item.quantity || 1);
+    const basePrice = Number(item.price || 0) * quantity;
+    const discountWithoutBill = Number(item.discountWithoutBill || 0);
+    const billShare = Number(item.billShare || 0);
+    const discount = Number(item.discount || 0);
+    const sellingPrice = Number.isFinite(Number(item.sellingPrice))
+      ? Number(item.sellingPrice)
+      : Math.max(0, Number(item.price || 0) - discountWithoutBill);
+    const net = Math.max(0, basePrice - discount);
+    const displayIdentifier = item.displayIdentifier || item.serialNumber || item.barcode || '-';
+    const identifierType = item.identifierType || (item.serialNumber ? 'SN' : 'BARCODE');
 
+    return { quantity, basePrice, discountWithoutBill, billShare, sellingPrice, net, displayIdentifier, identifierType };
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="space-y-3 lg:hidden">
+        {items.map((item, index) => {
+          const values = renderValues(item);
           return (
-            <tr key={item.lineId} className="hover:bg-slate-50/50 transition-colors">
-              <td className="p-2.5 text-center font-bold font-mono text-slate-400">{index + 1}</td>
-              <td className="p-2.5 font-black text-slate-900 truncate max-w-[200px]" title={item.productName}>
-                {item.productName}
-              </td>
-              <td className="p-2.5 text-slate-500">{item.lineType === 'SIMPLE' ? 'แบบจำนวน' : 'รายชิ้น/SN'}</td>
-              <td className="p-2.5 border-l border-slate-100 text-center select-all">
-                <div className="font-mono font-black text-slate-800">{displayIdentifier}</div>
-                <div className="mt-0.5 text-[9px] font-bold uppercase text-slate-400">{identifierType}</div>
-              </td>
-              <td className="p-2.5 text-center font-mono">
-                {item.lineType === 'SIMPLE' ? (
+            <article key={item.lineId} className="rounded-2xl border border-slate-200 bg-white p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-xs font-medium text-slate-500">รายการที่ {index + 1}</p>
+                  <h3 className="mt-1 truncate font-semibold text-slate-900">{item.productName}</h3>
+                  <p className="mt-1 break-all font-mono text-xs text-slate-500">
+                    {values.identifierType}: {values.displayIdentifier}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => onRemove?.(item.lineId)}
+                  className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-rose-200 bg-rose-50 text-rose-700 transition hover:bg-rose-100"
+                  aria-label={`ลบ ${item.productName || 'สินค้า'}`}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+
+              <div className="mt-4 grid grid-cols-2 gap-3">
+                <label className="space-y-1 text-xs font-medium text-slate-600">
+                  <span>จำนวน</span>
+                  {item.lineType === 'SIMPLE' ? (
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      min="1"
+                      max={item.quantityAvailable}
+                      step="1"
+                      className={`${inputClass} w-full text-center`}
+                      value={values.quantity}
+                      onChange={(event) => handleSimpleQuantityChange(item, event)}
+                    />
+                  ) : (
+                    <div className="flex h-11 items-center justify-center rounded-xl bg-slate-100 font-mono font-semibold text-slate-800">{values.quantity}</div>
+                  )}
+                </label>
+                <label className="space-y-1 text-xs font-medium text-slate-600">
+                  <span>ราคาขายจริง</span>
                   <input
                     type="number"
                     inputMode="decimal"
-                    min="1"
-                    max={item.quantityAvailable}
-                    step="1"
-                    className="w-16 h-7 border border-slate-200 rounded-lg px-1.5 text-center font-mono font-black text-slate-900 bg-white focus:border-slate-900 outline-none text-xs"
-                    value={quantity}
-                    onChange={(event) => handleSimpleQuantityChange(item, event)}
-                    aria-label={`จำนวน ${item.productName || 'สินค้าแบบจำนวน'}`}
+                    step="0.01"
+                    className={`${inputClass} w-full`}
+                    value={values.sellingPrice === 0 ? '' : values.sellingPrice}
+                    onChange={(event) => handleSellingPriceChange(item, event)}
                   />
-                ) : quantity}
-              </td>
-              <td className="p-2.5 font-mono text-right text-slate-400">{basePrice.toFixed(2)}</td>
-              <td className="p-2.5 text-right">
-                <input
-                  type="number"
-                  inputMode="decimal"
-                  step="0.01"
-                  className="w-20 h-7 border border-slate-200 rounded-lg px-2 text-right font-mono font-black text-slate-900 bg-white focus:border-slate-900 outline-none text-xs"
-                  placeholder="0.00"
-                  value={sellingPrice === 0 ? '' : sellingPrice}
-                  onChange={(event) => handleSellingPriceChange(item, event)}
-                />
-              </td>
-              <td className="p-2.5 text-right">
-                <input
-                  type="number"
-                  inputMode="decimal"
-                  min="0"
-                  step="0.01"
-                  className="w-16 h-7 border border-slate-200 rounded-lg px-1.5 text-right font-mono text-orange-600 bg-white focus:border-slate-900 outline-none text-xs"
-                  placeholder="0.00"
-                  value={discountWithoutBill === 0 ? '' : discountWithoutBill}
-                  onChange={(event) => handleDiscountChange(item, event)}
-                />
-              </td>
-              <td className="p-2.5 text-right font-mono text-slate-500">{billShare.toFixed(2)}</td>
-              <td className="p-2.5 text-right font-mono font-black text-slate-900">
-                {net.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </td>
-              <td className="p-2.5 text-center select-none">
-                <button
-                  type="button"
-                  className="h-6 px-2 rounded-lg border border-rose-100 text-rose-500 font-black hover:bg-rose-50 text-[10px] shadow-sm bg-white transition-all"
-                  onClick={() => onRemove?.(item.lineId)}
-                >
-                  ลบออก
-                </button>
-              </td>
-            </tr>
+                </label>
+                <label className="space-y-1 text-xs font-medium text-slate-600">
+                  <span>ส่วนลดรายการ</span>
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    min="0"
+                    step="0.01"
+                    className={`${inputClass} w-full`}
+                    value={values.discountWithoutBill === 0 ? '' : values.discountWithoutBill}
+                    onChange={(event) => handleDiscountChange(item, event)}
+                  />
+                </label>
+                <div className="space-y-1 text-xs font-medium text-slate-600">
+                  <span>ยอดสุทธิ</span>
+                  <div className="flex h-11 items-center justify-end rounded-xl bg-emerald-50 px-3 font-mono font-semibold text-emerald-800">
+                    {formatMoney(values.net)}
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-3 flex justify-between rounded-xl bg-slate-50 px-3 py-2 text-xs text-slate-600">
+                <span>ราคาป้าย {formatMoney(values.basePrice)}</span>
+                <span>ลดท้ายบิล {formatMoney(values.billShare)}</span>
+              </div>
+            </article>
           );
         })}
-      </tbody>
-    </table>
+      </div>
+
+      <div className="hidden overflow-x-auto rounded-2xl border border-slate-200 lg:block">
+        <table className="min-w-[1180px] w-full border-collapse text-left text-sm">
+          <thead className="border-b border-slate-200 bg-slate-50 text-xs font-semibold text-slate-600">
+            <tr>
+              <th className="px-3 py-3 text-center">#</th>
+              <th className="px-3 py-3">สินค้า</th>
+              <th className="px-3 py-3">ประเภท</th>
+              <th className="px-3 py-3 text-center">บาร์โค้ด / SN</th>
+              <th className="px-3 py-3 text-center">จำนวน</th>
+              <th className="px-3 py-3 text-right">ราคาป้าย</th>
+              <th className="px-3 py-3 text-right">ขายจริง</th>
+              <th className="px-3 py-3 text-right">ส่วนลด</th>
+              <th className="px-3 py-3 text-right">ลดท้ายบิล</th>
+              <th className="px-3 py-3 text-right">สุทธิ</th>
+              <th className="px-3 py-3 text-center">จัดการ</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100 bg-white">
+            {items.map((item, index) => {
+              const values = renderValues(item);
+              return (
+                <tr key={item.lineId} className="transition hover:bg-teal-50/40">
+                  <td className="px-3 py-3 text-center font-mono text-slate-500">{index + 1}</td>
+                  <td className="max-w-[240px] truncate px-3 py-3 font-semibold text-slate-900" title={item.productName}>{item.productName}</td>
+                  <td className="px-3 py-3 text-slate-600">{item.lineType === 'SIMPLE' ? 'แบบจำนวน' : 'รายชิ้น / SN'}</td>
+                  <td className="px-3 py-3 text-center">
+                    <div className="font-mono font-semibold text-slate-800">{values.displayIdentifier}</div>
+                    <div className="mt-1 text-xs text-slate-500">{values.identifierType}</div>
+                  </td>
+                  <td className="px-3 py-3 text-center">
+                    {item.lineType === 'SIMPLE' ? (
+                      <input
+                        type="number"
+                        inputMode="decimal"
+                        min="1"
+                        max={item.quantityAvailable}
+                        step="1"
+                        className={`${inputClass} w-20 text-center`}
+                        value={values.quantity}
+                        onChange={(event) => handleSimpleQuantityChange(item, event)}
+                      />
+                    ) : values.quantity}
+                  </td>
+                  <td className="px-3 py-3 text-right font-mono text-slate-600">{formatMoney(values.basePrice)}</td>
+                  <td className="px-3 py-3 text-right">
+                    <input type="number" inputMode="decimal" step="0.01" className={`${inputClass} w-28`} value={values.sellingPrice === 0 ? '' : values.sellingPrice} onChange={(event) => handleSellingPriceChange(item, event)} />
+                  </td>
+                  <td className="px-3 py-3 text-right">
+                    <input type="number" inputMode="decimal" min="0" step="0.01" className={`${inputClass} w-24`} value={values.discountWithoutBill === 0 ? '' : values.discountWithoutBill} onChange={(event) => handleDiscountChange(item, event)} />
+                  </td>
+                  <td className="px-3 py-3 text-right font-mono text-slate-600">{formatMoney(values.billShare)}</td>
+                  <td className="px-3 py-3 text-right font-mono font-semibold text-emerald-800">{formatMoney(values.net)}</td>
+                  <td className="px-3 py-3 text-center">
+                    <button type="button" onClick={() => onRemove?.(item.lineId)} className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 px-3 text-xs font-semibold text-rose-700 transition hover:bg-rose-100">
+                      <Trash2 className="h-3.5 w-3.5" /> ลบ
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
   );
 };
 

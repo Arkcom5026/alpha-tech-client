@@ -94,7 +94,7 @@ assert(shell.includes('useSaleCustomerHydration'), 'Composition shell must deleg
 assert(shell.includes('projectSaleCustomerSection'), 'Composition shell must consume projection');
 assert(shell.includes('<SaleCustomerSearch'), 'Composition shell must render search presentation');
 assert(shell.includes('<SaleCustomerSearchResults'), 'Composition shell must render results presentation');
-assert(shell.includes('!view.selection.selectedCustomer && ('), 'Search results must be hidden after a customer is selected');
+assert(shell.includes('!view.selection.selectedCustomer ? ('), 'Search results must be hidden after a customer is selected');
 assert(shell.includes('<SaleCustomerDetailsForm'), 'Composition shell must render details presentation');
 assert(!shell.includes('/repairs/'), 'Composition shell must not own Repair workflow');
 

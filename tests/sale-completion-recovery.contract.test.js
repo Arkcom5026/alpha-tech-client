@@ -126,9 +126,13 @@ describe('Sale Completion Recovery authority', () => {
     expect(capturedFailure.failure.retryable).toBe(true);
   });
 
-  it('freezes checkout mutation surfaces while preserving the existing-command retry path', async () => {
+  it('freezes checkout mutation surfaces through workspace lock authority while preserving the existing-command retry path', async () => {
     const pageSource = await readFile(
       new URL('../src/features/sales/create/pages/CreateSalePage.jsx', import.meta.url),
+      'utf8'
+    );
+    const panelSource = await readFile(
+      new URL('../src/features/sales/create/components/workspace/SaleWorkspacePanel.jsx', import.meta.url),
       'utf8'
     );
     const summarySource = await readFile(
@@ -137,10 +141,14 @@ describe('Sale Completion Recovery authority', () => {
     );
 
     expect(pageSource).toContain('sale.completion.recovery?.preserveCheckout');
-    expect(pageSource).toContain("checkoutLocked ? 'pointer-events-none opacity-60' : ''");
+    expect(pageSource).toContain('locked={checkoutLocked}');
+    expect(pageSource).toContain('locked={cartLocked}');
     expect(pageSource).toContain('disabled={checkoutLocked}');
-    expect(pageSource).toContain('{!checkoutLocked && (');
-    expect(summarySource).toContain("retryingExistingCommand\n              ? 'ตรวจสอบคำสั่งเดิมอีกครั้ง'");
+    expect(pageSource).toContain('{!checkoutLocked && !sourceLocked && (');
+    expect(panelSource).toContain("locked ? 'pointer-events-none opacity-60' : ''");
+    expect(panelSource).toContain('aria-disabled={locked}');
+    expect(summarySource).toContain('retryingExistingCommand');
+    expect(summarySource).toContain("'ตรวจสอบคำสั่งเดิม'");
     expect(summarySource).toContain("recovery?.state === 'UNCERTAIN'");
   });
 

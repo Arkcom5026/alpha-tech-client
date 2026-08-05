@@ -1,12 +1,40 @@
-// src/features/sales/components/CalculationDetails.jsx
-// 🏛️ Premium Next-Gen POS Calculation Details: (Lean Data Hierarchy Edition)
-
-import PaymentInput from '@/components/shared/input/PaymentInput';
 import React from 'react';
 import PropTypes from 'prop-types';
 
-const fmt = (n) => Number(n || 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const preventInvalidNumberKeys = (e) => { if (["e","E","+","-"].includes(e.key)) e.preventDefault(); };
+const formatMoney = (value) =>
+  Number(value || 0).toLocaleString('th-TH', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+
+const preventInvalidNumberKeys = (event) => {
+  if (['e', 'E', '+', '-'].includes(event.key)) event.preventDefault();
+};
+
+const SummaryRow = ({ label, value, tone = 'neutral', emphasized = false }) => {
+  const toneClass = {
+    neutral: 'text-slate-700',
+    discount: 'text-amber-700',
+    tax: 'text-slate-600',
+    deposit: 'text-teal-700',
+  }[tone];
+
+  return (
+    <div className={`flex items-center justify-between gap-3 ${toneClass}`}>
+      <span className={emphasized ? 'font-semibold' : 'font-medium'}>{label}</span>
+      <span className={`font-mono tabular-nums ${emphasized ? 'font-semibold text-slate-900' : 'font-medium'}`}>
+        {value}
+      </span>
+    </div>
+  );
+};
+
+SummaryRow.propTypes = {
+  label: PropTypes.string.isRequired,
+  value: PropTypes.string.isRequired,
+  tone: PropTypes.oneOf(['neutral', 'discount', 'tax', 'deposit']),
+  emphasized: PropTypes.bool,
+};
 
 const CalculationDetails = ({
   totalOriginalPrice,
@@ -22,90 +50,98 @@ const CalculationDetails = ({
   disabled = false,
 }) => {
   const totalOriginal = Number(totalOriginalPrice) || 0;
-  const totalDiscOnly = Number(totalDiscountOnly) || 0;
-  const billDisc = Number(billDiscount) || 0;
-  const totalDisc = Number(totalDiscount) || 0;
-  const net = Number(priceBeforeVat) || 0;
-  const vat = Number(vatAmount) || 0;
-  const depositTotal = Number(customerDepositAmount) || 0;
-  const depositVal = Number(depositUsed) || 0;
-  const remainDeposit = Math.max(0, depositTotal - depositVal);
-  const billOver = billDisc > totalOriginal;
+  const itemDiscount = Number(totalDiscountOnly) || 0;
+  const billDiscountValue = Number(billDiscount) || 0;
+  const totalDiscountValue = Number(totalDiscount) || 0;
+  const netAmount = Number(priceBeforeVat) || 0;
+  const vatAmountValue = Number(vatAmount) || 0;
+  const depositBalance = Number(customerDepositAmount) || 0;
+  const depositUsedValue = Number(depositUsed) || 0;
+  const remainingDeposit = Math.max(0, depositBalance - depositUsedValue);
+  const billDiscountExceedsTotal = billDiscountValue > totalOriginal;
+
+  const numberInputClass = `h-11 w-32 rounded-xl border bg-white px-3 text-right font-mono text-sm font-semibold text-slate-900 outline-none transition focus:ring-2 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400 ${
+    billDiscountExceedsTotal
+      ? 'border-rose-400 focus:border-rose-500 focus:ring-rose-100'
+      : 'border-slate-300 focus:border-teal-500 focus:ring-teal-100'
+  }`;
 
   return (
-    /* 🟢 [VISUAL FIXED]: ปรับเปลี่ยนสีพื้นหลังหลวม ๆ ออก และคุมโทนด้วยกรอบสีขาวพรีเมียมลีนตาความสูงสมดุล */
-    <div className="flex-1 w-full space-y-2 font-semibold text-slate-600 text-[11px] sm:text-xs">
-      <div className="flex justify-between items-center px-1">
-        <span className="font-bold text-slate-800">ยอดรวมราคาสินค้าดิบ</span>
-        <span className="font-mono font-black text-slate-900">{fmt(totalOriginal)} ฿</span>
-      </div>
-      <div className="flex justify-between items-center px-2 text-orange-600">
-        <span>ส่วนลดสะสมต่อรายการ</span>
-        <span className="font-mono font-bold">- {fmt(totalDiscOnly)} ฿</span>
-      </div>
+    <div className="w-full space-y-4 text-sm">
+      <div className="space-y-2.5">
+        <SummaryRow label="ยอดรวมสินค้า" value={`${formatMoney(totalOriginal)} ฿`} emphasized />
+        <SummaryRow label="ส่วนลดรายสินค้า" value={`- ${formatMoney(itemDiscount)} ฿`} tone="discount" />
 
-      <div className="flex justify-between items-center gap-2 px-2 text-orange-600">
-        <span>ส่วนลดท้ายบิลลดหนี้</span>
-        <input
-          type="number"
-          inputMode="decimal"
-          min="0"
-          step="0.01"
-          className={`w-24 h-7 border rounded-lg px-2 text-right font-mono font-black text-slate-900 focus:border-slate-900 outline-none shadow-sm ${billOver ? 'border-rose-500 focus:ring-rose-400' : 'border-slate-200 focus:ring-slate-900'}`}
-          placeholder="0.00"
-          value={billDisc === 0 ? '' : (Number.isFinite(billDisc) ? billDisc : '')}
-          onChange={(e) => setBillDiscount(e)}
-          onKeyDown={preventInvalidNumberKeys}
-          onWheel={(e) => e.currentTarget.blur()}
-          disabled={disabled}
-        />
-      </div>
-
-      {billOver && (
-        <div className="text-rose-600 text-[10px] font-black text-right px-2 animate-pulse">
-          ⚠️ ห้ามกรอกส่วนลดเกินยอดรวมสินค้า ({fmt(totalOriginal)} ฿)
+        <div className="flex items-center justify-between gap-3 text-amber-700">
+          <label htmlFor="sale-bill-discount" className="font-medium">
+            ส่วนลดท้ายบิล
+          </label>
+          <input
+            id="sale-bill-discount"
+            type="number"
+            inputMode="decimal"
+            min="0"
+            step="0.01"
+            className={numberInputClass}
+            placeholder="0.00"
+            value={billDiscountValue === 0 ? '' : billDiscountValue}
+            onChange={setBillDiscount}
+            onKeyDown={preventInvalidNumberKeys}
+            onWheel={(event) => event.currentTarget.blur()}
+            disabled={disabled}
+          />
         </div>
-      )}
 
-      <div className="flex justify-between items-center px-2 text-orange-700 font-bold border-b border-slate-100 pb-1.5">
-        <span>รวมสิทธิ์ส่วนลดทั้งสิ้น</span>
-        <span className="font-mono">- {fmt(totalDisc)} ฿</span>
-      </div>
-      
-      <div className="flex justify-between items-center px-1 text-slate-700">
-        <span>มูลค่าก่อนคิดภาษี (Net)</span>
-        <span className="font-mono font-black">{fmt(net)} ฿</span>
-      </div>
-      <div className="flex justify-between items-center px-1 text-rose-500">
-        <span>ภาษีมูลค่าเพิ่ม Vat 7%</span>
-        <span className="font-mono font-bold">{fmt(vat)} ฿</span>
+        {billDiscountExceedsTotal ? (
+          <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700">
+            ส่วนลดท้ายบิลต้องไม่เกินยอดรวมสินค้า {formatMoney(totalOriginal)} บาท
+          </div>
+        ) : null}
+
+        <div className="border-t border-slate-200 pt-3">
+          <SummaryRow
+            label="ส่วนลดรวม"
+            value={`- ${formatMoney(totalDiscountValue)} ฿`}
+            tone="discount"
+            emphasized
+          />
+        </div>
       </div>
 
-      {depositTotal > 0 && (
-        <div className="pt-1.5 border-t border-slate-100 space-y-1.5">
-          <div className="flex justify-between items-center gap-2 px-1">
-            <span className="text-blue-700 font-black">สิทธิ์หักลบเงินมัดจำ</span>
+      <div className="space-y-2.5 rounded-xl bg-slate-50 p-3">
+        <SummaryRow label="มูลค่าก่อนภาษี" value={`${formatMoney(netAmount)} ฿`} />
+        <SummaryRow label="ภาษีมูลค่าเพิ่ม 7%" value={`${formatMoney(vatAmountValue)} ฿`} tone="tax" />
+      </div>
+
+      {depositBalance > 0 ? (
+        <div className="space-y-3 rounded-xl border border-teal-200 bg-teal-50 p-3">
+          <div className="flex items-center justify-between gap-3">
+            <label htmlFor="sale-deposit-used" className="font-semibold text-teal-800">
+              ใช้เงินมัดจำ
+            </label>
             <input
+              id="sale-deposit-used"
               type="number"
               inputMode="decimal"
               min="0"
               step="0.01"
-              className="w-24 h-7 border border-blue-200 rounded-lg px-2 text-right font-mono font-black text-blue-900 bg-white focus:border-blue-500 outline-none text-xs shadow-sm"
+              className="h-11 w-32 rounded-xl border border-teal-300 bg-white px-3 text-right font-mono text-sm font-semibold text-slate-900 outline-none transition focus:border-teal-500 focus:ring-2 focus:ring-teal-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
               placeholder="0.00"
-              value={depositVal === 0 ? '' : depositVal}
-              onChange={(e) => handleDepositUsedChange(e)}
+              value={depositUsedValue === 0 ? '' : depositUsedValue}
+              onChange={handleDepositUsedChange}
               onKeyDown={preventInvalidNumberKeys}
-              onWheel={(e) => e.currentTarget.blur()}
+              onWheel={(event) => event.currentTarget.blur()}
               disabled={disabled}
             />
           </div>
-
-          <div className="flex justify-between px-2 text-blue-700 font-bold bg-blue-50/50 p-1 rounded-md border border-blue-100/30">
-            <span>วงเงินมัดจำคงเหลือประจำตัว:</span>
-            <span className="font-mono font-black text-blue-600">{fmt(remainDeposit)} ฿</span>
-          </div>
+          <SummaryRow
+            label="เงินมัดจำคงเหลือ"
+            value={`${formatMoney(remainingDeposit)} ฿`}
+            tone="deposit"
+            emphasized
+          />
         </div>
-      )}
+      ) : null}
     </div>
   );
 };

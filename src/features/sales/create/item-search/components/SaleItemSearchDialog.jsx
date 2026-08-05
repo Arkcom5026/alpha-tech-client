@@ -58,7 +58,7 @@ const SaleItemSearchDialog = ({ open, query, items, truncated, priceType, onSele
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/55 p-3 backdrop-blur-sm"
+      className="fixed inset-0 z-[100] flex items-end justify-center bg-slate-950/45 sm:items-center sm:p-4"
       role="dialog"
       aria-modal="true"
       aria-label="เลือกสินค้าจากผลการค้นหา"
@@ -66,80 +66,125 @@ const SaleItemSearchDialog = ({ open, query, items, truncated, priceType, onSele
         if (event.target === event.currentTarget) onClose();
       }}
     >
-      <div className="flex max-h-[86vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
-        <div className="flex items-start justify-between gap-3 border-b border-slate-200 px-4 py-3">
-          <div>
-            <div className="flex items-center gap-2 font-black text-slate-900">
-              <Search className="h-4 w-4" />
-              เลือกสินค้าที่ต้องการขาย
+      <div className="flex h-[92vh] w-full flex-col overflow-hidden rounded-t-3xl border border-slate-200 bg-slate-50 shadow-2xl sm:h-auto sm:max-h-[86vh] sm:max-w-5xl sm:rounded-3xl">
+        <header className="flex shrink-0 items-start justify-between gap-3 border-b border-teal-200 bg-teal-50 px-4 py-4 sm:px-5">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 text-base font-semibold text-teal-950">
+              <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-teal-200 bg-white text-teal-700">
+                <Search className="h-4 w-4" />
+              </span>
+              <span>เลือกสินค้าที่ต้องการขาย</span>
             </div>
-            <div className="mt-1 text-xs text-slate-500">
+            <p className="mt-2 text-sm text-slate-600">
               ผลการค้นหา “{query}” จำนวน {items.length} รายการ
-              {truncated ? ' · แสดงเฉพาะผลลัพธ์แรก กรุณาระบุคำค้นให้ละเอียดขึ้น' : ''}
-            </div>
-            <div className="mt-1 text-[10px] font-bold text-slate-400">
-              ใช้ปุ่ม ↑ ↓ เพื่อเลื่อน · Enter เพื่อเลือก · Esc เพื่อปิด
-            </div>
+            </p>
+            {truncated ? (
+              <p className="mt-1 text-xs text-amber-700">
+                ผลลัพธ์มีมากกว่าที่แสดง กรุณาระบุชื่อ รุ่น บาร์โค้ด หรือหมายเลขเครื่องให้ละเอียดขึ้น
+              </p>
+            ) : null}
+            <p className="mt-1 hidden text-xs text-slate-500 sm:block">
+              ใช้ปุ่มลูกศรเพื่อเลื่อน กด Enter เพื่อเลือก และ Esc เพื่อปิด
+            </p>
           </div>
-          <button type="button" onClick={onClose} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100" aria-label="ปิดหน้าต่างเลือกสินค้า">
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:border-teal-300 hover:bg-teal-100 hover:text-teal-900"
+            aria-label="ปิดหน้าต่างเลือกสินค้า"
+          >
             <X className="h-5 w-5" />
           </button>
-        </div>
+        </header>
 
-        <div className="overflow-y-auto p-3">
-          <div className="grid gap-2" role="listbox" aria-label="ผลการค้นหาสินค้า">
-            {items.map((item, index) => {
-              const price = item?.prices?.[priceType];
-              const product = item?.product || {};
-              const selected = index === activeIndex;
-              return (
-                <button
-                  type="button"
-                  key={`${item.type}-${item.stockItemId || item.simpleLotId}`}
-                  ref={(node) => { itemRefs.current[index] = node; }}
-                  role="option"
-                  aria-selected={selected}
-                  onMouseEnter={() => setActiveIndex(index)}
-                  onFocus={() => setActiveIndex(index)}
-                  onClick={() => onSelect(item)}
-                  className={`grid w-full grid-cols-12 items-center gap-3 rounded-xl border p-3 text-left transition ${selected
-                    ? 'border-orange-500 bg-orange-50 ring-2 ring-orange-200'
-                    : 'border-slate-200 hover:border-orange-400 hover:bg-orange-50'}`}
-                >
-                  <div className="col-span-12 flex items-center gap-3 md:col-span-6">
-                    <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
-                      {product.coverImageUrl ? (
-                        <img src={product.coverImageUrl} alt="" className="h-full w-full object-cover" loading="lazy" />
-                      ) : (
-                        <ImageOff className="h-5 w-5 text-slate-300" />
-                      )}
-                    </div>
-                    <div className="min-w-0">
-                      <div className="truncate font-black text-slate-900">{product.name || 'ไม่ระบุชื่อสินค้า'}</div>
-                      <div className="mt-1 flex flex-wrap gap-2 text-[11px] text-slate-500">
-                        {product.brandName && <span>ยี่ห้อ: {product.brandName}</span>}
-                        {product.codeType && <span>รุ่น/รหัส: {product.codeType}</span>}
-                        {product.productTypeName && <span>ประเภท: {product.productTypeName}</span>}
-                        <span>{item.type === 'STOCK' ? 'สินค้าแยกชิ้น' : 'สินค้าแบบจำนวน'}</span>
+        <div className="overflow-y-auto p-3 sm:p-4">
+          {items.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-14 text-center">
+              <p className="font-medium text-slate-700">ไม่พบสินค้าที่ตรงกับคำค้นหา</p>
+              <p className="mt-1 text-sm text-slate-500">ลองค้นหาด้วยชื่อสินค้า รุ่น บาร์โค้ด หรือหมายเลขเครื่อง</p>
+            </div>
+          ) : (
+            <div className="grid gap-3" role="listbox" aria-label="ผลการค้นหาสินค้า">
+              {items.map((item, index) => {
+                const price = item?.prices?.[priceType];
+                const product = item?.product || {};
+                const selected = index === activeIndex;
+                const itemKey = `${item.type}-${item.stockItemId || item.simpleLotId}`;
+
+                return (
+                  <button
+                    type="button"
+                    key={itemKey}
+                    ref={(node) => { itemRefs.current[index] = node; }}
+                    role="option"
+                    aria-selected={selected}
+                    onMouseEnter={() => setActiveIndex(index)}
+                    onFocus={() => setActiveIndex(index)}
+                    onClick={() => onSelect(item)}
+                    className={`w-full rounded-2xl border p-3 text-left transition sm:p-4 ${
+                      selected
+                        ? 'border-emerald-300 bg-emerald-100 ring-2 ring-emerald-200'
+                        : 'border-teal-100 bg-white hover:border-teal-300 hover:bg-teal-50'
+                    }`}
+                  >
+                    <div className="flex gap-3">
+                      <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-slate-50 sm:h-20 sm:w-20">
+                        {product.coverImageUrl ? (
+                          <img src={product.coverImageUrl} alt="" className="h-full w-full object-cover" loading="lazy" />
+                        ) : (
+                          <ImageOff className="h-6 w-6 text-slate-300" />
+                        )}
+                      </div>
+
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                          <div className="min-w-0">
+                            <div className="line-clamp-2 text-sm font-semibold text-slate-950 sm:text-base">
+                              {product.name || 'ไม่ระบุชื่อสินค้า'}
+                            </div>
+                            <div className="mt-1 flex flex-wrap gap-1.5 text-xs text-slate-600">
+                              {product.brandName ? <span className="rounded-md bg-slate-100 px-2 py-1">ยี่ห้อ {product.brandName}</span> : null}
+                              {product.codeType ? <span className="rounded-md bg-slate-100 px-2 py-1">รุ่น/รหัส {product.codeType}</span> : null}
+                              {product.productTypeName ? <span className="rounded-md bg-slate-100 px-2 py-1">{product.productTypeName}</span> : null}
+                              <span className="rounded-md bg-teal-50 px-2 py-1 text-teal-800">
+                                {item.type === 'STOCK' ? 'สินค้าแยกชิ้น' : 'สินค้าแบบจำนวน'}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="shrink-0 text-left sm:text-right">
+                            <div className={`text-lg font-semibold ${price == null ? 'text-amber-700' : 'text-teal-800'}`}>
+                              {price == null ? 'ยังไม่มีราคา' : `฿${money(price)}`}
+                            </div>
+                            <div className="text-xs text-slate-500">แตะเพื่อเพิ่มลงตะกร้า</div>
+                          </div>
+                        </div>
+
+                        <div className="mt-3 grid gap-2 border-t border-slate-200/80 pt-3 text-xs text-slate-700 sm:grid-cols-3">
+                          <div>
+                            <span className="text-slate-500">รหัสสินค้า</span>
+                            <div className="mt-0.5 break-all font-mono font-medium text-slate-900">
+                              {item.serialNumber || item.barcode || '-'}
+                            </div>
+                          </div>
+                          <div>
+                            <span className="text-slate-500">ประเภทตัวระบุ</span>
+                            <div className="mt-0.5 font-medium text-slate-900">
+                              {item.serialNumber ? 'หมายเลขเครื่อง' : item.barcode ? 'บาร์โค้ด' : '-'}
+                            </div>
+                          </div>
+                          <div>
+                            <span className="text-slate-500">จำนวนพร้อมขาย</span>
+                            <div className="mt-0.5 font-semibold text-emerald-800">{item.quantityAvailable ?? 0}</div>
+                          </div>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  <div className="col-span-12 md:col-span-3 text-[11px] text-slate-600">
-                    {item.serialNumber && <div>SN: <strong>{item.serialNumber}</strong></div>}
-                    {item.barcode && <div>บาร์โค้ด: <strong>{item.barcode}</strong></div>}
-                    <div>พร้อมขาย: <strong>{item.quantityAvailable}</strong></div>
-                    {item.barcodeAuthority && <div>แหล่งรหัส: <strong>{item.barcodeAuthority.kind}</strong></div>}
-                  </div>
-                  <div className="col-span-12 text-right md:col-span-3">
-                    <div className="text-base font-black text-orange-700">
-                      {price == null ? 'ยังไม่มีราคา' : `฿${money(price)}`}
-                    </div>
-                    <div className="text-[10px] font-bold text-slate-400">กดเพื่อเพิ่มลงตะกร้า</div>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
     </div>

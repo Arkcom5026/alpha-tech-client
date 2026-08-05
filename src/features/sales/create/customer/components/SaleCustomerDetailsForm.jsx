@@ -1,6 +1,15 @@
 import React from 'react';
-import { Mail, MapPin, User } from 'lucide-react';
+import { MapPin } from 'lucide-react';
 import AddressForm from '@/features/address/components/AddressForm';
+
+const CUSTOMER_TYPES = [
+  { value: 'INDIVIDUAL', label: 'บุคคลทั่วไป' },
+  { value: 'ORGANIZATION', label: 'นิติบุคคล' },
+  { value: 'GOVERNMENT', label: 'หน่วยงาน' },
+];
+
+const fieldClass =
+  'h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-teal-500 focus:ring-2 focus:ring-teal-100';
 
 const SaleCustomerDetailsForm = ({
   editor,
@@ -21,124 +30,153 @@ const SaleCustomerDetailsForm = ({
     postalCode: editor.postalCode,
   };
 
+  const isOrganization =
+    editor.customerType === 'ORGANIZATION' || editor.customerType === 'GOVERNMENT';
+
   return (
-    <div className="text-xs font-bold text-slate-700 bg-slate-50/40 border border-slate-200 rounded-xl p-2 space-y-2 animate-fadeIn">
-      <div className="flex gap-4 text-[10px] font-black text-slate-400 pb-1 border-b border-slate-100/80 mb-1">
-        {['INDIVIDUAL', 'ORGANIZATION', 'GOVERNMENT'].map((type) => (
-          <label key={type} className="flex items-center gap-1 cursor-pointer hover:text-slate-700 transition-colors select-none">
-            <input
-              type="radio"
-              name="customerType"
-              value={type}
-              className="accent-slate-900"
-              checked={editor.customerType === type}
-              onChange={() => onPatch({ customerType: type })}
-            />
-            <span className={editor.customerType === type ? 'text-slate-900 font-black' : ''}>
-              {type === 'INDIVIDUAL' ? 'บุคคลทั่วไป' : type === 'ORGANIZATION' ? 'นิติบุคคล' : 'หน่วยงาน'}
-            </span>
-          </label>
-        ))}
+    <div className="space-y-4 rounded-xl border border-slate-200 bg-slate-50/60 p-3 md:p-4">
+      <div>
+        <p className="mb-2 text-xs font-semibold text-slate-700">ประเภทลูกค้า</p>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+          {CUSTOMER_TYPES.map((type) => {
+            const active = editor.customerType === type.value;
+            return (
+              <button
+                key={type.value}
+                type="button"
+                onClick={() => onPatch({ customerType: type.value })}
+                className={`min-h-11 rounded-xl border px-3 text-sm font-semibold transition ${
+                  active
+                    ? 'border-emerald-300 bg-emerald-100 text-emerald-950'
+                    : 'border-teal-200 bg-teal-50 text-teal-900 hover:bg-teal-100'
+                }`}
+              >
+                {type.label}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-      <div className="space-y-1.5">
-        {(editor.customerType === 'ORGANIZATION' || editor.customerType === 'GOVERNMENT') && (
-          <div className="space-y-1.5 animate-fadeIn">
-            <input
-              type="text"
-              placeholder="🏢 ระบุชื่อบริษัท / หน่วยงานสังกัด..."
-              value={editor.companyName}
-              onChange={(event) => onPatch({ companyName: event.target.value })}
-              className="h-7 border border-slate-200 px-2 rounded-lg w-full text-slate-900 font-black outline-none focus:border-slate-900 text-xs shadow-sm"
-            />
-            <input
-              type="text"
-              placeholder="🧾 เลขผู้เสียภาษี (ถ้ามี)..."
-              value={editor.taxId}
-              onChange={(event) => onPatch({ taxId: event.target.value })}
-              className="h-7 border border-slate-200 px-2 rounded-lg w-full text-slate-900 font-mono font-bold outline-none focus:border-slate-900 text-xs shadow-sm"
-            />
-          </div>
-        )}
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+        {isOrganization ? (
+          <>
+            <div>
+              <label className="mb-1.5 block text-xs font-semibold text-slate-700">ชื่อบริษัทหรือหน่วยงาน</label>
+              <input
+                type="text"
+                value={editor.companyName}
+                onChange={(event) => onPatch({ companyName: event.target.value })}
+                placeholder="ชื่อบริษัทหรือหน่วยงาน"
+                className={fieldClass}
+              />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-xs font-semibold text-slate-700">เลขประจำตัวผู้เสียภาษี</label>
+              <input
+                type="text"
+                value={editor.taxId}
+                onChange={(event) => onPatch({ taxId: event.target.value })}
+                placeholder="เลขประจำตัวผู้เสียภาษี (ถ้ามี)"
+                className={`${fieldClass} font-mono`}
+              />
+            </div>
+          </>
+        ) : null}
 
-        <div className="relative">
+        <div>
+          <label className="mb-1.5 block text-xs font-semibold text-slate-700">ชื่อผู้ติดต่อ</label>
           <input
             type="text"
             id="customer-name-input"
-            placeholder="ชื่อ-นามสกุล ผู้ซื้อ..."
             value={editor.name}
             onChange={(event) => onPatch({ name: event.target.value })}
-            className="h-7 border border-slate-200 pl-2 pr-7 rounded-lg w-full text-slate-900 font-black outline-none focus:border-slate-900 text-xs shadow-sm font-medium"
+            placeholder="ชื่อ-นามสกุล"
+            className={fieldClass}
           />
-          <User className="w-3.5 h-3.5 text-slate-300 absolute right-2.5 top-1.5" />
         </div>
 
-        <input
-          type="tel"
-          placeholder="เบอร์โทรลูกค้า..."
-          value={editor.phone}
-          onChange={(event) => onPatch({ phone: event.target.value })}
-          className="h-7 border border-slate-200 px-2 rounded-lg w-full text-slate-900 font-mono font-black outline-none focus:border-slate-900 text-xs shadow-sm"
-        />
+        <div>
+          <label className="mb-1.5 block text-xs font-semibold text-slate-700">เบอร์โทร</label>
+          <input
+            type="tel"
+            inputMode="tel"
+            value={editor.phone}
+            onChange={(event) => onPatch({ phone: event.target.value })}
+            placeholder="เบอร์โทรลูกค้า"
+            className={`${fieldClass} font-mono`}
+          />
+        </div>
 
-        <div className="relative">
+        <div className="md:col-span-2">
+          <label className="mb-1.5 block text-xs font-semibold text-slate-700">อีเมล</label>
           <input
             type="email"
-            placeholder="อีเมลติดต่อส่งบิลดิจิทัล (ถ้ามี)..."
             value={editor.email}
             onChange={(event) => onPatch({ email: event.target.value })}
-            className="h-7 border border-slate-200 pl-2 pr-7 rounded-lg w-full text-slate-900 font-bold outline-none focus:border-slate-900 text-xs shadow-sm"
+            placeholder="อีเมลสำหรับรับเอกสาร (ถ้ามี)"
+            className={fieldClass}
           />
-          <Mail className="w-3.5 h-3.5 text-slate-300 absolute right-2.5 top-1.5" />
         </div>
+      </div>
 
-        <div className="w-full pt-0.5 max-w-full overflow-hidden">
-          <div className="text-[10px] text-slate-400 pl-0.5 mb-1 font-bold flex items-center gap-1">
-            <MapPin className="w-3 h-3 text-slate-400" /> ข้อมูลพิกัดส่งบิลเอกสาร:
-          </div>
-          <div className="address-form-density-compact">
-            <AddressForm
-              value={addressValue}
-              onChange={(next) => onPatch({
+      <div>
+        <div className="mb-2 flex items-center gap-2 text-xs font-semibold text-slate-700">
+          <MapPin className="h-4 w-4 text-teal-700" />
+          ที่อยู่สำหรับเอกสารและการจัดส่ง
+        </div>
+        <div className="address-form-density-compact overflow-hidden rounded-xl border border-slate-200 bg-white p-2">
+          <AddressForm
+            value={addressValue}
+            onChange={(next) =>
+              onPatch({
                 addressDetail: next?.address || '',
                 provinceCode: next?.provinceCode || '',
                 districtCode: next?.districtCode || '',
                 subdistrictCode: next?.subdistrictCode || '',
                 postalCode: next?.postalCode || next?.postcode || '',
-              })}
-              provinceFilter={provinceFilter}
-              layout="subdistrict-with-postcode"
-              required
-            />
-          </div>
+              })
+            }
+            provinceFilter={provinceFilter}
+            layout="subdistrict-with-postcode"
+            required
+          />
         </div>
-
-        {selectedCustomer?.customerAddress && !isModified && (
-          <div className="text-[10px] font-bold text-slate-400 bg-white border border-slate-100 rounded-lg p-1.5 select-all leading-relaxed shadow-sm">
-            📌 {selectedCustomer.customerAddress}
-          </div>
-        )}
       </div>
 
-      <div className="flex gap-2 justify-end select-none pt-0.5">
+      {selectedCustomer?.customerAddress && !isModified ? (
+        <div className="rounded-xl border border-teal-100 bg-teal-50 px-3 py-2 text-xs leading-5 text-teal-900">
+          ที่อยู่เดิม: {selectedCustomer.customerAddress}
+        </div>
+      ) : null}
+
+      <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
         {selectedCustomer ? (
           <button
             type="button"
             onClick={onUpdate}
             disabled={!isModified}
-            className={`h-6 px-3 text-white font-black text-[10px] rounded-md shadow-sm transition-all ${isModified ? 'bg-slate-900 hover:bg-slate-800 active:scale-95' : 'bg-slate-300 cursor-not-allowed shadow-none'}`}
+            className="h-11 rounded-xl bg-teal-700 px-5 text-sm font-semibold text-white transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:bg-slate-300"
           >
-            อัปเดตข้อมูลลูกค้า
+            บันทึกการแก้ไข
           </button>
         ) : pendingCreate ? (
-          <div className="flex gap-1.5">
-            <button type="button" onClick={onCreate} className="h-6 px-3 bg-slate-900 hover:bg-slate-800 text-white text-[10px] rounded-md shadow-sm font-black active:scale-95 transition-all">
-              บันทึกลูกค้าใหม่
-            </button>
-            <button type="button" onClick={onCancelCreate} className="h-6 px-3 bg-white border border-slate-200 text-slate-500 text-[10px] rounded-md shadow-sm font-bold hover:bg-slate-50 active:scale-95 transition-all">
+          <>
+            <button
+              type="button"
+              onClick={onCancelCreate}
+              className="h-11 rounded-xl border border-slate-300 bg-white px-5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+            >
               ยกเลิก
             </button>
-          </div>
+            <button
+              type="button"
+              onClick={onCreate}
+              className="h-11 rounded-xl bg-teal-700 px-5 text-sm font-semibold text-white transition hover:bg-teal-800"
+            >
+              เพิ่มลูกค้าใหม่
+            </button>
+          </>
         ) : null}
       </div>
     </div>

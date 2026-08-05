@@ -24,7 +24,8 @@ assertIncludes(api, "apiClient.get(`/sales/reservations", 'Inbox must use authen
 assertIncludes(api, 'status', 'Inbox API must support lifecycle status filtering');
 assertIncludes(api, 'getMerchantProductReservation', 'Merchant detail API is required');
 
-assertIncludes(inbox, 'Merchant Reservation Workspace', 'POS inbox must identify merchant reservation authority');
+assertIncludes(inbox, 'ใบจองสินค้าออนไลน์', 'POS inbox must identify the reservation work queue');
+assertIncludes(inbox, 'เฉพาะข้อมูลของร้านปัจจุบัน', 'POS inbox must expose merchant and tenant authority');
 assertIncludes(inbox, 'งานที่ต้องจัดการ', 'Inbox must prioritize open operational work');
 assertIncludes(inbox, 'ACTIVE', 'Inbox must show new reservations');
 assertIncludes(inbox, 'ACCEPTED', 'Inbox must show accepted reservations');
@@ -40,9 +41,9 @@ assertExcludes(inbox, 'to={`/pos/sales/reservations/${reservation.id}`}', 'Inbox
 
 assertIncludes(detail, 'getMerchantProductReservation', 'Detail page must load branch-scoped server authority');
 assertIncludes(detail, 'รายการสินค้า', 'Detail foundation must render reservation items');
-assertIncludes(detail, 'Timeline ใบจอง', 'Detail foundation must retain lifecycle evidence');
+assertIncludes(detail, 'ประวัติสถานะใบจอง', 'Detail foundation must retain lifecycle evidence');
 
-assertIncludes(hub, 'Online Commerce Work Center', 'POS must expose one online-commerce entry center');
+assertIncludes(hub, 'ศูนย์งานขายออนไลน์', 'POS must expose one online-commerce entry center');
 assertIncludes(hub, '<ProductReservationInboxPage />', 'ProductReservation must be the primary online work queue');
 assertIncludes(hub, '/sales/order-online/legacy', 'Legacy OrderOnline must remain explicitly accessible');
 assertIncludes(hub, 'เปิดคำสั่งซื้อระบบเดิม', 'Legacy entry must be clear to POS users');

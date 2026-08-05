@@ -1,14 +1,11 @@
-// src/features/sales/components/PaymentSummary.jsx
-// 🏛️ Premium Next-Gen POS Payment Summary: (Pure High-Contrast & Premium Dark Layout Center)
-
 import React, { useEffect } from 'react';
 import PropTypes from 'prop-types';
 
 import BillPrintOptions from './BillPrintOptions';
 import { PRINT_OPTION, SALE_MODE } from '../contracts/salePrintOptions';
 
-const fmt = (n) =>
-  Number(n || 0).toLocaleString('th-TH', {
+const fmt = (value) =>
+  Number(value || 0).toLocaleString('th-TH', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
@@ -50,138 +47,110 @@ const PaymentSummary = ({
     }
   }, [isCredit, isCash, saleOption, setSaleOption]);
 
-  const changeClass =
-    changeNum > 0 ? 'text-emerald-600 font-black' : changeNum < 0 ? 'text-rose-600 font-black' : 'text-slate-600 font-bold';
-
+  const outstanding = Math.max(0, Number((totalNum - paidNum).toFixed(2)));
   const commandSuffix = recovery?.commandId ? recovery.commandId.slice(-8) : '';
 
   return (
-    <div className="flex-1 w-full flex flex-col justify-between gap-3 text-xs font-bold text-slate-600">
-      <div className="space-y-2">
+    <div className="flex flex-1 flex-col justify-between gap-4 text-sm text-slate-700">
+      <div className="space-y-3">
+        <div className="rounded-xl border border-teal-200 bg-teal-50 p-3">
+          <div className="flex items-center justify-between gap-4">
+            <span className="font-medium text-teal-900">ยอดสุทธิที่ต้องชำระ</span>
+            <span data-testid="pos-sale-total-due" className="font-mono text-xl font-semibold text-teal-900">฿{fmt(totalNum)}</span>
+          </div>
+        </div>
+
         {isCash ? (
-          <div className="space-y-1.5 border-b border-slate-100 pb-2">
-            <div className="flex justify-between items-center bg-slate-900 text-white p-2 rounded-xl shadow-inner select-none">
-              <span className="text-[11px] font-black tracking-wide uppercase opacity-70">ยอดสุทธิที่ต้องชำระ</span>
-              <span data-testid="pos-sale-total-due" className="font-mono text-lg font-black text-teal-400">฿{fmt(totalNum)}</span>
+          <div className="space-y-2 rounded-xl border border-slate-200 bg-white p-3">
+            <div className="flex items-center justify-between gap-4">
+              <span>ยอดเงินที่รับ</span>
+              <span className={receivedNum >= totalNum ? 'font-mono font-semibold text-emerald-700' : 'font-mono font-semibold text-rose-700'}>฿{fmt(receivedNum)}</span>
             </div>
-
-            <div className="flex justify-between items-center px-1 pt-1">
-              <span className="text-slate-800 font-black">รวมยอดเงินที่รับจริง</span>
-              <span className={`font-mono font-black ${receivedNum >= totalNum ? 'text-emerald-600' : 'text-rose-600'}`}>
-                ฿{fmt(receivedNum)}
-              </span>
-            </div>
-
-            <div className="flex justify-between items-center px-1">
-              <span className="text-slate-800 font-black">มูลค่าเงินทอนหน้าร้าน</span>
-              <span className={`font-mono ${changeClass}`}>฿{fmt(changeNum)}</span>
+            <div className="flex items-center justify-between gap-4">
+              <span>เงินทอน</span>
+              <span className={changeNum >= 0 ? 'font-mono font-semibold text-emerald-700' : 'font-mono font-semibold text-rose-700'}>฿{fmt(changeNum)}</span>
             </div>
           </div>
         ) : (
-          <div className="space-y-1.5 border-b border-slate-100 pb-2">
-            <div className="bg-slate-950 text-white p-2 rounded-xl text-center shadow-inner select-none">
-              <p className="text-[11px] font-black tracking-wide uppercase text-amber-400">โหมดเครดิตค้างชำระ / หน่วยงาน</p>
+          <div className="space-y-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-amber-900">
+            <div className="flex items-center justify-between gap-4">
+              <span>ยอดใช้มัดจำ</span>
+              <span className="font-mono font-semibold">฿{fmt(paidNum)}</span>
             </div>
-
-            <div className="space-y-1 pt-1 text-[11px]">
-              <div className="flex justify-between items-center px-1">
-                <span>ยอดมูลค่ารวมบิล (รวม VAT):</span>
-                <span className="font-mono font-bold text-slate-900">฿{fmt(totalNum)}</span>
-              </div>
-              <div className="flex justify-between items-center px-1 text-emerald-600">
-                <span>ยอดเงินมัดจำล่วงหน้าที่ใช้หักลอย:</span>
-                <span className="font-mono font-bold">฿{fmt(paidNum)}</span>
-              </div>
-              {(() => {
-                const outstanding = Math.max(0, Number((totalNum - paidNum).toFixed(2)));
-                return (
-                  <div className="flex justify-between items-center pt-1.5 border-t border-dashed border-slate-100 px-1 font-black text-xs">
-                    <span className="text-slate-900">ยอดค้างบัญชีเครดิตยกยอด:</span>
-                    <span className={`font-mono ${outstanding > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>฿{fmt(outstanding)}</span>
-                  </div>
-                );
-              })()}
+            <div className="flex items-center justify-between gap-4 border-t border-amber-200 pt-2">
+              <span className="font-medium">ยอดค้างชำระ</span>
+              <span className="font-mono font-semibold">฿{fmt(outstanding)}</span>
             </div>
           </div>
         )}
       </div>
 
       {saleExecutionDisabled ? (
-        <div className="rounded-xl border border-blue-200 bg-blue-50 p-2.5 text-[11px] font-black text-blue-800">
-          ใบจองออนไลน์ถูกโหลดเข้าตะกร้าขายแล้ว การบันทึก Sale จะเปิดเมื่อ Server Finalization เชื่อม Sale กับ ProductReservation แบบ atomic
+        <div className="rounded-xl border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
+          รายการจากใบจองพร้อมตรวจสอบแล้ว แต่ยังไม่เปิดการบันทึกการขายจนกว่าการเชื่อมต่อขั้นสุดท้ายจะพร้อม
         </div>
       ) : null}
 
-      {recovery?.state === 'UNCERTAIN' && (
-        <div className="bg-amber-50 border border-amber-300 text-amber-800 p-2.5 rounded-xl text-[11px] font-black animate-slideUp space-y-1">
-          <div>⏳ ผลการบันทึกยังไม่แน่นอน ระบบจะตรวจสอบด้วยคำสั่งเดิม</div>
-          {commandSuffix && <div className="font-mono text-[10px] opacity-75">คำสั่ง …{commandSuffix}</div>}
-          <div className="text-[10px] font-bold">ห้ามล้างตะกร้าหรือสร้างรายการใหม่จนกว่าจะยืนยันผลสำเร็จ</div>
+      {recovery?.state === 'UNCERTAIN' ? (
+        <div className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+          <p className="font-semibold">ผลการบันทึกยังไม่แน่นอน ระบบจะตรวจสอบคำสั่งเดิม</p>
+          {commandSuffix ? <p className="mt-1 font-mono text-xs">คำสั่ง …{commandSuffix}</p> : null}
+          <p className="mt-1 text-xs">กรุณาอย่าล้างตะกร้าหรือสร้างรายการใหม่จนกว่าจะทราบผล</p>
         </div>
-      )}
+      ) : null}
 
-      {paymentError && (
-        <div className="bg-rose-50 border border-rose-200 text-rose-600 p-2.5 rounded-xl text-[11px] font-black animate-slideUp">
-          ⚠️ {paymentError}
-        </div>
-      )}
+      {paymentError ? (
+        <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">{paymentError}</div>
+      ) : null}
 
-      <label className="inline-flex items-center gap-2 text-[11px] font-black text-slate-700 cursor-pointer select-none">
+      <label className="flex min-h-11 items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-medium text-slate-800">
         <input
           type="checkbox"
           checked={isCredit}
-          onChange={(e) => {
-            const next = e.target.checked ? SALE_MODE.CREDIT : SALE_MODE.CASH;
-            setCurrentSaleMode(next);
-          }}
+          onChange={(event) => setCurrentSaleMode(event.target.checked ? SALE_MODE.CREDIT : SALE_MODE.CASH)}
           disabled={isSubmitting || saleExecutionDisabled}
-          className="accent-slate-900 h-3.5 w-3.5"
+          className="h-4 w-4 accent-teal-700"
         />
-        <span>เครดิต/หน่วยงาน</span>
-        {!hasValidCustomerId && isCredit && (
-          <span className="text-[10px] text-rose-500 font-medium">(กรุณาเลือกชื่อลูกค้าก่อน)</span>
-        )}
+        <span>ขายแบบเครดิต/หน่วยงาน</span>
+        {!hasValidCustomerId && isCredit ? <span className="text-xs text-rose-600">กรุณาเลือกลูกค้า</span> : null}
       </label>
 
-      <div className="py-0.5">
-        <BillPrintOptions
-          saleOption={saleOption}
-          setSaleOption={setSaleOption}
-          currentSaleMode={currentSaleMode}
-          hideNoneOption={isCash}
-        />
-      </div>
+      <BillPrintOptions
+        saleOption={saleOption}
+        setSaleOption={setSaleOption}
+        currentSaleMode={currentSaleMode}
+        hideNoneOption={isCash}
+      />
 
-      <div className="grid grid-cols-2 gap-2 pt-1 select-none">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         <button
           type="button"
           onClick={onSaveHeldCart}
           disabled={heldCartDisabled || isSubmitting || recovery?.state === 'UNCERTAIN'}
-          className="h-9 border border-orange-300 bg-orange-50 hover:bg-orange-100 text-orange-700 font-black text-xs rounded-xl active:scale-[0.99] transition-all disabled:opacity-40 disabled:transform-none"
+          className="min-h-11 rounded-xl border border-teal-200 bg-teal-50 px-4 text-sm font-semibold text-teal-900 hover:bg-teal-100 disabled:cursor-not-allowed disabled:opacity-40"
         >
-          {heldCartDisabled ? 'ใช้ใบจองออนไลน์เดิม' : 'บันทึกการจอง'}
+          {heldCartDisabled ? 'ใช้ใบจองออนไลน์เดิม' : 'พักรายการขาย'}
         </button>
         <button
           type="button"
           onClick={async () => {
             if (!isConfirmEnabled || isSubmitting) return;
-
             try {
               await onConfirm?.();
-            } catch (err) {
-              console.error('[PaymentSummary] confirm sale error', err);
+            } catch (error) {
+              console.error('[PaymentSummary] confirm sale error', error);
             }
           }}
           disabled={!isConfirmEnabled || isSubmitting || saleExecutionDisabled}
           data-testid="pos-sale-confirm-button"
-          className="h-9 bg-slate-900 hover:bg-slate-800 text-white font-black text-xs rounded-xl active:scale-[0.99] transition-all shadow-md disabled:opacity-40 disabled:transform-none disabled:shadow-none"
+          className="min-h-11 rounded-xl bg-teal-700 px-4 text-sm font-semibold text-white hover:bg-teal-800 disabled:cursor-not-allowed disabled:opacity-40"
         >
           {saleExecutionDisabled
-            ? 'รอเชื่อม Finalization'
+            ? 'ยังไม่พร้อมบันทึก'
             : isSubmitting
-              ? '⏳ กำลังบันทึก...'
+              ? 'กำลังบันทึก...'
               : retryingExistingCommand
-                ? 'ตรวจสอบคำสั่งเดิมอีกครั้ง'
+                ? 'ตรวจสอบคำสั่งเดิม'
                 : 'บันทึกการขาย'}
         </button>
       </div>

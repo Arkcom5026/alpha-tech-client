@@ -1,530 +1,498 @@
-
-
-
-
-
-
-
-
-// =============================
-// client/src/features/stockAudit/pages/ReadyToSellAuditPage.jsx
-// แก้ไข: เพิ่ม isStarting ใน Destructuring และปรับปรุงประสิทธิภาพการโหลดข้อมูล
-
-import React, { useEffect, useRef, useState } from 'react'
-import useStockAuditStore from '../store/stockAuditStore'
-import ScanInput from '../components/ScanInput'
-import AuditTable from '../components/AuditTable'
-import ConfirmActionDialog from '@/components/shared/dialogs/ConfirmActionDialog'
+import React, { useEffect, useRef, useState } from 'react';
+import useStockAuditStore from '../store/stockAuditStore';
+import ScanInput from '../components/ScanInput';
+import AuditTable from '../components/AuditTable';
+import StockAuditSessionSummary from '../components/workspace/StockAuditSessionSummary';
+import StockAuditActionBar from '../components/workspace/StockAuditActionBar';
+import StockAuditListPanel from '../components/workspace/StockAuditListPanel';
+import ConfirmActionDialog from '@/components/shared/dialogs/ConfirmActionDialog';
 
 const ReadyToSellAuditPage = () => {
-  const scanRef = useRef(null)
-  const audioCtxRef = useRef(null)
+  const scanRef = useRef(null);
+  const audioCtxRef = useRef(null);
+  const initRef = useRef(false);
 
-  // ดึง State และ Action จาก Store
   const {
-    sessionId, expectedCount, scannedCount, missingCount,
-    expectedItems, expectedTotal, expectedPage, expectedPageSize,
-    scannedItems, scannedTotal, scannedPage, scannedPageSize,
-    startReadyAuditAction, loadActiveReadyAuditAction, loadOverviewAction, loadItemsAction, scanBarcodeAction, confirmAuditAction, scanSnAction,
-    cancelAuditAction, resetAuditStateAction,
-    isScanning, isConfirming, errorMessage, isLoadingItems,
+    sessionId,
+    expectedCount,
+    scannedCount,
+    missingCount,
+    expectedItems,
+    expectedTotal,
+    expectedPage,
+    expectedPageSize,
+    scannedItems,
+    scannedTotal,
+    scannedPage,
+    scannedPageSize,
+    startReadyAuditAction,
+    loadActiveReadyAuditAction,
+    loadOverviewAction,
+    loadItemsAction,
+    scanBarcodeAction,
+    confirmAuditAction,
+    scanSnAction,
+    cancelAuditAction,
+    resetAuditStateAction,
+    isScanning,
+    isConfirming,
+    errorMessage,
+    isLoadingItems,
     isCancelling,
-    isStarting, // ✅ เพิ่มตัวแปรนี้ที่เดิมขาดไป ทำให้เกิด Error
-  } = useStockAuditStore()
+    isStarting,
+  } = useStockAuditStore();
 
-  const [scanMode, setScanMode] = useState('BARCODE')
-  const [openConfirmLost, setOpenConfirmLost] = useState(false)
-  const [openConfirmPending, setOpenConfirmPending] = useState(false)
-  const [openCancel, setOpenCancel] = useState(false)
-  const [bannerMessage, setBannerMessage] = useState('')
-  const [sessionClosed, setSessionClosed] = useState(false)
-  const [lastScannedValue, setLastScannedValue] = useState('')
+  const [scanMode, setScanMode] = useState('BARCODE');
+  const [openConfirmLost, setOpenConfirmLost] = useState(false);
+  const [openConfirmPending, setOpenConfirmPending] = useState(false);
+  const [openCancel, setOpenCancel] = useState(false);
+  const [bannerMessage, setBannerMessage] = useState('');
+  const [sessionClosed, setSessionClosed] = useState(false);
+  const [lastScannedValue, setLastScannedValue] = useState('');
+  const [expectedQ, setExpectedQ] = useState('');
+  const [scannedQ, setScannedQ] = useState('');
 
-  // --- Helpers ---
-  const formatNum = (n) => Number(n ?? 0).toLocaleString('th-TH')
-  const hasSession = !!sessionId
-  const missingIsCritical = Number(missingCount ?? 0) > 0
+  const formatNum = (value) => Number(value ?? 0).toLocaleString('th-TH');
 
-  // ค่าค้นหาแยกสองตาราง (กัน bug เปลี่ยนหน้าแล้ว q หาย)
-  const [expectedQ, setExpectedQ] = useState('')
-  const [scannedQ, setScannedQ] = useState('')
-
-  const initRef = useRef(false)
-
-  // --- Functions: Scan Focus & Audio ---
   const focusScan = () => {
-    const el = scanRef.current
-    if (!el) return
-    const fn = () => {
+    const element = scanRef.current;
+    if (!element) return;
+
+    const focus = () => {
       try {
-        if (typeof el.focus === 'function') el.focus()
-        if (typeof el.select === 'function') el.select()
-      } catch (err) {
-        console.error('Focus error:', err)
+        if (typeof element.focus === 'function') element.focus();
+        if (typeof element.select === 'function') element.select();
+      } catch (error) {
+        console.error('Focus error:', error);
       }
-    }
+    };
+
     if (typeof window !== 'undefined' && 'requestAnimationFrame' in window) {
-      window.requestAnimationFrame(fn)
+      window.requestAnimationFrame(focus);
     } else {
-      setTimeout(fn, 0)
+      setTimeout(focus, 0);
     }
-  }
+  };
 
   const getAudioCtx = async () => {
     try {
-      const AC = window.AudioContext || window.webkitAudioContext
-      if (!AC) return null
-      if (!audioCtxRef.current) audioCtxRef.current = new AC()
-      const ctx = audioCtxRef.current
-      if (ctx.state === 'suspended' && ctx.resume) await ctx.resume()
-      return ctx
-    } catch (err) {
-      console.error('AudioContext error:', err)
-      return null
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextClass) return null;
+      if (!audioCtxRef.current) audioCtxRef.current = new AudioContextClass();
+      const context = audioCtxRef.current;
+      if (context.state === 'suspended' && context.resume) await context.resume();
+      return context;
+    } catch (error) {
+      console.error('AudioContext error:', error);
+      return null;
     }
-  }
+  };
 
   const playBeep = async ({ freq, duration, type = 'square', volume = 0.6 }) => {
-    const ctx = await getAudioCtx()
-    if (!ctx) return
-    const start = ctx.currentTime
-    const osc = ctx.createOscillator()
-    const gain = ctx.createGain()
-    osc.type = type
-    osc.frequency.setValueAtTime(freq, start)
-    gain.gain.setValueAtTime(0.0001, start)
-    gain.gain.exponentialRampToValueAtTime(Math.min(volume, 1), start + 0.01)
-    gain.gain.exponentialRampToValueAtTime(0.0001, start + duration)
-    osc.connect(gain).connect(ctx.destination)
-    osc.start(start)
-    osc.stop(start + duration + 0.05)
-    return new Promise((resolve) => setTimeout(resolve, duration * 1000 + 50))
-  }
+    const context = await getAudioCtx();
+    if (!context) return;
+    const start = context.currentTime;
+    const oscillator = context.createOscillator();
+    const gain = context.createGain();
+    oscillator.type = type;
+    oscillator.frequency.setValueAtTime(freq, start);
+    gain.gain.setValueAtTime(0.0001, start);
+    gain.gain.exponentialRampToValueAtTime(Math.min(volume, 1), start + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+    oscillator.connect(gain).connect(context.destination);
+    oscillator.start(start);
+    oscillator.stop(start + duration + 0.05);
+    return new Promise((resolve) => setTimeout(resolve, duration * 1000 + 50));
+  };
 
   const playNoise = async ({ duration = 0.3, volume = 0.5 }) => {
-    const ctx = await getAudioCtx()
-    if (!ctx) return
-    const start = ctx.currentTime
-    const bufferSize = Math.max(1, Math.floor(ctx.sampleRate * duration))
-    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate)
-    const data = buffer.getChannelData(0)
-    for (let i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1) * 0.9
-    const noise = ctx.createBufferSource()
-    const gain = ctx.createGain()
-    noise.buffer = buffer
-    gain.gain.setValueAtTime(0.0001, start)
-    gain.gain.exponentialRampToValueAtTime(Math.min(volume, 1), start + 0.01)
-    gain.gain.exponentialRampToValueAtTime(0.0001, start + duration)
-    noise.connect(gain).connect(ctx.destination)
-    noise.start(start)
-    noise.stop(start + duration + 0.02)
-  }
+    const context = await getAudioCtx();
+    if (!context) return;
+    const start = context.currentTime;
+    const bufferSize = Math.max(1, Math.floor(context.sampleRate * duration));
+    const buffer = context.createBuffer(1, bufferSize, context.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let index = 0; index < bufferSize; index += 1) {
+      data[index] = (Math.random() * 2 - 1) * 0.9;
+    }
+    const noise = context.createBufferSource();
+    const gain = context.createGain();
+    noise.buffer = buffer;
+    gain.gain.setValueAtTime(0.0001, start);
+    gain.gain.exponentialRampToValueAtTime(Math.min(volume, 1), start + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+    noise.connect(gain).connect(context.destination);
+    noise.start(start);
+    noise.stop(start + duration + 0.02);
+  };
 
   const playSuccess = async () => {
-    await playBeep({ freq: 900, duration: 0.2, type: 'triangle', volume: 1 })
-    await playBeep({ freq: 1500, duration: 0.2, type: 'triangle', volume: 1 })
-  }
+    await playBeep({ freq: 900, duration: 0.2, type: 'triangle', volume: 1 });
+    await playBeep({ freq: 1500, duration: 0.2, type: 'triangle', volume: 1 });
+  };
 
-  const playDuplicate = async () => {  
-    const ctx = await getAudioCtx()
-    if (!ctx) return
-    const now = ctx.currentTime
+  const playDuplicate = async () => {
+    const context = await getAudioCtx();
+    if (!context) return;
+    const now = context.currentTime;
     const makeTone = (start, freq, duration, volume = 0.85) => {
-      const osc = ctx.createOscillator()
-      const gain = ctx.createGain()
-      osc.type = 'square'
-      osc.frequency.setValueAtTime(freq, start)
-      gain.gain.setValueAtTime(0.0001, start)
-      gain.gain.exponentialRampToValueAtTime(volume, start + 0.01)
-      gain.gain.exponentialRampToValueAtTime(0.0001, start + duration)
-      osc.connect(gain).connect(ctx.destination)
-      osc.start(start)
-      osc.stop(start + duration + 0.05)
-    }
-    const dur = 0.25
-    const gap = 0.12
-    const f = 1900
-    makeTone(now + 0.00, f, dur)
-    makeTone(now + dur + gap, f, dur)
-  }
+      const oscillator = context.createOscillator();
+      const gain = context.createGain();
+      oscillator.type = 'square';
+      oscillator.frequency.setValueAtTime(freq, start);
+      gain.gain.setValueAtTime(0.0001, start);
+      gain.gain.exponentialRampToValueAtTime(volume, start + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+      oscillator.connect(gain).connect(context.destination);
+      oscillator.start(start);
+      oscillator.stop(start + duration + 0.05);
+    };
+    const duration = 0.25;
+    const gap = 0.12;
+    makeTone(now, 1900, duration);
+    makeTone(now + duration + gap, 1900, duration);
+  };
 
   const playError = async () => {
-    const ctx = await getAudioCtx()
-    if (!ctx) return
-    const start = ctx.currentTime
-    const dur = 1.2
-    const osc = ctx.createOscillator()
-    const gain = ctx.createGain()
-    osc.type = 'sawtooth'
-    osc.frequency.setValueAtTime(1000, start)
-    osc.frequency.exponentialRampToValueAtTime(200, start + dur)
-    gain.gain.setValueAtTime(0.0001, start)
-    gain.gain.exponentialRampToValueAtTime(0.7, start + 0.05)
-    gain.gain.exponentialRampToValueAtTime(0.0001, start + dur)
-    osc.connect(gain).connect(ctx.destination)
-    osc.start(start)
-    osc.stop(start + dur)
-    await playNoise({ duration: 0.5, volume: 0.5 })
-  }
+    const context = await getAudioCtx();
+    if (!context) return;
+    const start = context.currentTime;
+    const duration = 1.2;
+    const oscillator = context.createOscillator();
+    const gain = context.createGain();
+    oscillator.type = 'sawtooth';
+    oscillator.frequency.setValueAtTime(1000, start);
+    oscillator.frequency.exponentialRampToValueAtTime(200, start + duration);
+    gain.gain.setValueAtTime(0.0001, start);
+    gain.gain.exponentialRampToValueAtTime(0.7, start + 0.05);
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+    oscillator.connect(gain).connect(context.destination);
+    oscillator.start(start);
+    oscillator.stop(start + duration);
+    await playNoise({ duration: 0.5, volume: 0.5 });
+  };
 
-  // --- Effects ---
   useEffect(() => {
-    if (initRef.current) return
-    initRef.current = true
+    if (initRef.current) return;
+    initRef.current = true;
 
     const bootstrap = async () => {
       try {
-        const res = await loadActiveReadyAuditAction()
-        if (res?.ok && res?.found) {
-          setSessionClosed(false)
-          setBannerMessage('พบรอบตรวจนับที่เปิดค้างอยู่ ระบบเชื่อมเข้ารอบเดิมให้แล้ว')
-          setTimeout(() => setBannerMessage(''), 3500)
+        const response = await loadActiveReadyAuditAction();
+        if (response?.ok && response?.found) {
+          setSessionClosed(false);
+          setBannerMessage('พบรอบตรวจนับที่เปิดค้างอยู่ ระบบเชื่อมเข้ารอบเดิมให้แล้ว');
+          setTimeout(() => setBannerMessage(''), 3500);
         }
-      } catch (err) {
-        console.error('Bootstrap active audit error:', err)
+      } catch (error) {
+        console.error('Bootstrap active audit error:', error);
       } finally {
-        if (scanRef.current) focusScan()
+        focusScan();
       }
-    }
+    };
 
-    bootstrap()
-  }, [])
+    bootstrap();
+  }, [loadActiveReadyAuditAction]);
 
   useEffect(() => {
-    const onKey = (e) => {
-      if (e.key === 'F2') {
-        e.preventDefault()
-        focusScan()
-      } else if (e.key === 'F3') {
-        e.preventDefault()
-        setScanMode((m) => (m === 'BARCODE' ? 'SN' : 'BARCODE'))
+    const onKey = (event) => {
+      if (event.key === 'F2') {
+        event.preventDefault();
+        focusScan();
+      } else if (event.key === 'F3') {
+        event.preventDefault();
+        setScanMode((current) => (current === 'BARCODE' ? 'SN' : 'BARCODE'));
       }
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [])
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
-  useEffect(() => { focusScan() }, [scanMode])
+  useEffect(() => {
+    focusScan();
+  }, [scanMode]);
 
   useEffect(() => {
     if (!sessionId || typeof loadOverviewAction !== 'function') {
-      setSessionClosed(false)
-      return
+      setSessionClosed(false);
+      return undefined;
     }
 
-    let cancelled = false
-
+    let cancelled = false;
     const syncSessionState = async () => {
       try {
-        const res = await loadOverviewAction(sessionId)
-        const confirmedAt = res?.session?.confirmedAt || null
-        if (cancelled) return
-
+        const response = await loadOverviewAction(sessionId);
+        const confirmedAt = response?.session?.confirmedAt || null;
+        if (cancelled) return;
         if (confirmedAt) {
-          setSessionClosed(true)
-          setBannerMessage('รอบตรวจนับนี้ถูกปิดแล้ว ระบบล้างสถานะรอบปัจจุบันให้เพื่อเริ่มรอบใหม่ได้')
-          if (typeof resetAuditStateAction === 'function') {
-            resetAuditStateAction()
-          }
-          setTimeout(() => setBannerMessage(''), 4500)
-          return
+          setSessionClosed(true);
+          setBannerMessage('รอบตรวจนับนี้ถูกปิดแล้ว ระบบพร้อมให้เริ่มรอบใหม่');
+          if (typeof resetAuditStateAction === 'function') resetAuditStateAction();
+          setTimeout(() => setBannerMessage(''), 4500);
+          return;
         }
-
-        setSessionClosed(false)
-      } catch (err) {
-        if (cancelled) return
-        console.error('Sync session state error:', err)
+        setSessionClosed(false);
+      } catch (error) {
+        if (!cancelled) console.error('Sync session state error:', error);
       }
-    }
+    };
 
-    syncSessionState()
-    return () => { cancelled = true }
-  }, [sessionId, loadOverviewAction, resetAuditStateAction])
+    syncSessionState();
+    return () => {
+      cancelled = true;
+    };
+  }, [sessionId, loadOverviewAction, resetAuditStateAction]);
 
-  // --- Handlers ---
-  const classifyScanResult = (result, err) => {
-    const code = String(result?.code ?? result?.status ?? result?.reason ?? '').toUpperCase()
-    const statusCode = Number(result?.statusCode ?? result?.httpStatus ?? err?.response?.status ?? 0)
-    const messageRaw = (result?.message ?? result?.msg ?? result?.error ?? err?.response?.data?.message ?? err?.response?.data?.error ?? '').toString()
-    const message = messageRaw.toLowerCase()
-
+  const classifyScanResult = (result, error) => {
+    const code = String(result?.code ?? result?.status ?? result?.reason ?? '').toUpperCase();
+    const statusCode = Number(result?.statusCode ?? result?.httpStatus ?? error?.response?.status ?? 0);
+    const messageRaw = (result?.message ?? result?.msg ?? result?.error ?? error?.response?.data?.message ?? error?.response?.data?.error ?? '').toString();
+    const message = messageRaw.toLowerCase();
     const flags = {
-      ok: !!(result && (result.ok === true || result === true)),
-      duplicate: false,
-      notFound: false,
+      ok: Boolean(result && (result.ok === true || result === true)),
+      duplicate: statusCode === 409,
+      notFound: statusCode === 404 || statusCode === 422,
       resolvedPending: false,
-    }
+    };
 
-    if (statusCode === 409) flags.duplicate = true
-    if (statusCode === 404 || statusCode === 422) flags.notFound = true
-
-    const dupTokens = ['DUPLICATE','ALREADY','ALREADY_SCANNED']
-    const nfTokens  = ['NOT_FOUND','NOT_IN_EXPECTED','UNEXPECTED','UNKNOWN_ITEM']
-    const rpTokens  = ['RESOLVED_PENDING','PENDING_RESOLVED']
-    if (dupTokens.some(t => code.includes(t))) flags.duplicate = true
-    if (nfTokens.some(t => code.includes(t)))  flags.notFound = true
-    if (rpTokens.some(t => code.includes(t)))  flags.resolvedPending = true
-
-    const m = message
-    if (m.includes('duplicate') || (m.includes('สแกน') && m.includes('แล้ว'))) flags.duplicate = true
-    if (m.includes('ไม่พบ') || m.includes('not found') || m.includes('unexpected') || m.includes('ไม่อยู่ในชุดคาดหวัง')) flags.notFound = true
-    if (m.includes('ค้างตรวจ') || (m.includes('pending') && m.includes('resolved'))) flags.resolvedPending = true
-
-    if (flags.duplicate && flags.notFound) flags.notFound = false
-    return flags
-  }
+    if (['DUPLICATE', 'ALREADY', 'ALREADY_SCANNED'].some((token) => code.includes(token))) flags.duplicate = true;
+    if (['NOT_FOUND', 'NOT_IN_EXPECTED', 'UNEXPECTED', 'UNKNOWN_ITEM'].some((token) => code.includes(token))) flags.notFound = true;
+    if (['RESOLVED_PENDING', 'PENDING_RESOLVED'].some((token) => code.includes(token))) flags.resolvedPending = true;
+    if (message.includes('duplicate') || (message.includes('สแกน') && message.includes('แล้ว'))) flags.duplicate = true;
+    if (message.includes('ไม่พบ') || message.includes('not found') || message.includes('unexpected') || message.includes('ไม่อยู่ในชุดคาดหวัง')) flags.notFound = true;
+    if (message.includes('ค้างตรวจ') || (message.includes('pending') && message.includes('resolved'))) flags.resolvedPending = true;
+    if (flags.duplicate && flags.notFound) flags.notFound = false;
+    return flags;
+  };
 
   const handleScan = async (value) => {
     if (!value) {
-      focusScan()
-      return
+      focusScan();
+      return;
     }
 
-    const input = String(value).trim()
-
+    const input = String(value).trim();
     try {
-      let result
-      if (scanMode === 'SN' && typeof scanSnAction === 'function') {
-        result = await scanSnAction(input)
-      } else {
-        result = await scanBarcodeAction(input, { mode: scanMode })
-      }
-
-      const { ok, duplicate, notFound, resolvedPending } = classifyScanResult(result)
+      const result = scanMode === 'SN' && typeof scanSnAction === 'function'
+        ? await scanSnAction(input)
+        : await scanBarcodeAction(input, { mode: scanMode });
+      const { ok, duplicate, notFound, resolvedPending } = classifyScanResult(result);
 
       if (ok || resolvedPending) {
-        await playSuccess()
-        setLastScannedValue(input)
-
+        await playSuccess();
+        setLastScannedValue(input);
         if (resolvedPending) {
-          setBannerMessage('พบของค้างตรวจ – เคลียร์ให้แล้ว')
-          setTimeout(() => setBannerMessage(''), 2500)
+          setBannerMessage('พบสินค้าค้างตรวจและปรับสถานะเรียบร้อยแล้ว');
+          setTimeout(() => setBannerMessage(''), 2500);
         }
       } else if (duplicate) {
-        await playDuplicate()
+        await playDuplicate();
       } else if (notFound) {
-        await playError()
+        await playError();
       } else {
-        await playError()
+        await playError();
       }
-    } catch (err) {
-      const { duplicate, notFound, resolvedPending } = classifyScanResult(null, err)
-
+    } catch (error) {
+      const { duplicate, notFound, resolvedPending } = classifyScanResult(null, error);
       if (resolvedPending) {
-        await playSuccess()
-        setBannerMessage('พบของค้างตรวจ – เคลียร์ให้แล้ว')
-        setTimeout(() => setBannerMessage(''), 2500)
+        await playSuccess();
+        setBannerMessage('พบสินค้าค้างตรวจและปรับสถานะเรียบร้อยแล้ว');
+        setTimeout(() => setBannerMessage(''), 2500);
       } else if (duplicate) {
-        await playDuplicate()
+        await playDuplicate();
       } else if (notFound) {
-        await playError()
+        await playError();
       } else {
-        console.error('Scan error:', err)
-        await playError()
+        console.error('Scan error:', error);
+        await playError();
       }
     } finally {
-      focusScan()
+      focusScan();
     }
-  }
+  };
+
+  const startAudit = async () => {
+    const response = await startReadyAuditAction();
+    if (response?.ok) setSessionClosed(false);
+    if (response?.ok && response?.reused) {
+      setBannerMessage('พบรอบตรวจนับที่เปิดค้างอยู่ ระบบเชื่อมเข้ารอบเดิมให้แล้ว');
+      setTimeout(() => setBannerMessage(''), 3500);
+    }
+    focusScan();
+  };
 
   const doConfirmLost = async () => {
     try {
-      const res = await confirmAuditAction('MARK_LOST')
-      if (res?.ok) {
-        await playSuccess()
-        // store จะจัดการ refresh/optimistic เอง
-      }
-    } catch (e) {
-      await playError()
+      const response = await confirmAuditAction('MARK_LOST');
+      if (response?.ok) await playSuccess();
+    } catch {
+      await playError();
     } finally {
-      setOpenConfirmLost(false)
-      focusScan()
+      setOpenConfirmLost(false);
+      focusScan();
     }
-  }
+  };
 
   const doConfirmPending = async () => {
     try {
-      const res = await confirmAuditAction('MARK_PENDING')
-      if (res?.ok) {
-        await playSuccess()
-        // store จะจัดการ refresh/optimistic เอง
-      }
-    } catch (e) {
-      await playError()
+      const response = await confirmAuditAction('MARK_PENDING');
+      if (response?.ok) await playSuccess();
+    } catch {
+      await playError();
     } finally {
-      setOpenConfirmPending(false)
-      focusScan()
+      setOpenConfirmPending(false);
+      focusScan();
     }
-  }
+  };
 
   const doCancelAudit = async () => {
-    if (!sessionId) return
+    if (!sessionId) return;
     try {
-      const res = await cancelAuditAction(sessionId)
-      if (res?.ok) {
-        await playSuccess()
-        if (typeof resetAuditStateAction === 'function') resetAuditStateAction()
+      const response = await cancelAuditAction(sessionId);
+      if (response?.ok) {
+        await playSuccess();
+        if (typeof resetAuditStateAction === 'function') resetAuditStateAction();
       } else {
-        await playError()
+        await playError();
       }
-    } catch (e) {
-      await playError()
+    } catch {
+      await playError();
     } finally {
-      setOpenCancel(false)
-      focusScan()
+      setOpenCancel(false);
+      focusScan();
     }
-  }
+  };
 
-  return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
-          <span className="font-medium">Session:</span>
-          <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold border ${hasSession ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-zinc-50 text-zinc-600 border-zinc-200'}`}
-          >
-            {hasSession ? `#${sessionId}` : '-'}
-          </span>
-          <span>Expected: <b className="tabular-nums">{formatNum(expectedCount)}</b></span>
-          <span>Scanned: <b className="tabular-nums">{formatNum(scannedCount)}</b></span>
-          <span>
-            Missing:{' '}
-            <b className={`tabular-nums ${missingIsCritical ? 'text-red-600' : ''}`}>{formatNum(missingCount)}</b>
-          </span>
-          <span className="text-gray-500">(F2 โฟกัสช่องสแกน · F3 สลับโหมด)</span>
-        </div>
-        <div className="flex items-center gap-2">
-          {sessionId && (
-            <button
-              type="button"
-              className={`px-4 py-2 rounded-lg text-white ${isCancelling ? 'bg-gray-400 cursor-not-allowed' : 'bg-zinc-600 hover:bg-zinc-700'}`}
-              onClick={() => setOpenCancel(true)}
-              disabled={isCancelling || isConfirming}
-              title="ยกเลิกรอบตรวจนับ (ไม่สรุปสูญหาย/ค้างตรวจ และล้างข้อมูลในหน้านี้)"
-            >
-              {isCancelling ? 'กำลังยกเลิก...' : 'ยกเลิกรอบ'}
-            </button>
-          )}
-
-          {!sessionId && (
-            <button
-              type="button"
-              className={`px-4 py-2 rounded-lg text-white ${isStarting ? 'bg-gray-400 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-700'}`}
-              onClick={async () => {
-                const res = await startReadyAuditAction()
-                if (res?.ok) {
-                  setSessionClosed(false)
-                }
-                if (res?.ok && res?.reused) {
-                  setBannerMessage('พบรอบตรวจนับที่เปิดค้างอยู่ ระบบเชื่อมเข้ารอบเดิมให้แล้ว')
-                  setTimeout(() => setBannerMessage(''), 3500)
-                }
-                focusScan()
-              }}
-              disabled={isStarting}
-            >
-              {isStarting ? 'กำลังเริ่มรอบ...' : 'เริ่มรอบตรวจนับ'}
-            </button>
-          )}
-          <button
-            type="button"
-            className={`px-4 py-2 rounded-lg text-white ${isConfirming ? 'bg-blue-500 opacity-60 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}
-            onClick={() => setOpenConfirmLost(true)}
-            disabled={isConfirming || isCancelling || !sessionId || sessionClosed}
-            title={!sessionId ? 'ต้องกด “เริ่มรอบตรวจนับ” ก่อน จึงจะสรุปสูญหายได้' : (sessionClosed ? 'รอบนี้ถูกปิดแล้ว' : 'สรุปของที่ยังไม่สแกนเป็น “สูญหาย” และปิดรอบ')}
-          >
-            บันทึกสินค้าสูญหาย
-          </button>
-          <button
-            type="button"
-            className={`px-4 py-2 rounded-lg text-white ${isConfirming ? 'bg-amber-500 opacity-60 cursor-not-allowed' : 'bg-amber-500 hover:bg-amber-600'}`}
-            onClick={() => setOpenConfirmPending(true)}
-            disabled={isConfirming || isCancelling || !sessionId || sessionClosed}
-            title={!sessionId ? 'ต้องกด “เริ่มรอบตรวจนับ” ก่อน จึงจะปิดรอบได้' : (sessionClosed ? 'รอบนี้ถูกปิดแล้ว' : 'ปิดรอบแบบ “ค้างตรวจ” (ไม่สรุปสูญหาย)')}
-          >
-            ปิดรอบ (ค้างตรวจ)
-          </button>
-        </div>
+  const scanner = (
+    <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+      <div>
+        <label className="mb-1.5 block text-xs font-semibold text-slate-600" htmlFor="stock-audit-scan-input">
+          สแกนสินค้า
+        </label>
+        <ScanInput
+          id="stock-audit-scan-input"
+          ref={scanRef}
+          onSubmit={handleScan}
+          disabled={isScanning || !sessionId || sessionClosed}
+          placeholder={sessionClosed
+            ? 'รอบนี้ถูกปิดแล้ว กรุณาเริ่มรอบใหม่'
+            : scanMode === 'SN'
+              ? 'สแกนหรือพิมพ์หมายเลขเครื่อง'
+              : 'สแกนบาร์โค้ดสินค้า'}
+          autoSubmit
+          delay={140}
+          className="min-h-12 w-full rounded-xl border border-teal-200 bg-white px-4 text-base text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 disabled:bg-slate-100"
+        />
       </div>
 
-      {(errorMessage || bannerMessage || lastScannedValue) && (
-        <div className="text-sm">
-          {errorMessage && <span className="text-red-600">{errorMessage}</span>}
-          {bannerMessage && <span className="ml-3 px-2 py-1 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">{bannerMessage}</span>}
-          {lastScannedValue && !errorMessage && (
-            <span className="ml-3 px-2 py-1 rounded bg-blue-50 text-blue-700 border border-blue-200">
-              ล่าสุด: <b className="tabular-nums">{lastScannedValue}</b>
-            </span>
-          )}
+      <div>
+        <p className="mb-1.5 text-xs font-semibold text-slate-600">โหมดสแกน</p>
+        <div className="grid grid-cols-2 rounded-xl border border-teal-200 bg-teal-50 p-1 lg:min-w-[220px]">
+          {['BARCODE', 'SN'].map((mode) => {
+            const active = scanMode === mode;
+            return (
+              <button
+                key={mode}
+                type="button"
+                className={`min-h-10 rounded-lg px-4 text-sm font-semibold transition ${active
+                  ? 'bg-emerald-200 text-emerald-950 shadow-sm'
+                  : 'text-teal-900 hover:bg-white'}`}
+                onClick={() => setScanMode(mode)}
+              >
+                {mode === 'BARCODE' ? 'Barcode' : 'SN'}
+              </button>
+            );
+          })}
         </div>
-      )}
+      </div>
+    </div>
+  );
 
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-        {/* Expected Table */}
-        <div className="rounded-xl border p-3">
-          <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-            <h3 className="font-semibold">Expected (ยังไม่สแกน) {expectedTotal}</h3>
-            <div className="flex items-center gap-2">
-              <ScanInput
-                ref={scanRef}
-                onSubmit={handleScan}
-                disabled={isScanning || !sessionId || sessionClosed}
-                placeholder={sessionClosed ? 'รอบนี้ถูกปิดแล้ว — กดเริ่มรอบใหม่เพื่อสแกนต่อ' : (scanMode === 'SN' ? 'สแกน/พิมพ์ SN (F3 สลับโหมด)' : 'สแกนบาร์โค้ด (F3 สลับโหมด)')}
-                autoSubmit
-                delay={140}
-                className="border border-black rounded px-3 py-2 w-80 md:w-96"
-              />
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-600">โหมด:</span>
-                <div className="inline-flex rounded-lg overflow-hidden border">
-                  <button
-                    type="button"
-                    className={`px-3 py-1 text-xs ${scanMode === 'BARCODE' ? 'bg-gray-900 text-white' : 'bg-white hover:bg-gray-50'}`}
-                    onClick={() => setScanMode('BARCODE')}
-                  >BARCODE</button>
-                  <button
-                    type="button"
-                    className={`px-3 py-1 text-xs ${scanMode === 'SN' ? 'bg-gray-900 text-white' : 'bg-white hover:bg-gray-50'}`}
-                    onClick={() => setScanMode('SN')}
-                  >SN</button>
-                </div>
+  return (
+    <div className="min-h-full bg-slate-50 p-3 md:p-5">
+      <div className="mx-auto max-w-[1500px] space-y-4">
+        <StockAuditSessionSummary
+          sessionId={sessionId}
+          expectedCount={expectedCount}
+          scannedCount={scannedCount}
+          missingCount={missingCount}
+          formatNumber={formatNum}
+        />
+
+        <StockAuditActionBar
+          sessionId={sessionId}
+          sessionClosed={sessionClosed}
+          isStarting={isStarting}
+          isConfirming={isConfirming}
+          isCancelling={isCancelling}
+          onStart={startAudit}
+          onCancel={() => setOpenCancel(true)}
+          onMarkLost={() => setOpenConfirmLost(true)}
+          onMarkPending={() => setOpenConfirmPending(true)}
+        />
+
+        {(errorMessage || bannerMessage || lastScannedValue) ? (
+          <section className="grid gap-2 sm:grid-cols-2">
+            {errorMessage ? (
+              <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900">
+                {errorMessage}
               </div>
-            </div>
-          </div>
+            ) : null}
+            {bannerMessage ? (
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+                {bannerMessage}
+              </div>
+            ) : null}
+            {lastScannedValue && !errorMessage ? (
+              <div className="rounded-xl border border-teal-200 bg-teal-50 px-4 py-3 text-sm text-teal-900">
+                สแกนล่าสุด: <strong className="font-semibold tabular-nums">{lastScannedValue}</strong>
+              </div>
+            ) : null}
+          </section>
+        ) : null}
 
-          <AuditTable
-            items={expectedItems}
-            total={expectedTotal}
-            page={expectedPage}
-            pageSize={expectedPageSize}
-            loading={isLoadingItems}
-            onSearch={(q) => {
-              setExpectedQ(q)
-              return loadItemsAction({ scanned: 0, q, page: 1, pageSize: expectedPageSize })
-            }}
-            onPageChange={(page) => loadItemsAction({ scanned: 0, q: expectedQ, page, pageSize: expectedPageSize })}
-          />
-        </div>
+        <div className="grid gap-4 xl:grid-cols-2">
+          <StockAuditListPanel
+            title="รายการรอตรวจนับ"
+            description="สินค้าที่คาดว่าจะพบและยังไม่ได้สแกนในรอบนี้"
+            count={formatNum(expectedTotal)}
+            scanner={scanner}
+          >
+            <AuditTable
+              items={expectedItems}
+              total={expectedTotal}
+              page={expectedPage}
+              pageSize={expectedPageSize}
+              loading={isLoadingItems}
+              onSearch={(query) => {
+                setExpectedQ(query);
+                return loadItemsAction({ scanned: 0, q: query, page: 1, pageSize: expectedPageSize });
+              }}
+              onPageChange={(page) => loadItemsAction({ scanned: 0, q: expectedQ, page, pageSize: expectedPageSize })}
+            />
+          </StockAuditListPanel>
 
-        {/* Scanned Table */}
-        <div className="rounded-xl border p-3">
-          <div className="flex items-center justify-between mb-2 py-2">
-            <h3 className="font-semibold">Scanned {scannedTotal}</h3>
-          </div>
-
-          <AuditTable
-            items={scannedItems}
-            total={scannedTotal}
-            page={scannedPage}
-            pageSize={scannedPageSize}
-            scanned={true}
-            highlightValue={lastScannedValue}
-            loading={isLoadingItems}
-            onSearch={(q) => {
-              setScannedQ(q)
-              return loadItemsAction({ scanned: 1, q, page: 1, pageSize: scannedPageSize })
-            }}
-            onPageChange={(page) => loadItemsAction({ scanned: 1, q: scannedQ, page, pageSize: scannedPageSize })}
-          />
+          <StockAuditListPanel
+            title="รายการที่สแกนแล้ว"
+            description="สินค้าที่ตรวจพบและบันทึกเข้าสู่รอบตรวจนับแล้ว"
+            count={formatNum(scannedTotal)}
+            accent="emerald"
+          >
+            <AuditTable
+              items={scannedItems}
+              total={scannedTotal}
+              page={scannedPage}
+              pageSize={scannedPageSize}
+              scanned
+              highlightValue={lastScannedValue}
+              loading={isLoadingItems}
+              onSearch={(query) => {
+                setScannedQ(query);
+                return loadItemsAction({ scanned: 1, q: query, page: 1, pageSize: scannedPageSize });
+              }}
+              onPageChange={(page) => loadItemsAction({ scanned: 1, q: scannedQ, page, pageSize: scannedPageSize })}
+            />
+          </StockAuditListPanel>
         </div>
       </div>
 
@@ -532,7 +500,7 @@ const ReadyToSellAuditPage = () => {
         open={openConfirmLost}
         onOpenChange={setOpenConfirmLost}
         title="บันทึกสินค้าสูญหาย"
-        description="ของที่ยังไม่ถูกสแกนจะถูกบันทึกเป็นสูญหาย และปิดรอบตรวจทันที"
+        description="สินค้าที่ยังไม่ถูกสแกนจะถูกบันทึกเป็นสูญหาย และรอบตรวจนับจะถูกปิดทันที"
         confirmText={isConfirming ? 'กำลังบันทึก...' : 'ยืนยันบันทึกสูญหาย'}
         confirmVariant="primary"
         onConfirm={doConfirmLost}
@@ -542,9 +510,9 @@ const ReadyToSellAuditPage = () => {
       <ConfirmActionDialog
         open={openConfirmPending}
         onOpenChange={setOpenConfirmPending}
-        title="ปิดรอบ (ค้างตรวจ)"
-        description="ปิดรอบโดยยังไม่สรุปเป็นสูญหาย ของที่ยังไม่ถูกสแกนจะถูกทำเครื่องหมายเป็นค้างตรวจ"
-        confirmText={isConfirming ? 'กำลังบันทึก...' : 'ยืนยันปิดรอบ (ค้างตรวจ)'}
+        title="ปิดรอบแบบค้างตรวจ"
+        description="ปิดรอบโดยยังไม่สรุปเป็นสูญหาย สินค้าที่ยังไม่ถูกสแกนจะถูกทำเครื่องหมายเป็นค้างตรวจ"
+        confirmText={isConfirming ? 'กำลังบันทึก...' : 'ยืนยันปิดรอบ'}
         confirmVariant="warning"
         onConfirm={doConfirmPending}
         disabled={isConfirming || isCancelling || !sessionId || sessionClosed}
@@ -554,19 +522,14 @@ const ReadyToSellAuditPage = () => {
         open={openCancel}
         onOpenChange={setOpenCancel}
         title="ยกเลิกรอบตรวจนับ"
-        description="ยกเลิกรอบนี้โดยไม่สรุปเป็นสูญหาย/ค้างตรวจ และล้างข้อมูลในหน้านี้ (สามารถเริ่มรอบใหม่ได้ทันที)"
+        description="ยกเลิกรอบนี้โดยไม่สรุปเป็นสูญหายหรือค้างตรวจ และล้างข้อมูลรอบปัจจุบัน"
         confirmText={isCancelling ? 'กำลังยกเลิก...' : 'ยืนยันยกเลิกรอบ'}
         confirmVariant="danger"
         onConfirm={doCancelAudit}
         disabled={isConfirming || isCancelling || !sessionId || sessionClosed}
       />
     </div>
-  )
-}
+  );
+};
 
-export default ReadyToSellAuditPage
-
-
-
-
-
+export default ReadyToSellAuditPage;

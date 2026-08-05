@@ -1,5 +1,6 @@
 import React from 'react';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
+import ExpensePayeeMasterDataPanel from '../components/ExpensePayeeMasterDataPanel';
 import TaxExpenseCreateForm from '../components/TaxExpenseCreateForm';
 import useTaxExpenseWorkspace from '../hooks/useTaxExpenseWorkspace';
 
@@ -7,7 +8,19 @@ const money = (value) => Number(value || 0).toLocaleString('th-TH', { minimumFra
 
 const TaxExpenseWorkspacePage = () => {
   const {
-    branchId, currentBranch, expenses, categories, payees, loading, saving, error, load, submitExpense,
+    branchId,
+    currentBranch,
+    expenses,
+    categories,
+    payees,
+    loading,
+    saving,
+    savingPayee,
+    error,
+    load,
+    searchPayees,
+    submitPayee,
+    submitExpense,
   } = useTaxExpenseWorkspace();
 
   if (!branchId) {
@@ -18,13 +31,22 @@ const TaxExpenseWorkspacePage = () => {
     <section className="space-y-5">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div><h1 className="text-xl font-black text-slate-900">ค่าใช้จ่ายทางภาษี</h1><p className="mt-1 text-sm text-slate-500">ร้าน: {currentBranch?.name || branchId} · บันทึกจากเอกสารผู้รับเงินจริง</p></div>
-        <button type="button" onClick={load} disabled={loading} className="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700"><RefreshCw size={15} className={loading ? 'animate-spin' : ''} />รีเฟรช</button>
+        <button type="button" onClick={() => load()} disabled={loading} className="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700"><RefreshCw size={15} className={loading ? 'animate-spin' : ''} />รีเฟรช</button>
       </header>
 
       {error && <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm font-semibold text-rose-700">{error}</div>}
 
+      <ExpensePayeeMasterDataPanel
+        payees={payees}
+        loading={loading}
+        saving={savingPayee}
+        onRefresh={() => searchPayees('')}
+        onSearch={searchPayees}
+        onCreate={submitPayee}
+      />
+
       <div className="grid gap-5 xl:grid-cols-[1.1fr_.9fr]">
-        <TaxExpenseCreateForm categories={categories} payees={payees} saving={saving} onSubmit={submitExpense} />
+        <TaxExpenseCreateForm categories={categories} saving={saving} onSubmit={submitExpense} payeeConnectionReady={false} />
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <h2 className="font-black text-slate-900">รายการล่าสุด</h2>
           <div className="mt-3 overflow-x-auto">

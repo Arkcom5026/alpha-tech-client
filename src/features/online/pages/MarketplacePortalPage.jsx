@@ -167,9 +167,9 @@ const MarketplacePortalPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#f7f8f7] font-sans text-slate-900 antialiased lg:h-screen lg:overflow-hidden">
-      <header className="h-16 border-b border-slate-200 bg-white px-5">
-        <div className="mx-auto flex h-full max-w-[1440px] items-center justify-between gap-4">
+    <div className="min-h-screen bg-[#f7f8f7] font-sans text-slate-900 antialiased">
+      <header className="h-16 border-b border-slate-200 bg-white px-4 sm:px-5">
+        <div className="mx-auto flex h-full max-w-[1560px] items-center justify-between gap-4">
           <a href="/" className="flex items-center gap-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2">
             <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-teal-600 text-xs font-black text-white">SS</span>
             <div>
@@ -200,8 +200,8 @@ const MarketplacePortalPage = () => {
         </div>
       </header>
 
-      <main className="mx-auto flex w-full max-w-[1440px] flex-col px-5 py-4 lg:h-[calc(100vh-4rem)] lg:min-h-0">
-        <section className="shrink-0">
+      <main className="mx-auto w-full max-w-[1560px] px-4 py-3 sm:px-5 lg:h-[calc(100vh-4rem)] lg:min-h-0 lg:overflow-hidden">
+        <section>
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
             <div className="flex h-14 flex-1 items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 shadow-sm transition focus-within:border-teal-300 focus-within:ring-4 focus-within:ring-teal-100/70">
               <FaSearch className="shrink-0 text-lg text-sky-600" />
@@ -228,7 +228,7 @@ const MarketplacePortalPage = () => {
           </div>
         </section>
 
-        <section className="mt-3 shrink-0">
+        <section className="mt-4">
           <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
             {categories.map((category) => {
               const Icon = category.icon;
@@ -239,9 +239,9 @@ const MarketplacePortalPage = () => {
                   type="button"
                   onClick={() => setActiveCategory(category.fullName)}
                   aria-pressed={active}
-                  className={`relative flex h-16 items-center gap-2 rounded-2xl border px-3 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 ${
+                  className={`relative flex h-14 items-center gap-2 rounded-2xl border px-3 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 ${
                     active
-                      ? 'border-slate-300 bg-white shadow-sm after:absolute after:inset-x-4 after:top-0 after:h-0.5 after:rounded-full after:bg-teal-500'
+                      ? 'border-slate-300 bg-white shadow-sm after:absolute after:inset-x-5 after:top-0 after:h-0.5 after:rounded-full after:bg-teal-500'
                       : categoryTone[category.tone]
                   }`}
                 >
@@ -256,8 +256,8 @@ const MarketplacePortalPage = () => {
           </div>
         </section>
 
-        <section className="mt-4 flex min-h-0 flex-1 flex-col">
-          <div className="mb-3 flex shrink-0 items-end justify-between gap-4">
+        <section className="mt-3">
+          <div className="mb-2 flex items-end justify-between gap-4">
             <div>
               <p className="text-[10px] font-extrabold tracking-[0.12em] text-rose-600">สินค้าพร้อมขาย</p>
               <h1 className="mt-0.5 text-xl font-black tracking-tight text-slate-950">สินค้าใกล้คุณ</h1>
@@ -266,14 +266,18 @@ const MarketplacePortalPage = () => {
           </div>
 
           {filteredProducts.length > 0 ? (
-            <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+            <div className="grid items-start grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
               {filteredProducts.map((product) => (
-                <article key={product.id} className="group flex min-h-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg">
-                  <div className="relative min-h-[170px] flex-[1.15] overflow-hidden bg-slate-100">
-                    <div data-image-fallback className="absolute inset-0 hidden items-center justify-center bg-gradient-to-br from-sky-50 via-white to-violet-50">
-                      <div className="text-center">
-                        <FaWarehouse className="mx-auto text-3xl text-slate-300" />
-                        <p className="mt-2 text-xs font-bold text-slate-400">กำลังเตรียมภาพสินค้า</p>
+                <article key={product.id} className="group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg">
+                  <div className="relative aspect-[4/3] overflow-hidden bg-slate-100">
+                    <div data-image-fallback className="absolute inset-0 hidden items-center justify-center overflow-hidden bg-gradient-to-br from-sky-50 via-white to-violet-50">
+                      <div className="absolute -left-8 bottom-5 h-24 w-24 rotate-12 rounded-[28px] border border-sky-100 bg-white/80" />
+                      <div className="absolute -right-6 top-4 h-28 w-28 -rotate-12 rounded-[32px] border border-violet-100 bg-white/75" />
+                      <div className="relative text-center">
+                        <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-slate-200 bg-white shadow-sm">
+                          <FaWarehouse className="text-2xl text-slate-400" />
+                        </span>
+                        <p className="mt-3 text-xs font-extrabold text-slate-500">กำลังเตรียมภาพสินค้า</p>
                       </div>
                     </div>
                     <img src={product.imgUrl} alt="" onError={handleImageError} className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]" />
@@ -282,21 +286,21 @@ const MarketplacePortalPage = () => {
                     <span className="absolute bottom-2.5 right-2.5 inline-flex items-center gap-1 rounded-full bg-sky-600 px-2 py-1 text-[9px] font-extrabold text-white"><FaMapPin className="text-[8px]" />{product.distance}</span>
                   </div>
 
-                  <div className="flex min-h-0 flex-1 flex-col p-3">
+                  <div className="p-3">
                     <p className="text-[9px] font-extrabold tracking-wide text-slate-400">{product.category}</p>
-                    <h2 className="mt-1 line-clamp-2 text-[13px] font-extrabold leading-[1.35] text-slate-950">{product.name}</h2>
+                    <h2 className="mt-1 line-clamp-2 min-h-[36px] text-[13px] font-extrabold leading-[1.35] text-slate-950">{product.name}</h2>
                     <div className="mt-2 flex items-center justify-between gap-2">
                       {renderRating(product.rating)}
                       <span className="inline-flex items-center gap-1 text-[9px] font-semibold text-slate-400"><FaClock />{product.update}</span>
                     </div>
                     <p className="mt-2 flex items-center gap-1.5 text-[10px] font-semibold text-slate-500"><FaStore className="shrink-0 text-violet-500" /><span className="truncate">{product.shop}</span></p>
 
-                    <div className="mt-auto pt-3">
+                    <div className="mt-3 border-t border-slate-100 pt-3">
                       <div className="flex items-end justify-between gap-2">
                         <p className="text-lg font-black tracking-tight text-slate-950">฿{product.price.toLocaleString()}</p>
                         <span className="rounded-full bg-emerald-50 px-2 py-1 text-[9px] font-extrabold text-emerald-700">เหลือ {product.stock}</span>
                       </div>
-                      <div className="mt-2 flex items-center justify-between border-t border-slate-100 pt-2">
+                      <div className="mt-2 flex items-center justify-between">
                         <span className="inline-flex min-w-0 items-center gap-1 text-[9px] font-bold text-emerald-700"><FaCheckCircle /><span className="truncate">{product.trust}</span></span>
                         <a href={`/marketplace/products/${product.id}`} className="inline-flex shrink-0 items-center gap-1 text-[10px] font-extrabold text-slate-700 hover:text-teal-700">ดูสินค้า <FaChevronRight className="text-[8px]" /></a>
                       </div>
@@ -306,7 +310,7 @@ const MarketplacePortalPage = () => {
               ))}
             </div>
           ) : (
-            <div className="flex flex-1 items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-white">
+            <div className="flex min-h-[360px] items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-white">
               <div className="text-center">
                 <FaSearch className="mx-auto text-3xl text-slate-300" />
                 <p className="mt-3 font-extrabold text-slate-900">ไม่พบสินค้าที่ค้นหา</p>

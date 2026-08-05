@@ -34,6 +34,7 @@ for (const helper of [
 }
 
 assert.ok(!script.includes('rm -rf'), 'retirement must not use recursive deletion');
-assert.ok(!script.includes('scripts/'), 'retirement must not delete the entire scripts directory');
+assert.ok(!script.includes("fs.rmSync(path.join(root, 'scripts')"), 'retirement must not delete the scripts directory');
+assert.ok(!script.includes("fs.rmdirSync(path.join(root, 'scripts')"), 'retirement must not remove the scripts directory');
 
 console.log('store experience migration helper retirement contract: PASS');

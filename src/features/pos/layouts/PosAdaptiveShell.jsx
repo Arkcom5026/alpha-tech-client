@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Outlet, useLocation, useParams } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Menu, X } from 'lucide-react';
+import { Menu, X } from 'lucide-react';
 
 import HeaderPos from '@/features/pos/components/header/HeaderPos';
 import SidebarLoader from '@/features/pos/components/sidebar/SidebarLoader';
@@ -54,23 +54,15 @@ const PosAdaptiveShell = () => {
 
       <div
         className={[
-          'relative hidden h-[100dvh] shrink-0 overflow-hidden border-r border-slate-200 bg-white transition-[width] duration-200 lg:block',
-          desktopExpanded ? 'w-64' : 'w-[76px]',
+          'hidden h-[100dvh] shrink-0 transition-[width] duration-200 lg:block',
+          desktopExpanded ? 'w-64' : 'w-16',
         ].join(' ')}
       >
-        <div className="h-full w-64">
-          <SidebarLoader shopSlug={shopSlug} />
-        </div>
-
-        <button
-          type="button"
-          onClick={toggleDesktopSidebar}
-          className="absolute right-2 top-4 z-40 flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:border-teal-300 hover:bg-teal-50 hover:text-teal-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500"
-          aria-label={desktopExpanded ? 'ย่อเมนูด้านข้าง' : 'ขยายเมนูด้านข้าง'}
-          aria-expanded={desktopExpanded}
-        >
-          {desktopExpanded ? <ChevronLeft className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
-        </button>
+        <SidebarLoader
+          shopSlug={shopSlug}
+          collapsed={!desktopExpanded}
+          onToggle={toggleDesktopSidebar}
+        />
       </div>
 
       {mobileOpen && (
@@ -81,10 +73,9 @@ const PosAdaptiveShell = () => {
             onClick={() => setMobileOpen(false)}
             aria-label="ปิดเมนู POS"
           />
-          <div className="absolute inset-y-0 left-0 w-[min(86vw,320px)] overflow-hidden bg-white shadow-2xl">
-            <div className="h-full w-64 max-w-full">
-              <SidebarLoader shopSlug={shopSlug} />
-            </div>
+
+          <div className="absolute inset-y-0 left-0 w-[min(88vw,320px)] overflow-hidden bg-white shadow-2xl">
+            <SidebarLoader shopSlug={shopSlug} collapsed={false} />
             <button
               type="button"
               onClick={() => setMobileOpen(false)}

@@ -15,6 +15,14 @@ function isLoginUrl(url) {
   return /\/login(?:\?|$)|\/partner-portal\/login(?:\?|$)/i.test(url);
 }
 
+function isLoginRequest(requestOrResponse) {
+  const request = typeof requestOrResponse.request === 'function'
+    ? requestOrResponse.request()
+    : requestOrResponse;
+  return request.method() === 'POST'
+    && /\/api\/auth\/login(?:\?|$)|\/auth\/login(?:\?|$)/i.test(request.url());
+}
+
 async function canOpenProtectedStore(page) {
   await page.goto(`${baseUrl}/${branchSlug}/pos/`, { waitUntil: 'domcontentloaded' });
   await page.waitForLoadState('networkidle').catch(() => {});
@@ -42,6 +50,11 @@ async function createStoredSession(browser) {
 
   const context = await browser.newContext();
   const page = await context.newPage();
+  let failedLoginRequest = null;
+  page.on('requestfailed', (request) => {
+    if (isLoginRequest(request)) failedLoginRequest = request;
+  });
+
   try {
     await page.goto(`${baseUrl}/login`, { waitUntil: 'domcontentloaded' });
     await page.getByRole('textbox', {
@@ -49,19 +62,33 @@ async function createStoredSession(browser) {
     }).fill(username);
     await page.getByRole('textbox', { name: 'รหัสผ่าน' }).fill(password);
 
-    const loginResponsePromise = page.waitForResponse(
-      (response) => response.request().method() === 'POST'
-        && /login|signin|authenticate/i.test(response.url()),
-      { timeout: 20_000 }
-    );
+    const submitButton = page.getByRole('button', { name: 'เข้าสู่ระบบ', exact: true });
+    await submitButton.click();
 
-    await page.getByRole('button', { name: 'เข้าสู่ระบบ', exact: true }).click();
-    const loginResponse = await loginResponsePromise;
-    const loginBody = await loginResponse.text();
+    const loginResponse = await page.waitForResponse(isLoginRequest, { timeout: 10_000 }).catch(() => null);
 
-    if (!loginResponse.ok()) {
+    if (loginResponse) {
+      const loginBody = await loginResponse.text();
+      if (!loginResponse.ok()) {
+        throw new Error(
+          `Merchant login failed with HTTP ${loginResponse.status()}: ${loginBody}`
+        );
+      }
+    } else {
+      await page.waitForTimeout(500);
+      if (failedLoginRequest) {
+        throw new Error(
+          `Merchant login request failed before receiving a response: ${failedLoginRequest.failure()?.errorText || 'UNKNOWN_NETWORK_ERROR'} (${failedLoginRequest.url()})`
+        );
+      }
+
+      const visibleError = await page.locator('.text-red-600, .text-red-500')
+        .filter({ hasText: /.+/ })
+        .first()
+        .textContent()
+        .catch(() => null);
       throw new Error(
-        `Merchant login failed with HTTP ${loginResponse.status()}: ${loginBody}`
+        `Merchant login produced no /auth/login response.${visibleError ? ` UI error: ${visibleError.trim()}` : ` Current URL: ${page.url()}`}`
       );
     }
 
@@ -69,7 +96,7 @@ async function createStoredSession(browser) {
 
     if (!(await canOpenProtectedStore(page))) {
       throw new Error(
-        `Merchant login API succeeded but protected store route redirected to ${page.url()}. Confirm the account has access to ${branchSlug}. Login response: ${loginBody}`
+        `Merchant login API succeeded but protected store route redirected to ${page.url()}. Confirm the account has access to ${branchSlug}.`
       );
     }
 

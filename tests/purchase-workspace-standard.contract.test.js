@@ -19,6 +19,7 @@ const page = read('src/features/purchaseOrder/list/pages/PurchaseOrderListPage.j
 const header = read('src/features/purchaseOrder/list/components/PurchaseOrderWorkspaceHeader.jsx');
 const toolbar = read('src/features/purchaseOrder/list/components/PurchaseOrderListToolbar.jsx');
 const table = read('src/features/purchaseOrder/list/components/PurchaseOrderListTable.jsx');
+const badge = read('src/features/purchaseOrder/list/components/PurchaseOrderStatusBadge.jsx');
 const feedback = read('src/features/purchaseOrder/list/components/PurchaseOrderListFeedback.jsx');
 
 assertIncludes(page, 'PurchaseOrderWorkspaceHeader', 'Purchase order list must use the workspace header');
@@ -39,9 +40,14 @@ assertIncludes(toolbar, 'แสดงประวัติทั้งหมด'
 assertIncludes(table, 'md:hidden', 'Purchase results must expose mobile cards');
 assertIncludes(table, 'md:block', 'Purchase results must preserve desktop table layout');
 assertIncludes(table, '<table', 'Purchase results must preserve table semantics on desktop');
+assertIncludes(table, 'grid-cols-2', 'Mobile purchase cards must keep a compact information grid');
+assertIncludes(table, 'col-span-2', 'Supplier information must remain readable across the mobile card width');
 assertIncludes(table, 'min-h-11', 'Purchase row actions must remain touch sized');
 assertIncludes(table, 'PurchaseOrderStatusBadge', 'Status projection must remain visible in both layouts');
 assertIncludes(table, 'ไม่พบข้อมูลใบสั่งซื้อ', 'Empty state must remain explicit');
+assertIncludes(badge, 'TONE_STYLES', 'Status badge tones must use one deterministic configuration authority');
+assertIncludes(badge, 'aria-label={`สถานะ ${label}`}', 'Status badge must expose an accessible status label');
+assertIncludes(badge, 'whitespace-nowrap', 'Status labels must not wrap inside compact purchase cards');
 assertIncludes(feedback, 'role="status"', 'Loading feedback must be accessible');
 assertIncludes(feedback, 'role="alert"', 'Error feedback must be accessible');
 

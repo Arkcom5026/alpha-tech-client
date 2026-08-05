@@ -1,6 +1,6 @@
 // Real Browser E2E for Repair Intake Completion.
 // No API interception, mock response, or client-store injection is allowed.
-// Provision a fresh Test-DB fixture and run the paired Test-DB API server first.
+// Provision a fresh fixture through the paired Server E2E package first.
 
 import { test, expect } from '@playwright/test';
 import { repairIntakeSelectors } from './repairIntakeCompletion.selectors';
@@ -29,12 +29,12 @@ const onePixelPng = Buffer.from(
   'base64'
 );
 
-test.describe('Repair intake completion (Test DB)', () => {
+test.describe('Repair intake completion (selected E2E authority)', () => {
   test('blocks work before evidence, then accepts completed intake evidence', async ({ page }) => {
     if (missingEnvironment.length > 0) {
       throw new Error(
         `Missing Repair Browser E2E environment: ${missingEnvironment.join(', ')}. `
-          + 'Use the values emitted by the Test-DB fixture before running this test.'
+          + 'Use the values emitted by the paired Server fixture before running this test.'
       );
     }
 
@@ -57,7 +57,7 @@ test.describe('Repair intake completion (Test DB)', () => {
     expect(
       detailResponse.ok(),
       `Repair detail API failed with HTTP ${detailResponse.status()}: ${detailBody}. `
-        + 'Start the Server with npm run start:test-database so Browser runtime uses the same Test DB as the fixture.'
+        + 'Confirm that the API runtime uses the same authority as the fixture.'
     ).toBeTruthy();
 
     await expect(page.getByRole('heading', { name: repairJobNo })).toBeVisible();

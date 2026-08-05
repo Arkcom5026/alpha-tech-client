@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ShieldCheck, User } from 'lucide-react';
+import { UserRound } from 'lucide-react';
 import useSalesStore from '@/features/sales/store/salesStore';
 import useCustomerDepositStore from '@/features/customerDeposit/store/customerDepositStore';
 import useCustomerStore from '@/features/customer/store/customerStore';
@@ -47,7 +47,7 @@ const SaleCustomerSection = ({ productSearchRef, clearTrigger, onClearFinish, on
     if (!hydrated) return;
     setSelectedCustomer(hydrated);
     setPendingCreate(false);
-    setFormInfo('เลือกลูกค้าแล้ว');
+    setFormInfo('เลือกลูกค้าสำหรับรายการขายแล้ว');
     setFormError('');
   }, [hydration]);
 
@@ -57,7 +57,7 @@ const SaleCustomerSection = ({ productSearchRef, clearTrigger, onClearFinish, on
     clearCustomerAndDeposit();
     setPendingCreate(true);
     editor.clearEditor(mode === 'phone' ? { phone: query } : { name: query });
-    setFormInfo('ไม่พบลูกค้าในร้านนี้ สามารถเพิ่มลูกค้าใหม่ได้');
+    setFormInfo('ไม่พบลูกค้าในร้านนี้ สามารถเพิ่มข้อมูลลูกค้าใหม่ได้');
     setFormError('');
     setTimeout(() => document.getElementById('customer-name-input')?.focus(), 80);
   }, [clearCustomerAndDeposit, editor, setCustomerId]);
@@ -144,10 +144,17 @@ const SaleCustomerSection = ({ productSearchRef, clearTrigger, onClearFinish, on
   const provinceFilter = useMemo(() => undefined, []);
 
   return (
-    <div className="w-full select-none rounded-2xl border border-slate-200 bg-white p-2.5 text-xs font-semibold text-slate-700 shadow-sm">
-      <div className="mb-2 flex items-center gap-1.5 border-b border-slate-100 pb-1.5">
-        <div className="rounded-md bg-slate-900/5 p-1 text-slate-800"><User className="h-3.5 w-3.5" /></div>
-        <h2 className="text-xs font-black text-slate-900">ข้อมูลรายละเอียดผู้ซื้อ</h2>
+    <section className="w-full space-y-3 rounded-2xl border border-slate-200 bg-white p-3 md:p-4">
+      <div className="flex items-start gap-3 border-b border-slate-100 pb-3">
+        <div className="rounded-xl bg-teal-100 p-2 text-teal-800">
+          <UserRound className="h-5 w-5" />
+        </div>
+        <div>
+          <h2 className="text-base font-semibold text-slate-900">ข้อมูลลูกค้า</h2>
+          <p className="mt-0.5 text-xs leading-5 text-slate-500">
+            ค้นหา เลือก หรือเพิ่มลูกค้าสำหรับรายการขายปัจจุบัน
+          </p>
+        </div>
       </div>
 
       <SaleCustomerSearch
@@ -158,19 +165,28 @@ const SaleCustomerSection = ({ productSearchRef, clearTrigger, onClearFinish, on
         onSubmit={view.search.submitSearch}
       />
 
-      {view.feedback.formError && <div className="mb-2 rounded-md border border-rose-100 bg-rose-50 p-1.5 text-[10px] font-black text-rose-600">{view.feedback.formError}</div>}
-      {view.feedback.formInfo && <div className="mb-2 rounded-md border border-emerald-100 bg-emerald-50 p-1.5 text-[10px] font-black text-emerald-700">{view.feedback.formInfo}</div>}
+      {view.feedback.formError ? (
+        <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2.5 text-sm text-rose-800">
+          {view.feedback.formError}
+        </div>
+      ) : null}
 
-      {!view.selection.selectedCustomer && (
+      {view.feedback.formInfo ? (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-sm text-emerald-800">
+          {view.feedback.formInfo}
+        </div>
+      ) : null}
+
+      {!view.selection.selectedCustomer ? (
         <SaleCustomerSearchResults
           results={view.search.results}
           selectedCustomerId={view.search.selectedResultId}
           loading={view.search.loading}
           onSelect={handleSelectResult}
         />
-      )}
+      ) : null}
 
-      {(view.selection.selectedCustomer || view.selection.pendingCreate) && (
+      {view.selection.selectedCustomer || view.selection.pendingCreate ? (
         <SaleCustomerDetailsForm
           editor={view.editor.editor}
           selectedCustomer={view.selection.selectedCustomer}
@@ -182,13 +198,8 @@ const SaleCustomerSection = ({ productSearchRef, clearTrigger, onClearFinish, on
           onUpdate={handleUpdate}
           onCancelCreate={handleCancelCreate}
         />
-      )}
-
-      <div className="mt-2 flex items-center gap-1 border-t border-slate-100 bg-slate-50/40 p-1 text-[9px] font-bold text-slate-400">
-        <ShieldCheck className="h-3 w-3 text-slate-400" />
-        <span>Store-scoped customer search and deposit hydration</span>
-      </div>
-    </div>
+      ) : null}
+    </section>
   );
 };
 

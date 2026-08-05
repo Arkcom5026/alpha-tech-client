@@ -48,17 +48,28 @@ async function createStoredSession(browser) {
       name: /อีเมลหรือเบอร์โทรศัพท์|name@example\.com/i,
     }).fill(username);
     await page.getByRole('textbox', { name: 'รหัสผ่าน' }).fill(password);
-    await page.getByRole('button', { name: 'เข้าสู่ระบบ', exact: true }).click();
 
-    await page.waitForFunction(
-      () => !/\/login(?:\?|$)|\/partner-portal\/login(?:\?|$)/i.test(window.location.pathname + window.location.search),
-      null,
+    const loginResponsePromise = page.waitForResponse(
+      (response) => response.request().method() === 'POST'
+        && /login|signin|authenticate/i.test(response.url()),
       { timeout: 20_000 }
     );
 
+    await page.getByRole('button', { name: 'เข้าสู่ระบบ', exact: true }).click();
+    const loginResponse = await loginResponsePromise;
+    const loginBody = await loginResponse.text();
+
+    if (!loginResponse.ok()) {
+      throw new Error(
+        `Merchant login failed with HTTP ${loginResponse.status()}: ${loginBody}`
+      );
+    }
+
+    await page.waitForTimeout(500);
+
     if (!(await canOpenProtectedStore(page))) {
       throw new Error(
-        `Merchant login completed but protected store route redirected to ${page.url()}. Confirm the account has access to ${branchSlug}.`
+        `Merchant login API succeeded but protected store route redirected to ${page.url()}. Confirm the account has access to ${branchSlug}. Login response: ${loginBody}`
       );
     }
 

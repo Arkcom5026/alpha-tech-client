@@ -8,8 +8,8 @@ const assertIncludes = (source, value, message) => {
 
 const files = [
   'src/features/receiving/quick-stock/pages/QuickStockPage.jsx',
-  'src/features/receiving/quick-stock/components/QuickReceiptWorkspaceHeader.jsx',
-  'src/features/receiving/quick-stock/components/QuickReceiptProgressSummary.jsx',
+  'src/features/receiving/quick-stock/components/QuickReceiptSessionPanel.jsx',
+  'src/features/receiving/quick-stock/components/QuickReceiptActions.jsx',
 ];
 
 for (const file of files) {
@@ -19,12 +19,11 @@ for (const file of files) {
 }
 
 const page = fs.readFileSync(files[0], 'utf8');
-const header = fs.readFileSync(files[1], 'utf8');
-const summary = fs.readFileSync(files[2], 'utf8');
+const sessionPanel = fs.readFileSync(files[1], 'utf8');
+const actions = fs.readFileSync(files[2], 'utf8');
 
-assertIncludes(page, 'QuickReceiptWorkspaceHeader', 'Quick receipt page must compose workspace header');
-assertIncludes(page, 'QuickReceiptProgressSummary', 'Quick receipt page must compose progress summary');
-assertIncludes(header, 'mobile', 'Workspace header must expose mobile action composition');
-assertIncludes(summary, 'Progress', 'Progress summary must expose progress information');
+assertIncludes(page, 'QuickReceiptSessionPanel', 'Quick receipt page must compose session workspace');
+assertIncludes(sessionPanel, 'QuickReceiptActions', 'Session workspace must compose receipt actions');
+assertIncludes(actions, 'button', 'Receipt actions must expose actionable controls');
 
 console.log('Purchase quick receipt mobile action polish contract: PASS');

@@ -61,8 +61,9 @@ assertIncludes(createSale, 'sourceContext = null', 'POS page must expose source 
 assertIncludes(createSale, 'sourceLocked = false', 'POS page must expose cart source lock');
 assertIncludes(createSale, 'heldCartDisabled={sourceLocked}', 'Online reservation must not create a duplicate held cart');
 assertIncludes(createSale, 'saleExecutionDisabled={saleExecutionDisabled}', 'POS must preserve finalization gate');
-assertIncludes(payment, "heldCartDisabled ? 'ใช้ใบจองออนไลน์เดิม' : 'บันทึกการจอง'", 'Held-cart button must acknowledge the existing online reservation');
-assertIncludes(payment, "saleExecutionDisabled\n            ? 'รอเชื่อม Finalization'", 'Sale confirmation must remain visibly gated');
+assertIncludes(payment, "heldCartDisabled ? 'ใช้ใบจองออนไลน์เดิม' : 'พักรายการขาย'", 'Held-cart action must acknowledge and preserve the existing online reservation');
+assertIncludes(payment, 'disabled={!isConfirmEnabled || isSubmitting || saleExecutionDisabled}', 'Sale confirmation must remain disabled while finalization authority is closed');
+assertIncludes(payment, "saleExecutionDisabled\n            ? 'ยังไม่พร้อมบันทึก'", 'Operator must see that reservation finalization is not yet available');
 assertExcludes(bridge, '<CreateSalePage />', 'Bridge must not mount an unscoped empty POS sale page');
 
 assertIncludes(routes, "path: 'reservations/:reservationId/sale'", 'Sales routes must mount the reservation sale bridge');

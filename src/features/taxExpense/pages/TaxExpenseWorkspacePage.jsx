@@ -1,13 +1,15 @@
 import React from 'react';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 import TaxExpenseCreateForm from '../components/TaxExpenseCreateForm';
+import TaxExpenseMasterDataSetup from '../setup/components/TaxExpenseMasterDataSetup';
 import useTaxExpenseWorkspace from '../hooks/useTaxExpenseWorkspace';
 
 const money = (value) => Number(value || 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 const TaxExpenseWorkspacePage = () => {
   const {
-    branchId, currentBranch, expenses, categories, payees, loading, saving, error, load, submitExpense,
+    branchId, currentBranch, expenses, categories, payees, suppliers,
+    loading, saving, setupBusy, error, load, submitExpense, addCategory, enablePayee,
   } = useTaxExpenseWorkspace();
 
   if (!branchId) {
@@ -22,6 +24,8 @@ const TaxExpenseWorkspacePage = () => {
       </header>
 
       {error && <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm font-semibold text-rose-700">{error}</div>}
+
+      <TaxExpenseMasterDataSetup suppliers={suppliers} busy={setupBusy} onCreateCategory={addCategory} onEnablePayee={enablePayee} />
 
       <div className="grid gap-5 xl:grid-cols-[1.1fr_.9fr]">
         <TaxExpenseCreateForm categories={categories} payees={payees} saving={saving} onSubmit={submitExpense} />

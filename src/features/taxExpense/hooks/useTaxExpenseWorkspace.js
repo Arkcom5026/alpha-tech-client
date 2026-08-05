@@ -4,6 +4,7 @@ import { useBranchStore } from '@/features/branch/store/branchStore';
 import {
   createExpensePayee,
   createTaxExpense,
+  createTaxExpenseCategory,
   listExpensePayees,
   listTaxExpenseCategories,
   listTaxExpenses,
@@ -22,6 +23,7 @@ const useTaxExpenseWorkspace = () => {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [savingPayee, setSavingPayee] = useState(false);
+  const [savingCategory, setSavingCategory] = useState(false);
   const [error, setError] = useState('');
 
   const load = useCallback(async ({ payeeQuery = '' } = {}) => {
@@ -66,6 +68,23 @@ const useTaxExpenseWorkspace = () => {
     }
   }, []);
 
+  const submitCategory = useCallback(async (payload) => {
+    setSavingCategory(true);
+    try {
+      const created = await createTaxExpenseCategory(payload);
+      setCategories((current) => [...current.filter((item) => item.id !== created.id), created]
+        .sort((left, right) => left.code.localeCompare(right.code)));
+      toast.success('เพิ่มหมวดค่าใช้จ่ายแล้ว');
+      return created;
+    } catch (requestError) {
+      const message = requestError?.response?.data?.message || 'ไม่สามารถเพิ่มหมวดค่าใช้จ่ายได้';
+      toast.error(message);
+      throw requestError;
+    } finally {
+      setSavingCategory(false);
+    }
+  }, []);
+
   const submitPayee = useCallback(async (payload) => {
     setSavingPayee(true);
     try {
@@ -107,9 +126,11 @@ const useTaxExpenseWorkspace = () => {
     loading,
     saving,
     savingPayee,
+    savingCategory,
     error,
     load,
     searchPayees,
+    submitCategory,
     submitPayee,
     submitExpense,
   };

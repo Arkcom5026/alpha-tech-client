@@ -1,6 +1,7 @@
 import React from 'react';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 import ExpensePayeeMasterDataPanel from '../components/ExpensePayeeMasterDataPanel';
+import TaxExpenseCategoryPanel from '../components/TaxExpenseCategoryPanel';
 import TaxExpenseCreateForm from '../components/TaxExpenseCreateForm';
 import useTaxExpenseWorkspace from '../hooks/useTaxExpenseWorkspace';
 
@@ -16,9 +17,11 @@ const TaxExpenseWorkspacePage = () => {
     loading,
     saving,
     savingPayee,
+    savingCategory,
     error,
     load,
     searchPayees,
+    submitCategory,
     submitPayee,
     submitExpense,
   } = useTaxExpenseWorkspace();
@@ -36,6 +39,12 @@ const TaxExpenseWorkspacePage = () => {
 
       {error && <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm font-semibold text-rose-700">{error}</div>}
 
+      <TaxExpenseCategoryPanel
+        categories={categories}
+        saving={savingCategory}
+        onCreate={submitCategory}
+      />
+
       <ExpensePayeeMasterDataPanel
         payees={payees}
         loading={loading}
@@ -46,7 +55,7 @@ const TaxExpenseWorkspacePage = () => {
       />
 
       <div className="grid gap-5 xl:grid-cols-[1.1fr_.9fr]">
-        <TaxExpenseCreateForm categories={categories} saving={saving} onSubmit={submitExpense} payeeConnectionReady={false} />
+        <TaxExpenseCreateForm categories={categories} payees={payees} saving={saving} onSubmit={submitExpense} />
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <h2 className="font-black text-slate-900">รายการล่าสุด</h2>
           <div className="mt-3 overflow-x-auto">

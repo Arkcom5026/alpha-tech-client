@@ -1,4 +1,5 @@
 import React from 'react';
+import { Archive, ShoppingBag } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 import ProductReservationInboxPage from './ProductReservationInboxPage';
 
@@ -7,23 +8,35 @@ const OnlineCommerceWorkCenterPage = () => {
   const posPrefix = shopSlug ? `/${shopSlug}/pos` : '/pos';
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 pt-5 md:flex-row md:items-center md:justify-between md:px-8">
-        <div>
-          <p className="text-xs font-black uppercase tracking-[0.2em] text-indigo-600">Online Commerce Work Center</p>
-          <p className="mt-1 text-sm text-slate-600">
-            ใบจองสินค้าเป็นงานหลัก ส่วนคำสั่งซื้อระบบเดิมถูกแยกไว้เพื่อการอ้างอิงและดำเนินงานต่อเนื่อง
-          </p>
+    <main className="min-h-full bg-slate-50">
+      <section className="mx-auto max-w-7xl px-3 pt-4 md:px-6 md:pt-6">
+        <div className="rounded-2xl border border-teal-200 bg-teal-50 p-4 md:p-5">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div className="flex min-w-0 items-start gap-3">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-teal-200 bg-white text-teal-800">
+                <ShoppingBag className="h-5 w-5" />
+              </div>
+              <div className="min-w-0">
+                <h1 className="text-xl font-semibold text-slate-950">ศูนย์งานขายออนไลน์</h1>
+                <p className="mt-1 text-sm leading-6 text-slate-600">
+                  จัดการใบจองสินค้าออนไลน์ของร้านปัจจุบัน และเปิดงานจากระบบคำสั่งซื้อเดิมเมื่อต้องอ้างอิงข้อมูลย้อนหลัง
+                </p>
+              </div>
+            </div>
+
+            <Link
+              to={`${posPrefix}/sales/order-online/legacy`}
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-teal-200 bg-white px-4 text-sm font-semibold text-teal-800 hover:bg-teal-100"
+            >
+              <Archive className="h-4 w-4" />
+              เปิดคำสั่งซื้อระบบเดิม
+            </Link>
+          </div>
         </div>
-        <Link
-          to={`${posPrefix}/sales/order-online/legacy`}
-          className="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-black text-slate-700 shadow-sm transition hover:border-indigo-300 hover:text-indigo-700"
-        >
-          เปิดคำสั่งซื้อระบบเดิม
-        </Link>
-      </div>
+      </section>
+
       <ProductReservationInboxPage />
-    </div>
+    </main>
   );
 };
 

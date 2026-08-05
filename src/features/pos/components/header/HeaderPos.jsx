@@ -121,7 +121,7 @@ const HeaderPos = () => {
     ['ads-nav-button', isActive ? 'ads-nav-button-active' : 'ads-nav-button-idle'].join(' ');
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-slate-200 bg-slate-100/95 text-slate-900 shadow-[0_1px_3px_rgba(15,23,42,0.06)] backdrop-blur-xl">
+    <header className="sticky top-0 z-40 w-full border-b border-teal-200 bg-teal-50/95 text-slate-900 shadow-[0_1px_3px_rgba(13,148,136,0.08)] backdrop-blur-xl">
       <div className="mx-auto flex h-16 max-w-[1680px] items-center gap-3 px-3 pl-16 sm:px-5 sm:pl-16 lg:px-5">
         <nav className="hidden min-w-0 flex-1 items-center gap-2 overflow-x-auto py-2 scrollbar-none md:flex">
           {navItems.map((item) => {
@@ -141,7 +141,7 @@ const HeaderPos = () => {
 
         <div className="ml-auto flex shrink-0 items-center gap-2">
           {!isGlobalSuperAdmin && (
-            <div className="hidden max-w-[180px] items-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-900 sm:flex">
+            <div className="hidden max-w-[180px] items-center rounded-xl border border-teal-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900 sm:flex">
               <span className="truncate">{compactBranchName}</span>
             </div>
           )}
@@ -184,7 +184,7 @@ const HeaderPos = () => {
                     }}
                     className="ads-button-ghost w-full justify-start"
                   >
-                    <Settings className="h-4 w-4 text-teal-700" />
+                    <Settings className="h-4 w-4 text-teal-600" />
                     {isGlobalSuperAdmin ? 'Settings' : 'ตั้งค่าระบบ'}
                   </button>
 

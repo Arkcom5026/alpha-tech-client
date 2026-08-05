@@ -1,6 +1,7 @@
 import React from 'react';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 import ExpensePayeeMasterDataPanel from '../components/ExpensePayeeMasterDataPanel';
+import TaxExpenseCategoryPanel from '../components/TaxExpenseCategoryPanel';
 import TaxExpenseCreateForm from '../components/TaxExpenseCreateForm';
 import useTaxExpenseWorkspace from '../hooks/useTaxExpenseWorkspace';
 
@@ -16,9 +17,11 @@ const TaxExpenseWorkspacePage = () => {
     loading,
     saving,
     savingPayee,
+    savingCategory,
     error,
     load,
     searchPayees,
+    submitCategory,
     submitPayee,
     submitExpense,
   } = useTaxExpenseWorkspace();
@@ -35,6 +38,12 @@ const TaxExpenseWorkspacePage = () => {
       </header>
 
       {error && <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm font-semibold text-rose-700">{error}</div>}
+
+      <TaxExpenseCategoryPanel
+        categories={categories}
+        saving={savingCategory}
+        onCreate={submitCategory}
+      />
 
       <ExpensePayeeMasterDataPanel
         payees={payees}

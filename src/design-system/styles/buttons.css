@@ -1,0 +1,68 @@
+@layer components {
+  .ads-button {
+    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold transition-colors;
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2;
+    @apply disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .ads-button-primary {
+    @apply ads-button border border-teal-700 bg-teal-700 text-white shadow-sm;
+    @apply hover:border-teal-800 hover:bg-teal-800 active:border-teal-900 active:bg-teal-900;
+  }
+
+  .ads-button-secondary {
+    @apply ads-button border border-slate-800 bg-slate-800 text-white shadow-sm;
+    @apply hover:border-slate-900 hover:bg-slate-900 active:bg-slate-950;
+  }
+
+  .ads-button-outline {
+    @apply ads-button border border-slate-300 bg-white text-slate-800;
+    @apply hover:border-teal-300 hover:bg-teal-50 hover:text-teal-800;
+  }
+
+  .ads-button-tint {
+    @apply ads-button border border-teal-200 bg-teal-50 text-teal-800;
+    @apply hover:border-teal-300 hover:bg-teal-100 active:bg-teal-200;
+  }
+
+  .ads-button-success {
+    @apply ads-button border border-emerald-700 bg-emerald-700 text-white shadow-sm;
+    @apply hover:border-emerald-800 hover:bg-emerald-800 active:bg-emerald-900;
+  }
+
+  .ads-button-warning {
+    @apply ads-button border border-amber-300 bg-amber-100 text-amber-950;
+    @apply hover:border-amber-400 hover:bg-amber-200 active:bg-amber-300;
+  }
+
+  .ads-button-danger {
+    @apply ads-button border border-red-700 bg-red-700 text-white shadow-sm;
+    @apply hover:border-red-800 hover:bg-red-800 active:bg-red-900;
+  }
+
+  .ads-button-ghost {
+    @apply ads-button border border-transparent bg-transparent text-slate-700;
+    @apply hover:bg-slate-100 hover:text-slate-950;
+  }
+
+  .ads-nav-button {
+    @apply relative inline-flex h-11 items-center justify-center gap-2 rounded-xl border px-3 text-[13px] font-semibold whitespace-nowrap transition-colors;
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2;
+  }
+
+  .ads-nav-button-idle {
+    @apply border-slate-200 bg-slate-100 text-slate-800;
+    @apply hover:border-slate-300 hover:bg-white hover:text-slate-950;
+  }
+
+  .ads-nav-button-active {
+    @apply border-teal-700 bg-teal-700 text-white shadow-sm;
+    @apply hover:border-teal-800 hover:bg-teal-800;
+  }
+
+  .ads-icon-button {
+    @apply inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-slate-300 bg-white text-slate-700;
+    @apply transition-colors hover:border-teal-300 hover:bg-teal-50 hover:text-teal-800;
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2;
+  }
+}

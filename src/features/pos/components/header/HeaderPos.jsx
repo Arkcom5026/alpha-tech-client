@@ -118,23 +118,17 @@ const HeaderPos = () => {
   const logoutLabel = isGlobalSuperAdmin ? 'ออกจากระบบ Superadmin' : 'ออกจากระบบ';
 
   const navLinkClass = ({ isActive }) =>
-    [
-      'group relative inline-flex h-11 items-center justify-center gap-2 rounded-xl border px-3.5 text-[13px] font-medium whitespace-nowrap transition-all duration-150',
-      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-50',
-      isActive
-        ? '!border-teal-200 !bg-teal-50 !text-teal-800 shadow-[0_1px_2px_rgba(13,148,136,0.08)]'
-        : '!border-transparent !bg-white/70 !text-slate-600 hover:!border-slate-200 hover:!bg-white hover:!text-slate-950',
-    ].join(' ');
+    ['ads-nav-button', isActive ? 'ads-nav-button-active' : 'ads-nav-button-idle'].join(' ');
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-slate-200 bg-slate-50/95 text-slate-800 shadow-[0_1px_3px_rgba(15,23,42,0.04)] backdrop-blur-xl">
+    <header className="sticky top-0 z-40 w-full border-b border-slate-200 bg-slate-100/95 text-slate-900 shadow-[0_1px_3px_rgba(15,23,42,0.06)] backdrop-blur-xl">
       <div className="mx-auto flex h-16 max-w-[1680px] items-center gap-3 px-3 pl-16 sm:px-5 sm:pl-16 lg:px-5">
-        <nav className="hidden min-w-0 flex-1 items-center gap-1.5 overflow-x-auto py-2 scrollbar-none md:flex">
+        <nav className="hidden min-w-0 flex-1 items-center gap-2 overflow-x-auto py-2 scrollbar-none md:flex">
           {navItems.map((item) => {
             const Icon = item.icon;
             return (
               <NavLink key={item.path} to={item.path} end={item.end} className={navLinkClass}>
-                <Icon className="h-4 w-4 shrink-0 transition-colors group-hover:text-current" />
+                <Icon className="h-4 w-4 shrink-0" />
                 <span>{item.label}</span>
               </NavLink>
             );
@@ -142,18 +136,18 @@ const HeaderPos = () => {
         </nav>
 
         <div className="min-w-0 flex-1 md:hidden">
-          <p className="truncate text-sm font-semibold text-slate-900">{compactBranchName}</p>
+          <p className="truncate text-sm font-semibold text-slate-950">{compactBranchName}</p>
         </div>
 
         <div className="ml-auto flex shrink-0 items-center gap-2">
           {!isGlobalSuperAdmin && (
-            <div className="hidden max-w-[180px] items-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 sm:flex">
+            <div className="hidden max-w-[180px] items-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-900 sm:flex">
               <span className="truncate">{compactBranchName}</span>
             </div>
           )}
 
           {isGlobalSuperAdmin && (
-            <div className="hidden items-center gap-2 rounded-xl border border-red-100 bg-red-50 px-3 py-2 text-red-700 lg:flex">
+            <div className="hidden items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-red-800 lg:flex">
               <Terminal className="h-3.5 w-3.5" />
               <span className="text-[10px] font-semibold uppercase tracking-[0.12em]">Superadmin</span>
             </div>
@@ -164,7 +158,7 @@ const HeaderPos = () => {
               <button
                 type="button"
                 onClick={() => setShowMenu((value) => !value)}
-                className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:border-teal-300 hover:bg-teal-50 hover:text-teal-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500"
+                className="ads-icon-button"
                 aria-expanded={showMenu}
                 aria-label="เปิดเมนูผู้ใช้งาน"
               >
@@ -174,7 +168,7 @@ const HeaderPos = () => {
               {showMenu && (
                 <div className="absolute right-0 mt-2 w-64 overflow-hidden rounded-2xl border border-slate-200 bg-white p-2 text-slate-700 shadow-xl">
                   <div className="px-3 py-2">
-                    <p className="truncate text-sm font-semibold text-slate-900">{displayName}</p>
+                    <p className="truncate text-sm font-semibold text-slate-950">{displayName}</p>
                     <p className="mt-0.5 truncate text-[11px] text-slate-500">
                       {isGlobalSuperAdmin ? 'Catalog Governance' : displayBranchName}
                     </p>
@@ -188,16 +182,16 @@ const HeaderPos = () => {
                       setShowMenu(false);
                       navigate(getRoutePath('/settings'));
                     }}
-                    className="flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-left text-sm font-medium transition hover:bg-slate-100 hover:text-slate-900"
+                    className="ads-button-ghost w-full justify-start"
                   >
-                    <Settings className="h-4 w-4 text-teal-600" />
+                    <Settings className="h-4 w-4 text-teal-700" />
                     {isGlobalSuperAdmin ? 'Settings' : 'ตั้งค่าระบบ'}
                   </button>
 
                   <button
                     type="button"
                     onClick={handleLogout}
-                    className="mt-1 flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-left text-sm font-semibold text-red-600 transition hover:bg-red-50"
+                    className="ads-button-danger mt-1 w-full justify-start"
                   >
                     <LogOut className="h-4 w-4" />
                     {logoutLabel}

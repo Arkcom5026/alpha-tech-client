@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Outlet, useLocation, useParams } from 'react-router-dom';
-import { Menu, X } from 'lucide-react';
+import { X } from 'lucide-react';
 
 import HeaderPos from '@/features/pos/components/header/HeaderPos';
 import SidebarLoader from '@/features/pos/components/sidebar/SidebarLoader';
@@ -86,18 +86,7 @@ const PosAdaptiveShell = () => {
       )}
 
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        <div className="relative">
-          <HeaderPos shopSlug={shopSlug} onMobileModuleSelect={() => setMobileOpen(true)} />
-          <button
-            type="button"
-            onClick={() => setMobileOpen(true)}
-            className="absolute left-3 top-8 z-50 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:border-teal-300 hover:bg-teal-50 hover:text-teal-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 lg:hidden"
-            aria-label="เปิดเมนูย่อยของโมดูลปัจจุบัน"
-            aria-expanded={mobileOpen}
-          >
-            <Menu className="h-5 w-5" />
-          </button>
-        </div>
+        <HeaderPos shopSlug={shopSlug} onMobileModuleSelect={() => setMobileOpen(true)} />
 
         <main className="min-w-0 flex-1 overflow-y-auto bg-slate-50 px-3 py-4 animate-fadeIn sm:px-4 md:px-6 md:py-6 lg:px-8">
           <div className="mx-auto w-full max-w-[1680px]">

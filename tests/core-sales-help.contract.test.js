@@ -86,12 +86,16 @@ describe('Core Sales Help contract', () => {
     expect(drawer).toMatch(/onClose/);
   });
 
-  test('Create Sale exposes contextual help without absorbing Sale Return ownership', () => {
+  test('Create Sale exposes contextual help through the workspace header without absorbing Sale Return ownership', () => {
     const page = read('src/features/sales/create/pages/CreateSalePage.jsx');
+    const header = read('src/features/sales/create/components/workspace/SaleWorkspaceHeader.jsx');
 
     expect(page).toMatch(/CoreSalesHelpDrawer/);
     expect(page).toMatch(/isHelpOpen/);
-    expect(page).toMatch(/เปิดคู่มือการขายสินค้า/);
+    expect(page).toMatch(/<SaleWorkspaceHeader/);
+    expect(page).toMatch(/onHelp=\{\(\) => setIsHelpOpen\(true\)\}/);
+    expect(header).toMatch(/เปิดคู่มือการขายสินค้า/);
+    expect(header).toMatch(/onClick=\{onHelp\}/);
     expect(page).toMatch(/<PaymentSection/);
     expect(page).toMatch(/<PosHeldCartPanel/);
     expect(page).not.toMatch(/SaleReturn|return workflow|คืนสินค้าและคืนเงิน/);

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { NavLink, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
   BarChart3,
   CircleDollarSign,
@@ -33,6 +33,11 @@ const getCompactBranchName = (branchName = '', shopSlug = '') => {
   if (compact) return compact;
   if (shopSlug) return shopSlug;
   return 'ร้านค้า';
+};
+
+const normalizePath = (value = '') => {
+  const normalized = String(value || '/').replace(/\/+$/u, '');
+  return normalized || '/';
 };
 
 const HeaderPos = () => {
@@ -116,64 +121,46 @@ const HeaderPos = () => {
 
   const navItems = isGlobalSuperAdmin ? superAdminNavItems : posNavItems;
   const logoutLabel = isGlobalSuperAdmin ? 'ออกจากระบบ Superadmin' : 'ออกจากระบบ';
+  const currentPath = normalizePath(pathname);
 
-  const navLinkClass = ({ isActive }) =>
-    [
-      'pos-header-nav-item inline-flex h-11 items-center justify-center gap-2 rounded-xl border px-3 text-[13px] font-semibold whitespace-nowrap transition-colors',
-      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2',
-      isActive ? 'pos-header-nav-active' : 'pos-header-nav-idle',
-    ].join(' ');
+  const isNavItemActive = (item) => {
+    const itemPath = normalizePath(item.path);
+    if (item.end) return currentPath === itemPath;
+    return currentPath === itemPath || currentPath.startsWith(`${itemPath}/`);
+  };
 
   return (
-    <header className="pos-header-shell sticky top-0 z-40 w-full border-b border-teal-200 bg-teal-50/95 text-slate-900 shadow-[0_1px_3px_rgba(13,148,136,0.08)] backdrop-blur-xl">
-      <style>{`
-        header.pos-header-shell nav.pos-header-nav a.pos-header-nav-item {
-          box-shadow: none !important;
-          text-shadow: none !important;
-          opacity: 1 !important;
-        }
-
-        header.pos-header-shell nav.pos-header-nav a.pos-header-nav-idle {
-          background-color: #ccfbf1 !important;
-          border-color: #5eead4 !important;
-          color: #134e4a !important;
-        }
-
-        header.pos-header-shell nav.pos-header-nav a.pos-header-nav-idle:hover {
-          background-color: #99f6e4 !important;
-          border-color: #2dd4bf !important;
-          color: #042f2e !important;
-        }
-
-        header.pos-header-shell nav.pos-header-nav a.pos-header-nav-active,
-        header.pos-header-shell nav.pos-header-nav a.pos-header-nav-active:hover {
-          background-color: #a7f3d0 !important;
-          border-color: #34d399 !important;
-          color: #064e3b !important;
-        }
-
-        header.pos-header-shell nav.pos-header-nav a.pos-header-nav-idle > span,
-        header.pos-header-shell nav.pos-header-nav a.pos-header-nav-idle > svg {
-          color: #134e4a !important;
-          stroke: currentColor !important;
-        }
-
-        header.pos-header-shell nav.pos-header-nav a.pos-header-nav-active > span,
-        header.pos-header-shell nav.pos-header-nav a.pos-header-nav-active > svg {
-          color: #064e3b !important;
-          stroke: currentColor !important;
-        }
-      `}</style>
-
+    <header className="sticky top-0 z-40 w-full border-b border-slate-200 bg-slate-50 text-slate-900">
       <div className="mx-auto flex h-16 max-w-[1680px] items-center gap-3 px-3 pl-16 sm:px-5 sm:pl-16 lg:px-5">
-        <nav className="pos-header-nav hidden min-w-0 flex-1 items-center gap-2 overflow-x-auto py-2 scrollbar-none md:flex">
+        <nav className="hidden min-w-0 flex-1 items-center gap-2 overflow-x-auto py-2 scrollbar-none md:flex">
           {navItems.map((item) => {
             const Icon = item.icon;
+            const isActive = isNavItemActive(item);
+
             return (
-              <NavLink key={item.path} to={item.path} end={item.end} className={navLinkClass}>
-                <Icon className="h-4 w-4 shrink-0" />
-                <span>{item.label}</span>
-              </NavLink>
+              <button
+                key={item.path}
+                type="button"
+                onClick={() => navigate(item.path)}
+                aria-current={isActive ? 'page' : undefined}
+                className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl border px-3 text-[13px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2"
+                style={
+                  isActive
+                    ? {
+                        backgroundColor: '#d1fae5',
+                        borderColor: '#6ee7b7',
+                        color: '#065f46',
+                      }
+                    : {
+                        backgroundColor: '#f0fdfa',
+                        borderColor: '#99f6e4',
+                        color: '#134e4a',
+                      }
+                }
+              >
+                <Icon className="h-4 w-4 shrink-0" style={{ color: 'currentColor' }} />
+                <span style={{ color: 'currentColor' }}>{item.label}</span>
+              </button>
             );
           })}
         </nav>
@@ -184,7 +171,7 @@ const HeaderPos = () => {
 
         <div className="ml-auto flex shrink-0 items-center gap-2">
           {!isGlobalSuperAdmin && (
-            <div className="hidden max-w-[180px] items-center rounded-xl border border-teal-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900 sm:flex">
+            <div className="hidden max-w-[180px] items-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900 sm:flex">
               <span className="truncate">{compactBranchName}</span>
             </div>
           )}
@@ -201,7 +188,7 @@ const HeaderPos = () => {
               <button
                 type="button"
                 onClick={() => setShowMenu((value) => !value)}
-                className="ads-icon-button"
+                className="flex h-11 w-11 items-center justify-center rounded-xl border border-teal-200 bg-white text-teal-800 transition-colors hover:bg-teal-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500"
                 aria-expanded={showMenu}
                 aria-label="เปิดเมนูผู้ใช้งาน"
               >
@@ -225,7 +212,7 @@ const HeaderPos = () => {
                       setShowMenu(false);
                       navigate(getRoutePath('/settings'));
                     }}
-                    className="ads-button-ghost w-full justify-start"
+                    className="flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-left text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100 hover:text-slate-950"
                   >
                     <Settings className="h-4 w-4 text-teal-600" />
                     {isGlobalSuperAdmin ? 'Settings' : 'ตั้งค่าระบบ'}
@@ -234,7 +221,7 @@ const HeaderPos = () => {
                   <button
                     type="button"
                     onClick={handleLogout}
-                    className="ads-button-danger mt-1 w-full justify-start"
+                    className="mt-1 flex min-h-11 w-full items-center gap-3 rounded-xl bg-red-700 px-3 text-left text-sm font-semibold text-white transition-colors hover:bg-red-800"
                   >
                     <LogOut className="h-4 w-4" />
                     {logoutLabel}

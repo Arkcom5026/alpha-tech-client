@@ -1,6 +1,3 @@
-// src/features/deliveryNote/pages/PrintDeliveryNotePage.jsx
-// 🏛️ Premium Next-Gen POS Delivery Note Workspace: (Server Authority Edition)
-
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import {
@@ -8,6 +5,7 @@ import {
   useSaleDocumentLineEditor,
 } from '@/features/sales/documents/workspace';
 import DeliveryNoteForm from '../components/DeliveryNoteForm';
+import DeliveryNoteDocumentState from '../components/workspace/DeliveryNoteDocumentState';
 
 const normalizeDocumentText = (value) => {
   if (typeof value !== 'string') return '';
@@ -15,18 +13,8 @@ const normalizeDocumentText = (value) => {
 };
 
 const resolveSaleItemProductName = (item) => {
-  const product =
-    item?.product ||
-    item?.stockItem?.product ||
-    item?.productSnapshot ||
-    null;
-
-  return (
-    product?.name ||
-    item?.productName ||
-    item?.name ||
-    'ไม่พบชื่อสินค้า'
-  );
+  const product = item?.product || item?.stockItem?.product || item?.productSnapshot || null;
+  return product?.name || item?.productName || item?.name || 'ไม่พบชื่อสินค้า';
 };
 
 const buildSaleDocumentLineDescription = (item) => {
@@ -42,12 +30,8 @@ const buildSaleDocumentLine = (item) => ({
 });
 
 const buildPrintableProductName = (documentLine) =>
-  [
-    documentLine?.documentPrefix,
-    documentLine?.documentDescription,
-    documentLine?.documentSuffix,
-  ]
-    .map((x) => normalizeDocumentText(x))
+  [documentLine?.documentPrefix, documentLine?.documentDescription, documentLine?.documentSuffix]
+    .map((value) => normalizeDocumentText(value))
     .filter(Boolean)
     .join('\n');
 
@@ -72,7 +56,6 @@ const buildBranchFullAddress = (branch = {}) => {
 
 const PrintDeliveryNotePage = () => {
   const { saleId } = useParams();
-
   const [currentSale, setCurrentSale] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [pageError, setPageError] = useState('');
@@ -83,7 +66,6 @@ const PrintDeliveryNotePage = () => {
       setCurrentSale(null);
       return null;
     }
-
     const sale = await loadSaleDocument({ saleId });
     setCurrentSale(sale || null);
     return sale || null;
@@ -95,10 +77,7 @@ const PrintDeliveryNotePage = () => {
     savingLineKey,
     error: editorError,
     actions: documentLineActions,
-  } = useSaleDocumentLineEditor({
-    saleId,
-    reload: reloadSaleDocument,
-  });
+  } = useSaleDocumentLineEditor({ saleId, reload: reloadSaleDocument });
 
   useEffect(() => {
     let isMounted = true;
@@ -120,13 +99,13 @@ const PrintDeliveryNotePage = () => {
       try {
         const sale = await loadSaleDocument({ saleId });
         if (isMounted) setCurrentSale(sale || null);
-      } catch (err) {
+      } catch (error) {
         if (isMounted) {
           setPageError(
-            err?.response?.data?.error ||
-              err?.response?.data?.message ||
-              err?.message ||
-              'ไม่สามารถโหลดข้อมูลใบส่งของได้'
+            error?.response?.data?.error ||
+              error?.response?.data?.message ||
+              error?.message ||
+              'ไม่สามารถโหลดข้อมูลใบส่งสินค้าได้'
           );
         }
       } finally {
@@ -135,7 +114,6 @@ const PrintDeliveryNotePage = () => {
     };
 
     fetchData();
-
     return () => {
       isMounted = false;
     };
@@ -144,9 +122,7 @@ const PrintDeliveryNotePage = () => {
   const preparedSaleItems = useMemo(() => {
     if (!currentSale) return [];
 
-    // `saleLines` is the preferred server document projection. Keep the legacy
-    // fallback for older responses and merge serialised and SIMPLE line stores.
-    const src = Array.isArray(currentSale.saleLines) && currentSale.saleLines.length > 0
+    const source = Array.isArray(currentSale.saleLines) && currentSale.saleLines.length > 0
       ? currentSale.saleLines
       : [
           ...(Array.isArray(currentSale.items) ? currentSale.items : []),
@@ -155,40 +131,26 @@ const PrintDeliveryNotePage = () => {
 
     const grouped = new Map();
 
-    for (const [sourceIndex, item] of src.entries()) {
+    for (const [sourceIndex, item] of source.entries()) {
       const product = item?.product || item?.stockItem?.product || item?.productSnapshot || null;
       const productIdRaw = product?.id ?? item?.productId ?? item?.stockItem?.productId ?? null;
       const productId = productIdRaw == null ? null : String(productIdRaw);
-
-      const documentLine = buildSaleDocumentLine({
-        ...item,
-        product,
-      });
-
+      const documentLine = buildSaleDocumentLine({ ...item, product });
       const key = [
         productId ? `product-${productId}` : `unknown-${item?.id ?? sourceIndex}`,
         `prefix-${documentLine.documentPrefix}`,
         `description-${documentLine.documentDescription}`,
         `suffix-${documentLine.documentSuffix}`,
       ].join('|');
-
       const isSnItem = Boolean(item?.stockItemId || item?.stockItem?.id);
-
       const unitPrice = isSnItem
-        ? (Number(item?.price ?? item?.unitPrice ?? item?.basePrice ?? 0) || 0)
-        : (Number(item?.unitPrice ?? item?.price ?? item?.basePrice ?? item?.sellPrice ?? 0) || 0);
-
-      const quantity = isSnItem
-        ? 1
-        : Math.max(1, Number(item?.quantity ?? item?.qty ?? 1) || 1);
-
-      const discountEach = isSnItem
-        ? 0
-        : (Number(item?.discount ?? item?.discountAmount ?? 0) || 0);
+        ? Number(item?.price ?? item?.unitPrice ?? item?.basePrice ?? 0) || 0
+        : Number(item?.unitPrice ?? item?.price ?? item?.basePrice ?? item?.sellPrice ?? 0) || 0;
+      const quantity = isSnItem ? 1 : Math.max(1, Number(item?.quantity ?? item?.qty ?? 1) || 1);
+      const discountEach = isSnItem ? 0 : Number(item?.discount ?? item?.discountAmount ?? 0) || 0;
 
       if (!grouped.has(key)) {
         const stableId = productId ? `product-${productId}-${grouped.size}` : `unknown-${item?.id ?? sourceIndex}`;
-
         grouped.set(key, {
           id: stableId,
           documentLineKey: key,
@@ -227,15 +189,15 @@ const PrintDeliveryNotePage = () => {
   const error = pageError || editorError;
 
   if (isLoading) {
-    return <div className="p-8 text-center text-zinc-400 font-bold bg-slate-900 min-h-screen">⏳ กำลังสตรีมโครงสร้างใบส่งของ A4...</div>;
+    return <DeliveryNoteDocumentState status="loading" message="ระบบกำลังโหลดข้อมูลและจัดเตรียมเอกสารสำหรับพิมพ์" />;
   }
 
   if (error) {
-    return <div className="p-8 text-center text-rose-400 font-black bg-slate-900 min-h-screen">⚠️ {error}</div>;
+    return <DeliveryNoteDocumentState status="error" message={error} />;
   }
 
   if (!currentSale) {
-    return <div className="p-8 text-center text-zinc-400 font-bold bg-slate-900 min-h-screen">❌ ไม่พบชุดข้อมูลโครงสร้างของใบขายรายการนี้</div>;
+    return <DeliveryNoteDocumentState status="empty" message="ไม่พบรายการขายที่ใช้สร้างใบส่งสินค้านี้" />;
   }
 
   const branch = currentSale.branch || {};
@@ -247,8 +209,8 @@ const PrintDeliveryNotePage = () => {
   };
 
   return (
-    <div className="w-full min-h-screen bg-white text-black dark:bg-white dark:text-black py-8 px-4 print:p-0 print:bg-white animate-fadeIn">
-      <div className="mx-auto max-w-[210mm] bg-white text-black dark:bg-white dark:text-black p-2 print:p-0">
+    <main className="min-h-screen bg-slate-100 px-3 py-5 text-black print:bg-white print:p-0 md:px-6 md:py-8">
+      <section className="mx-auto max-w-[210mm] rounded-2xl bg-white p-3 shadow-sm print:rounded-none print:p-0 print:shadow-none md:p-5">
         <DeliveryNoteForm
           sale={currentSale}
           hideDate={hideDate}
@@ -263,8 +225,8 @@ const PrintDeliveryNotePage = () => {
           onChangeDocumentLineDraft={documentLineActions.change}
           onSaveDocumentLine={documentLineActions.save}
         />
-      </div>
-    </div>
+      </section>
+    </main>
   );
 };
 

@@ -13,6 +13,7 @@
     "preview": "vite preview",
     "test": "vitest",
     "test:run": "vitest run",
+    "test:stock-audit-mobile-workspace": "node tests/stock-audit-mobile-workspace.contract.test.js && node tests/pos-mobile-module-navigation.contract.test.js",
     "test:quick-receipt": "vitest run src/features/receiving/quick-stock/api/quickReceiptSessionApi.test.js src/features/receiving/quick-stock/components/QuickReceiptSessionPanel.test.jsx src/features/receiving/quick-stock/pages/QuickStockPage.test.jsx",
     "test:tax-expense": "vitest run src/features/taxExpense/api/taxExpenseApi.test.js",
     "test:auth-receipt": "vitest run src/features/customerReceipt/__tests__/customerReceiptAuthRegression.test.js",

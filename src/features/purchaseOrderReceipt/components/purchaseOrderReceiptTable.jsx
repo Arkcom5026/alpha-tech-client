@@ -1,269 +1,253 @@
-// src/features/purchaseOrderReceipt/components/purchaseOrderReceiptTable.jsx
-// 🏛️ Next-Gen Receipt Table: (Glassmorphic Accent, Aurora Badges, Spring Buttons & Stable Routing)
 import React, { useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Search, ClipboardCheck, Layers, Calendar, User, SlidersHorizontal, AlertCircle, XCircle } from 'lucide-react';
-import usePurchaseOrderReceiptStore from '../store/purchaseOrderReceiptStore'; 
+import {
+  AlertCircle,
+  Calendar,
+  ClipboardCheck,
+  FileText,
+  Search,
+  SlidersHorizontal,
+  User,
+  XCircle,
+} from 'lucide-react';
+
+import usePurchaseOrderReceiptStore from '../store/purchaseOrderReceiptStore';
+import ReceiptStatusBadge from './ReceiptStatusBadge';
+
+const STATUS_FILTERS = [
+  { value: 'ALL', label: 'ทั้งหมด' },
+  { value: 'PENDING', label: 'รอดำเนินการ' },
+  { value: 'PARTIALLY_RECEIVED', label: 'รับบางส่วน' },
+  { value: 'COMPLETED', label: 'เสร็จสมบูรณ์' },
+];
+
+const normalizeStatus = (status) => String(status || '').toUpperCase();
 
 const formatDateTh = (value) => {
-  try {
-    if (!value) return '-';
-    const d = value instanceof Date ? value : new Date(value);
-    if (Number.isNaN(d.getTime())) return '-';
-    return new Intl.DateTimeFormat('th-TH', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    }).format(d);
-  } catch {
-    return '-';
-  }
+  if (!value) return '-';
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return '-';
+  return new Intl.DateTimeFormat('th-TH', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(date);
 };
 
-const normalizeStatus = (status) => String(status || '').toUpperCase(); 
-
-const renderStatusBadge = (statusRaw) => {
-  const s = normalizeStatus(statusRaw); 
-  if (s === 'PENDING') {
-    return (
-      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-slate-100 text-slate-700 border border-slate-200 select-none">
-        <span className="h-1.5 w-1.5 rounded-full bg-slate-500 animate-pulse" /> รอดำเนินการ
-      </span>
-    );
-  }
-  if (s === 'PARTIALLY_RECEIVED') {
-    return (
-      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-amber-500/10 text-amber-700 border border-amber-500/20 select-none">
-        <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" style={{ animationDuration: '2s' }} /> รับบางส่วน
-      </span>
-    );
-  }
-  if (s === 'COMPLETED' || s === 'RECEIVED') {
-    return (
-      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-emerald-50 text-emerald-700 border border-emerald-500/20 select-none">
-        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> เสร็จสมบูรณ์
-      </span>
-    );
-  }
-  return (
-    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-rose-50 text-rose-700 border border-rose-500/15 select-none">
-      <span className="h-1.5 w-1.5 rounded-full bg-rose-500" /> ยกเลิก
-    </span>
-  );
+const canReceive = (purchaseOrder) => {
+  const status = normalizeStatus(purchaseOrder?.status);
+  return status === 'PENDING' || status === 'PARTIALLY_RECEIVED';
 };
 
-const canReceive = (po) => {
-  const s = normalizeStatus(po?.status); 
-  return s === 'PENDING' || s === 'PARTIALLY_RECEIVED'; 
-};
-
-const PurchaseOrderReceiptTable = ({ purchaseOrders, loading }) => {
-  const navigate = useNavigate(); 
-  const { shopSlug } = useParams();
-  const { cancelPurchaseOrderAction } = usePurchaseOrderReceiptStore(); 
-  const [searchText = '', setSearchText] = useState(''); 
-  const [statusFilter = 'ALL', setStatusFilter] = useState('ALL'); 
-  const [cancelingId, setCancelingId] = useState(null); 
-
-  const filtered = useMemo(() => {
-    const list = Array.isArray(purchaseOrders) ? purchaseOrders : []; 
-    const q = String(searchText || '').trim().toLowerCase(); 
-
-    return list.filter((po) => {
-      const supplierName = String(po?.supplier?.name || '').toLowerCase(); 
-      const poCode = String(po?.code || po?.poNumber || '').toLowerCase(); 
-
-      const matchText = !q || supplierName.includes(q) || poCode.includes(q); 
-      const matchStatus =
-        statusFilter === 'ALL' || normalizeStatus(po?.status) === normalizeStatus(statusFilter); 
-
-      return matchText && matchStatus; 
-    });
-  }, [purchaseOrders, searchText, statusFilter]); 
+const ReceiptActions = ({ purchaseOrder, isCanceling, onReceive, onCancel }) => {
+  const receiveEnabled = canReceive(purchaseOrder);
+  const canCancel = receiveEnabled;
+  const code = purchaseOrder?.code || purchaseOrder?.poNumber || '-';
 
   return (
-    <div className="border border-slate-200 rounded-2xl overflow-hidden shadow-[0_4px_25px_rgba(0,0,0,0.01)] bg-white"> 
-      
-      {/* 🟦 TOP CONTROL CONTAINER */}
-      <div className="flex justify-between items-center p-4 flex-wrap gap-4 bg-slate-50/70 border-b border-slate-100 font-sans">
-        <div className="relative">
-          <Search className="absolute left-3.5 top-2.5 h-4 w-4 text-slate-400" /> {/*[cite: 16] */}
-          <input
-            type="text"
-            placeholder="ค้นหา Supplier / เลขที่ใบสั่งซื้อ..."
-            value={searchText} 
-            onChange={(e) => setSearchText(e.target.value)} 
-            className="pl-10 pr-4 py-2 w-64 bg-white border border-slate-200 focus:border-orange-500 text-sm font-bold rounded-xl outline-none transition-all shadow-inner" 
-          />
+    <div className="grid grid-cols-2 gap-2 sm:flex sm:justify-end">
+      <button
+        type="button"
+        disabled={!receiveEnabled || isCanceling}
+        onClick={() => onReceive(purchaseOrder.id)}
+        className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-teal-700 bg-teal-700 px-4 text-sm font-semibold text-white transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400"
+      >
+        <ClipboardCheck className="h-4 w-4" />
+        ตรวจรับ
+      </button>
+
+      {canCancel ? (
+        <button
+          type="button"
+          disabled={isCanceling}
+          onClick={() => onCancel(purchaseOrder.id, code)}
+          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-rose-200 bg-white px-4 text-sm font-semibold text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <XCircle className="h-4 w-4" />
+          {isCanceling ? 'กำลังยกเลิก' : 'ยกเลิก'}
+        </button>
+      ) : (
+        <div className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-slate-100 px-4 text-sm font-medium text-slate-500">
+          <AlertCircle className="h-4 w-4" />
+          ปิดรายการแล้ว
         </div>
-
-        <div className="flex items-center gap-4 text-xs sm:text-sm flex-wrap font-black text-slate-600 bg-white border border-slate-200 px-4 py-1.5 rounded-xl shadow-sm select-none"> {/*[cite: 16] */}
-          <span className="text-slate-400 font-bold flex items-center gap-1 shrink-0"><SlidersHorizontal className="w-3.5 h-3.5" /> ตัวกรอง:</span> {/*[cite: 16] */}
-          
-          <label className="flex items-center gap-1.5 cursor-pointer hover:text-slate-900 transition-colors">
-            <input
-              type="radio"
-              name="poReceiptStatusFilter"
-              value="ALL"
-              checked={statusFilter === 'ALL'} 
-              onChange={(e) => setStatusFilter(e.target.value)} 
-              className="w-4 h-4 text-orange-500 border-slate-300 accent-orange-500 cursor-pointer" 
-            />
-            <span>ทั้งหมด</span>
-          </label>
-          <label className="flex items-center gap-1.5 cursor-pointer hover:text-slate-900 transition-colors">
-            <input
-              type="radio"
-              name="poReceiptStatusFilter"
-              value="PENDING"
-              checked={statusFilter === 'PENDING'} 
-              onChange={(e) => setStatusFilter(e.target.value)} 
-              className="w-4 h-4 text-orange-500 border-slate-300 accent-orange-500 cursor-pointer" 
-            />
-            <span>รอดำเนินการ</span>
-          </label>
-          <label className="flex items-center gap-1.5 cursor-pointer hover:text-slate-900 transition-colors">
-            <input
-              type="radio"
-              name="poReceiptStatusFilter"
-              value="PARTIALLY_RECEIVED"
-              checked={statusFilter === 'PARTIALLY_RECEIVED'} 
-              onChange={(e) => setStatusFilter(e.target.value)} 
-              className="w-4 h-4 text-orange-500 border-slate-300 accent-orange-500 cursor-pointer" 
-            />
-            <span>รับบางส่วน</span>
-          </label>
-          <label className="flex items-center gap-1.5 cursor-pointer hover:text-slate-900 transition-colors">
-            <input
-              type="radio"
-              name="poReceiptStatusFilter"
-              value="COMPLETED"
-              checked={statusFilter === 'COMPLETED'} 
-              onChange={(e) => setStatusFilter(e.target.value)} 
-              className="w-4 h-4 text-orange-500 border-slate-300 accent-orange-500 cursor-pointer" 
-            />
-            <span>เสร็จสมบูรณ์</span>
-          </label>
-        </div>
-      </div>
-
-      {/* 📊 TABLE LAYOUT */}
-      <div className="w-full overflow-x-auto font-sans">
-        <table className="w-full text-sm text-left border-collapse"> {/*[cite: 16] */}
-          <thead>
-            <tr className="bg-slate-50 border-b border-slate-100 text-slate-500 text-xs font-black uppercase tracking-wider select-none"> {/*[cite: 16] */}
-              <th className="px-4 py-3.5 w-12 text-center">#</th> {/*[cite: 16] */}
-              <th className="px-4 py-3.5"><Calendar className="w-3.5 h-3.5 inline mr-1" /> วันที่ออกเอกสาร</th> {/*[cite: 16] */}
-              <th className="px-4 py-3.5">เลขที่ใบสั่งซื้อ</th> {/*[cite: 16] */}
-              <th className="px-4 py-3.5"><User className="w-3.5 h-3.5 inline mr-1" /> Supplier</th> {/*[cite: 16] */}
-              <th className="px-4 py-3.5"><Layers className="w-3.5 h-3.5 inline mr-1" /> สถานะ</th> {/*[cite: 16] */}
-              {/* 🟢 ขยายความกว้างหัวตารางล็อกพื้นที่รับ 2 ปุ่มแนวนอน */}
-              <th className="px-4 py-3.5 text-center w-[240px]">การจัดการคลังพัสดุ</th>
-            </tr>
-          </thead>
-
-          <tbody className="divide-y divide-slate-100"> {/*[cite: 16] */}
-            {loading && (
-              <tr>
-                <td className="px-4 py-12 text-center text-slate-400 font-bold select-none" colSpan={6}> {/*[cite: 16] */}
-                  <div className="flex items-center justify-center gap-2"> {/*[cite: 16] */}
-                    <span className="h-4 w-4 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" /> {/*[cite: 16] */}
-                    <span>กำลังโหลดและเชื่อมท่อ Live API หลังบ้าน...</span> {/*[cite: 16] */}
-                  </div>
-                </td>
-              </tr>
-            )}
-
-            {!loading && filtered.length === 0 && (
-              <tr>
-                <td className="px-4 py-12 text-center text-slate-400 font-bold italic text-sm select-none" colSpan={6}> {/*[cite: 16] */}
-                  ไม่พบข้อมูลเอกสารใบสั่งซื้อที่ตรงกับเงื่อนไขตัวกรองในปัจจุบัน {/*[cite: 16] */}
-                </td>
-              </tr>
-            )}
-
-            {!loading &&
-              filtered.map((po, index) => {
-                const disabled = !canReceive(po); 
-                const isCanceling = cancelingId === po.id;
-                const canCancel = normalizeStatus(po?.status) === 'PENDING' || normalizeStatus(po?.status) === 'PARTIALLY_RECEIVED';
-
-                const handleCancelPO = async (id, code) => {
-                  if (!window.confirm(`⚠️ คุณต้องการ "ยกเลิก" ใบสั่งซื้อเลขที่ ${code} ใช่หรือไม่?\n(เมื่อยกเลิกแล้ว บิลนี้จะถูกปิดถาวรและไม่สามารถนำมาตรวจรับของได้อีก)`)) {
-                    return;
-                  }
-                  try {
-                    setCancelingId(id);
-                    await cancelPurchaseOrderAction(id);
-                    alert(`✅ ยกเลิกใบสั่งซื้อ ${code} และถอนสิทธิ์เอกสารสำเร็จ`);
-                  } catch (err) {
-                    alert(`❌ 不สามารถยกเลิกบิลได้: ${err?.message || 'เกิดข้อผิดพลาดทางระบบ'}`);
-                  } finally {
-                    setCancelingId(null);
-                  }
-                };
-
-                return (
-                  <tr key={po.id} className="hover:bg-slate-50/80 transition-colors duration-150 group"> {/*[cite: 16] */}
-                    <td className="px-4 py-3.5 text-center font-bold text-slate-400 text-xs">{index + 1}</td> {/*[cite: 16] */}
-                    <td className="px-4 py-3.5 text-slate-500 font-semibold">{formatDateTh(po?.createdAt)}</td> {/*[cite: 16] */}
-                    <td className="px-4 py-3.5 font-black text-slate-900 tracking-tight group-hover:text-orange-500 transition-colors"> {/*[cite: 16] */}
-                      {po?.code || po?.poNumber || '-'} {/*[cite: 16] */}
-                    </td>
-                    <td className="px-4 py-3.5 font-bold text-slate-700">{po?.supplier?.name || '-'}</td> {/*[cite: 16] */}
-                    <td className="px-4 py-3.5">{renderStatusBadge(po?.status)}</td> {/*[cite: 16] */}
-                    
-                    <td className="px-4 py-3.5 text-center">
-                      {/* 🟢 จัดเรียง flex แถวตรงแบบบังคับห้ามตัดคำบรรทัด */}
-                      <div className="flex items-center justify-center gap-1.5 flex-nowrap w-full">
-                        
-                        {/* 🎨 1. ปุ่มตรวจรับสินค้า */}
-                        <button
-                          disabled={disabled || isCanceling}
-                          onClick={() => {
-                            if (disabled) return;
-                            const targetSlug = shopSlug || 'advancetech'; 
-                            navigate(`/${targetSlug}/pos/purchases/receipt/create/${po.id}`); 
-                          }}
-                          className={`px-2.5 py-1 rounded-lg text-xs font-black border tracking-wide transition-all duration-200 ease-out transform active:scale-95 flex items-center gap-1 shadow-sm whitespace-nowrap shrink-0 ${
-                            disabled
-                              ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed shadow-none'
-                              : 'bg-slate-800 hover:bg-slate-900 text-white border-slate-900 hover:border-black'
-                          }`}
-                        >
-                          <ClipboardCheck className="w-3.5 h-3.5" /> {/*[cite: 16] */}
-                          <span>ตรวจรับ</span>
-                        </button>
-
-                        {/* 🔴 2. ปุ่มยกเลิกเอกสาร PO (ปรับลดขนาดฟอนต์ text-[10px] และยึดพื้นที่แนวเดี่ยว) */}
-                        {canCancel && (
-                          <button
-                            type="button"
-                            disabled={isCanceling}
-                            onClick={() => handleCancelPO(po.id, po.code)}
-                            className="px-2 py-1 rounded-lg text-[10px] font-black border border-rose-200 bg-white text-rose-600 hover:bg-rose-50 hover:border-rose-300 transition-all active:scale-95 flex items-center gap-0.5 whitespace-nowrap shrink-0"
-                          >
-                            <XCircle className="w-3 h-3" />
-                            <span>{isCanceling ? 'ปิดบิล...' : 'ยกเลิกบิล'}</span>
-                          </button>
-                        )}
-
-                        {disabled && (
-                          <span className="text-[10px] text-slate-400 font-bold bg-slate-100 px-2 py-1 rounded-md flex items-center gap-1 select-none whitespace-nowrap shrink-0"> {/*[cite: 16] */}
-                            <AlertCircle className="w-3 h-3 text-slate-400" /> {/*[cite: 16] */}
-                            เสร็จสิ้นแล้ว
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-          </tbody>
-        </table>
-      </div>
+      )}
     </div>
   );
 };
 
-export default PurchaseOrderReceiptTable;
+export default function PurchaseOrderReceiptTable({ purchaseOrders, loading }) {
+  const navigate = useNavigate();
+  const { shopSlug } = useParams();
+  const { cancelPurchaseOrderAction } = usePurchaseOrderReceiptStore();
+  const [searchText, setSearchText] = useState('');
+  const [statusFilter, setStatusFilter] = useState('ALL');
+  const [cancelingId, setCancelingId] = useState(null);
+
+  const filtered = useMemo(() => {
+    const list = Array.isArray(purchaseOrders) ? purchaseOrders : [];
+    const query = String(searchText || '').trim().toLowerCase();
+
+    return list.filter((purchaseOrder) => {
+      const supplierName = String(purchaseOrder?.supplier?.name || '').toLowerCase();
+      const code = String(purchaseOrder?.code || purchaseOrder?.poNumber || '').toLowerCase();
+      const matchesQuery = !query || supplierName.includes(query) || code.includes(query);
+      const matchesStatus =
+        statusFilter === 'ALL' || normalizeStatus(purchaseOrder?.status) === statusFilter;
+      return matchesQuery && matchesStatus;
+    });
+  }, [purchaseOrders, searchText, statusFilter]);
+
+  const handleReceive = (id) => {
+    const targetSlug = shopSlug || 'advancetech';
+    navigate(`/${targetSlug}/pos/purchases/receipt/create/${id}`);
+  };
+
+  const handleCancel = async (id, code) => {
+    const confirmed = window.confirm(
+      `คุณต้องการยกเลิกใบสั่งซื้อเลขที่ ${code} ใช่หรือไม่?\nเมื่อยกเลิกแล้ว เอกสารนี้จะไม่สามารถนำมาตรวจรับสินค้าได้อีก`
+    );
+    if (!confirmed) return;
+
+    try {
+      setCancelingId(id);
+      await cancelPurchaseOrderAction(id);
+      window.alert(`ยกเลิกใบสั่งซื้อ ${code} สำเร็จ`);
+    } catch (error) {
+      window.alert(`ไม่สามารถยกเลิกเอกสารได้: ${error?.message || 'เกิดข้อผิดพลาดทางระบบ'}`);
+    } finally {
+      setCancelingId(null);
+    }
+  };
+
+  return (
+    <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm" aria-label="รายการตรวจรับสินค้า">
+      <div className="space-y-4 border-b border-slate-200 bg-slate-50 p-4 lg:flex lg:items-center lg:justify-between lg:space-y-0">
+        <div className="relative w-full lg:max-w-md">
+          <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <input
+            type="search"
+            aria-label="ค้นหาใบสั่งซื้อที่รอตรวจรับ"
+            placeholder="ค้นหา Supplier หรือเลขที่ใบสั่งซื้อ"
+            value={searchText}
+            onChange={(event) => setSearchText(event.target.value)}
+            className="min-h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm text-slate-800 outline-none transition focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
+          />
+        </div>
+
+        <div className="flex gap-2 overflow-x-auto pb-1 lg:pb-0" aria-label="ตัวกรองสถานะใบสั่งซื้อ">
+          <span className="inline-flex min-h-11 shrink-0 items-center gap-2 px-1 text-sm font-medium text-slate-500">
+            <SlidersHorizontal className="h-4 w-4" /> ตัวกรอง
+          </span>
+          {STATUS_FILTERS.map((filter) => {
+            const active = statusFilter === filter.value;
+            return (
+              <button
+                key={filter.value}
+                type="button"
+                onClick={() => setStatusFilter(filter.value)}
+                className={`min-h-11 shrink-0 rounded-xl border px-4 text-sm font-semibold transition ${
+                  active
+                    ? 'border-teal-300 bg-teal-100 text-teal-900'
+                    : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                {filter.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {loading ? (
+        <div role="status" className="flex min-h-40 items-center justify-center gap-3 p-6 text-sm font-medium text-slate-500">
+          <span className="h-5 w-5 animate-spin rounded-full border-2 border-teal-600 border-t-transparent" />
+          กำลังโหลดรายการตรวจรับสินค้า
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className="px-5 py-12 text-center">
+          <FileText className="mx-auto h-10 w-10 text-slate-300" />
+          <h2 className="mt-3 text-base font-semibold text-slate-900">ไม่พบรายการที่ตรงกับเงื่อนไข</h2>
+          <p className="mt-1 text-sm text-slate-500">ลองเปลี่ยนคำค้นหาหรือตัวกรองสถานะ</p>
+        </div>
+      ) : (
+        <>
+          <div className="space-y-3 p-3 md:hidden">
+            {filtered.map((purchaseOrder) => {
+              const code = purchaseOrder?.code || purchaseOrder?.poNumber || '-';
+              return (
+                <article key={purchaseOrder.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-xs font-medium text-slate-500">เลขที่ใบสั่งซื้อ</p>
+                      <h2 className="mt-1 break-all text-base font-bold text-slate-950">{code}</h2>
+                    </div>
+                    <ReceiptStatusBadge status={purchaseOrder?.status} />
+                  </div>
+
+                  <dl className="mt-4 space-y-3 text-sm">
+                    <div className="flex items-start gap-3">
+                      <User className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
+                      <div className="min-w-0">
+                        <dt className="text-xs text-slate-500">Supplier</dt>
+                        <dd className="break-words font-semibold text-slate-800">{purchaseOrder?.supplier?.name || '-'}</dd>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <Calendar className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
+                      <div>
+                        <dt className="text-xs text-slate-500">วันที่ออกเอกสาร</dt>
+                        <dd className="font-semibold text-slate-800">{formatDateTh(purchaseOrder?.createdAt)}</dd>
+                      </div>
+                    </div>
+                  </dl>
+
+                  <div className="mt-4 border-t border-slate-200 pt-4">
+                    <ReceiptActions
+                      purchaseOrder={purchaseOrder}
+                      isCanceling={cancelingId === purchaseOrder.id}
+                      onReceive={handleReceive}
+                      onCancel={handleCancel}
+                    />
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+
+          <div className="hidden overflow-x-auto md:block">
+            <table className="w-full min-w-[900px] border-collapse text-left">
+              <thead>
+                <tr className="border-b border-slate-200 bg-slate-50 text-xs font-semibold text-slate-500">
+                  <th className="px-5 py-4">วันที่ออกเอกสาร</th>
+                  <th className="px-5 py-4">เลขที่ใบสั่งซื้อ</th>
+                  <th className="px-5 py-4">Supplier</th>
+                  <th className="px-5 py-4 text-center">สถานะ</th>
+                  <th className="px-5 py-4 text-right">การจัดการ</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {filtered.map((purchaseOrder) => (
+                  <tr key={purchaseOrder.id} className="transition hover:bg-teal-50/40">
+                    <td className="px-5 py-4 text-sm font-medium text-slate-500">{formatDateTh(purchaseOrder?.createdAt)}</td>
+                    <td className="px-5 py-4 text-sm font-bold text-slate-950">{purchaseOrder?.code || purchaseOrder?.poNumber || '-'}</td>
+                    <td className="px-5 py-4 text-sm font-semibold text-slate-700">{purchaseOrder?.supplier?.name || '-'}</td>
+                    <td className="px-5 py-4 text-center"><ReceiptStatusBadge status={purchaseOrder?.status} /></td>
+                    <td className="px-5 py-4">
+                      <ReceiptActions
+                        purchaseOrder={purchaseOrder}
+                        isCanceling={cancelingId === purchaseOrder.id}
+                        onReceive={handleReceive}
+                        onCancel={handleCancel}
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+    </section>
+  );
+}

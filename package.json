@@ -15,6 +15,7 @@
     "test:run": "vitest run",
     "test:stock-audit-mobile-workspace": "node tests/stock-audit-mobile-workspace.contract.test.js && node tests/pos-mobile-module-navigation.contract.test.js",
     "test:purchase-workspace-standard": "node tests/purchase-workspace-standard.contract.test.js",
+    "test:purchase-receipt-workspace-standard": "node tests/purchase-receipt-workspace-standard.contract.test.js",
     "test:quick-receipt": "vitest run src/features/receiving/quick-stock/api/quickReceiptSessionApi.test.js src/features/receiving/quick-stock/components/QuickReceiptSessionPanel.test.jsx src/features/receiving/quick-stock/pages/QuickStockPage.test.jsx",
     "test:tax-expense": "vitest run src/features/taxExpense/api/taxExpenseApi.test.js",
     "test:auth-receipt": "vitest run src/features/customerReceipt/__tests__/customerReceiptAuthRegression.test.js",
@@ -132,7 +133,7 @@
     "vite": "5.2.10",
     "vitest": "^4.1.7"
   },
-  "description": "This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.",
+  "description": "This template provides a minimal setup for React with Vite.",
   "main": "eslint.config.js",
   "keywords": [],
   "author": "",

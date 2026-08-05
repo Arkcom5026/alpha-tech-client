@@ -14,6 +14,9 @@ export const listMerchantProductReservations = async ({ statuses = [], limit = 1
 export const getMerchantProductReservation = async (reservationId) =>
   unwrap(await apiClient.get(`/sales/reservations/${reservationId}`));
 
+export const ensureMerchantProductReservationAllocation = async (reservationId) =>
+  unwrap(await apiClient.post(`/sales/reservations/${reservationId}/allocation`));
+
 export const executeMerchantProductReservationLifecycle = async ({
   reservationId,
   commandType,

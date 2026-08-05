@@ -114,7 +114,7 @@
     font-size: var(--ads-type-heading-lg-size);
     line-height: var(--ads-type-heading-lg-line-height);
     letter-spacing: var(--ads-type-heading-lg-letter-spacing);
-    font-weight: var(--ads-font-weight-bold);
+    font-weight: var(--ads-font-weight-semibold);
   }
 
   .text-heading-md {
@@ -152,13 +152,13 @@
   .text-caption {
     font-size: var(--ads-type-caption-size);
     line-height: var(--ads-type-caption-line-height);
-    font-weight: var(--ads-font-weight-medium);
+    font-weight: var(--ads-font-weight-regular);
   }
 
   .text-label {
     font-size: var(--ads-type-label-size);
     line-height: var(--ads-type-label-line-height);
-    font-weight: var(--ads-font-weight-semibold);
+    font-weight: var(--ads-font-weight-medium);
   }
 }
 

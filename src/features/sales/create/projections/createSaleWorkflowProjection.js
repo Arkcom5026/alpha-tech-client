@@ -23,11 +23,15 @@ export const projectCreateSaleWorkflow = ({
     setError: itemSearch.setError,
     handleBarcodeSearch: itemSearch.handleBarcodeSearch,
     resetInput: itemSearch.resetInput,
+    selection: itemSearch.selection,
+    closeSelection: itemSearch.closeSelection,
+    selectSearchItem: itemSearch.selectSearchItem,
   },
   completion: {
     isSubmitting: completion.isSubmitting,
     setIsSubmitting: completion.setIsSubmitting,
     confirm: completion.confirm,
+    recovery: completion.recovery,
   },
   documentHandoff: {
     saleOption: documentHandoff.saleOption,

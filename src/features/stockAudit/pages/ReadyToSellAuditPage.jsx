@@ -276,7 +276,7 @@ const ReadyToSellAuditPage = () => {
       const result = scanMode === 'SN' && typeof scanSnAction === 'function'
         ? await scanSnAction(input)
         : await scanBarcodeAction(input, { mode: scanMode });
-      const { ok, duplicate, notFound, resolvedPending } = classifyScanResult(result);
+      const { ok, duplicate, resolvedPending } = classifyScanResult(result);
 
       if (ok || resolvedPending) {
         await playSuccess();
@@ -359,6 +359,20 @@ const ReadyToSellAuditPage = () => {
     }
   };
 
+  const auditActionBar = (
+    <StockAuditActionBar
+      sessionId={sessionId}
+      sessionClosed={sessionClosed}
+      isStarting={isStarting}
+      isConfirming={isConfirming}
+      isCancelling={isCancelling}
+      onStart={startAudit}
+      onCancel={() => setOpenCancel(true)}
+      onMarkLost={() => setOpenConfirmLost(true)}
+      onMarkPending={() => setOpenConfirmPending(true)}
+    />
+  );
+
   return (
     <div className="min-h-full bg-slate-50 p-3 md:p-5">
       <div className="mx-auto max-w-[1500px] space-y-4">
@@ -370,17 +384,7 @@ const ReadyToSellAuditPage = () => {
           formatNumber={formatNum}
         />
 
-        <StockAuditActionBar
-          sessionId={sessionId}
-          sessionClosed={sessionClosed}
-          isStarting={isStarting}
-          isConfirming={isConfirming}
-          isCancelling={isCancelling}
-          onStart={startAudit}
-          onCancel={() => setOpenCancel(true)}
-          onMarkLost={() => setOpenConfirmLost(true)}
-          onMarkPending={() => setOpenConfirmPending(true)}
-        />
+        {!sessionId ? auditActionBar : null}
 
         <StockAuditScannerWorkspace
           ref={scanRef}
@@ -454,6 +458,8 @@ const ReadyToSellAuditPage = () => {
             />
           </StockAuditListPanel>
         </div>
+
+        {sessionId ? auditActionBar : null}
       </div>
 
       <ConfirmActionDialog

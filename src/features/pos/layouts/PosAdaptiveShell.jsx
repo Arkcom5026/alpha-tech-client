@@ -8,6 +8,11 @@ import PosKeyboardRuntime from '@/features/pos/runtime/PosKeyboardRuntime';
 
 const SIDEBAR_PREFERENCE_KEY = 'alpha-tech.pos.sidebar.expanded.v2';
 
+const normalizePath = (value = '') => {
+  const normalized = String(value || '/').replace(/\/+$/u, '');
+  return normalized || '/';
+};
+
 const readDesktopPreference = () => {
   if (typeof window === 'undefined') return true;
   const savedValue = window.localStorage.getItem(SIDEBAR_PREFERENCE_KEY);
@@ -19,10 +24,27 @@ const PosAdaptiveShell = () => {
   const { pathname } = useLocation();
   const [desktopExpanded, setDesktopExpanded] = useState(readDesktopPreference);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [pendingMobileModulePath, setPendingMobileModulePath] = useState('');
 
   useEffect(() => {
-    setMobileOpen(false);
-  }, [pathname]);
+    if (!pendingMobileModulePath) {
+      setMobileOpen(false);
+      return;
+    }
+
+    const currentPath = normalizePath(pathname);
+    const targetPath = normalizePath(pendingMobileModulePath);
+    const hasReachedModule =
+      currentPath === targetPath || currentPath.startsWith(`${targetPath}/`);
+
+    if (!hasReachedModule) {
+      setMobileOpen(false);
+      return;
+    }
+
+    setMobileOpen(true);
+    setPendingMobileModulePath('');
+  }, [pathname, pendingMobileModulePath]);
 
   useEffect(() => {
     if (!mobileOpen) return undefined;
@@ -31,7 +53,10 @@ const PosAdaptiveShell = () => {
     document.body.style.overflow = 'hidden';
 
     const handleEscape = (event) => {
-      if (event.key === 'Escape') setMobileOpen(false);
+      if (event.key === 'Escape') {
+        setPendingMobileModulePath('');
+        setMobileOpen(false);
+      }
     };
 
     window.addEventListener('keydown', handleEscape);
@@ -40,6 +65,17 @@ const PosAdaptiveShell = () => {
       window.removeEventListener('keydown', handleEscape);
     };
   }, [mobileOpen]);
+
+  const closeMobileSidebar = () => {
+    setPendingMobileModulePath('');
+    setMobileOpen(false);
+  };
+
+  const handleMobileModuleSelect = (item) => {
+    const targetPath = item?.path;
+    if (!targetPath) return;
+    setPendingMobileModulePath(targetPath);
+  };
 
   const toggleDesktopSidebar = () => {
     setDesktopExpanded((current) => {
@@ -67,7 +103,7 @@ const PosAdaptiveShell = () => {
           <button
             type="button"
             className="absolute inset-0 bg-slate-950/45 backdrop-blur-[2px]"
-            onClick={() => setMobileOpen(false)}
+            onClick={closeMobileSidebar}
             aria-label="ปิดเมนูย่อย POS"
           />
 
@@ -75,7 +111,7 @@ const PosAdaptiveShell = () => {
             <SidebarLoader collapsed={false} />
             <button
               type="button"
-              onClick={() => setMobileOpen(false)}
+              onClick={closeMobileSidebar}
               className="absolute right-3 top-3 flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-600 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500"
               aria-label="ปิดเมนูย่อย POS"
             >
@@ -86,7 +122,7 @@ const PosAdaptiveShell = () => {
       )}
 
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        <HeaderPos shopSlug={shopSlug} onMobileModuleSelect={() => setMobileOpen(true)} />
+        <HeaderPos shopSlug={shopSlug} onMobileModuleSelect={handleMobileModuleSelect} />
 
         <main className="min-w-0 flex-1 overflow-y-auto bg-slate-50 px-3 py-4 animate-fadeIn sm:px-4 md:px-6 md:py-6 lg:px-8">
           <div className="mx-auto w-full max-w-[1680px]">

@@ -29,6 +29,8 @@ const PaymentSummary = ({
   setCurrentSaleMode,
   hasValidCustomerId = false,
   onSaveHeldCart,
+  heldCartDisabled = false,
+  saleExecutionDisabled = false,
 }) => {
   const totalNum = Number(totalToPay) || 0;
   const paidNum = Number(grandTotalPaid) || 0;
@@ -104,6 +106,12 @@ const PaymentSummary = ({
         )}
       </div>
 
+      {saleExecutionDisabled ? (
+        <div className="rounded-xl border border-blue-200 bg-blue-50 p-2.5 text-[11px] font-black text-blue-800">
+          ใบจองออนไลน์ถูกโหลดเข้าตะกร้าขายแล้ว การบันทึก Sale จะเปิดเมื่อ Server Finalization เชื่อม Sale กับ ProductReservation แบบ atomic
+        </div>
+      ) : null}
+
       {recovery?.state === 'UNCERTAIN' && (
         <div className="bg-amber-50 border border-amber-300 text-amber-800 p-2.5 rounded-xl text-[11px] font-black animate-slideUp space-y-1">
           <div>⏳ ผลการบันทึกยังไม่แน่นอน ระบบจะตรวจสอบด้วยคำสั่งเดิม</div>
@@ -126,7 +134,7 @@ const PaymentSummary = ({
             const next = e.target.checked ? SALE_MODE.CREDIT : SALE_MODE.CASH;
             setCurrentSaleMode(next);
           }}
-          disabled={isSubmitting}
+          disabled={isSubmitting || saleExecutionDisabled}
           className="accent-slate-900 h-3.5 w-3.5"
         />
         <span>เครดิต/หน่วยงาน</span>
@@ -148,10 +156,10 @@ const PaymentSummary = ({
         <button
           type="button"
           onClick={onSaveHeldCart}
-          disabled={isSubmitting || recovery?.state === 'UNCERTAIN'}
+          disabled={heldCartDisabled || isSubmitting || recovery?.state === 'UNCERTAIN'}
           className="h-9 border border-orange-300 bg-orange-50 hover:bg-orange-100 text-orange-700 font-black text-xs rounded-xl active:scale-[0.99] transition-all disabled:opacity-40 disabled:transform-none"
         >
-          บันทึกการจอง
+          {heldCartDisabled ? 'ใช้ใบจองออนไลน์เดิม' : 'บันทึกการจอง'}
         </button>
         <button
           type="button"
@@ -164,15 +172,17 @@ const PaymentSummary = ({
               console.error('[PaymentSummary] confirm sale error', err);
             }
           }}
-          disabled={!isConfirmEnabled || isSubmitting}
+          disabled={!isConfirmEnabled || isSubmitting || saleExecutionDisabled}
           data-testid="pos-sale-confirm-button"
           className="h-9 bg-slate-900 hover:bg-slate-800 text-white font-black text-xs rounded-xl active:scale-[0.99] transition-all shadow-md disabled:opacity-40 disabled:transform-none disabled:shadow-none"
         >
-          {isSubmitting
-            ? '⏳ กำลังบันทึก...'
-            : retryingExistingCommand
-              ? 'ตรวจสอบคำสั่งเดิมอีกครั้ง'
-              : 'บันทึกการขาย'}
+          {saleExecutionDisabled
+            ? 'รอเชื่อม Finalization'
+            : isSubmitting
+              ? '⏳ กำลังบันทึก...'
+              : retryingExistingCommand
+                ? 'ตรวจสอบคำสั่งเดิมอีกครั้ง'
+                : 'บันทึกการขาย'}
         </button>
       </div>
     </div>
@@ -205,6 +215,8 @@ PaymentSummary.propTypes = {
   setCurrentSaleMode: PropTypes.func.isRequired,
   hasValidCustomerId: PropTypes.bool,
   onSaveHeldCart: PropTypes.func.isRequired,
+  heldCartDisabled: PropTypes.bool,
+  saleExecutionDisabled: PropTypes.bool,
 };
 
 export default PaymentSummary;

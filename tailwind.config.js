@@ -13,6 +13,12 @@ export default {
         medium: 'var(--ads-font-weight-medium)',
         semibold: 'var(--ads-font-weight-semibold)',
         bold: 'var(--ads-font-weight-bold)',
+        extrabold: 'var(--ads-font-weight-bold)',
+        black: 'var(--ads-font-weight-bold)',
+      },
+      letterSpacing: {
+        tighter: '-0.005em',
+        tight: '-0.002em',
       },
       borderRadius: {
         lg: 'var(--radius)',

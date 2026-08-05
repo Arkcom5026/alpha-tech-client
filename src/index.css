@@ -1,5 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700&display=swap');
 @import "./design-system/styles/tokens.css";
+@import "./design-system/styles/buttons.css";
 
 @tailwind base;
 @tailwind components;

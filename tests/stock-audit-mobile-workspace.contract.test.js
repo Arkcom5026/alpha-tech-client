@@ -22,8 +22,10 @@ assertIncludes(page, 'StockAuditActionBar', 'Stock audit page must use the opera
 assertIncludes(page, 'StockAuditListPanel', 'Stock audit page must use shared list panels');
 assertIncludes(page, "event.key === 'F2'", 'F2 focus authority must remain available');
 assertIncludes(page, "event.key === 'F3'", 'F3 scan-mode authority must remain available');
-assertIncludes(page, "scanMode === 'BARCODE'", 'Barcode scan mode must remain available');
-assertIncludes(page, "scanMode === 'SN'", 'SN scan mode must remain available');
+assertIncludes(page, "['BARCODE', 'SN'].map", 'Barcode and SN selector authority must remain available');
+assertIncludes(page, 'scanMode === mode', 'Selected scan mode must remain explicit');
+assertIncludes(page, "scanMode === 'SN'", 'SN execution path must remain available');
+assertIncludes(page, 'scanBarcodeAction(input, { mode: scanMode })', 'Barcode execution path must remain available');
 assertIncludes(page, "confirmAuditAction('MARK_LOST')", 'Lost-stock close authority must remain available');
 assertIncludes(page, "confirmAuditAction('MARK_PENDING')", 'Pending close authority must remain available');
 assertIncludes(page, 'loadActiveReadyAuditAction', 'Active audit recovery must remain available');

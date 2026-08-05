@@ -2,7 +2,7 @@
 // 🏢 Master Multi-Tenant Router (Clean & Professional Partner-Portal Routing)
 // 🔒 [SECURITY PATCH] ป้องกันเมนูตกรางเตะออกจากระบบ — ตรึง Session ให้อยู่ใน POS เสมอ ไม่ต้อง Login ใหม่
 import React from 'react';
-import { Navigate, Outlet, useParams } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 
 import { posPartnerRoutes } from './partner/posPartnerRoutes';
 import { onlinePartnerRoutes } from './partner/onlinePartnerRoutes';
@@ -24,15 +24,8 @@ import PublicStorefrontCartPage from '@/features/storefront/pages/PublicStorefro
 import PublicStorefrontIdentityPage from '@/features/storefront/pages/PublicStorefrontIdentityPage';
 import NotFound from '@/pages/NotFound';
 
-import HeaderPos from '@/features/pos/components/header/HeaderPos';
-import SidebarLoader from '@/features/pos/components/sidebar/SidebarLoader';
+import PosAdaptiveShell from '@/features/pos/layouts/PosAdaptiveShell';
 import LayoutSuperAdmin from '@/features/pos/layouts/superadmin/LayoutSuperAdmin';
-import PosKeyboardRuntime from '@/features/pos/runtime/PosKeyboardRuntime';
-
-const PartnerPosMasterLayout = () => {
-  const { shopSlug } = useParams();
-  return <div className="flex h-screen w-screen overflow-hidden bg-slate-50 text-slate-800 font-sans"><PosKeyboardRuntime /><SidebarLoader shopSlug={shopSlug} /><div className="flex min-w-0 flex-1 flex-col overflow-hidden"><HeaderPos shopSlug={shopSlug} /><main className="min-w-0 flex-1 overflow-y-auto bg-slate-50 p-4 animate-fadeIn md:p-6 lg:p-8"><div className="mx-auto w-full max-w-[1680px]"><Outlet /></div></main></div></div>;
-};
 
 const SuperAdminEntryRedirect = () => {
   const branchSlug = useAuthStore((state) => state.employee?.branchSlug);
@@ -54,7 +47,7 @@ const AppRouter = [
   { path: 'partner-portal/reset-password', element: <ResetPasswordPage /> },
   { path: 'superadmin/dashboard', element: <SuperAdminEntryRedirect /> },
   { path: ':shopSlug/pos/storefront', element: <Navigate to="../settings/storefront" relative="path" replace /> },
-  { path: ':shopSlug/pos', element: <PartnerPosMasterLayout />, children: [...posPartnerRoutes] },
+  { path: ':shopSlug/pos', element: <PosAdaptiveShell />, children: [...posPartnerRoutes] },
   {
     path: ':shopSlug/superadmin',
     element: <SuperAdminAuthorityGuard />,

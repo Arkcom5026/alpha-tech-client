@@ -15,6 +15,7 @@ const assertExcludes = (source, value, message) => {
 
 const detail = read('src/features/productReservation/merchant/pages/ProductReservationDetailPage.jsx');
 const bridge = read('src/features/productReservation/merchant/pages/ReservationSaleBridgePage.jsx');
+const merchantApi = read('src/features/productReservation/merchant/api/productReservationMerchantApi.js');
 const adapter = read('src/features/productReservation/merchant/adapters/productReservationSaleCartAdapter.js');
 const createSale = read('src/features/sales/create/pages/CreateSalePage.jsx');
 const workflow = read('src/features/sales/create/hooks/useCreateSaleWorkflow.js');
@@ -26,13 +27,19 @@ assertIncludes(detail, "['ACCEPTED', 'FULFILLMENT_READY', 'READY_FOR_PICKUP']", 
 assertIncludes(detail, 'นำใบจองเข้าสู่หน้าขาย POS', 'Reservation detail must expose POS sale bridge action');
 assertIncludes(detail, 'to="sale"', 'Bridge action must remain inside current shop route context');
 
+assertIncludes(merchantApi, 'ensureMerchantProductReservationAllocation', 'Merchant API must expose allocation authority');
+assertIncludes(merchantApi, '/allocation', 'Allocation must use the branch-scoped reservation endpoint');
 assertIncludes(bridge, "import CreateSalePage from '@/features/sales/create/pages/CreateSalePage'", 'Bridge must reuse the existing POS Sales Engine');
 assertIncludes(bridge, 'createProductReservationSaleCart', 'Bridge must use a dedicated reservation cart adapter');
 assertIncludes(bridge, 'getMerchantProductReservation', 'Bridge must re-read branch-scoped reservation authority');
+assertIncludes(bridge, 'ensureMerchantProductReservationAllocation', 'Bridge must ensure physical allocation before cart mapping');
+assertIncludes(bridge, 'await ensureMerchantProductReservationAllocation(reservationId)', 'Allocation must finish before final detail hydration');
+assertIncludes(bridge, 'return getMerchantProductReservation(reservationId)', 'Bridge must refresh server authority after allocation');
 assertIncludes(bridge, 'initialItems={saleCart.lines}', 'Reservation items must hydrate the existing POS cart');
 assertIncludes(bridge, 'sourceContext={saleCart.source}', 'POS must retain ProductReservation source authority');
 assertIncludes(bridge, 'sourceLocked', 'Reservation-backed cart must be locked against mutation');
 assertIncludes(bridge, 'saleExecutionDisabled', 'Sale finalization must remain closed until atomic server authority exists');
+assertIncludes(bridge, 'ผูกสินค้าจริงแล้ว', 'Operator must see physical allocation readiness');
 assertIncludes(bridge, 'ไม่สร้าง POS Held Cart หรือใบจองซ้ำ', 'Operator must see no-duplicate reservation policy');
 
 for (const token of [

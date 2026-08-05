@@ -289,8 +289,8 @@ const MarketplacePortalPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#f8f7f4] font-sans text-slate-900 antialiased selection:bg-teal-200 selection:text-slate-950">
-      <header className="sticky top-0 z-50 border-b border-slate-200/80 bg-white/92 px-4 py-3 backdrop-blur-xl sm:px-6">
+    <div className="min-h-screen bg-[#f6f7f6] font-sans text-slate-900 antialiased selection:bg-teal-200 selection:text-slate-950">
+      <header className="sticky top-0 z-50 border-b border-slate-200/80 bg-white/95 px-4 py-3 backdrop-blur-xl sm:px-6">
         <div className="mx-auto flex max-w-[1440px] items-center justify-between gap-4">
           <a href="/" className="flex shrink-0 items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-teal-600 text-xs font-black tracking-wider text-white shadow-sm">
@@ -347,48 +347,38 @@ const MarketplacePortalPage = () => {
       </header>
 
       <main>
-        <section className="relative overflow-hidden border-b border-slate-200/70 bg-white">
-          <div className="absolute -left-24 top-8 h-72 w-72 rounded-full bg-sky-100/65 blur-3xl" />
+        <section className="relative overflow-hidden bg-[#fffdf8]">
+          <div className="absolute -left-28 top-0 h-80 w-80 rounded-full bg-sky-100/55 blur-3xl" />
           <div className="absolute right-[4%] top-0 h-72 w-72 rounded-full bg-amber-100/55 blur-3xl" />
-          <div className="absolute bottom-[-120px] left-[44%] h-64 w-64 rounded-full bg-rose-100/45 blur-3xl" />
+          <div className="absolute bottom-[-130px] left-[45%] h-64 w-64 rounded-full bg-rose-100/40 blur-3xl" />
 
-          <div className="relative mx-auto max-w-[1440px] px-4 py-10 sm:px-6 sm:py-14">
-            <div className="grid items-center gap-8 lg:grid-cols-[minmax(0,1.25fr)_minmax(320px,0.75fr)]">
+          <div className="relative mx-auto max-w-[1440px] px-4 py-10 sm:px-6 sm:py-12">
+            <div className="grid items-center gap-8 lg:grid-cols-[minmax(0,1.35fr)_minmax(330px,0.65fr)]">
               <div>
-                <div className="inline-flex items-center gap-2 rounded-full border border-teal-100 bg-teal-50 px-3 py-1.5 text-[11px] font-bold text-teal-800">
-                  <span className="h-2 w-2 rounded-full bg-teal-500" />
-                  เลือกซื้อจากร้านจริง เห็นความพร้อมก่อนตัดสินใจ
+                <div className="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-[11px] font-bold text-amber-800">
+                  <span className="h-2 w-2 rounded-full bg-amber-500" />
+                  ค้นหาจากร้านจริงและเห็นความพร้อมก่อนออกเดินทาง
                 </div>
 
-                <h1 className="mt-5 max-w-3xl text-4xl font-black leading-[1.08] tracking-[-0.045em] text-slate-950 sm:text-5xl">
-                  สินค้าที่คุณกำลังหา
-                  <span className="block text-slate-700">
-                    อาจอยู่ใกล้กว่าที่คิด
-                  </span>
-                </h1>
-
-                <p className="mt-4 max-w-2xl text-sm font-medium leading-7 text-slate-600 sm:text-base">
-                  ค้นหาสินค้าจากหลายร้าน เปรียบเทียบความพร้อม ระยะทาง
-                  และวิธีรับสินค้าได้จากที่เดียว
-                </p>
-
-                <div className="mt-7 max-w-3xl rounded-[26px] border border-slate-200 bg-white p-2.5 shadow-[0_18px_50px_rgba(15,23,42,0.10)]">
+                <div className="mt-5 max-w-3xl rounded-[28px] border border-slate-200 bg-white p-3 shadow-[0_22px_60px_rgba(15,23,42,0.13)] ring-1 ring-white">
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                     <div className="flex flex-1 items-center gap-3 px-3">
-                      <FaSearch className="shrink-0 text-lg text-teal-600" />
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-sky-50 text-sky-600">
+                        <FaSearch />
+                      </span>
                       <input
                         type="search"
                         value={searchQuery}
                         onChange={(event) => setSearchQuery(event.target.value)}
                         placeholder="ค้นหาสินค้า แบรนด์ หมวดหมู่ หรือร้านค้า..."
-                        className="h-12 w-full bg-transparent text-sm font-semibold text-slate-950 outline-none placeholder:font-medium placeholder:text-slate-400"
+                        className="h-14 w-full bg-transparent text-base font-semibold text-slate-950 outline-none placeholder:font-medium placeholder:text-slate-400"
                       />
                     </div>
                     <button
                       type="button"
-                      className="inline-flex h-12 items-center justify-center gap-2 rounded-[19px] bg-teal-600 px-5 text-sm font-extrabold text-white shadow-sm transition hover:bg-teal-700 active:scale-[0.99]"
+                      className="inline-flex h-14 items-center justify-center gap-2 rounded-[20px] bg-teal-600 px-6 text-sm font-extrabold text-white shadow-sm transition hover:bg-teal-700 active:scale-[0.99]"
                     >
-                      ค้นหา
+                      ค้นหาสินค้า
                       <FaArrowRight className="text-xs" />
                     </button>
                   </div>
@@ -418,10 +408,22 @@ const MarketplacePortalPage = () => {
                     );
                   })}
                 </div>
+
+                <h1 className="mt-7 max-w-3xl text-4xl font-black leading-[1.08] tracking-[-0.045em] text-slate-950 sm:text-[46px]">
+                  เจอสินค้าที่ต้องการ
+                  <span className="block text-slate-700">
+                    โดยไม่ต้องค้นหาหลายที่
+                  </span>
+                </h1>
+
+                <p className="mt-4 max-w-2xl text-sm font-medium leading-7 text-slate-600 sm:text-base">
+                  ค้นหาสินค้า ดูร้านที่มีของพร้อมขาย เปรียบเทียบระยะทาง
+                  และเลือกวิธีรับสินค้าที่เหมาะกับคุณได้ในที่เดียว
+                </p>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div className="col-span-2 rounded-[26px] border border-sky-100 bg-sky-50/80 p-5">
+              <div className="space-y-3">
+                <div className="rounded-[26px] border border-sky-100 bg-sky-50/85 p-5 shadow-sm">
                   <div className="flex items-center justify-between gap-4">
                     <div>
                       <p className="text-[11px] font-bold text-sky-700">
@@ -443,21 +445,32 @@ const MarketplacePortalPage = () => {
                   ) : null}
                 </div>
 
-                <div className="rounded-[24px] border border-emerald-100 bg-emerald-50/80 p-4">
-                  <FaWarehouse className="text-emerald-600" />
-                  <p className="mt-3 text-xl font-black text-slate-950">
-                    {filteredProducts.length}
-                  </p>
-                  <p className="mt-1 text-[11px] font-bold text-emerald-700">
-                    พร้อมให้เลือกตอนนี้
-                  </p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-[24px] border border-emerald-100 bg-emerald-50/85 p-4">
+                    <FaWarehouse className="text-emerald-600" />
+                    <p className="mt-3 text-2xl font-black text-slate-950">
+                      {filteredProducts.length}
+                    </p>
+                    <p className="mt-1 text-[11px] font-bold text-emerald-700">
+                      สินค้าพร้อมเลือก
+                    </p>
+                  </div>
+
+                  <div className="rounded-[24px] border border-violet-100 bg-violet-50/85 p-4">
+                    <FaStore className="text-violet-600" />
+                    <p className="mt-3 text-2xl font-black text-slate-950">128</p>
+                    <p className="mt-1 text-[11px] font-bold text-violet-700">
+                      ร้านค้าในระบบ
+                    </p>
+                  </div>
                 </div>
 
-                <div className="rounded-[24px] border border-violet-100 bg-violet-50/80 p-4">
-                  <FaStore className="text-violet-600" />
-                  <p className="mt-3 text-xl font-black text-slate-950">128</p>
-                  <p className="mt-1 text-[11px] font-bold text-violet-700">
-                    ร้านค้าในระบบ
+                <div className="rounded-[24px] border border-rose-100 bg-rose-50/75 p-4">
+                  <p className="text-[11px] font-bold text-rose-700">
+                    เลือกอย่างสบายใจ
+                  </p>
+                  <p className="mt-1 text-sm font-extrabold text-slate-950">
+                    เห็นราคา ร้านค้า ความพร้อม และวิธีรับสินค้าก่อนตัดสินใจ
                   </p>
                 </div>
               </div>
@@ -465,75 +478,80 @@ const MarketplacePortalPage = () => {
           </div>
         </section>
 
-        <section className="mx-auto max-w-[1440px] px-4 py-8 sm:px-6">
-          <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
-            <div>
-              <p className="text-[11px] font-extrabold tracking-[0.14em] text-teal-700">
-                เลือกดูตามหมวดหมู่
+        <section className="border-y border-slate-200/70 bg-[#f2f5f4]">
+          <div className="mx-auto max-w-[1440px] px-4 py-7 sm:px-6">
+            <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+              <div>
+                <p className="text-[11px] font-extrabold tracking-[0.14em] text-violet-700">
+                  เลือกจากหมวดหมู่
+                </p>
+                <h2 className="mt-1 text-2xl font-black tracking-[-0.035em] text-slate-950">
+                  เริ่มจากสิ่งที่คุณกำลังหา
+                </h2>
+              </div>
+              <p className="max-w-sm text-sm font-medium text-slate-500">
+                เลือกหมวดเพื่อกรองสินค้าได้ทันที
               </p>
-              <h2 className="mt-1 text-2xl font-black tracking-[-0.035em] text-slate-950">
-                เริ่มจากสิ่งที่คุณสนใจ
-              </h2>
             </div>
-            <p className="max-w-md text-sm font-medium text-slate-500">
-              ระบบจะกรองสินค้าที่เกี่ยวข้องให้ทันที โดยยังคง Search ไว้เป็นจุดเริ่มต้นหลัก
-            </p>
-          </div>
 
-          <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-            {categoriesList.map((category, index) => {
-              const Icon = category.icon;
-              const style = categoryStyles[index];
-              const isActive = activeCategory === category.name;
+            <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+              {categoriesList.map((category, index) => {
+                const Icon = category.icon;
+                const style = categoryStyles[index];
+                const isActive = activeCategory === category.name;
 
-              return (
-                <button
-                  key={category.name}
-                  type="button"
-                  onClick={() => setActiveCategory(category.name)}
-                  className={`group rounded-[24px] border p-4 text-left transition duration-200 ${
-                    isActive
-                      ? 'border-teal-300 bg-white shadow-[0_12px_30px_rgba(13,148,136,0.12)] ring-2 ring-teal-100'
-                      : `${style.surface} ${style.hover}`
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <span
-                      className={`flex h-10 w-10 items-center justify-center rounded-2xl ${
-                        isActive ? 'bg-teal-600 text-white' : style.icon
-                      }`}
-                    >
-                      <Icon />
-                    </span>
-                    <span
-                      className={`rounded-full px-2 py-1 text-[10px] font-extrabold ${
-                        isActive ? 'bg-teal-50 text-teal-700' : style.count
-                      }`}
-                    >
-                      {category.count}
-                    </span>
-                  </div>
-                  <p className="mt-4 text-sm font-extrabold leading-5 text-slate-900">
-                    {category.name}
-                  </p>
-                </button>
-              );
-            })}
+                return (
+                  <button
+                    key={category.name}
+                    type="button"
+                    onClick={() => setActiveCategory(category.name)}
+                    className={`group relative rounded-[22px] border p-4 text-left transition duration-200 ${
+                      isActive
+                        ? 'border-slate-300 bg-white shadow-[0_12px_28px_rgba(15,23,42,0.09)]'
+                        : `${style.surface} ${style.hover}`
+                    }`}
+                  >
+                    {isActive ? (
+                      <span className="absolute inset-x-4 top-0 h-1 rounded-b-full bg-teal-500" />
+                    ) : null}
+                    <div className="flex items-start justify-between gap-2">
+                      <span
+                        className={`flex h-10 w-10 items-center justify-center rounded-2xl ${
+                          isActive ? 'bg-teal-50 text-teal-700' : style.icon
+                        }`}
+                      >
+                        <Icon />
+                      </span>
+                      <span
+                        className={`rounded-full px-2 py-1 text-[10px] font-extrabold ${
+                          isActive ? 'bg-slate-100 text-slate-600' : style.count
+                        }`}
+                      >
+                        {category.count}
+                      </span>
+                    </div>
+                    <p className="mt-4 text-sm font-extrabold leading-5 text-slate-900">
+                      {category.name}
+                    </p>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </section>
 
-        <section className="border-y border-slate-200/70 bg-white">
-          <div className="mx-auto max-w-[1440px] px-4 py-9 sm:px-6">
+        <section className="bg-[#fffdfa]">
+          <div className="mx-auto max-w-[1480px] px-4 py-10 sm:px-6">
             <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
               <div>
-                <p className="text-[11px] font-extrabold tracking-[0.14em] text-teal-700">
-                  สินค้าที่พร้อมให้เลือก
+                <p className="text-[11px] font-extrabold tracking-[0.14em] text-rose-700">
+                  สินค้าพร้อมขาย
                 </p>
-                <h2 className="mt-1 text-2xl font-black tracking-[-0.035em] text-slate-950">
-                  ดูสินค้าใกล้คุณวันนี้
+                <h2 className="mt-1 text-3xl font-black tracking-[-0.04em] text-slate-950">
+                  สินค้าใกล้คุณที่เลือกซื้อได้ตอนนี้
                 </h2>
                 <p className="mt-2 text-sm font-medium text-slate-500">
-                  เปรียบเทียบราคา ร้านค้า และความพร้อมก่อนเข้าไปดูรายละเอียด
+                  เปรียบเทียบราคา ร้านค้า และความพร้อมก่อนดูรายละเอียด
                 </p>
               </div>
 
@@ -567,16 +585,16 @@ const MarketplacePortalPage = () => {
             </div>
 
             {filteredProducts.length > 0 ? (
-              <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+              <div className="mt-7 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
                 {filteredProducts.slice(0, 5).map((product) => (
                   <article
                     key={product.id}
-                    className="group flex min-w-0 flex-col overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-[0_10px_28px_rgba(15,23,42,0.06)] transition duration-300 hover:-translate-y-1 hover:border-slate-300 hover:shadow-[0_18px_38px_rgba(15,23,42,0.11)]"
+                    className="group flex min-w-0 flex-col overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-[0_12px_30px_rgba(15,23,42,0.07)] transition duration-300 hover:-translate-y-1 hover:border-slate-300 hover:shadow-[0_20px_42px_rgba(15,23,42,0.12)]"
                   >
-                    <div className="relative aspect-[1.08] overflow-hidden bg-gradient-to-br from-slate-100 via-white to-slate-200">
+                    <div className="relative aspect-[1.04] overflow-hidden bg-gradient-to-br from-slate-100 via-white to-slate-200">
                       <div
                         data-image-fallback
-                        className="hidden absolute inset-0 items-center justify-center bg-gradient-to-br from-sky-50 via-white to-violet-50"
+                        className="absolute inset-0 hidden items-center justify-center bg-gradient-to-br from-sky-50 via-white to-violet-50"
                       >
                         <div className="text-center">
                           <FaWarehouse className="mx-auto text-3xl text-slate-300" />
@@ -659,7 +677,7 @@ const MarketplacePortalPage = () => {
                           </span>
                           <a
                             href={`/marketplace/products/${product.id}`}
-                            className="inline-flex shrink-0 items-center gap-1 rounded-xl px-2 py-1.5 text-xs font-extrabold text-teal-700 transition hover:bg-teal-50"
+                            className="inline-flex shrink-0 items-center gap-1 rounded-xl px-2 py-1.5 text-xs font-extrabold text-slate-700 transition hover:bg-slate-100 hover:text-slate-950"
                           >
                             ดูสินค้า
                             <FaChevronRight className="text-[9px]" />
@@ -671,7 +689,7 @@ const MarketplacePortalPage = () => {
                 ))}
               </div>
             ) : (
-              <div className="mt-6 rounded-[28px] border border-dashed border-slate-300 bg-slate-50 px-6 py-14 text-center">
+              <div className="mt-7 rounded-[28px] border border-dashed border-slate-300 bg-white px-6 py-14 text-center">
                 <FaSearch className="mx-auto text-3xl text-slate-300" />
                 <h3 className="mt-4 text-lg font-black text-slate-900">
                   ยังไม่พบสินค้าที่ตรงกับการค้นหา
@@ -691,8 +709,21 @@ const MarketplacePortalPage = () => {
                 </button>
               </div>
             )}
+          </div>
+        </section>
 
-            <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <section className="border-y border-slate-200/70 bg-white">
+          <div className="mx-auto max-w-[1440px] px-4 py-8 sm:px-6">
+            <div className="mb-5 max-w-2xl">
+              <p className="text-[11px] font-extrabold tracking-[0.14em] text-emerald-700">
+                ซื้อได้อย่างมั่นใจ
+              </p>
+              <h2 className="mt-1 text-2xl font-black tracking-[-0.035em] text-slate-950">
+                ข้อมูลที่ช่วยให้ตัดสินใจได้ง่ายขึ้น
+              </h2>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
               {trustLayers.map((item, index) => {
                 const Icon = item.icon;
                 const style = trustStyles[index];
@@ -700,7 +731,7 @@ const MarketplacePortalPage = () => {
                 return (
                   <div
                     key={item.title}
-                    className={`flex items-center gap-3 rounded-[22px] border px-4 py-3.5 ${style.surface}`}
+                    className={`flex items-center gap-3 rounded-[22px] border px-4 py-4 ${style.surface}`}
                   >
                     <span
                       className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ${style.icon}`}
@@ -746,13 +777,11 @@ const MarketplacePortalPage = () => {
         </section>
       </main>
 
-      <footer className="border-t border-slate-200 bg-white px-4 py-6 sm:px-6">
+      <footer className="border-t border-slate-200 bg-[#eef1f0] px-4 py-7 sm:px-6">
         <div className="mx-auto flex max-w-[1440px] flex-col items-center justify-between gap-4 text-center sm:flex-row sm:text-left">
           <div>
-            <p className="text-sm font-black text-slate-950">
-              SADUAKSABUY
-            </p>
-            <p className="mt-1 text-xs font-medium text-slate-400">
+            <p className="text-sm font-black text-slate-950">SADUAKSABUY</p>
+            <p className="mt-1 text-xs font-medium text-slate-500">
               ค้นหา เลือกซื้อ และเชื่อมต่อกับร้านค้าใกล้คุณ
             </p>
           </div>

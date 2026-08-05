@@ -5,6 +5,7 @@ import { usePurchaseOrderList } from '../../hooks/usePurchaseOrderList';
 import PurchaseOrderListFeedback from '../components/PurchaseOrderListFeedback';
 import PurchaseOrderListTable from '../components/PurchaseOrderListTable';
 import PurchaseOrderListToolbar from '../components/PurchaseOrderListToolbar';
+import PurchaseOrderWorkspaceHeader from '../components/PurchaseOrderWorkspaceHeader';
 import { projectPurchaseOrderListRows } from '../projections/purchaseOrderListRowProjection';
 
 export default function PurchaseOrderListPage() {
@@ -31,24 +32,29 @@ export default function PurchaseOrderListPage() {
     `/${targetSlug}/pos/purchases/orders/${action}/${id}`;
 
   return (
-    <div className="h-full w-full space-y-6 p-6 text-slate-800 animate-fadeIn">
-      <PurchaseOrderListToolbar
-        searchQuery={searchQuery}
-        onSearchQueryChange={setSearchQuery}
-        showAllHistory={showAllHistory}
-        onShowAllHistoryChange={setShowAllHistory}
-        onCreate={() => navigate(`/${targetSlug}/pos/purchases/orders/create`)}
-      />
+    <div className="min-h-full bg-slate-50 p-3 text-slate-800 md:p-5">
+      <div className="mx-auto max-w-[1500px] space-y-4">
+        <PurchaseOrderWorkspaceHeader
+          onCreate={() => navigate(`/${targetSlug}/pos/purchases/orders/create`)}
+        />
 
-      <PurchaseOrderListFeedback isLoading={isLoading} error={error} />
+        <PurchaseOrderListToolbar
+          searchQuery={searchQuery}
+          onSearchQueryChange={setSearchQuery}
+          showAllHistory={showAllHistory}
+          onShowAllHistoryChange={setShowAllHistory}
+        />
 
-      <PurchaseOrderListTable
-        rows={rows}
-        isLoading={isLoading}
-        onView={(id) => navigate(orderPath('view', id))}
-        onEdit={(id) => navigate(orderPath('edit', id))}
-        onPrint={(id) => navigate(orderPath('print', id))}
-      />
+        <PurchaseOrderListFeedback isLoading={isLoading} error={error} />
+
+        <PurchaseOrderListTable
+          rows={rows}
+          isLoading={isLoading}
+          onView={(id) => navigate(orderPath('view', id))}
+          onEdit={(id) => navigate(orderPath('edit', id))}
+          onPrint={(id) => navigate(orderPath('print', id))}
+        />
+      </div>
     </div>
   );
 }

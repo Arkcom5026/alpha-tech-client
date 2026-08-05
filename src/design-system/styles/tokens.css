@@ -1,44 +1,45 @@
 /* Alpha Design System — platform foundation tokens */
 :root {
-  /* Typography foundation: Thai-first, readable, and stable across commerce/POS surfaces. */
+  /* ADS Typography v1: Thai-first, readable, and stable across commerce/POS surfaces. */
   --ads-font-sans: "Noto Sans Thai", "Inter", "Segoe UI", Tahoma, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   --ads-font-mono: "Roboto Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
 
+  /* Weight policy: 400–700 only. Thai UI must not synthesize 800/900 weights. */
   --ads-font-weight-regular: 400;
   --ads-font-weight-medium: 500;
   --ads-font-weight-semibold: 600;
   --ads-font-weight-bold: 700;
 
-  --ads-type-display-size: clamp(2rem, 3.25vw, 3.5rem);
-  --ads-type-display-line-height: 1.16;
-  --ads-type-display-letter-spacing: -0.025em;
+  --ads-type-display-size: clamp(1.875rem, 3vw, 3.25rem);
+  --ads-type-display-line-height: 1.2;
+  --ads-type-display-letter-spacing: 0;
 
-  --ads-type-heading-xl-size: 1.875rem;
-  --ads-type-heading-xl-line-height: 1.3;
-  --ads-type-heading-xl-letter-spacing: -0.018em;
+  --ads-type-heading-xl-size: 1.75rem;
+  --ads-type-heading-xl-line-height: 1.36;
+  --ads-type-heading-xl-letter-spacing: 0;
 
-  --ads-type-heading-lg-size: 1.5rem;
-  --ads-type-heading-lg-line-height: 1.35;
-  --ads-type-heading-lg-letter-spacing: -0.012em;
+  --ads-type-heading-lg-size: 1.375rem;
+  --ads-type-heading-lg-line-height: 1.42;
+  --ads-type-heading-lg-letter-spacing: 0;
 
-  --ads-type-heading-md-size: 1.25rem;
-  --ads-type-heading-md-line-height: 1.45;
-  --ads-type-heading-md-letter-spacing: -0.006em;
+  --ads-type-heading-md-size: 1.125rem;
+  --ads-type-heading-md-line-height: 1.5;
+  --ads-type-heading-md-letter-spacing: 0;
 
   --ads-type-title-size: 1rem;
-  --ads-type-title-line-height: 1.55;
+  --ads-type-title-line-height: 1.58;
   --ads-type-title-letter-spacing: 0;
 
   --ads-type-body-lg-size: 1rem;
-  --ads-type-body-lg-line-height: 1.75;
+  --ads-type-body-lg-line-height: 1.78;
   --ads-type-body-size: 0.875rem;
-  --ads-type-body-line-height: 1.7;
+  --ads-type-body-line-height: 1.72;
   --ads-type-small-size: 0.8125rem;
-  --ads-type-small-line-height: 1.65;
+  --ads-type-small-line-height: 1.68;
   --ads-type-caption-size: 0.75rem;
-  --ads-type-caption-line-height: 1.55;
+  --ads-type-caption-line-height: 1.58;
   --ads-type-label-size: 0.8125rem;
-  --ads-type-label-line-height: 1.5;
+  --ads-type-label-line-height: 1.55;
 
   --ads-space-1: 0.25rem;
   --ads-space-2: 0.5rem;

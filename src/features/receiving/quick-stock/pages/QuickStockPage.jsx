@@ -7,9 +7,26 @@ import IntakeQueueTable from "../../components/quick-stock/IntakeQueueTable";
 import QueueSummary from "../../components/quick-stock/QueueSummary";
 import CommitBar from "../../components/quick-stock/CommitBar";
 import QuickReceiptSessionPanel from "../components/QuickReceiptSessionPanel";
+import QuickReceiptProgressSummary from "../components/QuickReceiptProgressSummary";
+import QuickReceiptWorkspaceHeader from "../components/QuickReceiptWorkspaceHeader";
 import TemplateOperationalProductAdoptionPanel from "../components/TemplateOperationalProductAdoptionPanel";
 import LocalOperationalProductCreationPanel from "../components/LocalOperationalProductCreationPanel";
 import useQuickStockRuntimeController from "../hooks/useQuickStockRuntimeController";
+
+const StepSection = ({ step, title, description, children, className = "" }) => (
+  <section className={`rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:p-5 ${className}`}>
+    <div className="mb-4 flex items-start gap-3 border-b border-slate-100 pb-4">
+      <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-teal-50 text-sm font-bold text-teal-700">
+        {step}
+      </span>
+      <div>
+        <h2 className="text-base font-bold text-slate-900">{title}</h2>
+        <p className="mt-0.5 text-sm text-slate-500">{description}</p>
+      </div>
+    </div>
+    {children}
+  </section>
+);
 
 const QuickStockPage = () => {
   const {
@@ -94,161 +111,200 @@ const QuickStockPage = () => {
   } = useQuickStockRuntimeController();
 
   return (
-    <div className="w-full min-h-screen bg-slate-50 p-4 xl:p-6 space-y-4">
-      <QuickReceiptSessionPanel
-        operationalProduct={operationalProduct}
-        barcodeQueue={barcodeQueue}
-        defaultCost={defaultCost}
-        priceForm={priceForm}
-        note={note}
-        onCurrentLineSaved={() => {
-          resetQueue();
-          clearProductSelection();
-        }}
+    <div className="mx-auto min-h-screen w-full max-w-[1480px] space-y-4 bg-slate-50 p-4 xl:p-6">
+      <QuickReceiptWorkspaceHeader />
+      <QuickReceiptProgressSummary
+        headerReady={false}
+        productReady={productReady}
+        queueReady={queueReady}
+        hasLines={barcodeQueue.length > 0}
       />
 
-      <div className="grid grid-cols-1 2xl:grid-cols-12 gap-4">
-        <div className="2xl:col-span-4 space-y-4">
-          <ProductFinderPanel
-            selectedProduct={selectedProduct}
-            showSearchResult={showSearchResult}
-            onShowSearchResult={() => setShowSearchResult(true)}
-            productTypes={productTypes}
-            brands={brands}
-            selectedProductTypeId={selectedProductTypeId}
-            selectedBrandId={selectedBrandId}
-            keyword={keyword}
-            filteredProducts={filteredProducts}
-            selectedProductId={selectedProductId}
-            dropdownsLoading={dropdownsLoading}
-            isLoading={isLoading || isBusy}
-            onProductTypeChange={(value) => {
-              setSelectedProductTypeId(value);
-              setSelectedBrandId("");
-              setSelectedProductId("");
-              setAdoptedOperationalProduct(null);
-              setIsLocalCreateOpen(false);
-              setShowSearchResult(true);
-              resetQueue();
-              executeProductSearch({ productTypeId: value, brandId: "", search: committedKeyword });
-            }}
-            onBrandChange={(value) => {
-              setSelectedBrandId(value);
-              setSelectedProductId("");
-              setAdoptedOperationalProduct(null);
-              setIsLocalCreateOpen(false);
-              setShowSearchResult(true);
-              resetQueue();
-              executeProductSearch({ brandId: value, search: committedKeyword });
-            }}
-            onKeywordChange={(value) => {
-              setKeyword(value);
-              setSelectedProductId("");
-              setAdoptedOperationalProduct(null);
-              setIsLocalCreateOpen(false);
-              setShowSearchResult(true);
-              resetQueue();
-            }}
-            onSearch={() => {
-              const nextKeyword = String(keyword || "").trim();
-              setCommittedKeyword(nextKeyword);
-              setShowSearchResult(true);
-              executeProductSearch({ search: nextKeyword });
-            }}
-            onKeywordEnter={(value) => {
-              const nextKeyword = String(value || "").trim();
-              setCommittedKeyword(nextKeyword);
-              setShowSearchResult(true);
-              executeProductSearch({ search: nextKeyword });
-            }}
-            onSelectProduct={selectProduct}
-            getBrandName={getBrandName}
-            getProductTypeName={getProductTypeName}
-            getProductUnitName={getProductUnitName}
-          />
+      <StepSection
+        step="1"
+        title="ข้อมูลใบส่งของและรายการรับ"
+        description="เลือก Supplier บันทึกเลขที่ใบส่งของ เปิดรายการเดิม หรือเก็บงานไว้รับต่อภายหลัง"
+      >
+        <QuickReceiptSessionPanel
+          operationalProduct={operationalProduct}
+          barcodeQueue={barcodeQueue}
+          defaultCost={defaultCost}
+          priceForm={priceForm}
+          note={note}
+          onCurrentLineSaved={() => {
+            resetQueue();
+            clearProductSelection();
+          }}
+        />
+      </StepSection>
 
-          <ProductMasterPanel
-            selectedProduct={operationalProduct}
-            selectedTemplateProduct={selectedTemplateProduct}
-            runtimeStatus={runtimeStatus}
-            productTypes={productTypes}
-            brands={brands}
-            units={units}
-            productForm={productForm}
-            priceForm={priceForm}
-            isEditingProduct={isEditingProduct}
-            isSavingProduct={isSavingProduct}
-            isDeletingProduct={isDeletingProduct}
-            onEditStart={() => setIsEditingProduct(true)}
-            onEditCancel={() => {
-              setProductForm(buildProductFormFromProduct(operationalProduct));
-              setPriceForm(buildPriceFormFromProduct(operationalProduct));
-              setDefaultCost(buildPriceFormFromProduct(operationalProduct).costPrice ?? 0);
-              setIsEditingProduct(false);
-            }}
-            onSaveProduct={handleSaveProductInline}
-            onClearProduct={clearProductSelection}
-            onDeleteProduct={handleDeleteSelectedProductForRecovery}
-            onProductFieldChange={updateProductForm}
-            onPriceFieldChange={updatePriceForm}
-          />
+      <div className="grid grid-cols-1 gap-4 2xl:grid-cols-12">
+        <div className="space-y-4 2xl:col-span-4">
+          <StepSection
+            step="2"
+            title="ค้นหาและเลือกสินค้า"
+            description="เลือกประเภท ยี่ห้อ หรือค้นหาจากชื่อและรุ่นก่อนเริ่มรับสินค้า"
+          >
+            <div className="space-y-4">
+              <ProductFinderPanel
+                selectedProduct={selectedProduct}
+                showSearchResult={showSearchResult}
+                onShowSearchResult={() => setShowSearchResult(true)}
+                productTypes={productTypes}
+                brands={brands}
+                selectedProductTypeId={selectedProductTypeId}
+                selectedBrandId={selectedBrandId}
+                keyword={keyword}
+                filteredProducts={filteredProducts}
+                selectedProductId={selectedProductId}
+                dropdownsLoading={dropdownsLoading}
+                isLoading={isLoading || isBusy}
+                onProductTypeChange={(value) => {
+                  setSelectedProductTypeId(value);
+                  setSelectedBrandId("");
+                  setSelectedProductId("");
+                  setAdoptedOperationalProduct(null);
+                  setIsLocalCreateOpen(false);
+                  setShowSearchResult(true);
+                  resetQueue();
+                  executeProductSearch({ productTypeId: value, brandId: "", search: committedKeyword });
+                }}
+                onBrandChange={(value) => {
+                  setSelectedBrandId(value);
+                  setSelectedProductId("");
+                  setAdoptedOperationalProduct(null);
+                  setIsLocalCreateOpen(false);
+                  setShowSearchResult(true);
+                  resetQueue();
+                  executeProductSearch({ brandId: value, search: committedKeyword });
+                }}
+                onKeywordChange={(value) => {
+                  setKeyword(value);
+                  setSelectedProductId("");
+                  setAdoptedOperationalProduct(null);
+                  setIsLocalCreateOpen(false);
+                  setShowSearchResult(true);
+                  resetQueue();
+                }}
+                onSearch={() => {
+                  const nextKeyword = String(keyword || "").trim();
+                  setCommittedKeyword(nextKeyword);
+                  setShowSearchResult(true);
+                  executeProductSearch({ search: nextKeyword });
+                }}
+                onKeywordEnter={(value) => {
+                  const nextKeyword = String(value || "").trim();
+                  setCommittedKeyword(nextKeyword);
+                  setShowSearchResult(true);
+                  executeProductSearch({ search: nextKeyword });
+                }}
+                onSelectProduct={selectProduct}
+                getBrandName={getBrandName}
+                getProductTypeName={getProductTypeName}
+                getProductUnitName={getProductUnitName}
+              />
 
-          <TemplateOperationalProductAdoptionPanel
-            isVisible={isTemplateOnlySelection}
-            isBusy={isBusy}
-            onCreateOperationalProduct={handleCreateOperationalProductFromTemplate}
-          />
+              <ProductMasterPanel
+                selectedProduct={operationalProduct}
+                selectedTemplateProduct={selectedTemplateProduct}
+                runtimeStatus={runtimeStatus}
+                productTypes={productTypes}
+                brands={brands}
+                units={units}
+                productForm={productForm}
+                priceForm={priceForm}
+                isEditingProduct={isEditingProduct}
+                isSavingProduct={isSavingProduct}
+                isDeletingProduct={isDeletingProduct}
+                onEditStart={() => setIsEditingProduct(true)}
+                onEditCancel={() => {
+                  setProductForm(buildProductFormFromProduct(operationalProduct));
+                  setPriceForm(buildPriceFormFromProduct(operationalProduct));
+                  setDefaultCost(buildPriceFormFromProduct(operationalProduct).costPrice ?? 0);
+                  setIsEditingProduct(false);
+                }}
+                onSaveProduct={handleSaveProductInline}
+                onClearProduct={clearProductSelection}
+                onDeleteProduct={handleDeleteSelectedProductForRecovery}
+                onProductFieldChange={updateProductForm}
+                onPriceFieldChange={updatePriceForm}
+              />
 
-          <LocalOperationalProductCreationPanel
-            isVisible={(noSearchResults || isLocalCreateOpen) && !operationalProduct}
-            isOpen={isLocalCreateOpen}
-            isBusy={isBusy}
-            productTypes={productTypes}
-            brands={brands}
-            units={units}
-            productForm={localProductForm}
-            priceForm={localPriceForm}
-            onOpen={openLocalCreateForm}
-            onProductFieldChange={updateLocalProductForm}
-            onPriceFieldChange={updateLocalPriceForm}
-            onCreate={handleCreateLocalOperationalProduct}
-          />
+              <TemplateOperationalProductAdoptionPanel
+                isVisible={isTemplateOnlySelection}
+                isBusy={isBusy}
+                onCreateOperationalProduct={handleCreateOperationalProductFromTemplate}
+              />
+
+              <LocalOperationalProductCreationPanel
+                isVisible={(noSearchResults || isLocalCreateOpen) && !operationalProduct}
+                isOpen={isLocalCreateOpen}
+                isBusy={isBusy}
+                productTypes={productTypes}
+                brands={brands}
+                units={units}
+                productForm={localProductForm}
+                priceForm={localPriceForm}
+                onOpen={openLocalCreateForm}
+                onProductFieldChange={updateLocalProductForm}
+                onPriceFieldChange={updateLocalPriceForm}
+                onCreate={handleCreateLocalOperationalProduct}
+              />
+            </div>
+          </StepSection>
         </div>
 
-        <div className="2xl:col-span-8 space-y-4">
-          <IntakeControlPanel
-            selectedProduct={intakeRuntimeProduct}
-            barcodeInputRef={barcodeInputRef}
-            barcode={barcode}
-            setBarcode={setBarcode}
-            autoFocusSerial={autoFocusSerial}
-            setAutoFocusSerial={setAutoFocusSerial}
-            defaultCost={defaultCost}
-            setDefaultCost={setDefaultCost}
-            priceForm={priceForm}
-            onPriceFieldChange={updatePriceForm}
-            note={note}
-            setNote={setNote}
-            isCommitting={isCommitting}
-            onBarcodeSubmit={handleBarcodeSubmit}
-          />
-          <QueueSummary total={barcodeQueue.length} readyCount={readyCount} needDataCount={needDataCount} productReady={productReady} />
-          <IntakeQueueTable
-            barcodeQueue={barcodeQueue}
-            serialInputRefs={serialInputRefs}
-            barcodeInputRef={barcodeInputRef}
-            onUpdateQueueItemField={updateQueueItemField}
-            onRemoveQueueItem={removeQueueItem}
-          />
-          <CommitBar
-            selectedProduct={commitRuntimeProduct}
-            barcodeQueue={barcodeQueue}
-            productReady={productReady}
-            queueReady={queueReady}
-            isCommitting={isCommitting}
-            onResetQueue={resetQueue}
-            onCommit={handleCommit}
-          />
+        <div className="space-y-4 2xl:col-span-8">
+          <StepSection
+            step="3"
+            title="รับสินค้า สแกน และกำหนดราคา"
+            description="สแกน Barcode เติม Serial Number และตรวจราคาก่อนเพิ่มสินค้าเข้าใบรับ"
+          >
+            <div className="space-y-4">
+              <IntakeControlPanel
+                selectedProduct={intakeRuntimeProduct}
+                barcodeInputRef={barcodeInputRef}
+                barcode={barcode}
+                setBarcode={setBarcode}
+                autoFocusSerial={autoFocusSerial}
+                setAutoFocusSerial={setAutoFocusSerial}
+                defaultCost={defaultCost}
+                setDefaultCost={setDefaultCost}
+                priceForm={priceForm}
+                onPriceFieldChange={updatePriceForm}
+                note={note}
+                setNote={setNote}
+                isCommitting={isCommitting}
+                onBarcodeSubmit={handleBarcodeSubmit}
+              />
+              <QueueSummary total={barcodeQueue.length} readyCount={readyCount} needDataCount={needDataCount} productReady={productReady} />
+              <IntakeQueueTable
+                barcodeQueue={barcodeQueue}
+                serialInputRefs={serialInputRefs}
+                barcodeInputRef={barcodeInputRef}
+                onUpdateQueueItemField={updateQueueItemField}
+                onRemoveQueueItem={removeQueueItem}
+              />
+            </div>
+          </StepSection>
+
+          <StepSection
+            step="4"
+            title="ตรวจทานและยืนยันรายการ"
+            description="ตรวจจำนวนและความพร้อมของข้อมูลก่อนบันทึกสินค้ารายการปัจจุบัน"
+          >
+            <div className="sticky bottom-3 z-10">
+              <CommitBar
+                selectedProduct={commitRuntimeProduct}
+                barcodeQueue={barcodeQueue}
+                productReady={productReady}
+                queueReady={queueReady}
+                isCommitting={isCommitting}
+                onResetQueue={resetQueue}
+                onCommit={handleCommit}
+              />
+            </div>
+          </StepSection>
         </div>
       </div>
     </div>

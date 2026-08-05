@@ -16,6 +16,7 @@ export const useCreateSaleWorkflow = ({
   navigate,
   productSearchRef,
   setHideCustomerDetails,
+  initialItems = [],
 }) => {
   const [selectedPriceType, setSelectedPriceType] = useState('retail');
   const [saleMode, setSaleMode] = useState('CASH');
@@ -25,6 +26,7 @@ export const useCreateSaleWorkflow = ({
   const cart = useSaleCartEditor({
     activeHeldCartRef: activeHeldCartAuthorityRef,
     onError: setError,
+    initialItems,
   });
 
   const heldCartArgs = createSaleHeldCartWorkflowAdapter({

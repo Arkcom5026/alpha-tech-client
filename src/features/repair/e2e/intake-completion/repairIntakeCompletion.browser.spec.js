@@ -39,9 +39,9 @@ test.describe('Repair intake completion (selected E2E authority)', () => {
     }
 
     await page.goto(`${baseUrl}/login`);
-    await page.locator(repairIntakeSelectors.loginIdentity).fill(operatorEmail);
-    await page.locator(repairIntakeSelectors.loginPassword).fill(operatorPassword);
-    await page.getByRole('button', { name: 'เข้าสู่ระบบด้วยรหัสผ่าน' }).click();
+    await page.getByRole('textbox', { name: repairIntakeSelectors.loginIdentityName }).fill(operatorEmail);
+    await page.getByRole('textbox', { name: repairIntakeSelectors.loginPasswordName }).fill(operatorPassword);
+    await page.getByRole('button', { name: repairIntakeSelectors.loginSubmitName, exact: true }).click();
     await page.waitForURL(new RegExp(`/${branchSlug}/pos/`), { timeout: 15_000 });
 
     const detailResponsePromise = page.waitForResponse(

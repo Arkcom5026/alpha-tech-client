@@ -22,7 +22,9 @@ includes("savePartnerStoreCapability(capabilityPayload(capability.storefrontEnab
 includes("themePreset: 'platform-default'", 'platform-owned theme preset');
 includes("layoutPreset: 'platform-default'", 'platform-owned layout preset');
 includes('เผยแพร่การเปลี่ยนแปลง', 'live publish action');
-includes('Desktop', 'preview contract placeholder');
+includes("['desktop', Monitor]", 'desktop preview mode');
+includes("['tablet', Tablet]", 'tablet preview mode');
+includes("['mobile', Smartphone]", 'mobile preview mode');
 
 assert.doesNotMatch(page, /<select[^>]*themePreset/, 'merchant must not receive theme selector');
 assert.doesNotMatch(page, /type="color"/, 'merchant must not receive platform color controls');

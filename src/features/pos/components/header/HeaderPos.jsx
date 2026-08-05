@@ -1,6 +1,3 @@
-// src/features/pos/components/header/HeaderPos.jsx
-// P1 Header — POS Runtime + Superadmin Governance navigation
-
 import { useEffect, useState } from 'react';
 import { NavLink, useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
@@ -9,7 +6,6 @@ import {
   ClipboardList,
   Home,
   LogOut,
-  Menu,
   Package,
   Settings,
   ShieldCheck,
@@ -26,9 +22,7 @@ import { useBranchStore } from '@/features/branch/store/branchStore';
 const getCompactBranchName = (branchName = '', shopSlug = '') => {
   const value = String(branchName || '').trim();
 
-  if (value.includes('แอดวานซ์ เทค')) {
-    return 'แอดวานซ์ เทค';
-  }
+  if (value.includes('แอดวานซ์ เทค')) return 'แอดวานซ์ เทค';
 
   const compact = value
     .replace(/^บริษัท\s*/u, '')
@@ -78,6 +72,10 @@ const HeaderPos = () => {
   };
 
   useEffect(() => {
+    setShowMenu(false);
+  }, [pathname]);
+
+  useEffect(() => {
     if (isSuperAdmin) return;
 
     if (isAuthenticated && normalizedRole === 'employee' && employee?.branchId && selectedBranchId) {
@@ -89,171 +87,125 @@ const HeaderPos = () => {
     if (!isSuperAdmin || isSuperAdminRoute || !shopSlug) return;
 
     const isPosRuntimeRoute = pathname.includes(`/${shopSlug}/pos`) || pathname.includes('/pos');
-    if (isPosRuntimeRoute) {
-      navigate(`/${shopSlug}/superadmin`, { replace: true });
-    }
+    if (isPosRuntimeRoute) navigate(`/${shopSlug}/superadmin`, { replace: true });
   }, [isSuperAdmin, isSuperAdminRoute, navigate, pathname, shopSlug]);
 
-  const getPosRoutePath = (subPath = '') => {
-    return shopSlug ? `/${shopSlug}/pos${subPath}` : `/pos${subPath}`;
-  };
-
-  const getSuperAdminRoutePath = (subPath = '') => {
-    return shopSlug ? `/${shopSlug}/superadmin${subPath}` : `/superadmin${subPath}`;
-  };
-
+  const getPosRoutePath = (subPath = '') => (shopSlug ? `/${shopSlug}/pos${subPath}` : `/pos${subPath}`);
+  const getSuperAdminRoutePath = (subPath = '') =>
+    shopSlug ? `/${shopSlug}/superadmin${subPath}` : `/superadmin${subPath}`;
   const getRoutePath = isGlobalSuperAdmin ? getSuperAdminRoutePath : getPosRoutePath;
 
   const posNavItems = [
-    { label: 'หน้าหลัก', path: getPosRoutePath(''), end: true, show: true, icon: Home },
-    { label: 'จัดซื้อ', path: getPosRoutePath('/purchases'), show: true, icon: ShoppingCart },
-    { label: 'การขาย', path: getPosRoutePath('/sales'), show: true, icon: ClipboardList },
-    { label: 'บริการ', path: getPosRoutePath('/services'), show: true, icon: Wrench },
-    { label: 'สต๊อก', path: getPosRoutePath('/stock'), show: true, icon: Package },
-    { label: 'รายงาน', path: getPosRoutePath('/reports'), show: true, icon: BarChart3 },
-    { label: 'การเงิน', path: getPosRoutePath('/finance'), show: true, icon: CircleDollarSign },
-    { label: 'ตั้งค่าระบบ', path: getPosRoutePath('/settings'), show: true, icon: Settings },
+    { label: 'หน้าหลัก', path: getPosRoutePath(''), end: true, icon: Home },
+    { label: 'จัดซื้อ', path: getPosRoutePath('/purchases'), icon: ShoppingCart },
+    { label: 'การขาย', path: getPosRoutePath('/sales'), icon: ClipboardList },
+    { label: 'บริการ', path: getPosRoutePath('/services'), icon: Wrench },
+    { label: 'สต๊อก', path: getPosRoutePath('/stock'), icon: Package },
+    { label: 'รายงาน', path: getPosRoutePath('/reports'), icon: BarChart3 },
+    { label: 'การเงิน', path: getPosRoutePath('/finance'), icon: CircleDollarSign },
+    { label: 'ตั้งค่าระบบ', path: getPosRoutePath('/settings'), icon: Settings },
   ];
 
   const superAdminNavItems = [
-    { label: 'Dashboard', path: getSuperAdminRoutePath(''), end: true, show: true, icon: Home },
-    { label: 'Catalog', path: getSuperAdminRoutePath('/catalog'), show: true, icon: Store },
-    { label: 'Governance', path: getSuperAdminRoutePath('/governance'), show: true, icon: ShieldCheck },
-    { label: 'Analytics', path: getSuperAdminRoutePath('/analytics'), show: true, icon: BarChart3 },
-    { label: 'Settings', path: getSuperAdminRoutePath('/settings'), show: true, icon: Settings },
+    { label: 'Dashboard', path: getSuperAdminRoutePath(''), end: true, icon: Home },
+    { label: 'Catalog', path: getSuperAdminRoutePath('/catalog'), icon: Store },
+    { label: 'Governance', path: getSuperAdminRoutePath('/governance'), icon: ShieldCheck },
+    { label: 'Analytics', path: getSuperAdminRoutePath('/analytics'), icon: BarChart3 },
+    { label: 'Settings', path: getSuperAdminRoutePath('/settings'), icon: Settings },
   ];
 
-  const navItems = (isGlobalSuperAdmin ? superAdminNavItems : posNavItems).filter((item) => item.show);
-  const mobileMenuLabel = isGlobalSuperAdmin ? 'เมนู Superadmin' : 'เมนู POS';
-  const logoutLabel = isGlobalSuperAdmin ? 'ออกจากระบบ Superadmin' : 'ออกจากระบบ POS';
+  const navItems = isGlobalSuperAdmin ? superAdminNavItems : posNavItems;
+  const logoutLabel = isGlobalSuperAdmin ? 'ออกจากระบบ Superadmin' : 'ออกจากระบบ';
 
   const navLinkClass = ({ isActive }) =>
     [
-      'relative inline-flex items-center justify-center gap-2 overflow-visible rounded-2xl px-4 py-2.5',
-      'text-[13px] font-semibold whitespace-nowrap border transition-all duration-200',
-      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/70',
-      'focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950',
-      'before:absolute before:inset-x-3 before:top-0 before:h-px before:rounded-full before:transition-opacity before:duration-200',
-      'after:absolute after:left-5 after:right-5 after:-bottom-[3px] after:h-[2px] after:rounded-full after:transition-all after:duration-200',
+      'inline-flex h-10 items-center justify-center gap-2 rounded-xl px-3 text-[13px] font-semibold whitespace-nowrap transition-colors',
+      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2',
       isActive
-        ? [
-            'border-amber-300/70 bg-gradient-to-b from-amber-400 to-orange-500 text-white',
-            'shadow-[0_0_0_1px_rgba(251,191,36,0.28),0_0_28px_rgba(245,158,11,0.50),0_10px_32px_rgba(249,115,22,0.34)]',
-            'before:bg-white/60 before:opacity-100 after:bg-amber-200 after:opacity-100 after:shadow-[0_0_12px_rgba(251,191,36,0.55)]',
-          ].join(' ')
-        : [
-            'border-[#7a5b21]/80 bg-slate-950/34 text-slate-100',
-            'shadow-[inset_0_1px_0_rgba(255,255,255,0.055),0_0_0_1px_rgba(120,53,15,0.14)]',
-            'before:bg-gradient-to-r before:from-transparent before:via-white/10 before:to-transparent before:opacity-100 after:bg-amber-400/55 after:opacity-0',
-            'hover:-translate-y-px hover:border-[#d6a84a]/85 hover:bg-white/10 hover:text-white hover:shadow-[0_0_0_1px_rgba(251,191,36,0.18),0_0_16px_rgba(212,168,74,0.24)] hover:after:opacity-100',
-          ].join(' '),
+        ? 'bg-teal-50 text-teal-800 ring-1 ring-inset ring-teal-200'
+        : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900',
     ].join(' ');
 
   return (
-    <header className="sticky top-0 z-40 w-full border-t-2 border-orange-400 border-b border-amber-500/35 bg-slate-950 text-white shadow-[0_18px_48px_rgba(15,23,42,0.24)]">
-      <div className="relative overflow-visible">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_16%_0%,rgba(249,115,22,0.20),transparent_28%),radial-gradient(circle_at_82%_0%,rgba(251,191,36,0.10),transparent_24%),radial-gradient(circle_at_70%_100%,rgba(59,130,246,0.05),transparent_40%),linear-gradient(90deg,rgba(15,23,42,0.98),rgba(30,41,59,0.97),rgba(15,23,42,0.98))]" />
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-transparent via-amber-300 to-transparent opacity-80" />
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-amber-300/95 to-transparent" />
-        <div className="pointer-events-none absolute inset-x-1/4 bottom-0 h-10 bg-amber-500/14 blur-2xl" />
+    <header className="sticky top-0 z-40 w-full border-b border-slate-200 bg-white/95 text-slate-800 shadow-[0_1px_0_rgba(15,23,42,0.02)] backdrop-blur-xl">
+      <div className="mx-auto flex h-16 max-w-[1680px] items-center gap-3 px-3 pl-16 sm:px-5 sm:pl-16 lg:px-6">
+        <nav className="hidden min-w-0 flex-1 items-center gap-1 overflow-x-auto scrollbar-none md:flex">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            return (
+              <NavLink key={item.path} to={item.path} end={item.end} className={navLinkClass}>
+                <Icon className="h-4 w-4 shrink-0" />
+                <span>{item.label}</span>
+              </NavLink>
+            );
+          })}
+        </nav>
 
-        <div className="relative mx-auto flex h-[68px] max-w-[1680px] items-center gap-3 px-4 sm:px-5 xl:px-7">
-          <div className="flex items-center gap-2 md:hidden">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-[#b7791f]/65 bg-slate-950/40 text-orange-300 shadow-inner">
-              <Menu className="h-4 w-4" />
+        <div className="min-w-0 flex-1 md:hidden">
+          <p className="truncate text-sm font-semibold text-slate-900">{compactBranchName}</p>
+        </div>
+
+        <div className="ml-auto flex shrink-0 items-center gap-2">
+          {!isGlobalSuperAdmin && (
+            <div className="hidden max-w-[180px] items-center rounded-full bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-700 sm:flex">
+              <span className="truncate">{compactBranchName}</span>
             </div>
+          )}
 
-            <select
-              onChange={(event) => navigate(event.target.value)}
-              className="h-11 max-w-[150px] rounded-2xl border border-[#b7791f]/65 bg-slate-900 px-3 text-sm font-semibold text-white outline-none transition focus:border-orange-400"
-              defaultValue=""
-            >
-              <option value="" disabled hidden>
-                {mobileMenuLabel}
-              </option>
-              {navItems.map((item) => (
-                <option key={item.path} value={item.path}>
-                  {item.label}
-                </option>
-              ))}
-            </select>
-          </div>
+          {isGlobalSuperAdmin && (
+            <div className="hidden items-center gap-2 rounded-full bg-red-50 px-3 py-2 text-red-700 lg:flex">
+              <Terminal className="h-3.5 w-3.5" />
+              <span className="text-[10px] font-semibold uppercase tracking-[0.12em]">Superadmin</span>
+            </div>
+          )}
 
-          <nav className="hidden min-w-0 flex-1 items-center gap-1.5 md:flex">
-            {navItems.map((item) => {
-              const Icon = item.icon;
+          {isAuthenticated && (
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setShowMenu((value) => !value)}
+                className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:border-teal-300 hover:bg-teal-50 hover:text-teal-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500"
+                aria-expanded={showMenu}
+                aria-label="เปิดเมนูผู้ใช้งาน"
+              >
+                <UserCircle className="h-6 w-6" />
+              </button>
 
-              return (
-                <NavLink key={item.path} to={item.path} end={item.end} className={navLinkClass}>
-                  <Icon className="h-4 w-4 shrink-0 text-amber-300" />
-                  <span>{item.label}</span>
-                </NavLink>
-              );
-            })}
-          </nav>
-
-          <div className="ml-auto flex shrink-0 items-center justify-end gap-2">
-            {!isGlobalSuperAdmin && (
-              <div className="hidden max-w-[180px] items-center rounded-full border border-[#b7791f]/55 bg-slate-950/24 px-3 py-2 text-sm font-semibold text-slate-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] sm:flex">
-                <span className="truncate">{compactBranchName}</span>
-              </div>
-            )}
-
-            {isGlobalSuperAdmin && (
-              <div className="hidden items-center gap-2 rounded-full border border-red-400/20 bg-red-500/10 px-3 py-2 text-red-300 lg:flex">
-                <Terminal className="h-3.5 w-3.5" />
-                <span className="text-[10px] font-semibold uppercase tracking-[0.12em]">Superadmin</span>
-              </div>
-            )}
-
-            {isAuthenticated && (
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => setShowMenu((value) => !value)}
-                  className="flex h-11 w-11 items-center justify-center rounded-full border border-[#b7791f]/65 bg-slate-950/28 text-slate-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] transition hover:border-amber-400/80 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400/70"
-                  aria-expanded={showMenu}
-                  aria-label="เปิดเมนูผู้ใช้งาน"
-                >
-                  <UserCircle className="h-6 w-6" />
-                </button>
-
-                {showMenu && (
-                  <div className="absolute right-0 mt-2 w-56 overflow-hidden rounded-2xl border border-[#7a5b21]/85 bg-slate-950/95 p-2 text-slate-100 shadow-2xl shadow-slate-950/40 backdrop-blur-xl">
-                    <div className="px-3 py-2">
-                      <p className="truncate text-sm font-semibold">{displayName}</p>
-                      <p className="mt-0.5 truncate text-[11px] text-slate-400">
-                        {isGlobalSuperAdmin ? 'Catalog Governance' : displayBranchName}
-                      </p>
-                    </div>
-
-                    <div className="my-1 h-px bg-gradient-to-r from-transparent via-amber-300/28 to-transparent" />
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowMenu(false);
-                        navigate(getRoutePath('/settings'));
-                      }}
-                      className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-xs font-medium text-slate-300 transition hover:bg-white/10 hover:text-white"
-                    >
-                      <Settings className="h-3.5 w-3.5 text-orange-300" />
-                      {isGlobalSuperAdmin ? 'Settings' : 'ตั้งค่าระบบ'}
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={handleLogout}
-                      className="mt-1 flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-xs font-semibold text-red-300 transition hover:bg-red-500/10"
-                    >
-                      <LogOut className="h-3.5 w-3.5" />
-                      {logoutLabel}
-                    </button>
+              {showMenu && (
+                <div className="absolute right-0 mt-2 w-64 overflow-hidden rounded-2xl border border-slate-200 bg-white p-2 text-slate-700 shadow-xl">
+                  <div className="px-3 py-2">
+                    <p className="truncate text-sm font-semibold text-slate-900">{displayName}</p>
+                    <p className="mt-0.5 truncate text-[11px] text-slate-500">
+                      {isGlobalSuperAdmin ? 'Catalog Governance' : displayBranchName}
+                    </p>
                   </div>
-                )}
-              </div>
-            )}
-          </div>
+
+                  <div className="my-1 h-px bg-slate-100" />
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowMenu(false);
+                      navigate(getRoutePath('/settings'));
+                    }}
+                    className="flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-left text-sm font-medium transition hover:bg-slate-100 hover:text-slate-900"
+                  >
+                    <Settings className="h-4 w-4 text-teal-600" />
+                    {isGlobalSuperAdmin ? 'Settings' : 'ตั้งค่าระบบ'}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    className="mt-1 flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-left text-sm font-semibold text-red-600 transition hover:bg-red-50"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    {logoutLabel}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </header>

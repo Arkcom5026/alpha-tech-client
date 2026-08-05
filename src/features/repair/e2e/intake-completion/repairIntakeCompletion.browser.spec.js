@@ -3,18 +3,15 @@
 // Provision a fresh fixture through the paired Server E2E package first.
 
 import { test, expect } from '@playwright/test';
+import { merchantAuthStatePath } from '../../../e2e/auth/merchantAuthState.js';
 import { repairIntakeSelectors } from './repairIntakeCompletion.selectors';
 
 const baseUrl = process.env.E2E_BASE_URL || 'http://localhost:5173';
-const operatorEmail = process.env.E2E_TEST_USERNAME;
-const operatorPassword = process.env.E2E_TEST_PASSWORD;
 const branchSlug = process.env.REPAIR_INTAKE_E2E_BRANCH_SLUG;
 const repairJobId = process.env.REPAIR_INTAKE_E2E_JOB_ID;
 const repairJobNo = process.env.REPAIR_INTAKE_E2E_JOB_NO;
 
 const requiredEnvironment = {
-  E2E_TEST_USERNAME: operatorEmail,
-  E2E_TEST_PASSWORD: operatorPassword,
   REPAIR_INTAKE_E2E_BRANCH_SLUG: branchSlug,
   REPAIR_INTAKE_E2E_JOB_ID: repairJobId,
   REPAIR_INTAKE_E2E_JOB_NO: repairJobNo,
@@ -29,6 +26,8 @@ const onePixelPng = Buffer.from(
   'base64'
 );
 
+test.use({ storageState: merchantAuthStatePath });
+
 test.describe('Repair intake completion (selected E2E authority)', () => {
   test('blocks work before evidence, then accepts completed intake evidence', async ({ page }) => {
     if (missingEnvironment.length > 0) {
@@ -38,12 +37,6 @@ test.describe('Repair intake completion (selected E2E authority)', () => {
       );
     }
 
-    await page.goto(`${baseUrl}/login`);
-    await page.getByRole('textbox', { name: repairIntakeSelectors.loginIdentityName }).fill(operatorEmail);
-    await page.getByRole('textbox', { name: repairIntakeSelectors.loginPasswordName }).fill(operatorPassword);
-    await page.getByRole('button', { name: repairIntakeSelectors.loginSubmitName, exact: true }).click();
-    await page.waitForURL(new RegExp(`/${branchSlug}/pos/`), { timeout: 15_000 });
-
     const detailResponsePromise = page.waitForResponse(
       (response) => response.request().method() === 'GET'
         && response.url().includes(`/api/repairs/jobs/${repairJobId}`),
@@ -51,6 +44,13 @@ test.describe('Repair intake completion (selected E2E authority)', () => {
     );
 
     await page.goto(`${baseUrl}/${branchSlug}/pos/services/repairs/${repairJobId}`);
+
+    if (/\/login(?:\?|$)|\/partner-portal(?:\/login)?(?:\?|$)/i.test(page.url())) {
+      throw new Error(
+        'Stored Merchant E2E authentication is unavailable or expired. Run the auth bootstrap before this spec.'
+      );
+    }
+
     const detailResponse = await detailResponsePromise;
     const detailBody = await detailResponse.text();
 

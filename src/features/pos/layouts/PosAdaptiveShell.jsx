@@ -1,16 +1,17 @@
 import { useEffect, useState } from 'react';
 import { Outlet, useLocation, useParams } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Menu, X } from 'lucide-react';
+import { Menu, X } from 'lucide-react';
 
 import HeaderPos from '@/features/pos/components/header/HeaderPos';
 import SidebarLoader from '@/features/pos/components/sidebar/SidebarLoader';
 import PosKeyboardRuntime from '@/features/pos/runtime/PosKeyboardRuntime';
 
-const SIDEBAR_PREFERENCE_KEY = 'alpha-tech.pos.sidebar.expanded';
+const SIDEBAR_PREFERENCE_KEY = 'alpha-tech.pos.sidebar.expanded.v2';
 
 const readDesktopPreference = () => {
-  if (typeof window === 'undefined') return false;
-  return window.localStorage.getItem(SIDEBAR_PREFERENCE_KEY) === 'true';
+  if (typeof window === 'undefined') return true;
+  const savedValue = window.localStorage.getItem(SIDEBAR_PREFERENCE_KEY);
+  return savedValue === null ? true : savedValue === 'true';
 };
 
 const PosAdaptiveShell = () => {
@@ -54,37 +55,24 @@ const PosAdaptiveShell = () => {
 
       <div
         className={[
-          'relative hidden h-[100dvh] shrink-0 overflow-hidden border-r border-slate-200 bg-white transition-[width] duration-200 lg:block',
-          desktopExpanded ? 'w-64' : 'w-[76px]',
+          'hidden h-[100dvh] shrink-0 overflow-hidden border-r border-slate-200 bg-white transition-[width] duration-200 lg:block',
+          desktopExpanded ? 'w-64' : 'w-16',
         ].join(' ')}
       >
-        <div className="h-full w-64">
-          <SidebarLoader shopSlug={shopSlug} />
-        </div>
-
-        <button
-          type="button"
-          onClick={toggleDesktopSidebar}
-          className="absolute right-2 top-4 z-40 flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:border-teal-300 hover:bg-teal-50 hover:text-teal-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500"
-          aria-label={desktopExpanded ? 'ย่อเมนูด้านข้าง' : 'ขยายเมนูด้านข้าง'}
-          aria-expanded={desktopExpanded}
-        >
-          {desktopExpanded ? <ChevronLeft className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
-        </button>
+        <SidebarLoader collapsed={!desktopExpanded} onToggle={toggleDesktopSidebar} />
       </div>
 
       {mobileOpen && (
         <div className="fixed inset-0 z-[70] lg:hidden" role="dialog" aria-modal="true" aria-label="เมนู POS">
           <button
             type="button"
-            className="absolute inset-0 bg-slate-950/50 backdrop-blur-[2px]"
+            className="absolute inset-0 bg-slate-950/45 backdrop-blur-[2px]"
             onClick={() => setMobileOpen(false)}
             aria-label="ปิดเมนู POS"
           />
-          <div className="absolute inset-y-0 left-0 w-[min(86vw,320px)] overflow-hidden bg-white shadow-2xl">
-            <div className="h-full w-64 max-w-full">
-              <SidebarLoader shopSlug={shopSlug} />
-            </div>
+
+          <div className="absolute inset-y-0 left-0 w-[min(88vw,320px)] overflow-hidden bg-white shadow-2xl">
+            <SidebarLoader collapsed={false} />
             <button
               type="button"
               onClick={() => setMobileOpen(false)}
@@ -103,7 +91,7 @@ const PosAdaptiveShell = () => {
           <button
             type="button"
             onClick={() => setMobileOpen(true)}
-            className="absolute left-3 top-1/2 z-50 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:bg-teal-50 hover:text-teal-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 lg:hidden"
+            className="absolute left-3 top-1/2 z-50 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:border-teal-300 hover:bg-teal-50 hover:text-teal-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 lg:hidden"
             aria-label="เปิดเมนู POS"
             aria-expanded={mobileOpen}
           >

@@ -3,7 +3,10 @@ import { Link, useParams } from 'react-router-dom';
 
 import CreateSalePage from '@/features/sales/create/pages/CreateSalePage';
 import { createProductReservationSaleCart } from '../adapters/productReservationSaleCartAdapter';
-import { getMerchantProductReservation } from '../api/productReservationMerchantApi';
+import {
+  ensureMerchantProductReservationAllocation,
+  getMerchantProductReservation,
+} from '../api/productReservationMerchantApi';
 
 const ALLOWED_BRIDGE_STATUSES = new Set(['ACCEPTED', 'FULFILLMENT_READY', 'READY_FOR_PICKUP']);
 
@@ -18,14 +21,21 @@ const ReservationSaleBridgePage = () => {
     setLoading(true);
     setError('');
 
-    getMerchantProductReservation(reservationId)
+    const loadBridgeAuthority = async () => {
+      const initial = await getMerchantProductReservation(reservationId);
+      const nextReservation = initial?.reservation || null;
+      if (!nextReservation) throw new Error('ไม่พบใบจองที่ต้องการนำเข้าสู่หน้าขาย');
+      if (!ALLOWED_BRIDGE_STATUSES.has(nextReservation.status)) {
+        throw new Error(`ใบจองสถานะ ${nextReservation.status} ยังไม่สามารถนำเข้าสู่หน้าขายได้`);
+      }
+
+      await ensureMerchantProductReservationAllocation(reservationId);
+      return getMerchantProductReservation(reservationId);
+    };
+
+    loadBridgeAuthority()
       .then((result) => {
         if (!active) return;
-        const nextReservation = result?.reservation || null;
-        if (!nextReservation) throw new Error('ไม่พบใบจองที่ต้องการนำเข้าสู่หน้าขาย');
-        if (!ALLOWED_BRIDGE_STATUSES.has(nextReservation.status)) {
-          throw new Error(`ใบจองสถานะ ${nextReservation.status} ยังไม่สามารถนำเข้าสู่หน้าขายได้`);
-        }
         setData(result);
       })
       .catch((requestError) => {
@@ -55,7 +65,7 @@ const ReservationSaleBridgePage = () => {
   const bridgeError = error || saleCart?.error;
 
   if (loading) {
-    return <div className="p-10 text-center text-sm font-black text-slate-500">กำลังตรวจสอบใบจองก่อนเข้าสู่หน้าขาย POS...</div>;
+    return <div className="p-10 text-center text-sm font-black text-slate-500">กำลังผูกสินค้าจริงและตรวจสอบใบจองก่อนเข้าสู่หน้าขาย POS...</div>;
   }
 
   if (bridgeError || !reservation || !saleCart?.source) {
@@ -82,7 +92,7 @@ const ReservationSaleBridgePage = () => {
             <p className="text-xs font-black uppercase tracking-[0.2em] text-blue-600">ProductReservation → POS Sale Bridge</p>
             <p className="mt-1 font-black">กำลังขายจากใบจอง {reservation.code}</p>
             <p className="mt-1 text-xs font-bold text-blue-700">
-              Source Reservation #{reservation.id} · {saleCart.lines.length} รายการ · ไม่สร้าง POS Held Cart หรือใบจองซ้ำ
+              Source Reservation #{reservation.id} · {saleCart.lines.length} รายการ · ผูกสินค้าจริงแล้ว · ไม่สร้าง POS Held Cart หรือใบจองซ้ำ
             </p>
           </div>
           <Link

@@ -47,22 +47,22 @@
 
   .ads-nav-button {
     @apply relative inline-flex h-11 items-center justify-center gap-2 rounded-xl border px-3 text-[13px] font-semibold whitespace-nowrap transition-colors;
-    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2;
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 focus-visible:ring-offset-teal-50;
   }
 
   .ads-nav-button-idle {
-    @apply border-slate-200 bg-slate-100 text-slate-800;
-    @apply hover:border-slate-300 hover:bg-white hover:text-slate-950;
+    @apply border-teal-200 bg-teal-100 text-teal-950;
+    @apply hover:border-teal-300 hover:bg-teal-200 hover:text-teal-950;
   }
 
   .ads-nav-button-active {
-    @apply border-teal-700 bg-teal-700 text-white shadow-sm;
-    @apply hover:border-teal-800 hover:bg-teal-800;
+    @apply border-emerald-300 bg-emerald-200 text-emerald-950 shadow-sm;
+    @apply hover:border-emerald-400 hover:bg-emerald-300 hover:text-emerald-950;
   }
 
   .ads-icon-button {
-    @apply inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-slate-300 bg-white text-slate-700;
-    @apply transition-colors hover:border-teal-300 hover:bg-teal-50 hover:text-teal-800;
-    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2;
+    @apply inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-teal-200 bg-white text-teal-900;
+    @apply transition-colors hover:border-emerald-300 hover:bg-emerald-100 hover:text-emerald-950;
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2;
   }
 }

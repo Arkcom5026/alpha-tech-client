@@ -20,7 +20,7 @@ export default function BarcodePreviewWorkspaceHeader({ receiptId, labelCount = 
             ใบรับ #{receiptId || '-'}
           </span>
           <span className="inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 px-4 text-xs font-semibold text-slate-600">
-            ฉลาก {labelCount}
+            จำนวนฉลาก {labelCount}
           </span>
           <span className="inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 px-4 text-xs font-semibold text-slate-600">
             พิมพ์แล้ว {printedCount}/{labelCount}

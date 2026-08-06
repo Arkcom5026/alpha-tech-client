@@ -5,7 +5,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { test, expect } from '@playwright/test';
-import { merchantAuthStatePath } from '../../../e2e/auth/merchantAuthState.js';
+import { saleMerchantAuthStatePath } from './saleMerchantAuthState.js';
 
 const baseUrl = process.env.E2E_BASE_URL || 'http://localhost:5173';
 const branchId = process.env.POS_SALE_E2E_BRANCH_ID;
@@ -36,7 +36,7 @@ const publishResult = (result) => {
   fs.writeFileSync(absolutePath, `${JSON.stringify(result, null, 2)}\n`, 'utf8');
 };
 
-test.use({ storageState: merchantAuthStatePath });
+test.use({ storageState: saleMerchantAuthStatePath });
 
 test.describe('POS sale completion (selected E2E authority)', () => {
   test('staff completes cash sale and receipt keeps the merchant session', async ({ page }) => {
@@ -52,7 +52,7 @@ test.describe('POS sale completion (selected E2E authority)', () => {
 
     if (isAuthenticationRoute(page.url())) {
       throw new Error(
-        'Merchant E2E authentication is unavailable or expired. Run the auth bootstrap before this spec.'
+        'Sale E2E authentication is unavailable or expired. Run the Sale auth bootstrap before this spec.'
       );
     }
 
@@ -90,7 +90,7 @@ test.describe('POS sale completion (selected E2E authority)', () => {
 
     if (isAuthenticationRoute(documentPage.url())) {
       throw new Error(
-        `Receipt document handoff lost the merchant session and reached ${documentPage.url()}`
+        `Receipt document handoff lost the Sale session and reached ${documentPage.url()}`
       );
     }
 

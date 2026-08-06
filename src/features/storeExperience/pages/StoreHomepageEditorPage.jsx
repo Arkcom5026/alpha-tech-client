@@ -87,7 +87,11 @@ const StoreHomepageEditorPage = () => {
           ...defaultDraft,
           ...(nextDraft || {}),
           themePreset: PLATFORM_THEME_PRESET,
-          themeTokens: PLATFORM_TOKENS,
+          themeTokens: {
+            ...PLATFORM_TOKENS,
+            brandPrimary: nextDraft?.themeTokens?.brandPrimary || PLATFORM_TOKENS.brandPrimary,
+            brandAccent: nextDraft?.themeTokens?.brandAccent || PLATFORM_TOKENS.brandAccent,
+          },
           layoutPreset: PLATFORM_LAYOUT_PRESET,
           sectionConfiguration: nextDraft?.sectionConfiguration || defaultDraft.sectionConfiguration,
           contentConfiguration: {
@@ -110,6 +114,7 @@ const StoreHomepageEditorPage = () => {
     [draft.sectionConfiguration]
   );
   const content = draft.contentConfiguration || defaultContentConfiguration;
+  const tokens = { ...PLATFORM_TOKENS, ...(draft.themeTokens || {}) };
 
   const updateContent = (key, value) => setDraft((current) => ({
     ...current,
@@ -117,6 +122,17 @@ const StoreHomepageEditorPage = () => {
       ...defaultContentConfiguration,
       ...(current.contentConfiguration || {}),
       [key]: value,
+    },
+  }));
+
+  const updateBrandToken = (key, value) => setDraft((current) => ({
+    ...current,
+    themeTokens: {
+      ...PLATFORM_TOKENS,
+      ...(current.themeTokens || {}),
+      [key]: value,
+      surface: PLATFORM_TOKENS.surface,
+      text: PLATFORM_TOKENS.text,
     },
   }));
 
@@ -133,22 +149,20 @@ const StoreHomepageEditorPage = () => {
     storefrontSlug: String(capability.storefrontSlug || '').trim().toLowerCase(),
     displayName: String(capability.displayName || '').trim() || null,
     contactPhone: String(capability.contactPhone || '').trim() || null,
-    fixedDeliveryFee: capability.deliveryEnabled && capability.deliveryFeeMode === 'FIXED'
-      ? Number(capability.fixedDeliveryFee || 0)
-      : null,
-    maxDeliveryDistanceKm: capability.deliveryEnabled && capability.serviceAreaMode === 'DISTANCE'
-      ? Number(capability.maxDeliveryDistanceKm || 0)
-      : null,
+    fixedDeliveryFee: capability.deliveryEnabled && capability.deliveryFeeMode === 'FIXED' ? Number(capability.fixedDeliveryFee || 0) : null,
+    maxDeliveryDistanceKm: capability.deliveryEnabled && capability.serviceAreaMode === 'DISTANCE' ? Number(capability.maxDeliveryDistanceKm || 0) : null,
     deliveryFeeMode: capability.deliveryEnabled ? capability.deliveryFeeMode : null,
     serviceAreaMode: capability.deliveryEnabled ? capability.serviceAreaMode : 'PICKUP_ONLY',
-    serviceAreas: capability.deliveryEnabled && capability.serviceAreaMode === 'ADMIN_AREAS'
-      ? capability.serviceAreas || []
-      : [],
+    serviceAreas: capability.deliveryEnabled && capability.serviceAreaMode === 'ADMIN_AREAS' ? capability.serviceAreas || [] : [],
   });
 
   const draftPayload = () => ({
     themePreset: PLATFORM_THEME_PRESET,
-    themeTokens: PLATFORM_TOKENS,
+    themeTokens: {
+      ...PLATFORM_TOKENS,
+      brandPrimary: tokens.brandPrimary,
+      brandAccent: tokens.brandAccent,
+    },
     layoutPreset: PLATFORM_LAYOUT_PRESET,
     sectionConfiguration: draft.sectionConfiguration,
     contentConfiguration: draft.contentConfiguration,
@@ -170,14 +184,9 @@ const StoreHomepageEditorPage = () => {
     ]);
     setCapability({ ...defaultCapability, ...(savedCapability || {}) });
     setDraft((current) => ({ ...current, ...(savedDraft || {}) }));
-    setState({
-      loading: false,
-      busy: false,
-      error: '',
-      success: isPublished
-        ? 'บันทึกการแก้ไขเป็นแบบร่างแล้ว หน้าร้านสาธารณะยังใช้ฉบับที่เผยแพร่อยู่'
-        : 'บันทึกแบบร่างหน้าร้านเรียบร้อยแล้ว',
-    });
+    setState({ loading: false, busy: false, error: '', success: isPublished
+      ? 'บันทึกการแก้ไขเป็นแบบร่างแล้ว หน้าร้านสาธารณะยังใช้ฉบับที่เผยแพร่อยู่'
+      : 'บันทึกแบบร่างหน้าร้านเรียบร้อยแล้ว' });
   });
 
   const publish = () => run(async () => {
@@ -217,20 +226,16 @@ const StoreHomepageEditorPage = () => {
         <div>
           <div className="flex flex-wrap items-center gap-2">
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-600">Store Experience</p>
-            <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${isPublished ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
-              {isPublished ? 'LIVE' : 'DRAFT'}
-            </span>
+            <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${isPublished ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>{isPublished ? 'LIVE' : 'DRAFT'}</span>
           </div>
           <h1 className="mt-1 text-2xl font-bold text-slate-900">ออกแบบหน้าหลักของร้าน</h1>
-          <p className="mt-1 text-sm text-slate-500">จัดการโลโก้ ภาพหน้าร้าน โปรโมชั่น และข้อความแบรนด์ภายในมาตรฐานเดียวของแพลตฟอร์ม</p>
+          <p className="mt-1 text-sm text-slate-500">จัดการสีแบรนด์ โลโก้ ภาพหน้าร้าน โปรโมชั่น และข้อความภายในมาตรฐานเดียวของแพลตฟอร์ม</p>
           {isPublished ? <p className="mt-2 text-xs font-medium text-emerald-700">แก้ไขแบบร่างได้โดยไม่กระทบหน้าร้านที่เผยแพร่อยู่ จนกว่าจะกดเผยแพร่การเปลี่ยนแปลง</p> : null}
         </div>
         <div className="flex flex-wrap gap-2">
           <button type="button" onClick={preview} className={`${actionClass} border border-slate-300 bg-white text-slate-700 hover:bg-slate-50`}>ดูหน้าร้าน</button>
           <button type="button" onClick={save} disabled={state.busy} className={`${actionClass} bg-blue-600 text-white hover:bg-blue-700`}>บันทึกแบบร่าง</button>
-          <button type="button" onClick={publish} disabled={state.busy} className={`${actionClass} bg-emerald-600 text-white hover:bg-emerald-700`}>
-            {isPublished ? 'เผยแพร่การเปลี่ยนแปลง' : 'เผยแพร่หน้าร้าน'}
-          </button>
+          <button type="button" onClick={publish} disabled={state.busy} className={`${actionClass} bg-emerald-600 text-white hover:bg-emerald-700`}>{isPublished ? 'เผยแพร่การเปลี่ยนแปลง' : 'เผยแพร่หน้าร้าน'}</button>
           {isPublished ? <button type="button" onClick={unpublish} disabled={state.busy} className={`${actionClass} bg-amber-500 text-white hover:bg-amber-600`}>ยกเลิกเผยแพร่</button> : null}
         </div>
       </section>
@@ -252,8 +257,12 @@ const StoreHomepageEditorPage = () => {
 
           <section className="rounded-2xl border border-blue-200 bg-blue-50 p-5 shadow-sm">
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-700">Platform Design Authority</p>
-            <h2 className="mt-1 font-bold text-slate-900">ธีมหลักดูแลโดย Alpha-Tech Platform</h2>
-            <p className="mt-2 text-sm leading-6 text-slate-600">รูปแบบตัวอักษร สีพื้นฐาน ระยะห่าง การตอบสนองบนมือถือ และองค์ประกอบการขายถูกควบคุมโดยแพลตฟอร์ม เพื่อให้หน้าร้านทุกแห่งใช้งานง่าย ปลอดภัย และมีคุณภาพสม่ำเสมอ</p>
+            <h2 className="mt-1 font-bold text-slate-900">แพลตฟอร์มควบคุมโครงสร้าง ร้านเลือกสีแบรนด์</h2>
+            <p className="mt-2 text-sm leading-6 text-slate-600">ร้านเลือกสีหลักและสีเน้นได้ ส่วนรูปแบบตัวอักษร สีพื้นผิว สีข้อความ ระยะห่าง การตอบสนองบนมือถือ และองค์ประกอบการขายยังควบคุมโดย Alpha-Tech Platform</p>
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              <label className="text-sm font-medium text-slate-700">สีหลักของร้าน<div className="mt-1 flex items-center gap-3"><input type="color" aria-label="สีหลักของร้าน" value={tokens.brandPrimary} onChange={(event) => updateBrandToken('brandPrimary', event.target.value)} className="h-11 w-14 cursor-pointer rounded-lg border border-slate-200 bg-white p-1" /><input className={fieldClass} value={tokens.brandPrimary} onChange={(event) => updateBrandToken('brandPrimary', event.target.value)} /></div></label>
+              <label className="text-sm font-medium text-slate-700">สีเน้นของร้าน<div className="mt-1 flex items-center gap-3"><input type="color" aria-label="สีเน้นของร้าน" value={tokens.brandAccent} onChange={(event) => updateBrandToken('brandAccent', event.target.value)} className="h-11 w-14 cursor-pointer rounded-lg border border-slate-200 bg-white p-1" /><input className={fieldClass} value={tokens.brandAccent} onChange={(event) => updateBrandToken('brandAccent', event.target.value)} /></div></label>
+            </div>
           </section>
 
           <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -300,24 +309,24 @@ const StoreHomepageEditorPage = () => {
 
         <section className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 shadow-sm">
           <div className="border-b border-slate-200 bg-white px-5 py-3"><p className="text-sm font-semibold text-slate-700">ตัวอย่างเนื้อหาหน้าร้าน</p></div>
-          <div className="min-h-[760px] bg-white text-slate-900">
-            <header className="relative overflow-hidden bg-blue-800 px-6 py-6 text-white">
+          <div className="min-h-[760px]" style={{ background: tokens.surface, color: tokens.text }}>
+            <header className="relative overflow-hidden px-6 py-6 text-white" style={{ background: tokens.brandPrimary }}>
               {content.coverImageUrl ? <img src={content.coverImageUrl} alt="" className="absolute inset-0 h-full w-full object-cover opacity-25" /> : null}
               <div className="relative flex items-center gap-4">
                 {content.logoUrl ? <img src={content.logoUrl} alt="โลโก้ร้าน" className="h-14 w-14 rounded-2xl border border-white/20 bg-white object-contain p-1" /> : <div className="grid h-14 w-14 place-items-center rounded-2xl bg-white/15 text-2xl">🏪</div>}
-                <div><p className="text-xs text-white/70">/{capability.storefrontSlug || 'your-store'}</p><h2 className="mt-1 text-2xl font-black">{capability.displayName || 'ชื่อร้านของคุณ'}</h2><p className="mt-1 text-sm text-white/75">{content.storeHeadline || 'พื้นที่สำหรับข้อความแนะนำร้านของคุณ'}</p></div>
+                <div><p className="text-xs text-white/70">/{capability.storefrontSlug || 'your-store'}</p><h2 className="mt-1 text-2xl font-black">{content.storeHeadline || capability.displayName || 'ชื่อร้านของคุณ'}</h2><p className="mt-1 text-sm text-white/75">{content.storeDescription || 'พื้นที่สำหรับข้อความแนะนำร้านของคุณ'}</p></div>
               </div>
             </header>
             <div className="space-y-6 p-6">
               {enabledSections.map((section) => {
-                if (section.type === 'HERO') return <div key={section.id} className="relative overflow-hidden rounded-3xl bg-amber-400 p-8 text-slate-950">{content.heroImageUrl ? <img src={content.heroImageUrl} alt="" className="absolute inset-0 h-full w-full object-cover opacity-25" /> : null}<div className="relative"><p className="text-sm font-bold uppercase tracking-[0.18em]">ยินดีต้อนรับ</p><h3 className="mt-2 max-w-xl text-3xl font-black">{content.heroHeadline || defaultContentConfiguration.heroHeadline}</h3><p className="mt-3 max-w-xl text-sm leading-6 text-slate-800">{content.heroSupportingText || defaultContentConfiguration.heroSupportingText}</p></div></div>;
+                if (section.type === 'HERO') return <div key={section.id} className="relative overflow-hidden rounded-3xl p-8 text-slate-950" style={{ background: tokens.brandAccent }}>{content.heroImageUrl ? <img src={content.heroImageUrl} alt="" className="absolute inset-0 h-full w-full object-cover opacity-25" /> : null}<div className="relative"><p className="text-sm font-bold uppercase tracking-[0.18em]">ยินดีต้อนรับ</p><h3 className="mt-2 max-w-xl text-3xl font-black">{content.heroHeadline || defaultContentConfiguration.heroHeadline}</h3><p className="mt-3 max-w-xl text-sm leading-6 text-slate-800">{content.heroSupportingText || defaultContentConfiguration.heroSupportingText}</p></div></div>;
                 if (section.type === 'FEATURED_PRODUCTS') return <div key={section.id}><h3 className="mb-3 text-lg font-bold">สินค้าแนะนำ</h3><div className="grid grid-cols-2 gap-3 md:grid-cols-3">{[1, 2, 3].map((item) => <div key={item} className="rounded-xl border border-slate-200 bg-white p-4"><div className="aspect-square rounded-lg bg-slate-100" /><p className="mt-3 font-semibold">สินค้าตัวอย่าง {item}</p></div>)}</div></div>;
                 if (section.type === 'PRODUCT_GRID') return <div key={section.id}><h3 className="mb-3 text-lg font-bold">สินค้าทั้งหมด</h3><div className="grid grid-cols-2 gap-3 md:grid-cols-4">{[1, 2, 3, 4].map((item) => <div key={item} className="rounded-xl border border-slate-200 bg-white p-3"><div className="aspect-square rounded-lg bg-slate-100" /><p className="mt-2 text-sm font-semibold">สินค้า {item}</p></div>)}</div></div>;
                 if (section.type === 'FULFILLMENT') return <div key={section.id} className="rounded-xl border border-slate-200 bg-white p-5"><h3 className="font-bold">การรับสินค้า</h3><p className="mt-1 text-sm text-slate-600">{capability.pickupInstruction || 'รับสินค้าที่หน้าร้าน'}</p></div>;
-                if (section.type === 'CONTACT') return <div key={section.id} className="rounded-xl border border-slate-200 bg-white p-5"><h3 className="font-bold">ติดต่อร้าน</h3><p className="mt-1 text-sm text-slate-600">{capability.contactPhone || 'ยังไม่ได้ระบุเบอร์ติดต่อ'}</p></div>;
+                if (section.type === 'CONTACT') return <div key={section.id} className="rounded-xl p-5 text-white" style={{ background: tokens.brandPrimary }}><h3 className="font-bold">ติดต่อร้าน</h3><p className="mt-1 text-sm text-white/75">{capability.contactPhone || 'ยังไม่ได้ระบุเบอร์ติดต่อ'}</p></div>;
                 return null;
               })}
-              {content.promotionTitle || content.promotionImageUrl ? <section className="overflow-hidden rounded-3xl border border-slate-200 bg-slate-950 text-white"><div className="grid md:grid-cols-2">{content.promotionImageUrl ? <img src={content.promotionImageUrl} alt="โปรโมชั่น" className="h-full min-h-48 w-full object-cover" /> : <div className="min-h-48 bg-slate-800" />}<div className="p-7"><p className="text-xs font-bold uppercase tracking-[0.18em] text-white/55">Promotion</p><h3 className="mt-2 text-2xl font-black">{content.promotionTitle || 'โปรโมชั่นพิเศษจากร้าน'}</h3>{content.promotionCtaLabel ? <span className="mt-5 inline-flex rounded-xl bg-white px-4 py-2 text-sm font-bold text-slate-950">{content.promotionCtaLabel}</span> : null}</div></div></section> : null}
+              {content.promotionTitle || content.promotionImageUrl ? <section className="overflow-hidden rounded-3xl border border-slate-200 text-white" style={{ background: tokens.brandPrimary }}><div className="grid md:grid-cols-2">{content.promotionImageUrl ? <img src={content.promotionImageUrl} alt="โปรโมชั่น" className="h-full min-h-48 w-full object-cover" /> : <div className="min-h-48 bg-black/15" />}<div className="p-7"><p className="text-xs font-bold uppercase tracking-[0.18em] text-white/55">Promotion</p><h3 className="mt-2 text-2xl font-black">{content.promotionTitle || 'โปรโมชั่นพิเศษจากร้าน'}</h3>{content.promotionCtaLabel ? <span className="mt-5 inline-flex rounded-xl px-4 py-2 text-sm font-bold text-slate-950" style={{ background: tokens.brandAccent }}>{content.promotionCtaLabel}</span> : null}</div></div></section> : null}
               {content.storeDescription ? <p className="rounded-2xl bg-slate-50 p-5 text-sm leading-7 text-slate-600">{content.storeDescription}</p> : null}
             </div>
           </div>

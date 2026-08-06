@@ -7,7 +7,7 @@ const publicPage = fs.readFileSync('src/features/storefront/pages/PublicStorefro
 
 assert.match(page, /PLATFORM_THEME_PRESET = 'platform-default'/, 'platform theme authority must be explicit');
 assert.match(page, /PLATFORM_LAYOUT_PRESET = 'platform-default'/, 'platform layout authority must be explicit');
-assert.doesNotMatch(page, /type="color"/, 'merchant studio must not expose theme-token editing');
+assert.doesNotMatch(page, /type="color"/, 'merchant studio must not expose unrestricted theme-token editing');
 assert.doesNotMatch(page, /<select[^>]*value=\{draft\.themePreset\}/, 'merchant studio must not expose theme preset selection');
 assert.doesNotMatch(page, /<select[^>]*value=\{draft\.layoutPreset\}/, 'merchant studio must not expose layout preset selection');
 
@@ -75,5 +75,13 @@ assert.match(publicPage, /content\.storeHeadline \|\| storefront\.name/, 'public
 assert.match(publicPage, /content\.logoUrl/, 'public header must support the published logo URL');
 assert.match(publicPage, /content\.coverImageUrl/, 'public storefront must support the published cover image URL');
 assert.match(publicPage, /content\.heroImageUrl/, 'public hero must support the published hero image URL');
+
+assert.match(publicPage, /const PromotionBanner = \(\{ content, tokens \}\)/, 'public storefront must own a published promotion renderer');
+assert.match(publicPage, /content\.promotionTitle/, 'public promotion must bind the published title');
+assert.match(publicPage, /content\.promotionImageUrl/, 'public promotion must bind the published image');
+assert.match(publicPage, /content\.promotionCtaLabel && content\.promotionCtaUrl/, 'public promotion CTA requires both label and destination');
+assert.match(publicPage, /<PromotionBanner content=\{content\} tokens=\{tokens\} \/>/, 'public page must render the promotion banner');
+assert.match(publicPage, /style=\{\{ background: tokens\.brandPrimary \}\}/, 'public discovery action must follow the published primary brand token');
+assert.match(publicPage, /style=\{\{ background: tokens\.brandAccent, color: tokens\.text \}\}/, 'public promotion CTA must follow the published accent token');
 
 console.log('online store brand content studio contract: PASS');

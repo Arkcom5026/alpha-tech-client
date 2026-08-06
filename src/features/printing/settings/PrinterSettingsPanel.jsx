@@ -11,6 +11,7 @@ const PrinterSettingsPanel = ({
   branchId,
   workstationId,
   discoverySelectionService,
+  printerTestService,
 }) => {
   const [printers, setPrinters] = useState([])
   const [preferences, setPreferences] = useState([])
@@ -49,6 +50,7 @@ const PrinterSettingsPanel = ({
 
   const selectedRow = rows.find((row) => row.documentPurpose === selectedPurpose)
   const availablePrinters = printers.filter((printer) => printer.isOnline !== false)
+  const isBusy = ['LOADING', 'SAVING', 'TESTING'].includes(status)
 
   const saveSelection = async () => {
     if (!selectedPrinterId) {
@@ -70,6 +72,30 @@ const PrinterSettingsPanel = ({
     } catch (error) {
       setStatus('ERROR')
       setMessage(error.message || 'บันทึกเครื่องพิมพ์ไม่สำเร็จ')
+    }
+  }
+
+  const testSelection = async () => {
+    if (!selectedPrinterId) {
+      setMessage('กรุณาเลือกเครื่องพิมพ์ก่อนทดสอบ')
+      return
+    }
+
+    setStatus('TESTING')
+    setMessage('กำลังส่งงานทดสอบพิมพ์...')
+    try {
+      const outcome = await printerTestService.test({
+        branchId,
+        workstationId,
+        documentPurpose: selectedPurpose,
+        printerProfileId: selectedPrinterId,
+      })
+      const adapter = outcome.result.adapter ? ` ผ่าน ${outcome.result.adapter}` : ''
+      setStatus('READY')
+      setMessage(`ทดสอบพิมพ์สำเร็จ${adapter}`)
+    } catch (error) {
+      setStatus('ERROR')
+      setMessage(error.message || 'ทดสอบพิมพ์ไม่สำเร็จ')
     }
   }
 
@@ -103,6 +129,7 @@ const PrinterSettingsPanel = ({
               setSelectedPurpose(event.target.value)
               setSelectedPrinterId('')
             }}
+            disabled={isBusy}
           >
             {rows.map((row) => (
               <option key={row.documentPurpose} value={row.documentPurpose}>
@@ -118,7 +145,7 @@ const PrinterSettingsPanel = ({
             className="w-full rounded-lg border border-slate-300 px-3 py-2"
             value={selectedPrinterId}
             onChange={(event) => setSelectedPrinterId(event.target.value)}
-            disabled={status === 'LOADING' || status === 'SAVING'}
+            disabled={isBusy}
           >
             <option value="">เลือกเครื่องพิมพ์</option>
             {availablePrinters.map((printer) => (
@@ -141,24 +168,33 @@ const PrinterSettingsPanel = ({
       <div className="flex flex-wrap gap-2">
         <button
           type="button"
+          className="rounded-lg bg-orange-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+          onClick={testSelection}
+          disabled={isBusy || !selectedPrinterId}
+        >
+          {status === 'TESTING' ? 'กำลังทดสอบ...' : 'ทดสอบพิมพ์'}
+        </button>
+        <button
+          type="button"
           className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
           onClick={saveSelection}
-          disabled={status === 'LOADING' || status === 'SAVING'}
+          disabled={isBusy}
         >
           บันทึกเครื่องพิมพ์
         </button>
         <button
           type="button"
-          className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700"
+          className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 disabled:opacity-50"
           onClick={load}
+          disabled={isBusy}
         >
           ค้นหาใหม่
         </button>
         <button
           type="button"
-          className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700"
+          className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 disabled:opacity-50"
           onClick={clearSelection}
-          disabled={!selectedRow?.preference}
+          disabled={isBusy || !selectedRow?.preference}
         >
           ล้างการตั้งค่า
         </button>

@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 // src/routes/partner/posPartnerRoutes.jsx
 // 🏛️ Clean Architecture Routing: Unified Premium Integration (Safe Emergency Rollback Edition)
 // 🎨 Minimal Platinum Light Mode Edition Integrated — Fix Blank Screen Loop

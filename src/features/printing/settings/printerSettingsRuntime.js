@@ -3,6 +3,7 @@ import {
   createPrinterDiscoverySelectionService,
   createPrinterPreferenceStore,
 } from '../preferences/index.js'
+import { createPrinterTestService } from './printerTestService.js'
 
 const WORKSTATION_STORAGE_KEY = 'alpha-tech.printing.workstation-id.v1'
 
@@ -39,12 +40,14 @@ const createPrinterSettingsRuntime = ({
     transport,
     preferenceStore,
   })
+  const printerTestService = createPrinterTestService({ transport })
 
   return Object.freeze({
     workstationId: resolveWorkstationId({ storage, cryptoImpl }),
     transport,
     preferenceStore,
     discoverySelectionService,
+    printerTestService,
   })
 }
 

@@ -43,6 +43,7 @@ const PrinterSettingsPage = () => {
           branchId={String(branchId)}
           workstationId={runtime.workstationId}
           discoverySelectionService={runtime.discoverySelectionService}
+          printerTestService={runtime.printerTestService}
         />
       </div>
     </main>

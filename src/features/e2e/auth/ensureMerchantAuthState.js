@@ -10,8 +10,10 @@ const baseUrl = (process.env.E2E_BASE_URL || 'http://localhost:5173').replace(/\
 const branchSlug = process.env.POS_SALE_E2E_BRANCH_SLUG
   || process.env.REPAIR_INTAKE_E2E_BRANCH_SLUG
   || 'test-shop';
-const username = process.env.E2E_TEST_USERNAME;
-const password = process.env.E2E_TEST_PASSWORD;
+const username = process.env.E2E_TEST_USERNAME
+  || process.env.POS_SALE_E2E_OPERATOR_EMAIL;
+const password = process.env.E2E_TEST_PASSWORD
+  || process.env.POS_SALE_E2E_OPERATOR_PASSWORD;
 
 function isLoginUrl(url) {
   return /\/login(?:\?|$)|\/partner-portal\/login(?:\?|$)/i.test(url);
@@ -46,7 +48,7 @@ async function isStoredSessionValid(browser) {
 async function createStoredSession(browser) {
   if (!username || !password) {
     throw new Error(
-      'Merchant E2E auth state is missing or expired. Set E2E_TEST_USERNAME and E2E_TEST_PASSWORD in the E2E runtime environment.'
+      'Merchant E2E auth state is missing or expired. Set E2E_TEST_USERNAME/E2E_TEST_PASSWORD or the Sale E2E operator credentials in the runtime environment.'
     );
   }
 

@@ -7,7 +7,9 @@ import { merchantAuthStatePath } from './merchantAuthState.js';
 dotenv.config({ path: path.resolve(process.cwd(), '.env.e2e.local') });
 
 const baseUrl = (process.env.E2E_BASE_URL || 'http://localhost:5173').replace(/\/$/, '');
-const branchSlug = process.env.REPAIR_INTAKE_E2E_BRANCH_SLUG || 'test-shop';
+const branchSlug = process.env.POS_SALE_E2E_BRANCH_SLUG
+  || process.env.REPAIR_INTAKE_E2E_BRANCH_SLUG
+  || 'test-shop';
 const username = process.env.E2E_TEST_USERNAME;
 const password = process.env.E2E_TEST_PASSWORD;
 
@@ -44,7 +46,7 @@ async function isStoredSessionValid(browser) {
 async function createStoredSession(browser) {
   if (!username || !password) {
     throw new Error(
-      'Merchant E2E auth state is missing or expired. Set E2E_TEST_USERNAME and E2E_TEST_PASSWORD in .env.e2e.local.'
+      'Merchant E2E auth state is missing or expired. Set E2E_TEST_USERNAME and E2E_TEST_PASSWORD in the E2E runtime environment.'
     );
   }
 

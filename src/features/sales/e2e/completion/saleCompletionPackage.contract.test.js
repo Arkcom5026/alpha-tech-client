@@ -25,6 +25,15 @@ assert.match(runner, /saleCompletion\.browser\.spec\.js/);
 assert.match(runner, /verifySaleCompletionOutcome\.js/);
 assert.match(runner, /POS_SALE_E2E_BRANCH_ID/);
 assert.match(runner, /Sale completion Browser \+ Database E2E package: PASS/);
+
 assert.match(authBootstrap, /storageState/);
+assert.match(authBootstrap, /POS_SALE_E2E_BRANCH_SLUG/);
+assert.match(authBootstrap, /POS_SALE_E2E_OPERATOR_EMAIL/);
+assert.match(authBootstrap, /POS_SALE_E2E_OPERATOR_PASSWORD/);
+assert.ok(
+  authBootstrap.indexOf('POS_SALE_E2E_BRANCH_SLUG')
+    < authBootstrap.indexOf('REPAIR_INTAKE_E2E_BRANCH_SLUG'),
+  'Sale branch authority must take precedence over Repair branch fallback.'
+);
 
 console.log('Sale completion Browser E2E package contract: PASS');

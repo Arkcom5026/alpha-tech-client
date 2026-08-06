@@ -1,3 +1,4 @@
+/* global Buffer, process */
 import http from 'node:http'
 import { createDefaultMockRegistry } from './printerRegistry.js'
 import { createMockPrinterAdapter } from './mockPrinterAdapter.js'

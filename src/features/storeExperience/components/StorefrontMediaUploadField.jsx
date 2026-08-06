@@ -7,6 +7,7 @@ const StorefrontMediaUploadField = ({
   purpose,
   value,
   onUploaded,
+  onBusyChange = () => {},
   upload,
   disabled = false,
   accept = 'image/*',
@@ -30,6 +31,7 @@ const StorefrontMediaUploadField = ({
     }
 
     setUploadState({ busy: true, error: '' });
+    onBusyChange(true, purpose);
     try {
       const result = await upload({ file, purpose });
       if (!result?.secureUrl) throw new Error('ไม่พบ URL รูปภาพจากระบบอัปโหลด');
@@ -40,6 +42,8 @@ const StorefrontMediaUploadField = ({
         busy: false,
         error: error?.response?.data?.message || error.message || 'อัปโหลดรูปภาพไม่สำเร็จ',
       });
+    } finally {
+      onBusyChange(false, purpose);
     }
   };
 

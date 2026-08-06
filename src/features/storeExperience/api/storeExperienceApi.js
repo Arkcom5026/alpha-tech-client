@@ -35,9 +35,10 @@ export const uploadStorefrontMedia = async ({ file, purpose }) => {
   }));
 };
 
-export const listStorefrontMedia = async ({ purpose, pageSize = 24, nextCursor } = {}) => {
+export const listStorefrontMedia = async ({ purpose, search, pageSize = 24, nextCursor } = {}) => {
   const params = { pageSize };
   if (purpose) params.purpose = purpose;
+  if (search) params.search = String(search).trim().slice(0, 120);
   if (nextCursor) params.nextCursor = nextCursor;
   return unwrap(await apiClient.get('/store-experience/media', { params }));
 };

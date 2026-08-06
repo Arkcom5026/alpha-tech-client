@@ -2,28 +2,44 @@
 // Module-owned E2E aligned with Repair E2E authority pattern.
 // No API interception, mock response, store injection, or browser-side DB access.
 
+import fs from 'node:fs';
+import path from 'node:path';
 import { test, expect } from '@playwright/test';
 import { merchantAuthStatePath } from '../../../e2e/auth/merchantAuthState.js';
 
 const baseUrl = process.env.E2E_BASE_URL || 'http://localhost:5173';
+const branchId = process.env.POS_SALE_E2E_BRANCH_ID;
 const branchSlug = process.env.POS_SALE_E2E_BRANCH_SLUG;
 const stockBarcode = process.env.POS_SALE_E2E_STOCK_BARCODE;
 const expectedRetailTotal = process.env.POS_SALE_E2E_EXPECTED_RETAIL_TOTAL;
 const customerName = process.env.POS_SALE_E2E_CUSTOMER_NAME;
 const customerPhone = process.env.POS_SALE_E2E_CUSTOMER_PHONE;
+const resultPath = process.env.POS_SALE_E2E_RESULT_PATH;
 
 const requiredEnvironment = {
+  POS_SALE_E2E_BRANCH_ID: branchId,
   POS_SALE_E2E_BRANCH_SLUG: branchSlug,
   POS_SALE_E2E_STOCK_BARCODE: stockBarcode,
   POS_SALE_E2E_EXPECTED_RETAIL_TOTAL: expectedRetailTotal,
   POS_SALE_E2E_CUSTOMER_NAME: customerName,
   POS_SALE_E2E_CUSTOMER_PHONE: customerPhone,
+  POS_SALE_E2E_RESULT_PATH: resultPath,
+};
+
+const isAuthenticationRoute = (url) => (
+  /\/login(?:\?|$)|\/partner-portal(?:\/login)?(?:\?|$)/i.test(url)
+);
+
+const publishResult = (result) => {
+  const absolutePath = path.resolve(resultPath);
+  fs.mkdirSync(path.dirname(absolutePath), { recursive: true });
+  fs.writeFileSync(absolutePath, `${JSON.stringify(result, null, 2)}\n`, 'utf8');
 };
 
 test.use({ storageState: merchantAuthStatePath });
 
-test.describe('POS sale completion (Test DB)', () => {
-  test('staff completes cash sale and receives receipt with existing merchant session', async ({ page }) => {
+test.describe('POS sale completion (selected E2E authority)', () => {
+  test('staff completes cash sale and receipt keeps the merchant session', async ({ page }) => {
     const missing = Object.entries(requiredEnvironment)
       .filter(([, value]) => !value)
       .map(([name]) => name);
@@ -34,8 +50,10 @@ test.describe('POS sale completion (Test DB)', () => {
 
     await page.goto(`${baseUrl}/${branchSlug}/pos/sales/sale`);
 
-    if (/\/login(?:\?|$)/i.test(page.url())) {
-      throw new Error('Merchant E2E authentication is unavailable or expired. Bootstrap auth state before running this spec.');
+    if (isAuthenticationRoute(page.url())) {
+      throw new Error(
+        'Merchant E2E authentication is unavailable or expired. Run the auth bootstrap before this spec.'
+      );
     }
 
     await page.locator('#sale-customer-search-input').fill(customerPhone);
@@ -63,15 +81,34 @@ test.describe('POS sale completion (Test DB)', () => {
     await page.getByTestId('pos-sale-confirm-button').click();
 
     const completionBody = await (await completion).json();
-    const saleId = completionBody?.saleId || completionBody?.data?.saleId;
-    expect(saleId).toBeTruthy();
+    const saleId = Number(completionBody?.saleId || completionBody?.data?.saleId);
+    expect(Number.isInteger(saleId) && saleId > 0).toBeTruthy();
 
     const receiptPage = await popup;
-    if (receiptPage) {
-      await receiptPage.waitForLoadState('domcontentloaded');
-      await expect(receiptPage).toHaveURL(new RegExp(`/(print-short|bill/print-short)/${saleId}`));
-    } else {
-      await expect(page).toHaveURL(new RegExp(`/(print-short|bill/print-short)/${saleId}`));
+    const documentPage = receiptPage || page;
+    if (receiptPage) await receiptPage.waitForLoadState('domcontentloaded');
+
+    if (isAuthenticationRoute(documentPage.url())) {
+      throw new Error(
+        `Receipt document handoff lost the merchant session and reached ${documentPage.url()}`
+      );
     }
+
+    await expect(documentPage).toHaveURL(
+      new RegExp(`/(print-short|bill/print-short)/${saleId}`)
+    );
+
+    publishResult({
+      result: 'PASS',
+      databaseModified: true,
+      saleId,
+      branchId: Number(branchId),
+      branchSlug,
+      stockBarcode,
+      customerPhone,
+      receiptMode: receiptPage ? 'POPUP' : 'SAME_TAB',
+      receiptUrl: documentPage.url(),
+      authRedirectObserved: false,
+    });
   });
 });

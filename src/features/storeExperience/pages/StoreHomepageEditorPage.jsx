@@ -165,12 +165,19 @@ const StoreHomepageEditorPage = () => {
 
   const save = () => run(async () => {
     const [savedCapability, savedDraft] = await Promise.all([
-      savePartnerStoreCapability(capabilityPayload(false)),
+      savePartnerStoreCapability(capabilityPayload(capability.storefrontEnabled)),
       saveStoreExperienceDraft(draftPayload()),
     ]);
     setCapability({ ...defaultCapability, ...(savedCapability || {}) });
     setDraft((current) => ({ ...current, ...(savedDraft || {}) }));
-    setState({ loading: false, busy: false, error: '', success: 'บันทึกแบบร่างหน้าร้านเรียบร้อยแล้ว' });
+    setState({
+      loading: false,
+      busy: false,
+      error: '',
+      success: isPublished
+        ? 'บันทึกการแก้ไขเป็นแบบร่างแล้ว หน้าร้านสาธารณะยังใช้ฉบับที่เผยแพร่อยู่'
+        : 'บันทึกแบบร่างหน้าร้านเรียบร้อยแล้ว',
+    });
   });
 
   const publish = () => run(async () => {
@@ -183,7 +190,7 @@ const StoreHomepageEditorPage = () => {
     const published = await publishStoreExperience();
     setCapability((current) => ({ ...current, ...(published?.capability || {}), storefrontEnabled: true }));
     setDraft((current) => ({ ...current, ...(published?.experience || {}), status: 'PUBLISHED' }));
-    setState({ loading: false, busy: false, error: '', success: 'เผยแพร่หน้าร้านเรียบร้อยแล้ว ลูกค้าสามารถเข้าชมได้ทันที' });
+    setState({ loading: false, busy: false, error: '', success: 'เผยแพร่หน้าร้านเรียบร้อยแล้ว ลูกค้าสามารถเข้าชมฉบับล่าสุดได้ทันที' });
   });
 
   const unpublish = () => run(async () => {
@@ -216,17 +223,15 @@ const StoreHomepageEditorPage = () => {
           </div>
           <h1 className="mt-1 text-2xl font-bold text-slate-900">ออกแบบหน้าหลักของร้าน</h1>
           <p className="mt-1 text-sm text-slate-500">จัดการโลโก้ ภาพหน้าร้าน โปรโมชั่น และข้อความแบรนด์ภายในมาตรฐานเดียวของแพลตฟอร์ม</p>
+          {isPublished ? <p className="mt-2 text-xs font-medium text-emerald-700">แก้ไขแบบร่างได้โดยไม่กระทบหน้าร้านที่เผยแพร่อยู่ จนกว่าจะกดเผยแพร่การเปลี่ยนแปลง</p> : null}
         </div>
         <div className="flex flex-wrap gap-2">
           <button type="button" onClick={preview} className={`${actionClass} border border-slate-300 bg-white text-slate-700 hover:bg-slate-50`}>ดูหน้าร้าน</button>
-          {isPublished ? (
-            <button type="button" onClick={unpublish} disabled={state.busy} className={`${actionClass} bg-amber-500 text-white hover:bg-amber-600`}>ยกเลิกเผยแพร่</button>
-          ) : (
-            <>
-              <button type="button" onClick={save} disabled={state.busy} className={`${actionClass} bg-blue-600 text-white hover:bg-blue-700`}>บันทึกแบบร่าง</button>
-              <button type="button" onClick={publish} disabled={state.busy} className={`${actionClass} bg-emerald-600 text-white hover:bg-emerald-700`}>เผยแพร่หน้าร้าน</button>
-            </>
-          )}
+          <button type="button" onClick={save} disabled={state.busy} className={`${actionClass} bg-blue-600 text-white hover:bg-blue-700`}>บันทึกแบบร่าง</button>
+          <button type="button" onClick={publish} disabled={state.busy} className={`${actionClass} bg-emerald-600 text-white hover:bg-emerald-700`}>
+            {isPublished ? 'เผยแพร่การเปลี่ยนแปลง' : 'เผยแพร่หน้าร้าน'}
+          </button>
+          {isPublished ? <button type="button" onClick={unpublish} disabled={state.busy} className={`${actionClass} bg-amber-500 text-white hover:bg-amber-600`}>ยกเลิกเผยแพร่</button> : null}
         </div>
       </section>
 
@@ -238,9 +243,9 @@ const StoreHomepageEditorPage = () => {
           <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <h2 className="font-bold text-slate-900">ข้อมูลหน้าร้าน</h2>
             <div className="mt-4 grid gap-4">
-              <label className="text-sm font-medium text-slate-700">ชื่อที่แสดง<input disabled={isPublished} className={`${fieldClass} mt-1 disabled:bg-slate-100`} value={capability.displayName || ''} onChange={(event) => setCapability((current) => ({ ...current, displayName: event.target.value }))} /></label>
-              <label className="text-sm font-medium text-slate-700">URL ร้าน<input disabled={isPublished} className={`${fieldClass} mt-1 disabled:bg-slate-100`} value={capability.storefrontSlug || ''} onChange={(event) => setCapability((current) => ({ ...current, storefrontSlug: event.target.value }))} placeholder="advancetech" /></label>
-              <label className="text-sm font-medium text-slate-700">เบอร์ติดต่อ<input disabled={isPublished} className={`${fieldClass} mt-1 disabled:bg-slate-100`} value={capability.contactPhone || ''} onChange={(event) => setCapability((current) => ({ ...current, contactPhone: event.target.value }))} /></label>
+              <label className="text-sm font-medium text-slate-700">ชื่อที่แสดง<input className={`${fieldClass} mt-1`} value={capability.displayName || ''} onChange={(event) => setCapability((current) => ({ ...current, displayName: event.target.value }))} /></label>
+              <label className="text-sm font-medium text-slate-700">URL ร้าน<input className={`${fieldClass} mt-1`} value={capability.storefrontSlug || ''} onChange={(event) => setCapability((current) => ({ ...current, storefrontSlug: event.target.value }))} placeholder="advancetech" /></label>
+              <label className="text-sm font-medium text-slate-700">เบอร์ติดต่อ<input className={`${fieldClass} mt-1`} value={capability.contactPhone || ''} onChange={(event) => setCapability((current) => ({ ...current, contactPhone: event.target.value }))} /></label>
               <div className="rounded-xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-700">สถานะสาธารณะ: <strong>{isPublished ? 'เปิดใช้งาน' : 'ยังไม่เผยแพร่'}</strong></div>
             </div>
           </section>
@@ -254,30 +259,30 @@ const StoreHomepageEditorPage = () => {
           <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <h2 className="font-bold text-slate-900">อัตลักษณ์และภาพหน้าร้าน</h2>
             <div className="mt-4 grid gap-4">
-              <label className="text-sm font-medium text-slate-700">URL โลโก้ร้าน<input disabled={isPublished} className={`${fieldClass} mt-1 disabled:bg-slate-100`} value={content.logoUrl} onChange={(event) => updateContent('logoUrl', event.target.value)} placeholder="https://.../logo.png" /></label>
-              <label className="text-sm font-medium text-slate-700">URL ภาพปกหน้าร้าน<input disabled={isPublished} className={`${fieldClass} mt-1 disabled:bg-slate-100`} value={content.coverImageUrl} onChange={(event) => updateContent('coverImageUrl', event.target.value)} placeholder="https://.../cover.jpg" /></label>
-              <label className="text-sm font-medium text-slate-700">หัวเรื่องร้าน<input disabled={isPublished} className={`${fieldClass} mt-1 disabled:bg-slate-100`} value={content.storeHeadline} onChange={(event) => updateContent('storeHeadline', event.target.value)} placeholder="ร้านอุปกรณ์ไอทีที่ดูแลคุณครบทุกขั้นตอน" /></label>
-              <label className="text-sm font-medium text-slate-700">คำอธิบายร้าน<textarea disabled={isPublished} rows={3} className={`${fieldClass} mt-1 resize-none disabled:bg-slate-100`} value={content.storeDescription} onChange={(event) => updateContent('storeDescription', event.target.value)} placeholder="แนะนำความเชี่ยวชาญ จุดเด่น และบริการของร้าน" /></label>
+              <label className="text-sm font-medium text-slate-700">URL โลโก้ร้าน<input className={`${fieldClass} mt-1`} value={content.logoUrl} onChange={(event) => updateContent('logoUrl', event.target.value)} placeholder="https://.../logo.png" /></label>
+              <label className="text-sm font-medium text-slate-700">URL ภาพปกหน้าร้าน<input className={`${fieldClass} mt-1`} value={content.coverImageUrl} onChange={(event) => updateContent('coverImageUrl', event.target.value)} placeholder="https://.../cover.jpg" /></label>
+              <label className="text-sm font-medium text-slate-700">หัวเรื่องร้าน<input className={`${fieldClass} mt-1`} value={content.storeHeadline} onChange={(event) => updateContent('storeHeadline', event.target.value)} placeholder="ร้านอุปกรณ์ไอทีที่ดูแลคุณครบทุกขั้นตอน" /></label>
+              <label className="text-sm font-medium text-slate-700">คำอธิบายร้าน<textarea rows={3} className={`${fieldClass} mt-1 resize-none`} value={content.storeDescription} onChange={(event) => updateContent('storeDescription', event.target.value)} placeholder="แนะนำความเชี่ยวชาญ จุดเด่น และบริการของร้าน" /></label>
             </div>
           </section>
 
           <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <h2 className="font-bold text-slate-900">Hero Banner</h2>
             <div className="mt-4 grid gap-4">
-              <label className="text-sm font-medium text-slate-700">URL ภาพ Hero<input disabled={isPublished} className={`${fieldClass} mt-1 disabled:bg-slate-100`} value={content.heroImageUrl} onChange={(event) => updateContent('heroImageUrl', event.target.value)} placeholder="https://.../hero.jpg" /></label>
-              <label className="text-sm font-medium text-slate-700">ข้อความหลัก<input disabled={isPublished} className={`${fieldClass} mt-1 disabled:bg-slate-100`} value={content.heroHeadline} onChange={(event) => updateContent('heroHeadline', event.target.value)} /></label>
-              <label className="text-sm font-medium text-slate-700">ข้อความสนับสนุน<textarea disabled={isPublished} rows={3} className={`${fieldClass} mt-1 resize-none disabled:bg-slate-100`} value={content.heroSupportingText} onChange={(event) => updateContent('heroSupportingText', event.target.value)} /></label>
+              <label className="text-sm font-medium text-slate-700">URL ภาพ Hero<input className={`${fieldClass} mt-1`} value={content.heroImageUrl} onChange={(event) => updateContent('heroImageUrl', event.target.value)} placeholder="https://.../hero.jpg" /></label>
+              <label className="text-sm font-medium text-slate-700">ข้อความหลัก<input className={`${fieldClass} mt-1`} value={content.heroHeadline} onChange={(event) => updateContent('heroHeadline', event.target.value)} /></label>
+              <label className="text-sm font-medium text-slate-700">ข้อความสนับสนุน<textarea rows={3} className={`${fieldClass} mt-1 resize-none`} value={content.heroSupportingText} onChange={(event) => updateContent('heroSupportingText', event.target.value)} /></label>
             </div>
           </section>
 
           <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <h2 className="font-bold text-slate-900">โปรโมชั่น</h2>
             <div className="mt-4 grid gap-4">
-              <label className="text-sm font-medium text-slate-700">ชื่อโปรโมชั่น<input disabled={isPublished} className={`${fieldClass} mt-1 disabled:bg-slate-100`} value={content.promotionTitle} onChange={(event) => updateContent('promotionTitle', event.target.value)} /></label>
-              <label className="text-sm font-medium text-slate-700">URL ภาพโปรโมชั่น<input disabled={isPublished} className={`${fieldClass} mt-1 disabled:bg-slate-100`} value={content.promotionImageUrl} onChange={(event) => updateContent('promotionImageUrl', event.target.value)} placeholder="https://.../promotion.jpg" /></label>
+              <label className="text-sm font-medium text-slate-700">ชื่อโปรโมชั่น<input className={`${fieldClass} mt-1`} value={content.promotionTitle} onChange={(event) => updateContent('promotionTitle', event.target.value)} /></label>
+              <label className="text-sm font-medium text-slate-700">URL ภาพโปรโมชั่น<input className={`${fieldClass} mt-1`} value={content.promotionImageUrl} onChange={(event) => updateContent('promotionImageUrl', event.target.value)} placeholder="https://.../promotion.jpg" /></label>
               <div className="grid gap-4 sm:grid-cols-2">
-                <label className="text-sm font-medium text-slate-700">ข้อความปุ่ม<input disabled={isPublished} className={`${fieldClass} mt-1 disabled:bg-slate-100`} value={content.promotionCtaLabel} onChange={(event) => updateContent('promotionCtaLabel', event.target.value)} placeholder="ดูสินค้าโปรโมชั่น" /></label>
-                <label className="text-sm font-medium text-slate-700">ลิงก์ปุ่ม<input disabled={isPublished} className={`${fieldClass} mt-1 disabled:bg-slate-100`} value={content.promotionCtaUrl} onChange={(event) => updateContent('promotionCtaUrl', event.target.value)} placeholder="/advancetech?q=promotion" /></label>
+                <label className="text-sm font-medium text-slate-700">ข้อความปุ่ม<input className={`${fieldClass} mt-1`} value={content.promotionCtaLabel} onChange={(event) => updateContent('promotionCtaLabel', event.target.value)} placeholder="ดูสินค้าโปรโมชั่น" /></label>
+                <label className="text-sm font-medium text-slate-700">ลิงก์ปุ่ม<input className={`${fieldClass} mt-1`} value={content.promotionCtaUrl} onChange={(event) => updateContent('promotionCtaUrl', event.target.value)} placeholder="/advancetech?q=promotion" /></label>
               </div>
             </div>
           </section>
@@ -287,7 +292,7 @@ const StoreHomepageEditorPage = () => {
             <div className="mt-4 space-y-2">
               {SECTION_OPTIONS.map(([type, label]) => {
                 const section = (draft.sectionConfiguration || []).find((item) => item.type === type);
-                return <label key={type} className="flex items-center justify-between rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-700"><span>{label}</span><input disabled={isPublished} type="checkbox" checked={Boolean(section?.enabled)} onChange={() => toggleSection(type)} /></label>;
+                return <label key={type} className="flex items-center justify-between rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-700"><span>{label}</span><input type="checkbox" checked={Boolean(section?.enabled)} onChange={() => toggleSection(type)} /></label>;
               })}
             </div>
           </section>

@@ -30,5 +30,7 @@ export const uploadStorefrontMedia = async ({ file, purpose }) => {
   const formData = new FormData();
   formData.append('file', file);
   formData.append('purpose', purpose);
-  return unwrap(await apiClient.post('/store-experience/media/upload', formData));
+  return unwrap(await apiClient.post('/store-experience/media/upload', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }));
 };

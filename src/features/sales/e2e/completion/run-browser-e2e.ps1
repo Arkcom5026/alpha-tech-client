@@ -226,7 +226,7 @@ try {
   if ($null -eq $PreviousViteApiBaseUrl) { Remove-Item Env:VITE_API_BASE_URL -ErrorAction SilentlyContinue }
   else { $env:VITE_API_BASE_URL = $PreviousViteApiBaseUrl }
 
-  if ($null -eq $PreviousE2EBaseUrl) { Remove-Item Env:VITE_API_BASE_URL -ErrorAction SilentlyContinue }
+  if ($null -eq $PreviousE2EBaseUrl) { Remove-Item Env:E2E_BASE_URL -ErrorAction SilentlyContinue }
   else { $env:E2E_BASE_URL = $PreviousE2EBaseUrl }
 
   if ($null -eq $PreviousResultPath) { Remove-Item Env:POS_SALE_E2E_RESULT_PATH -ErrorAction SilentlyContinue }

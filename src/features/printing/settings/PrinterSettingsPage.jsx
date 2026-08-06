@@ -49,5 +49,5 @@ const PrinterSettingsPage = () => {
   )
 }
 
-export { PrinterSettingsPage, resolveEmployeeBranchId }
+export { PrinterSettingsPage }
 export default PrinterSettingsPage

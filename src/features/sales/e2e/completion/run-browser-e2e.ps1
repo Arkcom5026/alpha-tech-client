@@ -117,6 +117,8 @@ try {
   }
 
   $RequiredEnvironmentNames = @(
+    'POS_SALE_E2E_OPERATOR_EMAIL',
+    'POS_SALE_E2E_OPERATOR_PASSWORD',
     'POS_SALE_E2E_BRANCH_ID',
     'POS_SALE_E2E_BRANCH_SLUG',
     'POS_SALE_E2E_STOCK_BARCODE',
@@ -186,8 +188,8 @@ try {
 
   Push-Location $ClientRoot
   try {
-    Write-Host 'Ensuring reusable Merchant E2E authentication state...' -ForegroundColor Cyan
-    node src/features/e2e/auth/ensureMerchantAuthState.js
+    Write-Host 'Ensuring module-owned Sale E2E authentication state...' -ForegroundColor Cyan
+    node src/features/sales/e2e/completion/ensureSaleMerchantAuthState.js
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
     npx playwright test src/features/sales/e2e/completion/saleCompletion.browser.spec.js
@@ -224,7 +226,7 @@ try {
   if ($null -eq $PreviousViteApiBaseUrl) { Remove-Item Env:VITE_API_BASE_URL -ErrorAction SilentlyContinue }
   else { $env:VITE_API_BASE_URL = $PreviousViteApiBaseUrl }
 
-  if ($null -eq $PreviousE2EBaseUrl) { Remove-Item Env:E2E_BASE_URL -ErrorAction SilentlyContinue }
+  if ($null -eq $PreviousE2EBaseUrl) { Remove-Item Env:VITE_API_BASE_URL -ErrorAction SilentlyContinue }
   else { $env:E2E_BASE_URL = $PreviousE2EBaseUrl }
 
   if ($null -eq $PreviousResultPath) { Remove-Item Env:POS_SALE_E2E_RESULT_PATH -ErrorAction SilentlyContinue }

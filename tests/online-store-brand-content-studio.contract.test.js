@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import assert from 'node:assert';
 
 const page = fs.readFileSync('src/features/storeExperience/pages/StoreHomepageEditorPage.jsx', 'utf8');
+const api = fs.readFileSync('src/features/storeExperience/api/storeExperienceApi.js', 'utf8');
 
 assert.match(page, /PLATFORM_THEME_PRESET = 'platform-default'/, 'platform theme authority must be explicit');
 assert.match(page, /PLATFORM_LAYOUT_PRESET = 'platform-default'/, 'platform layout authority must be explicit');
@@ -35,6 +36,16 @@ assert.match(
   page,
   /savePartnerStoreCapability\(capabilityPayload\(capability\.storefrontEnabled\)\)/,
   'saving a live-store draft must preserve public storefront availability'
+);
+assert.match(
+  api,
+  /apiClient\.put\('\/partner-store\/capability', payload\)/,
+  'capability API must forward the caller-provided storefrontEnabled value'
+);
+assert.doesNotMatch(
+  api,
+  /storefrontEnabled:\s*false/,
+  'capability API must not force-disable the public storefront on every save'
 );
 assert.match(page, /บันทึกแบบร่าง/, 'save draft action must remain available');
 assert.match(page, /เผยแพร่การเปลี่ยนแปลง/, 'live stores must expose an explicit republish action');

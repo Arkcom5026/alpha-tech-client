@@ -18,6 +18,7 @@ test('normalizes local EPSON receipt queue as RAW eligible', () => {
   assert.equal(printer.queueAuthority, 'LOCAL_QUEUE')
   assert.equal(printer.isLocalQueue, true)
   assert.equal(printer.paperWidthMm, 80)
+  assert.equal(printer.capabilities.driverManaged, false)
   assert.equal(printer.capabilities.raw, true)
   assert.equal(printer.capabilities.cut, true)
   assert.equal(printer.isOnline, true)
@@ -38,6 +39,8 @@ test('normalizes UNC shared connection as non-local RAW authority', () => {
 
   assert.equal(printer.queueAuthority, 'SHARED_CONNECTION')
   assert.equal(printer.isSharedConnection, true)
+  assert.equal(printer.capabilities.driverManaged, true)
   assert.equal(printer.capabilities.raw, false)
   assert.equal(printer.capabilities.cut, false)
+  assert.equal(printer.capabilities.cashDrawer, false)
 })

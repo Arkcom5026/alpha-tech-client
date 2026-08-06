@@ -35,6 +35,7 @@ const normalizePrinter = (printer) => {
     isSharedConnection: queueAuthority === 'SHARED_CONNECTION',
     paperWidthMm: isReceiptPrinter(printer) ? 80 : null,
     capabilities: {
+      driverManaged: queueAuthority === 'SHARED_CONNECTION',
       raw: localRawEligible,
       cut: localRawEligible && isEscPosPrinter(printer),
       cashDrawer: localRawEligible && isEscPosPrinter(printer),

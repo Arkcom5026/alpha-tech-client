@@ -3,6 +3,7 @@ import assert from 'node:assert';
 
 const page = fs.readFileSync('src/features/storeExperience/pages/StoreHomepageEditorPage.jsx', 'utf8');
 const api = fs.readFileSync('src/features/storeExperience/api/storeExperienceApi.js', 'utf8');
+const uploadField = fs.readFileSync('src/features/storeExperience/components/StorefrontMediaUploadField.jsx', 'utf8');
 const publicPage = fs.readFileSync('src/features/storefront/pages/PublicStorefrontPage.jsx', 'utf8');
 
 assert.match(page, /PLATFORM_THEME_PRESET = 'platform-default'/, 'platform theme authority must be explicit');
@@ -27,6 +28,19 @@ for (const field of [
 ]) {
   assert.match(page, new RegExp(field), `brand content field missing: ${field}`);
 }
+
+for (const purpose of ['STORE_LOGO', 'STORE_COVER', 'STORE_HERO', 'STORE_PROMOTION']) {
+  assert.match(page, new RegExp(`purpose="${purpose}"`), `storefront media upload purpose missing: ${purpose}`);
+}
+assert.match(page, /upload=\{uploadStorefrontMedia\}/, 'media fields must use the authenticated upload authority');
+assert.match(api, /apiClient\.post\('\/store-experience\/media\/upload', formData, \{/, 'client must call the branch-scoped storefront media endpoint');
+assert.match(api, /headers:\s*\{\s*'Content-Type':\s*'multipart\/form-data'\s*\}/, 'storefront upload must preserve the multipart boundary contract');
+assert.match(api, /formData\.append\('file', file\)/, 'upload request must send the selected file');
+assert.match(api, /formData\.append\('purpose', purpose\)/, 'upload request must send only the media purpose');
+assert.doesNotMatch(api, /branchId/, 'client media upload must not submit authoritative branch ownership');
+assert.match(uploadField, /MAX_FILE_SIZE_BYTES = 5 \* 1024 \* 1024/, 'client must enforce the 5 MB storefront media limit');
+assert.match(uploadField, /startsWith\('image\/'\)/, 'client must reject non-image files before upload');
+assert.match(uploadField, /result\?\.secureUrl/, 'upload field must bind the normalized secure URL');
 
 assert.match(page, /contentConfiguration: draft\.contentConfiguration/, 'draft payload must include merchant content configuration');
 assert.match(page, /themePreset: PLATFORM_THEME_PRESET/, 'draft payload must preserve platform theme authority');

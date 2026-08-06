@@ -25,3 +25,12 @@ export const publishStoreExperience = async () =>
 
 export const unpublishStoreExperience = async () =>
   unwrap(await apiClient.post('/store-experience/unpublish'));
+
+export const uploadStorefrontMedia = async ({ file, purpose }) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('purpose', purpose);
+  return unwrap(await apiClient.post('/store-experience/media/upload', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }));
+};

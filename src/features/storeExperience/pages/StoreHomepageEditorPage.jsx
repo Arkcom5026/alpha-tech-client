@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import StorefrontMediaUploadField from '../components/StorefrontMediaUploadField';
 import {
   getPartnerStoreCapability,
   getStoreExperienceDraft,
@@ -6,6 +7,7 @@ import {
   savePartnerStoreCapability,
   saveStoreExperienceDraft,
   unpublishStoreExperience,
+  uploadStorefrontMedia,
 } from '../api/storeExperienceApi';
 
 const PLATFORM_THEME_PRESET = 'platform-default';
@@ -268,8 +270,10 @@ const StoreHomepageEditorPage = () => {
           <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <h2 className="font-bold text-slate-900">อัตลักษณ์และภาพหน้าร้าน</h2>
             <div className="mt-4 grid gap-4">
-              <label className="text-sm font-medium text-slate-700">URL โลโก้ร้าน<input className={`${fieldClass} mt-1`} value={content.logoUrl} onChange={(event) => updateContent('logoUrl', event.target.value)} placeholder="https://.../logo.png" /></label>
-              <label className="text-sm font-medium text-slate-700">URL ภาพปกหน้าร้าน<input className={`${fieldClass} mt-1`} value={content.coverImageUrl} onChange={(event) => updateContent('coverImageUrl', event.target.value)} placeholder="https://.../cover.jpg" /></label>
+              <StorefrontMediaUploadField label="โลโก้ร้าน" purpose="STORE_LOGO" value={content.logoUrl} upload={uploadStorefrontMedia} onUploaded={(url) => updateContent('logoUrl', url)} disabled={state.busy} />
+              <StorefrontMediaUploadField label="ภาพปกหน้าร้าน" purpose="STORE_COVER" value={content.coverImageUrl} upload={uploadStorefrontMedia} onUploaded={(url) => updateContent('coverImageUrl', url)} disabled={state.busy} />
+              <label className="text-sm font-medium text-slate-700">URL โลโก้ร้าน (ทางเลือก)<input className={`${fieldClass} mt-1`} value={content.logoUrl} onChange={(event) => updateContent('logoUrl', event.target.value)} placeholder="https://.../logo.png" /></label>
+              <label className="text-sm font-medium text-slate-700">URL ภาพปกหน้าร้าน (ทางเลือก)<input className={`${fieldClass} mt-1`} value={content.coverImageUrl} onChange={(event) => updateContent('coverImageUrl', event.target.value)} placeholder="https://.../cover.jpg" /></label>
               <label className="text-sm font-medium text-slate-700">หัวเรื่องร้าน<input className={`${fieldClass} mt-1`} value={content.storeHeadline} onChange={(event) => updateContent('storeHeadline', event.target.value)} placeholder="ร้านอุปกรณ์ไอทีที่ดูแลคุณครบทุกขั้นตอน" /></label>
               <label className="text-sm font-medium text-slate-700">คำอธิบายร้าน<textarea rows={3} className={`${fieldClass} mt-1 resize-none`} value={content.storeDescription} onChange={(event) => updateContent('storeDescription', event.target.value)} placeholder="แนะนำความเชี่ยวชาญ จุดเด่น และบริการของร้าน" /></label>
             </div>
@@ -278,7 +282,8 @@ const StoreHomepageEditorPage = () => {
           <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <h2 className="font-bold text-slate-900">Hero Banner</h2>
             <div className="mt-4 grid gap-4">
-              <label className="text-sm font-medium text-slate-700">URL ภาพ Hero<input className={`${fieldClass} mt-1`} value={content.heroImageUrl} onChange={(event) => updateContent('heroImageUrl', event.target.value)} placeholder="https://.../hero.jpg" /></label>
+              <StorefrontMediaUploadField label="ภาพ Hero" purpose="STORE_HERO" value={content.heroImageUrl} upload={uploadStorefrontMedia} onUploaded={(url) => updateContent('heroImageUrl', url)} disabled={state.busy} />
+              <label className="text-sm font-medium text-slate-700">URL ภาพ Hero (ทางเลือก)<input className={`${fieldClass} mt-1`} value={content.heroImageUrl} onChange={(event) => updateContent('heroImageUrl', event.target.value)} placeholder="https://.../hero.jpg" /></label>
               <label className="text-sm font-medium text-slate-700">ข้อความหลัก<input className={`${fieldClass} mt-1`} value={content.heroHeadline} onChange={(event) => updateContent('heroHeadline', event.target.value)} /></label>
               <label className="text-sm font-medium text-slate-700">ข้อความสนับสนุน<textarea rows={3} className={`${fieldClass} mt-1 resize-none`} value={content.heroSupportingText} onChange={(event) => updateContent('heroSupportingText', event.target.value)} /></label>
             </div>
@@ -288,7 +293,8 @@ const StoreHomepageEditorPage = () => {
             <h2 className="font-bold text-slate-900">โปรโมชั่น</h2>
             <div className="mt-4 grid gap-4">
               <label className="text-sm font-medium text-slate-700">ชื่อโปรโมชั่น<input className={`${fieldClass} mt-1`} value={content.promotionTitle} onChange={(event) => updateContent('promotionTitle', event.target.value)} /></label>
-              <label className="text-sm font-medium text-slate-700">URL ภาพโปรโมชั่น<input className={`${fieldClass} mt-1`} value={content.promotionImageUrl} onChange={(event) => updateContent('promotionImageUrl', event.target.value)} placeholder="https://.../promotion.jpg" /></label>
+              <StorefrontMediaUploadField label="ภาพโปรโมชั่น" purpose="STORE_PROMOTION" value={content.promotionImageUrl} upload={uploadStorefrontMedia} onUploaded={(url) => updateContent('promotionImageUrl', url)} disabled={state.busy} />
+              <label className="text-sm font-medium text-slate-700">URL ภาพโปรโมชั่น (ทางเลือก)<input className={`${fieldClass} mt-1`} value={content.promotionImageUrl} onChange={(event) => updateContent('promotionImageUrl', event.target.value)} placeholder="https://.../promotion.jpg" /></label>
               <div className="grid gap-4 sm:grid-cols-2">
                 <label className="text-sm font-medium text-slate-700">ข้อความปุ่ม<input className={`${fieldClass} mt-1`} value={content.promotionCtaLabel} onChange={(event) => updateContent('promotionCtaLabel', event.target.value)} placeholder="ดูสินค้าโปรโมชั่น" /></label>
                 <label className="text-sm font-medium text-slate-700">ลิงก์ปุ่ม<input className={`${fieldClass} mt-1`} value={content.promotionCtaUrl} onChange={(event) => updateContent('promotionCtaUrl', event.target.value)} placeholder="/advancetech?q=promotion" /></label>

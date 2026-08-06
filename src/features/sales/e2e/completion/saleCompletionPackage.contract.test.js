@@ -16,6 +16,8 @@ assert.match(spec, /POS_SALE_E2E_RESULT_PATH/);
 assert.match(spec, /Receipt document handoff lost the Sale session/);
 assert.match(spec, /authRedirectObserved: false/);
 assert.match(spec, /receiptMode: receiptPage \? 'POPUP' : 'SAME_TAB'/);
+assert.match(spec, /getByText\(\/ไม่พบลูกค้าในร้านนี้\/\)/);
+assert.doesNotMatch(spec, /ไม่พบลูกค้าในร้านนี้ สามารถเพิ่มลูกค้าใหม่ได้/);
 assert.doesNotMatch(spec, /page\.goto\([^\n]*\/login/);
 assert.doesNotMatch(spec, /features\/e2e\/auth/);
 

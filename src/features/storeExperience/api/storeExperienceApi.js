@@ -34,3 +34,10 @@ export const uploadStorefrontMedia = async ({ file, purpose }) => {
     headers: { 'Content-Type': 'multipart/form-data' },
   }));
 };
+
+export const listStorefrontMedia = async ({ purpose, pageSize = 24, nextCursor } = {}) => {
+  const params = { pageSize };
+  if (purpose) params.purpose = purpose;
+  if (nextCursor) params.nextCursor = nextCursor;
+  return unwrap(await apiClient.get('/store-experience/media', { params }));
+};

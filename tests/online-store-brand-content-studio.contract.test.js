@@ -30,4 +30,18 @@ assert.match(page, /themePreset: PLATFORM_THEME_PRESET/, 'draft payload must pre
 assert.match(page, /layoutPreset: PLATFORM_LAYOUT_PRESET/, 'draft payload must preserve platform layout authority');
 assert.match(page, /ธีมหลักดูแลโดย Alpha-Tech Platform/, 'studio must explain locked platform theme authority');
 
+assert.doesNotMatch(page, /disabled=\{isPublished\}/, 'published stores must remain editable as draft');
+assert.match(
+  page,
+  /savePartnerStoreCapability\(capabilityPayload\(capability\.storefrontEnabled\)\)/,
+  'saving a live-store draft must preserve public storefront availability'
+);
+assert.match(page, /บันทึกแบบร่าง/, 'save draft action must remain available');
+assert.match(page, /เผยแพร่การเปลี่ยนแปลง/, 'live stores must expose an explicit republish action');
+assert.match(
+  page,
+  /หน้าร้านสาธารณะยังใช้ฉบับที่เผยแพร่อยู่/,
+  'live draft save must explain published snapshot isolation'
+);
+
 console.log('online store brand content studio contract: PASS');

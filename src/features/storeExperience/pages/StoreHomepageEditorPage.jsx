@@ -8,6 +8,15 @@ import {
   unpublishStoreExperience,
 } from '../api/storeExperienceApi';
 
+const PLATFORM_THEME_PRESET = 'platform-default';
+const PLATFORM_LAYOUT_PRESET = 'platform-default';
+const PLATFORM_TOKENS = {
+  brandPrimary: '#1e40af',
+  brandAccent: '#f59e0b',
+  surface: '#ffffff',
+  text: '#111827',
+};
+
 const SECTION_OPTIONS = [
   ['HERO', 'ภาพเปิดร้าน'],
   ['FEATURED_PRODUCTS', 'สินค้าแนะนำ'],
@@ -33,21 +42,31 @@ const defaultCapability = {
   serviceAreas: [],
 };
 
+const defaultContentConfiguration = {
+  logoUrl: '',
+  coverImageUrl: '',
+  storeHeadline: '',
+  storeDescription: '',
+  heroImageUrl: '',
+  heroHeadline: 'เลือกสินค้าที่ใช่ จากร้านที่คุณไว้วางใจ',
+  heroSupportingText: 'ค้นหาและเลือกซื้อสินค้าจากสต๊อกของร้านโดยตรง พร้อมราคาและสถานะล่าสุด',
+  promotionTitle: '',
+  promotionImageUrl: '',
+  promotionCtaLabel: '',
+  promotionCtaUrl: '',
+};
+
 const defaultDraft = {
   status: 'DRAFT',
-  themePreset: 'modern-light',
-  themeTokens: {
-    brandPrimary: '#1e40af',
-    brandAccent: '#f59e0b',
-    surface: '#ffffff',
-    text: '#111827',
-  },
-  layoutPreset: 'catalog-grid',
+  themePreset: PLATFORM_THEME_PRESET,
+  themeTokens: PLATFORM_TOKENS,
+  layoutPreset: PLATFORM_LAYOUT_PRESET,
   sectionConfiguration: SECTION_OPTIONS.map(([type], index) => ({
     id: `${type.toLowerCase().replaceAll('_', '-')}-${index + 1}`,
     type,
     enabled: true,
   })),
+  contentConfiguration: defaultContentConfiguration,
 };
 
 const fieldClass = 'w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100';
@@ -67,8 +86,14 @@ const StoreHomepageEditorPage = () => {
         setDraft({
           ...defaultDraft,
           ...(nextDraft || {}),
-          themeTokens: { ...defaultDraft.themeTokens, ...(nextDraft?.themeTokens || {}) },
+          themePreset: PLATFORM_THEME_PRESET,
+          themeTokens: PLATFORM_TOKENS,
+          layoutPreset: PLATFORM_LAYOUT_PRESET,
           sectionConfiguration: nextDraft?.sectionConfiguration || defaultDraft.sectionConfiguration,
+          contentConfiguration: {
+            ...defaultContentConfiguration,
+            ...(nextDraft?.contentConfiguration || {}),
+          },
         });
         setState({ loading: false, busy: false, error: '', success: '' });
       })
@@ -84,10 +109,15 @@ const StoreHomepageEditorPage = () => {
     () => (draft.sectionConfiguration || []).filter((section) => section.enabled),
     [draft.sectionConfiguration]
   );
+  const content = draft.contentConfiguration || defaultContentConfiguration;
 
-  const updateToken = (key, value) => setDraft((current) => ({
+  const updateContent = (key, value) => setDraft((current) => ({
     ...current,
-    themeTokens: { ...(current.themeTokens || {}), [key]: value },
+    contentConfiguration: {
+      ...defaultContentConfiguration,
+      ...(current.contentConfiguration || {}),
+      [key]: value,
+    },
   }));
 
   const toggleSection = (type) => setDraft((current) => ({
@@ -117,10 +147,11 @@ const StoreHomepageEditorPage = () => {
   });
 
   const draftPayload = () => ({
-    themePreset: draft.themePreset,
-    themeTokens: draft.themeTokens,
-    layoutPreset: draft.layoutPreset,
+    themePreset: PLATFORM_THEME_PRESET,
+    themeTokens: PLATFORM_TOKENS,
+    layoutPreset: PLATFORM_LAYOUT_PRESET,
     sectionConfiguration: draft.sectionConfiguration,
+    contentConfiguration: draft.contentConfiguration,
   });
 
   const run = async (operation) => {
@@ -184,7 +215,7 @@ const StoreHomepageEditorPage = () => {
             </span>
           </div>
           <h1 className="mt-1 text-2xl font-bold text-slate-900">ออกแบบหน้าหลักของร้าน</h1>
-          <p className="mt-1 text-sm text-slate-500">บันทึกแบบร่าง ดูตัวอย่าง และเผยแพร่จากหน้าเดียว</p>
+          <p className="mt-1 text-sm text-slate-500">จัดการโลโก้ ภาพหน้าร้าน โปรโมชั่น และข้อความแบรนด์ภายในมาตรฐานเดียวของแพลตฟอร์ม</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <button type="button" onClick={preview} className={`${actionClass} border border-slate-300 bg-white text-slate-700 hover:bg-slate-50`}>ดูหน้าร้าน</button>
@@ -202,7 +233,7 @@ const StoreHomepageEditorPage = () => {
       {state.error ? <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{state.error}</div> : null}
       {state.success ? <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{state.success}</div> : null}
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,460px)_minmax(0,1fr)]">
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,500px)_minmax(0,1fr)]">
         <div className="space-y-6">
           <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <h2 className="font-bold text-slate-900">ข้อมูลหน้าร้าน</h2>
@@ -214,12 +245,40 @@ const StoreHomepageEditorPage = () => {
             </div>
           </section>
 
+          <section className="rounded-2xl border border-blue-200 bg-blue-50 p-5 shadow-sm">
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-700">Platform Design Authority</p>
+            <h2 className="mt-1 font-bold text-slate-900">ธีมหลักดูแลโดย Alpha-Tech Platform</h2>
+            <p className="mt-2 text-sm leading-6 text-slate-600">รูปแบบตัวอักษร สีพื้นฐาน ระยะห่าง การตอบสนองบนมือถือ และองค์ประกอบการขายถูกควบคุมโดยแพลตฟอร์ม เพื่อให้หน้าร้านทุกแห่งใช้งานง่าย ปลอดภัย และมีคุณภาพสม่ำเสมอ</p>
+          </section>
+
           <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <h2 className="font-bold text-slate-900">รูปแบบและสี</h2>
-            <div className="mt-4 grid gap-4 sm:grid-cols-2">
-              <label className="text-sm font-medium text-slate-700">ธีม<select disabled={isPublished} className={`${fieldClass} mt-1 disabled:bg-slate-100`} value={draft.themePreset} onChange={(event) => setDraft((current) => ({ ...current, themePreset: event.target.value }))}><option value="platform-default">มาตรฐานแพลตฟอร์ม</option><option value="modern-light">สว่างทันสมัย</option><option value="classic-slate">คลาสสิก</option></select></label>
-              <label className="text-sm font-medium text-slate-700">เลย์เอาต์<select disabled={isPublished} className={`${fieldClass} mt-1 disabled:bg-slate-100`} value={draft.layoutPreset} onChange={(event) => setDraft((current) => ({ ...current, layoutPreset: event.target.value }))}><option value="platform-default">มาตรฐานแพลตฟอร์ม</option><option value="catalog-grid">กริดสินค้า</option><option value="catalog-list">รายการสินค้า</option></select></label>
-              {Object.entries(draft.themeTokens || {}).map(([key, value]) => <label key={key} className="text-sm font-medium text-slate-700">{key}<div className="mt-1 flex gap-2"><input disabled={isPublished} type="color" value={value} onChange={(event) => updateToken(key, event.target.value)} className="h-11 w-14 rounded-lg border border-slate-200 bg-white p-1 disabled:opacity-60" /><input disabled={isPublished} className={`${fieldClass} disabled:bg-slate-100`} value={value} onChange={(event) => updateToken(key, event.target.value)} /></div></label>)}
+            <h2 className="font-bold text-slate-900">อัตลักษณ์และภาพหน้าร้าน</h2>
+            <div className="mt-4 grid gap-4">
+              <label className="text-sm font-medium text-slate-700">URL โลโก้ร้าน<input disabled={isPublished} className={`${fieldClass} mt-1 disabled:bg-slate-100`} value={content.logoUrl} onChange={(event) => updateContent('logoUrl', event.target.value)} placeholder="https://.../logo.png" /></label>
+              <label className="text-sm font-medium text-slate-700">URL ภาพปกหน้าร้าน<input disabled={isPublished} className={`${fieldClass} mt-1 disabled:bg-slate-100`} value={content.coverImageUrl} onChange={(event) => updateContent('coverImageUrl', event.target.value)} placeholder="https://.../cover.jpg" /></label>
+              <label className="text-sm font-medium text-slate-700">หัวเรื่องร้าน<input disabled={isPublished} className={`${fieldClass} mt-1 disabled:bg-slate-100`} value={content.storeHeadline} onChange={(event) => updateContent('storeHeadline', event.target.value)} placeholder="ร้านอุปกรณ์ไอทีที่ดูแลคุณครบทุกขั้นตอน" /></label>
+              <label className="text-sm font-medium text-slate-700">คำอธิบายร้าน<textarea disabled={isPublished} rows={3} className={`${fieldClass} mt-1 resize-none disabled:bg-slate-100`} value={content.storeDescription} onChange={(event) => updateContent('storeDescription', event.target.value)} placeholder="แนะนำความเชี่ยวชาญ จุดเด่น และบริการของร้าน" /></label>
+            </div>
+          </section>
+
+          <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <h2 className="font-bold text-slate-900">Hero Banner</h2>
+            <div className="mt-4 grid gap-4">
+              <label className="text-sm font-medium text-slate-700">URL ภาพ Hero<input disabled={isPublished} className={`${fieldClass} mt-1 disabled:bg-slate-100`} value={content.heroImageUrl} onChange={(event) => updateContent('heroImageUrl', event.target.value)} placeholder="https://.../hero.jpg" /></label>
+              <label className="text-sm font-medium text-slate-700">ข้อความหลัก<input disabled={isPublished} className={`${fieldClass} mt-1 disabled:bg-slate-100`} value={content.heroHeadline} onChange={(event) => updateContent('heroHeadline', event.target.value)} /></label>
+              <label className="text-sm font-medium text-slate-700">ข้อความสนับสนุน<textarea disabled={isPublished} rows={3} className={`${fieldClass} mt-1 resize-none disabled:bg-slate-100`} value={content.heroSupportingText} onChange={(event) => updateContent('heroSupportingText', event.target.value)} /></label>
+            </div>
+          </section>
+
+          <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <h2 className="font-bold text-slate-900">โปรโมชั่น</h2>
+            <div className="mt-4 grid gap-4">
+              <label className="text-sm font-medium text-slate-700">ชื่อโปรโมชั่น<input disabled={isPublished} className={`${fieldClass} mt-1 disabled:bg-slate-100`} value={content.promotionTitle} onChange={(event) => updateContent('promotionTitle', event.target.value)} /></label>
+              <label className="text-sm font-medium text-slate-700">URL ภาพโปรโมชั่น<input disabled={isPublished} className={`${fieldClass} mt-1 disabled:bg-slate-100`} value={content.promotionImageUrl} onChange={(event) => updateContent('promotionImageUrl', event.target.value)} placeholder="https://.../promotion.jpg" /></label>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label className="text-sm font-medium text-slate-700">ข้อความปุ่ม<input disabled={isPublished} className={`${fieldClass} mt-1 disabled:bg-slate-100`} value={content.promotionCtaLabel} onChange={(event) => updateContent('promotionCtaLabel', event.target.value)} placeholder="ดูสินค้าโปรโมชั่น" /></label>
+                <label className="text-sm font-medium text-slate-700">ลิงก์ปุ่ม<input disabled={isPublished} className={`${fieldClass} mt-1 disabled:bg-slate-100`} value={content.promotionCtaUrl} onChange={(event) => updateContent('promotionCtaUrl', event.target.value)} placeholder="/advancetech?q=promotion" /></label>
+              </div>
             </div>
           </section>
 
@@ -235,18 +294,26 @@ const StoreHomepageEditorPage = () => {
         </div>
 
         <section className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 shadow-sm">
-          <div className="border-b border-slate-200 bg-white px-5 py-3"><p className="text-sm font-semibold text-slate-700">ตัวอย่างหน้าร้าน</p></div>
-          <div style={{ background: draft.themeTokens?.surface, color: draft.themeTokens?.text }} className="min-h-[720px]">
-            <header style={{ background: draft.themeTokens?.brandPrimary }} className="px-6 py-5 text-white"><p className="text-xs opacity-75">/{capability.storefrontSlug || 'your-store'}</p><h2 className="mt-1 text-2xl font-bold">{capability.displayName || 'ชื่อร้านของคุณ'}</h2></header>
+          <div className="border-b border-slate-200 bg-white px-5 py-3"><p className="text-sm font-semibold text-slate-700">ตัวอย่างเนื้อหาหน้าร้าน</p></div>
+          <div className="min-h-[760px] bg-white text-slate-900">
+            <header className="relative overflow-hidden bg-blue-800 px-6 py-6 text-white">
+              {content.coverImageUrl ? <img src={content.coverImageUrl} alt="" className="absolute inset-0 h-full w-full object-cover opacity-25" /> : null}
+              <div className="relative flex items-center gap-4">
+                {content.logoUrl ? <img src={content.logoUrl} alt="โลโก้ร้าน" className="h-14 w-14 rounded-2xl border border-white/20 bg-white object-contain p-1" /> : <div className="grid h-14 w-14 place-items-center rounded-2xl bg-white/15 text-2xl">🏪</div>}
+                <div><p className="text-xs text-white/70">/{capability.storefrontSlug || 'your-store'}</p><h2 className="mt-1 text-2xl font-black">{capability.displayName || 'ชื่อร้านของคุณ'}</h2><p className="mt-1 text-sm text-white/75">{content.storeHeadline || 'พื้นที่สำหรับข้อความแนะนำร้านของคุณ'}</p></div>
+              </div>
+            </header>
             <div className="space-y-6 p-6">
               {enabledSections.map((section) => {
-                if (section.type === 'HERO') return <div key={section.id} style={{ background: draft.themeTokens?.brandAccent }} className="rounded-2xl p-8 text-slate-900"><p className="text-sm font-semibold">ยินดีต้อนรับ</p><h3 className="mt-2 text-3xl font-black">เลือกสินค้าที่ใช่ จากร้านที่คุณไว้วางใจ</h3></div>;
-                if (section.type === 'FEATURED_PRODUCTS') return <div key={section.id}><h3 className="mb-3 text-lg font-bold">สินค้าแนะนำ</h3><div className="grid grid-cols-2 gap-3 md:grid-cols-3">{[1,2,3].map((item) => <div key={item} className="rounded-xl border border-slate-200 bg-white p-4"><div className="aspect-square rounded-lg bg-slate-100" /><p className="mt-3 font-semibold">สินค้าตัวอย่าง {item}</p></div>)}</div></div>;
-                if (section.type === 'PRODUCT_GRID') return <div key={section.id}><h3 className="mb-3 text-lg font-bold">สินค้าทั้งหมด</h3><div className="grid grid-cols-2 gap-3 md:grid-cols-4">{[1,2,3,4].map((item) => <div key={item} className="rounded-xl border border-slate-200 bg-white p-3"><div className="aspect-square rounded-lg bg-slate-100" /><p className="mt-2 text-sm font-semibold">สินค้า {item}</p></div>)}</div></div>;
+                if (section.type === 'HERO') return <div key={section.id} className="relative overflow-hidden rounded-3xl bg-amber-400 p-8 text-slate-950">{content.heroImageUrl ? <img src={content.heroImageUrl} alt="" className="absolute inset-0 h-full w-full object-cover opacity-25" /> : null}<div className="relative"><p className="text-sm font-bold uppercase tracking-[0.18em]">ยินดีต้อนรับ</p><h3 className="mt-2 max-w-xl text-3xl font-black">{content.heroHeadline || defaultContentConfiguration.heroHeadline}</h3><p className="mt-3 max-w-xl text-sm leading-6 text-slate-800">{content.heroSupportingText || defaultContentConfiguration.heroSupportingText}</p></div></div>;
+                if (section.type === 'FEATURED_PRODUCTS') return <div key={section.id}><h3 className="mb-3 text-lg font-bold">สินค้าแนะนำ</h3><div className="grid grid-cols-2 gap-3 md:grid-cols-3">{[1, 2, 3].map((item) => <div key={item} className="rounded-xl border border-slate-200 bg-white p-4"><div className="aspect-square rounded-lg bg-slate-100" /><p className="mt-3 font-semibold">สินค้าตัวอย่าง {item}</p></div>)}</div></div>;
+                if (section.type === 'PRODUCT_GRID') return <div key={section.id}><h3 className="mb-3 text-lg font-bold">สินค้าทั้งหมด</h3><div className="grid grid-cols-2 gap-3 md:grid-cols-4">{[1, 2, 3, 4].map((item) => <div key={item} className="rounded-xl border border-slate-200 bg-white p-3"><div className="aspect-square rounded-lg bg-slate-100" /><p className="mt-2 text-sm font-semibold">สินค้า {item}</p></div>)}</div></div>;
                 if (section.type === 'FULFILLMENT') return <div key={section.id} className="rounded-xl border border-slate-200 bg-white p-5"><h3 className="font-bold">การรับสินค้า</h3><p className="mt-1 text-sm text-slate-600">{capability.pickupInstruction || 'รับสินค้าที่หน้าร้าน'}</p></div>;
                 if (section.type === 'CONTACT') return <div key={section.id} className="rounded-xl border border-slate-200 bg-white p-5"><h3 className="font-bold">ติดต่อร้าน</h3><p className="mt-1 text-sm text-slate-600">{capability.contactPhone || 'ยังไม่ได้ระบุเบอร์ติดต่อ'}</p></div>;
                 return null;
               })}
+              {content.promotionTitle || content.promotionImageUrl ? <section className="overflow-hidden rounded-3xl border border-slate-200 bg-slate-950 text-white"><div className="grid md:grid-cols-2">{content.promotionImageUrl ? <img src={content.promotionImageUrl} alt="โปรโมชั่น" className="h-full min-h-48 w-full object-cover" /> : <div className="min-h-48 bg-slate-800" />}<div className="p-7"><p className="text-xs font-bold uppercase tracking-[0.18em] text-white/55">Promotion</p><h3 className="mt-2 text-2xl font-black">{content.promotionTitle || 'โปรโมชั่นพิเศษจากร้าน'}</h3>{content.promotionCtaLabel ? <span className="mt-5 inline-flex rounded-xl bg-white px-4 py-2 text-sm font-bold text-slate-950">{content.promotionCtaLabel}</span> : null}</div></div></section> : null}
+              {content.storeDescription ? <p className="rounded-2xl bg-slate-50 p-5 text-sm leading-7 text-slate-600">{content.storeDescription}</p> : null}
             </div>
           </div>
         </section>

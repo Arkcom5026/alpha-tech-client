@@ -44,7 +44,8 @@
     "test:output-tax-credit-note-e2e": "node tests/output-tax-credit-note-e2e.contract.test.cjs",
     "test:e2e:output-tax-credit-note": "playwright test e2e/output-tax-credit-note-full-return.spec.js",
     "test:canonical-storefront": "node tests/canonical-storefront-route.contract.test.js",
-    "test:purchase-quick-receipt-mobile-action-polish": "node tests/purchase-quick-receipt-mobile-action-polish.contract.test.js"
+    "test:purchase-quick-receipt-mobile-action-polish": "node tests/purchase-quick-receipt-mobile-action-polish.contract.test.js",
+    "test:online-store-brand-content-studio": "node tests/online-store-brand-content-studio.contract.test.js"
   },
   "dependencies": {
     "@cloudinary/react": "1.14.1",
@@ -136,7 +137,7 @@
     "vite": "5.2.10",
     "vitest": "^4.1.7"
   },
-  "description": "This template provides a minimal setup for React with Vite.",
+  "description": "This template provides a minimal setup with React and Vite.",
   "main": "eslint.config.js",
   "keywords": [],
   "author": "",

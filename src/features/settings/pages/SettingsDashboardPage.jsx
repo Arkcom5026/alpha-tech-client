@@ -6,7 +6,7 @@ import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Users, ShieldAlert, Building2, Landmark, ArrowRight, KeyRound, Store, ShoppingBag, Printer } from 'lucide-react';
 
-const SettingTile = ({ title, desc, icon: Icon, onClick }) => {
+const SettingTile = ({ title, desc, icon, onClick }) => {
   return (
     <button
       type="button"
@@ -15,7 +15,7 @@ const SettingTile = ({ title, desc, icon: Icon, onClick }) => {
     >
       <div className="flex items-center gap-4 min-w-0">
         <div className="p-3 rounded-xl shrink-0 bg-slate-100 text-slate-500 transition-colors group-hover:bg-orange-500/10 group-hover:text-orange-600">
-          <Icon className="w-5 h-5" />
+          {React.createElement(icon, { className: 'w-5 h-5' })}
         </div>
         <div className="min-w-0">
           <div className="font-black text-sm tracking-tight truncate text-slate-900">

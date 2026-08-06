@@ -33,7 +33,8 @@ for (const purpose of ['STORE_LOGO', 'STORE_COVER', 'STORE_HERO', 'STORE_PROMOTI
   assert.match(page, new RegExp(`purpose="${purpose}"`), `storefront media upload purpose missing: ${purpose}`);
 }
 assert.match(page, /upload=\{uploadStorefrontMedia\}/, 'media fields must use the authenticated upload authority');
-assert.match(api, /apiClient\.post\('\/store-experience\/media\/upload', formData\)/, 'client must call the branch-scoped storefront media endpoint');
+assert.match(api, /apiClient\.post\('\/store-experience\/media\/upload', formData, \{/, 'client must call the branch-scoped storefront media endpoint');
+assert.match(api, /headers:\s*\{\s*'Content-Type':\s*'multipart\/form-data'\s*\}/, 'storefront upload must preserve the multipart boundary contract');
 assert.match(api, /formData\.append\('file', file\)/, 'upload request must send the selected file');
 assert.match(api, /formData\.append\('purpose', purpose\)/, 'upload request must send only the media purpose');
 assert.doesNotMatch(api, /branchId/, 'client media upload must not submit authoritative branch ownership');

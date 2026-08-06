@@ -3,9 +3,12 @@ import process from 'node:process'
 import http from 'node:http'
 import { createDefaultMockRegistry } from './printerRegistry.js'
 import { createMockPrinterAdapter } from './mockPrinterAdapter.js'
+import { createPrintAdapterRouter } from './printAdapterRouter.js'
 import { validatePrintJob } from './printJobValidator.js'
 import { discoverWindowsPrinters } from './windowsPrinterDiscovery.js'
+import { createWindowsDriverSpool } from './windowsDriverSpool.js'
 import { createWindowsRawPrinterAdapter } from './windowsRawPrinterAdapter.js'
+import { createWindowsSharedQueuePrinterAdapter } from './windowsSharedQueuePrinterAdapter.js'
 import { createPhysicalPilotAdapter } from './physicalPilotAdapter.js'
 
 const HOST = process.env.ALPHA_PRINT_BRIDGE_HOST || '127.0.0.1'
@@ -18,6 +21,14 @@ const PILOT_PRINTER_ID = process.env.ALPHA_PRINT_BRIDGE_PILOT_PRINTER_ID || ''
 const registry = createDefaultMockRegistry()
 const mockAdapter = createMockPrinterAdapter()
 const rawAdapter = createWindowsRawPrinterAdapter({ enabled: RAW_ENABLED })
+const sharedQueueAdapter = createWindowsSharedQueuePrinterAdapter({
+  spoolPrintImpl: createWindowsDriverSpool(),
+})
+const adapterRouter = createPrintAdapterRouter({
+  mockAdapter,
+  rawAdapter,
+  sharedQueueAdapter,
+})
 const physicalPilotAdapter = createPhysicalPilotAdapter()
 
 const sendJson = (res, statusCode, payload) => {
@@ -77,9 +88,10 @@ const server = http.createServer(async (req, res) => {
     return sendJson(res, 200, {
       ok: true,
       service: 'alpha-tech-local-print-bridge',
-      version: '0.3.0',
-      mode: PHYSICAL_PILOT_ENABLED ? 'PHYSICAL_PILOT_ARMED' : RAW_ENABLED ? 'WINDOWS_RAW_ENABLED' : 'MOCK_WITH_WINDOWS_DISCOVERY',
+      version: '0.4.0',
+      mode: PHYSICAL_PILOT_ENABLED ? 'PHYSICAL_PILOT_ARMED' : RAW_ENABLED ? 'WINDOWS_RAW_ENABLED' : 'DRIVER_MANAGED_WITH_WINDOWS_DISCOVERY',
       rawPrintingEnabled: RAW_ENABLED,
+      driverManagedPrintingEnabled: true,
       physicalPilotEnabled: PHYSICAL_PILOT_ENABLED,
       pilotPrinterId: PHYSICAL_PILOT_ENABLED ? PILOT_PRINTER_ID : null,
       host: HOST,
@@ -131,7 +143,7 @@ const server = http.createServer(async (req, res) => {
         })
       }
 
-      const adapter = printer.connection === 'WINDOWS_QUEUE' ? rawAdapter : mockAdapter
+      const adapter = adapterRouter.resolve(printer)
       const result = await adapter.print({ printer, printJob })
       return sendJson(res, 202, { accepted: true, result })
     } catch (error) {
@@ -144,6 +156,7 @@ const server = http.createServer(async (req, res) => {
 
 server.listen(PORT, HOST, () => {
   console.log(`[local-print-bridge] listening on http://${HOST}:${PORT}`)
+  console.log('[local-print-bridge] driverManagedPrintingEnabled=true')
   console.log(`[local-print-bridge] rawPrintingEnabled=${RAW_ENABLED}`)
   console.log(`[local-print-bridge] physicalPilotEnabled=${PHYSICAL_PILOT_ENABLED}`)
   if (PHYSICAL_PILOT_ENABLED) console.log(`[local-print-bridge] pilotPrinterId=${PILOT_PRINTER_ID}`)

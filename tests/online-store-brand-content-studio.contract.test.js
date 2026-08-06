@@ -3,6 +3,7 @@ import assert from 'node:assert';
 
 const page = fs.readFileSync('src/features/storeExperience/pages/StoreHomepageEditorPage.jsx', 'utf8');
 const api = fs.readFileSync('src/features/storeExperience/api/storeExperienceApi.js', 'utf8');
+const publicPage = fs.readFileSync('src/features/storefront/pages/PublicStorefrontPage.jsx', 'utf8');
 
 assert.match(page, /PLATFORM_THEME_PRESET = 'platform-default'/, 'platform theme authority must be explicit');
 assert.match(page, /PLATFORM_LAYOUT_PRESET = 'platform-default'/, 'platform layout authority must be explicit');
@@ -54,5 +55,25 @@ assert.match(
   /หน้าร้านสาธารณะยังใช้ฉบับที่เผยแพร่อยู่/,
   'live draft save must explain published snapshot isolation'
 );
+
+assert.match(
+  publicPage,
+  /const content = experience\.contentConfiguration \|\| \{\}/,
+  'public storefront must read published contentConfiguration'
+);
+assert.match(
+  publicPage,
+  /content\.heroHeadline \|\| DEFAULT_CONTENT\.heroHeadline/,
+  'public hero headline must bind to the published snapshot with a legacy fallback'
+);
+assert.match(
+  publicPage,
+  /content\.heroSupportingText \|\| DEFAULT_CONTENT\.heroSupportingText/,
+  'public hero supporting text must bind to the published snapshot with a legacy fallback'
+);
+assert.match(publicPage, /content\.storeHeadline \|\| storefront\.name/, 'public header must bind merchant store headline');
+assert.match(publicPage, /content\.logoUrl/, 'public header must support the published logo URL');
+assert.match(publicPage, /content\.coverImageUrl/, 'public storefront must support the published cover image URL');
+assert.match(publicPage, /content\.heroImageUrl/, 'public hero must support the published hero image URL');
 
 console.log('online store brand content studio contract: PASS');

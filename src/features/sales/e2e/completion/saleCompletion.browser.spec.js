@@ -27,7 +27,7 @@ const requiredEnvironment = {
 };
 
 const isAuthenticationRoute = (url) => (
-  /\\/login(?:\\?|$)|\\/partner-portal(?:\\/login)?(?:\\?|$)/i.test(url)
+  /\/login(?:\?|$)|\/partner-portal(?:\/login)?(?:\?|$)/i.test(url)
 );
 
 const publishResult = (result) => {

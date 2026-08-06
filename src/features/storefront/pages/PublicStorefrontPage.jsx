@@ -51,6 +51,37 @@ const ProductCard = ({ product, shopSlug, compact = false }) => (
   </Link>
 );
 
+const PromotionBanner = ({ content, tokens }) => {
+  if (!content.promotionTitle && !content.promotionImageUrl) return null;
+
+  const action = content.promotionCtaLabel && content.promotionCtaUrl
+    ? (
+      <a
+        href={content.promotionCtaUrl}
+        className="mt-5 inline-flex rounded-xl px-5 py-3 text-sm font-bold shadow-sm transition hover:-translate-y-0.5"
+        style={{ background: tokens.brandAccent, color: tokens.text }}
+      >
+        {content.promotionCtaLabel}
+      </a>
+    )
+    : null;
+
+  return (
+    <section className="overflow-hidden rounded-3xl border border-slate-200 shadow-sm" style={{ background: tokens.brandPrimary, color: '#ffffff' }}>
+      <div className={`grid ${content.promotionImageUrl ? 'md:grid-cols-2' : ''}`}>
+        {content.promotionImageUrl ? (
+          <img src={content.promotionImageUrl} alt={content.promotionTitle || 'โปรโมชั่น'} className="h-full min-h-56 w-full object-cover" />
+        ) : null}
+        <div className="flex flex-col justify-center p-8 md:p-10">
+          <p className="text-xs font-bold uppercase tracking-[0.2em] text-white/60">Promotion</p>
+          <h2 className="mt-3 text-3xl font-black md:text-4xl">{content.promotionTitle || 'โปรโมชั่นพิเศษจากร้าน'}</h2>
+          {action}
+        </div>
+      </div>
+    </section>
+  );
+};
+
 const PublicStorefrontPage = () => {
   const { shopSlug } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -202,10 +233,10 @@ const PublicStorefrontPage = () => {
           <option value="price_asc">ราคาต่ำไปสูง</option>
           <option value="price_desc">ราคาสูงไปต่ำ</option>
         </select>
-        <button type="submit" className="rounded-xl bg-blue-600 px-5 py-3 font-bold text-white hover:bg-blue-700">ค้นหา</button>
+        <button type="submit" className="rounded-xl px-5 py-3 font-bold text-white" style={{ background: tokens.brandPrimary }}>ค้นหา</button>
       </form>
       {hasFilters ? (
-        <button type="button" onClick={() => { setSearchText(''); setSearchParams({}); }} className="mt-3 text-sm font-bold text-blue-700 hover:underline">
+        <button type="button" onClick={() => { setSearchText(''); setSearchParams({}); }} className="mt-3 text-sm font-bold hover:underline" style={{ color: tokens.brandPrimary }}>
           ล้างคำค้นและตัวกรอง
         </button>
       ) : null}
@@ -226,7 +257,7 @@ const PublicStorefrontPage = () => {
       const heroStyle = content.heroImageUrl
         ? {
           backgroundColor: tokens.brandAccent,
-          backgroundImage: `linear-gradient(rgba(255,255,255,0.12), rgba(255,255,255,0.12)), url(${content.heroImageUrl})`,
+          backgroundImage: `linear-gradient(rgba(255,255,255,0.18), rgba(255,255,255,0.18)), url(${content.heroImageUrl})`,
           backgroundPosition: 'center',
           backgroundSize: 'cover',
         }
@@ -291,7 +322,7 @@ const PublicStorefrontPage = () => {
           ) : (
             <div className="rounded-2xl border border-dashed border-slate-300 p-10 text-center text-slate-500">
               <p className="font-bold text-slate-700">ไม่พบสินค้าที่ตรงกับเงื่อนไข</p>
-              <button type="button" onClick={() => { setSearchText(''); setSearchParams({}); }} className="mt-3 font-bold text-blue-700">ล้างตัวกรอง</button>
+              <button type="button" onClick={() => { setSearchText(''); setSearchParams({}); }} className="mt-3 font-bold" style={{ color: tokens.brandPrimary }}>ล้างตัวกรอง</button>
             </div>
           )}
         </section>
@@ -347,7 +378,7 @@ const PublicStorefrontPage = () => {
       <header className="sticky top-0 z-10 text-white shadow-sm" style={{ background: tokens.brandPrimary }}>
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-5 py-4">
           <div className="flex min-w-0 items-center gap-3">
-            {content.logoUrl ? <img src={content.logoUrl} alt="" className="h-11 w-11 shrink-0 rounded-xl bg-white/10 object-contain p-1" /> : null}
+            {content.logoUrl ? <img src={content.logoUrl} alt="โลโก้ร้าน" className="h-11 w-11 shrink-0 rounded-xl bg-white/10 object-contain p-1" /> : null}
             <div className="min-w-0">
               <p className="text-xs text-white/65">/{storefront.slug}</p>
               <h1 className="truncate text-xl font-black md:text-2xl">{content.storeHeadline || storefront.name}</h1>
@@ -357,8 +388,11 @@ const PublicStorefrontPage = () => {
           <Link to="/" className="shrink-0 rounded-xl bg-white/10 px-4 py-2 text-sm font-semibold">Marketplace</Link>
         </div>
       </header>
-      {content.coverImageUrl ? <img src={content.coverImageUrl} alt="" className="h-48 w-full object-cover md:h-64" /> : null}
-      <div className="mx-auto max-w-7xl space-y-10 px-5 py-8 md:py-10">{sections.map(renderSection)}</div>
+      {content.coverImageUrl ? <img src={content.coverImageUrl} alt="ภาพปกหน้าร้าน" className="h-48 w-full object-cover md:h-64" /> : null}
+      <div className="mx-auto max-w-7xl space-y-10 px-5 py-8 md:py-10">
+        <PromotionBanner content={content} tokens={tokens} />
+        {sections.map(renderSection)}
+      </div>
       <footer className="mt-12 border-t px-5 py-8 text-center text-sm text-slate-500">{storefront.name} · หน้าร้านออนไลน์บน Alpha-Tech Platform</footer>
     </main>
   );

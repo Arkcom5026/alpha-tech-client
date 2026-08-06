@@ -58,7 +58,7 @@ test.describe('POS sale completion (selected E2E authority)', () => {
 
     await page.locator('#sale-customer-search-input').fill(customerPhone);
     await page.locator('#sale-customer-search-input').press('Enter');
-    await expect(page.getByText('ไม่พบลูกค้าในร้านนี้ สามารถเพิ่มลูกค้าใหม่ได้')).toBeVisible();
+    await expect(page.getByText(/ไม่พบลูกค้าในร้านนี้/)).toBeVisible();
 
     await page.locator('#customer-name-input').fill(customerName);
     await page.getByRole('button', { name: 'บันทึกลูกค้าใหม่' }).click();

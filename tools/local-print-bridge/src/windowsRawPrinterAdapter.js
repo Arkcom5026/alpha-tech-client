@@ -1,3 +1,5 @@
+import { Buffer } from 'node:buffer'
+import process from 'node:process'
 import { execFile } from 'node:child_process'
 import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
@@ -5,6 +7,7 @@ import { join, resolve } from 'node:path'
 import { promisify } from 'node:util'
 import { fileURLToPath } from 'node:url'
 import { renderShortTaxInvoiceEscPos } from './escposRenderer.js'
+
 
 const execFileAsync = promisify(execFile)
 const moduleDir = fileURLToPath(new URL('.', import.meta.url))

@@ -1,3 +1,5 @@
+import { Buffer } from 'node:buffer'
+
 const ESC = 0x1b
 const GS = 0x1d
 

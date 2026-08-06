@@ -1,3 +1,4 @@
+import { Buffer } from 'node:buffer'
 const FRAME_VERSION = '1.0'
 
 const encodeGatewayWebSocketFrame = ({ frameType = 'PROTOCOL', envelope } = {}) => {

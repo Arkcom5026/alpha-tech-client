@@ -1,3 +1,4 @@
+import { setImmediate } from 'node:timers'
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { createGatewayWebSocketAdapter } from '../src/features/store-device/websocket/createGatewayWebSocketAdapter.js'

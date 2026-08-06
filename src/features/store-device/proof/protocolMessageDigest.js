@@ -1,3 +1,4 @@
+import { Buffer } from 'node:buffer'
 import { createHash, timingSafeEqual } from 'node:crypto'
 import { canonicalSerialize, createProtocolProofMaterial } from './canonicalProtocolSerialization.js'
 

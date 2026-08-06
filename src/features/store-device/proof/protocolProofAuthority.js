@@ -1,3 +1,4 @@
+import { Buffer } from 'node:buffer'
 import { createHmac, timingSafeEqual } from 'node:crypto'
 import { canonicalSerialize, createProtocolProofMaterial } from './canonicalProtocolSerialization.js'
 import { createProtocolMessageDigest } from './protocolMessageDigest.js'

@@ -23,10 +23,15 @@ function isLoginRequest(requestOrResponse) {
     && /\/api\/auth\/login(?:\?|$)|\/auth\/login(?:\?|$)/i.test(request.url());
 }
 
-async function canOpenProtectedStore(page) {
-  await page.goto(`${baseUrl}/${branchSlug}/pos/`, { waitUntil: 'domcontentloaded' });
+async function canOpenSaleWorkspace(page) {
+  await page.goto(`${baseUrl}/${branchSlug}/pos/sales/sale`, { waitUntil: 'domcontentloaded' });
   await page.waitForLoadState('networkidle').catch(() => {});
-  return !isLoginUrl(page.url());
+
+  if (isLoginUrl(page.url())) return false;
+
+  return page.locator('#sale-customer-search-input')
+    .isVisible({ timeout: 10_000 })
+    .catch(() => false);
 }
 
 async function isStoredSessionValid(browser) {
@@ -35,7 +40,7 @@ async function isStoredSessionValid(browser) {
   const context = await browser.newContext({ storageState: saleMerchantAuthStatePath });
   const page = await context.newPage();
   try {
-    return await canOpenProtectedStore(page);
+    return await canOpenSaleWorkspace(page);
   } finally {
     await context.close();
   }
@@ -80,9 +85,9 @@ async function createStoredSession(browser) {
     }
 
     await page.waitForTimeout(500);
-    if (!(await canOpenProtectedStore(page))) {
+    if (!(await canOpenSaleWorkspace(page))) {
       throw new Error(
-        `Sale E2E login succeeded but protected store route redirected to ${page.url()}. Confirm access to ${branchSlug}.`
+        `Sale E2E login succeeded but Sale workspace was unavailable at ${page.url()}. Confirm access to ${branchSlug}.`
       );
     }
 

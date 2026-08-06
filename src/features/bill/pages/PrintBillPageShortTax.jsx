@@ -125,6 +125,48 @@ const PrintBillPageShortTax = () => {
     }
   }, [sale?.id, saleItems?.length, payment?.id, config])
 
+  useEffect(() => {
+    const root = printRootRef.current
+    if (!root) return undefined
+
+    const agencyLabel = Array.from(root.querySelectorAll('.row .left.label')).find(
+      (element) => element.textContent?.trim() === 'หน่วยงาน'
+    )
+    const agencyRow = agencyLabel?.parentElement || null
+    const agencyValue = agencyRow?.querySelector('.right') || null
+
+    if (!agencyRow || !agencyValue) return undefined
+
+    const previousRowAlignItems = agencyRow.style.alignItems
+    const previousValueStyle = {
+      flex: agencyValue.style.flex,
+      minWidth: agencyValue.style.minWidth,
+      whiteSpace: agencyValue.style.whiteSpace,
+      overflow: agencyValue.style.overflow,
+      textOverflow: agencyValue.style.textOverflow,
+      overflowWrap: agencyValue.style.overflowWrap,
+      wordBreak: agencyValue.style.wordBreak,
+      lineHeight: agencyValue.style.lineHeight,
+    }
+
+    agencyRow.style.alignItems = 'flex-start'
+    Object.assign(agencyValue.style, {
+      flex: '1 1 0%',
+      minWidth: '0',
+      whiteSpace: 'normal',
+      overflow: 'visible',
+      textOverflow: 'clip',
+      overflowWrap: 'anywhere',
+      wordBreak: 'break-word',
+      lineHeight: '1.25',
+    })
+
+    return () => {
+      agencyRow.style.alignItems = previousRowAlignItems
+      Object.assign(agencyValue.style, previousValueStyle)
+    }
+  }, [sale?.id, sale?.customer?.companyName])
+
   const returnToSale = useCallback(() => {
     navigate(saleRoute, { replace: true })
   }, [navigate, saleRoute])

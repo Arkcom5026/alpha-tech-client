@@ -27,7 +27,7 @@ const requiredEnvironment = {
 };
 
 const isAuthenticationRoute = (url) => (
-  /\/login(?:\?|$)|\/partner-portal(?:\/login)?(?:\?|$)/i.test(url)
+  /\\/login(?:\\?|$)|\\/partner-portal(?:\\/login)?(?:\\?|$)/i.test(url)
 );
 
 const publishResult = (result) => {
@@ -61,7 +61,10 @@ test.describe('POS sale completion (selected E2E authority)', () => {
     await expect(page.locator('#customer-name-input')).toBeVisible();
 
     await page.locator('#customer-name-input').fill(customerName);
-    await page.getByRole('button', { name: 'บันทึกลูกค้าใหม่' }).click();
+    await page.getByRole('button', {
+      name: 'เพิ่มลูกค้าใหม่',
+      exact: true,
+    }).click();
 
     const barcodeInput = page.getByTestId('pos-sale-barcode-input');
     await barcodeInput.fill(stockBarcode);

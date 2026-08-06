@@ -7,6 +7,11 @@ export {
   resolveWorkstationId,
 } from './printerSettingsRuntime.js'
 export {
+  DOCUMENT_TYPE_BY_PURPOSE,
+  createPrinterTestJob,
+  createPrinterTestService,
+} from './printerTestService.js'
+export {
   PURPOSE_LABELS,
   createPrinterSettingsRows,
   describePrinter,

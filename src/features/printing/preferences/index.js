@@ -8,3 +8,8 @@ export {
   STORAGE_NAMESPACE,
   createPrinterPreferenceStore,
 } from './printerPreferenceStore.js'
+
+export {
+  createPrinterDiscoverySelectionService,
+  scorePrinterForPurpose,
+} from './printerDiscoverySelectionService.js'

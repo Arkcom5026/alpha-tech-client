@@ -23,10 +23,14 @@ const PrinterSettingsPanel = ({
     setStatus('LOADING')
     setMessage('')
     try {
-      const discovery = await discoverySelectionService.discover({ documentPurpose: selectedPurpose })
-      const saved = discoverySelectionService.listPreferences({ branchId, workstationId })
-      setPrinters(discovery.printers)
-      setPreferences(saved)
+      const resolution = await discoverySelectionService.resolve({
+        branchId,
+        workstationId,
+        documentPurpose: selectedPurpose,
+      })
+      setPrinters(resolution.printers)
+      setPreferences(resolution.preference ? [resolution.preference] : [])
+      setSelectedPrinterId(resolution.preference?.printerProfileId || '')
       setStatus('READY')
     } catch (error) {
       setStatus('ERROR')
@@ -55,7 +59,7 @@ const PrinterSettingsPanel = ({
     setStatus('SAVING')
     setMessage('')
     try {
-      await discoverySelectionService.saveSelection({
+      await discoverySelectionService.select({
         branchId,
         workstationId,
         documentPurpose: selectedPurpose,
@@ -70,7 +74,7 @@ const PrinterSettingsPanel = ({
   }
 
   const clearSelection = async () => {
-    discoverySelectionService.clearSelection({
+    discoverySelectionService.clear({
       branchId,
       workstationId,
       documentPurpose: selectedPurpose,

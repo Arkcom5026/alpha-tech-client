@@ -132,8 +132,8 @@ export const repairApi = {
 
   transitionJob: (id, payload) =>
     request(
-      () => apiClient.patch(`/repairs/jobs/${id}/status`, payload),
-      'ไม่สามารถอัปเดตสถานะงานซ่อมได้'
+      () => apiClient.post(`/repairs/jobs/${id}/workflow/commands`, payload),
+      'ไม่สามารถอัปเดตขั้นตอนงานซ่อมได้'
     ),
 
   addPart: (id, payload) =>

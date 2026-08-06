@@ -15,6 +15,8 @@ const RepairJobDetailPage = () => {
   const { shopSlug, repairJobId } = useParams();
 
   const activeJob = useRepairRuntimeStore((state) => state.activeJob);
+  const workflowStatus = useRepairRuntimeStore((state) => state.workflowStatus);
+  const availableWorkflowActions = useRepairRuntimeStore((state) => state.availableWorkflowActions);
   const loading = useRepairRuntimeStore((state) => state.loading);
   const submitting = useRepairRuntimeStore((state) => state.submitting);
   const error = useRepairRuntimeStore((state) => state.error);
@@ -57,13 +59,15 @@ const RepairJobDetailPage = () => {
 
       {activeJob ? (
         <div className="space-y-4">
-        <JobRuntimePanel
-          job={activeJob}
-          submitting={submitting}
-          onTransition={(payload) => transitionJob(repairJobId, payload)}
-          onAddPart={(payload) => addPart(repairJobId, payload)}
-          onOpenClaim={handleOpenClaim}
-        />
+          <JobRuntimePanel
+            job={activeJob}
+            workflowStatus={workflowStatus}
+            availableWorkflowActions={availableWorkflowActions}
+            submitting={submitting}
+            onTransition={(payload) => transitionJob(repairJobId, payload)}
+            onAddPart={(payload) => addPart(repairJobId, payload)}
+            onOpenClaim={handleOpenClaim}
+          />
           <RepairTrackingAccessPanel repairJobId={repairJobId} jobNo={activeJob.jobNo} />
           <RepairEstimateApprovalPanel repairJobId={repairJobId} job={activeJob} />
           <RepairHandoverPanel repairJobId={repairJobId} jobStatus={activeJob.status} />

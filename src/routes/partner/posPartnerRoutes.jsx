@@ -18,6 +18,7 @@ import ServicesDashboardPage from '@/features/pos/pages/dashboard/ServicesDashbo
 import { ReportsDashboardPage } from '@/features/pos/pages/dashboard/ReportsDashboardPage';
 import StoreHomepageEditorPage from '@/features/storeExperience/pages/StoreHomepageEditorPage';
 import OnlineProductVisibilityDashboardPage from '@/features/storeExperience/pages/OnlineProductVisibilityDashboardPage';
+import PrinterSettingsPage from '@/features/printing/settings/PrinterSettingsPage';
 
 import DailyClosingPage from '@/features/finance/pages/DailyClosingPage';
 import AccountsReceivablePage from '@/features/finance/pages/AccountsReceivablePage';
@@ -112,6 +113,7 @@ export const posPartnerRoutes = [
         element: <Outlet />,
         children: [
           { index: true, element: <SettingsDashboardPage /> },
+          { path: 'printers', element: <PrinterSettingsPage /> },
           { path: 'storefront', element: <StoreHomepageEditorPage /> },
           { path: 'online-products', element: <OnlineProductVisibilityDashboardPage /> },
           { path: 'employee', element: <ListEmployeePage /> },

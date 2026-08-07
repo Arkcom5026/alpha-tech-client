@@ -7,6 +7,9 @@ const read = (relativePath) => fs.readFileSync(path.join(root, relativePath), 'u
 
 describe('refund receipt print workspace behavior contract', () => {
   const page = read('src/features/refund/pages/PrintRefundReceiptPage.jsx');
+  const shell = read('src/features/refund/print/workspace/components/RefundReceiptPrintShell.jsx');
+  const state = read('src/features/refund/print/workspace/components/RefundReceiptPrintState.jsx');
+  const toolbar = read('src/features/refund/print/workspace/components/RefundReceiptPrintToolbar.jsx');
   const policy = read('src/features/refund/print/workspace/policies/refundReceiptPrintPolicy.js');
 
   it('keeps sale-return loading scoped to the route id through the current store authority', () => {
@@ -24,11 +27,12 @@ describe('refund receipt print workspace behavior contract', () => {
     expect(policy).toContain("taxId: branch?.taxId || '-'");
   });
 
-  it('preserves loading and browser print behavior', () => {
-    expect(page).toContain('if (!saleReturn)');
-    expect(page).toContain('กำลังโหลด...');
-    expect(page).toContain('window.print()');
-    expect(page).toContain('print:hidden');
+  it('preserves loading and browser print behavior across workspace ownership', () => {
+    expect(page).toContain('if (!saleReturn) return <RefundReceiptPrintState />');
+    expect(state).toContain('กำลังโหลด...');
+    expect(page).toContain('const handlePrint = () => window.print()');
+    expect(page).toContain('<RefundReceiptPrintToolbar onPrint={handlePrint} />');
+    expect(toolbar).toContain('print:hidden');
   });
 
   it('preserves refund aggregation and remaining-amount semantics across policy ownership', () => {
@@ -36,26 +40,26 @@ describe('refund receipt print workspace behavior contract', () => {
     expect(policy).toContain('refundTransactions.reduce');
     expect(policy).toContain('Number(transaction?.amount || 0)');
     expect(policy).toContain('remainingAmount: totalRefund - totalAmount - deductedAmount');
-    expect(page).toContain('formatRefundReceiptMoney(totalRefund)');
-    expect(page).toContain('formatRefundReceiptMoney(remainingAmount)');
+    expect(shell).toContain('formatRefundReceiptMoney(totalRefund)');
+    expect(shell).toContain('formatRefundReceiptMoney(remainingAmount)');
   });
 
-  it('preserves sale, customer, and refund transaction identity presentation across policy ownership', () => {
+  it('preserves sale, customer, and refund transaction identity presentation across workspace ownership', () => {
     expect(policy).toContain("customerName: source.sale?.customer?.name || '-'");
     expect(policy).toContain("saleCode: source.sale?.code || '-'");
-    expect(page).toContain('refundTransactions.map');
-    expect(page).toContain('transaction.refundedAt');
-    expect(page).toContain('transaction.method');
-    expect(page).toContain("transaction.note || '-'");
+    expect(shell).toContain('refundTransactions.map');
+    expect(shell).toContain('transaction.refundedAt');
+    expect(shell).toContain('transaction.method');
+    expect(shell).toContain("transaction.note || '-'");
   });
 
-  it('keeps the current printable refund receipt surface intact across policy ownership', () => {
-    expect(page).toContain('ใบรับเงินคืน');
-    expect(page).toContain('ยอดสินค้าที่ต้องคืน');
-    expect(page).toContain('ยอดที่คืนไปแล้ว');
-    expect(page).toContain('ยอดที่หักไว้');
-    expect(page).toContain('ยอดคงเหลือที่ต้องคืน');
-    expect(page).toContain('รวมเป็นเงินทั้งสิ้น');
-    expect(page).toContain('โปรดเก็บเอกสารนี้ไว้เป็นหลักฐานการคืนเงิน');
+  it('keeps the current printable refund receipt surface intact across workspace ownership', () => {
+    expect(shell).toContain('ใบรับเงินคืน');
+    expect(shell).toContain('ยอดสินค้าที่ต้องคืน');
+    expect(shell).toContain('ยอดที่คืนไปแล้ว');
+    expect(shell).toContain('ยอดที่หักไว้');
+    expect(shell).toContain('ยอดคงเหลือที่ต้องคืน');
+    expect(shell).toContain('รวมเป็นเงินทั้งสิ้น');
+    expect(shell).toContain('โปรดเก็บเอกสารนี้ไว้เป็นหลักฐานการคืนเงิน');
   });
 });

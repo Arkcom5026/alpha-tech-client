@@ -10,6 +10,7 @@ import { createWindowsDriverSpool } from './windowsDriverSpool.js'
 import { createWindowsRawPrinterAdapter } from './windowsRawPrinterAdapter.js'
 import { createWindowsSharedQueuePrinterAdapter } from './windowsSharedQueuePrinterAdapter.js'
 import { createPhysicalPilotAdapter } from './physicalPilotAdapter.js'
+import { createDurableSaleReceiptRuntimeComposition } from './durableSaleReceiptRuntimeComposition.js'
 
 const HOST = process.env.ALPHA_PRINT_BRIDGE_HOST || '127.0.0.1'
 const PORT = Number(process.env.ALPHA_PRINT_BRIDGE_PORT || 17451)
@@ -74,6 +75,10 @@ const resolvePrinter = async (printerProfileId) => {
   return windowsPrinters.find((printer) => printer.id === printerProfileId) || null
 }
 
+const durableSaleReceipt = createDurableSaleReceiptRuntimeComposition({
+  resolvePrinter,
+})
+
 const sendError = (res, error) => sendJson(res, error.statusCode || 400, {
   code: error.code || (error.name === 'TypeError' ? 'INVALID_REQUEST' : 'REQUEST_REJECTED'),
   message: error.message,
@@ -88,12 +93,19 @@ const server = http.createServer(async (req, res) => {
     return sendJson(res, 200, {
       ok: true,
       service: 'alpha-tech-local-print-bridge',
-      version: '0.4.0',
-      mode: PHYSICAL_PILOT_ENABLED ? 'PHYSICAL_PILOT_ARMED' : RAW_ENABLED ? 'WINDOWS_RAW_ENABLED' : 'DRIVER_MANAGED_WITH_WINDOWS_DISCOVERY',
+      version: '0.5.0',
+      mode: durableSaleReceipt.readiness.pilotEnabled
+        ? 'DURABLE_SALE_RECEIPT_PILOT_ARMED'
+        : PHYSICAL_PILOT_ENABLED
+          ? 'PHYSICAL_PILOT_ARMED'
+          : RAW_ENABLED
+            ? 'WINDOWS_RAW_ENABLED'
+            : 'DRIVER_MANAGED_WITH_WINDOWS_DISCOVERY',
       rawPrintingEnabled: RAW_ENABLED,
       driverManagedPrintingEnabled: true,
       physicalPilotEnabled: PHYSICAL_PILOT_ENABLED,
       pilotPrinterId: PHYSICAL_PILOT_ENABLED ? PILOT_PRINTER_ID : null,
+      durableSaleReceiptPilot: durableSaleReceipt.readiness,
       host: HOST,
       port: PORT,
       timestamp: new Date().toISOString(),
@@ -109,6 +121,25 @@ const server = http.createServer(async (req, res) => {
         printers: registry.list(),
         warning: { code: 'WINDOWS_PRINTER_DISCOVERY_FAILED', message: error.message },
       })
+    }
+  }
+
+  if (req.method === 'POST' && url.pathname === '/v1/durable-sale-receipt-pilot') {
+    try {
+      const request = await readJsonBody(req)
+      if (!request || typeof request !== 'object') throw new TypeError('request body is required')
+      const result = await durableSaleReceipt.runtime.execute({
+        jobId: request.jobId,
+        gatewayId: request.gatewayId,
+        sessionId: request.sessionId,
+        expiresAt: request.expiresAt,
+        printerProfileId: request.printerProfileId,
+        confirmation: request.confirmation,
+        executorOptions: request.executorOptions || {},
+      })
+      return sendJson(res, 202, { accepted: true, result })
+    } catch (error) {
+      return sendError(res, error)
     }
   }
 
@@ -159,7 +190,12 @@ server.listen(PORT, HOST, () => {
   console.log('[local-print-bridge] driverManagedPrintingEnabled=true')
   console.log(`[local-print-bridge] rawPrintingEnabled=${RAW_ENABLED}`)
   console.log(`[local-print-bridge] physicalPilotEnabled=${PHYSICAL_PILOT_ENABLED}`)
+  console.log(`[local-print-bridge] durableSaleReceiptPilotEnabled=${durableSaleReceipt.readiness.pilotEnabled}`)
+  console.log(`[local-print-bridge] durableSaleReceiptPhysicalSubmissionEnabled=${durableSaleReceipt.readiness.physicalSubmissionEnabled}`)
   if (PHYSICAL_PILOT_ENABLED) console.log(`[local-print-bridge] pilotPrinterId=${PILOT_PRINTER_ID}`)
+  if (durableSaleReceipt.readiness.allowedPrinterId) {
+    console.log(`[local-print-bridge] durableSaleReceiptPrinterId=${durableSaleReceipt.readiness.allowedPrinterId}`)
+  }
 })
 
 const shutdown = (signal) => {

@@ -141,35 +141,11 @@ const createDurablePrintExecutionCoordinator = ({
         fallbackMessage: 'Durable print lease acknowledgement failed',
       })
 
+      let executionResult
       try {
-        const executionResult = assertLocalExecutionResult(
+        executionResult = assertLocalExecutionResult(
           await localExecutor.execute(envelope, executorOptions),
         )
-
-        const completion = await postLeaseAction({
-          leaseId,
-          action: 'complete',
-          body: {
-            gatewayId,
-            sessionId,
-            resultId,
-            executionSnapshot: executionResult,
-            adapterEvidence: {
-              adapter: executionResult.adapter,
-              evidence: executionResult.evidence || null,
-            },
-            transportEvidence: executionResult.evidence?.transport || null,
-          },
-          fallbackCode: 'PRINT_BRIDGE_COMPLETE_FAILED',
-          fallbackMessage: 'Durable print lease completion failed',
-        })
-
-        return Object.freeze({
-          lifecycleStatus: 'SUCCEEDED',
-          resultId,
-          executionResult,
-          completion,
-        })
       } catch (error) {
         const failureSnapshot = Object.freeze({
           schemaVersion: 1,
@@ -209,6 +185,51 @@ const createDurablePrintExecutionCoordinator = ({
           resultId,
           executionResult: failureSnapshot,
           failure,
+        })
+      }
+
+      try {
+        const completion = await postLeaseAction({
+          leaseId,
+          action: 'complete',
+          body: {
+            gatewayId,
+            sessionId,
+            resultId,
+            executionSnapshot: executionResult,
+            adapterEvidence: {
+              adapter: executionResult.adapter,
+              evidence: executionResult.evidence || null,
+            },
+            transportEvidence: executionResult.evidence?.transport || null,
+          },
+          fallbackCode: 'PRINT_BRIDGE_COMPLETE_FAILED',
+          fallbackMessage: 'Durable print lease completion failed',
+        })
+
+        return Object.freeze({
+          lifecycleStatus: 'SUCCEEDED',
+          resultId,
+          executionResult,
+          completion,
+        })
+      } catch (error) {
+        return Object.freeze({
+          lifecycleStatus: 'COMPLETION_UNCONFIRMED',
+          resultId,
+          executionResult,
+          completionError: Object.freeze({
+            code: error?.code || 'PRINT_BRIDGE_COMPLETE_FAILED',
+            message: error?.message || 'Durable print lease completion could not be confirmed',
+            statusCode: Number(error?.statusCode) || 502,
+          }),
+          safety: Object.freeze({
+            localExecutionSucceeded: true,
+            completionConfirmed: false,
+            failureReported: false,
+            retryRequiresReconciliation: true,
+            automaticPhysicalRetryAllowed: false,
+          }),
         })
       }
     },

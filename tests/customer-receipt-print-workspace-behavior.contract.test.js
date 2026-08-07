@@ -7,6 +7,9 @@ const read = (relativePath) => fs.readFileSync(path.join(root, relativePath), 'u
 
 describe('customer receipt print workspace behavior contract', () => {
   const page = read('src/features/customerReceipt/pages/PrintCustomerReceiptPage.jsx');
+  const toolbar = read('src/features/customerReceipt/print/workspace/components/CustomerReceiptPrintToolbar.jsx');
+  const shell = read('src/features/customerReceipt/print/workspace/components/CustomerReceiptPrintShell.jsx');
+  const runtime = `${page}\n${toolbar}\n${shell}`;
 
   it('preserves query-driven auto-print and print-mode resolution', () => {
     expect(page).toContain("String(searchParams.get('autoPrint') || '').toLowerCase()");
@@ -55,12 +58,13 @@ describe('customer receipt print workspace behavior contract', () => {
     expect(page).toContain('const timer = window.setTimeout(handlePrint, 300)');
   });
 
-  it('keeps full and short receipt layouts plus print media semantics intact', () => {
-    expect(page).toContain("printMode === 'SHORT' ? '80mm auto' : 'A4'");
-    expect(page).toContain("printMode === 'SHORT' ? '0' : '10mm'");
-    expect(page).toContain('CustomerReceiptShortPrintLayout receipt={selectedItem}');
-    expect(page).toContain('CustomerReceiptPrintLayout receipt={selectedItem}');
-    expect(page).toContain("onClick={() => setPrintMode('FULL')}");
-    expect(page).toContain("onClick={() => setPrintMode('SHORT')}");
+  it('keeps full and short receipt layouts plus print media semantics intact across workspace ownership', () => {
+    expect(runtime).toContain("printMode === 'SHORT' ? '80mm auto' : 'A4'");
+    expect(runtime).toContain("printMode === 'SHORT' ? '0' : '10mm'");
+    expect(runtime).toContain('CustomerReceiptShortPrintLayout receipt={receipt}');
+    expect(runtime).toContain('CustomerReceiptPrintLayout receipt={receipt}');
+    expect(runtime).toContain("onChangeMode?.('FULL')");
+    expect(runtime).toContain("onChangeMode?.('SHORT')");
+    expect(page).toContain('onChangeMode={setPrintMode}');
   });
 });

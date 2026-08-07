@@ -11,6 +11,11 @@ export const createTaxExpenseCategory = async (payload) =>
 export const listExpensePayees = async ({ q } = {}) =>
   unwrap(await apiClient.get('/tax-expenses/expense-payees', { params: q ? { q } : undefined }));
 
+// Compatibility authority for expense flows that still use the supplier-oriented name.
+// Expense payees are served by the dedicated /tax-expenses/expense-payees endpoint.
+export const listExpensePayeeSuppliers = async (params = {}) =>
+  listExpensePayees(params);
+
 export const createExpensePayee = async (payload) =>
   unwrap(await apiClient.post('/tax-expenses/expense-payees', payload));
 

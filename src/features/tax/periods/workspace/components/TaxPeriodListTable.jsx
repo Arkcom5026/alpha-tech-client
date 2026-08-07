@@ -10,6 +10,8 @@ const TaxPeriodListTable = ({
   actionMeta = {},
   formatDate,
   formatDateTime,
+  filtersSlot = null,
+  error = '',
   onOpen,
   onAction,
 }) => (
@@ -20,6 +22,9 @@ const TaxPeriodListTable = ({
         <p className="text-xs text-slate-500">แสดง {visiblePeriods.length} จาก {periods.length} รายการ</p>
       </div>
     </div>
+
+    {filtersSlot}
+    {error && <div className="border-b border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">{error}</div>}
 
     <div className="overflow-x-auto">
       <table className="min-w-full divide-y divide-slate-200 text-sm">

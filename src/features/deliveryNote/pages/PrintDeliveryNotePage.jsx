@@ -4,8 +4,8 @@ import {
   loadSaleDocument,
   useSaleDocumentLineEditor,
 } from '@/features/sales/documents/workspace';
-import DeliveryNoteForm from '../components/DeliveryNoteForm';
 import DeliveryNoteDocumentState from '../components/workspace/DeliveryNoteDocumentState';
+import DeliveryNotePrintShell from '../print/workspace/components/DeliveryNotePrintShell';
 import {
   buildDeliveryNoteBranchConfig,
   prepareDeliveryNoteSaleItems,
@@ -99,24 +99,19 @@ const PrintDeliveryNotePage = () => {
   }
 
   return (
-    <main className="min-h-screen bg-slate-100 px-3 py-5 text-black print:bg-white print:p-0 md:px-6 md:py-8">
-      <section className="mx-auto max-w-[210mm] rounded-2xl bg-white p-3 shadow-sm print:rounded-none print:p-0 print:shadow-none md:p-5">
-        <DeliveryNoteForm
-          sale={currentSale}
-          hideDate={hideDate}
-          setHideDate={setHideDate}
-          saleItems={preparedSaleItems}
-          config={preparedConfig}
-          editableDocumentLines
-          editingLineKey={editingLineKey}
-          lineDrafts={lineDrafts}
-          savingLineKey={savingLineKey}
-          onToggleDocumentLineEdit={documentLineActions.toggle}
-          onChangeDocumentLineDraft={documentLineActions.change}
-          onSaveDocumentLine={documentLineActions.save}
-        />
-      </section>
-    </main>
+    <DeliveryNotePrintShell
+      sale={currentSale}
+      hideDate={hideDate}
+      setHideDate={setHideDate}
+      saleItems={preparedSaleItems}
+      config={preparedConfig}
+      editingLineKey={editingLineKey}
+      lineDrafts={lineDrafts}
+      savingLineKey={savingLineKey}
+      onToggleDocumentLineEdit={documentLineActions.toggle}
+      onChangeDocumentLineDraft={documentLineActions.change}
+      onSaveDocumentLine={documentLineActions.save}
+    />
   );
 };
 

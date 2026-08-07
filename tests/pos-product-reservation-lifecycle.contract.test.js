@@ -24,7 +24,7 @@ assertIncludes(detail, "executeLifecycle('CANCEL', normalizedReason)", 'Cancella
 assertIncludes(detail, "reservation.status === 'ACTIVE'", 'Accept action must be status-gated');
 assertIncludes(detail, "['ACTIVE', 'ACCEPTED'].includes(reservation.status)", 'Cancellation must follow lifecycle boundary');
 assertIncludes(detail, 'createIdempotencyKey', 'Each merchant command must have an idempotency key');
-assertIncludes(detail, 'Timeline ใบจอง', 'Detail must expose lifecycle evidence');
+assertIncludes(detail, 'ประวัติสถานะใบจอง', 'Detail must expose lifecycle evidence');
 assertIncludes(detail, 'event.commandType', 'Timeline must render command authority');
 assertIncludes(detail, 'event.fromStatus', 'Timeline must render source status');
 assertIncludes(detail, 'event.toStatus', 'Timeline must render target status');

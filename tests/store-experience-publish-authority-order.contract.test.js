@@ -1,8 +1,10 @@
-'use strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import assert from 'node:assert';
+import { fileURLToPath } from 'node:url';
 
-const fs = require('fs');
-const path = require('path');
-const assert = require('assert');
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const api = fs.readFileSync(path.resolve(__dirname, '../src/features/storeExperience/api/storeExperienceApi.js'), 'utf8');
 const page = fs.readFileSync(path.resolve(__dirname, '../src/features/storeExperience/pages/StoreHomepageEditorPage.jsx'), 'utf8');

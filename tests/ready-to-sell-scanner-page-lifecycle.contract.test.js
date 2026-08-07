@@ -32,8 +32,8 @@ describe('ready-to-sell scanner page lifecycle contract', () => {
 
   it('delegates Enter-to-scan through workspace controls and clears input in the controller', () => {
     expect(page).toContain('onScanEnter={handleScanEnter}');
-    expect(controls).toContain("if (event.key !== 'Enter') return;");
-    expect(controls).toContain('onScanEnter?.()');
+    expect(controls).toContain("if (e.key === 'Enter')");
+    expect(controls).toContain('onScanEnter();');
     expect(page).toContain('setScanText');
     expect(controller).toContain("setScanText('')");
   });

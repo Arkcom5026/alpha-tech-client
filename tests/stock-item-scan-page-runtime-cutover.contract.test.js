@@ -11,6 +11,12 @@ const page = read('src/features/stockItem/pages/ScanBarcodeListPage.jsx');
 const controls = read(
   'src/features/stockItem/receive/scan-workflow/components/StockItemScanControls.jsx'
 );
+const workingResults = read(
+  'src/features/stockItem/receive/scan-workflow/components/StockItemWorkingGroupResults.jsx'
+);
+const receivedResults = read(
+  'src/features/stockItem/receive/scan-workflow/components/StockItemReceivedResults.jsx'
+);
 const runtime = read(
   'src/features/stockItem/receive/scan-workflow/hooks/useStockItemScanRuntimeController.js'
 );
@@ -48,13 +54,19 @@ describe('StockItem scan page runtime cutover contract', () => {
   it('keeps search and edit serial inside protected focus ownership', () => {
     expect(page).toContain('searchInputRef: filterInputRef');
     expect(page).toContain('editSerialInputRef');
-    expect(page).toContain('ref={editSerialInputRef}');
-    expect(page).toContain('type="search"');
+    expect(page).toContain('filterInputRef={filterInputRef}');
+    expect(page).toContain('editSerialInputRef={editSerialInputRef}');
+    expect(page).toContain('scheduleFocus(STOCK_ITEM_FOCUS_TARGET.EDIT_SERIAL)');
+    expect(workingResults).toContain('type="search"');
+    expect(workingResults).toContain('ref={filterInputRef}');
+    expect(receivedResults).toContain('ref={editSerialInputRef}');
   });
 
   it('does not restore a page-local barcode focus scheduler', () => {
     expect(page).not.toContain('const focusBarcodeInput = useCallback');
     expect(page).not.toContain('barcodeInputRef.current?.focus?.()');
     expect(page).toContain('scheduleFocus(STOCK_ITEM_FOCUS_TARGET.BARCODE)');
+    expect(workingResults).not.toContain('.focus(');
+    expect(receivedResults).not.toContain('.focus(');
   });
 });

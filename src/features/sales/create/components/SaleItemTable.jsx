@@ -1,6 +1,8 @@
 import React, { useEffect } from 'react';
 import { PackageOpen, Trash2 } from 'lucide-react';
 
+import { normalizePriceAdjustmentInput } from '../cart/services/salePriceAdjustmentPolicy';
+
 const toNumber = (raw) => {
   if (raw === '' || raw === null || raw === undefined) return 0;
   const number = Number(String(raw).replace(/,/g, ''));
@@ -28,9 +30,10 @@ const SaleItemTable = ({ items = [], onRemove, onUpdate, onChangeSimpleQuantity,
 
     if (totalPriceSatang <= 0 || totalDiscountSatang <= 0) {
       items.forEach((item) => {
-        const baseDiscount = Number(item.discountWithoutBill || 0);
-        if (Number(item.billShare || 0) !== 0 || Number(item.discount || 0) !== baseDiscount) {
-          onUpdate(item.lineId, { billShare: 0, discount: baseDiscount });
+        const itemAdjustment = Number(item.priceAdjustment || 0);
+        const compatibilityDiscount = itemAdjustment < 0 ? Number((-itemAdjustment).toFixed(2)) : 0;
+        if (Number(item.billShare || 0) !== 0 || Number(item.discount || 0) !== compatibilityDiscount) {
+          onUpdate(item.lineId, { billShare: 0, discount: compatibilityDiscount });
         }
       });
       return;
@@ -57,33 +60,34 @@ const SaleItemTable = ({ items = [], onRemove, onUpdate, onChangeSimpleQuantity,
     const allocationByLine = new Map(allocations.map((row) => [row.lineId, row.floor / 100]));
     items.forEach((item) => {
       const billShare = allocationByLine.get(item.lineId) || 0;
-      const discountWithoutBill = Number(item.discountWithoutBill || 0);
-      const discount = Number((discountWithoutBill + billShare).toFixed(2));
-      if (Number(item.billShare || 0) !== billShare || Number(item.discount || 0) !== discount) {
-        onUpdate(item.lineId, { billShare, discount });
+      const itemAdjustment = Number(item.priceAdjustment || 0);
+      const combinedAdjustment = Number((itemAdjustment - billShare).toFixed(2));
+      const compatibilityDiscount = combinedAdjustment < 0 ? Number((-combinedAdjustment).toFixed(2)) : 0;
+      if (Number(item.billShare || 0) !== billShare || Number(item.discount || 0) !== compatibilityDiscount) {
+        onUpdate(item.lineId, { billShare, discount: compatibilityDiscount });
       }
     });
   }, [billDiscount, items, onUpdate]);
 
-  const handleDiscountChange = (item, input) => {
-    const discountWithoutBill = Math.max(0, toNumber(input?.target?.value));
+  const handlePriceAdjustmentChange = (item, input) => {
+    const quantity = item.lineType === 'SIMPLE' ? Number(item.quantity || 1) : 1;
+    const basePrice = Number(item.price || 0) * quantity;
+    const requested = toNumber(input?.target?.value);
+    const safeAdjustment = Math.max(-basePrice, requested);
+    const normalized = normalizePriceAdjustmentInput({ basePrice, adjustment: safeAdjustment });
+    if (!normalized.ok) return;
+
     const billShare = Number(item.billShare || 0);
+    const combinedAdjustment = Number((normalized.priceAdjustment - billShare).toFixed(2));
     onUpdate?.(item.lineId, {
-      discountWithoutBill,
-      discount: Number((discountWithoutBill + billShare).toFixed(2)),
+      priceAdjustment: normalized.priceAdjustment,
+      discountWithoutBill: normalized.discount,
+      discount: combinedAdjustment < 0 ? Number((-combinedAdjustment).toFixed(2)) : 0,
     });
   };
 
-  const handleSellingPriceChange = (item, input) => {
-    const sellingPrice = Math.max(0, toNumber(input?.target?.value));
-    const basePrice = Number(item.price || 0);
-    const billShare = Number(item.billShare || 0);
-    const discountWithoutBill = Number((basePrice - sellingPrice).toFixed(2));
-    onUpdate?.(item.lineId, {
-      sellingPrice,
-      discountWithoutBill,
-      discount: Number((discountWithoutBill + billShare).toFixed(2)),
-    });
+  const handleAdjustmentReasonChange = (item, input) => {
+    onUpdate?.(item.lineId, { adjustmentReason: input?.target?.value || '' });
   };
 
   const handleSimpleQuantityChange = (item, input) => {
@@ -103,17 +107,23 @@ const SaleItemTable = ({ items = [], onRemove, onUpdate, onChangeSimpleQuantity,
   const renderValues = (item) => {
     const quantity = Number(item.quantity || 1);
     const basePrice = Number(item.price || 0) * quantity;
-    const discountWithoutBill = Number(item.discountWithoutBill || 0);
+    const priceAdjustment = Number(item.priceAdjustment || 0);
     const billShare = Number(item.billShare || 0);
-    const discount = Number(item.discount || 0);
-    const sellingPrice = Number.isFinite(Number(item.sellingPrice))
-      ? Number(item.sellingPrice)
-      : Math.max(0, Number(item.price || 0) - discountWithoutBill);
-    const net = Math.max(0, basePrice - discount);
+    const finalPriceBeforeBill = Math.max(0, basePrice + priceAdjustment);
+    const net = Math.max(0, finalPriceBeforeBill - billShare);
     const displayIdentifier = item.displayIdentifier || item.serialNumber || item.barcode || '-';
     const identifierType = item.identifierType || (item.serialNumber ? 'SN' : 'BARCODE');
 
-    return { quantity, basePrice, discountWithoutBill, billShare, sellingPrice, net, displayIdentifier, identifierType };
+    return {
+      quantity,
+      basePrice,
+      priceAdjustment,
+      billShare,
+      finalPriceBeforeBill,
+      net,
+      displayIdentifier,
+      identifierType,
+    };
   };
 
   return (
@@ -160,28 +170,33 @@ const SaleItemTable = ({ items = [], onRemove, onUpdate, onChangeSimpleQuantity,
                   )}
                 </label>
                 <label className="space-y-1 text-xs font-medium text-slate-600">
-                  <span>ราคาขายจริง</span>
+                  <span>ปรับราคา (+/-)</span>
                   <input
                     type="number"
                     inputMode="decimal"
+                    min={-values.basePrice}
                     step="0.01"
                     className={`${inputClass} w-full`}
-                    value={values.sellingPrice === 0 ? '' : values.sellingPrice}
-                    onChange={(event) => handleSellingPriceChange(item, event)}
+                    value={values.priceAdjustment === 0 ? '' : values.priceAdjustment}
+                    onChange={(event) => handlePriceAdjustmentChange(item, event)}
                   />
                 </label>
-                <label className="space-y-1 text-xs font-medium text-slate-600">
-                  <span>ส่วนลดรายการ</span>
+                <label className="col-span-2 space-y-1 text-xs font-medium text-slate-600">
+                  <span>เหตุผลการปรับราคา</span>
                   <input
-                    type="number"
-                    inputMode="decimal"
-                    min="0"
-                    step="0.01"
-                    className={`${inputClass} w-full`}
-                    value={values.discountWithoutBill === 0 ? '' : values.discountWithoutBill}
-                    onChange={(event) => handleDiscountChange(item, event)}
+                    type="text"
+                    className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-teal-600 focus:ring-2 focus:ring-teal-100"
+                    placeholder="เช่น ต่อรองราคา / ค่าบริการเพิ่มเติม"
+                    value={item.adjustmentReason || ''}
+                    onChange={(event) => handleAdjustmentReasonChange(item, event)}
                   />
                 </label>
+                <div className="space-y-1 text-xs font-medium text-slate-600">
+                  <span>ราคาหลังปรับ</span>
+                  <div className="flex h-11 items-center justify-end rounded-xl bg-slate-100 px-3 font-mono font-semibold text-slate-800">
+                    {formatMoney(values.finalPriceBeforeBill)}
+                  </div>
+                </div>
                 <div className="space-y-1 text-xs font-medium text-slate-600">
                   <span>ยอดสุทธิ</span>
                   <div className="flex h-11 items-center justify-end rounded-xl bg-emerald-50 px-3 font-mono font-semibold text-emerald-800">
@@ -200,7 +215,7 @@ const SaleItemTable = ({ items = [], onRemove, onUpdate, onChangeSimpleQuantity,
       </div>
 
       <div className="hidden overflow-x-auto rounded-2xl border border-slate-200 lg:block">
-        <table className="min-w-[1180px] w-full border-collapse text-left text-sm">
+        <table className="min-w-[1320px] w-full border-collapse text-left text-sm">
           <thead className="border-b border-slate-200 bg-slate-50 text-xs font-semibold text-slate-600">
             <tr>
               <th className="px-3 py-3 text-center">#</th>
@@ -209,8 +224,9 @@ const SaleItemTable = ({ items = [], onRemove, onUpdate, onChangeSimpleQuantity,
               <th className="px-3 py-3 text-center">บาร์โค้ด / SN</th>
               <th className="px-3 py-3 text-center">จำนวน</th>
               <th className="px-3 py-3 text-right">ราคาป้าย</th>
-              <th className="px-3 py-3 text-right">ขายจริง</th>
-              <th className="px-3 py-3 text-right">ส่วนลด</th>
+              <th className="px-3 py-3 text-right">ปรับราคา (+/-)</th>
+              <th className="px-3 py-3">เหตุผล</th>
+              <th className="px-3 py-3 text-right">ราคาหลังปรับ</th>
               <th className="px-3 py-3 text-right">ลดท้ายบิล</th>
               <th className="px-3 py-3 text-right">สุทธิ</th>
               <th className="px-3 py-3 text-center">จัดการ</th>
@@ -244,11 +260,26 @@ const SaleItemTable = ({ items = [], onRemove, onUpdate, onChangeSimpleQuantity,
                   </td>
                   <td className="px-3 py-3 text-right font-mono text-slate-600">{formatMoney(values.basePrice)}</td>
                   <td className="px-3 py-3 text-right">
-                    <input type="number" inputMode="decimal" step="0.01" className={`${inputClass} w-28`} value={values.sellingPrice === 0 ? '' : values.sellingPrice} onChange={(event) => handleSellingPriceChange(item, event)} />
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      min={-values.basePrice}
+                      step="0.01"
+                      className={`${inputClass} w-28`}
+                      value={values.priceAdjustment === 0 ? '' : values.priceAdjustment}
+                      onChange={(event) => handlePriceAdjustmentChange(item, event)}
+                    />
                   </td>
-                  <td className="px-3 py-3 text-right">
-                    <input type="number" inputMode="decimal" min="0" step="0.01" className={`${inputClass} w-24`} value={values.discountWithoutBill === 0 ? '' : values.discountWithoutBill} onChange={(event) => handleDiscountChange(item, event)} />
+                  <td className="px-3 py-3">
+                    <input
+                      type="text"
+                      className="h-11 w-52 rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-teal-600 focus:ring-2 focus:ring-teal-100"
+                      placeholder="เหตุผลการปรับราคา"
+                      value={item.adjustmentReason || ''}
+                      onChange={(event) => handleAdjustmentReasonChange(item, event)}
+                    />
                   </td>
+                  <td className="px-3 py-3 text-right font-mono font-semibold text-slate-800">{formatMoney(values.finalPriceBeforeBill)}</td>
                   <td className="px-3 py-3 text-right font-mono text-slate-600">{formatMoney(values.billShare)}</td>
                   <td className="px-3 py-3 text-right font-mono font-semibold text-emerald-800">{formatMoney(values.net)}</td>
                   <td className="px-3 py-3 text-center">

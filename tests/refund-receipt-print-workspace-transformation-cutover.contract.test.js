@@ -7,12 +7,15 @@ const read = (relativePath) => fs.readFileSync(path.join(root, relativePath), 'u
 
 describe('refund receipt print workspace transformation cutover contract', () => {
   const page = read('src/features/refund/pages/PrintRefundReceiptPage.jsx');
+  const shell = read('src/features/refund/print/workspace/components/RefundReceiptPrintShell.jsx');
   const policy = read('src/features/refund/print/workspace/policies/refundReceiptPrintPolicy.js');
 
   it('cuts refund and branch presentation projection over to the print policy', () => {
     expect(page).toContain('prepareRefundReceiptPrintProjection');
     expect(page).toContain('prepareRefundReceiptPrintProjection(saleReturn, branch)');
-    expect(page).toContain('formatRefundReceiptMoney');
+    expect(policy).toContain('formatRefundReceiptMoney');
+    expect(shell).toContain('formatRefundReceiptMoney');
+    expect(page).not.toContain('formatRefundReceiptMoney');
   });
 
   it('removes duplicated refund projection implementation from the page', () => {

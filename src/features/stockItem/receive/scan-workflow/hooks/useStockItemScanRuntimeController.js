@@ -34,10 +34,15 @@ export const useStockItemScanRuntimeController = ({
     searchInputRef,
     editSerialInputRef,
   });
+  const {
+    cancelScheduledFocus,
+    scheduleFocus,
+    focusForState,
+  } = focusController;
 
   const focusForCurrentState = useCallback(({ barcodeCaptured = false } = {}) => {
     const searchActive = searchInputRef?.current != null && document.activeElement === searchInputRef.current;
-    return focusController.focusForState({
+    return focusForState({
       searchActive,
       editingSerial,
       submitting,
@@ -48,7 +53,7 @@ export const useStockItemScanRuntimeController = ({
     });
   }, [
     editingSerial,
-    focusController,
+    focusForState,
     manualSerialMode,
     searchInputRef,
     submitting,
@@ -74,7 +79,9 @@ export const useStockItemScanRuntimeController = ({
 
   return {
     ...workingGroupController,
-    ...focusController,
+    cancelScheduledFocus,
+    scheduleFocus,
+    focusForState,
     focusForCurrentState,
     resolveReceiveInput,
   };

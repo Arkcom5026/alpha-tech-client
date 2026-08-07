@@ -1,7 +1,7 @@
 import React from 'react';
 import { formatRefundReceiptMoney } from '../policies/refundReceiptPrintPolicy';
 
-const RefundReceiptPrintShell = ({ projection, onPrint }) => {
+const RefundReceiptPrintShell = ({ projection, toolbar }) => {
   const {
     code,
     createdAt,
@@ -26,15 +26,7 @@ const RefundReceiptPrintShell = ({ projection, onPrint }) => {
           <p>อีเมล: {branch.email}</p>
           <p>ผู้ติดต่อ: {branch.contactName}</p>
         </div>
-        <div className="text-right">
-          <button
-            type="button"
-            onClick={onPrint}
-            className="bg-blue-600 text-white px-4 py-1 rounded print:hidden"
-          >
-            พิมพ์
-          </button>
-        </div>
+        {toolbar}
       </div>
 
       <div className="text-center mb-6">

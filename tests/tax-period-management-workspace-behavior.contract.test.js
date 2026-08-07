@@ -7,6 +7,7 @@ const read = (relativePath) => fs.readFileSync(path.join(root, relativePath), 'u
 
 describe('tax period management workspace behavior contract', () => {
   const page = read('src/features/tax/periods/pages/TaxPeriodManagementPage.jsx');
+  const listTable = read('src/features/tax/periods/workspace/components/TaxPeriodListTable.jsx');
 
   it('keeps branch selection as the runtime authority', () => {
     expect(page).toContain('const selectedBranchId = useBranchStore((state) => state.selectedBranchId);');
@@ -57,11 +58,12 @@ describe('tax period management workspace behavior contract', () => {
     expect(page).toContain('await loadData();');
   });
 
-  it('keeps client search, current-period selection, and available actions intact', () => {
+  it('keeps client search, current-period selection, and available actions intact across workspace ownership', () => {
     expect(page).toContain("const keyword = searchText.trim().toLowerCase();");
     expect(page).toContain("String(period?.periodCode || '').toLowerCase().includes(keyword)");
-    expect(page).toContain('setSelectedPeriodId(summary.currentPeriod.id)');
-    expect(page).toContain('const actions = Array.isArray(period.availableActions) ? period.availableActions : [];');
+    expect(page).toContain('currentPeriod={summary?.currentPeriod}');
+    expect(page).toContain('onOpen={setSelectedPeriodId}');
+    expect(listTable).toContain('const actions = Array.isArray(period.availableActions) ? period.availableActions : [];');
     expect(page).toContain('onAction={handleAction}');
     expect(page).toContain('onClose={() => setSelectedPeriodId(null)}');
   });

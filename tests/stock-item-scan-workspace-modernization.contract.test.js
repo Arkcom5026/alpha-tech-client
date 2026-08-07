@@ -1,0 +1,86 @@
+import { describe, expect, it } from 'vitest';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const filename = fileURLToPath(import.meta.url);
+const root = path.resolve(path.dirname(filename), '..');
+const read = (relativePath) => fs.readFileSync(path.join(root, relativePath), 'utf8');
+
+const page = read('src/features/stockItem/pages/ScanBarcodeListPage.jsx');
+const header = read('src/features/stockItem/receive/scan-workflow/components/StockItemScanWorkspaceHeader.jsx');
+const summary = read('src/features/stockItem/receive/scan-workflow/components/StockItemScanSummary.jsx');
+const controls = read('src/features/stockItem/receive/scan-workflow/components/StockItemScanControls.jsx');
+const workingResults = read('src/features/stockItem/receive/scan-workflow/components/StockItemWorkingGroupResults.jsx');
+const receivedResults = read('src/features/stockItem/receive/scan-workflow/components/StockItemReceivedResults.jsx');
+
+describe('StockItem scan workspace modernization contract', () => {
+  it('composes the modern workspace shell in operational order', () => {
+    expect(page).toContain('<StockItemScanWorkspaceHeader');
+    expect(page).toContain('<StockItemScanSummary');
+    expect(page).toContain('<StockItemScanControls');
+    expect(page).toContain('<StockItemWorkingGroupResults');
+    expect(page).toContain('<StockItemReceivedResults');
+    expect(page.indexOf('<StockItemScanWorkspaceHeader')).toBeLessThan(page.indexOf('<StockItemScanSummary'));
+    expect(page.indexOf('<StockItemScanSummary')).toBeLessThan(page.indexOf('<StockItemScanControls'));
+    expect(page.indexOf('<StockItemScanControls')).toBeLessThan(page.indexOf('<StockItemWorkingGroupResults'));
+    expect(page.indexOf('<StockItemWorkingGroupResults')).toBeLessThan(page.indexOf('<StockItemReceivedResults'));
+    expect(page).toContain('max-w-[1400px]');
+  });
+
+  it('uses workspace components with system-teal primary actions', () => {
+    expect(header).toContain('bg-teal-700');
+    expect(controls).toContain('bg-teal-700');
+    expect(receivedResults).toContain('bg-teal-700');
+    expect(header).toContain('min-h-11');
+    expect(controls).toContain('min-h-11');
+    expect(workingResults).toContain('min-h-11');
+    expect(receivedResults).toContain('min-h-11');
+  });
+
+  it('keeps scan controls presentation-only', () => {
+    expect(controls).not.toContain('receiveSNAction');
+    expect(controls).not.toContain('useStockItemScanRuntimeController');
+    expect(controls).not.toContain('requestAnimationFrame');
+    expect(controls).not.toContain('.focus(');
+  });
+
+  it('keeps optional serial mode explicit in the control surface', () => {
+    expect(controls).toContain('type="checkbox"');
+    expect(controls).toContain('เก็บ Serial Number');
+    expect(controls).toContain('ไม่บังคับ');
+  });
+
+  it('keeps operational summary presentation separated from runtime behavior', () => {
+    expect(summary).toContain('ทั้งหมด');
+    expect(summary).toContain('รับแล้ว');
+    expect(summary).toContain('ค้างรับ');
+    expect(summary).not.toContain('useStockItem');
+  });
+
+  it('keeps search working-group presentation explicit and accessible', () => {
+    expect(workingResults).toContain('type="search"');
+    expect(workingResults).toContain('ค้นหาสินค้า / SKU / Barcode');
+    expect(workingResults).toContain('กลุ่มสินค้าชนิดเดียว');
+    expect(workingResults).toContain('หลายกลุ่มสินค้า');
+    expect(workingResults).toContain('ไม่มีรายการค้างรับในกลุ่มนี้');
+  });
+
+  it('keeps received SN edit presentation explicit', () => {
+    expect(receivedResults).toContain('แก้ไข SN');
+    expect(receivedResults).toContain('เว้นว่างเพื่อล้าง SN');
+    expect(receivedResults).toContain('onStartEditSN');
+    expect(receivedResults).toContain('onCancelEditSN');
+    expect(receivedResults).toContain('onSaveEditSN');
+  });
+
+  it('keeps runtime and receive ownership out of extracted presentation components', () => {
+    for (const source of [header, summary, controls, workingResults, receivedResults]) {
+      expect(source).not.toContain('receiveSNAction');
+      expect(source).not.toContain('useStockItemReceiveStore');
+      expect(source).not.toContain('useStockItemScanRuntimeController');
+      expect(source).not.toContain('requestAnimationFrame');
+      expect(source).not.toContain('.focus(');
+    }
+  });
+});

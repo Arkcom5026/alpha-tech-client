@@ -2,8 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
   READY_TO_SELL_SORT_MODE,
-  matchReadyToSellScan,
-  sortReadyToSellRows,
+  resolveReadyToSellScanOutcome,
+  sortReadyToSellItems,
 } from '../policies/readyToSellScannerPolicy';
 
 const useReadyToSellScannerController = ({
@@ -19,7 +19,7 @@ const useReadyToSellScannerController = ({
   const scanInputRef = useRef(null);
 
   const displayRows = useMemo(
-    () => sortReadyToSellRows(rows, sortMode),
+    () => sortReadyToSellItems(rows, sortMode),
     [rows, sortMode],
   );
 
@@ -51,11 +51,11 @@ const useReadyToSellScannerController = ({
   }, []);
 
   const submitScan = useCallback((raw) => {
-    const outcome = matchReadyToSellScan(displayRows, raw);
+    const outcome = resolveReadyToSellScanOutcome(displayRows, raw);
     setHighlightId(outcome.highlightId ?? null);
     setScanMessage(outcome.message || '');
 
-    if (outcome.matched) scrollToRow(outcome.highlightId);
+    if (outcome.shouldScroll) scrollToRow(outcome.highlightId);
     return outcome;
   }, [displayRows, scrollToRow]);
 

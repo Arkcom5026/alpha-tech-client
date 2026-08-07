@@ -1,6 +1,6 @@
 // src/features/receiving/quick-stock/hooks/useQuickStockQueueController.js
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "react-toastify";
 
 import { normalizeText } from "../utils/quickStockRuntimeUtils";
@@ -11,21 +11,62 @@ const useQuickStockQueueController = ({
 } = {}) => {
   const barcodeInputRef = useRef(null);
   const serialInputRefs = useRef({});
+  const focusTimerRef = useRef(null);
 
   const [barcode, setBarcode] = useState("");
   const [barcodeQueue, setBarcodeQueue] = useState([]);
   const [autoFocusSerial, setAutoFocusSerial] = useState(false);
 
+  const cancelScheduledFocus = useCallback(() => {
+    if (focusTimerRef.current) {
+      clearTimeout(focusTimerRef.current);
+      focusTimerRef.current = null;
+    }
+  }, []);
+
+  const scheduleFocus = useCallback((resolveTarget, { select = false } = {}) => {
+    cancelScheduledFocus();
+    focusTimerRef.current = setTimeout(() => {
+      const target = typeof resolveTarget === "function" ? resolveTarget() : resolveTarget;
+      focusTimerRef.current = null;
+      if (!target || target.disabled) return;
+      target.focus();
+      if (select) target.select?.();
+    }, 0);
+  }, [cancelScheduledFocus]);
+
+  const focusBarcodeInput = useCallback(() => {
+    scheduleFocus(() => barcodeInputRef.current);
+  }, [scheduleFocus]);
+
+  const focusSerialInput = useCallback((rowId) => {
+    scheduleFocus(() => serialInputRefs.current?.[rowId], { select: true });
+  }, [scheduleFocus]);
+
+  useEffect(() => () => cancelScheduledFocus(), [cancelScheduledFocus]);
+
+  useEffect(() => {
+    if (isOperationalSelection) {
+      focusBarcodeInput();
+      return;
+    }
+    cancelScheduledFocus();
+  }, [cancelScheduledFocus, focusBarcodeInput, isOperationalSelection]);
+
   const resetQueue = useCallback(() => {
     setBarcodeQueue([]);
     setBarcode("");
     serialInputRefs.current = {};
-    setTimeout(() => barcodeInputRef.current?.focus(), 50);
-  }, []);
+    if (isOperationalSelection) focusBarcodeInput();
+    else cancelScheduledFocus();
+  }, [cancelScheduledFocus, focusBarcodeInput, isOperationalSelection]);
 
   const addBarcodeToQueue = useCallback((rawBarcode) => {
     const cleanBarcode = String(rawBarcode || "").trim();
-    if (!cleanBarcode) return;
+    if (!cleanBarcode) {
+      if (isOperationalSelection) focusBarcodeInput();
+      return;
+    }
 
     if (!isOperationalSelection) {
       toast.error(
@@ -34,14 +75,14 @@ const useQuickStockQueueController = ({
           : "กรุณาเลือกสินค้า Operational Product ก่อนสแกนบาร์โค้ด"
       );
       setBarcode("");
-      barcodeInputRef.current?.focus();
+      cancelScheduledFocus();
       return;
     }
 
     if (barcodeQueue.some((item) => normalizeText(item.barcode) === normalizeText(cleanBarcode))) {
       toast.warning(`บาร์โค้ดซ้ำในรายการ: ${cleanBarcode}`);
       setBarcode("");
-      barcodeInputRef.current?.focus();
+      focusBarcodeInput();
       return;
     }
 
@@ -52,24 +93,31 @@ const useQuickStockQueueController = ({
     ]);
     setBarcode("");
 
-    setTimeout(() => {
-      if (autoFocusSerial && serialInputRefs.current?.[rowId]) {
-        serialInputRefs.current[rowId].focus();
-        serialInputRefs.current[rowId].select?.();
-        return;
-      }
-      barcodeInputRef.current?.focus();
-    }, 50);
-  }, [autoFocusSerial, barcodeQueue, isOperationalSelection, isTemplateOnlySelection]);
+    if (autoFocusSerial) focusSerialInput(rowId);
+    else focusBarcodeInput();
+  }, [
+    autoFocusSerial,
+    barcodeQueue,
+    cancelScheduledFocus,
+    focusBarcodeInput,
+    focusSerialInput,
+    isOperationalSelection,
+    isTemplateOnlySelection,
+  ]);
 
   const handleBarcodeSubmit = useCallback((event) => {
     event?.preventDefault();
     addBarcodeToQueue(barcode);
   }, [addBarcodeToQueue, barcode]);
 
+  const handleSerialSubmit = useCallback(() => {
+    if (isOperationalSelection) focusBarcodeInput();
+  }, [focusBarcodeInput, isOperationalSelection]);
+
   const removeQueueItem = useCallback((id) => {
     setBarcodeQueue((prev) => prev.filter((item) => item.id !== id));
-  }, []);
+    if (isOperationalSelection) focusBarcodeInput();
+  }, [focusBarcodeInput, isOperationalSelection]);
 
   const updateQueueItemField = useCallback((id, field, value) => {
     setBarcodeQueue((prev) =>
@@ -99,6 +147,7 @@ const useQuickStockQueueController = ({
     resetQueue,
     addBarcodeToQueue,
     handleBarcodeSubmit,
+    handleSerialSubmit,
     removeQueueItem,
     updateQueueItemField,
   };

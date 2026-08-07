@@ -5,6 +5,13 @@ export const mapHeldCartLinesToSaleItems = ({ cart, validation }) => {
 
   return (cart?.lines || []).map((line) => {
     const availability = validationByKey.get(line.lineKey) || null;
+    const priceAdjustment = Number.isFinite(Number(line.priceAdjustment))
+      ? Number(line.priceAdjustment)
+      : -Number(line.discount || 0);
+    const lineBase = Number(line.unitPrice || 0) * Number(line.quantity || 1);
+    const finalPrice = Number.isFinite(Number(line.finalPrice))
+      ? Number(line.finalPrice)
+      : Math.max(0, lineBase + priceAdjustment);
 
     return {
       lineId: line.lineKey,
@@ -28,9 +35,11 @@ export const mapHeldCartLinesToSaleItems = ({ cart, validation }) => {
       model: line.modelName || '',
       price: Number(line.unitPrice),
       originalPrice: Number(line.unitPrice),
-      sellingPrice: Number(line.unitPrice),
-      discount: Number(line.discount || 0),
-      discountWithoutBill: Number(line.discount || 0),
+      sellingPrice: finalPrice,
+      priceAdjustment,
+      adjustmentReason: line.adjustmentReason || '',
+      discount: priceAdjustment < 0 ? Math.abs(priceAdjustment) : 0,
+      discountWithoutBill: priceAdjustment < 0 ? Math.abs(priceAdjustment) : 0,
       billShare: 0,
       heldCartAvailability: availability,
     };

@@ -95,6 +95,7 @@ const CanonicalGroupDetailPage = () => {
         <div className="mt-2 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0">
             <h1 className="text-2xl font-black text-slate-900">{group.canonicalName || '-'}</h1>
+            <p className="mt-2 text-sm font-bold text-slate-500">มุมมองแบบอ่านอย่างเดียวสำหรับตรวจ Canonical Group ก่อนสร้าง Candidate</p>
             <p className="mt-2 text-sm font-bold text-slate-500">{group.canonicalBrandName || group.brandName || 'ไม่ระบุแบรนด์'}</p>
             <p className="mt-2 break-all font-mono text-xs text-slate-400">{group.groupKey || group.groupFingerprint || groupKey}</p>
           </div>

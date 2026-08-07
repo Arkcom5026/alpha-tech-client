@@ -13,6 +13,7 @@ describe('product template candidate review workspace slice 5 contract', () => {
     const status = read('src/features/templateCandidate/utils/candidateStatus.js');
     const mapper = read('src/features/templateCandidate/utils/candidateMapper.js');
     const queuePage = read('src/features/templateCandidate/pages/CandidateReviewPage.jsx');
+    const queuePresentation = read('src/features/templateCandidate/workspace/components/CandidateReviewQueue.jsx');
     const detailPage = read('src/features/templateCandidate/pages/CandidateDetailPage.jsx');
     const routes = read('src/routes/superadmin/superAdminRoutes.jsx');
 
@@ -58,7 +59,10 @@ describe('product template candidate review workspace slice 5 contract', () => {
     expect(queuePage).toMatch(/pageSize/);
     expect(queuePage).toMatch(/const detailBasePath/);
     expect(queuePage).toMatch(/\/superadmin\/catalog\/candidates/);
-    expect(queuePage).toMatch(/navigate\(`\$\{detailBasePath\}\/\$\{candidate\.id\}`\)/);
+    expect(queuePage).toMatch(/const handleOpenCandidate = \(candidateId\) => navigate\(`\$\{detailBasePath\}\/\$\{candidateId\}`\);/);
+    expect(queuePage).toMatch(/onOpenCandidate=\{handleOpenCandidate\}/);
+    expect(queuePresentation).toMatch(/onClick=\{\(\) => onOpenCandidate\(candidate\.id\)\}/);
+    expect(queuePresentation).not.toMatch(/useNavigate|navigate\(/);
     expect(queuePage).not.toMatch(/SUBMITTED|REQUEST_REVISION|REVISION_REQUESTED|APPROVED|MERGED_EXISTING/);
 
     expect(detailPage).toMatch(/startReview\(/);

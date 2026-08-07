@@ -141,6 +141,7 @@ const createDurableSaleReceiptPilotRuntime = ({
         leaseContext,
         executorOptions: {
           ...executorOptions,
+          printerId: normalizedPrinterProfileId,
           printerProfileId: normalizedPrinterProfileId,
           expectedPrinterId: normalizedAllowedPrinterId,
           durableSaleReceiptPilot: true,

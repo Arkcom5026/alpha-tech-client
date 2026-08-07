@@ -7,11 +7,21 @@ const filename = fileURLToPath(import.meta.url);
 const root = path.resolve(path.dirname(filename), '..');
 const read = (relativePath) => fs.readFileSync(path.join(root, relativePath), 'utf8');
 
+const page = read('src/features/stockItem/pages/ScanBarcodeListPage.jsx');
 const header = read('src/features/stockItem/receive/scan-workflow/components/StockItemScanWorkspaceHeader.jsx');
 const summary = read('src/features/stockItem/receive/scan-workflow/components/StockItemScanSummary.jsx');
 const controls = read('src/features/stockItem/receive/scan-workflow/components/StockItemScanControls.jsx');
 
 describe('StockItem scan workspace modernization contract', () => {
+  it('composes the modern workspace shell in operational order', () => {
+    expect(page).toContain('<StockItemScanWorkspaceHeader');
+    expect(page).toContain('<StockItemScanSummary');
+    expect(page).toContain('<StockItemScanControls');
+    expect(page.indexOf('<StockItemScanWorkspaceHeader')).toBeLessThan(page.indexOf('<StockItemScanSummary'));
+    expect(page.indexOf('<StockItemScanSummary')).toBeLessThan(page.indexOf('<StockItemScanControls'));
+    expect(page).toContain('max-w-[1400px]');
+  });
+
   it('uses workspace components with system-teal primary actions', () => {
     expect(header).toContain('bg-teal-700');
     expect(controls).toContain('bg-teal-700');
@@ -37,5 +47,13 @@ describe('StockItem scan workspace modernization contract', () => {
     expect(summary).toContain('รับแล้ว');
     expect(summary).toContain('ค้างรับ');
     expect(summary).not.toContain('useStockItem');
+  });
+
+  it('keeps runtime and receive ownership out of extracted presentation components', () => {
+    for (const source of [header, summary, controls]) {
+      expect(source).not.toContain('receiveSNAction');
+      expect(source).not.toContain('useStockItemReceiveStore');
+      expect(source).not.toContain('useStockItemScanRuntimeController');
+    }
   });
 });

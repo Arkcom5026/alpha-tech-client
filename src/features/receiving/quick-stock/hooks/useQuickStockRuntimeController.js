@@ -44,6 +44,7 @@ const useQuickStockRuntimeController = () => {
   const queue = useQuickStockQueueController({
     isOperationalSelection: provisionalIsOperationalSelection,
     isTemplateOnlySelection: provisionalIsTemplateOnlySelection,
+    operationalSelectionKey: provisionalOperationalProduct?.id || null,
   });
 
   const product = useQuickStockProductController({

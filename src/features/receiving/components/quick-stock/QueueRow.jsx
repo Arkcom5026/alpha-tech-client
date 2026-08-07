@@ -4,7 +4,7 @@ const QueueRow = ({
   item,
   index,
   serialInputRefs,
-  barcodeInputRef,
+  onSerialSubmit,
   onUpdateQueueItemField,
   onRemoveQueueItem,
 }) => {
@@ -32,7 +32,7 @@ const QueueRow = ({
           onKeyDown={(event) => {
             if (event.key === "Enter") {
               event.preventDefault();
-              barcodeInputRef.current?.focus();
+              onSerialSubmit?.(item.id);
             }
           }}
           placeholder="Optional"

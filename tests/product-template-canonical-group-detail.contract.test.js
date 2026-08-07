@@ -12,6 +12,8 @@ describe('product template canonical group detail contract', () => {
     const candidatePage = read('src/features/templateCandidate/pages/CandidateReviewPage.jsx');
     const candidateHeader = read('src/features/templateCandidate/workspace/components/CandidateReviewWorkspaceHeader.jsx');
     const detailPage = read('src/features/templateCandidate/pages/CanonicalGroupDetailPage.jsx');
+    const detailHeader = read('src/features/templateCandidate/workspace/components/CanonicalGroupDetailHeader.jsx');
+    const sourceProducts = read('src/features/templateCandidate/workspace/components/CanonicalGroupSourceProducts.jsx');
     const routes = read('src/routes/superadmin/superAdminRoutes.jsx');
 
     expect(api).toContain('getCanonicalProductGroupApi');
@@ -24,9 +26,11 @@ describe('product template canonical group detail contract', () => {
     expect(listPage).toContain('businessType=${encodeURIComponent(filters.businessType)}');
     expect(candidatePage).toContain('CandidateReviewWorkspaceHeader');
     expect(candidateHeader).toContain('Product Template Candidate Review Queue');
-    expect(detailPage).toContain('Canonical Group Detail');
-    expect(detailPage).toContain('Source Products');
-    expect(detailPage).toContain('แบบอ่านอย่างเดียว');
+    expect(detailPage).toContain('CanonicalGroupDetailHeader');
+    expect(detailPage).toContain('CanonicalGroupSourceProducts');
+    expect(detailHeader).toContain('Canonical Group Detail');
+    expect(detailHeader).toContain('แบบอ่านอย่างเดียว');
+    expect(sourceProducts).toContain('Source Products');
     expect(routes).toContain("path: 'groups'");
     expect(routes).toContain('CanonicalGroupReviewPage');
     expect(routes).toContain("path: 'groups/:groupKey'");

@@ -49,6 +49,7 @@ const MerchantLoginShell = () => (
 
         <Link
           to="/partner-portal"
+          aria-label="กลับหน้าพาร์ทเนอร์"
           className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-bold text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500"
         >
           <FaArrowLeft className="text-[10px]" />
@@ -57,7 +58,7 @@ const MerchantLoginShell = () => (
       </div>
     </header>
 
-    <main className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-6xl items-center px-5 py-8">
+    <main className="mx-auto flex min-h-[calc(100vh-8rem)] max-w-6xl items-center px-5 py-8">
       <section className="grid w-full overflow-hidden rounded-[30px] border border-slate-200 bg-white shadow-[0_24px_64px_rgba(15,23,42,0.10)] lg:grid-cols-[minmax(0,1fr)_430px]">
         <div className="relative hidden overflow-hidden border-r border-slate-100 bg-gradient-to-br from-white via-[#fbfcfb] to-sky-50/60 p-10 lg:flex lg:flex-col xl:p-12">
           <div className="absolute -left-20 top-10 h-64 w-64 rounded-full bg-sky-100/65 blur-3xl" />
@@ -76,7 +77,13 @@ const MerchantLoginShell = () => (
             </p>
           </div>
 
-          <div className="relative mt-8 grid gap-3">
+          <img
+            src="/assets/merchant-pos-hardware.svg"
+            alt="อุปกรณ์หน้าร้านสำหรับระบบ Merchant POS"
+            className="relative mx-auto mt-7 max-h-44 w-full max-w-md object-contain"
+          />
+
+          <div className="relative mt-7 grid gap-3">
             {values.map(({ title, detail, Icon, tone }) => (
               <div key={title} className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-sm">
                 <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${tone}`}>
@@ -105,6 +112,10 @@ const MerchantLoginShell = () => (
         </div>
       </section>
     </main>
+
+    <footer className="border-t border-slate-200 bg-white px-5 py-4 text-center text-[11px] font-medium text-slate-400">
+      SADUAKSABUY Merchant Center · Secure store access
+    </footer>
   </div>
 );
 

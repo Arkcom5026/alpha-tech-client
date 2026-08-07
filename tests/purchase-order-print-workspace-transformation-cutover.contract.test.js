@@ -7,12 +7,14 @@ const read = (relativePath) => fs.readFileSync(path.join(root, relativePath), 'u
 
 describe('purchase order print workspace transformation cutover contract', () => {
   const page = read('src/features/purchaseOrder/print/pages/PrintPurchaseOrderPage.jsx');
+  const shell = read('src/features/purchaseOrder/print/workspace/components/PurchaseOrderPrintShell.jsx');
   const policy = read('src/features/purchaseOrder/print/workspace/policies/purchaseOrderPrintPolicy.js');
 
   it('cuts branch resolution and purchase-order projection over to the print policy', () => {
     expect(page).toContain('resolvePurchaseOrderBranchId');
     expect(page).toContain('preparePurchaseOrderPrintProjection(po)');
-    expect(page).toContain('formatPurchaseOrderMoney');
+    expect(shell).toContain('formatPurchaseOrderMoney');
+    expect(policy).toContain('export const formatPurchaseOrderMoney');
   });
 
   it('removes duplicated projection implementation from the page', () => {
@@ -20,6 +22,7 @@ describe('purchase order print workspace transformation cutover contract', () =>
     expect(page).not.toContain('const qty = Number(item?.quantity ?? 0)');
     expect(page).not.toContain('const cost = Number(item?.costPrice ?? 0)');
     expect(page).not.toContain('return sum + qty * cost');
+    expect(page).not.toContain('formatPurchaseOrderMoney');
   });
 
   it('keeps branch loading, purchase-order fetching, and browser authority in the page', () => {

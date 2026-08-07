@@ -1,9 +1,10 @@
-// 📁 FILE: src/features/finance/pages/CustomerCreditPage.jsx
-// ✅ Hard-stable: useSyncExternalStore + store API
 import React, { useCallback, useMemo, useState, useSyncExternalStore } from 'react';
-import { useParams } from 'react-router-dom'; // 🟢 [DYNAMIC PARAM FIX] นำเข้า useParams มาร่วมทีม
+import { useParams } from 'react-router-dom';
 import useFinanceStore from '@/features/finance/store/financeStore';
 import CustomerCreditTable from '@/features/finance/components/CustomerCreditTable';
+import FinanceMetricCard from '@/features/finance/components/workspace/FinanceMetricCard';
+import FinanceWorkspaceHeader from '@/features/finance/components/workspace/FinanceWorkspaceHeader';
+import FinanceWorkspaceSection from '@/features/finance/components/workspace/FinanceWorkspaceSection';
 
 const toISODate = (d) => {
   try {
@@ -77,7 +78,7 @@ const useFinanceSlice = (selector) => {
 };
 
 const CustomerCreditPage = () => {
-  const { shopSlug } = useParams(); // 🟢 [LINK BINDING] แกะรหัสชื่อร้านค้าพาร์ตเนอร์คุมระบบนำทาง Multi-Tenant
+  const { shopSlug } = useParams();
   const defaults = useMemo(() => getDefaultRange90(), []);
 
   const [keyword, setKeyword] = useState('');
@@ -135,11 +136,7 @@ const CustomerCreditPage = () => {
         return sum + parseMoney(v);
       }, 0);
 
-      return {
-        creditTotal,
-        customerCount: seen.size || safeRows.length,
-        limitTotal,
-      };
+      return { creditTotal, customerCount: seen.size || safeRows.length, limitTotal };
     };
 
     if (s && typeof s === 'object') {
@@ -156,9 +153,7 @@ const CustomerCreditPage = () => {
           s.arTotal ??
           s.netOutstanding
       );
-
       const customerCount = Number(s.customerCount ?? s.totalCustomers ?? s.customers ?? safeRows.length) || 0;
-
       const limitTotal = parseMoney(
         s.totalCreditLimit ??
           s.creditLimitTotal ??
@@ -184,13 +179,11 @@ const CustomerCreditPage = () => {
     return computeFromRows();
   }, [customerCreditSummary, safeRows]);
 
-  const buildParams = useCallback(() => {
-    return {
-      keyword: keyword.trim() || undefined,
-      fromDate: fromDate || undefined,
-      toDate: toDate || undefined,
-    };
-  }, [keyword, fromDate, toDate]);
+  const buildParams = useCallback(() => ({
+    keyword: keyword.trim() || undefined,
+    fromDate: fromDate || undefined,
+    toDate: toDate || undefined,
+  }), [keyword, fromDate, toDate]);
 
   const reload = useCallback(async () => {
     try {
@@ -199,12 +192,11 @@ const CustomerCreditPage = () => {
         console.log('[CustomerCreditPage] reload()', buildParams());
       }
     } catch (_) {}
+
     const params = buildParams();
     const st = useFinanceStore.getState();
 
-    if (typeof st.resetCustomerCreditErrorAction === 'function') {
-      st.resetCustomerCreditErrorAction();
-    }
+    if (typeof st.resetCustomerCreditErrorAction === 'function') st.resetCustomerCreditErrorAction();
 
     if (typeof st.fetchCustomerCreditAction === 'function') {
       await st.fetchCustomerCreditAction(params);
@@ -214,18 +206,14 @@ const CustomerCreditPage = () => {
     const jobs = [];
     if (typeof st.fetchCustomerCreditSummaryAction === 'function') jobs.push(st.fetchCustomerCreditSummaryAction(params));
     if (typeof st.fetchCustomerCreditRowsAction === 'function') jobs.push(st.fetchCustomerCreditRowsAction(params));
-
     if (jobs.length === 0) return;
     await Promise.all(jobs);
   }, [buildParams]);
 
-  const onApplyFilters = useCallback(
-    async (e) => {
-      e?.preventDefault?.();
-      await reload();
-    },
-    [reload]
-  );
+  const onApplyFilters = useCallback(async (e) => {
+    e?.preventDefault?.();
+    await reload();
+  }, [reload]);
 
   const onClearFilters = useCallback(() => {
     setKeyword('');
@@ -245,123 +233,69 @@ const CustomerCreditPage = () => {
   }, [safeRows.length, customerCreditSummary]);
 
   return (
-    <div className="min-h-screen bg-gray-100 p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold text-blue-800">เครดิตลูกค้า (Customer Credit)</h1>
-          <p className="text-sm text-gray-600 mt-1">ภาพรวมยอดเครดิตคงค้างรายลูกค้า (ฐานทำ Credit Control / Aging ต่อได้)</p>
+    <div className="min-h-screen space-y-5 bg-slate-50 p-4 text-slate-800 md:p-6">
+      <FinanceWorkspaceHeader
+        title="เครดิตลูกค้า"
+        description="ตรวจยอดเครดิตคงค้างและวงเงินรายลูกค้า โดยคง subscription และ fallback authority เดิมของ Finance Store"
+        badge={shopSlug ? `Credit · ${shopSlug}` : 'Customer Credit'}
+      />
+
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <FinanceMetricCard label="ยอดเครดิตคงค้างรวม" value={`${fmt(computedSummary.creditTotal)} ฿`} hint="รวมยอดค้างทั้งหมดของลูกค้า" tone="danger" />
+        <FinanceMetricCard label="จำนวนลูกค้าที่มีเครดิต" value={`${computedSummary.customerCount.toLocaleString('th-TH')} ราย`} hint="นับแบบ best-effort จากผลลัพธ์" tone="info" />
+        <FinanceMetricCard label="วงเงินรวม" value={computedSummary.limitTotal ? `${fmt(computedSummary.limitTotal)} ฿` : '—'} hint="แสดงเมื่อมีข้อมูลวงเงิน" tone="neutral" />
+      </div>
+
+      {customerCreditError ? (
+        <div role="alert" className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm font-semibold text-rose-800">
+          <p className="font-black">ไม่สามารถโหลดข้อมูลเครดิตลูกค้าได้</p>
+          <p className="mt-1">{String(customerCreditError)}</p>
         </div>
+      ) : null}
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-white rounded-xl shadow-sm border p-5">
-            <div className="text-sm text-gray-500">ยอดเครดิตคงค้างรวม</div>
-            <div className="text-3xl font-extrabold text-red-600 mt-2">{fmt(computedSummary.creditTotal)} ฿</div>
-            <div className="text-xs text-gray-400 mt-1">รวมยอดค้างทั้งหมดของลูกค้า</div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm border p-5">
-            <div className="text-sm text-gray-500">จำนวนลูกค้าที่มีเครดิต</div>
-            <div className="text-3xl font-extrabold text-purple-600 mt-2">
-              {computedSummary.customerCount.toLocaleString('th-TH')} ราย
-            </div>
-            <div className="text-xs text-gray-400 mt-1">นับแบบ best-effort</div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm border p-5">
-            <div className="text-sm text-gray-500">วงเงินรวม</div>
-            <div className="text-3xl font-extrabold text-blue-700 mt-2">
-              {computedSummary.limitTotal ? `${fmt(computedSummary.limitTotal)} ฿` : '—'}
-            </div>
-            <div className="text-xs text-gray-400 mt-1">แสดงเมื่อมีข้อมูลวงเงิน</div>
-          </div>
+      {missingWiring ? (
+        <div role="status" className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold text-amber-900">
+          <p className="font-black">ยังไม่ได้เชื่อม store action สำหรับเครดิตลูกค้า</p>
+          <p className="mt-1">โปรดเพิ่ม action ใน <span className="font-mono">financeStore.js</span> เช่น <span className="font-mono">fetchCustomerCreditAction</span></p>
         </div>
+      ) : null}
 
-        {customerCreditError ? (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
-            <div className="font-semibold">ไม่สามารถโหลดข้อมูลเครดิตลูกค้าได้</div>
-            <div className="text-sm mt-1">{String(customerCreditError)}</div>
-          </div>
-        ) : null}
+      <FinanceWorkspaceSection title="ค้นหาเครดิตลูกค้า" description="หน้านี้คง behavior เดิม: ไม่ auto-load และโหลดเมื่อกดค้นหาเท่านั้น">
+        <form onSubmit={onApplyFilters} className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <label className="text-sm font-black text-slate-700">
+            ค้นหา
+            <input
+              type="search"
+              className="mt-1 min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm font-medium outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-100"
+              placeholder="ชื่อลูกค้า / หน่วยงาน / เบอร์โทร"
+              value={keyword}
+              onChange={(e) => setKeyword(e.target.value)}
+            />
+          </label>
+          <label className="text-sm font-black text-slate-700">
+            ตั้งแต่
+            <input type="date" className="mt-1 min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm focus:border-teal-600 focus:ring-2 focus:ring-teal-100" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
+          </label>
+          <label className="text-sm font-black text-slate-700">
+            ถึง
+            <input type="date" className="mt-1 min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm focus:border-teal-600 focus:ring-2 focus:ring-teal-100" value={toDate} onChange={(e) => setToDate(e.target.value)} />
+          </label>
 
-        {missingWiring ? (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-yellow-900">
-            <div className="font-semibold">ยังไม่ได้เชื่อม store action สำหรับเครดิตลูกค้า</div>
-            <div className="text-sm mt-1">
-              โปรดเพิ่ม action ใน <span className="font-mono">financeStore.js</span> เช่น{' '}
-              <span className="font-mono">fetchCustomerCreditAction</span>
-            </div>
-          </div>
-        ) : null}
-
-        <form onSubmit={onApplyFilters} className="bg-white border rounded-xl p-5 shadow-sm">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">ค้นหา</label>
-              <input
-                className="w-full border rounded-md px-3 py-2 text-sm"
-                placeholder="ชื่อลูกค้า / หน่วยงาน / เบอร์โทร"
-                value={keyword}
-                onChange={(e) => setKeyword(e.target.value)}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">ตั้งแต่</label>
-              <input
-                type="date"
-                className="w-full border rounded-md px-3 py-2 text-sm"
-                value={fromDate}
-                onChange={(e) => setFromDate(e.target.value)}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">ถึง</label>
-              <input
-                type="date"
-                className="w-full border rounded-md px-3 py-2 text-sm"
-                value={toDate}
-                onChange={(e) => setToDate(e.target.value)}
-              />
-            </div>
-          </div>
-
-          <div className="flex flex-wrap gap-3 mt-4">
-            {/* 🟢 [BUG FIX SUCCESS] ซ่อมคีย์บอร์ดพิมพ์เศษสตริง $1 หลุดพังออกถาวร ปิดแท็กสะอาดสมบูรณ์ */}
-            <button
-              type="submit"
-              className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-semibold hover:bg-blue-700 transition"
-              disabled={!!customerCreditLoading}
-            >
+          <div className="flex flex-wrap gap-3 md:col-span-3">
+            <button type="submit" className="min-h-11 rounded-xl bg-teal-700 px-5 text-sm font-black text-white transition hover:bg-teal-800 disabled:opacity-60" disabled={!!customerCreditLoading}>
               {customerCreditLoading ? 'กำลังโหลด...' : 'ค้นหา'}
             </button>
-
-            <button
-              type="button"
-              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md text-sm font-semibold hover:bg-gray-200 transition"
-              onClick={onClearFilters}
-              disabled={!!customerCreditLoading}
-            >
+            <button type="button" className="min-h-11 rounded-xl border border-slate-300 bg-white px-5 text-sm font-black text-slate-700 transition hover:bg-slate-50 disabled:opacity-60" onClick={onClearFilters} disabled={!!customerCreditLoading}>
               ล้างตัวกรอง
             </button>
           </div>
-
-          <div className="text-xs text-gray-500 mt-3">
-            * หน้านี้ไม่ auto-load เพื่อความนิ่ง (กด “ค้นหา” เพื่อโหลดข้อมูล)
-          </div>
         </form>
+      </FinanceWorkspaceSection>
 
-        <div className="bg-white border rounded-xl p-5 shadow-sm">
-          <div className="flex items-center justify-between gap-3 mb-3">
-            <div className="text-sm font-semibold text-gray-700">รายการเครดิตลูกค้า</div>
-            <div className="text-xs text-gray-500">ทั้งหมด {safeRows.length.toLocaleString('th-TH')} รายการ</div>
-          </div>
-
-          <CustomerCreditTable rows={safeRows} loading={!!customerCreditLoading} />
-
-          <div className="text-xs text-gray-500 mt-3">* ฐานสำหรับทำ Credit Control, Aging และ Customer Detail ต่อไป</div>
-        </div>
-      </div>
+      <FinanceWorkspaceSection title="รายการเครดิตลูกค้า" description={`ทั้งหมด ${safeRows.length.toLocaleString('th-TH')} รายการ`}>
+        <CustomerCreditTable rows={safeRows} loading={!!customerCreditLoading} />
+        <p className="mt-3 text-xs font-medium text-slate-500">* ฐานข้อมูลนี้รองรับการต่อยอด Credit Control, Aging และ Customer Detail</p>
+      </FinanceWorkspaceSection>
     </div>
   );
 };

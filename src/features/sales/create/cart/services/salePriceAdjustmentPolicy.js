@@ -35,13 +35,17 @@ export const projectSaleLinePrice = (item = {}) => {
   const quantity = item.lineType === 'SIMPLE' ? Number(item.quantity || 1) : 1
   const basePrice = round2((Number(item.price) || 0) * quantity)
   const explicit = Number(item.priceAdjustment)
-  const legacyDiscount = Number(item.discountWithoutBill ?? item.discount ?? 0) || 0
-  const priceAdjustment = Number.isFinite(explicit) ? round2(explicit) : round2(-legacyDiscount)
+  const legacyItemDiscount = Number(item.discountWithoutBill ?? item.discount ?? 0) || 0
+  const billShare = Math.max(0, Number(item.billShare || 0))
+  const itemAdjustment = Number.isFinite(explicit) ? round2(explicit) : round2(-legacyItemDiscount)
+  const priceAdjustment = round2(itemAdjustment - billShare)
   const result = normalizePriceAdjustmentInput({ basePrice, adjustment: priceAdjustment })
 
   if (!result.ok) return result
   return {
     ...result,
+    itemPriceAdjustment: itemAdjustment,
+    billShare: round2(billShare),
     adjustmentReason: String(item.adjustmentReason || '').trim() || null,
   }
 }

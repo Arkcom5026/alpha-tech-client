@@ -1,7 +1,10 @@
 import { useCallback } from 'react';
 import useStockItemScanFocusController from './useStockItemScanFocusController';
 import useStockItemWorkingGroupController from './useStockItemWorkingGroupController';
-import { deriveEffectiveReceiveInput } from '../policies/stockItemScanWorkflowPolicy';
+import {
+  deriveEffectiveReceiveInput,
+  STOCK_ITEM_WORKING_GROUP,
+} from '../policies/stockItemScanWorkflowPolicy';
 
 export const useStockItemScanRuntimeController = ({
   rows = [],
@@ -53,12 +56,21 @@ export const useStockItemScanRuntimeController = ({
     workingGroupController.workingGroup,
   ]);
 
-  const resolveReceiveInput = useCallback(({ barcodeInput, serialNumber } = {}) =>
-    deriveEffectiveReceiveInput({
+  const resolveReceiveInput = useCallback(({ barcodeInput, serialNumber } = {}) => {
+    const canUseExpectedBarcode =
+      manualSerialMode &&
+      workingGroupController.workingGroup === STOCK_ITEM_WORKING_GROUP.SINGLE_PRODUCT;
+
+    return deriveEffectiveReceiveInput({
       barcodeInput,
-      expectedBarcode: workingGroupController.expectedBarcode,
+      expectedBarcode: canUseExpectedBarcode ? workingGroupController.expectedBarcode : '',
       serialNumber,
-    }), [workingGroupController.expectedBarcode]);
+    });
+  }, [
+    manualSerialMode,
+    workingGroupController.expectedBarcode,
+    workingGroupController.workingGroup,
+  ]);
 
   return {
     ...workingGroupController,

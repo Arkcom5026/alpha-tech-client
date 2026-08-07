@@ -1,15 +1,15 @@
 {
     "schemaVersion":  2,
-    "status":  "BLOCKED",
+    "status":  "PASS",
     "repository":  "Arkcom5026/alpha-tech-client",
     "sourceBranch":  "main",
     "sourceSha":  "b9bcf71fa6fdaa9319b3e0d82382eb90d222b0cb",
     "eventName":  "workflow_dispatch",
     "workflow":  "ALDE Local Certification",
-    "workflowRunId":  31197764939,
+    "workflowRunId":  31197975897,
     "workflowRunAttempt":  1,
-    "workflowRunUrl":  "https://github.com/Arkcom5026/alpha-tech-client/actions/runs/31197764939",
-    "publishedAt":  "2026-08-07T16:29:19.9212799Z",
+    "workflowRunUrl":  "https://github.com/Arkcom5026/alpha-tech-client/actions/runs/31197975897",
+    "publishedAt":  "2026-08-07T17:16:38.6236753Z",
     "runner":  {
                    "name":  "ALDE-WIN01",
                    "os":  "Windows",
@@ -17,24 +17,24 @@
                },
     "metadata":  {
                      "schemaVersion":  5,
-                     "status":  "BLOCKED",
+                     "status":  "PASS",
                      "mode":  "SyncAndCertify",
-                     "startedAt":  "2026-08-07T16:29:14.0328943Z",
-                     "finishedAt":  "2026-08-07T16:29:15.7652024Z",
+                     "startedAt":  "2026-08-07T16:31:43.7692069Z",
+                     "finishedAt":  "2026-08-07T17:16:29.2224839Z",
                      "runnerName":  "ALDE-WIN01",
-                     "workflowRunId":  "31197764939",
+                     "workflowRunId":  "31197975897",
                      "clientPath":  "D:\\alpha-tech\\client",
                      "serverPath":  "D:\\alpha-tech\\server",
-                     "clientHead":  "f6dc2336c895d6359ac846611b1ff017791a45b8",
-                     "serverHead":  "219a3839d627bae69213e5a0933e1cbf239fc5cd",
-                     "engineExitCode":  2,
-                     "pipelineExitCode":  2,
-                     "pipelineError":  "ALDE preflight blocked certification.",
+                     "clientHead":  "037d6262999b7d687ddc83e6107086ff2822f078",
+                     "serverHead":  "c58aead79f77370a51414ebeae37d068e5ed9375",
+                     "engineExitCode":  1,
+                     "pipelineExitCode":  0,
+                     "pipelineError":  "",
                      "preflight":  {
                                        "schemaVersion":  1,
-                                       "status":  "BLOCKED",
+                                       "status":  "PASS",
                                        "name":  "ALDE Reliability Preflight",
-                                       "startedAt":  "2026-08-07T16:29:15.2875410Z",
+                                       "startedAt":  "2026-08-07T16:31:44.8321709Z",
                                        "requiredBranch":  "main",
                                        "repositories":  {
                                                             "client":  {
@@ -53,14 +53,14 @@
                                                             "server":  {
                                                                            "label":  "Server",
                                                                            "path":  "D:\\alpha-tech\\server",
-                                                                           "branch":  "feature/document-purpose-store-device-print-job",
-                                                                           "head":  "219a3839d627bae69213e5a0933e1cbf239fc5cd",
+                                                                           "branch":  "main",
+                                                                           "head":  "6668b98857876bb2743fae4494f4fb96ff0f5a2e",
                                                                            "clean":  true,
                                                                            "dirtyEntries":  [
 
                                                                                             ],
                                                                            "issues":  [
-                                                                                          "REQUIRED_BRANCH_MISMATCH"
+
                                                                                       ]
                                                                        }
                                                         },
@@ -68,7 +68,7 @@
 
                                                                      ],
                                        "issues":  [
-                                                      "REQUIRED_BRANCH_MISMATCH"
+
                                                   ],
                                        "remediation":  [
                                                            "Keep both repositories on the required branch with clean working trees.",
@@ -76,8 +76,8 @@
                                                            "Stop only the identified Alpha-Tech server node process before rerunning if Prisma generate lock risk is reported."
                                                        ]
                                    },
-                     "preflightReportPath":  "D:\\alde\\actions-runner\\_work\\alpha-tech-client\\alpha-tech-client\\alde-evidence\\alde-preflight-20260807-232914.json",
-                     "preflightExitCode":  2,
+                     "preflightReportPath":  "D:\\alde\\actions-runner\\_work\\alpha-tech-client\\alpha-tech-client\\alde-evidence\\alde-preflight-20260807-233143.json",
+                     "preflightExitCode":  0,
                      "assessment":  {
                                         "schemaVersion":  2,
                                         "classifier":  {
@@ -92,38 +92,28 @@
                                                            "conservativeUnknownPolicy":  "UNCLASSIFIED is certification-failing until reviewed.",
                                                            "earlyFailurePolicy":  "Preflight failures without normal gates are preserved as a synthetic ALDE preflight gate."
                                                        },
-                                        "authorityStatus":  "BLOCKED",
+                                        "authorityStatus":  "PASS",
                                         "regressionCount":  0,
-                                        "environmentBlockerCount":  1,
+                                        "environmentBlockerCount":  0,
                                         "safetyGuardCount":  0,
                                         "unclassifiedCount":  0,
-                                        "failedGateCount":  1,
+                                        "failedGateCount":  0,
                                         "requiredPassedGateCount":  0,
                                         "advisorySkippedGateCount":  0,
                                         "blockingSkippedGateCount":  0,
-                                        "interpretation":  "No source regression was identified, but certification requires repository/environment recovery or explicit safety authority.",
+                                        "interpretation":  "All certification gates passed.",
                                         "gates":  [
-                                                      {
-                                                          "name":  "ALDE preflight",
-                                                          "status":  "FAIL",
-                                                          "failureClass":  "ENVIRONMENT_BLOCKER",
-                                                          "reasonCode":  "REQUIRED_BRANCH_MISMATCH",
-                                                          "matchedPattern":  "REQUIRED_BRANCH_MISMATCH",
-                                                          "durationSeconds":  null,
-                                                          "detail":  "REQUIRED_BRANCH_MISMATCH",
-                                                          "transcriptEvidence":  "**********************\r\nWindows PowerShell transcript start\r\nStart time: 20260807232914\r\nUsername: WORKGROUP\\DESKTOP-8GBTJDF$\r\nRunAs User: WORKGROUP\\DESKTOP-8GBTJDF$\r\nConfiguration Name: \r\nMachine: DESKTOP-8GBTJDF (Microsoft Windows NT 10.0.19045.0)\r\nHost Application: C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.EXE -command . \u0027D:\\alde\\actions-runner\\_work\\_temp\\a532358d-f731-4ade-ba05-31436e2eb5c7.ps1\u0027\r\nProcess ID: 10080\r\nPSVersion: 5.1.19041.6157\r\nPSEdition: Desktop\r\nPSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1.19041.6157\r\nBuildVersion: 10.0.19041.6157\r\nCLRVersion: 4.0.30319.42000\r\nWSManStackVersion: 3.0\r\nPSRemotingProtocolVersion: 2.3\r\nSerializationVersion: 1.1.0.1\r\n**********************\r\n\r\n==============================================================================\r\n ALDE RELIABILITY PREFLIGHT\r\n==============================================================================\r\n[PREFLIGHT] status=BLOCKED issues=1\r\nWARNING: ALDE engine returned failure: ALDE preflight blocked certification.\r\n**********************\r\nWindows PowerShell transcript end\r\nEnd time: 20260807232915\r\n**********************",
-                                                          "gatePolicy":  "REQUIRED"
-                                                      }
+
                                                   ]
                                     },
-                     "reportPath":  "D:\\alde\\actions-runner\\_work\\alpha-tech-client\\alpha-tech-client\\alde-evidence\\alde-preflight-20260807-232914.json",
-                     "transcriptPath":  "D:\\alde\\actions-runner\\_work\\alpha-tech-client\\alpha-tech-client\\alde-evidence\\alde-transcript-20260807-232914.log"
+                     "reportPath":  "D:\\alde\\actions-runner\\_work\\alpha-tech-client\\alpha-tech-client\\alde-evidence\\alde-preflight-20260807-233143.json",
+                     "transcriptPath":  "D:\\alde\\actions-runner\\_work\\alpha-tech-client\\alpha-tech-client\\alde-evidence\\alde-transcript-20260807-233143.log"
                  },
     "verificationReport":  {
                                "schemaVersion":  1,
-                               "status":  "BLOCKED",
+                               "status":  "PASS",
                                "name":  "ALDE Reliability Preflight",
-                               "startedAt":  "2026-08-07T16:29:15.2875410Z",
+                               "startedAt":  "2026-08-07T16:31:44.8321709Z",
                                "requiredBranch":  "main",
                                "repositories":  {
                                                     "client":  {
@@ -142,14 +132,14 @@
                                                     "server":  {
                                                                    "label":  "Server",
                                                                    "path":  "D:\\alpha-tech\\server",
-                                                                   "branch":  "feature/document-purpose-store-device-print-job",
-                                                                   "head":  "219a3839d627bae69213e5a0933e1cbf239fc5cd",
+                                                                   "branch":  "main",
+                                                                   "head":  "6668b98857876bb2743fae4494f4fb96ff0f5a2e",
                                                                    "clean":  true,
                                                                    "dirtyEntries":  [
 
                                                                                     ],
                                                                    "issues":  [
-                                                                                  "REQUIRED_BRANCH_MISMATCH"
+
                                                                               ]
                                                                }
                                                 },
@@ -157,7 +147,7 @@
 
                                                              ],
                                "issues":  [
-                                              "REQUIRED_BRANCH_MISMATCH"
+
                                           ],
                                "remediation":  [
                                                    "Keep both repositories on the required branch with clean working trees.",
@@ -178,28 +168,18 @@
                                                                      "conservativeUnknownPolicy":  "UNCLASSIFIED is certification-failing until reviewed.",
                                                                      "earlyFailurePolicy":  "Preflight failures without normal gates are preserved as a synthetic ALDE preflight gate."
                                                                  },
-                                                  "authorityStatus":  "BLOCKED",
+                                                  "authorityStatus":  "PASS",
                                                   "regressionCount":  0,
-                                                  "environmentBlockerCount":  1,
+                                                  "environmentBlockerCount":  0,
                                                   "safetyGuardCount":  0,
                                                   "unclassifiedCount":  0,
-                                                  "failedGateCount":  1,
+                                                  "failedGateCount":  0,
                                                   "requiredPassedGateCount":  0,
                                                   "advisorySkippedGateCount":  0,
                                                   "blockingSkippedGateCount":  0,
-                                                  "interpretation":  "No source regression was identified, but certification requires repository/environment recovery or explicit safety authority.",
+                                                  "interpretation":  "All certification gates passed.",
                                                   "gates":  [
-                                                                {
-                                                                    "name":  "ALDE preflight",
-                                                                    "status":  "FAIL",
-                                                                    "failureClass":  "ENVIRONMENT_BLOCKER",
-                                                                    "reasonCode":  "REQUIRED_BRANCH_MISMATCH",
-                                                                    "matchedPattern":  "REQUIRED_BRANCH_MISMATCH",
-                                                                    "durationSeconds":  null,
-                                                                    "detail":  "REQUIRED_BRANCH_MISMATCH",
-                                                                    "transcriptEvidence":  "**********************\r\nWindows PowerShell transcript start\r\nStart time: 20260807232914\r\nUsername: WORKGROUP\\DESKTOP-8GBTJDF$\r\nRunAs User: WORKGROUP\\DESKTOP-8GBTJDF$\r\nConfiguration Name: \r\nMachine: DESKTOP-8GBTJDF (Microsoft Windows NT 10.0.19045.0)\r\nHost Application: C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.EXE -command . \u0027D:\\alde\\actions-runner\\_work\\_temp\\a532358d-f731-4ade-ba05-31436e2eb5c7.ps1\u0027\r\nProcess ID: 10080\r\nPSVersion: 5.1.19041.6157\r\nPSEdition: Desktop\r\nPSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1.19041.6157\r\nBuildVersion: 10.0.19041.6157\r\nCLRVersion: 4.0.30319.42000\r\nWSManStackVersion: 3.0\r\nPSRemotingProtocolVersion: 2.3\r\nSerializationVersion: 1.1.0.1\r\n**********************\r\n\r\n==============================================================================\r\n ALDE RELIABILITY PREFLIGHT\r\n==============================================================================\r\n[PREFLIGHT] status=BLOCKED issues=1\r\nWARNING: ALDE engine returned failure: ALDE preflight blocked certification.\r\n**********************\r\nWindows PowerShell transcript end\r\nEnd time: 20260807232915\r\n**********************",
-                                                                    "gatePolicy":  "REQUIRED"
-                                                                }
+
                                                             ]
                                               }
                            }

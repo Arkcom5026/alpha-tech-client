@@ -15,6 +15,8 @@ describe('combined document detail workspace presentation contract', () => {
     expect(combined).not.toContain('useCombinedBillingStore');
     expect(combined).not.toContain('fetchDocumentById');
     expect(combined).not.toContain('useParams');
+    expect(combined).not.toContain('useNavigate');
+    expect(combined).not.toContain('react-router-dom');
     expect(combined).not.toContain('useEffect');
     expect(combined).not.toContain('window.print');
   });
@@ -25,8 +27,8 @@ describe('combined document detail workspace presentation contract', () => {
     expect(state).toContain('ไม่พบข้อมูลเอกสาร');
   });
 
-  it('preserves return navigation and print controls through explicit props', () => {
-    expect(toolbar).toContain("backTo = '/billing/combine'");
+  it('preserves return navigation and print controls through explicit intents', () => {
+    expect(toolbar).toContain('onClick={onBack}');
     expect(toolbar).toContain('onClick={onPrint}');
     expect(toolbar).toContain('กลับไปหน้ารวมบิล');
     expect(toolbar).toContain('พิมพ์เอกสาร');

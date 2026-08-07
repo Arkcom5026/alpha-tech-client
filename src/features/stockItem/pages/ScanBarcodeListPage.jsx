@@ -3,12 +3,13 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { CheckCircle2, HelpCircle, Search } from 'lucide-react';
 import useBarcodeStore from '@/features/barcode/store/barcodeStore';
 import useStockItemReceiveStore from '@/features/stockItem/receive/store/useStockItemReceiveStore';
+import StockItemReceivedResults from '@/features/stockItem/receive/scan-workflow/components/StockItemReceivedResults';
 import StockItemScanControls from '@/features/stockItem/receive/scan-workflow/components/StockItemScanControls';
 import StockItemScanSummary from '@/features/stockItem/receive/scan-workflow/components/StockItemScanSummary';
 import StockItemScanWorkspaceHeader from '@/features/stockItem/receive/scan-workflow/components/StockItemScanWorkspaceHeader';
+import StockItemWorkingGroupResults from '@/features/stockItem/receive/scan-workflow/components/StockItemWorkingGroupResults';
 import useStockItemScanRuntimeController from '@/features/stockItem/receive/scan-workflow/hooks/useStockItemScanRuntimeController';
 import {
   STOCK_ITEM_FOCUS_TARGET,
@@ -158,13 +159,6 @@ const ScanBarcodeListPage = () => {
   useEffect(() => () => {
     if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current);
   }, []);
-
-  const refreshBarcodesDebounced = useCallback(() => {
-    if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current);
-    refreshTimeoutRef.current = setTimeout(() => {
-      if (receiptId) loadBarcodesAction(receiptId);
-    }, 300);
-  }, [loadBarcodesAction, receiptId]);
 
   const restoreWorkflowFocus = useCallback(() => {
     focusForCurrentState();
@@ -350,6 +344,18 @@ const ScanBarcodeListPage = () => {
     }
   };
 
+  const handleStartEditSN = useCallback((row) => {
+    setEditingBarcodeReceiptId(row.id);
+    setEditingSN(row.serialNumber || '');
+    scheduleFocus(STOCK_ITEM_FOCUS_TARGET.EDIT_SERIAL);
+  }, [scheduleFocus]);
+
+  const handleCancelEditSN = useCallback(() => {
+    setEditingBarcodeReceiptId(null);
+    setEditingSN('');
+    restoreWorkflowFocus();
+  }, [restoreWorkflowFocus]);
+
   const messageClass = pageMessage?.type === 'success'
     ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
     : pageMessage?.type === 'warning'
@@ -392,15 +398,28 @@ const ScanBarcodeListPage = () => {
       />
 
       <section className="grid gap-4 xl:grid-cols-2">
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="mb-3 flex items-center justify-between gap-3"><div className="flex items-center gap-2"><HelpCircle className="text-amber-500" size={20} /><div><h2 className="font-semibold">รายการค้างรับ</h2><p className="text-xs text-slate-500">{workingGroup === STOCK_ITEM_WORKING_GROUP.SINGLE_PRODUCT ? 'กลุ่มสินค้าชนิดเดียว' : workingGroup === STOCK_ITEM_WORKING_GROUP.MIXED_PRODUCT ? 'หลายกลุ่มสินค้า' : 'ไม่มีรายการในกลุ่ม'}</p></div></div><div className="relative max-w-xs flex-1"><Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} /><input ref={filterInputRef} type="search" value={textFilter} onChange={(event) => setTextFilter(event.target.value)} placeholder="ค้นหาสินค้า / SKU / Barcode" className="min-h-11 w-full rounded-xl border border-slate-300 py-2 pl-9 pr-3 text-sm outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-100" /></div></div>
-          <div className="max-h-[560px] space-y-2 overflow-y-auto pr-1">{pendingList.length === 0 ? <p className="rounded-xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">ไม่มีรายการค้างรับในกลุ่มนี้</p> : pendingList.map((row, index) => <div key={row.id ?? `${row.barcode}-${index}`} className="rounded-xl border border-slate-200 bg-slate-50 p-3"><div className="flex items-start justify-between gap-3"><div><p className="font-medium">{resolveProductName(row)}</p><p className="mt-1 font-mono text-sm text-teal-700">{row.barcode || '-'}</p></div><span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700">ค้างรับ</span></div></div>)}</div>
-        </div>
+        <StockItemWorkingGroupResults
+          workingGroup={workingGroup}
+          filterInputRef={filterInputRef}
+          textFilter={textFilter}
+          setTextFilter={setTextFilter}
+          rows={pendingList}
+          resolveProductName={resolveProductName}
+        />
 
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="mb-3 flex items-center gap-2"><CheckCircle2 className="text-emerald-500" size={20} /><h2 className="font-semibold">รายการรับแล้ว</h2></div>
-          <div className="max-h-[560px] space-y-2 overflow-y-auto pr-1">{scannedList.length === 0 ? <p className="rounded-xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">ยังไม่มีรายการรับเข้า</p> : scannedList.map((row, index) => { const isEditing = editingBarcodeReceiptId === row.id; return <div key={row.id ?? `${row.barcode}-${index}`} className={`rounded-xl border p-3 ${lastFlashBarcode === String(row.barcode || '') ? 'border-emerald-400 bg-emerald-50' : 'border-slate-200 bg-slate-50'}`}><div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><p className="font-medium">{resolveProductName(row)}</p><p className="mt-1 font-mono text-sm text-teal-700">{row.barcode || '-'}</p></div>{isEditing ? <div className="flex flex-wrap items-center gap-2"><input ref={editSerialInputRef} value={editingSN} onChange={(event) => setEditingSN(event.target.value)} placeholder="เว้นว่างเพื่อล้าง SN" className="min-h-11 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-teal-600" /><button type="button" disabled={editingSubmitting} onClick={() => handleSaveEditSN(row)} className="min-h-11 rounded-lg bg-teal-700 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">บันทึก</button><button type="button" disabled={editingSubmitting} onClick={() => { setEditingBarcodeReceiptId(null); setEditingSN(''); restoreWorkflowFocus(); }} className="min-h-11 rounded-lg border border-slate-300 px-3 py-2 text-sm">ยกเลิก</button></div> : <div className="flex flex-wrap items-center gap-2"><span className="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700">พร้อมขาย</span><span className="font-mono text-sm text-slate-600">SN: {row.serialNumber || '-'}</span><button type="button" onClick={() => { setEditingBarcodeReceiptId(row.id); setEditingSN(row.serialNumber || ''); requestAnimationFrame(() => scheduleFocus(STOCK_ITEM_FOCUS_TARGET.EDIT_SERIAL)); }} className="min-h-11 rounded-lg border border-slate-300 px-3 py-1.5 text-xs hover:bg-slate-50">แก้ไข SN</button></div>}</div></div>; })}</div>
-        </div>
+        <StockItemReceivedResults
+          rows={scannedList}
+          resolveProductName={resolveProductName}
+          lastFlashBarcode={lastFlashBarcode}
+          editingBarcodeReceiptId={editingBarcodeReceiptId}
+          editSerialInputRef={editSerialInputRef}
+          editingSN={editingSN}
+          setEditingSN={setEditingSN}
+          editingSubmitting={editingSubmitting}
+          onSaveEditSN={handleSaveEditSN}
+          onCancelEditSN={handleCancelEditSN}
+          onStartEditSN={handleStartEditSN}
+        />
       </section>
     </main>
   );

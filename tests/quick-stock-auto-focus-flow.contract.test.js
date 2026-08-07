@@ -8,6 +8,7 @@ const root = path.resolve(path.dirname(filename), '..');
 const read = (relativePath) => fs.readFileSync(path.join(root, relativePath), 'utf8');
 
 const queueController = read('src/features/receiving/quick-stock/hooks/useQuickStockQueueController.js');
+const runtimeController = read('src/features/receiving/quick-stock/hooks/useQuickStockRuntimeController.js');
 const page = read('src/features/receiving/quick-stock/pages/QuickStockPage.jsx');
 const queueTable = read('src/features/receiving/components/quick-stock/IntakeQueueTable.jsx');
 const queueBody = read('src/features/receiving/components/quick-stock/QueueTableBody.jsx');
@@ -20,6 +21,12 @@ describe('quick stock auto focus flow contract', () => {
     expect(queueController).toContain('const focusSerialInput = useCallback');
     expect(queueController).toContain('cancelScheduledFocus();');
     expect(queueController).toMatch(/if \(isOperationalSelection\) \{\s*focusBarcodeInput\(\);/);
+  });
+
+  it('refocuses when the selected operational product identity changes', () => {
+    expect(runtimeController).toContain('operationalSelectionKey: provisionalOperationalProduct?.id || null');
+    expect(queueController).toContain('operationalSelectionKey,');
+    expect(queueController).toContain('isOperationalSelection, operationalSelectionKey]);');
   });
 
   it('routes barcode scan according to the serial autofocus preference', () => {

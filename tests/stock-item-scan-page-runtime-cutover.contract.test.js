@@ -8,6 +8,9 @@ const root = path.resolve(path.dirname(filename), '..');
 const read = (relativePath) => fs.readFileSync(path.join(root, relativePath), 'utf8');
 
 const page = read('src/features/stockItem/pages/ScanBarcodeListPage.jsx');
+const controls = read(
+  'src/features/stockItem/receive/scan-workflow/components/StockItemScanControls.jsx'
+);
 const runtime = read(
   'src/features/stockItem/receive/scan-workflow/hooks/useStockItemScanRuntimeController.js'
 );
@@ -21,12 +24,17 @@ describe('StockItem scan page runtime cutover contract', () => {
     expect(page).toContain('resolveReceiveInput,');
   });
 
-  it('restores optional serial mode without making serial mandatory', () => {
-    expect(page).toContain('manualSerialMode');
-    expect(page).toContain('เก็บ Serial Number');
-    expect(page).toContain('checked={manualSerialMode}');
-    expect(page).toContain('disabled={submitting || !manualSerialMode}');
-    expect(page).toContain('ไม่บังคับ');
+  it('restores optional serial mode through the composed scan controls', () => {
+    expect(page).toContain('<StockItemScanControls');
+    expect(page).toContain('manualSerialMode={manualSerialMode}');
+    expect(page).toContain('onSerialModeChange={handleSerialModeChange}');
+    expect(page).toContain('serialInputRef={serialInputRef}');
+    expect(page).toContain('snInput={snInput}');
+
+    expect(controls).toContain('เก็บ Serial Number');
+    expect(controls).toContain('checked={manualSerialMode}');
+    expect(controls).toContain('disabled={submitting || !manualSerialMode}');
+    expect(controls).toContain('ไม่บังคับ');
   });
 
   it('preserves single-group serial autopilot and mixed-group barcode leadership', () => {

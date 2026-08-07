@@ -3,7 +3,10 @@ import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import useSaleReturnStore from '@/features/saleReturn/store/saleReturnStore';
 import useEmployeeStore from '@/features/employee/store/employeeStore';
-
+import {
+  formatRefundReceiptMoney,
+  prepareRefundReceiptPrintProjection,
+} from '@/features/refund/print/workspace/policies/refundReceiptPrintPolicy';
 
 const PrintRefundReceiptPage = () => {
   const { saleReturnId } = useParams();
@@ -21,29 +24,30 @@ const PrintRefundReceiptPage = () => {
 
   if (!saleReturn) return <div className="p-4">กำลังโหลด...</div>;
 
-  const { code, createdAt, sale, refundTransaction = [], totalRefund = 0, refundedAmount = 0, deductedAmount = 0 } = saleReturn;
-  const customerName = sale?.customer?.name || '-';
-  const saleCode = sale?.code || '-';
-  const totalAmount = refundTransaction.reduce((sum, r) => sum + (r.amount || 0), 0);
-  const remainingAmount = totalRefund - totalAmount - deductedAmount;
-
-  const branchName = branch?.name || '-';
-  const branchAddress = branch?.address || '-';
-  const branchPhone = branch?.phone || '-';
-  const branchTaxId = branch?.taxId || '-';
-  const branchEmail = branch?.email || '-';
-  const branchContact = branch?.contactName || '-';
+  const projection = prepareRefundReceiptPrintProjection(saleReturn, branch);
+  const {
+    code,
+    createdAt,
+    customerName,
+    saleCode,
+    refundTransactions,
+    totalRefund,
+    deductedAmount,
+    totalAmount,
+    remainingAmount,
+    branch: branchProjection,
+  } = projection;
 
   return (
     <div className="w-[794px] h-[1123px] mx-auto p-8 bg-white text-black text-sm print:block" style={{ fontFamily: 'TH Sarabun New' }}>
       <div className="flex justify-between items-start mb-6">
         <div>
-          <h1 className="text-lg font-bold">{branchName}</h1>
-          <p>{branchAddress}</p>
-          <p>โทร: {branchPhone}</p>
-          <p>เลขผู้เสียภาษี: {branchTaxId}</p>
-          <p>อีเมล: {branchEmail}</p>
-          <p>ผู้ติดต่อ: {branchContact}</p>
+          <h1 className="text-lg font-bold">{branchProjection.name}</h1>
+          <p>{branchProjection.address}</p>
+          <p>โทร: {branchProjection.phone}</p>
+          <p>เลขผู้เสียภาษี: {branchProjection.taxId}</p>
+          <p>อีเมล: {branchProjection.email}</p>
+          <p>ผู้ติดต่อ: {branchProjection.contactName}</p>
         </div>
         <div className="text-right">
           <button
@@ -67,10 +71,10 @@ const PrintRefundReceiptPage = () => {
       </div>
 
       <div className="mb-4">
-        <p>ยอดสินค้าที่ต้องคืน: {totalRefund.toFixed(2)} ฿</p>
-        <p>ยอดที่คืนไปแล้ว: {totalAmount.toFixed(2)} ฿</p>
-        <p>ยอดที่หักไว้: {deductedAmount.toFixed(2)} ฿</p>
-        <p>ยอดคงเหลือที่ต้องคืน: {remainingAmount.toFixed(2)} ฿</p>
+        <p>ยอดสินค้าที่ต้องคืน: {formatRefundReceiptMoney(totalRefund)} ฿</p>
+        <p>ยอดที่คืนไปแล้ว: {formatRefundReceiptMoney(totalAmount)} ฿</p>
+        <p>ยอดที่หักไว้: {formatRefundReceiptMoney(deductedAmount)} ฿</p>
+        <p>ยอดคงเหลือที่ต้องคืน: {formatRefundReceiptMoney(remainingAmount)} ฿</p>
       </div>
 
       <table className="w-full table-auto border mb-6">
@@ -83,19 +87,19 @@ const PrintRefundReceiptPage = () => {
           </tr>
         </thead>
         <tbody>
-          {refundTransaction.map((r) => (
-            <tr key={r.id}>
-              <td className="border px-2 py-1">{r.refundedAt ? new Date(r.refundedAt).toLocaleDateString() : '-'}</td>
-              <td className="border px-2 py-1 text-right">{r.amount.toFixed(2)} ฿</td>
-              <td className="border px-2 py-1">{r.method}</td>
-              <td className="border px-2 py-1">{r.note || '-'}</td>
+          {refundTransactions.map((transaction) => (
+            <tr key={transaction.id}>
+              <td className="border px-2 py-1">{transaction.refundedAt ? new Date(transaction.refundedAt).toLocaleDateString() : '-'}</td>
+              <td className="border px-2 py-1 text-right">{formatRefundReceiptMoney(transaction.amount)} ฿</td>
+              <td className="border px-2 py-1">{transaction.method}</td>
+              <td className="border px-2 py-1">{transaction.note || '-'}</td>
             </tr>
           ))}
         </tbody>
       </table>
 
       <div className="text-right font-semibold text-base mb-8">
-        รวมเป็นเงินทั้งสิ้น: {totalAmount.toFixed(2)} ฿
+        รวมเป็นเงินทั้งสิ้น: {formatRefundReceiptMoney(totalAmount)} ฿
       </div>
 
       <div className="flex justify-between mt-12">

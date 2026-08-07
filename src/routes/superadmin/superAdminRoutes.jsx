@@ -70,7 +70,7 @@ export const superAdminRoutes = [
       },
       {
         path: 'units',
-        element: <SuperAdminPlaceholderPage title="Units" description="จัดการหน่วยนับกลางสำหรับ Template Catalog" />,
+        element: <SuperAdminPlaceholderPage title="Units" description="จัดการหน่วยนับกลางของสินค้า" />,
       },
     ],
   },

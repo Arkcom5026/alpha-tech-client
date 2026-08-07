@@ -10,6 +10,7 @@ describe('product template canonical group detail contract', () => {
     const api = read('src/features/templateCandidate/api/templateCandidateApi.js');
     const listPage = read('src/features/templateCandidate/pages/CanonicalGroupReviewPage.jsx');
     const candidatePage = read('src/features/templateCandidate/pages/CandidateReviewPage.jsx');
+    const candidateHeader = read('src/features/templateCandidate/workspace/components/CandidateReviewWorkspaceHeader.jsx');
     const detailPage = read('src/features/templateCandidate/pages/CanonicalGroupDetailPage.jsx');
     const routes = read('src/routes/superadmin/superAdminRoutes.jsx');
 
@@ -21,7 +22,8 @@ describe('product template canonical group detail contract', () => {
     expect(listPage).toContain("catalog/candidates/groups");
     expect(listPage).toContain('encodeURIComponent(groupKey)');
     expect(listPage).toContain('businessType=${encodeURIComponent(filters.businessType)}');
-    expect(candidatePage).toContain('Product Template Candidate Review Queue');
+    expect(candidatePage).toContain('CandidateReviewWorkspaceHeader');
+    expect(candidateHeader).toContain('Product Template Candidate Review Queue');
     expect(detailPage).toContain('Canonical Group Detail');
     expect(detailPage).toContain('Source Products');
     expect(detailPage).toContain('แบบอ่านอย่างเดียว');

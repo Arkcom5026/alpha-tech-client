@@ -4,7 +4,7 @@ import QueueRow from "./QueueRow";
 const QueueTableBody = ({
   barcodeQueue = [],
   serialInputRefs,
-  barcodeInputRef,
+  onSerialSubmit,
   onUpdateQueueItemField,
   onRemoveQueueItem,
 }) => (
@@ -15,7 +15,7 @@ const QueueTableBody = ({
         item={item}
         index={index}
         serialInputRefs={serialInputRefs}
-        barcodeInputRef={barcodeInputRef}
+        onSerialSubmit={onSerialSubmit}
         onUpdateQueueItemField={onUpdateQueueItemField}
         onRemoveQueueItem={onRemoveQueueItem}
       />

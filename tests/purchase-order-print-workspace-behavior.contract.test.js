@@ -7,11 +7,18 @@ const read = (relativePath) => fs.readFileSync(path.join(root, relativePath), 'u
 
 describe('purchase order print workspace behavior contract', () => {
   const page = read('src/features/purchaseOrder/print/pages/PrintPurchaseOrderPage.jsx');
+  const policy = read('src/features/purchaseOrder/print/workspace/policies/purchaseOrderPrintPolicy.js');
+  const projection = `${page}\n${policy}`;
 
   it('preserves branch source-of-truth resolution and branch loading', () => {
     expect(page).toContain('state.employee?.branchId');
     expect(page).toContain('state.selectedBranchId');
     expect(page).toContain('state.branch || state.currentBranch || state.activeBranch || null');
+    expect(page).toContain('resolvePurchaseOrderBranchId');
+    expect(policy).toContain('selectedBranchId ??');
+    expect(policy).toContain('branchDetail?.id ??');
+    expect(policy).toContain('branchDetail?.branchId ??');
+    expect(policy).toContain('authBranchId ??');
     expect(page).toContain('loadAndSetBranchById');
     expect(page).toContain('Promise.resolve(loadAndSetBranchById(Number(branchId)))');
   });
@@ -39,16 +46,18 @@ describe('purchase order print workspace behavior contract', () => {
     expect(page).toContain('ไม่พบใบสั่งซื้อ');
   });
 
-  it('preserves item and total projection semantics', () => {
-    expect(page).toContain('const items = Array.isArray(po.items) ? po.items : []');
-    expect(page).toContain('const qty = Number(item?.quantity ?? 0)');
-    expect(page).toContain('const cost = Number(item?.costPrice ?? 0)');
-    expect(page).toContain('return sum + qty * cost');
-    expect(page).toContain('const lineTotal = qty * cost');
-    expect(page).toContain("toLocaleString('th-TH'");
+  it('preserves item and total projection semantics across policy ownership', () => {
+    expect(page).toContain('preparePurchaseOrderPrintProjection(po)');
+    expect(page).toContain('formatPurchaseOrderMoney');
+    expect(policy).toContain('Array.isArray(po?.items) ? po.items : []');
+    expect(policy).toContain('const quantity = Number(item?.quantity ?? 0)');
+    expect(policy).toContain('const costPrice = Number(item?.costPrice ?? 0)');
+    expect(policy).toContain('lineTotal: quantity * costPrice');
+    expect(policy).toContain('const total = lines.reduce');
+    expect(projection).toContain("toLocaleString('th-TH'");
   });
 
-  it('keeps the current printable purchase-order surface intact before extraction', () => {
+  it('keeps the current printable purchase-order surface intact across policy ownership', () => {
     expect(page).toContain('ใบสั่งซื้อ (Purchase Order)');
     expect(page).toContain('ผู้ขาย (Supplier)');
     expect(page).toContain('ดาวน์โหลด PDF');

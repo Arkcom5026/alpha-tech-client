@@ -7,6 +7,7 @@ const read = (relativePath) => fs.readFileSync(path.join(root, relativePath), 'u
 
 describe('delivery note print workspace behavior contract', () => {
   const page = read('src/features/deliveryNote/pages/PrintDeliveryNotePage.jsx');
+  const policy = read('src/features/deliveryNote/print/workspace/policies/deliveryNotePrintPolicy.js');
 
   it('keeps sale-document loading and mounted lifecycle intact', () => {
     expect(page).toContain('const sale = await loadSaleDocument({ saleId });');
@@ -25,33 +26,35 @@ describe('delivery note print workspace behavior contract', () => {
   });
 
   it('preserves sale-line fallback across saleLines, items, and simpleItems', () => {
-    expect(page).toContain('Array.isArray(currentSale.saleLines) && currentSale.saleLines.length > 0');
-    expect(page).toContain('...(Array.isArray(currentSale.items) ? currentSale.items : [])');
-    expect(page).toContain('...(Array.isArray(currentSale.simpleItems) ? currentSale.simpleItems : [])');
+    expect(page).toContain('prepareDeliveryNoteSaleItems(currentSale)');
+    expect(policy).toContain('Array.isArray(sale.saleLines) && sale.saleLines.length > 0');
+    expect(policy).toContain('...(Array.isArray(sale.items) ? sale.items : [])');
+    expect(policy).toContain('...(Array.isArray(sale.simpleItems) ? sale.simpleItems : [])');
   });
 
   it('preserves grouping identity and document-description semantics', () => {
-    expect(page).toContain('documentDescription: buildSaleDocumentLineDescription(item)');
-    expect(page).toContain("`product-${productId}`");
-    expect(page).toContain('`prefix-${documentLine.documentPrefix}`');
-    expect(page).toContain('`description-${documentLine.documentDescription}`');
-    expect(page).toContain('`suffix-${documentLine.documentSuffix}`');
-    expect(page).toContain('productName: buildPrintableProductName(documentLine)');
+    expect(policy).toContain('documentDescription: documentDescriptionRaw || resolveDeliveryNoteProductName(item)');
+    expect(policy).toContain("`product-${productId}`");
+    expect(policy).toContain('`prefix-${documentLine.documentPrefix}`');
+    expect(policy).toContain('`description-${documentLine.documentDescription}`');
+    expect(policy).toContain('`suffix-${documentLine.documentSuffix}`');
+    expect(policy).toContain('productName: buildDeliveryNotePrintableProductName(documentLine)');
   });
 
   it('preserves SN and simple-item quantity, price, discount, and id aggregation', () => {
-    expect(page).toContain('const isSnItem = Boolean(item?.stockItemId || item?.stockItem?.id);');
-    expect(page).toContain('const quantity = isSnItem ? 1 : Math.max(1, Number(item?.quantity ?? item?.qty ?? 1) || 1);');
-    expect(page).toContain('const discountEach = isSnItem ? 0 : Number(item?.discount ?? item?.discountAmount ?? 0) || 0;');
-    expect(page).toContain('saleItemIds: isSnItem && item?.id ? [Number(item.id)] : []');
-    expect(page).toContain('simpleItemIds: !isSnItem && item?.id ? [Number(item.id)] : []');
-    expect(page).toContain('aggregate.quantity += quantity;');
-    expect(page).toContain('aggregate.discount += discountEach;');
+    expect(policy).toContain('const isSnItem = Boolean(item?.stockItemId || item?.stockItem?.id);');
+    expect(policy).toContain('const quantity = isSnItem ? 1 : Math.max(1, Number(item?.quantity ?? item?.qty ?? 1) || 1);');
+    expect(policy).toContain('Number(item?.discount ?? item?.discountAmount ?? 0) || 0');
+    expect(policy).toContain('saleItemIds: isSnItem && item?.id ? [Number(item.id)] : []');
+    expect(policy).toContain('simpleItemIds: !isSnItem && item?.id ? [Number(item.id)] : []');
+    expect(policy).toContain('aggregate.quantity += quantity;');
+    expect(policy).toContain('aggregate.discount += discountEach;');
   });
 
   it('keeps branch projection, document states, and printable form composition intact', () => {
-    expect(page).toContain('address: buildBranchFullAddress(branch)');
-    expect(page).toContain('branchName: branch.companyName || branch.name ||');
+    expect(page).toContain('buildDeliveryNoteBranchConfig(currentSale)');
+    expect(policy).toContain('address: buildDeliveryNoteBranchAddress(branch)');
+    expect(policy).toContain("branchName: branch.companyName || branch.name || '-'");
     expect(page).toContain('<DeliveryNoteDocumentState status="loading"');
     expect(page).toContain('<DeliveryNoteDocumentState status="error"');
     expect(page).toContain('<DeliveryNoteDocumentState status="empty"');
@@ -59,5 +62,6 @@ describe('delivery note print workspace behavior contract', () => {
     expect(page).toContain('editableDocumentLines');
     expect(page).toContain('hideDate={hideDate}');
     expect(page).toContain('saleItems={preparedSaleItems}');
+    expect(page).toContain('config={preparedConfig}');
   });
 });

@@ -1,4 +1,5 @@
 import { readSaleCustomerFirstAssociation } from '../../customer/services/saleCustomerFirstAssociationSession';
+import { summarizeSalePriceAdjustments } from '../../cart/services/salePriceAdjustmentPolicy';
 
 const round2 = (value) => Number((Number(value) || 0).toFixed(2));
 
@@ -10,11 +11,17 @@ export const buildSaleCompletionPayload = ({
   options = {},
 }) => {
   const vatRate = 7;
-  const lines = (saleItems || []).map((item) => {
+  const pricing = summarizeSalePriceAdjustments(saleItems || []);
+  if (!pricing.ok) {
+    const error = new Error(pricing.message || 'ข้อมูลการปรับราคาไม่ถูกต้อง');
+    error.code = pricing.code || 'INVALID_PRICE_ADJUSTMENT';
+    throw error;
+  }
+
+  const lines = (saleItems || []).map((item, index) => {
+    const projected = pricing.lines[index];
     const quantity = item.lineType === 'SIMPLE' ? Number(item.quantity || 1) : 1;
-    const basePrice = round2((Number(item.price) || 0) * quantity);
-    const discount = round2(Number(item.discount) || 0);
-    const price = round2(Math.max(basePrice - discount, 0));
+    const price = projected.finalPrice;
     const vatAmount = round2((price * vatRate) / (100 + vatRate));
 
     return {
@@ -24,17 +31,20 @@ export const buildSaleCompletionPayload = ({
       productId: Number(item.productId),
       simpleLotId: item.lineType === 'SIMPLE' ? Number(item.simpleLotId) : null,
       quantity,
-      basePrice,
-      discount,
+      basePrice: projected.basePrice,
+      priceAdjustment: projected.priceAdjustment,
+      adjustmentReason: projected.adjustmentReason,
+      discount: projected.discount,
       price,
       vatAmount,
       remark: '',
     };
   });
 
-  const totalBeforeDiscount = round2(lines.reduce((sum, line) => sum + line.basePrice, 0));
-  const totalDiscount = round2(lines.reduce((sum, line) => sum + line.discount, 0));
-  const totalAmount = round2(Math.max(totalBeforeDiscount - totalDiscount, 0));
+  const totalBeforeDiscount = pricing.totalBeforeAdjustment;
+  const totalPriceAdjustment = pricing.totalPriceAdjustment;
+  const totalDiscount = pricing.totalDiscount;
+  const totalAmount = pricing.totalAmount;
   const vat = round2((totalAmount * vatRate) / (100 + vatRate));
   const isCredit = saleMode === 'CREDIT';
 
@@ -43,6 +53,7 @@ export const buildSaleCompletionPayload = ({
     customerFirstAssociationToken: readSaleCustomerFirstAssociation(customerId) || undefined,
     sourceHeldCartId: activeHeldCart?.id || null,
     totalBeforeDiscount,
+    totalPriceAdjustment,
     totalDiscount,
     vat,
     vatRate,

@@ -2,7 +2,7 @@ import { resolveSaleDocumentRoute } from '../saleDocumentRoute';
 
 export const openCompletedSaleDocument = ({
   shopSlug, saleId, option, reservedWindow, navigate,
-  lastDocumentKey, browser = globalThis.window,
+  lastDocumentKey,
 }) => {
   const documentKey = `${String(saleId)}::${String(option)}`;
   if (!saleId || !option || option === 'NONE' || documentKey === lastDocumentKey) {
@@ -10,15 +10,12 @@ export const openCompletedSaleDocument = ({
   }
   const route = resolveSaleDocumentRoute({ shopSlug, saleId, option });
   if (!route) return { opened: false, documentKey: lastDocumentKey };
+  if (typeof navigate !== 'function') {
+    return { opened: false, documentKey: lastDocumentKey, route, reason: 'missing-navigation' };
+  }
   if (reservedWindow && !reservedWindow.closed) {
-    reservedWindow.location.replace(route);
-    reservedWindow.focus?.();
-    return { opened: true, documentKey, route, mode: 'reserved' };
+    reservedWindow.close?.();
   }
-  const opened = browser?.open?.(route, '_blank', 'noopener,noreferrer');
-  if (!opened) {
-    navigate(route);
-    return { opened: true, documentKey, route, mode: 'same-tab' };
-  }
-  return { opened: true, documentKey, route, mode: 'new-window' };
+  navigate(route);
+  return { opened: true, documentKey, route, mode: 'same-tab' };
 };

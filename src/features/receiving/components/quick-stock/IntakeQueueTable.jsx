@@ -6,7 +6,7 @@ import QueueTableHeader from "./QueueTableHeader";
 const IntakeQueueTable = ({
   barcodeQueue = [],
   serialInputRefs,
-  barcodeInputRef,
+  onSerialSubmit,
   onUpdateQueueItemField,
   onRemoveQueueItem,
 }) => {
@@ -32,7 +32,7 @@ const IntakeQueueTable = ({
             <QueueTableBody
               barcodeQueue={barcodeQueue}
               serialInputRefs={serialInputRefs}
-              barcodeInputRef={barcodeInputRef}
+              onSerialSubmit={onSerialSubmit}
               onUpdateQueueItemField={onUpdateQueueItemField}
               onRemoveQueueItem={onRemoveQueueItem}
             />

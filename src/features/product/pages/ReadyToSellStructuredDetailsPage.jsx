@@ -1,16 +1,3 @@
-
-
-
-
-
-
-
-
-
-
-
-
-
 // ✅ src/features/product/pages/ReadyToSellStructuredDetailsPage.jsx
 // Show all IN_STOCK StockItems (STRUCTURED) for a product in the selected branch
 
@@ -19,6 +6,7 @@ import { useNavigate, useParams, useLocation } from 'react-router-dom';
 
 import useProductStore from '../store/productStore';
 import { useBranchStore } from '@/features/branch/store/branchStore';
+import useReadyToSellScannerController from '../ready-to-sell/scan-workflow/hooks/useReadyToSellScannerController';
 
 const ReadyToSellStructuredDetailsPage = () => {
   const navigate = useNavigate();
@@ -33,17 +21,6 @@ const ReadyToSellStructuredDetailsPage = () => {
   }, [productId]);
 
   const [searchText, setSearchText] = useState('');
-
-  // ✅ Scan UX (no dialog/toast) — helps POS workflow
-  const [scanMode, setScanMode] = useState(true);
-  const [scanText, setScanText] = useState('');
-  const [scanMessage, setScanMessage] = useState('');
-  const [highlightId, setHighlightId] = useState(null);
-
-  // ✅ Local sort (fail-soft) — FIFO is useful for stock ops
-  const [sortMode, setSortMode] = useState('NEWEST'); // NEWEST | FIFO
-
-  const scanRef = useRef(null);
   const [committed, setCommitted] = useState('');
 
   const loading = useProductStore((s) => s.readyToSellStructuredDetailsLoading);
@@ -81,7 +58,6 @@ const ReadyToSellStructuredDetailsPage = () => {
   }, [branchId, pid, loading, committed, safeFetch]);
 
   useEffect(() => {
-    // cleanup on unmount
     return () => {
       if (typeof resetAction === 'function') resetAction();
     };
@@ -91,39 +67,29 @@ const ReadyToSellStructuredDetailsPage = () => {
     load();
   }, [load]);
 
-  // ✅ Autofocus scan input when scan mode is on
-  useEffect(() => {
-    try {
-      if (scanMode && scanRef.current) scanRef.current.focus();
-    } catch (_) {
-      // ignore
-    }
-  }, [scanMode, pid, branchId]);
-
   const items = useMemo(() => (Array.isArray(data?.items) ? data.items : []), [data]);
 
-  // ✅ Display list (sorting only; server filtering remains source-of-truth)
-  const displayItems = useMemo(() => {
-    const arr = Array.isArray(items) ? [...items] : [];
-    const getT = (x) => {
-      const v = x?.receivedAt ?? x?.createdAt ?? null;
-      const t = v ? new Date(v).getTime() : 0;
-      return Number.isFinite(t) ? t : 0;
-    };
+  const {
+    scanMode,
+    scanText,
+    scanMessage,
+    highlightId,
+    sortMode,
+    scanInputRef,
+    displayRows: displayItems,
+    setScanText,
+    setScanMessage,
+    handleScanEnter,
+    toggleScanMode,
+    toggleSortMode,
+  } = useReadyToSellScannerController({
+    rows: items,
+    branchId,
+    productId: pid,
+  });
 
-    if (sortMode === 'FIFO') {
-      // Oldest first
-      arr.sort((a, b) => getT(a) - getT(b));
-      return arr;
-    }
-
-    // Newest first
-    arr.sort((a, b) => getT(b) - getT(a));
-    return arr;
-  }, [items, sortMode]);
   const total = useMemo(() => Number(data?.total ?? items.length) || items.length, [data, items]);
 
-  // ✅ Header meta helpers (fast scan context)
   const latestReceivedAt = useMemo(() => {
     const first = displayItems?.[0];
     const v = first?.receivedAt ?? null;
@@ -141,55 +107,6 @@ const ReadyToSellStructuredDetailsPage = () => {
     return first?.productName ?? first?.product?.name ?? '-';
   }, [items]);
 
-  const normalizeScan = useCallback((v) => {
-    const s = String(v ?? '').trim();
-    return s;
-  }, []);
-
-  const tryScanJump = useCallback(
-    (raw) => {
-      const s = normalizeScan(raw);
-      if (!s) return;
-
-      const key = s.toLowerCase();
-      const digits = key.replace(/[^0-9]+/g, '');
-
-      const found = (displayItems || []).find((it) => {
-        const b = String(it?.barcode ?? '').toLowerCase();
-        const sn = String(it?.serialNumber ?? '').toLowerCase();
-
-        if (b && b === key) return true;
-        if (sn && sn === key) return true;
-
-        // allow digit-only match (common with scanners)
-        if (digits && b.replace(/[^0-9]+/g, '') === digits) return true;
-        if (digits && sn.replace(/[^0-9]+/g, '') === digits) return true;
-
-        return false;
-      });
-
-      if (!found) {
-        setHighlightId(null);
-        setScanMessage(`ไม่พบรายการสำหรับ “${s}”`);
-        return;
-      }
-
-      const id = found?.id ?? null;
-      setHighlightId(id);
-      setScanMessage('');
-
-      // scroll into view (fail-soft)
-      try {
-        const el = document.getElementById(`sn-row-${id}`);
-        if (el?.scrollIntoView) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      } catch (_) {
-        // ignore
-      }
-    },
-    [displayItems, normalizeScan]
-  );
-
-  // ✅ Quick meta for readability (fail-soft: show '-' when missing)
   const headerMeta = useMemo(() => {
     const first = items?.[0] || {};
 
@@ -257,7 +174,6 @@ const ReadyToSellStructuredDetailsPage = () => {
 
         <div className="mt-3 pb-3 border-b border-zinc-200 dark:border-zinc-800" />
 
-        {/* ✅ Product summary (readability-first) */}
         <div className="mt-4 rounded-2xl border border-zinc-200/80 bg-white dark:border-zinc-800/80 dark:bg-zinc-900">
           <div className="p-4 sm:p-5">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
@@ -315,11 +231,7 @@ const ReadyToSellStructuredDetailsPage = () => {
                 <button
                   type="button"
                   className={`btn btn-outline ${scanMode ? 'ring-1 ring-blue-200' : ''}`}
-                  onClick={() => {
-                    setScanMode((v) => !v);
-                    setScanMessage('');
-                    setHighlightId(null);
-                  }}
+                  onClick={toggleScanMode}
                   disabled={!branchId || !pid}
                 >
                   {scanMode ? 'โหมดสแกน: เปิด' : 'โหมดสแกน: ปิด'}
@@ -328,7 +240,7 @@ const ReadyToSellStructuredDetailsPage = () => {
                 <button
                   type="button"
                   className="btn btn-outline"
-                  onClick={() => setSortMode((m) => (m === 'FIFO' ? 'NEWEST' : 'FIFO'))}
+                  onClick={toggleSortMode}
                   disabled={!branchId || !pid}
                   title="สลับการเรียงลำดับ"
                 >
@@ -345,7 +257,7 @@ const ReadyToSellStructuredDetailsPage = () => {
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                 <div className="w-full sm:max-w-[520px]">
                   <input
-                    ref={scanRef}
+                    ref={scanInputRef}
                     type="text"
                     placeholder="สแกน SN/Barcode แล้วกด Enter"
                     value={scanText}
@@ -353,10 +265,7 @@ const ReadyToSellStructuredDetailsPage = () => {
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') {
                         e.preventDefault();
-                        const v = String(scanText ?? '').trim();
-                        if (!v) return;
-                        tryScanJump(v);
-                        setScanText('');
+                        handleScanEnter();
                       }
                     }}
                     className="border px-3 py-2 rounded w-full font-mono"
@@ -476,10 +385,3 @@ const ReadyToSellStructuredDetailsPage = () => {
 };
 
 export default ReadyToSellStructuredDetailsPage;
-
-
-
-
-
-
-

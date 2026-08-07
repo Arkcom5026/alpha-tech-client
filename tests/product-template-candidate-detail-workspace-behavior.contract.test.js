@@ -7,6 +7,9 @@ const read = (relativePath) => fs.readFileSync(path.join(root, relativePath), 'u
 
 describe('product template candidate detail workspace behavior contract', () => {
   const page = read('src/features/templateCandidate/pages/CandidateDetailPage.jsx');
+  const decisionPanel = read(
+    'src/features/templateCandidate/workspace/components/CandidateDetailDecisionPanel.jsx',
+  );
 
   it('keeps candidate fetch and action refresh lifecycle owned by the detail page', () => {
     expect(page).toContain('if (id) fetchById(id);');
@@ -16,14 +19,18 @@ describe('product template candidate detail workspace behavior contract', () => 
     expect(page).toContain('clearError();');
   });
 
-  it('preserves governance actions and status gates', () => {
+  it('preserves governance actions and status gates while UI validation stays presentation-owned', () => {
     for (const action of ['startReview', 'rejectCandidate', 'mergeCandidate', 'promoteCandidate']) {
       expect(page).toContain(action);
     }
     expect(page).toContain('TEMPLATE_CANDIDATE_STATUS.DRAFT');
     expect(page).toContain('TEMPLATE_CANDIDATE_STATUS.UNDER_REVIEW');
-    expect(page).toContain('!decisionNote.trim()');
-    expect(page).toContain('!targetTemplateProductId');
+    expect(page).toContain('decisionNote={decisionNote}');
+    expect(page).toContain('targetTemplateProductId={targetTemplateProductId}');
+    expect(page).toContain('onReject={() => runAction(() => rejectCandidate');
+    expect(page).toContain('onMerge={() => runAction(() => mergeCandidate');
+    expect(decisionPanel).toContain('disabled={busy || !decisionNote.trim()}');
+    expect(decisionPanel).toContain('disabled={busy || !targetTemplateProductId}');
   });
 
   it('preserves promote form hydration and catalog-safe payload semantics', () => {
@@ -53,5 +60,6 @@ describe('product template candidate detail workspace behavior contract', () => 
     expect(page).toContain('proposedTemplateData');
     expect(page).toContain('events');
     expect(page).not.toMatch(/costPrice|priceRetail|priceOnline|priceWholesale|stockMovement|purchaseOrder|taxDocument|repairJob|warrantyClaim/);
+    expect(decisionPanel).not.toMatch(/useTemplateCandidate|fetchById|startReview|rejectCandidate|mergeCandidate|promoteCandidate/);
   });
 });

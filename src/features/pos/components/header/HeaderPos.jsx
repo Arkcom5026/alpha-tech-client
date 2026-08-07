@@ -21,6 +21,7 @@ import {
 
 import { useAuthStore } from '@/features/auth/store/authStore';
 import { useBranchStore } from '@/features/branch/store/branchStore';
+import OperationalStatusBadge from '@/features/system/operational-status/components/OperationalStatusBadge';
 
 const DEFAULT_MOBILE_NAV_IDS = ['purchases', 'sales', 'services', 'stock', 'finance'];
 const MOBILE_NAV_PREFERENCE_PREFIX = 'alpha-tech.pos.mobile-nav.visible.v1';
@@ -78,6 +79,7 @@ const HeaderPos = ({ onMobileModuleSelect }) => {
   const isSuperAdmin = normalizedRole === 'superadmin';
   const isSuperAdminRoute = pathname.includes('/superadmin');
   const isGlobalSuperAdmin = isSuperAdmin || isSuperAdminRoute;
+  const canViewOperationalStatus = normalizedRole === 'admin' || normalizedRole === 'superadmin';
 
   const displayBranchName =
     employee?.branchName ||
@@ -246,6 +248,8 @@ const HeaderPos = ({ onMobileModuleSelect }) => {
               <span className="text-[10px] font-semibold uppercase tracking-[0.12em]">Superadmin</span>
             </div>
           )}
+
+          <OperationalStatusBadge enabled={canViewOperationalStatus} />
 
           {isAuthenticated && (
             <div className="relative">

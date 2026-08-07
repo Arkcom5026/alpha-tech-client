@@ -1,8 +1,9 @@
-// 📁 FILE: src/features/finance/pages/DailyClosingPage.jsx
-// ✅ Daily Closing Confidence Surface V2.1 — Credit-aware + Date Range
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useParams } from 'react-router-dom'; // 🟢 [DYNAMIC PARAM FIX] นำเข้า useParams มาร่วมทีม
+import { useParams } from 'react-router-dom';
 import useFinanceStore from '@/features/finance/store/financeStore';
+import FinanceMetricCard from '@/features/finance/components/workspace/FinanceMetricCard';
+import FinanceWorkspaceHeader from '@/features/finance/components/workspace/FinanceWorkspaceHeader';
+import FinanceWorkspaceSection from '@/features/finance/components/workspace/FinanceWorkspaceSection';
 
 const toISODate = (d) => {
   try {
@@ -47,80 +48,34 @@ const safeText = (value, fallback = '-') => {
   return s || fallback;
 };
 
-const StatCard = ({ label, value, suffix = '฿', tone = 'slate', helper }) => {
-  const toneClass = {
-    slate: 'text-slate-900',
-    blue: 'text-blue-700',
-    green: 'text-green-700',
-    red: 'text-red-700',
-    orange: 'text-orange-700',
-    purple: 'text-purple-700',
-    amber: 'text-amber-700',
-  }[tone] || 'text-slate-900';
-
-  return (
-    <div className="bg-white border rounded-xl p-5 shadow-sm">
-      <div className="text-sm text-gray-500">{label}</div>
-      <div className={`text-3xl font-extrabold mt-2 ${toneClass}`}>
-        {fmt(value)} {suffix}
-      </div>
-      {helper ? <div className="text-xs text-gray-400 mt-1">{helper}</div> : null}
-    </div>
-  );
-};
-
-const CountCard = ({ label, value, suffix = 'บิล', tone = 'purple', helper }) => {
-  const toneClass = {
-    slate: 'text-slate-900',
-    blue: 'text-blue-700',
-    green: 'text-green-700',
-    orange: 'text-orange-700',
-    purple: 'text-purple-700',
-  }[tone] || 'text-slate-900';
-
-  return (
-    <div className="bg-white border rounded-xl p-5 shadow-sm">
-      <div className="text-sm text-gray-500">{label}</div>
-      <div className={`text-3xl font-extrabold mt-2 ${toneClass}`}>
-        {Number(value || 0).toLocaleString('th-TH')} {suffix}
-      </div>
-      {helper ? <div className="text-xs text-gray-400 mt-1">{helper}</div> : null}
-    </div>
-  );
-};
-
 const PaymentRow = ({ label, value, helper }) => (
-  <div className="flex items-start justify-between gap-3 border-b last:border-b-0 py-3">
+  <div className="flex items-start justify-between gap-3 border-b border-slate-100 py-3 last:border-b-0">
     <div>
-      <div className="text-sm font-medium text-gray-700">{label}</div>
-      {helper ? <div className="text-xs text-gray-400 mt-0.5">{helper}</div> : null}
+      <p className="text-sm font-semibold text-slate-700">{label}</p>
+      {helper ? <p className="mt-0.5 text-xs font-medium text-slate-500">{helper}</p> : null}
     </div>
-    <div className="font-mono font-semibold text-gray-900 whitespace-nowrap">{fmt(value)} ฿</div>
+    <p className="whitespace-nowrap font-mono text-sm font-black text-slate-950">{fmt(value)} ฿</p>
   </div>
 );
 
-const SignalRow = ({ label, value, helper, tone = 'slate' }) => {
-  const toneClass = {
-    slate: 'bg-slate-50 border-slate-200 text-slate-900',
-    blue: 'bg-blue-50 border-blue-100 text-blue-900',
-    purple: 'bg-purple-50 border-purple-100 text-purple-900',
-    amber: 'bg-amber-50 border-amber-100 text-amber-900',
-    green: 'bg-green-50 border-green-100 text-green-900',
-  }[tone] || 'bg-slate-50 border-slate-200 text-slate-900';
-
-  return (
-    <div className={`flex items-center justify-between gap-3 rounded-lg border p-3 ${toneClass}`}>
-      <div>
-        <div className="font-semibold">{label}</div>
-        {helper ? <div className="text-xs opacity-80 mt-0.5">{helper}</div> : null}
-      </div>
-      <div className="font-mono font-bold whitespace-nowrap">{fmt(value)} ฿</div>
-    </div>
-  );
+const SIGNAL_TONES = {
+  neutral: 'border-slate-200 bg-slate-50 text-slate-900',
+  info: 'border-teal-200 bg-teal-50 text-teal-900',
+  warn: 'border-amber-200 bg-amber-50 text-amber-900',
 };
 
+const SignalRow = ({ label, value, helper, tone = 'neutral' }) => (
+  <div className={`flex items-center justify-between gap-3 rounded-2xl border p-4 ${SIGNAL_TONES[tone] || SIGNAL_TONES.neutral}`}>
+    <div>
+      <p className="text-sm font-black">{label}</p>
+      {helper ? <p className="mt-1 text-xs font-medium opacity-80">{helper}</p> : null}
+    </div>
+    <p className="whitespace-nowrap font-mono text-sm font-black">{fmt(value)} ฿</p>
+  </div>
+);
+
 const DailyClosingPage = () => {
-  const { shopSlug } = useParams(); // 🟢 [LINK BINDING] แกะรหัสชื่อร้านค้าพาร์ตเนอร์คุมระบบนำทาง Multi-Tenant
+  const { shopSlug } = useParams();
   const dailyClosingSummary = useFinanceStore((s) => s.dailyClosingSummary);
   const dailyClosingLoading = useFinanceStore((s) => s.dailyClosingLoading);
   const dailyClosingError = useFinanceStore((s) => s.dailyClosingError);
@@ -143,14 +98,11 @@ const DailyClosingPage = () => {
     void reload();
   }, [reload]);
 
-  const onSubmit = useCallback(
-    async (e) => {
-      e?.preventDefault?.();
-      if (typeof resetDailyClosingErrorAction === 'function') resetDailyClosingErrorAction();
-      await reload();
-    },
-    [reload, resetDailyClosingErrorAction]
-  );
+  const onSubmit = useCallback(async (e) => {
+    e?.preventDefault?.();
+    if (typeof resetDailyClosingErrorAction === 'function') resetDailyClosingErrorAction();
+    await reload();
+  }, [reload, resetDailyClosingErrorAction]);
 
   const onUseSingleDay = useCallback(() => {
     setToDate(fromDate);
@@ -208,7 +160,7 @@ const DailyClosingPage = () => {
       return {
         title: isRangeMode ? 'ยังไม่มีบิลขายในช่วงวันที่เลือก' : 'ยังไม่มีบิลขายในวันนี้',
         text: 'ระบบยังไม่พบยอดขายสำหรับช่วงวันที่เลือก',
-        className: 'bg-slate-50 border-slate-200 text-slate-700',
+        className: 'border-slate-200 bg-slate-50 text-slate-700',
       };
     }
 
@@ -218,156 +170,109 @@ const DailyClosingPage = () => {
         text: hasCredit
           ? `เงินรับจริงตรงกับยอดที่ควรได้รับ หลังแยกยอดเครดิต ${fmt(creditOutstandingAmount)} ฿ ออกแล้ว`
           : 'เงินรับจริงตรงกับยอดที่ควรได้รับ',
-        className: 'bg-green-50 border-green-200 text-green-800',
+        className: 'border-emerald-200 bg-emerald-50 text-emerald-800',
       };
     }
 
     return {
       title: `⚠️ พบส่วนต่างเงินจริง ${fmt(differenceAmount)} ฿`,
-      text:
-        differenceAmount > 0
-          ? 'เงินรับจริงมากกว่ายอดที่ควรได้รับ กรุณาตรวจสอบรายการรับเงิน'
-          : 'เงินรับจริงน้อยกว่ายอดที่ควรได้รับ กรุณาตรวจสอบเงินสด/โอน/QR/บัตร',
-      className: 'bg-orange-50 border-orange-200 text-orange-800',
+      text: differenceAmount > 0
+        ? 'เงินรับจริงมากกว่ายอดที่ควรได้รับ กรุณาตรวจสอบรายการรับเงิน'
+        : 'เงินรับจริงน้อยกว่ายอดที่ควรได้รับ กรุณาตรวจสอบเงินสด/โอน/QR/บัตร',
+      className: 'border-amber-200 bg-amber-50 text-amber-900',
     };
   }, [status, differenceAmount, hasCredit, creditOutstandingAmount, isRangeMode]);
 
   return (
-    <div className="min-h-screen bg-gray-100 p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold text-blue-800">สรุปปิดร้านประจำวัน</h1>
-          <p className="text-sm text-gray-600 mt-1">
-            ตรวจยอดขาย แยกยอดเครดิต และยืนยันว่าเงินที่ควรรับตรงกับเงินจริง
-          </p>
-        </div>
+    <div className="min-h-screen space-y-5 bg-slate-50 p-4 text-slate-800 md:p-6">
+      <FinanceWorkspaceHeader
+        title="สรุปปิดร้านประจำวัน"
+        description="ตรวจยอดขาย แยกยอดเครดิต และยืนยันว่าเงินที่ควรรับตรงกับเงินจริงโดยไม่ตีความยอดเครดิตเป็นเงินขาด"
+        badge={shopSlug ? `Closing · ${shopSlug}` : 'Daily Closing'}
+      />
 
-        <form onSubmit={onSubmit} className="bg-white border rounded-xl p-5 shadow-sm">
-          <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto_auto] gap-4 md:items-end">
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">จากวันที่</label>
-              <input
-                type="date"
-                className="w-full border rounded-md px-3 py-2 text-sm"
-                value={fromDate}
-                onChange={(e) => setFromDate(e.target.value)}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">ถึงวันที่</label>
-              <input
-                type="date"
-                className="w-full border rounded-md px-3 py-2 text-sm"
-                value={toDate}
-                onChange={(e) => setToDate(e.target.value)}
-              />
-            </div>
-
-            <button
-              type="button"
-              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md text-sm font-semibold hover:bg-gray-200 transition disabled:opacity-60"
-              onClick={onUseSingleDay}
-              disabled={!!dailyClosingLoading}
-            >
-              ดูวันเดียว
-            </button>
-
-            <button
-              type="submit"
-              className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-semibold hover:bg-blue-700 transition disabled:opacity-60"
-              disabled={!!dailyClosingLoading}
-            >
-              {dailyClosingLoading ? 'กำลังโหลด...' : 'โหลดสรุป'}
-            </button>
-          </div>
-
-          <div className="text-xs text-gray-500 mt-3">
-            ถ้าเลือกวันเดียวกัน = สรุปรายวัน • ถ้าเลือกคนละวัน = สรุปช่วงวันที่
-          </div>
+      <FinanceWorkspaceSection title="ช่วงเวลาที่ต้องการตรวจ" description="เลือกวันเดียวกันสำหรับสรุปรายวัน หรือเลือกคนละวันสำหรับสรุปช่วงวันที่">
+        <form onSubmit={onSubmit} className="grid grid-cols-1 gap-4 md:grid-cols-[1fr_1fr_auto_auto] md:items-end">
+          <label className="text-sm font-black text-slate-700">
+            จากวันที่
+            <input type="date" className="mt-1 min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm focus:border-teal-600 focus:ring-2 focus:ring-teal-100" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
+          </label>
+          <label className="text-sm font-black text-slate-700">
+            ถึงวันที่
+            <input type="date" className="mt-1 min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm focus:border-teal-600 focus:ring-2 focus:ring-teal-100" value={toDate} onChange={(e) => setToDate(e.target.value)} />
+          </label>
+          <button type="button" className="min-h-11 rounded-xl border border-slate-300 bg-white px-5 text-sm font-black text-slate-700 transition hover:bg-slate-50 disabled:opacity-60" onClick={onUseSingleDay} disabled={!!dailyClosingLoading}>
+            ดูวันเดียว
+          </button>
+          <button type="submit" className="min-h-11 rounded-xl bg-teal-700 px-5 text-sm font-black text-white transition hover:bg-teal-800 disabled:opacity-60" disabled={!!dailyClosingLoading}>
+            {dailyClosingLoading ? 'กำลังโหลด...' : 'โหลดสรุป'}
+          </button>
         </form>
+      </FinanceWorkspaceSection>
 
-        {dailyClosingError ? (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
-            <div className="font-semibold">ไม่สามารถโหลดข้อมูลสรุปปิดร้านได้</div>
-            <div className="text-sm mt-1">{String(dailyClosingError)}</div>
+      {dailyClosingError ? (
+        <div role="alert" className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm font-semibold text-rose-800">
+          <p className="font-black">ไม่สามารถโหลดข้อมูลสรุปปิดร้านได้</p>
+          <p className="mt-1">{String(dailyClosingError)}</p>
+        </div>
+      ) : null}
+
+      <section className={`rounded-2xl border p-5 ${statusView.className}`}>
+        <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+          <div>
+            <h2 className="text-xl font-black">{statusView.title}</h2>
+            <p className="mt-1 text-sm font-medium">{statusView.text}</p>
           </div>
-        ) : null}
+          <p className="whitespace-nowrap text-sm font-black opacity-80">ช่วง: {rangeLabel}</p>
+        </div>
+      </section>
 
-        <div className={`border rounded-xl p-5 ${statusView.className}`}>
-          <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-2">
-            <div>
-              <div className="text-xl font-bold">{statusView.title}</div>
-              <div className="text-sm mt-1">{statusView.text}</div>
-            </div>
-            <div className="text-sm font-semibold opacity-80 whitespace-nowrap">
-              ช่วง: {rangeLabel}
-            </div>
+      {hasCredit ? (
+        <div role="status" className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold text-amber-900">
+          <p className="font-black">พบยอดขายเครดิต / ลูกหนี้จากการขาย</p>
+          <p className="mt-1">ยอดเครดิตหรือยอดค้างชำระไม่ถูกนับเป็นเงินขาด แต่จะแสดงเป็นภาระติดตามรับเงิน</p>
+        </div>
+      ) : null}
+
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
+        <FinanceMetricCard label="ยอดขายรวม" value={`${fmt(salesTotalAmount)} ฿`} hint="Sale.totalAmount เฉพาะบิลที่ไม่ยกเลิก" tone="info" />
+        <FinanceMetricCard label="ยอดเครดิต/ค้างชำระ" value={`${fmt(creditOutstandingAmount)} ฿`} hint="ไม่ถือเป็นเงินขาด" tone={creditOutstandingAmount > 0 ? 'warn' : 'neutral'} />
+        <FinanceMetricCard label="ควรรับเงินจริง" value={`${fmt(expectedCashAmount)} ฿`} hint="ยอดขายรวม - ยอดเครดิต/ค้างชำระ" tone="neutral" />
+        <FinanceMetricCard label="รับเงินจริง" value={`${fmt(totalCollected)} ฿`} hint="รวมจาก PaymentItem ตามช่องทาง" tone="info" />
+        <FinanceMetricCard label="ส่วนต่างเงินจริง" value={`${fmt(differenceAmount)} ฿`} hint="รับเงินจริง - ควรรับเงินจริง" tone={differenceAmount === 0 ? 'info' : 'warn'} />
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <FinanceMetricCard label="จำนวนบิล" value={`${Number(sales.billCount || 0).toLocaleString('th-TH')} บิล`} hint="ตามช่วงวันที่เลือก" />
+        <FinanceMetricCard label="บิลเครดิต/ค้าง" value={`${creditBillCount.toLocaleString('th-TH')} บิล`} hint="ยอดที่ต้องติดตามรับเงิน" tone={creditBillCount > 0 ? 'warn' : 'neutral'} />
+        <FinanceMetricCard label="ยอดจ่ายแล้วในบิล" value={`${fmt(sales.paidAmount)} ฿`} hint="Sale.paidAmount รวม" tone="info" />
+        <FinanceMetricCard label="ลูกหนี้เกิดใหม่" value={`${fmt(receivablesFromTodaySales.amount ?? sales.unpaidAmount)} ฿`} hint="ยอดค้างจากบิลในช่วงวันที่เลือก" tone="warn" />
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <FinanceWorkspaceSection title="แยกช่องทางรับเงิน" description={`เงินรับจริงจาก PaymentItem รวม ${fmt(totalCollected)} ฿`}>
+          <PaymentRow label="เงินสด" value={payments.cash} />
+          <PaymentRow label="โอน" value={payments.transfer} />
+          <PaymentRow label="QR" value={payments.qr} />
+          <PaymentRow label="บัตร" value={payments.card} />
+          <PaymentRow label="E-Wallet" value={payments.eWallet} />
+          <PaymentRow label="เช็ค" value={payments.cheque} helper="แสดงไว้ก่อน แม้ V1 ยังไม่ลงรายละเอียดราชการ" />
+          <PaymentRow label="มัดจำที่นำมาใช้" value={payments.deposit} />
+          <PaymentRow label="อื่น ๆ" value={payments.other} />
+        </FinanceWorkspaceSection>
+
+        <FinanceWorkspaceSection title="สัญญาณการเงิน" description="แสดงเป็น signal ก่อน ไม่เอาไปปนกับยอดขายโดยตรง">
+          <div className="space-y-3">
+            <SignalRow label="ยอดเครดิตจากการขาย" value={creditOutstandingAmount} helper={`${creditBillCount.toLocaleString('th-TH')} บิล ไม่ถือเป็นส่วนต่างเงินจริง`} tone="warn" />
+            <SignalRow label="มัดจำรับเพิ่ม" value={deposits.receivedTodayAmount} helper="CustomerDeposit.createdAt ตามช่วงวันที่เลือก" tone="info" />
+            <SignalRow label="รับชำระลูกหนี้" value={customerReceipts.receivedTodayAmount} helper="CustomerReceipt.receivedAt ตามช่วงวันที่เลือก" tone="info" />
+            <SignalRow label="คืนของ / คืนเงิน" value={returns?.refundPaidAmount} helper={returns?.enabled ? 'เปิดใช้งานแล้ว' : 'ยังไม่เปิดใช้ใน V1'} />
           </div>
-        </div>
+        </FinanceWorkspaceSection>
+      </div>
 
-        {hasCredit ? (
-          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-amber-900">
-            <div className="font-bold">ℹ️ พบยอดขายเครดิต / ลูกหนี้จากการขาย</div>
-            <div className="text-sm mt-1">
-              ยอดเครดิตหรือยอดค้างชำระไม่ถูกนับเป็นเงินขาด แต่จะแสดงเป็นภาระติดตามรับเงิน
-            </div>
-          </div>
-        ) : null}
-
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-          <StatCard label="ยอดขายรวม" value={salesTotalAmount} tone="blue" helper="Sale.totalAmount เฉพาะบิลที่ไม่ยกเลิก" />
-          <StatCard label="ยอดเครดิต/ค้างชำระ" value={creditOutstandingAmount} tone={creditOutstandingAmount > 0 ? 'amber' : 'slate'} helper="ไม่ถือเป็นเงินขาด" />
-          <StatCard label="ควรรับเงินจริง" value={expectedCashAmount} tone="purple" helper="ยอดขายรวม - ยอดเครดิต/ค้างชำระ" />
-          <StatCard label="รับเงินจริง" value={totalCollected} tone="green" helper="รวมจาก PaymentItem ตามช่องทาง" />
-          <StatCard label="ส่วนต่างเงินจริง" value={differenceAmount} tone={differenceAmount === 0 ? 'green' : 'orange'} helper="รับเงินจริง - ควรรับเงินจริง" />
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <CountCard label="จำนวนบิล" value={sales.billCount} helper="ตามช่วงวันที่เลือก" />
-          <CountCard label="บิลเครดิต/ค้าง" value={creditBillCount} tone="orange" helper="ยอดที่ต้องติดตามรับเงิน" />
-          <StatCard label="ยอดจ่ายแล้วในบิล" value={sales.paidAmount} tone="green" helper="Sale.paidAmount รวม" />
-          <StatCard label="ลูกหนี้เกิดใหม่" value={receivablesFromTodaySales.amount ?? sales.unpaidAmount} tone="orange" helper="ยอดค้างจากบิลในช่วงวันที่เลือก" />
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <section className="bg-white border rounded-xl p-5 shadow-sm">
-            <div className="flex items-center justify-between gap-3 mb-3">
-              <div>
-                <h2 className="text-lg font-bold text-gray-800">แยกช่องทางรับเงิน</h2>
-                <p className="text-xs text-gray-500">เงินรับจริงจาก PaymentItem</p>
-              </div>
-              <div className="text-sm font-bold text-green-700">{fmt(totalCollected)} ฿</div>
-            </div>
-
-            <div>
-              <PaymentRow label="เงินสด" value={payments.cash} />
-              <PaymentRow label="โอน" value={payments.transfer} />
-              <PaymentRow label="QR" value={payments.qr} />
-              <PaymentRow label="บัตร" value={payments.card} />
-              <PaymentRow label="E-Wallet" value={payments.eWallet} />
-              <PaymentRow label="เช็ค" value={payments.cheque} helper="แสดงไว้ก่อน แม้ V1 ยังไม่ลงรายละเอียดราชการ" />
-              <PaymentRow label="มัดจำที่นำมาใช้" value={payments.deposit} />
-              <PaymentRow label="อื่น ๆ" value={payments.other} />
-            </div>
-          </section>
-
-          <section className="bg-white border rounded-xl p-5 shadow-sm">
-            <h2 className="text-lg font-bold text-gray-800">สัญญาณการเงิน</h2>
-            <p className="text-xs text-gray-500 mb-3">แสดงเป็น signal ก่อน ไม่เอาไปปนกับยอดขายโดยตรง</p>
-
-            <div className="space-y-3">
-              <SignalRow label="ยอดเครดิตจากการขาย" value={creditOutstandingAmount} helper={`${creditBillCount.toLocaleString('th-TH')} บิล ไม่ถือเป็นส่วนต่างเงินจริง`} tone="amber" />
-              <SignalRow label="มัดจำรับเพิ่ม" value={deposits.receivedTodayAmount} helper="CustomerDeposit.createdAt ตามช่วงวันที่เลือก" tone="blue" />
-              <SignalRow label="รับชำระลูกหนี้" value={customerReceipts.receivedTodayAmount} helper="CustomerReceipt.receivedAt ตามช่วงวันที่เลือก" tone="purple" />
-              <SignalRow label="คืนของ / คืนเงิน" value={returns?.refundPaidAmount} helper={returns?.enabled ? 'เปิดใช้งานแล้ว' : 'ยังไม่เปิดใช้ใน V1'} tone="slate" />
-            </div>
-          </section>
-        </div>
-
-        <div className="bg-white border rounded-xl p-5 shadow-sm text-xs text-gray-500">
-          Runtime Truth: ยอดขายมาจาก Sale, เงินรับจริงมาจาก PaymentItem, ยอดเครดิต/ค้างชำระถูกแยกออกจากส่วนต่างเงินจริงเพื่อไม่ให้ระบบตีความเครดิตเป็นเงินหาย
-        </div>
+      <div className="rounded-2xl border border-slate-200 bg-white p-4 text-xs font-medium leading-5 text-slate-500 shadow-sm">
+        Runtime Truth: ยอดขายมาจาก Sale, เงินรับจริงมาจาก PaymentItem, ยอดเครดิต/ค้างชำระถูกแยกออกจากส่วนต่างเงินจริงเพื่อไม่ให้ระบบตีความเครดิตเป็นเงินหาย
       </div>
     </div>
   );

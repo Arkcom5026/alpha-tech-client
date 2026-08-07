@@ -1,0 +1,175 @@
+import React from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { BUSINESS_TYPE_OPTIONS, getBusinessTypeLabel } from '../utils/businessType';
+import useCanonicalProductGroups from '../hooks/useCanonicalProductGroups';
+
+const REVIEW_STATUS = {
+  READY: 'READY',
+  PRODUCT_TYPE_REVIEW_REQUIRED: 'PRODUCT_TYPE_REVIEW_REQUIRED',
+};
+
+const REVIEW_OPTIONS = [
+  ['', 'ทุกสถานะ'],
+  [REVIEW_STATUS.READY, 'พร้อมตรวจ'],
+  [REVIEW_STATUS.PRODUCT_TYPE_REVIEW_REQUIRED, 'ต้องตรวจ Product Type'],
+];
+
+const statusLabel = (status) =>
+  status === REVIEW_STATUS.READY ? 'พร้อมตรวจ' : 'ต้องตรวจ Product Type';
+
+const statusClass = (status) =>
+  status === REVIEW_STATUS.READY
+    ? 'bg-emerald-50 text-emerald-700'
+    : 'bg-amber-50 text-amber-700';
+
+const CanonicalGroupReviewPage = () => {
+  const navigate = useNavigate();
+  const { shopSlug } = useParams();
+  const { groups, summary, pagination, templateBranch, categoryId, loading, error, refresh } =
+    useCanonicalProductGroups();
+  const [filters, setFilters] = React.useState({
+    businessType: '',
+    reviewStatus: '',
+    q: '',
+    page: 1,
+    pageSize: 30,
+  });
+
+  const load = React.useCallback((next) => {
+    if (!next?.businessType) return Promise.resolve(null);
+    return refresh(next);
+  }, [refresh]);
+
+  const selectBusinessType = (businessType) => {
+    const next = { ...filters, businessType, reviewStatus: '', q: '', page: 1 };
+    setFilters(next);
+    load(next);
+  };
+
+  const apply = (next) => {
+    setFilters(next);
+    return load(next);
+  };
+
+  const openGroup = (group) => {
+    const groupKey = group.groupKey || group.groupFingerprint;
+    if (!groupKey) return;
+    const basePath = shopSlug
+      ? `/${shopSlug}/superadmin/catalog/candidates/groups`
+      : '/superadmin/catalog/candidates/groups';
+    navigate(`${basePath}/${encodeURIComponent(groupKey)}?businessType=${encodeURIComponent(filters.businessType)}`);
+  };
+
+  const page = pagination?.page || filters.page;
+  const totalPages = Math.max(pagination?.totalPages || 1, 1);
+  const totalGroups = summary?.totalGroups ?? pagination?.total ?? groups.length;
+  const ready = summary?.ready ?? 0;
+  const reviewRequired = summary?.productTypeReviewRequired ?? 0;
+
+  return (
+    <div className="min-h-screen space-y-5 bg-slate-50 p-4 xl:p-6">
+      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <p className="text-[11px] font-black uppercase tracking-[0.18em] text-orange-500">Platform Product Knowledge</p>
+        <div className="mt-2 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <h1 className="text-2xl font-black text-slate-900">Canonical Product Group Review</h1>
+            <p className="mt-2 max-w-3xl text-sm font-medium text-slate-500">ตรวจสินค้าเป็นกลุ่มกลางข้ามร้าน ลด Candidate ซ้ำ และเตรียมข้อมูลก่อนสร้าง Product Template ของแพลตฟอร์ม</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button type="button" onClick={() => navigate(-1)} className="min-h-11 rounded-2xl border border-slate-200 px-4 text-sm font-black text-slate-700">กลับ Candidate Queue</button>
+            <button type="button" disabled={!filters.businessType || loading} onClick={() => load(filters)} className="min-h-11 rounded-2xl border border-slate-200 px-5 text-sm font-black text-slate-700 disabled:opacity-40">
+              {loading ? 'กำลังโหลด...' : 'รีเฟรชกลุ่ม'}
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section className="rounded-3xl border border-orange-200 bg-orange-50/60 p-5 shadow-sm">
+        <p className="text-[11px] font-black uppercase tracking-[0.14em] text-orange-600">Business Type Scope</p>
+        <h2 className="mt-1 text-lg font-black text-slate-900">เลือกกลุ่มธุรกิจที่ต้องการตรวจ</h2>
+        <div className="mt-4 flex flex-wrap gap-2">
+          {BUSINESS_TYPE_OPTIONS.map((item) => (
+            <button key={item.value} type="button" onClick={() => selectBusinessType(item.value)} className={`min-h-11 rounded-2xl border px-4 text-sm font-black transition ${filters.businessType === item.value ? 'border-orange-500 bg-orange-500 text-white' : 'border-orange-200 bg-white text-slate-700'}`}>
+              {item.label}
+            </button>
+          ))}
+        </div>
+        {!filters.businessType && (
+          <p className="mt-4 rounded-2xl bg-white p-4 text-sm font-bold text-slate-600">Canonical Group จะยังไม่โหลดจนกว่าจะเลือกประเภทธุรกิจ</p>
+        )}
+      </section>
+
+      {filters.businessType && (
+        <>
+          <section className="grid gap-3 md:grid-cols-3 xl:grid-cols-5">
+            {[
+              ['กลุ่มทั้งหมด', totalGroups],
+              ['พร้อมตรวจ', ready],
+              ['ต้องตรวจ Product Type', reviewRequired],
+              ['Template Branch', templateBranch?.branchCode || '-'],
+              ['Category ID', categoryId || '-'],
+            ].map(([label, value]) => (
+              <div key={label} className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+                <p className="text-[11px] font-black uppercase tracking-[0.12em] text-slate-400">{label}</p>
+                <p className="mt-2 text-2xl font-black text-slate-900">{value}</p>
+              </div>
+            ))}
+          </section>
+
+          <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+            <form onSubmit={(event) => { event.preventDefault(); apply({ ...filters, page: 1 }); }} className="grid gap-3 lg:grid-cols-[minmax(260px,1fr)_240px_130px]">
+              <input type="search" value={filters.q} onChange={(event) => setFilters((current) => ({ ...current, q: event.target.value }))} placeholder="ค้นหาชื่อสินค้า แบรนด์ Fingerprint หรือร้าน..." className="min-h-11 rounded-2xl border border-slate-200 px-4 text-sm font-semibold outline-none focus:border-orange-400" />
+              <select value={filters.reviewStatus} onChange={(event) => apply({ ...filters, reviewStatus: event.target.value, page: 1 })} className="min-h-11 rounded-2xl border border-slate-200 px-4 text-sm font-bold text-slate-700">
+                {REVIEW_OPTIONS.map(([value, label]) => <option key={value || 'ALL'} value={value}>{label}</option>)}
+              </select>
+              <button type="submit" disabled={loading} className="min-h-11 rounded-2xl bg-slate-950 px-5 text-sm font-black text-white disabled:opacity-50">ค้นหา</button>
+            </form>
+          </section>
+
+          {error && <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-700">{error.message || String(error)}</div>}
+
+          <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+            <div className="hidden grid-cols-[1.5fr_180px_130px_130px_190px] gap-3 border-b border-slate-100 bg-slate-50 px-4 py-3 text-[11px] font-black uppercase tracking-[0.1em] text-slate-500 md:grid">
+              <div>Canonical Group</div><div>Product Type</div><div>Products</div><div>Stores</div><div>Review Status</div>
+            </div>
+            {loading && groups.length === 0 ? (
+              <div className="p-10 text-center text-sm font-bold text-slate-500">กำลังโหลด Canonical Groups...</div>
+            ) : groups.length === 0 ? (
+              <div className="p-10 text-center text-sm font-bold text-slate-500">ไม่พบกลุ่มสินค้าใน {getBusinessTypeLabel(filters.businessType)}</div>
+            ) : (
+              <div className="divide-y divide-slate-100">
+                {groups.map((group) => (
+                  <button key={group.groupKey || group.groupFingerprint} type="button" onClick={() => openGroup(group)} className="grid min-h-20 w-full gap-2 px-4 py-4 text-left transition hover:bg-orange-50/60 md:grid-cols-[1.5fr_180px_130px_130px_190px] md:gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-black text-slate-900">{group.canonicalName || '-'}</p>
+                      <p className="mt-1 truncate text-xs font-semibold text-slate-500">{group.brandName || group.canonicalBrandName || 'ไม่ระบุแบรนด์'}</p>
+                      <p className="mt-1 truncate font-mono text-[10px] text-slate-400">{group.groupKey || group.groupFingerprint}</p>
+                    </div>
+                    <div className="text-sm font-bold text-slate-600">{group.productTypeName || '-'}</div>
+                    <div className="text-lg font-black text-slate-900">{group.sourceProductCount || 0}</div>
+                    <div className="text-lg font-black text-slate-900">{group.sourceBranchCount || 0}</div>
+                    <div>
+                      <span className={`inline-flex rounded-full px-3 py-1 text-[11px] font-black ${statusClass(group.reviewStatus)}`}>{statusLabel(group.reviewStatus)}</span>
+                      {(group.reviewReasons || []).length > 0 && <p className="mt-2 text-xs font-semibold text-amber-700">{group.reviewReasons.join(', ')}</p>}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+            <div className="flex flex-col gap-3 border-t border-slate-100 px-4 py-4 text-sm font-bold text-slate-600 sm:flex-row sm:items-center sm:justify-between">
+              <span>Page {page} / {totalPages} · {pagination?.total ?? groups.length} กลุ่ม</span>
+              <div className="flex gap-2">
+                <button type="button" disabled={page <= 1 || loading} onClick={() => apply({ ...filters, page: page - 1 })} className="min-h-11 rounded-2xl border border-slate-200 px-4 disabled:opacity-40">ก่อนหน้า</button>
+                <button type="button" disabled={page >= totalPages || loading} onClick={() => apply({ ...filters, page: page + 1 })} className="min-h-11 rounded-2xl border border-slate-200 px-4 disabled:opacity-40">ถัดไป</button>
+              </div>
+            </div>
+          </section>
+
+          <section className="rounded-3xl border border-blue-200 bg-blue-50 p-5 text-sm font-bold text-blue-800">เลือก Canonical Group เพื่อเปิดรายละเอียดแบบอ่านอย่างเดียว ก่อนเข้าสู่ขั้นสร้าง Product Template</section>
+        </>
+      )}
+    </div>
+  );
+};
+
+export default CanonicalGroupReviewPage;

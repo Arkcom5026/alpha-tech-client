@@ -5,6 +5,7 @@ import { Navigate } from 'react-router-dom';
 
 import CandidateReviewPage from '@/features/templateCandidate/pages/CandidateReviewPage';
 import CandidateDetailPage from '@/features/templateCandidate/pages/CandidateDetailPage';
+import CanonicalGroupReviewPage from '@/features/templateCandidate/pages/CanonicalGroupReviewPage';
 import CanonicalGroupDetailPage from '@/features/templateCandidate/pages/CanonicalGroupDetailPage';
 import ProductTemplateGovernanceListPage from '@/features/productTemplate/pages/ProductTemplateGovernanceListPage';
 import ProductTemplateGovernanceDetailPage from '@/features/productTemplate/pages/ProductTemplateGovernanceDetailPage';
@@ -50,6 +51,7 @@ export const superAdminRoutes = [
         path: 'candidates',
         children: [
           { index: true, element: <CandidateReviewPage /> },
+          { path: 'groups', element: <CanonicalGroupReviewPage /> },
           { path: 'groups/:groupKey', element: <CanonicalGroupDetailPage /> },
           { path: ':id', element: <CandidateDetailPage /> },
         ],

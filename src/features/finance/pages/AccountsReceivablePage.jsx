@@ -1,9 +1,10 @@
-// 📁 FILE: src/features/finance/pages/AccountsReceivablePage.jsx
-// ✅ Production-grade (minimal disruption) - Store-first
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useParams } from 'react-router-dom'; // 🟢 [DYNAMIC PARAM FIX] นำเข้า useParams มาร่วมทีม
+import { useParams } from 'react-router-dom';
 import useFinanceStore from '@/features/finance/store/financeStore';
 import AccountsReceivableTable from '@/features/finance/components/AccountsReceivableTable';
+import FinanceMetricCard from '@/features/finance/components/workspace/FinanceMetricCard';
+import FinanceWorkspaceHeader from '@/features/finance/components/workspace/FinanceWorkspaceHeader';
+import FinanceWorkspaceSection from '@/features/finance/components/workspace/FinanceWorkspaceSection';
 
 const toISODate = (d) => {
   try {
@@ -42,8 +43,8 @@ const fmt = (n) => {
 };
 
 const AccountsReceivablePage = () => {
-  const { shopSlug } = useParams(); // 🟢 [LINK BINDING] แกะรหัสชื่อร้านค้าพาร์ตเนอร์คุมระบบนำทาง Multi-Tenant
-  
+  const { shopSlug } = useParams();
+
   const arSummary = useFinanceStore((s) => s.arSummary);
   const arRows = useFinanceStore((s) => s.arRows);
   const arLoading = useFinanceStore((s) => s.arLoading);
@@ -55,7 +56,6 @@ const AccountsReceivablePage = () => {
   const resetArErrorAction = useFinanceStore((s) => s.resetArErrorAction);
 
   const [keyword, setKeyword] = useState('');
-
   const [fromDate, setFromDate] = useState(() => {
     try {
       const today = new Date();
@@ -66,7 +66,6 @@ const AccountsReceivablePage = () => {
       return '';
     }
   });
-
   const [toDate, setToDate] = useState(() => {
     try {
       return toISODate(new Date());
@@ -74,7 +73,6 @@ const AccountsReceivablePage = () => {
       return '';
     }
   });
-
   const [status, setStatus] = useState('OPEN');
   const didInitRef = useRef(false);
   const safeRows = Array.isArray(arRows) ? arRows : [];
@@ -149,14 +147,11 @@ const AccountsReceivablePage = () => {
     void reload();
   }, [reload]);
 
-  const onApplyFilters = useCallback(
-    async (e) => {
-      e?.preventDefault?.();
-      if (typeof resetArErrorAction === 'function') resetArErrorAction();
-      await reload();
-    },
-    [reload, resetArErrorAction]
-  );
+  const onApplyFilters = useCallback(async (e) => {
+    e?.preventDefault?.();
+    if (typeof resetArErrorAction === 'function') resetArErrorAction();
+    await reload();
+  }, [reload, resetArErrorAction]);
 
   const onClearFilters = useCallback(async () => {
     if (typeof resetArErrorAction === 'function') resetArErrorAction();
@@ -187,132 +182,78 @@ const AccountsReceivablePage = () => {
   }, [fetchAccountsReceivableAction, fetchAccountsReceivableSummaryAction, fetchAccountsReceivableRowsAction, safeRows.length, arSummary]);
 
   return (
-    <div className="min-h-screen bg-gray-100 p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold text-blue-800">ลูกหนี้/ยอดค้าง (Accounts Receivable)</h1>
-          <p className="text-sm text-gray-600 mt-1">
-            แสดงเฉพาะรายการที่ยังมียอดค้าง (UNPAID / PARTIALLY_PAID) ตามช่วงวันที่
-          </p>
+    <div className="min-h-screen space-y-5 bg-slate-50 p-4 text-slate-800 md:p-6">
+      <FinanceWorkspaceHeader
+        title="ลูกหนี้และยอดค้าง"
+        description="ติดตามใบขายที่ยังชำระไม่ครบ ค้นหาตามลูกค้า เลขบิล และช่วงวันที่ โดยคงขอบเขตร้านปัจจุบัน"
+        badge={shopSlug ? `AR · ${shopSlug}` : 'Accounts Receivable'}
+      />
+
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <FinanceMetricCard label="ยอดค้างรวม" value={`${fmt(computedSummary.outstandingTotal)} ฿`} hint="คำนวณจากยอดสุทธิ - จ่ายแล้ว" tone="danger" />
+        <FinanceMetricCard label="จำนวนบิลค้าง" value={`${computedSummary.invoiceCount.toLocaleString('th-TH')} บิล`} hint="จำนวนใบขายที่ยังไม่ชำระครบ" tone="warn" />
+        <FinanceMetricCard label="จำนวนลูกค้าที่ค้าง" value={`${computedSummary.customerCount.toLocaleString('th-TH')} ราย`} hint="นับจาก customerId ที่พบในผลลัพธ์" tone="info" />
+      </div>
+
+      {arError ? (
+        <div role="alert" className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm font-semibold text-rose-800">
+          <p className="font-black">ไม่สามารถโหลดข้อมูลลูกหนี้ได้</p>
+          <p className="mt-1">{String(arError)}</p>
         </div>
+      ) : null}
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-white rounded-xl shadow-sm border p-5">
-            <div className="text-sm text-gray-500">ยอดค้างรวม</div>
-            <div className="text-3xl font-extrabold text-red-600 mt-2">{fmt(computedSummary.outstandingTotal)} ฿</div>
-            <div className="text-xs text-gray-400 mt-1">คำนวณจากยอดสุทธิ - จ่ายแล้ว</div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm border p-5">
-            <div className="text-sm text-gray-500">จำนวนบิลค้าง</div>
-            <div className="text-3xl font-extrabold text-orange-600 mt-2">{computedSummary.invoiceCount.toLocaleString('th-TH')} บิล</div>
-            <div className="text-xs text-gray-400 mt-1">จำนวนใบขายที่ยังไม่ชำระครบ</div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm border p-5">
-            <div className="text-sm text-gray-500">จำนวนลูกค้าที่ค้าง</div>
-            <div className="text-3xl font-extrabold text-purple-600 mt-2">{computedSummary.customerCount.toLocaleString('th-TH')} ราย</div>
-            <div className="text-xs text-gray-400 mt-1">นับแบบ best-effort จาก customerId</div>
-          </div>
+      {missingWiring ? (
+        <div role="status" className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold text-amber-900">
+          <p className="font-black">ยังไม่ได้เชื่อม store action สำหรับลูกหนี้</p>
+          <p className="mt-1">โปรดเพิ่ม action ใน <span className="font-mono">financeStore.js</span> เช่น <span className="font-mono">fetchAccountsReceivableAction</span></p>
         </div>
+      ) : null}
 
-        {arError ? (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
-            <div className="font-semibold">ไม่สามารถโหลดข้อมูลลูกหนี้ได้</div>
-            <div className="text-sm mt-1">{String(arError)}</div>
-          </div>
-        ) : null}
+      <FinanceWorkspaceSection title="ค้นหาและกรองลูกหนี้" description="ค่าเริ่มต้นแสดงรายการค้างชำระในช่วง 30 วันล่าสุด">
+        <form onSubmit={onApplyFilters} className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <label className="text-sm font-black text-slate-700">
+            ค้นหา
+            <input
+              type="search"
+              className="mt-1 min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm font-medium outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-100"
+              placeholder="เลขบิล / ชื่อลูกค้า / เบอร์โทร"
+              value={keyword}
+              onChange={(e) => setKeyword(e.target.value)}
+            />
+          </label>
+          <label className="text-sm font-black text-slate-700">
+            ตั้งแต่
+            <input type="date" className="mt-1 min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm focus:border-teal-600 focus:ring-2 focus:ring-teal-100" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
+          </label>
+          <label className="text-sm font-black text-slate-700">
+            ถึง
+            <input type="date" className="mt-1 min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm focus:border-teal-600 focus:ring-2 focus:ring-teal-100" value={toDate} onChange={(e) => setToDate(e.target.value)} />
+          </label>
+          <label className="text-sm font-black text-slate-700">
+            สถานะ
+            <select className="mt-1 min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm font-semibold focus:border-teal-600 focus:ring-2 focus:ring-teal-100" value={status} onChange={(e) => setStatus(e.target.value)}>
+              <option value="OPEN">ค้างชำระ (รวมค้างบางส่วน)</option>
+              <option value="UNPAID">ค้างทั้งหมด</option>
+              <option value="PARTIALLY_PAID">ค้างบางส่วน</option>
+              <option value="ALL">ทั้งหมด</option>
+            </select>
+          </label>
 
-        {missingWiring ? (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-yellow-900">
-            <div className="font-semibold">ยังไม่ได้เชื่อม store action สำหรับลูกหนี้</div>
-            <div className="text-sm mt-1">
-              โปรดเพิ่ม action ใน <span className="font-mono">financeStore.js</span> เช่น{' '}
-              <span className="font-mono">fetchAccountsReceivableAction</span>
-            </div>
-          </div>
-        ) : null}
-
-        <form onSubmit={onApplyFilters} className="bg-white border rounded-xl p-5 shadow-sm">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">ค้นหา</label>
-              <input
-                className="w-full border rounded-md px-3 py-2 text-sm"
-                placeholder="เลขบิล / ชื่อลูกค้า / เบอร์โทร"
-                value={keyword}
-                onChange={(e) => setKeyword(e.target.value)}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">ตั้งแต่</label>
-              <input
-                type="date"
-                className="w-full border rounded-md px-3 py-2 text-sm"
-                value={fromDate}
-                onChange={(e) => setFromDate(e.target.value)}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">ถึง</label>
-              <input
-                type="date"
-                className="w-full border rounded-md px-3 py-2 text-sm"
-                value={toDate}
-                onChange={(e) => setToDate(e.target.value)}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">สถานะ</label>
-              <select
-                className="w-full border rounded-md px-3 py-2 text-sm"
-                value={status}
-                onChange={(e) => setStatus(e.target.value)}
-              >
-                <option value="OPEN">ค้างชำระ (รวมค้างบางส่วน)</option>
-                <option value="UNPAID">ค้างทั้งหมด</option>
-                <option value="PARTIALLY_PAID">ค้างบางส่วน</option>
-                <option value="ALL">ทั้งหมด</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap gap-3 mt-4">
-            <button
-              type="submit"
-              className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-semibold hover:bg-blue-700 transition"
-              disabled={!!arLoading}
-            >
+          <div className="flex flex-wrap gap-3 md:col-span-2 xl:col-span-4">
+            <button type="submit" className="min-h-11 rounded-xl bg-teal-700 px-5 text-sm font-black text-white transition hover:bg-teal-800 disabled:opacity-60" disabled={!!arLoading}>
               {arLoading ? 'กำลังโหลด...' : 'ค้นหา'}
             </button>
-
-            <button
-              type="button"
-              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md text-sm font-semibold hover:bg-gray-200 transition"
-              onClick={onClearFilters}
-              disabled={!!arLoading}
-            >
+            <button type="button" className="min-h-11 rounded-xl border border-slate-300 bg-white px-5 text-sm font-black text-slate-700 transition hover:bg-slate-50 disabled:opacity-60" onClick={onClearFilters} disabled={!!arLoading}>
               ล้างตัวกรอง
             </button>
           </div>
         </form>
+      </FinanceWorkspaceSection>
 
-        <div className="bg-white border rounded-xl p-5 shadow-sm">
-          <div className="flex items-center justify-between gap-3 mb-3">
-            <div className="text-sm font-semibold text-gray-700">รายการบิลค้าง</div>
-            <div className="text-xs text-gray-500">ทั้งหมด {safeRows.length.toLocaleString('th-TH')} รายการ</div>
-          </div>
-
-          <AccountsReceivableTable rows={safeRows} loading={!!arLoading} />
-
-          <div className="text-xs text-gray-500 mt-3">
-            * ยอดค้างคำนวณจาก <span className="font-mono">totalAmount - paidAmount</span> (ไม่ให้ติดลบ)
-          </div>
-        </div>
-      </div>
+      <FinanceWorkspaceSection title="รายการบิลค้าง" description={`ทั้งหมด ${safeRows.length.toLocaleString('th-TH')} รายการ`}>
+        <AccountsReceivableTable rows={safeRows} loading={!!arLoading} />
+        <p className="mt-3 text-xs font-medium text-slate-500">* ยอดค้างคำนวณจาก <span className="font-mono">totalAmount - paidAmount</span> และไม่อนุญาตให้ติดลบ</p>
+      </FinanceWorkspaceSection>
     </div>
   );
 };

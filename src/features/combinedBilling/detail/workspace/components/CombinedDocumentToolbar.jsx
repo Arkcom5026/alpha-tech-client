@@ -1,12 +1,15 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
 
-const CombinedDocumentToolbar = ({ backTo = '/billing/combine', onPrint }) => (
+const CombinedDocumentToolbar = ({ onBack, onPrint }) => (
   <div className="max-w-4xl mx-auto mb-6 print:hidden">
     <div className="flex justify-between items-center">
-      <Link to={backTo} className="text-indigo-600 hover:text-indigo-800">
+      <button
+        type="button"
+        onClick={onBack}
+        className="text-indigo-600 hover:text-indigo-800"
+      >
         &larr; กลับไปหน้ารวมบิล
-      </Link>
+      </button>
       <button
         type="button"
         onClick={onPrint}

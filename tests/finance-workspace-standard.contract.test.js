@@ -40,7 +40,15 @@ assertIncludes(action, 'focus:ring-2', 'Finance action cards must preserve visib
 assertIncludes(metric, 'TONES', 'Finance metrics must use one deterministic tone authority');
 assertIncludes(section, 'rounded-3xl', 'Finance workspace sections must preserve the shared composition shell');
 
-// Behavior locks before refactoring the high-risk finance pages.
+// Accounts receivable is now a composed workspace, while behavior remains page-owned.
+assertIncludes(ar, 'FinanceWorkspaceHeader', 'AR must use the finance workspace header');
+assertIncludes(ar, 'FinanceMetricCard', 'AR must use shared finance metric cards');
+assertIncludes(ar, 'FinanceWorkspaceSection', 'AR must use shared finance workspace sections');
+assertIncludes(ar, 'type="search"', 'AR keyword input must expose search semantics');
+assertIncludes(ar, 'min-h-11', 'AR controls must remain touch sized');
+assertIncludes(ar, 'bg-teal-700', 'AR primary search action must use system teal');
+assertIncludes(ar, 'role="alert"', 'AR error feedback must be accessible');
+assertIncludes(ar, 'role="status"', 'AR wiring feedback must be accessible');
 assertIncludes(ar, 'buildParams', 'AR filter parameter authority must remain explicit');
 assertIncludes(ar, 'fetchAccountsReceivableAction', 'AR combined fetch authority must remain available');
 assertIncludes(ar, 'fetchAccountsReceivableSummaryAction', 'AR summary fallback authority must remain available');
@@ -48,6 +56,7 @@ assertIncludes(ar, 'fetchAccountsReceivableRowsAction', 'AR row fallback authori
 assertIncludes(ar, 'Math.max(0', 'AR outstanding calculation must never become negative');
 assertIncludes(ar, 'onClearFilters', 'AR clear-filter behavior must remain available');
 
+// Behavior locks before refactoring the remaining high-risk finance pages.
 assertIncludes(credit, 'useSyncExternalStore', 'Customer credit hard-stable store subscription must remain intact');
 assertIncludes(credit, 'getDefaultRange90', 'Customer credit default 90-day range must remain intact');
 assertIncludes(credit, 'fetchCustomerCreditAction', 'Customer credit combined fetch authority must remain available');

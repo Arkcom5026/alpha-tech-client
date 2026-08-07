@@ -7,6 +7,8 @@ const read = (relativePath) => fs.readFileSync(path.join(root, relativePath), 'u
 
 describe('customer receipt list workspace behavior contract', () => {
   const page = read('src/features/customerReceipt/pages/CustomerReceiptListPage.jsx');
+  const workspace = read('src/features/customerReceipt/list/CustomerReceiptListWorkspace.jsx');
+  const runtimeSource = `${page}\n${workspace}`;
 
   it('preserves initial-load-once and message cleanup lifecycle', () => {
     expect(page).toContain('const didInitialLoadRef = useRef(false);');
@@ -26,6 +28,8 @@ describe('customer receipt list workspace behavior contract', () => {
     for (const field of ['status', 'customerId', 'paymentMethod', 'fromDate', 'toDate']) {
       expect(page).toContain(`${field}: ''`);
     }
+    expect(workspace).toContain("event.key === 'Enter' && onSearch()");
+    expect(workspace).toContain('onKeywordInputChange(event.target.value)');
   });
 
   it('preserves client-side sorting without mutating store rows', () => {
@@ -36,6 +40,9 @@ describe('customer receipt list workspace behavior contract', () => {
     expect(page).toContain("sortKey === 'totalAmount'");
     expect(page).toContain("sortKey === 'allocatedAmount'");
     expect(page).toContain("sortKey === 'remainingAmount'");
+    for (const key of ['code', 'customerName', 'totalAmount', 'allocatedAmount', 'remainingAmount', 'createdAt']) {
+      expect(workspace).toContain(`onToggleSort('${key}')`);
+    }
   });
 
   it('preserves finance-context navigation and allocation guard', () => {
@@ -45,7 +52,10 @@ describe('customer receipt list workspace behavior contract', () => {
     expect(page).toContain('getDynamicFinanceUrl(`/${item.id}`)');
     expect(page).toContain('getDynamicFinanceUrl(`/${item.id}/reprint`)');
     expect(page).toContain('getDynamicFinanceUrl(`/${item.id}/allocate`)');
-    expect(page).toContain('!isCancelled && remains > 0');
+    expect(workspace).toContain('!isCancelled && remains > 0');
+    expect(workspace).toContain('onOpenDetail(item)');
+    expect(workspace).toContain('onOpenReprint(item)');
+    expect(workspace).toContain('onOpenAllocate(item)');
   });
 
   it('preserves receipt summary semantics and pagination ownership', () => {
@@ -58,10 +68,19 @@ describe('customer receipt list workspace behavior contract', () => {
       'fullyAllocatedCount',
       'cancelledCount',
     ]) {
-      expect(page).toContain(field);
+      expect(runtimeSource).toContain(field);
     }
     expect(page).toContain('pagination');
     expect(page).toContain('setCustomerReceiptFiltersAction');
     expect(page).toContain('searchCustomerReceiptsAction');
+  });
+
+  it('keeps page orchestration separate from workspace presentation', () => {
+    expect(page).toContain("import CustomerReceiptListWorkspace from '../list/CustomerReceiptListWorkspace';");
+    expect(page).toContain('<CustomerReceiptListWorkspace');
+    expect(page).not.toContain('<table');
+    expect(page).not.toContain('lucide-react');
+    expect(workspace).toContain('<table');
+    expect(workspace).toContain('data-testid="create-new-receipt-button"');
   });
 });

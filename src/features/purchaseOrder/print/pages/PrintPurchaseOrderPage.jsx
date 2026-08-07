@@ -10,15 +10,11 @@ import { useParams } from 'react-router-dom';
 import { getPurchaseOrderById } from '../../api/purchaseOrderApi';
 import { useBranchStore } from '@/features/branch/store/branchStore';
 import { useAuthStore } from '@/features/auth/store/authStore';
-
-const formatMoney = (value) => {
-  const n = Number(value);
-  if (!Number.isFinite(n)) return '0.00';
-  return n.toLocaleString('th-TH', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-};
+import {
+  formatPurchaseOrderMoney,
+  preparePurchaseOrderPrintProjection,
+  resolvePurchaseOrderBranchId,
+} from '../workspace/policies/purchaseOrderPrintPolicy';
 
 const PrintPurchaseOrderPage = () => {
   const { id } = useParams();
@@ -33,21 +29,13 @@ const PrintPurchaseOrderPage = () => {
   const branchDetail = useBranchStore((state) => state.branch || state.currentBranch || state.activeBranch || null);
   const loadAndSetBranchById = useBranchStore((state) => state.loadAndSetBranchById);
 
-  const branchId = useMemo(() => {
-    const raw =
-      selectedBranchId ??
-      branchDetail?.id ??
-      branchDetail?.branchId ??
-      authBranchId ??
-      null;
+  const branchId = useMemo(() => resolvePurchaseOrderBranchId({
+    selectedBranchId,
+    branchDetail,
+    authBranchId,
+  }), [selectedBranchId, branchDetail, authBranchId]);
 
-    const n = Number(raw);
-    return Number.isFinite(n) && n > 0 ? n : null;
-  }, [selectedBranchId, branchDetail?.id, branchDetail?.branchId, authBranchId]);
-
-  const branch = useMemo(() => {
-    return branchDetail || {};
-  }, [branchDetail]);
+  const branch = useMemo(() => branchDetail || {}, [branchDetail]);
 
   useEffect(() => {
     if (!branchId) return;
@@ -99,12 +87,7 @@ const PrintPurchaseOrderPage = () => {
   if (loading) return <p className="p-4">กำลังโหลด...</p>;
   if (!po) return <p className="p-4 text-red-500">ไม่พบใบสั่งซื้อ</p>;
 
-  const items = Array.isArray(po.items) ? po.items : [];
-  const total = items.reduce((sum, item) => {
-    const qty = Number(item?.quantity ?? 0);
-    const cost = Number(item?.costPrice ?? 0);
-    return sum + qty * cost;
-  }, 0);
+  const { lines, total } = preparePurchaseOrderPrintProjection(po);
 
   return (
     <div>
@@ -199,35 +182,29 @@ const PrintPurchaseOrderPage = () => {
           </thead>
 
           <tbody>
-            {items.length === 0 ? (
+            {lines.length === 0 ? (
               <tr>
                 <td colSpan={5} className="border p-4 text-center text-muted-foreground">
                   ไม่มีรายการสินค้า
                 </td>
               </tr>
             ) : (
-              items.map((item, idx) => {
-                const qty = Number(item?.quantity ?? 0);
-                const cost = Number(item?.costPrice ?? 0);
-                const lineTotal = qty * cost;
-
-                return (
-                  <tr key={item?.id ?? idx} className="border">
-                    <td className="border p-2 text-center">{idx + 1}</td>
-                    <td className="border p-2">{item.product?.name || item.productName || '-'}</td>
-                    <td className="border p-2 text-center">{qty.toLocaleString('th-TH')}</td>
-                    <td className="border p-2 text-right">{formatMoney(cost)} ฿</td>
-                    <td className="border p-2 text-right">{formatMoney(lineTotal)} ฿</td>
-                  </tr>
-                );
-              })
+              lines.map((line, idx) => (
+                <tr key={line.id ?? idx} className="border">
+                  <td className="border p-2 text-center">{idx + 1}</td>
+                  <td className="border p-2">{line.name}</td>
+                  <td className="border p-2 text-center">{line.quantity.toLocaleString('th-TH')}</td>
+                  <td className="border p-2 text-right">{formatPurchaseOrderMoney(line.costPrice)} ฿</td>
+                  <td className="border p-2 text-right">{formatPurchaseOrderMoney(line.lineTotal)} ฿</td>
+                </tr>
+              ))
             )}
 
             <tr className="font-semibold">
               <td colSpan={4} className="text-right border p-2">
                 รวมทั้งสิ้น
               </td>
-              <td className="border p-2 text-right">{formatMoney(total)} ฿</td>
+              <td className="border p-2 text-right">{formatPurchaseOrderMoney(total)} ฿</td>
             </tr>
           </tbody>
         </table>

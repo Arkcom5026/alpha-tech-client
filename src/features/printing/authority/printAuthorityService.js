@@ -12,6 +12,10 @@ const createJobId = () => {
   return `print-${Date.now()}-${Math.random().toString(16).slice(2)}`
 }
 
+const isBridgeReady = (health) => (
+  health?.ok === true || health?.status === 'ok'
+)
+
 const createPrintAuthorityService = ({
   transport = createLocalPrintBridgeTransport(),
   now = () => new Date().toISOString(),
@@ -20,7 +24,7 @@ const createPrintAuthorityService = ({
   const verifyBridge = async () => {
     const health = await transport.health()
 
-    if (health?.status !== 'ok') {
+    if (!isBridgeReady(health)) {
       throw new Error('Alpha-Tech Local Print Bridge is not ready')
     }
 
@@ -52,5 +56,5 @@ const createPrintAuthorityService = ({
   })
 }
 
-export { createPrintAuthorityService }
+export { createPrintAuthorityService, isBridgeReady }
 export default createPrintAuthorityService

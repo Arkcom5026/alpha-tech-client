@@ -8,7 +8,7 @@
   },
   "scripts": {
     "start": "node src/server.js",
-    "test": "node --test tests/printJobValidator.test.js tests/mockPrinterAdapter.test.js tests/escposRenderer.test.js tests/windowsPrinterDiscovery.test.js tests/physicalPilotRenderer.test.js",
+    "test": "node --test tests/printJobValidator.test.js tests/mockPrinterAdapter.test.js tests/escposRenderer.test.js tests/windowsPrinterDiscovery.test.js tests/physicalPilotRenderer.test.js tests/durablePrintLeaseClient.test.js",
     "test:shared-queue-smoke": "node --test tests/sharedQueueSmokeHarness.test.js",
     "smoke:shared-queue": "node scripts/shared-queue-smoke.js"
   }

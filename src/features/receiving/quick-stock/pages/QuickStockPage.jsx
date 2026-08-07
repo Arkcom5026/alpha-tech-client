@@ -80,6 +80,7 @@ const QuickStockPage = () => {
     handleCreateOperationalProductFromTemplate,
     handleCreateLocalOperationalProduct,
     handleBarcodeSubmit,
+    handleSerialSubmit,
     removeQueueItem,
     updateQueueItemField,
     handleSaveProductInline,
@@ -236,7 +237,7 @@ const QuickStockPage = () => {
           <IntakeQueueTable
             barcodeQueue={barcodeQueue}
             serialInputRefs={serialInputRefs}
-            barcodeInputRef={barcodeInputRef}
+            onSerialSubmit={handleSerialSubmit}
             onUpdateQueueItemField={updateQueueItemField}
             onRemoveQueueItem={removeQueueItem}
           />

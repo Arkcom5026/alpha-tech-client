@@ -37,7 +37,7 @@ export const buildSaleCompletionPayload = ({
       discount: projected.discount,
       price,
       vatAmount,
-      remark: '',
+      remark: projected.adjustmentReason || '',
     };
   });
 

@@ -9,7 +9,7 @@ describe('product template canonical group review workspace PT-GR-01 contract', 
   it('adopts the read-only canonical group projection', () => {
     const api = read('src/features/templateCandidate/api/templateCandidateApi.js');
     const hook = read('src/features/templateCandidate/hooks/useCanonicalProductGroups.js');
-    const page = read('src/features/templateCandidate/pages/CandidateReviewPage.jsx');
+    const page = read('src/features/templateCandidate/pages/CanonicalGroupReviewPage.jsx');
 
     const assertions = [
       [api.includes('listCanonicalProductGroupsApi'), 'canonical group API export'],

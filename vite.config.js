@@ -1,6 +1,7 @@
 // ✅ vite.config.js
 // 🏛️ Premium Enterprise POS Bundler Configuration
 
+import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
@@ -9,6 +10,41 @@ import { dirname } from 'path'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
+
+const testFilePattern = /\.(?:test|spec)\.(?:js|jsx|ts|tsx)$/
+const vitestImportPattern = /\bfrom\s+['"]vitest['"]|\brequire\(\s*['"]vitest['"]\s*\)|\bimport\(\s*['"]vitest['"]\s*\)/
+const toPosixPath = (value) => value.split(path.sep).join('/')
+
+const discoverNonVitestTestFiles = (rootDir) => {
+  const nonVitestFiles = []
+
+  const visit = (directory) => {
+    if (!existsSync(directory)) return
+
+    for (const entry of readdirSync(directory, { withFileTypes: true })) {
+      const absolutePath = path.join(directory, entry.name)
+
+      if (entry.isDirectory()) {
+        visit(absolutePath)
+        continue
+      }
+
+      if (!entry.isFile() || !testFilePattern.test(entry.name)) continue
+
+      const source = readFileSync(absolutePath, 'utf8')
+      if (!vitestImportPattern.test(source)) {
+        nonVitestFiles.push(toPosixPath(path.relative(rootDir, absolutePath)))
+      }
+    }
+  }
+
+  visit(path.join(rootDir, 'src'))
+  visit(path.join(rootDir, 'tests'))
+
+  return nonVitestFiles
+}
+
+const nonVitestTestFiles = discoverNonVitestTestFiles(__dirname)
 
 export default defineConfig({
   plugins: [react()],
@@ -39,7 +75,8 @@ export default defineConfig({
       '**/dist/**',
       'e2e/**',
       '**/*.e2e.*',
-      'src/features/**/e2e/**/*.browser.spec.{js,jsx,ts,tsx}'
+      'src/features/**/e2e/**/*.browser.spec.{js,jsx,ts,tsx}',
+      ...nonVitestTestFiles
     ]
   }
 })

@@ -7,6 +7,7 @@ const read = (relativePath) => fs.readFileSync(path.join(root, relativePath), 'u
 
 describe('product template canonical group detail workspace behavior contract', () => {
   const page = read('src/features/templateCandidate/pages/CanonicalGroupDetailPage.jsx');
+  const materialization = read('src/features/templateCandidate/workspace/components/CanonicalGroupMaterializationPanel.jsx');
 
   it('keeps canonical group fetch scoped by group key and business type', () => {
     expect(page).toContain("const { groupKey } = useParams();");
@@ -25,12 +26,13 @@ describe('product template canonical group detail workspace behavior contract', 
 
   it('materializes only READY groups through the existing catalog authority', () => {
     expect(page).toContain("const canMaterialize = group.reviewStatus === 'READY';");
-    expect(page).toContain('disabled={!canMaterialize || materializing}');
     expect(page).toContain('materializeCanonicalProductGroupsApi({');
     expect(page).toContain('businessType,');
     expect(page).toContain('apply: true,');
     expect(page).toContain('limit: 500,');
     expect(page).toContain('groupKey,');
+    expect(page).toContain('onMaterialize={materializeGroup}');
+    expect(materialization).toContain('disabled={!canMaterialize || materializing}');
   });
 
   it('keeps result lifecycle and catalog-safe scope explicit', () => {
@@ -38,7 +40,7 @@ describe('product template canonical group detail workspace behavior contract', 
     expect(page).toContain('setMaterializeResult(null);');
     expect(page).toContain('setMaterializeResult(response?.data || response);');
     expect(page).toContain('setMaterializeError(requestError);');
-    expect(page).toContain('โดยไม่แก้สินค้า ราคา หรือสต๊อก');
-    expect(page).not.toMatch(/costPrice|priceRetail|priceOnline|priceWholesale|stockMovement|purchaseOrder|taxDocument|repairJob|warrantyClaim/);
+    expect(materialization).toContain('โดยไม่แก้สินค้า ราคา หรือสต๊อก');
+    expect(`${page}\n${materialization}`).not.toMatch(/costPrice|priceRetail|priceOnline|priceWholesale|stockMovement|purchaseOrder|taxDocument|repairJob|warrantyClaim/);
   });
 });

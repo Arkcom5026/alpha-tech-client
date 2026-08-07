@@ -14,10 +14,12 @@ describe('ready-to-sell scanner controller ownership contract', () => {
   );
 
   it('keeps scan matching and sorting policy-owned', () => {
-    expect(controller).toContain('matchReadyToSellScan');
-    expect(controller).toContain('sortReadyToSellRows');
-    expect(policy).toContain('matchReadyToSellScan');
-    expect(policy).toContain('sortReadyToSellRows');
+    expect(controller).toContain('resolveReadyToSellScanOutcome');
+    expect(controller).toContain('sortReadyToSellItems');
+    expect(policy).toContain('resolveReadyToSellScanOutcome');
+    expect(policy).toContain('findReadyToSellScanMatch');
+    expect(policy).toContain('matchesReadyToSellScan');
+    expect(policy).toContain('sortReadyToSellItems');
   });
 
   it('owns scanner focus behind one controller boundary', () => {
@@ -33,6 +35,7 @@ describe('ready-to-sell scanner controller ownership contract', () => {
     expect(controller).toContain("el.scrollIntoView({ behavior: 'smooth', block: 'center' });");
     expect(controller).toContain('setHighlightId(outcome.highlightId ?? null)');
     expect(controller).toContain("setScanMessage(outcome.message || '')");
+    expect(controller).toContain('if (outcome.shouldScroll) scrollToRow(outcome.highlightId);');
   });
 
   it('keeps Enter submission and mode toggles local to scanner state', () => {

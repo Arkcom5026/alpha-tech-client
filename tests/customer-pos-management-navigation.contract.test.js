@@ -16,7 +16,10 @@ const posRoutes = read('src/routes/partner/posPartnerRoutes.jsx');
 assert.match(posRoutes, /path:\s*'customers'/);
 assert.match(salesMenu, /label:\s*'จัดการลูกค้า'/);
 assert.match(salesMenu, /to:\s*`\$\{prefix\}\/customers`/);
-assert.match(sidebarLoader, /if \(moduleKey === 'customers'\) return 'sales';/);
+assert.match(
+  sidebarLoader,
+  /(?:if\s*\(moduleKey === 'customers'\)\s*return 'sales';|moduleKey === 'customers'\s*\?\s*'sales'\s*:\s*moduleKey)/,
+);
 assert.doesNotMatch(header, /label:\s*'ลูกค้า'/);
 assert.doesNotMatch(header, /getPosRoutePath\('\/customers'\)/);
 

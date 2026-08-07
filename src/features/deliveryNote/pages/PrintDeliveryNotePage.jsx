@@ -6,53 +6,10 @@ import {
 } from '@/features/sales/documents/workspace';
 import DeliveryNoteForm from '../components/DeliveryNoteForm';
 import DeliveryNoteDocumentState from '../components/workspace/DeliveryNoteDocumentState';
-
-const normalizeDocumentText = (value) => {
-  if (typeof value !== 'string') return '';
-  return value.trim();
-};
-
-const resolveSaleItemProductName = (item) => {
-  const product = item?.product || item?.stockItem?.product || item?.productSnapshot || null;
-  return product?.name || item?.productName || item?.name || 'ไม่พบชื่อสินค้า';
-};
-
-const buildSaleDocumentLineDescription = (item) => {
-  const documentDescription = normalizeDocumentText(item?.documentDescription);
-  return documentDescription || resolveSaleItemProductName(item);
-};
-
-const buildSaleDocumentLine = (item) => ({
-  documentPrefix: normalizeDocumentText(item?.documentPrefix),
-  documentDescriptionRaw: normalizeDocumentText(item?.documentDescription),
-  documentDescription: buildSaleDocumentLineDescription(item),
-  documentSuffix: normalizeDocumentText(item?.documentSuffix),
-});
-
-const buildPrintableProductName = (documentLine) =>
-  [documentLine?.documentPrefix, documentLine?.documentDescription, documentLine?.documentSuffix]
-    .map((value) => normalizeDocumentText(value))
-    .filter(Boolean)
-    .join('\n');
-
-const buildBranchFullAddress = (branch = {}) => {
-  const subdistrict = branch?.subdistrict || null;
-  const district = subdistrict?.district || null;
-  const province = district?.province || null;
-
-  const fullAddress = [
-    branch?.address,
-    subdistrict?.nameTh ? `ต.${subdistrict.nameTh}` : null,
-    district?.nameTh ? `อ.${district.nameTh}` : null,
-    province?.nameTh ? `จ.${province.nameTh}` : null,
-    subdistrict?.postcode,
-  ]
-    .filter(Boolean)
-    .join(' ')
-    .trim();
-
-  return fullAddress || '-';
-};
+import {
+  buildDeliveryNoteBranchConfig,
+  prepareDeliveryNoteSaleItems,
+} from '../print/workspace/policies/deliveryNotePrintPolicy';
 
 const PrintDeliveryNotePage = () => {
   const { saleId } = useParams();
@@ -119,73 +76,14 @@ const PrintDeliveryNotePage = () => {
     };
   }, [saleId]);
 
-  const preparedSaleItems = useMemo(() => {
-    if (!currentSale) return [];
-
-    const source = Array.isArray(currentSale.saleLines) && currentSale.saleLines.length > 0
-      ? currentSale.saleLines
-      : [
-          ...(Array.isArray(currentSale.items) ? currentSale.items : []),
-          ...(Array.isArray(currentSale.simpleItems) ? currentSale.simpleItems : []),
-        ];
-
-    const grouped = new Map();
-
-    for (const [sourceIndex, item] of source.entries()) {
-      const product = item?.product || item?.stockItem?.product || item?.productSnapshot || null;
-      const productIdRaw = product?.id ?? item?.productId ?? item?.stockItem?.productId ?? null;
-      const productId = productIdRaw == null ? null : String(productIdRaw);
-      const documentLine = buildSaleDocumentLine({ ...item, product });
-      const key = [
-        productId ? `product-${productId}` : `unknown-${item?.id ?? sourceIndex}`,
-        `prefix-${documentLine.documentPrefix}`,
-        `description-${documentLine.documentDescription}`,
-        `suffix-${documentLine.documentSuffix}`,
-      ].join('|');
-      const isSnItem = Boolean(item?.stockItemId || item?.stockItem?.id);
-      const unitPrice = isSnItem
-        ? Number(item?.price ?? item?.unitPrice ?? item?.basePrice ?? 0) || 0
-        : Number(item?.unitPrice ?? item?.price ?? item?.basePrice ?? item?.sellPrice ?? 0) || 0;
-      const quantity = isSnItem ? 1 : Math.max(1, Number(item?.quantity ?? item?.qty ?? 1) || 1);
-      const discountEach = isSnItem ? 0 : Number(item?.discount ?? item?.discountAmount ?? 0) || 0;
-
-      if (!grouped.has(key)) {
-        const stableId = productId ? `product-${productId}-${grouped.size}` : `unknown-${item?.id ?? sourceIndex}`;
-        grouped.set(key, {
-          id: stableId,
-          documentLineKey: key,
-          productId: productIdRaw,
-          stockItemId: item?.stockItemId ?? item?.stockItem?.id ?? null,
-          saleItemIds: isSnItem && item?.id ? [Number(item.id)] : [],
-          simpleItemIds: !isSnItem && item?.id ? [Number(item.id)] : [],
-          documentPrefix: documentLine.documentPrefix,
-          documentDescriptionRaw: documentLine.documentDescriptionRaw,
-          documentDescription: documentLine.documentDescription,
-          documentSuffix: documentLine.documentSuffix,
-          hasDocumentLine: Boolean(documentLine.documentPrefix || documentLine.documentSuffix),
-          productName: buildPrintableProductName(documentLine),
-          productModel: product?.model || item?.productModel || '-',
-          price: unitPrice,
-          quantity: 0,
-          unit: product?.unit?.name || item?.unit || 'ชิ้น',
-          discount: 0,
-          barcode: '-',
-          serialNumber: '-',
-        });
-      } else {
-        const aggregate = grouped.get(key);
-        if (isSnItem && item?.id) aggregate.saleItemIds.push(Number(item.id));
-        if (!isSnItem && item?.id) aggregate.simpleItemIds.push(Number(item.id));
-      }
-
-      const aggregate = grouped.get(key);
-      aggregate.quantity += quantity;
-      aggregate.discount += discountEach;
-    }
-
-    return Array.from(grouped.values());
-  }, [currentSale]);
-
+  const preparedSaleItems = useMemo(
+    () => prepareDeliveryNoteSaleItems(currentSale),
+    [currentSale]
+  );
+  const preparedConfig = useMemo(
+    () => buildDeliveryNoteBranchConfig(currentSale),
+    [currentSale]
+  );
   const error = pageError || editorError;
 
   if (isLoading) {
@@ -199,14 +97,6 @@ const PrintDeliveryNotePage = () => {
   if (!currentSale) {
     return <DeliveryNoteDocumentState status="empty" message="ไม่พบรายการขายที่ใช้สร้างใบส่งสินค้านี้" />;
   }
-
-  const branch = currentSale.branch || {};
-  const preparedConfig = {
-    branchName: branch.companyName || branch.name || '-',
-    address: buildBranchFullAddress(branch),
-    phone: branch.phone || '-',
-    taxId: branch.taxId || currentSale.branchTaxId || '-',
-  };
 
   return (
     <main className="min-h-screen bg-slate-100 px-3 py-5 text-black print:bg-white print:p-0 md:px-6 md:py-8">

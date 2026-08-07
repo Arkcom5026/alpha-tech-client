@@ -8,6 +8,7 @@ import { normalizeText } from "../utils/quickStockRuntimeUtils";
 const useQuickStockQueueController = ({
   isOperationalSelection,
   isTemplateOnlySelection,
+  operationalSelectionKey,
 } = {}) => {
   const barcodeInputRef = useRef(null);
   const serialInputRefs = useRef({});
@@ -51,7 +52,7 @@ const useQuickStockQueueController = ({
       return;
     }
     cancelScheduledFocus();
-  }, [cancelScheduledFocus, focusBarcodeInput, isOperationalSelection]);
+  }, [cancelScheduledFocus, focusBarcodeInput, isOperationalSelection, operationalSelectionKey]);
 
   const resetQueue = useCallback(() => {
     setBarcodeQueue([]);

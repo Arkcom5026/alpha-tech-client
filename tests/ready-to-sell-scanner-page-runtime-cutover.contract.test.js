@@ -7,6 +7,12 @@ const read = (relativePath) =>
 
 describe('ready-to-sell scanner page runtime cutover contract', () => {
   const page = read('src/features/product/pages/ReadyToSellStructuredDetailsPage.jsx');
+  const controls = read(
+    'src/features/product/ready-to-sell/workspace/components/ReadyToSellScanControls.jsx',
+  );
+  const results = read(
+    'src/features/product/ready-to-sell/workspace/components/ReadyToSellResultsTable.jsx',
+  );
 
   it('composes the scanner controller as the runtime owner', () => {
     expect(page).toContain('useReadyToSellScannerController');
@@ -37,9 +43,12 @@ describe('ready-to-sell scanner page runtime cutover contract', () => {
     expect(page).toContain("setTimeout(() => setCommitted(searchText.trim()), 250)");
   });
 
-  it('preserves the current scanner presentation surface for the cutover increment', () => {
-    expect(page).toContain('สแกน SN/Barcode แล้วกด Enter');
-    expect(page).toContain("sortMode === 'FIFO' ? 'FIFO (เก่าก่อน)' : 'ใหม่ก่อน'");
-    expect(page).toContain('highlightId != null && it?.id === highlightId');
+  it('preserves the scanner presentation through workspace presentation owners', () => {
+    expect(page).toContain('<ReadyToSellScanControls');
+    expect(page).toContain('<ReadyToSellResultsTable');
+    expect(controls).toContain('สแกน SN/Barcode แล้วกด Enter');
+    expect(controls).toContain("sortMode === 'FIFO' ? 'FIFO (เก่าก่อน)' : 'ใหม่ก่อน'");
+    expect(results).toContain('highlightId != null && item?.id === highlightId');
+    expect(results).toContain("highlighted ? 'bg-amber-50 ring-1 ring-amber-200");
   });
 });

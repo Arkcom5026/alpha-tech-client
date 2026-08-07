@@ -7,6 +7,9 @@ const read = (relativePath) => fs.readFileSync(path.join(root, relativePath), 'u
 
 describe('ready-to-sell scanner page lifecycle contract', () => {
   const page = read('src/features/product/pages/ReadyToSellStructuredDetailsPage.jsx');
+  const controls = read(
+    'src/features/product/ready-to-sell/workspace/components/ReadyToSellScanControls.jsx',
+  );
   const controller = read(
     'src/features/product/ready-to-sell/scan-workflow/hooks/useReadyToSellScannerController.js',
   );
@@ -27,9 +30,10 @@ describe('ready-to-sell scanner page lifecycle contract', () => {
     expect(controller).toContain('node.focus()');
   });
 
-  it('delegates Enter-to-scan and input clearing to the scanner controller', () => {
-    expect(page).toContain("if (e.key === 'Enter')");
-    expect(page).toContain('handleScanEnter()');
+  it('delegates Enter-to-scan through workspace controls and clears input in the controller', () => {
+    expect(page).toContain('onScanEnter={handleScanEnter}');
+    expect(controls).toContain("if (e.key === 'Enter')");
+    expect(controls).toContain('onScanEnter();');
     expect(page).toContain('setScanText');
     expect(controller).toContain("setScanText('')");
   });
@@ -45,6 +49,7 @@ describe('ready-to-sell scanner page lifecycle contract', () => {
 
   it('keeps scanner behavior local to this read-only stock-detail surface', () => {
     expect(page).not.toMatch(/receiveSNAction|createStockItem|updateStockItem|deleteStockItem/);
+    expect(controls).not.toMatch(/receiveSNAction|createStockItem|updateStockItem|deleteStockItem/);
     expect(controller).not.toMatch(/receiveSNAction|createStockItem|updateStockItem|deleteStockItem/);
   });
 });

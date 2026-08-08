@@ -1,13 +1,7 @@
 import React, { useEffect } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import useRepairRuntimeStore from '../store/repairRuntimeStore';
-import RepairShellHeader from '../components/RepairShellHeader';
-import RuntimeStatePanel from '../components/RuntimeStatePanel';
-import JobRuntimePanel from '../components/JobRuntimePanel';
-import RepairTrackingAccessPanel from '../customer-access/components/RepairTrackingAccessPanel';
-import IntakeEvidencePanel from '../components/IntakeEvidencePanel';
-import RepairEstimateApprovalPanel from '../customer-access/components/RepairEstimateApprovalPanel';
-import RepairHandoverPanel from '../components/RepairHandoverPanel';
+import RepairDetailWorkspace from '../detail/workspace/components/RepairDetailWorkspace';
 
 const RepairJobDetailPage = () => {
   const navigate = useNavigate();
@@ -40,40 +34,18 @@ const RepairJobDetailPage = () => {
   };
 
   return (
-    <div>
-      <RepairShellHeader
-        eyebrow="Repair Runtime"
-        title="รายละเอียดงานซ่อม"
-        description="พื้นที่ปฏิบัติงานหลักสำหรับสถานะ อะไหล่ บันทึกช่าง และการส่งต่อเคลม"
-      />
-
-      <RuntimeStatePanel
-        loading={loading}
-        error={error}
-        empty={!loading && !error && !activeJob}
-        emptyText="ไม่พบงานซ่อม"
-        onRetry={() => loadJob(repairJobId)}
-      />
-
-      {activeJob ? (
-        <div className="space-y-4">
-        <JobRuntimePanel
-          job={activeJob}
-          submitting={submitting}
-          onTransition={(payload) => transitionJob(repairJobId, payload)}
-          onAddPart={(payload) => addPart(repairJobId, payload)}
-          onOpenClaim={handleOpenClaim}
-        />
-          <RepairTrackingAccessPanel repairJobId={repairJobId} jobNo={activeJob.jobNo} />
-          <RepairEstimateApprovalPanel repairJobId={repairJobId} job={activeJob} />
-          <RepairHandoverPanel repairJobId={repairJobId} jobStatus={activeJob.status} />
-          <IntakeEvidencePanel
-            repairJobId={repairJobId}
-            warning={location.state?.evidenceWarning}
-          />
-        </div>
-      ) : null}
-    </div>
+    <RepairDetailWorkspace
+      repairJobId={repairJobId}
+      job={activeJob}
+      loading={loading}
+      submitting={submitting}
+      error={error}
+      evidenceWarning={location.state?.evidenceWarning}
+      onRetry={() => loadJob(repairJobId)}
+      onTransition={(payload) => transitionJob(repairJobId, payload)}
+      onAddPart={(payload) => addPart(repairJobId, payload)}
+      onOpenClaim={handleOpenClaim}
+    />
   );
 };
 

@@ -22,9 +22,9 @@ describe('dead Quick Receive API retirement', () => {
     expect(quickReceiptSessionApi).toContain('makeIdempotencyKey');
   });
 
-  it('keeps Quick Stock compatibility adapters available', () => {
+  it('keeps only live Quick Stock compatibility adapters available', () => {
     const quickReceiveApi = read('src/features/quickReceive/api/quickReceiveApi.js');
-    expect(quickReceiveApi).toContain('getQuickReceiveDropdowns');
+    expect(quickReceiveApi).not.toContain('getQuickReceiveDropdowns');
     expect(quickReceiveApi).toContain('quickReceiveExistingProduct');
     expect(quickReceiveApi).toContain('quickStockIntakeExistingApi');
     expect(quickReceiveApi).toContain('commitQuickStockExistingIntakeApi');

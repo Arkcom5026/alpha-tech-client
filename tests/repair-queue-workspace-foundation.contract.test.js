@@ -22,7 +22,7 @@ const sampleJobs = [
   {
     id: 1,
     jobNo: 'REP-001',
-    status: 'INTAKE',
+    status: 'RECEIVED',
     customerName: 'Kanjana',
     deviceModel: 'Notebook A',
     reportedSymptoms: 'No power',
@@ -32,7 +32,7 @@ const sampleJobs = [
   {
     id: 2,
     jobNo: 'REP-002',
-    status: 'REPAIRING',
+    status: 'IN_PROGRESS',
     customerName: 'Somchai',
     deviceModel: 'Phone B',
     reportedSymptoms: 'Broken display',

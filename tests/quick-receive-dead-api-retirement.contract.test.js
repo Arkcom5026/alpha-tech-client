@@ -14,10 +14,12 @@ describe('dead Quick Receive API retirement', () => {
     expect(quickReceiveApi).not.toContain("apiClient.post('stock/simple/quick-receive'");
   });
 
-  it('retires helpers that existed only for the dead preview/commit flow', () => {
+  it('retires only helpers that became orphaned while preserving live command-key support', () => {
     const quickReceiveApi = read('src/features/quickReceive/api/quickReceiveApi.js');
-    expect(quickReceiveApi).not.toContain('makeIdempotencyKey');
+    const quickReceiptSessionApi = read('src/features/receiving/quick-stock/api/quickReceiptSessionApi.js');
     expect(quickReceiveApi).not.toContain('normalizeItems');
+    expect(quickReceiveApi).toContain('makeIdempotencyKey');
+    expect(quickReceiptSessionApi).toContain('makeIdempotencyKey');
   });
 
   it('keeps Quick Stock compatibility adapters available', () => {

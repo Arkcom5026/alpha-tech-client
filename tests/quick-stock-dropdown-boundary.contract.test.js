@@ -19,9 +19,10 @@ describe('quick stock dropdown boundary ownership', () => {
     expect(panel).not.toContain('getQuickReceiveDropdowns');
   });
 
-  it('allows the QuickStock API boundary to keep the legacy dropdown adapter behind it', () => {
+  it('requires the QuickStock API boundary to own dropdown transport directly', () => {
     const quickStockApi = read('src/features/receiving/quick-stock/api/quickStockApi.js');
-    expect(quickStockApi).toContain('@/features/quickReceive/api/quickReceiveApi');
-    expect(quickStockApi).toContain('getQuickReceiveDropdowns');
+    expect(quickStockApi).not.toContain('@/features/quickReceive/api/quickReceiveApi');
+    expect(quickStockApi).not.toContain('getQuickReceiveDropdowns');
+    expect(quickStockApi).toContain("apiClient.get('quick-stock/dropdowns'");
   });
 });

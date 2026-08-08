@@ -2,10 +2,11 @@
 //
 // QuickStock Runtime API boundary.
 //
-// QuickStock owns its intake transport while legacy product/dropdown adapters
+// QuickStock owns its intake and dropdown transports while legacy product adapters
 // continue delegating to existing feature APIs until their separate governance cutover.
 
-import { getQuickReceiveDropdowns } from "@/features/quickReceive/api/quickReceiveApi";
+import apiClient from "@/utils/apiClient";
+import { parseApiError } from "@/utils/uiHelpers";
 import {
   createQuickReceiveLocalOperationalProduct,
   createQuickReceiveOperationalProductFromTemplate,
@@ -18,6 +19,10 @@ import {
   updateProduct,
 } from "@/features/product/api/productApi";
 import { commitQuickStockExistingIntakeApi } from "./quickStockIntakeApi";
+
+const stripEmptyParams = (obj = {}) => Object.fromEntries(
+  Object.entries(obj).filter(([, value]) => value !== "" && value !== undefined && value !== null)
+);
 
 const extractList = (raw) => {
   if (Array.isArray(raw)) return raw;
@@ -60,8 +65,13 @@ export const normalizeQuickStockError = (err, fallbackMessage = "เกิดข
 });
 
 export const getQuickStockDropdowns = async ({ productTypeId } = {}) => {
-  const raw = await getQuickReceiveDropdowns({ productTypeId });
-  return raw;
+  try {
+    const params = stripEmptyParams({ productTypeId, _ts: Date.now() });
+    const { data } = await apiClient.get('quick-stock/dropdowns', { params });
+    return data;
+  } catch (err) {
+    throw parseApiError(err);
+  }
 };
 
 export const searchQuickStockProducts = async (filters = {}) => {

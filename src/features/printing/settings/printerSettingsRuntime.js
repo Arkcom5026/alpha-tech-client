@@ -59,7 +59,10 @@ const createPrinterSettingsRuntime = ({
   })
   const printerTestService = createPrinterTestService({ transport })
   const printerSettingsApi = createPrinterSettingsApi({ client: apiClient })
-  const serverPrinterSettingsService = createServerPrinterSettingsService({ api: printerSettingsApi })
+  const serverPrinterSettingsService = createServerPrinterSettingsService({
+    api: printerSettingsApi,
+    discoverySelectionService,
+  })
 
   return Object.freeze({
     workstationId: resolveWorkstationId({ storage, cryptoImpl }),

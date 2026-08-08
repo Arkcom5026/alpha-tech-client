@@ -12,11 +12,12 @@ const ServerPrinterSettingsPanel = ({
   settingsService,
   printerTestService,
 }) => {
-  const [catalog, setCatalog] = useState({ purposes: [], profiles: [], routes: [], devices: [] })
+  const [catalog, setCatalog] = useState({ purposes: [], profiles: [], routes: [], devices: [], localPrinters: [], warnings: [] })
   const [purposeId, setPurposeId] = useState('')
   const [profileId, setProfileId] = useState('')
   const [deviceId, setDeviceId] = useState('')
   const [deviceProfileCode, setDeviceProfileCode] = useState('')
+  const [localPrinterId, setLocalPrinterId] = useState('')
   const [profileDraft, setProfileDraft] = useState({ code: '', displayName: '', manufacturer: '', modelName: '' })
   const [status, setStatus] = useState('IDLE')
   const [message, setMessage] = useState('')
@@ -29,6 +30,8 @@ const ServerPrinterSettingsPanel = ({
       setCatalog(next)
       setPurposeId((current) => current || String(next.purposes[0]?.id || ''))
       setDeviceId((current) => current || String(next.devices[0]?.deviceId || ''))
+      setLocalPrinterId((current) => current || String(next.localPrinters[0]?.id || ''))
+      if (next.warnings.length) setMessage(next.warnings.join(' · '))
       setStatus('READY')
     } catch (error) {
       setStatus('ERROR')
@@ -104,6 +107,15 @@ const ServerPrinterSettingsPanel = ({
     }), 'ผูกเครื่องจริงกับโปรไฟล์แล้ว')
   }
 
+  const registerLocalPrinter = () => {
+    const printer = catalog.localPrinters.find((item) => item.id === localPrinterId)
+    if (!printer) return setMessage('กรุณาเลือกเครื่องพิมพ์ที่ Local Print Bridge ค้นพบ')
+    return perform(
+      () => settingsService.registerLocalPrinter({ printer, workstationId }),
+      `ลงทะเบียน ${printer.name} กับสาขาแล้ว`,
+    )
+  }
+
   const testRoute = async () => {
     const readyDevice = matchingDevices.find((device) => device.connectionState === 'ONLINE')
     if (!readyDevice || !selectedPurpose) return setMessage('ยังไม่มีเครื่องจริงที่ออนไลน์สำหรับโปรไฟล์นี้')
@@ -134,6 +146,7 @@ const ServerPrinterSettingsPanel = ({
             <select className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2" value={purposeId} onChange={(event) => setPurposeId(event.target.value)} disabled={busy}>
               {catalog.purposes.map((purpose) => <option key={purpose.id} value={purpose.id}>{purpose.displayName}</option>)}
             </select>
+            {!catalog.purposes.length && <span className="mt-1 block text-xs text-amber-700">ไม่พบประเภทเอกสารที่พร้อมพิมพ์</span>}
           </label>
           <label className="text-sm font-medium text-slate-700">โปรไฟล์เครื่องพิมพ์
             <select className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2" value={profileId} onChange={(event) => setProfileId(event.target.value)} disabled={busy}>
@@ -153,6 +166,19 @@ const ServerPrinterSettingsPanel = ({
       </section>
 
       <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+        <h2 className="text-lg font-bold text-slate-900">เครื่องพิมพ์ที่พบในเครื่องนี้</h2>
+        <p className="mt-1 text-sm text-slate-600">นำเครื่องจาก Alpha-Tech Local Print Bridge มาลงทะเบียนกับสาขาก่อนผูกโปรไฟล์</p>
+        <div className="mt-3 flex flex-col gap-3 md:flex-row">
+          <select className="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-2" value={localPrinterId} onChange={(event) => setLocalPrinterId(event.target.value)} disabled={busy}>
+            <option value="">เลือกเครื่องที่ค้นพบ</option>
+            {catalog.localPrinters.map((printer) => <option key={printer.id} value={printer.id}>{printer.name} ({printer.isOnline ? 'ออนไลน์' : 'ออฟไลน์'})</option>)}
+          </select>
+          <button type="button" className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50" onClick={registerLocalPrinter} disabled={busy || !localPrinterId}>ลงทะเบียนเครื่องนี้</button>
+        </div>
+        {!catalog.localPrinters.length && <p className="mt-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-800">ไม่พบเครื่องพิมพ์จาก Local Print Bridge กรุณาเปิด Bridge และตรวจสอบว่าเครื่องพิมพ์ติดตั้งใน Windows แล้ว</p>}
+      </section>
+
+      <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
         <h2 className="text-lg font-bold text-slate-900">โปรไฟล์รุ่นเครื่องพิมพ์</h2>
         <div className="mt-3 grid gap-3 md:grid-cols-2 lg:grid-cols-4">
           {['code', 'displayName', 'manufacturer', 'modelName'].map((field) => (
@@ -162,6 +188,7 @@ const ServerPrinterSettingsPanel = ({
           ))}
         </div>
         <button type="button" className="mt-3 rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50" onClick={createProfile} disabled={busy}>สร้างโปรไฟล์</button>
+        {!catalog.profiles.length && <p className="mt-3 text-sm text-slate-500">ยังไม่มีโปรไฟล์ กรอกรหัสและชื่อเพื่อสร้างโปรไฟล์แรก เช่น RECEIPT_80MM</p>}
       </section>
 
       <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -181,6 +208,7 @@ const ServerPrinterSettingsPanel = ({
           </label>
         </div>
         <button type="button" className="mt-3 rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50" onClick={assignDevice} disabled={busy}>ผูกเครื่องกับโปรไฟล์</button>
+        {!catalog.devices.length && <p className="mt-3 text-sm text-amber-700">ยังไม่มีเครื่องที่ลงทะเบียน กรุณาลงทะเบียนจากรายการเครื่องที่พบด้านบนก่อน</p>}
       </section>
 
       {message && <p className="rounded-lg border border-slate-200 bg-white p-3 text-sm text-slate-700" role="status">{message}</p>}

@@ -1,4 +1,5 @@
 import { resolveDocumentPrinter } from './documentPrinterResolutionPolicy.js'
+import { getLegacyDocumentPurposeAliases } from './documentPurposeCatalog.js'
 
 const requireText = (value, field) => {
   const normalized = String(value || '').trim()
@@ -16,6 +17,7 @@ const toBinding = (preference, source) => {
       connection: preference.connection || null,
       queueAuthority: preference.queueAuthority || null,
       updatedAt: preference.updatedAt || null,
+      storedDocumentPurpose: preference.documentPurpose || null,
     }),
   })
 }
@@ -23,6 +25,14 @@ const toBinding = (preference, source) => {
 const normalizePrinters = (payload) => Array.isArray(payload?.printers)
   ? payload.printers.filter((printer) => printer && typeof printer === 'object')
   : []
+
+const firstPreference = (getPreference, purposes) => {
+  for (const purpose of purposes) {
+    const preference = getPreference(purpose)
+    if (preference) return preference
+  }
+  return null
+}
 
 const createHierarchicalPrinterResolverService = ({
   transport,
@@ -44,32 +54,39 @@ const createHierarchicalPrinterResolverService = ({
     const workstation = requireText(workstationId, 'workstationId')
     const purpose = requireText(documentPurpose, 'documentPurpose')
     const user = userId == null ? null : requireText(userId, 'userId')
+    const purposeCandidates = [purpose, ...getLegacyDocumentPurposeAliases(purpose)]
 
     const userPreference = user
-      ? hierarchyStore.get({ scopeType: 'USER', branchId: branch, workstationId: workstation, userId: user, documentPurpose: purpose })
+      ? firstPreference((candidatePurpose) => hierarchyStore.get({
+        scopeType: 'USER',
+        branchId: branch,
+        workstationId: workstation,
+        userId: user,
+        documentPurpose: candidatePurpose,
+      }), purposeCandidates)
       : null
 
-    const hierarchicalWorkstationPreference = hierarchyStore.get({
+    const hierarchicalWorkstationPreference = firstPreference((candidatePurpose) => hierarchyStore.get({
       scopeType: 'WORKSTATION',
       branchId: branch,
       workstationId: workstation,
-      documentPurpose: purpose,
-    })
-    const legacyWorkstationPreference = legacyPreferenceStore.get({
+      documentPurpose: candidatePurpose,
+    }), purposeCandidates)
+    const legacyWorkstationPreference = firstPreference((candidatePurpose) => legacyPreferenceStore.get({
       branchId: branch,
       workstationId: workstation,
-      documentPurpose: purpose,
-    })
+      documentPurpose: candidatePurpose,
+    }), purposeCandidates)
 
-    const branchPreference = hierarchyStore.get({
+    const branchPreference = firstPreference((candidatePurpose) => hierarchyStore.get({
       scopeType: 'BRANCH',
       branchId: branch,
-      documentPurpose: purpose,
-    })
-    const documentDefaultPreference = hierarchyStore.get({
+      documentPurpose: candidatePurpose,
+    }), purposeCandidates)
+    const documentDefaultPreference = firstPreference((candidatePurpose) => hierarchyStore.get({
       scopeType: 'DOCUMENT_DEFAULT',
-      documentPurpose: purpose,
-    })
+      documentPurpose: candidatePurpose,
+    }), purposeCandidates)
     const platformDefaultPreference = hierarchyStore.get({
       scopeType: 'PLATFORM_DEFAULT',
       documentPurpose: '*',
@@ -97,6 +114,7 @@ const createHierarchicalPrinterResolverService = ({
       workstationId: workstation,
       userId: user,
       documentPurpose: purpose,
+      purposeCandidates: Object.freeze([...purposeCandidates]),
       bindings,
       resolution,
       warning: payload?.warning || null,

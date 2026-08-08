@@ -11,6 +11,7 @@ import {
   XCircle,
 } from 'lucide-react';
 
+import { cancelPurchaseOrder } from '@/features/purchaseOrder/lifecycle';
 import usePurchaseOrderReceiptStore from '../store/purchaseOrderReceiptStore';
 import ReceiptStatusBadge from './ReceiptStatusBadge';
 
@@ -79,7 +80,7 @@ const ReceiptActions = ({ purchaseOrder, isCanceling, onReceive, onCancel }) => 
 export default function PurchaseOrderReceiptTable({ purchaseOrders, loading }) {
   const navigate = useNavigate();
   const { shopSlug } = useParams();
-  const { cancelPurchaseOrderAction } = usePurchaseOrderReceiptStore();
+  const { fetchPurchaseOrdersForReceiptAction } = usePurchaseOrderReceiptStore();
   const [searchText, setSearchText] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [cancelingId, setCancelingId] = useState(null);
@@ -111,7 +112,8 @@ export default function PurchaseOrderReceiptTable({ purchaseOrders, loading }) {
 
     try {
       setCancelingId(id);
-      await cancelPurchaseOrderAction(id);
+      await cancelPurchaseOrder(id);
+      await fetchPurchaseOrdersForReceiptAction({ shopSlug: shopSlug || 'advancetech' });
       window.alert(`ยกเลิกใบสั่งซื้อ ${code} สำเร็จ`);
     } catch (error) {
       window.alert(`ไม่สามารถยกเลิกเอกสารได้: ${error?.message || 'เกิดข้อผิดพลาดทางระบบ'}`);

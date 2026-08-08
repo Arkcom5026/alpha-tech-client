@@ -7,7 +7,7 @@ const mocks = vi.hoisted(() => ({
   del: vi.fn(),
   getAllSuppliers: vi.fn(),
   parseApiError: vi.fn((error) => error),
-  makeIdempotencyKey: vi.fn(() => 'cmd-test-001'),
+  randomUUID: vi.fn(() => 'cmd-test-001'),
 }));
 
 vi.mock('@/utils/apiClient', () => ({
@@ -15,15 +15,15 @@ vi.mock('@/utils/apiClient', () => ({
 }));
 vi.mock('@/utils/uiHelpers', () => ({ parseApiError: mocks.parseApiError }));
 vi.mock('@/features/supplier/api/supplierApi', () => ({ getAllSuppliers: mocks.getAllSuppliers }));
-vi.mock('@/features/quickReceive/api/quickReceiveApi', () => ({ makeIdempotencyKey: mocks.makeIdempotencyKey }));
 
 const api = await import('./quickReceiptSessionApi');
 
 describe('quickReceiptSessionApi', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.stubGlobal('crypto', { randomUUID: mocks.randomUUID });
     api.__resetQuickReceiptCommandKeysForTest();
-    mocks.makeIdempotencyKey.mockReturnValue('cmd-test-001');
+    mocks.randomUUID.mockReturnValue('cmd-test-001');
   });
 
   it('loads and normalizes supplier rows', async () => {
@@ -60,7 +60,7 @@ describe('quickReceiptSessionApi', () => {
     await expect(api.completeQuickReceipt({ items: [{ productId: 10 }], deliveryNoteNumber: 'DN-RETRY', supplierId: 1 }))
       .resolves.toEqual({ id: 90, status: 'COMPLETED' });
 
-    expect(mocks.makeIdempotencyKey).toHaveBeenCalledTimes(1);
+    expect(mocks.randomUUID).toHaveBeenCalledTimes(1);
     expect(mocks.post.mock.calls[0][2]).toEqual({ headers: { 'X-Idempotency-Key': 'cmd-test-001' } });
     expect(mocks.post.mock.calls[1][2]).toEqual({ headers: { 'X-Idempotency-Key': 'cmd-test-001' } });
   });
@@ -83,7 +83,7 @@ describe('quickReceiptSessionApi', () => {
     await expect(api.finalizeQuickReceipt(77)).rejects.toThrow('timeout');
     await expect(api.finalizeQuickReceipt('77')).resolves.toEqual({ id: 77, status: 'COMPLETED' });
 
-    expect(mocks.makeIdempotencyKey).toHaveBeenCalledTimes(1);
+    expect(mocks.randomUUID).toHaveBeenCalledTimes(1);
     expect(mocks.post.mock.calls[0][2]).toEqual(mocks.post.mock.calls[1][2]);
   });
 

@@ -1,6 +1,6 @@
 import React from 'react';
-import BranchPriceManagementWorkspace from '../workspace/BranchPriceManagementWorkspace';
+import ManageBranchPriceWorkspace from '../workspace/ManageBranchPriceWorkspace';
 
-const ManageBranchPricePage = () => <BranchPriceManagementWorkspace />;
+const ManageBranchPricePage = () => <ManageBranchPriceWorkspace />;
 
 export default ManageBranchPricePage;

@@ -15,6 +15,7 @@ const SaleReturnCreateWorkspace = ({
   refundTotal,
   deduction,
   helpLabel,
+  submitLabel,
   onSelectLine,
   onPatchLine,
   onReasonChange,
@@ -181,7 +182,7 @@ const SaleReturnCreateWorkspace = ({
         disabled={submitting}
         onClick={onSubmit}
       >
-        {submitting ? 'กำลังดำเนินการ...' : 'ยืนยันคืนสินค้าและคืนเงิน'}
+        {submitting ? 'กำลังดำเนินการ...' : submitLabel}
       </button>
     </div>
   </main>

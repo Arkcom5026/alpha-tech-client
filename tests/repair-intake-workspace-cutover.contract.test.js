@@ -39,6 +39,21 @@ describe('repair intake workspace cutover contract', () => {
     expect(pageSource).not.toContain('CustomerWarrantyAssets');
     expect(pageSource).not.toContain('IntakeProjection');
     expect(pageSource).not.toContain('ExternalDeviceIntakeForm');
+    expect(pageSource).not.toContain('RuntimeStatePanel');
+  });
+
+  it('keeps intake workspace presentation and runtime-state rendering in the workspace owner', () => {
+    expect(workspaceSource).toContain('RepairShellHeader');
+    expect(workspaceSource).toContain('MobileIntakeProgress');
+    expect(workspaceSource).toContain('RepairDeviceSearchPanel');
+    expect(workspaceSource).toContain('RepairCustomerSection');
+    expect(workspaceSource).toContain('CustomerWarrantyAssets');
+    expect(workspaceSource).toContain('IntakeProjection');
+    expect(workspaceSource).toContain('ExternalDeviceIntakeForm');
+    expect(workspaceSource).toContain('RuntimeStatePanel');
+    expect(workspaceSource).toContain('loading={runtime.loading}');
+    expect(workspaceSource).toContain('error={runtime.error}');
+    expect(workspaceSource).toContain('onRetry={onRetry}');
   });
 
   it('keeps workspace presentation free of store, router, lifecycle, api, and mutation authority', () => {

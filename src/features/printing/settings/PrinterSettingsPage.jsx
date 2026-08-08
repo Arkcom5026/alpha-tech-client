@@ -31,7 +31,7 @@ const PrinterSettingsPage = () => {
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <h1 className="text-xl font-black text-slate-900">ตั้งค่าเครื่องพิมพ์</h1>
           <p className="mt-1 text-sm text-slate-600">
-            เลือกเครื่องพิมพ์สำหรับสาขาและเครื่องขายนี้ โดยไม่ผูกกับยี่ห้อหรือรุ่นของอุปกรณ์
+            เลือกเครื่องพิมพ์ตามประเภทเอกสารและระดับการใช้งาน โดยไม่ผูกกับยี่ห้อหรือรุ่นของอุปกรณ์
           </p>
           <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-500">
             <span className="rounded-lg bg-slate-100 px-2 py-1">สาขา: {String(branchId)}</span>
@@ -43,6 +43,7 @@ const PrinterSettingsPage = () => {
           branchId={String(branchId)}
           workstationId={runtime.workstationId}
           discoverySelectionService={runtime.discoverySelectionService}
+          printerScopeManagementService={runtime.printerScopeManagementService}
           printerTestService={runtime.printerTestService}
         />
       </div>

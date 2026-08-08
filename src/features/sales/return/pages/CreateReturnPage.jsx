@@ -147,6 +147,7 @@ const CreateReturnPage = () => {
         eligibleTotal={eligibleTotal}
         refundTotal={refundTotal}
         deduction={deduction}
+        helpLabel="คู่มือ"
         onSelectLine={selectLine}
         onPatchLine={patchLine}
         onReasonChange={setReason}

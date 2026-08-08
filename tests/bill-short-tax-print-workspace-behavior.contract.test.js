@@ -8,8 +8,18 @@ const runtimePath = path.join(
   root,
   'src/features/bill/shortTax/print/workspace/runtime/useBillShortTaxPrintRuntime.js'
 )
+const shellPath = path.join(
+  root,
+  'src/features/bill/shortTax/print/workspace/components/BillShortTaxPrintShell.jsx'
+)
+const toolbarPath = path.join(
+  root,
+  'src/features/bill/shortTax/print/workspace/components/BillShortTaxPrintToolbar.jsx'
+)
 const page = fs.readFileSync(pagePath, 'utf8')
 const runtime = fs.readFileSync(runtimePath, 'utf8')
+const shell = fs.readFileSync(shellPath, 'utf8')
+const toolbar = fs.readFileSync(toolbarPath, 'utf8')
 
 describe('bill short tax print workspace behavior contract', () => {
   it('keeps bill hydration scoped to route sale and optional payment identity', () => {
@@ -22,12 +32,13 @@ describe('bill short tax print workspace behavior contract', () => {
   it('keeps editable document-line runtime wired through the shared workspace', () => {
     expect(page).toContain('useSaleDocumentLineEditor')
     expect(page).toContain('reload: reloadSaleForPrint')
-    expect(page).toContain('documentLineEditor.actions.save')
+    expect(page).toContain('documentLineEditor={documentLineEditor}')
+    expect(shell).toContain('documentLineEditor.actions.save')
   })
 
   it('preserves dynamic 80mm print-height measurement and cleanup lifecycle across runtime ownership', () => {
     expect(page).toContain('useBillShortTaxPrintRuntime')
-    expect(page).toContain('ref={printRuntime.printRootRef}')
+    expect(page).toContain('printRootRef={printRuntime.printRootRef}')
     expect(runtime).toContain("--short-tax-receipt-height")
     expect(runtime).toContain('getBoundingClientRect()')
     expect(runtime).toContain('new ResizeObserver(updatePrintHeight)')
@@ -36,7 +47,8 @@ describe('bill short tax print workspace behavior contract', () => {
   })
 
   it('preserves browser print and afterprint return authority across runtime ownership', () => {
-    expect(page).toContain('onClick={printRuntime.printAndReturnToSale}')
+    expect(page).toContain('onPrint={printRuntime.printAndReturnToSale}')
+    expect(toolbar).toContain('onClick={onPrint}')
     expect(runtime).toContain("window.addEventListener('afterprint', returnOnce")
     expect(runtime).toContain('window.print?.()')
     expect(runtime).toContain('PRINT_RETURN_FALLBACK_MS')
@@ -56,11 +68,12 @@ describe('bill short tax print workspace behavior contract', () => {
     expect(runtime).toContain('if (!paymentId) return')
   })
 
-  it('keeps the current short-tax printable surface and editor presentation intact', () => {
-    expect(page).toContain('<BillLayoutShortTax')
-    expect(page).toContain('payments={[payment]}')
-    expect(page).toContain('hideContactName={hideContactName}')
-    expect(page).toContain('editableDocumentLines')
-    expect(page).toContain('className="bill-print-root')
+  it('keeps the current short-tax printable surface and editor presentation intact across workspace ownership', () => {
+    expect(page).toContain('<BillShortTaxPrintShell')
+    expect(shell).toContain('<BillLayoutShortTax')
+    expect(shell).toContain('payments={[payment]}')
+    expect(shell).toContain('hideContactName={hideContactName}')
+    expect(shell).toContain('editableDocumentLines')
+    expect(shell).toContain('className="bill-print-root')
   })
 })

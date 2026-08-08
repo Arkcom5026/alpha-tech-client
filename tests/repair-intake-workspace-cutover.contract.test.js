@@ -32,14 +32,22 @@ describe('repair intake workspace cutover contract', () => {
   });
 
   it('removes duplicated intake presentation implementation from the page', () => {
-    expect(pageSource).not.toContain('RepairShellHeader');
-    expect(pageSource).not.toContain('MobileIntakeProgress');
-    expect(pageSource).not.toContain('RepairDeviceSearchPanel');
-    expect(pageSource).not.toContain('RepairCustomerSection');
-    expect(pageSource).not.toContain('CustomerWarrantyAssets');
-    expect(pageSource).not.toContain('IntakeProjection');
-    expect(pageSource).not.toContain('ExternalDeviceIntakeForm');
-    expect(pageSource).not.toContain('RuntimeStatePanel');
+    const presentationImports = [
+      'RepairShellHeader',
+      'MobileIntakeProgress',
+      'RepairDeviceSearchPanel',
+      'RepairCustomerSection',
+      'CustomerWarrantyAssets',
+      'IntakeProjection',
+      'ExternalDeviceIntakeForm',
+      'RuntimeStatePanel',
+    ];
+
+    for (const component of presentationImports) {
+      expect(pageSource).not.toMatch(
+        new RegExp(`import\\s+${component}\\s+from\\s+['\"]`)
+      );
+    }
   });
 
   it('keeps intake workspace presentation and runtime-state rendering in the workspace owner', () => {

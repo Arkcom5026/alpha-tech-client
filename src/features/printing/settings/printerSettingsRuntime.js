@@ -1,5 +1,7 @@
 import { createLocalPrintBridgeTransport } from '../authority/localPrintBridgeTransport.js'
 import {
+  createHierarchicalPrinterPreferenceStore,
+  createHierarchicalPrinterResolverService,
   createPrinterDiscoverySelectionService,
   createPrinterPreferenceStore,
 } from '../preferences/index.js'
@@ -35,10 +37,16 @@ const createPrinterSettingsRuntime = ({
   baseUrl,
 } = {}) => {
   const preferenceStore = createPrinterPreferenceStore({ storage })
+  const hierarchyStore = createHierarchicalPrinterPreferenceStore({ storage })
   const transport = createLocalPrintBridgeTransport({ baseUrl, fetchImpl })
   const discoverySelectionService = createPrinterDiscoverySelectionService({
     transport,
     preferenceStore,
+  })
+  const hierarchicalResolverService = createHierarchicalPrinterResolverService({
+    transport,
+    legacyPreferenceStore: preferenceStore,
+    hierarchyStore,
   })
   const printerTestService = createPrinterTestService({ transport })
 
@@ -46,7 +54,9 @@ const createPrinterSettingsRuntime = ({
     workstationId: resolveWorkstationId({ storage, cryptoImpl }),
     transport,
     preferenceStore,
+    hierarchyStore,
     discoverySelectionService,
+    hierarchicalResolverService,
     printerTestService,
   })
 }

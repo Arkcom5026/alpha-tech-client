@@ -1,10 +1,14 @@
 import apiClient from '@/utils/apiClient';
 import { parseApiError } from '@/utils/uiHelpers';
 import { getAllSuppliers } from '@/features/supplier/api/supplierApi';
-import { makeIdempotencyKey } from '@/features/quickReceive/api/quickReceiveApi';
 
 const unwrap = (response) => response?.data?.data ?? response?.data ?? response;
 const pendingCommandKeys = new Map();
+
+function makeIdempotencyKey() {
+  if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
+  return `qr_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+}
 
 const stablePayload = (value) => {
   if (Array.isArray(value)) return value.map(stablePayload);

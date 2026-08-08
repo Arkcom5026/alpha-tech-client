@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { getQuickReceiveDropdowns } from "@/features/quickReceive/api/quickReceiveApi";
+import { getQuickStockDropdowns } from "@/features/receiving/quick-stock/api/quickStockApi";
 import ProductSearchFilters from "./ProductSearchFilters";
 import ProductSearchResults from "./ProductSearchResults";
 
@@ -93,7 +93,7 @@ const ProductFinderPanel = ({
     const load = async () => {
       setWorkflowLoading(true);
       try {
-        const data = await getQuickReceiveDropdowns({ productTypeId: selectedProductTypeId });
+        const data = await getQuickStockDropdowns({ productTypeId: selectedProductTypeId });
         if (!cancelled) {
           setWorkflowDropdowns({
             productTypes: dedupeOptions(data?.productTypes || []),
@@ -101,7 +101,7 @@ const ProductFinderPanel = ({
           });
         }
       } catch (error) {
-        console.warn("Quick Receive dropdown load failed; using fallback props", error);
+        console.warn("Quick Stock dropdown load failed; using fallback props", error);
         if (!cancelled) setWorkflowDropdowns({ productTypes: [], brands: [] });
       } finally {
         if (!cancelled) setWorkflowLoading(false);

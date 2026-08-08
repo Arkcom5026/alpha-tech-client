@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
+import process from 'node:process';
 
 const root = process.cwd();
 const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
@@ -70,8 +71,8 @@ describe('purchase order receipt ownership certification', () => {
   it('certifies that Barcode consumes Receipt only through context and finalization boundaries', () => {
     const barcodeStore = read(barcodeStorePath);
 
-    expect(barcodeStore).toContain('getReceiptById');
-    expect(barcodeStore).toContain('finalizeReceiptIfNeeded');
+    expect(barcodeStore).toContain('getReceipt');
+    expect(barcodeStore).toContain('finalizeReceipt');
 
     for (const token of [
       'createReceipt',

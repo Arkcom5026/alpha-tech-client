@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { useAuthStore } from '@/features/auth/store/authStore'
-import PrinterSettingsPanel from './PrinterSettingsPanel.jsx'
+import ServerPrinterSettingsPanel from './ServerPrinterSettingsPanel.jsx'
 import { createPrinterSettingsRuntime } from './printerSettingsRuntime.js'
 
 const resolveEmployeeBranchId = (employee) => (
@@ -39,11 +39,10 @@ const PrinterSettingsPage = () => {
           </div>
         </div>
 
-        <PrinterSettingsPanel
+        <ServerPrinterSettingsPanel
           branchId={String(branchId)}
           workstationId={runtime.workstationId}
-          discoverySelectionService={runtime.discoverySelectionService}
-          printerScopeManagementService={runtime.printerScopeManagementService}
+          settingsService={runtime.serverPrinterSettingsService}
           printerTestService={runtime.printerTestService}
         />
       </div>

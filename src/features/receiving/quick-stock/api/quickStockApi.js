@@ -2,14 +2,10 @@
 //
 // QuickStock Runtime API boundary.
 //
-// This file intentionally keeps QuickStock FE isolated from quickReceiveStore.
-// During Phase 4 it delegates to the existing low-level Quick Receive API files
-// to preserve endpoint behavior while removing the store dependency.
+// QuickStock owns its intake transport while legacy product/dropdown adapters
+// continue delegating to existing feature APIs until their separate governance cutover.
 
-import {
-  getQuickReceiveDropdowns,
-  quickStockIntakeExistingApi,
-} from "@/features/quickReceive/api/quickReceiveApi";
+import { getQuickReceiveDropdowns } from "@/features/quickReceive/api/quickReceiveApi";
 import {
   createQuickReceiveLocalOperationalProduct,
   createQuickReceiveOperationalProductFromTemplate,
@@ -21,6 +17,7 @@ import {
   deleteProduct as deleteProductApi,
   updateProduct,
 } from "@/features/product/api/productApi";
+import { commitQuickStockExistingIntakeApi } from "./quickStockIntakeApi";
 
 const extractList = (raw) => {
   if (Array.isArray(raw)) return raw;
@@ -109,7 +106,7 @@ export const deleteQuickStockOperationalProduct = async (id) => {
 };
 
 export const commitQuickStockExistingIntake = async (payload) => {
-  return quickStockIntakeExistingApi(payload);
+  return commitQuickStockExistingIntakeApi(payload);
 };
 
 export default {

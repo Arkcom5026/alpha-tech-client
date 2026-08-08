@@ -33,6 +33,12 @@ const warrantyClaimDetailWorkspace = read(
 );
 
 const runtimePages = [jobsPage, detailPage, claimsPage, claimDetailPage];
+const runtimeStateWorkspaces = [
+  repairQueueWorkspace,
+  repairDetailWorkspace,
+  warrantyClaimQueueWorkspace,
+  warrantyClaimDetailWorkspace,
+];
 
 describe('repair operations workspace behavior contract', () => {
   it('keeps repair runtime store authority across current operational pages', () => {
@@ -55,7 +61,7 @@ describe('repair operations workspace behavior contract', () => {
     expect(jobsPage).toContain('/pos/services/repairs/${job.id}');
   });
 
-  it('preserves warranty claim queue search, active-lane projection, and navigation across workspace ownership', () => {
+  it('preserves warranty claim queue search, active-lane projection, and navigation', () => {
     expect(claimsPage).toContain("const [query, setQuery] = useState('')");
     expect(claimsPage).toContain('projectWarrantyClaimQueue(claims, query)');
     expect(claimsPage).toContain('WarrantyClaimQueueWorkspace');
@@ -108,24 +114,18 @@ describe('repair operations workspace behavior contract', () => {
   });
 
   it('keeps loading, error, empty, and retry presentation semantics intact across workspace ownership', () => {
-    for (const source of [
-      intakeWorkspace,
-      repairQueueWorkspace,
-      repairDetailWorkspace,
-      warrantyClaimQueueWorkspace,
-      warrantyClaimDetailWorkspace,
-    ]) {
+    for (const source of runtimeStateWorkspaces) {
       expect(source).toContain('RuntimeStatePanel');
       expect(source).toContain('loading={loading}');
       expect(source).toContain('error={error}');
       expect(source).toContain('onRetry={onRetry}');
     }
 
-    expect(warrantyClaimQueueWorkspace).toContain('filteredClaims.length');
-    expect(warrantyClaimQueueWorkspace).toContain('activeLanes.length');
-
+    expect(intakeWorkspace).toContain('RuntimeStatePanel');
     expect(intakeWorkspace).toContain('loading={runtime.loading}');
     expect(intakeWorkspace).toContain('error={runtime.error}');
     expect(intakeWorkspace).toContain('onRetry={onRetry}');
+    expect(warrantyClaimQueueWorkspace).toContain('filteredClaims.length');
+    expect(warrantyClaimQueueWorkspace).toContain('activeLanes.length');
   });
 });

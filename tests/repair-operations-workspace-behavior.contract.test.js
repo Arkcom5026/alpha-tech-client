@@ -10,6 +10,12 @@ const jobsPage = read('src/features/repair/pages/RepairJobsPage.jsx');
 const detailPage = read('src/features/repair/pages/RepairJobDetailPage.jsx');
 const claimsPage = read('src/features/repair/pages/WarrantyClaimsPage.jsx');
 const claimDetailPage = read('src/features/repair/pages/WarrantyClaimDetailPage.jsx');
+const repairQueueWorkspace = read(
+  'src/features/repair/queue/workspace/components/RepairQueueWorkspace.jsx'
+);
+const repairQueuePolicy = read(
+  'src/features/repair/queue/workspace/policies/repairQueuePolicy.js'
+);
 
 const runtimePages = [jobsPage, detailPage, claimsPage, claimDetailPage];
 
@@ -24,11 +30,13 @@ describe('repair operations workspace behavior contract', () => {
     expect(claimDetailPage).toContain('loadClaim');
   });
 
-  it('preserves repair queue search and lane projection semantics', () => {
+  it('preserves repair queue search, lane projection, and navigation across workspace ownership', () => {
     expect(jobsPage).toContain("const [query, setQuery] = useState('')");
-    expect(jobsPage).toContain('groupByStatus(filtered, REPAIR_LANES)');
-    expect(jobsPage).toContain('job.stockItem?.serialNumber');
-    expect(jobsPage).toContain('job.device?.imei');
+    expect(jobsPage).toContain('projectRepairQueue(jobs, query)');
+    expect(jobsPage).toContain('RepairQueueWorkspace');
+    expect(repairQueuePolicy).toContain('job?.stockItem?.serialNumber');
+    expect(repairQueuePolicy).toContain('job?.device?.imei');
+    expect(repairQueuePolicy).toContain('groupByStatus(filtered, REPAIR_LANES)');
     expect(jobsPage).toContain('/pos/services/repairs/${job.id}');
   });
 
@@ -74,8 +82,13 @@ describe('repair operations workspace behavior contract', () => {
     expect(detailPage).toContain('IntakeEvidencePanel');
   });
 
-  it('keeps loading, error, empty, and retry presentation semantics intact', () => {
-    for (const source of runtimePages) {
+  it('keeps loading, error, empty, and retry presentation semantics intact across workspace ownership', () => {
+    expect(repairQueueWorkspace).toContain('RuntimeStatePanel');
+    expect(repairQueueWorkspace).toContain('loading={loading}');
+    expect(repairQueueWorkspace).toContain('error={error}');
+    expect(repairQueueWorkspace).toContain('onRetry={onRetry}');
+
+    for (const source of [detailPage, claimsPage, claimDetailPage]) {
       expect(source).toContain('RuntimeStatePanel');
       expect(source).toContain('loading={loading}');
       expect(source).toContain('error={error}');

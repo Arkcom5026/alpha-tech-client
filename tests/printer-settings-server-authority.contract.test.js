@@ -25,6 +25,7 @@ test('uses server authority endpoints for routes, profiles, and physical devices
   await api.listDevices()
   await api.configurePrintRoute({ definitionId: 7, printerProfileId: 9 })
   await api.assignPrinterProfile({ deviceId: 'counter/receipt', printerProfileCode: 'EPSON_T82' })
+  await api.registerPrinterDevice({ deviceId: 'windows:p2021', kind: 'PRINTER' })
 
   assert.deepEqual(calls.slice(0, 4).map((call) => call[1]), [
     '/document-purposes',
@@ -34,6 +35,7 @@ test('uses server authority endpoints for routes, profiles, and physical devices
   ])
   assert.equal(calls[4][1], '/document-purposes/7/print-route')
   assert.equal(calls[5][1], '/store-devices/devices/counter%2Freceipt/printer-profile')
+  assert.equal(calls[6][1], '/store-devices/devices')
 })
 
 test('filters configuration catalog to eligible purposes and usable printer devices', async () => {
@@ -56,4 +58,47 @@ test('filters configuration catalog to eligible purposes and usable printer devi
   assert.deepEqual(result.purposes.map((item) => item.id), [1])
   assert.deepEqual(result.devices.map((item) => item.deviceId), ['printer'])
   assert.equal(Object.isFrozen(result), true)
+})
+
+test('preserves available catalog data when one authority endpoint is temporarily unavailable', async () => {
+  const service = createServerPrinterSettingsService({
+    api: {
+      listDocumentPurposes: async () => [{ id: 1, lifecycleState: 'ACTIVE', metadata: { printEligible: true } }],
+      listPrinterProfiles: async () => { throw new Error('profiles unavailable') },
+      listPrintRoutes: async () => [],
+      listDevices: async () => [],
+    },
+  })
+
+  const result = await service.load()
+  assert.deepEqual(result.purposes.map((item) => item.id), [1])
+  assert.deepEqual(result.profiles, [])
+  assert.match(result.warnings[0], /โปรไฟล์: profiles unavailable/)
+})
+
+test('registers a locally discovered printer through branch device authority', async () => {
+  let registered
+  const service = createServerPrinterSettingsService({
+    api: {
+      registerPrinterDevice: async (payload) => { registered = payload; return payload },
+    },
+  })
+
+  await service.registerLocalPrinter({
+    workstationId: 'workstation-1',
+    printer: {
+      id: 'windows:p2021',
+      name: 'P2021',
+      connection: 'WINDOWS',
+      isOnline: true,
+      driverName: 'P2021 Driver',
+      capabilities: { driverManaged: true },
+    },
+  })
+
+  assert.equal(registered.deviceId, 'windows:p2021')
+  assert.equal(registered.gatewayId, 'workstation-1')
+  assert.equal(registered.kind, 'PRINTER')
+  assert.equal(registered.connectionState, 'ONLINE')
+  assert.equal(registered.metadata.driverName, 'P2021 Driver')
 })

@@ -25,6 +25,9 @@ const createPrinterSettingsApi = ({ client } = {}) => {
       await client.patch(`/store-devices/printer-profiles/${profileId}`, payload),
     ),
     listDevices: async () => unwrapData(await client.get('/store-devices/devices')),
+    registerPrinterDevice: async (payload) => unwrapData(
+      await client.post('/store-devices/devices', payload),
+    ),
     assignPrinterProfile: async ({ deviceId, printerProfileCode }) => unwrapData(
       await client.post(`/store-devices/devices/${encodeURIComponent(deviceId)}/printer-profile`, {
         printerProfileCode,

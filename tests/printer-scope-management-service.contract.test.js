@@ -12,7 +12,13 @@ const printer = Object.freeze({
 const createHarness = () => {
   const stored = new Map()
   const calls = []
-  const key = (scope) => JSON.stringify(scope)
+  const key = (scope) => JSON.stringify({
+    scopeType: scope.scopeType ?? null,
+    branchId: scope.branchId ?? null,
+    workstationId: scope.workstationId ?? null,
+    userId: scope.userId ?? null,
+    documentPurpose: scope.documentPurpose ?? null,
+  })
   const hierarchyStore = {
     get: (scope) => stored.get(key(scope)) || null,
     save: (value) => {

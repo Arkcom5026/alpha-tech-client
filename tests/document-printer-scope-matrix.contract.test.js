@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { createPrinterSettingsRuntime } from '../src/features/printing/settings/printerSettingsRuntime.js'
-import { CANONICAL_DOCUMENT_PURPOSE_CODES } from '../src/features/printing/preferences/documentPurposeCatalog.js'
+import { SYSTEM_DOCUMENT_PURPOSE_CODES } from '../src/features/printing/preferences/documentPurposeCatalog.js'
 
 const createMemoryStorage = () => {
   const values = new Map()
@@ -17,7 +17,7 @@ const scopePrefixes = Object.freeze({
   WORKSTATION: 'workstation',
 })
 
-const printers = CANONICAL_DOCUMENT_PURPOSE_CODES.flatMap((purpose) => (
+const printers = SYSTEM_DOCUMENT_PURPOSE_CODES.flatMap((purpose) => (
   Object.entries(scopePrefixes).map(([scopeType, prefix]) => Object.freeze({
     id: `windows:${prefix}:${purpose}`,
     name: `${prefix}-${purpose}`,
@@ -44,7 +44,7 @@ const runtime = createPrinterSettingsRuntime({
 const branchId = 'branch-matrix'
 const workstationId = runtime.workstationId
 
-for (const purpose of CANONICAL_DOCUMENT_PURPOSE_CODES) {
+for (const purpose of SYSTEM_DOCUMENT_PURPOSE_CODES) {
   for (const scopeType of ['DOCUMENT_DEFAULT', 'BRANCH', 'WORKSTATION']) {
     const printer = printers.find((candidate) => (
       candidate.purpose === purpose && candidate.scopeType === scopeType
@@ -60,7 +60,7 @@ for (const purpose of CANONICAL_DOCUMENT_PURPOSE_CODES) {
   }
 }
 
-for (const purpose of CANONICAL_DOCUMENT_PURPOSE_CODES) {
+for (const purpose of SYSTEM_DOCUMENT_PURPOSE_CODES) {
   const workstationPrinter = printers.find((candidate) => (
     candidate.purpose === purpose && candidate.scopeType === 'WORKSTATION'
   ))
@@ -117,10 +117,10 @@ for (const purpose of CANONICAL_DOCUMENT_PURPOSE_CODES) {
 }
 
 const remaining = runtime.hierarchyStore.list()
-assert.equal(remaining.length, CANONICAL_DOCUMENT_PURPOSE_CODES.length)
+assert.equal(remaining.length, SYSTEM_DOCUMENT_PURPOSE_CODES.length)
 assert.deepEqual(
   remaining.map((preference) => preference.documentPurpose).sort(),
-  [...CANONICAL_DOCUMENT_PURPOSE_CODES].sort(),
+  [...SYSTEM_DOCUMENT_PURPOSE_CODES].sort(),
 )
 assert.ok(remaining.every((preference) => preference.scopeType === 'DOCUMENT_DEFAULT'))
 

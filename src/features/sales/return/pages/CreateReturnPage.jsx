@@ -15,6 +15,8 @@ import SaleReturnCreateWorkspace from '../create/workspace/SaleReturnCreateWorks
 import SaleReturnHelpDrawer from '../help/SaleReturnHelpDrawer';
 import { runCompleteSaleReturn } from '../workflows/completeSaleReturnWorkflow';
 
+const SUBMIT_LABEL = 'ยืนยันคืนสินค้าและคืนเงิน';
+
 const CreateReturnPage = () => {
   const { saleId, shopSlug = 'advancetech' } = useParams();
   const navigate = useNavigate();
@@ -148,6 +150,7 @@ const CreateReturnPage = () => {
         refundTotal={refundTotal}
         deduction={deduction}
         helpLabel="คู่มือ"
+        submitLabel={SUBMIT_LABEL}
         onSelectLine={selectLine}
         onPatchLine={patchLine}
         onReasonChange={setReason}

@@ -1,6 +1,7 @@
 import apiClient from '@/utils/apiClient';
 import { parseApiError } from '@/utils/uiHelpers';
 import { getProductTypeDropdowns, getProductTypes } from '@/features/productType/api/productTypeApi';
+import { commitQuickStockExistingIntakeApi } from '@/features/receiving/quick-stock/api/quickStockIntakeApi';
 
 const sanitizeOperationalProductWritePayload = (payload = {}) => {
   const sanitized = { ...(payload || {}) };
@@ -367,37 +368,8 @@ export const quickStockInAllInOneApi = async (payload) => {
   } catch (err) { throw parseApiError(err); }
 };
 
-export const quickReceiveExistingProductApi = async (payload = {}) => {
-  try {
-    if (import.meta.env?.DEV) console.log('[productApi] quickReceiveExistingProductApi payload', payload);
-
-    const sanitizedPayload = { ...payload };
-    delete sanitizedPayload.branchId;
-    delete sanitizedPayload.movementType;
-    delete sanitizedPayload.source;
-
-    const rawItems = sanitizedPayload.items ?? sanitizedPayload.barcodes ?? sanitizedPayload.queue ?? [];
-    const items = Array.isArray(rawItems)
-      ? rawItems
-          .map((item) => {
-            if (typeof item === 'string') {
-              return { barcode: item, serialNumber: item };
-            }
-            const barcode = item?.barcode ?? item?.serialNumber ?? item?.sn ?? '';
-            const serialNumber = item?.serialNumber ?? item?.barcode ?? item?.sn ?? '';
-            return { ...item, barcode, serialNumber };
-          })
-          .filter((item) => item?.barcode || item?.serialNumber)
-      : [];
-
-    sanitizedPayload.items = items;
-    delete sanitizedPayload.barcodes;
-    delete sanitizedPayload.queue;
-
-    const { data } = await apiClient.post('quick-stock/existing', sanitizedPayload);
-    return data;
-  } catch (err) { throw parseApiError(err); }
-};
+export const quickReceiveExistingProductApi = async (payload = {}) =>
+  commitQuickStockExistingIntakeApi(payload);
 
 export const createOperationalProductFromTemplateApi = async (payload = {}) => {
   try {

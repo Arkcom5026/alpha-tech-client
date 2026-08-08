@@ -2,18 +2,10 @@
 //
 // QuickStock Runtime API boundary.
 //
-// QuickStock owns its intake and dropdown transports while legacy product adapters
-// continue delegating to existing feature APIs until their separate governance cutover.
+// QuickStock owns its intake, dropdown, and product adapter transports.
 
 import apiClient from "@/utils/apiClient";
 import { parseApiError } from "@/utils/uiHelpers";
-import {
-  createQuickReceiveLocalOperationalProduct,
-  createQuickReceiveOperationalProductFromTemplate,
-  getQuickReceiveOperationalProductByTemplateId,
-  getQuickReceiveOperationalProducts,
-  getQuickReceiveTemplateProducts,
-} from "@/features/quickReceive/api/quickReceiveProductApi";
 import {
   deleteProduct as deleteProductApi,
   updateProduct,
@@ -23,6 +15,50 @@ import { commitQuickStockExistingIntakeApi } from "./quickStockIntakeApi";
 const stripEmptyParams = (obj = {}) => Object.fromEntries(
   Object.entries(obj).filter(([, value]) => value !== "" && value !== undefined && value !== null)
 );
+
+const hasSearchIntent = (params = {}) => {
+  const productTypeId = Number(params.productTypeId);
+  const brandId = Number(params.brandId);
+  const search = String(params.search || params.searchText || params.keyword || "").trim();
+  return Boolean((Number.isFinite(productTypeId) && productTypeId > 0) || (Number.isFinite(brandId) && brandId > 0) || search);
+};
+
+const emptySearchResponse = Object.freeze({ items: [], products: [], total: 0, source: "quick-receive-idle" });
+
+const getQuickStockOperationalProducts = async (filters = {}) => {
+  try {
+    const sanitized = stripEmptyParams({ ...filters });
+    delete sanitized.branchId;
+
+    if (!hasSearchIntent(sanitized)) {
+      return emptySearchResponse;
+    }
+
+    const params = { ...sanitized, _ts: Date.now() };
+    const { data } = await apiClient.get('products/pos/search', { params });
+    return data;
+  } catch (err) {
+    throw parseApiError(err);
+  }
+};
+
+const getQuickStockTemplateProducts = async (filters = {}) => {
+  try {
+    const sanitized = stripEmptyParams({ ...filters });
+    delete sanitized.branchId;
+    delete sanitized.template;
+
+    if (!hasSearchIntent(sanitized)) {
+      return emptySearchResponse;
+    }
+
+    const params = { ...sanitized, _ts: Date.now() };
+    const { data } = await apiClient.get('products/template/search', { params });
+    return data;
+  } catch (err) {
+    throw parseApiError(err);
+  }
+};
 
 const extractList = (raw) => {
   if (Array.isArray(raw)) return raw;
@@ -76,8 +112,8 @@ export const getQuickStockDropdowns = async ({ productTypeId } = {}) => {
 
 export const searchQuickStockProducts = async (filters = {}) => {
   const [operationalResult, templateResult] = await Promise.allSettled([
-    getQuickReceiveOperationalProducts(filters),
-    getQuickReceiveTemplateProducts(filters),
+    getQuickStockOperationalProducts(filters),
+    getQuickStockTemplateProducts(filters),
   ]);
 
   const operationalProducts =
@@ -94,16 +130,50 @@ export const searchQuickStockProducts = async (filters = {}) => {
 };
 
 export const getQuickStockOperationalProductByTemplateId = async (templateProductId) => {
-  const raw = await getQuickReceiveOperationalProductByTemplateId(templateProductId);
-  return extractSingle(raw);
+  try {
+    if (!templateProductId) {
+      const error = new Error('ไม่พบ templateProductId');
+      error.code = 'TEMPLATE_PRODUCT_ID_MISSING';
+      throw error;
+    }
+    const { data } = await apiClient.get(`products/pos/runtime-by-template/${templateProductId}`, {
+      params: { _ts: Date.now() },
+    });
+    return extractSingle(data);
+  } catch (err) {
+    throw parseApiError(err);
+  }
 };
 
-export const createQuickStockOperationalProductFromTemplate = async (payload) => {
-  return createQuickReceiveOperationalProductFromTemplate(payload);
+export const createQuickStockOperationalProductFromTemplate = async (payload = {}) => {
+  try {
+    const sanitizedPayload = { ...payload };
+    delete sanitizedPayload.branchId;
+    const { data } = await apiClient.post('products/pos/create-from-template', sanitizedPayload);
+    return data;
+  } catch (err) {
+    throw parseApiError(err);
+  }
 };
 
-export const createQuickStockLocalOperationalProduct = async (payload) => {
-  return createQuickReceiveLocalOperationalProduct(payload);
+export const createQuickStockLocalOperationalProduct = async (payload = {}) => {
+  try {
+    const sanitizedPayload = { ...payload };
+    delete sanitizedPayload.branchId;
+    delete sanitizedPayload.templateProductId;
+    delete sanitizedPayload.productTemplateId;
+    delete sanitizedPayload.items;
+    delete sanitizedPayload.barcodes;
+    delete sanitizedPayload.queue;
+    delete sanitizedPayload.quantity;
+    delete sanitizedPayload.stock;
+    delete sanitizedPayload.movementType;
+    delete sanitizedPayload.source;
+    const { data } = await apiClient.post('products/pos/create-local', sanitizedPayload);
+    return data;
+  } catch (err) {
+    throw parseApiError(err);
+  }
 };
 
 export const updateQuickStockOperationalProduct = async (id, payload) => {

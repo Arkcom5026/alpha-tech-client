@@ -8,28 +8,36 @@ const read = (relativePath) => readFileSync(join(featureRoot, relativePath), 'ut
 
 describe('settings dashboard workspace behavior lock', () => {
   it('preserves tenant-aware settings navigation destinations', () => {
-    const page = read('pages/SettingsDashboardPage.jsx');
-    expect(page).toContain('useParams');
-    expect(page).toContain('shopSlug');
-    expect(page).toContain('`/${shopSlug}/pos/settings/printers`');
-    expect(page).toContain('`/${shopSlug}/pos/settings/storefront`');
-    expect(page).toContain('`/${shopSlug}/pos/settings/online-products`');
-    expect(page).toContain('`/${shopSlug}/pos/settings/staff`');
-    expect(page).toContain('`/${shopSlug}/pos/settings/employee`');
-    expect(page).toContain('`/${shopSlug}/pos/settings/positions`');
-    expect(page).toContain('`/${shopSlug}/pos/settings/branches`');
-    expect(page).toContain('`/${shopSlug}/pos/settings/bank`');
+    const workspace = read('workspaces/SettingsDashboardWorkspace.jsx');
+    expect(workspace).toContain('useParams');
+    expect(workspace).toContain('shopSlug');
+    expect(workspace).toContain('`/${shopSlug}/pos/settings/printers`');
+    expect(workspace).toContain('`/${shopSlug}/pos/settings/storefront`');
+    expect(workspace).toContain('`/${shopSlug}/pos/settings/online-products`');
+    expect(workspace).toContain('`/${shopSlug}/pos/settings/staff`');
+    expect(workspace).toContain('`/${shopSlug}/pos/settings/employee`');
+    expect(workspace).toContain('`/${shopSlug}/pos/settings/positions`');
+    expect(workspace).toContain('`/${shopSlug}/pos/settings/branches`');
+    expect(workspace).toContain('`/${shopSlug}/pos/settings/bank`');
   });
 
   it('preserves the settings dashboard as a navigation hub without direct data mutation', () => {
+    const workspace = read('workspaces/SettingsDashboardWorkspace.jsx');
+    expect(workspace).toContain('SettingTile');
+    expect(workspace).toContain('useNavigate');
+    expect(workspace).not.toContain('apiClient.');
+    expect(workspace).not.toContain('fetch(');
+    expect(workspace).not.toContain('.post(');
+    expect(workspace).not.toContain('.put(');
+    expect(workspace).not.toContain('.patch(');
+    expect(workspace).not.toContain('.delete(');
+  });
+
+  it('keeps SettingsDashboardPage as a thin workspace adapter', () => {
     const page = read('pages/SettingsDashboardPage.jsx');
-    expect(page).toContain('SettingTile');
-    expect(page).toContain('useNavigate');
-    expect(page).not.toContain('apiClient.');
-    expect(page).not.toContain('fetch(');
-    expect(page).not.toContain('.post(');
-    expect(page).not.toContain('.put(');
-    expect(page).not.toContain('.patch(');
-    expect(page).not.toContain('.delete(');
+    expect(page).toContain("import SettingsDashboardWorkspace from '../workspaces/SettingsDashboardWorkspace'");
+    expect(page).toContain('export default SettingsDashboardWorkspace');
+    expect(page).not.toContain('useNavigate');
+    expect(page).not.toContain('SettingTile');
   });
 });

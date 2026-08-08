@@ -30,6 +30,7 @@ const ReturnSearchPage = () => {
         onQueryChange={setQuery}
         sales={filtered}
         error={error}
+        helpLabel="คู่มือ"
         onSelectSale={handleSelectSale}
         onOpenHelp={() => setHelpOpen(true)}
       />

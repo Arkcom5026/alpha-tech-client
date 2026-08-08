@@ -51,13 +51,19 @@ test('composition exposes both pilot and physical gates only when explicitly con
   assert.equal(composition.readiness.allowedPrinterId, 'windows:EPSON')
 })
 
-test('server exposes a dedicated durable pilot route without replacing the default print-jobs route', async () => {
+test('server exposes durable worker readiness without replacing manual or default print routes', async () => {
   const source = await readFile(serverPath, 'utf8')
 
+  assert.match(source, /createDurableSaleReceiptGatewayWorker/)
+  assert.match(source, /durableSaleReceiptWorker\.readiness/)
+  assert.match(source, /durableSaleReceiptWorker\.start\(\)/)
+  assert.match(source, /durableSaleReceiptWorker\.stop\(\)/)
+  assert.match(source, /DURABLE_SALE_RECEIPT_WORKER_ARMED/)
   assert.match(source, /\/v1\/durable-sale-receipt-pilot/)
   assert.match(source, /durableSaleReceipt\.runtime\.execute/)
   assert.match(source, /\/v1\/physical-pilot/)
   assert.match(source, /\/v1\/print-jobs/)
-  assert.match(source, /version: '0\.5\.0'/)
+  assert.match(source, /version: '0\.6\.0'/)
   assert.match(source, /durableSaleReceiptPilot:/)
+  assert.match(source, /durableSaleReceiptWorker:/)
 })

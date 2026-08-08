@@ -40,18 +40,21 @@ assert.match(api, /formData\.append\('purpose', purpose\)/, 'upload request must
 assert.doesNotMatch(api, /branchId/, 'client media APIs must not submit authoritative branch ownership');
 assert.match(api, /apiClient\.get\('\/store-experience\/media', \{ params \}\)/, 'client must call the branch-scoped media library endpoint');
 assert.match(api, /if \(purpose\) params\.purpose = purpose/, 'media library must filter by the current slot purpose');
+assert.match(api, /params\.search\s*=\s*String\(search\)\.trim\(\)\.slice\(0, 120\)/, 'media management search must be normalized and bounded');
 assert.match(api, /if \(nextCursor\) params\.nextCursor = nextCursor/, 'media library must support bounded cursor pagination');
 assert.match(uploadField, /MAX_FILE_SIZE_BYTES = 5 \* 1024 \* 1024/, 'client must enforce the 5 MB storefront media limit');
 assert.match(uploadField, /startsWith\('image\/'\)/, 'client must reject non-image files before upload');
 assert.match(uploadField, /result\?\.secureUrl/, 'upload field must bind the normalized secure URL');
-assert.match(uploadField, /เลือกจากคลัง/, 'media field must expose the store media library');
-assert.match(uploadField, /listStorefrontMedia\(\{ purpose, pageSize: 24, nextCursor: cursor \}\)/, 'library requests must stay purpose scoped');
+assert.match(uploadField, /จัดการคลัง/, 'media field must expose the evolved store media management experience');
+assert.match(uploadField, /listStorefrontMedia\(\{ purpose, search: searchValue, pageSize: 24, nextCursor: cursor \}\)/, 'library requests must stay purpose scoped and forward bounded search');
 assert.match(uploadField, /onUploaded\(asset\.secureUrl, asset\)/, 'selecting an existing asset must update only the draft field');
-assert.match(uploadField, /ยังไม่มีภาพประเภทนี้ในคลัง/, 'media library must have an empty state');
-assert.match(uploadField, /โหลดคลังรูปภาพไม่สำเร็จ/, 'media library must have an error state');
-assert.match(uploadField, /ลองใหม่/, 'media library must have a retry action');
-assert.match(uploadField, /โหลดเพิ่มเติม/, 'media library must expose cursor pagination');
-assert.doesNotMatch(uploadField, /delete|destroy/i, 'media library foundation must not expose destructive authority');
+assert.match(uploadField, /ไม่พบภาพตามเงื่อนไข/, 'media management must have an empty state');
+assert.match(uploadField, /โหลดคลังรูปภาพไม่สำเร็จ/, 'media management must have an error state');
+assert.match(uploadField, /ลองใหม่/, 'media management must have a retry action');
+assert.match(uploadField, /library\.nextCursor/, 'media management must preserve cursor pagination authority');
+assert.match(uploadField, /append:\s*true,\s*cursor:\s*library\.nextCursor/, 'media management must request the next bounded page');
+assert.match(uploadField, /disabled title="ยังไม่เปิดสิทธิ์ลบใน Foundation นี้"/, 'destructive media action must remain disabled');
+assert.doesNotMatch(uploadField, /destroy|deleteStorefrontMedia|apiClient\.delete/i, 'media management foundation must not expose destructive provider authority');
 
 assert.match(page, /contentConfiguration: draft\.contentConfiguration/, 'draft payload must include merchant content configuration');
 assert.match(page, /themePreset: PLATFORM_THEME_PRESET/, 'draft payload must preserve platform theme authority');

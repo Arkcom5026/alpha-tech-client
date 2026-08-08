@@ -3,10 +3,15 @@ import { DOCUMENT_PURPOSES } from './createPrinterPreferenceContract.js'
 const DOCUMENT_PURPOSE_SET = new Set(DOCUMENT_PURPOSES)
 const RECEIPT_PURPOSES = new Set([
   'RECEIPT',
+  'SALE_RECEIPT',
   'SHORT_TAX_INVOICE',
   'DELIVERY_NOTE',
   'REPAIR_INTAKE',
   'REPAIR_RETURN',
+])
+const A4_PURPOSES = new Set([
+  'A4_DOCUMENT',
+  'FULL_TAX_INVOICE',
 ])
 
 const requireText = (value, field) => {
@@ -52,7 +57,7 @@ const scorePrinterForPurpose = (printer, documentPurpose) => {
   if (documentPurpose === 'BARCODE_LABEL') {
     if (/barcode|label|zebra|tsc|brother ql/.test(searchable)) score += 80
     if (printer.capabilities?.raw) score += 15
-  } else if (documentPurpose === 'A4_DOCUMENT') {
+  } else if (A4_PURPOSES.has(documentPurpose)) {
     if (paperWidthMm >= 200) score += 80
     if (/a4|laser|inkjet|canon|brother|hp|epson l/.test(searchable)) score += 30
     if (/receipt|pos|thermal|tm-t|80mm|58mm/.test(searchable)) score -= 50

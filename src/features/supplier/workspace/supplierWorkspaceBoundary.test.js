@@ -21,10 +21,21 @@ describe('supplier workspace boundary', () => {
     expect(page).not.toContain('getSupplierById');
   });
 
-  it('keeps table presentation free from router ownership', () => {
+  it('keeps table and form presentation free from runtime ownership', () => {
     const table = read('src/features/supplier/components/SupplierTable.jsx');
+    const form = read('src/features/supplier/components/SupplierForm.jsx');
     expect(table).not.toContain('react-router-dom');
     expect(table).toContain('onOpenSupplier');
+    expect(form).not.toContain('@/features/bank/api/bankApi');
+    expect(form).not.toContain('@/features/branch/store/branchStore');
+    expect(form).toContain('banks = []');
+    expect(form).toContain('branchId = null');
+  });
+
+  it('centralizes supplier form runtime in the workspace layer', () => {
+    const runtime = read('src/features/supplier/workspace/useSupplierFormRuntime.js');
+    expect(runtime).toContain('@/features/bank/api/bankApi');
+    expect(runtime).toContain('@/features/branch/store/branchStore');
   });
 
   it('preserves distinct edit and legacy update authorities', () => {

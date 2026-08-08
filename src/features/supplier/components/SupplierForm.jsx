@@ -1,19 +1,17 @@
-// src/features/supplier/components/SupplierForm.jsx
-// 🏛️ Enterprise Supplier Onboarding Center: (Clean Visual Hierarchy & Seamless Context Edition)
-
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
-import { getAllBanks } from '@/features/bank/api/bankApi';
-import { useBranchStore } from '@/features/branch/store/branchStore';
 import { Building2, User, Phone, Mail, FileText, MapPin, Landmark, CreditCard, AlertCircle } from 'lucide-react';
 
-const SupplierForm = ({ defaultValues = {}, onSubmit, isEdit = false, showCreditFields = false }) => {
-  const [banks, setBanks] = useState([]);
-  const [internalDefaults, setInternalDefaults] = useState(defaultValues || null);
-  const [formSynced, setFormSynced] = useState(false);
-  const selectedBranchId = useBranchStore((state) => state.selectedBranchId);
-
+const SupplierForm = ({
+  defaultValues = {},
+  onSubmit,
+  isEdit = false,
+  showCreditFields = false,
+  banks = [],
+  branchId = null,
+  formSyncReady = false,
+}) => {
   const {
     register,
     handleSubmit,
@@ -22,34 +20,17 @@ const SupplierForm = ({ defaultValues = {}, onSubmit, isEdit = false, showCredit
   } = useForm({ defaultValues: {} });
 
   useEffect(() => {
-    if (internalDefaults && Object.keys(internalDefaults).length > 0 && banks.length > 0 && !formSynced) {
-      reset({ ...internalDefaults });
-      setFormSynced(true);
+    if (formSyncReady && defaultValues && Object.keys(defaultValues).length > 0) {
+      reset({ ...defaultValues });
     }
-  }, [internalDefaults, banks, reset, formSynced]);
-
-  useEffect(() => {
-    const loadBanks = async () => {
-      try {
-        const data = await getAllBanks();
-        setBanks(data);
-        setInternalDefaults(defaultValues || null);
-        setFormSynced(false);
-      } catch (err) {
-        console.error('❌ โหลดธนาคารล้มเหลว', err);
-      }
-    };
-    loadBanks();
-  }, [defaultValues]);
+  }, [defaultValues, formSyncReady, reset]);
 
   return (
     <div className="w-full bg-white p-5 md:p-6 rounded-xl animate-fadeIn text-xs md:text-sm">
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-        <input type="hidden" value={selectedBranchId || ''} {...register('branchId')} />
+        <input type="hidden" value={branchId || ''} {...register('branchId')} />
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-          
-          {/* 🟦 หมวดหมู่ที่ 1: ข้อมูลบริษัทและการติดต่อหลัก */}
           <div className="md:col-span-2 pb-1 border-b border-slate-100 flex items-center gap-1.5 text-slate-400 select-none">
             <Building2 className="w-4 h-4 text-slate-900" />
             <span className="font-black tracking-wide uppercase text-[10px]">ข้อมูลระบุตัวตนและรายละเอียดคู่ค้า</span>
@@ -176,7 +157,6 @@ const SupplierForm = ({ defaultValues = {}, onSubmit, isEdit = false, showCredit
             />
           </div>
 
-          {/* 🟦 หมวดหมู่ที่ 2: ข้อมูลบัญชีธนาคารเพื่อการชำระเงิน */}
           <div className="md:col-span-2 pb-1 border-b border-slate-100 pt-2 flex items-center gap-1.5 text-slate-400 select-none">
             <Landmark className="w-4 h-4 text-slate-900" />
             <span className="font-black tracking-wide uppercase text-[10px]">รายละเอียดบัญชีธนาคารเพื่อธุรกรรมการเงิน</span>
@@ -223,7 +203,6 @@ const SupplierForm = ({ defaultValues = {}, onSubmit, isEdit = false, showCredit
 
           <div className="hidden md:block"></div>
 
-          {/* 🟦 หมวดหมู่ที่ 3: วงเงินเครดิตทางการค้า */}
           {showCreditFields && (
             <>
               <div className="md:col-span-2 pb-1 border-b border-slate-100 pt-2 flex items-center gap-1.5 text-slate-400 select-none">
@@ -274,11 +253,10 @@ const SupplierForm = ({ defaultValues = {}, onSubmit, isEdit = false, showCredit
               </div>
             </>
           )}
-
         </div>
 
-        <Button 
-          type="submit" 
+        <Button
+          type="submit"
           className="h-9 w-full bg-slate-900 hover:bg-slate-800 text-white font-black text-xs rounded-lg active:scale-[0.99] transition-all shadow-md select-none mt-6"
         >
           {isEdit ? 'บันทึกปรับปรุงข้อมูลผู้ขาย' : 'ยืนยันลงทะเบียนเพิ่มผู้ขาย'}

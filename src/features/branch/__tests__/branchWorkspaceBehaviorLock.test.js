@@ -22,18 +22,19 @@ describe('branch workspace behavior lock', () => {
     expect(source).toContain('ensureSelectedBranchAction');
   });
 
-  it('preserves management authority and tenant navigation', () => {
-    expect(source).toContain('isSuperAdmin');
-    expect(source).toContain('/pos/settings/branches/create');
-    expect(source).toContain('/pos/settings/branches/edit/');
-    expect(source).toContain('currentBranchId');
+  it('preserves canonical workspace management authority', () => {
+    expect(source).toContain('BranchListWorkspace');
+    expect(source).toContain('filterBranchesForShop');
+    expect(source).toContain('isBranchSuperAdmin');
+    expect(source).toContain('projectBranchEditDefaults');
+    expect(source).not.toContain('/pos/settings/branches/create');
+    expect(source).not.toContain('/pos/settings/branches/edit/');
   });
 
-  it('preserves address and branch-feature editing integration', () => {
-    expect(source).toContain('AddressForm');
-    expect(source).toContain('AddressDisplay');
-    expect(source).toContain('businessType');
-    expect(source).toContain('trackSerialNumber');
-    expect(source).toContain('enableTemplates');
+  it('preserves active branch workspace edit affordances without promoting legacy pages', () => {
+    expect(source).toContain("register('name'");
+    expect(source).toContain("register('phone'");
+    expect(source).toContain("register('address'");
+    expect(source).toContain('แก้ไขข้อมูลร้าน/บริษัท');
   });
 });

@@ -2,3 +2,10 @@ export { default as TaxIntakeWorkspacePage } from './intake/pages/TaxIntakeWorks
 export * from './intake/api/taxIntakeApi';
 export { default as TaxPeriodManagementPage } from './periods/pages/TaxPeriodManagementPage';
 export * from './periods/api/taxPeriodApi';
+export { default as InputTaxControlCenterPage } from './inputTaxControlCenter/pages/InputTaxControlCenterPage';
+export * from './inputTaxControlCenter/api/inputTaxControlCenterApi';
+export { default as InputTaxDocumentListPage } from './inputTaxDocuments/pages/InputTaxDocumentListPage';
+export { default as InputTaxDocumentDetailPage } from './inputTaxDocuments/pages/InputTaxDocumentDetailPage';
+export * from './inputTaxDocuments/api/inputTaxDocumentApi';
+export { default as InputTaxFilingWorkspacePage } from './inputTaxFiling/pages/InputTaxFilingWorkspacePage';
+export { default as InputTaxQualityCenterPage } from './inputTaxQuality/pages/InputTaxQualityCenterPage';

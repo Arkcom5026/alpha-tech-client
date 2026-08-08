@@ -27,6 +27,11 @@ import CustomerCreditPage from '@/features/finance/pages/CustomerCreditPage';
 import TaxIntakeWorkspacePage from '@/features/tax/intake/pages/TaxIntakeWorkspacePage';
 import TaxPeriodManagementPage from '@/features/tax/periods/pages/TaxPeriodManagementPage';
 import InputTaxReceiptWorkspacePage from '@/features/tax/inputDocuments/pages/InputTaxReceiptWorkspacePage';
+import InputTaxControlCenterPage from '@/features/tax/inputTaxControlCenter/pages/InputTaxControlCenterPage';
+import InputTaxDocumentListPage from '@/features/tax/inputTaxDocuments/pages/InputTaxDocumentListPage';
+import InputTaxDocumentDetailPage from '@/features/tax/inputTaxDocuments/pages/InputTaxDocumentDetailPage';
+import InputTaxFilingWorkspacePage from '@/features/tax/inputTaxFiling/pages/InputTaxFilingWorkspacePage';
+import InputTaxQualityCenterPage from '@/features/tax/inputTaxQuality/pages/InputTaxQualityCenterPage';
 import SupplierPayableWorkspacePage from '@/features/supplierPayable/pages/SupplierPayableWorkspacePage';
 import TaxExpenseWorkspacePage from '@/features/taxExpense/pages/TaxExpenseWorkspacePage';
 
@@ -91,6 +96,16 @@ export const posPartnerRoutes = [
           { path: 'daily-closing', element: <DailyClosingPage /> },
           { path: 'ar', border: 'none', element: <AccountsReceivablePage /> },
           { path: 'customer-credit', element: <CustomerCreditPage /> },
+          { path: 'input-tax', element: <InputTaxControlCenterPage /> },
+          {
+            path: 'input-tax-documents',
+            children: [
+              { index: true, element: <InputTaxDocumentListPage /> },
+              { path: ':taxDocumentId', element: <InputTaxDocumentDetailPage /> },
+            ],
+          },
+          { path: 'input-tax-filing', element: <InputTaxFilingWorkspacePage /> },
+          { path: 'input-tax-quality', element: <InputTaxQualityCenterPage /> },
           { path: 'tax-intake', element: <TaxIntakeWorkspacePage /> },
           { path: 'input-tax-receipts', element: <InputTaxReceiptWorkspacePage /> },
           { path: 'tax-periods', element: <TaxPeriodManagementPage /> },

@@ -12,6 +12,10 @@ export const getSidebarFinanceItems = (shopSlug) => {
       label: 'การเงิน',
       items: [
         { label: 'สรุปปิดร้าน', to: `${prefix}/finance/daily-closing`, cap: P1_CAP.VIEW_REPORTS },
+        { label: 'ศูนย์ควบคุมภาษีซื้อ', to: `${prefix}/finance/input-tax`, cap: P1_CAP.VIEW_REPORTS },
+        { label: 'รายการเอกสารภาษีซื้อ', to: `${prefix}/finance/input-tax-documents`, cap: P1_CAP.VIEW_REPORTS },
+        { label: 'เตรียมยื่นภาษีซื้อ', to: `${prefix}/finance/input-tax-filing`, cap: P1_CAP.VIEW_REPORTS },
+        { label: 'ตรวจสอบคุณภาพภาษีซื้อ', to: `${prefix}/finance/input-tax-quality`, cap: P1_CAP.VIEW_REPORTS },
         { label: 'เอกสารภาษี', to: `${prefix}/finance/tax-intake`, cap: P1_CAP.VIEW_REPORTS },
         { label: 'ติดตามภาษีซื้อ', to: `${prefix}/finance/input-tax-receipts`, cap: P1_CAP.VIEW_REPORTS },
         { label: 'รอบภาษี', to: `${prefix}/finance/tax-periods`, cap: P1_CAP.VIEW_REPORTS },

@@ -25,3 +25,7 @@ export {
   RESOLUTION_LEVELS,
   resolveDocumentPrinter,
 } from './documentPrinterResolutionPolicy.js'
+
+export {
+  createHierarchicalPrinterResolverService,
+} from './hierarchicalPrinterResolverService.js'

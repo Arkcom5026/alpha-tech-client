@@ -78,6 +78,7 @@ describe('warranty claim queue workspace foundation contract', () => {
     expect(projection.activeLanes).toHaveLength(1);
     expect(projection.activeLanes[0].key).toBe('SUBMITTED');
     expect(projection.activeLanes[0].items).toEqual([sampleClaims[0]]);
+    expect(policySource).toContain('groupByStatus(filtered, CLAIM_LANES)');
   });
 
   it('keeps workspace presentation free of store, route, and lifecycle authority', () => {
@@ -88,7 +89,7 @@ describe('warranty claim queue workspace foundation contract', () => {
     expect(workspaceSource).not.toContain('useParams');
   });
 
-  it('preserves queue state, search, refresh, retry, and open intents through props before cutover', () => {
+  it('preserves queue state, search, refresh, retry, and open intents through props after cutover', () => {
     expect(workspaceSource).toContain('onQueryChange(event.target.value)');
     expect(workspaceSource).toContain('onClick={onRefresh}');
     expect(workspaceSource).toContain('onRetry={onRetry}');
@@ -96,6 +97,7 @@ describe('warranty claim queue workspace foundation contract', () => {
     expect(workspaceSource).toContain('onOpen={onOpenClaim}');
     expect(pageSource).toContain('useRepairRuntimeStore');
     expect(pageSource).toContain('loadClaims');
-    expect(pageSource).toContain('groupByStatus(filtered, CLAIM_LANES)');
+    expect(pageSource).toContain('projectWarrantyClaimQueue');
+    expect(pageSource).not.toContain('groupByStatus(filtered, CLAIM_LANES)');
   });
 });

@@ -72,6 +72,19 @@ describe('employee workspace behavior lock', () => {
     expectThinAdapter('pages/EmployeeFormPage.jsx', 'LegacyEmployeeFormWorkspace');
   });
 
+  it('preserves roles management authority inside the roles workspace', () => {
+    const rolesWorkspace = read('workspaces/ManageRolesWorkspace.jsx');
+    expect(rolesWorkspace).toContain('useAuthStore');
+    expect(rolesWorkspace).toContain("=== 'superadmin'");
+    expect(rolesWorkspace).toContain('getAllEmployees');
+    expect(rolesWorkspace).toContain('getBranchDropdowns');
+    expect(rolesWorkspace).toContain('updateUserRole');
+    expect(rolesWorkspace).toContain('setEmployeeActive');
+    expect(rolesWorkspace).toContain('branchFilter');
+    expect(rolesWorkspace).toContain('window.confirm');
+    expectThinAdapter('pages/ManageRolesPage.jsx', 'ManageRolesWorkspace');
+  });
+
   it('preserves employee form normalization and branch submission policy', () => {
     const form = read('components/EmployeeForm.jsx');
     expect(form).toContain('name: formData.name.trim()');

@@ -10,13 +10,27 @@ export const parseSalePaymentMoney = (value) => {
   return 0;
 };
 
-const getItemPrice = (item) => parseSalePaymentMoney(
+const getItemUnitPrice = (item) => parseSalePaymentMoney(
   item?.price ?? item?.sellPrice ?? item?.unitPrice ?? 0
 );
 
-const getItemDiscount = (item) => parseSalePaymentMoney(
+const getItemQuantity = (item) => (
+  item?.lineType === 'SIMPLE'
+    ? Math.max(0, parseSalePaymentMoney(item?.quantity || 1))
+    : 1
+);
+
+const getItemBasePrice = (item) => round2(getItemUnitPrice(item) * getItemQuantity(item));
+
+const getLegacyItemDiscount = (item) => parseSalePaymentMoney(
   item?.discountWithoutBill ?? item?.discount ?? 0
 );
+
+const getItemPriceAdjustment = (item) => {
+  const explicitAdjustment = Number(item?.priceAdjustment);
+  if (Number.isFinite(explicitAdjustment)) return round2(explicitAdjustment);
+  return round2(-getLegacyItemDiscount(item));
+};
 
 export const projectSalePaymentCalculation = ({
   saleItems = [],
@@ -28,11 +42,18 @@ export const projectSalePaymentCalculation = ({
   const items = Array.isArray(saleItems) ? saleItems : [];
   const payments = Array.isArray(paymentList) ? paymentList : [];
 
-  const totalOriginalPrice = round2(items.reduce((sum, item) => sum + getItemPrice(item), 0));
-  const totalDiscountOnly = round2(items.reduce((sum, item) => sum + getItemDiscount(item), 0));
+  const totalOriginalPrice = round2(items.reduce((sum, item) => sum + getItemBasePrice(item), 0));
+  const totalPriceAdjustment = round2(items.reduce(
+    (sum, item) => sum + getItemPriceAdjustment(item),
+    0
+  ));
+  const totalDiscountOnly = round2(items.reduce(
+    (sum, item) => sum + Math.max(0, -getItemPriceAdjustment(item)),
+    0
+  ));
   const safeBillDiscount = parseSalePaymentMoney(billDiscount);
   const totalDiscount = round2(totalDiscountOnly + safeBillDiscount);
-  const totalToPay = round2(Math.max(totalOriginalPrice - totalDiscount, 0));
+  const totalToPay = round2(Math.max(totalOriginalPrice + totalPriceAdjustment - safeBillDiscount, 0));
   const vatAmount = totalToPay > 0 ? round2((totalToPay * vatRate) / (100 + vatRate)) : 0;
   const priceBeforeVat = totalToPay > 0 ? round2(totalToPay - vatAmount) : 0;
   const safeDepositUsed = Math.min(parseSalePaymentMoney(depositUsed), totalToPay);
@@ -52,6 +73,7 @@ export const projectSalePaymentCalculation = ({
   return {
     itemCount: items.length,
     totalOriginalPrice,
+    totalPriceAdjustment,
     totalDiscountOnly,
     safeBillDiscount,
     totalDiscount,

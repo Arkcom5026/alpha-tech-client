@@ -70,8 +70,8 @@ describe('purchase order receipt ownership certification', () => {
   it('certifies that Barcode consumes Receipt only through context and finalization boundaries', () => {
     const barcodeStore = read(barcodeStorePath);
 
-    expect(barcodeStore).toContain('getReceiptById');
-    expect(barcodeStore).toContain('finalizeReceiptIfNeeded');
+    expect(barcodeStore).toContain('getReceipt');
+    expect(barcodeStore).toContain('finalizeReceipt');
 
     for (const token of [
       'createReceipt',

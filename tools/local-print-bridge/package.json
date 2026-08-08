@@ -8,7 +8,7 @@
   },
   "scripts": {
     "start": "node src/server.js",
-    "test": "node --test tests/printJobValidator.test.js tests/mockPrinterAdapter.test.js tests/escposRenderer.test.js tests/windowsPrinterDiscovery.test.js tests/physicalPilotRenderer.test.js tests/durablePrintLeaseClient.test.js tests/durablePrintExecutionCoordinator.test.js tests/durableSaleReceiptPilotRuntime.test.js tests/durableSaleReceiptLocalExecutor.test.js tests/durableSaleReceiptRuntimeIntegration.test.js tests/durableSaleReceiptRuntimeEntrypoint.test.js tests/saleReceipt80mmHtmlRenderer.test.js tests/windowsBrowserPdfRenderer.test.js tests/sumatraPdfSaleReceiptSubmitter.test.js",
+    "test": "node --test tests/printJobValidator.test.js tests/mockPrinterAdapter.test.js tests/escposRenderer.test.js tests/windowsPrinterDiscovery.test.js tests/physicalPilotRenderer.test.js tests/storeDeviceGatewaySessionClient.test.js tests/durablePrintLeaseClient.test.js tests/durablePrintExecutionCoordinator.test.js tests/durableSaleReceiptPilotRuntime.test.js tests/durableSaleReceiptLocalExecutor.test.js tests/durableSaleReceiptRuntimeIntegration.test.js tests/durableSaleReceiptRuntimeEntrypoint.test.js tests/saleReceipt80mmHtmlRenderer.test.js tests/windowsBrowserPdfRenderer.test.js tests/sumatraPdfSaleReceiptSubmitter.test.js",
     "test:shared-queue-smoke": "node --test tests/sharedQueueSmokeHarness.test.js",
     "smoke:shared-queue": "node scripts/shared-queue-smoke.js"
   }

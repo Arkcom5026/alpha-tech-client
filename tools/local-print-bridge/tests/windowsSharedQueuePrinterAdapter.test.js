@@ -102,3 +102,40 @@ test('rejects offline shared queues before spool submission', async () => {
 
   assert.equal(called, false)
 })
+
+
+test('prints FULL_TAX_INVOICE through the driver-managed shared queue', async () => {
+  const calls = []
+  const adapter = createWindowsSharedQueuePrinterAdapter({
+    now: () => new Date('2026-08-08T06:00:00.000Z'),
+    spoolPrintImpl: async (request) => {
+      calls.push(request)
+      return { submitted: true, queue: request.printerName }
+    },
+  })
+
+  const fullTaxInvoiceJob = {
+    ...printJob,
+    jobId: 'full-tax-invoice-job-1',
+    documentType: 'FULL_TAX_INVOICE',
+    snapshot: Object.freeze({
+      documentType: 'FULL_TAX_INVOICE',
+      taxInvoiceNumber: 'TX-2026-0001',
+    }),
+  }
+
+  const result = await adapter.print({
+    printer: sharedPrinter,
+    printJob: fullTaxInvoiceJob,
+  })
+
+  assert.equal(calls.length, 1)
+  assert.equal(calls[0].printerName, sharedPrinter.name)
+  assert.equal(calls[0].documentName, fullTaxInvoiceJob.jobId)
+  assert.equal(calls[0].printJob, fullTaxInvoiceJob)
+
+  assert.equal(result.status, 'PRINTED')
+  assert.equal(result.adapter, 'WINDOWS_SHARED_QUEUE_DRIVER')
+  assert.equal(result.driverManaged, true)
+  assert.equal(result.capabilitiesUsed.raw, false)
+})

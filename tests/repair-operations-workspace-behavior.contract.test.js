@@ -6,6 +6,9 @@ const root = process.cwd();
 const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 
 const intakePage = read('src/features/repair/pages/RepairIntakePage.jsx');
+const intakeWorkspace = read(
+  'src/features/repair/intake/workspace/components/RepairIntakeWorkspace.jsx'
+);
 const jobsPage = read('src/features/repair/pages/RepairJobsPage.jsx');
 const detailPage = read('src/features/repair/pages/RepairJobDetailPage.jsx');
 const claimsPage = read('src/features/repair/pages/WarrantyClaimsPage.jsx');
@@ -86,10 +89,10 @@ describe('repair operations workspace behavior contract', () => {
     expect(warrantyClaimDetailWorkspace).toContain('onOpenRepair={onOpenRepair}');
   });
 
-  it('preserves intake customer, device, repair creation, and external-device evidence flow', () => {
-    expect(intakePage).toContain('RepairDeviceSearchPanel');
-    expect(intakePage).toContain('RepairCustomerSection');
-    expect(intakePage).toContain('CustomerWarrantyAssets');
+  it('preserves intake customer, device, repair creation, and external-device evidence flow across workspace ownership', () => {
+    expect(intakeWorkspace).toContain('RepairDeviceSearchPanel');
+    expect(intakeWorkspace).toContain('RepairCustomerSection');
+    expect(intakeWorkspace).toContain('CustomerWarrantyAssets');
     expect(intakePage).toContain('runtime.createJob');
     expect(intakePage).toContain('runtime.createExternalIntake');
     expect(intakePage).toContain('repairApi.saveIntakeEvidence');
@@ -106,6 +109,7 @@ describe('repair operations workspace behavior contract', () => {
 
   it('keeps loading, error, empty, and retry presentation semantics intact across workspace ownership', () => {
     for (const source of [
+      intakeWorkspace,
       repairQueueWorkspace,
       repairDetailWorkspace,
       warrantyClaimQueueWorkspace,
@@ -120,9 +124,8 @@ describe('repair operations workspace behavior contract', () => {
     expect(warrantyClaimQueueWorkspace).toContain('filteredClaims.length');
     expect(warrantyClaimQueueWorkspace).toContain('activeLanes.length');
 
-    expect(intakePage).toContain('RuntimeStatePanel');
-    expect(intakePage).toContain('loading={runtime.loading}');
-    expect(intakePage).toContain('error={runtime.error}');
-    expect(intakePage).toContain('onRetry={retryCurrentSearch}');
+    expect(intakeWorkspace).toContain('loading={runtime.loading}');
+    expect(intakeWorkspace).toContain('error={runtime.error}');
+    expect(intakeWorkspace).toContain('onRetry={onRetry}');
   });
 });

@@ -5,6 +5,7 @@ import {
   createPrinterDiscoverySelectionService,
   createPrinterPreferenceStore,
 } from '../preferences/index.js'
+import { createPrinterScopeManagementService } from './printerScopeManagementService.js'
 import { createPrinterTestService } from './printerTestService.js'
 
 const WORKSTATION_STORAGE_KEY = 'alpha-tech.printing.workstation-id.v1'
@@ -48,6 +49,11 @@ const createPrinterSettingsRuntime = ({
     legacyPreferenceStore: preferenceStore,
     hierarchyStore,
   })
+  const printerScopeManagementService = createPrinterScopeManagementService({
+    discoverySelectionService,
+    hierarchyStore,
+    hierarchicalResolverService,
+  })
   const printerTestService = createPrinterTestService({ transport })
 
   return Object.freeze({
@@ -57,6 +63,7 @@ const createPrinterSettingsRuntime = ({
     hierarchyStore,
     discoverySelectionService,
     hierarchicalResolverService,
+    printerScopeManagementService,
     printerTestService,
   })
 }

@@ -11,6 +11,12 @@ const stripEmptyParams = (obj = {}) => Object.fromEntries(
   Object.entries(obj).filter(([, value]) => value !== '' && value !== undefined && value !== null)
 );
 
+// Compatibility helper still consumed by the Quick Receipt session boundary.
+export function makeIdempotencyKey() {
+  if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
+  return `qr_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+}
+
 export const getQuickReceiveDropdowns = async ({ productTypeId } = {}) => {
   try {
     const params = stripEmptyParams({ productTypeId, _ts: Date.now() });

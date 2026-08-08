@@ -43,3 +43,18 @@ test('rejects unsupported document type', () => {
     /Unsupported documentType/
   )
 })
+
+
+test('accepts FULL_TAX_INVOICE print jobs', () => {
+  const normalized = validatePrintJob({
+    ...validJob,
+    documentType: 'FULL_TAX_INVOICE',
+    snapshot: {
+      ...validJob.snapshot,
+      documentType: 'FULL_TAX_INVOICE',
+    },
+  })
+
+  assert.equal(normalized.documentType, 'FULL_TAX_INVOICE')
+  assert.equal(normalized.snapshot.documentType, 'FULL_TAX_INVOICE')
+})

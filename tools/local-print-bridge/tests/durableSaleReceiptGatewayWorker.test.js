@@ -102,6 +102,34 @@ test('accepts LEASED sale receipt jobs so an expired server lease can be replace
   assert.equal(options.executeCalls[0].jobId, 'sale-leased')
 })
 
+test('pins execution to the explicitly configured pilot job', async () => {
+  const options = baseOptions({ jobs: [
+    { jobId: 'sale-other', jobType: 'PRINT_DOCUMENT', source: 'SALE_RECEIPT', status: 'PENDING', requestSnapshot: { documentPurpose: { code: 'SALE_RECEIPT' } } },
+    { jobId: 'sale-target', jobType: 'PRINT_DOCUMENT', source: 'SALE_RECEIPT', status: 'LEASED', requestSnapshot: { documentPurpose: { code: 'SALE_RECEIPT' } } },
+  ] })
+  const worker = createDurableSaleReceiptGatewayWorker({
+    enabled: true,
+    serverBaseUrl: 'https://server.example',
+    authorization: 'Bearer test',
+    gatewayId: 'gw-1',
+    printerProfileId: 'windows:EPSON',
+    confirmation: 'approved-once',
+    targetJobId: 'sale-target',
+    fetchImpl: options.fetchImpl,
+    runtime: options.runtime,
+    gatewayClient: options.gatewayClient,
+    bootstrapSession: async () => authority,
+  })
+
+  const result = await worker.tick()
+  assert.equal(result.mode, 'EXECUTED')
+  assert.equal(result.jobId, 'sale-target')
+  assert.equal(options.executeCalls.length, 1)
+  assert.equal(options.executeCalls[0].jobId, 'sale-target')
+  assert.equal(worker.readiness.targetJobConfigured, true)
+  assert.equal(worker.readiness.targetJobId, 'sale-target')
+})
+
 test('blocks automatic physical retry after completion becomes unconfirmed', async () => {
   const completionError = Object.assign(new Error('completion unknown'), {
     code: 'DURABLE_PRINT_COMPLETION_UNCONFIRMED',

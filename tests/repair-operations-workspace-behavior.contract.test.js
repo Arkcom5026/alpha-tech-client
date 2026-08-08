@@ -25,6 +25,9 @@ const warrantyClaimQueueWorkspace = read(
 const warrantyClaimQueuePolicy = read(
   'src/features/repair/claimQueue/workspace/policies/warrantyClaimQueuePolicy.js'
 );
+const warrantyClaimDetailWorkspace = read(
+  'src/features/repair/claimDetail/workspace/components/WarrantyClaimDetailWorkspace.jsx'
+);
 
 const runtimePages = [jobsPage, detailPage, claimsPage, claimDetailPage];
 
@@ -73,11 +76,14 @@ describe('repair operations workspace behavior contract', () => {
     expect(repairDetailWorkspace).toContain('onOpenClaim={onOpenClaim}');
   });
 
-  it('preserves warranty claim detail transition and repair handoff semantics', () => {
+  it('preserves warranty claim detail transition and repair handoff across workspace ownership', () => {
     expect(claimDetailPage).toContain('transitionClaim');
+    expect(claimDetailPage).toContain('WarrantyClaimDetailWorkspace');
     expect(claimDetailPage).toContain('onTransition={(payload) => transitionClaim(claimId, payload)}');
     expect(claimDetailPage).toContain('onOpenRepair={(id) =>');
     expect(claimDetailPage).toContain('/pos/services/repairs/${id}');
+    expect(warrantyClaimDetailWorkspace).toContain('onTransition={onTransition}');
+    expect(warrantyClaimDetailWorkspace).toContain('onOpenRepair={onOpenRepair}');
   });
 
   it('preserves intake customer, device, repair creation, and external-device evidence flow', () => {
@@ -103,6 +109,7 @@ describe('repair operations workspace behavior contract', () => {
       repairQueueWorkspace,
       repairDetailWorkspace,
       warrantyClaimQueueWorkspace,
+      warrantyClaimDetailWorkspace,
     ]) {
       expect(source).toContain('RuntimeStatePanel');
       expect(source).toContain('loading={loading}');
@@ -112,11 +119,6 @@ describe('repair operations workspace behavior contract', () => {
 
     expect(warrantyClaimQueueWorkspace).toContain('filteredClaims.length');
     expect(warrantyClaimQueueWorkspace).toContain('activeLanes.length');
-
-    expect(claimDetailPage).toContain('RuntimeStatePanel');
-    expect(claimDetailPage).toContain('loading={loading}');
-    expect(claimDetailPage).toContain('error={error}');
-    expect(claimDetailPage).toContain('onRetry=');
 
     expect(intakePage).toContain('RuntimeStatePanel');
     expect(intakePage).toContain('loading={runtime.loading}');

@@ -12,7 +12,7 @@ describe('quick stock product adapter ownership', () => {
     expect(quickStockApi).toContain("apiClient.get('products/pos/search'");
     expect(quickStockApi).toContain("apiClient.get('products/template/search'");
     expect(quickStockApi).toContain('hasSearchIntent');
-    expect(quickStockApi).toContain("source: 'quick-stock-idle'");
+    expect(quickStockApi).toContain('source: "quick-receive-idle"');
     expect(quickStockApi).toContain('delete sanitized.branchId');
     expect(quickStockApi).toContain('_ts: Date.now()');
   });

@@ -3,12 +3,19 @@ export const normalizeDeliveryNoteDocumentText = (value) => {
   return value.trim();
 };
 
+const round2 = (value) => Math.round((Number(value) || 0) * 100) / 100;
+
+const toMoney = (value) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
 export const resolveDeliveryNoteProduct = (item) =>
   item?.product || item?.stockItem?.product || item?.productSnapshot || null;
 
 export const resolveDeliveryNoteProductName = (item) => {
   const product = resolveDeliveryNoteProduct(item);
-  return product?.name || item?.productName || item?.name || 'ไม่พบชื่อสินค้า';
+  return product?.name || item?.description || item?.productName || item?.name || 'ไม่พบชื่อสินค้า';
 };
 
 export const buildDeliveryNoteDocumentLine = (item) => {
@@ -45,6 +52,47 @@ export const resolveDeliveryNoteSourceItems = (sale) => {
   ];
 };
 
+const resolveDeliveryNoteLinePricing = (item) => {
+  const isSnItem = Boolean(item?.stockItemId || item?.stockItem?.id || item?.lineType === 'STOCK_ITEM');
+  const quantity = isSnItem ? 1 : Math.max(1, toMoney(item?.quantity ?? item?.qty ?? 1) || 1);
+
+  // SaleItem.price / SaleItemSimple.price are persisted as the final WHOLE-LINE
+  // amount after signed price adjustment. The document workspace must therefore
+  // derive the unit price from the final line amount and must not subtract the
+  // persisted discount again.
+  const explicitLineAmount = item?.lineAmount ?? item?.amount ?? item?.totalAmount ?? null;
+  const persistedFinalLineAmount = item?.price != null && item?.basePrice != null
+    ? item.price
+    : null;
+
+  if (explicitLineAmount != null || persistedFinalLineAmount != null) {
+    const lineAmount = round2(toMoney(explicitLineAmount ?? persistedFinalLineAmount));
+    const unitPrice = quantity > 0 ? round2(lineAmount / quantity) : 0;
+    return {
+      isSnItem,
+      quantity,
+      unitPrice,
+      lineAmount,
+      discount: 0,
+    };
+  }
+
+  // Compatibility for older projections that expose a unit price plus a
+  // discount rather than a persisted final line amount.
+  const rawUnit = toMoney(item?.unitAmount ?? item?.unitPrice ?? item?.sellPrice ?? item?.price ?? item?.basePrice ?? 0);
+  const rawDiscount = toMoney(item?.discountAmount ?? item?.discount ?? 0);
+  const unitPrice = round2(Math.max(rawUnit - rawDiscount, 0));
+  const lineAmount = round2(unitPrice * quantity);
+
+  return {
+    isSnItem,
+    quantity,
+    unitPrice,
+    lineAmount,
+    discount: 0,
+  };
+};
+
 export const prepareDeliveryNoteSaleItems = (sale) => {
   const source = resolveDeliveryNoteSourceItems(sale);
   if (source.length === 0) return [];
@@ -56,20 +104,15 @@ export const prepareDeliveryNoteSaleItems = (sale) => {
     const productIdRaw = product?.id ?? item?.productId ?? item?.stockItem?.productId ?? null;
     const productId = productIdRaw == null ? null : String(productIdRaw);
     const documentLine = buildDeliveryNoteDocumentLine({ ...item, product });
+    const pricing = resolveDeliveryNoteLinePricing(item);
+    const unitPriceKey = Math.round(pricing.unitPrice * 100);
     const key = [
       productId ? `product-${productId}` : `unknown-${item?.id ?? sourceIndex}`,
+      `unit-${unitPriceKey}`,
       `prefix-${documentLine.documentPrefix}`,
       `description-${documentLine.documentDescription}`,
       `suffix-${documentLine.documentSuffix}`,
     ].join('|');
-    const isSnItem = Boolean(item?.stockItemId || item?.stockItem?.id);
-    const unitPrice = isSnItem
-      ? Number(item?.price ?? item?.unitPrice ?? item?.basePrice ?? 0) || 0
-      : Number(item?.unitPrice ?? item?.price ?? item?.basePrice ?? item?.sellPrice ?? 0) || 0;
-    const quantity = isSnItem ? 1 : Math.max(1, Number(item?.quantity ?? item?.qty ?? 1) || 1);
-    const discountEach = isSnItem
-      ? 0
-      : Number(item?.discount ?? item?.discountAmount ?? 0) || 0;
 
     if (!grouped.has(key)) {
       const stableId = productId
@@ -81,8 +124,8 @@ export const prepareDeliveryNoteSaleItems = (sale) => {
         documentLineKey: key,
         productId: productIdRaw,
         stockItemId: item?.stockItemId ?? item?.stockItem?.id ?? null,
-        saleItemIds: isSnItem && item?.id ? [Number(item.id)] : [],
-        simpleItemIds: !isSnItem && item?.id ? [Number(item.id)] : [],
+        saleItemIds: pricing.isSnItem && item?.id ? [Number(item.id)] : [],
+        simpleItemIds: !pricing.isSnItem && item?.id ? [Number(item.id)] : [],
         documentPrefix: documentLine.documentPrefix,
         documentDescriptionRaw: documentLine.documentDescriptionRaw,
         documentDescription: documentLine.documentDescription,
@@ -90,22 +133,21 @@ export const prepareDeliveryNoteSaleItems = (sale) => {
         hasDocumentLine: Boolean(documentLine.documentPrefix || documentLine.documentSuffix),
         productName: buildDeliveryNotePrintableProductName(documentLine),
         productModel: product?.model || item?.productModel || '-',
-        price: unitPrice,
+        price: pricing.unitPrice,
         quantity: 0,
         unit: product?.unit?.name || item?.unit || 'ชิ้น',
         discount: 0,
-        barcode: '-',
+        barcode: item?.barcode || item?.stockItem?.barcode || '-',
         serialNumber: '-',
       });
     } else {
       const aggregate = grouped.get(key);
-      if (isSnItem && item?.id) aggregate.saleItemIds.push(Number(item.id));
-      if (!isSnItem && item?.id) aggregate.simpleItemIds.push(Number(item.id));
+      if (pricing.isSnItem && item?.id) aggregate.saleItemIds.push(Number(item.id));
+      if (!pricing.isSnItem && item?.id) aggregate.simpleItemIds.push(Number(item.id));
     }
 
     const aggregate = grouped.get(key);
-    aggregate.quantity += quantity;
-    aggregate.discount += discountEach;
+    aggregate.quantity = round2(aggregate.quantity + pricing.quantity);
   }
 
   return Array.from(grouped.values());

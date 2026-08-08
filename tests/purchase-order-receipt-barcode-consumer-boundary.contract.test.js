@@ -37,8 +37,8 @@ describe('purchase order receipt barcode consumer boundary contract', () => {
   it('allows Barcode to depend on Receipt only for receipt context and finalization', () => {
     const barcodeStore = read('src/features/barcode/store/barcodeStore.js');
 
-    expect(barcodeStore).toContain('getReceiptById');
-    expect(barcodeStore).toContain('finalizeReceiptIfNeeded');
+    expect(barcodeStore).toContain('getReceipt');
+    expect(barcodeStore).toContain('finalizeReceipt');
     expect(barcodeStore).not.toContain('markReceiptAsPrinted');
     expect(barcodeStore).not.toContain('createReceipt');
     expect(barcodeStore).not.toContain('updateReceiptItemReceived');

@@ -7,16 +7,34 @@ const STATUS_LABELS = Object.freeze({
   UNAVAILABLE: 'ไม่พบเครื่องพิมพ์เดิม',
 })
 
+const SCOPE_OPTIONS = Object.freeze([
+  Object.freeze({ value: 'WORKSTATION', label: 'เครื่องขายนี้' }),
+  Object.freeze({ value: 'BRANCH', label: 'ทั้งสาขา' }),
+  Object.freeze({ value: 'DOCUMENT_DEFAULT', label: 'ค่าเริ่มต้นของเอกสาร' }),
+])
+
+const AUTHORITY_LABELS = Object.freeze({
+  USER: 'ผู้ใช้งาน',
+  WORKSTATION: 'เครื่องขาย',
+  BRANCH: 'สาขา',
+  DOCUMENT_DEFAULT: 'ค่าเริ่มต้นของเอกสาร',
+  PLATFORM_DEFAULT: 'ค่าเริ่มต้นของระบบ',
+})
+
 const PrinterSettingsPanel = ({
   branchId,
   workstationId,
   discoverySelectionService,
+  printerScopeManagementService = null,
   printerTestService,
 }) => {
   const [printers, setPrinters] = useState([])
   const [preferences, setPreferences] = useState([])
-  const [selectedPurpose, setSelectedPurpose] = useState('RECEIPT')
+  const [selectedPurpose, setSelectedPurpose] = useState('SALE_RECEIPT')
+  const [selectedScope, setSelectedScope] = useState('WORKSTATION')
   const [selectedPrinterId, setSelectedPrinterId] = useState('')
+  const [resolvedPrinter, setResolvedPrinter] = useState(null)
+  const [resolvedAuthority, setResolvedAuthority] = useState(null)
   const [status, setStatus] = useState('IDLE')
   const [message, setMessage] = useState('')
 
@@ -24,20 +42,36 @@ const PrinterSettingsPanel = ({
     setStatus('LOADING')
     setMessage('')
     try {
-      const resolution = await discoverySelectionService.resolve({
-        branchId,
-        workstationId,
-        documentPurpose: selectedPurpose,
-      })
-      setPrinters(resolution.printers)
-      setPreferences(resolution.preference ? [resolution.preference] : [])
-      setSelectedPrinterId(resolution.preference?.printerProfileId || '')
+      if (printerScopeManagementService) {
+        const inspection = await printerScopeManagementService.inspect({
+          scopeType: selectedScope,
+          branchId,
+          workstationId,
+          documentPurpose: selectedPurpose,
+        })
+        setPrinters(inspection.printers)
+        setPreferences(inspection.preference ? [inspection.preference] : [])
+        setSelectedPrinterId(inspection.preference?.printerProfileId || '')
+        setResolvedPrinter(inspection.resolved?.printer || null)
+        setResolvedAuthority(inspection.resolved?.authorityLevel || null)
+      } else {
+        const resolution = await discoverySelectionService.resolve({
+          branchId,
+          workstationId,
+          documentPurpose: selectedPurpose,
+        })
+        setPrinters(resolution.printers)
+        setPreferences(resolution.preference ? [resolution.preference] : [])
+        setSelectedPrinterId(resolution.preference?.printerProfileId || '')
+        setResolvedPrinter(resolution.selectedPrinter || null)
+        setResolvedAuthority(resolution.preference ? 'WORKSTATION' : null)
+      }
       setStatus('READY')
     } catch (error) {
       setStatus('ERROR')
       setMessage(error.message || 'ไม่สามารถค้นหาเครื่องพิมพ์ได้')
     }
-  }, [branchId, discoverySelectionService, selectedPurpose, workstationId])
+  }, [branchId, discoverySelectionService, printerScopeManagementService, selectedPurpose, selectedScope, workstationId])
 
   useEffect(() => {
     load()
@@ -61,12 +95,22 @@ const PrinterSettingsPanel = ({
     setStatus('SAVING')
     setMessage('')
     try {
-      await discoverySelectionService.select({
-        branchId,
-        workstationId,
-        documentPurpose: selectedPurpose,
-        printerProfileId: selectedPrinterId,
-      })
+      if (printerScopeManagementService) {
+        await printerScopeManagementService.save({
+          scopeType: selectedScope,
+          branchId,
+          workstationId,
+          documentPurpose: selectedPurpose,
+          printerProfileId: selectedPrinterId,
+        })
+      } else {
+        await discoverySelectionService.select({
+          branchId,
+          workstationId,
+          documentPurpose: selectedPurpose,
+          printerProfileId: selectedPrinterId,
+        })
+      }
       setMessage('บันทึกเครื่องพิมพ์เรียบร้อยแล้ว')
       await load()
     } catch (error) {
@@ -100,11 +144,20 @@ const PrinterSettingsPanel = ({
   }
 
   const clearSelection = async () => {
-    discoverySelectionService.clear({
-      branchId,
-      workstationId,
-      documentPurpose: selectedPurpose,
-    })
+    if (printerScopeManagementService) {
+      printerScopeManagementService.clear({
+        scopeType: selectedScope,
+        branchId,
+        workstationId,
+        documentPurpose: selectedPurpose,
+      })
+    } else {
+      discoverySelectionService.clear({
+        branchId,
+        workstationId,
+        documentPurpose: selectedPurpose,
+      })
+    }
     setSelectedPrinterId('')
     setMessage('ล้างการตั้งค่าแล้ว')
     await load()
@@ -113,13 +166,32 @@ const PrinterSettingsPanel = ({
   return (
     <section className="space-y-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
       <div>
-        <h2 className="text-lg font-semibold text-slate-900">ตั้งค่าเครื่องพิมพ์ประจำเครื่องขาย</h2>
+        <h2 className="text-lg font-semibold text-slate-900">ตั้งค่าเครื่องพิมพ์ตามประเภทเอกสาร</h2>
         <p className="text-sm text-slate-600">
-          เลือกเครื่องพิมพ์แยกตามประเภทเอกสาร ระบบจะจำค่าตามสาขาและเครื่องขายนี้
+          กำหนดเครื่องพิมพ์ตามระดับที่ต้องการ ระบบจะแสดงระดับที่มีอำนาจจริงเมื่อใช้งาน
         </p>
       </div>
 
-      <div className="grid gap-3 md:grid-cols-2">
+      <div className={`grid gap-3 ${printerScopeManagementService ? 'md:grid-cols-3' : 'md:grid-cols-2'}`}>
+        {printerScopeManagementService && (
+          <label className="space-y-1 text-sm font-medium text-slate-700">
+            ระดับการตั้งค่า
+            <select
+              className="w-full rounded-lg border border-slate-300 px-3 py-2"
+              value={selectedScope}
+              onChange={(event) => {
+                setSelectedScope(event.target.value)
+                setSelectedPrinterId('')
+              }}
+              disabled={isBusy}
+            >
+              {SCOPE_OPTIONS.map((scope) => (
+                <option key={scope.value} value={scope.value}>{scope.label}</option>
+              ))}
+            </select>
+          </label>
+        )}
+
         <label className="space-y-1 text-sm font-medium text-slate-700">
           ประเภทเอกสาร
           <select
@@ -158,8 +230,12 @@ const PrinterSettingsPanel = ({
       </div>
 
       <div className="rounded-lg bg-slate-50 p-3 text-sm text-slate-700">
-        <div>สถานะ: {STATUS_LABELS[selectedRow?.status] || selectedRow?.status}</div>
-        {selectedRow?.preference && <div>เครื่องที่บันทึก: {selectedRow.preference.printerName}</div>}
+        <div>สถานะระดับนี้: {STATUS_LABELS[selectedRow?.status] || selectedRow?.status}</div>
+        {selectedRow?.preference && <div>เครื่องที่บันทึกระดับนี้: {selectedRow.preference.printerName}</div>}
+        {resolvedAuthority && (
+          <div>ระดับที่ใช้งานจริง: {AUTHORITY_LABELS[resolvedAuthority] || resolvedAuthority}</div>
+        )}
+        {resolvedPrinter && <div>เครื่องที่ใช้งานจริง: {resolvedPrinter.name}</div>}
         {selectedRow?.badges?.length > 0 && <div>{selectedRow.badges.join(' · ')}</div>}
       </div>
 
@@ -196,12 +272,12 @@ const PrinterSettingsPanel = ({
           onClick={clearSelection}
           disabled={isBusy || !selectedRow?.preference}
         >
-          ล้างการตั้งค่า
+          ล้างการตั้งค่าระดับนี้
         </button>
       </div>
     </section>
   )
 }
 
-export { PrinterSettingsPanel }
+export { AUTHORITY_LABELS, PrinterSettingsPanel, SCOPE_OPTIONS }
 export default PrinterSettingsPanel

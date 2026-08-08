@@ -1,14 +1,8 @@
-import { DOCUMENT_PURPOSES } from '../preferences/index.js'
+import { SYSTEM_DOCUMENT_PURPOSES } from '../preferences/index.js'
 
-const PURPOSE_LABELS = Object.freeze({
-  RECEIPT: 'ใบเสร็จ',
-  SHORT_TAX_INVOICE: 'ใบกำกับภาษีอย่างย่อ',
-  DELIVERY_NOTE: 'ใบส่งของ',
-  REPAIR_INTAKE: 'ใบรับซ่อม',
-  REPAIR_RETURN: 'ใบคืนงานซ่อม',
-  BARCODE_LABEL: 'ฉลากบาร์โค้ด',
-  A4_DOCUMENT: 'เอกสาร A4',
-})
+const PURPOSE_LABELS = Object.freeze(Object.fromEntries(
+  SYSTEM_DOCUMENT_PURPOSES.map((purpose) => [purpose.code, purpose.displayName]),
+))
 
 const describePrinter = (printer) => {
   const badges = []
@@ -27,7 +21,7 @@ const createPrinterSettingsRows = ({ preferences = [], printers = [] } = {}) => 
   )
   const printerById = new Map(printers.map((printer) => [printer.id, printer]))
 
-  return DOCUMENT_PURPOSES.map((documentPurpose) => {
+  return SYSTEM_DOCUMENT_PURPOSES.map(({ code: documentPurpose }) => {
     const preference = preferenceByPurpose.get(documentPurpose) || null
     const printer = preference ? printerById.get(preference.printerProfileId) || null : null
 

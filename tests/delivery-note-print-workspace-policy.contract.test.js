@@ -44,33 +44,110 @@ describe('delivery note print workspace policy contract', () => {
     });
   });
 
-  it('preserves SN and simple-item aggregation semantics', () => {
+  it('projects persisted final sale amounts without subtracting adjustment evidence twice', () => {
     const rows = prepareDeliveryNoteSaleItems({
       items: [
-        { id: 11, stockItemId: 101, product: { id: 1, name: 'Phone', unit: { name: 'เครื่อง' } }, price: 12000 },
-        { id: 12, stockItemId: 102, product: { id: 1, name: 'Phone', unit: { name: 'เครื่อง' } }, price: 12000 },
+        {
+          id: 11,
+          stockItemId: 101,
+          product: { id: 1, name: 'Phone', unit: { name: 'เครื่อง' } },
+          basePrice: 3500,
+          price: 3600,
+          discount: 0,
+        },
       ],
       simpleItems: [
-        { id: 21, product: { id: 2, name: 'Cable', unit: { name: 'เส้น' } }, unitPrice: 100, quantity: 2, discount: 10 },
-        { id: 22, product: { id: 2, name: 'Cable', unit: { name: 'เส้น' } }, unitPrice: 100, quantity: 3, discountAmount: 5 },
+        {
+          id: 21,
+          product: { id: 2, name: 'Cable', unit: { name: 'เส้น' } },
+          quantity: 2,
+          basePrice: 200,
+          price: 180,
+          discount: 20,
+        },
+      ],
+    });
+
+    const phone = rows.find((row) => row.productId === 1);
+    expect(phone.quantity).toBe(1);
+    expect(phone.price).toBe(3600);
+    expect(phone.discount).toBe(0);
+
+    const cable = rows.find((row) => row.productId === 2);
+    expect(cable.quantity).toBe(2);
+    expect(cable.price).toBe(90);
+    expect(cable.discount).toBe(0);
+
+    const documentTotal = rows.reduce((sum, row) => sum + row.price * row.quantity, 0);
+    expect(documentTotal).toBe(3780);
+  });
+
+  it('does not merge the same product when effective final unit prices differ', () => {
+    const rows = prepareDeliveryNoteSaleItems({
+      simpleItems: [
+        {
+          id: 21,
+          product: { id: 2, name: 'Cable', unit: { name: 'เส้น' } },
+          quantity: 2,
+          basePrice: 200,
+          price: 180,
+          discount: 20,
+        },
+        {
+          id: 22,
+          product: { id: 2, name: 'Cable', unit: { name: 'เส้น' } },
+          quantity: 3,
+          basePrice: 300,
+          price: 300,
+          discount: 0,
+        },
       ],
     });
 
     expect(rows).toHaveLength(2);
+    expect(rows.map((row) => row.price).sort((a, b) => a - b)).toEqual([90, 100]);
+    expect(rows.reduce((sum, row) => sum + row.price * row.quantity, 0)).toBe(480);
+  });
 
-    const phone = rows.find((row) => row.productId === 1);
-    expect(phone.quantity).toBe(2);
-    expect(phone.discount).toBe(0);
-    expect(phone.price).toBe(12000);
-    expect(phone.saleItemIds).toEqual([11, 12]);
-    expect(phone.simpleItemIds).toEqual([]);
+  it('supports server saleLines projections using lineAmount as final authority', () => {
+    const rows = prepareDeliveryNoteSaleItems({
+      saleLines: [
+        {
+          id: 31,
+          lineType: 'SIMPLE',
+          description: 'Service package',
+          quantity: 2,
+          unitAmount: 100,
+          discountAmount: 20,
+          lineAmount: 220,
+        },
+      ],
+    });
 
-    const cable = rows.find((row) => row.productId === 2);
-    expect(cable.quantity).toBe(5);
-    expect(cable.discount).toBe(15);
-    expect(cable.price).toBe(100);
-    expect(cable.saleItemIds).toEqual([]);
-    expect(cable.simpleItemIds).toEqual([21, 22]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].productName).toBe('Service package');
+    expect(rows[0].quantity).toBe(2);
+    expect(rows[0].price).toBe(110);
+    expect(rows[0].discount).toBe(0);
+  });
+
+  it('preserves compatibility for older unit-price projections', () => {
+    const rows = prepareDeliveryNoteSaleItems({
+      simpleItems: [
+        {
+          id: 21,
+          product: { id: 2, name: 'Cable', unit: { name: 'เส้น' } },
+          unitPrice: 100,
+          quantity: 2,
+          discount: 10,
+        },
+      ],
+    });
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0].quantity).toBe(2);
+    expect(rows[0].price).toBe(90);
+    expect(rows[0].discount).toBe(0);
   });
 
   it('preserves branch identity, address projection, and tax fallback', () => {

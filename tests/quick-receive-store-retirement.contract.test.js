@@ -6,15 +6,13 @@ const root = process.cwd();
 const exists = (file) => fs.existsSync(path.join(root, file));
 const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 
-describe('legacy Quick Receive store retirement', () => {
+describe('legacy Quick Receive boundary retirement', () => {
   it('retires the unconsumed Quick Receive Zustand store', () => {
     expect(exists('src/features/quickReceive/store/quickReceiveStore.js')).toBe(false);
   });
 
-  it('keeps only live legacy Quick Receive API compatibility adapters available', () => {
-    const quickReceiveApi = read('src/features/quickReceive/api/quickReceiveApi.js');
-    expect(quickReceiveApi).not.toContain('getQuickReceiveDropdowns');
-    expect(quickReceiveApi).toContain('quickStockIntakeExistingApi');
+  it('retires the legacy Quick Receive API compatibility file', () => {
+    expect(exists('src/features/quickReceive/api/quickReceiveApi.js')).toBe(false);
   });
 
   it('retires Quick Receive product adapters after Quick Stock assumes ownership', () => {

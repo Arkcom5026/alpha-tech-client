@@ -3,30 +3,24 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const root = process.cwd();
+const exists = (file) => fs.existsSync(path.join(root, file));
 const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 
 describe('dead Quick Receive API retirement', () => {
-  it('retires unused preview and commit APIs from the legacy Quick Receive boundary', () => {
-    const quickReceiveApi = read('src/features/quickReceive/api/quickReceiveApi.js');
-    expect(quickReceiveApi).not.toContain('previewQuickReceive');
-    expect(quickReceiveApi).not.toContain('createQuickReceive');
-    expect(quickReceiveApi).not.toContain('stock/simple/quick-receive/preview');
-    expect(quickReceiveApi).not.toContain("apiClient.post('stock/simple/quick-receive'");
+  it('retires the final legacy Quick Receive API boundary', () => {
+    expect(exists('src/features/quickReceive/api/quickReceiveApi.js')).toBe(false);
   });
 
-  it('retires only helpers that became orphaned while preserving live command-key support', () => {
-    const quickReceiveApi = read('src/features/quickReceive/api/quickReceiveApi.js');
+  it('keeps command-key behavior inside the Quick Receipt owner', () => {
     const quickReceiptSessionApi = read('src/features/receiving/quick-stock/api/quickReceiptSessionApi.js');
-    expect(quickReceiveApi).not.toContain('normalizeItems');
-    expect(quickReceiveApi).toContain('makeIdempotencyKey');
     expect(quickReceiptSessionApi).toContain('makeIdempotencyKey');
+    expect(quickReceiptSessionApi).toContain('globalThis.crypto?.randomUUID');
+    expect(quickReceiptSessionApi).not.toContain('@/features/quickReceive/api/quickReceiveApi');
   });
 
-  it('keeps only live Quick Stock compatibility adapters available', () => {
-    const quickReceiveApi = read('src/features/quickReceive/api/quickReceiveApi.js');
-    expect(quickReceiveApi).not.toContain('getQuickReceiveDropdowns');
-    expect(quickReceiveApi).toContain('quickReceiveExistingProduct');
-    expect(quickReceiveApi).toContain('quickStockIntakeExistingApi');
-    expect(quickReceiveApi).toContain('commitQuickStockExistingIntakeApi');
+  it('keeps existing-product intake transport inside Quick Stock', () => {
+    const intakeApi = read('src/features/receiving/quick-stock/api/quickStockIntakeApi.js');
+    expect(intakeApi).toContain('commitQuickStockExistingIntakeApi');
+    expect(intakeApi).toContain("apiClient.post('quick-stock/existing'");
   });
 });

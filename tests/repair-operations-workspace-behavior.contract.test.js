@@ -19,6 +19,12 @@ const repairQueuePolicy = read(
 const repairDetailWorkspace = read(
   'src/features/repair/detail/workspace/components/RepairDetailWorkspace.jsx'
 );
+const warrantyClaimQueueWorkspace = read(
+  'src/features/repair/claimQueue/workspace/components/WarrantyClaimQueueWorkspace.jsx'
+);
+const warrantyClaimQueuePolicy = read(
+  'src/features/repair/claimQueue/workspace/policies/warrantyClaimQueuePolicy.js'
+);
 
 const runtimePages = [jobsPage, detailPage, claimsPage, claimDetailPage];
 
@@ -43,12 +49,14 @@ describe('repair operations workspace behavior contract', () => {
     expect(jobsPage).toContain('/pos/services/repairs/${job.id}');
   });
 
-  it('preserves warranty claim queue search, active-lane projection, and navigation', () => {
+  it('preserves warranty claim queue search, active-lane projection, and navigation across workspace ownership', () => {
     expect(claimsPage).toContain("const [query, setQuery] = useState('')");
-    expect(claimsPage).toContain('groupByStatus(filtered, CLAIM_LANES)');
-    expect(claimsPage).toContain('.filter((lane) => lane.items.length > 0)');
-    expect(claimsPage).toContain('claim.claimAsset?.serialNumber');
-    expect(claimsPage).toContain('claim.device?.imei');
+    expect(claimsPage).toContain('projectWarrantyClaimQueue(claims, query)');
+    expect(claimsPage).toContain('WarrantyClaimQueueWorkspace');
+    expect(warrantyClaimQueuePolicy).toContain('claim?.claimAsset?.serialNumber');
+    expect(warrantyClaimQueuePolicy).toContain('claim?.device?.imei');
+    expect(warrantyClaimQueuePolicy).toContain('groupByStatus(filtered, CLAIM_LANES)');
+    expect(warrantyClaimQueuePolicy).toContain('lane.items.length > 0');
     expect(claimsPage).toContain('/pos/services/warranty-claims/${claim.id}');
   });
 
@@ -91,19 +99,25 @@ describe('repair operations workspace behavior contract', () => {
   });
 
   it('keeps loading, error, empty, and retry presentation semantics intact across workspace ownership', () => {
-    for (const source of [repairQueueWorkspace, repairDetailWorkspace]) {
+    for (const source of [
+      repairQueueWorkspace,
+      repairDetailWorkspace,
+      warrantyClaimQueueWorkspace,
+    ]) {
       expect(source).toContain('RuntimeStatePanel');
       expect(source).toContain('loading={loading}');
       expect(source).toContain('error={error}');
       expect(source).toContain('onRetry={onRetry}');
     }
 
-    for (const source of [claimsPage, claimDetailPage]) {
-      expect(source).toContain('RuntimeStatePanel');
-      expect(source).toContain('loading={loading}');
-      expect(source).toContain('error={error}');
-      expect(source).toContain('onRetry=');
-    }
+    expect(warrantyClaimQueueWorkspace).toContain('filteredClaims.length');
+    expect(warrantyClaimQueueWorkspace).toContain('activeLanes.length');
+
+    expect(claimDetailPage).toContain('RuntimeStatePanel');
+    expect(claimDetailPage).toContain('loading={loading}');
+    expect(claimDetailPage).toContain('error={error}');
+    expect(claimDetailPage).toContain('onRetry=');
+
     expect(intakePage).toContain('RuntimeStatePanel');
     expect(intakePage).toContain('loading={runtime.loading}');
     expect(intakePage).toContain('error={runtime.error}');

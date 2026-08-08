@@ -3,6 +3,7 @@ const SaleReturnSearchWorkspace = ({
   onQueryChange,
   sales,
   error,
+  helpLabel,
   onSelectSale,
   onOpenHelp,
 }) => (
@@ -18,7 +19,7 @@ const SaleReturnSearchWorkspace = ({
           className="rounded-xl border border-orange-200 bg-orange-50 px-4 py-2 font-bold text-orange-700"
           onClick={onOpenHelp}
         >
-          คู่มือ
+          {helpLabel}
         </button>
       </div>
       <input

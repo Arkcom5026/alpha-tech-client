@@ -13,53 +13,63 @@ const readFeatureSource = (dir) => readdirSync(dir).flatMap((name) => {
 
 const source = readFeatureSource(featureRoot);
 
+const expectThinAdapter = (pagePath, workspaceName) => {
+  const page = read(pagePath);
+  expect(page).toContain(`import ${workspaceName} from '../workspaces/${workspaceName}'`);
+  expect(page).toContain(`export default ${workspaceName}`);
+};
+
 describe('employee workspace behavior lock', () => {
   it('preserves tenant-aware list loading and role/branch filtering', () => {
-    const listPage = read('pages/ListEmployeePage.jsx');
-    expect(listPage).toContain('useAuthStore');
-    expect(listPage).toContain('shopSlug');
-    expect(listPage).toContain("['admin', 'superadmin']");
-    expect(listPage).toContain('getBranchDropdowns');
-    expect(listPage).toContain('branchFilter');
-    expect(listPage).toContain('getAllEmployees');
-    expect(listPage).toContain('limit: 10000');
+    const listWorkspace = read('workspaces/EmployeeListWorkspace.jsx');
+    expect(listWorkspace).toContain('useAuthStore');
+    expect(listWorkspace).toContain('shopSlug');
+    expect(listWorkspace).toContain("['admin', 'superadmin']");
+    expect(listWorkspace).toContain('getBranchDropdowns');
+    expect(listWorkspace).toContain('branchFilter');
+    expect(listWorkspace).toContain('getAllEmployees');
+    expect(listWorkspace).toContain('limit: 10000');
+    expectThinAdapter('pages/ListEmployeePage.jsx', 'EmployeeListWorkspace');
   });
 
   it('preserves client-side search, status filtering, and pagination semantics', () => {
-    const listPage = read('pages/ListEmployeePage.jsx');
-    expect(listPage).toContain("filters.search");
-    expect(listPage).toContain("filters.status");
-    expect(listPage).toContain('filtered.slice');
-    expect(listPage).toContain('setPage(1)');
-    expect(listPage).toContain('EmployeeTable');
+    const listWorkspace = read('workspaces/EmployeeListWorkspace.jsx');
+    expect(listWorkspace).toContain('filters.search');
+    expect(listWorkspace).toContain('filters.status');
+    expect(listWorkspace).toContain('filtered.slice');
+    expect(listWorkspace).toContain('setPage(1)');
+    expect(listWorkspace).toContain('EmployeeTable');
   });
 
   it('preserves detail loading, status projection, and activate/deactivate lifecycle', () => {
-    const viewPage = read('pages/ViewEmployeePage.jsx');
-    expect(viewPage).toContain('getEmployeeById');
-    expect(viewPage).toContain('setEmployeeActive');
-    expect(viewPage).toContain("status === 'pending'");
-    expect(viewPage).toContain('window.confirm');
-    expect(viewPage).toContain("status: nextActive ? 'active' : 'inactive'");
-    expect(viewPage).toContain('/pos/settings/employee/edit/');
+    const detailWorkspace = read('workspaces/EmployeeDetailWorkspace.jsx');
+    expect(detailWorkspace).toContain('getEmployeeById');
+    expect(detailWorkspace).toContain('setEmployeeActive');
+    expect(detailWorkspace).toContain("status === 'pending'");
+    expect(detailWorkspace).toContain('window.confirm');
+    expect(detailWorkspace).toContain("status: nextActive ? 'active' : 'inactive'");
+    expect(detailWorkspace).toContain('/pos/settings/employee/edit/');
+    expectThinAdapter('pages/ViewEmployeePage.jsx', 'EmployeeDetailWorkspace');
   });
 
-  it('preserves superadmin branch-edit authority on the canonical edit page', () => {
-    const editPage = read('pages/EditEmployeePage.jsx');
-    expect(editPage).toContain('useAuthStore');
-    expect(editPage).toContain("=== 'superadmin'");
-    expect(editPage).toContain('getBranchDropdowns');
-    expect(editPage).toContain('updateEmployee');
-    expect(editPage).toContain('canEditBranch={isSuperAdmin}');
-    expect(editPage).toContain('branchOptions={branches}');
+  it('preserves superadmin branch-edit authority on the canonical edit workspace', () => {
+    const editWorkspace = read('workspaces/EmployeeEditWorkspace.jsx');
+    expect(editWorkspace).toContain('useAuthStore');
+    expect(editWorkspace).toContain("=== 'superadmin'");
+    expect(editWorkspace).toContain('getBranchDropdowns');
+    expect(editWorkspace).toContain('updateEmployee');
+    expect(editWorkspace).toContain('canEditBranch={isSuperAdmin}');
+    expect(editWorkspace).toContain('branchOptions={branches}');
+    expectThinAdapter('pages/EditEmployeePage.jsx', 'EmployeeEditWorkspace');
   });
 
-  it('preserves the legacy employee form page as a distinct edit surface until retirement', () => {
-    const formPage = read('pages/EmployeeFormPage.jsx');
-    expect(formPage).toContain('getEmployeeById');
-    expect(formPage).toContain('updateEmployee');
-    expect(formPage).toContain("shopSlug || 'advancetech'");
-    expect(formPage).toContain('showUserSearch={false}');
+  it('preserves the legacy employee form workspace as a distinct edit surface until retirement', () => {
+    const legacyWorkspace = read('workspaces/LegacyEmployeeFormWorkspace.jsx');
+    expect(legacyWorkspace).toContain('getEmployeeById');
+    expect(legacyWorkspace).toContain('updateEmployee');
+    expect(legacyWorkspace).toContain("shopSlug || 'advancetech'");
+    expect(legacyWorkspace).toContain('showUserSearch={false}');
+    expectThinAdapter('pages/EmployeeFormPage.jsx', 'LegacyEmployeeFormWorkspace');
   });
 
   it('preserves employee form normalization and branch submission policy', () => {

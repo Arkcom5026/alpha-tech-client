@@ -7,6 +7,8 @@ const pagePath = 'src/features/deliveryNote/pages/PrintDeliveryNotePage.jsx';
 const page = read(pagePath);
 const workspaceApi = read('src/features/sales/documents/workspace/api/saleDocumentWorkspaceApi.js');
 const routes = read('src/routes/partner/salesRoutes.jsx');
+const printShell = read('src/features/deliveryNote/print/workspace/components/DeliveryNotePrintShell.jsx');
+const printPolicy = read('src/features/deliveryNote/print/workspace/policies/deliveryNotePrintPolicy.js');
 
 describe('Delivery Note server authority cutover contract', () => {
   it('uses the shared document workspace boundary with the required command shape', () => {
@@ -45,8 +47,10 @@ describe('Delivery Note server authority cutover contract', () => {
 
   it('preserves the Delivery Note projection and renderer', () => {
     expect(page).toContain('preparedSaleItems');
-    expect(page).toContain('buildBranchFullAddress');
-    expect(page).toContain('<DeliveryNoteForm');
+    expect(page).toContain('buildDeliveryNoteBranchConfig');
+    expect(printPolicy).toContain('buildDeliveryNoteBranchAddress');
+    expect(page).toContain('<DeliveryNotePrintShell');
+    expect(printShell).toContain('<DeliveryNoteForm');
     expect(page).toContain('hideDate={hideDate}');
     expect(page).toContain('saleItems={preparedSaleItems}');
   });

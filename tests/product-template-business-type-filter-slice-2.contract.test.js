@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import process from 'node:process';
 import { describe, expect, it } from 'vitest';
 
 const root = process.cwd();
@@ -11,6 +12,8 @@ describe('product template business-type filter slice 2 contract', () => {
     const mapper = read('src/features/templateCandidate/utils/candidateMapper.js');
     const businessType = read('src/features/templateCandidate/utils/businessType.js');
     const api = read('src/features/templateCandidate/api/templateCandidateApi.js');
+    const businessTypeScope = read('src/features/templateCandidate/workspace/components/CandidateBusinessTypeScope.jsx');
+    const reviewQueue = read('src/features/templateCandidate/workspace/components/CandidateReviewQueue.jsx');
 
     for (const value of ['GENERAL', 'IT', 'ELECTRONICS', 'CONSTRUCTION', 'GROCERY']) {
       expect(businessType).toContain(`value: '${value}'`);
@@ -19,12 +22,13 @@ describe('product template business-type filter slice 2 contract', () => {
     expect(page).toMatch(/businessType:\s*''/);
     expect(page).toMatch(/if \(!next\?\.businessType\) return Promise\.resolve\(null\)/);
     expect(page).not.toMatch(/React\.useEffect\([\s\S]*loadQueue/);
-    expect(page).toContain('BUSINESS_TYPE_OPTIONS.map');
+    expect(page).toContain('options={BUSINESS_TYPE_OPTIONS}');
+    expect(businessTypeScope).toContain('options.map');
     expect(page).toContain('handleBusinessType');
-    expect(page).toContain('Queue จะยังไม่โหลดจนกว่าจะเลือกประเภทธุรกิจ');
-    expect(page).toContain('getBusinessTypeLabel(candidate.businessType)');
+    expect(businessTypeScope).toContain('Queue จะยังไม่โหลดจนกว่าจะเลือกประเภทธุรกิจ');
+    expect(reviewQueue).toContain('getBusinessTypeLabel(candidate.businessType)');
     expect(page).toContain('...filters, status, page: 1');
-    expect(page).toContain('...filters, reviewerId: String(item.reviewerId), page: 1');
+    expect(page).toContain('...filters, reviewerId: String(reviewerId), page: 1');
     expect(page).toContain('...filters, page');
 
     expect(mapper).toMatch(/businessType:\s*candidate\.sourceBranch\?\.businessType/);

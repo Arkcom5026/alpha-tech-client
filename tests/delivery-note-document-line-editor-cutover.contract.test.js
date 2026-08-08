@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import process from 'node:process';
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
 
@@ -11,6 +12,7 @@ const workspaceIndexPath = 'src/features/sales/documents/workspace/index.js';
 const workspaceApiPath = 'src/features/sales/documents/workspace/api/saleDocumentWorkspaceApi.js';
 const rootStorePath = 'src/features/sales/store/salesStore.js';
 const documentSlicePath = 'src/features/sales/documents/store/saleDocumentRuntimeSlice.js';
+const printShellPath = 'src/features/deliveryNote/print/workspace/components/DeliveryNotePrintShell.jsx';
 
 test('Delivery Note consumes the shared document line editor', () => {
   const page = read(pagePath);
@@ -36,13 +38,15 @@ test('Delivery Note no longer imports or calls the legacy Sales Store', () => {
 test('server authority uses the workspace command shape and preserves the renderer', () => {
   const page = read(pagePath);
   const workspaceApi = read(workspaceApiPath);
+  const printShell = read(printShellPath);
 
   assert.match(page, /loadSaleDocument\(\{ saleId \}\)/);
   assert.doesNotMatch(page, /loadSaleDocument\(saleId\)/);
   assert.match(workspaceApi, /loadSaleDocument = async \(\{ saleId, paymentId \} = \{\}\)/);
   assert.match(page, /setCurrentSale\(sale \|\| null\)/);
   assert.doesNotMatch(page, /Math\.random\(\)/);
-  assert.match(page, /<DeliveryNoteForm/);
+  assert.match(page, /<DeliveryNotePrintShell/);
+  assert.match(printShell, /<DeliveryNoteForm/);
   assert.match(page, /saleItems=\{preparedSaleItems\}/);
   assert.match(page, /hideDate=\{hideDate\}/);
 });

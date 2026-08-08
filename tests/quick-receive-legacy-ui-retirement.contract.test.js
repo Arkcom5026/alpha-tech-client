@@ -29,6 +29,6 @@ describe('quick receive legacy UI retirement contract', () => {
   it('preserves Quick Receive compatibility APIs during UI retirement', () => {
     expect(exists('src/features/quickReceive/api/quickReceiveApi.js')).toBe(true);
     expect(exists('src/features/quickReceive/api/quickReceiveProductApi.js')).toBe(true);
-    expect(exists('src/features/quickReceive/store/quickReceiveStore.js')).toBe(true);
+    expect(exists('src/features/quickReceive/store/quickReceiveStore.js')).toBe(false);
   });
 });

@@ -36,6 +36,26 @@ test('maps A4 settings tests to a driver-compatible document type', () => {
   assert.equal(job.snapshot.documentPurpose, 'A4_DOCUMENT')
 })
 
+test('maps server document-purpose codes to bridge-compatible test documents', () => {
+  const receipt = createPrinterTestJob({
+    branchId: 'branch-1',
+    workstationId: 'counter-1',
+    documentPurpose: 'SALE_RECEIPT',
+    printerProfileId: 'windows:receipt',
+    now: () => 1,
+  })
+  const fullTaxInvoice = createPrinterTestJob({
+    branchId: 'branch-1',
+    workstationId: 'counter-1',
+    documentPurpose: 'FULL_TAX_INVOICE',
+    printerProfileId: 'windows:a4',
+    now: () => 1,
+  })
+
+  assert.equal(receipt.documentType, 'RECEIPT')
+  assert.equal(fullTaxInvoice.documentType, 'DELIVERY_NOTE')
+})
+
 test('dispatches the test job and requires printed confirmation', async () => {
   const calls = []
   const service = createPrinterTestService({

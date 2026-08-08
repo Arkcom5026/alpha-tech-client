@@ -7,6 +7,8 @@ import {
 } from '../preferences/index.js'
 import { createPrinterScopeManagementService } from './printerScopeManagementService.js'
 import { createPrinterTestService } from './printerTestService.js'
+import { createPrinterSettingsApi } from './printerSettingsApi.js'
+import { createServerPrinterSettingsService } from './serverPrinterSettingsService.js'
 
 const WORKSTATION_STORAGE_KEY = 'alpha-tech.printing.workstation-id.v1'
 
@@ -36,6 +38,7 @@ const createPrinterSettingsRuntime = ({
   fetchImpl = globalThis.fetch,
   cryptoImpl = globalThis.crypto,
   baseUrl,
+  apiClient,
 } = {}) => {
   const preferenceStore = createPrinterPreferenceStore({ storage })
   const hierarchyStore = createHierarchicalPrinterPreferenceStore({ storage })
@@ -55,6 +58,8 @@ const createPrinterSettingsRuntime = ({
     hierarchicalResolverService,
   })
   const printerTestService = createPrinterTestService({ transport })
+  const printerSettingsApi = createPrinterSettingsApi({ client: apiClient })
+  const serverPrinterSettingsService = createServerPrinterSettingsService({ api: printerSettingsApi })
 
   return Object.freeze({
     workstationId: resolveWorkstationId({ storage, cryptoImpl }),
@@ -65,6 +70,8 @@ const createPrinterSettingsRuntime = ({
     hierarchicalResolverService,
     printerScopeManagementService,
     printerTestService,
+    printerSettingsApi,
+    serverPrinterSettingsService,
   })
 }
 

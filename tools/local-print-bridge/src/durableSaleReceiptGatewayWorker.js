@@ -43,6 +43,7 @@ const createDurableSaleReceiptGatewayWorker = ({
   credentialVersion = Number(process.env.ALPHA_PRINT_BRIDGE_GATEWAY_CREDENTIAL_VERSION || 1),
   printerProfileId = process.env.ALPHA_PRINT_BRIDGE_DURABLE_SALE_RECEIPT_PRINTER_ID || '',
   confirmation = process.env.ALPHA_PRINT_BRIDGE_DURABLE_SALE_RECEIPT_CONFIRMATION || '',
+  targetJobId = process.env.ALPHA_PRINT_BRIDGE_DURABLE_SALE_RECEIPT_JOB_ID || '',
   pollIntervalMs = positiveInteger(process.env.ALPHA_PRINT_BRIDGE_DURABLE_SALE_RECEIPT_POLL_MS, 5000),
   leaseDurationMs = positiveInteger(process.env.ALPHA_PRINT_BRIDGE_DURABLE_SALE_RECEIPT_LEASE_MS, 15 * 60 * 1000),
   sessionDurationMs = positiveInteger(process.env.ALPHA_PRINT_BRIDGE_GATEWAY_SESSION_MS, 60 * 60 * 1000),
@@ -66,6 +67,7 @@ const createDurableSaleReceiptGatewayWorker = ({
   const normalizedGatewayId = String(gatewayId || '').trim()
   const normalizedPrinterProfileId = String(printerProfileId || '').trim()
   const normalizedConfirmation = String(confirmation || '')
+  const normalizedTargetJobId = String(targetJobId || '').trim()
   const blockedJobIds = new Set()
   const inFlightJobIds = new Set()
   let authority = null
@@ -106,6 +108,7 @@ const createDurableSaleReceiptGatewayWorker = ({
       && purposeCode === 'SALE_RECEIPT'
       && ['PENDING', 'LEASED'].includes(job?.status)
       && typeof job?.jobId === 'string'
+      && (!normalizedTargetJobId || job.jobId === normalizedTargetJobId)
       && !blockedJobIds.has(job.jobId)
       && !inFlightJobIds.has(job.jobId)
   }) || null
@@ -217,6 +220,8 @@ const createDurableSaleReceiptGatewayWorker = ({
         enabled,
         gatewayConfigured: Boolean(normalizedGatewayId),
         exactPrinterConfigured: Boolean(normalizedPrinterProfileId),
+        targetJobConfigured: Boolean(normalizedTargetJobId),
+        targetJobId: normalizedTargetJobId || null,
         serverBaseUrlConfigured: Boolean(normalizedBaseUrl),
         authorizationConfigured: Boolean(String(authorization || '').trim()),
         pollIntervalMs,

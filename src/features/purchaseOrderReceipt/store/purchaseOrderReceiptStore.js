@@ -239,25 +239,6 @@ const usePurchaseOrderReceiptStore = create((set, get) => ({
     }
   },
 
-  cancelPurchaseOrderAction: async (poId) => {
-    try {
-      set({ loading: true, error: null });
-      const res = await updatePurchaseOrderStatus({ id: Number(poId), status: 'CANCELLED' });
-
-      set((state) => ({
-        purchaseOrdersForReceipt: state.purchaseOrdersForReceipt.filter((po) => po.id !== Number(poId)),
-        loading: false,
-        error: null,
-      }));
-
-      return res;
-    } catch (err) {
-      console.error('❌ ดำเนินการยกเลิกเอกสารใบสั่งซื้อจัดคลังไม่สำเร็จ:', err);
-      set({ error: err, loading: false });
-      throw err;
-    }
-  },
-
   addReceiptItemAction: async (payload) => {
     try {
       set({ error: null });

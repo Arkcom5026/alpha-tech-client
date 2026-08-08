@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const root = process.cwd();
+const exists = (file) => fs.existsSync(path.join(root, file));
 const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 
 describe('quick stock dropdown transport ownership', () => {
@@ -19,11 +20,11 @@ describe('quick stock dropdown transport ownership', () => {
     expect(quickStockApi).toContain('parseApiError');
   });
 
-  it('retires the legacy Quick Receive dropdown transport while preserving live compatibility helpers', () => {
-    const quickReceiveApi = read('src/features/quickReceive/api/quickReceiveApi.js');
-    expect(quickReceiveApi).not.toContain('getQuickReceiveDropdowns');
-    expect(quickReceiveApi).not.toContain('quick-stock/dropdowns');
-    expect(quickReceiveApi).toContain('makeIdempotencyKey');
-    expect(quickReceiveApi).toContain('quickStockIntakeExistingApi');
+  it('keeps Quick Stock independent from the retired Quick Receive API boundary', () => {
+    expect(exists('src/features/quickReceive/api/quickReceiveApi.js')).toBe(false);
+    const quickStockApi = read('src/features/receiving/quick-stock/api/quickStockApi.js');
+    const intakeApi = read('src/features/receiving/quick-stock/api/quickStockIntakeApi.js');
+    expect(quickStockApi).not.toContain('@/features/quickReceive/api/quickReceiveApi');
+    expect(intakeApi).toContain('commitQuickStockExistingIntakeApi');
   });
 });

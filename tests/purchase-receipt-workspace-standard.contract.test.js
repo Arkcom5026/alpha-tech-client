@@ -9,6 +9,9 @@ const read = (relativePath) => fs.readFileSync(path.join(root, relativePath), 'u
 const assertIncludes = (source, value, message) => {
   if (!source.includes(value)) throw new Error(message || `Expected source to include: ${value}`);
 };
+const assertExcludes = (source, value, message) => {
+  if (source.includes(value)) throw new Error(message || `Expected source to exclude: ${value}`);
+};
 const assertBefore = (source, first, second, message) => {
   const firstIndex = source.indexOf(first);
   const secondIndex = source.indexOf(second);
@@ -21,6 +24,7 @@ const header = read('src/features/purchaseOrderReceipt/components/ReceiptWorkspa
 const summary = read('src/features/purchaseOrderReceipt/components/ReceiptSummary.jsx');
 const statusBadge = read('src/features/purchaseOrderReceipt/components/ReceiptStatusBadge.jsx');
 const feedback = read('src/features/purchaseOrderReceipt/components/ReceiptFeedback.jsx');
+const purchaseOrderLifecycle = read('src/features/purchaseOrder/lifecycle/index.js');
 
 assertIncludes(page, 'ReceiptWorkspaceHeader', 'Receipt page must use the workspace header');
 assertIncludes(page, 'ReceiptSummary', 'Receipt page must expose status summary');
@@ -43,11 +47,17 @@ assertIncludes(table, 'md:hidden', 'Receipt results must expose mobile cards');
 assertIncludes(table, 'md:block', 'Receipt results must preserve desktop table layout');
 assertIncludes(table, '<table', 'Receipt results must preserve desktop table semantics');
 assertIncludes(table, 'min-h-11', 'Receipt actions must remain touch sized');
-assertIncludes(table, 'cancelPurchaseOrderAction', 'Cancel purchase order authority must remain available');
+assertIncludes(table, "@/features/purchaseOrder/lifecycle", 'Receipt cancellation must consume Purchase Order public lifecycle boundary');
+assertIncludes(table, 'cancelPurchaseOrder(id)', 'Receipt UI must coordinate cancellation through Purchase Order');
+assertIncludes(table, 'fetchPurchaseOrdersForReceiptAction', 'Receipt UI must refresh eligibility after Purchase Order cancellation');
+assertExcludes(table, 'cancelPurchaseOrderAction', 'Receipt UI must not use Receipt-owned Purchase Order cancellation mutation');
 assertIncludes(table, '/pos/purchases/receipt/create/', 'Receipt navigation authority must remain available');
 assertIncludes(table, 'window.confirm', 'Cancel action must preserve explicit confirmation');
 assertIncludes(table, 'ReceiptStatusBadge', 'Receipt status projection must remain visible');
 assertIncludes(table, 'ไม่พบรายการที่ตรงกับเงื่อนไข', 'Receipt empty state must remain explicit');
 assertIncludes(statusBadge, 'aria-label={`สถานะ ${config.label}`}', 'Receipt status badge must remain accessible');
+
+assertIncludes(purchaseOrderLifecycle, 'cancelPurchaseOrder', 'Purchase Order must expose cancellation as lifecycle authority');
+assertIncludes(purchaseOrderLifecycle, "status: 'CANCELLED'", 'Purchase Order cancellation must preserve CANCELLED transition');
 
 console.log('Purchase receipt workspace standard contract: PASS');

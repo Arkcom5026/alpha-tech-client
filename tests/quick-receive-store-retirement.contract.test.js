@@ -17,13 +17,13 @@ describe('legacy Quick Receive store retirement', () => {
     expect(quickReceiveApi).toContain('quickStockIntakeExistingApi');
   });
 
-  it('keeps Quick Receive product adapters available behind Quick Stock', () => {
-    const quickReceiveProductApi = read('src/features/quickReceive/api/quickReceiveProductApi.js');
-    expect(quickReceiveProductApi).toContain('getQuickReceiveOperationalProducts');
-    expect(quickReceiveProductApi).toContain('getQuickReceiveTemplateProducts');
+  it('retires Quick Receive product adapters after Quick Stock assumes ownership', () => {
+    expect(exists('src/features/quickReceive/api/quickReceiveProductApi.js')).toBe(false);
 
     const quickStockApi = read('src/features/receiving/quick-stock/api/quickStockApi.js');
     expect(quickStockApi).not.toContain('@/features/quickReceive/api/quickReceiveApi');
-    expect(quickStockApi).toContain('@/features/quickReceive/api/quickReceiveProductApi');
+    expect(quickStockApi).not.toContain('@/features/quickReceive/api/quickReceiveProductApi');
+    expect(quickStockApi).toContain("apiClient.get('products/pos/search'");
+    expect(quickStockApi).toContain("apiClient.get('products/template/search'");
   });
 });

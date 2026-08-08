@@ -14,8 +14,8 @@ const runtime = fs.readFileSync(runtimePath, 'utf8')
 describe('bill short tax print workspace runtime cutover contract', () => {
   it('cuts thermal browser lifecycle over to the dedicated runtime owner', () => {
     expect(page).toContain('useBillShortTaxPrintRuntime({')
-    expect(page).toContain('ref={printRuntime.printRootRef}')
-    expect(page).toContain('onClick={printRuntime.printAndReturnToSale}')
+    expect(page).toContain('printRootRef={printRuntime.printRootRef}')
+    expect(page).toContain('onPrint={printRuntime.printAndReturnToSale}')
     expect(runtime).toContain('const printRootRef = useRef(null)')
     expect(runtime).toContain('const printAndReturnToSale = useCallback')
   })
@@ -35,7 +35,7 @@ describe('bill short tax print workspace runtime cutover contract', () => {
     expect(page).toContain('useBillStore()')
     expect(page).toContain('loadSaleByIdAction(')
     expect(page).toContain('useSaleDocumentLineEditor')
-    expect(page).toContain('documentLineEditor.actions.save')
+    expect(page).toContain('documentLineEditor={documentLineEditor}')
   })
 
   it('keeps the runtime owner free of bill hydration and mutation authority', () => {

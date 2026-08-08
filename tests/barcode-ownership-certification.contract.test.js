@@ -75,4 +75,12 @@ describe('barcode ownership certification contract', () => {
       expect(store).not.toContain(token);
     }
   });
+
+  it('requires Receipt dependencies to cross public feature boundaries', () => {
+    const store = read('src/features/barcode/store/barcodeStore.js');
+
+    expect(store).toContain("@/features/purchaseOrderReceipt/finalization");
+    expect(store).toContain("@/features/purchaseOrderReceipt/query");
+    expect(store).not.toContain("@/features/purchaseOrderReceipt/api/purchaseOrderReceiptApi");
+  });
 });

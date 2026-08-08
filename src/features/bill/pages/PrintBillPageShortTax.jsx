@@ -1,21 +1,20 @@
 // src/features/bill/pages/PrintBillPageShortTax.jsx
 // 🏛️ Premium Next-Gen POS Print Page: (Short Thermal Receipt Core Logic Restored)
 
-import { useCallback, useEffect, useMemo, useRef } from 'react'
+import { useCallback, useEffect, useMemo } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import BillLayoutShortTax from '../components/BillLayoutShortTax'
 import { useBillStore } from '@/features/bill/store/billStore'
+import BillShortTaxPrintShell from '@/features/bill/shortTax/print/workspace/components/BillShortTaxPrintShell'
+import BillShortTaxPrintState from '@/features/bill/shortTax/print/workspace/components/BillShortTaxPrintState'
+import BillShortTaxPrintToolbar from '@/features/bill/shortTax/print/workspace/components/BillShortTaxPrintToolbar'
+import { useBillShortTaxPrintRuntime } from '@/features/bill/shortTax/print/workspace/runtime/useBillShortTaxPrintRuntime'
 import { useSaleDocumentLineEditor } from '@/features/sales/documents/workspace'
-
-const PRINT_RETURN_FALLBACK_MS = 60_000
 
 const PrintBillPageShortTax = () => {
   const params = useParams()
   const navigate = useNavigate()
   const saleId = params.id || params.saleId
   const saleRoute = `/${params.shopSlug || 'advancetech'}/pos/sales/sale`
-  const printedRef = useRef(false)
-  const printRootRef = useRef(null)
 
   const [searchParams] = useSearchParams()
 
@@ -77,130 +76,33 @@ const PrintBillPageShortTax = () => {
     }
   }, [reloadSaleForPrint, resetAction])
 
-  useEffect(() => {
-    printedRef.current = false
-  }, [saleId, autoPrint])
-
-  useEffect(() => {
-    const updatePrintHeight = () => {
-      const element = printRootRef.current
-      if (!element || typeof document === 'undefined') return
-
-      const rect = element.getBoundingClientRect()
-      const measuredHeight = Math.max(
-        Math.ceil(rect.height || 0),
-        element.scrollHeight || 0,
-        element.offsetHeight || 0
-      )
-
-      if (measuredHeight > 0) {
-        document.documentElement.style.setProperty(
-          '--short-tax-receipt-height',
-          `${measuredHeight}px`
-        )
-      }
-    }
-
-    updatePrintHeight()
-
-    const frameId = window.requestAnimationFrame(updatePrintHeight)
-    const timerId = window.setTimeout(updatePrintHeight, 150)
-    const resizeObserver =
-      typeof ResizeObserver !== 'undefined'
-        ? new ResizeObserver(updatePrintHeight)
-        : null
-
-    if (printRootRef.current && resizeObserver) {
-      resizeObserver.observe(printRootRef.current)
-    }
-
-    window.addEventListener('beforeprint', updatePrintHeight)
-
-    return () => {
-      window.cancelAnimationFrame(frameId)
-      window.clearTimeout(timerId)
-      window.removeEventListener('beforeprint', updatePrintHeight)
-      resizeObserver?.disconnect()
-      document.documentElement.style.removeProperty('--short-tax-receipt-height')
-    }
-  }, [sale?.id, saleItems?.length, payment?.id, config])
-
   const returnToSale = useCallback(() => {
     navigate(saleRoute, { replace: true })
   }, [navigate, saleRoute])
 
-  const printAndReturnToSale = useCallback(() => {
-    let returned = false
-    let fallbackTimerId = null
-
-    const cleanup = () => {
-      window.removeEventListener('afterprint', returnOnce)
-      if (fallbackTimerId !== null) {
-        window.clearTimeout(fallbackTimerId)
-        fallbackTimerId = null
-      }
-    }
-
-    const returnOnce = () => {
-      if (returned) return
-      returned = true
-      cleanup()
-      returnToSale()
-    }
-
-    window.addEventListener('afterprint', returnOnce, { once: true })
-
-    try {
-      window.focus?.()
-      window.print?.()
-
-      // `afterprint` is the lifecycle authority. The long fallback only protects
-      // browsers that never dispatch it; it must not navigate away while the
-      // print dialog is still opening or being used.
-      fallbackTimerId = window.setTimeout(returnOnce, PRINT_RETURN_FALLBACK_MS)
-    } catch {
-      cleanup()
-      returnOnce()
-    }
-  }, [returnToSale])
-
-  useEffect(() => {
-    if (!autoPrint) return
-    if (printedRef.current) return
-    if (!sale?.id) return
-    if (!config) return
-    if (!saleItems?.length) return
-    if (!payment?.id) return
-
-    printedRef.current = true
-
-    const timerId = setTimeout(() => {
-      printAndReturnToSale()
-    }, 300)
-
-    return () => clearTimeout(timerId)
-  }, [autoPrint, sale?.id, config, saleItems?.length, payment?.id, printAndReturnToSale])
+  const printRuntime = useBillShortTaxPrintRuntime({
+    autoPrint,
+    saleId: sale?.id || null,
+    saleItemsCount: saleItems?.length || 0,
+    paymentId: payment?.id || null,
+    config,
+    returnToSale,
+  })
 
   const workspaceError = error || documentLineEditor.error
+  const state = (
+    <BillShortTaxPrintState
+      loading={loading}
+      error={workspaceError}
+      hasSale={Boolean(sale)}
+      hasItems={Boolean(saleItems?.length)}
+      hasConfig={Boolean(config)}
+      hasPayment={Boolean(payment)}
+    />
+  )
 
-  if (loading) {
-    return <div className="text-center p-8 text-zinc-400 font-bold bg-slate-900 min-h-screen">⏳ กำลังโหลดข้อมูลใบเสร็จรับเงิน...</div>
-  }
-
-  if (workspaceError) {
-    return <div className="text-center p-8 text-rose-400 font-bold bg-slate-900 min-h-screen">เกิดข้อผิดพลาด: {workspaceError}</div>
-  }
-
-  if (!sale || !saleItems?.length || !config) {
-    return <div className="text-center p-8 text-zinc-400 font-bold bg-slate-900 min-h-screen">ไม่พบข้อมูลใบเสร็จตามรหัสอ้างอิง</div>
-  }
-
-  if (!payment) {
-    return (
-      <div className="text-center p-8 text-amber-400 font-bold bg-slate-900 min-h-screen">
-        ใบขายนี้ยังไม่มีการรับชำระ จึงยังไม่สามารถพิมพ์ใบเสร็จได้
-      </div>
-    )
+  if (loading || workspaceError || !sale || !saleItems?.length || !config || !payment) {
+    return state
   }
 
   const customerType = sale.customer?.type || 'PERSON'
@@ -208,114 +110,20 @@ const PrintBillPageShortTax = () => {
 
   return (
     <>
-      <style>{`
-        .bill-print-root {
-          font-family: 'THSarabunNew', 'TH Sarabun New', 'Sarabun', system-ui, sans-serif;
-        }
-
-        @page {
-          size: 80mm auto;
-          margin: 0;
-        }
-
-        @media print {
-          html,
-          body,
-          #root {
-            width: 80mm !important;
-            height: var(--short-tax-receipt-height, auto) !important;
-            min-height: var(--short-tax-receipt-height, 0) !important;
-            max-height: var(--short-tax-receipt-height, none) !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            overflow: visible !important;
-            background: #fff !important;
-          }
-
-          html,
-          body {
-            position: relative !important;
-          }
-
-          body * {
-            visibility: hidden !important;
-          }
-
-          .bill-print-root,
-          .bill-print-root * {
-            visibility: visible !important;
-          }
-
-          .bill-print-root {
-            position: absolute !important;
-            top: 0 !important;
-            left: 0 !important;
-            display: block !important;
-            width: 80mm !important;
-            max-width: 80mm !important;
-            height: auto !important;
-            min-height: 0 !important;
-            max-height: none !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            overflow: visible !important;
-            border: 0 !important;
-            border-radius: 0 !important;
-            box-shadow: none !important;
-            background: #fff !important;
-          }
-        }
-      `}</style>
-
-      <div className="w-full bg-white px-4 py-3 print:hidden">
-        <div className="mx-auto flex max-w-[80mm] items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={returnToSale}
-              className="inline-flex items-center justify-center rounded-lg border border-slate-600 bg-slate-800 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-400"
-            >
-              กลับหน้าขายสินค้า
-            </button>
-
-            <button
-              type="button"
-              onClick={printAndReturnToSale}
-              className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 focus:ring-offset-slate-900"
-            >
-              พิมพ์ใบเสร็จ
-            </button>
-          </div>
-
-          {autoPrint ? (
-            <span className="text-xs font-medium text-emerald-300">
-              Auto print เปิดอยู่
-            </span>
-          ) : null}
-        </div>
-      </div>
-
-      <div className="w-full bg-white text-black dark:bg-white dark:text-black py-6 px-4 print:w-auto print:p-0 print:m-0 print:min-h-0 print:h-auto print:bg-white">
-        <div
-          ref={printRootRef}
-          className="bill-print-root mx-auto w-[80mm] max-w-[80mm] bg-white text-black dark:bg-white dark:text-black p-4 rounded-xl border border-zinc-200 shadow-sm print:p-0 print:border-none print:shadow-none"
-        >
-          <BillLayoutShortTax
-            sale={sale}
-            saleItems={saleItems}
-            payments={[payment]}
-            config={{ ...config, hideDate: false }}
-            hideContactName={hideContactName}
-            editableDocumentLines
-            editingLineKey={documentLineEditor.editingLineKey}
-            lineDrafts={documentLineEditor.lineDrafts}
-            savingLineKey={documentLineEditor.savingLineKey}
-            onToggleDocumentLineEdit={documentLineEditor.actions.toggle}
-            onChangeDocumentLineDraft={documentLineEditor.actions.change}
-            onSaveDocumentLine={documentLineEditor.actions.save}
-          />
-        </div>
-      </div>
+      <BillShortTaxPrintToolbar
+        autoPrint={autoPrint}
+        onBack={returnToSale}
+        onPrint={printRuntime.printAndReturnToSale}
+      />
+      <BillShortTaxPrintShell
+        sale={sale}
+        saleItems={saleItems}
+        payment={payment}
+        config={config}
+        hideContactName={hideContactName}
+        printRootRef={printRuntime.printRootRef}
+        documentLineEditor={documentLineEditor}
+      />
     </>
   )
 }

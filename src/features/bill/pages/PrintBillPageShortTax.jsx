@@ -1,21 +1,18 @@
 // src/features/bill/pages/PrintBillPageShortTax.jsx
 // 🏛️ Premium Next-Gen POS Print Page: (Short Thermal Receipt Core Logic Restored)
 
-import { useCallback, useEffect, useMemo, useRef } from 'react'
+import { useCallback, useEffect, useMemo } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import BillLayoutShortTax from '../components/BillLayoutShortTax'
 import { useBillStore } from '@/features/bill/store/billStore'
+import { useBillShortTaxPrintRuntime } from '@/features/bill/shortTax/print/workspace/runtime/useBillShortTaxPrintRuntime'
 import { useSaleDocumentLineEditor } from '@/features/sales/documents/workspace'
-
-const PRINT_RETURN_FALLBACK_MS = 60_000
 
 const PrintBillPageShortTax = () => {
   const params = useParams()
   const navigate = useNavigate()
   const saleId = params.id || params.saleId
   const saleRoute = `/${params.shopSlug || 'advancetech'}/pos/sales/sale`
-  const printedRef = useRef(false)
-  const printRootRef = useRef(null)
 
   const [searchParams] = useSearchParams()
 
@@ -77,109 +74,18 @@ const PrintBillPageShortTax = () => {
     }
   }, [reloadSaleForPrint, resetAction])
 
-  useEffect(() => {
-    printedRef.current = false
-  }, [saleId, autoPrint])
-
-  useEffect(() => {
-    const updatePrintHeight = () => {
-      const element = printRootRef.current
-      if (!element || typeof document === 'undefined') return
-
-      const rect = element.getBoundingClientRect()
-      const measuredHeight = Math.max(
-        Math.ceil(rect.height || 0),
-        element.scrollHeight || 0,
-        element.offsetHeight || 0
-      )
-
-      if (measuredHeight > 0) {
-        document.documentElement.style.setProperty(
-          '--short-tax-receipt-height',
-          `${measuredHeight}px`
-        )
-      }
-    }
-
-    updatePrintHeight()
-
-    const frameId = window.requestAnimationFrame(updatePrintHeight)
-    const timerId = window.setTimeout(updatePrintHeight, 150)
-    const resizeObserver =
-      typeof ResizeObserver !== 'undefined'
-        ? new ResizeObserver(updatePrintHeight)
-        : null
-
-    if (printRootRef.current && resizeObserver) {
-      resizeObserver.observe(printRootRef.current)
-    }
-
-    window.addEventListener('beforeprint', updatePrintHeight)
-
-    return () => {
-      window.cancelAnimationFrame(frameId)
-      window.clearTimeout(timerId)
-      window.removeEventListener('beforeprint', updatePrintHeight)
-      resizeObserver?.disconnect()
-      document.documentElement.style.removeProperty('--short-tax-receipt-height')
-    }
-  }, [sale?.id, saleItems?.length, payment?.id, config])
-
   const returnToSale = useCallback(() => {
     navigate(saleRoute, { replace: true })
   }, [navigate, saleRoute])
 
-  const printAndReturnToSale = useCallback(() => {
-    let returned = false
-    let fallbackTimerId = null
-
-    const cleanup = () => {
-      window.removeEventListener('afterprint', returnOnce)
-      if (fallbackTimerId !== null) {
-        window.clearTimeout(fallbackTimerId)
-        fallbackTimerId = null
-      }
-    }
-
-    const returnOnce = () => {
-      if (returned) return
-      returned = true
-      cleanup()
-      returnToSale()
-    }
-
-    window.addEventListener('afterprint', returnOnce, { once: true })
-
-    try {
-      window.focus?.()
-      window.print?.()
-
-      // `afterprint` is the lifecycle authority. The long fallback only protects
-      // browsers that never dispatch it; it must not navigate away while the
-      // print dialog is still opening or being used.
-      fallbackTimerId = window.setTimeout(returnOnce, PRINT_RETURN_FALLBACK_MS)
-    } catch {
-      cleanup()
-      returnOnce()
-    }
-  }, [returnToSale])
-
-  useEffect(() => {
-    if (!autoPrint) return
-    if (printedRef.current) return
-    if (!sale?.id) return
-    if (!config) return
-    if (!saleItems?.length) return
-    if (!payment?.id) return
-
-    printedRef.current = true
-
-    const timerId = setTimeout(() => {
-      printAndReturnToSale()
-    }, 300)
-
-    return () => clearTimeout(timerId)
-  }, [autoPrint, sale?.id, config, saleItems?.length, payment?.id, printAndReturnToSale])
+  const printRuntime = useBillShortTaxPrintRuntime({
+    autoPrint,
+    saleId: sale?.id || null,
+    saleItemsCount: saleItems?.length || 0,
+    paymentId: payment?.id || null,
+    config,
+    returnToSale,
+  })
 
   const workspaceError = error || documentLineEditor.error
 
@@ -280,7 +186,7 @@ const PrintBillPageShortTax = () => {
 
             <button
               type="button"
-              onClick={printAndReturnToSale}
+              onClick={printRuntime.printAndReturnToSale}
               className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 focus:ring-offset-slate-900"
             >
               พิมพ์ใบเสร็จ
@@ -297,7 +203,7 @@ const PrintBillPageShortTax = () => {
 
       <div className="w-full bg-white text-black dark:bg-white dark:text-black py-6 px-4 print:w-auto print:p-0 print:m-0 print:min-h-0 print:h-auto print:bg-white">
         <div
-          ref={printRootRef}
+          ref={printRuntime.printRootRef}
           className="bill-print-root mx-auto w-[80mm] max-w-[80mm] bg-white text-black dark:bg-white dark:text-black p-4 rounded-xl border border-zinc-200 shadow-sm print:p-0 print:border-none print:shadow-none"
         >
           <BillLayoutShortTax

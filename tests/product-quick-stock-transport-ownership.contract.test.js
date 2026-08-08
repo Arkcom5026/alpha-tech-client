@@ -14,12 +14,16 @@ describe('product to quick stock transport ownership', () => {
   it('prevents Product API from owning quick-stock/existing transport', () => {
     const productApi = read('src/features/product/api/productApi.js');
     expect(productApi).not.toContain("apiClient.post('quick-stock/existing'");
+    expect(productApi).toContain('@/features/receiving/quick-stock/api/quickStockIntakeApi');
+    expect(productApi).toContain('commitQuickStockExistingIntakeApi');
   });
 
-  it('requires Product compatibility flow to consume QuickStock public transport boundary', () => {
+  it('preserves Product compatibility export without duplicating transport behavior', () => {
+    const productApi = read('src/features/product/api/productApi.js');
     const productStore = read('src/features/product/store/productStore.js');
-    expect(productStore).toContain('@/features/receiving/quick-stock/api/quickStockIntakeApi');
-    expect(productStore).toContain('commitQuickStockExistingIntakeApi');
-    expect(productStore).not.toContain('quickReceiveExistingProductApi');
+
+    expect(productApi).toContain('export const quickReceiveExistingProductApi');
+    expect(productApi).toContain('commitQuickStockExistingIntakeApi(payload)');
+    expect(productStore).toContain('quickReceiveExistingProductApi');
   });
 });

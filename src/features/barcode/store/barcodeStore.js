@@ -13,7 +13,8 @@ import {
   reprintReceiptBarcodes,
   searchReceiptsForReprint,
 } from '../print-reprint';
-import { finalizeReceiptIfNeeded, getReceiptById } from '@/features/purchaseOrderReceipt/api/purchaseOrderReceiptApi';
+import { finalizeReceipt } from '@/features/purchaseOrderReceipt/finalization';
+import { getReceipt } from '@/features/purchaseOrderReceipt/query';
 
 const getBarcodesByReceiptId = async (receiptId, opts = {}) => {
   const result = await loadReceiptBarcodes({ receiptId, ...opts });
@@ -228,7 +229,7 @@ const useBarcodeStore = create((set, get) => ({
 
   loadReceiptWithSupplierAction: async (receiptId) => {
     try {
-      const data = await getReceiptById(receiptId);
+      const data = await getReceipt(receiptId);
       set({ currentReceipt: data });
     } catch (err) {
       console.error('[loadReceiptWithSupplierAction]', err);
@@ -324,7 +325,8 @@ const useBarcodeStore = create((set, get) => ({
       set({ error: null });
       if (!receiptId) throw new Error('Missing receiptId');
       const rid = Number.isFinite(Number(receiptId)) ? Number(receiptId) : receiptId;
-      return await finalizeReceiptIfNeeded(rid);
+      const result = await finalizeReceipt(rid);
+      return result?.sourceResponse ?? result;
     } catch (err) {
       console.error('[finalizeReceiptIfNeededAction]', err);
       set({ error: err?.response?.data?.message || err?.message || 'Finalize ไม่สำเร็จ' });

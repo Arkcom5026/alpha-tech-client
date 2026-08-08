@@ -79,7 +79,9 @@ describe('procurement-to-stock pipeline ownership certification', () => {
     const scanService = barcodeScanService();
     const stockBoundary = stockItemReceiveBoundary();
 
-    expect(barcode).toContain('@/features/purchaseOrderReceipt/api/purchaseOrderReceiptApi');
+    expect(barcode).toContain('@/features/purchaseOrderReceipt/finalization');
+    expect(barcode).toContain('@/features/purchaseOrderReceipt/query');
+    expect(barcode).not.toContain('@/features/purchaseOrderReceipt/api/purchaseOrderReceiptApi');
     expect(scanService).toContain("@/features/stockItem/receive");
     expect(stockBoundary).toContain("export { receiveScannedStockItem }");
     expect(stockBoundary).toContain("export { receiveAllPendingStockItems }");

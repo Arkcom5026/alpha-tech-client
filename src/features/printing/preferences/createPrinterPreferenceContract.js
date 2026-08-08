@@ -1,13 +1,6 @@
-const DOCUMENT_PURPOSES = Object.freeze([
-  'RECEIPT',
-  'SHORT_TAX_INVOICE',
-  'DELIVERY_NOTE',
-  'REPAIR_INTAKE',
-  'REPAIR_RETURN',
-  'BARCODE_LABEL',
-  'A4_DOCUMENT',
-])
+import { SUPPORTED_DOCUMENT_PURPOSE_CODES } from './documentPurposeCatalog.js'
 
+const DOCUMENT_PURPOSES = SUPPORTED_DOCUMENT_PURPOSE_CODES
 const DOCUMENT_PURPOSE_SET = new Set(DOCUMENT_PURPOSES)
 
 const requireText = (value, field) => {

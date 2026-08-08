@@ -5,6 +5,7 @@
 
 import apiClient from '@/utils/apiClient';
 import { parseApiError } from '@/utils/uiHelpers';
+import { commitQuickStockExistingIntakeApi } from '@/features/receiving/quick-stock/api/quickStockIntakeApi';
 
 const stripEmptyParams = (obj = {}) => Object.fromEntries(
   Object.entries(obj).filter(([, value]) => value !== '' && value !== undefined && value !== null)
@@ -29,20 +30,6 @@ function normalizeItems(items) {
     }))
     .filter((it) => Number.isFinite(it.productId) && it.productId > 0 && Number.isFinite(it.quantity) && it.quantity > 0);
 }
-
-const normalizeBarcodeItems = (items) => {
-  if (!Array.isArray(items)) return [];
-  return items
-    .map((item) => {
-      if (typeof item === 'string') {
-        return { barcode: item, serialNumber: item };
-      }
-      const barcode = item?.barcode ?? item?.serialNumber ?? item?.sn ?? '';
-      const serialNumber = item?.serialNumber ?? item?.barcode ?? item?.sn ?? '';
-      return { ...item, barcode, serialNumber };
-    })
-    .filter((item) => item?.barcode || item?.serialNumber);
-};
 
 export const getQuickReceiveDropdowns = async ({ productTypeId } = {}) => {
   try {
@@ -97,23 +84,9 @@ export async function createQuickReceive(payload, opts = {}) {
   }
 }
 
-export const quickReceiveExistingProduct = async (payload = {}) => {
-  try {
-    const sanitizedPayload = { ...payload };
-    delete sanitizedPayload.branchId;
-    delete sanitizedPayload.movementType;
-    delete sanitizedPayload.source;
-
-    const rawItems = sanitizedPayload.items ?? sanitizedPayload.barcodes ?? sanitizedPayload.queue ?? [];
-    sanitizedPayload.items = normalizeBarcodeItems(rawItems);
-    delete sanitizedPayload.barcodes;
-    delete sanitizedPayload.queue;
-
-    const { data } = await apiClient.post('quick-stock/existing', sanitizedPayload);
-    return data;
-  } catch (err) {
-    throw parseApiError(err);
-  }
-};
+// Compatibility shim for legacy Quick Receive consumers. The QuickStock feature
+// owns the transport and payload sanitation for the existing-product intake flow.
+export const quickReceiveExistingProduct = async (payload = {}) =>
+  commitQuickStockExistingIntakeApi(payload);
 
 export const quickStockIntakeExistingApi = quickReceiveExistingProduct;

@@ -26,8 +26,8 @@ const calculateSaleReturnAmounts = ({ available = [], selectedItems = [], refund
       (candidate) => candidate.kind === item.kind && candidate.id === (item.saleItemId || item.saleItemSimpleId),
     );
     return total + (item.kind === 'SIMPLE'
-      ? Number(source?.eligibleRefund || 0) * item.quantity / Number(source?.eligibleQuantity || 1)
-      : Number(source?.eligibleRefund || 0));
+      ? Number(source.eligibleRefund) * item.quantity / Number(source.eligibleQuantity)
+      : Number(source.eligibleRefund));
   }, 0);
 
   const refundTotal = selectedItems.reduce((total, item) => total + item.refundAmount, 0);
@@ -53,9 +53,9 @@ const validateSaleReturnSubmission = ({
 };
 
 const isFullRefundReturn = ({ eligibleTotal, refundTotal, saleTotal, deduction }) => (
-  Math.abs(Number(eligibleTotal || 0) - Number(saleTotal || 0)) <= 0.005
-  && Math.abs(Number(refundTotal || 0) - Number(saleTotal || 0)) <= 0.005
-  && Number(deduction || 0) <= 0.005
+  Math.abs(eligibleTotal - Number(saleTotal || 0)) <= 0.005
+  && Math.abs(refundTotal - Number(saleTotal || 0)) <= 0.005
+  && deduction <= 0.005
 );
 
 export {

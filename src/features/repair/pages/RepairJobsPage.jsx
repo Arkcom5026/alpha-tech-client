@@ -1,10 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import useRepairRuntimeStore from '../store/repairRuntimeStore';
-import RepairShellHeader from '../components/RepairShellHeader';
-import RuntimeStatePanel from '../components/RuntimeStatePanel';
-import QueueBoard from '../components/QueueBoard';
-import { REPAIR_LANES, groupByStatus } from '../utils/repairRuntime';
+import RepairQueueWorkspace from '../queue/workspace/components/RepairQueueWorkspace';
+import { projectRepairQueue } from '../queue/workspace/policies/repairQueuePolicy';
 
 const RepairJobsPage = () => {
   const navigate = useNavigate();
@@ -20,77 +18,22 @@ const RepairJobsPage = () => {
     loadJobs();
   }, [loadJobs]);
 
-  const filtered = useMemo(() => {
-    const normalized = query.trim().toLowerCase();
-    if (!normalized) return jobs;
-
-    return jobs.filter((job) =>
-      [
-        job.jobNo,
-        job.deviceModel,
-        job.reportedSymptoms,
-        job.customerName,
-        job.stockItem?.barcode,
-        job.stockItem?.serialNumber,
-        job.device?.barcode,
-        job.device?.serialNumber,
-        job.device?.imei,
-      ]
-        .filter(Boolean)
-        .some((value) => String(value).toLowerCase().includes(normalized))
-    );
-  }, [jobs, query]);
-
-  const lanes = useMemo(
-    () => groupByStatus(filtered, REPAIR_LANES),
-    [filtered]
-  );
+  const { lanes } = useMemo(() => projectRepairQueue(jobs, query), [jobs, query]);
 
   return (
-    <div>
-      <RepairShellHeader
-        eyebrow="Repair Operations"
-        title="คิวงานซ่อม"
-        description="จัดงานแบบ operation lanes เพื่อให้เห็นงานรับเข้า งานกำลังซ่อม งานรออะไหล่ และงานพร้อมส่งมอบในหน้าจอเดียว"
-      />
-
-      <div className="mb-5 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-        <div className="flex flex-col gap-3 sm:flex-row">
-          <input
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="ค้นหาเลขใบงาน ลูกค้า รุ่น อาการ Barcode, Serial หรือ IMEI"
-            className="min-h-12 flex-1 rounded-xl border border-slate-300 px-4"
-          />
-
-          <button
-            type="button"
-            onClick={() => loadJobs()}
-            className="min-h-12 rounded-xl bg-blue-700 px-6 font-black text-white"
-          >
-            รีเฟรชคิว
-          </button>
-        </div>
-      </div>
-
-      <RuntimeStatePanel
-        loading={loading}
-        error={error}
-        empty={!loading && !error && !jobs.length}
-        emptyText="ยังไม่มีงานซ่อมในระบบ"
-        onRetry={() => loadJobs()}
-      />
-
-      {!loading && !error && jobs.length ? (
-        <QueueBoard
-          lanes={lanes}
-          type="repair"
-          onOpen={(job) =>
-            navigate(`/${shopSlug}/pos/services/repairs/${job.id}`)
-          }
-        />
-      ) : null}
-    </div>
+    <RepairQueueWorkspace
+      query={query}
+      onQueryChange={setQuery}
+      onRefresh={loadJobs}
+      loading={loading}
+      error={error}
+      jobs={jobs}
+      lanes={lanes}
+      onRetry={loadJobs}
+      onOpenJob={(job) =>
+        navigate(`/${shopSlug}/pos/services/repairs/${job.id}`)
+      }
+    />
   );
 };
 

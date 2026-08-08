@@ -1,10 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import useRepairRuntimeStore from '../store/repairRuntimeStore';
-import RepairShellHeader from '../components/RepairShellHeader';
-import RuntimeStatePanel from '../components/RuntimeStatePanel';
-import QueueBoard from '../components/QueueBoard';
-import { CLAIM_LANES, groupByStatus } from '../utils/repairRuntime';
+import WarrantyClaimQueueWorkspace from '../claimQueue/workspace/components/WarrantyClaimQueueWorkspace';
+import { projectWarrantyClaimQueue } from '../claimQueue/workspace/policies/warrantyClaimQueuePolicy';
 
 const WarrantyClaimsPage = () => {
   const navigate = useNavigate();
@@ -20,94 +18,25 @@ const WarrantyClaimsPage = () => {
     loadClaims();
   }, [loadClaims]);
 
-  const filtered = useMemo(() => {
-    const normalized = query.trim().toLowerCase();
-    if (!normalized) return claims;
-
-    return claims.filter((claim) =>
-      [
-        claim.claimNo,
-        claim.reason,
-        claim.externalClaimRef,
-        claim.trackingNumber,
-        claim.supplier?.name,
-        claim.serviceProvider,
-        claim.repairJob?.jobNo,
-        claim.repairJob?.customerName,
-        claim.repairJob?.customer?.name,
-        claim.repairJob?.customer?.phone,
-        claim.repairJob?.customer?.email,
-        claim.claimAsset?.displayName,
-        claim.claimAsset?.brand,
-        claim.claimAsset?.category,
-        claim.claimAsset?.model,
-        claim.claimAsset?.barcode,
-        claim.claimAsset?.serialNumber,
-        claim.claimAsset?.imei,
-        claim.stockItem?.product?.name,
-        claim.stockItem?.barcode,
-        claim.stockItem?.serialNumber,
-        claim.device?.brand,
-        claim.device?.model,
-        claim.device?.barcode,
-        claim.device?.serialNumber,
-        claim.device?.imei,
-      ]
-        .filter(Boolean)
-        .some((value) => String(value).toLowerCase().includes(normalized))
-    );
-  }, [claims, query]);
-
-  const activeLanes = useMemo(
-    () => groupByStatus(filtered, CLAIM_LANES).filter((lane) => lane.items.length > 0),
-    [filtered]
+  const { filtered, activeLanes } = useMemo(
+    () => projectWarrantyClaimQueue(claims, query),
+    [claims, query]
   );
 
   return (
-    <div>
-      <RepairShellHeader
-        eyebrow="Warranty Operations"
-        title="คิวงานเคลม"
-        description="ติดตามงานเคลมตั้งแต่ร่างรายการ การขนส่ง การตรวจสอบ การซ่อม ไปจนถึงผลการเคลม"
-      />
-
-      <div className="mb-5 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-        <div className="flex flex-col gap-3 sm:flex-row">
-          <input
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="ค้นหาเลขเคลม เหตุผล Supplier Tracking หรือเลขอ้างอิง"
-            className="min-h-12 flex-1 rounded-xl border border-slate-300 px-4"
-          />
-
-          <button
-            type="button"
-            onClick={() => loadClaims()}
-            className="min-h-12 rounded-xl bg-indigo-700 px-6 font-black text-white"
-          >
-            รีเฟรชคิว
-          </button>
-        </div>
-      </div>
-
-      <RuntimeStatePanel
-        loading={loading}
-        error={error}
-        empty={!loading && !error && !filtered.length}
-        emptyText={query.trim() ? 'ไม่พบงานเคลมที่ตรงกับคำค้นหา' : 'ยังไม่มีงานเคลมในระบบ'}
-        onRetry={() => loadClaims()}
-      />
-
-      {!loading && !error && activeLanes.length ? (
-        <QueueBoard
-          lanes={activeLanes}
-          type="claim"
-          onOpen={(claim) =>
-            navigate(`/${shopSlug}/pos/services/warranty-claims/${claim.id}`)
-          }
-        />
-      ) : null}
-    </div>
+    <WarrantyClaimQueueWorkspace
+      query={query}
+      onQueryChange={setQuery}
+      onRefresh={loadClaims}
+      loading={loading}
+      error={error}
+      filteredClaims={filtered}
+      activeLanes={activeLanes}
+      onRetry={loadClaims}
+      onOpenClaim={(claim) =>
+        navigate(`/${shopSlug}/pos/services/warranty-claims/${claim.id}`)
+      }
+    />
   );
 };
 

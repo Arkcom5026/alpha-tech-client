@@ -1,6 +1,4 @@
-// src/features/supplier/components/SupplierTable.jsx
 import React from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
 
 import { CrudTableAction, CrudTableActions } from '@/design-system';
 
@@ -10,14 +8,15 @@ const formatMoney = (value) =>
     maximumFractionDigits: 2,
   });
 
-const SupplierTable = ({ suppliers = [], startIndex = 0, disabled = false }) => {
-  const navigate = useNavigate();
-  const { shopSlug } = useParams();
-  const targetSlug = shopSlug || 'advancetech';
-
+const SupplierTable = ({
+  suppliers = [],
+  startIndex = 0,
+  disabled = false,
+  onOpenSupplier = () => {},
+}) => {
   const openSupplier = (supplier) => {
     if (disabled) return;
-    navigate(`/${targetSlug}/pos/purchases/suppliers/view/${supplier.id}`);
+    onOpenSupplier(supplier);
   };
 
   return (

@@ -36,20 +36,30 @@ describe('delivery note print workspace behavior contract', () => {
   it('preserves grouping identity and document-description semantics', () => {
     expect(policy).toContain('documentDescription: documentDescriptionRaw || resolveDeliveryNoteProductName(item)');
     expect(policy).toContain("`product-${productId}`");
+    expect(policy).toContain('`unit-${unitPriceKey}`');
     expect(policy).toContain('`prefix-${documentLine.documentPrefix}`');
     expect(policy).toContain('`description-${documentLine.documentDescription}`');
     expect(policy).toContain('`suffix-${documentLine.documentSuffix}`');
     expect(policy).toContain('productName: buildDeliveryNotePrintableProductName(documentLine)');
   });
 
-  it('preserves SN and simple-item quantity, price, discount, and id aggregation', () => {
-    expect(policy).toContain('const isSnItem = Boolean(item?.stockItemId || item?.stockItem?.id);');
-    expect(policy).toContain('const quantity = isSnItem ? 1 : Math.max(1, Number(item?.quantity ?? item?.qty ?? 1) || 1);');
-    expect(policy).toContain('Number(item?.discount ?? item?.discountAmount ?? 0) || 0');
-    expect(policy).toContain('saleItemIds: isSnItem && item?.id ? [Number(item.id)] : []');
-    expect(policy).toContain('simpleItemIds: !isSnItem && item?.id ? [Number(item.id)] : []');
-    expect(policy).toContain('aggregate.quantity += quantity;');
-    expect(policy).toContain('aggregate.discount += discountEach;');
+  it('preserves SN/simple quantity and final-line pricing authority without double discount', () => {
+    expect(policy).toContain("const isSnItem = Boolean(item?.stockItemId || item?.stockItem?.id || item?.lineType === 'STOCK_ITEM');");
+    expect(policy).toContain('const quantity = isSnItem ? 1 : Math.max(1, toMoney(item?.quantity ?? item?.qty ?? 1) || 1);');
+    expect(policy).toContain('const explicitLineAmount = item?.lineAmount ?? item?.amount ?? item?.totalAmount ?? null;');
+    expect(policy).toContain('const persistedFinalLineAmount = item?.price != null && item?.basePrice != null');
+    expect(policy).toContain('const unitPrice = quantity > 0 ? round2(lineAmount / quantity) : 0;');
+    expect(policy).toContain('discount: 0,');
+    expect(policy).toContain('saleItemIds: pricing.isSnItem && item?.id ? [Number(item.id)] : []');
+    expect(policy).toContain('simpleItemIds: !pricing.isSnItem && item?.id ? [Number(item.id)] : []');
+    expect(policy).toContain('aggregate.quantity = round2(aggregate.quantity + pricing.quantity);');
+  });
+
+  it('keeps compatibility for older unit-price plus discount projections', () => {
+    expect(policy).toContain('const rawUnit = toMoney(item?.unitAmount ?? item?.unitPrice ?? item?.sellPrice ?? item?.price ?? item?.basePrice ?? 0);');
+    expect(policy).toContain('const rawDiscount = toMoney(item?.discountAmount ?? item?.discount ?? 0);');
+    expect(policy).toContain('const unitPrice = round2(Math.max(rawUnit - rawDiscount, 0));');
+    expect(policy).toContain('const lineAmount = round2(unitPrice * quantity);');
   });
 
   it('keeps branch projection, document states, and printable form composition intact across workspace ownership', () => {

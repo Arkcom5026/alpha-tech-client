@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const root = process.cwd();
+const exists = (file) => fs.existsSync(path.join(root, file));
 const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 
 describe('quick stock existing-product intake ownership behavior lock', () => {
@@ -27,12 +28,12 @@ describe('quick stock existing-product intake ownership behavior lock', () => {
     expect(runtimeStore).toContain('commitQuickStockExistingIntake(payload)');
   });
 
-  it('keeps Quick Receive as a compatibility consumer instead of the intake transport owner', () => {
-    const legacyApi = read('src/features/quickReceive/api/quickReceiveApi.js');
+  it('retires the Quick Receive compatibility boundary while preserving Product delegation', () => {
+    expect(exists('src/features/quickReceive/api/quickReceiveApi.js')).toBe(false);
 
-    expect(legacyApi).toContain("from '@/features/receiving/quick-stock/api/quickStockIntakeApi'");
-    expect(legacyApi).toContain('commitQuickStockExistingIntakeApi(payload)');
-    expect(legacyApi).not.toContain("apiClient.post('quick-stock/existing'");
-    expect(legacyApi).not.toContain('normalizeBarcodeItems');
+    const productApi = read('src/features/product/api/productApi.js');
+    expect(productApi).toContain("from '@/features/receiving/quick-stock/api/quickStockIntakeApi'");
+    expect(productApi).toContain('commitQuickStockExistingIntakeApi');
+    expect(productApi).not.toContain("apiClient.post('quick-stock/existing'");
   });
 });

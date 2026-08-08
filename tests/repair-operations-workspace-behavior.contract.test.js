@@ -16,6 +16,9 @@ const repairQueueWorkspace = read(
 const repairQueuePolicy = read(
   'src/features/repair/queue/workspace/policies/repairQueuePolicy.js'
 );
+const repairDetailWorkspace = read(
+  'src/features/repair/detail/workspace/components/RepairDetailWorkspace.jsx'
+);
 
 const runtimePages = [jobsPage, detailPage, claimsPage, claimDetailPage];
 
@@ -49,13 +52,17 @@ describe('repair operations workspace behavior contract', () => {
     expect(claimsPage).toContain('/pos/services/warranty-claims/${claim.id}');
   });
 
-  it('preserves repair detail mutations for transition, parts, and claim handoff', () => {
+  it('preserves repair detail mutations and claim handoff across workspace ownership', () => {
     expect(detailPage).toContain('transitionJob');
     expect(detailPage).toContain('addPart');
     expect(detailPage).toContain('openClaim');
+    expect(detailPage).toContain('RepairDetailWorkspace');
     expect(detailPage).toContain('onTransition={(payload) => transitionJob(repairJobId, payload)}');
     expect(detailPage).toContain('onAddPart={(payload) => addPart(repairJobId, payload)}');
     expect(detailPage).toContain('/pos/services/warranty-claims/${created.id}');
+    expect(repairDetailWorkspace).toContain('onTransition={onTransition}');
+    expect(repairDetailWorkspace).toContain('onAddPart={onAddPart}');
+    expect(repairDetailWorkspace).toContain('onOpenClaim={onOpenClaim}');
   });
 
   it('preserves warranty claim detail transition and repair handoff semantics', () => {
@@ -75,20 +82,23 @@ describe('repair operations workspace behavior contract', () => {
     expect(intakePage).toContain('state: { evidenceWarning: error.message }');
   });
 
-  it('preserves customer access, estimate approval, handover, and intake evidence surfaces', () => {
-    expect(detailPage).toContain('RepairTrackingAccessPanel');
-    expect(detailPage).toContain('RepairEstimateApprovalPanel');
-    expect(detailPage).toContain('RepairHandoverPanel');
-    expect(detailPage).toContain('IntakeEvidencePanel');
+  it('preserves customer access, estimate approval, handover, and intake evidence surfaces across workspace ownership', () => {
+    expect(repairDetailWorkspace).toContain('RepairTrackingAccessPanel');
+    expect(repairDetailWorkspace).toContain('RepairEstimateApprovalPanel');
+    expect(repairDetailWorkspace).toContain('RepairHandoverPanel');
+    expect(repairDetailWorkspace).toContain('IntakeEvidencePanel');
+    expect(detailPage).toContain('evidenceWarning={location.state?.evidenceWarning}');
   });
 
   it('keeps loading, error, empty, and retry presentation semantics intact across workspace ownership', () => {
-    expect(repairQueueWorkspace).toContain('RuntimeStatePanel');
-    expect(repairQueueWorkspace).toContain('loading={loading}');
-    expect(repairQueueWorkspace).toContain('error={error}');
-    expect(repairQueueWorkspace).toContain('onRetry={onRetry}');
+    for (const source of [repairQueueWorkspace, repairDetailWorkspace]) {
+      expect(source).toContain('RuntimeStatePanel');
+      expect(source).toContain('loading={loading}');
+      expect(source).toContain('error={error}');
+      expect(source).toContain('onRetry={onRetry}');
+    }
 
-    for (const source of [detailPage, claimsPage, claimDetailPage]) {
+    for (const source of [claimsPage, claimDetailPage]) {
       expect(source).toContain('RuntimeStatePanel');
       expect(source).toContain('loading={loading}');
       expect(source).toContain('error={error}');

@@ -11,6 +11,7 @@ import { createWindowsRawPrinterAdapter } from './windowsRawPrinterAdapter.js'
 import { createWindowsSharedQueuePrinterAdapter } from './windowsSharedQueuePrinterAdapter.js'
 import { createPhysicalPilotAdapter } from './physicalPilotAdapter.js'
 import { createDurableSaleReceiptRuntimeComposition } from './durableSaleReceiptRuntimeComposition.js'
+import { createDurableSaleReceiptGatewayWorker } from './durableSaleReceiptGatewayWorker.js'
 
 const HOST = process.env.ALPHA_PRINT_BRIDGE_HOST || '127.0.0.1'
 const PORT = Number(process.env.ALPHA_PRINT_BRIDGE_PORT || 17451)
@@ -78,6 +79,9 @@ const resolvePrinter = async (printerProfileId) => {
 const durableSaleReceipt = createDurableSaleReceiptRuntimeComposition({
   resolvePrinter,
 })
+const durableSaleReceiptWorker = createDurableSaleReceiptGatewayWorker({
+  runtime: durableSaleReceipt.runtime,
+})
 
 const sendError = (res, error) => sendJson(res, error.statusCode || 400, {
   code: error.code || (error.name === 'TypeError' ? 'INVALID_REQUEST' : 'REQUEST_REJECTED'),
@@ -93,19 +97,22 @@ const server = http.createServer(async (req, res) => {
     return sendJson(res, 200, {
       ok: true,
       service: 'alpha-tech-local-print-bridge',
-      version: '0.5.0',
-      mode: durableSaleReceipt.readiness.pilotEnabled
-        ? 'DURABLE_SALE_RECEIPT_PILOT_ARMED'
-        : PHYSICAL_PILOT_ENABLED
-          ? 'PHYSICAL_PILOT_ARMED'
-          : RAW_ENABLED
-            ? 'WINDOWS_RAW_ENABLED'
-            : 'DRIVER_MANAGED_WITH_WINDOWS_DISCOVERY',
+      version: '0.6.0',
+      mode: durableSaleReceiptWorker.readiness.enabled
+        ? 'DURABLE_SALE_RECEIPT_WORKER_ARMED'
+        : durableSaleReceipt.readiness.pilotEnabled
+          ? 'DURABLE_SALE_RECEIPT_PILOT_ARMED'
+          : PHYSICAL_PILOT_ENABLED
+            ? 'PHYSICAL_PILOT_ARMED'
+            : RAW_ENABLED
+              ? 'WINDOWS_RAW_ENABLED'
+              : 'DRIVER_MANAGED_WITH_WINDOWS_DISCOVERY',
       rawPrintingEnabled: RAW_ENABLED,
       driverManagedPrintingEnabled: true,
       physicalPilotEnabled: PHYSICAL_PILOT_ENABLED,
       pilotPrinterId: PHYSICAL_PILOT_ENABLED ? PILOT_PRINTER_ID : null,
       durableSaleReceiptPilot: durableSaleReceipt.readiness,
+      durableSaleReceiptWorker: durableSaleReceiptWorker.readiness,
       host: HOST,
       port: PORT,
       timestamp: new Date().toISOString(),
@@ -192,14 +199,28 @@ server.listen(PORT, HOST, () => {
   console.log(`[local-print-bridge] physicalPilotEnabled=${PHYSICAL_PILOT_ENABLED}`)
   console.log(`[local-print-bridge] durableSaleReceiptPilotEnabled=${durableSaleReceipt.readiness.pilotEnabled}`)
   console.log(`[local-print-bridge] durableSaleReceiptPhysicalSubmissionEnabled=${durableSaleReceipt.readiness.physicalSubmissionEnabled}`)
+  console.log(`[local-print-bridge] durableSaleReceiptWorkerEnabled=${durableSaleReceiptWorker.readiness.enabled}`)
   if (PHYSICAL_PILOT_ENABLED) console.log(`[local-print-bridge] pilotPrinterId=${PILOT_PRINTER_ID}`)
   if (durableSaleReceipt.readiness.allowedPrinterId) {
     console.log(`[local-print-bridge] durableSaleReceiptPrinterId=${durableSaleReceipt.readiness.allowedPrinterId}`)
+  }
+  if (durableSaleReceiptWorker.readiness.enabled) {
+    durableSaleReceiptWorker.start()
+      .then(({ gatewayId, sessionId }) => {
+        console.log(`[local-print-bridge] durable gateway worker started gatewayId=${gatewayId} sessionId=${sessionId}`)
+      })
+      .catch((error) => {
+        console.error('[local-print-bridge] durable gateway worker failed to start', {
+          code: error?.code,
+          message: error?.message,
+        })
+      })
   }
 })
 
 const shutdown = (signal) => {
   console.log(`[local-print-bridge] received ${signal}, shutting down`)
+  durableSaleReceiptWorker.stop()
   server.close((error) => {
     if (error) {
       console.error('[local-print-bridge] shutdown failed', error)

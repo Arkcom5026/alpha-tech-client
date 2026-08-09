@@ -57,3 +57,14 @@ export const confirmDocumentWorkspace = async ({ customerId, note, lines }) => {
   const res = await apiClient.post('/combined-billing/document-workspace/confirm', { customerId, note, lines });
   return res.data;
 };
+
+export const listConsolidatedDeliveries = async () => (await apiClient.get('/combined-billing/consolidated-deliveries')).data;
+export const getConsolidatedDelivery = async (id) => (await apiClient.get(`/combined-billing/consolidated-deliveries/${id}`)).data;
+export const issueConsolidatedTaxDocument = async ({ branchId, taxDocumentId, taxInvoiceKind, recipient }) => {
+  const res = await apiClient.post(`/tax/documents/${taxDocumentId}/issue`, { branchId, taxInvoiceKind, ...(recipient ? { recipient } : {}) });
+  return res.data?.data ?? res.data;
+};
+export const getConsolidatedTaxPrintable = async ({ branchId, taxDocumentId }) => {
+  const res = await apiClient.get(`/tax/documents/${taxDocumentId}/printable`, { params: { branchId } });
+  return res.data?.data ?? res.data;
+};

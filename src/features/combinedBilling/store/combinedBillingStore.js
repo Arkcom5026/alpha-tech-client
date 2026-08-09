@@ -6,6 +6,8 @@ import {
   getCustomersWithPendingSales,
   getDocumentWorkspace,
   confirmDocumentWorkspace,
+  listConsolidatedDeliveries,
+  getConsolidatedDelivery,
 } from '../api/combinedBillingApi';
 
 const useCombinedBillingStore = create((set) => ({
@@ -16,6 +18,8 @@ const useCombinedBillingStore = create((set) => ({
   loading: false,
   error: null,
   workspace: [],
+  history: [],
+  selectedDocument: null,
 
   // ✅ โหลดรายการใบส่งของที่รวมบิลได้
   loadCombinableSalesAction: async () => {
@@ -85,6 +89,8 @@ const useCombinedBillingStore = create((set) => ({
     catch (error) { set({ error }); throw error; }
     finally { set({ loading: false }); }
   },
+  loadHistoryAction: async () => { const history = await listConsolidatedDeliveries(); set({ history }); return history; },
+  loadDocumentDetailAction: async (id) => { const selectedDocument = await getConsolidatedDelivery(id); set({ selectedDocument }); return selectedDocument; },
 }));
 
 export default useCombinedBillingStore;

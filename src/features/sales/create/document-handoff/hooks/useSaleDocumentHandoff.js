@@ -24,6 +24,7 @@ export const useSaleDocumentHandoff = ({
           shopSlug,
           saleId,
           option: finalOption,
+          paymentId: printContext?.paymentId,
           reservedWindow: printContext?.printWindow,
           navigate,
           lastDocumentKey: lastDocumentKeyRef.current,

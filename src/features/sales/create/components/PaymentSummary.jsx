@@ -179,6 +179,7 @@ PaymentSummary.propTypes = {
   retryingExistingCommand: PropTypes.bool,
   saleOption: PropTypes.oneOf([
     PRINT_OPTION.NONE,
+    PRINT_OPTION.ORDINARY_RECEIPT,
     PRINT_OPTION.RECEIPT,
     PRINT_OPTION.TAX_INVOICE,
     PRINT_OPTION.DELIVERY_NOTE,

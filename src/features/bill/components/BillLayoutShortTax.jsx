@@ -87,6 +87,7 @@ const BillLayoutShortTax = ({
   payments,
   config,
   hideContactName,
+  documentTitle,
 
   editableDocumentLines = false,
   editingLineKey = null,
@@ -96,7 +97,7 @@ const BillLayoutShortTax = ({
   onChangeDocumentLineDraft,
   onSaveDocumentLine,
 }) => {
-  const receiptTitle = 'ใบกำกับภาษีอย่างย่อ / ใบเสร็จรับเงิน'
+  const receiptTitle = documentTitle || 'ใบกำกับภาษีอย่างย่อ / ใบเสร็จรับเงิน'
   const receiptRootRef = React.useRef(null)
 
   React.useEffect(() => {

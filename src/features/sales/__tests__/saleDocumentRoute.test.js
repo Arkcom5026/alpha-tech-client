@@ -13,4 +13,10 @@ describe('sale document route', () => {
   it('returns null for NONE', () => {
     expect(resolveSaleDocumentRoute({ shopSlug: 'shop', saleId: 42, option: 'NONE' })).toBeNull();
   });
+
+  it('routes an ordinary receipt through its authoritative payment', () => {
+    expect(resolveSaleDocumentRoute({
+      shopSlug: 'shop', saleId: 42, paymentId: 91, option: 'ORDINARY_RECEIPT',
+    })).toBe('/shop/pos/sales/print-short/42?document=receipt&paymentId=91');
+  });
 });

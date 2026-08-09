@@ -5,8 +5,6 @@ import { PRINT_OPTION, SALE_MODE } from '../contracts/salePrintOptions';
 const BillPrintOptions = ({
   saleOption,
   setSaleOption,
-  includeDeliveryNote = false,
-  setIncludeDeliveryNote,
   hideNoneOption = false,
   currentSaleMode = SALE_MODE.CASH,
 }) => {
@@ -79,18 +77,6 @@ const BillPrintOptions = ({
           );
         })}
       </div>
-      {isCash ? (
-        <label className="flex min-h-11 items-center gap-3 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-medium text-blue-900">
-          <input
-            type="checkbox"
-            checked={includeDeliveryNote}
-            onChange={(event) => setIncludeDeliveryNote?.(event.target.checked)}
-            className="h-4 w-4 accent-blue-700"
-          />
-          <span>ออกใบส่งของเพิ่มเติม</span>
-          <span className="text-xs font-normal text-blue-700">เอกสารประกอบการขายเงินสด ไม่ตัดสต๊อกซ้ำ</span>
-        </label>
-      ) : null}
       {isCredit ? (
         <p className="text-xs font-medium text-amber-700">
           การขายแบบเครดิตใช้ใบส่งสินค้าเป็นเอกสารหลัก
@@ -103,8 +89,6 @@ const BillPrintOptions = ({
 BillPrintOptions.propTypes = {
   saleOption: PropTypes.oneOf(Object.values(PRINT_OPTION)).isRequired,
   setSaleOption: PropTypes.func.isRequired,
-  includeDeliveryNote: PropTypes.bool,
-  setIncludeDeliveryNote: PropTypes.func,
   hideNoneOption: PropTypes.bool,
   currentSaleMode: PropTypes.oneOf(Object.values(SALE_MODE)),
 };

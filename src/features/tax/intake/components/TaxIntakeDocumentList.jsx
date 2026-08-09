@@ -8,6 +8,7 @@ const TaxIntakeDocumentList = ({
   documents,
   loading,
   status,
+  selectedDocumentId,
   onStatusChange,
   onOpenDocument,
 }) => (
@@ -33,26 +34,30 @@ const TaxIntakeDocumentList = ({
     </div>
 
     <div className="divide-y divide-slate-100">
-      {documents.map((item) => (
-        <button
-          type="button"
-          key={item.id}
-          onClick={() => onOpenDocument(item)}
-          className="block w-full p-4 text-left hover:bg-slate-50"
-        >
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="font-bold text-slate-900">{item.documentNumber}</p>
-              <p className="mt-1 text-xs text-slate-500">
-                {item.documentType} · {formatTaxIntakeMoney(item.totalAmount)}
-              </p>
+      {documents.map((item) => {
+        const selected = String(item.id) === String(selectedDocumentId || '');
+        return (
+          <button
+            type="button"
+            key={item.id}
+            aria-pressed={selected}
+            onClick={() => onOpenDocument(item)}
+            className={`block w-full p-4 text-left transition ${selected ? 'bg-blue-50 ring-1 ring-inset ring-blue-200' : 'hover:bg-slate-50'}`}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="font-bold text-slate-900">{item.documentNumber}</p>
+                <p className="mt-1 text-xs text-slate-500">
+                  {item.documentType} · {formatTaxIntakeMoney(item.totalAmount)}
+                </p>
+              </div>
+              <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${getTaxIntakeBadgeClass(item.status)}`}>
+                {item.status}
+              </span>
             </div>
-            <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${getTaxIntakeBadgeClass(item.status)}`}>
-              {item.status}
-            </span>
-          </div>
-        </button>
-      ))}
+          </button>
+        );
+      })}
 
       {!loading && documents.length === 0 && (
         <div className="p-8 text-center text-sm text-slate-500">ยังไม่มี Tax Document</div>

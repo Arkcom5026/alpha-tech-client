@@ -68,6 +68,7 @@ const useCombinedBillingStore = create((set) => ({
     try {
       const customers = await getCustomersWithPendingSales();
       set({ customersWithPendingSales: customers });
+      return customers;
     } catch (error) {
       set({ error });
     } finally {

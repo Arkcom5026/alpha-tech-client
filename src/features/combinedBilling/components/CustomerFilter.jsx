@@ -20,9 +20,9 @@ const CustomerFilter = ({ onSelect }) => {
 
   const handleSearch = async () => {
     try {
-      await loadCustomersWithPendingSalesAction();
+      const loadedCustomers = await loadCustomersWithPendingSalesAction();
 
-      const filtered = customersWithPendingSales.filter((c) => {
+      const filtered = (Array.isArray(loadedCustomers) ? loadedCustomers : []).filter((c) => {
         const lower = searchText.toLowerCase();
         return (
           (c.name && c.name.toLowerCase().includes(lower)) ||

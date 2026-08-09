@@ -8,7 +8,7 @@ const depositList = read('src/features/customerDeposit/pages/ListCustomerDeposit
 const routes = read('src/routes/partner/posPartnerRoutes.jsx');
 
 assert.match(sidebar, /ประวัติใบรับชำระเดิม/);
-assert.match(sidebar, /ประวัติเงินมัดจำเดิม/);
+assert.doesNotMatch(sidebar, /ประวัติเงินมัดจำเดิม|finance\/deposit|finance\/refunds|จ่ายเงิน\/Advance Sup/);
 assert.doesNotMatch(receiptList, /create-new-receipt-button|onOpenAllocate|สร้างใบรับเงิน/);
 assert.match(receiptList, /พิมพ์ย้อนหลังเท่านั้น/);
 assert.doesNotMatch(depositList, /deposit\/create|รับเงินมัดจำ/);

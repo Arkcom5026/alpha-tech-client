@@ -19,6 +19,8 @@ const PrintConsolidatedBillPage = () => {
   if (error) return <main className="p-6 text-red-700">{error}</main>;
   if (!view) return <main className="p-6">กำลังเตรียมบิล...</main>;
   if (kind === 'FULL') return <div className="w-full min-h-screen bg-white py-8 px-4 print:p-0"><div className="bill-print-root mx-auto max-w-[210mm] bg-white print:p-0"><BillLayoutFullTax sale={view.sale} saleItems={view.items} payments={[view.payment]} config={view.config} /></div></div>;
-  return <div className="bill-print-root mx-auto w-[80mm] bg-white p-4 print:p-0"><BillLayoutShortTax sale={view.sale} saleItems={view.items} payments={[view.payment]} config={view.config} hideContactName /></div>;
+  const customerType = view.sale.customer?.type || 'PERSON';
+  const hideContactName = customerType === 'ORGANIZATION' || customerType === 'GOVERNMENT';
+  return <div className="bill-print-root mx-auto w-[80mm] bg-white p-4 print:p-0"><BillLayoutShortTax sale={view.sale} saleItems={view.items} payments={[view.payment]} config={view.config} hideContactName={hideContactName} /></div>;
 };
 export default PrintConsolidatedBillPage;

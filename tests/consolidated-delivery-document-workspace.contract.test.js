@@ -32,4 +32,6 @@ assert.doesNotMatch(page, /issueConsolidatedTaxDocument/);
 assert.match(printableDelivery, /documentUnitPrice/);
 assert.match(printableBill, /BillLayoutShortTax/);
 assert.match(printableBill, /BillLayoutFullTax/);
+assert.match(printableBill, /customerType === 'ORGANIZATION' \|\| customerType === 'GOVERNMENT'/);
+assert.match(printableBill, /hideContactName=\{hideContactName\}/);
 console.log('Consolidated delivery document workspace client contract: PASS');

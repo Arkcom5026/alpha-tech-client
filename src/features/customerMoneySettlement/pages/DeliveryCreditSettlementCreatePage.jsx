@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { Search, WalletCards } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useCustomerMoneyReceiveCustomerSearch } from '@/features/customerMoneyReceive/customer/useCustomerMoneyReceiveCustomerSearch';
-import { getEligibleDeliveryCredits } from '../api/deliveryCreditSettlementApi';
+import { createDeliveryCreditSettlement, getEligibleDeliveryCredits } from '../api/deliveryCreditSettlementApi';
 
 const customerLabel = (customer) => customer?.companyName || customer?.name || '-';
 const money = (value) => Number(value || 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -14,6 +14,8 @@ const DeliveryCreditSettlementCreatePage = () => {
   const [loadingCredits, setLoadingCredits] = useState(false);
   const [creditError, setCreditError] = useState('');
   const [selected, setSelected] = useState({});
+  const [note, setNote] = useState('');
+  const [saving, setSaving] = useState(false);
 
   const loadCredits = async (customer) => {
     setLoadingCredits(true);
@@ -47,6 +49,25 @@ const DeliveryCreditSettlementCreatePage = () => {
   const selectedTotal = useMemo(() => selectedLines.reduce((sum, line) => sum + Number(line.amount || 0), 0), [selectedLines]);
   const balance = Number(workspace?.balance?.availableAmount || 0);
   const overBalance = selectedTotal > balance;
+  const canSubmit = selectedLines.length > 0 && selectedTotal > 0 && !overBalance && !saving;
+
+  const submit = async () => {
+    if (!canSubmit || !customerSearch.selectedCustomer) return;
+    setSaving(true);
+    setCreditError('');
+    try {
+      const result = await createDeliveryCreditSettlement({
+        customerId: customerSearch.selectedCustomer.id,
+        note: note.trim() || null,
+        lines: selectedLines,
+      });
+      navigate(`../${result.id}`);
+    } catch (err) {
+      setCreditError(err?.response?.data?.message || err?.message || 'ตัดยอดใบส่งของไม่สำเร็จ');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <div className="mx-auto w-full max-w-7xl space-y-4 p-3 md:p-5">
@@ -92,11 +113,12 @@ const DeliveryCreditSettlementCreatePage = () => {
               <div className="divide-y divide-slate-100">
                 {sale.lines.map((line) => {
                   const key = `${sale.id}:${line.lineType}:${line.saleItemId}`;
-                  return <div key={key} className="grid gap-3 px-4 py-3 md:grid-cols-[1fr_130px_160px] md:items-center"><div><div className="font-medium text-slate-900">{line.description}</div><div className="text-xs text-slate-500">{line.lineType} · จำนวน {line.quantity} · มูลค่ารายการ ฿{money(line.lineAmount)}</div></div><div className="text-right text-sm text-slate-600">฿{money(line.lineAmount)}</div><input type="number" min="0" step="0.01" value={selected[key]?.amount ?? ''} onChange={(e) => setLineAmount(sale, line, e.target.value)} placeholder="ยอดที่จะตัด" className="h-10 rounded-lg border border-slate-300 px-3 text-right" /></div>;
+                  return <div key={key} className="grid gap-3 px-4 py-3 md:grid-cols-[1fr_130px_160px] md:items-center"><div><div className="font-medium text-slate-900">{line.description}</div><div className="text-xs text-slate-500">{line.lineType} · จำนวน {line.quantity} · มูลค่ารายการ ฿{money(line.lineAmount)}</div></div><div className="text-right text-sm text-slate-600">฿{money(line.lineAmount)}</div><input type="number" min="0" max={Math.min(line.lineAmount, sale.outstandingAmount)} step="0.01" value={selected[key]?.amount ?? ''} onChange={(e) => setLineAmount(sale, line, e.target.value)} placeholder="ยอดที่จะตัด" className="h-10 rounded-lg border border-slate-300 px-3 text-right" /></div>;
                 })}
               </div>
             </article>
           ))}
+          <textarea value={note} onChange={(e) => setNote(e.target.value)} maxLength={500} rows={3} placeholder="หมายเหตุการตัดยอด (ถ้ามี)" className="w-full rounded-xl border border-slate-300 p-3" />
         </section>
       )}
 
@@ -104,7 +126,7 @@ const DeliveryCreditSettlementCreatePage = () => {
         <section className="sticky bottom-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-lg">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div><div className="text-xs text-slate-500">ยอดที่เลือกตัดทั้งหมด</div><div className={`text-2xl font-bold ${overBalance ? 'text-rose-700' : 'text-indigo-800'}`}>฿{money(selectedTotal)}</div>{overBalance && <div className="text-xs text-rose-700">ยอดที่เลือกมากกว่า Customer Money ที่พร้อมใช้</div>}</div>
-            <button type="button" disabled className="h-12 rounded-xl bg-slate-300 px-6 font-semibold text-white">ยืนยันตัดยอด — รอ Settlement Persistence</button>
+            <button type="button" onClick={submit} disabled={!canSubmit} className="h-12 rounded-xl bg-indigo-700 px-6 font-semibold text-white disabled:bg-slate-300">{saving ? 'กำลังตัดยอด...' : 'ยืนยันตัดยอดใบส่งของ'}</button>
           </div>
         </section>
       )}

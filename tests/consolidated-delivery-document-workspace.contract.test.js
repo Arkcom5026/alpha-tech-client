@@ -18,6 +18,7 @@ assert.match(page, /line\.status === 'PAID_READY'/);
 assert.match(page, /documentUnitPrice/);
 assert.match(page, /adjustmentReason/);
 assert.match(page, /Tax Document #/);
+assert.match(page, /setSelected\(\{\}\)/);
 assert.match(store, /return customers/);
 assert.match(customerFilter, /const loadedCustomers = await loadCustomersWithPendingSalesAction\(\)/);
 assert.match(customerFilter, /Array\.isArray\(loadedCustomers\)/);

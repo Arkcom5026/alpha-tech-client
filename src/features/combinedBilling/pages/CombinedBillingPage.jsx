@@ -39,6 +39,8 @@ const CombinedBillingPage = () => {
     setMessage(`สร้างใบส่งของรวม ${result.code} และส่งต่อ Bill/Tax แล้ว (Tax Document #${result.taxDocument?.id})`);
     await loadDocumentWorkspaceAction(customer.id);
     await loadHistoryAction();
+    setSelected({});
+    setReasons({});
   };
 
   const issue = async (kind, result = lastResult) => {

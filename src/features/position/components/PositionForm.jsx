@@ -45,7 +45,7 @@ const PositionForm = ({
       <div>
         <label className="block text-sm font-medium mb-1">ชื่อตำแหน่ง <span className="text-rose-600">*</span></label>
         <input
-          className="w-full border border-zinc-300 dark:border-zinc-700 rounded-md px-3 py-2 bg-white dark:bg-zinc-900"
+          className="w-full border border-zinc-300 dark:border-zinc-700 rounded-md px-3 py-2 bg-white dark:bg-zinc-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 dark:focus:ring-emerald-950/40"
           placeholder="เช่น ผู้ดูแลระบบ"
           value={name}
           onChange={(e) => setName(e.target.value)}
@@ -55,7 +55,7 @@ const PositionForm = ({
       <div>
         <label className="block text-sm font-medium mb-1">คำอธิบาย</label>
         <textarea
-          className="w-full border border-zinc-300 dark:border-zinc-700 rounded-md px-3 py-2 bg-white dark:bg-zinc-900 min-h-[96px]"
+          className="w-full border border-zinc-300 dark:border-zinc-700 rounded-md px-3 py-2 bg-white dark:bg-zinc-900 min-h-[96px] outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 dark:focus:ring-emerald-950/40"
           placeholder="รายละเอียดเพิ่มเติม (ถ้ามี)"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
@@ -64,7 +64,7 @@ const PositionForm = ({
 
       <div className="flex items-center justify-end gap-2 pt-2">
         <button type="button" className="px-3 py-2 rounded-md border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800" onClick={onCancel} disabled={submitting}>ยกเลิก</button>
-        <button type="submit" disabled={!canSubmit} className="px-3 py-2 rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 disabled:opacity-50">{submitting ? 'กำลังบันทึก...' : 'บันทึก'}</button>
+        <button type="submit" disabled={!canSubmit} className="px-3 py-2 rounded-md text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 disabled:opacity-50">{submitting ? 'กำลังบันทึก...' : 'บันทึก'}</button>
       </div>
     </form>
   );

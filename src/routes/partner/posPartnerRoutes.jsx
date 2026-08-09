@@ -31,6 +31,7 @@ import SupplierPayableWorkspacePage from '@/features/supplierPayable/pages/Suppl
 import TaxExpenseWorkspacePage from '@/features/taxExpense/pages/TaxExpenseWorkspacePage';
 import CustomerMoneyReceivePage from '@/features/customerMoneyReceive/pages/CustomerMoneyReceivePage';
 import CustomerMoneyReceiveDetailPage from '@/features/customerMoneyReceive/pages/CustomerMoneyReceiveDetailPage';
+import CustomerMoneyReceiptPrintPage from '@/features/customerMoneyReceive/pages/CustomerMoneyReceiptPrintPage';
 
 import CustomerReceiptListPage from '@features/customerReceipt/pages/CustomerReceiptListPage';
 import CreateCustomerReceiptPage from '@features/customerReceipt/pages/CreateCustomerReceiptPage';
@@ -100,6 +101,7 @@ export const posPartnerRoutes = [
           { path: 'supplier-payables', element: <SupplierPayableWorkspacePage /> },
           { path: 'customer-money-receive', element: <CustomerMoneyReceivePage /> },
           { path: 'customer-money-receive/:id', element: <CustomerMoneyReceiveDetailPage /> },
+          { path: 'customer-money-receive/:id/print', element: <CustomerMoneyReceiptPrintPage /> },
           {
             path: 'customer-receipts',
             children: [

@@ -47,3 +47,13 @@ export const getCustomersWithPendingSales = async () => {
     throw error;
   }
 };
+
+export const getDocumentWorkspace = async (customerId) => {
+  const res = await apiClient.get('/combined-billing/document-workspace', { params: { customerId } });
+  return res.data;
+};
+
+export const confirmDocumentWorkspace = async ({ customerId, note, lines }) => {
+  const res = await apiClient.post('/combined-billing/document-workspace/confirm', { customerId, note, lines });
+  return res.data;
+};

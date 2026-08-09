@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { BadgeAlert, Building2, FileText, Landmark, UserCheck, Wallet } from 'lucide-react';
+import { BadgeAlert, Building2, FileText, Landmark, UserCheck, Wallet, WalletCards } from 'lucide-react';
 import FinanceActionCard from '../components/workspace/FinanceActionCard';
 import FinanceMetricCard from '../components/workspace/FinanceMetricCard';
 import FinanceWorkspaceHeader from '../components/workspace/FinanceWorkspaceHeader';
@@ -43,9 +43,15 @@ const FinanceDashboardPage = () => {
 
       <FinanceWorkspaceSection
         title="เมนูจัดการบัญชี"
-        description="เข้าถึงลูกหนี้ เครดิตลูกค้า และเจ้าหนี้ Supplier โดยรักษาขอบเขตสาขาปัจจุบัน"
+        description="รับเงินจากลูกค้า ตรวจสอบลูกหนี้ เครดิตลูกค้า และเจ้าหนี้ Supplier โดยรักษาขอบเขตสาขาปัจจุบัน"
       >
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
+          <FinanceActionCard
+            title="รับเงินจากลูกค้า"
+            description="บันทึกรับเงินจริงและออกเอกสารรับเงิน โดยยังไม่ตัดใบส่งสินค้า"
+            icon={WalletCards}
+            onClick={() => navigate(`/${shopSlug}/pos/finance/customer-money-receive`)}
+          />
           <FinanceActionCard
             title="จัดการลูกหนี้"
             description="ตรวจสอบบิลค้างจ่ายและบันทึกตัดชำระหนี้"

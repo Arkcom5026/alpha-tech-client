@@ -13,8 +13,8 @@ import {
 } from '../api/inputTaxReceiptLinkApi';
 import {
   projectDocumentAllocation,
+  receiptAllocationPrefill,
   receiptIdentity,
-  remainingReceiptAmount,
 } from '../utils/inputTaxReceiptLink';
 
 export const inputTaxReceiptInitialFilters = Object.freeze({
@@ -192,9 +192,7 @@ const useInputTaxReceiptWorkspaceController = () => {
         ...current,
         [key]: {
           ...receipt,
-          allocatedSubtotal: 0,
-          allocatedVatAmount: 0,
-          allocatedTotalAmount: remainingReceiptAmount(receipt),
+          ...receiptAllocationPrefill(receipt),
         },
       };
     });

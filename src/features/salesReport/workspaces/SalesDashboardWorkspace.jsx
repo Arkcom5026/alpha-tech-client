@@ -82,7 +82,7 @@ const SalesDashboardPage = () => {
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
         <section className="flex flex-col gap-3 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <p className="text-sm font-medium text-blue-600">Sales Report</p>
+            <p className="text-sm font-medium text-emerald-600">Sales Report</p>
             <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-900">
               Dashboard รายงานการขาย
             </h1>
@@ -94,13 +94,13 @@ const SalesDashboardPage = () => {
           <div className="flex flex-wrap gap-3">
             <Link
               to={shopSlug ? `/${shopSlug}/pos/reports/sales/list` : `/pos/reports/sales/list`}
-              className="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+              className="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700"
             >
               ดูรายการขาย
             </Link>
             <Link
               to={shopSlug ? `/${shopSlug}/pos/reports/sales/products` : `/pos/reports/sales/products`}
-              className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"
+              className="inline-flex items-center justify-center rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700"
             >
               วิเคราะห์สินค้า
             </Link>
@@ -115,7 +115,7 @@ const SalesDashboardPage = () => {
                 type="date"
                 value={filters?.dateFrom || ''}
                 onChange={(event) => handleDateChange('dateFrom', event.target.value)}
-                className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
               />
             </div>
 
@@ -125,7 +125,7 @@ const SalesDashboardPage = () => {
                 type="date"
                 value={filters?.dateTo || ''}
                 onChange={(event) => handleDateChange('dateTo', event.target.value)}
-                className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
               />
             </div>
 
@@ -133,7 +133,7 @@ const SalesDashboardPage = () => {
               <button
                 type="button"
                 onClick={handleApplyDateFilter}
-                className="w-full rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
+                className="w-full rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700"
               >
                 ใช้ตัวกรอง
               </button>
@@ -143,7 +143,7 @@ const SalesDashboardPage = () => {
               <button
                 type="button"
                 onClick={handleResetDateFilter}
-                className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700"
               >
                 ล้างช่วงวันที่
               </button>
@@ -164,7 +164,7 @@ const SalesDashboardPage = () => {
                   {formatNumber(summary.growthPct)}% จากช่วงก่อนหน้า
                 </p>
               </div>
-              <div className="rounded-2xl bg-blue-50 p-3 text-blue-600">
+              <div className="rounded-2xl bg-emerald-50 p-3 text-emerald-600">
                 <DollarSign size={28} />
               </div>
             </div>
@@ -268,7 +268,7 @@ const SalesDashboardPage = () => {
                       <div className="text-xs font-medium text-slate-500">{formatNumber(amount)}</div>
                       <div className="flex h-full w-full items-end">
                         <div
-                          className="w-full rounded-t-2xl bg-blue-600 transition-all duration-300"
+                          className="w-full rounded-t-2xl bg-emerald-600 transition-all duration-300"
                           style={{ height: `${heightPercent}%` }}
                         />
                       </div>
@@ -324,7 +324,7 @@ const SalesDashboardPage = () => {
             </div>
             <Link
               to={shopSlug ? `/${shopSlug}/pos/reports/sales/products` : `/pos/reports/sales/products`}
-              className="text-sm font-semibold text-blue-600 hover:text-blue-700"
+              className="text-sm font-semibold text-emerald-600 hover:text-emerald-700"
             >
               ดูทั้งหมด
             </Link>
@@ -350,7 +350,7 @@ const SalesDashboardPage = () => {
                     </tr>
                   ) : hasTopProducts ? (
                     topProducts.map((item, index) => (
-                      <tr key={item.id || `${item.name}-${index}`} className="hover:bg-slate-50">
+                      <tr key={item.id || `${item.name}-${index}`} className="transition hover:bg-emerald-50/50">
                         <td className="px-4 py-3 font-medium text-slate-600">{index + 1}</td>
                         <td className="px-4 py-3 font-medium text-slate-900">{item.name}</td>
                         <td className="px-4 py-3 text-right font-semibold text-slate-700">
@@ -379,5 +379,4 @@ const SalesDashboardPage = () => {
 };
 
 export default SalesDashboardPage;
-
 

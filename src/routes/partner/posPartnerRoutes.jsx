@@ -25,7 +25,7 @@ import DailyClosingPage from '@/features/finance/pages/DailyClosingPage';
 import AccountsReceivablePage from '@/features/finance/pages/AccountsReceivablePage';
 import CustomerCreditPage from '@/features/finance/pages/CustomerCreditPage';
 import TaxIntakeWorkspacePage from '@/features/tax/intake/pages/TaxIntakeWorkspacePage';
-import TaxPeriodManagementPage from '@/features/tax/periods/TaxPeriodManagementPage';
+import TaxPeriodManagementPage from '@/features/tax/periods/taxPeriodManagementPage';
 import InputTaxReceiptWorkspacePage from '@/features/tax/inputDocuments/pages/InputTaxReceiptWorkspacePage';
 import SupplierPayableWorkspacePage from '@/features/supplierPayable/pages/SupplierPayableWorkspacePage';
 import TaxExpenseWorkspacePage from '@/features/taxExpense/pages/TaxExpenseWorkspacePage';

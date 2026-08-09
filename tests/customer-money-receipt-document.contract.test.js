@@ -20,7 +20,7 @@ test('customer money module follows list-first navigation standard', () => {
   assert.match(routes, /path: ':id\/print', element: <CustomerMoneyReceiptPrintPage/);
   assert.match(listPage, /ประวัติการรับเงินจากลูกค้า/);
   assert.match(listPage, /navigate\('\.\/create'\)/);
-  assert.match(listPage, /> รับเงิน</);
+  assert.match(listPage, /<Plus[^>]*\/>\s*รับเงิน/);
   assert.match(createPage, /กลับประวัติการรับเงิน/);
   assert.match(detail, /กลับรายการรับเงิน/);
 });

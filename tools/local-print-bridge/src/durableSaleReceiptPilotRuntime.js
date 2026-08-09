@@ -51,14 +51,19 @@ const createDurableSaleReceiptPilotRuntime = ({
     }
   }
 
-  const resolvedLeaseClient = leaseClient || createDurablePrintLeaseClient({
-    serverBaseUrl,
-    fetchImpl,
-    getAuthorization,
-  })
+  // Keep the local discovery/driver bridge available without requiring
+  // durable-server credentials. Durable clients are only valid when the
+  // explicitly gated pilot is enabled.
+  const resolvedLeaseClient = leaseClient || (enabled
+    ? createDurablePrintLeaseClient({
+      serverBaseUrl,
+      fetchImpl,
+      getAuthorization,
+    })
+    : null)
 
   const resolvedCoordinator = coordinator || (() => {
-    if (!localExecutor || typeof localExecutor.execute !== 'function') {
+    if (!enabled || !localExecutor || typeof localExecutor.execute !== 'function') {
       return null
     }
     return createDurablePrintExecutionCoordinator({

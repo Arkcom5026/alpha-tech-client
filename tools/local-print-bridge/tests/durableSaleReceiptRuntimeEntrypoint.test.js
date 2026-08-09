@@ -28,6 +28,20 @@ test('composition keeps pilot and physical submission behind separate explicit g
   assert.equal(composition.readiness.serverAuthorizationConfigured, true)
 })
 
+test('disabled durable pilot does not require server credentials for local printer discovery startup', () => {
+  const composition = createDurableSaleReceiptRuntimeComposition({
+    resolvePrinter: async () => null,
+    env: {},
+    renderer: { async render() { throw new Error('must not render') } },
+    submitter: { async submit() { throw new Error('must not submit') } },
+    localExecutor: { async execute() { throw new Error('must not execute') } },
+  })
+
+  assert.equal(composition.runtime.enabled, false)
+  assert.equal(composition.readiness.pilotEnabled, false)
+  assert.equal(composition.readiness.serverBaseUrlConfigured, false)
+})
+
 test('composition exposes both pilot and physical gates only when explicitly configured', () => {
   const composition = createDurableSaleReceiptRuntimeComposition({
     resolvePrinter: async () => null,

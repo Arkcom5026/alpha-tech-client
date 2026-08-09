@@ -42,4 +42,79 @@ describe('input tax receipt link utilities', () => {
       allocatedTotalAmount: 96.3,
     });
   });
+
+  it('splits a VAT-inclusive receipt using the server standard-rate policy', () => {
+    expect(receiptAllocationPrefill({
+      remainingSubtotalAmount: 23490,
+      remainingVatAmount: 0,
+      remainingTotalAmount: 23490,
+      vatPolicy: {
+        treatment: 'STANDARD_RATE',
+        ratePercent: 7,
+        priceMode: 'INCLUSIVE',
+        autoCalculate: true,
+      },
+    })).toEqual({
+      allocatedSubtotal: 21953.27,
+      allocatedVatAmount: 1536.73,
+      allocatedTotalAmount: 23490,
+    });
+  });
+
+  it('adds VAT for an explicit VAT-exclusive policy', () => {
+    expect(receiptAllocationPrefill({
+      remainingSubtotalAmount: 100,
+      remainingVatAmount: 0,
+      remainingTotalAmount: 107,
+      vatPolicy: {
+        treatment: 'STANDARD_RATE',
+        ratePercent: 7,
+        priceMode: 'EXCLUSIVE',
+        autoCalculate: true,
+      },
+    })).toEqual({
+      allocatedSubtotal: 100,
+      allocatedVatAmount: 7,
+      allocatedTotalAmount: 107,
+    });
+  });
+
+  it.each(['ZERO_RATED', 'EXEMPT', 'NON_VAT'])(
+    'keeps VAT at zero for %s treatment',
+    (treatment) => {
+      expect(receiptAllocationPrefill({
+        remainingSubtotalAmount: 100,
+        remainingVatAmount: 0,
+        remainingTotalAmount: 100,
+        vatPolicy: {
+          treatment,
+          ratePercent: 0,
+          priceMode: 'INCLUSIVE',
+          autoCalculate: true,
+        },
+      })).toEqual({
+        allocatedSubtotal: 100,
+        allocatedVatAmount: 0,
+        allocatedTotalAmount: 100,
+      });
+    },
+  );
+
+  it('falls back to source amounts when tax semantics are insufficient', () => {
+    expect(receiptAllocationPrefill({
+      remainingSubtotalAmount: 250,
+      remainingVatAmount: 0,
+      remainingTotalAmount: 250,
+      vatPolicy: {
+        treatment: 'UNKNOWN',
+        ratePercent: 0,
+        priceMode: 'UNKNOWN',
+        autoCalculate: false,
+      },
+    })).toEqual({
+      allocatedSubtotal: 250,
+      allocatedVatAmount: 0,
+      allocatedTotalAmount: 250,
+    });
+  });
 });

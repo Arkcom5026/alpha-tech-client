@@ -71,7 +71,7 @@ const defaultDraft = {
   contentConfiguration: defaultContentConfiguration,
 };
 
-const fieldClass = 'w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100';
+const fieldClass = 'w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100';
 const actionClass = 'rounded-xl px-4 py-3 text-sm font-semibold shadow-sm transition disabled:cursor-not-allowed disabled:opacity-60';
 
 const StoreHomepageEditorPage = () => {
@@ -227,7 +227,7 @@ const StoreHomepageEditorPage = () => {
       <section className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:flex-row md:items-center md:justify-between">
         <div>
           <div className="flex flex-wrap items-center gap-2">
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-600">Store Experience</p>
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-600">Store Experience</p>
             <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${isPublished ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>{isPublished ? 'LIVE' : 'DRAFT'}</span>
           </div>
           <h1 className="mt-1 text-2xl font-bold text-slate-900">ออกแบบหน้าหลักของร้าน</h1>
@@ -236,8 +236,8 @@ const StoreHomepageEditorPage = () => {
         </div>
         <div className="flex flex-wrap gap-2">
           <button type="button" onClick={preview} className={`${actionClass} border border-slate-300 bg-white text-slate-700 hover:bg-slate-50`}>ดูหน้าร้าน</button>
-          <button type="button" onClick={save} disabled={state.busy} className={`${actionClass} bg-blue-600 text-white hover:bg-blue-700`}>บันทึกแบบร่าง</button>
-          <button type="button" onClick={publish} disabled={state.busy} className={`${actionClass} bg-emerald-600 text-white hover:bg-emerald-700`}>{isPublished ? 'เผยแพร่การเปลี่ยนแปลง' : 'เผยแพร่หน้าร้าน'}</button>
+          <button type="button" onClick={save} disabled={state.busy} className={`${actionClass} bg-emerald-600 text-white hover:bg-emerald-700`}>บันทึกแบบร่าง</button>
+          <button type="button" onClick={publish} disabled={state.busy} className={`${actionClass} bg-emerald-700 text-white hover:bg-emerald-800`}>{isPublished ? 'เผยแพร่การเปลี่ยนแปลง' : 'เผยแพร่หน้าร้าน'}</button>
           {isPublished ? <button type="button" onClick={unpublish} disabled={state.busy} className={`${actionClass} bg-amber-500 text-white hover:bg-amber-600`}>ยกเลิกเผยแพร่</button> : null}
         </div>
       </section>
@@ -257,8 +257,8 @@ const StoreHomepageEditorPage = () => {
             </div>
           </section>
 
-          <section className="rounded-2xl border border-blue-200 bg-blue-50 p-5 shadow-sm">
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-700">Platform Design Authority</p>
+          <section className="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-5 shadow-sm">
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-700">Platform Design Authority</p>
             <h2 className="mt-1 font-bold text-slate-900">แพลตฟอร์มควบคุมโครงสร้าง ร้านเลือกสีแบรนด์</h2>
             <p className="mt-2 text-sm leading-6 text-slate-600">ร้านเลือกสีหลักและสีเน้นได้ ส่วนรูปแบบตัวอักษร สีพื้นผิว สีข้อความ ระยะห่าง การตอบสนองบนมือถือ และองค์ประกอบการขายยังควบคุมโดย Alpha-Tech Platform</p>
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
@@ -307,7 +307,7 @@ const StoreHomepageEditorPage = () => {
             <div className="mt-4 space-y-2">
               {SECTION_OPTIONS.map(([type, label]) => {
                 const section = (draft.sectionConfiguration || []).find((item) => item.type === type);
-                return <label key={type} className="flex items-center justify-between rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-700"><span>{label}</span><input type="checkbox" checked={Boolean(section?.enabled)} onChange={() => toggleSection(type)} /></label>;
+                return <label key={type} className="flex items-center justify-between rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-700"><span>{label}</span><input type="checkbox" checked={Boolean(section?.enabled)} onChange={() => toggleSection(type)} className="accent-emerald-600" /></label>;
               })}
             </div>
           </section>

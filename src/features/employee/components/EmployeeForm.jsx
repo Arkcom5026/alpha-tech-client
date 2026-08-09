@@ -1,5 +1,3 @@
-
-
 // ✅ @filename: EmployeeForm.jsx
 // ✅ @folder: src/features/employee/components/
 
@@ -13,8 +11,6 @@ import { useState, useEffect } from 'react';
  * - ถ้าเป็น superadmin จะสามารถแก้ไขสาขา (branchId) ได้ โดยรับข้อมูลสาขาผ่าน props
  */
 const EmployeeForm = ({ defaultValues = {}, onSubmit, loading, canEditBranch = false, branchOptions = [] }) => {
-  // ✂️ ตัด UI/logic ค้นหาผู้ใช้ออกทั้งหมด ตามคำขอ
-
   const [formData, setFormData] = useState({
     name: defaultValues.name || '',
     phone: defaultValues.phone || '',
@@ -24,7 +20,6 @@ const EmployeeForm = ({ defaultValues = {}, onSubmit, loading, canEditBranch = f
       : (defaultValues.branch?.id ? String(defaultValues.branch.id) : ''),
   });
 
-  // sync เมื่อ defaultValues เปลี่ยน (หลังโหลดข้อมูล)
   useEffect(() => {
     setFormData({
       name: defaultValues.name || '',
@@ -43,7 +38,6 @@ const EmployeeForm = ({ defaultValues = {}, onSubmit, loading, canEditBranch = f
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    // ใช้ browser validation แทน alert (ตามมาตรฐาน UI ของระบบ)
     await onSubmit({
       name: formData.name.trim(),
       phone: formData.phone.trim(),
@@ -52,16 +46,17 @@ const EmployeeForm = ({ defaultValues = {}, onSubmit, loading, canEditBranch = f
     });
   };
 
+  const selectClassName = 'border border-slate-300 p-2 w-full rounded-lg text-sm bg-white dark:bg-zinc-900 dark:border-zinc-700 focus:outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 dark:focus:ring-emerald-950/40 transition';
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      {/* 🔍 บล็อกค้นหาผู้ใช้ถูกตัดออกตามคำขอ */}
-
       <Input
         name="name"
         placeholder="ชื่อพนักงาน"
         value={formData.name}
         onChange={handleChange}
         required
+        className="focus-visible:border-emerald-500 focus-visible:ring-emerald-100"
       />
 
       <Input
@@ -69,17 +64,18 @@ const EmployeeForm = ({ defaultValues = {}, onSubmit, loading, canEditBranch = f
         placeholder="เบอร์โทรศัพท์"
         value={formData.phone}
         onChange={handleChange}
+        className="focus-visible:border-emerald-500 focus-visible:ring-emerald-100"
       />
 
       {canEditBranch && (
         <>
-          <label className="text-sm font-medium">สาขา</label>
+          <label className="text-sm font-medium text-slate-700 dark:text-zinc-200">สาขา</label>
           <select
             name="branchId"
             value={formData.branchId}
             onChange={handleChange}
             required
-            className="border p-2 w-full rounded text-sm"
+            className={selectClassName}
           >
             <option value="">-- เลือกสาขา --</option>
             {Array.isArray(branchOptions) && branchOptions.map((b) => (
@@ -89,13 +85,13 @@ const EmployeeForm = ({ defaultValues = {}, onSubmit, loading, canEditBranch = f
         </>
       )}
 
-      <label className="text-sm font-medium">ตำแหน่ง</label>
+      <label className="text-sm font-medium text-slate-700 dark:text-zinc-200">ตำแหน่ง</label>
       <select
         name="positionId"
         value={formData.positionId}
         onChange={handleChange}
         required
-        className="border p-2 w-full rounded text-sm"
+        className={selectClassName}
       >
         <option value="">-- เลือกตำแหน่ง --</option>
         <option value="1">ผู้ดูแลระบบ</option>
@@ -108,7 +104,11 @@ const EmployeeForm = ({ defaultValues = {}, onSubmit, loading, canEditBranch = f
       </select>
 
       <div className="flex justify-end">
-        <Button type="submit" disabled={loading || !formData.positionId}>
+        <Button
+          type="submit"
+          disabled={loading || !formData.positionId}
+          className="bg-emerald-600 text-white hover:bg-emerald-700 focus-visible:ring-emerald-300"
+        >
           {loading ? 'กำลังบันทึก...' : 'บันทึก'}
         </Button>
       </div>
@@ -117,7 +117,3 @@ const EmployeeForm = ({ defaultValues = {}, onSubmit, loading, canEditBranch = f
 };
 
 export default EmployeeForm;
-
-
-
-

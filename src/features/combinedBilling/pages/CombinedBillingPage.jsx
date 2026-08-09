@@ -62,7 +62,7 @@ const CombinedBillingPage = () => {
     <CustomerFilter />
     {message && <div className="rounded-lg bg-green-50 p-4 text-green-800">{message}</div>}
     {actionError && <div className="rounded-lg bg-red-50 p-4 text-red-700">{actionError}</div>}
-    {lastResult?.taxDocument?.id && <div className="flex gap-3 rounded-lg border bg-white p-4"><button className="rounded bg-slate-800 px-4 py-2 text-white" onClick={() => issue('SHORT')}>ออกใบกำกับภาษีอย่างย่อ</button><button className="rounded bg-blue-700 px-4 py-2 text-white" onClick={() => issue('FULL')}>ออกใบกำกับภาษีเต็มรูป</button></div>}
+    {lastResult?.taxDocument?.id && <div className="flex flex-wrap gap-3 rounded-lg border bg-white p-4"><button className="rounded bg-slate-800 px-4 py-2 text-white" onClick={() => printDelivery(lastResult)}>พิมพ์ใบส่งของรวม</button><button className="rounded bg-emerald-700 px-4 py-2 text-white" onClick={() => issue('SHORT')}>ออกใบกำกับภาษีอย่างย่อ</button><button className="rounded bg-blue-700 px-4 py-2 text-white" onClick={() => issue('FULL')}>ออกใบกำกับภาษีเต็มรูป</button></div>}
     {error && <div className="rounded-lg bg-red-50 p-4 text-red-700">{error.response?.data?.message || error.message}</div>}
     {customer && <div className="space-y-4">
       {workspace.map((sale) => <section key={sale.id} className="rounded-xl border bg-white p-4 shadow-sm">

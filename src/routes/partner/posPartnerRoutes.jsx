@@ -28,6 +28,7 @@ import TaxIntakeWorkspacePage from '@/features/tax/intake/pages/TaxIntakeWorkspa
 import TaxPeriodManagementPage from '@/features/tax/periods/pages/TaxPeriodManagementPage';
 import AccountingOfficePackagePage from '@/features/tax/periods/pages/AccountingOfficePackagePage';
 import InputTaxReceiptWorkspacePage from '@/features/tax/inputDocuments/pages/InputTaxReceiptWorkspacePage';
+import InputVatReportPage from '@/features/tax/inputVatReport/pages/InputVatReportPage';
 import SupplierPayableWorkspacePage from '@/features/supplierPayable/pages/SupplierPayableWorkspacePage';
 import TaxExpenseWorkspacePage from '@/features/taxExpense/pages/TaxExpenseWorkspacePage';
 import CustomerMoneyReceiveListPage from '@/features/customerMoneyReceive/pages/CustomerMoneyReceiveListPage';
@@ -84,7 +85,7 @@ export const posPartnerRoutes = [
           { path: 'sales/list', element: <TempReportPage title="📑 รายการเอกสารและบิลใบเสร็จงานขาย" /> },
           { path: 'sales/products', element: <TempReportPage title="📦 รายงานวิเคราะห์อันดับสินค้าขายดี" /> },
           { path: 'purchase', element: <TempReportPage title="🚚 รายงานวิเคราะห์ประวัติการจัดซื้อสินค้า" /> },
-          { path: 'inputtax', element: <TempReportPage title="💰 รายงานสมุดบัญชีภาษีซื้อ" /> },
+          { path: 'inputtax', element: <InputVatReportPage /> },
           { path: 'salestax', element: <TempReportPage title="💵 รายงานสมุดบัญชีภาษีขาย" /> },
         ],
       },

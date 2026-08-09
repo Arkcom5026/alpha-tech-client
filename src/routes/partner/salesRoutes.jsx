@@ -40,6 +40,7 @@ const salesRoutes = {
     { path: 'bill/print-full/:saleId', element: <PrintBillPageFullTax /> },
     { path: 'print-short/:saleId', element: <PrintBillPageShortTax /> },
     { path: 'print-full/:saleId', element: <PrintBillPageFullTax /> },
+    { path: 'tax-document/print/:taxDocumentId', element: <PrintConsolidatedTaxPage /> },
     {
       path: 'delivery-note',
       children: [

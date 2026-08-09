@@ -66,6 +66,41 @@ export const transitionTaxDocument = async ({ branchId, taxDocumentId, targetSta
   return unwrapData(response);
 };
 
+export const issueOutputTaxDocument = async ({ branchId, taxDocumentId, taxInvoiceKind, recipient }) => {
+  const response = await apiClient.post(
+    `/tax/documents/${requirePositiveId(taxDocumentId, 'taxDocumentId')}/issue`,
+    {
+      branchId: requirePositiveId(branchId, 'branchId'),
+      taxInvoiceKind: String(taxInvoiceKind || '').trim().toUpperCase(),
+      ...(recipient ? { recipient } : {}),
+    },
+  );
+  return unwrapData(response);
+};
+
+export const getOutputTaxPrintable = async ({ branchId, taxDocumentId }) => {
+  const response = await apiClient.get(
+    `/tax/documents/${requirePositiveId(taxDocumentId, 'taxDocumentId')}/printable`,
+    { params: { branchId: requirePositiveId(branchId, 'branchId') } },
+  );
+  return unwrapData(response);
+};
+
+export const getTaxIssuerProfile = async ({ branchId }) => {
+  const response = await apiClient.get('/tax/issuer-profile', {
+    params: { branchId: requirePositiveId(branchId, 'branchId') },
+  });
+  return unwrapData(response);
+};
+
+export const saveTaxIssuerProfile = async ({ branchId, ...profile }) => {
+  const response = await apiClient.put('/tax/issuer-profile', {
+    ...profile,
+    branchId: requirePositiveId(branchId, 'branchId'),
+  });
+  return unwrapData(response);
+};
+
 export const getTaxIntakeErrorDetails = (error) => (
   error?.response?.data?.error?.details || error?.response?.data?.details || null
 );

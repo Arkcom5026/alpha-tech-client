@@ -5,6 +5,9 @@ import { useNavigate } from 'react-router-dom';
 import CustomerReceiptListWorkspace from '../list/CustomerReceiptListWorkspace';
 import useCustomerReceiptStore from '../store/customerReceiptStore';
 
+const EMPTY_ITEMS = Object.freeze([]);
+const EMPTY_FILTERS = Object.freeze({});
+
 const CustomerReceiptListPage = () => {
   const didInitialLoadRef = useRef(false);
   const navigate = useNavigate();
@@ -13,9 +16,9 @@ const CustomerReceiptListPage = () => {
   const [sortKey, setSortKey] = useState('createdAt');
   const [sortDir, setSortDir] = useState('desc');
 
-  const items = useCustomerReceiptStore((state) => state.items) || [];
+  const items = useCustomerReceiptStore((state) => state.items) || EMPTY_ITEMS;
   const pagination = useCustomerReceiptStore((state) => state.pagination);
-  const filters = useCustomerReceiptStore((state) => state.filters) || {};
+  const filters = useCustomerReceiptStore((state) => state.filters) || EMPTY_FILTERS;
   const loading = useCustomerReceiptStore((state) => state.loading) || false;
   const error = useCustomerReceiptStore((state) => state.error) || null;
   const successMessage = useCustomerReceiptStore((state) => state.successMessage) || null;

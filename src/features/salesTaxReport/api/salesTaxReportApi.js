@@ -13,7 +13,6 @@ export const fetchSalesTaxReport = async (startDate, endDate) => {
     });
 
 
-    console.log('fetchSalesTaxReport',response.data)
     return response.data;
 
   } catch (error) {

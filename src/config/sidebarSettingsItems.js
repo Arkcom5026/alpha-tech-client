@@ -19,6 +19,7 @@ export const getSidebarSettingsItems = (shopSlug) => {
         { label: 'ตำแหน่งงาน', to: `${prefix}/settings/positions`, cap: P1_CAP.MANAGE_EMPLOYEES },
         { label: 'จัดการร้าน/บริษัท', to: `${prefix}/settings/branches`, cap: P1_CAP.MANAGE_EMPLOYEES },
         { label: 'ธนาคาร', to: `${prefix}/settings/bank`, cap: P1_CAP.VIEW_REPORTS },
+        { label: 'ตั้งค่าผู้ออกเอกสารภาษี', to: `${prefix}/settings/tax-issuer`, cap: P1_CAP.VIEW_REPORTS },
       ],
     },
   ];

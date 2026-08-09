@@ -104,6 +104,10 @@ const PrintBillListPage = () => {
   }), [documentSearch.rows, sortDir, sortKey]);
 
   const handlePrint = (row) => {
+    if (row.taxDocumentId) {
+      navigate(`../tax-document/print/${row.taxDocumentId}`);
+      return;
+    }
     navigate(printFormat === 'full'
       ? `../bill/print-full/${row.id}`
       : `../bill/print-short/${row.id}`);

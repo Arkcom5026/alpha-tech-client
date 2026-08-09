@@ -1,5 +1,6 @@
 import React from 'react';
 import { FileSearch } from 'lucide-react';
+import { Link, useParams } from 'react-router-dom';
 import TaxIntakeReconciliationCard from './TaxIntakeReconciliationCard';
 import {
   formatTaxIntakeDateTime,
@@ -20,12 +21,17 @@ const TaxIntakeDocumentDetailPanel = ({
   transitioning,
   transitionError,
   onTransition,
+  onIssue,
 }) => {
+  const { shopSlug } = useParams();
   if (!document) return null;
 
-  const actions = taxDocumentLifecycleActions[document.status] || [];
+  const isDraftOutput = document.status === 'DRAFT' && document.documentType === 'OUTPUT_TAX_INVOICE';
+  const actions = isDraftOutput ? [] : (taxDocumentLifecycleActions[document.status] || []);
   const reconciliation = document.inputTaxReconciliation;
   const approvalBlocked = Boolean(reconciliation && !reconciliation.canApprove);
+  const isIssuedOutput = document.status === 'REGISTERED'
+    && ['OUTPUT_TAX_INVOICE', 'OUTPUT_TAX_CREDIT_NOTE'].includes(document.documentType);
 
   return (
     <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -91,6 +97,20 @@ const TaxIntakeDocumentDetailPanel = ({
             );
           })}
         </div>
+      )}
+      {isDraftOutput && (
+        <div className="space-y-2 rounded-xl border border-blue-200 bg-blue-50 p-4">
+          <p className="text-sm font-bold text-blue-900">เอกสารภาษีขายต้องออกเลขผ่านระบบควบคุมเลขเอกสาร</p>
+          <div className="flex flex-wrap gap-2"><button disabled={transitioning} onClick={() => onIssue('SHORT')} className="rounded-xl bg-emerald-700 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">ออกใบกำกับภาษีอย่างย่อ</button><button disabled={transitioning} onClick={() => onIssue('FULL')} className="rounded-xl bg-blue-700 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">ออกใบกำกับภาษีเต็มรูป</button></div>
+        </div>
+      )}
+      {isIssuedOutput && (
+        <Link
+          to={`/${shopSlug || 'advancetech'}/pos/sales/tax-document/print/${document.id}`}
+          className="inline-flex rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-black text-white"
+        >
+          พิมพ์เอกสารภาษีฉบับที่ออกเลขแล้ว
+        </Link>
       )}
     </div>
   );

@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
+import { useBranchStore } from '@/features/branch/store/branchStore';
 import BillLayoutShortTax from '@/features/bill/components/BillLayoutShortTax';
 import BillLayoutFullTax from '@/features/bill/components/BillLayoutFullTax';
 import { getConsolidatedTaxPrintable } from '../api/combinedBillingApi';
 
 const PrintConsolidatedTaxPage = () => {
   const { taxDocumentId } = useParams(); const [query] = useSearchParams();
-  const branchId = Number(query.get('branchId')); const [data, setData] = useState(null); const [error, setError] = useState('');
+  const selectedBranchId = useBranchStore((state) => Number(state.selectedBranchId || state.currentBranch?.id || 0));
+  const branchId = Number(query.get('branchId') || selectedBranchId); const [data, setData] = useState(null); const [error, setError] = useState('');
   useEffect(() => { getConsolidatedTaxPrintable({ branchId, taxDocumentId }).then(setData).catch((e) => setError(e.response?.data?.message || e.message)); }, [branchId, taxDocumentId]);
   const view = useMemo(() => !data ? null : ({
     sale: { id: `tax-${data.document.id}`, code: data.document.number, createdAt: data.document.issuedAt, soldAt: data.document.issuedAt, totalAmount: data.document.totalAmount, vat: data.document.taxAmount, customer: { name: data.recipient?.legalName || data.sale?.customerName, companyName: data.recipient?.legalName || data.sale?.customerName, taxId: data.recipient?.taxId || data.sale?.customerTaxId, address: data.recipient?.registeredAddress }, branch: { companyName: data.issuer?.legalName, address: data.issuer?.registeredAddress, phone: data.issuer?.phone, taxId: data.issuer?.taxId } },

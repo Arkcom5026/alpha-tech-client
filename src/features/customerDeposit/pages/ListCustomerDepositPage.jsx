@@ -12,7 +12,7 @@ const ListCustomerDepositPage = () => {
 
   useEffect(() => {
     fetchCustomerDepositsAction();
-  }, []);
+  }, [fetchCustomerDepositsAction]);
 
   const handleCancel = async (id) => {
     if (window.confirm('คุณต้องการยกเลิกรายการนี้หรือไม่?')) {

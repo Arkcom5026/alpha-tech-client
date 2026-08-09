@@ -8,10 +8,10 @@ import InputTaxReceiptWorkspaceHeader from '../components/InputTaxReceiptWorkspa
 import InputTaxDocumentSelectionPanel from '../components/InputTaxDocumentSelectionPanel';
 import InputTaxDocumentCreationForm from '../components/InputTaxDocumentCreationForm';
 import InputTaxReceiptWorkspaceSummary from '../components/InputTaxReceiptWorkspaceSummary';
-import useInputTaxReceiptWorkspaceController from '../hooks/useInputTaxReceiptWorkspaceController';
+import useInputTaxReceiptCreateLinkController from '../hooks/useInputTaxReceiptCreateLinkController';
 
 const InputTaxReceiptWorkspacePage = () => {
-  const controller = useInputTaxReceiptWorkspaceController();
+  const controller = useInputTaxReceiptCreateLinkController();
 
   const activeLinkCount = useMemo(() => controller.links.filter((link) => (
     String(link.status || '').toUpperCase() !== 'CANCELLED'
@@ -62,17 +62,17 @@ const InputTaxReceiptWorkspacePage = () => {
         linksLoading={controller.linksLoading}
         submitting={controller.submitting}
         onDocumentChange={controller.setSelectedDocumentId}
-        onToggleCreateDocument={() => controller.setShowCreateDocument((value) => !value)}
+        onToggleCreateDocument={controller.toggleCreateDocument}
         onAttach={controller.attachSelected}
       />
 
       {controller.showCreateDocument && (
         <InputTaxDocumentCreationForm
-          supplier={controller.selectedSupplier}
+          supplierName={controller.selectedSupplier?.supplierName || ''}
           invoice={controller.invoice}
           submitting={controller.submitting}
-          onChange={controller.changeInvoice}
-          onSubmit={controller.createInputTaxDocument}
+          onInvoiceChange={controller.changeInvoice}
+          onSubmit={controller.createAndAutoLinkInputTaxDocument}
         />
       )}
 

@@ -4,6 +4,11 @@ import { getCustomerMoneyReceive } from '../api/customerMoneyReceiveApi';
 
 const customerLabel = (customer) => customer?.companyName || customer?.name || '-';
 
+const formatMoney = (value) => Number(value || 0).toLocaleString('th-TH', {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+
 const CustomerMoneyReceiveDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -30,7 +35,10 @@ const CustomerMoneyReceiveDetailPage = () => {
       <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm print:border-0 print:shadow-none">
         <header className="border-b border-slate-200 pb-4 text-center"><h1 className="text-2xl font-bold text-slate-900">เอกสารรับเงินจากลูกค้า</h1><p className="mt-1 text-sm text-slate-500">Customer Money Receive</p></header>
         <div className="mt-5 grid gap-3 sm:grid-cols-2"><div><div className="text-xs text-slate-500">เลขที่เอกสาร</div><div className="font-semibold">{record.documentNo}</div></div><div><div className="text-xs text-slate-500">วันที่รับเงิน</div><div className="font-semibold">{new Date(record.receivedAt).toLocaleString('th-TH')}</div></div><div className="sm:col-span-2"><div className="text-xs text-slate-500">ลูกค้า</div><div className="font-semibold">{customerLabel(record.customer)}</div><div className="text-sm text-slate-600">{[record.customer?.phone, record.customer?.email, record.customer?.taxId].filter(Boolean).join(' · ')}</div></div></div>
-        <div className="my-6 rounded-2xl bg-slate-50 p-5 text-center"><div className="text-sm text-slate-500">จำนวนเงินที่รับ</div><div className="mt-1 text-3xl font-bold text-slate-950">฿{Number(record.amount).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div></div>
+        <div className="my-6 grid gap-3 sm:grid-cols-2">
+          <div className="rounded-2xl bg-slate-50 p-5 text-center"><div className="text-sm text-slate-500">จำนวนเงินที่รับ</div><div className="mt-1 text-3xl font-bold text-slate-950">฿{formatMoney(record.amount)}</div></div>
+          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-center"><div className="text-sm text-emerald-700">เงินลูกค้าคงเหลือปัจจุบัน</div><div className="mt-1 text-3xl font-bold text-emerald-950">฿{formatMoney(record.availableBalance)}</div><div className="mt-1 text-xs text-emerald-700">รวมเงินที่ยังพร้อมนำไปใช้ในสาขาปัจจุบัน</div></div>
+        </div>
         <dl className="space-y-3 text-sm"><div className="grid grid-cols-[150px_1fr] gap-3"><dt className="text-slate-500">ช่องทางรับเงิน</dt><dd className="font-medium">{record.paymentMethod}</dd></div><div className="grid grid-cols-[150px_1fr] gap-3"><dt className="text-slate-500">เลขอ้างอิง</dt><dd>{record.paymentReference || '-'}</dd></div><div className="grid grid-cols-[150px_1fr] gap-3"><dt className="text-slate-500">รายละเอียดการรับเงิน</dt><dd className="whitespace-pre-wrap">{record.description || '-'}</dd></div><div className="grid grid-cols-[150px_1fr] gap-3"><dt className="text-slate-500">ผู้รับเงิน</dt><dd>{record.receivedBy?.name || record.receivedBy?.fullName || `#${record.receivedBy?.id || '-'}`}</dd></div></dl>
         <footer className="mt-10 border-t border-slate-200 pt-4 text-xs text-slate-500">เอกสารนี้ยืนยันการรับเงินจริงจากลูกค้าเท่านั้น และไม่ใช่การตัดชำระใบส่งสินค้า</footer>
       </article>

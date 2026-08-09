@@ -25,6 +25,7 @@ const BillPrintOptions = ({
 
     return [
       ...(hideNoneOption ? [] : [{ value: PRINT_OPTION.NONE, label: 'ไม่พิมพ์เอกสาร', disabled: false }]),
+      { value: PRINT_OPTION.ORDINARY_RECEIPT, label: 'ใบเสร็จรับเงิน', disabled: false },
       { value: PRINT_OPTION.RECEIPT, label: 'ใบกำกับภาษีอย่างย่อ', disabled: false },
       { value: PRINT_OPTION.TAX_INVOICE, label: 'ใบกำกับภาษีเต็มรูป', disabled: false },
     ];

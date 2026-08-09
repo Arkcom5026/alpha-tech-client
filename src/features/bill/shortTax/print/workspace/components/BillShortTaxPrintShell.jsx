@@ -6,6 +6,7 @@ const BillShortTaxPrintShell = ({
   payment,
   config,
   hideContactName,
+  documentTitle,
   printRootRef,
   documentLineEditor,
 }) => (
@@ -80,6 +81,7 @@ const BillShortTaxPrintShell = ({
           payments={[payment]}
           config={{ ...config, hideDate: false }}
           hideContactName={hideContactName}
+          documentTitle={documentTitle}
           editableDocumentLines
           editingLineKey={documentLineEditor.editingLineKey}
           lineDrafts={documentLineEditor.lineDrafts}

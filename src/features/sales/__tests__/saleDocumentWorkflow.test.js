@@ -34,4 +34,12 @@ describe('completed sale document workflow', () => {
     expect(result.opened).toBe(false);
     expect(navigate).not.toHaveBeenCalled();
   });
+
+  it('hands an ordinary receipt off with the payment identity', () => {
+    const navigate = vi.fn();
+    openCompletedSaleDocument({
+      shopSlug: 'shop', saleId: 1, paymentId: 9, option: 'ORDINARY_RECEIPT', navigate,
+    });
+    expect(navigate).toHaveBeenCalledWith('/shop/pos/sales/print-short/1?document=receipt&paymentId=9');
+  });
 });

@@ -6,14 +6,14 @@ import apiClient from '@/utils/apiClient'
 
 // ดึง active ready-audit session ของสาขาปัจจุบัน
 export const getActiveReadySession = async () => {
-  const res = await apiClient.get('/stock-audit/ready/active')
+  const res = await apiClient.get('/stock-audits/ready/active')
   return res.data
 }
 
 // เริ่มรอบเช็คสต๊อกพร้อมขาย (สร้าง Expected Snapshot)
 export const startReadyAudit = async () => {
   const { data, status } = await apiClient.post(
-    '/stock-audit/ready/start',
+    '/stock-audits/ready/start',
     {},
     {
       validateStatus: (s) => (s >= 200 && s < 300) || s === 409,
@@ -37,7 +37,7 @@ export const startReadyAudit = async () => {
 
 // ดึงภาพรวมของ Session (expected, scanned, missing)
 export const getAuditOverview = async (sessionId) => {
-  const res = await apiClient.get(`/stock-audit/${sessionId}/overview`)
+  const res = await apiClient.get(`/stock-audits/${sessionId}/overview`)
   return res.data
 }
 
@@ -48,19 +48,19 @@ export const scanAuditBarcode = async (sessionId, barcode, opts = {}) => {
     payload.mode = opts.mode
   }
 
-  const res = await apiClient.post(`/stock-audit/${sessionId}/scan`, payload)
+  const res = await apiClient.post(`/stock-audits/${sessionId}/scan`, payload)
   return res.data
 }
 
 // สแกนด้วย Serial Number โดยตรง
 export const scanAuditSn = async (sessionId, sn) => {
-  const res = await apiClient.post(`/stock-audit/${sessionId}/scan-sn`, { sn })
+  const res = await apiClient.post(`/stock-audits/${sessionId}/scan-sn`, { sn })
   return res.data
 }
 
 // ยืนยันผลการเช็ค (MARK_PENDING | MARK_LOST)
 export const confirmAudit = async (sessionId, strategy = 'MARK_PENDING') => {
-  const res = await apiClient.post(`/stock-audit/${sessionId}/confirm`, { strategy })
+  const res = await apiClient.post(`/stock-audits/${sessionId}/confirm`, { strategy })
   return res.data
 }
 
@@ -71,7 +71,7 @@ export const getAuditItems = async (sessionId, params = {}) => {
   const page = params && params.page
   const pageSize = params && params.pageSize
 
-  const res = await apiClient.get(`/stock-audit/${sessionId}/items`, {
+  const res = await apiClient.get(`/stock-audits/${sessionId}/items`, {
     params: { scanned, q, page, pageSize },
   })
   return res.data
@@ -79,6 +79,6 @@ export const getAuditItems = async (sessionId, params = {}) => {
 
 // ยกเลิกรอบตรวจนับ (Soft-cancel)
 export const cancelAudit = async (sessionId, payload = {}) => {
-  const res = await apiClient.post(`/stock-audit/${sessionId}/cancel`, payload)
+  const res = await apiClient.post(`/stock-audits/${sessionId}/cancel`, payload)
   return res.data
 }

@@ -191,7 +191,7 @@ const SalesListPage = () => {
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
         <section className="flex flex-col gap-3 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <p className="text-sm font-medium text-blue-600">Sales Report</p>
+            <p className="text-sm font-medium text-emerald-600">Sales Report</p>
             <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-900">
               รายการขาย
             </h1>
@@ -204,14 +204,14 @@ const SalesListPage = () => {
             <Link
               // 🟢 FIXED: สับสายทางวิ่งถอยกลับ Dashboard ให้มีตัวแปร Tenant แปะหน้าเสมอเสถียร 100%
               to={`/${targetSlug}/pos/reports/sales`}
-              className="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+              className="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700"
             >
               กลับ Dashboard
             </Link>
             <button
               type="button"
               disabled
-              className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="inline-flex items-center justify-center rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-emerald-300"
             >
               ส่งออกข้อมูล
             </button>
@@ -257,7 +257,7 @@ const SalesListPage = () => {
                 onKeyDown={(event) => {
                   if (event.key === 'Enter') handleSearchSubmit();
                 }}
-                className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
               />
             </div>
 
@@ -266,7 +266,7 @@ const SalesListPage = () => {
               <select
                 value={filters?.paymentMethod || 'ALL'}
                 onChange={(event) => handleFilterChange('paymentMethod', event.target.value)}
-                className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
               >
                 {Object.entries(paymentMethodLabelMap).map(([value, label]) => (
                   <option key={value} value={value}>
@@ -281,7 +281,7 @@ const SalesListPage = () => {
               <select
                 value={filters?.status || 'ALL'}
                 onChange={(event) => handleFilterChange('status', event.target.value)}
-                className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
               >
                 {Object.entries(statusLabelMap).map(([value, label]) => (
                   <option key={value} value={value}>
@@ -297,7 +297,7 @@ const SalesListPage = () => {
                 type="date"
                 value={filters?.dateFrom || ''}
                 onChange={(event) => handleDateChange('dateFrom', event.target.value)}
-                className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
               />
             </div>
 
@@ -307,7 +307,7 @@ const SalesListPage = () => {
                 type="date"
                 value={filters?.dateTo || ''}
                 onChange={(event) => handleDateChange('dateTo', event.target.value)}
-                className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
               />
             </div>
 
@@ -315,7 +315,7 @@ const SalesListPage = () => {
               <button
                 type="button"
                 onClick={handleSearchSubmit}
-                className="w-full rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 whitespace-nowrap"
+                className="w-full rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700 whitespace-nowrap"
               >
                 ค้นหา
               </button>
@@ -325,7 +325,7 @@ const SalesListPage = () => {
               <button
                 type="button"
                 onClick={handleApplyDateFilter}
-                className="w-full rounded-2xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 whitespace-nowrap"
+                className="w-full rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700 whitespace-nowrap"
               >
                 ใช้ตัวกรอง
               </button>
@@ -335,7 +335,7 @@ const SalesListPage = () => {
               <button
                 type="button"
                 onClick={handleResetDateFilter}
-                className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 whitespace-nowrap"
+                className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 whitespace-nowrap"
               >
                 ล้างตัวกรอง
               </button>
@@ -345,7 +345,7 @@ const SalesListPage = () => {
 
         <section className="rounded-3xl border border-slate-200 bg-white shadow-sm">
           <div className="border-b border-slate-200 px-6 py-4">
-            <div className="inline-flex items-center rounded-2xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700 whitespace-nowrap">
+            <div className="inline-flex items-center rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700 whitespace-nowrap">
               ช่วงข้อมูลปัจจุบัน: {dateRangeLabel}
             </div>
           </div>
@@ -376,7 +376,7 @@ const SalesListPage = () => {
                     <button
                       type="button"
                       onClick={() => handleSortChange('soldAt')}
-                      className="inline-flex items-center gap-1 hover:text-blue-600"
+                      className="inline-flex items-center gap-1 transition hover:text-emerald-600"
                     >
                       {renderSortLabel('วันที่ / เวลา', 'soldAt')}
                     </button>
@@ -389,7 +389,7 @@ const SalesListPage = () => {
                     <button
                       type="button"
                       onClick={() => handleSortChange('totalAmount')}
-                      className="inline-flex w-full items-center justify-end gap-1 hover:text-blue-600"
+                      className="inline-flex w-full items-center justify-end gap-1 transition hover:text-emerald-600"
                     >
                       {renderSortLabel('ยอดรวม', 'totalAmount')}
                     </button>
@@ -413,7 +413,7 @@ const SalesListPage = () => {
                     <tr
                       key={row.id}
                       onClick={() => handleOpenSaleDetail(row.id)}
-                      className="cursor-pointer odd:bg-white even:bg-slate-50 hover:bg-blue-50 transition"
+                      className="cursor-pointer odd:bg-white even:bg-slate-50 transition hover:bg-emerald-50/60"
                     >
                       <td className="px-4 py-3 font-semibold text-slate-900">
                         <button
@@ -423,7 +423,7 @@ const SalesListPage = () => {
                             navigator.clipboard?.writeText?.(row.saleNo);
                           }}
                           title="คลิกเพื่อคัดลอกเลขบิล"
-                          className="inline-flex items-center gap-2 rounded-lg text-left transition hover:text-blue-600"
+                          className="inline-flex items-center gap-2 rounded-lg text-left transition hover:text-emerald-600"
                         >
                           <span>{row.saleNo}</span>
                         </button>
@@ -453,7 +453,7 @@ const SalesListPage = () => {
                           // 🟢 FIXED: สับสายพาสตรงปุ่มกดรายละเอียดท้ายตารางให้สลัก Dynamic targetSlug คุมสาขาปลอดภัย
                           to={`/${targetSlug}/pos/reports/sales/${row.id}`}
                           onClick={(event) => event.stopPropagation()}
-                          className="inline-flex items-center justify-center rounded-xl border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+                          className="inline-flex items-center justify-center rounded-xl border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700"
                         >
                           ดูรายละเอียด
                         </Link>
@@ -482,7 +482,7 @@ const SalesListPage = () => {
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                className="rounded-xl border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-xl border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
                 disabled={salesListLoading || pagination.page <= 1}
                 onClick={() => handlePageChange(pagination.page - 1)}
               >
@@ -490,7 +490,7 @@ const SalesListPage = () => {
               </button>
               <button
                 type="button"
-                className="rounded-xl border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-xl border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
                 disabled={salesListLoading || pagination.page >= pagination.totalPages}
                 onClick={() => handlePageChange(pagination.page + 1)}
               >

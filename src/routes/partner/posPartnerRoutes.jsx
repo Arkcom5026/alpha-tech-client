@@ -33,6 +33,10 @@ import CustomerMoneyReceiveListPage from '@/features/customerMoneyReceive/pages/
 import CustomerMoneyReceivePage from '@/features/customerMoneyReceive/pages/CustomerMoneyReceivePage';
 import CustomerMoneyReceiveDetailPage from '@/features/customerMoneyReceive/pages/CustomerMoneyReceiveDetailPage';
 import CustomerMoneyReceiptPrintPage from '@/features/customerMoneyReceive/pages/CustomerMoneyReceiptPrintPage';
+import DeliveryCreditSettlementListPage from '@/features/customerMoneySettlement/pages/DeliveryCreditSettlementListPage';
+import DeliveryCreditSettlementCreatePage from '@/features/customerMoneySettlement/pages/DeliveryCreditSettlementCreatePage';
+import DeliveryCreditSettlementDetailPage from '@/features/customerMoneySettlement/pages/DeliveryCreditSettlementDetailPage';
+import DeliveryCreditSettlementPrintPage from '@/features/customerMoneySettlement/pages/DeliveryCreditSettlementPrintPage';
 
 import CustomerReceiptListPage from '@features/customerReceipt/pages/CustomerReceiptListPage';
 import CreateCustomerReceiptPage from '@features/customerReceipt/pages/CreateCustomerReceiptPage';
@@ -107,6 +111,15 @@ export const posPartnerRoutes = [
               { path: 'create', element: <CustomerMoneyReceivePage /> },
               { path: ':id', element: <CustomerMoneyReceiveDetailPage /> },
               { path: ':id/print', element: <CustomerMoneyReceiptPrintPage /> },
+            ],
+          },
+          {
+            path: 'customer-money-settlements',
+            children: [
+              { index: true, element: <DeliveryCreditSettlementListPage /> },
+              { path: 'create', element: <DeliveryCreditSettlementCreatePage /> },
+              { path: ':id', element: <DeliveryCreditSettlementDetailPage /> },
+              { path: ':id/print', element: <DeliveryCreditSettlementPrintPage /> },
             ],
           },
           {

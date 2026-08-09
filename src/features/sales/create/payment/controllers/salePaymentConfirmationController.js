@@ -14,6 +14,7 @@ export const executeSalePaymentConfirmation = async ({
   calculation,
   saleMode,
   saleOption,
+  includeDeliveryNote = false,
   customerType,
   hasValidCustomerId,
   hasImmediatePayment,
@@ -55,7 +56,7 @@ export const executeSalePaymentConfirmation = async ({
 
   try {
     const response = await onConfirmSale({
-      deliveryNoteMode: saleMode === 'CREDIT' ? 'PRINT' : undefined,
+      deliveryNoteMode: saleMode === 'CREDIT' || includeDeliveryNote ? 'PRINT' : undefined,
       saleType: customerType === 'GOVERNMENT' ? 'GOVERNMENT' : undefined,
       paymentIntent,
     });

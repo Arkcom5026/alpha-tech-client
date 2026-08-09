@@ -22,6 +22,8 @@ const PaymentSummary = ({
   retryingExistingCommand = false,
   saleOption,
   setSaleOption,
+  includeDeliveryNote = false,
+  setIncludeDeliveryNote,
   currentSaleMode,
   setCurrentSaleMode,
   hasValidCustomerId = false,
@@ -42,7 +44,7 @@ const PaymentSummary = ({
       setSaleOption(PRINT_OPTION.DELIVERY_NOTE);
       return;
     }
-    if (isCash && saleOption === PRINT_OPTION.NONE) {
+    if (isCash && [PRINT_OPTION.NONE, PRINT_OPTION.DELIVERY_NOTE].includes(saleOption)) {
       setSaleOption(PRINT_OPTION.RECEIPT);
     }
   }, [isCredit, isCash, saleOption, setSaleOption]);
@@ -118,6 +120,8 @@ const PaymentSummary = ({
       <BillPrintOptions
         saleOption={saleOption}
         setSaleOption={setSaleOption}
+        includeDeliveryNote={includeDeliveryNote}
+        setIncludeDeliveryNote={setIncludeDeliveryNote}
         currentSaleMode={currentSaleMode}
         hideNoneOption={isCash}
       />
@@ -180,6 +184,8 @@ PaymentSummary.propTypes = {
     PRINT_OPTION.DELIVERY_NOTE,
   ]).isRequired,
   setSaleOption: PropTypes.func.isRequired,
+  includeDeliveryNote: PropTypes.bool,
+  setIncludeDeliveryNote: PropTypes.func.isRequired,
   currentSaleMode: PropTypes.oneOf([SALE_MODE.CASH, SALE_MODE.CREDIT]).isRequired,
   setCurrentSaleMode: PropTypes.func.isRequired,
   hasValidCustomerId: PropTypes.bool,

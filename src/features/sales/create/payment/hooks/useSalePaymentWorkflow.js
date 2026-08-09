@@ -12,6 +12,8 @@ export const useSalePaymentWorkflow = ({
   onSaleModeChange,
   saleOption,
   onSaleOptionChange,
+  includeDeliveryNote,
+  onIncludeDeliveryNoteChange,
   onConfirmSale,
   onSaleConfirmed,
   setClearPhoneTrigger,
@@ -123,10 +125,12 @@ export const useSalePaymentWorkflow = ({
     setClearPhoneTrigger?.(Date.now());
     onSaleModeChange?.('CASH');
     onSaleOptionChange?.('NONE');
+    onIncludeDeliveryNoteChange?.(false);
   }, [
     clearCustomerAndDeposit,
     onSaleModeChange,
     onSaleOptionChange,
+    onIncludeDeliveryNoteChange,
     resetSaleOrderAction,
     setBillDiscount,
     setCardRef,
@@ -151,6 +155,7 @@ export const useSalePaymentWorkflow = ({
         cardRef,
         customerType,
         saleOption,
+        includeDeliveryNote,
         onConfirmSale,
         onSaleConfirmed,
         confirmContext,
@@ -187,6 +192,7 @@ export const useSalePaymentWorkflow = ({
     paymentList,
     resetAfterSuccess,
     saleOption,
+    includeDeliveryNote,
     selectedDeposit,
   ]);
 

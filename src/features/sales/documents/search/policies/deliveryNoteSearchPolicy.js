@@ -88,8 +88,9 @@ const getBalanceAmount = (sale) => {
 
 export const DELIVERY_NOTE_SEARCH_POLICY = Object.freeze({
   id: 'DELIVERY_NOTE',
-  queryParams: Object.freeze({ onlyUnpaid: 1 }),
+  queryParams: Object.freeze({ onlyWithDeliveryNote: 1 }),
   isEligible: (sale) => {
+    if (sale?.officialDocumentNumber) return true;
     if (getBalanceAmount(sale) > 0.0001) return true;
     if (sale?.isPaid === false) return true;
     return String(sale?.paymentStatus || '').toUpperCase() === 'UNPAID';

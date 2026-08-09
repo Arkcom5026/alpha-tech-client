@@ -122,8 +122,8 @@ const DeliveryNoteListPage = () => {
   return (
     <main className="mx-auto w-full max-w-[1600px] space-y-4 p-3 text-slate-800 md:p-5">
       <DeliveryNoteWorkspaceHeader
-        title="ใบส่งสินค้าและยอดค้างชำระ"
-        description="ค้นหา ตรวจสอบ และพิมพ์ใบส่งสินค้าจากรายการขายเครดิต"
+        title="ใบส่งสินค้า"
+        description="ค้นหา ตรวจสอบ และพิมพ์ย้อนหลังทั้งใบส่งของเครดิตและใบส่งของประกอบการขายเงินสด"
         count={sortedRows.length}
       />
 
@@ -158,7 +158,7 @@ const DeliveryNoteListPage = () => {
       />
 
       <p className="text-xs text-slate-500">
-        แสดงเฉพาะรายการที่เข้าเงื่อนไขสำหรับออกใบส่งสินค้าตามข้อมูลจากระบบขาย
+        ใบส่งของประกอบการขายเงินสดเป็นเอกสารปลายทาง ไม่ตัดสต๊อกซ้ำและไม่นำไปตัดยอดหรือรวมใบส่งของ
       </p>
     </main>
   );

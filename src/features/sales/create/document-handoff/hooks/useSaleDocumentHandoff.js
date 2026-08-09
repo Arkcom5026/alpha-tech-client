@@ -11,6 +11,7 @@ export const useSaleDocumentHandoff = ({
   productSearchRef,
 }) => {
   const [saleOption, setSaleOption] = useState('NONE');
+  const [includeDeliveryNote, setIncludeDeliveryNote] = useState(false);
   const lastDocumentKeyRef = useRef('');
 
   const handleConfirmed = useCallback((saleId, option, printContext = {}) => {
@@ -50,6 +51,8 @@ export const useSaleDocumentHandoff = ({
   return {
     saleOption,
     setSaleOption,
+    includeDeliveryNote,
+    setIncludeDeliveryNote,
     handleConfirmed,
   };
 };

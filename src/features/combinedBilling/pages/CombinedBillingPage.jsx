@@ -16,6 +16,7 @@ const CombinedBillingPage = () => {
   const [reasons, setReasons] = useState({});
   const [note, setNote] = useState('');
   const [message, setMessage] = useState('');
+  const [actionError, setActionError] = useState('');
   const [lastResult, setLastResult] = useState(null);
 
   useEffect(() => { loadHistoryAction().catch(() => {}); }, [loadHistoryAction]);
@@ -44,15 +45,23 @@ const CombinedBillingPage = () => {
   };
 
   const issue = async (kind, result = lastResult) => {
-    const recipient = kind === 'FULL' ? { legalName: result.customer?.companyName || result.customer?.name, taxId: result.customer?.taxId, registeredAddress: result.customer?.registeredAddress || result.customer?.address, branchCode: result.customer?.branchCode || '00000', isHeadOffice: result.customer?.isHeadOffice ?? true } : undefined;
-    await issueConsolidatedTaxDocument({ branchId, taxDocumentId: result.taxDocument.id, taxInvoiceKind: kind, recipient });
-    navigate(`/${shopSlug}/pos/sales/combined-billing/tax/print/${result.taxDocument.id}?branchId=${branchId}`);
+    try {
+      setActionError('');
+      const recipient = kind === 'FULL' ? { legalName: result.customer?.companyName || result.customer?.name, taxId: result.customer?.taxId, registeredAddress: result.customer?.registeredAddress || result.customer?.address, branchCode: result.customer?.branchCode || '00000', isHeadOffice: result.customer?.isHeadOffice ?? true } : undefined;
+      await issueConsolidatedTaxDocument({ branchId, taxDocumentId: result.taxDocument.id, taxInvoiceKind: kind, recipient });
+      navigate(`/${shopSlug}/pos/sales/combined-billing/tax/print/${result.taxDocument.id}?branchId=${branchId}`);
+    } catch (issueError) {
+      setActionError(issueError.response?.data?.message || issueError.message || 'ไม่สามารถออกเอกสารภาษีได้');
+    }
   };
+
+  const printDelivery = (document) => navigate(`/${shopSlug}/pos/sales/combined-billing/delivery/print/${document.id}`);
 
   return <div className="p-6 space-y-6">
     <div><h1 className="text-2xl font-bold">Document Workspace / ใบส่งของรวม</h1><p className="text-gray-600">เลือกเฉพาะรายการที่ชำระครบ ปรับราคาสุดท้าย และส่งต่อให้ระบบ Bill/Tax เดิม</p></div>
     <CustomerFilter />
     {message && <div className="rounded-lg bg-green-50 p-4 text-green-800">{message}</div>}
+    {actionError && <div className="rounded-lg bg-red-50 p-4 text-red-700">{actionError}</div>}
     {lastResult?.taxDocument?.id && <div className="flex gap-3 rounded-lg border bg-white p-4"><button className="rounded bg-slate-800 px-4 py-2 text-white" onClick={() => issue('SHORT')}>ออกใบกำกับภาษีอย่างย่อ</button><button className="rounded bg-blue-700 px-4 py-2 text-white" onClick={() => issue('FULL')}>ออกใบกำกับภาษีเต็มรูป</button></div>}
     {error && <div className="rounded-lg bg-red-50 p-4 text-red-700">{error.response?.data?.message || error.message}</div>}
     {customer && <div className="space-y-4">
@@ -64,7 +73,22 @@ const CombinedBillingPage = () => {
       </section>)}
       <div className="sticky bottom-4 rounded-xl border bg-white p-4 shadow-lg"><div className="flex flex-wrap items-end gap-4"><label className="flex-1">หมายเหตุ<input className="mt-1 w-full rounded border px-3 py-2" value={note} onChange={(e) => setNote(e.target.value)} /></label><div className="text-right"><div className="text-sm text-gray-500">{chosen.length} รายการ</div><div className="text-xl font-bold">{money(total)} บาท</div></div><button className="rounded bg-blue-600 px-5 py-2 text-white disabled:opacity-50" disabled={loading || !chosen.length || chosen.some((line) => Number(prices[`${line.lineType}:${line.lineId}`]) !== Number(line.sourceUnitPrice) && !reasons[`${line.lineType}:${line.lineId}`]?.trim())} onClick={confirm}>ยืนยันสร้างใบส่งของรวม</button></div></div>
     </div>}
-    <section className="rounded-xl border bg-white p-4"><h2 className="mb-3 text-xl font-bold">ประวัติใบส่งของรวม</h2><div className="space-y-3">{history.map((document) => <details className="rounded-lg border p-3" key={document.id}><summary className="cursor-pointer font-semibold">{document.code} · {document.customer?.companyName || document.customer?.name} · {money(document.totalAmount)} บาท · Bill/Tax: {document.taxDocument?.issuedDocumentNumber || document.taxDocument?.status || '-'}</summary><div className="mt-3 overflow-x-auto"><table className="min-w-full text-sm"><thead><tr className="bg-gray-50"><th className="p-2 text-left">ใบส่งของต้นทาง</th><th className="p-2 text-left">รายการ</th><th className="p-2 text-right">ยอดเอกสาร</th><th className="p-2">สถานะ</th></tr></thead><tbody>{document.documentLines.map((line) => <tr className="border-t" key={line.id}><td className="p-2">{line.sourceDocumentNo}</td><td className="p-2">{line.description}<div className="text-xs text-gray-500">{line.sourceLineType} #{line.sourceLineId}</div></td><td className="p-2 text-right">{money(line.documentAmount)}</td><td className="p-2 text-center">{line.status}</td></tr>)}</tbody></table></div></details>)}</div></section>
+    <section className="rounded-xl border bg-white p-4">
+      <h2 className="mb-3 text-xl font-bold">ประวัติใบส่งของรวม</h2>
+      <div className="space-y-3">{history.map((document) => {
+        const tax = document.taxDocument;
+        const taxIssued = Boolean(tax?.issuedDocumentNumber);
+        return <details className="rounded-lg border p-3" key={document.id}>
+          <summary className="cursor-pointer font-semibold">{document.code} · {document.customer?.companyName || document.customer?.name} · {money(document.totalAmount)} บาท · Bill/Tax: {tax?.issuedDocumentNumber || tax?.status || '-'}</summary>
+          <div className="mt-3 flex flex-wrap gap-2 print:hidden">
+            <button className="rounded bg-slate-800 px-3 py-2 text-sm text-white" onClick={() => printDelivery(document)}>พิมพ์ใบส่งของรวม</button>
+            {tax && !taxIssued && <><button className="rounded bg-emerald-700 px-3 py-2 text-sm text-white" onClick={() => issue('SHORT', document)}>ออกและพิมพ์บิล/ใบกำกับภาษีอย่างย่อ</button><button className="rounded bg-blue-700 px-3 py-2 text-sm text-white" onClick={() => issue('FULL', document)}>ออกและพิมพ์บิล/ใบกำกับภาษีเต็มรูป</button></>}
+            {tax && taxIssued && <button className="rounded bg-blue-700 px-3 py-2 text-sm text-white" onClick={() => navigate(`/${shopSlug}/pos/sales/combined-billing/tax/print/${tax.id}?branchId=${branchId}`)}>พิมพ์บิล/ใบกำกับภาษี {tax.taxInvoiceKind === 'FULL' ? 'เต็มรูป' : 'อย่างย่อ'}</button>}
+          </div>
+          <div className="mt-3 overflow-x-auto"><table className="min-w-full text-sm"><thead><tr className="bg-gray-50"><th className="p-2 text-left">ใบส่งของต้นทาง</th><th className="p-2 text-left">รายการ</th><th className="p-2 text-right">ยอดเอกสาร</th><th className="p-2">สถานะ</th></tr></thead><tbody>{document.documentLines.map((line) => <tr className="border-t" key={line.id}><td className="p-2">{line.sourceDocumentNo}</td><td className="p-2">{line.description}<div className="text-xs text-gray-500">{line.sourceLineType} #{line.sourceLineId}</div></td><td className="p-2 text-right">{money(line.documentAmount)}</td><td className="p-2 text-center">{line.status}</td></tr>)}</tbody></table></div>
+        </details>;
+      })}</div>
+    </section>
   </div>;
 };
 

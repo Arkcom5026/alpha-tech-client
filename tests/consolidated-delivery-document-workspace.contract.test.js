@@ -9,6 +9,7 @@ const page = read('src/features/combinedBilling/pages/CombinedBillingPage.jsx');
 const api = read('src/features/combinedBilling/api/combinedBillingApi.js');
 const store = read('src/features/combinedBilling/store/combinedBillingStore.js');
 const customerFilter = read('src/features/combinedBilling/components/CustomerFilter.jsx');
+const printableDelivery = read('src/features/combinedBilling/pages/PrintConsolidatedDeliveryPage.jsx');
 
 assert.match(api, /\/combined-billing\/document-workspace/);
 assert.match(api, /\/combined-billing\/document-workspace\/confirm/);
@@ -22,4 +23,9 @@ assert.match(page, /setSelected\(\{\}\)/);
 assert.match(store, /return customers/);
 assert.match(customerFilter, /const loadedCustomers = await loadCustomersWithPendingSalesAction\(\)/);
 assert.match(customerFilter, /Array\.isArray\(loadedCustomers\)/);
+assert.match(api, /getConsolidatedDeliveryPrintable/);
+assert.match(page, /พิมพ์ใบส่งของรวม/);
+assert.match(page, /ออกและพิมพ์บิล\/ใบกำกับภาษีอย่างย่อ/);
+assert.match(page, /ออกและพิมพ์บิล\/ใบกำกับภาษีเต็มรูป/);
+assert.match(printableDelivery, /documentUnitPrice/);
 console.log('Consolidated delivery document workspace client contract: PASS');

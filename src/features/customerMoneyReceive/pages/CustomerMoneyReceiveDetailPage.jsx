@@ -60,8 +60,8 @@ const CustomerMoneyReceiveDetailPage = () => {
   return (
     <div className="mx-auto max-w-3xl space-y-4 p-4 md:p-6">
       <div className="flex flex-wrap gap-2">
-        <button type="button" onClick={() => navigate('../customer-money-receive')} className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold">กลับไปรับเงิน</button>
-        <button type="button" onClick={() => navigate(`./print`)} className="rounded-xl bg-teal-700 px-4 py-2 text-sm font-semibold text-white">ออกใบรับเงิน / พิมพ์</button>
+        <button type="button" onClick={() => navigate('..')} className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold">กลับรายการรับเงิน</button>
+        <button type="button" onClick={() => navigate('./print')} className="rounded-xl bg-teal-700 px-4 py-2 text-sm font-semibold text-white">ออกใบรับเงิน / พิมพ์</button>
         {canCancel && <button type="button" onClick={handleCancel} disabled={cancelling} className="rounded-xl border border-rose-300 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700 disabled:opacity-50">{cancelling ? 'กำลังยกเลิก...' : 'ยกเลิกเอกสารรับเงิน'}</button>}
       </div>
       {cancelError && <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">{cancelError}</div>}

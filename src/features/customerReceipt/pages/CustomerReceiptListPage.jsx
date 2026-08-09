@@ -136,10 +136,8 @@ const CustomerReceiptListPage = () => {
     return `${baseSalesPath}/finance/customer-receipts${segment}`;
   };
 
-  const handleCreate = () => navigate(getDynamicFinanceUrl('/create'));
   const handleOpenDetail = (item) => navigate(getDynamicFinanceUrl(`/${item.id}`));
   const handleOpenReprint = (item) => navigate(getDynamicFinanceUrl(`/${item.id}/reprint`));
-  const handleOpenAllocate = (item) => navigate(getDynamicFinanceUrl(`/${item.id}/allocate`));
 
   // Keep store pagination/filter ownership explicit at the page controller boundary.
   // The current high-density workspace does not expose those controls yet.
@@ -152,7 +150,6 @@ const CustomerReceiptListPage = () => {
       onKeywordInputChange={setKeywordInput}
       onSearch={handleSearch}
       onReset={handleReset}
-      onCreate={handleCreate}
       loading={loading}
       error={error}
       successMessage={successMessage}
@@ -163,7 +160,6 @@ const CustomerReceiptListPage = () => {
       onToggleSort={toggleSort}
       onOpenDetail={handleOpenDetail}
       onOpenReprint={handleOpenReprint}
-      onOpenAllocate={handleOpenAllocate}
     />
   );
 };

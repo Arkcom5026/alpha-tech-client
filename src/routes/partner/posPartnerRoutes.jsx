@@ -3,7 +3,7 @@
 // 🏛️ Clean Architecture Routing: Unified Premium Integration (Safe Emergency Rollback Edition)
 // 🎨 Minimal Platinum Light Mode Edition Integrated — Fix Blank Screen Loop
 import React from 'react';
-import { Navigate, Outlet } from 'react-router-dom';
+import { Navigate, Outlet, useParams } from 'react-router-dom';
 import ProtectedRoute from '@/features/auth/components/ProtectedRoute';
 
 import purchasesRoutes from './purchasesRoutes';
@@ -39,9 +39,7 @@ import DeliveryCreditSettlementDetailPage from '@/features/customerMoneySettleme
 import DeliveryCreditSettlementPrintPage from '@/features/customerMoneySettlement/pages/DeliveryCreditSettlementPrintPage';
 
 import CustomerReceiptListPage from '@features/customerReceipt/pages/CustomerReceiptListPage';
-import CreateCustomerReceiptPage from '@features/customerReceipt/pages/CreateCustomerReceiptPage';
 import CustomerReceiptDetailPage from '@features/customerReceipt/pages/CustomerReceiptDetailPage';
-import CustomerReceiptAllocatePage from '@features/customerReceipt/pages/CustomerReceiptAllocatePage';
 import PrintCustomerReceiptPage from '@features/customerReceipt/pages/PrintCustomerReceiptPage';
 import ReprintCustomerReceiptPage from '@features/customerReceipt/reprint/pages/ReprintCustomerReceiptPage';
 
@@ -66,6 +64,11 @@ const TempReportPage = ({ title }) => (
     {title} <span className="text-slate-500 text-xs font-bold font-mono ml-2">(ระบบกำลังเคลียร์โฟลเดอร์ลุยสถาปัตยกรรมใหม่)</span>
   </div>
 );
+
+const LegacyCustomerMoneyRedirect = ({ target }) => {
+  const { shopSlug } = useParams();
+  return <Navigate to={`/${shopSlug || 'advancetech'}/pos/finance/${target}`} replace />;
+};
 
 export const posPartnerRoutes = [
   {
@@ -126,9 +129,9 @@ export const posPartnerRoutes = [
             path: 'customer-receipts',
             children: [
               { index: true, element: <CustomerReceiptListPage /> },
-              { path: 'create', element: <CreateCustomerReceiptPage /> },
+              { path: 'create', element: <LegacyCustomerMoneyRedirect target="customer-money-receive/create" /> },
               { path: ':id', element: <CustomerReceiptDetailPage /> },
-              { path: ':id/allocate', element: <CustomerReceiptAllocatePage /> },
+              { path: ':id/allocate', element: <LegacyCustomerMoneyRedirect target="customer-money-settlements/create" /> },
               { path: ':id/print', element: <PrintCustomerReceiptPage /> },
               { path: ':id/reprint', element: <ReprintCustomerReceiptPage /> },
             ],

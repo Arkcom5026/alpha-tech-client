@@ -38,7 +38,8 @@ const DeliveryCreditSettlementCreatePage = () => {
 
   const setLineAmount = (sale, line, value) => {
     const key = `${sale.id}:${line.lineType}:${line.saleItemId}`;
-    const amount = Math.max(0, Number(value) || 0);
+    const limit = Math.min(Number(line.remainingAmount ?? line.lineAmount), Number(sale.outstandingAmount));
+    const amount = Math.min(Math.max(0, Number(value) || 0), limit);
     setSelected((prev) => ({
       ...prev,
       [key]: amount > 0 ? { saleId: sale.id, saleItemId: line.saleItemId, lineType: line.lineType, amount } : undefined,
@@ -113,7 +114,8 @@ const DeliveryCreditSettlementCreatePage = () => {
               <div className="divide-y divide-slate-100">
                 {sale.lines.map((line) => {
                   const key = `${sale.id}:${line.lineType}:${line.saleItemId}`;
-                  return <div key={key} className="grid gap-3 px-4 py-3 md:grid-cols-[1fr_130px_160px] md:items-center"><div><div className="font-medium text-slate-900">{line.description}</div><div className="text-xs text-slate-500">{line.lineType} · จำนวน {line.quantity} · มูลค่ารายการ ฿{money(line.lineAmount)}</div></div><div className="text-right text-sm text-slate-600">฿{money(line.lineAmount)}</div><input type="number" min="0" max={Math.min(line.lineAmount, sale.outstandingAmount)} step="0.01" value={selected[key]?.amount ?? ''} onChange={(e) => setLineAmount(sale, line, e.target.value)} placeholder="ยอดที่จะตัด" className="h-10 rounded-lg border border-slate-300 px-3 text-right" /></div>;
+                  const remaining = Number(line.remainingAmount ?? line.lineAmount);
+                  return <div key={key} className="grid gap-3 px-4 py-3 md:grid-cols-[1fr_150px_160px] md:items-center"><div><div className="font-medium text-slate-900">{line.description}</div><div className="text-xs text-slate-500">{line.lineType} · จำนวน {line.quantity} · มูลค่า ฿{money(line.lineAmount)} · เคยตัด ฿{money(line.appliedAmount)}</div></div><div className="text-right text-sm font-semibold text-rose-700">คงเหลือ ฿{money(remaining)}</div><input type="number" min="0" max={Math.min(remaining, sale.outstandingAmount)} step="0.01" value={selected[key]?.amount ?? ''} onChange={(e) => setLineAmount(sale, line, e.target.value)} placeholder="ยอดที่จะตัด" className="h-10 rounded-lg border border-slate-300 px-3 text-right" /></div>;
                 })}
               </div>
             </article>

@@ -1,0 +1,22 @@
+import { useCallback, useEffect, useState } from 'react';
+import { useBranchStore } from '@/features/branch/store/branchStore';
+import { listSalesTaxFilings, prepareSalesTaxFiling, submitSalesTaxFiling } from '../api/salesTaxFilingApi';
+
+const money = (value) => Number(value || 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const SalesTaxFilingPage = () => {
+  const branchId = useBranchStore((state) => Number(state.selectedBranchId || state.currentBranch?.id || 0));
+  const now = new Date(); const [year, setYear] = useState(now.getFullYear()); const [month, setMonth] = useState(now.getMonth() + 1);
+  const [batches, setBatches] = useState([]); const [detail, setDetail] = useState(null); const [busy, setBusy] = useState(false); const [error, setError] = useState('');
+  const load = useCallback(async () => { if (!branchId) return; const result = await listSalesTaxFilings({ branchId, year, month }); setBatches(result?.batches || []); }, [branchId, month, year]);
+  useEffect(() => { load().catch((e) => setError(e.response?.data?.message || e.message)); }, [load]);
+  const prepare = async () => { setBusy(true); setError(''); try { const result = await prepareSalesTaxFiling({ branchId, year, month }); setDetail(result); await load(); } catch (e) { setError(e.response?.data?.message || e.message); } finally { setBusy(false); } };
+  const submit = async (batchId) => { setBusy(true); setError(''); try { const result = await submitSalesTaxFiling({ branchId, batchId }); setDetail(result?.batch); await load(); } catch (e) { setError(e.response?.data?.message || e.message); } finally { setBusy(false); } };
+  return <main className="mx-auto max-w-6xl space-y-5 p-4 md:p-6">
+    <header><h1 className="text-2xl font-black">จัดชุดยื่นภาษีขาย</h1><p className="text-sm text-slate-600">รวบรวมเฉพาะใบกำกับภาษีและใบลดหนี้ที่ออกเลขจริงจากทะเบียน TaxDocument</p></header>
+    <section className="flex flex-wrap items-end gap-3 rounded-2xl border bg-white p-4"><label>ปี<input className="ml-2 rounded border px-3 py-2" type="number" value={year} onChange={(e) => setYear(Number(e.target.value))} /></label><label>เดือน<select className="ml-2 rounded border px-3 py-2" value={month} onChange={(e) => setMonth(Number(e.target.value))}>{Array.from({ length: 12 }, (_, i) => <option key={i + 1} value={i + 1}>{i + 1}</option>)}</select></label><button disabled={busy || !branchId} onClick={prepare} className="rounded-xl bg-teal-700 px-4 py-2 font-bold text-white disabled:opacity-50">เตรียมชุดยื่น/อัปเดตรายการ</button></section>
+    {error && <div className="rounded-xl bg-rose-50 p-3 text-rose-800">{error}</div>}
+    <section className="space-y-3">{batches.map((batch) => <article key={batch.id} className="rounded-2xl border bg-white p-4"><div className="flex flex-wrap items-center justify-between gap-3"><div><b>{String(batch.month).padStart(2, '0')}/{batch.year}</b><span className="ml-2 rounded bg-slate-100 px-2 py-1 text-xs">{batch.status}</span><p className="text-sm text-slate-600">{batch.itemCount} เอกสาร · VAT {money(batch.taxAmount)} บาท · รวม {money(batch.totalAmount)} บาท</p></div><div className="flex gap-2"><button onClick={() => prepare()} className="rounded border px-3 py-2">ดู/อัปเดต</button>{batch.status === 'DRAFT' && <button disabled={busy || Number(batch.itemCount) === 0} onClick={() => submit(batch.id)} className="rounded bg-blue-700 px-3 py-2 font-bold text-white disabled:opacity-50">ยืนยันชุดยื่น</button>}</div></div></article>)}</section>
+    {detail?.items && <section className="overflow-x-auto rounded-2xl border bg-white p-4"><h2 className="mb-3 text-lg font-black">เอกสารในชุดยื่น</h2><table className="min-w-full text-sm"><thead><tr className="bg-slate-50"><th className="p-2 text-left">วันที่</th><th className="p-2 text-left">เลขเอกสาร</th><th className="p-2 text-left">ประเภท</th><th className="p-2 text-right">ฐานภาษี</th><th className="p-2 text-right">VAT</th><th className="p-2 text-right">รวม</th></tr></thead><tbody>{detail.items.map((item) => <tr className="border-t" key={item.id}><td className="p-2">{item.issuedAt ? new Date(item.issuedAt).toLocaleDateString('th-TH') : '-'}</td><td className="p-2">{item.issuedDocumentNumber}</td><td className="p-2">{item.documentType}</td><td className="p-2 text-right">{money(item.subtotalAmount)}</td><td className="p-2 text-right">{money(item.taxAmount)}</td><td className="p-2 text-right">{money(item.totalAmount)}</td></tr>)}</tbody></table></section>}
+  </main>;
+};
+export default SalesTaxFilingPage;

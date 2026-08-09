@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import useCombinedBillingStore from '@/features/combinedBilling/store/combinedBillingStore';
 
 const CustomerFilter = ({ onSelect }) => {
@@ -7,10 +7,8 @@ const CustomerFilter = ({ onSelect }) => {
   const [error, setError] = useState('');
 
   const {
-    customersWithPendingSales,
     loadCustomersWithPendingSalesAction,
     setCustomer,
-    customer,
   } = useCombinedBillingStore();
 
   const handleSelect = (cust) => {
@@ -36,7 +34,7 @@ const CustomerFilter = ({ onSelect }) => {
       if (filtered.length === 1) {
         handleSelect(filtered[0]);
       }
-    } catch (err) {
+    } catch {
       setError('เกิดข้อผิดพลาดในการค้นหาข้อมูลลูกค้า');
     }
   };

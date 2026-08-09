@@ -1,5 +1,6 @@
 import { mapSalePaymentIntent } from '../services/salePaymentIntentMapper';
 import { validateSalePaymentConfirmation } from '../services/salePaymentValidation';
+import { issueOutputTaxDocument } from '@/features/tax/intake/api/taxIntakeApi';
 
 const projectSaleOption = ({ saleMode, saleOption }) => {
   if (saleMode === 'CREDIT') return 'DELIVERY_NOTE';
@@ -76,6 +77,31 @@ export const executeSalePaymentConfirmation = async ({
       return {
         ok: false,
         error: '❌ ไม่พบ ID ของรายการขายหลังจากยืนยัน',
+      };
+    }
+
+    if (saleMode === 'CASH') {
+      const taxDocumentId = Number(response?.taxIntake?.taxDocumentId || 0);
+      if (!taxDocumentId) {
+        const error = new Error('บันทึกการขายแล้ว แต่ยังส่งรายการเข้าสู่ทะเบียนภาษีขายไม่สำเร็จ');
+        error.code = response?.taxIntake?.code || 'OUTPUT_TAX_PUBLICATION_PENDING';
+        throw error;
+      }
+      const taxInvoiceKind = saleOption === 'TAX_INVOICE' ? 'FULL' : 'SHORT';
+      const issued = await issueOutputTaxDocument({
+        branchId: response?.sale?.branchId,
+        taxDocumentId,
+        taxInvoiceKind,
+      });
+      const issuedDocumentId = Number(issued?.document?.id || taxDocumentId);
+      const finalTaxOption = taxInvoiceKind === 'FULL' ? 'TAX_DOCUMENT_FULL' : 'TAX_DOCUMENT_SHORT';
+      onSaleConfirmed?.(issuedDocumentId, finalTaxOption, confirmContext);
+      return {
+        ok: true,
+        saleId,
+        taxDocumentId: issuedDocumentId,
+        saleOption: finalTaxOption,
+        response,
       };
     }
 

@@ -27,7 +27,7 @@ const ListSalesTaxReportPage = () => {
         <div className="flex justify-between items-center mb-4">
           <h1 className="text-xl font-bold">รายงานภาษีขาย</h1>
           <Link
-            to={`/pos/reports/sales-tax/print?startDate=${format(startDate, 'yyyy-MM-dd')}&endDate=${format(endDate, 'yyyy-MM-dd')}`}
+            to={`../sales-tax/print?startDate=${format(startDate, 'yyyy-MM-dd')}&endDate=${format(endDate, 'yyyy-MM-dd')}`}
           >
             <Button>พิมพ์รายงาน</Button>
           </Link>

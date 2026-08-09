@@ -14,6 +14,7 @@ const createPage = read('src/features/customerMoneySettlement/pages/DeliveryCred
 const detailPage = read('src/features/customerMoneySettlement/pages/DeliveryCreditSettlementDetailPage.jsx');
 const printPage = read('src/features/customerMoneySettlement/pages/DeliveryCreditSettlementPrintPage.jsx');
 const api = read('src/features/customerMoneySettlement/api/deliveryCreditSettlementApi.js');
+const saleDocumentRoute = read('src/features/sales/documents/saleDocumentRoute.js');
 
 test('delivery credit settlement follows list-first project standard', () => {
   assert.match(sidebar, /ตัดยอดใบส่งของเครดิต/);
@@ -46,6 +47,17 @@ test('history detail and print use the isolated settlement API', () => {
   assert.match(api, /customer-money-settlements\/delivery-credit/);
   assert.match(api, /eligible-sales/);
   assert.doesNotMatch(api, /customer-receipts/);
+});
+
+test('fully paid sales reuse the existing short and full tax document routes', () => {
+  assert.match(detailPage, /resolveSaleDocumentRoute/);
+  assert.match(detailPage, /payment\?\.taxDocumentReady/);
+  assert.match(detailPage, /ใบกำกับภาษีอย่างย่อ/);
+  assert.match(detailPage, /openTaxDocument\(payment\.saleId, 'RECEIPT'\)/);
+  assert.match(detailPage, /ใบกำกับภาษีเต็มรูป/);
+  assert.match(detailPage, /openTaxDocument\(payment\.saleId, 'TAX_INVOICE'\)/);
+  assert.match(saleDocumentRoute, /option === 'RECEIPT'[\s\S]*print-short/);
+  assert.match(saleDocumentRoute, /option === 'TAX_INVOICE'[\s\S]*print-full/);
 });
 
 test('flow explicitly avoids new stock movement semantics', () => {

@@ -58,6 +58,15 @@ const TaxIntakeWorkspacePage = () => {
         </div>
       )}
 
+      {selectedDocument && (
+        <TaxIntakeDocumentDetailPanel
+          document={selectedDocument}
+          transitioning={transitioning}
+          transitionError={transitionError}
+          onTransition={handleTransition}
+        />
+      )}
+
       <div className="grid gap-5 xl:grid-cols-2">
         <TaxIntakeCandidateList
           candidates={candidates}
@@ -70,17 +79,11 @@ const TaxIntakeWorkspacePage = () => {
           documents={documents}
           loading={loading}
           status={documentStatus}
+          selectedDocumentId={selectedDocument?.id || null}
           onStatusChange={setDocumentStatus}
           onOpenDocument={openDocument}
         />
       </div>
-
-      <TaxIntakeDocumentDetailPanel
-        document={selectedDocument}
-        transitioning={transitioning}
-        transitionError={transitionError}
-        onTransition={handleTransition}
-      />
     </section>
   );
 };

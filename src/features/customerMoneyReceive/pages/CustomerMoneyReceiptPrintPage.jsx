@@ -28,23 +28,60 @@ const paymentMethodLabel = (value) => ({
 
 const customerName = (customer) => customer?.companyName || customer?.name || '-';
 
+const THAI_DIGITS = ['', 'หนึ่ง', 'สอง', 'สาม', 'สี่', 'ห้า', 'หก', 'เจ็ด', 'แปด', 'เก้า'];
+const THAI_PLACES = ['', 'สิบ', 'ร้อย', 'พัน', 'หมื่น', 'แสน'];
+
+const readThaiNumberGroup = (number) => {
+  const digits = String(Math.max(0, Math.trunc(number))).split('').map(Number);
+  return digits.map((digit, index) => {
+    if (!digit) return '';
+    const place = digits.length - index - 1;
+    if (place === 1) {
+      if (digit === 1) return 'สิบ';
+      if (digit === 2) return 'ยี่สิบ';
+      return `${THAI_DIGITS[digit]}สิบ`;
+    }
+    if (place === 0 && digit === 1 && digits.length > 1) return 'เอ็ด';
+    return `${THAI_DIGITS[digit]}${THAI_PLACES[place] || ''}`;
+  }).join('');
+};
+
+const readThaiInteger = (number) => {
+  const value = Math.max(0, Math.trunc(number));
+  if (value === 0) return 'ศูนย์';
+  if (value < 1_000_000) return readThaiNumberGroup(value);
+  const millions = Math.trunc(value / 1_000_000);
+  const remainder = value % 1_000_000;
+  return `${readThaiInteger(millions)}ล้าน${remainder ? readThaiNumberGroup(remainder) : ''}`;
+};
+
+const thaiBahtText = (value) => {
+  const amount = Math.max(0, Math.round((Number(value || 0) + Number.EPSILON) * 100));
+  const baht = Math.trunc(amount / 100);
+  const satang = amount % 100;
+  const bahtText = `${readThaiInteger(baht)}บาท`;
+  return satang ? `${bahtText}${readThaiInteger(satang)}สตางค์` : `${bahtText}ถ้วน`;
+};
+
 const CustomerMoneyReceiptDocument = ({ record, mode }) => {
   const isShort = mode === 'SHORT';
   const isCancelled = record.status === 'CANCELLED';
   const branch = record.branch || {};
   const customer = record.customer || {};
   const customerContact = customer.user?.loginId || customer.user?.email || '-';
+  const branchIdentity = branch.isHeadOffice ? 'สำนักงานใหญ่' : 'สาขา';
 
   return (
     <article className={`customer-money-receipt-document bg-white text-black ${isShort ? 'w-[80mm] p-4 text-[12px]' : 'min-h-[277mm] w-[190mm] p-8 text-[14px]'}`}>
       <header className="border-b-2 border-black pb-4 text-center">
-        <h1 className={`${isShort ? 'text-xl' : 'text-2xl'} font-bold`}>{branch.name || 'ใบรับเงิน'}</h1>
+        <h1 className={`${isShort ? 'text-xl' : 'text-2xl'} font-bold`}>{branch.name || 'ร้านค้า'}</h1>
         {!isShort && <div className="mt-1 text-sm">{branch.address || '-'}</div>}
         <div className="mt-1 text-sm">
           {[branch.phone && `โทร ${branch.phone}`, branch.taxId && `เลขประจำตัวผู้เสียภาษี ${branch.taxId}`].filter(Boolean).join(' · ')}
         </div>
+        {!isShort && branch.name && <div className="mt-1 text-xs">{branchIdentity}</div>}
         <div className={`${isShort ? 'mt-3 text-lg' : 'mt-4 text-xl'} font-bold`}>ใบรับเงิน</div>
-        <div className="text-xs">CUSTOMER MONEY RECEIPT</div>
+        <div className="text-xs tracking-wide">CUSTOMER MONEY RECEIPT</div>
       </header>
 
       {isCancelled && (
@@ -68,10 +105,12 @@ const CustomerMoneyReceiptDocument = ({ record, mode }) => {
           <span className="font-semibold">จำนวนเงินที่รับ</span>
           <span className={`${isShort ? 'text-2xl' : 'text-3xl'} font-bold`}>฿{formatMoney(record.amount)}</span>
         </div>
+        <div className="mt-2 rounded border border-black px-3 py-2 text-center font-semibold">({thaiBahtText(record.amount)})</div>
         <dl className="mt-4 space-y-2">
           <div className="flex justify-between gap-4"><dt className="font-semibold">ช่องทางรับเงิน</dt><dd>{paymentMethodLabel(record.paymentMethod)}</dd></div>
           <div className="flex justify-between gap-4"><dt className="font-semibold">เลขอ้างอิง</dt><dd>{record.paymentReference || '-'}</dd></div>
           <div className="grid grid-cols-[110px_1fr] gap-3"><dt className="font-semibold">รายละเอียด</dt><dd className="whitespace-pre-wrap text-right">{record.description || '-'}</dd></div>
+          {!isShort && <div className="grid grid-cols-[110px_1fr] gap-3"><dt className="font-semibold">สถานะเงิน</dt><dd className="text-right">รับเข้า Customer Money และยังไม่กำหนดการนำไปใช้</dd></div>}
         </dl>
       </section>
 
@@ -85,13 +124,22 @@ const CustomerMoneyReceiptDocument = ({ record, mode }) => {
 
       {!isShort && (
         <section className="mt-14 grid grid-cols-2 gap-16 text-center">
-          <div><div className="border-b border-black pb-8" /><div className="mt-2">ผู้ชำระเงิน</div></div>
+          <div><div className="border-b border-black pb-8" /><div className="mt-2">ผู้ชำระเงิน / ผู้ส่งมอบเงิน</div></div>
           <div><div className="border-b border-black pb-8" /><div className="mt-2">ผู้รับเงิน {record.receivedBy?.name ? `(${record.receivedBy.name})` : ''}</div></div>
         </section>
       )}
 
+      {isShort && (
+        <section className="mt-7 text-center">
+          <div className="mx-auto w-4/5 border-b border-black pb-7" />
+          <div className="mt-2">ผู้รับเงิน {record.receivedBy?.name ? `(${record.receivedBy.name})` : ''}</div>
+        </section>
+      )}
+
       <footer className={`${isShort ? 'mt-6' : 'mt-12'} border-t border-black pt-3 text-center text-xs`}>
-        เอกสารนี้เป็นหลักฐานการรับเงินจริงจากลูกค้า และยังไม่ใช่การตัดชำระใบส่งสินค้า/ใบขาย
+        <div className="font-semibold">เอกสารนี้เป็นหลักฐานการรับเงินจริงจากลูกค้า</div>
+        <div className="mt-1">เงินที่รับยังไม่ผูกกับยอดหนี้ ใบส่งของ การขาย หรือวัตถุประสงค์การใช้เงินใด ๆ</div>
+        {!isShort && <div className="mt-1">ไม่ใช่ใบกำกับภาษี และไม่ก่อให้เกิดการตัดสต๊อกหรือรายการภาษีจากการรับเงินนี้</div>}
       </footer>
     </article>
   );
@@ -130,20 +178,27 @@ const CustomerMoneyReceiptPrintPage = () => {
       <style>{`
         @page { size: ${mode === 'SHORT' ? '80mm auto' : 'A4'}; margin: ${mode === 'SHORT' ? '0' : '10mm'}; }
         @media print {
-          body { background: #fff !important; }
+          html, body, #root { margin: 0 !important; padding: 0 !important; background: #fff !important; }
           body * { visibility: hidden !important; }
           .customer-money-receipt-document, .customer-money-receipt-document * { visibility: visible !important; }
           .customer-money-receipt-document { position: absolute !important; inset: 0 auto auto 0 !important; margin: 0 !important; border: 0 !important; box-shadow: none !important; }
           .customer-money-receipt-toolbar { display: none !important; }
         }
       `}</style>
-      <div className="customer-money-receipt-toolbar flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 py-3">
-        <div><div className="font-bold text-slate-900">ใบรับเงิน {record.documentNo}</div><div className="text-xs text-slate-500">เลือกขนาดเอกสารก่อนพิมพ์</div></div>
-        <div className="flex flex-wrap gap-2">
-          <button type="button" onClick={() => navigate(-1)} className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold">กลับ</button>
-          <button type="button" onClick={() => setMode('FULL')} className={`rounded-lg px-3 py-2 text-sm font-semibold ${mode === 'FULL' ? 'bg-slate-900 text-white' : 'border border-slate-300'}`}>A4</button>
-          <button type="button" onClick={() => setMode('SHORT')} className={`rounded-lg px-3 py-2 text-sm font-semibold ${mode === 'SHORT' ? 'bg-slate-900 text-white' : 'border border-slate-300'}`}>80mm</button>
-          <button type="button" onClick={() => window.print()} className="rounded-lg bg-teal-700 px-4 py-2 text-sm font-semibold text-white">พิมพ์ใบรับเงิน</button>
+      <div className="customer-money-receipt-toolbar w-full bg-white px-4 py-3 print:hidden">
+        <div className="mx-auto flex max-w-[210mm] flex-wrap items-center justify-between gap-3">
+          <div>
+            <div className="font-bold text-slate-900">ใบรับเงิน {record.documentNo}</div>
+            <div className="text-xs text-slate-500">Customer Money Receipt · เลือกขนาดเอกสารก่อนพิมพ์</div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <button type="button" onClick={() => navigate(-1)} className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold">กลับ</button>
+            <div className="flex rounded-lg border border-slate-200 bg-slate-50 p-1">
+              <button type="button" onClick={() => setMode('FULL')} className={`rounded-md px-3 py-1.5 text-sm font-bold ${mode === 'FULL' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}>A4</button>
+              <button type="button" onClick={() => setMode('SHORT')} className={`rounded-md px-3 py-1.5 text-sm font-bold ${mode === 'SHORT' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}>80mm</button>
+            </div>
+            <button type="button" onClick={() => window.print()} className="rounded-lg bg-teal-700 px-4 py-2 text-sm font-semibold text-white">พิมพ์ใบรับเงิน</button>
+          </div>
         </div>
       </div>
       <main className="min-h-screen bg-slate-100 p-4 print:bg-white print:p-0">

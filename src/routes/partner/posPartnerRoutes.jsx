@@ -35,6 +35,8 @@ import CustomerMoneyReceiveDetailPage from '@/features/customerMoneyReceive/page
 import CustomerMoneyReceiptPrintPage from '@/features/customerMoneyReceive/pages/CustomerMoneyReceiptPrintPage';
 import DeliveryCreditSettlementListPage from '@/features/customerMoneySettlement/pages/DeliveryCreditSettlementListPage';
 import DeliveryCreditSettlementCreatePage from '@/features/customerMoneySettlement/pages/DeliveryCreditSettlementCreatePage';
+import DeliveryCreditSettlementDetailPage from '@/features/customerMoneySettlement/pages/DeliveryCreditSettlementDetailPage';
+import DeliveryCreditSettlementPrintPage from '@/features/customerMoneySettlement/pages/DeliveryCreditSettlementPrintPage';
 
 import CustomerReceiptListPage from '@features/customerReceipt/pages/CustomerReceiptListPage';
 import CreateCustomerReceiptPage from '@features/customerReceipt/pages/CreateCustomerReceiptPage';
@@ -116,6 +118,8 @@ export const posPartnerRoutes = [
             children: [
               { index: true, element: <DeliveryCreditSettlementListPage /> },
               { path: 'create', element: <DeliveryCreditSettlementCreatePage /> },
+              { path: ':id', element: <DeliveryCreditSettlementDetailPage /> },
+              { path: ':id/print', element: <DeliveryCreditSettlementPrintPage /> },
             ],
           },
           {

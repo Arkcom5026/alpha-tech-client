@@ -18,7 +18,9 @@ const remainingSourceAmount = (receipt, remainingField, sourceField, allocatedFi
   0,
 );
 
-export const receiptAllocationPrefill = (receipt) => ({
+const roundMoney = (value) => Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100;
+
+const sourceAmountPrefill = (receipt) => ({
   allocatedSubtotal: remainingSourceAmount(
     receipt,
     'remainingSubtotalAmount',
@@ -33,6 +35,53 @@ export const receiptAllocationPrefill = (receipt) => ({
   ),
   allocatedTotalAmount: remainingReceiptAmount(receipt),
 });
+
+export const receiptAllocationPrefill = (receipt) => {
+  const source = sourceAmountPrefill(receipt);
+  const policy = receipt?.vatPolicy;
+  if (!policy?.autoCalculate) return source;
+
+  const treatment = String(policy.treatment || '').toUpperCase();
+  const priceMode = String(policy.priceMode || '').toUpperCase();
+  const ratePercent = Number(policy.ratePercent || 0);
+
+  if (['ZERO_RATED', 'EXEMPT', 'NON_VAT'].includes(treatment)) {
+    const total = roundMoney(remainingReceiptAmount(receipt));
+    return {
+      allocatedSubtotal: total,
+      allocatedVatAmount: 0,
+      allocatedTotalAmount: total,
+    };
+  }
+
+  if (treatment !== 'STANDARD_RATE' || !Number.isFinite(ratePercent) || ratePercent < 0) {
+    return source;
+  }
+
+  if (priceMode === 'INCLUSIVE') {
+    const total = roundMoney(remainingReceiptAmount(receipt));
+    const divisor = 1 + (ratePercent / 100);
+    if (divisor <= 0) return source;
+    const subtotal = roundMoney(total / divisor);
+    return {
+      allocatedSubtotal: subtotal,
+      allocatedVatAmount: roundMoney(total - subtotal),
+      allocatedTotalAmount: total,
+    };
+  }
+
+  if (priceMode === 'EXCLUSIVE') {
+    const subtotal = roundMoney(source.allocatedSubtotal);
+    const vat = roundMoney(subtotal * (ratePercent / 100));
+    return {
+      allocatedSubtotal: subtotal,
+      allocatedVatAmount: vat,
+      allocatedTotalAmount: roundMoney(subtotal + vat),
+    };
+  }
+
+  return source;
+};
 
 const allocationFields = [
   ['subtotalAmount', 'allocatedSubtotal'],

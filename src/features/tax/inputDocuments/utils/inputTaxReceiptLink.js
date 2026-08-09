@@ -6,9 +6,33 @@ import {
 export const receiptIdentity = (receipt) => `${receipt.sourceType}:${receipt.sourceId}`;
 
 export const remainingReceiptAmount = (receipt) => Math.max(
-  Number(receipt?.receiptAmount || 0) - Number(receipt?.allocatedTotalAmount || 0),
+  Number(receipt?.remainingTotalAmount
+    ?? (Number(receipt?.sourceTotalAmount ?? receipt?.receiptAmount ?? 0)
+      - Number(receipt?.allocatedTotalAmount || 0))),
   0,
 );
+
+const remainingSourceAmount = (receipt, remainingField, sourceField, allocatedField) => Math.max(
+  Number(receipt?.[remainingField]
+    ?? (Number(receipt?.[sourceField] || 0) - Number(receipt?.[allocatedField] || 0))),
+  0,
+);
+
+export const receiptAllocationPrefill = (receipt) => ({
+  allocatedSubtotal: remainingSourceAmount(
+    receipt,
+    'remainingSubtotalAmount',
+    'sourceSubtotalAmount',
+    'allocatedSubtotal',
+  ),
+  allocatedVatAmount: remainingSourceAmount(
+    receipt,
+    'remainingVatAmount',
+    'sourceVatAmount',
+    'allocatedVatAmount',
+  ),
+  allocatedTotalAmount: remainingReceiptAmount(receipt),
+});
 
 const allocationFields = [
   ['subtotalAmount', 'allocatedSubtotal'],

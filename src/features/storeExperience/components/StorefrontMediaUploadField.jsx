@@ -97,7 +97,7 @@ const StorefrontMediaUploadField = ({
             type="button"
             onClick={selectFile}
             disabled={disabled || uploadState.busy}
-            className="rounded-lg bg-slate-900 px-3 py-2 text-xs font-bold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {uploadState.busy ? 'กำลังอัปโหลด...' : value ? 'เปลี่ยนรูป' : 'อัปโหลดรูป'}
           </button>
@@ -135,7 +135,7 @@ const StorefrontMediaUploadField = ({
                       type="button"
                       key={asset.publicId}
                       onClick={() => chooseAsset(asset)}
-                      className="overflow-hidden rounded-xl border border-slate-200 bg-white text-left transition hover:border-blue-500 hover:shadow-md"
+                      className="overflow-hidden rounded-xl border border-slate-200 bg-white text-left transition hover:border-emerald-500 hover:shadow-md"
                     >
                       <img src={asset.secureUrl} alt={asset.publicId} className="h-40 w-full bg-slate-100 object-cover" />
                       <div className="p-3">

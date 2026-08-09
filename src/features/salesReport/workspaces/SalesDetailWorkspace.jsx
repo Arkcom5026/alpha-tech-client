@@ -322,7 +322,7 @@ export const SalesDetailPage = () => {
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
         <section className="flex flex-col gap-3 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <p className="text-sm font-medium text-blue-600">Sales Report</p>
+            <p className="text-sm font-medium text-emerald-600">Sales Report</p>
             <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-900">
               รายละเอียดบิลขาย
             </h1>
@@ -440,7 +440,7 @@ export const SalesDetailPage = () => {
                       </tr>
                     ) : items.length > 0 ? (
                       items.map((item) => (
-                        <tr key={item.id} className="hover:bg-slate-50">
+                        <tr key={item.id} className="transition hover:bg-emerald-50/40">
                           <td className="px-4 py-3 text-slate-900">
                             <div className="font-medium">{item.productName || '-'}</div>
                             <div className="mt-1 text-xs text-slate-500">{item.sku || item.productCode || '-'}</div>
@@ -476,7 +476,7 @@ export const SalesDetailPage = () => {
                   type="button"
                   onClick={isReceivePaymentOpen ? handleCloseReceivePayment : handleOpenReceivePayment}
                   disabled={salesDetailLoading || paymentLoading || isPaymentComplete || isSaleVoided}
-                  className={`inline-flex items-center justify-center rounded-xl px-4 py-2.5 text-sm font-semibold text-white transition ${salesDetailLoading || paymentLoading || isPaymentComplete || isSaleVoided ? 'cursor-not-allowed bg-slate-300' : 'bg-blue-600 hover:bg-blue-700'}`}
+                  className={`inline-flex items-center justify-center rounded-xl px-4 py-2.5 text-sm font-semibold text-white transition ${salesDetailLoading || paymentLoading || isPaymentComplete || isSaleVoided ? 'cursor-not-allowed bg-slate-300' : 'bg-emerald-600 hover:bg-emerald-700'}`}
                   title={isPaymentComplete ? 'บิลนี้ชำระครบแล้ว' : isSaleVoided ? 'บิลนี้ไม่สามารถรับชำระเพิ่มได้' : 'รับชำระเพิ่ม'}
                 >
                   {isReceivePaymentOpen ? 'ปิดฟอร์มรับชำระ' : 'รับชำระเพิ่ม'}
@@ -521,14 +521,14 @@ export const SalesDetailPage = () => {
               </div>
 
               {isReceivePaymentOpen ? (
-                <form onSubmit={handleSubmitReceivePayment} className="mt-5 space-y-4 rounded-2xl border border-blue-100 bg-blue-50/60 p-4">
+                <form onSubmit={handleSubmitReceivePayment} className="mt-5 space-y-4 rounded-2xl border border-emerald-200 bg-emerald-50/60 p-4">
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <label className="block">
                       <span className="mb-1 block text-sm font-semibold text-slate-700">วิธีรับชำระ</span>
                       <select
                         value={receivePaymentForm.method}
                         onChange={(event) => handleReceivePaymentFieldChange('method', event.target.value)}
-                        className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none ring-0 transition focus:border-blue-500"
+                        className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none ring-0 transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
                       >
                         {receivePaymentMethodOptions.map((option) => (
                           <option key={option.value} value={option.value}>
@@ -544,7 +544,7 @@ export const SalesDetailPage = () => {
                         type="datetime-local"
                         value={receivePaymentForm.receivedAt}
                         onChange={(event) => handleReceivePaymentFieldChange('receivedAt', event.target.value)}
-                        className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none ring-0 transition focus:border-blue-500"
+                        className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none ring-0 transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
                       />
                     </label>
                   </div>
@@ -558,7 +558,7 @@ export const SalesDetailPage = () => {
                       placeholder={balanceAmount > 0 ? String(Number(balanceAmount.toFixed(2))) : '0.00'}
                       value={receivePaymentForm.amount}
                       onChange={(event) => handleReceivePaymentFieldChange('amount', event.target.value)}
-                      className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-right text-sm text-slate-900 outline-none ring-0 transition focus:border-blue-500"
+                      className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-right text-sm text-slate-900 outline-none ring-0 transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
                     />
                     <p className="mt-1 text-xs text-slate-500">ยอดคงเหลือปัจจุบัน {formatCurrency(balanceAmount)}</p>
                   </label>
@@ -570,7 +570,7 @@ export const SalesDetailPage = () => {
                       value={receivePaymentForm.note}
                       onChange={(event) => handleReceivePaymentFieldChange('note', event.target.value)}
                       placeholder="เช่น รับชำระรอบที่ 2 / ลูกค้าโอนมาแล้ว"
-                      className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none ring-0 transition focus:border-blue-500"
+                      className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none ring-0 transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
                     />
                   </label>
 
@@ -611,7 +611,7 @@ export const SalesDetailPage = () => {
                     return (
                       <div
                         key={payment.id}
-                        className={`rounded-2xl border px-4 py-4 ${index === 0 && !payment?.isCancelled ? 'border-blue-200 bg-blue-50/60' : 'border-slate-200 bg-slate-50'}`}
+                        className={`rounded-2xl border px-4 py-4 ${index === 0 && !payment?.isCancelled ? 'border-emerald-200 bg-emerald-50/60' : 'border-slate-200 bg-slate-50'}`}
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div>
@@ -683,7 +683,7 @@ export const SalesDetailPage = () => {
                   timeline.map((event, index) => (
                     <div key={event.id} className="relative flex gap-4">
                       <div className="flex flex-col items-center">
-                        <div className="h-3 w-3 rounded-full bg-blue-600" />
+                        <div className="h-3 w-3 rounded-full bg-emerald-600" />
                         {index < timeline.length - 1 ? (
                           <div className="mt-2 h-full min-h-[40px] w-px bg-slate-200" />
                         ) : null}
@@ -710,7 +710,6 @@ export const SalesDetailPage = () => {
 };
 
 export default SalesDetailPage;
-
 
 
 

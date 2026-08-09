@@ -29,6 +29,8 @@ import TaxPeriodManagementPage from '@/features/tax/periods/pages/TaxPeriodManag
 import InputTaxReceiptWorkspacePage from '@/features/tax/inputDocuments/pages/InputTaxReceiptWorkspacePage';
 import SupplierPayableWorkspacePage from '@/features/supplierPayable/pages/SupplierPayableWorkspacePage';
 import TaxExpenseWorkspacePage from '@/features/taxExpense/pages/TaxExpenseWorkspacePage';
+import CustomerMoneyReceivePage from '@/features/customerMoneyReceive/pages/CustomerMoneyReceivePage';
+import CustomerMoneyReceiveDetailPage from '@/features/customerMoneyReceive/pages/CustomerMoneyReceiveDetailPage';
 
 import CustomerReceiptListPage from '@features/customerReceipt/pages/CustomerReceiptListPage';
 import CreateCustomerReceiptPage from '@features/customerReceipt/pages/CreateCustomerReceiptPage';
@@ -96,6 +98,8 @@ export const posPartnerRoutes = [
           { path: 'tax-periods', element: <TaxPeriodManagementPage /> },
           { path: 'tax-expenses', element: <TaxExpenseWorkspacePage /> },
           { path: 'supplier-payables', element: <SupplierPayableWorkspacePage /> },
+          { path: 'customer-money-receive', element: <CustomerMoneyReceivePage /> },
+          { path: 'customer-money-receive/:id', element: <CustomerMoneyReceiveDetailPage /> },
           {
             path: 'customer-receipts',
             children: [

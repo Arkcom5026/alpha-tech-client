@@ -19,7 +19,7 @@ const InputTaxDocumentCreationForm = ({
   >
     <div className="xl:col-span-5">
       <p className="font-black text-slate-900">สร้างใบกำกับภาษีซื้อของ {supplierName}</p>
-      <p className="text-xs text-slate-500">สร้างเอกสารก่อน แล้วเลือกผูกใบรับสินค้าที่เลือกไว้</p>
+      <p className="text-xs text-slate-500">ยอดถูกเติมจากใบรับสินค้าที่เลือก และยังแก้ไขได้ตามใบกำกับจริง ก่อนบันทึกและผูกอัตโนมัติ</p>
     </div>
 
     <label>
@@ -63,7 +63,7 @@ const InputTaxDocumentCreationForm = ({
         disabled={submitting}
         className="rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-black text-white disabled:opacity-50"
       >
-        บันทึกใบกำกับภาษีซื้อ
+        บันทึกและผูกใบกำกับภาษีซื้อ
       </button>
     </div>
   </form>

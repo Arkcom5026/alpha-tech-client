@@ -1,10 +1,41 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import {
+  Cable,
+  Link2,
+  Plus,
+  Printer,
+  RefreshCw,
+  Save,
+  Unplug,
+} from 'lucide-react'
+import {
+  Alert,
+  Badge,
+  Button,
+  Card,
+  CardBody,
+  CardFooter,
+  CardHeader,
+  Field,
+  Input,
+  Select,
+} from '@/design-system'
 
-const getErrorMessage = (error, fallback) => (
-  error?.response?.data?.error || error?.response?.data?.message || error?.message || fallback
-)
+const getErrorMessage = (error, fallback) =>
+  error?.response?.data?.error ||
+  error?.response?.data?.message ||
+  error?.message ||
+  fallback
 
-const profileCodeOfDevice = (device) => device.metadata?.printerProfileCode || ''
+const profileCodeOfDevice = (device) =>
+  device.metadata?.printerProfileCode || ''
+
+const PROFILE_FIELDS = Object.freeze([
+  Object.freeze({ key: 'code', label: 'รหัส' }),
+  Object.freeze({ key: 'displayName', label: 'ชื่อโปรไฟล์' }),
+  Object.freeze({ key: 'manufacturer', label: 'ผู้ผลิต' }),
+  Object.freeze({ key: 'modelName', label: 'รุ่น' }),
+])
 
 const ServerPrinterSettingsPanel = ({
   branchId,
@@ -12,13 +43,25 @@ const ServerPrinterSettingsPanel = ({
   settingsService,
   printerTestService,
 }) => {
-  const [catalog, setCatalog] = useState({ purposes: [], profiles: [], routes: [], devices: [], localPrinters: [], warnings: [] })
+  const [catalog, setCatalog] = useState({
+    purposes: [],
+    profiles: [],
+    routes: [],
+    devices: [],
+    localPrinters: [],
+    warnings: [],
+  })
   const [purposeId, setPurposeId] = useState('')
   const [profileId, setProfileId] = useState('')
   const [deviceId, setDeviceId] = useState('')
   const [deviceProfileCode, setDeviceProfileCode] = useState('')
   const [localPrinterId, setLocalPrinterId] = useState('')
-  const [profileDraft, setProfileDraft] = useState({ code: '', displayName: '', manufacturer: '', modelName: '' })
+  const [profileDraft, setProfileDraft] = useState({
+    code: '',
+    displayName: '',
+    manufacturer: '',
+    modelName: '',
+  })
   const [status, setStatus] = useState('IDLE')
   const [message, setMessage] = useState('')
 
@@ -29,8 +72,12 @@ const ServerPrinterSettingsPanel = ({
       const next = await settingsService.load()
       setCatalog(next)
       setPurposeId((current) => current || String(next.purposes[0]?.id || ''))
-      setDeviceId((current) => current || String(next.devices[0]?.deviceId || ''))
-      setLocalPrinterId((current) => current || String(next.localPrinters[0]?.id || ''))
+      setDeviceId(
+        (current) => current || String(next.devices[0]?.deviceId || ''),
+      )
+      setLocalPrinterId(
+        (current) => current || String(next.localPrinters[0]?.id || ''),
+      )
       if (next.warnings.length) setMessage(next.warnings.join(' · '))
       setStatus('READY')
     } catch (error) {
@@ -39,20 +86,32 @@ const ServerPrinterSettingsPanel = ({
     }
   }, [settingsService])
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => {
+    load()
+  }, [load])
 
-  const selectedPurpose = catalog.purposes.find((item) => String(item.id) === purposeId) || null
-  const selectedRoute = catalog.routes.find((item) => String(item.definitionId) === purposeId) || null
+  const selectedPurpose =
+    catalog.purposes.find((item) => String(item.id) === purposeId) || null
+  const selectedRoute =
+    catalog.routes.find((item) => String(item.definitionId) === purposeId) ||
+    null
   const activeProfiles = catalog.profiles.filter((item) => item.isActive)
-  const selectedProfile = catalog.profiles.find((item) => String(item.id) === profileId) || null
+  const selectedProfile =
+    catalog.profiles.find((item) => String(item.id) === profileId) || null
   const selectedRouteMatchesProfile = Boolean(
-    selectedRoute?.isActive && String(selectedRoute.printerProfileId) === profileId,
+    selectedRoute?.isActive &&
+      String(selectedRoute.printerProfileId) === profileId,
   )
-  const matchingDevices = useMemo(() => (
-    selectedProfile
-      ? catalog.devices.filter((device) => profileCodeOfDevice(device) === selectedProfile.normalizedCode)
-      : []
-  ), [catalog.devices, selectedProfile])
+  const matchingDevices = useMemo(
+    () =>
+      selectedProfile
+        ? catalog.devices.filter(
+            (device) =>
+              profileCodeOfDevice(device) === selectedProfile.normalizedCode,
+          )
+        : [],
+    [catalog.devices, selectedProfile],
+  )
   const busy = ['LOADING', 'SAVING', 'TESTING'].includes(status)
 
   useEffect(() => {
@@ -73,43 +132,66 @@ const ServerPrinterSettingsPanel = ({
   }
 
   const saveRoute = () => {
-    if (!purposeId || !profileId) return setMessage('กรุณาเลือกประเภทเอกสารและโปรไฟล์เครื่องพิมพ์')
-    return perform(() => settingsService.configureRoute({
-      definitionId: Number(purposeId),
-      printerProfileId: Number(profileId),
-    }), 'บันทึกเส้นทางการพิมพ์แล้ว')
+    if (!purposeId || !profileId)
+      return setMessage('กรุณาเลือกประเภทเอกสารและโปรไฟล์เครื่องพิมพ์')
+    return perform(
+      () =>
+        settingsService.configureRoute({
+          definitionId: Number(purposeId),
+          printerProfileId: Number(profileId),
+        }),
+      'บันทึกเส้นทางการพิมพ์แล้ว',
+    )
   }
 
-  const clearRoute = () => perform(
-    () => settingsService.disableRoute({ definitionId: Number(purposeId) }),
-    'ปิดเส้นทางการพิมพ์แล้ว',
-  )
+  const clearRoute = () =>
+    perform(
+      () => settingsService.disableRoute({ definitionId: Number(purposeId) }),
+      'ปิดเส้นทางการพิมพ์แล้ว',
+    )
 
   const createProfile = () => {
     if (!profileDraft.code.trim() || !profileDraft.displayName.trim()) {
       return setMessage('กรุณาระบุรหัสและชื่อโปรไฟล์')
     }
-    return perform(() => settingsService.createProfile({
-      ...profileDraft,
-      capabilities: { print: true },
-      adapterKind: 'DRIVER',
-      isActive: true,
-    }), 'สร้างโปรไฟล์เครื่องพิมพ์แล้ว').then(() => {
-      setProfileDraft({ code: '', displayName: '', manufacturer: '', modelName: '' })
+    return perform(
+      () =>
+        settingsService.createProfile({
+          ...profileDraft,
+          capabilities: { print: true },
+          adapterKind: 'DRIVER',
+          isActive: true,
+        }),
+      'สร้างโปรไฟล์เครื่องพิมพ์แล้ว',
+    ).then(() => {
+      setProfileDraft({
+        code: '',
+        displayName: '',
+        manufacturer: '',
+        modelName: '',
+      })
     })
   }
 
   const assignDevice = () => {
-    if (!deviceId || !deviceProfileCode) return setMessage('กรุณาเลือกเครื่องจริงและโปรไฟล์')
-    return perform(() => settingsService.assignDevice({
-      deviceId,
-      printerProfileCode: deviceProfileCode,
-    }), 'ผูกเครื่องจริงกับโปรไฟล์แล้ว')
+    if (!deviceId || !deviceProfileCode)
+      return setMessage('กรุณาเลือกเครื่องจริงและโปรไฟล์')
+    return perform(
+      () =>
+        settingsService.assignDevice({
+          deviceId,
+          printerProfileCode: deviceProfileCode,
+        }),
+      'ผูกเครื่องจริงกับโปรไฟล์แล้ว',
+    )
   }
 
   const registerLocalPrinter = () => {
-    const printer = catalog.localPrinters.find((item) => item.id === localPrinterId)
-    if (!printer) return setMessage('กรุณาเลือกเครื่องพิมพ์ที่ Local Print Bridge ค้นพบ')
+    const printer = catalog.localPrinters.find(
+      (item) => item.id === localPrinterId,
+    )
+    if (!printer)
+      return setMessage('กรุณาเลือกเครื่องพิมพ์ที่ Local Print Bridge ค้นพบ')
     return perform(
       () => settingsService.registerLocalPrinter({ printer, workstationId }),
       `ลงทะเบียน ${printer.name} กับสาขาแล้ว`,
@@ -117,8 +199,11 @@ const ServerPrinterSettingsPanel = ({
   }
 
   const testRoute = async () => {
-    const readyDevice = matchingDevices.find((device) => device.connectionState === 'ONLINE')
-    if (!readyDevice || !selectedPurpose) return setMessage('ยังไม่มีเครื่องจริงที่ออนไลน์สำหรับโปรไฟล์นี้')
+    const readyDevice = matchingDevices.find(
+      (device) => device.connectionState === 'ONLINE',
+    )
+    if (!readyDevice || !selectedPurpose)
+      return setMessage('ยังไม่มีเครื่องจริงที่ออนไลน์สำหรับโปรไฟล์นี้')
     setStatus('TESTING')
     setMessage('กำลังส่งงานทดสอบพิมพ์...')
     try {
@@ -137,82 +222,271 @@ const ServerPrinterSettingsPanel = ({
   }
 
   return (
-    <div className="space-y-4">
-      <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-        <h2 className="text-lg font-bold text-slate-900">เส้นทางการพิมพ์ตามประเภทเอกสาร</h2>
-        <p className="mt-1 text-sm text-slate-600">ค่าที่บันทึกมีผลกับทุกผู้ใช้ในสาขานี้ และระบบจะเลือกเครื่องจริงที่ออนไลน์จากโปรไฟล์ที่กำหนด</p>
-        <div className="mt-4 grid gap-3 md:grid-cols-2">
-          <label className="text-sm font-medium text-slate-700">ประเภทเอกสาร
-            <select className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2" value={purposeId} onChange={(event) => setPurposeId(event.target.value)} disabled={busy}>
-              {catalog.purposes.map((purpose) => <option key={purpose.id} value={purpose.id}>{purpose.displayName}</option>)}
-            </select>
-            {!catalog.purposes.length && <span className="mt-1 block text-xs text-amber-700">ไม่พบประเภทเอกสารที่พร้อมพิมพ์</span>}
-          </label>
-          <label className="text-sm font-medium text-slate-700">โปรไฟล์เครื่องพิมพ์
-            <select className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2" value={profileId} onChange={(event) => setProfileId(event.target.value)} disabled={busy}>
-              <option value="">ยังไม่กำหนด</option>
-              {activeProfiles.map((profile) => <option key={profile.id} value={profile.id}>{profile.displayName}</option>)}
-            </select>
-          </label>
-        </div>
-        <div className="mt-3 rounded-lg bg-slate-50 p-3 text-sm text-slate-700">
-          สถานะ: {selectedRoute?.isActive ? 'กำหนดแล้ว' : 'ยังไม่กำหนด'} · เครื่องที่ตรงโปรไฟล์ {matchingDevices.length} เครื่อง · ออนไลน์ {matchingDevices.filter((item) => item.connectionState === 'ONLINE').length} เครื่อง
-        </div>
-        <div className="mt-3 flex flex-wrap gap-2">
-          <button type="button" className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50" onClick={saveRoute} disabled={busy || !profileId}>บันทึกเส้นทาง</button>
-          <button type="button" className="rounded-lg bg-orange-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50" onClick={testRoute} disabled={busy || !selectedRouteMatchesProfile}>ทดสอบพิมพ์</button>
-          <button type="button" className="rounded-lg border border-slate-300 px-4 py-2 text-sm disabled:opacity-50" onClick={clearRoute} disabled={busy || !selectedRoute}>ปิดเส้นทาง</button>
-        </div>
-      </section>
+    <div className="space-y-5">
+      <Card>
+        <CardHeader className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-lg font-semibold text-[hsl(var(--ads-text-strong))]">
+              เส้นทางการพิมพ์ตามประเภทเอกสาร
+            </h2>
+            <p className="mt-1 text-sm text-[hsl(var(--ads-text-muted))]">
+              ค่าที่บันทึกมีผลกับทุกผู้ใช้ในสาขานี้
+              และระบบจะเลือกเครื่องจริงที่ออนไลน์จากโปรไฟล์ที่กำหนด
+            </p>
+          </div>
+          <Link2
+            className="h-5 w-5 shrink-0 text-[hsl(var(--ads-text-muted))]"
+            aria-hidden="true"
+          />
+        </CardHeader>
+        <CardBody className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2">
+            <Field
+              id="printer-purpose"
+              label="ประเภทเอกสาร"
+              hint={
+                !catalog.purposes.length
+                  ? 'ไม่พบประเภทเอกสารที่พร้อมพิมพ์'
+                  : undefined
+              }
+            >
+              <Select
+                value={purposeId}
+                onChange={(event) => setPurposeId(event.target.value)}
+                disabled={busy}
+              >
+                {catalog.purposes.map((purpose) => (
+                  <option key={purpose.id} value={purpose.id}>
+                    {purpose.displayName}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <Field id="printer-profile" label="โปรไฟล์เครื่องพิมพ์">
+              <Select
+                value={profileId}
+                onChange={(event) => setProfileId(event.target.value)}
+                disabled={busy}
+              >
+                <option value="">ยังไม่กำหนด</option>
+                {activeProfiles.map((profile) => (
+                  <option key={profile.id} value={profile.id}>
+                    {profile.displayName}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 rounded-[var(--ads-radius-md)] border border-[hsl(var(--ads-border-default))] bg-[hsl(var(--ads-surface-subtle))] p-4">
+            <Badge tone={selectedRoute?.isActive ? 'success' : 'neutral'}>
+              {selectedRoute?.isActive
+                ? 'กำหนดเส้นทางแล้ว'
+                : 'ยังไม่กำหนดเส้นทาง'}
+            </Badge>
+            <Badge>ตรงโปรไฟล์ {matchingDevices.length} เครื่อง</Badge>
+            <Badge tone="info">
+              ออนไลน์{' '}
+              {
+                matchingDevices.filter(
+                  (item) => item.connectionState === 'ONLINE',
+                ).length
+              }{' '}
+              เครื่อง
+            </Badge>
+          </div>
+        </CardBody>
+        <CardFooter className="justify-stretch sm:justify-end">
+          <Button
+            onClick={saveRoute}
+            disabled={busy || !profileId}
+            className="w-full sm:w-auto"
+          >
+            <Save className="h-4 w-4" aria-hidden="true" />
+            บันทึกเส้นทาง
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={testRoute}
+            disabled={busy || !selectedRouteMatchesProfile}
+            loading={status === 'TESTING'}
+            loadingLabel="กำลังทดสอบ..."
+            className="w-full sm:w-auto"
+          >
+            <Printer className="h-4 w-4" aria-hidden="true" />
+            ทดสอบพิมพ์
+          </Button>
+          <Button
+            variant="ghost"
+            onClick={clearRoute}
+            disabled={busy || !selectedRoute}
+            className="w-full text-[hsl(var(--ads-danger))] sm:w-auto"
+          >
+            <Unplug className="h-4 w-4" aria-hidden="true" />
+            ปิดเส้นทาง
+          </Button>
+        </CardFooter>
+      </Card>
 
-      <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-        <h2 className="text-lg font-bold text-slate-900">เครื่องพิมพ์ที่พบในเครื่องนี้</h2>
-        <p className="mt-1 text-sm text-slate-600">นำเครื่องจาก Alpha-Tech Local Print Bridge มาลงทะเบียนกับสาขาก่อนผูกโปรไฟล์</p>
-        <div className="mt-3 flex flex-col gap-3 md:flex-row">
-          <select className="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-2" value={localPrinterId} onChange={(event) => setLocalPrinterId(event.target.value)} disabled={busy}>
-            <option value="">เลือกเครื่องที่ค้นพบ</option>
-            {catalog.localPrinters.map((printer) => <option key={printer.id} value={printer.id}>{printer.name} ({printer.isOnline ? 'ออนไลน์' : 'ออฟไลน์'})</option>)}
-          </select>
-          <button type="button" className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50" onClick={registerLocalPrinter} disabled={busy || !localPrinterId}>ลงทะเบียนเครื่องนี้</button>
-        </div>
-        {!catalog.localPrinters.length && <p className="mt-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-800">ไม่พบเครื่องพิมพ์จาก Local Print Bridge กรุณาเปิด Bridge และตรวจสอบว่าเครื่องพิมพ์ติดตั้งใน Windows แล้ว</p>}
-      </section>
+      <div className="grid gap-5 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <h2 className="text-lg font-semibold text-[hsl(var(--ads-text-strong))]">
+              เครื่องพิมพ์ที่พบในเครื่องนี้
+            </h2>
+            <p className="mt-1 text-sm text-[hsl(var(--ads-text-muted))]">
+              นำเครื่องจาก Alpha-Tech Local Print Bridge
+              มาลงทะเบียนกับสาขาก่อนผูกโปรไฟล์
+            </p>
+          </CardHeader>
+          <CardBody className="space-y-4">
+            <Field
+              id="local-printer"
+              label="เครื่องพิมพ์จาก Local Print Bridge"
+            >
+              <Select
+                value={localPrinterId}
+                onChange={(event) => setLocalPrinterId(event.target.value)}
+                disabled={busy}
+              >
+                <option value="">เลือกเครื่องที่ค้นพบ</option>
+                {catalog.localPrinters.map((printer) => (
+                  <option key={printer.id} value={printer.id}>
+                    {printer.name} ({printer.isOnline ? 'ออนไลน์' : 'ออฟไลน์'})
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            {!catalog.localPrinters.length && (
+              <Alert tone="warning">
+                ไม่พบเครื่องพิมพ์จาก Local Print Bridge กรุณาเปิด Bridge
+                และตรวจสอบว่าเครื่องพิมพ์ติดตั้งใน Windows แล้ว
+              </Alert>
+            )}
+          </CardBody>
+          <CardFooter>
+            <Button
+              onClick={registerLocalPrinter}
+              disabled={busy || !localPrinterId}
+            >
+              <Cable className="h-4 w-4" aria-hidden="true" />
+              ลงทะเบียนเครื่องนี้
+            </Button>
+          </CardFooter>
+        </Card>
 
-      <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-        <h2 className="text-lg font-bold text-slate-900">โปรไฟล์รุ่นเครื่องพิมพ์</h2>
-        <div className="mt-3 grid gap-3 md:grid-cols-2 lg:grid-cols-4">
-          {['code', 'displayName', 'manufacturer', 'modelName'].map((field) => (
-            <label key={field} className="text-sm font-medium text-slate-700">{{ code: 'รหัส', displayName: 'ชื่อโปรไฟล์', manufacturer: 'ผู้ผลิต', modelName: 'รุ่น' }[field]}
-              <input className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2" value={profileDraft[field]} onChange={(event) => setProfileDraft((current) => ({ ...current, [field]: event.target.value }))} disabled={busy} />
-            </label>
-          ))}
-        </div>
-        <button type="button" className="mt-3 rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50" onClick={createProfile} disabled={busy}>สร้างโปรไฟล์</button>
-        {!catalog.profiles.length && <p className="mt-3 text-sm text-slate-500">ยังไม่มีโปรไฟล์ กรอกรหัสและชื่อเพื่อสร้างโปรไฟล์แรก เช่น RECEIPT_80MM</p>}
-      </section>
+        <Card>
+          <CardHeader>
+            <h2 className="text-lg font-semibold text-[hsl(var(--ads-text-strong))]">
+              ผูกเครื่องพิมพ์จริง
+            </h2>
+            <p className="mt-1 text-sm text-[hsl(var(--ads-text-muted))]">
+              กำหนดโปรไฟล์ให้เครื่องที่ลงทะเบียน
+              เพื่อให้ระบบเลือกใช้งานได้ถูกต้อง
+            </p>
+          </CardHeader>
+          <CardBody className="space-y-4">
+            <Field id="registered-printer" label="เครื่องที่ลงทะเบียน">
+              <Select
+                value={deviceId}
+                onChange={(event) => setDeviceId(event.target.value)}
+                disabled={busy}
+              >
+                <option value="">เลือกเครื่อง</option>
+                {catalog.devices.map((device) => (
+                  <option key={device.deviceId} value={device.deviceId}>
+                    {device.name} ({device.connectionState})
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <Field id="device-profile" label="โปรไฟล์">
+              <Select
+                value={deviceProfileCode}
+                onChange={(event) => setDeviceProfileCode(event.target.value)}
+                disabled={busy}
+              >
+                <option value="">เลือกโปรไฟล์</option>
+                {activeProfiles.map((profile) => (
+                  <option key={profile.id} value={profile.normalizedCode}>
+                    {profile.displayName}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            {!catalog.devices.length && (
+              <Alert tone="warning">
+                ยังไม่มีเครื่องที่ลงทะเบียน
+                กรุณาลงทะเบียนจากรายการเครื่องที่พบก่อน
+              </Alert>
+            )}
+          </CardBody>
+          <CardFooter>
+            <Button onClick={assignDevice} disabled={busy}>
+              <Link2 className="h-4 w-4" aria-hidden="true" />
+              ผูกเครื่องกับโปรไฟล์
+            </Button>
+          </CardFooter>
+        </Card>
+      </div>
 
-      <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-        <h2 className="text-lg font-bold text-slate-900">ผูกเครื่องพิมพ์จริง</h2>
-        <div className="mt-3 grid gap-3 md:grid-cols-2">
-          <label className="text-sm font-medium text-slate-700">เครื่องที่ลงทะเบียน
-            <select className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2" value={deviceId} onChange={(event) => setDeviceId(event.target.value)} disabled={busy}>
-              <option value="">เลือกเครื่อง</option>
-              {catalog.devices.map((device) => <option key={device.deviceId} value={device.deviceId}>{device.name} ({device.connectionState})</option>)}
-            </select>
-          </label>
-          <label className="text-sm font-medium text-slate-700">โปรไฟล์
-            <select className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2" value={deviceProfileCode} onChange={(event) => setDeviceProfileCode(event.target.value)} disabled={busy}>
-              <option value="">เลือกโปรไฟล์</option>
-              {activeProfiles.map((profile) => <option key={profile.id} value={profile.normalizedCode}>{profile.displayName}</option>)}
-            </select>
-          </label>
-        </div>
-        <button type="button" className="mt-3 rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50" onClick={assignDevice} disabled={busy}>ผูกเครื่องกับโปรไฟล์</button>
-        {!catalog.devices.length && <p className="mt-3 text-sm text-amber-700">ยังไม่มีเครื่องที่ลงทะเบียน กรุณาลงทะเบียนจากรายการเครื่องที่พบด้านบนก่อน</p>}
-      </section>
+      <Card>
+        <CardHeader>
+          <h2 className="text-lg font-semibold text-[hsl(var(--ads-text-strong))]">
+            โปรไฟล์รุ่นเครื่องพิมพ์
+          </h2>
+          <p className="mt-1 text-sm text-[hsl(var(--ads-text-muted))]">
+            สร้างโปรไฟล์กลางเพื่อใช้กับเครื่องพิมพ์รุ่นเดียวกัน
+            โดยไม่ผูกกับเครื่องจริงเพียงเครื่องเดียว
+          </p>
+        </CardHeader>
+        <CardBody className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            {PROFILE_FIELDS.map((field) => (
+              <Field
+                key={field.key}
+                id={`printer-profile-${field.key}`}
+                label={field.label}
+              >
+                <Input
+                  value={profileDraft[field.key]}
+                  onChange={(event) =>
+                    setProfileDraft((current) => ({
+                      ...current,
+                      [field.key]: event.target.value,
+                    }))
+                  }
+                  disabled={busy}
+                />
+              </Field>
+            ))}
+          </div>
+          {!catalog.profiles.length && (
+            <Alert tone="info">
+              ยังไม่มีโปรไฟล์ กรอกรหัสและชื่อเพื่อสร้างโปรไฟล์แรก เช่น
+              RECEIPT_80MM
+            </Alert>
+          )}
+        </CardBody>
+        <CardFooter>
+          <Button onClick={createProfile} disabled={busy}>
+            <Plus className="h-4 w-4" aria-hidden="true" />
+            สร้างโปรไฟล์
+          </Button>
+        </CardFooter>
+      </Card>
 
-      {message && <p className="rounded-lg border border-slate-200 bg-white p-3 text-sm text-slate-700" role="status">{message}</p>}
-      <button type="button" className="text-sm text-slate-600 underline disabled:opacity-50" onClick={load} disabled={busy}>โหลดข้อมูลใหม่</button>
+      {message && (
+        <Alert tone={status === 'ERROR' ? 'danger' : 'info'}>{message}</Alert>
+      )}
+      <div className="flex justify-end">
+        <Button variant="ghost" onClick={load} disabled={busy}>
+          <RefreshCw
+            className={`h-4 w-4 ${status === 'LOADING' ? 'animate-spin' : ''}`}
+            aria-hidden="true"
+          />
+          โหลดข้อมูลใหม่
+        </Button>
+      </div>
     </div>
   )
 }

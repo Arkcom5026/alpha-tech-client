@@ -14,6 +14,16 @@ const requirePositiveId = (value, fieldName) => {
   return normalized;
 };
 
+const requireTextId = (value, fieldName) => {
+  const normalized = String(value || '').trim();
+  if (!normalized) {
+    const error = new Error(`${fieldName} ไม่ถูกต้อง`);
+    error.code = 'TAX_PERIOD_CLIENT_VALIDATION_ERROR';
+    throw error;
+  }
+  return normalized;
+};
+
 const normalizeOptionalDate = (value, fieldName) => {
   if (!value) return undefined;
   const date = new Date(value);
@@ -72,9 +82,9 @@ export const listTaxPeriods = async ({ branchId, status, fromDate, toDate } = {}
 
 export const getTaxPeriodDetail = async ({ branchId, taxPeriodId }) => {
   const normalizedBranchId = requirePositiveId(branchId, 'branchId');
-  const normalizedTaxPeriodId = requirePositiveId(taxPeriodId, 'taxPeriodId');
+  const normalizedTaxPeriodId = requireTextId(taxPeriodId, 'taxPeriodId');
 
-  const response = await apiClient.get(`/tax/periods/${normalizedTaxPeriodId}`, {
+  const response = await apiClient.get(`/tax/periods/${encodeURIComponent(normalizedTaxPeriodId)}`, {
     params: { branchId: normalizedBranchId },
   });
   return unwrapData(response);
@@ -93,11 +103,11 @@ export const ensureMonthlyTaxPeriod = async ({ branchId, referenceDate } = {}) =
 
 export const transitionTaxPeriod = async ({ branchId, taxPeriodId, action, occurredAt }) => {
   const normalizedBranchId = requirePositiveId(branchId, 'branchId');
-  const normalizedTaxPeriodId = requirePositiveId(taxPeriodId, 'taxPeriodId');
+  const normalizedTaxPeriodId = requireTextId(taxPeriodId, 'taxPeriodId');
   const normalizedAction = requireAction(action);
   const normalizedOccurredAt = normalizeOptionalDate(occurredAt, 'occurredAt');
 
-  const response = await apiClient.post(`/tax/periods/${normalizedTaxPeriodId}/${normalizedAction.toLowerCase()}`, {
+  const response = await apiClient.post(`/tax/periods/${encodeURIComponent(normalizedTaxPeriodId)}/${normalizedAction.toLowerCase()}`, {
     branchId: normalizedBranchId,
     ...(normalizedOccurredAt ? { occurredAt: normalizedOccurredAt } : {}),
   });

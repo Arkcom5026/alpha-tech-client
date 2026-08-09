@@ -25,5 +25,22 @@ test('receipt document supports full A4 and short 80mm print modes', () => {
   assert.match(printPage, /CUSTOMER MONEY RECEIPT/);
   assert.match(printPage, /record\.branch/);
   assert.match(printPage, /record\.receivedBy/);
-  assert.match(printPage, /การรับเงินจริงจากลูกค้า/);
+});
+
+test('receipt document represents generic customer money and not debt allocation semantics', () => {
+  assert.match(printPage, /รับเข้า Customer Money และยังไม่กำหนดการนำไปใช้/);
+  assert.match(printPage, /เงินที่รับยังไม่ผูกกับยอดหนี้ ใบส่งของ การขาย หรือวัตถุประสงค์การใช้เงินใด ๆ/);
+  assert.match(printPage, /ไม่ใช่ใบกำกับภาษี/);
+  assert.doesNotMatch(printPage, /allocationId|saleId|deliveryId/);
+});
+
+test('receipt document includes legal presentation essentials', () => {
+  assert.match(printPage, /เลขประจำตัวผู้เสียภาษี/);
+  assert.match(printPage, /จำนวนเงินที่รับ/);
+  assert.match(printPage, /thaiBahtText\(record\.amount\)/);
+  assert.match(printPage, /ช่องทางรับเงิน/);
+  assert.match(printPage, /เลขอ้างอิง/);
+  assert.match(printPage, /ผู้ชำระเงิน \/ ผู้ส่งมอบเงิน/);
+  assert.match(printPage, /ผู้รับเงิน/);
+  assert.match(printPage, /ยกเลิกแล้ว \/ CANCELLED/);
 });

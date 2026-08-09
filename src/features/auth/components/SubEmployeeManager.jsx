@@ -115,9 +115,9 @@ const SubEmployeeManager = () => {
     <div className="mx-auto w-full max-w-5xl rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
       <div className="flex flex-col gap-5 border-b border-slate-200 pb-6 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-start gap-4">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-orange-200 bg-orange-50 text-orange-600"><FaUserPlus /></div>
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-emerald-200 bg-emerald-50 text-emerald-600"><FaUserPlus /></div>
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-orange-600">Employee onboarding</p>
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-600">Employee onboarding</p>
             <h3 className="mt-1 text-xl font-black text-slate-900">เพิ่มพนักงานใหม่</h3>
             <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-600">สร้างบัญชี กำหนดบทบาทและตำแหน่งงาน พร้อมส่งข้อมูลเข้าสู่ระบบให้พนักงานในครั้งเดียว</p>
           </div>
@@ -172,12 +172,12 @@ const SubEmployeeManager = () => {
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="เบอร์โทรศัพท์ติดต่อ (ไม่บังคับ)" icon={<FaPhone />}><input value={form.phone} onChange={(e) => updateField('phone', e.target.value)} disabled={isLoading} placeholder="เช่น 0812345678" className="w-full bg-transparent px-3 py-3 text-sm font-semibold outline-none" /></Field>
-            <div><label className="mb-2 block text-xs font-black text-slate-700">บทบาทในร้าน</label><select value={form.v2Role} onChange={(e) => updateField('v2Role', e.target.value)} disabled={isLoading} className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-3 text-sm font-bold outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-100"><option value="CASHIER">แคชเชียร์</option><option value="MANAGER">ผู้จัดการร้าน</option></select><p className="mt-1.5 text-[11px] leading-5 text-slate-500">{selectedRole.description}</p></div>
+            <div><label className="mb-2 block text-xs font-black text-slate-700">บทบาทในร้าน</label><select value={form.v2Role} onChange={(e) => updateField('v2Role', e.target.value)} disabled={isLoading} className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-3 text-sm font-bold outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"><option value="CASHIER">แคชเชียร์</option><option value="MANAGER">ผู้จัดการร้าน</option></select><p className="mt-1.5 text-[11px] leading-5 text-slate-500">{selectedRole.description}</p></div>
           </div>
 
-          <div><label className="mb-2 block text-xs font-black text-slate-700">ตำแหน่งงาน</label><div className="flex items-center rounded-xl border border-slate-300 bg-white px-3.5 focus-within:border-orange-500 focus-within:ring-4 focus-within:ring-orange-100"><FaBriefcase className="text-sm text-slate-400" /><select value={form.positionId} onChange={(e) => updateField('positionId', e.target.value)} disabled={isLoading || positions.length === 0} className="w-full bg-transparent px-3 py-3 text-sm font-bold outline-none">{positions.length === 0 ? <option value="">กำลังโหลดตำแหน่งงาน...</option> : positions.map((position) => <option key={position.id} value={position.id}>{position.name}</option>)}</select></div><p className="mt-1.5 text-[11px] text-slate-500">ตำแหน่งนี้จะแสดงในหน้าจัดการพนักงานทันที</p></div>
+          <div><label className="mb-2 block text-xs font-black text-slate-700">ตำแหน่งงาน</label><div className="flex items-center rounded-xl border border-slate-300 bg-white px-3.5 focus-within:border-emerald-500 focus-within:ring-4 focus-within:ring-emerald-100"><FaBriefcase className="text-sm text-slate-400" /><select value={form.positionId} onChange={(e) => updateField('positionId', e.target.value)} disabled={isLoading || positions.length === 0} className="w-full bg-transparent px-3 py-3 text-sm font-bold outline-none">{positions.length === 0 ? <option value="">กำลังโหลดตำแหน่งงาน...</option> : positions.map((position) => <option key={position.id} value={position.id}>{position.name}</option>)}</select></div><p className="mt-1.5 text-[11px] text-slate-500">ตำแหน่งนี้จะแสดงในหน้าจัดการพนักงานทันที</p></div>
 
-          <button type="submit" disabled={isLoading || positions.length === 0} className={`inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl px-5 text-sm font-black text-white ${isLoading || positions.length === 0 ? 'cursor-not-allowed bg-orange-300' : 'bg-orange-500 hover:bg-orange-600'}`}>{isLoading ? <><FaSpinner className="animate-spin" />กำลังสร้างบัญชีพนักงาน...</> : <><FaUserPlus />สร้างบัญชีพนักงาน</>}</button>
+          <button type="submit" disabled={isLoading || positions.length === 0} className={`inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl px-5 text-sm font-black text-white ${isLoading || positions.length === 0 ? 'cursor-not-allowed bg-emerald-300' : 'bg-emerald-500 hover:bg-emerald-600'}`}>{isLoading ? <><FaSpinner className="animate-spin" />กำลังสร้างบัญชีพนักงาน...</> : <><FaUserPlus />สร้างบัญชีพนักงาน</>}</button>
         </form>
 
         <aside className="space-y-4 lg:col-span-5">
@@ -189,6 +189,6 @@ const SubEmployeeManager = () => {
   );
 };
 
-const Field = ({ label, icon, children }) => <div><label className="mb-2 block text-xs font-black text-slate-700">{label}</label><div className="flex items-center rounded-xl border border-slate-300 bg-white px-3.5 focus-within:border-orange-500 focus-within:ring-4 focus-within:ring-orange-100"><span className="text-sm text-slate-400">{icon}</span>{children}</div></div>;
+const Field = ({ label, icon, children }) => <div><label className="mb-2 block text-xs font-black text-slate-700">{label}</label><div className="flex items-center rounded-xl border border-slate-300 bg-white px-3.5 focus-within:border-emerald-500 focus-within:ring-4 focus-within:ring-emerald-100"><span className="text-sm text-slate-400">{icon}</span>{children}</div></div>;
 
 export default SubEmployeeManager;

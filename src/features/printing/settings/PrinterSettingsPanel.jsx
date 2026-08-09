@@ -163,6 +163,8 @@ const PrinterSettingsPanel = ({
     await load()
   }
 
+  const selectClass = 'w-full rounded-lg border border-slate-300 px-3 py-2 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100'
+
   return (
     <section className="space-y-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
       <div>
@@ -177,7 +179,7 @@ const PrinterSettingsPanel = ({
           <label className="space-y-1 text-sm font-medium text-slate-700">
             ระดับการตั้งค่า
             <select
-              className="w-full rounded-lg border border-slate-300 px-3 py-2"
+              className={selectClass}
               value={selectedScope}
               onChange={(event) => {
                 setSelectedScope(event.target.value)
@@ -195,7 +197,7 @@ const PrinterSettingsPanel = ({
         <label className="space-y-1 text-sm font-medium text-slate-700">
           ประเภทเอกสาร
           <select
-            className="w-full rounded-lg border border-slate-300 px-3 py-2"
+            className={selectClass}
             value={selectedPurpose}
             onChange={(event) => {
               setSelectedPurpose(event.target.value)
@@ -214,7 +216,7 @@ const PrinterSettingsPanel = ({
         <label className="space-y-1 text-sm font-medium text-slate-700">
           เครื่องพิมพ์
           <select
-            className="w-full rounded-lg border border-slate-300 px-3 py-2"
+            className={selectClass}
             value={selectedPrinterId}
             onChange={(event) => setSelectedPrinterId(event.target.value)}
             disabled={isBusy}
@@ -229,7 +231,7 @@ const PrinterSettingsPanel = ({
         </label>
       </div>
 
-      <div className="rounded-lg bg-slate-50 p-3 text-sm text-slate-700">
+      <div className="rounded-lg border border-emerald-100 bg-emerald-50/40 p-3 text-sm text-slate-700">
         <div>สถานะระดับนี้: {STATUS_LABELS[selectedRow?.status] || selectedRow?.status}</div>
         {selectedRow?.preference && <div>เครื่องที่บันทึกระดับนี้: {selectedRow.preference.printerName}</div>}
         {resolvedAuthority && (
@@ -244,7 +246,7 @@ const PrinterSettingsPanel = ({
       <div className="flex flex-wrap gap-2">
         <button
           type="button"
-          className="rounded-lg bg-orange-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+          className="rounded-lg border border-emerald-300 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-800 hover:bg-emerald-100 disabled:opacity-50"
           onClick={testSelection}
           disabled={isBusy || !selectedPrinterId}
         >
@@ -252,7 +254,7 @@ const PrinterSettingsPanel = ({
         </button>
         <button
           type="button"
-          className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+          className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
           onClick={saveSelection}
           disabled={isBusy}
         >
@@ -260,7 +262,7 @@ const PrinterSettingsPanel = ({
         </button>
         <button
           type="button"
-          className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 disabled:opacity-50"
+          className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
           onClick={load}
           disabled={isBusy}
         >
@@ -268,7 +270,7 @@ const PrinterSettingsPanel = ({
         </button>
         <button
           type="button"
-          className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 disabled:opacity-50"
+          className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
           onClick={clearSelection}
           disabled={isBusy || !selectedRow?.preference}
         >

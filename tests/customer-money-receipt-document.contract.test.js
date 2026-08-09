@@ -8,13 +8,36 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = (relativePath) => fs.readFileSync(path.join(root, relativePath), 'utf8');
 
 const routes = read('src/routes/partner/posPartnerRoutes.jsx');
+const listPage = read('src/features/customerMoneyReceive/pages/CustomerMoneyReceiveListPage.jsx');
+const createPage = read('src/features/customerMoneyReceive/pages/CustomerMoneyReceivePage.jsx');
 const detail = read('src/features/customerMoneyReceive/pages/CustomerMoneyReceiveDetailPage.jsx');
 const printPage = read('src/features/customerMoneyReceive/pages/CustomerMoneyReceiptPrintPage.jsx');
 
+test('customer money module follows list-first navigation standard', () => {
+  assert.match(routes, /path: 'customer-money-receive'[\s\S]*CustomerMoneyReceiveListPage/);
+  assert.match(routes, /path: 'create', element: <CustomerMoneyReceivePage/);
+  assert.match(routes, /path: ':id', element: <CustomerMoneyReceiveDetailPage/);
+  assert.match(routes, /path: ':id\/print', element: <CustomerMoneyReceiptPrintPage/);
+  assert.match(listPage, /ประวัติการรับเงินจากลูกค้า/);
+  assert.match(listPage, /navigate\('\.\/create'\)/);
+  assert.match(listPage, /> รับเงิน</);
+  assert.match(createPage, /กลับประวัติการรับเงิน/);
+  assert.match(detail, /กลับรายการรับเงิน/);
+});
+
+test('history list provides operational search and document actions', () => {
+  assert.match(listPage, /เลข CMR, ชื่อลูกค้า, Tax ID, เลขอ้างอิง/);
+  assert.match(listPage, /ทุกสถานะ/);
+  assert.match(listPage, /ทุกช่องทาง/);
+  assert.match(listPage, /type="date"/);
+  assert.match(listPage, /รายละเอียด/);
+  assert.match(listPage, /พิมพ์/);
+});
+
 test('customer money receive detail opens a dedicated receipt document route', () => {
-  assert.match(routes, /customer-money-receive\/:id\/print/);
+  assert.match(routes, /path: ':id\/print'/);
   assert.match(routes, /CustomerMoneyReceiptPrintPage/);
-  assert.match(detail, /navigate\(`\.\/print`\)/);
+  assert.match(detail, /navigate\('\.\/print'\)/);
   assert.doesNotMatch(detail, /onClick=\{\(\) => window\.print\(\)\}/);
 });
 

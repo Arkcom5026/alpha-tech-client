@@ -1,4 +1,5 @@
 import { useCallback, useReducer } from 'react';
+import { toast } from 'react-toastify';
 
 import {
   mapSaleSearchItemToCartLine,
@@ -34,6 +35,11 @@ export const useSaleItemSearch = ({
   productSearchRef,
 }) => {
   const [selection, dispatchSelection] = useReducer(selectionReducer, CLOSED_SELECTION);
+
+  const showSearchError = useCallback((message) => {
+    setError(message);
+    toast.error(message);
+  }, [setError]);
 
   const focusSearch = useCallback(() => {
     requestAnimationFrame(() => productSearchRef?.current?.focus?.());
@@ -90,7 +96,7 @@ export const useSaleItemSearch = ({
     try {
       const result = await searchSaleItems(query);
       if (!result.items.length) {
-        setError(`❌ ${result.message || 'ไม่พบสินค้าที่พร้อมขายจากข้อมูลค้นหานี้'}`);
+        showSearchError(result.message || 'ไม่พบสินค้าที่พร้อมขายจากข้อมูลค้นหานี้');
         return;
       }
 
@@ -109,7 +115,7 @@ export const useSaleItemSearch = ({
       clearInput(event.target);
     } catch (error) {
       const payload = error?.response?.data;
-      setError(`❌ ${payload?.message || error?.message || DEFAULT_SEARCH_ERROR}`);
+      showSearchError(payload?.message || error?.message || DEFAULT_SEARCH_ERROR);
       focusSearch();
     }
   }, [
@@ -118,6 +124,7 @@ export const useSaleItemSearch = ({
     clearSaleError,
     focusSearch,
     setError,
+    showSearchError,
   ]);
 
   return {

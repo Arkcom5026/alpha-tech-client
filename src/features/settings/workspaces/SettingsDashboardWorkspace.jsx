@@ -1,6 +1,6 @@
 // src/features/settings/workspaces/SettingsDashboardWorkspace.jsx
 // 🏛️ Advanced Multi-Tenant Settings Dashboard Hub
-// 🎨 Minimal Platinum Light Mode Edition (User Feedback Optimized — High Contrast Text)
+// 🎨 Mint Platform Standard
 
 import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -11,10 +11,10 @@ const SettingTile = ({ title, desc, icon, onClick }) => {
     <button
       type="button"
       onClick={onClick}
-      className="group w-full border border-slate-200/80 rounded-2xl bg-white p-5 text-left text-slate-700 flex items-start justify-between gap-4 transition-all duration-200 shadow-sm hover:shadow-md hover:-translate-y-0.5 hover:bg-slate-50 hover:border-orange-500/40"
+      className="group w-full border border-slate-200/80 rounded-2xl bg-white p-5 text-left text-slate-700 flex items-start justify-between gap-4 transition-all duration-200 shadow-sm hover:shadow-md hover:-translate-y-0.5 hover:bg-emerald-50/40 hover:border-emerald-300"
     >
       <div className="flex items-center gap-4 min-w-0">
-        <div className="p-3 rounded-xl shrink-0 bg-slate-100 text-slate-500 transition-colors group-hover:bg-orange-500/10 group-hover:text-orange-600">
+        <div className="p-3 rounded-xl shrink-0 bg-slate-100 text-slate-500 transition-colors group-hover:bg-emerald-100 group-hover:text-emerald-700">
           {React.createElement(icon, { className: 'w-5 h-5' })}
         </div>
         <div className="min-w-0">
@@ -28,7 +28,7 @@ const SettingTile = ({ title, desc, icon, onClick }) => {
           )}
         </div>
       </div>
-      <ArrowRight className="w-4 h-4 mt-1 shrink-0 text-slate-300 transition-colors group-hover:text-slate-600" />
+      <ArrowRight className="w-4 h-4 mt-1 shrink-0 text-slate-300 transition-colors group-hover:text-emerald-600" />
     </button>
   );
 };
@@ -44,7 +44,7 @@ const SettingsDashboardWorkspace = () => {
           <h1 className="text-xl font-black text-slate-900 tracking-tight">ศูนย์การตั้งค่าระบบร้านค้า</h1>
           <p className="text-xs text-slate-400 font-bold mt-0.5 tracking-wide">จัดการหน้าร้าน สินค้าออนไลน์ พนักงาน เครื่องพิมพ์ ตำแหน่ง สาขา และช่องทางธุรกรรมของร้านจากจุดเดียว</p>
         </div>
-        <div className="bg-slate-100 text-orange-700 font-black text-xs px-3 py-1.5 rounded-xl border border-slate-200 shadow-sm shrink-0 self-start sm:self-center select-none">
+        <div className="bg-emerald-50 text-emerald-700 font-black text-xs px-3 py-1.5 rounded-xl border border-emerald-200 shadow-sm shrink-0 self-start sm:self-center select-none">
           ⚙️ ตั้งค่าระบบ
         </div>
       </div>

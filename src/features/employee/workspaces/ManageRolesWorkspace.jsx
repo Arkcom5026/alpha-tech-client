@@ -153,27 +153,29 @@ export default function ManageRolesPage() {
     );
   }
 
+  const filterClassName = 'border border-zinc-300 dark:border-zinc-700 rounded-md px-3 py-2 bg-white dark:bg-zinc-900 focus:outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 dark:focus:ring-emerald-950/40 transition';
+
   return (
     <div className="w-full flex justify-center mt-4">
       <div className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm rounded-xl overflow-hidden">
-        <div className="px-4 py-3 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-800/60">
-          <h1 className="text-base font-semibold text-zinc-800 dark:text-zinc-100">จัดการ Role และสถานะพนักงาน</h1>
+        <div className="px-4 py-3 border-b border-emerald-100 dark:border-zinc-800 bg-emerald-50/50 dark:bg-zinc-800/60">
+          <h1 className="text-base font-semibold text-emerald-900 dark:text-emerald-300">จัดการ Role และสถานะพนักงาน</h1>
           {error && <p className="mt-1 text-xs text-rose-600">{error}</p>}
         </div>
 
         <div className="px-4 py-3 flex items-center gap-2 flex-wrap">
           <input
-            className="border border-zinc-300 dark:border-zinc-700 rounded-md px-3 py-2 w-full flex-1 min-w-[280px] max-w-2xl bg-white dark:bg-zinc-900"
+            className={`${filterClassName} w-full flex-1 min-w-[280px] max-w-2xl`}
             placeholder="ค้นหาชื่อ / อีเมล..."
             value={search}
             onChange={(event) => setSearch(event.target.value)}
           />
-          <select className="border rounded-md px-3 py-2 bg-white dark:bg-zinc-900" value={filterRole} onChange={(event) => setFilterRole(event.target.value)}>
+          <select className={filterClassName} value={filterRole} onChange={(event) => setFilterRole(event.target.value)}>
             <option value="all">Role: ทั้งหมด</option>
             <option value="admin">admin</option>
             <option value="employee">employee</option>
           </select>
-          <select className="border rounded-md px-3 py-2 bg-white dark:bg-zinc-900 min-w-[220px]" value={branchFilter} onChange={(event) => setBranchFilter(event.target.value)}>
+          <select className={`${filterClassName} min-w-[220px]`} value={branchFilter} onChange={(event) => setBranchFilter(event.target.value)}>
             <option value="all">สาขา: ทั้งหมด</option>
             {branches.map((branch) => <option key={branch.id} value={branch.id}>{branch.name}</option>)}
           </select>
@@ -200,12 +202,12 @@ export default function ManageRolesPage() {
                 const lifecycleAllowed = employee.status !== 'pending';
                 const isActive = employee.status === 'active';
                 return (
-                  <tr key={employee.id} className="border-b border-zinc-100 dark:border-zinc-800">
+                  <tr key={employee.id} className="border-b border-zinc-100 dark:border-zinc-800 hover:bg-emerald-50/30 dark:hover:bg-emerald-950/10 transition-colors">
                     <td className="px-4 py-3 text-center">{(page - 1) * limit + index + 1}</td>
                     <td className="px-4 py-3">{employee.name || '-'}</td>
                     <td className="px-4 py-3">{employee.email || '-'}</td>
                     <td className="px-4 py-3">{employee.branch?.name || '-'}</td>
-                    <td className="px-4 py-3 text-center"><Badge className="bg-blue-50 text-blue-700 ring-blue-600/20">{employee.role || '-'}</Badge></td>
+                    <td className="px-4 py-3 text-center"><Badge className="bg-emerald-50 text-emerald-700 ring-emerald-600/20">{employee.role || '-'}</Badge></td>
                     <td className="px-4 py-3 text-center">
                       <Badge className={isActive ? 'bg-emerald-50 text-emerald-700 ring-emerald-600/20' : employee.status === 'pending' ? 'bg-amber-50 text-amber-700 ring-amber-600/20' : 'bg-zinc-200 text-zinc-800 ring-zinc-400/40'}>
                         {statusText[employee.status] || employee.status || '-'}
@@ -213,11 +215,11 @@ export default function ManageRolesPage() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex justify-end gap-2">
-                        <ActionButton className="bg-indigo-600 text-white" disabled={!roleChangeAllowed} onClick={() => requestRoleChange(employee)}>
+                        <ActionButton className="bg-emerald-600 text-white hover:bg-emerald-700 focus:ring-emerald-400" disabled={!roleChangeAllowed} onClick={() => requestRoleChange(employee)}>
                           เปลี่ยน Role
                         </ActionButton>
                         <ActionButton
-                          className={isActive ? 'bg-rose-600 text-white' : 'bg-emerald-600 text-white'}
+                          className={isActive ? 'bg-rose-600 text-white hover:bg-rose-700 focus:ring-rose-400' : 'bg-emerald-600 text-white hover:bg-emerald-700 focus:ring-emerald-400'}
                           disabled={!lifecycleAllowed || changingEmployeeId === employee.id}
                           onClick={() => changeLifecycle(employee)}
                         >
@@ -233,9 +235,9 @@ export default function ManageRolesPage() {
         </div>
 
         {pages > 1 && (
-          <div className="flex gap-2 p-4 justify-center border-t">
+          <div className="flex gap-2 p-4 justify-center border-t border-zinc-200 dark:border-zinc-800">
             {Array.from({ length: pages }, (_, index) => index + 1).map((pageNumber) => (
-              <button key={pageNumber} className={`px-3 py-1.5 border rounded ${pageNumber === page ? 'bg-gray-200 dark:bg-zinc-700' : ''}`} onClick={() => setPage(pageNumber)}>
+              <button key={pageNumber} className={`px-3 py-1.5 border rounded transition ${pageNumber === page ? 'bg-emerald-100 border-emerald-300 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300' : 'hover:bg-emerald-50 hover:border-emerald-200'}`} onClick={() => setPage(pageNumber)}>
                 {pageNumber}
               </button>
             ))}
@@ -249,7 +251,7 @@ export default function ManageRolesPage() {
             </div>
             <div className="flex gap-2">
               <ActionButton className="border border-amber-300 text-amber-900" onClick={() => setPending(null)}>ยกเลิก</ActionButton>
-              <ActionButton className="bg-blue-600 text-white" onClick={confirmRoleChange}>ยืนยัน</ActionButton>
+              <ActionButton className="bg-emerald-600 text-white hover:bg-emerald-700 focus:ring-emerald-400" onClick={confirmRoleChange}>ยืนยัน</ActionButton>
             </div>
           </div>
         )}

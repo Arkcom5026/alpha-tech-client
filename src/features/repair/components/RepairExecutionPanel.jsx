@@ -8,13 +8,28 @@ const STATUS_COPY = {
   },
   REPAIRING: {
     title: 'กำลังซ่อม',
-    description: 'บันทึกอะไหล่ที่ใช้ หรือพักงานเมื่อจำเป็นต้องรออะไหล่',
+    description: 'บันทึกอะไหล่ที่ใช้ พักรออะไหล่ หรือสรุปงานเมื่อซ่อมเสร็จ',
   },
   WAITING_PARTS: {
     title: 'รออะไหล่',
     description: 'งานถูกพักไว้ชั่วคราว เมื่ออะไหล่พร้อมให้กลับมาดำเนินการซ่อมต่อ',
   },
+  WAITING_QC: {
+    title: 'ตรวจสอบหลังซ่อม',
+    description: 'ตรวจ checklist ให้ครบก่อนระบุว่าผ่านหรือส่งกลับไปแก้งาน',
+  },
+  QC_FAILED: {
+    title: 'QC ไม่ผ่าน',
+    description: 'งานต้องกลับไปแก้ไขก่อนนำมาตรวจซ้ำอีกครั้ง',
+  },
 };
+
+const QC_ITEMS = [
+  { key: 'reported_symptom', label: 'อาการที่ลูกค้าแจ้งได้รับการแก้ไขแล้ว' },
+  { key: 'function_test', label: 'ฟังก์ชันหลักของเครื่องทำงานปกติ' },
+  { key: 'stability_test', label: 'ทดสอบความเสถียรแล้วไม่พบอาการผิดปกติ' },
+  { key: 'physical_check', label: 'ตรวจสภาพภายนอกและอุปกรณ์ประกอบก่อนส่งมอบ' },
+];
 
 const normalizeProducts = (payload) => {
   if (Array.isArray(payload)) return payload;
@@ -42,6 +57,9 @@ const RepairExecutionPanel = ({ job, submitting, onWorkflowAction, onAddPart }) 
     [workflow.availableActions]
   );
   const [note, setNote] = useState('');
+  const [completion, setCompletion] = useState({ workPerformed: '', resultSummary: '', technicianNote: '' });
+  const [qcChecks, setQcChecks] = useState(() => Object.fromEntries(QC_ITEMS.map((item) => [item.key, false])));
+  const [qcNote, setQcNote] = useState('');
   const [partSearch, setPartSearch] = useState('');
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState('');
@@ -49,13 +67,14 @@ const RepairExecutionPanel = ({ job, submitting, onWorkflowAction, onAddPart }) 
   const [selected, setSelected] = useState(null);
   const [qtyUsed, setQtyUsed] = useState(1);
 
-  if (!['APPROVED', 'REPAIRING', 'WAITING_PARTS'].includes(status)) return null;
+  if (!['APPROVED', 'REPAIRING', 'WAITING_PARTS', 'WAITING_QC', 'QC_FAILED'].includes(status)) return null;
 
-  const run = (action) =>
+  const run = (action, extra = {}) =>
     onWorkflowAction({
       action,
       expectedWorkflowStatus: status,
       note: note.trim() || undefined,
+      ...extra,
     });
 
   const searchParts = async () => {
@@ -84,6 +103,13 @@ const RepairExecutionPanel = ({ job, submitting, onWorkflowAction, onAddPart }) 
     setProducts([]);
   };
 
+  const submitCompletion = () => run('COMPLETE_REPAIR', { repairCompletion: completion });
+  const qcPayload = () => ({
+    checks: QC_ITEMS.map((item) => ({ ...item, passed: Boolean(qcChecks[item.key]) })),
+    note: qcNote.trim() || undefined,
+  });
+  const allQcPassed = QC_ITEMS.every((item) => qcChecks[item.key]);
+  const anyQcFailed = QC_ITEMS.some((item) => !qcChecks[item.key]);
   const copy = STATUS_COPY[status];
 
   return (
@@ -184,27 +210,65 @@ const RepairExecutionPanel = ({ job, submitting, onWorkflowAction, onAddPart }) 
             ) : null}
           </div>
 
-          {actionNames.has('WAIT_FOR_PARTS') ? (
-            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
-              <h4 className="font-black text-amber-950">ต้องรออะไหล่?</h4>
-              <p className="mt-1 text-sm text-amber-800">พักงานซ่อมพร้อมบันทึกเหตุผล เพื่อให้หน้าร้านเห็นว่าคิวนี้ติดที่อะไร</p>
-              <textarea
-                rows={3}
-                value={note}
-                onChange={(event) => setNote(event.target.value)}
-                placeholder="เช่น รอ SSD 1TB จากคลังกลาง"
-                className="mt-3 w-full rounded-xl border border-amber-200 bg-white px-4 py-3"
-              />
-              <button
-                type="button"
-                disabled={submitting || !note.trim()}
-                onClick={() => run('WAIT_FOR_PARTS')}
-                className="mt-3 rounded-xl bg-amber-600 px-5 py-3 font-black text-white disabled:opacity-40"
-              >
-                เปลี่ยนเป็นรออะไหล่
-              </button>
-            </div>
-          ) : null}
+          <div className="space-y-5">
+            {actionNames.has('WAIT_FOR_PARTS') ? (
+              <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+                <h4 className="font-black text-amber-950">ต้องรออะไหล่?</h4>
+                <p className="mt-1 text-sm text-amber-800">พักงานซ่อมพร้อมบันทึกเหตุผล เพื่อให้หน้าร้านเห็นว่าคิวนี้ติดที่อะไร</p>
+                <textarea
+                  rows={3}
+                  value={note}
+                  onChange={(event) => setNote(event.target.value)}
+                  placeholder="เช่น รอ SSD 1TB จากคลังกลาง"
+                  className="mt-3 w-full rounded-xl border border-amber-200 bg-white px-4 py-3"
+                />
+                <button
+                  type="button"
+                  disabled={submitting || !note.trim()}
+                  onClick={() => run('WAIT_FOR_PARTS')}
+                  className="mt-3 rounded-xl bg-amber-600 px-5 py-3 font-black text-white disabled:opacity-40"
+                >
+                  เปลี่ยนเป็นรออะไหล่
+                </button>
+              </div>
+            ) : null}
+
+            {actionNames.has('COMPLETE_REPAIR') ? (
+              <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4">
+                <h4 className="font-black text-blue-950">ซ่อมเสร็จแล้ว</h4>
+                <p className="mt-1 text-sm text-blue-800">สรุปสิ่งที่ทำและผลหลังซ่อมก่อนส่งต่อให้ผู้ตรวจ QC</p>
+                <textarea
+                  rows={3}
+                  value={completion.workPerformed}
+                  onChange={(event) => setCompletion((current) => ({ ...current, workPerformed: event.target.value }))}
+                  placeholder="งานที่ดำเนินการ *"
+                  className="mt-3 w-full rounded-xl border border-blue-200 bg-white px-4 py-3"
+                />
+                <textarea
+                  rows={3}
+                  value={completion.resultSummary}
+                  onChange={(event) => setCompletion((current) => ({ ...current, resultSummary: event.target.value }))}
+                  placeholder="ผลหลังซ่อม *"
+                  className="mt-3 w-full rounded-xl border border-blue-200 bg-white px-4 py-3"
+                />
+                <textarea
+                  rows={2}
+                  value={completion.technicianNote}
+                  onChange={(event) => setCompletion((current) => ({ ...current, technicianNote: event.target.value }))}
+                  placeholder="หมายเหตุเพิ่มเติมของช่าง"
+                  className="mt-3 w-full rounded-xl border border-blue-200 bg-white px-4 py-3"
+                />
+                <button
+                  type="button"
+                  disabled={submitting || !completion.workPerformed.trim() || !completion.resultSummary.trim()}
+                  onClick={submitCompletion}
+                  className="mt-3 rounded-xl bg-blue-700 px-5 py-3 font-black text-white disabled:opacity-40"
+                >
+                  ส่งตรวจหลังซ่อม
+                </button>
+              </div>
+            ) : null}
+          </div>
         </div>
       ) : null}
 
@@ -215,6 +279,61 @@ const RepairExecutionPanel = ({ job, submitting, onWorkflowAction, onAddPart }) 
           button="กลับมาซ่อมต่อ"
           disabled={submitting}
           onClick={() => run('RESUME_REPAIR')}
+        />
+      ) : null}
+
+      {status === 'WAITING_QC' ? (
+        <div className="mt-5 rounded-2xl border border-violet-200 bg-violet-50 p-4">
+          <h4 className="font-black text-violet-950">Checklist ตรวจหลังซ่อม</h4>
+          <p className="mt-1 text-sm text-violet-800">ติ๊กเฉพาะรายการที่ตรวจจริงแล้วผ่าน หากมีข้อใดไม่ผ่านให้ส่งกลับไปแก้งาน</p>
+          <div className="mt-4 space-y-2">
+            {QC_ITEMS.map((item) => (
+              <label key={item.key} className="flex items-start gap-3 rounded-xl border border-violet-100 bg-white p-3">
+                <input
+                  type="checkbox"
+                  checked={qcChecks[item.key]}
+                  onChange={(event) => setQcChecks((current) => ({ ...current, [item.key]: event.target.checked }))}
+                  className="mt-1 h-4 w-4"
+                />
+                <span className="text-sm font-bold text-slate-800">{item.label}</span>
+              </label>
+            ))}
+          </div>
+          <textarea
+            rows={3}
+            value={qcNote}
+            onChange={(event) => setQcNote(event.target.value)}
+            placeholder="ผลการทดสอบ / เหตุผลหากไม่ผ่าน"
+            className="mt-3 w-full rounded-xl border border-violet-200 bg-white px-4 py-3"
+          />
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              type="button"
+              disabled={submitting || !allQcPassed}
+              onClick={() => run('PASS_QC', { qc: qcPayload() })}
+              className="rounded-xl bg-emerald-700 px-5 py-3 font-black text-white disabled:opacity-40"
+            >
+              QC ผ่าน — พร้อมส่งมอบ
+            </button>
+            <button
+              type="button"
+              disabled={submitting || !anyQcFailed || !qcNote.trim()}
+              onClick={() => run('FAIL_QC', { qc: qcPayload() })}
+              className="rounded-xl bg-red-700 px-5 py-3 font-black text-white disabled:opacity-40"
+            >
+              QC ไม่ผ่าน — ส่งกลับแก้งาน
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {actionNames.has('REWORK_AFTER_QC') ? (
+        <WorkflowAction
+          title="ส่งกลับให้ช่างแก้งาน"
+          description="กลับเข้าสู่ขั้นกำลังซ่อมเพื่อแก้จุดที่ QC ตรวจไม่ผ่าน แล้วต้องส่งตรวจใหม่อีกครั้ง"
+          button="เริ่มแก้งาน"
+          disabled={submitting}
+          onClick={() => run('REWORK_AFTER_QC')}
         />
       ) : null}
     </section>

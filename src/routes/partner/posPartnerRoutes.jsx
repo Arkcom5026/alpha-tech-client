@@ -34,6 +34,7 @@ import TaxPeriodManagementPage from '@/features/tax/periods/pages/TaxPeriodManag
 import AccountingOfficePackagePage from '@/features/tax/periods/pages/AccountingOfficePackagePage';
 import VatSettlementPage from '@/features/tax/settlement/pages/VatSettlementPage';
 import WithholdingTaxWorkspacePage from '@/features/tax/withholding/pages/WithholdingTaxWorkspacePage';
+import UnifiedTaxReadinessPage from '@/features/tax/readiness/pages/UnifiedTaxReadinessPage';
 import InputTaxReceiptWorkspacePage from '@/features/tax/inputDocuments/pages/InputTaxReceiptWorkspacePage';
 import InputVatReportPage from '@/features/tax/inputVatReport/pages/InputVatReportPage';
 import SupplierPayableWorkspacePage from '@/features/supplierPayable/pages/SupplierPayableWorkspacePage';
@@ -117,6 +118,7 @@ export const posPartnerRoutes = [
           { path: 'tax-periods', element: <TaxPeriodManagementPage /> },
           { path: 'output-tax-filings', element: <SalesTaxFilingPage /> },
           { path: 'tax-publication-retry', element: <TaxPublicationRetryPage /> },
+          { path: 'tax-periods/:taxPeriodId/readiness', element: <UnifiedTaxReadinessPage /> },
           { path: 'tax-periods/:taxPeriodId/accounting-office', element: <AccountingOfficePackagePage /> },
           { path: 'tax-periods/:taxPeriodId/vat-settlement', element: <VatSettlementPage /> },
           { path: 'tax-periods/:taxPeriodId/withholding-tax', element: <WithholdingTaxWorkspacePage /> },

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
 import ExpensePayeeMasterDataPanel from '../components/ExpensePayeeMasterDataPanel';
 import TaxExpenseAssessmentPanel from '../components/TaxExpenseAssessmentPanel';
 import TaxExpenseCategoryPanel from '../components/TaxExpenseCategoryPanel';
@@ -9,7 +10,9 @@ import useTaxExpenseWorkspace from '../hooks/useTaxExpenseWorkspace';
 const money = (value) => Number(value || 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 const TaxExpenseWorkspacePage = () => {
-  const [assessmentExpenseId, setAssessmentExpenseId] = useState(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialAssessmentExpenseId = Number(searchParams.get('assessmentExpenseId') || 0) || null;
+  const [assessmentExpenseId, setAssessmentExpenseId] = useState(initialAssessmentExpenseId);
   const {
     branchId,
     currentBranch,
@@ -27,6 +30,15 @@ const TaxExpenseWorkspacePage = () => {
     submitPayee,
     submitExpense,
   } = useTaxExpenseWorkspace();
+
+  const openAssessment = (expenseId) => {
+    const normalizedId = Number(expenseId) || null;
+    setAssessmentExpenseId(normalizedId);
+    const next = new URLSearchParams(searchParams);
+    if (normalizedId) next.set('assessmentExpenseId', String(normalizedId));
+    else next.delete('assessmentExpenseId');
+    setSearchParams(next, { replace: true });
+  };
 
   if (!branchId) {
     return <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-amber-800"><div className="flex gap-3"><AlertTriangle />กรุณาเลือกร้านก่อนบันทึกค่าใช้จ่าย</div></div>;
@@ -63,7 +75,7 @@ const TaxExpenseWorkspacePage = () => {
           <div className="mt-3 overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead className="border-b text-slate-500"><tr><th className="pb-2">เลขที่</th><th className="pb-2">ผู้รับเงิน</th><th className="pb-2">เอกสาร</th><th className="pb-2 text-right">ยอดรวม</th><th className="pb-2 text-right">ประเมิน</th></tr></thead>
-              <tbody>{expenses.map((expense) => <tr key={expense.id} className="border-b border-slate-100"><td className="py-3 font-bold">{expense.expenseNumber}</td><td className="py-3">{expense.counterpartyName}</td><td className="py-3">{expense.documentNumber || '-'}</td><td className="py-3 text-right font-bold">฿{money(expense.totalAmount)}</td><td className="py-3 text-right"><button type="button" onClick={() => setAssessmentExpenseId(expense.id)} className="rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1.5 font-bold text-blue-700 hover:bg-blue-100">ประเมินภาษี</button></td></tr>)}</tbody>
+              <tbody>{expenses.map((expense) => <tr key={expense.id} className="border-b border-slate-100"><td className="py-3 font-bold">{expense.expenseNumber}</td><td className="py-3">{expense.counterpartyName}</td><td className="py-3">{expense.documentNumber || '-'}</td><td className="py-3 text-right font-bold">฿{money(expense.totalAmount)}</td><td className="py-3 text-right"><button type="button" onClick={() => openAssessment(expense.id)} className="rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1.5 font-bold text-blue-700 hover:bg-blue-100">ประเมินภาษี</button></td></tr>)}</tbody>
             </table>
             {!loading && !expenses.length && <p className="py-8 text-center text-sm text-slate-400">ยังไม่มีรายการค่าใช้จ่าย</p>}
           </div>
@@ -72,7 +84,7 @@ const TaxExpenseWorkspacePage = () => {
 
       <TaxExpenseAssessmentPanel
         expenseId={assessmentExpenseId}
-        onClose={() => setAssessmentExpenseId(null)}
+        onClose={() => openAssessment(null)}
         onConfirmed={() => load()}
       />
     </section>

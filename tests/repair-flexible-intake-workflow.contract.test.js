@@ -21,7 +21,7 @@ describe('repair flexible intake workflow contract', () => {
     expect(diagnosisPanel).toContain("run('START_DIAGNOSIS'");
   });
 
-  it('offers an optional pre-agreed path for both registered and external-device intake', () => {
+  it('offers an optional pre-agreed path for both registered and external-device intake and exposes it on the job detail', () => {
     const intakeWorkspace = read(
       'src/features/repair/intake/workspace/components/RepairIntakeWorkspace.jsx'
     );
@@ -29,6 +29,7 @@ describe('repair flexible intake workflow contract', () => {
       'src/features/repair/intake/workspace/policies/repairIntakePolicy.js'
     );
     const externalIntake = read('src/features/repair/components/ExternalDeviceIntakeForm.jsx');
+    const diagnosisPanel = read('src/features/repair/components/RepairDiagnosisPanel.jsx');
 
     for (const source of [intakeWorkspace, externalIntake]) {
       expect(source).toContain('ตกลงราคาและขอบเขตงานแล้ว');
@@ -42,6 +43,11 @@ describe('repair flexible intake workflow contract', () => {
     expect(intakePolicy).toContain('estimatedCost: preAgreedService');
     expect(externalIntake).toContain('preAgreedService: agreement');
     expect(externalIntake).toContain('agreement.agreedAmount');
+
+    expect(diagnosisPanel).toContain("actionNames.has('START_PRE_AGREED_SERVICE')");
+    expect(diagnosisPanel).toContain("run('START_PRE_AGREED_SERVICE')");
+    expect(diagnosisPanel).toContain('workflow.preAgreedService');
+    expect(diagnosisPanel).toContain('ใช้ราคาที่ตกลงและไปขั้นเริ่มงาน');
   });
 
   it('prefills pickup receiver name from the repair customer projection while still allowing edits', () => {

@@ -72,6 +72,8 @@ const AccountingOfficePackagePage = () => {
     ['Input VAT พร้อม', readiness.inputVatReady],
     ['ค่าใช้จ่ายจัดหมวดครบ', readiness.expensesClassified],
     ['หลักฐานค่าใช้จ่ายครบ', readiness.expenseEvidenceComplete],
+    ['WHT ดำเนินการครบ', readiness.withholdingComplete],
+    ['หลักฐาน WHT ครบ', readiness.withholdingEvidenceComplete],
     ['รอบภาษีล็อก/ยื่นแล้ว', readiness.periodLockedOrSubmitted],
   ], [readiness]);
 
@@ -128,7 +130,7 @@ const AccountingOfficePackagePage = () => {
     if (!data) return;
     downloadCsvFile({
       filename: `tax-expenses-${periodCode}.csv`,
-      headers: ['วันที่', 'เลขที่ค่าใช้จ่าย', 'คู่ค้า', 'เอกสารอ้างอิง', 'ก่อน VAT', 'VAT', 'ยอดรวม', 'WHT', 'ยอดจ่าย', 'สถานะหลักฐาน', 'รายการรอประเมิน'],
+      headers: ['วันที่', 'เลขที่ค่าใช้จ่าย', 'คู่ค้า', 'เอกสารอ้างอิง', 'ก่อน VAT', 'VAT', 'ยอดรวม', 'WHT', 'ยอดจ่าย', 'สถานะหลักฐาน', 'รายการรอประเมิน', 'WHT รอดำเนินการ', 'หนังสือรับรอง WHT'],
       rows: (data.expenses || []).map((expense) => [
         date(expense.expenseDate),
         expense.expenseNumber,
@@ -141,6 +143,8 @@ const AccountingOfficePackagePage = () => {
         expense.paymentDueAmount,
         expense.evidenceStatus,
         expense.pendingAssessmentItemCount,
+        expense.withholdingRequiredItemCount,
+        expense.hasVerifiedWithholdingCertificate ? 'VERIFIED' : '',
       ]),
     });
   };
@@ -189,7 +193,7 @@ const AccountingOfficePackagePage = () => {
             <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4"><p className="text-xs text-emerald-700">ภาษีขายสุทธิ</p><p className="mt-1 text-2xl font-black text-emerald-950">฿{money(data.summary?.taxAmount)}</p><p className="mt-1 text-xs text-emerald-700">{data.summary?.documentCount || 0} เอกสาร</p></div>
             <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4"><p className="text-xs text-blue-700">ภาษีซื้อสุทธิ</p><p className="mt-1 text-2xl font-black text-blue-950">฿{money(data.inputSummary?.taxAmount)}</p><p className="mt-1 text-xs text-blue-700">{data.inputSummary?.documentCount || 0} เอกสาร</p></div>
             <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4"><p className="text-xs text-amber-700">ค่าใช้จ่ายรวม</p><p className="mt-1 text-2xl font-black text-amber-950">฿{money(data.expenseSummary?.totalAmount)}</p><p className="mt-1 text-xs text-amber-700">{data.expenseSummary?.expenseCount || 0} รายการ</p></div>
-            <div className="rounded-2xl border border-slate-200 bg-white p-4"><p className="text-xs text-slate-500">WHT จากค่าใช้จ่าย</p><p className="mt-1 text-2xl font-black">฿{money(data.expenseSummary?.withholdingTaxAmount)}</p><p className="mt-1 text-xs text-slate-500">Foundation สำหรับ WHT workflow ถัดไป</p></div>
+            <div className="rounded-2xl border border-slate-200 bg-white p-4"><p className="text-xs text-slate-500">WHT จากค่าใช้จ่าย</p><p className="mt-1 text-2xl font-black">฿{money(data.expenseSummary?.withholdingTaxAmount)}</p><p className="mt-1 text-xs text-slate-500">รอดำเนินการ {data.expenseSummary?.withholdingPendingCount || 0} · ขาดหนังสือรับรอง {data.expenseSummary?.missingWithholdingCertificateCount || 0}</p></div>
           </section>
 
           <section className={`rounded-2xl border p-4 ${readiness.readyForAccountingOffice ? 'border-emerald-200 bg-emerald-50' : 'border-amber-200 bg-amber-50'}`}>
@@ -200,10 +204,11 @@ const AccountingOfficePackagePage = () => {
             <p className="mt-3 text-sm font-black">{readiness.readyForAccountingOffice ? 'READY FOR ACCOUNTANT — พร้อมส่งสำนักงานบัญชี' : 'ยังมีรายการที่ต้องจัดการก่อนปิดชุดส่งสำนักงานบัญชี'}</p>
           </section>
 
-          <section className="grid gap-3 md:grid-cols-3">
+          <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             <div className="rounded-2xl border border-slate-200 bg-white p-4"><p className="text-xs font-bold text-slate-500">Output VAT</p><p className="mt-2 font-black">{readiness.outputVatReady ? 'พร้อม' : 'ยังไม่พร้อม'}</p><p className="mt-1 text-xs text-slate-500">Filing {readiness.filingPrepared ? 'เตรียมแล้ว' : 'ยังไม่เตรียม'} · ครบ {readiness.filingCoversAllDocuments ? '✓' : '—'}</p></div>
             <div className="rounded-2xl border border-slate-200 bg-white p-4"><p className="text-xs font-bold text-slate-500">Input VAT</p><p className="mt-2 font-black">{readiness.inputVatReady ? 'พร้อม' : 'ยังไม่พร้อม'}</p><p className="mt-1 text-xs text-slate-500">Filing {readiness.inputFilingPrepared ? 'เตรียมแล้ว' : 'ยังไม่เตรียม'} · ครบ {readiness.inputFilingCoversAllDocuments ? '✓' : '—'}</p></div>
             <div className="rounded-2xl border border-slate-200 bg-white p-4"><p className="text-xs font-bold text-slate-500">Tax Expenses</p><p className="mt-2 font-black">{readiness.expensesReady ? 'พร้อม' : 'ต้อง Review'}</p><p className="mt-1 text-xs text-slate-500">รอประเมิน {data.expenseSummary?.pendingAssessmentCount || 0} · หลักฐานไม่ครบ {data.expenseSummary?.missingEvidenceCount || 0}</p></div>
+            <div className="rounded-2xl border border-slate-200 bg-white p-4"><p className="text-xs font-bold text-slate-500">Withholding Tax</p><p className="mt-2 font-black">{readiness.withholdingReady ? 'พร้อม' : 'ต้องดำเนินการ'}</p><p className="mt-1 text-xs text-slate-500">รอหัก {data.expenseSummary?.withholdingPendingCount || 0} · ขาด certificate {data.expenseSummary?.missingWithholdingCertificateCount || 0}</p></div>
           </section>
 
           <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
@@ -241,12 +246,12 @@ const AccountingOfficePackagePage = () => {
           <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
             <div className="border-b border-slate-200 px-4 py-3"><h2 className="font-black text-slate-900">ค่าใช้จ่ายและสถานะการตรวจ</h2></div>
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[1040px] text-sm">
-                <thead className="bg-slate-50 text-left text-xs font-bold text-slate-500"><tr><th className="px-4 py-3">วันที่</th><th className="px-4 py-3">เลขค่าใช้จ่าย</th><th className="px-4 py-3">คู่ค้า</th><th className="px-4 py-3 text-right">ยอดรวม</th><th className="px-4 py-3 text-right">VAT</th><th className="px-4 py-3 text-right">WHT</th><th className="px-4 py-3">หลักฐาน</th><th className="px-4 py-3 text-right">รอประเมิน</th></tr></thead>
+              <table className="w-full min-w-[1120px] text-sm">
+                <thead className="bg-slate-50 text-left text-xs font-bold text-slate-500"><tr><th className="px-4 py-3">วันที่</th><th className="px-4 py-3">เลขค่าใช้จ่าย</th><th className="px-4 py-3">คู่ค้า</th><th className="px-4 py-3 text-right">ยอดรวม</th><th className="px-4 py-3 text-right">VAT</th><th className="px-4 py-3 text-right">WHT</th><th className="px-4 py-3">หลักฐาน</th><th className="px-4 py-3 text-right">รอประเมิน</th><th className="px-4 py-3 text-right">WHT รอหัก</th><th className="px-4 py-3">WHT Certificate</th></tr></thead>
                 <tbody className="divide-y divide-slate-100">
-                  {(data.expenses || []).length === 0 ? <tr><td colSpan="8" className="px-4 py-10 text-center text-slate-500">ไม่มีค่าใช้จ่ายภาษีในรอบนี้</td></tr> : data.expenses.map((expense) => (
+                  {(data.expenses || []).length === 0 ? <tr><td colSpan="10" className="px-4 py-10 text-center text-slate-500">ไม่มีค่าใช้จ่ายภาษีในรอบนี้</td></tr> : data.expenses.map((expense) => (
                     <tr key={expense.id}>
-                      <td className="px-4 py-3 text-slate-600">{date(expense.expenseDate)}</td><td className="px-4 py-3 font-bold text-slate-900">{expense.expenseNumber || '-'}</td><td className="px-4 py-3">{expense.counterpartyName || '-'}</td><td className="px-4 py-3 text-right font-black">฿{money(expense.totalAmount)}</td><td className="px-4 py-3 text-right">฿{money(expense.vatAmount)}</td><td className="px-4 py-3 text-right">฿{money(expense.withholdingTaxAmount)}</td><td className="px-4 py-3">{expense.evidenceStatus || '-'}</td><td className="px-4 py-3 text-right font-bold">{expense.pendingAssessmentItemCount || 0}</td>
+                      <td className="px-4 py-3 text-slate-600">{date(expense.expenseDate)}</td><td className="px-4 py-3 font-bold text-slate-900">{expense.expenseNumber || '-'}</td><td className="px-4 py-3">{expense.counterpartyName || '-'}</td><td className="px-4 py-3 text-right font-black">฿{money(expense.totalAmount)}</td><td className="px-4 py-3 text-right">฿{money(expense.vatAmount)}</td><td className="px-4 py-3 text-right">฿{money(expense.withholdingTaxAmount)}</td><td className="px-4 py-3">{expense.evidenceStatus || '-'}</td><td className="px-4 py-3 text-right font-bold">{expense.pendingAssessmentItemCount || 0}</td><td className="px-4 py-3 text-right font-bold">{expense.withholdingRequiredItemCount || 0}</td><td className="px-4 py-3">{expense.withholdingTaxAmount > 0 ? (expense.hasVerifiedWithholdingCertificate ? 'VERIFIED' : 'MISSING') : 'N/A'}</td>
                     </tr>
                   ))}
                 </tbody>

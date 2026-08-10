@@ -5,6 +5,7 @@ import RepairWorkflowOverview from '../../../components/RepairWorkflowOverview';
 import JobRuntimePanel from '../../../components/JobRuntimePanel';
 import RepairDiagnosisPanel from '../../../components/RepairDiagnosisPanel';
 import RepairExecutionPanel from '../../../components/RepairExecutionPanel';
+import RepairClaimHandoffPanel from '../../../components/RepairClaimHandoffPanel';
 import RepairTrackingAccessPanel from '../../../customer-access/components/RepairTrackingAccessPanel';
 import RepairEstimateApprovalPanel from '../../../customer-access/components/RepairEstimateApprovalPanel';
 import RepairHandoverPanel from '../../../components/RepairHandoverPanel';
@@ -55,7 +56,8 @@ const RepairDetailWorkspace = ({
           onWorkflowAction={onWorkflowAction}
           onAddPart={onAddPart}
         />
-        <JobRuntimePanel
+        <JobRuntimePanel job={job} />
+        <RepairClaimHandoffPanel
           job={job}
           submitting={submitting}
           onOpenClaim={onOpenClaim}

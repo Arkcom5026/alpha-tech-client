@@ -57,6 +57,7 @@ const WithholdingTaxWorkspacePage = () => {
   const exceptions = Array.isArray(data?.exceptions) ? data.exceptions : [];
   const readiness = data?.readiness || {};
   const summary = data?.summary || {};
+  const noWhtSource = Number(summary.sourceItemCount || 0) === 0;
   const filingByForm = useMemo(() => Object.fromEntries(filings.map((row) => [row.formType, row])), [filings]);
   const expenseGroups = useMemo(() => {
     const map = new Map();
@@ -126,9 +127,15 @@ const WithholdingTaxWorkspacePage = () => {
         <section className={`rounded-2xl border p-4 ${readiness.readyForAccountant ? 'border-emerald-200 bg-emerald-50' : 'border-amber-200 bg-amber-50'}`}>
           <h2 className="font-black">WHT Readiness</h2>
           <div className="mt-3 grid gap-2 md:grid-cols-3">
-            <Status passed={readiness.certificatesReady}>หนังสือรับรองครบ</Status>
-            <Status passed={readiness.filingsReady}>Filing ที่มีรายการยื่นครบ</Status>
-            <Status passed={readiness.readyForAccountant}>พร้อมส่งสำนักงานบัญชี</Status>
+            {noWhtSource ? <>
+              <Status passed>ไม่มีรายการที่ต้องออกหนังสือรับรอง</Status>
+              <Status passed>ไม่มีรายการที่ต้องยื่น ภ.ง.ด.3/53</Status>
+              <Status passed>ไม่มี WHT blocker สำหรับสำนักงานบัญชี</Status>
+            </> : <>
+              <Status passed={readiness.certificatesReady}>หนังสือรับรองครบ</Status>
+              <Status passed={readiness.filingsReady}>Filing ที่มีรายการยื่นครบ</Status>
+              <Status passed={readiness.readyForAccountant}>พร้อมส่งสำนักงานบัญชี</Status>
+            </>}
           </div>
         </section>
 
@@ -167,8 +174,8 @@ const WithholdingTaxWorkspacePage = () => {
             const filing = filingByForm[formType];
             return <div key={formType} className="rounded-2xl border border-slate-200 bg-white p-4">
               <h2 className="font-black text-slate-900">{formLabel(formType)} Filing Preparation</h2>
-              <div className="mt-2 text-sm text-slate-600">สถานะ: <span className="font-black">{filing?.status || 'ยังไม่เตรียม'}</span> · {Number(filing?.itemCount || 0)} รายการ · WHT ฿{money(filing?.withholdingTaxAmount)}</div>
-              <div className="mt-3"><button type="button" disabled={!!busyKey || filing?.status === 'SUBMITTED'} onClick={() => prepare(formType)} className="rounded-lg border border-blue-300 bg-blue-50 px-3 py-2 text-xs font-bold text-blue-800 disabled:opacity-40">เตรียม {formLabel(formType)}</button></div>
+              <div className="mt-2 text-sm text-slate-600">สถานะ: <span className="font-black">{noWhtSource ? 'ไม่มีรายการที่ต้องยื่น' : filing?.status || 'ยังไม่เตรียม'}</span> · {Number(filing?.itemCount || 0)} รายการ · WHT ฿{money(filing?.withholdingTaxAmount)}</div>
+              {noWhtSource ? <p className="mt-3 text-xs font-semibold text-slate-500">ไม่ต้องเตรียมแบบสำหรับรอบนี้</p> : <div className="mt-3"><button type="button" disabled={!!busyKey || filing?.status === 'SUBMITTED'} onClick={() => prepare(formType)} className="rounded-lg border border-blue-300 bg-blue-50 px-3 py-2 text-xs font-bold text-blue-800 disabled:opacity-40">เตรียม {formLabel(formType)}</button></div>}
               {filing?.status === 'PREPARED' && <div className="mt-3 space-y-2 rounded-xl border border-amber-200 bg-amber-50 p-3"><label className="block text-xs font-bold text-amber-900">เลขอ้างอิง/หลักฐานการยื่นภายนอก</label><input value={references[formType] || ''} onChange={(event) => setReferences((current) => ({ ...current, [formType]: event.target.value }))} className="w-full rounded-lg border border-amber-300 bg-white px-3 py-2 text-sm" placeholder="เช่น RD-ACK-2026-08-001" /><button type="button" disabled={!!busyKey || !String(references[formType] || '').trim()} onClick={() => submit(formType)} className="rounded-lg bg-amber-600 px-3 py-2 text-xs font-bold text-white disabled:opacity-40">ยืนยันว่าดำเนินการยื่นภายนอกแล้ว</button></div>}
               {filing?.status === 'SUBMITTED' && <p className="mt-3 text-sm font-bold text-emerald-700">บันทึกหลักฐานการยื่นแล้ว</p>}
             </div>;

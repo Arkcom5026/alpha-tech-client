@@ -42,6 +42,16 @@ test('WHT workspace presents human confirmation certificate PND readiness and ex
   assert.match(source, /ออกหนังสือรับรอง/);
 });
 
+test('WHT no-source period explains no filing obligation instead of inviting empty preparation', () => {
+  const source = read('src/features/tax/withholding/pages/WithholdingTaxWorkspacePage.jsx');
+  assert.match(source, /const noWhtSource = Number\(summary\.sourceItemCount \|\| 0\) === 0/);
+  assert.match(source, /ไม่มีรายการที่ต้องออกหนังสือรับรอง/);
+  assert.match(source, /ไม่มีรายการที่ต้องยื่น ภ\.ง\.ด\.3\/53/);
+  assert.match(source, /ไม่มี WHT blocker สำหรับสำนักงานบัญชี/);
+  assert.match(source, /noWhtSource \? 'ไม่มีรายการที่ต้องยื่น'/);
+  assert.match(source, /ไม่ต้องเตรียมแบบสำหรับรอบนี้/);
+});
+
 test('WHT workspace requires manual evidence before submission confirmation', () => {
   const source = read('src/features/tax/withholding/pages/WithholdingTaxWorkspacePage.jsx');
   assert.match(source, /เลขอ้างอิง\/หลักฐานการยื่นภายนอก/);

@@ -13,12 +13,16 @@ test('Input Tax Step 10B maps backend error codes to Thai actionable messages', 
   const source = read('src/features/tax/contracts/inputTaxErrorMessages.js');
   [
     'INPUT_TAX_FILING_RECONCILIATION_REQUIRED',
+    'INPUT_TAX_FILING_VAT_AUTHORITY_REQUIRED',
+    'INPUT_TAX_FILING_VAT_AUTHORITY_CONFLICT',
     'INPUT_TAX_DOCUMENT_ALREADY_IN_FILING',
     'INPUT_TAX_STALE_VERSION',
     'INPUT_TAX_REASON_REQUIRED',
     'INPUT_TAX_REPORT_RANGE_TOO_LARGE',
     'INPUT_TAX_REPORT_RESULT_TOO_LARGE',
     'TAX_PERIOD_STALE_VERSION',
+    'TAX_PERIOD_INPUT_FILING_INCOMPLETE',
+    'TAX_PERIOD_INPUT_FILING_NOT_SUBMITTED',
   ].forEach((code) => assert.match(source, new RegExp(code)));
   assert.match(source, /getInputTaxErrorMessage/);
   assert.match(source, /error\?\.response\?\.data\?\.code/);

@@ -2,6 +2,7 @@ import React from 'react';
 import RepairShellHeader from '../../../components/RepairShellHeader';
 import RuntimeStatePanel from '../../../components/RuntimeStatePanel';
 import JobRuntimePanel from '../../../components/JobRuntimePanel';
+import RepairWorkflowOverview from '../../../components/RepairWorkflowOverview';
 import RepairDiagnosisPanel from '../../../components/RepairDiagnosisPanel';
 import RepairExecutionPanel from '../../../components/RepairExecutionPanel';
 import RepairTrackingAccessPanel from '../../../customer-access/components/RepairTrackingAccessPanel';
@@ -39,6 +40,11 @@ const RepairDetailWorkspace = ({
 
     {job ? (
       <div className="space-y-4">
+        <RepairWorkflowOverview
+          job={job}
+          submitting={submitting}
+          onWorkflowAction={onWorkflowAction}
+        />
         <RepairDiagnosisPanel
           job={job}
           submitting={submitting}

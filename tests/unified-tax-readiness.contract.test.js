@@ -18,7 +18,7 @@ test('unified readiness API reads backend-owned authority projection', () => {
   assert.match(source, /branchId/);
 });
 
-test('readiness workspace presents percentage six domains and accountant state', () => {
+test('readiness workspace presents percentage domains and accountant state', () => {
   const source = read('src/features/tax/readiness/pages/UnifiedTaxReadinessPage.jsx');
   assert.match(source, /ศูนย์ตรวจความพร้อมภาษี/);
   assert.match(source, /readinessPercent/);
@@ -32,6 +32,14 @@ test('exception cards navigate to backend-owned source targets', () => {
   assert.match(source, /entry\.target\?\.relativePath/);
   assert.match(source, /กดเพื่อไปแก้ที่ต้นทาง/);
   assert.match(source, /\/pos\/finance\//);
+});
+
+test('tax expense workspace honors record-aware assessment deep links', () => {
+  const source = read('src/features/taxExpense/pages/TaxExpenseWorkspacePage.jsx');
+  assert.match(source, /useSearchParams/);
+  assert.match(source, /assessmentExpenseId/);
+  assert.match(source, /setSearchParams/);
+  assert.match(source, /openAssessment/);
 });
 
 test('partner routes mount unified readiness workspace without replacing existing tax routes', () => {

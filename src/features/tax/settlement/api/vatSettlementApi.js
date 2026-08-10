@@ -31,6 +31,40 @@ export const getVatSettlementPreparation = async ({ branchId, taxPeriodId }) => 
   return unwrapData(response);
 };
 
+export const getVatCarryForwardAuthority = async ({ branchId, taxPeriodId }) => {
+  const normalizedBranchId = requirePositiveId(branchId, 'branchId');
+  const normalizedTaxPeriodId = requireText(taxPeriodId, 'taxPeriodId');
+  const response = await apiClient.get(`/tax/vat-carry-forward/${encodeURIComponent(normalizedTaxPeriodId)}`, {
+    params: { branchId: normalizedBranchId },
+  });
+  return unwrapData(response);
+};
+
+export const confirmVatCarryForwardAuthority = async ({
+  branchId,
+  taxPeriodId,
+  sourceType,
+  amount,
+  note,
+}) => {
+  const normalizedBranchId = requirePositiveId(branchId, 'branchId');
+  const normalizedTaxPeriodId = requireText(taxPeriodId, 'taxPeriodId');
+  const normalizedSourceType = requireText(sourceType, 'sourceType');
+  const normalizedAmount = Number(amount);
+  if (!Number.isFinite(normalizedAmount) || normalizedAmount < 0) {
+    const error = new Error('ยอดเครดิตยกมาไม่ถูกต้อง');
+    error.code = 'VAT_SETTLEMENT_CLIENT_VALIDATION_ERROR';
+    throw error;
+  }
+  const response = await apiClient.post(`/tax/vat-carry-forward/${encodeURIComponent(normalizedTaxPeriodId)}/confirm`, {
+    branchId: normalizedBranchId,
+    sourceType: normalizedSourceType,
+    amount: normalizedAmount,
+    note: String(note || '').trim() || null,
+  });
+  return unwrapData(response);
+};
+
 export const getVatSettlementErrorMessage = (error) => {
   const responseData = error?.response?.data;
   const code = error?.code || responseData?.code || responseData?.error?.code;
@@ -40,7 +74,12 @@ export const getVatSettlementErrorMessage = (error) => {
     VAT_SETTLEMENT_ACCESS_FORBIDDEN: 'บัญชีนี้ไม่มีสิทธิ์ดู VAT Settlement',
     VAT_SETTLEMENT_BRANCH_FORBIDDEN: 'ไม่สามารถดู VAT Settlement ของสาขาอื่นได้',
     VAT_SETTLEMENT_PERIOD_REQUIRED: 'กรุณาเลือกรอบภาษี',
+    VAT_CARRY_FORWARD_ACCESS_FORBIDDEN: 'บัญชีนี้ไม่มีสิทธิ์ยืนยันเครดิต VAT ยกมา',
+    VAT_CARRY_FORWARD_BRANCH_FORBIDDEN: 'ไม่สามารถจัดการเครดิต VAT ยกมาของสาขาอื่นได้',
+    VAT_CARRY_FORWARD_PREVIOUS_PERIOD_NOT_FINALIZED: 'ต้องล็อกหรือยื่นรอบภาษีก่อนหน้าก่อนยืนยันเครดิตยกมา',
+    VAT_CARRY_FORWARD_PERIOD_IMMUTABLE: 'รอบภาษีนี้ล็อกแล้ว จึงแก้เครดิตยกมาไม่ได้',
+    VAT_CARRY_FORWARD_HISTORICAL_OPENING_NOT_ALLOWED: 'ใช้ยอดเปิดระบบได้เฉพาะเมื่อไม่มีรอบภาษีก่อนหน้า',
     ACCOUNTING_OFFICE_PERIOD_NOT_FOUND: 'ไม่พบรอบภาษีที่เลือก',
   };
-  return messages[code] || message || 'ไม่สามารถโหลด VAT Settlement ได้';
+  return messages[code] || message || 'ไม่สามารถดำเนินการ VAT Settlement ได้';
 };

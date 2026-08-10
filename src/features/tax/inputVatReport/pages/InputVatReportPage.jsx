@@ -40,7 +40,7 @@ const InputVatReportPage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [month, year]);
 
-  const rows = Array.isArray(report?.data) ? report.data : [];
+  const rows = useMemo(() => (Array.isArray(report?.data) ? report.data : []), [report?.data]);
   const summary = report?.summary || {};
   const authorityCount = useMemo(
     () => rows.filter((row) => row.authority === 'INPUT_VAT_RECORD').length,
@@ -88,7 +88,6 @@ const InputVatReportPage = () => {
               type="button"
               onClick={loadReport}
               disabled={loading}
-              title={loading ? 'กำลังโหลดรายงานภาษีซื้อ' : 'โหลดข้อมูลรายงานภาษีซื้ออีกครั้ง'}
               className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-black text-white disabled:opacity-50"
             >
               <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />

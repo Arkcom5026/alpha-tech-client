@@ -1,17 +1,8 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { REPAIR_WORKFLOW_LABELS, formatDateTime, formatMoney } from '../utils/repairRuntime';
 
-const JobRuntimePanel = ({
-  job,
-  submitting,
-  onOpenClaim,
-}) => {
-  const [claim, setClaim] = useState({ reason: '', supplierId: '', serviceProvider: '', note: '' });
+const JobRuntimePanel = ({ job }) => {
   const workflowStatus = job?.workflow?.status || 'RECEIVED';
-
-  const activeClaim = (job.warrantyClaims || []).find(
-    (item) => !['RESOLVED', 'CANCELLED'].includes(item.status)
-  );
 
   return (
     <div className="space-y-5">
@@ -72,69 +63,6 @@ const JobRuntimePanel = ({
           </div>
         </section>
       </div>
-
-      <section className="rounded-2xl border border-indigo-200 bg-indigo-50 p-5">
-        <h3 className="text-lg font-black text-indigo-950">Warranty Handoff</h3>
-        {activeClaim ? (
-          <div className="mt-3">
-            <p className="text-sm text-indigo-800">
-              มีรายการเคลมที่กำลังเปิด: {activeClaim.claimNo || `Claim #${activeClaim.id}`}
-            </p>
-            <button
-              type="button"
-              onClick={() => onOpenClaim(activeClaim.id)}
-              className="mt-3 rounded-xl bg-indigo-700 px-5 py-3 font-black text-white"
-            >
-              เปิดรายการเคลม
-            </button>
-          </div>
-        ) : (job.stockItemId || job.deviceId) && !['DELIVERED', 'CLOSED', 'CANCELLED'].includes(workflowStatus) ? (
-          <div className="mt-4 grid gap-3 md:grid-cols-2">
-            <textarea
-              rows={3}
-              value={claim.reason}
-              onChange={(event) => setClaim((current) => ({ ...current, reason: event.target.value }))}
-              placeholder="เหตุผลในการส่งเคลม"
-              className="rounded-xl border border-indigo-200 bg-white px-4 py-3 md:col-span-2"
-            />
-            <input
-              value={claim.supplierId}
-              onChange={(event) => setClaim((current) => ({ ...current, supplierId: event.target.value }))}
-              inputMode="numeric"
-              placeholder="Supplier ID"
-              className="rounded-xl border border-indigo-200 bg-white px-4 py-3"
-            />
-            <input
-              value={claim.serviceProvider}
-              onChange={(event) => setClaim((current) => ({ ...current, serviceProvider: event.target.value }))}
-              placeholder="ศูนย์บริการ"
-              className="rounded-xl border border-indigo-200 bg-white px-4 py-3"
-            />
-            <textarea
-              rows={2}
-              value={claim.note}
-              onChange={(event) => setClaim((current) => ({ ...current, note: event.target.value }))}
-              placeholder="หมายเหตุ"
-              className="rounded-xl border border-indigo-200 bg-white px-4 py-3 md:col-span-2"
-            />
-            <button
-              type="button"
-              disabled={submitting || !claim.reason.trim()}
-              onClick={() =>
-                onOpenClaim({
-                  ...claim,
-                  supplierId: claim.supplierId ? Number(claim.supplierId) : null,
-                })
-              }
-              className="rounded-xl bg-indigo-700 px-5 py-3 font-black text-white md:col-span-2 disabled:opacity-40"
-            >
-              เปิดรายการเคลมจากงานซ่อม
-            </button>
-          </div>
-        ) : (
-          <p className="mt-3 text-sm text-indigo-800">งานนี้ไม่สามารถเปิดรายการเคลมใหม่ได้</p>
-        )}
-      </section>
     </div>
   );
 };

@@ -7,6 +7,9 @@ const BillPrintOptions = ({
   setSaleOption,
   hideNoneOption = false,
   currentSaleMode = SALE_MODE.CASH,
+  includeDeliveryNote = false,
+  setIncludeDeliveryNote,
+  disabled = false,
 }) => {
   const isValidSetter = typeof setSaleOption === 'function';
   const setSaleOptionSafe = useMemo(
@@ -53,27 +56,40 @@ const BillPrintOptions = ({
           const active = saleOption === option.value;
 
           return (
-            <label
-              key={option.value}
-              className={`flex min-h-11 items-center gap-2 rounded-xl border px-3 py-2 text-sm transition ${
-                option.disabled
-                  ? 'cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400 opacity-60'
-                  : active
-                    ? 'cursor-pointer border-emerald-300 bg-emerald-100 font-semibold text-emerald-900'
-                    : 'cursor-pointer border-teal-200 bg-teal-50 font-medium text-teal-900 hover:border-teal-300 hover:bg-teal-100'
-              }`}
-            >
-              <input
-                name="bill-print-option"
-                type="radio"
-                value={option.value}
-                checked={active}
-                onChange={(event) => !option.disabled && setSaleOptionSafe(event.target.value)}
-                className="h-4 w-4 accent-emerald-600"
-                disabled={option.disabled}
-              />
-              <span>{option.label}</span>
-            </label>
+            <React.Fragment key={option.value}>
+              <label
+                className={`flex min-h-11 items-center gap-2 rounded-xl border px-3 py-2 text-sm transition ${
+                  option.disabled
+                    ? 'cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400 opacity-60'
+                    : active
+                      ? 'cursor-pointer border-emerald-300 bg-emerald-100 font-semibold text-emerald-900'
+                      : 'cursor-pointer border-teal-200 bg-teal-50 font-medium text-teal-900 hover:border-teal-300 hover:bg-teal-100'
+                }`}
+              >
+                <input
+                  name="bill-print-option"
+                  type="radio"
+                  value={option.value}
+                  checked={active}
+                  onChange={(event) => !option.disabled && setSaleOptionSafe(event.target.value)}
+                  className="h-4 w-4 accent-emerald-600"
+                  disabled={option.disabled}
+                />
+                <span>{option.label}</span>
+              </label>
+              {isCash && option.value === PRINT_OPTION.ORDINARY_RECEIPT ? (
+                <label className="flex min-h-11 cursor-pointer items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-semibold text-blue-900 transition hover:bg-blue-100">
+                  <input
+                    type="checkbox"
+                    checked={includeDeliveryNote}
+                    onChange={(event) => setIncludeDeliveryNote?.(event.target.checked)}
+                    disabled={disabled}
+                    className="h-4 w-4 accent-blue-700"
+                  />
+                  <span>ออกใบส่งของเพิ่มเติม</span>
+                </label>
+              ) : null}
+            </React.Fragment>
           );
         })}
       </div>
@@ -91,6 +107,9 @@ BillPrintOptions.propTypes = {
   setSaleOption: PropTypes.func.isRequired,
   hideNoneOption: PropTypes.bool,
   currentSaleMode: PropTypes.oneOf(Object.values(SALE_MODE)),
+  includeDeliveryNote: PropTypes.bool,
+  setIncludeDeliveryNote: PropTypes.func,
+  disabled: PropTypes.bool,
 };
 
 export default BillPrintOptions;

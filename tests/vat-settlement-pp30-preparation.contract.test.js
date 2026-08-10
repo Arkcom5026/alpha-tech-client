@@ -19,17 +19,27 @@ test('VAT settlement workspace reads isolated preparation API', () => {
   assert.match(page, /getVatSettlementPreparation/);
 });
 
-test('workspace presents payable credit reconciliation and readiness', () => {
+test('workspace presents current-period payable credit reconciliation and PP30 readiness', () => {
   const source = read('src/features/tax/settlement/pages/VatSettlementPage.jsx');
-  assert.match(source, /VAT ต้องชำระ/);
-  assert.match(source, /VAT เครดิต/);
+  assert.match(source, /VAT ต้องชำระรอบปัจจุบัน/);
+  assert.match(source, /VAT เครดิตรอบปัจจุบัน/);
   assert.match(source, /outputReconciliationDifference/);
+  assert.match(source, /readyForCurrentPeriodSettlement/);
   assert.match(source, /readyForPp30Preparation/);
   assert.match(source, /Settlement Exceptions/);
   assert.match(source, /ยังไม่ใช่การยื่นแบบต่อกรมสรรพากร/);
 });
 
-test('partner route mounts VAT settlement workspace under tax periods', () => {
+test('workspace blocks PP30 readiness when carry-forward authority is unresolved', () => {
+  const source = read('src/features/tax/settlement/pages/VatSettlementPage.jsx');
+  assert.match(source, /carryForwardAuthorityReady/);
+  assert.match(source, /VAT_SETTLEMENT_CARRY_FORWARD_AUTHORITY_REQUIRED/);
+  assert.match(source, /ภาษีชำระไว้เกินยกมา/);
+  assert.match(source, /pp30NetVatAfterCarryForward/);
+  assert.match(source, /รอ Authority/);
+});
+
+test('partner route mounts VAT settlement workspace under tax periods without route regression', () => {
   const source = read('src/routes/partner/posPartnerRoutes.jsx');
   assert.match(source, /tax-periods\/:taxPeriodId\/vat-settlement/);
   assert.match(source, /VatSettlementPage/);

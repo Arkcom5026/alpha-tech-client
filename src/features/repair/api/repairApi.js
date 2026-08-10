@@ -22,6 +22,10 @@ export const repairApi = {
   getIntakeContext: (lookup) => request(() => apiClient.get(`/repairs/intake-context/${encodeURIComponent(String(lookup).trim())}`), 'ไม่สามารถค้นหาข้อมูลรับซ่อมได้'),
   getCustomerWarrantyAssets: (customerId) => request(() => apiClient.get(`/repairs/customers/${customerId}/warranty-assets`), 'ไม่สามารถโหลดสินค้าที่มีประกันของลูกค้าได้'),
   searchPartProducts: (search) => request(() => apiClient.get('/products/pos/search', { params: { search: String(search || '').trim(), limit: 20, _ts: Date.now() } }), 'ไม่สามารถค้นหาอะไหล่ในสาขาได้'),
+  getPartStockOptions: (id, productId, query = '') => request(
+    () => apiClient.get(`/repairs/jobs/${id}/part-stock-options`, { params: { productId, q: String(query || '').trim() } }),
+    'ไม่สามารถโหลด Serial/StockItem ที่พร้อมใช้งานได้'
+  ),
   listJobs: (params = {}) => request(() => apiClient.get('/repairs/jobs', { params }), 'ไม่สามารถโหลดคิวงานซ่อมได้'),
   getJob: (id) => request(() => apiClient.get(`/repairs/jobs/${id}`), 'ไม่สามารถโหลดรายละเอียดงานซ่อมได้'),
   createJob: (payload) => request(() => apiClient.post('/repairs/jobs', payload), 'ไม่สามารถเปิดใบรับซ่อมได้'),

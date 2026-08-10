@@ -11,24 +11,30 @@ test('tax period list exposes WHT workspace action', () => {
   assert.match(source, /> WHT</);
 });
 
-test('WHT API exposes workspace certificate prepare and manual submission actions', () => {
+test('WHT API exposes treatment certificate prepare and manual submission actions', () => {
   const source = read('src/features/tax/withholding/api/withholdingTaxApi.js');
   assert.match(source, /getWithholdingTaxWorkspace/);
+  assert.match(source, /transitionWithholdingTreatment/);
+  assert.match(source, /items\/\$\{positiveId\(taxExpenseItemId/);
+  assert.match(source, /WITHHOLDING_REQUIRED/);
+  assert.match(source, /WITHHELD/);
   assert.match(source, /issueWithholdingCertificate/);
   assert.match(source, /prepareWithholdingFiling/);
   assert.match(source, /submitWithholdingFiling/);
   assert.match(source, /certificates\/issue/);
-  assert.match(source, /filings\/\$\{normalizedForm\}\/prepare/);
-  assert.match(source, /filings\/\$\{normalizedForm\}\/submit/);
   assert.match(source, /MANUAL_EXTERNAL_FILING/);
 });
 
-test('WHT workspace presents certificate PND3 PND53 readiness and exceptions', () => {
+test('WHT workspace presents human confirmation certificate PND readiness and exceptions', () => {
   const source = read('src/features/tax/withholding/pages/WithholdingTaxWorkspacePage.jsx');
   assert.match(source, /Withholding Tax Workspace/);
+  assert.match(source, /PENDING_REVIEW|Review/);
+  assert.match(source, /WITHHOLDING_REQUIRED/);
+  assert.match(source, /WITHHELD/);
+  assert.match(source, /ยืนยันว่าต้องหัก/);
+  assert.match(source, /ยืนยันว่าหักแล้ว/);
   assert.match(source, /ภ\.ง\.ด\.3/);
   assert.match(source, /ภ\.ง\.ด\.53/);
-  assert.match(source, /หนังสือรับรองการหักภาษี ณ ที่จ่าย/);
   assert.match(source, /manual filing evidence/);
   assert.match(source, /ยังไม่ใช่ direct e-Filing/);
   assert.match(source, /WHT Readiness/);

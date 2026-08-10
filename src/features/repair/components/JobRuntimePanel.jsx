@@ -1,15 +1,13 @@
 import React, { useState } from 'react';
-import { REPAIR_LABELS, formatDateTime, formatMoney } from '../utils/repairRuntime';
+import { REPAIR_WORKFLOW_LABELS, formatDateTime, formatMoney } from '../utils/repairRuntime';
 
 const JobRuntimePanel = ({
   job,
   submitting,
-  workflowManaged = false,
-  onTransition,
   onOpenClaim,
 }) => {
-  const [transition, setTransition] = useState({ status: '', technicianNotes: '', technicianId: '' });
   const [claim, setClaim] = useState({ reason: '', supplierId: '', serviceProvider: '', note: '' });
+  const workflowStatus = job?.workflow?.status || 'RECEIVED';
 
   const activeClaim = (job.warrantyClaims || []).find(
     (item) => !['RESOLVED', 'CANCELLED'].includes(item.status)
@@ -25,7 +23,7 @@ const JobRuntimePanel = ({
             <p className="mt-1 text-sm text-slate-500">{job.deviceModel}</p>
           </div>
           <span className="w-fit rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-black text-blue-700">
-            {REPAIR_LABELS[job.status] || job.status}
+            {REPAIR_WORKFLOW_LABELS[workflowStatus] || workflowStatus}
           </span>
         </div>
 
@@ -49,32 +47,12 @@ const JobRuntimePanel = ({
       <div className="grid gap-5 xl:grid-cols-2">
         <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <h3 className="text-lg font-black text-slate-950">ขั้นตอนงาน</h3>
-          {workflowManaged ? (
-            <div className="mt-4 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950">
-              <p className="font-black">สถานะถูกควบคุมด้วย Repair Workflow</p>
-              <p className="mt-1 text-blue-800">
-                ใช้ปุ่มดำเนินการในส่วน workflow ด้านบน ระบบจะแสดงเฉพาะงานที่ทำได้ในสถานะปัจจุบันและป้องกันการข้ามขั้นตอน
-              </p>
-            </div>
-          ) : (
-            <>
-              <textarea
-                rows={3}
-                value={transition.technicianNotes}
-                onChange={(event) => setTransition((current) => ({ ...current, technicianNotes: event.target.value }))}
-                placeholder="บันทึกความคืบหน้า"
-                className="mt-3 w-full rounded-xl border border-slate-300 px-4 py-3"
-              />
-              <button
-                type="button"
-                disabled={!transition.status || submitting}
-                onClick={() => onTransition?.(transition)}
-                className="mt-3 rounded-xl bg-slate-900 px-5 py-3 font-black text-white disabled:opacity-40"
-              >
-                บันทึกสถานะ
-              </button>
-            </>
-          )}
+          <div className="mt-4 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950">
+            <p className="font-black">สถานะถูกควบคุมด้วย Repair Workflow</p>
+            <p className="mt-1 text-blue-800">
+              ใช้ปุ่มดำเนินการในส่วน workflow ด้านบน ระบบจะแสดงเฉพาะงานที่ทำได้ในสถานะปัจจุบันและป้องกันการข้ามขั้นตอน
+            </p>
+          </div>
         </section>
 
         <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -110,7 +88,7 @@ const JobRuntimePanel = ({
               เปิดรายการเคลม
             </button>
           </div>
-        ) : (job.stockItemId || job.deviceId) && !['COMPLETED', 'CANCELLED'].includes(job.status) ? (
+        ) : (job.stockItemId || job.deviceId) && !['DELIVERED', 'CLOSED', 'CANCELLED'].includes(workflowStatus) ? (
           <div className="mt-4 grid gap-3 md:grid-cols-2">
             <textarea
               rows={3}

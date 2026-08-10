@@ -1,11 +1,23 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import repairApi from '../api/repairApi';
 
+const CLAIM_OPENABLE_WORKFLOW_STATUSES = new Set([
+  'DIAGNOSING',
+  'WAITING_APPROVAL',
+  'APPROVED',
+  'REJECTED',
+  'REPAIRING',
+  'WAITING_PARTS',
+  'WAITING_QC',
+  'QC_FAILED',
+]);
+
 const RepairClaimHandoffPanel = ({ job, submitting, onOpenClaim }) => {
   const activeClaim = useMemo(
     () => (job?.warrantyClaims || []).find((item) => !['RESOLVED', 'CANCELLED'].includes(item.status)),
     [job?.warrantyClaims]
   );
+  const [expanded, setExpanded] = useState(false);
   const [options, setOptions] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -19,10 +31,11 @@ const RepairClaimHandoffPanel = ({ job, submitting, onOpenClaim }) => {
   });
 
   const workflowStatus = job?.workflow?.status || 'RECEIVED';
-  const canCreate = Boolean(job?.id && (job.stockItemId || job.deviceId)) && !['DELIVERED', 'CLOSED', 'CANCELLED'].includes(workflowStatus);
+  const canCreate = Boolean(job?.id && (job.stockItemId || job.deviceId))
+    && CLAIM_OPENABLE_WORKFLOW_STATUSES.has(workflowStatus);
 
   useEffect(() => {
-    if (!canCreate || activeClaim) return;
+    if (!expanded || !canCreate || activeClaim || options) return;
     let cancelled = false;
     setLoading(true);
     setError('');
@@ -41,7 +54,7 @@ const RepairClaimHandoffPanel = ({ job, submitting, onOpenClaim }) => {
         if (!cancelled) setLoading(false);
       });
     return () => { cancelled = true; };
-  }, [activeClaim, canCreate, job?.id]);
+  }, [activeClaim, canCreate, expanded, job?.id, options]);
 
   if (activeClaim) {
     return (
@@ -51,6 +64,7 @@ const RepairClaimHandoffPanel = ({ job, submitting, onOpenClaim }) => {
         <p className="mt-2 text-sm text-indigo-800">
           {activeClaim.claimNo || `Claim #${activeClaim.id}`} · {activeClaim.status}
         </p>
+        <p className="mt-2 text-sm text-indigo-700">ใบงานซ่อมถูกพักไว้จนกว่ารายการเคลมนี้จะจบ</p>
         <button
           type="button"
           onClick={() => onOpenClaim(activeClaim.id)}
@@ -80,16 +94,57 @@ const RepairClaimHandoffPanel = ({ job, submitting, onOpenClaim }) => {
     });
   };
 
+  if (!expanded) {
+    return (
+      <section className="rounded-2xl border border-dashed border-indigo-200 bg-white p-5">
+        <p className="text-xs font-black uppercase tracking-[0.16em] text-indigo-700">Optional Path</p>
+        <h3 className="mt-1 text-lg font-black text-slate-950">ต้องส่งเคลมแทนการซ่อมในร้านหรือไม่?</h3>
+        <p className="mt-1 text-sm text-slate-600">
+          ขั้นตอนนี้ไม่บังคับ หากร้านซ่อมเองให้ดำเนิน Repair Workflow ตามปกติจน QC และส่งมอบได้เลย
+        </p>
+        <button
+          type="button"
+          onClick={() => setExpanded(true)}
+          className="mt-4 rounded-xl border border-indigo-300 bg-indigo-50 px-5 py-3 font-black text-indigo-800"
+        >
+          เปิดขั้นตอนส่งเคลม
+        </button>
+      </section>
+    );
+  }
+
   return (
     <section className="rounded-2xl border border-indigo-200 bg-indigo-50 p-5">
-      <p className="text-xs font-black uppercase tracking-[0.16em] text-indigo-700">Warranty Handoff</p>
-      <h3 className="mt-1 text-lg font-black text-indigo-950">ส่งต่อเป็นงานเคลม</h3>
-      <p className="mt-1 text-sm text-indigo-800">
-        ระบบจะตรวจแหล่งรับเข้าสินค้าและผู้จำหน่ายให้ก่อน เพื่อไม่ต้องกรอก Supplier ID เอง
-      </p>
+      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+        <div>
+          <p className="text-xs font-black uppercase tracking-[0.16em] text-indigo-700">Warranty Handoff · Optional</p>
+          <h3 className="mt-1 text-lg font-black text-indigo-950">ส่งต่อเป็นงานเคลม</h3>
+          <p className="mt-1 text-sm text-indigo-800">
+            เลือกทางนี้เฉพาะเมื่ออุปกรณ์ต้องส่งผู้จำหน่ายหรือศูนย์ ระบบจะพัก Repair Workflow หลังเปิดเคลมสำเร็จ
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setExpanded(false)}
+          className="w-fit rounded-xl border border-indigo-200 bg-white px-3 py-2 text-xs font-black text-indigo-700"
+        >
+          ซ่อนขั้นตอนเคลม
+        </button>
+      </div>
 
       {loading ? <p className="mt-4 text-sm text-indigo-700">กำลังตรวจข้อมูลผู้จำหน่าย...</p> : null}
-      {error ? <p className="mt-4 rounded-xl bg-red-50 p-3 text-sm font-bold text-red-700">{error}</p> : null}
+      {error ? (
+        <div className="mt-4 rounded-xl bg-red-50 p-3">
+          <p className="text-sm font-bold text-red-700">{error}</p>
+          <button
+            type="button"
+            onClick={() => { setOptions(null); setExpanded(false); setTimeout(() => setExpanded(true), 0); }}
+            className="mt-2 text-xs font-black text-red-700 underline"
+          >
+            ลองโหลดใหม่
+          </button>
+        </div>
+      ) : null}
 
       {!loading && !error ? (
         <div className="mt-4 grid gap-3 md:grid-cols-2">
@@ -152,7 +207,7 @@ const RepairClaimHandoffPanel = ({ job, submitting, onOpenClaim }) => {
             onClick={submit}
             className="rounded-xl bg-indigo-700 px-5 py-3 font-black text-white md:col-span-2 disabled:opacity-40"
           >
-            เปิดรายการเคลมจากงานซ่อม
+            ยืนยันเปิดรายการเคลมและพักงานซ่อม
           </button>
         </div>
       ) : null}

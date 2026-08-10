@@ -6,6 +6,23 @@ export const REPAIR_LANES = [
   { key: 'CANCELLED', label: 'ยกเลิก', description: 'งานที่ยุติแล้ว' },
 ];
 
+export const REPAIR_WORKFLOW_LANES = [
+  { key: 'RECEIVED', label: 'รับงานแล้ว' },
+  { key: 'WAITING_DIAGNOSIS', label: 'รอตรวจวินิจฉัย' },
+  { key: 'DIAGNOSING', label: 'กำลังตรวจวินิจฉัย' },
+  { key: 'WAITING_APPROVAL', label: 'รอลูกค้าอนุมัติ' },
+  { key: 'APPROVED', label: 'ลูกค้าอนุมัติแล้ว' },
+  { key: 'REJECTED', label: 'ลูกค้าไม่อนุมัติ' },
+  { key: 'REPAIRING', label: 'กำลังซ่อม' },
+  { key: 'WAITING_PARTS', label: 'รออะไหล่' },
+  { key: 'WAITING_QC', label: 'รอตรวจ QC' },
+  { key: 'QC_FAILED', label: 'QC ไม่ผ่าน' },
+  { key: 'READY_FOR_DELIVERY', label: 'พร้อมส่งมอบ' },
+  { key: 'DELIVERED', label: 'ส่งมอบแล้ว' },
+  { key: 'CLOSED', label: 'ปิดงานแล้ว' },
+  { key: 'CANCELLED', label: 'ยกเลิกแล้ว' },
+];
+
 export const CLAIM_LANES = [
   { key: 'DRAFT', label: 'ร่างรายการ', description: 'เตรียมข้อมูลเคลม' },
   { key: 'SUBMITTED', label: 'ส่งเคลมแล้ว', description: 'รอการตอบรับ' },
@@ -45,6 +62,9 @@ export const CLAIM_TRANSITIONS = {
 };
 
 export const REPAIR_LABELS = Object.fromEntries(REPAIR_LANES.map((item) => [item.key, item.label]));
+export const REPAIR_WORKFLOW_LABELS = Object.fromEntries(
+  REPAIR_WORKFLOW_LANES.map((item) => [item.key, item.label])
+);
 export const CLAIM_LABELS = Object.fromEntries(CLAIM_LANES.map((item) => [item.key, item.label]));
 
 export const groupByStatus = (items = [], lanes = []) =>

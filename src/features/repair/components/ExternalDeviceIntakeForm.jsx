@@ -37,6 +37,13 @@ const initialDraft = {
   internalRemark: '',
   depositPaid: 0,
   estimatedCost: 0,
+  preAgreedService: {
+    enabled: false,
+    agreedScope: '',
+    agreedAmount: 0,
+    confirmedByName: '',
+    confirmationNote: '',
+  },
 };
 
 const initialEvidence = {
@@ -60,21 +67,46 @@ const ExternalDeviceIntakeForm = ({
   const [selectedAccessories, setSelectedAccessories] = useState([]);
   const [intakeEvidence, setIntakeEvidence] = useState(initialEvidence);
 
-  const canSubmit = useMemo(
-    () =>
-      Boolean(
-        customer?.id &&
-          draft.model.trim() &&
-          draft.customerProblem.trim() &&
-          intakeEvidence.confirmed &&
-          intakeEvidence.customerSignature.trim() &&
-          !submitting
-      ),
-    [customer, draft.model, draft.customerProblem, intakeEvidence, submitting]
-  );
+  const preAgreedService = draft.preAgreedService;
+  const canSubmit = useMemo(() => {
+    const baseReady = Boolean(
+      customer?.id &&
+        draft.model.trim() &&
+        draft.customerProblem.trim() &&
+        intakeEvidence.confirmed &&
+        intakeEvidence.customerSignature.trim() &&
+        !submitting
+    );
+    if (!baseReady) return false;
+    if (!preAgreedService.enabled) return true;
+
+    const agreedAmount = Number(preAgreedService.agreedAmount);
+    return Boolean(
+      preAgreedService.agreedScope.trim() &&
+        preAgreedService.confirmedByName.trim() &&
+        Number.isFinite(agreedAmount) &&
+        agreedAmount >= 0
+    );
+  }, [
+    customer,
+    draft.model,
+    draft.customerProblem,
+    intakeEvidence,
+    preAgreedService,
+    submitting,
+  ]);
 
   const patch = (field, value) =>
     setDraft((current) => ({ ...current, [field]: value }));
+
+  const patchPreAgreed = (patchValue) =>
+    setDraft((current) => ({
+      ...current,
+      preAgreedService: {
+        ...current.preAgreedService,
+        ...patchValue,
+      },
+    }));
 
   const toggleAccessory = (accessoryType) =>
     setSelectedAccessories((current) =>
@@ -85,8 +117,19 @@ const ExternalDeviceIntakeForm = ({
 
   const submit = () => {
     if (!canSubmit) return;
+    const agreement = preAgreedService.enabled
+      ? {
+          enabled: true,
+          agreedScope: preAgreedService.agreedScope.trim(),
+          agreedAmount: Number(preAgreedService.agreedAmount || 0),
+          confirmedByName: preAgreedService.confirmedByName.trim(),
+          confirmationNote: preAgreedService.confirmationNote.trim() || null,
+        }
+      : undefined;
+
     onSubmit({
       customerId: customer.id,
+      customerName: customer?.name || customer?.companyName || '',
       device: {
         category: draft.category,
         brand: draft.brand,
@@ -98,11 +141,14 @@ const ExternalDeviceIntakeForm = ({
       customerProblem: draft.customerProblem,
       internalRemark: draft.internalRemark,
       depositPaid: Number(draft.depositPaid || 0),
-      estimatedCost: Number(draft.estimatedCost || 0),
+      estimatedCost: agreement
+        ? agreement.agreedAmount
+        : Number(draft.estimatedCost || 0),
       accessories: selectedAccessories.map((accessoryType) => ({
         accessoryType,
         quantity: 1,
       })),
+      ...(agreement ? { preAgreedService: agreement } : {}),
       intakeEvidence,
     });
   };
@@ -248,16 +294,18 @@ const ExternalDeviceIntakeForm = ({
             className="min-h-12 w-full rounded-xl border border-slate-300 px-4"
           />
         </label>
-        <label className="space-y-1">
-          <span className="text-xs font-black text-slate-600">ราคาประเมินเบื้องต้น</span>
-          <input
-            type="number"
-            min="0"
-            value={draft.estimatedCost}
-            onChange={(event) => patch('estimatedCost', event.target.value)}
-            className="min-h-12 w-full rounded-xl border border-slate-300 px-4"
-          />
-        </label>
+        {!preAgreedService.enabled ? (
+          <label className="space-y-1">
+            <span className="text-xs font-black text-slate-600">ราคาประเมินเบื้องต้น</span>
+            <input
+              type="number"
+              min="0"
+              value={draft.estimatedCost}
+              onChange={(event) => patch('estimatedCost', event.target.value)}
+              className="min-h-12 w-full rounded-xl border border-slate-300 px-4"
+            />
+          </label>
+        ) : <div />}
         <label className="space-y-1 md:col-span-2">
           <span className="text-xs font-black text-slate-600">หมายเหตุภายใน</span>
           <textarea
@@ -268,6 +316,68 @@ const ExternalDeviceIntakeForm = ({
           />
         </label>
       </div>
+
+      <section className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+        <label className="flex cursor-pointer items-start gap-3">
+          <input
+            type="checkbox"
+            checked={Boolean(preAgreedService.enabled)}
+            onChange={(event) =>
+              patchPreAgreed({
+                enabled: event.target.checked,
+                agreedAmount: event.target.checked
+                  ? Number(draft.estimatedCost || preAgreedService.agreedAmount || 0)
+                  : preAgreedService.agreedAmount,
+                confirmedByName:
+                  preAgreedService.confirmedByName ||
+                  customer?.name ||
+                  customer?.companyName ||
+                  '',
+              })
+            }
+            className="mt-1 h-4 w-4"
+          />
+          <span>
+            <span className="block font-black text-emerald-950">ตกลงราคาและขอบเขตงานแล้ว</span>
+            <span className="mt-1 block text-xs leading-5 text-emerald-800">
+              ใช้กับงานที่ตกลงกันตั้งแต่รับเครื่อง เช่น ลงโปรแกรม หรืองานบริการราคาชัดเจน เมื่อหลักฐานรับเครื่องครบสามารถเริ่มงานได้โดยไม่ต้องผ่านขั้นเสนอราคาอีกครั้ง
+            </span>
+          </span>
+        </label>
+
+        {preAgreedService.enabled ? (
+          <div className="mt-4 grid gap-3 md:grid-cols-2">
+            <textarea
+              rows={3}
+              value={preAgreedService.agreedScope}
+              onChange={(event) => patchPreAgreed({ agreedScope: event.target.value })}
+              placeholder="ขอบเขตงานที่ตกลง * เช่น ลง Windows + Driver + โปรแกรมพื้นฐาน"
+              className="rounded-xl border border-emerald-200 bg-white px-4 py-3 md:col-span-2"
+            />
+            <input
+              type="number"
+              min="0"
+              value={preAgreedService.agreedAmount}
+              onChange={(event) => patchPreAgreed({ agreedAmount: event.target.value })}
+              placeholder="ราคาที่ตกลง *"
+              className="rounded-xl border border-emerald-200 bg-white px-4 py-3"
+            />
+            <input
+              value={preAgreedService.confirmedByName}
+              onChange={(event) => patchPreAgreed({ confirmedByName: event.target.value })}
+              placeholder="ผู้ยืนยันข้อตกลง *"
+              className="rounded-xl border border-emerald-200 bg-white px-4 py-3"
+            />
+            <textarea
+              rows={2}
+              value={preAgreedService.confirmationNote}
+              onChange={(event) => patchPreAgreed({ confirmationNote: event.target.value })}
+              placeholder="หมายเหตุข้อตกลง / ช่องทางยืนยัน (ถ้ามี)"
+              className="rounded-xl border border-emerald-200 bg-white px-4 py-3 md:col-span-2"
+            />
+          </div>
+        ) : null}
+      </section>
 
       {error ? (
         <p className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm font-bold text-red-700">

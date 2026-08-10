@@ -96,7 +96,7 @@ export const posPartnerRoutes = [
           { path: 'sales/list', element: <TempReportPage title="📑 รายการเอกสารและบิลใบเสร็จงานขาย" /> },
           { path: 'sales/products', element: <TempReportPage title="📦 รายงานวิเคราะห์อันดับสินค้าขายดี" /> },
           { path: 'purchase', element: <TempReportPage title="🚚 รายงานวิเคราะห์ประวัติการจัดซื้อสินค้า" /> },
-          { path: 'inputtax', element: <TempReportPage title="💰 รายงานสมุดบัญชีภาษีซื้อ" /> },
+          { path: 'inputtax', element: <InputVatReportPage /> },
           { path: 'salestax', element: <ListSalesTaxReportPage /> },
           { path: 'sales-tax/print', element: <PrintSalesTaxReportPage /> },
         ],

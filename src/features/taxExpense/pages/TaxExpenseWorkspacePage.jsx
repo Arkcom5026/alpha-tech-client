@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 import ExpensePayeeMasterDataPanel from '../components/ExpensePayeeMasterDataPanel';
+import TaxExpenseAssessmentPanel from '../components/TaxExpenseAssessmentPanel';
 import TaxExpenseCategoryPanel from '../components/TaxExpenseCategoryPanel';
 import TaxExpenseCreateForm from '../components/TaxExpenseCreateForm';
 import useTaxExpenseWorkspace from '../hooks/useTaxExpenseWorkspace';
@@ -8,6 +9,7 @@ import useTaxExpenseWorkspace from '../hooks/useTaxExpenseWorkspace';
 const money = (value) => Number(value || 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 const TaxExpenseWorkspacePage = () => {
+  const [assessmentExpenseId, setAssessmentExpenseId] = useState(null);
   const {
     branchId,
     currentBranch,
@@ -60,13 +62,19 @@ const TaxExpenseWorkspacePage = () => {
           <h2 className="font-black text-slate-900">รายการล่าสุด</h2>
           <div className="mt-3 overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="border-b text-slate-500"><tr><th className="pb-2">เลขที่</th><th className="pb-2">ผู้รับเงิน</th><th className="pb-2">เอกสาร</th><th className="pb-2 text-right">ยอดรวม</th></tr></thead>
-              <tbody>{expenses.map((expense) => <tr key={expense.id} className="border-b border-slate-100"><td className="py-3 font-bold">{expense.expenseNumber}</td><td className="py-3">{expense.counterpartyName}</td><td className="py-3">{expense.documentNumber || '-'}</td><td className="py-3 text-right font-bold">฿{money(expense.totalAmount)}</td></tr>)}</tbody>
+              <thead className="border-b text-slate-500"><tr><th className="pb-2">เลขที่</th><th className="pb-2">ผู้รับเงิน</th><th className="pb-2">เอกสาร</th><th className="pb-2 text-right">ยอดรวม</th><th className="pb-2 text-right">ประเมิน</th></tr></thead>
+              <tbody>{expenses.map((expense) => <tr key={expense.id} className="border-b border-slate-100"><td className="py-3 font-bold">{expense.expenseNumber}</td><td className="py-3">{expense.counterpartyName}</td><td className="py-3">{expense.documentNumber || '-'}</td><td className="py-3 text-right font-bold">฿{money(expense.totalAmount)}</td><td className="py-3 text-right"><button type="button" onClick={() => setAssessmentExpenseId(expense.id)} className="rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1.5 font-bold text-blue-700 hover:bg-blue-100">ประเมินภาษี</button></td></tr>)}</tbody>
             </table>
             {!loading && !expenses.length && <p className="py-8 text-center text-sm text-slate-400">ยังไม่มีรายการค่าใช้จ่าย</p>}
           </div>
         </div>
       </div>
+
+      <TaxExpenseAssessmentPanel
+        expenseId={assessmentExpenseId}
+        onClose={() => setAssessmentExpenseId(null)}
+        onConfirmed={() => load()}
+      />
     </section>
   );
 };

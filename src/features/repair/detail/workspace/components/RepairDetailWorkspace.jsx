@@ -1,8 +1,8 @@
 import React from 'react';
 import RepairShellHeader from '../../../components/RepairShellHeader';
 import RuntimeStatePanel from '../../../components/RuntimeStatePanel';
-import JobRuntimePanel from '../../../components/JobRuntimePanel';
 import RepairWorkflowOverview from '../../../components/RepairWorkflowOverview';
+import JobRuntimePanel from '../../../components/JobRuntimePanel';
 import RepairDiagnosisPanel from '../../../components/RepairDiagnosisPanel';
 import RepairExecutionPanel from '../../../components/RepairExecutionPanel';
 import RepairTrackingAccessPanel from '../../../customer-access/components/RepairTrackingAccessPanel';
@@ -19,7 +19,6 @@ const RepairDetailWorkspace = ({
   evidenceWarning,
   onRetry,
   onWorkflowAction,
-  onTransition,
   onAddPart,
   onOpenClaim,
 }) => (
@@ -59,8 +58,6 @@ const RepairDetailWorkspace = ({
         <JobRuntimePanel
           job={job}
           submitting={submitting}
-          workflowManaged
-          onTransition={onTransition}
           onOpenClaim={onOpenClaim}
         />
         <RepairTrackingAccessPanel repairJobId={repairJobId} jobNo={job.jobNo} />

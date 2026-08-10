@@ -79,7 +79,7 @@ export const getVatSettlementErrorMessage = (error) => {
     VAT_CARRY_FORWARD_PREVIOUS_PERIOD_NOT_FINALIZED: 'ต้องล็อกหรือยื่นรอบภาษีก่อนหน้าก่อนยืนยันเครดิตยกมา',
     VAT_CARRY_FORWARD_SOURCE_SETTLEMENT_NOT_READY: 'ยอด ภ.พ.30 ของรอบก่อนยังไม่พร้อม จึงยังยืนยันเครดิตยกมาไม่ได้',
     VAT_CARRY_FORWARD_AMOUNT_EXCEEDS_SOURCE_CREDIT: 'ยอดเครดิตยกมาต้องไม่เกินเครดิต VAT คงเหลือของรอบก่อน',
-    VAT_CARRY_FORWARD_PERIOD_IMMUTABLE: 'รอบภาษีนี้ล็อกแล้ว จึงแก้เครดิตยกมาไม่ได้',
+    VAT_CARRY_FORWARD_PERIOD_IMMUTABLE: 'รอบภาษีนี้ยื่นแล้ว จึงแก้เครดิตยกมาไม่ได้',
     VAT_CARRY_FORWARD_HISTORICAL_OPENING_NOT_ALLOWED: 'ใช้ยอดเปิดระบบได้เฉพาะเมื่อไม่มีรอบภาษีก่อนหน้า',
     ACCOUNTING_OFFICE_PERIOD_NOT_FOUND: 'ไม่พบรอบภาษีที่เลือก',
   };

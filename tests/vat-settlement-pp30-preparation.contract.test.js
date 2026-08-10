@@ -35,16 +35,18 @@ test('workspace presents PP30 payable credit reconciliation and readiness', () =
   assert.match(source, /ยังไม่ใช่การยื่นแบบต่อกรมสรรพากร/);
 });
 
-test('carry-forward panel exposes source amount note status and confirmation', () => {
+test('carry-forward panel exposes source credit cap, audit fields and confirmation', () => {
   const source = read('src/features/tax/settlement/components/VatCarryForwardAuthorityPanel.jsx');
   assert.match(source, /เครดิต VAT ยกมา/);
   assert.match(source, /PRIOR_PERIOD/);
   assert.match(source, /HISTORICAL_OPENING/);
+  assert.match(source, /suggestedAmount/);
+  assert.match(source, /เครดิตคงเหลือจากรอบก่อน/);
   assert.match(source, /ยอดเครดิตยกมา/);
   assert.match(source, /หมายเหตุ \/ หลักฐานอ้างอิง/);
   assert.match(source, /ยืนยันเครดิตยกมา/);
   assert.match(source, /authority\?\.version/);
-  assert.match(source, /LOCKED/);
+  assert.match(source, /priorSettlementReady/);
   assert.match(source, /SUBMITTED/);
 });
 
@@ -55,6 +57,12 @@ test('workspace blocks PP30 readiness when carry-forward authority is unresolved
   assert.match(source, /ภาษีชำระไว้เกินยกมา/);
   assert.match(source, /pp30NetVatAfterCarryForward/);
   assert.match(source, /รอ Authority/);
+});
+
+test('tax period UI maps PP30 settlement submit blocker', () => {
+  const source = read('src/features/tax/periods/api/taxPeriodApi.js');
+  assert.match(source, /TAX_PERIOD_VAT_SETTLEMENT_NOT_READY/);
+  assert.match(source, /VAT Settlement \/ ภ\.พ\.30 ยังไม่พร้อม/);
 });
 
 test('partner route mounts VAT settlement workspace under tax periods without route regression', () => {

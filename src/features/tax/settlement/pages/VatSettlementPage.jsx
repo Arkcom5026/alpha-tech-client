@@ -18,6 +18,7 @@ const labels = {
   VAT_SETTLEMENT_INPUT_CREDIT_NOT_READY: 'สิทธิ์เครดิตภาษีซื้อยังไม่พร้อมสำหรับการคำนวณ',
   VAT_SETTLEMENT_PERIOD_NOT_LOCKED: 'รอบภาษียังไม่ได้ล็อกหรือยื่นแล้ว',
   VAT_SETTLEMENT_CARRY_FORWARD_AUTHORITY_REQUIRED: 'ยังไม่มี authority ยืนยันภาษีชำระไว้เกินยกมาจากรอบก่อน',
+  VAT_SETTLEMENT_HISTORICAL_OPENING_AUTHORITY_REQUIRED: 'กรุณายืนยันยอดเครดิต VAT เปิดระบบสำหรับรอบแรก แม้ยอดที่ยืนยันจะเป็น 0.00',
 };
 
 const Status = ({ passed, children }) => (
@@ -63,7 +64,7 @@ const VatSettlementPage = () => {
     ['Output filing reconcile แล้ว', readiness.outputFilingReconciled],
     ['Input filing พร้อม', readiness.inputFilingPrepared],
     ['สิทธิ์เครดิต Input VAT พร้อม', readiness.inputCreditAuthorityReady],
-    ['เครดิตยกมามี authority', readiness.carryForwardAuthorityReady],
+    ['เครดิตยกมา/ยอดเปิดระบบมี authority', readiness.carryForwardAuthorityReady],
     ['รอบภาษีล็อก/ยื่นแล้ว', readiness.periodLockedOrSubmitted],
   ], [readiness]);
 
@@ -111,9 +112,9 @@ const VatSettlementPage = () => {
               <p className="mt-2 text-3xl font-black text-indigo-950">{settlement.pp30VatCredit == null ? 'รอ Authority' : `฿${money(settlement.pp30VatCredit)}`}</p>
             </div>
             <div className="rounded-2xl border border-slate-200 bg-white p-5">
-              <div className="flex items-center gap-2 text-slate-700"><Calculator size={18} /><h2 className="font-black">ภาษีชำระไว้เกินยกมา</h2></div>
+              <div className="flex items-center gap-2 text-slate-700"><Calculator size={18} /><h2 className="font-black">ภาษีชำระไว้เกินยกมา / ยอดเปิดระบบ</h2></div>
               <p className="mt-2 text-3xl font-black">{carryForward.amount == null ? 'รอ Authority' : `฿${money(carryForward.amount)}`}</p>
-              <p className="mt-1 text-xs text-slate-500">{carryForward.previousPeriodCode ? `อ้างอิงรอบ ${carryForward.previousPeriodCode}` : 'ไม่มีรอบก่อนหน้า'}</p>
+              <p className="mt-1 text-xs text-slate-500">{carryForward.previousPeriodCode ? `อ้างอิงรอบ ${carryForward.previousPeriodCode}` : 'รอบแรก: ต้องยืนยันยอดเปิดระบบ'}</p>
             </div>
           </section>
 

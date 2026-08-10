@@ -3,6 +3,7 @@ import RepairShellHeader from '../../../components/RepairShellHeader';
 import RuntimeStatePanel from '../../../components/RuntimeStatePanel';
 import JobRuntimePanel from '../../../components/JobRuntimePanel';
 import RepairDiagnosisPanel from '../../../components/RepairDiagnosisPanel';
+import RepairExecutionPanel from '../../../components/RepairExecutionPanel';
 import RepairTrackingAccessPanel from '../../../customer-access/components/RepairTrackingAccessPanel';
 import RepairEstimateApprovalPanel from '../../../customer-access/components/RepairEstimateApprovalPanel';
 import RepairHandoverPanel from '../../../components/RepairHandoverPanel';
@@ -43,12 +44,17 @@ const RepairDetailWorkspace = ({
           submitting={submitting}
           onWorkflowAction={onWorkflowAction}
         />
+        <RepairExecutionPanel
+          job={job}
+          submitting={submitting}
+          onWorkflowAction={onWorkflowAction}
+          onAddPart={onAddPart}
+        />
         <JobRuntimePanel
           job={job}
           submitting={submitting}
           workflowManaged
           onTransition={onTransition}
-          onAddPart={onAddPart}
           onOpenClaim={onOpenClaim}
         />
         <RepairTrackingAccessPanel repairJobId={repairJobId} jobNo={job.jobNo} />

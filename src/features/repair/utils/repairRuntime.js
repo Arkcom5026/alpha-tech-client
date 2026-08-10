@@ -8,8 +8,8 @@ export const REPAIR_LANES = [
 
 export const REPAIR_WORKFLOW_LANES = [
   { key: 'RECEIVED', label: 'รับงานแล้ว' },
-  { key: 'WAITING_DIAGNOSIS', label: 'รอตรวจวินิจฉัย' },
-  { key: 'DIAGNOSING', label: 'กำลังตรวจวินิจฉัย' },
+  { key: 'WAITING_DIAGNOSIS', label: 'รอตรวจสอบ' },
+  { key: 'DIAGNOSING', label: 'กำลังตรวจสอบ' },
   { key: 'WAITING_APPROVAL', label: 'รอลูกค้าอนุมัติ' },
   { key: 'APPROVED', label: 'ลูกค้าอนุมัติแล้ว' },
   { key: 'REJECTED', label: 'ลูกค้าไม่อนุมัติ' },

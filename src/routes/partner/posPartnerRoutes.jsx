@@ -32,6 +32,7 @@ import CustomerCreditPage from '@/features/finance/pages/CustomerCreditPage';
 import TaxIntakeWorkspacePage from '@/features/tax/intake/pages/TaxIntakeWorkspacePage';
 import TaxPeriodManagementPage from '@/features/tax/periods/pages/TaxPeriodManagementPage';
 import AccountingOfficePackagePage from '@/features/tax/periods/pages/AccountingOfficePackagePage';
+import VatSettlementPage from '@/features/tax/settlement/pages/VatSettlementPage';
 import InputTaxReceiptWorkspacePage from '@/features/tax/inputDocuments/pages/InputTaxReceiptWorkspacePage';
 import InputVatReportPage from '@/features/tax/inputVatReport/pages/InputVatReportPage';
 import SupplierPayableWorkspacePage from '@/features/supplierPayable/pages/SupplierPayableWorkspacePage';
@@ -116,6 +117,7 @@ export const posPartnerRoutes = [
           { path: 'output-tax-filings', element: <SalesTaxFilingPage /> },
           { path: 'tax-publication-retry', element: <TaxPublicationRetryPage /> },
           { path: 'tax-periods/:taxPeriodId/accounting-office', element: <AccountingOfficePackagePage /> },
+          { path: 'tax-periods/:taxPeriodId/vat-settlement', element: <VatSettlementPage /> },
           { path: 'tax-expenses', element: <TaxExpenseWorkspacePage /> },
           { path: 'supplier-payables', element: <SupplierPayableWorkspacePage /> },
           {
@@ -176,7 +178,7 @@ export const posPartnerRoutes = [
             children: [
               { index: true, element: <ListBankPage /> },
               { path: 'create', element: <CreateBankPage /> },
-              { path: 'edit/:id', element: <EditBankPage /> },
+              { path: ':id', element: <EditBankPage /> },
             ],
           },
         ],

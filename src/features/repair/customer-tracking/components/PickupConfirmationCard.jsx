@@ -1,9 +1,18 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { confirmPublicRepairPickup } from '../api/repairTrackingPublicApi';
 
-const PickupConfirmationCard = ({ token, status, handover, onChanged }) => {
-  const [form, setForm] = useState({ receiverName: '', receiverPhone: '', note: '' });
+const PickupConfirmationCard = ({ token, status, handover, defaultReceiverName = '', onChanged }) => {
+  const [form, setForm] = useState({ receiverName: defaultReceiverName, receiverPhone: '', note: '' });
   const [state, setState] = useState({ loading: false, error: null });
+
+  useEffect(() => {
+    if (!defaultReceiverName) return;
+    setForm((current) =>
+      current.receiverName.trim()
+        ? current
+        : { ...current, receiverName: defaultReceiverName }
+    );
+  }, [defaultReceiverName]);
 
   if (handover?.status === 'DELIVERED') {
     return (
@@ -39,7 +48,7 @@ const PickupConfirmationCard = ({ token, status, handover, onChanged }) => {
     <section className="rounded-3xl border border-blue-200 bg-white p-5 shadow-sm">
       <p className="text-xs font-black uppercase tracking-[0.15em] text-blue-600">Digital Pickup</p>
       <h2 className="mt-2 text-lg font-black text-slate-950">ยืนยันว่าคุณมารับเครื่อง</h2>
-      <p className="mt-1 text-sm leading-6 text-slate-600">การกดปุ่มนี้เป็นเพียงการยืนยันตัวผู้รับ พนักงานยังต้องตรวจสอบและส่งมอบขั้นสุดท้าย</p>
+      <p className="mt-1 text-sm leading-6 text-slate-600">ระบบเติมชื่อผู้ส่งซ่อมเป็นค่าเริ่มต้น สามารถแก้ไขได้หากผู้มารับเป็นคนอื่น</p>
       <div className="mt-4 space-y-3">
         <input
           value={form.receiverName}

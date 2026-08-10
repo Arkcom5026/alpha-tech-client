@@ -1,31 +1,5 @@
 import React, { useMemo, useState } from 'react';
-
-const STATUS_LABELS = {
-  RECEIVED: 'รับงานแล้ว',
-  WAITING_DIAGNOSIS: 'รอตรวจวินิจฉัย',
-  DIAGNOSING: 'กำลังตรวจวินิจฉัย',
-  WAITING_APPROVAL: 'รอลูกค้าอนุมัติ',
-  APPROVED: 'ลูกค้าอนุมัติแล้ว',
-  REJECTED: 'ลูกค้าไม่อนุมัติ',
-  REPAIRING: 'กำลังซ่อม',
-  WAITING_PARTS: 'รออะไหล่',
-  WAITING_QC: 'รอตรวจ QC',
-  QC_FAILED: 'QC ไม่ผ่าน',
-  READY_FOR_DELIVERY: 'พร้อมส่งมอบ',
-  DELIVERED: 'ส่งมอบแล้ว',
-  CLOSED: 'ปิดงานแล้ว',
-  CANCELLED: 'ยกเลิกแล้ว',
-};
-
-const formatDateTime = (value) => {
-  if (!value) return '-';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '-';
-  return new Intl.DateTimeFormat('th-TH', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(date);
-};
+import { REPAIR_WORKFLOW_LABELS, formatDateTime } from '../utils/repairRuntime';
 
 const RepairWorkflowOverview = ({ job, submitting, onWorkflowAction }) => {
   const workflow = job?.workflow || {};
@@ -51,7 +25,7 @@ const RepairWorkflowOverview = ({ job, submitting, onWorkflowAction }) => {
         <div>
           <p className="text-xs font-black uppercase tracking-[0.16em] text-blue-700">Current Workflow</p>
           <div className="mt-2 flex flex-wrap items-center gap-2">
-            <h2 className="text-xl font-black text-slate-950">{STATUS_LABELS[status] || status}</h2>
+            <h2 className="text-xl font-black text-slate-950">{REPAIR_WORKFLOW_LABELS[status] || status}</h2>
             <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-black text-blue-700">{status}</span>
           </div>
           <div className="mt-4 rounded-xl border border-blue-100 bg-blue-50 p-4">
@@ -123,13 +97,13 @@ const RepairWorkflowOverview = ({ job, submitting, onWorkflowAction }) => {
                 <div key={item.id} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
                   <div className="flex flex-wrap items-start justify-between gap-2">
                     <p className="font-black text-slate-900">
-                      {item.status ? STATUS_LABELS[item.status] || item.status : item.title || item.eventType}
+                      {item.status ? REPAIR_WORKFLOW_LABELS[item.status] || item.status : item.title || item.eventType}
                     </p>
                     <span className="text-xs font-bold text-slate-500">{formatDateTime(item.occurredAt)}</span>
                   </div>
                   {item.previousStatus && item.status ? (
                     <p className="mt-1 text-xs text-slate-500">
-                      {STATUS_LABELS[item.previousStatus] || item.previousStatus} → {STATUS_LABELS[item.status] || item.status}
+                      {REPAIR_WORKFLOW_LABELS[item.previousStatus] || item.previousStatus} → {REPAIR_WORKFLOW_LABELS[item.status] || item.status}
                     </p>
                   ) : null}
                   {item.description ? (

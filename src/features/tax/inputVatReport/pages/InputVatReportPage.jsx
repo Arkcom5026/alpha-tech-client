@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { RefreshCw, ReceiptText, ShieldCheck } from 'lucide-react';
 import { getInputVatReport } from '../api/inputVatReportApi';
+import { getInputTaxErrorMessage } from '../../contracts/inputTaxErrorMessages';
 
 const money = (value) => Number(value || 0).toLocaleString('th-TH', {
   minimumFractionDigits: 2,
@@ -28,7 +29,7 @@ const InputVatReportPage = () => {
       const next = await getInputVatReport({ month, year });
       setReport(next || { data: [], summary: {} });
     } catch (err) {
-      setError(err?.response?.data?.message || err?.message || 'ไม่สามารถโหลดรายงานภาษีซื้อได้');
+      setError(getInputTaxErrorMessage(err, 'ไม่สามารถโหลดรายงานภาษีซื้อได้'));
     } finally {
       setLoading(false);
     }
@@ -87,6 +88,7 @@ const InputVatReportPage = () => {
               type="button"
               onClick={loadReport}
               disabled={loading}
+              title={loading ? 'กำลังโหลดรายงานภาษีซื้อ' : 'โหลดข้อมูลรายงานภาษีซื้ออีกครั้ง'}
               className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-black text-white disabled:opacity-50"
             >
               <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />

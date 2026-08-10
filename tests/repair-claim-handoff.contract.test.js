@@ -25,7 +25,19 @@ describe('repair warranty claim handoff contract', () => {
     expect(panel).toContain('sourceLocked');
     expect(panel).toContain('<select');
     expect(panel).toContain('sourceSupplierId');
-    expect(panel).toContain('เปิดรายการเคลมจากงานซ่อม');
+    expect(panel).toContain('ยืนยันเปิดรายการเคลมและพักงานซ่อม');
+  });
+
+  it('makes claim an explicit optional branch instead of a mandatory repair step', () => {
+    const panel = read('src/features/repair/components/RepairClaimHandoffPanel.jsx');
+
+    expect(panel).toContain('CLAIM_OPENABLE_WORKFLOW_STATUSES');
+    expect(panel).toContain('Optional Path');
+    expect(panel).toContain('ขั้นตอนนี้ไม่บังคับ');
+    expect(panel).toContain('เปิดขั้นตอนส่งเคลม');
+    expect(panel).toContain("'DIAGNOSING'");
+    expect(panel).toContain("'REPAIRING'");
+    expect(panel).not.toContain("!['DELIVERED', 'CLOSED', 'CANCELLED'].includes(workflowStatus)");
   });
 
   it('mounts claim handoff as a dedicated repair runtime panel', () => {

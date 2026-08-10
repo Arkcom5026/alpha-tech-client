@@ -1,5 +1,5 @@
 import React from 'react';
-import { Calculator, Eye, FolderArchive } from 'lucide-react';
+import { Calculator, Eye, FolderArchive, ReceiptText } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const TaxPeriodListTable = ({
@@ -70,6 +70,13 @@ const TaxPeriodListTable = ({
                         className="inline-flex items-center gap-1.5 rounded-lg border border-blue-300 bg-blue-50 px-3 py-2 text-xs font-bold text-blue-800 hover:bg-blue-100"
                       >
                         <Calculator size={14} /> VAT Settlement
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => navigate(`${period.id}/withholding-tax`)}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-violet-300 bg-violet-50 px-3 py-2 text-xs font-bold text-violet-800 hover:bg-violet-100"
+                      >
+                        <ReceiptText size={14} /> WHT
                       </button>
                       <button
                         type="button"

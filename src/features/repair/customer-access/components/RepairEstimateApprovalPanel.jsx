@@ -21,8 +21,17 @@ const RepairEstimateApprovalPanel = ({ repairJobId, job }) => {
   const [requestNote, setRequestNote] = useState('');
   const [state, setState] = useState({ loading: true, error: '', notice: '' });
   const workflowStatus = job?.workflow?.status || 'RECEIVED';
+  const preAgreedService = job?.workflow?.preAgreedService || null;
+  const preAgreedWasUsed = Boolean(
+    preAgreedService?.enabled &&
+      (job?.workflow?.history || []).some(
+        (event) => event.action === 'START_PRE_AGREED_SERVICE'
+      )
+  );
   const canPublish =
-    workflowStatus === 'WAITING_APPROVAL' && Number(job?.estimatedCost || 0) > 0;
+    !preAgreedWasUsed &&
+    workflowStatus === 'WAITING_APPROVAL' &&
+    Number(job?.estimatedCost || 0) > 0;
 
   const load = useCallback(async () => {
     setState((current) => ({ ...current, loading: true, error: '' }));
@@ -59,6 +68,56 @@ const RepairEstimateApprovalPanel = ({ repairJobId, job }) => {
       setState({ loading: false, error: error.message, notice: '' });
     }
   };
+
+  if (preAgreedWasUsed) {
+    return (
+      <section className="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-4 shadow-sm sm:p-5">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.16em] text-emerald-700">
+              Pre-agreed Estimate
+            </p>
+            <h2 className="mt-1 text-lg font-black text-slate-950">ตกลงราคาแล้ว ไม่ต้องขออนุมัติซ้ำ</h2>
+            <p className="mt-1 text-sm text-slate-600">
+              งานนี้ใช้ข้อตกลงจากขั้นรับเครื่อง ระบบจะแสดงราคาและขอบเขตงานเป็นข้อมูลอ้างอิงแบบอ่านอย่างเดียว
+            </p>
+          </div>
+          <span className="w-fit rounded-full bg-emerald-100 px-3 py-1 text-xs font-black text-emerald-800">
+            ตกลงแล้ว
+          </span>
+        </div>
+
+        <div className="mt-4 grid gap-3 sm:grid-cols-3">
+          <Metric label="ราคาที่ตกลง" value={money(preAgreedService.agreedAmount || job?.estimatedCost)} />
+          <Metric label="มัดจำ" value={money(job?.depositPaid)} />
+          <Metric
+            label="ยอดคงเหลือ"
+            value={money(
+              Math.max(
+                Number(preAgreedService.agreedAmount || job?.estimatedCost || 0) -
+                  Number(job?.depositPaid || 0),
+                0
+              )
+            )}
+          />
+        </div>
+
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <ReadOnlyDetail label="ขอบเขตงานที่ตกลง" value={preAgreedService.agreedScope || '-'} />
+          <ReadOnlyDetail label="ผู้ยืนยัน" value={preAgreedService.confirmedByName || '-'} />
+          {preAgreedService.confirmationNote ? (
+            <div className="sm:col-span-2">
+              <ReadOnlyDetail label="หมายเหตุข้อตกลง" value={preAgreedService.confirmationNote} />
+            </div>
+          ) : null}
+        </div>
+
+        <p className="mt-4 rounded-xl border border-emerald-200 bg-white p-3 text-sm font-bold text-emerald-800">
+          ใช้ Fast Path แล้ว — ไม่ต้องส่งราคาประเมินให้ลูกค้าอนุมัติอีกครั้ง
+        </p>
+      </section>
+    );
+  }
 
   return (
     <section className="rounded-2xl border border-amber-200 bg-amber-50/60 p-4 shadow-sm sm:p-5">
@@ -110,7 +169,7 @@ const RepairEstimateApprovalPanel = ({ repairJobId, job }) => {
             ? 'ลูกค้าอนุมัติราคาแล้ว ขั้นถัดไปคือเริ่มงานซ่อม'
             : workflowStatus === 'REJECTED'
               ? 'ลูกค้าไม่อนุมัติราคา งานนี้จะไม่เข้าสู่ขั้นซ่อม'
-              : 'การส่งราคาจะเปิดเมื่อบันทึกผลวินิจฉัยเสร็จและงานอยู่ในขั้นรอลูกค้าอนุมัติ'}
+              : 'การส่งราคาจะเปิดเมื่อบันทึกผลตรวจสอบเสร็จและงานอยู่ในขั้นรอลูกค้าอนุมัติ'}
         </p>
       )}
 
@@ -151,6 +210,13 @@ const Metric = ({ label, value }) => (
   <div className="rounded-xl bg-white p-3">
     <p className="text-xs font-black text-slate-500">{label}</p>
     <p className="mt-1 font-black text-slate-950">{value}</p>
+  </div>
+);
+
+const ReadOnlyDetail = ({ label, value }) => (
+  <div className="rounded-xl border border-emerald-100 bg-white p-3">
+    <p className="text-xs font-black text-slate-500">{label}</p>
+    <p className="mt-1 whitespace-pre-wrap font-bold text-slate-900">{value}</p>
   </div>
 );
 

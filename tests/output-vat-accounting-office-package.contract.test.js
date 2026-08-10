@@ -30,6 +30,18 @@ test('workspace presents monthly tax closing authorities and readiness', () => {
   assert.match(source, /READY FOR ACCOUNTANT/);
 });
 
+test('workspace renders backend-owned closing exceptions', () => {
+  const page = read('src/features/tax/periods/pages/AccountingOfficePackagePage.jsx');
+  const panel = read('src/features/tax/periods/components/AccountingOfficeExceptionsPanel.jsx');
+  assert.match(page, /AccountingOfficeExceptionsPanel/);
+  assert.match(page, /data\.exceptions/);
+  assert.match(panel, /Exceptions = 0/);
+  assert.match(panel, /entry\.code/);
+  assert.match(panel, /entry\.source/);
+  assert.match(panel, /entry\.count/);
+  assert.match(panel, /รายการที่ต้องแก้ก่อนส่งสำนักงานบัญชี/);
+});
+
 test('workspace exposes output input expense exports and full closing JSON', () => {
   const source = read('src/features/tax/periods/pages/AccountingOfficePackagePage.jsx');
   assert.match(source, /Output VAT CSV/);

@@ -11,23 +11,41 @@ test('tax period list exposes VAT settlement action', () => {
   assert.match(source, /vat-settlement/);
 });
 
-test('VAT settlement workspace reads isolated preparation API', () => {
+test('VAT settlement workspace reads settlement and carry-forward authority APIs', () => {
   const api = read('src/features/tax/settlement/api/vatSettlementApi.js');
   const page = read('src/features/tax/settlement/pages/VatSettlementPage.jsx');
   assert.match(api, /tax\/vat-settlement/);
+  assert.match(api, /tax\/vat-carry-forward/);
+  assert.match(api, /confirmVatCarryForwardAuthority/);
   assert.match(api, /branchId/);
   assert.match(page, /getVatSettlementPreparation/);
+  assert.match(page, /VatCarryForwardAuthorityPanel/);
 });
 
-test('workspace presents current-period payable credit reconciliation and PP30 readiness', () => {
+test('workspace presents PP30 payable credit reconciliation and readiness', () => {
   const source = read('src/features/tax/settlement/pages/VatSettlementPage.jsx');
-  assert.match(source, /VAT ต้องชำระรอบปัจจุบัน/);
-  assert.match(source, /VAT เครดิตรอบปัจจุบัน/);
+  assert.match(source, /VAT ต้องชำระตาม ภ\.พ\.30/);
+  assert.match(source, /VAT เครดิตคงเหลือตาม ภ\.พ\.30/);
   assert.match(source, /outputReconciliationDifference/);
+  assert.match(source, /pp30VatPayable/);
+  assert.match(source, /pp30VatCredit/);
   assert.match(source, /readyForCurrentPeriodSettlement/);
   assert.match(source, /readyForPp30Preparation/);
   assert.match(source, /Settlement Exceptions/);
   assert.match(source, /ยังไม่ใช่การยื่นแบบต่อกรมสรรพากร/);
+});
+
+test('carry-forward panel exposes source amount note status and confirmation', () => {
+  const source = read('src/features/tax/settlement/components/VatCarryForwardAuthorityPanel.jsx');
+  assert.match(source, /เครดิต VAT ยกมา/);
+  assert.match(source, /PRIOR_PERIOD/);
+  assert.match(source, /HISTORICAL_OPENING/);
+  assert.match(source, /ยอดเครดิตยกมา/);
+  assert.match(source, /หมายเหตุ \/ หลักฐานอ้างอิง/);
+  assert.match(source, /ยืนยันเครดิตยกมา/);
+  assert.match(source, /authority\?\.version/);
+  assert.match(source, /LOCKED/);
+  assert.match(source, /SUBMITTED/);
 });
 
 test('workspace blocks PP30 readiness when carry-forward authority is unresolved', () => {

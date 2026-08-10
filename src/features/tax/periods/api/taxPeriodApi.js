@@ -138,6 +138,7 @@ export const getTaxPeriodErrorMessage = (error) => {
     TAX_PERIOD_ALREADY_EXISTS: 'รอบภาษีของช่วงเวลานี้มีอยู่แล้ว',
     TAX_PERIOD_INVALID_DATE_RANGE: 'ช่วงวันที่ของรอบภาษีไม่ถูกต้อง',
     TAX_PERIOD_BRANCH_REQUIRED: 'กรุณาเลือกสาขาก่อนดำเนินการ',
+    TAX_PERIOD_VAT_SETTLEMENT_NOT_READY: 'VAT Settlement / ภ.พ.30 ยังไม่พร้อม กรุณาแก้รายการค้างและยืนยันเครดิตยกมาก่อนยื่นรอบภาษี',
     NETWORK_ERROR: 'ไม่สามารถเชื่อมต่อระบบรอบภาษีได้ กรุณาตรวจสอบเครือข่าย',
     ECONNABORTED: 'ระบบรอบภาษีตอบสนองช้าเกินไป กรุณาลองใหม่',
   };

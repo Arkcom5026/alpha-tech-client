@@ -19,12 +19,34 @@ test('accounting office workspace reads isolated package api', () => {
   assert.match(page, /getAccountingOfficePackage/);
 });
 
-test('workspace exposes readiness and accounting exports', () => {
+test('workspace presents monthly tax closing authorities and readiness', () => {
   const source = read('src/features/tax/periods/pages/AccountingOfficePackagePage.jsx');
+  assert.match(source, /Monthly Tax Closing Package/);
   assert.match(source, /readyForAccountingOffice/);
-  assert.match(source, /CSV รายงานภาษีขาย/);
-  assert.match(source, /ชุดข้อมูล JSON/);
+  assert.match(source, /outputVatReady/);
+  assert.match(source, /inputVatReady/);
+  assert.match(source, /expensesReady/);
+  assert.match(source, /READY FOR ACCOUNTANT/);
+});
+
+test('workspace exposes output input expense exports and full closing JSON', () => {
+  const source = read('src/features/tax/periods/pages/AccountingOfficePackagePage.jsx');
+  assert.match(source, /Output VAT CSV/);
+  assert.match(source, /Input VAT CSV/);
+  assert.match(source, /Expenses CSV/);
+  assert.match(source, /Closing JSON/);
   assert.match(source, /OUTPUT_VAT_ADJUSTMENT/);
+  assert.match(source, /INPUT_VAT_ADJUSTMENT/);
+});
+
+test('workspace renders input tax and tax expense review projections', () => {
+  const source = read('src/features/tax/periods/pages/AccountingOfficePackagePage.jsx');
+  assert.match(source, /data\.inputSummary/);
+  assert.match(source, /data\.expenseSummary/);
+  assert.match(source, /data\.inputDocuments/);
+  assert.match(source, /data\.expenses/);
+  assert.match(source, /pendingAssessmentItemCount/);
+  assert.match(source, /evidenceStatus/);
 });
 
 test('partner route mounts the accounting office workspace under tax periods', () => {

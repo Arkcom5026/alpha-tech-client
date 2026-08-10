@@ -26,6 +26,7 @@ test('workspace presents monthly tax closing authorities and readiness', () => {
   assert.match(source, /outputVatReady/);
   assert.match(source, /inputVatReady/);
   assert.match(source, /expensesReady/);
+  assert.match(source, /withholdingReady/);
   assert.match(source, /READY FOR ACCOUNTANT/);
 });
 
@@ -39,7 +40,7 @@ test('workspace exposes output input expense exports and full closing JSON', () 
   assert.match(source, /INPUT_VAT_ADJUSTMENT/);
 });
 
-test('workspace renders input tax and tax expense review projections', () => {
+test('workspace renders input tax expense and WHT review projections', () => {
   const source = read('src/features/tax/periods/pages/AccountingOfficePackagePage.jsx');
   assert.match(source, /data\.inputSummary/);
   assert.match(source, /data\.expenseSummary/);
@@ -47,6 +48,9 @@ test('workspace renders input tax and tax expense review projections', () => {
   assert.match(source, /data\.expenses/);
   assert.match(source, /pendingAssessmentItemCount/);
   assert.match(source, /evidenceStatus/);
+  assert.match(source, /withholdingPendingCount/);
+  assert.match(source, /missingWithholdingCertificateCount/);
+  assert.match(source, /hasVerifiedWithholdingCertificate/);
 });
 
 test('partner route mounts the accounting office workspace under tax periods', () => {

@@ -1,12 +1,18 @@
-import React, { useMemo, useState } from 'react';
-import { REPAIR_LABELS, REPAIR_TRANSITIONS, formatDateTime, formatMoney } from '../utils/repairRuntime';
+import React, { useState } from 'react';
+import { REPAIR_LABELS, formatDateTime, formatMoney } from '../utils/repairRuntime';
 
-const JobRuntimePanel = ({ job, submitting, onTransition, onAddPart, onOpenClaim }) => {
+const JobRuntimePanel = ({
+  job,
+  submitting,
+  workflowManaged = false,
+  onTransition,
+  onAddPart,
+  onOpenClaim,
+}) => {
   const [transition, setTransition] = useState({ status: '', technicianNotes: '', technicianId: '' });
   const [part, setPart] = useState({ productId: '', qtyUsed: 1 });
   const [claim, setClaim] = useState({ reason: '', supplierId: '', serviceProvider: '', note: '' });
 
-  const nextStatuses = useMemo(() => REPAIR_TRANSITIONS[job.status] || [], [job.status]);
   const activeClaim = (job.warrantyClaims || []).find(
     (item) => !['RESOLVED', 'CANCELLED'].includes(item.status)
   );
@@ -32,14 +38,8 @@ const JobRuntimePanel = ({ job, submitting, onTransition, onAddPart, onOpenClaim
           <Info label="อัปเดตล่าสุด" value={formatDateTime(job.updatedAt)} />
           <Info label="มัดจำ" value={formatMoney(job.depositPaid)} />
           <Info label="ราคาประเมิน" value={formatMoney(job.estimatedCost)} />
-          <Info
-            label="บาร์โค้ด"
-            value={job.stockItem?.barcode || job.device?.barcode}
-          />
-          <Info
-            label="Serial"
-            value={job.stockItem?.serialNumber || job.device?.serialNumber}
-          />
+          <Info label="บาร์โค้ด" value={job.stockItem?.barcode || job.device?.barcode} />
+          <Info label="Serial" value={job.stockItem?.serialNumber || job.device?.serialNumber} />
         </div>
 
         <div className="mt-4 rounded-xl border border-slate-200 p-4">
@@ -50,19 +50,16 @@ const JobRuntimePanel = ({ job, submitting, onTransition, onAddPart, onOpenClaim
 
       <div className="grid gap-5 xl:grid-cols-2">
         <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h3 className="text-lg font-black text-slate-950">เปลี่ยนสถานะงาน</h3>
-          {nextStatuses.length ? (
+          <h3 className="text-lg font-black text-slate-950">ขั้นตอนงาน</h3>
+          {workflowManaged ? (
+            <div className="mt-4 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950">
+              <p className="font-black">สถานะถูกควบคุมด้วย Repair Workflow</p>
+              <p className="mt-1 text-blue-800">
+                ใช้ปุ่มดำเนินการในส่วน “ขั้นตรวจสอบ / วินิจฉัย” ด้านบน ระบบจะเปิดเฉพาะขั้นที่ทำได้จริงและป้องกันการข้ามขั้นตอน
+              </p>
+            </div>
+          ) : (
             <>
-              <select
-                value={transition.status}
-                onChange={(event) => setTransition((current) => ({ ...current, status: event.target.value }))}
-                className="mt-4 w-full rounded-xl border border-slate-300 px-4 py-3"
-              >
-                <option value="">เลือกสถานะถัดไป</option>
-                {nextStatuses.map((status) => (
-                  <option key={status} value={status}>{REPAIR_LABELS[status]}</option>
-                ))}
-              </select>
               <textarea
                 rows={3}
                 value={transition.technicianNotes}
@@ -73,14 +70,12 @@ const JobRuntimePanel = ({ job, submitting, onTransition, onAddPart, onOpenClaim
               <button
                 type="button"
                 disabled={!transition.status || submitting}
-                onClick={() => onTransition(transition)}
+                onClick={() => onTransition?.(transition)}
                 className="mt-3 rounded-xl bg-slate-900 px-5 py-3 font-black text-white disabled:opacity-40"
               >
                 บันทึกสถานะ
               </button>
             </>
-          ) : (
-            <p className="mt-3 text-sm text-slate-500">งานนี้อยู่ในสถานะปลายทางแล้ว</p>
           )}
         </section>
 
@@ -143,8 +138,7 @@ const JobRuntimePanel = ({ job, submitting, onTransition, onAddPart, onOpenClaim
               เปิดรายการเคลม
             </button>
           </div>
-        ) : (job.stockItemId || job.deviceId) &&
-          !['COMPLETED', 'CANCELLED'].includes(job.status) ? (
+        ) : (job.stockItemId || job.deviceId) && !['COMPLETED', 'CANCELLED'].includes(job.status) ? (
           <div className="mt-4 grid gap-3 md:grid-cols-2">
             <textarea
               rows={3}

@@ -32,6 +32,9 @@ describe('repair flexible intake workflow contract', () => {
     const intakePage = read('src/features/repair/pages/RepairIntakePage.jsx');
     const externalIntake = read('src/features/repair/components/ExternalDeviceIntakeForm.jsx');
     const diagnosisPanel = read('src/features/repair/components/RepairDiagnosisPanel.jsx');
+    const estimatePanel = read(
+      'src/features/repair/customer-access/components/RepairEstimateApprovalPanel.jsx'
+    );
 
     for (const source of [intakeWorkspace, externalIntake]) {
       expect(source).toContain('ตกลงราคาและขอบเขตงานแล้ว');
@@ -55,6 +58,12 @@ describe('repair flexible intake workflow contract', () => {
     expect(diagnosisPanel).toContain('workflow.preAgreedService');
     expect(diagnosisPanel).toContain('ใช้ราคาที่ตกลงและไปขั้นเริ่มงาน');
     expect(diagnosisPanel).toContain("actionNames.has('QUEUE_DIAGNOSIS')");
+
+    expect(estimatePanel).toContain("event.action === 'START_PRE_AGREED_SERVICE'");
+    expect(estimatePanel).toContain('ตกลงราคาแล้ว ไม่ต้องขออนุมัติซ้ำ');
+    expect(estimatePanel).toContain('ใช้ Fast Path แล้ว — ไม่ต้องส่งราคาประเมินให้ลูกค้าอนุมัติอีกครั้ง');
+    expect(estimatePanel).toContain('preAgreedService.agreedAmount || job?.estimatedCost');
+    expect(estimatePanel).toContain('!preAgreedWasUsed');
   });
 
   it('prefills pickup receiver name from the repair customer projection while still allowing edits', () => {

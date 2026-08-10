@@ -202,6 +202,7 @@ const CustomerRepairTrackingPage = () => {
           token={token}
           status={status}
           handover={repair.handover}
+          defaultReceiverName={repair.pickupDefaults?.receiverName || ''}
           onChanged={(handover) =>
             setTracking((current) => ({
               ...current,

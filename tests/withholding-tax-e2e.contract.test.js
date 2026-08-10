@@ -8,7 +8,7 @@ const read = (relativePath) => fs.readFileSync(path.join(process.cwd(), relative
 test('tax period list exposes WHT workspace action', () => {
   const source = read('src/features/tax/periods/workspace/components/TaxPeriodListTable.jsx');
   assert.match(source, /withholding-tax/);
-  assert.match(source, /> WHT</);
+  assert.match(source, /<ReceiptText size=\{14\} \/>\s*WHT/);
 });
 
 test('WHT API exposes treatment certificate prepare and manual submission actions', () => {

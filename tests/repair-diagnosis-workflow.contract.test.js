@@ -10,11 +10,12 @@ describe('repair diagnosis workflow contract', () => {
   it('uses workflow commands instead of free-form repair status selection', () => {
     const api = read('src/features/repair/api/repairApi.js');
     const page = read('src/features/repair/pages/RepairJobDetailPage.jsx');
+    const diagnosis = read('src/features/repair/components/RepairDiagnosisPanel.jsx');
     const runtime = read('src/features/repair/components/JobRuntimePanel.jsx');
 
     expect(api).toContain('/workflow/commands');
     expect(page).toContain('transitionWorkflow');
-    expect(page).toContain('expectedWorkflowStatus');
+    expect(diagnosis).toContain('expectedWorkflowStatus: status');
     expect(runtime).toContain('สถานะถูกควบคุมด้วย Repair Workflow');
     expect(runtime).not.toContain('เลือกสถานะถัดไป');
   });

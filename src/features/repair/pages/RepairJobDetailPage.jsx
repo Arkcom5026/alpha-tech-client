@@ -1,6 +1,7 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import useRepairRuntimeStore from '../store/repairRuntimeStore';
+import repairApi from '../api/repairApi';
 import RepairDetailWorkspace from '../detail/workspace/components/RepairDetailWorkspace';
 
 const RepairJobDetailPage = () => {
@@ -16,10 +17,28 @@ const RepairJobDetailPage = () => {
   const transitionJob = useRepairRuntimeStore((state) => state.transitionJob);
   const addPart = useRepairRuntimeStore((state) => state.addPart);
   const openClaim = useRepairRuntimeStore((state) => state.openClaim);
+  const [workflowSubmitting, setWorkflowSubmitting] = useState(false);
+  const [workflowError, setWorkflowError] = useState('');
 
   useEffect(() => {
     loadJob(repairJobId);
   }, [loadJob, repairJobId]);
+
+  const handleWorkflowAction = async (payload) => {
+    setWorkflowSubmitting(true);
+    setWorkflowError('');
+    try {
+      await repairApi.transitionWorkflow(repairJobId, {
+        ...payload,
+        commandKey: payload.commandKey || `repair-workflow-${repairJobId}-${Date.now()}`,
+      });
+      await loadJob(repairJobId);
+    } catch (workflowActionError) {
+      setWorkflowError(workflowActionError.message);
+    } finally {
+      setWorkflowSubmitting(false);
+    }
+  };
 
   const handleOpenClaim = async (value) => {
     if (typeof value === 'number' || typeof value === 'string') {
@@ -38,10 +57,11 @@ const RepairJobDetailPage = () => {
       repairJobId={repairJobId}
       job={activeJob}
       loading={loading}
-      submitting={submitting}
-      error={error}
+      submitting={submitting || workflowSubmitting}
+      error={workflowError || error}
       evidenceWarning={location.state?.evidenceWarning}
       onRetry={() => loadJob(repairJobId)}
+      onWorkflowAction={handleWorkflowAction}
       onTransition={(payload) => transitionJob(repairJobId, payload)}
       onAddPart={(payload) => addPart(repairJobId, payload)}
       onOpenClaim={handleOpenClaim}

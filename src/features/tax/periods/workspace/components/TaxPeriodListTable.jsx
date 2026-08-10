@@ -1,5 +1,5 @@
 import React from 'react';
-import { Calculator, Eye, FolderArchive, ReceiptText } from 'lucide-react';
+import { Calculator, Eye, FolderArchive, ReceiptText, ShieldCheck } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const TaxPeriodListTable = ({
@@ -63,6 +63,13 @@ const TaxPeriodListTable = ({
                         className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700"
                       >
                         <Eye size={14} /> รายละเอียด
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => navigate(`${period.id}/readiness`)}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-300 bg-indigo-50 px-3 py-2 text-xs font-bold text-indigo-800 hover:bg-indigo-100"
+                      >
+                        <ShieldCheck size={14} /> Tax Readiness
                       </button>
                       <button
                         type="button"

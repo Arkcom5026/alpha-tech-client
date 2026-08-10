@@ -154,6 +154,12 @@ export const repairApi = {
       'ไม่สามารถบันทึกอะไหล่ได้'
     ),
 
+  getClaimOptions: (id) =>
+    request(
+      () => apiClient.get(`/repairs/jobs/${id}/warranty-claim-options`),
+      'ไม่สามารถโหลดข้อมูลสำหรับเปิดรายการเคลมได้'
+    ),
+
   openClaim: (id, payload) =>
     request(
       () => apiClient.post(`/repairs/jobs/${id}/warranty-claims`, payload),

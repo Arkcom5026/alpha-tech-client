@@ -59,7 +59,12 @@ const RepairDetailWorkspace = ({
         />
         <RepairTrackingAccessPanel repairJobId={repairJobId} jobNo={job.jobNo} />
         <RepairEstimateApprovalPanel repairJobId={repairJobId} job={job} />
-        <RepairHandoverPanel repairJobId={repairJobId} jobStatus={job.status} />
+        <RepairHandoverPanel
+          repairJobId={repairJobId}
+          job={job}
+          onWorkflowAction={onWorkflowAction}
+          onJobReload={onRetry}
+        />
         <IntakeEvidencePanel repairJobId={repairJobId} warning={evidenceWarning} />
       </div>
     ) : null}

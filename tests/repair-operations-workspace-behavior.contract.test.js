@@ -72,15 +72,16 @@ describe('repair operations workspace behavior contract', () => {
     expect(claimsPage).toContain('/pos/services/warranty-claims/${claim.id}');
   });
 
-  it('preserves repair detail mutations and claim handoff across workspace ownership', () => {
-    expect(detailPage).toContain('transitionJob');
+  it('preserves repair detail workflow mutations and claim handoff across workspace ownership', () => {
+    expect(detailPage).toContain('transitionWorkflow');
+    expect(detailPage).toContain('handleWorkflowAction');
     expect(detailPage).toContain('addPart');
     expect(detailPage).toContain('openClaim');
     expect(detailPage).toContain('RepairDetailWorkspace');
-    expect(detailPage).toContain('onTransition={(payload) => transitionJob(repairJobId, payload)}');
+    expect(detailPage).toContain('onWorkflowAction={handleWorkflowAction}');
     expect(detailPage).toContain('onAddPart={(payload) => addPart(repairJobId, payload)}');
     expect(detailPage).toContain('/pos/services/warranty-claims/${created.id}');
-    expect(repairDetailWorkspace).toContain('onTransition={onTransition}');
+    expect(repairDetailWorkspace).toContain('onWorkflowAction={onWorkflowAction}');
     expect(repairDetailWorkspace).toContain('onAddPart={onAddPart}');
     expect(repairDetailWorkspace).toContain('onOpenClaim={onOpenClaim}');
   });

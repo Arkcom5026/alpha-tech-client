@@ -28,11 +28,11 @@ describe('repair detail workspace foundation contract', () => {
     expect(workspaceSource).toContain('onRetry={onRetry}');
   });
 
-  it('preserves transition, part, and claim intents without acquiring mutation authority', () => {
-    expect(workspaceSource).toContain('onTransition={onTransition}');
+  it('preserves workflow, part, and claim intents without acquiring mutation authority', () => {
+    expect(workspaceSource).toContain('onWorkflowAction={onWorkflowAction}');
     expect(workspaceSource).toContain('onAddPart={onAddPart}');
     expect(workspaceSource).toContain('onOpenClaim={onOpenClaim}');
-    expect(workspaceSource).not.toContain('transitionJob');
+    expect(workspaceSource).not.toContain('transitionWorkflow(');
     expect(workspaceSource).not.toContain('addPart(');
     expect(workspaceSource).not.toContain('openClaim(');
   });
@@ -45,9 +45,10 @@ describe('repair detail workspace foundation contract', () => {
     expect(workspaceSource).toContain('warning={evidenceWarning}');
   });
 
-  it('keeps current page mutation and navigation authority intact before cutover', () => {
+  it('keeps current page workflow mutation and navigation authority intact', () => {
     expect(pageSource).toContain('useRepairRuntimeStore');
-    expect(pageSource).toContain('transitionJob');
+    expect(pageSource).toContain('transitionWorkflow');
+    expect(pageSource).toContain('handleWorkflowAction');
     expect(pageSource).toContain('addPart');
     expect(pageSource).toContain('openClaim');
     expect(pageSource).toContain('handleOpenClaim');

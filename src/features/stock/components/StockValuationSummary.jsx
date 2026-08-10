@@ -14,8 +14,8 @@ const StockValuationSummary = ({ data }) => {
   const quality = data?.dataQuality;
   if (!valuation || !quality) return null;
 
-  const reconciliationDifference = Number(quality.quantityReconciliationDifference || 0);
-  const hasReconciliationWarning = Math.abs(reconciliationDifference) > 0.0001;
+  const missingCostProducts = Number(quality.missingCostProducts || 0);
+  const missingCostQuantity = Number(quality.missingCostQuantity || 0);
 
   return (
     <section className="rounded-2xl border border-slate-200 bg-slate-50 p-4 md:p-5">
@@ -32,31 +32,19 @@ const StockValuationSummary = ({ data }) => {
         <StockMetricCard label="มูลค่าสต๊อกรวม" value={formatMoney(valuation.totalCostValue)} tone="emerald" />
       </div>
 
-      <div className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-2">
-        {quality.hasIncompleteValuation && (
+      <div className="mt-4">
+        {quality.hasIncompleteValuation ? (
           <StockStatusPanel
             tone="warning"
             title="มูลค่าสต๊อกยังไม่สมบูรณ์"
-            description={`สินค้าติดตามรายชิ้นไม่มีต้นทุน ${Number(quality.missingCostItems || 0)} รายการ • สินค้า Simple ไม่มีต้นทุน ${Number(quality.missingCostLots || 0)} ล็อต${Number(quality.missingCostQuantity || 0) > 0 ? ` • ปริมาณที่ยังประเมินไม่ได้ ${Number(quality.missingCostQuantity || 0)}` : ''}`}
+            description={`สินค้าติดตามรายชิ้นไม่มีต้นทุน ${Number(quality.missingCostItems || 0)} รายการ • สินค้า Simple ไม่มีต้นทุน ${missingCostProducts} รายการ${missingCostQuantity > 0 ? ` • ปริมาณที่ยังประเมินไม่ได้ ${missingCostQuantity}` : ''}`}
           />
-        )}
-
-        {hasReconciliationWarning && (
+        ) : (
           <StockStatusPanel
-            tone="critical"
-            title="ยอดสินค้า Simple ไม่ตรงกัน"
-            description={`StockBalance ต่างจากผลรวม SimpleLot อยู่ ${reconciliationDifference} หน่วย ควรตรวจสอบก่อนใช้ยอดทางบัญชี`}
+            tone="success"
+            title="ข้อมูลมูลค่าสต๊อกสมบูรณ์"
+            description="มูลค่าสินค้า Simple คำนวณจากยอด StockBalance และต้นทุนเฉลี่ยของสินค้าที่ใช้งานจริงในร้าน"
           />
-        )}
-
-        {!quality.hasIncompleteValuation && !hasReconciliationWarning && (
-          <div className="lg:col-span-2">
-            <StockStatusPanel
-              tone="success"
-              title="ข้อมูลมูลค่าสต๊อกสมบูรณ์"
-              description="ไม่พบรายการไม่มีต้นทุน และยอด SimpleLot ตรงกับ StockBalance"
-            />
-          </div>
         )}
       </div>
     </section>

@@ -36,4 +36,16 @@ describe('repair diagnosis workflow contract', () => {
     expect(panel).toContain('existingDiagnosis.recommendedAction');
     expect(panel).toContain('existingDiagnosis.estimatedCost');
   });
+
+  it('opens estimate publishing only in WAITING_APPROVAL and explains the resulting handoff', () => {
+    const approvalPanel = read(
+      'src/features/repair/customer-access/components/RepairEstimateApprovalPanel.jsx'
+    );
+
+    expect(approvalPanel).toContain("workflowStatus === 'WAITING_APPROVAL'");
+    expect(approvalPanel).toContain('canPublish');
+    expect(approvalPanel).toContain('อัปเดต workflow ให้อัตโนมัติ');
+    expect(approvalPanel).toContain('ลูกค้าอนุมัติราคาแล้ว ขั้นถัดไปคือเริ่มงานซ่อม');
+    expect(approvalPanel).toContain('ลูกค้าไม่อนุมัติราคา งานนี้จะไม่เข้าสู่ขั้นซ่อม');
+  });
 });

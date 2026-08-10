@@ -5,7 +5,7 @@ import { toast } from 'react-toastify';
 import { useBranchStore } from '@/features/branch/store/branchStore';
 import { getVatSettlementErrorMessage, getVatSettlementPreparation } from '../api/vatSettlementApi';
 
-const money = (value) => Number(value || 0).toLocaleString('th-TH', {
+const money = (value) => value == null ? '-' : Number(value || 0).toLocaleString('th-TH', {
   minimumFractionDigits: 2,
   maximumFractionDigits: 2,
 });
@@ -16,6 +16,7 @@ const labels = {
   VAT_SETTLEMENT_OUTPUT_RECONCILIATION_MISMATCH: 'ยอดภาษีขายใน filing ยังไม่ตรงกับ VAT authority',
   VAT_SETTLEMENT_INPUT_CREDIT_NOT_READY: 'สิทธิ์เครดิตภาษีซื้อยังไม่พร้อมสำหรับการคำนวณ',
   VAT_SETTLEMENT_PERIOD_NOT_LOCKED: 'รอบภาษียังไม่ได้ล็อกหรือยื่นแล้ว',
+  VAT_SETTLEMENT_CARRY_FORWARD_AUTHORITY_REQUIRED: 'ยังไม่มี authority ยืนยันภาษีชำระไว้เกินยกมาจากรอบก่อน',
 };
 
 const Status = ({ passed, children }) => (
@@ -53,6 +54,7 @@ const VatSettlementPage = () => {
   useEffect(() => { load(); }, [load]);
 
   const settlement = data?.settlement || {};
+  const carryForward = data?.carryForward || {};
   const readiness = data?.readiness || {};
   const exceptions = Array.isArray(data?.exceptions) ? data.exceptions : [];
   const checks = useMemo(() => [
@@ -60,6 +62,7 @@ const VatSettlementPage = () => {
     ['Output filing reconcile แล้ว', readiness.outputFilingReconciled],
     ['Input filing พร้อม', readiness.inputFilingPrepared],
     ['สิทธิ์เครดิต Input VAT พร้อม', readiness.inputCreditAuthorityReady],
+    ['เครดิตยกมามี authority', readiness.carryForwardAuthorityReady],
     ['รอบภาษีล็อก/ยื่นแล้ว', readiness.periodLockedOrSubmitted],
   ], [readiness]);
 
@@ -94,17 +97,22 @@ const VatSettlementPage = () => {
             <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4"><p className="text-xs text-emerald-700">Output VAT</p><p className="mt-1 text-2xl font-black text-emerald-950">฿{money(settlement.outputVatAuthority)}</p></div>
             <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4"><p className="text-xs text-blue-700">Input VAT ใช้เครดิตได้</p><p className="mt-1 text-2xl font-black text-blue-950">฿{money(settlement.creditableInputVat)}</p></div>
             <div className="rounded-2xl border border-slate-200 bg-white p-4"><p className="text-xs text-slate-500">Input VAT ยังไม่ได้ใช้เครดิต</p><p className="mt-1 text-2xl font-black">฿{money(settlement.nonCreditableOrUnselectedInputVat)}</p></div>
-            <div className={`rounded-2xl border p-4 ${Number(settlement.netVat || 0) >= 0 ? 'border-amber-200 bg-amber-50' : 'border-indigo-200 bg-indigo-50'}`}><p className="text-xs">VAT สุทธิ</p><p className="mt-1 text-2xl font-black">฿{money(settlement.netVat)}</p></div>
+            <div className={`rounded-2xl border p-4 ${Number(settlement.currentPeriodNetVat || 0) >= 0 ? 'border-amber-200 bg-amber-50' : 'border-indigo-200 bg-indigo-50'}`}><p className="text-xs">VAT สุทธิรอบปัจจุบัน</p><p className="mt-1 text-2xl font-black">฿{money(settlement.currentPeriodNetVat)}</p></div>
           </section>
 
-          <section className="grid gap-3 md:grid-cols-2">
+          <section className="grid gap-3 md:grid-cols-3">
             <div className="rounded-2xl border border-rose-200 bg-rose-50 p-5">
-              <div className="flex items-center gap-2 text-rose-800"><Calculator size={18} /><h2 className="font-black">VAT ต้องชำระ</h2></div>
-              <p className="mt-2 text-3xl font-black text-rose-950">฿{money(settlement.vatPayable)}</p>
+              <div className="flex items-center gap-2 text-rose-800"><Calculator size={18} /><h2 className="font-black">VAT ต้องชำระรอบปัจจุบัน</h2></div>
+              <p className="mt-2 text-3xl font-black text-rose-950">฿{money(settlement.currentPeriodVatPayable)}</p>
             </div>
             <div className="rounded-2xl border border-indigo-200 bg-indigo-50 p-5">
-              <div className="flex items-center gap-2 text-indigo-800"><Calculator size={18} /><h2 className="font-black">VAT เครดิต</h2></div>
-              <p className="mt-2 text-3xl font-black text-indigo-950">฿{money(settlement.vatCredit)}</p>
+              <div className="flex items-center gap-2 text-indigo-800"><Calculator size={18} /><h2 className="font-black">VAT เครดิตรอบปัจจุบัน</h2></div>
+              <p className="mt-2 text-3xl font-black text-indigo-950">฿{money(settlement.currentPeriodVatCredit)}</p>
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-white p-5">
+              <div className="flex items-center gap-2 text-slate-700"><Calculator size={18} /><h2 className="font-black">ภาษีชำระไว้เกินยกมา</h2></div>
+              <p className="mt-2 text-3xl font-black">{carryForward.amount == null ? 'รอ Authority' : `฿${money(carryForward.amount)}`}</p>
+              <p className="mt-1 text-xs text-slate-500">{carryForward.previousPeriodCode ? `อ้างอิงรอบ ${carryForward.previousPeriodCode}` : 'ไม่มีรอบก่อนหน้า'}</p>
             </div>
           </section>
 
@@ -113,15 +121,16 @@ const VatSettlementPage = () => {
             <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
               {checks.map(([label, passed]) => <Status key={label} passed={passed}>{label}</Status>)}
             </div>
-            <p className="mt-3 text-sm font-black">{readiness.readyForPp30Preparation ? 'พร้อมสำหรับขั้นเตรียม ภ.พ.30' : 'ยังมีรายการที่ต้องแก้ก่อนใช้ยอด settlement เป็นข้อมูลเตรียม ภ.พ.30'}</p>
+            <p className="mt-3 text-sm font-black">{readiness.readyForPp30Preparation ? 'พร้อมสำหรับขั้นเตรียม ภ.พ.30' : readiness.readyForCurrentPeriodSettlement ? 'ยอด VAT รอบปัจจุบันพร้อมแล้ว แต่ยังมี authority อื่นที่ต้องยืนยันก่อนเตรียม ภ.พ.30' : 'ยังมีรายการที่ต้องแก้ก่อนใช้ยอด settlement เป็นข้อมูลเตรียม ภ.พ.30'}</p>
           </section>
 
           <section className="rounded-2xl border border-slate-200 bg-white p-4">
             <h2 className="font-black text-slate-900">Reconciliation</h2>
-            <div className="mt-3 grid gap-3 md:grid-cols-3 text-sm">
+            <div className="mt-3 grid gap-3 md:grid-cols-4 text-sm">
               <div><p className="text-slate-500">Output VAT authority</p><p className="mt-1 font-black">฿{money(settlement.outputVatAuthority)}</p></div>
               <div><p className="text-slate-500">Output filing</p><p className="mt-1 font-black">฿{money(settlement.outputVatFiling)}</p></div>
               <div><p className="text-slate-500">ผลต่าง</p><p className="mt-1 font-black">฿{money(settlement.outputReconciliationDifference)}</p></div>
+              <div><p className="text-slate-500">VAT สุทธิหลังเครดิตยกมา</p><p className="mt-1 font-black">{settlement.pp30NetVatAfterCarryForward == null ? 'รอ Authority' : `฿${money(settlement.pp30NetVatAfterCarryForward)}`}</p></div>
             </div>
           </section>
 

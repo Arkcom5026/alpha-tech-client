@@ -4,6 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { useBranchStore } from '@/features/branch/store/branchStore';
 import { getVatSettlementErrorMessage, getVatSettlementPreparation } from '../api/vatSettlementApi';
+import VatCarryForwardAuthorityPanel from '../components/VatCarryForwardAuthorityPanel';
 
 const money = (value) => value == null ? '-' : Number(value || 0).toLocaleString('th-TH', {
   minimumFractionDigits: 2,
@@ -102,12 +103,12 @@ const VatSettlementPage = () => {
 
           <section className="grid gap-3 md:grid-cols-3">
             <div className="rounded-2xl border border-rose-200 bg-rose-50 p-5">
-              <div className="flex items-center gap-2 text-rose-800"><Calculator size={18} /><h2 className="font-black">VAT ต้องชำระรอบปัจจุบัน</h2></div>
-              <p className="mt-2 text-3xl font-black text-rose-950">฿{money(settlement.currentPeriodVatPayable)}</p>
+              <div className="flex items-center gap-2 text-rose-800"><Calculator size={18} /><h2 className="font-black">VAT ต้องชำระตาม ภ.พ.30</h2></div>
+              <p className="mt-2 text-3xl font-black text-rose-950">{settlement.pp30VatPayable == null ? 'รอ Authority' : `฿${money(settlement.pp30VatPayable)}`}</p>
             </div>
             <div className="rounded-2xl border border-indigo-200 bg-indigo-50 p-5">
-              <div className="flex items-center gap-2 text-indigo-800"><Calculator size={18} /><h2 className="font-black">VAT เครดิตรอบปัจจุบัน</h2></div>
-              <p className="mt-2 text-3xl font-black text-indigo-950">฿{money(settlement.currentPeriodVatCredit)}</p>
+              <div className="flex items-center gap-2 text-indigo-800"><Calculator size={18} /><h2 className="font-black">VAT เครดิตคงเหลือตาม ภ.พ.30</h2></div>
+              <p className="mt-2 text-3xl font-black text-indigo-950">{settlement.pp30VatCredit == null ? 'รอ Authority' : `฿${money(settlement.pp30VatCredit)}`}</p>
             </div>
             <div className="rounded-2xl border border-slate-200 bg-white p-5">
               <div className="flex items-center gap-2 text-slate-700"><Calculator size={18} /><h2 className="font-black">ภาษีชำระไว้เกินยกมา</h2></div>
@@ -115,6 +116,8 @@ const VatSettlementPage = () => {
               <p className="mt-1 text-xs text-slate-500">{carryForward.previousPeriodCode ? `อ้างอิงรอบ ${carryForward.previousPeriodCode}` : 'ไม่มีรอบก่อนหน้า'}</p>
             </div>
           </section>
+
+          <VatCarryForwardAuthorityPanel branchId={branchId} taxPeriodId={taxPeriodId} onConfirmed={load} />
 
           <section className={`rounded-2xl border p-4 ${readiness.readyForPp30Preparation ? 'border-emerald-200 bg-emerald-50' : 'border-amber-200 bg-amber-50'}`}>
             <h2 className="font-black">PP30 Preparation Readiness</h2>

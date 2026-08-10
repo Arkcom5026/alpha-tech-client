@@ -76,7 +76,7 @@ const RepairWorkflowOverview = ({ job, submitting, onWorkflowAction }) => {
           {status === 'REJECTED' && actionNames.has('REOPEN_AFTER_REJECTION') ? (
             <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4">
               <p className="font-black text-amber-950">ลูกค้าไม่อนุมัติราคา</p>
-              <p className="mt-1 text-sm text-amber-800">หากต้องการเสนอทางเลือกใหม่ ให้ระบุเหตุผลแล้วกลับไปวินิจฉัย/ปรับราคาอีกครั้ง</p>
+              <p className="mt-1 text-sm text-amber-800">หากต้องการเสนอทางเลือกใหม่ ให้ระบุเหตุผลแล้วกลับไปตรวจสอบ/ปรับราคาอีกครั้ง</p>
               <textarea
                 rows={3}
                 value={reopenReason}
@@ -90,7 +90,7 @@ const RepairWorkflowOverview = ({ job, submitting, onWorkflowAction }) => {
                 onClick={() => run('REOPEN_AFTER_REJECTION', reopenReason)}
                 className="mt-3 rounded-xl bg-amber-600 px-5 py-3 font-black text-white disabled:opacity-40"
               >
-                กลับไปวินิจฉัยและเสนอราคาใหม่
+                กลับไปตรวจสอบและเสนอราคาใหม่
               </button>
             </div>
           ) : null}

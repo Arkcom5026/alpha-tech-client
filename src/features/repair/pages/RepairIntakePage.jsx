@@ -35,12 +35,17 @@ const RepairIntakePage = () => {
   }, [runtime.selectedCustomer]);
 
   const openCreateDialog = () => {
-    setDraft(
-      createRepairIntakeDraft({
-        customerId: contextCustomerId,
-        intakeContext: runtime.intakeContext,
-      })
-    );
+    const nextDraft = createRepairIntakeDraft({
+      customerId: contextCustomerId,
+      intakeContext: runtime.intakeContext,
+    });
+    setDraft({
+      ...nextDraft,
+      preAgreedService: {
+        ...nextDraft.preAgreedService,
+        confirmedByName: intakeContact.contactName || '',
+      },
+    });
     setCreateOpen(true);
   };
 

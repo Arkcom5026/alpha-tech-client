@@ -41,7 +41,6 @@ export const repairApi = {
   getHandover: (id) => request(() => apiClient.get(`/repairs/jobs/${id}/handover`), 'ไม่สามารถโหลดสถานะส่งมอบได้'),
   finalizeHandover: (id, payload) => request(() => apiClient.post(`/repairs/jobs/${id}/handover/finalize`, payload), 'ไม่สามารถยืนยันการส่งมอบได้'),
   transitionWorkflow: (id, payload) => request(() => apiClient.post(`/repairs/jobs/${id}/workflow/commands`, payload), 'ไม่สามารถดำเนินขั้นตอนงานซ่อมได้'),
-  transitionJob: (id, payload) => request(() => apiClient.patch(`/repairs/jobs/${id}/status`, payload), 'ไม่สามารถอัปเดตสถานะงานซ่อมได้'),
   addPart: (id, payload) => request(() => apiClient.post(`/repairs/jobs/${id}/parts`, payload), 'ไม่สามารถบันทึกอะไหล่ได้'),
   getClaimOptions: (id) => request(() => apiClient.get(`/repairs/jobs/${id}/warranty-claim-options`), 'ไม่สามารถโหลดข้อมูลสำหรับเปิดรายการเคลมได้'),
   openClaim: (id, payload) => request(() => apiClient.post(`/repairs/jobs/${id}/warranty-claims`, payload), 'ไม่สามารถเปิดรายการเคลมได้'),

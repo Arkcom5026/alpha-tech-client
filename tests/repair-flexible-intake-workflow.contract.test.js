@@ -13,6 +13,7 @@ describe('repair flexible intake workflow contract', () => {
 
     expect(diagnosisPanel).toContain('ขั้นตรวจสอบ');
     expect(diagnosisPanel).toContain('บันทึกผลตรวจสอบ');
+    expect(diagnosisPanel).not.toContain('วินิจฉัย');
     expect(runtime).toContain("WAITING_DIAGNOSIS', label: 'รอตรวจสอบ'");
     expect(runtime).toContain("DIAGNOSING', label: 'กำลังตรวจสอบ'");
     expect(workflowOverview).not.toContain('กลับไปวินิจฉัย');
@@ -28,6 +29,7 @@ describe('repair flexible intake workflow contract', () => {
     const intakePolicy = read(
       'src/features/repair/intake/workspace/policies/repairIntakePolicy.js'
     );
+    const intakePage = read('src/features/repair/pages/RepairIntakePage.jsx');
     const externalIntake = read('src/features/repair/components/ExternalDeviceIntakeForm.jsx');
     const diagnosisPanel = read('src/features/repair/components/RepairDiagnosisPanel.jsx');
 
@@ -40,14 +42,19 @@ describe('repair flexible intake workflow contract', () => {
     }
 
     expect(intakePolicy).toContain('preAgreedService');
+    expect(intakePolicy).toContain("if (!draft?.preAgreedService?.enabled) return true");
     expect(intakePolicy).toContain('estimatedCost: preAgreedService');
+    expect(intakePage).toContain('buildRepairJobPayload({ draft, intakeContact })');
+    expect(intakePage).toContain('runtime.createExternalIntake(intakePayload)');
     expect(externalIntake).toContain('preAgreedService: agreement');
     expect(externalIntake).toContain('agreement.agreedAmount');
 
     expect(diagnosisPanel).toContain("actionNames.has('START_PRE_AGREED_SERVICE')");
+    expect(diagnosisPanel).toContain('preAgreedService?.enabled');
     expect(diagnosisPanel).toContain("run('START_PRE_AGREED_SERVICE')");
     expect(diagnosisPanel).toContain('workflow.preAgreedService');
     expect(diagnosisPanel).toContain('ใช้ราคาที่ตกลงและไปขั้นเริ่มงาน');
+    expect(diagnosisPanel).toContain("actionNames.has('QUEUE_DIAGNOSIS')");
   });
 
   it('prefills pickup receiver name from the repair customer projection while still allowing edits', () => {

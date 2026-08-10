@@ -21,7 +21,7 @@ const VatCarryForwardAuthorityPanel = ({ branchId, taxPeriodId, onConfirmed }) =
   const [error, setError] = useState('');
 
   const sourceType = context?.previousPeriod ? 'PRIOR_PERIOD' : 'HISTORICAL_OPENING';
-  const immutable = ['LOCKED', 'SUBMITTED'].includes(String(context?.period?.status || ''));
+  const immutable = String(context?.period?.status || '') === 'SUBMITTED';
   const priorSettlementReady = context?.previousPeriod
     ? Boolean(context?.priorPeriodSettlement?.readyForPp30Preparation)
     : true;
@@ -134,7 +134,7 @@ const VatCarryForwardAuthorityPanel = ({ branchId, taxPeriodId, onConfirmed }) =
         </button>
       </div>
 
-      {immutable && <p className="mt-3 text-xs font-semibold text-amber-700">รอบนี้ล็อก/ยื่นแล้ว จึงแก้ Carry-forward Authority ไม่ได้</p>}
+      {immutable && <p className="mt-3 text-xs font-semibold text-amber-700">รอบนี้ยื่นแล้ว จึงแก้ Carry-forward Authority ไม่ได้</p>}
     </section>
   );
 };

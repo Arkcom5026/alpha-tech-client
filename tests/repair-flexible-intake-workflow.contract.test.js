@@ -10,6 +10,9 @@ describe('repair flexible intake workflow contract', () => {
     const diagnosisPanel = read('src/features/repair/components/RepairDiagnosisPanel.jsx');
     const runtime = read('src/features/repair/utils/repairRuntime.js');
     const workflowOverview = read('src/features/repair/components/RepairWorkflowOverview.jsx');
+    const detailWorkspace = read(
+      'src/features/repair/detail/workspace/components/RepairDetailWorkspace.jsx'
+    );
 
     expect(diagnosisPanel).toContain('ขั้นตรวจสอบ');
     expect(diagnosisPanel).toContain('บันทึกผลตรวจสอบ');
@@ -17,6 +20,8 @@ describe('repair flexible intake workflow contract', () => {
     expect(runtime).toContain("WAITING_DIAGNOSIS', label: 'รอตรวจสอบ'");
     expect(runtime).toContain("DIAGNOSING', label: 'กำลังตรวจสอบ'");
     expect(workflowOverview).not.toContain('กลับไปวินิจฉัย');
+    expect(detailWorkspace).toContain('ตั้งแต่ตรวจสอบจนถึงส่งมอบ');
+    expect(detailWorkspace).not.toContain('วินิจฉัย');
 
     expect(diagnosisPanel).toContain("run('COMPLETE_DIAGNOSIS'");
     expect(diagnosisPanel).toContain("run('START_DIAGNOSIS'");

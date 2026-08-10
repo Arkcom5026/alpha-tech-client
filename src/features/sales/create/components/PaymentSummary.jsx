@@ -122,21 +122,12 @@ const PaymentSummary = ({
         setSaleOption={setSaleOption}
         currentSaleMode={currentSaleMode}
         hideNoneOption={isCash}
+        includeDeliveryNote={includeDeliveryNote}
+        setIncludeDeliveryNote={setIncludeDeliveryNote}
+        disabled={isSubmitting || saleExecutionDisabled}
       />
 
-      <div className={`grid grid-cols-1 gap-2 ${isCash ? 'sm:grid-cols-3' : 'sm:grid-cols-2'}`}>
-        {isCash ? (
-          <label className="flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-3 text-sm font-semibold text-blue-900 hover:bg-blue-100">
-            <input
-              type="checkbox"
-              checked={includeDeliveryNote}
-              onChange={(event) => setIncludeDeliveryNote(event.target.checked)}
-              disabled={isSubmitting || saleExecutionDisabled}
-              className="h-4 w-4 accent-blue-700"
-            />
-            <span>ออกใบส่งของเพิ่มเติม</span>
-          </label>
-        ) : null}
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         <button
           type="button"
           onClick={onSaveHeldCart}

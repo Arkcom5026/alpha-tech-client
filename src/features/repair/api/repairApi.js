@@ -83,8 +83,6 @@ export const repairApi = {
     ].forEach((field) => form.append(field, String(evidence[field] ?? '')));
     return request(
       () => apiClient.post(`/repairs/jobs/${id}/intake-evidence`, form, {
-        // apiClient defaults to application/json. Remove that default so Axios/the
-        // browser can generate multipart/form-data with the required boundary.
         headers: { 'Content-Type': undefined },
       }),
       'ไม่สามารถบันทึกหลักฐานการรับเครื่องได้'
@@ -128,6 +126,12 @@ export const repairApi = {
     request(
       () => apiClient.post(`/repairs/jobs/${id}/handover/finalize`, payload),
       'ไม่สามารถยืนยันการส่งมอบได้'
+    ),
+
+  transitionWorkflow: (id, payload) =>
+    request(
+      () => apiClient.post(`/repairs/jobs/${id}/workflow/commands`, payload),
+      'ไม่สามารถดำเนินขั้นตอนงานซ่อมได้'
     ),
 
   transitionJob: (id, payload) =>

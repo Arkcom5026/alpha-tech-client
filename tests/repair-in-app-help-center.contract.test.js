@@ -47,4 +47,15 @@ describe('Repair in-app help center contract', () => {
     expect(content).toContain("pathname.includes('warranty-claims')");
     expect(content).toContain("pathname.includes('/repairs')");
   });
+
+  it('documents the flexible workflow instead of stale mandatory gates', () => {
+    expect(content).toContain('รูปสภาพเครื่องเป็นตัวเลือก');
+    expect(content).toContain('ตกลงราคาและขอบเขตงานแล้ว');
+    expect(content).toContain('การเสนอราคาเป็น capability ที่เลือกใช้ตามบริบท');
+    expect(content).toContain('ชื่อผู้ส่งซ่อมเป็นค่าเริ่มต้น');
+    expect(content).toContain("['WAITING_DIAGNOSIS', 'รอตรวจสอบ'");
+    expect(content).toContain("['DIAGNOSING', 'กำลังตรวจสอบ'");
+    expect(content).not.toContain('วินิจฉัย');
+    expect(content).not.toContain('หากไม่มีความยินยอมและรูปสภาพเครื่องตอนรับเข้า');
+  });
 });

@@ -3,6 +3,7 @@ import { ArrowLeft, CheckCircle2, Download, FileSpreadsheet, RefreshCw, ShieldCh
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { useBranchStore } from '@/features/branch/store/branchStore';
+import AccountingOfficeExceptionsPanel from '../components/AccountingOfficeExceptionsPanel';
 import {
   getAccountingOfficePackage,
   getAccountingOfficePackageErrorMessage,
@@ -203,6 +204,8 @@ const AccountingOfficePackagePage = () => {
             </div>
             <p className="mt-3 text-sm font-black">{readiness.readyForAccountingOffice ? 'READY FOR ACCOUNTANT — พร้อมส่งสำนักงานบัญชี' : 'ยังมีรายการที่ต้องจัดการก่อนปิดชุดส่งสำนักงานบัญชี'}</p>
           </section>
+
+          <AccountingOfficeExceptionsPanel exceptions={data.exceptions || []} />
 
           <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             <div className="rounded-2xl border border-slate-200 bg-white p-4"><p className="text-xs font-bold text-slate-500">Output VAT</p><p className="mt-2 font-black">{readiness.outputVatReady ? 'พร้อม' : 'ยังไม่พร้อม'}</p><p className="mt-1 text-xs text-slate-500">Filing {readiness.filingPrepared ? 'เตรียมแล้ว' : 'ยังไม่เตรียม'} · ครบ {readiness.filingCoversAllDocuments ? '✓' : '—'}</p></div>

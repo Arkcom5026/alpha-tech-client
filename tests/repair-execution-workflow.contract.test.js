@@ -28,12 +28,13 @@ describe('repair execution workflow contract', () => {
     expect(runtime).not.toContain('placeholder="Product ID"');
   });
 
-  it('places part consumption inside the REPAIRING stage only', () => {
+  it('places quantity and serialized part consumption inside the REPAIRING stage only', () => {
     const panel = read('src/features/repair/components/RepairExecutionPanel.jsx');
     const workspace = read('src/features/repair/detail/workspace/components/RepairDetailWorkspace.jsx');
 
     expect(panel).toContain("status === 'REPAIRING'");
-    expect(panel).toContain('onAddPart({ productId: id, qtyUsed: Number(qtyUsed) })');
+    expect(panel).toContain('qtyUsed: serialized ? 1 : Number(qtyUsed)');
+    expect(panel).toContain('stockItemId: Number(selectedStockItem.id)');
     expect(workspace).toContain('<RepairExecutionPanel');
     expect(workspace).toContain('onAddPart={onAddPart}');
   });

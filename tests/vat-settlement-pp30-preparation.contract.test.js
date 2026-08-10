@@ -50,11 +50,13 @@ test('carry-forward panel exposes source credit cap, audit fields and confirmati
   assert.match(source, /SUBMITTED/);
 });
 
-test('workspace blocks PP30 readiness when carry-forward authority is unresolved', () => {
+test('workspace requires prior carry-forward or explicit historical opening authority', () => {
   const source = read('src/features/tax/settlement/pages/VatSettlementPage.jsx');
   assert.match(source, /carryForwardAuthorityReady/);
   assert.match(source, /VAT_SETTLEMENT_CARRY_FORWARD_AUTHORITY_REQUIRED/);
-  assert.match(source, /ภาษีชำระไว้เกินยกมา/);
+  assert.match(source, /VAT_SETTLEMENT_HISTORICAL_OPENING_AUTHORITY_REQUIRED/);
+  assert.match(source, /ยอดเปิดระบบ/);
+  assert.match(source, /แม้ยอดที่ยืนยันจะเป็น 0\.00/);
   assert.match(source, /pp30NetVatAfterCarryForward/);
   assert.match(source, /รอ Authority/);
 });

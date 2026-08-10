@@ -29,9 +29,10 @@ describe('repair API route parity', () => {
   });
 
   it('does not expose the retired free-status repair mutation', () => {
-    expect(source).not.toContain("transitionJob:");
-    expect(source).not.toContain("/status`, payload");
+    expect(source).not.toContain('transitionJob:');
+    expect(source).not.toContain('apiClient.patch(`/repairs/jobs/${id}/status`');
     expect(source).toContain('transitionWorkflow');
+    expect(source).toContain('apiClient.patch(`/repairs/warranty-claims/${id}/status`');
   });
 
   it('keeps serialized repair-part discovery behind the repair boundary', () => {

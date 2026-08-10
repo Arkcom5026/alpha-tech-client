@@ -15,7 +15,7 @@ describe('repair diagnosis workflow contract', () => {
 
     expect(api).toContain('/workflow/commands');
     expect(page).toContain('transitionWorkflow');
-    expect(diagnosis).toContain('expectedWorkflowStatus: status');
+    expect(diagnosis).toContain('expectedWorkflowStatus: workflow.status');
     expect(runtime).toContain('สถานะถูกควบคุมด้วย Repair Workflow');
     expect(runtime).not.toContain('เลือกสถานะถัดไป');
   });

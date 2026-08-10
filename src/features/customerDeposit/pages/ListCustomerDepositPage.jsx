@@ -2,20 +2,17 @@
 // 🏛️ Premium Finance Influx: (Fixed Tenant Navigation, Glassmorphic Headers & Spring Physics Buttons)
 import React, { useEffect } from 'react';
 // 🟢 [IMPORT FIXED] เรียกใช้งาน useParams คุมรหัสพิกัดบริษัทคั่น URL
-import { useNavigate, useParams } from 'react-router-dom';
 import useCustomerDepositStore from '../store/customerDepositStore';
 import StandardActionButtons from '@/components/shared/buttons/StandardActionButtons';
-import { Plus, Banknote, Calendar, User, Phone, Wallet, Layers } from 'lucide-react';
+import { Banknote, Calendar, User, Phone, Wallet, Layers } from 'lucide-react';
 
 const ListCustomerDepositPage = () => {
   // 🟢 [SLUG ACTIVATED] แกะคีย์ Dynamic Shop Slug ประจำหน้างานปัจจุบัน
-  const { shopSlug } = useParams();
   const { deposits, fetchCustomerDepositsAction, cancelCustomerDepositAction } = useCustomerDepositStore();
-  const navigate = useNavigate();
 
   useEffect(() => {
     fetchCustomerDepositsAction();
-  }, []);
+  }, [fetchCustomerDepositsAction]);
 
   const handleCancel = async (id) => {
     if (window.confirm('คุณต้องการยกเลิกรายการนี้หรือไม่?')) {
@@ -30,24 +27,13 @@ const ListCustomerDepositPage = () => {
       <div className="bg-white/80 border border-slate-200/80 p-6 rounded-3xl shadow-[0_4px_25px_rgba(0,0,0,0.01)] backdrop-blur-md flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5 transition-all duration-300">
         <div className="min-w-0">
           <h1 className="text-xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-            <Banknote className="w-5 h-5 text-orange-500" /> รายการเงินมัดจำของลูกค้า
+            <Banknote className="w-5 h-5 text-orange-500" /> ประวัติเงินมัดจำระบบเดิม
           </h1>
           <p className="text-xs text-slate-400 mt-1 font-bold tracking-wide">
-            Customer Deposit Management • ตรวจสอบความถูกต้องสมดุลยอดเงินสด เงินโอน และบัญชีมัดจำกลางประจำสาขา
+            สำหรับตรวจสอบรายการเดิมเท่านั้น การรับเงินใหม่ให้ใช้เมนูรับเงินจากลูกค้า
           </p>
         </div>
 
-        {/* 🚀 BUTTON: ปุ่มกดรับเงินมัดจำแบบเด้งสู้เมาส์ Spring Physics หล่อล้ำยุค */}
-        <button
-          onClick={() => {
-            const targetSlug = shopSlug || 'advancetech';
-            navigate(`/${targetSlug}/pos/finance/deposit/create`);
-          }}
-          className="flex items-center gap-1.5 px-4 py-2.5 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-black text-xs sm:text-sm rounded-xl border border-orange-400/10 shadow-[0_4px_15px_rgba(249,115,22,0.2)] transform hover:-translate-y-0.5 active:scale-95 transition-all duration-300 shrink-0 self-start sm:self-auto"
-        >
-          <Plus className="w-4 h-4 text-orange-100" />
-          <span>รับเงินมัดจำ</span>
-        </button>
       </div>
 
       {/* 📊 2. แผงตารางประมวลผลโมเดิร์น ยกระดับจากขอบเทาแบนๆ สู่ความเนี๊ยบระดับสากล */}

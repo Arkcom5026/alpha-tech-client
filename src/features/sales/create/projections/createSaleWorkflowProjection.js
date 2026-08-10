@@ -36,6 +36,8 @@ export const projectCreateSaleWorkflow = ({
   documentHandoff: {
     saleOption: documentHandoff.saleOption,
     setSaleOption: documentHandoff.setSaleOption,
+    includeDeliveryNote: documentHandoff.includeDeliveryNote,
+    setIncludeDeliveryNote: documentHandoff.setIncludeDeliveryNote,
     handleConfirmed: documentHandoff.handleConfirmed,
   },
   heldCart,

@@ -26,6 +26,7 @@ const TaxIntakeWorkspacePage = () => {
     loadData,
     openDocument,
     handleTransition,
+    handleIssue,
   } = useTaxIntakeWorkspaceController();
 
   if (!branchId) {
@@ -64,6 +65,7 @@ const TaxIntakeWorkspacePage = () => {
           transitioning={transitioning}
           transitionError={transitionError}
           onTransition={handleTransition}
+          onIssue={handleIssue}
         />
       )}
 

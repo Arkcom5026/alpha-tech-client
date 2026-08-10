@@ -22,6 +22,8 @@ const PaymentSummary = ({
   retryingExistingCommand = false,
   saleOption,
   setSaleOption,
+  includeDeliveryNote = false,
+  setIncludeDeliveryNote,
   currentSaleMode,
   setCurrentSaleMode,
   hasValidCustomerId = false,
@@ -42,7 +44,7 @@ const PaymentSummary = ({
       setSaleOption(PRINT_OPTION.DELIVERY_NOTE);
       return;
     }
-    if (isCash && saleOption === PRINT_OPTION.NONE) {
+    if (isCash && [PRINT_OPTION.NONE, PRINT_OPTION.DELIVERY_NOTE].includes(saleOption)) {
       setSaleOption(PRINT_OPTION.RECEIPT);
     }
   }, [isCredit, isCash, saleOption, setSaleOption]);
@@ -122,7 +124,19 @@ const PaymentSummary = ({
         hideNoneOption={isCash}
       />
 
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+      <div className={`grid grid-cols-1 gap-2 ${isCash ? 'sm:grid-cols-3' : 'sm:grid-cols-2'}`}>
+        {isCash ? (
+          <label className="flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-3 text-sm font-semibold text-blue-900 hover:bg-blue-100">
+            <input
+              type="checkbox"
+              checked={includeDeliveryNote}
+              onChange={(event) => setIncludeDeliveryNote(event.target.checked)}
+              disabled={isSubmitting || saleExecutionDisabled}
+              className="h-4 w-4 accent-blue-700"
+            />
+            <span>ออกใบส่งของเพิ่มเติม</span>
+          </label>
+        ) : null}
         <button
           type="button"
           onClick={onSaveHeldCart}
@@ -175,11 +189,14 @@ PaymentSummary.propTypes = {
   retryingExistingCommand: PropTypes.bool,
   saleOption: PropTypes.oneOf([
     PRINT_OPTION.NONE,
+    PRINT_OPTION.ORDINARY_RECEIPT,
     PRINT_OPTION.RECEIPT,
     PRINT_OPTION.TAX_INVOICE,
     PRINT_OPTION.DELIVERY_NOTE,
   ]).isRequired,
   setSaleOption: PropTypes.func.isRequired,
+  includeDeliveryNote: PropTypes.bool,
+  setIncludeDeliveryNote: PropTypes.func.isRequired,
   currentSaleMode: PropTypes.oneOf([SALE_MODE.CASH, SALE_MODE.CREDIT]).isRequired,
   setCurrentSaleMode: PropTypes.func.isRequired,
   hasValidCustomerId: PropTypes.bool,

@@ -8,6 +8,7 @@ import {
   listTaxCandidates,
   listTaxDocuments,
   transitionTaxDocument,
+  issueOutputTaxDocument,
 } from '../api/taxIntakeApi';
 
 const normalizeList = (result, key) => (
@@ -119,6 +120,20 @@ const useTaxIntakeWorkspaceController = () => {
     }
   }, [branchId, loadData, selectedDocument?.id]);
 
+  const handleIssue = useCallback(async (taxInvoiceKind) => {
+    if (!branchId || !selectedDocument?.id) return;
+    setTransitioning(true); setTransitionError(null);
+    try {
+      await issueOutputTaxDocument({ branchId, taxDocumentId: selectedDocument.id, taxInvoiceKind });
+      setSelectedDocument(await getTaxDocumentDetail({ branchId, taxDocumentId: selectedDocument.id }));
+      await loadData();
+      toast.success('ออกเลขใบกำกับภาษีเรียบร้อยแล้ว');
+    } catch (requestError) {
+      const message = getTaxIntakeErrorMessage(requestError);
+      setTransitionError({ message, details: getTaxIntakeErrorDetails(requestError) }); toast.error(message);
+    } finally { setTransitioning(false); }
+  }, [branchId, loadData, selectedDocument?.id]);
+
   const totals = useMemo(() => ({
     candidates: candidates.length,
     documents: documents.length,
@@ -142,6 +157,7 @@ const useTaxIntakeWorkspaceController = () => {
     loadData,
     openDocument,
     handleTransition,
+    handleIssue,
   };
 };
 

@@ -11,6 +11,9 @@ import {
 import CreateSalePage from '@/features/sales/create/pages/CreateSalePage';
 import PrintDeliveryNotePage from '@/features/deliveryNote/pages/PrintDeliveryNotePage';
 import CombinedBillingPage from '@/features/combinedBilling/pages/CombinedBillingPage';
+import PrintConsolidatedTaxPage from '@/features/combinedBilling/pages/PrintConsolidatedTaxPage';
+import PrintConsolidatedDeliveryPage from '@/features/combinedBilling/pages/PrintConsolidatedDeliveryPage';
+import PrintConsolidatedBillPage from '@/features/combinedBilling/pages/PrintConsolidatedBillPage';
 import DeliveryNoteListPage from '@/features/deliveryNote/pages/DeliveryNoteListPage';
 import ListOrderOnlinePosPage from '@/features/orderOnlinePos/pages/ListOrderOnlinePosPage';
 import OrderOnlinePosDetailPage from '@/features/orderOnlinePos/pages/OrderOnlinePosDetailPage';
@@ -37,6 +40,7 @@ const salesRoutes = {
     { path: 'bill/print-full/:saleId', element: <PrintBillPageFullTax /> },
     { path: 'print-short/:saleId', element: <PrintBillPageShortTax /> },
     { path: 'print-full/:saleId', element: <PrintBillPageFullTax /> },
+    { path: 'tax-document/print/:taxDocumentId', element: <PrintConsolidatedTaxPage /> },
     {
       path: 'delivery-note',
       children: [
@@ -45,6 +49,9 @@ const salesRoutes = {
       ],
     },
     { path: 'combined-billing', element: <CombinedBillingPage /> },
+    { path: 'combined-billing/delivery/print/:documentId', element: <PrintConsolidatedDeliveryPage /> },
+    { path: 'combined-billing/bill/print/:documentId', element: <PrintConsolidatedBillPage /> },
+    { path: 'combined-billing/tax/print/:taxDocumentId', element: <PrintConsolidatedTaxPage /> },
     { path: 'sale-return', element: <ReturnSearchPage /> },
     { path: 'sale-return/create/:saleId', element: <CreateReturnPage /> },
     { path: 'credit-note/print/:taxDocumentId', element: <PrintCreditNotePage /> },

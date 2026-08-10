@@ -3,7 +3,7 @@
 // 🏛️ Clean Architecture Routing: Unified Premium Integration (Safe Emergency Rollback Edition)
 // 🎨 Minimal Platinum Light Mode Edition Integrated — Fix Blank Screen Loop
 import React from 'react';
-import { Navigate, Outlet } from 'react-router-dom';
+import { Navigate, Outlet, useParams } from 'react-router-dom';
 import ProtectedRoute from '@/features/auth/components/ProtectedRoute';
 
 import purchasesRoutes from './purchasesRoutes';
@@ -20,6 +20,11 @@ import { ReportsDashboardPage } from '@/features/pos/pages/dashboard/ReportsDash
 import StoreHomepageEditorPage from '@/features/storeExperience/pages/StoreHomepageEditorPage';
 import OnlineProductVisibilityDashboardPage from '@/features/storeExperience/pages/OnlineProductVisibilityDashboardPage';
 import PrinterSettingsPage from '@/features/printing/settings/PrinterSettingsPage';
+import TaxIssuerProfilePage from '@/features/tax/issuerProfile/pages/TaxIssuerProfilePage';
+import SalesTaxFilingPage from '@/features/tax/outputFilings/pages/SalesTaxFilingPage';
+import TaxPublicationRetryPage from '@/features/tax/publicationRetry/pages/TaxPublicationRetryPage';
+import ListSalesTaxReportPage from '@/features/salesTaxReport/pages/ListSalesTaxReportPage';
+import PrintSalesTaxReportPage from '@/features/salesTaxReport/pages/PrintSalesTaxReportPage';
 
 import DailyClosingPage from '@/features/finance/pages/DailyClosingPage';
 import AccountsReceivablePage from '@/features/finance/pages/AccountsReceivablePage';
@@ -28,18 +33,19 @@ import TaxIntakeWorkspacePage from '@/features/tax/intake/pages/TaxIntakeWorkspa
 import TaxPeriodManagementPage from '@/features/tax/periods/pages/TaxPeriodManagementPage';
 import AccountingOfficePackagePage from '@/features/tax/periods/pages/AccountingOfficePackagePage';
 import InputTaxReceiptWorkspacePage from '@/features/tax/inputDocuments/pages/InputTaxReceiptWorkspacePage';
-import InputVatReportPage from '@/features/tax/inputVatReport/pages/InputVatReportPage';
 import SupplierPayableWorkspacePage from '@/features/supplierPayable/pages/SupplierPayableWorkspacePage';
 import TaxExpenseWorkspacePage from '@/features/taxExpense/pages/TaxExpenseWorkspacePage';
 import CustomerMoneyReceiveListPage from '@/features/customerMoneyReceive/pages/CustomerMoneyReceiveListPage';
 import CustomerMoneyReceivePage from '@/features/customerMoneyReceive/pages/CustomerMoneyReceivePage';
 import CustomerMoneyReceiveDetailPage from '@/features/customerMoneyReceive/pages/CustomerMoneyReceiveDetailPage';
 import CustomerMoneyReceiptPrintPage from '@/features/customerMoneyReceive/pages/CustomerMoneyReceiptPrintPage';
+import DeliveryCreditSettlementListPage from '@/features/customerMoneySettlement/pages/DeliveryCreditSettlementListPage';
+import DeliveryCreditSettlementCreatePage from '@/features/customerMoneySettlement/pages/DeliveryCreditSettlementCreatePage';
+import DeliveryCreditSettlementDetailPage from '@/features/customerMoneySettlement/pages/DeliveryCreditSettlementDetailPage';
+import DeliveryCreditSettlementPrintPage from '@/features/customerMoneySettlement/pages/DeliveryCreditSettlementPrintPage';
 
 import CustomerReceiptListPage from '@features/customerReceipt/pages/CustomerReceiptListPage';
-import CreateCustomerReceiptPage from '@features/customerReceipt/pages/CreateCustomerReceiptPage';
 import CustomerReceiptDetailPage from '@features/customerReceipt/pages/CustomerReceiptDetailPage';
-import CustomerReceiptAllocatePage from '@features/customerReceipt/pages/CustomerReceiptAllocatePage';
 import PrintCustomerReceiptPage from '@features/customerReceipt/pages/PrintCustomerReceiptPage';
 import ReprintCustomerReceiptPage from '@features/customerReceipt/reprint/pages/ReprintCustomerReceiptPage';
 
@@ -65,6 +71,11 @@ const TempReportPage = ({ title }) => (
   </div>
 );
 
+const LegacyCustomerMoneyRedirect = ({ target }) => {
+  const { shopSlug } = useParams();
+  return <Navigate to={`/${shopSlug || 'advancetech'}/pos/finance/${target}`} replace />;
+};
+
 export const posPartnerRoutes = [
   {
     element: <ProtectedRoute />,
@@ -86,7 +97,8 @@ export const posPartnerRoutes = [
           { path: 'sales/products', element: <TempReportPage title="📦 รายงานวิเคราะห์อันดับสินค้าขายดี" /> },
           { path: 'purchase', element: <TempReportPage title="🚚 รายงานวิเคราะห์ประวัติการจัดซื้อสินค้า" /> },
           { path: 'inputtax', element: <InputVatReportPage /> },
-          { path: 'salestax', element: <TempReportPage title="💵 รายงานสมุดบัญชีภาษีขาย" /> },
+          { path: 'salestax', element: <ListSalesTaxReportPage /> },
+          { path: 'sales-tax/print', element: <PrintSalesTaxReportPage /> },
         ],
       },
       {
@@ -100,6 +112,8 @@ export const posPartnerRoutes = [
           { path: 'tax-intake', element: <TaxIntakeWorkspacePage /> },
           { path: 'input-tax-receipts', element: <InputTaxReceiptWorkspacePage /> },
           { path: 'tax-periods', element: <TaxPeriodManagementPage /> },
+          { path: 'output-tax-filings', element: <SalesTaxFilingPage /> },
+          { path: 'tax-publication-retry', element: <TaxPublicationRetryPage /> },
           { path: 'tax-periods/:taxPeriodId/accounting-office', element: <AccountingOfficePackagePage /> },
           { path: 'tax-expenses', element: <TaxExpenseWorkspacePage /> },
           { path: 'supplier-payables', element: <SupplierPayableWorkspacePage /> },
@@ -113,12 +127,21 @@ export const posPartnerRoutes = [
             ],
           },
           {
+            path: 'customer-money-settlements',
+            children: [
+              { index: true, element: <DeliveryCreditSettlementListPage /> },
+              { path: 'create', element: <DeliveryCreditSettlementCreatePage /> },
+              { path: ':id', element: <DeliveryCreditSettlementDetailPage /> },
+              { path: ':id/print', element: <DeliveryCreditSettlementPrintPage /> },
+            ],
+          },
+          {
             path: 'customer-receipts',
             children: [
               { index: true, element: <CustomerReceiptListPage /> },
-              { path: 'create', element: <CreateCustomerReceiptPage /> },
+              { path: 'create', element: <LegacyCustomerMoneyRedirect target="customer-money-receive/create" /> },
               { path: ':id', element: <CustomerReceiptDetailPage /> },
-              { path: ':id/allocate', element: <CustomerReceiptAllocatePage /> },
+              { path: ':id/allocate', element: <LegacyCustomerMoneyRedirect target="customer-money-settlements/create" /> },
               { path: ':id/print', element: <PrintCustomerReceiptPage /> },
               { path: ':id/reprint', element: <ReprintCustomerReceiptPage /> },
             ],
@@ -131,6 +154,7 @@ export const posPartnerRoutes = [
         children: [
           { index: true, element: <SettingsDashboardPage /> },
           { path: 'printers', element: <PrinterSettingsPage /> },
+          { path: 'tax-issuer', element: <TaxIssuerProfilePage /> },
           { path: 'storefront', element: <StoreHomepageEditorPage /> },
           { path: 'online-products', element: <OnlineProductVisibilityDashboardPage /> },
           { path: 'employee', element: <ListEmployeePage /> },

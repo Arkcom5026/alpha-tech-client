@@ -1,3 +1,4 @@
+/* global process */
 import fs from 'node:fs'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
@@ -16,10 +17,12 @@ const toolbarPath = path.join(
   root,
   'src/features/bill/shortTax/print/workspace/components/BillShortTaxPrintToolbar.jsx'
 )
+const layoutPath = path.join(root, 'src/features/bill/components/BillLayoutShortTax.jsx')
 const page = fs.readFileSync(pagePath, 'utf8')
 const runtime = fs.readFileSync(runtimePath, 'utf8')
 const shell = fs.readFileSync(shellPath, 'utf8')
 const toolbar = fs.readFileSync(toolbarPath, 'utf8')
+const layout = fs.readFileSync(layoutPath, 'utf8')
 
 describe('bill short tax print workspace behavior contract', () => {
   it('keeps bill hydration scoped to route sale and optional payment identity', () => {
@@ -75,5 +78,10 @@ describe('bill short tax print workspace behavior contract', () => {
     expect(shell).toContain('hideContactName={hideContactName}')
     expect(shell).toContain('editableDocumentLines')
     expect(shell).toContain('className="bill-print-root')
+  })
+
+  it('shows a customer identity on the original short-tax document', () => {
+    expect(layout).toContain("customer?.name || customer?.companyName || sale?.customerName || 'ลูกค้าทั่วไป'")
+    expect(layout).toContain('{getCustomerNameText(sale.customer)}')
   })
 })

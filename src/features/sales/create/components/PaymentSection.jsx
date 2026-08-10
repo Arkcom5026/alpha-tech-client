@@ -27,6 +27,8 @@ const PaymentSection = ({
   onSaleModeChange,
   saleOption,
   onSaleOptionChange,
+  includeDeliveryNote,
+  onIncludeDeliveryNoteChange,
   onConfirmSale,
   onSaveHeldCart,
   heldCartDisabled = false,
@@ -60,6 +62,8 @@ const PaymentSection = ({
     onSaleModeChange,
     saleOption,
     onSaleOptionChange,
+    includeDeliveryNote,
+    onIncludeDeliveryNoteChange,
     onConfirmSale,
     onSaleConfirmed,
     setClearPhoneTrigger,
@@ -136,6 +140,8 @@ const PaymentSection = ({
             retryingExistingCommand={payment.confirmation.retryingExistingCommand}
             saleOption={saleOption}
             setSaleOption={onSaleOptionChange}
+            includeDeliveryNote={includeDeliveryNote}
+            setIncludeDeliveryNote={onIncludeDeliveryNoteChange}
             currentSaleMode={currentSaleMode}
             setCurrentSaleMode={payment.saleMode.change}
             hasValidCustomerId={hasValidCustomerId}

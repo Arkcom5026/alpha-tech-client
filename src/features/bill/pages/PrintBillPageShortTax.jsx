@@ -28,6 +28,8 @@ const PrintBillPageShortTax = () => {
     return value === '1' || value === 'true' || value === 'yes'
   }, [searchParams])
 
+  const isOrdinaryReceipt = searchParams.get('document') === 'receipt'
+
   const {
     sale,
     payment,
@@ -121,6 +123,7 @@ const PrintBillPageShortTax = () => {
         payment={payment}
         config={config}
         hideContactName={hideContactName}
+        documentTitle={isOrdinaryReceipt ? 'ใบเสร็จรับเงิน' : undefined}
         printRootRef={printRuntime.printRootRef}
         documentLineEditor={documentLineEditor}
       />

@@ -1,5 +1,6 @@
 import { mapSalePaymentIntent } from '../services/salePaymentIntentMapper';
 import { validateSalePaymentConfirmation } from '../services/salePaymentValidation';
+import { issueOutputTaxDocument } from '@/features/tax/intake/api/taxIntakeApi';
 
 const projectSaleOption = ({ saleMode, saleOption }) => {
   if (saleMode === 'CREDIT') return 'DELIVERY_NOTE';
@@ -14,6 +15,7 @@ export const executeSalePaymentConfirmation = async ({
   calculation,
   saleMode,
   saleOption,
+  includeDeliveryNote = false,
   customerType,
   hasValidCustomerId,
   hasImmediatePayment,
@@ -55,7 +57,7 @@ export const executeSalePaymentConfirmation = async ({
 
   try {
     const response = await onConfirmSale({
-      deliveryNoteMode: saleMode === 'CREDIT' ? 'PRINT' : undefined,
+      deliveryNoteMode: saleMode === 'CREDIT' || includeDeliveryNote ? 'PRINT' : undefined,
       saleType: customerType === 'GOVERNMENT' ? 'GOVERNMENT' : undefined,
       paymentIntent,
     });
@@ -75,6 +77,41 @@ export const executeSalePaymentConfirmation = async ({
       return {
         ok: false,
         error: '❌ ไม่พบ ID ของรายการขายหลังจากยืนยัน',
+      };
+    }
+
+    if (saleMode === 'CASH') {
+      const completion = response?.data || response;
+      if (saleOption === 'ORDINARY_RECEIPT') {
+        const paymentId = Number(completion?.payments?.[0]?.id || 0);
+        if (!paymentId) {
+          throw new Error('บันทึกการขายแล้ว แต่ไม่พบรายการรับชำระสำหรับออกใบเสร็จรับเงิน');
+        }
+        onSaleConfirmed?.(saleId, 'ORDINARY_RECEIPT', { ...confirmContext, paymentId });
+        return { ok: true, saleId, paymentId, saleOption: 'ORDINARY_RECEIPT', response };
+      }
+
+      const taxDocumentId = Number(completion?.taxIntake?.taxDocumentId || response?.taxIntake?.taxDocumentId || 0);
+      if (!taxDocumentId) {
+        const error = new Error('บันทึกการขายแล้ว แต่ยังส่งรายการเข้าสู่ทะเบียนภาษีขายไม่สำเร็จ');
+        error.code = completion?.taxIntake?.code || response?.taxIntake?.code || 'OUTPUT_TAX_PUBLICATION_PENDING';
+        throw error;
+      }
+      const taxInvoiceKind = saleOption === 'TAX_INVOICE' ? 'FULL' : 'SHORT';
+      const issued = await issueOutputTaxDocument({
+        branchId: completion?.sale?.branchId || response?.sale?.branchId,
+        taxDocumentId,
+        taxInvoiceKind,
+      });
+      const issuedDocumentId = Number(issued?.document?.id || taxDocumentId);
+      const finalTaxOption = taxInvoiceKind === 'FULL' ? 'TAX_DOCUMENT_FULL' : 'TAX_DOCUMENT_SHORT';
+      onSaleConfirmed?.(issuedDocumentId, finalTaxOption, confirmContext);
+      return {
+        ok: true,
+        saleId,
+        taxDocumentId: issuedDocumentId,
+        saleOption: finalTaxOption,
+        response,
       };
     }
 

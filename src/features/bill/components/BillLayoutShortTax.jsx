@@ -87,6 +87,7 @@ const BillLayoutShortTax = ({
   payments,
   config,
   hideContactName,
+  documentTitle,
 
   editableDocumentLines = false,
   editingLineKey = null,
@@ -96,7 +97,7 @@ const BillLayoutShortTax = ({
   onChangeDocumentLineDraft,
   onSaveDocumentLine,
 }) => {
-  const receiptTitle = 'ใบกำกับภาษีอย่างย่อ / ใบเสร็จรับเงิน'
+  const receiptTitle = documentTitle || 'ใบกำกับภาษีอย่างย่อ / ใบเสร็จรับเงิน'
   const receiptRootRef = React.useRef(null)
 
   React.useEffect(() => {
@@ -287,6 +288,9 @@ const BillLayoutShortTax = ({
     if (!customer) return '-'
     return customer.user?.loginId || customer.phone || customer.phoneNumber || '-'
   }
+
+  const getCustomerNameText = (customer) =>
+    customer?.name || customer?.companyName || sale?.customerName || 'ลูกค้าทั่วไป'
 
   const normalizedPayments = Array.isArray(payments)
     ? payments
@@ -645,10 +649,12 @@ const BillLayoutShortTax = ({
             <div className="left label">พนักงานขาย</div>
             <div className="right clip">{sale.employee?.name || '-'}</div>
           </div>
-          <div className="row small">
-            <div className="left label">หน่วยงาน</div>
-            <div className="right clip">{sale.customer?.companyName || '-'}</div>
-          </div>
+          {sale.customer?.companyName && (
+            <div className="row small">
+              <div className="left label">หน่วยงาน</div>
+              <div className="right clip">{sale.customer.companyName}</div>
+            </div>
+          )}
           <div className="row small mono">
             <div className="left label">โทร:</div>
             <div className="right clip">{getCustomerPhoneText(sale.customer)}</div>
@@ -656,7 +662,7 @@ const BillLayoutShortTax = ({
           {!hideContactName && (
             <div className="row small">
               <div className="left label">ลูกค้า</div>
-              <div className="right clip">{sale.customer?.name || '-'}</div>
+              <div className="right clip">{getCustomerNameText(sale.customer)}</div>
             </div>
           )}
         </div>

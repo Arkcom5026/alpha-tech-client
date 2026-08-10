@@ -7,7 +7,6 @@ import {
   Clock,
   FileCheck,
   FileText,
-  Plus,
   RefreshCw,
   Search,
   XCircle,
@@ -34,7 +33,6 @@ const CustomerReceiptListWorkspace = ({
   onKeywordInputChange,
   onSearch,
   onReset,
-  onCreate,
   loading,
   error,
   successMessage,
@@ -45,7 +43,6 @@ const CustomerReceiptListWorkspace = ({
   onToggleSort,
   onOpenDetail,
   onOpenReprint,
-  onOpenAllocate,
 }) => (
   <div className="w-full h-full p-2 md:p-3 space-y-3 max-w-[1600px] mx-auto text-slate-800 selection:bg-orange-500 selection:text-white animate-fadeIn text-xs md:text-sm antialiased font-sans font-semibold">
     <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden w-full">
@@ -55,8 +52,8 @@ const CustomerReceiptListWorkspace = ({
             <FileText className="w-4 h-4" />
           </div>
           <div>
-            <h2 className="text-xs md:text-sm font-black text-slate-900 uppercase tracking-wide">ระบบออกใบรับชำระเงินและตัดหนี้ลูกหนี้</h2>
-            <p className="text-[10px] text-slate-400 font-bold mt-0.5">จัดการใบรับเงินลูกหนี้หน่วยงาน ตรวจสอบยอดคงเหลือ และติดตามการตัดชำระแต่ละบิล</p>
+            <h2 className="text-xs md:text-sm font-black text-slate-900 uppercase tracking-wide">ประวัติใบรับชำระลูกหนี้ระบบเดิม</h2>
+            <p className="text-[10px] text-slate-400 font-bold mt-0.5">สำหรับตรวจสอบรายละเอียดและพิมพ์ย้อนหลังเท่านั้น การรับเงินและตัดยอดใหม่ให้ใช้ Customer Money</p>
           </div>
         </div>
 
@@ -78,9 +75,6 @@ const CustomerReceiptListWorkspace = ({
           </button>
           <button onClick={onReset} className="h-8 px-2.5 bg-slate-50 border border-slate-200 text-slate-500 font-bold text-xs rounded-lg hover:bg-slate-100 transition-all active:scale-95">
             ล้างตัวกรอง
-          </button>
-          <button data-testid="create-new-receipt-button" onClick={onCreate} className="h-8 px-3 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-black text-xs rounded-lg active:scale-95 transition-all shadow-sm flex items-center gap-1 border border-orange-400/10">
-            <Plus className="w-3.5 h-3.5" /> สร้างใบรับเงิน
           </button>
         </div>
       </div>
@@ -173,11 +167,6 @@ const CustomerReceiptListWorkspace = ({
                         <button type="button" onClick={() => onOpenReprint(item)} className="h-5 px-2 bg-amber-50 border border-amber-200 hover:bg-amber-100 text-amber-700 font-black text-[10px] rounded shadow-sm transition-all active:scale-95">
                           พิมพ์
                         </button>
-                        {!isCancelled && remains > 0 && (
-                          <button type="button" onClick={() => onOpenAllocate(item)} className="h-5 px-2 bg-slate-900 hover:bg-slate-800 text-white font-black text-[10px] rounded shadow-sm transition-all active:scale-95">
-                            ตัดบิล
-                          </button>
-                        )}
                       </div>
                     </td>
                   </tr>

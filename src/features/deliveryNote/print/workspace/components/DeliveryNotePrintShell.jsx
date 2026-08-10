@@ -13,6 +13,7 @@ const DeliveryNotePrintShell = ({
   onToggleDocumentLineEdit,
   onChangeDocumentLineDraft,
   onSaveDocumentLine,
+  editableDocumentLines = true,
 }) => (
   <main className="min-h-screen bg-slate-100 px-3 py-5 text-black print:bg-white print:p-0 md:px-6 md:py-8">
     <section className="mx-auto max-w-[210mm] rounded-2xl bg-white p-3 shadow-sm print:rounded-none print:p-0 print:shadow-none md:p-5">
@@ -22,7 +23,7 @@ const DeliveryNotePrintShell = ({
         setHideDate={setHideDate}
         saleItems={saleItems}
         config={config}
-        editableDocumentLines
+        editableDocumentLines={editableDocumentLines}
         editingLineKey={editingLineKey}
         lineDrafts={lineDrafts}
         savingLineKey={savingLineKey}

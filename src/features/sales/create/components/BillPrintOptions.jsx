@@ -23,9 +23,9 @@ const BillPrintOptions = ({
 
     return [
       ...(hideNoneOption ? [] : [{ value: PRINT_OPTION.NONE, label: 'ไม่พิมพ์เอกสาร', disabled: false }]),
+      { value: PRINT_OPTION.ORDINARY_RECEIPT, label: 'ใบเสร็จรับเงิน', disabled: false },
       { value: PRINT_OPTION.RECEIPT, label: 'ใบกำกับภาษีอย่างย่อ', disabled: false },
       { value: PRINT_OPTION.TAX_INVOICE, label: 'ใบกำกับภาษีเต็มรูป', disabled: false },
-      { value: PRINT_OPTION.DELIVERY_NOTE, label: 'ใบส่งสินค้า', disabled: false },
     ];
   }, [hideNoneOption, isCredit]);
 
@@ -34,7 +34,7 @@ const BillPrintOptions = ({
       setSaleOptionSafe(PRINT_OPTION.DELIVERY_NOTE);
       return;
     }
-    if (isCash && hideNoneOption && saleOption === PRINT_OPTION.NONE) {
+    if (isCash && hideNoneOption && [PRINT_OPTION.NONE, PRINT_OPTION.DELIVERY_NOTE].includes(saleOption)) {
       setSaleOptionSafe(PRINT_OPTION.RECEIPT);
     }
   }, [hideNoneOption, isCash, isCredit, saleOption, setSaleOptionSafe]);

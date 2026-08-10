@@ -1,14 +1,14 @@
 import { resolveSaleDocumentRoute } from '../saleDocumentRoute';
 
 export const openCompletedSaleDocument = ({
-  shopSlug, saleId, option, reservedWindow, navigate,
+  shopSlug, saleId, option, paymentId, reservedWindow, navigate,
   lastDocumentKey,
 }) => {
   const documentKey = `${String(saleId)}::${String(option)}`;
   if (!saleId || !option || option === 'NONE' || documentKey === lastDocumentKey) {
     return { opened: false, documentKey: lastDocumentKey };
   }
-  const route = resolveSaleDocumentRoute({ shopSlug, saleId, option });
+  const route = resolveSaleDocumentRoute({ shopSlug, saleId, option, paymentId });
   if (!route) return { opened: false, documentKey: lastDocumentKey };
   if (typeof navigate !== 'function') {
     return { opened: false, documentKey: lastDocumentKey, route, reason: 'missing-navigation' };

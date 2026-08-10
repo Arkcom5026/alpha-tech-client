@@ -57,6 +57,7 @@ const RepairDiagnosisPanel = ({ job, submitting, onWorkflowAction }) => {
   };
 
   const existingDiagnosis = workflow.diagnosis;
+  const preAgreedService = workflow.preAgreedService;
 
   return (
     <section className="rounded-2xl border border-blue-200 bg-white p-5 shadow-sm">
@@ -65,7 +66,7 @@ const RepairDiagnosisPanel = ({ job, submitting, onWorkflowAction }) => {
           <p className="text-xs font-black uppercase tracking-[0.16em] text-blue-700">Repair Workflow</p>
           <h3 className="mt-1 text-xl font-black text-slate-950">ขั้นตรวจสอบ</h3>
           <p className="mt-1 text-sm text-slate-500">
-            ระบบจะพาไปทีละขั้นและไม่ให้ข้ามงานที่ต้องทำก่อนหน้า
+            งานทั่วไปเลือกตรวจสอบตามปกติ ส่วนงานที่ตกลงราคาและขอบเขตไว้แล้วสามารถเริ่มตามข้อตกลงได้
           </p>
         </div>
         <span className="w-fit rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-black text-blue-700">
@@ -84,6 +85,38 @@ const RepairDiagnosisPanel = ({ job, submitting, onWorkflowAction }) => {
               <Info label="หมายเหตุสำหรับลูกค้า" value={existingDiagnosis.customerNote} />
             </div>
           ) : null}
+        </div>
+      ) : null}
+
+      {actionNames.has('START_PRE_AGREED_SERVICE') && preAgreedService?.enabled ? (
+        <div className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+          <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.14em] text-emerald-700">Pre-agreed Service</p>
+              <h4 className="mt-1 font-black text-emerald-950">ลูกค้าตกลงราคาและขอบเขตงานแล้ว</h4>
+              <p className="mt-1 text-sm text-emerald-800">ไม่จำเป็นต้องผ่านขั้นตรวจสอบและเสนอราคาซ้ำ หากข้อมูลรับเครื่องครบสามารถเริ่มงานตามข้อตกลงได้</p>
+            </div>
+            <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-emerald-800">
+              {formatMoney(preAgreedService.agreedAmount)}
+            </span>
+          </div>
+          <div className="mt-3 grid gap-2 md:grid-cols-2">
+            <Info label="ขอบเขตงานที่ตกลง" value={preAgreedService.agreedScope} />
+            <Info label="ผู้ยืนยัน" value={preAgreedService.confirmedByName} />
+            {preAgreedService.confirmationNote ? (
+              <div className="md:col-span-2">
+                <Info label="หมายเหตุข้อตกลง" value={preAgreedService.confirmationNote} />
+              </div>
+            ) : null}
+          </div>
+          <button
+            type="button"
+            disabled={submitting}
+            onClick={() => run('START_PRE_AGREED_SERVICE')}
+            className="mt-4 min-h-11 rounded-xl bg-emerald-700 px-5 font-black text-white disabled:opacity-40"
+          >
+            ใช้ราคาที่ตกลงและไปขั้นเริ่มงาน
+          </button>
         </div>
       ) : null}
 

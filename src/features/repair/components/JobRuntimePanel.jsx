@@ -6,11 +6,9 @@ const JobRuntimePanel = ({
   submitting,
   workflowManaged = false,
   onTransition,
-  onAddPart,
   onOpenClaim,
 }) => {
   const [transition, setTransition] = useState({ status: '', technicianNotes: '', technicianId: '' });
-  const [part, setPart] = useState({ productId: '', qtyUsed: 1 });
   const [claim, setClaim] = useState({ reason: '', supplierId: '', serviceProvider: '', note: '' });
 
   const activeClaim = (job.warrantyClaims || []).find(
@@ -55,7 +53,7 @@ const JobRuntimePanel = ({
             <div className="mt-4 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950">
               <p className="font-black">สถานะถูกควบคุมด้วย Repair Workflow</p>
               <p className="mt-1 text-blue-800">
-                ใช้ปุ่มดำเนินการในส่วน “ขั้นตรวจสอบ / วินิจฉัย” ด้านบน ระบบจะเปิดเฉพาะขั้นที่ทำได้จริงและป้องกันการข้ามขั้นตอน
+                ใช้ปุ่มดำเนินการในส่วน workflow ด้านบน ระบบจะแสดงเฉพาะงานที่ทำได้ในสถานะปัจจุบันและป้องกันการข้ามขั้นตอน
               </p>
             </div>
           ) : (
@@ -81,6 +79,7 @@ const JobRuntimePanel = ({
 
         <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <h3 className="text-lg font-black text-slate-950">อะไหล่ที่ใช้</h3>
+          <p className="mt-1 text-xs text-slate-500">การเบิกอะไหล่ทำจากขั้น “กำลังซ่อม” ด้านบน เพื่อให้สต๊อกและสถานะงานสอดคล้องกัน</p>
           <div className="mt-3 space-y-2">
             {(job.partsUsed || []).length ? (
               job.partsUsed.map((item) => (
@@ -93,33 +92,6 @@ const JobRuntimePanel = ({
               <p className="text-sm text-slate-500">ยังไม่มีการบันทึกอะไหล่</p>
             )}
           </div>
-
-          {!['COMPLETED', 'CANCELLED'].includes(job.status) ? (
-            <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_120px_auto]">
-              <input
-                value={part.productId}
-                onChange={(event) => setPart((current) => ({ ...current, productId: event.target.value }))}
-                inputMode="numeric"
-                placeholder="Product ID"
-                className="rounded-xl border border-slate-300 px-4 py-3"
-              />
-              <input
-                value={part.qtyUsed}
-                onChange={(event) => setPart((current) => ({ ...current, qtyUsed: event.target.value }))}
-                type="number"
-                min="1"
-                className="rounded-xl border border-slate-300 px-4 py-3"
-              />
-              <button
-                type="button"
-                disabled={submitting || !part.productId}
-                onClick={() => onAddPart({ productId: Number(part.productId), qtyUsed: Number(part.qtyUsed) })}
-                className="rounded-xl bg-blue-700 px-5 py-3 font-black text-white disabled:opacity-40"
-              >
-                บันทึก
-              </button>
-            </div>
-          ) : null}
         </section>
       </div>
 

@@ -49,6 +49,14 @@ export const repairApi = {
       'ไม่สามารถโหลดสินค้าที่มีประกันของลูกค้าได้'
     ),
 
+  searchPartProducts: (search) =>
+    request(
+      () => apiClient.get('/products/pos/search', {
+        params: { search: String(search || '').trim(), limit: 20, _ts: Date.now() },
+      }),
+      'ไม่สามารถค้นหาอะไหล่ในสาขาได้'
+    ),
+
   listJobs: (params = {}) =>
     request(() => apiClient.get('/repairs/jobs', { params }), 'ไม่สามารถโหลดคิวงานซ่อมได้'),
 

@@ -23,6 +23,17 @@ test('tax expense workspace exposes human-reviewed assessment action', () => {
   assert.match(panel, /ยืนยันผลการประเมิน/);
 });
 
+test('assessment suggestions remain editable before human confirmation', () => {
+  const source = read('src/features/taxExpense/components/TaxExpenseAssessmentPanel.jsx');
+  assert.match(source, /const VAT_OPTIONS/);
+  assert.match(source, /const CIT_OPTIONS/);
+  assert.match(source, /updateDecision\(item\.taxExpenseItemId, 'vatTreatment'/);
+  assert.match(source, /updateDecision\(item\.taxExpenseItemId, 'citTreatment'/);
+  assert.match(source, /decisions: items\.map/);
+  assert.match(source, /latestAssessment\.version/);
+  assert.match(source, /latestAssessment\.status/);
+});
+
 test('assessment panel keeps WHT in dedicated workflow', () => {
   const source = read('src/features/taxExpense/components/TaxExpenseAssessmentPanel.jsx');
   assert.match(source, /WHT ไม่ถูกแก้จากหน้านี้/);

@@ -1,10 +1,12 @@
 import React, { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { REPAIR_WORKFLOW_LABELS, formatDateTime } from '../utils/repairRuntime';
 
 const RepairWorkflowOverview = ({ job, submitting, onWorkflowAction }) => {
   const workflow = job?.workflow || {};
   const status = workflow.status || 'RECEIVED';
   const history = workflow.history || [];
+  const claimContext = workflow.claimContext || null;
   const actionNames = useMemo(
     () => new Set((workflow.availableActions || []).map((item) => item.action)),
     [workflow.availableActions]
@@ -34,6 +36,42 @@ const RepairWorkflowOverview = ({ job, submitting, onWorkflowAction }) => {
               {workflow.nextAction || 'ตรวจสอบสถานะงานก่อนดำเนินการต่อ'}
             </p>
           </div>
+
+          {claimContext?.active ? (
+            <div className="mt-4 rounded-xl border border-violet-200 bg-violet-50 p-4">
+              <p className="font-black text-violet-950">ใบงานพักระหว่างกระบวนการเคลม</p>
+              <p className="mt-1 text-sm text-violet-800">
+                เคลม {claimContext.claimNo || `#${claimContext.claimId}`} · {claimContext.status}
+              </p>
+              <p className="mt-2 text-sm text-violet-700">
+                ระบบหยุด action งานซ่อมและการเบิกอะไหล่ไว้ชั่วคราว เพื่อไม่ให้สถานะงานซ่อมเดินสวนกับงานเคลม
+              </p>
+              <Link
+                to={`/warranty-claims/${claimContext.claimId}`}
+                className="mt-3 inline-flex rounded-xl bg-violet-700 px-4 py-2 text-sm font-black text-white"
+              >
+                เปิดรายการเคลมที่กำลังดำเนินการ
+              </Link>
+            </div>
+          ) : null}
+
+          {claimContext?.handbackPending ? (
+            <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+              <p className="font-black text-emerald-950">เคลมจบแล้ว · กลับมาดำเนินใบงานซ่อม</p>
+              <p className="mt-1 text-sm text-emerald-800">
+                {claimContext.claimNo || `#${claimContext.claimId}`} · ผล {claimContext.resolution || '-'}
+              </p>
+              <p className="mt-2 text-sm text-emerald-700">
+                ตรวจผลจากศูนย์และทำขั้นถัดไปตามคำแนะนำด้านบน เมื่อมี workflow action ใหม่ ระบบจะถือว่ารับงานกลับจากเคลมแล้ว
+              </p>
+              <Link
+                to={`/warranty-claims/${claimContext.claimId}`}
+                className="mt-3 inline-flex rounded-xl border border-emerald-300 bg-white px-4 py-2 text-sm font-black text-emerald-800"
+              >
+                ดูผลเคลมและหลักฐาน
+              </Link>
+            </div>
+          ) : null}
 
           {status === 'REJECTED' && actionNames.has('REOPEN_AFTER_REJECTION') ? (
             <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4">

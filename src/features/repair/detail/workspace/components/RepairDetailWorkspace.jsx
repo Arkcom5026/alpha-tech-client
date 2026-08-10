@@ -1,7 +1,11 @@
 import React from 'react';
 import RepairShellHeader from '../../../components/RepairShellHeader';
 import RuntimeStatePanel from '../../../components/RuntimeStatePanel';
+import RepairWorkflowOverview from '../../../components/RepairWorkflowOverview';
 import JobRuntimePanel from '../../../components/JobRuntimePanel';
+import RepairDiagnosisPanel from '../../../components/RepairDiagnosisPanel';
+import RepairExecutionPanel from '../../../components/RepairExecutionPanel';
+import RepairClaimHandoffPanel from '../../../components/RepairClaimHandoffPanel';
 import RepairTrackingAccessPanel from '../../../customer-access/components/RepairTrackingAccessPanel';
 import RepairEstimateApprovalPanel from '../../../customer-access/components/RepairEstimateApprovalPanel';
 import RepairHandoverPanel from '../../../components/RepairHandoverPanel';
@@ -15,7 +19,7 @@ const RepairDetailWorkspace = ({
   error,
   evidenceWarning,
   onRetry,
-  onTransition,
+  onWorkflowAction,
   onAddPart,
   onOpenClaim,
 }) => (
@@ -23,7 +27,7 @@ const RepairDetailWorkspace = ({
     <RepairShellHeader
       eyebrow="Repair Runtime"
       title="รายละเอียดงานซ่อม"
-      description="พื้นที่ปฏิบัติงานหลักสำหรับสถานะ อะไหล่ บันทึกช่าง และการส่งต่อเคลม"
+      description="พื้นที่ปฏิบัติงานหลักที่พาผู้ใช้ทำงานตามขั้นตอน ตั้งแต่ตรวจวินิจฉัยจนถึงส่งมอบ"
     />
 
     <RuntimeStatePanel
@@ -36,16 +40,36 @@ const RepairDetailWorkspace = ({
 
     {job ? (
       <div className="space-y-4">
-        <JobRuntimePanel
+        <RepairWorkflowOverview
           job={job}
           submitting={submitting}
-          onTransition={onTransition}
+          onWorkflowAction={onWorkflowAction}
+        />
+        <RepairDiagnosisPanel
+          job={job}
+          submitting={submitting}
+          onWorkflowAction={onWorkflowAction}
+        />
+        <RepairExecutionPanel
+          job={job}
+          submitting={submitting}
+          onWorkflowAction={onWorkflowAction}
           onAddPart={onAddPart}
+        />
+        <JobRuntimePanel job={job} />
+        <RepairClaimHandoffPanel
+          job={job}
+          submitting={submitting}
           onOpenClaim={onOpenClaim}
         />
         <RepairTrackingAccessPanel repairJobId={repairJobId} jobNo={job.jobNo} />
         <RepairEstimateApprovalPanel repairJobId={repairJobId} job={job} />
-        <RepairHandoverPanel repairJobId={repairJobId} jobStatus={job.status} />
+        <RepairHandoverPanel
+          repairJobId={repairJobId}
+          job={job}
+          onWorkflowAction={onWorkflowAction}
+          onJobReload={onRetry}
+        />
         <IntakeEvidencePanel repairJobId={repairJobId} warning={evidenceWarning} />
       </div>
     ) : null}

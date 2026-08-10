@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import repairApi from '../api/repairApi';
 
-const RepairHandoverPanel = ({ repairJobId, jobStatus }) => {
+const RepairHandoverPanel = ({ repairJobId, job, onWorkflowAction, onJobReload }) => {
+  const workflowStatus = job?.workflow?.status || 'RECEIVED';
   const [handover, setHandover] = useState(null);
   const [checks, setChecks] = useState({
     paymentConfirmed: false, deviceReturned: false, accessoriesReturned: false, note: '',
@@ -16,33 +17,79 @@ const RepairHandoverPanel = ({ repairJobId, jobStatus }) => {
   };
   useEffect(load, [repairJobId]);
 
+  if (!['READY_FOR_DELIVERY', 'DELIVERED', 'CLOSED'].includes(workflowStatus)) return null;
+
   const finalize = async () => {
     setState((v) => ({ ...v, saving: true, error: null }));
     try {
       setHandover(await repairApi.finalizeHandover(repairJobId, checks));
+      await onJobReload?.();
       setState({ loading: false, saving: false, error: null });
     } catch (error) {
       setState({ loading: false, saving: false, error: error.message });
     }
   };
 
+  const closeJob = () => onWorkflowAction?.({
+    action: 'CLOSE',
+    expectedWorkflowStatus: 'DELIVERED',
+    note: 'ปิดใบงานหลังส่งมอบเครื่องคืนลูกค้าเรียบร้อยแล้ว',
+  });
+
   return (
     <section className="rounded-2xl border border-emerald-200 bg-white p-5 shadow-sm">
-      <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-700">Digital Handover</p>
-      <h3 className="mt-1 text-lg font-black text-slate-950">ส่งมอบเครื่องคืนลูกค้า</h3>
-      {state.loading ? <p className="mt-3 text-sm text-slate-500">กำลังโหลด...</p> : null}
-      {!state.loading && handover?.status === 'DELIVERED' ? (
-        <div className="mt-4 rounded-2xl bg-emerald-50 p-4 font-bold text-emerald-800">
-          ส่งมอบเสร็จแล้ว — ผู้รับ {handover.customerConfirmedBy}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-700">Digital Handover</p>
+          <h3 className="mt-1 text-lg font-black text-slate-950">ส่งมอบเครื่องคืนลูกค้า</h3>
+          <p className="mt-1 text-sm text-slate-500">ยืนยันผู้รับ การชำระเงิน ตัวเครื่อง และอุปกรณ์ ก่อนปิดใบงาน</p>
+        </div>
+        <span className="w-fit rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-700">
+          {workflowStatus}
+        </span>
+      </div>
+
+      {workflowStatus === 'CLOSED' ? (
+        <div className="mt-4 rounded-2xl bg-slate-100 p-4 font-bold text-slate-700">
+          ใบงานนี้ส่งมอบและปิดงานเรียบร้อยแล้ว
         </div>
       ) : null}
-      {!state.loading && handover?.status !== 'DELIVERED' ? (
+
+      {state.loading ? <p className="mt-3 text-sm text-slate-500">กำลังโหลด...</p> : null}
+
+      {!state.loading && workflowStatus === 'DELIVERED' ? (
+        <div className="mt-4 space-y-3">
+          <div className="rounded-2xl bg-emerald-50 p-4 font-bold text-emerald-800">
+            ส่งมอบเสร็จแล้ว — ผู้รับ {handover?.customerConfirmedBy || '-'}
+          </div>
+          <button
+            type="button"
+            onClick={closeJob}
+            className="min-h-12 w-full rounded-xl bg-slate-900 px-5 font-black text-white"
+          >
+            ปิดใบงานซ่อม
+          </button>
+        </div>
+      ) : null}
+
+      {!state.loading && workflowStatus === 'READY_FOR_DELIVERY' ? (
         <>
           <div className={`mt-4 rounded-2xl p-4 ${handover?.customerConfirmedAt ? 'bg-emerald-50 text-emerald-800' : 'bg-amber-50 text-amber-800'}`}>
             {handover?.customerConfirmedAt
               ? `ลูกค้ายืนยันแล้ว: ${handover.customerConfirmedBy}`
-              : jobStatus === 'COMPLETED' ? 'รอลูกค้ากดยืนยันรับเครื่องจากลิงก์ติดตาม' : 'งานยังไม่อยู่ในสถานะพร้อมรับ'}
+              : 'รอลูกค้ากดยืนยันรับเครื่องจากลิงก์ติดตาม'}
           </div>
+
+          {!handover?.customerConfirmedAt ? (
+            <button
+              type="button"
+              onClick={load}
+              className="mt-3 min-h-11 rounded-xl border border-amber-300 bg-white px-4 text-sm font-black text-amber-800"
+            >
+              รีเฟรชสถานะการยืนยัน
+            </button>
+          ) : null}
+
           {handover?.customerConfirmedAt ? (
             <div className="mt-4 space-y-3">
               {[
@@ -62,7 +109,7 @@ const RepairHandoverPanel = ({ repairJobId, jobStatus }) => {
                 onClick={finalize}
                 className="min-h-12 w-full rounded-xl bg-emerald-700 px-5 font-black text-white disabled:opacity-40"
               >
-                {state.saving ? 'กำลังปิดการส่งมอบ...' : 'ยืนยันส่งมอบขั้นสุดท้าย'}
+                {state.saving ? 'กำลังส่งมอบ...' : 'ยืนยันส่งมอบขั้นสุดท้าย'}
               </button>
             </div>
           ) : null}

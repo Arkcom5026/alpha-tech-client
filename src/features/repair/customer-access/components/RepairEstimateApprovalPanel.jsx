@@ -20,6 +20,9 @@ const RepairEstimateApprovalPanel = ({ repairJobId, job }) => {
   const [approval, setApproval] = useState(null);
   const [requestNote, setRequestNote] = useState('');
   const [state, setState] = useState({ loading: true, error: '', notice: '' });
+  const workflowStatus = job?.workflow?.status || 'RECEIVED';
+  const canPublish =
+    workflowStatus === 'WAITING_APPROVAL' && Number(job?.estimatedCost || 0) > 0;
 
   const load = useCallback(async () => {
     setState((current) => ({ ...current, loading: true, error: '' }));
@@ -37,6 +40,7 @@ const RepairEstimateApprovalPanel = ({ repairJobId, job }) => {
   }, [load]);
 
   const publish = async () => {
+    if (!canPublish) return;
     if (!window.confirm('ยืนยันส่งราคาประเมินปัจจุบันให้ลูกค้าพิจารณา?')) return;
     setState({ loading: true, error: '', notice: '' });
     try {
@@ -65,17 +69,19 @@ const RepairEstimateApprovalPanel = ({ repairJobId, job }) => {
           </p>
           <h2 className="mt-1 text-lg font-black text-slate-950">ส่งราคาประเมินให้ลูกค้าอนุมัติ</h2>
           <p className="mt-1 text-sm text-slate-600">
-            ระบบจะล็อกยอดเป็น snapshot ลูกค้าอนุมัติหรือปฏิเสธจากลิงก์ติดตามงาน
+            ระบบจะล็อกยอดเป็น snapshot ลูกค้าอนุมัติหรือปฏิเสธจากลิงก์ติดตามงาน และอัปเดต workflow ให้อัตโนมัติ
           </p>
         </div>
-        <button
-          type="button"
-          disabled={state.loading || Number(job?.estimatedCost || 0) <= 0}
-          onClick={publish}
-          className="min-h-11 rounded-xl bg-amber-600 px-5 text-sm font-black text-white disabled:opacity-40"
-        >
-          {state.loading ? 'กำลังดำเนินการ' : approval?.status === 'PENDING' ? 'ส่งราคาใหม่' : 'ส่งให้ลูกค้า'}
-        </button>
+        {workflowStatus === 'WAITING_APPROVAL' ? (
+          <button
+            type="button"
+            disabled={state.loading || !canPublish}
+            onClick={publish}
+            className="min-h-11 rounded-xl bg-amber-600 px-5 text-sm font-black text-white disabled:opacity-40"
+          >
+            {state.loading ? 'กำลังดำเนินการ' : approval?.status === 'PENDING' ? 'ส่งราคาใหม่' : 'ส่งให้ลูกค้า'}
+          </button>
+        ) : null}
       </div>
 
       <div className="mt-4 grid gap-3 sm:grid-cols-3">
@@ -87,16 +93,26 @@ const RepairEstimateApprovalPanel = ({ repairJobId, job }) => {
         />
       </div>
 
-      <label className="mt-4 block space-y-1">
-        <span className="text-xs font-black text-slate-600">ข้อความถึงลูกค้า</span>
-        <textarea
-          rows={2}
-          value={requestNote}
-          onChange={(event) => setRequestNote(event.target.value)}
-          placeholder="เช่น รวมค่าแรงและอะไหล่แล้ว รับประกันงานซ่อม 30 วัน"
-          className="w-full rounded-xl border border-amber-200 bg-white px-4 py-3"
-        />
-      </label>
+      {workflowStatus === 'WAITING_APPROVAL' ? (
+        <label className="mt-4 block space-y-1">
+          <span className="text-xs font-black text-slate-600">ข้อความถึงลูกค้า</span>
+          <textarea
+            rows={2}
+            value={requestNote}
+            onChange={(event) => setRequestNote(event.target.value)}
+            placeholder="เช่น รวมค่าแรงและอะไหล่แล้ว รับประกันงานซ่อม 30 วัน"
+            className="w-full rounded-xl border border-amber-200 bg-white px-4 py-3"
+          />
+        </label>
+      ) : (
+        <p className="mt-4 rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-600">
+          {workflowStatus === 'APPROVED'
+            ? 'ลูกค้าอนุมัติราคาแล้ว ขั้นถัดไปคือเริ่มงานซ่อม'
+            : workflowStatus === 'REJECTED'
+              ? 'ลูกค้าไม่อนุมัติราคา งานนี้จะไม่เข้าสู่ขั้นซ่อม'
+              : 'การส่งราคาจะเปิดเมื่อบันทึกผลวินิจฉัยเสร็จและงานอยู่ในขั้นรอลูกค้าอนุมัติ'}
+        </p>
+      )}
 
       {approval ? (
         <div className="mt-4 rounded-xl border border-amber-200 bg-white p-4">
@@ -111,6 +127,11 @@ const RepairEstimateApprovalPanel = ({ repairJobId, job }) => {
           {approval.confirmedByName ? (
             <p className="mt-2 text-sm text-slate-600">
               ผู้ตอบกลับ: {approval.confirmedByName}
+            </p>
+          ) : null}
+          {approval.customerNote ? (
+            <p className="mt-2 whitespace-pre-wrap text-sm text-slate-600">
+              หมายเหตุจากลูกค้า: {approval.customerNote}
             </p>
           ) : null}
         </div>

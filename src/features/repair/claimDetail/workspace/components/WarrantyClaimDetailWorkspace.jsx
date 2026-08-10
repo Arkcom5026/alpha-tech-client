@@ -2,6 +2,7 @@ import React from 'react';
 import RepairShellHeader from '../../../components/RepairShellHeader';
 import RuntimeStatePanel from '../../../components/RuntimeStatePanel';
 import ClaimRuntimePanel from '../../../components/ClaimRuntimePanel';
+import ClaimResolutionOutcomePanel from '../../../components/ClaimResolutionOutcomePanel';
 
 const WarrantyClaimDetailWorkspace = ({
   claim,
@@ -28,12 +29,15 @@ const WarrantyClaimDetailWorkspace = ({
     />
 
     {claim ? (
-      <ClaimRuntimePanel
-        claim={claim}
-        submitting={submitting}
-        onTransition={onTransition}
-        onOpenRepair={onOpenRepair}
-      />
+      <div className="space-y-4">
+        <ClaimResolutionOutcomePanel claim={claim} />
+        <ClaimRuntimePanel
+          claim={claim}
+          submitting={submitting}
+          onTransition={onTransition}
+          onOpenRepair={onOpenRepair}
+        />
+      </div>
     ) : null}
   </div>
 );

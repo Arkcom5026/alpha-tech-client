@@ -39,6 +39,21 @@ export const getWithholdingTaxWorkspace = async ({ branchId, taxPeriodId }) => {
   return unwrapData(response);
 };
 
+export const transitionWithholdingTreatment = async ({ branchId, taxExpenseItemId, resultingTreatment, note }) => {
+  const target = text(resultingTreatment, 'resultingTreatment').toUpperCase();
+  if (!['WITHHOLDING_REQUIRED', 'WITHHELD'].includes(target)) {
+    const error = new Error('WHT treatment transition ไม่ถูกต้อง');
+    error.code = 'WHT_CLIENT_VALIDATION_ERROR';
+    throw error;
+  }
+  const response = await apiClient.post(`/tax/withholding-tax/items/${positiveId(taxExpenseItemId, 'taxExpenseItemId')}/treatment`, {
+    branchId: positiveId(branchId, 'branchId'),
+    resultingTreatment: target,
+    note: String(note || '').trim() || null,
+  });
+  return unwrapData(response);
+};
+
 export const issueWithholdingCertificate = async ({ branchId, taxPeriodId, taxExpenseId, formType: requestedForm }) => {
   const response = await apiClient.post(`/tax/withholding-tax/${encodeURIComponent(text(taxPeriodId, 'taxPeriodId'))}/certificates/issue`, {
     branchId: positiveId(branchId, 'branchId'),
@@ -77,6 +92,10 @@ export const getWithholdingTaxErrorMessage = (error) => {
     WHT_CLIENT_VALIDATION_ERROR: message || 'ข้อมูล WHT ไม่ถูกต้อง',
     WHT_ACCESS_FORBIDDEN: 'บัญชีนี้ไม่มีสิทธิ์จัดการภาษีหัก ณ ที่จ่าย',
     WHT_BRANCH_FORBIDDEN: 'ไม่สามารถจัดการ WHT ของสาขาอื่นได้',
+    WHT_TREATMENT_TRANSITION_INVALID: 'ลำดับการยืนยัน WHT ไม่ถูกต้อง กรุณารีเฟรชข้อมูลก่อน',
+    WHT_TREATMENT_AMOUNT_REQUIRED: 'ต้องมีอัตราและยอด WHT มากกว่า 0 ก่อนยืนยัน',
+    WHT_TREATMENT_CERTIFICATE_LOCKED: 'ออกหนังสือรับรองแล้ว จึงแก้สถานะ WHT ของรายการไม่ได้',
+    WHT_TREATMENT_CONCURRENT_MODIFICATION: 'สถานะ WHT ถูกแก้จากอีกหน้าจอ กรุณารีเฟรชแล้วลองใหม่',
     WHT_ITEMS_NOT_WITHHELD: 'ต้องประเมินรายการ WHT เป็น WITHHELD ให้ครบก่อนออกหนังสือรับรอง',
     WHT_ISSUER_PROFILE_REQUIRED: 'ต้องตั้งค่า Tax Issuer Profile ให้พร้อมก่อนออกหนังสือรับรอง',
     WHT_FORM_TYPE_MISMATCH: 'ประเภทแบบ ภ.ง.ด. ไม่ตรงกับประเภทผู้รับเงิน',

@@ -10,8 +10,9 @@ describe('repair runtime final hardening contract', () => {
     const runtime = read('src/features/repair/components/JobRuntimePanel.jsx');
     const utils = read('src/features/repair/utils/repairRuntime.js');
 
+    expect(utils).toContain('REPAIR_WORKFLOW_LANES');
+    expect(utils).toContain("{ key: 'READY_FOR_DELIVERY', label: 'พร้อมส่งมอบ' }");
     expect(utils).toContain('REPAIR_WORKFLOW_LABELS');
-    expect(utils).toContain("READY_FOR_DELIVERY: 'พร้อมส่งมอบ'");
     expect(runtime).toContain('REPAIR_WORKFLOW_LABELS[workflowStatus]');
     expect(runtime).not.toContain('REPAIR_LABELS[job.status]');
   });
@@ -28,9 +29,11 @@ describe('repair runtime final hardening contract', () => {
     expect(runtime).not.toContain('transition.status');
   });
 
-  it('keeps terminal claim creation rules aligned with workflow status', () => {
-    const runtime = read('src/features/repair/components/JobRuntimePanel.jsx');
+  it('keeps claim creation optional and constrained to explicit workflow statuses', () => {
+    const handoff = read('src/features/repair/components/RepairClaimHandoffPanel.jsx');
 
-    expect(runtime).toContain("['DELIVERED', 'CLOSED', 'CANCELLED'].includes(workflowStatus)");
+    expect(handoff).toContain('CLAIM_OPENABLE_WORKFLOW_STATUSES');
+    expect(handoff).toContain('CLAIM_OPENABLE_WORKFLOW_STATUSES.has(workflowStatus)');
+    expect(handoff).toContain('เปิดขั้นตอนส่งเคลม');
   });
 });

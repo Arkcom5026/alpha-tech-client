@@ -17,6 +17,13 @@ export const createRepairIntakeDraft = ({ customerId = '', intakeContext = null 
   depositPaid: 0,
   estimatedCost: 0,
   technicianNotes: '',
+  preAgreedService: {
+    enabled: false,
+    agreedScope: '',
+    agreedAmount: 0,
+    confirmedByName: '',
+    confirmationNote: '',
+  },
 });
 
 export const projectRepairIntakeContact = (selectedCustomer, currentContact) => {
@@ -32,21 +39,49 @@ export const projectRepairIntakeContact = (selectedCustomer, currentContact) => 
   };
 };
 
-export const canSubmitRepairIntake = ({ draft, intakeContact, submitting }) =>
-  !submitting &&
-  Boolean(Number(draft?.customerId)) &&
-  Boolean(draft?.deviceModel?.trim()) &&
-  Boolean(draft?.reportedSymptoms?.trim()) &&
-  Boolean(intakeContact?.contactName?.trim());
+export const canSubmitRepairIntake = ({ draft, intakeContact, submitting }) => {
+  const baseReady =
+    !submitting &&
+    Boolean(Number(draft?.customerId)) &&
+    Boolean(draft?.deviceModel?.trim()) &&
+    Boolean(draft?.reportedSymptoms?.trim()) &&
+    Boolean(intakeContact?.contactName?.trim());
 
-export const buildRepairJobPayload = ({ draft, intakeContact }) => ({
-  ...draft,
-  ...intakeContact,
-  customerId: Number(draft.customerId),
-  stockItemId: draft.stockItemId ? Number(draft.stockItemId) : null,
-  depositPaid: Number(draft.depositPaid || 0),
-  estimatedCost: Number(draft.estimatedCost || 0),
-});
+  if (!baseReady) return false;
+  if (!draft?.preAgreedService?.enabled) return true;
+
+  const agreedAmount = Number(draft.preAgreedService.agreedAmount);
+  return (
+    Boolean(draft.preAgreedService.agreedScope?.trim()) &&
+    Boolean(draft.preAgreedService.confirmedByName?.trim()) &&
+    Number.isFinite(agreedAmount) &&
+    agreedAmount >= 0
+  );
+};
+
+export const buildRepairJobPayload = ({ draft, intakeContact }) => {
+  const preAgreedService = draft.preAgreedService?.enabled
+    ? {
+        enabled: true,
+        agreedScope: draft.preAgreedService.agreedScope.trim(),
+        agreedAmount: Number(draft.preAgreedService.agreedAmount || 0),
+        confirmedByName: draft.preAgreedService.confirmedByName.trim(),
+        confirmationNote: draft.preAgreedService.confirmationNote?.trim() || null,
+      }
+    : undefined;
+
+  return {
+    ...draft,
+    ...intakeContact,
+    customerId: Number(draft.customerId),
+    stockItemId: draft.stockItemId ? Number(draft.stockItemId) : null,
+    depositPaid: Number(draft.depositPaid || 0),
+    estimatedCost: preAgreedService
+      ? preAgreedService.agreedAmount
+      : Number(draft.estimatedCost || 0),
+    ...(preAgreedService ? { preAgreedService } : {}),
+  };
+};
 
 export const getRepairIntakeStatus = ({ externalMode, intakeNotFound, intakeContext }) => {
   if (externalMode) return 'EXTERNAL';

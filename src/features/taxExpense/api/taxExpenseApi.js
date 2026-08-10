@@ -31,3 +31,9 @@ export const listTaxExpenses = async ({ status, fromDate, toDate, q } = {}) =>
 
 export const createTaxExpense = async (payload) =>
   unwrap(await apiClient.post('/tax-expenses', payload));
+
+export const getTaxExpenseAssessmentSuggestion = async (taxExpenseId) =>
+  unwrap(await apiClient.get(`/tax-expenses/${taxExpenseId}/assessment-suggestion`));
+
+export const confirmTaxExpenseAssessment = async (taxExpenseId, payload) =>
+  unwrap(await apiClient.post(`/tax-expenses/${taxExpenseId}/assessment-confirmation`, payload));

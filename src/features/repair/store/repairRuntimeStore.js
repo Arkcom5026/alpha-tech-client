@@ -91,14 +91,7 @@ const useRepairRuntimeStore = create((set, get) => ({
       return null;
     }
 
-    set({
-      loading: true,
-      error: null,
-      errorCode: null,
-      intakeLookup: query,
-      intakeNotFound: false,
-      intakeNotFoundLookup: '',
-    });
+    set({ loading: true, error: null, errorCode: null, intakeLookup: query, intakeNotFound: false, intakeNotFoundLookup: '' });
     try {
       const payload = await repairApi.searchIntake(query);
       const searchResults = {
@@ -115,12 +108,7 @@ const useRepairRuntimeStore = create((set, get) => ({
       });
       return searchResults;
     } catch (error) {
-      set({
-        searchResults: { devices: [], customers: [], counts: { devices: 0, customers: 0, total: 0 } },
-        loading: false,
-        error: error.message,
-        errorCode: error.code,
-      });
+      set({ searchResults: { devices: [], customers: [], counts: { devices: 0, customers: 0, total: 0 } }, loading: false, error: error.message, errorCode: error.code });
       return null;
     }
   },
@@ -132,14 +120,7 @@ const useRepairRuntimeStore = create((set, get) => ({
       return null;
     }
 
-    set({
-      loading: true,
-      error: null,
-      errorCode: null,
-      intakeLookup: lookup,
-      intakeNotFound: false,
-      intakeNotFoundLookup: '',
-    });
+    set({ loading: true, error: null, errorCode: null, intakeLookup: lookup, intakeNotFound: false, intakeNotFoundLookup: '' });
     try {
       const intakeContext = await repairApi.getIntakeContext(lookup);
       set({
@@ -152,29 +133,12 @@ const useRepairRuntimeStore = create((set, get) => ({
       });
       return intakeContext;
     } catch (error) {
-      if (
-        error.status === 404 ||
-        error.code === 'REPAIR_STOCK_ITEM_NOT_FOUND'
-      ) {
-        set({
-          intakeContext: null,
-          intakeNotFound: true,
-          intakeNotFoundLookup: lookup,
-          loading: false,
-          error: null,
-          errorCode: error.code,
-        });
+      if (error.status === 404 || error.code === 'REPAIR_STOCK_ITEM_NOT_FOUND') {
+        set({ intakeContext: null, intakeNotFound: true, intakeNotFoundLookup: lookup, loading: false, error: null, errorCode: error.code });
         return null;
       }
 
-      set({
-        intakeContext: null,
-        intakeNotFound: false,
-        intakeNotFoundLookup: '',
-        loading: false,
-        error: error.message,
-        errorCode: error.code,
-      });
+      set({ intakeContext: null, intakeNotFound: false, intakeNotFoundLookup: '', loading: false, error: error.message, errorCode: error.code });
       return null;
     }
   },
@@ -183,11 +147,7 @@ const useRepairRuntimeStore = create((set, get) => ({
     set({ loading: true, error: null, errorCode: null });
     try {
       const jobs = await repairApi.listJobs(params);
-      set({
-        jobs: Array.isArray(jobs) ? jobs : jobs?.items || [],
-        loading: false,
-        lastLoadedAt: new Date().toISOString(),
-      });
+      set({ jobs: Array.isArray(jobs) ? jobs : jobs?.items || [], loading: false, lastLoadedAt: new Date().toISOString() });
       return jobs;
     } catch (error) {
       set({ loading: false, error: error.message, errorCode: error.code });
@@ -199,11 +159,7 @@ const useRepairRuntimeStore = create((set, get) => ({
     set({ loading: true, error: null, errorCode: null });
     try {
       const claims = await repairApi.listClaims(params);
-      set({
-        claims: Array.isArray(claims) ? claims : claims?.items || [],
-        loading: false,
-        lastLoadedAt: new Date().toISOString(),
-      });
+      set({ claims: Array.isArray(claims) ? claims : claims?.items || [], loading: false, lastLoadedAt: new Date().toISOString() });
       return claims;
     } catch (error) {
       set({ loading: false, error: error.message, errorCode: error.code });
@@ -251,25 +207,8 @@ const useRepairRuntimeStore = create((set, get) => ({
     set({ submitting: true, error: null, errorCode: null });
     try {
       const created = await repairApi.createExternalIntake(payload);
-      set({
-        submitting: false,
-        activeJob: created?.repairJob || null,
-        intakeContext: null,
-        lastLoadedAt: new Date().toISOString(),
-      });
+      set({ submitting: false, activeJob: created?.repairJob || null, intakeContext: null, lastLoadedAt: new Date().toISOString() });
       return created;
-    } catch (error) {
-      set({ submitting: false, error: error.message, errorCode: error.code });
-      return null;
-    }
-  },
-
-  transitionJob: async (id, payload) => {
-    set({ submitting: true, error: null, errorCode: null });
-    try {
-      const updated = await repairApi.transitionJob(id, payload);
-      set({ submitting: false, activeJob: updated });
-      return updated;
     } catch (error) {
       set({ submitting: false, error: error.message, errorCode: error.code });
       return null;

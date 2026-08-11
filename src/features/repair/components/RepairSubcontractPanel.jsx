@@ -24,7 +24,7 @@ const emptySendForm = (job) => ({
   expectedReturnAt: '',
 });
 
-const RepairSubcontractPanel = ({ job, onChanged }) => {
+const RepairSubcontractPanel = ({ job, onChanged, refreshKey = 0 }) => {
   const [context, setContext] = useState(null);
   const [expanded, setExpanded] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -58,7 +58,7 @@ const RepairSubcontractPanel = ({ job, onChanged }) => {
 
   useEffect(() => {
     load();
-  }, [load]);
+  }, [load, refreshKey]);
 
   useEffect(() => {
     setSendForm(emptySendForm(job));

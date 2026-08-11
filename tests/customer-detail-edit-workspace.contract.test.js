@@ -25,3 +25,9 @@ test('customer detail workspace exposes editable tax identity and address fields
   assert.match(workspaceSource, /ORGANIZATION/);
   assert.match(workspaceSource, /GOVERNMENT/);
 });
+
+test('customer detail workspace no longer renders the disconnected placeholder state', () => {
+  assert.doesNotMatch(workspaceSource, /ยังไม่มีข้อมูลรายละเอียดที่เชื่อมต่อกับหน้านี้/);
+  assert.match(workspaceSource, /กำลังโหลดข้อมูลลูกค้า/);
+  assert.match(workspaceSource, /โหลดรายละเอียดลูกค้าไม่สำเร็จ/);
+});

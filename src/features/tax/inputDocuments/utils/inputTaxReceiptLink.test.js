@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
+  documentCanFitReceiptAllocations,
   receiptAllocationPrefill,
   receiptIdentity,
+  remainingDocumentTotalCapacity,
   remainingReceiptAmount,
 } from './inputTaxReceiptLink';
 
@@ -116,5 +118,43 @@ describe('input tax receipt link utilities', () => {
       allocatedVatAmount: 0,
       allocatedTotalAmount: 250,
     });
+  });
+
+  it('excludes a fully allocated invoice from a new receipt allocation', () => {
+    const document = {
+      subtotalAmount: 14774.77,
+      taxAmount: 1034.23,
+      totalAmount: 15809,
+      activeAllocatedSubtotal: 14774.77,
+      activeAllocatedVatAmount: 1034.23,
+      activeAllocatedTotalAmount: 15809,
+    };
+    const pending = [{
+      allocatedSubtotal: 7195.33,
+      allocatedVatAmount: 503.67,
+      allocatedTotalAmount: 7699,
+    }];
+
+    expect(documentCanFitReceiptAllocations(document, pending)).toBe(false);
+    expect(remainingDocumentTotalCapacity(document)).toBe(0);
+  });
+
+  it('keeps an invoice available when every known amount has enough remaining capacity', () => {
+    const document = {
+      subtotalAmount: 20000,
+      taxAmount: 1400,
+      totalAmount: 21400,
+      activeAllocatedSubtotal: 10000,
+      activeAllocatedVatAmount: 700,
+      activeAllocatedTotalAmount: 10700,
+    };
+    const pending = [{
+      allocatedSubtotal: 7195.33,
+      allocatedVatAmount: 503.67,
+      allocatedTotalAmount: 7699,
+    }];
+
+    expect(documentCanFitReceiptAllocations(document, pending)).toBe(true);
+    expect(remainingDocumentTotalCapacity(document)).toBe(10700);
   });
 });

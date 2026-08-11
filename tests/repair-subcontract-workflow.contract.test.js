@@ -48,6 +48,21 @@ describe('repair subcontract workflow contract', () => {
     expect(panel).toContain('disabled={loading || !outsourceConsent');
   });
 
+  it('quick-creates a required ExpensePayee without leaving the repair job and auto-selects it', () => {
+    const panel = read('src/features/repair/components/RepairSubcontractPanel.jsx');
+    const dialog = read('src/features/repair/components/ExpensePayeeQuickCreateDialog.jsx');
+
+    expect(panel).toContain('ExpensePayeeQuickCreateDialog');
+    expect(panel).toContain('+ เพิ่มผู้รับซ่อม');
+    expect(panel).toContain('setQuickCreateOpen(true)');
+    expect(panel).toContain('expensePayeeId: String(created.id)');
+    expect(panel).toContain('created.phone');
+    expect(dialog).toContain('createExpensePayee');
+    expect(dialog).toContain('เลขผู้เสียภาษีไม่บังคับ');
+    expect(dialog).toContain('บันทึกและเลือกผู้รับซ่อม');
+    expect(dialog).toContain("payeeType: 'INDIVIDUAL'");
+  });
+
   it('refreshes outsource authority immediately after intake evidence is updated', () => {
     const panel = read('src/features/repair/components/RepairSubcontractPanel.jsx');
     const workspace = read(

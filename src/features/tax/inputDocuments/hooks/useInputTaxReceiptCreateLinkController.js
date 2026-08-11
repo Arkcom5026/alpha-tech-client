@@ -7,12 +7,7 @@ const useInputTaxReceiptCreateLinkController = () => {
   const controller = useInputTaxReceiptWorkspaceController();
   const pendingAutoLinkRef = useRef(false);
 
-  const toggleCreateDocument = useCallback(() => {
-    if (controller.showCreateDocument) {
-      controller.setShowCreateDocument(false);
-      return;
-    }
-
+  const openCreateDocument = useCallback(() => {
     if (!controller.selectedSupplier || controller.selectedReceipts.length === 0) {
       toast.warning('กรุณาเลือกใบรับสินค้าก่อนสร้างใบกำกับภาษีซื้อ');
       return;
@@ -25,6 +20,29 @@ const useInputTaxReceiptCreateLinkController = () => {
     controller.setSelectedDocumentId('');
     controller.setShowCreateDocument(true);
   }, [controller]);
+
+  const toggleCreateDocument = useCallback(() => {
+    if (controller.showCreateDocument) {
+      if (controller.eligibleDocuments.length === 0 && controller.selectedReceipts.length > 0) return;
+      controller.setShowCreateDocument(false);
+      return;
+    }
+
+    openCreateDocument();
+  }, [controller, openCreateDocument]);
+
+  useEffect(() => {
+    if (controller.selectedReceipts.length === 0) return;
+    if (controller.eligibleDocuments.length > 0) return;
+    if (controller.showCreateDocument) return;
+
+    openCreateDocument();
+  }, [
+    controller.eligibleDocuments.length,
+    controller.selectedReceipts.length,
+    controller.showCreateDocument,
+    openCreateDocument,
+  ]);
 
   const createAndAutoLinkInputTaxDocument = useCallback(async (event) => {
     pendingAutoLinkRef.current = true;

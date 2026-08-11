@@ -37,6 +37,14 @@ describe('Tax UX input receipt linking simplification', () => {
     expect(selection).toContain('แสดงเฉพาะใบกำกับของผู้จำหน่ายรายเดียวกันที่ระบบอนุญาตให้ผูกเพิ่มได้');
   });
 
+  it('automatically guides to a new invoice when no existing document can be used', () => {
+    expect(orchestration).toContain('controller.eligibleDocuments.length > 0');
+    expect(orchestration).toContain('if (controller.showCreateDocument) return;');
+    expect(orchestration).toContain('openCreateDocument();');
+    expect(selection).toContain('disabled={!hasReceipts || !existingAvailable}');
+    expect(selection).toContain('ไม่มีใบกำกับภาษีซื้อเดิมที่ใช้ได้ ระบบเลือกการสร้างฉบับใหม่ให้แล้ว');
+  });
+
   it('makes the final action describe exactly what will happen', () => {
     expect(selection).toContain('ยืนยันผูก {selectedReceiptCount} ใบรับสินค้า');
     expect(form).toContain('สร้างใบกำกับภาษีซื้อและผูก {selectedReceiptCount} ใบรับสินค้า');

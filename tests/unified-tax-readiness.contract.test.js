@@ -7,7 +7,7 @@ const read = (relativePath) => fs.readFileSync(path.join(process.cwd(), relative
 
 test('tax period list exposes unified readiness action', () => {
   const source = read('src/features/tax/periods/workspace/components/TaxPeriodListTable.jsx');
-  assert.match(source, /Tax Readiness/);
+  assert.match(source, /Tax Readiness|ความพร้อมภาษี/);
   assert.match(source, /\$\{period\.id\}\/readiness/);
 });
 
@@ -18,19 +18,22 @@ test('unified readiness API reads backend-owned authority projection', () => {
   assert.match(source, /branchId/);
 });
 
-test('readiness workspace presents percentage domains and accountant state', () => {
+test('readiness workspace presents percentage domains and Thai closing state', () => {
   const source = read('src/features/tax/readiness/pages/UnifiedTaxReadinessPage.jsx');
   assert.match(source, /ศูนย์ตรวจความพร้อมภาษี/);
   assert.match(source, /readinessPercent/);
   assert.match(source, /readyDomainCount/);
-  assert.match(source, /READY FOR ACCOUNTANT/);
-  assert.match(source, /Tax Exceptions/);
+  assert.match(source, /พร้อมสำหรับขั้นตอนส่งต่อ/);
+  assert.match(source, /รายการที่ต้องจัดการ/);
+  assert.doesNotMatch(source, />Tax Exceptions</);
 });
 
-test('exception cards navigate to backend-owned source targets', () => {
+test('exception cards navigate to operational source targets with filing-specific guidance', () => {
   const source = read('src/features/tax/readiness/pages/UnifiedTaxReadinessPage.jsx');
   assert.match(source, /entry\.target\?\.relativePath/);
-  assert.match(source, /กดเพื่อไปแก้ที่ต้นทาง/);
+  assert.match(source, /exceptionTarget/);
+  assert.match(source, /ไปดำเนินการ/);
+  assert.match(source, /input-vat-filing/);
   assert.match(source, /\/pos\/finance\//);
 });
 
@@ -42,10 +45,12 @@ test('tax expense workspace honors record-aware assessment deep links', () => {
   assert.match(source, /openAssessment/);
 });
 
-test('partner routes mount unified readiness workspace without replacing existing tax routes', () => {
+test('partner routes mount unified readiness and filing workspaces without replacing existing tax routes', () => {
   const routes = read('src/routes/partner/posPartnerRoutes.jsx');
   assert.match(routes, /UnifiedTaxReadinessPage/);
+  assert.match(routes, /InputTaxFilingWorkspacePage/);
   assert.match(routes, /tax-periods\/:taxPeriodId\/readiness/);
+  assert.match(routes, /tax-periods\/:taxPeriodId\/input-vat-filing/);
   assert.match(routes, /tax-periods\/:taxPeriodId\/vat-settlement/);
   assert.match(routes, /tax-periods\/:taxPeriodId\/withholding-tax/);
   assert.match(routes, /tax-periods\/:taxPeriodId\/accounting-office/);

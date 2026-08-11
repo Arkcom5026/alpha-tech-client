@@ -38,6 +38,13 @@ test('create workspace uses customer money and item-level partial selections', (
   assert.match(createPage, /ยืนยันตัดยอดใบส่งของ/);
 });
 
+test('create workspace caps combined line selections by each sale outstanding amount', () => {
+  assert.match(createPage, /usedByOtherLines/);
+  assert.match(createPage, /remainingSaleCapacity/);
+  assert.match(createPage, /Number\(sale\.outstandingAmount\) - usedByOtherLines/);
+  assert.match(createPage, /Math\.min\(Number\(line\.remainingAmount \?\? line\.lineAmount\), remainingSaleCapacity\)/);
+});
+
 test('history detail and print use the isolated settlement API', () => {
   assert.match(listPage, /listDeliveryCreditSettlements/);
   assert.match(detailPage, /getDeliveryCreditSettlement/);

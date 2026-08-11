@@ -152,15 +152,21 @@ const groupRepairItemsByDay = (items = []) => {
     );
 };
 
-const RepairCompactRow = ({ item, onOpen }) => {
-  const customerName = item?.customer?.name || item?.customerName || `ลูกค้า #${item?.customerId}`;
+const RepairCompactRow = ({ item, expanded, onToggle }) => {
+  const customerName =
+    item?.customer?.name || item?.customerName || `ลูกค้า #${item?.customerId}`;
   const asset = getRepairAsset(item);
 
   return (
     <button
       type="button"
-      onClick={() => onOpen(item)}
-      className="grid min-h-9 w-full grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-center gap-3 rounded-lg border border-transparent px-2.5 py-1.5 text-left text-xs transition hover:border-blue-200 hover:bg-blue-50/70 focus:outline-none focus:ring-2 focus:ring-blue-200"
+      onClick={() => onToggle(item.id)}
+      className={`grid min-h-9 w-full grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-center gap-3 rounded-lg border px-2.5 py-1.5 text-left text-xs transition focus:outline-none focus:ring-2 focus:ring-blue-200 ${
+        expanded
+          ? 'border-blue-200 bg-blue-50/70'
+          : 'border-transparent hover:border-blue-200 hover:bg-blue-50/70'
+      }`}
+      aria-expanded={expanded}
       title={`${customerName} • ${asset.displayName}`}
     >
       <span className="truncate font-black text-slate-800">{customerName}</span>
@@ -169,7 +175,92 @@ const RepairCompactRow = ({ item, onOpen }) => {
   );
 };
 
-const RepairDayGroup = ({ group, initiallyOpen, onOpen }) => {
+const RepairPreviewCard = ({ item, onOpen }) => {
+  const customer = item.customer;
+  const customerName = customer?.name || item.customerName || `ลูกค้า #${item.customerId}`;
+  const customerContact = customer?.phone || customer?.email || null;
+  const asset = getRepairAsset(item);
+  const assetMeta = getAssetMeta(asset);
+  const assetIdentity = getAssetIdentity(asset);
+  const external = item.activeSubcontract;
+
+  return (
+    <button
+      type="button"
+      onClick={() => onOpen(item)}
+      className="mx-1 mb-2 w-[calc(100%-0.5rem)] rounded-xl border border-blue-200 bg-white p-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-200"
+      aria-label={`เปิดรายละเอียดงาน ${item.jobNo}`}
+    >
+      <p className="font-black text-slate-950">{item.jobNo}</p>
+
+      {customerName ? (
+        <div className="mt-2 rounded-lg bg-slate-50 px-2.5 py-2">
+          <p className="line-clamp-1 text-sm font-black text-slate-800">
+            {customerName}
+          </p>
+          {customerContact ? (
+            <p className="mt-0.5 line-clamp-1 text-xs text-slate-500">
+              {customerContact}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+
+      <div className="mt-2 rounded-lg border border-slate-100 px-2.5 py-2">
+        <div className="flex items-start justify-between gap-2">
+          <p className="line-clamp-2 text-sm font-black text-slate-800">
+            {asset.displayName}
+          </p>
+          <span className="shrink-0 rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-black text-blue-700">
+            {getAssetSourceLabel(asset.sourceType)}
+          </span>
+        </div>
+        {assetMeta ? (
+          <p className="mt-1 line-clamp-1 text-xs text-slate-500">{assetMeta}</p>
+        ) : null}
+        {assetIdentity.length ? (
+          <div className="mt-1 space-y-0.5 text-[11px] text-slate-500">
+            {assetIdentity.map((value) => (
+              <p key={value} className="line-clamp-1">{value}</p>
+            ))}
+          </div>
+        ) : null}
+      </div>
+
+      {item.reportedSymptoms ? (
+        <p className="mt-2 line-clamp-2 text-xs leading-5 text-slate-500">
+          อาการ: {item.reportedSymptoms}
+        </p>
+      ) : null}
+
+      {external?.active ? (
+        <div className="mt-2 rounded-lg bg-violet-50 px-2.5 py-2 text-[11px] text-violet-800">
+          <p className="font-black">ส่งให้: {external.providerName || '-'}</p>
+          {external.workScope ? (
+            <p className="mt-1 line-clamp-2">งาน: {external.workScope}</p>
+          ) : null}
+          {external.sentAt ? (
+            <p className="mt-1 text-violet-600">
+              ส่งออก {formatDateTime(external.sentAt)}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+
+      <p className="mt-2 text-xs text-slate-400">
+        {formatDateTime(item.updatedAt || item.createdAt)}
+      </p>
+    </button>
+  );
+};
+
+const RepairDayGroup = ({
+  group,
+  initiallyOpen,
+  selectedItemId,
+  onToggleItem,
+  onOpen,
+}) => {
   const [open, setOpen] = useState(initiallyOpen);
 
   return (
@@ -191,9 +282,19 @@ const RepairDayGroup = ({ group, initiallyOpen, onOpen }) => {
 
       {open ? (
         <div className="divide-y divide-slate-100 py-1">
-          {group.items.map((item) => (
-            <RepairCompactRow key={item.id} item={item} onOpen={onOpen} />
-          ))}
+          {group.items.map((item) => {
+            const expanded = selectedItemId === item.id;
+            return (
+              <React.Fragment key={item.id}>
+                <RepairCompactRow
+                  item={item}
+                  expanded={expanded}
+                  onToggle={onToggleItem}
+                />
+                {expanded ? <RepairPreviewCard item={item} onOpen={onOpen} /> : null}
+              </React.Fragment>
+            );
+          })}
         </div>
       ) : null}
     </div>
@@ -202,6 +303,9 @@ const RepairDayGroup = ({ group, initiallyOpen, onOpen }) => {
 
 const RepairLane = ({ lane, onOpen }) => {
   const groups = useMemo(() => groupRepairItemsByDay(lane.items), [lane.items]);
+  const [selectedItemId, setSelectedItemId] = useState(null);
+  const toggleItem = (itemId) =>
+    setSelectedItemId((current) => (current === itemId ? null : itemId));
 
   return (
     <section
@@ -228,6 +332,8 @@ const RepairLane = ({ lane, onOpen }) => {
               key={group.key}
               group={group}
               initiallyOpen={index === 0}
+              selectedItemId={selectedItemId}
+              onToggleItem={toggleItem}
               onOpen={onOpen}
             />
           ))

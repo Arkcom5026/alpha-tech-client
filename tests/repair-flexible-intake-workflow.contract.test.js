@@ -71,6 +71,17 @@ describe('repair flexible intake workflow contract', () => {
     expect(estimatePanel).toContain('!preAgreedWasUsed');
   });
 
+  it('prefills the external intake confirmer from the selected customer without removing edit authority', () => {
+    const externalIntake = read('src/features/repair/components/ExternalDeviceIntakeForm.jsx');
+    const evidenceFields = read('src/features/repair/components/MobileIntakeEvidenceFields.jsx');
+
+    expect(externalIntake).toContain("const defaultCustomerSignature = customer?.name || customer?.companyName || ''");
+    expect(externalIntake).toContain('customerSignature: defaultCustomerSignature');
+    expect(externalIntake).toContain('current.customerSignature.trim()');
+    expect(evidenceFields).toContain("onChange={(event) => patch('customerSignature', event.target.value)}");
+    expect(evidenceFields).toContain('ลูกค้าหรือผู้ส่งมอบพิมพ์ชื่อเพื่อยืนยัน');
+  });
+
   it('prefills pickup receiver name from the repair customer projection while still allowing edits', () => {
     const pickup = read(
       'src/features/repair/customer-tracking/components/PickupConfirmationCard.jsx'

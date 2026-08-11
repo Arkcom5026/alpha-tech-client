@@ -45,3 +45,11 @@ test('readiness explains output draft blocker in Thai before period close', () =
   assert.match(readinessSource, /มีเอกสารภาษีขายฉบับร่างที่ยังต้องจัดการ/);
   assert.match(readinessSource, /เลือกประเภทใบกำกับภาษีก่อนปิดรอบ/);
 });
+
+test('readiness output draft deep link always preselects output tax invoice type', () => {
+  assert.match(readinessSource, /normalizeExceptionTarget/);
+  assert.match(readinessSource, /exception\?\.code !== 'OUTPUT_VAT_DRAFTS_REMAIN'/);
+  assert.match(readinessSource, /params\.set\('documentStatus', 'DRAFT'\)/);
+  assert.match(readinessSource, /params\.set\('documentType', 'OUTPUT_TAX_INVOICE'\)/);
+  assert.match(readinessSource, /goToTarget\(entry\.target\?\.relativePath, entry\)/);
+});

@@ -16,6 +16,7 @@ const printPage = read('src/features/customerMoneySettlement/pages/DeliveryCredi
 const api = read('src/features/customerMoneySettlement/api/deliveryCreditSettlementApi.js');
 const receiveListPage = read('src/features/customerMoneyReceive/pages/CustomerMoneyReceiveListPage.jsx');
 const receiveDetailPage = read('src/features/customerMoneyReceive/pages/CustomerMoneyReceiveDetailPage.jsx');
+const receivePrintPage = read('src/features/customerMoneyReceive/pages/CustomerMoneyReceiptPrintPage.jsx');
 
 test('delivery credit settlement follows list-first project standard', () => {
   assert.match(sidebar, /ตัดยอดใบส่งของเครดิต/);
@@ -110,6 +111,10 @@ test('fully allocated source receipts are visibly distinct from available receip
   assert.match(receiveDetailPage, /Customer Money จากใบรับเงินนี้ถูกนำไปใช้ครบแล้ว/);
   assert.match(receiveDetailPage, /record\.remainingAmount/);
   assert.match(receiveDetailPage, /record\.status === 'ACTIVE'/);
+  assert.match(receivePrintPage, /record\.status === 'FULLY_ALLOCATED'/);
+  assert.match(receivePrintPage, /ใช้ Customer Money ครบแล้ว \/ FULLY ALLOCATED/);
+  assert.match(receivePrintPage, /Customer Money จากใบรับนี้ถูกนำไปใช้ครบแล้ว/);
+  assert.match(receivePrintPage, /ยอดคงเหลือของใบรับนี้ยังสามารถนำไปใช้ผ่าน Customer Money workflow ได้/);
 });
 
 test('fully paid active sales hand off to the existing document workspace instead of creating tax documents here', () => {

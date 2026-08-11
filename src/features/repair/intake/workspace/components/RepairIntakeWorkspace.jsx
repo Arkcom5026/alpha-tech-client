@@ -46,15 +46,14 @@ const RepairIntakeWorkspace = ({
   onConfirmCreate,
 }) => {
   const [statusText, statusClass] = statusBadge[status] || statusBadge.WAITING;
-  const preAgreedService = draft?.preAgreedService || {
+  const repairAuthorization = draft?.preAgreedService || {
     enabled: false,
     agreedScope: '',
-    agreedAmount: 0,
     confirmedByName: '',
     confirmationNote: '',
   };
-  const updatePreAgreed = (patch) =>
-    onDraftChange('preAgreedService', { ...preAgreedService, ...patch });
+  const updateAuthorization = (patch) =>
+    onDraftChange('preAgreedService', { ...repairAuthorization, ...patch });
 
   return (
     <div>
@@ -176,9 +175,10 @@ const RepairIntakeWorkspace = ({
                         <input value={draft.deviceModel} onChange={(event) => onDraftChange('deviceModel', event.target.value)} placeholder="รุ่นหรือรายละเอียดอุปกรณ์ *" className="rounded-xl border border-slate-300 px-4 py-3 md:col-span-2" />
                         <textarea rows={4} value={draft.reportedSymptoms} onChange={(event) => onDraftChange('reportedSymptoms', event.target.value)} placeholder="อาการที่ลูกค้าแจ้ง *" className="rounded-xl border border-slate-300 px-4 py-3 md:col-span-2" />
                         <input type="number" min="0" value={draft.depositPaid} onChange={(event) => onDraftChange('depositPaid', event.target.value)} placeholder="มัดจำ" className="rounded-xl border border-slate-300 px-4 py-3" />
-                        {!preAgreedService.enabled ? (
-                          <input type="number" min="0" value={draft.estimatedCost} onChange={(event) => onDraftChange('estimatedCost', event.target.value)} placeholder="ราคาประเมิน" className="rounded-xl border border-slate-300 px-4 py-3" />
-                        ) : <div />}
+                        <div>
+                          <input type="number" min="0" value={draft.estimatedCost} onChange={(event) => onDraftChange('estimatedCost', event.target.value)} placeholder="งบ/ราคาประเมิน (ถ้ามี)" className="w-full rounded-xl border border-slate-300 px-4 py-3" />
+                          <p className="mt-1 text-[11px] text-slate-500">ไม่บังคับ ราคาจริงระบุเมื่อซ่อมเสร็จ</p>
+                        </div>
                         <textarea rows={2} value={draft.technicianNotes} onChange={(event) => onDraftChange('technicianNotes', event.target.value)} placeholder="บันทึกภายใน" className="rounded-xl border border-slate-300 px-4 py-3 md:col-span-2" />
                       </div>
 
@@ -186,53 +186,42 @@ const RepairIntakeWorkspace = ({
                         <label className="flex cursor-pointer items-start gap-3">
                           <input
                             type="checkbox"
-                            checked={Boolean(preAgreedService.enabled)}
+                            checked={Boolean(repairAuthorization.enabled)}
                             onChange={(event) =>
-                              updatePreAgreed({
+                              updateAuthorization({
                                 enabled: event.target.checked,
-                                agreedAmount: event.target.checked
-                                  ? Number(draft.estimatedCost || preAgreedService.agreedAmount || 0)
-                                  : preAgreedService.agreedAmount,
                                 confirmedByName:
-                                  preAgreedService.confirmedByName || intakeContact.contactName || '',
+                                  repairAuthorization.confirmedByName || intakeContact.contactName || '',
                               })
                             }
                             className="mt-1 h-4 w-4"
                           />
                           <span>
-                            <span className="block font-black text-emerald-950">ตกลงราคาและขอบเขตงานแล้ว</span>
-                            <span className="mt-1 block text-xs leading-5 text-emerald-800">สำหรับงานที่ตกลงกันตั้งแต่รับเครื่อง เช่น ลงโปรแกรม หรืองานบริการราคาชัดเจน หลังหลักฐานรับเครื่องครบสามารถเริ่มงานได้โดยไม่ต้องผ่านขั้นเสนอราคาอีกครั้ง</span>
+                            <span className="block font-black text-emerald-950">ลูกค้าอนุมัติให้ซ่อม — ไม่ต้องเสนอราคาก่อน</span>
+                            <span className="mt-1 block text-xs leading-5 text-emerald-800">สำหรับเคสที่ลูกค้าอนุญาตให้ร้านดำเนินงานได้เลยโดยไม่ผูกยอดล่วงหน้า ช่างระบุค่าซ่อมจริงเมื่อทำงานเสร็จ หากลูกค้าต้องการทราบราคาก่อน ให้ไม่เลือกช่องนี้และใช้ขั้นตรวจสอบ/เสนอราคา</span>
                           </span>
                         </label>
 
-                        {preAgreedService.enabled ? (
+                        {repairAuthorization.enabled ? (
                           <div className="mt-4 grid gap-3 md:grid-cols-2">
                             <textarea
                               rows={3}
-                              value={preAgreedService.agreedScope}
-                              onChange={(event) => updatePreAgreed({ agreedScope: event.target.value })}
-                              placeholder="ขอบเขตงานที่ตกลง * เช่น ลง Windows + Driver + โปรแกรมพื้นฐาน"
+                              value={repairAuthorization.agreedScope}
+                              onChange={(event) => updateAuthorization({ agreedScope: event.target.value })}
+                              placeholder="ขอบเขต/เงื่อนไขที่ลูกค้าอนุมัติ (ถ้ามี)"
                               className="rounded-xl border border-emerald-200 bg-white px-4 py-3 md:col-span-2"
                             />
                             <input
-                              type="number"
-                              min="0"
-                              value={preAgreedService.agreedAmount}
-                              onChange={(event) => updatePreAgreed({ agreedAmount: event.target.value })}
-                              placeholder="ราคาที่ตกลง *"
-                              className="rounded-xl border border-emerald-200 bg-white px-4 py-3"
-                            />
-                            <input
-                              value={preAgreedService.confirmedByName}
-                              onChange={(event) => updatePreAgreed({ confirmedByName: event.target.value })}
-                              placeholder="ผู้ยืนยันข้อตกลง *"
-                              className="rounded-xl border border-emerald-200 bg-white px-4 py-3"
+                              value={repairAuthorization.confirmedByName}
+                              onChange={(event) => updateAuthorization({ confirmedByName: event.target.value })}
+                              placeholder="ผู้อนุมัติให้ซ่อม *"
+                              className="rounded-xl border border-emerald-200 bg-white px-4 py-3 md:col-span-2"
                             />
                             <textarea
                               rows={2}
-                              value={preAgreedService.confirmationNote}
-                              onChange={(event) => updatePreAgreed({ confirmationNote: event.target.value })}
-                              placeholder="หมายเหตุข้อตกลง / ช่องทางยืนยัน (ถ้ามี)"
+                              value={repairAuthorization.confirmationNote}
+                              onChange={(event) => updateAuthorization({ confirmationNote: event.target.value })}
+                              placeholder="หมายเหตุ / ช่องทางที่ลูกค้าอนุมัติ (ถ้ามี)"
                               className="rounded-xl border border-emerald-200 bg-white px-4 py-3 md:col-span-2"
                             />
                           </div>

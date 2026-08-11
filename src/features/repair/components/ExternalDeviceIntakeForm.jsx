@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import MobileIntakeEvidenceFields from './MobileIntakeEvidenceFields';
 
 const DEVICE_CATEGORIES = [
@@ -66,6 +66,16 @@ const ExternalDeviceIntakeForm = ({
   const [draft, setDraft] = useState(initialDraft);
   const [selectedAccessories, setSelectedAccessories] = useState([]);
   const [intakeEvidence, setIntakeEvidence] = useState(initialEvidence);
+  const defaultCustomerSignature = customer?.name || customer?.companyName || '';
+
+  useEffect(() => {
+    if (!defaultCustomerSignature) return;
+    setIntakeEvidence((current) =>
+      current.customerSignature.trim()
+        ? current
+        : { ...current, customerSignature: defaultCustomerSignature }
+    );
+  }, [defaultCustomerSignature]);
 
   const preAgreedService = draft.preAgreedService;
   const canSubmit = useMemo(() => {

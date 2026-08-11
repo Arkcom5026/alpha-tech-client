@@ -12,7 +12,33 @@ const emptyDraft = {
   allowOutsourceRepair: false,
 };
 
-const IntakeEvidencePanel = ({ repairJobId, warning }) => {
+const draftFromEvidence = (evidence) => {
+  const consent = evidence?.consent;
+  if (!consent) return { ...emptyDraft };
+  return {
+    photos: [],
+    confirmed: Boolean(consent.customerSignature && consent.signedAt),
+    customerSignature: consent.customerSignature || '',
+    allowDataErase: Boolean(consent.allowDataErase),
+    allowFactoryReset: Boolean(consent.allowFactoryReset),
+    allowDisassembly: Boolean(consent.allowDisassembly),
+    allowOutsourceRepair: Boolean(consent.allowOutsourceRepair),
+  };
+};
+
+const consentChanged = (draft, evidence) => {
+  const consent = evidence?.consent;
+  if (!consent) return Boolean(draft.confirmed);
+  return (
+    draft.customerSignature.trim() !== String(consent.customerSignature || '').trim() ||
+    Boolean(draft.allowDataErase) !== Boolean(consent.allowDataErase) ||
+    Boolean(draft.allowFactoryReset) !== Boolean(consent.allowFactoryReset) ||
+    Boolean(draft.allowDisassembly) !== Boolean(consent.allowDisassembly) ||
+    Boolean(draft.allowOutsourceRepair) !== Boolean(consent.allowOutsourceRepair)
+  );
+};
+
+const IntakeEvidencePanel = ({ repairJobId, warning, onSaved }) => {
   const [evidence, setEvidence] = useState(null);
   const [draft, setDraft] = useState(emptyDraft);
   const [editing, setEditing] = useState(false);
@@ -35,14 +61,35 @@ const IntakeEvidencePanel = ({ repairJobId, warning }) => {
     load();
   }, [load]);
 
+  const beginEdit = () => {
+    setDraft(draftFromEvidence(evidence));
+    setEditing(true);
+  };
+
+  const cancelEdit = () => {
+    setDraft(emptyDraft);
+    setEditing(false);
+  };
+
+  const shouldWriteConsent = consentChanged(draft, evidence);
+  const canSave = Boolean(
+    draft.photos.length ||
+      (shouldWriteConsent && draft.confirmed && draft.customerSignature.trim())
+  );
+
   const save = async () => {
+    if (!canSave) return;
     setLoading(true);
     setError('');
     try {
-      const saved = await repairApi.saveIntakeEvidence(repairJobId, draft);
+      const payload = shouldWriteConsent
+        ? draft
+        : { ...draft, confirmed: false };
+      const saved = await repairApi.saveIntakeEvidence(repairJobId, payload);
       setEvidence(saved);
       setDraft(emptyDraft);
       setEditing(false);
+      await onSaved?.(saved);
     } catch (saveError) {
       setError(saveError.message);
     } finally {
@@ -64,7 +111,7 @@ const IntakeEvidencePanel = ({ repairJobId, warning }) => {
         </div>
         <button
           type="button"
-          onClick={() => setEditing((current) => !current)}
+          onClick={editing ? cancelEdit : beginEdit}
           className="min-h-10 rounded-xl border border-emerald-300 px-3 text-sm font-black text-emerald-700"
         >
           {editing ? 'ยกเลิก' : '+ เพิ่มหลักฐาน'}
@@ -82,7 +129,7 @@ const IntakeEvidencePanel = ({ repairJobId, warning }) => {
           <MobileIntakeEvidenceFields value={draft} onChange={setDraft} />
           <button
             type="button"
-            disabled={loading || (!draft.photos.length && !draft.confirmed)}
+            disabled={loading || !canSave}
             onClick={save}
             className="min-h-12 w-full rounded-xl bg-emerald-700 px-4 font-black text-white disabled:opacity-40"
           >

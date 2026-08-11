@@ -21,6 +21,15 @@ const deviceIdentifiers = (device) =>
     device.serviceTag ? `Service Tag: ${device.serviceTag}` : '',
   ].filter(Boolean).join(' • ');
 
+const repairHistoryText = (device) => {
+  const count = Number(device.repairHistoryCount || 0);
+  if (!count) return '';
+  const latestJobNo = device.latestRepairJob?.jobNo;
+  return latestJobNo
+    ? `เคยรับซ่อม ${count} ครั้ง • ล่าสุด ${latestJobNo}`
+    : `เคยรับซ่อม ${count} ครั้ง`;
+};
+
 const IntakeSearchPanel = ({
   value,
   loading,
@@ -96,41 +105,57 @@ const IntakeSearchPanel = ({
           {devices.length > 0 ? (
             <section className="rounded-2xl border border-blue-200 bg-blue-50/60 p-3">
               <p className="text-xs font-black text-blue-800">อุปกรณ์ที่พบ {devices.length} รายการ</p>
+              <p className="mt-1 text-[11px] text-blue-700">
+                รวมอุปกรณ์ที่เคยซื้อจากร้านหรือเคยนำมารับซ่อมกับลูกค้าที่ค้นหา
+              </p>
               <div className="mt-2 space-y-2">
-                {devices.map((device) => (
-                  <button
-                    key={`${device.sourceType || 'STOCK_ITEM'}-${device.id}`}
-                    type="button"
-                    onClick={() => onSelectDevice(device)}
-                    className="w-full rounded-xl border border-blue-100 bg-white p-3 text-left hover:border-blue-400"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="truncate font-black text-slate-900">{deviceName(device)}</p>
-                        <p className="mt-1 truncate text-xs font-bold text-slate-500">
-                          {deviceIdentifiers(device) || 'ยังไม่มีรหัสประจำอุปกรณ์'}
-                        </p>
-                        {device.latestCustomer ? (
-                          <p className="mt-1 truncate text-xs text-emerald-700">
-                            ลูกค้าล่าสุด: {customerName(device.latestCustomer)}
+                {devices.map((device) => {
+                  const historyText = repairHistoryText(device);
+                  return (
+                    <button
+                      key={`${device.sourceType || 'STOCK_ITEM'}-${device.id}`}
+                      type="button"
+                      onClick={() => onSelectDevice(device)}
+                      className="w-full rounded-xl border border-blue-100 bg-white p-3 text-left hover:border-blue-400"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="truncate font-black text-slate-900">{deviceName(device)}</p>
+                          <p className="mt-1 truncate text-xs font-bold text-slate-500">
+                            {deviceIdentifiers(device) || 'ยังไม่มีรหัสประจำอุปกรณ์'}
                           </p>
-                        ) : null}
+                          {device.latestCustomer ? (
+                            <p className="mt-1 truncate text-xs text-emerald-700">
+                              ลูกค้าล่าสุด: {customerName(device.latestCustomer)}
+                            </p>
+                          ) : null}
+                          {historyText ? (
+                            <p className="mt-1 truncate text-xs font-bold text-violet-700">
+                              {historyText}
+                            </p>
+                          ) : null}
+                        </div>
+                        <div className="flex shrink-0 flex-col items-end gap-1">
+                          {device.sourceType === 'REGISTERED_DEVICE' ? (
+                            <span className="rounded-full bg-violet-100 px-2 py-1 text-[10px] font-black text-violet-700">
+                              อุปกรณ์ลงทะเบียน
+                            </span>
+                          ) : null}
+                          {Number(device.repairHistoryCount || 0) > 0 ? (
+                            <span className="rounded-full bg-emerald-100 px-2 py-1 text-[10px] font-black text-emerald-700">
+                              มีประวัติซ่อม
+                            </span>
+                          ) : null}
+                          {device.exactIdentifierMatch ? (
+                            <span className="rounded-full bg-blue-100 px-2 py-1 text-[10px] font-black text-blue-700">
+                              รหัสตรงกัน
+                            </span>
+                          ) : null}
+                        </div>
                       </div>
-                      <div className="flex shrink-0 flex-col items-end gap-1">
-                        {device.sourceType === 'REGISTERED_DEVICE' ? (
-                          <span className="rounded-full bg-violet-100 px-2 py-1 text-[10px] font-black text-violet-700">
-                            อุปกรณ์ลงทะเบียน
-                          </span>
-                        ) : null}
-                        {device.exactIdentifierMatch ? (
-                          <span className="rounded-full bg-blue-100 px-2 py-1 text-[10px] font-black text-blue-700">
-                            รหัสตรงกัน
-                          </span>
-                        ) : null}
-                      </div>
-                    </div>
-                  </button>
-                ))}
+                    </button>
+                  );
+                })}
               </div>
             </section>
           ) : null}

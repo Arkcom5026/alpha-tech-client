@@ -8,7 +8,7 @@ const STATUS_COPY = {
   },
   REPAIRING: {
     title: 'กำลังซ่อม',
-    description: 'บันทึกอะไหล่ที่ใช้ พักรออะไหล่ หรือสรุปงานเมื่อซ่อมเสร็จ',
+    description: 'บันทึกอะไหล่ที่ใช้ พักรออะไหล่ หรือสรุปงานและค่าซ่อมจริงเมื่อเสร็จ',
   },
   WAITING_PARTS: {
     title: 'รออะไหล่',
@@ -62,7 +62,12 @@ const RepairExecutionPanel = ({ job, submitting, onWorkflowAction, onAddPart }) 
     [workflow.availableActions]
   );
   const [note, setNote] = useState('');
-  const [completion, setCompletion] = useState({ workPerformed: '', resultSummary: '', technicianNote: '' });
+  const [completion, setCompletion] = useState({
+    workPerformed: '',
+    resultSummary: '',
+    finalAmount: '',
+    technicianNote: '',
+  });
   const [qcChecks, setQcChecks] = useState(() => Object.fromEntries(QC_ITEMS.map((item) => [item.key, false])));
   const [qcNote, setQcNote] = useState('');
   const [partSearch, setPartSearch] = useState('');
@@ -155,8 +160,12 @@ const RepairExecutionPanel = ({ job, submitting, onWorkflowAction, onAddPart }) 
     setProducts([]);
   };
 
-  const submitDirectCompletion = () => run('COMPLETE_REPAIR_DIRECT', { repairCompletion: completion });
-  const submitCompletionForQc = () => run('COMPLETE_REPAIR', { repairCompletion: completion });
+  const completionPayload = () => ({
+    ...completion,
+    finalAmount: Number(completion.finalAmount),
+  });
+  const submitDirectCompletion = () => run('COMPLETE_REPAIR_DIRECT', { repairCompletion: completionPayload() });
+  const submitCompletionForQc = () => run('COMPLETE_REPAIR', { repairCompletion: completionPayload() });
   const qcPayload = () => ({
     checks: QC_ITEMS.map((item) => ({ ...item, passed: Boolean(qcChecks[item.key]) })),
     note: qcNote.trim() || undefined,
@@ -165,7 +174,14 @@ const RepairExecutionPanel = ({ job, submitting, onWorkflowAction, onAddPart }) 
   const anyQcFailed = QC_ITEMS.some((item) => !qcChecks[item.key]);
   const copy = STATUS_COPY[status];
   const serializedPartsUsed = Array.isArray(job?.serializedPartsUsed) ? job.serializedPartsUsed : [];
-  const completionReady = Boolean(completion.workPerformed.trim() && completion.resultSummary.trim());
+  const finalAmount = Number(completion.finalAmount);
+  const completionReady = Boolean(
+    completion.workPerformed.trim() &&
+      completion.resultSummary.trim() &&
+      completion.finalAmount !== '' &&
+      Number.isFinite(finalAmount) &&
+      finalAmount >= 0
+  );
 
   return (
     <section className="rounded-2xl border border-emerald-200 bg-white p-5 shadow-sm">
@@ -366,7 +382,7 @@ const RepairExecutionPanel = ({ job, submitting, onWorkflowAction, onAddPart }) 
               <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
                 <h4 className="font-black text-emerald-950">ซ่อมเสร็จแล้ว</h4>
                 <p className="mt-1 text-sm text-emerald-800">
-                  สรุปงานครั้งเดียว แล้วเลือกพร้อมส่งมอบได้ทันที หรือส่งตรวจหลังซ่อมเมื่อเคสนี้ต้องการ QC เพิ่มเติม
+                  สรุปงานและระบุค่าซ่อมจริงเมื่อทราบยอดแล้ว จากนั้นพร้อมส่งมอบได้ทันที หรือเลือกตรวจหลังซ่อมสำหรับเคสที่ต้องการ QC เพิ่มเติม
                 </p>
                 <textarea
                   rows={3}
@@ -382,6 +398,18 @@ const RepairExecutionPanel = ({ job, submitting, onWorkflowAction, onAddPart }) 
                   placeholder="ผลหลังซ่อม *"
                   className="mt-3 w-full rounded-xl border border-emerald-200 bg-white px-4 py-3"
                 />
+                <label className="mt-3 block space-y-1">
+                  <span className="text-xs font-black text-emerald-900">ค่าซ่อมจริง *</span>
+                  <input
+                    type="number"
+                    min="0"
+                    value={completion.finalAmount}
+                    onChange={(event) => setCompletion((current) => ({ ...current, finalAmount: event.target.value }))}
+                    placeholder="ระบุยอดจริงหลังซ่อม เช่น 350 (ใส่ 0 หากไม่คิดค่าใช้จ่าย)"
+                    className="w-full rounded-xl border border-emerald-200 bg-white px-4 py-3"
+                  />
+                  <span className="block text-[11px] text-emerald-700">ยอดนี้เป็นราคาสุดท้ายสำหรับการส่งมอบ ไม่ต้องกำหนดตั้งแต่รับเครื่อง</span>
+                </label>
                 <textarea
                   rows={2}
                   value={completion.technicianNote}

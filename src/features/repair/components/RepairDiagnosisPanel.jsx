@@ -2,11 +2,12 @@ import React, { useMemo, useState } from 'react';
 import { formatMoney } from '../utils/repairRuntime';
 
 const STATUS_LABELS = {
-  RECEIVED: 'รับงานแล้ว',
+  RECEIVED: 'รับเครื่องแล้ว',
+  ACCEPTED: 'ช่างรับงานแล้ว',
   WAITING_DIAGNOSIS: 'รอตรวจสอบ',
   DIAGNOSING: 'กำลังตรวจสอบ',
   WAITING_APPROVAL: 'รอลูกค้าอนุมัติ',
-  APPROVED: 'ลูกค้าอนุมัติแล้ว',
+  APPROVED: 'ลูกค้าอนุมัติราคาแล้ว',
   REJECTED: 'ลูกค้าไม่อนุมัติ',
   REPAIRING: 'กำลังซ่อม',
   WAITING_PARTS: 'รออะไหล่',
@@ -58,19 +59,22 @@ const RepairDiagnosisPanel = ({ job, submitting, onWorkflowAction }) => {
 
   const existingDiagnosis = workflow.diagnosis;
   const repairAuthorization = workflow.preAgreedService;
+  const acceptanceEntry = Boolean(
+    workflow.status === 'RECEIVED' && actionNames.has('ACCEPT_JOB')
+  );
   const authorizationEntry = Boolean(
-    workflow.status === 'RECEIVED' &&
+    workflow.status === 'ACCEPTED' &&
       repairAuthorization?.enabled &&
       actionNames.has('START_PRE_AGREED_SERVICE')
   );
   const directEntry = Boolean(
-    workflow.status === 'RECEIVED' &&
+    workflow.status === 'ACCEPTED' &&
       actionNames.has('START_REPAIR') &&
       !authorizationEntry
   );
-  const simplifiedEntry = authorizationEntry || directEntry;
+  const readyAfterAcceptance = authorizationEntry || directEntry;
   const hasOptionalEntryActions =
-    workflow.status === 'RECEIVED' && actionNames.has('QUEUE_DIAGNOSIS');
+    workflow.status === 'ACCEPTED' && actionNames.has('QUEUE_DIAGNOSIS');
 
   return (
     <section className="rounded-2xl border border-blue-200 bg-white p-5 shadow-sm">
@@ -78,12 +82,14 @@ const RepairDiagnosisPanel = ({ job, submitting, onWorkflowAction }) => {
         <div>
           <p className="text-xs font-black uppercase tracking-[0.16em] text-blue-700">Repair Workflow</p>
           <h3 className="mt-1 text-xl font-black text-slate-950">
-            {simplifiedEntry ? 'พร้อมเริ่มงาน' : 'ขั้นตรวจสอบ'}
+            {acceptanceEntry ? 'รอช่างรับงาน' : readyAfterAcceptance ? 'พร้อมดำเนินงาน' : 'ขั้นตรวจสอบ'}
           </h3>
           <p className="mt-1 text-sm text-slate-500">
-            {simplifiedEntry
-              ? 'หากขอบเขตงานชัดเจนสามารถเริ่มงานได้ทันที ส่วนการตรวจสอบและขั้นตอนพิเศษเลือกใช้เมื่อจำเป็น'
-              : 'ใช้การตรวจสอบเมื่อต้องหาสาเหตุหรือประเมินงานเพิ่มเติมก่อนดำเนินการ'}
+            {acceptanceEntry
+              ? 'ร้านรับเครื่องแล้ว ช่างต้องรับผิดชอบใบงานก่อน จึงเริ่มซ่อมหรือเลือกตรวจสอบได้'
+              : readyAfterAcceptance
+                ? 'ช่างรับงานแล้ว เลือกเริ่มซ่อมได้ทันที หรือใช้การตรวจสอบเมื่อเคสต้องการรายละเอียดหรือเสนอราคาก่อนซ่อม'
+                : 'ใช้การตรวจสอบเมื่อต้องหาสาเหตุหรือประเมินงานเพิ่มเติมก่อนดำเนินการ'}
           </p>
         </div>
         <span className="w-fit rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-black text-blue-700">
@@ -105,6 +111,24 @@ const RepairDiagnosisPanel = ({ job, submitting, onWorkflowAction }) => {
         </div>
       ) : null}
 
+      {acceptanceEntry ? (
+        <div className="mt-5 rounded-2xl border border-emerald-300 bg-emerald-50 p-4 shadow-sm">
+          <p className="text-xs font-black uppercase tracking-[0.14em] text-emerald-700">Job Acceptance · Primary Action</p>
+          <h4 className="mt-1 text-lg font-black text-emerald-950">ช่างรับงานก่อนดำเนินการ</h4>
+          <p className="mt-1 text-sm text-emerald-800">
+            การรับงานหมายถึงช่างรับผิดชอบใบงานนี้ ยังไม่ใช่การเริ่มซ่อม หลังรับงานแล้วจึงเลือกเริ่มซ่อมหรือตรวจสอบก่อนตามเคส
+          </p>
+          <button
+            type="button"
+            disabled={submitting}
+            onClick={() => run('ACCEPT_JOB')}
+            className="mt-4 min-h-12 rounded-xl bg-emerald-700 px-6 font-black text-white disabled:opacity-40"
+          >
+            รับงาน
+          </button>
+        </div>
+      ) : null}
+
       {authorizationEntry ? (
         <div className="mt-5 rounded-2xl border border-emerald-300 bg-emerald-50 p-4 shadow-sm">
           <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
@@ -112,7 +136,7 @@ const RepairDiagnosisPanel = ({ job, submitting, onWorkflowAction }) => {
               <p className="text-xs font-black uppercase tracking-[0.14em] text-emerald-700">Repair Authorization · Primary Action</p>
               <h4 className="mt-1 text-lg font-black text-emerald-950">ลูกค้าอนุมัติให้ซ่อมแล้ว</h4>
               <p className="mt-1 text-sm text-emerald-800">
-                ลูกค้าอนุญาตให้ดำเนินงานโดยไม่ต้องเสนอราคาก่อน ช่างเริ่มงานได้ทันทีและระบุค่าซ่อมจริงเมื่อซ่อมเสร็จ
+                ช่างรับงานแล้ว และลูกค้าอนุญาตให้ดำเนินการโดยไม่ต้องเสนอราคาก่อน สามารถเริ่มซ่อมได้ทันทีและระบุค่าซ่อมจริงเมื่อซ่อมเสร็จ
               </p>
             </div>
             <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-emerald-800">
@@ -134,7 +158,7 @@ const RepairDiagnosisPanel = ({ job, submitting, onWorkflowAction }) => {
             onClick={() => run('START_PRE_AGREED_SERVICE')}
             className="mt-4 min-h-12 rounded-xl bg-emerald-700 px-6 font-black text-white disabled:opacity-40"
           >
-            เริ่มงาน
+            เริ่มซ่อม
           </button>
         </div>
       ) : null}
@@ -142,9 +166,9 @@ const RepairDiagnosisPanel = ({ job, submitting, onWorkflowAction }) => {
       {directEntry ? (
         <div className="mt-5 rounded-2xl border border-emerald-300 bg-emerald-50 p-4 shadow-sm">
           <p className="text-xs font-black uppercase tracking-[0.14em] text-emerald-700">Primary Action</p>
-          <h4 className="mt-1 text-lg font-black text-emerald-950">เริ่มงานได้เลย</h4>
+          <h4 className="mt-1 text-lg font-black text-emerald-950">เริ่มซ่อมได้เลย</h4>
           <p className="mt-1 text-sm text-emerald-800">
-            ใช้เมื่อข้อมูลรับเครื่องและขอบเขตงานเพียงพอแล้ว ไม่ต้องผ่านขั้นตรวจสอบหรือเสนอราคาโดยไม่จำเป็น
+            ช่างรับงานแล้ว หากข้อมูลและขอบเขตงานเพียงพอสามารถเริ่มซ่อมได้ โดยไม่ต้องผ่านขั้นตรวจสอบหรือเสนอราคาโดยไม่จำเป็น
           </p>
           <button
             type="button"
@@ -152,7 +176,7 @@ const RepairDiagnosisPanel = ({ job, submitting, onWorkflowAction }) => {
             onClick={() => run('START_REPAIR')}
             className="mt-4 min-h-12 rounded-xl bg-emerald-700 px-6 font-black text-white disabled:opacity-40"
           >
-            เริ่มงาน
+            เริ่มซ่อม
           </button>
         </div>
       ) : null}
@@ -160,7 +184,7 @@ const RepairDiagnosisPanel = ({ job, submitting, onWorkflowAction }) => {
       {hasOptionalEntryActions ? (
         <div className="mt-5 border-t border-slate-200 pt-4">
           <p className="text-xs font-black uppercase tracking-[0.14em] text-slate-500">ตัวเลือกเพิ่มเติม</p>
-          <p className="mt-1 text-sm text-slate-500">เลือกใช้เฉพาะเมื่อเคสนี้ต้องการขั้นตอนเพิ่มเติม</p>
+          <p className="mt-1 text-sm text-slate-500">หลังรับงานแล้ว เลือกตรวจสอบเมื่อเคสต้องหาสาเหตุหรือเมื่อลูกค้าต้องการเสนอราคาก่อนซ่อม</p>
         </div>
       ) : null}
 

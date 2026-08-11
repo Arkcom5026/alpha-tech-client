@@ -91,6 +91,7 @@ const TaxClosingHandoffPage = () => {
       generatedAt: data.generatedAt,
     });
     downloadJson(`tax-closing-${periodCode}-bundle.json`, data);
+    downloadJson(`pp30-settlement-${periodCode}.json`, snapshot?.pp30 || {});
     downloadCsv(`output-vat-${periodCode}.csv`, ['วันที่', 'เลขเอกสาร', 'ประเภท', 'คู่ค้า', 'เลขผู้เสียภาษี', 'ก่อน VAT', 'VAT', 'รวม'], exportRows.outputVat);
     downloadCsv(`input-vat-${periodCode}.csv`, ['วันที่', 'เลขเอกสาร', 'ประเภท', 'คู่ค้า', 'เลขผู้เสียภาษี', 'ก่อน VAT', 'VAT', 'รวม'], exportRows.inputVat);
     downloadCsv(`tax-expenses-${periodCode}.csv`, ['วันที่', 'เลขค่าใช้จ่าย', 'คู่ค้า', 'เลขเอกสาร', 'ก่อน VAT', 'VAT', 'รวม', 'WHT', 'ยอดจ่าย', 'หลักฐาน'], exportRows.expenses);
@@ -130,11 +131,12 @@ const TaxClosingHandoffPage = () => {
             <p className="mt-2 text-xs font-semibold text-slate-600">ชุดนี้ใช้สำหรับส่งสำนักงานบัญชีหรือใช้เตรียมการยื่นเองในอนาคต และไม่ใช่หลักฐานการยื่นต่อกรมสรรพากรโดยตรง</p>
           </section>
 
-          <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
             <div className="rounded-2xl border border-emerald-200 bg-white p-4"><p className="text-xs text-slate-500">Output VAT</p><p className="mt-1 text-xl font-black">฿{money(snapshot?.outputVat?.summary?.taxAmount)}</p><p className="text-xs text-slate-500">{snapshot?.outputVat?.documents?.length || 0} เอกสาร</p></div>
             <div className="rounded-2xl border border-blue-200 bg-white p-4"><p className="text-xs text-slate-500">Input VAT</p><p className="mt-1 text-xl font-black">฿{money(snapshot?.inputVat?.summary?.taxAmount)}</p><p className="text-xs text-slate-500">{snapshot?.inputVat?.documents?.length || 0} เอกสาร</p></div>
             <div className="rounded-2xl border border-amber-200 bg-white p-4"><p className="text-xs text-slate-500">Tax Expenses</p><p className="mt-1 text-xl font-black">฿{money(snapshot?.expenses?.summary?.totalAmount)}</p><p className="text-xs text-slate-500">{snapshot?.expenses?.rows?.length || 0} รายการ</p></div>
             <div className="rounded-2xl border border-violet-200 bg-white p-4"><p className="text-xs text-slate-500">WHT</p><p className="mt-1 text-xl font-black">฿{money(snapshot?.withholding?.summary?.withholdingTaxAmount)}</p><p className="text-xs text-slate-500">{snapshot?.withholding?.rows?.length || 0} รายการ</p></div>
+            <div className="rounded-2xl border border-cyan-200 bg-white p-4"><p className="text-xs text-slate-500">PP30 สุทธิ</p><p className="mt-1 text-xl font-black">฿{money(snapshot?.pp30?.settlement?.pp30VatPayable ?? snapshot?.pp30?.settlement?.pp30VatCredit)}</p><p className="text-xs text-slate-500">{snapshot?.pp30?.readiness?.readyForPp30Preparation ? 'พร้อม' : 'ยังไม่พร้อม'}</p></div>
           </section>
 
           <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">

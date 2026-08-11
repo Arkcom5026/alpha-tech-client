@@ -6,6 +6,7 @@ import {
   filterRepairJobs,
   getRepairQueueSearchValues,
   projectRepairQueue,
+  projectRepairQueueItem,
 } from '../src/features/repair/queue/workspace/policies/repairQueuePolicy.js';
 
 const root = process.cwd();
@@ -17,6 +18,8 @@ const workspaceSource = read(
 const policySource = read(
   'src/features/repair/queue/workspace/policies/repairQueuePolicy.js'
 );
+const runtimeSource = read('src/features/repair/utils/repairRuntime.js');
+const boardSource = read('src/features/repair/components/QueueBoard.jsx');
 
 const sampleJobs = [
   {
@@ -37,6 +40,21 @@ const sampleJobs = [
     deviceModel: 'Phone B',
     reportedSymptoms: 'Broken display',
   },
+  {
+    id: 8,
+    jobNo: 'REP-008',
+    status: 'IN_PROGRESS',
+    customerName: 'External Customer',
+    deviceModel: 'Notebook C',
+    activeSubcontract: {
+      id: 77,
+      active: true,
+      status: 'SENT',
+      providerName: 'ช่างวา',
+      workScope: 'ซ่อมเมนบอร์ด',
+      sentAt: '2026-08-11T16:15:23.000Z',
+    },
+  },
 ];
 
 describe('repair queue workspace foundation contract', () => {
@@ -54,15 +72,38 @@ describe('repair queue workspace foundation contract', () => {
     expect(values).toContain('IMEI-001');
     expect(filterRepairJobs(sampleJobs, 'imei-001')).toEqual([sampleJobs[0]]);
     expect(filterRepairJobs(sampleJobs, 'somchai')).toEqual([sampleJobs[1]]);
+    expect(filterRepairJobs(sampleJobs, 'ช่างวา')).toEqual([sampleJobs[2]]);
     expect(filterRepairJobs(sampleJobs, '')).toBe(sampleJobs);
+  });
+
+  it('routes active subcontract custody to external repair lane without replacing repair status', () => {
+    const projected = projectRepairQueueItem(sampleJobs[2]);
+    expect(projected.status).toBe('IN_PROGRESS');
+    expect(projected.queueStatus).toBe('EXTERNAL_REPAIR');
+
+    const projection = projectRepairQueue(sampleJobs, '');
+    const externalLane = projection.lanes.find((lane) => lane.key === 'EXTERNAL_REPAIR');
+    const internalLane = projection.lanes.find((lane) => lane.key === 'IN_PROGRESS');
+    expect(externalLane?.items.map((item) => item.id)).toContain(8);
+    expect(internalLane?.items.map((item) => item.id)).not.toContain(8);
+    expect(internalLane?.items.map((item) => item.id)).toContain(2);
   });
 
   it('preserves lane projection through the established repair runtime policy', () => {
     const projection = projectRepairQueue(sampleJobs, 'REP-001');
     expect(projection.filtered).toEqual([sampleJobs[0]]);
     expect(projection.lanes).toEqual(expect.any(Array));
-    expect(projection.lanes.flatMap((lane) => lane.items)).toContain(sampleJobs[0]);
-    expect(projection.lanes.flatMap((lane) => lane.items)).not.toContain(sampleJobs[1]);
+    expect(projection.lanes.flatMap((lane) => lane.items).map((item) => item.id)).toContain(sampleJobs[0].id);
+    expect(projection.lanes.flatMap((lane) => lane.items).map((item) => item.id)).not.toContain(sampleJobs[1].id);
+  });
+
+  it('declares and presents the external repair lane with provider context', () => {
+    expect(runtimeSource).toContain("key: 'EXTERNAL_REPAIR'");
+    expect(runtimeSource).toContain("label: 'ส่งซ่อมภายนอก'");
+    expect(boardSource).toContain("lane.key === 'EXTERNAL_REPAIR'");
+    expect(boardSource).toContain('ส่งให้: {external.providerName}');
+    expect(boardSource).toContain('งาน: {external.workScope}');
+    expect(boardSource).toContain("min-w-[1420px] grid-cols-6");
   });
 
   it('keeps workspace presentation free of store, route, and lifecycle authority', () => {

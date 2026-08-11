@@ -113,7 +113,7 @@ const RepairEstimateApprovalPanel = ({ repairJobId, job }) => {
           </p>
           <h2 className="mt-1 text-lg font-black text-slate-950">ส่งราคาประเมินให้ลูกค้าอนุมัติ</h2>
           <p className="mt-1 text-sm text-slate-600">
-            ใช้เฉพาะเคสที่ลูกค้าต้องการทราบและอนุมัติราคาก่อนซ่อม ระบบจะล็อกยอดเป็น snapshot และรอการตัดสินใจจากลูกค้า
+            ใช้เฉพาะเคสที่ลูกค้าต้องการทราบและอนุมัติราคาก่อนซ่อม ระบบจะล็อกยอดเป็น snapshot รอการตัดสินใจจากลูกค้า และอัปเดต workflow ให้อัตโนมัติเมื่อลูกค้าตอบกลับ
           </p>
         </div>
         {workflowStatus === 'WAITING_APPROVAL' ? (

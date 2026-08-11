@@ -69,30 +69,30 @@ const TaxPeriodListTable = ({
                         onClick={() => navigate(`${period.id}/readiness`)}
                         className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-300 bg-indigo-50 px-3 py-2 text-xs font-bold text-indigo-800 hover:bg-indigo-100"
                       >
-                        <ShieldCheck size={14} /> Tax Readiness
+                        <ShieldCheck size={14} /> ความพร้อมภาษี
                       </button>
                       <button
                         type="button"
                         onClick={() => navigate(`${period.id}/vat-settlement`)}
                         className="inline-flex items-center gap-1.5 rounded-lg border border-blue-300 bg-blue-50 px-3 py-2 text-xs font-bold text-blue-800 hover:bg-blue-100"
                       >
-                        <Calculator size={14} /> VAT Settlement
+                        <Calculator size={14} /> สรุป VAT
                       </button>
                       <button
                         type="button"
                         onClick={() => navigate(`${period.id}/withholding-tax`)}
                         className="inline-flex items-center gap-1.5 rounded-lg border border-violet-300 bg-violet-50 px-3 py-2 text-xs font-bold text-violet-800 hover:bg-violet-100"
                       >
-                        <ReceiptText size={14} /> WHT
+                        <ReceiptText size={14} /> ภาษีหัก ณ ที่จ่าย
                       </button>
                       <button
                         type="button"
                         onClick={() => navigate(`${period.id}/handoff`)}
                         className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-800 hover:bg-emerald-100"
                       >
-                        <FolderArchive size={14} /> Tax Closing Package · ส่งสำนักงานบัญชี
+                        <FolderArchive size={14} /> ชุดปิดรอบภาษี · ส่งสำนักงานบัญชี
                       </button>
-                      {actions.length === 0 ? <span className="inline-flex items-center text-xs font-semibold text-slate-400">ไม่มี Action ต่อ</span> : actions.map(({ action }) => {
+                      {actions.length === 0 ? <span className="inline-flex items-center text-xs font-semibold text-slate-400">ไม่มีขั้นตอนต่อ</span> : actions.map(({ action }) => {
                         const meta = actionMeta[action];
                         if (!meta) return null;
                         const Icon = meta.icon;

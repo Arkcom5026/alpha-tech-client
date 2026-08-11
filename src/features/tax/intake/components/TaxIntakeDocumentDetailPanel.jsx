@@ -16,6 +16,35 @@ const DetailMetric = ({ label, value }) => (
   </div>
 );
 
+const normalizeText = (value) => String(value || '').trim();
+const normalizeTaxId = (value) => String(value || '').replace(/[^0-9]/g, '');
+
+const projectFullTaxRecipientReadiness = (document) => {
+  const recipient = document?.snapshot?.recipient || {};
+  const legalName = normalizeText(recipient.legalName || document?.snapshot?.counterpartyName);
+  const taxId = normalizeTaxId(recipient.taxId || document?.counterpartyTaxId);
+  const registeredAddress = normalizeText(recipient.registeredAddress);
+  const branchCode = normalizeText(recipient.branchCode || '00000');
+
+  const missing = [];
+  if (!legalName) missing.push('ชื่อผู้รับ/ชื่อนิติบุคคล');
+  if (taxId.length !== 13) missing.push('เลขประจำตัวผู้เสียภาษี 13 หลัก');
+  if (!registeredAddress) missing.push('ที่อยู่จดทะเบียน');
+  if (!/^[0-9]{5}$/.test(branchCode)) missing.push('รหัสสาขา 5 หลัก');
+
+  return {
+    ready: missing.length === 0,
+    missing,
+    recipient: {
+      legalName: legalName || '-',
+      taxId: taxId || '-',
+      registeredAddress: registeredAddress || '-',
+      branchCode: branchCode || '-',
+      isHeadOffice: Boolean(recipient.isHeadOffice),
+    },
+  };
+};
+
 const TaxIntakeDocumentDetailPanel = ({
   document,
   transitioning,
@@ -32,6 +61,7 @@ const TaxIntakeDocumentDetailPanel = ({
   const approvalBlocked = Boolean(reconciliation && !reconciliation.canApprove);
   const isIssuedOutput = document.status === 'REGISTERED'
     && ['OUTPUT_TAX_INVOICE', 'OUTPUT_TAX_CREDIT_NOTE'].includes(document.documentType);
+  const fullTaxReadiness = isDraftOutput ? projectFullTaxRecipientReadiness(document) : null;
 
   return (
     <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -98,12 +128,55 @@ const TaxIntakeDocumentDetailPanel = ({
           })}
         </div>
       )}
+
       {isDraftOutput && (
-        <div className="space-y-2 rounded-xl border border-blue-200 bg-blue-50 p-4">
-          <p className="text-sm font-bold text-blue-900">เอกสารภาษีขายต้องออกเลขผ่านระบบควบคุมเลขเอกสาร</p>
-          <div className="flex flex-wrap gap-2"><button disabled={transitioning} onClick={() => onIssue('SHORT')} className="rounded-xl bg-emerald-700 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">ออกใบกำกับภาษีอย่างย่อ</button><button disabled={transitioning} onClick={() => onIssue('FULL')} className="rounded-xl bg-blue-700 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">ออกใบกำกับภาษีเต็มรูป</button></div>
+        <div className="space-y-3 rounded-xl border border-blue-200 bg-blue-50 p-4">
+          <div>
+            <p className="text-sm font-bold text-blue-900">เอกสารภาษีขายต้องออกเลขผ่านระบบควบคุมเลขเอกสาร</p>
+            <p className="mt-1 text-xs text-blue-700">ใบกำกับภาษีเต็มรูปจะเปิดให้กดเมื่อข้อมูลผู้รับครบตามเงื่อนไขของระบบ</p>
+          </div>
+
+          <div className="rounded-xl border border-blue-100 bg-white p-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-sm font-black text-slate-900">ข้อมูลผู้รับสำหรับใบกำกับภาษีเต็มรูป</p>
+              <span className={`rounded-full px-2.5 py-1 text-xs font-black ${fullTaxReadiness.ready ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-800'}`}>
+                {fullTaxReadiness.ready ? 'ข้อมูลครบ' : 'ข้อมูลยังไม่ครบ'}
+              </span>
+            </div>
+            <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
+              <div><dt className="text-xs text-slate-500">ชื่อผู้รับ/นิติบุคคล</dt><dd className="font-bold text-slate-900">{fullTaxReadiness.recipient.legalName}</dd></div>
+              <div><dt className="text-xs text-slate-500">เลขประจำตัวผู้เสียภาษี</dt><dd className="font-bold text-slate-900">{fullTaxReadiness.recipient.taxId}</dd></div>
+              <div><dt className="text-xs text-slate-500">ที่อยู่จดทะเบียน</dt><dd className="font-bold text-slate-900">{fullTaxReadiness.recipient.registeredAddress}</dd></div>
+              <div><dt className="text-xs text-slate-500">รหัสสาขา</dt><dd className="font-bold text-slate-900">{fullTaxReadiness.recipient.branchCode}</dd></div>
+            </dl>
+            {!fullTaxReadiness.ready && (
+              <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-900">
+                ยังออกใบกำกับภาษีเต็มรูปไม่ได้ · ขาด: {fullTaxReadiness.missing.join(', ')}
+              </div>
+            )}
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              disabled={transitioning}
+              onClick={() => onIssue('SHORT')}
+              className="rounded-xl bg-emerald-700 px-4 py-2 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              ออกใบกำกับภาษีอย่างย่อ
+            </button>
+            <button
+              type="button"
+              disabled={transitioning || !fullTaxReadiness.ready}
+              onClick={() => onIssue('FULL')}
+              className="rounded-xl bg-blue-700 px-4 py-2 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              ออกใบกำกับภาษีเต็มรูป
+            </button>
+          </div>
         </div>
       )}
+
       {isIssuedOutput && (
         <Link
           to={`/${shopSlug || 'advancetech'}/pos/sales/tax-document/print/${document.id}`}

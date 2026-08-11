@@ -19,6 +19,17 @@ describe('repair intake evidence consent preservation contract', () => {
     expect(panel).toContain('onClick={editing ? cancelEdit : beginEdit}');
   });
 
+  it('does not re-sign unchanged consent when staff only adds photos', () => {
+    const panel = read('src/features/repair/components/IntakeEvidencePanel.jsx');
+
+    expect(panel).toContain('const consentChanged = (draft, evidence) =>');
+    expect(panel).toContain('const shouldWriteConsent = consentChanged(draft, evidence)');
+    expect(panel).toContain("? draft\n        : { ...draft, confirmed: false }");
+    expect(panel).toContain('draft.photos.length ||');
+    expect(panel).toContain('shouldWriteConsent && draft.confirmed && draft.customerSignature.trim()');
+    expect(panel).toContain('disabled={loading || !canSave}');
+  });
+
   it('continues to submit explicit permission values through the repair evidence API', () => {
     const api = read('src/features/repair/api/repairApi.js');
 

@@ -37,10 +37,11 @@ test('client follows backend projections instead of recreating tax eligibility',
   assert.doesNotMatch(page, /0\.07|7\s*\/\s*100|VAT_RATE/);
 });
 
-test('readiness routes filing blockers directly to the filing workspace', () => {
+test('readiness explains filing blockers in Thai and follows backend-owned targets', () => {
   const page = read('src/features/tax/readiness/pages/UnifiedTaxReadinessPage.jsx');
   assert.match(page, /INPUT_VAT_FILING_NOT_PREPARED/);
   assert.match(page, /INPUT_VAT_FILING_INCOMPLETE/);
-  assert.match(page, /tax-periods\/\$\{taxPeriodId\}\/input-vat-filing/);
+  assert.match(page, /entry\.target\?\.relativePath/);
+  assert.match(page, /domain\.target/);
   assert.match(page, /ยังไม่ได้เตรียมชุดภาษีซื้อสำหรับรอบนี้/);
 });

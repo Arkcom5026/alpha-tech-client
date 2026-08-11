@@ -6,13 +6,15 @@ const root = process.cwd();
 const read = (relativePath) => fs.readFileSync(path.join(root, relativePath), 'utf8');
 
 describe('repair completion and QC workflow contract', () => {
-  it('requires a repair completion summary before entering QC', () => {
+  it('requires a repair completion summary and final amount before entering optional QC', () => {
     const panel = read('src/features/repair/components/RepairExecutionPanel.jsx');
 
     expect(panel).toContain("run('COMPLETE_REPAIR'");
     expect(panel).toContain('completion.workPerformed.trim()');
     expect(panel).toContain('completion.resultSummary.trim()');
-    expect(panel).toContain('ส่งตรวจหลังซ่อม');
+    expect(panel).toContain("completion.finalAmount !== ''");
+    expect(panel).toContain('ค่าซ่อมจริง *');
+    expect(panel).toContain('ตรวจหลังซ่อมก่อนส่งมอบ');
   });
 
   it('uses a visible QC checklist and only allows PASS_QC when every item passes', () => {

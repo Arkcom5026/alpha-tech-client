@@ -18,6 +18,12 @@ const customerLabel = (customer) => customer?.companyName || customer?.name || '
 const money = (value) => Number(value || 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const dateTime = (value) => value ? new Date(value).toLocaleString('th-TH') : '-';
 
+const statusMeta = (status) => {
+  if (status === 'CANCELLED') return { label: 'ยกเลิก', className: 'bg-rose-100 text-rose-700' };
+  if (status === 'FULLY_ALLOCATED') return { label: 'ใช้ครบแล้ว', className: 'bg-sky-100 text-sky-700' };
+  return { label: 'พร้อมใช้', className: 'bg-emerald-100 text-emerald-700' };
+};
+
 const initialFilters = {
   search: '',
   status: '',
@@ -53,9 +59,10 @@ const CustomerMoneyReceiveListPage = () => {
   const summary = useMemo(() => rows.reduce((acc, row) => {
     acc.total += Number(row.amount || 0);
     if (row.status === 'ACTIVE') acc.active += 1;
+    if (row.status === 'FULLY_ALLOCATED') acc.allocated += 1;
     if (row.status === 'CANCELLED') acc.cancelled += 1;
     return acc;
-  }, { total: 0, active: 0, cancelled: 0 }), [rows]);
+  }, { total: 0, active: 0, allocated: 0, cancelled: 0 }), [rows]);
 
   const submitFilters = (event) => {
     event.preventDefault();
@@ -89,7 +96,7 @@ const CustomerMoneyReceiveListPage = () => {
             <input value={filters.search} onChange={(e) => setFilters((prev) => ({ ...prev, search: e.target.value }))} className="h-11 w-full rounded-xl border border-slate-300 pl-10 pr-3 outline-none focus:border-teal-500" placeholder="เลข CMR, ชื่อลูกค้า, Tax ID, เลขอ้างอิง" />
           </label>
           <select value={filters.status} onChange={(e) => setFilters((prev) => ({ ...prev, status: e.target.value }))} className="h-11 rounded-xl border border-slate-300 px-3">
-            <option value="">ทุกสถานะ</option><option value="ACTIVE">ใช้งาน</option><option value="CANCELLED">ยกเลิก</option>
+            <option value="">ทุกสถานะ</option><option value="ACTIVE">พร้อมใช้</option><option value="FULLY_ALLOCATED">ใช้ครบแล้ว</option><option value="CANCELLED">ยกเลิก</option>
           </select>
           <select value={filters.paymentMethod} onChange={(e) => setFilters((prev) => ({ ...prev, paymentMethod: e.target.value }))} className="h-11 rounded-xl border border-slate-300 px-3">
             <option value="">ทุกช่องทาง</option><option value="CASH">เงินสด</option><option value="TRANSFER">โอนเงิน</option><option value="QR">QR</option><option value="CARD">บัตร</option><option value="E_WALLET">E-Wallet</option><option value="CHEQUE">เช็ค</option><option value="OTHER">อื่น ๆ</option>
@@ -105,7 +112,7 @@ const CustomerMoneyReceiveListPage = () => {
 
       <section className="grid gap-3 sm:grid-cols-3">
         <div className="rounded-2xl border border-slate-200 bg-white p-4"><div className="text-xs text-slate-500">เอกสารที่แสดง</div><div className="mt-1 text-2xl font-bold text-slate-900">{rows.length}</div></div>
-        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4"><div className="text-xs text-emerald-700">ใช้งาน / ยกเลิก</div><div className="mt-1 text-2xl font-bold text-emerald-950">{summary.active} / {summary.cancelled}</div></div>
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4"><div className="text-xs text-emerald-700">พร้อมใช้ / ใช้ครบ / ยกเลิก</div><div className="mt-1 text-2xl font-bold text-emerald-950">{summary.active} / {summary.allocated} / {summary.cancelled}</div></div>
         <div className="rounded-2xl border border-teal-200 bg-teal-50 p-4"><div className="text-xs text-teal-700">ยอดรับเงินตามผลค้นหา</div><div className="mt-1 text-2xl font-bold text-teal-950">฿{money(summary.total)}</div></div>
       </section>
 
@@ -118,21 +125,25 @@ const CustomerMoneyReceiveListPage = () => {
         <div className="overflow-x-auto">
           <table className="w-full min-w-[980px] text-sm">
             <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
-              <tr><th className="px-4 py-3">เลขเอกสาร</th><th className="px-4 py-3">วันที่รับเงิน</th><th className="px-4 py-3">ลูกค้า</th><th className="px-4 py-3">ช่องทาง</th><th className="px-4 py-3 text-right">จำนวนเงิน</th><th className="px-4 py-3">ผู้รับเงิน</th><th className="px-4 py-3">สถานะ</th><th className="px-4 py-3 text-right">จัดการ</th></tr>
+              <tr><th className="px-4 py-3">เลขเอกสาร</th><th className="px-4 py-3">วันที่รับเงิน</th><th className="px-4 py-3">ลูกค้า</th><th className="px-4 py-3">ช่องทาง</th><th className="px-4 py-3 text-right">จำนวนเงิน</th><th className="px-4 py-3 text-right">คงเหลือ</th><th className="px-4 py-3">ผู้รับเงิน</th><th className="px-4 py-3">สถานะ</th><th className="px-4 py-3 text-right">จัดการ</th></tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {loading ? <tr><td colSpan="8" className="px-4 py-10 text-center text-slate-500">กำลังโหลดประวัติ...</td></tr> : rows.length === 0 ? <tr><td colSpan="8" className="px-4 py-10 text-center text-slate-500">ไม่พบรายการรับเงินตามเงื่อนไข</td></tr> : rows.map((row) => (
-                <tr key={row.id} className="hover:bg-slate-50/70">
-                  <td className="px-4 py-3 font-semibold text-slate-900">{row.documentNo}</td>
-                  <td className="px-4 py-3 text-slate-600">{dateTime(row.receivedAt)}</td>
-                  <td className="px-4 py-3"><div className="font-medium text-slate-900">{customerLabel(row.customer)}</div><div className="text-xs text-slate-500">{row.customer?.taxId || '-'}</div></td>
-                  <td className="px-4 py-3 text-slate-600">{paymentMethodLabel(row.paymentMethod)}</td>
-                  <td className="px-4 py-3 text-right font-bold text-slate-900">฿{money(row.amount)}</td>
-                  <td className="px-4 py-3 text-slate-600">{row.receivedBy?.name || `#${row.receivedBy?.id || '-'}`}</td>
-                  <td className="px-4 py-3">{row.status === 'CANCELLED' ? <span className="rounded-full bg-rose-100 px-2.5 py-1 text-xs font-semibold text-rose-700">ยกเลิก</span> : <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700">ใช้งาน</span>}</td>
-                  <td className="px-4 py-3"><div className="flex justify-end gap-2"><button type="button" onClick={() => navigate(`./${row.id}`)} className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold">รายละเอียด</button><button type="button" onClick={() => navigate(`./${row.id}/print`)} className="rounded-lg border border-teal-300 bg-teal-50 px-3 py-1.5 text-xs font-semibold text-teal-800">พิมพ์</button></div></td>
-                </tr>
-              ))}
+              {loading ? <tr><td colSpan="9" className="px-4 py-10 text-center text-slate-500">กำลังโหลดประวัติ...</td></tr> : rows.length === 0 ? <tr><td colSpan="9" className="px-4 py-10 text-center text-slate-500">ไม่พบรายการรับเงินตามเงื่อนไข</td></tr> : rows.map((row) => {
+                const status = statusMeta(row.status);
+                return (
+                  <tr key={row.id} className="hover:bg-slate-50/70">
+                    <td className="px-4 py-3 font-semibold text-slate-900">{row.documentNo}</td>
+                    <td className="px-4 py-3 text-slate-600">{dateTime(row.receivedAt)}</td>
+                    <td className="px-4 py-3"><div className="font-medium text-slate-900">{customerLabel(row.customer)}</div><div className="text-xs text-slate-500">{row.customer?.taxId || '-'}</div></td>
+                    <td className="px-4 py-3 text-slate-600">{paymentMethodLabel(row.paymentMethod)}</td>
+                    <td className="px-4 py-3 text-right font-bold text-slate-900">฿{money(row.amount)}</td>
+                    <td className="px-4 py-3 text-right font-semibold text-slate-700">฿{money(row.remainingAmount)}</td>
+                    <td className="px-4 py-3 text-slate-600">{row.receivedBy?.name || `#${row.receivedBy?.id || '-'}`}</td>
+                    <td className="px-4 py-3"><span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${status.className}`}>{status.label}</span></td>
+                    <td className="px-4 py-3"><div className="flex justify-end gap-2"><button type="button" onClick={() => navigate(`./${row.id}`)} className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold">รายละเอียด</button><button type="button" onClick={() => navigate(`./${row.id}/print`)} className="rounded-lg border border-teal-300 bg-teal-50 px-3 py-1.5 text-xs font-semibold text-teal-800">พิมพ์</button></div></td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

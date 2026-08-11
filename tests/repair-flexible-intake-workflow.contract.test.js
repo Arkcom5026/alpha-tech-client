@@ -10,6 +10,9 @@ describe('repair flexible intake workflow contract', () => {
     const diagnosisPanel = read('src/features/repair/components/RepairDiagnosisPanel.jsx');
     const runtime = read('src/features/repair/utils/repairRuntime.js');
     const workflowOverview = read('src/features/repair/components/RepairWorkflowOverview.jsx');
+    const detailWorkspace = read(
+      'src/features/repair/detail/workspace/components/RepairDetailWorkspace.jsx'
+    );
 
     expect(diagnosisPanel).toContain('ขั้นตรวจสอบ');
     expect(diagnosisPanel).toContain('บันทึกผลตรวจสอบ');
@@ -17,6 +20,8 @@ describe('repair flexible intake workflow contract', () => {
     expect(runtime).toContain("WAITING_DIAGNOSIS', label: 'รอตรวจสอบ'");
     expect(runtime).toContain("DIAGNOSING', label: 'กำลังตรวจสอบ'");
     expect(workflowOverview).not.toContain('กลับไปวินิจฉัย');
+    expect(detailWorkspace).toContain('ตั้งแต่ตรวจสอบจนถึงส่งมอบ');
+    expect(detailWorkspace).not.toContain('วินิจฉัย');
 
     expect(diagnosisPanel).toContain("run('COMPLETE_DIAGNOSIS'");
     expect(diagnosisPanel).toContain("run('START_DIAGNOSIS'");
@@ -64,6 +69,17 @@ describe('repair flexible intake workflow contract', () => {
     expect(estimatePanel).toContain('ใช้ Fast Path แล้ว — ไม่ต้องส่งราคาประเมินให้ลูกค้าอนุมัติอีกครั้ง');
     expect(estimatePanel).toContain('preAgreedService.agreedAmount || job?.estimatedCost');
     expect(estimatePanel).toContain('!preAgreedWasUsed');
+  });
+
+  it('prefills the external intake confirmer from the selected customer without removing edit authority', () => {
+    const externalIntake = read('src/features/repair/components/ExternalDeviceIntakeForm.jsx');
+    const evidenceFields = read('src/features/repair/components/MobileIntakeEvidenceFields.jsx');
+
+    expect(externalIntake).toContain("const defaultCustomerSignature = customer?.name || customer?.companyName || ''");
+    expect(externalIntake).toContain('customerSignature: defaultCustomerSignature');
+    expect(externalIntake).toContain('current.customerSignature.trim()');
+    expect(evidenceFields).toContain("onChange={(event) => patch('customerSignature', event.target.value)}");
+    expect(evidenceFields).toContain('ลูกค้าหรือผู้ส่งมอบพิมพ์ชื่อเพื่อยืนยัน');
   });
 
   it('prefills pickup receiver name from the repair customer projection while still allowing edits', () => {

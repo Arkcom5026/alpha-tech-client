@@ -27,7 +27,7 @@ const RepairDetailWorkspace = ({
     <RepairShellHeader
       eyebrow="Repair Runtime"
       title="รายละเอียดงานซ่อม"
-      description="พื้นที่ปฏิบัติงานหลักที่พาผู้ใช้ทำงานตามขั้นตอน ตั้งแต่ตรวจวินิจฉัยจนถึงส่งมอบ"
+      description="พื้นที่ปฏิบัติงานหลักที่พาผู้ใช้ทำงานตามขั้นตอน ตั้งแต่ตรวจสอบจนถึงส่งมอบ"
     />
 
     <RuntimeStatePanel

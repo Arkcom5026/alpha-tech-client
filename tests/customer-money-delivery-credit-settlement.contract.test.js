@@ -14,6 +14,8 @@ const createPage = read('src/features/customerMoneySettlement/pages/DeliveryCred
 const detailPage = read('src/features/customerMoneySettlement/pages/DeliveryCreditSettlementDetailPage.jsx');
 const printPage = read('src/features/customerMoneySettlement/pages/DeliveryCreditSettlementPrintPage.jsx');
 const api = read('src/features/customerMoneySettlement/api/deliveryCreditSettlementApi.js');
+const receiveListPage = read('src/features/customerMoneyReceive/pages/CustomerMoneyReceiveListPage.jsx');
+const receiveDetailPage = read('src/features/customerMoneyReceive/pages/CustomerMoneyReceiveDetailPage.jsx');
 
 test('delivery credit settlement follows list-first project standard', () => {
   assert.match(sidebar, /ตัดยอดใบส่งของเครดิต/);
@@ -64,6 +66,16 @@ test('whole-note action fails closed in the UI when remaining customer money can
   assert.match(createPage, /Customer Money ที่เหลือไม่พอสำหรับตัดยอดทั้งใบ/);
 });
 
+test('settlement submit uses a durable idempotency key and reuses it after an uncertain response', () => {
+  assert.match(createPage, /useRef/);
+  assert.match(createPage, /submitKeyRef/);
+  assert.match(createPage, /createCommandKey/);
+  assert.match(createPage, /submitKeyRef\.current \|\| createCommandKey\(\)/);
+  assert.match(createPage, /createDeliveryCreditSettlement\([\s\S]*idempotencyKey\)/);
+  assert.match(createPage, /invalidateSubmitKey/);
+  assert.match(api, /X-Idempotency-Key/);
+});
+
 test('history detail print and cancellation use the isolated settlement API', () => {
   assert.match(listPage, /listDeliveryCreditSettlements/);
   assert.match(detailPage, /getDeliveryCreditSettlement/);
@@ -88,6 +100,16 @@ test('cancelled settlements remain auditable in list detail and print projection
   assert.match(detailPage, /record\.cancelledAt/);
   assert.match(printPage, /record\.status === 'CANCELLED'/);
   assert.match(printPage, /เหตุผลการยกเลิก/);
+});
+
+test('fully allocated source receipts are visibly distinct from available receipts', () => {
+  assert.match(receiveListPage, /FULLY_ALLOCATED/);
+  assert.match(receiveListPage, /ใช้ครบแล้ว/);
+  assert.match(receiveListPage, /row\.remainingAmount/);
+  assert.match(receiveDetailPage, /isFullyAllocated/);
+  assert.match(receiveDetailPage, /Customer Money จากใบรับเงินนี้ถูกนำไปใช้ครบแล้ว/);
+  assert.match(receiveDetailPage, /record\.remainingAmount/);
+  assert.match(receiveDetailPage, /record\.status === 'ACTIVE'/);
 });
 
 test('fully paid active sales hand off to the existing document workspace instead of creating tax documents here', () => {

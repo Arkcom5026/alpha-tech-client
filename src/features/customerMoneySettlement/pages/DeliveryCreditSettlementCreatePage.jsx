@@ -6,6 +6,7 @@ import { createDeliveryCreditSettlement, getEligibleDeliveryCredits } from '../a
 
 const customerLabel = (customer) => customer?.companyName || customer?.name || '-';
 const money = (value) => Number(value || 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const lineKey = (saleId, line) => `${saleId}:${line.lineType}:${line.saleItemId}`;
 
 const DeliveryCreditSettlementCreatePage = () => {
   const navigate = useNavigate();
@@ -37,7 +38,7 @@ const DeliveryCreditSettlementCreatePage = () => {
   };
 
   const setLineAmount = (sale, line, value) => {
-    const key = `${sale.id}:${line.lineType}:${line.saleItemId}`;
+    const key = lineKey(sale.id, line);
     setSelected((prev) => {
       const usedByOtherLines = Object.entries(prev).reduce((sum, [existingKey, entry]) => {
         if (existingKey === key || !entry || entry.saleId !== sale.id) return sum;
@@ -53,8 +54,47 @@ const DeliveryCreditSettlementCreatePage = () => {
     });
   };
 
+  const selectWholeSale = (sale) => {
+    setSelected((prev) => {
+      const next = { ...prev };
+      for (const [key, entry] of Object.entries(next)) {
+        if (entry?.saleId === sale.id) delete next[key];
+      }
+
+      let remainingSaleCapacity = Number(sale.outstandingAmount || 0);
+      for (const line of sale.lines || []) {
+        if (remainingSaleCapacity <= 0) break;
+        const remainingLineAmount = Math.max(0, Number(line.remainingAmount ?? line.lineAmount));
+        const amount = Math.min(remainingLineAmount, remainingSaleCapacity);
+        if (amount <= 0) continue;
+        next[lineKey(sale.id, line)] = {
+          saleId: sale.id,
+          saleItemId: line.saleItemId,
+          lineType: line.lineType,
+          amount: Number(amount.toFixed(2)),
+        };
+        remainingSaleCapacity = Number((remainingSaleCapacity - amount).toFixed(2));
+      }
+      return next;
+    });
+  };
+
+  const clearWholeSale = (saleId) => {
+    setSelected((prev) => {
+      const next = { ...prev };
+      for (const [key, entry] of Object.entries(next)) {
+        if (entry?.saleId === saleId) delete next[key];
+      }
+      return next;
+    });
+  };
+
   const selectedLines = useMemo(() => Object.values(selected).filter(Boolean), [selected]);
   const selectedTotal = useMemo(() => selectedLines.reduce((sum, line) => sum + Number(line.amount || 0), 0), [selectedLines]);
+  const selectedBySale = useMemo(() => selectedLines.reduce((map, line) => {
+    map.set(line.saleId, (map.get(line.saleId) || 0) + Number(line.amount || 0));
+    return map;
+  }, new Map()), [selectedLines]);
   const balance = Number(workspace?.balance?.availableAmount || 0);
   const overBalance = selectedTotal > balance;
   const canSubmit = selectedLines.length > 0 && selectedTotal > 0 && !overBalance && !saving;
@@ -112,21 +152,34 @@ const DeliveryCreditSettlementCreatePage = () => {
 
       {workspace && !loadingCredits && (
         <section className="space-y-3">
-          {workspace.sales.length === 0 ? <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-slate-500">ไม่พบใบส่งของเครดิตที่ยังมียอดค้าง</div> : workspace.sales.map((sale) => (
-            <article key={sale.id} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-              <header className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3">
-                <div><div className="font-bold text-slate-900">{sale.documentNo}</div><div className="text-xs text-slate-500">ยอดเอกสาร ฿{money(sale.totalAmount)} · ชำระแล้ว ฿{money(sale.paidAmount)}</div></div>
-                <div className="text-right"><div className="text-xs text-slate-500">ยอดค้าง</div><div className="text-xl font-bold text-rose-700">฿{money(sale.outstandingAmount)}</div></div>
-              </header>
-              <div className="divide-y divide-slate-100">
-                {sale.lines.map((line) => {
-                  const key = `${sale.id}:${line.lineType}:${line.saleItemId}`;
-                  const remaining = Number(line.remainingAmount ?? line.lineAmount);
-                  return <div key={key} className="grid gap-3 px-4 py-3 md:grid-cols-[1fr_150px_160px] md:items-center"><div><div className="font-medium text-slate-900">{line.description}</div><div className="text-xs text-slate-500">{line.lineType} · จำนวน {line.quantity} · มูลค่า ฿{money(line.lineAmount)} · เคยตัด ฿{money(line.appliedAmount)}</div></div><div className="text-right text-sm font-semibold text-rose-700">คงเหลือ ฿{money(remaining)}</div><input type="number" min="0" max={Math.min(remaining, sale.outstandingAmount)} step="0.01" value={selected[key]?.amount ?? ''} onChange={(e) => setLineAmount(sale, line, e.target.value)} placeholder="ยอดที่จะตัด" className="h-10 rounded-lg border border-slate-300 px-3 text-right" /></div>;
-                })}
-              </div>
-            </article>
-          ))}
+          {workspace.sales.length === 0 ? <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-slate-500">ไม่พบใบส่งของเครดิตที่ยังมียอดค้าง</div> : workspace.sales.map((sale) => {
+            const saleSelectedAmount = Number((selectedBySale.get(sale.id) || 0).toFixed(2));
+            const isWholeSaleSelected = saleSelectedAmount > 0 && Math.abs(saleSelectedAmount - Number(sale.outstandingAmount || 0)) < 0.01;
+            return (
+              <article key={sale.id} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                <header className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3">
+                  <div><div className="font-bold text-slate-900">{sale.documentNo}</div><div className="text-xs text-slate-500">ยอดเอกสาร ฿{money(sale.totalAmount)} · ชำระแล้ว ฿{money(sale.paidAmount)} · เลือกแล้ว ฿{money(saleSelectedAmount)}</div></div>
+                  <div className="flex items-center gap-3">
+                    <div className="text-right"><div className="text-xs text-slate-500">ยอดค้าง</div><div className="text-xl font-bold text-rose-700">฿{money(sale.outstandingAmount)}</div></div>
+                    <button
+                      type="button"
+                      onClick={() => (isWholeSaleSelected ? clearWholeSale(sale.id) : selectWholeSale(sale))}
+                      className={`h-10 rounded-xl border px-4 text-sm font-semibold ${isWholeSaleSelected ? 'border-slate-300 bg-white text-slate-700' : 'border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100'}`}
+                    >
+                      {isWholeSaleSelected ? 'ล้างทั้งใบ' : 'เลือกทั้งใบ'}
+                    </button>
+                  </div>
+                </header>
+                <div className="divide-y divide-slate-100">
+                  {sale.lines.map((line) => {
+                    const key = lineKey(sale.id, line);
+                    const remaining = Number(line.remainingAmount ?? line.lineAmount);
+                    return <div key={key} className="grid gap-3 px-4 py-3 md:grid-cols-[1fr_150px_160px] md:items-center"><div><div className="font-medium text-slate-900">{line.description}</div><div className="text-xs text-slate-500">{line.lineType} · จำนวน {line.quantity} · มูลค่า ฿{money(line.lineAmount)} · เคยตัด ฿{money(line.appliedAmount)}</div></div><div className="text-right text-sm font-semibold text-rose-700">คงเหลือ ฿{money(remaining)}</div><input type="number" min="0" max={Math.min(remaining, sale.outstandingAmount)} step="0.01" value={selected[key]?.amount ?? ''} onChange={(e) => setLineAmount(sale, line, e.target.value)} placeholder="ยอดที่จะตัด" className="h-10 rounded-lg border border-slate-300 px-3 text-right" /></div>;
+                  })}
+                </div>
+              </article>
+            );
+          })}
           <textarea value={note} onChange={(e) => setNote(e.target.value)} maxLength={500} rows={3} placeholder="หมายเหตุการตัดยอด (ถ้ามี)" className="w-full rounded-xl border border-slate-300 p-3" />
         </section>
       )}

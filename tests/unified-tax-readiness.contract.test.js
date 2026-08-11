@@ -28,12 +28,11 @@ test('readiness workspace presents percentage domains and Thai closing state', (
   assert.doesNotMatch(source, />Tax Exceptions</);
 });
 
-test('exception cards navigate to operational source targets with filing-specific guidance', () => {
+test('readiness cards follow backend-owned operational source targets', () => {
   const source = read('src/features/tax/readiness/pages/UnifiedTaxReadinessPage.jsx');
   assert.match(source, /entry\.target\?\.relativePath/);
-  assert.match(source, /exceptionTarget/);
+  assert.match(source, /domain\.target/);
   assert.match(source, /ไปดำเนินการ/);
-  assert.match(source, /input-vat-filing/);
   assert.match(source, /\/pos\/finance\//);
 });
 

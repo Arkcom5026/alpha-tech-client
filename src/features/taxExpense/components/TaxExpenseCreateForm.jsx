@@ -10,9 +10,10 @@ const newItem = () => ({
   withholdingTaxAmount: '0',
 });
 
-const TaxExpenseCreateForm = ({ categories, payees, saving, onSubmit }) => {
+const TaxExpenseCreateForm = ({ categories, payees, repairReasons = [], saving, onSubmit }) => {
   const [expensePayeeId, setExpensePayeeId] = useState('');
   const [documentNumber, setDocumentNumber] = useState('');
+  const [repairSubcontractId, setRepairSubcontractId] = useState('');
   const [expenseDate, setExpenseDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [note, setNote] = useState('');
   const [items, setItems] = useState([newItem()]);
@@ -36,8 +37,11 @@ const TaxExpenseCreateForm = ({ categories, payees, saving, onSubmit }) => {
       return;
     }
     try {
+      const repairReason = repairReasons.find((item) => Number(item.id) === Number(repairSubcontractId));
       await onSubmit({
         expensePayeeId: Number(expensePayeeId),
+        repairJobId: repairReason?.repairJob?.id,
+        repairSubcontractId: repairReason?.id,
         documentNumber,
         expenseDate,
         documentDate: expenseDate,
@@ -83,6 +87,18 @@ const TaxExpenseCreateForm = ({ categories, payees, saving, onSubmit }) => {
           <input type="date" value={expenseDate} onChange={(event) => setExpenseDate(event.target.value)} className="mt-1 h-9 w-full rounded-lg border border-slate-200 px-2" />
         </label>
       </div>
+
+      <label className="block text-xs font-bold text-slate-700">เหตุผลการจ่ายสำหรับงานซ่อมภายนอก (ถ้ามี)
+        <select value={repairSubcontractId} onChange={(event) => {
+          const value = event.target.value;
+          setRepairSubcontractId(value);
+          const reason = repairReasons.find((item) => String(item.id) === value);
+          if (reason) setExpensePayeeId(String(reason.expensePayeeId));
+        }} className="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-white px-2">
+          <option value="">ค่าใช้จ่ายทั่วไป — ไม่อ้างอิงงานซ่อม</option>
+          {repairReasons.map((reason) => <option key={reason.id} value={reason.id}>{reason.repairJob?.jobNo} · {reason.repairJob?.deviceModel} · {reason.providerName} · {reason.status}</option>)}
+        </select>
+      </label>
 
       <div className="space-y-2">
         {items.map((item, index) => (

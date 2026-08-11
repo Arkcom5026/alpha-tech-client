@@ -19,6 +19,9 @@ export const listExpensePayeeSuppliers = async (params = {}) =>
 export const createExpensePayee = async (payload) =>
   unwrap(await apiClient.post('/tax-expenses/expense-payees', payload));
 
+export const listRepairExpenseReasons = async () =>
+  unwrap(await apiClient.get('/tax-expenses/repair-reasons'));
+
 export const listTaxExpenses = async ({ status, fromDate, toDate, q } = {}) =>
   unwrap(await apiClient.get('/tax-expenses', {
     params: {

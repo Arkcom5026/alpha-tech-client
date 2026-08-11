@@ -12,6 +12,7 @@ import {
   reallocateInputTaxDocumentReceiptLink,
 } from '../api/inputTaxReceiptLinkApi';
 import {
+  documentCanFitReceiptAllocations,
   projectDocumentAllocation,
   receiptAllocationPrefill,
   receiptIdentity,
@@ -86,11 +87,17 @@ const useInputTaxReceiptWorkspaceController = () => {
   ), [links, selectedDocument, selectedReceipts]);
   const eligibleDocuments = useMemo(() => {
     const mutableDocuments = documents.filter((document) => isTaxDocumentMutable(document.status));
-    if (!selectedSupplierId) return mutableDocuments;
-    return mutableDocuments.filter((document) => (
-      Number(document?.supplierId || document?.snapshot?.supplierId || 0) === Number(selectedSupplierId)
+    const supplierDocuments = selectedSupplierId
+      ? mutableDocuments.filter((document) => (
+        Number(document?.supplierId || document?.snapshot?.supplierId || 0) === Number(selectedSupplierId)
+      ))
+      : mutableDocuments;
+
+    if (selectedReceipts.length === 0) return supplierDocuments;
+    return supplierDocuments.filter((document) => (
+      documentCanFitReceiptAllocations(document, selectedReceipts)
     ));
-  }, [documents, selectedSupplierId]);
+  }, [documents, selectedReceipts, selectedSupplierId]);
   const suppliers = useMemo(() => {
     const unique = new Map();
     receipts.forEach((receipt) => unique.set(Number(receipt.supplierId), {

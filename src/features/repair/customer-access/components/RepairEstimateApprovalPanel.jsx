@@ -22,14 +22,15 @@ const RepairEstimateApprovalPanel = ({ repairJobId, job }) => {
   const [state, setState] = useState({ loading: true, error: '', notice: '' });
   const workflowStatus = job?.workflow?.status || 'RECEIVED';
   const repairAuthorization = job?.workflow?.preAgreedService || null;
+  const hasRepairAuthorization = Boolean(repairAuthorization?.enabled);
   const authorizationWasUsed = Boolean(
-    repairAuthorization?.enabled &&
+    hasRepairAuthorization &&
       (job?.workflow?.history || []).some(
         (event) => event.action === 'START_PRE_AGREED_SERVICE'
       )
   );
   const canPublish =
-    !authorizationWasUsed &&
+    !hasRepairAuthorization &&
     workflowStatus === 'WAITING_APPROVAL' &&
     Number(job?.estimatedCost || 0) > 0;
 
@@ -69,7 +70,7 @@ const RepairEstimateApprovalPanel = ({ repairJobId, job }) => {
     }
   };
 
-  if (authorizationWasUsed) {
+  if (hasRepairAuthorization) {
     return (
       <section className="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-4 shadow-sm sm:p-5">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -83,7 +84,7 @@ const RepairEstimateApprovalPanel = ({ repairJobId, job }) => {
             </p>
           </div>
           <span className="w-fit rounded-full bg-emerald-100 px-3 py-1 text-xs font-black text-emerald-800">
-            อนุมัติให้ซ่อมแล้ว
+            {authorizationWasUsed ? 'ใช้สิทธิ์อนุมัติแล้ว' : 'อนุมัติให้ซ่อมแล้ว'}
           </span>
         </div>
 
@@ -98,7 +99,9 @@ const RepairEstimateApprovalPanel = ({ repairJobId, job }) => {
         </div>
 
         <p className="mt-4 rounded-xl border border-emerald-200 bg-white p-3 text-sm font-bold text-emerald-800">
-          ไม่ผูกยอดล่วงหน้า — ค่าซ่อมจริงจะถูกบันทึกตอนสรุปงานหลังซ่อมเสร็จ
+          {authorizationWasUsed
+            ? 'ใช้การอนุมัติจากลูกค้าเพื่อเริ่มงานแล้ว — ค่าซ่อมจริงจะถูกบันทึกตอนสรุปงานหลังซ่อมเสร็จ'
+            : 'ลูกค้าอนุมัติให้ซ่อมแล้ว — ไม่ต้องส่งราคาประเมินก่อนเริ่มงาน และไม่ผูกยอดล่วงหน้า'}
         </p>
       </section>
     );

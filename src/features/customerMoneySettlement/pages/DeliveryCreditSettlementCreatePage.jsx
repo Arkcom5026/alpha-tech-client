@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { Search, WalletCards } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useCustomerMoneyReceiveCustomerSearch } from '@/features/customerMoneyReceive/customer/useCustomerMoneyReceiveCustomerSearch';
@@ -7,10 +7,12 @@ import { createDeliveryCreditSettlement, getEligibleDeliveryCredits } from '../a
 const customerLabel = (customer) => customer?.companyName || customer?.name || '-';
 const money = (value) => Number(value || 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const lineKey = (saleId, line) => `${saleId}:${line.lineType}:${line.saleItemId}`;
+const createCommandKey = () => globalThis.crypto?.randomUUID?.() || `cms-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
 const DeliveryCreditSettlementCreatePage = () => {
   const navigate = useNavigate();
   const customerSearch = useCustomerMoneyReceiveCustomerSearch();
+  const submitKeyRef = useRef(null);
   const [workspace, setWorkspace] = useState(null);
   const [loadingCredits, setLoadingCredits] = useState(false);
   const [creditError, setCreditError] = useState('');
@@ -18,10 +20,14 @@ const DeliveryCreditSettlementCreatePage = () => {
   const [note, setNote] = useState('');
   const [saving, setSaving] = useState(false);
 
+  const invalidateSubmitKey = () => { submitKeyRef.current = null; };
+
   const loadCredits = async (customer) => {
     setLoadingCredits(true);
     setCreditError('');
     setSelected({});
+    setNote('');
+    invalidateSubmitKey();
     try {
       setWorkspace(await getEligibleDeliveryCredits({ customerId: customer.id, take: 200 }));
     } catch (err) {
@@ -38,6 +44,7 @@ const DeliveryCreditSettlementCreatePage = () => {
   };
 
   const setLineAmount = (sale, line, value) => {
+    invalidateSubmitKey();
     const key = lineKey(sale.id, line);
     setSelected((prev) => {
       const usedByOtherLines = Object.entries(prev).reduce((sum, [existingKey, entry]) => {
@@ -60,6 +67,7 @@ const DeliveryCreditSettlementCreatePage = () => {
   };
 
   const selectWholeSale = (sale) => {
+    invalidateSubmitKey();
     setSelected((prev) => {
       const next = { ...prev };
       for (const [key, entry] of Object.entries(next)) {
@@ -85,6 +93,7 @@ const DeliveryCreditSettlementCreatePage = () => {
   };
 
   const clearWholeSale = (saleId) => {
+    invalidateSubmitKey();
     setSelected((prev) => {
       const next = { ...prev };
       for (const [key, entry] of Object.entries(next)) {
@@ -108,12 +117,14 @@ const DeliveryCreditSettlementCreatePage = () => {
     if (!canSubmit || !customerSearch.selectedCustomer) return;
     setSaving(true);
     setCreditError('');
+    const idempotencyKey = submitKeyRef.current || createCommandKey();
+    submitKeyRef.current = idempotencyKey;
     try {
       const result = await createDeliveryCreditSettlement({
         customerId: customerSearch.selectedCustomer.id,
         note: note.trim() || null,
         lines: selectedLines,
-      });
+      }, idempotencyKey);
       navigate(`../${result.id}`);
     } catch (err) {
       setCreditError(err?.response?.data?.message || err?.message || 'ตัดยอดใบส่งของไม่สำเร็จ');
@@ -190,7 +201,7 @@ const DeliveryCreditSettlementCreatePage = () => {
               </article>
             );
           })}
-          <textarea value={note} onChange={(e) => setNote(e.target.value)} maxLength={500} rows={3} placeholder="หมายเหตุการตัดยอด (ถ้ามี)" className="w-full rounded-xl border border-slate-300 p-3" />
+          <textarea value={note} onChange={(e) => { invalidateSubmitKey(); setNote(e.target.value); }} maxLength={500} rows={3} placeholder="หมายเหตุการตัดยอด (ถ้ามี)" className="w-full rounded-xl border border-slate-300 p-3" />
         </section>
       )}
 

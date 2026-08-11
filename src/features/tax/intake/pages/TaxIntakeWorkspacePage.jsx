@@ -5,6 +5,7 @@ import TaxIntakeWorkspaceSummary from '../components/TaxIntakeWorkspaceSummary';
 import TaxIntakeCandidateList from '../components/TaxIntakeCandidateList';
 import TaxIntakeDocumentList from '../components/TaxIntakeDocumentList';
 import TaxIntakeDocumentDetailPanel from '../components/TaxIntakeDocumentDetailPanel';
+import TaxIntakePeriodFilterBar from '../components/TaxIntakePeriodFilterBar';
 import useTaxIntakeWorkspaceController from '../hooks/useTaxIntakeWorkspaceController';
 
 const TaxIntakeWorkspacePage = () => {
@@ -13,16 +14,23 @@ const TaxIntakeWorkspacePage = () => {
     currentBranch,
     candidates,
     documents,
+    taxPeriods,
+    taxPeriodId,
+    selectedTaxPeriod,
     selectedDocument,
     loading,
+    periodsLoading,
     error,
     candidateStatus,
     documentStatus,
+    documentType,
     transitioning,
     transitionError,
     totals,
     setCandidateStatus,
-    setDocumentStatus,
+    handleTaxPeriodChange,
+    handleDocumentStatusChange,
+    handleDocumentTypeChange,
     loadData,
     openDocument,
     handleTransition,
@@ -53,6 +61,14 @@ const TaxIntakeWorkspacePage = () => {
         documentCount={totals.documents}
       />
 
+      <TaxIntakePeriodFilterBar
+        taxPeriods={taxPeriods}
+        taxPeriodId={taxPeriodId}
+        selectedTaxPeriod={selectedTaxPeriod}
+        loading={periodsLoading}
+        onChange={handleTaxPeriodChange}
+      />
+
       {error && (
         <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm font-semibold text-rose-700">
           {error}
@@ -81,8 +97,10 @@ const TaxIntakeWorkspacePage = () => {
           documents={documents}
           loading={loading}
           status={documentStatus}
+          documentType={documentType}
           selectedDocumentId={selectedDocument?.id || null}
-          onStatusChange={setDocumentStatus}
+          onStatusChange={handleDocumentStatusChange}
+          onDocumentTypeChange={handleDocumentTypeChange}
           onOpenDocument={openDocument}
         />
       </div>

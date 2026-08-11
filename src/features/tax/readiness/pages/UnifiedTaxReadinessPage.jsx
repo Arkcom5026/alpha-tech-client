@@ -32,6 +32,16 @@ const EXCEPTION_COPY_TH = {
   WHT_CERTIFICATE_NOT_ISSUED: ['เอกสารภาษีหัก ณ ที่จ่ายยังไม่ครบ', 'กรุณาตรวจสอบและจัดเตรียมหลักฐานภาษีหัก ณ ที่จ่าย'],
 };
 
+const normalizeExceptionTarget = (relativePath, exception) => {
+  if (!relativePath || exception?.code !== 'OUTPUT_VAT_DRAFTS_REMAIN') return relativePath;
+
+  const [pathname, query = ''] = String(relativePath).split('?');
+  const params = new URLSearchParams(query);
+  params.set('documentStatus', 'DRAFT');
+  params.set('documentType', 'OUTPUT_TAX_INVOICE');
+  return `${pathname}?${params.toString()}`;
+};
+
 const UnifiedTaxReadinessPage = () => {
   const navigate = useNavigate();
   const { shopSlug, taxPeriodId } = useParams();
@@ -64,9 +74,10 @@ const UnifiedTaxReadinessPage = () => {
   const blockers = useMemo(() => exceptions.filter((entry) => entry.severity === 'BLOCKER'), [exceptions]);
   const reviews = useMemo(() => exceptions.filter((entry) => entry.severity !== 'BLOCKER'), [exceptions]);
 
-  const goToTarget = (relativePath) => {
+  const goToTarget = (relativePath, exception = null) => {
     if (!relativePath) return;
-    navigate(`/${shopSlug || 'advancetech'}/pos/finance/${relativePath}`);
+    const target = normalizeExceptionTarget(relativePath, exception);
+    navigate(`/${shopSlug || 'advancetech'}/pos/finance/${target}`);
   };
 
   const exceptionCopy = (entry) => EXCEPTION_COPY_TH[entry.code]
@@ -125,7 +136,7 @@ const UnifiedTaxReadinessPage = () => {
                 {blockers.map((entry) => {
                   const copy = exceptionCopy(entry);
                   return (
-                    <button key={`${entry.code}:${entry.source}`} type="button" onClick={() => goToTarget(entry.target?.relativePath)} className="block w-full rounded-xl border border-amber-200 bg-white px-4 py-3 text-left hover:border-amber-400">
+                    <button key={`${entry.code}:${entry.source}`} type="button" onClick={() => goToTarget(entry.target?.relativePath, entry)} className="block w-full rounded-xl border border-amber-200 bg-white px-4 py-3 text-left hover:border-amber-400">
                       <div className="flex flex-wrap items-center justify-between gap-2"><span className="font-black text-amber-900">{copy[0]}</span><span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-black text-amber-800">{entry.count} รายการ</span></div>
                       <p className="mt-1 text-sm text-slate-600">{copy[1]}</p>
                       <p className="mt-1 text-xs font-bold text-blue-700">ไปดำเนินการ</p>
@@ -139,7 +150,7 @@ const UnifiedTaxReadinessPage = () => {
           {reviews.length > 0 && (
             <section className="rounded-2xl border border-blue-200 bg-blue-50 p-4">
               <div className="flex items-center gap-2 text-blue-800"><TriangleAlert size={18} /><h2 className="font-black">รายการที่ควรตรวจสอบ</h2></div>
-              <div className="mt-3 space-y-2">{reviews.map((entry) => { const copy = exceptionCopy(entry); return <button key={`${entry.code}:${entry.source}`} type="button" onClick={() => goToTarget(entry.target?.relativePath)} className="block w-full rounded-xl border border-blue-200 bg-white px-4 py-3 text-left"><div className="font-black text-blue-900">{copy[0]}</div><p className="mt-1 text-sm text-slate-600">{copy[1]}</p></button>; })}</div>
+              <div className="mt-3 space-y-2">{reviews.map((entry) => { const copy = exceptionCopy(entry); return <button key={`${entry.code}:${entry.source}`} type="button" onClick={() => goToTarget(entry.target?.relativePath, entry)} className="block w-full rounded-xl border border-blue-200 bg-white px-4 py-3 text-left"><div className="font-black text-blue-900">{copy[0]}</div><p className="mt-1 text-sm text-slate-600">{copy[1]}</p></button>; })}</div>
             </section>
           )}
         </>

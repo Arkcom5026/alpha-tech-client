@@ -100,6 +100,34 @@ export const sumReceiptAllocations = (items = []) => allocationFields.reduce(
   {},
 );
 
+const documentCapacityFields = [
+  ['subtotalAmount', 'activeAllocatedSubtotal'],
+  ['taxAmount', 'activeAllocatedVatAmount'],
+  ['totalAmount', 'activeAllocatedTotalAmount'],
+];
+
+export const documentCanFitReceiptAllocations = (document, pendingReceipts = []) => {
+  const pending = sumReceiptAllocations(pendingReceipts);
+  const pendingByLimitField = {
+    subtotalAmount: pending.subtotalAmount,
+    taxAmount: pending.vatAmount,
+    totalAmount: pending.totalAmount,
+  };
+
+  return documentCapacityFields.every(([limitField, allocatedField]) => {
+    const limit = Number(document?.[limitField] || 0);
+    if (limit <= 0) return true;
+    const allocated = Number(document?.[allocatedField] || 0);
+    const requested = Number(pendingByLimitField[limitField] || 0);
+    return allocated + requested <= limit + 0.001;
+  });
+};
+
+export const remainingDocumentTotalCapacity = (document) => Math.max(
+  Number(document?.totalAmount || 0) - Number(document?.activeAllocatedTotalAmount || 0),
+  0,
+);
+
 export const projectDocumentAllocation = ({ document, activeLinks, pendingReceipts }) => {
   const limits = {
     subtotalAmount: Number(document?.subtotalAmount || 0),

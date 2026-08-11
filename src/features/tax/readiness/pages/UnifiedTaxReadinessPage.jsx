@@ -67,18 +67,6 @@ const UnifiedTaxReadinessPage = () => {
     navigate(`/${shopSlug || 'advancetech'}/pos/finance/${relativePath}`);
   };
 
-  const domainTarget = (domain) => (
-    domain.key === 'INPUT_VAT'
-      ? `tax-periods/${taxPeriodId}/input-vat-filing`
-      : domain.target
-  );
-
-  const exceptionTarget = (entry) => (
-    ['INPUT_VAT_FILING_NOT_PREPARED', 'INPUT_VAT_FILING_INCOMPLETE'].includes(entry.code)
-      ? `tax-periods/${taxPeriodId}/input-vat-filing`
-      : entry.target?.relativePath
-  );
-
   const exceptionCopy = (entry) => EXCEPTION_COPY_TH[entry.code]
     || ['มีรายการภาษีที่ต้องจัดการ', 'กรุณาเปิดรายการนี้เพื่อตรวจสอบและดำเนินการต่อ'];
 
@@ -121,7 +109,7 @@ const UnifiedTaxReadinessPage = () => {
 
           <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {domains.map((domain) => (
-              <button key={domain.key} type="button" onClick={() => goToTarget(domainTarget(domain))} className={`rounded-2xl border p-4 text-left transition hover:-translate-y-0.5 hover:shadow-sm ${domain.ready ? 'border-emerald-200 bg-emerald-50' : 'border-slate-200 bg-white'}`}>
+              <button key={domain.key} type="button" onClick={() => goToTarget(domain.target)} className={`rounded-2xl border p-4 text-left transition hover:-translate-y-0.5 hover:shadow-sm ${domain.ready ? 'border-emerald-200 bg-emerald-50' : 'border-slate-200 bg-white'}`}>
                 <div className="flex items-center gap-2"><CheckCircle2 size={17} className={domain.ready ? 'text-emerald-600' : 'text-slate-300'} /><span className="font-black text-slate-900">{DOMAIN_LABELS_TH[domain.key] || domain.label}</span></div>
                 <p className={`mt-2 text-sm font-bold ${domain.ready ? 'text-emerald-700' : 'text-amber-700'}`}>{domain.ready ? 'พร้อม' : 'ต้องตรวจสอบ'}</p>
               </button>
@@ -135,7 +123,7 @@ const UnifiedTaxReadinessPage = () => {
                 {blockers.map((entry) => {
                   const copy = exceptionCopy(entry);
                   return (
-                    <button key={`${entry.code}:${entry.source}`} type="button" onClick={() => goToTarget(exceptionTarget(entry))} className="block w-full rounded-xl border border-amber-200 bg-white px-4 py-3 text-left hover:border-amber-400">
+                    <button key={`${entry.code}:${entry.source}`} type="button" onClick={() => goToTarget(entry.target?.relativePath)} className="block w-full rounded-xl border border-amber-200 bg-white px-4 py-3 text-left hover:border-amber-400">
                       <div className="flex flex-wrap items-center justify-between gap-2"><span className="font-black text-amber-900">{copy[0]}</span><span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-black text-amber-800">{entry.count} รายการ</span></div>
                       <p className="mt-1 text-sm text-slate-600">{copy[1]}</p>
                       <p className="mt-1 text-xs font-bold text-blue-700">ไปดำเนินการ</p>
@@ -149,7 +137,7 @@ const UnifiedTaxReadinessPage = () => {
           {reviews.length > 0 && (
             <section className="rounded-2xl border border-blue-200 bg-blue-50 p-4">
               <div className="flex items-center gap-2 text-blue-800"><TriangleAlert size={18} /><h2 className="font-black">รายการที่ควรตรวจสอบ</h2></div>
-              <div className="mt-3 space-y-2">{reviews.map((entry) => { const copy = exceptionCopy(entry); return <button key={`${entry.code}:${entry.source}`} type="button" onClick={() => goToTarget(exceptionTarget(entry))} className="block w-full rounded-xl border border-blue-200 bg-white px-4 py-3 text-left"><div className="font-black text-blue-900">{copy[0]}</div><p className="mt-1 text-sm text-slate-600">{copy[1]}</p></button>; })}</div>
+              <div className="mt-3 space-y-2">{reviews.map((entry) => { const copy = exceptionCopy(entry); return <button key={`${entry.code}:${entry.source}`} type="button" onClick={() => goToTarget(entry.target?.relativePath)} className="block w-full rounded-xl border border-blue-200 bg-white px-4 py-3 text-left"><div className="font-black text-blue-900">{copy[0]}</div><p className="mt-1 text-sm text-slate-600">{copy[1]}</p></button>; })}</div>
             </section>
           )}
         </>

@@ -27,7 +27,7 @@ describe('repair flexible intake workflow contract', () => {
     expect(diagnosisPanel).toContain("run('START_DIAGNOSIS'");
   });
 
-  it('makes direct repair start the primary RECEIVED action while keeping inspection and pre-agreed flows optional', () => {
+  it('makes direct repair start the primary RECEIVED action while keeping inspection and authorization flows optional', () => {
     const diagnosisPanel = read('src/features/repair/components/RepairDiagnosisPanel.jsx');
 
     expect(diagnosisPanel).toContain("workflow.status === 'RECEIVED' && actionNames.has('START_REPAIR')");
@@ -40,48 +40,46 @@ describe('repair flexible intake workflow contract', () => {
     expect(diagnosisPanel).toContain('เลือกใช้เฉพาะเมื่อเคสนี้ต้องการขั้นตอนเพิ่มเติม');
   });
 
-  it('offers an optional pre-agreed path for both registered and external-device intake and exposes it on the job detail', () => {
+  it('uses repair authorization without requiring an agreed amount for registered and external intake', () => {
     const intakeWorkspace = read(
       'src/features/repair/intake/workspace/components/RepairIntakeWorkspace.jsx'
     );
     const intakePolicy = read(
       'src/features/repair/intake/workspace/policies/repairIntakePolicy.js'
     );
-    const intakePage = read('src/features/repair/pages/RepairIntakePage.jsx');
     const externalIntake = read('src/features/repair/components/ExternalDeviceIntakeForm.jsx');
-    const diagnosisPanel = read('src/features/repair/components/RepairDiagnosisPanel.jsx');
     const estimatePanel = read(
       'src/features/repair/customer-access/components/RepairEstimateApprovalPanel.jsx'
     );
 
     for (const source of [intakeWorkspace, externalIntake]) {
-      expect(source).toContain('ตกลงราคาและขอบเขตงานแล้ว');
-      expect(source).toContain('agreedScope');
-      expect(source).toContain('agreedAmount');
+      expect(source).toContain('ลูกค้าอนุมัติให้ซ่อม — ไม่ต้องเสนอราคาก่อน');
       expect(source).toContain('confirmedByName');
-      expect(source).toContain('confirmationNote');
+      expect(source).toContain('ราคาจริงระบุเมื่อซ่อมเสร็จ');
+      expect(source).not.toContain('ราคาที่ตกลง *');
+      expect(source).not.toContain('ตกลงราคาและขอบเขตงานแล้ว');
     }
 
-    expect(intakePolicy).toContain('preAgreedService');
-    expect(intakePolicy).toContain("if (!draft?.preAgreedService?.enabled) return true");
-    expect(intakePolicy).toContain('estimatedCost: preAgreedService');
-    expect(intakePage).toContain('buildRepairJobPayload({ draft, intakeContact })');
-    expect(intakePage).toContain('runtime.createExternalIntake(intakePayload)');
-    expect(externalIntake).toContain('preAgreedService: agreement');
-    expect(externalIntake).toContain('agreement.agreedAmount');
+    expect(intakePolicy).toContain("authorizationMode: 'REPAIR_AUTHORIZED'");
+    expect(intakePolicy).toContain('estimatedCost: Number(draft.estimatedCost || 0)');
+    expect(intakePolicy).not.toContain('preAgreedService.agreedAmount || 0');
 
-    expect(diagnosisPanel).toContain("actionNames.has('START_PRE_AGREED_SERVICE')");
-    expect(diagnosisPanel).toContain('preAgreedService?.enabled');
-    expect(diagnosisPanel).toContain("run('START_PRE_AGREED_SERVICE')");
-    expect(diagnosisPanel).toContain('workflow.preAgreedService');
-    expect(diagnosisPanel).toContain('ใช้ข้อตกลงนี้ในการเริ่มงาน');
-    expect(diagnosisPanel).toContain("actionNames.has('QUEUE_DIAGNOSIS')");
+    expect(estimatePanel).toContain('Repair Authorization');
+    expect(estimatePanel).toContain('ลูกค้าอนุมัติให้ซ่อมแล้ว');
+    expect(estimatePanel).toContain('ไม่ผูกยอดล่วงหน้า');
+    expect(estimatePanel).toContain('ค่าซ่อมจริงจะถูกบันทึกตอนสรุปงานหลังซ่อมเสร็จ');
+    expect(estimatePanel).not.toContain('ตกลงราคาแล้ว ไม่ต้องขออนุมัติซ้ำ');
+  });
 
-    expect(estimatePanel).toContain("event.action === 'START_PRE_AGREED_SERVICE'");
-    expect(estimatePanel).toContain('ตกลงราคาแล้ว ไม่ต้องขออนุมัติซ้ำ');
-    expect(estimatePanel).toContain('ใช้ Fast Path แล้ว — ไม่ต้องส่งราคาประเมินให้ลูกค้าอนุมัติอีกครั้ง');
-    expect(estimatePanel).toContain('preAgreedService.agreedAmount || job?.estimatedCost');
-    expect(estimatePanel).toContain('!preAgreedWasUsed');
+  it('keeps quote-before-repair as the explicit path for customers who require price approval first', () => {
+    const estimatePanel = read(
+      'src/features/repair/customer-access/components/RepairEstimateApprovalPanel.jsx'
+    );
+
+    expect(estimatePanel).toContain('ส่งราคาประเมินให้ลูกค้าอนุมัติ');
+    expect(estimatePanel).toContain('ใช้เฉพาะเคสที่ลูกค้าต้องการทราบและอนุมัติราคาก่อนซ่อม');
+    expect(estimatePanel).toContain("workflowStatus === 'WAITING_APPROVAL'");
+    expect(estimatePanel).toContain('publishEstimateApproval');
   });
 
   it('prefills the external intake confirmer from the selected customer without removing edit authority', () => {

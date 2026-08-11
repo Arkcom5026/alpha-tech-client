@@ -121,10 +121,12 @@ const useTaxIntakeWorkspaceController = () => {
       Promise.resolve(ensureSelectedBranchAction?.()).catch(() => {});
       return;
     }
-
     loadPeriods();
-    loadData();
-  }, [branchId, ensureSelectedBranchAction, loadData, loadPeriods]);
+  }, [branchId, ensureSelectedBranchAction, loadPeriods]);
+
+  useEffect(() => {
+    if (branchId) loadData();
+  }, [branchId, loadData]);
 
   useEffect(() => {
     setSelectedDocument(null);

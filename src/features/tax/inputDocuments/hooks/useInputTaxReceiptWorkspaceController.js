@@ -85,8 +85,9 @@ const useInputTaxReceiptWorkspaceController = () => {
       : null
   ), [links, selectedDocument, selectedReceipts]);
   const eligibleDocuments = useMemo(() => {
-    if (!selectedSupplierId) return documents;
-    return documents.filter((document) => (
+    const mutableDocuments = documents.filter((document) => isTaxDocumentMutable(document.status));
+    if (!selectedSupplierId) return mutableDocuments;
+    return mutableDocuments.filter((document) => (
       Number(document?.supplierId || document?.snapshot?.supplierId || 0) === Number(selectedSupplierId)
     ));
   }, [documents, selectedSupplierId]);
@@ -185,7 +186,7 @@ const useInputTaxReceiptWorkspaceController = () => {
       }
       const first = Object.values(current)[0];
       if (first && Number(first.supplierId) !== Number(receipt.supplierId)) {
-        toast.warning('กรุณาเลือกใบรับสินค้าจาก Supplier เดียวกัน');
+        toast.warning('กรุณาเลือกใบรับสินค้าจากผู้จำหน่ายรายเดียวกัน');
         return current;
       }
       return {
@@ -205,12 +206,17 @@ const useInputTaxReceiptWorkspaceController = () => {
     }));
   }, []);
 
+  const selectExistingDocument = useCallback((documentId) => {
+    setShowCreateDocument(false);
+    setSelectedDocumentId(String(documentId || ''));
+  }, []);
+
   const attachSelected = useCallback(async () => {
-    if (!selectedDocumentId) return toast.warning('กรุณาเลือกใบกำกับภาษี');
-    if (!selectedDocumentMutable) return toast.warning('เอกสารนี้อยู่ในสถานะอ่านอย่างเดียว');
-    if (linksLoading) return toast.warning('กำลังตรวจสอบยอดที่ผูกอยู่ กรุณารอสักครู่');
+    if (!selectedDocumentId) return toast.warning('กรุณาเลือกใบกำกับภาษีซื้อ');
+    if (!selectedDocumentMutable) return toast.warning('ใบกำกับภาษีซื้อนี้ไม่อนุญาตให้ผูกเพิ่ม');
+    if (linksLoading) return toast.warning('กำลังตรวจสอบยอดที่ผูกไว้ กรุณารอสักครู่');
     if (selectedReceipts.length === 0) return toast.warning('กรุณาเลือกใบรับสินค้าอย่างน้อย 1 ใบ');
-    if (allocationProjection?.overflow) return toast.warning('ยอดจัดสรรรวมเกินยอดใบกำกับภาษี');
+    if (allocationProjection?.overflow) return toast.warning('ยอดที่จะผูกรวมเกินยอดใบกำกับภาษีซื้อ');
 
     setSubmitting(true);
     try {
@@ -220,7 +226,7 @@ const useInputTaxReceiptWorkspaceController = () => {
         commandKey: makeCommandKey(),
         receiptReferences: selectedReceipts,
       });
-      toast.success(`ผูกใบรับสินค้า ${selectedReceipts.length} ใบแล้ว`);
+      toast.success(`ผูกใบรับสินค้า ${selectedReceipts.length} ใบกับใบกำกับภาษีซื้อแล้ว`);
       setSelected({});
       await Promise.all([loadReceipts(), loadLinks()]);
     } catch (error) {
@@ -241,9 +247,9 @@ const useInputTaxReceiptWorkspaceController = () => {
 
   const createInputTaxDocument = useCallback(async (event) => {
     event.preventDefault();
-    if (!selectedSupplier) return toast.warning('เลือกใบรับสินค้าของ Supplier ก่อนสร้างใบกำกับภาษี');
+    if (!selectedSupplier) return toast.warning('กรุณาเลือกใบรับสินค้าของผู้จำหน่ายก่อนสร้างใบกำกับภาษีซื้อ');
     if (!invoice.documentNumber || !invoice.issuedAt) {
-      return toast.warning('กรุณากรอกเลขที่และวันที่ใบกำกับภาษี');
+      return toast.warning('กรุณากรอกเลขที่และวันที่ใบกำกับภาษีซื้อ');
     }
 
     setSubmitting(true);
@@ -286,9 +292,9 @@ const useInputTaxReceiptWorkspaceController = () => {
         taxDocumentId: selectedDocumentId,
         linkId: link.id,
         allocation,
-        reason: 'ปรับยอดจัดสรรจากหน้าติดตามเอกสารภาษีซื้อ',
+        reason: 'ปรับยอดที่ผูกจากหน้าติดตามเอกสารภาษีซื้อ',
       });
-      toast.success('ปรับยอดจัดสรรแล้ว');
+      toast.success('ปรับยอดที่ผูกแล้ว');
       await Promise.all([loadLinks(), loadReceipts()]);
     } catch (error) {
       toast.error(inputTaxReceiptLinkErrorMessage(error));
@@ -350,6 +356,7 @@ const useInputTaxReceiptWorkspaceController = () => {
     invoice,
     setSelectedDocumentId,
     setShowCreateDocument,
+    selectExistingDocument,
     changeFilter,
     resetFilters,
     loadReceipts,

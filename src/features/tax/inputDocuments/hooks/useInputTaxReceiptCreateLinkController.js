@@ -22,6 +22,7 @@ const useInputTaxReceiptCreateLinkController = () => {
     controller.changeInvoice('subtotalAmount', String(totals.subtotalAmount ?? 0));
     controller.changeInvoice('taxAmount', String(totals.vatAmount ?? 0));
     controller.changeInvoice('totalAmount', String(totals.totalAmount ?? 0));
+    controller.setSelectedDocumentId('');
     controller.setShowCreateDocument(true);
   }, [controller]);
 

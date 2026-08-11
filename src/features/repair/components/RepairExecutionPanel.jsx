@@ -155,7 +155,8 @@ const RepairExecutionPanel = ({ job, submitting, onWorkflowAction, onAddPart }) 
     setProducts([]);
   };
 
-  const submitCompletion = () => run('COMPLETE_REPAIR', { repairCompletion: completion });
+  const submitDirectCompletion = () => run('COMPLETE_REPAIR_DIRECT', { repairCompletion: completion });
+  const submitCompletionForQc = () => run('COMPLETE_REPAIR', { repairCompletion: completion });
   const qcPayload = () => ({
     checks: QC_ITEMS.map((item) => ({ ...item, passed: Boolean(qcChecks[item.key]) })),
     note: qcNote.trim() || undefined,
@@ -164,6 +165,7 @@ const RepairExecutionPanel = ({ job, submitting, onWorkflowAction, onAddPart }) 
   const anyQcFailed = QC_ITEMS.some((item) => !qcChecks[item.key]);
   const copy = STATUS_COPY[status];
   const serializedPartsUsed = Array.isArray(job?.serializedPartsUsed) ? job.serializedPartsUsed : [];
+  const completionReady = Boolean(completion.workPerformed.trim() && completion.resultSummary.trim());
 
   return (
     <section className="rounded-2xl border border-emerald-200 bg-white p-5 shadow-sm">
@@ -360,39 +362,56 @@ const RepairExecutionPanel = ({ job, submitting, onWorkflowAction, onAddPart }) 
               </div>
             ) : null}
 
-            {actionNames.has('COMPLETE_REPAIR') ? (
-              <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4">
-                <h4 className="font-black text-blue-950">ซ่อมเสร็จแล้ว</h4>
-                <p className="mt-1 text-sm text-blue-800">สรุปสิ่งที่ทำและผลหลังซ่อมก่อนส่งต่อให้ผู้ตรวจ QC</p>
+            {actionNames.has('COMPLETE_REPAIR_DIRECT') || actionNames.has('COMPLETE_REPAIR') ? (
+              <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+                <h4 className="font-black text-emerald-950">ซ่อมเสร็จแล้ว</h4>
+                <p className="mt-1 text-sm text-emerald-800">
+                  สรุปงานครั้งเดียว แล้วเลือกพร้อมส่งมอบได้ทันที หรือส่งตรวจหลังซ่อมเมื่อเคสนี้ต้องการ QC เพิ่มเติม
+                </p>
                 <textarea
                   rows={3}
                   value={completion.workPerformed}
                   onChange={(event) => setCompletion((current) => ({ ...current, workPerformed: event.target.value }))}
                   placeholder="งานที่ดำเนินการ *"
-                  className="mt-3 w-full rounded-xl border border-blue-200 bg-white px-4 py-3"
+                  className="mt-3 w-full rounded-xl border border-emerald-200 bg-white px-4 py-3"
                 />
                 <textarea
                   rows={3}
                   value={completion.resultSummary}
                   onChange={(event) => setCompletion((current) => ({ ...current, resultSummary: event.target.value }))}
                   placeholder="ผลหลังซ่อม *"
-                  className="mt-3 w-full rounded-xl border border-blue-200 bg-white px-4 py-3"
+                  className="mt-3 w-full rounded-xl border border-emerald-200 bg-white px-4 py-3"
                 />
                 <textarea
                   rows={2}
                   value={completion.technicianNote}
                   onChange={(event) => setCompletion((current) => ({ ...current, technicianNote: event.target.value }))}
                   placeholder="หมายเหตุเพิ่มเติมของช่าง"
-                  className="mt-3 w-full rounded-xl border border-blue-200 bg-white px-4 py-3"
+                  className="mt-3 w-full rounded-xl border border-emerald-200 bg-white px-4 py-3"
                 />
-                <button
-                  type="button"
-                  disabled={submitting || !completion.workPerformed.trim() || !completion.resultSummary.trim()}
-                  onClick={submitCompletion}
-                  className="mt-3 rounded-xl bg-blue-700 px-5 py-3 font-black text-white disabled:opacity-40"
-                >
-                  ส่งตรวจหลังซ่อม
-                </button>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {actionNames.has('COMPLETE_REPAIR_DIRECT') ? (
+                    <button
+                      type="button"
+                      disabled={submitting || !completionReady}
+                      onClick={submitDirectCompletion}
+                      className="rounded-xl bg-emerald-700 px-5 py-3 font-black text-white disabled:opacity-40"
+                    >
+                      งานเสร็จ — พร้อมส่งมอบ
+                    </button>
+                  ) : null}
+                  {actionNames.has('COMPLETE_REPAIR') ? (
+                    <button
+                      type="button"
+                      disabled={submitting || !completionReady}
+                      onClick={submitCompletionForQc}
+                      className="rounded-xl border border-violet-300 bg-white px-5 py-3 font-black text-violet-800 disabled:opacity-40"
+                    >
+                      ตรวจหลังซ่อมก่อนส่งมอบ
+                    </button>
+                  ) : null}
+                </div>
+                <p className="mt-2 text-xs text-emerald-700">QC เป็นตัวเลือกเสริมสำหรับงานที่ต้องการการตรวจเพิ่มเติม ไม่ใช่ขั้นบังคับของทุกงาน</p>
               </div>
             ) : null}
           </div>

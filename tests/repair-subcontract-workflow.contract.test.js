@@ -6,14 +6,15 @@ const root = process.cwd();
 const read = (relativePath) => fs.readFileSync(path.join(root, relativePath), 'utf8');
 
 describe('repair subcontract workflow contract', () => {
-  it('exposes send, update, return-request and receive-return API boundaries', () => {
+  it('exposes send, update and command API boundaries', () => {
     const api = read('src/features/repair/api/repairApi.js');
 
     expect(api).toContain('getSubcontractContext');
     expect(api).toContain('sendSubcontract');
     expect(api).toContain('updateSubcontract');
     expect(api).toContain('commandSubcontract');
-    expect(api).toContain("action: 'REQUEST_RETURN'");
+    expect(api).toContain('/subcontracts');
+    expect(api).toContain('/commands');
     expect(api).not.toContain('EXACT_PRICE');
     expect(api).not.toContain('MAX_BUDGET');
   });

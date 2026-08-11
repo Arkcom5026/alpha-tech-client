@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import RepairShellHeader from '../../../components/RepairShellHeader';
 import RuntimeStatePanel from '../../../components/RuntimeStatePanel';
 import RepairWorkflowOverview from '../../../components/RepairWorkflowOverview';
@@ -24,7 +24,13 @@ const RepairDetailWorkspace = ({
   onAddPart,
   onOpenClaim,
 }) => {
+  const [evidenceRevision, setEvidenceRevision] = useState(0);
   const subcontractActive = Boolean(job?.workflow?.subcontractContext?.active);
+
+  const handleEvidenceSaved = async () => {
+    setEvidenceRevision((current) => current + 1);
+    await onRetry?.();
+  };
 
   return (
     <div>
@@ -50,7 +56,11 @@ const RepairDetailWorkspace = ({
             onWorkflowAction={onWorkflowAction}
           />
 
-          <RepairSubcontractPanel job={job} onChanged={onRetry} />
+          <RepairSubcontractPanel
+            job={job}
+            onChanged={onRetry}
+            refreshKey={evidenceRevision}
+          />
 
           {!subcontractActive ? (
             <>
@@ -90,7 +100,11 @@ const RepairDetailWorkspace = ({
             />
           ) : null}
 
-          <IntakeEvidencePanel repairJobId={repairJobId} warning={evidenceWarning} />
+          <IntakeEvidencePanel
+            repairJobId={repairJobId}
+            warning={evidenceWarning}
+            onSaved={handleEvidenceSaved}
+          />
         </div>
       ) : null}
     </div>

@@ -27,16 +27,22 @@ describe('repair flexible intake workflow contract', () => {
     expect(diagnosisPanel).toContain("run('START_DIAGNOSIS'");
   });
 
-  it('makes direct repair start the primary RECEIVED action while keeping inspection and authorization flows optional', () => {
+  it('uses one primary start action and preserves inspection as the optional RECEIVED path', () => {
     const diagnosisPanel = read('src/features/repair/components/RepairDiagnosisPanel.jsx');
 
-    expect(diagnosisPanel).toContain("workflow.status === 'RECEIVED' && actionNames.has('START_REPAIR')");
+    expect(diagnosisPanel).toContain("actionNames.has('START_REPAIR')");
     expect(diagnosisPanel).toContain("onClick={() => run('START_REPAIR')}");
+    expect(diagnosisPanel).toContain("actionNames.has('START_PRE_AGREED_SERVICE')");
+    expect(diagnosisPanel).toContain("onClick={() => run('START_PRE_AGREED_SERVICE')}");
+    expect(diagnosisPanel).toContain('const authorizationEntry = Boolean(');
+    expect(diagnosisPanel).toContain('const directEntry = Boolean(');
+    expect(diagnosisPanel).toContain('!authorizationEntry');
+    expect(diagnosisPanel).toContain('Repair Authorization · Primary Action');
+    expect(diagnosisPanel).not.toContain('ใช้การอนุมัตินี้ในการเริ่มงาน');
     expect(diagnosisPanel).toContain('เริ่มงานได้เลย');
     expect(diagnosisPanel).toContain('ไม่ต้องผ่านขั้นตรวจสอบหรือเสนอราคาโดยไม่จำเป็น');
     expect(diagnosisPanel).toContain('ตัวเลือกเพิ่มเติม');
     expect(diagnosisPanel).toContain("actionNames.has('QUEUE_DIAGNOSIS')");
-    expect(diagnosisPanel).toContain("actionNames.has('START_PRE_AGREED_SERVICE')");
     expect(diagnosisPanel).toContain('เลือกใช้เฉพาะเมื่อเคสนี้ต้องการขั้นตอนเพิ่มเติม');
   });
 

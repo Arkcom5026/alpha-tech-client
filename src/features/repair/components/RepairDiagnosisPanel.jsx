@@ -58,11 +58,19 @@ const RepairDiagnosisPanel = ({ job, submitting, onWorkflowAction }) => {
 
   const existingDiagnosis = workflow.diagnosis;
   const repairAuthorization = workflow.preAgreedService;
-  const simplifiedEntry = workflow.status === 'RECEIVED' && actionNames.has('START_REPAIR');
-  const hasOptionalEntryActions =
+  const authorizationEntry = Boolean(
     workflow.status === 'RECEIVED' &&
-    (actionNames.has('QUEUE_DIAGNOSIS') ||
-      (actionNames.has('START_PRE_AGREED_SERVICE') && repairAuthorization?.enabled));
+      repairAuthorization?.enabled &&
+      actionNames.has('START_PRE_AGREED_SERVICE')
+  );
+  const directEntry = Boolean(
+    workflow.status === 'RECEIVED' &&
+      actionNames.has('START_REPAIR') &&
+      !authorizationEntry
+  );
+  const simplifiedEntry = authorizationEntry || directEntry;
+  const hasOptionalEntryActions =
+    workflow.status === 'RECEIVED' && actionNames.has('QUEUE_DIAGNOSIS');
 
   return (
     <section className="rounded-2xl border border-blue-200 bg-white p-5 shadow-sm">
@@ -97,7 +105,41 @@ const RepairDiagnosisPanel = ({ job, submitting, onWorkflowAction }) => {
         </div>
       ) : null}
 
-      {actionNames.has('START_REPAIR') && workflow.status === 'RECEIVED' ? (
+      {authorizationEntry ? (
+        <div className="mt-5 rounded-2xl border border-emerald-300 bg-emerald-50 p-4 shadow-sm">
+          <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.14em] text-emerald-700">Repair Authorization · Primary Action</p>
+              <h4 className="mt-1 text-lg font-black text-emerald-950">ลูกค้าอนุมัติให้ซ่อมแล้ว</h4>
+              <p className="mt-1 text-sm text-emerald-800">
+                ลูกค้าอนุญาตให้ดำเนินงานโดยไม่ต้องเสนอราคาก่อน ช่างเริ่มงานได้ทันทีและระบุค่าซ่อมจริงเมื่อซ่อมเสร็จ
+              </p>
+            </div>
+            <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-emerald-800">
+              ไม่ผูกยอดล่วงหน้า
+            </span>
+          </div>
+          <div className="mt-3 grid gap-2 md:grid-cols-2">
+            <Info label="ขอบเขต/เงื่อนไขที่อนุมัติ" value={repairAuthorization.agreedScope || 'อนุมัติให้ดำเนินการซ่อมตามอาการที่แจ้ง'} />
+            <Info label="ผู้อนุมัติให้ซ่อม" value={repairAuthorization.confirmedByName} />
+            {repairAuthorization.confirmationNote ? (
+              <div className="md:col-span-2">
+                <Info label="หมายเหตุการอนุมัติ" value={repairAuthorization.confirmationNote} />
+              </div>
+            ) : null}
+          </div>
+          <button
+            type="button"
+            disabled={submitting}
+            onClick={() => run('START_PRE_AGREED_SERVICE')}
+            className="mt-4 min-h-12 rounded-xl bg-emerald-700 px-6 font-black text-white disabled:opacity-40"
+          >
+            เริ่มงาน
+          </button>
+        </div>
+      ) : null}
+
+      {directEntry ? (
         <div className="mt-5 rounded-2xl border border-emerald-300 bg-emerald-50 p-4 shadow-sm">
           <p className="text-xs font-black uppercase tracking-[0.14em] text-emerald-700">Primary Action</p>
           <h4 className="mt-1 text-lg font-black text-emerald-950">เริ่มงานได้เลย</h4>
@@ -119,38 +161,6 @@ const RepairDiagnosisPanel = ({ job, submitting, onWorkflowAction }) => {
         <div className="mt-5 border-t border-slate-200 pt-4">
           <p className="text-xs font-black uppercase tracking-[0.14em] text-slate-500">ตัวเลือกเพิ่มเติม</p>
           <p className="mt-1 text-sm text-slate-500">เลือกใช้เฉพาะเมื่อเคสนี้ต้องการขั้นตอนเพิ่มเติม</p>
-        </div>
-      ) : null}
-
-      {actionNames.has('START_PRE_AGREED_SERVICE') && repairAuthorization?.enabled ? (
-        <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
-          <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-            <div>
-              <p className="text-xs font-black uppercase tracking-[0.14em] text-emerald-700">Repair Authorization</p>
-              <h4 className="mt-1 font-black text-emerald-950">ลูกค้าอนุมัติให้ซ่อมแล้ว</h4>
-              <p className="mt-1 text-sm text-emerald-800">ลูกค้าอนุญาตให้ดำเนินงานโดยไม่ต้องเสนอราคาก่อน ช่างสามารถเริ่มงานได้และระบุค่าซ่อมจริงเมื่อซ่อมเสร็จ</p>
-            </div>
-            <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-emerald-800">
-              ไม่ผูกยอดล่วงหน้า
-            </span>
-          </div>
-          <div className="mt-3 grid gap-2 md:grid-cols-2">
-            <Info label="ขอบเขต/เงื่อนไขที่อนุมัติ" value={repairAuthorization.agreedScope || 'อนุมัติให้ดำเนินการซ่อมตามอาการที่แจ้ง'} />
-            <Info label="ผู้อนุมัติให้ซ่อม" value={repairAuthorization.confirmedByName} />
-            {repairAuthorization.confirmationNote ? (
-              <div className="md:col-span-2">
-                <Info label="หมายเหตุการอนุมัติ" value={repairAuthorization.confirmationNote} />
-              </div>
-            ) : null}
-          </div>
-          <button
-            type="button"
-            disabled={submitting}
-            onClick={() => run('START_PRE_AGREED_SERVICE')}
-            className="mt-4 min-h-11 rounded-xl border border-emerald-300 bg-white px-5 font-black text-emerald-800 disabled:opacity-40"
-          >
-            ใช้การอนุมัตินี้ในการเริ่มงาน
-          </button>
         </div>
       ) : null}
 

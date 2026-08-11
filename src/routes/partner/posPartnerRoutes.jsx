@@ -186,7 +186,7 @@ export const posPartnerRoutes = [
             children: [
               { index: true, element: <ListBankPage /> },
               { path: 'create', element: <CreateBankPage /> },
-              { path: ':id', element: <EditBankPage /> },
+              { path: 'edit/:id', element: <EditBankPage /> },
             ],
           },
         ],

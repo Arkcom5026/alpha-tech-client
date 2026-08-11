@@ -112,6 +112,23 @@ describe('repair flexible intake workflow contract', () => {
     expect(searchPanel).toContain('onSelectDevice(device)');
   });
 
+  it('starts repeat intake from a completed registered device instead of opening old history', () => {
+    const intakePage = read('src/features/repair/pages/RepairIntakePage.jsx');
+    const runtimeStore = read('src/features/repair/store/repairRuntimeStore.js');
+    const intakePolicy = read(
+      'src/features/repair/intake/workspace/policies/repairIntakePolicy.js'
+    );
+
+    expect(intakePage).toContain("const ACTIVE_REPAIR_STATUSES = new Set(['RECEIVED', 'IN_PROGRESS', 'WAITING_PARTS'])");
+    expect(intakePage).toContain("if (device?.sourceType === 'REGISTERED_DEVICE')");
+    expect(intakePage).toContain('ACTIVE_REPAIR_STATUSES.has(latestRepair.status)');
+    expect(intakePage).toContain('runtime.selectRegisteredDeviceForIntake(device)');
+    expect(runtimeStore).toContain('selectRegisteredDeviceForIntake: (device) =>');
+    expect(runtimeStore).toContain("sourceType: 'REGISTERED_DEVICE'");
+    expect(intakePolicy).toContain("deviceId: registeredDevice ? identity.deviceId || identity.id || '' : ''");
+    expect(intakePolicy).toContain('deviceId: draft.deviceId ? Number(draft.deviceId) : null');
+  });
+
   it('prefills the external intake confirmer from the selected customer without removing edit authority', () => {
     const externalIntake = read('src/features/repair/components/ExternalDeviceIntakeForm.jsx');
     const evidenceFields = read('src/features/repair/components/MobileIntakeEvidenceFields.jsx');

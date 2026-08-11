@@ -37,3 +37,6 @@ export const getTaxExpenseAssessmentSuggestion = async (taxExpenseId) =>
 
 export const confirmTaxExpenseAssessment = async (taxExpenseId, payload) =>
   unwrap(await apiClient.post(`/tax-expenses/${taxExpenseId}/assessment-confirmation`, payload));
+
+export const verifyTaxExpenseEvidence = async (taxExpenseId, payload = {}) =>
+  unwrap(await apiClient.post(`/tax-expenses/${taxExpenseId}/evidence/verify`, payload));

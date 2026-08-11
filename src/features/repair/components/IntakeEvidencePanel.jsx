@@ -71,11 +71,17 @@ const IntakeEvidencePanel = ({ repairJobId, warning }) => {
     setEditing(false);
   };
 
+  const shouldWriteConsent = consentChanged(draft, evidence);
+  const canSave = Boolean(
+    draft.photos.length ||
+      (shouldWriteConsent && draft.confirmed && draft.customerSignature.trim())
+  );
+
   const save = async () => {
+    if (!canSave) return;
     setLoading(true);
     setError('');
     try {
-      const shouldWriteConsent = consentChanged(draft, evidence);
       const payload = shouldWriteConsent
         ? draft
         : { ...draft, confirmed: false };
@@ -122,7 +128,7 @@ const IntakeEvidencePanel = ({ repairJobId, warning }) => {
           <MobileIntakeEvidenceFields value={draft} onChange={setDraft} />
           <button
             type="button"
-            disabled={loading || (!draft.photos.length && !draft.confirmed)}
+            disabled={loading || !canSave}
             onClick={save}
             className="min-h-12 w-full rounded-xl bg-emerald-700 px-4 font-black text-white disabled:opacity-40"
           >

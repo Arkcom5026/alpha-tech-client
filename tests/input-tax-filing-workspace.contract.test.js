@@ -17,7 +17,7 @@ test('filing API uses canonical server workspace and preparation routes', () => 
   assert.match(api, /\/tax-intake\/input-documents\/filing\/periods\/\$\{periodId\(taxPeriodId\)\}\/prepare/);
   assert.match(api, /documents\/\$\{positiveId\(taxDocumentId, 'taxDocumentId'\)\}\/select/);
   assert.match(api, /documents\/\$\{positiveId\(taxDocumentId, 'taxDocumentId'\)\}\/remove/);
-  assert.doesNotMatch(api, /\/file[`'\"]/);
+  assert.doesNotMatch(api, /\/file/);
 });
 
 test('Thai-first filing workspace explains preparation is not government filing', () => {

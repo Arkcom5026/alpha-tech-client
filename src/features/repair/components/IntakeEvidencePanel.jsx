@@ -38,7 +38,7 @@ const consentChanged = (draft, evidence) => {
   );
 };
 
-const IntakeEvidencePanel = ({ repairJobId, warning }) => {
+const IntakeEvidencePanel = ({ repairJobId, warning, onSaved }) => {
   const [evidence, setEvidence] = useState(null);
   const [draft, setDraft] = useState(emptyDraft);
   const [editing, setEditing] = useState(false);
@@ -89,6 +89,7 @@ const IntakeEvidencePanel = ({ repairJobId, warning }) => {
       setEvidence(saved);
       setDraft(emptyDraft);
       setEditing(false);
+      await onSaved?.(saved);
     } catch (saveError) {
       setError(saveError.message);
     } finally {

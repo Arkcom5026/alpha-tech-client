@@ -22,3 +22,8 @@ export const getDeliveryCreditSettlement = async (id) => {
   const response = await apiClient.get(`${BASE_PATH}/${id}`);
   return unwrap(response);
 };
+
+export const cancelDeliveryCreditSettlement = async (id, cancelReason) => {
+  const response = await apiClient.post(`${BASE_PATH}/${id}/cancel`, { cancelReason });
+  return unwrap(response);
+};

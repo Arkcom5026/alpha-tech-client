@@ -37,6 +37,7 @@ export const INPUT_TAX_ERROR_MESSAGES_TH = Object.freeze({
   INPUT_TAX_REPLACEMENT_CYCLE: 'ไม่สามารถเชื่อมโยงเอกสารทดแทนได้ เนื่องจากจะเกิดวงจรอ้างอิง',
   INPUT_TAX_REPLACEMENT_SELF_REFERENCE: 'เอกสารไม่สามารถใช้ตัวเองเป็นเอกสารที่ถูกแทนที่ได้',
   TAX_DOCUMENT_NOT_FOUND: 'ไม่พบเอกสารภาษีที่ต้องการ',
+  TAX_DOCUMENT_TRANSITION_FORBIDDEN: 'เอกสารยังไม่สามารถไปยังขั้นตอนที่เลือกได้ กรุณารีเฟรชและตรวจสถานะอีกครั้ง',
   TAX_DOCUMENT_LIFECYCLE_CONFLICT: 'สถานะเอกสารภาษีมีการเปลี่ยนแปลง กรุณารีเฟรชแล้วลองใหม่',
 });
 

@@ -45,6 +45,16 @@ test('create workspace caps combined line selections by each sale outstanding am
   assert.match(createPage, /Math\.min\(Number\(line\.remainingAmount \?\? line\.lineAmount\), remainingSaleCapacity\)/);
 });
 
+test('create workspace can select or clear one whole delivery note in a single action', () => {
+  assert.match(createPage, /const selectWholeSale = \(sale\)/);
+  assert.match(createPage, /const clearWholeSale = \(saleId\)/);
+  assert.match(createPage, /remainingSaleCapacity = Number\(sale\.outstandingAmount \|\| 0\)/);
+  assert.match(createPage, /Math\.min\(remainingLineAmount, remainingSaleCapacity\)/);
+  assert.match(createPage, /เลือกทั้งใบ/);
+  assert.match(createPage, /ล้างทั้งใบ/);
+  assert.match(createPage, /เลือกแล้ว ฿\{money\(saleSelectedAmount\)\}/);
+});
+
 test('history detail and print use the isolated settlement API', () => {
   assert.match(listPage, /listDeliveryCreditSettlements/);
   assert.match(detailPage, /getDeliveryCreditSettlement/);

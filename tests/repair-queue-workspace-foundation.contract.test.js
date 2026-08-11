@@ -101,8 +101,9 @@ describe('repair queue workspace foundation contract', () => {
     expect(runtimeSource).toContain("key: 'EXTERNAL_REPAIR'");
     expect(runtimeSource).toContain("label: 'ส่งซ่อมภายนอก'");
     expect(boardSource).toContain("lane.key === 'EXTERNAL_REPAIR'");
-    expect(boardSource).toContain('ส่งให้: {external.providerName}');
-    expect(boardSource).toContain('งาน: {external.workScope}');
+    expect(boardSource).toContain("external.providerName || '-'");
+    expect(boardSource).toContain('external.workScope');
+    expect(boardSource).toContain('ส่งออก {formatDateTime(external.sentAt)}');
     expect(boardSource).toContain("min-w-[1420px] grid-cols-6");
   });
 

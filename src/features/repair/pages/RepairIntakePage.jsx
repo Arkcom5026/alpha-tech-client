@@ -12,6 +12,8 @@ import {
   projectRepairIntakeContact,
 } from '../intake/workspace/policies/repairIntakePolicy';
 
+const ACTIVE_REPAIR_STATUSES = new Set(['RECEIVED', 'IN_PROGRESS', 'WAITING_PARTS']);
+
 const RepairIntakePage = () => {
   const navigate = useNavigate();
   const { shopSlug } = useParams();
@@ -22,7 +24,12 @@ const RepairIntakePage = () => {
   const [createOpen, setCreateOpen] = useState(false);
   const [externalMode, setExternalMode] = useState(false);
 
-  const selectedStockItemId = runtime.intakeContext?.identity?.id || '';
+  const registeredDeviceSelected =
+    runtime.intakeContext?.sourceType === 'REGISTERED_DEVICE' ||
+    runtime.intakeContext?.identity?.sourceType === 'REGISTERED_DEVICE';
+  const selectedStockItemId = registeredDeviceSelected
+    ? ''
+    : runtime.intakeContext?.identity?.id || '';
   const contextCustomerId = useMemo(
     () => runtime.selectedCustomer?.id || runtime.intakeContext?.latestSale?.customerId || '',
     [runtime.selectedCustomer, runtime.intakeContext]
@@ -69,8 +76,16 @@ const RepairIntakePage = () => {
       await runtime.selectCustomer(device.latestCustomer);
     }
 
-    if (device?.sourceType === 'REGISTERED_DEVICE' && device?.latestRepairJob?.id) {
-      navigate(`/${shopSlug}/pos/services/repairs/${device.latestRepairJob.id}`);
+    if (device?.sourceType === 'REGISTERED_DEVICE') {
+      const latestRepair = device?.latestRepairJob || null;
+      if (latestRepair?.id && ACTIVE_REPAIR_STATUSES.has(latestRepair.status)) {
+        navigate(`/${shopSlug}/pos/services/repairs/${latestRepair.id}`);
+        return;
+      }
+
+      runtime.selectRegisteredDeviceForIntake(device);
+      setCreateOpen(false);
+      setExternalMode(false);
       return;
     }
 

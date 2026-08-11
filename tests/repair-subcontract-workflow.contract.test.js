@@ -31,6 +31,14 @@ describe('repair subcontract workflow contract', () => {
     expect(panel).not.toContain('MAX_BUDGET');
   });
 
+  it('normalizes browser local expected-return timestamps before sending them to the API', () => {
+    const panel = read('src/features/repair/components/RepairSubcontractPanel.jsx');
+
+    expect(panel).toContain('const toIsoOrNull = (value) => (value ? new Date(value).toISOString() : null)');
+    expect(panel).toContain('expectedReturnAt: toIsoOrNull(sendForm.expectedReturnAt)');
+    expect(panel).toContain('expectedReturnAt: toIsoOrNull(updateForm.expectedReturnAt)');
+  });
+
   it('requires outsource consent before the send button is enabled', () => {
     const panel = read('src/features/repair/components/RepairSubcontractPanel.jsx');
 

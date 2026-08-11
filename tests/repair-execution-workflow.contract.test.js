@@ -16,6 +16,18 @@ describe('repair execution workflow contract', () => {
     expect(panel).toContain("expectedWorkflowStatus: status");
   });
 
+  it('makes ready-for-delivery primary while keeping QC as an optional completion path', () => {
+    const panel = read('src/features/repair/components/RepairExecutionPanel.jsx');
+
+    expect(panel).toContain("run('COMPLETE_REPAIR_DIRECT'");
+    expect(panel).toContain("run('COMPLETE_REPAIR'");
+    expect(panel).toContain('งานเสร็จ — พร้อมส่งมอบ');
+    expect(panel).toContain('ตรวจหลังซ่อมก่อนส่งมอบ');
+    expect(panel).toContain('QC เป็นตัวเลือกเสริม');
+    expect(panel).toContain("actionNames.has('COMPLETE_REPAIR_DIRECT')");
+    expect(panel).toContain("actionNames.has('COMPLETE_REPAIR')");
+  });
+
   it('uses product search instead of asking staff for a Product ID', () => {
     const api = read('src/features/repair/api/repairApi.js');
     const execution = read('src/features/repair/components/RepairExecutionPanel.jsx');

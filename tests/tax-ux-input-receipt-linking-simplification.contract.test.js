@@ -16,6 +16,7 @@ const form = read('src/features/tax/inputDocuments/components/InputTaxDocumentCr
 const allocation = read('src/features/tax/inputDocuments/components/InputTaxAllocationSummary.jsx');
 const controller = read('src/features/tax/inputDocuments/hooks/useInputTaxReceiptWorkspaceController.js');
 const orchestration = read('src/features/tax/inputDocuments/hooks/useInputTaxReceiptCreateLinkController.js');
+const utils = read('src/features/tax/inputDocuments/utils/inputTaxReceiptLink.js');
 
 describe('Tax UX input receipt linking simplification', () => {
   it('puts receipt selection before the document decision', () => {
@@ -34,7 +35,15 @@ describe('Tax UX input receipt linking simplification', () => {
 
   it('excludes read-only documents from operational linking choices', () => {
     expect(controller).toContain('documents.filter((document) => isTaxDocumentMutable(document.status))');
-    expect(selection).toContain('แสดงเฉพาะใบกำกับของผู้จำหน่ายรายเดียวกันที่ระบบอนุญาตให้ผูกเพิ่มได้');
+  });
+
+  it('excludes documents whose remaining capacity cannot fit the selected receipts', () => {
+    expect(controller).toContain('documentCanFitReceiptAllocations(document, selectedReceipts)');
+    expect(utils).toContain('activeAllocatedSubtotal');
+    expect(utils).toContain('activeAllocatedVatAmount');
+    expect(utils).toContain('activeAllocatedTotalAmount');
+    expect(selection).toContain('ยังมียอดคงเหลือเพียงพอกับใบรับสินค้าที่เลือก');
+    expect(selection).toContain('คงเหลือ {formatTaxMoney(remainingDocumentTotalCapacity(document))}');
   });
 
   it('automatically guides to a new invoice when no existing document can be used', () => {
@@ -42,7 +51,7 @@ describe('Tax UX input receipt linking simplification', () => {
     expect(orchestration).toContain('if (controller.showCreateDocument) return;');
     expect(orchestration).toContain('openCreateDocument();');
     expect(selection).toContain('disabled={!hasReceipts || !existingAvailable}');
-    expect(selection).toContain('ไม่มีใบกำกับภาษีซื้อเดิมที่ใช้ได้ ระบบเลือกการสร้างฉบับใหม่ให้แล้ว');
+    expect(selection).toContain('ไม่มีใบกำกับภาษีซื้อเดิมที่มียอดคงเหลือเพียงพอ ระบบเลือกการสร้างฉบับใหม่ให้แล้ว');
   });
 
   it('makes the final action describe exactly what will happen', () => {

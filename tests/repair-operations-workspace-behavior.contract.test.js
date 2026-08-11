@@ -51,13 +51,16 @@ describe('repair operations workspace behavior contract', () => {
     expect(claimDetailPage).toContain('loadClaim');
   });
 
-  it('preserves repair queue search, lane projection, and navigation across workspace ownership', () => {
+  it('preserves repair queue search, derived external-repair lane projection, and navigation across workspace ownership', () => {
     expect(jobsPage).toContain("const [query, setQuery] = useState('')");
     expect(jobsPage).toContain('projectRepairQueue(jobs, query)');
     expect(jobsPage).toContain('RepairQueueWorkspace');
     expect(repairQueuePolicy).toContain('job?.stockItem?.serialNumber');
     expect(repairQueuePolicy).toContain('job?.device?.imei');
-    expect(repairQueuePolicy).toContain('groupByStatus(filtered, REPAIR_LANES)');
+    expect(repairQueuePolicy).toContain('job?.activeSubcontract?.providerName');
+    expect(repairQueuePolicy).toContain('projectRepairQueueItem');
+    expect(repairQueuePolicy).toContain("queueStatus: 'EXTERNAL_REPAIR'");
+    expect(repairQueuePolicy).toContain('queueStatus: job?.status');
     expect(jobsPage).toContain('/pos/services/repairs/${job.id}');
   });
 

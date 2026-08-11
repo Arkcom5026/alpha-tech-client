@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import repairApi from '../api/repairApi';
 import { listExpensePayees } from '@/features/taxExpense/api/taxExpenseApi';
+import ExpensePayeeQuickCreateDialog from './ExpensePayeeQuickCreateDialog';
 
 const money = (value) =>
   value === null || value === undefined || value === ''
@@ -30,6 +31,7 @@ const RepairSubcontractPanel = ({ job, onChanged, refreshKey = 0 }) => {
   const [context, setContext] = useState(null);
   const [payees, setPayees] = useState([]);
   const [expanded, setExpanded] = useState(false);
+  const [quickCreateOpen, setQuickCreateOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -79,6 +81,17 @@ const RepairSubcontractPanel = ({ job, onChanged, refreshKey = 0 }) => {
   const workflowStatus = job?.workflow?.status || context?.workflowStatus || 'RECEIVED';
   const canOpen = ['APPROVED', 'REPAIRING'].includes(workflowStatus);
   const outsourceConsent = Boolean(context?.outsourceConsent);
+
+  const handlePayeeCreated = async (created) => {
+    if (!created?.id) return;
+    setPayees((current) => [created, ...current.filter((item) => Number(item.id) !== Number(created.id))]);
+    setSendForm((current) => ({
+      ...current,
+      expensePayeeId: String(created.id),
+      providerPhone: current.providerPhone || created.phone || '',
+    }));
+    setNotice(`เพิ่มผู้รับซ่อม “${created.name}” และเลือกให้ใบงานนี้แล้ว`);
+  };
 
   const runMutation = async (work, successMessage) => {
     setLoading(true);
@@ -260,10 +273,13 @@ const RepairSubcontractPanel = ({ job, onChanged, refreshKey = 0 }) => {
             </p>
           ) : null}
           <div className="mt-3 grid gap-3 md:grid-cols-2">
-            <select value={sendForm.expensePayeeId} onChange={(e) => setSendForm((v) => ({ ...v, expensePayeeId: e.target.value }))} className="rounded-xl border border-violet-200 bg-white px-4 py-3">
-              <option value="">เลือก ExpensePayee ผู้รับซ่อม *</option>
-              {payees.map((payee) => <option key={payee.id} value={payee.id}>{payee.name}{payee.taxId ? ` · ${payee.taxId}` : ''}</option>)}
-            </select>
+            <div className="flex gap-2">
+              <select value={sendForm.expensePayeeId} onChange={(e) => setSendForm((v) => ({ ...v, expensePayeeId: e.target.value }))} className="min-w-0 flex-1 rounded-xl border border-violet-200 bg-white px-4 py-3">
+                <option value="">เลือก ExpensePayee ผู้รับซ่อม *</option>
+                {payees.map((payee) => <option key={payee.id} value={payee.id}>{payee.name}{payee.taxId ? ` · ${payee.taxId}` : ''}</option>)}
+              </select>
+              <button type="button" onClick={() => setQuickCreateOpen(true)} className="shrink-0 rounded-xl border border-violet-300 bg-white px-4 py-3 text-sm font-black text-violet-800 hover:bg-violet-100">+ เพิ่มผู้รับซ่อม</button>
+            </div>
             <input value={sendForm.providerPhone} onChange={(e) => setSendForm((v) => ({ ...v, providerPhone: e.target.value }))} placeholder="เบอร์ติดต่อ" className="rounded-xl border border-violet-200 bg-white px-4 py-3" />
             <textarea rows={3} value={sendForm.workScope} onChange={(e) => setSendForm((v) => ({ ...v, workScope: e.target.value }))} placeholder="ขอบเขตงานที่ส่งซ่อม *" className="rounded-xl border border-violet-200 bg-white px-4 py-3 md:col-span-2" />
             <input type="number" min="0" value={sendForm.customerEstimateAmount} onChange={(e) => setSendForm((v) => ({ ...v, customerEstimateAmount: e.target.value }))} placeholder="ราคาที่แจ้งลูกค้าโดยประมาณ" className="rounded-xl border border-violet-200 bg-white px-4 py-3" />
@@ -272,7 +288,7 @@ const RepairSubcontractPanel = ({ job, onChanged, refreshKey = 0 }) => {
             <input value={sendForm.externalReference} onChange={(e) => setSendForm((v) => ({ ...v, externalReference: e.target.value }))} placeholder="เลขอ้างอิงจากผู้รับซ่อม" className="rounded-xl border border-violet-200 bg-white px-4 py-3" />
             <input value={sendForm.trackingNumber} onChange={(e) => setSendForm((v) => ({ ...v, trackingNumber: e.target.value }))} placeholder="เลขติดตามขนส่ง" className="rounded-xl border border-violet-200 bg-white px-4 py-3" />
           </div>
-          {!payees.length ? <p className="mt-3 text-sm font-bold text-amber-700">กรุณาสร้าง ExpensePayee ในหน้าค่าใช้จ่ายก่อนส่งเครื่อง</p> : null}
+          {!payees.length ? <p className="mt-3 text-sm font-bold text-amber-700">ยังไม่มี ExpensePayee ผู้รับซ่อม กด “+ เพิ่มผู้รับซ่อม” เพื่อสร้างได้โดยไม่ออกจากใบงาน</p> : null}
           <button type="button" disabled={loading || !outsourceConsent || !sendForm.expensePayeeId || !sendForm.workScope.trim()} onClick={send} className="mt-4 rounded-xl bg-violet-700 px-5 py-3 font-black text-white disabled:opacity-40">ยืนยันส่งซ่อมภายนอกและพักงานในร้าน</button>
         </div>
       ) : !canOpen ? (
@@ -292,6 +308,12 @@ const RepairSubcontractPanel = ({ job, onChanged, refreshKey = 0 }) => {
           </div>
         </details>
       ) : null}
+
+      <ExpensePayeeQuickCreateDialog
+        open={quickCreateOpen}
+        onClose={() => setQuickCreateOpen(false)}
+        onCreated={handlePayeeCreated}
+      />
     </section>
   );
 };

@@ -66,10 +66,16 @@ const thaiBahtText = (value) => {
 const CustomerMoneyReceiptDocument = ({ record, mode }) => {
   const isShort = mode === 'SHORT';
   const isCancelled = record.status === 'CANCELLED';
+  const isFullyAllocated = record.status === 'FULLY_ALLOCATED';
   const branch = record.branch || {};
   const customer = record.customer || {};
   const customerContact = customer.user?.loginId || customer.user?.email || '-';
   const branchIdentity = branch.isHeadOffice ? 'สำนักงานใหญ่' : 'สาขา';
+  const moneyStatusText = isCancelled
+    ? 'เอกสารถูกยกเลิกและยอดนี้ไม่อยู่ใน Customer Money ที่พร้อมใช้'
+    : isFullyAllocated
+      ? 'Customer Money จากใบรับนี้ถูกนำไปใช้ครบแล้ว'
+      : `รับเข้า Customer Money และยังพร้อมใช้ ฿${formatMoney(record.remainingAmount)}`;
 
   return (
     <article className={`customer-money-receipt-document bg-white text-black ${isShort ? 'w-[80mm] p-4 text-[12px]' : 'min-h-[277mm] w-[190mm] p-8 text-[14px]'}`}>
@@ -86,6 +92,9 @@ const CustomerMoneyReceiptDocument = ({ record, mode }) => {
 
       {isCancelled && (
         <div className="my-4 border-2 border-black p-2 text-center font-bold">ยกเลิกแล้ว / CANCELLED</div>
+      )}
+      {isFullyAllocated && (
+        <div className="my-4 border border-black p-2 text-center font-bold">ใช้ Customer Money ครบแล้ว / FULLY ALLOCATED</div>
       )}
 
       <section className="mt-4 grid grid-cols-2 gap-x-5 gap-y-2">
@@ -110,7 +119,7 @@ const CustomerMoneyReceiptDocument = ({ record, mode }) => {
           <div className="flex justify-between gap-4"><dt className="font-semibold">ช่องทางรับเงิน</dt><dd>{paymentMethodLabel(record.paymentMethod)}</dd></div>
           <div className="flex justify-between gap-4"><dt className="font-semibold">เลขอ้างอิง</dt><dd>{record.paymentReference || '-'}</dd></div>
           <div className="grid grid-cols-[110px_1fr] gap-3"><dt className="font-semibold">รายละเอียด</dt><dd className="whitespace-pre-wrap text-right">{record.description || '-'}</dd></div>
-          {!isShort && <div className="grid grid-cols-[110px_1fr] gap-3"><dt className="font-semibold">สถานะเงิน</dt><dd className="text-right">รับเข้า Customer Money และยังไม่กำหนดการนำไปใช้</dd></div>}
+          {!isShort && <div className="grid grid-cols-[110px_1fr] gap-3"><dt className="font-semibold">สถานะเงิน</dt><dd className="text-right">{moneyStatusText}</dd></div>}
         </dl>
       </section>
 
@@ -138,7 +147,7 @@ const CustomerMoneyReceiptDocument = ({ record, mode }) => {
 
       <footer className={`${isShort ? 'mt-6' : 'mt-12'} border-t border-black pt-3 text-center text-xs`}>
         <div className="font-semibold">เอกสารนี้เป็นหลักฐานการรับเงินจริงจากลูกค้า</div>
-        <div className="mt-1">เงินที่รับยังไม่ผูกกับยอดหนี้ ใบส่งของ การขาย หรือวัตถุประสงค์การใช้เงินใด ๆ</div>
+        <div className="mt-1">{isFullyAllocated ? 'เงินจากใบรับนี้ถูกนำไปใช้ผ่าน Customer Money workflow ครบแล้ว' : isCancelled ? 'ใบรับเงินนี้ถูกยกเลิกและไม่ใช่ยอดเงินพร้อมใช้' : 'ยอดคงเหลือของใบรับนี้ยังสามารถนำไปใช้ผ่าน Customer Money workflow ได้'}</div>
         {!isShort && <div className="mt-1">ไม่ใช่ใบกำกับภาษี และไม่ก่อให้เกิดการตัดสต๊อกหรือรายการภาษีจากการรับเงินนี้</div>}
       </footer>
     </article>

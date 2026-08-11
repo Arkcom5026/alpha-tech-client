@@ -22,10 +22,10 @@ const InputTaxDocumentSelectionPanel = ({
   return (
     <div className="space-y-3 rounded-2xl border border-blue-200 bg-blue-50/40 p-4">
       <div>
-        <p className="text-xs font-black uppercase tracking-wide text-blue-700">ขั้นตอนที่ 2 · เลือกวิธีจัดการใบกำกับภาษี</p>
+        <p className="text-xs font-black uppercase tracking-wide text-blue-700">ขั้นตอนที่ 2 · เลือกวิธีจัดการใบกำกับภาษีซื้อ</p>
         <p className="mt-1 text-sm text-slate-600">
           {hasReceipts
-            ? `เลือกแล้ว ${selectedReceiptCount} ใบรับสินค้า จาก Supplier เดียวกัน จากนั้นเลือกเพียงหนึ่งวิธีด้านล่าง`
+            ? `เลือกแล้ว ${selectedReceiptCount} ใบรับสินค้า จากผู้จำหน่ายรายเดียวกัน จากนั้นเลือกเพียงหนึ่งวิธีด้านล่าง`
             : 'เลือกใบรับสินค้าที่ต้องการจัดการก่อน ระบบจึงจะแสดงทางเลือกที่เหมาะสม'}
         </p>
       </div>
@@ -39,8 +39,8 @@ const InputTaxDocumentSelectionPanel = ({
             existingMode ? 'border-blue-500 bg-white shadow-sm' : 'border-slate-200 bg-white/70'
           }`}
         >
-          <div className="flex items-center gap-2 font-black text-slate-900"><Link2 size={18} /> ผูกกับใบกำกับภาษีที่มีอยู่</div>
-          <p className="mt-1 text-xs text-slate-500">แสดงเฉพาะเอกสารของ Supplier เดียวกันที่ยังอยู่ในสถานะแก้ไข/ผูกเพิ่มได้</p>
+          <div className="flex items-center gap-2 font-black text-slate-900"><Link2 size={18} /> ใช้ใบกำกับภาษีซื้อที่มีอยู่แล้ว</div>
+          <p className="mt-1 text-xs text-slate-500">แสดงเฉพาะใบกำกับของผู้จำหน่ายรายเดียวกันที่ระบบอนุญาตให้ผูกเพิ่มได้</p>
         </button>
 
         <button
@@ -51,30 +51,30 @@ const InputTaxDocumentSelectionPanel = ({
             showCreateDocument ? 'border-emerald-500 bg-white shadow-sm' : 'border-slate-200 bg-white/70'
           }`}
         >
-          <div className="flex items-center gap-2 font-black text-slate-900"><FilePlus2 size={18} /> สร้างใบกำกับภาษีใหม่</div>
-          <p className="mt-1 text-xs text-slate-500">ระบบเติมยอดจากใบรับสินค้าที่เลือกให้ แล้วให้ตรวจตามเอกสารจริงก่อนยืนยัน</p>
+          <div className="flex items-center gap-2 font-black text-slate-900"><FilePlus2 size={18} /> สร้างใบกำกับภาษีซื้อฉบับใหม่</div>
+          <p className="mt-1 text-xs text-slate-500">ระบบเติมยอดจากใบรับสินค้าที่เลือกให้ แล้วให้ตรวจเทียบกับเอกสารจริงก่อนยืนยัน</p>
         </button>
       </div>
 
       {existingMode && (
         <div className="grid gap-3 rounded-xl border border-blue-100 bg-white p-3 lg:grid-cols-[1fr_auto] lg:items-end">
           <label>
-            <span className="mb-1 block text-xs font-bold text-slate-600">เลือกใบกำกับภาษีเดิม</span>
+            <span className="mb-1 block text-xs font-bold text-slate-600">ใบกำกับภาษีซื้อที่พร้อมให้ผูกเพิ่ม</span>
             <select
               value={selectedDocumentId}
               onChange={(event) => onDocumentChange(event.target.value)}
               disabled={!hasReceipts}
               className="w-full rounded-xl border border-blue-200 bg-white px-3 py-2.5 text-sm disabled:opacity-50"
             >
-              <option value="">เลือกใบกำกับภาษีที่ยังผูกเพิ่มได้</option>
+              <option value="">เลือกใบกำกับภาษีซื้อ</option>
               {eligibleDocuments.map((document) => (
                 <option key={document.id} value={document.id}>
-                  {document.documentNumber} · {formatTaxMoney(document.totalAmount)} · {document.status}
+                  {document.documentNumber} · ยอดรวม {formatTaxMoney(document.totalAmount)}
                 </option>
               ))}
             </select>
             {eligibleDocuments.length === 0 && (
-              <p className="mt-2 text-xs font-semibold text-amber-700">ไม่มีใบกำกับภาษีเดิมที่พร้อมให้ผูกเพิ่มสำหรับ Supplier นี้ ให้เลือก “สร้างใบกำกับภาษีใหม่”</p>
+              <p className="mt-2 text-xs font-semibold text-amber-700">ไม่มีใบกำกับภาษีซื้อเดิมที่ผูกเพิ่มได้สำหรับผู้จำหน่ายรายนี้ ให้เลือก “สร้างใบกำกับภาษีซื้อฉบับใหม่”</p>
             )}
           </label>
 
@@ -97,7 +97,7 @@ const InputTaxDocumentSelectionPanel = ({
 
       {selectedDocument && allocationOverflow && (
         <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">
-          ยอดจากใบรับสินค้าที่เลือกเกินยอดคงเหลือของใบกำกับภาษีนี้ กรุณาเลือกเอกสารอื่นหรือปรับรายการก่อนยืนยัน
+          ยอดจากใบรับสินค้าที่เลือกเกินยอดคงเหลือของใบกำกับภาษีซื้อนี้ กรุณาเลือกเอกสารอื่นหรือปรับรายการก่อนยืนยัน
         </div>
       )}
     </div>

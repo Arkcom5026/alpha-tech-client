@@ -27,23 +27,28 @@ describe('repair flexible intake workflow contract', () => {
     expect(diagnosisPanel).toContain("run('START_DIAGNOSIS'");
   });
 
-  it('uses one primary start action and preserves inspection as the optional RECEIVED path', () => {
+  it('requires technician acceptance before repair or inspection becomes available', () => {
     const diagnosisPanel = read('src/features/repair/components/RepairDiagnosisPanel.jsx');
+    const runtime = read('src/features/repair/utils/repairRuntime.js');
 
+    expect(runtime).toContain("RECEIVED', label: 'รับเครื่องแล้ว'");
+    expect(runtime).toContain("ACCEPTED', label: 'ช่างรับงานแล้ว'");
+    expect(diagnosisPanel).toContain('const acceptanceEntry = Boolean(');
+    expect(diagnosisPanel).toContain("workflow.status === 'RECEIVED' && actionNames.has('ACCEPT_JOB')");
+    expect(diagnosisPanel).toContain("onClick={() => run('ACCEPT_JOB')}");
+    expect(diagnosisPanel).toContain('Job Acceptance · Primary Action');
+    expect(diagnosisPanel).toContain('ช่างรับงานก่อนดำเนินการ');
+    expect(diagnosisPanel).toContain('ยังไม่ใช่การเริ่มซ่อม');
+    expect(diagnosisPanel).toContain('รับงาน');
+
+    expect(diagnosisPanel).toContain("workflow.status === 'ACCEPTED'");
     expect(diagnosisPanel).toContain("actionNames.has('START_REPAIR')");
     expect(diagnosisPanel).toContain("onClick={() => run('START_REPAIR')}");
     expect(diagnosisPanel).toContain("actionNames.has('START_PRE_AGREED_SERVICE')");
     expect(diagnosisPanel).toContain("onClick={() => run('START_PRE_AGREED_SERVICE')}");
-    expect(diagnosisPanel).toContain('const authorizationEntry = Boolean(');
-    expect(diagnosisPanel).toContain('const directEntry = Boolean(');
-    expect(diagnosisPanel).toContain('!authorizationEntry');
-    expect(diagnosisPanel).toContain('Repair Authorization · Primary Action');
-    expect(diagnosisPanel).not.toContain('ใช้การอนุมัตินี้ในการเริ่มงาน');
-    expect(diagnosisPanel).toContain('เริ่มงานได้เลย');
-    expect(diagnosisPanel).toContain('ไม่ต้องผ่านขั้นตรวจสอบหรือเสนอราคาโดยไม่จำเป็น');
-    expect(diagnosisPanel).toContain('ตัวเลือกเพิ่มเติม');
+    expect(diagnosisPanel).toContain('เริ่มซ่อม');
     expect(diagnosisPanel).toContain("actionNames.has('QUEUE_DIAGNOSIS')");
-    expect(diagnosisPanel).toContain('เลือกใช้เฉพาะเมื่อเคสนี้ต้องการขั้นตอนเพิ่มเติม');
+    expect(diagnosisPanel).toContain('หลังรับงานแล้ว เลือกตรวจสอบ');
   });
 
   it('uses repair authorization without requiring an agreed amount for registered and external intake', () => {
@@ -80,11 +85,16 @@ describe('repair flexible intake workflow contract', () => {
     expect(estimatePanel).not.toContain('ตกลงราคาแล้ว ไม่ต้องขออนุมัติซ้ำ');
   });
 
-  it('keeps quote-before-repair as the explicit path for customers who require price approval first', () => {
+  it('keeps quote-before-repair after technician acceptance as the explicit inspection path', () => {
+    const diagnosisPanel = read('src/features/repair/components/RepairDiagnosisPanel.jsx');
     const estimatePanel = read(
       'src/features/repair/customer-access/components/RepairEstimateApprovalPanel.jsx'
     );
 
+    expect(diagnosisPanel).toContain("workflow.status === 'ACCEPTED'");
+    expect(diagnosisPanel).toContain('เมื่อลูกค้าต้องการเสนอราคาก่อนซ่อม');
+    expect(diagnosisPanel).toContain("run('QUEUE_DIAGNOSIS')");
+    expect(diagnosisPanel).toContain('บันทึกผลตรวจและส่งขออนุมัติราคา');
     expect(estimatePanel).toContain('ส่งราคาประเมินให้ลูกค้าอนุมัติ');
     expect(estimatePanel).toContain('ใช้เฉพาะเคสที่ลูกค้าต้องการทราบและอนุมัติราคาก่อนซ่อม');
     expect(estimatePanel).toContain("workflowStatus === 'WAITING_APPROVAL'");

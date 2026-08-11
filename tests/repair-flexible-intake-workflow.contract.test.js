@@ -129,6 +129,22 @@ describe('repair flexible intake workflow contract', () => {
     expect(intakePolicy).toContain('deviceId: draft.deviceId ? Number(draft.deviceId) : null');
   });
 
+  it('captures mandatory intake confirmation for repeat repairs and persists it after job creation', () => {
+    const intakePage = read('src/features/repair/pages/RepairIntakePage.jsx');
+    const intakeWorkspace = read(
+      'src/features/repair/intake/workspace/components/RepairIntakeWorkspace.jsx'
+    );
+
+    expect(intakePage).toContain('const [intakeEvidence, setIntakeEvidence]');
+    expect(intakePage).toContain('intakeEvidence.confirmed');
+    expect(intakePage).toContain('intakeEvidence.customerSignature.trim()');
+    expect(intakePage).toContain('await repairApi.saveIntakeEvidence(created.id, intakeEvidence)');
+    expect(intakeWorkspace).toContain("import MobileIntakeEvidenceFields from '../../../components/MobileIntakeEvidenceFields'");
+    expect(intakeWorkspace).toContain('<MobileIntakeEvidenceFields');
+    expect(intakeWorkspace).toContain('value={intakeEvidence}');
+    expect(intakeWorkspace).toContain('onChange={onIntakeEvidenceChange}');
+  });
+
   it('prefills the external intake confirmer from the selected customer without removing edit authority', () => {
     const externalIntake = read('src/features/repair/components/ExternalDeviceIntakeForm.jsx');
     const evidenceFields = read('src/features/repair/components/MobileIntakeEvidenceFields.jsx');

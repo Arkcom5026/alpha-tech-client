@@ -12,6 +12,20 @@ const emptyDraft = {
   allowOutsourceRepair: false,
 };
 
+const draftFromEvidence = (evidence) => {
+  const consent = evidence?.consent;
+  if (!consent) return { ...emptyDraft };
+  return {
+    photos: [],
+    confirmed: Boolean(consent.customerSignature && consent.signedAt),
+    customerSignature: consent.customerSignature || '',
+    allowDataErase: Boolean(consent.allowDataErase),
+    allowFactoryReset: Boolean(consent.allowFactoryReset),
+    allowDisassembly: Boolean(consent.allowDisassembly),
+    allowOutsourceRepair: Boolean(consent.allowOutsourceRepair),
+  };
+};
+
 const IntakeEvidencePanel = ({ repairJobId, warning }) => {
   const [evidence, setEvidence] = useState(null);
   const [draft, setDraft] = useState(emptyDraft);
@@ -34,6 +48,16 @@ const IntakeEvidencePanel = ({ repairJobId, warning }) => {
   useEffect(() => {
     load();
   }, [load]);
+
+  const beginEdit = () => {
+    setDraft(draftFromEvidence(evidence));
+    setEditing(true);
+  };
+
+  const cancelEdit = () => {
+    setDraft(emptyDraft);
+    setEditing(false);
+  };
 
   const save = async () => {
     setLoading(true);
@@ -64,7 +88,7 @@ const IntakeEvidencePanel = ({ repairJobId, warning }) => {
         </div>
         <button
           type="button"
-          onClick={() => setEditing((current) => !current)}
+          onClick={editing ? cancelEdit : beginEdit}
           className="min-h-10 rounded-xl border border-emerald-300 px-3 text-sm font-black text-emerald-700"
         >
           {editing ? 'ยกเลิก' : '+ เพิ่มหลักฐาน'}

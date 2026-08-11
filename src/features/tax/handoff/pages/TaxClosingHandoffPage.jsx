@@ -82,21 +82,18 @@ const TaxClosingHandoffPage = () => {
     ]),
   }), [snapshot]);
 
-  const exportAll = () => {
-    if (!data) return;
-    downloadJson(`tax-closing-${periodCode}-manifest.json`, {
-      ...data.manifest,
-      snapshotHash: data.snapshotHash,
-      packageVersion: data.packageVersion,
-      generatedAt: data.generatedAt,
-    });
-    downloadJson(`tax-closing-${periodCode}-bundle.json`, data);
-    downloadJson(`pp30-settlement-${periodCode}.json`, snapshot?.pp30 || {});
-    downloadCsv(`output-vat-${periodCode}.csv`, ['วันที่', 'เลขเอกสาร', 'ประเภท', 'คู่ค้า', 'เลขผู้เสียภาษี', 'ก่อน VAT', 'VAT', 'รวม'], exportRows.outputVat);
-    downloadCsv(`input-vat-${periodCode}.csv`, ['วันที่', 'เลขเอกสาร', 'ประเภท', 'คู่ค้า', 'เลขผู้เสียภาษี', 'ก่อน VAT', 'VAT', 'รวม'], exportRows.inputVat);
-    downloadCsv(`tax-expenses-${periodCode}.csv`, ['วันที่', 'เลขค่าใช้จ่าย', 'คู่ค้า', 'เลขเอกสาร', 'ก่อน VAT', 'VAT', 'รวม', 'WHT', 'ยอดจ่าย', 'หลักฐาน'], exportRows.expenses);
-    downloadCsv(`withholding-tax-${periodCode}.csv`, ['เลขค่าใช้จ่าย', 'คู่ค้า', 'เลขผู้เสียภาษี', 'WHT', 'แบบ', 'หนังสือรับรอง', 'สถานะ'], exportRows.withholding);
-  };
+  const exportManifest = () => data && downloadJson(`tax-closing-${periodCode}-manifest.json`, {
+    ...data.manifest,
+    snapshotHash: data.snapshotHash,
+    packageVersion: data.packageVersion,
+    generatedAt: data.generatedAt,
+  });
+  const exportBundle = () => data && downloadJson(`tax-closing-${periodCode}-bundle.json`, data);
+  const exportPp30 = () => data && downloadJson(`pp30-settlement-${periodCode}.json`, snapshot?.pp30 || {});
+  const exportOutputVat = () => data && downloadCsv(`output-vat-${periodCode}.csv`, ['วันที่', 'เลขเอกสาร', 'ประเภท', 'คู่ค้า', 'เลขผู้เสียภาษี', 'ก่อน VAT', 'VAT', 'รวม'], exportRows.outputVat);
+  const exportInputVat = () => data && downloadCsv(`input-vat-${periodCode}.csv`, ['วันที่', 'เลขเอกสาร', 'ประเภท', 'คู่ค้า', 'เลขผู้เสียภาษี', 'ก่อน VAT', 'VAT', 'รวม'], exportRows.inputVat);
+  const exportExpenses = () => data && downloadCsv(`tax-expenses-${periodCode}.csv`, ['วันที่', 'เลขค่าใช้จ่าย', 'คู่ค้า', 'เลขเอกสาร', 'ก่อน VAT', 'VAT', 'รวม', 'WHT', 'ยอดจ่าย', 'หลักฐาน'], exportRows.expenses);
+  const exportWithholding = () => data && downloadCsv(`withholding-tax-${periodCode}.csv`, ['เลขค่าใช้จ่าย', 'คู่ค้า', 'เลขผู้เสียภาษี', 'WHT', 'แบบ', 'หนังสือรับรอง', 'สถานะ'], exportRows.withholding);
 
   if (!branchId) {
     return <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-sm font-semibold text-amber-800">กรุณาเลือกร้านก่อนเปิด Tax Closing Package</div>;
@@ -116,7 +113,7 @@ const TaxClosingHandoffPage = () => {
           </div>
           <div className="flex flex-wrap gap-2">
             <button type="button" onClick={load} disabled={loading} className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-bold text-slate-700 disabled:opacity-50"><RefreshCw size={16} className={loading ? 'animate-spin' : ''} />รีเฟรช</button>
-            <button type="button" onClick={exportAll} disabled={!data} className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50"><Download size={16} />ดาวน์โหลดชุดส่งต่อ</button>
+            <button type="button" onClick={exportBundle} disabled={!data} className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50"><Download size={16} />Bundle JSON</button>
           </div>
         </div>
       </header>
@@ -137,6 +134,19 @@ const TaxClosingHandoffPage = () => {
             <div className="rounded-2xl border border-amber-200 bg-white p-4"><p className="text-xs text-slate-500">Tax Expenses</p><p className="mt-1 text-xl font-black">฿{money(snapshot?.expenses?.summary?.totalAmount)}</p><p className="text-xs text-slate-500">{snapshot?.expenses?.rows?.length || 0} รายการ</p></div>
             <div className="rounded-2xl border border-violet-200 bg-white p-4"><p className="text-xs text-slate-500">WHT</p><p className="mt-1 text-xl font-black">฿{money(snapshot?.withholding?.summary?.withholdingTaxAmount)}</p><p className="text-xs text-slate-500">{snapshot?.withholding?.rows?.length || 0} รายการ</p></div>
             <div className="rounded-2xl border border-cyan-200 bg-white p-4"><p className="text-xs text-slate-500">PP30 สุทธิ</p><p className="mt-1 text-xl font-black">฿{money(snapshot?.pp30?.settlement?.pp30VatPayable ?? snapshot?.pp30?.settlement?.pp30VatCredit)}</p><p className="text-xs text-slate-500">{snapshot?.pp30?.readiness?.readyForPp30Preparation ? 'พร้อม' : 'ยังไม่พร้อม'}</p></div>
+          </section>
+
+          <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <h2 className="font-black">ไฟล์ส่งออก</h2>
+            <p className="mt-1 text-xs text-slate-500">Bundle JSON คือ snapshot หลัก ส่วนไฟล์ด้านล่างเป็นรูปแบบเสริมสำหรับนำไปตรวจหรือส่งต่อ</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button type="button" onClick={exportManifest} className="rounded-xl border border-slate-300 px-3 py-2 text-xs font-bold">Manifest JSON</button>
+              <button type="button" onClick={exportOutputVat} className="rounded-xl border border-emerald-300 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-800">Output VAT CSV</button>
+              <button type="button" onClick={exportInputVat} className="rounded-xl border border-blue-300 bg-blue-50 px-3 py-2 text-xs font-bold text-blue-800">Input VAT CSV</button>
+              <button type="button" onClick={exportExpenses} className="rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-800">Expenses CSV</button>
+              <button type="button" onClick={exportWithholding} className="rounded-xl border border-violet-300 bg-violet-50 px-3 py-2 text-xs font-bold text-violet-800">WHT CSV</button>
+              <button type="button" onClick={exportPp30} className="rounded-xl border border-cyan-300 bg-cyan-50 px-3 py-2 text-xs font-bold text-cyan-800">PP30 JSON</button>
+            </div>
           </section>
 
           <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">

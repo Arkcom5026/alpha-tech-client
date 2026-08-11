@@ -11,6 +11,7 @@ const money = (value) =>
       }).format(Number(value || 0));
 
 const dateText = (value) => (value ? new Date(value).toLocaleString('th-TH') : '-');
+const toIsoOrNull = (value) => (value ? new Date(value).toISOString() : null);
 
 const emptySendForm = (job) => ({
   providerName: '',
@@ -94,7 +95,7 @@ const RepairSubcontractPanel = ({ job, onChanged }) => {
         customerEstimateAmount: sendForm.customerEstimateAmount === ''
           ? null
           : Number(sendForm.customerEstimateAmount),
-        expectedReturnAt: sendForm.expectedReturnAt || null,
+        expectedReturnAt: toIsoOrNull(sendForm.expectedReturnAt),
       }),
       'บันทึกการส่งซ่อมภายนอกแล้ว ใบงานภายในร้านถูกพักจนกว่าจะรับเครื่องกลับ'
     );
@@ -109,7 +110,7 @@ const RepairSubcontractPanel = ({ job, onChanged }) => {
         providerQuotedAmount: updateForm.providerQuotedAmount === ''
           ? null
           : Number(updateForm.providerQuotedAmount),
-        expectedReturnAt: updateForm.expectedReturnAt || null,
+        expectedReturnAt: toIsoOrNull(updateForm.expectedReturnAt),
       }),
       'อัปเดตข้อมูลจากผู้รับซ่อมภายนอกแล้ว'
     );

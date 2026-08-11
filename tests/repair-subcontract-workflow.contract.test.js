@@ -48,13 +48,29 @@ describe('repair subcontract workflow contract', () => {
     expect(panel).toContain('disabled={loading || !outsourceConsent');
   });
 
+  it('refreshes outsource authority immediately after intake evidence is updated', () => {
+    const panel = read('src/features/repair/components/RepairSubcontractPanel.jsx');
+    const workspace = read(
+      'src/features/repair/detail/workspace/components/RepairDetailWorkspace.jsx'
+    );
+    const evidence = read('src/features/repair/components/IntakeEvidencePanel.jsx');
+
+    expect(panel).toContain('refreshKey = 0');
+    expect(panel).toContain('[load, refreshKey]');
+    expect(workspace).toContain('const [evidenceRevision, setEvidenceRevision] = useState(0)');
+    expect(workspace).toContain('refreshKey={evidenceRevision}');
+    expect(workspace).toContain('onSaved={handleEvidenceSaved}');
+    expect(evidence).toContain('await onSaved?.(saved)');
+  });
+
   it('holds internal repair execution, claim and handover panels while custody is outside', () => {
     const workspace = read(
       'src/features/repair/detail/workspace/components/RepairDetailWorkspace.jsx'
     );
 
     expect(workspace).toContain('const subcontractActive = Boolean(job?.workflow?.subcontractContext?.active)');
-    expect(workspace).toContain('<RepairSubcontractPanel job={job} onChanged={onRetry} />');
+    expect(workspace).toContain('<RepairSubcontractPanel');
+    expect(workspace).toContain('onChanged={onRetry}');
     expect(workspace).toContain('!subcontractActive');
     expect(workspace).toContain('<RepairExecutionPanel');
     expect(workspace).toContain('<RepairClaimHandoffPanel');

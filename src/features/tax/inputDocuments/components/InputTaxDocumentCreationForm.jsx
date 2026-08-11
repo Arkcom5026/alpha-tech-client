@@ -2,8 +2,8 @@ import React from 'react';
 import { CircleCheckBig } from 'lucide-react';
 
 const amountFields = Object.freeze([
-  ['subtotalAmount', 'มูลค่าก่อน VAT'],
-  ['taxAmount', 'VAT'],
+  ['subtotalAmount', 'มูลค่าก่อนภาษีมูลค่าเพิ่ม'],
+  ['taxAmount', 'ภาษีมูลค่าเพิ่ม'],
   ['totalAmount', 'ยอดรวม'],
 ]);
 
@@ -20,9 +20,9 @@ const InputTaxDocumentCreationForm = ({
     className="grid gap-3 rounded-2xl border border-emerald-200 bg-emerald-50/30 p-4 shadow-sm md:grid-cols-2 xl:grid-cols-5"
   >
     <div className="xl:col-span-5">
-      <p className="text-xs font-black uppercase tracking-wide text-emerald-700">ขั้นตอนที่ 3 · ตรวจสอบใบกำกับภาษีใหม่</p>
+      <p className="text-xs font-black uppercase tracking-wide text-emerald-700">ขั้นตอนที่ 3 · ตรวจสอบใบกำกับภาษีซื้อฉบับใหม่</p>
       <p className="mt-1 font-black text-slate-900">สร้างใบกำกับภาษีซื้อของ {supplierName}</p>
-      <p className="text-xs text-slate-500">ยอดถูกเติมจากใบรับสินค้าที่เลือก กรุณาตรวจเลขที่ วันที่ และยอดทั้งหมดกับใบกำกับภาษีจริงก่อนยืนยัน</p>
+      <p className="text-xs text-slate-500">ระบบเติมยอดจากใบรับสินค้าที่เลือกให้ กรุณาตรวจเลขที่ วันที่ และยอดทั้งหมดกับใบกำกับภาษีจริงก่อนยืนยัน</p>
     </div>
 
     <label>
@@ -66,7 +66,7 @@ const InputTaxDocumentCreationForm = ({
         disabled={submitting || selectedReceiptCount === 0}
         className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-black text-white disabled:opacity-50"
       >
-        <CircleCheckBig size={17} /> สร้างใบกำกับภาษีและผูก {selectedReceiptCount} ใบรับสินค้า
+        <CircleCheckBig size={17} /> สร้างใบกำกับภาษีซื้อและผูก {selectedReceiptCount} ใบรับสินค้า
       </button>
     </div>
   </form>

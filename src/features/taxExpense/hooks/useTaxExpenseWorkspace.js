@@ -8,6 +8,7 @@ import {
   listExpensePayees,
   listTaxExpenseCategories,
   listTaxExpenses,
+  listRepairExpenseReasons,
 } from '../api/taxExpenseApi';
 
 const list = (value) => Array.isArray(value) ? value : [];
@@ -20,6 +21,7 @@ const useTaxExpenseWorkspace = () => {
   const [expenses, setExpenses] = useState([]);
   const [categories, setCategories] = useState([]);
   const [payees, setPayees] = useState([]);
+  const [repairReasons, setRepairReasons] = useState([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [savingPayee, setSavingPayee] = useState(false);
@@ -31,14 +33,16 @@ const useTaxExpenseWorkspace = () => {
     setLoading(true);
     setError('');
     try {
-      const [expenseData, categoryData, payeeData] = await Promise.all([
+      const [expenseData, categoryData, payeeData, repairReasonData] = await Promise.all([
         listTaxExpenses(),
         listTaxExpenseCategories(),
         listExpensePayees({ q: payeeQuery }),
+        listRepairExpenseReasons(),
       ]);
       setExpenses(list(expenseData));
       setCategories(list(categoryData));
       setPayees(list(payeeData));
+      setRepairReasons(list(repairReasonData));
     } catch (requestError) {
       const message = requestError?.response?.data?.message || 'ไม่สามารถโหลดข้อมูลค่าใช้จ่ายได้';
       setError(message);
@@ -123,6 +127,7 @@ const useTaxExpenseWorkspace = () => {
     expenses,
     categories,
     payees,
+    repairReasons,
     loading,
     saving,
     savingPayee,

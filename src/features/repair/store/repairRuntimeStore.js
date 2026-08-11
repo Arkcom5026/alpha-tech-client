@@ -84,6 +84,59 @@ const useRepairRuntimeStore = create((set, get) => ({
     return syntheticContext;
   },
 
+  selectRegisteredDeviceForIntake: (device) => {
+    const deviceId = Number(device?.id || 0);
+    if (!deviceId) {
+      set({ error: 'ไม่พบ Device ID จากอุปกรณ์ที่เลือก', errorCode: 'REPAIR_DEVICE_ID_MISSING' });
+      return null;
+    }
+
+    const latestCustomer = normalizeCustomer(device?.latestCustomer);
+    const deviceName = [device?.brand, device?.model].filter(Boolean).join(' ').trim();
+    const context = {
+      sourceType: 'REGISTERED_DEVICE',
+      identity: {
+        id: deviceId,
+        deviceId,
+        sourceType: 'REGISTERED_DEVICE',
+        barcode: device?.barcode || null,
+        serialNumber: device?.serialNumber || null,
+        imei: device?.imei || null,
+        status: device?.status || 'ACTIVE',
+        branchId: device?.branchId || null,
+        product: {
+          name: deviceName || device?.category || `Device #${deviceId}`,
+          brand: device?.brand || null,
+          productType: device?.category || null,
+        },
+      },
+      latestSale: latestCustomer
+        ? {
+            customerId: latestCustomer.id,
+            customerName: latestCustomer.name || latestCustomer.companyName || '',
+            soldAt: null,
+          }
+        : null,
+      warranty: null,
+      procurement: null,
+      activeRepair: null,
+      activeClaim: null,
+      latestRepairJob: device?.latestRepairJob || null,
+      repairHistoryCount: Number(device?.repairHistoryCount || 0),
+    };
+
+    set({
+      intakeContext: context,
+      intakeNotFound: false,
+      intakeNotFoundLookup: '',
+      searchResults: { devices: [], customers: [], counts: { devices: 0, customers: 0, total: 0 } },
+      error: null,
+      errorCode: null,
+      lastLoadedAt: new Date().toISOString(),
+    });
+    return context;
+  },
+
   searchDirectory: async (queryInput) => {
     const query = String(queryInput ?? get().intakeLookup).trim();
     if (!query) {

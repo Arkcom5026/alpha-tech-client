@@ -21,15 +21,15 @@ const RepairEstimateApprovalPanel = ({ repairJobId, job }) => {
   const [requestNote, setRequestNote] = useState('');
   const [state, setState] = useState({ loading: true, error: '', notice: '' });
   const workflowStatus = job?.workflow?.status || 'RECEIVED';
-  const preAgreedService = job?.workflow?.preAgreedService || null;
-  const preAgreedWasUsed = Boolean(
-    preAgreedService?.enabled &&
+  const repairAuthorization = job?.workflow?.preAgreedService || null;
+  const authorizationWasUsed = Boolean(
+    repairAuthorization?.enabled &&
       (job?.workflow?.history || []).some(
         (event) => event.action === 'START_PRE_AGREED_SERVICE'
       )
   );
   const canPublish =
-    !preAgreedWasUsed &&
+    !authorizationWasUsed &&
     workflowStatus === 'WAITING_APPROVAL' &&
     Number(job?.estimatedCost || 0) > 0;
 
@@ -69,51 +69,36 @@ const RepairEstimateApprovalPanel = ({ repairJobId, job }) => {
     }
   };
 
-  if (preAgreedWasUsed) {
+  if (authorizationWasUsed) {
     return (
       <section className="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-4 shadow-sm sm:p-5">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.16em] text-emerald-700">
-              Pre-agreed Estimate
+              Repair Authorization
             </p>
-            <h2 className="mt-1 text-lg font-black text-slate-950">ตกลงราคาแล้ว ไม่ต้องขออนุมัติซ้ำ</h2>
+            <h2 className="mt-1 text-lg font-black text-slate-950">ลูกค้าอนุมัติให้ซ่อมแล้ว</h2>
             <p className="mt-1 text-sm text-slate-600">
-              งานนี้ใช้ข้อตกลงจากขั้นรับเครื่อง ระบบจะแสดงราคาและขอบเขตงานเป็นข้อมูลอ้างอิงแบบอ่านอย่างเดียว
+              งานนี้ไม่ต้องเสนอราคาก่อนซ่อม ช่างดำเนินงานได้ตามอำนาจที่ลูกค้าให้ไว้ และระบุค่าซ่อมจริงเมื่อทำงานเสร็จ
             </p>
           </div>
           <span className="w-fit rounded-full bg-emerald-100 px-3 py-1 text-xs font-black text-emerald-800">
-            ตกลงแล้ว
+            อนุมัติให้ซ่อมแล้ว
           </span>
         </div>
 
-        <div className="mt-4 grid gap-3 sm:grid-cols-3">
-          <Metric label="ราคาที่ตกลง" value={money(preAgreedService.agreedAmount || job?.estimatedCost)} />
-          <Metric label="มัดจำ" value={money(job?.depositPaid)} />
-          <Metric
-            label="ยอดคงเหลือ"
-            value={money(
-              Math.max(
-                Number(preAgreedService.agreedAmount || job?.estimatedCost || 0) -
-                  Number(job?.depositPaid || 0),
-                0
-              )
-            )}
-          />
-        </div>
-
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          <ReadOnlyDetail label="ขอบเขตงานที่ตกลง" value={preAgreedService.agreedScope || '-'} />
-          <ReadOnlyDetail label="ผู้ยืนยัน" value={preAgreedService.confirmedByName || '-'} />
-          {preAgreedService.confirmationNote ? (
+          <ReadOnlyDetail label="ขอบเขต/เงื่อนไขที่อนุมัติ" value={repairAuthorization.agreedScope || 'อนุมัติให้ดำเนินการซ่อมตามอาการที่แจ้ง'} />
+          <ReadOnlyDetail label="ผู้อนุมัติให้ซ่อม" value={repairAuthorization.confirmedByName || '-'} />
+          {repairAuthorization.confirmationNote ? (
             <div className="sm:col-span-2">
-              <ReadOnlyDetail label="หมายเหตุข้อตกลง" value={preAgreedService.confirmationNote} />
+              <ReadOnlyDetail label="หมายเหตุการอนุมัติ" value={repairAuthorization.confirmationNote} />
             </div>
           ) : null}
         </div>
 
         <p className="mt-4 rounded-xl border border-emerald-200 bg-white p-3 text-sm font-bold text-emerald-800">
-          ใช้ Fast Path แล้ว — ไม่ต้องส่งราคาประเมินให้ลูกค้าอนุมัติอีกครั้ง
+          ไม่ผูกยอดล่วงหน้า — ค่าซ่อมจริงจะถูกบันทึกตอนสรุปงานหลังซ่อมเสร็จ
         </p>
       </section>
     );
@@ -128,7 +113,7 @@ const RepairEstimateApprovalPanel = ({ repairJobId, job }) => {
           </p>
           <h2 className="mt-1 text-lg font-black text-slate-950">ส่งราคาประเมินให้ลูกค้าอนุมัติ</h2>
           <p className="mt-1 text-sm text-slate-600">
-            ระบบจะล็อกยอดเป็น snapshot ลูกค้าอนุมัติหรือปฏิเสธจากลิงก์ติดตามงาน และอัปเดต workflow ให้อัตโนมัติ
+            ใช้เฉพาะเคสที่ลูกค้าต้องการทราบและอนุมัติราคาก่อนซ่อม ระบบจะล็อกยอดเป็น snapshot และรอการตัดสินใจจากลูกค้า
           </p>
         </div>
         {workflowStatus === 'WAITING_APPROVAL' ? (

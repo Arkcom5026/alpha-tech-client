@@ -101,6 +101,17 @@ describe('repair flexible intake workflow contract', () => {
     expect(estimatePanel).toContain('publishEstimateApproval');
   });
 
+  it('surfaces devices previously repaired for the searched customer', () => {
+    const searchPanel = read('src/features/repair/components/IntakeSearchPanel.jsx');
+
+    expect(searchPanel).toContain('repairHistoryCount');
+    expect(searchPanel).toContain('latestRepairJob');
+    expect(searchPanel).toContain('เคยรับซ่อม');
+    expect(searchPanel).toContain('มีประวัติซ่อม');
+    expect(searchPanel).toContain('รวมอุปกรณ์ที่เคยซื้อจากร้านหรือเคยนำมารับซ่อมกับลูกค้าที่ค้นหา');
+    expect(searchPanel).toContain('onSelectDevice(device)');
+  });
+
   it('prefills the external intake confirmer from the selected customer without removing edit authority', () => {
     const externalIntake = read('src/features/repair/components/ExternalDeviceIntakeForm.jsx');
     const evidenceFields = read('src/features/repair/components/MobileIntakeEvidenceFields.jsx');

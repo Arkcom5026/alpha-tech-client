@@ -32,6 +32,7 @@ import CustomerCreditPage from '@/features/finance/pages/CustomerCreditPage';
 import TaxIntakeWorkspacePage from '@/features/tax/intake/pages/TaxIntakeWorkspacePage';
 import TaxPeriodManagementPage from '@/features/tax/periods/pages/TaxPeriodManagementPage';
 import AccountingOfficePackagePage from '@/features/tax/periods/pages/AccountingOfficePackagePage';
+import TaxClosingHandoffPage from '@/features/tax/handoff/pages/TaxClosingHandoffPage';
 import VatSettlementPage from '@/features/tax/settlement/pages/VatSettlementPage';
 import WithholdingTaxWorkspacePage from '@/features/tax/withholding/pages/WithholdingTaxWorkspacePage';
 import UnifiedTaxReadinessPage from '@/features/tax/readiness/pages/UnifiedTaxReadinessPage';
@@ -120,6 +121,7 @@ export const posPartnerRoutes = [
           { path: 'tax-publication-retry', element: <TaxPublicationRetryPage /> },
           { path: 'tax-periods/:taxPeriodId/readiness', element: <UnifiedTaxReadinessPage /> },
           { path: 'tax-periods/:taxPeriodId/accounting-office', element: <AccountingOfficePackagePage /> },
+          { path: 'tax-periods/:taxPeriodId/handoff', element: <TaxClosingHandoffPage /> },
           { path: 'tax-periods/:taxPeriodId/vat-settlement', element: <VatSettlementPage /> },
           { path: 'tax-periods/:taxPeriodId/withholding-tax', element: <WithholdingTaxWorkspacePage /> },
           { path: 'tax-expenses', element: <TaxExpenseWorkspacePage /> },

@@ -87,10 +87,10 @@ const TaxPeriodListTable = ({
                       </button>
                       <button
                         type="button"
-                        onClick={() => navigate(`${period.id}/accounting-office`)}
+                        onClick={() => navigate(`${period.id}/handoff`)}
                         className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-800 hover:bg-emerald-100"
                       >
-                        <FolderArchive size={14} /> ส่งสำนักงานบัญชี
+                        <FolderArchive size={14} /> Tax Closing Package
                       </button>
                       {actions.length === 0 ? <span className="inline-flex items-center text-xs font-semibold text-slate-400">ไม่มี Action ต่อ</span> : actions.map(({ action }) => {
                         const meta = actionMeta[action];

@@ -44,8 +44,13 @@ const DeliveryCreditSettlementCreatePage = () => {
         if (existingKey === key || !entry || entry.saleId !== sale.id) return sum;
         return sum + Number(entry.amount || 0);
       }, 0);
+      const usedByOtherSelections = Object.entries(prev).reduce((sum, [existingKey, entry]) => {
+        if (existingKey === key || !entry) return sum;
+        return sum + Number(entry.amount || 0);
+      }, 0);
       const remainingSaleCapacity = Math.max(0, Number(sale.outstandingAmount) - usedByOtherLines);
-      const limit = Math.min(Number(line.remainingAmount ?? line.lineAmount), remainingSaleCapacity);
+      const remainingCustomerMoney = Math.max(0, Number(workspace?.balance?.availableAmount || 0) - usedByOtherSelections);
+      const limit = Math.min(Number(line.remainingAmount ?? line.lineAmount), remainingSaleCapacity, remainingCustomerMoney);
       const amount = Math.min(Math.max(0, Number(value) || 0), limit);
       return {
         ...prev,
@@ -96,7 +101,7 @@ const DeliveryCreditSettlementCreatePage = () => {
     return map;
   }, new Map()), [selectedLines]);
   const balance = Number(workspace?.balance?.availableAmount || 0);
-  const overBalance = selectedTotal > balance;
+  const overBalance = selectedTotal > balance + 0.001;
   const canSubmit = selectedLines.length > 0 && selectedTotal > 0 && !overBalance && !saving;
 
   const submit = async () => {
@@ -155,6 +160,9 @@ const DeliveryCreditSettlementCreatePage = () => {
           {workspace.sales.length === 0 ? <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-slate-500">ไม่พบใบส่งของเครดิตที่ยังมียอดค้าง</div> : workspace.sales.map((sale) => {
             const saleSelectedAmount = Number((selectedBySale.get(sale.id) || 0).toFixed(2));
             const isWholeSaleSelected = saleSelectedAmount > 0 && Math.abs(saleSelectedAmount - Number(sale.outstandingAmount || 0)) < 0.01;
+            const selectedOutsideSale = Math.max(0, selectedTotal - saleSelectedAmount);
+            const customerMoneyAvailableForSale = Math.max(0, balance - selectedOutsideSale);
+            const canSelectWholeSale = Number(sale.outstandingAmount || 0) <= customerMoneyAvailableForSale + 0.001;
             return (
               <article key={sale.id} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
                 <header className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3">
@@ -164,9 +172,11 @@ const DeliveryCreditSettlementCreatePage = () => {
                     <button
                       type="button"
                       onClick={() => (isWholeSaleSelected ? clearWholeSale(sale.id) : selectWholeSale(sale))}
-                      className={`h-10 rounded-xl border px-4 text-sm font-semibold ${isWholeSaleSelected ? 'border-slate-300 bg-white text-slate-700' : 'border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100'}`}
+                      disabled={!isWholeSaleSelected && !canSelectWholeSale}
+                      title={!isWholeSaleSelected && !canSelectWholeSale ? 'Customer Money ที่เหลือไม่พอสำหรับตัดยอดทั้งใบ' : undefined}
+                      className={`h-10 rounded-xl border px-4 text-sm font-semibold disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400 ${isWholeSaleSelected ? 'border-slate-300 bg-white text-slate-700' : 'border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100'}`}
                     >
-                      {isWholeSaleSelected ? 'ล้างทั้งใบ' : 'เลือกทั้งใบ'}
+                      {isWholeSaleSelected ? 'ล้างทั้งใบ' : canSelectWholeSale ? 'เลือกทั้งใบ' : 'เงินไม่พอทั้งใบ'}
                     </button>
                   </div>
                 </header>

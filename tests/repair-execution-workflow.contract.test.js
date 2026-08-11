@@ -30,12 +30,17 @@ describe('repair execution workflow contract', () => {
 
   it('requires the final repair amount at completion instead of binding price at intake', () => {
     const panel = read('src/features/repair/components/RepairExecutionPanel.jsx');
+    const runtime = read('src/features/repair/components/JobRuntimePanel.jsx');
 
     expect(panel).toContain("finalAmount: ''");
     expect(panel).toContain('ค่าซ่อมจริง *');
     expect(panel).toContain('ยอดนี้เป็นราคาสุดท้ายสำหรับการส่งมอบ');
     expect(panel).toContain('finalAmount: Number(completion.finalAmount)');
     expect(panel).toContain("completion.finalAmount !== ''");
+
+    expect(runtime).toContain("FINAL_PRICE_ACTIONS = new Set(['COMPLETE_REPAIR', 'COMPLETE_REPAIR_DIRECT'])");
+    expect(runtime).toContain('hasFinalRepairAmount');
+    expect(runtime).toContain("hasFinalRepairAmount ? 'ค่าซ่อมจริง' : 'ราคาประเมิน'");
   });
 
   it('uses product search instead of asking staff for a Product ID', () => {

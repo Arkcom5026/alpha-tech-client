@@ -7,6 +7,7 @@ import CustomerWarrantyAssets from '../../../components/CustomerWarrantyAssets';
 import RepairIntakeContactForm from '../../../components/RepairIntakeContactForm';
 import IntakeProjection from '../../../components/IntakeProjection';
 import ExternalDeviceIntakeForm from '../../../components/ExternalDeviceIntakeForm';
+import MobileIntakeEvidenceFields from '../../../components/MobileIntakeEvidenceFields';
 import MobileIntakeProgress from '../../../components/MobileIntakeProgress';
 
 const statusBadge = {
@@ -22,6 +23,7 @@ const RepairIntakeWorkspace = ({
   createOpen,
   externalMode,
   intakeContact,
+  intakeEvidence,
   draft,
   selectedStockItemId,
   status,
@@ -41,6 +43,7 @@ const RepairIntakeWorkspace = ({
   onOpenClaim,
   onCreateJob,
   onContactChange,
+  onIntakeEvidenceChange,
   onCloseCreate,
   onDraftChange,
   onConfirmCreate,
@@ -180,6 +183,13 @@ const RepairIntakeWorkspace = ({
                           <p className="mt-1 text-[11px] text-slate-500">ไม่บังคับ ราคาจริงระบุเมื่อซ่อมเสร็จ</p>
                         </div>
                         <textarea rows={2} value={draft.technicianNotes} onChange={(event) => onDraftChange('technicianNotes', event.target.value)} placeholder="บันทึกภายใน" className="rounded-xl border border-slate-300 px-4 py-3 md:col-span-2" />
+                      </div>
+
+                      <div className="mt-4">
+                        <MobileIntakeEvidenceFields
+                          value={intakeEvidence}
+                          onChange={onIntakeEvidenceChange}
+                        />
                       </div>
 
                       <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-4">

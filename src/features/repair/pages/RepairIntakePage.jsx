@@ -14,6 +14,16 @@ import {
 
 const ACTIVE_REPAIR_STATUSES = new Set(['RECEIVED', 'IN_PROGRESS', 'WAITING_PARTS']);
 
+const createRepeatIntakeEvidence = (customerSignature = '') => ({
+  photos: [],
+  confirmed: false,
+  customerSignature,
+  allowDataErase: false,
+  allowFactoryReset: false,
+  allowDisassembly: false,
+  allowOutsourceRepair: false,
+});
+
 const RepairIntakePage = () => {
   const navigate = useNavigate();
   const { shopSlug } = useParams();
@@ -21,6 +31,7 @@ const RepairIntakePage = () => {
   const [customerPanelOpen, setCustomerPanelOpen] = useState(false);
   const [intakeContact, setIntakeContact] = useState(emptyRepairIntakeContact);
   const [draft, setDraft] = useState(createRepairIntakeDraft());
+  const [intakeEvidence, setIntakeEvidence] = useState(createRepeatIntakeEvidence());
   const [createOpen, setCreateOpen] = useState(false);
   const [externalMode, setExternalMode] = useState(false);
 
@@ -41,6 +52,21 @@ const RepairIntakePage = () => {
     );
   }, [runtime.selectedCustomer]);
 
+  useEffect(() => {
+    if (!intakeContact.contactName) return;
+    setIntakeEvidence((current) =>
+      current.customerSignature.trim()
+        ? current
+        : { ...current, customerSignature: intakeContact.contactName }
+    );
+  }, [intakeContact.contactName]);
+
+  const repeatIntakeCanSubmit = Boolean(
+    canSubmitRepairIntake({ draft, intakeContact, submitting: runtime.submitting }) &&
+      intakeEvidence.confirmed &&
+      intakeEvidence.customerSignature.trim()
+  );
+
   const openCreateDialog = () => {
     const nextDraft = createRepairIntakeDraft({
       customerId: contextCustomerId,
@@ -53,17 +79,29 @@ const RepairIntakePage = () => {
         confirmedByName: intakeContact.contactName || '',
       },
     });
+    setIntakeEvidence(createRepeatIntakeEvidence(intakeContact.contactName || ''));
     setCreateOpen(true);
   };
 
   const createJob = async () => {
-    if (!canSubmitRepairIntake({ draft, intakeContact, submitting: runtime.submitting })) return;
+    if (!repeatIntakeCanSubmit) return;
 
     const created = await runtime.createJob(
       buildRepairJobPayload({ draft, intakeContact })
     );
 
-    if (created?.id) navigate(`/${shopSlug}/pos/services/repairs/${created.id}`);
+    if (!created?.id) return;
+
+    try {
+      await repairApi.saveIntakeEvidence(created.id, intakeEvidence);
+    } catch (error) {
+      navigate(`/${shopSlug}/pos/services/repairs/${created.id}`, {
+        state: { evidenceWarning: error.message },
+      });
+      return;
+    }
+
+    navigate(`/${shopSlug}/pos/services/repairs/${created.id}`);
   };
 
   const selectCustomer = async (customer) => {
@@ -101,6 +139,7 @@ const RepairIntakePage = () => {
   const clearCustomer = () => {
     runtime.clearSelectedCustomer();
     setIntakeContact(emptyRepairIntakeContact);
+    setIntakeEvidence(createRepeatIntakeEvidence());
     setCreateOpen(false);
     setExternalMode(false);
     setCustomerPanelOpen(false);
@@ -109,6 +148,7 @@ const RepairIntakePage = () => {
   const resetAll = () => {
     runtime.resetIntake();
     setIntakeContact(emptyRepairIntakeContact);
+    setIntakeEvidence(createRepeatIntakeEvidence());
     setCreateOpen(false);
     setExternalMode(false);
     setCustomerPanelOpen(false);
@@ -125,12 +165,12 @@ const RepairIntakePage = () => {
   };
 
   const createExternalIntake = async (payload) => {
-    const { intakeEvidence, ...intakePayload } = payload;
+    const { intakeEvidence: externalEvidence, ...intakePayload } = payload;
     const created = await runtime.createExternalIntake(intakePayload);
     if (!created?.repairJob?.id) return;
 
     try {
-      await repairApi.saveIntakeEvidence(created.repairJob.id, intakeEvidence);
+      await repairApi.saveIntakeEvidence(created.repairJob.id, externalEvidence);
     } catch (error) {
       navigate(`/${shopSlug}/pos/services/repairs/${created.repairJob.id}`, {
         state: { evidenceWarning: error.message },
@@ -165,14 +205,11 @@ const RepairIntakePage = () => {
       createOpen={createOpen}
       externalMode={externalMode}
       intakeContact={intakeContact}
+      intakeEvidence={intakeEvidence}
       draft={draft}
       selectedStockItemId={selectedStockItemId}
       status={status}
-      canSubmit={canSubmitRepairIntake({
-        draft,
-        intakeContact,
-        submitting: runtime.submitting,
-      })}
+      canSubmit={repeatIntakeCanSubmit}
       onToggleCustomerPanel={() => setCustomerPanelOpen((open) => !open)}
       onSelectDevice={selectSearchDevice}
       onSelectCustomer={selectCustomer}
@@ -190,6 +227,7 @@ const RepairIntakePage = () => {
       }
       onCreateJob={openCreateDialog}
       onContactChange={setIntakeContact}
+      onIntakeEvidenceChange={setIntakeEvidence}
       onCloseCreate={() => setCreateOpen(false)}
       onDraftChange={onDraftChange}
       onConfirmCreate={createJob}

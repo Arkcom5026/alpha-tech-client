@@ -18,7 +18,7 @@ const RepairQueueWorkspace = ({
     <RepairShellHeader
       eyebrow="Repair Operations"
       title="คิวงานซ่อม"
-      description="จัดงานแบบ operation lanes เพื่อให้เห็นงานรับเข้า งานกำลังซ่อม งานรออะไหล่ และงานพร้อมส่งมอบในหน้าจอเดียว"
+      description="ดูงานตามสถานะและกลุ่มวันแบบกะทัดรัด แต่ละรายการแสดงเฉพาะชื่อลูกค้าและอุปกรณ์ แล้วคลิกเพื่อเปิดรายละเอียดใบงาน"
     />
 
     <div className="mb-5 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">

@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useMemo, useState } from 'react';
+import { ChevronDown, ChevronRight } from 'lucide-react';
 import { formatDateTime } from '../utils/repairRuntime';
 
 const getRepairAsset = (item) => {
@@ -94,24 +95,170 @@ const ClaimDetail = ({ label, value }) =>
     </p>
   ) : null;
 
-const QueueBoard = ({ lanes, type, onOpen }) => (
-  <div className="overflow-x-auto pb-2">
-    <div
-      className={`grid gap-4 ${
-        type === 'repair'
-          ? 'min-w-[1420px] grid-cols-6'
-          : 'min-w-[1180px] grid-cols-5'
+const getRepairLaneTimestamp = (item) =>
+  item?.queueStatus === 'EXTERNAL_REPAIR'
+    ? item?.activeSubcontract?.sentAt || item?.updatedAt || item?.createdAt
+    : item?.updatedAt || item?.createdAt;
+
+const toDayKey = (value) => {
+  const date = value ? new Date(value) : null;
+  if (!date || Number.isNaN(date.getTime())) return 'UNKNOWN';
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const formatDayLabel = (value) => {
+  const date = value ? new Date(value) : null;
+  if (!date || Number.isNaN(date.getTime())) return 'ไม่ทราบวันที่';
+  return new Intl.DateTimeFormat('th-TH', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  }).format(date);
+};
+
+const groupRepairItemsByDay = (items = []) => {
+  const groups = new Map();
+
+  for (const item of items) {
+    const timestamp = getRepairLaneTimestamp(item);
+    const key = toDayKey(timestamp);
+    if (!groups.has(key)) {
+      groups.set(key, {
+        key,
+        timestamp,
+        label: formatDayLabel(timestamp),
+        items: [],
+      });
+    }
+    groups.get(key).items.push(item);
+  }
+
+  return [...groups.values()]
+    .map((group) => ({
+      ...group,
+      items: [...group.items].sort(
+        (left, right) =>
+          new Date(getRepairLaneTimestamp(right) || 0).getTime() -
+          new Date(getRepairLaneTimestamp(left) || 0).getTime()
+      ),
+    }))
+    .sort(
+      (left, right) =>
+        new Date(right.timestamp || 0).getTime() -
+        new Date(left.timestamp || 0).getTime()
+    );
+};
+
+const RepairCompactRow = ({ item, onOpen }) => {
+  const customerName = item?.customer?.name || item?.customerName || `ลูกค้า #${item?.customerId}`;
+  const asset = getRepairAsset(item);
+
+  return (
+    <button
+      type="button"
+      onClick={() => onOpen(item)}
+      className="grid min-h-9 w-full grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-center gap-3 rounded-lg border border-transparent px-2.5 py-1.5 text-left text-xs transition hover:border-blue-200 hover:bg-blue-50/70 focus:outline-none focus:ring-2 focus:ring-blue-200"
+      title={`${customerName} • ${asset.displayName}`}
+    >
+      <span className="truncate font-black text-slate-800">{customerName}</span>
+      <span className="truncate text-slate-600">{asset.displayName}</span>
+    </button>
+  );
+};
+
+const RepairDayGroup = ({ group, initiallyOpen, onOpen }) => {
+  const [open, setOpen] = useState(initiallyOpen);
+
+  return (
+    <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+      <button
+        type="button"
+        onClick={() => setOpen((current) => !current)}
+        className="flex min-h-9 w-full items-center justify-between gap-2 bg-slate-50 px-2.5 py-1.5 text-left"
+        aria-expanded={open}
+      >
+        <span className="flex min-w-0 items-center gap-1.5 text-xs font-black text-slate-700">
+          {open ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+          <span className="truncate">{group.label}</span>
+        </span>
+        <span className="shrink-0 rounded-full bg-white px-2 py-0.5 text-[10px] font-black text-slate-600">
+          {group.items.length} งาน
+        </span>
+      </button>
+
+      {open ? (
+        <div className="divide-y divide-slate-100 py-1">
+          {group.items.map((item) => (
+            <RepairCompactRow key={item.id} item={item} onOpen={onOpen} />
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+};
+
+const RepairLane = ({ lane, onOpen }) => {
+  const groups = useMemo(() => groupRepairItemsByDay(lane.items), [lane.items]);
+
+  return (
+    <section
+      className={`rounded-2xl border p-3 ${
+        lane.key === 'EXTERNAL_REPAIR'
+          ? 'border-violet-200 bg-violet-50/50'
+          : 'border-slate-200 bg-slate-100/70'
       }`}
     >
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <h2 className="truncate font-black text-slate-950">{lane.label}</h2>
+          <p className="mt-1 line-clamp-2 text-xs text-slate-500">{lane.description}</p>
+        </div>
+        <span className="shrink-0 rounded-full bg-white px-2.5 py-1 text-xs font-black text-slate-700 shadow-sm">
+          {lane.items.length}
+        </span>
+      </div>
+
+      <div className="mt-3 space-y-2">
+        {groups.length ? (
+          groups.map((group, index) => (
+            <RepairDayGroup
+              key={group.key}
+              group={group}
+              initiallyOpen={index === 0}
+              onOpen={onOpen}
+            />
+          ))
+        ) : (
+          <div className="rounded-xl border border-dashed border-slate-300 bg-white/70 p-4 text-center text-xs text-slate-400">
+            ไม่มีรายการ
+          </div>
+        )}
+      </div>
+    </section>
+  );
+};
+
+const RepairQueueBoard = ({ lanes, onOpen }) => (
+  <div className="overflow-x-auto pb-2">
+    <div className="grid min-w-[1420px] grid-cols-6 gap-4">
+      {lanes.map((lane) => (
+        <RepairLane key={lane.key} lane={lane} onOpen={onOpen} />
+      ))}
+    </div>
+  </div>
+);
+
+const ClaimQueueBoard = ({ lanes, onOpen }) => (
+  <div className="overflow-x-auto pb-2">
+    <div className="grid min-w-[1180px] grid-cols-5 gap-4">
       {lanes.map((lane) => (
         <section
           key={lane.key}
           className={`rounded-2xl border p-3 ${
-            type === 'claim'
-              ? CLAIM_LANE_STYLES[lane.key] || 'border-slate-200 bg-slate-100/70'
-              : lane.key === 'EXTERNAL_REPAIR'
-                ? 'border-violet-200 bg-violet-50/70'
-                : 'border-slate-200 bg-slate-100/70'
+            CLAIM_LANE_STYLES[lane.key] || 'border-slate-200 bg-slate-100/70'
           }`}
         >
           <div className="flex items-start justify-between gap-2">
@@ -127,23 +274,15 @@ const QueueBoard = ({ lanes, type, onOpen }) => (
           <div className="mt-3 space-y-3">
             {lane.items.length ? (
               lane.items.map((item) => {
-                const isRepair = type === 'repair';
-                const customer = isRepair
-                  ? item.customer
-                  : item.repairJob?.customer;
+                const customer = item.repairJob?.customer;
                 const customerName =
-                  customer?.name ||
-                  (isRepair ? item.customerName : item.repairJob?.customerName) ||
-                  (isRepair ? `ลูกค้า #${item.customerId}` : null);
+                  customer?.name || item.repairJob?.customerName || null;
                 const customerContact = customer?.phone || customer?.email || null;
-                const asset = isRepair ? getRepairAsset(item) : getClaimAsset(item);
+                const asset = getClaimAsset(item);
                 const assetMeta = getAssetMeta(asset);
                 const assetIdentity = getAssetIdentity(asset);
-                const source = !isRepair ? item.source : null;
-                const supplierName = !isRepair
-                  ? item.supplier?.name || item.serviceProvider
-                  : null;
-                const external = isRepair ? item.activeSubcontract : null;
+                const source = item.source;
+                const supplierName = item.supplier?.name || item.serviceProvider;
 
                 return (
                   <button
@@ -153,10 +292,8 @@ const QueueBoard = ({ lanes, type, onOpen }) => (
                     className="w-full rounded-xl border border-slate-200 bg-white p-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-md"
                   >
                     <div className="flex items-start justify-between gap-2">
-                      <p className="font-black text-slate-950">
-                        {isRepair ? item.jobNo : item.claimNo}
-                      </p>
-                      {!isRepair && source ? (
+                      <p className="font-black text-slate-950">{item.claimNo}</p>
+                      {source ? (
                         <span className="shrink-0 rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-black text-indigo-700">
                           {source.label}
                         </span>
@@ -205,44 +342,18 @@ const QueueBoard = ({ lanes, type, onOpen }) => (
                       ) : null}
                     </div>
 
-                    {isRepair && item.reportedSymptoms ? (
-                      <p className="mt-2 line-clamp-2 text-xs leading-5 text-slate-500">
-                        อาการ: {item.reportedSymptoms}
-                      </p>
-                    ) : null}
-
-                    {external?.active ? (
-                      <div className="mt-2 rounded-lg bg-violet-50 px-2.5 py-2 text-[11px] text-violet-800">
-                        <p className="font-black">ส่งให้: {external.providerName || '-'}</p>
-                        {external.workScope ? (
-                          <p className="mt-1 line-clamp-2">งาน: {external.workScope}</p>
-                        ) : null}
-                        {external.sentAt ? (
-                          <p className="mt-1 text-violet-600">
-                            ส่งออก {formatDateTime(external.sentAt)}
-                          </p>
-                        ) : null}
-                      </div>
-                    ) : null}
-
-                    {!isRepair ? (
-                      <div className="mt-2 rounded-lg bg-indigo-50/60 px-2.5 py-2">
-                        <ClaimDetail label="Supplier/ศูนย์" value={supplierName} />
-                        <ClaimDetail label="Tracking" value={item.trackingNumber} />
-                        <ClaimDetail label="เลขอ้างอิง" value={item.externalClaimRef} />
-                        <ClaimDetail
-                          label="เหตุผล"
-                          value={item.reason || item.repairJob?.reportedSymptoms}
-                        />
-                      </div>
-                    ) : null}
+                    <div className="mt-2 rounded-lg bg-indigo-50/60 px-2.5 py-2">
+                      <ClaimDetail label="Supplier/ศูนย์" value={supplierName} />
+                      <ClaimDetail label="Tracking" value={item.trackingNumber} />
+                      <ClaimDetail label="เลขอ้างอิง" value={item.externalClaimRef} />
+                      <ClaimDetail
+                        label="เหตุผล"
+                        value={item.reason || item.repairJob?.reportedSymptoms}
+                      />
+                    </div>
 
                     <p className="mt-2 text-xs text-slate-400">
-                      {formatDateTime(
-                        isRepair
-                          ? item.updatedAt || item.createdAt
-                          : item.updatedAt || item.openedAt
-                      )}
+                      {formatDateTime(item.updatedAt || item.openedAt)}
                     </p>
                   </button>
                 );
@@ -258,5 +369,12 @@ const QueueBoard = ({ lanes, type, onOpen }) => (
     </div>
   </div>
 );
+
+const QueueBoard = ({ lanes, type, onOpen }) =>
+  type === 'repair' ? (
+    <RepairQueueBoard lanes={lanes} onOpen={onOpen} />
+  ) : (
+    <ClaimQueueBoard lanes={lanes} onOpen={onOpen} />
+  );
 
 export default QueueBoard;

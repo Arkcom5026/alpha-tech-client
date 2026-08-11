@@ -97,14 +97,39 @@ describe('repair queue workspace foundation contract', () => {
     expect(projection.lanes.flatMap((lane) => lane.items).map((item) => item.id)).not.toContain(sampleJobs[1].id);
   });
 
-  it('declares and presents the external repair lane with provider context', () => {
+  it('keeps external repair as a queue lane without expanding operational detail into each row', () => {
     expect(runtimeSource).toContain("key: 'EXTERNAL_REPAIR'");
     expect(runtimeSource).toContain("label: 'ส่งซ่อมภายนอก'");
     expect(boardSource).toContain("lane.key === 'EXTERNAL_REPAIR'");
-    expect(boardSource).toContain("external.providerName || '-'");
-    expect(boardSource).toContain('external.workScope');
-    expect(boardSource).toContain('ส่งออก {formatDateTime(external.sentAt)}');
     expect(boardSource).toContain("min-w-[1420px] grid-cols-6");
+    expect(boardSource).not.toContain('ส่งให้: {external.providerName');
+    expect(boardSource).not.toContain('งาน: {external.workScope}');
+  });
+
+  it('renders repair jobs as one-line customer and device rows that still open normal job detail', () => {
+    expect(boardSource).toContain('const RepairCompactRow');
+    expect(boardSource).toContain('grid-cols-[minmax(0,1fr)_minmax(0,1fr)]');
+    expect(boardSource).toContain('{customerName}');
+    expect(boardSource).toContain('{asset.displayName}');
+    expect(boardSource).toContain('onClick={() => onOpen(item)}');
+    expect(boardSource).not.toContain('อาการ: {item.reportedSymptoms}');
+  });
+
+  it('groups every repair lane by operational day with latest day expanded by default', () => {
+    expect(boardSource).toContain('const getRepairLaneTimestamp');
+    expect(boardSource).toContain("item?.queueStatus === 'EXTERNAL_REPAIR'");
+    expect(boardSource).toContain('item?.activeSubcontract?.sentAt');
+    expect(boardSource).toContain('const groupRepairItemsByDay');
+    expect(boardSource).toContain('const RepairDayGroup');
+    expect(boardSource).toContain('aria-expanded={open}');
+    expect(boardSource).toContain('initiallyOpen={index === 0}');
+    expect(boardSource).toContain('{group.items.length} งาน');
+  });
+
+  it('keeps warranty claim board detail behavior separate from compact repair rendering', () => {
+    expect(boardSource).toContain('const ClaimQueueBoard');
+    expect(boardSource).toContain('<ClaimDetail label="Supplier/ศูนย์"');
+    expect(boardSource).toContain('formatDateTime(item.updatedAt || item.openedAt)');
   });
 
   it('keeps workspace presentation free of store, route, and lifecycle authority', () => {

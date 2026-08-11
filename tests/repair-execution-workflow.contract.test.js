@@ -28,6 +28,16 @@ describe('repair execution workflow contract', () => {
     expect(panel).toContain("actionNames.has('COMPLETE_REPAIR')");
   });
 
+  it('requires the final repair amount at completion instead of binding price at intake', () => {
+    const panel = read('src/features/repair/components/RepairExecutionPanel.jsx');
+
+    expect(panel).toContain("finalAmount: ''");
+    expect(panel).toContain('ค่าซ่อมจริง *');
+    expect(panel).toContain('ยอดนี้เป็นราคาสุดท้ายสำหรับการส่งมอบ');
+    expect(panel).toContain('finalAmount: Number(completion.finalAmount)');
+    expect(panel).toContain("completion.finalAmount !== ''");
+  });
+
   it('uses product search instead of asking staff for a Product ID', () => {
     const api = read('src/features/repair/api/repairApi.js');
     const execution = read('src/features/repair/components/RepairExecutionPanel.jsx');

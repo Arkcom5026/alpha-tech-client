@@ -20,7 +20,6 @@ export const createRepairIntakeDraft = ({ customerId = '', intakeContext = null 
   preAgreedService: {
     enabled: false,
     agreedScope: '',
-    agreedAmount: 0,
     confirmedByName: '',
     confirmationNote: '',
   },
@@ -50,21 +49,17 @@ export const canSubmitRepairIntake = ({ draft, intakeContact, submitting }) => {
   if (!baseReady) return false;
   if (!draft?.preAgreedService?.enabled) return true;
 
-  const agreedAmount = Number(draft.preAgreedService.agreedAmount);
-  return (
-    Boolean(draft.preAgreedService.agreedScope?.trim()) &&
-    Boolean(draft.preAgreedService.confirmedByName?.trim()) &&
-    Number.isFinite(agreedAmount) &&
-    agreedAmount >= 0
-  );
+  return Boolean(draft.preAgreedService.confirmedByName?.trim());
 };
 
 export const buildRepairJobPayload = ({ draft, intakeContact }) => {
   const preAgreedService = draft.preAgreedService?.enabled
     ? {
         enabled: true,
-        agreedScope: draft.preAgreedService.agreedScope.trim(),
-        agreedAmount: Number(draft.preAgreedService.agreedAmount || 0),
+        authorizationMode: 'REPAIR_AUTHORIZED',
+        agreedScope:
+          draft.preAgreedService.agreedScope?.trim() ||
+          'ลูกค้าอนุมัติให้ดำเนินการซ่อมตามอาการที่แจ้ง',
         confirmedByName: draft.preAgreedService.confirmedByName.trim(),
         confirmationNote: draft.preAgreedService.confirmationNote?.trim() || null,
       }
@@ -76,9 +71,7 @@ export const buildRepairJobPayload = ({ draft, intakeContact }) => {
     customerId: Number(draft.customerId),
     stockItemId: draft.stockItemId ? Number(draft.stockItemId) : null,
     depositPaid: Number(draft.depositPaid || 0),
-    estimatedCost: preAgreedService
-      ? preAgreedService.agreedAmount
-      : Number(draft.estimatedCost || 0),
+    estimatedCost: Number(draft.estimatedCost || 0),
     ...(preAgreedService ? { preAgreedService } : {}),
   };
 };

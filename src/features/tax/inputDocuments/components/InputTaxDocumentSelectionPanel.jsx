@@ -17,7 +17,8 @@ const InputTaxDocumentSelectionPanel = ({
   onAttachSelected,
 }) => {
   const hasReceipts = selectedReceiptCount > 0;
-  const existingMode = hasReceipts && !showCreateDocument;
+  const existingAvailable = eligibleDocuments.length > 0;
+  const existingMode = hasReceipts && existingAvailable && !showCreateDocument;
 
   return (
     <div className="space-y-3 rounded-2xl border border-blue-200 bg-blue-50/40 p-4">
@@ -34,13 +35,17 @@ const InputTaxDocumentSelectionPanel = ({
         <button
           type="button"
           onClick={() => onDocumentChange(selectedDocumentId || '')}
-          disabled={!hasReceipts}
-          className={`rounded-xl border p-4 text-left transition disabled:cursor-not-allowed disabled:opacity-40 ${
+          disabled={!hasReceipts || !existingAvailable}
+          className={`rounded-xl border p-4 text-left transition disabled:cursor-not-allowed disabled:opacity-50 ${
             existingMode ? 'border-blue-500 bg-white shadow-sm' : 'border-slate-200 bg-white/70'
           }`}
         >
           <div className="flex items-center gap-2 font-black text-slate-900"><Link2 size={18} /> ใช้ใบกำกับภาษีซื้อที่มีอยู่แล้ว</div>
-          <p className="mt-1 text-xs text-slate-500">แสดงเฉพาะใบกำกับของผู้จำหน่ายรายเดียวกันที่ระบบอนุญาตให้ผูกเพิ่มได้</p>
+          <p className={`mt-1 text-xs ${hasReceipts && !existingAvailable ? 'font-semibold text-amber-700' : 'text-slate-500'}`}>
+            {hasReceipts && !existingAvailable
+              ? 'ไม่มีใบกำกับภาษีซื้อเดิมที่ใช้ได้ ระบบเลือกการสร้างฉบับใหม่ให้แล้ว'
+              : 'แสดงเฉพาะใบกำกับของผู้จำหน่ายรายเดียวกันที่ระบบอนุญาตให้ผูกเพิ่มได้'}
+          </p>
         </button>
 
         <button
@@ -73,9 +78,6 @@ const InputTaxDocumentSelectionPanel = ({
                 </option>
               ))}
             </select>
-            {eligibleDocuments.length === 0 && (
-              <p className="mt-2 text-xs font-semibold text-amber-700">ไม่มีใบกำกับภาษีซื้อเดิมที่ผูกเพิ่มได้สำหรับผู้จำหน่ายรายนี้ ให้เลือก “สร้างใบกำกับภาษีซื้อฉบับใหม่”</p>
-            )}
           </label>
 
           <button

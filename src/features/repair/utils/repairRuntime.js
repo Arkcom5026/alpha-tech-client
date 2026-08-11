@@ -1,5 +1,5 @@
 export const REPAIR_LANES = [
-  { key: 'RECEIVED', label: 'รับเข้าใหม่', description: 'รับเครื่องแล้ว รอหลักฐานครบและเริ่มตรวจ' },
+  { key: 'RECEIVED', label: 'รับเข้าใหม่', description: 'รับเครื่องแล้ว รอช่างรับงาน' },
   { key: 'IN_PROGRESS', label: 'กำลังตรวจ/ซ่อม', description: 'ช่างกำลังดำเนินงาน' },
   { key: 'WAITING_PARTS', label: 'รออะไหล่', description: 'งานติดรอชิ้นส่วน' },
   { key: 'COMPLETED', label: 'พร้อมส่งมอบ', description: 'ซ่อมเสร็จแล้ว รอบันทึกการส่งมอบ' },
@@ -7,11 +7,12 @@ export const REPAIR_LANES = [
 ];
 
 export const REPAIR_WORKFLOW_LANES = [
-  { key: 'RECEIVED', label: 'รับงานแล้ว' },
+  { key: 'RECEIVED', label: 'รับเครื่องแล้ว' },
+  { key: 'ACCEPTED', label: 'ช่างรับงานแล้ว' },
   { key: 'WAITING_DIAGNOSIS', label: 'รอตรวจสอบ' },
   { key: 'DIAGNOSING', label: 'กำลังตรวจสอบ' },
   { key: 'WAITING_APPROVAL', label: 'รอลูกค้าอนุมัติ' },
-  { key: 'APPROVED', label: 'ลูกค้าอนุมัติแล้ว' },
+  { key: 'APPROVED', label: 'ลูกค้าอนุมัติราคาแล้ว' },
   { key: 'REJECTED', label: 'ลูกค้าไม่อนุมัติ' },
   { key: 'REPAIRING', label: 'กำลังซ่อม' },
   { key: 'WAITING_PARTS', label: 'รออะไหล่' },

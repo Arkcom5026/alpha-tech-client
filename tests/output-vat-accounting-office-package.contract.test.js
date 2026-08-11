@@ -5,10 +5,11 @@ import path from 'node:path';
 
 const read = (relativePath) => fs.readFileSync(path.join(process.cwd(), relativePath), 'utf8');
 
-test('tax period list exposes accounting office package action', () => {
+test('tax period list preserves accounting office handoff meaning while using tax closing handoff route', () => {
   const source = read('src/features/tax/periods/workspace/components/TaxPeriodListTable.jsx');
   assert.match(source, /ส่งสำนักงานบัญชี/);
-  assert.match(source, /accounting-office/);
+  assert.match(source, /Tax Closing Package/);
+  assert.match(source, /handoff/);
 });
 
 test('accounting office workspace reads isolated package api', () => {

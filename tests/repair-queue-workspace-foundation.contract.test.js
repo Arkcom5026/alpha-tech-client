@@ -97,22 +97,29 @@ describe('repair queue workspace foundation contract', () => {
     expect(projection.lanes.flatMap((lane) => lane.items).map((item) => item.id)).not.toContain(sampleJobs[1].id);
   });
 
-  it('keeps external repair as a queue lane without expanding operational detail into each row', () => {
+  it('keeps external repair as a queue lane while compact rows remain minimal', () => {
     expect(runtimeSource).toContain("key: 'EXTERNAL_REPAIR'");
     expect(runtimeSource).toContain("label: 'ส่งซ่อมภายนอก'");
     expect(boardSource).toContain("lane.key === 'EXTERNAL_REPAIR'");
     expect(boardSource).toContain("min-w-[1420px] grid-cols-6");
-    expect(boardSource).not.toContain('ส่งให้: {external.providerName');
-    expect(boardSource).not.toContain('งาน: {external.workScope}');
-  });
-
-  it('renders repair jobs as one-line customer and device rows that still open normal job detail', () => {
     expect(boardSource).toContain('const RepairCompactRow');
     expect(boardSource).toContain('grid-cols-[minmax(0,1fr)_minmax(0,1fr)]');
     expect(boardSource).toContain('{customerName}');
     expect(boardSource).toContain('{asset.displayName}');
+  });
+
+  it('expands one compact repair row into the previous rich card before navigation', () => {
+    expect(boardSource).toContain('const RepairPreviewCard');
+    expect(boardSource).toContain('const [selectedItemId, setSelectedItemId] = useState(null)');
+    expect(boardSource).toContain('current === itemId ? null : itemId');
+    expect(boardSource).toContain('selectedItemId === item.id');
+    expect(boardSource).toContain('<RepairPreviewCard item={item} onOpen={onOpen} />');
     expect(boardSource).toContain('onClick={() => onOpen(item)}');
-    expect(boardSource).not.toContain('อาการ: {item.reportedSymptoms}');
+    expect(boardSource).toContain('{item.jobNo}');
+    expect(boardSource).toContain('อาการ: {item.reportedSymptoms}');
+    expect(boardSource).toContain("external.providerName || '-'");
+    expect(boardSource).toContain('external.workScope');
+    expect(boardSource).toContain('getAssetIdentity(asset)');
   });
 
   it('groups every repair lane by operational day with latest day expanded by default', () => {

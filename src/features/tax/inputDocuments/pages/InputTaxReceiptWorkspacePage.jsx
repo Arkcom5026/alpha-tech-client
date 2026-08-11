@@ -51,31 +51,6 @@ const InputTaxReceiptWorkspacePage = () => {
         onReset={controller.resetFilters}
       />
 
-      <InputTaxDocumentSelectionPanel
-        eligibleDocuments={controller.eligibleDocuments}
-        selectedDocumentId={controller.selectedDocumentId}
-        selectedDocument={controller.selectedDocument}
-        selectedDocumentMutable={controller.selectedDocumentMutable}
-        selectedSupplierId={controller.selectedSupplierId}
-        selectedReceiptCount={controller.selectedReceipts.length}
-        allocationProjection={controller.allocationProjection}
-        linksLoading={controller.linksLoading}
-        submitting={controller.submitting}
-        onDocumentChange={controller.setSelectedDocumentId}
-        onToggleCreateDocument={controller.toggleCreateDocument}
-        onAttach={controller.attachSelected}
-      />
-
-      {controller.showCreateDocument && (
-        <InputTaxDocumentCreationForm
-          supplierName={controller.selectedSupplier?.supplierName || ''}
-          invoice={controller.invoice}
-          submitting={controller.submitting}
-          onInvoiceChange={controller.changeInvoice}
-          onSubmit={controller.createAndAutoLinkInputTaxDocument}
-        />
-      )}
-
       <InputTaxReceiptCandidateTable
         receipts={controller.receipts}
         selected={controller.selected}
@@ -84,6 +59,32 @@ const InputTaxReceiptWorkspacePage = () => {
         onToggle={controller.toggleReceipt}
         onAllocationChange={controller.changeAllocation}
       />
+
+      <InputTaxDocumentSelectionPanel
+        eligibleDocuments={controller.eligibleDocuments}
+        selectedDocumentId={controller.selectedDocumentId}
+        selectedDocument={controller.selectedDocument}
+        selectedSupplierId={controller.selectedSupplierId}
+        selectedReceiptCount={controller.selectedReceipts.length}
+        showCreateDocument={controller.showCreateDocument}
+        allocationOverflow={controller.allocationProjection?.overflow}
+        linksLoading={controller.linksLoading}
+        submitting={controller.submitting}
+        onDocumentChange={controller.selectExistingDocument}
+        onToggleCreateDocument={controller.toggleCreateDocument}
+        onAttachSelected={controller.attachSelected}
+      />
+
+      {controller.showCreateDocument && (
+        <InputTaxDocumentCreationForm
+          supplierName={controller.selectedSupplier?.supplierName || ''}
+          selectedReceiptCount={controller.selectedReceipts.length}
+          invoice={controller.invoice}
+          submitting={controller.submitting}
+          onInvoiceChange={controller.changeInvoice}
+          onSubmit={controller.createAndAutoLinkInputTaxDocument}
+        />
+      )}
 
       {controller.selectedDocument && (
         <InputTaxAllocationSummary projection={controller.allocationProjection} />

@@ -19,7 +19,7 @@ const STATUS_LABELS = {
 };
 
 const ACTION_COPY = {
-  QUEUE_DIAGNOSIS: { label: 'ส่งเข้าคิวตรวจ', hint: 'หลักฐานรับเครื่องต้องครบก่อนเริ่มขั้นตอนนี้' },
+  QUEUE_DIAGNOSIS: { label: 'ตรวจสอบก่อน', hint: 'ใช้เมื่อต้องตรวจหาสาเหตุหรือขอบเขตงานก่อนเริ่มซ่อม' },
   START_DIAGNOSIS: { label: 'เริ่มตรวจสอบ', hint: 'เริ่มบันทึกผลตรวจและสาเหตุของปัญหา' },
 };
 
@@ -58,15 +58,24 @@ const RepairDiagnosisPanel = ({ job, submitting, onWorkflowAction }) => {
 
   const existingDiagnosis = workflow.diagnosis;
   const preAgreedService = workflow.preAgreedService;
+  const simplifiedEntry = workflow.status === 'RECEIVED' && actionNames.has('START_REPAIR');
+  const hasOptionalEntryActions =
+    workflow.status === 'RECEIVED' &&
+    (actionNames.has('QUEUE_DIAGNOSIS') ||
+      (actionNames.has('START_PRE_AGREED_SERVICE') && preAgreedService?.enabled));
 
   return (
     <section className="rounded-2xl border border-blue-200 bg-white p-5 shadow-sm">
       <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div>
           <p className="text-xs font-black uppercase tracking-[0.16em] text-blue-700">Repair Workflow</p>
-          <h3 className="mt-1 text-xl font-black text-slate-950">ขั้นตรวจสอบ</h3>
+          <h3 className="mt-1 text-xl font-black text-slate-950">
+            {simplifiedEntry ? 'พร้อมเริ่มงาน' : 'ขั้นตรวจสอบ'}
+          </h3>
           <p className="mt-1 text-sm text-slate-500">
-            งานทั่วไปเลือกตรวจสอบตามปกติ ส่วนงานที่ตกลงราคาและขอบเขตไว้แล้วสามารถเริ่มตามข้อตกลงได้
+            {simplifiedEntry
+              ? 'หากขอบเขตงานชัดเจนสามารถเริ่มงานได้ทันที ส่วนการตรวจสอบและขั้นตอนพิเศษเลือกใช้เมื่อจำเป็น'
+              : 'ใช้การตรวจสอบเมื่อต้องหาสาเหตุหรือประเมินงานเพิ่มเติมก่อนดำเนินการ'}
           </p>
         </div>
         <span className="w-fit rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-black text-blue-700">
@@ -88,13 +97,38 @@ const RepairDiagnosisPanel = ({ job, submitting, onWorkflowAction }) => {
         </div>
       ) : null}
 
+      {actionNames.has('START_REPAIR') && workflow.status === 'RECEIVED' ? (
+        <div className="mt-5 rounded-2xl border border-emerald-300 bg-emerald-50 p-4 shadow-sm">
+          <p className="text-xs font-black uppercase tracking-[0.14em] text-emerald-700">Primary Action</p>
+          <h4 className="mt-1 text-lg font-black text-emerald-950">เริ่มงานได้เลย</h4>
+          <p className="mt-1 text-sm text-emerald-800">
+            ใช้เมื่อข้อมูลรับเครื่องและขอบเขตงานเพียงพอแล้ว ไม่ต้องผ่านขั้นตรวจสอบหรือเสนอราคาโดยไม่จำเป็น
+          </p>
+          <button
+            type="button"
+            disabled={submitting}
+            onClick={() => run('START_REPAIR')}
+            className="mt-4 min-h-12 rounded-xl bg-emerald-700 px-6 font-black text-white disabled:opacity-40"
+          >
+            เริ่มงาน
+          </button>
+        </div>
+      ) : null}
+
+      {hasOptionalEntryActions ? (
+        <div className="mt-5 border-t border-slate-200 pt-4">
+          <p className="text-xs font-black uppercase tracking-[0.14em] text-slate-500">ตัวเลือกเพิ่มเติม</p>
+          <p className="mt-1 text-sm text-slate-500">เลือกใช้เฉพาะเมื่อเคสนี้ต้องการขั้นตอนเพิ่มเติม</p>
+        </div>
+      ) : null}
+
       {actionNames.has('START_PRE_AGREED_SERVICE') && preAgreedService?.enabled ? (
-        <div className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+        <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
           <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
             <div>
               <p className="text-xs font-black uppercase tracking-[0.14em] text-emerald-700">Pre-agreed Service</p>
               <h4 className="mt-1 font-black text-emerald-950">ลูกค้าตกลงราคาและขอบเขตงานแล้ว</h4>
-              <p className="mt-1 text-sm text-emerald-800">ไม่จำเป็นต้องผ่านขั้นตรวจสอบและเสนอราคาซ้ำ หากข้อมูลรับเครื่องครบสามารถเริ่มงานตามข้อตกลงได้</p>
+              <p className="mt-1 text-sm text-emerald-800">ใช้เมื่ออยากเก็บหลักฐานข้อตกลงราคาและขอบเขตงานไว้กับ workflow โดยไม่ต้องผ่านขั้นตรวจสอบและเสนอราคาซ้ำ</p>
             </div>
             <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-emerald-800">
               {formatMoney(preAgreedService.agreedAmount)}
@@ -113,9 +147,9 @@ const RepairDiagnosisPanel = ({ job, submitting, onWorkflowAction }) => {
             type="button"
             disabled={submitting}
             onClick={() => run('START_PRE_AGREED_SERVICE')}
-            className="mt-4 min-h-11 rounded-xl bg-emerald-700 px-5 font-black text-white disabled:opacity-40"
+            className="mt-4 min-h-11 rounded-xl border border-emerald-300 bg-white px-5 font-black text-emerald-800 disabled:opacity-40"
           >
-            ใช้ราคาที่ตกลงและไปขั้นเริ่มงาน
+            ใช้ข้อตกลงนี้ในการเริ่มงาน
           </button>
         </div>
       ) : null}
@@ -194,14 +228,14 @@ const RepairDiagnosisPanel = ({ job, submitting, onWorkflowAction }) => {
 };
 
 const ActionCard = ({ copy, disabled, onClick }) => (
-  <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+  <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
     <p className="font-black text-slate-950">{copy.label}</p>
     <p className="mt-1 text-sm text-slate-500">{copy.hint}</p>
     <button
       type="button"
       disabled={disabled}
       onClick={onClick}
-      className="mt-3 min-h-11 rounded-xl bg-slate-900 px-5 font-black text-white disabled:opacity-40"
+      className="mt-3 min-h-11 rounded-xl border border-slate-300 bg-white px-5 font-black text-slate-700 disabled:opacity-40"
     >
       {copy.label}
     </button>

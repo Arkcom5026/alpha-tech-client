@@ -6,24 +6,35 @@ export const emptyRepairIntakeContact = {
   contactRelationship: '',
 };
 
-export const createRepairIntakeDraft = ({ customerId = '', intakeContext = null } = {}) => ({
-  customerId,
-  stockItemId: intakeContext?.identity?.id || '',
-  deviceModel:
-    intakeContext?.identity?.product?.name ||
-    intakeContext?.identity?.serialNumber ||
-    '',
-  reportedSymptoms: '',
-  depositPaid: 0,
-  estimatedCost: 0,
-  technicianNotes: '',
-  preAgreedService: {
-    enabled: false,
-    agreedScope: '',
-    confirmedByName: '',
-    confirmationNote: '',
-  },
-});
+const isRegisteredDeviceContext = (intakeContext) =>
+  intakeContext?.sourceType === 'REGISTERED_DEVICE' ||
+  intakeContext?.identity?.sourceType === 'REGISTERED_DEVICE';
+
+export const createRepairIntakeDraft = ({ customerId = '', intakeContext = null } = {}) => {
+  const registeredDevice = isRegisteredDeviceContext(intakeContext);
+  const identity = intakeContext?.identity || {};
+
+  return {
+    customerId,
+    stockItemId: registeredDevice ? '' : identity.id || '',
+    deviceId: registeredDevice ? identity.deviceId || identity.id || '' : '',
+    deviceModel:
+      identity.product?.name ||
+      [identity.brand, identity.model].filter(Boolean).join(' ').trim() ||
+      identity.serialNumber ||
+      '',
+    reportedSymptoms: '',
+    depositPaid: 0,
+    estimatedCost: 0,
+    technicianNotes: '',
+    preAgreedService: {
+      enabled: false,
+      agreedScope: '',
+      confirmedByName: '',
+      confirmationNote: '',
+    },
+  };
+};
 
 export const projectRepairIntakeContact = (selectedCustomer, currentContact) => {
   if (!selectedCustomer) return currentContact;
@@ -70,6 +81,7 @@ export const buildRepairJobPayload = ({ draft, intakeContact }) => {
     ...intakeContact,
     customerId: Number(draft.customerId),
     stockItemId: draft.stockItemId ? Number(draft.stockItemId) : null,
+    deviceId: draft.deviceId ? Number(draft.deviceId) : null,
     depositPaid: Number(draft.depositPaid || 0),
     estimatedCost: Number(draft.estimatedCost || 0),
     ...(preAgreedService ? { preAgreedService } : {}),

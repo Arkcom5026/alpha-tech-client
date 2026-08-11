@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { useBranchStore } from '@/features/branch/store/branchStore';
+import { listTaxPeriods } from '@/features/tax/periods/api/taxPeriodApi';
 import {
   getTaxDocumentDetail,
   getTaxIntakeErrorDetails,
@@ -19,7 +21,11 @@ const normalizeList = (result, key) => (
       : []
 );
 
+const normalizeQueryFilter = (value) => String(value || '').trim();
+const normalizeUpperQueryFilter = (value) => normalizeQueryFilter(value).toUpperCase();
+
 const useTaxIntakeWorkspaceController = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const selectedBranchId = useBranchStore((state) => state.selectedBranchId);
   const currentBranch = useBranchStore((state) => state.currentBranch);
   const ensureSelectedBranchAction = useBranchStore((state) => state.ensureSelectedBranchAction);
@@ -27,13 +33,56 @@ const useTaxIntakeWorkspaceController = () => {
 
   const [candidates, setCandidates] = useState([]);
   const [documents, setDocuments] = useState([]);
+  const [taxPeriods, setTaxPeriods] = useState([]);
   const [selectedDocument, setSelectedDocument] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [periodsLoading, setPeriodsLoading] = useState(false);
   const [error, setError] = useState('');
   const [candidateStatus, setCandidateStatus] = useState('');
-  const [documentStatus, setDocumentStatus] = useState('');
+  const [taxPeriodId, setTaxPeriodId] = useState(() => normalizeQueryFilter(searchParams.get('taxPeriodId')));
+  const [documentStatus, setDocumentStatus] = useState(() => normalizeUpperQueryFilter(searchParams.get('documentStatus')));
+  const [documentType, setDocumentType] = useState(() => normalizeUpperQueryFilter(searchParams.get('documentType')));
   const [transitioning, setTransitioning] = useState(false);
   const [transitionError, setTransitionError] = useState(null);
+
+  const updateQueryFilter = useCallback((key, value) => {
+    const next = new URLSearchParams(searchParams);
+    const normalized = normalizeQueryFilter(value);
+    if (normalized) next.set(key, normalized);
+    else next.delete(key);
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams]);
+
+  const handleTaxPeriodChange = useCallback((value) => {
+    const normalized = normalizeQueryFilter(value);
+    setTaxPeriodId(normalized);
+    updateQueryFilter('taxPeriodId', normalized);
+  }, [updateQueryFilter]);
+
+  const handleDocumentStatusChange = useCallback((value) => {
+    const normalized = normalizeUpperQueryFilter(value);
+    setDocumentStatus(normalized);
+    updateQueryFilter('documentStatus', normalized);
+  }, [updateQueryFilter]);
+
+  const handleDocumentTypeChange = useCallback((value) => {
+    const normalized = normalizeUpperQueryFilter(value);
+    setDocumentType(normalized);
+    updateQueryFilter('documentType', normalized);
+  }, [updateQueryFilter]);
+
+  const loadPeriods = useCallback(async () => {
+    if (!branchId) return;
+    setPeriodsLoading(true);
+    try {
+      const result = await listTaxPeriods({ branchId });
+      setTaxPeriods(normalizeList(result, 'periods'));
+    } catch (requestError) {
+      toast.error(getTaxIntakeErrorMessage(requestError));
+    } finally {
+      setPeriodsLoading(false);
+    }
+  }, [branchId]);
 
   const loadData = useCallback(async () => {
     if (!branchId) return;
@@ -43,8 +92,17 @@ const useTaxIntakeWorkspaceController = () => {
 
     try {
       const [candidateResult, documentResult] = await Promise.all([
-        listTaxCandidates({ branchId, status: candidateStatus || undefined }),
-        listTaxDocuments({ branchId, status: documentStatus || undefined }),
+        listTaxCandidates({
+          branchId,
+          taxPeriodId: taxPeriodId || undefined,
+          status: candidateStatus || undefined,
+        }),
+        listTaxDocuments({
+          branchId,
+          taxPeriodId: taxPeriodId || undefined,
+          status: documentStatus || undefined,
+          documentType: documentType || undefined,
+        }),
       ]);
 
       setCandidates(normalizeList(candidateResult, 'candidates'));
@@ -56,7 +114,7 @@ const useTaxIntakeWorkspaceController = () => {
     } finally {
       setLoading(false);
     }
-  }, [branchId, candidateStatus, documentStatus]);
+  }, [branchId, candidateStatus, documentStatus, documentType, taxPeriodId]);
 
   useEffect(() => {
     if (!branchId) {
@@ -64,13 +122,14 @@ const useTaxIntakeWorkspaceController = () => {
       return;
     }
 
+    loadPeriods();
     loadData();
-  }, [branchId, ensureSelectedBranchAction, loadData]);
+  }, [branchId, ensureSelectedBranchAction, loadData, loadPeriods]);
 
   useEffect(() => {
     setSelectedDocument(null);
     setTransitionError(null);
-  }, [branchId]);
+  }, [branchId, documentStatus, documentType, taxPeriodId]);
 
   const openDocument = useCallback(async (document) => {
     if (!branchId || !document?.id) return;
@@ -134,6 +193,11 @@ const useTaxIntakeWorkspaceController = () => {
     } finally { setTransitioning(false); }
   }, [branchId, loadData, selectedDocument?.id]);
 
+  const selectedTaxPeriod = useMemo(
+    () => taxPeriods.find((period) => String(period.id) === String(taxPeriodId)) || null,
+    [taxPeriodId, taxPeriods],
+  );
+
   const totals = useMemo(() => ({
     candidates: candidates.length,
     documents: documents.length,
@@ -144,16 +208,23 @@ const useTaxIntakeWorkspaceController = () => {
     currentBranch,
     candidates,
     documents,
+    taxPeriods,
+    taxPeriodId,
+    selectedTaxPeriod,
     selectedDocument,
     loading,
+    periodsLoading,
     error,
     candidateStatus,
     documentStatus,
+    documentType,
     transitioning,
     transitionError,
     totals,
     setCandidateStatus,
-    setDocumentStatus,
+    handleTaxPeriodChange,
+    handleDocumentStatusChange,
+    handleDocumentTypeChange,
     loadData,
     openDocument,
     handleTransition,

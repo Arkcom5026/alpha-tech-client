@@ -64,9 +64,12 @@ describe('repair flexible intake workflow contract', () => {
     expect(intakePolicy).toContain('estimatedCost: Number(draft.estimatedCost || 0)');
     expect(intakePolicy).not.toContain('preAgreedService.agreedAmount || 0');
 
+    expect(estimatePanel).toContain('const hasRepairAuthorization = Boolean(repairAuthorization?.enabled)');
+    expect(estimatePanel).toContain('if (hasRepairAuthorization)');
+    expect(estimatePanel).toContain('!hasRepairAuthorization');
     expect(estimatePanel).toContain('Repair Authorization');
     expect(estimatePanel).toContain('ลูกค้าอนุมัติให้ซ่อมแล้ว');
-    expect(estimatePanel).toContain('ไม่ผูกยอดล่วงหน้า');
+    expect(estimatePanel).toContain('ไม่ต้องส่งราคาประเมินก่อนเริ่มงาน และไม่ผูกยอดล่วงหน้า');
     expect(estimatePanel).toContain('ค่าซ่อมจริงจะถูกบันทึกตอนสรุปงานหลังซ่อมเสร็จ');
     expect(estimatePanel).not.toContain('ตกลงราคาแล้ว ไม่ต้องขออนุมัติซ้ำ');
   });

@@ -26,6 +26,16 @@ export const listManagedCustomers = async ({ scope = 'STORE', query = '', limit 
   }
 };
 
+export const getManagedCustomerDetail = async (customerProfileId) => {
+  try {
+    const res = await apiClient.get(`/customers/management/${customerProfileId}`);
+    return res.data?.customer || res.data;
+  } catch (error) {
+    console.error('❌ [getManagedCustomerDetail] error:', error);
+    throw error;
+  }
+};
+
 export const claimUnassignedCustomer = async (customerProfileId) => {
   try {
     const res = await apiClient.post(

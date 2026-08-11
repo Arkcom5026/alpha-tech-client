@@ -1,6 +1,9 @@
 import React from 'react';
 import { FilePlus2, Link2, CircleCheckBig } from 'lucide-react';
-import { formatTaxMoney } from '../utils/inputTaxReceiptLink';
+import {
+  formatTaxMoney,
+  remainingDocumentTotalCapacity,
+} from '../utils/inputTaxReceiptLink';
 
 const InputTaxDocumentSelectionPanel = ({
   eligibleDocuments,
@@ -43,8 +46,8 @@ const InputTaxDocumentSelectionPanel = ({
           <div className="flex items-center gap-2 font-black text-slate-900"><Link2 size={18} /> ใช้ใบกำกับภาษีซื้อที่มีอยู่แล้ว</div>
           <p className={`mt-1 text-xs ${hasReceipts && !existingAvailable ? 'font-semibold text-amber-700' : 'text-slate-500'}`}>
             {hasReceipts && !existingAvailable
-              ? 'ไม่มีใบกำกับภาษีซื้อเดิมที่ใช้ได้ ระบบเลือกการสร้างฉบับใหม่ให้แล้ว'
-              : 'แสดงเฉพาะใบกำกับของผู้จำหน่ายรายเดียวกันที่ระบบอนุญาตให้ผูกเพิ่มได้'}
+              ? 'ไม่มีใบกำกับภาษีซื้อเดิมที่มียอดคงเหลือเพียงพอ ระบบเลือกการสร้างฉบับใหม่ให้แล้ว'
+              : 'แสดงเฉพาะใบกำกับของผู้จำหน่ายรายเดียวกันที่ยังมียอดคงเหลือเพียงพอกับใบรับสินค้าที่เลือก'}
           </p>
         </button>
 
@@ -74,7 +77,7 @@ const InputTaxDocumentSelectionPanel = ({
               <option value="">เลือกใบกำกับภาษีซื้อ</option>
               {eligibleDocuments.map((document) => (
                 <option key={document.id} value={document.id}>
-                  {document.documentNumber} · ยอดรวม {formatTaxMoney(document.totalAmount)}
+                  {document.documentNumber} · คงเหลือ {formatTaxMoney(remainingDocumentTotalCapacity(document))}
                 </option>
               ))}
             </select>

@@ -1,6 +1,7 @@
 export const REPAIR_LANES = [
   { key: 'RECEIVED', label: 'รับเข้าใหม่', description: 'รับเครื่องแล้ว รอช่างรับงาน' },
   { key: 'IN_PROGRESS', label: 'กำลังตรวจ/ซ่อม', description: 'ช่างกำลังดำเนินงาน' },
+  { key: 'EXTERNAL_REPAIR', label: 'ส่งซ่อมภายนอก', description: 'อุปกรณ์อยู่นอกร้านกับผู้รับซ่อมภายนอก' },
   { key: 'WAITING_PARTS', label: 'รออะไหล่', description: 'งานติดรอชิ้นส่วน' },
   { key: 'COMPLETED', label: 'พร้อมส่งมอบ', description: 'ซ่อมเสร็จแล้ว รอบันทึกการส่งมอบ' },
   { key: 'CANCELLED', label: 'ยกเลิก', description: 'งานที่ยุติแล้ว' },

@@ -38,12 +38,19 @@ const DeliveryCreditSettlementCreatePage = () => {
 
   const setLineAmount = (sale, line, value) => {
     const key = `${sale.id}:${line.lineType}:${line.saleItemId}`;
-    const limit = Math.min(Number(line.remainingAmount ?? line.lineAmount), Number(sale.outstandingAmount));
-    const amount = Math.min(Math.max(0, Number(value) || 0), limit);
-    setSelected((prev) => ({
-      ...prev,
-      [key]: amount > 0 ? { saleId: sale.id, saleItemId: line.saleItemId, lineType: line.lineType, amount } : undefined,
-    }));
+    setSelected((prev) => {
+      const usedByOtherLines = Object.entries(prev).reduce((sum, [existingKey, entry]) => {
+        if (existingKey === key || !entry || entry.saleId !== sale.id) return sum;
+        return sum + Number(entry.amount || 0);
+      }, 0);
+      const remainingSaleCapacity = Math.max(0, Number(sale.outstandingAmount) - usedByOtherLines);
+      const limit = Math.min(Number(line.remainingAmount ?? line.lineAmount), remainingSaleCapacity);
+      const amount = Math.min(Math.max(0, Number(value) || 0), limit);
+      return {
+        ...prev,
+        [key]: amount > 0 ? { saleId: sale.id, saleItemId: line.saleItemId, lineType: line.lineType, amount } : undefined,
+      };
+    });
   };
 
   const selectedLines = useMemo(() => Object.values(selected).filter(Boolean), [selected]);

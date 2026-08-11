@@ -85,8 +85,9 @@ const useInputTaxReceiptWorkspaceController = () => {
       : null
   ), [links, selectedDocument, selectedReceipts]);
   const eligibleDocuments = useMemo(() => {
-    if (!selectedSupplierId) return documents;
-    return documents.filter((document) => (
+    const mutableDocuments = documents.filter((document) => isTaxDocumentMutable(document.status));
+    if (!selectedSupplierId) return mutableDocuments;
+    return mutableDocuments.filter((document) => (
       Number(document?.supplierId || document?.snapshot?.supplierId || 0) === Number(selectedSupplierId)
     ));
   }, [documents, selectedSupplierId]);
@@ -203,6 +204,11 @@ const useInputTaxReceiptWorkspaceController = () => {
       ...current,
       [key]: { ...current[key], [field]: value },
     }));
+  }, []);
+
+  const selectExistingDocument = useCallback((documentId) => {
+    setShowCreateDocument(false);
+    setSelectedDocumentId(String(documentId || ''));
   }, []);
 
   const attachSelected = useCallback(async () => {
@@ -350,6 +356,7 @@ const useInputTaxReceiptWorkspaceController = () => {
     invoice,
     setSelectedDocumentId,
     setShowCreateDocument,
+    selectExistingDocument,
     changeFilter,
     resetFilters,
     loadReceipts,

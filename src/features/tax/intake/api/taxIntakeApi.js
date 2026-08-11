@@ -12,6 +12,8 @@ const requirePositiveId = (value, fieldName) => {
   return normalized;
 };
 
+const optionalText = (value) => String(value || '').trim() || undefined;
+
 export const registerTaxCandidate = async (payload = {}) => {
   const branchId = requirePositiveId(payload.branchId, 'branchId');
   const response = await apiClient.post('/tax/candidates/register', {
@@ -21,10 +23,11 @@ export const registerTaxCandidate = async (payload = {}) => {
   return unwrapData(response);
 };
 
-export const listTaxCandidates = async ({ branchId, status, sourceType, limit = 50, offset = 0 } = {}) => {
+export const listTaxCandidates = async ({ branchId, taxPeriodId, status, sourceType, limit = 50, offset = 0 } = {}) => {
   const response = await apiClient.get('/tax/candidates', {
     params: {
       branchId: requirePositiveId(branchId, 'branchId'),
+      ...(optionalText(taxPeriodId) ? { taxPeriodId: optionalText(taxPeriodId) } : {}),
       ...(status ? { status: String(status).trim().toUpperCase() } : {}),
       ...(sourceType ? { sourceType: String(sourceType).trim().toUpperCase() } : {}),
       limit,
@@ -34,10 +37,11 @@ export const listTaxCandidates = async ({ branchId, status, sourceType, limit = 
   return unwrapData(response);
 };
 
-export const listTaxDocuments = async ({ branchId, status, documentType, limit = 50, offset = 0 } = {}) => {
+export const listTaxDocuments = async ({ branchId, taxPeriodId, status, documentType, limit = 50, offset = 0 } = {}) => {
   const response = await apiClient.get('/tax/documents', {
     params: {
       branchId: requirePositiveId(branchId, 'branchId'),
+      ...(optionalText(taxPeriodId) ? { taxPeriodId: optionalText(taxPeriodId) } : {}),
       ...(status ? { status: String(status).trim().toUpperCase() } : {}),
       ...(documentType ? { documentType: String(documentType).trim().toUpperCase() } : {}),
       limit,
@@ -116,6 +120,7 @@ export const getTaxIntakeErrorMessage = (error) => {
     TAX_ADMINISTRATIVE_BRANCH_FORBIDDEN: 'ไม่สามารถเข้าถึงข้อมูลภาษีของสาขาอื่นได้',
     TAX_DOCUMENT_NOT_FOUND: 'ไม่พบเอกสารภาษีที่เลือก',
     TAX_DOCUMENT_IDENTITY_CONFLICT: 'มีเอกสารภาษีเลขที่นี้อยู่แล้ว',
+    TAX_PERIOD_NOT_FOUND: 'ไม่พบรอบภาษีที่เลือก กรุณาโหลดรอบภาษีใหม่',
     INPUT_TAX_RECONCILIATION_REQUIRED: 'ยังอนุมัติไม่ได้: ยอดใบรับสินค้าที่ผูกไว้ยังไม่ตรงกับยอดเอกสารภาษี',
   };
   return messages[code] || message || 'ไม่สามารถดำเนินการในระบบรับเอกสารภาษีได้';

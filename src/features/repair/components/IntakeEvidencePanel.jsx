@@ -26,6 +26,18 @@ const draftFromEvidence = (evidence) => {
   };
 };
 
+const consentChanged = (draft, evidence) => {
+  const consent = evidence?.consent;
+  if (!consent) return Boolean(draft.confirmed);
+  return (
+    draft.customerSignature.trim() !== String(consent.customerSignature || '').trim() ||
+    Boolean(draft.allowDataErase) !== Boolean(consent.allowDataErase) ||
+    Boolean(draft.allowFactoryReset) !== Boolean(consent.allowFactoryReset) ||
+    Boolean(draft.allowDisassembly) !== Boolean(consent.allowDisassembly) ||
+    Boolean(draft.allowOutsourceRepair) !== Boolean(consent.allowOutsourceRepair)
+  );
+};
+
 const IntakeEvidencePanel = ({ repairJobId, warning }) => {
   const [evidence, setEvidence] = useState(null);
   const [draft, setDraft] = useState(emptyDraft);
@@ -63,7 +75,11 @@ const IntakeEvidencePanel = ({ repairJobId, warning }) => {
     setLoading(true);
     setError('');
     try {
-      const saved = await repairApi.saveIntakeEvidence(repairJobId, draft);
+      const shouldWriteConsent = consentChanged(draft, evidence);
+      const payload = shouldWriteConsent
+        ? draft
+        : { ...draft, confirmed: false };
+      const saved = await repairApi.saveIntakeEvidence(repairJobId, payload);
       setEvidence(saved);
       setDraft(emptyDraft);
       setEditing(false);

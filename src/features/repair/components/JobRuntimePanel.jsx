@@ -1,8 +1,13 @@
 import React from 'react';
 import { REPAIR_WORKFLOW_LABELS, formatDateTime, formatMoney } from '../utils/repairRuntime';
 
+const FINAL_PRICE_ACTIONS = new Set(['COMPLETE_REPAIR', 'COMPLETE_REPAIR_DIRECT']);
+
 const JobRuntimePanel = ({ job }) => {
   const workflowStatus = job?.workflow?.status || 'RECEIVED';
+  const hasFinalRepairAmount = (job?.workflow?.history || []).some((event) =>
+    FINAL_PRICE_ACTIONS.has(event.action)
+  );
 
   return (
     <div className="space-y-5">
@@ -24,7 +29,10 @@ const JobRuntimePanel = ({ job }) => {
           <Info label="รับเมื่อ" value={formatDateTime(job.createdAt)} />
           <Info label="อัปเดตล่าสุด" value={formatDateTime(job.updatedAt)} />
           <Info label="มัดจำ" value={formatMoney(job.depositPaid)} />
-          <Info label="ราคาประเมิน" value={formatMoney(job.estimatedCost)} />
+          <Info
+            label={hasFinalRepairAmount ? 'ค่าซ่อมจริง' : 'ราคาประเมิน'}
+            value={formatMoney(job.estimatedCost)}
+          />
           <Info label="บาร์โค้ด" value={job.stockItem?.barcode || job.device?.barcode} />
           <Info label="Serial" value={job.stockItem?.serialNumber || job.device?.serialNumber} />
         </div>

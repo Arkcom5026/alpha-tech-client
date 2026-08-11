@@ -39,6 +39,23 @@ export const prepareInputTaxFilingBatch = async ({ branchId, taxPeriodId }) => {
   return unwrapData(response);
 };
 
+export const advanceInputTaxDocumentLifecycle = async ({ branchId, taxDocumentId, targetStatus }) => {
+  const normalizedTarget = String(targetStatus || '').trim().toUpperCase();
+  if (!normalizedTarget) {
+    const error = new Error('ไม่พบขั้นตอนเอกสารถัดไป');
+    error.code = 'INPUT_TAX_FILING_CLIENT_VALIDATION_ERROR';
+    throw error;
+  }
+  const response = await apiClient.post(
+    `/tax-intake/documents/${positiveId(taxDocumentId, 'taxDocumentId')}/transition`,
+    {
+      branchId: positiveId(branchId, 'branchId'),
+      targetStatus: normalizedTarget,
+    },
+  );
+  return unwrapData(response);
+};
+
 export const selectInputTaxDocumentForFiling = async ({ branchId, batchId, taxDocumentId }) => {
   const response = await apiClient.post(
     `/tax-intake/input-documents/filing/batches/${positiveId(batchId, 'batchId')}/documents/${positiveId(taxDocumentId, 'taxDocumentId')}/select`,

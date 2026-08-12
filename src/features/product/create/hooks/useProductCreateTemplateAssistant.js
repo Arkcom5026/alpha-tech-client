@@ -200,7 +200,20 @@ const buildPreflightResult = (template, products = []) => {
   };
 };
 
+const buildTypeMappingConflictMessage = (error) => {
+  const data = error?.response?.data;
+  if (data?.error !== 'PRODUCT_TYPE_GLOBAL_MAPPING_CONFLICT') return null;
+
+  const details = data?.details || {};
+  const templateType = details.templateProductTypeName || 'ประเภทสินค้าของ Template';
+  const branchType = details.branchProductTypeName || 'ประเภทสินค้าในร้าน';
+  const globalType = details.globalProductTypeName || 'Global ProductType';
+
+  return `ยังสร้างสินค้าจาก Template นี้ไม่ได้ เพราะ mapping ประเภทสินค้าไม่สอดคล้องกัน: Template “${templateType}”, ร้าน “${branchType}”, Global “${globalType}” กรุณาตรวจสอบ ProductType mapping ก่อน`;
+};
+
 const getErrorMessage = (error, fallback) =>
+  buildTypeMappingConflictMessage(error) ||
   error?.response?.data?.message ||
   error?.response?.data?.error ||
   error?.message ||

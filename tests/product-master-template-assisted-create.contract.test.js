@@ -46,6 +46,12 @@ assert.match(hookSource, /currentPath\.indexOf\('\/pos\/'\)/);
 assert.match(hookSource, /buildStoreScopedPath\(location\.pathname, `\/pos\/stock\/products\/edit\/\$\{product\.id\}`\)/);
 assert.match(hookSource, /buildStoreScopedPath\(location\.pathname, `\/pos\/stock\/products\/edit\/\$\{productId\}`\)/);
 assert.match(hookSource, /clonedProductSnapshot:\s*product/);
+assert.match(hookSource, /PRODUCT_TYPE_GLOBAL_MAPPING_CONFLICT/);
+assert.match(hookSource, /buildTypeMappingConflictMessage/);
+assert.match(hookSource, /mapping ประเภทสินค้าไม่สอดคล้องกัน/);
+assert.match(hookSource, /templateProductTypeName/);
+assert.match(hookSource, /branchProductTypeName/);
+assert.match(hookSource, /globalProductTypeName/);
 assert.doesNotMatch(hookSource, /quick-stock|QuickStock|quickStock/);
 
 assert.match(editPageSource, /useLocation/);

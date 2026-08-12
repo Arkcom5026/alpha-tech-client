@@ -33,7 +33,8 @@ assertIncludes(toolbar, "onModeChange?.('UNPRINTED')", 'Unprinted mode control m
 assertIncludes(toolbar, "onModeChange?.('REPRINT')", 'Reprint mode control must remain explicit');
 assertIncludes(toolbar, 'type="search"', 'Barcode filters must expose search semantics');
 assertIncludes(toolbar, 'min-h-11', 'Barcode toolbar controls must remain touch sized');
-assertIncludes(previewHeader, 'พรีวิวบาร์โค้ด', 'Barcode preview header must remain explicit');
+assertIncludes(previewHeader, 'เตรียม Barcode / SN ก่อนรับสินค้า', 'Barcode preparation header must state the pre-receive identity step explicitly');
+assertIncludes(previewHeader, 'ไปยิงรับสินค้าเข้าสต๊อก', 'Barcode preparation must expose the stock-receive continuation explicitly');
 assertIncludes(previewHeader, 'จำนวนฉลาก', 'Preview header must summarize label count');
 assertIncludes(previewHeader, 'พิมพ์แล้ว', 'Preview header must summarize printed progress');
 assertIncludes(previewSettings, 'ตั้งค่าการพิมพ์', 'Preview settings foundation must remain available');

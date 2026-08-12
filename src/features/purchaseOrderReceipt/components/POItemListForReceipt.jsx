@@ -1,10 +1,13 @@
 // src/features/purchaseOrderReceipt/components/POItemListForReceipt.jsx
 
 import React, { useEffect, useMemo, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import usePurchaseOrderReceiptStore from '../store/purchaseOrderReceiptStore';
-import { Save, Edit2, X, CheckCircle2, AlertTriangle, AlertCircle, ShoppingCart, Percent, Layers, Landmark } from 'lucide-react';
+import { Save, Edit2, X, CheckCircle2, AlertTriangle, AlertCircle, ShoppingCart, Percent, Layers, Landmark, Barcode } from 'lucide-react';
 
 const POItemListForReceipt = ({ poId, receiptId, setReceiptId, formData, items }) => {
+  const navigate = useNavigate();
+  const { shopSlug } = useParams();
   const {
     loadOrderByIdAction,
     loadOrderById,
@@ -13,7 +16,6 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, formData, items }
     error,
     addReceiptItemAction,
     createReceiptAction,
-    updatePurchaseOrderStatusAction,
   } = usePurchaseOrderReceiptStore();
 
   const [receiptQuantities, setReceiptQuantities] = useState({});
@@ -33,14 +35,14 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, formData, items }
 
   const isPoFinalized = useMemo(() => {
     const status = String(currentOrder?.status || '').toUpperCase();
-    return status === 'RECEIVED' || status === 'PARTIALLY_RECEIVED' || status === 'CANCELLED';
+    return status === 'RECEIVED' || status === 'COMPLETED' || status === 'CANCELLED';
   }, [currentOrder?.status]);
 
   const shouldShowFinalizeWarning = useMemo(() => {
     const hasReceipt = !!receiptId;
     const hasAnySaved = Object.keys(savedRows || {}).length > 0;
-    return (hasReceipt || hasAnySaved) && !isPoFinalized;
-  }, [receiptId, savedRows, isPoFinalized]);
+    return (hasReceipt || hasAnySaved) && !isPoFinalized && !finalizedOnce;
+  }, [receiptId, savedRows, isPoFinalized, finalizedOnce]);
 
   const [isInitialized, setIsInitialized] = useState(false);
 
@@ -109,7 +111,7 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, formData, items }
     const received = Number(item.receivedQuantity || 0);
     const total = num + received;
     const isIncomplete = total < Number(item.quantity || 0);
-    
+
     const shouldWarn = Number(item.quantity || 0) > 10 && value.toString().startsWith('1');
 
     setReceiptQuantities((prev) => ({ ...prev, [itemId]: num }));
@@ -132,7 +134,7 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, formData, items }
     if (Number.isNaN(costPrice) || costPrice < 0) return;
 
     setReceiptPrices((prev) => ({ ...prev, [itemId]: costPrice }));
-    const quantity = receiptQuantities[itemId] ?? 0;
+    const quantity = receiptQuantities[item.id] ?? 0;
     calculateTotal(itemId, quantity, costPrice);
   };
 
@@ -194,7 +196,7 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, formData, items }
     }
   };
 
-  const handleConfirmFinalize = async () => {
+  const handleConfirmFinalize = () => {
     if (finalizedOnce || isPoFinalized) return;
     setFinalizeError('');
     setFinalizeSuccess('');
@@ -216,36 +218,22 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, formData, items }
     });
 
     if (!allRowsConfirmedNow) {
-      setFinalizeError('กรุณากดปุ่ม “บันทึก” ให้ครบทุกรายการก่อน แล้วค่อยกด “บันทึกใบรับสินค้า”');
+      setFinalizeError('กรุณากดปุ่ม “บันทึก” ให้ครบทุกรายการก่อน แล้วค่อยกด “ยืนยันบันทึกใบรับสินค้า”');
       return;
     }
 
-    const allDone = (listItems || []).every((it) => {
-      if (itemStatus[it.id] === 'done') return true;
-      const ordered = Number(it.quantity || 0);
-      const receivedDb = Number(it.receivedQuantity || 0);
-      const receivedSession = Number(sessionSavedQty[it.id] || 0);
-      return (receivedDb + receivedSession) >= ordered;
-    });
+    setFinalizing(true);
+    setFinalizedOnce(true);
+    setFinalizeSuccess(
+      'บันทึกใบรับสินค้าเรียบร้อย ขั้นถัดไปคือเตรียม Barcode / SN และยิงรับเข้าสต๊อก โดยสถานะ PO จะอัปเดตจากหลักฐาน Stock Receive จริง'
+    );
+    setFinalizing(false);
+  };
 
-    const statusToSet = allDone ? 'RECEIVED' : 'PARTIALLY_RECEIVED';
-    try {
-      setFinalizing(true);
-      await updatePurchaseOrderStatusAction({ id: currentOrder.id, status: statusToSet });
-      setFinalizedOnce(true);
-
-      const fn = loadOrderByIdAction || loadOrderById;
-      try { fn?.(poId); } catch (e) { console.warn('⚠️ reload failed:', e); }
-
-      setFinalizeSuccess(
-        `บันทึกใบรับสินค้าเรียบร้อย (สถานะ: ${statusToSet === 'RECEIVED' ? 'รับครบแล้ว' : 'รับบางส่วน'})`
-      );
-    } catch (err) {
-      console.error('❌ finalize error:', err);
-      setFinalizeError(getErrorMessage(err) || 'บันทึกสถานะใบสั่งซื้อไม่สำเร็จ');
-    } finally {
-      setFinalizing(false);
-    }
+  const handleContinueToBarcodePrep = () => {
+    if (!finalizedOnce || !receiptId) return;
+    const targetSlug = shopSlug || 'advancetech';
+    navigate(`/${targetSlug}/pos/purchases/barcodes/preview/${receiptId}`);
   };
 
   if (loading || !isInitialized) {
@@ -266,15 +254,8 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, formData, items }
     );
   }
 
-  const allRemainingZero = (listItems || []).every((it) => {
-    const ordered = Number(it.quantity || 0);
-    const receivedDb = Number(it.receivedQuantity || 0);
-    const receivedSession = Number(sessionSavedQty[it.id] || 0);
-    return Math.max(ordered - (receivedDb + receivedSession), 0) === 0;
-  });
-
   const allRowsConfirmed = (listItems || []).every((it) => Number(it.receivedQuantity || 0) > 0 || !!savedRows[it.id]);
-  
+
   const hasAnyReceiptActivity =
     !!receiptId ||
     Object.keys(savedRows || {}).length > 0 ||
@@ -285,7 +266,7 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, formData, items }
 
   return (
     <div className="space-y-4 w-full select-none animate-fadeIn">
-      
+
       <div className="flex items-center justify-between px-2 pt-2">
         <h2 className="text-sm font-black text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
           <ShoppingCart className="w-4 h-4 text-slate-400" /> รายการสินค้าประจำใบตรวจรับสินค้า
@@ -296,8 +277,8 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, formData, items }
         <div className="rounded-2xl border border-amber-500/20 bg-amber-500/[0.04] p-4 text-xs font-bold text-amber-800 flex items-start gap-2.5 shadow-sm animate-slideUp">
           <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
           <div>
-            <div className="font-black text-amber-950">ตรวจพบการบันทึกไอเทมแถวย่อยค้างอยู่!</div>
-            <div className="opacity-90 mt-0.5 leading-relaxed">กรุณาเลื่อนลงไปด้านล่างสุดเพื่อกดปุ่ม <span className="font-black text-orange-600 underline">“บันทึกใบรับสินค้า”</span> เพื่อส่งสัญญาณอัปเดตสเตตัสเข้าฐานข้อมูลส่วนกลางให้เสร็จสมบูรณ์</div>
+            <div className="font-black text-amber-950">มีรายการ RC ที่บันทึกแล้วและรอยืนยัน</div>
+            <div className="opacity-90 mt-0.5 leading-relaxed">กรุณาตรวจสอบรายการให้ครบแล้วกด <span className="font-black text-orange-600 underline">“ยืนยันบันทึกใบรับสินค้า”</span> ขั้นตอนนี้บันทึก RC เท่านั้น และจะไม่ประกาศว่า PO รับสินค้าเข้าสต๊อกแล้ว</div>
           </div>
         </div>
       )}
@@ -309,14 +290,23 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, formData, items }
       )}
 
       {(finalizeSuccess || isPoFinalized) && (
-        <div className="rounded-2xl border border-emerald-500/20 bg-emerald-50 p-3 text-xs font-black text-emerald-700 flex items-center gap-2 shadow-sm animate-fadeIn">
-          <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-          <span>
-            {finalizeSuccess ||
-              `บันทึกใบรับสินค้าพัสดุเรียบร้อยแล้ว (สถานะใน Store: ${
-                String(currentOrder?.status || '').toUpperCase() === 'RECEIVED' ? 'ตรวจรับของครบถ้วน' : 'รับสินค้าไว้บางส่วน'
-              })`}
-          </span>
+        <div className="rounded-2xl border border-emerald-500/20 bg-emerald-50 p-3 text-xs font-black text-emerald-700 flex flex-col gap-3 shadow-sm animate-fadeIn sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-2">
+            <CheckCircle2 className="mt-0.5 w-4 h-4 shrink-0 text-emerald-600" />
+            <span>
+              {finalizeSuccess || 'สถานะรับสินค้าของ PO ได้รับการยืนยันจาก Stock Receive แล้ว'}
+            </span>
+          </div>
+          {finalizedOnce && receiptId ? (
+            <button
+              type="button"
+              onClick={handleContinueToBarcodePrep}
+              className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-teal-700 px-4 text-xs font-black text-white transition hover:bg-teal-800 active:scale-95"
+            >
+              <Barcode className="h-4 w-4" />
+              เตรียม Barcode / SN
+            </button>
+          ) : null}
         </div>
       )}
 
@@ -506,12 +496,9 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, formData, items }
 
       <div className="bg-slate-50/70 border border-slate-200/70 rounded-2xl p-4 sm:p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-4 select-none">
         <div className="text-left space-y-0.5 font-bold text-xs text-slate-500">
-          <div className="flex items-center gap-1 text-slate-700 font-black"><AlertCircle className="w-3.5 h-3.5 text-slate-400" /> เงื่อนไขกฎเหล็กคลัง:</div>
-          <div className="opacity-90 pl-4">ระบบจะคัดกรองแถวที่มีค่า <span className="font-black text-slate-800">"รับแล้ว (&gt; 0)"</span> ถือว่าผ่านสิทธิ์การตรวจสอบความสมดุลเอกสาร</div>
-          <div className="opacity-90 pl-4 mt-0.5">
-            เมื่อกดส่งสัญญานบันทึกภาพบิล ระบบจะทำการอัปเดตสเตตัสกลางเป็น:{' '}
-            <span className="font-black text-orange-600 px-1.5 py-0.5 bg-orange-50 rounded-md text-xs font-sans ml-0.5 shadow-inner">{allRemainingZero ? 'RECEIVED (รับครบแล้ว)' : 'PARTIALLY_RECEIVED (รับบางส่วน)'}</span>
-          </div>
+          <div className="flex items-center gap-1 text-slate-700 font-black"><AlertCircle className="w-3.5 h-3.5 text-slate-400" /> ขอบเขตของใบตรวจรับ:</div>
+          <div className="opacity-90 pl-4">การบันทึกจำนวนและต้นทุนใน RC เป็นการเตรียมรายการรับสินค้า และยังไม่ถือว่า StockItem / LOT ถูกสร้างหรือพร้อมขาย</div>
+          <div className="opacity-90 pl-4 mt-0.5">สถานะ <span className="font-black text-orange-600">PARTIALLY_RECEIVED / RECEIVED / COMPLETED</span> ต้องมาจากหลักฐานการยิงรับสินค้าและ Stock Receive ฝั่ง Server ไม่ใช่จากหน้านี้</div>
         </div>
 
         <button
@@ -529,7 +516,7 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, formData, items }
           ) : (
             <CheckCircle2 className="w-4 h-4 text-orange-100" />
           )}
-          <span>{finalizing ? 'กำลังบันทึก...' : finalizedOnce || isPoFinalized ? 'บันทึกสำเร็จแล้ว' : 'บันทึกใบรับสินค้าประจำสาขา'}</span>
+          <span>{finalizing ? 'กำลังบันทึก...' : finalizedOnce || isPoFinalized ? 'บันทึกสำเร็จแล้ว' : 'ยืนยันบันทึกใบรับสินค้า'}</span>
         </button>
       </div>
 

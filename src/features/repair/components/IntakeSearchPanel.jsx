@@ -1,8 +1,8 @@
 import React, { useCallback, useState } from 'react';
 import MobileDeviceScanner from './MobileDeviceScanner';
+import { getCustomerDisplayName } from '@/features/customer/utils/customerDisplayName';
 
-const customerName = (customer) =>
-  customer.companyName || customer.name || `ลูกค้า #${customer.id}`;
+const customerName = (customer) => getCustomerDisplayName(customer, `ลูกค้า #${customer.id}`);
 
 const deviceName = (device) =>
   [device.product?.brand?.name || device.brand, device.product?.name || device.model]

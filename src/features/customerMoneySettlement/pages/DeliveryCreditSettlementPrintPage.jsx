@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { getCustomerDisplayName } from '@/features/customer/utils/customerDisplayName';
 import { getDeliveryCreditSettlement } from '../api/deliveryCreditSettlementApi';
 
 const money = (value) => Number(value || 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const customerLabel = (customer) => customer?.companyName || customer?.name || '-';
+const customerLabel = getCustomerDisplayName;
 
 const DeliveryCreditSettlementPrintPage = () => {
   const { id } = useParams();

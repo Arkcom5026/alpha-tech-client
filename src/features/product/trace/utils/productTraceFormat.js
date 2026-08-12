@@ -1,3 +1,5 @@
+import { getCustomerDisplayName } from '@/features/customer/utils/customerDisplayName';
+
 const toNumberOrNull = (value) => {
   if (value === null || value === undefined || value === '') return null;
   const number = Number(value);
@@ -55,7 +57,7 @@ export const formatProductTraceDate = (value, fallback = '-') => {
 };
 
 export const resolveProductTraceCustomerName = (customer) =>
-  customer?.companyName || customer?.name || '-';
+  getCustomerDisplayName(customer);
 
 export const resolveProductTraceProductName = (identity) =>
   identity?.product?.name || 'ไม่พบชื่อสินค้า';

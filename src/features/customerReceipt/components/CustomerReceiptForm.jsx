@@ -9,6 +9,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import useCustomerReceiptStore from '../store/customerReceiptStore';
+import { getCustomerDisplayName } from '@/features/customer/utils/customerDisplayName';
 
 const PAYMENT_METHOD_OPTIONS = [
   { value: 'CHEQUE', label: 'เช็ค' },
@@ -300,7 +301,7 @@ const CustomerReceiptForm = ({
 
               <div className="divide-y divide-gray-100">
                 {customerSearchResults.map((customer) => {
-                  const customerLabel = customer.companyName || customer.name || '-';
+                  const customerLabel = getCustomerDisplayName(customer);
                   const customerSubLabel = customer.companyName && customer.name ? customer.name : '';
                   const isSelected = Number(form.customerId) === Number(customer.id);
 
@@ -353,7 +354,7 @@ const CustomerReceiptForm = ({
                     <p>
                       ชื่อ/หน่วยงาน:{' '}
                       <span className="font-medium text-gray-900">
-                        {selectedCustomer.companyName || selectedCustomer.name || '-'}
+                        {getCustomerDisplayName(selectedCustomer)}
                       </span>
                     </p>
                     {!!selectedCustomer.companyName && !!selectedCustomer.name && (

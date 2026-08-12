@@ -11,6 +11,7 @@ import {
   Search,
   XCircle,
 } from 'lucide-react';
+import { getCustomerDisplayName } from '@/features/customer/utils/customerDisplayName';
 
 const formatMoney = (value) => Number(value || 0).toLocaleString('th-TH', {
   minimumFractionDigits: 2,
@@ -138,7 +139,7 @@ const CustomerReceiptListWorkspace = ({
                 return (
                   <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
                     <td className="p-2 px-2.5 font-mono font-black text-slate-900 select-all">{item.code || '—'}</td>
-                    <td className="p-2 px-2 font-bold text-slate-800 max-w-[180px] truncate" title={item?.customer?.name}>{item?.customer?.companyName || item?.customer?.name || 'ลูกค้าทั่วไป'}</td>
+                    <td className="p-2 px-2 font-bold text-slate-800 max-w-[180px] truncate" title={getCustomerDisplayName(item?.customer, 'ลูกค้าทั่วไป')}>{getCustomerDisplayName(item?.customer, 'ลูกค้าทั่วไป')}</td>
                     <td className="p-2 px-2 text-slate-500 font-mono text-[11px]">{item.paymentMethod || 'เงินสด'}</td>
                     <td className="p-2 px-2 text-right font-mono text-slate-500">{formatMoney(item.totalAmount)}</td>
                     <td className="p-2 px-2 text-right font-mono text-emerald-700 font-bold">{formatMoney(item.allocatedAmount)}</td>

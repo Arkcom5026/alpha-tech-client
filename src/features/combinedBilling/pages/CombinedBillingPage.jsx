@@ -3,6 +3,7 @@ import CustomerFilter from '../components/CustomerFilter';
 import useCombinedBillingStore from '../store/combinedBillingStore';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useBranchStore } from '@/features/branch/store/branchStore';
+import { getCustomerDisplayName } from '@/features/customer/utils/customerDisplayName';
 
 const money = (value) => Number(value || 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -66,7 +67,7 @@ const CombinedBillingPage = () => {
         const tax = document.taxDocument;
         const taxIssued = Boolean(tax?.issuedDocumentNumber);
         return <details className="rounded-lg border p-3" key={document.id}>
-          <summary className="cursor-pointer font-semibold">{document.code} · {document.customer?.companyName || document.customer?.name} · {money(document.totalAmount)} บาท · Bill/Tax: {tax?.issuedDocumentNumber || tax?.status || '-'}</summary>
+          <summary className="cursor-pointer font-semibold">{document.code} · {getCustomerDisplayName(document.customer)} · {money(document.totalAmount)} บาท · Bill/Tax: {tax?.issuedDocumentNumber || tax?.status || '-'}</summary>
           <div className="mt-3 flex flex-wrap gap-2 print:hidden">
             <button className="rounded bg-slate-800 px-3 py-2 text-sm text-white" onClick={() => printDelivery(document)}>พิมพ์ใบส่งของรวม</button>
             {!taxIssued && <><button className="rounded bg-emerald-700 px-3 py-2 text-sm text-white" onClick={() => printBill(document, 'SHORT')}>พิมพ์บิลอย่างย่อ</button><button className="rounded bg-blue-700 px-3 py-2 text-sm text-white" onClick={() => printBill(document, 'FULL')}>พิมพ์บิลเต็มรูป</button></>}

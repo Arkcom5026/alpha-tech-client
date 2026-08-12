@@ -9,6 +9,7 @@ import useCustomerStore from '@/features/customer/store/customerStore';
 import { useAddressStore } from '@/features/address/store/addressStore';
 import AddressForm from '@/features/address/components/AddressForm';
 import { User, Search, Phone, RefreshCw, ShieldCheck, Mail, MapPin } from 'lucide-react';
+import { getCustomerDisplayName } from '@/features/customer/utils/customerDisplayName';
 
 const REGION_NAME_SETS = {
   NORTH: new Set(['เชียงใหม่','เชียงราย','แม่ฮ่องสอน','ลำพูน','ลำปาง','แพร่','น่าน','พะเยา','อุตรดิตถ์','ตาก','นครสวรรค์','อุทัยธานี','กำแพงเพชร','สุโขทัย','พิษณุโลก','พิจิตร','เพชรบูรณ์']),
@@ -485,7 +486,7 @@ const CustomerSection = ({ productSearchRef, clearTrigger, onSaleModeSelect }) =
       {searchMode === 'name' && searchResults.length > 0 && (
         <div className="mb-2 border border-slate-200 rounded-xl p-1.5 bg-slate-50 max-h-32 overflow-y-auto space-y-1 shadow-inner animate-fadeIn">
           {searchResults.map((cust) => {
-            const displayLabel = (cust.type === 'ORGANIZATION' || cust.type === 'GOVERNMENT') ? (cust.companyName || cust.name || '-') : (cust.name || cust.companyName || '-');
+            const displayLabel = getCustomerDisplayName(cust);
             return (
               <button
                 key={cust.id}

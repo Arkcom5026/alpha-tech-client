@@ -3,14 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Search, WalletCards } from 'lucide-react';
 import { createCustomerMoneyReceive } from '../api/customerMoneyReceiveApi';
 import { useCustomerMoneyReceiveCustomerSearch } from '../customer/useCustomerMoneyReceiveCustomerSearch';
+import { getCustomerDisplayName } from '@/features/customer/utils/customerDisplayName';
 
-const customerLabel = (customer) => {
-  if (!customer) return '-';
-  if (customer.type === 'ORGANIZATION' || customer.type === 'GOVERNMENT') {
-    return customer.companyName || customer.name || '-';
-  }
-  return customer.name || customer.companyName || '-';
-};
+const customerLabel = getCustomerDisplayName;
 
 const paymentMethods = [
   ['CASH', 'เงินสด'], ['TRANSFER', 'โอนเงิน'], ['QR', 'QR'], ['CARD', 'บัตร'],

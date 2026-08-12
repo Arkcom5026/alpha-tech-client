@@ -1,4 +1,5 @@
 import React from 'react';
+import { getCustomerDisplayName } from '@/features/customer/utils/customerDisplayName';
 
 const SaleCustomerSearchResults = ({
   results,
@@ -18,10 +19,7 @@ const SaleCustomerSearchResults = ({
       </div>
       <div className="max-h-52 space-y-2 overflow-y-auto">
         {results.map((customer) => {
-          const displayLabel =
-            customer.type === 'ORGANIZATION' || customer.type === 'GOVERNMENT'
-              ? customer.companyName || customer.name || '-'
-              : customer.name || customer.companyName || '-';
+          const displayLabel = getCustomerDisplayName(customer);
           const details = [customer.phone, customer.email, customer.taxId]
             .filter(Boolean)
             .join(' · ');

@@ -1,4 +1,5 @@
 import { buildCanonicalSaleDocumentLines } from '@/features/sales/documents/utils/saleDocumentLineMapper'
+import { getCustomerDisplayName } from '@/features/customer/utils/customerDisplayName'
 
 const normalizeText = (value) => {
   if (value === null || value === undefined) return ''
@@ -54,13 +55,7 @@ export const buildCustomerReceiptBranchAddress = (branch, fallbackAddress = '-')
 }
 
 export const buildCustomerReceiptCustomerName = (customer) => {
-  if (!customer) return '-'
-
-  if (['ORGANIZATION', 'GOVERNMENT'].includes(customer.type)) {
-    return customer.companyName || customer.name || '-'
-  }
-
-  return customer.name || customer.companyName || '-'
+  return getCustomerDisplayName(customer)
 }
 
 export const buildCustomerReceiptCustomerAddress = (customer) => {

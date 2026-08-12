@@ -2,9 +2,10 @@ import React, { useMemo, useRef, useState } from 'react';
 import { Search, WalletCards } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useCustomerMoneyReceiveCustomerSearch } from '@/features/customerMoneyReceive/customer/useCustomerMoneyReceiveCustomerSearch';
+import { getCustomerDisplayName } from '@/features/customer/utils/customerDisplayName';
 import { createDeliveryCreditSettlement, getEligibleDeliveryCredits } from '../api/deliveryCreditSettlementApi';
 
-const customerLabel = (customer) => [customer?.companyName || customer?.name, customer?.departmentName].filter(Boolean).join(' · ') || '-';
+const customerLabel = getCustomerDisplayName;
 const money = (value) => Number(value || 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const lineKey = (saleId, line) => `${saleId}:${line.lineType}:${line.saleItemId}`;
 const createCommandKey = () => globalThis.crypto?.randomUUID?.() || `cms-${Date.now()}-${Math.random().toString(36).slice(2)}`;

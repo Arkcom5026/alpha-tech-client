@@ -1,3 +1,5 @@
+import { getCustomerDisplayName } from '@/features/customer/utils/customerDisplayName';
+
 const SaleReturnSearchWorkspace = ({
   query,
   onQueryChange,
@@ -49,7 +51,7 @@ const SaleReturnSearchWorkspace = ({
             {sales.map((sale) => (
               <tr key={sale.id} className="transition hover:bg-emerald-50/40">
                 <td className="p-3 font-semibold text-slate-900">{sale.code}</td>
-                <td className="text-slate-700">{sale.customer?.companyName || sale.customer?.name || 'ลูกค้าทั่วไป'}</td>
+                <td className="text-slate-700">{getCustomerDisplayName(sale.customer, 'ลูกค้าทั่วไป')}</td>
                 <td className="text-slate-600">{new Date(sale.soldAt).toLocaleString('th-TH')}</td>
                 <td className="text-right font-semibold text-slate-900">
                   {Number(sale.totalAmount || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿

@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { getCustomerMoneyReceive } from '../api/customerMoneyReceiveApi';
+import { getCustomerDisplayName } from '@/features/customer/utils/customerDisplayName';
 
 const formatMoney = (value) => Number(value || 0).toLocaleString('th-TH', {
   minimumFractionDigits: 2,
@@ -26,7 +27,7 @@ const paymentMethodLabel = (value) => ({
   QR: 'QR / พร้อมเพย์',
 }[value] || value || '-');
 
-const customerName = (customer) => customer?.companyName || customer?.name || '-';
+const customerName = getCustomerDisplayName;
 
 const THAI_DIGITS = ['', 'หนึ่ง', 'สอง', 'สาม', 'สี่', 'ห้า', 'หก', 'เจ็ด', 'แปด', 'เก้า'];
 const THAI_PLACES = ['', 'สิบ', 'ร้อย', 'พัน', 'หมื่น', 'แสน'];

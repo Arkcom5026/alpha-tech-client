@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { FileText, Plus, RefreshCw, Search } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { getCustomerDisplayName } from '@/features/customer/utils/customerDisplayName';
 import { listCustomerMoneyReceives } from '../api/customerMoneyReceiveApi';
 
 const paymentMethodLabel = (value) => ({
@@ -14,7 +15,7 @@ const paymentMethodLabel = (value) => ({
   DEPOSIT: 'เงินฝาก/มัดจำเดิม',
 }[value] || value || '-');
 
-const customerLabel = (customer) => customer?.companyName || customer?.name || '-';
+const customerLabel = getCustomerDisplayName;
 const money = (value) => Number(value || 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const dateTime = (value) => value ? new Date(value).toLocaleString('th-TH') : '-';
 

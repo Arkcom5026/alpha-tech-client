@@ -7,12 +7,8 @@ import PaymentSummary from './PaymentSummary';
 import PaymentMethodInput from './PaymentMethodInput';
 import CalculationDetails from './CalculationDetails';
 
-const PaymentPanel = ({ title, description, children }) => (
+const PaymentPanel = ({ children }) => (
   <section className="flex min-h-full flex-col rounded-2xl border border-slate-200 bg-white p-4">
-    <div className="mb-4 border-b border-slate-100 pb-3">
-      <h3 className="text-base font-semibold text-slate-900">{title}</h3>
-      {description ? <p className="mt-1 text-sm text-slate-500">{description}</p> : null}
-    </div>
     <div className="flex flex-1 flex-col">{children}</div>
   </section>
 );
@@ -90,7 +86,7 @@ const PaymentSection = ({
   return (
     <div className="w-full rounded-2xl bg-slate-50 p-3 md:p-4">
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-        <PaymentPanel title="สรุปยอดขาย" description="ตรวจสอบส่วนลด ภาษี และยอดที่ต้องชำระ">
+        <PaymentPanel>
           <CalculationDetails
             totalOriginalPrice={calculation.totalOriginalPrice}
             totalDiscountOnly={calculation.totalDiscountOnly}
@@ -105,7 +101,7 @@ const PaymentSection = ({
           />
         </PaymentPanel>
 
-        <PaymentPanel title="รับชำระเงิน" description={isCreditSale ? 'รายการเครดิตไม่รับเงินในขั้นตอนนี้' : 'ระบุยอดตามวิธีที่ลูกค้าชำระ'}>
+        <PaymentPanel>
           {!isCreditSale ? (
             <PaymentMethodInput
               cash={paymentList.find((item) => item.method === 'CASH')?.amount || ''}
@@ -127,7 +123,7 @@ const PaymentSection = ({
           )}
         </PaymentPanel>
 
-        <PaymentPanel title="ยืนยันรายการ" description="เลือกเอกสารและตรวจสอบสถานะก่อนบันทึก">
+        <PaymentPanel>
           <PaymentSummary
             totalToPay={calculation.totalToPay}
             grandTotalPaid={calculation.grandTotalPaid}

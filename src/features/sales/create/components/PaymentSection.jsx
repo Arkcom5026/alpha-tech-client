@@ -29,13 +29,13 @@ const PaymentStatus = ({ calculation, isCreditSale }) => {
   if (isCreditSale) {
     return (
       <div className="mb-3 grid grid-cols-2 gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
-        <div>
-          <p className="text-xs font-medium text-amber-700">ยอดใช้มัดจำ</p>
-          <p className="mt-0.5 font-mono font-semibold">฿{fmt(calculation.grandTotalPaid)}</p>
+        <div className="grid grid-cols-[1fr_auto] items-center gap-2">
+          <span className="text-xs font-medium text-amber-700">ยอดใช้มัดจำ</span>
+          <span className="font-mono font-semibold">฿{fmt(calculation.grandTotalPaid)}</span>
         </div>
-        <div className="text-right">
-          <p className="text-xs font-medium text-amber-700">ยอดค้างชำระ</p>
-          <p className="mt-0.5 font-mono font-semibold">฿{fmt(outstandingAmount)}</p>
+        <div className="grid grid-cols-[1fr_auto] items-center gap-2 border-l border-amber-200 pl-3">
+          <span className="text-xs font-medium text-amber-700">ยอดค้างชำระ</span>
+          <span className="font-mono font-semibold">฿{fmt(outstandingAmount)}</span>
         </div>
       </div>
     );
@@ -43,22 +43,22 @@ const PaymentStatus = ({ calculation, isCreditSale }) => {
 
   return (
     <div className="mb-3 rounded-xl border border-teal-200 bg-teal-50 p-3">
-      <div className="flex items-center justify-between gap-4 border-b border-teal-100 pb-2">
+      <div className="grid grid-cols-[1fr_auto] items-center gap-4 border-b border-teal-100 pb-2">
         <span className="text-sm font-semibold text-teal-900">ยอดสุทธิที่ต้องชำระ</span>
         <span data-testid="pos-sale-total-due" className="font-mono text-lg font-bold text-teal-900">
           ฿{fmt(calculation.totalToPay)}
         </span>
       </div>
       <div className="mt-2 grid grid-cols-2 gap-3 text-sm">
-        <div>
-          <p className="text-xs font-medium text-slate-500">ยอดเงินที่รับ</p>
-          <p className={`mt-0.5 font-mono font-semibold ${receivedAmount >= calculation.totalToPay ? 'text-emerald-700' : 'text-rose-700'}`}>
+        <div className="grid grid-cols-[1fr_auto] items-center gap-2">
+          <span className="text-xs font-medium text-slate-500">ยอดเงินที่รับ</span>
+          <span className={`font-mono font-semibold ${receivedAmount >= calculation.totalToPay ? 'text-emerald-700' : 'text-rose-700'}`}>
             ฿{fmt(receivedAmount)}
-          </p>
+          </span>
         </div>
-        <div className="text-right">
-          <p className="text-xs font-medium text-slate-500">เงินทอน</p>
-          <p className="mt-0.5 font-mono font-semibold text-emerald-700">฿{fmt(calculation.changeAmount)}</p>
+        <div className="grid grid-cols-[1fr_auto] items-center gap-2 border-l border-teal-100 pl-3">
+          <span className="text-xs font-medium text-slate-500">เงินทอน</span>
+          <span className="font-mono font-semibold text-emerald-700">฿{fmt(calculation.changeAmount)}</span>
         </div>
       </div>
     </div>

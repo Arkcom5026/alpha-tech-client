@@ -15,9 +15,6 @@ const SaleCustomerSearch = ({
       onSubmit();
     }}
   >
-    <label htmlFor="sale-customer-search-input" className="block text-xs font-semibold text-slate-700">
-      ค้นหาลูกค้าในร้านนี้
-    </label>
     <div className="flex flex-col gap-2 sm:flex-row">
       <div className="relative min-w-0 flex-1">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-teal-700" />
@@ -29,6 +26,7 @@ const SaleCustomerSearch = ({
           value={query}
           onChange={(event) => onQueryChange(event.target.value)}
           placeholder="ชื่อ เบอร์โทร บริษัท หน่วยงาน อีเมล หรือเลขผู้เสียภาษี"
+          aria-label="ค้นหาลูกค้า"
           className="h-11 w-full rounded-xl border border-teal-200 bg-teal-50/60 pl-10 pr-3 text-sm font-medium text-slate-900 outline-none transition focus:border-teal-500 focus:bg-white focus:ring-2 focus:ring-teal-100"
         />
       </div>

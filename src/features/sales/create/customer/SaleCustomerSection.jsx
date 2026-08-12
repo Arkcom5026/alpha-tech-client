@@ -49,7 +49,7 @@ const SaleCustomerSection = ({ productSearchRef, clearTrigger, onClearFinish, on
     setSelectedCustomer(hydrated);
     setPendingCreate(false);
     setEditingSelectedCustomer(false);
-    setFormInfo('เลือกลูกค้าสำหรับรายการขายแล้ว');
+    setFormInfo('');
     setFormError('');
   }, [hydration]);
 

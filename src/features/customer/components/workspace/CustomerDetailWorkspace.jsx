@@ -36,6 +36,33 @@ const toEditor = (customer) => ({
   postcode: customer?.postcode || '',
 });
 
+const money = (value) => Number(value || 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+const FinancialGroupSummary = ({ customer }) => {
+  const status = customer?.financialGroupStatus || 'STANDALONE';
+  const ownerName = customer?.financialOwner?.companyName || `#${customer?.financialOwnerCustomerId || customer?.id}`;
+  return (
+    <section className="rounded-2xl border border-teal-200 bg-teal-50 p-5 shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div><h2 className="text-lg font-black text-slate-900">บัญชีการเงินของลูกค้า</h2><p className="mt-1 text-sm text-slate-600">{status === 'OWNER' ? 'หน่วยงานหลักและยอดรวมขององค์กร' : status === 'MEMBER' ? `ใช้บัญชีการเงินร่วมกับ ${ownerName}` : 'บัญชีการเงินเดี่ยว'}</p></div>
+        <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-teal-800">{status === 'OWNER' ? 'หน่วยงานหลัก' : status === 'MEMBER' ? 'บัญชีร่วม' : 'บัญชีเดี่ยว'}</span>
+      </div>
+      {status === 'MEMBER' ? (
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <div className="rounded-xl bg-white p-3"><p className="text-xs text-slate-500">Financial Owner</p><p className="mt-1 font-bold text-slate-900">{ownerName}</p></div>
+          <div className="rounded-xl bg-white p-3"><p className="text-xs text-slate-500">ลูกหนี้เฉพาะแผนกนี้</p><p className="mt-1 text-lg font-black text-rose-700">{money(customer.memberOutstandingDebt)}</p></div>
+          <div className="rounded-xl bg-white p-3 sm:col-span-2"><p className="font-semibold text-sky-800">Customer Money ใช้ร่วมกับหน่วยงานหลัก</p><p className="mt-1 text-xs text-slate-500">ยอดเงินไม่ถูกนับเป็นเงินเฉพาะของแผนกนี้</p></div>
+        </div>
+      ) : (
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <div className="rounded-xl bg-white p-3"><p className="text-xs text-slate-500">{status === 'OWNER' ? 'Customer Money พร้อมใช้รวม' : 'ยอดมัดจำพร้อมใช้'}</p><p className="mt-1 text-lg font-black text-emerald-700">{money(status === 'OWNER' ? customer.groupAvailableCustomerMoney : customer.depositBalance)}</p></div>
+          <div className="rounded-xl bg-white p-3"><p className="text-xs text-slate-500">{status === 'OWNER' ? 'ลูกหนี้รวมทั้งองค์กร' : 'หนี้คงค้าง'}</p><p className="mt-1 text-lg font-black text-rose-700">{money(status === 'OWNER' ? customer.groupOutstandingDebt : customer.outstandingDebt)}</p></div>
+        </div>
+      )}
+    </section>
+  );
+};
+
 const CustomerDetailWorkspace = ({ customerId, onBack }) => {
   const [customer, setCustomer] = useState(null);
   const [editor, setEditor] = useState(emptyEditor);
@@ -150,7 +177,8 @@ const CustomerDetailWorkspace = ({ customerId, onBack }) => {
 
         {loading ? (
           <section className="rounded-2xl border border-slate-200 bg-white p-10 text-center text-sm font-semibold text-slate-500">กำลังโหลดข้อมูลลูกค้า...</section>
-        ) : customer ? (
+        ) : customer ? (<>
+          <FinancialGroupSummary customer={customer} />
           <section className="space-y-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <div>
               <h2 className="text-lg font-black text-slate-900">ข้อมูลหลักของลูกค้า</h2>
@@ -190,6 +218,7 @@ const CustomerDetailWorkspace = ({ customerId, onBack }) => {
               <button type="button" onClick={save} disabled={!dirty || saving} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-teal-700 px-5 text-sm font-black text-white disabled:cursor-not-allowed disabled:bg-slate-300"><Save className="h-4 w-4" />{saving ? 'กำลังบันทึก...' : 'บันทึกการแก้ไข'}</button>
             </div>
           </section>
+        </>
         ) : null}
       </div>
     </div>

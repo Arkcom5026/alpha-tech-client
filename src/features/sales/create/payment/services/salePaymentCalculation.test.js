@@ -65,4 +65,45 @@ describe('sale payment calculation', () => {
       totalToPay: 450,
     });
   });
+
+  it('returns cash change while applying only the amount due as paid', () => {
+    const result = projectSalePaymentCalculation({
+      saleItems: [
+        { lineType: 'STOCK_ITEM', price: 700, priceAdjustment: 0 },
+      ],
+      paymentList: [
+        { method: 'CASH', amount: 1000 },
+      ],
+    });
+
+    expect(result).toMatchObject({
+      totalToPay: 700,
+      cashAmount: 1000,
+      totalPaid: 1000,
+      changeAmount: 300,
+      totalPaidNet: 700,
+      grandTotalPaid: 700,
+    });
+  });
+
+  it('calculates change from cash after non-cash payments are applied first', () => {
+    const result = projectSalePaymentCalculation({
+      saleItems: [
+        { lineType: 'STOCK_ITEM', price: 700, priceAdjustment: 0 },
+      ],
+      paymentList: [
+        { method: 'TRANSFER', amount: 200 },
+        { method: 'CASH', amount: 600 },
+      ],
+    });
+
+    expect(result).toMatchObject({
+      totalToPay: 700,
+      paidByOther: 200,
+      remainingToPay: 500,
+      changeAmount: 100,
+      totalPaidNet: 700,
+      grandTotalPaid: 700,
+    });
+  });
 });

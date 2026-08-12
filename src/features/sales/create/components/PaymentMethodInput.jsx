@@ -12,7 +12,7 @@ const moneyValue = (value) => {
 };
 
 const PaymentAmountField = ({ label, value, onChange, testId, disabled }) => (
-  <label className="grid gap-1.5">
+  <label className="grid grid-cols-[88px_minmax(0,1fr)] items-center gap-3">
     <span className="text-sm font-medium text-slate-700">{label}</span>
     <input
       type="number"
@@ -27,7 +27,7 @@ const PaymentAmountField = ({ label, value, onChange, testId, disabled }) => (
       onWheel={(event) => event.currentTarget.blur()}
       disabled={disabled}
       placeholder="0.00"
-      className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-right font-mono text-base font-semibold text-slate-900 outline-none transition focus:border-teal-500 focus:ring-2 focus:ring-teal-100 disabled:bg-slate-100 disabled:text-slate-400"
+      className="h-10 min-w-0 rounded-lg border border-slate-300 bg-white px-3 text-right font-mono text-sm font-semibold text-slate-900 outline-none transition focus:border-teal-500 focus:ring-2 focus:ring-teal-100 disabled:bg-slate-100 disabled:text-slate-400"
     />
   </label>
 );
@@ -43,7 +43,7 @@ const PaymentMethodInput = ({
   onCardRefChange,
   disabled = false,
 }) => (
-  <div className="grid w-full gap-3">
+  <div className="grid w-full gap-2.5">
     <PaymentAmountField
       label="เงินสด"
       value={cash}
@@ -55,15 +55,15 @@ const PaymentMethodInput = ({
     <PaymentAmountField label="บัตรเครดิต" value={credit} onChange={onCreditChange} disabled={disabled} />
 
     {(Number(credit) > 0 || String(cardRef).trim().length > 0) && (
-      <label className="grid gap-1.5">
-        <span className="text-sm font-medium text-slate-700">เลขอ้างอิงบัตร</span>
+      <label className="grid grid-cols-[88px_minmax(0,1fr)] items-center gap-3">
+        <span className="text-sm font-medium text-slate-700">เลขอ้างอิง</span>
         <input
           type="text"
           value={cardRef || ''}
           onChange={onCardRefChange}
           disabled={disabled}
           placeholder="เลขอ้างอิงจากเครื่องรับบัตร"
-          className="h-11 rounded-xl border border-slate-300 bg-white px-3 font-mono text-sm font-medium text-slate-900 outline-none transition focus:border-teal-500 focus:ring-2 focus:ring-teal-100 disabled:bg-slate-100"
+          className="h-10 min-w-0 rounded-lg border border-slate-300 bg-white px-3 font-mono text-sm font-medium text-slate-900 outline-none transition focus:border-teal-500 focus:ring-2 focus:ring-teal-100 disabled:bg-slate-100"
         />
       </label>
     )}

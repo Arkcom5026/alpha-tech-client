@@ -10,6 +10,7 @@ const read = (relativePath) => fs.readFileSync(path.resolve(__dirname, '..', rel
 const pageSource = read('src/features/product/create/pages/CreateProductPage.jsx');
 const assistantSource = read('src/features/product/create/components/ProductCreateTemplateAssistantPanel.jsx');
 const hookSource = read('src/features/product/create/hooks/useProductCreateTemplateAssistant.js');
+const editPageSource = read('src/features/product/pages/EditProductPage.jsx');
 const runtimeControllerSource = read('src/features/product/create/hooks/useProductCreateRuntimeController.js');
 const productApiSource = read('src/features/product/api/productApi.js');
 
@@ -44,7 +45,17 @@ assert.match(hookSource, /buildStoreScopedPath/);
 assert.match(hookSource, /currentPath\.indexOf\('\/pos\/'\)/);
 assert.match(hookSource, /buildStoreScopedPath\(location\.pathname, `\/pos\/stock\/products\/edit\/\$\{product\.id\}`\)/);
 assert.match(hookSource, /buildStoreScopedPath\(location\.pathname, `\/pos\/stock\/products\/edit\/\$\{productId\}`\)/);
+assert.match(hookSource, /clonedProductSnapshot:\s*product/);
 assert.doesNotMatch(hookSource, /quick-stock|QuickStock|quickStock/);
+
+assert.match(editPageSource, /useLocation/);
+assert.match(editPageSource, /location\.state\?\.clonedProductSnapshot/);
+assert.match(editPageSource, /Number\(snapshot\?\.id\) === Number\(id\)/);
+assert.match(editPageSource, /normalizeProductForEdit\(snapshot\)/);
+assert.match(editPageSource, /setProduct\(normalizedSnapshot\)/);
+assert.match(editPageSource, /fetchedProductIdRef\.current === String\(id\)/);
+assert.match(editPageSource, /const data = await getProductById\(id\)/);
+assert.match(editPageSource, /setProduct\(normalized\)/);
 
 assert.match(runtimeControllerSource, /createLocalOperationalProductCreateApi/);
 assert.match(runtimeControllerSource, /const response = await createLocalOperationalProductCreateApi\(payload\)/);

@@ -226,13 +226,13 @@ const SaleItemTable = ({ items = [], onRemove, onUpdate, onChangeSimpleQuantity,
           <thead className="border-b border-slate-200 bg-slate-50 text-xs font-semibold text-slate-600">
             <tr>
               <th className="px-3 py-3 text-center">#</th>
-              <th className="px-3 py-3">สินค้า</th>
+              <th className="w-[340px] px-3 py-3">สินค้า</th>
               <th className="px-3 py-3">บาร์โค้ด</th>
               <th className="px-3 py-3">SN</th>
               <th className="px-3 py-3 text-center">จำนวน</th>
               <th className="px-3 py-3 text-right">ราคาป้าย</th>
-              <th className="px-3 py-3 text-right">ปรับราคา (+/-)</th>
-              <th className="px-3 py-3">เหตุผล</th>
+              <th className="w-[110px] px-2 py-3 text-right">ปรับราคา (+/-)</th>
+              <th className="w-[120px] px-2 py-3">เหตุผล</th>
               <th className="px-3 py-3 text-right">ราคาหลังปรับ</th>
               <th className="px-3 py-3 text-right">ลดท้ายบิล</th>
               <th className="px-3 py-3 text-right">สุทธิ</th>
@@ -245,7 +245,7 @@ const SaleItemTable = ({ items = [], onRemove, onUpdate, onChangeSimpleQuantity,
               return (
                 <tr key={item.lineId} className="transition hover:bg-teal-50/40">
                   <td className="px-3 py-3 text-center font-mono text-slate-500">{index + 1}</td>
-                  <td className="max-w-[240px] truncate px-3 py-3 font-semibold text-slate-900" title={item.productName}>{item.productName}</td>
+                  <td className="max-w-[340px] truncate px-3 py-3 font-semibold text-slate-900" title={item.productName}>{item.productName}</td>
                   <td className="px-3 py-3 font-mono font-semibold text-slate-800">{values.barcode}</td>
                   <td className="px-3 py-3 font-mono font-semibold text-slate-800">{values.serialNumber}</td>
                   <td className="px-3 py-3 text-center">
@@ -263,21 +263,21 @@ const SaleItemTable = ({ items = [], onRemove, onUpdate, onChangeSimpleQuantity,
                     ) : values.quantity}
                   </td>
                   <td className="px-3 py-3 text-right font-mono text-slate-600">{formatMoney(values.basePrice)}</td>
-                  <td className="px-3 py-3 text-right">
+                  <td className="px-2 py-3 text-right">
                     <input
                       type="number"
                       inputMode="decimal"
                       min={-values.basePrice}
                       step="0.01"
-                      className={`${inputClass} w-28`}
+                      className={`${inputClass} w-24`}
                       value={values.priceAdjustment === 0 ? '' : values.priceAdjustment}
                       onChange={(event) => handlePriceAdjustmentChange(item, event)}
                     />
                   </td>
-                  <td className="px-3 py-3">
+                  <td className="px-2 py-3">
                     <input
                       type="text"
-                      className="h-11 w-36 rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-teal-600 focus:ring-2 focus:ring-teal-100"
+                      className="h-11 w-28 rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-teal-600 focus:ring-2 focus:ring-teal-100"
                       placeholder="เหตุผล"
                       value={item.adjustmentReason || ''}
                       onChange={(event) => handleAdjustmentReasonChange(item, event)}

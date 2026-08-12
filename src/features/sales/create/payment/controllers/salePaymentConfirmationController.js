@@ -29,7 +29,7 @@ export const executeSalePaymentConfirmation = async ({
 } = {}) => {
   const paymentIntent = mapSalePaymentIntent({
     paymentList,
-    changeAmount: calculation?.safeChangeAmount,
+    changeAmount: calculation?.changeAmount,
     depositUsed: calculation?.safeDepositUsed,
     selectedDeposit,
     cardRef,

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { UserRound } from 'lucide-react';
+import { PencilLine, UserRound } from 'lucide-react';
 import useSalesStore from '@/features/sales/store/salesStore';
 import useCustomerDepositStore from '@/features/customerDeposit/store/customerDepositStore';
 import useCustomerStore from '@/features/customer/store/customerStore';
@@ -16,6 +16,7 @@ const SaleCustomerSection = ({ productSearchRef, clearTrigger, onClearFinish, on
   const customerSearchRef = useRef(null);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [pendingCreate, setPendingCreate] = useState(false);
+  const [editingSelectedCustomer, setEditingSelectedCustomer] = useState(false);
   const [formInfo, setFormInfo] = useState('');
   const [formError, setFormError] = useState('');
 
@@ -47,6 +48,7 @@ const SaleCustomerSection = ({ productSearchRef, clearTrigger, onClearFinish, on
     if (!hydrated) return;
     setSelectedCustomer(hydrated);
     setPendingCreate(false);
+    setEditingSelectedCustomer(false);
     setFormInfo('เลือกลูกค้าสำหรับรายการขายแล้ว');
     setFormError('');
   }, [hydration]);
@@ -56,6 +58,7 @@ const SaleCustomerSection = ({ productSearchRef, clearTrigger, onClearFinish, on
     setCustomerId(null);
     clearCustomerAndDeposit();
     setPendingCreate(true);
+    setEditingSelectedCustomer(false);
     editor.clearEditor(mode === 'phone' ? { phone: query } : { name: query });
     setFormInfo('ไม่พบลูกค้าในร้านนี้ สามารถเพิ่มข้อมูลลูกค้าใหม่ได้');
     setFormError('');
@@ -79,6 +82,7 @@ const SaleCustomerSection = ({ productSearchRef, clearTrigger, onClearFinish, on
     editor.clearEditor();
     setSelectedCustomer(null);
     setPendingCreate(false);
+    setEditingSelectedCustomer(false);
     setFormInfo('');
     setFormError('');
     setCustomerId(null);
@@ -116,8 +120,10 @@ const SaleCustomerSection = ({ productSearchRef, clearTrigger, onClearFinish, on
     }
     try {
       const updated = await updateCustomer(selectedCustomer.id, editor.createPayload);
-      editor.hydrateCustomer(updated || { ...selectedCustomer, ...editor.createPayload });
-      setSelectedCustomer(updated || { ...selectedCustomer, ...editor.createPayload });
+      const nextCustomer = updated || { ...selectedCustomer, ...editor.createPayload };
+      editor.hydrateCustomer(nextCustomer);
+      setSelectedCustomer(nextCustomer);
+      setEditingSelectedCustomer(false);
       setFormInfo('อัปเดตข้อมูลลูกค้าสำเร็จ');
       setFormError('');
     } catch (error) {
@@ -142,6 +148,14 @@ const SaleCustomerSection = ({ productSearchRef, clearTrigger, onClearFinish, on
   });
 
   const provinceFilter = useMemo(() => undefined, []);
+  const compactCustomerName =
+    view.editor.editor.companyName || view.editor.editor.name || selectedCustomer?.name || 'ลูกค้าที่เลือก';
+  const compactContactName =
+    view.editor.editor.companyName && view.editor.editor.name ? view.editor.editor.name : '';
+  const compactPhone = view.editor.editor.phone || selectedCustomer?.phone || '-';
+  const compactDetail = [compactContactName, view.editor.editor.departmentName]
+    .filter(Boolean)
+    .join(' · ');
 
   return (
     <section className="w-full space-y-3 rounded-2xl border border-slate-200 bg-white p-3 md:p-4">
@@ -186,7 +200,31 @@ const SaleCustomerSection = ({ productSearchRef, clearTrigger, onClearFinish, on
         />
       ) : null}
 
-      {view.selection.selectedCustomer || view.selection.pendingCreate ? (
+      {view.selection.selectedCustomer && !editingSelectedCustomer ? (
+        <div className="flex items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50/70 px-3 py-3">
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold text-slate-900">{compactCustomerName}</p>
+            <p className="mt-0.5 text-xs font-medium text-slate-600">โทร {compactPhone}</p>
+            {compactDetail ? (
+              <p className="mt-1 truncate text-xs text-slate-500">{compactDetail}</p>
+            ) : null}
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setEditingSelectedCustomer(true);
+              setFormInfo('');
+              setFormError('');
+            }}
+            className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg border border-emerald-300 bg-white px-3 text-xs font-semibold text-emerald-800 transition hover:bg-emerald-100"
+          >
+            <PencilLine className="h-3.5 w-3.5" />
+            แก้ไข
+          </button>
+        </div>
+      ) : null}
+
+      {(view.selection.selectedCustomer && editingSelectedCustomer) || view.selection.pendingCreate ? (
         <SaleCustomerDetailsForm
           editor={view.editor.editor}
           selectedCustomer={view.selection.selectedCustomer}

@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 import {
   createOperationalProductFromTemplateApi,
@@ -213,8 +213,20 @@ const initialPreflight = {
   potentialDuplicates: [],
 };
 
+const buildStoreScopedPath = (pathname, targetPath) => {
+  const cleanTarget = targetPath.startsWith('/') ? targetPath : `/${targetPath}`;
+  const currentPath = String(pathname || '');
+  const posIndex = currentPath.indexOf('/pos/');
+
+  if (posIndex <= 0) return cleanTarget;
+
+  const prefix = currentPath.slice(0, posIndex).replace(/\/$/, '');
+  return `${prefix}${cleanTarget}`;
+};
+
 const useProductCreateTemplateAssistant = ({ productTypeId, brandId } = {}) => {
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [items, setItems] = useState([]);
   const [selectedTemplate, setSelectedTemplate] = useState(null);
@@ -298,8 +310,11 @@ const useProductCreateTemplateAssistant = ({ productTypeId, brandId } = {}) => {
   const openExistingProduct = useCallback((product) => {
     const productId = Number(product?.id);
     if (!Number.isFinite(productId) || productId <= 0) return;
-    navigate(`/pos/stock/products/edit/${productId}`);
-  }, [navigate]);
+
+    navigate(
+      buildStoreScopedPath(location.pathname, `/pos/stock/products/edit/${productId}`)
+    );
+  }, [location.pathname, navigate]);
 
   const useTemplate = useCallback(async (template = selectedTemplate) => {
     const templateProductId = Number(template?.templateProductId ?? template?.id);
@@ -325,13 +340,16 @@ const useProductCreateTemplateAssistant = ({ productTypeId, brandId } = {}) => {
         throw new Error('สร้าง Product จาก Template แล้วแต่ไม่พบ Operational Product ID');
       }
 
-      navigate(`/pos/stock/products/edit/${product.id}`, {
-        state: {
-          templateAssistedCreate: true,
-          templateProductId,
-          cloneCreated: response?.created === true,
-        },
-      });
+      navigate(
+        buildStoreScopedPath(location.pathname, `/pos/stock/products/edit/${product.id}`),
+        {
+          state: {
+            templateAssistedCreate: true,
+            templateProductId,
+            cloneCreated: response?.created === true,
+          },
+        }
+      );
 
       return product;
     } catch (error) {
@@ -340,7 +358,7 @@ const useProductCreateTemplateAssistant = ({ productTypeId, brandId } = {}) => {
     } finally {
       setCloning(false);
     }
-  }, [navigate, preflight.checked, preflight.checking, selectedTemplate]);
+  }, [location.pathname, navigate, preflight.checked, preflight.checking, selectedTemplate]);
 
   return {
     items,

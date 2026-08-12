@@ -39,7 +39,11 @@ assert.match(hookSource, /Number\(product\?\.templateProductId\) === templatePro
 assert.match(hookSource, /potentialDuplicates/);
 assert.match(hookSource, /if \(!preflight\.checked \|\| preflight\.checking\)/);
 assert.match(hookSource, /createOperationalProductFromTemplateApi/);
-assert.match(hookSource, /navigate\(`\/pos\/stock\/products\/edit\/\$\{product\.id\}`/);
+assert.match(hookSource, /useLocation/);
+assert.match(hookSource, /buildStoreScopedPath/);
+assert.match(hookSource, /currentPath\.indexOf\('\/pos\/'\)/);
+assert.match(hookSource, /buildStoreScopedPath\(location\.pathname, `\/pos\/stock\/products\/edit\/\$\{product\.id\}`\)/);
+assert.match(hookSource, /buildStoreScopedPath\(location\.pathname, `\/pos\/stock\/products\/edit\/\$\{productId\}`\)/);
 assert.doesNotMatch(hookSource, /quick-stock|QuickStock|quickStock/);
 
 assert.match(runtimeControllerSource, /createLocalOperationalProductCreateApi/);

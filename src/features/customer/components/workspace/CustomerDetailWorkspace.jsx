@@ -15,7 +15,7 @@ const CUSTOMER_TYPES = [
 
 const fieldClass = 'h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-900 outline-none transition focus:border-teal-500 focus:ring-2 focus:ring-teal-100';
 const emptyEditor = {
-  name: '', phone: '', email: '', type: 'INDIVIDUAL', companyName: '', taxId: '',
+  name: '', phone: '', email: '', type: 'INDIVIDUAL', companyName: '', departmentName: '', financialOwnerCustomerId: '', taxId: '',
   addressDetail: '', provinceCode: '', districtCode: '', subdistrictCode: '', postcode: '',
 };
 
@@ -25,6 +25,8 @@ const toEditor = (customer) => ({
   email: customer?.email || '',
   type: customer?.type || 'INDIVIDUAL',
   companyName: customer?.companyName || '',
+  departmentName: customer?.departmentName || '',
+  financialOwnerCustomerId: customer?.financialOwnerCustomerId || '',
   taxId: customer?.taxId || '',
   addressDetail: customer?.addressDetail || '',
   provinceCode: customer?.provinceCode || '',
@@ -79,6 +81,8 @@ const CustomerDetailWorkspace = ({ customerId, onBack }) => {
         phone: editor.phone,
         type: editor.type,
         companyName: editor.companyName,
+        departmentName: isOrganization ? editor.departmentName : '',
+        financialOwnerCustomerId: isOrganization ? (Number(editor.financialOwnerCustomerId) || null) : null,
         taxId: taxIdDigits || '',
         addressDetail: editor.addressDetail,
         subdistrictCode: editor.subdistrictCode || '',
@@ -148,6 +152,8 @@ const CustomerDetailWorkspace = ({ customerId, onBack }) => {
               {isOrganization ? <>
                 <label className="text-sm font-semibold text-slate-700">ชื่อบริษัทหรือหน่วยงาน<input className={`${fieldClass} mt-1.5`} value={editor.companyName} onChange={(e) => patch({ companyName: e.target.value })} /></label>
                 <label className="text-sm font-semibold text-slate-700">เลขประจำตัวผู้เสียภาษี<input inputMode="numeric" className={`${fieldClass} mt-1.5 font-mono`} value={editor.taxId} onChange={(e) => patch({ taxId: e.target.value.replace(/\D/g, '').slice(0, 13) })} placeholder="13 หลัก" />{editor.taxId && !taxIdentityReady ? <span className="mt-1 block text-xs font-semibold text-amber-700">ต้องมี 13 หลักจึงพร้อมสำหรับใบกำกับภาษีเต็มรูป</span> : null}</label>
+                <label className="text-sm font-semibold text-slate-700">แผนก / กอง / สำนัก<input className={`${fieldClass} mt-1.5`} value={editor.departmentName} onChange={(e) => patch({ departmentName: e.target.value })} placeholder="เว้นว่างสำหรับหน่วยงานหลัก" /></label>
+                <label className="text-sm font-semibold text-slate-700">รหัสเจ้าของบัญชีการเงิน<input inputMode="numeric" className={`${fieldClass} mt-1.5 font-mono`} value={editor.financialOwnerCustomerId} onChange={(e) => patch({ financialOwnerCustomerId: e.target.value.replace(/\D/g, '') })} placeholder="เว้นว่างหากเป็นหน่วยงานหลัก" /><span className="mt-1 block text-xs font-normal text-slate-400">เชื่อมได้เฉพาะหน่วยงานหลักสาขาเดียวกันและข้อมูลนิติบุคคลตรงกัน</span></label>
               </> : null}
               <label className="text-sm font-semibold text-slate-700">ชื่อผู้ติดต่อ<input className={`${fieldClass} mt-1.5`} value={editor.name} onChange={(e) => patch({ name: e.target.value })} /></label>
               <label className="text-sm font-semibold text-slate-700">เบอร์โทร<input className={`${fieldClass} mt-1.5 font-mono`} value={editor.phone} onChange={(e) => patch({ phone: e.target.value })} /></label>

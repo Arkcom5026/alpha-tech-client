@@ -115,7 +115,7 @@ const QuickSalePage = ({
           </SaleWorkspacePanel>
         </div>
 
-        <div className="space-y-4 xl:col-span-8">
+        <div className="xl:col-span-8">
           <SaleWorkspacePanel
             title={sourceLocked ? 'สินค้าจากใบจอง' : 'ค้นหาและเพิ่มสินค้า'}
             description={sourceLocked ? 'รายการถูกล็อกตามข้อมูลในใบจองเดิม' : 'ค้นหาด้วยบาร์โค้ด หมายเลขเครื่อง ชื่อ หรือรุ่นสินค้า'}
@@ -153,25 +153,25 @@ const QuickSalePage = ({
               </div>
             )}
           </SaleWorkspacePanel>
-
-          <SaleWorkspacePanel
-            title="รายการสินค้าในตะกร้า"
-            description="ตรวจสอบจำนวน ราคา และส่วนลดก่อนรับชำระเงิน"
-            locked={cartLocked}
-            className="min-h-[360px]"
-          >
-            <div className="overflow-x-auto rounded-xl border border-slate-200">
-              <SaleItemTable
-                items={sale.cart.items}
-                onRemove={sourceLocked ? () => {} : sale.cart.remove}
-                onUpdate={sourceLocked ? () => {} : sale.cart.update}
-                onChangeSimpleQuantity={sourceLocked ? () => {} : sale.cart.setSimpleQuantity}
-                billDiscount={sale.presentation.billDiscount}
-              />
-            </div>
-          </SaleWorkspacePanel>
         </div>
       </div>
+
+      <SaleWorkspacePanel
+        title="รายการสินค้าในตะกร้า"
+        description="ตรวจสอบจำนวน ราคา และส่วนลดก่อนรับชำระเงิน"
+        locked={cartLocked}
+        className="min-h-[360px]"
+      >
+        <div className="overflow-x-auto rounded-xl border border-slate-200">
+          <SaleItemTable
+            items={sale.cart.items}
+            onRemove={sourceLocked ? () => {} : sale.cart.remove}
+            onUpdate={sourceLocked ? () => {} : sale.cart.update}
+            onChangeSimpleQuantity={sourceLocked ? () => {} : sale.cart.setSimpleQuantity}
+            billDiscount={sale.presentation.billDiscount}
+          />
+        </div>
+      </SaleWorkspacePanel>
 
       <SaleWorkspacePanel
         title="สรุปยอดและรับชำระเงิน"

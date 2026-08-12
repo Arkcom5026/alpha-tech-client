@@ -347,6 +347,7 @@ const useProductCreateTemplateAssistant = ({ productTypeId, brandId } = {}) => {
             templateAssistedCreate: true,
             templateProductId,
             cloneCreated: response?.created === true,
+            clonedProductSnapshot: product,
           },
         }
       );

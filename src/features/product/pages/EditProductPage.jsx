@@ -1,7 +1,7 @@
 // ✅ src/features/product/pages/EditProductPage.jsx
 
 import { useEffect, useState, useRef, useMemo } from 'react';
-import { useParams } from 'react-router-dom';
+import { useLocation, useParams } from 'react-router-dom';
 import ProductForm from '../components/ProductForm';
 import ProductImage from '../components/ProductImage';
 
@@ -23,42 +23,66 @@ const isTemplateRuntimeProduct = (product) => {
   return false;
 };
 
+const normalizeImages = (imgs = []) =>
+  imgs.map((it) => {
+    const publicIdString =
+      (typeof it?.public_id === 'string' && it.public_id) ||
+      (typeof it?.publicId === 'string' && it.publicId) ||
+      (typeof it?.cloudinaryPublicId === 'string' && it.cloudinaryPublicId) ||
+      null;
+
+    return {
+      id: it?.id ?? it?._id ?? null,
+      url: it?.url ?? it?.secure_url ?? it?.secureUrl ?? it?.src ?? '',
+      caption: it?.caption ?? '',
+      isCover: Boolean(it?.isCover),
+      public_id: publicIdString,
+      publicId: publicIdString,
+    };
+  });
+
+const normalizeProductForEdit = (data) => {
+  if (!data) return null;
+  const serverImages = Array.isArray(data.images)
+    ? data.images
+    : Array.isArray(data.productImages)
+      ? data.productImages
+      : [];
+
+  return {
+    ...data,
+    images: normalizeImages(serverImages),
+  };
+};
+
 const EditProductPage = () => {
+  const location = useLocation();
+  const { id } = useParams();
+  const routeProductId = Number(id);
+  const routeSnapshot = location.state?.clonedProductSnapshot;
+  const validRouteSnapshot =
+    routeSnapshot &&
+    Number.isFinite(routeProductId) &&
+    Number(routeSnapshot?.id) === routeProductId &&
+    !isTemplateRuntimeProduct(routeSnapshot)
+      ? normalizeProductForEdit(routeSnapshot)
+      : null;
+
   const [previewUrls, setPreviewUrls] = useState([]);
   const [captions, setCaptions] = useState([]);
   const [coverIndex, setCoverIndex] = useState(null);
-  const { id } = useParams();
-  const [product, setProduct] = useState(null);
+  const [product, setProduct] = useState(validRouteSnapshot);
   const [error, setError] = useState('');
   const [selectedFiles, setSelectedFiles] = useState([]);
   const imageRef = useRef();
-  const [oldImages, setOldImages] = useState([]);
-  const hasFetched = useRef(false);
+  const [oldImages, setOldImages] = useState(validRouteSnapshot?.images || []);
+  const fetchedProductIdRef = useRef(null);
   const [isUpdating, setIsUpdating] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [saveLocked, setSaveLocked] = useState(false);
 
   const { updateProduct, getProductById, deleteImage, ensureDropdownsAction, dropdownsLoaded } = useProductStore();
 
-  // --- helpers ---
-  const normalizeImages = (imgs = []) =>
-    imgs.map((it) => {
-      const publicIdString =
-        (typeof it?.public_id === 'string' && it.public_id) ||
-        (typeof it?.publicId === 'string' && it.publicId) ||
-        (typeof it?.cloudinaryPublicId === 'string' && it.cloudinaryPublicId) ||
-        null;
-  
-      return {
-        id: it?.id ?? it?._id ?? null,
-        url: it?.url ?? it?.secure_url ?? it?.secureUrl ?? it?.src ?? '',
-        caption: it?.caption ?? '',
-        isCover: Boolean(it?.isCover),
-        public_id: publicIdString,
-        publicId: publicIdString,
-      };
-    });
-  
   useEffect(() => {
     if (!dropdownsLoaded) {
       ensureDropdownsAction();
@@ -66,8 +90,25 @@ const EditProductPage = () => {
   }, [dropdownsLoaded, ensureDropdownsAction]);
 
   useEffect(() => {
-    if (!id || hasFetched.current) return;
-    hasFetched.current = true;
+    if (!id) return;
+    if (fetchedProductIdRef.current === String(id)) return;
+    fetchedProductIdRef.current = String(id);
+
+    setError('');
+
+    const snapshot = location.state?.clonedProductSnapshot;
+    if (
+      snapshot &&
+      Number(snapshot?.id) === Number(id) &&
+      !isTemplateRuntimeProduct(snapshot)
+    ) {
+      const normalizedSnapshot = normalizeProductForEdit(snapshot);
+      setProduct(normalizedSnapshot);
+      setOldImages(normalizedSnapshot?.images || []);
+    } else {
+      setProduct(null);
+      setOldImages([]);
+    }
 
     const fetchData = async () => {
       try {
@@ -83,20 +124,9 @@ const EditProductPage = () => {
           return;
         }
 
-        const serverImages = Array.isArray(data.images)
-          ? data.images
-          : Array.isArray(data.productImages)
-          ? data.productImages
-          : [];
-
-        const images = normalizeImages(serverImages);
-
-        setProduct({
-          ...data,
-          images,
-        });
-
-        setOldImages(images);
+        const normalized = normalizeProductForEdit(data);
+        setProduct(normalized);
+        setOldImages(normalized?.images || []);
       } catch (err) {
         console.error('โหลดข้อมูลสินค้าล้มเหลว:', err);
         setError('ไม่สามารถโหลดข้อมูลสินค้าได้');
@@ -104,14 +134,13 @@ const EditProductPage = () => {
     };
 
     fetchData();
-  }, [id, getProductById]);
+  }, [id, getProductById, location.state]);
 
   const mappedProduct = useMemo(() => {
     if (!product) return null;
 
-    // ✅ กำหนดโหมดแบบปลอดภัย (ไม่ไปยุ่งกับ Template)
     const resolveMode = (p) => {
-      if (p?.mode) return p.mode; // ค่าจากเซิร์ฟเวอร์มีสิทธิ์สูงสุด
+      if (p?.mode) return p.mode;
       if (typeof p?.noSN === 'boolean') return p.noSN ? 'SIMPLE' : 'STRUCTURED';
       if (p?.trackSerialNumber === true) return 'STRUCTURED';
       return 'SIMPLE';
@@ -128,13 +157,10 @@ const EditProductPage = () => {
   }, [product]);
 
   const handleUpdate = async (formData) => {
-    // ถ้าผู้ใช้กดบันทึกอีกครั้งหลังเคยบันทึกสำเร็จแล้ว ให้ปลดล็อกก่อน (กัน state ค้าง)
     if (saveLocked) setSaveLocked(false);
 
     setIsUpdating(true);
 
-    // Stock mode changes must not rewrite Template trace identity.
-    // templateProductId is preserved by the backend and is not part of this normal edit payload.
     if (formData?.mode === 'SIMPLE') {
       formData.noSN = true;
       formData.trackSerialNumber = false;
@@ -151,12 +177,10 @@ const EditProductPage = () => {
       formData.images = uploadedImages;
       formData.imagesToDelete = imagesToDelete;
 
-      // ลบรูปเก่าที่ผู้ใช้ติ๊กเลือก
       for (const img of imagesToDelete) {
         if (img == null || img === '') continue;
-      
+
         try {
-          // ✅ ถ้าเป็นเลข ให้ส่งเป็น imageId (ตรงกับ BE ที่รองรับ imageId แล้ว)
           if (typeof img === 'number') {
             await deleteImage({ productId: id, imageId: img });
           } else {
@@ -166,11 +190,9 @@ const EditProductPage = () => {
           console.warn('⚠️ ลบภาพไม่สำเร็จ:', err);
         }
       }
-      
-      // บันทึกสินค้า
+
       await updateProduct(id, formData);
 
-      // 🔄 โหลดข้อมูลล่าสุดกลับมาโชว์
       try {
         const fresh = await getProductById(id);
         if (fresh && isTemplateRuntimeProduct(fresh)) {
@@ -178,24 +200,14 @@ const EditProductPage = () => {
           return;
         }
         if (fresh) {
-          const serverImages = Array.isArray(fresh.images)
-            ? fresh.images
-            : Array.isArray(fresh.productImages)
-            ? fresh.productImages
-            : [];
-          const images = normalizeImages(serverImages);
-
-          setProduct({
-            ...fresh,
-            images,
-          });
-          setOldImages(images);
+          const normalized = normalizeProductForEdit(fresh);
+          setProduct(normalized);
+          setOldImages(normalized?.images || []);
         }
       } catch (e) {
         console.warn('⚠️ รีเฟรชข้อมูลสินค้าไม่สำเร็จหลังบันทึก:', e);
       }
 
-      // เคลียร์สถานะไฟล์/พรีวิวชั่วคราว
       setSelectedFiles([]);
       setPreviewUrls([]);
       setCaptions([]);
@@ -250,7 +262,6 @@ const EditProductPage = () => {
         defaultValues={mappedProduct}
         onSubmit={handleUpdate}
         mode="edit"
-        // ✅ หลังบันทึกสำเร็จ ให้ disable ปุ่มบันทึก (จนกว่าจะมีการแก้ไขใหม่)
         submitDisabled={isUpdating || saveLocked}
         submitLabel={saveLocked ? 'บันทึกแล้ว' : undefined}
         onAnyChange={() => {
@@ -258,7 +269,6 @@ const EditProductPage = () => {
         }}
       />
 
-      {/* ✅ Inline status (แทน dialog) */}
       {(isUpdating || showSuccess) && (
         <div
           className={`mt-4 rounded-lg border px-4 py-3 text-sm font-medium ${

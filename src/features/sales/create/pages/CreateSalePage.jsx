@@ -73,7 +73,7 @@ const QuickSalePage = ({
   const activeHeldCart = sale.heldCart.panel.activeCart;
 
   return (
-    <div className="mx-auto min-h-full w-full max-w-[1600px] space-y-4 p-3 text-slate-800 selection:bg-teal-200 selection:text-teal-950 md:p-5">
+    <div className="mx-auto min-h-full w-full max-w-[1560px] space-y-3 p-2.5 text-slate-800 selection:bg-teal-200 selection:text-teal-950 md:p-4">
       {sourceContext && (
         <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm leading-6 text-blue-900">
           รายการสินค้าถูกอ้างอิงจากใบจองเดิม จำนวน ราคา และรายการสต๊อกจึงถูกล็อกไว้จนกว่าจะยืนยันการขาย
@@ -95,7 +95,7 @@ const QuickSalePage = ({
         </div>
       )}
 
-      <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[3fr_2fr]">
+      <div className="grid grid-cols-1 items-start gap-3 xl:grid-cols-[3fr_2fr]">
         <div className={checkoutLocked ? 'pointer-events-none opacity-60' : ''} aria-disabled={checkoutLocked}>
           <CustomerSection
             phoneInputRef={phoneInputRef}
@@ -113,7 +113,7 @@ const QuickSalePage = ({
             title={sourceLocked ? 'สินค้าจากใบจอง' : 'ค้นหาสินค้า'}
             locked={cartLocked}
             action={
-              <div className="flex flex-wrap items-center justify-end gap-2">
+              <div className="flex flex-wrap items-center justify-end gap-1.5">
                 <SalePriceTypeSelector
                   value={sale.presentation.selectedPriceType}
                   onChange={sale.presentation.setSelectedPriceType}
@@ -122,9 +122,9 @@ const QuickSalePage = ({
                 <button
                   type="button"
                   onClick={() => setIsHelpOpen(true)}
-                  className="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2"
+                  className="inline-flex h-8 items-center justify-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-semibold text-slate-700 transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2"
                 >
-                  <CircleHelp className="h-4 w-4" />
+                  <CircleHelp className="h-3.5 w-3.5" />
                   คู่มือ
                 </button>
               </div>
@@ -132,7 +132,7 @@ const QuickSalePage = ({
           >
             {!sourceLocked && (
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
                 <input
                   ref={barcodeInputRef}
                   type="text"
@@ -140,7 +140,7 @@ const QuickSalePage = ({
                   onKeyDown={sale.itemSearch.handleBarcodeSearch}
                   disabled={checkoutLocked}
                   data-testid="pos-sale-barcode-input"
-                  className="h-11 w-full rounded-xl border border-slate-300 bg-white pl-10 pr-4 text-sm font-medium text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 disabled:cursor-not-allowed disabled:bg-slate-100"
+                  className="h-10 w-full rounded-lg border border-slate-300 bg-white pl-9 pr-3 text-xs font-medium text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 disabled:cursor-not-allowed disabled:bg-slate-100"
                 />
               </div>
             )}
@@ -148,10 +148,7 @@ const QuickSalePage = ({
         </div>
       </div>
 
-      <SaleWorkspacePanel
-        locked={cartLocked}
-        className="min-h-[360px]"
-      >
+      <SaleWorkspacePanel locked={cartLocked} className="min-h-[300px]">
         <div className="overflow-x-auto rounded-xl border border-slate-200">
           <SaleItemTable
             items={sale.cart.items}

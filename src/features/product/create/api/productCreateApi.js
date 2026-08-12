@@ -174,6 +174,7 @@ export const uploadProductCreateImages = async (productId, {
   files = [],
   captions = [],
   coverIndex = 0,
+  syncTemplateImage = false,
 } = {}) => {
   const safeProductId = Number(productId);
   const safeFiles = normalizeFiles(files).filter((file) => {
@@ -184,6 +185,7 @@ export const uploadProductCreateImages = async (productId, {
   });
 
   const safeCaptions = normalizeCaptions(captions);
+  const normalizedCoverIndex = Number(coverIndex);
 
   if (!Number.isFinite(safeProductId) || safeProductId <= 0) {
     throw new Error('productId is required for product image upload');
@@ -200,7 +202,8 @@ export const uploadProductCreateImages = async (productId, {
       const formData = new FormData();
       formData.append('file', file);
       formData.append('caption', String(safeCaptions?.[i] ?? ''));
-      formData.append('coverIndex', String(coverIndex ?? 0));
+      formData.append('coverIndex', String(i === normalizedCoverIndex ? 0 : -1));
+      if (syncTemplateImage) formData.append('syncTemplateImage', 'true');
 
       const { data } = await apiClient.post(
         `products/${safeProductId}/images/upload-full`,
@@ -217,6 +220,7 @@ export const uploadProductCreateImages = async (productId, {
           secure_url: image.secure_url || image.url,
           caption: image.caption || '',
           isCover: !!image.isCover,
+          templateImageSync: data?.templateImageSync || null,
         });
       });
     } catch (err) {

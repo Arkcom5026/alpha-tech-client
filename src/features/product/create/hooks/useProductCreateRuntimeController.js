@@ -328,6 +328,7 @@ const useProductCreateRuntimeController = () => {
       const payload = buildPayload(formValues, branchId);
       const response = await createLocalOperationalProductCreateApi(payload);
       const created = extractCreatedProduct(response);
+      const shouldSyncTemplateImages = response?.templateSync?.status === 'REVERSE_CLONED';
 
       if (!created?.id) {
         throw new Error('สร้างสินค้าแล้วแต่ไม่พบ productId สำหรับอัปโหลดรูปภาพ');
@@ -338,6 +339,7 @@ const useProductCreateRuntimeController = () => {
           files: runtime.selectedFiles,
           captions: runtime.captions,
           coverIndex: runtime.coverIndex,
+          syncTemplateImage: shouldSyncTemplateImages,
         });
       }
 

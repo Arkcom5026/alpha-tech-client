@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 
 import {
   createOperationalProductFromTemplateApi,
+  getProductsForPos,
   searchTemplateProducts,
 } from '@/features/product/api/productApi';
 
@@ -14,6 +15,28 @@ const extractTemplateItems = (response) => {
     response?.data,
     response?.data?.items,
     response?.data?.data,
+    response?.result,
+    response?.result?.items,
+  ];
+
+  for (const candidate of candidates) {
+    if (Array.isArray(candidate)) return candidate;
+  }
+
+  return [];
+};
+
+const extractOperationalItems = (response) => {
+  if (Array.isArray(response)) return response;
+
+  const candidates = [
+    response?.items,
+    response?.rows,
+    response?.products,
+    response?.data,
+    response?.data?.items,
+    response?.data?.rows,
+    response?.data?.products,
     response?.result,
     response?.result?.items,
   ];
@@ -45,11 +68,113 @@ const extractOperationalProduct = (response) => {
   return null;
 };
 
+const normalizeText = (value) =>
+  String(value ?? '')
+    .trim()
+    .toLocaleLowerCase('th-TH')
+    .replace(/\s+/g, ' ');
+
+const getTemplateId = (item) => Number(item?.templateProductId ?? item?.id) || null;
+
+const getProductTypeName = (item) =>
+  item?.productTypeName || item?.productType?.name || item?.typeName || '';
+
+const getBrandName = (item) =>
+  item?.brandName || item?.brand?.name || '';
+
+const getBarcode = (item) =>
+  item?.saleBarcode || item?.barcode || item?.ean || item?.skuBarcode || '';
+
+const dedupeById = (items = []) => {
+  const map = new Map();
+  items.forEach((item) => {
+    const id = Number(item?.id);
+    if (!Number.isFinite(id) || id <= 0) return;
+    if (!map.has(id)) map.set(id, item);
+  });
+  return Array.from(map.values());
+};
+
+const scorePotentialDuplicate = (template, product) => {
+  const templateName = normalizeText(template?.name);
+  const productName = normalizeText(product?.name);
+  const templateBrand = normalizeText(getBrandName(template));
+  const productBrand = normalizeText(getBrandName(product));
+  const templateType = normalizeText(getProductTypeName(template));
+  const productType = normalizeText(getProductTypeName(product));
+  const templateBarcode = normalizeText(getBarcode(template));
+  const productBarcode = normalizeText(getBarcode(product));
+
+  let score = 0;
+  const reasons = [];
+
+  if (templateBarcode && productBarcode && templateBarcode === productBarcode) {
+    score += 100;
+    reasons.push('Barcode ตรงกัน');
+  }
+
+  if (templateName && productName && templateName === productName) {
+    score += 60;
+    reasons.push('ชื่อสินค้าตรงกัน');
+  } else if (
+    templateName &&
+    productName &&
+    (templateName.includes(productName) || productName.includes(templateName))
+  ) {
+    score += 30;
+    reasons.push('ชื่อสินค้าใกล้เคียง');
+  }
+
+  if (templateBrand && productBrand && templateBrand === productBrand) {
+    score += 15;
+    reasons.push('แบรนด์ตรงกัน');
+  }
+
+  if (templateType && productType && templateType === productType) {
+    score += 10;
+    reasons.push('ประเภทสินค้าตรงกัน');
+  }
+
+  return { score, reasons };
+};
+
+const buildPreflightResult = (template, products = []) => {
+  const templateProductId = getTemplateId(template);
+  const uniqueProducts = dedupeById(products);
+
+  const exactLinkedProduct = uniqueProducts.find(
+    (product) => Number(product?.templateProductId) === templateProductId
+  ) || null;
+
+  const potentialDuplicates = uniqueProducts
+    .filter((product) => product?.id !== exactLinkedProduct?.id)
+    .map((product) => ({
+      product,
+      ...scorePotentialDuplicate(template, product),
+    }))
+    .filter((item) => item.score >= 40)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 5);
+
+  return {
+    exactLinkedProduct,
+    potentialDuplicates,
+    checked: true,
+  };
+};
+
 const getErrorMessage = (error, fallback) =>
   error?.response?.data?.message ||
   error?.response?.data?.error ||
   error?.message ||
   fallback;
+
+const initialPreflight = {
+  checking: false,
+  checked: false,
+  exactLinkedProduct: null,
+  potentialDuplicates: [],
+};
 
 const useProductCreateTemplateAssistant = ({ productTypeId, brandId } = {}) => {
   const navigate = useNavigate();
@@ -59,11 +184,13 @@ const useProductCreateTemplateAssistant = ({ productTypeId, brandId } = {}) => {
   const [loading, setLoading] = useState(false);
   const [cloning, setCloning] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [preflight, setPreflight] = useState(initialPreflight);
 
   const search = useCallback(async (query = '') => {
     setLoading(true);
     setErrorMessage('');
     setSelectedTemplate(null);
+    setPreflight(initialPreflight);
 
     try {
       const cleanQuery = String(query || '').trim();
@@ -88,21 +215,71 @@ const useProductCreateTemplateAssistant = ({ productTypeId, brandId } = {}) => {
     }
   }, [productTypeId, brandId]);
 
-  const selectTemplate = useCallback((template) => {
-    setSelectedTemplate(template || null);
-    setErrorMessage('');
+  const runPreflight = useCallback(async (template) => {
+    if (!template) return initialPreflight;
+
+    setPreflight({ ...initialPreflight, checking: true });
+
+    try {
+      const name = String(template?.name || '').trim();
+      const barcode = String(getBarcode(template) || '').trim();
+
+      const searches = [];
+      if (name) {
+        searches.push(getProductsForPos({ search: name, takeNum: 30, skipNum: 0 }));
+      }
+      if (barcode && barcode !== name) {
+        searches.push(getProductsForPos({ search: barcode, takeNum: 30, skipNum: 0 }));
+      }
+
+      const settled = await Promise.allSettled(searches);
+      const products = settled
+        .filter((result) => result.status === 'fulfilled')
+        .flatMap((result) => extractOperationalItems(result.value));
+
+      const next = buildPreflightResult(template, products);
+      setPreflight({ ...next, checking: false });
+      return next;
+    } catch (error) {
+      setPreflight({ ...initialPreflight, checked: true });
+      setErrorMessage(getErrorMessage(error, 'ตรวจสอบสินค้าที่มีอยู่ในร้านไม่สำเร็จ'));
+      return { ...initialPreflight, checked: true };
+    }
   }, []);
+
+  const selectTemplate = useCallback(async (template) => {
+    const nextTemplate = template || null;
+    setSelectedTemplate(nextTemplate);
+    setErrorMessage('');
+    setPreflight(initialPreflight);
+
+    if (nextTemplate) {
+      await runPreflight(nextTemplate);
+    }
+  }, [runPreflight]);
 
   const clearTemplate = useCallback(() => {
     setSelectedTemplate(null);
     setErrorMessage('');
+    setPreflight(initialPreflight);
   }, []);
+
+  const openExistingProduct = useCallback((product) => {
+    const productId = Number(product?.id);
+    if (!Number.isFinite(productId) || productId <= 0) return;
+    navigate(`/pos/stock/products/edit/${productId}`);
+  }, [navigate]);
 
   const useTemplate = useCallback(async (template = selectedTemplate) => {
     const templateProductId = Number(template?.templateProductId ?? template?.id);
 
     if (!Number.isFinite(templateProductId) || templateProductId <= 0) {
       setErrorMessage('ไม่พบ Template Product ID ที่ใช้สร้างสินค้า');
+      return null;
+    }
+
+    if (!preflight.checked || preflight.checking) {
+      setErrorMessage('กรุณารอระบบตรวจสอบสินค้าในร้านก่อนใช้ Template');
       return null;
     }
 
@@ -132,7 +309,7 @@ const useProductCreateTemplateAssistant = ({ productTypeId, brandId } = {}) => {
     } finally {
       setCloning(false);
     }
-  }, [navigate, selectedTemplate]);
+  }, [navigate, preflight.checked, preflight.checking, selectedTemplate]);
 
   return {
     items,
@@ -140,10 +317,12 @@ const useProductCreateTemplateAssistant = ({ productTypeId, brandId } = {}) => {
     loading,
     cloning,
     errorMessage,
+    preflight,
     search,
     selectTemplate,
     clearTemplate,
     useTemplate,
+    openExistingProduct,
   };
 };
 

@@ -8,9 +8,11 @@ const ProductCreateTemplateAssistantPanel = ({
   loading = false,
   cloning = false,
   disabled = false,
+  preflight,
   onSearch,
   onSelect,
   onUseTemplate,
+  onOpenExistingProduct,
   onClear,
 }) => {
   const [query, setQuery] = useState('');
@@ -18,6 +20,12 @@ const ProductCreateTemplateAssistantPanel = ({
 
   const selectedId = getTemplateId(selectedTemplate);
   const hasResults = Array.isArray(items) && items.length > 0;
+  const checking = preflight?.checking === true;
+  const checked = preflight?.checked === true;
+  const exactLinkedProduct = preflight?.exactLinkedProduct || null;
+  const potentialDuplicates = Array.isArray(preflight?.potentialDuplicates)
+    ? preflight.potentialDuplicates
+    : [];
 
   const previewRows = useMemo(() => {
     if (!selectedTemplate) return [];
@@ -111,30 +119,84 @@ const ProductCreateTemplateAssistantPanel = ({
 
       {selectedTemplate ? (
         <div className="mt-4 rounded-xl border border-emerald-200 bg-white p-4">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-            <div className="min-w-0">
-              <div className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Template Preview</div>
-              <div className="mt-1 text-lg font-semibold text-slate-900">{selectedTemplate.name}</div>
-              <div className="mt-3 grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
-                {previewRows.map(([label, value]) => (
-                  <div key={label} className="rounded-lg bg-slate-50 px-3 py-2">
-                    <div className="text-xs text-slate-500">{label}</div>
-                    <div className="mt-0.5 font-medium text-slate-800">{String(value)}</div>
-                  </div>
-                ))}
-              </div>
-              <p className="mt-3 text-xs text-slate-500">
-                เมื่อใช้ Template ระบบจะสร้าง Operational Product ของร้าน แล้วพาไปหน้าแก้ไขเพื่อ Review/Edit ก่อนใช้งานต่อ
-              </p>
+          <div className="min-w-0">
+            <div className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Template Preview</div>
+            <div className="mt-1 text-lg font-semibold text-slate-900">{selectedTemplate.name}</div>
+            <div className="mt-3 grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
+              {previewRows.map(([label, value]) => (
+                <div key={label} className="rounded-lg bg-slate-50 px-3 py-2">
+                  <div className="text-xs text-slate-500">{label}</div>
+                  <div className="mt-0.5 font-medium text-slate-800">{String(value)}</div>
+                </div>
+              ))}
             </div>
+          </div>
 
+          <div className="mt-4 border-t border-slate-200 pt-4">
+            <div className="text-sm font-semibold text-slate-900">ตรวจสอบกับสินค้าในร้านก่อนสร้าง</div>
+
+            {checking ? (
+              <div className="mt-2 rounded-xl border border-sky-200 bg-sky-50 px-3 py-3 text-sm text-sky-800">
+                กำลังเปรียบเทียบ Template กับ Operational Product ในร้าน...
+              </div>
+            ) : null}
+
+            {!checking && checked && exactLinkedProduct ? (
+              <div className="mt-2 rounded-xl border border-amber-300 bg-amber-50 px-3 py-3 text-sm text-amber-900">
+                <div className="font-semibold">มี Product ที่สร้างจาก Template นี้อยู่ในร้านแล้ว</div>
+                <div className="mt-1">#{exactLinkedProduct.id} · {exactLinkedProduct.name || 'ไม่ระบุชื่อสินค้า'}</div>
+                <button
+                  type="button"
+                  onClick={() => onOpenExistingProduct?.(exactLinkedProduct)}
+                  className="mt-3 rounded-lg border border-amber-400 bg-white px-3 py-1.5 text-xs font-semibold hover:bg-amber-100"
+                >
+                  เปิด Product เดิม
+                </button>
+              </div>
+            ) : null}
+
+            {!checking && checked && !exactLinkedProduct && potentialDuplicates.length > 0 ? (
+              <div className="mt-2 rounded-xl border border-amber-200 bg-amber-50/70 p-3">
+                <div className="text-sm font-semibold text-amber-900">พบสินค้าในร้านที่อาจซ้ำหรือใกล้เคียง</div>
+                <p className="mt-1 text-xs text-amber-800">
+                  รายการเหล่านี้เป็นเพียงคำเตือนจากความคล้ายกัน ไม่ได้ถูกผูกกับ Template อัตโนมัติ
+                </p>
+                <div className="mt-3 space-y-2">
+                  {potentialDuplicates.map(({ product, reasons }) => (
+                    <div key={`potential-${product.id}`} className="rounded-lg border border-amber-200 bg-white p-3">
+                      <div className="text-sm font-medium text-slate-900">#{product.id} · {product.name || 'ไม่ระบุชื่อสินค้า'}</div>
+                      <div className="mt-1 text-xs text-slate-500">{reasons.join(' · ')}</div>
+                      <button
+                        type="button"
+                        onClick={() => onOpenExistingProduct?.(product)}
+                        className="mt-2 rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium hover:bg-slate-50"
+                      >
+                        เปิดดู Product นี้
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+            {!checking && checked && !exactLinkedProduct && potentialDuplicates.length === 0 ? (
+              <div className="mt-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-3 text-sm text-emerald-800">
+                ยังไม่พบ Product ในร้านที่ตรงหรือใกล้เคียงกับ Template นี้
+              </div>
+            ) : null}
+          </div>
+
+          <div className="mt-4 flex flex-col gap-2 border-t border-slate-200 pt-4 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-xs text-slate-500">
+              ความคล้ายกันไม่ใช่การผูกข้อมูลอัตโนมัติ ร้านยังเลือกสร้าง Product ใหม่จาก Template ได้เอง
+            </p>
             <button
               type="button"
               onClick={() => onUseTemplate?.(selectedTemplate)}
-              disabled={disabled || cloning || !selectedId}
+              disabled={disabled || cloning || checking || !checked || !selectedId}
               className="shrink-0 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {cloning ? 'กำลังสร้างจาก Template...' : 'ใช้ Template นี้'}
+              {cloning ? 'กำลังสร้างจาก Template...' : checking ? 'กำลังตรวจสอบ...' : 'ใช้ Template นี้'}
             </button>
           </div>
         </div>

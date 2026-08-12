@@ -15,25 +15,32 @@ const productApiSource = read('src/features/product/api/productApi.js');
 
 assert.match(pageSource, /ProductCreateTemplateAssistantPanel/);
 assert.match(pageSource, /useProductCreateTemplateAssistant/);
+assert.match(pageSource, /preflight=\{templateAssistant\.preflight\}/);
+assert.match(pageSource, /onOpenExistingProduct=\{templateAssistant\.openExistingProduct\}/);
 assert.match(pageSource, /หรือสร้าง Product เอง/);
 assert.match(pageSource, /<ProductCreateSubmitBar/);
 
 assert.match(assistantSource, /ใช้ Template ช่วยสร้างสินค้า/);
-assert.match(assistantSource, /ตัวเลือกเสริมสำหรับลดงานกรอกข้อมูล/);
+assert.match(assistantSource, /ตรวจสอบกับสินค้าในร้านก่อนสร้าง/);
+assert.match(assistantSource, /มี Product ที่สร้างจาก Template นี้อยู่ในร้านแล้ว/);
+assert.match(assistantSource, /พบสินค้าในร้านที่อาจซ้ำหรือใกล้เคียง/);
+assert.match(assistantSource, /ความคล้ายกันไม่ใช่การผูกข้อมูลอัตโนมัติ/);
 assert.match(assistantSource, /ใช้ Template นี้/);
-assert.match(assistantSource, /Review\/Edit/);
 
 assert.match(hookSource, /searchTemplateProducts/);
-assert.match(hookSource, /productTypeId:\s*productTypeId\s*\|\|\s*undefined/);
-assert.match(hookSource, /brandId:\s*brandId\s*\|\|\s*undefined/);
+assert.match(hookSource, /getProductsForPos/);
+assert.match(hookSource, /scorePotentialDuplicate/);
+assert.match(hookSource, /Number\(product\?\.templateProductId\) === templateProductId/);
+assert.match(hookSource, /potentialDuplicates/);
+assert.match(hookSource, /if \(!preflight\.checked \|\| preflight\.checking\)/);
 assert.match(hookSource, /createOperationalProductFromTemplateApi/);
-assert.match(hookSource, /templateProductId\s*=\s*Number\(template\?\.templateProductId\s*\?\?\s*template\?\.id\)/);
 assert.match(hookSource, /navigate\(`\/pos\/stock\/products\/edit\/\$\{product\.id\}`/);
 assert.doesNotMatch(hookSource, /quick-stock|QuickStock|quickStock/);
 
 assert.match(runtimeControllerSource, /createLocalOperationalProductCreateApi/);
 assert.match(runtimeControllerSource, /const response = await createLocalOperationalProductCreateApi\(payload\)/);
 
+assert.match(productApiSource, /apiClient\.get\('products\/pos\/search'/);
 assert.match(productApiSource, /apiClient\.get\('products\/template\/search'/);
 assert.match(productApiSource, /apiClient\.post\('products\/pos\/create-from-template'/);
 

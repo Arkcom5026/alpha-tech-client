@@ -23,6 +23,8 @@ const DeliveryCreditSettlementPrintPage = () => {
   if (error) return <div className="p-5 text-rose-700">{error}</div>;
   if (!record) return <div className="p-8 text-center text-slate-500">กำลังโหลด...</div>;
 
+  const isCancelled = record.status === 'CANCELLED';
+
   return (
     <div className="min-h-screen bg-slate-100 p-4 print:bg-white print:p-0">
       <style>{`@media print { @page { size: ${mode === 'SHORT' ? '80mm auto' : 'A4'}; margin: ${mode === 'SHORT' ? '4mm' : '12mm'}; } .no-print { display:none!important; } }`}</style>
@@ -33,10 +35,11 @@ const DeliveryCreditSettlementPrintPage = () => {
         <button type="button" onClick={() => window.print()} className="rounded-lg bg-indigo-700 px-4 py-2 text-sm font-semibold text-white">พิมพ์</button>
       </div>
       <article className={`mx-auto bg-white text-slate-950 ${mode === 'SHORT' ? 'w-[72mm] p-3 text-[11px]' : 'max-w-[190mm] p-8 text-sm'} print:w-auto print:max-w-none print:p-0`}>
-        <header className="border-b border-slate-900 pb-3 text-center"><h1 className={mode === 'SHORT' ? 'text-lg font-bold' : 'text-2xl font-bold'}>เอกสารตัดยอดใบส่งของเครดิต</h1><div>CUSTOMER MONEY DELIVERY CREDIT SETTLEMENT</div></header>
-        <div className="mt-3 grid grid-cols-2 gap-2"><div><b>เลขที่:</b> {record.code}</div><div className="text-right"><b>วันที่:</b> {new Date(record.settledAt).toLocaleString('th-TH')}</div><div className="col-span-2"><b>ลูกค้า:</b> {customerLabel(record.customer)}</div></div>
+        <header className="border-b border-slate-900 pb-3 text-center"><h1 className={mode === 'SHORT' ? 'text-lg font-bold' : 'text-2xl font-bold'}>เอกสารตัดยอดใบส่งของเครดิต</h1><div>CUSTOMER MONEY DELIVERY CREDIT SETTLEMENT</div>{isCancelled && <div className="mt-2 border-y-2 border-slate-900 py-1 text-lg font-black">ยกเลิกแล้ว / CANCELLED</div>}</header>
+        <div className="mt-3 grid grid-cols-2 gap-2"><div><b>เลขที่:</b> {record.code}</div><div className="text-right"><b>วันที่:</b> {new Date(record.settledAt).toLocaleString('th-TH')}</div><div className="col-span-2"><b>ลูกค้า:</b> {customerLabel(record.customer)}</div><div className="col-span-2"><b>สถานะ:</b> {isCancelled ? 'ยกเลิกแล้ว' : 'ใช้งาน'}</div></div>
+        {isCancelled && <div className="mt-3 border border-slate-500 p-2"><b>เหตุผลการยกเลิก:</b> {record.cancelReason || '-'}{record.cancelledAt && <div><b>ยกเลิกเมื่อ:</b> {new Date(record.cancelledAt).toLocaleString('th-TH')}</div>}</div>}
         <div className="mt-4 space-y-3">{record.lines.map((line) => <div key={line.id} className="border-b border-dashed border-slate-300 pb-2"><div className="font-semibold">{line.saleCode} · {line.description}</div><div className="flex justify-between"><span>{line.saleItemType} #{line.saleItemId}</span><span>฿{money(line.appliedAmount)}</span></div></div>)}</div>
-        <div className="mt-4 flex justify-between border-y border-slate-900 py-3 text-lg font-bold"><span>ยอดตัดรวม</span><span>฿{money(record.totalAmount)}</span></div>
+        <div className={`mt-4 flex justify-between border-y border-slate-900 py-3 text-lg font-bold ${isCancelled ? 'line-through' : ''}`}><span>ยอดตัดรวม</span><span>฿{money(record.totalAmount)}</span></div>
         {record.note && <div className="mt-3"><b>หมายเหตุ:</b> {record.note}</div>}
         <footer className="mt-6 text-center text-[10px] text-slate-600">เอกสารนี้บันทึกการนำ Customer Money ไปตัดยอดใบส่งของเครดิตเท่านั้น ไม่สร้าง stock movement และไม่ตัดสต๊อกซ้ำ</footer>
       </article>

@@ -8,8 +8,10 @@ export const getEligibleDeliveryCredits = async (params) => {
   return unwrap(response);
 };
 
-export const createDeliveryCreditSettlement = async (payload) => {
-  const response = await apiClient.post(BASE_PATH, payload);
+export const createDeliveryCreditSettlement = async (payload, idempotencyKey = null) => {
+  const response = await apiClient.post(BASE_PATH, payload, {
+    headers: idempotencyKey ? { 'X-Idempotency-Key': idempotencyKey } : undefined,
+  });
   return unwrap(response);
 };
 
@@ -20,5 +22,10 @@ export const listDeliveryCreditSettlements = async (params = {}) => {
 
 export const getDeliveryCreditSettlement = async (id) => {
   const response = await apiClient.get(`${BASE_PATH}/${id}`);
+  return unwrap(response);
+};
+
+export const cancelDeliveryCreditSettlement = async (id, cancelReason) => {
+  const response = await apiClient.post(`${BASE_PATH}/${id}/cancel`, { cancelReason });
   return unwrap(response);
 };

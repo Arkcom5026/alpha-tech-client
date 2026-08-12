@@ -5,6 +5,7 @@ import { listDeliveryCreditSettlements } from '../api/deliveryCreditSettlementAp
 
 const money = (value) => Number(value || 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const customerLabel = (customer) => customer?.companyName || customer?.name || '-';
+const statusLabel = (status) => status === 'CANCELLED' ? 'ยกเลิกแล้ว' : status === 'ACTIVE' ? 'ใช้งาน' : status || '-';
 
 const DeliveryCreditSettlementListPage = () => {
   const navigate = useNavigate();
@@ -52,7 +53,10 @@ const DeliveryCreditSettlementListPage = () => {
           <table className="w-full min-w-[850px] text-sm">
             <thead className="bg-slate-50 text-left text-xs text-slate-500"><tr><th className="px-4 py-3">เลขเอกสาร</th><th className="px-4 py-3">วันที่</th><th className="px-4 py-3">ลูกค้า</th><th className="px-4 py-3 text-right">ยอดตัด</th><th className="px-4 py-3">สถานะ</th><th className="px-4 py-3 text-right">จัดการ</th></tr></thead>
             <tbody className="divide-y divide-slate-100">
-              {loading ? <tr><td colSpan="6" className="px-4 py-10 text-center text-slate-500">กำลังโหลด...</td></tr> : rows.length === 0 ? <tr><td colSpan="6" className="px-4 py-10 text-center text-slate-500">ยังไม่มีรายการตัดยอดใบส่งของ</td></tr> : rows.map((row) => <tr key={row.id}><td className="px-4 py-3 font-semibold">{row.code}</td><td className="px-4 py-3">{new Date(row.settledAt).toLocaleString('th-TH')}</td><td className="px-4 py-3">{customerLabel(row.customer)}</td><td className="px-4 py-3 text-right font-bold">฿{money(row.totalAmount)}</td><td className="px-4 py-3">{row.status}</td><td className="px-4 py-3 text-right"><button type="button" onClick={() => navigate(`./${row.id}`)} className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold">รายละเอียด</button></td></tr>)}
+              {loading ? <tr><td colSpan="6" className="px-4 py-10 text-center text-slate-500">กำลังโหลด...</td></tr> : rows.length === 0 ? <tr><td colSpan="6" className="px-4 py-10 text-center text-slate-500">ยังไม่มีรายการตัดยอดใบส่งของ</td></tr> : rows.map((row) => {
+                const cancelled = row.status === 'CANCELLED';
+                return <tr key={row.id} className={cancelled ? 'bg-slate-50 text-slate-500' : ''}><td className={`px-4 py-3 font-semibold ${cancelled ? 'line-through' : ''}`}>{row.code}</td><td className="px-4 py-3">{new Date(row.settledAt).toLocaleString('th-TH')}</td><td className="px-4 py-3">{customerLabel(row.customer)}</td><td className={`px-4 py-3 text-right font-bold ${cancelled ? 'line-through' : ''}`}>฿{money(row.totalAmount)}</td><td className="px-4 py-3"><span className={`rounded-full px-2.5 py-1 text-xs font-bold ${cancelled ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700'}`}>{statusLabel(row.status)}</span></td><td className="px-4 py-3 text-right"><button type="button" onClick={() => navigate(`./${row.id}`)} className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700">รายละเอียด</button></td></tr>;
+              })}
             </tbody>
           </table>
         </div>

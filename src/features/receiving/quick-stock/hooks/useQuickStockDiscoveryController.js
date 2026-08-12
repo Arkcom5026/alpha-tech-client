@@ -7,9 +7,7 @@ import {
   dedupeDiscoveryProducts,
   getBrandName,
   getProductBrandId,
-  getProductTypeId,
   getProductTypeName,
-  hideTemplateResultsWhenOperationalExists,
   isOperationalBranchProduct,
   isTemplateCatalogProduct,
   normalizeOperationalProductList,
@@ -78,39 +76,39 @@ const useQuickStockDiscoveryController = ({
   }, [loadDropdownsAction, selectedProductTypeId]);
 
   const filteredProducts = useMemo(() => {
-    const ptId = toNumberOrNull(selectedProductTypeId);
     const brandId = toNumberOrNull(selectedBrandId);
     const q = normalizeText(committedKeyword);
 
-    return hideTemplateResultsWhenOperationalExists(
-      productList.filter((product) => {
-        if (ptId && Number(getProductTypeId(product)) !== Number(ptId)) return false;
-        if (brandId && Number(getProductBrandId(product)) !== Number(brandId)) return false;
-        if (!q) return true;
+    // ProductType filtering is authoritative on the backend for both sources.
+    // Operational search receives the branch-local ProductType id, while
+    // Template search maps that id through globalProductTypeId into T01.
+    // Re-applying the branch-local id here would incorrectly hide Template rows.
+    return productList.filter((product) => {
+      if (brandId && Number(getProductBrandId(product)) !== Number(brandId)) return false;
+      if (!q) return true;
 
-        const searchable = [
-          product?.name,
-          product?.title,
-          product?.sku,
-          product?.barcode,
-          product?.model,
-          product?.code,
-          getBrandName(product),
-          getProductTypeName(product),
-        ]
-          .filter(Boolean)
-          .join(" ")
-          .toLowerCase();
+      const searchable = [
+        product?.name,
+        product?.title,
+        product?.sku,
+        product?.barcode,
+        product?.model,
+        product?.code,
+        getBrandName(product),
+        getProductTypeName(product),
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
 
-        return searchable.includes(q);
-      })
-    ).sort((a, b) => {
+      return searchable.includes(q);
+    }).sort((a, b) => {
       const sourceRankA = a.__quickStockDiscoverySource === "OPERATIONAL" ? 0 : 1;
       const sourceRankB = b.__quickStockDiscoverySource === "OPERATIONAL" ? 0 : 1;
       if (sourceRankA !== sourceRankB) return sourceRankA - sourceRankB;
       return String(a?.name || "").localeCompare(String(b?.name || ""));
     });
-  }, [productList, selectedProductTypeId, selectedBrandId, committedKeyword]);
+  }, [productList, selectedBrandId, committedKeyword]);
 
   const selectedProduct = useMemo(() => {
     if (!selectedProductId) return null;

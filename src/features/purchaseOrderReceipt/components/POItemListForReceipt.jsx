@@ -1,10 +1,13 @@
 // src/features/purchaseOrderReceipt/components/POItemListForReceipt.jsx
 
 import React, { useEffect, useMemo, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import usePurchaseOrderReceiptStore from '../store/purchaseOrderReceiptStore';
-import { Save, Edit2, X, CheckCircle2, AlertTriangle, AlertCircle, ShoppingCart, Percent, Layers, Landmark } from 'lucide-react';
+import { Save, Edit2, X, CheckCircle2, AlertTriangle, AlertCircle, ShoppingCart, Percent, Layers, Landmark, Barcode } from 'lucide-react';
 
 const POItemListForReceipt = ({ poId, receiptId, setReceiptId, formData, items }) => {
+  const navigate = useNavigate();
+  const { shopSlug } = useParams();
   const {
     loadOrderByIdAction,
     loadOrderById,
@@ -131,7 +134,7 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, formData, items }
     if (Number.isNaN(costPrice) || costPrice < 0) return;
 
     setReceiptPrices((prev) => ({ ...prev, [itemId]: costPrice }));
-    const quantity = receiptQuantities[itemId] ?? 0;
+    const quantity = receiptQuantities[item.id] ?? 0;
     calculateTotal(itemId, quantity, costPrice);
   };
 
@@ -227,6 +230,12 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, formData, items }
     setFinalizing(false);
   };
 
+  const handleContinueToBarcodePrep = () => {
+    if (!finalizedOnce || !receiptId) return;
+    const targetSlug = shopSlug || 'advancetech';
+    navigate(`/${targetSlug}/pos/purchases/barcodes/preview/${receiptId}`);
+  };
+
   if (loading || !isInitialized) {
     return (
       <div className="p-8 flex items-center justify-center gap-2 text-slate-400 font-bold select-none">
@@ -281,11 +290,23 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, formData, items }
       )}
 
       {(finalizeSuccess || isPoFinalized) && (
-        <div className="rounded-2xl border border-emerald-500/20 bg-emerald-50 p-3 text-xs font-black text-emerald-700 flex items-center gap-2 shadow-sm animate-fadeIn">
-          <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-          <span>
-            {finalizeSuccess || 'สถานะรับสินค้าของ PO ได้รับการยืนยันจาก Stock Receive แล้ว'}
-          </span>
+        <div className="rounded-2xl border border-emerald-500/20 bg-emerald-50 p-3 text-xs font-black text-emerald-700 flex flex-col gap-3 shadow-sm animate-fadeIn sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-2">
+            <CheckCircle2 className="mt-0.5 w-4 h-4 shrink-0 text-emerald-600" />
+            <span>
+              {finalizeSuccess || 'สถานะรับสินค้าของ PO ได้รับการยืนยันจาก Stock Receive แล้ว'}
+            </span>
+          </div>
+          {finalizedOnce && receiptId ? (
+            <button
+              type="button"
+              onClick={handleContinueToBarcodePrep}
+              className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-teal-700 px-4 text-xs font-black text-white transition hover:bg-teal-800 active:scale-95"
+            >
+              <Barcode className="h-4 w-4" />
+              เตรียม Barcode / SN
+            </button>
+          ) : null}
         </div>
       )}
 

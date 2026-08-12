@@ -12,7 +12,9 @@ import ProductCreateImageSection from '../components/ProductCreateImageSection';
 import ProductCreateInventorySection from '../components/ProductCreateInventorySection';
 import ProductCreatePriceSection from '../components/ProductCreatePriceSection';
 import ProductCreateSubmitBar from '../components/ProductCreateSubmitBar';
+import ProductCreateTemplateAssistantPanel from '../components/ProductCreateTemplateAssistantPanel';
 import useProductCreateRuntimeController from '../hooks/useProductCreateRuntimeController';
+import useProductCreateTemplateAssistant from '../hooks/useProductCreateTemplateAssistant';
 
 const CreateProductPage = () => {
   const {
@@ -53,6 +55,11 @@ const CreateProductPage = () => {
     setCaptions,
     setCoverIndex,
   } = runtime;
+
+  const templateAssistant = useProductCreateTemplateAssistant({
+    productTypeId: formValues.productTypeId,
+    brandId: formValues.brandId,
+  });
 
   const formDisabled = isProcessing || saveLocked;
 
@@ -96,7 +103,7 @@ const CreateProductPage = () => {
       <div className="mb-4 flex flex-col gap-1">
         <h2 className="text-xl font-bold">เพิ่มสินค้า</h2>
         <p className="text-sm text-slate-500">
-          Product Create Runtime ใช้ API และ Component เฉพาะของงานเพิ่มสินค้า
+          สร้าง Product ของร้านได้เองตามปกติ หรือใช้ Template Store เป็นตัวช่วยลดงานกรอกข้อมูล
         </p>
       </div>
 
@@ -105,6 +112,32 @@ const CreateProductPage = () => {
           {errorMessage}
         </div>
       )}
+
+      <div className="mb-6">
+        <ProductCreateTemplateAssistantPanel
+          items={templateAssistant.items}
+          selectedTemplate={templateAssistant.selectedTemplate}
+          loading={templateAssistant.loading}
+          cloning={templateAssistant.cloning}
+          disabled={formDisabled}
+          onSearch={templateAssistant.search}
+          onSelect={templateAssistant.selectTemplate}
+          onUseTemplate={templateAssistant.useTemplate}
+          onClear={templateAssistant.clearTemplate}
+        />
+
+        {templateAssistant.errorMessage ? (
+          <div className="mt-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+            {templateAssistant.errorMessage}
+          </div>
+        ) : null}
+      </div>
+
+      <div className="mb-4 flex items-center gap-3 text-xs font-medium uppercase tracking-wide text-slate-400">
+        <span className="h-px flex-1 bg-slate-200" />
+        <span>หรือสร้าง Product เอง</span>
+        <span className="h-px flex-1 bg-slate-200" />
+      </div>
 
       {createdProduct?.id && (
         <div className="mb-4 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-900">

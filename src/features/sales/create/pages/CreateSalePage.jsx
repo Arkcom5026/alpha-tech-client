@@ -148,7 +148,7 @@ const QuickSalePage = ({
         </div>
       </div>
 
-      <SaleWorkspacePanel locked={cartLocked} className="min-h-[300px]">
+      <SaleWorkspacePanel locked={cartLocked} className="min-h-[240px]">
         <div className="overflow-x-auto rounded-xl border border-slate-200">
           <SaleItemTable
             items={sale.cart.items}

@@ -95,8 +95,8 @@ const QuickSalePage = ({
         </div>
       )}
 
-      <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-12">
-        <div className="xl:col-span-4">
+      <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[3fr_2fr]">
+        <div>
           <SaleWorkspacePanel
             title="ข้อมูลลูกค้า"
             description="ค้นหาลูกค้าเดิมหรือกรอกข้อมูลที่จำเป็นสำหรับรายการขาย"
@@ -115,7 +115,7 @@ const QuickSalePage = ({
           </SaleWorkspacePanel>
         </div>
 
-        <div className="xl:col-span-8">
+        <div>
           <SaleWorkspacePanel
             title={sourceLocked ? 'สินค้าจากใบจอง' : 'ค้นหาและเพิ่มสินค้า'}
             description={sourceLocked ? 'รายการถูกล็อกตามข้อมูลในใบจองเดิม' : 'ค้นหาด้วยบาร์โค้ด หมายเลขเครื่อง ชื่อ หรือรุ่นสินค้า'}

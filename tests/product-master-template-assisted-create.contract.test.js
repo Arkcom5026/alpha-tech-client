@@ -29,6 +29,11 @@ assert.match(assistantSource, /ใช้ Template นี้/);
 
 assert.match(hookSource, /searchTemplateProducts/);
 assert.match(hookSource, /getProductsForPos/);
+assert.match(hookSource, /buildOperationalSearchTerms/);
+assert.match(hookSource, /replace\(\/\\\(\[\^\)\]\*\\\)\/g/);
+assert.match(hookSource, /name\.match\(\/\[A-Za-z0-9\]/);
+assert.match(hookSource, /DUPLICATE_SEARCH_NOISE_TOKENS/);
+assert.match(hookSource, /const searches = searchTerms\.map/);
 assert.match(hookSource, /scorePotentialDuplicate/);
 assert.match(hookSource, /Number\(product\?\.templateProductId\) === templateProductId/);
 assert.match(hookSource, /potentialDuplicates/);

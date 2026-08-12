@@ -222,13 +222,13 @@ const SaleItemTable = ({ items = [], onRemove, onUpdate, onChangeSimpleQuantity,
       </div>
 
       <div className="hidden overflow-x-auto rounded-2xl border border-slate-200 lg:block">
-        <table className="min-w-[1320px] w-full border-collapse text-left text-sm">
+        <table className="min-w-[1260px] w-full border-collapse text-left text-sm">
           <thead className="border-b border-slate-200 bg-slate-50 text-xs font-semibold text-slate-600">
             <tr>
               <th className="px-3 py-3 text-center">#</th>
               <th className="px-3 py-3">สินค้า</th>
-              <th className="px-3 py-3">ประเภท</th>
-              <th className="px-3 py-3">บาร์โค้ด / SN</th>
+              <th className="px-3 py-3">บาร์โค้ด</th>
+              <th className="px-3 py-3">SN</th>
               <th className="px-3 py-3 text-center">จำนวน</th>
               <th className="px-3 py-3 text-right">ราคาป้าย</th>
               <th className="px-3 py-3 text-right">ปรับราคา (+/-)</th>
@@ -246,19 +246,8 @@ const SaleItemTable = ({ items = [], onRemove, onUpdate, onChangeSimpleQuantity,
                 <tr key={item.lineId} className="transition hover:bg-teal-50/40">
                   <td className="px-3 py-3 text-center font-mono text-slate-500">{index + 1}</td>
                   <td className="max-w-[240px] truncate px-3 py-3 font-semibold text-slate-900" title={item.productName}>{item.productName}</td>
-                  <td className="px-3 py-3 text-slate-600">{item.lineType === 'SIMPLE' ? 'แบบจำนวน' : 'รายชิ้น / SN'}</td>
-                  <td className="px-3 py-3">
-                    <div className="space-y-1 text-xs">
-                      <div className="flex items-baseline gap-2">
-                        <span className="w-14 shrink-0 font-medium text-slate-500">บาร์โค้ด</span>
-                        <span className="break-all font-mono font-semibold text-slate-800">{values.barcode}</span>
-                      </div>
-                      <div className="flex items-baseline gap-2">
-                        <span className="w-14 shrink-0 font-medium text-slate-500">SN</span>
-                        <span className="break-all font-mono font-semibold text-slate-800">{values.serialNumber}</span>
-                      </div>
-                    </div>
-                  </td>
+                  <td className="px-3 py-3 font-mono font-semibold text-slate-800">{values.barcode}</td>
+                  <td className="px-3 py-3 font-mono font-semibold text-slate-800">{values.serialNumber}</td>
                   <td className="px-3 py-3 text-center">
                     {item.lineType === 'SIMPLE' ? (
                       <input
@@ -288,8 +277,8 @@ const SaleItemTable = ({ items = [], onRemove, onUpdate, onChangeSimpleQuantity,
                   <td className="px-3 py-3">
                     <input
                       type="text"
-                      className="h-11 w-52 rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-teal-600 focus:ring-2 focus:ring-teal-100"
-                      placeholder="เหตุผลการปรับราคา"
+                      className="h-11 w-36 rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-teal-600 focus:ring-2 focus:ring-teal-100"
+                      placeholder="เหตุผล"
                       value={item.adjustmentReason || ''}
                       onChange={(event) => handleAdjustmentReasonChange(item, event)}
                     />

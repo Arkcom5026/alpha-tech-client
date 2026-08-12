@@ -45,8 +45,7 @@ const BillPrintOptions = ({
   if (!isValidSetter) return null;
 
   return (
-    <fieldset className="space-y-2 border-t border-slate-200 pt-3">
-      <legend className="text-xs font-semibold text-slate-700">เอกสารหลังบันทึกการขาย</legend>
+    <fieldset className="space-y-2">
       <div
         className="grid grid-cols-1 gap-2 sm:grid-cols-2"
         role="radiogroup"

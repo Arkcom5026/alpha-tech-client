@@ -21,8 +21,10 @@ assert.match(assistantSource, /ใช้ Template นี้/);
 assert.match(assistantSource, /Review\/Edit/);
 
 assert.match(hookSource, /searchTemplateProducts/);
+assert.match(hookSource, /productTypeId:\s*productTypeId\s*\|\|\s*undefined/);
+assert.match(hookSource, /brandId:\s*brandId\s*\|\|\s*undefined/);
 assert.match(hookSource, /createOperationalProductFromTemplateApi/);
-assert.match(hookSource, /templateProductId:\s*productTypeId/);
+assert.match(hookSource, /templateProductId\s*=\s*Number\(template\?\.templateProductId\s*\?\?\s*template\?\.id\)/);
 assert.match(hookSource, /navigate\(`\/pos\/stock\/products\/edit\/\$\{product\.id\}`/);
 assert.doesNotMatch(hookSource, /quick-stock|QuickStock|quickStock/);
 

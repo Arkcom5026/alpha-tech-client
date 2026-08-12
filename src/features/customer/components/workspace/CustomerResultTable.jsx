@@ -58,6 +58,7 @@ const CustomerResultTable = ({
                 {customer.companyName && customer.name ? (
                   <div className="text-xs text-slate-500">{customer.companyName}</div>
                 ) : null}
+                {customer.departmentName ? <div className="text-xs font-semibold text-teal-700">{customer.departmentName}</div> : null}
                 {customer.taxId ? (
                   <div className="text-xs text-slate-500">เลขภาษี {customer.taxId}</div>
                 ) : null}

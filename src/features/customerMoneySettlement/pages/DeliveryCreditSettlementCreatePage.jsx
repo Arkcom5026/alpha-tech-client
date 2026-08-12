@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useCustomerMoneyReceiveCustomerSearch } from '@/features/customerMoneyReceive/customer/useCustomerMoneyReceiveCustomerSearch';
 import { createDeliveryCreditSettlement, getEligibleDeliveryCredits } from '../api/deliveryCreditSettlementApi';
 
-const customerLabel = (customer) => customer?.companyName || customer?.name || '-';
+const customerLabel = (customer) => [customer?.companyName || customer?.name, customer?.departmentName].filter(Boolean).join(' · ') || '-';
 const money = (value) => Number(value || 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const lineKey = (saleId, line) => `${saleId}:${line.lineType}:${line.saleItemId}`;
 const createCommandKey = () => globalThis.crypto?.randomUUID?.() || `cms-${Date.now()}-${Math.random().toString(36).slice(2)}`;

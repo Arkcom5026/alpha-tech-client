@@ -120,9 +120,11 @@ const CreateProductPage = () => {
           loading={templateAssistant.loading}
           cloning={templateAssistant.cloning}
           disabled={formDisabled}
+          preflight={templateAssistant.preflight}
           onSearch={templateAssistant.search}
           onSelect={templateAssistant.selectTemplate}
           onUseTemplate={templateAssistant.useTemplate}
+          onOpenExistingProduct={templateAssistant.openExistingProduct}
           onClear={templateAssistant.clearTemplate}
         />
 

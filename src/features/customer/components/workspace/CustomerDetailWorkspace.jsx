@@ -4,6 +4,7 @@ import { toast } from 'react-toastify';
 import AddressForm from '@/features/address/components/AddressForm';
 import {
   getManagedCustomerDetail,
+  listManagedCustomers,
   updateCustomerProfilePos,
 } from '@/features/customer/api/customerApi';
 
@@ -41,6 +42,7 @@ const CustomerDetailWorkspace = ({ customerId, onBack }) => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [ownerOptions, setOwnerOptions] = useState([]);
 
   const load = useCallback(async () => {
     if (!customerId) return;
@@ -66,6 +68,22 @@ const CustomerDetailWorkspace = ({ customerId, onBack }) => {
   const taxIdDigits = String(editor.taxId || '').replace(/\D/g, '');
   const taxIdentityReady = !isOrganization || taxIdDigits.length === 13;
   const dirty = useMemo(() => customer && JSON.stringify(editor) !== JSON.stringify(toEditor(customer)), [customer, editor]);
+
+  useEffect(() => {
+    if (!isOrganization || !editor.companyName) { setOwnerOptions([]); return; }
+    let active = true;
+    listManagedCustomers({ scope: 'STORE', query: editor.companyName, limit: 100 })
+      .then((data) => {
+        if (!active) return;
+        const results = data?.results || [];
+        setOwnerOptions(results.filter((item) => item.id !== Number(customerId)
+          && !item.financialOwnerCustomerId && item.type === editor.type
+          && String(item.companyName || '').trim().toLocaleLowerCase('th-TH') === String(editor.companyName || '').trim().toLocaleLowerCase('th-TH')
+          && String(item.taxId || '').replace(/\D/g, '') === taxIdDigits));
+      })
+      .catch(() => { if (active) setOwnerOptions([]); });
+    return () => { active = false; };
+  }, [customerId, editor.companyName, editor.type, isOrganization, taxIdDigits]);
 
   const save = async () => {
     if (!customerId || saving) return;
@@ -153,7 +171,7 @@ const CustomerDetailWorkspace = ({ customerId, onBack }) => {
                 <label className="text-sm font-semibold text-slate-700">ชื่อบริษัทหรือหน่วยงาน<input className={`${fieldClass} mt-1.5`} value={editor.companyName} onChange={(e) => patch({ companyName: e.target.value })} /></label>
                 <label className="text-sm font-semibold text-slate-700">เลขประจำตัวผู้เสียภาษี<input inputMode="numeric" className={`${fieldClass} mt-1.5 font-mono`} value={editor.taxId} onChange={(e) => patch({ taxId: e.target.value.replace(/\D/g, '').slice(0, 13) })} placeholder="13 หลัก" />{editor.taxId && !taxIdentityReady ? <span className="mt-1 block text-xs font-semibold text-amber-700">ต้องมี 13 หลักจึงพร้อมสำหรับใบกำกับภาษีเต็มรูป</span> : null}</label>
                 <label className="text-sm font-semibold text-slate-700">แผนก / กอง / สำนัก<input className={`${fieldClass} mt-1.5`} value={editor.departmentName} onChange={(e) => patch({ departmentName: e.target.value })} placeholder="เว้นว่างสำหรับหน่วยงานหลัก" /></label>
-                <label className="text-sm font-semibold text-slate-700">รหัสเจ้าของบัญชีการเงิน<input inputMode="numeric" className={`${fieldClass} mt-1.5 font-mono`} value={editor.financialOwnerCustomerId} onChange={(e) => patch({ financialOwnerCustomerId: e.target.value.replace(/\D/g, '') })} placeholder="เว้นว่างหากเป็นหน่วยงานหลัก" /><span className="mt-1 block text-xs font-normal text-slate-400">เชื่อมได้เฉพาะหน่วยงานหลักสาขาเดียวกันและข้อมูลนิติบุคคลตรงกัน</span></label>
+                <label className="text-sm font-semibold text-slate-700">เจ้าของบัญชีการเงิน<select className={`${fieldClass} mt-1.5`} value={editor.financialOwnerCustomerId} onChange={(e) => patch({ financialOwnerCustomerId: e.target.value })}><option value="">หน่วยงานหลัก / ไม่เชื่อมกลุ่ม</option>{ownerOptions.map((item) => <option key={item.id} value={item.id}>{item.companyName || item.name} (#{item.id})</option>)}</select><span className="mt-1 block text-xs font-normal text-slate-400">แสดงเฉพาะหน่วยงานหลักสาขาเดียวกันและข้อมูลนิติบุคคลตรงกัน</span></label>
               </> : null}
               <label className="text-sm font-semibold text-slate-700">ชื่อผู้ติดต่อ<input className={`${fieldClass} mt-1.5`} value={editor.name} onChange={(e) => patch({ name: e.target.value })} /></label>
               <label className="text-sm font-semibold text-slate-700">เบอร์โทร<input className={`${fieldClass} mt-1.5 font-mono`} value={editor.phone} onChange={(e) => patch({ phone: e.target.value })} /></label>

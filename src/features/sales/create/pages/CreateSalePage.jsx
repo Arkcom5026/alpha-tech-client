@@ -96,26 +96,21 @@ const QuickSalePage = ({
       )}
 
       <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[3fr_2fr]">
-        <div>
-          <SaleWorkspacePanel
-            locked={checkoutLocked}
-            className="overflow-hidden"
-          >
-            <CustomerSection
-              phoneInputRef={phoneInputRef}
-              productSearchRef={barcodeInputRef}
-              clearTrigger={clearPhoneTrigger}
-              onClearFinish={() => setClearPhoneTrigger(null)}
-              key={clearPhoneTrigger}
-              hideCustomerDetails={hideCustomerDetails}
-              onSaleModeSelect={sale.presentation.setSaleMode}
-            />
-          </SaleWorkspacePanel>
+        <div className={checkoutLocked ? 'pointer-events-none opacity-60' : ''} aria-disabled={checkoutLocked}>
+          <CustomerSection
+            phoneInputRef={phoneInputRef}
+            productSearchRef={barcodeInputRef}
+            clearTrigger={clearPhoneTrigger}
+            onClearFinish={() => setClearPhoneTrigger(null)}
+            key={clearPhoneTrigger}
+            hideCustomerDetails={hideCustomerDetails}
+            onSaleModeSelect={sale.presentation.setSaleMode}
+          />
         </div>
 
         <div>
           <SaleWorkspacePanel
-            title={sourceLocked ? 'สินค้าจากใบจอง' : 'ค้นหาและเพิ่มสินค้า'}
+            title={sourceLocked ? 'สินค้าจากใบจอง' : 'ค้นหาสินค้า'}
             locked={cartLocked}
             action={
               <div className="flex flex-wrap items-center justify-end gap-2">

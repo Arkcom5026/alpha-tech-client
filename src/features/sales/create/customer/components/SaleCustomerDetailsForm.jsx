@@ -44,7 +44,10 @@ const SaleCustomerDetailsForm = ({
               <button
                 key={type.value}
                 type="button"
-                onClick={() => onPatch({ customerType: type.value })}
+                onClick={() => onPatch({
+                  customerType: type.value,
+                  ...(type.value === 'INDIVIDUAL' ? { departmentName: '' } : {}),
+                })}
                 className={`min-h-11 rounded-xl border px-3 text-sm font-semibold transition ${
                   active
                     ? 'border-emerald-300 bg-emerald-100 text-emerald-950'
@@ -68,6 +71,17 @@ const SaleCustomerDetailsForm = ({
                 value={editor.companyName}
                 onChange={(event) => onPatch({ companyName: event.target.value })}
                 placeholder="ชื่อบริษัทหรือหน่วยงาน"
+                className={fieldClass}
+              />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-xs font-semibold text-slate-700">แผนก / กอง / สำนัก</label>
+              <input
+                type="text"
+                aria-label="แผนก / กอง / สำนัก"
+                value={editor.departmentName}
+                onChange={(event) => onPatch({ departmentName: event.target.value })}
+                placeholder="แผนก / กอง / สำนัก (ถ้ามี)"
                 className={fieldClass}
               />
             </div>

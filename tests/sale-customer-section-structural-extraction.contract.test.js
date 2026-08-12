@@ -53,6 +53,8 @@ assert(!resultsComponent.includes('apiClient'), 'Result presentation must not ca
 assert(resultsComponent.includes('onSelect(customer)'), 'Result presentation must delegate selection intent');
 assert(resultsComponent.includes('customer.phone'), 'Results must expose phone evidence');
 assert(detailsComponent.includes('AddressForm'), 'Details presentation must own address rendering');
+assert(detailsComponent.includes('แผนก / กอง / สำนัก'), 'Details presentation must expose department input');
+assert(detailsComponent.includes('departmentName: event.target.value'), 'Department input must update editor state');
 assert(!detailsComponent.includes('apiClient'), 'Details presentation must not call APIs');
 
 assert(searchHook.includes('submitSearch'), 'Search hook must own search execution');
@@ -71,6 +73,9 @@ assert(editorHook.includes('validateForSave'), 'Editor hook must own save valida
 assert(editorHook.includes('createPayload'), 'Editor hook must own payload projection');
 assert(editorHook.includes('hydrateCustomer'), 'Editor hook must own customer field hydration');
 assert(editorHook.includes('addressDetail'), 'Editor hook must own address fields');
+assert(editorHook.includes("departmentName: ''"), 'Editor hook must initialize department state');
+assert(editorHook.includes('departmentName: customer.departmentName'), 'Editor hook must hydrate department state');
+assert(editorHook.includes("editor.customerType === 'INDIVIDUAL' ? '' : editor.departmentName"), 'Editor payload must preserve organization department only');
 assert(!editorHook.includes('apiClient'), 'Editor hook must not call APIs directly');
 
 assert(hydrationHook.includes('searchByCustomerId'), 'Hydration hook must own full customer/deposit lookup delegation');

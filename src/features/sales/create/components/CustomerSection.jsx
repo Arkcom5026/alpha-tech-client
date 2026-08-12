@@ -39,6 +39,7 @@ const CustomerSection = ({ productSearchRef, clearTrigger, onSaleModeSelect }) =
 
   const [customerType, setCustomerType] = useState('INDIVIDUAL');
   const [companyName, setCompanyName] = useState('');
+  const [departmentName, setDepartmentName] = useState('');
   const [taxId, setTaxId] = useState('');
 
   const [customerLoading, setCustomerLoading] = useState(false);
@@ -140,7 +141,7 @@ const CustomerSection = ({ productSearchRef, clearTrigger, onSaleModeSelect }) =
     setPhone(''); setRawPhone('');
     setName(''); setEmail('');
     setAddressDetail(''); setProvinceCode(''); setDistrictCode(''); setSubdistrictCode(''); setPostalCode('');
-    setCompanyName(''); setTaxId(''); setCustomerType('INDIVIDUAL');
+    setCompanyName(''); setDepartmentName(''); setTaxId(''); setCustomerType('INDIVIDUAL');
     setNameSearch(''); setSearchResults([]); setSelectedSearchCustomerId(null); setSelectedCustomer(null);
     setCustomerDepositAmount(0); setSelectedDeposit(null);
     setIsModified(false); setFormError(''); setFormInfo(''); _setShouldShowDetails(false);
@@ -226,6 +227,7 @@ const CustomerSection = ({ productSearchRef, clearTrigger, onSaleModeSelect }) =
     setAddressDetail(customer.addressDetail || customer.address || '');
     setCustomerType(customer.type || 'INDIVIDUAL');
     setCompanyName(customer.companyName || '');
+    setDepartmentName(customer.departmentName || '');
     setTaxId(customer.taxId || '');
     setIsModified(false);
     setIsClearing(false);
@@ -259,7 +261,7 @@ const CustomerSection = ({ productSearchRef, clearTrigger, onSaleModeSelect }) =
           _setShouldShowDetails(true);
           setName(''); setEmail('');
           setAddressDetail(''); setProvinceCode(''); setDistrictCode(''); setSubdistrictCode(''); setPostalCode('');
-          setCompanyName(''); setTaxId('');
+          setCompanyName(''); setDepartmentName(''); setTaxId('');
           setCustomerType('INDIVIDUAL');
           setTimeout(() => {
             const nameInput = document.getElementById('customer-name-input');
@@ -295,7 +297,7 @@ const CustomerSection = ({ productSearchRef, clearTrigger, onSaleModeSelect }) =
           _setShouldShowDetails(true);
           setName(''); setEmail('');
           setAddressDetail(''); setProvinceCode(''); setDistrictCode(''); setSubdistrictCode(''); setPostalCode('');
-          setCompanyName(''); setTaxId('');
+          setCompanyName(''); setDepartmentName(''); setTaxId('');
           setCustomerType('INDIVIDUAL');
           setTimeout(() => {
             const nameInput = document.getElementById('customer-name-input');
@@ -344,6 +346,7 @@ const CustomerSection = ({ productSearchRef, clearTrigger, onSaleModeSelect }) =
           addressDetail,
           type: customerType,
           companyName,
+          departmentName: customerType === 'INDIVIDUAL' ? '' : departmentName,
           taxId,
         }
       );
@@ -376,6 +379,7 @@ const CustomerSection = ({ productSearchRef, clearTrigger, onSaleModeSelect }) =
         addressDetail,
         type: customerType,
         companyName,
+        departmentName: customerType === 'INDIVIDUAL' ? '' : departmentName,
         taxId,
       });
 
@@ -405,7 +409,7 @@ const CustomerSection = ({ productSearchRef, clearTrigger, onSaleModeSelect }) =
     setPhone(''); setRawPhone('');
     setName(''); setEmail('');
     setAddressDetail(''); setProvinceCode(''); setDistrictCode(''); setSubdistrictCode(''); setPostalCode('');
-    setCompanyName(''); setTaxId('');
+    setCompanyName(''); setDepartmentName(''); setTaxId('');
     setCustomerType('INDIVIDUAL');
     setFormError('');
     setIsModified(false);
@@ -509,7 +513,7 @@ const CustomerSection = ({ productSearchRef, clearTrigger, onSaleModeSelect }) =
             {['INDIVIDUAL', 'ORGANIZATION', 'GOVERNMENT'].map((type) => (
               <label key={type} className="flex items-center gap-1 cursor-pointer hover:text-slate-700 transition-colors select-none">
                 <input type="radio" name="customerType" value={type} className="accent-slate-900"
-                  checked={customerType === type} onChange={() => { setCustomerType(type); setIsModified(true); }} />
+                  checked={customerType === type} onChange={() => { setCustomerType(type); if (type === 'INDIVIDUAL') setDepartmentName(''); setIsModified(true); }} />
                 <span className={customerType === type ? "text-slate-900 font-black" : ""}>
                   {type === 'INDIVIDUAL' ? 'บุคคลทั่วไป' : type === 'ORGANIZATION' ? 'นิติบุคคล' : 'หน่วยงาน'}
                 </span>
@@ -521,6 +525,7 @@ const CustomerSection = ({ productSearchRef, clearTrigger, onSaleModeSelect }) =
             {(customerType === 'ORGANIZATION' || customerType === 'GOVERNMENT') && (
               <div className="space-y-1.5 animate-fadeIn">
                 <input type="text" placeholder="🏢 ระบุชื่อบริษัท / หน่วยงานสังกัด..." value={companyName} onChange={(e) => { setCompanyName(e.target.value); setIsModified(true); }} className="h-7 border border-slate-200 px-2 rounded-lg w-full text-slate-900 font-black outline-none focus:border-slate-900 text-xs shadow-sm" />
+                <input type="text" aria-label="แผนก / กอง / สำนัก" placeholder="แผนก / กอง / สำนัก (ถ้ามี)..." value={departmentName} onChange={(e) => { setDepartmentName(e.target.value); setIsModified(true); }} className="h-7 border border-slate-200 px-2 rounded-lg w-full text-slate-900 font-bold outline-none focus:border-slate-900 text-xs shadow-sm" />
                 <input type="text" placeholder="🧾 เลขผู้เสียภาษี (ถ้ามี)..." value={taxId} onChange={(e) => { setTaxId(e.target.value); setIsModified(true); }} className="h-7 border border-slate-200 px-2 rounded-lg w-full text-slate-900 font-mono font-bold outline-none focus:border-slate-900 text-xs shadow-sm" />
               </div>
             )}

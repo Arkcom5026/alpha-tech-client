@@ -6,6 +6,7 @@ const EMPTY_EDITOR = {
   email: '',
   customerType: 'INDIVIDUAL',
   companyName: '',
+  departmentName: '',
   taxId: '',
   addressDetail: '',
   provinceCode: '',
@@ -30,6 +31,7 @@ export const useSaleCustomerEditor = () => {
       email: customer.email || '',
       customerType: customer.type || 'INDIVIDUAL',
       companyName: customer.companyName || '',
+      departmentName: customer.departmentName || '',
       taxId: customer.taxId || '',
       addressDetail: customer.addressDetail || customer.address || '',
       provinceCode: customer.provinceCode || '',
@@ -54,6 +56,7 @@ export const useSaleCustomerEditor = () => {
     addressDetail: editor.addressDetail,
     type: editor.customerType,
     companyName: editor.companyName,
+    departmentName: editor.customerType === 'INDIVIDUAL' ? '' : editor.departmentName,
     taxId: editor.taxId,
   }), [editor]);
 

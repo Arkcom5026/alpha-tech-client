@@ -95,6 +95,43 @@ const dedupeById = (items = []) => {
   return Array.from(map.values());
 };
 
+const DUPLICATE_SEARCH_NOISE_TOKENS = new Set([
+  'BLACK',
+  'WHITE',
+  'RED',
+  'GREEN',
+  'BLUE',
+  'YELLOW',
+  'CYAN',
+  'MAGENTA',
+  'GRAY',
+  'GREY',
+  'GOLD',
+  'SILVER',
+]);
+
+const buildOperationalSearchTerms = (template = {}) => {
+  const name = String(template?.name || '').trim();
+  const barcode = String(getBarcode(template) || '').trim();
+  const withoutParenthetical = name
+    .replace(/\([^)]*\)/g, ' ')
+    .replace(/\[[^\]]*\]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  const modelTokens = (name.match(/[A-Za-z0-9][A-Za-z0-9.+#/_-]*/g) || [])
+    .map((token) => token.trim())
+    .filter(Boolean)
+    .filter((token) => !DUPLICATE_SEARCH_NOISE_TOKENS.has(token.toUpperCase()));
+
+  const modelTerm = modelTokens.join(' ').trim();
+  const terms = [name, withoutParenthetical, modelTerm, barcode]
+    .map((term) => String(term || '').trim())
+    .filter((term) => term.length >= 2);
+
+  return Array.from(new Set(terms)).slice(0, 5);
+};
+
 const scorePotentialDuplicate = (template, product) => {
   const templateName = normalizeText(template?.name);
   const productName = normalizeText(product?.name);
@@ -221,16 +258,10 @@ const useProductCreateTemplateAssistant = ({ productTypeId, brandId } = {}) => {
     setPreflight({ ...initialPreflight, checking: true });
 
     try {
-      const name = String(template?.name || '').trim();
-      const barcode = String(getBarcode(template) || '').trim();
-
-      const searches = [];
-      if (name) {
-        searches.push(getProductsForPos({ search: name, takeNum: 30, skipNum: 0 }));
-      }
-      if (barcode && barcode !== name) {
-        searches.push(getProductsForPos({ search: barcode, takeNum: 30, skipNum: 0 }));
-      }
+      const searchTerms = buildOperationalSearchTerms(template);
+      const searches = searchTerms.map((searchTerm) =>
+        getProductsForPos({ search: searchTerm, takeNum: 30, skipNum: 0 })
+      );
 
       const settled = await Promise.allSettled(searches);
       const products = settled

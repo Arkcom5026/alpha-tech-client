@@ -163,25 +163,23 @@ const QuickSalePage = ({
         </div>
       </SaleWorkspacePanel>
 
-      <SaleWorkspacePanel>
-        <PaymentSection
-          saleItems={sale.cart.items}
-          isSubmitting={sale.completion.isSubmitting}
-          recovery={sale.completion.recovery}
-          onSaleConfirmed={sale.documentHandoff.handleConfirmed}
-          setClearPhoneTrigger={setClearPhoneTrigger}
-          currentSaleMode={sale.presentation.saleMode}
-          onSaleModeChange={sale.presentation.setSaleMode}
-          saleOption={sale.documentHandoff.saleOption}
-          onSaleOptionChange={sale.documentHandoff.setSaleOption}
-          includeDeliveryNote={sale.documentHandoff.includeDeliveryNote}
-          onIncludeDeliveryNoteChange={sale.documentHandoff.setIncludeDeliveryNote}
-          onConfirmSale={sale.completion.confirm}
-          onSaveHeldCart={sale.heldCart.commands.openPanel}
-          heldCartDisabled={sourceLocked}
-          saleExecutionDisabled={saleExecutionDisabled}
-        />
-      </SaleWorkspacePanel>
+      <PaymentSection
+        saleItems={sale.cart.items}
+        isSubmitting={sale.completion.isSubmitting}
+        recovery={sale.completion.recovery}
+        onSaleConfirmed={sale.documentHandoff.handleConfirmed}
+        setClearPhoneTrigger={setClearPhoneTrigger}
+        currentSaleMode={sale.presentation.saleMode}
+        onSaleModeChange={sale.presentation.setSaleMode}
+        saleOption={sale.documentHandoff.saleOption}
+        onSaleOptionChange={sale.documentHandoff.setSaleOption}
+        includeDeliveryNote={sale.documentHandoff.includeDeliveryNote}
+        onIncludeDeliveryNoteChange={sale.documentHandoff.setIncludeDeliveryNote}
+        onConfirmSale={sale.completion.confirm}
+        onSaveHeldCart={sale.heldCart.commands.openPanel}
+        heldCartDisabled={sourceLocked}
+        saleExecutionDisabled={saleExecutionDisabled}
+      />
 
       {!checkoutLocked && !sourceLocked && (
         <PosHeldCartPanel

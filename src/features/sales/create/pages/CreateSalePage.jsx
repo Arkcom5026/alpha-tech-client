@@ -163,10 +163,7 @@ const QuickSalePage = ({
         </div>
       </SaleWorkspacePanel>
 
-      <SaleWorkspacePanel
-        title="สรุปยอดและรับชำระเงิน"
-        description="ตรวจสอบส่วนลด ภาษี วิธีรับชำระ และเอกสารก่อนยืนยันการขาย"
-      >
+      <SaleWorkspacePanel>
         <PaymentSection
           saleItems={sale.cart.items}
           isSubmitting={sale.completion.isSubmitting}

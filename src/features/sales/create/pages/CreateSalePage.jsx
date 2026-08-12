@@ -149,8 +149,6 @@ const QuickSalePage = ({
       </div>
 
       <SaleWorkspacePanel
-        title="รายการสินค้าในตะกร้า"
-        description="ตรวจสอบจำนวน ราคา และส่วนลดก่อนรับชำระเงิน"
         locked={cartLocked}
         className="min-h-[360px]"
       >

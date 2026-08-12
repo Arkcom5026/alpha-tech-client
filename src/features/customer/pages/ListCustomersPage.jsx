@@ -21,13 +21,14 @@ const ListCustomersPage = () => {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
 
-  const loadCustomers = useCallback(async () => {
+  const loadCustomers = useCallback(async (signal) => {
     setLoading(true);
     setError('');
     try {
-      const data = await listManagedCustomers({ scope, query, limit: 200 });
+      const data = await listManagedCustomers({ scope, query, limit: 200, signal });
       setCustomers(Array.isArray(data?.results) ? data.results : []);
     } catch (requestError) {
+      if (requestError?.code === 'ERR_CANCELED' || requestError?.name === 'CanceledError') return;
       setCustomers([]);
       setError(getErrorMessage(requestError, 'โหลดรายการลูกค้าไม่สำเร็จ'));
     } finally {
@@ -36,8 +37,12 @@ const ListCustomersPage = () => {
   }, [scope, query]);
 
   useEffect(() => {
-    const timer = window.setTimeout(loadCustomers, 250);
-    return () => window.clearTimeout(timer);
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => loadCustomers(controller.signal), 450);
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
   }, [loadCustomers]);
 
   const changeScope = (nextScope) => {

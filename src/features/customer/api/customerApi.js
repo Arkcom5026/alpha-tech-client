@@ -14,10 +14,11 @@ export const searchStoreCustomers = async (query) => {
   }
 };
 
-export const listManagedCustomers = async ({ scope = 'STORE', query = '', limit = 100 } = {}) => {
+export const listManagedCustomers = async ({ scope = 'STORE', query = '', limit = 100, signal } = {}) => {
   try {
     const res = await apiClient.get('/customers/management', {
       params: { scope, q: String(query || '').trim(), limit },
+      signal,
     });
     return res.data;
   } catch (error) {

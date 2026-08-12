@@ -165,9 +165,6 @@ const SaleCustomerSection = ({ productSearchRef, clearTrigger, onClearFinish, on
         </div>
         <div>
           <h2 className="text-base font-semibold text-slate-900">ข้อมูลลูกค้า</h2>
-          <p className="mt-0.5 text-xs leading-5 text-slate-500">
-            ค้นหา เลือก หรือเพิ่มลูกค้าสำหรับรายการขายปัจจุบัน
-          </p>
         </div>
       </div>
 

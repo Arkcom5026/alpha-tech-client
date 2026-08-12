@@ -41,10 +41,6 @@ const SaleCustomerSearch = ({
         {customerLoading ? 'กำลังค้นหา' : 'ค้นหา'}
       </button>
     </div>
-    <div className="space-y-1 text-xs leading-5 text-slate-500">
-      <p>ผลการค้นหาจะแสดงเฉพาะลูกค้าที่อยู่ภายใต้ร้านปัจจุบัน</p>
-      <p>ไม่ค้นหาสินค้า บาร์โค้ด หรือหมายเลขอุปกรณ์ ให้ใช้ช่องค้นหาสินค้าในขั้นตอนถัดไป</p>
-    </div>
   </form>
 );
 

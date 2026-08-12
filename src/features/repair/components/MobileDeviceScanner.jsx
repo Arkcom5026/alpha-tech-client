@@ -18,6 +18,25 @@ const MobileDeviceScanner = ({ open, onClose, onDetected }) => {
   const streamRef = useRef(null);
   const [error, setError] = useState(null);
 
+  const detectImage = async (file) => {
+    if (!file || !('BarcodeDetector' in window)) {
+      setError('อุปกรณ์นี้ยังอ่าน QR จากรูปไม่ได้ กรุณากรอกข้อมูลด้วยตนเอง');
+      return;
+    }
+    try {
+      const supported = await window.BarcodeDetector.getSupportedFormats();
+      const detector = new window.BarcodeDetector({ formats: FORMATS.filter((format) => supported.includes(format)) });
+      const bitmap = await createImageBitmap(file);
+      const results = await detector.detect(bitmap);
+      bitmap.close?.();
+      const value = results?.[0]?.rawValue?.trim();
+      if (!value) throw new Error('QR not found');
+      onDetected(value);
+    } catch {
+      setError('ไม่พบ QR หรือ Barcode ในรูป กรุณาเลือกรูปใหม่หรือกรอกข้อมูลด้วยตนเอง');
+    }
+  };
+
   useEffect(() => {
     if (!open) return undefined;
     let cancelled = false;
@@ -109,6 +128,10 @@ const MobileDeviceScanner = ({ open, onClose, onDetected }) => {
         ) : (
           <p className="text-sm text-slate-300">วางรหัสให้อยู่ภายในกรอบ ระบบจะค้นหาให้อัตโนมัติ</p>
         )}
+        <label className="mt-3 inline-flex min-h-11 cursor-pointer items-center rounded-xl bg-white/10 px-4 text-sm font-black">
+          เลือกรูป QR จากเครื่อง
+          <input type="file" accept="image/*" className="sr-only" onChange={(event) => detectImage(event.target.files?.[0])} />
+        </label>
       </footer>
     </div>
   );

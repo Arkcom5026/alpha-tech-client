@@ -1,11 +1,11 @@
 import React from 'react';
 
-const MobileIntakeProgress = ({ hasCustomer, hasDevice, enteringDetails }) => {
-  const current = enteringDetails || hasDevice ? 3 : hasCustomer ? 2 : 1;
+const MobileIntakeProgress = ({ hasCustomer, hasDevice, enteringDetails, currentStep, onStepChange }) => {
+  const current = currentStep || (enteringDetails || hasDevice ? 3 : hasCustomer ? 2 : 1);
   const steps = [
-    ['ค้นหา', 'ลูกค้าหรืออุปกรณ์'],
-    ['ลูกค้า', 'ยืนยันเจ้าของ'],
-    ['รับเครื่อง', 'อาการและหลักฐาน'],
+    ['ลูกค้า', 'ค้นหาหรือเพิ่มใหม่'],
+    ['สิ่งที่รับซ่อม', 'เลือกเดิมหรือกรอกเอง'],
+    ['รายละเอียด', 'ปัญหาและหลักฐาน'],
   ];
 
   return (
@@ -23,11 +23,12 @@ const MobileIntakeProgress = ({ hasCustomer, hasDevice, enteringDetails }) => {
         {steps.map(([title, detail], index) => {
           const step = index + 1;
           const active = current >= step;
+          const enabled = step === 1 || (step === 2 && hasCustomer) || (step === 3 && (hasDevice || enteringDetails));
           return (
-            <div key={title} className={`rounded-xl px-2 py-3 text-center ${active ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-400'}`}>
+            <button type="button" key={title} disabled={!enabled} onClick={() => onStepChange?.(step)} aria-current={current === step ? 'step' : undefined} className={`rounded-xl px-2 py-3 text-center disabled:cursor-not-allowed ${active ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-400'}`}>
               <p className="text-xs font-black">{title}</p>
               <p className={`mt-1 text-[9px] ${active ? 'text-blue-100' : 'text-slate-400'}`}>{detail}</p>
-            </div>
+            </button>
           );
         })}
       </div>

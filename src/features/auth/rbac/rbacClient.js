@@ -18,6 +18,8 @@ export const P1_POSITION = {
     POS_SALE: 'posSale',
     STOCK_AUDIT: 'stockAudit',
     VIEW_REPORTS: 'viewReports',
+    VIEW_COMMUNICATION: 'viewCommunication',
+    MANAGE_COMMUNICATION: 'manageCommunication',
   };
   
   /* ------------------------------------------------------------------
@@ -88,10 +90,13 @@ export const P1_POSITION = {
       [P1_CAP.POS_SALE]: false,
       [P1_CAP.STOCK_AUDIT]: false,
       [P1_CAP.VIEW_REPORTS]: false,
+      [P1_CAP.VIEW_COMMUNICATION]: false,
+      [P1_CAP.MANAGE_COMMUNICATION]: false,
     };
   
     // Non-POS roles
     if (!pos) return caps;
+    caps[P1_CAP.VIEW_COMMUNICATION] = true;
   
     // SUPERADMIN (platform/support): allow all
     if (isSuperAdmin(userRole)) {
@@ -111,6 +116,7 @@ export const P1_POSITION = {
       // Keep employees management restricted by default
       // - ADMIN can manage employees; EMPLOYEE cannot (unless you decide otherwise)
       caps[P1_CAP.MANAGE_EMPLOYEES] = isAdminRole(userRole);
+      caps[P1_CAP.MANAGE_COMMUNICATION] = isAdminRole(userRole);
       return caps;
     }
   
@@ -128,6 +134,7 @@ export const P1_POSITION = {
       caps[P1_CAP.POS_SALE] = true;
       caps[P1_CAP.STOCK_AUDIT] = true;
       caps[P1_CAP.MANAGE_EMPLOYEES] = true;
+      caps[P1_CAP.MANAGE_COMMUNICATION] = true;
       return caps;
     }
   
@@ -143,6 +150,20 @@ export const P1_POSITION = {
         caps[P1_CAP.POS_SALE] = true;
         caps[P1_CAP.STOCK_AUDIT] = true;
         caps[P1_CAP.VIEW_REPORTS] = true;
+        caps[P1_CAP.MANAGE_COMMUNICATION] = true;
+        return caps;
+      }
+
+      case 'owner':
+      case 'manager': {
+        caps[P1_CAP.MANAGE_PRODUCTS] = true;
+        caps[P1_CAP.EDIT_PRICING] = true;
+        caps[P1_CAP.PURCHASING] = true;
+        caps[P1_CAP.RECEIVE_STOCK] = true;
+        caps[P1_CAP.POS_SALE] = true;
+        caps[P1_CAP.STOCK_AUDIT] = true;
+        caps[P1_CAP.VIEW_REPORTS] = true;
+        caps[P1_CAP.MANAGE_COMMUNICATION] = true;
         return caps;
       }
   
@@ -215,5 +236,4 @@ export const P1_POSITION = {
    * Usage: if (can(roleContext, P1_CAP.MANAGE_PRODUCTS)) { ... }
    */
   export const can = (roleContext, capKey) => hasCap(roleContext?.capabilities, capKey);
-  
   

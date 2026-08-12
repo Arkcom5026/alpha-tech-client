@@ -4,7 +4,7 @@
 
 import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Users, ShieldAlert, Building2, Landmark, ArrowRight, KeyRound, Store, ShoppingBag, Printer } from 'lucide-react';
+import { Users, ShieldAlert, Building2, Landmark, ArrowRight, KeyRound, Store, ShoppingBag, Printer, MessageCircle } from 'lucide-react';
 
 const SettingTile = ({ title, desc, icon, onClick }) => {
   return (
@@ -57,6 +57,7 @@ const SettingsDashboardWorkspace = () => {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-2">
           <SettingTile title="ตั้งค่าเครื่องพิมพ์" desc="ค้นหาและเลือกเครื่องพิมพ์ประจำเครื่องขาย แยกตามประเภทเอกสาร" icon={Printer} onClick={() => navigate(`/${shopSlug}/pos/settings/printers`)} />
+          <SettingTile title="ช่องทางติดต่อของสาขา" desc="ตั้งค่า LINE, Facebook, โทรศัพท์, อีเมล ลิงก์สาธารณะ และ QR สำหรับงานบริการ" icon={MessageCircle} onClick={() => navigate(`/${shopSlug}/pos/settings/communication`)} />
           <SettingTile title="ออกแบบหน้าร้านออนไลน์" desc="ตั้งค่าชื่อร้าน ธีม สี ส่วนประกอบ และตรวจตัวอย่างหน้าหลักก่อนเผยแพร่" icon={Store} onClick={() => navigate(`/${shopSlug}/pos/settings/storefront`)} />
           <SettingTile title="จัดการสินค้าออนไลน์" desc="ตรวจว่าสินค้าใดขึ้นหน้าร้านได้ พร้อมขาย หรือถูกบล็อกด้วยเหตุผลใด" icon={ShoppingBag} onClick={() => navigate(`/${shopSlug}/pos/settings/online-products`)} />
           <SettingTile title="เพิ่มพนักงานใหม่" desc="สร้างบัญชี กำหนดบทบาท และส่งข้อมูลเข้าสู่ระบบให้พร้อมใช้งานในครั้งเดียว" icon={KeyRound} onClick={() => navigate(`/${shopSlug}/pos/settings/staff`)} />

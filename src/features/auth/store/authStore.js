@@ -761,6 +761,8 @@ export const useAuthStore = create(
       canPosSaleSelector: () => get().canSelector(P1_CAP.POS_SALE),
       canStockAuditSelector: () => get().canSelector(P1_CAP.STOCK_AUDIT),
       canViewReportsSelector: () => get().canSelector(P1_CAP.VIEW_REPORTS),
+      canViewCommunicationSelector: () => get().canSelector(P1_CAP.VIEW_COMMUNICATION),
+      canManageCommunicationSelector: () => get().canSelector(P1_CAP.MANAGE_COMMUNICATION),
     }),
     {
       name: 'auth-storage',

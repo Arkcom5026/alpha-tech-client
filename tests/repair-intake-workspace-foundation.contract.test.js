@@ -20,6 +20,10 @@ const workspaceSource = read(
 const policySource = read(
   'src/features/repair/intake/workspace/policies/repairIntakePolicy.js'
 );
+const externalIntakeSource = read(
+  'src/features/repair/components/ExternalDeviceIntakeForm.jsx'
+);
+const repairApiSource = read('src/features/repair/api/repairApi.js');
 
 describe('repair intake workspace foundation contract', () => {
   it('keeps intake projection policy pure and runtime-independent', () => {
@@ -36,7 +40,7 @@ describe('repair intake workspace foundation contract', () => {
     const draft = createRepairIntakeDraft({ customerId: 7, intakeContext });
     expect(draft.customerId).toBe(7);
     expect(draft.stockItemId).toBe(22);
-    expect(draft.deviceModel).toBe('Notebook 22');
+    expect(draft.assetDescription).toBe('Notebook 22');
 
     const contact = projectRepairIntakeContact(
       { name: 'Kanjana', phone: '0800000000', email: 'k@example.com' },
@@ -53,7 +57,30 @@ describe('repair intake workspace foundation contract', () => {
       customerId: 7,
       stockItemId: 22,
       depositPaid: 500,
+      assetDescription: 'Notebook 22',
       deviceModel: 'Notebook 22',
+    });
+  });
+
+  it('accepts a business-neutral minimal intake without product or device identity', () => {
+    const draft = createRepairIntakeDraft({ customerId: 7 });
+    const readyDraft = {
+      ...draft,
+      assetDescription: 'เครื่องตัดหญ้าที่ลูกค้านำมา',
+      reportedSymptoms: 'สตาร์ตไม่ติด',
+    };
+    const contact = { ...emptyRepairIntakeContact, contactName: 'Somchai' };
+
+    expect(
+      canSubmitRepairIntake({ draft: readyDraft, intakeContact: contact, submitting: false })
+    ).toBe(true);
+    expect(buildRepairJobPayload({ draft: readyDraft, intakeContact: contact })).toMatchObject({
+      customerId: 7,
+      stockItemId: null,
+      deviceId: null,
+      assetDescription: 'เครื่องตัดหญ้าที่ลูกค้านำมา',
+      deviceModel: 'เครื่องตัดหญ้าที่ลูกค้านำมา',
+      reportedSymptoms: 'สตาร์ตไม่ติด',
     });
   });
 
@@ -70,6 +97,28 @@ describe('repair intake workspace foundation contract', () => {
     expect(workspaceSource).not.toContain('useEffect');
     expect(workspaceSource).not.toContain('repairApi');
     expect(workspaceSource).not.toContain('navigate(');
+  });
+
+  it('provides a one-hand guided flow without creating mobile business authority', () => {
+    expect(workspaceSource).toContain('const [requestedStep, setRequestedStep] = useState(null)');
+    expect(workspaceSource).toContain('const currentStep = requestedStep ?? suggestedStep');
+    expect(workspaceSource).toContain('aria-label="ขั้นตอนรับซ่อมบนมือถือ"');
+    expect(workspaceSource).toContain('const startExistingDetails = () =>');
+    expect(workspaceSource).toContain("currentStep <= 2 ? 'block' : 'hidden'");
+    expect(workspaceSource).toContain("currentStep >= 2 ? 'block' : 'hidden'");
+    expect(workspaceSource).toContain('onStartExternalIntake()');
+    expect(workspaceSource).toContain('ไม่มีรหัสหรือไม่เคยซื้อจากร้านก็รับซ่อมได้');
+    expect(workspaceSource).not.toContain('MobileRepairJob');
+  });
+
+  it('keeps manual intake business-neutral and asset registration optional', () => {
+    expect(externalIntakeSource).toContain("assetDescription: ''");
+    expect(externalIntakeSource).toContain('registerAsset: false');
+    expect(externalIntakeSource).toContain('assetDescription: draft.assetDescription');
+    expect(externalIntakeSource).toContain('registerAsset: draft.registerAsset');
+    expect(externalIntakeSource).toContain('งานซ่อมสามารถเปิดได้โดยไม่สร้างทะเบียนทรัพย์สิน');
+    expect(externalIntakeSource).not.toContain("category: 'NOTEBOOK'");
+    expect(repairApiSource).toContain("apiClient.post('/repairs/intakes/manual', payload)");
   });
 
   it('preserves customer, device, external intake, evidence-adjacent, and create intents through props before cutover', () => {

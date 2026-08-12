@@ -18,7 +18,7 @@ export const createRepairIntakeDraft = ({ customerId = '', intakeContext = null 
     customerId,
     stockItemId: registeredDevice ? '' : identity.id || '',
     deviceId: registeredDevice ? identity.deviceId || identity.id || '' : '',
-    deviceModel:
+    assetDescription:
       identity.product?.name ||
       [identity.brand, identity.model].filter(Boolean).join(' ').trim() ||
       identity.serialNumber ||
@@ -53,7 +53,7 @@ export const canSubmitRepairIntake = ({ draft, intakeContact, submitting }) => {
   const baseReady =
     !submitting &&
     Boolean(Number(draft?.customerId)) &&
-    Boolean(draft?.deviceModel?.trim()) &&
+    Boolean((draft?.assetDescription || draft?.deviceModel || '').trim()) &&
     Boolean(draft?.reportedSymptoms?.trim()) &&
     Boolean(intakeContact?.contactName?.trim());
 
@@ -64,6 +64,9 @@ export const canSubmitRepairIntake = ({ draft, intakeContact, submitting }) => {
 };
 
 export const buildRepairJobPayload = ({ draft, intakeContact }) => {
+  const assetDescription = String(
+    draft.assetDescription || draft.deviceModel || ''
+  ).trim();
   const preAgreedService = draft.preAgreedService?.enabled
     ? {
         enabled: true,
@@ -79,6 +82,9 @@ export const buildRepairJobPayload = ({ draft, intakeContact }) => {
   return {
     ...draft,
     ...intakeContact,
+    assetDescription,
+    // Keep the legacy alias during the contract transition.
+    deviceModel: assetDescription,
     customerId: Number(draft.customerId),
     stockItemId: draft.stockItemId ? Number(draft.stockItemId) : null,
     deviceId: draft.deviceId ? Number(draft.deviceId) : null,

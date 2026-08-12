@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import MobileIntakeEvidenceFields from './MobileIntakeEvidenceFields';
+import RepairCommunicationPreferenceFields, { emptyRepairCommunicationPreference } from './RepairCommunicationPreferenceFields';
 
 const DEVICE_CATEGORIES = [
   ['NOTEBOOK', 'โน้ตบุ๊ก'],
@@ -27,9 +28,10 @@ const ACCESSORIES = [
 ];
 
 const initialDraft = {
-  category: 'NOTEBOOK',
+  assetDescription: '',
+  registerAsset: false,
+  category: '',
   brand: '',
-  model: '',
   serialNumber: '',
   imei: '',
   barcode: '',
@@ -61,10 +63,13 @@ const ExternalDeviceIntakeForm = ({
   error,
   onCancel,
   onSubmit,
+  communicationProfiles,
+  communicationProfilesWarning,
 }) => {
   const [draft, setDraft] = useState(initialDraft);
   const [selectedAccessories, setSelectedAccessories] = useState([]);
   const [intakeEvidence, setIntakeEvidence] = useState(initialEvidence);
+  const [communicationPreference, setCommunicationPreference] = useState(emptyRepairCommunicationPreference);
   const defaultCustomerSignature = customer?.name || customer?.companyName || '';
 
   useEffect(() => {
@@ -80,7 +85,7 @@ const ExternalDeviceIntakeForm = ({
   const canSubmit = useMemo(() => {
     const baseReady = Boolean(
       customer?.id &&
-        draft.model.trim() &&
+        draft.assetDescription.trim() &&
         draft.customerProblem.trim() &&
         intakeEvidence.confirmed &&
         intakeEvidence.customerSignature.trim() &&
@@ -91,7 +96,7 @@ const ExternalDeviceIntakeForm = ({
     return Boolean(repairAuthorization.confirmedByName.trim());
   }, [
     customer,
-    draft.model,
+    draft.assetDescription,
     draft.customerProblem,
     intakeEvidence,
     repairAuthorization,
@@ -134,10 +139,11 @@ const ExternalDeviceIntakeForm = ({
     onSubmit({
       customerId: customer.id,
       customerName: customer?.name || customer?.companyName || '',
-      device: {
+      assetDescription: draft.assetDescription,
+      registerAsset: draft.registerAsset,
+      asset: {
         category: draft.category,
         brand: draft.brand,
-        model: draft.model,
         serialNumber: draft.serialNumber,
         imei: draft.imei,
         barcode: draft.barcode,
@@ -152,6 +158,7 @@ const ExternalDeviceIntakeForm = ({
       })),
       ...(authorization ? { preAgreedService: authorization } : {}),
       intakeEvidence,
+      communicationPreference,
     });
   };
 
@@ -159,11 +166,11 @@ const ExternalDeviceIntakeForm = ({
     <div className="space-y-5">
       <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
         <p className="text-xs font-black uppercase tracking-[0.14em] text-blue-700">
-          External Device
+          Manual Repair Intake
         </p>
         <div className="mt-1 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h3 className="font-black text-blue-950">เพิ่มอุปกรณ์ภายนอกร้าน</h3>
+            <h3 className="font-black text-blue-950">รับสิ่งที่ลูกค้านำมาซ่อม</h3>
             <p className="mt-1 text-sm text-blue-800">
               เจ้าของ: {customer?.name || customer?.companyName || `Customer #${customer?.id}`}
             </p>
@@ -179,13 +186,37 @@ const ExternalDeviceIntakeForm = ({
       </div>
 
       <div className="grid gap-3 md:grid-cols-2">
+        <label className="space-y-1 md:col-span-2">
+          <span className="text-xs font-black text-slate-600">สิ่งที่นำมาซ่อม *</span>
+          <input
+            value={draft.assetDescription}
+            onChange={(event) => patch('assetDescription', event.target.value)}
+            placeholder="เช่น เครื่องตัดหญ้า รถยนต์ เครื่องปั่น โทรศัพท์ หรือแผงวงจร"
+            className="min-h-12 w-full rounded-xl border border-slate-300 px-4"
+          />
+        </label>
+
+        <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-violet-200 bg-violet-50 p-4 md:col-span-2">
+          <input
+            type="checkbox"
+            checked={draft.registerAsset}
+            onChange={(event) => patch('registerAsset', event.target.checked)}
+            className="mt-1 h-4 w-4"
+          />
+          <span>
+            <span className="block font-black text-violet-950">ลงทะเบียนไว้ค้นหาและนำกลับมาซ่อมครั้งต่อไป</span>
+            <span className="mt-1 block text-xs text-violet-700">ไม่บังคับ งานซ่อมสามารถเปิดได้โดยไม่สร้างทะเบียนทรัพย์สิน</span>
+          </span>
+        </label>
+
         <label className="space-y-1">
-          <span className="text-xs font-black text-slate-600">ประเภทอุปกรณ์ *</span>
+          <span className="text-xs font-black text-slate-600">ประเภทสำหรับทะเบียน (ถ้ามี)</span>
           <select
             value={draft.category}
             onChange={(event) => patch('category', event.target.value)}
             className="min-h-12 w-full rounded-xl border border-slate-300 bg-white px-4"
           >
+            <option value="">ไม่ระบุ</option>
             {DEVICE_CATEGORIES.map(([value, label]) => (
               <option key={value} value={value}>{label}</option>
             ))}
@@ -198,16 +229,6 @@ const ExternalDeviceIntakeForm = ({
             value={draft.brand}
             onChange={(event) => patch('brand', event.target.value)}
             placeholder="เช่น ASUS, HP, Canon"
-            className="min-h-12 w-full rounded-xl border border-slate-300 px-4"
-          />
-        </label>
-
-        <label className="space-y-1 md:col-span-2">
-          <span className="text-xs font-black text-slate-600">รุ่นหรือรายละเอียดอุปกรณ์ *</span>
-          <input
-            value={draft.model}
-            onChange={(event) => patch('model', event.target.value)}
-            placeholder="ระบุรุ่น หรือรายละเอียดที่ใช้แยกเครื่อง"
             className="min-h-12 w-full rounded-xl border border-slate-300 px-4"
           />
         </label>
@@ -237,7 +258,7 @@ const ExternalDeviceIntakeForm = ({
           <input
             value={draft.barcode}
             onChange={(event) => patch('barcode', event.target.value)}
-            placeholder="เว้นว่างเพื่อให้ระบบสร้างรหัสอุปกรณ์ของร้านอัตโนมัติ"
+            placeholder="เว้นว่างได้ ระบบสร้างรหัสให้อัตโนมัติเมื่อเลือกลงทะเบียน"
             className="min-h-12 w-full rounded-xl border border-slate-300 px-4"
           />
           <span className="block text-[11px] text-slate-500">
@@ -260,6 +281,15 @@ const ExternalDeviceIntakeForm = ({
       <MobileIntakeEvidenceFields
         value={intakeEvidence}
         onChange={setIntakeEvidence}
+      />
+
+      <RepairCommunicationPreferenceFields
+        value={communicationPreference}
+        onChange={setCommunicationPreference}
+        contact={{ phone: customer?.phone, email: customer?.email }}
+        customerId={customer?.id}
+        profiles={communicationProfiles}
+        profilesWarning={communicationProfilesWarning}
       />
 
       <section>
@@ -381,7 +411,7 @@ const ExternalDeviceIntakeForm = ({
         onClick={submit}
         className="sticky bottom-0 z-20 min-h-14 w-full rounded-xl bg-blue-700 px-6 font-black text-white shadow-lg disabled:cursor-not-allowed disabled:opacity-40 md:static md:min-h-12 md:shadow-sm"
       >
-        {submitting ? 'กำลังรับเครื่องและเปิดใบงาน' : 'ยืนยันรับอุปกรณ์ภายนอก'}
+        {submitting ? 'กำลังเปิดใบงานรับซ่อม' : 'ยืนยันรับงานซ่อม'}
       </button>
     </div>
   );

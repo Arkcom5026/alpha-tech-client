@@ -39,4 +39,23 @@ describe('repair intake evidence consent preservation contract', () => {
     expect(api).toContain("'allowOutsourceRepair'");
     expect(api).toContain("form.append(field, String(evidence[field] ?? ''))");
   });
+
+  it('preserves the pending evidence draft and retries without creating another repair job', () => {
+    const page = read('src/features/repair/pages/RepairIntakePage.jsx');
+    const detailPage = read('src/features/repair/pages/RepairJobDetailPage.jsx');
+    const workspace = read(
+      'src/features/repair/detail/workspace/components/RepairDetailWorkspace.jsx'
+    );
+    const panel = read('src/features/repair/components/IntakeEvidencePanel.jsx');
+
+    expect(page).toContain('navigationState.pendingIntakeEvidence = intakeEvidence');
+    expect(page).toContain('navigationState.pendingIntakeEvidence = externalEvidence');
+    expect(detailPage).toContain('pendingIntakeEvidence={location.state?.pendingIntakeEvidence}');
+    expect(workspace).toContain('retryDraft={pendingIntakeEvidence}');
+    expect(panel).toContain('const [editing, setEditing] = useState(retryPending)');
+    expect(panel).toContain('retryPending ? retryDraft : emptyDraft');
+    expect(panel).toContain('กดบันทึกอีกครั้งได้โดยไม่สร้างใบงานซ้ำ');
+    expect(panel).toContain("await repairApi.saveIntakeEvidence(repairJobId, payload)");
+    expect(panel).not.toContain('createJob(');
+  });
 });

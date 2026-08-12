@@ -259,7 +259,7 @@ const useRepairRuntimeStore = create((set, get) => ({
   createExternalIntake: async (payload) => {
     set({ submitting: true, error: null, errorCode: null });
     try {
-      const created = await repairApi.createExternalIntake(payload);
+      const created = await repairApi.createManualIntake(payload);
       set({ submitting: false, activeJob: created?.repairJob || null, intakeContext: null, lastLoadedAt: new Date().toISOString() });
       return created;
     } catch (error) {

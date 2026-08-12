@@ -2,6 +2,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import useRepairRuntimeStore from '../store/repairRuntimeStore';
 import repairApi from '../api/repairApi';
+import { listCommunicationProfiles, saveCustomerContactChannel, saveRepairCommunicationPreference } from '../../communication/api/communicationApi';
+import { emptyRepairCommunicationPreference } from '../components/RepairCommunicationPreferenceFields';
 import RepairIntakeWorkspace from '../intake/workspace/components/RepairIntakeWorkspace';
 import {
   buildRepairJobPayload,
@@ -32,6 +34,9 @@ const RepairIntakePage = () => {
   const [intakeContact, setIntakeContact] = useState(emptyRepairIntakeContact);
   const [draft, setDraft] = useState(createRepairIntakeDraft());
   const [intakeEvidence, setIntakeEvidence] = useState(createRepeatIntakeEvidence());
+  const [communicationPreference, setCommunicationPreference] = useState(emptyRepairCommunicationPreference);
+  const [communicationProfiles, setCommunicationProfiles] = useState([]);
+  const [communicationProfilesWarning, setCommunicationProfilesWarning] = useState('');
   const [createOpen, setCreateOpen] = useState(false);
   const [externalMode, setExternalMode] = useState(false);
 
@@ -61,6 +66,18 @@ const RepairIntakePage = () => {
     );
   }, [intakeContact.contactName]);
 
+  useEffect(() => {
+    let active = true;
+    listCommunicationProfiles()
+      .then((profiles) => {
+        if (active) setCommunicationProfiles(Array.isArray(profiles) ? profiles : []);
+      })
+      .catch((error) => {
+        if (active) setCommunicationProfilesWarning(error.message);
+      });
+    return () => { active = false; };
+  }, []);
+
   const repeatIntakeCanSubmit = Boolean(
     canSubmitRepairIntake({ draft, intakeContact, submitting: runtime.submitting }) &&
       intakeEvidence.confirmed &&
@@ -80,6 +97,7 @@ const RepairIntakePage = () => {
       },
     });
     setIntakeEvidence(createRepeatIntakeEvidence(intakeContact.contactName || ''));
+    setCommunicationPreference(emptyRepairCommunicationPreference);
     setCreateOpen(true);
   };
 
@@ -92,16 +110,19 @@ const RepairIntakePage = () => {
 
     if (!created?.id) return;
 
+    const navigationState = {};
     try {
       await repairApi.saveIntakeEvidence(created.id, intakeEvidence);
     } catch (error) {
-      navigate(`/${shopSlug}/pos/services/repairs/${created.id}`, {
-        state: { evidenceWarning: error.message },
-      });
-      return;
+      navigationState.evidenceWarning = error.message;
+      navigationState.pendingIntakeEvidence = intakeEvidence;
     }
-
-    navigate(`/${shopSlug}/pos/services/repairs/${created.id}`);
+    try {
+      await persistCommunicationPreference({ customerId: draft.customerId, repairJobId: created.id, preference: communicationPreference });
+    } catch (error) {
+      navigationState.communicationWarning = error.message;
+    }
+    navigate(`/${shopSlug}/pos/services/repairs/${created.id}`, { state: navigationState });
   };
 
   const selectCustomer = async (customer) => {
@@ -140,6 +161,7 @@ const RepairIntakePage = () => {
     runtime.clearSelectedCustomer();
     setIntakeContact(emptyRepairIntakeContact);
     setIntakeEvidence(createRepeatIntakeEvidence());
+    setCommunicationPreference(emptyRepairCommunicationPreference);
     setCreateOpen(false);
     setExternalMode(false);
     setCustomerPanelOpen(false);
@@ -149,6 +171,7 @@ const RepairIntakePage = () => {
     runtime.resetIntake();
     setIntakeContact(emptyRepairIntakeContact);
     setIntakeEvidence(createRepeatIntakeEvidence());
+    setCommunicationPreference(emptyRepairCommunicationPreference);
     setCreateOpen(false);
     setExternalMode(false);
     setCustomerPanelOpen(false);
@@ -165,20 +188,23 @@ const RepairIntakePage = () => {
   };
 
   const createExternalIntake = async (payload) => {
-    const { intakeEvidence: externalEvidence, ...intakePayload } = payload;
+    const { intakeEvidence: externalEvidence, communicationPreference: externalCommunication, ...intakePayload } = payload;
     const created = await runtime.createExternalIntake(intakePayload);
     if (!created?.repairJob?.id) return;
 
+    const navigationState = {};
     try {
       await repairApi.saveIntakeEvidence(created.repairJob.id, externalEvidence);
     } catch (error) {
-      navigate(`/${shopSlug}/pos/services/repairs/${created.repairJob.id}`, {
-        state: { evidenceWarning: error.message },
-      });
-      return;
+      navigationState.evidenceWarning = error.message;
+      navigationState.pendingIntakeEvidence = externalEvidence;
     }
-
-    navigate(`/${shopSlug}/pos/services/repairs/${created.repairJob.id}`);
+    try {
+      await persistCommunicationPreference({ customerId: intakePayload.customerId, repairJobId: created.repairJob.id, preference: externalCommunication });
+    } catch (error) {
+      navigationState.communicationWarning = error.message;
+    }
+    navigate(`/${shopSlug}/pos/services/repairs/${created.repairJob.id}`, { state: navigationState });
   };
 
   const retryCurrentSearch = () => runtime.searchDirectory(runtime.intakeLookup);
@@ -206,6 +232,9 @@ const RepairIntakePage = () => {
       externalMode={externalMode}
       intakeContact={intakeContact}
       intakeEvidence={intakeEvidence}
+      communicationPreference={communicationPreference}
+      communicationProfiles={communicationProfiles}
+      communicationProfilesWarning={communicationProfilesWarning}
       draft={draft}
       selectedStockItemId={selectedStockItemId}
       status={status}
@@ -228,11 +257,35 @@ const RepairIntakePage = () => {
       onCreateJob={openCreateDialog}
       onContactChange={setIntakeContact}
       onIntakeEvidenceChange={setIntakeEvidence}
+      onCommunicationPreferenceChange={setCommunicationPreference}
       onCloseCreate={() => setCreateOpen(false)}
       onDraftChange={onDraftChange}
       onConfirmCreate={createJob}
     />
   );
+};
+
+const persistCommunicationPreference = async ({ customerId, repairJobId, preference }) => {
+  if (!preference?.channelType) return;
+  const destination = preference.destination?.trim() || null;
+  let contactChannelId = preference.contactChannelId || null;
+  if (destination && !contactChannelId) {
+    const channel = await saveCustomerContactChannel(customerId, {
+      channelType: preference.channelType,
+      address: destination,
+      displayLabel: preference.displayLabel?.trim() || null,
+      consentStatus: preference.consentGranted ? 'GRANTED' : 'UNKNOWN',
+    });
+    contactChannelId = channel?.id || null;
+  }
+  await saveRepairCommunicationPreference(repairJobId, {
+    channelType: preference.channelType,
+    contactChannelId,
+    profileId: preference.profileId || null,
+    destinationSnapshot: destination,
+    displayLabelSnapshot: preference.displayLabel?.trim() || null,
+    consentGranted: Boolean(preference.consentGranted),
+  });
 };
 
 export default RepairIntakePage;

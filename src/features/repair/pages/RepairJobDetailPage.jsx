@@ -59,6 +59,8 @@ const RepairJobDetailPage = () => {
       submitting={submitting || workflowSubmitting}
       error={workflowError || error}
       evidenceWarning={location.state?.evidenceWarning}
+      communicationWarning={location.state?.communicationWarning}
+      pendingIntakeEvidence={location.state?.pendingIntakeEvidence}
       onRetry={() => loadJob(repairJobId)}
       onWorkflowAction={handleWorkflowAction}
       onAddPart={(payload) => addPart(repairJobId, payload)}

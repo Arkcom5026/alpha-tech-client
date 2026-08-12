@@ -29,6 +29,7 @@ export const repairApi = {
   listJobs: (params = {}) => request(() => apiClient.get('/repairs/jobs', { params }), 'ไม่สามารถโหลดคิวงานซ่อมได้'),
   getJob: (id) => request(() => apiClient.get(`/repairs/jobs/${id}`), 'ไม่สามารถโหลดรายละเอียดงานซ่อมได้'),
   createJob: (payload) => request(() => apiClient.post('/repairs/jobs', payload), 'ไม่สามารถเปิดใบรับซ่อมได้'),
+  createManualIntake: (payload) => request(() => apiClient.post('/repairs/intakes/manual', payload), 'ไม่สามารถเปิดงานรับซ่อมได้'),
   createExternalIntake: (payload) => request(() => apiClient.post('/repairs/intakes/external-device', payload), 'ไม่สามารถรับอุปกรณ์ภายนอกได้'),
   getIntakeEvidence: (id) => request(() => apiClient.get(`/repairs/jobs/${id}/intake-evidence`), 'ไม่สามารถโหลดหลักฐานการรับเครื่องได้'),
   saveIntakeEvidence: (id, evidence = {}) => {

@@ -7,6 +7,7 @@ This directory is the module-owned Browser E2E package for repair intake complet
 - `repairIntakeCompletion.browser.spec.js` proves the employee can operate the real UI against the local Server connected to the Test DB.
 - The paired Server package under `src/modules/repair/e2e/intake-completion/` provisions isolated Test-DB data and verifies database post-conditions read-only.
 - No API interception, mock response, store injection, or direct browser-side database access is allowed.
+- The package runs at a 390x844 touch viewport and asserts that the repair workspace has no horizontal overflow.
 
 ## Runtime authority
 

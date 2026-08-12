@@ -20,6 +20,7 @@ import { ReportsDashboardPage } from '@/features/pos/pages/dashboard/ReportsDash
 import StoreHomepageEditorPage from '@/features/storeExperience/pages/StoreHomepageEditorPage';
 import OnlineProductVisibilityDashboardPage from '@/features/storeExperience/pages/OnlineProductVisibilityDashboardPage';
 import PrinterSettingsPage from '@/features/printing/settings/PrinterSettingsPage';
+import CommunicationProfileSettingsPage from '@/features/communication/pages/CommunicationProfileSettingsPage';
 import TaxIssuerProfilePage from '@/features/tax/issuerProfile/pages/TaxIssuerProfilePage';
 import SalesTaxFilingPage from '@/features/tax/outputFilings/pages/SalesTaxFilingPage';
 import TaxPublicationRetryPage from '@/features/tax/publicationRetry/pages/TaxPublicationRetryPage';
@@ -165,6 +166,7 @@ export const posPartnerRoutes = [
         children: [
           { index: true, element: <SettingsDashboardPage /> },
           { path: 'printers', element: <PrinterSettingsPage /> },
+          { path: 'communication', element: <CommunicationProfileSettingsPage /> },
           { path: 'tax-issuer', element: <TaxIssuerProfilePage /> },
           { path: 'storefront', element: <StoreHomepageEditorPage /> },
           { path: 'online-products', element: <OnlineProductVisibilityDashboardPage /> },

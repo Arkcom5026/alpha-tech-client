@@ -11,6 +11,7 @@ import RepairTrackingAccessPanel from '../../../customer-access/components/Repai
 import RepairEstimateApprovalPanel from '../../../customer-access/components/RepairEstimateApprovalPanel';
 import RepairHandoverPanel from '../../../components/RepairHandoverPanel';
 import IntakeEvidencePanel from '../../../components/IntakeEvidencePanel';
+import RepairCommunicationPanel from '../../../components/RepairCommunicationPanel';
 
 const RepairDetailWorkspace = ({
   repairJobId,
@@ -19,6 +20,8 @@ const RepairDetailWorkspace = ({
   submitting,
   error,
   evidenceWarning,
+  communicationWarning,
+  pendingIntakeEvidence,
   onRetry,
   onWorkflowAction,
   onAddPart,
@@ -50,6 +53,11 @@ const RepairDetailWorkspace = ({
 
       {job ? (
         <div className="space-y-4">
+          {communicationWarning ? (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+              เปิดงานซ่อมสำเร็จ แต่ยังบันทึกช่องทางติดต่อไม่ได้: {communicationWarning}
+            </div>
+          ) : null}
           <RepairWorkflowOverview
             job={job}
             submitting={submitting}
@@ -89,6 +97,7 @@ const RepairDetailWorkspace = ({
           ) : null}
 
           <RepairTrackingAccessPanel repairJobId={repairJobId} jobNo={job.jobNo} />
+          <RepairCommunicationPanel repairJobId={repairJobId} />
           <RepairEstimateApprovalPanel repairJobId={repairJobId} job={job} />
 
           {!subcontractActive ? (
@@ -103,6 +112,7 @@ const RepairDetailWorkspace = ({
           <IntakeEvidencePanel
             repairJobId={repairJobId}
             warning={evidenceWarning}
+            retryDraft={pendingIntakeEvidence}
             onSaved={handleEvidenceSaved}
           />
         </div>

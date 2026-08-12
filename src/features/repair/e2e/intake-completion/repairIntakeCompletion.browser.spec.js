@@ -26,7 +26,12 @@ const onePixelPng = Buffer.from(
   'base64'
 );
 
-test.use({ storageState: merchantAuthStatePath });
+test.use({
+  storageState: merchantAuthStatePath,
+  viewport: { width: 390, height: 844 },
+  hasTouch: true,
+  isMobile: true,
+});
 
 test.describe('Repair intake completion (selected E2E authority)', () => {
   test('blocks work before evidence, then accepts completed intake evidence', async ({ page }) => {
@@ -44,6 +49,7 @@ test.describe('Repair intake completion (selected E2E authority)', () => {
     );
 
     await page.goto(`${baseUrl}/${branchSlug}/pos/services/repairs/${repairJobId}`);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy();
 
     if (/\/login(?:\?|$)|\/partner-portal(?:\/login)?(?:\?|$)/i.test(page.url())) {
       throw new Error(

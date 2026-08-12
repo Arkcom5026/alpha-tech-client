@@ -38,12 +38,18 @@ const consentChanged = (draft, evidence) => {
   );
 };
 
-const IntakeEvidencePanel = ({ repairJobId, warning, onSaved }) => {
+const hasRetryableDraft = (draft) => Boolean(
+  draft && ((draft.photos || []).length || draft.confirmed)
+);
+
+const IntakeEvidencePanel = ({ repairJobId, warning, retryDraft, onSaved }) => {
+  const retryPending = hasRetryableDraft(retryDraft);
   const [evidence, setEvidence] = useState(null);
-  const [draft, setDraft] = useState(emptyDraft);
-  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(() => retryPending ? retryDraft : emptyDraft);
+  const [editing, setEditing] = useState(retryPending);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(warning || '');
+  const [error, setError] = useState('');
+  const [retryNotice, setRetryNotice] = useState(warning || '');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -69,6 +75,7 @@ const IntakeEvidencePanel = ({ repairJobId, warning, onSaved }) => {
   const cancelEdit = () => {
     setDraft(emptyDraft);
     setEditing(false);
+    setRetryNotice('');
   };
 
   const shouldWriteConsent = consentChanged(draft, evidence);
@@ -89,6 +96,7 @@ const IntakeEvidencePanel = ({ repairJobId, warning, onSaved }) => {
       setEvidence(saved);
       setDraft(emptyDraft);
       setEditing(false);
+      setRetryNotice('');
       await onSaved?.(saved);
     } catch (saveError) {
       setError(saveError.message);
@@ -122,6 +130,18 @@ const IntakeEvidencePanel = ({ repairJobId, warning, onSaved }) => {
         <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm font-bold text-amber-800">
           {error}
         </p>
+      ) : null}
+
+      {retryNotice ? (
+        <div className="mt-4 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+          <p className="font-black">เปิดใบงานสำเร็จแล้ว แต่หลักฐานยังบันทึกไม่ครบ</p>
+          <p className="mt-1">{retryNotice}</p>
+          <p className="mt-1 text-xs">
+            {retryPending
+              ? 'รูปและคำยืนยันเดิมยังอยู่ในแบบฟอร์ม กดบันทึกอีกครั้งได้โดยไม่สร้างใบงานซ้ำ'
+              : 'เปิดส่วนเพิ่มหลักฐานเพื่อบันทึกใหม่ได้โดยไม่สร้างใบงานซ้ำ'}
+          </p>
+        </div>
       ) : null}
 
       {editing ? (

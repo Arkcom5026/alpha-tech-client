@@ -39,6 +39,7 @@ const IntakeSearchPanel = ({
   onReset,
   onSelectDevice,
   onSelectCustomer,
+  mode = 'all',
 }) => {
   const submit = (event) => {
     event.preventDefault();
@@ -54,16 +55,18 @@ const IntakeSearchPanel = ({
     [onChange, onSearch]
   );
 
-  const devices = results?.devices || [];
-  const customers = results?.customers || [];
+  const devices = mode === 'customer' ? [] : results?.devices || [];
+  const customers = mode === 'asset' ? [] : results?.customers || [];
   const hasResults = devices.length > 0 || customers.length > 0;
+  const customerMode = mode === 'customer';
+  const assetMode = mode === 'asset';
 
   return (
     <div className="space-y-3">
       <form onSubmit={submit} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-        <p className="text-sm font-black text-slate-800">ค้นหาลูกค้าหรืออุปกรณ์</p>
+        <p className="text-sm font-black text-slate-800">{customerMode ? 'ค้นหาลูกค้า' : assetMode ? 'ค้นหาสิ่งที่รับซ่อม' : 'ค้นหาลูกค้าหรือสิ่งที่รับซ่อม'}</p>
         <p className="mt-1 text-xs text-slate-500">
-          ชื่อ เบอร์โทร บริษัท รุ่น ยี่ห้อ Barcode, Serial Number หรือ Service Tag
+          {customerMode ? 'ชื่อ เบอร์โทร บริษัท หรือสแกน QR ลูกค้า' : assetMode ? 'Barcode, Serial Number, IMEI, Service Tag หรือรหัสทรัพย์สิน' : 'ชื่อ เบอร์โทร บริษัท รุ่น ยี่ห้อ Barcode, Serial Number หรือ Service Tag'}
         </p>
 
         <button
@@ -72,7 +75,7 @@ const IntakeSearchPanel = ({
           className="mt-3 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-4 font-black text-blue-700 sm:hidden"
         >
           <span aria-hidden="true">▣</span>
-          เปิดกล้องสแกน Barcode / QR
+          {customerMode ? 'เปิดกล้องสแกน QR ลูกค้า' : 'เปิดกล้องสแกน Barcode / QR'}
         </button>
 
         <div className="mt-3 flex flex-col gap-2 sm:flex-row">
@@ -80,7 +83,7 @@ const IntakeSearchPanel = ({
             autoFocus
             value={value}
             onChange={(event) => onChange(event.target.value)}
-            placeholder="พิมพ์หรือสแกนข้อมูลที่มี"
+            placeholder={customerMode ? 'ชื่อ เบอร์โทร บริษัท หรือ QR ลูกค้า' : assetMode ? 'Barcode, Serial, IMEI หรือ Service Tag' : 'พิมพ์หรือสแกนข้อมูลที่มี'}
             className="min-h-12 flex-1 rounded-xl border border-slate-300 px-4 text-base outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
           />
           <button

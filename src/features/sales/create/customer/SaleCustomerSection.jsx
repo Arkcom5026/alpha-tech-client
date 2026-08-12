@@ -159,22 +159,23 @@ const SaleCustomerSection = ({ productSearchRef, clearTrigger, onClearFinish, on
 
   return (
     <section className="w-full space-y-3 rounded-2xl border border-slate-200 bg-white p-3 md:p-4">
-      <div className="flex items-start gap-3 border-b border-slate-100 pb-3">
-        <div className="rounded-xl bg-teal-100 p-2 text-teal-800">
-          <UserRound className="h-5 w-5" />
-        </div>
-        <div>
+      <div className="flex flex-col gap-3 border-b border-slate-100 pb-3 lg:flex-row lg:items-center">
+        <div className="flex shrink-0 items-center gap-3">
+          <div className="rounded-xl bg-teal-100 p-2 text-teal-800">
+            <UserRound className="h-5 w-5" />
+          </div>
           <h2 className="text-base font-semibold text-slate-900">ข้อมูลลูกค้า</h2>
         </div>
+        <div className="min-w-0 flex-1">
+          <SaleCustomerSearch
+            query={view.search.query}
+            customerLoading={view.search.loading}
+            inputRef={customerSearchRef}
+            onQueryChange={view.search.setQuery}
+            onSubmit={view.search.submitSearch}
+          />
+        </div>
       </div>
-
-      <SaleCustomerSearch
-        query={view.search.query}
-        customerLoading={view.search.loading}
-        inputRef={customerSearchRef}
-        onQueryChange={view.search.setQuery}
-        onSubmit={view.search.submitSearch}
-      />
 
       {view.feedback.formError ? (
         <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2.5 text-sm text-rose-800">
@@ -199,11 +200,15 @@ const SaleCustomerSection = ({ productSearchRef, clearTrigger, onClearFinish, on
 
       {view.selection.selectedCustomer && !editingSelectedCustomer ? (
         <div className="flex items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50/70 px-3 py-3">
-          <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-slate-900">{compactCustomerName}</p>
-            <p className="mt-0.5 text-xs font-medium text-slate-600">โทร {compactPhone}</p>
+          <div className="min-w-0 flex flex-1 flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+            <span className="truncate font-semibold text-slate-900">{compactCustomerName}</span>
+            <span className="text-slate-300" aria-hidden="true">·</span>
+            <span className="shrink-0 font-medium text-slate-600">โทร {compactPhone}</span>
             {compactDetail ? (
-              <p className="mt-1 truncate text-xs text-slate-500">{compactDetail}</p>
+              <>
+                <span className="text-slate-300" aria-hidden="true">·</span>
+                <span className="min-w-0 truncate text-slate-500">{compactDetail}</span>
+              </>
             ) : null}
           </div>
           <button

@@ -111,8 +111,14 @@ const SaleItemTable = ({ items = [], onRemove, onUpdate, onChangeSimpleQuantity,
     const billShare = Number(item.billShare || 0);
     const finalPriceBeforeBill = Math.max(0, basePrice + priceAdjustment);
     const net = Math.max(0, finalPriceBeforeBill - billShare);
-    const displayIdentifier = item.displayIdentifier || item.serialNumber || item.barcode || '-';
-    const identifierType = item.identifierType || (item.serialNumber ? 'SN' : 'BARCODE');
+    const authorityBarcode = String(item?.barcodeAuthority?.barcode || '').trim();
+    const authorityKind = String(item?.barcodeAuthority?.kind || '').toUpperCase();
+    const barcode = String(
+      item?.barcode || (authorityBarcode && authorityKind !== 'SN' ? authorityBarcode : '') || '-'
+    );
+    const serialNumber = String(
+      item?.serialNumber || (authorityKind === 'SN' ? authorityBarcode : '') || '-'
+    );
 
     return {
       quantity,
@@ -121,8 +127,8 @@ const SaleItemTable = ({ items = [], onRemove, onUpdate, onChangeSimpleQuantity,
       billShare,
       finalPriceBeforeBill,
       net,
-      displayIdentifier,
-      identifierType,
+      barcode,
+      serialNumber,
     };
   };
 
@@ -137,9 +143,10 @@ const SaleItemTable = ({ items = [], onRemove, onUpdate, onChangeSimpleQuantity,
                 <div className="min-w-0">
                   <p className="text-xs font-medium text-slate-500">รายการที่ {index + 1}</p>
                   <h3 className="mt-1 truncate font-semibold text-slate-900">{item.productName}</h3>
-                  <p className="mt-1 break-all font-mono text-xs text-slate-500">
-                    {values.identifierType}: {values.displayIdentifier}
-                  </p>
+                  <div className="mt-1 space-y-0.5 text-xs text-slate-500">
+                    <p className="break-all"><span className="font-medium">บาร์โค้ด</span> <span className="font-mono">{values.barcode}</span></p>
+                    <p className="break-all"><span className="font-medium">SN</span> <span className="font-mono">{values.serialNumber}</span></p>
+                  </div>
                 </div>
                 <button
                   type="button"
@@ -221,7 +228,7 @@ const SaleItemTable = ({ items = [], onRemove, onUpdate, onChangeSimpleQuantity,
               <th className="px-3 py-3 text-center">#</th>
               <th className="px-3 py-3">สินค้า</th>
               <th className="px-3 py-3">ประเภท</th>
-              <th className="px-3 py-3 text-center">บาร์โค้ด / SN</th>
+              <th className="px-3 py-3">บาร์โค้ด / SN</th>
               <th className="px-3 py-3 text-center">จำนวน</th>
               <th className="px-3 py-3 text-right">ราคาป้าย</th>
               <th className="px-3 py-3 text-right">ปรับราคา (+/-)</th>
@@ -240,9 +247,17 @@ const SaleItemTable = ({ items = [], onRemove, onUpdate, onChangeSimpleQuantity,
                   <td className="px-3 py-3 text-center font-mono text-slate-500">{index + 1}</td>
                   <td className="max-w-[240px] truncate px-3 py-3 font-semibold text-slate-900" title={item.productName}>{item.productName}</td>
                   <td className="px-3 py-3 text-slate-600">{item.lineType === 'SIMPLE' ? 'แบบจำนวน' : 'รายชิ้น / SN'}</td>
-                  <td className="px-3 py-3 text-center">
-                    <div className="font-mono font-semibold text-slate-800">{values.displayIdentifier}</div>
-                    <div className="mt-1 text-xs text-slate-500">{values.identifierType}</div>
+                  <td className="px-3 py-3">
+                    <div className="space-y-1 text-xs">
+                      <div className="flex items-baseline gap-2">
+                        <span className="w-14 shrink-0 font-medium text-slate-500">บาร์โค้ด</span>
+                        <span className="break-all font-mono font-semibold text-slate-800">{values.barcode}</span>
+                      </div>
+                      <div className="flex items-baseline gap-2">
+                        <span className="w-14 shrink-0 font-medium text-slate-500">SN</span>
+                        <span className="break-all font-mono font-semibold text-slate-800">{values.serialNumber}</span>
+                      </div>
+                    </div>
                   </td>
                   <td className="px-3 py-3 text-center">
                     {item.lineType === 'SIMPLE' ? (

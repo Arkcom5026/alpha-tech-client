@@ -73,16 +73,16 @@ const QuickSalePage = ({
   const activeHeldCart = sale.heldCart.panel.activeCart;
 
   return (
-    <div className="mx-auto min-h-full w-full max-w-[1560px] space-y-3 p-2.5 text-slate-800 selection:bg-teal-200 selection:text-teal-950 md:p-4">
+    <div className="mx-auto flex min-h-full w-full max-w-[1560px] flex-col gap-3 p-2.5 text-slate-800 selection:bg-teal-200 selection:text-teal-950 md:p-4 xl:h-[calc(100dvh-4rem)] xl:min-h-0 xl:overflow-hidden">
       {sourceContext && (
-        <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm leading-6 text-blue-900">
+        <div className="shrink-0 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm leading-6 text-blue-900">
           รายการสินค้าถูกอ้างอิงจากใบจองเดิม จำนวน ราคา และรายการสต๊อกจึงถูกล็อกไว้จนกว่าจะยืนยันการขาย
         </div>
       )}
 
       {activeHeldCart && sale.heldCart.panel.validation && (
         <div
-          className={`rounded-xl border px-4 py-3 text-sm font-medium ${
+          className={`shrink-0 rounded-xl border px-4 py-3 text-sm font-medium ${
             sale.heldCart.panel.validation.ready
               ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
               : 'border-rose-200 bg-rose-50 text-rose-800'
@@ -95,7 +95,7 @@ const QuickSalePage = ({
         </div>
       )}
 
-      <div className="grid grid-cols-1 items-start gap-3 xl:grid-cols-[3fr_2fr]">
+      <div className="grid shrink-0 grid-cols-1 items-start gap-3 xl:grid-cols-[3fr_2fr]">
         <div className={checkoutLocked ? 'pointer-events-none opacity-60' : ''} aria-disabled={checkoutLocked}>
           <CustomerSection
             phoneInputRef={phoneInputRef}
@@ -148,35 +148,39 @@ const QuickSalePage = ({
         </div>
       </div>
 
-      <SaleWorkspacePanel locked={cartLocked} className="min-h-[240px]">
-        <div className="overflow-x-auto rounded-xl border border-slate-200">
-          <SaleItemTable
-            items={sale.cart.items}
-            onRemove={sourceLocked ? () => {} : sale.cart.remove}
-            onUpdate={sourceLocked ? () => {} : sale.cart.update}
-            onChangeSimpleQuantity={sourceLocked ? () => {} : sale.cart.setSimpleQuantity}
-            billDiscount={sale.presentation.billDiscount}
-          />
-        </div>
-      </SaleWorkspacePanel>
+      <div className="min-h-[240px] xl:min-h-0 xl:flex-1 xl:overflow-hidden">
+        <SaleWorkspacePanel locked={cartLocked} className="h-full min-h-[240px] xl:min-h-0 xl:overflow-hidden">
+          <div className="h-full overflow-auto rounded-xl border border-slate-200 overscroll-contain">
+            <SaleItemTable
+              items={sale.cart.items}
+              onRemove={sourceLocked ? () => {} : sale.cart.remove}
+              onUpdate={sourceLocked ? () => {} : sale.cart.update}
+              onChangeSimpleQuantity={sourceLocked ? () => {} : sale.cart.setSimpleQuantity}
+              billDiscount={sale.presentation.billDiscount}
+            />
+          </div>
+        </SaleWorkspacePanel>
+      </div>
 
-      <PaymentSection
-        saleItems={sale.cart.items}
-        isSubmitting={sale.completion.isSubmitting}
-        recovery={sale.completion.recovery}
-        onSaleConfirmed={sale.documentHandoff.handleConfirmed}
-        setClearPhoneTrigger={setClearPhoneTrigger}
-        currentSaleMode={sale.presentation.saleMode}
-        onSaleModeChange={sale.presentation.setSaleMode}
-        saleOption={sale.documentHandoff.saleOption}
-        onSaleOptionChange={sale.documentHandoff.setSaleOption}
-        includeDeliveryNote={sale.documentHandoff.includeDeliveryNote}
-        onIncludeDeliveryNoteChange={sale.documentHandoff.setIncludeDeliveryNote}
-        onConfirmSale={sale.completion.confirm}
-        onSaveHeldCart={sale.heldCart.commands.openPanel}
-        heldCartDisabled={sourceLocked}
-        saleExecutionDisabled={saleExecutionDisabled}
-      />
+      <div className="shrink-0">
+        <PaymentSection
+          saleItems={sale.cart.items}
+          isSubmitting={sale.completion.isSubmitting}
+          recovery={sale.completion.recovery}
+          onSaleConfirmed={sale.documentHandoff.handleConfirmed}
+          setClearPhoneTrigger={setClearPhoneTrigger}
+          currentSaleMode={sale.presentation.saleMode}
+          onSaleModeChange={sale.presentation.setSaleMode}
+          saleOption={sale.documentHandoff.saleOption}
+          onSaleOptionChange={sale.documentHandoff.setSaleOption}
+          includeDeliveryNote={sale.documentHandoff.includeDeliveryNote}
+          onIncludeDeliveryNoteChange={sale.documentHandoff.setIncludeDeliveryNote}
+          onConfirmSale={sale.completion.confirm}
+          onSaveHeldCart={sale.heldCart.commands.openPanel}
+          heldCartDisabled={sourceLocked}
+          saleExecutionDisabled={saleExecutionDisabled}
+        />
+      </div>
 
       {!checkoutLocked && !sourceLocked && (
         <PosHeldCartPanel

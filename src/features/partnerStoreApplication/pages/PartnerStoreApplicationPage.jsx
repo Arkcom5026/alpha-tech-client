@@ -7,8 +7,6 @@ const initialForm = {
   contactName: '',
   contactPhone: '',
   contactEmail: '',
-  password: '',
-  confirmPassword: '',
   businessAddress: '',
   requestedStorefrontSlug: '',
   note: '',
@@ -32,24 +30,14 @@ export default function PartnerStoreApplicationPage() {
   const submit = async (event) => {
     event.preventDefault();
     setError('');
-
-    if (form.password.length < 8) {
-      setError('รหัสผ่านต้องมีความยาวอย่างน้อย 8 ตัวอักษร');
-      return;
-    }
-    if (form.password !== form.confirmPassword) {
-      setError('ยืนยันรหัสผ่านไม่ตรงกัน');
-      return;
-    }
-
     setSubmitting(true);
+
     try {
       const response = await submitPartnerStoreApplication({
         businessName: form.businessName.trim(),
         contactName: form.contactName.trim(),
         contactPhone: form.contactPhone.trim(),
         contactEmail: form.contactEmail.trim().toLowerCase(),
-        password: form.password,
         businessAddress: form.businessAddress.trim(),
         requestedStorefrontSlug: form.requestedStorefrontSlug.trim() || undefined,
         note: form.note.trim() || undefined,
@@ -71,7 +59,7 @@ export default function PartnerStoreApplicationPage() {
           <h1 className="mt-3 text-3xl font-black">ส่งใบสมัครร้านพาร์ตเนอร์แล้ว</h1>
           <p className="mt-4 text-sm leading-6 text-slate-600">
             เลขอ้างอิง <strong>{submitted.applicationCode}</strong><br />
-            บัญชีเจ้าของร้านถูกสำรองไว้แล้ว แต่ยังเข้าสู่ระบบไม่ได้จนกว่าใบสมัครจะได้รับอนุมัติ
+            ระบบบันทึกเฉพาะใบสมัครของคุณในขั้นตอนนี้ ยังไม่มีการสร้างร้านหรือบัญชีเข้าใช้งานจนกว่าจะผ่านกระบวนการอนุมัติและเปิดใช้งาน
           </p>
           <Link to="/partner-portal" className="mt-7 inline-flex rounded-xl bg-slate-900 px-5 py-3 text-sm font-bold text-white">
             กลับหน้าพาร์ตเนอร์
@@ -88,7 +76,7 @@ export default function PartnerStoreApplicationPage() {
         <p className="mt-5 text-xs font-black uppercase tracking-[0.2em] text-orange-500">Partner application</p>
         <h1 className="mt-2 text-3xl font-black">สมัครเป็นร้านพาร์ตเนอร์</h1>
         <p className="mt-3 text-sm leading-6 text-slate-500">
-          กรอกข้อมูลร้านและกำหนดบัญชีเจ้าของร้าน ระบบจะสำรองบัญชีไว้แบบยังไม่เปิดใช้งานจนกว่าเจ้าหน้าที่จะอนุมัติ
+          กรอกข้อมูลสำหรับยื่นใบสมัครร้านพาร์ตเนอร์ ขั้นตอนนี้เป็นการส่งข้อมูลเพื่อพิจารณาเท่านั้น และยังไม่สร้างร้านหรือบัญชีเข้าใช้งานระบบ
         </p>
 
         {error && <p role="alert" className="mt-5 rounded-xl border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-700">{error}</p>}
@@ -98,29 +86,23 @@ export default function PartnerStoreApplicationPage() {
             <label className="text-sm font-bold">ชื่อร้าน
               <input required value={form.businessName} onChange={update('businessName')} className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-3 font-medium" />
             </label>
-            <label className="text-sm font-bold">ชื่อผู้ติดต่อ / เจ้าของร้าน
+            <label className="text-sm font-bold">ชื่อผู้ติดต่อ / ผู้ยื่นใบสมัคร
               <input required value={form.contactName} onChange={update('contactName')} className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-3 font-medium" />
             </label>
             <label className="text-sm font-bold">เบอร์โทรศัพท์
               <input required value={form.contactPhone} onChange={update('contactPhone')} className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-3 font-medium" />
             </label>
-            <label className="text-sm font-bold">อีเมลสำหรับเข้าสู่ระบบ
+            <label className="text-sm font-bold">อีเมลสำหรับติดต่อ
               <input required type="email" autoComplete="email" value={form.contactEmail} onChange={update('contactEmail')} className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-3 font-medium" />
-            </label>
-            <label className="text-sm font-bold">รหัสผ่าน
-              <input required minLength="8" type="password" autoComplete="new-password" value={form.password} onChange={update('password')} className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-3 font-medium" />
-            </label>
-            <label className="text-sm font-bold">ยืนยันรหัสผ่าน
-              <input required minLength="8" type="password" autoComplete="new-password" value={form.confirmPassword} onChange={update('confirmPassword')} className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-3 font-medium" />
             </label>
           </div>
           <p className="rounded-xl bg-amber-50 p-3 text-xs font-medium leading-5 text-amber-800">
-            ใช้อีเมลและรหัสผ่านชุดนี้เข้าสู่ Merchant Center หลังจากใบสมัครได้รับอนุมัติแล้ว
+            หลังจากใบสมัครผ่านการอนุมัติ ระบบจะแจ้งขั้นตอนเปิดใช้งานและกำหนดบัญชีเจ้าของร้านแยกต่างหาก
           </p>
           <label className="block text-sm font-bold">ที่อยู่สถานประกอบการ
             <textarea required rows="3" value={form.businessAddress} onChange={update('businessAddress')} className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-3 font-medium" />
           </label>
-          <label className="block text-sm font-bold">ชื่อย่อหน้าร้าน (ไม่บังคับ)
+          <label className="block text-sm font-bold">ชื่อย่อหน้าร้านที่ต้องการ (ไม่บังคับ)
             <input value={form.requestedStorefrontSlug} onChange={update('requestedStorefrontSlug')} placeholder="my-shop" className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-3 font-mono font-medium" />
           </label>
           <label className="block text-sm font-bold">หมายเหตุ (ไม่บังคับ)

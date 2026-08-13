@@ -33,6 +33,7 @@ export const useSalePaymentWorkflow = ({
   setCustomerIdAction,
 }) => {
   const [paymentError, setPaymentError] = useState('');
+  const [completionWarning, setCompletionWarning] = useState(null);
   const [depositTouched, setDepositTouched] = useState(false);
 
   const effectiveCustomer = selectedCustomer || { id: null, name: 'ลูกค้าทั่วไป' };
@@ -142,6 +143,7 @@ export const useSalePaymentWorkflow = ({
   const confirm = useCallback(async (confirmContext = {}) => {
     if (isSubmitting) return null;
     setPaymentError('');
+    setCompletionWarning(null);
 
     try {
       const result = await executeSalePaymentConfirmation({
@@ -172,6 +174,10 @@ export const useSalePaymentWorkflow = ({
         return null;
       }
 
+      if (result.warning) {
+        setCompletionWarning(result.warning);
+      }
+
       resetAfterSuccess();
       return result;
     } catch (error) {
@@ -199,6 +205,7 @@ export const useSalePaymentWorkflow = ({
   return projectSalePaymentWorkflow({
     calculation,
     paymentError,
+    completionWarning,
     isConfirmEnabled,
     recovery,
     handlers: {

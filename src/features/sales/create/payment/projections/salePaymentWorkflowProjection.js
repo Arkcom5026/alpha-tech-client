@@ -1,6 +1,7 @@
 export const projectSalePaymentWorkflow = ({
   calculation,
   paymentError,
+  completionWarning = null,
   isConfirmEnabled,
   recovery = null,
   handlers,
@@ -8,6 +9,7 @@ export const projectSalePaymentWorkflow = ({
   calculation,
   feedback: {
     error: paymentError,
+    warning: completionWarning,
     recovery,
   },
   confirmation: {

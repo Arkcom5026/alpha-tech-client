@@ -182,6 +182,7 @@ const PaymentSection = ({
             isSubmitting={isSubmitting}
             onConfirm={payment.confirmation.confirm}
             paymentError={payment.feedback.error}
+            completionWarning={payment.feedback.warning}
             recovery={payment.feedback.recovery}
             retryingExistingCommand={payment.confirmation.retryingExistingCommand}
             saleOption={saleOption}

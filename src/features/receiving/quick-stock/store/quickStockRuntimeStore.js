@@ -5,10 +5,9 @@ import { create } from "zustand";
 import {
   commitQuickStockExistingIntake,
   createQuickStockLocalOperationalProduct,
-  createQuickStockOperationalProductFromTemplate,
   deleteQuickStockOperationalProduct,
   getQuickStockDropdowns,
-  getQuickStockOperationalProductByTemplateId,
+  materializeQuickStockTemplateProduct,
   normalizeQuickStockError,
   searchQuickStockProducts,
   updateQuickStockOperationalProduct,
@@ -157,15 +156,11 @@ const useQuickStockRuntimeStore = create((set, get) => ({
     }
   },
 
-  getOperationalProductByTemplateIdAction: async (templateProductId) => {
-    return getQuickStockOperationalProductByTemplateId(templateProductId);
-  },
-
-  createOperationalProductFromTemplateAction: async (payload) => {
+  materializeTemplateProductAction: async (payload) => {
     set({ quickStockLoading: true, quickStockError: null });
 
     try {
-      const response = await createQuickStockOperationalProductFromTemplate(payload);
+      const response = await materializeQuickStockTemplateProduct(payload);
 
       set({
         quickStockLoading: false,
@@ -176,7 +171,7 @@ const useQuickStockRuntimeStore = create((set, get) => ({
     } catch (error) {
       const mapped = normalizeQuickStockError(
         error,
-        "สร้าง Operational Product จาก Template ไม่สำเร็จ"
+        "เตรียมสินค้า Template สำหรับ Quick Receipt ไม่สำเร็จ"
       );
 
       set({

@@ -26,10 +26,14 @@ export const useTemplateCandidate = ({ autoFetch = false, filters = {} } = {}) =
     refresh,
     fetchById: store.fetchTemplateCandidateById,
     createCandidate: store.createTemplateCandidateAction,
+    createCatalogQualityCandidate: store.createCatalogQualityCandidateAction,
+    scanDuplicates: store.scanCatalogDuplicateCandidatesAction,
+    scanOrphans: store.scanCatalogOrphanCandidatesAction,
+    scanQuality: store.scanCatalogQualityCandidatesAction,
     startReview: store.startTemplateCandidateReviewAction,
     rejectCandidate: store.rejectTemplateCandidateAction,
-    mergeCandidate: store.mergeTemplateCandidateAction,
-    promoteCandidate: store.promoteTemplateCandidateAction,
+    resolveDuplicate: store.resolveCatalogDuplicateCandidateAction,
+    archiveOrphan: store.archiveCatalogOrphanCandidateAction,
     clearError: store.clearTemplateCandidateError,
   };
 };

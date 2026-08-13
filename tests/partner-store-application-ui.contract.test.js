@@ -16,6 +16,7 @@ describe('partner store application UI contract', () => {
 
     expect(api).toContain("'/public/partner-store-applications'");
     expect(api).toContain("'/partner-store/applications'");
+    expect(api).toContain('/review');
     expect(api).toContain('/approve');
     expect(api).toContain('/reject');
     expect(apply).toContain('businessAddress');
@@ -24,7 +25,9 @@ describe('partner store application UI contract', () => {
     expect(apply).toContain('ขั้นตอนเปิดใช้งานและกำหนดบัญชีเจ้าของร้านแยกต่างหาก');
     expect(apply).toContain('Application received');
     expect(review).not.toContain('Owner User ID');
-    expect(review).toContain('อนุมัติและเปิดร้าน');
+    expect(review).toContain('เริ่มตรวจสอบ');
+    expect(review).toContain('อนุมัติใบสมัคร');
+    expect(review).not.toContain('อนุมัติและเปิดร้าน');
     expect(review).toContain('ปฏิเสธ');
     expect(router).toContain("'partner-portal/apply'");
     expect(superadmin).toContain("path: 'partner-store-applications'");

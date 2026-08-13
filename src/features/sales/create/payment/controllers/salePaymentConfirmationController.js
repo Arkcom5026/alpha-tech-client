@@ -69,8 +69,11 @@ export const executeSalePaymentConfirmation = async ({
   }
 
   try {
+    const deliveryNoteMode =
+      saleMode === 'CREDIT' ? 'PRINT' : includeDeliveryNote ? 'PRINT' : undefined;
+
     const response = await onConfirmSale({
-      deliveryNoteMode: saleMode === 'CREDIT' || includeDeliveryNote ? 'PRINT' : undefined,
+      deliveryNoteMode,
       saleType: customerType === 'GOVERNMENT' ? 'GOVERNMENT' : undefined,
       paymentIntent,
     });

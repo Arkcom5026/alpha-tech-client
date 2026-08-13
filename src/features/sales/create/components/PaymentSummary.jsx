@@ -86,7 +86,7 @@ const PaymentSummary = ({
           disabled={heldCartDisabled || isSubmitting || recovery?.state === 'UNCERTAIN'}
           className="min-h-10 rounded-lg border border-teal-200 bg-teal-50 px-4 text-sm font-semibold text-teal-900 hover:bg-teal-100 disabled:cursor-not-allowed disabled:opacity-40"
         >
-          {heldCartDisabled ? 'ใช้ใบจองออนไลน์เดิม' : 'พักรายการขาย'}
+          {heldCartDisabled ? 'ใช้ใบจองออนไลน์เดิม' : 'บันทึกใบจอง'}
         </button>
         <button
           type="button"

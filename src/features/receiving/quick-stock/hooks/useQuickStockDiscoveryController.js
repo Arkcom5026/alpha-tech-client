@@ -8,6 +8,7 @@ import {
   getBrandName,
   getProductBrandId,
   getProductTypeName,
+  hideTemplateResultsWhenOperationalExists,
   isOperationalBranchProduct,
   isTemplateCatalogProduct,
   normalizeOperationalProductList,
@@ -57,7 +58,9 @@ const useQuickStockDiscoveryController = ({
       const result = await searchProductsAction(params);
       const operationalList = normalizeOperationalProductList(result?.operationalProducts || []);
       const templateList = normalizeTemplateProductList(result?.templateProducts || []);
-      const merged = dedupeDiscoveryProducts([...operationalList, ...templateList]);
+      const merged = hideTemplateResultsWhenOperationalExists(
+        dedupeDiscoveryProducts([...operationalList, ...templateList])
+      );
 
       setRuntimeSearchProducts(merged);
       return merged;

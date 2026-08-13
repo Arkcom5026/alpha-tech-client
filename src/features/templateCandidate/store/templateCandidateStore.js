@@ -4,10 +4,14 @@ import {
   listTemplateCandidatesApi,
   getTemplateCandidateApi,
   createTemplateCandidateApi,
+  createCatalogQualityCandidateApi,
+  scanCatalogDuplicateCandidatesApi,
+  scanCatalogOrphanCandidatesApi,
+  scanCatalogQualityCandidatesApi,
   startTemplateCandidateReviewApi,
-  promoteTemplateCandidateApi,
   rejectTemplateCandidateApi,
-  mergeTemplateCandidateApi,
+  resolveCatalogDuplicateCandidateApi,
+  archiveCatalogOrphanCandidateApi,
 } from '../api/templateCandidateApi';
 import { mapCandidateListResponse, mapCandidateResponse } from '../utils/candidateMapper';
 
@@ -75,6 +79,61 @@ const useTemplateCandidateStore = create((set) => ({
     }
   },
 
+  createCatalogQualityCandidateAction: async (payload) => {
+    set({ mutating: true, error: null });
+    try {
+      const response = await createCatalogQualityCandidateApi(payload);
+      const candidate = mapCandidateResponse(response);
+      set((state) => ({
+        mutating: false,
+        selectedCandidate: candidate || state.selectedCandidate,
+        candidates: candidate?.id
+          ? [candidate, ...state.candidates.filter((item) => Number(item.id) !== Number(candidate.id))]
+          : state.candidates,
+      }));
+      return { ...response, candidate };
+    } catch (error) {
+      set({ error, mutating: false });
+      throw error;
+    }
+  },
+
+  scanCatalogDuplicateCandidatesAction: async (payload = {}) => {
+    set({ mutating: true, error: null });
+    try {
+      const response = await scanCatalogDuplicateCandidatesApi(payload);
+      set({ mutating: false });
+      return response;
+    } catch (error) {
+      set({ error, mutating: false });
+      throw error;
+    }
+  },
+
+  scanCatalogOrphanCandidatesAction: async (payload = {}) => {
+    set({ mutating: true, error: null });
+    try {
+      const response = await scanCatalogOrphanCandidatesApi(payload);
+      set({ mutating: false });
+      return response;
+    } catch (error) {
+      set({ error, mutating: false });
+      throw error;
+    }
+  },
+
+  scanCatalogQualityCandidatesAction: async (payload = {}) => {
+    set({ mutating: true, error: null });
+    try {
+      const response = await scanCatalogQualityCandidatesApi(payload);
+      set({ mutating: false });
+      return response;
+    } catch (error) {
+      set({ error, mutating: false });
+      throw error;
+    }
+  },
+
   startTemplateCandidateReviewAction: async (id) => {
     set({ mutating: true, error: null });
     try {
@@ -107,32 +166,34 @@ const useTemplateCandidateStore = create((set) => ({
     }
   },
 
-  mergeTemplateCandidateAction: async (id, payload = {}) => {
+  resolveCatalogDuplicateCandidateAction: async (id, payload = {}) => {
     set({ mutating: true, error: null });
     try {
-      const candidate = mapCandidateResponse(await mergeTemplateCandidateApi(id, payload));
+      const response = await resolveCatalogDuplicateCandidateApi(id, payload);
+      const candidate = mapCandidateResponse(response);
       set((state) => ({
         mutating: false,
-        selectedCandidate: candidate,
-        candidates: replaceCandidate(state.candidates, candidate),
+        selectedCandidate: candidate || state.selectedCandidate,
+        candidates: candidate ? replaceCandidate(state.candidates, candidate) : state.candidates,
       }));
-      return candidate;
+      return { ...response, candidate };
     } catch (error) {
       set({ error, mutating: false });
       throw error;
     }
   },
 
-  promoteTemplateCandidateAction: async (id, payload = {}) => {
+  archiveCatalogOrphanCandidateAction: async (id, payload = {}) => {
     set({ mutating: true, error: null });
     try {
-      const candidate = mapCandidateResponse(await promoteTemplateCandidateApi(id, payload));
+      const response = await archiveCatalogOrphanCandidateApi(id, payload);
+      const candidate = mapCandidateResponse(response);
       set((state) => ({
         mutating: false,
-        selectedCandidate: candidate,
-        candidates: replaceCandidate(state.candidates, candidate),
+        selectedCandidate: candidate || state.selectedCandidate,
+        candidates: candidate ? replaceCandidate(state.candidates, candidate) : state.candidates,
       }));
-      return candidate;
+      return { ...response, candidate };
     } catch (error) {
       set({ error, mutating: false });
       throw error;

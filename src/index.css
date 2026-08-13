@@ -163,6 +163,12 @@
   }
 }
 
+/* The operational verification control remains available as an internal feature,
+   but is intentionally not exposed in the merchant POS header. */
+button[aria-label='ดูสถานะความพร้อมของระบบ'] {
+  display: none !important;
+}
+
 /* Global Print Rules */
 @media print {
   aside,

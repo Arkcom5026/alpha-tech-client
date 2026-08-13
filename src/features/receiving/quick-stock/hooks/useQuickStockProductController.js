@@ -11,7 +11,6 @@ import {
   dedupeDiscoveryProducts,
   extractSingle,
   getFirstBranchPrice,
-  getTemplateLookupId,
   isValidOperationalProductForAdoption,
   normalizeOperationalProduct,
   toMoneyNumber,
@@ -33,8 +32,7 @@ const useQuickStockProductController = ({
   resetQueue,
   executeProductSearch,
 
-  getOperationalProductByTemplateIdAction,
-  createOperationalProductFromTemplateAction,
+  materializeTemplateProductAction,
   createLocalOperationalProductAction,
   updateOperationalProductAction,
   deleteOperationalProductAction,
@@ -71,51 +69,76 @@ const useQuickStockProductController = ({
   const operationalProduct = selectedSearchOperationalProduct || adoptedOperationalProduct;
   const isTemplateOnlySelection = !!selectedTemplateProduct && !operationalProduct;
   const isOperationalSelection = !!operationalProduct?.id;
-  const runtimeStatus = operationalProduct ? "READY" : selectedProduct ? "NOT_CREATED" : "IDLE";
+  const runtimeStatus = operationalProduct
+    ? "READY"
+    : selectedTemplateProduct && isCreatingOperationalProduct
+      ? "MATERIALIZING"
+      : selectedProduct
+        ? "NOT_CREATED"
+        : "IDLE";
+
+  const adoptOperationalProduct = useCallback((rawProduct, sourceProduct = null) => {
+    if (!isValidOperationalProductForAdoption(rawProduct, sourceProduct)) return false;
+
+    const nextOperationalProduct = normalizeOperationalProduct(rawProduct);
+    setAdoptedOperationalProduct(nextOperationalProduct);
+    setRuntimeSearchProducts((prev) =>
+      dedupeDiscoveryProducts([nextOperationalProduct, ...(Array.isArray(prev) ? prev : [])])
+    );
+
+    setProductForm(buildProductFormFromProduct(nextOperationalProduct));
+    const nextPriceForm = buildPriceFormFromProduct(nextOperationalProduct);
+    setPriceForm(nextPriceForm);
+    setDefaultCost(nextPriceForm.costPrice ?? 0);
+    setSelectedProductId(`OPERATIONAL:${nextOperationalProduct.id}`);
+    setIsLocalCreateOpen(false);
+    resetQueue();
+
+    return true;
+  }, [resetQueue, setRuntimeSearchProducts, setSelectedProductId]);
 
   useEffect(() => {
-    let cancelled = false;
+    if (!selectedTemplateProduct || operationalProduct) return;
 
-    const lookupTemplateOperationalProduct = async () => {
-      if (!selectedTemplateProduct) {
-        setAdoptedOperationalProduct(null);
-        setIsCheckingOperationalProduct(false);
-        return;
-      }
+    const payload = buildCreateOperationalProductPayload(selectedTemplateProduct);
+    if (!payload?.templateProductId) {
+      toast.error("ไม่พบ Template Product ID สำหรับเตรียมสินค้าในร้าน");
+      return;
+    }
 
-      const templateProductId = getTemplateLookupId(selectedTemplateProduct);
-      if (!templateProductId) return;
+    let active = true;
+    setIsCheckingOperationalProduct(false);
+    setIsCreatingOperationalProduct(true);
 
-      setAdoptedOperationalProduct(null);
-      setIsCheckingOperationalProduct(true);
-
+    const materializeTemplateProduct = async () => {
       try {
-        const response = await getOperationalProductByTemplateIdAction(templateProductId);
-        if (cancelled) return;
+        const response = await materializeTemplateProductAction(payload);
+        if (!active) return;
 
-        const rawCandidate = extractSingle(response);
-        if (isValidOperationalProductForAdoption(rawCandidate, selectedTemplateProduct)) {
-          setAdoptedOperationalProduct(normalizeOperationalProduct(rawCandidate));
-          return;
+        const rawProduct = extractSingle(response);
+        if (!adoptOperationalProduct(rawProduct, selectedTemplateProduct)) {
+          toast.error("เตรียมสินค้าในร้านแล้ว แต่ข้อมูลที่ตอบกลับยังไม่ใช่ Operational Product ที่ถูกต้อง");
         }
-
-        setAdoptedOperationalProduct(null);
       } catch (err) {
-        if (!cancelled) {
-          console.warn("QuickStock operational lookup did not find a branch product:", err);
-          setAdoptedOperationalProduct(null);
-        }
+        if (!active) return;
+        console.error("Quick Receipt template materialization failed:", err);
+        toast.error(err?.message || "เตรียมสินค้า Template สำหรับรับเข้าไม่สำเร็จ");
       } finally {
-        if (!cancelled) setIsCheckingOperationalProduct(false);
+        if (active) setIsCreatingOperationalProduct(false);
       }
     };
 
-    lookupTemplateOperationalProduct();
+    materializeTemplateProduct();
 
     return () => {
-      cancelled = true;
+      active = false;
     };
-  }, [selectedTemplateProduct, getOperationalProductByTemplateIdAction]);
+  }, [
+    selectedTemplateProduct,
+    operationalProduct,
+    materializeTemplateProductAction,
+    adoptOperationalProduct,
+  ]);
 
   useEffect(() => {
     if (!operationalProduct) {
@@ -179,60 +202,6 @@ const useQuickStockProductController = ({
     setShowSearchResult(false);
     resetQueue();
   }, [productList, resetQueue, setSelectedProductId, setShowSearchResult]);
-
-  const adoptOperationalProduct = useCallback((rawProduct, sourceProduct = null) => {
-    if (!isValidOperationalProductForAdoption(rawProduct, sourceProduct)) return false;
-
-    const nextOperationalProduct = normalizeOperationalProduct(rawProduct);
-    setAdoptedOperationalProduct(nextOperationalProduct);
-    setRuntimeSearchProducts((prev) =>
-      dedupeDiscoveryProducts([nextOperationalProduct, ...(Array.isArray(prev) ? prev : [])])
-    );
-
-    setProductForm(buildProductFormFromProduct(nextOperationalProduct));
-    const nextPriceForm = buildPriceFormFromProduct(nextOperationalProduct);
-    setPriceForm(nextPriceForm);
-    setDefaultCost(nextPriceForm.costPrice ?? 0);
-    setSelectedProductId(`OPERATIONAL:${nextOperationalProduct.id}`);
-    setIsLocalCreateOpen(false);
-    resetQueue();
-
-    return true;
-  }, [resetQueue, setRuntimeSearchProducts, setSelectedProductId]);
-
-  const handleCreateOperationalProductFromTemplate = useCallback(async () => {
-    if (!selectedTemplateProduct || operationalProduct) return;
-
-    const payload = buildCreateOperationalProductPayload(selectedTemplateProduct);
-    if (!payload?.templateProductId) {
-      toast.error("ไม่พบ Template Product ID สำหรับสร้างสินค้าในร้าน");
-      return;
-    }
-
-    setIsCreatingOperationalProduct(true);
-
-    try {
-      const response = await createOperationalProductFromTemplateAction(payload);
-      const rawCreatedProduct = extractSingle(response);
-
-      if (!adoptOperationalProduct(rawCreatedProduct, selectedTemplateProduct)) {
-        toast.error("สร้างสินค้าแล้ว แต่ข้อมูลที่ตอบกลับยังไม่ใช่ Operational Product ที่ถูกต้อง");
-        return;
-      }
-
-      toast.success("สร้าง Operational Product จาก Template เรียบร้อย");
-    } catch (err) {
-      console.error("Create operational product from template failed:", err);
-      toast.error(err?.message || "สร้าง Operational Product จาก Template ไม่สำเร็จ");
-    } finally {
-      setIsCreatingOperationalProduct(false);
-    }
-  }, [
-    selectedTemplateProduct,
-    operationalProduct,
-    createOperationalProductFromTemplateAction,
-    adoptOperationalProduct,
-  ]);
 
   const handleCreateLocalOperationalProduct = useCallback(async () => {
     const payload = buildLocalOperationalProductPayload({
@@ -433,7 +402,6 @@ const useQuickStockProductController = ({
     updateLocalPriceForm,
     selectProduct,
     adoptOperationalProduct,
-    handleCreateOperationalProductFromTemplate,
     handleCreateLocalOperationalProduct,
     handleSaveProductInline,
     handleDeleteSelectedProductForRecovery,

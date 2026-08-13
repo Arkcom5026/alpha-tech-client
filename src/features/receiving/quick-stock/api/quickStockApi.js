@@ -72,23 +72,6 @@ const extractList = (raw) => {
   return [];
 };
 
-const extractSingle = (raw) => {
-  if (!raw) return null;
-  if (Array.isArray(raw)) return raw[0] || null;
-
-  return (
-    raw?.product ||
-    raw?.data?.product ||
-    raw?.data?.item ||
-    raw?.data ||
-    raw?.result?.product ||
-    raw?.result?.item ||
-    raw?.result ||
-    raw?.item ||
-    null
-  );
-};
-
 export const normalizeQuickStockError = (err, fallbackMessage = "เกิดข้อผิดพลาด") => ({
   code: err?.code || err?.error || err?.data?.error || err?.response?.data?.error,
   message:
@@ -129,23 +112,7 @@ export const searchQuickStockProducts = async (filters = {}) => {
   };
 };
 
-export const getQuickStockOperationalProductByTemplateId = async (templateProductId) => {
-  try {
-    if (!templateProductId) {
-      const error = new Error('ไม่พบ templateProductId');
-      error.code = 'TEMPLATE_PRODUCT_ID_MISSING';
-      throw error;
-    }
-    const { data } = await apiClient.get(`products/pos/runtime-by-template/${templateProductId}`, {
-      params: { _ts: Date.now() },
-    });
-    return extractSingle(data);
-  } catch (err) {
-    throw parseApiError(err);
-  }
-};
-
-export const createQuickStockOperationalProductFromTemplate = async (payload = {}) => {
+export const materializeQuickStockTemplateProduct = async (payload = {}) => {
   try {
     const sanitizedPayload = { ...payload };
     delete sanitizedPayload.branchId;
@@ -192,8 +159,7 @@ export const commitQuickStockExistingIntake = async (payload) => {
 export default {
   getQuickStockDropdowns,
   searchQuickStockProducts,
-  getQuickStockOperationalProductByTemplateId,
-  createQuickStockOperationalProductFromTemplate,
+  materializeQuickStockTemplateProduct,
   createQuickStockLocalOperationalProduct,
   updateQuickStockOperationalProduct,
   deleteQuickStockOperationalProduct,

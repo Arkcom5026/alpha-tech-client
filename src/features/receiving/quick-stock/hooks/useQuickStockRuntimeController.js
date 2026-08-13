@@ -21,11 +21,10 @@ const useQuickStockRuntimeController = () => {
     isLoading,
     loadDropdownsAction,
     searchProductsAction,
-    getOperationalProductByTemplateIdAction,
     updateOperationalProductAction,
     deleteOperationalProductAction,
     quickStockIntakeExistingAction,
-    createOperationalProductFromTemplateAction,
+    materializeTemplateProductAction,
     createLocalOperationalProductAction,
   } = useQuickStockRuntimeStore();
 
@@ -62,8 +61,7 @@ const useQuickStockRuntimeController = () => {
     resetQueue: queue.resetQueue,
     executeProductSearch: discovery.executeProductSearch,
 
-    getOperationalProductByTemplateIdAction,
-    createOperationalProductFromTemplateAction,
+    materializeTemplateProductAction,
     createLocalOperationalProductAction,
     updateOperationalProductAction,
     deleteOperationalProductAction,

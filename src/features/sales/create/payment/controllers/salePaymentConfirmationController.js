@@ -11,6 +11,19 @@ const closeReservedPrintWindow = (confirmContext) => {
   confirmContext?.printWindow?.close?.();
 };
 
+const projectPostSaleDocumentWarning = ({ saleId, code, message, cause }) => ({
+  code: code || 'POST_SALE_DOCUMENT_FAILED',
+  message: message || 'ขายสำเร็จ แต่ออกเอกสารภาษีไม่สำเร็จ',
+  detail:
+    cause?.response?.data?.message ||
+    cause?.response?.data?.error ||
+    cause?.message ||
+    'กรุณาตรวจสอบการตั้งค่าผู้ออกเอกสารภาษี แล้วพิมพ์เอกสารย้อนหลัง',
+  saleId,
+  printHistoryPath: '../bill',
+  taxIssuerSettingsPath: '../../settings/tax-issuer',
+});
+
 export const executeSalePaymentConfirmation = async ({
   calculation,
   saleMode,
@@ -85,7 +98,18 @@ export const executeSalePaymentConfirmation = async ({
       if (saleOption === 'ORDINARY_RECEIPT') {
         const paymentId = Number(completion?.payments?.[0]?.id || 0);
         if (!paymentId) {
-          throw new Error('บันทึกการขายแล้ว แต่ไม่พบรายการรับชำระสำหรับออกใบเสร็จรับเงิน');
+          closeReservedPrintWindow(confirmContext);
+          return {
+            ok: true,
+            saleId,
+            response,
+            warning: projectPostSaleDocumentWarning({
+              saleId,
+              code: 'PAYMENT_RECEIPT_HANDOFF_FAILED',
+              message: 'ขายสำเร็จ แต่ยังเปิดใบเสร็จรับเงินไม่สำเร็จ',
+              cause: new Error('ไม่พบรายการรับชำระสำหรับออกใบเสร็จรับเงิน'),
+            }),
+          };
         }
         onSaleConfirmed?.(saleId, 'ORDINARY_RECEIPT', { ...confirmContext, paymentId });
         return { ok: true, saleId, paymentId, saleOption: 'ORDINARY_RECEIPT', response };
@@ -93,26 +117,55 @@ export const executeSalePaymentConfirmation = async ({
 
       const taxDocumentId = Number(completion?.taxIntake?.taxDocumentId || response?.taxIntake?.taxDocumentId || 0);
       if (!taxDocumentId) {
-        const error = new Error('บันทึกการขายแล้ว แต่ยังส่งรายการเข้าสู่ทะเบียนภาษีขายไม่สำเร็จ');
-        error.code = completion?.taxIntake?.code || response?.taxIntake?.code || 'OUTPUT_TAX_PUBLICATION_PENDING';
-        throw error;
+        closeReservedPrintWindow(confirmContext);
+        return {
+          ok: true,
+          saleId,
+          response,
+          warning: projectPostSaleDocumentWarning({
+            saleId,
+            code: completion?.taxIntake?.code || response?.taxIntake?.code || 'OUTPUT_TAX_PUBLICATION_PENDING',
+            message: 'ขายสำเร็จ แต่ยังสร้างเอกสารภาษีไม่สำเร็จ',
+            cause: new Error('รายการยังไม่พร้อมสำหรับการออกเอกสารภาษี กรุณาพิมพ์ย้อนหลังภายหลัง'),
+          }),
+        };
       }
+
       const taxInvoiceKind = saleOption === 'TAX_INVOICE' ? 'FULL' : 'SHORT';
-      const issued = await issueOutputTaxDocument({
-        branchId: completion?.sale?.branchId || response?.sale?.branchId,
-        taxDocumentId,
-        taxInvoiceKind,
-      });
-      const issuedDocumentId = Number(issued?.document?.id || taxDocumentId);
-      const finalTaxOption = taxInvoiceKind === 'FULL' ? 'TAX_DOCUMENT_FULL' : 'TAX_DOCUMENT_SHORT';
-      onSaleConfirmed?.(issuedDocumentId, finalTaxOption, confirmContext);
-      return {
-        ok: true,
-        saleId,
-        taxDocumentId: issuedDocumentId,
-        saleOption: finalTaxOption,
-        response,
-      };
+      try {
+        const issued = await issueOutputTaxDocument({
+          branchId: completion?.sale?.branchId || response?.sale?.branchId,
+          taxDocumentId,
+          taxInvoiceKind,
+        });
+        const issuedDocumentId = Number(issued?.document?.id || taxDocumentId);
+        const finalTaxOption = taxInvoiceKind === 'FULL' ? 'TAX_DOCUMENT_FULL' : 'TAX_DOCUMENT_SHORT';
+        onSaleConfirmed?.(issuedDocumentId, finalTaxOption, confirmContext);
+        return {
+          ok: true,
+          saleId,
+          taxDocumentId: issuedDocumentId,
+          saleOption: finalTaxOption,
+          response,
+        };
+      } catch (issuanceError) {
+        closeReservedPrintWindow(confirmContext);
+        return {
+          ok: true,
+          saleId,
+          taxDocumentId,
+          response,
+          warning: projectPostSaleDocumentWarning({
+            saleId,
+            code:
+              issuanceError?.response?.data?.code ||
+              issuanceError?.code ||
+              'TAX_DOCUMENT_ISSUANCE_FAILED',
+            message: 'ขายสำเร็จ แต่ออกเอกสารภาษีไม่สำเร็จ',
+            cause: issuanceError,
+          }),
+        };
+      }
     }
 
     const finalSaleOption = projectSaleOption({ saleMode, saleOption });

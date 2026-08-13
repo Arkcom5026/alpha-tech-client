@@ -4,6 +4,7 @@ import useTemplateCandidate from '../hooks/useTemplateCandidate';
 import {
   TEMPLATE_CANDIDATE_STATUS,
   getCandidateStatusLabel,
+  getCandidateTypeLabel,
 } from '../utils/candidateStatus';
 import { BUSINESS_TYPE_OPTIONS, getBusinessTypeLabel } from '../utils/businessType';
 import CandidateReviewWorkspaceHeader from '../workspace/components/CandidateReviewWorkspaceHeader';
@@ -17,8 +18,9 @@ const SORT_OPTIONS = [
   ['createdAt', 'สร้างล่าสุด'],
   ['updatedAt', 'อัปเดตล่าสุด'],
   ['reviewedAt', 'ตรวจสอบล่าสุด'],
-  ['promotedAt', 'Promote ล่าสุด'],
+  ['resolvedAt', 'จัดการล่าสุด'],
   ['status', 'สถานะ'],
+  ['type', 'ประเภท Candidate'],
 ];
 
 const CandidateReviewPage = () => {
@@ -147,6 +149,7 @@ const CandidateReviewPage = () => {
             totalRows={totalRows}
             getBusinessTypeLabel={getBusinessTypeLabel}
             getStatusLabel={getCandidateStatusLabel}
+            getTypeLabel={getCandidateTypeLabel}
             onOpenCandidate={handleOpenCandidate}
             onPage={handlePage}
             onReviewer={handleReviewer}

@@ -148,17 +148,18 @@ const SaleCustomerSection = ({ productSearchRef, clearTrigger, onClearFinish, on
   });
 
   const provinceFilter = useMemo(() => undefined, []);
-  const compactCustomerName =
-    view.editor.editor.companyName || view.editor.editor.name || selectedCustomer?.name || 'ลูกค้าที่เลือก';
-  const compactContactName =
-    view.editor.editor.companyName && view.editor.editor.name ? view.editor.editor.name : '';
+  const customerName = view.editor.editor.companyName
+    ? selectedCustomer?.customerName || selectedCustomer?.displayName || ''
+    : view.editor.editor.name || selectedCustomer?.name || '-';
+  const organizationName = view.editor.editor.companyName || selectedCustomer?.companyName || '-';
+  const departmentName = view.editor.editor.departmentName || selectedCustomer?.departmentName || '-';
+  const contactName = view.editor.editor.companyName
+    ? view.editor.editor.name || selectedCustomer?.contactName || selectedCustomer?.name || '-'
+    : selectedCustomer?.contactName || '-';
   const compactPhone = view.editor.editor.phone || selectedCustomer?.phone || '-';
-  const compactDetail = [compactContactName, view.editor.editor.departmentName]
-    .filter(Boolean)
-    .join(' · ');
 
   return (
-    <section className="w-full space-y-2.5 rounded-[20px] border border-slate-200 bg-white p-3">
+    <section className="h-full w-full space-y-2.5 rounded-[20px] border border-slate-200 bg-white p-3">
       <div className="flex flex-col gap-2.5 border-b border-slate-100 pb-2.5 lg:flex-row lg:items-center">
         <div className="flex shrink-0 items-center gap-2">
           <div className="rounded-lg bg-teal-100 p-1.5 text-teal-800">
@@ -199,17 +200,30 @@ const SaleCustomerSection = ({ productSearchRef, clearTrigger, onClearFinish, on
       ) : null}
 
       {view.selection.selectedCustomer && !editingSelectedCustomer ? (
-        <div className="flex items-center justify-between gap-2.5 rounded-lg border border-emerald-200 bg-emerald-50/70 px-3 py-2.5">
-          <div className="min-w-0 flex flex-1 flex-wrap items-center gap-x-2 gap-y-1 text-xs">
-            <span className="truncate font-semibold text-slate-900">{compactCustomerName}</span>
-            <span className="text-slate-300" aria-hidden="true">·</span>
-            <span className="shrink-0 font-medium text-slate-600">โทร {compactPhone}</span>
-            {compactDetail ? (
-              <>
-                <span className="text-slate-300" aria-hidden="true">·</span>
-                <span className="min-w-0 truncate text-slate-500">{compactDetail}</span>
-              </>
-            ) : null}
+        <div className="flex items-start justify-between gap-3 rounded-lg border border-emerald-200 bg-emerald-50/70 px-3 py-2.5">
+          <div className="min-w-0 flex-1">
+            <div className="grid gap-x-5 gap-y-1.5 text-sm sm:grid-cols-2 xl:grid-cols-3">
+              <p className="min-w-0 text-slate-700">
+                <span className="font-semibold text-slate-500">ชื่อลูกค้า :</span>{' '}
+                <span className="font-semibold text-slate-950">{customerName}</span>
+              </p>
+              <p className="min-w-0 text-slate-700">
+                <span className="font-semibold text-slate-500">ชื่อหน่วยงาน :</span>{' '}
+                <span className="font-semibold text-slate-950">{organizationName}</span>
+              </p>
+              <p className="min-w-0 text-slate-700">
+                <span className="font-semibold text-slate-500">แผนก :</span>{' '}
+                <span className="font-semibold text-slate-950">{departmentName}</span>
+              </p>
+              <p className="min-w-0 text-slate-700">
+                <span className="font-semibold text-slate-500">ชื่อผู้ติดต่อ :</span>{' '}
+                <span className="font-semibold text-slate-950">{contactName}</span>
+              </p>
+              <p className="min-w-0 text-slate-700">
+                <span className="font-semibold text-slate-500">โทร :</span>{' '}
+                <span className="font-mono font-semibold text-slate-950">{compactPhone}</span>
+              </p>
+            </div>
           </div>
           <button
             type="button"

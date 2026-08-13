@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
+import { materializePurchaseOrderTemplateProduct } from '../api/purchaseOrderApi';
 import { executePurchaseOrderSubmit } from '../controllers/purchaseOrderSubmitController';
 import { mapProductToPurchaseOrderEditorItem } from '../mappers/purchaseOrderEditorProductMapper';
 import { mapPurchaseOrderItems } from '../mappers/purchaseOrderItemMapper';
@@ -9,6 +10,14 @@ import {
   projectPurchaseOrderSupplierCreditHint,
 } from '../projections/purchaseOrderEditorProjection';
 import { usePurchaseOrderStore } from '../store/purchaseOrderStore';
+
+const toPositiveInt = (value) => {
+  const n = Number(value);
+  return Number.isInteger(n) && n > 0 ? n : null;
+};
+
+const unwrapMaterializedProduct = (payload) =>
+  payload?.product || payload?.data || payload;
 
 export const usePurchaseOrderEditor = ({ mode, currentBranchId, suppliers }) => {
   const { id, shopSlug } = useParams();
@@ -67,16 +76,46 @@ export const usePurchaseOrderEditor = ({ mode, currentBranchId, suppliers }) => 
     [supplier, suppliers]
   );
 
-  const addProductToOrder = useCallback((product) => {
+  const addProductToOrder = useCallback(async (product) => {
+    let operationalProduct = product;
+
+    if (mode === 'create' && (product?.discoverySource === 'TEMPLATE' || product?.isTemplateProduct === true)) {
+      const templateProductId = toPositiveInt(product?.templateProductId || product?.id);
+      if (!templateProductId) {
+        throw new Error('ไม่พบรหัสสินค้า Template ที่ต้องการนำเข้า');
+      }
+
+      const materialized = await materializePurchaseOrderTemplateProduct(templateProductId);
+      const localProduct = unwrapMaterializedProduct(materialized);
+      const localProductId = toPositiveInt(localProduct?.productId || localProduct?.id);
+      if (!localProductId) {
+        throw new Error('ไม่สามารถสร้างสินค้าในร้านจาก Template ได้');
+      }
+
+      operationalProduct = {
+        ...localProduct,
+        productId: localProductId,
+        id: localProductId,
+        quantity: product?.quantity || 1,
+        costPrice: product?.costPrice ?? localProduct?.costPrice ?? 0,
+        discoverySource: 'LOCAL',
+        isTemplateProduct: false,
+        templateProductId,
+        templateTrace: product?.name || localProduct?.templateTrace || null,
+      };
+    }
+
     setProducts((previous) => {
-      const nextItem = mapProductToPurchaseOrderEditorItem(product);
+      const nextItem = mapProductToPurchaseOrderEditorItem(operationalProduct);
       if (!nextItem) return previous;
       if (previous.some((row) => Number(row.productId || row.id) === nextItem.productId)) {
         return previous;
       }
       return [...previous, nextItem];
     });
-  }, []);
+
+    return operationalProduct;
+  }, [mode]);
 
   const handleCancel = useCallback(() => {
     navigate(`/${shopSlug}/pos/purchases`);

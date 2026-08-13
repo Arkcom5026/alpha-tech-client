@@ -25,6 +25,7 @@ export const usePurchaseOrderForm = (mode, searchText) => {
   const productSearch = usePurchaseOrderProductSearch({
     currentBranchId,
     searchText,
+    mode,
   });
 
   const referenceData = usePurchaseOrderReferenceData({

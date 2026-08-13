@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import { searchPurchaseOrderProducts } from '../api/purchaseOrderApi';
+import {
+  searchPurchaseOrderProducts,
+  searchPurchaseOrderTemplateProducts,
+} from '../api/purchaseOrderApi';
 import { mapPurchaseOrderProductSearchResponse } from '../mappers/purchaseOrderProductSearchMapper';
 import {
   applyPurchaseOrderProductFilterPatch,
@@ -8,7 +11,35 @@ import {
   toPurchaseOrderPositiveInt,
 } from '../policies/purchaseOrderProductSearchPolicy';
 
-export const usePurchaseOrderProductSearch = ({ currentBranchId, searchText }) => {
+const markLocalRows = (payload) =>
+  mapPurchaseOrderProductSearchResponse(payload).map((row) => ({
+    ...row,
+    discoverySource: 'LOCAL',
+    isTemplateProduct: false,
+  }));
+
+const markTemplateRows = (payload) =>
+  mapPurchaseOrderProductSearchResponse(payload).map((row) => ({
+    ...row,
+    discoverySource: 'TEMPLATE',
+    isTemplateProduct: true,
+    templateProductId: Number(row?.templateProductId || row?.id),
+  }));
+
+const mergeDiscoveryRows = (localRows, templateRows) => {
+  const linkedTemplateIds = new Set(
+    localRows
+      .map((row) => Number(row?.templateProductId))
+      .filter((id) => Number.isInteger(id) && id > 0)
+  );
+
+  return [
+    ...localRows,
+    ...templateRows.filter((row) => !linkedTemplateIds.has(Number(row?.templateProductId))),
+  ];
+};
+
+export const usePurchaseOrderProductSearch = ({ currentBranchId, searchText, mode = 'create' }) => {
   const [filter, setFilter] = useState({ productTypeId: '', brandId: '' });
   const [committedSearchText, setCommittedSearchText] = useState('');
   const [fetchedProducts, setFetchedProducts] = useState([]);
@@ -39,15 +70,30 @@ export const usePurchaseOrderProductSearch = ({ currentBranchId, searchText }) =
     let alive = true;
     setProductsLoading(true);
 
-    searchPurchaseOrderProducts({ productTypeId, brandId, search })
-      .then((data) => {
+    const localRequest = searchPurchaseOrderProducts({ productTypeId, brandId, search });
+    const templateRequest = mode === 'create'
+      ? searchPurchaseOrderTemplateProducts({ productTypeId, brandId, search })
+      : Promise.resolve([]);
+
+    Promise.allSettled([localRequest, templateRequest])
+      .then(([localResult, templateResult]) => {
         if (!alive) return;
-        setFetchedProducts(mapPurchaseOrderProductSearchResponse(data));
-      })
-      .catch((error) => {
-        if (!alive) return;
-        console.error('[PO] product search failed:', error);
-        setFetchedProducts([]);
+
+        const localRows = localResult.status === 'fulfilled'
+          ? markLocalRows(localResult.value)
+          : [];
+        const templateRows = templateResult.status === 'fulfilled'
+          ? markTemplateRows(templateResult.value)
+          : [];
+
+        if (localResult.status === 'rejected') {
+          console.error('[PO] local product search failed:', localResult.reason);
+        }
+        if (templateResult.status === 'rejected') {
+          console.error('[PO] template product search failed:', templateResult.reason);
+        }
+
+        setFetchedProducts(mergeDiscoveryRows(localRows, templateRows));
       })
       .finally(() => {
         if (alive) setProductsLoading(false);
@@ -56,7 +102,7 @@ export const usePurchaseOrderProductSearch = ({ currentBranchId, searchText }) =
     return () => {
       alive = false;
     };
-  }, [currentBranchId, productTypeId, brandId, committedSearchText]);
+  }, [currentBranchId, productTypeId, brandId, committedSearchText, mode]);
 
   const handleFilterChange = useCallback((patch) => {
     setFilter((previous) => applyPurchaseOrderProductFilterPatch(previous, patch));

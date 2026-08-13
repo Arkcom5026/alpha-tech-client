@@ -25,7 +25,7 @@ const ProductResultRow = ({
       <div className="flex items-start justify-between gap-2">
         <div className="font-semibold text-sm text-gray-900 min-w-0">{product.name}</div>
         <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[11px] font-medium ${template ? "border-amber-200 bg-amber-50 text-amber-700" : "border-emerald-200 bg-emerald-50 text-emerald-700"}`}>
-          {template ? "Template · ต้องสร้างในร้านก่อน" : "Operational · พร้อมรับเข้า"}
+          {template ? "Template · เตรียมให้อัตโนมัติ" : "Operational · พร้อมรับเข้า"}
         </span>
       </div>
       <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-1 text-xs text-gray-500">
@@ -141,7 +141,7 @@ const ProductSearchResults = ({
           />
           <ProductResultGroup
             title="Template Catalog"
-            description="ยังเป็นต้นแบบ ต้องสร้างหรือ adopt เป็นสินค้าในร้านก่อนรับเข้า"
+            description="เลือกได้ทันที ระบบจะเตรียม Local Product ของร้านให้อัตโนมัติก่อนรับเข้า"
             products={templateProducts}
             selectedProductId={selectedProductId}
             onSelectProduct={onSelectProduct}

@@ -9,6 +9,7 @@ const PaymentSummary = ({
   isSubmitting,
   onConfirm,
   paymentError,
+  completionWarning,
   recovery,
   retryingExistingCommand = false,
   saleOption,
@@ -50,6 +51,30 @@ const PaymentSummary = ({
           <p className="font-semibold">ผลการบันทึกยังไม่แน่นอน ระบบจะตรวจสอบคำสั่งเดิม</p>
           {commandSuffix ? <p className="mt-1 font-mono text-xs">คำสั่ง …{commandSuffix}</p> : null}
           <p className="mt-1 text-xs">กรุณาอย่าล้างตะกร้าหรือสร้างรายการใหม่จนกว่าจะทราบผล</p>
+        </div>
+      ) : null}
+
+      {completionWarning ? (
+        <div className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950" data-testid="pos-sale-completion-warning">
+          <p className="font-semibold">{completionWarning.message || 'ขายสำเร็จ แต่ออกเอกสารไม่สำเร็จ'}</p>
+          {completionWarning.detail ? <p className="mt-1 text-xs leading-5 text-amber-800">{completionWarning.detail}</p> : null}
+          {completionWarning.saleId ? (
+            <p className="mt-1 text-xs text-amber-700">เลขอ้างอิงรายการขาย: {completionWarning.saleId}</p>
+          ) : null}
+          <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <a
+              href={completionWarning.printHistoryPath || '../bill'}
+              className="inline-flex min-h-9 items-center justify-center rounded-lg border border-amber-300 bg-white px-3 text-xs font-semibold text-amber-900 hover:bg-amber-100"
+            >
+              ไปพิมพ์ย้อนหลัง
+            </a>
+            <a
+              href={completionWarning.taxIssuerSettingsPath || '../../settings/tax-issuer'}
+              className="inline-flex min-h-9 items-center justify-center rounded-lg border border-amber-300 bg-white px-3 text-xs font-semibold text-amber-900 hover:bg-amber-100"
+            >
+              ตั้งค่าผู้ออกเอกสารภาษี
+            </a>
+          </div>
         </div>
       ) : null}
 
@@ -120,6 +145,14 @@ PaymentSummary.propTypes = {
   isSubmitting: PropTypes.bool.isRequired,
   onConfirm: PropTypes.func.isRequired,
   paymentError: PropTypes.oneOfType([PropTypes.string, PropTypes.node]),
+  completionWarning: PropTypes.shape({
+    code: PropTypes.string,
+    message: PropTypes.string,
+    detail: PropTypes.string,
+    saleId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    printHistoryPath: PropTypes.string,
+    taxIssuerSettingsPath: PropTypes.string,
+  }),
   recovery: PropTypes.shape({
     state: PropTypes.string,
     commandId: PropTypes.string,

@@ -7,7 +7,6 @@ import IntakeQueueTable from "../../components/quick-stock/IntakeQueueTable";
 import QueueSummary from "../../components/quick-stock/QueueSummary";
 import CommitBar from "../../components/quick-stock/CommitBar";
 import QuickReceiptSessionPanel from "../components/QuickReceiptSessionPanel";
-import TemplateOperationalProductAdoptionPanel from "../components/TemplateOperationalProductAdoptionPanel";
 import LocalOperationalProductCreationPanel from "../components/LocalOperationalProductCreationPanel";
 import useQuickStockRuntimeController from "../hooks/useQuickStockRuntimeController";
 
@@ -59,7 +58,6 @@ const QuickStockPage = () => {
     selectedProduct,
     selectedTemplateProduct,
     operationalProduct,
-    isTemplateOnlySelection,
     runtimeStatus,
     readyCount,
     needDataCount,
@@ -77,7 +75,6 @@ const QuickStockPage = () => {
     updateLocalProductForm,
     updateLocalPriceForm,
     selectProduct,
-    handleCreateOperationalProductFromTemplate,
     handleCreateLocalOperationalProduct,
     handleBarcodeSubmit,
     handleSerialSubmit,
@@ -192,12 +189,6 @@ const QuickStockPage = () => {
             onDeleteProduct={handleDeleteSelectedProductForRecovery}
             onProductFieldChange={updateProductForm}
             onPriceFieldChange={updatePriceForm}
-          />
-
-          <TemplateOperationalProductAdoptionPanel
-            isVisible={isTemplateOnlySelection}
-            isBusy={isBusy}
-            onCreateOperationalProduct={handleCreateOperationalProductFromTemplate}
           />
 
           <LocalOperationalProductCreationPanel

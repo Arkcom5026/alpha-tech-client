@@ -39,7 +39,7 @@ assert.match(searchTableSource, /await onAdd\(/);
 assert.match(searchTableSource, /discoverySource: product\?\.discoverySource/);
 assert.match(searchTableSource, /isTemplateProduct: product\?\.isTemplateProduct === true/);
 assert.match(searchTableSource, /templateProductId: product\?\.templateProductId/);
-assert.match(searchTableSource, />Template</);
+assert.match(searchTableSource, />\s*Template\s*</);
 
 assert.match(payloadSource, /productId: Number\(product\?\.productId \|\| product\?\.id\)/);
 assert.doesNotMatch(payloadSource, /templateProductId/);

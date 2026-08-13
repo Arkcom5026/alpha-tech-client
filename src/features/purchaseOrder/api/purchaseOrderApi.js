@@ -71,6 +71,28 @@ export const searchPurchaseOrderProducts = async ({ productTypeId, brandId, sear
   return res.data;
 };
 
+export const searchPurchaseOrderTemplateProducts = async ({ productTypeId, brandId, search } = {}) => {
+  const res = await apiClient.get('/products/template/search', {
+    params: {
+      productTypeId: productTypeId || undefined,
+      brandId: brandId || undefined,
+      search: search || undefined,
+      take: 50,
+      pageSize: 50,
+      includeInactive: 'false',
+      _ts: Date.now(),
+    },
+  });
+  return res.data;
+};
+
+export const materializePurchaseOrderTemplateProduct = async (templateProductId) => {
+  const res = await apiClient.post('/products/pos/create-from-template', {
+    templateProductId: Number(templateProductId),
+  });
+  return res.data;
+};
+
 export const getPurchaseOrders = async (opts = {}) => {
   const res = await apiClient.get('/purchase-orders', {
     params: buildParams(opts),

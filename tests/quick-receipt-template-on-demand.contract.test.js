@@ -11,6 +11,7 @@ const read = (relativePath) => fs.readFileSync(path.resolve(root, relativePath),
 const apiSource = read('src/features/receiving/quick-stock/api/quickStockApi.js');
 const storeSource = read('src/features/receiving/quick-stock/store/quickStockRuntimeStore.js');
 const runtimeSource = read('src/features/receiving/quick-stock/hooks/useQuickStockRuntimeController.js');
+const discoverySource = read('src/features/receiving/quick-stock/hooks/useQuickStockDiscoveryController.js');
 const productSource = read('src/features/receiving/quick-stock/hooks/useQuickStockProductController.js');
 const commitSource = read('src/features/receiving/quick-stock/hooks/useQuickStockCommitController.js');
 const pageSource = read('src/features/receiving/quick-stock/pages/QuickStockPage.jsx');
@@ -28,6 +29,13 @@ assert.doesNotMatch(storeSource, /createOperationalProductFromTemplateAction/);
 
 assert.match(runtimeSource, /materializeTemplateProductAction/);
 assert.doesNotMatch(runtimeSource, /getOperationalProductByTemplateIdAction/);
+
+assert.match(discoverySource, /hideTemplateResultsWhenOperationalExists/);
+assert.match(
+  discoverySource,
+  /hideTemplateResultsWhenOperationalExists\(\s*dedupeDiscoveryProducts\(\[\.\.\.operationalList, \.\.\.templateList\]\)\s*\)/
+);
+assert.match(discoverySource, /setRuntimeSearchProducts\(merged\)/);
 
 assert.match(productSource, /selectedTemplateProduct/);
 assert.match(productSource, /materializeTemplateProductAction\(payload\)/);

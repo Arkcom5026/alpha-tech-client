@@ -95,8 +95,11 @@ const QuickSalePage = ({
         </div>
       )}
 
-      <div className="grid shrink-0 grid-cols-1 items-start gap-3 xl:grid-cols-[3fr_2fr]">
-        <div className={checkoutLocked ? 'pointer-events-none opacity-60' : ''} aria-disabled={checkoutLocked}>
+      <div className="grid shrink-0 grid-cols-1 items-stretch gap-3 xl:grid-cols-[3fr_2fr]">
+        <div
+          className={`h-full ${checkoutLocked ? 'pointer-events-none opacity-60' : ''}`}
+          aria-disabled={checkoutLocked}
+        >
           <CustomerSection
             phoneInputRef={phoneInputRef}
             productSearchRef={barcodeInputRef}
@@ -108,10 +111,11 @@ const QuickSalePage = ({
           />
         </div>
 
-        <div>
+        <div className="h-full">
           <SaleWorkspacePanel
             title={sourceLocked ? 'สินค้าจากใบจอง' : 'ค้นหาสินค้า'}
             locked={cartLocked}
+            className="h-full"
             action={
               <div className="flex flex-wrap items-center justify-end gap-1.5">
                 <SalePriceTypeSelector

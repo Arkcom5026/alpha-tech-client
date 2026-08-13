@@ -8,6 +8,9 @@ export const listPartnerStoreApplications = (status) =>
     params: status ? { status } : undefined,
   });
 
+export const startReviewPartnerStoreApplication = (applicationId, payload = {}) =>
+  apiClient.post(`/partner-store/applications/${applicationId}/review`, payload);
+
 export const approvePartnerStoreApplication = (applicationId, payload) =>
   apiClient.post(`/partner-store/applications/${applicationId}/approve`, payload);
 

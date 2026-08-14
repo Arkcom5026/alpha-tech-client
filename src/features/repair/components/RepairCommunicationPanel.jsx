@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { getRepairCommunicationPreference, listRepairCommunicationActivities, recordRepairCommunicationActivity } from '../../communication/api/communicationApi';
+import { dedupeRepairRead } from '../api/repairRequestCoordinator';
 
 const ACTIVITY_TYPES = [
   ['CALL', 'โทรหาลูกค้า'], ['MESSAGE', 'ส่งข้อความ'], ['RECEIPT_SENT', 'ส่งใบรับงาน'],
@@ -27,7 +28,14 @@ const RepairCommunicationPanel = ({ repairJobId }) => {
   const load = async () => {
     try {
       const [nextPreference, nextActivities] = await Promise.all([
-        getRepairCommunicationPreference(repairJobId), listRepairCommunicationActivities(repairJobId),
+        dedupeRepairRead(
+          `repair:communication-preference:${repairJobId}`,
+          () => getRepairCommunicationPreference(repairJobId)
+        ),
+        dedupeRepairRead(
+          `repair:communication-activities:${repairJobId}`,
+          () => listRepairCommunicationActivities(repairJobId)
+        ),
       ]);
       setPreference(nextPreference); setActivities(nextActivities || []); setError('');
     } catch (loadError) { setError(loadError.message); }

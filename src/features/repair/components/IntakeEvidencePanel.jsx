@@ -144,6 +144,14 @@ const IntakeEvidencePanel = ({ repairJobId, warning, retryDraft, onSaved }) => {
         </div>
       ) : null}
 
+      {!loading && evidence?.repairAsset ? (
+        <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
+          <p className="font-black">{evidence.repairAsset.displayName || '-'}</p>
+          <p className="mt-1 text-xs">รุ่น / Model: {evidence.repairAsset.model || '-'}</p>
+          <p className="mt-1 text-xs">Serial: {evidence.repairAsset.serialNumber || '-'}</p>
+        </div>
+      ) : null}
+
       {editing ? (
         <div className="mt-4 space-y-3">
           <MobileIntakeEvidenceFields value={draft} onChange={setDraft} />

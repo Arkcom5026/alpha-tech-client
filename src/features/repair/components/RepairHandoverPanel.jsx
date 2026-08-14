@@ -77,6 +77,14 @@ const RepairHandoverPanel = ({ repairJobId, job, onWorkflowAction, onJobReload }
 
       {state.loading ? <p className="mt-3 text-sm text-slate-500">กำลังโหลด...</p> : null}
 
+      {!state.loading && handover?.repairAsset ? (
+        <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
+          <p className="font-black">{handover.repairAsset.displayName || '-'}</p>
+          <p className="mt-1 text-xs">รุ่น / Model: {handover.repairAsset.model || '-'}</p>
+          <p className="mt-1 text-xs">Serial: {handover.repairAsset.serialNumber || '-'}</p>
+        </div>
+      ) : null}
+
       {!state.loading && workflowStatus === 'DELIVERED' ? (
         <div className="mt-4 rounded-2xl bg-emerald-50 p-4 font-bold text-emerald-800">
           ส่งมอบเสร็จแล้ว — ผู้รับ {handover?.customerConfirmedBy || '-'} กำลังปิดใบงาน

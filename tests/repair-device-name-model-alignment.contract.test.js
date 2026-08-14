@@ -25,15 +25,17 @@ test('mobile repair intake separates human-readable device name from optional mo
   assert.match(source, /patch\('model', event\.target\.value\)/);
 });
 
-test('actual repair runtime detail is the device naming presentation authority', () => {
+test('actual repair runtime detail consumes repairAsset as its single identity presentation authority', () => {
   const source = read('src/features/repair/components/JobRuntimePanel.jsx');
 
-  assert.match(source, /label="ชื่ออุปกรณ์"/);
-  assert.match(source, /label="รุ่น \/ Model"/);
-  assert.match(source, /job\?\.repairAsset\?\.displayName/);
-  assert.match(source, /job\?\.repairAsset\?\.model/);
-  assert.match(source, /job\?\.assetDescription/);
-  assert.match(source, /job\?\.deviceModel/);
+  assert.match(source, /const repairAsset = job\?\.repairAsset \|\| null/);
+  assert.match(source, /label="ชื่ออุปกรณ์" value=\{repairAsset\?\.displayName\}/);
+  assert.match(source, /label="รุ่น \/ Model" value=\{repairAsset\?\.model\}/);
+  assert.match(source, /label="บาร์โค้ด" value=\{repairAsset\?\.barcode\}/);
+  assert.match(source, /label="Serial" value=\{repairAsset\?\.serialNumber\}/);
+  assert.doesNotMatch(source, /job\?\.assetDescription/);
+  assert.doesNotMatch(source, /job\?\.deviceModel/);
+  assert.doesNotMatch(source, /job\?\.device\?\.model/);
 });
 
 test('retired duplicate RepairJobSummary presentation stays removed', () => {

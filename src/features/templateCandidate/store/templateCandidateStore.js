@@ -12,6 +12,8 @@ import {
   rejectTemplateCandidateApi,
   resolveCatalogDuplicateCandidateApi,
   archiveCatalogOrphanCandidateApi,
+  mergeTemplateCandidateApi,
+  promoteTemplateCandidateApi,
 } from '../api/templateCandidateApi';
 import { mapCandidateListResponse, mapCandidateResponse } from '../utils/candidateMapper';
 
@@ -194,6 +196,38 @@ const useTemplateCandidateStore = create((set) => ({
         candidates: candidate ? replaceCandidate(state.candidates, candidate) : state.candidates,
       }));
       return { ...response, candidate };
+    } catch (error) {
+      set({ error, mutating: false });
+      throw error;
+    }
+  },
+
+  mergeTemplateCandidateAction: async (id, payload = {}) => {
+    set({ mutating: true, error: null });
+    try {
+      const candidate = mapCandidateResponse(await mergeTemplateCandidateApi(id, payload));
+      set((state) => ({
+        mutating: false,
+        selectedCandidate: candidate,
+        candidates: replaceCandidate(state.candidates, candidate),
+      }));
+      return candidate;
+    } catch (error) {
+      set({ error, mutating: false });
+      throw error;
+    }
+  },
+
+  promoteTemplateCandidateAction: async (id, payload = {}) => {
+    set({ mutating: true, error: null });
+    try {
+      const candidate = mapCandidateResponse(await promoteTemplateCandidateApi(id, payload));
+      set((state) => ({
+        mutating: false,
+        selectedCandidate: candidate,
+        candidates: replaceCandidate(state.candidates, candidate),
+      }));
+      return candidate;
     } catch (error) {
       set({ error, mutating: false });
       throw error;

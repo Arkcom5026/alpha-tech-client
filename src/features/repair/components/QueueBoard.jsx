@@ -16,54 +16,7 @@ const MISSING_REPAIR_ASSET = Object.freeze({
 
 const getRepairAsset = (item) => item?.repairAsset || MISSING_REPAIR_ASSET;
 
-// Claim queue retirement is handled in the later Repair ↔ Claim identity increment.
-// Keep its legacy fallback isolated here so Repair Queue never rebuilds identity in FE.
-const getLegacyClaimAssetFallback = (item) => {
-  if (item.stockItem) {
-    return {
-      sourceType: 'STOCK_ITEM',
-      displayName:
-        item.stockItem?.product?.name || item.repairJob?.deviceModel || 'สินค้าในร้าน',
-      brand: item.stockItem?.product?.brand || null,
-      category: item.stockItem?.product?.productType || null,
-      model: item.device?.model || null,
-      barcode: item.stockItem?.barcode || item.device?.barcode || null,
-      serialNumber:
-        item.stockItem?.serialNumber || item.device?.serialNumber || null,
-      imei: item.device?.imei || null,
-    };
-  }
-
-  if (item.device) {
-    return {
-      sourceType: 'CUSTOMER_DEVICE',
-      displayName:
-        item.repairJob?.deviceModel ||
-        [item.device.brand, item.device.model].filter(Boolean).join(' ') ||
-        'อุปกรณ์ของลูกค้า',
-      brand: item.device.brand || null,
-      category: item.device.category || null,
-      model: item.device.model || null,
-      barcode: item.device.barcode || null,
-      serialNumber: item.device.serialNumber || null,
-      imei: item.device.imei || null,
-    };
-  }
-
-  return {
-    sourceType: 'DESCRIBED_DEVICE',
-    displayName: item.repairJob?.deviceModel || 'อุปกรณ์ในรายการเคลม',
-    brand: null,
-    category: null,
-    model: null,
-    barcode: null,
-    serialNumber: null,
-    imei: null,
-  };
-};
-
-const getClaimAsset = (item) =>
-  item.claimAsset || getLegacyClaimAssetFallback(item);
+const getClaimAsset = (item) => item?.claimAsset || MISSING_REPAIR_ASSET;
 
 const getAssetMeta = (asset) =>
   [asset.brand, asset.category].filter(Boolean).join(' • ');

@@ -96,7 +96,7 @@ const TaxExpenseCreateForm = ({ categories, payees, repairReasons = [], saving, 
           if (reason) setExpensePayeeId(String(reason.expensePayeeId));
         }} className="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-white px-2">
           <option value="">ค่าใช้จ่ายทั่วไป — ไม่อ้างอิงงานซ่อม</option>
-          {repairReasons.map((reason) => <option key={reason.id} value={reason.id}>{reason.repairJob?.jobNo} · {reason.repairJob?.deviceModel} · {reason.providerName} · {reason.status}</option>)}
+          {repairReasons.map((reason) => <option key={reason.id} value={reason.id}>{reason.repairJob?.jobNo} · {reason.repairJob?.repairAsset?.displayName || 'ไม่พบข้อมูลอุปกรณ์'} · {reason.providerName} · {reason.status}</option>)}
         </select>
       </label>
 

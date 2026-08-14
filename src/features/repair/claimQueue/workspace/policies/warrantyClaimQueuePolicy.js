@@ -21,14 +21,6 @@ export const getWarrantyClaimSearchValues = (claim) => [
   claim?.claimAsset?.barcode,
   claim?.claimAsset?.serialNumber,
   claim?.claimAsset?.imei,
-  claim?.stockItem?.product?.name,
-  claim?.stockItem?.barcode,
-  claim?.stockItem?.serialNumber,
-  claim?.device?.brand,
-  claim?.device?.model,
-  claim?.device?.barcode,
-  claim?.device?.serialNumber,
-  claim?.device?.imei,
 ];
 
 export const filterWarrantyClaims = (claims = [], query = '') => {

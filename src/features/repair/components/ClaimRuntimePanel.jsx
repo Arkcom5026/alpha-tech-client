@@ -77,7 +77,7 @@ const ClaimRuntimePanel = ({ claim, submitting, onTransition, onOpenRepair }) =>
           <div>
             <p className="text-xs font-black uppercase tracking-[0.18em] text-indigo-600">Claim Runtime</p>
             <h2 className="mt-1 text-2xl font-black text-slate-950">{claim.claimNo}</h2>
-            <p className="mt-1 text-sm text-slate-500">{claim.claimAsset?.displayName || claim.repairJob?.deviceModel || 'รายการเคลม'}</p>
+            <p className="mt-1 text-sm text-slate-500">{claim.claimAsset?.displayName || 'ไม่พบข้อมูลอุปกรณ์'}</p>
           </div>
           <span className="w-fit rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-xs font-black text-indigo-700">{CLAIM_LABELS[claim.status] || claim.status}</span>
         </div>

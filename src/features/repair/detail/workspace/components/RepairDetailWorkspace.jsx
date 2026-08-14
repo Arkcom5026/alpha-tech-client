@@ -13,6 +13,25 @@ import RepairHandoverPanel from '../../../components/RepairHandoverPanel';
 import IntakeEvidencePanel from '../../../components/IntakeEvidencePanel';
 import RepairCommunicationPanel from '../../../components/RepairCommunicationPanel';
 
+const ESTIMATE_RUNTIME_STATUSES = new Set([
+  'WAITING_APPROVAL',
+  'APPROVED',
+  'REJECTED',
+  'REPAIRING',
+  'WAITING_PARTS',
+  'WAITING_QC',
+  'QC_FAILED',
+  'READY_FOR_DELIVERY',
+  'DELIVERED',
+  'CLOSED',
+]);
+
+const HANDOVER_RUNTIME_STATUSES = new Set([
+  'READY_FOR_DELIVERY',
+  'DELIVERED',
+  'CLOSED',
+]);
+
 const RepairDetailWorkspace = ({
   repairJobId,
   job,
@@ -28,7 +47,14 @@ const RepairDetailWorkspace = ({
   onOpenClaim,
 }) => {
   const [evidenceRevision, setEvidenceRevision] = useState(0);
+  const workflowStatus = job?.workflow?.status || 'RECEIVED';
   const subcontractActive = Boolean(job?.workflow?.subcontractContext?.active);
+  const subcontractRelevant =
+    subcontractActive || ['APPROVED', 'REPAIRING'].includes(workflowStatus);
+  const estimateRelevant =
+    Boolean(job?.workflow?.preAgreedService?.enabled) ||
+    ESTIMATE_RUNTIME_STATUSES.has(workflowStatus);
+  const handoverRelevant = HANDOVER_RUNTIME_STATUSES.has(workflowStatus);
 
   const handleEvidenceSaved = async () => {
     setEvidenceRevision((current) => current + 1);
@@ -64,11 +90,13 @@ const RepairDetailWorkspace = ({
             onWorkflowAction={onWorkflowAction}
           />
 
-          <RepairSubcontractPanel
-            job={job}
-            onChanged={onRetry}
-            refreshKey={evidenceRevision}
-          />
+          {subcontractRelevant ? (
+            <RepairSubcontractPanel
+              job={job}
+              onChanged={onRetry}
+              refreshKey={evidenceRevision}
+            />
+          ) : null}
 
           {!subcontractActive ? (
             <>
@@ -98,9 +126,12 @@ const RepairDetailWorkspace = ({
 
           <RepairTrackingAccessPanel repairJobId={repairJobId} jobNo={job.jobNo} />
           <RepairCommunicationPanel repairJobId={repairJobId} />
-          <RepairEstimateApprovalPanel repairJobId={repairJobId} job={job} />
 
-          {!subcontractActive ? (
+          {estimateRelevant ? (
+            <RepairEstimateApprovalPanel repairJobId={repairJobId} job={job} />
+          ) : null}
+
+          {!subcontractActive && handoverRelevant ? (
             <RepairHandoverPanel
               repairJobId={repairJobId}
               job={job}

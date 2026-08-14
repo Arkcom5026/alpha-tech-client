@@ -34,6 +34,8 @@ export const useTemplateCandidate = ({ autoFetch = false, filters = {} } = {}) =
     rejectCandidate: store.rejectTemplateCandidateAction,
     resolveDuplicate: store.resolveCatalogDuplicateCandidateAction,
     archiveOrphan: store.archiveCatalogOrphanCandidateAction,
+    mergeCandidate: store.mergeTemplateCandidateAction,
+    promoteCandidate: store.promoteTemplateCandidateAction,
     clearError: store.clearTemplateCandidateError,
   };
 };

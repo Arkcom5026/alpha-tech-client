@@ -47,8 +47,13 @@ const RepairSubcontractPanel = ({ job, onChanged, refreshKey = 0 }) => {
   const [returnNote, setReturnNote] = useState('');
   const [receiveForm, setReceiveForm] = useState({ actualExternalCost: '', transportCost: '', materialCost: '', otherOperationalCost: '', resultNote: '' });
 
+  const activeFromJob = job?.workflow?.subcontractContext || null;
+  const workflowStatus = job?.workflow?.status || context?.workflowStatus || 'RECEIVED';
+  const canOpen = ['APPROVED', 'REPAIRING'].includes(workflowStatus);
+  const shouldLoadContext = Boolean(activeFromJob || expanded);
+
   const load = useCallback(async () => {
-    if (!job?.id) return;
+    if (!job?.id || !shouldLoadContext) return;
     setLoading(true);
     setError('');
     try {
@@ -63,23 +68,25 @@ const RepairSubcontractPanel = ({ job, onChanged, refreshKey = 0 }) => {
     } finally {
       setLoading(false);
     }
-  }, [job?.id]);
+  }, [job?.id, shouldLoadContext]);
 
   useEffect(() => {
+    if (!shouldLoadContext) return;
     load();
-  }, [load, refreshKey]);
+  }, [load, refreshKey, shouldLoadContext]);
 
   useEffect(() => {
-    listExpensePayees().then((rows) => setPayees(Array.isArray(rows) ? rows : [])).catch(() => setPayees([]));
-  }, [refreshKey]);
+    if (!expanded || activeFromJob) return;
+    listExpensePayees()
+      .then((rows) => setPayees(Array.isArray(rows) ? rows : []))
+      .catch(() => setPayees([]));
+  }, [expanded, activeFromJob, refreshKey]);
 
   useEffect(() => {
     setSendForm(emptySendForm(job));
   }, [job?.id, job?.estimatedCost]);
 
-  const active = context?.active || job?.workflow?.subcontractContext || null;
-  const workflowStatus = job?.workflow?.status || context?.workflowStatus || 'RECEIVED';
-  const canOpen = ['APPROVED', 'REPAIRING'].includes(workflowStatus);
+  const active = context?.active || activeFromJob || null;
   const outsourceConsent = Boolean(context?.outsourceConsent);
 
   const handlePayeeCreated = async (created) => {

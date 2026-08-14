@@ -12,15 +12,17 @@ const read = (relativePath) => fs.readFileSync(path.join(root, relativePath), 'u
 test('customer tracking page consumes repairAsset as canonical paperless identity', () => {
   const source = read('src/features/repair/customer-tracking/pages/CustomerRepairTrackingPage.jsx');
 
-  assert.match(source, /const repairAsset = repair\.repairAsset \|\| repair\.device \|\| \{\}/);
-  assert.match(source, /repairAsset\.displayName/);
-  assert.match(source, /label="ชื่ออุปกรณ์" value=\{repairAsset\.displayName\}/);
+  assert.match(source, /const repairAsset = repair\.repairAsset \|\| \{\}/);
+  assert.match(source, /\{repairAsset\.displayName \|\| '-'\}/);
   assert.match(source, /label="รุ่น \/ Model" value=\{repairAsset\.model\}/);
   assert.match(source, /label="ยี่ห้อ" value=\{repairAsset\.brand\}/);
+  assert.match(source, /label="ประเภท" value=\{repairAsset\.category\}/);
   assert.match(source, /label="Serial Number" value=\{repairAsset\.serialNumber\}/);
   assert.match(source, /label="IMEI" value=\{repairAsset\.imei\}/);
-  assert.match(source, /label="Barcode ร้าน" value=\{repairAsset\.barcode\}/);
-  assert.doesNotMatch(source, /const device = repair\.device/);
+  assert.match(source, /label="Barcode" value=\{repairAsset\.barcode\}/);
+  assert.doesNotMatch(source, /repair\.device/);
+  assert.doesNotMatch(source, /repair\.deviceModel/);
+  assert.doesNotMatch(source, /repair\.assetDescription/);
 });
 
 test('public tracking read participates in repair in-flight request dedupe', () => {

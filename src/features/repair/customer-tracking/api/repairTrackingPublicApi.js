@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { getRuntimeBaseURL } from '@/utils/apiClient';
+import { dedupeRepairRead } from '../../api/repairRequestCoordinator';
 
 const normalizeError = (error) => {
   const payload = error?.response?.data;
@@ -12,20 +13,23 @@ const normalizeError = (error) => {
 };
 
 export async function getPublicRepairTracking(token) {
-  try {
-    const baseURL = getRuntimeBaseURL();
-    const response = await axios.get(
-      `${baseURL}repairs/public/tracking/${encodeURIComponent(String(token || '').trim())}`,
-      {
-        timeout: 30000,
-        withCredentials: false,
-        headers: { Accept: 'application/json' },
-      }
-    );
-    return response?.data?.data ?? null;
-  } catch (error) {
-    throw normalizeError(error);
-  }
+  const normalizedToken = String(token || '').trim();
+  return dedupeRepairRead(`public-tracking:${normalizedToken}`, async () => {
+    try {
+      const baseURL = getRuntimeBaseURL();
+      const response = await axios.get(
+        `${baseURL}repairs/public/tracking/${encodeURIComponent(normalizedToken)}`,
+        {
+          timeout: 30000,
+          withCredentials: false,
+          headers: { Accept: 'application/json' },
+        }
+      );
+      return response?.data?.data ?? null;
+    } catch (error) {
+      throw normalizeError(error);
+    }
+  });
 }
 
 export async function decidePublicRepairEstimate(token, payload) {

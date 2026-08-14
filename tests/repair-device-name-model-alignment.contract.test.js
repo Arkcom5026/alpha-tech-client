@@ -7,8 +7,12 @@ import { fileURLToPath } from 'node:url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+function resolve(relativePath) {
+  return path.join(__dirname, '..', relativePath);
+}
+
 function read(relativePath) {
-  return fs.readFileSync(path.join(__dirname, '..', relativePath), 'utf8');
+  return fs.readFileSync(resolve(relativePath), 'utf8');
 }
 
 test('mobile repair intake separates human-readable device name from optional model', () => {
@@ -21,7 +25,7 @@ test('mobile repair intake separates human-readable device name from optional mo
   assert.match(source, /patch\('model', event\.target\.value\)/);
 });
 
-test('actual repair runtime detail shows device name and technical model as separate fields', () => {
+test('actual repair runtime detail is the device naming presentation authority', () => {
   const source = read('src/features/repair/components/JobRuntimePanel.jsx');
 
   assert.match(source, /label="ชื่ออุปกรณ์"/);
@@ -32,11 +36,11 @@ test('actual repair runtime detail shows device name and technical model as sepa
   assert.match(source, /job\?\.deviceModel/);
 });
 
-test('legacy repair summary also keeps device name and technical model separate', () => {
-  const source = read('src/features/repair/components/RepairJobSummary.jsx');
-
-  assert.match(source, /label="ชื่ออุปกรณ์"/);
-  assert.match(source, /label="รุ่น \/ Model"/);
+test('retired duplicate RepairJobSummary presentation stays removed', () => {
+  assert.equal(
+    fs.existsSync(resolve('src/features/repair/components/RepairJobSummary.jsx')),
+    false
+  );
 });
 
 test('repair queue keeps the repair asset display name as the compact primary label', () => {

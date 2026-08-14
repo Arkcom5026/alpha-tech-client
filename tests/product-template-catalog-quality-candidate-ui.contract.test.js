@@ -8,10 +8,13 @@ const read = (relativePath) => fs.readFileSync(path.join(root, relativePath), 'u
 const api = read('src/features/templateCandidate/api/templateCandidateApi.js');
 const status = read('src/features/templateCandidate/utils/candidateStatus.js');
 const mapper = read('src/features/templateCandidate/utils/candidateMapper.js');
+const review = read('src/features/templateCandidate/pages/CandidateReviewPage.jsx');
 const detail = read('src/features/templateCandidate/pages/CandidateDetailPage.jsx');
 const snapshots = read('src/features/templateCandidate/workspace/components/CandidateDetailSnapshots.jsx');
+const scanner = read('src/features/templateCandidate/workspace/components/CandidateCatalogQualityScanner.jsx');
 const decision = read('src/features/templateCandidate/workspace/components/CandidateCatalogQualityDecisionPanel.jsx');
 const queue = read('src/features/templateCandidate/workspace/components/CandidateReviewQueue.jsx');
+const header = read('src/features/templateCandidate/workspace/components/CandidateReviewWorkspaceHeader.jsx');
 
 assert.match(api, /quality\/scan/);
 assert.match(api, /quality\/scan-orphans/);
@@ -31,6 +34,16 @@ assert.match(mapper, /primaryTemplateProductId/);
 assert.match(mapper, /comparisonTemplateProductId/);
 assert.match(mapper, /assessment/);
 assert.match(mapper, /resolution/);
+
+assert.match(review, /CandidateCatalogQualityScanner/);
+assert.match(review, /scanDuplicates/);
+assert.match(review, /scanOrphans/);
+assert.match(review, /scanQuality/);
+assert.match(scanner, /Template Branch ID/);
+assert.match(scanner, /Dry run/);
+assert.match(scanner, /สร้าง Candidate/);
+assert.match(scanner, /apply/);
+assert.match(header, /Template Catalog Quality/);
 
 assert.match(detail, /CandidateCatalogQualityDecisionPanel/);
 assert.match(detail, /catalogQualityCandidate/);

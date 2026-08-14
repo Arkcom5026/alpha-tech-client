@@ -13,6 +13,8 @@ describe('partner store provisioning UI v2 contract', () => {
     expect(page).toContain("['NOT_STARTED', 'FAILED']");
     expect(page).toContain('Provisioning:');
     expect(page).toContain('สร้างร้าน');
-    expect(page).toContain('รอขั้นตอน Activation แยกต่างหาก');
+    expect(page).toContain('Provisioning จะสร้าง Branch และ Capability เท่านั้น ไม่เปิดบัญชีเจ้าของร้าน');
+    expect(page).toContain('ร้านถูกสร้างแล้ว สามารถออกลิงก์ให้เจ้าของร้านตั้งรหัสผ่านได้');
+    expect(page).toContain('issuePartnerStoreActivationInvitation');
   });
 });

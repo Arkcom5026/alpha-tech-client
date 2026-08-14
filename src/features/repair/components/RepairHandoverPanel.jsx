@@ -3,12 +3,14 @@ import repairApi from '../api/repairApi';
 
 const RepairHandoverPanel = ({ repairJobId, job, onWorkflowAction, onJobReload }) => {
   const workflowStatus = job?.workflow?.status || 'RECEIVED';
+  const handoverRelevant = ['READY_FOR_DELIVERY', 'DELIVERED', 'CLOSED'].includes(workflowStatus);
   const defaultReceiverName = job?.customer?.name || job?.customer?.companyName || job?.customerName || '';
   const [handover, setHandover] = useState(null);
   const [form, setForm] = useState({ receiverName: defaultReceiverName, handoverConfirmed: false, note: '' });
-  const [state, setState] = useState({ loading: true, saving: false, error: null });
+  const [state, setState] = useState({ loading: false, saving: false, error: null });
 
   const load = () => {
+    if (!handoverRelevant) return;
     setState((v) => ({ ...v, loading: true, error: null }));
     repairApi.getHandover(repairJobId)
       .then((data) => {
@@ -21,9 +23,13 @@ const RepairHandoverPanel = ({ repairJobId, job, onWorkflowAction, onJobReload }
       })
       .catch((error) => setState({ loading: false, saving: false, error: error.message }));
   };
-  useEffect(load, [repairJobId]);
 
-  if (!['READY_FOR_DELIVERY', 'DELIVERED', 'CLOSED'].includes(workflowStatus)) return null;
+  useEffect(() => {
+    if (!handoverRelevant) return;
+    load();
+  }, [repairJobId, handoverRelevant]);
+
+  if (!handoverRelevant) return null;
 
   const finalizeAndClose = async () => {
     setState((v) => ({ ...v, saving: true, error: null }));

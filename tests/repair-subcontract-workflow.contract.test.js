@@ -71,7 +71,7 @@ describe('repair subcontract workflow contract', () => {
     const evidence = read('src/features/repair/components/IntakeEvidencePanel.jsx');
 
     expect(panel).toContain('refreshKey = 0');
-    expect(panel).toContain('[load, refreshKey]');
+    expect(panel).toContain('[load, refreshKey, shouldLoadContext]');
     expect(workspace).toContain('const [evidenceRevision, setEvidenceRevision] = useState(0)');
     expect(workspace).toContain('refreshKey={evidenceRevision}');
     expect(workspace).toContain('onSaved={handleEvidenceSaved}');

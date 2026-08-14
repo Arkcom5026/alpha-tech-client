@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import RepairShellHeader from '../../../components/RepairShellHeader';
 import RuntimeStatePanel from '../../../components/RuntimeStatePanel';
 import RepairWorkflowOverview from '../../../components/RepairWorkflowOverview';
@@ -52,6 +52,7 @@ const RepairDetailWorkspace = ({
   const estimateRelevant =
     preAgreedService || ESTIMATE_VISIBLE_STATUSES.has(workflowStatus);
   const handoverRelevant = HANDOVER_VISIBLE_STATUSES.has(workflowStatus);
+  const evidenceRelevant = Boolean(evidenceWarning || pendingIntakeEvidence);
 
   const handleEvidenceSaved = async () => {
     setEvidenceRevision((current) => current + 1);
@@ -62,15 +63,15 @@ const RepairDetailWorkspace = ({
     <div>
       <RepairShellHeader
         eyebrow="Repair Runtime"
-        title="à¸£à¸²à¸¢à¸¥à¸°à¹€à¸­à¸µà¸¢à¸”à¸‡à¸²à¸™à¸‹à¹ˆà¸­à¸¡"
-        description="à¸žà¸·à¹‰à¸™à¸—à¸µà¹ˆà¸›à¸à¸´à¸šà¸±à¸•à¸´à¸‡à¸²à¸™à¸«à¸¥à¸±à¸à¸—à¸µà¹ˆà¸žà¸²à¸œà¸¹à¹‰à¹ƒà¸Šà¹‰à¸—à¸³à¸‡à¸²à¸™à¸•à¸²à¸¡à¸‚à¸±à¹‰à¸™à¸•à¸­à¸™ à¸•à¸±à¹‰à¸‡à¹à¸•à¹ˆà¸•à¸£à¸§à¸ˆà¸ªà¸­à¸šà¸ˆà¸™à¸–à¸¶à¸‡à¸ªà¹ˆà¸‡à¸¡à¸­à¸š"
+        title="รายละเอียดงานซ่อม"
+        description="พื้นที่ปฏิบัติงานหลักที่พาผู้ใช้ทำงานตามขั้นตอน ตั้งแต่ตรวจสอบจนถึงส่งมอบ"
       />
 
       <RuntimeStatePanel
         loading={loading}
         error={error}
         empty={!loading && !error && !job}
-        emptyText="à¹„à¸¡à¹ˆà¸žà¸šà¸‡à¸²à¸™à¸‹à¹ˆà¸­à¸¡"
+        emptyText="ไม่พบงานซ่อม"
         onRetry={onRetry}
       />
 
@@ -78,7 +79,7 @@ const RepairDetailWorkspace = ({
         <div className="space-y-4">
           {communicationWarning ? (
             <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-              à¹€à¸›à¸´à¸”à¸‡à¸²à¸™à¸‹à¹ˆà¸­à¸¡à¸ªà¸³à¹€à¸£à¹‡à¸ˆ à¹à¸•à¹ˆà¸¢à¸±à¸‡à¸šà¸±à¸™à¸—à¸¶à¸à¸Šà¹ˆà¸­à¸‡à¸—à¸²à¸‡à¸•à¸´à¸”à¸•à¹ˆà¸­à¹„à¸¡à¹ˆà¹„à¸”à¹‰: {communicationWarning}
+              เปิดงานซ่อมสำเร็จ แต่ยังบันทึกช่องทางติดต่อไม่ได้: {communicationWarning}
             </div>
           ) : null}
           <RepairWorkflowOverview
@@ -88,11 +89,13 @@ const RepairDetailWorkspace = ({
           />
 
           {subcontractRelevant ? (
-            <RepairSubcontractPanel
-              job={job}
-              onChanged={onRetry}
-              refreshKey={evidenceRevision}
-            />
+            <DeferredRepairSection minHeight={140} force={subcontractActive}>
+              <RepairSubcontractPanel
+                job={job}
+                onChanged={onRetry}
+                refreshKey={evidenceRevision}
+              />
+            </DeferredRepairSection>
           ) : null}
 
           {!subcontractActive ? (
@@ -121,20 +124,28 @@ const RepairDetailWorkspace = ({
             />
           ) : null}
 
-          <RepairTrackingAccessPanel repairJobId={repairJobId} jobNo={job.jobNo} />
+          <DeferredRepairSection minHeight={120}>
+            <RepairTrackingAccessPanel repairJobId={repairJobId} jobNo={job.jobNo} />
+          </DeferredRepairSection>
 
           <DeferredRepairSection minHeight={140} force={Boolean(communicationWarning)}>
             <RepairCommunicationPanel repairJobId={repairJobId} />
           </DeferredRepairSection>
 
           {estimateRelevant ? (
-            <DeferredRepairSection minHeight={180}>
+            <DeferredRepairSection
+              minHeight={180}
+              force={workflowStatus === 'WAITING_APPROVAL'}
+            >
               <RepairEstimateApprovalPanel repairJobId={repairJobId} job={job} />
             </DeferredRepairSection>
           ) : null}
 
           {!subcontractActive && handoverRelevant ? (
-            <DeferredRepairSection minHeight={180}>
+            <DeferredRepairSection
+              minHeight={180}
+              force={workflowStatus === 'READY_FOR_DELIVERY'}
+            >
               <RepairHandoverPanel
                 repairJobId={repairJobId}
                 job={job}
@@ -146,7 +157,7 @@ const RepairDetailWorkspace = ({
 
           <DeferredRepairSection
             minHeight={180}
-            force={Boolean(evidenceWarning || pendingIntakeEvidence)}
+            force={evidenceRelevant}
           >
             <IntakeEvidencePanel
               repairJobId={repairJobId}
@@ -162,4 +173,3 @@ const RepairDetailWorkspace = ({
 };
 
 export default RepairDetailWorkspace;
-

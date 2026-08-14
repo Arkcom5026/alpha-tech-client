@@ -106,7 +106,8 @@ describe('repair operations workspace behavior contract', () => {
     expect(intakePage).toContain('runtime.createJob');
     expect(intakePage).toContain('runtime.createExternalIntake');
     expect(intakePage).toContain('repairApi.saveIntakeEvidence');
-    expect(intakePage).toContain('state: { evidenceWarning: error.message }');
+    expect(intakePage).toContain('navigationState.evidenceWarning = error.message');
+    expect(intakePage).toContain('navigationState.pendingIntakeEvidence = externalEvidence');
   });
 
   it('preserves customer access, estimate approval, handover, and intake evidence surfaces across workspace ownership', () => {

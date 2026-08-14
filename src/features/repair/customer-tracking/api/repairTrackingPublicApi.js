@@ -14,8 +14,8 @@ const normalizeError = (error) => {
 
 export async function getPublicRepairTracking(token) {
   const normalizedToken = String(token || '').trim();
-  return dedupeRepairRead(`public-tracking:${normalizedToken}`, async () => {
-    try {
+  try {
+    return await dedupeRepairRead(`public-tracking:${normalizedToken}`, async () => {
       const baseURL = getRuntimeBaseURL();
       const response = await axios.get(
         `${baseURL}repairs/public/tracking/${encodeURIComponent(normalizedToken)}`,
@@ -26,10 +26,10 @@ export async function getPublicRepairTracking(token) {
         }
       );
       return response?.data?.data ?? null;
-    } catch (error) {
-      throw normalizeError(error);
-    }
-  });
+    });
+  } catch (error) {
+    throw normalizeError(error);
+  }
 }
 
 export async function decidePublicRepairEstimate(token, payload) {

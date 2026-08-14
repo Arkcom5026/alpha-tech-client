@@ -33,4 +33,27 @@ describe('tax expense API contract', () => {
       supplierId: 7, documentNumber: 'INV-1',
     }));
   });
+
+  it('shares only concurrent expense-payee reads with the same normalized query', async () => {
+    let resolveRead;
+    mocks.get.mockReturnValue(new Promise((resolve) => {
+      resolveRead = resolve;
+    }));
+
+    const first = api.listExpensePayees({ q: '  Vendor A  ' });
+    const duplicate = api.listExpensePayees({ q: 'vendor a' });
+
+    expect(first).toBe(duplicate);
+    expect(mocks.get).toHaveBeenCalledTimes(1);
+    expect(mocks.get).toHaveBeenCalledWith('/tax-expenses/expense-payees', {
+      params: { q: 'Vendor A' },
+    });
+
+    resolveRead({ data: { data: [{ id: 1 }] } });
+    await expect(first).resolves.toEqual([{ id: 1 }]);
+
+    mocks.get.mockResolvedValue({ data: { data: [{ id: 2 }] } });
+    await api.listExpensePayees({ q: 'vendor a' });
+    expect(mocks.get).toHaveBeenCalledTimes(2);
+  });
 });

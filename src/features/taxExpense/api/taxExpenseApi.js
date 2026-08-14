@@ -1,6 +1,7 @@
 import apiClient from '@/utils/apiClient';
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
+const inFlightExpensePayeeReads = new Map();
 
 export const listTaxExpenseCategories = async () =>
   unwrap(await apiClient.get('/tax-expenses/categories'));
@@ -8,8 +9,26 @@ export const listTaxExpenseCategories = async () =>
 export const createTaxExpenseCategory = async (payload) =>
   unwrap(await apiClient.post('/tax-expenses/categories', payload));
 
-export const listExpensePayees = async ({ q } = {}) =>
-  unwrap(await apiClient.get('/tax-expenses/expense-payees', { params: q ? { q } : undefined }));
+export const listExpensePayees = ({ q } = {}) => {
+  const normalizedQuery = String(q || '').trim();
+  const key = normalizedQuery.toLocaleLowerCase();
+  const existing = inFlightExpensePayeeReads.get(key);
+  if (existing) return existing;
+
+  const pending = apiClient
+    .get('/tax-expenses/expense-payees', {
+      params: normalizedQuery ? { q: normalizedQuery } : undefined,
+    })
+    .then(unwrap)
+    .finally(() => {
+      if (inFlightExpensePayeeReads.get(key) === pending) {
+        inFlightExpensePayeeReads.delete(key);
+      }
+    });
+
+  inFlightExpensePayeeReads.set(key, pending);
+  return pending;
+};
 
 // Compatibility authority for expense flows that still use the supplier-oriented name.
 // Expense payees are served by the dedicated /tax-expenses/expense-payees endpoint.

@@ -12,6 +12,7 @@ import RepairEstimateApprovalPanel from '../../../customer-access/components/Rep
 import RepairHandoverPanel from '../../../components/RepairHandoverPanel';
 import IntakeEvidencePanel from '../../../components/IntakeEvidencePanel';
 import RepairCommunicationPanel from '../../../components/RepairCommunicationPanel';
+import DeferredRepairPanel from './DeferredRepairPanel';
 
 const RepairDetailWorkspace = ({
   repairJobId,
@@ -28,7 +29,11 @@ const RepairDetailWorkspace = ({
   onOpenClaim,
 }) => {
   const [evidenceRevision, setEvidenceRevision] = useState(0);
+  const workflowStatus = job?.workflow?.status || null;
   const subcontractActive = Boolean(job?.workflow?.subcontractContext?.active);
+  const estimateRelevant = workflowStatus === 'WAITING_APPROVAL';
+  const handoverRelevant = ['READY_FOR_DELIVERY', 'DELIVERED'].includes(workflowStatus);
+  const evidenceRelevant = Boolean(evidenceWarning || pendingIntakeEvidence);
 
   const handleEvidenceSaved = async () => {
     setEvidenceRevision((current) => current + 1);
@@ -64,11 +69,13 @@ const RepairDetailWorkspace = ({
             onWorkflowAction={onWorkflowAction}
           />
 
-          <RepairSubcontractPanel
-            job={job}
-            onChanged={onRetry}
-            refreshKey={evidenceRevision}
-          />
+          <DeferredRepairPanel eager={subcontractActive} minHeight={96}>
+            <RepairSubcontractPanel
+              job={job}
+              onChanged={onRetry}
+              refreshKey={evidenceRevision}
+            />
+          </DeferredRepairPanel>
 
           {!subcontractActive ? (
             <>
@@ -96,25 +103,37 @@ const RepairDetailWorkspace = ({
             />
           ) : null}
 
-          <RepairTrackingAccessPanel repairJobId={repairJobId} jobNo={job.jobNo} />
-          <RepairCommunicationPanel repairJobId={repairJobId} />
-          <RepairEstimateApprovalPanel repairJobId={repairJobId} job={job} />
+          <DeferredRepairPanel minHeight={80}>
+            <RepairTrackingAccessPanel repairJobId={repairJobId} jobNo={job.jobNo} />
+          </DeferredRepairPanel>
+
+          <DeferredRepairPanel minHeight={100}>
+            <RepairCommunicationPanel repairJobId={repairJobId} />
+          </DeferredRepairPanel>
+
+          <DeferredRepairPanel eager={estimateRelevant} minHeight={100}>
+            <RepairEstimateApprovalPanel repairJobId={repairJobId} job={job} />
+          </DeferredRepairPanel>
 
           {!subcontractActive ? (
-            <RepairHandoverPanel
-              repairJobId={repairJobId}
-              job={job}
-              onWorkflowAction={onWorkflowAction}
-              onJobReload={onRetry}
-            />
+            <DeferredRepairPanel eager={handoverRelevant} minHeight={100}>
+              <RepairHandoverPanel
+                repairJobId={repairJobId}
+                job={job}
+                onWorkflowAction={onWorkflowAction}
+                onJobReload={onRetry}
+              />
+            </DeferredRepairPanel>
           ) : null}
 
-          <IntakeEvidencePanel
-            repairJobId={repairJobId}
-            warning={evidenceWarning}
-            retryDraft={pendingIntakeEvidence}
-            onSaved={handleEvidenceSaved}
-          />
+          <DeferredRepairPanel eager={evidenceRelevant} minHeight={100}>
+            <IntakeEvidencePanel
+              repairJobId={repairJobId}
+              warning={evidenceWarning}
+              retryDraft={pendingIntakeEvidence}
+              onSaved={handleEvidenceSaved}
+            />
+          </DeferredRepairPanel>
         </div>
       ) : null}
     </div>

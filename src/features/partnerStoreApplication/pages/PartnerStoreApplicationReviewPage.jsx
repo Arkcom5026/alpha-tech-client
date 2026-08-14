@@ -5,6 +5,7 @@ import {
   rejectPartnerStoreApplication,
   startReviewPartnerStoreApplication,
 } from '../api/partnerStoreApplicationApi';
+import { provisionPartnerStoreApplication } from '../api/partnerStoreProvisioningApi';
 
 const statuses = ['', 'PENDING', 'UNDER_REVIEW', 'APPROVED', 'REJECTED', 'WITHDRAWN'];
 const messageFrom = (error) => error?.response?.data?.message || error?.message || 'ดำเนินการไม่สำเร็จ';
@@ -57,12 +58,14 @@ export default function PartnerStoreApplicationReviewPage() {
     return run(item, () => rejectPartnerStoreApplication(item.id, { reviewNote }));
   };
 
+  const provision = (item) => run(item, () => provisionPartnerStoreApplication(item.id));
+
   return (
     <div className="space-y-5">
       <section className="rounded-3xl border border-emerald-100 bg-white p-6 shadow-sm">
         <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-600">Partner governance</p>
         <h1 className="mt-2 text-2xl font-black text-slate-900">ใบสมัครร้านพาร์ตเนอร์</h1>
-        <p className="mt-2 text-sm text-slate-500">การอนุมัติเป็นคำตัดสินด้าน Governance เท่านั้น ยังไม่เปิดร้านหรือเปิดใช้งานบัญชี</p>
+        <p className="mt-2 text-sm text-slate-500">การอนุมัติเป็น Governance ส่วนการสร้างร้านเป็น Provisioning แยกขั้น และยังไม่เปิดใช้งานบัญชีเจ้าของร้าน</p>
         <select value={status} onChange={(event) => setStatus(event.target.value)} className="mt-5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold">
           {statuses.map((value) => <option key={value || 'ALL'} value={value}>{value || 'ทุกสถานะ'}</option>)}
         </select>
@@ -75,7 +78,11 @@ export default function PartnerStoreApplicationReviewPage() {
       {items.map((item) => {
         const pending = item.status === 'PENDING';
         const underReview = item.status === 'UNDER_REVIEW';
+        const approved = item.status === 'APPROVED';
+        const provisioningStatus = item.provisioningStatus || 'NOT_STARTED';
+        const canProvision = approved && ['NOT_STARTED', 'FAILED'].includes(provisioningStatus);
         const acting = actingId === item.id;
+
         return (
           <article key={item.id} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <div className="flex flex-wrap items-start justify-between gap-3">
@@ -83,13 +90,19 @@ export default function PartnerStoreApplicationReviewPage() {
                 <h2 className="font-black text-slate-900">{item.businessName}</h2>
                 <p className="mt-1 text-xs font-mono text-slate-500">{item.applicationCode} · {item.status}</p>
               </div>
-              <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">{item.contactName}</span>
+              <div className="flex flex-wrap gap-2">
+                <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">{item.contactName}</span>
+                {approved && <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">Provisioning: {provisioningStatus}</span>}
+              </div>
             </div>
+
             <div className="mt-4 grid gap-2 text-sm text-slate-600 md:grid-cols-2">
               <p><b>อีเมล:</b> {item.contactEmail || '-'}</p>
               <p><b>โทรศัพท์:</b> {item.contactPhone}</p>
               <p><b>ที่อยู่:</b> {item.businessAddress || '-'}</p>
               <p><b>ชื่อย่อหน้าร้าน:</b> {item.requestedStorefrontSlug || 'ระบบกำหนดภายหลัง'}</p>
+              {approved && item.provisionedBranchId && <p><b>Branch ID:</b> {item.provisionedBranchId}</p>}
+              {approved && item.provisioningFailureCode && <p className="text-red-600"><b>Provisioning error:</b> {item.provisioningFailureCode}</p>}
             </div>
 
             {(pending || underReview) && (
@@ -98,6 +111,23 @@ export default function PartnerStoreApplicationReviewPage() {
                 {pending && <button disabled={acting} onClick={() => startReview(item)} className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-60">เริ่มตรวจสอบ</button>}
                 {underReview && <button disabled={acting} onClick={() => approve(item)} className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-60">อนุมัติใบสมัคร</button>}
                 {underReview && <button disabled={acting} onClick={() => reject(item)} className="rounded-xl bg-red-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-60">ปฏิเสธ</button>}
+              </div>
+            )}
+
+            {approved && (
+              <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-4">
+                <p className="text-xs text-slate-500">
+                  {provisioningStatus === 'PROVISIONED'
+                    ? 'สร้างร้านแล้ว รอขั้นตอน Activation แยกต่างหาก'
+                    : provisioningStatus === 'IN_PROGRESS'
+                      ? 'กำลังสร้างร้าน ระบบป้องกันการสร้างซ้ำ'
+                      : 'Provisioning จะสร้าง Branch และ Capability เท่านั้น ไม่เปิดบัญชีเจ้าของร้าน'}
+                </p>
+                {canProvision && (
+                  <button disabled={acting} onClick={() => provision(item)} className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-60">
+                    {provisioningStatus === 'FAILED' ? 'ลองสร้างร้านอีกครั้ง' : 'สร้างร้าน'}
+                  </button>
+                )}
               </div>
             )}
           </article>

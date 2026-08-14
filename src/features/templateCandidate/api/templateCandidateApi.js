@@ -43,12 +43,31 @@ export const getTemplateCandidateApi = (id) =>
 export const createTemplateCandidateApi = (payload) =>
   request(() => apiClient.post(BASE_PATH, payload));
 
+export const createCatalogQualityCandidateApi = (payload) =>
+  request(() => apiClient.post(`${BASE_PATH}/quality`, payload));
+
+export const scanCatalogDuplicateCandidatesApi = (payload = {}) =>
+  request(() => apiClient.post(`${BASE_PATH}/quality/scan`, payload));
+
+export const scanCatalogOrphanCandidatesApi = (payload = {}) =>
+  request(() => apiClient.post(`${BASE_PATH}/quality/scan-orphans`, payload));
+
+export const scanCatalogQualityCandidatesApi = (payload = {}) =>
+  request(() => apiClient.post(`${BASE_PATH}/quality/scan-quality`, payload));
+
 export const startTemplateCandidateReviewApi = (id) =>
   request(() => apiClient.post(`${BASE_PATH}/${id}/start-review`));
 
 export const rejectTemplateCandidateApi = (id, payload = {}) =>
   request(() => apiClient.post(`${BASE_PATH}/${id}/reject`, payload));
 
+export const resolveCatalogDuplicateCandidateApi = (id, payload = {}) =>
+  request(() => apiClient.post(`${BASE_PATH}/${id}/resolve-duplicate`, payload));
+
+export const archiveCatalogOrphanCandidateApi = (id, payload = {}) =>
+  request(() => apiClient.post(`${BASE_PATH}/${id}/archive-orphan`, payload));
+
+// Legacy transition commands remain exported for historical Candidate records only.
 export const mergeTemplateCandidateApi = (id, payload = {}) =>
   request(() => apiClient.post(`${BASE_PATH}/${id}/merge`, payload));
 

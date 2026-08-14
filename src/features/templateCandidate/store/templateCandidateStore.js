@@ -4,10 +4,16 @@ import {
   listTemplateCandidatesApi,
   getTemplateCandidateApi,
   createTemplateCandidateApi,
+  createCatalogQualityCandidateApi,
+  scanCatalogDuplicateCandidatesApi,
+  scanCatalogOrphanCandidatesApi,
+  scanCatalogQualityCandidatesApi,
   startTemplateCandidateReviewApi,
-  promoteTemplateCandidateApi,
   rejectTemplateCandidateApi,
+  resolveCatalogDuplicateCandidateApi,
+  archiveCatalogOrphanCandidateApi,
   mergeTemplateCandidateApi,
+  promoteTemplateCandidateApi,
 } from '../api/templateCandidateApi';
 import { mapCandidateListResponse, mapCandidateResponse } from '../utils/candidateMapper';
 
@@ -75,6 +81,61 @@ const useTemplateCandidateStore = create((set) => ({
     }
   },
 
+  createCatalogQualityCandidateAction: async (payload) => {
+    set({ mutating: true, error: null });
+    try {
+      const response = await createCatalogQualityCandidateApi(payload);
+      const candidate = mapCandidateResponse(response);
+      set((state) => ({
+        mutating: false,
+        selectedCandidate: candidate || state.selectedCandidate,
+        candidates: candidate?.id
+          ? [candidate, ...state.candidates.filter((item) => Number(item.id) !== Number(candidate.id))]
+          : state.candidates,
+      }));
+      return { ...response, candidate };
+    } catch (error) {
+      set({ error, mutating: false });
+      throw error;
+    }
+  },
+
+  scanCatalogDuplicateCandidatesAction: async (payload = {}) => {
+    set({ mutating: true, error: null });
+    try {
+      const response = await scanCatalogDuplicateCandidatesApi(payload);
+      set({ mutating: false });
+      return response;
+    } catch (error) {
+      set({ error, mutating: false });
+      throw error;
+    }
+  },
+
+  scanCatalogOrphanCandidatesAction: async (payload = {}) => {
+    set({ mutating: true, error: null });
+    try {
+      const response = await scanCatalogOrphanCandidatesApi(payload);
+      set({ mutating: false });
+      return response;
+    } catch (error) {
+      set({ error, mutating: false });
+      throw error;
+    }
+  },
+
+  scanCatalogQualityCandidatesAction: async (payload = {}) => {
+    set({ mutating: true, error: null });
+    try {
+      const response = await scanCatalogQualityCandidatesApi(payload);
+      set({ mutating: false });
+      return response;
+    } catch (error) {
+      set({ error, mutating: false });
+      throw error;
+    }
+  },
+
   startTemplateCandidateReviewAction: async (id) => {
     set({ mutating: true, error: null });
     try {
@@ -101,6 +162,40 @@ const useTemplateCandidateStore = create((set) => ({
         candidates: replaceCandidate(state.candidates, candidate),
       }));
       return candidate;
+    } catch (error) {
+      set({ error, mutating: false });
+      throw error;
+    }
+  },
+
+  resolveCatalogDuplicateCandidateAction: async (id, payload = {}) => {
+    set({ mutating: true, error: null });
+    try {
+      const response = await resolveCatalogDuplicateCandidateApi(id, payload);
+      const candidate = mapCandidateResponse(response);
+      set((state) => ({
+        mutating: false,
+        selectedCandidate: candidate || state.selectedCandidate,
+        candidates: candidate ? replaceCandidate(state.candidates, candidate) : state.candidates,
+      }));
+      return { ...response, candidate };
+    } catch (error) {
+      set({ error, mutating: false });
+      throw error;
+    }
+  },
+
+  archiveCatalogOrphanCandidateAction: async (id, payload = {}) => {
+    set({ mutating: true, error: null });
+    try {
+      const response = await archiveCatalogOrphanCandidateApi(id, payload);
+      const candidate = mapCandidateResponse(response);
+      set((state) => ({
+        mutating: false,
+        selectedCandidate: candidate || state.selectedCandidate,
+        candidates: candidate ? replaceCandidate(state.candidates, candidate) : state.candidates,
+      }));
+      return { ...response, candidate };
     } catch (error) {
       set({ error, mutating: false });
       throw error;

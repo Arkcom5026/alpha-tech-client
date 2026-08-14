@@ -4,10 +4,12 @@ import useTemplateCandidate from '../hooks/useTemplateCandidate';
 import {
   TEMPLATE_CANDIDATE_STATUS,
   getCandidateStatusLabel,
+  getCandidateTypeLabel,
 } from '../utils/candidateStatus';
 import { BUSINESS_TYPE_OPTIONS, getBusinessTypeLabel } from '../utils/businessType';
 import CandidateReviewWorkspaceHeader from '../workspace/components/CandidateReviewWorkspaceHeader';
 import CandidateBusinessTypeScope from '../workspace/components/CandidateBusinessTypeScope';
+import CandidateCatalogQualityScanner from '../workspace/components/CandidateCatalogQualityScanner';
 import CandidateReviewSummary from '../workspace/components/CandidateReviewSummary';
 import CandidateReviewFilters from '../workspace/components/CandidateReviewFilters';
 import CandidateReviewQueue from '../workspace/components/CandidateReviewQueue';
@@ -17,8 +19,9 @@ const SORT_OPTIONS = [
   ['createdAt', 'สร้างล่าสุด'],
   ['updatedAt', 'อัปเดตล่าสุด'],
   ['reviewedAt', 'ตรวจสอบล่าสุด'],
-  ['promotedAt', 'Promote ล่าสุด'],
+  ['resolvedAt', 'จัดการล่าสุด'],
   ['status', 'สถานะ'],
+  ['type', 'ประเภท Candidate'],
 ];
 
 const CandidateReviewPage = () => {
@@ -34,8 +37,12 @@ const CandidateReviewPage = () => {
     summary,
     reviewerWorkload,
     loading,
+    mutating,
     error,
     refresh,
+    scanDuplicates,
+    scanOrphans,
+    scanQuality,
   } = useTemplateCandidate();
 
   const [filters, setFilters] = React.useState({
@@ -99,7 +106,7 @@ const CandidateReviewPage = () => {
   return (
     <div className="min-h-screen space-y-5 bg-slate-50 p-4 xl:p-6">
       <CandidateReviewWorkspaceHeader
-        loading={loading}
+        loading={loading || mutating}
         hasBusinessType={hasBusinessType}
         onRefresh={() => loadQueue(filters)}
       />
@@ -113,6 +120,15 @@ const CandidateReviewPage = () => {
 
       {hasBusinessType && (
         <>
+          <CandidateCatalogQualityScanner
+            businessType={filters.businessType}
+            busy={loading || mutating}
+            onScanDuplicates={scanDuplicates}
+            onScanOrphans={scanOrphans}
+            onScanQuality={scanQuality}
+            onRefresh={() => loadQueue(filters)}
+          />
+
           <CandidateReviewSummary
             statuses={Object.values(TEMPLATE_CANDIDATE_STATUS)}
             total={total}
@@ -147,6 +163,7 @@ const CandidateReviewPage = () => {
             totalRows={totalRows}
             getBusinessTypeLabel={getBusinessTypeLabel}
             getStatusLabel={getCandidateStatusLabel}
+            getTypeLabel={getCandidateTypeLabel}
             onOpenCandidate={handleOpenCandidate}
             onPage={handlePage}
             onReviewer={handleReviewer}

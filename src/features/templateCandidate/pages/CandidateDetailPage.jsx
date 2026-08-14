@@ -9,6 +9,7 @@ import CandidateDetailHeader from '../workspace/components/CandidateDetailHeader
 import CandidateDetailSnapshots from '../workspace/components/CandidateDetailSnapshots';
 import CandidateDetailStartReview from '../workspace/components/CandidateDetailStartReview';
 import CandidateDetailDecisionPanel from '../workspace/components/CandidateDetailDecisionPanel';
+import CandidateCatalogQualityDecisionPanel from '../workspace/components/CandidateCatalogQualityDecisionPanel';
 import CandidateDetailTimeline from '../workspace/components/CandidateDetailTimeline';
 
 const CandidateDetailPage = () => {
@@ -17,17 +18,20 @@ const CandidateDetailPage = () => {
   const {
     selectedCandidate,
     loading,
-    submitting,
+    mutating,
     error,
     fetchById,
     startReview,
     rejectCandidate,
+    resolveDuplicate,
+    archiveOrphan,
     mergeCandidate,
     promoteCandidate,
     clearError,
   } = useTemplateCandidate();
 
   const [decisionNote, setDecisionNote] = React.useState('');
+  const [canonicalTemplateProductId, setCanonicalTemplateProductId] = React.useState('');
   const [targetTemplateProductId, setTargetTemplateProductId] = React.useState('');
   const [promoteForm, setPromoteForm] = React.useState({
     name: '',
@@ -50,8 +54,10 @@ const CandidateDetailPage = () => {
   React.useEffect(() => {
     const candidate = selectedCandidate;
     if (!candidate) return;
+
     const source = candidate.proposedTemplateData || candidate.sourceSnapshot || {};
     setDecisionNote(candidate.decisionNote || '');
+    setCanonicalTemplateProductId(candidate.primaryTemplateProductId || '');
     setTargetTemplateProductId(candidate.targetTemplateProductId || '');
     setPromoteForm((current) => ({
       ...current,
@@ -109,7 +115,8 @@ const CandidateDetailPage = () => {
 
   const candidate = selectedCandidate;
   const status = candidate?.status;
-  const busy = loading || submitting;
+  const catalogQualityCandidate = Boolean(candidate?.type);
+  const busy = loading || mutating;
   const events = [...(candidate?.events || [])].sort(
     (a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)
   );
@@ -142,28 +149,48 @@ const CandidateDetailPage = () => {
 
       <CandidateDetailSnapshots candidate={candidate} />
 
-      <CandidateDetailStartReview
-        visible={status === TEMPLATE_CANDIDATE_STATUS.DRAFT}
-        busy={busy}
-        onStart={() => runAction(() => startReview(id))}
-      />
+      {catalogQualityCandidate ? (
+        <CandidateCatalogQualityDecisionPanel
+          candidate={candidate}
+          busy={busy}
+          decisionNote={decisionNote}
+          setDecisionNote={setDecisionNote}
+          canonicalTemplateProductId={canonicalTemplateProductId}
+          setCanonicalTemplateProductId={setCanonicalTemplateProductId}
+          onResolveDuplicate={() => runAction(() => resolveDuplicate(id, {
+            canonicalTemplateProductId: Number(canonicalTemplateProductId),
+            decisionNote: decisionNote.trim() || null,
+          }))}
+          onArchiveOrphan={() => runAction(() => archiveOrphan(id, {
+            decisionNote: decisionNote.trim() || null,
+          }))}
+        />
+      ) : (
+        <>
+          <CandidateDetailStartReview
+            visible={status === TEMPLATE_CANDIDATE_STATUS.DRAFT}
+            busy={busy}
+            onStart={() => runAction(() => startReview(id))}
+          />
 
-      <CandidateDetailDecisionPanel
-        visible={status === TEMPLATE_CANDIDATE_STATUS.UNDER_REVIEW}
-        busy={busy}
-        decisionNote={decisionNote}
-        setDecisionNote={setDecisionNote}
-        targetTemplateProductId={targetTemplateProductId}
-        setTargetTemplateProductId={setTargetTemplateProductId}
-        promoteForm={promoteForm}
-        setPromoteForm={setPromoteForm}
-        onReject={() => runAction(() => rejectCandidate(id, { decisionNote: decisionNote.trim() }))}
-        onMerge={() => runAction(() => mergeCandidate(id, {
-          targetTemplateProductId: Number(targetTemplateProductId),
-          decisionNote: decisionNote.trim() || null,
-        }))}
-        onPromote={handlePromote}
-      />
+          <CandidateDetailDecisionPanel
+            visible={status === TEMPLATE_CANDIDATE_STATUS.UNDER_REVIEW}
+            busy={busy}
+            decisionNote={decisionNote}
+            setDecisionNote={setDecisionNote}
+            targetTemplateProductId={targetTemplateProductId}
+            setTargetTemplateProductId={setTargetTemplateProductId}
+            promoteForm={promoteForm}
+            setPromoteForm={setPromoteForm}
+            onReject={() => runAction(() => rejectCandidate(id, { decisionNote: decisionNote.trim() }))}
+            onMerge={() => runAction(() => mergeCandidate(id, {
+              targetTemplateProductId: Number(targetTemplateProductId),
+              decisionNote: decisionNote.trim() || null,
+            }))}
+            onPromote={handlePromote}
+          />
+        </>
+      )}
 
       <CandidateDetailTimeline candidate={candidate} events={events} />
     </div>

@@ -1,7 +1,7 @@
 import React from 'react';
 import RepairShellHeader from '../../../components/RepairShellHeader';
 import RuntimeStatePanel from '../../../components/RuntimeStatePanel';
-import QueueBoard from '../../../components/QueueBoard';
+import ClaimQueueBoard from './ClaimQueueBoard';
 
 const WarrantyClaimQueueWorkspace = ({
   query,
@@ -49,7 +49,7 @@ const WarrantyClaimQueueWorkspace = ({
     />
 
     {!loading && !error && activeLanes.length ? (
-      <QueueBoard lanes={activeLanes} type="claim" onOpen={onOpenClaim} />
+      <ClaimQueueBoard lanes={activeLanes} onOpen={onOpenClaim} />
     ) : null}
   </div>
 );

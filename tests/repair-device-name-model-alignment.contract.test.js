@@ -45,9 +45,17 @@ test('retired duplicate RepairJobSummary presentation stays removed', () => {
   );
 });
 
-test('repair queue keeps the repair asset display name as the compact primary label', () => {
+test('repair queue consumes canonical repairAsset without rebuilding repair identity from legacy fields', () => {
   const source = read('src/features/repair/components/QueueBoard.jsx');
+  const repairResolver = source.match(
+    /const getRepairAsset = \(item\) => ([^;]+);/
+  )?.[0] || '';
 
-  assert.match(source, /if \(item\.repairAsset\) return item\.repairAsset/);
+  assert.match(repairResolver, /item\?\.repairAsset/);
+  assert.match(repairResolver, /MISSING_REPAIR_ASSET/);
+  assert.doesNotMatch(repairResolver, /deviceModel/);
+  assert.doesNotMatch(repairResolver, /stockItem/);
+  assert.doesNotMatch(repairResolver, /item\.device/);
   assert.match(source, /\{asset\.displayName\}/);
+  assert.match(source, /const getLegacyClaimAssetFallback/);
 });

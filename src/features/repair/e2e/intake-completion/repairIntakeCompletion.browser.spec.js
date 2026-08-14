@@ -35,6 +35,7 @@ test.use({
 
 test.describe('Repair intake completion (selected E2E authority)', () => {
   test('blocks work before evidence, then accepts completed intake evidence', async ({ page }) => {
+    test.setTimeout(60_000);
     if (missingEnvironment.length > 0) {
       throw new Error(
         `Missing Repair Browser E2E environment: ${missingEnvironment.join(', ')}. `
@@ -68,19 +69,16 @@ test.describe('Repair intake completion (selected E2E authority)', () => {
 
     await expect(page.getByRole('heading', { name: repairJobNo })).toBeVisible();
 
-    const statusSelect = page.locator(repairIntakeSelectors.statusSelect).first();
-    await expect(statusSelect).toBeVisible();
-    await expect(statusSelect.locator('option[value="COMPLETED"]')).toHaveCount(0);
-
-    await statusSelect.selectOption('IN_PROGRESS');
-    await page.getByPlaceholder('บันทึกความคืบหน้า').fill('E2E blocked before intake evidence');
+    const acceptancePanel = page.locator(repairIntakeSelectors.jobAcceptancePanel).first();
+    const acceptJobButton = acceptancePanel.getByRole('button');
+    await expect(acceptJobButton).toBeVisible();
 
     const blockedResponsePromise = page.waitForResponse(
-      (response) => response.request().method() === 'PATCH'
-        && response.url().includes(`/api/repairs/jobs/${repairJobId}/status`),
+      (response) => response.request().method() === 'POST'
+        && response.url().includes(`/api/repairs/jobs/${repairJobId}/workflow/commands`),
       { timeout: 15_000 }
     );
-    await page.getByRole('button', { name: 'บันทึกสถานะ' }).click();
+    await acceptJobButton.click();
     const blockedResponse = await blockedResponsePromise;
     const blockedBodyText = await blockedResponse.text();
     let blockedBody = null;
@@ -105,6 +103,9 @@ test.describe('Repair intake completion (selected E2E authority)', () => {
       `409 response did not identify the intake-evidence gate: ${blockedBodyText}`
     ).toMatch(/intake|evidence|หลักฐาน|รับเครื่อง/i);
 
+    // The evidence panel is intentionally deferred until it approaches the viewport.
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await page.waitForTimeout(500);
     await page.getByRole('button', { name: '+ เพิ่มหลักฐาน' }).click();
     await page.locator(repairIntakeSelectors.evidenceFileInput).setInputFiles({
       name: `repair-intake-${Date.now()}.png`,
@@ -144,23 +145,39 @@ test.describe('Repair intake completion (selected E2E authority)', () => {
     await expect(page.getByText('ยังไม่มีภาพหลักฐาน')).toHaveCount(0);
     await expect(page.getByRole('img', { name: /หลักฐานรับเครื่อง 1/i })).toBeVisible();
 
-    await statusSelect.selectOption('IN_PROGRESS');
-    await page.getByPlaceholder('บันทึกความคืบหน้า').fill('E2E intake evidence complete');
-
     const successResponsePromise = page.waitForResponse(
-      (response) => response.request().method() === 'PATCH'
-        && response.url().includes(`/api/repairs/jobs/${repairJobId}/status`),
+      (response) => response.request().method() === 'POST'
+        && response.url().includes(`/api/repairs/jobs/${repairJobId}/workflow/commands`),
       { timeout: 15_000 }
     );
-    await page.getByRole('button', { name: 'บันทึกสถานะ' }).click();
+    await acceptJobButton.click();
     const successResponse = await successResponsePromise;
     const successBodyText = await successResponse.text();
 
     expect(
       successResponse.ok(),
-      `Final status update failed with HTTP ${successResponse.status()}: ${successBodyText}`
+      `Job acceptance failed with HTTP ${successResponse.status()}: ${successBodyText}`
     ).toBeTruthy();
 
-    await expect(page.getByText('กำลังตรวจ/ซ่อม', { exact: true })).toBeVisible();
+    await expect(acceptancePanel).toHaveCount(0);
+
+    const repairActionPanel = page.locator('section:has-text("Primary Action")')
+      .filter({ hasNotText: 'Job Acceptance' })
+      .first();
+    const startRepairButton = repairActionPanel.getByRole('button').first();
+    await expect(startRepairButton).toBeVisible();
+
+    const startRepairResponsePromise = page.waitForResponse(
+      (response) => response.request().method() === 'POST'
+        && response.url().includes(`/api/repairs/jobs/${repairJobId}/workflow/commands`),
+      { timeout: 15_000 }
+    );
+    await startRepairButton.click();
+    const startRepairResponse = await startRepairResponsePromise;
+    const startRepairBodyText = await startRepairResponse.text();
+    expect(
+      startRepairResponse.ok(),
+      `Starting repair failed with HTTP ${startRepairResponse.status()}: ${startRepairBodyText}`
+    ).toBeTruthy();
   });
 });

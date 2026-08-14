@@ -32,6 +32,7 @@ const initialDraft = {
   registerAsset: false,
   category: '',
   brand: '',
+  model: '',
   serialNumber: '',
   imei: '',
   barcode: '',
@@ -144,6 +145,7 @@ const ExternalDeviceIntakeForm = ({
       asset: {
         category: draft.category,
         brand: draft.brand,
+        model: draft.model,
         serialNumber: draft.serialNumber,
         imei: draft.imei,
         barcode: draft.barcode,
@@ -187,13 +189,16 @@ const ExternalDeviceIntakeForm = ({
 
       <div className="grid gap-3 md:grid-cols-2">
         <label className="space-y-1 md:col-span-2">
-          <span className="text-xs font-black text-slate-600">สิ่งที่นำมาซ่อม *</span>
+          <span className="text-xs font-black text-slate-600">ชื่ออุปกรณ์ *</span>
           <input
             value={draft.assetDescription}
             onChange={(event) => patch('assetDescription', event.target.value)}
-            placeholder="เช่น เครื่องตัดหญ้า รถยนต์ เครื่องปั่น โทรศัพท์ หรือแผงวงจร"
+            placeholder="เช่น Canon G2010, iPhone 15 Pro, เครื่องตัดหญ้า Honda GX35"
             className="min-h-12 w-full rounded-xl border border-slate-300 px-4"
           />
+          <span className="block text-[11px] text-slate-500">
+            ใช้ชื่อที่คนในร้านอ่านแล้วเข้าใจได้ทันที ชื่อนี้จะแสดงเป็นชื่อหลักในคิวงาน
+          </span>
         </label>
 
         <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-violet-200 bg-violet-50 p-4 md:col-span-2">
@@ -229,6 +234,16 @@ const ExternalDeviceIntakeForm = ({
             value={draft.brand}
             onChange={(event) => patch('brand', event.target.value)}
             placeholder="เช่น ASUS, HP, Canon"
+            className="min-h-12 w-full rounded-xl border border-slate-300 px-4"
+          />
+        </label>
+
+        <label className="space-y-1 md:col-span-2">
+          <span className="text-xs font-black text-slate-600">รุ่น / Model</span>
+          <input
+            value={draft.model}
+            onChange={(event) => patch('model', event.target.value)}
+            placeholder="ข้อมูลเสริม ถ้ามี เช่น X1502ZA, A3108, GUN125"
             className="min-h-12 w-full rounded-xl border border-slate-300 px-4"
           />
         </label>

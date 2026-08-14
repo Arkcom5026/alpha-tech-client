@@ -12,6 +12,8 @@ import MarketplacePortalPage from '@/features/online/pages/MarketplacePortalPage
 import PartnerWelcomePage from '@/features/auth/pages/PartnerWelcomePage';
 import PartnerStoreApplicationPage from '@/features/partnerStoreApplication/pages/PartnerStoreApplicationPage';
 import PartnerStoreActivationPage from '@/features/partnerStoreApplication/pages/PartnerStoreActivationPage';
+import PartnerStoreOnboardingPage from '@/features/partnerStoreApplication/pages/PartnerStoreOnboardingPage';
+import PartnerStoreOnboardingGate from '@/features/partnerStoreApplication/guards/PartnerStoreOnboardingGate';
 import LoginPage from '@/features/auth/pages/LoginPage';
 import MerchantLoginShell from '@/features/auth/layouts/MerchantLoginShell';
 import ForgotPasswordPage from '@/features/auth/pages/ForgotPasswordPage';
@@ -25,7 +27,6 @@ import PublicStorefrontCartPage from '@/features/storefront/pages/PublicStorefro
 import PublicStorefrontIdentityPage from '@/features/storefront/pages/PublicStorefrontIdentityPage';
 import NotFound from '@/pages/NotFound';
 
-import PosAdaptiveShell from '@/features/pos/layouts/PosAdaptiveShell';
 import LayoutSuperAdmin from '@/features/pos/layouts/superadmin/LayoutSuperAdmin';
 
 const SuperAdminEntryRedirect = () => {
@@ -49,7 +50,8 @@ const AppRouter = [
   { path: 'partner-portal/reset-password', element: <ResetPasswordPage /> },
   { path: 'superadmin/dashboard', element: <SuperAdminEntryRedirect /> },
   { path: ':shopSlug/pos/storefront', element: <Navigate to="../settings/storefront" relative="path" replace /> },
-  { path: ':shopSlug/pos', element: <PosAdaptiveShell />, children: [...posPartnerRoutes] },
+  { path: ':shopSlug/pos/onboarding', element: <PartnerStoreOnboardingPage /> },
+  { path: ':shopSlug/pos', element: <PartnerStoreOnboardingGate />, children: [...posPartnerRoutes] },
   {
     path: ':shopSlug/superadmin',
     element: <SuperAdminAuthorityGuard />,

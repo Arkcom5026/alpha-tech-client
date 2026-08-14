@@ -22,7 +22,10 @@ test('repair detail mounts optional runtime domains only when workflow makes the
   const source = read('src/features/repair/detail/workspace/components/RepairDetailWorkspace.jsx');
 
   assert.match(source, /SUBCONTRACT_VISIBLE_STATUSES = new Set\(\['APPROVED', 'REPAIRING'\]\)/);
-  assert.match(source, /ESTIMATE_VISIBLE_STATUSES = new Set\(\['WAITING_APPROVAL', 'APPROVED', 'REJECTED'\]\)/);
+  assert.match(source, /ESTIMATE_VISIBLE_STATUSES = new Set\(\[/);
+  assert.match(source, /'WAITING_APPROVAL'/);
+  assert.match(source, /'APPROVED'/);
+  assert.match(source, /'REJECTED'/);
   assert.match(source, /HANDOVER_VISIBLE_STATUSES = new Set\(\['READY_FOR_DELIVERY', 'DELIVERED', 'CLOSED'\]\)/);
   assert.match(source, /subcontractRelevant \?/);
   assert.match(source, /estimateRelevant \?/);

@@ -65,11 +65,14 @@ test('communication panel participates in repair runtime read dedupe', () => {
 test('detail workspace only mounts expensive secondary panels when workflow makes them relevant', () => {
   const source = read('src/features/repair/detail/workspace/components/RepairDetailWorkspace.jsx');
 
+  assert.match(source, /SUBCONTRACT_VISIBLE_STATUSES = new Set\(\['APPROVED', 'REPAIRING'\]\)/);
+  assert.match(source, /ESTIMATE_VISIBLE_STATUSES = new Set\(\[/);
+  assert.match(source, /HANDOVER_VISIBLE_STATUSES = new Set\(\['READY_FOR_DELIVERY', 'DELIVERED', 'CLOSED'\]\)/);
   assert.match(source, /const subcontractRelevant =/);
-  assert.match(source, /\['APPROVED', 'REPAIRING'\]\.includes\(workflowStatus\)/);
+  assert.match(source, /SUBCONTRACT_VISIBLE_STATUSES\.has\(workflowStatus\)/);
   assert.match(source, /const estimateRelevant =/);
-  assert.match(source, /ESTIMATE_RUNTIME_STATUSES\.has\(workflowStatus\)/);
-  assert.match(source, /const handoverRelevant = HANDOVER_RUNTIME_STATUSES\.has\(workflowStatus\)/);
+  assert.match(source, /ESTIMATE_VISIBLE_STATUSES\.has\(workflowStatus\)/);
+  assert.match(source, /const handoverRelevant = HANDOVER_VISIBLE_STATUSES\.has\(workflowStatus\)/);
   assert.match(source, /\{subcontractRelevant \? \(/);
   assert.match(source, /\{estimateRelevant \? \(/);
   assert.match(source, /!subcontractActive && handoverRelevant/);

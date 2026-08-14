@@ -21,13 +21,22 @@ test('mobile repair intake separates human-readable device name from optional mo
   assert.match(source, /patch\('model', event\.target\.value\)/);
 });
 
-test('repair detail shows device name and technical model as separate fields', () => {
+test('actual repair runtime detail shows device name and technical model as separate fields', () => {
+  const source = read('src/features/repair/components/JobRuntimePanel.jsx');
+
+  assert.match(source, /label="ชื่ออุปกรณ์"/);
+  assert.match(source, /label="รุ่น \/ Model"/);
+  assert.match(source, /job\?\.repairAsset\?\.displayName/);
+  assert.match(source, /job\?\.repairAsset\?\.model/);
+  assert.match(source, /job\?\.assetDescription/);
+  assert.match(source, /job\?\.deviceModel/);
+});
+
+test('legacy repair summary also keeps device name and technical model separate', () => {
   const source = read('src/features/repair/components/RepairJobSummary.jsx');
 
   assert.match(source, /label="ชื่ออุปกรณ์"/);
   assert.match(source, /label="รุ่น \/ Model"/);
-  assert.match(source, /job\.repairAsset\?\.displayName/);
-  assert.match(source, /job\.repairAsset\?\.model/);
 });
 
 test('repair queue keeps the repair asset display name as the compact primary label', () => {

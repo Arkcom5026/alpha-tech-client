@@ -110,7 +110,7 @@ const CustomerRepairTrackingPage = () => {
   }
 
   const repair = tracking.repair;
-  const device = repair.device || {};
+  const repairAsset = repair.repairAsset || {};
   const status = getCustomerFacingStatus(repair.status || {}, repair.handover);
   const stage = Number(status.stage || 0);
 
@@ -148,13 +148,15 @@ const CustomerRepairTrackingPage = () => {
         ) : null}
 
         <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-          <p className="text-xs font-black uppercase tracking-[0.15em] text-blue-600">อุปกรณ์</p>
-          <h2 className="mt-2 text-xl font-black text-slate-950">{device.displayName || device.model || '-'}</h2>
+          <p className="text-xs font-black uppercase tracking-[0.15em] text-blue-600">สิ่งที่นำมาซ่อม</p>
+          <h2 className="mt-2 text-xl font-black text-slate-950">{repairAsset.displayName || '-'}</h2>
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            <Info label="รุ่น" value={device.model} />
-            <Info label="ประเภท" value={device.type} />
-            <Info label="Serial Number" value={device.serialNumber} />
-            <Info label="Barcode ร้าน" value={device.barcode} />
+            <Info label="รุ่น / Model" value={repairAsset.model} />
+            <Info label="ยี่ห้อ" value={repairAsset.brand} />
+            <Info label="ประเภท" value={repairAsset.category} />
+            <Info label="Serial Number" value={repairAsset.serialNumber} />
+            <Info label="IMEI" value={repairAsset.imei} />
+            <Info label="Barcode" value={repairAsset.barcode} />
           </div>
           <div className="mt-3 rounded-2xl bg-slate-50 p-4">
             <p className="text-xs font-black text-slate-500">อาการที่แจ้ง</p>

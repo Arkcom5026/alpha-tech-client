@@ -4,14 +4,15 @@ const normalizeQuery = (value) => String(value || '').trim().toLowerCase();
 
 export const getRepairQueueSearchValues = (job) => [
   job?.jobNo,
-  job?.deviceModel,
   job?.reportedSymptoms,
   job?.customerName,
-  job?.stockItem?.barcode,
-  job?.stockItem?.serialNumber,
-  job?.device?.barcode,
-  job?.device?.serialNumber,
-  job?.device?.imei,
+  job?.repairAsset?.displayName,
+  job?.repairAsset?.brand,
+  job?.repairAsset?.category,
+  job?.repairAsset?.model,
+  job?.repairAsset?.barcode,
+  job?.repairAsset?.serialNumber,
+  job?.repairAsset?.imei,
   job?.activeSubcontract?.providerName,
   job?.activeSubcontract?.workScope,
 ];

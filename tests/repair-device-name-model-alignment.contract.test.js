@@ -57,5 +57,6 @@ test('repair queue consumes canonical repairAsset without rebuilding repair iden
   assert.doesNotMatch(repairResolver, /stockItem/);
   assert.doesNotMatch(repairResolver, /item\.device/);
   assert.match(source, /\{asset\.displayName\}/);
-  assert.match(source, /const getLegacyClaimAssetFallback/);
+  assert.doesNotMatch(source, /getLegacyClaimAssetFallback/);
+  assert.match(source, /item\?\.claimAsset \|\| MISSING_REPAIR_ASSET/);
 });

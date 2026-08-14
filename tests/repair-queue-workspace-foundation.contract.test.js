@@ -27,17 +27,15 @@ const sampleJobs = [
     jobNo: 'REP-001',
     status: 'RECEIVED',
     customerName: 'Kanjana',
-    deviceModel: 'Notebook A',
     reportedSymptoms: 'No power',
-    stockItem: { barcode: 'BC-001', serialNumber: 'SN-001' },
-    device: { barcode: 'DV-001', serialNumber: 'DSN-001', imei: 'IMEI-001' },
+    repairAsset: { displayName: 'Notebook A', model: 'A1', barcode: 'BC-001', serialNumber: 'SN-001', imei: 'IMEI-001' },
   },
   {
     id: 2,
     jobNo: 'REP-002',
     status: 'IN_PROGRESS',
     customerName: 'Somchai',
-    deviceModel: 'Phone B',
+    repairAsset: { displayName: 'Phone B' },
     reportedSymptoms: 'Broken display',
   },
   {
@@ -45,7 +43,7 @@ const sampleJobs = [
     jobNo: 'REP-008',
     status: 'IN_PROGRESS',
     customerName: 'External Customer',
-    deviceModel: 'Notebook C',
+    repairAsset: { displayName: 'Notebook C' },
     activeSubcontract: {
       id: 77,
       active: true,

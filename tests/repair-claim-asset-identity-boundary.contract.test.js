@@ -25,7 +25,7 @@ test('claim queue consumes claimAsset as its identity presentation authority', (
 test('warranty claim workspace uses dedicated claim board instead of shared repair queue presentation', () => {
   assert.match(claimWorkspace, /import ClaimQueueBoard from '\.\/ClaimQueueBoard'/);
   assert.match(claimWorkspace, /<ClaimQueueBoard lanes=\{activeLanes\} onOpen=\{onOpenClaim\} \/>/);
-  assert.doesNotMatch(claimWorkspace, /QueueBoard/);
+  assert.doesNotMatch(claimWorkspace, /from ['"].*components\/QueueBoard/);
 });
 
 test('claim detail reads canonical claimAsset before any legacy compatibility display', () => {

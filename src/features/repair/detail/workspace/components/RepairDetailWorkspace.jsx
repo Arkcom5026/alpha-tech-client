@@ -52,6 +52,7 @@ const RepairDetailWorkspace = ({
   const estimateRelevant =
     preAgreedService || ESTIMATE_VISIBLE_STATUSES.has(workflowStatus);
   const handoverRelevant = HANDOVER_VISIBLE_STATUSES.has(workflowStatus);
+  const evidenceRelevant = Boolean(evidenceWarning || pendingIntakeEvidence);
 
   const handleEvidenceSaved = async () => {
     setEvidenceRevision((current) => current + 1);
@@ -88,11 +89,13 @@ const RepairDetailWorkspace = ({
           />
 
           {subcontractRelevant ? (
-            <RepairSubcontractPanel
-              job={job}
-              onChanged={onRetry}
-              refreshKey={evidenceRevision}
-            />
+            <DeferredRepairSection minHeight={140} force={subcontractActive}>
+              <RepairSubcontractPanel
+                job={job}
+                onChanged={onRetry}
+                refreshKey={evidenceRevision}
+              />
+            </DeferredRepairSection>
           ) : null}
 
           {!subcontractActive ? (
@@ -121,20 +124,28 @@ const RepairDetailWorkspace = ({
             />
           ) : null}
 
-          <RepairTrackingAccessPanel repairJobId={repairJobId} jobNo={job.jobNo} />
+          <DeferredRepairSection minHeight={120}>
+            <RepairTrackingAccessPanel repairJobId={repairJobId} jobNo={job.jobNo} />
+          </DeferredRepairSection>
 
           <DeferredRepairSection minHeight={140} force={Boolean(communicationWarning)}>
             <RepairCommunicationPanel repairJobId={repairJobId} />
           </DeferredRepairSection>
 
           {estimateRelevant ? (
-            <DeferredRepairSection minHeight={180}>
+            <DeferredRepairSection
+              minHeight={180}
+              force={workflowStatus === 'WAITING_APPROVAL'}
+            >
               <RepairEstimateApprovalPanel repairJobId={repairJobId} job={job} />
             </DeferredRepairSection>
           ) : null}
 
           {!subcontractActive && handoverRelevant ? (
-            <DeferredRepairSection minHeight={180}>
+            <DeferredRepairSection
+              minHeight={180}
+              force={workflowStatus === 'READY_FOR_DELIVERY'}
+            >
               <RepairHandoverPanel
                 repairJobId={repairJobId}
                 job={job}
@@ -146,7 +157,7 @@ const RepairDetailWorkspace = ({
 
           <DeferredRepairSection
             minHeight={180}
-            force={Boolean(evidenceWarning || pendingIntakeEvidence)}
+            force={evidenceRelevant}
           >
             <IntakeEvidencePanel
               repairJobId={repairJobId}

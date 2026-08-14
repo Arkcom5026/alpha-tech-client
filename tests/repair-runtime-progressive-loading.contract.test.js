@@ -36,7 +36,8 @@ test('communication and intake evidence are progressive while warnings force imm
   const source = read('src/features/repair/detail/workspace/components/RepairDetailWorkspace.jsx');
 
   assert.match(source, /force=\{Boolean\(communicationWarning\)\}/);
-  assert.match(source, /force=\{Boolean\(evidenceWarning \|\| pendingIntakeEvidence\)\}/);
+  assert.match(source, /const evidenceRelevant = Boolean\(evidenceWarning \|\| pendingIntakeEvidence\)/);
+  assert.match(source, /force=\{evidenceRelevant\}/);
   assert.match(source, /<RepairCommunicationPanel repairJobId=\{repairJobId\} \/>/);
   assert.match(source, /<IntakeEvidencePanel/);
 });

@@ -81,6 +81,26 @@ test('detail workspace only mounts expensive secondary panels when workflow make
   assert.match(source, /'CLOSED'/);
 });
 
+test('noncritical detail panels are progressively mounted near the viewport', () => {
+  const workspace = read('src/features/repair/detail/workspace/components/RepairDetailWorkspace.jsx');
+  const deferred = read('src/features/repair/detail/workspace/components/DeferredRepairSection.jsx');
+
+  assert.match(workspace, /DeferredRepairSection/);
+  assert.match(workspace, /<RepairTrackingAccessPanel/);
+  assert.match(workspace, /<RepairCommunicationPanel/);
+  assert.match(workspace, /force=\{evidenceRelevant\}/);
+  assert.match(deferred, /IntersectionObserver/);
+  assert.match(deferred, /if \(ready\) return children/);
+  assert.match(deferred, /rootMargin = '320px 0px'/);
+});
+
+test('workflow-critical estimate and handover panels stay eager only at their action stage', () => {
+  const source = read('src/features/repair/detail/workspace/components/RepairDetailWorkspace.jsx');
+
+  assert.match(source, /force=\{workflowStatus === 'WAITING_APPROVAL'\}/);
+  assert.match(source, /force=\{workflowStatus === 'READY_FOR_DELIVERY'\}/);
+});
+
 test('repair runtime Thai presentation source remains valid UTF-8 and free of mojibake markers', () => {
   const workspace = read('src/features/repair/detail/workspace/components/RepairDetailWorkspace.jsx');
   const shell = read('src/features/repair/components/RepairShellHeader.jsx');

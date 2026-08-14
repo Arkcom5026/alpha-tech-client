@@ -11,6 +11,7 @@ import { superAdminRoutes } from './superadmin/superAdminRoutes';
 import MarketplacePortalPage from '@/features/online/pages/MarketplacePortalPage';
 import PartnerWelcomePage from '@/features/auth/pages/PartnerWelcomePage';
 import PartnerStoreApplicationPage from '@/features/partnerStoreApplication/pages/PartnerStoreApplicationPage';
+import PartnerStoreActivationPage from '@/features/partnerStoreApplication/pages/PartnerStoreActivationPage';
 import LoginPage from '@/features/auth/pages/LoginPage';
 import MerchantLoginShell from '@/features/auth/layouts/MerchantLoginShell';
 import ForgotPasswordPage from '@/features/auth/pages/ForgotPasswordPage';
@@ -43,6 +44,7 @@ const AppRouter = [
   { path: 'repair/track/:token', element: <CustomerRepairTrackingPage /> },
   { path: 'partner-portal', element: <PartnerWelcomePage /> },
   { path: 'partner-portal/apply', element: <PartnerStoreApplicationPage /> },
+  { path: 'partner-portal/activate', element: <PartnerStoreActivationPage /> },
   { path: 'partner-portal/forgot-password', element: <ForgotPasswordPage /> },
   { path: 'partner-portal/reset-password', element: <ResetPasswordPage /> },
   { path: 'superadmin/dashboard', element: <SuperAdminEntryRedirect /> },

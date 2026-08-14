@@ -24,11 +24,12 @@ describe('partner store application UI contract', () => {
     expect(apply).toContain('ยังไม่สร้างร้านหรือบัญชีเข้าใช้งานระบบ');
     expect(apply).toContain('ขั้นตอนเปิดใช้งานและกำหนดบัญชีเจ้าของร้านแยกต่างหาก');
     expect(apply).toContain('Application received');
-    expect(review).not.toContain('Owner User ID');
     expect(review).toContain('เริ่มตรวจสอบ');
     expect(review).toContain('อนุมัติใบสมัคร');
     expect(review).not.toContain('อนุมัติและเปิดร้าน');
     expect(review).toContain('ปฏิเสธ');
+    expect(review).toContain('Owner User ID');
+    expect(review).toContain("activationStatus === 'ACTIVE'");
     expect(router).toContain("'partner-portal/apply'");
     expect(superadmin).toContain("path: 'partner-store-applications'");
     expect(superadmin).toContain('<PartnerStoreApplicationReviewPage />');

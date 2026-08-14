@@ -28,9 +28,29 @@ function isLoginRequest(requestOrResponse) {
 }
 
 async function canOpenProtectedStore(page) {
+  let authenticationFailure = false;
+  const inspectResponse = async (response) => {
+    if (!/\/api\/auth\//i.test(response.url())) return;
+    if ([401, 403].includes(response.status())) {
+      authenticationFailure = true;
+      return;
+    }
+    const body = await response.text().catch(() => '');
+    if (/refresh token is required|invalid refresh token|token expired/i.test(body)) {
+      authenticationFailure = true;
+    }
+  };
+  page.on('response', inspectResponse);
   await page.goto(`${baseUrl}/${branchSlug}/pos/`, { waitUntil: 'domcontentloaded' });
   await page.waitForLoadState('networkidle').catch(() => {});
-  return !isLoginUrl(page.url());
+  await page.waitForTimeout(250);
+  page.off('response', inspectResponse);
+
+  const visibleAuthenticationError = await page.getByText(
+    /refresh token is required|invalid refresh token|token expired/i
+  ).first().isVisible().catch(() => false);
+
+  return !isLoginUrl(page.url()) && !authenticationFailure && !visibleAuthenticationError;
 }
 
 async function isStoredSessionValid(browser) {

@@ -8,12 +8,7 @@ const JobRuntimePanel = ({ job }) => {
   const hasFinalRepairAmount = (job?.workflow?.history || []).some((event) =>
     FINAL_PRICE_ACTIONS.has(event.action)
   );
-  const deviceName =
-    job?.repairAsset?.displayName ||
-    job?.assetDescription ||
-    job?.deviceModel ||
-    null;
-  const deviceModel = job?.repairAsset?.model || job?.device?.model || null;
+  const repairAsset = job?.repairAsset || null;
 
   return (
     <div className="space-y-5">
@@ -22,7 +17,7 @@ const JobRuntimePanel = ({ job }) => {
           <div>
             <p className="text-xs font-black uppercase tracking-[0.18em] text-blue-600">Repair Runtime</p>
             <h2 className="mt-1 text-2xl font-black text-slate-950">{job.jobNo}</h2>
-            <p className="mt-1 text-sm text-slate-500">{deviceName}</p>
+            <p className="mt-1 text-sm text-slate-500">{repairAsset?.displayName || '-'}</p>
           </div>
           <span className="w-fit rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-black text-blue-700">
             {REPAIR_WORKFLOW_LABELS[workflowStatus] || workflowStatus}
@@ -30,8 +25,8 @@ const JobRuntimePanel = ({ job }) => {
         </div>
 
         <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <Info label="ชื่ออุปกรณ์" value={deviceName} />
-          <Info label="รุ่น / Model" value={deviceModel} />
+          <Info label="ชื่ออุปกรณ์" value={repairAsset?.displayName} />
+          <Info label="รุ่น / Model" value={repairAsset?.model} />
           <Info label="ลูกค้า" value={job.customerName || job.customerId} />
           <Info label="ช่าง" value={job.technician?.name || 'ยังไม่มอบหมาย'} />
           <Info label="รับเมื่อ" value={formatDateTime(job.createdAt)} />
@@ -41,8 +36,8 @@ const JobRuntimePanel = ({ job }) => {
             label={hasFinalRepairAmount ? 'ค่าซ่อมจริง' : 'ราคาประเมิน'}
             value={formatMoney(job.estimatedCost)}
           />
-          <Info label="บาร์โค้ด" value={job.stockItem?.barcode || job.device?.barcode} />
-          <Info label="Serial" value={job.stockItem?.serialNumber || job.device?.serialNumber} />
+          <Info label="บาร์โค้ด" value={repairAsset?.barcode} />
+          <Info label="Serial" value={repairAsset?.serialNumber} />
         </div>
 
         <div className="mt-4 rounded-xl border border-slate-200 p-4">

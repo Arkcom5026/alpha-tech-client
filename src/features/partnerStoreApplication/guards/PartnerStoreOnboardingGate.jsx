@@ -2,26 +2,46 @@ import React, { useEffect, useState } from 'react';
 import { Navigate, useParams } from 'react-router-dom';
 import PosAdaptiveShell from '@/features/pos/layouts/PosAdaptiveShell';
 import { getPartnerStoreOnboarding } from '../api/partnerStoreOnboardingApi';
+import { getPartnerStoreOperationalReadiness } from '../api/partnerStoreOperationalReadinessApi';
 
 export default function PartnerStoreOnboardingGate() {
   const { shopSlug } = useParams();
-  const [state, setState] = useState({ loading: true, data: null, error: '' });
+  const [state, setState] = useState({ loading: true, onboarding: null, readiness: null, error: '' });
 
   useEffect(() => {
     let active = true;
-    getPartnerStoreOnboarding()
-      .then((response) => {
+
+    const load = async () => {
+      try {
+        const onboardingResponse = await getPartnerStoreOnboarding();
         if (!active) return;
-        setState({ loading: false, data: response.data?.data || null, error: '' });
-      })
-      .catch((error) => {
+        const onboarding = onboardingResponse.data?.data || null;
+
+        if (!onboarding?.isPartnerStoreOwner || onboarding?.requiresOnboarding) {
+          setState({ loading: false, onboarding, readiness: null, error: '' });
+          return;
+        }
+
+        const readinessResponse = await getPartnerStoreOperationalReadiness();
         if (!active) return;
         setState({
           loading: false,
-          data: null,
-          error: error?.response?.data?.message || error?.message || 'ตรวจสอบสถานะเริ่มใช้งานร้านไม่สำเร็จ',
+          onboarding,
+          readiness: readinessResponse.data?.data || null,
+          error: '',
         });
-      });
+      } catch (error) {
+        if (!active) return;
+        setState({
+          loading: false,
+          onboarding: null,
+          readiness: null,
+          error: error?.response?.data?.message || error?.message || 'ตรวจสอบสถานะร้านไม่สำเร็จ',
+        });
+      }
+    };
+
+    load();
     return () => { active = false; };
   }, []);
 
@@ -33,9 +53,14 @@ export default function PartnerStoreOnboardingGate() {
     return <div className="flex min-h-screen items-center justify-center bg-slate-50 p-6"><div className="max-w-lg rounded-2xl border border-red-200 bg-white p-5 text-sm font-bold text-red-600">{state.error}</div></div>;
   }
 
-  if (state.data?.isPartnerStoreOwner && state.data?.requiresOnboarding) {
-    const canonicalSlug = state.data?.application?.provisionedBranch?.slug || shopSlug;
+  if (state.onboarding?.isPartnerStoreOwner && state.onboarding?.requiresOnboarding) {
+    const canonicalSlug = state.onboarding?.application?.provisionedBranch?.slug || shopSlug;
     return <Navigate to={`/${canonicalSlug}/pos/onboarding`} replace />;
+  }
+
+  if (state.readiness?.isPartnerStoreOwner && state.readiness?.requiresCertification) {
+    const canonicalSlug = state.readiness?.application?.provisionedBranch?.slug || shopSlug;
+    return <Navigate to={`/${canonicalSlug}/pos/readiness`} replace />;
   }
 
   return <PosAdaptiveShell />;

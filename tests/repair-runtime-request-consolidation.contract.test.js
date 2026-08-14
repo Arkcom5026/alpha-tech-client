@@ -61,3 +61,19 @@ test('communication panel participates in repair runtime read dedupe', () => {
   assert.match(source, /repair:communication-activities:/);
   assert.match(source, /dedupeRepairRead/);
 });
+
+test('detail workspace only mounts expensive secondary panels when workflow makes them relevant', () => {
+  const source = read('src/features/repair/detail/workspace/components/RepairDetailWorkspace.jsx');
+
+  assert.match(source, /const subcontractRelevant =/);
+  assert.match(source, /\['APPROVED', 'REPAIRING'\]\.includes\(workflowStatus\)/);
+  assert.match(source, /const estimateRelevant =/);
+  assert.match(source, /ESTIMATE_RUNTIME_STATUSES\.has\(workflowStatus\)/);
+  assert.match(source, /const handoverRelevant = HANDOVER_RUNTIME_STATUSES\.has\(workflowStatus\)/);
+  assert.match(source, /\{subcontractRelevant \? \(/);
+  assert.match(source, /\{estimateRelevant \? \(/);
+  assert.match(source, /!subcontractActive && handoverRelevant/);
+  assert.match(source, /'READY_FOR_DELIVERY'/);
+  assert.match(source, /'DELIVERED'/);
+  assert.match(source, /'CLOSED'/);
+});

@@ -77,3 +77,15 @@ test('detail workspace only mounts expensive secondary panels when workflow make
   assert.match(source, /'DELIVERED'/);
   assert.match(source, /'CLOSED'/);
 });
+
+test('repair runtime Thai presentation source remains valid UTF-8 and free of mojibake markers', () => {
+  const workspace = read('src/features/repair/detail/workspace/components/RepairDetailWorkspace.jsx');
+  const shell = read('src/features/repair/components/RepairShellHeader.jsx');
+  const combined = `${workspace}\n${shell}`;
+
+  assert.match(workspace, /รายละเอียดงานซ่อม/);
+  assert.match(workspace, /พื้นที่ปฏิบัติงานหลักที่พาผู้ใช้ทำงานตามขั้นตอน/);
+  assert.match(shell, /รับเรื่อง/);
+  assert.match(shell, /คิวงานซ่อม/);
+  assert.doesNotMatch(combined, /(?:à¸|à¹|Ã|Â|â€|ï¿½)/);
+});

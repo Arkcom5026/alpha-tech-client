@@ -48,3 +48,13 @@ test('handover is not mounted for early repair workflow states', () => {
   assert.match(source, guardedHandover);
   assert.doesNotMatch(source, /<RepairHandoverPanel[\s\S]*?\/>\s*\n\s*\) : null\}\s*\n\s*<IntakeEvidencePanel/);
 });
+
+test('repair runtime keeps user-facing Thai copy encoded as UTF-8', () => {
+  const source = read('src/features/repair/detail/workspace/components/RepairDetailWorkspace.jsx');
+
+  assert.match(source, /title="รายละเอียดงานซ่อม"/);
+  assert.match(source, /description="พื้นที่ปฏิบัติงานหลักที่พาผู้ใช้ทำงานตามขั้นตอน ตั้งแต่ตรวจสอบจนถึงส่งมอบ"/);
+  assert.match(source, /emptyText="ไม่พบงานซ่อม"/);
+  assert.match(source, /เปิดงานซ่อมสำเร็จ แต่ยังบันทึกช่องทางติดต่อไม่ได้/);
+  assert.doesNotMatch(source, /à¸|à¹/);
+});

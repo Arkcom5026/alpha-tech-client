@@ -55,8 +55,10 @@ describe('repair operations workspace behavior contract', () => {
     expect(jobsPage).toContain("const [query, setQuery] = useState('')");
     expect(jobsPage).toContain('projectRepairQueue(jobs, query)');
     expect(jobsPage).toContain('RepairQueueWorkspace');
-    expect(repairQueuePolicy).toContain('job?.stockItem?.serialNumber');
-    expect(repairQueuePolicy).toContain('job?.device?.imei');
+    expect(repairQueuePolicy).toContain('job?.repairAsset?.serialNumber');
+    expect(repairQueuePolicy).toContain('job?.repairAsset?.imei');
+    expect(repairQueuePolicy).not.toContain('job?.stockItem?.serialNumber');
+    expect(repairQueuePolicy).not.toContain('job?.device?.imei');
     expect(repairQueuePolicy).toContain('job?.activeSubcontract?.providerName');
     expect(repairQueuePolicy).toContain('projectRepairQueueItem');
     expect(repairQueuePolicy).toContain("queueStatus: 'EXTERNAL_REPAIR'");
@@ -69,7 +71,8 @@ describe('repair operations workspace behavior contract', () => {
     expect(claimsPage).toContain('projectWarrantyClaimQueue(claims, query)');
     expect(claimsPage).toContain('WarrantyClaimQueueWorkspace');
     expect(warrantyClaimQueuePolicy).toContain('claim?.claimAsset?.serialNumber');
-    expect(warrantyClaimQueuePolicy).toContain('claim?.device?.imei');
+    expect(warrantyClaimQueuePolicy).toContain('claim?.claimAsset?.imei');
+    expect(warrantyClaimQueuePolicy).not.toContain('claim?.device?.imei');
     expect(warrantyClaimQueuePolicy).toContain('groupByStatus(filtered, CLAIM_LANES)');
     expect(warrantyClaimQueuePolicy).toContain('lane.items.length > 0');
     expect(claimsPage).toContain('/pos/services/warranty-claims/${claim.id}');

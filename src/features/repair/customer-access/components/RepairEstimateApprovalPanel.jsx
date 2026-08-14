@@ -19,7 +19,7 @@ const STATUS_LABELS = {
 const RepairEstimateApprovalPanel = ({ repairJobId, job }) => {
   const [approval, setApproval] = useState(null);
   const [requestNote, setRequestNote] = useState('');
-  const [state, setState] = useState({ loading: true, error: '', notice: '' });
+  const [state, setState] = useState({ loading: false, error: '', notice: '' });
   const workflowStatus = job?.workflow?.status || 'RECEIVED';
   const repairAuthorization = job?.workflow?.preAgreedService || null;
   const hasRepairAuthorization = Boolean(repairAuthorization?.enabled);
@@ -29,12 +29,27 @@ const RepairEstimateApprovalPanel = ({ repairJobId, job }) => {
         (event) => event.action === 'START_PRE_AGREED_SERVICE'
       )
   );
+  const approvalDecisionInHistory = (job?.workflow?.history || []).some((event) =>
+    ['APPROVE_QUOTATION', 'REJECT_QUOTATION'].includes(event.action)
+  );
+  const approvalReadRelevant =
+    !hasRepairAuthorization &&
+    (
+      workflowStatus === 'WAITING_APPROVAL' ||
+      workflowStatus === 'APPROVED' ||
+      workflowStatus === 'REJECTED' ||
+      approvalDecisionInHistory
+    );
   const canPublish =
     !hasRepairAuthorization &&
     workflowStatus === 'WAITING_APPROVAL' &&
     Number(job?.estimatedCost || 0) > 0;
 
   const load = useCallback(async () => {
+    if (!approvalReadRelevant) {
+      setState((current) => ({ ...current, loading: false, error: '' }));
+      return;
+    }
     setState((current) => ({ ...current, loading: true, error: '' }));
     try {
       const payload = await repairApi.getEstimateApproval(repairJobId);
@@ -43,11 +58,16 @@ const RepairEstimateApprovalPanel = ({ repairJobId, job }) => {
     } catch (error) {
       setState({ loading: false, error: error.message, notice: '' });
     }
-  }, [repairJobId]);
+  }, [repairJobId, approvalReadRelevant]);
 
   useEffect(() => {
+    if (!approvalReadRelevant) {
+      setApproval(null);
+      setState((current) => ({ ...current, loading: false, error: '' }));
+      return;
+    }
     load();
-  }, [load]);
+  }, [load, approvalReadRelevant]);
 
   const publish = async () => {
     if (!canPublish) return;

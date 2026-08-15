@@ -1,6 +1,7 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AlertTriangle, CheckCircle2, FileCheck2, LockKeyhole, RotateCcw } from 'lucide-react';
-import { toast } from 'react-toastify';
+import { ConfirmActionDialog } from '@/design-system/composites';
+import { feedback } from '@/design-system/feedback';
 import { useBranchStore } from '@/features/branch/store/branchStore';
 import {
   ensureMonthlyTaxPeriod,
@@ -25,10 +26,10 @@ const STATUS_META = {
 };
 
 const ACTION_META = {
-  CLOSE: { label: 'ปิดรอบภาษี', icon: CheckCircle2, confirm: 'ยืนยันการปิดรอบภาษีนี้หรือไม่?' },
-  LOCK: { label: 'ล็อกรอบภาษี', icon: LockKeyhole, confirm: 'ยืนยันการล็อกรอบภาษีนี้หรือไม่? หลังล็อกจะไม่ควรแก้ไขข้อมูลย้อนหลัง' },
-  SUBMIT: { label: 'ยื่นรอบภาษี', icon: FileCheck2, confirm: 'ยืนยันว่ารอบภาษีนี้ยื่นเรียบร้อยแล้วหรือไม่?' },
-  REOPEN: { label: 'เปิดรอบอีกครั้ง', icon: RotateCcw, confirm: 'ยืนยันการเปิดรอบภาษีนี้กลับมาแก้ไขอีกครั้งหรือไม่?' },
+  CLOSE: { label: 'ปิดรอบภาษี', icon: CheckCircle2, confirm: 'ยืนยันการปิดรอบภาษีนี้หรือไม่?', intent: 'primary' },
+  LOCK: { label: 'ล็อกรอบภาษี', icon: LockKeyhole, confirm: 'ยืนยันการล็อกรอบภาษีนี้หรือไม่? หลังล็อกจะไม่ควรแก้ไขข้อมูลย้อนหลัง', intent: 'primary' },
+  SUBMIT: { label: 'ยื่นรอบภาษี', icon: FileCheck2, confirm: 'ยืนยันว่ารอบภาษีนี้ยื่นเรียบร้อยแล้วหรือไม่?', intent: 'primary' },
+  REOPEN: { label: 'เปิดรอบอีกครั้ง', icon: RotateCcw, confirm: 'ยืนยันการเปิดรอบภาษีนี้กลับมาแก้ไขอีกครั้งหรือไม่?', intent: 'primary' },
 };
 
 const formatDate = (value) => {
@@ -76,6 +77,8 @@ const TaxPeriodManagementPage = () => {
   const [busyKey, setBusyKey] = useState('');
   const [error, setError] = useState('');
   const [selectedPeriodId, setSelectedPeriodId] = useState(null);
+  const [pendingAction, setPendingAction] = useState(null);
+  const pendingResolverRef = useRef(null);
 
   const loadData = useCallback(async () => {
     if (!branchId) return;
@@ -96,7 +99,7 @@ const TaxPeriodManagementPage = () => {
     } catch (requestError) {
       const message = getTaxPeriodErrorMessage(requestError);
       setError(message);
-      toast.error(message);
+      feedback.error(message);
     } finally {
       setLoading(false);
     }
@@ -117,6 +120,11 @@ const TaxPeriodManagementPage = () => {
     setFromDate('');
     setToDate('');
   }, [branchId]);
+
+  useEffect(() => () => {
+    pendingResolverRef.current?.(false);
+    pendingResolverRef.current = null;
+  }, []);
 
   const totals = useMemo(() => summary?.countsByStatus || {}, [summary]);
   const statusOptions = useMemo(
@@ -141,19 +149,35 @@ const TaxPeriodManagementPage = () => {
     setBusyKey('ensure');
     try {
       const result = await ensureMonthlyTaxPeriod({ branchId });
-      toast.success(result?.created ? 'สร้างรอบภาษีประจำเดือนเรียบร้อยแล้ว' : 'รอบภาษีประจำเดือนนี้มีอยู่แล้ว');
+      feedback.success(result?.created ? 'สร้างรอบภาษีประจำเดือนเรียบร้อยแล้ว' : 'รอบภาษีประจำเดือนนี้มีอยู่แล้ว');
       await loadData();
     } catch (requestError) {
-      toast.error(getTaxPeriodErrorMessage(requestError));
+      feedback.error(getTaxPeriodErrorMessage(requestError));
     } finally {
       setBusyKey('');
     }
   };
 
-  const handleAction = async (period, action) => {
-    const meta = ACTION_META[action];
-    if (!meta || !window.confirm(meta.confirm)) return false;
+  const resolvePendingAction = (result) => {
+    pendingResolverRef.current?.(result);
+    pendingResolverRef.current = null;
+    setPendingAction(null);
+  };
 
+  const handleAction = (period, action) => {
+    const meta = ACTION_META[action];
+    if (!meta || pendingAction) return Promise.resolve(false);
+
+    return new Promise((resolve) => {
+      pendingResolverRef.current = resolve;
+      setPendingAction({ period, action, meta });
+    });
+  };
+
+  const confirmPendingAction = async () => {
+    if (!pendingAction?.period || !pendingAction?.action) return;
+
+    const { period, action } = pendingAction;
     const key = `${period.id}:${action}`;
     setBusyKey(key);
     try {
@@ -163,12 +187,12 @@ const TaxPeriodManagementPage = () => {
         action,
         occurredAt: new Date().toISOString(),
       });
-      toast.success(result?.replayed ? 'สถานะนี้ถูกบันทึกไว้แล้ว' : 'อัปเดตสถานะรอบภาษีเรียบร้อยแล้ว');
+      feedback.success(result?.replayed ? 'สถานะนี้ถูกบันทึกไว้แล้ว' : 'อัปเดตสถานะรอบภาษีเรียบร้อยแล้ว');
       await loadData();
-      return true;
+      resolvePendingAction(true);
     } catch (requestError) {
-      toast.error(getTaxPeriodErrorMessage(requestError));
-      return false;
+      feedback.error(getTaxPeriodErrorMessage(requestError));
+      resolvePendingAction(false);
     } finally {
       setBusyKey('');
     }
@@ -181,6 +205,8 @@ const TaxPeriodManagementPage = () => {
       </div>
     );
   }
+
+  const pendingKey = pendingAction ? `${pendingAction.period.id}:${pendingAction.action}` : '';
 
   return (
     <>
@@ -242,6 +268,20 @@ const TaxPeriodManagementPage = () => {
           onClose={() => setSelectedPeriodId(null)}
         />
       )}
+
+      <ConfirmActionDialog
+        open={Boolean(pendingAction)}
+        intent={pendingAction?.meta?.intent || 'primary'}
+        title={pendingAction?.meta?.label || 'ยืนยันการดำเนินการ'}
+        description={pendingAction?.meta?.confirm || ''}
+        confirmLabel={pendingAction?.meta?.label || 'ยืนยัน'}
+        cancelLabel="ยกเลิก"
+        loading={Boolean(pendingKey && busyKey === pendingKey)}
+        onCancel={() => {
+          if (!busyKey) resolvePendingAction(false);
+        }}
+        onConfirm={confirmPendingAction}
+      />
     </>
   );
 };

@@ -18,6 +18,17 @@ test('handoff API reads backend-owned tax closing package', () => {
   assert.match(source, /branchId/);
 });
 
+test('handoff finalization is bound to the exact snapshot reviewed by the user', () => {
+  const api = read('src/features/tax/handoff/api/taxClosingHandoffApi.js');
+  const page = read('src/features/tax/handoff/pages/TaxClosingHandoffPage.jsx');
+  assert.match(api, /requireSnapshotHash/);
+  assert.match(api, /expectedSnapshotHash/);
+  assert.match(api, /\{ expectedSnapshotHash \}/);
+  assert.match(api, /TAX_CLOSING_FINALIZATION_EXPECTED_SNAPSHOT_REQUIRED/);
+  assert.match(api, /TAX_CLOSING_FINALIZATION_SNAPSHOT_CHANGED/);
+  assert.match(page, /expectedSnapshotHash: data\.snapshotHash/);
+});
+
 test('handoff workspace exposes deterministic package identity and readiness state', () => {
   const source = read('src/features/tax/handoff/pages/TaxClosingHandoffPage.jsx');
   assert.match(source, /Snapshot SHA-256/);

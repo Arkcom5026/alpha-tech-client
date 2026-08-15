@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { toast } from 'react-toastify';
+import { feedback } from '@/design-system/feedback';
 import { useBranchStore } from '@/features/branch/store/branchStore';
 import { listTaxPeriods } from '@/features/tax/periods/api/taxPeriodApi';
 import {
@@ -78,7 +78,7 @@ const useTaxIntakeWorkspaceController = () => {
       const result = await listTaxPeriods({ branchId });
       setTaxPeriods(normalizeList(result, 'periods'));
     } catch (requestError) {
-      toast.error(getTaxIntakeErrorMessage(requestError));
+      feedback.error(getTaxIntakeErrorMessage(requestError));
     } finally {
       setPeriodsLoading(false);
     }
@@ -110,7 +110,7 @@ const useTaxIntakeWorkspaceController = () => {
     } catch (requestError) {
       const message = getTaxIntakeErrorMessage(requestError);
       setError(message);
-      toast.error(message);
+      feedback.error(message);
     } finally {
       setLoading(false);
     }
@@ -144,7 +144,7 @@ const useTaxIntakeWorkspaceController = () => {
       setSelectedDocument(detail);
       setTransitionError(null);
     } catch (requestError) {
-      toast.error(getTaxIntakeErrorMessage(requestError));
+      feedback.error(getTaxIntakeErrorMessage(requestError));
     }
   }, [branchId]);
 
@@ -168,14 +168,14 @@ const useTaxIntakeWorkspaceController = () => {
 
       setSelectedDocument(detail);
       await loadData();
-      toast.success(`เปลี่ยนสถานะเป็น ${targetStatus} แล้ว`);
+      feedback.success(`เปลี่ยนสถานะเป็น ${targetStatus} แล้ว`);
     } catch (requestError) {
       const message = getTaxIntakeErrorMessage(requestError);
       setTransitionError({
         message,
         details: getTaxIntakeErrorDetails(requestError),
       });
-      toast.error(message);
+      feedback.error(message);
     } finally {
       setTransitioning(false);
     }
@@ -183,16 +183,20 @@ const useTaxIntakeWorkspaceController = () => {
 
   const handleIssue = useCallback(async (taxInvoiceKind) => {
     if (!branchId || !selectedDocument?.id) return;
-    setTransitioning(true); setTransitionError(null);
+    setTransitioning(true);
+    setTransitionError(null);
     try {
       await issueOutputTaxDocument({ branchId, taxDocumentId: selectedDocument.id, taxInvoiceKind });
       setSelectedDocument(await getTaxDocumentDetail({ branchId, taxDocumentId: selectedDocument.id }));
       await loadData();
-      toast.success('ออกเลขใบกำกับภาษีเรียบร้อยแล้ว');
+      feedback.success('ออกเลขใบกำกับภาษีเรียบร้อยแล้ว');
     } catch (requestError) {
       const message = getTaxIntakeErrorMessage(requestError);
-      setTransitionError({ message, details: getTaxIntakeErrorDetails(requestError) }); toast.error(message);
-    } finally { setTransitioning(false); }
+      setTransitionError({ message, details: getTaxIntakeErrorDetails(requestError) });
+      feedback.error(message);
+    } finally {
+      setTransitioning(false);
+    }
   }, [branchId, loadData, selectedDocument?.id]);
 
   const selectedTaxPeriod = useMemo(

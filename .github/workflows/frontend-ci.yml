@@ -2,9 +2,9 @@ name: Frontend Mission Control v2
 
 on:
   push:
-    branches: [ "main", "integration/system-hardening-7-agendas" ]
+    branches: [ "main" ]
   pull_request:
-    branches: [ "main", "integration/system-hardening-7-agendas" ]
+    branches: [ "main" ]
 
 jobs:
   build-and-deploy:
@@ -30,6 +30,9 @@ jobs:
 
     - name: Release safety contract
       run: node tests/release-safety-foundation.contract.test.js
+
+    - name: Canonical E2E authority cleanup contract
+      run: node tests/canonical-e2e-authority-cleanup.contract.test.js
 
     - name: Observability incident detection contract
       run: node tests/observability-incident-detection.contract.test.js
@@ -73,10 +76,10 @@ jobs:
     - name: 🧪 ตรวจสัญญาคู่มือรับสินค้าด่วน
       run: npm run test:quick-receipt-help
 
-    - name: 🧪 ตรวจสัญญาคู่มือการขายหลัก
+    - name: 🧪 ตรวจสัญญาการขายหลัก
       run: npm run test:core-sales-help
 
-    - name: 🧪 ตรวจสัญญาคู่มือคืนสินค้า
+    - name: 🧪 ตรวจสัญญาคืนสินค้า
       run: npm run test:sale-return-help
 
     - name: 🧪 ตรวจสัญญาการกู้คืนคำสั่งยืนยันการขาย

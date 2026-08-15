@@ -54,8 +54,17 @@ const refExists = (ref) => {
 const findings = [];
 const normalizeFile = (file) => file.replaceAll('\\', '/');
 const shouldScanFile = (file) => UI_EXTENSIONS.has(path.extname(file).toLowerCase());
+const isCommentOnlyLine = (source) => {
+  const trimmed = source.trim();
+  return trimmed.startsWith('//')
+    || trimmed.startsWith('/*')
+    || trimmed.startsWith('*')
+    || trimmed.startsWith('*/')
+    || trimmed.startsWith('{/*');
+};
 
 const scanSourceLine = (file, line, source) => {
+  if (isCommentOnlyLine(source)) return;
   for (const rule of rules) {
     if (rule.allowed?.has(file)) continue;
     if (rule.pattern.test(source)) {

@@ -56,6 +56,11 @@ const actionOwners = [
   ['server printer settings', 'src/features/printing/settings/ServerPrinterSettingsPanel.jsx'],
   ['tax issuer profile', 'src/features/tax/issuerProfile/pages/TaxIssuerProfilePage.jsx'],
   ['partner profile', 'src/features/settings/pages/PartnerProfilePage.jsx'],
+
+  // Wave 3: indirect store/action owners missed by direct apiClient discovery.
+  ['product reservation lifecycle', 'src/features/productReservation/merchant/pages/ProductReservationDetailPage.jsx'],
+  ['combined billing document', 'src/features/combinedBilling/pages/CombinedBillingPage.jsx'],
+  ['admin branch lifecycle', 'src/features/admin/components/FormBranch.jsx'],
 ].map(([name, file]) => [name, file, read(file)]);
 
 assert(feedbackSource.includes('actionSuccess:'), 'feedback authority must expose actionSuccess');
@@ -71,6 +76,18 @@ const productEditSource = read('src/features/product/pages/EditProductPage.jsx')
 assert(productEditSource.includes('if (isUpdating) return'), 'Product edit must block duplicate submits while saving');
 assert(productEditSource.includes("feedback.actionSuccess('บันทึกการแก้ไขสินค้าเรียบร้อยแล้ว'"), 'Product edit must show visible save success feedback');
 assert(!productEditSource.includes("setError('เกิดข้อผิดพลาดในการบันทึกข้อมูล')"), 'Product edit save failure must not replace the entire page with a fatal load error');
+
+const productReservationSource = read('src/features/productReservation/merchant/pages/ProductReservationDetailPage.jsx');
+assert(productReservationSource.includes('if (submittingCommand) return'), 'Product reservation lifecycle must block duplicate commands');
+assert(productReservationSource.includes('idempotencyKey: createIdempotencyKey'), 'Product reservation lifecycle must retain idempotency protection');
+
+const combinedBillingSource = read('src/features/combinedBilling/pages/CombinedBillingPage.jsx');
+assert(combinedBillingSource.includes('if (loading || !customer?.id || !chosen.length) return'), 'Combined billing confirmation must block duplicate or invalid submits');
+
+const adminBranchSource = read('src/features/admin/components/FormBranch.jsx');
+assert(adminBranchSource.includes('ConfirmActionDialog'), 'Admin branch deletion must require confirmation');
+assert(adminBranchSource.includes('if (isSaving) return'), 'Admin branch creation must block duplicate submits');
+assert(adminBranchSource.includes('if (!pendingDeleteBranch || deletingId) return'), 'Admin branch deletion must block duplicate submits');
 
 // Structural regression: the profiles list route previously resolved to a copy of the edit page.
 const productProfileListSource = read('src/features/productProfile/pages/ListProductProfilePage.jsx');

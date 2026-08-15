@@ -44,6 +44,17 @@ describe('shared UI modernization foundation', () => {
     expect(workflow).toContain('node scripts/verify-ui-modernization.mjs --mode=diff');
   });
 
+  it('ignores comment-only dialog wording without weakening executable dialog detection', () => {
+    const guard = read('scripts/verify-ui-modernization.mjs');
+
+    expect(guard).toContain('const isCommentOnlyLine = (source) =>');
+    expect(guard).toContain("trimmed.startsWith('//')");
+    expect(guard).toContain("trimmed.startsWith('{/*')");
+    expect(guard).toContain('if (isCommentOnlyLine(source)) return;');
+    expect(guard).toContain("id: 'native-browser-dialog'");
+    expect(guard).toContain('(?:alert|confirm)');
+  });
+
   it('does not retain an unused orange candidate tone', () => {
     const badge = read('src/features/templateCandidate/components/CandidateBadge.jsx');
     const status = read('src/features/templateCandidate/utils/candidateStatus.js');

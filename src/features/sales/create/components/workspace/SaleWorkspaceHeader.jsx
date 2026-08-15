@@ -41,6 +41,7 @@ const SaleWorkspaceHeader = ({ title, description, status, tone = 'neutral', onH
           <button
             type="button"
             onClick={onHelp}
+            aria-label="เปิดคู่มือการขายสินค้า"
             className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-2xl border border-emerald-200 bg-white px-4 text-sm font-semibold text-emerald-900 shadow-sm transition hover:border-emerald-300 hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2"
           >
             <CircleHelp className="h-4 w-4" />

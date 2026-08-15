@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { presentError } from './errorPresentation.js';
+import { getErrorMessage, presentError } from './errorPresentation.js';
 
 describe('presentError', () => {
   it('maps HTTP status to safe actionable copy', () => {
@@ -35,5 +35,17 @@ describe('presentError', () => {
 
     expect(result.fieldErrors).toEqual({ taxId: 'รูปแบบไม่ถูกต้อง' });
     expect(result.correlationId).toBe('trace-123');
+  });
+
+  it('normalizes the server operational error envelope for action feedback', () => {
+    expect(getErrorMessage({
+      response: {
+        data: {
+          error: {
+            message: 'รายการนี้ถูกใช้งานแล้วและไม่สามารถลบได้',
+          },
+        },
+      },
+    }, 'ลบรายการไม่สำเร็จ')).toBe('รายการนี้ถูกใช้งานแล้วและไม่สามารถลบได้');
   });
 });

@@ -147,7 +147,9 @@ const TableCustomers = () => {
         intent={pendingStatus?.userStatus ? 'destructive' : 'primary'}
         loading={savingStatus}
         loadingLabel="กำลังบันทึก..."
-        onClose={() => setPendingStatus(null)}
+        onClose={() => {
+          if (!savingStatus) setPendingStatus(null);
+        }}
         onConfirm={confirmChangeUserStatus}
       />
     </>

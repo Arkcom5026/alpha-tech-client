@@ -1,16 +1,12 @@
-// ✅ Canvas นี้เปลี่ยนชื่อจาก 'RegisterEmployee' → 'RegisterUser'
-// ✅ @filename: RegisterPage.jsx
-// ✅ @folder: src/pages/
-
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useNavigate } from 'react-router-dom'; // 🟢 [DYNAMIC PARAM FIX] นำเข้า useNavigate เพื่อการสับรางแบบ Single Page Application
+import { useNavigate } from 'react-router-dom';
 import { feedback } from '@/design-system/feedback';
 import { registerSchema } from '@/features/auth/schema/registerSchema';
 import { registerUser } from '@/features/auth/api/authApi';
 
 const RegisterPage = () => {
-  const navigate = useNavigate(); // 🟢 เรียกใช้งานหัวอ่านระบบนำทางหน้าร้าน
+  const navigate = useNavigate();
   const {
     register,
     handleSubmit,
@@ -25,13 +21,10 @@ const RegisterPage = () => {
       const { name, phone, email, password } = data;
       await registerUser({ name, phone, email, password, role: 'customer' });
       reset();
-      feedback.success('สมัครสำเร็จแล้ว');
-
-      // 🟢 [BUG FIX ROUTE] เปลี่ยนจาก window.location.href แบบแข็ง มาดีดส่งเข้าหาประตูเมืองใหม่พรีเมียม 100%
+      feedback.actionSuccess('สมัครสำเร็จแล้ว', 'auth-customer-register-success');
       navigate('/partner-portal', { replace: true });
-    } catch (err) {
-      console.error(err);
-      feedback.error(err?.response?.data?.message || err.message || 'เกิดข้อผิดพลาด');
+    } catch (error) {
+      feedback.actionError(error, 'สมัครบัญชีไม่สำเร็จ กรุณาลองใหม่อีกครั้ง', 'auth-customer-register-error');
     }
   };
 
@@ -75,15 +68,15 @@ const RegisterPage = () => {
             {...register('confirmPassword')}
           />
 
-          {errors.name && <p className='text-red-600 text-sm'>{errors.name.message}</p>}
-          {errors.email && <p className='text-red-600 text-sm'>{errors.email.message}</p>}
-          {errors.password && <p className='text-red-600 text-sm'>{errors.password.message}</p>}
-          {errors.confirmPassword && <p className='text-red-600 text-sm'>{errors.confirmPassword.message}</p>}
-          {errors.phone && <p className='text-red-600 text-sm'>{errors.phone.message}</p>}
+          {errors.name && <p className="text-red-600 text-sm">{errors.name.message}</p>}
+          {errors.email && <p className="text-red-600 text-sm">{errors.email.message}</p>}
+          {errors.password && <p className="text-red-600 text-sm">{errors.password.message}</p>}
+          {errors.confirmPassword && <p className="text-red-600 text-sm">{errors.confirmPassword.message}</p>}
+          {errors.phone && <p className="text-red-600 text-sm">{errors.phone.message}</p>}
 
           <button
             type="submit"
-            className="w-full rounded bg-emerald-600 py-2 text-white hover:bg-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2"
+            className="w-full rounded bg-emerald-600 py-2 text-white hover:bg-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             disabled={isSubmitting}
           >
             {isSubmitting ? 'กำลังสมัคร...' : 'สมัครสมาชิก'}

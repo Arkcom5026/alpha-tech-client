@@ -1,127 +1,135 @@
-import React, { useState, useEffect } from 'react';
-
-import { changeUserStatus,changeUserRole } from '../api/admin';
-import { toast } from 'react-toastify';
+import React, { useCallback, useEffect, useState } from 'react';
+import { ConfirmActionDialog } from '@/design-system/composites';
+import { feedback } from '@/design-system/feedback';
+import {
+  changeUserStatus,
+  changeUserRole,
+  getListAllCustomer as getListAllUsers,
+} from '../api/admin';
 import { useAuthStore } from '@/features/auth/store/authStore';
 
-
-
 const TableCustomers = () => {
+  const token = useAuthStore((state) => state.token);
+  const [customers, setCustomers] = useState([]);
+  const [pendingStatus, setPendingStatus] = useState(null);
+  const [savingStatus, setSavingStatus] = useState(false);
 
-    const token = useAuthStore((state) => state.token)
-    const [customers, setCustomers] = useState([])
+  const handleGetUsers = useCallback(() => {
+    getListAllUsers(token)
+      .then((res) => {
+        setCustomers(res.data);
+      })
+      .catch((err) => {
+        console.log('handleGetUsers err --> ', err);
+        feedback.error(err?.response?.data?.message || 'โหลดรายการผู้ใช้ไม่สำเร็จ');
+      });
+  }, [token]);
 
+  useEffect(() => {
+    handleGetUsers();
+  }, [handleGetUsers]);
 
-    useEffect(() => {
-        //code
-        handleGetUsers(token)
+  const requestChangeUserStatus = (userId, userStatus, email) => {
+    setPendingStatus({ userId, userStatus, email });
+  };
 
-    }, [])
+  const confirmChangeUserStatus = async () => {
+    if (!pendingStatus?.userId) return;
+    const value = {
+      id: pendingStatus.userId,
+      enabled: !pendingStatus.userStatus,
+    };
 
-
-    const handleGetUsers = (token) => {
-        getListAllUsers(token)
-            .then((res) => {
-                setCustomers(res.data)
-            })
-            .catch((err) => {
-                console.log('handleGetUsers err --> ', err)
-            })
+    setSavingStatus(true);
+    try {
+      await changeUserStatus(token, value);
+      handleGetUsers();
+      feedback.success('อัปเดตสถานะผู้ใช้แล้ว');
+      setPendingStatus(null);
+    } catch (err) {
+      console.log('changeUserStatus err --> ', err);
+      feedback.error(err?.response?.data?.message || 'อัปเดตสถานะผู้ใช้ไม่สำเร็จ');
+    } finally {
+      setSavingStatus(false);
     }
+  };
 
-    const handleChangUserStatue = (userId, userStatus) => {
-        console.log('handleChangUserStatue -->', userId, userStatus)
-        const value = {
-            id: userId,
-            enabled: !userStatus
-        }
+  const handleChangUserRole = async (userId, userRole) => {
+    const value = {
+      id: userId,
+      Role: userRole,
+    };
 
-        changeUserStatus(token, value)
-            .then((res) => {
-                // console.log('changeUserStatus --> ', res)
-                handleGetUsers(token)
-                toast.success('Update Status Success')
-            })
-            .catch((err) => {
-                console.log('changeUserStatus err --> ', err)
-            })
-
+    try {
+      await changeUserRole(token, value);
+      handleGetUsers();
+      feedback.success('อัปเดตสิทธิ์ผู้ใช้แล้ว');
+    } catch (err) {
+      console.log('changeUserRole err --> ', err);
+      feedback.error(err?.response?.data?.message || 'อัปเดตสิทธิ์ผู้ใช้ไม่สำเร็จ');
     }
+  };
 
-
-    const handleChangUserRole = (userId, userRole) => {
-        console.log('handleChangUserRole -->', userId, userRole)
-        const value = {
-            id: userId,
-            Role: userRole
-        }
-
-        changeUserRole(token, value)
-            .then((res) => {
-                 console.log('changeUserRole --> ', res)
-                 handleGetUsers(token)
-                 toast.success('Update Role Success')
-            })
-            .catch((err) => {
-                console.log('changeUserRole err --> ', err)
-            })
-    }
-
-    return (
-        <div>
-            <div className='container mx-auto p-4 bg-white shadow-md'>
-
-                <table className='w-full'>
-                    <thead>
-                        <tr>
-                            <th>ลำดับ</th>
-                            <th>Email</th>
-                            {/* <th>วันที่แก้ไขล่าสุด</th> */}
-                            <th>สิทธิ์</th>
-                            <th>สถานะ</th>
-                            <th>จัดการ</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {
-                            customers?.map((item, index) =>
-                                <tr key={index}>
-                                    <td>{index + 1}</td>
-                                    <td>{item.email}</td>
-                                    {/*  <td>{item.updateAt}</td> */}
-
-                                    <td>                                       
-                                        <select 
-                                        onChange={(e)=>handleChangUserRole(item.id,e.target.value)}
-                                        value={item.role}
-                                        >
-                                            <option>user</option>
-                                            <option>admin</option>
-                                        </select>
-                                    </td>
-                                    <td>
-                                        {item.enabled ? 'Active' : 'Inactive'}
-                                    </td>
-                                    <td>
-                                        <button
-
-                                            className='bg-blue-500 rounded-md shadow-md p-1'
-                                            onClick={() => handleChangUserStatue(item.id, item.enabled)}
-                                        >
-                                            {item.enabled ? 'Disable' : 'Enable'}
-                                            
-
-                                        </button>
-                                    </td>
-                                </tr>
-                            )
-
-                        }
-                    </tbody>
-                </table>
-            </div>
+  return (
+    <>
+      <div>
+        <div className="container mx-auto bg-white p-4 shadow-md">
+          <table className="w-full">
+            <thead>
+              <tr>
+                <th>ลำดับ</th>
+                <th>Email</th>
+                <th>สิทธิ์</th>
+                <th>สถานะ</th>
+                <th>จัดการ</th>
+              </tr>
+            </thead>
+            <tbody>
+              {customers?.map((item, index) => (
+                <tr key={item.id || index}>
+                  <td>{index + 1}</td>
+                  <td>{item.email}</td>
+                  <td>
+                    <select
+                      onChange={(e) => handleChangUserRole(item.id, e.target.value)}
+                      value={item.role}
+                      className="rounded border border-slate-300 px-2 py-1 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-100"
+                    >
+                      <option>user</option>
+                      <option>admin</option>
+                    </select>
+                  </td>
+                  <td>{item.enabled ? 'Active' : 'Inactive'}</td>
+                  <td>
+                    <button
+                      className={item.enabled
+                        ? 'rounded-md bg-rose-600 p-1 text-white shadow-md hover:bg-rose-700'
+                        : 'rounded-md bg-emerald-600 p-1 text-white shadow-md hover:bg-emerald-700'}
+                      onClick={() => requestChangeUserStatus(item.id, item.enabled, item.email)}
+                    >
+                      {item.enabled ? 'Disable' : 'Enable'}
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
-    )
-}
+      </div>
 
-export default TableCustomers
+      <ConfirmActionDialog
+        open={Boolean(pendingStatus)}
+        title={pendingStatus?.userStatus ? 'ปิดใช้งานผู้ใช้' : 'เปิดใช้งานผู้ใช้'}
+        description={`ยืนยัน${pendingStatus?.userStatus ? 'ปิด' : 'เปิด'}ใช้งาน ${pendingStatus?.email || 'ผู้ใช้รายนี้'} หรือไม่?`}
+        confirmLabel={pendingStatus?.userStatus ? 'ปิดใช้งาน' : 'เปิดใช้งาน'}
+        intent={pendingStatus?.userStatus ? 'destructive' : 'primary'}
+        loading={savingStatus}
+        loadingLabel="กำลังบันทึก..."
+        onClose={() => setPendingStatus(null)}
+        onConfirm={confirmChangeUserStatus}
+      />
+    </>
+  );
+};
+
+export default TableCustomers;

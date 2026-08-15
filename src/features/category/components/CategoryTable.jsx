@@ -5,6 +5,7 @@ import {
   ConfirmActionDialog,
   CrudTableAction,
   CrudTableActions,
+  feedback,
 } from '@/design-system';
 import { useCategoryStore } from '../Store/CategoryStore';
 
@@ -25,14 +26,22 @@ const CategoryTable = ({
   const proceed = async () => {
     if (!confirm || isSaving || disabled || !canManage) return;
 
+    const isArchiveAction = confirm.type === 'archive';
+    const actionText = isArchiveAction ? 'ปิดใช้งาน' : 'กู้คืน';
     setIsSaving(true);
     try {
-      const result =
-        confirm.type === 'archive'
-          ? await archiveAction(confirm.row.id)
-          : await restoreAction(confirm.row.id);
+      const result = isArchiveAction
+        ? await archiveAction(confirm.row.id)
+        : await restoreAction(confirm.row.id);
 
-      if (result?.ok) setConfirm(null);
+      if (result?.ok) {
+        setConfirm(null);
+        feedback.actionSuccess(`${actionText}หมวดหมู่เรียบร้อยแล้ว`, `category:${isArchiveAction ? 'archive' : 'restore'}:success`);
+      } else {
+        feedback.error(result?.message || `${actionText}หมวดหมู่ไม่สำเร็จ`, { eventKey: `category:${isArchiveAction ? 'archive' : 'restore'}:error` });
+      }
+    } catch (actionError) {
+      feedback.actionError(actionError, `${actionText}หมวดหมู่ไม่สำเร็จ`, `category:${isArchiveAction ? 'archive' : 'restore'}:error`);
     } finally {
       setIsSaving(false);
     }
@@ -127,7 +136,7 @@ const CategoryTable = ({
 
       <ConfirmActionDialog
         open={Boolean(confirm)}
-        onClose={() => setConfirm(null)}
+        onClose={() => !isSaving && setConfirm(null)}
         onConfirm={proceed}
         title={`${isArchive ? 'ปิดใช้งาน' : 'กู้คืน'}หมวดหมู่สินค้า`}
         description={`ยืนยันการ${isArchive ? 'ปิดใช้งาน' : 'กู้คืน'}หมวดหมู่ “${confirm?.row?.name || ''}” หรือไม่?`}

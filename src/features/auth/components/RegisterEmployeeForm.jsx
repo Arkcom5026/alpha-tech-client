@@ -1,13 +1,9 @@
-// src/pages/RegisterEmployee.jsx
-// 🏛️ Tenant-Safe Registration Platform: (Fixed Parameter Drift, Unified Dynamic Redirect)
 import useEmployeeStore from '@/features/employee/store/employeeStore';
 import React, { useState } from 'react';
-// 🟢 [IMPORT FIXED] ดึง useParams มาเตรียมดักจับค่าบริษัทคั่น URL
 import { useNavigate, useParams } from 'react-router-dom';
 import { feedback } from '@/design-system';
 
 const RegisterEmployeeForm = () => {
-  // 🟢 [SLUG ACTIVATED] แกะคีย์ชื่อร้านค้าปัจจุบันจากระนาบ Dynamic Router
   const { shopSlug } = useParams();
   const navigate = useNavigate();
   const actionRegisterEmployee = useEmployeeStore((state) => state.actionRegisterEmployee);
@@ -18,26 +14,26 @@ const RegisterEmployeeForm = () => {
     password: '',
     branchId: '',
   });
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleChange = (e) => {
-    setForm({
-      ...form,
-      [e.target.name]: e.target.value,
-    });
+  const handleChange = (event) => {
+    setForm((current) => ({ ...current, [event.target.name]: event.target.value }));
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    if (submitting) return;
+
+    setSubmitting(true);
     try {
       await actionRegisterEmployee(form);
-      feedback.success('สมัครบัญชีสำเร็จ กรุณาเข้าสู่ระบบ');
-      
-      // 🟢 [ROUTING FIXED] แปลงท่อส่งหน้าจอหลังสมัครเสร็จ ให้พุ่งตรงดิ่งไปที่หน้าล็อกอินของสาขานั้นๆ ไม่หลงทาง
+      feedback.actionSuccess('สมัครบัญชีสำเร็จ กรุณาเข้าสู่ระบบ', 'auth-employee-register-success');
       const targetSlug = shopSlug || 'advancetech';
       navigate(`/${targetSlug}/pos/login`);
-    } catch (err) {
-      console.error(err);
-      feedback.error('สมัครบัญชีไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
+    } catch (error) {
+      feedback.actionError(error, 'สมัครบัญชีไม่สำเร็จ กรุณาลองใหม่อีกครั้ง', 'auth-employee-register-error');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -85,9 +81,10 @@ const RegisterEmployeeForm = () => {
             />
             <button
               type="submit"
-              className="bg-slate-800 rounded-xl w-full text-white font-black py-2.5 shadow-sm hover:bg-slate-900 active:scale-98 transform transition-all text-sm tracking-wide"
+              disabled={submitting}
+              className="bg-slate-800 rounded-xl w-full text-white font-black py-2.5 shadow-sm hover:bg-slate-900 active:scale-98 transform transition-all text-sm tracking-wide disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Register
+              {submitting ? 'กำลังสมัครบัญชี...' : 'Register'}
             </button>
           </div>
         </form>

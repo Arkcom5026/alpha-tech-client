@@ -13,16 +13,17 @@ const form = read('src/features/tax/inputDocuments/components/InputTaxDocumentCr
 
 describe('input tax create and auto-link workflow contract', () => {
   it('prefills the tax document amount from selected receipt allocations', () => {
-    expect(orchestration).toContain('sumReceiptAllocations(controller.selectedReceipts)');
+    expect(orchestration).toContain('sumReceiptAllocations(selectedReceipts)');
     expect(orchestration).toContain("changeInvoice('subtotalAmount'");
     expect(orchestration).toContain("changeInvoice('taxAmount'");
     expect(orchestration).toContain("changeInvoice('totalAmount'");
   });
 
   it('links the selected receipts after a newly-created document becomes selected', () => {
-    expect(orchestration).toContain("controller.setSelectedDocumentId('')");
-    expect(orchestration).toContain('controller.createInputTaxDocument(event)');
-    expect(orchestration).toContain('controller.attachSelected()');
+    expect(orchestration).toContain("setSelectedDocumentId('')");
+    expect(orchestration).toContain('await createInputTaxDocument(event)');
+    expect(orchestration).toContain('Promise.resolve(attachSelected()).catch(() => {});');
+    expect(orchestration).toContain('pendingAutoLinkRef.current = true');
   });
 
   it('wires the creation form using the component prop contract', () => {

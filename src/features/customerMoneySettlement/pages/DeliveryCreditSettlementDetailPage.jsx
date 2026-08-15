@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { feedback } from '@/design-system/feedback';
 import { getCustomerDisplayName } from '@/features/customer/utils/customerDisplayName';
 import {
   cancelDeliveryCreditSettlement,
@@ -44,8 +45,11 @@ const DeliveryCreditSettlementDetailPage = () => {
       setRecord(updated);
       setShowCancel(false);
       setCancelReason('');
+      feedback.actionSuccess('ยกเลิกเอกสารตัดยอดเรียบร้อยแล้ว', `customer-money-settlement:cancel:${id}:success`);
     } catch (err) {
-      setActionError(err?.response?.data?.message || err?.message || 'ยกเลิกเอกสารตัดยอดไม่สำเร็จ');
+      const fallbackMessage = 'ยกเลิกเอกสารตัดยอดไม่สำเร็จ';
+      setActionError(err?.response?.data?.message || err?.message || fallbackMessage);
+      feedback.actionError(err, fallbackMessage, `customer-money-settlement:cancel:${id}:error`);
     } finally {
       setCancelling(false);
     }

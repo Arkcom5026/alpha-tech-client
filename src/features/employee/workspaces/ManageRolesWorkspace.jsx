@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ConfirmActionDialog } from '@/design-system/composites';
 import { useAuthStore } from '@/features/auth/store/authStore.js';
 import {
@@ -61,7 +61,7 @@ export default function ManageRolesPage() {
   const pages = Math.max(1, Math.ceil(filtered.length / limit));
   const pageRows = filtered.slice((page - 1) * limit, page * limit);
 
-  const fetchList = async () => {
+  const fetchList = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
@@ -81,7 +81,7 @@ export default function ManageRolesPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     if (!isSuperAdmin) return;
@@ -89,7 +89,7 @@ export default function ManageRolesPage() {
     getBranchDropdowns()
       .then((rows) => setBranches(Array.isArray(rows) ? rows : []))
       .catch(() => setBranches([]));
-  }, [isSuperAdmin]);
+  }, [fetchList, isSuperAdmin]);
 
   useEffect(() => {
     setPage(1);

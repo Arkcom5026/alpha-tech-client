@@ -1,18 +1,19 @@
-// ✅ src/features/category/pages/CreateCategoryPage.jsx
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useState } from 'react';
 
+import { feedback } from '@/design-system';
 import CategoryForm from '../components/CategoryForm';
 import { categorySchema } from '../schema/createCategorySchema';
 import { useCategoryStore } from '../Store/CategoryStore';
 
-
 const CreateCategoryPage = () => {
   const navigate = useNavigate();
+  const { shopSlug } = useParams();
   const { createAction, submitting, error } = useCategoryStore();
-  const [info, setInfo] = useState(''); // แสดงผลการทำงานแทน alert
+  const [info, setInfo] = useState('');
+  const listPath = `/${shopSlug || 'advancetech'}/pos/stock/categories`;
 
   const form = useForm({
     resolver: zodResolver(categorySchema),
@@ -20,17 +21,19 @@ const CreateCategoryPage = () => {
   });
 
   const onSubmit = async (data) => {
+    if (submitting) return;
     try {
-      const res = await createAction(data); // ✅ เรียกผ่าน store ตามมาตรฐาน
+      const res = await createAction(data);
       if (res?.ok) {
-        setInfo('สร้างหมวดหมู่เรียบร้อย');
-        navigate(`/${shopSlug}/pos/stock/categories`);
-      } else if (res?.message) {
-        setInfo(res.message);
-        setTimeout(() => setInfo(''), 3500);
+        feedback.actionSuccess('เพิ่มหมวดหมู่เรียบร้อยแล้ว', 'category:create:success');
+        navigate(listPath);
+      } else {
+        const message = res?.message || 'เพิ่มหมวดหมู่ไม่สำเร็จ';
+        setInfo(message);
+        feedback.error(message, { eventKey: 'category:create:error' });
       }
     } catch (err) {
-      console.error('❌ สร้างหมวดหมู่ไม่สำเร็จ:', err);
+      feedback.actionError(err, 'เพิ่มหมวดหมู่ไม่สำเร็จ', 'category:create:error');
     }
   };
 
@@ -47,10 +50,8 @@ const CreateCategoryPage = () => {
       <CategoryForm
         form={form}
         mode="create"
-        onSubmit={(data) => {
-          onSubmit(data);
-        }}
-        onCancel={() => navigate(`/${shopSlug}/pos/stock/categories`)}
+        onSubmit={onSubmit}
+        onCancel={() => !submitting && navigate(listPath)}
         submitting={submitting}
       />
     </div>

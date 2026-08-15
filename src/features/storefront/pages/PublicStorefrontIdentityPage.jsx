@@ -2,9 +2,11 @@ import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { clearAnonymousCart } from '@/features/storefront/cart/anonymousCartStore';
 import {
+  clearCommerceIdentityProof,
   clearStorefrontCommitmentAuthority,
   commitProductReservation,
   getAnonymousSessionToken,
+  getCommerceIdentityProof,
   getOrCreateCommitmentIdempotencyKey,
   requestCommitmentIdentity,
   verifyCommitmentIdentity,
@@ -21,27 +23,42 @@ const replaceableChallengeCodes = new Set([
   'COMMERCE_IDENTITY_CHALLENGE_NOT_FOUND',
 ]);
 
+const replaceableProofCodes = new Set([
+  'COMMITMENT_IDENTITY_PROOF_INVALID',
+  'COMMITMENT_IDENTITY_PROOF_CONFLICT',
+]);
+
 const PublicStorefrontIdentityPage = () => {
   const { shopSlug } = useParams();
   const [phone, setPhone] = useState('');
   const [otp, setOtp] = useState('');
   const [challenge, setChallenge] = useState(null);
-  const [proofToken, setProofToken] = useState('');
+  const [proofToken, setProofToken] = useState(() => getCommerceIdentityProof(shopSlug));
   const [reservation, setReservation] = useState(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [challengeNeedsReplacement, setChallengeNeedsReplacement] = useState(false);
 
+  const resetExpiredProof = () => {
+    clearCommerceIdentityProof(shopSlug);
+    setProofToken('');
+    setChallenge(null);
+    setOtp('');
+    setChallengeNeedsReplacement(true);
+    setError('หลักฐานยืนยันตัวตนหมดอายุหรือถูกใช้แล้ว กรุณาขอรหัส OTP ใหม่');
+  };
+
   const requestOtp = async () => {
     setBusy(true);
     setError('');
     setChallengeNeedsReplacement(false);
+    clearCommerceIdentityProof(shopSlug);
+    setProofToken('');
     try {
       const token = getAnonymousSessionToken(shopSlug);
       if (!token) throw new Error('ไม่พบ Shopping Session กรุณากลับไปตรวจสอบตะกร้าอีกครั้ง');
       const data = await requestCommitmentIdentity({ shopSlug, token, phone });
       setOtp('');
-      setProofToken('');
       setChallenge(data);
     } catch (err) {
       setError(err?.response?.data?.message || err?.message || 'ไม่สามารถส่งรหัสยืนยันได้');
@@ -86,6 +103,8 @@ const PublicStorefrontIdentityPage = () => {
         setChallengeNeedsReplacement(true);
         setOtp('');
         setError('รหัส OTP ชุดนี้ถูกใช้หรือหมดอายุแล้ว กรุณาขอรหัสใหม่');
+      } else if (replaceableProofCodes.has(code)) {
+        resetExpiredProof();
       } else {
         setError(err?.response?.data?.message || err?.message || 'ไม่สามารถยืนยันและสร้างรายการจองได้');
       }
@@ -100,7 +119,12 @@ const PublicStorefrontIdentityPage = () => {
     try {
       await createReservation(proofToken);
     } catch (err) {
-      setError(err?.response?.data?.message || err?.message || 'ไม่สามารถสร้างรายการจองได้');
+      const code = err?.response?.data?.code || err?.response?.data?.error;
+      if (replaceableProofCodes.has(code)) {
+        resetExpiredProof();
+      } else {
+        setError(err?.response?.data?.message || err?.message || 'ไม่สามารถสร้างรายการจองได้');
+      }
     } finally {
       setBusy(false);
     }
@@ -143,13 +167,13 @@ const PublicStorefrontIdentityPage = () => {
                 <input value={phone} onChange={(event) => setPhone(event.target.value)} disabled={Boolean(challenge) && !challengeNeedsReplacement} placeholder="08XXXXXXXX" className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-600" />
               </label>
 
-              {!challenge || challengeNeedsReplacement ? (
-                <button type="button" onClick={requestOtp} disabled={busy || !phone.trim()} className="w-full rounded-xl bg-blue-600 px-5 py-3 font-black text-white disabled:bg-slate-300">{busy ? 'กำลังส่งรหัส...' : challengeNeedsReplacement ? 'ขอรหัส OTP ใหม่' : 'ส่งรหัส OTP'}</button>
-              ) : proofToken ? (
+              {proofToken ? (
                 <div className="space-y-4">
-                  <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">ยืนยัน OTP สำเร็จแล้ว แต่ยังสร้างรายการจองไม่สำเร็จ สามารถลองส่งคำสั่งเดิมซ้ำได้อย่างปลอดภัย</div>
-                  <button type="button" onClick={retryReservation} disabled={busy} className="w-full rounded-xl bg-blue-600 px-5 py-3 font-black text-white disabled:bg-slate-300">{busy ? 'กำลังสร้างรายการจอง...' : 'ลองสร้างรายการจองอีกครั้ง'}</button>
+                  <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">ยืนยัน OTP สำเร็จแล้ว หากหน้าถูกรีเฟรชหรือการเชื่อมต่อสะดุด สามารถส่งคำสั่งจองเดิมซ้ำได้อย่างปลอดภัย</div>
+                  <button type="button" onClick={retryReservation} disabled={busy} className="w-full rounded-xl bg-blue-600 px-5 py-3 font-black text-white disabled:bg-slate-300">{busy ? 'กำลังสร้างรายการจอง...' : 'ดำเนินการจองต่อ'}</button>
                 </div>
+              ) : !challenge || challengeNeedsReplacement ? (
+                <button type="button" onClick={requestOtp} disabled={busy || !phone.trim()} className="w-full rounded-xl bg-blue-600 px-5 py-3 font-black text-white disabled:bg-slate-300">{busy ? 'กำลังส่งรหัส...' : challengeNeedsReplacement ? 'ขอรหัส OTP ใหม่' : 'ส่งรหัส OTP'}</button>
               ) : (
                 <>
                   <div className="rounded-xl bg-blue-50 px-4 py-3 text-sm text-blue-800">ส่งรหัสไปยัง {challenge.phoneMasked || 'เบอร์ที่ระบุ'} แล้ว</div>

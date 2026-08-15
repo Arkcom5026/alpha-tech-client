@@ -40,19 +40,36 @@ const actionOwners = [
   ['branch price', 'src/features/branchPrice/workspace/ManageBranchPriceWorkspace.jsx'],
   ['repair workflow', 'src/features/repair/pages/RepairJobDetailPage.jsx'],
   ['stock audit session', 'src/features/stockAudit/pages/ReadyToSellAuditPage.jsx'],
-].map(([name, file]) => [name, read(file)]);
+
+  // Wave 2: owners that were outside the original curated audit.
+  ['product profile create', 'src/features/productProfile/pages/CreateProductProfilePage.jsx'],
+  ['product profile edit', 'src/features/productProfile/pages/EditProductProfilePage.jsx'],
+  ['product profile list', 'src/features/productProfile/pages/ListProductProfilePage.jsx'],
+  ['sales tax filing', 'src/features/tax/outputFilings/pages/SalesTaxFilingPage.jsx'],
+  ['partner store governance', 'src/features/partnerStoreApplication/pages/PartnerStoreApplicationReviewPage.jsx'],
+  ['supplier advance payment', 'src/features/supplierPayment/components/SupplierAdvancePaymentForm.jsx'],
+  ['supplier receipt payment', 'src/features/supplierPayment/components/SupplierReceiptPaymentForm.jsx'],
+  ['printer settings', 'src/features/printing/settings/PrinterSettingsPanel.jsx'],
+  ['server printer settings', 'src/features/printing/settings/ServerPrinterSettingsPanel.jsx'],
+  ['tax issuer profile', 'src/features/tax/issuerProfile/pages/TaxIssuerProfilePage.jsx'],
+  ['partner profile', 'src/features/settings/pages/PartnerProfilePage.jsx'],
+].map(([name, file]) => [name, file, read(file)]);
 
 assert(feedbackSource.includes('actionSuccess:'), 'feedback authority must expose actionSuccess');
 assert(feedbackSource.includes('actionError:'), 'feedback authority must expose actionError');
 assert(errorSource.includes('error?.response?.data?.error?.message'), 'error normalization must support Server operational envelope');
 
-for (const [name, source] of actionOwners) {
-  assert(source.includes('feedback.actionSuccess'), `${name} must provide persistent action success feedback`);
-  assert(source.includes('feedback.actionError'), `${name} must provide persistent action error feedback`);
+for (const [name, file, source] of actionOwners) {
+  assert(source.includes('feedback.actionSuccess'), `${name} (${file}) must provide persistent action success feedback`);
+  assert(source.includes('feedback.actionError'), `${name} (${file}) must provide persistent action error feedback`);
 }
 
 const srcRoot = path.join(root, 'src');
 const directToastifyImports = [];
+const silentDirectMutationOwners = [];
+const DIRECT_MUTATION_RE = /\b(?:apiClient|axios)\s*\.\s*(?:post|put|patch|delete)\s*\(/;
+const UI_OWNER_RE = /\/(?:pages|components|workspace|workspaces|hooks)\//;
+
 const walk = (dir) => {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     const fullPath = path.join(dir, entry.name);
@@ -63,8 +80,17 @@ const walk = (dir) => {
     if (!/\.(js|jsx|ts|tsx)$/.test(entry.name)) continue;
     const relativePath = path.relative(root, fullPath).replaceAll('\\', '/');
     const source = fs.readFileSync(fullPath, 'utf8');
+
     if (source.includes("from 'react-toastify'") || source.includes('from "react-toastify"')) {
       if (!relativePath.startsWith('src/design-system/feedback/')) directToastifyImports.push(relativePath);
+    }
+
+    const normalized = `/${relativePath}`;
+    if (UI_OWNER_RE.test(normalized) && DIRECT_MUTATION_RE.test(source)) {
+      const hasSuccess = source.includes('feedback.actionSuccess') || source.includes('feedback.success');
+      const hasError = source.includes('feedback.actionError') || source.includes('feedback.error');
+      const explicitlyExempt = source.includes('ACTION_FEEDBACK_EXEMPT');
+      if ((!hasSuccess || !hasError) && !explicitlyExempt) silentDirectMutationOwners.push(relativePath);
     }
   }
 };
@@ -72,7 +98,12 @@ walk(srcRoot);
 
 assert(
   directToastifyImports.length === 0,
-  `features must not import react-toastify directly: ${directToastifyImports.join(', ')}`
+  `features must not import react-toastify directly: ${directToastifyImports.join(', ')}`,
+);
+
+assert(
+  silentDirectMutationOwners.length === 0,
+  `direct persistent UI mutations must expose success and error feedback (or document ACTION_FEEDBACK_EXEMPT): ${silentDirectMutationOwners.join(', ')}`,
 );
 
 console.log('Action Feedback Standardization Contract: PASS');

@@ -11,7 +11,13 @@ const closeReservedPrintWindow = (confirmContext) => {
   confirmContext?.printWindow?.close?.();
 };
 
-const projectPostSaleDocumentWarning = ({ saleId, code, message, cause }) => ({
+const openShortReceiptFallback = ({ saleId, saleOption, onSaleConfirmed, confirmContext }) => {
+  if (saleOption !== 'RECEIPT' || typeof onSaleConfirmed !== 'function') return false;
+  onSaleConfirmed(saleId, 'RECEIPT', confirmContext);
+  return true;
+};
+
+const projectPostSaleDocumentWarning = ({ saleId, code, message, cause, fallbackOpened = false }) => ({
   code: code || 'POST_SALE_DOCUMENT_FAILED',
   message: message || 'ขายสำเร็จ แต่ออกเอกสารภาษีไม่สำเร็จ',
   detail:
@@ -20,6 +26,7 @@ const projectPostSaleDocumentWarning = ({ saleId, code, message, cause }) => ({
     cause?.message ||
     'กรุณาตรวจสอบการตั้งค่าผู้ออกเอกสารภาษี แล้วพิมพ์เอกสารย้อนหลัง',
   saleId,
+  fallbackOpened,
   printHistoryPath: '../bill',
   taxIssuerSettingsPath: '../../settings/tax-issuer',
 });
@@ -120,7 +127,13 @@ export const executeSalePaymentConfirmation = async ({
 
       const taxDocumentId = Number(completion?.taxIntake?.taxDocumentId || response?.taxIntake?.taxDocumentId || 0);
       if (!taxDocumentId) {
-        closeReservedPrintWindow(confirmContext);
+        const fallbackOpened = openShortReceiptFallback({
+          saleId,
+          saleOption,
+          onSaleConfirmed,
+          confirmContext,
+        });
+        if (!fallbackOpened) closeReservedPrintWindow(confirmContext);
         return {
           ok: true,
           saleId,
@@ -128,8 +141,11 @@ export const executeSalePaymentConfirmation = async ({
           warning: projectPostSaleDocumentWarning({
             saleId,
             code: completion?.taxIntake?.code || response?.taxIntake?.code || 'OUTPUT_TAX_PUBLICATION_PENDING',
-            message: 'ขายสำเร็จ แต่ยังสร้างเอกสารภาษีไม่สำเร็จ',
-            cause: new Error('รายการยังไม่พร้อมสำหรับการออกเอกสารภาษี กรุณาพิมพ์ย้อนหลังภายหลัง'),
+            message: fallbackOpened
+              ? 'ขายสำเร็จ และเปิดใบกำกับภาษีอย่างย่อสำรองแล้ว แต่ TaxDocument ยังไม่พร้อม'
+              : 'ขายสำเร็จ แต่ยังสร้างเอกสารภาษีไม่สำเร็จ',
+            cause: new Error('รายการยังไม่พร้อมสำหรับการออกเอกสารภาษี กรุณาตรวจสอบ TaxDocument authority ภายหลัง'),
+            fallbackOpened,
           }),
         };
       }
@@ -152,7 +168,13 @@ export const executeSalePaymentConfirmation = async ({
           response,
         };
       } catch (issuanceError) {
-        closeReservedPrintWindow(confirmContext);
+        const fallbackOpened = openShortReceiptFallback({
+          saleId,
+          saleOption,
+          onSaleConfirmed,
+          confirmContext,
+        });
+        if (!fallbackOpened) closeReservedPrintWindow(confirmContext);
         return {
           ok: true,
           saleId,
@@ -164,8 +186,11 @@ export const executeSalePaymentConfirmation = async ({
               issuanceError?.response?.data?.code ||
               issuanceError?.code ||
               'TAX_DOCUMENT_ISSUANCE_FAILED',
-            message: 'ขายสำเร็จ แต่ออกเอกสารภาษีไม่สำเร็จ',
+            message: fallbackOpened
+              ? 'ขายสำเร็จ และเปิดใบกำกับภาษีอย่างย่อสำรองแล้ว แต่ TaxDocument ยังออกไม่สำเร็จ'
+              : 'ขายสำเร็จ แต่ออกเอกสารภาษีไม่สำเร็จ',
             cause: issuanceError,
+            fallbackOpened,
           }),
         };
       }

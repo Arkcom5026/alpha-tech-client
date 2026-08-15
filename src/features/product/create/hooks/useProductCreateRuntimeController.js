@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef } from 'react';
 
+import { feedback } from '@/design-system/feedback';
 import { useBranchStore } from '@/features/branch/store/branchStore';
 import {
   createLocalOperationalProductCreateApi,
@@ -160,6 +161,7 @@ const buildPayload = (values = {}, branchId) => ({
 });
 
 const getApiErrorMessage = (err, fallback) =>
+  err?.response?.data?.error?.message ||
   err?.response?.data?.message ||
   err?.message ||
   fallback;
@@ -241,6 +243,7 @@ const useProductCreateRuntimeController = () => {
     }
   }, [
     formValues.productTypeId,
+    branchId,
     setBrands,
     setBrandsLoading,
     setRuntimeError,
@@ -287,8 +290,6 @@ const useProductCreateRuntimeController = () => {
     loadBrands();
   }, [loadBrands]);
 
-  // Existing model check should not run on every product-name keystroke.
-  // It refreshes when ProductType/Brand changes and can still be triggered manually by the panel button.
   useEffect(() => {
     loadExistingModels();
   }, [loadExistingModels]);
@@ -344,10 +345,11 @@ const useProductCreateRuntimeController = () => {
       }
 
       finishCreateSuccess(created);
+      feedback.actionSuccess('บันทึกสินค้าเรียบร้อยแล้ว', 'product-create:save:success');
     } catch (err) {
-      finishCreateError(
-        getApiErrorMessage(err, 'เกิดข้อผิดพลาดในการบันทึกสินค้า')
-      );
+      const message = getApiErrorMessage(err, 'เกิดข้อผิดพลาดในการบันทึกสินค้า');
+      finishCreateError(message);
+      feedback.actionError(err, 'เกิดข้อผิดพลาดในการบันทึกสินค้า', 'product-create:save:error');
     }
   }, [
     formValues,

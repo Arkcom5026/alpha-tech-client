@@ -123,7 +123,7 @@ const QuickSalePage = ({
         <div className="h-full">
           <SaleWorkspacePanel
             title={sourceLocked ? 'สินค้าจากใบจอง' : 'ค้นหาสินค้า'}
-            locked={cartLocked}
+            locked={checkoutLocked}
             className="h-full"
             action={
               <SalePriceTypeSelector

@@ -61,6 +61,10 @@ const actionOwners = [
   ['product reservation lifecycle', 'src/features/productReservation/merchant/pages/ProductReservationDetailPage.jsx'],
   ['combined billing document', 'src/features/combinedBilling/pages/CombinedBillingPage.jsx'],
   ['admin branch lifecycle', 'src/features/admin/components/FormBranch.jsx'],
+
+  // Wave 4: destructive residual owners that previously relied on browser prompts.
+  ['held cart lifecycle', 'src/features/sales/held-cart/components/PosHeldCartPanel.jsx'],
+  ['customer money receive cancellation', 'src/features/customerMoneyReceive/pages/CustomerMoneyReceiveDetailPage.jsx'],
 ].map(([name, file]) => [name, file, read(file)]);
 
 assert(feedbackSource.includes('actionSuccess:'), 'feedback authority must expose actionSuccess');
@@ -88,6 +92,16 @@ const adminBranchSource = read('src/features/admin/components/FormBranch.jsx');
 assert(adminBranchSource.includes('ConfirmActionDialog'), 'Admin branch deletion must require confirmation');
 assert(adminBranchSource.includes('if (isSaving) return'), 'Admin branch creation must block duplicate submits');
 assert(adminBranchSource.includes('if (!pendingDeleteBranch || deletingId) return'), 'Admin branch deletion must block duplicate submits');
+
+const heldCartSource = read('src/features/sales/held-cart/components/PosHeldCartPanel.jsx');
+assert(!heldCartSource.includes('window.prompt('), 'Held cart cancellation must not use browser prompt');
+assert(heldCartSource.includes('pendingCancelId'), 'Held cart cancellation must require an in-context confirmation state');
+assert(heldCartSource.includes('if (cancellingId) return'), 'Held cart cancellation must block duplicate destructive submits');
+
+const moneyReceiveSource = read('src/features/customerMoneyReceive/pages/CustomerMoneyReceiveDetailPage.jsx');
+assert(!moneyReceiveSource.includes('window.prompt('), 'Customer money receive cancellation must not use browser prompt');
+assert(moneyReceiveSource.includes('cancelOpen'), 'Customer money receive cancellation must expose an explicit confirmation state');
+assert(moneyReceiveSource.includes('if (cancelling) return'), 'Customer money receive cancellation must block duplicate destructive submits');
 
 // Structural regression: the profiles list route previously resolved to a copy of the edit page.
 const productProfileListSource = read('src/features/productProfile/pages/ListProductProfilePage.jsx');

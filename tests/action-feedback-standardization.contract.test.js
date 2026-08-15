@@ -26,6 +26,8 @@ const actionOwners = [
   ['product type create', 'src/features/productType/workspace/CreateProductTypeWorkspace.jsx'],
   ['product type edit', 'src/features/productType/workspace/EditProductTypeWorkspace.jsx'],
   ['product type lifecycle', 'src/features/productType/components/ProductTypeTable.jsx'],
+  ['product delete', 'src/features/product/pages/ListProductPage.jsx'],
+  ['product template images', 'src/features/productTemplate/components/TemplateImageGalleryPanel.jsx'],
   ['employee detail', 'src/features/employee/workspaces/EmployeeDetailWorkspace.jsx'],
   ['employee edit', 'src/features/employee/workspaces/EmployeeEditWorkspace.jsx'],
   ['employee legacy edit', 'src/features/employee/workspaces/LegacyEmployeeFormWorkspace.jsx'],
@@ -34,7 +36,10 @@ const actionOwners = [
   ['supplier edit', 'src/features/supplier/workspace/SupplierEditWorkspace.jsx'],
   ['supplier legacy update', 'src/features/supplier/workspace/SupplierLegacyUpdateWorkspace.jsx'],
   ['customer claim', 'src/features/customer/pages/ListCustomersPage.jsx'],
+  ['bank lifecycle', 'src/features/bank/workspace/ListBankWorkspace.jsx'],
   ['branch price', 'src/features/branchPrice/workspace/ManageBranchPriceWorkspace.jsx'],
+  ['repair workflow', 'src/features/repair/pages/RepairJobDetailPage.jsx'],
+  ['stock audit session', 'src/features/stockAudit/pages/ReadyToSellAuditPage.jsx'],
 ].map(([name, file]) => [name, read(file)]);
 
 assert(feedbackSource.includes('actionSuccess:'), 'feedback authority must expose actionSuccess');

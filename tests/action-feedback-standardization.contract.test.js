@@ -27,6 +27,7 @@ const actionOwners = [
   ['product type edit', 'src/features/productType/workspace/EditProductTypeWorkspace.jsx'],
   ['product type lifecycle', 'src/features/productType/components/ProductTypeTable.jsx'],
   ['product delete', 'src/features/product/pages/ListProductPage.jsx'],
+  ['product create runtime', 'src/features/product/create/hooks/useProductCreateRuntimeController.js'],
   ['product template images', 'src/features/productTemplate/components/TemplateImageGalleryPanel.jsx'],
   ['employee detail', 'src/features/employee/workspaces/EmployeeDetailWorkspace.jsx'],
   ['employee edit', 'src/features/employee/workspaces/EmployeeEditWorkspace.jsx'],
@@ -63,6 +64,24 @@ for (const [name, file, source] of actionOwners) {
   assert(source.includes('feedback.actionSuccess'), `${name} (${file}) must provide persistent action success feedback`);
   assert(source.includes('feedback.actionError'), `${name} (${file}) must provide persistent action error feedback`);
 }
+
+// Structural regression: the profiles list route previously resolved to a copy of the edit page.
+const productProfileListSource = read('src/features/productProfile/pages/ListProductProfilePage.jsx');
+const stockRoutesSource = read('src/routes/partner/stockRoutes.jsx');
+assert(productProfileListSource.includes('const ListProductProfilePage'), 'Product Profile list must own a ListProductProfilePage component');
+assert(!productProfileListSource.includes('const EditProductProfilePage'), 'Product Profile list must not duplicate the edit workspace');
+assert(stockRoutesSource.includes('element: <ListProductProfilePage />'), 'Product Profile profiles route must render the list workspace');
+assert(productProfileListSource.includes('ConfirmActionDialog'), 'Product Profile delete must require confirmation');
+
+// High-impact / financial actions must retain duplicate-submit protection and confirmation boundaries.
+const advancePaymentSource = read('src/features/supplierPayment/components/SupplierAdvancePaymentForm.jsx');
+const receiptPaymentSource = read('src/features/supplierPayment/components/SupplierReceiptPaymentForm.jsx');
+const salesTaxFilingSource = read('src/features/tax/outputFilings/pages/SalesTaxFilingPage.jsx');
+const partnerReviewSource = read('src/features/partnerStoreApplication/pages/PartnerStoreApplicationReviewPage.jsx');
+assert(advancePaymentSource.includes('if (submitting) return'), 'Supplier advance payment must block duplicate submits');
+assert(receiptPaymentSource.includes('if (submitting) return'), 'Supplier receipt payment must block duplicate submits');
+assert(salesTaxFilingSource.includes('ConfirmActionDialog'), 'Sales tax filing submission must require confirmation');
+assert(partnerReviewSource.includes('ConfirmActionDialog'), 'Partner Store governance high-impact actions must require confirmation');
 
 const srcRoot = path.join(root, 'src');
 const directToastifyImports = [];

@@ -1,7 +1,6 @@
-
-
 // ✅ src/features/productTemplate/components/ProductTemplateTable.jsx
 import React, { useMemo, useState } from 'react';
+import { feedback } from '@/design-system';
 
 // Badge component for status labels
 const Badge = ({ children, className = '' }) => (
@@ -37,28 +36,39 @@ const ProductTemplateTable = ({
   onEdit,
   onToggleActive,
 }) => {
-              
   // ✅ Table ไม่ดึง action จาก store เอง (ให้ Page ส่ง onToggleActive / onEdit มาเท่านั้น)
   const toggleActiveAction = onToggleActive;
 
-
-
   const rows = useMemo(() => (Array.isArray(data) ? data : []), [data]);
   const [confirm, setConfirm] = useState(null);
+  const [isToggling, setIsToggling] = useState(false);
 
   const handleToggle = (row) => {
+    if (isToggling) return;
     const nextActive = !resolveActive(row);
     setConfirm({ type: 'toggle', row, nextActive });
   };
 
   const proceed = async () => {
-    if (!confirm?.row || !toggleActiveAction) return setConfirm(null);
+    if (!confirm?.row || !toggleActiveAction || isToggling) return;
+
+    const { row, nextActive } = confirm;
+    setIsToggling(true);
     try {
-      await toggleActiveAction(confirm.row.id);
-    } catch (e) {
-      console.error('[ProductTemplateTable] toggleActiveAction error', e);
-    } finally {
+      await toggleActiveAction(row.id);
+      feedback.actionSuccess(
+        nextActive ? 'เปิดใช้งาน Product Template เรียบร้อยแล้ว' : 'ปิดใช้งาน Product Template เรียบร้อยแล้ว',
+        `product-template:${row.id}:list-toggle:success`,
+      );
       setConfirm(null);
+    } catch (toggleError) {
+      feedback.actionError(
+        toggleError,
+        nextActive ? 'ไม่สามารถเปิดใช้งาน Product Template ได้' : 'ไม่สามารถปิดใช้งาน Product Template ได้',
+        `product-template:${row.id}:list-toggle:error`,
+      );
+    } finally {
+      setIsToggling(false);
     }
   };
 
@@ -95,7 +105,6 @@ const ProductTemplateTable = ({
 
             {rows.map((row, idx) => {
               const unitName = row.unitName ?? row.unit?.name ?? '-';
-
               const isActive = resolveActive(row);
 
               return (
@@ -115,7 +124,7 @@ const ProductTemplateTable = ({
                       <ActionButton
                         className="border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800"
                         onClick={() => onEdit?.(row)}
-                        disabled={!onEdit}
+                        disabled={!onEdit || isToggling}
                       >
                         แก้ไข
                       </ActionButton>
@@ -123,7 +132,7 @@ const ProductTemplateTable = ({
                       <ActionButton
                         className={`text-white ${isActive ? 'bg-rose-600 hover:bg-rose-700 focus:ring-rose-500' : 'bg-emerald-600 hover:bg-emerald-700 focus:ring-emerald-500'}`}
                         onClick={() => handleToggle(row)}
-                        disabled={!toggleActiveAction}
+                        disabled={!toggleActiveAction || isToggling}
                       >
                         {isActive ? 'ปิดใช้งาน' : 'กู้คืน'}
                       </ActionButton>
@@ -147,11 +156,19 @@ const ProductTemplateTable = ({
               ยืนยันการ{confirm.nextActive ? 'กู้คืน' : 'ปิดใช้งาน'} เทมเพลทสินค้า “{confirm.row?.name}” หรือไม่?
             </div>
             <div className="flex gap-2">
-              <ActionButton className="border border-amber-300 text-amber-900 hover:bg-amber-100" onClick={() => setConfirm(null)}>
+              <ActionButton
+                className="border border-amber-300 text-amber-900 hover:bg-amber-100"
+                onClick={() => !isToggling && setConfirm(null)}
+                disabled={isToggling}
+              >
                 ยกเลิก
               </ActionButton>
-              <ActionButton className="bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500" onClick={proceed}>
-                ยืนยัน
+              <ActionButton
+                className="bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500"
+                onClick={proceed}
+                disabled={isToggling}
+              >
+                {isToggling ? 'กำลังบันทึก...' : 'ยืนยัน'}
               </ActionButton>
             </div>
           </div>
@@ -162,9 +179,3 @@ const ProductTemplateTable = ({
 };
 
 export default ProductTemplateTable;
-
-
-
-
-
-

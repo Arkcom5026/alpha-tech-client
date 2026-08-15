@@ -46,32 +46,6 @@ const discoverNonVitestTestFiles = (rootDir) => {
 
 const nonVitestTestFiles = discoverNonVitestTestFiles(__dirname)
 
-const vendorChunkFor = (moduleId) => {
-  const id = toPosixPath(moduleId)
-  if (!id.includes('/node_modules/')) {
-    const featureName = id.match(/\/src\/features\/([^/]+)\//)?.[1]
-    return featureName
-      ? `feature-${featureName.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase()}`
-      : undefined
-  }
-
-  const groups = [
-    ['vendor-react', ['/react/', '/react-dom/', '/react-router', '/scheduler/']],
-    ['vendor-mui', ['/@mui/', '/@emotion/']],
-    ['vendor-motion', ['/framer-motion/', '/motion/']],
-    ['vendor-charts', ['/recharts/', '/d3-', '/victory-vendor/']],
-    ['vendor-documents', ['/xlsx/', '/html2pdf.js/', '/jspdf/', '/html2canvas/']],
-    ['vendor-media', ['/@cloudinary/', '/cloudinary/', '/swiper/', '/react-webcam/']],
-    ['vendor-ui', ['/@radix-ui/', '/@dnd-kit/', '/react-datepicker/', '/react-day-picker/', '/rc-slider/', '/react-icons/', '/lucide-react/']],
-    ['vendor-forms', ['/react-hook-form/', '/@hookform/', '/zod/']],
-    ['vendor-data', ['/@tanstack/', '/axios/', '/zustand/']],
-    ['vendor-utils', ['/lodash', '/date-fns/', '/dayjs/', '/moment/', '/numeral/']],
-  ]
-
-  return groups.find(([, patterns]) => patterns.some((pattern) => id.includes(pattern)))?.[0]
-    || 'vendor-misc'
-}
-
 export default defineConfig({
   plugins: [react()],
   resolve: {
@@ -90,13 +64,6 @@ export default defineConfig({
   },
   server: {
     historyApiFallback: true
-  },
-  build: {
-    rollupOptions: {
-      output: {
-        manualChunks: vendorChunkFor
-      }
-    }
   },
   test: {
     include: [

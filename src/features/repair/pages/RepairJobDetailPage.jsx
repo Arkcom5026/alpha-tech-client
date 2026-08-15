@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { feedback } from '@/design-system';
 import useRepairRuntimeStore from '../store/repairRuntimeStore';
 import repairApi from '../api/repairApi';
 import RepairDetailWorkspace from '../detail/workspace/components/RepairDetailWorkspace';
@@ -24,6 +25,7 @@ const RepairJobDetailPage = () => {
   }, [loadJob, repairJobId]);
 
   const handleWorkflowAction = async (payload) => {
+    if (workflowSubmitting) return false;
     setWorkflowSubmitting(true);
     setWorkflowError('');
     try {
@@ -32,8 +34,13 @@ const RepairJobDetailPage = () => {
         commandKey: payload.commandKey || `repair-workflow-${repairJobId}-${Date.now()}`,
       });
       await loadJob(repairJobId);
+      feedback.actionSuccess('อัปเดตสถานะงานซ่อมเรียบร้อยแล้ว', `repair:workflow:${payload.action || 'transition'}:success`);
+      return true;
     } catch (workflowActionError) {
-      setWorkflowError(workflowActionError.message);
+      const message = workflowActionError?.response?.data?.error?.message || workflowActionError?.response?.data?.message || workflowActionError?.message || 'อัปเดตสถานะงานซ่อมไม่สำเร็จ';
+      setWorkflowError(message);
+      feedback.actionError(workflowActionError, message, `repair:workflow:${payload.action || 'transition'}:error`);
+      return false;
     } finally {
       setWorkflowSubmitting(false);
     }

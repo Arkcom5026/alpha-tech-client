@@ -19,7 +19,7 @@ const buttonTone = {
 };
 
 const fieldControlClass =
-  'w-full rounded-[var(--ads-radius-md)] border bg-[hsl(var(--ads-surface-base))] text-[hsl(var(--ads-text-default))] shadow-[var(--ads-shadow-xs)] outline-none transition duration-[var(--ads-motion-fast)] placeholder:text-[hsl(var(--ads-text-muted))] focus:border-[hsl(var(--ads-focus))] focus:ring-2 focus:ring-[hsl(var(--ads-focus)/0.16)] disabled:cursor-not-allowed disabled:opacity-60';
+  'w-full rounded-[var(--ads-radius-md)] border bg-[hsl(var(--ads-surface-base))] text-[hsl(var(--ads-text-default))] shadow-[var(--ads-shadow-xs)] outline-none transition [transition-duration:var(--ads-motion-fast)] placeholder:text-[hsl(var(--ads-text-muted))] focus:border-[hsl(var(--ads-focus))] focus:ring-2 focus:ring-[hsl(var(--ads-focus)/0.16)] disabled:cursor-not-allowed disabled:opacity-60';
 
 export const Spinner = ({
   size = 'md',
@@ -69,7 +69,7 @@ export const Button = React.forwardRef(function Button(
       disabled={disabled || loading}
       aria-busy={loading || undefined}
       className={join(
-        'inline-flex select-none items-center justify-center gap-2 rounded-[var(--ads-radius-md)] px-4 font-medium shadow-[var(--ads-shadow-xs)] transition duration-[var(--ads-motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ads-focus))] focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50',
+        'inline-flex select-none items-center justify-center gap-2 rounded-[var(--ads-radius-md)] px-4 font-medium shadow-[var(--ads-shadow-xs)] transition [transition-duration:var(--ads-motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ads-focus))] focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50',
         controlSize[size],
         buttonTone[variant] || buttonTone.primary,
         fullWidth && 'w-full',

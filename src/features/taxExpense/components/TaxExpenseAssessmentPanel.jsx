@@ -1,6 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { CheckCircle2, RefreshCw, ShieldCheck } from 'lucide-react';
-import { toast } from 'react-toastify';
+import { feedback } from '@/design-system/feedback';
 import {
   confirmTaxExpenseAssessment,
   getTaxExpenseAssessmentSuggestion,
@@ -22,7 +22,7 @@ const TaxExpenseAssessmentPanel = ({ expenseId, onClose, onConfirmed }) => {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     if (!expenseId) return;
     setLoading(true);
     try {
@@ -38,15 +38,15 @@ const TaxExpenseAssessmentPanel = ({ expenseId, onClose, onConfirmed }) => {
       setDecisions(next);
       setNote(response?.latestAssessment?.assessmentNote || '');
     } catch (error) {
-      toast.error(error?.response?.data?.message || 'ไม่สามารถโหลดคำแนะนำการประเมินภาษีได้');
+      feedback.error(error?.response?.data?.message || 'ไม่สามารถโหลดคำแนะนำการประเมินภาษีได้');
     } finally {
       setLoading(false);
     }
-  };
+  }, [expenseId]);
 
-  useEffect(() => { load(); }, [expenseId]);
+  useEffect(() => { load(); }, [load]);
 
-  const items = data?.suggestion?.items || [];
+  const items = useMemo(() => data?.suggestion?.items || [], [data]);
   const complete = useMemo(() => items.length > 0 && items.every((item) => {
     const decision = decisions[item.taxExpenseItemId];
     return decision?.vatTreatment && decision?.citTreatment;
@@ -72,11 +72,11 @@ const TaxExpenseAssessmentPanel = ({ expenseId, onClose, onConfirmed }) => {
         note,
       };
       await confirmTaxExpenseAssessment(expenseId, payload);
-      toast.success('ยืนยันผลการประเมินภาษีแล้ว');
+      feedback.success('ยืนยันผลการประเมินภาษีแล้ว');
       await load();
       onConfirmed?.();
     } catch (error) {
-      toast.error(error?.response?.data?.message || 'ไม่สามารถยืนยันผลการประเมินภาษีได้');
+      feedback.error(error?.response?.data?.message || 'ไม่สามารถยืนยันผลการประเมินภาษีได้');
     } finally {
       setSaving(false);
     }
@@ -125,7 +125,7 @@ const TaxExpenseAssessmentPanel = ({ expenseId, onClose, onConfirmed }) => {
           ))}
           {!items.length && <div className="py-8 text-center text-sm text-slate-400">ไม่พบรายการสำหรับประเมิน</div>}
           <textarea value={note} onChange={(event) => setNote(event.target.value)} rows={2} className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" placeholder="หมายเหตุการประเมิน (ถ้ามี)" />
-          <button type="button" disabled={!complete || saving} onClick={confirm} className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-black text-white disabled:opacity-40"><CheckCircle2 size={16} />{saving ? 'กำลังยืนยัน...' : 'ยืนยันผลการประเมิน'}</button>
+          <button type="button" disabled={!complete || saving} onClick={confirm} className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-black text-white hover:bg-emerald-700 disabled:opacity-40"><CheckCircle2 size={16} />{saving ? 'กำลังยืนยัน...' : 'ยืนยันผลการประเมิน'}</button>
           {data?.latestAssessment && <p className="text-xs font-semibold text-emerald-700">ยืนยันล่าสุด v{data.latestAssessment.version} · {data.latestAssessment.status}</p>}
         </div>
       )}

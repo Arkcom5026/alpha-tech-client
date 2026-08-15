@@ -1,62 +1,70 @@
 import { useCallback, useEffect, useRef } from 'react';
-import { toast } from 'react-toastify';
+import { feedback } from '@/design-system/feedback';
 import useInputTaxReceiptWorkspaceController from './useInputTaxReceiptWorkspaceController';
 import { sumReceiptAllocations } from '../utils/inputTaxReceiptLink';
 
 const useInputTaxReceiptCreateLinkController = () => {
   const controller = useInputTaxReceiptWorkspaceController();
   const pendingAutoLinkRef = useRef(false);
+  const {
+    selectedSupplier,
+    selectedReceipts,
+    eligibleDocuments,
+    showCreateDocument,
+    selectedDocumentId,
+    submitting,
+    changeInvoice,
+    setSelectedDocumentId,
+    setShowCreateDocument,
+    createInputTaxDocument,
+    attachSelected,
+  } = controller;
 
   const openCreateDocument = useCallback(() => {
-    if (!controller.selectedSupplier || controller.selectedReceipts.length === 0) {
-      toast.warning('กรุณาเลือกใบรับสินค้าก่อนสร้างใบกำกับภาษีซื้อ');
+    if (!selectedSupplier || selectedReceipts.length === 0) {
+      feedback.warning('กรุณาเลือกใบรับสินค้าก่อนสร้างใบกำกับภาษีซื้อ');
       return;
     }
 
-    const totals = sumReceiptAllocations(controller.selectedReceipts);
-    controller.changeInvoice('subtotalAmount', String(totals.subtotalAmount ?? 0));
-    controller.changeInvoice('taxAmount', String(totals.vatAmount ?? 0));
-    controller.changeInvoice('totalAmount', String(totals.totalAmount ?? 0));
-    controller.setSelectedDocumentId('');
-    controller.setShowCreateDocument(true);
-  }, [controller]);
+    const totals = sumReceiptAllocations(selectedReceipts);
+    changeInvoice('subtotalAmount', String(totals.subtotalAmount ?? 0));
+    changeInvoice('taxAmount', String(totals.vatAmount ?? 0));
+    changeInvoice('totalAmount', String(totals.totalAmount ?? 0));
+    setSelectedDocumentId('');
+    setShowCreateDocument(true);
+  }, [changeInvoice, selectedReceipts, selectedSupplier, setSelectedDocumentId, setShowCreateDocument]);
 
   const toggleCreateDocument = useCallback(() => {
-    if (controller.showCreateDocument) {
-      if (controller.eligibleDocuments.length === 0 && controller.selectedReceipts.length > 0) return;
-      controller.setShowCreateDocument(false);
+    if (showCreateDocument) {
+      if (eligibleDocuments.length === 0 && selectedReceipts.length > 0) return;
+      setShowCreateDocument(false);
       return;
     }
 
     openCreateDocument();
-  }, [controller, openCreateDocument]);
+  }, [eligibleDocuments.length, openCreateDocument, selectedReceipts.length, setShowCreateDocument, showCreateDocument]);
 
   useEffect(() => {
-    if (controller.selectedReceipts.length === 0) return;
-    if (controller.eligibleDocuments.length > 0) return;
-    if (controller.showCreateDocument) return;
+    if (selectedReceipts.length === 0) return;
+    if (eligibleDocuments.length > 0) return;
+    if (showCreateDocument) return;
 
     openCreateDocument();
-  }, [
-    controller.eligibleDocuments.length,
-    controller.selectedReceipts.length,
-    controller.showCreateDocument,
-    openCreateDocument,
-  ]);
+  }, [eligibleDocuments.length, openCreateDocument, selectedReceipts.length, showCreateDocument]);
 
   const createAndAutoLinkInputTaxDocument = useCallback(async (event) => {
     pendingAutoLinkRef.current = true;
-    controller.setSelectedDocumentId('');
-    await controller.createInputTaxDocument(event);
-  }, [controller]);
+    setSelectedDocumentId('');
+    await createInputTaxDocument(event);
+  }, [createInputTaxDocument, setSelectedDocumentId]);
 
   useEffect(() => {
     if (!pendingAutoLinkRef.current) return;
-    if (controller.submitting || !controller.selectedDocumentId) return;
+    if (submitting || !selectedDocumentId) return;
 
     pendingAutoLinkRef.current = false;
-    Promise.resolve(controller.attachSelected()).catch(() => {});
-  }, [controller.attachSelected, controller.selectedDocumentId, controller.submitting]);
+    Promise.resolve(attachSelected()).catch(() => {});
+  }, [attachSelected, selectedDocumentId, submitting]);
 
   return {
     ...controller,

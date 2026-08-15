@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, RefreshCw, Save, UserRound } from 'lucide-react';
-import { toast } from 'react-toastify';
+import { feedback } from '@/design-system/feedback';
 import AddressForm from '@/features/address/components/AddressForm';
 import {
   getManagedCustomerDetail,
@@ -14,7 +14,7 @@ const CUSTOMER_TYPES = [
   { value: 'GOVERNMENT', label: 'หน่วยงานรัฐ' },
 ];
 
-const fieldClass = 'h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-900 outline-none transition focus:border-teal-500 focus:ring-2 focus:ring-teal-100';
+const fieldClass = 'h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100';
 const emptyEditor = {
   name: '', phone: '', email: '', type: 'INDIVIDUAL', companyName: '', departmentName: '', financialOwnerCustomerId: '', taxId: '',
   addressDetail: '', provinceCode: '', districtCode: '', subdistrictCode: '', postcode: '',
@@ -42,10 +42,10 @@ const FinancialGroupSummary = ({ customer }) => {
   const status = customer?.financialGroupStatus || 'STANDALONE';
   const ownerName = customer?.financialOwner?.companyName || `#${customer?.financialOwnerCustomerId || customer?.id}`;
   return (
-    <section className="rounded-2xl border border-teal-200 bg-teal-50 p-5 shadow-sm">
+    <section className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div><h2 className="text-lg font-black text-slate-900">บัญชีการเงินของลูกค้า</h2><p className="mt-1 text-sm text-slate-600">{status === 'OWNER' ? 'หน่วยงานหลักและยอดรวมขององค์กร' : status === 'MEMBER' ? `ใช้บัญชีการเงินร่วมกับ ${ownerName}` : 'บัญชีการเงินเดี่ยว'}</p></div>
-        <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-teal-800">{status === 'OWNER' ? 'หน่วยงานหลัก' : status === 'MEMBER' ? 'บัญชีร่วม' : 'บัญชีเดี่ยว'}</span>
+        <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-emerald-800">{status === 'OWNER' ? 'หน่วยงานหลัก' : status === 'MEMBER' ? 'บัญชีร่วม' : 'บัญชีเดี่ยว'}</span>
       </div>
       {status === 'MEMBER' ? (
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -82,7 +82,7 @@ const CustomerDetailWorkspace = ({ customerId, onBack }) => {
     } catch (requestError) {
       const message = requestError?.response?.data?.message || 'โหลดรายละเอียดลูกค้าไม่สำเร็จ';
       setError(message);
-      toast.error(message);
+      feedback.error(message);
     } finally {
       setLoading(false);
     }
@@ -114,10 +114,8 @@ const CustomerDetailWorkspace = ({ customerId, onBack }) => {
 
   const save = async () => {
     if (!customerId || saving) return;
-    if (isOrganization && editor.taxId && !taxIdentityReady) {
-      toast.error('เลขประจำตัวผู้เสียภาษีต้องมี 13 หลัก');
-      return;
-    }
+    if (isOrganization && editor.taxId && !taxIdentityReady) return;
+
     setSaving(true);
     setError('');
     try {
@@ -135,11 +133,11 @@ const CustomerDetailWorkspace = ({ customerId, onBack }) => {
       });
       setCustomer(updated);
       setEditor(toEditor(updated));
-      toast.success('บันทึกข้อมูลลูกค้าเรียบร้อยแล้ว');
+      feedback.success('บันทึกข้อมูลลูกค้าเรียบร้อยแล้ว');
     } catch (requestError) {
       const message = requestError?.response?.data?.message || 'บันทึกข้อมูลลูกค้าไม่สำเร็จ';
       setError(message);
-      toast.error(message);
+      feedback.error(message);
     } finally {
       setSaving(false);
     }
@@ -156,19 +154,19 @@ const CustomerDetailWorkspace = ({ customerId, onBack }) => {
   return (
     <div className="min-h-full bg-slate-50 p-3 md:p-5">
       <div className="mx-auto max-w-6xl space-y-4">
-        <header className="rounded-2xl border border-teal-100 bg-teal-50 p-4 md:p-5">
+        <header className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4 md:p-5">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-start gap-3">
-              <div className="rounded-xl border border-teal-200 bg-white p-2.5 text-teal-700"><UserRound className="h-5 w-5" /></div>
+              <div className="rounded-xl border border-emerald-200 bg-white p-2.5 text-emerald-700"><UserRound className="h-5 w-5" /></div>
               <div>
-                <p className="text-xs font-semibold text-teal-700">ข้อมูลลูกค้า</p>
+                <p className="text-xs font-semibold text-emerald-700">ข้อมูลลูกค้า</p>
                 <h1 className="mt-1 text-xl font-semibold text-slate-900 md:text-2xl">รายละเอียดและแก้ไขข้อมูลลูกค้า</h1>
                 <p className="mt-1 text-sm text-slate-600">รหัสลูกค้า {customerId || '-'}</p>
               </div>
             </div>
             <div className="flex gap-2">
-              <button type="button" onClick={load} disabled={loading} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-teal-200 bg-white px-4 text-sm font-semibold text-teal-800 disabled:opacity-50"><RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />โหลดใหม่</button>
-              <button type="button" onClick={onBack} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-teal-200 bg-white px-4 text-sm font-semibold text-teal-800"><ArrowLeft className="h-4 w-4" />กลับรายการลูกค้า</button>
+              <button type="button" onClick={load} disabled={loading} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-emerald-200 bg-white px-4 text-sm font-semibold text-emerald-800 disabled:opacity-50"><RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />โหลดใหม่</button>
+              <button type="button" onClick={onBack} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-emerald-200 bg-white px-4 text-sm font-semibold text-emerald-800"><ArrowLeft className="h-4 w-4" />กลับรายการลูกค้า</button>
             </div>
           </div>
         </header>
@@ -189,7 +187,7 @@ const CustomerDetailWorkspace = ({ customerId, onBack }) => {
               <p className="mb-2 text-xs font-bold text-slate-700">ประเภทลูกค้า</p>
               <div className="grid gap-2 sm:grid-cols-3">
                 {CUSTOMER_TYPES.map((item) => (
-                  <button key={item.value} type="button" onClick={() => patch({ type: item.value })} className={`min-h-11 rounded-xl border px-3 text-sm font-bold ${editor.type === item.value ? 'border-teal-400 bg-teal-100 text-teal-950' : 'border-slate-200 bg-white text-slate-700'}`}>{item.label}</button>
+                  <button key={item.value} type="button" onClick={() => patch({ type: item.value })} className={`min-h-11 rounded-xl border px-3 text-sm font-bold ${editor.type === item.value ? 'border-emerald-400 bg-emerald-100 text-emerald-950' : 'border-slate-200 bg-white text-slate-700'}`}>{item.label}</button>
                 ))}
               </div>
             </div>
@@ -215,7 +213,7 @@ const CustomerDetailWorkspace = ({ customerId, onBack }) => {
 
             <div className="flex flex-col gap-2 border-t border-slate-100 pt-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="text-sm text-slate-500">{dirty ? 'มีข้อมูลที่ยังไม่ได้บันทึก' : 'ข้อมูลล่าสุดถูกบันทึกแล้ว'}</div>
-              <button type="button" onClick={save} disabled={!dirty || saving} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-teal-700 px-5 text-sm font-black text-white disabled:cursor-not-allowed disabled:bg-slate-300"><Save className="h-4 w-4" />{saving ? 'กำลังบันทึก...' : 'บันทึกการแก้ไข'}</button>
+              <button type="button" onClick={save} disabled={!dirty || saving} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-emerald-700 px-5 text-sm font-black text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:bg-slate-300"><Save className="h-4 w-4" />{saving ? 'กำลังบันทึก...' : 'บันทึกการแก้ไข'}</button>
             </div>
           </section>
         </>

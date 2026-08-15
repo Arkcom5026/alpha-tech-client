@@ -7,6 +7,7 @@ import useBankStore from '@/features/bank/store/bankStore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { FieldMessage, feedback } from '@/design-system/feedback';
 
 export function EditBankPage() {
   const navigate = useNavigate();
@@ -17,6 +18,7 @@ export function EditBankPage() {
 
   const [form, setForm] = useState({ name: '', active: true });
   const [loading, setLoading] = useState(true);
+  const [nameError, setNameError] = useState('');
 
   // 🟢 [DYNAMIC RELATIVE PATH]: คืนความสมบูรณ์ให้ปุ่มถอยกลับ ดึงจากวินโดว์ปัจจุบัน เพื่อสยบอาการลิงก์หลุดเลนหน้าร้าน
   const getListUrl = () => {
@@ -43,14 +45,17 @@ export function EditBankPage() {
   const onSubmit = async (e) => {
     e.preventDefault();
     if (!form.name || form.name.trim() === '') {
-      return alert('กรุณาระบุชื่อธนาคาร');
+      setNameError('กรุณาระบุชื่อธนาคาร');
+      return;
     }
+    setNameError('');
     try {
       await updateBankAction(bankId, form);
+      feedback.success('อัปเดตข้อมูลธนาคารแล้ว');
       navigate(getListUrl());
     } catch (err) {
       const msg = err?.response?.data?.message || 'บันทึกไม่สำเร็จ';
-      alert(msg);
+      feedback.error(msg);
     }
   };
 
@@ -76,10 +81,16 @@ export function EditBankPage() {
                 <Input
                   id="name"
                   value={form.name}
-                  onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                  onChange={(e) => {
+                    setForm((f) => ({ ...f, name: e.target.value }));
+                    if (nameError) setNameError('');
+                  }}
                   className="h-9 text-xs font-bold rounded-xl bg-slate-50 focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 border-slate-200 shadow-inner"
+                  aria-invalid={Boolean(nameError)}
+                  aria-describedby={nameError ? 'bank-name-error' : undefined}
                   required
                 />
+                <FieldMessage id="bank-name-error">{nameError}</FieldMessage>
               </div>
 
               <div className="flex items-center gap-2 h-9 border border-emerald-100 bg-emerald-50/40 rounded-xl px-3 select-none">

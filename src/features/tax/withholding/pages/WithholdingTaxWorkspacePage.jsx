@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, CheckCircle2, FileCheck2, RefreshCw, ShieldAlert } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { toast } from 'react-toastify';
+import { feedback } from '@/design-system/feedback';
 import { useBranchStore } from '@/features/branch/store/branchStore';
 import {
   getWithholdingTaxErrorMessage,
@@ -44,7 +44,7 @@ const WithholdingTaxWorkspacePage = () => {
     } catch (requestError) {
       const message = getWithholdingTaxErrorMessage(requestError);
       setError(message);
-      toast.error(message);
+      feedback.error(message);
     } finally {
       setLoading(false);
     }
@@ -52,11 +52,11 @@ const WithholdingTaxWorkspacePage = () => {
 
   useEffect(() => { load(); }, [load]);
 
-  const rows = useMemo(() => (Array.isArray(data?.rows) ? data.rows : []), [data?.rows]);
-  const filings = useMemo(() => (Array.isArray(data?.filings) ? data.filings : []), [data?.filings]);
-  const exceptions = Array.isArray(data?.exceptions) ? data.exceptions : [];
-  const readiness = data?.readiness || {};
-  const summary = data?.summary || {};
+  const rows = useMemo(() => Array.isArray(data?.rows) ? data.rows : [], [data?.rows]);
+  const filings = useMemo(() => Array.isArray(data?.filings) ? data.filings : [], [data?.filings]);
+  const exceptions = useMemo(() => Array.isArray(data?.exceptions) ? data.exceptions : [], [data?.exceptions]);
+  const readiness = useMemo(() => data?.readiness || {}, [data?.readiness]);
+  const summary = useMemo(() => data?.summary || {}, [data?.summary]);
   const noWhtSource = Number(summary.sourceItemCount || 0) === 0;
   const filingByForm = useMemo(() => Object.fromEntries(filings.map((row) => [row.formType, row])), [filings]);
   const expenseGroups = useMemo(() => {
@@ -72,10 +72,10 @@ const WithholdingTaxWorkspacePage = () => {
     setBusyKey(key);
     try {
       await work();
-      toast.success(successMessage);
+      feedback.success(successMessage);
       await load();
     } catch (requestError) {
-      toast.error(getWithholdingTaxErrorMessage(requestError));
+      feedback.error(getWithholdingTaxErrorMessage(requestError));
     } finally {
       setBusyKey('');
     }
@@ -90,7 +90,10 @@ const WithholdingTaxWorkspacePage = () => {
   const issue = async (group) => {
     const first = group[0];
     const selectedForm = first.recommendedFormType || manualForms[first.taxExpenseId];
-    if (!selectedForm) return toast.error('กรุณาเลือก ภ.ง.ด.3 หรือ ภ.ง.ด.53 สำหรับผู้รับเงินรายนี้');
+    if (!selectedForm) {
+      feedback.warning('กรุณาเลือก ภ.ง.ด.3 หรือ ภ.ง.ด.53 สำหรับผู้รับเงินรายนี้');
+      return;
+    }
     return run(`cert:${first.taxExpenseId}`, () => issueWithholdingCertificate({ branchId, taxPeriodId, taxExpenseId: first.taxExpenseId, formType: selectedForm }), `ออกหนังสือรับรอง WHT ${first.expenseNumber} แล้ว`);
   };
 
@@ -104,7 +107,7 @@ const WithholdingTaxWorkspacePage = () => {
           <div className="flex items-start gap-3">
             <button type="button" onClick={() => navigate(-1)} className="rounded-xl border border-slate-200 p-2 text-slate-600 hover:bg-slate-50" aria-label="ย้อนกลับ"><ArrowLeft size={18} /></button>
             <div>
-              <p className="text-xs font-black uppercase tracking-[0.16em] text-violet-600">Withholding Tax Workspace</p>
+              <p className="text-xs font-black uppercase tracking-[0.16em] text-emerald-700">Withholding Tax Workspace</p>
               <h1 className="mt-1 text-2xl font-black text-slate-900">ภาษีหัก ณ ที่จ่าย / WHT</h1>
               <p className="mt-1 text-sm text-slate-500">รอบ {data?.period?.periodCode || taxPeriodId} · {currentBranch?.name || `สาขา #${branchId || '-'}`}</p>
               <p className="mt-1 text-xs text-slate-400">Review → WITHHOLDING_REQUIRED → WITHHELD → Certificate → ภ.ง.ด.3 / ภ.ง.ด.53 preparation → manual filing evidence — ยังไม่ใช่ direct e-Filing</p>
@@ -152,7 +155,7 @@ const WithholdingTaxWorkspacePage = () => {
                   <div className="flex flex-wrap items-center gap-2">
                     {!first.recommendedFormType && <select value={manualForms[first.taxExpenseId] || ''} onChange={(event) => setManualForms((current) => ({ ...current, [first.taxExpenseId]: event.target.value }))} className="rounded-lg border border-slate-300 px-2 py-2 text-xs font-bold"><option value="">เลือกแบบ</option><option value="PND3">ภ.ง.ด.3</option><option value="PND53">ภ.ง.ด.53</option></select>}
                     <span className="rounded-lg bg-slate-100 px-2 py-2 text-xs font-bold">{formLabel(first.recommendedFormType || manualForms[first.taxExpenseId])}</span>
-                    <button type="button" disabled={!canIssue || !!busyKey} onClick={() => issue(group)} className="inline-flex items-center gap-1.5 rounded-lg border border-violet-300 bg-violet-50 px-3 py-2 text-xs font-bold text-violet-800 disabled:opacity-40"><FileCheck2 size={14} /> {certificateIssued ? 'ออกใบรับรองใหม่' : 'ออกหนังสือรับรอง'}</button>
+                    <button type="button" disabled={!canIssue || !!busyKey} onClick={() => issue(group)} className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-800 hover:bg-emerald-100 disabled:opacity-40"><FileCheck2 size={14} /> {certificateIssued ? 'ออกใบรับรองใหม่' : 'ออกหนังสือรับรอง'}</button>
                   </div>
                 </div>
                 <div className="mt-3 space-y-2">
@@ -175,8 +178,8 @@ const WithholdingTaxWorkspacePage = () => {
             return <div key={formType} className="rounded-2xl border border-slate-200 bg-white p-4">
               <h2 className="font-black text-slate-900">{formLabel(formType)} Filing Preparation</h2>
               <div className="mt-2 text-sm text-slate-600">สถานะ: <span className="font-black">{noWhtSource ? 'ไม่มีรายการที่ต้องยื่น' : filing?.status || 'ยังไม่เตรียม'}</span> · {Number(filing?.itemCount || 0)} รายการ · WHT ฿{money(filing?.withholdingTaxAmount)}</div>
-              {noWhtSource ? <p className="mt-3 text-xs font-semibold text-slate-500">ไม่ต้องเตรียมแบบสำหรับรอบนี้</p> : <div className="mt-3"><button type="button" disabled={!!busyKey || filing?.status === 'SUBMITTED'} onClick={() => prepare(formType)} className="rounded-lg border border-blue-300 bg-blue-50 px-3 py-2 text-xs font-bold text-blue-800 disabled:opacity-40">เตรียม {formLabel(formType)}</button></div>}
-              {filing?.status === 'PREPARED' && <div className="mt-3 space-y-2 rounded-xl border border-amber-200 bg-amber-50 p-3"><label className="block text-xs font-bold text-amber-900">เลขอ้างอิง/หลักฐานการยื่นภายนอก</label><input value={references[formType] || ''} onChange={(event) => setReferences((current) => ({ ...current, [formType]: event.target.value }))} className="w-full rounded-lg border border-amber-300 bg-white px-3 py-2 text-sm" placeholder="เช่น RD-ACK-2026-08-001" /><button type="button" disabled={!!busyKey || !String(references[formType] || '').trim()} onClick={() => submit(formType)} className="rounded-lg bg-amber-600 px-3 py-2 text-xs font-bold text-white disabled:opacity-40">ยืนยันว่าดำเนินการยื่นภายนอกแล้ว</button></div>}
+              {noWhtSource ? <p className="mt-3 text-xs font-semibold text-slate-500">ไม่ต้องเตรียมแบบสำหรับรอบนี้</p> : <div className="mt-3"><button type="button" disabled={!!busyKey || filing?.status === 'SUBMITTED'} onClick={() => prepare(formType)} className="rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-800 hover:bg-emerald-100 disabled:opacity-40">เตรียม {formLabel(formType)}</button></div>}
+              {filing?.status === 'PREPARED' && <div className="mt-3 space-y-2 rounded-xl border border-amber-200 bg-amber-50 p-3"><label className="block text-xs font-bold text-amber-900">เลขอ้างอิง/หลักฐานการยื่นภายนอก</label><input value={references[formType] || ''} onChange={(event) => setReferences((current) => ({ ...current, [formType]: event.target.value }))} className="w-full rounded-lg border border-amber-300 bg-white px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-100" placeholder="เช่น RD-ACK-2026-08-001" /><button type="button" disabled={!!busyKey || !String(references[formType] || '').trim()} onClick={() => submit(formType)} className="rounded-lg bg-amber-600 px-3 py-2 text-xs font-bold text-white disabled:opacity-40">ยืนยันว่าดำเนินการยื่นภายนอกแล้ว</button></div>}
               {filing?.status === 'SUBMITTED' && <p className="mt-3 text-sm font-bold text-emerald-700">บันทึกหลักฐานการยื่นแล้ว</p>}
             </div>;
           })}

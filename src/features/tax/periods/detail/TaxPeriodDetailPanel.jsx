@@ -9,7 +9,7 @@ import {
   RotateCcw,
   X,
 } from 'lucide-react';
-import { toast } from 'react-toastify';
+import { feedback } from '@/design-system/feedback';
 import { getTaxPeriodDetail, getTaxPeriodErrorMessage } from '../api/taxPeriodApi';
 
 const STATUS_META = {
@@ -40,17 +40,20 @@ const formatDateTime = (value) => {
   }).format(date);
 };
 
-const TimelineItem = ({ label, value, icon: Icon, active }) => (
+const TimelineItem = ({ label, value, icon, active }) => {
+  const IconComponent = icon;
+  return (
   <div className="flex gap-3">
     <div className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border ${active ? 'border-blue-200 bg-blue-50 text-blue-700' : 'border-slate-200 bg-slate-50 text-slate-400'}`}>
-      <Icon size={15} />
+      <IconComponent size={15} />
     </div>
     <div className="min-w-0 pb-4">
       <p className={`text-sm font-bold ${active ? 'text-slate-800' : 'text-slate-400'}`}>{label}</p>
       <p className="mt-0.5 text-xs text-slate-500">{formatDateTime(value)}</p>
     </div>
   </div>
-);
+  );
+};
 
 const TaxPeriodDetailPanel = ({ branchId, taxPeriodId, onClose, onAction, busyKey }) => {
   const [detail, setDetail] = useState(null);
@@ -67,7 +70,7 @@ const TaxPeriodDetailPanel = ({ branchId, taxPeriodId, onClose, onAction, busyKe
     } catch (requestError) {
       const message = getTaxPeriodErrorMessage(requestError);
       setError(message);
-      toast.error(message);
+      feedback.error(message);
     } finally {
       setLoading(false);
     }
@@ -98,7 +101,7 @@ const TaxPeriodDetailPanel = ({ branchId, taxPeriodId, onClose, onAction, busyKe
       <aside className="flex h-full w-full max-w-xl flex-col bg-white shadow-2xl">
         <header className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
           <div>
-            <p className="text-xs font-bold uppercase tracking-wide text-blue-600">รายละเอียดรอบภาษี</p>
+            <p className="text-xs font-bold uppercase tracking-wide text-emerald-700">รายละเอียดรอบภาษี</p>
             <h2 className="mt-1 text-xl font-black text-slate-900">{detail?.periodCode || 'กำลังโหลด...'}</h2>
           </div>
           <button type="button" onClick={onClose} className="rounded-xl p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-800" aria-label="ปิด">
@@ -175,7 +178,7 @@ const TaxPeriodDetailPanel = ({ branchId, taxPeriodId, onClose, onAction, busyKe
                   type="button"
                   onClick={() => handleAction(action)}
                   disabled={!!busyKey}
-                  className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-blue-700 disabled:opacity-50"
+                  className="inline-flex items-center gap-2 rounded-xl bg-emerald-700 px-4 py-2.5 text-sm font-bold text-white hover:bg-emerald-800 disabled:opacity-50"
                 >
                   <Icon size={16} /> {busyKey === key ? 'กำลังบันทึก...' : meta.label}
                 </button>

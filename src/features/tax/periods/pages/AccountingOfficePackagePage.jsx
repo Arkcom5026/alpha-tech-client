@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, CheckCircle2, Download, FileSpreadsheet, RefreshCw, ShieldCheck } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { toast } from 'react-toastify';
+import { feedback } from '@/design-system/feedback';
 import { useBranchStore } from '@/features/branch/store/branchStore';
 import AccountingOfficeExceptionsPanel from '../components/AccountingOfficeExceptionsPanel';
 import {
@@ -59,7 +59,7 @@ const AccountingOfficePackagePage = () => {
     } catch (requestError) {
       const message = getAccountingOfficePackageErrorMessage(requestError);
       setError(message);
-      toast.error(message);
+      feedback.error(message);
     } finally {
       setLoading(false);
     }
@@ -67,7 +67,7 @@ const AccountingOfficePackagePage = () => {
 
   useEffect(() => { load(); }, [load]);
 
-  const readiness = data?.readiness || {};
+  const readiness = useMemo(() => data?.readiness || {}, [data?.readiness]);
   const checks = useMemo(() => [
     ['Output VAT พร้อม', readiness.outputVatReady],
     ['Input VAT พร้อม', readiness.inputVatReady],

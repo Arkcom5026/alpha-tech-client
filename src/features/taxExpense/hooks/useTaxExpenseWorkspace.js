@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { toast } from 'react-toastify';
+import { feedback } from '@/design-system/feedback';
 import { useBranchStore } from '@/features/branch/store/branchStore';
 import {
   createExpensePayee,
@@ -46,7 +46,7 @@ const useTaxExpenseWorkspace = () => {
     } catch (requestError) {
       const message = requestError?.response?.data?.message || 'ไม่สามารถโหลดข้อมูลค่าใช้จ่ายได้';
       setError(message);
-      toast.error(message);
+      feedback.error(message);
     } finally {
       setLoading(false);
     }
@@ -66,7 +66,7 @@ const useTaxExpenseWorkspace = () => {
       setPayees(list(await listExpensePayees({ q })));
     } catch (requestError) {
       const message = requestError?.response?.data?.message || 'ไม่สามารถค้นหาผู้รับเงินค่าใช้จ่ายได้';
-      toast.error(message);
+      feedback.error(message);
     } finally {
       setLoading(false);
     }
@@ -78,11 +78,11 @@ const useTaxExpenseWorkspace = () => {
       const created = await createTaxExpenseCategory(payload);
       setCategories((current) => [...current.filter((item) => item.id !== created.id), created]
         .sort((left, right) => left.code.localeCompare(right.code)));
-      toast.success('เพิ่มหมวดค่าใช้จ่ายแล้ว');
+      feedback.success('เพิ่มหมวดค่าใช้จ่ายแล้ว');
       return created;
     } catch (requestError) {
       const message = requestError?.response?.data?.message || 'ไม่สามารถเพิ่มหมวดค่าใช้จ่ายได้';
-      toast.error(message);
+      feedback.error(message);
       throw requestError;
     } finally {
       setSavingCategory(false);
@@ -94,11 +94,11 @@ const useTaxExpenseWorkspace = () => {
     try {
       const created = await createExpensePayee(payload);
       setPayees((current) => [created, ...current.filter((item) => item.id !== created.id)]);
-      toast.success('เพิ่มผู้รับเงินค่าใช้จ่ายแล้ว');
+      feedback.success('เพิ่มผู้รับเงินค่าใช้จ่ายแล้ว');
       return created;
     } catch (requestError) {
       const message = requestError?.response?.data?.message || 'ไม่สามารถเพิ่มผู้รับเงินค่าใช้จ่ายได้';
-      toast.error(message);
+      feedback.error(message);
       throw requestError;
     } finally {
       setSavingPayee(false);
@@ -110,11 +110,11 @@ const useTaxExpenseWorkspace = () => {
     try {
       const created = await createTaxExpense(payload);
       setExpenses((current) => [created, ...current]);
-      toast.success('บันทึกค่าใช้จ่ายแล้ว');
+      feedback.success('บันทึกค่าใช้จ่ายแล้ว');
       return created;
     } catch (requestError) {
       const message = requestError?.response?.data?.message || 'ไม่สามารถบันทึกค่าใช้จ่ายได้';
-      toast.error(message);
+      feedback.error(message);
       throw requestError;
     } finally {
       setSaving(false);

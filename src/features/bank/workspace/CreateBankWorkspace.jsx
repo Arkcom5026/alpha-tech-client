@@ -8,6 +8,7 @@ import { useAuthStore } from '@/features/auth/store/authStore'; // 🟢 ดึ�
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { FieldMessage, feedback } from '@/design-system/feedback';
 
 const emptyBank = { name: '', active: true };
 
@@ -29,6 +30,7 @@ export function CreateBankPage() {
   const shopSlug = employee?.branchSlug || 'default';
 
   const [form, setForm] = useState(emptyBank);
+  const [nameError, setNameError] = useState('');
 
   // 🟢 [DYNAMIC BACK LIST CONTROL - FIXED]: สับสายคำนวณพาธย้อนกลับด้วย shopSlug โดยตรง แม่นยำ 100% ไม่พึ่งพาพาสดิบเบราว์เซอร์
   const getListUrl = () => {
@@ -54,18 +56,21 @@ export function CreateBankPage() {
   const onSubmit = async (e) => {
     e.preventDefault();
     if (!form.name || form.name.trim() === '') {
-      return alert('กรุณาระบุชื่อธนาคาร');
+      setNameError('กรุณาระบุชื่อธนาคาร');
+      return;
     }
+    setNameError('');
     try {
       if (isEdit) {
         await updateBankAction(Number(id), form);
       } else {
         await createBankAction(form);
       }
+      feedback.success(isEdit ? 'แก้ไขข้อมูลธนาคารแล้ว' : 'เพิ่มข้อมูลธนาคารแล้ว');
       navigate(getListUrl());
     } catch (err) {
       const msg = err?.response?.data?.message || 'บันทึกไม่สำเร็จ';
-      alert(msg);
+      feedback.error(msg);
     }
   };
 
@@ -88,11 +93,17 @@ export function CreateBankPage() {
               <Input
                 id="name"
                 value={form.name}
-                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                onChange={(e) => {
+                  setForm((f) => ({ ...f, name: e.target.value }));
+                  if (nameError) setNameError('');
+                }}
                 placeholder="เช่น ธนาคารกสิกรไทย (KBANK), ธนาคารไทยพาณิชย์"
                 className="h-9 text-xs font-bold rounded-xl bg-slate-50 focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 border-slate-200 shadow-inner"
+                aria-invalid={Boolean(nameError)}
+                aria-describedby={nameError ? 'bank-name-error' : undefined}
                 required
               />
+              <FieldMessage id="bank-name-error">{nameError}</FieldMessage>
             </div>
 
             <div className="flex items-center gap-2 h-9 border border-emerald-100 bg-emerald-50/40 rounded-xl px-3 select-none">

@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, Calculator, CheckCircle2, RefreshCw, ShieldAlert } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { toast } from 'react-toastify';
+import { feedback } from '@/design-system/feedback';
 import { useBranchStore } from '@/features/branch/store/branchStore';
 import { getVatSettlementErrorMessage, getVatSettlementPreparation } from '../api/vatSettlementApi';
 import VatCarryForwardAuthorityPanel from '../components/VatCarryForwardAuthorityPanel';
@@ -47,7 +47,7 @@ const VatSettlementPage = () => {
     } catch (requestError) {
       const message = getVatSettlementErrorMessage(requestError);
       setError(message);
-      toast.error(message);
+      feedback.error(message);
     } finally {
       setLoading(false);
     }
@@ -55,10 +55,10 @@ const VatSettlementPage = () => {
 
   useEffect(() => { load(); }, [load]);
 
-  const settlement = data?.settlement || {};
-  const carryForward = data?.carryForward || {};
-  const readiness = data?.readiness || {};
-  const exceptions = Array.isArray(data?.exceptions) ? data.exceptions : [];
+  const settlement = useMemo(() => data?.settlement || {}, [data?.settlement]);
+  const carryForward = useMemo(() => data?.carryForward || {}, [data?.carryForward]);
+  const readiness = useMemo(() => data?.readiness || {}, [data?.readiness]);
+  const exceptions = useMemo(() => Array.isArray(data?.exceptions) ? data.exceptions : [], [data?.exceptions]);
   const checks = useMemo(() => [
     ['Output filing พร้อม', readiness.outputFilingPrepared],
     ['Output filing reconcile แล้ว', readiness.outputFilingReconciled],
@@ -77,7 +77,7 @@ const VatSettlementPage = () => {
               <ArrowLeft size={18} />
             </button>
             <div>
-              <p className="text-xs font-black uppercase tracking-[0.16em] text-blue-600">VAT Settlement Preparation</p>
+              <p className="text-xs font-black uppercase tracking-[0.16em] text-emerald-700">VAT Settlement Preparation</p>
               <h1 className="mt-1 text-2xl font-black text-slate-900">เตรียมสรุป VAT สำหรับ ภ.พ.30</h1>
               <p className="mt-1 text-sm text-slate-500">รอบ {data?.period?.periodCode || taxPeriodId} · {currentBranch?.name || `สาขา #${branchId || '-'}`}</p>
               <p className="mt-1 text-xs text-slate-400">Preparation & validation workspace — ยังไม่ใช่การยื่นแบบต่อกรมสรรพากร</p>

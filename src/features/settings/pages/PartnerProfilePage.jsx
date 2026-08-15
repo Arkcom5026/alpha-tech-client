@@ -6,6 +6,7 @@ import { useParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { Store, Save, ShieldCheck, Mail, Phone, Globe, MessageSquare, Image, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { feedback } from '@/design-system/feedback';
 import apiClient from '@/utils/apiClient'; // 🟢 เชื่อมต่อตัวรับส่งสัญญาณสิทธิ์พอร์ต 5000 ส่วนกลาง
 
 const PartnerProfilePage = () => {
@@ -64,10 +65,10 @@ const PartnerProfilePage = () => {
       });
 
       setSuccess(true);
-      alert('✅ บันทึกข้อมูลโปรไฟล์ร้านค้าเรียบร้อยแล้ว');
+      feedback.success('บันทึกข้อมูลโปรไฟล์ร้านค้าเรียบร้อยแล้ว');
     } catch (err) {
       console.error('❌ [PartnerProfile] Saving Data Failed:', err);
-      alert(err?.response?.data?.message || '❌ เกิดข้อผิดพลาดในการบันทึกข้อมูล');
+      feedback.error(err?.response?.data?.message || 'เกิดข้อผิดพลาดในการบันทึกข้อมูล');
     } finally {
       setLoading(false);
     }

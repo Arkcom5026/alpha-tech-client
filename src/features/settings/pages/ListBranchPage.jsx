@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
+import { feedback } from '@/design-system/feedback';
 import { useBranchStore } from '@/features/branch/store/branchStore';
 import { useAuthStore } from '@/features/auth/store/authStore.js';
 import BranchListWorkspace from '@/features/branch/workspace/BranchListWorkspace';
@@ -15,7 +16,7 @@ const ListBranchPage = () => {
   const role = useAuthStore((state) => state.role);
   const isSuperAdmin = isBranchSuperAdmin(role);
 
-  const rawBranches = useBranchStore((state) => state.branches) || [];
+  const rawBranches = useBranchStore((state) => state.branches);
   const loading = useBranchStore((state) => state.isLoading) || false;
   const fetchBranches = useBranchStore((state) => state.fetchBranchesAction);
 
@@ -30,7 +31,7 @@ const ListBranchPage = () => {
   }, [fetchBranches]);
 
   const filteredBranches = useMemo(() => filterBranchesForShop({
-    branches: rawBranches,
+    branches: rawBranches || [],
     shopSlug,
     isSuperAdmin,
   }), [rawBranches, shopSlug, isSuperAdmin]);
@@ -55,10 +56,10 @@ const ListBranchPage = () => {
         selectedShop.address = data.address;
       }
 
-      alert('✅ แก้ไขข้อมูลร้าน/บริษัท เรียบร้อยแล้ว');
+      feedback.success('แก้ไขข้อมูลร้าน/บริษัทเรียบร้อยแล้ว');
       setIsModalOpen(false);
-    } catch (err) {
-      alert('❌ เกิดข้อผิดพลาดในการบันทึกข้อมูล');
+    } catch (error) {
+      feedback.error(error, { fallback: 'เกิดข้อผิดพลาดในการบันทึกข้อมูล' });
     }
   };
 

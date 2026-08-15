@@ -84,6 +84,8 @@ assert(!productEditSource.includes("setError('เกิดข้อผิดพ�
 const productReservationSource = read('src/features/productReservation/merchant/pages/ProductReservationDetailPage.jsx');
 assert(productReservationSource.includes('if (submittingCommand) return'), 'Product reservation lifecycle must block duplicate commands');
 assert(productReservationSource.includes('idempotencyKey: createIdempotencyKey'), 'Product reservation lifecycle must retain idempotency protection');
+assert(!productReservationSource.includes('window.prompt('), 'Product reservation cancellation must not use browser prompt');
+assert(productReservationSource.includes('cancelOpen'), 'Product reservation cancellation must require an in-context confirmation state');
 
 const combinedBillingSource = read('src/features/combinedBilling/pages/CombinedBillingPage.jsx');
 assert(combinedBillingSource.includes('if (loading || !customer?.id || !chosen.length) return'), 'Combined billing confirmation must block duplicate or invalid submits');

@@ -1,103 +1,86 @@
-// src/features/productProfile/pages/CreateProductProfilePage.jsx
-// ✅ CreateProductProfilePage — FULL VERSION (UI: โปรไฟล์สินค้า) — aligned with CreateProductTypePage
 import React, { useEffect, useMemo, useState } from 'react';
-import { useNavigate, Link, useParams } from 'react-router-dom'; // 🟢 [DYNAMIC PARAM FIX] นำเข้า useParams
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import PageHeader from '@/components/shared/layout/PageHeader';
+import { feedback } from '@/design-system/feedback';
+import { useAuthStore } from '@/features/auth/store/authStore';
+import useProductStore from '@/features/product/store/productStore';
 import ProductProfileForm from '../components/ProductProfileForm';
 import useProductProfileStore from '../store/productProfileStore';
-import { useAuthStore } from '@/features/auth/store/authStore';
-
-import { parseApiError } from '@/utils/uiHelpers';
-import useProductStore from '@/features/product/store/productStore';
 
 const CreateProductProfilePage = () => {
-  // 🟢 [LINK BINDING] แกะรหัสชื่อร้านค้าจาก URL สแตนด์บายเพื่อคุมระบบทางวิ่ง Multi-Tenant
   const { shopSlug } = useParams();
   const navigate = useNavigate();
+  const listPath = `/${shopSlug}/pos/stock/profiles`;
 
-  // 🟢 [DYNAMIC PATH FIX] แปลงเป็น Dynamic Path ระดับภายใน Component ล้างสแลชตัวท้ายออกให้แบนราบ
-  const LIST_PATH = `/${shopSlug}/pos/stock/profiles`;
-
-  // ✅ Guard สิทธิ์ (P1-safe): canManageProductOrdering เป็น selector function
   const { isSuperAdmin, canManageProductOrdering } = useAuthStore();
   const canManage = useMemo(
     () => isSuperAdmin || canManageProductOrdering(),
-    [isSuperAdmin, canManageProductOrdering]
+    [isSuperAdmin, canManageProductOrdering],
   );
 
-  // ----- stores -----
-  const { createProfile, createProfileAction } = useProductProfileStore();
-  const createFn = createProfileAction || createProfile;
-
-  // ใช้ dropdowns จาก productStore เพื่อส่งเข้า CascadingDropdowns ในฟอร์ม
-  const pStore = useProductStore();
-  const rawDropdowns = pStore?.dropdowns;
-  const dropdownLoading = !pStore?.dropdownsLoaded;
-
-  // Merge possible shapes from store into a single dropdowns object
-  const mergedDropdowns = React.useMemo(() => {
-    const s = pStore || {};
-    const dd = rawDropdowns || {};
-    const pickArr = (...xs) => xs.find((x) => Array.isArray(x)) || [];
-
-    const categories = pickArr(
-      dd.categories,
-      dd.categoryList,
-      dd.category_list,
-      dd.data?.categories,
-      dd.list?.categories,
-      dd.categoriesList,
-      dd.items?.categories,
-      s.categories,
-      s.categoryDropdowns,
-    );
-    const productTypes = pickArr(
-      dd.productTypes,
-      dd.productTypeList,
-      dd.product_types,
-      dd.types,
-      dd.data?.productTypes,
-      dd.list?.productTypes,
-      dd.items?.productTypes,
-      dd.list,
-      s.productTypes,
-      s.typeDropdowns,
-      s.list,
-    );
-    return { categories, productTypes };
-  }, [pStore, rawDropdowns]);
-
-  const ensureDropdownsAction = pStore?.ensureDropdownsAction;
-
-  // ----- UI state -----
+  const { createProfileAction, isSubmitting } = useProductProfileStore();
+  const productStore = useProductStore();
+  const rawDropdowns = productStore?.dropdowns;
+  const dropdownLoading = !productStore?.dropdownsLoaded;
+  const ensureDropdownsAction = productStore?.ensureDropdownsAction;
   const [errorMsg, setErrorMsg] = useState('');
-  const [successMsg, setSuccessMsg] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // โหลด dropdowns ครั้งเดียว (กันลูป และเงียบ warning exhaustive-deps)
+  const mergedDropdowns = useMemo(() => {
+    const store = productStore || {};
+    const dropdowns = rawDropdowns || {};
+    const pickArray = (...values) => values.find((value) => Array.isArray(value)) || [];
+
+    return {
+      categories: pickArray(
+        dropdowns.categories,
+        dropdowns.categoryList,
+        dropdowns.category_list,
+        dropdowns.data?.categories,
+        dropdowns.list?.categories,
+        dropdowns.categoriesList,
+        dropdowns.items?.categories,
+        store.categories,
+        store.categoryDropdowns,
+      ),
+      productTypes: pickArray(
+        dropdowns.productTypes,
+        dropdowns.productTypeList,
+        dropdowns.product_types,
+        dropdowns.types,
+        dropdowns.data?.productTypes,
+        dropdowns.list?.productTypes,
+        dropdowns.items?.productTypes,
+        dropdowns.list,
+        store.productTypes,
+        store.typeDropdowns,
+        store.list,
+      ),
+    };
+  }, [productStore, rawDropdowns]);
+
   useEffect(() => {
-    try { ensureDropdownsAction?.(); } catch (e) { console.error('dropdown load error', e); }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    Promise.resolve(ensureDropdownsAction?.()).catch((error) => {
+      feedback.actionError(error, 'โหลดตัวเลือกโปรไฟล์สินค้าไม่สำเร็จ', 'product-profile:create:dropdowns:error');
+    });
+  }, [ensureDropdownsAction]);
 
   const handleSubmit = async (formData) => {
-    if (!canManage) return; // hard-stop safety
+    if (!canManage || isSubmitting) return;
     setErrorMsg('');
-    setSuccessMsg('');
-    setIsSubmitting(true);
+
     try {
-      await createFn({
+      await createProfileAction({
         name: (formData.name || '').trim(),
         description: (formData.description || '').trim(),
         categoryId: Number(formData.categoryId),
         productTypeId: Number(formData.productTypeId),
       });
-      setSuccessMsg('บันทึกโปรไฟล์สินค้าเรียบร้อยแล้ว');
-      setTimeout(() => navigate(LIST_PATH), 600);
-    } catch (err) {
-      setErrorMsg(parseApiError(err));
-    } finally {
-      setIsSubmitting(false);
+      feedback.actionSuccess('บันทึกโปรไฟล์สินค้าเรียบร้อยแล้ว', 'product-profile:create:success');
+      navigate(listPath);
+    } catch (error) {
+      const message = error?.response?.data?.error?.message || error?.response?.data?.message || error?.message || 'บันทึกโปรไฟล์สินค้าไม่สำเร็จ';
+      setErrorMsg(message);
+      feedback.actionError(error, 'บันทึกโปรไฟล์สินค้าไม่สำเร็จ', 'product-profile:create:error');
     }
   };
 
@@ -106,34 +89,12 @@ const CreateProductProfilePage = () => {
       <div className="p-6 w-full flex flex-col items-center">
         <div className="w-full max-w-3xl">
           <PageHeader title="เพิ่มโปรไฟล์สินค้าใหม่" />
-
-          {/* BestLine guidance */}
-          <div className="mt-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
-            <div className="font-semibold">โปรไฟล์สินค้า (Product Profile) ใช้เมื่อใด?</div>
-            <ul className="mt-1 list-disc pl-5 space-y-1">
-              <li>ใช้เมื่อสินค้าใน <span className="font-medium">ประเภทสินค้าเดียวกัน</span> มีรูปแบบ/แนวคิดการใช้งาน <span className="font-medium">ซ้ำจริง</span></li>
-              <li><span className="font-medium">ไม่ใช่แบรนด์</span> และ <span className="font-medium">ไม่จำเป็นต้องมีทุกสินค้า</span></li>
-              <li>ถ้าไม่ซ้ำ แนะนำให้บันทึกสเปกไว้ที่สินค้าโดยตรง (Product / productConfig)</li>
-            </ul>
-          </div>
-
           <div className="mt-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800">
             <div className="font-semibold">คุณไม่มีสิทธิ์เข้าถึงหน้านี้</div>
-            <div className="mt-1">เฉพาะผู้ดูแลระบบ (Admin) หรือ Super Admin เท่านั้นที่สามารถเพิ่ม/แก้ไขโปรไฟล์สินค้าได้</div>
+            <div className="mt-1">เฉพาะผู้ดูแลระบบหรือ Super Admin เท่านั้นที่สามารถเพิ่มโปรไฟล์สินค้าได้</div>
             <div className="mt-3 flex flex-wrap gap-2">
-              <button
-                type="button"
-                className="rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
-                onClick={() => navigate(-1)}
-              >
-                ย้อนกลับ
-              </button>
-              <Link
-                className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-sm font-medium text-blue-700 hover:bg-blue-100"
-                to={LIST_PATH}
-              >
-                กลับไปหน้ารายการโปรไฟล์สินค้า
-              </Link>
+              <button type="button" className="rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm font-medium text-zinc-700" onClick={() => navigate(-1)}>ย้อนกลับ</button>
+              <Link className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-sm font-medium text-emerald-700" to={listPath}>กลับไปหน้ารายการโปรไฟล์สินค้า</Link>
             </div>
           </div>
         </div>
@@ -145,28 +106,19 @@ const CreateProductProfilePage = () => {
     <div className="p-6 w-full flex flex-col items-center">
       <div className="w-full max-w-3xl">
         <PageHeader title="เพิ่มโปรไฟล์สินค้าใหม่" />
-
-        {errorMsg && (
-          <div className="mt-3 mb-4 rounded-lg border border-red-300 bg-red-50 px-4 py-2 text-sm text-red-700">
-            {String(errorMsg)}
-          </div>
-        )}
-        {successMsg && (
-          <div className="mt-3 mb-4 rounded-lg border border-emerald-300 bg-emerald-50 px-4 py-2 text-sm text-emerald-700">
-            {successMsg}
-          </div>
-        )}
-
-        <div className="border rounded-xl p-4 shadow-sm bg-white dark:bg-zinc-900">
+        <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+          ใช้โปรไฟล์สินค้าเมื่อสินค้าประเภทเดียวกันมีรูปแบบการใช้งานซ้ำจริง เพื่อช่วยให้การกรอกข้อมูลสม่ำเสมอ
+        </div>
+        {errorMsg && <div className="mt-3 mb-4 rounded-lg border border-red-300 bg-red-50 px-4 py-2 text-sm text-red-700">{errorMsg}</div>}
+        <div className="mt-4 border rounded-xl p-4 shadow-sm bg-white dark:bg-zinc-900">
           <ProductProfileForm
             dropdowns={mergedDropdowns}
             isDropdownLoading={dropdownLoading}
             onSubmit={handleSubmit}
             isSubmitting={isSubmitting}
           />
-
           <div className="flex justify-between mt-4">
-            <Link to={LIST_PATH} className="btn btn-outline">กลับไปหน้ารายการโปรไฟล์สินค้า</Link>
+            <Link to={listPath} className="btn btn-outline">กลับไปหน้ารายการโปรไฟล์สินค้า</Link>
           </div>
         </div>
       </div>

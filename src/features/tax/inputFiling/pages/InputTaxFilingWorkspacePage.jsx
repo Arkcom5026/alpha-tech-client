@@ -8,7 +8,7 @@ import {
   XCircle,
 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { toast } from 'react-toastify';
+import { feedback } from '@/design-system/feedback';
 import { useBranchStore } from '@/features/branch/store/branchStore';
 import {
   advanceInputTaxDocumentLifecycle,
@@ -89,7 +89,7 @@ const InputTaxFilingWorkspacePage = () => {
     } catch (requestError) {
       const message = inputTaxFilingErrorMessage(requestError);
       setError(message);
-      toast.error(message);
+      feedback.error(message);
     } finally {
       setLoading(false);
     }
@@ -97,7 +97,10 @@ const InputTaxFilingWorkspacePage = () => {
 
   useEffect(() => { load(); }, [load]);
 
-  const documents = Array.isArray(workspace?.documents) ? workspace.documents : [];
+  const documents = useMemo(
+    () => Array.isArray(workspace?.documents) ? workspace.documents : [],
+    [workspace?.documents],
+  );
   const readyDocuments = useMemo(
     () => documents.filter((document) => document.canSelectForFiling),
     [documents],
@@ -115,10 +118,10 @@ const InputTaxFilingWorkspacePage = () => {
         taxDocumentId: document.taxDocumentId,
         targetStatus: document.nextLifecycleTarget,
       });
-      toast.success(lifecycleSuccessText(document.nextLifecycleTarget));
+      feedback.success(lifecycleSuccessText(document.nextLifecycleTarget));
       await load();
     } catch (requestError) {
-      toast.error(inputTaxFilingErrorMessage(requestError));
+      feedback.error(inputTaxFilingErrorMessage(requestError));
     } finally {
       setSubmitting(false);
     }
@@ -129,10 +132,10 @@ const InputTaxFilingWorkspacePage = () => {
     setSubmitting(true);
     try {
       const result = await prepareInputTaxFilingBatch({ branchId, taxPeriodId });
-      toast.success(result?.replayed ? 'เปิดชุดภาษีซื้อเดิมของรอบนี้แล้ว' : 'เริ่มเตรียมชุดภาษีซื้อแล้ว');
+      feedback.success(result?.replayed ? 'เปิดชุดภาษีซื้อเดิมของรอบนี้แล้ว' : 'เริ่มเตรียมชุดภาษีซื้อแล้ว');
       await load();
     } catch (requestError) {
-      toast.error(inputTaxFilingErrorMessage(requestError));
+      feedback.error(inputTaxFilingErrorMessage(requestError));
     } finally {
       setSubmitting(false);
     }
@@ -143,10 +146,10 @@ const InputTaxFilingWorkspacePage = () => {
     setSubmitting(true);
     try {
       await selectInputTaxDocumentForFiling({ branchId, batchId: batch.id, taxDocumentId });
-      toast.success('เพิ่มเอกสารเข้าชุดภาษีซื้อแล้ว');
+      feedback.success('เพิ่มเอกสารเข้าชุดภาษีซื้อแล้ว');
       await load();
     } catch (requestError) {
-      toast.error(inputTaxFilingErrorMessage(requestError));
+      feedback.error(inputTaxFilingErrorMessage(requestError));
     } finally {
       setSubmitting(false);
     }
@@ -165,9 +168,9 @@ const InputTaxFilingWorkspacePage = () => {
         });
         completed += 1;
       }
-      toast.success(`เพิ่มเอกสารพร้อมใช้ ${completed} รายการเข้าชุดแล้ว`);
+      feedback.success(`เพิ่มเอกสารพร้อมใช้ ${completed} รายการเข้าชุดแล้ว`);
     } catch (requestError) {
-      toast.error(inputTaxFilingErrorMessage(requestError));
+      feedback.error(inputTaxFilingErrorMessage(requestError));
     } finally {
       await load();
       setSubmitting(false);
@@ -186,12 +189,12 @@ const InputTaxFilingWorkspacePage = () => {
         reason,
         version: document.filingItem?.version,
       });
-      toast.success('นำเอกสารออกจากชุดภาษีซื้อแล้ว');
+      feedback.success('นำเอกสารออกจากชุดภาษีซื้อแล้ว');
       setRemovalId(null);
       setRemovalReason('');
       await load();
     } catch (requestError) {
-      toast.error(inputTaxFilingErrorMessage(requestError));
+      feedback.error(inputTaxFilingErrorMessage(requestError));
     } finally {
       setSubmitting(false);
     }
@@ -247,7 +250,7 @@ const InputTaxFilingWorkspacePage = () => {
                 {summary.readyForTaxClosing ? (
                   <button type="button" onClick={goReadiness} className="rounded-xl bg-emerald-700 px-5 py-3 font-black text-white">ขั้นตอนที่ 4 · กลับไปตรวจความพร้อมภาษี</button>
                 ) : (
-                  <button type="button" onClick={selectAllReady} disabled={submitting || readyDocuments.length === 0} className="rounded-xl bg-blue-700 px-5 py-3 font-black text-white disabled:opacity-40">เพิ่มรายการที่พร้อมทั้งหมด ({readyDocuments.length})</button>
+                  <button type="button" onClick={selectAllReady} disabled={submitting || readyDocuments.length === 0} className="rounded-xl bg-emerald-700 px-5 py-3 font-black text-white disabled:opacity-40">เพิ่มรายการที่พร้อมทั้งหมด ({readyDocuments.length})</button>
                 )}
               </div>
             </section>
@@ -291,9 +294,9 @@ const InputTaxFilingWorkspacePage = () => {
                         <div><p className="text-xs font-bold text-slate-500">VAT</p><p className="mt-1 font-black text-slate-900">{formatTaxMoney(document.vatAmount)}</p></div>
                         <div className="flex justify-end">
                           {document.canAdvanceLifecycle && lifecycleLabel ? (
-                            <button type="button" onClick={() => advanceDocument(document)} disabled={submitting} className="rounded-xl bg-amber-600 px-4 py-2.5 text-sm font-black text-white disabled:opacity-40">{lifecycleLabel}</button>
+                            <button type="button" onClick={() => advanceDocument(document)} disabled={submitting} className="rounded-xl bg-emerald-700 px-4 py-2.5 text-sm font-black text-white disabled:opacity-40">{lifecycleLabel}</button>
                           ) : document.canSelectForFiling ? (
-                            <button type="button" onClick={() => selectDocument(document.taxDocumentId)} disabled={submitting} className="inline-flex items-center gap-2 rounded-xl bg-blue-700 px-4 py-2.5 text-sm font-black text-white disabled:opacity-40"><FileCheck2 size={16} />เพิ่มเข้าชุด</button>
+                            <button type="button" onClick={() => selectDocument(document.taxDocumentId)} disabled={submitting} className="inline-flex items-center gap-2 rounded-xl bg-emerald-700 px-4 py-2.5 text-sm font-black text-white disabled:opacity-40"><FileCheck2 size={16} />เพิ่มเข้าชุด</button>
                           ) : document.canRemoveFromFiling ? (
                             <button type="button" onClick={() => { setRemovalId(removing ? null : document.taxDocumentId); setRemovalReason(''); }} disabled={submitting} className="inline-flex items-center gap-2 rounded-xl border border-rose-200 px-4 py-2.5 text-sm font-black text-rose-700 disabled:opacity-40"><XCircle size={16} />นำออก</button>
                           ) : selected ? (

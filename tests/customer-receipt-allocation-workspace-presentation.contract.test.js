@@ -34,7 +34,10 @@ describe('customer receipt allocation workspace presentation contract', () => {
     expect(body).toContain('CustomerReceiptDetailCard');
     expect(body).toContain('CustomerReceiptAllocateForm');
     expect(body).toContain('candidatesSummary.totalItems');
-    expect(body).toContain('onSubmit={onSubmit}');
+    expect(body).toContain('const handleSubmit = async (payload) =>');
+    expect(body).toContain('onSubmit={handleSubmit}');
+    expect(body).toContain('feedback.actionSuccess');
+    expect(body).toContain('feedback.actionError');
   });
 
   it('preserves operational messages, guidance, and shortcuts', () => {

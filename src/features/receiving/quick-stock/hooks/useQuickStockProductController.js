@@ -1,7 +1,7 @@
 // src/features/receiving/quick-stock/hooks/useQuickStockProductController.js
 
 import { useCallback, useEffect, useState } from "react";
-import { toast } from "react-toastify";
+import { feedback } from "@/design-system/feedback";
 
 import {
   buildCreateOperationalProductPayload,
@@ -45,6 +45,7 @@ const useQuickStockProductController = ({
   const [isEditingProduct, setIsEditingProduct] = useState(false);
   const [isSavingProduct, setIsSavingProduct] = useState(false);
   const [isDeletingProduct, setIsDeletingProduct] = useState(false);
+  const [pendingRecoveryDelete, setPendingRecoveryDelete] = useState(null);
 
   const [defaultCost, setDefaultCost] = useState(0);
 
@@ -102,7 +103,7 @@ const useQuickStockProductController = ({
 
     const payload = buildCreateOperationalProductPayload(selectedTemplateProduct);
     if (!payload?.templateProductId) {
-      toast.error("ไม่พบ Template Product ID สำหรับเตรียมสินค้าในร้าน");
+      feedback.error("ไม่พบ Template Product ID สำหรับเตรียมสินค้าในร้าน");
       return;
     }
 
@@ -117,12 +118,12 @@ const useQuickStockProductController = ({
 
         const rawProduct = extractSingle(response);
         if (!adoptOperationalProduct(rawProduct, selectedTemplateProduct)) {
-          toast.error("เตรียมสินค้าในร้านแล้ว แต่ข้อมูลที่ตอบกลับยังไม่ใช่ Operational Product ที่ถูกต้อง");
+          feedback.error("เตรียมสินค้าในร้านแล้ว แต่ข้อมูลที่ตอบกลับยังไม่ใช่ Operational Product ที่ถูกต้อง");
         }
       } catch (err) {
         if (!active) return;
         console.error("Quick Receipt template materialization failed:", err);
-        toast.error(err?.message || "เตรียมสินค้า Template สำหรับรับเข้าไม่สำเร็จ");
+        feedback.error(err?.message || "เตรียมสินค้า Template สำหรับรับเข้าไม่สำเร็จ");
       } finally {
         if (active) setIsCreatingOperationalProduct(false);
       }
@@ -209,10 +210,10 @@ const useQuickStockProductController = ({
       priceForm: localPriceForm,
     });
 
-    if (!payload.name) return toast.error("กรุณาระบุชื่อสินค้า");
-    if (!payload.productTypeId) return toast.error("กรุณาเลือกประเภทสินค้า");
+    if (!payload.name) return feedback.error("กรุณาระบุชื่อสินค้า");
+    if (!payload.productTypeId) return feedback.error("กรุณาเลือกประเภทสินค้า");
     if (payload.costPrice == null || payload.priceRetail <= 0) {
-      return toast.error("กรุณาระบุราคาทุนและราคาขายปลีกก่อนสร้างสินค้า");
+      return feedback.error("กรุณาระบุราคาทุนและราคาขายปลีกก่อนสร้างสินค้า");
     }
 
     setIsCreatingOperationalProduct(true);
@@ -222,7 +223,7 @@ const useQuickStockProductController = ({
       const rawCreatedProduct = extractSingle(response);
 
       if (!adoptOperationalProduct(rawCreatedProduct, null)) {
-        toast.error("สร้างสินค้าแล้ว แต่ข้อมูลที่ตอบกลับยังไม่ใช่ Operational Product ที่ถูกต้อง");
+        feedback.error("สร้างสินค้าแล้ว แต่ข้อมูลที่ตอบกลับยังไม่ใช่ Operational Product ที่ถูกต้อง");
         return;
       }
 
@@ -242,10 +243,10 @@ const useQuickStockProductController = ({
         priceOnline: "",
       });
 
-      toast.success("สร้างสินค้า Local ของร้านเรียบร้อย");
+      feedback.success("สร้างสินค้า Local ของร้านเรียบร้อย");
     } catch (err) {
       console.error("Create local operational product failed:", err);
-      toast.error(err?.message || "สร้างสินค้า Local ไม่สำเร็จ");
+      feedback.error(err?.message || "สร้างสินค้า Local ไม่สำเร็จ");
     } finally {
       setIsCreatingOperationalProduct(false);
     }
@@ -255,8 +256,8 @@ const useQuickStockProductController = ({
     if (!operationalProduct?.id) return;
 
     const name = String(productForm.name || "").trim();
-    if (!name) return toast.error("ชื่อสินค้าห้ามว่าง");
-    if (toMoneyNumber(priceForm.priceRetail) <= 0) return toast.error("ราคาขายปลีกต้องมากกว่า 0");
+    if (!name) return feedback.error("ชื่อสินค้าห้ามว่าง");
+    if (toMoneyNumber(priceForm.priceRetail) <= 0) return feedback.error("ราคาขายปลีกต้องมากกว่า 0");
 
     setIsSavingProduct(true);
 
@@ -317,40 +318,55 @@ const useQuickStockProductController = ({
       setProductForm(buildProductFormFromProduct(nextProduct));
       setPriceForm(buildPriceFormFromProduct(nextProduct));
       setDefaultCost(String(nextProduct.costPrice ?? 0));
-      toast.success("บันทึกข้อมูลสินค้าเรียบร้อย");
+      feedback.success("บันทึกข้อมูลสินค้าเรียบร้อย");
       setIsEditingProduct(false);
     } catch (err) {
       console.error("Quick edit product failed:", err);
-      toast.error(err?.message || "บันทึกข้อมูลสินค้าไม่สำเร็จ");
+      feedback.error(err?.message || "บันทึกข้อมูลสินค้าไม่สำเร็จ");
     } finally {
       setIsSavingProduct(false);
     }
   }, [operationalProduct, productForm, priceForm, updateOperationalProductAction, setRuntimeSearchProducts]);
 
-  const handleDeleteSelectedProductForRecovery = useCallback(async () => {
+  const handleDeleteSelectedProductForRecovery = useCallback(() => {
     if (!operationalProduct?.id) return;
+    setPendingRecoveryDelete(operationalProduct);
+  }, [operationalProduct]);
 
-    const ok = window.confirm(
-      `ยืนยันลบสินค้าในช่วง Recovery?\n\n${operationalProduct.name}\n\nควรใช้เฉพาะรายการซ้ำ/ผิด และยังไม่มีประวัติรับเข้าเท่านั้น`
-    );
-    if (!ok) return;
+  const cancelDeleteSelectedProductForRecovery = useCallback(() => {
+    if (!isDeletingProduct) setPendingRecoveryDelete(null);
+  }, [isDeletingProduct]);
+
+  const confirmDeleteSelectedProductForRecovery = useCallback(async () => {
+    const productToDelete = pendingRecoveryDelete;
+    if (!productToDelete?.id || isDeletingProduct) return;
 
     setIsDeletingProduct(true);
 
     try {
-      const result = await deleteOperationalProductAction(operationalProduct.id);
-      if (result === false) return toast.error("ลบสินค้าไม่สำเร็จ อาจมีประวัติใช้งานแล้ว");
+      const result = await deleteOperationalProductAction(productToDelete.id);
+      if (result === false) {
+        feedback.error("ลบสินค้าไม่สำเร็จ อาจมีประวัติใช้งานแล้ว");
+        return;
+      }
 
-      toast.success("ลบสินค้าเรียบร้อย");
+      feedback.success("ลบสินค้าเรียบร้อย");
+      setPendingRecoveryDelete(null);
       clearProductSelection();
       await executeProductSearch();
     } catch (err) {
       console.error("Delete product failed:", err);
-      toast.error(err?.message || "ลบสินค้าไม่สำเร็จ");
+      feedback.error(err?.message || "ลบสินค้าไม่สำเร็จ");
     } finally {
       setIsDeletingProduct(false);
     }
-  }, [operationalProduct, deleteOperationalProductAction, clearProductSelection, executeProductSearch]);
+  }, [
+    pendingRecoveryDelete,
+    isDeletingProduct,
+    deleteOperationalProductAction,
+    clearProductSelection,
+    executeProductSearch,
+  ]);
 
   const openLocalCreateForm = useCallback(() => {
     setIsLocalCreateOpen(true);
@@ -378,6 +394,7 @@ const useQuickStockProductController = ({
     setIsSavingProduct,
     isDeletingProduct,
     setIsDeletingProduct,
+    pendingRecoveryDelete,
 
     defaultCost,
     setDefaultCost,
@@ -405,6 +422,8 @@ const useQuickStockProductController = ({
     handleCreateLocalOperationalProduct,
     handleSaveProductInline,
     handleDeleteSelectedProductForRecovery,
+    cancelDeleteSelectedProductForRecovery,
+    confirmDeleteSelectedProductForRecovery,
     openLocalCreateForm,
   };
 };

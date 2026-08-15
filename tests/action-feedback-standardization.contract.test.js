@@ -47,6 +47,7 @@ const actionOwners = [
   ['product profile edit', 'src/features/productProfile/pages/EditProductProfilePage.jsx'],
   ['product profile list', 'src/features/productProfile/pages/ListProductProfilePage.jsx'],
   ['sales tax filing', 'src/features/tax/outputFilings/pages/SalesTaxFilingPage.jsx'],
+  ['tax publication retry', 'src/features/tax/publicationRetry/pages/TaxPublicationRetryPage.jsx'],
   ['partner store governance', 'src/features/partnerStoreApplication/pages/PartnerStoreApplicationReviewPage.jsx'],
   ['supplier advance payment', 'src/features/supplierPayment/components/SupplierAdvancePaymentForm.jsx'],
   ['supplier receipt payment', 'src/features/supplierPayment/components/SupplierReceiptPaymentForm.jsx'],
@@ -82,12 +83,21 @@ assert(advancePaymentSource.includes('if (submitting) return'), 'Supplier advanc
 assert(receiptPaymentSource.includes('if (submitting) return'), 'Supplier receipt payment must block duplicate submits');
 assert(salesTaxFilingSource.includes('ConfirmActionDialog'), 'Sales tax filing submission must require confirmation');
 assert(partnerReviewSource.includes('ConfirmActionDialog'), 'Partner Store governance high-impact actions must require confirmation');
+assert(partnerReviewSource.includes("activationStatus === 'ACTIVE'"), 'Partner Store governance must preserve activated-owner lifecycle presentation');
+assert(partnerReviewSource.includes('Provisioning จะสร้าง Branch และ Capability เท่านั้น ไม่เปิดบัญชีเจ้าของร้าน'), 'Partner Store governance must preserve provisioning/account-separation guidance');
 
 const srcRoot = path.join(root, 'src');
 const directToastifyImports = [];
 const silentDirectMutationOwners = [];
 const DIRECT_MUTATION_RE = /\b(?:apiClient|axios)\s*\.\s*(?:post|put|patch|delete)\s*\(/;
 const UI_OWNER_RE = /\/(?:pages|components|workspace|workspaces|hooks)\//;
+const TRANSPORT_SEGMENT_RE = /\/(?:api|utils|services|projections)\//;
+
+// Explicit exception: this onboarding owner renders a persistent success credential card and
+// an inline error panel in the same workspace, so adding a second toast would duplicate feedback.
+const INLINE_FEEDBACK_EXEMPTIONS = new Map([
+  ['src/features/auth/components/SubEmployeeManager.jsx', 'persistent success credential card + inline error panel'],
+]);
 
 const walk = (dir) => {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -105,10 +115,11 @@ const walk = (dir) => {
     }
 
     const normalized = `/${relativePath}`;
-    if (UI_OWNER_RE.test(normalized) && DIRECT_MUTATION_RE.test(source)) {
+    const isUiOwner = UI_OWNER_RE.test(normalized) && !TRANSPORT_SEGMENT_RE.test(normalized);
+    if (isUiOwner && DIRECT_MUTATION_RE.test(source)) {
       const hasSuccess = source.includes('feedback.actionSuccess') || source.includes('feedback.success');
       const hasError = source.includes('feedback.actionError') || source.includes('feedback.error');
-      const explicitlyExempt = source.includes('ACTION_FEEDBACK_EXEMPT');
+      const explicitlyExempt = source.includes('ACTION_FEEDBACK_EXEMPT') || INLINE_FEEDBACK_EXEMPTIONS.has(relativePath);
       if ((!hasSuccess || !hasError) && !explicitlyExempt) silentDirectMutationOwners.push(relativePath);
     }
   }
@@ -122,7 +133,7 @@ assert(
 
 assert(
   silentDirectMutationOwners.length === 0,
-  `direct persistent UI mutations must expose success and error feedback (or document ACTION_FEEDBACK_EXEMPT): ${silentDirectMutationOwners.join(', ')}`,
+  `direct persistent UI mutations must expose success and error feedback (or documented inline feedback exemption): ${silentDirectMutationOwners.join(', ')}`,
 );
 
 console.log('Action Feedback Standardization Contract: PASS');

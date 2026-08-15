@@ -46,7 +46,8 @@ describe('employee workspace behavior lock', () => {
     expect(detailWorkspace).toContain('getEmployeeById');
     expect(detailWorkspace).toContain('setEmployeeActive');
     expect(detailWorkspace).toContain("status === 'pending'");
-    expect(detailWorkspace).toContain('window.confirm');
+    expect(detailWorkspace).toContain('ConfirmActionDialog');
+    expect(detailWorkspace).toContain('pendingStatusChange');
     expect(detailWorkspace).toContain("status: nextActive ? 'active' : 'inactive'");
     expect(detailWorkspace).toContain('/pos/settings/employee/edit/');
     expectThinAdapter('pages/ViewEmployeePage.jsx', 'EmployeeDetailWorkspace');
@@ -81,7 +82,8 @@ describe('employee workspace behavior lock', () => {
     expect(rolesWorkspace).toContain('updateUserRole');
     expect(rolesWorkspace).toContain('setEmployeeActive');
     expect(rolesWorkspace).toContain('branchFilter');
-    expect(rolesWorkspace).toContain('window.confirm');
+    expect(rolesWorkspace).toContain('ConfirmActionDialog');
+    expect(rolesWorkspace).toContain('pendingLifecycle');
     expectThinAdapter('pages/ManageRolesPage.jsx', 'ManageRolesWorkspace');
   });
 

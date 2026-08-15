@@ -26,6 +26,7 @@ const actionOwners = [
   ['product type create', 'src/features/productType/workspace/CreateProductTypeWorkspace.jsx'],
   ['product type edit', 'src/features/productType/workspace/EditProductTypeWorkspace.jsx'],
   ['product type lifecycle', 'src/features/productType/components/ProductTypeTable.jsx'],
+  ['product edit', 'src/features/product/pages/EditProductPage.jsx'],
   ['product delete', 'src/features/product/pages/ListProductPage.jsx'],
   ['product template images', 'src/features/productTemplate/components/TemplateImageGalleryPanel.jsx'],
   ['employee detail', 'src/features/employee/workspaces/EmployeeDetailWorkspace.jsx'],

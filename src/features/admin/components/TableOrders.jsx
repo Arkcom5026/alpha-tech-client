@@ -129,7 +129,9 @@ const TableOrders = () => {
         intent="destructive"
         loading={savingStatus}
         loadingLabel="กำลังยกเลิก..."
-        onClose={() => setPendingCancellation(null)}
+        onClose={() => {
+          if (!savingStatus) setPendingCancellation(null);
+        }}
         onConfirm={() => pendingCancellation && applyOrderStatus(pendingCancellation.order.id, pendingCancellation.nextStatus)}
       />
     </>

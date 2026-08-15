@@ -192,6 +192,7 @@ export default function PartnerStoreApplicationReviewPage() {
                 <p><b>ชื่อย่อหน้าร้าน:</b> {item.requestedStorefrontSlug || 'ระบบกำหนดภายหลัง'}</p>
                 {approved && item.provisionedBranchId && <p><b>Branch ID:</b> {item.provisionedBranchId}</p>}
                 {approved && item.provisionedOwnerUserId && <p><b>Owner User ID:</b> {item.provisionedOwnerUserId}</p>}
+                {approved && item.provisioningFailureCode && <p className="text-red-600"><b>Provisioning error:</b> {item.provisioningFailureCode}</p>}
               </div>
 
               {(pending || underReview) && (
@@ -206,7 +207,15 @@ export default function PartnerStoreApplicationReviewPage() {
               {approved && (
                 <div className="mt-5 space-y-4 border-t border-slate-100 pt-4">
                   <div className="flex flex-wrap items-center justify-between gap-3">
-                    <p className="text-xs text-slate-500">Provisioning สร้าง Branch และ Capability ก่อน ส่วน Owner Activation แยกเป็นอีกขั้น</p>
+                    <p className="text-xs text-slate-500">
+                      {provisioningStatus === 'PROVISIONED'
+                        ? activationStatus === 'ACTIVE'
+                          ? 'ร้านและบัญชีเจ้าของร้านเปิดใช้งานแล้ว'
+                          : 'ร้านถูกสร้างแล้ว สามารถออกลิงก์ให้เจ้าของร้านตั้งรหัสผ่านได้'
+                        : provisioningStatus === 'IN_PROGRESS'
+                          ? 'กำลังสร้างร้าน ระบบป้องกันการสร้างซ้ำ'
+                          : 'Provisioning จะสร้าง Branch และ Capability เท่านั้น ไม่เปิดบัญชีเจ้าของร้าน'}
+                    </p>
                     <div className="flex flex-wrap gap-2">
                       {canProvision && <button disabled={acting} onClick={() => requestProvision(item)} className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-60">{provisioningStatus === 'FAILED' ? 'ลองสร้างร้านอีกครั้ง' : 'สร้างร้าน'}</button>}
                       {canIssueActivation && <button disabled={acting} onClick={() => issueActivation(item)} className="rounded-xl bg-sky-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-60">{activationStatus === 'INVITED' ? 'ออกลิงก์ใหม่' : 'ออกลิงก์เปิดใช้งาน'}</button>}

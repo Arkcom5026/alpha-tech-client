@@ -163,8 +163,8 @@ const RepairWorkflowOverview = ({ job, submitting, onWorkflowAction }) => {
         intent="destructive"
         loading={submitting}
         onConfirm={async () => {
-          await run('CANCEL', cancelReason);
-          setCancelConfirmationOpen(false);
+          const success = await run('CANCEL', cancelReason);
+          if (success !== false) setCancelConfirmationOpen(false);
         }}
         onClose={() => {
           if (!submitting) setCancelConfirmationOpen(false);

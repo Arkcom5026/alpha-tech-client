@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ConfirmActionDialog } from '@/design-system/composites';
+import { feedback, getErrorMessage } from '@/design-system';
 import {
   claimUnassignedCustomer,
   listManagedCustomers,
@@ -8,9 +9,6 @@ import {
 import CustomerWorkspaceHeader from '@/features/customer/components/workspace/CustomerWorkspaceHeader';
 import CustomerScopeTabs from '@/features/customer/components/workspace/CustomerScopeTabs';
 import CustomerResultTable from '@/features/customer/components/workspace/CustomerResultTable';
-
-const getErrorMessage = (error, fallback) =>
-  error?.response?.data?.message || error?.response?.data?.error || fallback;
 
 const ListCustomersPage = () => {
   const navigate = useNavigate();
@@ -59,18 +57,22 @@ const ListCustomersPage = () => {
 
   const confirmClaimCustomer = async () => {
     const customer = pendingClaim;
-    if (!customer?.id) return;
+    if (!customer?.id || claimingId) return;
 
     setClaimingId(customer.id);
     setMessage('');
     setError('');
     try {
       await claimUnassignedCustomer(customer.id);
-      setMessage('รับลูกค้าเข้าร้านเรียบร้อยแล้ว');
+      const successMessage = 'รับลูกค้าเข้าร้านเรียบร้อยแล้ว';
+      setMessage(successMessage);
       setCustomers((current) => current.filter((item) => item.id !== customer.id));
       setPendingClaim(null);
+      feedback.actionSuccess(successMessage, 'customer:claim:success');
     } catch (requestError) {
-      setError(getErrorMessage(requestError, 'รับลูกค้าเข้าร้านไม่สำเร็จ'));
+      const errorMessage = getErrorMessage(requestError, 'รับลูกค้าเข้าร้านไม่สำเร็จ');
+      setError(errorMessage);
+      feedback.actionError(requestError, errorMessage, 'customer:claim:error');
       await loadCustomers();
     } finally {
       setClaimingId(null);
@@ -133,7 +135,7 @@ const ListCustomersPage = () => {
         intent="primary"
         loading={Boolean(claimingId)}
         loadingLabel="กำลังรับเข้าร้าน..."
-        onClose={() => setPendingClaim(null)}
+        onClose={() => !claimingId && setPendingClaim(null)}
         onConfirm={confirmClaimCustomer}
       />
     </>

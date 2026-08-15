@@ -179,7 +179,7 @@ const useProductTemplateStore = create(devtools((set, get) => ({
       return updated;
     } catch (error) {
       set({ error: getErrorMessage(error, 'ไม่สามารถปิดใช้งาน Template ได้') });
-      return null;
+      throw error;
     } finally {
       set({ isSaving: false });
     }
@@ -194,7 +194,7 @@ const useProductTemplateStore = create(devtools((set, get) => ({
       return updated;
     } catch (error) {
       set({ error: getErrorMessage(error, 'ไม่สามารถเปิดใช้งาน Template ได้') });
-      return null;
+      throw error;
     } finally {
       set({ isSaving: false });
     }

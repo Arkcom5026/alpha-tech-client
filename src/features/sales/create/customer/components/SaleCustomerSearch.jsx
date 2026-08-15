@@ -38,6 +38,9 @@ const SaleCustomerSearch = ({
         {customerLoading ? 'กำลังค้นหา' : 'ค้นหา'}
       </button>
     </div>
+    <p className="mt-1.5 text-[11px] text-slate-500">
+      ค้นหาเฉพาะข้อมูลลูกค้า ไม่ค้นหาสินค้า บาร์โค้ด หรือหมายเลขอุปกรณ์
+    </p>
   </form>
 );
 

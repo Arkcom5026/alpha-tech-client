@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 
 import { getExistingProductModels } from '@/features/product/api/productExistingModelsApi';
 
@@ -9,6 +10,7 @@ const toId = (value) => {
 };
 
 const ProductExistingModelsPanel = ({ productTypeId, brandId }) => {
+  const location = useLocation();
   const [items, setItems] = useState([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(false);
@@ -17,11 +19,12 @@ const ProductExistingModelsPanel = ({ productTypeId, brandId }) => {
   const ptId = toId(productTypeId);
   const brId = toId(brandId);
   const isReady = Boolean(ptId && brId);
+  const isEditRoute = /\/products\/edit\/[^/]+\/?$/i.test(location.pathname || '');
 
   useEffect(() => {
     let cancelled = false;
 
-    if (!isReady) {
+    if (isEditRoute || !isReady) {
       setItems([]);
       setSearch('');
       setLoading(false);
@@ -51,7 +54,7 @@ const ProductExistingModelsPanel = ({ productTypeId, brandId }) => {
     return () => {
       cancelled = true;
     };
-  }, [isReady, ptId, brId]);
+  }, [isEditRoute, isReady, ptId, brId]);
 
   const filteredItems = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -63,6 +66,8 @@ const ProductExistingModelsPanel = ({ productTypeId, brandId }) => {
       String(item?.name ?? '').toLowerCase().includes(query)
     );
   }, [items, search]);
+
+  if (isEditRoute) return null;
 
   if (!isReady) {
     return (

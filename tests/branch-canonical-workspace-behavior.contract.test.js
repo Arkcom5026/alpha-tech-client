@@ -46,7 +46,7 @@ describe('canonical branch runtime behavior lock', () => {
     expect(page).toContain('selectedShop.name = data.name');
     expect(page).toContain('selectedShop.phone = data.phone');
     expect(page).toContain('selectedShop.address = data.address');
-    expect(page).toContain('แก้ไขข้อมูลร้าน/บริษัท เรียบร้อยแล้ว');
+    expect(page).toContain("feedback.success('แก้ไขข้อมูลร้าน/บริษัทเรียบร้อยแล้ว')");
   });
 
   it('preserves table, loading, empty and verified presentation states', () => {

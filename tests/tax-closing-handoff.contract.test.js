@@ -5,10 +5,11 @@ import path from 'node:path';
 
 const read = (relativePath) => fs.readFileSync(path.join(process.cwd(), relativePath), 'utf8');
 
-test('tax period list exposes Tax Closing Package action', () => {
+test('tax period list exposes the accounting-office handoff action', () => {
   const source = read('src/features/tax/periods/workspace/components/TaxPeriodListTable.jsx');
-  assert.match(source, /Tax Closing Package/);
   assert.match(source, /\$\{period\.id\}\/handoff/);
+  assert.match(source, /ชุดปิดรอบภาษี/);
+  assert.match(source, /ส่งสำนักงานบัญชี/);
 });
 
 test('handoff API reads backend-owned tax closing package', () => {

@@ -45,17 +45,16 @@ describe('customer receipt list workspace behavior contract', () => {
     }
   });
 
-  it('preserves finance-context navigation and allocation guard', () => {
+  it('preserves finance-context navigation for legacy detail and reprint surfaces', () => {
     expect(page).toContain("currentPath.indexOf('/finance')");
     expect(page).toContain('finance/customer-receipts${segment}');
-    expect(page).toContain("getDynamicFinanceUrl('/create')");
     expect(page).toContain('getDynamicFinanceUrl(`/${item.id}`)');
     expect(page).toContain('getDynamicFinanceUrl(`/${item.id}/reprint`)');
-    expect(page).toContain('getDynamicFinanceUrl(`/${item.id}/allocate`)');
-    expect(workspace).toContain('!isCancelled && remains > 0');
+    expect(page).not.toContain("getDynamicFinanceUrl('/create')");
+    expect(page).not.toContain('getDynamicFinanceUrl(`/${item.id}/allocate`)');
     expect(workspace).toContain('onOpenDetail(item)');
     expect(workspace).toContain('onOpenReprint(item)');
-    expect(workspace).toContain('onOpenAllocate(item)');
+    expect(workspace).not.toContain('onOpenAllocate(item)');
   });
 
   it('preserves receipt summary semantics and pagination ownership', () => {
@@ -75,12 +74,14 @@ describe('customer receipt list workspace behavior contract', () => {
     expect(page).toContain('searchCustomerReceiptsAction');
   });
 
-  it('keeps page orchestration separate from workspace presentation', () => {
+  it('keeps page orchestration separate from read-only legacy workspace presentation', () => {
     expect(page).toContain("import CustomerReceiptListWorkspace from '../list/CustomerReceiptListWorkspace';");
     expect(page).toContain('<CustomerReceiptListWorkspace');
     expect(page).not.toContain('<table');
     expect(page).not.toContain('lucide-react');
     expect(workspace).toContain('<table');
-    expect(workspace).toContain('data-testid="create-new-receipt-button"');
+    expect(workspace).toContain('สำหรับตรวจสอบรายละเอียดและพิมพ์ย้อนหลังเท่านั้น');
+    expect(workspace).toContain('Customer Money');
+    expect(workspace).not.toContain('data-testid="create-new-receipt-button"');
   });
 });

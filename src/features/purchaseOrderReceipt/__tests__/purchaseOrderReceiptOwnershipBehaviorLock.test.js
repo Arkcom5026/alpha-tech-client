@@ -33,7 +33,8 @@ describe('purchase order receipt ownership-safe behavior lock', () => {
     const table = read('components/purchaseOrderReceiptTable.jsx');
     expect(table).toContain('ConfirmActionDialog');
     expect(table).toContain('ไม่สามารถนำมาตรวจรับสินค้าได้อีก');
-    expect(table).toContain('feedback.success');
+    expect(table).toContain('feedback.actionSuccess');
+    expect(table).toContain('feedback.actionError');
     expect(table).not.toContain('window.confirm');
   });
 

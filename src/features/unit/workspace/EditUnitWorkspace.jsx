@@ -1,12 +1,12 @@
 // src/features/unit/pages/EditUnitPage.jsx
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { feedback } from '@/design-system';
 import useUnitStore from '../store/unitStore';
 import UnitForm from '../components/UnitForm';
 
 const EditUnitPage = () => {
-  // 🟢 [DYNAMIC PARAM FIX] แกะรหัส shopSlug ร่วมกับ id จาก useParams เพื่อเปิดท่อสัญญาน Multi-Tenant
-  const { shopSlug, id } = useParams(); 
+  const { shopSlug, id } = useParams();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -20,7 +20,7 @@ const EditUnitPage = () => {
         const data = await getUnitById(id);
         setUnit(data);
       } catch (err) {
-        console.error('loadUnit error:', err);
+        feedback.actionError(err, 'โหลดข้อมูลหน่วยนับไม่สำเร็จ', 'unit:load:error');
       } finally {
         setLoading(false);
       }
@@ -32,10 +32,10 @@ const EditUnitPage = () => {
     setIsSubmitting(true);
     try {
       await updateUnit(id, formData);
-      // 🟢 [CLEAN ENGINE NAVIGATE] เรียกใช้งาน shopSlug ดึงพิกัดกลับสู่หน้าตารางหลักอย่างแม่นยำ ล้างท่อ / ท้ายคำทิ้ง
+      feedback.actionSuccess('บันทึกการแก้ไขหน่วยนับเรียบร้อยแล้ว', 'unit:update:success');
       navigate(`/${shopSlug}/pos/stock/units`);
     } catch (err) {
-      console.error('update unit error:', err);
+      feedback.actionError(err, 'บันทึกการแก้ไขหน่วยนับไม่สำเร็จ', 'unit:update:error');
     } finally {
       setIsSubmitting(false);
     }

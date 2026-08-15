@@ -19,11 +19,13 @@ const actionOwners = [
   ['brand edit', 'src/features/brand/workspace/EditBrandWorkspace.jsx'],
   ['category create', 'src/features/category/workspace/CreateCategoryWorkspace.jsx'],
   ['category edit', 'src/features/category/workspace/EditCategoryWorkspace.jsx'],
+  ['category lifecycle', 'src/features/category/components/CategoryTable.jsx'],
   ['position create', 'src/features/position/workspace/CreatePositionWorkspace.jsx'],
   ['position edit', 'src/features/position/workspace/EditPositionWorkspace.jsx'],
   ['position lifecycle', 'src/features/position/workspace/ListPositionWorkspace.jsx'],
   ['product type create', 'src/features/productType/workspace/CreateProductTypeWorkspace.jsx'],
   ['product type edit', 'src/features/productType/workspace/EditProductTypeWorkspace.jsx'],
+  ['product type lifecycle', 'src/features/productType/components/ProductTypeTable.jsx'],
   ['employee detail', 'src/features/employee/workspaces/EmployeeDetailWorkspace.jsx'],
   ['employee edit', 'src/features/employee/workspaces/EmployeeEditWorkspace.jsx'],
   ['employee legacy edit', 'src/features/employee/workspaces/LegacyEmployeeFormWorkspace.jsx'],
@@ -31,6 +33,7 @@ const actionOwners = [
   ['supplier create', 'src/features/supplier/workspace/SupplierCreateWorkspace.jsx'],
   ['supplier edit', 'src/features/supplier/workspace/SupplierEditWorkspace.jsx'],
   ['supplier legacy update', 'src/features/supplier/workspace/SupplierLegacyUpdateWorkspace.jsx'],
+  ['customer claim', 'src/features/customer/pages/ListCustomersPage.jsx'],
   ['branch price', 'src/features/branchPrice/workspace/ManageBranchPriceWorkspace.jsx'],
 ].map(([name, file]) => [name, read(file)]);
 

@@ -52,6 +52,8 @@ const ProductReservationDetailPage = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [submittingCommand, setSubmittingCommand] = useState('');
+  const [cancelOpen, setCancelOpen] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
 
   const loadReservation = useCallback(async () => {
     setLoading(true);
@@ -70,7 +72,7 @@ const ProductReservationDetailPage = () => {
   }, [loadReservation]);
 
   const executeLifecycle = useCallback(async (commandType, reason = null) => {
-    if (submittingCommand) return;
+    if (submittingCommand) return false;
     setSubmittingCommand(commandType);
     setError('');
     setSuccess('');
@@ -87,27 +89,43 @@ const ProductReservationDetailPage = () => {
       setSuccess(successMessage);
       feedback.actionSuccess(successMessage, `product-reservation:${reservationId}:${commandType}:success`);
       await loadReservation();
+      return true;
     } catch (requestError) {
       const fallbackMessage = 'ไม่สามารถเปลี่ยนสถานะใบจองได้';
       setError(requestError?.response?.data?.message || requestError?.message || fallbackMessage);
       feedback.actionError(requestError, fallbackMessage, `product-reservation:${reservationId}:${commandType}:error`);
+      return false;
     } finally {
       setSubmittingCommand('');
     }
   }, [loadReservation, reservationId, submittingCommand]);
 
-  const cancelReservation = useCallback(() => {
+  const requestCancel = useCallback(() => {
     if (submittingCommand) return;
-    const reason = window.prompt('ระบุเหตุผลที่ยกเลิกใบจอง');
-    if (reason == null) return;
-    const normalizedReason = reason.trim();
+    setError('');
+    setCancelReason('');
+    setCancelOpen(true);
+  }, [submittingCommand]);
+
+  const closeCancel = useCallback(() => {
+    if (submittingCommand) return;
+    setCancelOpen(false);
+    setCancelReason('');
+  }, [submittingCommand]);
+
+  const confirmCancel = useCallback(async () => {
+    const normalizedReason = cancelReason.trim();
     if (!normalizedReason) {
       setError('กรุณาระบุเหตุผลที่ยกเลิกใบจอง');
       feedback.info('กรุณาระบุเหตุผลที่ยกเลิกใบจอง');
       return;
     }
-    executeLifecycle('CANCEL', normalizedReason);
-  }, [executeLifecycle, submittingCommand]);
+    const completed = await executeLifecycle('CANCEL', normalizedReason);
+    if (completed) {
+      setCancelOpen(false);
+      setCancelReason('');
+    }
+  }, [cancelReason, executeLifecycle]);
 
   const reservation = data?.reservation;
   const items = data?.items || [];
@@ -189,38 +207,61 @@ const ProductReservationDetailPage = () => {
             {success ? <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-semibold text-emerald-800">{success}</div> : null}
 
             {(canAccept || canCancel || canOpenPosSale) ? (
-              <div className="grid gap-3 sm:grid-cols-2 lg:flex lg:flex-wrap">
-                {canAccept ? (
-                  <button
-                    type="button"
-                    onClick={() => executeLifecycle('ACCEPT')}
-                    disabled={Boolean(submittingCommand)}
-                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-teal-700 px-5 text-sm font-semibold text-white hover:bg-teal-800 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    <CheckCircle2 className="h-4 w-4" />
-                    {submittingCommand === 'ACCEPT' ? 'กำลังรับใบจอง...' : 'รับใบจอง'}
-                  </button>
-                ) : null}
-                {canOpenPosSale ? (
-                  <Link
-                    to="sale"
-                    relative="path"
-                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-emerald-300 bg-emerald-200 px-5 text-center text-sm font-semibold text-emerald-950 hover:bg-emerald-300"
-                  >
-                    <ShoppingCart className="h-4 w-4" />
-                    นำใบจองเข้าสู่หน้าขาย POS
-                  </Link>
-                ) : null}
-                {canCancel ? (
-                  <button
-                    type="button"
-                    onClick={cancelReservation}
-                    disabled={Boolean(submittingCommand)}
-                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-rose-300 bg-white px-5 text-sm font-semibold text-rose-700 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    <XCircle className="h-4 w-4" />
-                    {submittingCommand === 'CANCEL' ? 'กำลังยกเลิก...' : 'ยกเลิกใบจอง'}
-                  </button>
+              <div className="space-y-3">
+                <div className="grid gap-3 sm:grid-cols-2 lg:flex lg:flex-wrap">
+                  {canAccept ? (
+                    <button
+                      type="button"
+                      onClick={() => executeLifecycle('ACCEPT')}
+                      disabled={Boolean(submittingCommand)}
+                      className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-teal-700 px-5 text-sm font-semibold text-white hover:bg-teal-800 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      <CheckCircle2 className="h-4 w-4" />
+                      {submittingCommand === 'ACCEPT' ? 'กำลังรับใบจอง...' : 'รับใบจอง'}
+                    </button>
+                  ) : null}
+                  {canOpenPosSale ? (
+                    <Link
+                      to="sale"
+                      relative="path"
+                      className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-emerald-300 bg-emerald-200 px-5 text-center text-sm font-semibold text-emerald-950 hover:bg-emerald-300"
+                    >
+                      <ShoppingCart className="h-4 w-4" />
+                      นำใบจองเข้าสู่หน้าขาย POS
+                    </Link>
+                  ) : null}
+                  {canCancel && !cancelOpen ? (
+                    <button
+                      type="button"
+                      onClick={requestCancel}
+                      disabled={Boolean(submittingCommand)}
+                      className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-rose-300 bg-white px-5 text-sm font-semibold text-rose-700 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      <XCircle className="h-4 w-4" />
+                      ยกเลิกใบจอง
+                    </button>
+                  ) : null}
+                </div>
+
+                {canCancel && cancelOpen ? (
+                  <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4">
+                    <h2 className="font-semibold text-rose-900">ยืนยันยกเลิกใบจอง</h2>
+                    <p className="mt-1 text-sm text-rose-700">ระบุเหตุผลเพื่อบันทึกในประวัติสถานะก่อนยืนยันการยกเลิก</p>
+                    <textarea
+                      value={cancelReason}
+                      onChange={(event) => setCancelReason(event.target.value)}
+                      disabled={Boolean(submittingCommand)}
+                      rows={3}
+                      placeholder="เหตุผลที่ยกเลิกใบจอง"
+                      className="mt-3 w-full rounded-xl border border-rose-200 bg-white px-3 py-2 text-sm outline-none focus:border-rose-400 focus:ring-2 focus:ring-rose-100 disabled:opacity-60"
+                    />
+                    <div className="mt-3 flex justify-end gap-2">
+                      <button type="button" onClick={closeCancel} disabled={Boolean(submittingCommand)} className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 disabled:opacity-50">ไม่ยกเลิก</button>
+                      <button type="button" onClick={confirmCancel} disabled={Boolean(submittingCommand) || !cancelReason.trim()} className="rounded-xl bg-rose-700 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
+                        {submittingCommand === 'CANCEL' ? 'กำลังยกเลิก...' : 'ยืนยันยกเลิกใบจอง'}
+                      </button>
+                    </div>
+                  </div>
                 ) : null}
               </div>
             ) : null}

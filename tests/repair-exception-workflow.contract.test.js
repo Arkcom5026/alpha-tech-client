@@ -23,7 +23,9 @@ describe('repair exceptional workflow contract', () => {
 
     expect(overview).toContain("actionNames.has('CANCEL')");
     expect(overview).toContain('!cancelReason.trim()');
-    expect(overview).toContain("window.confirm('ยืนยันยกเลิกใบงานนี้?')");
+    expect(overview).toContain('<ConfirmActionDialog');
+    expect(overview).toContain('open={cancelConfirmationOpen}');
+    expect(overview).toContain('intent="destructive"');
     expect(overview).toContain("run('CANCEL', cancelReason)");
   });
 

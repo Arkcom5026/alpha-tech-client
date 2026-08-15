@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, Download, FileSpreadsheet, PackageCheck, RefreshCw, ShieldCheck } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { toast } from 'react-toastify';
+import { feedback } from '@/design-system/feedback';
 import { useBranchStore } from '@/features/branch/store/branchStore';
 import {
   finalizeTaxClosingHandoffBundle,
@@ -70,7 +70,7 @@ const TaxClosingHandoffPage = () => {
     } catch (requestError) {
       const message = getTaxClosingHandoffErrorMessage(requestError);
       setError(message);
-      toast.error(message);
+      feedback.error(message);
     } finally {
       setLoading(false);
     }
@@ -123,10 +123,10 @@ const TaxClosingHandoffPage = () => {
     setFinalizing(true);
     try {
       const result = await finalizeTaxClosingHandoffBundle({ branchId, taxPeriodId });
-      toast.success(result?.replayed ? 'Snapshot นี้ยืนยันไว้แล้ว' : 'ยืนยัน Tax Closing Snapshot เรียบร้อย');
+      feedback.success(result?.replayed ? 'Snapshot นี้ยืนยันไว้แล้ว' : 'ยืนยัน Tax Closing Snapshot เรียบร้อย');
       await load();
     } catch (requestError) {
-      toast.error(getTaxClosingHandoffErrorMessage(requestError));
+      feedback.error(getTaxClosingHandoffErrorMessage(requestError));
     } finally {
       setFinalizing(false);
     }

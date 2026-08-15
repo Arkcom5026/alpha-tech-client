@@ -10,29 +10,32 @@ const assert = (condition, message) => {
 
 const feedbackSource = read('src/design-system/feedback/feedback.js');
 const errorSource = read('src/design-system/feedback/errorPresentation.js');
-const unitCreate = read('src/features/unit/workspace/CreateUnitWorkspace.jsx');
-const unitEdit = read('src/features/unit/workspace/EditUnitWorkspace.jsx');
-const unitList = read('src/features/unit/workspace/ListUnitWorkspace.jsx');
-const employeeDetail = read('src/features/employee/workspaces/EmployeeDetailWorkspace.jsx');
-const employeeEdit = read('src/features/employee/workspaces/EmployeeEditWorkspace.jsx');
-const employeeLegacyEdit = read('src/features/employee/workspaces/LegacyEmployeeFormWorkspace.jsx');
-const employeeRoles = read('src/features/employee/workspaces/ManageRolesWorkspace.jsx');
-const branchPrice = read('src/features/branchPrice/workspace/ManageBranchPriceWorkspace.jsx');
+
+const actionOwners = [
+  ['unit create', 'src/features/unit/workspace/CreateUnitWorkspace.jsx'],
+  ['unit edit', 'src/features/unit/workspace/EditUnitWorkspace.jsx'],
+  ['unit list', 'src/features/unit/workspace/ListUnitWorkspace.jsx'],
+  ['brand create', 'src/features/brand/workspace/CreateBrandWorkspace.jsx'],
+  ['brand edit', 'src/features/brand/workspace/EditBrandWorkspace.jsx'],
+  ['category create', 'src/features/category/workspace/CreateCategoryWorkspace.jsx'],
+  ['category edit', 'src/features/category/workspace/EditCategoryWorkspace.jsx'],
+  ['position create', 'src/features/position/workspace/CreatePositionWorkspace.jsx'],
+  ['position edit', 'src/features/position/workspace/EditPositionWorkspace.jsx'],
+  ['position lifecycle', 'src/features/position/workspace/ListPositionWorkspace.jsx'],
+  ['product type create', 'src/features/productType/workspace/CreateProductTypeWorkspace.jsx'],
+  ['product type edit', 'src/features/productType/workspace/EditProductTypeWorkspace.jsx'],
+  ['employee detail', 'src/features/employee/workspaces/EmployeeDetailWorkspace.jsx'],
+  ['employee edit', 'src/features/employee/workspaces/EmployeeEditWorkspace.jsx'],
+  ['employee legacy edit', 'src/features/employee/workspaces/LegacyEmployeeFormWorkspace.jsx'],
+  ['employee roles', 'src/features/employee/workspaces/ManageRolesWorkspace.jsx'],
+  ['branch price', 'src/features/branchPrice/workspace/ManageBranchPriceWorkspace.jsx'],
+].map(([name, file]) => [name, read(file)]);
 
 assert(feedbackSource.includes('actionSuccess:'), 'feedback authority must expose actionSuccess');
 assert(feedbackSource.includes('actionError:'), 'feedback authority must expose actionError');
 assert(errorSource.includes('error?.response?.data?.error?.message'), 'error normalization must support Server operational envelope');
 
-for (const [name, source] of [
-  ['unit create', unitCreate],
-  ['unit edit', unitEdit],
-  ['unit list', unitList],
-  ['employee detail', employeeDetail],
-  ['employee edit', employeeEdit],
-  ['employee legacy edit', employeeLegacyEdit],
-  ['employee roles', employeeRoles],
-  ['branch price', branchPrice],
-]) {
+for (const [name, source] of actionOwners) {
   assert(source.includes('feedback.actionSuccess'), `${name} must provide persistent action success feedback`);
   assert(source.includes('feedback.actionError'), `${name} must provide persistent action error feedback`);
 }

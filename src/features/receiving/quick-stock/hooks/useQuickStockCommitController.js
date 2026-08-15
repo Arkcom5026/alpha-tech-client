@@ -1,7 +1,7 @@
 // src/features/receiving/quick-stock/hooks/useQuickStockCommitController.js
 
 import { useCallback, useState } from "react";
-import { toast } from "react-toastify";
+import { feedback as toast } from '@/design-system';
 
 import { ONBOARDING_STATES, toMoneyNumber } from "../utils/quickStockRuntimeUtils";
 
@@ -66,7 +66,7 @@ const useQuickStockCommitController = ({
     }
 
     return true;
-  }, [operationalProduct, isTemplateOnlySelection, defaultCost, priceForm, barcodeQueue]);
+  }, [operationalProduct, isTemplateOnlySelection, resolvedCostPrice, priceForm, barcodeQueue]);
 
   const handleCommit = useCallback(async () => {
     if (!validateBeforeCommit()) return;
@@ -109,7 +109,7 @@ const useQuickStockCommitController = ({
     barcodeQueue,
     operationalProduct,
     note,
-    defaultCost,
+    resolvedCostPrice,
     priceForm,
     quickStockIntakeExistingAction,
     resetQueue,

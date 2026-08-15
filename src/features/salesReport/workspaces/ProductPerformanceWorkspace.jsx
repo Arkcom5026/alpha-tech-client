@@ -7,8 +7,9 @@
 ========================= */
 
 import React, { useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import useSalesReportStore from '@/features/salesReport/stores/salesReportStore';
+import { InlineFeedback } from '@/design-system';
 
 // helpers (scoped)
 const KPI_CARD_CLASS =
@@ -23,6 +24,7 @@ const formatNumber = (value) =>
 const formatCurrency = (value) => `฿${formatNumber(value)}`;
 
 const ProductPerformancePage = () => {
+  const { shopSlug } = useParams();
   const filters = useSalesReportStore((s) => s.filters);
   const productPerformance = useSalesReportStore((s) => s.productPerformance);
   const loading = useSalesReportStore((s) => s.productPerformanceLoading);
@@ -145,9 +147,7 @@ const ProductPerformancePage = () => {
         </section>
 
         {error && (
-          <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">
-            {error}
-          </div>
+          <InlineFeedback variant="error" description={error} />
         )}
 
         <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">

@@ -1,3 +1,5 @@
+import { InlineFeedback } from '@/design-system';
+
 const money = (value) => Number(value || 0).toLocaleString('th-TH', {
   minimumFractionDigits: 2,
   maximumFractionDigits: 2,
@@ -33,7 +35,7 @@ const SaleReturnCreateWorkspace = ({
         </div>
         <button
           type="button"
-          className="rounded-xl border border-orange-200 bg-orange-50 px-4 py-2 font-bold text-orange-700"
+          className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 font-bold text-emerald-700 hover:bg-emerald-100"
           onClick={onOpenHelp}
         >
           {helpLabel}
@@ -167,18 +169,18 @@ const SaleReturnCreateWorkspace = ({
         </button>
         <div className="border-t pt-3 text-sm space-y-1">
           <div className="flex justify-between"><span>มูลค่าที่คืนได้</span><b>{money(eligibleTotal)} ฿</b></div>
-          <div className="flex justify-between"><span>หัก</span><b className="text-orange-600">{money(deduction)} ฿</b></div>
+          <div className="flex justify-between"><span>หัก</span><b className="text-amber-700">{money(deduction)} ฿</b></div>
           <div className="flex justify-between text-lg"><span>คืนเงินจริง</span><b>{money(refundTotal)} ฿</b></div>
         </div>
       </div>
     </section>
 
-    {error && <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-red-700">{error}</div>}
+    {error && <InlineFeedback variant="error" description={error} />}
 
     <div className="flex justify-end gap-3">
       <button className="rounded-xl border px-5 py-3 font-bold" onClick={onCancel}>ยกเลิก</button>
       <button
-        className="rounded-xl bg-orange-500 px-6 py-3 font-black text-white disabled:opacity-50"
+        className="rounded-xl bg-emerald-600 px-6 py-3 font-black text-white transition hover:bg-emerald-700 disabled:opacity-50"
         disabled={submitting}
         onClick={onSubmit}
       >

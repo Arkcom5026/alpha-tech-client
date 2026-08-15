@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, RefreshCw, WalletCards } from 'lucide-react';
-import { toast } from 'react-toastify';
+import { feedback as toast } from '@/design-system';
 import {
   createSupplierPayableFromReceipts,
   getSupplierPayableAging,
@@ -409,7 +409,7 @@ const SupplierPayableWorkspacePage = () => {
     <section className="space-y-5">
       <header className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:flex-row md:items-center md:justify-between">
         <div>
-          <div className="flex items-center gap-2 text-sm font-bold text-orange-600"><WalletCards size={18} /> Supplier Payables</div>
+          <div className="flex items-center gap-2 text-sm font-bold text-emerald-700"><WalletCards size={18} /> Supplier Payables</div>
           <h1 className="mt-1 text-2xl font-black text-slate-900">รายการเจ้าหนี้ Supplier</h1>
           <p className="mt-1 text-sm text-slate-500">ตั้งหนี้จากใบรับสินค้า ก่อนเข้าสู่กระบวนการจัดสรรการชำระเงิน</p>
         </div>
@@ -441,7 +441,7 @@ const SupplierPayableWorkspacePage = () => {
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <div className="rounded-xl bg-rose-50 p-3"><p className="text-xs text-rose-600">หนี้คงค้างรวม</p><strong className="text-lg text-rose-700">{money(aging?.totals?.grossOutstanding)}</strong></div>
           <div className="rounded-xl bg-yellow-50 p-3"><p className="text-xs text-yellow-700">อยู่ระหว่างโต้แย้ง</p><strong className="text-lg text-yellow-800">{money(aging?.totals?.disputedOutstanding)}</strong></div>
-          <div className="rounded-xl bg-orange-50 p-3"><p className="text-xs text-orange-600">Advance พร้อมใช้</p><strong className="text-lg text-orange-700">{money(aging?.totals?.availableAdvance)}</strong></div>
+          <div className="rounded-xl bg-emerald-50 p-3"><p className="text-xs text-emerald-700">Advance พร้อมใช้</p><strong className="text-lg text-emerald-800">{money(aging?.totals?.availableAdvance)}</strong></div>
           <div className="rounded-xl bg-slate-100 p-3"><p className="text-xs text-slate-600">Net Exposure</p><strong className="text-lg text-slate-900">{money(aging?.totals?.netExposure)}</strong></div>
         </div>
         <div className="overflow-x-auto">
@@ -469,7 +469,7 @@ const SupplierPayableWorkspacePage = () => {
                   <td className="px-2 py-3 text-right">{money(item.buckets?.overdue61To90)}</td>
                   <td className="px-2 py-3 text-right text-rose-600">{money(item.buckets?.overdue90Plus)}</td>
                   <td className="px-2 py-3 text-right">{money(item.buckets?.noDueDate)}</td>
-                  <td className="px-2 py-3 text-right text-orange-600">{money(item.availableAdvance)}</td>
+                  <td className="px-2 py-3 text-right text-emerald-700">{money(item.availableAdvance)}</td>
                   <td className="px-2 py-3 text-right font-black">{money(item.netExposure)}</td>
                 </tr>
               ))}
@@ -522,7 +522,7 @@ const SupplierPayableWorkspacePage = () => {
                     max={Math.min(Number(item.outstandingAmount || 0), Number(selectedAdvance?.availableAmount || 0))}
                     value={advanceAllocations[item.id]}
                     onChange={(event) => setAdvanceAllocations({ ...advanceAllocations, [item.id]: event.target.value })}
-                    className="mt-2 w-full rounded-xl border border-orange-200 bg-orange-50 px-3 py-2 text-right text-sm font-bold"
+                    className="mt-2 w-full rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-right text-sm font-bold focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
                   />
                 )}
               </div>
@@ -535,7 +535,7 @@ const SupplierPayableWorkspacePage = () => {
           <div><h2 className="font-black">ตั้งหนี้จากใบรับสินค้า</h2><p className="text-xs text-slate-500">เลือกได้หลายใบ แต่ต้องเป็น Supplier เดียวกัน</p></div>
           <div className="max-h-80 space-y-2 overflow-auto">
             {candidates.map((item) => (
-              <label key={item.id} className="flex cursor-pointer items-start gap-3 rounded-xl border p-3 hover:bg-orange-50">
+              <label key={item.id} className="flex cursor-pointer items-start gap-3 rounded-xl border p-3 hover:bg-emerald-50">
                 <input type="checkbox" checked={selectedIds.includes(item.id)} onChange={() => toggle(item)} className="mt-1" />
                 <span className="min-w-0 flex-1"><span className="block font-bold">{item.code} · {item.supplierName}</span><span className="block text-xs text-slate-500">{item.source} · {item.deliveryNoteNumber || 'ไม่มีเลขใบส่งสินค้า'}</span></span>
                 <strong className="text-sm">{money(item.totalAmount)}</strong>
@@ -633,7 +633,7 @@ const SupplierPayableWorkspacePage = () => {
       </div>
 
       <div className="grid gap-5 xl:grid-cols-[0.8fr_1.2fr]">
-        <div className="space-y-4 rounded-2xl border border-orange-200 bg-white p-4">
+        <div className="space-y-4 rounded-2xl border border-emerald-200 bg-white p-4">
           <div><h2 className="font-black">บันทึกเงินจ่ายล่วงหน้า</h2><p className="text-xs text-slate-500">สร้างเครดิตที่นำไปตัด Payable ภายหลังได้</p></div>
           <select value={advanceForm.supplierId} onChange={(event) => setAdvanceForm({ ...advanceForm, supplierId: event.target.value })} className="w-full rounded-xl border px-3 py-2 text-sm">
             <option value="">เลือก Supplier</option>
@@ -646,7 +646,7 @@ const SupplierPayableWorkspacePage = () => {
             <input value={advanceForm.paymentRef} onChange={(event) => setAdvanceForm({ ...advanceForm, paymentRef: event.target.value })} placeholder="เลขอ้างอิง" className="rounded-xl border px-3 py-2 text-sm" />
           </div>
           <input value={advanceForm.note} onChange={(event) => setAdvanceForm({ ...advanceForm, note: event.target.value })} placeholder="หมายเหตุ" className="w-full rounded-xl border px-3 py-2 text-sm" />
-          <button type="button" onClick={createAdvance} disabled={!advanceForm.supplierId || Number(advanceForm.amount) <= 0 || saving} className="w-full rounded-xl bg-orange-500 px-4 py-2.5 text-sm font-black text-white disabled:opacity-50">ยืนยันเงินจ่ายล่วงหน้า</button>
+          <button type="button" onClick={createAdvance} disabled={!advanceForm.supplierId || Number(advanceForm.amount) <= 0 || saving} className="w-full rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-black text-white transition hover:bg-emerald-700 disabled:opacity-50">ยืนยันเงินจ่ายล่วงหน้า</button>
         </div>
 
         <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4">
@@ -657,11 +657,11 @@ const SupplierPayableWorkspacePage = () => {
           </div>
           <div className="max-h-96 divide-y overflow-auto">
             {advances.map((item) => (
-              <div key={item.id} className={`py-3 ${selectedAdvanceId === item.id ? 'bg-orange-50' : ''}`}>
+              <div key={item.id} className={`py-3 ${selectedAdvanceId === item.id ? 'bg-emerald-50' : ''}`}>
                 <div className="flex items-start gap-3">
                   {item.status === 'ACTIVE' && <input type="radio" name="selectedAdvance" className="mt-1" checked={selectedAdvanceId === item.id} onChange={() => { setSelectedAdvanceId(item.id); setAdvanceAllocations({}); }} />}
                   <div className="min-w-0 flex-1"><p className="font-bold">{item.code} · {item.supplier?.name}</p><p className="text-xs text-slate-500">ตั้งต้น {money(item.originalAmount)} · ใช้แล้ว {money(item.usedAmount)}</p></div>
-                  <div className="text-right"><strong className="block text-orange-600">{money(item.availableAmount)}</strong><span className="text-[10px] font-black">{item.status}</span></div>
+                  <div className="text-right"><strong className="block text-emerald-700">{money(item.availableAmount)}</strong><span className="text-[10px] font-black">{item.status}</span></div>
                 </div>
                 <div className="mt-2 flex justify-end gap-3">
                   {item.status === 'REVIEW_REQUIRED' && <button type="button" onClick={() => activateAdvance(item.id)} disabled={Number(reviewAmount) <= 0 || saving} className="text-xs font-black text-blue-600 disabled:opacity-50">รับรองยอดเดิม</button>}
@@ -670,7 +670,7 @@ const SupplierPayableWorkspacePage = () => {
               </div>
             ))}
           </div>
-          <div className="flex items-center justify-between border-t pt-3"><span className="text-sm">ใช้ Advance {money(advanceTotal)} / คงเหลือ {money(selectedAdvance?.availableAmount)}</span><button type="button" onClick={applyAdvance} disabled={!selectedAdvance || !advanceSelection.length || advanceTotal <= 0 || advanceTotal > Number(selectedAdvance.availableAmount || 0) || saving} className="rounded-xl bg-orange-500 px-4 py-2.5 text-sm font-black text-white disabled:opacity-50">ตัดยอดด้วย Advance</button></div>
+          <div className="flex items-center justify-between border-t pt-3"><span className="text-sm">ใช้ Advance {money(advanceTotal)} / คงเหลือ {money(selectedAdvance?.availableAmount)}</span><button type="button" onClick={applyAdvance} disabled={!selectedAdvance || !advanceSelection.length || advanceTotal <= 0 || advanceTotal > Number(selectedAdvance.availableAmount || 0) || saving} className="rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-black text-white transition hover:bg-emerald-700 disabled:opacity-50">ตัดยอดด้วย Advance</button></div>
         </div>
       </div>
     </section>

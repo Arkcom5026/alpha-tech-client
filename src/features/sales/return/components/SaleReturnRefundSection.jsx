@@ -76,7 +76,7 @@ const SaleReturnRefundSection = ({
       </button>
       <div className="space-y-1 border-t pt-3 text-sm">
         <div className="flex justify-between"><span>มูลค่าที่คืนได้</span><b>{money(projection.eligibleRefundTotal)} ฿</b></div>
-        <div className="flex justify-between"><span>หัก</span><b className="text-orange-600">{money(projection.deductedAmount)} ฿</b></div>
+        <div className="flex justify-between"><span>หัก</span><b className="text-amber-700">{money(projection.deductedAmount)} ฿</b></div>
         <div className="flex justify-between text-lg"><span>คืนเงินจริง</span><b>{money(projection.actualRefundTotal)} ฿</b></div>
         <div className="flex justify-between text-slate-500"><span>รวมช่องทางคืนเงิน</span><b>{money(projection.refundEvidenceTotal)} ฿</b></div>
       </div>

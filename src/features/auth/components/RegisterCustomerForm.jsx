@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { toast } from 'react-toastify';
+import { feedback } from '@/design-system';
 // 🟢 [IMPORT FIXED] ดึง useParams เข้ามาประจำการเพื่อสลักชื่อสาขา/บริษัทคั่น URL
 import { useNavigate, useParams } from 'react-router-dom';
 import useEmployeeStore from '@/features/employee/store/employeeStore';
@@ -10,7 +10,6 @@ const RegisterCustomerForm = () => {
   const navigate = useNavigate();
 
   const actionLoginEmployee = useEmployeeStore((state) => state.actionLoginEmployee);
-  const employee = useEmployeeStore((state) => state.employee);
 
   const [form, setForm] = useState({
     email: "",
@@ -47,10 +46,9 @@ const RegisterCustomerForm = () => {
       const res = await actionLoginEmployee(form);
 
       const role = res.data.payload.role;            
-      const token = res.data.token;         
       roleRedirect(role);
 
-      toast.success("Welcome back");
+      feedback.success('สมัครบัญชีสำเร็จ');
     } catch (err) {
       console.log(err);
     }
@@ -64,7 +62,7 @@ const RegisterCustomerForm = () => {
           <div className="space-y-4">
             <input
               placeholder="Email"
-              className="border w-full px-3 py-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent font-medium text-sm transition-all"
+              className="border w-full px-3 py-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent font-medium text-sm transition-all"
               onChange={handleChange}
               name="email"
               type="email"
@@ -72,7 +70,7 @@ const RegisterCustomerForm = () => {
 
             <input
               placeholder="Password"
-              className="border w-full px-3 py-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent font-medium text-sm transition-all"
+              className="border w-full px-3 py-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent font-medium text-sm transition-all"
               onChange={handleChange}
               name="password"
               type="password" 

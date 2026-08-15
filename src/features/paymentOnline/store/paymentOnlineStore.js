@@ -1,6 +1,7 @@
 // src/features/paymentOnline/store/paymentOnlineStore.js
 
 import { create } from 'zustand';
+import { feedback } from '@/design-system';
 import {
   getOrderOnlineById,
   uploadPaymentSlip,
@@ -75,20 +76,20 @@ export const usePaymentOnlineStore = create((set) => ({
   approveSlipAction: async (orderId) => {
     try {
       await approveOrderOnlineSlip(orderId);
-      alert('อนุมัติสลิปเรียบร้อยแล้ว');
+      feedback.success('อนุมัติสลิปเรียบร้อยแล้ว');
     } catch (error) {
       console.error('approveSlipAction error:', error);
-      alert('ไม่สามารถอนุมัติสลิปได้');
+      feedback.error(error, { fallback: 'ไม่สามารถอนุมัติสลิปได้' });
     }
   },
 
   rejectSlipAction: async (orderId) => {
     try {
       await rejectOrderOnlineSlip(orderId);
-      alert('ปฏิเสธสลิปเรียบร้อยแล้ว');
+      feedback.success('ปฏิเสธสลิปเรียบร้อยแล้ว');
     } catch (error) {
       console.error('rejectSlipAction error:', error);
-      alert('ไม่สามารถปฏิเสธสลิปได้');
+      feedback.error(error, { fallback: 'ไม่สามารถปฏิเสธสลิปได้' });
     }
   },
 }));

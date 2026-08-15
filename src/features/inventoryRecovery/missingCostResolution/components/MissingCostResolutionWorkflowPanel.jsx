@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { CheckCircle2, FilePlus2, RotateCcw, Send, ShieldCheck, XCircle } from 'lucide-react';
-import { toast } from 'react-toastify';
+import { feedback } from '@/design-system';
 import {
   useAppendMissingCostEvidence,
   useTransitionMissingCostResolution,
@@ -96,16 +96,16 @@ const MissingCostResolutionWorkflowPanel = ({ detail }) => {
         confidence: form.confidence,
         rationale: form.rationale.trim(),
       });
-      toast.success('บันทึกหลักฐานต้นทุนแล้ว');
+      feedback.success('บันทึกหลักฐานต้นทุนแล้ว');
       setForm((current) => ({ ...current, sourceReference: '', evidenceSummary: '', proposedUnitCost: '', rationale: '' }));
     } catch (error) {
-      toast.error(getErrorMessage(error));
+      feedback.error(getErrorMessage(error));
     }
   };
 
   const transition = async (action) => {
     if (!latestEvidence?.evidenceHash && action.toStatus !== 'CANCELLED') {
-      toast.error('ต้องมีหลักฐานต้นทุนก่อนเปลี่ยนสถานะ');
+      feedback.warning('ต้องมีหลักฐานต้นทุนก่อนเปลี่ยนสถานะ');
       return;
     }
     try {
@@ -120,10 +120,10 @@ const MissingCostResolutionWorkflowPanel = ({ detail }) => {
         reasonCode: action.reasonCode,
         note: note.trim() || null,
       });
-      toast.success(`${action.label}สำเร็จ`);
+      feedback.success(`${action.label}สำเร็จ`);
       setNote('');
     } catch (error) {
-      toast.error(getErrorMessage(error));
+      feedback.error(getErrorMessage(error));
     }
   };
 

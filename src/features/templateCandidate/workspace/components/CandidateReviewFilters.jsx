@@ -14,7 +14,7 @@ const CandidateReviewFilters = ({
         value={filters.q}
         onChange={(event) => onUpdateFilter('q', event.target.value)}
         placeholder="ค้นหา Candidate ID, สินค้า, ร้าน หรือ Template..."
-        className="min-h-11 rounded-2xl border border-slate-200 px-4 text-sm font-semibold outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-200"
+        className="min-h-11 rounded-2xl border border-slate-200 px-4 text-sm font-semibold outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
       />
       <select
         value={filters.status}
@@ -52,7 +52,7 @@ const CandidateReviewFilters = ({
       <button
         type="submit"
         disabled={loading}
-        className="min-h-11 rounded-2xl bg-slate-950 px-5 text-sm font-black text-white transition hover:bg-orange-500 disabled:opacity-50"
+        className="min-h-11 rounded-2xl bg-emerald-600 px-5 text-sm font-black text-white transition hover:bg-emerald-700 disabled:opacity-50"
       >
         ค้นหา
       </button>

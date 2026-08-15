@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { AlertTriangle, CheckCircle2, History, RefreshCw, ShieldCheck } from 'lucide-react';
-import { toast } from 'react-toastify';
+import { feedback } from '@/design-system';
 import {
   useExecuteMissingCostRecovery,
   useMissingCostRecoveryApprovalPlan,
@@ -68,16 +68,16 @@ const MissingCostRecoveryExecutionPanel = ({ detail }) => {
     if (!ready || !payload || !confirmed) return;
     try {
       await executeMutation.mutateAsync({ payload, idempotencyKey });
-      toast.success('นำต้นทุนที่อนุมัติไปใช้กับสต๊อกสำเร็จ');
+      feedback.success('นำต้นทุนที่อนุมัติไปใช้กับสต๊อกสำเร็จ');
       setConfirmed(false);
       setIdempotencyKey(newIdempotencyKey(resolutionId));
       await auditQuery.refetch();
     } catch (error) {
       const code = error?.response?.data?.code || error?.code;
-      if (String(code || '').includes('STALE')) toast.error('ข้อมูลเปลี่ยนแล้ว กรุณาสร้าง Preview และ Plan ใหม่');
-      else if (String(code || '').includes('DUPLICATE')) toast.error('คำสั่งนี้เคยดำเนินการแล้ว ระบบไม่ทำซ้ำ');
-      else if (error?.response?.status === 403) toast.error('บัญชีนี้ไม่มีสิทธิ์ดำเนินการ หรือระบบยังไม่ได้เปิดความสามารถนี้');
-      else toast.error(errorMessage(error));
+      if (String(code || '').includes('STALE')) feedback.warning('ข้อมูลเปลี่ยนแล้ว กรุณาสร้าง Preview และ Plan ใหม่');
+      else if (String(code || '').includes('DUPLICATE')) feedback.info('คำสั่งนี้เคยดำเนินการแล้ว ระบบไม่ทำซ้ำ');
+      else if (error?.response?.status === 403) feedback.error('บัญชีนี้ไม่มีสิทธิ์ดำเนินการ หรือระบบยังไม่ได้เปิดความสามารถนี้');
+      else feedback.error(errorMessage(error));
     }
   };
 

@@ -1,7 +1,7 @@
 // src/features/receiving/quick-stock/hooks/useQuickStockDiscoveryController.js
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { toast } from "react-toastify";
+import { feedback as toast } from '@/design-system';
 
 import {
   dedupeDiscoveryProducts,

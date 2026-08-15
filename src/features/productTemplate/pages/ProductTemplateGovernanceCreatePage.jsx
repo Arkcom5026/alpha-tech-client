@@ -91,7 +91,7 @@ const ProductTemplateGovernanceCreatePage = () => {
         <button type="button" onClick={() => navigate(listPath)} className="mb-4 rounded-2xl border border-slate-200 px-4 py-2 text-xs font-black text-slate-600 transition hover:bg-slate-50">
           ← Back to Templates
         </button>
-        <p className="text-[11px] font-black uppercase tracking-[0.18em] text-orange-500">Template Governance</p>
+        <p className="text-[11px] font-black uppercase tracking-[0.18em] text-emerald-600">Template Governance</p>
         <h1 className="mt-2 text-2xl font-black text-slate-900">New Product Template</h1>
         <p className="mt-2 max-w-3xl text-sm font-medium text-slate-500">
           สร้าง Template Catalog กลางสำหรับใช้เป็นแหล่งค้นหาและ clone source เท่านั้น ไม่สร้างหรือแก้ Operational Product ของสาขา
@@ -120,7 +120,7 @@ const ProductTemplateGovernanceCreatePage = () => {
           <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             <label className="space-y-2 md:col-span-2 xl:col-span-3">
               <span className="text-xs font-black uppercase tracking-[0.12em] text-slate-500">Template Name *</span>
-              <input value={form.name} onChange={(event) => setField('name', event.target.value)} required className="min-h-11 w-full rounded-2xl border border-slate-200 px-4 text-sm font-semibold outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-200" placeholder="เช่น กล้องวงจรปิด VSTARCAM CG49 3MP SIM Indoor" />
+              <input value={form.name} onChange={(event) => setField('name', event.target.value)} required className="min-h-11 w-full rounded-2xl border border-slate-200 px-4 text-sm font-semibold outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100" placeholder="เช่น กล้องวงจรปิด VSTARCAM CG49 3MP SIM Indoor" />
             </label>
 
             <CatalogMasterSelect label="Product Type" required value={form.productTypeId} options={masterOptions.productTypes} onChange={(value) => setField('productTypeId', value)} disabled={isLoadingMasters} />
@@ -138,7 +138,7 @@ const ProductTemplateGovernanceCreatePage = () => {
 
             <label className="space-y-2">
               <span className="text-xs font-black uppercase tracking-[0.12em] text-slate-500">Warranty Days</span>
-              <input type="number" min="0" value={form.warrantyDays} onChange={(event) => setField('warrantyDays', event.target.value)} className="min-h-11 w-full rounded-2xl border border-slate-200 px-4 text-sm font-semibold outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-200" />
+              <input type="number" min="0" value={form.warrantyDays} onChange={(event) => setField('warrantyDays', event.target.value)} className="min-h-11 w-full rounded-2xl border border-slate-200 px-4 text-sm font-semibold outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100" />
             </label>
           </div>
         </section>
@@ -156,7 +156,7 @@ const ProductTemplateGovernanceCreatePage = () => {
 
         <div className="flex justify-end gap-3 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
           <button type="button" onClick={() => navigate(listPath)} className="rounded-2xl border border-slate-200 px-5 py-3 text-sm font-black text-slate-700 transition hover:bg-slate-50">Cancel</button>
-          <button type="submit" disabled={isSaving || !String(form.name || '').trim() || !form.productTypeId} className="rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white transition hover:bg-orange-500 disabled:opacity-60">
+          <button type="submit" disabled={isSaving || !String(form.name || '').trim() || !form.productTypeId} className="rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-black text-white transition hover:bg-emerald-700 disabled:opacity-60">
             {isSaving ? 'Creating...' : 'Create Template'}
           </button>
         </div>

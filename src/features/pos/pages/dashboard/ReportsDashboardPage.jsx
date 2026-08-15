@@ -18,7 +18,8 @@ const mockSummary = {
 // ============================================================
 // 🧱 Small UI Components (Tailwind CSS + Lucide Icons)
 // ============================================================
-const SummaryCard = ({ title, value, icon: Icon, tone = 'blue' }) => {
+const SummaryCard = ({ title, value, icon, tone = 'blue' }) => {
+  const IconComponent = icon;
   const toneMap = {
     blue: 'border-slate-200 bg-white text-slate-900 shadow-[0_4px_20px_rgba(0,0,0,0.01)]',
     green: 'border-slate-200 bg-white text-slate-900 shadow-[0_4px_20px_rgba(0,0,0,0.01)]',
@@ -28,13 +29,13 @@ const SummaryCard = ({ title, value, icon: Icon, tone = 'blue' }) => {
   const iconMap = {
     blue: 'bg-blue-50 border border-blue-100 text-blue-600',
     green: 'bg-emerald-50 border border-emerald-100 text-emerald-600',
-    amber: 'bg-orange-50 border border-orange-100 text-orange-600',
+    amber: 'bg-amber-50 border border-amber-100 text-amber-700',
   };
 
   return (
     <div className={`flex items-center p-5 rounded-2xl border transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 ${toneMap[tone]}`}>
       <div className={`p-3 rounded-xl mr-4 shrink-0 ${iconMap[tone]} select-none`}>
-        <Icon className="w-6 h-6" />
+        <IconComponent className="w-6 h-6" />
       </div>
       <div>
         <div className="text-xs font-black text-slate-400 uppercase tracking-wider select-none">{title}</div>

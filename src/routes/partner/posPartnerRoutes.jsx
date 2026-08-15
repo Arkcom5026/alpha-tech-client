@@ -73,7 +73,7 @@ import QuickStockPage from '@/features/receiving/quick-stock/pages/QuickStockPag
 import { repairRouteConfigs } from './repairRouteConfig';
 
 const TempReportPage = ({ title }) => (
-  <div className="p-6 font-black text-orange-400 bg-slate-900/50 border border-orange-500/10 rounded-2xl shadow-inner text-xs md:text-sm font-sans animate-fadeIn">
+  <div className="p-6 font-black text-emerald-300 bg-slate-900/50 border border-emerald-500/10 rounded-2xl shadow-inner text-xs md:text-sm font-sans animate-fadeIn">
     {title} <span className="text-slate-500 text-xs font-bold font-mono ml-2">(ระบบกำลังเคลียร์โฟลเดอร์ลุยสถาปัตยกรรมใหม่)</span>
   </div>
 );

@@ -115,7 +115,7 @@ const SaleAllocationCandidateTable = ({
                   <tr
                     key={item?.id}
                     className={`transition-colors align-middle ${
-                      isSelected ? 'bg-orange-500/5 text-slate-900' : 'hover:bg-slate-50/50'
+                      isSelected ? 'bg-emerald-500/5 text-slate-900' : 'hover:bg-slate-50/50'
                     }`}
                   >
                     <td className="p-2 px-3 text-center select-none">

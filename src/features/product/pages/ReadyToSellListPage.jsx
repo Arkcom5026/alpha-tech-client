@@ -6,6 +6,8 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 
 import ReadyToSellTable from '../components/ReadyToSellTable';
 import useProductStore from '../store/productStore';
+
+const EMPTY_READY_TO_SELL_ITEMS = Object.freeze([]);
 import { useBranchStore } from '@/features/branch/store/branchStore';
 import { PackageCheck, ArrowLeft, Eye, RefreshCw, Search, SlidersHorizontal, AlertCircle, Loader2 } from 'lucide-react';
 
@@ -44,7 +46,7 @@ const ReadyToSellListPage = () => {
 
   // ✅ IMPORTANT: ดึงจาก store เป็น primitive/field ที่ stable
   const readyToSellData = useProductStore((s) => s.readyToSellData);
-  const readyToSellItems = readyToSellData?.items ?? [];
+  const readyToSellItems = readyToSellData?.items ?? EMPTY_READY_TO_SELL_ITEMS;
   const readyToSellTotal = readyToSellData?.total ?? 0;
 
   // ✅ Action หลักของ ready-to-sell
@@ -133,14 +135,14 @@ const ReadyToSellListPage = () => {
   }, [loadError]);
 
   return (
-    <div className="w-full h-full p-6 space-y-6 text-slate-800 selection:bg-orange-500 selection:text-white animate-fadeIn font-sans">
+    <div className="w-full h-full p-6 space-y-6 text-slate-800 selection:bg-emerald-600 selection:text-white animate-fadeIn font-sans">
       <div className="w-full max-w-[1400px] mx-auto space-y-6">
         
         {/* 🟦 1. ส่วนหัวแผงควบคุมสไตล์ Glassmorphism ผสานปุ่ม Action เรืองแสง */}
         <div className="bg-white/80 dark:bg-zinc-900/80 border border-slate-200/80 dark:border-zinc-800 p-6 rounded-3xl shadow-[0_4px_25px_rgba(0,0,0,0.01)] backdrop-blur-md flex flex-col md:flex-row md:items-center md:justify-between gap-5 transition-all duration-300">
           <div className="min-w-0">
             <h1 className="text-xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
-              <PackageCheck className="w-5 h-5 text-orange-500" /> สินค้าพร้อมขาย
+              <PackageCheck className="w-5 h-5 text-emerald-600" /> สินค้าพร้อมขาย
             </h1>
             <p className="mt-1 text-xs font-bold text-slate-400 dark:text-zinc-400 tracking-wide">
               Ready-to-Sell Inventory Management • รายการสินค้าจัดสรรส่วนกลางคลังพร้อมแปรสภาพเป็นยอดขายของสาขา
@@ -172,7 +174,7 @@ const ReadyToSellListPage = () => {
                 setCurrentPage(1);
                 queueMicrotask(() => loadOnce());
               }}
-              className="flex items-center gap-1.5 px-4 h-10 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-black text-xs rounded-xl border border-orange-400/10 shadow-[0_4px_15px_rgba(249,115,22,0.2)] transform hover:-translate-y-0.5 active:scale-95 transition-all duration-300 disabled:opacity-50 disabled:transform-none disabled:shadow-none"
+              className="flex items-center gap-1.5 px-4 h-10 bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-700 hover:to-teal-600 text-white font-black text-xs rounded-xl border border-emerald-400/10 shadow-sm transform hover:-translate-y-0.5 active:scale-95 transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 disabled:opacity-50 disabled:transform-none disabled:shadow-none"
             >
               <Eye className="w-3.5 h-3.5" />
               <span>แสดงข้อมูล</span>
@@ -193,7 +195,7 @@ const ReadyToSellListPage = () => {
                   placeholder="ค้นหา (SN / ชื่อสินค้า / รุ่น / บาร์โค้ด)..."
                   value={searchText}
                   onChange={(e) => setSearchText(e.target.value)}
-                  className="w-full text-sm pl-10 pr-4 py-2.5 bg-slate-50 focus:bg-white dark:bg-zinc-800 dark:focus:bg-zinc-800/50 border border-slate-200 dark:border-zinc-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 font-medium transition-all disabled:opacity-50"
+                  className="w-full text-sm pl-10 pr-4 py-2.5 bg-slate-50 focus:bg-white dark:bg-zinc-800 dark:focus:bg-zinc-800/50 border border-slate-200 dark:border-zinc-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-medium transition-all disabled:opacity-50"
                   disabled={!hasLoaded}
                   aria-disabled={!hasLoaded}
                 />
@@ -226,7 +228,7 @@ const ReadyToSellListPage = () => {
                 disabled={!hasLoaded || loading}
                 className="inline-flex items-center justify-center gap-1 px-4 h-10 text-xs font-black bg-slate-100 hover:bg-slate-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-200 border border-slate-200/40 dark:border-zinc-700/40 rounded-xl transform active:scale-95 transition-all shadow-sm disabled:opacity-40 disabled:transform-none"
               >
-                <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-orange-500' : ''}`} />
+                <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-emerald-600' : ''}`} />
                 <span>รีเฟรช</span>
               </button>
             </div>
@@ -276,7 +278,7 @@ const ReadyToSellListPage = () => {
               {hasLoaded && !loading && !errorMessage && (
                 <div className="text-xs font-bold text-slate-400 dark:text-zinc-500 flex items-center gap-1 select-none">
                   <span>ค้นพบพิกัดข้อมูลสต๊อกทั้งหมด</span>
-                  <span className="font-black text-orange-500 px-1.5 py-0.5 bg-orange-50 dark:bg-zinc-800 rounded-md text-xs">{totalCount.toLocaleString('th-TH')}</span>
+                  <span className="font-black text-emerald-700 px-1.5 py-0.5 bg-emerald-50 dark:bg-zinc-800 rounded-md text-xs">{totalCount.toLocaleString('th-TH')}</span>
                   <span>รายการ</span>
                 </div>
               )}

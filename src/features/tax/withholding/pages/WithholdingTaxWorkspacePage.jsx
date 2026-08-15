@@ -52,8 +52,8 @@ const WithholdingTaxWorkspacePage = () => {
 
   useEffect(() => { load(); }, [load]);
 
-  const rows = Array.isArray(data?.rows) ? data.rows : [];
-  const filings = Array.isArray(data?.filings) ? data.filings : [];
+  const rows = useMemo(() => (Array.isArray(data?.rows) ? data.rows : []), [data?.rows]);
+  const filings = useMemo(() => (Array.isArray(data?.filings) ? data.filings : []), [data?.filings]);
   const exceptions = Array.isArray(data?.exceptions) ? data.exceptions : [];
   const readiness = data?.readiness || {};
   const summary = data?.summary || {};

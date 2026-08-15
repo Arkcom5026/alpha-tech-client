@@ -33,7 +33,7 @@ const TemplatePriceSnapshotForm = ({ form, setField }) => {
               step="0.01"
               value={form[field.key] ?? ''}
               onChange={(event) => setField(field.key, event.target.value)}
-              className="min-h-11 w-full rounded-2xl border border-slate-200 px-4 text-sm font-semibold outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-200"
+              className="min-h-11 w-full rounded-2xl border border-slate-200 px-4 text-sm font-semibold outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
             />
           </label>
         ))}
@@ -42,7 +42,7 @@ const TemplatePriceSnapshotForm = ({ form, setField }) => {
           <input
             value={form.templateBranchCode ?? 'T01'}
             onChange={(event) => setField('templateBranchCode', event.target.value)}
-            className="min-h-11 w-full rounded-2xl border border-slate-200 px-4 text-sm font-semibold outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-200"
+            className="min-h-11 w-full rounded-2xl border border-slate-200 px-4 text-sm font-semibold outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
           />
         </label>
       </div>

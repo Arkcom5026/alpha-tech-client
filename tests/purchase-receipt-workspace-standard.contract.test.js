@@ -52,7 +52,9 @@ assertIncludes(table, 'cancelPurchaseOrder(id)', 'Receipt UI must coordinate can
 assertIncludes(table, 'fetchPurchaseOrdersForReceiptAction', 'Receipt UI must refresh eligibility after Purchase Order cancellation');
 assertExcludes(table, 'cancelPurchaseOrderAction', 'Receipt UI must not use Receipt-owned Purchase Order cancellation mutation');
 assertIncludes(table, '/pos/purchases/receipt/create/', 'Receipt navigation authority must remain available');
-assertIncludes(table, 'window.confirm', 'Cancel action must preserve explicit confirmation');
+assertIncludes(table, 'ConfirmActionDialog', 'Cancel action must preserve explicit confirmation');
+assertIncludes(table, 'intent="destructive"', 'Cancel confirmation must communicate destructive intent');
+assertExcludes(table, 'window.confirm', 'Cancel action must not use the browser confirmation popup');
 assertIncludes(table, 'ReceiptStatusBadge', 'Receipt status projection must remain visible');
 assertIncludes(table, 'ไม่พบรายการที่ตรงกับเงื่อนไข', 'Receipt empty state must remain explicit');
 assertIncludes(statusBadge, 'aria-label={`สถานะ ${config.label}`}', 'Receipt status badge must remain accessible');

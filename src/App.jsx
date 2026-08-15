@@ -2,8 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAuthStore } from '@/features/auth/store/authStore';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
-import { ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import { FeedbackProvider } from '@/design-system';
 
 import AppRouter from './routes/AppRouter';
 
@@ -121,7 +120,7 @@ const App = () => {
   if (!bootstrapReady) {
     return (
       <>
-        <ToastContainer />
+        <FeedbackProvider />
         <div className="flex h-screen w-screen items-center justify-center bg-slate-50">
           <div className="text-center">
             <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-4 border-blue-500 border-t-transparent" />
@@ -134,7 +133,7 @@ const App = () => {
 
   return (
     <>
-      <ToastContainer />
+      <FeedbackProvider />
       <RouterProvider router={router} />
     </>
   );

@@ -19,7 +19,9 @@ describe('purchase order receipt ownership retirement', () => {
     expect(table).toContain("@/features/purchaseOrder/lifecycle");
     expect(table).toContain('cancelPurchaseOrder');
     expect(table).toContain('fetchPurchaseOrdersForReceiptAction');
-    expect(table).toContain('window.confirm');
+    expect(table).toContain('ConfirmActionDialog');
+    expect(table).toContain('intent="destructive"');
+    expect(table).not.toContain('window.confirm');
   });
 
   it('keeps cancellation implementation owned by purchase order', () => {

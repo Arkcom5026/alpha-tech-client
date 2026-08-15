@@ -9,6 +9,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import useSalesReportStore from '@/features/salesReport/stores/salesReportStore';
 import usePaymentStore from '@/features/payment/store/paymentStore';
+import { InlineFeedback } from '@/design-system';
 
 const formatNumber = (value) =>
   new Intl.NumberFormat('th-TH', {
@@ -123,7 +124,7 @@ const paymentStatusClassMap = {
 };
 
 export const SalesDetailPage = () => {
-  const { saleId } = useParams();
+  const { saleId, shopSlug } = useParams();
 
   const salesDetail = useSalesReportStore((state) => state.salesDetail);
   const salesDetailLoading = useSalesReportStore((state) => state.salesDetailLoading);
@@ -350,9 +351,7 @@ export const SalesDetailPage = () => {
         </section>
 
         {salesDetailError ? (
-          <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">
-            {salesDetailError}
-          </div>
+          <InlineFeedback variant="error" description={salesDetailError} />
         ) : null}
 
         {receivePaymentMessage ? (
@@ -362,9 +361,7 @@ export const SalesDetailPage = () => {
         ) : null}
 
         {(receivePaymentError || paymentError) ? (
-          <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">
-            {receivePaymentError || paymentError}
-          </div>
+          <InlineFeedback variant="error" description={receivePaymentError || paymentError} />
         ) : null}
 
         <section className="grid grid-cols-1 gap-6 xl:grid-cols-[1.35fr_1fr]">
@@ -710,6 +707,4 @@ export const SalesDetailPage = () => {
 };
 
 export default SalesDetailPage;
-
-
 

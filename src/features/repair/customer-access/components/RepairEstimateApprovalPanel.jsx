@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import repairApi from '../../api/repairApi';
+import { ConfirmActionDialog } from '@/design-system';
 
 const money = (value) =>
   new Intl.NumberFormat('th-TH', {
@@ -20,6 +21,7 @@ const RepairEstimateApprovalPanel = ({ repairJobId, job }) => {
   const [approval, setApproval] = useState(null);
   const [requestNote, setRequestNote] = useState('');
   const [state, setState] = useState({ loading: false, error: '', notice: '' });
+  const [publishConfirmationOpen, setPublishConfirmationOpen] = useState(false);
   const workflowStatus = job?.workflow?.status || 'RECEIVED';
   const repairAuthorization = job?.workflow?.preAgreedService || null;
   const hasRepairAuthorization = Boolean(repairAuthorization?.enabled);
@@ -71,7 +73,6 @@ const RepairEstimateApprovalPanel = ({ repairJobId, job }) => {
 
   const publish = async () => {
     if (!canPublish) return;
-    if (!window.confirm('ยืนยันส่งราคาประเมินปัจจุบันให้ลูกค้าพิจารณา?')) return;
     setState({ loading: true, error: '', notice: '' });
     try {
       const payload = await repairApi.publishEstimateApproval(repairJobId, {
@@ -80,6 +81,7 @@ const RepairEstimateApprovalPanel = ({ repairJobId, job }) => {
       });
       setApproval(payload?.approval || null);
       setRequestNote('');
+      setPublishConfirmationOpen(false);
       setState({
         loading: false,
         error: '',
@@ -143,7 +145,7 @@ const RepairEstimateApprovalPanel = ({ repairJobId, job }) => {
           <button
             type="button"
             disabled={state.loading || !canPublish}
-            onClick={publish}
+            onClick={() => setPublishConfirmationOpen(true)}
             className="min-h-11 rounded-xl bg-amber-600 px-5 text-sm font-black text-white disabled:opacity-40"
           >
             {state.loading ? 'กำลังดำเนินการ' : approval?.status === 'PENDING' ? 'ส่งราคาใหม่' : 'ส่งให้ลูกค้า'}
@@ -210,6 +212,18 @@ const RepairEstimateApprovalPanel = ({ repairJobId, job }) => {
       {state.error ? (
         <p className="mt-3 rounded-xl bg-red-50 p-3 text-sm font-bold text-red-700">{state.error}</p>
       ) : null}
+      <ConfirmActionDialog
+        open={publishConfirmationOpen}
+        title="ยืนยันส่งราคาประเมิน"
+        description={`ส่งราคาประเมิน ${money(job?.estimatedCost)} ให้ลูกค้าพิจารณา`}
+        confirmLabel="ยืนยันส่งราคา"
+        intent="primary"
+        loading={state.loading}
+        onConfirm={publish}
+        onClose={() => {
+          if (!state.loading) setPublishConfirmationOpen(false);
+        }}
+      />
     </section>
   );
 };

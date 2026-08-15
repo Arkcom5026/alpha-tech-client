@@ -188,7 +188,7 @@ const MarketplacePortalPage = () => {
             <button type="button" aria-label="สินค้าที่สนใจ" className="hidden h-9 w-9 items-center justify-center rounded-xl text-slate-500 transition hover:bg-rose-50 hover:text-rose-600 sm:flex">
               <FaRegHeart />
             </button>
-            <button type="button" aria-label="การแจ้งเตือน" className="relative hidden h-9 w-9 items-center justify-center rounded-xl text-slate-500 transition hover:bg-amber-50 hover:text-amber-600 sm:flex">
+            <button type="button" aria-label="การแจ้งเตือน" className="relative hidden h-9 w-9 items-center justify-center rounded-xl text-slate-500 transition hover:bg-emerald-50 hover:text-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 sm:flex">
               <FaBell />
               <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-rose-500 ring-2 ring-white" />
             </button>
@@ -221,7 +221,7 @@ const MarketplacePortalPage = () => {
               <button type="button" onClick={() => setSortMode('nearest')} aria-pressed={sortMode === 'nearest'} className={`h-10 rounded-xl px-3 text-xs font-bold transition ${sortMode === 'nearest' ? 'bg-sky-100 text-sky-800' : 'bg-white text-slate-500 hover:bg-slate-100'}`}>
                 ใกล้ที่สุด
               </button>
-              <button type="button" onClick={() => setSortMode('latest')} aria-pressed={sortMode === 'latest'} className={`h-10 rounded-xl px-3 text-xs font-bold transition ${sortMode === 'latest' ? 'bg-amber-100 text-amber-800' : 'bg-white text-slate-500 hover:bg-slate-100'}`}>
+              <button type="button" onClick={() => setSortMode('latest')} aria-pressed={sortMode === 'latest'} className={`h-10 rounded-xl px-3 text-xs font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${sortMode === 'latest' ? 'bg-emerald-100 text-emerald-800' : 'bg-white text-slate-500 hover:bg-slate-100'}`}>
                 ล่าสุด
               </button>
             </div>

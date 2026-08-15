@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { decidePublicRepairEstimate } from '../api/repairTrackingPublicApi';
+import { ConfirmActionDialog, InlineFeedback } from '@/design-system';
 
 const money = (value) =>
   new Intl.NumberFormat('th-TH', {
@@ -12,6 +13,7 @@ const EstimateDecisionCard = ({ token, approval, onChanged }) => {
   const [confirmedByName, setConfirmedByName] = useState('');
   const [customerNote, setCustomerNote] = useState('');
   const [state, setState] = useState({ loading: false, error: '' });
+  const [pendingDecision, setPendingDecision] = useState(null);
 
   if (!approval) return null;
 
@@ -20,11 +22,6 @@ const EstimateDecisionCard = ({ token, approval, onChanged }) => {
       setState({ loading: false, error: 'กรุณาระบุชื่อผู้ยืนยัน' });
       return;
     }
-    const message = decision === 'APPROVED'
-      ? `ยืนยันอนุมัติราคาประเมิน ${money(approval.estimateAmount)} ใช่หรือไม่?`
-      : 'ยืนยันไม่อนุมัติราคาประเมินนี้ใช่หรือไม่?';
-    if (!window.confirm(message)) return;
-
     setState({ loading: true, error: '' });
     try {
       const updated = await decidePublicRepairEstimate(token, {
@@ -34,6 +31,7 @@ const EstimateDecisionCard = ({ token, approval, onChanged }) => {
         customerNote: customerNote.trim() || null,
       });
       onChanged(updated);
+      setPendingDecision(null);
       setState({ loading: false, error: '' });
     } catch (error) {
       setState({ loading: false, error: error.message });
@@ -94,13 +92,13 @@ const EstimateDecisionCard = ({ token, approval, onChanged }) => {
         />
       </label>
       {state.error ? (
-        <p className="mt-3 rounded-xl bg-red-50 p-3 text-sm font-bold text-red-700">{state.error}</p>
+        <InlineFeedback variant="error" description={state.error} className="mt-3" />
       ) : null}
       <div className="mt-4 grid grid-cols-2 gap-2">
         <button
           type="button"
           disabled={state.loading}
-          onClick={() => decide('REJECTED')}
+          onClick={() => setPendingDecision('REJECTED')}
           className="min-h-12 rounded-xl border border-red-200 bg-white font-black text-red-700 disabled:opacity-50"
         >
           ไม่อนุมัติ
@@ -108,12 +106,24 @@ const EstimateDecisionCard = ({ token, approval, onChanged }) => {
         <button
           type="button"
           disabled={state.loading}
-          onClick={() => decide('APPROVED')}
+          onClick={() => setPendingDecision('APPROVED')}
           className="min-h-12 rounded-xl bg-emerald-700 font-black text-white disabled:opacity-50"
         >
           {state.loading ? 'กำลังบันทึก' : 'อนุมัติราคา'}
         </button>
       </div>
+      <ConfirmActionDialog
+        open={Boolean(pendingDecision)}
+        title={pendingDecision === 'APPROVED' ? 'ยืนยันอนุมัติราคาประเมิน' : 'ยืนยันไม่อนุมัติราคาประเมิน'}
+        description={pendingDecision === 'APPROVED' ? `ราคาประเมิน ${money(approval.estimateAmount)}` : 'ร้านจะได้รับผลการพิจารณานี้ทันที'}
+        confirmLabel={pendingDecision === 'APPROVED' ? 'ยืนยันอนุมัติ' : 'ยืนยันไม่อนุมัติ'}
+        intent={pendingDecision === 'APPROVED' ? 'primary' : 'destructive'}
+        loading={state.loading}
+        onConfirm={() => decide(pendingDecision)}
+        onClose={() => {
+          if (!state.loading) setPendingDecision(null);
+        }}
+      />
     </section>
   );
 };

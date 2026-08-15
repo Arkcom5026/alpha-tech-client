@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { toast } from 'react-toastify';
+import { feedback as toast } from '@/design-system';
 
 import {
   addQuickReceiptItem,
@@ -96,7 +96,9 @@ const useQuickReceiptSessionController = ({
           taxDocumentMode: normalizeTaxDocumentMode(parsed.header?.taxDocumentMode),
         }));
         setLocalLines(Array.isArray(parsed.lines) ? parsed.lines : []);
-      } catch (_error) {}
+      } catch {
+        localStorage.removeItem(STORAGE_KEY);
+      }
     }
 
     Promise.all([loadQuickReceiptSuppliers(), listQuickReceiptDrafts({ status: 'DRAFT' })])
@@ -112,8 +114,10 @@ const useQuickReceiptSessionController = ({
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ header, lines: localLines }));
   }, [header, localLines, receipt?.id]);
 
-  const serverLines = receipt?.items || [];
-  const allLines = [...serverLines, ...localLines];
+  const allLines = useMemo(
+    () => [...(receipt?.items || []), ...localLines],
+    [receipt?.items, localLines]
+  );
   const totalQuantity = useMemo(
     () => allLines.reduce((sum, item) => sum + Number(item.quantity || 0), 0),
     [allLines]
@@ -156,7 +160,9 @@ const useQuickReceiptSessionController = ({
   const uploadLocalLines = async (activeReceipt) => {
     let latest = activeReceipt;
     for (const line of localLines) {
-      const { localId, productName, ...payload } = line;
+      const payload = { ...line };
+      delete payload.localId;
+      delete payload.productName;
       latest = await addQuickReceiptItem(latest.id, payload);
     }
     setReceipt(latest);
@@ -200,7 +206,12 @@ const useQuickReceiptSessionController = ({
         completed = await completeQuickReceipt({
           ...header,
           supplierId: Number(header.supplierId),
-          items: localLines.map(({ localId, productName, ...line }) => line),
+          items: localLines.map((item) => {
+            const line = { ...item };
+            delete line.localId;
+            delete line.productName;
+            return line;
+          }),
         });
       }
 

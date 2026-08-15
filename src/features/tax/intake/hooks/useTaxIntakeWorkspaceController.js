@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { toast } from 'react-toastify';
+import { feedback as toast } from '@/design-system';
 import { useBranchStore } from '@/features/branch/store/branchStore';
 import { listTaxPeriods } from '@/features/tax/periods/api/taxPeriodApi';
 import {

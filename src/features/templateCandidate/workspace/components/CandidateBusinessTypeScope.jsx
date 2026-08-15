@@ -1,6 +1,6 @@
 const CandidateBusinessTypeScope = ({ options, businessType, hasBusinessType, onSelect }) => (
-  <section className="rounded-3xl border border-orange-200 bg-orange-50/60 p-5 shadow-sm">
-    <p className="text-[11px] font-black uppercase tracking-[0.14em] text-orange-600">Business Type Scope</p>
+  <section className="rounded-3xl border border-emerald-200 bg-emerald-50/60 p-5 shadow-sm">
+    <p className="text-[11px] font-black uppercase tracking-[0.14em] text-emerald-700">Business Type Scope</p>
     <h2 className="mt-1 text-lg font-black text-slate-900">เลือกกลุ่มธุรกิจที่ต้องการดำเนินการ</h2>
     <div className="mt-4 flex flex-wrap gap-2">
       {options.map((item) => (
@@ -10,8 +10,8 @@ const CandidateBusinessTypeScope = ({ options, businessType, hasBusinessType, on
           onClick={() => onSelect(item.value)}
           className={`min-h-11 rounded-2xl border px-4 text-sm font-black transition ${
             businessType === item.value
-              ? 'border-orange-500 bg-orange-500 text-white shadow-sm'
-              : 'border-orange-200 bg-white text-slate-700 hover:border-orange-400'
+              ? 'border-emerald-600 bg-emerald-600 text-white shadow-sm'
+              : 'border-emerald-200 bg-white text-slate-700 hover:border-emerald-400'
           }`}
         >
           {item.label}

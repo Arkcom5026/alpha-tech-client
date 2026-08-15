@@ -83,7 +83,7 @@ const ProductTemplateGovernanceListPage = () => {
   return (
     <div className="space-y-5">
       <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-        <p className="text-[11px] font-black uppercase tracking-[0.18em] text-orange-500">Catalog Governance</p>
+        <p className="text-[11px] font-black uppercase tracking-[0.18em] text-emerald-600">Catalog Governance</p>
         <div className="mt-2 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <h1 className="text-2xl font-black text-slate-900">Product Templates</h1>
@@ -95,7 +95,7 @@ const ProductTemplateGovernanceListPage = () => {
             <button
               type="button"
               onClick={() => navigate(newTemplatePath)}
-              className="rounded-2xl bg-orange-500 px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-white shadow-sm transition hover:bg-orange-600"
+              className="rounded-2xl bg-emerald-600 px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-white shadow-sm transition hover:bg-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2"
             >
               + New Template
             </button>
@@ -127,7 +127,7 @@ const ProductTemplateGovernanceListPage = () => {
             value={search || ''}
             onChange={(event) => setSearchAction(event.target.value)}
             placeholder="Search template name, brand, product type..."
-            className="min-h-11 flex-1 rounded-2xl border border-slate-200 px-4 text-sm font-semibold outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-200"
+            className="min-h-11 flex-1 rounded-2xl border border-slate-200 px-4 text-sm font-semibold outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
           />
           <label className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-600">
             <input
@@ -156,7 +156,7 @@ const ProductTemplateGovernanceListPage = () => {
           </button>
           <button
             type="submit"
-            className="min-h-11 rounded-2xl bg-slate-950 px-5 text-sm font-black text-white transition hover:bg-orange-500 disabled:opacity-60"
+            className="min-h-11 rounded-2xl bg-emerald-600 px-5 text-sm font-black text-white transition hover:bg-emerald-700 disabled:opacity-60"
             disabled={isLoading}
           >
             {isLoading ? 'Loading...' : 'Search'}
@@ -193,7 +193,7 @@ const ProductTemplateGovernanceListPage = () => {
                   key={id || getTemplateName(template)}
                   type="button"
                   onClick={() => id && navigate(`${basePath}/${id}`)}
-                  className="grid w-full grid-cols-[1.6fr_1fr_1fr_1fr_110px] gap-3 px-4 py-4 text-left transition hover:bg-orange-50/70"
+                  className="grid w-full grid-cols-[1.6fr_1fr_1fr_1fr_110px] gap-3 px-4 py-4 text-left transition hover:bg-emerald-50/70"
                 >
                   <div className="min-w-0">
                     <p className="truncate text-sm font-black text-slate-900">{getTemplateName(template)}</p>

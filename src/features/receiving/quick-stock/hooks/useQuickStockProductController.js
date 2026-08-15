@@ -1,7 +1,7 @@
 // src/features/receiving/quick-stock/hooks/useQuickStockProductController.js
 
 import { useCallback, useEffect, useState } from "react";
-import { toast } from "react-toastify";
+import { feedback as toast } from '@/design-system';
 
 import {
   buildCreateOperationalProductPayload,
@@ -330,23 +330,23 @@ const useQuickStockProductController = ({
   const handleDeleteSelectedProductForRecovery = useCallback(async () => {
     if (!operationalProduct?.id) return;
 
-    const ok = window.confirm(
-      `ยืนยันลบสินค้าในช่วง Recovery?\n\n${operationalProduct.name}\n\nควรใช้เฉพาะรายการซ้ำ/ผิด และยังไม่มีประวัติรับเข้าเท่านั้น`
-    );
-    if (!ok) return;
-
     setIsDeletingProduct(true);
 
     try {
       const result = await deleteOperationalProductAction(operationalProduct.id);
-      if (result === false) return toast.error("ลบสินค้าไม่สำเร็จ อาจมีประวัติใช้งานแล้ว");
+      if (result === false) {
+        toast.error("ลบสินค้าไม่สำเร็จ อาจมีประวัติใช้งานแล้ว");
+        return false;
+      }
 
       toast.success("ลบสินค้าเรียบร้อย");
       clearProductSelection();
       await executeProductSearch();
+      return true;
     } catch (err) {
       console.error("Delete product failed:", err);
       toast.error(err?.message || "ลบสินค้าไม่สำเร็จ");
+      return false;
     } finally {
       setIsDeletingProduct(false);
     }

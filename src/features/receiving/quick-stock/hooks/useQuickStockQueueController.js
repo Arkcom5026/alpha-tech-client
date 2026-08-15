@@ -1,7 +1,7 @@
 // src/features/receiving/quick-stock/hooks/useQuickStockQueueController.js
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { toast } from "react-toastify";
+import { feedback as toast } from '@/design-system';
 
 import { normalizeText } from "../utils/quickStockRuntimeUtils";
 

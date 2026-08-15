@@ -4,7 +4,7 @@
 
 import React, { useEffect } from 'react';
 import useSalesReportStore from '@/features/salesReport/stores/salesReportStore';
-import { Link } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import {
   DollarSign,
   Receipt,
@@ -14,6 +14,7 @@ import {
   TrendingUp,
   BarChart3,
 } from 'lucide-react';
+import { InlineFeedback } from '@/design-system';
 
 const formatNumber = (value) =>
   new Intl.NumberFormat('th-TH', {
@@ -27,6 +28,7 @@ const KPI_CARD_CLASS =
   'rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md';
 
 const SalesDashboardPage = () => {
+  const { shopSlug } = useParams();
   const filters = useSalesReportStore((state) => state.filters);
   const dashboard = useSalesReportStore((state) => state.dashboard);
   const dashboardLoading = useSalesReportStore((state) => state.dashboardLoading);
@@ -218,7 +220,7 @@ const SalesDashboardPage = () => {
                 <h2 className="mt-2 text-3xl font-bold text-slate-900">{formatNumber(summary.pendingOrders)}</h2>
                 <p className="mt-2 text-sm text-slate-500">ใช้เชื่อมการตัดสินใจระหว่างยอดขายกับการจัดซื้อ</p>
               </div>
-              <div className="rounded-2xl bg-orange-50 p-3 text-orange-600">
+              <div className="rounded-2xl bg-amber-50 p-3 text-amber-700">
                 <AlertTriangle size={28} />
               </div>
             </div>
@@ -254,8 +256,8 @@ const SalesDashboardPage = () => {
                 <p className="text-sm font-medium text-slate-500">กำลังโหลดข้อมูลกราฟยอดขาย...</p>
               </div>
             ) : dashboardError ? (
-              <div className="flex h-80 items-center justify-center rounded-2xl border border-rose-200 bg-rose-50 p-4">
-                <p className="text-sm font-medium text-rose-700">{dashboardError}</p>
+              <div className="flex h-80 items-center justify-center rounded-2xl bg-slate-50 p-4">
+                <InlineFeedback variant="error" description={dashboardError} className="w-full max-w-xl" />
               </div>
             ) : hasDailySales ? (
               <div className="flex h-80 items-end gap-3 rounded-2xl bg-slate-50 p-4">
@@ -379,4 +381,3 @@ const SalesDashboardPage = () => {
 };
 
 export default SalesDashboardPage;
-

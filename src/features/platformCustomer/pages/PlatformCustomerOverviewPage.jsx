@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Eye, Filter, RotateCcw, Search } from 'lucide-react';
 import { getPlatformCustomerOverview } from '../api/platformCustomerApi';
 import PlatformCustomer360Drawer from '../components/PlatformCustomer360Drawer';
@@ -44,15 +44,15 @@ const PlatformCustomerOverviewPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  const load = async (nextFilters = filters) => {
+  const load = useCallback(async (nextFilters) => {
     setLoading(true);
     setError('');
     try { setData(await getPlatformCustomerOverview(nextFilters)); }
     catch (cause) { setError(cause?.response?.data?.message || 'โหลดข้อมูลลูกค้าแพลตฟอร์มไม่สำเร็จ'); }
     finally { setLoading(false); }
-  };
+  }, []);
 
-  useEffect(() => { load(initialFilters); }, []);
+  useEffect(() => { load(initialFilters); }, [load]);
 
   const options = data.filterOptions || {};
   const districts = useMemo(() => (options.districts || []).filter(
@@ -89,10 +89,10 @@ const PlatformCustomerOverviewPage = () => {
           <div className="flex flex-wrap gap-2">
             <div className="relative min-w-[280px] flex-1">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-              <input value={filters.query} onChange={(e) => updateFilter('query', e.target.value)} placeholder="ค้นหาเบอร์โทร อีเมล ชื่อ บริษัท หรือเลขผู้เสียภาษี" className="w-full rounded-2xl border border-slate-200 py-3 pl-10 pr-4 text-sm font-semibold outline-none focus:border-orange-400" />
+              <input value={filters.query} onChange={(e) => updateFilter('query', e.target.value)} placeholder="ค้นหาเบอร์โทร อีเมล ชื่อ บริษัท หรือเลขผู้เสียภาษี" className="w-full rounded-2xl border border-slate-200 py-3 pl-10 pr-4 text-sm font-semibold outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100" />
             </div>
             <button className="rounded-2xl bg-slate-900 px-5 py-3 text-sm font-black text-white">ค้นหา</button>
-            <button type="button" onClick={resetFilters} className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-3 text-sm font-black text-slate-600 hover:border-orange-300 hover:text-orange-600"><RotateCcw className="h-4 w-4" /> ล้างตัวกรอง</button>
+            <button type="button" onClick={resetFilters} className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-3 text-sm font-black text-slate-600 hover:border-emerald-300 hover:text-emerald-700"><RotateCcw className="h-4 w-4" /> ล้างตัวกรอง</button>
           </div>
 
           <div className="grid gap-3 rounded-2xl border border-slate-200 bg-slate-50/70 p-4 md:grid-cols-2 xl:grid-cols-6">
@@ -126,7 +126,7 @@ const PlatformCustomerOverviewPage = () => {
               </tr></thead>
               <tbody className="divide-y divide-slate-100">{(data.results || []).map((identity, index) => {
                 const firstStore = identity.storeRelationships?.[0];
-                return <tr key={identity.userId} className="align-top hover:bg-orange-50/30">
+                return <tr key={identity.userId} className="align-top hover:bg-emerald-50/30">
                   <td className="sticky left-0 z-10 border-r border-slate-100 bg-white px-4 py-4 font-bold text-slate-500">{index + 1}</td>
                   <td className="sticky left-[72px] z-10 border-r border-slate-100 bg-white px-4 py-4 font-black text-slate-900">#{identity.userId}</td>
                   <td className="border-r border-slate-100 px-4 py-4 font-semibold text-slate-700">{identity.loginId || '-'}</td><td className="border-r border-slate-100 px-4 py-4 font-semibold text-slate-600">{identity.email || '-'}</td><td className="border-r border-slate-100 px-4 py-4 font-semibold text-slate-600">{resolveCustomerTypes(identity)}</td>

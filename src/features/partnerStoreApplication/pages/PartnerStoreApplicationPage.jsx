@@ -72,8 +72,8 @@ export default function PartnerStoreApplicationPage() {
   return (
     <main className="min-h-screen bg-[#FDFBF9] px-4 py-8 text-slate-800 md:py-12">
       <section className="mx-auto max-w-2xl rounded-3xl border border-slate-200 bg-white p-6 shadow-xl md:p-9">
-        <Link to="/partner-portal" className="text-sm font-bold text-orange-600">← กลับหน้าพาร์ตเนอร์</Link>
-        <p className="mt-5 text-xs font-black uppercase tracking-[0.2em] text-orange-500">Partner application</p>
+        <Link to="/partner-portal" className="text-sm font-bold text-emerald-700">← กลับหน้าพาร์ตเนอร์</Link>
+        <p className="mt-5 text-xs font-black uppercase tracking-[0.2em] text-emerald-600">Partner application</p>
         <h1 className="mt-2 text-3xl font-black">สมัครเป็นร้านพาร์ตเนอร์</h1>
         <p className="mt-3 text-sm leading-6 text-slate-500">
           กรอกข้อมูลสำหรับยื่นใบสมัครร้านพาร์ตเนอร์ ขั้นตอนนี้เป็นการส่งข้อมูลเพื่อพิจารณาเท่านั้น และยังไม่สร้างร้านหรือบัญชีเข้าใช้งานระบบ
@@ -108,7 +108,7 @@ export default function PartnerStoreApplicationPage() {
           <label className="block text-sm font-bold">หมายเหตุ (ไม่บังคับ)
             <textarea rows="2" value={form.note} onChange={update('note')} className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-3 font-medium" />
           </label>
-          <button disabled={submitting} className="w-full rounded-xl bg-orange-500 px-5 py-3.5 text-sm font-black text-white disabled:opacity-60">
+          <button disabled={submitting} className="w-full rounded-xl bg-emerald-600 px-5 py-3.5 text-sm font-black text-white transition hover:bg-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 disabled:opacity-60">
             {submitting ? 'กำลังส่งใบสมัคร…' : 'ส่งใบสมัคร'}
           </button>
         </form>

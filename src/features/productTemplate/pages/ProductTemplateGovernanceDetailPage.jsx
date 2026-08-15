@@ -96,7 +96,7 @@ const ProductTemplateGovernanceDetailPage = () => {
         <div className="grid gap-5 lg:grid-cols-[1fr_220px] lg:items-start">
           <div>
             <div className="flex flex-wrap items-center gap-2">
-              <p className="text-[11px] font-black uppercase tracking-[0.18em] text-orange-500">Template Catalog</p>
+              <p className="text-[11px] font-black uppercase tracking-[0.18em] text-emerald-600">Template Catalog</p>
               <StatusBadge active={active} />
             </div>
             <h1 className="mt-2 text-2xl font-black text-slate-900">{name}</h1>
@@ -106,7 +106,7 @@ const ProductTemplateGovernanceDetailPage = () => {
           </div>
 
           <div className="flex flex-col gap-2">
-            <button type="button" onClick={() => navigate(editPath)} disabled={isSaving || !id} className="rounded-2xl border border-orange-200 bg-orange-50 px-5 py-3 text-sm font-black text-orange-700 transition hover:bg-orange-100 disabled:opacity-60">
+            <button type="button" onClick={() => navigate(editPath)} disabled={isSaving || !id} className="rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-3 text-sm font-black text-emerald-700 transition hover:bg-emerald-100 disabled:opacity-60">
               Edit Template
             </button>
             {active ? (

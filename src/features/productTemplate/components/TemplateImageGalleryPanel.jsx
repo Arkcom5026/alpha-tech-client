@@ -70,7 +70,7 @@ const TemplateImageGalleryPanel = ({ template }) => {
           type="button"
           onClick={() => inputRef.current?.click()}
           disabled={isUploadingImage || !templateId}
-          className="rounded-2xl bg-slate-950 px-4 py-3 text-sm font-black text-white transition hover:bg-orange-500 disabled:opacity-60"
+          className="rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-black text-white transition hover:bg-emerald-700 disabled:opacity-60"
         >
           {isUploadingImage ? 'Processing...' : '+ Upload Image'}
         </button>
@@ -87,7 +87,7 @@ const TemplateImageGalleryPanel = ({ template }) => {
                 <div className="relative aspect-square">
                   <img src={url} alt="Template gallery" className="h-full w-full object-cover" />
                   {image.isCover && (
-                    <span className="absolute left-2 top-2 rounded-full bg-white/90 px-2 py-0.5 text-[10px] font-black text-orange-600">Cover</span>
+                    <span className="absolute left-2 top-2 rounded-full bg-white/90 px-2 py-0.5 text-[10px] font-black text-emerald-700">Cover</span>
                   )}
                 </div>
                 <div className="grid grid-cols-2 gap-1 p-2">

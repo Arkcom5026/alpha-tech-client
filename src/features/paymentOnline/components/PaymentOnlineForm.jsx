@@ -1,6 +1,7 @@
 // src/features/paymentOnline/components/PaymentOnlineForm.jsx
 
 import React, { useState } from 'react';
+import { feedback } from '@/design-system';
 
 const PaymentOnlineForm = ({ orderId, uploadSlipAction, submitPaymentSlipAction }) => {
   const [file, setFile] = useState(null);
@@ -20,12 +21,12 @@ const PaymentOnlineForm = ({ orderId, uploadSlipAction, submitPaymentSlipAction 
 
       await submitPaymentSlipAction(orderId, { note, slipUrl: url });
 
-      alert('ส่งข้อมูลการชำระเงินเรียบร้อยแล้ว');
+      feedback.success('ส่งข้อมูลการชำระเงินเรียบร้อยแล้ว');
       setFile(null);
       setNote('');
     } catch (err) {
       console.error('submit error:', err);
-      alert('เกิดข้อผิดพลาดในการส่งข้อมูล');
+      feedback.error(err, { fallback: 'เกิดข้อผิดพลาดในการส่งข้อมูล' });
     } finally {
       setIsSubmitting(false);
     }

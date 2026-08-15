@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom'; // 🟢 ดึง useParams ร่วมขบวนตรวจ
 import useSalesReportStore from '@/features/salesReport/stores/salesReportStore';
+import { InlineFeedback } from '@/design-system';
 
 // ✅ local helpers (scoped fix)
 const KPI_CARD_CLASS =
@@ -360,9 +361,7 @@ const SalesListPage = () => {
 
           {salesListError ? (
             <div className="px-6 py-5">
-              <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">
-                {salesListError}
-              </div>
+              <InlineFeedback variant="error" description={salesListError} />
             </div>
           ) : null}
 

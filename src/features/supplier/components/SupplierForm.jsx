@@ -46,7 +46,7 @@ const SupplierForm = ({
                 type="text"
                 placeholder="ระบุชื่อร้านค้าหรือชื่อบริษัท..."
                 {...register('name', { required: 'กรุณาระบุชื่อผู้ขายเพื่อบันทึกคลัง' })}
-                className="h-8 pl-8 pr-3 font-semibold text-slate-900 bg-slate-50/50 border border-slate-200 focus:border-orange-500 rounded-lg outline-none w-full transition-all"
+                className="h-8 pl-8 pr-3 font-semibold text-slate-900 bg-slate-50/50 border border-slate-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 rounded-lg outline-none w-full transition-all"
               />
             </div>
             {errors.name && (
@@ -64,7 +64,7 @@ const SupplierForm = ({
                 type="text"
                 placeholder="เช่น ผู้จัดการฝ่ายขาย, คุณสมชาย..."
                 {...register('contactPerson')}
-                className="h-8 pl-8 pr-3 font-semibold text-slate-900 bg-slate-50/50 border border-slate-200 focus:border-orange-500 rounded-lg outline-none w-full transition-all"
+                className="h-8 pl-8 pr-3 font-semibold text-slate-900 bg-slate-50/50 border border-slate-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 rounded-lg outline-none w-full transition-all"
               />
             </div>
           </div>
@@ -79,7 +79,7 @@ const SupplierForm = ({
                 type="text"
                 placeholder="เช่น 02-XXX-XXXX หรือ 081-XXX-XXXX"
                 {...register('phone', { required: 'กรุณาระบุเบอร์โทรศัพท์ติดต่อ' })}
-                className="h-8 pl-8 pr-3 font-mono font-semibold text-slate-900 bg-slate-50/50 border border-slate-200 focus:border-orange-500 rounded-lg outline-none w-full transition-all"
+                className="h-8 pl-8 pr-3 font-mono font-semibold text-slate-900 bg-slate-50/50 border border-slate-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 rounded-lg outline-none w-full transition-all"
               />
             </div>
             {errors.phone && (
@@ -97,7 +97,7 @@ const SupplierForm = ({
                 type="email"
                 placeholder="example@supplier.com"
                 {...register('email')}
-                className="h-8 pl-8 pr-3 font-semibold text-slate-900 bg-slate-50/50 border border-slate-200 focus:border-orange-500 rounded-lg outline-none w-full transition-all"
+                className="h-8 pl-8 pr-3 font-semibold text-slate-900 bg-slate-50/50 border border-slate-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 rounded-lg outline-none w-full transition-all"
               />
             </div>
           </div>
@@ -110,7 +110,7 @@ const SupplierForm = ({
                 type="text"
                 placeholder="ระบุเลขผู้เสียภาษี 13 หลัก..."
                 {...register('taxId')}
-                className="h-8 pl-8 pr-3 font-mono font-semibold text-slate-900 bg-slate-50/50 border border-slate-200 focus:border-orange-500 rounded-lg outline-none w-full transition-all"
+                className="h-8 pl-8 pr-3 font-mono font-semibold text-slate-900 bg-slate-50/50 border border-slate-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 rounded-lg outline-none w-full transition-all"
               />
             </div>
           </div>
@@ -123,7 +123,7 @@ const SupplierForm = ({
                 type="text"
                 placeholder="ระบุจังหวัด..."
                 {...register('province')}
-                className="h-8 pl-8 pr-3 font-semibold text-slate-900 bg-slate-50/50 border border-slate-200 focus:border-orange-500 rounded-lg outline-none w-full transition-all"
+                className="h-8 pl-8 pr-3 font-semibold text-slate-900 bg-slate-50/50 border border-slate-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 rounded-lg outline-none w-full transition-all"
               />
             </div>
           </div>
@@ -134,7 +134,7 @@ const SupplierForm = ({
               type="text"
               placeholder="เช่น 10000"
               {...register('postalCode')}
-              className="h-8 px-2.5 font-mono font-semibold text-slate-900 bg-slate-50/50 border border-slate-200 focus:border-orange-500 rounded-lg outline-none w-full transition-all"
+              className="h-8 px-2.5 font-mono font-semibold text-slate-900 bg-slate-50/50 border border-slate-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 rounded-lg outline-none w-full transition-all"
             />
           </div>
 
@@ -153,7 +153,7 @@ const SupplierForm = ({
               rows={2}
               placeholder="ระบุที่อยู่ เลขที่ อาคาร ถนน ตำบล อำเภอ..."
               {...register('address')}
-              className="p-2 text-xs font-semibold text-slate-900 bg-slate-50/50 border border-slate-200 focus:border-orange-500 rounded-lg outline-none w-full transition-all resize-none font-sans"
+              className="p-2 text-xs font-semibold text-slate-900 bg-slate-50/50 border border-slate-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 rounded-lg outline-none w-full transition-all resize-none font-sans"
             />
           </div>
 
@@ -168,7 +168,7 @@ const SupplierForm = ({
               <Landmark className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-slate-400" />
               <select
                 {...register('bankId')}
-                className="h-8 pl-8 pr-8 text-xs font-black bg-slate-50/50 border border-slate-200 focus:border-orange-500 rounded-lg outline-none w-full transition-all appearance-none cursor-pointer"
+                className="h-8 pl-8 pr-8 text-xs font-black bg-slate-50/50 border border-slate-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 rounded-lg outline-none w-full transition-all appearance-none cursor-pointer"
               >
                 <option value="">-- เลือกธนาคารผู้โอน --</option>
                 {banks.map((bank) => (
@@ -187,7 +187,7 @@ const SupplierForm = ({
               type="text"
               placeholder="ระบุเลขบัญชีรับเงินโอน..."
               {...register('accountNumber')}
-              className="h-8 px-2.5 font-mono font-semibold text-slate-900 bg-slate-50/50 border border-slate-200 focus:border-orange-500 rounded-lg outline-none w-full transition-all"
+              className="h-8 px-2.5 font-mono font-semibold text-slate-900 bg-slate-50/50 border border-slate-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 rounded-lg outline-none w-full transition-all"
             />
           </div>
 
@@ -197,7 +197,7 @@ const SupplierForm = ({
               type="text"
               placeholder="เช่น ออมทรัพย์, กระแสรายวัน..."
               {...register('accountType')}
-              className="h-8 px-2.5 font-semibold text-slate-900 bg-slate-50/50 border border-slate-200 focus:border-orange-500 rounded-lg outline-none w-full transition-all"
+              className="h-8 px-2.5 font-semibold text-slate-900 bg-slate-50/50 border border-slate-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 rounded-lg outline-none w-full transition-all"
             />
           </div>
 
@@ -216,7 +216,7 @@ const SupplierForm = ({
                   type="number"
                   placeholder="0.00"
                   {...register('creditLimit', { valueAsNumber: true, min: 0 })}
-                  className="h-8 px-2.5 font-mono font-bold text-slate-900 bg-slate-50/50 border border-slate-200 focus:border-orange-500 rounded-lg outline-none w-full transition-all"
+                  className="h-8 px-2.5 font-mono font-bold text-slate-900 bg-slate-50/50 border border-slate-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 rounded-lg outline-none w-full transition-all"
                 />
               </div>
 
@@ -236,7 +236,7 @@ const SupplierForm = ({
                   type="number"
                   placeholder="เช่น 30, 45, 60 วัน"
                   {...register('paymentTerms', { valueAsNumber: true, min: 0 })}
-                  className="h-8 px-2.5 font-mono font-bold text-slate-900 bg-slate-50/50 border border-slate-200 focus:border-orange-500 rounded-lg outline-none w-full transition-all"
+                  className="h-8 px-2.5 font-mono font-bold text-slate-900 bg-slate-50/50 border border-slate-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 rounded-lg outline-none w-full transition-all"
                 />
               </div>
 
@@ -248,7 +248,7 @@ const SupplierForm = ({
                   rows={2}
                   placeholder="ระบุข้อตกลงเพิ่มเติม..."
                   {...register('notes')}
-                  className="p-2 text-xs font-semibold text-slate-900 bg-slate-50/50 border border-slate-200 focus:border-orange-500 rounded-lg outline-none w-full transition-all resize-none font-sans"
+                  className="p-2 text-xs font-semibold text-slate-900 bg-slate-50/50 border border-slate-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 rounded-lg outline-none w-full transition-all resize-none font-sans"
                 />
               </div>
             </>

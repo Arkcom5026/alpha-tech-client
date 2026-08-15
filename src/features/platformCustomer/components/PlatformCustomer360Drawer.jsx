@@ -34,7 +34,7 @@ const PlatformCustomer360Drawer = ({ identity, onClose }) => {
             <h2 className="mt-2 text-xl font-black text-slate-900">Platform Identity #{identity.userId}</h2>
             <p className="mt-1 text-sm font-semibold text-slate-500">Read-only relationship overview</p>
           </div>
-          <button onClick={onClose} className="rounded-xl border border-slate-200 p-2 text-slate-500 hover:border-orange-300 hover:text-orange-600">
+          <button onClick={onClose} className="rounded-xl border border-slate-200 p-2 text-slate-500 hover:border-emerald-300 hover:text-emerald-700">
             <X className="h-5 w-5" />
           </button>
         </header>

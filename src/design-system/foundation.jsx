@@ -14,6 +14,8 @@ const buttonTone = {
   secondary:
     'border border-[hsl(var(--ads-border-default))] bg-[hsl(var(--ads-surface-base))] text-[hsl(var(--ads-text-default))] hover:bg-[hsl(var(--ads-surface-subtle))]',
   danger: 'bg-[hsl(var(--ads-danger))] text-white hover:brightness-95',
+  warning:
+    'border border-[hsl(var(--ads-warning)/0.45)] bg-[hsl(var(--ads-warning-subtle))] text-[hsl(var(--ads-warning))] hover:brightness-95',
   ghost:
     'text-[hsl(var(--ads-text-default))] hover:bg-[hsl(var(--ads-surface-subtle))]',
 };
@@ -292,6 +294,7 @@ export function PageHeader({ title, description, actions, className = '' }) {
 }
 
 export function Stack({
+  // eslint-disable-next-line no-unused-vars -- JSX dynamic element selected by the public `as` prop.
   as: Component = 'div',
   direction = 'column',
   gap = 4,
@@ -324,7 +327,12 @@ export function Stack({
   );
 }
 
-export function Card({ as: Component = 'section', className = '', ...props }) {
+export function Card({
+  // eslint-disable-next-line no-unused-vars -- JSX dynamic element selected by the public `as` prop.
+  as: Component = 'section',
+  className = '',
+  ...props
+}) {
   return (
     <Component
       className={join(
@@ -371,10 +379,12 @@ const alertTone = {
     'border-[hsl(var(--ads-danger)/0.3)] bg-[hsl(var(--ads-danger-subtle))] text-[hsl(var(--ads-danger))]',
 };
 
-export function Alert({ title, children, tone = 'info', className = '', ...props }) {
+export function Alert({ title, children, tone = 'info', live, className = '', ...props }) {
+  const role = tone === 'danger' ? 'alert' : 'status';
   return (
     <div
-      role={tone === 'danger' ? 'alert' : 'status'}
+      role={role}
+      aria-live={live || (role === 'alert' ? 'assertive' : 'polite')}
       className={join(
         'rounded-[var(--ads-radius-md)] border px-4 py-3 text-sm',
         alertTone[tone] || alertTone.info,
@@ -473,6 +483,7 @@ export function Dialog({
   children,
   footer,
   closeLabel = 'ปิด',
+  initialFocusRef,
   className = '',
 }) {
   const titleId = React.useId();
@@ -487,14 +498,33 @@ export function Dialog({
     document.body.style.overflow = 'hidden';
 
     const frame = window.requestAnimationFrame(() => {
-      const firstFocusable = panelRef.current?.querySelector(
+      const firstFocusable = initialFocusRef?.current || panelRef.current?.querySelector(
         'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
       );
       firstFocusable?.focus();
     });
 
     const handleKeyDown = (event) => {
-      if (event.key === 'Escape') onClose?.();
+      if (event.key === 'Escape') {
+        onClose?.();
+        return;
+      }
+
+      if (event.key === 'Tab' && panelRef.current) {
+        const focusable = [...panelRef.current.querySelectorAll(
+          'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        )];
+        if (!focusable.length) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first.focus();
+        }
+      }
     };
 
     document.addEventListener('keydown', handleKeyDown);
@@ -505,7 +535,7 @@ export function Dialog({
       document.body.style.overflow = originalOverflow;
       previousActiveElement?.focus?.();
     };
-  }, [open, onClose]);
+  }, [initialFocusRef, open, onClose]);
 
   if (!open) return null;
 

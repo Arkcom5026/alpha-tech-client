@@ -48,7 +48,10 @@ describe('tax period management workspace behavior contract', () => {
 
   it('preserves confirmed transition payloads, replay feedback, and refresh semantics', () => {
     expect(page).toContain('const meta = ACTION_META[action];');
-    expect(page).toContain('if (!meta || !window.confirm(meta.confirm)) return false;');
+    expect(page).toContain('setPendingAction({ period, action });');
+    expect(page).toContain('const confirmAction = async () =>');
+    expect(page).toContain('<ConfirmActionDialog');
+    expect(page).toContain('open={Boolean(pendingAction)}');
     expect(page).toContain('const key = `${period.id}:${action}`;');
     expect(page).toContain('const result = await transitionTaxPeriod({');
     expect(page).toContain('taxPeriodId: period.id');

@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { feedback } from '@/design-system';
 import useStockAuditStore from '../store/stockAuditStore';
 import AuditTable from '../components/AuditTable';
 import StockAuditSessionSummary from '../components/workspace/StockAuditSessionSummary';
@@ -320,11 +321,20 @@ const ReadyToSellAuditPage = () => {
   const doConfirmLost = async () => {
     try {
       const response = await confirmAuditAction('MARK_LOST');
-      if (response?.ok) await playSuccess();
-    } catch {
-      await playError();
-    } finally {
+      if (!response?.ok) {
+        await playError();
+        feedback.error(response?.error || 'ปิดรอบและบันทึกสินค้าสูญหายไม่สำเร็จ', { eventKey: 'stock-audit:mark-lost:error' });
+        return false;
+      }
+      await playSuccess();
+      feedback.actionSuccess('ปิดรอบและบันทึกสินค้าสูญหายเรียบร้อยแล้ว', 'stock-audit:mark-lost:success');
       setOpenConfirmLost(false);
+      return true;
+    } catch (error) {
+      await playError();
+      feedback.actionError(error, 'ปิดรอบและบันทึกสินค้าสูญหายไม่สำเร็จ', 'stock-audit:mark-lost:error');
+      return false;
+    } finally {
       focusScan();
     }
   };
@@ -332,29 +342,43 @@ const ReadyToSellAuditPage = () => {
   const doConfirmPending = async () => {
     try {
       const response = await confirmAuditAction('MARK_PENDING');
-      if (response?.ok) await playSuccess();
-    } catch {
-      await playError();
-    } finally {
+      if (!response?.ok) {
+        await playError();
+        feedback.error(response?.error || 'ปิดรอบแบบค้างตรวจไม่สำเร็จ', { eventKey: 'stock-audit:mark-pending:error' });
+        return false;
+      }
+      await playSuccess();
+      feedback.actionSuccess('ปิดรอบแบบค้างตรวจเรียบร้อยแล้ว', 'stock-audit:mark-pending:success');
       setOpenConfirmPending(false);
+      return true;
+    } catch (error) {
+      await playError();
+      feedback.actionError(error, 'ปิดรอบแบบค้างตรวจไม่สำเร็จ', 'stock-audit:mark-pending:error');
+      return false;
+    } finally {
       focusScan();
     }
   };
 
   const doCancelAudit = async () => {
-    if (!sessionId) return;
+    if (!sessionId || isCancelling) return false;
     try {
       const response = await cancelAuditAction(sessionId);
-      if (response?.ok) {
-        await playSuccess();
-        if (typeof resetAuditStateAction === 'function') resetAuditStateAction();
-      } else {
+      if (!response?.ok) {
         await playError();
+        feedback.error(response?.error || 'ยกเลิกรอบตรวจนับไม่สำเร็จ', { eventKey: 'stock-audit:cancel:error' });
+        return false;
       }
-    } catch {
-      await playError();
-    } finally {
+      await playSuccess();
+      if (typeof resetAuditStateAction === 'function') resetAuditStateAction();
+      feedback.actionSuccess('ยกเลิกรอบตรวจนับเรียบร้อยแล้ว', 'stock-audit:cancel:success');
       setOpenCancel(false);
+      return true;
+    } catch (error) {
+      await playError();
+      feedback.actionError(error, 'ยกเลิกรอบตรวจนับไม่สำเร็จ', 'stock-audit:cancel:error');
+      return false;
+    } finally {
       focusScan();
     }
   };
@@ -464,7 +488,9 @@ const ReadyToSellAuditPage = () => {
 
       <ConfirmActionDialog
         open={openConfirmLost}
-        onOpenChange={setOpenConfirmLost}
+        onOpenChange={(nextOpen) => {
+          if (!isConfirming) setOpenConfirmLost(nextOpen);
+        }}
         title="บันทึกสินค้าสูญหาย"
         description="สินค้าที่ยังไม่ถูกสแกนจะถูกบันทึกเป็นสูญหาย และรอบตรวจนับจะถูกปิดทันที"
         confirmText={isConfirming ? 'กำลังบันทึก...' : 'ยืนยันบันทึกสูญหาย'}
@@ -475,7 +501,9 @@ const ReadyToSellAuditPage = () => {
 
       <ConfirmActionDialog
         open={openConfirmPending}
-        onOpenChange={setOpenConfirmPending}
+        onOpenChange={(nextOpen) => {
+          if (!isConfirming) setOpenConfirmPending(nextOpen);
+        }}
         title="ปิดรอบแบบค้างตรวจ"
         description="ปิดรอบโดยยังไม่สรุปเป็นสูญหาย สินค้าที่ยังไม่ถูกสแกนจะถูกทำเครื่องหมายเป็นค้างตรวจ"
         confirmText={isConfirming ? 'กำลังบันทึก...' : 'ยืนยันปิดรอบ'}
@@ -486,7 +514,9 @@ const ReadyToSellAuditPage = () => {
 
       <ConfirmActionDialog
         open={openCancel}
-        onOpenChange={setOpenCancel}
+        onOpenChange={(nextOpen) => {
+          if (!isCancelling) setOpenCancel(nextOpen);
+        }}
         title="ยกเลิกรอบตรวจนับ"
         description="ยกเลิกรอบนี้โดยไม่สรุปเป็นสูญหายหรือค้างตรวจ และล้างข้อมูลรอบปัจจุบัน"
         confirmText={isCancelling ? 'กำลังยกเลิก...' : 'ยืนยันยกเลิกรอบ'}

@@ -1,9 +1,10 @@
-'use strict';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const assert = require('node:assert/strict');
-const fs = require('node:fs');
-const path = require('node:path');
-
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 const root = path.resolve(__dirname, '..');
 const runtime = fs.readFileSync(path.join(root, 'src/observability/runtimeObservability.js'), 'utf8');
 const main = fs.readFileSync(path.join(root, 'src/main.jsx'), 'utf8');

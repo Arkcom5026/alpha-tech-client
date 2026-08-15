@@ -32,6 +32,11 @@ export const setCommerceIdentityProof = (shopSlug, proofToken) => {
   window.localStorage.setItem(proofKey(shopSlug), String(proofToken || ''));
 };
 
+export const clearCommerceIdentityProof = (shopSlug) => {
+  if (typeof window === 'undefined') return;
+  window.localStorage.removeItem(proofKey(shopSlug));
+};
+
 export const getOrCreateCommitmentIdempotencyKey = (shopSlug) => {
   if (typeof window === 'undefined') return createIdempotencyKey();
   const key = idempotencyKey(shopSlug);

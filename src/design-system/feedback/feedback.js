@@ -1,4 +1,5 @@
 import { toast } from 'react-toastify';
+import { getErrorMessage } from './errorPresentation.js';
 
 const DEFAULT_DURATION = {
   success: 4000,
@@ -23,6 +24,9 @@ export const feedback = {
   info: (content, options) => emit('info', content, options),
   warning: (content, options) => emit('warning', content, options),
   error: (content, options) => emit('error', content, options),
+  actionSuccess: (message, eventKey) => emit('success', message, { eventKey }),
+  actionError: (error, fallbackMessage, eventKey) =>
+    emit('error', getErrorMessage(error, fallbackMessage), { eventKey }),
   dismiss: (eventKey) => toast.dismiss(eventKey),
   update: (eventKey, options) => toast.update(eventKey, options),
 };

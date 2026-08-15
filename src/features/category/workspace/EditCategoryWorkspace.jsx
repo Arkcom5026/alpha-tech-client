@@ -1,17 +1,17 @@
-// ✅ src/features/category/pages/EditCategoryPage.jsx
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 
+import { feedback } from '@/design-system';
 import { categorySchema } from '../schema/createCategorySchema';
 import CategoryForm from '../components/CategoryForm';
 import { useCategoryStore } from '../Store/CategoryStore';
 
-
 const EditCategoryPage = () => {
-  const { id } = useParams();
+  const { id, shopSlug } = useParams();
   const navigate = useNavigate();
+  const listPath = `/${shopSlug || 'advancetech'}/pos/stock/categories`;
 
   const { getCategoryAction, updateAction, submitting, error } = useCategoryStore();
 
@@ -34,26 +34,37 @@ const EditCategoryPage = () => {
         if (category.isSystem) {
           setInfo('หมวดระบบ (ล็อก) ไม่อนุญาตให้แก้ไข');
         }
-      } catch {
-        navigate(`/${shopSlug}/pos/stock/categories`);
+      } catch (loadError) {
+        feedback.actionError(loadError, 'โหลดข้อมูลหมวดหมู่ไม่สำเร็จ', 'category:edit:load:error');
+        navigate(listPath);
       } finally {
         setLoading(false);
       }
     };
     fetchCategory();
-  }, [id, getCategoryAction, form, navigate]);
+  }, [id, getCategoryAction, form, navigate, listPath]);
 
   const onSubmit = async (data) => {
     if (initial?.isSystem) {
-      setInfo('หมวดระบบ (ล็อก) ไม่อนุญาตให้แก้ไข');
+      const message = 'หมวดระบบ (ล็อก) ไม่อนุญาตให้แก้ไข';
+      setInfo(message);
+      feedback.warning(message, { eventKey: 'category:update:locked' });
       return;
     }
-    const res = await updateAction(id, data);
-    if (res?.ok) {
-      navigate(`/${shopSlug}/pos/stock/categories`);
-    } else if (res?.message) {
-      setInfo(res.message);
-      setTimeout(() => setInfo(''), 3500);
+    if (submitting) return;
+
+    try {
+      const res = await updateAction(id, data);
+      if (res?.ok) {
+        feedback.actionSuccess('บันทึกการแก้ไขหมวดหมู่เรียบร้อยแล้ว', 'category:update:success');
+        navigate(listPath);
+      } else {
+        const message = res?.message || 'บันทึกการแก้ไขหมวดหมู่ไม่สำเร็จ';
+        setInfo(message);
+        feedback.error(message, { eventKey: 'category:update:error' });
+      }
+    } catch (updateError) {
+      feedback.actionError(updateError, 'บันทึกการแก้ไขหมวดหมู่ไม่สำเร็จ', 'category:update:error');
     }
   };
 
@@ -73,7 +84,7 @@ const EditCategoryPage = () => {
         form={form}
         mode="edit"
         onSubmit={onSubmit}
-        onCancel={() => navigate(`/${shopSlug}/pos/stock/categories`)}
+        onCancel={() => !submitting && navigate(listPath)}
         submitting={submitting || !!initial?.isSystem}
       />
     </div>

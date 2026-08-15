@@ -1,11 +1,12 @@
 // src/features/unit/pages/CreateUnitPage.jsx
-import { useNavigate, useParams } from 'react-router-dom'; // 🟢 [DYNAMIC PARAM FIX] นำเข้า useParams มาร่วมทีม
+import { useNavigate, useParams } from 'react-router-dom';
 import { useState } from 'react';
+import { feedback } from '@/design-system';
 import UnitForm from '../components/UnitForm';
 import useUnitStore from '../store/unitStore';
 
 const CreateUnitPage = () => {
-  const { shopSlug } = useParams(); // 🟢 [LINK BINDING] แกะรหัสชื่อร้านค้าพาร์ตเนอร์สแตนด์บายใช้งานแบบ Multi-Tenant
+  const { shopSlug } = useParams();
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { addUnit } = useUnitStore();
@@ -14,10 +15,10 @@ const CreateUnitPage = () => {
     setIsSubmitting(true);
     try {
       await addUnit(data);
-      // 🟢 [BUG FIX SIGNALS] ล้างเครื่องหมายโควทเดี่ยวซ้อน และตัดสแลช (/) ตัวท้ายสุดออกให้แบนราบตรงล็อกเราเตอร์
+      feedback.actionSuccess('เพิ่มหน่วยนับเรียบร้อยแล้ว', 'unit:create:success');
       navigate(`/${shopSlug}/pos/stock/units`);
     } catch (err) {
-      console.error('create unit error:', err);
+      feedback.actionError(err, 'เพิ่มหน่วยนับไม่สำเร็จ', 'unit:create:error');
     } finally {
       setIsSubmitting(false);
     }

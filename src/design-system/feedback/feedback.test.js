@@ -30,4 +30,30 @@ describe('feedback adapter', () => {
       autoClose: 7000,
     }));
   });
+
+  it('emits standardized action success feedback', () => {
+    feedback.actionSuccess('บันทึกข้อมูลเรียบร้อยแล้ว', 'unit:create:success');
+    expect(toastMock.success).toHaveBeenCalledWith(
+      'บันทึกข้อมูลเรียบร้อยแล้ว',
+      expect.objectContaining({ autoClose: 4000, toastId: 'unit:create:success' })
+    );
+  });
+
+  it('reads the server operational error envelope for action failures', () => {
+    const error = {
+      response: {
+        data: {
+          error: {
+            message: 'ไม่สามารถลบรายการที่ถูกใช้งานแล้ว',
+          },
+        },
+      },
+    };
+
+    feedback.actionError(error, 'ลบรายการไม่สำเร็จ', 'unit:delete:error');
+    expect(toastMock.error).toHaveBeenCalledWith(
+      'ไม่สามารถลบรายการที่ถูกใช้งานแล้ว',
+      expect.objectContaining({ autoClose: 9000, toastId: 'unit:delete:error' })
+    );
+  });
 });

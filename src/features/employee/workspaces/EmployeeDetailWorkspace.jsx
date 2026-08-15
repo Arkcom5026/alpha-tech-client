@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ConfirmActionDialog } from '@/design-system/composites';
+import { feedback } from '@/design-system';
 import { getEmployeeById, setEmployeeActive } from '../api/employeeApi';
 
 const statusLabel = {
@@ -28,8 +29,11 @@ const ViewEmployeePage = () => {
         const data = await getEmployeeById(id);
         if (active) setEmployee(data);
       } catch (err) {
-        console.error('❌ โหลดข้อมูลพนักงานล้มเหลว:', err);
-        if (active) setError(err?.response?.data?.message || err?.message || 'โหลดข้อมูลพนักงานไม่สำเร็จ');
+        if (active) {
+          const message = err?.response?.data?.error?.message || err?.response?.data?.message || err?.message || 'โหลดข้อมูลพนักงานไม่สำเร็จ';
+          setError(message);
+          feedback.actionError(err, 'โหลดข้อมูลพนักงานไม่สำเร็จ', 'employee:load:error');
+        }
       } finally {
         if (active) setLoading(false);
       }
@@ -70,9 +74,11 @@ const ViewEmployeePage = () => {
         status: nextActive ? 'active' : 'inactive',
       }));
       setPendingStatusChange(false);
+      feedback.actionSuccess(`${actionText}พนักงานเรียบร้อยแล้ว`, `employee:${nextActive ? 'activate' : 'suspend'}:success`);
     } catch (err) {
-      console.error(`❌ ${actionText}พนักงานล้มเหลว:`, err);
-      setError(err?.response?.data?.message || err?.message || `${actionText}พนักงานไม่สำเร็จ`);
+      const message = err?.response?.data?.error?.message || err?.response?.data?.message || err?.message || `${actionText}พนักงานไม่สำเร็จ`;
+      setError(message);
+      feedback.actionError(err, `${actionText}พนักงานไม่สำเร็จ`, `employee:${nextActive ? 'activate' : 'suspend'}:error`);
     } finally {
       setChangingStatus(false);
     }

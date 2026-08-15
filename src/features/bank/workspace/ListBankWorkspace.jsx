@@ -18,6 +18,7 @@ import {
   Input,
   LoadingState,
   Select,
+  feedback,
 } from '@/design-system';
 
 const ListBankPage = () => {
@@ -89,8 +90,15 @@ const ListBankPage = () => {
       return;
     }
 
-    await toggleBankActiveAction(confirm.row.id);
-    setConfirm(null);
+    const nextActive = confirm.nextActive;
+    const actionText = nextActive ? 'เปิดใช้งาน' : 'ปิดใช้งาน';
+    try {
+      await toggleBankActiveAction(confirm.row.id);
+      setConfirm(null);
+      feedback.actionSuccess(`${actionText}ธนาคารเรียบร้อยแล้ว`, `bank:${nextActive ? 'activate' : 'deactivate'}:success`);
+    } catch (actionError) {
+      feedback.actionError(actionError, `${actionText}ธนาคารไม่สำเร็จ`, `bank:${nextActive ? 'activate' : 'deactivate'}:error`);
+    }
   };
 
   const retry = () => fetchBanksAction({ q: search, includeInactive });
@@ -240,7 +248,7 @@ const ListBankPage = () => {
 
       <ConfirmActionDialog
         open={Boolean(confirm)}
-        onClose={() => setConfirm(null)}
+        onClose={() => !bankSaving && setConfirm(null)}
         onConfirm={proceedToggle}
         title="ยืนยันการเปลี่ยนสถานะธนาคาร"
         description={

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { feedback } from '@/design-system';
 import { getEmployeeById, updateEmployee, getBranchDropdowns } from '../api/employeeApi';
 import EmployeeForm from '../components/EmployeeForm';
 import { useAuthStore } from '@/features/auth/store/authStore.js';
@@ -13,6 +14,7 @@ const EditEmployeePage = () => {
 
   const [employee, setEmployee] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [branches, setBranches] = useState([]);
 
@@ -29,8 +31,10 @@ const EditEmployeePage = () => {
         const data = await getEmployeeById(id);
         if (!cancelled) setEmployee(data);
       } catch (err) {
-        console.error('❌ ดึงข้อมูลพนักงานล้มเหลว:', err);
-        if (!cancelled) setError(err?.response?.data?.message || err?.message || 'ดึงข้อมูลพนักงานล้มเหลว');
+        if (!cancelled) {
+          setError(err?.response?.data?.error?.message || err?.response?.data?.message || err?.message || 'ดึงข้อมูลพนักงานล้มเหลว');
+          feedback.actionError(err, 'ดึงข้อมูลพนักงานล้มเหลว', 'employee:edit:load:error');
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -50,24 +54,30 @@ const EditEmployeePage = () => {
         const rows = await getBranchDropdowns();
         if (!cancelled) setBranches(Array.isArray(rows) ? rows : []);
       } catch (err) {
-        console.error('❌ โหลดสาขาล้มเหลว:', err);
+        if (!cancelled) feedback.actionError(err, 'โหลดรายการสาขาไม่สำเร็จ', 'employee:branches:load:error');
       }
     })();
     return () => { cancelled = true; };
   }, [isSuperAdmin]);
 
   const handleUpdate = async (formData) => {
+    if (submitting) return;
+    setSubmitting(true);
+    setError('');
     try {
       await updateEmployee(id, formData);
+      feedback.actionSuccess('บันทึกการแก้ไขข้อมูลพนักงานเรียบร้อยแล้ว', 'employee:update:success');
       navigate(`/${shopSlug}/pos/settings/employee`);
     } catch (err) {
-      console.error('❌ แก้ไขพนักงานล้มเหลว:', err);
-      setError(err?.response?.data?.message || err?.message || 'แก้ไขพนักงานล้มเหลว');
+      setError(err?.response?.data?.error?.message || err?.response?.data?.message || err?.message || 'แก้ไขพนักงานล้มเหลว');
+      feedback.actionError(err, 'แก้ไขข้อมูลพนักงานไม่สำเร็จ', 'employee:update:error');
+    } finally {
+      setSubmitting(false);
     }
   };
 
   if (loading) return <p className="text-center text-emerald-700">กำลังโหลดข้อมูล...</p>;
-  if (error) return <p className="text-center text-red-500">{error}</p>;
+  if (error && !employee) return <p className="text-center text-red-500">{error}</p>;
   if (!employee) return <p className="text-center text-red-500">ไม่พบข้อมูลพนักงาน</p>;
 
   return (
@@ -76,12 +86,14 @@ const EditEmployeePage = () => {
         <h1 className="text-xl font-semibold text-emerald-800 dark:text-emerald-300">✏️ แก้ไขข้อมูลพนักงาน</h1>
         <button
           onClick={() => navigate(-1)}
-          className="text-sm px-3 py-1 border border-slate-200 bg-white hover:bg-emerald-50 hover:border-emerald-200 text-slate-700 rounded shadow-sm transition"
+          disabled={submitting}
+          className="text-sm px-3 py-1 border border-slate-200 bg-white hover:bg-emerald-50 hover:border-emerald-200 text-slate-700 rounded shadow-sm transition disabled:opacity-60 disabled:cursor-not-allowed"
         >
           ← กลับ
         </button>
       </div>
-      <EmployeeForm defaultValues={employee} onSubmit={handleUpdate} loading={false} canEditBranch={isSuperAdmin} branchOptions={branches} />
+      {error ? <div className="mb-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div> : null}
+      <EmployeeForm defaultValues={employee} onSubmit={handleUpdate} loading={submitting} canEditBranch={isSuperAdmin} branchOptions={branches} />
     </div>
   );
 };

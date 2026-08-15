@@ -6,6 +6,7 @@ import {
   CrudTableAction,
   CrudTableActions,
   LoadingState,
+  feedback,
 } from '@/design-system';
 import useProductTypeStore from '@/features/productType/store/productTypeStore.js';
 
@@ -30,9 +31,16 @@ const ProductTypeTable = ({
 
   const proceed = async () => {
     if (!confirm?.row || isSubmitting) return;
-    if (confirm.type === 'archive') await archiveProductTypeAction(confirm.row.id);
-    if (confirm.type === 'restore') await restoreProductTypeAction(confirm.row.id);
-    setConfirm(null);
+    const isArchiveAction = confirm.type === 'archive';
+    const actionText = isArchiveAction ? 'ปิดใช้งาน' : 'กู้คืน';
+    try {
+      if (isArchiveAction) await archiveProductTypeAction(confirm.row.id);
+      else await restoreProductTypeAction(confirm.row.id);
+      setConfirm(null);
+      feedback.actionSuccess(`${actionText}ประเภทสินค้าเรียบร้อยแล้ว`, `product-type:${isArchiveAction ? 'archive' : 'restore'}:success`);
+    } catch (actionError) {
+      feedback.actionError(actionError, `${actionText}ประเภทสินค้าไม่สำเร็จ`, `product-type:${isArchiveAction ? 'archive' : 'restore'}:error`);
+    }
   };
 
   const isArchive = confirm?.type === 'archive';
@@ -149,7 +157,7 @@ const ProductTypeTable = ({
 
       <ConfirmActionDialog
         open={Boolean(confirm)}
-        onClose={() => setConfirm(null)}
+        onClose={() => !isSubmitting && setConfirm(null)}
         onConfirm={proceed}
         title={`${isArchive ? 'ปิดใช้งาน' : 'กู้คืน'}ประเภทสินค้า`}
         description={`ยืนยันการ${isArchive ? 'ปิดใช้งาน' : 'กู้คืน'}ประเภทสินค้า “${confirm?.row?.name || ''}” หรือไม่?`}

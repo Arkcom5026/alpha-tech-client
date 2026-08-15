@@ -1,6 +1,3 @@
-
-
-
 // ✅ src/features/product/pages/ListProductPage.jsx
 // ✅ Policy update (Production):
 // - Product เป็น Global Master Data → ห้ามปิดใช้งานจาก POS
@@ -8,19 +5,14 @@
 // - หากสินค้ามีการอ้างอิง (ถูกใช้แล้ว) BE ควรปฏิเสธ และ FE จะแสดงข้อความในหน้า
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-
 import { useLocation, useNavigate } from 'react-router-dom';
+import { feedback } from '@/design-system';
 import ConfirmDeleteDialog from '@/components/shared/dialogs/ConfirmDeleteDialog';
 
 import StandardActionButtons from '@/components/shared/buttons/StandardActionButtons';
 import ProductTable from '../components/ProductTable';
 import useProductStore from '../store/productStore';
 import { useBranchStore } from '@/features/branch/store/branchStore';
-
-// ✅ SUPERADMIN guard (best-effort): ป้องกันปุ่มลบโผล่ให้คนทั่วไป
-// - ถ้าโปรเจกต์คุณใช้ authStore เป็นมาตรฐานกลาง → จะอ่าน role จากที่นี่
-// - ถ้า path ไม่ตรง ให้ปรับ import ให้ตรงกับโปรเจกต์จริง (Minimal disruption)
-// 🔧 Fix: authStore ไม่มี default export → ใช้ named export แทน
 import { useAuthStore } from '@/features/auth/store/authStore';
 
 export default function ListProductPage() {
@@ -28,45 +20,32 @@ export default function ListProductPage() {
   const [committedSearchText, setCommittedSearchText] = useState('');
   const [sortOrder, setSortOrder] = useState('name-asc');
   const [filter, setFilter] = useState({
-    // ✅ Current hierarchy: ProductType + Brand only (no Category filter)
     productTypeId: null,
     brandId: null,
   });
 
   const [currentPage, setCurrentPage] = useState(1);
-
-  // ✅ on-demand: ต้องกดปุ่ม “แสดงข้อมูล” ก่อนจึงจะโหลดและให้ dropdown ทำงาน
   const [hasLoaded, setHasLoaded] = useState(false);
-
-  // ✅ Delete flow (SUPERADMIN only)
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
-  const [deleteError, setDeleteError] = useState(null); // UI-based error (ห้าม alert)
-
-  // ✅ View options (รองรับข้อมูลเยอะ)
-  const [pageSize, setPageSize] = useState(25); // 10 | 25 | 50
-  const [density, setDensity] = useState('normal'); // 'normal' | 'compact'
-  const [showAllPrices, setShowAllPrices] = useState(false); // toggle: แสดงราคาทั้งหมด
-
+  const [deleteError, setDeleteError] = useState(null);
+  const [pageSize, setPageSize] = useState(25);
+  const [density, setDensity] = useState('normal');
+  const [showAllPrices, setShowAllPrices] = useState(false);
   const perPage = pageSize;
-
-  // ✅ Step 1: โหลดสินค้าทั้งหมดให้ “นิ่ง” ก่อน แล้วค่อยกรองที่ FE
   const [allProducts, setAllProducts] = useState([]);
   const [loadingAll, setLoadingAll] = useState(false);
   const [loadAllError, setLoadAllError] = useState(null);
   const loadingAllRef = useRef(false);
 
-  // ปรับได้ตามระบบคุณ (200-500)
   const TAKE = 200;
   const MAX_PAGES_SAFETY = 500;
 
   const branchId = useBranchStore((state) => state.selectedBranchId);
   const navigate = useNavigate();
   const location = useLocation();
-
   const authRole = useAuthStore((s) => s?.user?.role ?? s?.role ?? null);
   const isSuperAdmin = String(authRole || '').toUpperCase() === 'SUPERADMIN';
-
 
   const {
     products,
@@ -78,20 +57,9 @@ export default function ListProductPage() {
     deleteProduct,
   } = useProductStore();
 
-  // ✅ Catalog Ownership Rule:
-  // ListProductPage เป็น Operational Catalog Surface เสมอ
-  // SUPERADMIN มีสิทธิ์จัดการมากกว่า แต่ไม่ควรเปลี่ยนไปใช้ Global/Template Catalog
-  // เพื่อป้องกัน Template Product หลุดเข้า Product List
-  // IMPORTANT: ต้องประกาศหลัง destructure store เพื่อกัน TDZ
   const fetchForList = fetchOperationalProductsAction;
-
-  // ✅ Step 1: เราใช้ allProducts เป็นแหล่งข้อมูลหลักในหน้านี้ (products ใน store จะถูก overwrite ทีละหน้า)
   // eslint-disable-next-line no-unused-vars
   const _storeProducts = products;
-
-  // ✅ เลื่อนการเรียก dropdowns: เรียกหลังผู้ใช้กด “แสดงข้อมูล” (hasLoaded) และมี branchId แล้วเท่านั้น
-  // - กัน 401 (token/branch context อาจยังไม่พร้อมตอน mount)
-  // - กัน StrictMode ยิงซ้ำ
   const dropdownsFetchRef = useRef({ branchId: null, done: false });
 
   useEffect(() => {
@@ -99,7 +67,6 @@ export default function ListProductPage() {
     if (!branchId) return;
     if (dropdownsLoaded === true) return;
 
-    // reset เมื่อสลับสาขา
     if (dropdownsFetchRef.current.branchId !== branchId) {
       dropdownsFetchRef.current = { branchId, done: false };
     }
@@ -112,7 +79,6 @@ export default function ListProductPage() {
     }
   }, [hasLoaded, branchId, dropdownsLoaded, ensureDropdownsAction]);
 
-  // 📌 (1) อ่านค่าจาก URL มาตั้งค่าเริ่มต้น (Deep-linkable)
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const q = params.get('q') || '';
@@ -129,7 +95,6 @@ export default function ListProductPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // 📌 (2) ซิงก์ state → URL (restore-only, prevent loops)
   useEffect(() => {
     const params = new URLSearchParams();
 
@@ -144,7 +109,6 @@ export default function ListProductPage() {
     }
   }, [filter, committedSearchText, sortOrder, navigate, location.pathname, location.search]);
 
-  // ✅ Delete confirm (SUPERADMIN only)
   const confirmDelete = (prodId) => {
     if (!isSuperAdmin) return;
     const target = allProducts.find((p) => p.id === prodId);
@@ -155,49 +119,52 @@ export default function ListProductPage() {
   };
 
   const handleDelete = async () => {
-    if (!deleteTarget?.id) return;
+    if (!deleteTarget?.id || deletingId) return;
 
-    // ✅ Guard: SUPERADMIN only (double check)
     if (!isSuperAdmin) {
-      setDeleteError('สิทธิ์ไม่เพียงพอ: เฉพาะ SUPERADMIN เท่านั้นที่สามารถลบสินค้าได้');
+      const message = 'สิทธิ์ไม่เพียงพอ: เฉพาะ SUPERADMIN เท่านั้นที่สามารถลบสินค้าได้';
+      setDeleteError(message);
+      feedback.error(message, { eventKey: 'product:delete:forbidden' });
       setDeleteTarget(null);
       return;
     }
 
     const targetId = deleteTarget.id;
     setDeletingId(targetId);
-    setDeleteError(null);    try {
+    setDeleteError(null);
+    try {
       const deleteFn = typeof deleteProductAction === 'function' ? deleteProductAction : deleteProduct;
 
       if (typeof deleteFn !== 'function') {
-        // ✅ Hard guard: FE ยังไม่พร้อม (ป้องกันเงียบ)
         throw new Error('FE_NOT_READY_DELETE_ACTION');
       }
 
-      await deleteFn(targetId);
+      const deleted = await deleteFn(targetId);
+      if (deleted === false) {
+        const storeError = useProductStore.getState().error;
+        const message =
+          storeError?.message ||
+          storeError?.raw?.response?.data?.error?.message ||
+          storeError?.raw?.response?.data?.message ||
+          'ลบสินค้าไม่สำเร็จ';
+        throw Object.assign(new Error(message), { code: storeError?.code, cause: storeError?.raw });
+      }
 
-      // ✅ sync UI ทันที
       setAllProducts((prev) => (Array.isArray(prev) ? prev.filter((p) => p?.id !== targetId) : prev));
       setDeleteTarget(null);
-
-      // ✅ reload กันข้อมูลค้าง/การจัดหน้าเปลี่ยน
       await loadAllProductsOnce();
+      feedback.actionSuccess('ลบสินค้าเรียบร้อยแล้ว', 'product:delete:success');
     } catch (error) {
-      // ✅ UI-based error (ห้าม alert)
       const msg =
-        error?.response?.data?.error ||
+        error?.response?.data?.error?.message ||
         error?.response?.data?.message ||
+        (typeof error?.response?.data?.error === 'string' ? error.response.data.error : '') ||
         (error?.message === 'FE_NOT_READY_DELETE_ACTION'
           ? 'ระบบยังไม่รองรับการลบสินค้าในฝั่งหน้าบ้าน (deleteProductAction ยังไม่ถูกเพิ่มใน productStore)'
           : error?.message) ||
-        'ลบสินค้าไม่สำเร็จ';      setDeleteError(msg);
-
-      // ไม่ปิด dialog เพื่อให้ผู้ใช้เห็น error และตัดสินใจได้
-      // แต่ถ้าคุณอยากปิด ให้ uncomment บรรทัดนี้
-      // setDeleteTarget(null);
-
-      // ✅ อย่า throw ต่อ เพื่อกัน Uncaught (in promise) ทำให้ UX แย่
-      return;
+        'ลบสินค้าไม่สำเร็จ';
+      setDeleteError(msg);
+      feedback.actionError(error, msg, 'product:delete:error');
     } finally {
       setDeletingId(null);
     }
@@ -205,7 +172,6 @@ export default function ListProductPage() {
 
   const getPrice = (p) => p.prices?.find((pr) => pr.level === 1)?.price || 0;
 
-  // ✅ Restore-only: ช่วย resolve id จากชื่อ (กรณี BE ส่งมาเป็น name แต่ไม่มี id/relation)
   const resolveTypeId = (p) => {
     const direct = p?.productTypeId ?? p?.productType?.id ?? p?.product_type_id;
     if (direct != null) return direct;
@@ -227,21 +193,15 @@ export default function ListProductPage() {
     if (f === undefined) return true;
 
     const r = toNum(resolvedVal);
-
-    // ✅ Restore-only UX guard:
     if (r === undefined && dropdownsLoaded !== true) return true;
     if (r === undefined) return false;
-
     return r === f;
   };
 
   const filtered = useMemo(() => {
     return allProducts.filter((p) => {
-      // type
       const resolvedTypeId = resolveTypeId(p);
       const okType = matchesId(filter.productTypeId, resolvedTypeId);
-
-      // brand (optional)
       const resolvedBrandId = p?.brandId ?? p?.brand?.id ?? undefined;
       const okBrand = matchesId(filter.brandId, resolvedBrandId);
 
@@ -277,7 +237,6 @@ export default function ListProductPage() {
     return sorted.slice((currentPage - 1) * perPage, currentPage * perPage);
   }, [sorted, currentPage, perPage]);
 
-  // 🧪 Debug (restore-only): ดูว่าข้อมูลหายที่ขั้นไหน (products → filtered → sorted)
   useEffect(() => {
     if (!(import.meta && import.meta.env && import.meta.env.DEV)) return;
 
@@ -294,8 +253,6 @@ export default function ListProductPage() {
 
   const totalPages = useMemo(() => Math.ceil(filtered.length / perPage), [filtered.length, perPage]);
 
-  // ✅ Step 1: โหลดสินค้าทั้งหมด (วนทีละหน้า) แล้วเก็บไว้ที่ allProducts
-  // IMPORTANT: ต้องประกาศก่อน useEffect ที่อ้างถึง เพื่อกัน TDZ (Temporal Dead Zone)
   const loadAllProductsOnce = useCallback(async () => {
     if (!branchId) return;
     if (loadingAllRef.current) return;
@@ -318,7 +275,6 @@ export default function ListProductPage() {
           take: TAKE,
           pageSize: TAKE,
           limit: TAKE,
-          // ✅ Policy: ไม่รองรับ inactive/disable ในหน้านี้แล้ว
           includeInactive: 0,
         };
 
@@ -327,11 +283,8 @@ export default function ListProductPage() {
         }
 
         await fetchForList(pageFilters);
-
-        // ✅ อ่านค่าล่าสุดจาก store หลัง fetch
         const rawList = useProductStore.getState().products;
 
-        // ✅ Array-first normalizer (รองรับ wrapper จาก getProducts)
         const pickArr = (x) => {
           if (Array.isArray(x)) return x;
           if (x && Array.isArray(x.items)) return x.items;
@@ -349,7 +302,6 @@ export default function ListProductPage() {
           console.log('✅ [ListProductPage] got', { page, count: list.length });
         }
 
-        // ✅ Normalize: flatten fields for FE table (minimal disruption)
         const normalizeRow = (p) => {
           const bp = Array.isArray(p?.branchPrice) ? p.branchPrice[0] : p?.branchPrice;
           const sb = Array.isArray(p?.stockBalances) ? p.stockBalances[0] : p?.stockBalances;
@@ -380,35 +332,22 @@ export default function ListProductPage() {
             p?.templateProduct?.name ??
             null;
 
-          const unitName =
-            p?.unitName ??
-            p?.unit?.name ??
-            null;
+          const unitName = p?.unitName ?? p?.unit?.name ?? null;
 
           return {
             ...p,
-
-            // Operational Product display fields.
             productType: typeName,
             productTypeName: typeName,
             categoryName,
             brandName,
             unitName,
-
-            // Template is trace metadata only, never operational truth.
             templateName: templateTraceName,
-
-            // SKU/spec must come from the operational product first.
             sku: p?.sku ?? p?.model ?? p?.spec ?? null,
-
-            // ✅ Prices (branch-scoped)
             costPrice: bp?.costPrice ?? p?.costPrice ?? null,
             priceRetail: bp?.priceRetail ?? p?.priceRetail ?? null,
             priceOnline: bp?.priceOnline ?? p?.priceOnline ?? null,
             priceWholesale: bp?.priceWholesale ?? p?.priceWholesale ?? null,
             priceTechnician: bp?.priceTechnician ?? p?.priceTechnician ?? null,
-
-            // ✅ Stock balance (branch-scoped)
             stockQuantity: sb?.quantity ?? p?.stockQuantity ?? null,
             stockReserved: sb?.reserved ?? p?.stockReserved ?? null,
             lastReceivedCost: sb?.lastReceivedCost ?? p?.lastReceivedCost ?? null,
@@ -416,7 +355,6 @@ export default function ListProductPage() {
         };
 
         const normalized = Array.isArray(list) ? list.map(normalizeRow) : [];
-
         acc = acc.concat(normalized);
         if (list.length < TAKE) break;
         page += 1;
@@ -437,15 +375,12 @@ export default function ListProductPage() {
     }
   }, [isSuperAdmin, branchId, fetchForList]);
 
-  // ✅ โหลดเมื่อ branchId เปลี่ยน
-  // แต่จะเริ่มทำงานหลังผู้ใช้กด “แสดงข้อมูล” เท่านั้น
   useEffect(() => {
     if (!hasLoaded) return;
     if (!branchId) return;
     loadAllProductsOnce();
   }, [isSuperAdmin, branchId, hasLoaded, loadAllProductsOnce]);
 
-  // ✅ ตรวจ refresh=1 เพื่อ reload (Step 1: reload all products)
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const refresh = params.get('refresh');
@@ -456,7 +391,6 @@ export default function ListProductPage() {
     }
   }, [location.search, location.pathname, isSuperAdmin, branchId, loadAllProductsOnce, navigate]);
 
-  // 📌 (3) Debounce ช่องค้นหา 300ms
   useEffect(() => {
     const t = setTimeout(() => {
       setCommittedSearchText(searchText.trim());
@@ -468,7 +402,6 @@ export default function ListProductPage() {
   return (
     <div className="p-6 w-full flex flex-col items-center">
       <div className="w-full max-w-[1400px]">
-        {/* Header (โทนเดียวกับ ListProductTemplatePage) */}
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-xl font-semibold text-zinc-800 dark:text-white">รายการสินค้า</h1>
@@ -492,12 +425,10 @@ export default function ListProductPage() {
         </div>
         <div className="mt-3 pb-3 border-b border-zinc-200 dark:border-zinc-800" />
 
-        {/* Filters (Sticky สำหรับข้อมูลเยอะ) */}
         <div className="mt-4">
           <div className="sticky top-0 z-20 rounded-xl border border-zinc-200/80 bg-white/85 backdrop-blur dark:border-zinc-800/80 dark:bg-zinc-900/80">
             <div className="p-3 sm:p-4 flex flex-col gap-3">
               <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:flex-wrap xl:flex-nowrap">
-                {/* search */}
                 <div className="w-full xl:flex-1 xl:min-w-[360px]">
                   <input
                     type="text"
@@ -508,7 +439,6 @@ export default function ListProductPage() {
                   />
                 </div>
 
-                {/* sort */}
                 <div className="w-full lg:w-[180px]">
                   <select
                     value={sortOrder}
@@ -522,7 +452,6 @@ export default function ListProductPage() {
                   </select>
                 </div>
 
-                {/* brand */}
                 <div className="w-full lg:w-[220px]">
                   <select
                     value={filter.brandId == null ? '' : String(filter.brandId)}
@@ -537,14 +466,11 @@ export default function ListProductPage() {
                   >
                     <option value="">แบรนด์ทั้งหมด</option>
                     {(Array.isArray(dropdowns?.brands) ? dropdowns.brands : []).map((b) => (
-                      <option key={String(b.id)} value={String(b.id)}>
-                        {b.name}
-                      </option>
+                      <option key={String(b.id)} value={String(b.id)}>{b.name}</option>
                     ))}
                   </select>
                 </div>
 
-                {/* per page */}
                 <div className="flex items-center gap-2 w-full lg:w-auto">
                   <label className="text-sm text-zinc-600 dark:text-zinc-400 whitespace-nowrap">แสดงต่อหน้า</label>
                   <select
@@ -561,7 +487,6 @@ export default function ListProductPage() {
                   </select>
                 </div>
 
-                {/* density */}
                 <div className="flex items-center gap-2 w-full lg:w-auto">
                   <label className="text-sm text-zinc-600 dark:text-zinc-400 whitespace-nowrap">ความหนาแน่น</label>
                   <select value={density} onChange={(e) => setDensity(e.target.value)} className="border px-3 py-2 rounded">
@@ -570,7 +495,6 @@ export default function ListProductPage() {
                   </select>
                 </div>
 
-                {/* show all prices */}
                 <label className="inline-flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400 select-none w-full lg:w-auto whitespace-nowrap">
                   <input type="checkbox" checked={showAllPrices} onChange={(e) => setShowAllPrices(e.target.checked)} />
                   แสดงราคาทั้งหมด
@@ -583,10 +507,7 @@ export default function ListProductPage() {
                     value={filter.productTypeId == null ? '' : String(filter.productTypeId)}
                     onChange={(e) => {
                       const value = e.target.value;
-                      setFilter((prev) => ({
-                        ...prev,
-                        productTypeId: value === '' ? null : Number(value),
-                      }));
+                      setFilter((prev) => ({ ...prev, productTypeId: value === '' ? null : Number(value) }));
                       setCurrentPage(1);
                     }}
                     className="border px-3 py-2 rounded w-full"
@@ -595,9 +516,7 @@ export default function ListProductPage() {
                   >
                     <option value="">-- เลือกประเภทสินค้า --</option>
                     {(Array.isArray(dropdowns?.productTypes) ? dropdowns.productTypes : []).map((type) => (
-                      <option key={String(type.id)} value={String(type.id)}>
-                        {type.name}
-                      </option>
+                      <option key={String(type.id)} value={String(type.id)}>{type.name}</option>
                     ))}
                   </select>
                 </div>
@@ -642,9 +561,7 @@ export default function ListProductPage() {
                   <div className="font-semibold">โหลดรายการสินค้าไม่สำเร็จ</div>
                   <div className="text-sm opacity-90">กรุณาลองใหม่อีกครั้ง</div>
                   <div className="mt-3 flex flex-wrap gap-2">
-                    <button type="button" className="btn btn-outline" onClick={() => loadAllProductsOnce()}>
-                      ลองใหม่
-                    </button>
+                    <button type="button" className="btn btn-outline" onClick={() => loadAllProductsOnce()}>ลองใหม่</button>
                     <button
                       type="button"
                       className="btn btn-outline"
@@ -674,7 +591,6 @@ export default function ListProductPage() {
                 </div>
               )}
 
-              {/* ✅ Delete error (UI-based) */}
               {hasLoaded && deleteError && (
                 <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-amber-900">
                   <div className="font-semibold">ลบสินค้าไม่สำเร็จ</div>
@@ -688,7 +604,6 @@ export default function ListProductPage() {
           </div>
         </div>
 
-        {/* Table wrapper */}
         <div className="mt-4 border rounded-xl p-3 shadow-sm bg-white dark:bg-zinc-900">
           <ProductTable
             products={hasLoaded ? paginated : []}
@@ -702,7 +617,6 @@ export default function ListProductPage() {
                 },
               })
             }
-            // ✅ เปลี่ยนจากปิดใช้งาน → ลบถาวร (SUPERADMIN เท่านั้น)
             onDelete={confirmDelete}
             deleting={deletingId}
             canDelete={isSuperAdmin}
@@ -713,15 +627,12 @@ export default function ListProductPage() {
           />
         </div>
 
-        {/* Pagination */}
         <div className="flex items-center justify-between mt-4">
           <div className="text-sm text-zinc-600 dark:text-zinc-400">
             หน้า {currentPage} / {Math.max(totalPages || 1, 1)}
           </div>
           <div className="flex gap-2">
-            <button className="btn btn-outline" onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} disabled={currentPage <= 1}>
-              ก่อนหน้า
-            </button>
+            <button className="btn btn-outline" onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} disabled={currentPage <= 1}>ก่อนหน้า</button>
             <button
               className="btn btn-outline"
               onClick={() => setCurrentPage((p) => Math.min(totalPages || 1, p + 1))}
@@ -732,25 +643,21 @@ export default function ListProductPage() {
           </div>
         </div>
 
-        {/* ✅ Confirm delete (SUPERADMIN only) */}
         <ConfirmDeleteDialog
           open={!!deleteTarget}
-          // ✅ รองรับหลาย signature ของ dialog component (กันเคสกด X / คลิกพื้นหลังแล้วไม่ปิด)
-          onClose={() => setDeleteTarget(null)}
+          onClose={() => {
+            if (!deletingId) setDeleteTarget(null);
+          }}
           onOpenChange={(nextOpen) => {
-            if (!nextOpen) setDeleteTarget(null);
+            if (!nextOpen && !deletingId) setDeleteTarget(null);
           }}
           onConfirm={handleDelete}
           itemLabel={deleteTarget?.name || 'ไม่พบคำเรียกสินค้า'}
           name="ยืนยันการลบสินค้า (ถาวร)"
-          description={`คุณแน่ใจว่าต้องการลบ “${deleteTarget?.name || 'ไม่พบคำเรียกสินค้า'}” หรือไม่?
-
-⚠️ การลบเป็นการลบถาวร และอาจลบไม่ได้หากสินค้าถูกใช้งานแล้ว (มีการอ้างอิงในสต๊อก/จัดซื้อ/ขาย/ออนไลน์)`}
-          // ✅ ป้องกันกดรัว
+          description={`คุณแน่ใจว่าต้องการลบ “${deleteTarget?.name || 'ไม่พบคำเรียกสินค้า'}” หรือไม่?\n\n⚠️ การลบเป็นการลบถาวร และอาจลบไม่ได้หากสินค้าถูกใช้งานแล้ว (มีการอ้างอิงในสต๊อก/จัดซื้อ/ขาย/ออนไลน์)`}
           loading={deletingId === deleteTarget?.id}
         />
 
-        {/* ✅ SUPERADMIN hint */}
         {hasLoaded && !isSuperAdmin && (
           <div className="mt-4 rounded-lg border border-zinc-200 bg-white px-4 py-3 text-zinc-700 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300">
             <div className="text-sm">
@@ -762,9 +669,3 @@ export default function ListProductPage() {
     </div>
   );
 }
-
-
-
-
-
-

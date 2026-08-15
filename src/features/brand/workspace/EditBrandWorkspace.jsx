@@ -1,14 +1,12 @@
-
 // src/features/stock/brand/pages/EditBrandPage.jsx
-// Edit Brand (Production-grade, no direct API calls)
-
 import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { feedback } from '@/design-system'
 import { useBrandStore } from '../store/brandStore'
 
 const EditBrandPage = () => {
   const navigate = useNavigate()
-  const { id } = useParams()
+  const { id, shopSlug } = useParams()
 
   const {
     items,
@@ -40,12 +38,15 @@ const EditBrandPage = () => {
   }, [])
 
   useEffect(() => {
-    // If not in store (direct link / refresh), fetch list once (includeInactive=true to ensure we can edit inactive)
     if (!numericId) return
 
     const bootstrap = async () => {
       if (!existing && !loading) {
-        await fetchBrandsAction({ includeInactive: true, page: 1 })
+        try {
+          await fetchBrandsAction({ includeInactive: true, page: 1 })
+        } catch (loadError) {
+          feedback.actionError(loadError, 'โหลดข้อมูลแบรนด์ไม่สำเร็จ', 'brand:edit:load:error')
+        }
       }
     }
 
@@ -62,32 +63,50 @@ const EditBrandPage = () => {
 
   const nameTrim = String(name || '').trim()
   const nameError = touched && !nameTrim ? 'กรุณากรอกชื่อแบรนด์' : null
+  const listPath = `/${shopSlug || 'advancetech'}/pos/stock/brands`
 
   const onSubmit = async (e) => {
     e?.preventDefault?.()
     clearErrorAction()
     setTouched(true)
 
-    if (!numericId) return
-    if (!nameTrim) return
+    if (!numericId || !nameTrim || saving) return
 
-    const result = await updateBrandAction({ id: numericId, name: nameTrim })
-    if (result?.ok) {
-      navigate(`/${shopSlug}/pos/stock/brands`)
+    try {
+      const result = await updateBrandAction({ id: numericId, name: nameTrim })
+      if (result?.ok) {
+        feedback.actionSuccess('บันทึกการแก้ไขแบรนด์เรียบร้อยแล้ว', 'brand:update:success')
+        navigate(listPath)
+        return
+      }
+      feedback.error(error || 'บันทึกการแก้ไขแบรนด์ไม่สำเร็จ', { eventKey: 'brand:update:error' })
+    } catch (updateError) {
+      feedback.actionError(updateError, 'บันทึกการแก้ไขแบรนด์ไม่สำเร็จ', 'brand:update:error')
     }
   }
 
   const onCancel = () => {
-    navigate(`/${shopSlug}/pos/stock/brands`)
+    if (saving) return
+    navigate(listPath)
   }
 
   const onToggle = async () => {
-    if (!existing?.id) return
+    if (!existing?.id || saving) return
     clearErrorAction()
-    await toggleBrandActiveAction({ id: existing.id, isActive: !existing.isActive })
+    const nextActive = !existing.isActive
+    const actionText = nextActive ? 'เปิดใช้งาน' : 'ปิดใช้งาน'
+    try {
+      const result = await toggleBrandActiveAction({ id: existing.id, isActive: nextActive })
+      if (result?.ok === false) {
+        feedback.error(error || `${actionText}แบรนด์ไม่สำเร็จ`, { eventKey: 'brand:toggle:error' })
+        return
+      }
+      feedback.actionSuccess(`${actionText}แบรนด์เรียบร้อยแล้ว`, `brand:${nextActive ? 'activate' : 'deactivate'}:success`)
+    } catch (toggleError) {
+      feedback.actionError(toggleError, `${actionText}แบรนด์ไม่สำเร็จ`, `brand:${nextActive ? 'activate' : 'deactivate'}:error`)
+    }
   }
 
-  // basic not found guard
   const notFound = numericId && !existing && !loading
 
   return (
@@ -99,7 +118,6 @@ const EditBrandPage = () => {
         </div>
       </div>
 
-      {/* error block (no dialog alert) */}
       {error ? (
         <div className="mt-3 rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">
           <div className="font-medium">เกิดข้อผิดพลาด</div>
@@ -131,7 +149,7 @@ const EditBrandPage = () => {
                 onBlur={() => setTouched(true)}
                 placeholder="เช่น Samsung"
                 className="w-full rounded border px-3 py-2 text-sm"
-                disabled={!existing}
+                disabled={saving || !existing}
               />
               {nameError ? (
                 <div className="mt-1 text-xs text-red-600">{nameError}</div>
@@ -144,7 +162,7 @@ const EditBrandPage = () => {
                 disabled={saving || !existing}
                 className="px-4 py-2 rounded bg-blue-600 text-white text-sm hover:bg-blue-700 disabled:opacity-60"
               >
-                บันทึก
+                {saving ? 'กำลังบันทึก...' : 'บันทึก'}
               </button>
               <button
                 type="button"
@@ -164,7 +182,6 @@ const EditBrandPage = () => {
                 {existing?.isActive ? 'ปิดใช้งาน' : 'เปิดใช้งาน'}
               </button>
 
-              {saving ? <div className="text-sm text-gray-600">กำลังบันทึก...</div> : null}
               {loading && !existing ? <div className="text-sm text-gray-600">กำลังโหลดข้อมูล...</div> : null}
             </div>
 

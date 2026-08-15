@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Building2 } from 'lucide-react';
 
+import { feedback } from '@/design-system';
 import SupplierForm from '../components/SupplierForm';
 import useSupplierStore from '../store/supplierStore';
 import {
@@ -20,13 +21,15 @@ const SupplierCreateWorkspace = () => {
   const paths = useMemo(() => createSupplierPaths(shopSlug), [shopSlug]);
 
   const handleCreateSupplier = async (formData) => {
+    if (loading) return;
     try {
       if (!branchId) throw new Error('ยังไม่ได้เลือกสาขา');
       setLoading(true);
       await createSupplierAction(normalizeSupplierMutationPayload(formData));
+      feedback.actionSuccess('เพิ่มผู้ขายเรียบร้อยแล้ว', 'supplier:create:success');
       navigate(paths.list);
     } catch (error) {
-      console.error('❌ Create supplier failed:', error);
+      feedback.actionError(error, 'เพิ่มผู้ขายไม่สำเร็จ', 'supplier:create:error');
     } finally {
       setLoading(false);
     }
@@ -50,7 +53,7 @@ const SupplierCreateWorkspace = () => {
             <p className="text-[11px] text-slate-400 font-medium">บันทึกพิกัด ข้อมูลบัญชีธนาคาร และวงเงินอนุมัติทางการค้าเพื่อลดภาระความกังวล</p>
           </div>
         </div>
-        <button type="button" onClick={() => navigate(paths.list)} className="flex items-center gap-1 h-7 px-2.5 bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200 rounded-lg text-[11px] font-black transition-all shadow-sm">
+        <button type="button" disabled={loading} onClick={() => navigate(paths.list)} className="flex items-center gap-1 h-7 px-2.5 bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200 rounded-lg text-[11px] font-black transition-all shadow-sm disabled:opacity-60 disabled:cursor-not-allowed">
           <ArrowLeft className="w-3 h-3" /><span>กลับหน้าทะเบียน</span>
         </button>
       </div>

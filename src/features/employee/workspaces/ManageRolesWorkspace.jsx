@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ConfirmActionDialog } from '@/design-system/composites';
+import { feedback } from '@/design-system';
 import { useAuthStore } from '@/features/auth/store/authStore.js';
 import {
   getAllEmployees,
@@ -44,6 +45,7 @@ export default function ManageRolesPage() {
   const [page, setPage] = useState(1);
   const [pending, setPending] = useState(null);
   const [pendingLifecycle, setPendingLifecycle] = useState(null);
+  const [changingRole, setChangingRole] = useState(false);
   const [changingEmployeeId, setChangingEmployeeId] = useState(null);
 
   const limit = 20;
@@ -77,7 +79,8 @@ export default function ManageRolesPage() {
         status: String(employee.status ?? '').toLowerCase(),
       })));
     } catch (err) {
-      setError(err?.response?.data?.message || err?.message || 'โหลดข้อมูลล้มเหลว');
+      setError(err?.response?.data?.error?.message || err?.response?.data?.message || err?.message || 'โหลดข้อมูลล้มเหลว');
+      feedback.actionError(err, 'โหลดข้อมูลพนักงานไม่สำเร็จ', 'employee:roles:load:error');
     } finally {
       setLoading(false);
     }
@@ -88,7 +91,10 @@ export default function ManageRolesPage() {
     fetchList();
     getBranchDropdowns()
       .then((rows) => setBranches(Array.isArray(rows) ? rows : []))
-      .catch(() => setBranches([]));
+      .catch((err) => {
+        setBranches([]);
+        feedback.actionError(err, 'โหลดรายการสาขาไม่สำเร็จ', 'employee:roles:branches:error');
+      });
   }, [fetchList, isSuperAdmin]);
 
   useEffect(() => {
@@ -98,6 +104,7 @@ export default function ManageRolesPage() {
   const requestRoleChange = (employee) => {
     if (employee.status !== 'active') {
       setError('เปลี่ยน Role ได้เฉพาะพนักงานที่ได้รับอนุมัติและกำลังใช้งานอยู่');
+      feedback.warning('เปลี่ยน Role ได้เฉพาะพนักงานที่ได้รับอนุมัติและกำลังใช้งานอยู่', { eventKey: 'employee:role:not-active' });
       return;
     }
     if (!['admin', 'employee'].includes(employee.role)) return;
@@ -105,17 +112,22 @@ export default function ManageRolesPage() {
   };
 
   const confirmRoleChange = async () => {
-    if (!pending?.employee) return;
+    if (!pending?.employee || changingRole) return;
+    const target = pending;
     try {
+      setChangingRole(true);
       setError('');
-      await updateUserRole(pending.employee.userId, pending.nextRole);
+      await updateUserRole(target.employee.userId, target.nextRole);
       setAllItems((items) => items.map((employee) =>
-        employee.id === pending.employee.id ? { ...employee, role: pending.nextRole } : employee
+        employee.id === target.employee.id ? { ...employee, role: target.nextRole } : employee
       ));
-    } catch (err) {
-      setError(err?.response?.data?.message || err?.message || 'เปลี่ยนสิทธิ์ไม่สำเร็จ');
-    } finally {
       setPending(null);
+      feedback.actionSuccess(`เปลี่ยน Role เป็น ${target.nextRole} เรียบร้อยแล้ว`, 'employee:role:update:success');
+    } catch (err) {
+      setError(err?.response?.data?.error?.message || err?.response?.data?.message || err?.message || 'เปลี่ยนสิทธิ์ไม่สำเร็จ');
+      feedback.actionError(err, 'เปลี่ยน Role พนักงานไม่สำเร็จ', 'employee:role:update:error');
+    } finally {
+      setChangingRole(false);
     }
   };
 
@@ -130,8 +142,9 @@ export default function ManageRolesPage() {
   const confirmLifecycleChange = async () => {
     const employee = pendingLifecycle?.employee;
     const nextActive = pendingLifecycle?.nextActive;
-    if (!employee || typeof nextActive !== 'boolean') return;
+    if (!employee || typeof nextActive !== 'boolean' || changingEmployeeId) return;
 
+    const actionText = nextActive ? 'เปิดใช้งาน' : 'ระงับการใช้งาน';
     try {
       setChangingEmployeeId(employee.id);
       setError('');
@@ -142,8 +155,10 @@ export default function ManageRolesPage() {
           : item
       ));
       setPendingLifecycle(null);
+      feedback.actionSuccess(`${actionText}พนักงานเรียบร้อยแล้ว`, `employee:role-lifecycle:${nextActive ? 'activate' : 'suspend'}:success`);
     } catch (err) {
-      setError(err?.response?.data?.message || err?.message || 'เปลี่ยนสถานะพนักงานไม่สำเร็จ');
+      setError(err?.response?.data?.error?.message || err?.response?.data?.message || err?.message || 'เปลี่ยนสถานะพนักงานไม่สำเร็จ');
+      feedback.actionError(err, `${actionText}พนักงานไม่สำเร็จ`, `employee:role-lifecycle:${nextActive ? 'activate' : 'suspend'}:error`);
     } finally {
       setChangingEmployeeId(null);
     }
@@ -222,7 +237,7 @@ export default function ManageRolesPage() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex justify-end gap-2">
-                          <ActionButton className="bg-emerald-600 text-white hover:bg-emerald-700 focus:ring-emerald-400" disabled={!roleChangeAllowed} onClick={() => requestRoleChange(employee)}>
+                          <ActionButton className="bg-emerald-600 text-white hover:bg-emerald-700 focus:ring-emerald-400" disabled={!roleChangeAllowed || changingRole} onClick={() => requestRoleChange(employee)}>
                             เปลี่ยน Role
                           </ActionButton>
                           <ActionButton
@@ -257,8 +272,10 @@ export default function ManageRolesPage() {
                 ยืนยันเปลี่ยน Role ของ “{pending.employee.name || pending.employee.email}” เป็น “{pending.nextRole}” หรือไม่?
               </div>
               <div className="flex gap-2">
-                <ActionButton className="border border-amber-300 text-amber-900" onClick={() => setPending(null)}>ยกเลิก</ActionButton>
-                <ActionButton className="bg-emerald-600 text-white hover:bg-emerald-700 focus:ring-emerald-400" onClick={confirmRoleChange}>ยืนยัน</ActionButton>
+                <ActionButton className="border border-amber-300 text-amber-900" disabled={changingRole} onClick={() => setPending(null)}>ยกเลิก</ActionButton>
+                <ActionButton className="bg-emerald-600 text-white hover:bg-emerald-700 focus:ring-emerald-400" disabled={changingRole} onClick={confirmRoleChange}>
+                  {changingRole ? 'กำลังบันทึก...' : 'ยืนยัน'}
+                </ActionButton>
               </div>
             </div>
           )}
@@ -275,7 +292,7 @@ export default function ManageRolesPage() {
         intent={pendingLifecycle?.nextActive ? 'primary' : 'destructive'}
         loading={Boolean(changingEmployeeId)}
         loadingLabel="กำลังบันทึก..."
-        onClose={() => setPendingLifecycle(null)}
+        onClose={() => !changingEmployeeId && setPendingLifecycle(null)}
         onConfirm={confirmLifecycleChange}
       />
     </>

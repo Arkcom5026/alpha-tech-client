@@ -1,6 +1,6 @@
-// --- filepath: src/features/position/pages/EditPositionPage.jsx
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { feedback } from '@/design-system';
 import PositionForm from '../components/PositionForm.jsx';
 import { usePositionStore } from '../stores/positionStore.js';
 
@@ -15,19 +15,23 @@ const EditPositionPage = () => {
   const { fetchByIdAction, updateAction, current, loading, error, message, resetCurrentAction } = usePositionStore();
   const [notFound, setNotFound] = useState(false);
 
-  // Load data by id (and log for debugging)
   useEffect(() => {
     let cancelled = false;
     (async () => {
       if (!Number.isFinite(idNum)) {
-        console.warn('[EditPositionPage] invalid id param:', id);
         setNotFound(true);
+        feedback.error('รหัสตำแหน่งไม่ถูกต้อง', { eventKey: 'position:edit:invalid-id' });
         return;
       }
-      console.debug('[EditPositionPage] fetching id=', idNum);
-      const item = await fetchByIdAction(idNum);
-      console.debug('[EditPositionPage] fetched item=', item);
-      if (!cancelled && !item) setNotFound(true);
+      try {
+        const item = await fetchByIdAction(idNum);
+        if (!cancelled && !item) setNotFound(true);
+      } catch (loadError) {
+        if (!cancelled) {
+          setNotFound(true);
+          feedback.actionError(loadError, 'โหลดข้อมูลตำแหน่งไม่สำเร็จ', 'position:edit:load:error');
+        }
+      }
     })();
     return () => {
       cancelled = true;
@@ -37,8 +41,18 @@ const EditPositionPage = () => {
   }, [idNum]);
 
   const handleSubmit = async (payload) => {
-    const ok = await updateAction(idNum, payload);
-    if (ok) navigate(-1);
+    if (loading) return;
+    try {
+      const ok = await updateAction(idNum, payload);
+      if (ok) {
+        feedback.actionSuccess('บันทึกการแก้ไขตำแหน่งเรียบร้อยแล้ว', 'position:update:success');
+        navigate(-1);
+      } else {
+        feedback.error(error || 'บันทึกการแก้ไขตำแหน่งไม่สำเร็จ', { eventKey: 'position:update:error' });
+      }
+    } catch (updateError) {
+      feedback.actionError(updateError, 'บันทึกการแก้ไขตำแหน่งไม่สำเร็จ', 'position:update:error');
+    }
   };
 
   const showForm = !!current && !loading;
@@ -62,10 +76,10 @@ const EditPositionPage = () => {
 
         {showForm && (
           <PositionForm
-            key={current.id} // ensure re-mount when current changes
+            key={current.id}
             initialValues={{ name: current?.name || '', description: current?.description || '' }}
             onSubmit={handleSubmit}
-            onCancel={() => navigate(-1)}
+            onCancel={() => !loading && navigate(-1)}
             submitting={loading}
             error={error}
           />

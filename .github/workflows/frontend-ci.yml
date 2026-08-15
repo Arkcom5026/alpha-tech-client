@@ -31,6 +31,9 @@ jobs:
     - name: Release safety contract
       run: node tests/release-safety-foundation.contract.test.js
 
+    - name: Tax Closing handoff contract
+      run: node tests/tax-closing-handoff.contract.test.js
+
     - name: UI modernization full-repository guard
       run: npm run guard:ui-modernization
 

@@ -29,7 +29,8 @@ describe('Tax UX input receipt linking simplification', () => {
     expect(selection).toContain('ใช้ใบกำกับภาษีซื้อที่มีอยู่แล้ว');
     expect(selection).toContain('สร้างใบกำกับภาษีซื้อฉบับใหม่');
     expect(selection).toContain('เลือกเพียงหนึ่งวิธีด้านล่าง');
-    expect(orchestration).toContain("controller.setSelectedDocumentId('')");
+    expect(orchestration).toContain("setSelectedDocumentId('')");
+    expect(orchestration).toContain('setShowCreateDocument(true)');
     expect(controller).toContain('setShowCreateDocument(false)');
   });
 
@@ -47,8 +48,8 @@ describe('Tax UX input receipt linking simplification', () => {
   });
 
   it('automatically guides to a new invoice when no existing document can be used', () => {
-    expect(orchestration).toContain('controller.eligibleDocuments.length > 0');
-    expect(orchestration).toContain('if (controller.showCreateDocument) return;');
+    expect(orchestration).toContain('if (eligibleDocuments.length > 0) return;');
+    expect(orchestration).toContain('if (showCreateDocument) return;');
     expect(orchestration).toContain('openCreateDocument();');
     expect(selection).toContain('disabled={!hasReceipts || !existingAvailable}');
     expect(selection).toContain('ไม่มีใบกำกับภาษีซื้อเดิมที่มียอดคงเหลือเพียงพอ ระบบเลือกการสร้างฉบับใหม่ให้แล้ว');

@@ -1,14 +1,12 @@
-
-
 // src/features/stock/brand/pages/CreateBrandPage.jsx
-// Create Brand (Production-grade, no direct API calls)
-
 import React, { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
+import { feedback } from '@/design-system'
 import { useBrandStore } from '../store/brandStore'
 
 const CreateBrandPage = () => {
   const navigate = useNavigate()
+  const { shopSlug } = useParams()
 
   const {
     saving,
@@ -33,17 +31,24 @@ const CreateBrandPage = () => {
     clearErrorAction()
     setTouched(true)
 
-    if (!nameTrim) return
+    if (!nameTrim || saving) return
 
-    const result = await createBrandAction({ name: nameTrim })
-    if (result?.ok) {
-      // กลับไปหน้า list
-      navigate(`/${shopSlug}/pos/stock/brands`)
+    try {
+      const result = await createBrandAction({ name: nameTrim })
+      if (result?.ok) {
+        feedback.actionSuccess('เพิ่มแบรนด์เรียบร้อยแล้ว', 'brand:create:success')
+        navigate(`/${shopSlug || 'advancetech'}/pos/stock/brands`)
+        return
+      }
+      feedback.error(error || 'เพิ่มแบรนด์ไม่สำเร็จ', { eventKey: 'brand:create:error' })
+    } catch (createError) {
+      feedback.actionError(createError, 'เพิ่มแบรนด์ไม่สำเร็จ', 'brand:create:error')
     }
   }
 
   const onCancel = () => {
-    navigate(`/${shopSlug}/pos/stock/brands`)
+    if (saving) return
+    navigate(`/${shopSlug || 'advancetech'}/pos/stock/brands`)
   }
 
   return (
@@ -55,7 +60,6 @@ const CreateBrandPage = () => {
         </div>
       </div>
 
-      {/* error block (no dialog alert) */}
       {error ? (
         <div className="mt-3 rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">
           <div className="font-medium">เกิดข้อผิดพลาด</div>
@@ -73,6 +77,7 @@ const CreateBrandPage = () => {
               onBlur={() => setTouched(true)}
               placeholder="เช่น Samsung"
               className="w-full rounded border px-3 py-2 text-sm"
+              disabled={saving}
             />
             {nameError ? (
               <div className="mt-1 text-xs text-red-600">{nameError}</div>
@@ -85,7 +90,7 @@ const CreateBrandPage = () => {
               disabled={saving}
               className="px-4 py-2 rounded bg-blue-600 text-white text-sm hover:bg-blue-700 disabled:opacity-60"
             >
-              บันทึก
+              {saving ? 'กำลังบันทึก...' : 'บันทึก'}
             </button>
             <button
               type="button"
@@ -95,7 +100,6 @@ const CreateBrandPage = () => {
             >
               ยกเลิก
             </button>
-            {saving ? <div className="text-sm text-gray-600">กำลังบันทึก...</div> : null}
           </div>
 
           <div className="text-xs text-gray-500">

@@ -1,16 +1,42 @@
 // ===== components/OrderOnlinePosTable.jsx =====
 
-import React from 'react';
-import { useNavigate, useParams } from 'react-router-dom'; // 🟢 ดึง useParams ร่วมขบวนจัด Multi-Tenant
+import React, { useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { ConfirmActionDialog } from '@/design-system/composites';
+import { feedback } from '@/design-system/feedback';
 import OrderOnlinePosStatusBadge from './OrderOnlinePosStatusBadge';
 import { useOrderOnlinePosStore } from '../store/orderOnlinePosStore';
 
+const ACTION_COPY = {
+  approve: {
+    title: 'อนุมัติสลิปคำสั่งซื้อ',
+    description: 'ยืนยันการอนุมัติสลิปคำสั่งซื้อนี้?',
+    confirmLabel: 'อนุมัติสลิป',
+    intent: 'primary',
+    success: 'อนุมัติสลิปเรียบร้อยแล้ว',
+  },
+  reject: {
+    title: 'ปฏิเสธสลิปคำสั่งซื้อ',
+    description: 'ยืนยันการปฏิเสธสลิปคำสั่งซื้อนี้?',
+    confirmLabel: 'ปฏิเสธสลิป',
+    intent: 'destructive',
+    success: 'ปฏิเสธสลิปเรียบร้อยแล้ว',
+  },
+  delete: {
+    title: 'ลบคำสั่งซื้อ',
+    description: 'คุณต้องการลบคำสั่งซื้อนี้หรือไม่? การดำเนินการนี้ไม่สามารถย้อนกลับได้',
+    confirmLabel: 'ลบคำสั่งซื้อ',
+    intent: 'destructive',
+    success: 'ลบคำสั่งซื้อเรียบร้อยแล้ว',
+  },
+};
+
 const OrderOnlinePosTable = ({ orders }) => {
   const navigate = useNavigate();
-  
-  // 🟢 FIXED: ดึงรหัสร้านค้าความปลอดภัยแชร์สาขามาใช้งานคุมเส้นทางย้ายเลน
   const { shopSlug } = useParams();
   const targetSlug = shopSlug || 'advancetech';
+  const [pendingAction, setPendingAction] = useState(null);
+  const [runningAction, setRunningAction] = useState(false);
 
   const {
     approveOrderOnlineSlipAction,
@@ -18,99 +44,103 @@ const OrderOnlinePosTable = ({ orders }) => {
     deleteOrderOnlineAction,
   } = useOrderOnlinePosStore();
 
-  const handleApprove = async (id) => {
-    if (confirm('ยืนยันการอนุมัติสลิปคำสั่งซื้อนี้?')) {
-      await approveOrderOnlineSlipAction(id);
+  const requestAction = (type, id) => setPendingAction({ type, id });
+
+  const confirmAction = async () => {
+    if (!pendingAction) return;
+    const copy = ACTION_COPY[pendingAction.type];
+    const action = pendingAction.type === 'approve'
+      ? approveOrderOnlineSlipAction
+      : pendingAction.type === 'reject'
+        ? rejectOrderOnlineSlipAction
+        : deleteOrderOnlineAction;
+
+    setRunningAction(true);
+    try {
+      await action(pendingAction.id);
+      feedback.success(copy.success);
+      setPendingAction(null);
+    } catch (error) {
+      feedback.error(error?.response?.data?.message || error?.message || 'ดำเนินการคำสั่งซื้อไม่สำเร็จ');
+    } finally {
+      setRunningAction(false);
     }
   };
 
-  const handleReject = async (id) => {
-    if (confirm('ยืนยันการปฏิเสธสลิปคำสั่งซื้อนี้?')) {
-      await rejectOrderOnlineSlipAction(id);
-    }
-  };
-
-  const handleDelete = async (id) => {
-    if (confirm('คุณต้องการลบคำสั่งซื้อนี้หรือไม่?')) {
-      await deleteOrderOnlineAction(id);
-    }
-  };
-
-  const formatMoney = (amount) => {
-    return typeof amount === 'number' ? amount.toFixed(2) : '-';
-  };
+  const formatMoney = (amount) => typeof amount === 'number' ? amount.toFixed(2) : '-';
+  const pendingCopy = pendingAction ? ACTION_COPY[pendingAction.type] : null;
 
   return (
-    <table className="w-full border text-sm">
-      <thead className="bg-gray-100">
-        <tr>
-          <th className="border p-2">รหัสคำสั่งซื้อ</th>
-          <th className="border p-2">ลูกค้า</th>
-          <th className="border p-2">วันที่</th>
-          <th className="border p-2">ยอดรวม</th>
-          <th className="border p-2">สถานะ</th>
-          <th className="border p-2">จัดการ</th>
-        </tr>
-      </thead>
-      <tbody>
-        {orders.length === 0 ? (
+    <>
+      <table className="w-full border text-sm">
+        <thead className="bg-gray-100">
           <tr>
-            <td colSpan="6" className="text-center p-4 text-gray-500">
-              ไม่พบคำสั่งซื้อ
-            </td>
+            <th className="border p-2">รหัสคำสั่งซื้อ</th>
+            <th className="border p-2">ลูกค้า</th>
+            <th className="border p-2">วันที่</th>
+            <th className="border p-2">ยอดรวม</th>
+            <th className="border p-2">สถานะ</th>
+            <th className="border p-2">จัดการ</th>
           </tr>
-        ) : (
-          orders.map((order) => {
-            const customerName = order.customer?.customerType === 'GOVERNMENT'
-              ? order.customer?.companyName || '-'
-              : order.customer?.name || '-';
+        </thead>
+        <tbody>
+          {orders.length === 0 ? (
+            <tr>
+              <td colSpan="6" className="p-4 text-center text-gray-500">ไม่พบคำสั่งซื้อ</td>
+            </tr>
+          ) : (
+            orders.map((order) => {
+              const customerName = order.customer?.customerType === 'GOVERNMENT'
+                ? order.customer?.companyName || '-'
+                : order.customer?.name || '-';
 
-            return (
-              <tr key={order.id} className="hover:bg-gray-50">
-                <td className="border p-2">{order.code}</td>
-                <td className="border p-2">{customerName}</td>
-                <td className="border p-2">{order.createdAt?.slice(0, 10)}</td>
-                <td className="border p-2 text-right">฿{formatMoney(order.totalAmount)}</td>
-                <td className="border p-2">
-                  <OrderOnlinePosStatusBadge status={order.status} />
-                </td>
-                <td className="border p-2 text-center space-y-1">
-                  <button
-                    className="text-blue-600 hover:underline block w-full"
-                    // 🟢 FIXED: ซ่อมพาสปุ่มกดดูสเปกออเดอร์เดลิเวอรี่ให้วิ่งผ่านเลน Tenant
-                    onClick={() => navigate(`/${targetSlug}/pos/sales/order-online/${order.id}`)}
-                  >
-                    ดูรายละเอียด
-                  </button>
-                  {order.status === 'WAITING_APPROVAL' && (
-                    <>
-                      <button
-                        className="text-green-600 hover:underline block w-full"
-                        onClick={() => handleApprove(order.id)}
-                      >
-                        อนุมัติสลิป
-                      </button>
-                      <button
-                        className="text-red-600 hover:underline block w-full"
-                        onClick={() => handleReject(order.id)}
-                      >
-                        ปฏิเสธสลิป
-                      </button>
-                    </>
-                  )}
-                  <button
-                    className="text-gray-500 hover:underline block w-full"
-                    onClick={() => handleDelete(order.id)}
-                  >
-                    ลบ
-                  </button>
-                </td>
-              </tr>
-            );
-          })
-        )}
-      </tbody>
-    </table>
+              return (
+                <tr key={order.id} className="hover:bg-gray-50">
+                  <td className="border p-2">{order.code}</td>
+                  <td className="border p-2">{customerName}</td>
+                  <td className="border p-2">{order.createdAt?.slice(0, 10)}</td>
+                  <td className="border p-2 text-right">฿{formatMoney(order.totalAmount)}</td>
+                  <td className="border p-2"><OrderOnlinePosStatusBadge status={order.status} /></td>
+                  <td className="space-y-1 border p-2 text-center">
+                    <button
+                      className="block w-full text-emerald-700 hover:underline"
+                      onClick={() => navigate(`/${targetSlug}/pos/sales/order-online/${order.id}`)}
+                    >
+                      ดูรายละเอียด
+                    </button>
+                    {order.status === 'WAITING_APPROVAL' && (
+                      <>
+                        <button className="block w-full text-emerald-600 hover:underline" onClick={() => requestAction('approve', order.id)}>
+                          อนุมัติสลิป
+                        </button>
+                        <button className="block w-full text-red-600 hover:underline" onClick={() => requestAction('reject', order.id)}>
+                          ปฏิเสธสลิป
+                        </button>
+                      </>
+                    )}
+                    <button className="block w-full text-gray-500 hover:underline" onClick={() => requestAction('delete', order.id)}>
+                      ลบ
+                    </button>
+                  </td>
+                </tr>
+              );
+            })
+          )}
+        </tbody>
+      </table>
+
+      <ConfirmActionDialog
+        open={Boolean(pendingAction)}
+        title={pendingCopy?.title}
+        description={pendingCopy?.description}
+        confirmLabel={pendingCopy?.confirmLabel}
+        intent={pendingCopy?.intent}
+        loading={runningAction}
+        loadingLabel="กำลังดำเนินการ..."
+        onClose={() => setPendingAction(null)}
+        onConfirm={confirmAction}
+      />
+    </>
   );
 };
 

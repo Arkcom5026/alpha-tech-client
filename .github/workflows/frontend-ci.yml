@@ -34,6 +34,9 @@ jobs:
     - name: UI modernization incremental guard
       run: node scripts/verify-ui-modernization.mjs --mode=diff
 
+    - name: UI modernization hardening contract
+      run: npx vitest run tests/ui-modernization-foundation.contract.test.js
+
     - name: 🧪 ตรวจสัญญา Sale Customer Search E2E Increment
       run: npm run test:sale-customer-search-e2e
 
@@ -43,7 +46,7 @@ jobs:
     - name: 🧪 ตรวจสัญญาคู่มือภายในงานรับซ่อม
       run: npm run test:repair-in-app-help
 
-    - name: 🧪 ตรวจสัญญาคู่มือการเคลม
+    - name: 🧪 ตรวจสัญญาคู่มืองานเคลม
       run: npm run test:warranty-claim-help
 
     - name: 🧪 ตรวจสัญญาคู่มือรับสินค้าด่วน

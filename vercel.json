@@ -1,5 +1,11 @@
 {
-  "ignoreCommand": "exit 1",
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "git": {
+    "deploymentEnabled": {
+      "main": true,
+      "*": false
+    }
+  },
   "rewrites": [
     { "source": "/(.*)", "destination": "/" }
   ]

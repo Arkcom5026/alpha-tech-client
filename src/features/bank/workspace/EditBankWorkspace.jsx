@@ -44,6 +44,7 @@ export function EditBankPage() {
 
   const onSubmit = async (e) => {
     e.preventDefault();
+    if (bankSaving) return;
     if (!form.name || form.name.trim() === '') {
       setNameError('กรุณาระบุชื่อธนาคาร');
       return;
@@ -51,11 +52,10 @@ export function EditBankPage() {
     setNameError('');
     try {
       await updateBankAction(bankId, form);
-      feedback.success('อัปเดตข้อมูลธนาคารแล้ว');
+      feedback.actionSuccess('อัปเดตข้อมูลธนาคารเรียบร้อยแล้ว', 'bank:update:success');
       navigate(getListUrl());
     } catch (err) {
-      const msg = err?.response?.data?.message || 'บันทึกไม่สำเร็จ';
-      feedback.error(msg);
+      feedback.actionError(err, 'บันทึกข้อมูลธนาคารไม่สำเร็จ', 'bank:update:error');
     }
   };
 

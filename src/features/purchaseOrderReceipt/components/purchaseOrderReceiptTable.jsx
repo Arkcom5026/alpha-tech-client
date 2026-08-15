@@ -11,6 +11,8 @@ import {
   XCircle,
 } from 'lucide-react';
 
+import { ConfirmActionDialog } from '@/design-system/composites';
+import { feedback } from '@/design-system/feedback';
 import { cancelPurchaseOrder } from '@/features/purchaseOrder/lifecycle';
 import usePurchaseOrderReceiptStore from '../store/purchaseOrderReceiptStore';
 import ReceiptStatusBadge from './ReceiptStatusBadge';
@@ -51,7 +53,7 @@ const ReceiptActions = ({ purchaseOrder, isCanceling, onReceive, onCancel }) => 
         type="button"
         disabled={!receiveEnabled || isCanceling}
         onClick={() => onReceive(purchaseOrder.id)}
-        className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-teal-700 bg-teal-700 px-4 text-sm font-semibold text-white transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400"
+        className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-emerald-700 bg-emerald-700 px-4 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400"
       >
         <ClipboardCheck className="h-4 w-4" />
         ตรวจรับ
@@ -84,6 +86,7 @@ export default function PurchaseOrderReceiptTable({ purchaseOrders, loading }) {
   const [searchText, setSearchText] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [cancelingId, setCancelingId] = useState(null);
+  const [pendingCancel, setPendingCancel] = useState(null);
 
   const filtered = useMemo(() => {
     const list = Array.isArray(purchaseOrders) ? purchaseOrders : [];
@@ -104,152 +107,173 @@ export default function PurchaseOrderReceiptTable({ purchaseOrders, loading }) {
     navigate(`/${targetSlug}/pos/purchases/receipt/create/${id}`);
   };
 
-  const handleCancel = async (id, code) => {
-    const confirmed = window.confirm(
-      `คุณต้องการยกเลิกใบสั่งซื้อเลขที่ ${code} ใช่หรือไม่?\nเมื่อยกเลิกแล้ว เอกสารนี้จะไม่สามารถนำมาตรวจรับสินค้าได้อีก`
-    );
-    if (!confirmed) return;
+  const requestCancel = (id, code) => {
+    setPendingCancel({ id, code });
+  };
+
+  const confirmCancel = async () => {
+    if (!pendingCancel?.id) return;
+    const { id, code } = pendingCancel;
 
     try {
       setCancelingId(id);
       await cancelPurchaseOrder(id);
       await fetchPurchaseOrdersForReceiptAction({ shopSlug: shopSlug || 'advancetech' });
-      window.alert(`ยกเลิกใบสั่งซื้อ ${code} สำเร็จ`);
+      feedback.success(`ยกเลิกใบสั่งซื้อ ${code} สำเร็จ`);
+      setPendingCancel(null);
     } catch (error) {
-      window.alert(`ไม่สามารถยกเลิกเอกสารได้: ${error?.message || 'เกิดข้อผิดพลาดทางระบบ'}`);
+      feedback.error(`ไม่สามารถยกเลิกเอกสารได้: ${error?.message || 'เกิดข้อผิดพลาดทางระบบ'}`);
     } finally {
       setCancelingId(null);
     }
   };
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm" aria-label="รายการตรวจรับสินค้า">
-      <div className="space-y-4 border-b border-slate-200 bg-slate-50 p-4 lg:flex lg:items-center lg:justify-between lg:space-y-0">
-        <div className="relative w-full lg:max-w-md">
-          <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-          <input
-            type="search"
-            aria-label="ค้นหาใบสั่งซื้อที่รอตรวจรับ"
-            placeholder="ค้นหา Supplier หรือเลขที่ใบสั่งซื้อ"
-            value={searchText}
-            onChange={(event) => setSearchText(event.target.value)}
-            className="min-h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm text-slate-800 outline-none transition focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
-          />
-        </div>
+    <>
+      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm" aria-label="รายการตรวจรับสินค้า">
+        <div className="space-y-4 border-b border-slate-200 bg-slate-50 p-4 lg:flex lg:items-center lg:justify-between lg:space-y-0">
+          <div className="relative w-full lg:max-w-md">
+            <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <input
+              type="search"
+              aria-label="ค้นหาใบสั่งซื้อที่รอตรวจรับ"
+              placeholder="ค้นหา Supplier หรือเลขที่ใบสั่งซื้อ"
+              value={searchText}
+              onChange={(event) => setSearchText(event.target.value)}
+              className="min-h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm text-slate-800 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+            />
+          </div>
 
-        <div className="flex gap-2 overflow-x-auto pb-1 lg:pb-0" aria-label="ตัวกรองสถานะใบสั่งซื้อ">
-          <span className="inline-flex min-h-11 shrink-0 items-center gap-2 px-1 text-sm font-medium text-slate-500">
-            <SlidersHorizontal className="h-4 w-4" /> ตัวกรอง
-          </span>
-          {STATUS_FILTERS.map((filter) => {
-            const active = statusFilter === filter.value;
-            return (
-              <button
-                key={filter.value}
-                type="button"
-                onClick={() => setStatusFilter(filter.value)}
-                className={`min-h-11 shrink-0 rounded-xl border px-4 text-sm font-semibold transition ${
-                  active
-                    ? 'border-teal-300 bg-teal-100 text-teal-900'
-                    : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-100'
-                }`}
-              >
-                {filter.label}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {loading ? (
-        <div role="status" className="flex min-h-40 items-center justify-center gap-3 p-6 text-sm font-medium text-slate-500">
-          <span className="h-5 w-5 animate-spin rounded-full border-2 border-teal-600 border-t-transparent" />
-          กำลังโหลดรายการตรวจรับสินค้า
-        </div>
-      ) : filtered.length === 0 ? (
-        <div className="px-5 py-12 text-center">
-          <FileText className="mx-auto h-10 w-10 text-slate-300" />
-          <h2 className="mt-3 text-base font-semibold text-slate-900">ไม่พบรายการที่ตรงกับเงื่อนไข</h2>
-          <p className="mt-1 text-sm text-slate-500">ลองเปลี่ยนคำค้นหาหรือตัวกรองสถานะ</p>
-        </div>
-      ) : (
-        <>
-          <div className="space-y-3 p-3 md:hidden">
-            {filtered.map((purchaseOrder) => {
-              const code = purchaseOrder?.code || purchaseOrder?.poNumber || '-';
+          <div className="flex gap-2 overflow-x-auto pb-1 lg:pb-0" aria-label="ตัวกรองสถานะใบสั่งซื้อ">
+            <span className="inline-flex min-h-11 shrink-0 items-center gap-2 px-1 text-sm font-medium text-slate-500">
+              <SlidersHorizontal className="h-4 w-4" /> ตัวกรอง
+            </span>
+            {STATUS_FILTERS.map((filter) => {
+              const active = statusFilter === filter.value;
               return (
-                <article key={purchaseOrder.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="text-xs font-medium text-slate-500">เลขที่ใบสั่งซื้อ</p>
-                      <h2 className="mt-1 break-all text-base font-bold text-slate-950">{code}</h2>
-                    </div>
-                    <ReceiptStatusBadge status={purchaseOrder?.status} />
-                  </div>
-
-                  <dl className="mt-4 space-y-3 text-sm">
-                    <div className="flex items-start gap-3">
-                      <User className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
-                      <div className="min-w-0">
-                        <dt className="text-xs text-slate-500">Supplier</dt>
-                        <dd className="break-words font-semibold text-slate-800">{purchaseOrder?.supplier?.name || '-'}</dd>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-3">
-                      <Calendar className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
-                      <div>
-                        <dt className="text-xs text-slate-500">วันที่ออกเอกสาร</dt>
-                        <dd className="font-semibold text-slate-800">{formatDateTh(purchaseOrder?.createdAt)}</dd>
-                      </div>
-                    </div>
-                  </dl>
-
-                  <div className="mt-4 border-t border-slate-200 pt-4">
-                    <ReceiptActions
-                      purchaseOrder={purchaseOrder}
-                      isCanceling={cancelingId === purchaseOrder.id}
-                      onReceive={handleReceive}
-                      onCancel={handleCancel}
-                    />
-                  </div>
-                </article>
+                <button
+                  key={filter.value}
+                  type="button"
+                  onClick={() => setStatusFilter(filter.value)}
+                  className={`min-h-11 shrink-0 rounded-xl border px-4 text-sm font-semibold transition ${
+                    active
+                      ? 'border-emerald-300 bg-emerald-100 text-emerald-900'
+                      : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-100'
+                  }`}
+                >
+                  {filter.label}
+                </button>
               );
             })}
           </div>
+        </div>
 
-          <div className="hidden overflow-x-auto md:block">
-            <table className="w-full min-w-[900px] border-collapse text-left">
-              <thead>
-                <tr className="border-b border-slate-200 bg-slate-50 text-xs font-semibold text-slate-500">
-                  <th className="px-5 py-4">วันที่ออกเอกสาร</th>
-                  <th className="px-5 py-4">เลขที่ใบสั่งซื้อ</th>
-                  <th className="px-5 py-4">Supplier</th>
-                  <th className="px-5 py-4 text-center">สถานะ</th>
-                  <th className="px-5 py-4 text-right">การจัดการ</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {filtered.map((purchaseOrder) => (
-                  <tr key={purchaseOrder.id} className="transition hover:bg-teal-50/40">
-                    <td className="px-5 py-4 text-sm font-medium text-slate-500">{formatDateTh(purchaseOrder?.createdAt)}</td>
-                    <td className="px-5 py-4 text-sm font-bold text-slate-950">{purchaseOrder?.code || purchaseOrder?.poNumber || '-'}</td>
-                    <td className="px-5 py-4 text-sm font-semibold text-slate-700">{purchaseOrder?.supplier?.name || '-'}</td>
-                    <td className="px-5 py-4 text-center"><ReceiptStatusBadge status={purchaseOrder?.status} /></td>
-                    <td className="px-5 py-4">
+        {loading ? (
+          <div role="status" className="flex min-h-40 items-center justify-center gap-3 p-6 text-sm font-medium text-slate-500">
+            <span className="h-5 w-5 animate-spin rounded-full border-2 border-emerald-600 border-t-transparent" />
+            กำลังโหลดรายการตรวจรับสินค้า
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="px-5 py-12 text-center">
+            <FileText className="mx-auto h-10 w-10 text-slate-300" />
+            <h2 className="mt-3 text-base font-semibold text-slate-900">ไม่พบรายการที่ตรงกับเงื่อนไข</h2>
+            <p className="mt-1 text-sm text-slate-500">ลองเปลี่ยนคำค้นหาหรือตัวกรองสถานะ</p>
+          </div>
+        ) : (
+          <>
+            <div className="space-y-3 p-3 md:hidden">
+              {filtered.map((purchaseOrder) => {
+                const code = purchaseOrder?.code || purchaseOrder?.poNumber || '-';
+                return (
+                  <article key={purchaseOrder.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-xs font-medium text-slate-500">เลขที่ใบสั่งซื้อ</p>
+                        <h2 className="mt-1 break-all text-base font-bold text-slate-950">{code}</h2>
+                      </div>
+                      <ReceiptStatusBadge status={purchaseOrder?.status} />
+                    </div>
+
+                    <dl className="mt-4 space-y-3 text-sm">
+                      <div className="flex items-start gap-3">
+                        <User className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
+                        <div className="min-w-0">
+                          <dt className="text-xs text-slate-500">Supplier</dt>
+                          <dd className="break-words font-semibold text-slate-800">{purchaseOrder?.supplier?.name || '-'}</dd>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <Calendar className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
+                        <div>
+                          <dt className="text-xs text-slate-500">วันที่ออกเอกสาร</dt>
+                          <dd className="font-semibold text-slate-800">{formatDateTh(purchaseOrder?.createdAt)}</dd>
+                        </div>
+                      </div>
+                    </dl>
+
+                    <div className="mt-4 border-t border-slate-200 pt-4">
                       <ReceiptActions
                         purchaseOrder={purchaseOrder}
                         isCanceling={cancelingId === purchaseOrder.id}
                         onReceive={handleReceive}
-                        onCancel={handleCancel}
+                        onCancel={requestCancel}
                       />
-                    </td>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+
+            <div className="hidden overflow-x-auto md:block">
+              <table className="w-full min-w-[900px] border-collapse text-left">
+                <thead>
+                  <tr className="border-b border-slate-200 bg-slate-50 text-xs font-semibold text-slate-500">
+                    <th className="px-5 py-4">วันที่ออกเอกสาร</th>
+                    <th className="px-5 py-4">เลขที่ใบสั่งซื้อ</th>
+                    <th className="px-5 py-4">Supplier</th>
+                    <th className="px-5 py-4 text-center">สถานะ</th>
+                    <th className="px-5 py-4 text-right">การจัดการ</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </>
-      )}
-    </section>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {filtered.map((purchaseOrder) => (
+                    <tr key={purchaseOrder.id} className="transition hover:bg-emerald-50/40">
+                      <td className="px-5 py-4 text-sm font-medium text-slate-500">{formatDateTh(purchaseOrder?.createdAt)}</td>
+                      <td className="px-5 py-4 text-sm font-bold text-slate-950">{purchaseOrder?.code || purchaseOrder?.poNumber || '-'}</td>
+                      <td className="px-5 py-4 text-sm font-semibold text-slate-700">{purchaseOrder?.supplier?.name || '-'}</td>
+                      <td className="px-5 py-4 text-center"><ReceiptStatusBadge status={purchaseOrder?.status} /></td>
+                      <td className="px-5 py-4">
+                        <ReceiptActions
+                          purchaseOrder={purchaseOrder}
+                          isCanceling={cancelingId === purchaseOrder.id}
+                          onReceive={handleReceive}
+                          onCancel={requestCancel}
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
+      </section>
+
+      <ConfirmActionDialog
+        open={Boolean(pendingCancel)}
+        intent="destructive"
+        title="ยกเลิกใบสั่งซื้อ"
+        description={pendingCancel
+          ? `ยืนยันยกเลิกใบสั่งซื้อเลขที่ ${pendingCancel.code} หรือไม่? เมื่อยกเลิกแล้ว เอกสารนี้จะไม่สามารถนำมาตรวจรับสินค้าได้อีก`
+          : ''}
+        confirmLabel="ยืนยันยกเลิก"
+        cancelLabel="กลับ"
+        loading={Boolean(pendingCancel && cancelingId === pendingCancel.id)}
+        onCancel={() => {
+          if (!cancelingId) setPendingCancel(null);
+        }}
+        onConfirm={confirmCancel}
+      />
+    </>
   );
 }

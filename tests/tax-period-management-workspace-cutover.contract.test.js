@@ -33,7 +33,9 @@ describe('tax period management workspace cutover contract', () => {
     expect(page).toContain('listTaxPeriods');
     expect(page).toContain('ensureMonthlyTaxPeriod');
     expect(page).toContain('transitionTaxPeriod');
-    expect(page).toContain('const handleAction = async (period, action) =>');
+    expect(page).toContain('const handleAction = (period, action) =>');
+    expect(page).toContain('const confirmAction = async () =>');
+    expect(page).toContain('<ConfirmActionDialog');
   });
 
   it('keeps extracted workspace presentation free of data and mutation authority', () => {

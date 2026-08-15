@@ -34,6 +34,9 @@ jobs:
     - name: Tax Closing handoff contract
       run: node tests/tax-closing-handoff.contract.test.js
 
+    - name: Public Storefront customer journey contract
+      run: node tests/public-storefront-customer-journey.contract.test.js
+
     - name: UI modernization full-repository guard
       run: npm run guard:ui-modernization
 

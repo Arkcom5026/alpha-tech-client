@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, CheckCircle2, RefreshCw, ShieldAlert, TriangleAlert } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { toast } from 'react-toastify';
+import { feedback } from '@/design-system/feedback';
 import { useBranchStore } from '@/features/branch/store/branchStore';
 import { getUnifiedTaxReadiness, getUnifiedTaxReadinessErrorMessage } from '../api/unifiedTaxReadinessApi';
 
@@ -61,7 +61,7 @@ const UnifiedTaxReadinessPage = () => {
     } catch (requestError) {
       const message = getUnifiedTaxReadinessErrorMessage(requestError);
       setError(message);
-      toast.error(message);
+      feedback.error(message);
     } finally {
       setLoading(false);
     }
@@ -69,8 +69,8 @@ const UnifiedTaxReadinessPage = () => {
 
   useEffect(() => { load(); }, [load]);
 
-  const domains = Array.isArray(data?.domains) ? data.domains : [];
-  const exceptions = Array.isArray(data?.exceptions) ? data.exceptions : [];
+  const domains = useMemo(() => Array.isArray(data?.domains) ? data.domains : [], [data?.domains]);
+  const exceptions = useMemo(() => Array.isArray(data?.exceptions) ? data.exceptions : [], [data?.exceptions]);
   const blockers = useMemo(() => exceptions.filter((entry) => entry.severity === 'BLOCKER'), [exceptions]);
   const reviews = useMemo(() => exceptions.filter((entry) => entry.severity !== 'BLOCKER'), [exceptions]);
 
@@ -90,7 +90,7 @@ const UnifiedTaxReadinessPage = () => {
           <div className="flex items-start gap-3">
             <button type="button" onClick={() => navigate(-1)} className="rounded-xl border border-slate-200 p-2 text-slate-600 hover:bg-slate-50" aria-label="ย้อนกลับ"><ArrowLeft size={18} /></button>
             <div>
-              <p className="text-xs font-black uppercase tracking-[0.16em] text-indigo-600">ความพร้อมก่อนปิดรอบภาษี</p>
+              <p className="text-xs font-black uppercase tracking-[0.16em] text-emerald-700">ความพร้อมก่อนปิดรอบภาษี</p>
               <h1 className="mt-1 text-2xl font-black text-slate-900">ศูนย์ตรวจความพร้อมภาษี</h1>
               <p className="mt-1 text-sm text-slate-500">รอบ {data?.period?.periodCode || taxPeriodId} · {currentBranch?.name || `สาขา #${branchId || '-'}`}</p>
               <p className="mt-1 text-xs text-slate-400">ระบบรวบรวมสถานะจากข้อมูลภาษีแต่ละส่วน เพื่อบอกสิ่งที่ต้องจัดการต่อโดยไม่สร้างข้อมูลซ้ำ</p>
@@ -139,7 +139,7 @@ const UnifiedTaxReadinessPage = () => {
                     <button key={`${entry.code}:${entry.source}`} type="button" onClick={() => goToTarget(entry.target?.relativePath, entry)} className="block w-full rounded-xl border border-amber-200 bg-white px-4 py-3 text-left hover:border-amber-400">
                       <div className="flex flex-wrap items-center justify-between gap-2"><span className="font-black text-amber-900">{copy[0]}</span><span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-black text-amber-800">{entry.count} รายการ</span></div>
                       <p className="mt-1 text-sm text-slate-600">{copy[1]}</p>
-                      <p className="mt-1 text-xs font-bold text-blue-700">ไปดำเนินการ</p>
+                      <p className="mt-1 text-xs font-bold text-emerald-700">ไปดำเนินการ</p>
                     </button>
                   );
                 })}

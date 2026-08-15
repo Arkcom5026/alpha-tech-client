@@ -1,6 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { BadgeCheck, RefreshCw, Save } from 'lucide-react';
-import { toast } from 'react-toastify';
+import { feedback } from '@/design-system/feedback';
 import {
   confirmVatCarryForwardAuthority,
   getVatCarryForwardAuthority,
@@ -26,7 +26,7 @@ const VatCarryForwardAuthorityPanel = ({ branchId, taxPeriodId, onConfirmed }) =
     ? Boolean(context?.priorPeriodSettlement?.readyForPp30Preparation)
     : true;
 
-  const load = async () => {
+  const load = useCallback(async () => {
     if (!branchId || !taxPeriodId) return;
     setLoading(true);
     setError('');
@@ -39,12 +39,13 @@ const VatCarryForwardAuthorityPanel = ({ branchId, taxPeriodId, onConfirmed }) =
     } catch (requestError) {
       const message = getVatSettlementErrorMessage(requestError);
       setError(message);
+      feedback.error(message);
     } finally {
       setLoading(false);
     }
-  };
+  }, [branchId, taxPeriodId]);
 
-  useEffect(() => { load(); }, [branchId, taxPeriodId]);
+  useEffect(() => { load(); }, [load]);
 
   const sourceLabel = useMemo(() => {
     if (context?.previousPeriod) {
@@ -64,26 +65,26 @@ const VatCarryForwardAuthorityPanel = ({ branchId, taxPeriodId, onConfirmed }) =
         amount,
         note,
       });
-      toast.success('ยืนยันเครดิต VAT ยกมาแล้ว');
+      feedback.success('ยืนยันเครดิต VAT ยกมาแล้ว');
       await load();
       await onConfirmed?.();
     } catch (requestError) {
       const message = getVatSettlementErrorMessage(requestError);
       setError(message);
-      toast.error(message);
+      feedback.error(message);
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <section className="rounded-2xl border border-indigo-200 bg-indigo-50 p-4">
+    <section className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
-          <div className="flex items-center gap-2 text-indigo-900"><BadgeCheck size={18} /><h2 className="font-black">เครดิต VAT ยกมา</h2></div>
-          <p className="mt-1 text-xs text-indigo-700">Authority สำหรับยอดภาษีชำระไว้เกินยกมาที่ใช้ในขั้นเตรียม ภ.พ.30</p>
+          <div className="flex items-center gap-2 text-emerald-900"><BadgeCheck size={18} /><h2 className="font-black">เครดิต VAT ยกมา</h2></div>
+          <p className="mt-1 text-xs text-emerald-700">Authority สำหรับยอดภาษีชำระไว้เกินยกมาที่ใช้ในขั้นเตรียม ภ.พ.30</p>
         </div>
-        <button type="button" onClick={load} disabled={loading} className="inline-flex items-center gap-2 rounded-xl border border-indigo-200 bg-white px-3 py-2 text-xs font-bold text-indigo-800 disabled:opacity-50">
+        <button type="button" onClick={load} disabled={loading} className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-white px-3 py-2 text-xs font-bold text-emerald-800 disabled:opacity-50">
           <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> รีเฟรช Authority
         </button>
       </div>
@@ -91,11 +92,11 @@ const VatCarryForwardAuthorityPanel = ({ branchId, taxPeriodId, onConfirmed }) =
       {error && <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-700">{error}</div>}
 
       <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-        <div className="rounded-xl border border-indigo-100 bg-white p-3"><p className="text-xs text-slate-500">แหล่งที่มา</p><p className="mt-1 text-sm font-black text-slate-900">{sourceLabel}</p></div>
-        <div className="rounded-xl border border-indigo-100 bg-white p-3"><p className="text-xs text-slate-500">เครดิตคงเหลือจากรอบก่อน</p><p className="mt-1 text-xl font-black text-indigo-950">{context?.suggestedAmount == null ? 'รอรอบก่อนพร้อม' : `฿${money(context.suggestedAmount)}`}</p></div>
-        <div className="rounded-xl border border-indigo-100 bg-white p-3"><p className="text-xs text-slate-500">สถานะ Authority</p><p className="mt-1 text-sm font-black text-slate-900">{context?.authority?.status || 'ยังไม่ยืนยัน'}</p></div>
-        <div className="rounded-xl border border-indigo-100 bg-white p-3"><p className="text-xs text-slate-500">ยอดที่ยืนยันล่าสุด</p><p className="mt-1 text-xl font-black text-indigo-950">฿{money(context?.authority?.amount)}</p></div>
-        <div className="rounded-xl border border-indigo-100 bg-white p-3"><p className="text-xs text-slate-500">Version</p><p className="mt-1 text-sm font-black text-slate-900">v{context?.authority?.version || '-'}</p></div>
+        <div className="rounded-xl border border-emerald-100 bg-white p-3"><p className="text-xs text-slate-500">แหล่งที่มา</p><p className="mt-1 text-sm font-black text-slate-900">{sourceLabel}</p></div>
+        <div className="rounded-xl border border-emerald-100 bg-white p-3"><p className="text-xs text-slate-500">เครดิตคงเหลือจากรอบก่อน</p><p className="mt-1 text-xl font-black text-emerald-950">{context?.suggestedAmount == null ? 'รอรอบก่อนพร้อม' : `฿${money(context.suggestedAmount)}`}</p></div>
+        <div className="rounded-xl border border-emerald-100 bg-white p-3"><p className="text-xs text-slate-500">สถานะ Authority</p><p className="mt-1 text-sm font-black text-slate-900">{context?.authority?.status || 'ยังไม่ยืนยัน'}</p></div>
+        <div className="rounded-xl border border-emerald-100 bg-white p-3"><p className="text-xs text-slate-500">ยอดที่ยืนยันล่าสุด</p><p className="mt-1 text-xl font-black text-emerald-950">฿{money(context?.authority?.amount)}</p></div>
+        <div className="rounded-xl border border-emerald-100 bg-white p-3"><p className="text-xs text-slate-500">Version</p><p className="mt-1 text-sm font-black text-slate-900">v{context?.authority?.version || '-'}</p></div>
       </div>
 
       {context?.previousPeriod && !priorSettlementReady && (
@@ -115,7 +116,7 @@ const VatCarryForwardAuthorityPanel = ({ branchId, taxPeriodId, onConfirmed }) =
             value={amount}
             onChange={(event) => setAmount(event.target.value)}
             disabled={immutable || saving || !priorSettlementReady}
-            className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-right font-black outline-none focus:border-indigo-400 disabled:bg-slate-100"
+            className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-right font-black outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 disabled:bg-slate-100"
           />
         </label>
         <label className="text-sm font-bold text-slate-700">
@@ -126,10 +127,10 @@ const VatCarryForwardAuthorityPanel = ({ branchId, taxPeriodId, onConfirmed }) =
             onChange={(event) => setNote(event.target.value)}
             disabled={immutable || saving || !priorSettlementReady}
             placeholder="เช่น ยอดตาม ภ.พ.30 เดือนก่อน / ส่วนที่เลือกยกมาแทนการขอคืน"
-            className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 outline-none focus:border-indigo-400 disabled:bg-slate-100"
+            className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 disabled:bg-slate-100"
           />
         </label>
-        <button type="button" onClick={confirm} disabled={immutable || saving || loading || !priorSettlementReady} className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-700 px-4 py-2.5 text-sm font-black text-white disabled:opacity-50">
+        <button type="button" onClick={confirm} disabled={immutable || saving || loading || !priorSettlementReady} className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-700 px-4 py-2.5 text-sm font-black text-white hover:bg-emerald-800 disabled:opacity-50">
           <Save size={16} /> {saving ? 'กำลังยืนยัน...' : 'ยืนยันเครดิตยกมา'}
         </button>
       </div>

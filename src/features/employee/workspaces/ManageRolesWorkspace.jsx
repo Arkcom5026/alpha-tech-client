@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { ConfirmActionDialog } from '@/design-system/composites';
 import { useAuthStore } from '@/features/auth/store/authStore.js';
 import {
   getAllEmployees,
@@ -42,6 +43,7 @@ export default function ManageRolesPage() {
   const [branchFilter, setBranchFilter] = useState('all');
   const [page, setPage] = useState(1);
   const [pending, setPending] = useState(null);
+  const [pendingLifecycle, setPendingLifecycle] = useState(null);
   const [changingEmployeeId, setChangingEmployeeId] = useState(null);
 
   const limit = 20;
@@ -117,15 +119,18 @@ export default function ManageRolesPage() {
     }
   };
 
-  const changeLifecycle = async (employee) => {
+  const requestLifecycleChange = (employee) => {
     if (employee.status === 'pending') return;
-    const nextActive = employee.status !== 'active';
-    const confirmed = window.confirm(
-      nextActive
-        ? `ยืนยันเปิดใช้งาน ${employee.name || employee.email} อีกครั้งหรือไม่?`
-        : `ยืนยันระงับการใช้งาน ${employee.name || employee.email} หรือไม่?\nประวัติการทำงานทั้งหมดจะยังคงอยู่`
-    );
-    if (!confirmed) return;
+    setPendingLifecycle({
+      employee,
+      nextActive: employee.status !== 'active',
+    });
+  };
+
+  const confirmLifecycleChange = async () => {
+    const employee = pendingLifecycle?.employee;
+    const nextActive = pendingLifecycle?.nextActive;
+    if (!employee || typeof nextActive !== 'boolean') return;
 
     try {
       setChangingEmployeeId(employee.id);
@@ -136,6 +141,7 @@ export default function ManageRolesPage() {
           ? { ...item, status: nextActive ? 'active' : 'inactive', active: nextActive }
           : item
       ));
+      setPendingLifecycle(null);
     } catch (err) {
       setError(err?.response?.data?.message || err?.message || 'เปลี่ยนสถานะพนักงานไม่สำเร็จ');
     } finally {
@@ -156,106 +162,122 @@ export default function ManageRolesPage() {
   const filterClassName = 'border border-zinc-300 dark:border-zinc-700 rounded-md px-3 py-2 bg-white dark:bg-zinc-900 focus:outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 dark:focus:ring-emerald-950/40 transition';
 
   return (
-    <div className="w-full flex justify-center mt-4">
-      <div className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm rounded-xl overflow-hidden">
-        <div className="px-4 py-3 border-b border-emerald-100 dark:border-zinc-800 bg-emerald-50/50 dark:bg-zinc-800/60">
-          <h1 className="text-base font-semibold text-emerald-900 dark:text-emerald-300">จัดการ Role และสถานะพนักงาน</h1>
-          {error && <p className="mt-1 text-xs text-rose-600">{error}</p>}
-        </div>
-
-        <div className="px-4 py-3 flex items-center gap-2 flex-wrap">
-          <input
-            className={`${filterClassName} w-full flex-1 min-w-[280px] max-w-2xl`}
-            placeholder="ค้นหาชื่อ / อีเมล..."
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-          />
-          <select className={filterClassName} value={filterRole} onChange={(event) => setFilterRole(event.target.value)}>
-            <option value="all">Role: ทั้งหมด</option>
-            <option value="admin">admin</option>
-            <option value="employee">employee</option>
-          </select>
-          <select className={`${filterClassName} min-w-[220px]`} value={branchFilter} onChange={(event) => setBranchFilter(event.target.value)}>
-            <option value="all">สาขา: ทั้งหมด</option>
-            {branches.map((branch) => <option key={branch.id} value={branch.id}>{branch.name}</option>)}
-          </select>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-sm">
-            <thead className="text-left text-zinc-600 bg-zinc-50 dark:bg-zinc-800">
-              <tr>
-                <th className="px-4 py-2 text-center">#</th>
-                <th className="px-4 py-2">ชื่อ</th>
-                <th className="px-4 py-2">อีเมล</th>
-                <th className="px-4 py-2">สาขา</th>
-                <th className="px-4 py-2 text-center">Role</th>
-                <th className="px-4 py-2 text-center">สถานะ</th>
-                <th className="px-4 py-2 text-right">จัดการ</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading && <tr><td colSpan={7} className="px-4 py-6 text-center text-zinc-500">กำลังโหลด...</td></tr>}
-              {!loading && pageRows.length === 0 && <tr><td colSpan={7} className="px-4 py-8 text-center text-zinc-500">ไม่พบข้อมูล</td></tr>}
-              {!loading && pageRows.map((employee, index) => {
-                const roleChangeAllowed = employee.status === 'active' && ['admin', 'employee'].includes(employee.role);
-                const lifecycleAllowed = employee.status !== 'pending';
-                const isActive = employee.status === 'active';
-                return (
-                  <tr key={employee.id} className="border-b border-zinc-100 dark:border-zinc-800 hover:bg-emerald-50/30 dark:hover:bg-emerald-950/10 transition-colors">
-                    <td className="px-4 py-3 text-center">{(page - 1) * limit + index + 1}</td>
-                    <td className="px-4 py-3">{employee.name || '-'}</td>
-                    <td className="px-4 py-3">{employee.email || '-'}</td>
-                    <td className="px-4 py-3">{employee.branch?.name || '-'}</td>
-                    <td className="px-4 py-3 text-center"><Badge className="bg-emerald-50 text-emerald-700 ring-emerald-600/20">{employee.role || '-'}</Badge></td>
-                    <td className="px-4 py-3 text-center">
-                      <Badge className={isActive ? 'bg-emerald-50 text-emerald-700 ring-emerald-600/20' : employee.status === 'pending' ? 'bg-amber-50 text-amber-700 ring-amber-600/20' : 'bg-zinc-200 text-zinc-800 ring-zinc-400/40'}>
-                        {statusText[employee.status] || employee.status || '-'}
-                      </Badge>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex justify-end gap-2">
-                        <ActionButton className="bg-emerald-600 text-white hover:bg-emerald-700 focus:ring-emerald-400" disabled={!roleChangeAllowed} onClick={() => requestRoleChange(employee)}>
-                          เปลี่ยน Role
-                        </ActionButton>
-                        <ActionButton
-                          className={isActive ? 'bg-rose-600 text-white hover:bg-rose-700 focus:ring-rose-400' : 'bg-emerald-600 text-white hover:bg-emerald-700 focus:ring-emerald-400'}
-                          disabled={!lifecycleAllowed || changingEmployeeId === employee.id}
-                          onClick={() => changeLifecycle(employee)}
-                        >
-                          {changingEmployeeId === employee.id ? 'กำลังบันทึก...' : isActive ? 'ระงับ' : 'เปิดใช้งาน'}
-                        </ActionButton>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-
-        {pages > 1 && (
-          <div className="flex gap-2 p-4 justify-center border-t border-zinc-200 dark:border-zinc-800">
-            {Array.from({ length: pages }, (_, index) => index + 1).map((pageNumber) => (
-              <button key={pageNumber} className={`px-3 py-1.5 border rounded transition ${pageNumber === page ? 'bg-emerald-100 border-emerald-300 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300' : 'hover:bg-emerald-50 hover:border-emerald-200'}`} onClick={() => setPage(pageNumber)}>
-                {pageNumber}
-              </button>
-            ))}
+    <>
+      <div className="w-full flex justify-center mt-4">
+        <div className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm rounded-xl overflow-hidden">
+          <div className="px-4 py-3 border-b border-emerald-100 dark:border-zinc-800 bg-emerald-50/50 dark:bg-zinc-800/60">
+            <h1 className="text-base font-semibold text-emerald-900 dark:text-emerald-300">จัดการ Role และสถานะพนักงาน</h1>
+            {error && <p className="mt-1 text-xs text-rose-600">{error}</p>}
           </div>
-        )}
 
-        {pending && (
-          <div className="px-4 py-3 flex flex-wrap items-center justify-between gap-3 bg-amber-50/90 dark:bg-amber-900/30 border-t border-amber-200 dark:border-amber-800">
-            <div className="text-sm text-amber-900 dark:text-amber-200">
-              ยืนยันเปลี่ยน Role ของ “{pending.employee.name || pending.employee.email}” เป็น “{pending.nextRole}” หรือไม่?
-            </div>
-            <div className="flex gap-2">
-              <ActionButton className="border border-amber-300 text-amber-900" onClick={() => setPending(null)}>ยกเลิก</ActionButton>
-              <ActionButton className="bg-emerald-600 text-white hover:bg-emerald-700 focus:ring-emerald-400" onClick={confirmRoleChange}>ยืนยัน</ActionButton>
-            </div>
+          <div className="px-4 py-3 flex items-center gap-2 flex-wrap">
+            <input
+              className={`${filterClassName} w-full flex-1 min-w-[280px] max-w-2xl`}
+              placeholder="ค้นหาชื่อ / อีเมล..."
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+            />
+            <select className={filterClassName} value={filterRole} onChange={(event) => setFilterRole(event.target.value)}>
+              <option value="all">Role: ทั้งหมด</option>
+              <option value="admin">admin</option>
+              <option value="employee">employee</option>
+            </select>
+            <select className={`${filterClassName} min-w-[220px]`} value={branchFilter} onChange={(event) => setBranchFilter(event.target.value)}>
+              <option value="all">สาขา: ทั้งหมด</option>
+              {branches.map((branch) => <option key={branch.id} value={branch.id}>{branch.name}</option>)}
+            </select>
           </div>
-        )}
+
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-sm">
+              <thead className="text-left text-zinc-600 bg-zinc-50 dark:bg-zinc-800">
+                <tr>
+                  <th className="px-4 py-2 text-center">#</th>
+                  <th className="px-4 py-2">ชื่อ</th>
+                  <th className="px-4 py-2">อีเมล</th>
+                  <th className="px-4 py-2">สาขา</th>
+                  <th className="px-4 py-2 text-center">Role</th>
+                  <th className="px-4 py-2 text-center">สถานะ</th>
+                  <th className="px-4 py-2 text-right">จัดการ</th>
+                </tr>
+              </thead>
+              <tbody>
+                {loading && <tr><td colSpan={7} className="px-4 py-6 text-center text-zinc-500">กำลังโหลด...</td></tr>}
+                {!loading && pageRows.length === 0 && <tr><td colSpan={7} className="px-4 py-8 text-center text-zinc-500">ไม่พบข้อมูล</td></tr>}
+                {!loading && pageRows.map((employee, index) => {
+                  const roleChangeAllowed = employee.status === 'active' && ['admin', 'employee'].includes(employee.role);
+                  const lifecycleAllowed = employee.status !== 'pending';
+                  const isActive = employee.status === 'active';
+                  return (
+                    <tr key={employee.id} className="border-b border-zinc-100 dark:border-zinc-800 hover:bg-emerald-50/30 dark:hover:bg-emerald-950/10 transition-colors">
+                      <td className="px-4 py-3 text-center">{(page - 1) * limit + index + 1}</td>
+                      <td className="px-4 py-3">{employee.name || '-'}</td>
+                      <td className="px-4 py-3">{employee.email || '-'}</td>
+                      <td className="px-4 py-3">{employee.branch?.name || '-'}</td>
+                      <td className="px-4 py-3 text-center"><Badge className="bg-emerald-50 text-emerald-700 ring-emerald-600/20">{employee.role || '-'}</Badge></td>
+                      <td className="px-4 py-3 text-center">
+                        <Badge className={isActive ? 'bg-emerald-50 text-emerald-700 ring-emerald-600/20' : employee.status === 'pending' ? 'bg-amber-50 text-amber-700 ring-amber-600/20' : 'bg-zinc-200 text-zinc-800 ring-zinc-400/40'}>
+                          {statusText[employee.status] || employee.status || '-'}
+                        </Badge>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex justify-end gap-2">
+                          <ActionButton className="bg-emerald-600 text-white hover:bg-emerald-700 focus:ring-emerald-400" disabled={!roleChangeAllowed} onClick={() => requestRoleChange(employee)}>
+                            เปลี่ยน Role
+                          </ActionButton>
+                          <ActionButton
+                            className={isActive ? 'bg-rose-600 text-white hover:bg-rose-700 focus:ring-rose-400' : 'bg-emerald-600 text-white hover:bg-emerald-700 focus:ring-emerald-400'}
+                            disabled={!lifecycleAllowed || changingEmployeeId === employee.id}
+                            onClick={() => requestLifecycleChange(employee)}
+                          >
+                            {changingEmployeeId === employee.id ? 'กำลังบันทึก...' : isActive ? 'ระงับ' : 'เปิดใช้งาน'}
+                          </ActionButton>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {pages > 1 && (
+            <div className="flex gap-2 p-4 justify-center border-t border-zinc-200 dark:border-zinc-800">
+              {Array.from({ length: pages }, (_, index) => index + 1).map((pageNumber) => (
+                <button key={pageNumber} className={`px-3 py-1.5 border rounded transition ${pageNumber === page ? 'bg-emerald-100 border-emerald-300 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300' : 'hover:bg-emerald-50 hover:border-emerald-200'}`} onClick={() => setPage(pageNumber)}>
+                  {pageNumber}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {pending && (
+            <div className="px-4 py-3 flex flex-wrap items-center justify-between gap-3 bg-amber-50/90 dark:bg-amber-900/30 border-t border-amber-200 dark:border-amber-800">
+              <div className="text-sm text-amber-900 dark:text-amber-200">
+                ยืนยันเปลี่ยน Role ของ “{pending.employee.name || pending.employee.email}” เป็น “{pending.nextRole}” หรือไม่?
+              </div>
+              <div className="flex gap-2">
+                <ActionButton className="border border-amber-300 text-amber-900" onClick={() => setPending(null)}>ยกเลิก</ActionButton>
+                <ActionButton className="bg-emerald-600 text-white hover:bg-emerald-700 focus:ring-emerald-400" onClick={confirmRoleChange}>ยืนยัน</ActionButton>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+
+      <ConfirmActionDialog
+        open={Boolean(pendingLifecycle)}
+        title={pendingLifecycle?.nextActive ? 'เปิดใช้งานพนักงานอีกครั้ง' : 'ระงับการใช้งานพนักงาน'}
+        description={pendingLifecycle?.nextActive
+          ? `ยืนยันเปิดใช้งาน ${pendingLifecycle?.employee?.name || pendingLifecycle?.employee?.email || 'พนักงาน'} อีกครั้งหรือไม่?`
+          : `ยืนยันระงับการใช้งาน ${pendingLifecycle?.employee?.name || pendingLifecycle?.employee?.email || 'พนักงาน'} หรือไม่? ประวัติการทำงานทั้งหมดจะยังคงอยู่`}
+        confirmLabel={pendingLifecycle?.nextActive ? 'เปิดใช้งาน' : 'ระงับการใช้งาน'}
+        intent={pendingLifecycle?.nextActive ? 'primary' : 'destructive'}
+        loading={Boolean(changingEmployeeId)}
+        loadingLabel="กำลังบันทึก..."
+        onClose={() => setPendingLifecycle(null)}
+        onConfirm={confirmLifecycleChange}
+      />
+    </>
   );
 }

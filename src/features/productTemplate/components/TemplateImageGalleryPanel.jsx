@@ -1,5 +1,6 @@
 import React from 'react';
 import { ConfirmActionDialog } from '@/design-system/composites';
+import { feedback } from '@/design-system';
 import useProductTemplateStore from '../store/productTemplateStore';
 
 const getImageUrl = (image) => image?.secure_url || image?.url || image?.imageUrl || '';
@@ -21,9 +22,15 @@ const TemplateImageGalleryPanel = ({ template }) => {
 
   const handleFileChange = async (event) => {
     const file = event.target.files?.[0];
-    if (!file || !templateId) return;
-    await uploadTemplateImageAction(templateId, file);
-    event.target.value = '';
+    if (!file || !templateId || isUploadingImage) return;
+    try {
+      await uploadTemplateImageAction(templateId, file);
+      feedback.actionSuccess('อัปโหลดรูป Template เรียบร้อยแล้ว', 'product-template:image-upload:success');
+    } catch (uploadError) {
+      feedback.actionError(uploadError, 'อัปโหลดรูป Template ไม่สำเร็จ', 'product-template:image-upload:error');
+    } finally {
+      event.target.value = '';
+    }
   };
 
   const handleDelete = (image) => {
@@ -32,14 +39,24 @@ const TemplateImageGalleryPanel = ({ template }) => {
   };
 
   const confirmDelete = async () => {
-    if (!templateId || !pendingDeleteImage) return;
-    await deleteTemplateImageAction(templateId, pendingDeleteImage);
-    setPendingDeleteImage(null);
+    if (!templateId || !pendingDeleteImage || isUploadingImage) return;
+    try {
+      await deleteTemplateImageAction(templateId, pendingDeleteImage);
+      setPendingDeleteImage(null);
+      feedback.actionSuccess('ลบรูป Template เรียบร้อยแล้ว', 'product-template:image-delete:success');
+    } catch (deleteError) {
+      feedback.actionError(deleteError, 'ลบรูป Template ไม่สำเร็จ', 'product-template:image-delete:error');
+    }
   };
 
   const handleSetCover = async (image) => {
-    if (!templateId || !image?.id) return;
-    await setTemplateCoverImageAction(templateId, image.id);
+    if (!templateId || !image?.id || isUploadingImage) return;
+    try {
+      await setTemplateCoverImageAction(templateId, image.id);
+      feedback.actionSuccess('ตั้งรูปปก Template เรียบร้อยแล้ว', 'product-template:image-cover:success');
+    } catch (coverError) {
+      feedback.actionError(coverError, 'ตั้งรูปปก Template ไม่สำเร็จ', 'product-template:image-cover:error');
+    }
   };
 
   return (
@@ -134,7 +151,7 @@ const TemplateImageGalleryPanel = ({ template }) => {
         intent="destructive"
         loading={isUploadingImage}
         loadingLabel="กำลังลบ..."
-        onClose={() => setPendingDeleteImage(null)}
+        onClose={() => !isUploadingImage && setPendingDeleteImage(null)}
         onConfirm={confirmDelete}
       />
     </>

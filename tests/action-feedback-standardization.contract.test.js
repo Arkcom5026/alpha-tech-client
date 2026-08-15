@@ -14,6 +14,7 @@ const unitCreate = read('src/features/unit/workspace/CreateUnitWorkspace.jsx');
 const unitEdit = read('src/features/unit/workspace/EditUnitWorkspace.jsx');
 const unitList = read('src/features/unit/workspace/ListUnitWorkspace.jsx');
 const employeeDetail = read('src/features/employee/workspaces/EmployeeDetailWorkspace.jsx');
+const employeeEdit = read('src/features/employee/workspaces/EmployeeEditWorkspace.jsx');
 const branchPrice = read('src/features/branchPrice/workspace/ManageBranchPriceWorkspace.jsx');
 
 assert(feedbackSource.includes('actionSuccess:'), 'feedback authority must expose actionSuccess');
@@ -25,6 +26,7 @@ for (const [name, source] of [
   ['unit edit', unitEdit],
   ['unit list', unitList],
   ['employee detail', employeeDetail],
+  ['employee edit', employeeEdit],
   ['branch price', branchPrice],
 ]) {
   assert(source.includes('feedback.actionSuccess'), `${name} must provide persistent action success feedback`);

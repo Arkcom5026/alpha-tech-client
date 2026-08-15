@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import useBranchPriceStore from '../store/branchPriceStore';
 
 import CascadingFilterGroup from '@/components/shared/form/CascadingFilterGroup';
+import { feedback } from '@/design-system';
 import useProductStore from '@/features/product/store/productStore';
 import BranchPriceEditTable from '../components/BranchPriceEditTable.jsx';
 import BranchPriceReadyTable from '../components/BranchPriceReadyTable.jsx';
@@ -37,6 +38,7 @@ const ManageBranchPriceWorkspace = () => {
   const [editablePrices, setEditablePrices] = useState({});
   const [pendingList, setPendingList] = useState([]);
   const [filteredEntries, setFilteredEntries] = useState([]);
+  const [saving, setSaving] = useState(false);
 
   const pid = (x) => Number(x?.product?.id ?? x?.id);
 
@@ -60,7 +62,6 @@ const ManageBranchPriceWorkspace = () => {
   ]);
 
   const handleConfirmOne = (productId, newEntry) => {
-    console.log('✅ handleConfirmOne: เพิ่มไปยัง pendingList →', newEntry);
     setPendingList((prev) => {
       const id = Number(productId);
       const exists = prev.some((it) => pid(it) === id);
@@ -70,7 +71,6 @@ const ManageBranchPriceWorkspace = () => {
     setEditablePrices((prev) => {
       const next = { ...prev };
       delete next[productId];
-      console.log('🧹 handleConfirmOne: ลบ editablePrices ของ productId →', productId);
       return next;
     });
 
@@ -78,36 +78,36 @@ const ManageBranchPriceWorkspace = () => {
   };
 
   const handleRemoveOne = (productId) => {
-    console.log('❌ handleRemoveOne: ลบรายการออกจาก pendingList →', productId);
     setPendingList((prev) => prev.filter((item) => pid(item) !== Number(productId)));
   };
 
   const handleSaveAll = async () => {
-    if (pendingList.length > 0) {
-      try {
-        const updates = pendingList.map((item) => ({
-          productId: item.product?.id || item.id,
-          costPrice: item.costPrice,
-          retailPrice: item.retailPrice,
-          wholesalePrice: item.wholesalePrice,
-          technicianPrice: item.technicianPrice,
-          priceOnline: item.priceOnline,
-        }));
+    if (pendingList.length === 0 || saving) return;
 
-        console.log('📂 handleSaveAll: กำลังส่งข้อมูไปอัปเดต →', updates);
-        await updateMultipleBranchPricesAction(updates);
-        console.log('✅ handleSaveAll: บันทึกสำเร็จ ล้าง pendingList และรีโหลด');
+    setSaving(true);
+    try {
+      const updates = pendingList.map((item) => ({
+        productId: item.product?.id || item.id,
+        costPrice: item.costPrice,
+        retailPrice: item.retailPrice,
+        wholesalePrice: item.wholesalePrice,
+        technicianPrice: item.technicianPrice,
+        priceOnline: item.priceOnline,
+      }));
 
-        setPendingList([]);
-        fetchAllProductsWithPriceByTokenAction({
-          categoryId: filter.categoryId || undefined,
-          productTypeId: filter.productTypeId || undefined,
-          brandId: filter.brandId || undefined,
-          searchText: committedSearchText?.trim() || undefined,
-        });
-      } catch (error) {
-        console.error('❌ Error updating prices:', error);
-      }
+      await updateMultipleBranchPricesAction(updates);
+      setPendingList([]);
+      await fetchAllProductsWithPriceByTokenAction({
+        categoryId: filter.categoryId || undefined,
+        productTypeId: filter.productTypeId || undefined,
+        brandId: filter.brandId || undefined,
+        searchText: committedSearchText?.trim() || undefined,
+      });
+      feedback.actionSuccess('บันทึกการเปลี่ยนราคาสินค้าเรียบร้อยแล้ว', 'branch-price:update:success');
+    } catch (saveError) {
+      feedback.actionError(saveError, 'บันทึกการเปลี่ยนราคาสินค้าไม่สำเร็จ', 'branch-price:update:error');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -144,6 +144,7 @@ const ManageBranchPriceWorkspace = () => {
               }))
             }
             className="h-10 rounded border px-3 text-sm"
+            disabled={saving}
           >
             <option value="">-- เลือกแบรนด์ --</option>
             {(dropdowns?.brands || []).map((brand) => (
@@ -182,9 +183,9 @@ const ManageBranchPriceWorkspace = () => {
             <button
               className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-60 disabled:cursor-not-allowed"
               onClick={handleSaveAll}
-              disabled={!pendingList.length}
+              disabled={!pendingList.length || saving}
             >
-              บันทึกการเปลี่ยนราคา
+              {saving ? 'กำลังบันทึก…' : 'บันทึกการเปลี่ยนราคา'}
             </button>
           </div>
         </div>

@@ -1,6 +1,7 @@
 import React, { useMemo, useRef, useState } from 'react';
 import { Search, WalletCards } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { feedback } from '@/design-system/feedback';
 import { useCustomerMoneyReceiveCustomerSearch } from '@/features/customerMoneyReceive/customer/useCustomerMoneyReceiveCustomerSearch';
 import { getCustomerDisplayName } from '@/features/customer/utils/customerDisplayName';
 import { createDeliveryCreditSettlement, getEligibleDeliveryCredits } from '../api/deliveryCreditSettlementApi';
@@ -126,9 +127,12 @@ const DeliveryCreditSettlementCreatePage = () => {
         note: note.trim() || null,
         lines: selectedLines,
       }, idempotencyKey);
+      feedback.actionSuccess('ตัดยอดใบส่งของเครดิตเรียบร้อยแล้ว', `customer-money-settlement:create:${result.id}:success`);
       navigate(`../${result.id}`);
     } catch (err) {
-      setCreditError(err?.response?.data?.message || err?.message || 'ตัดยอดใบส่งของไม่สำเร็จ');
+      const fallbackMessage = 'ตัดยอดใบส่งของไม่สำเร็จ';
+      setCreditError(err?.response?.data?.message || err?.message || fallbackMessage);
+      feedback.actionError(err, fallbackMessage, `customer-money-settlement:create:${idempotencyKey}:error`);
     } finally {
       setSaving(false);
     }

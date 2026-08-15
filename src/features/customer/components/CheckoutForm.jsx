@@ -20,7 +20,7 @@ export default function CheckoutForm() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!stripe || !elements) return;
+    if (!stripe || !elements || isLoading) return;
 
     setIsLoading(true);
     setMessage(null);
@@ -31,11 +31,14 @@ export default function CheckoutForm() {
         redirect: 'if_required',
       });
 
-      console.log('payload', payload);
       if (payload.error) {
         const errorMessage = payload.error.message || 'ชำระเงินไม่สำเร็จ';
         setMessage(errorMessage);
-        feedback.error(errorMessage);
+        feedback.actionError(
+          payload.error,
+          errorMessage,
+          'checkout.payment.confirm',
+        );
         return;
       }
 
@@ -43,13 +46,19 @@ export default function CheckoutForm() {
         try {
           await saveOrder(token, payload);
           clearCart();
-          feedback.success('ชำระเงินสำเร็จ');
+          feedback.actionSuccess(
+            'ชำระเงินและบันทึกคำสั่งซื้อสำเร็จ',
+            'checkout.order.persist',
+          );
           navigate('/user/history');
         } catch (err) {
-          console.log(err);
           const errorMessage = err?.response?.data?.message || err?.message || 'บันทึกคำสั่งซื้อไม่สำเร็จ';
           setMessage(errorMessage);
-          feedback.error(errorMessage);
+          feedback.actionError(
+            err,
+            errorMessage,
+            'checkout.order.persist',
+          );
         }
         return;
       }

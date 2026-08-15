@@ -29,21 +29,30 @@ const TableOrders = () => {
   }, [handleGetOrder]);
 
   const applyOrderStatus = async (orderId, orderStatus) => {
+    if (savingStatus) return;
     setSavingStatus(true);
     try {
       await changeOrderStatus(token, orderId, orderStatus);
-      feedback.success('อัปเดตสถานะคำสั่งซื้อแล้ว');
+      feedback.actionSuccess(
+        orderStatus === 'Cancelled' ? 'ยกเลิกคำสั่งซื้อเรียบร้อยแล้ว' : 'อัปเดตสถานะคำสั่งซื้อเรียบร้อยแล้ว',
+        `admin:order-status:${orderId}:${orderStatus}:success`,
+      );
       handleGetOrder();
       setPendingCancellation(null);
     } catch (err) {
       console.log('handleChangeOrderStatus err --> ', err);
-      feedback.error(err?.response?.data?.message || 'อัปเดตสถานะคำสั่งซื้อไม่สำเร็จ');
+      feedback.actionError(
+        err,
+        'อัปเดตสถานะคำสั่งซื้อไม่สำเร็จ',
+        `admin:order-status:${orderId}:${orderStatus}:error`,
+      );
     } finally {
       setSavingStatus(false);
     }
   };
 
   const handleChangeOrderStatus = (order, nextStatus) => {
+    if (savingStatus || nextStatus === order.orderStatus) return;
     if (nextStatus === 'Cancelled') {
       setPendingCancellation({ order, nextStatus });
       return;
@@ -97,7 +106,7 @@ const TableOrders = () => {
                       value={item.orderStatus}
                       onChange={(e) => handleChangeOrderStatus(item, e.target.value)}
                       disabled={savingStatus}
-                      className="rounded border border-slate-300 px-2 py-1 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-100"
+                      className="rounded border border-slate-300 px-2 py-1 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       <option>Not Process</option>
                       <option>Processing</option>

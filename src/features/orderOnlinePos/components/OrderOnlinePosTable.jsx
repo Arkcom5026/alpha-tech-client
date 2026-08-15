@@ -44,10 +44,13 @@ const OrderOnlinePosTable = ({ orders }) => {
     deleteOrderOnlineAction,
   } = useOrderOnlinePosStore();
 
-  const requestAction = (type, id) => setPendingAction({ type, id });
+  const requestAction = (type, id) => {
+    if (runningAction) return;
+    setPendingAction({ type, id });
+  };
 
   const confirmAction = async () => {
-    if (!pendingAction) return;
+    if (!pendingAction || runningAction) return;
     const copy = ACTION_COPY[pendingAction.type];
     const action = pendingAction.type === 'approve'
       ? approveOrderOnlineSlipAction
@@ -58,10 +61,17 @@ const OrderOnlinePosTable = ({ orders }) => {
     setRunningAction(true);
     try {
       await action(pendingAction.id);
-      feedback.success(copy.success);
+      feedback.actionSuccess(
+        copy.success,
+        `order-online:${pendingAction.id}:${pendingAction.type}:success`,
+      );
       setPendingAction(null);
     } catch (error) {
-      feedback.error(error?.response?.data?.message || error?.message || 'ดำเนินการคำสั่งซื้อไม่สำเร็จ');
+      feedback.actionError(
+        error,
+        'ดำเนินการคำสั่งซื้อไม่สำเร็จ',
+        `order-online:${pendingAction.id}:${pendingAction.type}:error`,
+      );
     } finally {
       setRunningAction(false);
     }
@@ -110,15 +120,15 @@ const OrderOnlinePosTable = ({ orders }) => {
                     </button>
                     {order.status === 'WAITING_APPROVAL' && (
                       <>
-                        <button className="block w-full text-emerald-600 hover:underline" onClick={() => requestAction('approve', order.id)}>
+                        <button disabled={runningAction} className="block w-full text-emerald-600 hover:underline disabled:opacity-50" onClick={() => requestAction('approve', order.id)}>
                           อนุมัติสลิป
                         </button>
-                        <button className="block w-full text-red-600 hover:underline" onClick={() => requestAction('reject', order.id)}>
+                        <button disabled={runningAction} className="block w-full text-red-600 hover:underline disabled:opacity-50" onClick={() => requestAction('reject', order.id)}>
                           ปฏิเสธสลิป
                         </button>
                       </>
                     )}
-                    <button className="block w-full text-gray-500 hover:underline" onClick={() => requestAction('delete', order.id)}>
+                    <button disabled={runningAction} className="block w-full text-gray-500 hover:underline disabled:opacity-50" onClick={() => requestAction('delete', order.id)}>
                       ลบ
                     </button>
                   </td>
@@ -137,7 +147,7 @@ const OrderOnlinePosTable = ({ orders }) => {
         intent={pendingCopy?.intent}
         loading={runningAction}
         loadingLabel="กำลังดำเนินการ..."
-        onClose={() => setPendingAction(null)}
+        onClose={() => !runningAction && setPendingAction(null)}
         onConfirm={confirmAction}
       />
     </>

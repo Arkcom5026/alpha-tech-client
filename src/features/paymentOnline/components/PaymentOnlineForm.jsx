@@ -1,7 +1,6 @@
 // src/features/paymentOnline/components/PaymentOnlineForm.jsx
 
 import React, { useState } from 'react';
-import { feedback } from '@/design-system';
 
 const PaymentOnlineForm = ({ orderId, uploadSlipAction, submitPaymentSlipAction }) => {
   const [file, setFile] = useState(null);
@@ -10,7 +9,7 @@ const PaymentOnlineForm = ({ orderId, uploadSlipAction, submitPaymentSlipAction 
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!file) return;
+    if (!file || isSubmitting) return;
 
     try {
       setIsSubmitting(true);
@@ -21,12 +20,11 @@ const PaymentOnlineForm = ({ orderId, uploadSlipAction, submitPaymentSlipAction 
 
       await submitPaymentSlipAction(orderId, { note, slipUrl: url });
 
-      feedback.success('ส่งข้อมูลการชำระเงินเรียบร้อยแล้ว');
       setFile(null);
       setNote('');
     } catch (err) {
       console.error('submit error:', err);
-      feedback.error(err, { fallback: 'เกิดข้อผิดพลาดในการส่งข้อมูล' });
+      // Persistent mutation feedback is owned by paymentOnlineStore.
     } finally {
       setIsSubmitting(false);
     }
@@ -41,23 +39,25 @@ const PaymentOnlineForm = ({ orderId, uploadSlipAction, submitPaymentSlipAction 
           accept="image/*"
           onChange={(e) => setFile(e.target.files[0])}
           required
-          className="border rounded px-3 py-2 w-full"
+          disabled={isSubmitting}
+          className="border rounded px-3 py-2 w-full disabled:opacity-60"
         />
       </div>
 
       <div>
         <label className="block font-medium mb-1">หมายเหตุ (ถ้ามี)</label>
         <textarea
-          className="border rounded px-3 py-2 w-full"
+          className="border rounded px-3 py-2 w-full disabled:opacity-60"
           rows={2}
           value={note}
           onChange={(e) => setNote(e.target.value)}
+          disabled={isSubmitting}
         />
       </div>
 
       <button
         type="submit"
-        disabled={isSubmitting}
+        disabled={isSubmitting || !file}
         className="bg-blue-600 text-white px-4 py-2 rounded disabled:opacity-50"
       >
         {isSubmitting ? 'กำลังส่งข้อมูล...' : 'ยืนยันการชำระเงิน'}

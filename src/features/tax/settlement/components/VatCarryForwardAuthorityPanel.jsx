@@ -55,6 +55,8 @@ const VatCarryForwardAuthorityPanel = ({ branchId, taxPeriodId, onConfirmed }) =
   }, [context]);
 
   const confirm = async () => {
+    if (!branchId || !taxPeriodId || immutable || saving || loading || !priorSettlementReady) return;
+
     setSaving(true);
     setError('');
     try {
@@ -65,13 +67,13 @@ const VatCarryForwardAuthorityPanel = ({ branchId, taxPeriodId, onConfirmed }) =
         amount,
         note,
       });
-      feedback.success('ยืนยันเครดิต VAT ยกมาแล้ว');
+      feedback.actionSuccess('ยืนยันเครดิต VAT ยกมาแล้ว', 'tax-vat-carry-forward-confirm-success');
       await load();
       await onConfirmed?.();
     } catch (requestError) {
       const message = getVatSettlementErrorMessage(requestError);
       setError(message);
-      feedback.error(message);
+      feedback.actionError(requestError, message, 'tax-vat-carry-forward-confirm-error');
     } finally {
       setSaving(false);
     }
@@ -84,7 +86,7 @@ const VatCarryForwardAuthorityPanel = ({ branchId, taxPeriodId, onConfirmed }) =
           <div className="flex items-center gap-2 text-emerald-900"><BadgeCheck size={18} /><h2 className="font-black">เครดิต VAT ยกมา</h2></div>
           <p className="mt-1 text-xs text-emerald-700">Authority สำหรับยอดภาษีชำระไว้เกินยกมาที่ใช้ในขั้นเตรียม ภ.พ.30</p>
         </div>
-        <button type="button" onClick={load} disabled={loading} className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-white px-3 py-2 text-xs font-bold text-emerald-800 disabled:opacity-50">
+        <button type="button" onClick={load} disabled={loading || saving} className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-white px-3 py-2 text-xs font-bold text-emerald-800 disabled:opacity-50">
           <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> รีเฟรช Authority
         </button>
       </div>

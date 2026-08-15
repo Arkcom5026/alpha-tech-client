@@ -60,7 +60,7 @@ const TaxExpenseAssessmentPanel = ({ expenseId, onClose, onConfirmed }) => {
   };
 
   const confirm = async () => {
-    if (!complete) return;
+    if (!complete || saving) return;
     setSaving(true);
     try {
       const payload = {
@@ -72,11 +72,11 @@ const TaxExpenseAssessmentPanel = ({ expenseId, onClose, onConfirmed }) => {
         note,
       };
       await confirmTaxExpenseAssessment(expenseId, payload);
-      feedback.success('ยืนยันผลการประเมินภาษีแล้ว');
+      feedback.actionSuccess('ยืนยันผลการประเมินภาษีแล้ว', `tax-expense:assessment:${expenseId}:success`);
       await load();
       onConfirmed?.();
     } catch (error) {
-      feedback.error(error?.response?.data?.message || 'ไม่สามารถยืนยันผลการประเมินภาษีได้');
+      feedback.actionError(error, 'ไม่สามารถยืนยันผลการประเมินภาษีได้', `tax-expense:assessment:${expenseId}:error`);
     } finally {
       setSaving(false);
     }

@@ -1,7 +1,7 @@
-
 // src/features/customerReceipt/components/CustomerReceiptCancelSection.jsx
 
 import { useMemo, useState } from 'react';
+import { feedback } from '@/design-system/feedback';
 
 const formatMoney = (value) => {
   const number = Number(value || 0);
@@ -13,7 +13,6 @@ const formatMoney = (value) => {
 
 const CustomerReceiptCancelSection = ({ item, submitting = false, onSubmit }) => {
   const [cancelReason, setCancelReason] = useState('');
-  
   const [localError, setLocalError] = useState('');
 
   const canCancel = useMemo(() => {
@@ -22,6 +21,7 @@ const CustomerReceiptCancelSection = ({ item, submitting = false, onSubmit }) =>
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+    if (submitting) return;
     setLocalError('');
 
     if (!item?.id) {
@@ -29,16 +29,27 @@ const CustomerReceiptCancelSection = ({ item, submitting = false, onSubmit }) =>
       return;
     }
 
-    
-
     if (!cancelReason.trim()) {
       setLocalError('กรุณาระบุเหตุผลการยกเลิกรายการ');
       return;
     }
 
-    await onSubmit?.({
-      cancelReason: cancelReason.trim(),
-    });
+    try {
+      await onSubmit?.({
+        cancelReason: cancelReason.trim(),
+      });
+      feedback.actionSuccess(
+        'ยกเลิกรายการรับชำระเรียบร้อยแล้ว',
+        `customer-receipt:cancel:${item.id}:success`,
+      );
+      setCancelReason('');
+    } catch (requestError) {
+      feedback.actionError(
+        requestError,
+        'ไม่สามารถยกเลิกรายการรับชำระได้',
+        `customer-receipt:cancel:${item.id}:error`,
+      );
+    }
   };
 
   if (!item) {
@@ -84,8 +95,6 @@ const CustomerReceiptCancelSection = ({ item, submitting = false, onSubmit }) =>
             </div>
           )}
 
-          
-
           <div className="space-y-1.5">
             <label htmlFor="customer-receipt-cancel-reason" className="text-sm font-medium text-gray-700">
               เหตุผลการยกเลิก
@@ -120,6 +129,3 @@ const CustomerReceiptCancelSection = ({ item, submitting = false, onSubmit }) =>
 };
 
 export default CustomerReceiptCancelSection;
-
-
-

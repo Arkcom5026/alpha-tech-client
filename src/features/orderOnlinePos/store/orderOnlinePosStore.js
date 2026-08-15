@@ -60,22 +60,26 @@ export const useOrderOnlinePosStore = create((set, get) => ({
   approveOrderOnlinePaymentSlipAction: async (id) => {
     set({ isLoading: true, error: null });
     try {
-      await approveOrderOnlineSlip(id);
+      const result = await approveOrderOnlineSlip(id);
       await get().loadOrderOnlinePosByIdAction(id);
       set({ isLoading: false });
+      return result;
     } catch (err) {
       set({ error: err.message || 'ไม่สามารถอนุมัติสลิปได้', isLoading: false });
+      throw err;
     }
   },
 
   rejectOrderOnlineSlipAction: async (id) => {
     set({ isLoading: true, error: null });
     try {
-      await rejectOrderOnlineSlip(id);
+      const result = await rejectOrderOnlineSlip(id);
       await get().loadOrderOnlinePosByIdAction(id);
       set({ isLoading: false });
+      return result;
     } catch (err) {
       set({ error: err.message || 'ไม่สามารถปฏิเสธสลิปได้', isLoading: false });
+      throw err;
     }
   },
 
@@ -85,8 +89,10 @@ export const useOrderOnlinePosStore = create((set, get) => ({
       await deleteOrderOnline(id);
       await get().loadOrderOnlinePosListAction();
       set({ isLoading: false });
+      return true;
     } catch (err) {
       set({ error: err.message || 'ไม่สามารถลบคำสั่งซื้อได้', isLoading: false });
+      throw err;
     }
   },
 

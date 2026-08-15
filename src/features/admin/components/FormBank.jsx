@@ -9,6 +9,7 @@ const FormBank = () => {
   const token = useAuthStore((state) => state.token);
   const [name, setName] = useState('');
   const [nameError, setNameError] = useState('');
+  const [saving, setSaving] = useState(false);
   const [pendingDelete, setPendingDelete] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
@@ -21,34 +22,52 @@ const FormBank = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (saving) return;
     if (!name.trim()) {
       setNameError('กรุณาระบุชื่อธนาคาร');
       return;
     }
     setNameError('');
 
+    setSaving(true);
     try {
       const res = await createBank(token, { name: name.trim() });
-      feedback.success(`เพิ่มธนาคาร ${res.data.name} แล้ว`);
+      feedback.actionSuccess(
+        `เพิ่มธนาคาร ${res.data.name} แล้ว`,
+        `admin-bank:create:${res.data.id || res.data.name}:success`,
+      );
       setName('');
-      fetchBanks(token);
+      await fetchBanks(token);
     } catch (err) {
       console.log(err);
-      feedback.error(err?.response?.data?.message || 'เพิ่มธนาคารไม่สำเร็จ');
+      feedback.actionError(
+        err,
+        'เพิ่มธนาคารไม่สำเร็จ',
+        'admin-bank:create:error',
+      );
+    } finally {
+      setSaving(false);
     }
   };
 
   const confirmRemove = async () => {
-    if (!pendingDelete?.id) return;
+    if (!pendingDelete?.id || deleting) return;
     setDeleting(true);
     try {
       const res = await removeBank(token, pendingDelete.id);
-      feedback.success(`ลบ ${res.data.name || pendingDelete.name} แล้ว`);
+      feedback.actionSuccess(
+        `ลบ ${res.data.name || pendingDelete.name} แล้ว`,
+        `admin-bank:${pendingDelete.id}:delete:success`,
+      );
       setPendingDelete(null);
-      fetchBanks(token);
+      await fetchBanks(token);
     } catch (err) {
       console.log(err);
-      feedback.error(err?.response?.data?.message || 'ลบธนาคารไม่สำเร็จ');
+      feedback.actionError(
+        err,
+        'ลบธนาคารไม่สำเร็จ',
+        `admin-bank:${pendingDelete.id}:delete:error`,
+      );
     } finally {
       setDeleting(false);
     }
@@ -65,12 +84,15 @@ const FormBank = () => {
               setName(e.target.value);
               if (nameError) setNameError('');
             }}
-            className="mr-5 rounded border border-slate-300 px-2 py-1 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-100"
+            disabled={saving}
+            className="mr-5 rounded border border-slate-300 px-2 py-1 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-100 disabled:opacity-60"
             type="text"
             aria-invalid={Boolean(nameError)}
             aria-describedby={nameError ? 'admin-bank-name-error' : undefined}
           />
-          <button className="rounded bg-emerald-600 px-3 py-1 text-white hover:bg-emerald-700">Add Bank</button>
+          <button disabled={saving} className="rounded bg-emerald-600 px-3 py-1 text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60">
+            {saving ? 'กำลังเพิ่ม...' : 'Add Bank'}
+          </button>
           <FieldMessage id="admin-bank-name-error">{nameError}</FieldMessage>
         </form>
 
@@ -82,7 +104,8 @@ const FormBank = () => {
               <span>{item.name}</span>
               <button
                 type="button"
-                className="rounded bg-red-500 px-2 py-1 text-white hover:bg-red-600"
+                className="rounded bg-red-500 px-2 py-1 text-white hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-60"
+                disabled={deleting || saving}
                 onClick={() => setPendingDelete(item)}
               >
                 Delete
@@ -100,7 +123,7 @@ const FormBank = () => {
         intent="destructive"
         loading={deleting}
         loadingLabel="กำลังลบ..."
-        onClose={() => setPendingDelete(null)}
+        onClose={() => !deleting && setPendingDelete(null)}
         onConfirm={confirmRemove}
       />
     </>

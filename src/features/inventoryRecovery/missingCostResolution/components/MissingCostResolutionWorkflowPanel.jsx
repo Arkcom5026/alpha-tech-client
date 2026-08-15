@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { CheckCircle2, FilePlus2, RotateCcw, Send, ShieldCheck, XCircle } from 'lucide-react';
+import { ConfirmActionDialog } from '@/design-system/composites';
 import { feedback } from '@/design-system';
 import {
   useAppendMissingCostEvidence,
@@ -36,6 +37,8 @@ const ACTIONS = {
   ],
 };
 
+const DESTRUCTIVE_STATUSES = new Set(['CANCELLED', 'REJECTED']);
+
 const toneClass = {
   blue: 'bg-blue-600 hover:bg-blue-700 text-white',
   emerald: 'bg-emerald-600 hover:bg-emerald-700 text-white',
@@ -56,6 +59,7 @@ const MissingCostResolutionWorkflowPanel = ({ detail }) => {
   const evidenceMutation = useAppendMissingCostEvidence(resolutionId);
   const transitionMutation = useTransitionMissingCostResolution(resolutionId);
   const [note, setNote] = useState('');
+  const [pendingAction, setPendingAction] = useState(null);
   const [form, setForm] = useState({
     sourceType: 'SUPPLIER_DOCUMENT',
     sourceReference: '',
@@ -81,6 +85,7 @@ const MissingCostResolutionWorkflowPanel = ({ detail }) => {
 
   const submitEvidence = async (event) => {
     event.preventDefault();
+    if (busy) return;
     try {
       await evidenceMutation.mutateAsync({
         expectedStatus: resolution.status,
@@ -96,14 +101,22 @@ const MissingCostResolutionWorkflowPanel = ({ detail }) => {
         confidence: form.confidence,
         rationale: form.rationale.trim(),
       });
-      feedback.success('บันทึกหลักฐานต้นทุนแล้ว');
+      feedback.actionSuccess(
+        'บันทึกหลักฐานต้นทุนแล้ว',
+        'inventory-recovery.missing-cost.evidence',
+      );
       setForm((current) => ({ ...current, sourceReference: '', evidenceSummary: '', proposedUnitCost: '', rationale: '' }));
     } catch (error) {
-      feedback.error(getErrorMessage(error));
+      feedback.actionError(
+        error,
+        getErrorMessage(error),
+        'inventory-recovery.missing-cost.evidence',
+      );
     }
   };
 
   const transition = async (action) => {
+    if (!action || busy) return;
     if (!latestEvidence?.evidenceHash && action.toStatus !== 'CANCELLED') {
       feedback.warning('ต้องมีหลักฐานต้นทุนก่อนเปลี่ยนสถานะ');
       return;
@@ -120,77 +133,112 @@ const MissingCostResolutionWorkflowPanel = ({ detail }) => {
         reasonCode: action.reasonCode,
         note: note.trim() || null,
       });
-      feedback.success(`${action.label}สำเร็จ`);
+      feedback.actionSuccess(
+        `${action.label}สำเร็จ`,
+        `inventory-recovery.missing-cost.transition.${action.toStatus.toLowerCase()}`,
+      );
       setNote('');
+      setPendingAction(null);
     } catch (error) {
-      feedback.error(getErrorMessage(error));
+      feedback.actionError(
+        error,
+        getErrorMessage(error),
+        `inventory-recovery.missing-cost.transition.${action.toStatus.toLowerCase()}`,
+      );
     }
   };
 
+  const requestTransition = (action) => {
+    if (busy) return;
+    if (DESTRUCTIVE_STATUSES.has(action.toStatus)) {
+      setPendingAction(action);
+      return;
+    }
+    transition(action);
+  };
+
   return (
-    <section className="space-y-5 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm md:p-7">
-      <div className="flex items-center gap-2">
-        <CheckCircle2 className="h-5 w-5 text-emerald-600" />
-        <h2 className="text-lg font-black text-slate-900">จัดการหลักฐานและการอนุมัติ</h2>
-      </div>
-
-      {canEditEvidence && (
-        <form onSubmit={submitEvidence} className="space-y-4 rounded-2xl bg-slate-50 p-4">
-          <div className="flex items-center gap-2 font-black text-slate-800"><FilePlus2 className="h-4 w-4" />เพิ่มหลักฐานเวอร์ชันใหม่</div>
-          <div className="grid gap-3 md:grid-cols-2">
-            <label className="text-sm font-bold text-slate-700">ประเภทหลักฐาน
-              <select value={form.sourceType} onChange={updateField('sourceType')} className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2">
-                {SOURCE_TYPES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-              </select>
-            </label>
-            <label className="text-sm font-bold text-slate-700">เลขที่/แหล่งอ้างอิง
-              <input required value={form.sourceReference} onChange={updateField('sourceReference')} className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" />
-            </label>
-            <label className="text-sm font-bold text-slate-700">ต้นทุนต่อหน่วยที่เสนอ
-              <input required min="0.01" step="0.01" type="number" value={form.proposedUnitCost} onChange={updateField('proposedUnitCost')} className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" />
-            </label>
-            <label className="text-sm font-bold text-slate-700">วันที่ต้นทุนมีผล
-              <input required type="date" value={form.effectiveDate} onChange={updateField('effectiveDate')} className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" />
-            </label>
-            <label className="text-sm font-bold text-slate-700">ความมั่นใจ
-              <select value={form.confidence} onChange={updateField('confidence')} className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2">
-                {CONFIDENCE_LEVELS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-              </select>
-            </label>
-            <label className="text-sm font-bold text-slate-700 md:col-span-2">สรุปหลักฐาน
-              <textarea required rows="2" value={form.evidenceSummary} onChange={updateField('evidenceSummary')} className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" />
-            </label>
-            <label className="text-sm font-bold text-slate-700 md:col-span-2">เหตุผลประกอบ
-              <textarea required rows="2" value={form.rationale} onChange={updateField('rationale')} className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" />
-            </label>
-          </div>
-          <button disabled={busy} className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-black text-white hover:bg-blue-700 disabled:opacity-50">บันทึกหลักฐาน</button>
-        </form>
-      )}
-
-      {actions.length > 0 && (
-        <div className="space-y-3 rounded-2xl border border-slate-200 p-4">
-          <label className="block text-sm font-bold text-slate-700">หมายเหตุประกอบการดำเนินการ
-            <textarea rows="2" value={note} onChange={(event) => setNote(event.target.value)} className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" />
-          </label>
-          <div className="flex flex-wrap gap-2">
-            {actions.map((action) => {
-              const Icon = action.icon;
-              return (
-                <button key={action.toStatus} type="button" disabled={busy} onClick={() => transition(action)} className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-black disabled:opacity-50 ${toneClass[action.tone]}`}>
-                  <Icon className="h-4 w-4" />{action.label}
-                </button>
-              );
-            })}
-          </div>
-          {resolution?.status === 'SUBMITTED' && <p className="text-xs text-slate-500">Backend จะตรวจผู้อนุมัติแยกจากผู้เสนอและปฏิเสธ optimistic authority ที่ล้าสมัย</p>}
+    <>
+      <section className="space-y-5 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm md:p-7">
+        <div className="flex items-center gap-2">
+          <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+          <h2 className="text-lg font-black text-slate-900">จัดการหลักฐานและการอนุมัติ</h2>
         </div>
-      )}
 
-      {!canEditEvidence && actions.length === 0 && (
-        <p className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-600">สถานะนี้ไม่มีการแก้ไขหลักฐานหรือเปลี่ยนสถานะเพิ่มเติมจากหน้า Workflow</p>
-      )}
-    </section>
+        {canEditEvidence && (
+          <form onSubmit={submitEvidence} className="space-y-4 rounded-2xl bg-slate-50 p-4">
+            <div className="flex items-center gap-2 font-black text-slate-800"><FilePlus2 className="h-4 w-4" />เพิ่มหลักฐานเวอร์ชันใหม่</div>
+            <div className="grid gap-3 md:grid-cols-2">
+              <label className="text-sm font-bold text-slate-700">ประเภทหลักฐาน
+                <select value={form.sourceType} onChange={updateField('sourceType')} className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2">
+                  {SOURCE_TYPES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                </select>
+              </label>
+              <label className="text-sm font-bold text-slate-700">เลขที่/แหล่งอ้างอิง
+                <input required value={form.sourceReference} onChange={updateField('sourceReference')} className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" />
+              </label>
+              <label className="text-sm font-bold text-slate-700">ต้นทุนต่อหน่วยที่เสนอ
+                <input required min="0.01" step="0.01" type="number" value={form.proposedUnitCost} onChange={updateField('proposedUnitCost')} className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" />
+              </label>
+              <label className="text-sm font-bold text-slate-700">วันที่ต้นทุนมีผล
+                <input required type="date" value={form.effectiveDate} onChange={updateField('effectiveDate')} className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" />
+              </label>
+              <label className="text-sm font-bold text-slate-700">ความมั่นใจ
+                <select value={form.confidence} onChange={updateField('confidence')} className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2">
+                  {CONFIDENCE_LEVELS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                </select>
+              </label>
+              <label className="text-sm font-bold text-slate-700 md:col-span-2">สรุปหลักฐาน
+                <textarea required rows="2" value={form.evidenceSummary} onChange={updateField('evidenceSummary')} className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" />
+              </label>
+              <label className="text-sm font-bold text-slate-700 md:col-span-2">เหตุผลประกอบ
+                <textarea required rows="2" value={form.rationale} onChange={updateField('rationale')} className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" />
+              </label>
+            </div>
+            <button disabled={busy} className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-black text-white hover:bg-blue-700 disabled:opacity-50">บันทึกหลักฐาน</button>
+          </form>
+        )}
+
+        {actions.length > 0 && (
+          <div className="space-y-3 rounded-2xl border border-slate-200 p-4">
+            <label className="block text-sm font-bold text-slate-700">หมายเหตุประกอบการดำเนินการ
+              <textarea rows="2" value={note} onChange={(event) => setNote(event.target.value)} className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" />
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {actions.map((action) => {
+                const Icon = action.icon;
+                return (
+                  <button key={action.toStatus} type="button" disabled={busy} onClick={() => requestTransition(action)} className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-black disabled:opacity-50 ${toneClass[action.tone]}`}>
+                    <Icon className="h-4 w-4" />{action.label}
+                  </button>
+                );
+              })}
+            </div>
+            {resolution?.status === 'SUBMITTED' && <p className="text-xs text-slate-500">Backend จะตรวจผู้อนุมัติแยกจากผู้เสนอและปฏิเสธ optimistic authority ที่ล้าสมัย</p>}
+          </div>
+        )}
+
+        {!canEditEvidence && actions.length === 0 && (
+          <p className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-600">สถานะนี้ไม่มีการแก้ไขหลักฐานหรือเปลี่ยนสถานะเพิ่มเติมจากหน้า Workflow</p>
+        )}
+      </section>
+
+      <ConfirmActionDialog
+        open={Boolean(pendingAction)}
+        title={pendingAction?.toStatus === 'REJECTED' ? 'ปฏิเสธหลักฐานต้นทุน' : 'ยกเลิกรายการแก้ไขต้นทุน'}
+        description={pendingAction?.toStatus === 'REJECTED'
+          ? 'ยืนยันปฏิเสธหลักฐานต้นทุนรายการนี้หรือไม่? สถานะจะถูกบันทึกใน audit trail'
+          : 'ยืนยันยกเลิกรายการแก้ไขต้นทุนนี้หรือไม่? รายการที่ยกเลิกจะไม่ถูกนำไป Execute กับสต๊อก'}
+        confirmLabel={pendingAction?.label || 'ยืนยัน'}
+        intent="destructive"
+        loading={transitionMutation.isPending}
+        loadingLabel="กำลังดำเนินการ..."
+        onClose={() => {
+          if (!transitionMutation.isPending) setPendingAction(null);
+        }}
+        onConfirm={() => transition(pendingAction)}
+      />
+    </>
   );
 };
 

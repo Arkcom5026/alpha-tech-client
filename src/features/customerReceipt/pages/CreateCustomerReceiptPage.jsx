@@ -3,6 +3,7 @@
 
 import { useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { feedback } from '@/design-system/feedback';
 import useCustomerReceiptStore from '../store/customerReceiptStore';
 import CustomerReceiptForm from '../components/CustomerReceiptForm';
 
@@ -12,7 +13,7 @@ const CreateCustomerReceiptPage = () => {
   const error = useCustomerReceiptStore((state) => state.error);
   const successMessage = useCustomerReceiptStore((state) => state.successMessage);
   const selectedItem = useCustomerReceiptStore((state) => state.selectedItem);
-  
+
   const createCustomerReceiptAction = useCustomerReceiptStore((state) => state.createCustomerReceiptAction);
   const resetCustomerReceiptCreateSessionAction = useCustomerReceiptStore((state) => state.resetCustomerReceiptCreateSessionAction);
   const clearCustomerReceiptMessagesAction = useCustomerReceiptStore((state) => state.clearCustomerReceiptMessagesAction);
@@ -27,17 +28,31 @@ const CreateCustomerReceiptPage = () => {
 
   // 🟢 [DYNAMIC BACK PATH]: แกะรอยตำแหน่ง URL ปัจจุบันเพื่อใช้ถอยหลังกลับไปหน้าตารางรวมอย่างแม่นยำ ป้องกันปัญหารหัสร้านลอยพัง
   const getBackUrl = () => {
-    const currentPath = window.location.pathname; // จะได้ /advance/pos/finance/customer-receipts/create
-    return currentPath.substring(0, currentPath.indexOf('/create')); // ตัดเหลือ /advance/pos/finance/customer-receipts
+    const currentPath = window.location.pathname;
+    return currentPath.substring(0, currentPath.indexOf('/create'));
   };
 
   const handleSubmit = async (formData) => {
-    const createdReceipt = await createCustomerReceiptAction(formData);
+    if (submitting) return;
 
-    if (createdReceipt?.id) {
-      const currentPath = window.location.pathname;
-      const baseFinanceUrl = currentPath.substring(0, currentPath.indexOf('/customer-receipts'));
-      navigate(`${baseFinanceUrl}/customer-receipts/${createdReceipt.id}`);
+    try {
+      const createdReceipt = await createCustomerReceiptAction(formData);
+
+      if (createdReceipt?.id) {
+        feedback.actionSuccess(
+          'สร้างใบรับเงินลูกหนี้เรียบร้อยแล้ว',
+          `customer-receipt:create:${createdReceipt.id}:success`,
+        );
+        const currentPath = window.location.pathname;
+        const baseFinanceUrl = currentPath.substring(0, currentPath.indexOf('/customer-receipts'));
+        navigate(`${baseFinanceUrl}/customer-receipts/${createdReceipt.id}`);
+      }
+    } catch (requestError) {
+      feedback.actionError(
+        requestError,
+        'ไม่สามารถสร้างใบรับเงินลูกหนี้ได้',
+        'customer-receipt:create:error',
+      );
     }
   };
 
@@ -46,7 +61,6 @@ const CreateCustomerReceiptPage = () => {
       <div className="flex flex-col gap-4 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm md:flex-row md:items-start md:justify-between">
         <div className="space-y-1">
           <div className="flex items-center gap-2 text-sm text-gray-500">
-            {/* 🟢 [FIXED]: ถอดป้ายตรวจเช็คตัวแปร shopSlug ที่ไม่ได้ลงทะเบียนออก แล้ววิ่งเข้าหา Dynamic Path ตรงล็อก */}
             <Link to={getBackUrl()} className="transition hover:text-gray-700">
               รายการรับชำระลูกหนี้
             </Link>
@@ -61,7 +75,6 @@ const CreateCustomerReceiptPage = () => {
         </div>
 
         <div className="flex flex-wrap gap-2">
-          {/* 🟢 [FIXED]: ผูกลิงก์ถอยกลับให้เรียกผ่านฟังก์ชันแกะสายส่งโดยตรง */}
           <Link to={getBackUrl()} className="inline-flex items-center justify-center rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50">
             กลับไปรายการ
           </Link>

@@ -13,6 +13,7 @@ const TableCustomers = () => {
   const [customers, setCustomers] = useState([]);
   const [pendingStatus, setPendingStatus] = useState(null);
   const [savingStatus, setSavingStatus] = useState(false);
+  const [savingRoleUserId, setSavingRoleUserId] = useState(null);
 
   const handleGetUsers = useCallback(() => {
     getListAllUsers(token)
@@ -30,11 +31,12 @@ const TableCustomers = () => {
   }, [handleGetUsers]);
 
   const requestChangeUserStatus = (userId, userStatus, email) => {
+    if (savingStatus) return;
     setPendingStatus({ userId, userStatus, email });
   };
 
   const confirmChangeUserStatus = async () => {
-    if (!pendingStatus?.userId) return;
+    if (!pendingStatus?.userId || savingStatus) return;
     const value = {
       id: pendingStatus.userId,
       enabled: !pendingStatus.userStatus,
@@ -44,29 +46,47 @@ const TableCustomers = () => {
     try {
       await changeUserStatus(token, value);
       handleGetUsers();
-      feedback.success('อัปเดตสถานะผู้ใช้แล้ว');
+      feedback.actionSuccess(
+        pendingStatus.userStatus ? 'ปิดใช้งานผู้ใช้เรียบร้อยแล้ว' : 'เปิดใช้งานผู้ใช้เรียบร้อยแล้ว',
+        `admin:user-status:${pendingStatus.userId}:success`,
+      );
       setPendingStatus(null);
     } catch (err) {
       console.log('changeUserStatus err --> ', err);
-      feedback.error(err?.response?.data?.message || 'อัปเดตสถานะผู้ใช้ไม่สำเร็จ');
+      feedback.actionError(
+        err,
+        'อัปเดตสถานะผู้ใช้ไม่สำเร็จ',
+        `admin:user-status:${pendingStatus.userId}:error`,
+      );
     } finally {
       setSavingStatus(false);
     }
   };
 
   const handleChangUserRole = async (userId, userRole) => {
+    if (savingRoleUserId) return;
     const value = {
       id: userId,
       Role: userRole,
     };
 
+    setSavingRoleUserId(userId);
     try {
       await changeUserRole(token, value);
       handleGetUsers();
-      feedback.success('อัปเดตสิทธิ์ผู้ใช้แล้ว');
+      feedback.actionSuccess(
+        'อัปเดตสิทธิ์ผู้ใช้เรียบร้อยแล้ว',
+        `admin:user-role:${userId}:success`,
+      );
     } catch (err) {
       console.log('changeUserRole err --> ', err);
-      feedback.error(err?.response?.data?.message || 'อัปเดตสิทธิ์ผู้ใช้ไม่สำเร็จ');
+      feedback.actionError(
+        err,
+        'อัปเดตสิทธิ์ผู้ใช้ไม่สำเร็จ',
+        `admin:user-role:${userId}:error`,
+      );
+    } finally {
+      setSavingRoleUserId(null);
     }
   };
 
@@ -93,7 +113,8 @@ const TableCustomers = () => {
                     <select
                       onChange={(e) => handleChangUserRole(item.id, e.target.value)}
                       value={item.role}
-                      className="rounded border border-slate-300 px-2 py-1 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-100"
+                      disabled={Boolean(savingRoleUserId) || savingStatus}
+                      className="rounded border border-slate-300 px-2 py-1 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       <option>user</option>
                       <option>admin</option>
@@ -103,8 +124,9 @@ const TableCustomers = () => {
                   <td>
                     <button
                       className={item.enabled
-                        ? 'rounded-md bg-rose-600 p-1 text-white shadow-md hover:bg-rose-700'
-                        : 'rounded-md bg-emerald-600 p-1 text-white shadow-md hover:bg-emerald-700'}
+                        ? 'rounded-md bg-rose-600 p-1 text-white shadow-md hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-60'
+                        : 'rounded-md bg-emerald-600 p-1 text-white shadow-md hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60'}
+                      disabled={savingStatus || Boolean(savingRoleUserId)}
                       onClick={() => requestChangeUserStatus(item.id, item.enabled, item.email)}
                     >
                       {item.enabled ? 'Disable' : 'Enable'}

@@ -29,6 +29,7 @@ const CheckoutPage = () => {
   const submitOrderAction = useOrderOnlineStore(
     (state) => state.submitOrderAction
   );
+  const isSubmitting = useOrderOnlineStore((state) => state.isSubmitting);
 
   const handleLoginSuccess = async () => {
     await fetchCartAction();
@@ -93,13 +94,9 @@ const CheckoutPage = () => {
   };
 
   const submitOrder = async () => {
+    if (isSubmitting) return;
     try {
       if (!token || !customer || !selectedBranchId) {
-        console.warn("❌ token/customer/branchId missing", {
-          token,
-          customer,
-          selectedBranchId,
-        });
         return;
       }
 
@@ -124,15 +121,20 @@ const CheckoutPage = () => {
         })),
       };
 
-      console.log("📦 Submitting order payload:", payload);
-
       const result = await submitOrderAction(payload);
       if (result?.order?.id) {
+        feedback.actionSuccess(
+          "ยืนยันคำสั่งซื้อเรียบร้อยแล้ว",
+          "online-order.checkout.submit",
+        );
         window.location.href = `/order-success/${result.order.id}`;
       }
     } catch (err) {
-      console.error("❌ submitOrder error:", err);
-      feedback.error(err, { fallback: "ไม่สามารถยืนยันคำสั่งซื้อได้" });
+      feedback.actionError(
+        err,
+        "ไม่สามารถยืนยันคำสั่งซื้อได้",
+        "online-order.checkout.submit",
+      );
     }
   };
 
@@ -207,9 +209,10 @@ const CheckoutPage = () => {
             {token && customer && (
               <button
                 onClick={submitOrder}
-                className="mt-6 w-full bg-green-600 text-white py-2 rounded-md hover:bg-green-700 transition"
+                disabled={isSubmitting}
+                className="mt-6 w-full bg-green-600 text-white py-2 rounded-md hover:bg-green-700 transition disabled:cursor-not-allowed disabled:opacity-50"
               >
-                ยืนยันการสั่งซื้อ
+                {isSubmitting ? "กำลังยืนยันคำสั่งซื้อ..." : "ยืนยันการสั่งซื้อ"}
               </button>
             )}
           </div>

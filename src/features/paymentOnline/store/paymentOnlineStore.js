@@ -1,7 +1,7 @@
 // src/features/paymentOnline/store/paymentOnlineStore.js
 
 import { create } from 'zustand';
-import { feedback } from '@/design-system';
+import { feedback } from '@/design-system/feedback';
 import {
   getOrderOnlineById,
   uploadPaymentSlip,
@@ -10,7 +10,7 @@ import {
   rejectOrderOnlineSlip,
 } from '../api/paymentOnlineApi';
 
-export const usePaymentOnlineStore = create((set) => ({
+export const usePaymentOnlineStore = create((set, get) => ({
   order: null,
   isLoading: false,
   isSubmitting: false,
@@ -38,20 +38,35 @@ export const usePaymentOnlineStore = create((set) => ({
           },
         },
       });
+      return order;
     } catch (error) {
       console.error('loadOrderAction error:', error);
+      feedback.actionError(
+        error,
+        'ไม่สามารถโหลดข้อมูลการชำระเงินได้',
+        `payment-online:${orderId}:load:error`,
+      );
+      throw error;
     } finally {
       set({ isLoading: false });
     }
   },
 
   uploadSlipAction: async (orderId, formData) => {
+    if (get().isSubmitting) {
+      throw new Error('กำลังดำเนินการชำระเงินอยู่ กรุณารอสักครู่');
+    }
     try {
       set({ isSubmitting: true });
       const uploadedSlipUrl = await uploadPaymentSlip(orderId, formData);
       return uploadedSlipUrl;
     } catch (error) {
       console.error('uploadSlipAction error:', error);
+      feedback.actionError(
+        error,
+        'อัปโหลดสลิปไม่สำเร็จ',
+        `payment-online:${orderId}:upload:error`,
+      );
       throw error;
     } finally {
       set({ isSubmitting: false });
@@ -59,11 +74,25 @@ export const usePaymentOnlineStore = create((set) => ({
   },
 
   submitSlipInfoAction: async (orderId, payload) => {
+    if (get().isSubmitting) {
+      throw new Error('กำลังดำเนินการชำระเงินอยู่ กรุณารอสักครู่');
+    }
     try {
       set({ isSubmitting: true });
-      await submitOrderOnlinePaymentSlip(orderId, payload);
+      const result = await submitOrderOnlinePaymentSlip(orderId, payload);
+      feedback.actionSuccess(
+        'ส่งข้อมูลการชำระเงินเรียบร้อยแล้ว',
+        `payment-online:${orderId}:submit:success`,
+      );
+      return result;
     } catch (error) {
       console.error('submitSlipInfoAction error:', error);
+      feedback.actionError(
+        error,
+        'เกิดข้อผิดพลาดในการส่งข้อมูลการชำระเงิน',
+        `payment-online:${orderId}:submit:error`,
+      );
+      throw error;
     } finally {
       set({ isSubmitting: false });
     }
@@ -74,22 +103,46 @@ export const usePaymentOnlineStore = create((set) => ({
   },
 
   approveSlipAction: async (orderId) => {
+    if (get().isSubmitting) return;
+    set({ isSubmitting: true });
     try {
       await approveOrderOnlineSlip(orderId);
-      feedback.success('อนุมัติสลิปเรียบร้อยแล้ว');
+      feedback.actionSuccess(
+        'อนุมัติสลิปเรียบร้อยแล้ว',
+        `payment-online:${orderId}:approve:success`,
+      );
     } catch (error) {
       console.error('approveSlipAction error:', error);
-      feedback.error(error, { fallback: 'ไม่สามารถอนุมัติสลิปได้' });
+      feedback.actionError(
+        error,
+        'ไม่สามารถอนุมัติสลิปได้',
+        `payment-online:${orderId}:approve:error`,
+      );
+      throw error;
+    } finally {
+      set({ isSubmitting: false });
     }
   },
 
   rejectSlipAction: async (orderId) => {
+    if (get().isSubmitting) return;
+    set({ isSubmitting: true });
     try {
       await rejectOrderOnlineSlip(orderId);
-      feedback.success('ปฏิเสธสลิปเรียบร้อยแล้ว');
+      feedback.actionSuccess(
+        'ปฏิเสธสลิปเรียบร้อยแล้ว',
+        `payment-online:${orderId}:reject:success`,
+      );
     } catch (error) {
       console.error('rejectSlipAction error:', error);
-      feedback.error(error, { fallback: 'ไม่สามารถปฏิเสธสลิปได้' });
+      feedback.actionError(
+        error,
+        'ไม่สามารถปฏิเสธสลิปได้',
+        `payment-online:${orderId}:reject:error`,
+      );
+      throw error;
+    } finally {
+      set({ isSubmitting: false });
     }
   },
 }));

@@ -111,18 +111,23 @@ export default function PurchaseOrderReceiptTable({ purchaseOrders, loading }) {
   };
 
   const confirmCancel = async () => {
-    if (!pendingCancel) return;
+    if (!pendingCancel || cancelingId) return;
     const { id, code } = pendingCancel;
     try {
       setCancelingId(id);
       await cancelPurchaseOrder(id);
       await fetchPurchaseOrdersForReceiptAction({ shopSlug: shopSlug || 'advancetech' });
-      feedback.success(`ยกเลิกใบสั่งซื้อ ${code} สำเร็จ`);
+      feedback.actionSuccess(
+        `ยกเลิกใบสั่งซื้อ ${code} สำเร็จ`,
+        'purchase-receipt.purchase-order.cancel',
+      );
       setPendingCancel(null);
     } catch (error) {
-      feedback.error(error, {
-        fallback: 'ไม่สามารถยกเลิกเอกสารได้ กรุณาลองใหม่อีกครั้ง',
-      });
+      feedback.actionError(
+        error,
+        'ไม่สามารถยกเลิกเอกสารได้ กรุณาลองใหม่อีกครั้ง',
+        'purchase-receipt.purchase-order.cancel',
+      );
     } finally {
       setCancelingId(null);
     }

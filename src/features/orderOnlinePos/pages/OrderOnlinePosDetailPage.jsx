@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { useParams } from 'react-router-dom';
+import { feedback } from '@/design-system';
 import { useOrderOnlinePosStore } from '../store/orderOnlinePosStore';
 import OrderOnlinePosStatusBadge from '../components/OrderOnlinePosStatusBadge';
 
@@ -12,7 +13,7 @@ const OrderOnlinePosDetailPage = () => {
     isLoading,
     error,
     approveOrderOnlinePaymentSlipAction,
-    rejectOrderOnlineSlipAction, // ✅ เพิ่ม action สำหรับปฏิเสธ
+    rejectOrderOnlineSlipAction,
   } = useOrderOnlinePosStore();
 
   useEffect(() => {
@@ -41,20 +42,22 @@ const OrderOnlinePosDetailPage = () => {
   const displayCustomer = customerType === 'GOVERNMENT' && customerCompany ? `${customerCompany}` : customerName;
 
   const handleConfirm = async () => {
-    if (!id) return;
+    if (!id || isLoading) return;
     try {
       await approveOrderOnlinePaymentSlipAction(id);
-    } catch (error) {
-      console.error('❌ อนุมัติล้มเหลว:', error);
+      feedback.actionSuccess('อนุมัติหลักฐานการชำระเงินเรียบร้อยแล้ว', 'order-online-pos:slip:approve:success');
+    } catch (requestError) {
+      feedback.actionError(requestError, 'อนุมัติหลักฐานการชำระเงินไม่สำเร็จ', 'order-online-pos:slip:approve:error');
     }
   };
 
   const handleReject = async () => {
-    if (!id) return;
+    if (!id || isLoading) return;
     try {
       await rejectOrderOnlineSlipAction(id);
-    } catch (error) {
-      console.error('❌ ปฏิเสธล้มเหลว:', error);
+      feedback.actionSuccess('ปฏิเสธหลักฐานการชำระเงินเรียบร้อยแล้ว', 'order-online-pos:slip:reject:success');
+    } catch (requestError) {
+      feedback.actionError(requestError, 'ปฏิเสธหลักฐานการชำระเงินไม่สำเร็จ', 'order-online-pos:slip:reject:error');
     }
   };
 
@@ -124,13 +127,15 @@ const OrderOnlinePosDetailPage = () => {
           <div className="mt-4 flex justify-center gap-4">
             <button
               onClick={handleConfirm}
-              className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded"
+              disabled={isLoading}
+              className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded disabled:cursor-not-allowed disabled:opacity-50"
             >
               อนุมัติการชำระเงิน
             </button>
             <button
               onClick={handleReject}
-              className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded"
+              disabled={isLoading}
+              className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded disabled:cursor-not-allowed disabled:opacity-50"
             >
               ปฏิเสธสลิป
             </button>

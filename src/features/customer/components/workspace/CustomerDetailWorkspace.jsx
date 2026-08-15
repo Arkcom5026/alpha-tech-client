@@ -133,11 +133,18 @@ const CustomerDetailWorkspace = ({ customerId, onBack }) => {
       });
       setCustomer(updated);
       setEditor(toEditor(updated));
-      feedback.success('บันทึกข้อมูลลูกค้าเรียบร้อยแล้ว');
+      feedback.actionSuccess(
+        'บันทึกข้อมูลลูกค้าเรียบร้อยแล้ว',
+        'customer.detail.save',
+      );
     } catch (requestError) {
       const message = requestError?.response?.data?.message || 'บันทึกข้อมูลลูกค้าไม่สำเร็จ';
       setError(message);
-      feedback.error(message);
+      feedback.actionError(
+        requestError,
+        message,
+        'customer.detail.save',
+      );
     } finally {
       setSaving(false);
     }

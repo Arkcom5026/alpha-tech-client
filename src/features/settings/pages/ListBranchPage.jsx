@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
+import { feedback } from '@/design-system/feedback';
 import { useBranchStore } from '@/features/branch/store/branchStore';
 import { useAuthStore } from '@/features/auth/store/authStore.js';
 import BranchListWorkspace from '@/features/branch/workspace/BranchListWorkspace';
@@ -55,10 +56,10 @@ const ListBranchPage = () => {
         selectedShop.address = data.address;
       }
 
-      alert('✅ แก้ไขข้อมูลร้าน/บริษัท เรียบร้อยแล้ว');
+      feedback.success('แก้ไขข้อมูลร้าน/บริษัทเรียบร้อยแล้ว');
       setIsModalOpen(false);
     } catch (err) {
-      alert('❌ เกิดข้อผิดพลาดในการบันทึกข้อมูล');
+      feedback.error('เกิดข้อผิดพลาดในการบันทึกข้อมูล');
     }
   };
 

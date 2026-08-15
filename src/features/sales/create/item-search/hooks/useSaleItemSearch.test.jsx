@@ -45,6 +45,13 @@ const enterSearch = async (handler, value) => {
   });
 };
 
+const expectStandardErrorFeedback = (message) => {
+  expect(toastError).toHaveBeenCalledWith(
+    message,
+    expect.objectContaining({ autoClose: 9000 }),
+  );
+};
+
 describe('POS sale item search feedback', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -67,7 +74,7 @@ describe('POS sale item search feedback', () => {
     await enterSearch(result.current.handleBarcodeSearch, 'SOLD-SN-1');
 
     expect(toastError).toHaveBeenCalledTimes(2);
-    expect(toastError).toHaveBeenLastCalledWith('สินค้ารายการนี้ถูกขายไปแล้ว ไม่สามารถเพิ่มเข้ารายการขายได้');
+    expectStandardErrorFeedback('สินค้ารายการนี้ถูกขายไปแล้ว ไม่สามารถเพิ่มเข้ารายการขายได้');
     expect(setError).toHaveBeenCalled();
     expect(addItem).not.toHaveBeenCalled();
   });
@@ -78,7 +85,7 @@ describe('POS sale item search feedback', () => {
 
     await enterSearch(result.current.handleBarcodeSearch, 'UNKNOWN-1');
 
-    expect(toastError).toHaveBeenCalledWith('ไม่พบสินค้าที่พร้อมขายจากข้อมูลค้นหานี้');
+    expectStandardErrorFeedback('ไม่พบสินค้าที่พร้อมขายจากข้อมูลค้นหานี้');
     expect(addItem).not.toHaveBeenCalled();
   });
 

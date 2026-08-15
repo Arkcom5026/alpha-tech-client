@@ -1,6 +1,6 @@
-// --- filepath: src/features/position/pages/CreatePositionPage.jsx
 import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { feedback } from '@/design-system';
 import PositionForm from '../components/PositionForm.jsx';
 import { usePositionStore } from '../stores/positionStore.js';
 
@@ -19,8 +19,18 @@ const CreatePositionPage = () => {
   }, []);
 
   const handleSubmit = async (payload) => {
-    const ok = await createAction(payload);
-    if (ok) navigate(-1);
+    if (loading) return;
+    try {
+      const ok = await createAction(payload);
+      if (ok) {
+        feedback.actionSuccess('เพิ่มตำแหน่งพนักงานเรียบร้อยแล้ว', 'position:create:success');
+        navigate(-1);
+      } else {
+        feedback.error(error || 'เพิ่มตำแหน่งพนักงานไม่สำเร็จ', { eventKey: 'position:create:error' });
+      }
+    } catch (createError) {
+      feedback.actionError(createError, 'เพิ่มตำแหน่งพนักงานไม่สำเร็จ', 'position:create:error');
+    }
   };
 
   return (
@@ -35,7 +45,7 @@ const CreatePositionPage = () => {
         <PositionForm
           initialValues={{ name: '', description: '' }}
           onSubmit={handleSubmit}
-          onCancel={() => navigate(-1)}
+          onCancel={() => !loading && navigate(-1)}
           submitting={loading}
           error={error}
         />

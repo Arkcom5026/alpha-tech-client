@@ -7,6 +7,12 @@ import {
 
 const messageFrom = (error) => error?.response?.data?.message || error?.message || 'ตรวจสอบความพร้อมร้านไม่สำเร็จ';
 
+const checkDetail = (check) => {
+  if (check?.ready || !check?.details) return '';
+  if (check.key === 'serviceMode' && check.details.reason) return check.details.reason;
+  return '';
+};
+
 export default function PartnerStoreOperationalReadinessPage() {
   const navigate = useNavigate();
   const { shopSlug } = useParams();
@@ -81,17 +87,21 @@ export default function PartnerStoreOperationalReadinessPage() {
         {error && <p role="alert" className="mt-5 rounded-xl border border-red-200 bg-red-50 p-3 text-sm font-bold text-red-700">{error}</p>}
 
         <div className="mt-6 space-y-3">
-          {checks.map((check) => (
-            <div key={check.key} className={`flex items-start justify-between gap-4 rounded-2xl border p-4 ${check.ready ? 'border-emerald-100 bg-emerald-50' : 'border-amber-200 bg-amber-50'}`}>
-              <div>
-                <p className="text-sm font-black text-slate-800">{check.label}</p>
-                <p className="mt-1 text-xs text-slate-500">{check.key}</p>
+          {checks.map((check) => {
+            const detail = checkDetail(check);
+            return (
+              <div key={check.key} className={`flex items-start justify-between gap-4 rounded-2xl border p-4 ${check.ready ? 'border-emerald-100 bg-emerald-50' : 'border-amber-200 bg-amber-50'}`}>
+                <div>
+                  <p className="text-sm font-black text-slate-800">{check.label}</p>
+                  {detail ? <p className="mt-1 text-xs leading-5 text-amber-800">{detail}</p> : null}
+                  <p className="mt-1 text-xs text-slate-500">{check.key}</p>
+                </div>
+                <span className={`shrink-0 rounded-full px-3 py-1 text-xs font-black ${check.ready ? 'bg-emerald-600 text-white' : 'bg-amber-500 text-white'}`}>
+                  {check.ready ? 'พร้อม' : 'ต้องแก้ไข'}
+                </span>
               </div>
-              <span className={`rounded-full px-3 py-1 text-xs font-black ${check.ready ? 'bg-emerald-600 text-white' : 'bg-amber-500 text-white'}`}>
-                {check.ready ? 'พร้อม' : 'ต้องแก้ไข'}
-              </span>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         <button

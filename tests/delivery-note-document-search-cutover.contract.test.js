@@ -42,7 +42,10 @@ assert(page.includes('documentSearch.actions.search'), 'Delivery Note list must 
 assert(page.includes("navigate(`print/${row.id}`)"), 'Delivery Note list must preserve nested print route authority');
 
 assert(policy.includes("id: 'DELIVERY_NOTE'"), 'Delivery Note policy identity must remain explicit');
-assert(policy.includes('onlyUnpaid: 1'), 'Delivery Note policy must preserve unpaid-only query semantics');
+assert(policy.includes('onlyWithDeliveryNote: 1'), 'Delivery Note policy must preserve delivery-note scoped query semantics');
+assert(policy.includes('officialDocumentNumber'), 'Delivery Note policy must preserve official-document eligibility');
+assert(policy.includes('getBalanceAmount(sale) > 0.0001'), 'Delivery Note policy must preserve outstanding-balance eligibility');
+assert(policy.includes("paymentStatus || '').toUpperCase() === 'UNPAID'"), 'Delivery Note policy must preserve unpaid fallback eligibility');
 assert(policy.includes('balanceAmount'), 'Delivery Note policy must project outstanding balance');
 assert(policy.includes('agingDays'), 'Delivery Note policy must project aging days');
 

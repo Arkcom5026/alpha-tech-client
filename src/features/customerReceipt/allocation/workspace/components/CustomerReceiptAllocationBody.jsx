@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { feedback } from '@/design-system/feedback';
 import CustomerReceiptDetailCard from '../../../components/CustomerReceiptDetailCard';
 import CustomerReceiptAllocateForm from '../../../components/CustomerReceiptAllocateForm';
 
@@ -13,6 +14,26 @@ const CustomerReceiptAllocationBody = ({
   submitting = false,
   onSubmit,
 }) => {
+  const handleSubmit = async (payload) => {
+    if (submitting) return null;
+
+    try {
+      const result = await onSubmit?.(payload);
+      feedback.actionSuccess(
+        'ตัดชำระจากใบรับเงินเรียบร้อยแล้ว',
+        `customer-receipt:allocate:${receipt?.id || 'unknown'}:success`,
+      );
+      return result;
+    } catch (requestError) {
+      feedback.actionError(
+        requestError,
+        'ไม่สามารถตัดชำระจากใบรับเงินได้',
+        `customer-receipt:allocate:${receipt?.id || 'unknown'}:error`,
+      );
+      throw requestError;
+    }
+  };
+
   if (detailLoading) {
     return (
       <div className="space-y-4">
@@ -67,7 +88,7 @@ const CustomerReceiptAllocationBody = ({
             candidates={candidates}
             candidatesLoading={candidatesLoading}
             submitting={submitting}
-            onSubmit={onSubmit}
+            onSubmit={handleSubmit}
           />
         </div>
       </div>

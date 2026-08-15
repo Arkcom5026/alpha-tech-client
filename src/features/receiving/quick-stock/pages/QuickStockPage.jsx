@@ -1,5 +1,6 @@
 // src/features/receiving/quick-stock/pages/QuickStockPage.jsx
 
+import { ConfirmActionDialog } from "@/design-system/composites";
 import ProductFinderPanel from "../../components/quick-stock/ProductFinderPanel";
 import ProductMasterPanel from "../../components/quick-stock/ProductMasterPanel";
 import IntakeControlPanel from "../../components/quick-stock/IntakeControlPanel";
@@ -48,6 +49,7 @@ const QuickStockPage = () => {
     setIsEditingProduct,
     isSavingProduct,
     isDeletingProduct,
+    pendingRecoveryDelete,
     productForm,
     setProductForm,
     priceForm,
@@ -82,6 +84,8 @@ const QuickStockPage = () => {
     updateQueueItemField,
     handleSaveProductInline,
     handleDeleteSelectedProductForRecovery,
+    cancelDeleteSelectedProductForRecovery,
+    confirmDeleteSelectedProductForRecovery,
     handleCommit,
     openLocalCreateForm,
     getBrandName,
@@ -92,158 +96,174 @@ const QuickStockPage = () => {
   } = useQuickStockRuntimeController();
 
   return (
-    <div className="w-full min-h-screen bg-slate-50 p-4 xl:p-6 space-y-4">
-      <QuickReceiptSessionPanel
-        operationalProduct={operationalProduct}
-        barcodeQueue={barcodeQueue}
-        defaultCost={defaultCost}
-        priceForm={priceForm}
-        note={note}
-        onCurrentLineSaved={() => {
-          resetQueue();
-          clearProductSelection();
-        }}
-      />
+    <>
+      <div className="w-full min-h-screen bg-slate-50 p-4 xl:p-6 space-y-4">
+        <QuickReceiptSessionPanel
+          operationalProduct={operationalProduct}
+          barcodeQueue={barcodeQueue}
+          defaultCost={defaultCost}
+          priceForm={priceForm}
+          note={note}
+          onCurrentLineSaved={() => {
+            resetQueue();
+            clearProductSelection();
+          }}
+        />
 
-      <div className="grid grid-cols-1 2xl:grid-cols-12 gap-4">
-        <div className="2xl:col-span-4 space-y-4">
-          <ProductFinderPanel
-            selectedProduct={selectedProduct}
-            showSearchResult={showSearchResult}
-            onShowSearchResult={() => setShowSearchResult(true)}
-            productTypes={productTypes}
-            brands={brands}
-            selectedProductTypeId={selectedProductTypeId}
-            selectedBrandId={selectedBrandId}
-            keyword={keyword}
-            filteredProducts={filteredProducts}
-            selectedProductId={selectedProductId}
-            dropdownsLoading={dropdownsLoading}
-            isLoading={isLoading || isBusy}
-            onProductTypeChange={(value) => {
-              setSelectedProductTypeId(value);
-              setSelectedBrandId("");
-              setSelectedProductId("");
-              setAdoptedOperationalProduct(null);
-              setIsLocalCreateOpen(false);
-              setShowSearchResult(true);
-              resetQueue();
-              executeProductSearch({ productTypeId: value, brandId: "", search: committedKeyword });
-            }}
-            onBrandChange={(value) => {
-              setSelectedBrandId(value);
-              setSelectedProductId("");
-              setAdoptedOperationalProduct(null);
-              setIsLocalCreateOpen(false);
-              setShowSearchResult(true);
-              resetQueue();
-              executeProductSearch({ brandId: value, search: committedKeyword });
-            }}
-            onKeywordChange={(value) => {
-              setKeyword(value);
-              setSelectedProductId("");
-              setAdoptedOperationalProduct(null);
-              setIsLocalCreateOpen(false);
-              setShowSearchResult(true);
-              resetQueue();
-            }}
-            onSearch={() => {
-              const nextKeyword = String(keyword || "").trim();
-              setCommittedKeyword(nextKeyword);
-              setShowSearchResult(true);
-              executeProductSearch({ search: nextKeyword });
-            }}
-            onKeywordEnter={(value) => {
-              const nextKeyword = String(value || "").trim();
-              setCommittedKeyword(nextKeyword);
-              setShowSearchResult(true);
-              executeProductSearch({ search: nextKeyword });
-            }}
-            onSelectProduct={selectProduct}
-            getBrandName={getBrandName}
-            getProductTypeName={getProductTypeName}
-            getProductUnitName={getProductUnitName}
-          />
+        <div className="grid grid-cols-1 2xl:grid-cols-12 gap-4">
+          <div className="2xl:col-span-4 space-y-4">
+            <ProductFinderPanel
+              selectedProduct={selectedProduct}
+              showSearchResult={showSearchResult}
+              onShowSearchResult={() => setShowSearchResult(true)}
+              productTypes={productTypes}
+              brands={brands}
+              selectedProductTypeId={selectedProductTypeId}
+              selectedBrandId={selectedBrandId}
+              keyword={keyword}
+              filteredProducts={filteredProducts}
+              selectedProductId={selectedProductId}
+              dropdownsLoading={dropdownsLoading}
+              isLoading={isLoading || isBusy}
+              onProductTypeChange={(value) => {
+                setSelectedProductTypeId(value);
+                setSelectedBrandId("");
+                setSelectedProductId("");
+                setAdoptedOperationalProduct(null);
+                setIsLocalCreateOpen(false);
+                setShowSearchResult(true);
+                resetQueue();
+                executeProductSearch({ productTypeId: value, brandId: "", search: committedKeyword });
+              }}
+              onBrandChange={(value) => {
+                setSelectedBrandId(value);
+                setSelectedProductId("");
+                setAdoptedOperationalProduct(null);
+                setIsLocalCreateOpen(false);
+                setShowSearchResult(true);
+                resetQueue();
+                executeProductSearch({ brandId: value, search: committedKeyword });
+              }}
+              onKeywordChange={(value) => {
+                setKeyword(value);
+                setSelectedProductId("");
+                setAdoptedOperationalProduct(null);
+                setIsLocalCreateOpen(false);
+                setShowSearchResult(true);
+                resetQueue();
+              }}
+              onSearch={() => {
+                const nextKeyword = String(keyword || "").trim();
+                setCommittedKeyword(nextKeyword);
+                setShowSearchResult(true);
+                executeProductSearch({ search: nextKeyword });
+              }}
+              onKeywordEnter={(value) => {
+                const nextKeyword = String(value || "").trim();
+                setCommittedKeyword(nextKeyword);
+                setShowSearchResult(true);
+                executeProductSearch({ search: nextKeyword });
+              }}
+              onSelectProduct={selectProduct}
+              getBrandName={getBrandName}
+              getProductTypeName={getProductTypeName}
+              getProductUnitName={getProductUnitName}
+            />
 
-          <ProductMasterPanel
-            selectedProduct={operationalProduct}
-            selectedTemplateProduct={selectedTemplateProduct}
-            runtimeStatus={runtimeStatus}
-            productTypes={productTypes}
-            brands={brands}
-            units={units}
-            productForm={productForm}
-            priceForm={priceForm}
-            isEditingProduct={isEditingProduct}
-            isSavingProduct={isSavingProduct}
-            isDeletingProduct={isDeletingProduct}
-            onEditStart={() => setIsEditingProduct(true)}
-            onEditCancel={() => {
-              setProductForm(buildProductFormFromProduct(operationalProduct));
-              setPriceForm(buildPriceFormFromProduct(operationalProduct));
-              setDefaultCost(buildPriceFormFromProduct(operationalProduct).costPrice ?? 0);
-              setIsEditingProduct(false);
-            }}
-            onSaveProduct={handleSaveProductInline}
-            onClearProduct={clearProductSelection}
-            onDeleteProduct={handleDeleteSelectedProductForRecovery}
-            onProductFieldChange={updateProductForm}
-            onPriceFieldChange={updatePriceForm}
-          />
+            <ProductMasterPanel
+              selectedProduct={operationalProduct}
+              selectedTemplateProduct={selectedTemplateProduct}
+              runtimeStatus={runtimeStatus}
+              productTypes={productTypes}
+              brands={brands}
+              units={units}
+              productForm={productForm}
+              priceForm={priceForm}
+              isEditingProduct={isEditingProduct}
+              isSavingProduct={isSavingProduct}
+              isDeletingProduct={isDeletingProduct}
+              onEditStart={() => setIsEditingProduct(true)}
+              onEditCancel={() => {
+                setProductForm(buildProductFormFromProduct(operationalProduct));
+                setPriceForm(buildPriceFormFromProduct(operationalProduct));
+                setDefaultCost(buildPriceFormFromProduct(operationalProduct).costPrice ?? 0);
+                setIsEditingProduct(false);
+              }}
+              onSaveProduct={handleSaveProductInline}
+              onClearProduct={clearProductSelection}
+              onDeleteProduct={handleDeleteSelectedProductForRecovery}
+              onProductFieldChange={updateProductForm}
+              onPriceFieldChange={updatePriceForm}
+            />
 
-          <LocalOperationalProductCreationPanel
-            isVisible={(noSearchResults || isLocalCreateOpen) && !operationalProduct}
-            isOpen={isLocalCreateOpen}
-            isBusy={isBusy}
-            productTypes={productTypes}
-            brands={brands}
-            units={units}
-            productForm={localProductForm}
-            priceForm={localPriceForm}
-            onOpen={openLocalCreateForm}
-            onProductFieldChange={updateLocalProductForm}
-            onPriceFieldChange={updateLocalPriceForm}
-            onCreate={handleCreateLocalOperationalProduct}
-          />
-        </div>
+            <LocalOperationalProductCreationPanel
+              isVisible={(noSearchResults || isLocalCreateOpen) && !operationalProduct}
+              isOpen={isLocalCreateOpen}
+              isBusy={isBusy}
+              productTypes={productTypes}
+              brands={brands}
+              units={units}
+              productForm={localProductForm}
+              priceForm={localPriceForm}
+              onOpen={openLocalCreateForm}
+              onProductFieldChange={updateLocalProductForm}
+              onPriceFieldChange={updateLocalPriceForm}
+              onCreate={handleCreateLocalOperationalProduct}
+            />
+          </div>
 
-        <div className="2xl:col-span-8 space-y-4">
-          <IntakeControlPanel
-            selectedProduct={intakeRuntimeProduct}
-            barcodeInputRef={barcodeInputRef}
-            barcode={barcode}
-            setBarcode={setBarcode}
-            autoFocusSerial={autoFocusSerial}
-            setAutoFocusSerial={setAutoFocusSerial}
-            defaultCost={defaultCost}
-            setDefaultCost={setDefaultCost}
-            priceForm={priceForm}
-            onPriceFieldChange={updatePriceForm}
-            note={note}
-            setNote={setNote}
-            isCommitting={isCommitting}
-            onBarcodeSubmit={handleBarcodeSubmit}
-          />
-          <QueueSummary total={barcodeQueue.length} readyCount={readyCount} needDataCount={needDataCount} productReady={productReady} />
-          <IntakeQueueTable
-            barcodeQueue={barcodeQueue}
-            serialInputRefs={serialInputRefs}
-            onSerialSubmit={handleSerialSubmit}
-            onUpdateQueueItemField={updateQueueItemField}
-            onRemoveQueueItem={removeQueueItem}
-          />
-          <CommitBar
-            selectedProduct={commitRuntimeProduct}
-            barcodeQueue={barcodeQueue}
-            productReady={productReady}
-            queueReady={queueReady}
-            isCommitting={isCommitting}
-            onResetQueue={resetQueue}
-            onCommit={handleCommit}
-          />
+          <div className="2xl:col-span-8 space-y-4">
+            <IntakeControlPanel
+              selectedProduct={intakeRuntimeProduct}
+              barcodeInputRef={barcodeInputRef}
+              barcode={barcode}
+              setBarcode={setBarcode}
+              autoFocusSerial={autoFocusSerial}
+              setAutoFocusSerial={setAutoFocusSerial}
+              defaultCost={defaultCost}
+              setDefaultCost={setDefaultCost}
+              priceForm={priceForm}
+              onPriceFieldChange={updatePriceForm}
+              note={note}
+              setNote={setNote}
+              isCommitting={isCommitting}
+              onBarcodeSubmit={handleBarcodeSubmit}
+            />
+            <QueueSummary total={barcodeQueue.length} readyCount={readyCount} needDataCount={needDataCount} productReady={productReady} />
+            <IntakeQueueTable
+              barcodeQueue={barcodeQueue}
+              serialInputRefs={serialInputRefs}
+              onSerialSubmit={handleSerialSubmit}
+              onUpdateQueueItemField={updateQueueItemField}
+              onRemoveQueueItem={removeQueueItem}
+            />
+            <CommitBar
+              selectedProduct={commitRuntimeProduct}
+              barcodeQueue={barcodeQueue}
+              productReady={productReady}
+              queueReady={queueReady}
+              isCommitting={isCommitting}
+              onResetQueue={resetQueue}
+              onCommit={handleCommit}
+            />
+          </div>
         </div>
       </div>
-    </div>
+
+      <ConfirmActionDialog
+        open={Boolean(pendingRecoveryDelete)}
+        intent="destructive"
+        title="ลบสินค้าในช่วง Recovery"
+        description={pendingRecoveryDelete
+          ? `ยืนยันลบ “${pendingRecoveryDelete.name || `สินค้า #${pendingRecoveryDelete.id}`}” หรือไม่? ควรใช้เฉพาะรายการซ้ำ/ผิดและยังไม่มีประวัติรับเข้าเท่านั้น`
+          : ''}
+        confirmLabel="ยืนยันลบ"
+        cancelLabel="ยกเลิก"
+        loading={isDeletingProduct}
+        onCancel={cancelDeleteSelectedProductForRecovery}
+        onConfirm={confirmDeleteSelectedProductForRecovery}
+      />
+    </>
   );
 };
 

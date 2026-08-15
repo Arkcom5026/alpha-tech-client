@@ -17,12 +17,11 @@ describe('quick stock product adapter ownership', () => {
     expect(quickStockApi).toContain('_ts: Date.now()');
   });
 
-  it('requires Quick Stock to own lookup and create transports directly', () => {
+  it('requires Quick Stock to own template-on-demand and local-create transports directly', () => {
     const quickStockApi = read('src/features/receiving/quick-stock/api/quickStockApi.js');
-    expect(quickStockApi).toContain('products/pos/runtime-by-template/${templateProductId}');
+    expect(quickStockApi).not.toContain('runtime-by-template');
     expect(quickStockApi).toContain("apiClient.post('products/pos/create-from-template'");
     expect(quickStockApi).toContain("apiClient.post('products/pos/create-local'");
-    expect(quickStockApi).toContain('TEMPLATE_PRODUCT_ID_MISSING');
     expect(quickStockApi).toContain('delete sanitizedPayload.branchId');
     expect(quickStockApi).toContain('delete sanitizedPayload.items');
     expect(quickStockApi).toContain('delete sanitizedPayload.movementType');

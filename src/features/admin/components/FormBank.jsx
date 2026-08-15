@@ -1,98 +1,110 @@
-import React, { useState, useEffect } from 'react'
-
-import { toast } from 'react-toastify';
-import { createBank } from '../api/bank';
+import React, { useEffect, useState } from 'react';
+import { ConfirmActionDialog } from '@/design-system/composites';
+import { FieldMessage, feedback } from '@/design-system/feedback';
+import { createBank, removeBank } from '../api/bank';
 import useBankStore from '@/store/bankStore';
 import { useAuthStore } from '@/features/auth/store/authStore';
 
-
 const FormBank = () => {
-    //Javascript code
-    const token = useAuthStore((state) => state.token)
-    const [name, setName] = useState('')
-   // const [categorier, setCategories] = useState([])
+  const token = useAuthStore((state) => state.token);
+  const [name, setName] = useState('');
+  const [nameError, setNameError] = useState('');
+  const [pendingDelete, setPendingDelete] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
-   const Banks = useBankStore((state)=>state.banks)
-   const getBank = useBankStore((state)=>state.getBank)
+  const banks = useBankStore((state) => state.banks);
+  const fetchBanks = useBankStore((state) => state.fetchBanks);
 
-    useEffect(() => {
-        getBank(token)
-    }, [])
+  useEffect(() => {
+    fetchBanks(token);
+  }, [fetchBanks, token]);
 
-
-
-    const handleSupmit = async (e) => {
-        //code
-        e.preventDefault()
-        if (!name) {
-            return toast.warning('Please fill data')
-        }
-        //console.log(token,{name})
-        try {
-            const res = await createBank(token, { name })
-            console.log(res.data.name)
-            toast.success(`Add Bank ${res.data.name} Success!!!`)
-            getBank(token)
-        } catch (err) {
-            console.log(err)
-        }
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!name.trim()) {
+      setNameError('กรุณาระบุชื่อธนาคาร');
+      return;
     }
+    setNameError('');
 
-    const handleRemove = async (id) => {
-        //code
-
-        try {
-            const res = await removeBank(token,id)
-            console.log(res)
-            toast.success(`Deleted ${res.data.name} success`)
-            getBank(token)
-        } catch (err) {
-            console.log(err)
-        }
+    try {
+      const res = await createBank(token, { name: name.trim() });
+      feedback.success(`เพิ่มธนาคาร ${res.data.name} แล้ว`);
+      setName('');
+      fetchBanks(token);
+    } catch (err) {
+      console.log(err);
+      feedback.error(err?.response?.data?.message || 'เพิ่มธนาคารไม่สำเร็จ');
     }
+  };
 
-    return (
-        <div className='container mx-auto p-4 bg-white shadow-md'>
-            <h1>Bank Management</h1>
-            <form className='my-4' onSubmit={handleSupmit} >
-                <input
-                    onChange={(e) => setName(e.target.value)}
-                    className='border mr-5'
-                    type='text'
-                >
+  const confirmRemove = async () => {
+    if (!pendingDelete?.id) return;
+    setDeleting(true);
+    try {
+      const res = await removeBank(token, pendingDelete.id);
+      feedback.success(`ลบ ${res.data.name || pendingDelete.name} แล้ว`);
+      setPendingDelete(null);
+      fetchBanks(token);
+    } catch (err) {
+      console.log(err);
+      feedback.error(err?.response?.data?.message || 'ลบธนาคารไม่สำเร็จ');
+    } finally {
+      setDeleting(false);
+    }
+  };
 
-                </input>
+  return (
+    <>
+      <div className="container mx-auto bg-white p-4 shadow-md">
+        <h1>Bank Management</h1>
+        <form className="my-4" onSubmit={handleSubmit}>
+          <input
+            value={name}
+            onChange={(e) => {
+              setName(e.target.value);
+              if (nameError) setNameError('');
+            }}
+            className="mr-5 rounded border border-slate-300 px-2 py-1 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-100"
+            type="text"
+            aria-invalid={Boolean(nameError)}
+            aria-describedby={nameError ? 'admin-bank-name-error' : undefined}
+          />
+          <button className="rounded bg-emerald-600 px-3 py-1 text-white hover:bg-emerald-700">Add Bank</button>
+          <FieldMessage id="admin-bank-name-error">{nameError}</FieldMessage>
+        </form>
 
-                <button className='bg-blue-500'> Add Cate Bank </button>
+        <hr />
 
-            </form>
+        <ul className="list-none">
+          {banks.map((item) => (
+            <li className="my-2 flex justify-between" key={item.id}>
+              <span>{item.name}</span>
+              <button
+                type="button"
+                className="rounded bg-red-500 px-2 py-1 text-white hover:bg-red-600"
+                onClick={() => setPendingDelete(item)}
+              >
+                Delete
+              </button>
+            </li>
+          ))}
+        </ul>
+      </div>
 
-            <hr />
+      <ConfirmActionDialog
+        open={Boolean(pendingDelete)}
+        title="ลบธนาคาร"
+        description={`ยืนยันลบ ${pendingDelete?.name || 'ธนาคารนี้'} หรือไม่?`}
+        confirmLabel="ลบธนาคาร"
+        intent="destructive"
+        loading={deleting}
+        loadingLabel="กำลังลบ..."
+        onClose={() => setPendingDelete(null)}
+        onConfirm={confirmRemove}
+      />
+    </>
+  );
+};
 
-            <ul className='list-none' >
-                {
-                    Banks.map((item, index) =>
-
-                        <li className='flex justify-between my-2' key={index}>
-                            <span>
-                                {item.name}
-                            </span>
-
-                            <button
-                                className='bg-red-500 '
-                                onClick={() => handleRemove(item.id)}
-                            >
-                                Delete</button>
-                        </li>
-                    )
-                }
-
-            </ul>
-
-
-
-        </div >
-    )
-}
-
-export default FormBank
+export default FormBank;

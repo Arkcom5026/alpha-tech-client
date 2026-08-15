@@ -30,6 +30,9 @@ const PosHeldCartPanel = ({
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [cancellingId, setCancellingId] = useState(null);
+  const [pendingCancelId, setPendingCancelId] = useState(null);
+  const [cancelReason, setCancelReason] = useState('');
   const [form, setForm] = useState({ customerName: '', customerPhone: '', note: '' });
 
   const load = async () => {
@@ -38,7 +41,7 @@ const PosHeldCartPanel = ({
       const result = await listPosHeldCarts({ query });
       setRows(Array.isArray(result) ? result : []);
     } catch (error) {
-      feedback.error(getPosHeldCartErrorMessage(error));
+      feedback.actionError(error, getPosHeldCartErrorMessage(error), 'held-cart:list:error');
     } finally {
       setLoading(false);
     }
@@ -51,6 +54,7 @@ const PosHeldCartPanel = ({
   if (!open) return null;
 
   const saveCurrent = async () => {
+    if (saving) return;
     if (!currentItems.length) {
       feedback.info('ยังไม่มีสินค้าให้พักรายการ');
       return;
@@ -63,27 +67,49 @@ const PosHeldCartPanel = ({
         priceType: currentPriceType,
         items: currentItems,
       });
-      feedback.success(`บันทึกใบพัก ${cart.code} แล้ว`);
+      feedback.actionSuccess(`บันทึกใบพัก ${cart.code} แล้ว`, 'held-cart:create:success');
       setForm({ customerName: '', customerPhone: '', note: '' });
       await load();
       onSavedAndClear(cart);
       onClose();
     } catch (error) {
-      feedback.error(getPosHeldCartErrorMessage(error));
+      feedback.actionError(error, getPosHeldCartErrorMessage(error), 'held-cart:create:error');
     } finally {
       setSaving(false);
     }
   };
 
-  const cancel = async (heldCartId) => {
-    const reason = window.prompt('ระบุเหตุผลยกเลิกใบพักรายการ');
-    if (!reason?.trim()) return;
+  const requestCancel = (heldCartId) => {
+    if (cancellingId) return;
+    setPendingCancelId(heldCartId);
+    setCancelReason('');
+  };
+
+  const closeCancel = () => {
+    if (cancellingId) return;
+    setPendingCancelId(null);
+    setCancelReason('');
+  };
+
+  const confirmCancel = async (heldCartId) => {
+    const reason = cancelReason.trim();
+    if (!reason) {
+      feedback.info('กรุณาระบุเหตุผลยกเลิกใบพักรายการ');
+      return;
+    }
+    if (cancellingId) return;
+
+    setCancellingId(heldCartId);
     try {
-      await cancelPosHeldCart(heldCartId, reason.trim());
-      feedback.success('ยกเลิกใบพักรายการแล้ว');
+      await cancelPosHeldCart(heldCartId, reason);
+      feedback.actionSuccess('ยกเลิกใบพักรายการแล้ว', `held-cart:cancel:${heldCartId}:success`);
+      setPendingCancelId(null);
+      setCancelReason('');
       await load();
     } catch (error) {
-      feedback.error(getPosHeldCartErrorMessage(error));
+      feedback.actionError(error, getPosHeldCartErrorMessage(error), `held-cart:cancel:${heldCartId}:error`);
+    } finally {
+      setCancellingId(null);
     }
   };
 
@@ -168,39 +194,72 @@ const PosHeldCartPanel = ({
             </div>
 
             <div className="mt-4 space-y-3">
-              {rows.map((cart) => (
-                <article key={cart.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                    <div className="min-w-0">
-                      <h3 className="font-semibold text-slate-900">{cart.code}</h3>
-                      <p className="mt-1 text-sm text-slate-600">
-                        {cart.customerName || cart.registeredCustomerName || 'ไม่ระบุลูกค้า'} · {cart.customerPhone || 'ไม่มีเบอร์'}
-                      </p>
-                      <p className="mt-1 text-xs text-slate-500">
-                        {cart.itemCount} รายการ · แก้ล่าสุด {new Date(cart.lastActivityAt).toLocaleString('th-TH')}
-                      </p>
+              {rows.map((cart) => {
+                const cancelOpen = pendingCancelId === cart.id;
+                const cancelling = cancellingId === cart.id;
+                return (
+                  <article key={cart.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="min-w-0">
+                        <h3 className="font-semibold text-slate-900">{cart.code}</h3>
+                        <p className="mt-1 text-sm text-slate-600">
+                          {cart.customerName || cart.registeredCustomerName || 'ไม่ระบุลูกค้า'} · {cart.customerPhone || 'ไม่มีเบอร์'}
+                        </p>
+                        <p className="mt-1 text-xs text-slate-500">
+                          {cart.itemCount} รายการ · แก้ล่าสุด {new Date(cart.lastActivityAt).toLocaleString('th-TH')}
+                        </p>
+                      </div>
+                      <strong className="font-mono text-emerald-800">{money(cart.totalAmount)}</strong>
                     </div>
-                    <strong className="font-mono text-emerald-800">{money(cart.totalAmount)}</strong>
-                  </div>
 
-                  <div className="mt-4 grid grid-cols-2 gap-2 sm:flex sm:justify-end">
-                    <button
-                      type="button"
-                      onClick={() => cancel(cart.id)}
-                      className="inline-flex h-10 items-center justify-center rounded-xl border border-rose-200 bg-rose-50 px-3 text-sm font-semibold text-rose-700 transition hover:bg-rose-100"
-                    >
-                      ยกเลิก
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => onLoad(cart.id)}
-                      className="inline-flex h-10 items-center justify-center rounded-xl bg-emerald-100 px-3 text-sm font-semibold text-emerald-900 transition hover:bg-emerald-200"
-                    >
-                      เปิดทำต่อ
-                    </button>
-                  </div>
-                </article>
-              ))}
+                    {cancelOpen && (
+                      <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 p-3">
+                        <label className="text-xs font-semibold text-rose-800" htmlFor={`held-cart-cancel-${cart.id}`}>
+                          เหตุผลยกเลิกใบพักรายการ
+                        </label>
+                        <textarea
+                          id={`held-cart-cancel-${cart.id}`}
+                          value={cancelReason}
+                          onChange={(event) => setCancelReason(event.target.value)}
+                          disabled={cancelling}
+                          rows={2}
+                          className="mt-2 w-full rounded-xl border border-rose-200 bg-white px-3 py-2 text-sm outline-none focus:border-rose-400 focus:ring-2 focus:ring-rose-100"
+                          placeholder="ระบุเหตุผลก่อนยืนยันยกเลิก"
+                        />
+                        <div className="mt-3 flex justify-end gap-2">
+                          <button type="button" onClick={closeCancel} disabled={cancelling} className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 disabled:opacity-50">
+                            ไม่ยกเลิก
+                          </button>
+                          <button type="button" onClick={() => confirmCancel(cart.id)} disabled={cancelling || !cancelReason.trim()} className="rounded-xl bg-rose-700 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">
+                            {cancelling ? 'กำลังยกเลิก...' : 'ยืนยันยกเลิก'}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {!cancelOpen && (
+                      <div className="mt-4 grid grid-cols-2 gap-2 sm:flex sm:justify-end">
+                        <button
+                          type="button"
+                          onClick={() => requestCancel(cart.id)}
+                          disabled={Boolean(cancellingId)}
+                          className="inline-flex h-10 items-center justify-center rounded-xl border border-rose-200 bg-rose-50 px-3 text-sm font-semibold text-rose-700 transition hover:bg-rose-100 disabled:opacity-50"
+                        >
+                          ยกเลิก
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => onLoad(cart.id)}
+                          disabled={Boolean(cancellingId)}
+                          className="inline-flex h-10 items-center justify-center rounded-xl bg-emerald-100 px-3 text-sm font-semibold text-emerald-900 transition hover:bg-emerald-200 disabled:opacity-50"
+                        >
+                          เปิดทำต่อ
+                        </button>
+                      </div>
+                    )}
+                  </article>
+                );
+              })}
 
               {!loading && !rows.length && (
                 <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-10 text-center">

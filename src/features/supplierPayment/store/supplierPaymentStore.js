@@ -40,7 +40,7 @@ const useSupplierPaymentStore = create((set, get) => ({
     } catch (err) {
       console.error('❌ [createSupplierPaymentAction] error:', err);
       set({ isSupplierPaymentSubmitting: false, supplierPaymentError: err?.message || 'เกิดข้อผิดพลาด' });
-      return null;
+      throw err;
     }
   },
 
@@ -63,9 +63,11 @@ const useSupplierPaymentStore = create((set, get) => ({
       const current = get().supplierPayments || [];
       const updated = current.filter((p) => p.id !== paymentId);
       set({ supplierPayments: updated });
+      return true;
     } catch (err) {
       console.error('❌ [deleteSupplierPaymentAction] error:', err);
       set({ supplierPaymentError: err?.message || 'ลบข้อมูลไม่สำเร็จ' });
+      throw err;
     }
   },
 

@@ -22,6 +22,16 @@ const requireText = (value, fieldName) => {
   return normalized;
 };
 
+const requireSnapshotHash = (value) => {
+  const normalized = String(value || '').trim().toLowerCase();
+  if (!/^[a-f0-9]{64}$/.test(normalized)) {
+    const error = new Error('Snapshot hash ไม่ถูกต้อง');
+    error.code = 'TAX_CLOSING_HANDOFF_CLIENT_VALIDATION_ERROR';
+    throw error;
+  }
+  return normalized;
+};
+
 const normalizeArgs = ({ branchId, taxPeriodId }) => ({
   branchId: requirePositiveId(branchId, 'branchId'),
   taxPeriodId: requireText(taxPeriodId, 'taxPeriodId'),
@@ -37,9 +47,10 @@ export const getTaxClosingHandoffBundle = async (args) => {
 
 export const finalizeTaxClosingHandoffBundle = async (args) => {
   const normalized = normalizeArgs(args);
+  const expectedSnapshotHash = requireSnapshotHash(args?.expectedSnapshotHash);
   const response = await apiClient.post(
     `/tax/tax-closing-handoff/${encodeURIComponent(normalized.taxPeriodId)}/finalize`,
-    {},
+    { expectedSnapshotHash },
     { params: { branchId: normalized.branchId } },
   );
   return unwrapData(response);
@@ -53,6 +64,8 @@ export const getTaxClosingHandoffErrorMessage = (error) => {
     TAX_CLOSING_HANDOFF_CLIENT_VALIDATION_ERROR: message || 'ข้อมูล Tax Closing Package ไม่ถูกต้อง',
     TAX_CLOSING_HANDOFF_ACCESS_FORBIDDEN: 'บัญชีนี้ไม่มีสิทธิ์จัดชุดข้อมูลภาษี',
     TAX_CLOSING_HANDOFF_BRANCH_FORBIDDEN: 'ไม่สามารถจัดชุดข้อมูลของสาขาอื่นได้',
+    TAX_CLOSING_FINALIZATION_EXPECTED_SNAPSHOT_REQUIRED: 'ไม่พบ Snapshot ที่ตรวจสอบแล้ว กรุณารีเฟรชชุดปิดภาษีและตรวจสอบใหม่',
+    TAX_CLOSING_FINALIZATION_SNAPSHOT_CHANGED: 'ข้อมูลภาษีเปลี่ยนหลังจากที่คุณตรวจสอบ กรุณารีเฟรชและตรวจ Snapshot เวอร์ชันล่าสุดก่อนยืนยัน',
     TAX_CLOSING_FINALIZATION_NOT_READY: 'ยังไม่สามารถยืนยันชุดปิดภาษีได้ กรุณาแก้รายการที่ยังไม่พร้อมก่อน',
     TAX_CLOSING_FINALIZATION_CONFLICT: 'ข้อมูลภาษีมีการเปลี่ยนแปลงระหว่างยืนยัน กรุณารีเฟรชและตรวจสอบอีกครั้ง',
     ACCOUNTING_OFFICE_PERIOD_NOT_FOUND: 'ไม่พบรอบภาษีที่เลือก',

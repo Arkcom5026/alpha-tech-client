@@ -134,7 +134,7 @@ const useProductTemplateStore = create(devtools((set, get) => ({
     } catch (error) {
       console.error('[productTemplateStore] uploadTemplateImageAction error:', error);
       set({ error: getErrorMessage(error, 'ไม่สามารถอัปโหลดรูป Template ได้') });
-      return null;
+      throw error;
     } finally {
       set({ isUploadingImage: false });
     }
@@ -149,7 +149,7 @@ const useProductTemplateStore = create(devtools((set, get) => ({
     } catch (error) {
       console.error('[productTemplateStore] deleteTemplateImageAction error:', error);
       set({ error: getErrorMessage(error, 'ไม่สามารถลบรูป Template ได้') });
-      return null;
+      throw error;
     } finally {
       set({ isUploadingImage: false });
     }
@@ -164,7 +164,7 @@ const useProductTemplateStore = create(devtools((set, get) => ({
     } catch (error) {
       console.error('[productTemplateStore] setTemplateCoverImageAction error:', error);
       set({ error: getErrorMessage(error, 'ไม่สามารถตั้งรูปปก Template ได้') });
-      return null;
+      throw error;
     } finally {
       set({ isUploadingImage: false });
     }

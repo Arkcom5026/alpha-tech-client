@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Archive, RefreshCw, Search, X } from 'lucide-react';
-import { toast } from 'react-toastify';
+import { feedback } from '@/design-system/feedback';
 import {
   cancelPosHeldCart,
   createPosHeldCart,
@@ -38,7 +38,7 @@ const PosHeldCartPanel = ({
       const result = await listPosHeldCarts({ query });
       setRows(Array.isArray(result) ? result : []);
     } catch (error) {
-      toast.error(getPosHeldCartErrorMessage(error));
+      feedback.error(getPosHeldCartErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -51,7 +51,10 @@ const PosHeldCartPanel = ({
   if (!open) return null;
 
   const saveCurrent = async () => {
-    if (!currentItems.length) return toast.info('ยังไม่มีสินค้าให้พักรายการ');
+    if (!currentItems.length) {
+      feedback.info('ยังไม่มีสินค้าให้พักรายการ');
+      return;
+    }
     setSaving(true);
     try {
       const cart = await createPosHeldCart({
@@ -60,13 +63,13 @@ const PosHeldCartPanel = ({
         priceType: currentPriceType,
         items: currentItems,
       });
-      toast.success(`บันทึกใบพัก ${cart.code} แล้ว`);
+      feedback.success(`บันทึกใบพัก ${cart.code} แล้ว`);
       setForm({ customerName: '', customerPhone: '', note: '' });
       await load();
       onSavedAndClear(cart);
       onClose();
     } catch (error) {
-      toast.error(getPosHeldCartErrorMessage(error));
+      feedback.error(getPosHeldCartErrorMessage(error));
     } finally {
       setSaving(false);
     }
@@ -77,10 +80,10 @@ const PosHeldCartPanel = ({
     if (!reason?.trim()) return;
     try {
       await cancelPosHeldCart(heldCartId, reason.trim());
-      toast.success('ยกเลิกใบพักรายการแล้ว');
+      feedback.success('ยกเลิกใบพักรายการแล้ว');
       await load();
     } catch (error) {
-      toast.error(getPosHeldCartErrorMessage(error));
+      feedback.error(getPosHeldCartErrorMessage(error));
     }
   };
 

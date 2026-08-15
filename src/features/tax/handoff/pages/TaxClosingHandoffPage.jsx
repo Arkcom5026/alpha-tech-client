@@ -122,7 +122,11 @@ const TaxClosingHandoffPage = () => {
     if (!data?.handoffReady || finalizing) return;
     setFinalizing(true);
     try {
-      const result = await finalizeTaxClosingHandoffBundle({ branchId, taxPeriodId });
+      const result = await finalizeTaxClosingHandoffBundle({
+        branchId,
+        taxPeriodId,
+        expectedSnapshotHash: data.snapshotHash,
+      });
       feedback.success(result?.replayed ? 'Snapshot นี้ยืนยันไว้แล้ว' : 'ยืนยัน Tax Closing Snapshot เรียบร้อย');
       await load();
     } catch (requestError) {

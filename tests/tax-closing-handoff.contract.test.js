@@ -5,10 +5,11 @@ import path from 'node:path';
 
 const read = (relativePath) => fs.readFileSync(path.join(process.cwd(), relativePath), 'utf8');
 
-test('tax period list exposes Tax Closing Package action', () => {
+test('tax period list exposes the accounting-office handoff action', () => {
   const source = read('src/features/tax/periods/workspace/components/TaxPeriodListTable.jsx');
-  assert.match(source, /Tax Closing Package/);
   assert.match(source, /\$\{period\.id\}\/handoff/);
+  assert.match(source, /ชุดปิดรอบภาษี/);
+  assert.match(source, /ส่งสำนักงานบัญชี/);
 });
 
 test('handoff API reads backend-owned tax closing package', () => {
@@ -16,6 +17,17 @@ test('handoff API reads backend-owned tax closing package', () => {
   assert.match(source, /getTaxClosingHandoffBundle/);
   assert.match(source, /\/tax\/tax-closing-handoff\//);
   assert.match(source, /branchId/);
+});
+
+test('handoff finalization is bound to the exact snapshot reviewed by the user', () => {
+  const api = read('src/features/tax/handoff/api/taxClosingHandoffApi.js');
+  const page = read('src/features/tax/handoff/pages/TaxClosingHandoffPage.jsx');
+  assert.match(api, /requireSnapshotHash/);
+  assert.match(api, /expectedSnapshotHash/);
+  assert.match(api, /\{ expectedSnapshotHash \}/);
+  assert.match(api, /TAX_CLOSING_FINALIZATION_EXPECTED_SNAPSHOT_REQUIRED/);
+  assert.match(api, /TAX_CLOSING_FINALIZATION_SNAPSHOT_CHANGED/);
+  assert.match(page, /expectedSnapshotHash: data\.snapshotHash/);
 });
 
 test('handoff workspace exposes deterministic package identity and readiness state', () => {

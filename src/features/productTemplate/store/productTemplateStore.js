@@ -103,7 +103,7 @@ const useProductTemplateStore = create(devtools((set, get) => ({
     } catch (error) {
       console.error('[productTemplateStore] addTemplateAction error:', error);
       set({ error: getErrorMessage(error, 'ไม่สามารถเพิ่มข้อมูลได้') });
-      return null;
+      throw error;
     } finally {
       set({ isSaving: false });
     }
@@ -119,7 +119,7 @@ const useProductTemplateStore = create(devtools((set, get) => ({
     } catch (error) {
       console.error('[productTemplateStore] updateTemplateAction error:', error);
       set({ error: getErrorMessage(error, 'ไม่สามารถอัปเดตข้อมูลได้') });
-      return null;
+      throw error;
     } finally {
       set({ isSaving: false });
     }

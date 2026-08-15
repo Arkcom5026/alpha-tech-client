@@ -26,6 +26,8 @@ describe('partner store operational readiness UI v2 contract', () => {
     expect(page).toContain('assessment.allReady');
     expect(page).toContain('certifyPartnerStoreOperationalReadiness');
     expect(page).toContain('รับรองความพร้อมและเข้าสู่ POS');
+    expect(page).toContain("check.key === 'serviceMode'");
+    expect(page).toContain('check.details.reason');
     expect(page).toContain('system health verification');
     expect(router).toContain("path: ':shopSlug/pos/readiness'");
     expect(router).toContain('<PartnerStoreOperationalReadinessPage />');

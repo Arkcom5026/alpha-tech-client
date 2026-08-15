@@ -73,53 +73,74 @@ const useTaxExpenseWorkspace = () => {
   }, []);
 
   const submitCategory = useCallback(async (payload) => {
+    if (savingCategory) return null;
     setSavingCategory(true);
     try {
       const created = await createTaxExpenseCategory(payload);
       setCategories((current) => [...current.filter((item) => item.id !== created.id), created]
         .sort((left, right) => left.code.localeCompare(right.code)));
-      feedback.success('เพิ่มหมวดค่าใช้จ่ายแล้ว');
+      feedback.actionSuccess(
+        'เพิ่มหมวดค่าใช้จ่ายแล้ว',
+        `tax-expense-category:${created.id || created.code || 'new'}:create:success`,
+      );
       return created;
     } catch (requestError) {
-      const message = requestError?.response?.data?.message || 'ไม่สามารถเพิ่มหมวดค่าใช้จ่ายได้';
-      feedback.error(message);
+      feedback.actionError(
+        requestError,
+        'ไม่สามารถเพิ่มหมวดค่าใช้จ่ายได้',
+        'tax-expense-category:create:error',
+      );
       throw requestError;
     } finally {
       setSavingCategory(false);
     }
-  }, []);
+  }, [savingCategory]);
 
   const submitPayee = useCallback(async (payload) => {
+    if (savingPayee) return null;
     setSavingPayee(true);
     try {
       const created = await createExpensePayee(payload);
       setPayees((current) => [created, ...current.filter((item) => item.id !== created.id)]);
-      feedback.success('เพิ่มผู้รับเงินค่าใช้จ่ายแล้ว');
+      feedback.actionSuccess(
+        'เพิ่มผู้รับเงินค่าใช้จ่ายแล้ว',
+        `tax-expense-payee:${created.id || 'new'}:create:success`,
+      );
       return created;
     } catch (requestError) {
-      const message = requestError?.response?.data?.message || 'ไม่สามารถเพิ่มผู้รับเงินค่าใช้จ่ายได้';
-      feedback.error(message);
+      feedback.actionError(
+        requestError,
+        'ไม่สามารถเพิ่มผู้รับเงินค่าใช้จ่ายได้',
+        'tax-expense-payee:create:error',
+      );
       throw requestError;
     } finally {
       setSavingPayee(false);
     }
-  }, []);
+  }, [savingPayee]);
 
   const submitExpense = useCallback(async (payload) => {
+    if (saving) return null;
     setSaving(true);
     try {
       const created = await createTaxExpense(payload);
       setExpenses((current) => [created, ...current]);
-      feedback.success('บันทึกค่าใช้จ่ายแล้ว');
+      feedback.actionSuccess(
+        'บันทึกค่าใช้จ่ายแล้ว',
+        `tax-expense:${created.id || 'new'}:create:success`,
+      );
       return created;
     } catch (requestError) {
-      const message = requestError?.response?.data?.message || 'ไม่สามารถบันทึกค่าใช้จ่ายได้';
-      feedback.error(message);
+      feedback.actionError(
+        requestError,
+        'ไม่สามารถบันทึกค่าใช้จ่ายได้',
+        'tax-expense:create:error',
+      );
       throw requestError;
     } finally {
       setSaving(false);
     }
-  }, []);
+  }, [saving]);
 
   return {
     branchId,

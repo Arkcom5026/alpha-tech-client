@@ -1,58 +1,75 @@
-// src/features/productProfile/pages/EditProductProfilePage.jsx
-import React, { useEffect, useMemo } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
-import useProductProfileStore from '../store/productProfileStore';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { feedback } from '@/design-system/feedback';
 import { useAuthStore } from '@/features/auth/store/authStore';
 import useProductStore from '@/features/product/store/productStore';
 import ProductProfileForm from '../components/ProductProfileForm';
+import useProductProfileStore from '../store/productProfileStore';
 
 const EditProductProfilePage = () => {
-  // 🟢 [DYNAMIC PARAM FIX] แกะรหัส shopSlug ร่วมกับ id จาก useParams
   const { shopSlug, id } = useParams();
   const navigate = useNavigate();
+  const listPath = `/${shopSlug}/pos/stock/profiles`;
+  const [submitError, setSubmitError] = useState('');
 
-  // 🟢 [DYNAMIC PATH FIX] ล้างเครื่องหมายเปิดปิดแหว่ง และรองรับตัวแปร Multi-Tenant
-  const LIST_PATH = `/${shopSlug}/pos/stock/profiles`;
-
-  // ✅ Guard สิทธิ์ (P1-safe): canManageProductOrdering เป็น selector function
   const { isSuperAdmin, canManageProductOrdering } = useAuthStore();
   const canManage = useMemo(
     () => isSuperAdmin || canManageProductOrdering(),
-    [isSuperAdmin, canManageProductOrdering]
+    [isSuperAdmin, canManageProductOrdering],
   );
 
   const {
     current,
     isLoadingCurrent,
+    isSubmitting,
     error,
-    fetchProfileById,
-    updateProfile,
+    fetchProfileByIdAction,
+    updateProfileAction,
     clearCurrentAction,
   } = useProductProfileStore();
   const { ensureDropdownsAction, dropdowns, dropdownsLoaded } = useProductStore();
-  const isDropdownLoading = !dropdownsLoaded;
-
-  useEffect(() => { ensureDropdownsAction?.(); }, [ensureDropdownsAction]);
 
   useEffect(() => {
-    if (!canManage) return;
-    if (!id) return;
-    (async () => {
-      try {
-        const e = await fetchProfileById(Number(id));        
-        if (!e) navigate(LIST_PATH);
-      } catch (e) {        
-        navigate(LIST_PATH);
-      }
-    })();
-    return () => clearCurrentAction();
-  }, [id, fetchProfileById, clearCurrentAction, navigate, canManage]);
+    Promise.resolve(ensureDropdownsAction?.()).catch((requestError) => {
+      feedback.actionError(requestError, 'โหลดตัวเลือกโปรไฟล์สินค้าไม่สำเร็จ', 'product-profile:edit:dropdowns:error');
+    });
+  }, [ensureDropdownsAction]);
 
-  const handleCancel = () => navigate(LIST_PATH);
+  useEffect(() => {
+    if (!canManage || !id) return undefined;
+    let active = true;
+
+    const load = async () => {
+      try {
+        const entity = await fetchProfileByIdAction(Number(id));
+        if (active && !entity) navigate(listPath);
+      } catch (requestError) {
+        if (active) {
+          feedback.actionError(requestError, 'โหลดโปรไฟล์สินค้าไม่สำเร็จ', 'product-profile:edit:load:error');
+        }
+      }
+    };
+
+    load();
+    return () => {
+      active = false;
+      clearCurrentAction();
+    };
+  }, [canManage, clearCurrentAction, fetchProfileByIdAction, id, listPath, navigate]);
+
   const handleSubmit = async (values) => {
-    if (!canManage) return; // hard-stop safety
-    await updateProfile(Number(id), values);
-    navigate(LIST_PATH);
+    if (!canManage || isSubmitting) return;
+    setSubmitError('');
+
+    try {
+      await updateProfileAction(Number(id), values);
+      feedback.actionSuccess('บันทึกการแก้ไขโปรไฟล์สินค้าเรียบร้อยแล้ว', 'product-profile:edit:success');
+      navigate(listPath);
+    } catch (requestError) {
+      const message = requestError?.response?.data?.error?.message || requestError?.response?.data?.message || requestError?.message || 'บันทึกการแก้ไขโปรไฟล์สินค้าไม่สำเร็จ';
+      setSubmitError(message);
+      feedback.actionError(requestError, 'บันทึกการแก้ไขโปรไฟล์สินค้าไม่สำเร็จ', 'product-profile:edit:error');
+    }
   };
 
   if (!canManage) {
@@ -62,37 +79,18 @@ const EditProductProfilePage = () => {
           <div className="flex items-center justify-between mb-4">
             <div>
               <h1 className="text-xl font-semibold">แก้ไขโปรไฟล์สินค้า</h1>
-              <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">เฉพาะผู้ดูแลระบบ (Admin) หรือ Super Admin เท่านั้น</p>
+              <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">เฉพาะผู้ดูแลระบบหรือ Super Admin เท่านั้น</p>
             </div>
-            <Link to={LIST_PATH} className="btn btn-outline">กลับไปหน้ารายการโปรไฟล์สินค้า</Link>
+            <Link to={listPath} className="btn btn-outline">กลับไปหน้ารายการ</Link>
           </div>
-
-          <div className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-            <div className="font-semibold">คุณไม่มีสิทธิ์เข้าถึงหน้านี้</div>
-            <div className="mt-1">ไม่สามารถแก้ไขโปรไฟล์สินค้าได้ในบัญชีนี้</div>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <button
-                type="button"
-                className="rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
-                onClick={() => navigate(-1)}
-              >
-                ย้อนกลับ
-              </button>
-              <Link
-                className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-sm font-medium text-blue-700 hover:bg-blue-100"
-                to={LIST_PATH}
-              >
-                กลับไปหน้ารายการโปรไฟล์สินค้า
-              </Link>
-            </div>
-          </div>
+          <div className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800">คุณไม่มีสิทธิ์แก้ไขโปรไฟล์สินค้าในบัญชีนี้</div>
         </div>
       </div>
     );
   }
 
   if (isLoadingCurrent && !current) return <div className="p-4">กำลังโหลด...</div>;
-  if (error) return <div className="p-4 text-red-600">{String(error)}</div>;
+  if (error && !current) return <div className="p-4 text-red-600">{String(error)}</div>;
   if (!current) return <div className="p-4">ไม่พบข้อมูล</div>;
 
   return (
@@ -101,32 +99,22 @@ const EditProductProfilePage = () => {
         <div className="flex items-center justify-between mb-4">
           <div>
             <h1 className="text-xl font-semibold">แก้ไขโปรไฟล์สินค้า #{id}</h1>
-            <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-              โปรไฟล์สินค้า = <span className="font-medium">กลุ่มมาตรฐานภายใน “ประเภทสินค้า”</span> ใช้เมื่อมีรูปแบบซ้ำจริง เพื่อช่วยเลือก Template/ค่าเริ่มต้นให้สม่ำเสมอ <span className="font-medium">(ไม่ใช่แบรนด์/ยี่ห้อ และไม่จำเป็นต้องมีทุกสินค้า)</span>
-            </p>
+            <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">โปรไฟล์สินค้าเป็นตัวช่วยจัดกลุ่มรูปแบบซ้ำภายในประเภทสินค้า และไม่จำเป็นต้องมีทุกสินค้า</p>
           </div>
-          <Link to={LIST_PATH} className="btn btn-outline">กลับไปหน้ารายการโปรไฟล์สินค้า</Link>
+          <Link to={listPath} className="btn btn-outline">กลับไปหน้ารายการ</Link>
         </div>
 
-        {/* BestLine guidance */}
-        <div className="mb-4 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
-          <div className="font-semibold">แนวทาง (BestLine)</div>
-          <ul className="mt-1 list-disc pl-5 space-y-1">
-            <li>ใช้โปรไฟล์เมื่อมีสินค้าในประเภทเดียวกัน <span className="font-medium">ซ้ำจริง</span> และต้องการมาตรฐานร่วม</li>
-            <li>ถ้าไม่ซ้ำ แนะนำให้เก็บสเปกไว้ที่สินค้าโดยตรง (Product / productConfig)</li>
-            <li>Template เป็นค่าเริ่มต้น (optional) — Product สามารถ override ได้</li>
-          </ul>
-        </div>
+        {submitError && <div className="mb-4 rounded-lg border border-red-300 bg-red-50 px-4 py-2 text-sm text-red-700">{submitError}</div>}
 
-        {/* 🟢 [STRUCTURE ALIGNMENT FIX] ปิดกล่องโครงสร้าง HTML และส่งคอมโพเนนต์ฟอร์มทำงาน */}
         <div className="bg-white dark:bg-zinc-900 border shadow-sm rounded-xl p-4">
           <ProductProfileForm
             mode="edit"
             defaultValues={current}
             dropdowns={dropdowns}
-            isDropdownLoading={isDropdownLoading}
+            isDropdownLoading={!dropdownsLoaded}
+            isSubmitting={isSubmitting}
             onSubmit={handleSubmit}
-            onCancel={handleCancel}
+            onCancel={() => navigate(listPath)}
           />
         </div>
       </div>

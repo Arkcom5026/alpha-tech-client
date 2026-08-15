@@ -27,7 +27,7 @@ const ListSalesTaxReportPage = () => {
         <div className="flex justify-between items-center mb-4">
           <h1 className="text-xl font-bold">รายงานภาษีขาย</h1>
           <Link
-            to={`../sales-tax/print?startDate=${format(startDate, 'yyyy-MM-dd')}&endDate=${format(endDate, 'yyyy-MM-dd')}`}
+            to={`/pos/reports/sales-tax/print?startDate=${format(startDate, 'yyyy-MM-dd')}&endDate=${format(endDate, 'yyyy-MM-dd')}`}
           >
             <Button>พิมพ์รายงาน</Button>
           </Link>
@@ -63,8 +63,6 @@ const ListSalesTaxReportPage = () => {
         <div className="mb-4 text-gray-700">
           ช่วงวันที่: {isValid(startDate) ? format(startDate, 'dd/MM/yyyy') : '-'} - {isValid(endDate) ? format(endDate, 'dd/MM/yyyy') : '-'}
         </div>
-
-        
 
         <SalesTaxTable
           title="รายการขาย (ใบกำกับภาษี)"

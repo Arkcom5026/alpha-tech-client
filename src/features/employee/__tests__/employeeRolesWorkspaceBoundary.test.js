@@ -18,7 +18,8 @@ describe('employee roles workspace boundary', () => {
     expect(workspace).toContain('branchFilter');
     expect(workspace).toContain("employee.status !== 'active'");
     expect(workspace).toContain("['admin', 'employee'].includes(employee.role)");
-    expect(workspace).toContain('window.confirm');
+    expect(workspace).toContain('ConfirmActionDialog');
+    expect(workspace).toContain('pendingLifecycle');
   });
 
   it('keeps ManageRolesPage as a thin workspace adapter', () => {

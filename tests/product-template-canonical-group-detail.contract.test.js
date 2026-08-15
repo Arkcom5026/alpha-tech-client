@@ -25,7 +25,8 @@ describe('product template canonical group detail contract', () => {
     expect(listPage).toContain('encodeURIComponent(groupKey)');
     expect(listPage).toContain('businessType=${encodeURIComponent(filters.businessType)}');
     expect(candidatePage).toContain('CandidateReviewWorkspaceHeader');
-    expect(candidateHeader).toContain('Product Template Candidate Review Queue');
+    expect(candidateHeader).toContain('Product Template Candidate Workspace');
+    expect(candidateHeader).toContain('Template Catalog Quality');
     expect(detailPage).toContain('CanonicalGroupDetailHeader');
     expect(detailPage).toContain('CanonicalGroupSourceProducts');
     expect(detailHeader).toContain('Canonical Group Detail');

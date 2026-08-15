@@ -26,6 +26,7 @@ const actionOwners = [
   ['product type create', 'src/features/productType/workspace/CreateProductTypeWorkspace.jsx'],
   ['product type edit', 'src/features/productType/workspace/EditProductTypeWorkspace.jsx'],
   ['product type lifecycle', 'src/features/productType/components/ProductTypeTable.jsx'],
+  ['product edit', 'src/features/product/pages/EditProductPage.jsx'],
   ['product delete', 'src/features/product/pages/ListProductPage.jsx'],
   ['product create runtime', 'src/features/product/create/hooks/useProductCreateRuntimeController.js'],
   ['product template images', 'src/features/productTemplate/components/TemplateImageGalleryPanel.jsx'],
@@ -65,6 +66,11 @@ for (const [name, file, source] of actionOwners) {
   assert(source.includes('feedback.actionSuccess'), `${name} (${file}) must provide persistent action success feedback`);
   assert(source.includes('feedback.actionError'), `${name} (${file}) must provide persistent action error feedback`);
 }
+
+const productEditSource = read('src/features/product/pages/EditProductPage.jsx');
+assert(productEditSource.includes('if (isUpdating) return'), 'Product edit must block duplicate submits while saving');
+assert(productEditSource.includes("feedback.actionSuccess('บันทึกการแก้ไขสินค้าเรียบร้อยแล้ว'"), 'Product edit must show visible save success feedback');
+assert(!productEditSource.includes("setError('เกิดข้อผิดพลาดในการบันทึกข้อมูล')"), 'Product edit save failure must not replace the entire page with a fatal load error');
 
 // Structural regression: the profiles list route previously resolved to a copy of the edit page.
 const productProfileListSource = read('src/features/productProfile/pages/ListProductProfilePage.jsx');

@@ -145,7 +145,7 @@ const SupplierViewWorkspace = () => {
               </div>
               <div className="bg-slate-50/60 border border-slate-200/50 p-2 rounded-lg">
                 <span className="block text-[10px] font-bold text-slate-400 mb-0.5">ระยะเวลาเครดิตรอบดิว:</span>
-                <span className="font-mono font-black text-orange-600 text-sm">{supplier.paymentTerms || 0} <span className="text-xs font-sans text-slate-400">วัน</span></span>
+                <span className="font-mono font-black text-emerald-700 text-sm">{supplier.paymentTerms || 0} <span className="text-xs font-sans text-slate-400">วัน</span></span>
               </div>
             </div>
 

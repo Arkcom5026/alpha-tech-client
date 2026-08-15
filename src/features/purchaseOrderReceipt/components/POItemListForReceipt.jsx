@@ -134,7 +134,7 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, formData, items }
     if (Number.isNaN(costPrice) || costPrice < 0) return;
 
     setReceiptPrices((prev) => ({ ...prev, [itemId]: costPrice }));
-    const quantity = receiptQuantities[item.id] ?? 0;
+    const quantity = receiptQuantities[itemId] ?? 0;
     calculateTotal(itemId, quantity, costPrice);
   };
 
@@ -239,7 +239,7 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, formData, items }
   if (loading || !isInitialized) {
     return (
       <div className="p-8 flex items-center justify-center gap-2 text-slate-400 font-bold select-none">
-        <span className="h-4 w-4 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
+        <span className="h-4 w-4 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
         <span>กำลังถอดรหัสและเรนเดอร์โครงสร้างรายการสินค้า...</span>
       </div>
     );
@@ -278,7 +278,7 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, formData, items }
           <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
           <div>
             <div className="font-black text-amber-950">มีรายการ RC ที่บันทึกแล้วและรอยืนยัน</div>
-            <div className="opacity-90 mt-0.5 leading-relaxed">กรุณาตรวจสอบรายการให้ครบแล้วกด <span className="font-black text-orange-600 underline">“ยืนยันบันทึกใบรับสินค้า”</span> ขั้นตอนนี้บันทึก RC เท่านั้น และจะไม่ประกาศว่า PO รับสินค้าเข้าสต๊อกแล้ว</div>
+            <div className="opacity-90 mt-0.5 leading-relaxed">กรุณาตรวจสอบรายการให้ครบแล้วกด <span className="font-black text-emerald-700 underline">“ยืนยันบันทึกใบรับสินค้า”</span> ขั้นตอนนี้บันทึก RC เท่านั้น และจะไม่ประกาศว่า PO รับสินค้าเข้าสต๊อกแล้ว</div>
           </div>
         </div>
       )}
@@ -323,10 +323,10 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, formData, items }
                 <th className="p-3 w-44"><Layers className="w-3.5 h-3.5 inline mr-1 text-slate-400" /> ชื่อสินค้าพัสดุ</th>
                 <th className="p-3 w-16 text-center">จำนวนสั่ง</th>
                 <th className="p-3 w-16 text-center bg-slate-100/50">รับแล้ว</th>
-                <th className="p-3 w-16 text-center text-orange-600">คงเหลือ</th>
+                <th className="p-3 w-16 text-center text-emerald-700">คงเหลือ</th>
                 <th className="p-3 w-20 text-right"><Percent className="w-3 h-3 inline mr-0.5" /> ราคาที่สั่ง</th>
-                <th className="p-3 w-24 text-center bg-orange-500/5 text-orange-700">จำนวนรับจริง</th>
-                <th className="p-3 w-24 text-center bg-orange-500/5 text-orange-700">ราคาที่รับจริง</th>
+                <th className="p-3 w-24 text-center bg-emerald-500/5 text-emerald-700">จำนวนรับจริง</th>
+                <th className="p-3 w-24 text-center bg-emerald-500/5 text-emerald-700">ราคาที่รับจริง</th>
                 <th className="p-3 w-24 text-right text-slate-900 font-black"><Landmark className="w-3.5 h-3.5 inline mr-1 text-slate-400" /> ยอดรวม</th>
                 <th className="p-3 w-24 text-center">จัดการแถว</th>
               </tr>
@@ -381,19 +381,19 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, formData, items }
                     <td className="p-3 text-slate-500 font-bold text-center truncate max-w-[110px]">{brandName}</td>
                     <td className="p-3 text-slate-400 text-center truncate max-w-[100px]">{profileName}</td>
                     <td className="p-3 text-slate-400 text-center truncate max-w-[100px]">{templateName}</td>
-                    <td className="p-3 font-black text-slate-900 group-hover:text-orange-500 transition-colors truncate max-w-[160px]" title={productName}>{productName}</td>
+                    <td className="p-3 font-black text-slate-900 group-hover:text-emerald-600 transition-colors truncate max-w-[160px]" title={productName}>{productName}</td>
 
                     <td className="p-3 text-center font-bold font-mono text-slate-500">{qtyOrdered}</td>
                     <td className="p-3 text-center font-bold font-mono bg-slate-50/60 text-slate-600">{received}</td>
-                    <td className="p-3 text-center font-black font-mono text-orange-600 bg-orange-500/[0.02]">{remaining}</td>
+                    <td className="p-3 text-center font-black font-mono text-emerald-700 bg-emerald-500/[0.02]">{remaining}</td>
                     <td className="p-3 text-right font-semibold font-sans text-slate-500">฿{Number(item.costPrice || 0).toLocaleString()}</td>
 
-                    <td className="p-3 bg-orange-500/[0.01]">
+                    <td className="p-3 bg-emerald-500/[0.01]">
                       <div className="flex flex-col items-center justify-center gap-1">
                         <input
                           type="number"
                           min="0"
-                          className="w-16 h-8 text-right font-black font-sans border border-slate-200 rounded-lg px-2 bg-white focus:border-orange-500 focus:ring-2 focus:ring-orange-500/10 outline-none transition-all shadow-sm disabled:opacity-50 disabled:bg-slate-50"
+                          className="w-16 h-8 text-right font-black font-sans border border-slate-200 rounded-lg px-2 bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 outline-none transition-all shadow-sm disabled:opacity-50 disabled:bg-slate-50"
                           value={quantity}
                           onChange={(e) => handleQuantityChange(item.id, e.target.value)}
                           onFocus={() => handleFocusQuantity(item.id)}
@@ -428,13 +428,13 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, formData, items }
                       </div>
                     </td>
 
-                    <td className="p-3 bg-orange-500/[0.01]">
+                    <td className="p-3 bg-emerald-500/[0.01]">
                       <input
                         type="number"
                         min="0"
                         step="0.01"
                         placeholder="0.00"
-                        className="w-20 h-8 text-right font-bold font-sans border border-slate-200 rounded-lg px-2 bg-white focus:border-orange-500 focus:ring-2 focus:ring-orange-500/10 outline-none transition-all shadow-sm disabled:opacity-50 disabled:bg-slate-50"
+                        className="w-20 h-8 text-right font-bold font-sans border border-slate-200 rounded-lg px-2 bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 outline-none transition-all shadow-sm disabled:opacity-50 disabled:bg-slate-50"
                         value={price === 0 ? '' : price}
                         onChange={(e) => handlePriceChange(item.id, e.target.value)}
                         disabled={!canEdit || isFullyReceived}
@@ -498,23 +498,23 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, formData, items }
         <div className="text-left space-y-0.5 font-bold text-xs text-slate-500">
           <div className="flex items-center gap-1 text-slate-700 font-black"><AlertCircle className="w-3.5 h-3.5 text-slate-400" /> ขอบเขตของใบตรวจรับ:</div>
           <div className="opacity-90 pl-4">การบันทึกจำนวนและต้นทุนใน RC เป็นการเตรียมรายการรับสินค้า และยังไม่ถือว่า StockItem / LOT ถูกสร้างหรือพร้อมขาย</div>
-          <div className="opacity-90 pl-4 mt-0.5">สถานะ <span className="font-black text-orange-600">PARTIALLY_RECEIVED / RECEIVED / COMPLETED</span> ต้องมาจากหลักฐานการยิงรับสินค้าและ Stock Receive ฝั่ง Server ไม่ใช่จากหน้านี้</div>
+          <div className="opacity-90 pl-4 mt-0.5">สถานะ <span className="font-black text-emerald-700">PARTIALLY_RECEIVED / RECEIVED / COMPLETED</span> ต้องมาจากหลักฐานการยิงรับสินค้าและ Stock Receive ฝั่ง Server ไม่ใช่จากหน้านี้</div>
         </div>
 
         <button
           type="button"
           disabled={!canFinalize}
           onClick={handleConfirmFinalize}
-          className={`flex items-center justify-center gap-1.5 px-5 h-11 text-xs sm:text-sm font-black rounded-xl border border-orange-400/10 shadow-sm transform active:scale-95 transition-all duration-300 shrink-0 self-start md:self-auto ${
+          className={`flex items-center justify-center gap-1.5 px-5 h-11 text-xs sm:text-sm font-black rounded-xl border border-emerald-400/10 shadow-sm transform active:scale-95 transition-all duration-300 shrink-0 self-start md:self-auto ${
             !canFinalize
               ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed shadow-none'
-              : 'bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white shadow-[0_4px_15px_rgba(249,115,22,0.2)] hover:-translate-y-0.5'
+              : 'bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-700 hover:to-teal-600 text-white hover:-translate-y-0.5'
           }`}
         >
           {finalizing ? (
             <span className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
           ) : (
-            <CheckCircle2 className="w-4 h-4 text-orange-100" />
+            <CheckCircle2 className="w-4 h-4 text-emerald-100" />
           )}
           <span>{finalizing ? 'กำลังบันทึก...' : finalizedOnce || isPoFinalized ? 'บันทึกสำเร็จแล้ว' : 'ยืนยันบันทึกใบรับสินค้า'}</span>
         </button>

@@ -1,0 +1,34 @@
+.ads-toast-container {
+  --toastify-font-family: var(--ads-font-sans);
+  --toastify-color-success: hsl(var(--ads-status-success));
+  --toastify-color-info: hsl(var(--ads-status-info));
+  --toastify-color-warning: hsl(var(--ads-status-warning));
+  --toastify-color-error: hsl(var(--ads-status-danger));
+  --toastify-color-progress-success: hsl(var(--ads-status-success));
+  --toastify-color-progress-info: hsl(var(--ads-status-info));
+  --toastify-color-progress-warning: hsl(var(--ads-status-warning));
+  --toastify-color-progress-error: hsl(var(--ads-status-danger));
+}
+
+.ads-toast {
+  border: 1px solid hsl(var(--ads-border-default));
+  border-radius: var(--ads-radius-md);
+  background: hsl(var(--ads-surface-raised));
+  color: hsl(var(--ads-text-default));
+  box-shadow: var(--ads-shadow-md);
+}
+
+@media (max-width: 480px) {
+  .ads-toast-container {
+    inset: max(env(safe-area-inset-top), 0.5rem) 0.5rem auto;
+    width: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ads-toast,
+  .ads-toast * {
+    animation-duration: 1ms !important;
+    transition-duration: 1ms !important;
+  }
+}

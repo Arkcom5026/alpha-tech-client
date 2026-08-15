@@ -1,5 +1,4 @@
 import apiClient from '@/utils/apiClient';
-import { toast } from 'react-toastify';
 
 export const payment = async(token) => await apiClient.post('/api/user/create-payment-intent',
     {}, {
@@ -7,4 +6,3 @@ export const payment = async(token) => await apiClient.post('/api/user/create-pa
         Authorization: `Bearer ${token}`
     }
 })
-

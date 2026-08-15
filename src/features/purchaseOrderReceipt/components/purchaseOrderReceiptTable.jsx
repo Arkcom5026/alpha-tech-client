@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 
 import { cancelPurchaseOrder } from '@/features/purchaseOrder/lifecycle';
+import { ConfirmActionDialog, feedback } from '@/design-system';
 import usePurchaseOrderReceiptStore from '../store/purchaseOrderReceiptStore';
 import ReceiptStatusBadge from './ReceiptStatusBadge';
 
@@ -84,6 +85,7 @@ export default function PurchaseOrderReceiptTable({ purchaseOrders, loading }) {
   const [searchText, setSearchText] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [cancelingId, setCancelingId] = useState(null);
+  const [pendingCancel, setPendingCancel] = useState(null);
 
   const filtered = useMemo(() => {
     const list = Array.isArray(purchaseOrders) ? purchaseOrders : [];
@@ -104,25 +106,30 @@ export default function PurchaseOrderReceiptTable({ purchaseOrders, loading }) {
     navigate(`/${targetSlug}/pos/purchases/receipt/create/${id}`);
   };
 
-  const handleCancel = async (id, code) => {
-    const confirmed = window.confirm(
-      `คุณต้องการยกเลิกใบสั่งซื้อเลขที่ ${code} ใช่หรือไม่?\nเมื่อยกเลิกแล้ว เอกสารนี้จะไม่สามารถนำมาตรวจรับสินค้าได้อีก`
-    );
-    if (!confirmed) return;
+  const handleCancel = (id, code) => {
+    setPendingCancel({ id, code });
+  };
 
+  const confirmCancel = async () => {
+    if (!pendingCancel) return;
+    const { id, code } = pendingCancel;
     try {
       setCancelingId(id);
       await cancelPurchaseOrder(id);
       await fetchPurchaseOrdersForReceiptAction({ shopSlug: shopSlug || 'advancetech' });
-      window.alert(`ยกเลิกใบสั่งซื้อ ${code} สำเร็จ`);
+      feedback.success(`ยกเลิกใบสั่งซื้อ ${code} สำเร็จ`);
+      setPendingCancel(null);
     } catch (error) {
-      window.alert(`ไม่สามารถยกเลิกเอกสารได้: ${error?.message || 'เกิดข้อผิดพลาดทางระบบ'}`);
+      feedback.error(error, {
+        fallback: 'ไม่สามารถยกเลิกเอกสารได้ กรุณาลองใหม่อีกครั้ง',
+      });
     } finally {
       setCancelingId(null);
     }
   };
 
   return (
+    <>
     <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm" aria-label="รายการตรวจรับสินค้า">
       <div className="space-y-4 border-b border-slate-200 bg-slate-50 p-4 lg:flex lg:items-center lg:justify-between lg:space-y-0">
         <div className="relative w-full lg:max-w-md">
@@ -251,5 +258,19 @@ export default function PurchaseOrderReceiptTable({ purchaseOrders, loading }) {
         </>
       )}
     </section>
+    <ConfirmActionDialog
+      open={Boolean(pendingCancel)}
+      title="ยืนยันการยกเลิกใบสั่งซื้อ"
+      description={pendingCancel ? `ใบสั่งซื้อ ${pendingCancel.code} จะไม่สามารถนำมาตรวจรับสินค้าได้อีก` : ''}
+      confirmLabel="ยืนยันยกเลิก"
+      loadingLabel="กำลังยกเลิก..."
+      intent="destructive"
+      loading={Boolean(cancelingId)}
+      onConfirm={confirmCancel}
+      onClose={() => {
+        if (!cancelingId) setPendingCancel(null);
+      }}
+    />
+    </>
   );
 }

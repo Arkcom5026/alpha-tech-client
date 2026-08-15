@@ -1,33 +1,43 @@
 // ListCustomerDepositPage.jsx
 // 🏛️ Premium Finance Influx: (Fixed Tenant Navigation, Glassmorphic Headers & Spring Physics Buttons)
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 // 🟢 [IMPORT FIXED] เรียกใช้งาน useParams คุมรหัสพิกัดบริษัทคั่น URL
 import useCustomerDepositStore from '../store/customerDepositStore';
 import StandardActionButtons from '@/components/shared/buttons/StandardActionButtons';
 import { Banknote, Calendar, User, Phone, Wallet, Layers } from 'lucide-react';
+import { ConfirmActionDialog, feedback } from '@/design-system';
 
 const ListCustomerDepositPage = () => {
   // 🟢 [SLUG ACTIVATED] แกะคีย์ Dynamic Shop Slug ประจำหน้างานปัจจุบัน
   const { deposits, fetchCustomerDepositsAction, cancelCustomerDepositAction } = useCustomerDepositStore();
+  const [pendingCancelId, setPendingCancelId] = useState(null);
+  const [isCanceling, setIsCanceling] = useState(false);
 
   useEffect(() => {
     fetchCustomerDepositsAction();
   }, [fetchCustomerDepositsAction]);
 
   const handleCancel = async (id) => {
-    if (window.confirm('คุณต้องการยกเลิกรายการนี้หรือไม่?')) {
+    try {
+      setIsCanceling(true);
       await cancelCustomerDepositAction(id);
+      feedback.success('ยกเลิกรายการเงินมัดจำเรียบร้อยแล้ว');
+      setPendingCancelId(null);
+    } catch (error) {
+      feedback.error(error, { fallback: 'ไม่สามารถยกเลิกรายการเงินมัดจำได้ กรุณาลองใหม่อีกครั้ง' });
+    } finally {
+      setIsCanceling(false);
     }
   };
 
   return (
-    <div className="w-full h-full p-6 space-y-6 text-slate-800 selection:bg-orange-500 selection:text-white animate-fadeIn">
+    <div className="w-full h-full p-6 space-y-6 text-slate-800 selection:bg-emerald-600 selection:text-white animate-fadeIn">
       
       {/* 🟦 1. ส่วนหัวแผงควบคุมสไตล์ Glassmorphism ผสานปุ่ม Action เรืองแสง */}
       <div className="bg-white/80 border border-slate-200/80 p-6 rounded-3xl shadow-[0_4px_25px_rgba(0,0,0,0.01)] backdrop-blur-md flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5 transition-all duration-300">
         <div className="min-w-0">
           <h1 className="text-xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-            <Banknote className="w-5 h-5 text-orange-500" /> ประวัติเงินมัดจำระบบเดิม
+            <Banknote className="w-5 h-5 text-emerald-600" /> ประวัติเงินมัดจำระบบเดิม
           </h1>
           <p className="text-xs text-slate-400 mt-1 font-bold tracking-wide">
             สำหรับตรวจสอบรายการเดิมเท่านั้น การรับเงินใหม่ให้ใช้เมนูรับเงินจากลูกค้า
@@ -48,7 +58,7 @@ const ListCustomerDepositPage = () => {
                 <th className="p-4 text-right">เงินสด</th>
                 <th className="p-4 text-right">เงินโอน</th>
                 <th className="p-4 text-right">บัตรเครดิต</th>
-                <th className="p-4 text-right text-orange-600 font-black"><Wallet className="w-3.5 h-3.5 inline mr-1" /> รวมสุทธิ</th>
+                <th className="p-4 text-right text-emerald-700 font-black"><Wallet className="w-3.5 h-3.5 inline mr-1" /> รวมสุทธิ</th>
                 <th className="p-4 text-center"><Calendar className="w-3.5 h-3.5 inline mr-1" /> วันที่</th>
                 <th className="p-4 text-center"><Layers className="w-3.5 h-3.5 inline mr-1" /> จัดการ</th>
               </tr>
@@ -64,14 +74,14 @@ const ListCustomerDepositPage = () => {
                 deposits.map((d, i) => (
                   <tr key={d.id} className="hover:bg-slate-50/80 transition-colors duration-150 group">
                     <td className="p-4 text-center font-bold text-slate-400 text-xs">{i + 1}</td>
-                    <td className="p-4 font-black text-slate-900 group-hover:text-orange-500 transition-colors">
+                    <td className="p-4 font-black text-slate-900 group-hover:text-emerald-600 transition-colors">
                       {d.customer?.name || '-'}
                     </td>
                     <td className="p-4 font-bold text-slate-600">{d.customer?.phone || '-'}</td>
                     <td className="p-4 text-right font-medium text-slate-600 font-sans">{d.cashAmount.toLocaleString()}</td>
                     <td className="p-4 text-right font-medium text-slate-600 font-sans">{d.transferAmount.toLocaleString()}</td>
                     <td className="p-4 text-right font-medium text-slate-600 font-sans">{d.cardAmount.toLocaleString()}</td>
-                    <td className="p-4 text-right font-black text-orange-600 font-sans text-base">
+                    <td className="p-4 text-right font-black text-emerald-700 font-sans text-base">
                       ฿{d.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </td>
                     <td className="p-4 text-center font-semibold text-slate-500">
@@ -80,7 +90,7 @@ const ListCustomerDepositPage = () => {
                     <td className="p-4 text-center">
                       <div className="inline-flex transform scale-90 origin-center">
                         <StandardActionButtons
-                          onDelete={() => handleCancel(d.id)}
+                          onDelete={() => setPendingCancelId(d.id)}
                           disableEdit
                         />
                       </div>
@@ -92,6 +102,20 @@ const ListCustomerDepositPage = () => {
           </table>
         </div>
       </div>
+
+      <ConfirmActionDialog
+        open={pendingCancelId !== null}
+        title="ยืนยันการยกเลิกรายการเงินมัดจำ"
+        description="รายการที่ยกเลิกจะไม่สามารถนำไปใช้อ้างอิงกับการรับชำระได้"
+        confirmLabel="ยืนยันยกเลิก"
+        loadingLabel="กำลังยกเลิก..."
+        intent="destructive"
+        loading={isCanceling}
+        onConfirm={() => handleCancel(pendingCancelId)}
+        onClose={() => {
+          if (!isCanceling) setPendingCancelId(null);
+        }}
+      />
 
     </div>
   );

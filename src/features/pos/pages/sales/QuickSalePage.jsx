@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { FaMoneyBill, FaPlus, FaTrash } from 'react-icons/fa';
+import { feedback } from '@/design-system';
 
 const mockFetchProductByBarcode = (barcode) => {
   // จำลองการดึงข้อมูลสินค้าจาก barcode จริง
@@ -24,13 +25,13 @@ const QuickSalePage = () => {
 
     // ✅ ตรวจสอบซ้ำ: barcode เดียวกันห้ามเพิ่มซ้ำ
     if (items.some((item) => item.barcode === foundProduct.barcode)) {
-      alert('สินค้านี้ถูกเพิ่มแล้ว');
+      feedback.warning('สินค้านี้ถูกเพิ่มในรายการแล้ว', { eventKey: 'quick-sale-duplicate-product' });
       setBarcode('');
       return;
     }
 
     if (foundProduct.stock <= 0) {
-      alert('❌ สินค้าหมดสต๊อก');
+      feedback.warning('สินค้าหมดสต๊อก', { eventKey: 'quick-sale-out-of-stock' });
       return;
     }
 

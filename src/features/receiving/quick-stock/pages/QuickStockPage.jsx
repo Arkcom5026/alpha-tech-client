@@ -1,5 +1,7 @@
 // src/features/receiving/quick-stock/pages/QuickStockPage.jsx
 
+import { useState } from "react";
+import { ConfirmActionDialog } from "@/design-system";
 import ProductFinderPanel from "../../components/quick-stock/ProductFinderPanel";
 import ProductMasterPanel from "../../components/quick-stock/ProductMasterPanel";
 import IntakeControlPanel from "../../components/quick-stock/IntakeControlPanel";
@@ -11,6 +13,7 @@ import LocalOperationalProductCreationPanel from "../components/LocalOperational
 import useQuickStockRuntimeController from "../hooks/useQuickStockRuntimeController";
 
 const QuickStockPage = () => {
+  const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false);
   const {
     barcodeInputRef,
     serialInputRefs,
@@ -186,7 +189,7 @@ const QuickStockPage = () => {
             }}
             onSaveProduct={handleSaveProductInline}
             onClearProduct={clearProductSelection}
-            onDeleteProduct={handleDeleteSelectedProductForRecovery}
+            onDeleteProduct={() => setDeleteConfirmationOpen(true)}
             onProductFieldChange={updateProductForm}
             onPriceFieldChange={updatePriceForm}
           />
@@ -243,6 +246,22 @@ const QuickStockPage = () => {
           />
         </div>
       </div>
+      <ConfirmActionDialog
+        open={deleteConfirmationOpen}
+        title="ยืนยันการลบสินค้า"
+        description={operationalProduct ? `ลบ ${operationalProduct.name} ออกจากระบบ ใช้เฉพาะรายการซ้ำหรือผิดที่ยังไม่มีประวัติรับเข้า` : ''}
+        confirmLabel="ยืนยันลบสินค้า"
+        loadingLabel="กำลังลบ..."
+        intent="destructive"
+        loading={isDeletingProduct}
+        onConfirm={async () => {
+          const deleted = await handleDeleteSelectedProductForRecovery();
+          if (deleted) setDeleteConfirmationOpen(false);
+        }}
+        onClose={() => {
+          if (!isDeletingProduct) setDeleteConfirmationOpen(false);
+        }}
+      />
     </div>
   );
 };

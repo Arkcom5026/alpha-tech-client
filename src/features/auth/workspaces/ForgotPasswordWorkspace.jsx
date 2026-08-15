@@ -53,20 +53,20 @@ const ForgotPasswordPage = () => {
       
       {/* 🔮 BACKGROUND LATTICE GRID & BLUR EFFECTS */}
       <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
-        <div className="absolute top-[-10%] left-[-10%] h-[600px] w-[600px] rounded-full bg-orange-100/40 blur-3xl" />
+        <div className="absolute top-[-10%] left-[-10%] h-[600px] w-[600px] rounded-full bg-emerald-100/40 blur-3xl" />
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#f5ebe2_1px,transparent_1px),linear-gradient(to_bottom,#f5ebe2_1px,transparent_1px)] bg-[size:4rem_4rem] opacity-40" />
       </div>
 
       {/* 🌐 TOP NAVIGATION BAR (คุมธีมสีกรมท่าลึก ขอบทองส้มหรูหราเข้าชุดคู่แฝด) */}
-      <header className="w-full bg-[#111625] border-b border-orange-500/10 sticky top-0 z-50 py-4 px-6 shadow-md shadow-slate-900/5">
+      <header className="w-full bg-[#111625] border-b border-emerald-500/10 sticky top-0 z-50 py-4 px-6 shadow-md shadow-slate-900/5">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <a href="/" className="flex items-center gap-3 select-none">
-            <div className="bg-[#EF6C00] text-white w-9 h-9 rounded-xl font-black text-sm flex items-center justify-center shadow-lg shadow-orange-500/20 tracking-wider">
+            <div className="bg-emerald-600 text-white w-9 h-9 rounded-xl font-black text-sm flex items-center justify-center shadow-lg shadow-emerald-500/20 tracking-wider">
               SS
             </div>
             <div className="flex flex-col text-left">
               <span className="text-base font-black leading-none tracking-tight text-white">
-                SADUAK<span className="text-orange-500">SABUY</span>
+                SADUAK<span className="text-emerald-500">SABUY</span>
               </span>
               <span className="mt-1 text-[9px] font-bold uppercase tracking-[0.22em] text-slate-400">
                 Hyperlocal Market
@@ -78,7 +78,7 @@ const ForgotPasswordPage = () => {
             to="/partner-portal"
             className="text-xs font-bold text-slate-300 hover:text-white flex items-center gap-2 transition-all"
           >
-            <FaArrowLeft className="text-[10px] text-orange-400" />
+            <FaArrowLeft className="text-[10px] text-emerald-400" />
             <span>ย้อนกลับหน้าแรก</span>
           </Link>
         </div>
@@ -94,7 +94,7 @@ const ForgotPasswordPage = () => {
 
           {/* 🌌 ส่วนข้อมูลด้านซ้าย (ดึงสไตล์ฟอนต์และการไล่เฉดสว่างพรีเมียมมาจากหน้าแรก) */}
           <div className="md:col-span-7 space-y-6 relative z-10 text-center md:text-left">
-            <div className="inline-flex items-center gap-2 bg-orange-500/10 border border-orange-500/20 text-[#D46B08] text-[10px] font-black px-3 py-1.5 rounded-full uppercase tracking-widest font-sans mx-auto md:mx-0">
+            <div className="inline-flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 text-[10px] font-black px-3 py-1.5 rounded-full uppercase tracking-widest font-sans mx-auto md:mx-0">
               <FaBolt className="text-[9px]" /> P1 MERCHANT SERVICE PLATFORM
             </div>
             
@@ -111,14 +111,14 @@ const ForgotPasswordPage = () => {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 text-left">
               <div className="bg-white/60 backdrop-blur-sm border border-slate-200/60 p-4 rounded-2xl flex items-start gap-3 shadow-sm">
-                <FaBoxes className="text-orange-500 text-base mt-0.5 shrink-0" />
+                <FaBoxes className="text-emerald-500 text-base mt-0.5 shrink-0" />
                 <div className="space-y-0.5">
                   <h5 className="font-bold text-xs text-slate-900">Live Inventory Control</h5>
                   <p className="text-[11px] text-slate-500 leading-normal font-medium">ตัดสต๊อกอัตโนมัติ สพันธ์ตรงกัน 100%</p>
                 </div>
               </div>
               <div className="bg-white/60 backdrop-blur-sm border border-slate-200/60 p-4 rounded-2xl flex items-start gap-3 shadow-sm">
-                <FaChartLine className="text-orange-500 text-base mt-0.5 shrink-0" />
+                <FaChartLine className="text-emerald-500 text-base mt-0.5 shrink-0" />
                 <div className="space-y-0.5">
                   <h5 className="font-bold text-xs text-slate-900">Advanced Analytics</h5>
                   <p className="text-[11px] text-slate-500 leading-normal font-medium">รายงานยอดขายรายวัน คัดกรองรายสาขา</p>
@@ -133,7 +133,7 @@ const ForgotPasswordPage = () => {
             <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-md space-y-5 w-full text-left">
               
               <div className="text-center space-y-2">
-                <div className="w-12 h-12 bg-[#FAF6F0] border border-[#EFE9DE] text-orange-500 rounded-xl flex items-center justify-center text-lg mx-auto shadow-sm">
+                <div className="w-12 h-12 bg-emerald-50 border border-emerald-100 text-emerald-600 rounded-xl flex items-center justify-center text-lg mx-auto shadow-sm">
                   <FaLock />
                 </div>
                 <h3 className="font-black text-base text-slate-900 tracking-tight pt-1">ลืมรหัสผ่าน?</h3>
@@ -165,7 +165,7 @@ const ForgotPasswordPage = () => {
                       value={identifier}
                       onChange={(e) => setIdentifier(e.target.value)}
                       disabled={loading}
-                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 outline-none focus:bg-white focus:border-orange-500 transition-all placeholder:text-slate-400"
+                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 outline-none focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition-all placeholder:text-slate-400"
                     />
                   </div>
 
@@ -193,7 +193,7 @@ const ForgotPasswordPage = () => {
                 <div className="flex items-center justify-center text-[11px] font-bold pt-2 border-t border-slate-100 select-none w-full">
                   <Link
                     to="/partner-portal"
-                    className="text-orange-500 hover:text-orange-600 transition-colors"
+                    className="text-emerald-600 hover:text-emerald-700 transition-colors"
                   >
                     กลับไปหน้าเข้าสู่ระบบ
                   </Link>

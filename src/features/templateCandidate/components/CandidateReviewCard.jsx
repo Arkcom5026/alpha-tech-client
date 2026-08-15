@@ -47,7 +47,7 @@ const CandidateReviewCard = ({
           </button>
         )}
         {onRequestRevision && (
-          <button type="button" className="rounded-lg border px-3 py-2 text-sm hover:bg-orange-50 disabled:opacity-50" disabled={isBusy} onClick={() => onRequestRevision(candidate)}>
+          <button type="button" className="rounded-lg border px-3 py-2 text-sm hover:bg-emerald-50 disabled:opacity-50" disabled={isBusy} onClick={() => onRequestRevision(candidate)}>
             ขอแก้ไข
           </button>
         )}

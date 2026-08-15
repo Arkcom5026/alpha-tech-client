@@ -4,7 +4,17 @@
    SalesKPISection.jsx
 ========================= */
 
-export const salesKpiSectionMock = {
+const KPI_CARD_CLASS =
+  'rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md';
+
+const formatNumber = (value) => new Intl.NumberFormat('th-TH', {
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 2,
+}).format(Number(value || 0));
+
+const formatCurrency = (value) => `฿${formatNumber(value)}`;
+
+const salesKpiSectionMock = {
     cards: [
       {
         key: 'totalSales',
@@ -40,7 +50,7 @@ export const salesKpiSectionMock = {
       },
     ],
   };
-  
+
   const salesKpiToneClassMap = {
     blue: {
       badge: 'bg-blue-50 text-blue-700',
@@ -59,8 +69,8 @@ export const salesKpiSectionMock = {
       accent: 'text-amber-600',
     },
     orange: {
-      badge: 'bg-orange-50 text-orange-700',
-      accent: 'text-orange-600',
+      badge: 'bg-emerald-50 text-emerald-700',
+      accent: 'text-emerald-600',
     },
     slate: {
       badge: 'bg-slate-100 text-slate-700',
@@ -120,6 +130,3 @@ export const salesKpiSectionMock = {
       </section>
     );
   };
-  
-
-  

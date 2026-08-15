@@ -63,12 +63,12 @@ const PartnerWelcomePage = () => (
 
     <main className="relative mx-auto flex min-h-[calc(100vh-72px)] max-w-6xl items-center px-5 py-8">
       <div className="pointer-events-none absolute -left-20 top-16 h-72 w-72 rounded-full bg-sky-100/60 blur-3xl" />
-      <div className="pointer-events-none absolute -right-20 bottom-10 h-72 w-72 rounded-full bg-amber-100/50 blur-3xl" />
+      <div className="pointer-events-none absolute -right-20 bottom-10 h-72 w-72 rounded-full bg-emerald-100/50 blur-3xl" />
 
       <div className="relative grid w-full items-center gap-12 lg:grid-cols-[minmax(0,1fr)_420px]">
         <section>
-          <div className="flex items-center gap-2 text-[11px] font-extrabold tracking-[0.08em] text-amber-700">
-            <span className="h-2 w-2 rounded-full bg-amber-500" />
+          <div className="flex items-center gap-2 text-[11px] font-extrabold tracking-[0.08em] text-emerald-700">
+            <span className="h-2 w-2 rounded-full bg-emerald-500" />
             สำหรับเจ้าของร้านค้า
           </div>
 

@@ -4,6 +4,7 @@ import InputMask from 'react-input-mask';
 import useSalesStore from '@/features/sales/store/salesStore';
 import useCustomerDepositStore from '@/features/customerDeposit/store/customerDepositStore';
 import useCustomerStore from '@/features/customer/store/customerStore';
+import { feedback } from '@/design-system';
 
 // ✨ รับ Prop onSaleModeSelect เพิ่มเข้ามา
 const CustomerSelectorDeposit = ({ productSearchRef, clearTrigger, hideCustomerDetails, onSaleModeSelect }) => {
@@ -54,7 +55,7 @@ const CustomerSelectorDeposit = ({ productSearchRef, clearTrigger, hideCustomerD
     const result = (!isClearing && (_shouldShowDetails || pendingPhone));
     console.log('🧮 [COMPUTE] shouldShowCustomerDetails (no hide flag):', result);
     return result;
-  }, [selectedCustomer, isClearing, _shouldShowDetails]);
+  }, [isClearing, _shouldShowDetails, pendingPhone]);
 
   useEffect(() => {
     // กำหนด focus ไปที่ช่องเบอร์โทรศัพท์เมื่อ Component โหลดครั้งแรก
@@ -220,10 +221,10 @@ const CustomerSelectorDeposit = ({ productSearchRef, clearTrigger, hideCustomerD
         taxId,
       });
       setIsModified(false);
-      alert('อัปเดตข้อมูลลูกค้าสำเร็จ!');
+      feedback.success('อัปเดตข้อมูลลูกค้าสำเร็จ');
     } catch (error) {
       console.error('อัปเดตข้อมูลไม่สำเร็จ:', error);
-      alert('อัปเดตข้อมูลลูกค้าไม่สำเร็จ!');
+      feedback.error(error, { fallback: 'อัปเดตข้อมูลลูกค้าไม่สำเร็จ กรุณาลองใหม่อีกครั้ง' });
     }
   };
 
@@ -246,8 +247,7 @@ const CustomerSelectorDeposit = ({ productSearchRef, clearTrigger, hideCustomerD
       if (newCustomer?.id) {
         setSelectedCustomer(newCustomer);
         setCustomerIdAction(newCustomer.id);
-        setCustomer(newCustomer); // ✅ เพิ่มบรรทัดนี้ เพื่อ set ค่า customer ใน store
-        alert('สร้างลูกค้าใหม่สำเร็จ!');
+        feedback.success('สร้างลูกค้าใหม่สำเร็จ');
         setShouldShowDetails(true);
         setTimeout(() => {
           productSearchRef?.current?.focus();
@@ -394,7 +394,7 @@ const CustomerSelectorDeposit = ({ productSearchRef, clearTrigger, hideCustomerD
         
 
           {searchMode === 'phone' && !selectedCustomer?.id && pendingPhone && (
-            <p className="text-orange-700 bg-orange-100 p-2 rounded-md border border-orange-200">
+            <p className="text-amber-800 bg-amber-50 p-2 rounded-md border border-amber-200">
               ไม่พบลูกค้าด้วยเบอร์: <strong>{phone}</strong> คุณต้องการสร้างลูกค้าใหม่หรือไม่?
             </p>
           )}
@@ -523,9 +523,6 @@ const CustomerSelectorDeposit = ({ productSearchRef, clearTrigger, hideCustomerD
 };
 
 export default CustomerSelectorDeposit;
-
-
-
 
 
 

@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { REPAIR_WORKFLOW_LABELS, formatDateTime } from '../utils/repairRuntime';
+import { ConfirmActionDialog } from '@/design-system';
 
 const RepairWorkflowOverview = ({ job, submitting, onWorkflowAction }) => {
   const workflow = job?.workflow || {};
@@ -13,6 +14,7 @@ const RepairWorkflowOverview = ({ job, submitting, onWorkflowAction }) => {
   );
   const [cancelReason, setCancelReason] = useState('');
   const [reopenReason, setReopenReason] = useState('');
+  const [cancelConfirmationOpen, setCancelConfirmationOpen] = useState(false);
 
   const run = (action, note) =>
     onWorkflowAction({
@@ -109,9 +111,7 @@ const RepairWorkflowOverview = ({ job, submitting, onWorkflowAction }) => {
               <button
                 type="button"
                 disabled={submitting || !cancelReason.trim()}
-                onClick={() => {
-                  if (window.confirm('ยืนยันยกเลิกใบงานนี้?')) run('CANCEL', cancelReason);
-                }}
+                onClick={() => setCancelConfirmationOpen(true)}
                 className="mt-3 rounded-xl bg-red-700 px-5 py-3 font-black text-white disabled:opacity-40"
               >
                 ยืนยันยกเลิกงาน
@@ -155,6 +155,21 @@ const RepairWorkflowOverview = ({ job, submitting, onWorkflowAction }) => {
           )}
         </div>
       </div>
+      <ConfirmActionDialog
+        open={cancelConfirmationOpen}
+        title="ยืนยันยกเลิกใบงาน"
+        description={cancelReason.trim()}
+        confirmLabel="ยืนยันยกเลิกงาน"
+        intent="destructive"
+        loading={submitting}
+        onConfirm={async () => {
+          await run('CANCEL', cancelReason);
+          setCancelConfirmationOpen(false);
+        }}
+        onClose={() => {
+          if (!submitting) setCancelConfirmationOpen(false);
+        }}
+      />
     </section>
   );
 };

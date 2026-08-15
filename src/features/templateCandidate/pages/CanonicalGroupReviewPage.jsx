@@ -69,7 +69,7 @@ const CanonicalGroupReviewPage = () => {
   return (
     <div className="min-h-screen space-y-5 bg-slate-50 p-4 xl:p-6">
       <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-        <p className="text-[11px] font-black uppercase tracking-[0.18em] text-orange-500">Platform Product Knowledge</p>
+        <p className="text-[11px] font-black uppercase tracking-[0.18em] text-emerald-600">Platform Product Knowledge</p>
         <div className="mt-2 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <h1 className="text-2xl font-black text-slate-900">Canonical Product Group Review</h1>
@@ -84,12 +84,12 @@ const CanonicalGroupReviewPage = () => {
         </div>
       </section>
 
-      <section className="rounded-3xl border border-orange-200 bg-orange-50/60 p-5 shadow-sm">
-        <p className="text-[11px] font-black uppercase tracking-[0.14em] text-orange-600">Business Type Scope</p>
+      <section className="rounded-3xl border border-emerald-200 bg-emerald-50/60 p-5 shadow-sm">
+        <p className="text-[11px] font-black uppercase tracking-[0.14em] text-emerald-700">Business Type Scope</p>
         <h2 className="mt-1 text-lg font-black text-slate-900">เลือกกลุ่มธุรกิจที่ต้องการตรวจ</h2>
         <div className="mt-4 flex flex-wrap gap-2">
           {BUSINESS_TYPE_OPTIONS.map((item) => (
-            <button key={item.value} type="button" onClick={() => selectBusinessType(item.value)} className={`min-h-11 rounded-2xl border px-4 text-sm font-black transition ${filters.businessType === item.value ? 'border-orange-500 bg-orange-500 text-white' : 'border-orange-200 bg-white text-slate-700'}`}>
+            <button key={item.value} type="button" onClick={() => selectBusinessType(item.value)} className={`min-h-11 rounded-2xl border px-4 text-sm font-black transition ${filters.businessType === item.value ? 'border-emerald-600 bg-emerald-600 text-white' : 'border-emerald-200 bg-white text-slate-700'}`}>
               {item.label}
             </button>
           ))}
@@ -118,7 +118,7 @@ const CanonicalGroupReviewPage = () => {
 
           <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
             <form onSubmit={(event) => { event.preventDefault(); apply({ ...filters, page: 1 }); }} className="grid gap-3 lg:grid-cols-[minmax(260px,1fr)_240px_130px]">
-              <input type="search" value={filters.q} onChange={(event) => setFilters((current) => ({ ...current, q: event.target.value }))} placeholder="ค้นหาชื่อสินค้า แบรนด์ Fingerprint หรือร้าน..." className="min-h-11 rounded-2xl border border-slate-200 px-4 text-sm font-semibold outline-none focus:border-orange-400" />
+              <input type="search" value={filters.q} onChange={(event) => setFilters((current) => ({ ...current, q: event.target.value }))} placeholder="ค้นหาชื่อสินค้า แบรนด์ Fingerprint หรือร้าน..." className="min-h-11 rounded-2xl border border-slate-200 px-4 text-sm font-semibold outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100" />
               <select value={filters.reviewStatus} onChange={(event) => apply({ ...filters, reviewStatus: event.target.value, page: 1 })} className="min-h-11 rounded-2xl border border-slate-200 px-4 text-sm font-bold text-slate-700">
                 {REVIEW_OPTIONS.map(([value, label]) => <option key={value || 'ALL'} value={value}>{label}</option>)}
               </select>
@@ -139,7 +139,7 @@ const CanonicalGroupReviewPage = () => {
             ) : (
               <div className="divide-y divide-slate-100">
                 {groups.map((group) => (
-                  <button key={group.groupKey || group.groupFingerprint} type="button" onClick={() => openGroup(group)} className="grid min-h-20 w-full gap-2 px-4 py-4 text-left transition hover:bg-orange-50/60 md:grid-cols-[1.5fr_180px_130px_130px_190px] md:gap-3">
+                  <button key={group.groupKey || group.groupFingerprint} type="button" onClick={() => openGroup(group)} className="grid min-h-20 w-full gap-2 px-4 py-4 text-left transition hover:bg-emerald-50/60 md:grid-cols-[1.5fr_180px_130px_130px_190px] md:gap-3">
                     <div className="min-w-0">
                       <p className="truncate text-sm font-black text-slate-900">{group.canonicalName || '-'}</p>
                       <p className="mt-1 truncate text-xs font-semibold text-slate-500">{group.brandName || group.canonicalBrandName || 'ไม่ระบุแบรนด์'}</p>

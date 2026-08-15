@@ -4,7 +4,7 @@ import useEmployeeStore from '@/features/employee/store/employeeStore';
 import React, { useState } from 'react';
 // 🟢 [IMPORT FIXED] ดึง useParams มาเตรียมดักจับค่าบริษัทคั่น URL
 import { useNavigate, useParams } from 'react-router-dom';
-import { toast } from 'react-toastify';
+import { feedback } from '@/design-system';
 
 const RegisterEmployeeForm = () => {
   // 🟢 [SLUG ACTIVATED] แกะคีย์ชื่อร้านค้าปัจจุบันจากระนาบ Dynamic Router
@@ -30,19 +30,19 @@ const RegisterEmployeeForm = () => {
     e.preventDefault();
     try {
       await actionRegisterEmployee(form);
-      toast.success('Registration successful! Please login.');
+      feedback.success('สมัครบัญชีสำเร็จ กรุณาเข้าสู่ระบบ');
       
       // 🟢 [ROUTING FIXED] แปลงท่อส่งหน้าจอหลังสมัครเสร็จ ให้พุ่งตรงดิ่งไปที่หน้าล็อกอินของสาขานั้นๆ ไม่หลงทาง
       const targetSlug = shopSlug || 'advancetech';
       navigate(`/${targetSlug}/pos/login`);
     } catch (err) {
       console.error(err);
-      toast.error('Registration failed. Please try again.');
+      feedback.error('สมัครบัญชีไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100 selection:bg-orange-500 selection:text-white">
+    <div className="min-h-screen flex items-center justify-center bg-gray-100 selection:bg-emerald-600 selection:text-white">
       <div className="w-full shadow-md bg-white p-8 max-w-md rounded-2xl border border-slate-100">
         <h1 className="text-2xl text-center my-4 font-black tracking-tight text-slate-900">Register as Employee</h1>
         <form onSubmit={handleSubmit}>
@@ -53,7 +53,7 @@ const RegisterEmployeeForm = () => {
               type="text"
               value={form.name}
               onChange={handleChange}
-              className="border w-full px-3 py-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 font-medium text-sm transition-all"
+              className="border w-full px-3 py-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium text-sm transition-all"
               required
             />
             <input
@@ -62,7 +62,7 @@ const RegisterEmployeeForm = () => {
               type="email"
               value={form.email}
               onChange={handleChange}
-              className="border w-full px-3 py-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 font-medium text-sm transition-all"
+              className="border w-full px-3 py-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium text-sm transition-all"
               required
             />
             <input
@@ -71,7 +71,7 @@ const RegisterEmployeeForm = () => {
               type="password"
               value={form.password}
               onChange={handleChange}
-              className="border w-full px-3 py-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 font-medium text-sm transition-all"
+              className="border w-full px-3 py-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium text-sm transition-all"
               required
             />
             <input
@@ -80,7 +80,7 @@ const RegisterEmployeeForm = () => {
               type="text"
               value={form.branchId}
               onChange={handleChange}
-              className="border w-full px-3 py-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 font-medium text-sm transition-all"
+              className="border w-full px-3 py-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium text-sm transition-all"
               required
             />
             <button

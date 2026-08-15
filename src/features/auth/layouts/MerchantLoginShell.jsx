@@ -62,10 +62,10 @@ const MerchantLoginShell = () => (
       <section className="grid w-full overflow-hidden rounded-[30px] border border-slate-200 bg-white shadow-[0_24px_64px_rgba(15,23,42,0.10)] lg:grid-cols-[minmax(0,1fr)_430px]">
         <div className="relative hidden overflow-hidden border-r border-slate-100 bg-gradient-to-br from-white via-[#fbfcfb] to-sky-50/60 p-10 lg:flex lg:flex-col xl:p-12">
           <div className="absolute -left-20 top-10 h-64 w-64 rounded-full bg-sky-100/65 blur-3xl" />
-          <div className="absolute -bottom-20 right-0 h-64 w-64 rounded-full bg-amber-100/45 blur-3xl" />
+          <div className="absolute -bottom-20 right-0 h-64 w-64 rounded-full bg-emerald-100/45 blur-3xl" />
 
           <div className="relative">
-            <p className="inline-flex rounded-full bg-amber-50 px-3 py-1.5 text-[10px] font-extrabold tracking-[0.08em] text-amber-700">
+            <p className="inline-flex rounded-full bg-emerald-50 px-3 py-1.5 text-[10px] font-extrabold tracking-[0.08em] text-emerald-700">
               สำหรับเจ้าของร้านและทีมงาน
             </p>
             <h1 className="mt-5 max-w-xl text-4xl font-black leading-[1.08] tracking-[-0.045em] text-slate-950 xl:text-5xl">
@@ -84,7 +84,9 @@ const MerchantLoginShell = () => (
           />
 
           <div className="relative mt-7 grid gap-3">
-            {values.map(({ title, detail, Icon, tone }) => (
+            {values.map(({ title, detail,
+              // eslint-disable-next-line no-unused-vars -- JSX icon component comes from the value-card definition.
+              Icon, tone }) => (
               <div key={title} className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-sm">
                 <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${tone}`}>
                   <Icon />

@@ -2,7 +2,7 @@ import React from 'react';
 
 const SaleWorkspacePanel = ({ title, description, action, children, locked = false, className = '' }) => (
   <section
-    className={`rounded-[20px] border border-slate-200/80 bg-white p-3 shadow-[0_8px_24px_rgba(15,23,42,0.04)] transition-shadow md:p-4 ${locked ? 'pointer-events-none opacity-60' : 'hover:shadow-[0_10px_28px_rgba(15,23,42,0.05)]'} ${className}`}
+    className={`rounded-[20px] border border-slate-200/80 bg-white p-3 shadow-[0_8px_24px_rgba(15,23,42,0.04)] transition-shadow md:p-4 ${locked ? 'pointer-events-none opacity-60' : ''} ${locked ? '' : 'hover:shadow-[0_10px_28px_rgba(15,23,42,0.05)]'} ${className}`}
     aria-disabled={locked}
   >
     {(title || description || action) && (

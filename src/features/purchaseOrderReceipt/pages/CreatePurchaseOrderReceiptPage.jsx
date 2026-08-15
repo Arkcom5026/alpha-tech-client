@@ -1,7 +1,7 @@
 // src/features/purchaseOrderReceipt/pages/CreatePurchaseOrderReceiptPage.jsx
 // 🏛️ Tenant-Safe Procurement Form: (Dual-Param Guard Activated, Store Sync & Glassmorphic Pack)
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 // 🟢 [IMPORT FIXED] ดึง useParams มาเพื่อแกะรอยค่าพารามิเตอร์คั่น URL ป้องกันระบบดีดหนีกลับหน้าแรก
 import { useParams, useNavigate } from 'react-router-dom';
 import { useForm, useWatch } from 'react-hook-form';
@@ -118,7 +118,7 @@ const CreatePurchaseOrderReceiptPage = () => {
     [formValues]
   );
 
-  const doLoadOrder = () => {
+  const doLoadOrder = useCallback(() => {
     const fn = loadOrderByIdAction || loadOrderById;
     try {
       clearErrorAction?.();
@@ -128,20 +128,20 @@ const CreatePurchaseOrderReceiptPage = () => {
     } catch (err) {
       console.error('📛 loadOrderById error:', err);
     }
-  };
+  }, [clearErrorAction, loadOrderByIdAction, loadOrderById, poId]);
 
   useEffect(() => {
     if (poId) {
       doLoadOrder();
       setReceiptId(null);
     }
-  }, [poId, loadOrderByIdAction, loadOrderById]);
+  }, [doLoadOrder, poId]);
 
   // 📦 LOADING FALLBACK STATE
   if (loading && !currentOrder) {
     return (
       <div className="w-full py-16 flex flex-col items-center justify-center gap-3 text-slate-400 font-bold select-none animate-fadeIn font-sans">
-        <Loader2 className="w-6 h-6 animate-spin text-orange-500" />
+        <Loader2 className="w-6 h-6 animate-spin text-emerald-600" />
         <p className="text-sm">กำลังสกัดค้นโครงสร้างเอกสารใบสั่งซื้อพอร์ต Live API...</p>
       </div>
     );
@@ -179,13 +179,13 @@ const CreatePurchaseOrderReceiptPage = () => {
   }
 
   return (
-    <div className="w-full h-full p-4 md:p-6 space-y-6 max-w-[1400px] mx-auto text-slate-800 selection:bg-orange-500 selection:text-white animate-fadeIn font-sans">
+    <div className="w-full h-full p-4 md:p-6 space-y-6 max-w-[1400px] mx-auto text-slate-800 selection:bg-emerald-600 selection:text-white animate-fadeIn font-sans">
       
       {/* 🟦 1. ส่วนหัวบาร์ควบคุมคุมสิทธิ์สไตล์ Glassmorphism ผสานปุ่มถอยกลับเสถียร 100% */}
       <div className="bg-white/80 dark:bg-zinc-900/80 border border-slate-200/80 dark:border-zinc-800 p-6 rounded-3xl shadow-[0_4px_25px_rgba(0,0,0,0.01)] backdrop-blur-md flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5 transition-all duration-300">
         <div className="min-w-0">
           <h1 className="text-xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2 select-none">
-            <FileSpreadsheet className="w-5 h-5 text-orange-500" /> สร้างใบรับสินค้าจากใบสั่งซื้อ
+            <FileSpreadsheet className="w-5 h-5 text-emerald-600" /> สร้างใบรับสินค้าจากใบสั่งซื้อ
           </h1>
           <p className="text-xs font-bold text-slate-400 dark:text-zinc-400 mt-1">
             Goods Receipt Processing Center • บันทึกหลักฐานเลขใบกำกับภาษีคู่ค้าและตรวจนับจำนวนรับของเข้าคลังพัสดุสาขา
@@ -237,7 +237,7 @@ const CreatePurchaseOrderReceiptPage = () => {
                   render={({ field }) => (
                     <FormItem className="space-y-1.5">
                       <FormLabel className="text-xs font-black text-slate-500"><FileText className="w-3.5 h-3.5 inline mr-1" /> เลขที่ใบกำกับภาษี</FormLabel>
-                      <Input {...field} placeholder="กรอกรหัสเลขบิลภาษีคู่ค้า" className="h-10 text-sm font-bold px-3 bg-white border border-slate-200 rounded-xl focus:border-orange-500 outline-none transition-all shadow-sm" />
+                      <Input {...field} placeholder="กรอกรหัสเลขบิลภาษีคู่ค้า" className="h-10 text-sm font-bold px-3 bg-white border border-slate-200 rounded-xl focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 outline-none transition-all shadow-sm" />
                       <FormMessage className="text-[11px] font-black text-rose-500" />
                     </FormItem>
                   )}
@@ -249,7 +249,7 @@ const CreatePurchaseOrderReceiptPage = () => {
                   render={({ field }) => (
                     <FormItem className="space-y-1.5">
                       <FormLabel className="text-xs font-black text-slate-500"><Calendar className="w-3.5 h-3.5 inline mr-1" /> วันที่ในใบกำกับภาษี</FormLabel>
-                      <Input {...field} type="date" className="h-10 text-sm font-bold px-3 bg-white border border-slate-200 rounded-xl focus:border-orange-500 outline-none transition-all shadow-sm cursor-pointer font-sans" />
+                      <Input {...field} type="date" className="h-10 text-sm font-bold px-3 bg-white border border-slate-200 rounded-xl focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 outline-none transition-all shadow-sm cursor-pointer font-sans" />
                       <FormMessage className="text-[11px] font-black text-rose-500" />
                     </FormItem>
                   )}
@@ -265,7 +265,7 @@ const CreatePurchaseOrderReceiptPage = () => {
                 render={({ field }) => (
                   <FormItem className="space-y-1.5">
                     <FormLabel className="text-xs font-black text-slate-500"><Calendar className="w-3.5 h-3.5 inline mr-1" /> วันที่รับเข้าคลังจริง</FormLabel>
-                    <Input {...field} type="date" className="h-10 text-sm font-bold px-3 bg-white border border-slate-200 rounded-xl focus:border-orange-500 outline-none transition-all shadow-sm cursor-pointer font-sans" />
+                    <Input {...field} type="date" className="h-10 text-sm font-bold px-3 bg-white border border-slate-200 rounded-xl focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 outline-none transition-all shadow-sm cursor-pointer font-sans" />
                     <FormMessage className="text-[11px] font-black text-rose-500" />
                   </FormItem>
                 )}
@@ -277,7 +277,7 @@ const CreatePurchaseOrderReceiptPage = () => {
                 render={({ field }) => (
                   <FormItem className="space-y-1.5">
                     <FormLabel className="text-xs font-black text-slate-500">หมายเหตุบันทึกจัดซื้อ</FormLabel>
-                    <Textarea {...field} placeholder="พิมพ์หมายเหตุหรือข้อมูลกำกับเพิ่มเติม (ถ้ามี)..." className="text-sm font-medium p-3 bg-white border border-slate-200 rounded-xl focus:border-orange-500 outline-none transition-all shadow-sm h-10 min-h-[40px] resize-none" />
+                    <Textarea {...field} placeholder="พิมพ์หมายเหตุหรือข้อมูลกำกับเพิ่มเติม (ถ้ามี)..." className="text-sm font-medium p-3 bg-white border border-slate-200 rounded-xl focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 outline-none transition-all shadow-sm h-10 min-h-[40px] resize-none" />
                     <FormMessage className="text-[11px] font-black text-rose-500" />
                   </FormItem>
                 )}

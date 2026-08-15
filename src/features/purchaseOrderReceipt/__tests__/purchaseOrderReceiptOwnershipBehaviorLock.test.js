@@ -31,8 +31,10 @@ describe('purchase order receipt ownership-safe behavior lock', () => {
 
   it('preserves explicit confirmation before cancel coordination', () => {
     const table = read('components/purchaseOrderReceiptTable.jsx');
-    expect(table).toContain('window.confirm');
+    expect(table).toContain('ConfirmActionDialog');
     expect(table).toContain('ไม่สามารถนำมาตรวจรับสินค้าได้อีก');
+    expect(table).toContain('feedback.success');
+    expect(table).not.toContain('window.confirm');
   });
 
   it('keeps downstream Barcode and StockItem internals out of PurchaseOrderReceipt', () => {

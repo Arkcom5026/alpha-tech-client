@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, CheckCircle2, FileCheck2, LockKeyhole, RotateCcw } from 'lucide-react';
-import { toast } from 'react-toastify';
+import { ConfirmActionDialog, feedback as toast } from '@/design-system';
 import { useBranchStore } from '@/features/branch/store/branchStore';
 import {
   ensureMonthlyTaxPeriod,
@@ -61,6 +61,7 @@ const renderStatus = (status) => {
 };
 
 const TaxPeriodManagementPage = () => {
+  const [pendingAction, setPendingAction] = useState(null);
   const selectedBranchId = useBranchStore((state) => state.selectedBranchId);
   const currentBranch = useBranchStore((state) => state.currentBranch);
   const ensureSelectedBranchAction = useBranchStore((state) => state.ensureSelectedBranchAction);
@@ -150,9 +151,16 @@ const TaxPeriodManagementPage = () => {
     }
   };
 
-  const handleAction = async (period, action) => {
+  const handleAction = (period, action) => {
     const meta = ACTION_META[action];
-    if (!meta || !window.confirm(meta.confirm)) return false;
+    if (!meta) return false;
+    setPendingAction({ period, action });
+    return false;
+  };
+
+  const confirmAction = async () => {
+    if (!pendingAction) return false;
+    const { period, action } = pendingAction;
 
     const key = `${period.id}:${action}`;
     setBusyKey(key);
@@ -165,6 +173,7 @@ const TaxPeriodManagementPage = () => {
       });
       toast.success(result?.replayed ? 'สถานะนี้ถูกบันทึกไว้แล้ว' : 'อัปเดตสถานะรอบภาษีเรียบร้อยแล้ว');
       await loadData();
+      setPendingAction(null);
       return true;
     } catch (requestError) {
       toast.error(getTaxPeriodErrorMessage(requestError));
@@ -242,6 +251,18 @@ const TaxPeriodManagementPage = () => {
           onClose={() => setSelectedPeriodId(null)}
         />
       )}
+      <ConfirmActionDialog
+        open={Boolean(pendingAction)}
+        title={pendingAction ? ACTION_META[pendingAction.action]?.label : ''}
+        description={pendingAction ? ACTION_META[pendingAction.action]?.confirm : ''}
+        confirmLabel="ยืนยันดำเนินการ"
+        intent={pendingAction?.action === 'LOCK' ? 'destructive' : 'primary'}
+        loading={Boolean(busyKey)}
+        onConfirm={confirmAction}
+        onClose={() => {
+          if (!busyKey) setPendingAction(null);
+        }}
+      />
     </>
   );
 };

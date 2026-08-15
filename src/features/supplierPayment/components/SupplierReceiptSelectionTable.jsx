@@ -17,9 +17,6 @@ const SupplierReceiptSelectionTable = ({ receipts, isLoading, selectedReceipts, 
   const { shopSlug } = useParams();
   const targetSlug = shopSlug || 'advancetech';
 
-  const rows = Array.isArray(data) ? data : [];
-  const colCount = 8;
-
   const isSelected = (receiptId) => selectedReceipts.some((r) => r.receiptId === receiptId);
 
   // ✅ FIX: This function now returns the raw, unformatted number for easier editing.
@@ -106,7 +103,7 @@ const SupplierReceiptSelectionTable = ({ receipts, isLoading, selectedReceipts, 
             ) : receipts.length === 0 ? (
               <tr><td colSpan="7" className="p-6 text-center text-gray-500">ไม่พบใบรับของที่พร้อมชำระ</td></tr>
             ) : (
-              receipts.map((r, index) => {
+              receipts.map((r) => {
                 const remaining = (r.totalAmount || 0) - (r.paidAmount || 0);
                 const isReceiptSelected = isSelected(r.id);
                 return (
@@ -115,7 +112,7 @@ const SupplierReceiptSelectionTable = ({ receipts, isLoading, selectedReceipts, 
                     <td className="p-3 text-sm text-gray-800">{r.code}</td>
                     <td className="p-3 text-sm text-gray-600">{dayjs(r.receivedDate).format('DD MMM BBBB')}</td>
                     <td className="p-3 text-sm text-right font-medium">{r.totalAmount?.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
-                    <td className="p-3 text-sm text-right text-orange-500">{r.paidAmount?.toLocaleString('en-US', {minimumFractionDigits: 2}) || '0.00'}</td>
+                    <td className="p-3 text-sm text-right text-emerald-700">{r.paidAmount?.toLocaleString('en-US', {minimumFractionDigits: 2}) || '0.00'}</td>
                     <td className="p-3 text-sm text-right font-semibold text-red-600">{remaining.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
                     <td className="p-3 text-sm text-right">
                       {/* ✅ FIX: Changed to type="number" for better UX and removed formatting from value */}

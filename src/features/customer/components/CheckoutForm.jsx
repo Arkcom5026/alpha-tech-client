@@ -1,90 +1,84 @@
 import { PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { useState } from 'react';
-import { toast } from 'react-toastify';
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from 'react-router-dom';
+import { feedback } from '@/design-system/feedback';
 
 import { saveOrder } from '@/features/customer/api/user';
 import useAuthStore from '@/features/auth/store/authStore';
 import useCartStore from '@/features/online/store/cartStore';
 
-
 export default function CheckoutForm() {
-
-  const token = useAuthStore((state) => state.token)
+  const token = useAuthStore((state) => state.token);
   const clearCart = useCartStore((state) => state.clearCart);
 
   const stripe = useStripe();
   const elements = useElements();
-  const [message, setMessage] = useState(null)
-  const [isLoading, setIsLoading] = useState(false)
-
-  const navigate = useNavigate()
-
+  const [message, setMessage] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!stripe || !elements) {
-      return;
-    }
+    if (!stripe || !elements) return;
 
     setIsLoading(true);
+    setMessage(null);
 
-    const payload = await stripe.confirmPayment({
-      elements,
-      redirect: "if_required",
-    });
+    try {
+      const payload = await stripe.confirmPayment({
+        elements,
+        redirect: 'if_required',
+      });
 
-    console.log("payload", payload);
-    if (payload.error) {
-      setMessage(payload.error.message);
-      console.log("error");
-      toast.error(payload.error.message);
-    } else if (payload.paymentIntent.status === "succeeded") {
-      console.log("Ready or Saveorder");
-      // Create Order
-      saveOrder(token, payload)
-        .then((res) => {
-          console.log(res);
-          clearCart()
-          toast.success("Payment Success!!!");
-          navigate("/user/history");
-        })
-        .catch((err) => {
+      console.log('payload', payload);
+      if (payload.error) {
+        const errorMessage = payload.error.message || 'ชำระเงินไม่สำเร็จ';
+        setMessage(errorMessage);
+        feedback.error(errorMessage);
+        return;
+      }
+
+      if (payload.paymentIntent?.status === 'succeeded') {
+        try {
+          await saveOrder(token, payload);
+          clearCart();
+          feedback.success('ชำระเงินสำเร็จ');
+          navigate('/user/history');
+        } catch (err) {
           console.log(err);
-        });
-    } else {
-      console.log("Something wrong!!!");
-      toast.warning("ชำระเงินไม่สำเร็จ");
-    }
+          const errorMessage = err?.response?.data?.message || err?.message || 'บันทึกคำสั่งซื้อไม่สำเร็จ';
+          setMessage(errorMessage);
+          feedback.error(errorMessage);
+        }
+        return;
+      }
 
-    setIsLoading(false);
+      const warningMessage = 'ชำระเงินไม่สำเร็จ';
+      setMessage(warningMessage);
+      feedback.warning(warningMessage);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const paymentElementOptions = {
-    layout: "tabs",
+    layout: 'tabs',
   };
 
   return (
-    <>
-      <form className="space-y-6" id="payment-form" onSubmit={handleSubmit}>
-        <PaymentElement id="payment-element" options={paymentElementOptions} />
-        <button
-          className="stripe-button"
-          disabled={isLoading || !stripe || !elements}
-          id="submit"
-        >
-          <span id="button-text">
-            {isLoading ? (
-              <div className="spinner" id="spinner"></div>
-            ) : (
-              "Pay now"
-            )}
-          </span>
-        </button>
-        {/* Show any error or success messages */}
-        {message && <div id="payment-message">{message}</div>}
-      </form>
-    </>
+    <form className="space-y-6" id="payment-form" onSubmit={handleSubmit}>
+      <PaymentElement id="payment-element" options={paymentElementOptions} />
+      <button
+        className="stripe-button"
+        disabled={isLoading || !stripe || !elements}
+        id="submit"
+      >
+        <span id="button-text">
+          {isLoading ? <div className="spinner" id="spinner" /> : 'Pay now'}
+        </span>
+      </button>
+      {message && <div id="payment-message" role="alert">{message}</div>}
+    </form>
   );
 }

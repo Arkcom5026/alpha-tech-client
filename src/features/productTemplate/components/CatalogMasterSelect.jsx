@@ -29,7 +29,7 @@ const CatalogMasterSelect = ({
       <span className="text-xs font-black uppercase tracking-[0.12em] text-slate-500">
         {label}{required ? ' *' : ''}
       </span>
-      <div className="rounded-2xl border border-slate-200 bg-white p-2 transition-within:border-orange-400 focus-within:ring-2 focus-within:ring-orange-200">
+      <div className="rounded-2xl border border-slate-200 bg-white p-2 focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-100">
         <input
           value={query}
           onChange={(event) => setQuery(event.target.value)}

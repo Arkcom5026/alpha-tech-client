@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { toast } from 'react-toastify';
+import { feedback as toast } from '@/design-system';
 import { useBranchStore } from '@/features/branch/store/branchStore';
 import { isTaxDocumentMutable } from '../../policies/taxDocumentMutability';
 import { listTaxDocuments, registerTaxCandidate } from '../../intake/api/taxIntakeApi';

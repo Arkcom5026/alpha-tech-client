@@ -7,6 +7,7 @@ import { useBranchStore } from "@/features/branch/store/branchStore";
 import RegisterForm from "../components/RegisterForm";
 import LoginForm from "../components/LoginForm";
 import CustomerInfoForm from "../components/CustomerInfoForm";
+import { feedback } from "@/design-system";
 
 const CheckoutPage = () => {
   const cartItems = useCartStore((state) => state.cartItems);
@@ -50,13 +51,13 @@ const CheckoutPage = () => {
       }
     };
     loadCart();
-  }, []);
+  }, [fetchCartAction, fetchCartBranchPricesAction]);
 
   useEffect(() => {
     if (cartItems.length > 0 && selectedItems.length === 0) {
       setSelectedItems(cartItems.map((item) => item.id));
     }
-  }, [cartItems]);
+  }, [cartItems, selectedItems.length]);
 
   const selectedCartItemsWithPrice = useMemo(() => {
     return cartItems.filter((item) => selectedItems.includes(item.id));
@@ -103,7 +104,7 @@ const CheckoutPage = () => {
       }
 
       if (!selectedCartItemsWithPrice.length) {
-        alert("กรุณาเลือกสินค้าก่อนทำรายการ");
+        feedback.warning("กรุณาเลือกสินค้าก่อนทำรายการ", { eventKey: "checkout-no-selection" });
         return;
       }
 
@@ -131,7 +132,7 @@ const CheckoutPage = () => {
       }
     } catch (err) {
       console.error("❌ submitOrder error:", err);
-      alert("ไม่สามารถยืนยันคำสั่งซื้อได้");
+      feedback.error(err, { fallback: "ไม่สามารถยืนยันคำสั่งซื้อได้" });
     }
   };
 

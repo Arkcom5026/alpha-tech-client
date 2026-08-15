@@ -229,7 +229,7 @@ const BarcodeRangePrintPage = () => {
   };
 
   return (
-    <div className="w-full h-full p-4 md:p-6 space-y-6 text-slate-800 selection:bg-orange-500 selection:text-white animate-fadeIn print:bg-white print:p-0 print-root font-sans">
+    <div className="w-full h-full p-4 md:p-6 space-y-6 text-slate-800 selection:bg-emerald-600 selection:text-white animate-fadeIn print:bg-white print:p-0 print-root font-sans">
       <style>{`
         @font-face {
           font-family: 'C39HrP24DhTt';
@@ -256,7 +256,7 @@ const BarcodeRangePrintPage = () => {
       <div className="bg-white/80 border border-slate-200/80 p-6 rounded-3xl shadow-[0_4px_25px_rgba(0,0,0,0.01)] backdrop-blur-md flex flex-col xl:flex-row xl:items-center xl:justify-between gap-5 transition-all duration-300 print:hidden select-none">
         <div>
           <h1 className="text-xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-            <Barcode className="w-5 h-5 text-orange-500" /> พรีวิวบาร์โค้ดแบบกำหนดเอง
+            <Barcode className="w-5 h-5 text-emerald-600" /> พรีวิวบาร์โค้ดแบบกำหนดเอง
           </h1>
           <p className="text-xs text-slate-400 mt-1 font-bold">
             Custom Barcode Command • จัดวางขนาดแท่ง ย่อสัดส่วนฟอนต์ และสั่งรันเลขพัสดุประเภทสินค้าทั่วไปหน้าร้าน
@@ -275,7 +275,7 @@ const BarcodeRangePrintPage = () => {
                 : '-'}
             </span>
           </div>
-          <div>Labels: <span className="text-orange-500 font-sans text-sm">{generatedItems.length}</span></div>
+          <div>Labels: <span className="text-emerald-600 font-sans text-sm">{generatedItems.length}</span></div>
           <div>สถานะ: <span className="px-2 py-0.5 bg-slate-200/60 rounded-md text-[10px] text-slate-600">ยังไม่ผูกฐานข้อมูล</span></div>
         </div>
       </div>
@@ -291,7 +291,7 @@ const BarcodeRangePrintPage = () => {
               name="barcode-input-mode"
               checked={inputMode === 'range'}
               onChange={() => setInputMode('range')}
-              className="accent-orange-500 h-4 w-4"
+              className="accent-emerald-600 h-4 w-4"
             />
             ช่วงเลขรันอัตโนมัติ
           </label>
@@ -302,7 +302,7 @@ const BarcodeRangePrintPage = () => {
               name="barcode-input-mode"
               checked={inputMode === 'manual'}
               onChange={() => setInputMode('manual')}
-              className="accent-orange-500 h-4 w-4"
+              className="accent-emerald-600 h-4 w-4"
             />
             กรอกเองหลายรายการ
           </label>
@@ -341,7 +341,7 @@ const BarcodeRangePrintPage = () => {
           {/* ชุดปุ่มกดคำสั่งสปริงฟิสิกส์ครอบคลุมลอจิกเดิมครบทุกชื่อฟังก์ชัน */}
           <div className="flex items-center gap-2 sm:ml-auto select-none w-full sm:w-auto pt-2 sm:pt-0">
             <button type="button" onClick={handleGenerateAction} className="flex-1 sm:flex-none h-9 px-4 bg-slate-800 hover:bg-slate-900 text-white rounded-xl active:scale-95 transform transition-all flex items-center justify-center gap-1"><RefreshCw className="w-3.5 h-3.5" /> สร้างตัวอย่าง</button>
-            <button type="button" onClick={handlePrintAction} className="flex-1 sm:flex-none h-9 px-4 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white rounded-xl active:scale-95 border border-orange-400/10 shadow-[0_4px_12px_rgba(249,115,22,0.2)] transform transition-all flex items-center justify-center gap-1"><Printer className="w-4 h-4" /> พิมพ์บาร์โค้ด</button>
+            <button type="button" onClick={handlePrintAction} className="flex-1 sm:flex-none h-9 px-4 bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-700 hover:to-teal-600 text-white rounded-xl active:scale-95 border border-emerald-400/10 shadow-sm transform transition-all flex items-center justify-center gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2"><Printer className="w-4 h-4" /> พิมพ์บาร์โค้ด</button>
             <button type="button" onClick={handleClearAction} className="h-9 px-3 bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-600 rounded-xl active:scale-95 transform transition-all flex items-center justify-center">ล้าง</button>
             <button type="button" onClick={handleBackAction} className="h-9 px-3 bg-white border border-slate-200 text-slate-500 rounded-xl hover:bg-slate-50 active:scale-95 transform transition-all flex items-center gap-1"><ArrowLeft className="w-3.5 h-3.5" /> กลับหน้ารายการ</button>
           </div>
@@ -350,7 +350,7 @@ const BarcodeRangePrintPage = () => {
         {inputMode === 'manual' && (
           <div className="mt-3 space-y-1.5 animate-fadeIn">
             <label className="text-xs font-black text-slate-400 uppercase tracking-wider block">กรอกบาร์โค้ดเองหลายรายการ</label>
-            <textarea value={manualInput} onChange={(event) => setManualInput(event.target.value)} className="min-h-[140px] w-full text-sm font-mono font-bold p-3 bg-slate-50 focus:bg-white border border-slate-200 rounded-2xl outline-none focus:border-orange-500 transition-all shadow-inner h-28 resize-none" placeholder={"กรอก 1 รายการต่อ 1 บรรทัด\nหรือคั่นด้วย comma เช่น 0000001,0000123,9988776"} />
+            <textarea value={manualInput} onChange={(event) => setManualInput(event.target.value)} className="min-h-[140px] w-full text-sm font-mono font-bold p-3 bg-slate-50 focus:bg-white border border-slate-200 rounded-2xl outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition-all shadow-inner h-28 resize-none" placeholder={"กรอก 1 รายการต่อ 1 บรรทัด\nหรือคั่นด้วย comma เช่น 0000001,0000123,9988776"} />
             <div className="text-[10px] text-slate-400 font-bold select-none">รองรับตัวเลขเท่านั้น ระบบจะตัดบรรทัดว่างและรายการซ้ำออกอัตโนมัติ สูงสุด {MAX_PRINT_ITEMS} รายการต่อครั้ง</div>
           </div>
         )}

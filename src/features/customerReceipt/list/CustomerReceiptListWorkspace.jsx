@@ -12,6 +12,7 @@ import {
   XCircle,
 } from 'lucide-react';
 import { getCustomerDisplayName } from '@/features/customer/utils/customerDisplayName';
+import { InlineFeedback } from '@/design-system';
 
 const formatMoney = (value) => Number(value || 0).toLocaleString('th-TH', {
   minimumFractionDigits: 2,
@@ -45,7 +46,7 @@ const CustomerReceiptListWorkspace = ({
   onOpenDetail,
   onOpenReprint,
 }) => (
-  <div className="w-full h-full p-2 md:p-3 space-y-3 max-w-[1600px] mx-auto text-slate-800 selection:bg-orange-500 selection:text-white animate-fadeIn text-xs md:text-sm antialiased font-sans font-semibold">
+  <div className="w-full h-full p-2 md:p-3 space-y-3 max-w-[1600px] mx-auto text-slate-800 selection:bg-emerald-600 selection:text-white animate-fadeIn text-xs md:text-sm antialiased font-sans font-semibold">
     <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden w-full">
       <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-3 p-3.5 pb-2.5 border-b border-slate-100 select-none">
         <div className="flex items-center gap-1.5">
@@ -80,8 +81,8 @@ const CustomerReceiptListWorkspace = ({
         </div>
       </div>
 
-      {error && <div className="mx-3 my-2 bg-rose-50 border border-rose-100 p-2 rounded-lg text-[11px] font-black text-rose-600 animate-slideUp">⚠️ {error}</div>}
-      {successMessage && <div className="mx-3 my-2 bg-emerald-50 border border-emerald-100 p-2 rounded-lg text-[11px] font-black text-emerald-700 animate-slideUp">✓ {successMessage}</div>}
+      {error && <InlineFeedback variant="error" description={error} className="mx-3 my-2" />}
+      {successMessage && <InlineFeedback variant="success" description={successMessage} className="mx-3 my-2" />}
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 p-3 bg-slate-50/50 border-b border-slate-100 select-none">
         <div className="border border-slate-150 rounded-xl p-2 bg-white shadow-inner">
@@ -98,7 +99,7 @@ const CustomerReceiptListWorkspace = ({
         </div>
         <div className="border border-slate-150 rounded-xl p-2 bg-white shadow-inner">
           <div className="text-[10px] text-slate-400 font-black uppercase">วงเงินคงเหลือทำ Allocation</div>
-          <div className="text-sm font-black text-orange-600 font-mono">{formatMoney(summary.totalRemaining)} ฿</div>
+          <div className="text-sm font-black text-amber-700 font-mono">{formatMoney(summary.totalRemaining)} ฿</div>
         </div>
       </div>
 
@@ -143,7 +144,7 @@ const CustomerReceiptListWorkspace = ({
                     <td className="p-2 px-2 text-slate-500 font-mono text-[11px]">{item.paymentMethod || 'เงินสด'}</td>
                     <td className="p-2 px-2 text-right font-mono text-slate-500">{formatMoney(item.totalAmount)}</td>
                     <td className="p-2 px-2 text-right font-mono text-emerald-700 font-bold">{formatMoney(item.allocatedAmount)}</td>
-                    <td className="p-2 px-2 text-right font-mono text-orange-600 font-black">{formatMoney(remains)}</td>
+                    <td className="p-2 px-2 text-right font-mono text-amber-700 font-black">{formatMoney(remains)}</td>
                     <td className="p-2 px-2 font-mono text-slate-400">{formatDate(item.createdAt)}</td>
                     <td className="p-2 px-2 text-center select-none">
                       {isCancelled ? (
@@ -165,7 +166,7 @@ const CustomerReceiptListWorkspace = ({
                         <button type="button" onClick={() => onOpenDetail(item)} className="h-5 px-2 bg-slate-50 border border-slate-200 hover:bg-slate-100 text-slate-600 font-black text-[10px] rounded shadow-sm transition-all active:scale-95">
                           ดีเทล
                         </button>
-                        <button type="button" onClick={() => onOpenReprint(item)} className="h-5 px-2 bg-amber-50 border border-amber-200 hover:bg-amber-100 text-amber-700 font-black text-[10px] rounded shadow-sm transition-all active:scale-95">
+                        <button type="button" onClick={() => onOpenReprint(item)} className="h-5 px-2 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 text-emerald-700 font-black text-[10px] rounded shadow-sm transition-all active:scale-95">
                           พิมพ์
                         </button>
                       </div>

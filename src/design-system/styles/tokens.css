@@ -73,6 +73,11 @@
   --ads-brand: 160 84% 39%;
   --ads-brand-hover: 161 94% 30%;
   --ads-brand-foreground: 0 0% 100%;
+  --ads-action-primary: var(--ads-brand);
+  --ads-action-primary-hover: var(--ads-brand-hover);
+  --ads-action-primary-foreground: var(--ads-brand-foreground);
+  --ads-accent-brand: 158 64% 95%;
+  --ads-nav-active: var(--ads-brand);
   --ads-success: 142 71% 35%;
   --ads-success-subtle: 138 76% 97%;
   --ads-warning: 32 95% 44%;
@@ -82,6 +87,10 @@
   --ads-info: 199 89% 40%;
   --ads-info-subtle: 204 100% 97%;
   --ads-focus: 160 84% 39%;
+  --ads-status-success: var(--ads-success);
+  --ads-status-info: var(--ads-info);
+  --ads-status-warning: var(--ads-warning);
+  --ads-status-danger: var(--ads-danger);
 }
 
 .dark {
@@ -97,6 +106,7 @@
   --ads-border-strong: 215 20% 35%;
   --ads-brand: 158 64% 52%;
   --ads-brand-hover: 156 72% 67%;
+  --ads-accent-brand: 160 84% 12%;
   --ads-success-subtle: 144 61% 10%;
   --ads-warning-subtle: 32 81% 10%;
   --ads-danger-subtle: 0 63% 12%;

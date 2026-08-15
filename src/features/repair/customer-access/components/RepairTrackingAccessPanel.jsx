@@ -1,10 +1,12 @@
 import React, { useMemo, useState } from 'react';
 import QRCode from 'react-qr-code';
 import repairApi from '../../api/repairApi';
+import { ConfirmActionDialog } from '@/design-system';
 
 const RepairTrackingAccessPanel = ({ repairJobId, jobNo }) => {
   const [access, setAccess] = useState(null);
   const [state, setState] = useState({ loading: false, error: null, notice: null });
+  const [revokeConfirmationOpen, setRevokeConfirmationOpen] = useState(false);
 
   const trackingUrl = useMemo(() => {
     if (!access?.trackingPath || typeof window === 'undefined') return '';
@@ -49,11 +51,11 @@ const RepairTrackingAccessPanel = ({ repairJobId, jobNo }) => {
   };
 
   const revoke = async () => {
-    if (!window.confirm('ยืนยันยกเลิกลิงก์ติดตามงานของลูกค้า?')) return;
     setState({ loading: true, error: null, notice: null });
     try {
       await repairApi.revokeTrackingAccess(repairJobId);
       setAccess(null);
+      setRevokeConfirmationOpen(false);
       setState({ loading: false, error: null, notice: 'ยกเลิกลิงก์ติดตามงานแล้ว' });
     } catch (error) {
       setState({ loading: false, error: error?.message || 'ไม่สามารถยกเลิกลิงก์ได้', notice: null });
@@ -105,7 +107,7 @@ const RepairTrackingAccessPanel = ({ repairJobId, jobNo }) => {
               <button type="button" disabled={state.loading} onClick={() => issue(true)} className="min-h-11 rounded-xl border border-slate-300 px-4 text-sm font-black text-slate-600">
                 ออกลิงก์ใหม่
               </button>
-              <button type="button" disabled={state.loading} onClick={revoke} className="min-h-11 rounded-xl border border-red-200 px-4 text-sm font-black text-red-600">
+              <button type="button" disabled={state.loading} onClick={() => setRevokeConfirmationOpen(true)} className="min-h-11 rounded-xl border border-red-200 px-4 text-sm font-black text-red-600">
                 ยกเลิกลิงก์
               </button>
             </div>
@@ -119,6 +121,18 @@ const RepairTrackingAccessPanel = ({ repairJobId, jobNo }) => {
       {state.error ? (
         <p className="mt-3 rounded-xl bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{state.error}</p>
       ) : null}
+      <ConfirmActionDialog
+        open={revokeConfirmationOpen}
+        title="ยืนยันยกเลิกลิงก์ติดตามงาน"
+        description="ลูกค้าจะไม่สามารถเปิดลิงก์เดิมเพื่อติดตามงานได้อีก"
+        confirmLabel="ยืนยันยกเลิกลิงก์"
+        intent="destructive"
+        loading={state.loading}
+        onConfirm={revoke}
+        onClose={() => {
+          if (!state.loading) setRevokeConfirmationOpen(false);
+        }}
+      />
     </section>
   );
 };

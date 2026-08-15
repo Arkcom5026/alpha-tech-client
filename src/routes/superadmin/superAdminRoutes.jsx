@@ -14,10 +14,11 @@ import ProductTemplateGovernanceCreatePage from '@/features/productTemplate/page
 import PartnerStoreApplicationReviewPage from '@/features/partnerStoreApplication/pages/PartnerStoreApplicationReviewPage';
 import PlatformCustomerOverviewPage from '@/features/platformCustomer/pages/PlatformCustomerOverviewPage';
 
+// eslint-disable-next-line react-refresh/only-export-components -- Route-local placeholder is intentionally colocated with the route table.
 const SuperAdminPlaceholderPage = ({ title, description }) => (
   <div className="space-y-4">
     <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-      <p className="text-[11px] font-black uppercase tracking-[0.18em] text-orange-500">Superadmin</p>
+      <p className="text-[11px] font-black uppercase tracking-[0.18em] text-emerald-600">Superadmin</p>
       <h1 className="mt-2 text-2xl font-black text-slate-900">{title}</h1>
       <p className="mt-2 max-w-3xl text-sm font-medium text-slate-500">{description}</p>
     </section>

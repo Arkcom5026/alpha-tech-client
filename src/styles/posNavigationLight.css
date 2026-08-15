@@ -1,7 +1,7 @@
 /*
  * POS Navigation Light Skin
  *
- * Silver-gray menu surfaces with soft-orange controls. Navigation,
+ * Silver-gray menu surfaces with semantic Mint/Green controls. Navigation,
  * permissions, active-route behavior, and component ownership stay unchanged.
  */
 
@@ -24,7 +24,7 @@ header.sticky.top-0.z-40 > div > .absolute.inset-0 {
 
 header.sticky.top-0.z-40 [class*="bg-slate-950"],
 header.sticky.top-0.z-40 [class*="bg-slate-900"] {
-  background-color: rgba(255, 237, 213, 0.96) !important;
+  background-color: hsl(var(--ads-accent-brand) / 0.96) !important;
 }
 
 header.sticky.top-0.z-40 [class*="text-white"],
@@ -36,26 +36,27 @@ header.sticky.top-0.z-40 [class*="text-slate-500"] {
   color: #64748b !important;
 }
 
-/* Inactive top navigation buttons use soft orange over the silver surface */
+/* Inactive top navigation buttons use the shared brand tint. */
 header.sticky.top-0.z-40 nav a:not([aria-current="page"]) {
-  background: linear-gradient(180deg, #fff7ed 0%, #ffedd5 100%) !important;
-  border-color: rgba(249, 115, 22, 0.32) !important;
-  color: #7c2d12 !important;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.94), 0 3px 10px rgba(124, 45, 18, 0.08) !important;
+  background: hsl(var(--ads-accent-brand)) !important;
+  border-color: hsl(var(--ads-action-primary) / 0.30) !important;
+  color: hsl(var(--ads-action-primary-hover)) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.94), 0 3px 10px hsl(var(--ads-action-primary) / 0.08) !important;
 }
 
 header.sticky.top-0.z-40 nav a:not([aria-current="page"]):hover {
-  background: linear-gradient(180deg, #fed7aa 0%, #fdba74 100%) !important;
-  border-color: rgba(234, 88, 12, 0.52) !important;
-  color: #9a3412 !important;
+  background: hsl(var(--ads-action-primary) / 0.16) !important;
+  border-color: hsl(var(--ads-action-primary) / 0.52) !important;
+  color: hsl(var(--ads-action-primary-hover)) !important;
 }
 
 header.sticky.top-0.z-40 nav a:not([aria-current="page"]) svg {
-  color: #ea580c !important;
+  color: hsl(var(--ads-action-primary)) !important;
 }
 
 /* Keep active item vibrant and readable */
 header.sticky.top-0.z-40 nav a[aria-current="page"] {
+  background: hsl(var(--ads-nav-active)) !important;
   color: #ffffff !important;
 }
 
@@ -63,13 +64,13 @@ header.sticky.top-0.z-40 nav a[aria-current="page"] svg {
   color: #ffffff !important;
 }
 
-/* Branch and user capsules use soft orange */
+/* Branch and user capsules use the shared brand tint. */
 header.sticky.top-0.z-40 .rounded-full {
-  border-color: rgba(249, 115, 22, 0.34) !important;
+  border-color: hsl(var(--ads-action-primary) / 0.34) !important;
 }
 
 header.sticky.top-0.z-40 button.rounded-full {
-  background: linear-gradient(180deg, #fff7ed 0%, #ffedd5 100%) !important;
+  background: hsl(var(--ads-accent-brand)) !important;
   color: #0f172a !important;
 }
 
@@ -104,7 +105,7 @@ aside.relative.z-30.flex.h-full.w-64 > .absolute.inset-0 {
 
 aside.relative.z-30.flex.h-full.w-64 [class*="bg-slate-950"],
 aside.relative.z-30.flex.h-full.w-64 [class*="bg-slate-900"] {
-  background-color: rgba(255, 237, 213, 0.92) !important;
+  background-color: hsl(var(--ads-accent-brand) / 0.92) !important;
 }
 
 aside.relative.z-30.flex.h-full.w-64 [class*="text-white"],
@@ -112,49 +113,41 @@ aside.relative.z-30.flex.h-full.w-64 [class*="text-slate-100"] {
   color: #0f172a !important;
 }
 
-aside.relative.z-30.flex.h-full.w-64 [class*="text-amber-200"] {
-  color: #9a3412 !important;
-}
-
-aside.relative.z-30.flex.h-full.w-64 [class*="text-amber-300"],
-aside.relative.z-30.flex.h-full.w-64 [class*="text-amber-400"] {
-  color: #ea580c !important;
-}
-
-/* Current module card uses a soft-orange control surface */
+/* Current module card uses the shared brand control surface. */
 aside.relative.z-30.flex.h-full.w-64 > div:nth-of-type(5) > div {
-  background: linear-gradient(180deg, #fff7ed 0%, #ffedd5 100%) !important;
-  border-color: rgba(249, 115, 22, 0.34) !important;
+  background: hsl(var(--ads-accent-brand)) !important;
+  border-color: hsl(var(--ads-action-primary) / 0.34) !important;
   box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08) !important;
 }
 
-/* Inactive sidebar menu items use soft orange over the silver rail */
+/* Inactive sidebar menu items use the shared brand tint. */
 aside.relative.z-30.flex.h-full.w-64 nav,
 aside.relative.z-30.flex.h-full.w-64 ul {
   color: #334155;
 }
 
 aside.relative.z-30.flex.h-full.w-64 ul a:not([aria-current="page"]) {
-  background: linear-gradient(180deg, #fff7ed 0%, #ffedd5 100%) !important;
-  border-color: rgba(249, 115, 22, 0.32) !important;
-  color: #7c2d12 !important;
+  background: hsl(var(--ads-accent-brand)) !important;
+  border-color: hsl(var(--ads-action-primary) / 0.32) !important;
+  color: hsl(var(--ads-action-primary-hover)) !important;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.96), 0 3px 10px rgba(15, 23, 42, 0.07) !important;
 }
 
 aside.relative.z-30.flex.h-full.w-64 ul a:not([aria-current="page"]):hover {
-  background: linear-gradient(180deg, #fed7aa 0%, #fdba74 100%) !important;
-  border-color: rgba(234, 88, 12, 0.55) !important;
-  color: #9a3412 !important;
+  background: hsl(var(--ads-action-primary) / 0.16) !important;
+  border-color: hsl(var(--ads-action-primary) / 0.55) !important;
+  color: hsl(var(--ads-action-primary-hover)) !important;
 }
 
 aside.relative.z-30.flex.h-full.w-64 ul a:not([aria-current="page"]) > span:nth-of-type(2) {
-  background: #fffaf5 !important;
-  border-color: rgba(249, 115, 22, 0.30) !important;
-  color: #ea580c !important;
+  background: hsl(var(--ads-surface-base)) !important;
+  border-color: hsl(var(--ads-action-primary) / 0.30) !important;
+  color: hsl(var(--ads-action-primary)) !important;
 }
 
-/* Keep active sidebar item orange with white text */
+/* Active sidebar items use the semantic navigation token. */
 aside.relative.z-30.flex.h-full.w-64 ul a[aria-current="page"] {
+  background: hsl(var(--ads-nav-active)) !important;
   color: #ffffff !important;
 }
 
@@ -170,13 +163,13 @@ aside.relative.z-30.flex.h-full.w-64 > div:last-child {
 }
 
 aside.relative.z-30.flex.h-full.w-64 > div:last-child a {
-  background: linear-gradient(180deg, #fff7ed 0%, #ffedd5 100%) !important;
-  border-color: rgba(249, 115, 22, 0.32) !important;
-  color: #7c2d12 !important;
+  background: hsl(var(--ads-accent-brand)) !important;
+  border-color: hsl(var(--ads-action-primary) / 0.32) !important;
+  color: hsl(var(--ads-action-primary-hover)) !important;
 }
 
 aside.relative.z-30.flex.h-full.w-64 > div:last-child a:hover {
-  background: linear-gradient(180deg, #fed7aa 0%, #fdba74 100%) !important;
-  border-color: rgba(234, 88, 12, 0.55) !important;
-  color: #9a3412 !important;
+  background: hsl(var(--ads-action-primary) / 0.16) !important;
+  border-color: hsl(var(--ads-action-primary) / 0.55) !important;
+  color: hsl(var(--ads-action-primary-hover)) !important;
 }

@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { ConfirmActionDialog } from '@/design-system/composites';
+import { feedback } from '@/design-system/feedback';
 import { useAuthStore } from '@/features/auth/store/authStore.js';
 
 const Badge = ({ children, className = '' }) => (
@@ -32,18 +34,15 @@ const EmployeeTable = ({
   onRefresh,
   embedded = false,
 }) => {
-  // 🔐 ใช้สิทธิ์และข้อมูลโปรไฟล์จาก auth store เพื่อแสดงผลและจัด Multi-Tenant URL
   const role = useAuthStore((s) => s.role);
   const employee = useAuthStore((s) => s.employee);
   const isSuperAdmin = String(role || '').toLowerCase() === 'superadmin';
-
-  // 🍊 ดึงรหัสร้านค้าสับสายความปลอดภัยแชร์สาขา (ถ้าไม่มีให้ Fallback ปลอดภัย)
   const shopSlug = employee?.branchSlug || 'default';
 
   const rows = Array.isArray(data) ? data : [];
   const colCount = 8 + (isSuperAdmin ? 1 : 0);
 
-  const [confirm, setConfirm] = useState(null); // { row, nextActive }
+  const [confirm, setConfirm] = useState(null);
   const [toggling, setToggling] = useState(null);
 
   const resolveEmpActive = (row) => {
@@ -66,13 +65,13 @@ const EmployeeTable = ({
     try {
       setToggling(id);
       await onToggleActive(id, confirm.nextActive);
-      onRefresh && onRefresh();
+      onRefresh?.();
+      setConfirm(null);
     } catch (err) {
       console.error('❌ เปลี่ยนสถานะพนักงานล้มเหลว:', err);
-      alert('เกิดข้อผิดพลาดในการเปลี่ยนสถานะพนักงาน');
+      feedback.error('เกิดข้อผิดพลาดในการเปลี่ยนสถานะพนักงาน');
     } finally {
       setToggling(null);
-      setConfirm(null);
     }
   };
 
@@ -103,7 +102,7 @@ const EmployeeTable = ({
         )}
 
         {rows.map((e, idx) => {
-          const role = String(e.role || e.user?.role || '').toLowerCase();
+          const rowRole = String(e.role || e.user?.role || '').toLowerCase();
           const status = String(e.status || e.employeeStatus || '').toLowerCase();
           const id = e.id ?? e.userId;
           const cur = resolveEmpActive(e);
@@ -129,12 +128,12 @@ const EmployeeTable = ({
                 )}
               </td>
               <td className="px-4 py-3 text-center">
-                {role === 'admin' ? (
+                {rowRole === 'admin' ? (
                   <Badge className="bg-purple-50 text-purple-700 ring-purple-600/20 dark:bg-purple-900/30 dark:text-purple-200 dark:ring-purple-400/30">admin</Badge>
-                ) : role === 'employee' ? (
+                ) : rowRole === 'employee' ? (
                   <Badge className="bg-blue-50 text-blue-700 ring-blue-600/20 dark:bg-blue-900/30 dark:text-blue-200 dark:ring-blue-400/30">employee</Badge>
-                ) : role ? (
-                  <Badge className="bg-zinc-200 text-zinc-800 ring-zinc-400/40 dark:bg-zinc-700 dark:text-zinc-200 dark:ring-zinc-500/40">{role}</Badge>
+                ) : rowRole ? (
+                  <Badge className="bg-zinc-200 text-zinc-800 ring-zinc-400/40 dark:bg-zinc-700 dark:text-zinc-200 dark:ring-zinc-500/40">{rowRole}</Badge>
                 ) : (
                   <span className="text-zinc-500">-</span>
                 )}
@@ -143,7 +142,6 @@ const EmployeeTable = ({
                 <div className="inline-flex items-center gap-2 justify-end min-w-[260px]">
                   {!readOnly && (
                     <Link
-                      // 🟢 FIXED: สับรางเปลี่ยนมาเติมสแลชตัวแรกและแนบตัวแปรความปลอดภัย shopSlug คุม Multi-Tenant
                       to={`/${shopSlug}/pos/settings/employee/edit/${id}`}
                       className="px-3 py-1.5 rounded-md text-sm font-medium border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800"
                       title="แก้ไขข้อมูลพนักงาน"
@@ -173,30 +171,9 @@ const EmployeeTable = ({
     </table>
   );
 
-  if (embedded) {
-    return (
-      <div className="w-full">
-        <div>{TableBlock}</div>
-        {confirm && (
-          <div className="px-4 py-3 flex items-center justify-between bg-amber-50/90 dark:bg-amber-900/30 border-t border-amber-200 dark:border-amber-800">
-            <div className="text-sm text-amber-900 dark:text-amber-200">
-              ยืนยันการ{confirm.nextActive ? 'กู้คืน' : 'ปิดใช้งาน'} พนักงาน “{confirm.row?.name || confirm.row?.user?.email}” หรือไม่?
-            </div>
-            <div className="flex gap-2">
-              <ActionButton className="border border-amber-300 text-amber-900 hover:bg-amber-100" onClick={() => setConfirm(null)}>
-                ยกเลิก
-              </ActionButton>
-              <ActionButton className="bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500" onClick={proceed}>
-                ยืนยัน
-              </ActionButton>
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  return (
+  const content = embedded ? (
+    <div className="w-full"><div>{TableBlock}</div></div>
+  ) : (
     <div className="w-full flex justify-center mt-4">
       <div className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm rounded-xl overflow-hidden">
         <div className="px-4 py-3 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-800/60 sticky top-0 z-10">
@@ -205,26 +182,26 @@ const EmployeeTable = ({
             <div className="text-xs text-zinc-500">ทั้งหมด {rows.length} รายการ</div>
           </div>
         </div>
-
         {TableBlock}
-
-        {confirm && (
-          <div className="px-4 py-3 flex items-center justify-between bg-amber-50/90 dark:bg-amber-900/30 border-t border-amber-200 dark:border-amber-800">
-            <div className="text-sm text-amber-900 dark:text-amber-200">
-              ยืนยันการ{confirm.nextActive ? 'กู้คืน' : 'ปิดใช้งาน'} พนักงาน “{confirm.row?.name || confirm.row?.user?.email}” หรือไม่?
-            </div>
-            <div className="flex gap-2">
-              <ActionButton className="border border-amber-300 text-amber-900 hover:bg-amber-100" onClick={() => setConfirm(null)}>
-                ยกเลิก
-              </ActionButton>
-              <ActionButton className="bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500" onClick={proceed}>
-                ยืนยัน
-              </ActionButton>
-            </div>
-          </div>
-        )}
       </div>
     </div>
+  );
+
+  return (
+    <>
+      {content}
+      <ConfirmActionDialog
+        open={Boolean(confirm)}
+        title={confirm?.nextActive ? 'กู้คืนพนักงาน' : 'ปิดใช้งานพนักงาน'}
+        description={`ยืนยันการ${confirm?.nextActive ? 'กู้คืน' : 'ปิดใช้งาน'}พนักงาน “${confirm?.row?.name || confirm?.row?.user?.email || ''}” หรือไม่?`}
+        confirmLabel={confirm?.nextActive ? 'กู้คืน' : 'ปิดใช้งาน'}
+        intent={confirm?.nextActive ? 'primary' : 'destructive'}
+        loading={Boolean(toggling)}
+        loadingLabel="กำลังบันทึก..."
+        onClose={() => setConfirm(null)}
+        onConfirm={proceed}
+      />
+    </>
   );
 };
 

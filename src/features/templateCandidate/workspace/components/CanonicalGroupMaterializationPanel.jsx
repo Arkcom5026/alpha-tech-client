@@ -1,12 +1,12 @@
 const CanonicalGroupMaterializationPanel = ({ canMaterialize, materializing, materializeError, materializeResult, onMaterialize }) => (
-  <section className="rounded-3xl border border-orange-200 bg-orange-50 p-5 shadow-sm">
+  <section className="rounded-3xl border border-emerald-200 bg-emerald-50 p-5 shadow-sm">
     <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
       <div>
-        <p className="text-[11px] font-black uppercase tracking-[0.14em] text-orange-600">Candidate Materialization</p>
+        <p className="text-[11px] font-black uppercase tracking-[0.14em] text-emerald-700">Candidate Materialization</p>
         <h2 className="mt-1 text-lg font-black text-slate-900">สร้าง Candidate สำหรับตรวจและสร้าง Product Template</h2>
         <p className="mt-2 text-sm font-semibold text-slate-600">ระบบจะสร้าง Candidate ผ่าน authority เดิมให้สินค้าต้นทางในกลุ่ม READY โดยไม่แก้สินค้า ราคา หรือสต๊อก</p>
       </div>
-      <button type="button" disabled={!canMaterialize || materializing} onClick={onMaterialize} className="min-h-11 rounded-2xl bg-orange-500 px-5 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-40">
+      <button type="button" disabled={!canMaterialize || materializing} onClick={onMaterialize} className="min-h-11 rounded-2xl bg-emerald-600 px-5 text-sm font-black text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-40">
         {materializing ? 'กำลังสร้าง Candidates...' : 'สร้าง Candidates จากกลุ่มนี้'}
       </button>
     </div>

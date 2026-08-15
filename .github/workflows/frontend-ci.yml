@@ -23,6 +23,12 @@ jobs:
     - name: 📦 บรรจุและติดตั้ง Packages ฝั่งหน้าบ้าน
       run: npm ci
 
+    - name: Dependency security gate
+      run: npm run audit:dependencies
+
+    - name: UI modernization guard
+      run: npm run guard:ui-modernization
+
     - name: 🧪 ตรวจสัญญา Sale Customer Search E2E Increment
       run: npm run test:sale-customer-search-e2e
 

@@ -86,7 +86,7 @@ const PurchaseOrderTable = ({ products = [], setProducts = () => {}, editable = 
                       {editable ? (
                         <input
                           type="text"
-                          className="w-20 text-right border border-slate-200 rounded-lg p-1 font-black focus:border-orange-500 outline-none shadow-sm text-xs"
+                          className="w-20 text-right border border-slate-200 rounded-lg p-1 font-black focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 outline-none shadow-sm text-xs"
                           value={product.quantity}
                           onChange={(e) => handleUpdateLine(currentId, 'quantity', e.target.value)}
                         />
@@ -99,7 +99,7 @@ const PurchaseOrderTable = ({ products = [], setProducts = () => {}, editable = 
                       {editable ? (
                         <input
                           type="text"
-                          className="w-24 text-right border border-slate-200 rounded-lg p-1 font-black focus:border-orange-500 outline-none shadow-sm text-xs"
+                          className="w-24 text-right border border-slate-200 rounded-lg p-1 font-black focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 outline-none shadow-sm text-xs"
                           value={product.costPrice}
                           onChange={(e) => handleUpdateLine(currentId, 'costPrice', e.target.value)}
                         />
@@ -127,7 +127,7 @@ const PurchaseOrderTable = ({ products = [], setProducts = () => {}, editable = 
                 <TableCell colSpan={4} className="text-right text-xs font-black uppercase text-slate-400 tracking-wider py-4">
                   ยอดรวมรวมบิลสุทธิทั้งสิ้น (Grand Total) :
                 </TableCell>
-                <TableCell className="text-right font-black text-base font-sans text-orange-600">
+                <TableCell className="text-right font-black text-base font-sans text-emerald-700">
                   ฿{grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </TableCell>
                 {editable && <TableCell />}

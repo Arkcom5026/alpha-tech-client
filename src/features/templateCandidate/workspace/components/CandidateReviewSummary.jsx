@@ -9,7 +9,7 @@ const CandidateReviewSummary = ({ statuses, total, statusCounts, getStatusLabel,
         key={status}
         type="button"
         onClick={() => onSelectStatus(status)}
-        className="min-h-24 rounded-3xl border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:border-orange-300 hover:bg-orange-50/40"
+        className="min-h-24 rounded-3xl border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:border-emerald-300 hover:bg-emerald-50/40"
       >
         <p className="truncate text-[11px] font-black uppercase tracking-[0.12em] text-slate-400">
           {getStatusLabel(status)}

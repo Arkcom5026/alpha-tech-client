@@ -96,7 +96,7 @@ const PurchaseOrderForm = ({
 
         <div className="flex flex-wrap gap-2">
           <select
-            className="h-9 w-[240px] rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold outline-none focus:border-orange-500 transition-colors cursor-pointer"
+            className="h-9 w-[240px] rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition-colors cursor-pointer"
             value={filter.productTypeId}
             onChange={(e) => {
               handleFilterChange({ productTypeId: e.target.value });
@@ -112,7 +112,7 @@ const PurchaseOrderForm = ({
           </select>
 
           <select
-            className="h-9 w-[240px] rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold outline-none focus:border-orange-500 transition-colors cursor-pointer"
+            className="h-9 w-[240px] rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition-colors cursor-pointer"
             value={filter.brandId}
             onChange={(e) => {
               handleFilterChange({ brandId: e.target.value });
@@ -177,7 +177,7 @@ const PurchaseOrderForm = ({
             type="checkbox"
             checked={shouldPrint}
             onChange={(e) => setShouldPrint(e.target.checked)}
-            className="rounded text-orange-500 accent-orange-500 cursor-pointer w-4 h-4"
+            className="rounded text-emerald-600 accent-emerald-600 cursor-pointer w-4 h-4"
           />
           <span className="text-xs text-gray-600 font-bold">
             พ่นพิมพ์ใบสั่งซื้อออกสลิปทันทีเมื่อบันทึกเอกสารสำเร็จ

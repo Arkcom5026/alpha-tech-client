@@ -40,6 +40,9 @@ jobs:
     - name: Sale receipt print reliability contract
       run: node tests/sale-receipt-print-reliability.contract.test.js
 
+    - name: Partner Store operational readiness UI contract
+      run: npx vitest run tests/partner-store-operational-readiness-ui-v2.contract.test.js
+
     - name: UI modernization full-repository guard
       run: npm run guard:ui-modernization
 

@@ -2,9 +2,9 @@ name: Frontend Mission Control v2
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "integration/system-hardening-7-agendas" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "main", "integration/system-hardening-7-agendas" ]
 
 jobs:
   build-and-deploy:
@@ -19,7 +19,7 @@ jobs:
     - name: ⚙️ จัดวางสแตนด์บายสภาวะแวดล้อม Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: 20
+        node-version: 22
         cache: 'npm'
 
     - name: 📦 บรรจุและติดตั้ง Packages ฝั่งหน้าบ้าน
@@ -27,6 +27,9 @@ jobs:
 
     - name: Dependency security gate
       run: npm run audit:dependencies
+
+    - name: Release safety contract
+      run: node tests/release-safety-foundation.contract.test.js
 
     - name: UI modernization full-repository guard
       run: npm run guard:ui-modernization
@@ -49,7 +52,7 @@ jobs:
     - name: 🧪 ตรวจสัญญาคู่มือภายในงานรับซ่อม
       run: npm run test:repair-in-app-help
 
-    - name: 🧪 ตรวจสัญญาคู่มืองานเคลม
+    - name: 🧪 ตรวจสัญญาคู่มือภายในงานเคลม
       run: npm run test:warranty-claim-help
 
     - name: 🧪 ตรวจสัญญาคู่มือรับสินค้าด่วน
@@ -84,6 +87,9 @@ jobs:
         echo "VITE_KEY_API=${{ secrets.KEY_API }}" >> .env
         echo "VITE_KEY_PRISMA=${{ secrets.KEY_PRISMA }}" >> .env
         echo "VITE_KEY_ORCHESTRATOR=${{ secrets.KEY_ORCHESTRATOR }}" >> .env
+
+    - name: Generate release provenance metadata
+      run: node scripts/generate-release-metadata.mjs
 
     - name: 🏗️ รันคำสั่งคอมไพล์ประกอบร่างโปรเจกต์ (Production Build)
       run: npm run build

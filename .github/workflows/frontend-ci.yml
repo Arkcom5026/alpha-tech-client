@@ -37,6 +37,9 @@ jobs:
     - name: UI modernization hardening contract
       run: npx vitest run tests/ui-modernization-foundation.contract.test.js
 
+    - name: Vite 8 production runtime chunking contract
+      run: npx vitest run tests/vite8-production-runtime-chunking.contract.test.js
+
     - name: 🧪 ตรวจสัญญา Sale Customer Search E2E Increment
       run: npm run test:sale-customer-search-e2e
 
@@ -46,7 +49,7 @@ jobs:
     - name: 🧪 ตรวจสัญญาคู่มือภายในงานรับซ่อม
       run: npm run test:repair-in-app-help
 
-    - name: 🧪 ตรวจสัญญาคู่มืองานเคลม
+    - name: 🧪 ตรวจสัญญางานเคลม
       run: npm run test:warranty-claim-help
 
     - name: 🧪 ตรวจสัญญาคู่มือรับสินค้าด่วน

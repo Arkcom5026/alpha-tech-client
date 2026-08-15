@@ -18,6 +18,7 @@ import {
   Input,
   LoadingState,
   Select,
+  feedback,
 } from '@/design-system';
 import useUnitStore from '../store/unitStore';
 
@@ -42,7 +43,7 @@ const ListUnitPage = () => {
   const [confirmId, setConfirmId] = useState(null);
 
   useEffect(() => {
-    fetchUnitsAction();
+    fetchUnitsAction().catch(() => {});
   }, [fetchUnitsAction]);
 
   const targetSlug = shopSlug || 'advancetech';
@@ -72,8 +73,13 @@ const ListUnitPage = () => {
 
   const handleDelete = async () => {
     if (!confirmId || submitting) return;
-    await deleteUnitAction(confirmId);
-    setConfirmId(null);
+    try {
+      await deleteUnitAction(confirmId);
+      setConfirmId(null);
+      feedback.actionSuccess('ลบหน่วยนับเรียบร้อยแล้ว', 'unit:delete:success');
+    } catch (deleteError) {
+      feedback.actionError(deleteError, 'ลบหน่วยนับไม่สำเร็จ', 'unit:delete:error');
+    }
   };
 
   const paginationText = total

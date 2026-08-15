@@ -17,6 +17,7 @@ import {
   Input,
   LoadingState,
   Select,
+  feedback,
 } from '@/design-system';
 
 const ListPositionPage = () => {
@@ -66,10 +67,14 @@ const ListPositionPage = () => {
   const proceedToggle = async () => {
     if (!confirm?.row || isSaving) return;
 
+    const actionText = confirm.nextActive ? 'กู้คืน' : 'ปิดใช้งาน';
     setIsSaving(true);
     try {
       await toggleActiveAction(confirm.row.id);
       setConfirm(null);
+      feedback.actionSuccess(`${actionText}ตำแหน่งเรียบร้อยแล้ว`, `position:${confirm.nextActive ? 'restore' : 'deactivate'}:success`);
+    } catch (toggleError) {
+      feedback.actionError(toggleError, `${actionText}ตำแหน่งไม่สำเร็จ`, `position:${confirm.nextActive ? 'restore' : 'deactivate'}:error`);
     } finally {
       setIsSaving(false);
     }
@@ -203,7 +208,7 @@ const ListPositionPage = () => {
 
       <ConfirmActionDialog
         open={Boolean(confirm)}
-        onClose={() => setConfirm(null)}
+        onClose={() => !isSaving && setConfirm(null)}
         onConfirm={proceedToggle}
         title={`${confirm?.nextActive ? 'กู้คืน' : 'ปิดใช้งาน'}ตำแหน่ง`}
         description={`ยืนยันการ${confirm?.nextActive ? 'กู้คืน' : 'ปิดใช้งาน'}ตำแหน่ง “${confirm?.row?.name || ''}” หรือไม่?`}

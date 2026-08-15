@@ -17,6 +17,7 @@ export const useOrderOnlineStore = create((set, get) => ({
 
   // ✅ สร้างคำสั่งซื้อใหม่
   submitOrderAction: async (userInputData = {}) => {
+    if (get().isSubmitting) return null;
     const { cartItems, clearCart } = useCartStore.getState();
     try {
       set({ isSubmitting: true });
@@ -36,7 +37,7 @@ export const useOrderOnlineStore = create((set, get) => ({
       return createdOrder;
     } catch (err) {
       console.error("❌ submitOrderAction error:", err);
-      return null;
+      throw err;
     } finally {
       set({ isSubmitting: false });
     }
@@ -90,6 +91,7 @@ export const useOrderOnlineStore = create((set, get) => ({
       get().loadOrdersAction();
     } catch (err) {
       console.error("❌ deleteOrderAction error:", err);
+      throw err;
     }
   },
 }));

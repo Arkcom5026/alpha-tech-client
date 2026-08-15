@@ -25,4 +25,30 @@ describe('shared UI modernization foundation', () => {
     expect(exports).toContain("export * from './feedback.js'");
     expect(exports).toContain("export * from './errorPresentation.js'");
   });
+
+  it('guards the full repository by default while retaining an incremental mode', () => {
+    const guard = read('scripts/verify-ui-modernization.mjs');
+    const workflow = read('.github/workflows/frontend-ci.yml');
+
+    expect(guard).toContain("|| 'full'");
+    expect(guard).toContain("VALID_MODES = new Set(['diff', 'full'])");
+    expect(guard).toContain("git(['ls-files', 'src'])");
+    expect(guard).toContain("git(['ls-files', '--others', '--exclude-standard', 'src'])");
+    expect(guard).toContain("id: 'legacy-action-orange'");
+    expect(guard).toContain('Static light orange/amber remains valid for semantic warning/status surfaces.');
+
+    expect(workflow).toContain('fetch-depth: 0');
+    expect(workflow).toContain('UI modernization full-repository guard');
+    expect(workflow).toContain('npm run guard:ui-modernization');
+    expect(workflow).toContain('UI modernization incremental guard');
+    expect(workflow).toContain('node scripts/verify-ui-modernization.mjs --mode=diff');
+  });
+
+  it('does not retain an unused orange candidate tone', () => {
+    const badge = read('src/features/templateCandidate/components/CandidateBadge.jsx');
+    const status = read('src/features/templateCandidate/utils/candidateStatus.js');
+
+    expect(status).not.toContain("'orange'");
+    expect(badge).not.toContain('bg-orange-');
+  });
 });

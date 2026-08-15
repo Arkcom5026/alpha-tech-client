@@ -27,8 +27,10 @@ test('Sale completion tax issuance warning contract', () => {
   };
 
   assert(
-    controller.includes("message: 'ขายสำเร็จ แต่ออกเอกสารภาษีไม่สำเร็จ'"),
-    'Tax issuance failure must be projected as a post-sale warning'
+    controller.includes('const projectPostSaleDocumentWarning') &&
+      controller.includes("code: code || 'POST_SALE_DOCUMENT_FAILED'") &&
+      controller.includes('fallbackOpened'),
+    'Tax issuance failure must be projected as a post-sale warning with explicit fallback state'
   );
   assert(
     controller.includes('ok: true') && controller.includes('warning: projectPostSaleDocumentWarning'),
@@ -37,6 +39,17 @@ test('Sale completion tax issuance warning contract', () => {
   assert(
     controller.includes("'TAX_DOCUMENT_ISSUANCE_FAILED'"),
     'Tax issuance failure must expose a stable warning code'
+  );
+  assert(
+    controller.includes('openShortReceiptFallback') &&
+      controller.includes("saleOption !== 'RECEIPT'") &&
+      controller.includes("onSaleConfirmed(saleId, 'RECEIPT', confirmContext)"),
+    'Short tax receipt failures must preserve an immediate sale-based receipt handoff'
+  );
+  assert(
+    controller.includes('ขายสำเร็จ และเปิดใบกำกับภาษีอย่างย่อสำรองแล้ว') &&
+      controller.includes("'ขายสำเร็จ แต่ออกเอกสารภาษีไม่สำเร็จ'"),
+    'Warning copy must distinguish successful short-receipt fallback from fail-closed tax issuance'
   );
   assert(
     controller.includes("printHistoryPath: '../bill'"),

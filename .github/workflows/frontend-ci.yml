@@ -13,6 +13,8 @@ jobs:
     steps:
     - name: 🛰️ ขนส่งและสแกนซอร์สโค้ดจาก Repository
       uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
 
     - name: ⚙️ จัดวางสแตนด์บายสภาวะแวดล้อม Node.js
       uses: actions/setup-node@v4
@@ -26,8 +28,14 @@ jobs:
     - name: Dependency security gate
       run: npm run audit:dependencies
 
-    - name: UI modernization guard
+    - name: UI modernization full-repository guard
       run: npm run guard:ui-modernization
+
+    - name: UI modernization incremental guard
+      run: node scripts/verify-ui-modernization.mjs --mode=diff
+
+    - name: UI modernization hardening contract
+      run: npx vitest run tests/ui-modernization-foundation.contract.test.js
 
     - name: 🧪 ตรวจสัญญา Sale Customer Search E2E Increment
       run: npm run test:sale-customer-search-e2e

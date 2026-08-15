@@ -19,9 +19,11 @@ const ListBranchPage = () => {
   const rawBranches = useBranchStore((state) => state.branches);
   const loading = useBranchStore((state) => state.isLoading) || false;
   const fetchBranches = useBranchStore((state) => state.fetchBranchesAction);
+  const updateBranch = useBranchStore((state) => state.updateBranchAction);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedShop, setSelectedShop] = useState(null);
+  const [saving, setSaving] = useState(false);
   const { register, handleSubmit, setValue, formState: { errors } } = useForm();
 
   useEffect(() => {
@@ -37,6 +39,7 @@ const ListBranchPage = () => {
   }), [rawBranches, shopSlug, isSuperAdmin]);
 
   const openEditModal = (shopData) => {
+    if (saving) return;
     setSelectedShop(shopData);
     const defaults = projectBranchEditDefaults(shopData);
     setValue('name', defaults.name);
@@ -46,20 +49,22 @@ const ListBranchPage = () => {
   };
 
   const onSaveSubmit = async (data) => {
+    if (!selectedShop?.id || saving) return;
+
+    setSaving(true);
     try {
-      console.log('💾 Saving Shop Update Payload:', { id: selectedShop?.id, ...data });
-      await new Promise((resolve) => setTimeout(resolve, 600));
-
-      if (selectedShop) {
-        selectedShop.name = data.name;
-        selectedShop.phone = data.phone;
-        selectedShop.address = data.address;
-      }
-
-      feedback.success('แก้ไขข้อมูลร้าน/บริษัทเรียบร้อยแล้ว');
+      await updateBranch(selectedShop.id, {
+        name: data.name,
+        phone: data.phone,
+        address: data.address,
+      });
+      feedback.actionSuccess('แก้ไขข้อมูลร้าน/บริษัทเรียบร้อยแล้ว', 'branch-settings-update-success');
       setIsModalOpen(false);
+      setSelectedShop(null);
     } catch (error) {
-      feedback.error(error, { fallback: 'เกิดข้อผิดพลาดในการบันทึกข้อมูล' });
+      feedback.actionError(error, 'เกิดข้อผิดพลาดในการบันทึกข้อมูล', 'branch-settings-update-error');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -68,13 +73,18 @@ const ListBranchPage = () => {
       shopSlug={shopSlug}
       isSuperAdmin={isSuperAdmin}
       branches={filteredBranches}
-      loading={loading}
+      loading={loading || saving}
       isModalOpen={isModalOpen}
       register={register}
       errors={errors}
       onOpenEdit={openEditModal}
       onRefresh={() => fetchBranches?.()}
-      onCloseModal={() => setIsModalOpen(false)}
+      onCloseModal={() => {
+        if (!saving) {
+          setIsModalOpen(false);
+          setSelectedShop(null);
+        }
+      }}
       onSubmit={handleSubmit(onSaveSubmit)}
     />
   );

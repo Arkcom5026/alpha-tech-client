@@ -52,7 +52,7 @@ jobs:
     - name: 🧪 ตรวจสัญญาคู่มือภายในงานรับซ่อม
       run: npm run test:repair-in-app-help
 
-    - name: 🧪 ตรวจสัญญาคู่มืองานเคลม
+    - name: 🧪 ตรวจสัญญาคู่มือภายในงานเคลม
       run: npm run test:warranty-claim-help
 
     - name: 🧪 ตรวจสัญญาคู่มือรับสินค้าด่วน
@@ -87,6 +87,9 @@ jobs:
         echo "VITE_KEY_API=${{ secrets.KEY_API }}" >> .env
         echo "VITE_KEY_PRISMA=${{ secrets.KEY_PRISMA }}" >> .env
         echo "VITE_KEY_ORCHESTRATOR=${{ secrets.KEY_ORCHESTRATOR }}" >> .env
+
+    - name: Generate release provenance metadata
+      run: node scripts/generate-release-metadata.mjs
 
     - name: 🏗️ รันคำสั่งคอมไพล์ประกอบร่างโปรเจกต์ (Production Build)
       run: npm run build

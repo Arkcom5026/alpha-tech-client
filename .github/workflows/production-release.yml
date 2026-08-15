@@ -1,0 +1,119 @@
+name: Production Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      expected_sha:
+        description: Exact main commit SHA approved for Production
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Verify main and deploy Production
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout approved commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.expected_sha }}
+          fetch-depth: 0
+
+      - name: Verify approved SHA is current main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          checked_out="$(git rev-parse HEAD)"
+          current_main="$(git rev-parse origin/main)"
+          if [ "$checked_out" != "${{ inputs.expected_sha }}" ]; then
+            echo "Checked-out SHA does not match expected_sha"
+            exit 1
+          fi
+          if [ "$checked_out" != "$current_main" ]; then
+            echo "Refusing release: expected_sha is not current origin/main"
+            exit 1
+          fi
+          echo "Release authority confirmed: $checked_out"
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Dependency security gate
+        run: npm run audit:dependencies
+
+      - name: Release safety contract
+        run: node tests/release-safety-foundation.contract.test.js
+
+      - name: Inject production build environment
+        shell: bash
+        run: |
+          echo "VITE_API_URL=https://api.saduaksabuy.com/api/v2/procurement" >> .env
+          echo "VITE_KEY_CONNECTOR=${{ secrets.KEY_CONNECTOR }}" >> .env
+          echo "VITE_KEY_LOGIC=${{ secrets.KEY_LOGIC }}" >> .env
+          echo "VITE_KEY_API=${{ secrets.KEY_API }}" >> .env
+          echo "VITE_KEY_PRISMA=${{ secrets.KEY_PRISMA }}" >> .env
+          echo "VITE_KEY_ORCHESTRATOR=${{ secrets.KEY_ORCHESTRATOR }}" >> .env
+
+      - name: Generate release provenance
+        env:
+          GIT_COMMIT_SHA: ${{ inputs.expected_sha }}
+          GIT_BRANCH: main
+        run: node scripts/generate-release-metadata.mjs
+
+      - name: Production build
+        run: npm run build
+
+      - name: Require Vercel release credential
+        shell: bash
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          if [ -z "$VERCEL_TOKEN" ]; then
+            echo "Missing repository/environment secret: VERCEL_TOKEN"
+            exit 1
+          fi
+
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
+
+      - name: Link exact Vercel project
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: vercel link --yes --project alpha-tech-client --scope arkcoms-projects --token "$VERCEL_TOKEN"
+
+      - name: Deploy current main to Production
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: vercel deploy --prod --yes --token "$VERCEL_TOKEN"
+
+      - name: Verify Production provenance
+        shell: bash
+        run: |
+          set -euo pipefail
+          expected="${{ inputs.expected_sha }}"
+          for attempt in {1..30}; do
+            body="$(curl --fail --silent --show-error https://saduaksabuy.com/release.json || true)"
+            if printf '%s' "$body" | grep -Fq "$expected"; then
+              echo "Production provenance confirmed: $expected"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "Production did not expose the approved release SHA within the verification window"
+          exit 1

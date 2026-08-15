@@ -209,7 +209,7 @@ const useProductTemplateStore = create(devtools((set, get) => ({
       return updated;
     } catch (error) {
       set({ error: getErrorMessage(error, 'ไม่สามารถเปลี่ยนสถานะได้') });
-      return null;
+      throw error;
     } finally {
       set({ isSaving: false });
     }

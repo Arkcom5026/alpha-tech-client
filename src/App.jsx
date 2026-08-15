@@ -2,10 +2,9 @@
 import React, { useEffect, useState } from 'react';
 import { useAuthStore } from '@/features/auth/store/authStore';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
-import { ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
 
 import AppRouter from './routes/AppRouter';
+import { FeedbackProvider } from '@/design-system/feedback';
 
 const router = createBrowserRouter(AppRouter);
 
@@ -120,23 +119,21 @@ const App = () => {
 
   if (!bootstrapReady) {
     return (
-      <>
-        <ToastContainer />
+      <FeedbackProvider>
         <div className="flex h-screen w-screen items-center justify-center bg-slate-50">
           <div className="text-center">
-            <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-4 border-blue-500 border-t-transparent" />
+            <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent" />
             <p className="text-sm text-slate-500">กำลังตรวจสอบสถานะ...</p>
           </div>
         </div>
-      </>
+      </FeedbackProvider>
     );
   }
 
   return (
-    <>
-      <ToastContainer />
+    <FeedbackProvider>
       <RouterProvider router={router} />
-    </>
+    </FeedbackProvider>
   );
 };
 

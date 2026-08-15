@@ -82,6 +82,10 @@ const TaxExpenseAssessmentPanel = ({ expenseId, onClose, onConfirmed }) => {
     }
   };
 
+  const closePanel = () => {
+    if (!saving) onClose?.();
+  };
+
   if (!expenseId) return null;
 
   return (
@@ -94,7 +98,7 @@ const TaxExpenseAssessmentPanel = ({ expenseId, onClose, onConfirmed }) => {
         </div>
         <div className="flex gap-2">
           <button type="button" onClick={load} disabled={loading || saving} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold"><RefreshCw size={14} className={loading ? 'animate-spin' : ''} />รีเฟรช</button>
-          <button type="button" onClick={onClose} className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold">ปิด</button>
+          <button type="button" onClick={closePanel} disabled={saving} className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold disabled:cursor-not-allowed disabled:opacity-50">ปิด</button>
         </div>
       </div>
 

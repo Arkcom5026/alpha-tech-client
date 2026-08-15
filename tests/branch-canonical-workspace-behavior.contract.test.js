@@ -41,12 +41,13 @@ describe('canonical branch runtime behavior lock', () => {
     expect(workspace).toContain("register('address'");
   });
 
-  it('preserves current simulated save behavior without inventing persistence', () => {
-    expect(page).toContain('await new Promise((resolve) => setTimeout(resolve, 600))');
-    expect(page).toContain('selectedShop.name = data.name');
-    expect(page).toContain('selectedShop.phone = data.phone');
-    expect(page).toContain('selectedShop.address = data.address');
-    expect(page).toContain("feedback.success('แก้ไขข้อมูลร้าน/บริษัทเรียบร้อยแล้ว')");
+  it('persists branch edits through the branch store authority', () => {
+    expect(page).toContain('updateBranchAction');
+    expect(page).toContain('await updateBranch(selectedShop.id');
+    expect(page).toContain("feedback.actionSuccess('แก้ไขข้อมูลร้าน/บริษัทเรียบร้อยแล้ว'");
+    expect(page).toContain("feedback.actionError(error, 'เกิดข้อผิดพลาดในการบันทึกข้อมูล'");
+    expect(page).not.toContain('await new Promise((resolve) => setTimeout(resolve, 600))');
+    expect(page).not.toContain('selectedShop.name = data.name');
   });
 
   it('preserves table, loading, empty and verified presentation states', () => {

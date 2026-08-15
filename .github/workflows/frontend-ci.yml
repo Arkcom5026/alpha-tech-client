@@ -37,6 +37,9 @@ jobs:
     - name: Public Storefront customer journey contract
       run: node tests/public-storefront-customer-journey.contract.test.js
 
+    - name: Sale receipt print reliability contract
+      run: node tests/sale-receipt-print-reliability.contract.test.js
+
     - name: UI modernization full-repository guard
       run: npm run guard:ui-modernization
 

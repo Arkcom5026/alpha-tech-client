@@ -65,19 +65,35 @@ const MissingCostRecoveryExecutionPanel = ({ detail }) => {
   };
 
   const execute = async () => {
-    if (!ready || !payload || !confirmed) return;
+    if (!ready || !payload || !confirmed || executeMutation.isPending) return;
     try {
       await executeMutation.mutateAsync({ payload, idempotencyKey });
-      feedback.success('นำต้นทุนที่อนุมัติไปใช้กับสต๊อกสำเร็จ');
+      feedback.actionSuccess(
+        'นำต้นทุนที่อนุมัติไปใช้กับสต๊อกสำเร็จ',
+        'inventory-recovery.missing-cost.execute',
+      );
       setConfirmed(false);
       setIdempotencyKey(newIdempotencyKey(resolutionId));
       await auditQuery.refetch();
     } catch (error) {
       const code = error?.response?.data?.code || error?.code;
-      if (String(code || '').includes('STALE')) feedback.warning('ข้อมูลเปลี่ยนแล้ว กรุณาสร้าง Preview และ Plan ใหม่');
-      else if (String(code || '').includes('DUPLICATE')) feedback.info('คำสั่งนี้เคยดำเนินการแล้ว ระบบไม่ทำซ้ำ');
-      else if (error?.response?.status === 403) feedback.error('บัญชีนี้ไม่มีสิทธิ์ดำเนินการ หรือระบบยังไม่ได้เปิดความสามารถนี้');
-      else feedback.error(errorMessage(error));
+      if (String(code || '').includes('STALE')) {
+        feedback.warning('ข้อมูลเปลี่ยนแล้ว กรุณาสร้าง Preview และ Plan ใหม่');
+      } else if (String(code || '').includes('DUPLICATE')) {
+        feedback.info('คำสั่งนี้เคยดำเนินการแล้ว ระบบไม่ทำซ้ำ');
+      } else if (error?.response?.status === 403) {
+        feedback.actionError(
+          error,
+          'บัญชีนี้ไม่มีสิทธิ์ดำเนินการ หรือระบบยังไม่ได้เปิดความสามารถนี้',
+          'inventory-recovery.missing-cost.execute',
+        );
+      } else {
+        feedback.actionError(
+          error,
+          errorMessage(error),
+          'inventory-recovery.missing-cost.execute',
+        );
+      }
     }
   };
 

@@ -1,5 +1,5 @@
 import { useCallback, useReducer } from 'react';
-import { toast } from 'react-toastify';
+import { feedback } from '@/design-system/feedback';
 
 import {
   mapSaleSearchItemToCartLine,
@@ -38,7 +38,7 @@ export const useSaleItemSearch = ({
 
   const showSearchError = useCallback((message) => {
     setError(message);
-    toast.error(message);
+    feedback.error(message);
   }, [setError]);
 
   const focusSearch = useCallback(() => {

@@ -1,6 +1,13 @@
 import * as React from 'react';
 import { Button, Dialog } from '../../foundation.jsx';
 
+const intentVariant = {
+  default: 'primary',
+  primary: 'primary',
+  destructive: 'danger',
+  danger: 'danger',
+};
+
 /**
  * Generic confirmation dialog for user-initiated actions.
  * Business wording and execution remain owned by the consuming feature.
@@ -11,12 +18,15 @@ export function ConfirmActionDialog({
   description,
   confirmLabel = 'ยืนยัน',
   cancelLabel = 'ยกเลิก',
-  confirmVariant = 'primary',
+  intent = 'default',
+  confirmVariant,
   loading = false,
   loadingLabel = 'กำลังบันทึก...',
   onConfirm,
   onClose,
 }) {
+  const resolvedVariant = confirmVariant || intentVariant[intent] || intentVariant.default;
+
   return (
     <Dialog
       open={Boolean(open)}
@@ -29,7 +39,7 @@ export function ConfirmActionDialog({
             {cancelLabel}
           </Button>
           <Button
-            variant={confirmVariant}
+            variant={resolvedVariant}
             loading={loading}
             loadingLabel={loadingLabel}
             onClick={onConfirm}

@@ -31,7 +31,7 @@ describe('product template business-type filter slice 2 contract', () => {
     expect(page).toContain('...filters, reviewerId: String(reviewerId), page: 1');
     expect(page).toContain('...filters, page');
 
-    expect(mapper).toMatch(/businessType:\s*candidate\.sourceBranch\?\.businessType/);
+    expect(mapper).toContain('businessType: assessment.businessType || candidate.sourceBranch?.businessType || sourceSnapshot.businessType || null');
     expect(api).toMatch(/apiClient\.get\(BASE_PATH, \{ params: cleanParams\(params\) \}\)/);
 
     expect(page).not.toMatch(/costPrice|priceRetail|serialNumber|supplier|stockMovement/i);

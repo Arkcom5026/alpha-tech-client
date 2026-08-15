@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, CalendarClock, CheckCircle2, Clock3, PackageCheck, ShoppingCart, XCircle } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
+import { feedback } from '@/design-system/feedback';
 import {
   executeMerchantProductReservationLifecycle,
   getMerchantProductReservation,
@@ -69,6 +70,7 @@ const ProductReservationDetailPage = () => {
   }, [loadReservation]);
 
   const executeLifecycle = useCallback(async (commandType, reason = null) => {
+    if (submittingCommand) return;
     setSubmittingCommand(commandType);
     setError('');
     setSuccess('');
@@ -79,25 +81,33 @@ const ProductReservationDetailPage = () => {
         reason,
         idempotencyKey: createIdempotencyKey(reservationId, commandType),
       });
-      setSuccess(commandType === 'ACCEPT' ? 'รับใบจองเรียบร้อยแล้ว' : 'ยกเลิกใบจองเรียบร้อยแล้ว');
+      const successMessage = commandType === 'ACCEPT'
+        ? 'รับใบจองเรียบร้อยแล้ว'
+        : 'ยกเลิกใบจองเรียบร้อยแล้ว';
+      setSuccess(successMessage);
+      feedback.actionSuccess(successMessage, `product-reservation:${reservationId}:${commandType}:success`);
       await loadReservation();
     } catch (requestError) {
-      setError(requestError?.response?.data?.message || requestError?.message || 'ไม่สามารถเปลี่ยนสถานะใบจองได้');
+      const fallbackMessage = 'ไม่สามารถเปลี่ยนสถานะใบจองได้';
+      setError(requestError?.response?.data?.message || requestError?.message || fallbackMessage);
+      feedback.actionError(requestError, fallbackMessage, `product-reservation:${reservationId}:${commandType}:error`);
     } finally {
       setSubmittingCommand('');
     }
-  }, [loadReservation, reservationId]);
+  }, [loadReservation, reservationId, submittingCommand]);
 
   const cancelReservation = useCallback(() => {
+    if (submittingCommand) return;
     const reason = window.prompt('ระบุเหตุผลที่ยกเลิกใบจอง');
     if (reason == null) return;
     const normalizedReason = reason.trim();
     if (!normalizedReason) {
       setError('กรุณาระบุเหตุผลที่ยกเลิกใบจอง');
+      feedback.info('กรุณาระบุเหตุผลที่ยกเลิกใบจอง');
       return;
     }
     executeLifecycle('CANCEL', normalizedReason);
-  }, [executeLifecycle]);
+  }, [executeLifecycle, submittingCommand]);
 
   const reservation = data?.reservation;
   const items = data?.items || [];

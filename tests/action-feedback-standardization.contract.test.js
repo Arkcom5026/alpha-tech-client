@@ -28,6 +28,9 @@ const actionOwners = [
   ['employee edit', 'src/features/employee/workspaces/EmployeeEditWorkspace.jsx'],
   ['employee legacy edit', 'src/features/employee/workspaces/LegacyEmployeeFormWorkspace.jsx'],
   ['employee roles', 'src/features/employee/workspaces/ManageRolesWorkspace.jsx'],
+  ['supplier create', 'src/features/supplier/workspace/SupplierCreateWorkspace.jsx'],
+  ['supplier edit', 'src/features/supplier/workspace/SupplierEditWorkspace.jsx'],
+  ['supplier legacy update', 'src/features/supplier/workspace/SupplierLegacyUpdateWorkspace.jsx'],
   ['branch price', 'src/features/branchPrice/workspace/ManageBranchPriceWorkspace.jsx'],
 ].map(([name, file]) => [name, read(file)]);
 

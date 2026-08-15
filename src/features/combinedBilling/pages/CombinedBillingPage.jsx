@@ -4,6 +4,7 @@ import useCombinedBillingStore from '../store/combinedBillingStore';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useBranchStore } from '@/features/branch/store/branchStore';
 import { getCustomerDisplayName } from '@/features/customer/utils/customerDisplayName';
+import { feedback } from '@/design-system/feedback';
 
 const money = (value) => Number(value || 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -33,14 +34,21 @@ const CombinedBillingPage = () => {
   const total = chosen.reduce((sum, line) => sum + Number(prices[`${line.lineType}:${line.lineId}`] || 0) * Number(line.quantity || 0), 0);
 
   const confirm = async () => {
+    if (loading || !customer?.id || !chosen.length) return;
     setMessage('');
-    const result = await confirmDocumentWorkspaceAction({ customerId: customer.id, note, lines: chosen.map((line) => ({ lineType: line.lineType, lineId: line.lineId, documentUnitPrice: Number(prices[`${line.lineType}:${line.lineId}`]), adjustmentReason: reasons[`${line.lineType}:${line.lineId}`] || '' })) });
-    setLastResult(result);
-    setMessage(`สร้างใบส่งของรวม ${result.code} และส่งต่อ Bill/Tax แล้ว (Tax Document #${result.taxDocument?.id})`);
-    await loadDocumentWorkspaceAction(customer.id);
-    await loadHistoryAction();
-    setSelected({});
-    setReasons({});
+    try {
+      const result = await confirmDocumentWorkspaceAction({ customerId: customer.id, note, lines: chosen.map((line) => ({ lineType: line.lineType, lineId: line.lineId, documentUnitPrice: Number(prices[`${line.lineType}:${line.lineId}`]), adjustmentReason: reasons[`${line.lineType}:${line.lineId}`] || '' })) });
+      setLastResult(result);
+      const successMessage = `สร้างใบส่งของรวม ${result.code} และส่งต่อ Bill/Tax แล้ว (Tax Document #${result.taxDocument?.id})`;
+      setMessage(successMessage);
+      feedback.actionSuccess(successMessage, `combined-billing:${result.id || result.code}:create:success`);
+      await loadDocumentWorkspaceAction(customer.id);
+      await loadHistoryAction();
+      setSelected({});
+      setReasons({});
+    } catch (requestError) {
+      feedback.actionError(requestError, 'สร้างใบส่งของรวมไม่สำเร็จ', 'combined-billing:create:error');
+    }
   };
 
   const printDelivery = (document) => navigate(`/${shopSlug}/pos/sales/combined-billing/delivery/print/${document.id}`);

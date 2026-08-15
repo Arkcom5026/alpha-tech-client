@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef, useMemo } from 'react';
 import { useLocation, useParams } from 'react-router-dom';
+import { feedback } from '@/design-system';
 import ProductForm from '../components/ProductForm';
 import ProductImage from '../components/ProductImage';
 
@@ -157,6 +158,7 @@ const EditProductPage = () => {
   }, [product]);
 
   const handleUpdate = async (formData) => {
+    if (isUpdating) return;
     if (saveLocked) setSaveLocked(false);
 
     setIsUpdating(true);
@@ -220,12 +222,13 @@ const EditProductPage = () => {
         }
       }
 
+      feedback.actionSuccess('บันทึกการแก้ไขสินค้าเรียบร้อยแล้ว', `product:edit:${id}:success`);
       setShowSuccess(true);
       setSaveLocked(true);
       setTimeout(() => setShowSuccess(false), 3000);
     } catch (err) {
       console.error('อัปเดตข้อมูลสินค้าล้มเหลว:', err);
-      setError('เกิดข้อผิดพลาดในการบันทึกข้อมูล');
+      feedback.actionError(err, 'เกิดข้อผิดพลาดในการบันทึกข้อมูลสินค้า', `product:edit:${id}:error`);
     } finally {
       setIsUpdating(false);
     }

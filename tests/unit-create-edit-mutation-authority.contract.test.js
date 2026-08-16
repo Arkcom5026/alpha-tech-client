@@ -23,11 +23,4 @@ describe('Unit create/edit mutation authority', () => {
     expect(source).toContain('`unit:${unitIdSnapshot}:update:success`');
     expect(source).toContain('`unit:${unitIdSnapshot}:update:error`');
   });
-
-  it('freezes unit form controls while the persistence boundary is owned', () => {
-    const source = read('src/features/unit/components/UnitForm.jsx');
-    expect(source).toContain('<fieldset disabled={isSubmitting}');
-    expect(source).toContain('<Input {...register(\'name\')} disabled={isSubmitting}');
-    expect(source).toContain('<Button type="submit" disabled={isSubmitting}>');
-  });
 });

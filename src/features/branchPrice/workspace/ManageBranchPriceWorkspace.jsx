@@ -105,13 +105,14 @@ const ManageBranchPriceWorkspace = () => {
 
     savingRef.current = true;
     setSaving(true);
+
     try {
       await updateMultipleBranchPricesAction(updates);
     } catch (saveError) {
       feedback.actionError(saveError, 'บันทึกการเปลี่ยนราคาสินค้าไม่สำเร็จ', 'branch-price:update:error');
+      savingRef.current = false;
+      setSaving(false);
       return;
-    } finally {
-      // Keep the authority lock until the post-save refresh below is complete.
     }
 
     setPendingList([]);

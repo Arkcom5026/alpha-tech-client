@@ -39,7 +39,7 @@ const SupplierAdvancePaymentForm = ({ supplier }) => {
 
   useEffect(() => {
     if (supplier?.id && fetchAdvancePaymentsBySupplierAction) {
-      Promise.resolve(fetchAdvancePaymentsBySupplierAction(supplier.id)).catch((requestError) => {
+      Promise.resolve(fetchAdvancePaymentsBySupplierAction(supplier.id, { throwOnError: true })).catch((requestError) => {
         feedback.actionError(requestError, 'โหลดประวัติการชำระเงิน Supplier ไม่สำเร็จ', 'supplier-payment:advance:history:error');
       });
     }

@@ -52,8 +52,14 @@ const AppRouter = [
   { path: 'partner-portal/reset-password', element: <ResetPasswordPage /> },
   { path: 'superadmin/dashboard', element: <SuperAdminEntryRedirect /> },
   { path: ':shopSlug/pos/storefront', element: <Navigate to="../settings/storefront" relative="path" replace /> },
-  { path: ':shopSlug/pos/onboarding', element: <PartnerStoreOnboardingPage /> },
-  { path: ':shopSlug/pos/readiness', element: <PartnerStoreOperationalReadinessPage /> },
+  {
+    path: ':shopSlug/pos/onboarding',
+    element: <ProtectedRoute><PartnerStoreOnboardingPage /></ProtectedRoute>,
+  },
+  {
+    path: ':shopSlug/pos/readiness',
+    element: <ProtectedRoute><PartnerStoreOperationalReadinessPage /></ProtectedRoute>,
+  },
   {
     path: ':shopSlug/pos',
     element: <ProtectedRoute><PartnerStoreOnboardingGate /></ProtectedRoute>,

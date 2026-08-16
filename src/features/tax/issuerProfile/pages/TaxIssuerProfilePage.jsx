@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { feedback } from '@/design-system/feedback';
 import { useBranchStore } from '@/features/branch/store/branchStore';
 import { getTaxIssuerProfile, saveTaxIssuerProfile } from '../../intake/api/taxIntakeApi';
@@ -19,6 +19,7 @@ const TaxIssuerProfilePage = () => {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const savingRef = useRef(false);
   const change = (field, value) => setForm((current) => ({ ...current, [field]: value }));
 
   useEffect(() => {
@@ -36,12 +37,16 @@ const TaxIssuerProfilePage = () => {
 
   const submit = async (event) => {
     event.preventDefault();
-    if (saving || !branchId) return;
+    if (saving || savingRef.current || !branchId) return;
+
+    const branchIdSnapshot = Number(branchId);
+    const formSnapshot = { ...form };
+    savingRef.current = true;
     setSaving(true);
     setError('');
     setMessage('');
     try {
-      const result = await saveTaxIssuerProfile({ branchId, ...form });
+      const result = await saveTaxIssuerProfile({ branchId: branchIdSnapshot, ...formSnapshot });
       setForm({ ...EMPTY, ...(result?.profile || {}) });
       setMessage('บันทึกข้อมูลผู้ออกเอกสารภาษีเรียบร้อยแล้ว');
       feedback.actionSuccess('บันทึกข้อมูลผู้ออกเอกสารภาษีเรียบร้อยแล้ว', 'tax-issuer-profile:save:success');
@@ -49,6 +54,7 @@ const TaxIssuerProfilePage = () => {
       setError(messageFrom(requestError, 'บันทึกข้อมูลผู้ออกเอกสารภาษีไม่สำเร็จ'));
       feedback.actionError(requestError, 'บันทึกข้อมูลผู้ออกเอกสารภาษีไม่สำเร็จ', 'tax-issuer-profile:save:error');
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   };

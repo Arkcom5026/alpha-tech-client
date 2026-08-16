@@ -31,8 +31,8 @@ const useTaxExpenseWorkspace = () => {
   const savingPayeeRef = useRef(false);
   const savingCategoryRef = useRef(false);
 
-  const load = useCallback(async ({ payeeQuery = '' } = {}) => {
-    if (!branchId) return;
+  const load = useCallback(async ({ payeeQuery = '', reportError = true } = {}) => {
+    if (!branchId) return { ok: false, skipped: true };
     setLoading(true);
     setError('');
     try {
@@ -42,14 +42,26 @@ const useTaxExpenseWorkspace = () => {
         listExpensePayees({ q: payeeQuery }),
         listRepairExpenseReasons(),
       ]);
-      setExpenses(list(expenseData));
-      setCategories(list(categoryData));
-      setPayees(list(payeeData));
-      setRepairReasons(list(repairReasonData));
+      const nextExpenses = list(expenseData);
+      const nextCategories = list(categoryData);
+      const nextPayees = list(payeeData);
+      const nextRepairReasons = list(repairReasonData);
+      setExpenses(nextExpenses);
+      setCategories(nextCategories);
+      setPayees(nextPayees);
+      setRepairReasons(nextRepairReasons);
+      return {
+        ok: true,
+        expenses: nextExpenses,
+        categories: nextCategories,
+        payees: nextPayees,
+        repairReasons: nextRepairReasons,
+      };
     } catch (requestError) {
       const message = requestError?.response?.data?.message || 'ไม่สามารถโหลดข้อมูลค่าใช้จ่ายได้';
       setError(message);
-      feedback.error(message);
+      if (reportError) feedback.error(message);
+      return { ok: false, error: requestError, message };
     } finally {
       setLoading(false);
     }

@@ -10,16 +10,8 @@ import {
 } from '../api/productTypeApi';
 import { parseApiError } from '@/utils/uiHelpers';
 
-// ✅ Standardized Product Type Store (Production-ready)
-// - No hard delete (archive/restore only)
-// - All API calls via productTypeApi
-// - Actions suffixed with `Action`
-// - try...catch everywhere + parseApiError
-// - Supports page, limit, search, includeInactive, categoryId
-
 const useProductTypeStore = create(
   devtools((set, get) => ({
-    // ---------- State ----------
     items: [],
     page: 1,
     limit: 20,
@@ -28,17 +20,12 @@ const useProductTypeStore = create(
     search: '',
     includeInactive: false,
     categoryId: null,
-
     current: null,
-
     isLoading: false,
     isSubmitting: false,
     error: null,
 
-    // ---------- Helpers ----------
     _setStateAction: (partial) => set(partial),
-
-    // ---------- Filters / Pagination ----------
     setPageAction: (page) => set({ page }),
     setLimitAction: (limit) => set({ limit }),
     setSearchAction: (search) => set({ search }),
@@ -48,15 +35,12 @@ const useProductTypeStore = create(
     resetFiltersAction: () =>
       set({ page: 1, limit: 20, search: '', includeInactive: false, categoryId: null }),
 
-    // ---------- Queries ----------
-    // Normalize response shape from BE (items/data/rows/results, total/count, totalPages/pages/pagination)
     fetchListAction: async () => {
       const { page, limit, search, includeInactive, categoryId } = get();
       set({ isLoading: true, error: null });
       try {
         const res = await getProductTypes({ page, limit, search, includeInactive, categoryId });
 
-        // ---- Normalize various BE response shapes (deep-safe) ----
         const pick = (obj, paths = []) => {
           for (const p of paths) {
             try {
@@ -64,7 +48,7 @@ const useProductTypeStore = create(
                 .split('.')
                 .reduce((acc, k) => (acc && acc[k] !== undefined ? acc[k] : undefined), obj);
               if (v !== undefined) return v;
-            } catch { 
+            } catch {
               // ignore
             }
           }
@@ -95,7 +79,7 @@ const useProductTypeStore = create(
 
         if (Array.isArray(payload)) items = payload;
         else if (Array.isArray(payload?.data)) items = payload.data;
-        else if (Array.isArray(items?.list)) items = items.list; // guard for nested list
+        else if (Array.isArray(items?.list)) items = items.list;
 
         const total = Number(
           pick(payload, [
@@ -144,58 +128,66 @@ const useProductTypeStore = create(
       }
     },
 
-    // ---------- Mutations ----------
     createProductTypeAction: async (payload) => {
+      if (get().isSubmitting) return null;
       set({ isSubmitting: true, error: null });
       try {
         const created = await createProductType(payload);
-        set({ isSubmitting: false });
         await get().fetchListAction();
         return created;
       } catch (err) {
-        set({ isSubmitting: false, error: parseApiError(err) });
+        set({ error: parseApiError(err) });
         throw err;
+      } finally {
+        set({ isSubmitting: false });
       }
     },
 
     updateProductTypeAction: async (id, payload) => {
+      if (get().isSubmitting) return null;
       set({ isSubmitting: true, error: null });
       try {
         const updated = await updateProductType(id, payload);
-        set({ isSubmitting: false });
         await get().fetchListAction();
         return updated;
       } catch (err) {
-        set({ isSubmitting: false, error: parseApiError(err) });
+        set({ error: parseApiError(err) });
         throw err;
+      } finally {
+        set({ isSubmitting: false });
       }
     },
 
     archiveProductTypeAction: async (id) => {
+      if (get().isSubmitting) return false;
       set({ isSubmitting: true, error: null });
       try {
         await archiveProductType(id);
-        set({ isSubmitting: false });
         await get().fetchListAction();
+        return true;
       } catch (err) {
-        set({ isSubmitting: false, error: parseApiError(err) });
+        set({ error: parseApiError(err) });
         throw err;
+      } finally {
+        set({ isSubmitting: false });
       }
     },
 
     restoreProductTypeAction: async (id) => {
+      if (get().isSubmitting) return false;
       set({ isSubmitting: true, error: null });
       try {
         await restoreProductType(id);
-        set({ isSubmitting: false });
         await get().fetchListAction();
+        return true;
       } catch (err) {
-        set({ isSubmitting: false, error: parseApiError(err) });
+        set({ error: parseApiError(err) });
         throw err;
+      } finally {
+        set({ isSubmitting: false });
       }
     },
   }))
 );
 
 export default useProductTypeStore;
-

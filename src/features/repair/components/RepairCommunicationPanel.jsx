@@ -40,7 +40,12 @@ const RepairCommunicationPanel = ({ repairJobId }) => {
         ),
       ]);
       setPreference(nextPreference); setActivities(nextActivities || []); setError('');
-    } catch (loadError) { setError(loadError.message); }
+      return { ok: true };
+    } catch (loadError) {
+      const message = loadError?.message || 'โหลดประวัติการติดต่อลูกค้าไม่สำเร็จ';
+      setError(message);
+      return { ok: false, error: loadError, message };
+    }
   };
   useEffect(() => { load(); }, [repairJobId]);
 
@@ -65,13 +70,10 @@ const RepairCommunicationPanel = ({ repairJobId }) => {
         `repair:communication:${repairJobIdSnapshot}:record:success`,
       );
 
-      try {
-        await load();
-      } catch (refreshError) {
-        const message = refreshError?.message || 'บันทึกสำเร็จแล้ว แต่โหลดประวัติการติดต่อล่าสุดไม่สำเร็จ';
-        setError(message);
+      const refreshResult = await load();
+      if (!refreshResult?.ok) {
         feedback.actionError(
-          refreshError,
+          refreshResult?.error,
           'บันทึกสำเร็จแล้ว แต่โหลดประวัติการติดต่อล่าสุดไม่สำเร็จ',
           `repair:communication:${repairJobIdSnapshot}:refresh:error`,
         );

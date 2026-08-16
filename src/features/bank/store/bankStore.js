@@ -68,6 +68,9 @@ const useBankStore = create((set, get) => ({
   },
 
   createBankAction: async (payload) => {
+    if (get().bankSaving || get().bankDeletingId) {
+      throw new Error('กำลังบันทึกข้อมูลธนาคารอยู่ กรุณารอสักครู่');
+    }
     set({ bankSaving: true, bankError: null });
     try {
       const created = await createBank(payload);
@@ -80,6 +83,9 @@ const useBankStore = create((set, get) => ({
   },
 
   updateBankAction: async (id, payload) => {
+    if (get().bankSaving || get().bankDeletingId) {
+      throw new Error('กำลังบันทึกข้อมูลธนาคารอยู่ กรุณารอสักครู่');
+    }
     set({ bankSaving: true, bankError: null });
     try {
       const updated = await apiUpdateBank(id, payload);
@@ -93,6 +99,7 @@ const useBankStore = create((set, get) => ({
   },
 
   toggleBankActiveAction: async (id) => {
+    if (get().bankSaving || get().bankDeletingId) return null;
     const current = (get().banks || []).find((bank) => bank.id === id);
     if (!current) return null;
 
@@ -100,6 +107,9 @@ const useBankStore = create((set, get) => ({
   },
 
   deleteBankAction: async (id) => {
+    if (get().bankSaving || get().bankDeletingId) {
+      throw new Error('กำลังบันทึกข้อมูลธนาคารอยู่ กรุณารอสักครู่');
+    }
     set({ bankDeletingId: id, bankError: null });
     try {
       await apiDeleteBank(id);

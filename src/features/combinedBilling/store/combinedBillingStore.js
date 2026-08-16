@@ -10,6 +10,9 @@ import {
   getConsolidatedDelivery,
 } from '../api/combinedBillingApi';
 
+let combinedBillingHistoryRequestSequence = 0;
+let combinedBillingDetailRequestSequence = 0;
+
 const useCombinedBillingStore = create((set, get) => ({
   combinableSales: [],
   combinedBilling: null,
@@ -121,15 +124,31 @@ const useCombinedBillingStore = create((set, get) => ({
   },
 
   loadHistoryAction: async () => {
-    const history = await listConsolidatedDeliveries();
-    set({ history });
-    return history;
+    const requestId = ++combinedBillingHistoryRequestSequence;
+    try {
+      const history = await listConsolidatedDeliveries();
+      if (requestId !== combinedBillingHistoryRequestSequence) return null;
+      set({ history });
+      return history;
+    } catch (error) {
+      if (requestId !== combinedBillingHistoryRequestSequence) return null;
+      throw error;
+    }
   },
 
   loadDocumentDetailAction: async (id) => {
-    const selectedDocument = await getConsolidatedDelivery(id);
-    set({ selectedDocument });
-    return selectedDocument;
+    const requestId = ++combinedBillingDetailRequestSequence;
+    const documentIdSnapshot = Number(id);
+    set({ selectedDocument: null });
+    try {
+      const selectedDocument = await getConsolidatedDelivery(documentIdSnapshot);
+      if (requestId !== combinedBillingDetailRequestSequence) return null;
+      set({ selectedDocument });
+      return selectedDocument;
+    } catch (error) {
+      if (requestId !== combinedBillingDetailRequestSequence) return null;
+      throw error;
+    }
   },
 }));
 

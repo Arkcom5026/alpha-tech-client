@@ -10,6 +10,7 @@ const nvmrc = readFileSync(new URL('../.nvmrc', import.meta.url), 'utf8').trim()
 assert.equal(nvmrc, '22', 'client Node authority must be Node 22')
 assert.equal(vercel.git?.deploymentEnabled, true, 'automatic Vercel Git deployments must remain enabled')
 assert.equal(vercel.ignoreCommand, 'exit 1', 'Git-triggered Vercel builds must never be skipped by Ignored Build Step')
+assert.match(vercel.buildCommand || '', /npm run build\s*&&\s*node scripts\/generate-release-metadata\.mjs/, 'Vercel build must publish release provenance after Vite build')
 assert.match(ciWorkflow, /node-version:\s*22\b/, 'GitHub CI must use Node 22')
 assert.match(ciWorkflow, /branches:\s*\[\s*"main"\s*\]/, 'GitHub CI must protect canonical main authority')
 assert.doesNotMatch(ciWorkflow, /integration\/system-hardening-7-agendas/, 'retired integration branch must not remain CI authority')
@@ -25,5 +26,7 @@ assert.doesNotMatch(releaseWorkflow, /^\s*push:\s*$/m, 'manual Production recove
 
 assert.match(generator, /VERCEL_GIT_COMMIT_SHA/, 'release metadata must capture Vercel provenance when present')
 assert.match(generator, /GITHUB_SHA/, 'release metadata must capture GitHub provenance when present')
+assert.match(generator, /path\.resolve\(process\.cwd\(\), 'dist'\)/, 'release metadata must be written into the deployed dist artifact')
+assert.match(generator, /path\.join\(outputDir, 'release\.json'\)/, 'release metadata artifact must be named release.json')
 
 console.log('Release Safety Foundation Contract: PASS')

@@ -164,7 +164,9 @@ const ListProductProfilePage = () => {
         intent="destructive"
         loading={isSubmitting}
         loadingLabel="กำลังลบ..."
-        onClose={() => setPendingDelete(null)}
+        onClose={() => {
+          if (!isSubmitting) setPendingDelete(null);
+        }}
         onConfirm={confirmDelete}
       />
     </>

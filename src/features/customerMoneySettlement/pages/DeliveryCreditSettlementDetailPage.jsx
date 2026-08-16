@@ -25,13 +25,41 @@ const DeliveryCreditSettlementDetailPage = () => {
   const [cancelling, setCancelling] = useState(false);
   const [actionError, setActionError] = useState('');
   const cancellingRef = useRef(false);
+  const recordContextRef = useRef(String(id || ''));
+  const loadRequestRef = useRef(0);
+  const cancelRequestRef = useRef(0);
 
   useEffect(() => {
-    let active = true;
-    getDeliveryCreditSettlement(id)
-      .then((data) => { if (active) setRecord(data); })
-      .catch((err) => { if (active) setError(err?.response?.data?.message || err?.message || 'โหลดเอกสารไม่สำเร็จ'); });
-    return () => { active = false; };
+    const settlementIdSnapshot = String(id || '');
+    const requestId = ++loadRequestRef.current;
+    recordContextRef.current = settlementIdSnapshot;
+    cancelRequestRef.current += 1;
+    cancellingRef.current = false;
+    setRecord(null);
+    setError('');
+    setShowCancel(false);
+    setCancelReason('');
+    setActionError('');
+    setCancelling(false);
+
+    getDeliveryCreditSettlement(settlementIdSnapshot)
+      .then((data) => {
+        if (loadRequestRef.current !== requestId || recordContextRef.current !== settlementIdSnapshot) return;
+        setRecord(data);
+      })
+      .catch((err) => {
+        if (loadRequestRef.current !== requestId || recordContextRef.current !== settlementIdSnapshot) return;
+        const fallbackMessage = 'โหลดเอกสารไม่สำเร็จ';
+        setError(err?.response?.data?.message || err?.message || fallbackMessage);
+        feedback.actionError(err, fallbackMessage, `customer-money-settlement:detail:${settlementIdSnapshot}:load:error`);
+      });
+
+    return () => {
+      if (recordContextRef.current === settlementIdSnapshot) {
+        loadRequestRef.current += 1;
+        cancelRequestRef.current += 1;
+      }
+    };
   }, [id]);
 
   const shopSlug = useMemo(() => location.pathname.split('/').filter(Boolean)[0] || 'advancetech', [location.pathname]);
@@ -40,24 +68,41 @@ const DeliveryCreditSettlementDetailPage = () => {
     const reason = cancelReason.trim();
     if (!reason || cancelling || cancellingRef.current || !id) return;
 
-    const settlementIdSnapshot = id;
+    const settlementIdSnapshot = String(id);
     const reasonSnapshot = reason;
+    const requestId = ++cancelRequestRef.current;
+    const ownsCancelRequest = () => (
+      cancelRequestRef.current === requestId
+      && recordContextRef.current === settlementIdSnapshot
+    );
+
     cancellingRef.current = true;
     setCancelling(true);
     setActionError('');
     try {
       const updated = await cancelDeliveryCreditSettlement(settlementIdSnapshot, reasonSnapshot);
+      if (!ownsCancelRequest()) {
+        feedback.actionError(
+          new Error('เอกสารถูกยกเลิกแล้ว แต่หน้าปัจจุบันเปลี่ยนไปเป็นเอกสารอื่น'),
+          'ยกเลิกเอกสารสำเร็จ แต่บริบทหน้าปัจจุบันเปลี่ยนไปแล้ว',
+          `customer-money-settlement:cancel:${settlementIdSnapshot}:context-changed:error`,
+        );
+        return;
+      }
       setRecord(updated);
       setShowCancel(false);
       setCancelReason('');
       feedback.actionSuccess('ยกเลิกเอกสารตัดยอดเรียบร้อยแล้ว', `customer-money-settlement:cancel:${settlementIdSnapshot}:success`);
     } catch (err) {
+      if (!ownsCancelRequest()) return;
       const fallbackMessage = 'ยกเลิกเอกสารตัดยอดไม่สำเร็จ';
       setActionError(err?.response?.data?.message || err?.message || fallbackMessage);
       feedback.actionError(err, fallbackMessage, `customer-money-settlement:cancel:${settlementIdSnapshot}:error`);
     } finally {
-      cancellingRef.current = false;
-      setCancelling(false);
+      if (ownsCancelRequest()) {
+        cancellingRef.current = false;
+        setCancelling(false);
+      }
     }
   };
 

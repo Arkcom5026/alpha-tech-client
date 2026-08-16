@@ -78,7 +78,7 @@ const useCombinedBillingStore = create((set, get) => ({
   },
 
   // ✅ ตั้งค่าลูกค้าที่ถูกเลือก
-  setCustomer: (customer) => set({ customer, workspace: [], error: null }),
+  setCustomer: (customer) => set({ customer, workspace: [], error: null, loading: false }),
 
   loadDocumentWorkspaceAction: async (customerId) => {
     const requestedCustomerId = Number(customerId);

@@ -73,15 +73,27 @@ const useSupplierPaymentStore = create((set, get) => ({
   },
 
   fetchSupplierPaymentsBySupplierIdAction: async (supplierId) => {
+    if (!supplierId) return [];
+    set({ isSupplierPaymentLoading: true, supplierPaymentError: null });
     try {
       const data = await getSupplierPaymentsBySupplier(supplierId);
-      if (Array.isArray(data) && data.length > 0) {
-        set({ supplierPayments: data, selectedSupplier: data[0].supplier || null });
-      } else {
-        set({ supplierPayments: [], selectedSupplier: null });
-      }
+      const payments = Array.isArray(data) ? data : [];
+      set({
+        supplierPayments: payments,
+        selectedSupplier: payments[0]?.supplier || null,
+        isSupplierPaymentLoading: false,
+        supplierPaymentError: null,
+      });
+      return payments;
     } catch (err) {
-      console.error('❌ [fetchSupplierPaymentsBySupplierIdAction] error:', err);
+      const message = err?.response?.data?.message || err?.message || 'ไม่สามารถโหลดประวัติการชำระเงิน Supplier ได้';
+      set({
+        supplierPayments: [],
+        selectedSupplier: null,
+        isSupplierPaymentLoading: false,
+        supplierPaymentError: message,
+      });
+      throw err;
     }
   },
 

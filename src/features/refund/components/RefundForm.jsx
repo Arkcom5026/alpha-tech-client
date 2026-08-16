@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { FieldMessage, feedback } from '@/design-system/feedback';
 import useRefundStore from '../store/refundStore';
 
-const RefundForm = ({ saleReturn }) => {
+const RefundForm = ({ saleReturn, onSuccess }) => {
   const remainingRefund = (saleReturn.totalRefund || 0) - (saleReturn.refundedAmount || 0) - (saleReturn.deductedAmount || 0);
   const [deductAmount, setDeductAmount] = useState(0);
   const [amount, setAmount] = useState(0);
@@ -44,6 +44,7 @@ const RefundForm = ({ saleReturn }) => {
     try {
       const result = await createRefundAction(refundData);
       if (!result) return;
+
       feedback.actionSuccess(
         'บันทึกการคืนเงินเรียบร้อยแล้ว',
         `refund:${saleReturn.id}:create:success`,
@@ -51,6 +52,16 @@ const RefundForm = ({ saleReturn }) => {
       setDeductAmount(0);
       setAmount(0);
       setNote('');
+
+      try {
+        await onSuccess?.(result);
+      } catch (refreshError) {
+        feedback.actionError(
+          refreshError,
+          'คืนเงินสำเร็จ แต่รีเฟรชยอดคงเหลือไม่สำเร็จ กรุณารีเฟรชหน้า',
+          `refund:${saleReturn.id}:refresh:error`,
+        );
+      }
     } catch (err) {
       feedback.actionError(
         err,

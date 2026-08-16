@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ConfirmActionDialog } from '@/design-system/composites';
 import { feedback } from '@/design-system/feedback';
 import {
@@ -14,16 +14,19 @@ const TableCustomers = () => {
   const [pendingStatus, setPendingStatus] = useState(null);
   const [savingStatus, setSavingStatus] = useState(false);
   const [savingRoleUserId, setSavingRoleUserId] = useState(null);
+  const mutationRef = useRef(false);
   const mutating = savingStatus || Boolean(savingRoleUserId);
   const interactionLocked = mutating || Boolean(pendingStatus);
 
   const handleGetUsers = useCallback(() => {
-    getListAllUsers(token)
+    return getListAllUsers(token)
       .then((res) => {
         setCustomers(res.data);
+        return { ok: true };
       })
       .catch((err) => {
         feedback.error(err?.response?.data?.message || 'โหลดรายการผู้ใช้ไม่สำเร็จ');
+        return { ok: false, error: err };
       });
   }, [token]);
 
@@ -32,59 +35,86 @@ const TableCustomers = () => {
   }, [handleGetUsers]);
 
   const requestChangeUserStatus = (userId, userStatus, email) => {
-    if (interactionLocked) return;
+    if (interactionLocked || mutationRef.current) return;
     setPendingStatus({ userId, userStatus, email });
   };
 
   const confirmChangeUserStatus = async () => {
-    if (!pendingStatus?.userId || mutating) return;
+    if (!pendingStatus?.userId || mutating || mutationRef.current) return;
+
+    const pendingSnapshot = { ...pendingStatus };
+    const tokenSnapshot = token;
     const value = {
-      id: pendingStatus.userId,
-      enabled: !pendingStatus.userStatus,
+      id: pendingSnapshot.userId,
+      enabled: !pendingSnapshot.userStatus,
     };
 
+    mutationRef.current = true;
     setSavingStatus(true);
     try {
-      await changeUserStatus(token, value);
-      handleGetUsers();
+      await changeUserStatus(tokenSnapshot, value);
       feedback.actionSuccess(
-        pendingStatus.userStatus ? 'ปิดใช้งานผู้ใช้เรียบร้อยแล้ว' : 'เปิดใช้งานผู้ใช้เรียบร้อยแล้ว',
-        `admin:user-status:${pendingStatus.userId}:success`,
+        pendingSnapshot.userStatus ? 'ปิดใช้งานผู้ใช้เรียบร้อยแล้ว' : 'เปิดใช้งานผู้ใช้เรียบร้อยแล้ว',
+        `admin:user-status:${pendingSnapshot.userId}:success`,
       );
       setPendingStatus(null);
+
+      const refreshResult = await handleGetUsers();
+      if (!refreshResult?.ok) {
+        feedback.actionError(
+          refreshResult?.error,
+          'อัปเดตสถานะสำเร็จแล้ว แต่รีเฟรชรายการผู้ใช้ไม่สำเร็จ',
+          `admin:user-status:${pendingSnapshot.userId}:refresh:error`,
+        );
+      }
     } catch (err) {
       feedback.actionError(
         err,
         'อัปเดตสถานะผู้ใช้ไม่สำเร็จ',
-        `admin:user-status:${pendingStatus.userId}:error`,
+        `admin:user-status:${pendingSnapshot.userId}:error`,
       );
     } finally {
+      mutationRef.current = false;
       setSavingStatus(false);
     }
   };
 
   const handleChangUserRole = async (userId, userRole) => {
-    if (interactionLocked) return;
+    if (interactionLocked || mutationRef.current) return;
+
+    const userIdSnapshot = userId;
+    const userRoleSnapshot = userRole;
+    const tokenSnapshot = token;
     const value = {
-      id: userId,
-      Role: userRole,
+      id: userIdSnapshot,
+      Role: userRoleSnapshot,
     };
 
-    setSavingRoleUserId(userId);
+    mutationRef.current = true;
+    setSavingRoleUserId(userIdSnapshot);
     try {
-      await changeUserRole(token, value);
-      handleGetUsers();
+      await changeUserRole(tokenSnapshot, value);
       feedback.actionSuccess(
         'อัปเดตสิทธิ์ผู้ใช้เรียบร้อยแล้ว',
-        `admin:user-role:${userId}:success`,
+        `admin:user-role:${userIdSnapshot}:success`,
       );
+
+      const refreshResult = await handleGetUsers();
+      if (!refreshResult?.ok) {
+        feedback.actionError(
+          refreshResult?.error,
+          'อัปเดตสิทธิ์สำเร็จแล้ว แต่รีเฟรชรายการผู้ใช้ไม่สำเร็จ',
+          `admin:user-role:${userIdSnapshot}:refresh:error`,
+        );
+      }
     } catch (err) {
       feedback.actionError(
         err,
         'อัปเดตสิทธิ์ผู้ใช้ไม่สำเร็จ',
-        `admin:user-role:${userId}:error`,
+        `admin:user-role:${userIdSnapshot}:error`,
       );
     } finally {
+      mutationRef.current = false;
       setSavingRoleUserId(null);
     }
   };
@@ -147,7 +177,7 @@ const TableCustomers = () => {
         loading={savingStatus}
         loadingLabel="กำลังบันทึก..."
         onClose={() => {
-          if (!mutating) setPendingStatus(null);
+          if (!mutating && !mutationRef.current) setPendingStatus(null);
         }}
         onConfirm={confirmChangeUserStatus}
       />

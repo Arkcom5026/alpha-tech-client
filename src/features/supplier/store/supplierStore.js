@@ -50,15 +50,23 @@ const useSupplierStore = create((set, get) => ({
   fetchSuppliersAction: async (explicitBranchId) => {
     const requestedBranchId = resolveSupplierBranchId(explicitBranchId);
     const requestId = ++supplierListRequestSequence;
+    const usesSelectedBranchAuthority = explicitBranchId != null;
 
     if (!requestedBranchId) {
       set({ suppliers: [], supplierError: null, isSupplierLoading: false });
       return [];
     }
 
+    const currentBranchId = () => {
+      if (usesSelectedBranchAuthority) {
+        const selected = Number(useBranchStore.getState().selectedBranchId);
+        return Number.isInteger(selected) && selected > 0 ? selected : null;
+      }
+      return resolveSupplierBranchId();
+    };
     const ownsRequest = () =>
       supplierListRequestSequence === requestId
-      && resolveSupplierBranchId() === requestedBranchId;
+      && currentBranchId() === requestedBranchId;
 
     set({ isSupplierLoading: true, supplierError: null });
     try {

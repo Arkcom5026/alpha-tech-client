@@ -6,7 +6,7 @@ import {
   upsertBranchPrice,
   getBranchPricesByBranchId,
   getAllProductsWithBranchPriceByBranchId,
-  updateMultipleBranchPrices, // 🟢 FIXED: เพิ่มการอิมพอร์ตตรงนี้ไว้ที่หัวเสา
+  updateMultipleBranchPrices,
 } from '../api/branchPriceApi';
 
 const useBranchPriceStore = create((set, get) => ({
@@ -14,9 +14,9 @@ const useBranchPriceStore = create((set, get) => ({
   branchPrices: [],
   allProductsWithPrice: [],
   loading: false,
+  mutating: false,
   error: null,
 
-  // ✅ โหลดราคาทั้งหมดของสาขาปัจจุบัน (จาก token - POS)
   fetchBranchPricesByTokenAction: async () => {
     set({ loading: true, error: null });
     try {
@@ -30,7 +30,6 @@ const useBranchPriceStore = create((set, get) => ({
     }
   },
 
-  // ✅ โหลดราคาทั้งหมดตาม branchId ที่กำหนด (เช่น สำหรับฝั่ง Online)
   fetchBranchPricesByIdAction: async (branchId) => {
     set({ loading: true, error: null });
     try {
@@ -44,7 +43,6 @@ const useBranchPriceStore = create((set, get) => ({
     }
   },
 
-  // ✅ โหลดสินค้าทั้งหมดพร้อมราคาจาก token context (POS)
   fetchAllProductsWithPriceByTokenAction: async (filters = {}) => {
     const toOptionalNumber = (value) => {
       if (value === '' || value === null || value === undefined) return undefined;
@@ -88,7 +86,6 @@ const useBranchPriceStore = create((set, get) => ({
     }
   },
 
-  // ✅ โหลดสินค้าทั้งหมดพร้อมราคาสำหรับ branchId ที่กำหนด (Online)
   fetchAllProductsWithPriceByIdAction: async (branchId) => {
     set({ loading: true, error: null });
     try {
@@ -102,12 +99,13 @@ const useBranchPriceStore = create((set, get) => ({
     }
   },
 
-  // ✅ เพิ่มหรือแก้ไขราคา (ใช้ branchId และ userId จาก token)
   upsertBranchPriceAction: async (data) => {
-    set({ loading: true, error: null });
+    if (get().mutating) {
+      throw new Error('กำลังบันทึกราคาสินค้าอยู่ กรุณารอสักครู่');
+    }
+    set({ mutating: true, error: null });
     try {
-      const res = await upsertBranchPrice(data); // data = { productId, price, ... }
-
+      const res = await upsertBranchPrice(data);
       set((state) => ({
         allProductsWithPrice: state.allProductsWithPrice.map((entry) =>
           entry.product.id === res.data.productId
@@ -115,21 +113,23 @@ const useBranchPriceStore = create((set, get) => ({
             : entry
         ),
       }));
+      return res;
     } catch (err) {
       console.error('❌ upsertBranchPriceAction error:', err);
-      set({ error: 'ไม่สามารถบันทึกราคาได้' });
+      set({ error: err?.response?.data?.message || err?.message || 'ไม่สามารถบันทึกราคาได้' });
+      throw err;
     } finally {
-      set({ loading: false });
+      set({ mutating: false });
     }
   },
 
-
-  // ✅ อัปเดตราคาหลายรายการพร้อมกัน (bulk update)
   updateMultipleBranchPricesAction: async (updatedList) => {
-    set({ loading: true, error: null });
+    if (get().mutating) {
+      throw new Error('กำลังบันทึกราคาสินค้าอยู่ กรุณารอสักครู่');
+    }
+    set({ mutating: true, error: null });
     try {
-      // 🟢 FIXED: ยุบคำสั่ง await import ทิ้ง แล้วเรียกใช้ฟังก์ชันตรง ๆ จากหัวเสาได้ทันที
-      await updateMultipleBranchPrices(updatedList);
+      const result = await updateMultipleBranchPrices(updatedList);
 
       set((state) => ({
         allProductsWithPrice: state.allProductsWithPrice.map((item) => {
@@ -145,15 +145,16 @@ const useBranchPriceStore = create((set, get) => ({
             : item;
         }),
       }));
+      return result;
     } catch (err) {
       console.error('❌ updateMultipleBranchPricesAction error:', err);
-      set({ error: 'ไม่สามารถอัปเดตราคาได้' });
+      set({ error: err?.response?.data?.message || err?.message || 'ไม่สามารถอัปเดตราคาได้' });
+      throw err;
     } finally {
-      set({ loading: false });
+      set({ mutating: false });
     }
   },
 
-  // 🧰 Utilities
   clearLastFetchKey: () => set({ __lastFetchKey: null }),
   resetError: () => set({ error: null }),
   resetState: () => set({
@@ -161,6 +162,7 @@ const useBranchPriceStore = create((set, get) => ({
     branchPrices: [],
     allProductsWithPrice: [],
     loading: false,
+    mutating: false,
     error: null,
   }),
 }));

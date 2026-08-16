@@ -101,6 +101,7 @@ const SupplierPayableWorkspacePage = () => {
     note: '',
   });
   const settlementMutationRef = useRef(false);
+  const advanceMutationRef = useRef(false);
 
   const load = useCallback(async ({ reportError = true } = {}) => {
     setLoading(true);
@@ -308,75 +309,162 @@ const SupplierPayableWorkspacePage = () => {
   };
 
   const createAdvance = async () => {
+    if (advanceMutationRef.current) return;
+    const advanceFormSnapshot = { ...advanceForm };
+    const supplierIdSnapshot = Number(advanceFormSnapshot.supplierId);
+
+    advanceMutationRef.current = true;
     setSaving(true);
     try {
       await createSupplierAdvance({
-        ...advanceForm,
-        supplierId: Number(advanceForm.supplierId),
-        amount: Number(advanceForm.amount),
+        ...advanceFormSnapshot,
+        supplierId: supplierIdSnapshot,
+        amount: Number(advanceFormSnapshot.amount),
       });
-      toast.success('บันทึกเงินจ่ายล่วงหน้า Supplier แล้ว');
-      setAdvanceForm({ ...advanceForm, amount: '', paymentRef: '', note: '' });
-      await load();
+      toast.actionSuccess(
+        'บันทึกเงินจ่ายล่วงหน้า Supplier แล้ว',
+        `supplier-payable:${supplierIdSnapshot}:advance:create:success`,
+      );
+      setAdvanceForm((current) => ({ ...current, amount: '', paymentRef: '', note: '' }));
+
+      const refresh = await load({ reportError: false });
+      if (!refresh.ok) {
+        toast.actionError(
+          refresh.error,
+          'บันทึกเงินจ่ายล่วงหน้า Supplier สำเร็จแล้ว แต่รีเฟรชข้อมูลเจ้าหนี้ล่าสุดไม่สำเร็จ',
+          `supplier-payable:${supplierIdSnapshot}:advance:create:refresh:error`,
+        );
+      }
     } catch (error) {
-      toast.error(getSupplierAdvanceErrorMessage(error));
+      toast.actionError(
+        error,
+        getSupplierAdvanceErrorMessage(error),
+        `supplier-payable:${supplierIdSnapshot}:advance:create:error`,
+      );
     } finally {
+      advanceMutationRef.current = false;
       setSaving(false);
     }
   };
 
   const applyAdvance = async () => {
-    if (!selectedAdvance || !advanceSelection.length) return;
+    if (advanceMutationRef.current || !selectedAdvance || !advanceSelection.length) return;
+    const advanceIdSnapshot = selectedAdvance.id;
+    const supplierIdSnapshot = selectedAdvance.supplierId;
+    const allocationsSnapshot = advanceSelection.map((item) => ({
+      payableId: item.id,
+      amount: Number(advanceAllocations[item.id] || 0),
+    }));
+
+    advanceMutationRef.current = true;
     setSaving(true);
     try {
       await applySupplierAdvance({
-        advanceId: selectedAdvance.id,
-        supplierId: selectedAdvance.supplierId,
-        allocations: advanceSelection.map((item) => ({
-          payableId: item.id,
-          amount: Number(advanceAllocations[item.id] || 0),
-        })),
+        advanceId: advanceIdSnapshot,
+        supplierId: supplierIdSnapshot,
+        allocations: allocationsSnapshot,
       });
-      toast.success('นำ Advance ไปตัดยอดเจ้าหนี้แล้ว');
+      toast.actionSuccess(
+        'นำ Advance ไปตัดยอดเจ้าหนี้แล้ว',
+        `supplier-payable:advance:${advanceIdSnapshot}:apply:success`,
+      );
       setAdvanceAllocations({});
-      await load();
+
+      const refresh = await load({ reportError: false });
+      if (!refresh.ok) {
+        toast.actionError(
+          refresh.error,
+          'นำ Advance ไปตัดยอดเจ้าหนี้สำเร็จแล้ว แต่รีเฟรชข้อมูลเจ้าหนี้ล่าสุดไม่สำเร็จ',
+          `supplier-payable:advance:${advanceIdSnapshot}:apply:refresh:error`,
+        );
+      }
     } catch (error) {
-      toast.error(getSupplierAdvanceErrorMessage(error));
+      toast.actionError(
+        error,
+        getSupplierAdvanceErrorMessage(error),
+        `supplier-payable:advance:${advanceIdSnapshot}:apply:error`,
+      );
     } finally {
+      advanceMutationRef.current = false;
       setSaving(false);
     }
   };
 
   const activateAdvance = async (advanceId) => {
+    if (advanceMutationRef.current) return;
+    const advanceIdSnapshot = advanceId;
+    const availableAmountSnapshot = Number(reviewAmount);
+
+    advanceMutationRef.current = true;
     setSaving(true);
     try {
-      await activateLegacySupplierAdvance({ advanceId, availableAmount: Number(reviewAmount) });
-      toast.success('รับรองยอด Advance เดิมแล้ว');
+      await activateLegacySupplierAdvance({
+        advanceId: advanceIdSnapshot,
+        availableAmount: availableAmountSnapshot,
+      });
+      toast.actionSuccess(
+        'รับรองยอด Advance เดิมแล้ว',
+        `supplier-payable:advance:${advanceIdSnapshot}:activate:success`,
+      );
       setReviewAmount('');
-      await load();
+
+      const refresh = await load({ reportError: false });
+      if (!refresh.ok) {
+        toast.actionError(
+          refresh.error,
+          'รับรองยอด Advance เดิมสำเร็จแล้ว แต่รีเฟรชข้อมูลเจ้าหนี้ล่าสุดไม่สำเร็จ',
+          `supplier-payable:advance:${advanceIdSnapshot}:activate:refresh:error`,
+        );
+      }
     } catch (error) {
-      toast.error(getSupplierAdvanceErrorMessage(error));
+      toast.actionError(
+        error,
+        getSupplierAdvanceErrorMessage(error),
+        `supplier-payable:advance:${advanceIdSnapshot}:activate:error`,
+      );
     } finally {
+      advanceMutationRef.current = false;
       setSaving(false);
     }
   };
 
   const voidAdvance = async (advanceId) => {
-    if (!advanceVoidReason.trim()) {
+    const advanceIdSnapshot = advanceId;
+    const reasonSnapshot = advanceVoidReason.trim();
+    if (!reasonSnapshot) {
       toast.info('กรุณาระบุเหตุผลในการยกเลิก Advance');
       return;
     }
+    if (advanceMutationRef.current) return;
+
+    advanceMutationRef.current = true;
     setSaving(true);
     try {
-      await voidSupplierAdvance({ advanceId, reason: advanceVoidReason });
-      toast.success('ยกเลิก Advance และย้อนยอดที่จัดสรรแล้ว');
+      await voidSupplierAdvance({ advanceId: advanceIdSnapshot, reason: reasonSnapshot });
+      toast.actionSuccess(
+        'ยกเลิก Advance และย้อนยอดที่จัดสรรแล้ว',
+        `supplier-payable:advance:${advanceIdSnapshot}:void:success`,
+      );
       setAdvanceVoidReason('');
       setAdvanceAllocations({});
-      if (selectedAdvanceId === advanceId) setSelectedAdvanceId(null);
-      await load();
+      setSelectedAdvanceId((current) => current === advanceIdSnapshot ? null : current);
+
+      const refresh = await load({ reportError: false });
+      if (!refresh.ok) {
+        toast.actionError(
+          refresh.error,
+          'ยกเลิก Advance สำเร็จแล้ว แต่รีเฟรชข้อมูลเจ้าหนี้ล่าสุดไม่สำเร็จ',
+          `supplier-payable:advance:${advanceIdSnapshot}:void:refresh:error`,
+        );
+      }
     } catch (error) {
-      toast.error(getSupplierAdvanceErrorMessage(error));
+      toast.actionError(
+        error,
+        getSupplierAdvanceErrorMessage(error),
+        `supplier-payable:advance:${advanceIdSnapshot}:void:error`,
+      );
     } finally {
+      advanceMutationRef.current = false;
       setSaving(false);
     }
   };

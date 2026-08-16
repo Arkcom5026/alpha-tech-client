@@ -253,7 +253,9 @@ const ServerPrinterSettingsPanel = ({ branchId, workstationId, settingsService, 
         intent="destructive"
         loading={status === 'SAVING'}
         loadingLabel="กำลังปิด..."
-        onClose={() => setClearRouteConfirmationOpen(false)}
+        onClose={() => {
+          if (status !== 'SAVING') setClearRouteConfirmationOpen(false)
+        }}
         onConfirm={clearRoute}
       />
     </>

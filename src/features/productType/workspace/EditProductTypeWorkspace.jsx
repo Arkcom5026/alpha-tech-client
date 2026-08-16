@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import ProductTypeForm from '../components/ProductTypeForm';
 import PageHeader from '@/components/shared/layout/PageHeader';
@@ -14,6 +14,8 @@ const EditProductTypePage = () => {
   const [successMsg, setSuccessMsg] = useState('');
   const [formData, setFormData] = useState(null);
   const [isFetching, setIsFetching] = useState(true);
+  const [mutationBusy, setMutationBusy] = useState(false);
+  const submittingRef = useRef(false);
 
   const { isSuperAdmin, canManageProductOrdering } = useAuthStore();
   const canManage = useMemo(
@@ -23,6 +25,7 @@ const EditProductTypePage = () => {
 
   const { fetchByIdAction, updateProductTypeAction, isSubmitting } = useProductTypeStore();
   const listPath = shopSlug ? `/${shopSlug}/pos/stock/types` : '/pos/stock/types';
+  const busy = isSubmitting || mutationBusy;
 
   useEffect(() => {
     if (!canManage) {
@@ -49,20 +52,31 @@ const EditProductTypePage = () => {
     return () => { mounted = false; };
   }, [id, fetchByIdAction, canManage]);
 
-  const handleSubmit = async (payload) => {
-    if (!canManage || isSubmitting) return;
+  const handleSubmit = async (formPayload) => {
+    if (!canManage || busy || submittingRef.current) return;
+
+    const productTypeIdSnapshot = Number(id);
+    const payload = { ...formPayload };
+    const listPathSnapshot = listPath;
+    if (!Number.isFinite(productTypeIdSnapshot) || productTypeIdSnapshot <= 0) return;
+
+    submittingRef.current = true;
+    setMutationBusy(true);
     setErrorMsg('');
     setSuccessMsg('');
     try {
-      await updateProductTypeAction(Number(id), payload);
+      await updateProductTypeAction(productTypeIdSnapshot, payload);
       const message = 'อัปเดตประเภทสินค้าเรียบร้อยแล้ว';
       setSuccessMsg(message);
-      feedback.actionSuccess(message, 'product-type:update:success');
-      navigate(listPath);
+      feedback.actionSuccess(message, `product-type:${productTypeIdSnapshot}:update:success`);
+      navigate(listPathSnapshot);
     } catch (err) {
       const message = parseApiError(err) || 'ไม่สามารถอัปเดตประเภทสินค้าได้';
       setErrorMsg(message);
-      feedback.actionError(err, message, 'product-type:update:error');
+      feedback.actionError(err, message, `product-type:${productTypeIdSnapshot}:update:error`);
+    } finally {
+      submittingRef.current = false;
+      setMutationBusy(false);
     }
   };
 
@@ -106,7 +120,7 @@ const EditProductTypePage = () => {
               mode="edit"
               defaultValues={formData}
               onSubmit={handleSubmit}
-              isSubmitting={isSubmitting}
+              isSubmitting={busy}
             />
           )}
         </div>

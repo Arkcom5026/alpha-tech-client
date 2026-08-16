@@ -11,7 +11,6 @@ const PaymentOnlinePage = () => {
     order,
     loadOrderAction,
     isLoading,
-    uploadSlipAction,
     submitPaymentSlipAction,
   } = usePaymentOnlineStore();
 
@@ -34,7 +33,7 @@ const PaymentOnlinePage = () => {
       <div className="bg-white border rounded-md p-4 mb-6">
         <p><strong>วันที่สั่งซื้อ:</strong> {order.createdAt ? new Date(order.createdAt).toLocaleString('th-TH') : '-'}</p>
         <p><strong>ชื่อลูกค้า:</strong> {order.customerName || '-'}</p>
-        <p><strong>ยอดรวม:</strong> {!isNaN(order.amount) ? `฿${order.amount.toFixed(2)}` : '-'} </p>        
+        <p><strong>ยอดรวม:</strong> {!isNaN(order.amount) ? `฿${order.amount.toFixed(2)}` : '-'} </p>
         {order.paymentSlipStatus && (
           <p className="mt-2"><strong>สถานะสลิป:</strong> {translateSlipStatus(order.paymentSlipStatus)}</p>
         )}
@@ -71,7 +70,7 @@ const PaymentOnlinePage = () => {
         </table>
       </div>
 
-      <div className="text-sm  flex justify-end">
+      <div className="text-sm flex justify-end">
         <div className="w-full sm:w-1/2 border border-gray-200 rounded-md p-2 bg-gray-50">
           <div className="flex justify-between mb-1">
             <span className="font-medium">รวม:</span>
@@ -91,7 +90,6 @@ const PaymentOnlinePage = () => {
 
       <PaymentOnlineForm
         orderId={order.id}
-        uploadSlipAction={uploadSlipAction}
         submitPaymentSlipAction={submitPaymentSlipAction}
       />
     </div>

@@ -10,14 +10,31 @@ const app = fs.readFileSync(path.join(root, 'src/App.jsx'), 'utf8');
 
 assert.match(router, /path: ':shopSlug', element: <PublicStorefrontPage \/>/);
 assert.match(router, /path: ':shopSlug\/shop', element: <Navigate to="\.\.\/" relative="path" replace \/>/);
+assert.match(router, /path: ':shopSlug\/cart', element: <PublicStorefrontCartPage \/>/);
+assert.match(router, /path: ':shopSlug\/checkout\/identity', element: <PublicStorefrontIdentityPage \/>/);
+assert.match(router, /path: ':shopSlug\/products\/:productId', element: <PublicStorefrontProductPage \/>/);
 assert.match(router, /path: '\*', element: <NotFound \/>/);
+
 assert.match(page, /const slug = encodeURIComponent\(shopSlug \|\| ''\)/);
 assert.match(page, /apiClient\.get\(`\/sales\/storefronts\/\$\{slug\}`/);
 assert.match(page, /skipAuthBootstrap:\s*true/);
-assert.match(app, /PUBLIC_STOREFRONT_SLUG_PATTERN/);
-assert.match(app, /PUBLIC_STOREFRONT_RESERVED_SLUGS/);
 assert.match(page, /\/products\?\$\{params\.toString\(\)\}/);
 assert.match(page, /const products = productState\.items/);
 assert.doesNotMatch(page, /branchId|costPrice|supplier|employee|availableQuantity/);
+
+// App.jsx is intentionally auth-neutral. Public storefront classification belongs
+// to AppRouter and the public storefront API calls opt out of auth bootstrap.
+assert.match(app, /<RouterProvider router=\{router\} \/>/);
+assert.doesNotMatch(app, /PUBLIC_STOREFRONT_SLUG_PATTERN/);
+assert.doesNotMatch(app, /PUBLIC_STOREFRONT_RESERVED_SLUGS/);
+assert.doesNotMatch(app, /useAuthStore|bootstrapAuthAction|refreshSession/);
+
+// Public storefront routes must remain outside ProtectedRoute / onboarding gates.
+const publicStorefrontBlock = router.slice(
+  router.indexOf("{ path: ':shopSlug/shop'"),
+  router.indexOf("{ element: <MerchantLoginShell />"),
+);
+assert.ok(publicStorefrontBlock.length > 0, 'public storefront route block must exist');
+assert.doesNotMatch(publicStorefrontBlock, /ProtectedRoute|PartnerStoreOnboardingGate/);
 
 console.log('canonical storefront route contract: PASS');

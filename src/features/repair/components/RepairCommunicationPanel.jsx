@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { feedback } from '@/design-system';
 import { getRepairCommunicationPreference, listRepairCommunicationActivities, recordRepairCommunicationActivity } from '../../communication/api/communicationApi';
 import { dedupeRepairRead } from '../api/repairRequestCoordinator';
@@ -23,6 +23,7 @@ const RepairCommunicationPanel = ({ repairJobId }) => {
   const [draft, setDraft] = useState({ activityType: 'CALL', direction: 'OUTBOUND', note: '' });
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
   const destination = preference?.contactChannel?.address || preference?.destinationSnapshot || '';
   const href = useMemo(() => actionHref(preference?.channelType, destination), [preference, destination]);
 
@@ -44,30 +45,47 @@ const RepairCommunicationPanel = ({ repairJobId }) => {
   useEffect(() => { load(); }, [repairJobId]);
 
   const record = async () => {
-    if (!preference?.channelType || saving) return;
+    if (!preference?.channelType || saving || savingRef.current) return;
+
+    const repairJobIdSnapshot = repairJobId;
+    const payload = {
+      ...draft,
+      channelType: preference.channelType,
+      destinationSnapshot: destination || null,
+    };
+
+    savingRef.current = true;
     setSaving(true);
     setError('');
     try {
-      await recordRepairCommunicationActivity(repairJobId, {
-        ...draft,
-        channelType: preference.channelType,
-        destinationSnapshot: destination || null,
-      });
+      await recordRepairCommunicationActivity(repairJobIdSnapshot, payload);
       setDraft((current) => ({ ...current, note: '' }));
       feedback.actionSuccess(
         'บันทึกการติดต่อลูกค้าเรียบร้อยแล้ว',
-        `repair:communication:${repairJobId}:record:success`,
+        `repair:communication:${repairJobIdSnapshot}:record:success`,
       );
-      await load();
+
+      try {
+        await load();
+      } catch (refreshError) {
+        const message = refreshError?.message || 'บันทึกสำเร็จแล้ว แต่โหลดประวัติการติดต่อล่าสุดไม่สำเร็จ';
+        setError(message);
+        feedback.actionError(
+          refreshError,
+          'บันทึกสำเร็จแล้ว แต่โหลดประวัติการติดต่อล่าสุดไม่สำเร็จ',
+          `repair:communication:${repairJobIdSnapshot}:refresh:error`,
+        );
+      }
     } catch (saveError) {
       const message = saveError?.message || 'บันทึกการติดต่อลูกค้าไม่สำเร็จ';
       setError(message);
       feedback.actionError(
         saveError,
         message,
-        `repair:communication:${repairJobId}:record:error`,
+        `repair:communication:${repairJobIdSnapshot}:record:error`,
       );
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   };
@@ -86,7 +104,7 @@ const RepairCommunicationPanel = ({ repairJobId }) => {
             <p className="mt-1 break-all text-sm text-sky-800">{destination || 'ไม่ได้ระบุปลายทาง'}</p>
             <p className="mt-1 text-xs text-sky-700">Consent: {preference.consentGranted ? 'ยินยอมแล้ว' : 'ยังไม่ยืนยัน'}</p>
             <div className="mt-3 flex flex-wrap gap-2">
-              {href ? <a href={href} target={href.startsWith('http') ? '_blank' : undefined} rel="noreferrer" className="min-h-11 rounded-xl bg-sky-700 px-4 py-3 text-sm font-black text-white">เปิดช่องทางติดต่อ</a> : null}
+              {href ? <a href={href} target={href.startsWith('http') ? '_blank' : undefined} rel="noreferrer" className={`min-h-11 rounded-xl bg-sky-700 px-4 py-3 text-sm font-black text-white ${saving ? 'pointer-events-none opacity-50' : ''}`}>เปิดช่องทางติดต่อ</a> : null}
               {destination ? <button type="button" disabled={saving} onClick={() => navigator.clipboard?.writeText(destination)} className="min-h-11 rounded-xl border border-sky-300 bg-white px-4 text-sm font-black text-sky-800 disabled:cursor-not-allowed disabled:opacity-50">คัดลอก</button> : null}
             </div>
           </div>

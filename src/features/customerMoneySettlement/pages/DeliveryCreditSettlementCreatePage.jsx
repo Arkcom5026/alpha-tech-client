@@ -15,6 +15,7 @@ const DeliveryCreditSettlementCreatePage = () => {
   const navigate = useNavigate();
   const customerSearch = useCustomerMoneyReceiveCustomerSearch();
   const submitKeyRef = useRef(null);
+  const savingRef = useRef(false);
   const [workspace, setWorkspace] = useState(null);
   const [loadingCredits, setLoadingCredits] = useState(false);
   const [creditError, setCreditError] = useState('');
@@ -22,9 +23,13 @@ const DeliveryCreditSettlementCreatePage = () => {
   const [note, setNote] = useState('');
   const [saving, setSaving] = useState(false);
 
-  const invalidateSubmitKey = () => { submitKeyRef.current = null; };
+  const invalidateSubmitKey = () => {
+    if (savingRef.current) return;
+    submitKeyRef.current = null;
+  };
 
   const loadCredits = async (customer) => {
+    if (savingRef.current) return;
     setLoadingCredits(true);
     setCreditError('');
     setSelected({});
@@ -41,11 +46,13 @@ const DeliveryCreditSettlementCreatePage = () => {
   };
 
   const chooseCustomer = async (customer) => {
+    if (savingRef.current) return;
     customerSearch.select(customer);
     await loadCredits(customer);
   };
 
   const setLineAmount = (sale, line, value) => {
+    if (savingRef.current) return;
     invalidateSubmitKey();
     const key = lineKey(sale.id, line);
     setSelected((prev) => {
@@ -69,6 +76,7 @@ const DeliveryCreditSettlementCreatePage = () => {
   };
 
   const selectWholeSale = (sale) => {
+    if (savingRef.current) return;
     invalidateSubmitKey();
     setSelected((prev) => {
       const next = { ...prev };
@@ -95,6 +103,7 @@ const DeliveryCreditSettlementCreatePage = () => {
   };
 
   const clearWholeSale = (saleId) => {
+    if (savingRef.current) return;
     invalidateSubmitKey();
     setSelected((prev) => {
       const next = { ...prev };
@@ -116,16 +125,22 @@ const DeliveryCreditSettlementCreatePage = () => {
   const canSubmit = selectedLines.length > 0 && selectedTotal > 0 && !overBalance && !saving;
 
   const submit = async () => {
-    if (!canSubmit || !customerSearch.selectedCustomer) return;
-    setSaving(true);
-    setCreditError('');
+    if (!canSubmit || !customerSearch.selectedCustomer || savingRef.current) return;
+
+    const customerIdSnapshot = customerSearch.selectedCustomer.id;
+    const noteSnapshot = note.trim() || null;
+    const linesSnapshot = selectedLines.map((line) => ({ ...line }));
     const idempotencyKey = submitKeyRef.current || createCommandKey();
     submitKeyRef.current = idempotencyKey;
+
+    savingRef.current = true;
+    setSaving(true);
+    setCreditError('');
     try {
       const result = await createDeliveryCreditSettlement({
-        customerId: customerSearch.selectedCustomer.id,
-        note: note.trim() || null,
-        lines: selectedLines,
+        customerId: customerIdSnapshot,
+        note: noteSnapshot,
+        lines: linesSnapshot,
       }, idempotencyKey);
       feedback.actionSuccess('ตัดยอดใบส่งของเครดิตเรียบร้อยแล้ว', `customer-money-settlement:create:${result.id}:success`);
       navigate(`../${result.id}`);
@@ -134,6 +149,7 @@ const DeliveryCreditSettlementCreatePage = () => {
       setCreditError(err?.response?.data?.message || err?.message || fallbackMessage);
       feedback.actionError(err, fallbackMessage, `customer-money-settlement:create:${idempotencyKey}:error`);
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   };
@@ -145,7 +161,7 @@ const DeliveryCreditSettlementCreatePage = () => {
           <h1 className="text-xl font-bold text-slate-900">ตัดยอดใบส่งของเครดิต</h1>
           <p className="text-sm text-slate-500">นำ Customer Money ไปใช้กับใบส่งของเครดิต โดยไม่สร้าง stock movement ใหม่</p>
         </div>
-        <button type="button" onClick={() => navigate('..')} className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold">กลับรายการ</button>
+        <button type="button" onClick={() => { if (!savingRef.current) navigate('..'); }} disabled={saving} className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold disabled:opacity-50">กลับรายการ</button>
       </header>
 
       <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -153,12 +169,12 @@ const DeliveryCreditSettlementCreatePage = () => {
         <div className="mt-3 flex gap-2">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-            <input value={customerSearch.query} onChange={(e) => customerSearch.setQuery(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); customerSearch.submit(); } }} placeholder="ชื่อ เบอร์โทร บริษัท อีเมล หรือเลขผู้เสียภาษี" className="h-11 w-full rounded-xl border border-slate-300 pl-10 pr-3" />
+            <input disabled={saving} value={customerSearch.query} onChange={(e) => customerSearch.setQuery(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !savingRef.current) { e.preventDefault(); customerSearch.submit(); } }} placeholder="ชื่อ เบอร์โทร บริษัท อีเมล หรือเลขผู้เสียภาษี" className="h-11 w-full rounded-xl border border-slate-300 pl-10 pr-3 disabled:bg-slate-100" />
           </div>
-          <button type="button" onClick={customerSearch.submit} disabled={customerSearch.loading} className="rounded-xl bg-indigo-700 px-4 text-sm font-semibold text-white disabled:opacity-50">ค้นหา</button>
+          <button type="button" onClick={customerSearch.submit} disabled={customerSearch.loading || saving} className="rounded-xl bg-indigo-700 px-4 text-sm font-semibold text-white disabled:opacity-50">ค้นหา</button>
         </div>
         {customerSearch.error && <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">{customerSearch.error}</div>}
-        {customerSearch.results.length > 0 && <div className="mt-3 grid gap-2 md:grid-cols-2">{customerSearch.results.map((customer) => <button key={customer.id} type="button" onClick={() => chooseCustomer(customer)} className="rounded-xl border border-slate-200 p-3 text-left hover:border-indigo-300"><div className="font-semibold">{customerLabel(customer)}</div><div className="text-xs text-slate-500">{[customer.phone, customer.email, customer.taxId].filter(Boolean).join(' · ')}</div></button>)}</div>}
+        {customerSearch.results.length > 0 && <div className="mt-3 grid gap-2 md:grid-cols-2">{customerSearch.results.map((customer) => <button key={customer.id} type="button" disabled={saving} onClick={() => chooseCustomer(customer)} className="rounded-xl border border-slate-200 p-3 text-left hover:border-indigo-300 disabled:opacity-50"><div className="font-semibold">{customerLabel(customer)}</div><div className="text-xs text-slate-500">{[customer.phone, customer.email, customer.taxId].filter(Boolean).join(' · ')}</div></button>)}</div>}
       </section>
 
       {customerSearch.selectedCustomer && (
@@ -188,7 +204,7 @@ const DeliveryCreditSettlementCreatePage = () => {
                     <button
                       type="button"
                       onClick={() => (isWholeSaleSelected ? clearWholeSale(sale.id) : selectWholeSale(sale))}
-                      disabled={!isWholeSaleSelected && !canSelectWholeSale}
+                      disabled={saving || (!isWholeSaleSelected && !canSelectWholeSale)}
                       title={!isWholeSaleSelected && !canSelectWholeSale ? 'Customer Money ที่เหลือไม่พอสำหรับตัดยอดทั้งใบ' : undefined}
                       className={`h-10 rounded-xl border px-4 text-sm font-semibold disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400 ${isWholeSaleSelected ? 'border-slate-300 bg-white text-slate-700' : 'border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100'}`}
                     >
@@ -200,13 +216,13 @@ const DeliveryCreditSettlementCreatePage = () => {
                   {sale.lines.map((line) => {
                     const key = lineKey(sale.id, line);
                     const remaining = Number(line.remainingAmount ?? line.lineAmount);
-                    return <div key={key} className="grid gap-3 px-4 py-3 md:grid-cols-[1fr_150px_160px] md:items-center"><div><div className="font-medium text-slate-900">{line.description}</div><div className="text-xs text-slate-500">{line.lineType} · จำนวน {line.quantity} · มูลค่า ฿{money(line.lineAmount)} · เคยตัด ฿{money(line.appliedAmount)}</div></div><div className="text-right text-sm font-semibold text-rose-700">คงเหลือ ฿{money(remaining)}</div><input type="number" min="0" max={Math.min(remaining, sale.outstandingAmount)} step="0.01" value={selected[key]?.amount ?? ''} onChange={(e) => setLineAmount(sale, line, e.target.value)} placeholder="ยอดที่จะตัด" className="h-10 rounded-lg border border-slate-300 px-3 text-right" /></div>;
+                    return <div key={key} className="grid gap-3 px-4 py-3 md:grid-cols-[1fr_150px_160px] md:items-center"><div><div className="font-medium text-slate-900">{line.description}</div><div className="text-xs text-slate-500">{line.lineType} · จำนวน {line.quantity} · มูลค่า ฿{money(line.lineAmount)} · เคยตัด ฿{money(line.appliedAmount)}</div></div><div className="text-right text-sm font-semibold text-rose-700">คงเหลือ ฿{money(remaining)}</div><input disabled={saving} type="number" min="0" max={Math.min(remaining, sale.outstandingAmount)} step="0.01" value={selected[key]?.amount ?? ''} onChange={(e) => setLineAmount(sale, line, e.target.value)} placeholder="ยอดที่จะตัด" className="h-10 rounded-lg border border-slate-300 px-3 text-right disabled:bg-slate-100" /></div>;
                   })}
                 </div>
               </article>
             );
           })}
-          <textarea value={note} onChange={(e) => { invalidateSubmitKey(); setNote(e.target.value); }} maxLength={500} rows={3} placeholder="หมายเหตุการตัดยอด (ถ้ามี)" className="w-full rounded-xl border border-slate-300 p-3" />
+          <textarea disabled={saving} value={note} onChange={(e) => { invalidateSubmitKey(); setNote(e.target.value); }} maxLength={500} rows={3} placeholder="หมายเหตุการตัดยอด (ถ้ามี)" className="w-full rounded-xl border border-slate-300 p-3 disabled:bg-slate-100" />
         </section>
       )}
 

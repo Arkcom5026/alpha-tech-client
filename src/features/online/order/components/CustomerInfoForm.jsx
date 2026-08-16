@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { feedback } from "@/design-system";
 import useCustomerStore from "@/features/customer/store/customerStore";
 
-const CustomerInfoForm = ({ onSubmit, onChange }) => {
+const CustomerInfoForm = ({ onSubmit, onChange, disabled = false }) => {
   const customer = useCustomerStore((state) => state.customer);
   const getMyCustomerProfileOnline = useCustomerStore((state) => state.getMyCustomerProfileOnline);
   const updateCustomerProfileAction = useCustomerStore((state) => state.updateCustomerProfileAction);
@@ -40,7 +40,7 @@ const CustomerInfoForm = ({ onSubmit, onChange }) => {
   }, [customer]);
 
   const handleChange = (e) => {
-    if (savingRef.current) return;
+    if (disabled || savingRef.current) return;
     const updated = { ...form, [e.target.name]: e.target.value };
     setForm(updated);
     setHasChanged(true);
@@ -51,7 +51,7 @@ const CustomerInfoForm = ({ onSubmit, onChange }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (status === "saving" || savingRef.current || !hasChanged) return;
+    if (disabled || status === "saving" || savingRef.current || !hasChanged) return;
 
     const payload = { ...form };
     savingRef.current = true;
@@ -90,13 +90,14 @@ const CustomerInfoForm = ({ onSubmit, onChange }) => {
   };
 
   const saving = status === "saving" || savingRef.current;
+  const interactionBusy = disabled || saving;
 
   return (
     <div className="w-full max-w-md mx-auto bg-white rounded-xl shadow p-6 space-y-4">
       <h2 className="text-xl font-semibold text-center">ข้อมูลลูกค้า</h2>
 
       <form onSubmit={handleSubmit} className="space-y-3">
-        <fieldset disabled={saving} className="space-y-3 disabled:opacity-60">
+        <fieldset disabled={interactionBusy} className="space-y-3 disabled:opacity-60">
           <input
             type="text"
             name="name"
@@ -170,7 +171,7 @@ const CustomerInfoForm = ({ onSubmit, onChange }) => {
         <button
           type="submit"
           className="w-full bg-blue-500 hover:bg-blue-700 text-white py-2 rounded font-medium disabled:opacity-50"
-          disabled={saving || !hasChanged}
+          disabled={interactionBusy || !hasChanged}
         >
           {saving ? "กำลังบันทึก..." : "บันทึกข้อมูล"}
         </button>

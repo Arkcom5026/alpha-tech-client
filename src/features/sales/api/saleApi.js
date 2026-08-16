@@ -2,7 +2,7 @@
 
 import apiClient from '@/utils/apiClient';
 import { submitSaleCompletion } from '../create/api/saleCompletionApi';
-import { runPrintableSalesRequest } from '../history/api/printableRequestCoordinator';
+import { searchPrintableSales as searchPrintableSalesFromHistory } from '../history/api/saleHistoryApi';
 
 // ✅ Policy: ต้องมี try/catch ครอบทุกจุดเสี่ยง (Production)
 // ✅ No console.log/console.error ใน production path
@@ -105,25 +105,8 @@ export const updateCustomer = async (data) => {
   }
 };
 
-export const searchPrintableSales = async (params) => {
-  try {
-    return await runPrintableSalesRequest(params, async (safeParams) => {
-      try {
-        const res = await apiClient.get('/sales/printable', { params: safeParams });
-        return res.data;
-      } catch (err) {
-        const status = err?.response?.status;
-        if (status === 404) {
-          const res2 = await apiClient.get('/sales/printable-sales', { params: safeParams });
-          return res2.data;
-        }
-        throw err;
-      }
-    });
-  } catch (err) {
-    throw attachApiContext(err, 'saleApi.searchPrintableSales');
-  }
-};
+// 🧭 Backward-compatible alias. Printable search authority now lives in saleHistoryApi.
+export const searchPrintableSales = searchPrintableSalesFromHistory;
 
 export const convertOrderOnlineToSale = async (orderOnlineId, stockSelections) => {
   try {

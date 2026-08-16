@@ -1,8 +1,10 @@
 import apiClient from '@/utils/apiClient';
+import { clearPrintableSalesRequestCache } from '../../history/api/printableRequestCoordinator';
 
 export const submitSaleCompletion = async (command) => {
   try {
     const response = await apiClient.post('/sales/complete', command);
+    clearPrintableSalesRequestCache();
     return response.data;
   } catch (error) {
     const payload = error?.response?.data;

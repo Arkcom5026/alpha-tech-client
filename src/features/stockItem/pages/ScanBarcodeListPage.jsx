@@ -3,6 +3,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { feedback } from '@/design-system/feedback';
 import useBarcodeStore from '@/features/barcode/store/barcodeStore';
 import useStockItemReceiveStore from '@/features/stockItem/receive/store/useStockItemReceiveStore';
 import StockItemReceivedResults from '@/features/stockItem/receive/scan-workflow/components/StockItemReceivedResults';
@@ -44,6 +45,7 @@ const ScanBarcodeListPage = () => {
   const refreshTimeoutRef = useRef(null);
   const scanQueueRef = useRef([]);
   const inFlightRef = useRef(false);
+  const editingMutationRef = useRef(false);
 
   const {
     loadBarcodesAction,
@@ -318,39 +320,70 @@ const ScanBarcodeListPage = () => {
   }, [currentExpectedPlaceholder, isSingleProductWorkingGroup, scheduleFocus]);
 
   const handleSaveEditSN = async (row) => {
-    const nextSN = String(editingSN || '').trim();
+    if (editingMutationRef.current) return;
+
+    const receiptIdSnapshot = receiptId;
+    const barcodeReceiptIdSnapshot = row?.id ?? null;
+    const barcodeSnapshot = String(row?.barcode || '').trim();
+    const stockItemIdSnapshot = row?.stockItemId ?? row?.stockItem?.id ?? null;
+    const nextSNSnapshot = String(editingSN || '').trim();
+
+    editingMutationRef.current = true;
     setEditingSubmitting(true);
     try {
-      if (nextSN) {
-        await updateReceivedSNAction({
-          stockItemId: row.stockItemId ?? row.stockItem?.id ?? null,
-          serialNumber: nextSN,
-          barcodeReceiptId: row.id,
-          receiptId,
-        });
-        setPageMessage({ type: 'success', text: 'แก้ไข SN สำเร็จ' });
+      const result = nextSNSnapshot
+        ? await updateReceivedSNAction({
+            stockItemId: stockItemIdSnapshot,
+            serialNumber: nextSNSnapshot,
+            barcodeReceiptId: barcodeReceiptIdSnapshot,
+            receiptId: receiptIdSnapshot,
+          })
+        : await deleteSerialNumberAction(barcodeSnapshot);
+
+      const successText = nextSNSnapshot ? 'แก้ไข SN สำเร็จ' : 'ล้าง SN สำเร็จ';
+      feedback.actionSuccess(
+        successText,
+        `barcode-sn:${barcodeSnapshot || barcodeReceiptIdSnapshot}:${nextSNSnapshot ? 'update' : 'delete'}:success`,
+      );
+
+      if (result?.refreshError) {
+        const partialText = `${successText}แล้ว แต่รีเฟรชรายการบาร์โค้ดล่าสุดไม่สำเร็จ`;
+        setPageMessage({ type: 'warning', text: partialText });
+        feedback.actionError(
+          result.refreshError,
+          partialText,
+          `barcode-sn:${barcodeSnapshot || barcodeReceiptIdSnapshot}:${nextSNSnapshot ? 'update' : 'delete'}:refresh:error`,
+        );
       } else {
-        await deleteSerialNumberAction(row.barcode);
-        await loadBarcodesAction(receiptId);
-        setPageMessage({ type: 'success', text: 'ล้าง SN สำเร็จ' });
+        setPageMessage({ type: 'success', text: successText });
       }
+
       setEditingBarcodeReceiptId(null);
       setEditingSN('');
     } catch (error) {
-      setPageMessage({ type: 'error', text: `แก้ไข SN ไม่สำเร็จ: ${error?.message || 'เกิดข้อผิดพลาด'}` });
+      const actionText = nextSNSnapshot ? 'แก้ไข SN ไม่สำเร็จ' : 'ล้าง SN ไม่สำเร็จ';
+      setPageMessage({ type: 'error', text: `${actionText}: ${error?.message || 'เกิดข้อผิดพลาด'}` });
+      feedback.actionError(
+        error,
+        actionText,
+        `barcode-sn:${barcodeSnapshot || barcodeReceiptIdSnapshot}:${nextSNSnapshot ? 'update' : 'delete'}:error`,
+      );
     } finally {
+      editingMutationRef.current = false;
       setEditingSubmitting(false);
       restoreWorkflowFocus();
     }
   };
 
   const handleStartEditSN = useCallback((row) => {
+    if (editingMutationRef.current) return;
     setEditingBarcodeReceiptId(row.id);
     setEditingSN(row.serialNumber || '');
     scheduleFocus(STOCK_ITEM_FOCUS_TARGET.EDIT_SERIAL);
   }, [scheduleFocus]);
 
   const handleCancelEditSN = useCallback(() => {
+    if (editingMutationRef.current) return;
     setEditingBarcodeReceiptId(null);
     setEditingSN('');
     restoreWorkflowFocus();

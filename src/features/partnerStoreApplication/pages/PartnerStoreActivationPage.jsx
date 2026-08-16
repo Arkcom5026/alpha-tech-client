@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { claimPartnerStoreActivation } from '../api/partnerStoreActivationApi';
 
@@ -12,23 +12,35 @@ export default function PartnerStoreActivationPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [activated, setActivated] = useState(null);
+  const submittingRef = useRef(false);
 
   const submit = async (event) => {
     event.preventDefault();
-    setError('');
-    if (!token) return setError('ลิงก์เปิดใช้งานไม่สมบูรณ์');
-    if (password.length < 8) return setError('รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร');
-    if (password !== confirmPassword) return setError('ยืนยันรหัสผ่านไม่ตรงกัน');
+    if (submitting || submittingRef.current) return;
 
+    const activationToken = token;
+    const nextPassword = password;
+    const nextConfirmPassword = confirmPassword;
+
+    setError('');
+    if (!activationToken) return setError('ลิงก์เปิดใช้งานไม่สมบูรณ์');
+    if (nextPassword.length < 8) return setError('รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร');
+    if (nextPassword !== nextConfirmPassword) return setError('ยืนยันรหัสผ่านไม่ตรงกัน');
+
+    submittingRef.current = true;
     setSubmitting(true);
     try {
-      const response = await claimPartnerStoreActivation({ token, password });
+      const response = await claimPartnerStoreActivation({
+        token: activationToken,
+        password: nextPassword,
+      });
       setActivated(response.data?.data || {});
       setPassword('');
       setConfirmPassword('');
     } catch (requestError) {
       setError(messageFrom(requestError));
     } finally {
+      submittingRef.current = false;
       setSubmitting(false);
     }
   };
@@ -59,11 +71,29 @@ export default function PartnerStoreActivationPage() {
         <form onSubmit={submit} className="mt-6 space-y-4">
           <label className="block text-sm font-bold text-slate-700">
             รหัสผ่านใหม่
-            <input type="password" autoComplete="new-password" value={password} onChange={(event) => setPassword(event.target.value)} className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2.5 font-normal" />
+            <input
+              type="password"
+              autoComplete="new-password"
+              value={password}
+              onChange={(event) => {
+                if (!submittingRef.current) setPassword(event.target.value);
+              }}
+              disabled={submitting}
+              className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2.5 font-normal disabled:cursor-not-allowed disabled:bg-slate-50 disabled:opacity-60"
+            />
           </label>
           <label className="block text-sm font-bold text-slate-700">
             ยืนยันรหัสผ่าน
-            <input type="password" autoComplete="new-password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2.5 font-normal" />
+            <input
+              type="password"
+              autoComplete="new-password"
+              value={confirmPassword}
+              onChange={(event) => {
+                if (!submittingRef.current) setConfirmPassword(event.target.value);
+              }}
+              disabled={submitting}
+              className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2.5 font-normal disabled:cursor-not-allowed disabled:bg-slate-50 disabled:opacity-60"
+            />
           </label>
           <button type="submit" disabled={submitting || !token} className="w-full rounded-xl bg-emerald-600 px-4 py-3 text-sm font-black text-white disabled:opacity-50">
             {submitting ? 'กำลังเปิดใช้งาน…' : 'เปิดใช้งานบัญชี'}

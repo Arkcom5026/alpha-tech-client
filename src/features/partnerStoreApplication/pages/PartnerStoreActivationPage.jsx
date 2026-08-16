@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { feedback } from '@/design-system/feedback';
 import { claimPartnerStoreActivation } from '../api/partnerStoreActivationApi';
@@ -14,10 +14,23 @@ export default function PartnerStoreActivationPage() {
   const [error, setError] = useState('');
   const [activated, setActivated] = useState(null);
   const submittingRef = useRef(false);
+  const tokenRef = useRef(token);
+  const requestRef = useRef(0);
+
+  useEffect(() => {
+    tokenRef.current = token;
+    requestRef.current += 1;
+    submittingRef.current = false;
+    setSubmitting(false);
+    setError('');
+    setActivated(null);
+    setPassword('');
+    setConfirmPassword('');
+  }, [token]);
 
   const submit = async (event) => {
     event.preventDefault();
-    if (submitting || submittingRef.current) return;
+    if (submittingRef.current) return;
 
     const activationToken = token;
     const nextPassword = password;
@@ -28,31 +41,47 @@ export default function PartnerStoreActivationPage() {
     if (nextPassword.length < 8) return setError('รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร');
     if (nextPassword !== nextConfirmPassword) return setError('ยืนยันรหัสผ่านไม่ตรงกัน');
 
+    const requestId = requestRef.current + 1;
+    requestRef.current = requestId;
     submittingRef.current = true;
     setSubmitting(true);
+
     try {
       const response = await claimPartnerStoreActivation({
         token: activationToken,
         password: nextPassword,
       });
+
+      if (tokenRef.current !== activationToken || requestRef.current !== requestId) {
+        feedback.actionError(
+          new Error('Activation context changed after persistence'),
+          'เปิดใช้งานบัญชีสำเร็จแล้ว แต่ลิงก์เปิดใช้งานบนหน้าปัจจุบันเปลี่ยนไป กรุณาเข้าสู่ระบบด้วยบัญชีที่เพิ่งเปิดใช้งาน',
+          `partner-store:activation:${requestId}:context-changed:error`,
+        );
+        return;
+      }
+
       setActivated(response.data?.data || {});
       setPassword('');
       setConfirmPassword('');
       feedback.actionSuccess(
         'เปิดใช้งานบัญชีเจ้าของร้านเรียบร้อยแล้ว',
-        'partner-store:activation:success',
+        `partner-store:activation:${requestId}:success`,
       );
     } catch (requestError) {
+      if (tokenRef.current !== activationToken || requestRef.current !== requestId) return;
       const message = messageFrom(requestError);
       setError(message);
       feedback.actionError(
         requestError,
         message,
-        'partner-store:activation:error',
+        `partner-store:activation:${requestId}:error`,
       );
     } finally {
-      submittingRef.current = false;
-      setSubmitting(false);
+      if (tokenRef.current === activationToken && requestRef.current === requestId) {
+        submittingRef.current = false;
+        setSubmitting(false);
+      }
     }
   };
 
@@ -68,6 +97,8 @@ export default function PartnerStoreActivationPage() {
       </main>
     );
   }
+
+  const mutationBusy = submitting || submittingRef.current;
 
   return (
     <main className="min-h-screen bg-slate-50 px-4 py-12">
@@ -89,7 +120,7 @@ export default function PartnerStoreActivationPage() {
               onChange={(event) => {
                 if (!submittingRef.current) setPassword(event.target.value);
               }}
-              disabled={submitting}
+              disabled={mutationBusy}
               className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2.5 font-normal disabled:cursor-not-allowed disabled:bg-slate-50 disabled:opacity-60"
             />
           </label>
@@ -102,12 +133,12 @@ export default function PartnerStoreActivationPage() {
               onChange={(event) => {
                 if (!submittingRef.current) setConfirmPassword(event.target.value);
               }}
-              disabled={submitting}
+              disabled={mutationBusy}
               className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2.5 font-normal disabled:cursor-not-allowed disabled:bg-slate-50 disabled:opacity-60"
             />
           </label>
-          <button type="submit" disabled={submitting || !token} className="w-full rounded-xl bg-emerald-600 px-4 py-3 text-sm font-black text-white disabled:opacity-50">
-            {submitting ? 'กำลังเปิดใช้งาน…' : 'เปิดใช้งานบัญชี'}
+          <button type="submit" disabled={mutationBusy || !token} className="w-full rounded-xl bg-emerald-600 px-4 py-3 text-sm font-black text-white disabled:opacity-50">
+            {mutationBusy ? 'กำลังเปิดใช้งาน…' : 'เปิดใช้งานบัญชี'}
           </button>
         </form>
       </section>

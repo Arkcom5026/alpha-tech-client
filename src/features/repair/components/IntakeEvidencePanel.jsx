@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { feedback } from '@/design-system';
 import repairApi from '../api/repairApi';
 import MobileIntakeEvidenceFields from './MobileIntakeEvidenceFields';
@@ -49,8 +49,11 @@ const IntakeEvidencePanel = ({ repairJobId, warning, retryDraft, onSaved }) => {
   const [draft, setDraft] = useState(() => retryPending ? retryDraft : emptyDraft);
   const [editing, setEditing] = useState(retryPending);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [retryNotice, setRetryNotice] = useState(warning || '');
+  const savingRef = useRef(false);
+  const interactionLocked = loading || saving;
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -69,13 +72,13 @@ const IntakeEvidencePanel = ({ repairJobId, warning, retryDraft, onSaved }) => {
   }, [load]);
 
   const beginEdit = () => {
-    if (loading) return;
+    if (interactionLocked) return;
     setDraft(draftFromEvidence(evidence));
     setEditing(true);
   };
 
   const cancelEdit = () => {
-    if (loading) return;
+    if (interactionLocked) return;
     setDraft(emptyDraft);
     setEditing(false);
     setRetryNotice('');
@@ -88,23 +91,29 @@ const IntakeEvidencePanel = ({ repairJobId, warning, retryDraft, onSaved }) => {
   );
 
   const save = async () => {
-    if (loading || !canSave) return;
-    setLoading(true);
+    if (loading || saving || savingRef.current || !canSave) return;
+
+    const repairJobIdSnapshot = repairJobId;
+    const draftSnapshot = { ...draft, photos: [...draft.photos] };
+    const shouldWriteConsentSnapshot = consentChanged(draftSnapshot, evidence);
+    const payload = shouldWriteConsentSnapshot
+      ? draftSnapshot
+      : { ...draftSnapshot, confirmed: false };
+
+    savingRef.current = true;
+    setSaving(true);
     setError('');
 
     let saved = null;
     try {
-      const payload = shouldWriteConsent
-        ? draft
-        : { ...draft, confirmed: false };
-      saved = await repairApi.saveIntakeEvidence(repairJobId, payload);
+      saved = await repairApi.saveIntakeEvidence(repairJobIdSnapshot, payload);
       setEvidence(saved);
       setDraft(emptyDraft);
       setEditing(false);
       setRetryNotice('');
       feedback.actionSuccess(
         'บันทึกหลักฐานการรับเครื่องเรียบร้อยแล้ว',
-        `repair:intake-evidence:${repairJobId}:save:success`,
+        `repair:intake-evidence:${repairJobIdSnapshot}:save:success`,
       );
     } catch (saveError) {
       const message = saveError?.message || 'บันทึกหลักฐานการรับเครื่องไม่สำเร็จ';
@@ -112,10 +121,11 @@ const IntakeEvidencePanel = ({ repairJobId, warning, retryDraft, onSaved }) => {
       feedback.actionError(
         saveError,
         message,
-        `repair:intake-evidence:${repairJobId}:save:error`,
+        `repair:intake-evidence:${repairJobIdSnapshot}:save:error`,
       );
     } finally {
-      setLoading(false);
+      savingRef.current = false;
+      setSaving(false);
     }
 
     if (!saved) return;
@@ -123,8 +133,13 @@ const IntakeEvidencePanel = ({ repairJobId, warning, retryDraft, onSaved }) => {
     try {
       await onSaved?.(saved);
     } catch (reloadError) {
-      setError('บันทึกหลักฐานสำเร็จแล้ว แต่ยังรีเฟรชข้อมูลใบงานไม่สำเร็จ กรุณากดโหลดใหม่');
-      feedback.warning?.('บันทึกหลักฐานแล้ว แต่รีเฟรชข้อมูลใบงานไม่สำเร็จ');
+      const message = 'บันทึกหลักฐานสำเร็จแล้ว แต่ยังรีเฟรชข้อมูลใบงานไม่สำเร็จ กรุณากดโหลดใหม่';
+      setError(message);
+      feedback.actionError(
+        reloadError,
+        'บันทึกหลักฐานสำเร็จแล้ว แต่ยังรีเฟรชข้อมูลใบงานไม่สำเร็จ',
+        `repair:intake-evidence:${repairJobIdSnapshot}:refresh:error`,
+      );
     }
   };
 
@@ -142,7 +157,7 @@ const IntakeEvidencePanel = ({ repairJobId, warning, retryDraft, onSaved }) => {
         </div>
         <button
           type="button"
-          disabled={loading}
+          disabled={interactionLocked}
           onClick={editing ? cancelEdit : beginEdit}
           className="min-h-10 rounded-xl border border-emerald-300 px-3 text-sm font-black text-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
         >
@@ -178,16 +193,16 @@ const IntakeEvidencePanel = ({ repairJobId, warning, retryDraft, onSaved }) => {
 
       {editing ? (
         <div className="mt-4 space-y-3">
-          <fieldset disabled={loading} className="disabled:opacity-60">
+          <fieldset disabled={interactionLocked} className="disabled:opacity-60">
             <MobileIntakeEvidenceFields value={draft} onChange={setDraft} />
           </fieldset>
           <button
             type="button"
-            disabled={loading || !canSave}
+            disabled={interactionLocked || !canSave}
             onClick={save}
             className="min-h-12 w-full rounded-xl bg-emerald-700 px-4 font-black text-white disabled:cursor-not-allowed disabled:opacity-40"
           >
-            {loading ? 'กำลังบันทึก...' : 'บันทึกหลักฐานดิจิทัล'}
+            {saving ? 'กำลังบันทึก...' : 'บันทึกหลักฐานดิจิทัล'}
           </button>
         </div>
       ) : (

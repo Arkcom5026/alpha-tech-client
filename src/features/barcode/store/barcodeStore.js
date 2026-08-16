@@ -57,7 +57,7 @@ const markBarcodesAsPrinted = async (purchaseOrderReceiptId) => {
 };
 
 const searchReprintReceipts = async (opts = {}) => {
-  const result = await searchReprintReceipts(opts);
+  const result = await searchReceiptsForReprint(opts);
   return Array.isArray(result?.receipts) ? result.receipts : [];
 };
 

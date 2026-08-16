@@ -49,6 +49,9 @@ jobs:
     - name: Partner Store operational readiness UI contract
       run: npx vitest run tests/partner-store-operational-readiness-ui-v2.contract.test.js
 
+    - name: Home startup performance contracts
+      run: npx vitest run tests/home-startup-performance.contract.test.js src/features/system/operational-status/operationalStatusBadge.contract.test.js
+
     - name: UI modernization full-repository guard
       run: npm run guard:ui-modernization
 

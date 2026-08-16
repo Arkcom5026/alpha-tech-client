@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { decidePublicRepairEstimate } from '../api/repairTrackingPublicApi';
-import { ConfirmActionDialog, InlineFeedback } from '@/design-system';
+import { ConfirmActionDialog, InlineFeedback, feedback } from '@/design-system';
 
 const money = (value) =>
   new Intl.NumberFormat('th-TH', {
@@ -18,6 +18,7 @@ const EstimateDecisionCard = ({ token, approval, onChanged }) => {
   if (!approval) return null;
 
   const decide = async (decision) => {
+    if (state.loading || !decision) return;
     if (!confirmedByName.trim()) {
       setState({ loading: false, error: 'กรุณาระบุชื่อผู้ยืนยัน' });
       return;
@@ -33,8 +34,18 @@ const EstimateDecisionCard = ({ token, approval, onChanged }) => {
       onChanged(updated);
       setPendingDecision(null);
       setState({ loading: false, error: '' });
+      feedback.actionSuccess(
+        decision === 'APPROVED' ? 'อนุมัติราคาประเมินเรียบร้อยแล้ว' : 'ส่งผลไม่อนุมัติราคาประเมินเรียบร้อยแล้ว',
+        `repair-estimate:${approval.id}:${decision.toLowerCase()}:success`,
+      );
     } catch (error) {
-      setState({ loading: false, error: error.message });
+      const message = error?.response?.data?.message || error?.message || 'บันทึกผลการพิจารณาราคาประเมินไม่สำเร็จ';
+      setState({ loading: false, error: message });
+      feedback.actionError(
+        error,
+        message,
+        `repair-estimate:${approval.id}:${String(decision).toLowerCase()}:error`,
+      );
     }
   };
 
@@ -77,7 +88,8 @@ const EstimateDecisionCard = ({ token, approval, onChanged }) => {
         <input
           value={confirmedByName}
           onChange={(event) => setConfirmedByName(event.target.value)}
-          className="min-h-12 w-full rounded-xl border border-amber-200 bg-white px-4"
+          disabled={state.loading}
+          className="min-h-12 w-full rounded-xl border border-amber-200 bg-white px-4 disabled:opacity-60"
           placeholder="พิมพ์ชื่อผู้อนุมัติหรือผู้ส่งซ่อม"
         />
       </label>
@@ -87,7 +99,8 @@ const EstimateDecisionCard = ({ token, approval, onChanged }) => {
           rows={2}
           value={customerNote}
           onChange={(event) => setCustomerNote(event.target.value)}
-          className="w-full rounded-xl border border-amber-200 bg-white px-4 py-3"
+          disabled={state.loading}
+          className="w-full rounded-xl border border-amber-200 bg-white px-4 py-3 disabled:opacity-60"
           placeholder="ไม่บังคับ"
         />
       </label>

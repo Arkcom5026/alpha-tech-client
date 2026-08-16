@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { feedback } from '@/design-system';
 import repairApi from '../api/repairApi';
 
 const RepairHandoverPanel = ({ repairJobId, job, onWorkflowAction, onJobReload }) => {
@@ -8,6 +9,7 @@ const RepairHandoverPanel = ({ repairJobId, job, onWorkflowAction, onJobReload }
   const [handover, setHandover] = useState(null);
   const [form, setForm] = useState({ receiverName: defaultReceiverName, handoverConfirmed: false, note: '' });
   const [state, setState] = useState({ loading: false, saving: false, error: null });
+  const savingRef = useRef(false);
 
   const load = () => {
     if (!handoverRelevant) return;
@@ -32,15 +34,20 @@ const RepairHandoverPanel = ({ repairJobId, job, onWorkflowAction, onJobReload }
   if (!handoverRelevant) return null;
 
   const finalizeAndClose = async () => {
-    if (state.saving) return;
+    if (state.saving || savingRef.current) return;
 
+    const repairJobIdSnapshot = repairJobId;
+    const formSnapshot = { ...form };
+    const handoverAlreadyConfirmed = Boolean(handover?.customerConfirmedAt);
+
+    savingRef.current = true;
     setState((v) => ({ ...v, saving: true, error: null }));
     let handoverFinalized = false;
     try {
-      const finalized = await repairApi.finalizeHandover(repairJobId, {
-        receiverName: handover?.customerConfirmedAt ? undefined : form.receiverName,
-        handoverConfirmed: form.handoverConfirmed,
-        note: form.note,
+      const finalized = await repairApi.finalizeHandover(repairJobIdSnapshot, {
+        receiverName: handoverAlreadyConfirmed ? undefined : formSnapshot.receiverName,
+        handoverConfirmed: formSnapshot.handoverConfirmed,
+        note: formSnapshot.note,
       });
       handoverFinalized = true;
       setHandover(finalized);
@@ -55,14 +62,40 @@ const RepairHandoverPanel = ({ repairJobId, job, onWorkflowAction, onJobReload }
           throw new Error('ส่งมอบเครื่องสำเร็จแล้ว แต่ยังปิดใบงานไม่สำเร็จ กรุณาลองปิดใบงานอีกครั้ง');
         }
       } else {
-        await onJobReload?.();
+        try {
+          await onJobReload?.();
+        } catch (refreshError) {
+          const message = 'ส่งมอบเครื่องสำเร็จแล้ว แต่รีเฟรชใบงานล่าสุดไม่สำเร็จ';
+          setState({ loading: false, saving: false, error: message });
+          feedback.actionError(
+            refreshError,
+            message,
+            `repair:handover:${repairJobIdSnapshot}:refresh:error`,
+          );
+          return;
+        }
       }
+
       setState({ loading: false, saving: false, error: null });
+      feedback.actionSuccess(
+        'ส่งมอบเครื่องและปิดใบงานเรียบร้อยแล้ว',
+        `repair:handover:${repairJobIdSnapshot}:finalize-close:success`,
+      );
     } catch (error) {
       const message = handoverFinalized
         ? error?.message || 'ส่งมอบเครื่องสำเร็จแล้ว แต่ปิดใบงานไม่สำเร็จ'
         : error?.message || 'ส่งมอบเครื่องไม่สำเร็จ';
       setState({ loading: false, saving: false, error: message });
+      feedback.actionError(
+        error,
+        message,
+        handoverFinalized
+          ? `repair:handover:${repairJobIdSnapshot}:close-after-finalize:error`
+          : `repair:handover:${repairJobIdSnapshot}:finalize:error`,
+      );
+    } finally {
+      savingRef.current = false;
+      setState((current) => ({ ...current, saving: false }));
     }
   };
 
@@ -119,7 +152,7 @@ const RepairHandoverPanel = ({ repairJobId, job, onWorkflowAction, onJobReload }
             />
           ) : null}
 
-          <label className="flex min-h-14 items-start gap-3 rounded-xl border border-slate-200 px-4 py-3 font-bold">
+          <label className={`flex min-h-14 items-start gap-3 rounded-xl border border-slate-200 px-4 py-3 font-bold ${state.saving ? 'opacity-60' : ''}`}>
             <input
               type="checkbox"
               checked={form.handoverConfirmed}

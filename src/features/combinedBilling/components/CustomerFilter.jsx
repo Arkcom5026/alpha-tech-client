@@ -9,14 +9,18 @@ const CustomerFilter = ({ onSelect }) => {
   const {
     loadCustomersWithPendingSalesAction,
     setCustomer,
+    loading,
   } = useCombinedBillingStore();
 
   const handleSelect = (cust) => {
+    if (loading) return;
     setCustomer(cust);
     if (onSelect) onSelect(cust);
   };
 
   const handleSearch = async () => {
+    if (loading) return;
+    setError('');
     try {
       const loadedCustomers = await loadCustomersWithPendingSalesAction();
 
@@ -40,13 +44,15 @@ const CustomerFilter = ({ onSelect }) => {
   };
 
   const handleClear = () => {
+    if (loading) return;
     setCustomer(null);
     setSearchText('');
     setFilteredCustomers([]);
+    setError('');
   };
 
   const handleKeyDown = (e) => {
-    if (e.key === 'Enter') {
+    if (e.key === 'Enter' && !loading) {
       handleSearch();
     }
   };
@@ -59,19 +65,24 @@ const CustomerFilter = ({ onSelect }) => {
           type="text"
           placeholder="ค้นหาชื่อลูกค้า เบอร์โทร หรือหน่วยงาน"
           value={searchText}
+          disabled={loading}
           onChange={(e) => setSearchText(e.target.value)}
           onKeyDown={handleKeyDown}
-          className="border rounded-md px-4 py-2 w-full text-lg"
+          className="border rounded-md px-4 py-2 w-full text-lg disabled:cursor-not-allowed disabled:bg-slate-100"
         />
         <button
+          type="button"
+          disabled={loading}
           onClick={handleSearch}
-          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-lg"
+          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-lg disabled:cursor-not-allowed disabled:opacity-50"
         >
-          ค้นหา
+          {loading ? 'กำลังโหลด...' : 'ค้นหา'}
         </button>
         <button
+          type="button"
+          disabled={loading}
           onClick={handleClear}
-          className="px-4 py-2 bg-gray-300 hover:bg-gray-400 rounded text-black text-lg"
+          className="px-4 py-2 bg-gray-300 hover:bg-gray-400 rounded text-black text-lg disabled:cursor-not-allowed disabled:opacity-50"
         >
           ล้าง
         </button>
@@ -80,10 +91,12 @@ const CustomerFilter = ({ onSelect }) => {
 
       <div className="space-y-2">
         {filteredCustomers.map((cust) => (
-          <div
+          <button
+            type="button"
             key={cust.id}
+            disabled={loading}
             onClick={() => handleSelect(cust)}
-            className="border border-gray-300 rounded p-3 cursor-pointer hover:bg-blue-50"
+            className="block w-full border border-gray-300 rounded p-3 text-left cursor-pointer hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-60"
           >
             <p><strong>หน่วยงาน:</strong> {cust.companyName}</p>
             <p><strong>ชื่อ:</strong> {cust.name}</p>
@@ -91,7 +104,7 @@ const CustomerFilter = ({ onSelect }) => {
             <p><strong>ประเภท:</strong> {cust.customerType}</p>
             <p><strong>อีเมล:</strong> {cust.email || '-'}</p>
             <p><strong>ที่อยู่:</strong> {cust.address || '-'}</p>
-          </div>
+          </button>
         ))}
         {filteredCustomers.length === 0 && <p className="text-gray-600">ไม่พบลูกค้าที่ตรงกับคำค้น</p>}
       </div>

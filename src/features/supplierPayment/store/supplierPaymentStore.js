@@ -97,23 +97,30 @@ const useSupplierPaymentStore = create((set, get) => ({
     }
   },
 
-  fetchAdvancePaymentsBySupplierAction: async (supplierId) => {
-    if (!supplierId) return;
+  fetchAdvancePaymentsBySupplierAction: async (supplierId, options = {}) => {
+    if (!supplierId) return [];
+    const throwOnError = options?.throwOnError === true;
     try {
       const data = await getAdvancePaymentsBySupplier(supplierId);
+      const payments = Array.isArray(data) ? data : [];
       set((state) => ({
-        advancePayments: Array.isArray(data) ? data : [],
+        advancePayments: payments,
         advancePaymentsBySupplier: {
           ...state.advancePaymentsBySupplier,
-          [supplierId]: Array.isArray(data) ? data : [],
+          [supplierId]: payments,
         },
-        selectedSupplier: data?.[0]?.supplier || state.selectedSupplier || null,
+        selectedSupplier: payments[0]?.supplier || state.selectedSupplier || null,
+        supplierPaymentError: null,
       }));
+      return payments;
     } catch (err) {
-      console.error('❌ [fetchAdvancePaymentsBySupplierAction] error:', err);
+      const message = err?.response?.data?.message || err?.message || 'ไม่สามารถโหลดประวัติการชำระเงินล่วงหน้า Supplier ได้';
       set((state) => ({
         advancePaymentsBySupplier: { ...state.advancePaymentsBySupplier, [supplierId]: [] },
+        supplierPaymentError: message,
       }));
+      if (throwOnError) throw err;
+      return [];
     }
   },
 

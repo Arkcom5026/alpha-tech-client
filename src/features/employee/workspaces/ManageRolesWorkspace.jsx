@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ConfirmActionDialog } from '@/design-system/composites';
 import { feedback } from '@/design-system';
 import { useAuthStore } from '@/features/auth/store/authStore.js';
@@ -47,9 +47,10 @@ export default function ManageRolesPage() {
   const [pendingLifecycle, setPendingLifecycle] = useState(null);
   const [changingRole, setChangingRole] = useState(false);
   const [changingEmployeeId, setChangingEmployeeId] = useState(null);
+  const mutationRef = useRef(null);
 
   const limit = 20;
-  const mutating = changingRole || Boolean(changingEmployeeId);
+  const mutating = changingRole || Boolean(changingEmployeeId) || Boolean(mutationRef.current);
   const interactionLocked = mutating || Boolean(pending) || Boolean(pendingLifecycle);
 
   const filtered = useMemo(() => {
@@ -115,21 +116,29 @@ export default function ManageRolesPage() {
   };
 
   const confirmRoleChange = async () => {
-    if (!pending?.employee || mutating) return;
-    const target = pending;
+    if (!pending?.employee || mutating || mutationRef.current) return;
+    const target = {
+      employeeId: Number(pending.employee.id),
+      userId: Number(pending.employee.userId),
+      nextRole: pending.nextRole,
+    };
+    mutationRef.current = { type: 'role', employeeId: target.employeeId };
     try {
       setChangingRole(true);
       setError('');
-      await updateUserRole(target.employee.userId, target.nextRole);
+      await updateUserRole(target.userId, target.nextRole);
       setAllItems((items) => items.map((employee) =>
-        employee.id === target.employee.id ? { ...employee, role: target.nextRole } : employee
+        employee.id === target.employeeId ? { ...employee, role: target.nextRole } : employee
       ));
       setPending(null);
-      feedback.actionSuccess(`เปลี่ยน Role เป็น ${target.nextRole} เรียบร้อยแล้ว`, 'employee:role:update:success');
+      feedback.actionSuccess(`เปลี่ยน Role เป็น ${target.nextRole} เรียบร้อยแล้ว`, `employee:${target.employeeId}:role:update:success`);
     } catch (err) {
       setError(err?.response?.data?.error?.message || err?.response?.data?.message || err?.message || 'เปลี่ยนสิทธิ์ไม่สำเร็จ');
-      feedback.actionError(err, 'เปลี่ยน Role พนักงานไม่สำเร็จ', 'employee:role:update:error');
+      feedback.actionError(err, 'เปลี่ยน Role พนักงานไม่สำเร็จ', `employee:${target.employeeId}:role:update:error`);
     } finally {
+      if (mutationRef.current?.type === 'role' && mutationRef.current?.employeeId === target.employeeId) {
+        mutationRef.current = null;
+      }
       setChangingRole(false);
     }
   };
@@ -145,24 +154,30 @@ export default function ManageRolesPage() {
   const confirmLifecycleChange = async () => {
     const employee = pendingLifecycle?.employee;
     const nextActive = pendingLifecycle?.nextActive;
-    if (!employee || typeof nextActive !== 'boolean' || mutating) return;
+    if (!employee || typeof nextActive !== 'boolean' || mutating || mutationRef.current) return;
 
-    const actionText = nextActive ? 'เปิดใช้งาน' : 'ระงับการใช้งาน';
+    const employeeId = Number(employee.id);
+    const nextActiveSnapshot = Boolean(nextActive);
+    const actionText = nextActiveSnapshot ? 'เปิดใช้งาน' : 'ระงับการใช้งาน';
+    mutationRef.current = { type: 'lifecycle', employeeId };
     try {
-      setChangingEmployeeId(employee.id);
+      setChangingEmployeeId(employeeId);
       setError('');
-      await setEmployeeActive(employee.id, nextActive);
+      await setEmployeeActive(employeeId, nextActiveSnapshot);
       setAllItems((items) => items.map((item) =>
-        item.id === employee.id
-          ? { ...item, status: nextActive ? 'active' : 'inactive', active: nextActive }
+        item.id === employeeId
+          ? { ...item, status: nextActiveSnapshot ? 'active' : 'inactive', active: nextActiveSnapshot }
           : item
       ));
       setPendingLifecycle(null);
-      feedback.actionSuccess(`${actionText}พนักงานเรียบร้อยแล้ว`, `employee:role-lifecycle:${nextActive ? 'activate' : 'suspend'}:success`);
+      feedback.actionSuccess(`${actionText}พนักงานเรียบร้อยแล้ว`, `employee:${employeeId}:role-lifecycle:${nextActiveSnapshot ? 'activate' : 'suspend'}:success`);
     } catch (err) {
       setError(err?.response?.data?.error?.message || err?.response?.data?.message || err?.message || 'เปลี่ยนสถานะพนักงานไม่สำเร็จ');
-      feedback.actionError(err, `${actionText}พนักงานไม่สำเร็จ`, `employee:role-lifecycle:${nextActive ? 'activate' : 'suspend'}:error`);
+      feedback.actionError(err, `${actionText}พนักงานไม่สำเร็จ`, `employee:${employeeId}:role-lifecycle:${nextActiveSnapshot ? 'activate' : 'suspend'}:error`);
     } finally {
+      if (mutationRef.current?.type === 'lifecycle' && mutationRef.current?.employeeId === employeeId) {
+        mutationRef.current = null;
+      }
       setChangingEmployeeId(null);
     }
   };

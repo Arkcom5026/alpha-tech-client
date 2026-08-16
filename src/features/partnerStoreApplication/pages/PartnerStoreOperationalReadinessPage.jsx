@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
 import { feedback } from '@/design-system/feedback';
 import {
@@ -22,21 +22,40 @@ export default function PartnerStoreOperationalReadinessPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const submittingRef = useRef(false);
+  const shopSlugRef = useRef(shopSlug);
+  const loadRequestRef = useRef(0);
+  shopSlugRef.current = shopSlug;
 
-  const load = async () => {
+  const load = useCallback(async () => {
+    const shopSlugSnapshot = String(shopSlug || '');
+    const requestId = ++loadRequestRef.current;
+    const isCurrentRequest = () => (
+      loadRequestRef.current === requestId
+      && String(shopSlugRef.current || '') === shopSlugSnapshot
+    );
+
     setLoading(true);
     setError('');
     try {
       const response = await getPartnerStoreOperationalReadiness();
-      setData(response.data?.data || null);
+      if (!isCurrentRequest()) return { ok: false, stale: true };
+      const nextData = response.data?.data || null;
+      setData(nextData);
+      return { ok: true, data: nextData };
     } catch (requestError) {
-      setError(messageFrom(requestError));
+      if (!isCurrentRequest()) return { ok: false, stale: true, error: requestError };
+      const loadMessage = messageFrom(requestError);
+      setError(loadMessage);
+      return { ok: false, error: requestError, message: loadMessage };
     } finally {
-      setLoading(false);
+      if (isCurrentRequest()) setLoading(false);
     }
-  };
+  }, [shopSlug]);
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    setData(null);
+    load();
+  }, [load]);
 
   if (loading) {
     return <main className="flex min-h-screen items-center justify-center bg-slate-50 text-sm font-bold text-slate-500">กำลังตรวจสอบความพร้อมร้าน…</main>;
@@ -60,7 +79,8 @@ export default function PartnerStoreOperationalReadinessPage() {
     if (submitting || submittingRef.current) return;
 
     const readinessConfirmed = Boolean(assessment.allReady);
-    const destinationSlug = canonicalSlug;
+    const routeSlugSnapshot = String(shopSlug || '');
+    const destinationSlug = String(canonicalSlug || routeSlugSnapshot);
     if (!readinessConfirmed) {
       setError('ร้านยังมีรายการที่ต้องแก้ไขก่อนรับรองความพร้อม');
       return;
@@ -75,6 +95,16 @@ export default function PartnerStoreOperationalReadinessPage() {
         'รับรองความพร้อมร้านเรียบร้อยแล้ว',
         `partner-store:operational-readiness:${destinationSlug}:certify:success`,
       );
+
+      if (String(shopSlugRef.current || '') !== routeSlugSnapshot) {
+        feedback.actionError(
+          new Error('Operational readiness route context changed after certification'),
+          'รับรองความพร้อมร้านสำเร็จแล้ว แต่หน้าปัจจุบันเปลี่ยนไปเป็นร้านอื่น จึงไม่ได้เปลี่ยนหน้าอัตโนมัติ',
+          `partner-store:operational-readiness:${destinationSlug}:certify:context-changed:error`,
+        );
+        return;
+      }
+
       navigate(`/${destinationSlug}/pos/dashboard`, { replace: true });
     } catch (requestError) {
       const mutationMessage = messageFrom(requestError);
@@ -83,13 +113,17 @@ export default function PartnerStoreOperationalReadinessPage() {
         mutationMessage,
         `partner-store:operational-readiness:${destinationSlug}:certify:error`,
       );
-      await load();
-      setError(mutationMessage);
+      if (String(shopSlugRef.current || '') === routeSlugSnapshot) {
+        await load();
+        setError(mutationMessage);
+      }
     } finally {
       submittingRef.current = false;
       setSubmitting(false);
     }
   };
+
+  const mutationBusy = submitting || submittingRef.current;
 
   return (
     <main className="min-h-screen bg-slate-50 px-4 py-10">
@@ -126,10 +160,10 @@ export default function PartnerStoreOperationalReadinessPage() {
         <button
           type="button"
           onClick={certify}
-          disabled={submitting || !assessment.allReady}
+          disabled={mutationBusy || !assessment.allReady}
           className="mt-6 w-full rounded-xl bg-emerald-600 px-4 py-3 text-sm font-black text-white disabled:cursor-not-allowed disabled:bg-slate-300"
         >
-          {submitting ? 'กำลังรับรอง…' : 'รับรองความพร้อมและเข้าสู่ POS'}
+          {mutationBusy ? 'กำลังรับรอง…' : 'รับรองความพร้อมและเข้าสู่ POS'}
         </button>
 
         {!assessment.allReady && (

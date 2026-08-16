@@ -1,4 +1,3 @@
-
 // src/features/productProfile/store/productProfileStore.js
 import { create } from 'zustand';
 import {
@@ -11,7 +10,6 @@ import {
 import { parseApiError } from '@/utils/uiHelpers';
 
 const useProductProfileStore = create((set, get) => ({
-  // ---------- State (list + filters + paging) ----------
   items: [],
   page: 1,
   limit: 20,
@@ -19,7 +17,6 @@ const useProductProfileStore = create((set, get) => ({
   totalPages: 1,
   search: '',
   includeInactive: false,
-  // ❌ ProductProfile ไม่ผูกกับ Category/ProductType ตาม BestLine
 
   current: null,
   isLoading: false,
@@ -52,15 +49,15 @@ const useProductProfileStore = create((set, get) => ({
         return undefined;
       };
 
-      let items = pick(payload, ['items','rows','results','list','data']) ?? (Array.isArray(payload) ? payload : []);
+      let items = pick(payload, ['items', 'rows', 'results', 'list', 'data']) ?? (Array.isArray(payload) ? payload : []);
       if (!Array.isArray(items) && Array.isArray(payload?.data)) items = payload.data;
 
       const total = Number(
-        pick(payload, ['total','count','meta.total','pagination.total']) ??
+        pick(payload, ['total', 'count', 'meta.total', 'pagination.total']) ??
         (Array.isArray(items) ? items.length : 0)
       );
       const totalPages = Number(
-        pick(payload, ['totalPages','pages','meta.totalPages','pagination.totalPages']) ??
+        pick(payload, ['totalPages', 'pages', 'meta.totalPages', 'pagination.totalPages']) ??
         (total && limit ? Math.ceil(total / Number(limit)) : 1)
       );
 
@@ -82,7 +79,6 @@ const useProductProfileStore = create((set, get) => ({
       const res = await getProductProfileById(id);
       const payload = res?.data ?? res;
 
-
       const pick = (obj, paths) => {
         for (const p of paths) {
           try {
@@ -95,7 +91,7 @@ const useProductProfileStore = create((set, get) => ({
         return undefined;
       };
 
-      let entity = pick(payload, ['item','profile','productProfile','result','record','data']);
+      let entity = pick(payload, ['item', 'profile', 'productProfile', 'result', 'record', 'data']);
       if (!entity && Array.isArray(payload)) entity = payload[0];
       if (!entity && payload && typeof payload === 'object' && !Array.isArray(payload)) entity = payload;
 
@@ -113,45 +109,50 @@ const useProductProfileStore = create((set, get) => ({
   },
 
   createProfileAction: async (payload) => {
+    if (get().isSubmitting) return null;
     set({ isSubmitting: true, error: null });
     try {
       const created = await createProductProfile(payload);
-      set({ isSubmitting: false });
       await get().fetchListAction();
       return created?.data ?? created;
     } catch (err) {
-      set({ isSubmitting: false, error: parseApiError(err) });
+      set({ error: parseApiError(err) });
       throw err;
+    } finally {
+      set({ isSubmitting: false });
     }
   },
 
   updateProfileAction: async (id, payload) => {
+    if (get().isSubmitting) return null;
     set({ isSubmitting: true, error: null });
     try {
       const updated = await updateProductProfile(id, payload);
-      set({ isSubmitting: false });
       await get().fetchListAction();
       return updated?.data ?? updated;
     } catch (err) {
-      set({ isSubmitting: false, error: parseApiError(err) });
+      set({ error: parseApiError(err) });
       throw err;
+    } finally {
+      set({ isSubmitting: false });
     }
   },
 
   deleteProfileAction: async (id) => {
+    if (get().isSubmitting) return false;
     set({ isSubmitting: true, error: null });
     try {
       await deleteProductProfile(id);
-      set({ isSubmitting: false });
       await get().fetchListAction();
       return true;
     } catch (err) {
-      set({ isSubmitting: false, error: parseApiError(err) });
+      set({ error: parseApiError(err) });
       throw err;
+    } finally {
+      set({ isSubmitting: false });
     }
   },
 
-  // ===== Backward-compatible aliases (deprecated) =====
   fetchProfileById: (...args) => get().fetchProfileByIdAction(...args),
   createProfile: (...args) => get().createProfileAction(...args),
   updateProfile: (...args) => get().updateProfileAction(...args),
@@ -159,4 +160,3 @@ const useProductProfileStore = create((set, get) => ({
 }));
 
 export default useProductProfileStore;
-

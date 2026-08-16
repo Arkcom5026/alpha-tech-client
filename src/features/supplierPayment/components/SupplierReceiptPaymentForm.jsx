@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
 import 'dayjs/locale/th';
@@ -25,8 +25,11 @@ const SupplierReceiptPaymentForm = ({ supplier, supplierId: overrideSupplierId }
   const [error, setError] = useState(null);
   const [successPayload, setSuccessPayload] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const submittingRef = useRef(false);
+  const mutationBusy = submitting || submittingRef.current;
 
   const handleSearchReceipts = useCallback((startDate, endDate, limit) => {
+    if (submittingRef.current) return;
     const formattedStartDate = dayjs(startDate).format('YYYY-MM-DD');
     const formattedEndDate = dayjs(endDate).format('YYYY-MM-DD');
     Promise.resolve(loadReceiptsReadyToPayAction({ supplierId, startDate: formattedStartDate, endDate: formattedEndDate, limit })).catch((requestError) => {
@@ -35,7 +38,7 @@ const SupplierReceiptPaymentForm = ({ supplier, supplierId: overrideSupplierId }
   }, [supplierId, loadReceiptsReadyToPayAction]);
 
   useEffect(() => {
-    if (formData.paymentType !== 'RECEIPT_BASED') return;
+    if (submittingRef.current || formData.paymentType !== 'RECEIPT_BASED') return;
     const desiredAmount = parseFloat(formData.amount.replace(/,/g, ''));
     if (Number.isNaN(desiredAmount) || desiredAmount <= 0) {
       setFormData((previous) => ({ ...previous, receipts: [] }));
@@ -58,6 +61,7 @@ const SupplierReceiptPaymentForm = ({ supplier, supplierId: overrideSupplierId }
   }, [formData.amount, formData.paymentType, receiptsReadyToPay]);
 
   const handleChange = (event) => {
+    if (submittingRef.current) return;
     const { name, value } = event.target;
     if (name.startsWith('chequeDetails.')) {
       const key = name.split('.')[1];
@@ -66,17 +70,19 @@ const SupplierReceiptPaymentForm = ({ supplier, supplierId: overrideSupplierId }
   };
 
   const handleAmountChange = (event) => {
+    if (submittingRef.current) return;
     const rawValue = event.target.value.replace(/,/g, '');
     if (!Number.isNaN(Number(rawValue)) || rawValue === '') setFormData((previous) => ({ ...previous, amount: rawValue }));
   };
 
   const handleAmountBlur = (event) => {
+    if (submittingRef.current) return;
     const value = parseFloat(event.target.value.replace(/,/g, ''));
     setFormData((previous) => ({ ...previous, amount: !Number.isNaN(value) ? value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '' }));
   };
 
   const handleCheckboxChange = (receipt) => {
-    if (submitting) return;
+    if (mutationBusy) return;
     setFormData((previous) => {
       const exists = previous.receipts.find((row) => row.receiptId === receipt.id);
       const remainingAmount = Number(receipt.totalAmount || 0) - Number(receipt.paidAmount || 0);
@@ -87,7 +93,7 @@ const SupplierReceiptPaymentForm = ({ supplier, supplierId: overrideSupplierId }
   };
 
   const handleReceiptAmountPaidChange = (receiptId, value) => {
-    if (submitting) return;
+    if (mutationBusy) return;
     setFormData((previous) => {
       const rawValue = String(value).replace(/,/g, '');
       const parsedValue = Number.isNaN(Number(rawValue)) || rawValue === '' ? 0 : parseFloat(rawValue);
@@ -99,27 +105,40 @@ const SupplierReceiptPaymentForm = ({ supplier, supplierId: overrideSupplierId }
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    if (submitting) return;
+    if (mutationBusy) return;
     setError(null);
     setSuccessPayload(null);
-    const parsedAmount = parseFloat(formData.amount.replace(/,/g, ''));
+
+    const paymentSupplierId = supplierId;
+    const formSnapshot = {
+      ...formData,
+      receipts: formData.receipts.map((row) => ({ ...row })),
+      chequeDetails: { ...formData.chequeDetails },
+    };
+    const parsedAmount = parseFloat(String(formSnapshot.amount).replace(/,/g, ''));
+
+    if (!paymentSupplierId) {
+      setError('ไม่พบข้อมูล Supplier สำหรับการชำระเงิน');
+      return;
+    }
     if (Number.isNaN(parsedAmount) || parsedAmount <= 0) {
       setError('กรุณากรอกจำนวนเงินให้ถูกต้องและมากกว่าศูนย์');
       return;
     }
 
     const payload = {
-      supplierId,
-      paymentDate: formData.paymentDate,
+      supplierId: paymentSupplierId,
+      paymentDate: formSnapshot.paymentDate,
       amount: parsedAmount,
-      method: formData.method,
-      paymentType: formData.paymentType,
-      note: formData.note,
-      debitAmount: formData.paymentType === 'ADVANCE' ? parsedAmount : 0,
-      receiptItems: formData.paymentType === 'RECEIPT_BASED' ? formData.receipts.map((row) => ({ receiptId: row.receiptId, amountPaid: row.amountPaid })) : [],
-      ...(formData.method === 'CHEQUE' && { chequeDetails: formData.chequeDetails }),
+      method: formSnapshot.method,
+      paymentType: formSnapshot.paymentType,
+      note: formSnapshot.note,
+      debitAmount: formSnapshot.paymentType === 'ADVANCE' ? parsedAmount : 0,
+      receiptItems: formSnapshot.paymentType === 'RECEIPT_BASED' ? formSnapshot.receipts.map((row) => ({ receiptId: row.receiptId, amountPaid: row.amountPaid })) : [],
+      ...(formSnapshot.method === 'CHEQUE' && { chequeDetails: formSnapshot.chequeDetails }),
     };
 
+    submittingRef.current = true;
     setSubmitting(true);
     try {
       const response = await createSupplierPaymentAction(payload);
@@ -130,6 +149,7 @@ const SupplierReceiptPaymentForm = ({ supplier, supplierId: overrideSupplierId }
       setError(`เกิดข้อผิดพลาดในการบันทึกข้อมูล: ${message}`);
       feedback.actionError(requestError, 'บันทึกการชำระใบรับสินค้า Supplier ไม่สำเร็จ', 'supplier-payment:receipt:create:error');
     } finally {
+      submittingRef.current = false;
       setSubmitting(false);
     }
   };
@@ -143,7 +163,7 @@ const SupplierReceiptPaymentForm = ({ supplier, supplierId: overrideSupplierId }
   const totalOutstandingAmount = receiptsReadyToPay.reduce((sum, receipt) => sum + Math.max(0, Number(receipt.totalAmount || 0) - Number(receipt.paidAmount || 0)), 0);
   const parsedAmountForValidation = parseFloat(formData.amount.replace(/,/g, ''));
   const isAmountMismatch = formData.paymentType === 'RECEIPT_BASED' && Math.abs(parsedAmountForValidation - selectedReceiptsTotal) > 0.01;
-  const isSubmitButtonDisabled = submitting || Number.isNaN(parsedAmountForValidation) || parsedAmountForValidation <= 0 || isAmountMismatch;
+  const isSubmitButtonDisabled = mutationBusy || Number.isNaN(parsedAmountForValidation) || parsedAmountForValidation <= 0 || isAmountMismatch;
 
   if (successPayload) {
     return (
@@ -159,13 +179,13 @@ const SupplierReceiptPaymentForm = ({ supplier, supplierId: overrideSupplierId }
     <div className="space-y-6">
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="grid grid-cols-1 items-start gap-6 md:grid-cols-3">
-          <div><label htmlFor="paymentDate" className="mb-1 block text-sm font-medium text-gray-700">วันที่ชำระ</label><input disabled={submitting} type="date" id="paymentDate" name="paymentDate" value={formData.paymentDate} onChange={handleChange} className="h-[42px] w-full rounded-md border-gray-300 px-3 shadow-sm disabled:opacity-60" /></div>
-          <div><label htmlFor="method" className="mb-1 block text-sm font-medium text-gray-700">วิธีชำระเงิน</label><select disabled={submitting} id="method" name="method" value={formData.method} onChange={handleChange} className="h-[42px] w-full rounded-md border-gray-300 shadow-sm disabled:opacity-60"><option value="CASH">เงินสด</option><option value="TRANSFER">โอนเงิน</option><option value="CHEQUE">เช็ค</option></select></div>
-          <PaymentMethodInput label="จำนวนเงิน" value={formData.amount} onChange={handleAmountChange} onBlur={handleAmountBlur} disabled={submitting} />
+          <div><label htmlFor="paymentDate" className="mb-1 block text-sm font-medium text-gray-700">วันที่ชำระ</label><input disabled={mutationBusy} type="date" id="paymentDate" name="paymentDate" value={formData.paymentDate} onChange={handleChange} className="h-[42px] w-full rounded-md border-gray-300 px-3 shadow-sm disabled:opacity-60" /></div>
+          <div><label htmlFor="method" className="mb-1 block text-sm font-medium text-gray-700">วิธีชำระเงิน</label><select disabled={mutationBusy} id="method" name="method" value={formData.method} onChange={handleChange} className="h-[42px] w-full rounded-md border-gray-300 shadow-sm disabled:opacity-60"><option value="CASH">เงินสด</option><option value="TRANSFER">โอนเงิน</option><option value="CHEQUE">เช็ค</option></select></div>
+          <PaymentMethodInput label="จำนวนเงิน" value={formData.amount} onChange={handleAmountChange} onBlur={handleAmountBlur} disabled={mutationBusy} />
         </div>
-        {formData.method === 'CHEQUE' && <div className="grid grid-cols-1 gap-6 rounded-lg border border-blue-200 bg-blue-50 p-4 md:grid-cols-3"><div><label className="mb-1 block text-sm font-medium text-gray-700">เลขที่เช็ค</label><input disabled={submitting} type="text" name="chequeDetails.number" value={formData.chequeDetails.number} onChange={handleChange} className="w-full rounded-md border-gray-300 shadow-sm" /></div><div><label className="mb-1 block text-sm font-medium text-gray-700">ธนาคาร</label><input disabled={submitting} type="text" name="chequeDetails.bank" value={formData.chequeDetails.bank} onChange={handleChange} className="w-full rounded-md border-gray-300 shadow-sm" /></div><div><label className="mb-1 block text-sm font-medium text-gray-700">วันที่บนเช็ค</label><input disabled={submitting} type="date" name="chequeDetails.dueDate" value={formData.chequeDetails.dueDate} onChange={handleChange} className="w-full rounded-md border-gray-300 shadow-sm" /></div></div>}
-        {formData.paymentType === 'RECEIPT_BASED' && <ReceiptSelectionTable supplierId={supplierId} receipts={receiptsReadyToPay} isLoading={isReceiptsLoading || submitting} selectedReceipts={formData.receipts} onToggle={handleCheckboxChange} onAmountPaidChange={handleReceiptAmountPaidChange} selectedReceiptsTotal={selectedReceiptsTotal} totalOutstandingAmount={totalOutstandingAmount} onSearch={handleSearchReceipts} />}
-        <div><label htmlFor="note" className="mb-1 block text-sm font-medium text-gray-700">หมายเหตุ (ถ้ามี)</label><textarea disabled={submitting} id="note" name="note" value={formData.note} onChange={handleChange} className="w-full rounded-md border-gray-300 shadow-sm disabled:opacity-60" rows="2" /></div>
+        {formData.method === 'CHEQUE' && <div className="grid grid-cols-1 gap-6 rounded-lg border border-blue-200 bg-blue-50 p-4 md:grid-cols-3"><div><label className="mb-1 block text-sm font-medium text-gray-700">เลขที่เช็ค</label><input disabled={mutationBusy} type="text" name="chequeDetails.number" value={formData.chequeDetails.number} onChange={handleChange} className="w-full rounded-md border-gray-300 shadow-sm" /></div><div><label className="mb-1 block text-sm font-medium text-gray-700">ธนาคาร</label><input disabled={mutationBusy} type="text" name="chequeDetails.bank" value={formData.chequeDetails.bank} onChange={handleChange} className="w-full rounded-md border-gray-300 shadow-sm" /></div><div><label className="mb-1 block text-sm font-medium text-gray-700">วันที่บนเช็ค</label><input disabled={mutationBusy} type="date" name="chequeDetails.dueDate" value={formData.chequeDetails.dueDate} onChange={handleChange} className="w-full rounded-md border-gray-300 shadow-sm" /></div></div>}
+        {formData.paymentType === 'RECEIPT_BASED' && <ReceiptSelectionTable supplierId={supplierId} receipts={receiptsReadyToPay} isLoading={isReceiptsLoading || mutationBusy} selectedReceipts={formData.receipts} onToggle={handleCheckboxChange} onAmountPaidChange={handleReceiptAmountPaidChange} selectedReceiptsTotal={selectedReceiptsTotal} totalOutstandingAmount={totalOutstandingAmount} onSearch={handleSearchReceipts} />}
+        <div><label htmlFor="note" className="mb-1 block text-sm font-medium text-gray-700">หมายเหตุ (ถ้ามี)</label><textarea disabled={mutationBusy} id="note" name="note" value={formData.note} onChange={handleChange} className="w-full rounded-md border-gray-300 shadow-sm disabled:opacity-60" rows="2" /></div>
         {error && <div className="rounded-lg border border-red-400 bg-red-100 px-4 py-3 text-red-700" role="alert">{error}</div>}
         {isAmountMismatch && <div className="rounded-lg border border-yellow-400 bg-yellow-100 px-4 py-3 text-center text-yellow-700" role="alert">ยอดเงินรวมไม่ตรงกับยอดที่เลือกในตาราง</div>}
         <div className="flex justify-end pt-4"><button type="submit" className="rounded-lg bg-emerald-600 px-6 py-3 font-semibold text-white hover:bg-emerald-700 disabled:bg-gray-400" disabled={isSubmitButtonDisabled}>{submitting ? 'กำลังบันทึก...' : 'บันทึกการชำระเงิน'}</button></div>

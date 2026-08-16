@@ -65,15 +65,18 @@ const TaxClosingHandoffPage = () => {
   const finalizingRef = useRef(false);
 
   const load = useCallback(async () => {
-    if (!branchId || !taxPeriodId) return;
+    if (!branchId || !taxPeriodId) return { ok: false, error: null };
     setLoading(true);
     setError('');
     try {
-      setData(await getTaxClosingHandoffBundle({ branchId, taxPeriodId }));
+      const nextData = await getTaxClosingHandoffBundle({ branchId, taxPeriodId });
+      setData(nextData);
+      return { ok: true, data: nextData, error: null };
     } catch (requestError) {
       const message = getTaxClosingHandoffErrorMessage(requestError);
       setError(message);
       feedback.error(message);
+      return { ok: false, data: null, error: requestError };
     } finally {
       setLoading(false);
     }
@@ -122,29 +125,46 @@ const TaxClosingHandoffPage = () => {
   const exportWithholding = () => data && downloadCsv(`withholding-tax-${periodCode}.csv`, ['เลขค่าใช้จ่าย', 'คู่ค้า', 'เลขผู้เสียภาษี', 'WHT', 'แบบ', 'หนังสือรับรอง', 'สถานะ'], exportRows.withholding);
 
   const finalizeSnapshot = async () => {
-    if (!data?.handoffReady || finalizing || finalizingRef.current) return false;
+    if (!data?.handoffReady || finalizing || finalizingRef.current || !branchId || !taxPeriodId) return false;
+
+    const branchIdSnapshot = Number(branchId);
+    const taxPeriodIdSnapshot = taxPeriodId;
+    const snapshotHashSnapshot = data.snapshotHash;
+
     finalizingRef.current = true;
     setFinalizing(true);
     try {
-      const result = await finalizeTaxClosingHandoffBundle({
-        branchId,
-        taxPeriodId,
-        expectedSnapshotHash: data.snapshotHash,
-      });
+      let result;
+      try {
+        result = await finalizeTaxClosingHandoffBundle({
+          branchId: branchIdSnapshot,
+          taxPeriodId: taxPeriodIdSnapshot,
+          expectedSnapshotHash: snapshotHashSnapshot,
+        });
+      } catch (requestError) {
+        feedback.actionError(
+          requestError,
+          getTaxClosingHandoffErrorMessage(requestError),
+          `tax-closing:${branchIdSnapshot}:${taxPeriodIdSnapshot}:finalize:error`,
+        );
+        return false;
+      }
+
       feedback.actionSuccess(
         result?.replayed ? 'Snapshot นี้ยืนยันไว้แล้ว' : 'ยืนยัน Tax Closing Snapshot เรียบร้อย',
-        `tax-closing:${taxPeriodId}:finalize:success`,
+        `tax-closing:${branchIdSnapshot}:${taxPeriodIdSnapshot}:finalize:success`,
       );
       setFinalizeConfirmationOpen(false);
-      await load();
+
+      const refreshResult = await load();
+      if (!refreshResult?.ok) {
+        feedback.actionError(
+          refreshResult?.error || new Error('Tax Closing refresh failed'),
+          'ยืนยัน Tax Closing Snapshot สำเร็จแล้ว แต่รีเฟรชชุดข้อมูลล่าสุดไม่สำเร็จ',
+          `tax-closing:${branchIdSnapshot}:${taxPeriodIdSnapshot}:refresh-after-finalize:error`,
+        );
+      }
       return true;
-    } catch (requestError) {
-      feedback.actionError(
-        requestError,
-        getTaxClosingHandoffErrorMessage(requestError),
-        `tax-closing:${taxPeriodId}:finalize:error`,
-      );
-      return false;
     } finally {
       finalizingRef.current = false;
       setFinalizing(false);
@@ -237,7 +257,6 @@ const TaxClosingHandoffPage = () => {
           </>
         )}
       </section>
-
       <ConfirmActionDialog
         open={finalizeConfirmationOpen}
         title={integrity.status === 'STALE' ? 'ยืนยัน Snapshot เวอร์ชันใหม่' : 'ยืนยัน Snapshot ปิดงวด'}

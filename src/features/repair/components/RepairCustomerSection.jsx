@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import useCustomerDepositStore from '@/features/customerDeposit/store/customerDepositStore';
 import useCustomerStore from '@/features/customer/store/customerStore';
+import { feedback } from '@/design-system';
 
 const EMPTY_DRAFT = {
   name: '',
@@ -56,8 +57,10 @@ const RepairCustomerSection = ({
   const [formError, setFormError] = useState('');
   const [formInfo, setFormInfo] = useState('');
   const [busy, setBusy] = useState(false);
+  const [mutationAction, setMutationAction] = useState(null);
   const [draft, setDraft] = useState(EMPTY_DRAFT);
   const queryRef = useRef(null);
+  const mutationRef = useRef(false);
 
   const searchByPhone = useCustomerDepositStore(
     (state) => state.searchCustomerByPhoneAndDepositAction
@@ -71,7 +74,8 @@ const RepairCustomerSection = ({
   const createCustomer = useCustomerStore((state) => state.createCustomerAction);
   const updateCustomer = useCustomerStore((state) => state.updateCustomerProfilePosAction);
 
-  const effectiveLoading = busy || loading;
+  const mutationBusy = Boolean(mutationAction) || mutationRef.current;
+  const effectiveLoading = busy || loading || mutationBusy;
 
   useEffect(() => {
     if (!selectedCustomer && !createOnly) {
@@ -82,7 +86,7 @@ const RepairCustomerSection = ({
   }, [selectedCustomer, createOnly]);
 
   useEffect(() => {
-    if (!selectedCustomer) return;
+    if (!selectedCustomer || mutationRef.current) return;
     setDraft({
       name: selectedCustomer.name || selectedCustomer.user?.name || '',
       phone: customerPhone(selectedCustomer),
@@ -101,7 +105,10 @@ const RepairCustomerSection = ({
     return 'บุคคลทั่วไป';
   }, [selectedCustomer]);
 
-  const resetDraft = (next = {}) => setDraft({ ...EMPTY_DRAFT, ...next });
+  const resetDraft = (next = {}) => {
+    if (mutationRef.current) return;
+    setDraft({ ...EMPTY_DRAFT, ...next });
+  };
 
   const deliverSelectedCustomer = async (candidate) => {
     const baseCustomer = normalizeCustomerPayload(candidate);
@@ -125,6 +132,7 @@ const RepairCustomerSection = ({
   };
 
   const selectCustomer = async (candidate) => {
+    if (mutationRef.current) return;
     setBusy(true);
     setFormError('');
     try {
@@ -138,6 +146,7 @@ const RepairCustomerSection = ({
 
   const submitSearch = async (event) => {
     event?.preventDefault();
+    if (mutationRef.current) return;
     setFormError('');
     setFormInfo('');
     setResults([]);
@@ -190,6 +199,7 @@ const RepairCustomerSection = ({
   };
 
   const submitCreate = async () => {
+    if (mutationRef.current) return;
     setFormError('');
     setFormInfo('');
 
@@ -204,53 +214,86 @@ const RepairCustomerSection = ({
       return;
     }
 
-    setBusy(true);
+    const payloadSnapshot = {
+      name: draft.name.trim(),
+      phone: cleanPhone || null,
+      email: draft.email.trim() || null,
+      type: draft.type,
+      companyName: draft.type === 'INDIVIDUAL' ? null : draft.companyName.trim() || null,
+      taxId: draft.type === 'INDIVIDUAL' ? null : draft.taxId.trim() || null,
+      addressDetail: draft.addressDetail.trim() || null,
+    };
+
+    mutationRef.current = true;
+    setMutationAction('create');
     try {
-      const createdPayload = await createCustomer({
-        name: draft.name.trim(),
-        phone: cleanPhone || null,
-        email: draft.email.trim() || null,
-        type: draft.type,
-        companyName: draft.type === 'INDIVIDUAL' ? null : draft.companyName.trim() || null,
-        taxId: draft.type === 'INDIVIDUAL' ? null : draft.taxId.trim() || null,
-        addressDetail: draft.addressDetail.trim() || null,
-      });
+      const createdPayload = await createCustomer(payloadSnapshot);
       const created = normalizeCustomerPayload(createdPayload);
       if (!created) throw new Error('ระบบไม่ได้ส่งข้อมูลลูกค้าที่สร้างกลับมา');
       setFormInfo('เพิ่มลูกค้าใหม่สำเร็จ');
+      feedback.actionSuccess(
+        'เพิ่มลูกค้าใหม่เรียบร้อยแล้ว',
+        `repair:customer:${created.id}:create:success`,
+      );
       await deliverSelectedCustomer(created);
     } catch (error) {
+      setFormInfo('');
       setFormError(error?.message || 'เพิ่มลูกค้าไม่สำเร็จ');
+      feedback.actionError(
+        error,
+        'เพิ่มลูกค้าใหม่ไม่สำเร็จ',
+        'repair:customer:create:error',
+      );
     } finally {
-      setBusy(false);
+      mutationRef.current = false;
+      setMutationAction(null);
     }
   };
 
   const submitUpdate = async () => {
-    if (!selectedCustomer?.id || !updateCustomer) return;
-    setBusy(true);
+    if (!selectedCustomer?.id || !updateCustomer || mutationRef.current) return;
+
+    const customerIdSnapshot = selectedCustomer.id;
+    const selectedCustomerSnapshot = { ...selectedCustomer };
+    const draftSnapshot = { ...draft };
+    const payloadSnapshot = {
+      name: draftSnapshot.name.trim(),
+      email: draftSnapshot.email.trim() || null,
+      type: draftSnapshot.type,
+      companyName: draftSnapshot.type === 'INDIVIDUAL' ? null : draftSnapshot.companyName.trim() || null,
+      taxId: draftSnapshot.type === 'INDIVIDUAL' ? null : draftSnapshot.taxId.trim() || null,
+      addressDetail: draftSnapshot.addressDetail.trim() || null,
+    };
+
+    mutationRef.current = true;
+    setMutationAction('update');
     setFormError('');
     setFormInfo('');
     try {
-      await updateCustomer(selectedCustomer.id, {
-        name: draft.name.trim(),
-        email: draft.email.trim() || null,
-        type: draft.type,
-        companyName: draft.type === 'INDIVIDUAL' ? null : draft.companyName.trim() || null,
-        taxId: draft.type === 'INDIVIDUAL' ? null : draft.taxId.trim() || null,
-        addressDetail: draft.addressDetail.trim() || null,
-      });
+      await updateCustomer(customerIdSnapshot, payloadSnapshot);
       setEditingSelected(false);
       setFormInfo('อัปเดตข้อมูลลูกค้าสำเร็จ');
-      await onSelectCustomer({ ...selectedCustomer, ...draft });
+      feedback.actionSuccess(
+        'อัปเดตข้อมูลลูกค้าเรียบร้อยแล้ว',
+        `repair:customer:${customerIdSnapshot}:update:success`,
+      );
+      await onSelectCustomer({ ...selectedCustomerSnapshot, ...draftSnapshot });
     } catch (error) {
+      setFormInfo('');
       setFormError(error?.message || 'อัปเดตข้อมูลลูกค้าไม่สำเร็จ');
+      feedback.actionError(
+        error,
+        'อัปเดตข้อมูลลูกค้าไม่สำเร็จ',
+        `repair:customer:${customerIdSnapshot}:update:error`,
+      );
     } finally {
-      setBusy(false);
+      mutationRef.current = false;
+      setMutationAction(null);
     }
   };
 
   const clear = () => {
+    if (mutationRef.current) return;
     setQuery('');
     setResults([]);
     setPendingCreate(false);
@@ -260,6 +303,11 @@ const RepairCustomerSection = ({
     resetDraft();
     onClearCustomer?.();
     setTimeout(() => queryRef.current?.focus(), 50);
+  };
+
+  const updateDraft = (patch) => {
+    if (mutationRef.current) return;
+    setDraft((current) => ({ ...current, ...patch }));
   };
 
   const renderCustomerForm = ({ updateMode = false } = {}) => (
@@ -274,7 +322,8 @@ const RepairCustomerSection = ({
             <input
               type="radio"
               checked={draft.type === value}
-              onChange={() => setDraft((current) => ({ ...current, type: value }))}
+              disabled={mutationBusy}
+              onChange={() => updateDraft({ type: value })}
             />
             {label}
           </label>
@@ -286,42 +335,47 @@ const RepairCustomerSection = ({
           <>
             <input
               value={draft.companyName}
-              onChange={(event) => setDraft((current) => ({ ...current, companyName: event.target.value }))}
+              disabled={mutationBusy}
+              onChange={(event) => updateDraft({ companyName: event.target.value })}
               placeholder="ชื่อบริษัทหรือหน่วยงาน"
-              className="min-h-11 rounded-xl border border-slate-300 bg-white px-4 outline-none focus:border-emerald-500"
+              className="min-h-11 rounded-xl border border-slate-300 bg-white px-4 outline-none focus:border-emerald-500 disabled:bg-slate-100 disabled:opacity-70"
             />
             <input
               value={draft.taxId}
-              onChange={(event) => setDraft((current) => ({ ...current, taxId: event.target.value }))}
+              disabled={mutationBusy}
+              onChange={(event) => updateDraft({ taxId: event.target.value })}
               placeholder="เลขผู้เสียภาษี"
-              className="min-h-11 rounded-xl border border-slate-300 bg-white px-4 outline-none focus:border-emerald-500"
+              className="min-h-11 rounded-xl border border-slate-300 bg-white px-4 outline-none focus:border-emerald-500 disabled:bg-slate-100 disabled:opacity-70"
             />
           </>
         ) : null}
         <input
           value={draft.name}
-          onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))}
+          disabled={mutationBusy}
+          onChange={(event) => updateDraft({ name: event.target.value })}
           placeholder="ชื่อ-นามสกุล *"
-          className="min-h-11 rounded-xl border border-slate-300 bg-white px-4 outline-none focus:border-emerald-500"
+          className="min-h-11 rounded-xl border border-slate-300 bg-white px-4 outline-none focus:border-emerald-500 disabled:bg-slate-100 disabled:opacity-70"
         />
         <input
           value={draft.phone}
-          onChange={(event) => setDraft((current) => ({ ...current, phone: event.target.value }))}
+          onChange={(event) => updateDraft({ phone: event.target.value })}
           placeholder="เบอร์โทร 10 หลัก"
-          disabled={updateMode}
-          className="min-h-11 rounded-xl border border-slate-300 bg-white px-4 outline-none focus:border-emerald-500 disabled:bg-slate-100"
+          disabled={updateMode || mutationBusy}
+          className="min-h-11 rounded-xl border border-slate-300 bg-white px-4 outline-none focus:border-emerald-500 disabled:bg-slate-100 disabled:opacity-70"
         />
         <input
           value={draft.email}
-          onChange={(event) => setDraft((current) => ({ ...current, email: event.target.value }))}
+          disabled={mutationBusy}
+          onChange={(event) => updateDraft({ email: event.target.value })}
           placeholder="อีเมล"
-          className="min-h-11 rounded-xl border border-slate-300 bg-white px-4 outline-none focus:border-emerald-500"
+          className="min-h-11 rounded-xl border border-slate-300 bg-white px-4 outline-none focus:border-emerald-500 disabled:bg-slate-100 disabled:opacity-70"
         />
         <input
           value={draft.addressDetail}
-          onChange={(event) => setDraft((current) => ({ ...current, addressDetail: event.target.value }))}
+          disabled={mutationBusy}
+          onChange={(event) => updateDraft({ addressDetail: event.target.value })}
           placeholder="ที่อยู่ติดต่อ"
-          className="min-h-11 rounded-xl border border-slate-300 bg-white px-4 outline-none focus:border-emerald-500 md:col-span-2"
+          className="min-h-11 rounded-xl border border-slate-300 bg-white px-4 outline-none focus:border-emerald-500 md:col-span-2 disabled:bg-slate-100 disabled:opacity-70"
         />
       </div>
 
@@ -333,12 +387,19 @@ const RepairCustomerSection = ({
           className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-emerald-700 px-5 font-black text-white disabled:opacity-50"
         >
           {effectiveLoading ? <RefreshCw className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4" />}
-          {updateMode ? 'บันทึกการแก้ไข' : 'บันทึกลูกค้าใหม่'}
+          {mutationAction === 'update'
+            ? 'กำลังบันทึก...'
+            : mutationAction === 'create'
+              ? 'กำลังบันทึกลูกค้า...'
+              : updateMode
+                ? 'บันทึกการแก้ไข'
+                : 'บันทึกลูกค้าใหม่'}
         </button>
         <button
           type="button"
+          disabled={mutationBusy}
           onClick={() => (updateMode ? setEditingSelected(false) : setPendingCreate(false))}
-          className="min-h-10 rounded-xl border border-slate-300 bg-white px-5 font-black text-slate-700"
+          className="min-h-10 rounded-xl border border-slate-300 bg-white px-5 font-black text-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
         >
           ยกเลิก
         </button>
@@ -364,7 +425,8 @@ const RepairCustomerSection = ({
           <button
             type="button"
             onClick={clear}
-            className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-slate-300 px-4 text-sm font-black text-slate-700"
+            disabled={mutationBusy}
+            className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-slate-300 px-4 text-sm font-black text-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
             <X className="h-4 w-4" /> เปลี่ยนลูกค้า
           </button>
@@ -401,8 +463,11 @@ const RepairCustomerSection = ({
               </div>
               <button
                 type="button"
-                onClick={() => setEditingSelected((current) => !current)}
-                className="min-h-10 rounded-xl border border-emerald-300 bg-white px-4 text-sm font-black text-emerald-800"
+                disabled={mutationBusy}
+                onClick={() => {
+                  if (!mutationRef.current) setEditingSelected((current) => !current);
+                }}
+                className="min-h-10 rounded-xl border border-emerald-300 bg-white px-4 text-sm font-black text-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {editingSelected ? 'ปิดการแก้ไข' : 'แก้ไขข้อมูลลูกค้า'}
               </button>
@@ -420,10 +485,11 @@ const RepairCustomerSection = ({
               <input
                 ref={queryRef}
                 value={query}
+                disabled={mutationBusy}
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder="ชื่อ เบอร์โทร บริษัท หรือหน่วยงาน"
                 inputMode="search"
-                className="min-h-12 w-full rounded-xl border border-slate-300 pl-10 pr-4 outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                className="min-h-12 w-full rounded-xl border border-slate-300 pl-10 pr-4 outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 disabled:bg-slate-100 disabled:opacity-70"
               />
             </div>
             <button type="submit" disabled={effectiveLoading} className="min-h-12 rounded-xl bg-emerald-700 px-6 font-black text-white disabled:opacity-50">
@@ -435,7 +501,13 @@ const RepairCustomerSection = ({
             <div className="mt-3 space-y-2">
               <p className="text-xs font-black text-slate-500">พบลูกค้า {results.length} รายการ</p>
               {results.map((customer) => (
-                <button key={customer.id} type="button" onClick={() => selectCustomer(customer)} className="flex w-full items-center justify-between rounded-xl border border-slate-200 p-3 text-left hover:border-emerald-300 hover:bg-emerald-50">
+                <button
+                  key={customer.id}
+                  type="button"
+                  disabled={effectiveLoading}
+                  onClick={() => selectCustomer(customer)}
+                  className="flex w-full items-center justify-between rounded-xl border border-slate-200 p-3 text-left hover:border-emerald-300 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60"
+                >
                   <div className="min-w-0">
                     <p className="truncate font-black text-slate-900">{customerLabel(customer)}</p>
                     <p className="mt-1 text-xs font-bold text-slate-500">{customerPhone(customer) || 'ไม่มีเบอร์โทร'}</p>

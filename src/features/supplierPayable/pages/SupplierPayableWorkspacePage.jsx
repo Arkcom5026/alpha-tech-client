@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AlertTriangle, RefreshCw, WalletCards } from 'lucide-react';
 import { feedback as toast } from '@/design-system';
 import {
@@ -100,8 +100,9 @@ const SupplierPayableWorkspacePage = () => {
     dueDate: '',
     note: '',
   });
+  const settlementMutationRef = useRef(false);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async ({ reportError = true } = {}) => {
     setLoading(true);
     try {
       const [payableResult, candidateResult, settlementResult, advanceResult, agingResult, disputeResult] = await Promise.all([
@@ -121,8 +122,10 @@ const SupplierPayableWorkspacePage = () => {
       setAdvances(Array.isArray(advanceResult) ? advanceResult : []);
       setAging(agingResult || null);
       setDisputeHistory(disputeResult || { disputes: [], adjustments: [] });
+      return { ok: true };
     } catch (error) {
-      toast.error(getSupplierPayableErrorMessage(error));
+      if (reportError) toast.error(getSupplierPayableErrorMessage(error));
+      return { ok: false, error };
     } finally {
       setLoading(false);
     }
@@ -197,42 +200,84 @@ const SupplierPayableWorkspacePage = () => {
   };
 
   const confirmPayment = async () => {
-    if (!paymentSelection.length) return;
+    if (settlementMutationRef.current || !paymentSelection.length) return;
+    const supplierIdSnapshot = paymentSupplierId;
+    const paymentFormSnapshot = { ...paymentForm };
+    const allocationsSnapshot = paymentSelection.map((item) => ({
+      payableId: item.id,
+      amount: Number(paymentAllocations[item.id] || 0),
+    }));
+
+    settlementMutationRef.current = true;
     setSaving(true);
     try {
       await createSupplierSettlement({
-        supplierId: paymentSupplierId,
-        ...paymentForm,
-        allocations: paymentSelection.map((item) => ({
-          payableId: item.id,
-          amount: Number(paymentAllocations[item.id] || 0),
-        })),
+        supplierId: supplierIdSnapshot,
+        ...paymentFormSnapshot,
+        allocations: allocationsSnapshot,
       });
-      toast.success('ยืนยันการชำระและจัดสรรยอดเจ้าหนี้แล้ว');
+      toast.actionSuccess(
+        'ยืนยันการชำระและจัดสรรยอดเจ้าหนี้แล้ว',
+        `supplier-payable:${supplierIdSnapshot}:settlement:create:success`,
+      );
       setPaymentAllocations({});
-      setPaymentForm({ ...paymentForm, paymentRef: '', note: '' });
-      await load();
+      setPaymentForm((current) => ({ ...current, paymentRef: '', note: '' }));
+
+      const refresh = await load({ reportError: false });
+      if (!refresh.ok) {
+        toast.actionError(
+          refresh.error,
+          'ยืนยันการชำระ Supplier สำเร็จแล้ว แต่รีเฟรชข้อมูลเจ้าหนี้ล่าสุดไม่สำเร็จ',
+          `supplier-payable:${supplierIdSnapshot}:settlement:create:refresh:error`,
+        );
+      }
     } catch (error) {
-      toast.error(getSupplierSettlementErrorMessage(error));
+      toast.actionError(
+        error,
+        getSupplierSettlementErrorMessage(error),
+        `supplier-payable:${supplierIdSnapshot}:settlement:create:error`,
+      );
     } finally {
+      settlementMutationRef.current = false;
       setSaving(false);
     }
   };
 
   const voidPayment = async (paymentId) => {
-    if (!voidReason.trim()) {
+    const paymentIdSnapshot = paymentId;
+    const reasonSnapshot = voidReason.trim();
+    if (!reasonSnapshot) {
       toast.info('กรุณาระบุเหตุผลในการยกเลิกก่อน');
       return;
     }
+    if (settlementMutationRef.current) return;
+
+    settlementMutationRef.current = true;
     setSaving(true);
     try {
-      await voidSupplierSettlement({ paymentId, reason: voidReason });
-      toast.success('ยกเลิกรายการชำระและคืนยอดคงค้างแล้ว');
+      await voidSupplierSettlement({ paymentId: paymentIdSnapshot, reason: reasonSnapshot });
+      toast.actionSuccess(
+        'ยกเลิกรายการชำระและคืนยอดคงค้างแล้ว',
+        `supplier-payable:settlement:${paymentIdSnapshot}:void:success`,
+      );
       setVoidReason('');
-      await load();
+
+      const refresh = await load({ reportError: false });
+      if (!refresh.ok) {
+        toast.actionError(
+          refresh.error,
+          'ยกเลิกรายการชำระ Supplier สำเร็จแล้ว แต่รีเฟรชข้อมูลเจ้าหนี้ล่าสุดไม่สำเร็จ',
+          `supplier-payable:settlement:${paymentIdSnapshot}:void:refresh:error`,
+        );
+      }
     } catch (error) {
-      toast.error(getSupplierSettlementErrorMessage(error));
+      toast.actionError(
+        error,
+        getSupplierSettlementErrorMessage(error),
+        `supplier-payable:settlement:${paymentIdSnapshot}:void:error`,
+      );
     } finally {
+      settlementMutationRef.current = false;
       setSaving(false);
     }
   };
@@ -413,7 +458,7 @@ const SupplierPayableWorkspacePage = () => {
           <h1 className="mt-1 text-2xl font-black text-slate-900">รายการเจ้าหนี้ Supplier</h1>
           <p className="mt-1 text-sm text-slate-500">ตั้งหนี้จากใบรับสินค้า ก่อนเข้าสู่กระบวนการจัดสรรการชำระเงิน</p>
         </div>
-        <button type="button" onClick={load} disabled={loading} className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-bold disabled:opacity-50">
+        <button type="button" onClick={load} disabled={loading || saving} className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-bold disabled:opacity-50">
           <RefreshCw size={17} className={loading ? 'animate-spin' : ''} /> โหลดใหม่
         </button>
       </header>

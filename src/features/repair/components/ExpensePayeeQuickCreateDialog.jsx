@@ -76,20 +76,31 @@ const ExpensePayeeQuickCreateDialog = ({ open, onClose, onCreated }) => {
     setSaving(true);
     try {
       const created = await createExpensePayee(payload);
+      const createdId = created?.id || 'new';
       feedback.actionSuccess(
         'เพิ่มผู้รับซ่อมเรียบร้อยแล้ว',
-        `repair:expense-payee:${created?.id || 'new'}:create:success`,
+        `repair:expense-payee:${createdId}:create:success`,
       );
 
       try {
-        await onCreated?.(created);
+        const selectionOutcome = await onCreated?.(created);
+        if (selectionOutcome === false || selectionOutcome?.ok === false) {
+          const selectionFailure = selectionOutcome?.error instanceof Error
+            ? selectionOutcome.error
+            : new Error(
+              selectionOutcome?.message
+                || selectionOutcome?.error?.message
+                || 'สร้างผู้รับซ่อมสำเร็จแล้ว แต่เลือกใช้งานอัตโนมัติไม่สำเร็จ',
+            );
+          throw selectionFailure;
+        }
       } catch (selectionError) {
         const message = selectionError?.message || 'สร้างผู้รับซ่อมสำเร็จแล้ว แต่เลือกใช้งานอัตโนมัติไม่สำเร็จ';
         setError(message);
         feedback.actionError(
           selectionError,
           'สร้างผู้รับซ่อมสำเร็จแล้ว แต่เลือกใช้งานอัตโนมัติไม่สำเร็จ',
-          `repair:expense-payee:${created?.id || 'new'}:select:error`,
+          `repair:expense-payee:${createdId}:select:error`,
         );
         return;
       }

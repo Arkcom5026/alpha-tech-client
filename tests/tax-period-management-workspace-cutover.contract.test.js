@@ -50,12 +50,14 @@ describe('tax period management workspace cutover contract', () => {
     }
   });
 
-  it('preserves list filters, error feedback, detail selection, and transition intents through props', () => {
+  it('preserves list filters, error feedback, guarded detail selection, and transition intents through props', () => {
     expect(page).toContain('filtersSlot={(');
     expect(page).toContain('error={error}');
-    expect(page).toContain('onOpen={setSelectedPeriodId}');
+    expect(page).toContain('onOpen={(periodId) => {');
+    expect(page.match(/if \(!interactionBusy\) setSelectedPeriodId\(periodId\);/g)?.length || 0).toBeGreaterThanOrEqual(2);
     expect(page).toContain('onAction={handleAction}');
     expect(page).toContain('taxPeriodId={selectedPeriodId}');
+    expect(page).toContain('busyKey={busyKey}');
     expect(workspaceFiles).toContain('{filtersSlot}');
     expect(workspaceFiles).toContain("error && <div");
   });

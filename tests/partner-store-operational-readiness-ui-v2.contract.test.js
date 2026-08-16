@@ -25,6 +25,10 @@ describe('partner store operational readiness UI v2 contract', () => {
     expect(page).toContain('รับรองความพร้อมก่อนเริ่มใช้งานร้าน');
     expect(page).toContain('assessment.allReady');
     expect(page).toContain('certifyPartnerStoreOperationalReadiness');
+    expect(page).toContain('submittingRef.current');
+    expect(page).toContain("feedback.actionSuccess(");
+    expect(page).toContain("feedback.actionError(");
+    expect(page).toContain('setError(mutationMessage)');
     expect(page).toContain('รับรองความพร้อมและเข้าสู่ POS');
     expect(page).toContain("check.key === 'serviceMode'");
     expect(page).toContain('check.details.reason');

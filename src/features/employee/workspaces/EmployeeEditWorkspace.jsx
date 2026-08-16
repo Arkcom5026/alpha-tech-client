@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { feedback } from '@/design-system';
 import { getEmployeeById, updateEmployee, getBranchDropdowns } from '../api/employeeApi';
@@ -17,6 +17,7 @@ const EditEmployeePage = () => {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [branches, setBranches] = useState([]);
+  const submittingRef = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -61,20 +62,29 @@ const EditEmployeePage = () => {
   }, [isSuperAdmin]);
 
   const handleUpdate = async (formData) => {
-    if (submitting) return;
+    if (submitting || submittingRef.current) return;
+
+    const employeeId = id;
+    const payload = { ...formData };
+    if (!employeeId) return;
+
+    submittingRef.current = true;
     setSubmitting(true);
     setError('');
     try {
-      await updateEmployee(id, formData);
+      await updateEmployee(employeeId, payload);
       feedback.actionSuccess('บันทึกการแก้ไขข้อมูลพนักงานเรียบร้อยแล้ว', 'employee:update:success');
       navigate(`/${shopSlug}/pos/settings/employee`);
     } catch (err) {
       setError(err?.response?.data?.error?.message || err?.response?.data?.message || err?.message || 'แก้ไขพนักงานล้มเหลว');
       feedback.actionError(err, 'แก้ไขข้อมูลพนักงานไม่สำเร็จ', 'employee:update:error');
     } finally {
+      submittingRef.current = false;
       setSubmitting(false);
     }
   };
+
+  const mutationBusy = submitting || submittingRef.current;
 
   if (loading) return <p className="text-center text-emerald-700">กำลังโหลดข้อมูล...</p>;
   if (error && !employee) return <p className="text-center text-red-500">{error}</p>;
@@ -85,15 +95,17 @@ const EditEmployeePage = () => {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-xl font-semibold text-emerald-800 dark:text-emerald-300">✏️ แก้ไขข้อมูลพนักงาน</h1>
         <button
-          onClick={() => navigate(-1)}
-          disabled={submitting}
+          onClick={() => {
+            if (!mutationBusy) navigate(-1);
+          }}
+          disabled={mutationBusy}
           className="text-sm px-3 py-1 border border-slate-200 bg-white hover:bg-emerald-50 hover:border-emerald-200 text-slate-700 rounded shadow-sm transition disabled:opacity-60 disabled:cursor-not-allowed"
         >
           ← กลับ
         </button>
       </div>
       {error ? <div className="mb-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div> : null}
-      <EmployeeForm defaultValues={employee} onSubmit={handleUpdate} loading={submitting} canEditBranch={isSuperAdmin} branchOptions={branches} />
+      <EmployeeForm defaultValues={employee} onSubmit={handleUpdate} loading={mutationBusy} canEditBranch={isSuperAdmin} branchOptions={branches} />
     </div>
   );
 };

@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
+import { feedback } from '@/design-system/feedback';
 import {
   certifyPartnerStoreOperationalReadiness,
   getPartnerStoreOperationalReadiness,
@@ -70,10 +71,20 @@ export default function PartnerStoreOperationalReadinessPage() {
     setError('');
     try {
       await certifyPartnerStoreOperationalReadiness();
+      feedback.actionSuccess(
+        'รับรองความพร้อมร้านเรียบร้อยแล้ว',
+        `partner-store:operational-readiness:${destinationSlug}:certify:success`,
+      );
       navigate(`/${destinationSlug}/pos/dashboard`, { replace: true });
     } catch (requestError) {
-      setError(messageFrom(requestError));
+      const mutationMessage = messageFrom(requestError);
+      feedback.actionError(
+        requestError,
+        mutationMessage,
+        `partner-store:operational-readiness:${destinationSlug}:certify:error`,
+      );
       await load();
+      setError(mutationMessage);
     } finally {
       submittingRef.current = false;
       setSubmitting(false);

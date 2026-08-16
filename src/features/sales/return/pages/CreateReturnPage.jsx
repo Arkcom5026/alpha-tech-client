@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   getSaleReturnEligibility,
@@ -27,6 +27,7 @@ const CreateReturnPage = () => {
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
+  const submittingRef = useRef(false);
 
   useEffect(() => {
     getSaleReturnEligibility(saleId).then(setEligibility).catch((err) => setError(err.response?.data?.message || err.message));
@@ -51,53 +52,76 @@ const CreateReturnPage = () => {
     refunds,
   }), [available, selectedItems, refunds]);
 
-  const selectLine = (item, selected) => setLines((current) => ({
-    ...current,
-    [`${item.kind}:${item.id}`]: {
-      selected,
-      quantity: item.kind === 'SIMPLE' ? item.eligibleQuantity : 1,
-      refundAmount: item.eligibleRefund,
-      reason: '',
-    },
-  }));
+  const mutationBusy = submitting || submittingRef.current;
 
-  const patchLine = (item, patch) => setLines((current) => ({
-    ...current,
-    [`${item.kind}:${item.id}`]: { ...current[`${item.kind}:${item.id}`], ...patch },
-  }));
+  const selectLine = (item, selected) => {
+    if (mutationBusy) return;
+    setLines((current) => ({
+      ...current,
+      [`${item.kind}:${item.id}`]: {
+        selected,
+        quantity: item.kind === 'SIMPLE' ? item.eligibleQuantity : 1,
+        refundAmount: item.eligibleRefund,
+        reason: '',
+      },
+    }));
+  };
+
+  const patchLine = (item, patch) => {
+    if (mutationBusy) return;
+    setLines((current) => ({
+      ...current,
+      [`${item.kind}:${item.id}`]: { ...current[`${item.kind}:${item.id}`], ...patch },
+    }));
+  };
 
   const submit = async () => {
+    if (mutationBusy) return;
+
+    const returnReason = reason;
+    const returnItems = selectedItems.map((item) => ({ ...item }));
+    const refundItems = refunds
+      .filter((item) => Number(item.amount) > 0)
+      .map((item) => ({
+        ...item,
+        amount: Number(item.amount),
+        sourcePaymentItemId: item.sourcePaymentItemId ? Number(item.sourcePaymentItemId) : null,
+      }));
+    const targetSaleId = saleId;
+    const returnEligibility = eligibility;
+    const returnEligibleTotal = eligibleTotal;
+    const returnRefundTotal = refundTotal;
+    const returnChannelTotal = channelTotal;
+    const returnDeduction = deduction;
+
     setError('');
     const validationError = validateSaleReturnSubmission({
-      selectedItems,
-      refundTotal,
-      channelTotal,
-      deduction,
-      reason,
+      selectedItems: returnItems,
+      refundTotal: returnRefundTotal,
+      channelTotal: returnChannelTotal,
+      deduction: returnDeduction,
+      reason: returnReason,
     });
     if (validationError) {
       setError(validationError);
       return;
     }
 
+    submittingRef.current = true;
     setSubmitting(true);
     try {
       const completedReturn = await runCompleteSaleReturn({
-        saleId,
-        reason,
-        items: selectedItems,
-        refunds: refunds.filter((item) => Number(item.amount) > 0).map((item) => ({
-          ...item,
-          amount: Number(item.amount),
-          sourcePaymentItemId: item.sourcePaymentItemId ? Number(item.sourcePaymentItemId) : null,
-        })),
+        saleId: targetSaleId,
+        reason: returnReason,
+        items: returnItems,
+        refunds: refundItems,
       });
 
       const fullRefundReturn = isFullRefundReturn({
-        eligibleTotal,
-        refundTotal,
-        saleTotal: eligibility.sale.totalAmount,
-        deduction,
+        eligibleTotal: returnEligibleTotal,
+        refundTotal: returnRefundTotal,
+        saleTotal: returnEligibility.sale.totalAmount,
+        deduction: returnDeduction,
       });
 
       if (fullRefundReturn) {
@@ -130,6 +154,7 @@ const CreateReturnPage = () => {
     } catch (err) {
       setError(err.response?.data?.message || err.message);
     } finally {
+      submittingRef.current = false;
       setSubmitting(false);
     }
   };
@@ -145,7 +170,7 @@ const CreateReturnPage = () => {
         reason={reason}
         refunds={refunds}
         error={error}
-        submitting={submitting}
+        submitting={mutationBusy}
         eligibleTotal={eligibleTotal}
         refundTotal={refundTotal}
         deduction={deduction}
@@ -153,9 +178,15 @@ const CreateReturnPage = () => {
         submitLabel={SUBMIT_LABEL}
         onSelectLine={selectLine}
         onPatchLine={patchLine}
-        onReasonChange={setReason}
-        onRefundsChange={setRefunds}
-        onCancel={() => navigate(-1)}
+        onReasonChange={(value) => {
+          if (!mutationBusy) setReason(value);
+        }}
+        onRefundsChange={(value) => {
+          if (!mutationBusy) setRefunds(value);
+        }}
+        onCancel={() => {
+          if (!mutationBusy) navigate(-1);
+        }}
         onSubmit={submit}
         onOpenHelp={() => setHelpOpen(true)}
       />

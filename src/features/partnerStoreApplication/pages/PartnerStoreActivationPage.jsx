@@ -1,5 +1,6 @@
 import React, { useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
+import { feedback } from '@/design-system/feedback';
 import { claimPartnerStoreActivation } from '../api/partnerStoreActivationApi';
 
 const messageFrom = (error) => error?.response?.data?.message || error?.message || 'เปิดใช้งานบัญชีไม่สำเร็จ';
@@ -37,8 +38,18 @@ export default function PartnerStoreActivationPage() {
       setActivated(response.data?.data || {});
       setPassword('');
       setConfirmPassword('');
+      feedback.actionSuccess(
+        'เปิดใช้งานบัญชีเจ้าของร้านเรียบร้อยแล้ว',
+        'partner-store:activation:success',
+      );
     } catch (requestError) {
-      setError(messageFrom(requestError));
+      const message = messageFrom(requestError);
+      setError(message);
+      feedback.actionError(
+        requestError,
+        message,
+        'partner-store:activation:error',
+      );
     } finally {
       submittingRef.current = false;
       setSubmitting(false);

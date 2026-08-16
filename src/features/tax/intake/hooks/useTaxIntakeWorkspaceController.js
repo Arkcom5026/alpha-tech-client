@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { feedback as toast } from '@/design-system';
 import { useBranchStore } from '@/features/branch/store/branchStore';
@@ -44,6 +44,7 @@ const useTaxIntakeWorkspaceController = () => {
   const [documentType, setDocumentType] = useState(() => normalizeUpperQueryFilter(searchParams.get('documentType')));
   const [transitioning, setTransitioning] = useState(false);
   const [transitionError, setTransitionError] = useState(null);
+  const transitionRef = useRef(false);
 
   const updateQueryFilter = useCallback((key, value) => {
     const next = new URLSearchParams(searchParams);
@@ -134,7 +135,7 @@ const useTaxIntakeWorkspaceController = () => {
   }, [branchId, documentStatus, documentType, taxPeriodId]);
 
   const openDocument = useCallback(async (document) => {
-    if (!branchId || !document?.id) return;
+    if (!branchId || !document?.id || transitionRef.current) return;
 
     try {
       const detail = await getTaxDocumentDetail({
@@ -148,27 +149,36 @@ const useTaxIntakeWorkspaceController = () => {
     }
   }, [branchId]);
 
-  const handleTransition = useCallback(async (targetStatus) => {
-    if (!branchId || !selectedDocument?.id) return;
+  const refreshAfterMutation = useCallback(async (taxDocumentId, successMessage) => {
+    toast.success(successMessage);
+    try {
+      const detail = await getTaxDocumentDetail({
+        branchId,
+        taxDocumentId,
+      });
+      setSelectedDocument(detail);
+    } catch (refreshError) {
+      toast.warning('ดำเนินการสำเร็จแล้ว แต่โหลดรายละเอียดเอกสารล่าสุดไม่สำเร็จ');
+    }
+    await loadData();
+  }, [branchId, loadData]);
 
+  const handleTransition = useCallback(async (targetStatus) => {
+    const taxDocumentId = selectedDocument?.id;
+    if (!branchId || !taxDocumentId || transitioning || transitionRef.current) return;
+
+    transitionRef.current = true;
     setTransitioning(true);
     setTransitionError(null);
 
     try {
       await transitionTaxDocument({
         branchId,
-        taxDocumentId: selectedDocument.id,
+        taxDocumentId,
         targetStatus,
       });
 
-      const detail = await getTaxDocumentDetail({
-        branchId,
-        taxDocumentId: selectedDocument.id,
-      });
-
-      setSelectedDocument(detail);
-      await loadData();
-      toast.success(`เปลี่ยนสถานะเป็น ${targetStatus} แล้ว`);
+      await refreshAfterMutation(taxDocumentId, `เปลี่ยนสถานะเป็น ${targetStatus} แล้ว`);
     } catch (requestError) {
       const message = getTaxIntakeErrorMessage(requestError);
       setTransitionError({
@@ -177,23 +187,30 @@ const useTaxIntakeWorkspaceController = () => {
       });
       toast.error(message);
     } finally {
+      transitionRef.current = false;
       setTransitioning(false);
     }
-  }, [branchId, loadData, selectedDocument?.id]);
+  }, [branchId, refreshAfterMutation, selectedDocument?.id, transitioning]);
 
   const handleIssue = useCallback(async (taxInvoiceKind) => {
-    if (!branchId || !selectedDocument?.id) return;
-    setTransitioning(true); setTransitionError(null);
+    const taxDocumentId = selectedDocument?.id;
+    if (!branchId || !taxDocumentId || transitioning || transitionRef.current) return;
+
+    transitionRef.current = true;
+    setTransitioning(true);
+    setTransitionError(null);
     try {
-      await issueOutputTaxDocument({ branchId, taxDocumentId: selectedDocument.id, taxInvoiceKind });
-      setSelectedDocument(await getTaxDocumentDetail({ branchId, taxDocumentId: selectedDocument.id }));
-      await loadData();
-      toast.success('ออกเลขใบกำกับภาษีเรียบร้อยแล้ว');
+      await issueOutputTaxDocument({ branchId, taxDocumentId, taxInvoiceKind });
+      await refreshAfterMutation(taxDocumentId, 'ออกเลขใบกำกับภาษีเรียบร้อยแล้ว');
     } catch (requestError) {
       const message = getTaxIntakeErrorMessage(requestError);
-      setTransitionError({ message, details: getTaxIntakeErrorDetails(requestError) }); toast.error(message);
-    } finally { setTransitioning(false); }
-  }, [branchId, loadData, selectedDocument?.id]);
+      setTransitionError({ message, details: getTaxIntakeErrorDetails(requestError) });
+      toast.error(message);
+    } finally {
+      transitionRef.current = false;
+      setTransitioning(false);
+    }
+  }, [branchId, refreshAfterMutation, selectedDocument?.id, transitioning]);
 
   const selectedTaxPeriod = useMemo(
     () => taxPeriods.find((period) => String(period.id) === String(taxPeriodId)) || null,

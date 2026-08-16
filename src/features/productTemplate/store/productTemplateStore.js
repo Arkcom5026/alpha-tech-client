@@ -9,6 +9,8 @@ import * as templateImageApi from '../api/templateImageApi';
 const getErrorMessage = (error, fallback) =>
   error?.response?.data?.message || error?.response?.data?.error || error?.message || fallback;
 
+const mutationBusyError = () => new Error('กำลังบันทึกข้อมูล Template กรุณารอสักครู่');
+
 const initialState = {
   items: [],
   currentTemplate: null,
@@ -95,6 +97,7 @@ const useProductTemplateStore = create(devtools((set, get) => ({
   },
 
   addTemplateAction: async (data) => {
+    if (get().isSaving || get().isUploadingImage) throw mutationBusyError();
     set({ isSaving: true, error: null });
     try {
       const newTemplate = await productTemplateApi.createProductTemplate(data);
@@ -110,6 +113,7 @@ const useProductTemplateStore = create(devtools((set, get) => ({
   },
 
   updateTemplateAction: async (id, data) => {
+    if (get().isSaving || get().isUploadingImage) throw mutationBusyError();
     set({ isSaving: true, error: null });
     try {
       const updated = await productTemplateApi.updateProductTemplate(id, data);
@@ -127,6 +131,7 @@ const useProductTemplateStore = create(devtools((set, get) => ({
 
   uploadTemplateImageAction: async (id, file) => {
     if (!id || !file) return null;
+    if (get().isSaving || get().isUploadingImage) throw mutationBusyError();
     set({ isUploadingImage: true, error: null });
     try {
       await templateImageApi.uploadTemplateImage(id, file);
@@ -142,6 +147,7 @@ const useProductTemplateStore = create(devtools((set, get) => ({
 
   deleteTemplateImageAction: async (id, image) => {
     if (!id || !image) return null;
+    if (get().isSaving || get().isUploadingImage) throw mutationBusyError();
     set({ isUploadingImage: true, error: null });
     try {
       await templateImageApi.deleteTemplateImage(id, image);
@@ -157,6 +163,7 @@ const useProductTemplateStore = create(devtools((set, get) => ({
 
   setTemplateCoverImageAction: async (id, imageId) => {
     if (!id || !imageId) return null;
+    if (get().isSaving || get().isUploadingImage) throw mutationBusyError();
     set({ isUploadingImage: true, error: null });
     try {
       await templateImageApi.setTemplateCoverImage(id, imageId);
@@ -171,6 +178,7 @@ const useProductTemplateStore = create(devtools((set, get) => ({
   },
 
   archiveTemplateAction: async (id) => {
+    if (get().isSaving || get().isUploadingImage) throw mutationBusyError();
     set({ isSaving: true, error: null });
     try {
       const updated = await productTemplateApi.archiveProductTemplate(id);
@@ -186,6 +194,7 @@ const useProductTemplateStore = create(devtools((set, get) => ({
   },
 
   restoreTemplateAction: async (id) => {
+    if (get().isSaving || get().isUploadingImage) throw mutationBusyError();
     set({ isSaving: true, error: null });
     try {
       const updated = await productTemplateApi.restoreProductTemplate(id);
@@ -201,6 +210,7 @@ const useProductTemplateStore = create(devtools((set, get) => ({
   },
 
   toggleActiveAction: async (id) => {
+    if (get().isSaving || get().isUploadingImage) throw mutationBusyError();
     set({ isSaving: true, error: null });
     try {
       const updated = await productTemplateApi.toggleActive(id);

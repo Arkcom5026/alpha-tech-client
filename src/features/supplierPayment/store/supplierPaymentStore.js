@@ -14,37 +14,33 @@ import {
 } from '../api/supplierPaymentApi';
 
 const useSupplierPaymentStore = create((set, get) => ({
-  // ── State ───────────────────────────────────────────────────────────────────
   supplierPayments: [],
   isSupplierPaymentLoading: false,
   isSupplierPaymentSubmitting: false,
   supplierPaymentError: null,
   selectedSupplier: null,
 
-  // เก็บลิสต์รวบยอดแบบเดิม (compat)
   advancePayments: [],
-  // เก็บแบบ Map ตาม supplierId → ใช้ใน PurchaseOrderForm
-  advancePaymentsBySupplier: {}, // { [supplierId: number]: AdvancePayment[] }
+  advancePaymentsBySupplier: {},
 
-  // ── Setters ────────────────────────────────────────────────────────────────
   setSelectedSupplier: (supplier) => set({ selectedSupplier: supplier }),
 
-  // ── Actions ────────────────────────────────────────────────────────────────
-  // สร้างการชำระเงินให้ Supplier
   createSupplierPaymentAction: async (paymentData) => {
+    if (get().isSupplierPaymentSubmitting) {
+      throw new Error('กำลังบันทึกการชำระเงินผู้ขายอยู่ กรุณารอสักครู่');
+    }
     set({ isSupplierPaymentSubmitting: true, supplierPaymentError: null });
     try {
-      const response = await createSupplierPayment(paymentData);
-      set({ isSupplierPaymentSubmitting: false });
-      return response;
+      return await createSupplierPayment(paymentData);
     } catch (err) {
       console.error('❌ [createSupplierPaymentAction] error:', err);
-      set({ isSupplierPaymentSubmitting: false, supplierPaymentError: err?.message || 'เกิดข้อผิดพลาด' });
+      set({ supplierPaymentError: err?.message || 'เกิดข้อผิดพลาด' });
       throw err;
+    } finally {
+      set({ isSupplierPaymentSubmitting: false });
     }
   },
 
-  // ดึงรายการชำระเงินทั้งหมด
   fetchAllSupplierPaymentsAction: async () => {
     set({ isSupplierPaymentLoading: true, supplierPaymentError: null });
     try {
@@ -56,8 +52,11 @@ const useSupplierPaymentStore = create((set, get) => ({
     }
   },
 
-  // ลบรายการชำระเงิน
   deleteSupplierPaymentAction: async (paymentId) => {
+    if (get().isSupplierPaymentSubmitting) {
+      throw new Error('กำลังบันทึกการชำระเงินผู้ขายอยู่ กรุณารอสักครู่');
+    }
+    set({ isSupplierPaymentSubmitting: true, supplierPaymentError: null });
     try {
       await deleteSupplierPayment(paymentId);
       const current = get().supplierPayments || [];
@@ -68,10 +67,11 @@ const useSupplierPaymentStore = create((set, get) => ({
       console.error('❌ [deleteSupplierPaymentAction] error:', err);
       set({ supplierPaymentError: err?.message || 'ลบข้อมูลไม่สำเร็จ' });
       throw err;
+    } finally {
+      set({ isSupplierPaymentSubmitting: false });
     }
   },
 
-  // ดึงข้อมูลการชำระเงินทั้งหมดของ Supplier
   fetchSupplierPaymentsBySupplierIdAction: async (supplierId) => {
     try {
       const data = await getSupplierPaymentsBySupplier(supplierId);
@@ -85,12 +85,10 @@ const useSupplierPaymentStore = create((set, get) => ({
     }
   },
 
-  // ดึงข้อมูลการชำระเงินล่วงหน้าตาม Supplier และแคชเป็น Map
   fetchAdvancePaymentsBySupplierAction: async (supplierId) => {
     if (!supplierId) return;
     try {
       const data = await getAdvancePaymentsBySupplier(supplierId);
-      // อัปเดตทั้งแบบเก่า (array) และแบบ Map ตาม supplierId
       set((state) => ({
         advancePayments: Array.isArray(data) ? data : [],
         advancePaymentsBySupplier: {
@@ -101,14 +99,12 @@ const useSupplierPaymentStore = create((set, get) => ({
       }));
     } catch (err) {
       console.error('❌ [fetchAdvancePaymentsBySupplierAction] error:', err);
-      // กรณี error ให้เคลียร์เฉพาะช่องของ supplierId นั้น ๆ แต่ไม่ยุ่งกับช่องอื่น
       set((state) => ({
         advancePaymentsBySupplier: { ...state.advancePaymentsBySupplier, [supplierId]: [] },
       }));
     }
   },
 
-  // Utility: ล้างแคชมัดจำของซัพพลายเออร์รายใดรายหนึ่ง
   clearAdvancePaymentsCacheAction: (supplierId) => {
     if (!supplierId) return;
     set((state) => {
@@ -120,6 +116,3 @@ const useSupplierPaymentStore = create((set, get) => ({
 }));
 
 export default useSupplierPaymentStore;
-
-
-

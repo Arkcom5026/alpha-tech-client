@@ -16,6 +16,8 @@ const sortUnits = (units) =>
     String(a?.name || '').localeCompare(String(b?.name || ''), 'th')
   );
 
+const mutationBusyError = () => new Error('กำลังบันทึกข้อมูลหน่วยนับ กรุณารอสักครู่');
+
 const useUnitStore = create((set, get) => ({
   units: [],
   currentUnit: null,
@@ -69,6 +71,7 @@ const useUnitStore = create((set, get) => ({
   },
 
   createUnitAction: async (unitData) => {
+    if (get().submitting) throw mutationBusyError();
     set({ submitting: true, error: null });
     try {
       const created = await createUnit(unitData);
@@ -83,6 +86,7 @@ const useUnitStore = create((set, get) => ({
   },
 
   updateUnitAction: async (id, unitData) => {
+    if (get().submitting) throw mutationBusyError();
     const parsedId = Number(id);
     set({ submitting: true, error: null });
     try {
@@ -101,6 +105,7 @@ const useUnitStore = create((set, get) => ({
   },
 
   deleteUnitAction: async (id) => {
+    if (get().submitting) throw mutationBusyError();
     const parsedId = Number(id);
     set({ submitting: true, error: null });
     try {

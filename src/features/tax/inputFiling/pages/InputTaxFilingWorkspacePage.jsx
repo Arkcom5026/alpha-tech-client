@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowLeft,
   CheckCircle2,
@@ -79,6 +79,7 @@ const InputTaxFilingWorkspacePage = () => {
   const [error, setError] = useState('');
   const [removalId, setRemovalId] = useState(null);
   const [removalReason, setRemovalReason] = useState('');
+  const mutationRef = useRef(false);
 
   const load = useCallback(async () => {
     if (!branchId || !taxPeriodId) return;
@@ -109,105 +110,120 @@ const InputTaxFilingWorkspacePage = () => {
   const summary = workspace?.summary || {};
   const pendingApprovalCount = Number(summary.pendingApprovalCount || 0);
 
-  const advanceDocument = async (document) => {
-    if (!document?.canAdvanceLifecycle || !document?.nextLifecycleTarget || submitting) return;
+  const runMutation = async ({ key, work, successMessage, reload = true }) => {
+    if (mutationRef.current || submitting || loading) return { ok: false, result: null };
+    mutationRef.current = true;
     setSubmitting(true);
     try {
-      await advanceInputTaxDocumentLifecycle({
+      const result = await work();
+      const message = typeof successMessage === 'function' ? successMessage(result) : successMessage;
+      if (message) {
+        feedback.actionSuccess(message, `input-tax-filing:${taxPeriodId}:${key}:success`);
+      }
+      if (reload) await load();
+      return { ok: true, result };
+    } catch (requestError) {
+      feedback.actionError(
+        requestError,
+        inputTaxFilingErrorMessage(requestError),
+        `input-tax-filing:${taxPeriodId}:${key}:error`,
+      );
+      return { ok: false, result: null };
+    } finally {
+      mutationRef.current = false;
+      setSubmitting(false);
+    }
+  };
+
+  const advanceDocument = async (document) => {
+    if (!document?.canAdvanceLifecycle || !document?.nextLifecycleTarget) return false;
+    const { ok } = await runMutation({
+      key: `document:${document.taxDocumentId}:lifecycle:${document.nextLifecycleTarget}`,
+      work: () => advanceInputTaxDocumentLifecycle({
         branchId,
         taxDocumentId: document.taxDocumentId,
         targetStatus: document.nextLifecycleTarget,
-      });
-      feedback.success(lifecycleSuccessText(document.nextLifecycleTarget));
-      await load();
-    } catch (requestError) {
-      feedback.error(inputTaxFilingErrorMessage(requestError));
-    } finally {
-      setSubmitting(false);
-    }
+      }),
+      successMessage: lifecycleSuccessText(document.nextLifecycleTarget),
+    });
+    return ok;
   };
 
   const prepare = async () => {
-    if (!branchId || !taxPeriodId || pendingApprovalCount > 0 || submitting) return;
-    setSubmitting(true);
-    try {
-      const result = await prepareInputTaxFilingBatch({ branchId, taxPeriodId });
-      feedback.success(result?.replayed ? 'เปิดชุดภาษีซื้อเดิมของรอบนี้แล้ว' : 'เริ่มเตรียมชุดภาษีซื้อแล้ว');
-      await load();
-    } catch (requestError) {
-      feedback.error(inputTaxFilingErrorMessage(requestError));
-    } finally {
-      setSubmitting(false);
-    }
+    if (!branchId || !taxPeriodId || pendingApprovalCount > 0) return false;
+    const { ok } = await runMutation({
+      key: 'prepare',
+      work: () => prepareInputTaxFilingBatch({ branchId, taxPeriodId }),
+      successMessage: (result) => result?.replayed
+        ? 'เปิดชุดภาษีซื้อเดิมของรอบนี้แล้ว'
+        : 'เริ่มเตรียมชุดภาษีซื้อแล้ว',
+    });
+    return ok;
   };
 
   const selectDocument = async (taxDocumentId) => {
-    if (!batch?.id || submitting) return;
-    setSubmitting(true);
-    try {
-      await selectInputTaxDocumentForFiling({ branchId, batchId: batch.id, taxDocumentId });
-      feedback.success('เพิ่มเอกสารเข้าชุดภาษีซื้อแล้ว');
-      await load();
-    } catch (requestError) {
-      feedback.error(inputTaxFilingErrorMessage(requestError));
-    } finally {
-      setSubmitting(false);
-    }
+    if (!batch?.id) return false;
+    const { ok } = await runMutation({
+      key: `document:${taxDocumentId}:select`,
+      work: () => selectInputTaxDocumentForFiling({ branchId, batchId: batch.id, taxDocumentId }),
+      successMessage: 'เพิ่มเอกสารเข้าชุดภาษีซื้อแล้ว',
+    });
+    return ok;
   };
 
   const selectAllReady = async () => {
-    if (!batch?.id || readyDocuments.length === 0 || submitting) return;
-    setSubmitting(true);
-    let completed = 0;
-    try {
-      for (const document of readyDocuments) {
-        await selectInputTaxDocumentForFiling({
-          branchId,
-          batchId: batch.id,
-          taxDocumentId: document.taxDocumentId,
-        });
-        completed += 1;
-      }
-      feedback.success(`เพิ่มเอกสารพร้อมใช้ ${completed} รายการเข้าชุดแล้ว`);
-    } catch (requestError) {
-      feedback.error(inputTaxFilingErrorMessage(requestError));
-    } finally {
-      await load();
-      setSubmitting(false);
-    }
+    if (!batch?.id || readyDocuments.length === 0) return false;
+    const { ok } = await runMutation({
+      key: 'select-all-ready',
+      work: async () => {
+        let completed = 0;
+        for (const document of readyDocuments) {
+          await selectInputTaxDocumentForFiling({
+            branchId,
+            batchId: batch.id,
+            taxDocumentId: document.taxDocumentId,
+          });
+          completed += 1;
+        }
+        return completed;
+      },
+      successMessage: (completed) => `เพิ่มเอกสารพร้อมใช้ ${completed} รายการเข้าชุดแล้ว`,
+    });
+    return ok;
   };
 
   const removeDocument = async (document) => {
     const reason = removalReason.trim();
-    if (!batch?.id || !reason || submitting) return;
-    setSubmitting(true);
-    try {
-      await removeInputTaxDocumentFromFiling({
+    if (!batch?.id || !reason) return false;
+    const { ok } = await runMutation({
+      key: `document:${document.taxDocumentId}:remove`,
+      work: () => removeInputTaxDocumentFromFiling({
         branchId,
         batchId: batch.id,
         taxDocumentId: document.taxDocumentId,
         reason,
         version: document.filingItem?.version,
-      });
-      feedback.success('นำเอกสารออกจากชุดภาษีซื้อแล้ว');
+      }),
+      successMessage: 'นำเอกสารออกจากชุดภาษีซื้อแล้ว',
+    });
+    if (ok) {
       setRemovalId(null);
       setRemovalReason('');
-      await load();
-    } catch (requestError) {
-      feedback.error(inputTaxFilingErrorMessage(requestError));
-    } finally {
-      setSubmitting(false);
     }
+    return ok;
   };
 
-  const goReadiness = () => navigate(`/${shopSlug || 'advancetech'}/pos/finance/tax-periods/${taxPeriodId}/readiness`);
+  const goReadiness = () => {
+    if (submitting || mutationRef.current) return;
+    navigate(`/${shopSlug || 'advancetech'}/pos/finance/tax-periods/${taxPeriodId}/readiness`);
+  };
 
   return (
     <section className="space-y-5">
       <header className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-start gap-3">
-            <button type="button" onClick={() => navigate(-1)} className="rounded-xl border border-slate-200 p-2 text-slate-600 hover:bg-slate-50" aria-label="ย้อนกลับ"><ArrowLeft size={18} /></button>
+            <button type="button" onClick={() => navigate(-1)} disabled={submitting} className="rounded-xl border border-slate-200 p-2 text-slate-600 hover:bg-slate-50 disabled:opacity-50" aria-label="ย้อนกลับ"><ArrowLeft size={18} /></button>
             <div>
               <p className="text-xs font-black uppercase tracking-[0.14em] text-emerald-700">การเตรียมข้อมูลภาษีซื้อ</p>
               <h1 className="mt-1 text-2xl font-black text-slate-950">เตรียมชุดภาษีซื้อสำหรับปิดรอบ</h1>
@@ -248,7 +264,7 @@ const InputTaxFilingWorkspacePage = () => {
                   <p className="mt-1 text-sm text-slate-600">เลือกเข้าชุดแล้ว {Number(summary.selectedDocumentCount || 0)} จาก {Number(summary.authorityDocumentCount || 0)} รายการ</p>
                 </div>
                 {summary.readyForTaxClosing ? (
-                  <button type="button" onClick={goReadiness} className="rounded-xl bg-emerald-700 px-5 py-3 font-black text-white">ขั้นตอนที่ 4 · กลับไปตรวจความพร้อมภาษี</button>
+                  <button type="button" onClick={goReadiness} disabled={submitting} className="rounded-xl bg-emerald-700 px-5 py-3 font-black text-white disabled:opacity-40">ขั้นตอนที่ 4 · กลับไปตรวจความพร้อมภาษี</button>
                 ) : (
                   <button type="button" onClick={selectAllReady} disabled={submitting || readyDocuments.length === 0} className="rounded-xl bg-emerald-700 px-5 py-3 font-black text-white disabled:opacity-40">เพิ่มรายการที่พร้อมทั้งหมด ({readyDocuments.length})</button>
                 )}
@@ -298,7 +314,7 @@ const InputTaxFilingWorkspacePage = () => {
                           ) : document.canSelectForFiling ? (
                             <button type="button" onClick={() => selectDocument(document.taxDocumentId)} disabled={submitting} className="inline-flex items-center gap-2 rounded-xl bg-emerald-700 px-4 py-2.5 text-sm font-black text-white disabled:opacity-40"><FileCheck2 size={16} />เพิ่มเข้าชุด</button>
                           ) : document.canRemoveFromFiling ? (
-                            <button type="button" onClick={() => { setRemovalId(removing ? null : document.taxDocumentId); setRemovalReason(''); }} disabled={submitting} className="inline-flex items-center gap-2 rounded-xl border border-rose-200 px-4 py-2.5 text-sm font-black text-rose-700 disabled:opacity-40"><XCircle size={16} />นำออก</button>
+                            <button type="button" onClick={() => { if (!submitting) { setRemovalId(removing ? null : document.taxDocumentId); setRemovalReason(''); } }} disabled={submitting} className="inline-flex items-center gap-2 rounded-xl border border-rose-200 px-4 py-2.5 text-sm font-black text-rose-700 disabled:opacity-40"><XCircle size={16} />นำออก</button>
                           ) : selected ? (
                             <span className="inline-flex items-center gap-2 text-sm font-black text-emerald-700"><CheckCircle2 size={17} />อยู่ในชุดแล้ว</span>
                           ) : null}
@@ -308,7 +324,7 @@ const InputTaxFilingWorkspacePage = () => {
                         <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 p-3">
                           <label className="block text-xs font-black text-rose-900">เหตุผลที่นำเอกสารออกจากชุด</label>
                           <div className="mt-2 flex flex-col gap-2 sm:flex-row">
-                            <input value={removalReason} onChange={(event) => setRemovalReason(event.target.value)} placeholder="เช่น ต้องกลับไปแก้ไขข้อมูลเอกสาร" className="min-h-10 flex-1 rounded-xl border border-rose-200 bg-white px-3" />
+                            <input disabled={submitting} value={removalReason} onChange={(event) => setRemovalReason(event.target.value)} placeholder="เช่น ต้องกลับไปแก้ไขข้อมูลเอกสาร" className="min-h-10 flex-1 rounded-xl border border-rose-200 bg-white px-3 disabled:opacity-50" />
                             <button type="button" onClick={() => removeDocument(document)} disabled={submitting || !removalReason.trim()} className="rounded-xl bg-rose-700 px-4 py-2 text-sm font-black text-white disabled:opacity-40">ยืนยันนำออก</button>
                           </div>
                         </div>

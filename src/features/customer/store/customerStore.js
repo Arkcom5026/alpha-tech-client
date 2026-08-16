@@ -12,9 +12,12 @@ import {
   getMyCustomerProfilePos as getMyCustomerProfilePosApi,
 } from '../api/customerApi';
 
-const useCustomerStore = create((set) => ({
+const mutationBusyError = () => new Error('กำลังบันทึกข้อมูลลูกค้า กรุณารอสักครู่');
+
+const useCustomerStore = create((set, get) => ({
   customer: null,
   isLoading: false,
+  isMutating: false,
   error: null,
   searchedCustomers: [],
   isSearching: false,
@@ -67,7 +70,8 @@ const useCustomerStore = create((set) => ({
   },
 
   createCustomer: async (customerData) => {
-    set({ isLoading: true, error: null });
+    if (get().isMutating) throw mutationBusyError();
+    set({ isLoading: true, isMutating: true, error: null });
     try {
       const newCustomer = await createCustomer(customerData);
       set({ customer: newCustomer });
@@ -76,12 +80,13 @@ const useCustomerStore = create((set) => ({
       set({ error: 'เกิดข้อผิดพลาดในการสร้างลูกค้า' });
       throw err;
     } finally {
-      set({ isLoading: false });
+      set({ isLoading: false, isMutating: false });
     }
   },
 
   updateCustomerProfileOnlineAction: async (data) => {
-    set({ isLoading: true, error: null });
+    if (get().isMutating) throw mutationBusyError();
+    set({ isLoading: true, isMutating: true, error: null });
     try {
       const updatedCustomer = await updateCustomerProfileOnlineApi(data);
       set({ customer: updatedCustomer });
@@ -90,12 +95,13 @@ const useCustomerStore = create((set) => ({
       set({ error: 'เกิดข้อผิดพลาดในการอัปเดตลูกค้า (Online)' });
       throw err;
     } finally {
-      set({ isLoading: false });
+      set({ isLoading: false, isMutating: false });
     }
   },
 
   updateCustomerProfilePosAction: async (id, data) => {
-    set({ isLoading: true, error: null });
+    if (get().isMutating) throw mutationBusyError();
+    set({ isLoading: true, isMutating: true, error: null });
     try {
       const safeId = Number(id);
       if (!Number.isFinite(safeId)) throw new Error('INVALID_CUSTOMER_ID');
@@ -106,7 +112,7 @@ const useCustomerStore = create((set) => ({
       set({ error: 'เกิดข้อผิดพลาดในการอัปเดตลูกค้า (POS)' });
       throw err;
     } finally {
-      set({ isLoading: false });
+      set({ isLoading: false, isMutating: false });
     }
   },
 

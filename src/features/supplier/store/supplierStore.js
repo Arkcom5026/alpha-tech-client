@@ -14,6 +14,8 @@ import { parseApiError } from '@/utils/uiHelpers';
 const sortSuppliers = (items = []) =>
   [...items].sort((a, b) => String(a?.name || '').localeCompare(String(b?.name || ''), 'th'));
 
+const mutationBusyError = () => new Error('กำลังบันทึกข้อมูลผู้ขาย กรุณารอสักครู่');
+
 const useSupplierStore = create((set, get) => ({
   suppliers: [],
   selectedSupplier: null,
@@ -84,6 +86,7 @@ const useSupplierStore = create((set, get) => ({
   },
 
   createSupplierAction: async (form) => {
+    if (get().isSupplierSaving) throw mutationBusyError();
     set({ isSupplierSaving: true, supplierError: null });
     try {
       const created = await createSupplier(form);
@@ -99,6 +102,7 @@ const useSupplierStore = create((set, get) => ({
   },
 
   updateSupplierAction: async (id, form) => {
+    if (get().isSupplierSaving) throw mutationBusyError();
     const parsedId = Number(id);
     if (!Number.isInteger(parsedId) || parsedId <= 0) {
       const error = new Error('ID ผู้ขายไม่ถูกต้อง');
@@ -128,6 +132,7 @@ const useSupplierStore = create((set, get) => ({
   },
 
   deleteSupplierAction: async (id) => {
+    if (get().isSupplierSaving) throw mutationBusyError();
     const parsedId = Number(id);
     if (!Number.isInteger(parsedId) || parsedId <= 0) {
       const error = new Error('ID ผู้ขายไม่ถูกต้อง');

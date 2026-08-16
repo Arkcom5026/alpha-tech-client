@@ -1,5 +1,3 @@
-
-
 // src/features/customerDeposit/store/customerDepositStore.js
 
 import { create } from 'zustand';
@@ -12,10 +10,10 @@ import {
   getCustomerDeposits,
   getCustomerDepositTotal,
   updateCustomerDeposit,
-  applyDepositUsage
+  applyDepositUsage,
 } from '../api/customerDepositApi';
 
-const useCustomerDepositStore = create((set) => ({
+const useCustomerDepositStore = create((set, get) => ({
   isSubmitting: false,
   isLoading: false,
   isLoadingDetail: false,
@@ -50,12 +48,13 @@ const useCustomerDepositStore = create((set) => ({
     depositUsed: 0,
   }),
 
-  // ACTION: Create
   createCustomerDepositAction: async (data) => {
+    if (get().isSubmitting) {
+      throw new Error('กำลังบันทึกเงินมัดจำอยู่ กรุณารอสักครู่');
+    }
     set({ isSubmitting: true, error: null });
     try {
-      const res = await createCustomerDeposit(data);
-      return res;
+      return await createCustomerDeposit(data);
     } catch (err) {
       console.error('❌ createCustomerDepositAction error:', err);
       set({ error: err });
@@ -65,7 +64,6 @@ const useCustomerDepositStore = create((set) => ({
     }
   },
 
-  // ACTION: Fetch All
   fetchCustomerDepositsAction: async () => {
     set({ isLoading: true });
     try {
@@ -80,7 +78,6 @@ const useCustomerDepositStore = create((set) => ({
     }
   },
 
-  // ACTION: Fetch By ID
   fetchCustomerDepositByIdAction: async (id) => {
     set({ isLoadingDetail: true });
     try {
@@ -94,29 +91,38 @@ const useCustomerDepositStore = create((set) => ({
     }
   },
 
-  // ACTION: Update
   updateCustomerDepositAction: async (id, data) => {
+    if (get().isSubmitting) {
+      throw new Error('กำลังบันทึกเงินมัดจำอยู่ กรุณารอสักครู่');
+    }
+    set({ isSubmitting: true, error: null });
     try {
       return await updateCustomerDeposit(id, data);
     } catch (err) {
       console.error('❌ updateCustomerDepositAction error:', err);
       set({ error: err });
       throw err;
+    } finally {
+      set({ isSubmitting: false });
     }
   },
 
-  // ACTION: Cancel
   cancelCustomerDepositAction: async (id) => {
+    if (get().isSubmitting) {
+      throw new Error('กำลังบันทึกเงินมัดจำอยู่ กรุณารอสักครู่');
+    }
+    set({ isSubmitting: true, error: null });
     try {
       return await updateCustomerDeposit(id, { status: 'CANCELLED' });
     } catch (err) {
       console.error('❌ cancelCustomerDepositAction error:', err);
       set({ error: err });
       throw err;
+    } finally {
+      set({ isSubmitting: false });
     }
   },
 
-  // ACTION: Fetch Total Amount
   fetchCustomerDepositAction: async (customerId) => {
     try {
       const res = await getCustomerDepositTotal(customerId);
@@ -130,7 +136,6 @@ const useCustomerDepositStore = create((set) => ({
     }
   },
 
-  // ACTION: Search by Phone
   searchCustomerByPhoneAndDepositAction: async (phone) => {
     try {
       set({ error: null });
@@ -157,11 +162,7 @@ const useCustomerDepositStore = create((set) => ({
         customerDeposits: deposits,
       });
 
-      return {
-        customer,
-        totalDeposit: deposit,
-        deposits,
-      };
+      return { customer, totalDeposit: deposit, deposits };
     } catch (err) {
       console.error('❌ searchCustomerByPhoneAndDepositAction error:', err);
       set({ error: err });
@@ -169,14 +170,11 @@ const useCustomerDepositStore = create((set) => ({
     }
   },
 
-  // ACTION: Search by Name
   searchCustomerByNameAndDepositAction: async (name) => {
     try {
       set({ error: null });
       const res = await getCustomerAndDepositByName(name);
-
       console.log('✅ res จาก getCustomerAndDepositByName', res);
-
       const results = Array.isArray(res?.results) ? res.results : [];
 
       set({
@@ -199,7 +197,6 @@ const useCustomerDepositStore = create((set) => ({
     }
   },
 
-  // ACTION: Apply Deposit Usage
   searchCustomerByCustomerIdAndDepositAction: async (customerId) => {
     try {
       set({ error: null });
@@ -208,9 +205,7 @@ const useCustomerDepositStore = create((set) => ({
       const deposit = res?.totalDeposit || 0;
       const deposits = Array.isArray(res?.deposits) ? res.deposits : [];
 
-      if (!customer) {
-        throw new Error('ไม่พบลูกค้า');
-      }
+      if (!customer) throw new Error('ไม่พบลูกค้า');
 
       set({
         selectedCustomer: customer,
@@ -220,11 +215,7 @@ const useCustomerDepositStore = create((set) => ({
         depositUsed: 0,
       });
 
-      return {
-        customer,
-        totalDeposit: deposit,
-        deposits,
-      };
+      return { customer, totalDeposit: deposit, deposits };
     } catch (err) {
       console.error('❌ searchCustomerByCustomerIdAndDepositAction error:', err);
       set({ error: err });
@@ -233,8 +224,11 @@ const useCustomerDepositStore = create((set) => ({
   },
 
   applyDepositUsageAction: async ({ depositId, saleId, amountUsed }) => {
+    if (get().isSubmitting) {
+      throw new Error('กำลังบันทึกเงินมัดจำอยู่ กรุณารอสักครู่');
+    }
+    set({ isSubmitting: true, error: null });
     try {
-      set({ error: null });
       const res = await applyDepositUsage({ depositId, saleId, amountUsed });
 
       set((state) => {
@@ -273,10 +267,11 @@ const useCustomerDepositStore = create((set) => ({
       console.error('❌ applyDepositUsageAction error:', err);
       set({ error: err });
       throw err;
+    } finally {
+      set({ isSubmitting: false });
     }
   },
 
-  // ACTION: Load by Phone
   loadCustomerDepositByPhoneAction: async (phone) => {
     try {
       set({ error: null });
@@ -305,7 +300,6 @@ const useCustomerDepositStore = create((set) => ({
     }
   },
 
-  // ACTION: Reset All
   resetAllDepositState: () => set({
     isSubmitting: false,
     isLoading: false,
@@ -318,11 +312,6 @@ const useCustomerDepositStore = create((set) => ({
     customerDepositAmount: 0,
     depositUsed: 0,
   }),
-
 }));
 
 export default useCustomerDepositStore;
-
-
-
-

@@ -90,21 +90,25 @@ const TaxPeriodDetailPanel = ({ branchId, taxPeriodId, onClose, onAction, busyKe
   };
 
   const handleAction = async (action) => {
-    if (!detail || !onAction) return;
+    if (!detail || !onAction || busyKey) return;
     const result = await onAction(detail, action);
     if (result !== false) await loadDetail();
   };
 
+  const handleClose = () => {
+    if (!busyKey) onClose?.();
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-slate-950/40" role="dialog" aria-modal="true" aria-label="รายละเอียดรอบภาษี">
-      <button type="button" className="min-w-0 flex-1 cursor-default" onClick={onClose} aria-label="ปิดรายละเอียด" />
+      <button type="button" className="min-w-0 flex-1 cursor-default" onClick={handleClose} disabled={!!busyKey} aria-label="ปิดรายละเอียด" />
       <aside className="flex h-full w-full max-w-xl flex-col bg-white shadow-2xl">
         <header className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
           <div>
             <p className="text-xs font-bold uppercase tracking-wide text-emerald-700">รายละเอียดรอบภาษี</p>
             <h2 className="mt-1 text-xl font-black text-slate-900">{detail?.periodCode || 'กำลังโหลด...'}</h2>
           </div>
-          <button type="button" onClick={onClose} className="rounded-xl p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-800" aria-label="ปิด">
+          <button type="button" onClick={handleClose} disabled={!!busyKey} className="rounded-xl p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-800 disabled:cursor-not-allowed disabled:opacity-50" aria-label="ปิด">
             <X size={20} />
           </button>
         </header>

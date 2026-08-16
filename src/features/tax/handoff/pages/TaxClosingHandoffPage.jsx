@@ -1,6 +1,7 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, Download, FileSpreadsheet, PackageCheck, RefreshCw, ShieldCheck } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { ConfirmActionDialog } from '@/design-system';
 import { feedback } from '@/design-system/feedback';
 import { useBranchStore } from '@/features/branch/store/branchStore';
 import {
@@ -59,7 +60,9 @@ const TaxClosingHandoffPage = () => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [finalizing, setFinalizing] = useState(false);
+  const [finalizeConfirmationOpen, setFinalizeConfirmationOpen] = useState(false);
   const [error, setError] = useState('');
+  const finalizingRef = useRef(false);
 
   const load = useCallback(async () => {
     if (!branchId || !taxPeriodId) return;
@@ -119,7 +122,8 @@ const TaxClosingHandoffPage = () => {
   const exportWithholding = () => data && downloadCsv(`withholding-tax-${periodCode}.csv`, ['เลขค่าใช้จ่าย', 'คู่ค้า', 'เลขผู้เสียภาษี', 'WHT', 'แบบ', 'หนังสือรับรอง', 'สถานะ'], exportRows.withholding);
 
   const finalizeSnapshot = async () => {
-    if (!data?.handoffReady || finalizing) return;
+    if (!data?.handoffReady || finalizing || finalizingRef.current) return false;
+    finalizingRef.current = true;
     setFinalizing(true);
     try {
       const result = await finalizeTaxClosingHandoffBundle({
@@ -127,11 +131,22 @@ const TaxClosingHandoffPage = () => {
         taxPeriodId,
         expectedSnapshotHash: data.snapshotHash,
       });
-      feedback.success(result?.replayed ? 'Snapshot นี้ยืนยันไว้แล้ว' : 'ยืนยัน Tax Closing Snapshot เรียบร้อย');
+      feedback.actionSuccess(
+        result?.replayed ? 'Snapshot นี้ยืนยันไว้แล้ว' : 'ยืนยัน Tax Closing Snapshot เรียบร้อย',
+        `tax-closing:${taxPeriodId}:finalize:success`,
+      );
+      setFinalizeConfirmationOpen(false);
       await load();
+      return true;
     } catch (requestError) {
-      feedback.error(getTaxClosingHandoffErrorMessage(requestError));
+      feedback.actionError(
+        requestError,
+        getTaxClosingHandoffErrorMessage(requestError),
+        `tax-closing:${taxPeriodId}:finalize:error`,
+      );
+      return false;
     } finally {
+      finalizingRef.current = false;
       setFinalizing(false);
     }
   };
@@ -141,86 +156,102 @@ const TaxClosingHandoffPage = () => {
   }
 
   return (
-    <section className="space-y-5">
-      <header className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex items-start gap-3">
-            <button type="button" onClick={() => navigate(-1)} className="rounded-xl border border-slate-200 p-2 text-slate-600 hover:bg-slate-50"><ArrowLeft size={18} /></button>
-            <div>
-              <p className="text-xs font-black uppercase tracking-[0.16em] text-indigo-600">Tax Closing Package</p>
-              <h1 className="mt-1 text-2xl font-black text-slate-900">ชุดข้อมูลภาษีพร้อมส่งต่อ</h1>
-              <p className="mt-1 text-sm text-slate-500">รอบ {periodCode} · {currentBranch?.name || `สาขา #${branchId}`}</p>
+    <>
+      <section className="space-y-5">
+        <header className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex items-start gap-3">
+              <button type="button" onClick={() => navigate(-1)} disabled={finalizing} className="rounded-xl border border-slate-200 p-2 text-slate-600 hover:bg-slate-50 disabled:opacity-50"><ArrowLeft size={18} /></button>
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.16em] text-indigo-600">Tax Closing Package</p>
+                <h1 className="mt-1 text-2xl font-black text-slate-900">ชุดข้อมูลภาษีพร้อมส่งต่อ</h1>
+                <p className="mt-1 text-sm text-slate-500">รอบ {periodCode} · {currentBranch?.name || `สาขา #${branchId}`}</p>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button type="button" onClick={load} disabled={loading || finalizing} className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-bold text-slate-700 disabled:opacity-50"><RefreshCw size={16} className={loading ? 'animate-spin' : ''} />รีเฟรช</button>
+              {integrity.status !== 'CURRENT' && (
+                <button type="button" onClick={() => setFinalizeConfirmationOpen(true)} disabled={!data?.handoffReady || finalizing} className="inline-flex items-center gap-2 rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-2.5 text-sm font-bold text-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"><ShieldCheck size={16} />{finalizing ? 'กำลังยืนยัน...' : integrity.status === 'STALE' ? 'ยืนยัน Snapshot เวอร์ชันใหม่' : 'ยืนยัน Snapshot ปิดงวด'}</button>
+              )}
+              <button type="button" onClick={exportBundle} disabled={!data || finalizing} className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50"><Download size={16} />Bundle JSON</button>
             </div>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <button type="button" onClick={load} disabled={loading || finalizing} className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-bold text-slate-700 disabled:opacity-50"><RefreshCw size={16} className={loading ? 'animate-spin' : ''} />รีเฟรช</button>
-            {integrity.status !== 'CURRENT' && (
-              <button type="button" onClick={finalizeSnapshot} disabled={!data?.handoffReady || finalizing} className="inline-flex items-center gap-2 rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-2.5 text-sm font-bold text-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"><ShieldCheck size={16} />{finalizing ? 'กำลังยืนยัน...' : integrity.status === 'STALE' ? 'ยืนยัน Snapshot เวอร์ชันใหม่' : 'ยืนยัน Snapshot ปิดงวด'}</button>
-            )}
-            <button type="button" onClick={exportBundle} disabled={!data} className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50"><Download size={16} />Bundle JSON</button>
-          </div>
-        </div>
-      </header>
+        </header>
 
-      {error && <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm font-semibold text-rose-700">{error}</div>}
-      {loading ? <div className="rounded-2xl border border-slate-200 bg-white p-12 text-center text-sm font-semibold text-slate-500">กำลังสร้าง Tax Closing Snapshot...</div> : data && (
-        <>
-          <section className={`rounded-2xl border p-5 ${data.handoffReady ? 'border-emerald-200 bg-emerald-50' : 'border-amber-200 bg-amber-50'}`}>
-            <div className="flex items-center gap-2"><PackageCheck size={20} /><h2 className="font-black">{data.handoffReady ? 'READY FOR HANDOFF' : 'DRAFT — ยังมีรายการต้องจัดการ'}</h2></div>
-            <p className="mt-2 text-sm">Readiness {readiness.readinessPercent ?? 0}% · Blockers {readiness.blockerCount ?? 0} · Package v{data.packageVersion}</p>
-            <p className="mt-1 break-all font-mono text-xs text-slate-600">Snapshot SHA-256: {shortHash(data.snapshotHash)}</p>
-            <p className="mt-2 text-xs font-semibold text-slate-600">ชุดนี้ใช้สำหรับส่งสำนักงานบัญชีหรือใช้เตรียมการยื่นเองในอนาคต และไม่ใช่หลักฐานการยื่นต่อกรมสรรพากรโดยตรง</p>
-          </section>
+        {error && <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm font-semibold text-rose-700">{error}</div>}
+        {loading ? <div className="rounded-2xl border border-slate-200 bg-white p-12 text-center text-sm font-semibold text-slate-500">กำลังสร้าง Tax Closing Snapshot...</div> : data && (
+          <>
+            <section className={`rounded-2xl border p-5 ${data.handoffReady ? 'border-emerald-200 bg-emerald-50' : 'border-amber-200 bg-amber-50'}`}>
+              <div className="flex items-center gap-2"><PackageCheck size={20} /><h2 className="font-black">{data.handoffReady ? 'READY FOR HANDOFF' : 'DRAFT — ยังมีรายการต้องจัดการ'}</h2></div>
+              <p className="mt-2 text-sm">Readiness {readiness.readinessPercent ?? 0}% · Blockers {readiness.blockerCount ?? 0} · Package v{data.packageVersion}</p>
+              <p className="mt-1 break-all font-mono text-xs text-slate-600">Snapshot SHA-256: {shortHash(data.snapshotHash)}</p>
+              <p className="mt-2 text-xs font-semibold text-slate-600">ชุดนี้ใช้สำหรับส่งสำนักงานบัญชีหรือใช้เตรียมการยื่นเองในอนาคต และไม่ใช่หลักฐานการยื่นต่อกรมสรรพากรโดยตรง</p>
+            </section>
 
-          <section className={`rounded-2xl border p-5 ${integrityView.className}`}>
-            <div className="flex items-center gap-2"><ShieldCheck size={19} /><h2 className="font-black">Closing Integrity — {integrity.status}</h2></div>
-            <p className="mt-2 text-sm font-bold">{integrityView.title}</p>
-            <p className="mt-1 text-xs">{integrityView.description}</p>
-            <div className="mt-3 grid gap-2 text-xs md:grid-cols-2">
-              <p className="break-all font-mono">Current: {shortHash(integrity.currentSnapshotHash || data.snapshotHash)}</p>
-              <p className="break-all font-mono">Finalized: {shortHash(integrity.finalizedSnapshotHash)}</p>
-              <p>Finalization version: {integrity.finalizationVersion || '-'}</p>
-              <p>Finalized at: {integrity.finalizedAt ? new Date(integrity.finalizedAt).toLocaleString('th-TH') : '-'}</p>
-            </div>
-          </section>
+            <section className={`rounded-2xl border p-5 ${integrityView.className}`}>
+              <div className="flex items-center gap-2"><ShieldCheck size={19} /><h2 className="font-black">Closing Integrity — {integrity.status}</h2></div>
+              <p className="mt-2 text-sm font-bold">{integrityView.title}</p>
+              <p className="mt-1 text-xs">{integrityView.description}</p>
+              <div className="mt-3 grid gap-2 text-xs md:grid-cols-2">
+                <p className="break-all font-mono">Current: {shortHash(integrity.currentSnapshotHash || data.snapshotHash)}</p>
+                <p className="break-all font-mono">Finalized: {shortHash(integrity.finalizedSnapshotHash)}</p>
+                <p>Finalization version: {integrity.finalizationVersion || '-'}</p>
+                <p>Finalized at: {integrity.finalizedAt ? new Date(integrity.finalizedAt).toLocaleString('th-TH') : '-'}</p>
+              </div>
+            </section>
 
-          <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-            <div className="rounded-2xl border border-emerald-200 bg-white p-4"><p className="text-xs text-slate-500">Output VAT</p><p className="mt-1 text-xl font-black">฿{money(snapshot?.outputVat?.summary?.taxAmount)}</p><p className="text-xs text-slate-500">{snapshot?.outputVat?.documents?.length || 0} เอกสาร</p></div>
-            <div className="rounded-2xl border border-blue-200 bg-white p-4"><p className="text-xs text-slate-500">Input VAT</p><p className="mt-1 text-xl font-black">฿{money(snapshot?.inputVat?.summary?.taxAmount)}</p><p className="text-xs text-slate-500">{snapshot?.inputVat?.documents?.length || 0} เอกสาร</p></div>
-            <div className="rounded-2xl border border-amber-200 bg-white p-4"><p className="text-xs text-slate-500">Tax Expenses</p><p className="mt-1 text-xl font-black">฿{money(snapshot?.expenses?.summary?.totalAmount)}</p><p className="text-xs text-slate-500">{snapshot?.expenses?.rows?.length || 0} รายการ</p></div>
-            <div className="rounded-2xl border border-violet-200 bg-white p-4"><p className="text-xs text-slate-500">WHT</p><p className="mt-1 text-xl font-black">฿{money(snapshot?.withholding?.summary?.withholdingTaxAmount)}</p><p className="text-xs text-slate-500">{snapshot?.withholding?.rows?.length || 0} รายการ</p></div>
-            <div className="rounded-2xl border border-cyan-200 bg-white p-4"><p className="text-xs text-slate-500">PP30 สุทธิ</p><p className="mt-1 text-xl font-black">฿{money(snapshot?.pp30?.settlement?.pp30VatPayable ?? snapshot?.pp30?.settlement?.pp30VatCredit)}</p><p className="text-xs text-slate-500">{snapshot?.pp30?.readiness?.readyForPp30Preparation ? 'พร้อม' : 'ยังไม่พร้อม'}</p></div>
-          </section>
+            <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+              <div className="rounded-2xl border border-emerald-200 bg-white p-4"><p className="text-xs text-slate-500">Output VAT</p><p className="mt-1 text-xl font-black">฿{money(snapshot?.outputVat?.summary?.taxAmount)}</p><p className="text-xs text-slate-500">{snapshot?.outputVat?.documents?.length || 0} เอกสาร</p></div>
+              <div className="rounded-2xl border border-blue-200 bg-white p-4"><p className="text-xs text-slate-500">Input VAT</p><p className="mt-1 text-xl font-black">฿{money(snapshot?.inputVat?.summary?.taxAmount)}</p><p className="text-xs text-slate-500">{snapshot?.inputVat?.documents?.length || 0} เอกสาร</p></div>
+              <div className="rounded-2xl border border-amber-200 bg-white p-4"><p className="text-xs text-slate-500">Tax Expenses</p><p className="mt-1 text-xl font-black">฿{money(snapshot?.expenses?.summary?.totalAmount)}</p><p className="text-xs text-slate-500">{snapshot?.expenses?.rows?.length || 0} รายการ</p></div>
+              <div className="rounded-2xl border border-violet-200 bg-white p-4"><p className="text-xs text-slate-500">WHT</p><p className="mt-1 text-xl font-black">฿{money(snapshot?.withholding?.summary?.withholdingTaxAmount)}</p><p className="text-xs text-slate-500">{snapshot?.withholding?.rows?.length || 0} รายการ</p></div>
+              <div className="rounded-2xl border border-cyan-200 bg-white p-4"><p className="text-xs text-slate-500">PP30 สุทธิ</p><p className="mt-1 text-xl font-black">฿{money(snapshot?.pp30?.settlement?.pp30VatPayable ?? snapshot?.pp30?.settlement?.pp30VatCredit)}</p><p className="text-xs text-slate-500">{snapshot?.pp30?.readiness?.readyForPp30Preparation ? 'พร้อม' : 'ยังไม่พร้อม'}</p></div>
+            </section>
 
-          <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <h2 className="font-black">ไฟล์ส่งออก</h2>
-            <p className="mt-1 text-xs text-slate-500">Bundle JSON คือ snapshot หลัก ส่วนไฟล์ด้านล่างเป็นรูปแบบเสริมสำหรับนำไปตรวจหรือส่งต่อ</p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <button type="button" onClick={exportManifest} className="rounded-xl border border-slate-300 px-3 py-2 text-xs font-bold">Manifest JSON</button>
-              <button type="button" onClick={exportOutputVat} className="rounded-xl border border-emerald-300 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-800">Output VAT CSV</button>
-              <button type="button" onClick={exportInputVat} className="rounded-xl border border-blue-300 bg-blue-50 px-3 py-2 text-xs font-bold text-blue-800">Input VAT CSV</button>
-              <button type="button" onClick={exportExpenses} className="rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-800">Expenses CSV</button>
-              <button type="button" onClick={exportWithholding} className="rounded-xl border border-violet-300 bg-violet-50 px-3 py-2 text-xs font-bold text-violet-800">WHT CSV</button>
-              <button type="button" onClick={exportPp30} className="rounded-xl border border-cyan-300 bg-cyan-50 px-3 py-2 text-xs font-bold text-cyan-800">PP30 JSON</button>
-            </div>
-          </section>
+            <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <h2 className="font-black">ไฟล์ส่งออก</h2>
+              <p className="mt-1 text-xs text-slate-500">Bundle JSON คือ snapshot หลัก ส่วนไฟล์ด้านล่างเป็นรูปแบบเสริมสำหรับนำไปตรวจหรือส่งต่อ</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button type="button" onClick={exportManifest} disabled={finalizing} className="rounded-xl border border-slate-300 px-3 py-2 text-xs font-bold disabled:opacity-50">Manifest JSON</button>
+                <button type="button" onClick={exportOutputVat} disabled={finalizing} className="rounded-xl border border-emerald-300 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-800 disabled:opacity-50">Output VAT CSV</button>
+                <button type="button" onClick={exportInputVat} disabled={finalizing} className="rounded-xl border border-blue-300 bg-blue-50 px-3 py-2 text-xs font-bold text-blue-800 disabled:opacity-50">Input VAT CSV</button>
+                <button type="button" onClick={exportExpenses} disabled={finalizing} className="rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-800 disabled:opacity-50">Expenses CSV</button>
+                <button type="button" onClick={exportWithholding} disabled={finalizing} className="rounded-xl border border-violet-300 bg-violet-50 px-3 py-2 text-xs font-bold text-violet-800 disabled:opacity-50">WHT CSV</button>
+                <button type="button" onClick={exportPp30} disabled={finalizing} className="rounded-xl border border-cyan-300 bg-cyan-50 px-3 py-2 text-xs font-bold text-cyan-800 disabled:opacity-50">PP30 JSON</button>
+              </div>
+            </section>
 
-          <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="flex items-center gap-2"><ShieldCheck size={18} /><h2 className="font-black">Package Manifest</h2></div>
-            <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
-              {manifestFiles.map((file) => <div key={file.key} className="rounded-xl border border-slate-200 p-3"><div className="flex items-center gap-2"><FileSpreadsheet size={15} /><p className="text-xs font-black">{file.key}</p></div><p className="mt-1 break-all text-xs text-slate-500">{file.filename}</p></div>)}
-            </div>
-          </section>
+            <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="flex items-center gap-2"><ShieldCheck size={18} /><h2 className="font-black">Package Manifest</h2></div>
+              <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+                {manifestFiles.map((file) => <div key={file.key} className="rounded-xl border border-slate-200 p-3"><div className="flex items-center gap-2"><FileSpreadsheet size={15} /><p className="text-xs font-black">{file.key}</p></div><p className="mt-1 break-all text-xs text-slate-500">{file.filename}</p></div>)}
+              </div>
+            </section>
 
-          <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <h2 className="font-black">Readiness Domains</h2>
-            <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-4">
-              {(snapshot?.readiness?.domains || []).map((domain) => <div key={domain.key} className="rounded-xl border border-slate-200 p-3"><p className="text-xs font-black">{domain.label}</p><p className={`mt-1 text-sm font-bold ${domain.ready ? 'text-emerald-600' : 'text-amber-700'}`}>{domain.ready ? 'พร้อม' : 'ยังไม่พร้อม'}</p></div>)}
-            </div>
-          </section>
-        </>
-      )}
-    </section>
+            <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <h2 className="font-black">Readiness Domains</h2>
+              <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-4">
+                {(snapshot?.readiness?.domains || []).map((domain) => <div key={domain.key} className="rounded-xl border border-slate-200 p-3"><p className="text-xs font-black">{domain.label}</p><p className={`mt-1 text-sm font-bold ${domain.ready ? 'text-emerald-600' : 'text-amber-700'}`}>{domain.ready ? 'พร้อม' : 'ยังไม่พร้อม'}</p></div>)}
+              </div>
+            </section>
+          </>
+        )}
+      </section>
+
+      <ConfirmActionDialog
+        open={finalizeConfirmationOpen}
+        title={integrity.status === 'STALE' ? 'ยืนยัน Snapshot เวอร์ชันใหม่' : 'ยืนยัน Snapshot ปิดงวด'}
+        description={`ระบบจะยืนยันชุดข้อมูลภาษีรอบ ${periodCode} ที่ Snapshot ${shortHash(data?.snapshotHash)} เป็นหลักฐานปิดงวดสำหรับส่งต่อสำนักงานบัญชี`}
+        confirmLabel={integrity.status === 'STALE' ? 'ยืนยันเวอร์ชันใหม่' : 'ยืนยัน Snapshot'}
+        intent="default"
+        loading={finalizing}
+        loadingLabel="กำลังยืนยัน..."
+        onConfirm={finalizeSnapshot}
+        onClose={() => {
+          if (!finalizing) setFinalizeConfirmationOpen(false);
+        }}
+      />
+    </>
   );
 };
 

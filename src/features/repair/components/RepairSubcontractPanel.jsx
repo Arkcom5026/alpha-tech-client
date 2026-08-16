@@ -50,28 +50,37 @@ const RepairSubcontractPanel = ({ job, onChanged, refreshKey = 0 }) => {
   const [returnNote, setReturnNote] = useState('');
   const [receiveForm, setReceiveForm] = useState({ actualExternalCost: '', transportCost: '', materialCost: '', otherOperationalCost: '', resultNote: '' });
   const mutationRef = useRef(false);
+  const jobIdRef = useRef(job?.id);
+  jobIdRef.current = job?.id;
 
   const activeFromJob = job?.workflow?.subcontractContext || null;
   const workflowStatus = job?.workflow?.status || context?.workflowStatus || 'RECEIVED';
   const canOpen = ['APPROVED', 'REPAIRING'].includes(workflowStatus);
   const shouldLoadContext = Boolean(activeFromJob || expanded);
-  const interactionLocked = loading || mutationBusy;
+  const interactionLocked = loading || mutationBusy || mutationRef.current;
 
-  const load = useCallback(async () => {
-    if (!job?.id || !shouldLoadContext) return;
+  const load = useCallback(async ({ jobId = job?.id, reportError = true } = {}) => {
+    if (!jobId || !shouldLoadContext) return { ok: false, skipped: true };
+    const jobIdSnapshot = jobId;
+    if (Number(jobIdRef.current) !== Number(jobIdSnapshot)) return { ok: false, stale: true };
+
     setLoading(true);
-    setError('');
+    if (reportError) setError('');
     try {
-      const data = await repairApi.getSubcontractContext(job.id);
+      const data = await repairApi.getSubcontractContext(jobIdSnapshot);
+      if (Number(jobIdRef.current) !== Number(jobIdSnapshot)) return { ok: false, stale: true };
       setContext(data);
       const paidTotal = (data?.relatedExpenses || []).reduce((sum, item) => sum + Number(item.totalAmount || 0), 0);
       if (paidTotal > 0) {
         setReceiveForm((current) => current.actualExternalCost ? current : { ...current, actualExternalCost: String(paidTotal) });
       }
+      return { ok: true, data };
     } catch (loadError) {
-      setError(loadError.message);
+      if (Number(jobIdRef.current) !== Number(jobIdSnapshot)) return { ok: false, stale: true, error: loadError };
+      if (reportError) setError(loadError.message);
+      return { ok: false, error: loadError };
     } finally {
-      setLoading(false);
+      if (Number(jobIdRef.current) === Number(jobIdSnapshot)) setLoading(false);
     }
   }, [job?.id, shouldLoadContext]);
 
@@ -105,9 +114,10 @@ const RepairSubcontractPanel = ({ job, onChanged, refreshKey = 0 }) => {
     setNotice(`เพิ่มผู้รับซ่อม “${created.name}” และเลือกให้ใบงานนี้แล้ว`);
   };
 
-  const runMutation = async ({ key, action, work, successMessage, failureMessage }) => {
+  const runMutation = async ({ key, action, jobIdSnapshot, work, successMessage, failureMessage }) => {
     if (mutationRef.current || mutationBusy) return false;
 
+    const ownerJobId = jobIdSnapshot || jobIdRef.current;
     mutationRef.current = true;
     setMutationBusy(true);
     setMutationAction(action);
@@ -118,16 +128,37 @@ const RepairSubcontractPanel = ({ job, onChanged, refreshKey = 0 }) => {
       setNotice(successMessage);
       feedback.actionSuccess(
         successMessage,
-        `repair:subcontract:${job.id}:${key}:success`,
+        `repair:subcontract:${ownerJobId}:${key}:success`,
       );
-      await load();
+
+      if (Number(jobIdRef.current) !== Number(ownerJobId)) {
+        feedback.actionError(
+          new Error('Repair job context changed after subcontract mutation'),
+          'บันทึกข้อมูลส่งซ่อมภายนอกสำเร็จแล้ว แต่มีการเปลี่ยนไปอีกใบงานก่อนรีเฟรชข้อมูล',
+          `repair:subcontract:${ownerJobId}:${key}:context-changed:error`,
+        );
+        return result ?? true;
+      }
+
+      const contextRefresh = await load({ jobId: ownerJobId, reportError: false });
+      if (!contextRefresh?.ok && !contextRefresh?.stale) {
+        feedback.actionError(
+          contextRefresh?.error,
+          'บันทึกข้อมูลส่งซ่อมภายนอกสำเร็จแล้ว แต่รีเฟรชข้อมูลส่งซ่อมล่าสุดไม่สำเร็จ',
+          `repair:subcontract:${ownerJobId}:${key}:context-refresh:error`,
+        );
+      }
+
       try {
-        await onChanged?.();
+        const parentRefresh = await onChanged?.();
+        if (parentRefresh === false || parentRefresh?.ok === false) {
+          throw parentRefresh?.error || new Error('Parent repair job refresh returned unsuccessful outcome');
+        }
       } catch (refreshError) {
         feedback.actionError(
           refreshError,
           'บันทึกข้อมูลส่งซ่อมภายนอกสำเร็จแล้ว แต่รีเฟรชใบงานหลักไม่สำเร็จ',
-          `repair:subcontract:${job.id}:${key}:refresh:error`,
+          `repair:subcontract:${ownerJobId}:${key}:refresh:error`,
         );
       }
       return result ?? true;
@@ -137,7 +168,7 @@ const RepairSubcontractPanel = ({ job, onChanged, refreshKey = 0 }) => {
       feedback.actionError(
         mutationError,
         failureMessage,
-        `repair:subcontract:${job.id}:${key}:error`,
+        `repair:subcontract:${ownerJobId}:${key}:error`,
       );
       return false;
     } finally {
@@ -154,6 +185,7 @@ const RepairSubcontractPanel = ({ job, onChanged, refreshKey = 0 }) => {
     const ok = await runMutation({
       key: 'send',
       action: 'send',
+      jobIdSnapshot,
       work: () => repairApi.sendSubcontract(jobIdSnapshot, {
         ...sendFormSnapshot,
         expensePayeeId: Number(sendFormSnapshot.expensePayeeId),
@@ -165,7 +197,7 @@ const RepairSubcontractPanel = ({ job, onChanged, refreshKey = 0 }) => {
       successMessage: 'บันทึกการส่งซ่อมภายนอกแล้ว ใบงานภายในร้านถูกพักจนกว่าจะรับเครื่องกลับ',
       failureMessage: 'บันทึกการส่งซ่อมภายนอกไม่สำเร็จ',
     });
-    if (ok) setExpanded(false);
+    if (ok && Number(jobIdRef.current) === Number(jobIdSnapshot)) setExpanded(false);
   };
 
   const update = async () => {
@@ -176,6 +208,7 @@ const RepairSubcontractPanel = ({ job, onChanged, refreshKey = 0 }) => {
     await runMutation({
       key: `subcontract:${subcontractIdSnapshot}:update`,
       action: 'update',
+      jobIdSnapshot,
       work: () => repairApi.updateSubcontract(jobIdSnapshot, subcontractIdSnapshot, {
         ...updateFormSnapshot,
         providerQuotedAmount: updateFormSnapshot.providerQuotedAmount === ''
@@ -196,6 +229,7 @@ const RepairSubcontractPanel = ({ job, onChanged, refreshKey = 0 }) => {
     await runMutation({
       key: `subcontract:${subcontractIdSnapshot}:request-return`,
       action: 'request-return',
+      jobIdSnapshot,
       work: () => repairApi.commandSubcontract(jobIdSnapshot, subcontractIdSnapshot, {
         action: 'REQUEST_RETURN',
         note: returnNoteSnapshot || null,
@@ -213,6 +247,7 @@ const RepairSubcontractPanel = ({ job, onChanged, refreshKey = 0 }) => {
     const ok = await runMutation({
       key: `subcontract:${subcontractIdSnapshot}:receive-return`,
       action: 'receive-return',
+      jobIdSnapshot,
       work: () => repairApi.commandSubcontract(jobIdSnapshot, subcontractIdSnapshot, {
         action: 'RECEIVE_RETURN',
         resultNote: receiveFormSnapshot.resultNote.trim(),
@@ -226,7 +261,7 @@ const RepairSubcontractPanel = ({ job, onChanged, refreshKey = 0 }) => {
       successMessage: 'รับเครื่องกลับเข้าร้านแล้ว ระบบปลดการพักใบงานและสามารถดำเนิน Repair Workflow ต่อได้',
       failureMessage: 'ยืนยันรับเครื่องกลับเข้าร้านไม่สำเร็จ',
     });
-    if (ok) {
+    if (ok && Number(jobIdRef.current) === Number(jobIdSnapshot)) {
       setReturnNote('');
       setReceiveForm({ actualExternalCost: '', transportCost: '', materialCost: '', otherOperationalCost: '', resultNote: '' });
     }

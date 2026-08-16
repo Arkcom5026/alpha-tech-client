@@ -14,6 +14,11 @@ import {
 
 const mutationBusyError = () => new Error('กำลังบันทึกข้อมูลลูกค้า กรุณารอสักครู่');
 let customerSearchRequestSequence = 0;
+let customerRecordRequestSequence = 0;
+
+const invalidateCustomerRecordReads = () => {
+  customerRecordRequestSequence += 1;
+};
 
 const useCustomerStore = create((set, get) => ({
   customer: null,
@@ -68,21 +73,28 @@ const useCustomerStore = create((set, get) => ({
   },
 
   getCustomerByPhone: async (phone) => {
+    if (get().isMutating) return null;
+    const phoneSnapshot = String(phone ?? '').trim();
+    const requestId = ++customerRecordRequestSequence;
+    const ownsRecordRequest = () => customerRecordRequestSequence === requestId;
     set({ isLoading: true, error: null });
     try {
-      const data = await getCustomerByPhone(phone);
+      const data = await getCustomerByPhone(phoneSnapshot);
+      if (!ownsRecordRequest()) return null;
       set({ customer: data });
       return data;
     } catch (err) {
+      if (!ownsRecordRequest()) return null;
       set({ customer: null, error: 'ไม่พบลูกค้า' });
       throw err;
     } finally {
-      set({ isLoading: false });
+      if (ownsRecordRequest()) set({ isLoading: false });
     }
   },
 
   createCustomer: async (customerData) => {
     if (get().isMutating) throw mutationBusyError();
+    invalidateCustomerRecordReads();
     set({ isLoading: true, isMutating: true, error: null });
     try {
       const newCustomer = await createCustomer(customerData);
@@ -98,6 +110,7 @@ const useCustomerStore = create((set, get) => ({
 
   updateCustomerProfileOnlineAction: async (data) => {
     if (get().isMutating) throw mutationBusyError();
+    invalidateCustomerRecordReads();
     set({ isLoading: true, isMutating: true, error: null });
     try {
       const updatedCustomer = await updateCustomerProfileOnlineApi(data);
@@ -113,6 +126,7 @@ const useCustomerStore = create((set, get) => ({
 
   updateCustomerProfilePosAction: async (id, data) => {
     if (get().isMutating) throw mutationBusyError();
+    invalidateCustomerRecordReads();
     set({ isLoading: true, isMutating: true, error: null });
     try {
       const safeId = Number(id);
@@ -129,35 +143,51 @@ const useCustomerStore = create((set, get) => ({
   },
 
   getMyCustomerProfileOnlineAction: async () => {
+    if (get().isMutating) return null;
+    const requestId = ++customerRecordRequestSequence;
+    const ownsRecordRequest = () => customerRecordRequestSequence === requestId;
     set({ isLoading: true, error: null });
     try {
       const data = await getMyCustomerProfileOnlineApi();
+      if (!ownsRecordRequest()) return null;
       set({ customer: data });
       return data;
     } catch (err) {
+      if (!ownsRecordRequest()) return null;
       set({ customer: null, error: 'โหลดข้อมูลลูกค้าไม่สำเร็จ (Online)' });
       throw err;
     } finally {
-      set({ isLoading: false });
+      if (ownsRecordRequest()) set({ isLoading: false });
     }
   },
 
   getMyCustomerProfilePosAction: async () => {
+    if (get().isMutating) return null;
+    const requestId = ++customerRecordRequestSequence;
+    const ownsRecordRequest = () => customerRecordRequestSequence === requestId;
     set({ isLoading: true, error: null });
     try {
       const data = await getMyCustomerProfilePosApi();
+      if (!ownsRecordRequest()) return null;
       set({ customer: data });
       return data;
     } catch (err) {
+      if (!ownsRecordRequest()) return null;
       set({ customer: null, error: 'โหลดข้อมูลลูกค้าไม่สำเร็จ (POS)' });
       throw err;
     } finally {
-      set({ isLoading: false });
+      if (ownsRecordRequest()) set({ isLoading: false });
     }
   },
 
-  setCustomer: (customer) => set({ customer }),
-  resetCustomer: () => set({ customer: null, error: null }),
+  setCustomer: (customer) => {
+    invalidateCustomerRecordReads();
+    set({ customer, error: null, isLoading: false });
+  },
+  resetCustomer: () => {
+    invalidateCustomerRecordReads();
+    set({ customer: null, error: null, isLoading: false });
+  },
 
   createCustomerAction: async (data) => useCustomerStore.getState().createCustomer(data),
   updateCustomerProfileAction: async (data, mode = 'online') => {

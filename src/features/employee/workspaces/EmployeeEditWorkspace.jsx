@@ -18,26 +18,38 @@ const EditEmployeePage = () => {
   const [error, setError] = useState('');
   const [branches, setBranches] = useState([]);
   const submittingRef = useRef(false);
+  const employeeContextRef = useRef({ id: String(id || ''), shopSlug: shopSlug || 'advancetech' });
+  const updateRequestRef = useRef(0);
+
+  useEffect(() => {
+    employeeContextRef.current = { id: String(id || ''), shopSlug: shopSlug || 'advancetech' };
+    updateRequestRef.current += 1;
+    submittingRef.current = false;
+    setSubmitting(false);
+    setEmployee(null);
+    setError('');
+  }, [id, shopSlug]);
 
   useEffect(() => {
     let cancelled = false;
+    const employeeIdSnapshot = String(id || '');
     const loadEmployee = async () => {
       try {
         setLoading(true);
         setError('');
-        if (!id) {
+        if (!employeeIdSnapshot) {
           setError('ไม่พบรหัสพนักงานใน URL');
           return;
         }
-        const data = await getEmployeeById(id);
-        if (!cancelled) setEmployee(data);
+        const data = await getEmployeeById(employeeIdSnapshot);
+        if (!cancelled && employeeContextRef.current.id === employeeIdSnapshot) setEmployee(data);
       } catch (err) {
-        if (!cancelled) {
+        if (!cancelled && employeeContextRef.current.id === employeeIdSnapshot) {
           setError(err?.response?.data?.error?.message || err?.response?.data?.message || err?.message || 'ดึงข้อมูลพนักงานล้มเหลว');
-          feedback.actionError(err, 'ดึงข้อมูลพนักงานล้มเหลว', 'employee:edit:load:error');
+          feedback.actionError(err, 'ดึงข้อมูลพนักงานล้มเหลว', `employee:edit:${employeeIdSnapshot}:load:error`);
         }
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled && employeeContextRef.current.id === employeeIdSnapshot) setLoading(false);
       }
     };
 
@@ -64,23 +76,58 @@ const EditEmployeePage = () => {
   const handleUpdate = async (formData) => {
     if (submitting || submittingRef.current) return;
 
-    const employeeId = id;
+    const employeeIdSnapshot = String(id || '');
+    const shopSlugSnapshot = shopSlug || 'advancetech';
     const payload = { ...formData };
-    if (!employeeId) return;
+    if (!employeeIdSnapshot) return;
 
+    const requestId = updateRequestRef.current + 1;
+    updateRequestRef.current = requestId;
     submittingRef.current = true;
     setSubmitting(true);
     setError('');
     try {
-      await updateEmployee(employeeId, payload);
-      feedback.actionSuccess('บันทึกการแก้ไขข้อมูลพนักงานเรียบร้อยแล้ว', 'employee:update:success');
-      navigate(`/${shopSlug}/pos/settings/employee`);
+      await updateEmployee(employeeIdSnapshot, payload);
+      feedback.actionSuccess(
+        'บันทึกการแก้ไขข้อมูลพนักงานเรียบร้อยแล้ว',
+        `employee:update:${employeeIdSnapshot}:success`,
+      );
+
+      const ownsCurrentContext =
+        requestId === updateRequestRef.current &&
+        employeeContextRef.current.id === employeeIdSnapshot &&
+        employeeContextRef.current.shopSlug === shopSlugSnapshot;
+      if (!ownsCurrentContext) {
+        feedback.warning(
+          'บันทึกข้อมูลพนักงานสำเร็จแล้ว แต่หน้าปัจจุบันเปลี่ยนไปเป็นพนักงานหรือร้านอื่น จึงไม่เปลี่ยนหน้าอัตโนมัติ',
+          `employee:update:${employeeIdSnapshot}:context-changed:error`,
+        );
+        return;
+      }
+
+      navigate(`/${shopSlugSnapshot}/pos/settings/employee`);
     } catch (err) {
-      setError(err?.response?.data?.error?.message || err?.response?.data?.message || err?.message || 'แก้ไขพนักงานล้มเหลว');
-      feedback.actionError(err, 'แก้ไขข้อมูลพนักงานไม่สำเร็จ', 'employee:update:error');
+      const ownsCurrentContext =
+        requestId === updateRequestRef.current &&
+        employeeContextRef.current.id === employeeIdSnapshot &&
+        employeeContextRef.current.shopSlug === shopSlugSnapshot;
+      if (ownsCurrentContext) {
+        setError(err?.response?.data?.error?.message || err?.response?.data?.message || err?.message || 'แก้ไขพนักงานล้มเหลว');
+      }
+      feedback.actionError(
+        err,
+        'แก้ไขข้อมูลพนักงานไม่สำเร็จ',
+        `employee:update:${employeeIdSnapshot}:error`,
+      );
     } finally {
-      submittingRef.current = false;
-      setSubmitting(false);
+      const ownsCurrentContext =
+        requestId === updateRequestRef.current &&
+        employeeContextRef.current.id === employeeIdSnapshot &&
+        employeeContextRef.current.shopSlug === shopSlugSnapshot;
+      if (ownsCurrentContext) {
+        submittingRef.current = false;
+        setSubmitting(false);
+      }
     }
   };
 

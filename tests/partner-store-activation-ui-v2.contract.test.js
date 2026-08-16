@@ -25,7 +25,9 @@ describe('Partner Store Activation UI v2 contract', () => {
     expect(router).toContain('<PartnerStoreActivationPage />');
     expect(activation).toContain('claimPartnerStoreActivation');
     expect(activation).toContain('ตั้งรหัสผ่านสำหรับบัญชีเจ้าของร้าน');
-    expect(activation).toContain('password.length < 8');
+    expect(activation).toContain('const nextPassword = password');
+    expect(activation).toContain('nextPassword.length < 8');
+    expect(activation).toContain('password: nextPassword');
     expect(activation).toContain("to=\"/login\"");
     expect(activation).not.toContain('useAuthStore');
     expect(activation).not.toContain('setAccessToken');

@@ -2,6 +2,7 @@
 // ✅ Employee Store = HR / Employee Management only
 // ✅ Auth / current login branch Source of Truth อยู่ที่ authStore.employee.branchId
 // ✅ Branch detail / selected branch อยู่ที่ branchStore
+// ✅ Auth store remains session authority.
 // ✅ ไฟล์นี้ไม่ persist session/branch/token/role อีกต่อไป เพื่อลดข้อมูลซ้ำซ้อน
 
 import { create } from 'zustand';
@@ -192,6 +193,7 @@ const useEmployeeStore = create(
         }
       },
 
+      // Never delete employee history. Use activation state instead.
       removeEmployee: async () => {
         set({ employeeError: 'ระบบไม่อนุญาตให้ลบประวัติพนักงาน กรุณาใช้การระงับการใช้งาน' });
         return false;

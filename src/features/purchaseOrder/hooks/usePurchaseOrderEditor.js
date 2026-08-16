@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import { materializePurchaseOrderTemplateProduct } from '../api/purchaseOrderApi';
@@ -30,6 +30,7 @@ export const usePurchaseOrderEditor = ({ mode, currentBranchId, suppliers }) => 
   const [shouldPrint, setShouldPrint] = useState(true);
   const [submitError, setSubmitError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const submitRef = useRef(false);
 
   const purchaseOrder = usePurchaseOrderStore((state) => state.purchaseOrder);
   const poLoading = usePurchaseOrderStore((state) => state.isLoading);
@@ -118,28 +119,32 @@ export const usePurchaseOrderEditor = ({ mode, currentBranchId, suppliers }) => 
   }, [mode]);
 
   const handleCancel = useCallback(() => {
+    if (submitRef.current) return;
     navigate(`/${shopSlug}/pos/purchases`);
   }, [navigate, shopSlug]);
 
   const handleSubmit = useCallback(async () => {
+    if (isSubmitting || submitRef.current) return;
     setSubmitError('');
-    if (isSubmitting) return;
 
+    const command = {
+      mode,
+      id,
+      currentBranchId,
+      supplier,
+      products: products.map((item) => ({ ...item })),
+      note,
+      shouldPrint,
+      purchaseOrder,
+      createPurchaseOrder,
+      updatePurchaseOrder,
+      shopSlug,
+    };
+
+    submitRef.current = true;
     setIsSubmitting(true);
     try {
-      const result = await executePurchaseOrderSubmit({
-        mode,
-        id,
-        currentBranchId,
-        supplier,
-        products,
-        note,
-        shouldPrint,
-        purchaseOrder,
-        createPurchaseOrder,
-        updatePurchaseOrder,
-        shopSlug,
-      });
+      const result = await executePurchaseOrderSubmit(command);
 
       if (!result.ok) {
         if (result.error) setSubmitError(result.error);
@@ -148,6 +153,7 @@ export const usePurchaseOrderEditor = ({ mode, currentBranchId, suppliers }) => 
 
       navigate(result.destination);
     } finally {
+      submitRef.current = false;
       setIsSubmitting(false);
     }
   }, [

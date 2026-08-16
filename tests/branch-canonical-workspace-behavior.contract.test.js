@@ -43,7 +43,10 @@ describe('canonical branch runtime behavior lock', () => {
 
   it('persists branch edits through the branch store authority', () => {
     expect(page).toContain('updateBranchAction');
-    expect(page).toContain('await updateBranch(selectedShop.id');
+    expect(page).toContain('const branchId = Number(selectedShop?.id || 0);');
+    expect(page).toContain('if (!branchId || saving || savingRef.current) return;');
+    expect(page).toContain('savingRef.current = true;');
+    expect(page).toContain('await updateBranch(branchId, payload);');
     expect(page).toContain("feedback.actionSuccess('แก้ไขข้อมูลร้าน/บริษัทเรียบร้อยแล้ว'");
     expect(page).toContain("feedback.actionError(error, 'เกิดข้อผิดพลาดในการบันทึกข้อมูล'");
     expect(page).not.toContain('await new Promise((resolve) => setTimeout(resolve, 600))');

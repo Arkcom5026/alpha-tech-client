@@ -57,7 +57,7 @@ const markBarcodesAsPrinted = async (purchaseOrderReceiptId) => {
 };
 
 const searchReprintReceipts = async (opts = {}) => {
-  const result = await searchReceiptsForReprint(opts);
+  const result = await searchReprintReceipts(opts);
   return Array.isArray(result?.receipts) ? result.receipts : [];
 };
 
@@ -130,6 +130,13 @@ const runWithConcurrency = async (items, worker, limit = 3) => {
   return results;
 };
 
+const withRefreshMetadata = (result, refreshError) => {
+  if (result && typeof result === 'object' && !Array.isArray(result)) {
+    return { ...result, refreshError: refreshError || null };
+  }
+  return { result, refreshError: refreshError || null };
+};
+
 const useBarcodeStore = create((set, get) => ({
   getExpandedBarcodesForPrint: (useSuggested = true) => {
     const state = get();
@@ -161,13 +168,16 @@ const useBarcodeStore = create((set, get) => ({
     set({ loading: true, error: null });
     try {
       const res = await getBarcodesByReceiptId(receiptId);
+      const list = (res?.barcodes || []).map(normalizeBarcodeItem);
       set({
-        barcodes: (res?.barcodes || []).map(normalizeBarcodeItem),
+        barcodes: list,
         loading: false,
       });
+      return { ok: true, barcodes: list, error: null };
     } catch (err) {
       console.error('[loadBarcodesAction]', err);
       set({ error: err?.message || 'โหลดบาร์โค้ดล้มเหลว', loading: false });
+      return { ok: false, barcodes: null, error: err };
     }
   },
 
@@ -369,11 +379,8 @@ const useBarcodeStore = create((set, get) => ({
         ),
       }));
 
-      if (receiptId) {
-        await get().loadBarcodesAction(receiptId);
-      }
-
-      return res;
+      const refreshResult = receiptId ? await get().loadBarcodesAction(receiptId) : null;
+      return withRefreshMetadata(res, refreshResult?.ok === false ? refreshResult.error : null);
     } catch (err) {
       console.error('❌ updateReceivedSNAction ล้มเหลว:', err);
       set({ error: err?.message || 'อัปเดต SN ไม่สำเร็จ' });
@@ -407,8 +414,8 @@ const useBarcodeStore = create((set, get) => ({
         ),
       }));
 
-      if (receiptId) await get().loadBarcodesAction(receiptId);
-      return res;
+      const refreshResult = receiptId ? await get().loadBarcodesAction(receiptId) : null;
+      return withRefreshMetadata(res, refreshResult?.ok === false ? refreshResult.error : null);
     } catch (err) {
       console.error('❌ อัปเดต SN ล้มเหลว:', err);
       set({ error: err?.message || 'อัปเดต Serial Number ล้มเหลว' });
@@ -427,8 +434,8 @@ const useBarcodeStore = create((set, get) => ({
         ),
       }));
       const receiptId = res?.stockItem?.purchaseOrderReceiptItem?.receiptId;
-      if (receiptId) await get().loadBarcodesAction(receiptId);
-      return res;
+      const refreshResult = receiptId ? await get().loadBarcodesAction(receiptId) : null;
+      return withRefreshMetadata(res, refreshResult?.ok === false ? refreshResult.error : null);
     } catch (err) {
       console.error('❌ ลบ SN ล้มเหลว:', err);
       set({ error: err?.message || 'ลบ SN ล้มเหลว' });

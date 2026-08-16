@@ -55,21 +55,30 @@ const EmployeeTable = ({
 
   const handleToggle = (row) => {
     const cur = resolveEmpActive(row);
-    if (cur === null) return;
+    if (cur === null || toggling) return;
     setConfirm({ row, nextActive: !cur });
   };
 
   const proceed = async () => {
-    if (!confirm?.row || !onToggleActive) return setConfirm(null);
+    if (!confirm?.row || !onToggleActive || toggling) return;
     const id = confirm.row.id ?? confirm.row.userId;
+    const nextActive = Boolean(confirm.nextActive);
     try {
       setToggling(id);
-      await onToggleActive(id, confirm.nextActive);
+      await onToggleActive(id, nextActive);
+      feedback.actionSuccess(
+        nextActive ? 'เปิดใช้งานพนักงานเรียบร้อยแล้ว' : 'ปิดใช้งานพนักงานเรียบร้อยแล้ว',
+        `employee:status:${id}:success`,
+      );
       onRefresh?.();
       setConfirm(null);
     } catch (err) {
       console.error('❌ เปลี่ยนสถานะพนักงานล้มเหลว:', err);
-      feedback.error('เกิดข้อผิดพลาดในการเปลี่ยนสถานะพนักงาน');
+      feedback.actionError(
+        err,
+        nextActive ? 'เปิดใช้งานพนักงานไม่สำเร็จ' : 'ปิดใช้งานพนักงานไม่สำเร็จ',
+        `employee:status:${id}:error`,
+      );
     } finally {
       setToggling(null);
     }
@@ -152,9 +161,9 @@ const EmployeeTable = ({
                   <ActionButton
                     className={`text-white ${isActive ? 'bg-rose-600 hover:bg-rose-700 focus:ring-rose-500' : 'bg-emerald-600 hover:bg-emerald-700 focus:ring-emerald-500'}`}
                     onClick={() => handleToggle(e)}
-                    disabled={!canToggle || toggling === id}
+                    disabled={!canToggle || Boolean(toggling)}
                   >
-                    {isActive ? 'ปิดใช้งาน' : 'กู้คืน'}
+                    {toggling === id ? 'กำลังบันทึก...' : isActive ? 'ปิดใช้งาน' : 'กู้คืน'}
                   </ActionButton>
                 </div>
               </td>
@@ -198,7 +207,9 @@ const EmployeeTable = ({
         intent={confirm?.nextActive ? 'primary' : 'destructive'}
         loading={Boolean(toggling)}
         loadingLabel="กำลังบันทึก..."
-        onClose={() => setConfirm(null)}
+        onClose={() => {
+          if (!toggling) setConfirm(null);
+        }}
         onConfirm={proceed}
       />
     </>

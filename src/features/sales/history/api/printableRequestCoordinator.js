@@ -3,6 +3,7 @@ const MAX_RECENT_PRINTABLE_REQUESTS = 32;
 
 const inFlightPrintableRequests = new Map();
 const recentPrintableResults = new Map();
+let printableCacheEpoch = 0;
 
 const normalizePrintableParams = (params = {}) => {
   const normalized = {};
@@ -35,13 +36,16 @@ const pruneRecentPrintableResults = (now) => {
 };
 
 export const clearPrintableSalesRequestCache = () => {
+  printableCacheEpoch += 1;
   recentPrintableResults.clear();
+  inFlightPrintableRequests.clear();
 };
 
 export const runPrintableSalesRequest = (params = {}, request) => {
   const queryParams = normalizePrintableParams(params);
   const requestKey = createPrintableRequestKey(queryParams);
   const forceRefresh = params?.forceRefresh === true;
+  const requestEpoch = printableCacheEpoch;
   const now = Date.now();
 
   pruneRecentPrintableResults(now);
@@ -59,12 +63,14 @@ export const runPrintableSalesRequest = (params = {}, request) => {
   const pending = Promise.resolve()
     .then(() => request(queryParams))
     .then((data) => {
-      recentPrintableResults.delete(requestKey);
-      recentPrintableResults.set(requestKey, {
-        data,
-        completedAt: Date.now(),
-      });
-      pruneRecentPrintableResults(Date.now());
+      if (requestEpoch === printableCacheEpoch) {
+        recentPrintableResults.delete(requestKey);
+        recentPrintableResults.set(requestKey, {
+          data,
+          completedAt: Date.now(),
+        });
+        pruneRecentPrintableResults(Date.now());
+      }
       return data;
     })
     .finally(() => {

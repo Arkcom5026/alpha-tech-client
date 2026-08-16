@@ -28,7 +28,7 @@ const VatCarryForwardAuthorityPanel = ({ branchId, taxPeriodId, onConfirmed }) =
     : true;
 
   const load = useCallback(async () => {
-    if (!branchId || !taxPeriodId) return;
+    if (!branchId || !taxPeriodId) return { ok: false, error: null };
     setLoading(true);
     setError('');
     try {
@@ -37,10 +37,12 @@ const VatCarryForwardAuthorityPanel = ({ branchId, taxPeriodId, onConfirmed }) =
       const initialAmount = data?.authority?.amount ?? data?.suggestedAmount ?? 0;
       setAmount(Number(initialAmount).toFixed(2));
       setNote(data?.authority?.note || '');
+      return { ok: true, data, error: null };
     } catch (requestError) {
       const message = getVatSettlementErrorMessage(requestError);
       setError(message);
       feedback.error(message);
+      return { ok: false, data: null, error: requestError };
     } finally {
       setLoading(false);
     }
@@ -58,9 +60,11 @@ const VatCarryForwardAuthorityPanel = ({ branchId, taxPeriodId, onConfirmed }) =
   const confirm = async () => {
     if (!branchId || !taxPeriodId || immutable || saving || savingRef.current || loading || !priorSettlementReady) return;
 
+    const branchIdSnapshot = branchId;
+    const taxPeriodIdSnapshot = taxPeriodId;
     const payload = {
-      branchId,
-      taxPeriodId,
+      branchId: branchIdSnapshot,
+      taxPeriodId: taxPeriodIdSnapshot,
       sourceType,
       amount,
       note,
@@ -69,28 +73,47 @@ const VatCarryForwardAuthorityPanel = ({ branchId, taxPeriodId, onConfirmed }) =
     savingRef.current = true;
     setSaving(true);
     setError('');
+
     try {
       await confirmVatCarryForwardAuthority(payload);
     } catch (requestError) {
       const message = getVatSettlementErrorMessage(requestError);
       setError(message);
-      feedback.actionError(requestError, message, 'tax-vat-carry-forward-confirm-error');
-      return;
-    } finally {
+      feedback.actionError(
+        requestError,
+        message,
+        `tax-vat-carry-forward:${branchIdSnapshot}:${taxPeriodIdSnapshot}:confirm:error`,
+      );
       savingRef.current = false;
       setSaving(false);
+      return;
     }
 
-    feedback.actionSuccess('ยืนยันเครดิต VAT ยกมาแล้ว', 'tax-vat-carry-forward-confirm-success');
-    await load();
+    feedback.actionSuccess(
+      'ยืนยันเครดิต VAT ยกมาแล้ว',
+      `tax-vat-carry-forward:${branchIdSnapshot}:${taxPeriodIdSnapshot}:confirm:success`,
+    );
+
+    const refreshResult = await load();
+    if (!refreshResult?.ok) {
+      feedback.actionError(
+        refreshResult?.error,
+        'ยืนยันเครดิต VAT ยกมาสำเร็จแล้ว แต่รีเฟรช Authority ล่าสุดไม่สำเร็จ',
+        `tax-vat-carry-forward:${branchIdSnapshot}:${taxPeriodIdSnapshot}:refresh:error`,
+      );
+    }
+
     try {
       await onConfirmed?.();
     } catch (requestError) {
       feedback.actionError(
         requestError,
         'ยืนยันเครดิต VAT ยกมาสำเร็จแล้ว แต่รีเฟรชข้อมูลส่วนที่เกี่ยวข้องไม่สำเร็จ',
-        'tax-vat-carry-forward-post-confirm-error',
+        `tax-vat-carry-forward:${branchIdSnapshot}:${taxPeriodIdSnapshot}:post-confirm:error`,
       );
+    } finally {
+      savingRef.current = false;
+      setSaving(false);
     }
   };
 

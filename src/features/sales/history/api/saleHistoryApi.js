@@ -1,5 +1,6 @@
 import apiClient from '@/utils/apiClient';
 import { attachSaleApiContext } from '../../shared/api/saleApiSupport';
+import { runPrintableSalesRequest } from './printableRequestCoordinator';
 
 export const getAllSales = async () => {
   try {
@@ -34,16 +35,17 @@ export const markSaleAsPaid = async (saleId) => {
 };
 
 export const searchPrintableSales = async (params) => {
-  const safeParams = { ...(params || {}), _ts: Date.now() };
   try {
-    try {
-      const response = await apiClient.get('/sales/printable', { params: safeParams });
-      return response.data;
-    } catch (error) {
-      if (error?.response?.status !== 404) throw error;
-      const response = await apiClient.get('/sales/printable-sales', { params: safeParams });
-      return response.data;
-    }
+    return await runPrintableSalesRequest(params, async (safeParams) => {
+      try {
+        const response = await apiClient.get('/sales/printable', { params: safeParams });
+        return response.data;
+      } catch (error) {
+        if (error?.response?.status !== 404) throw error;
+        const response = await apiClient.get('/sales/printable-sales', { params: safeParams });
+        return response.data;
+      }
+    });
   } catch (error) {
     throw attachSaleApiContext(error, 'saleHistoryApi.searchPrintableSales');
   }

@@ -19,11 +19,12 @@ describe('branch communication profile settings', () => {
     expect(read('src/features/settings/workspaces/SettingsDashboardWorkspace.jsx')).toContain('/pos/settings/communication');
   });
 
-  it('requires the dedicated manage communication capability', () => {
+  it('requires the dedicated manage communication capability and locks mutations while saving', () => {
     const page = read('src/features/communication/pages/CommunicationProfileSettingsPage.jsx');
     const rbac = read('src/features/auth/rbac/rbacClient.js');
     expect(rbac).toContain("MANAGE_COMMUNICATION: 'manageCommunication'");
     expect(page).toContain('canManageCommunicationSelector');
-    expect(page).toContain('disabled={!canManage}');
+    expect(page).toContain('fieldset disabled={!canManage || mutationBusy}');
+    expect(page).toContain('disabled={!canManage || !draft.displayName.trim() || mutationBusy}');
   });
 });

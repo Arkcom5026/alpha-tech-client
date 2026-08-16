@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { feedback } from '@/design-system';
 import useRepairRuntimeStore from '../store/repairRuntimeStore';
@@ -19,6 +19,7 @@ const RepairJobDetailPage = () => {
   const openClaim = useRepairRuntimeStore((state) => state.openClaim);
   const [workflowSubmitting, setWorkflowSubmitting] = useState(false);
   const [workflowError, setWorkflowError] = useState('');
+  const claimOpeningRef = useRef(false);
 
   useEffect(() => {
     loadJob(repairJobId);
@@ -49,12 +50,31 @@ const RepairJobDetailPage = () => {
   const handleOpenClaim = async (value) => {
     if (typeof value === 'number' || typeof value === 'string') {
       navigate(`/${shopSlug}/pos/services/warranty-claims/${value}`);
-      return;
+      return true;
     }
 
-    const created = await openClaim(repairJobId, value);
-    if (created?.id) {
-      navigate(`/${shopSlug}/pos/services/warranty-claims/${created.id}`);
+    if (claimOpeningRef.current || submitting) return null;
+    claimOpeningRef.current = true;
+    try {
+      const created = await openClaim(repairJobId, value);
+      if (created?.id) {
+        feedback.actionSuccess(
+          'เปิดรายการเคลมและพักงานซ่อมเรียบร้อยแล้ว',
+          `repair:claim:${created.id}:create:success`,
+        );
+        navigate(`/${shopSlug}/pos/services/warranty-claims/${created.id}`);
+        return created;
+      }
+
+      const message = useRepairRuntimeStore.getState().error || 'เปิดรายการเคลมไม่สำเร็จ';
+      feedback.actionError(
+        new Error(message),
+        message,
+        `repair:claim:${repairJobId}:create:error`,
+      );
+      return null;
+    } finally {
+      claimOpeningRef.current = false;
     }
   };
 

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { ConfirmActionDialog } from '@/design-system/composites';
 
 import QuickReceiptActions from './QuickReceiptActions';
 import QuickReceiptDraftPicker from './QuickReceiptDraftPicker';
@@ -16,6 +17,7 @@ const QuickReceiptSessionPanel = ({
   onCurrentLineSaved,
 }) => {
   const [isHelpOpen, setIsHelpOpen] = useState(false);
+  const [cancelConfirmationOpen, setCancelConfirmationOpen] = useState(false);
   const {
     header,
     suppliers,
@@ -45,6 +47,12 @@ const QuickReceiptSessionPanel = ({
     onCurrentLineSaved,
   });
 
+  const confirmCancelDraft = async () => {
+    if (isBusy) return;
+    const cancelled = await handleCancelDraft();
+    if (cancelled) setCancelConfirmationOpen(false);
+  };
+
   return (
     <>
       <section className="rounded-xl border border-indigo-200 bg-white p-4 shadow-sm space-y-4">
@@ -56,7 +64,8 @@ const QuickReceiptSessionPanel = ({
           <div className="flex items-center gap-2">
             <button
               type="button"
-              className="rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm font-semibold text-indigo-800 hover:bg-indigo-100"
+              disabled={isBusy}
+              className="rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm font-semibold text-indigo-800 hover:bg-indigo-100 disabled:cursor-not-allowed disabled:opacity-50"
               onClick={() => setIsHelpOpen(true)}
               aria-label="เปิดคู่มือรับสินค้าด่วน"
             >
@@ -68,7 +77,7 @@ const QuickReceiptSessionPanel = ({
               </div>
             )}
             {locked && (
-              <button type="button" className="rounded-lg border px-3 py-2 text-sm" onClick={resetReceipt}>
+              <button type="button" disabled={isBusy} className="rounded-lg border px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50" onClick={resetReceipt}>
                 เริ่มใบรับใหม่
               </button>
             )}
@@ -105,14 +114,32 @@ const QuickReceiptSessionPanel = ({
           isBusy={isBusy}
           locked={locked}
           hasLines={allLines.length > 0}
-          onCancelDraft={handleCancelDraft}
+          onCancelDraft={() => {
+            if (!isBusy) setCancelConfirmationOpen(true);
+          }}
           onAddCurrentLine={handleAddCurrentLine}
           onSaveForLater={handleSaveForLater}
           onFinalize={handleFinalize}
         />
       </section>
 
-      <QuickReceiptHelpDrawer open={isHelpOpen} onClose={() => setIsHelpOpen(false)} />
+      <QuickReceiptHelpDrawer open={isHelpOpen} onClose={() => !isBusy && setIsHelpOpen(false)} />
+
+      <ConfirmActionDialog
+        open={cancelConfirmationOpen}
+        title="ยืนยันยกเลิกใบรับสินค้าด่วน"
+        description={receipt?.code
+          ? `ยืนยันยกเลิก ${receipt.code} หรือไม่? รายการนี้จะไม่ถูกนำไป finalize เข้าสต๊อก`
+          : 'ยืนยันยกเลิกใบรับสินค้าด่วนนี้หรือไม่?'}
+        confirmLabel="ยืนยันยกเลิก"
+        intent="destructive"
+        loading={isBusy}
+        loadingLabel="กำลังยกเลิก..."
+        onClose={() => {
+          if (!isBusy) setCancelConfirmationOpen(false);
+        }}
+        onConfirm={confirmCancelDraft}
+      />
     </>
   );
 };

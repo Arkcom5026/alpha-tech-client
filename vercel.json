@@ -4,6 +4,7 @@
     "deploymentEnabled": true
   },
   "ignoreCommand": "exit 1",
+  "buildCommand": "npm run build && node scripts/generate-release-metadata.mjs",
   "rewrites": [
     { "source": "/(.*)", "destination": "/" }
   ]

@@ -8,17 +8,19 @@ const useBankStore = create((set) => ({
   error: null,
 
   fetchBanks: async (token) => {
-    set({ loading: true });
+    set({ loading: true, error: null });
     try {
       const res = await apiClient.get('/api/bank', {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
-      set({ banks: res.data, loading: false });
+      set({ banks: res.data, loading: false, error: null });
+      return { ok: true, data: res.data };
     } catch (err) {
       console.error('Fetch bank error:', err.response?.data);
       set({ error: err.message, loading: false });
+      return { ok: false, error: err };
     }
   },
 

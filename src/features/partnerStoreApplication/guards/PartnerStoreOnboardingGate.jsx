@@ -6,6 +6,7 @@ import { getPartnerStoreOnboarding } from '../api/partnerStoreOnboardingApi';
 import { getPartnerStoreOperationalReadiness } from '../api/partnerStoreOperationalReadinessApi';
 
 const NON_PARTNER_OWNER_CACHE_PREFIX = 'alpha-tech.partner-store.non-owner.v1';
+const onboardingRequestByCacheKey = new Map();
 
 const buildNonPartnerOwnerCacheKey = (shopSlug, employeeId) => {
   const slug = String(shopSlug || '').trim();
@@ -32,6 +33,24 @@ const rememberNonPartnerOwner = (cacheKey) => {
   }
 };
 
+const getPartnerStoreOnboardingOnce = (cacheKey) => {
+  if (!cacheKey) return getPartnerStoreOnboarding();
+
+  const existing = onboardingRequestByCacheKey.get(cacheKey);
+  if (existing) return existing;
+
+  const request = Promise.resolve()
+    .then(() => getPartnerStoreOnboarding())
+    .finally(() => {
+      if (onboardingRequestByCacheKey.get(cacheKey) === request) {
+        onboardingRequestByCacheKey.delete(cacheKey);
+      }
+    });
+
+  onboardingRequestByCacheKey.set(cacheKey, request);
+  return request;
+};
+
 export default function PartnerStoreOnboardingGate() {
   const { shopSlug } = useParams();
   const employeeId = useAuthStore((authState) => authState.employee?.id);
@@ -55,7 +74,7 @@ export default function PartnerStoreOnboardingGate() {
 
     const load = async () => {
       try {
-        const onboardingResponse = await getPartnerStoreOnboarding();
+        const onboardingResponse = await getPartnerStoreOnboardingOnce(cacheKey);
         if (!active) return;
         const onboarding = onboardingResponse.data?.data || null;
 

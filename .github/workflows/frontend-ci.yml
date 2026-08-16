@@ -55,6 +55,9 @@ jobs:
     - name: Auth public-first and protected bootstrap performance contracts
       run: npx vitest run tests/auth-initial-bootstrap-performance.contract.test.js tests/public-login-auth-bootstrap.contract.test.js
 
+    - name: Sales printable performance contract
+      run: npx vitest run tests/sales-printable-performance.contract.test.js
+
     - name: UI modernization full-repository guard
       run: npm run guard:ui-modernization
 

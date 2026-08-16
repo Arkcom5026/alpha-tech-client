@@ -92,10 +92,16 @@ describe('repair operations workspace behavior contract', () => {
     expect(repairDetailWorkspace).toContain('onOpenClaim={onOpenClaim}');
   });
 
-  it('preserves warranty claim detail transition and repair handoff across workspace ownership', () => {
+  it('preserves serialized warranty claim detail transition and repair handoff across workspace ownership', () => {
     expect(claimDetailPage).toContain('transitionClaim');
     expect(claimDetailPage).toContain('WarrantyClaimDetailWorkspace');
-    expect(claimDetailPage).toContain('onTransition={(payload) => transitionClaim(claimId, payload)}');
+    expect(claimDetailPage).toContain('const handleTransition = async (payload) =>');
+    expect(claimDetailPage).toContain('transitionRef.current');
+    expect(claimDetailPage).toContain('await transitionClaim(claimId, payload)');
+    expect(claimDetailPage).toContain('await loadClaim(claimId)');
+    expect(claimDetailPage).toContain('feedback.actionSuccess');
+    expect(claimDetailPage).toContain('feedback.actionError');
+    expect(claimDetailPage).toContain('onTransition={handleTransition}');
     expect(claimDetailPage).toContain('onOpenRepair={(id) =>');
     expect(claimDetailPage).toContain('/pos/services/repairs/${id}');
     expect(warrantyClaimDetailWorkspace).toContain('onTransition={onTransition}');

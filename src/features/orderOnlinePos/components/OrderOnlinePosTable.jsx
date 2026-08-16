@@ -1,6 +1,6 @@
 // ===== components/OrderOnlinePosTable.jsx =====
 
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ConfirmActionDialog } from '@/design-system/composites';
 import { feedback } from '@/design-system/feedback';
@@ -14,6 +14,7 @@ const ACTION_COPY = {
     confirmLabel: 'อนุมัติสลิป',
     intent: 'primary',
     success: 'อนุมัติสลิปเรียบร้อยแล้ว',
+    partial: 'อนุมัติสลิปสำเร็จแล้ว แต่รีเฟรชข้อมูลคำสั่งซื้อไม่สำเร็จ กรุณารีเฟรชหน้า',
   },
   reject: {
     title: 'ปฏิเสธสลิปคำสั่งซื้อ',
@@ -21,6 +22,7 @@ const ACTION_COPY = {
     confirmLabel: 'ปฏิเสธสลิป',
     intent: 'destructive',
     success: 'ปฏิเสธสลิปเรียบร้อยแล้ว',
+    partial: 'ปฏิเสธสลิปสำเร็จแล้ว แต่รีเฟรชข้อมูลคำสั่งซื้อไม่สำเร็จ กรุณารีเฟรชหน้า',
   },
   delete: {
     title: 'ลบคำสั่งซื้อ',
@@ -28,6 +30,7 @@ const ACTION_COPY = {
     confirmLabel: 'ลบคำสั่งซื้อ',
     intent: 'destructive',
     success: 'ลบคำสั่งซื้อเรียบร้อยแล้ว',
+    partial: 'ลบคำสั่งซื้อสำเร็จแล้ว แต่รีเฟรชรายการไม่สำเร็จ กรุณารีเฟรชหน้า',
   },
 };
 
@@ -37,42 +40,58 @@ const OrderOnlinePosTable = ({ orders }) => {
   const targetSlug = shopSlug || 'advancetech';
   const [pendingAction, setPendingAction] = useState(null);
   const [runningAction, setRunningAction] = useState(false);
+  const actionRef = useRef(false);
 
   const {
-    approveOrderOnlineSlipAction,
+    approveOrderOnlinePaymentSlipAction,
     rejectOrderOnlineSlipAction,
     deleteOrderOnlineAction,
   } = useOrderOnlinePosStore();
 
   const requestAction = (type, id) => {
-    if (runningAction) return;
+    if (actionRef.current || runningAction) return;
     setPendingAction({ type, id });
   };
 
   const confirmAction = async () => {
-    if (!pendingAction || runningAction) return;
-    const copy = ACTION_COPY[pendingAction.type];
-    const action = pendingAction.type === 'approve'
-      ? approveOrderOnlineSlipAction
-      : pendingAction.type === 'reject'
+    if (!pendingAction || actionRef.current || runningAction) return;
+
+    const command = {
+      type: pendingAction.type,
+      id: Number(pendingAction.id),
+    };
+    const copy = ACTION_COPY[command.type];
+    const action = command.type === 'approve'
+      ? approveOrderOnlinePaymentSlipAction
+      : command.type === 'reject'
         ? rejectOrderOnlineSlipAction
         : deleteOrderOnlineAction;
 
+    actionRef.current = true;
     setRunningAction(true);
     try {
-      await action(pendingAction.id);
+      const outcome = await action(command.id);
       feedback.actionSuccess(
         copy.success,
-        `order-online:${pendingAction.id}:${pendingAction.type}:success`,
+        `order-online:${command.id}:${command.type}:success`,
       );
       setPendingAction(null);
+
+      if (outcome?.refreshError) {
+        feedback.actionError(
+          outcome.refreshError,
+          copy.partial,
+          `order-online:${command.id}:${command.type}:refresh:error`,
+        );
+      }
     } catch (error) {
       feedback.actionError(
         error,
         'ดำเนินการคำสั่งซื้อไม่สำเร็จ',
-        `order-online:${pendingAction.id}:${pendingAction.type}:error`,
+        `order-online:${command.id}:${command.type}:error`,
       );
     } finally {
+      actionRef.current = false;
       setRunningAction(false);
     }
   };
@@ -113,8 +132,9 @@ const OrderOnlinePosTable = ({ orders }) => {
                   <td className="border p-2"><OrderOnlinePosStatusBadge status={order.status} /></td>
                   <td className="space-y-1 border p-2 text-center">
                     <button
-                      className="block w-full text-emerald-700 hover:underline"
-                      onClick={() => navigate(`/${targetSlug}/pos/sales/order-online/${order.id}`)}
+                      disabled={runningAction}
+                      className="block w-full text-emerald-700 hover:underline disabled:opacity-50"
+                      onClick={() => !actionRef.current && navigate(`/${targetSlug}/pos/sales/order-online/${order.id}`)}
                     >
                       ดูรายละเอียด
                     </button>
@@ -147,7 +167,7 @@ const OrderOnlinePosTable = ({ orders }) => {
         intent={pendingCopy?.intent}
         loading={runningAction}
         loadingLabel="กำลังดำเนินการ..."
-        onClose={() => !runningAction && setPendingAction(null)}
+        onClose={() => !actionRef.current && !runningAction && setPendingAction(null)}
         onConfirm={confirmAction}
       />
     </>

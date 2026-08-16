@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ConfirmActionDialog } from '@/design-system/composites';
 import { feedback } from '@/design-system/feedback';
 import { numberFormat } from '@/utils/number';
@@ -12,15 +12,18 @@ const TableOrders = () => {
   const [orders, setOrders] = useState([]);
   const [pendingCancellation, setPendingCancellation] = useState(null);
   const [savingStatus, setSavingStatus] = useState(false);
+  const statusMutationRef = useRef(false);
   const statusInteractionLocked = savingStatus || Boolean(pendingCancellation);
 
   const handleGetOrder = useCallback(() => {
-    getOrdersAdmin(token)
+    return getOrdersAdmin(token)
       .then((res) => {
         setOrders(res.data);
+        return { ok: true };
       })
       .catch((err) => {
         feedback.error(err?.response?.data?.message || 'โหลดรายการคำสั่งซื้อไม่สำเร็จ');
+        return { ok: false, error: err };
       });
   }, [token]);
 
@@ -29,29 +32,43 @@ const TableOrders = () => {
   }, [handleGetOrder]);
 
   const applyOrderStatus = async (orderId, orderStatus) => {
-    if (savingStatus) return;
+    if (savingStatus || statusMutationRef.current) return;
+
+    const orderIdSnapshot = orderId;
+    const orderStatusSnapshot = orderStatus;
+    const tokenSnapshot = token;
+    statusMutationRef.current = true;
     setSavingStatus(true);
     try {
-      await changeOrderStatus(token, orderId, orderStatus);
+      await changeOrderStatus(tokenSnapshot, orderIdSnapshot, orderStatusSnapshot);
       feedback.actionSuccess(
-        orderStatus === 'Cancelled' ? 'ยกเลิกคำสั่งซื้อเรียบร้อยแล้ว' : 'อัปเดตสถานะคำสั่งซื้อเรียบร้อยแล้ว',
-        `admin:order-status:${orderId}:${orderStatus}:success`,
+        orderStatusSnapshot === 'Cancelled' ? 'ยกเลิกคำสั่งซื้อเรียบร้อยแล้ว' : 'อัปเดตสถานะคำสั่งซื้อเรียบร้อยแล้ว',
+        `admin:order-status:${orderIdSnapshot}:${orderStatusSnapshot}:success`,
       );
-      handleGetOrder();
       setPendingCancellation(null);
+
+      const refreshResult = await handleGetOrder();
+      if (!refreshResult?.ok) {
+        feedback.actionError(
+          refreshResult?.error,
+          'อัปเดตสถานะสำเร็จแล้ว แต่รีเฟรชรายการคำสั่งซื้อไม่สำเร็จ',
+          `admin:order-status:${orderIdSnapshot}:${orderStatusSnapshot}:refresh:error`,
+        );
+      }
     } catch (err) {
       feedback.actionError(
         err,
         'อัปเดตสถานะคำสั่งซื้อไม่สำเร็จ',
-        `admin:order-status:${orderId}:${orderStatus}:error`,
+        `admin:order-status:${orderIdSnapshot}:${orderStatusSnapshot}:error`,
       );
     } finally {
+      statusMutationRef.current = false;
       setSavingStatus(false);
     }
   };
 
   const handleChangeOrderStatus = (order, nextStatus) => {
-    if (statusInteractionLocked || nextStatus === order.orderStatus) return;
+    if (statusInteractionLocked || statusMutationRef.current || nextStatus === order.orderStatus) return;
     if (nextStatus === 'Cancelled') {
       setPendingCancellation({ order, nextStatus });
       return;
@@ -129,7 +146,7 @@ const TableOrders = () => {
         loading={savingStatus}
         loadingLabel="กำลังยกเลิก..."
         onClose={() => {
-          if (!savingStatus) setPendingCancellation(null);
+          if (!savingStatus && !statusMutationRef.current) setPendingCancellation(null);
         }}
         onConfirm={() => pendingCancellation && applyOrderStatus(pendingCancellation.order.id, pendingCancellation.nextStatus)}
       />

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AlertTriangle, CheckCircle2, FileCheck2, LockKeyhole, RotateCcw } from 'lucide-react';
 import { ConfirmActionDialog, feedback as toast } from '@/design-system';
 import { useBranchStore } from '@/features/branch/store/branchStore';
@@ -77,9 +77,10 @@ const TaxPeriodManagementPage = () => {
   const [busyKey, setBusyKey] = useState('');
   const [error, setError] = useState('');
   const [selectedPeriodId, setSelectedPeriodId] = useState(null);
+  const mutationRef = useRef(false);
 
-  const loadData = useCallback(async () => {
-    if (!branchId) return;
+  const loadData = useCallback(async ({ reportError = true } = {}) => {
+    if (!branchId) return { ok: false, skipped: true };
     setLoading(true);
     setError('');
     try {
@@ -94,10 +95,12 @@ const TaxPeriodManagementPage = () => {
       ]);
       setSummary(summaryResult || null);
       setPeriods(Array.isArray(listResult?.periods) ? listResult.periods : []);
+      return { ok: true };
     } catch (requestError) {
       const message = getTaxPeriodErrorMessage(requestError);
       setError(message);
-      toast.error(message);
+      if (reportError) toast.error(message);
+      return { ok: false, error: requestError, message };
     } finally {
       setLoading(false);
     }
@@ -130,23 +133,37 @@ const TaxPeriodManagementPage = () => {
     return periods.filter((period) => String(period?.periodCode || '').toLowerCase().includes(keyword));
   }, [periods, searchText]);
 
+  const interactionBusy = Boolean(busyKey) || mutationRef.current;
+
   const handleResetFilters = () => {
+    if (interactionBusy) return;
     setStatusFilter('');
     setSearchText('');
     setFromDate('');
     setToDate('');
   };
 
+  const handleRefresh = () => {
+    if (mutationRef.current) return;
+    return loadData();
+  };
+
   const handleEnsureCurrentPeriod = async () => {
-    if (!branchId || busyKey) return;
+    if (!branchId || interactionBusy) return;
+
+    const targetBranchId = branchId;
+    mutationRef.current = true;
     setBusyKey('ensure');
     try {
-      const result = await ensureMonthlyTaxPeriod({ branchId });
+      const result = await ensureMonthlyTaxPeriod({ branchId: targetBranchId });
       toast.actionSuccess(
         result?.created ? 'สร้างรอบภาษีประจำเดือนเรียบร้อยแล้ว' : 'รอบภาษีประจำเดือนนี้มีอยู่แล้ว',
         'tax-period:ensure-current:success',
       );
-      await loadData();
+      const refresh = await loadData({ reportError: false });
+      if (!refresh.ok) {
+        toast.warning('บันทึกรอบภาษีสำเร็จแล้ว แต่โหลดข้อมูลล่าสุดไม่สำเร็จ กรุณากดโหลดใหม่');
+      }
     } catch (requestError) {
       toast.actionError(
         requestError,
@@ -154,45 +171,54 @@ const TaxPeriodManagementPage = () => {
         'tax-period:ensure-current:error',
       );
     } finally {
+      mutationRef.current = false;
       setBusyKey('');
     }
   };
 
   const handleAction = (period, action) => {
     const meta = ACTION_META[action];
-    if (!meta || busyKey) return false;
+    if (!meta || interactionBusy || pendingAction) return false;
     setPendingAction({ period, action });
     return false;
   };
 
   const confirmAction = async () => {
-    if (!pendingAction || busyKey) return false;
+    if (!pendingAction || interactionBusy) return false;
     const { period, action } = pendingAction;
+    const targetBranchId = branchId;
+    const taxPeriodId = period.id;
+    const occurredAt = new Date().toISOString();
 
-    const key = `${period.id}:${action}`;
+    const key = `${taxPeriodId}:${action}`;
+    mutationRef.current = true;
     setBusyKey(key);
     try {
       const result = await transitionTaxPeriod({
-        branchId,
-        taxPeriodId: period.id,
+        branchId: targetBranchId,
+        taxPeriodId,
         action,
-        occurredAt: new Date().toISOString(),
+        occurredAt,
       });
       toast.actionSuccess(
         result?.replayed ? 'สถานะนี้ถูกบันทึกไว้แล้ว' : 'อัปเดตสถานะรอบภาษีเรียบร้อยแล้ว',
-        `tax-period:${period.id}:${action}:success`,
+        `tax-period:${taxPeriodId}:${action}:success`,
       );
-      await loadData();
+      const refresh = await loadData({ reportError: false });
+      if (!refresh.ok) {
+        toast.warning('อัปเดตสถานะรอบภาษีสำเร็จแล้ว แต่โหลดข้อมูลล่าสุดไม่สำเร็จ กรุณากดโหลดใหม่');
+      }
       setPendingAction(null);
       return true;
     } catch (requestError) {
       toast.actionError(
         requestError,
         getTaxPeriodErrorMessage(requestError),
-        `tax-period:${period.id}:${action}:error`,
+        `tax-period:${taxPeriodId}:${action}:error`,
       );
       return false;
     } finally {
+      mutationRef.current = false;
       setBusyKey('');
     }
   };
@@ -213,7 +239,7 @@ const TaxPeriodManagementPage = () => {
           branchId={branchId}
           loading={loading}
           busyKey={busyKey}
-          onRefresh={loadData}
+          onRefresh={handleRefresh}
           onEnsureCurrentPeriod={handleEnsureCurrentPeriod}
         />
 
@@ -224,7 +250,9 @@ const TaxPeriodManagementPage = () => {
           formatDate={formatDate}
           formatDateTime={formatDateTime}
           renderStatus={renderStatus}
-          onOpen={setSelectedPeriodId}
+          onOpen={(periodId) => {
+            if (!interactionBusy) setSelectedPeriodId(periodId);
+          }}
         />
 
         <TaxPeriodListTable
@@ -237,7 +265,9 @@ const TaxPeriodManagementPage = () => {
           formatDate={formatDate}
           formatDateTime={formatDateTime}
           error={error}
-          onOpen={setSelectedPeriodId}
+          onOpen={(periodId) => {
+            if (!interactionBusy) setSelectedPeriodId(periodId);
+          }}
           onAction={handleAction}
           filtersSlot={(
             <TaxPeriodListFilters
@@ -246,10 +276,10 @@ const TaxPeriodManagementPage = () => {
               fromDate={fromDate}
               toDate={toDate}
               statusOptions={statusOptions}
-              onSearchTextChange={setSearchText}
-              onStatusChange={setStatusFilter}
-              onFromDateChange={setFromDate}
-              onToDateChange={setToDate}
+              onSearchTextChange={(value) => !interactionBusy && setSearchText(value)}
+              onStatusChange={(value) => !interactionBusy && setStatusFilter(value)}
+              onFromDateChange={(value) => !interactionBusy && setFromDate(value)}
+              onToDateChange={(value) => !interactionBusy && setToDate(value)}
               onReset={handleResetFilters}
             />
           )}
@@ -262,7 +292,9 @@ const TaxPeriodManagementPage = () => {
           taxPeriodId={selectedPeriodId}
           busyKey={busyKey}
           onAction={handleAction}
-          onClose={() => setSelectedPeriodId(null)}
+          onClose={() => {
+            if (!interactionBusy) setSelectedPeriodId(null);
+          }}
         />
       )}
       <ConfirmActionDialog
@@ -274,7 +306,7 @@ const TaxPeriodManagementPage = () => {
         loading={Boolean(busyKey)}
         onConfirm={confirmAction}
         onClose={() => {
-          if (!busyKey) setPendingAction(null);
+          if (!interactionBusy) setPendingAction(null);
         }}
       />
     </>

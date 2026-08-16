@@ -25,10 +25,8 @@ export const useCartStore = create(
       },
 
       addToCart: async (product) => {
-        console.log('🛒 addToCart:', product);
         const { cartItems } = get();
         const existing = cartItems.find(item => item.id === product.id);
-
         const { token } = useAuthStore.getState();
 
         if (token) {
@@ -36,22 +34,19 @@ export const useCartStore = create(
             if (existing) {
               await updateCartItemQuantity(product.productId || product.id, existing.quantity + 1);
             } else {
-              console.log('🔁 POST to /cart/items/' + product.id);
               await addToServerCartItem(product.productId || product.id, 1);
               await new Promise(resolve => setTimeout(resolve, 200));
               await updateCartItemQuantity(product.productId || product.id, 1);
             }
             await get().fetchCartAction();
           } catch (err) {
-            console.error('❌ addToCart sync error:', err);
+            throw err;
           }
+        } else if (existing) {
+          await get().increaseQuantity(product.id);
         } else {
-          if (existing) {
-            get().increaseQuantity(product.id);
-          } else {
-            const newItem = { ...product, quantity: 1 };
-            set({ cartItems: [...cartItems, newItem] });
-          }
+          const newItem = { ...product, quantity: 1 };
+          set({ cartItems: [...cartItems, newItem] });
         }
       },
 
@@ -59,25 +54,22 @@ export const useCartStore = create(
         try {
           const res = await getBranchPrices(branchId);
           set({ branchPrices: res });
+          return res;
         } catch (err) {
-          console.error('❌ fetchCartBranchPricesAction error:', err);
+          throw err;
         }
       },
 
       removeFromCart: async (id) => {
+        const { token } = useAuthStore.getState();
+        if (token && id) {
+          await removeCartItemFromServer(id);
+        }
+
         set({
           cartItems: get().cartItems.filter(item => item.id !== id),
-          selectedItems: get().selectedItems.filter(itemId => itemId !== id)
+          selectedItems: get().selectedItems.filter(itemId => itemId !== id),
         });
-
-        const { token } = useAuthStore.getState();
-        if (!token || !id) return;
-
-        try {
-          await removeCartItemFromServer(id);
-        } catch (err) {
-          console.error('❌ removeFromCart sync error:', err);
-        }
       },
 
       clearCart: () => {
@@ -86,52 +78,48 @@ export const useCartStore = create(
 
       increaseQuantity: async (id) => {
         const { cartItems } = get();
-        const updated = cartItems.map(item =>
-          item.id === id ? { ...item, quantity: item.quantity + 1 } : item
-        );
-        set({ cartItems: updated });
+        const current = cartItems.find(item => item.id === id);
+        if (!current) return false;
 
+        const nextQuantity = Number(current.quantity || 0) + 1;
         const { token } = useAuthStore.getState();
-        const found = updated.find(item => item.id === id);
-        if (token && found) {
-          try {
-            await updateCartItemQuantity(found.productId, found.quantity);
-          } catch (err) {
-            console.error('❌ increaseQuantity sync error:', err);
-          }
+        if (token) {
+          await updateCartItemQuantity(current.productId, nextQuantity);
         }
+
+        set({
+          cartItems: get().cartItems.map(item =>
+            item.id === id ? { ...item, quantity: nextQuantity } : item
+          ),
+        });
+        return true;
       },
 
       decreaseQuantity: async (id) => {
         const { cartItems } = get();
+        const current = cartItems.find(item => item.id === id);
+        if (!current) return false;
 
-        const removed = cartItems.find(item => item.id === id);
-        const updated = cartItems
-          .map(item =>
-            item.id === id ? { ...item, quantity: item.quantity - 1 } : item
-          )
-          .filter(item => item.quantity > 0);
-
-        set({ cartItems: updated });
-
+        const nextQuantity = Number(current.quantity || 0) - 1;
         const { token } = useAuthStore.getState();
-        const found = updated.find(item => item.id === id);
 
-        if (!token || !id) return;
-
-        if (found) {
-          try {
-            await updateCartItemQuantity(found.productId, found.quantity);
-          } catch (err) {
-            console.error('❌ decreaseQuantity sync error:', err);
-          }
-        } else if (removed?.productId) {
-          try {
-            await removeCartItemFromServer(removed.productId);
-          } catch (err) {
-            console.error('❌ decreaseQuantity delete sync error:', err);
+        if (token) {
+          if (nextQuantity > 0) {
+            await updateCartItemQuantity(current.productId, nextQuantity);
+          } else if (current.productId) {
+            await removeCartItemFromServer(current.productId);
           }
         }
+
+        set({
+          cartItems: get().cartItems
+            .map(item => item.id === id ? { ...item, quantity: nextQuantity } : item)
+            .filter(item => item.quantity > 0),
+          selectedItems: nextQuantity > 0
+            ? get().selectedItems
+            : get().selectedItems.filter(itemId => itemId !== id),
+        });
+        return true;
       },
 
       toggleSelectItem: (id) => {
@@ -169,59 +157,43 @@ export const useCartStore = create(
       },
 
       mergeCartAction: async () => {
-        try {
-          const cartItems = get().cartItems;
-          const mappedItems = cartItems
-            .filter(item => item.id && item.quantity)
-            .map(item => ({
-              productId: item.id,
-              quantity: item.quantity,
-              priceAtThatTime: item.priceAtThatTime || item.priceOnline || item.price || 0,
-            }));
-          await mergeCartToServer(mappedItems);
-        } catch (err) {
-          console.error('❌ mergeCartAction error:', err);
-        }
+        const cartItems = get().cartItems;
+        const mappedItems = cartItems
+          .filter(item => item.id && item.quantity)
+          .map(item => ({
+            productId: item.id,
+            quantity: item.quantity,
+            priceAtThatTime: item.priceAtThatTime || item.priceOnline || item.price || 0,
+          }));
+        await mergeCartToServer(mappedItems);
+        return true;
       },
 
       fetchCartAction: async () => {
-        try {
-          const token = useAuthStore.getState().token;
-          if (!token) {
-            return;
-          }
+        const token = useAuthStore.getState().token;
+        if (!token) return [];
 
-          const items = await fetchCartFromServer();
-          set({ cartItems: items });
-        } catch (err) {
-          console.error('❌ fetchCartAction error:', err);
-        }
+        const items = await fetchCartFromServer();
+        set({ cartItems: items });
+        return items;
       },
 
       clearServerCartAction: async () => {
-        try {
-          await clearServerCart();
-          set({ cartItems: [], selectedItems: [] });
-        } catch (err) {
-          console.error('❌ clearServerCartAction error:', err);
-        }
+        await clearServerCart();
+        set({ cartItems: [], selectedItems: [] });
+        return true;
       },
 
       deleteSelectedCartItemsAction: async () => {
-        const { selectedItems, setCart } = get();
+        const { selectedItems } = get();
+        if (selectedItems.length === 0) return false;
 
-        if (selectedItems.length === 0) return;
-
-        try {
-          await deleteSelectedCartItems(selectedItems);
-
-          set({
-            cartItems: get().cartItems.filter(item => !selectedItems.includes(item.id)),
-            selectedItems: [],
-          });
-        } catch (err) {
-          console.error('❌ deleteSelectedCartItemsAction error:', err);
-        }
+        await deleteSelectedCartItems(selectedItems);
+        set({
+          cartItems: get().cartItems.filter(item => !selectedItems.includes(item.id)),
+          selectedItems: [],
+        });
+        return true;
       },
 
       clearStorage: () => {
@@ -236,11 +208,7 @@ export const useCartStore = create(
       partialize: (state) => ({
         cartItems: state.cartItems,
         selectedItems: state.selectedItems,
-        // ❌ ไม่รวม branchPrices
       }),
     }
-
   )
 );
-
-

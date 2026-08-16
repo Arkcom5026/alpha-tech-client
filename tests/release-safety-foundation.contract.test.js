@@ -8,7 +8,7 @@ const generator = readFileSync(new URL('../scripts/generate-release-metadata.mjs
 const nvmrc = readFileSync(new URL('../.nvmrc', import.meta.url), 'utf8').trim()
 
 assert.equal(nvmrc, '22', 'client Node authority must be Node 22')
-assert.equal(vercel.git?.deploymentEnabled, true, 'automatic Vercel Git deployments must remain enabled')
+assert.equal(vercel.git?.deploymentEnabled, false, 'automatic Vercel Git deployments must remain disabled')
 assert.equal(vercel.ignoreCommand, 'exit 1', 'Git-triggered Vercel builds must never be skipped by Ignored Build Step')
 assert.match(vercel.buildCommand || '', /npm run build\s*&&\s*node scripts\/generate-release-metadata\.mjs/, 'Vercel build must publish release provenance after Vite build')
 assert.match(ciWorkflow, /node-version:\s*22\b/, 'GitHub CI must use Node 22')
@@ -16,13 +16,13 @@ assert.match(ciWorkflow, /branches:\s*\[\s*"main"\s*\]/, 'GitHub CI must protect
 assert.doesNotMatch(ciWorkflow, /integration\/system-hardening-7-agendas/, 'retired integration branch must not remain CI authority')
 assert.match(ciWorkflow, /generate-release-metadata\.mjs/, 'CI build must exercise release metadata generation')
 
-// Keep the manual exact-SHA workflow as a controlled fallback/recovery path.
-assert.match(releaseWorkflow, /workflow_dispatch:/, 'manual Production recovery must require explicit workflow dispatch')
-assert.match(releaseWorkflow, /expected_sha:/, 'manual Production recovery must require an approved SHA')
-assert.match(releaseWorkflow, /git rev-parse origin\/main/, 'manual Production recovery must verify current main authority')
-assert.match(releaseWorkflow, /vercel deploy --prod/, 'manual Production recovery must explicitly target Vercel Production')
-assert.match(releaseWorkflow, /saduaksabuy\.com\/release\.json/, 'manual Production recovery must verify deployed provenance')
-assert.doesNotMatch(releaseWorkflow, /^\s*push:\s*$/m, 'manual Production recovery workflow must not also trigger directly from Git push')
+// Keep the manual exact-SHA workflow as the controlled Production authority.
+assert.match(releaseWorkflow, /workflow_dispatch:/, 'manual Production release must require explicit workflow dispatch')
+assert.match(releaseWorkflow, /expected_sha:/, 'manual Production release must require an approved SHA')
+assert.match(releaseWorkflow, /git rev-parse origin\/main/, 'manual Production release must verify current main authority')
+assert.match(releaseWorkflow, /vercel deploy --prod/, 'manual Production release must explicitly target Vercel Production')
+assert.match(releaseWorkflow, /saduaksabuy\.com\/release\.json/, 'manual Production release must verify deployed provenance')
+assert.doesNotMatch(releaseWorkflow, /^\s*push:\s*$/m, 'manual Production release workflow must not also trigger directly from Git push')
 
 assert.match(generator, /VERCEL_GIT_COMMIT_SHA/, 'release metadata must capture Vercel provenance when present')
 assert.match(generator, /GITHUB_SHA/, 'release metadata must capture GitHub provenance when present')

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Archive, RefreshCw, Search, X } from 'lucide-react';
 import { feedback } from '@/design-system/feedback';
 import {
@@ -34,6 +34,7 @@ const PosHeldCartPanel = ({
   const [pendingCancelId, setPendingCancelId] = useState(null);
   const [cancelReason, setCancelReason] = useState('');
   const [form, setForm] = useState({ customerName: '', customerPhone: '', note: '' });
+  const mutationLockRef = useRef(false);
 
   const load = async () => {
     setLoading(true);
@@ -54,19 +55,23 @@ const PosHeldCartPanel = ({
   if (!open) return null;
 
   const saveCurrent = async () => {
-    if (saving) return;
+    if (saving || cancellingId || mutationLockRef.current) return;
     if (!currentItems.length) {
       feedback.info('ยังไม่มีสินค้าให้พักรายการ');
       return;
     }
+
+    const payload = {
+      ...form,
+      customerId: currentCustomerId || null,
+      priceType: currentPriceType,
+      items: [...currentItems],
+    };
+
+    mutationLockRef.current = true;
     setSaving(true);
     try {
-      const cart = await createPosHeldCart({
-        ...form,
-        customerId: currentCustomerId || null,
-        priceType: currentPriceType,
-        items: currentItems,
-      });
+      const cart = await createPosHeldCart(payload);
       feedback.actionSuccess(`บันทึกใบพัก ${cart.code} แล้ว`, 'held-cart:create:success');
       setForm({ customerName: '', customerPhone: '', note: '' });
       await load();
@@ -75,18 +80,19 @@ const PosHeldCartPanel = ({
     } catch (error) {
       feedback.actionError(error, getPosHeldCartErrorMessage(error), 'held-cart:create:error');
     } finally {
+      mutationLockRef.current = false;
       setSaving(false);
     }
   };
 
   const requestCancel = (heldCartId) => {
-    if (cancellingId) return;
+    if (saving || cancellingId || mutationLockRef.current) return;
     setPendingCancelId(heldCartId);
     setCancelReason('');
   };
 
   const closeCancel = () => {
-    if (cancellingId) return;
+    if (saving || cancellingId || mutationLockRef.current) return;
     setPendingCancelId(null);
     setCancelReason('');
   };
@@ -97,21 +103,26 @@ const PosHeldCartPanel = ({
       feedback.info('กรุณาระบุเหตุผลยกเลิกใบพักรายการ');
       return;
     }
-    if (cancellingId) return;
+    if (saving || cancellingId || mutationLockRef.current) return;
 
-    setCancellingId(heldCartId);
+    const targetId = heldCartId;
+    mutationLockRef.current = true;
+    setCancellingId(targetId);
     try {
-      await cancelPosHeldCart(heldCartId, reason);
-      feedback.actionSuccess('ยกเลิกใบพักรายการแล้ว', `held-cart:cancel:${heldCartId}:success`);
+      await cancelPosHeldCart(targetId, reason);
+      feedback.actionSuccess('ยกเลิกใบพักรายการแล้ว', `held-cart:cancel:${targetId}:success`);
       setPendingCancelId(null);
       setCancelReason('');
       await load();
     } catch (error) {
-      feedback.actionError(error, getPosHeldCartErrorMessage(error), `held-cart:cancel:${heldCartId}:error`);
+      feedback.actionError(error, getPosHeldCartErrorMessage(error), `held-cart:cancel:${targetId}:error`);
     } finally {
+      mutationLockRef.current = false;
       setCancellingId(null);
     }
   };
+
+  const interactionLocked = saving || Boolean(cancellingId);
 
   return (
     <div className="fixed inset-0 z-[80] flex justify-end bg-slate-950/40" role="dialog" aria-modal="true" aria-label="ใบพักรายการขาย">
@@ -124,7 +135,7 @@ const PosHeldCartPanel = ({
           <button
             type="button"
             onClick={onClose}
-            disabled={saving || Boolean(cancellingId)}
+            disabled={interactionLocked}
             className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-teal-200 bg-white text-teal-900 transition hover:bg-teal-100 disabled:cursor-not-allowed disabled:opacity-50"
             aria-label="ปิดใบพักรายการขาย"
           >
@@ -147,12 +158,14 @@ const PosHeldCartPanel = ({
                 onChange={(event) => setForm({ ...form, customerName: event.target.value })}
                 placeholder="ชื่อเรียกลูกค้า (ถ้ามี)"
                 className={inputClass}
+                disabled={interactionLocked}
               />
               <input
                 value={form.customerPhone}
                 onChange={(event) => setForm({ ...form, customerPhone: event.target.value })}
                 placeholder="เบอร์โทร (ถ้ามี)"
                 className={inputClass}
+                disabled={interactionLocked}
               />
             </div>
             <input
@@ -160,11 +173,12 @@ const PosHeldCartPanel = ({
               onChange={(event) => setForm({ ...form, note: event.target.value })}
               placeholder="หมายเหตุ เช่น รอเลือกรายการสินค้าเพิ่ม"
               className={`${inputClass} mt-3`}
+              disabled={interactionLocked}
             />
             <button
               type="button"
               onClick={saveCurrent}
-              disabled={!currentItems.length || saving}
+              disabled={!currentItems.length || interactionLocked}
               className="mt-4 inline-flex h-11 w-full items-center justify-center rounded-xl bg-teal-700 px-4 text-sm font-semibold text-white transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {saving ? 'กำลังบันทึก...' : 'บันทึกและเริ่มรายการขายใหม่'}
@@ -181,12 +195,13 @@ const PosHeldCartPanel = ({
                   onKeyDown={(event) => event.key === 'Enter' && load()}
                   placeholder="ค้นหารหัส ชื่อ หรือเบอร์โทร"
                   className={`${inputClass} pl-10`}
+                  disabled={interactionLocked}
                 />
               </div>
               <button
                 type="button"
                 onClick={load}
-                disabled={loading}
+                disabled={loading || interactionLocked}
                 className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-teal-200 bg-teal-50 px-4 text-sm font-semibold text-teal-900 transition hover:bg-teal-100 disabled:opacity-50"
               >
                 <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
@@ -222,16 +237,16 @@ const PosHeldCartPanel = ({
                           id={`held-cart-cancel-${cart.id}`}
                           value={cancelReason}
                           onChange={(event) => setCancelReason(event.target.value)}
-                          disabled={cancelling}
+                          disabled={interactionLocked}
                           rows={2}
                           className="mt-2 w-full rounded-xl border border-rose-200 bg-white px-3 py-2 text-sm outline-none focus:border-rose-400 focus:ring-2 focus:ring-rose-100"
                           placeholder="ระบุเหตุผลก่อนยืนยันยกเลิก"
                         />
                         <div className="mt-3 flex justify-end gap-2">
-                          <button type="button" onClick={closeCancel} disabled={cancelling} className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 disabled:opacity-50">
+                          <button type="button" onClick={closeCancel} disabled={interactionLocked} className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 disabled:opacity-50">
                             ไม่ยกเลิก
                           </button>
-                          <button type="button" onClick={() => confirmCancel(cart.id)} disabled={cancelling || !cancelReason.trim()} className="rounded-xl bg-rose-700 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">
+                          <button type="button" onClick={() => confirmCancel(cart.id)} disabled={interactionLocked || !cancelReason.trim()} className="rounded-xl bg-rose-700 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">
                             {cancelling ? 'กำลังยกเลิก...' : 'ยืนยันยกเลิก'}
                           </button>
                         </div>
@@ -243,7 +258,7 @@ const PosHeldCartPanel = ({
                         <button
                           type="button"
                           onClick={() => requestCancel(cart.id)}
-                          disabled={Boolean(cancellingId)}
+                          disabled={interactionLocked}
                           className="inline-flex h-10 items-center justify-center rounded-xl border border-rose-200 bg-rose-50 px-3 text-sm font-semibold text-rose-700 transition hover:bg-rose-100 disabled:opacity-50"
                         >
                           ยกเลิก
@@ -251,7 +266,7 @@ const PosHeldCartPanel = ({
                         <button
                           type="button"
                           onClick={() => onLoad(cart.id)}
-                          disabled={Boolean(cancellingId)}
+                          disabled={interactionLocked}
                           className="inline-flex h-10 items-center justify-center rounded-xl bg-emerald-100 px-3 text-sm font-semibold text-emerald-900 transition hover:bg-emerald-200 disabled:opacity-50"
                         >
                           เปิดทำต่อ

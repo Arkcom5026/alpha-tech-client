@@ -53,7 +53,7 @@ const IntakeEvidencePanel = ({ repairJobId, warning, retryDraft, onSaved }) => {
   const [error, setError] = useState('');
   const [retryNotice, setRetryNotice] = useState(warning || '');
   const savingRef = useRef(false);
-  const interactionLocked = loading || saving;
+  const interactionLocked = loading || saving || savingRef.current;
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -104,9 +104,8 @@ const IntakeEvidencePanel = ({ repairJobId, warning, retryDraft, onSaved }) => {
     setSaving(true);
     setError('');
 
-    let saved = null;
     try {
-      saved = await repairApi.saveIntakeEvidence(repairJobIdSnapshot, payload);
+      const saved = await repairApi.saveIntakeEvidence(repairJobIdSnapshot, payload);
       setEvidence(saved);
       setDraft(emptyDraft);
       setEditing(false);
@@ -115,6 +114,22 @@ const IntakeEvidencePanel = ({ repairJobId, warning, retryDraft, onSaved }) => {
         'บันทึกหลักฐานการรับเครื่องเรียบร้อยแล้ว',
         `repair:intake-evidence:${repairJobIdSnapshot}:save:success`,
       );
+
+      try {
+        const refreshResult = await onSaved?.(saved);
+        if (refreshResult?.ok === false) {
+          const refreshError = refreshResult.error || new Error(refreshResult.message || 'Repair job refresh failed');
+          throw refreshError;
+        }
+      } catch (reloadError) {
+        const message = 'บันทึกหลักฐานสำเร็จแล้ว แต่ยังรีเฟรชข้อมูลใบงานไม่สำเร็จ กรุณากดโหลดใหม่';
+        setError(message);
+        feedback.actionError(
+          reloadError,
+          'บันทึกหลักฐานสำเร็จแล้ว แต่ยังรีเฟรชข้อมูลใบงานไม่สำเร็จ',
+          `repair:intake-evidence:${repairJobIdSnapshot}:refresh:error`,
+        );
+      }
     } catch (saveError) {
       const message = saveError?.message || 'บันทึกหลักฐานการรับเครื่องไม่สำเร็จ';
       setError(message);
@@ -126,20 +141,6 @@ const IntakeEvidencePanel = ({ repairJobId, warning, retryDraft, onSaved }) => {
     } finally {
       savingRef.current = false;
       setSaving(false);
-    }
-
-    if (!saved) return;
-
-    try {
-      await onSaved?.(saved);
-    } catch (reloadError) {
-      const message = 'บันทึกหลักฐานสำเร็จแล้ว แต่ยังรีเฟรชข้อมูลใบงานไม่สำเร็จ กรุณากดโหลดใหม่';
-      setError(message);
-      feedback.actionError(
-        reloadError,
-        'บันทึกหลักฐานสำเร็จแล้ว แต่ยังรีเฟรชข้อมูลใบงานไม่สำเร็จ',
-        `repair:intake-evidence:${repairJobIdSnapshot}:refresh:error`,
-      );
     }
   };
 

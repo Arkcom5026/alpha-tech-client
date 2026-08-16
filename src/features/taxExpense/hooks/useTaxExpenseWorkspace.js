@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { feedback } from '@/design-system/feedback';
 import { useBranchStore } from '@/features/branch/store/branchStore';
 import {
@@ -27,6 +27,9 @@ const useTaxExpenseWorkspace = () => {
   const [savingPayee, setSavingPayee] = useState(false);
   const [savingCategory, setSavingCategory] = useState(false);
   const [error, setError] = useState('');
+  const savingRef = useRef(false);
+  const savingPayeeRef = useRef(false);
+  const savingCategoryRef = useRef(false);
 
   const load = useCallback(async ({ payeeQuery = '' } = {}) => {
     if (!branchId) return;
@@ -73,10 +76,11 @@ const useTaxExpenseWorkspace = () => {
   }, []);
 
   const submitCategory = useCallback(async (payload) => {
-    if (savingCategory) return null;
+    if (savingCategoryRef.current) return null;
+    savingCategoryRef.current = true;
     setSavingCategory(true);
     try {
-      const created = await createTaxExpenseCategory(payload);
+      const created = await createTaxExpenseCategory({ ...payload });
       setCategories((current) => [...current.filter((item) => item.id !== created.id), created]
         .sort((left, right) => left.code.localeCompare(right.code)));
       feedback.actionSuccess(
@@ -92,15 +96,17 @@ const useTaxExpenseWorkspace = () => {
       );
       throw requestError;
     } finally {
+      savingCategoryRef.current = false;
       setSavingCategory(false);
     }
-  }, [savingCategory]);
+  }, []);
 
   const submitPayee = useCallback(async (payload) => {
-    if (savingPayee) return null;
+    if (savingPayeeRef.current) return null;
+    savingPayeeRef.current = true;
     setSavingPayee(true);
     try {
-      const created = await createExpensePayee(payload);
+      const created = await createExpensePayee({ ...payload });
       setPayees((current) => [created, ...current.filter((item) => item.id !== created.id)]);
       feedback.actionSuccess(
         'เพิ่มผู้รับเงินค่าใช้จ่ายแล้ว',
@@ -115,15 +121,17 @@ const useTaxExpenseWorkspace = () => {
       );
       throw requestError;
     } finally {
+      savingPayeeRef.current = false;
       setSavingPayee(false);
     }
-  }, [savingPayee]);
+  }, []);
 
   const submitExpense = useCallback(async (payload) => {
-    if (saving) return null;
+    if (savingRef.current) return null;
+    savingRef.current = true;
     setSaving(true);
     try {
-      const created = await createTaxExpense(payload);
+      const created = await createTaxExpense({ ...payload });
       setExpenses((current) => [created, ...current]);
       feedback.actionSuccess(
         'บันทึกค่าใช้จ่ายแล้ว',
@@ -138,9 +146,10 @@ const useTaxExpenseWorkspace = () => {
       );
       throw requestError;
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
-  }, [saving]);
+  }, []);
 
   return {
     branchId,

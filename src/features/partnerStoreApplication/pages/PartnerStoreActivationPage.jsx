@@ -1,5 +1,6 @@
 import React, { useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
+import { feedback } from '@/design-system/feedback';
 import { claimPartnerStoreActivation } from '../api/partnerStoreActivationApi';
 
 const messageFrom = (error) => error?.response?.data?.message || error?.message || 'เปิดใช้งานบัญชีไม่สำเร็จ';
@@ -34,11 +35,22 @@ export default function PartnerStoreActivationPage() {
         token: activationToken,
         password: nextPassword,
       });
-      setActivated(response.data?.data || {});
+      const activationResult = response.data?.data || {};
+      setActivated(activationResult);
       setPassword('');
       setConfirmPassword('');
+      feedback.actionSuccess(
+        'เปิดใช้งานบัญชีเจ้าของร้านเรียบร้อยแล้ว',
+        `partner-store:activation:${activationResult?.applicationCode || 'owner'}:success`,
+      );
     } catch (requestError) {
-      setError(messageFrom(requestError));
+      const message = messageFrom(requestError);
+      setError(message);
+      feedback.actionError(
+        requestError,
+        message,
+        'partner-store:activation:claim:error',
+      );
     } finally {
       submittingRef.current = false;
       setSubmitting(false);
@@ -57,6 +69,8 @@ export default function PartnerStoreActivationPage() {
       </main>
     );
   }
+
+  const mutationBusy = submitting || submittingRef.current;
 
   return (
     <main className="min-h-screen bg-slate-50 px-4 py-12">
@@ -78,7 +92,7 @@ export default function PartnerStoreActivationPage() {
               onChange={(event) => {
                 if (!submittingRef.current) setPassword(event.target.value);
               }}
-              disabled={submitting}
+              disabled={mutationBusy}
               className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2.5 font-normal disabled:cursor-not-allowed disabled:bg-slate-50 disabled:opacity-60"
             />
           </label>
@@ -91,11 +105,11 @@ export default function PartnerStoreActivationPage() {
               onChange={(event) => {
                 if (!submittingRef.current) setConfirmPassword(event.target.value);
               }}
-              disabled={submitting}
+              disabled={mutationBusy}
               className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2.5 font-normal disabled:cursor-not-allowed disabled:bg-slate-50 disabled:opacity-60"
             />
           </label>
-          <button type="submit" disabled={submitting || !token} className="w-full rounded-xl bg-emerald-600 px-4 py-3 text-sm font-black text-white disabled:opacity-50">
+          <button type="submit" disabled={mutationBusy || !token} className="w-full rounded-xl bg-emerald-600 px-4 py-3 text-sm font-black text-white disabled:opacity-50">
             {submitting ? 'กำลังเปิดใช้งาน…' : 'เปิดใช้งานบัญชี'}
           </button>
         </form>

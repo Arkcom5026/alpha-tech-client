@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import EmployeeTable from '../components/EmployeeTable';
 import { getAllEmployees, getBranchDropdowns } from '../api/employeeApi';
+import useEmployeeStore from '../store/employeeStore';
 import { useAuthStore } from '@/features/auth/store/authStore.js';
 
 const ListEmployeePage = () => {
@@ -9,6 +10,7 @@ const ListEmployeePage = () => {
   const token = useAuthStore((s) => s.token);
   const role = useAuthStore((s) => s.role);
   const branchId = useAuthStore((s) => s.branchId);
+  const setEmployeeActiveAction = useEmployeeStore((state) => state.setEmployeeActiveAction);
   const lowerRole = String(role || '').toLowerCase();
   const canManage = ['admin', 'superadmin'].includes(lowerRole);
   const isSuperAdmin = lowerRole === 'superadmin';
@@ -81,7 +83,7 @@ const ListEmployeePage = () => {
     })();
   }, [isSuperAdmin]);
 
-  const handleToggleActive = async (id, nextActive) => Promise.resolve({ id, nextActive });
+  const handleToggleActive = async (id, nextActive) => setEmployeeActiveAction(id, nextActive);
 
   const controlClass = 'border border-slate-300 dark:border-zinc-700 rounded-xl px-3 py-2 bg-white dark:bg-zinc-900 text-sm outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 dark:focus:ring-emerald-950/40';
 

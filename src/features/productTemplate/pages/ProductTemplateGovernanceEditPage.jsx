@@ -32,6 +32,7 @@ const ProductTemplateGovernanceEditPage = () => {
     fetchMasterOptionsAction,
   } = useProductTemplateStore();
 
+  const mutationRef = React.useRef(false);
   const [form, setForm] = React.useState({
     name: '',
     productTypeId: '',
@@ -59,7 +60,7 @@ const ProductTemplateGovernanceEditPage = () => {
   }, [id, clearCurrentTemplateAction, getTemplateByIdAction, fetchMasterOptionsAction]);
 
   React.useEffect(() => {
-    if (!currentTemplate) return;
+    if (!currentTemplate || mutationRef.current) return;
     setForm({
       name: currentTemplate.name || currentTemplate.title || '',
       productTypeId: currentTemplate.productTypeId || '',
@@ -83,38 +84,48 @@ const ProductTemplateGovernanceEditPage = () => {
 
   const detailPath = shopSlug ? `/${shopSlug}/superadmin/catalog/templates/${id}` : `/superadmin/catalog/templates/${id}`;
   const listPath = shopSlug ? `/${shopSlug}/superadmin/catalog/templates` : '/superadmin/catalog/templates';
-  const setField = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
+  const mutationBusy = isSaving || mutationRef.current;
+  const setField = (key, value) => {
+    if (mutationRef.current) return;
+    setForm((prev) => ({ ...prev, [key]: value }));
+  };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    if (isSaving) return;
+    if (mutationBusy) return;
 
+    const templateId = id;
+    const formSnapshot = { ...form };
+    const successPath = detailPath;
     const payload = {
-      name: String(form.name || '').trim(),
-      productTypeId: optionalId(form.productTypeId),
-      brandId: optionalId(form.brandId),
-      categoryId: optionalId(form.categoryId),
-      unitId: optionalId(form.unitId),
-      mode: form.mode,
-      active: toBool(form.active),
-      trackSerialNumber: toBool(form.trackSerialNumber),
-      noSN: toBool(form.noSN),
-      codeType: String(form.codeType || '').trim() || undefined,
-      warrantyDays: optionalNumber(form.warrantyDays),
-      costPrice: optionalNumber(form.costPrice),
-      priceRetail: optionalNumber(form.priceRetail),
-      priceWholesale: optionalNumber(form.priceWholesale),
-      priceOnline: optionalNumber(form.priceOnline),
-      priceTechnician: optionalNumber(form.priceTechnician),
-      templateBranchCode: String(form.templateBranchCode || '').trim() || undefined,
+      name: String(formSnapshot.name || '').trim(),
+      productTypeId: optionalId(formSnapshot.productTypeId),
+      brandId: optionalId(formSnapshot.brandId),
+      categoryId: optionalId(formSnapshot.categoryId),
+      unitId: optionalId(formSnapshot.unitId),
+      mode: formSnapshot.mode,
+      active: toBool(formSnapshot.active),
+      trackSerialNumber: toBool(formSnapshot.trackSerialNumber),
+      noSN: toBool(formSnapshot.noSN),
+      codeType: String(formSnapshot.codeType || '').trim() || undefined,
+      warrantyDays: optionalNumber(formSnapshot.warrantyDays),
+      costPrice: optionalNumber(formSnapshot.costPrice),
+      priceRetail: optionalNumber(formSnapshot.priceRetail),
+      priceWholesale: optionalNumber(formSnapshot.priceWholesale),
+      priceOnline: optionalNumber(formSnapshot.priceOnline),
+      priceTechnician: optionalNumber(formSnapshot.priceTechnician),
+      templateBranchCode: String(formSnapshot.templateBranchCode || '').trim() || undefined,
     };
 
+    mutationRef.current = true;
     try {
-      await updateTemplateAction(id, payload);
-      feedback.actionSuccess('บันทึก Product Template เรียบร้อยแล้ว', `product-template:${id}:update:success`);
-      navigate(detailPath);
+      await updateTemplateAction(templateId, payload);
+      feedback.actionSuccess('บันทึก Product Template เรียบร้อยแล้ว', `product-template:${templateId}:update:success`);
+      navigate(successPath);
     } catch (updateError) {
-      feedback.actionError(updateError, 'ไม่สามารถบันทึก Product Template ได้', `product-template:${id}:update:error`);
+      feedback.actionError(updateError, 'ไม่สามารถบันทึก Product Template ได้', `product-template:${templateId}:update:error`);
+    } finally {
+      mutationRef.current = false;
     }
   };
 
@@ -125,7 +136,7 @@ const ProductTemplateGovernanceEditPage = () => {
   return (
     <div className="space-y-5">
       <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-        <button type="button" onClick={() => navigate(currentTemplate ? detailPath : listPath)} disabled={isSaving} className="mb-4 rounded-2xl border border-slate-200 px-4 py-2 text-xs font-black text-slate-600 transition hover:bg-slate-50 disabled:opacity-60">
+        <button type="button" onClick={() => navigate(currentTemplate ? detailPath : listPath)} disabled={mutationBusy} className="mb-4 rounded-2xl border border-slate-200 px-4 py-2 text-xs font-black text-slate-600 transition hover:bg-slate-50 disabled:opacity-60">
           ← Back
         </button>
         <p className="text-[11px] font-black uppercase tracking-[0.18em] text-emerald-600">Template Governance</p>
@@ -151,17 +162,17 @@ const ProductTemplateGovernanceEditPage = () => {
           <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             <label className="space-y-2 md:col-span-2 xl:col-span-3">
               <span className="text-xs font-black uppercase tracking-[0.12em] text-slate-500">Template Name</span>
-              <input value={form.name} onChange={(event) => setField('name', event.target.value)} required disabled={isSaving} className="min-h-11 w-full rounded-2xl border border-slate-200 px-4 text-sm font-semibold outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 disabled:opacity-60" />
+              <input value={form.name} onChange={(event) => setField('name', event.target.value)} required disabled={mutationBusy} className="min-h-11 w-full rounded-2xl border border-slate-200 px-4 text-sm font-semibold outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 disabled:opacity-60" />
             </label>
 
-            <CatalogMasterSelect label="Product Type" required value={form.productTypeId} options={masterOptions.productTypes} onChange={(value) => setField('productTypeId', value)} disabled={isLoadingMasters || isSaving} />
-            <CatalogMasterSelect label="Brand" value={form.brandId} options={masterOptions.brands} onChange={(value) => setField('brandId', value)} disabled={isLoadingMasters || isSaving} />
-            <CatalogMasterSelect label="Category" value={form.categoryId} options={masterOptions.categories} onChange={(value) => setField('categoryId', value)} disabled={isLoadingMasters || isSaving} />
-            <CatalogMasterSelect label="Unit" value={form.unitId} options={masterOptions.units} onChange={(value) => setField('unitId', value)} disabled={isLoadingMasters || isSaving} />
+            <CatalogMasterSelect label="Product Type" required value={form.productTypeId} options={masterOptions.productTypes} onChange={(value) => setField('productTypeId', value)} disabled={isLoadingMasters || mutationBusy} />
+            <CatalogMasterSelect label="Brand" value={form.brandId} options={masterOptions.brands} onChange={(value) => setField('brandId', value)} disabled={isLoadingMasters || mutationBusy} />
+            <CatalogMasterSelect label="Category" value={form.categoryId} options={masterOptions.categories} onChange={(value) => setField('categoryId', value)} disabled={isLoadingMasters || mutationBusy} />
+            <CatalogMasterSelect label="Unit" value={form.unitId} options={masterOptions.units} onChange={(value) => setField('unitId', value)} disabled={isLoadingMasters || mutationBusy} />
 
             <label className="space-y-2">
               <span className="text-xs font-black uppercase tracking-[0.12em] text-slate-500">Mode</span>
-              <select value={form.mode} onChange={(event) => setField('mode', event.target.value)} disabled={isSaving} className="min-h-11 w-full rounded-2xl border border-slate-200 px-4 text-sm font-semibold outline-none disabled:opacity-60">
+              <select value={form.mode} onChange={(event) => setField('mode', event.target.value)} disabled={mutationBusy} className="min-h-11 w-full rounded-2xl border border-slate-200 px-4 text-sm font-semibold outline-none disabled:opacity-60">
                 <option value="STRUCTURED">STRUCTURED</option>
                 <option value="SIMPLE">SIMPLE</option>
               </select>
@@ -169,12 +180,12 @@ const ProductTemplateGovernanceEditPage = () => {
 
             <label className="space-y-2">
               <span className="text-xs font-black uppercase tracking-[0.12em] text-slate-500">Warranty Days</span>
-              <input type="number" min="0" value={form.warrantyDays} onChange={(event) => setField('warrantyDays', event.target.value)} disabled={isSaving} className="min-h-11 w-full rounded-2xl border border-slate-200 px-4 text-sm font-semibold outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 disabled:opacity-60" />
+              <input type="number" min="0" value={form.warrantyDays} onChange={(event) => setField('warrantyDays', event.target.value)} disabled={mutationBusy} className="min-h-11 w-full rounded-2xl border border-slate-200 px-4 text-sm font-semibold outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 disabled:opacity-60" />
             </label>
 
             <label className="space-y-2">
               <span className="text-xs font-black uppercase tracking-[0.12em] text-slate-500">Code Type</span>
-              <input value={form.codeType} onChange={(event) => setField('codeType', event.target.value)} disabled={isSaving} className="min-h-11 w-full rounded-2xl border border-slate-200 px-4 text-sm font-semibold outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 disabled:opacity-60" />
+              <input value={form.codeType} onChange={(event) => setField('codeType', event.target.value)} disabled={mutationBusy} className="min-h-11 w-full rounded-2xl border border-slate-200 px-4 text-sm font-semibold outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 disabled:opacity-60" />
             </label>
           </div>
         </section>
@@ -184,15 +195,15 @@ const ProductTemplateGovernanceEditPage = () => {
         <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
           <h2 className="text-base font-black text-slate-900">Governance Flags</h2>
           <div className="mt-4 grid gap-3 md:grid-cols-3">
-            <label className="flex items-center gap-3 rounded-2xl border border-slate-200 p-4 text-sm font-bold text-slate-700"><input type="checkbox" checked={!!form.active} onChange={(event) => setField('active', event.target.checked)} disabled={isSaving} />Active Template</label>
-            <label className="flex items-center gap-3 rounded-2xl border border-slate-200 p-4 text-sm font-bold text-slate-700"><input type="checkbox" checked={!!form.trackSerialNumber} onChange={(event) => setField('trackSerialNumber', event.target.checked)} disabled={isSaving} />Track Serial Number</label>
-            <label className="flex items-center gap-3 rounded-2xl border border-slate-200 p-4 text-sm font-bold text-slate-700"><input type="checkbox" checked={!!form.noSN} onChange={(event) => setField('noSN', event.target.checked)} disabled={isSaving} />No Serial Number</label>
+            <label className="flex items-center gap-3 rounded-2xl border border-slate-200 p-4 text-sm font-bold text-slate-700"><input type="checkbox" checked={!!form.active} onChange={(event) => setField('active', event.target.checked)} disabled={mutationBusy} />Active Template</label>
+            <label className="flex items-center gap-3 rounded-2xl border border-slate-200 p-4 text-sm font-bold text-slate-700"><input type="checkbox" checked={!!form.trackSerialNumber} onChange={(event) => setField('trackSerialNumber', event.target.checked)} disabled={mutationBusy} />Track Serial Number</label>
+            <label className="flex items-center gap-3 rounded-2xl border border-slate-200 p-4 text-sm font-bold text-slate-700"><input type="checkbox" checked={!!form.noSN} onChange={(event) => setField('noSN', event.target.checked)} disabled={mutationBusy} />No Serial Number</label>
           </div>
         </section>
 
         <div className="flex justify-end gap-3 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
-          <button type="button" onClick={() => navigate(detailPath)} disabled={isSaving} className="rounded-2xl border border-slate-200 px-5 py-3 text-sm font-black text-slate-700 transition hover:bg-slate-50 disabled:opacity-60">Cancel</button>
-          <button type="submit" disabled={isSaving || !String(form.name || '').trim() || !form.productTypeId} className="rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-black text-white transition hover:bg-emerald-700 disabled:opacity-60">
+          <button type="button" onClick={() => navigate(detailPath)} disabled={mutationBusy} className="rounded-2xl border border-slate-200 px-5 py-3 text-sm font-black text-slate-700 transition hover:bg-slate-50 disabled:opacity-60">Cancel</button>
+          <button type="submit" disabled={mutationBusy || !String(form.name || '').trim() || !form.productTypeId} className="rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-black text-white transition hover:bg-emerald-700 disabled:opacity-60">
             {isSaving ? 'Saving...' : 'Save Template'}
           </button>
         </div>

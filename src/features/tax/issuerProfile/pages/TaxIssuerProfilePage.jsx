@@ -20,19 +20,32 @@ const TaxIssuerProfilePage = () => {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const savingRef = useRef(false);
+  const branchIdRef = useRef(branchId);
+  branchIdRef.current = branchId;
   const change = (field, value) => setForm((current) => ({ ...current, [field]: value }));
 
   useEffect(() => {
-    if (!branchId) return;
+    if (!branchId) return undefined;
+    let active = true;
+    const branchIdSnapshot = Number(branchId);
+
     setLoading(true);
     setError('');
-    getTaxIssuerProfile({ branchId })
-      .then((result) => setForm({ ...EMPTY, ...(result?.profile || {}) }))
-      .catch((requestError) => {
-        setError(messageFrom(requestError, 'โหลดข้อมูลผู้ออกเอกสารภาษีไม่สำเร็จ'));
-        feedback.actionError(requestError, 'โหลดข้อมูลผู้ออกเอกสารภาษีไม่สำเร็จ', 'tax-issuer-profile:load:error');
+    getTaxIssuerProfile({ branchId: branchIdSnapshot })
+      .then((result) => {
+        if (!active || branchIdRef.current !== branchIdSnapshot) return;
+        setForm({ ...EMPTY, ...(result?.profile || {}) });
       })
-      .finally(() => setLoading(false));
+      .catch((requestError) => {
+        if (!active || branchIdRef.current !== branchIdSnapshot) return;
+        setError(messageFrom(requestError, 'โหลดข้อมูลผู้ออกเอกสารภาษีไม่สำเร็จ'));
+        feedback.actionError(requestError, 'โหลดข้อมูลผู้ออกเอกสารภาษีไม่สำเร็จ', `tax-issuer-profile:${branchIdSnapshot}:load:error`);
+      })
+      .finally(() => {
+        if (active && branchIdRef.current === branchIdSnapshot) setLoading(false);
+      });
+
+    return () => { active = false; };
   }, [branchId]);
 
   const submit = async (event) => {
@@ -47,12 +60,21 @@ const TaxIssuerProfilePage = () => {
     setMessage('');
     try {
       const result = await saveTaxIssuerProfile({ branchId: branchIdSnapshot, ...formSnapshot });
-      setForm({ ...EMPTY, ...(result?.profile || {}) });
-      setMessage('บันทึกข้อมูลผู้ออกเอกสารภาษีเรียบร้อยแล้ว');
-      feedback.actionSuccess('บันทึกข้อมูลผู้ออกเอกสารภาษีเรียบร้อยแล้ว', 'tax-issuer-profile:save:success');
+      if (branchIdRef.current === branchIdSnapshot) {
+        setForm({ ...EMPTY, ...(result?.profile || {}) });
+        setMessage('บันทึกข้อมูลผู้ออกเอกสารภาษีเรียบร้อยแล้ว');
+      }
+      feedback.actionSuccess(
+        branchIdRef.current === branchIdSnapshot
+          ? 'บันทึกข้อมูลผู้ออกเอกสารภาษีเรียบร้อยแล้ว'
+          : 'บันทึกข้อมูลผู้ออกเอกสารภาษีของสาขาก่อนหน้าเรียบร้อยแล้ว',
+        `tax-issuer-profile:${branchIdSnapshot}:save:success`,
+      );
     } catch (requestError) {
-      setError(messageFrom(requestError, 'บันทึกข้อมูลผู้ออกเอกสารภาษีไม่สำเร็จ'));
-      feedback.actionError(requestError, 'บันทึกข้อมูลผู้ออกเอกสารภาษีไม่สำเร็จ', 'tax-issuer-profile:save:error');
+      if (branchIdRef.current === branchIdSnapshot) {
+        setError(messageFrom(requestError, 'บันทึกข้อมูลผู้ออกเอกสารภาษีไม่สำเร็จ'));
+      }
+      feedback.actionError(requestError, 'บันทึกข้อมูลผู้ออกเอกสารภาษีไม่สำเร็จ', `tax-issuer-profile:${branchIdSnapshot}:save:error`);
     } finally {
       savingRef.current = false;
       setSaving(false);

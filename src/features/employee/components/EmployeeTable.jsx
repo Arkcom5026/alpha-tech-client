@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ConfirmActionDialog } from '@/design-system/composites';
 import { feedback } from '@/design-system/feedback';
@@ -44,6 +44,7 @@ const EmployeeTable = ({
 
   const [confirm, setConfirm] = useState(null);
   const [toggling, setToggling] = useState(null);
+  const toggleRef = useRef(null);
 
   const resolveEmpActive = (row) => {
     const s = String(row?.status || row?.employeeStatus || '').toLowerCase();
@@ -55,31 +56,58 @@ const EmployeeTable = ({
 
   const handleToggle = (row) => {
     const cur = resolveEmpActive(row);
-    if (cur === null || toggling) return;
-    setConfirm({ row, nextActive: !cur });
+    if (cur === null || toggling || toggleRef.current) return;
+    const id = Number(row?.id ?? row?.userId);
+    if (!id) return;
+    setConfirm({
+      employeeId: id,
+      employeeName: row?.name || row?.user?.email || '',
+      nextActive: !cur,
+    });
   };
 
   const proceed = async () => {
-    if (!confirm?.row || !onToggleActive || toggling) return;
-    const id = confirm.row.id ?? confirm.row.userId;
-    const nextActive = Boolean(confirm.nextActive);
+    if (!confirm?.employeeId || !onToggleActive || toggling || toggleRef.current) return;
+    const employeeIdSnapshot = Number(confirm.employeeId);
+    const nextActiveSnapshot = Boolean(confirm.nextActive);
+    const operation = nextActiveSnapshot ? 'activate' : 'suspend';
+    toggleRef.current = { employeeId: employeeIdSnapshot, operation };
+    setToggling(employeeIdSnapshot);
+
     try {
-      setToggling(id);
-      await onToggleActive(id, nextActive);
+      await onToggleActive(employeeIdSnapshot, nextActiveSnapshot);
       feedback.actionSuccess(
-        nextActive ? 'เปิดใช้งานพนักงานเรียบร้อยแล้ว' : 'ปิดใช้งานพนักงานเรียบร้อยแล้ว',
-        `employee:status:${id}:success`,
+        nextActiveSnapshot ? 'เปิดใช้งานพนักงานเรียบร้อยแล้ว' : 'ปิดใช้งานพนักงานเรียบร้อยแล้ว',
+        `employee:${employeeIdSnapshot}:list-${operation}:success`,
       );
-      onRefresh?.();
       setConfirm(null);
+
+      if (onRefresh) {
+        try {
+          const refresh = await onRefresh();
+          if (refresh?.ok === false && !refresh?.stale) {
+            feedback.warning(
+              'อัปเดตสถานะพนักงานสำเร็จแล้ว แต่รีเฟรชรายการล่าสุดไม่สำเร็จ กรุณากดโหลดข้อมูลใหม่',
+              { eventKey: `employee:${employeeIdSnapshot}:list-${operation}:refresh:error` },
+            );
+          }
+        } catch (refreshError) {
+          feedback.warning(
+            'อัปเดตสถานะพนักงานสำเร็จแล้ว แต่รีเฟรชรายการล่าสุดไม่สำเร็จ กรุณากดโหลดข้อมูลใหม่',
+            { eventKey: `employee:${employeeIdSnapshot}:list-${operation}:refresh:error` },
+          );
+        }
+      }
     } catch (err) {
-      console.error('❌ เปลี่ยนสถานะพนักงานล้มเหลว:', err);
       feedback.actionError(
         err,
-        nextActive ? 'เปิดใช้งานพนักงานไม่สำเร็จ' : 'ปิดใช้งานพนักงานไม่สำเร็จ',
-        `employee:status:${id}:error`,
+        nextActiveSnapshot ? 'เปิดใช้งานพนักงานไม่สำเร็จ' : 'ปิดใช้งานพนักงานไม่สำเร็จ',
+        `employee:${employeeIdSnapshot}:list-${operation}:error`,
       );
     } finally {
+      if (toggleRef.current?.employeeId === employeeIdSnapshot && toggleRef.current?.operation === operation) {
+        toggleRef.current = null;
+      }
       setToggling(null);
     }
   };
@@ -152,7 +180,7 @@ const EmployeeTable = ({
                   {!readOnly && (
                     <Link
                       to={`/${shopSlug}/pos/settings/employee/edit/${id}`}
-                      className="px-3 py-1.5 rounded-md text-sm font-medium border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                      className={`px-3 py-1.5 rounded-md text-sm font-medium border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 ${toggling ? 'pointer-events-none opacity-50' : ''}`}
                       title="แก้ไขข้อมูลพนักงาน"
                     >
                       แก้ไข
@@ -161,7 +189,7 @@ const EmployeeTable = ({
                   <ActionButton
                     className={`text-white ${isActive ? 'bg-rose-600 hover:bg-rose-700 focus:ring-rose-500' : 'bg-emerald-600 hover:bg-emerald-700 focus:ring-emerald-500'}`}
                     onClick={() => handleToggle(e)}
-                    disabled={!canToggle || Boolean(toggling)}
+                    disabled={!canToggle || Boolean(toggling) || Boolean(toggleRef.current)}
                   >
                     {toggling === id ? 'กำลังบันทึก...' : isActive ? 'ปิดใช้งาน' : 'กู้คืน'}
                   </ActionButton>
@@ -202,13 +230,13 @@ const EmployeeTable = ({
       <ConfirmActionDialog
         open={Boolean(confirm)}
         title={confirm?.nextActive ? 'กู้คืนพนักงาน' : 'ปิดใช้งานพนักงาน'}
-        description={`ยืนยันการ${confirm?.nextActive ? 'กู้คืน' : 'ปิดใช้งาน'}พนักงาน “${confirm?.row?.name || confirm?.row?.user?.email || ''}” หรือไม่?`}
+        description={`ยืนยันการ${confirm?.nextActive ? 'กู้คืน' : 'ปิดใช้งาน'}พนักงาน “${confirm?.employeeName || ''}” หรือไม่?`}
         confirmLabel={confirm?.nextActive ? 'กู้คืน' : 'ปิดใช้งาน'}
         intent={confirm?.nextActive ? 'primary' : 'destructive'}
         loading={Boolean(toggling)}
         loadingLabel="กำลังบันทึก..."
         onClose={() => {
-          if (!toggling) setConfirm(null);
+          if (!toggling && !toggleRef.current) setConfirm(null);
         }}
         onConfirm={proceed}
       />

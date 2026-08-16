@@ -1,6 +1,6 @@
 // refund/components/RefundForm.jsx
 import React, { useState } from 'react';
-import { FieldMessage } from '@/design-system/feedback';
+import { FieldMessage, feedback } from '@/design-system/feedback';
 import useRefundStore from '../store/refundStore';
 
 const RefundForm = ({ saleReturn }) => {
@@ -11,27 +11,52 @@ const RefundForm = ({ saleReturn }) => {
   const [note, setNote] = useState('');
   const [validationError, setValidationError] = useState('');
 
-  const { createRefundAction, loading, error } = useRefundStore();
+  const { createRefundAction, loading, error, clearErrorAction } = useRefundStore();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (loading) return;
+
+    if (amount < 0 || deductAmount < 0) {
+      setValidationError('ยอดคืนและยอดหักต้องไม่ติดลบ');
+      return;
+    }
+    if (amount + deductAmount <= 0) {
+      setValidationError('กรุณาระบุยอดคืนหรือยอดหักอย่างน้อย 1 รายการ');
+      return;
+    }
     if (amount + deductAmount > remainingRefund) {
       setValidationError('ยอดคืนรวมกับยอดหัก เกินยอดคงเหลือที่สามารถคืนได้');
       return;
     }
+
     setValidationError('');
+    clearErrorAction?.();
+
+    const refundData = {
+      saleReturnId: saleReturn.id,
+      amount,
+      method,
+      note,
+      deducted: deductAmount,
+    };
+
     try {
-      const refundData = {
-        saleReturnId: saleReturn.id,
-        amount,
-        method,
-        note,
-        deducted: deductAmount,
-      };
       const result = await createRefundAction(refundData);
-      console.log('✅ Refund created:', result);
+      if (!result) return;
+      feedback.actionSuccess(
+        'บันทึกการคืนเงินเรียบร้อยแล้ว',
+        `refund:${saleReturn.id}:create:success`,
+      );
+      setDeductAmount(0);
+      setAmount(0);
+      setNote('');
     } catch (err) {
-      console.error('❌ Refund failed:', err);
+      feedback.actionError(
+        err,
+        'บันทึกการคืนเงินไม่สำเร็จ',
+        `refund:${saleReturn.id}:create:error`,
+      );
     }
   };
 
@@ -51,7 +76,8 @@ const RefundForm = ({ saleReturn }) => {
             if (validationError) setValidationError('');
           }}
           max={remainingRefund}
-          className="w-full rounded border px-3 py-2 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-100"
+          disabled={loading}
+          className="w-full rounded border px-3 py-2 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-100 disabled:cursor-not-allowed disabled:bg-slate-100"
           aria-invalid={Boolean(validationError)}
           aria-describedby={validationError ? 'refund-amount-error' : undefined}
         />
@@ -67,7 +93,8 @@ const RefundForm = ({ saleReturn }) => {
             if (validationError) setValidationError('');
           }}
           max={remainingRefund}
-          className="w-full rounded border px-3 py-2 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-100"
+          disabled={loading}
+          className="w-full rounded border px-3 py-2 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-100 disabled:cursor-not-allowed disabled:bg-slate-100"
           aria-invalid={Boolean(validationError)}
           aria-describedby={validationError ? 'refund-amount-error' : undefined}
         />
@@ -77,18 +104,19 @@ const RefundForm = ({ saleReturn }) => {
       <div>
         <label className="mb-1 block font-semibold">วิธีการคืนเงิน</label>
         <div className="space-y-2">
-          <label className="flex items-center gap-2">
-            <input type="radio" name="method" value="CASH" checked={method === 'CASH'} onChange={() => setMethod('CASH')} />
-            เงินสด (CASH)
-          </label>
-          <label className="flex items-center gap-2">
-            <input type="radio" name="method" value="QR" checked={method === 'QR'} onChange={() => setMethod('QR')} />
-            QR Code
-          </label>
-          <label className="flex items-center gap-2">
-            <input type="radio" name="method" value="TRANSFER" checked={method === 'TRANSFER'} onChange={() => setMethod('TRANSFER')} />
-            โอนเงิน (TRANSFER)
-          </label>
+          {['CASH', 'QR', 'TRANSFER'].map((value) => (
+            <label key={value} className="flex items-center gap-2">
+              <input
+                type="radio"
+                name="method"
+                value={value}
+                checked={method === value}
+                disabled={loading}
+                onChange={() => setMethod(value)}
+              />
+              {value === 'CASH' ? 'เงินสด (CASH)' : value === 'QR' ? 'QR Code' : 'โอนเงิน (TRANSFER)'}
+            </label>
+          ))}
         </div>
       </div>
 
@@ -97,7 +125,8 @@ const RefundForm = ({ saleReturn }) => {
         <textarea
           value={note}
           onChange={(e) => setNote(e.target.value)}
-          className="w-full rounded border px-3 py-2 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-100"
+          disabled={loading}
+          className="w-full rounded border px-3 py-2 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-100 disabled:cursor-not-allowed disabled:bg-slate-100"
           rows={3}
         />
       </div>
@@ -107,9 +136,9 @@ const RefundForm = ({ saleReturn }) => {
       <button
         type="submit"
         disabled={loading}
-        className="rounded bg-emerald-600 px-4 py-2 text-white hover:bg-emerald-700 disabled:opacity-50"
+        className="rounded bg-emerald-600 px-4 py-2 text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
       >
-        ✅ ยืนยันการคืนเงิน
+        {loading ? 'กำลังคืนเงิน...' : '✅ ยืนยันการคืนเงิน'}
       </button>
     </form>
   );

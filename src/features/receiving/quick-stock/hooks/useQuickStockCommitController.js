@@ -1,6 +1,6 @@
 // src/features/receiving/quick-stock/hooks/useQuickStockCommitController.js
 
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { feedback as toast } from '@/design-system';
 
 import { ONBOARDING_STATES, toMoneyNumber } from "../utils/quickStockRuntimeUtils";
@@ -21,6 +21,7 @@ const useQuickStockCommitController = ({
 } = {}) => {
   const [note, setNote] = useState("Manual stock intake");
   const [isCommitting, setIsCommitting] = useState(false);
+  const commitRef = useRef(false);
 
   const resolvedCostPrice = defaultCost ?? priceForm.costPrice;
   const hasRequiredIntakePrices =
@@ -29,7 +30,8 @@ const useQuickStockCommitController = ({
     toMoneyNumber(priceForm.priceRetail) > 0;
 
   const productReady = isOperationalSelection && hasRequiredIntakePrices;
-  const isBusy = isCommitting || isCheckingOperationalProduct || isCreatingOperationalProduct;
+  const mutationBusy = isCommitting || commitRef.current;
+  const isBusy = mutationBusy || isCheckingOperationalProduct || isCreatingOperationalProduct;
   const canScanBarcode = isOperationalSelection && !isBusy;
   const canCommitExistingIntake = productReady && queueReady && !isBusy;
 
@@ -69,39 +71,61 @@ const useQuickStockCommitController = ({
   }, [operationalProduct, isTemplateOnlySelection, resolvedCostPrice, priceForm, barcodeQueue]);
 
   const handleCommit = useCallback(async () => {
+    if (commitRef.current) return;
     if (!validateBeforeCommit()) return;
 
-    const cleanQueueItems = barcodeQueue.map((item) => ({
+    const productIdSnapshot = Number(operationalProduct.id);
+    const productSnapshot = {
+      id: productIdSnapshot,
+      name: operationalProduct.name,
+      mode: operationalProduct.mode || "STRUCTURED",
+      trackSerialNumber: !!operationalProduct.trackSerialNumber,
+    };
+    const noteSnapshot = note;
+    const queueItemsSnapshot = barcodeQueue.map((item) => ({
       barcode: String(item.barcode || "").trim(),
       serialNumber: String(item.serialNumber || "").trim() || null,
     }));
-
-    const payload = {
-      productId: Number(operationalProduct.id),
-      productName: operationalProduct.name,
-      mode: operationalProduct.mode || "STRUCTURED",
-      trackSerialNumber: !!operationalProduct.trackSerialNumber,
-      note,
-      quantity: cleanQueueItems.length,
+    const queueCountSnapshot = queueItemsSnapshot.length;
+    const priceSnapshot = {
       costPrice: toMoneyNumber(resolvedCostPrice),
       priceRetail: toMoneyNumber(priceForm.priceRetail),
       priceWholesale: toMoneyNumber(priceForm.priceWholesale),
       priceTechnician: toMoneyNumber(priceForm.priceTechnician),
       priceOnline: toMoneyNumber(priceForm.priceOnline),
-      items: cleanQueueItems,
-      barcodes: cleanQueueItems,
     };
 
+    const payload = {
+      productId: productIdSnapshot,
+      productName: productSnapshot.name,
+      mode: productSnapshot.mode,
+      trackSerialNumber: productSnapshot.trackSerialNumber,
+      note: noteSnapshot,
+      quantity: queueCountSnapshot,
+      ...priceSnapshot,
+      items: queueItemsSnapshot,
+      barcodes: queueItemsSnapshot,
+    };
+
+    commitRef.current = true;
     setIsCommitting(true);
 
     try {
       await quickStockIntakeExistingAction(payload);
-      toast.success(`บันทึกรับเข้า ${barcodeQueue.length} รายการเรียบร้อย`);
+      toast.actionSuccess(
+        `บันทึกรับเข้า ${queueCountSnapshot} รายการเรียบร้อย`,
+        `quick-stock:intake:${productIdSnapshot}:success`,
+      );
       resetQueue();
     } catch (err) {
       console.error("Quick Stock Commit Error:", err);
-      toast.error(err?.message || "บันทึกรับเข้าไม่สำเร็จ");
+      toast.actionError(
+        err,
+        err?.message || "บันทึกรับเข้าไม่สำเร็จ",
+        `quick-stock:intake:${productIdSnapshot}:error`,
+      );
     } finally {
+      commitRef.current = false;
       setIsCommitting(false);
     }
   }, [
@@ -115,7 +139,7 @@ const useQuickStockCommitController = ({
     resetQueue,
   ]);
 
-  const onboardingState = isCommitting
+  const onboardingState = mutationBusy
     ? ONBOARDING_STATES.INTAKE_COMMITTING
     : isCheckingOperationalProduct || isCreatingOperationalProduct
       ? ONBOARDING_STATES.CHECKING_OPERATIONAL_PRODUCT

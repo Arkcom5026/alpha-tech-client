@@ -19,6 +19,7 @@ const RepairJobDetailPage = () => {
   const openClaim = useRepairRuntimeStore((state) => state.openClaim);
   const [workflowSubmitting, setWorkflowSubmitting] = useState(false);
   const [workflowError, setWorkflowError] = useState('');
+  const workflowActionRef = useRef(false);
   const claimOpeningRef = useRef(false);
 
   useEffect(() => {
@@ -26,7 +27,8 @@ const RepairJobDetailPage = () => {
   }, [loadJob, repairJobId]);
 
   const handleWorkflowAction = async (payload) => {
-    if (workflowSubmitting) return false;
+    if (workflowActionRef.current || claimOpeningRef.current || workflowSubmitting || submitting) return false;
+    workflowActionRef.current = true;
     setWorkflowSubmitting(true);
     setWorkflowError('');
     try {
@@ -43,6 +45,7 @@ const RepairJobDetailPage = () => {
       feedback.actionError(workflowActionError, message, `repair:workflow:${payload.action || 'transition'}:error`);
       return false;
     } finally {
+      workflowActionRef.current = false;
       setWorkflowSubmitting(false);
     }
   };
@@ -53,7 +56,7 @@ const RepairJobDetailPage = () => {
       return true;
     }
 
-    if (claimOpeningRef.current || submitting) return null;
+    if (claimOpeningRef.current || workflowActionRef.current || submitting || workflowSubmitting) return null;
     claimOpeningRef.current = true;
     try {
       const created = await openClaim(repairJobId, value);

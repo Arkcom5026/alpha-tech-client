@@ -15,6 +15,16 @@ const sortSuppliers = (items = []) =>
   [...items].sort((a, b) => String(a?.name || '').localeCompare(String(b?.name || ''), 'th'));
 
 const mutationBusyError = () => new Error('กำลังบันทึกข้อมูลผู้ขาย กรุณารอสักครู่');
+let supplierListRequestSequence = 0;
+
+const resolveSupplierBranchId = (explicitBranchId) => {
+  const authState = useAuthStore.getState();
+  const value = explicitBranchId
+    || authState.employee?.branchId
+    || useBranchStore.getState().selectedBranchId;
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+};
 
 const useSupplierStore = create((set, get) => ({
   suppliers: [],
@@ -38,27 +48,32 @@ const useSupplierStore = create((set, get) => ({
     })),
 
   fetchSuppliersAction: async (explicitBranchId) => {
-    const authState = useAuthStore.getState();
-    const resolvedBranchId =
-      explicitBranchId || authState.employee?.branchId || useBranchStore.getState().selectedBranchId;
+    const requestedBranchId = resolveSupplierBranchId(explicitBranchId);
+    const requestId = ++supplierListRequestSequence;
 
-    if (!resolvedBranchId) {
+    if (!requestedBranchId) {
       set({ suppliers: [], supplierError: null, isSupplierLoading: false });
       return [];
     }
 
+    const ownsRequest = () =>
+      supplierListRequestSequence === requestId
+      && resolveSupplierBranchId() === requestedBranchId;
+
     set({ isSupplierLoading: true, supplierError: null });
     try {
-      const data = await getAllSuppliers({ branchId: Number(resolvedBranchId) });
+      const data = await getAllSuppliers({ branchId: requestedBranchId });
+      if (!ownsRequest()) return null;
       const suppliers = sortSuppliers(Array.isArray(data) ? data : []);
       set({ suppliers });
       return suppliers;
     } catch (err) {
+      if (!ownsRequest()) return null;
       const message = parseApiError(err) || 'ไม่สามารถโหลดบัญชีรายชื่อผู้ขายได้';
       set({ supplierError: message, suppliers: [] });
       throw err;
     } finally {
-      set({ isSupplierLoading: false });
+      if (ownsRequest()) set({ isSupplierLoading: false });
     }
   },
 
@@ -158,7 +173,8 @@ const useSupplierStore = create((set, get) => ({
     }
   },
 
-  resetSupplierState: () =>
+  resetSupplierState: () => {
+    supplierListRequestSequence += 1;
     set({
       suppliers: [],
       selectedSupplier: null,
@@ -168,7 +184,8 @@ const useSupplierStore = create((set, get) => ({
       search: '',
       page: 1,
       limit: 20,
-    }),
+    });
+  },
 }));
 
 export default useSupplierStore;

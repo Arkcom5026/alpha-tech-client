@@ -19,6 +19,7 @@ import LoginPage from '@/features/auth/pages/LoginPage';
 import MerchantLoginShell from '@/features/auth/layouts/MerchantLoginShell';
 import ForgotPasswordPage from '@/features/auth/pages/ForgotPasswordPage';
 import ResetPasswordPage from '@/features/auth/pages/ResetPasswordPage';
+import ProtectedRoute from '@/features/auth/components/ProtectedRoute';
 import SuperAdminAuthorityGuard from '@/features/auth/guards/SuperAdminAuthorityGuard';
 import { useAuthStore } from '@/features/auth/store/authStore';
 import CustomerRepairTrackingPage from '@/features/repair/customer-tracking/pages/CustomerRepairTrackingPage';
@@ -51,12 +52,22 @@ const AppRouter = [
   { path: 'partner-portal/reset-password', element: <ResetPasswordPage /> },
   { path: 'superadmin/dashboard', element: <SuperAdminEntryRedirect /> },
   { path: ':shopSlug/pos/storefront', element: <Navigate to="../settings/storefront" relative="path" replace /> },
-  { path: ':shopSlug/pos/onboarding', element: <PartnerStoreOnboardingPage /> },
-  { path: ':shopSlug/pos/readiness', element: <PartnerStoreOperationalReadinessPage /> },
-  { path: ':shopSlug/pos', element: <PartnerStoreOnboardingGate />, children: [...posPartnerRoutes] },
+  {
+    path: ':shopSlug/pos/onboarding',
+    element: <ProtectedRoute><PartnerStoreOnboardingPage /></ProtectedRoute>,
+  },
+  {
+    path: ':shopSlug/pos/readiness',
+    element: <ProtectedRoute><PartnerStoreOperationalReadinessPage /></ProtectedRoute>,
+  },
+  {
+    path: ':shopSlug/pos',
+    element: <ProtectedRoute><PartnerStoreOnboardingGate /></ProtectedRoute>,
+    children: [...posPartnerRoutes],
+  },
   {
     path: ':shopSlug/superadmin',
-    element: <SuperAdminAuthorityGuard />,
+    element: <ProtectedRoute><SuperAdminAuthorityGuard /></ProtectedRoute>,
     children: [{ element: <LayoutSuperAdmin />, children: superAdminRoutes }],
   },
   { path: ':shopSlug/shop', element: <Navigate to="../" relative="path" replace /> },

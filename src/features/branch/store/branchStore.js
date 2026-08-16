@@ -84,18 +84,6 @@ export const useBranchStore = create(
           const cachedBranch = get().currentBranch;
           if (cachedBranch?.id && Number(cachedBranch.id) === targetId) {
             set({ currentBranch: cachedBranch, selectedBranchId: targetId });
-
-            Promise.resolve()
-              .then(async () => {
-                const freshBranch = await getBranchById(targetId);
-                if (freshBranch?.id && Number(get().selectedBranchId) === targetId) {
-                  set({ currentBranch: freshBranch, selectedBranchId: freshBranch.id });
-                }
-              })
-              .catch((refreshErr) => {
-                console.warn('background branch refresh failed:', refreshErr);
-              });
-
             return cachedBranch;
           }
 

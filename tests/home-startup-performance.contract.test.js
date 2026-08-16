@@ -23,4 +23,13 @@ describe('Home startup performance contract', () => {
     expect(gate).toContain('if (onboarding?.requiresOnboarding)');
     expect(gate).toContain('getPartnerStoreOperationalReadiness');
   });
+
+  it('deduplicates an in-flight onboarding authority request for the same employee and shop', () => {
+    const gate = read('src/features/partnerStoreApplication/guards/PartnerStoreOnboardingGate.jsx');
+    expect(gate).toContain('const onboardingRequestByCacheKey = new Map()');
+    expect(gate).toContain('const getPartnerStoreOnboardingOnce = (cacheKey)');
+    expect(gate).toContain('const existing = onboardingRequestByCacheKey.get(cacheKey)');
+    expect(gate).toContain('if (existing) return existing');
+    expect(gate).toContain('getPartnerStoreOnboardingOnce(cacheKey)');
+  });
 });

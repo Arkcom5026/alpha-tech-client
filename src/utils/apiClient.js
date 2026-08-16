@@ -28,6 +28,7 @@ let refreshPromise = null;
 let silentRefreshTimerId = null;
 let lastScheduledAccessToken = null;
 let authStoreSubscribed = false;
+let bootstrapSessionSnapshot = null;
 
 const AUTH_REFRESH_LOCK_KEY = 'alpha_auth_refresh_lock_v1';
 const AUTH_REFRESH_RESULT_KEY = 'alpha_auth_refresh_result_v1';
@@ -36,6 +37,7 @@ const REFRESH_LOCK_TTL_MS = 10000;
 const REFRESH_WAIT_TIMEOUT_MS = 12000;
 const SILENT_REFRESH_SKEW_MS = 5 * 60 * 1000;
 const SILENT_REFRESH_MIN_DELAY_MS = 30 * 1000;
+const BOOTSTRAP_SESSION_SNAPSHOT_TTL_MS = 5000;
 
 const authDebugEnabled = () => import.meta.env?.DEV && import.meta.env?.VITE_AUTH_DEBUG === 'true';
 const authDebug = (...args) => {
@@ -317,6 +319,76 @@ const isAuthBypassEndpoint = (url = '') => {
   ].some((path) => normalizedUrl.includes(path));
 };
 
+const setBootstrapSessionSnapshot = (data, reason) => {
+  if (reason !== 'bootstrap') return;
+
+  const profile = data?.profile || null;
+  const branch = profile?.branch || null;
+  const role = data?.role || null;
+  const profileType = data?.profileType || null;
+
+  if (!profile || !role || !profileType) {
+    bootstrapSessionSnapshot = null;
+    return;
+  }
+
+  bootstrapSessionSnapshot = {
+    createdAt: Date.now(),
+    authMe: {
+      role,
+      profileType,
+      branchId: profile?.branchId ?? branch?.id ?? null,
+      profile,
+    },
+    branch,
+  };
+};
+
+const getBootstrapSessionSnapshot = () => {
+  if (!bootstrapSessionSnapshot) return null;
+
+  if (Date.now() - bootstrapSessionSnapshot.createdAt > BOOTSTRAP_SESSION_SNAPSHOT_TTL_MS) {
+    bootstrapSessionSnapshot = null;
+    return null;
+  }
+
+  return bootstrapSessionSnapshot;
+};
+
+const createBootstrapSnapshotAdapter = (data) => async (config) => ({
+  data,
+  status: 200,
+  statusText: 'OK',
+  headers: { 'x-alpha-bootstrap-reuse': '1' },
+  config,
+  request: null,
+});
+
+const applyBootstrapSnapshotAdapter = (config) => {
+  if (String(config?.method || 'get').toLowerCase() !== 'get') return config;
+
+  const snapshot = getBootstrapSessionSnapshot();
+  if (!snapshot) return config;
+
+  if (isAuthMeEndpoint(config.url)) {
+    config.adapter = createBootstrapSnapshotAdapter(snapshot.authMe);
+    authDebug('bootstrap-reuse:auth-me');
+    return config;
+  }
+
+  const branchMatch = String(config.url || '').match(/^\/?branches\/(\d+)(?:\?.*)?$/);
+  const requestedBranchId = branchMatch ? Number(branchMatch[1]) : null;
+  const snapshotBranchId = Number(snapshot.branch?.id || 0) || null;
+
+  if (requestedBranchId && snapshotBranchId === requestedBranchId) {
+    config.adapter = createBootstrapSnapshotAdapter(snapshot.branch);
+    bootstrapSessionSnapshot = null;
+    authDebug('bootstrap-reuse:branch', { branchId: requestedBranchId });
+  }
+
+  return config;
+};
+
 const waitForAuthBootstrapToFinish = async ({ timeoutMs = 15000, intervalMs = 50 } = {}) => {
   const startedAt = Date.now();
 
@@ -389,6 +461,7 @@ apiClient.interceptors.request.use(
     config.baseURL = getRuntimeBaseURL();
     config.withCredentials = true;
     config.url = normalizeRequestUrl(config.url);
+    applyBootstrapSnapshotAdapter(config);
 
     // ✅ Bootstrap gate:
     // On hard reload the app intentionally keeps accessToken in memory only.
@@ -411,6 +484,7 @@ apiClient.interceptors.request.use(
         hasToken: !!token,
         isAuthBypass: isAuthBypassEndpoint(config.url),
         isAuthMe: isAuthMeEndpoint(config.url),
+        bootstrapReuse: !!config.adapter && !!getBootstrapSessionSnapshot(),
       });
     }
 
@@ -472,11 +546,14 @@ const refreshAccessToken = async (reason = '401') => {
         traceRefreshSuccess(nextAccessToken).catch(() => {});
 
         publishRefreshResult(res?.data || {});
+        setBootstrapSessionSnapshot(res?.data || {}, reason);
         applyRefreshResultToStore({ accessToken: nextAccessToken, session: res?.data?.session || null });
         authDebug('refresh:success', { reason });
 
         return nextAccessToken;
       } catch (error) {
+        if (reason === 'bootstrap') bootstrapSessionSnapshot = null;
+
         const serverMessage =
           error?.response?.data?.message ||
           error?.response?.data?.error ||

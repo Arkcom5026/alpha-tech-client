@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ConfirmActionDialog } from '@/design-system/composites';
 import { feedback } from '@/design-system';
@@ -18,32 +18,56 @@ const ViewEmployeePage = () => {
   const [changingStatus, setChangingStatus] = useState(false);
   const [error, setError] = useState('');
   const [pendingStatusChange, setPendingStatusChange] = useState(false);
+  const employeeContextRef = useRef({ id, shopSlug });
+  const loadRequestRef = useRef(0);
+  const statusRequestRef = useRef(0);
+  const statusMutationRef = useRef(false);
 
   useEffect(() => {
-    let active = true;
+    employeeContextRef.current = { id, shopSlug };
+    loadRequestRef.current += 1;
+    statusRequestRef.current += 1;
+    statusMutationRef.current = false;
+    setEmployee(null);
+    setError('');
+    setChangingStatus(false);
+    setPendingStatusChange(false);
+  }, [id, shopSlug]);
+
+  useEffect(() => {
+    if (!id) return undefined;
+
+    const employeeIdSnapshot = id;
+    const shopSlugSnapshot = shopSlug;
+    const requestId = ++loadRequestRef.current;
+    const ownsContext = () => (
+      requestId === loadRequestRef.current
+      && employeeContextRef.current.id === employeeIdSnapshot
+      && employeeContextRef.current.shopSlug === shopSlugSnapshot
+    );
 
     const fetchData = async () => {
       try {
         setLoading(true);
         setError('');
-        const data = await getEmployeeById(id);
-        if (active) setEmployee(data);
+        const data = await getEmployeeById(employeeIdSnapshot);
+        if (ownsContext()) setEmployee(data);
       } catch (err) {
-        if (active) {
+        if (ownsContext()) {
           const message = err?.response?.data?.error?.message || err?.response?.data?.message || err?.message || 'โหลดข้อมูลพนักงานไม่สำเร็จ';
           setError(message);
-          feedback.actionError(err, 'โหลดข้อมูลพนักงานไม่สำเร็จ', 'employee:load:error');
+          feedback.actionError(err, 'โหลดข้อมูลพนักงานไม่สำเร็จ', `employee:${employeeIdSnapshot}:load:error`);
         }
       } finally {
-        if (active) setLoading(false);
+        if (ownsContext()) setLoading(false);
       }
     };
 
-    if (id) fetchData();
+    fetchData();
     return () => {
-      active = false;
+      if (requestId === loadRequestRef.current) loadRequestRef.current += 1;
     };
-  }, [id]);
+  }, [id, shopSlug]);
 
   const status = useMemo(() => {
     if (!employee) return '';
@@ -52,35 +76,67 @@ const ViewEmployeePage = () => {
     return employee.active === false ? 'inactive' : 'active';
   }, [employee]);
 
+  const mutationBusy = changingStatus || statusMutationRef.current;
+
   const requestStatusChange = () => {
-    if (!employee || status === 'pending' || changingStatus) return;
+    if (!employee || status === 'pending' || mutationBusy) return;
     setPendingStatusChange(true);
   };
 
   const confirmStatusChange = async () => {
-    if (!employee || status === 'pending' || changingStatus) return;
+    if (!employee || status === 'pending' || mutationBusy) return;
 
-    const nextActive = status !== 'active';
-    const actionText = nextActive ? 'เปิดใช้งาน' : 'ระงับการใช้งาน';
+    const employeeIdSnapshot = employee.id;
+    const routeEmployeeIdSnapshot = id;
+    const shopSlugSnapshot = shopSlug;
+    const nextActiveSnapshot = status !== 'active';
+    const actionText = nextActiveSnapshot ? 'เปิดใช้งาน' : 'ระงับการใช้งาน';
+    const requestId = ++statusRequestRef.current;
+    const ownsContext = () => (
+      requestId === statusRequestRef.current
+      && employeeContextRef.current.id === routeEmployeeIdSnapshot
+      && employeeContextRef.current.shopSlug === shopSlugSnapshot
+    );
 
+    statusMutationRef.current = true;
+    setChangingStatus(true);
+    setError('');
     try {
-      setChangingStatus(true);
-      setError('');
-      const result = await setEmployeeActive(employee.id, nextActive);
+      const result = await setEmployeeActive(employeeIdSnapshot, nextActiveSnapshot);
+      if (!ownsContext()) {
+        feedback.warning(
+          `${actionText}พนักงานสำเร็จแล้ว แต่คุณเปลี่ยนไปยังพนักงานหรือร้านอื่นระหว่างดำเนินการ กรุณาโหลดข้อมูลล่าสุดก่อนทำรายการต่อ`,
+          `employee:${employeeIdSnapshot}:status:context-changed:error`,
+        );
+        return;
+      }
+
       setEmployee((current) => ({
         ...current,
         ...(result?.employee || {}),
-        active: nextActive,
-        status: nextActive ? 'active' : 'inactive',
+        active: nextActiveSnapshot,
+        status: nextActiveSnapshot ? 'active' : 'inactive',
       }));
       setPendingStatusChange(false);
-      feedback.actionSuccess(`${actionText}พนักงานเรียบร้อยแล้ว`, `employee:${nextActive ? 'activate' : 'suspend'}:success`);
+      feedback.actionSuccess(
+        `${actionText}พนักงานเรียบร้อยแล้ว`,
+        `employee:${employeeIdSnapshot}:${nextActiveSnapshot ? 'activate' : 'suspend'}:success`,
+      );
     } catch (err) {
-      const message = err?.response?.data?.error?.message || err?.response?.data?.message || err?.message || `${actionText}พนักงานไม่สำเร็จ`;
-      setError(message);
-      feedback.actionError(err, `${actionText}พนักงานไม่สำเร็จ`, `employee:${nextActive ? 'activate' : 'suspend'}:error`);
+      if (ownsContext()) {
+        const message = err?.response?.data?.error?.message || err?.response?.data?.message || err?.message || `${actionText}พนักงานไม่สำเร็จ`;
+        setError(message);
+        feedback.actionError(
+          err,
+          `${actionText}พนักงานไม่สำเร็จ`,
+          `employee:${employeeIdSnapshot}:${nextActiveSnapshot ? 'activate' : 'suspend'}:error`,
+        );
+      }
     } finally {
-      setChangingStatus(false);
+      if (ownsContext()) {
+        statusMutationRef.current = false;
+        setChangingStatus(false);
+      }
     }
   };
 
@@ -124,29 +180,35 @@ const ViewEmployeePage = () => {
 
         <div className="mt-6 flex flex-wrap justify-between gap-3">
           <button
-            onClick={() => navigate(-1)}
-            className="text-sm px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded shadow"
+            onClick={() => {
+              if (!mutationBusy) navigate(-1);
+            }}
+            disabled={mutationBusy}
+            className="text-sm px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded shadow disabled:opacity-60 disabled:cursor-not-allowed"
           >
             ← กลับ
           </button>
 
           <div className="flex flex-wrap gap-2">
             <button
-              onClick={() => navigate(`/${shopSlug}/pos/settings/employee/edit/${employee.id}`)}
-              className="rounded bg-emerald-600 px-4 py-2 text-sm text-white shadow transition hover:bg-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2"
+              onClick={() => {
+                if (!mutationBusy) navigate(`/${shopSlug}/pos/settings/employee/edit/${employee.id}`);
+              }}
+              disabled={mutationBusy}
+              className="rounded bg-emerald-600 px-4 py-2 text-sm text-white shadow transition hover:bg-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed"
             >
               ✏️ แก้ไขข้อมูล
             </button>
 
             <button
               onClick={requestStatusChange}
-              disabled={changingStatus || status === 'pending'}
+              disabled={mutationBusy || status === 'pending'}
               className={`text-sm px-4 py-2 text-white rounded shadow disabled:cursor-not-allowed disabled:opacity-50 ${
                 isActive ? 'bg-red-500 hover:bg-red-600' : 'bg-emerald-600 hover:bg-emerald-700'
               }`}
               title={status === 'pending' ? 'พนักงานที่รออนุมัติต้องดำเนินการผ่านขั้นตอนอนุมัติ' : ''}
             >
-              {changingStatus ? 'กำลังบันทึก...' : isActive ? '⏸ ระงับการใช้งาน' : '▶ เปิดใช้งาน'}
+              {mutationBusy ? 'กำลังบันทึก...' : isActive ? '⏸ ระงับการใช้งาน' : '▶ เปิดใช้งาน'}
             </button>
           </div>
         </div>
@@ -160,10 +222,10 @@ const ViewEmployeePage = () => {
           : `ยืนยันระงับการใช้งาน ${employee.name || 'พนักงานรายนี้'} หรือไม่? ประวัติการทำงานทั้งหมดจะยังคงอยู่`}
         confirmLabel={nextActive ? 'เปิดใช้งาน' : 'ระงับการใช้งาน'}
         intent={nextActive ? 'primary' : 'destructive'}
-        loading={changingStatus}
+        loading={mutationBusy}
         loadingLabel="กำลังบันทึก..."
         onClose={() => {
-          if (!changingStatus) setPendingStatusChange(false);
+          if (!mutationBusy) setPendingStatusChange(false);
         }}
         onConfirm={confirmStatusChange}
       />

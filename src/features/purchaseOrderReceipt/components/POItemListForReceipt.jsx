@@ -185,9 +185,6 @@ const POItemListForReceipt = ({ poId, receiptId, setReceiptId, formData, items }
       setSavedRows((prev) => ({ ...prev, [item.id]: true }));
       setEditMode((prev) => ({ ...prev, [item.id]: false }));
       setFinalizeError('');
-
-      const fn = loadOrderByIdAction || loadOrderById;
-      try { fn?.(poId); } catch (err) { console.warn('⚠️ reload error:', err); }
     } catch (err) {
       console.error('❌ saveItem error:', err);
       setFinalizeError(getErrorMessage(err) || 'บันทึกรายการไม่สำเร็จ');

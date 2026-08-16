@@ -15,7 +15,7 @@ const metadata = {
   builtAt: new Date().toISOString(),
 }
 
-const publicDir = path.resolve(process.cwd(), 'public')
-await mkdir(publicDir, { recursive: true })
-await writeFile(path.join(publicDir, 'release.json'), `${JSON.stringify(metadata, null, 2)}\n`, 'utf8')
+const outputDir = path.resolve(process.cwd(), 'dist')
+await mkdir(outputDir, { recursive: true })
+await writeFile(path.join(outputDir, 'release.json'), `${JSON.stringify(metadata, null, 2)}\n`, 'utf8')
 console.log(`[release] ${metadata.app} ${commitSha || 'unknown'} ${branch || 'unknown'} (${source})`)

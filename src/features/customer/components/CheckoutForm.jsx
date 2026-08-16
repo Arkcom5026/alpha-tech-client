@@ -1,5 +1,5 @@
 import { PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { feedback } from '@/design-system/feedback';
 
@@ -15,19 +15,24 @@ export default function CheckoutForm() {
   const elements = useElements();
   const [message, setMessage] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const submitRef = useRef(false);
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!stripe || !elements || isLoading) return;
+    if (!stripe || !elements || isLoading || submitRef.current) return;
 
+    const tokenSnapshot = token;
+    const stripeSnapshot = stripe;
+    const elementsSnapshot = elements;
+    submitRef.current = true;
     setIsLoading(true);
     setMessage(null);
 
     try {
-      const payload = await stripe.confirmPayment({
-        elements,
+      const payload = await stripeSnapshot.confirmPayment({
+        elements: elementsSnapshot,
         redirect: 'if_required',
       });
 
@@ -44,7 +49,7 @@ export default function CheckoutForm() {
 
       if (payload.paymentIntent?.status === 'succeeded') {
         try {
-          await saveOrder(token, payload);
+          await saveOrder(tokenSnapshot, payload);
           clearCart();
           feedback.actionSuccess(
             'ชำระเงินและบันทึกคำสั่งซื้อสำเร็จ',
@@ -67,6 +72,7 @@ export default function CheckoutForm() {
       setMessage(warningMessage);
       feedback.warning(warningMessage);
     } finally {
+      submitRef.current = false;
       setIsLoading(false);
     }
   };

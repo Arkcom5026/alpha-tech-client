@@ -14,7 +14,19 @@ export const registerUser = async (data) => {
 };
 
 export const loginUser = async (data) => {
-  return await apiClient.post('/auth/login', data);
+  const response = await apiClient.post('/auth/login', data);
+  const branch = response?.data?.profile?.branch || null;
+
+  if (branch?.id) {
+    try {
+      const { useBranchStore } = await import('@/features/branch/store/branchStore');
+      useBranchStore.getState().setCurrentBranch(branch);
+    } catch (error) {
+      console.warn('login branch hydration failed; auth flow will use branch fallback', error);
+    }
+  }
+
+  return response;
 };
 
 export const verifySession = async () => {
@@ -50,4 +62,4 @@ export default {
   logoutAllSessions,
   requestPasswordReset,
   resetPassword,
-};  
+};

@@ -7,7 +7,7 @@
 // - รองรับ shopSlug / relative navigation
 // - เหมาะสำหรับใช้เป็นฟอร์มเพิ่มสาขาแบบเรียบง่ายในช่วง refactor
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import { createBranch, removeBranch } from '../../branch/api/branchApi';
@@ -48,6 +48,7 @@ const FormBranch = () => {
   const [deletingId, setDeletingId] = useState(null);
   const [message, setMessage] = useState(null);
   const [pendingDeleteBranch, setPendingDeleteBranch] = useState(null);
+  const mutationRef = useRef(false);
   const mutating = isSaving || Boolean(deletingId);
 
   const canSubmit = useMemo(() => {
@@ -60,7 +61,7 @@ const FormBranch = () => {
   }, [loadAllBranchesAction]);
 
   const handleChange = (e) => {
-    if (mutating) return;
+    if (mutating || mutationRef.current) return;
     const { name, value } = e.target;
 
     setForm((prev) => ({
@@ -72,37 +73,38 @@ const FormBranch = () => {
   };
 
   const resetForm = () => {
-    if (mutating) return;
+    if (mutating || mutationRef.current) return;
     setForm(initialState);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (mutating) return;
+    if (mutating || mutationRef.current) return;
 
     if (!isSuperAdmin) {
       setMessage({ type: 'error', text: 'ต้องเป็น Super Admin เท่านั้นจึงจะเพิ่มสาขาได้' });
       return;
     }
 
-    if (!form.name.trim()) {
+    const formSnapshot = { ...form };
+    if (!formSnapshot.name.trim()) {
       setMessage({ type: 'error', text: 'กรุณาระบุชื่อสาขา' });
       return;
     }
 
+    const payload = {
+      name: formSnapshot.name.trim(),
+      address: formSnapshot.address.trim() || null,
+      phone: formSnapshot.phone.trim() || null,
+      email: formSnapshot.email.trim() || null,
+      taxId: formSnapshot.taxId.trim() || null,
+      businessType: formSnapshot.businessType || 'IT',
+    };
+
+    mutationRef.current = true;
+    setIsSaving(true);
+    setMessage(null);
     try {
-      setIsSaving(true);
-      setMessage(null);
-
-      const payload = {
-        name: form.name.trim(),
-        address: form.address.trim() || null,
-        phone: form.phone.trim() || null,
-        email: form.email.trim() || null,
-        taxId: form.taxId.trim() || null,
-        businessType: form.businessType || 'IT',
-      };
-
       const res = await createBranch(payload);
       const successMessage = `เพิ่มสาขา “${res?.data?.name || payload.name}” สำเร็จ`;
 
@@ -111,11 +113,18 @@ const FormBranch = () => {
         text: successMessage,
       });
       feedback.actionSuccess(successMessage, `admin-branch:create:${res?.data?.id || payload.name}:success`);
-
       setForm(initialState);
 
       if (typeof loadAllBranchesAction === 'function') {
-        await loadAllBranchesAction();
+        try {
+          await loadAllBranchesAction();
+        } catch (refreshError) {
+          feedback.actionError(
+            refreshError,
+            'เพิ่มสาขาสำเร็จแล้ว แต่รีเฟรชรายการสาขาไม่สำเร็จ',
+            `admin-branch:create:${res?.data?.id || payload.name}:refresh:error`,
+          );
+        }
       }
     } catch (err) {
       const fallbackMessage = 'เพิ่มสาขาไม่สำเร็จ';
@@ -125,32 +134,34 @@ const FormBranch = () => {
       });
       feedback.actionError(err, fallbackMessage, 'admin-branch:create:error');
     } finally {
+      mutationRef.current = false;
       setIsSaving(false);
     }
   };
 
   const requestRemove = (branch) => {
-    if (!isSuperAdmin || mutating) return;
+    if (!isSuperAdmin || mutating || mutationRef.current) return;
     setPendingDeleteBranch(branch);
   };
 
   const handleRemove = async () => {
-    if (!pendingDeleteBranch || mutating) return;
+    if (!pendingDeleteBranch || mutating || mutationRef.current) return;
     if (!isSuperAdmin) {
       setMessage({ type: 'error', text: 'ต้องเป็น Super Admin เท่านั้นจึงจะลบสาขาได้' });
       return;
     }
 
-    const branchId = Number(pendingDeleteBranch.id);
+    const target = { ...pendingDeleteBranch };
+    const branchId = Number(target.id);
     if (!Number.isFinite(branchId) || branchId <= 0) return;
 
+    mutationRef.current = true;
+    setDeletingId(branchId);
+    setMessage(null);
     try {
-      setDeletingId(branchId);
-      setMessage(null);
-
       await removeBranch(branchId);
 
-      const successMessage = `ลบสาขา “${pendingDeleteBranch.name || branchId}” สำเร็จ`;
+      const successMessage = `ลบสาขา “${target.name || branchId}” สำเร็จ`;
       setMessage({
         type: 'success',
         text: successMessage,
@@ -159,7 +170,15 @@ const FormBranch = () => {
       setPendingDeleteBranch(null);
 
       if (typeof loadAllBranchesAction === 'function') {
-        await loadAllBranchesAction();
+        try {
+          await loadAllBranchesAction();
+        } catch (refreshError) {
+          feedback.actionError(
+            refreshError,
+            'ลบสาขาสำเร็จแล้ว แต่รีเฟรชรายการสาขาไม่สำเร็จ',
+            `admin-branch:delete:${branchId}:refresh:error`,
+          );
+        }
       }
     } catch (err) {
       const fallbackMessage = 'ลบสาขาไม่สำเร็จ';
@@ -169,12 +188,13 @@ const FormBranch = () => {
       });
       feedback.actionError(err, fallbackMessage, `admin-branch:delete:${branchId}:error`);
     } finally {
+      mutationRef.current = false;
       setDeletingId(null);
     }
   };
 
   const goBack = () => {
-    if (mutating) return;
+    if (mutating || mutationRef.current) return;
     navigate('..');
   };
 
@@ -383,7 +403,7 @@ const FormBranch = () => {
         intent="destructive"
         loading={Boolean(deletingId)}
         loadingLabel="กำลังลบ..."
-        onClose={() => !mutating && setPendingDeleteBranch(null)}
+        onClose={() => !mutating && !mutationRef.current && setPendingDeleteBranch(null)}
         onConfirm={handleRemove}
       />
     </>

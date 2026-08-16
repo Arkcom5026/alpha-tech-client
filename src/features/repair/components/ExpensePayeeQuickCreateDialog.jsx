@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Plus, X } from 'lucide-react';
 import { feedback } from '@/design-system';
 import { createExpensePayee } from '@/features/taxExpense/api/taxExpenseApi';
@@ -26,6 +26,7 @@ const ExpensePayeeQuickCreateDialog = ({ open, onClose, onCreated }) => {
   const [form, setForm] = useState(initialForm);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const savingRef = useRef(false);
 
   useEffect(() => {
     if (!open) return;
@@ -36,46 +37,63 @@ const ExpensePayeeQuickCreateDialog = ({ open, onClose, onCreated }) => {
   if (!open) return null;
 
   const update = (key, value) => {
-    if (saving) return;
+    if (saving || savingRef.current) return;
     setForm((current) => ({ ...current, [key]: value }));
   };
 
   const submit = async (event) => {
     event.preventDefault();
-    if (saving) return;
+    if (saving || savingRef.current) return;
     setError('');
 
-    if (!form.name.trim()) {
+    const formSnapshot = { ...form };
+    if (!formSnapshot.name.trim()) {
       setError('กรุณาระบุชื่อผู้รับซ่อม');
       return;
     }
-    if (form.taxId && !/^\d{13}$/.test(form.taxId)) {
+    if (formSnapshot.taxId && !/^\d{13}$/.test(formSnapshot.taxId)) {
       setError('เลขประจำตัวผู้เสียภาษีต้องมี 13 หลัก หรือเว้นว่างได้');
       return;
     }
-    if (form.taxBranchCode && !/^\d{5}$/.test(form.taxBranchCode)) {
+    if (formSnapshot.taxBranchCode && !/^\d{5}$/.test(formSnapshot.taxBranchCode)) {
       setError('รหัสสาขาภาษีต้องมี 5 หลัก');
       return;
     }
 
+    const payload = {
+      ...formSnapshot,
+      name: formSnapshot.name.trim(),
+      taxId: formSnapshot.taxId || undefined,
+      taxBranchCode: formSnapshot.taxBranchCode || undefined,
+      address: formSnapshot.address || undefined,
+      phone: formSnapshot.phone || undefined,
+      email: formSnapshot.email || undefined,
+      contactPerson: formSnapshot.contactPerson || undefined,
+      notes: formSnapshot.notes || undefined,
+    };
+
+    savingRef.current = true;
     setSaving(true);
     try {
-      const created = await createExpensePayee({
-        ...form,
-        name: form.name.trim(),
-        taxId: form.taxId || undefined,
-        taxBranchCode: form.taxBranchCode || undefined,
-        address: form.address || undefined,
-        phone: form.phone || undefined,
-        email: form.email || undefined,
-        contactPerson: form.contactPerson || undefined,
-        notes: form.notes || undefined,
-      });
-      await onCreated?.(created);
+      const created = await createExpensePayee(payload);
       feedback.actionSuccess(
-        'เพิ่มผู้รับซ่อมและเลือกใช้งานเรียบร้อยแล้ว',
+        'เพิ่มผู้รับซ่อมเรียบร้อยแล้ว',
         `repair:expense-payee:${created?.id || 'new'}:create:success`,
       );
+
+      try {
+        await onCreated?.(created);
+      } catch (selectionError) {
+        const message = selectionError?.message || 'สร้างผู้รับซ่อมสำเร็จแล้ว แต่เลือกใช้งานอัตโนมัติไม่สำเร็จ';
+        setError(message);
+        feedback.actionError(
+          selectionError,
+          'สร้างผู้รับซ่อมสำเร็จแล้ว แต่เลือกใช้งานอัตโนมัติไม่สำเร็จ',
+          `repair:expense-payee:${created?.id || 'new'}:select:error`,
+        );
+        return;
+      }
+
       onClose?.();
     } catch (requestError) {
       const message = requestError?.response?.data?.message || requestError?.message || 'ไม่สามารถเพิ่มผู้รับซ่อมได้';
@@ -86,6 +104,7 @@ const ExpensePayeeQuickCreateDialog = ({ open, onClose, onCreated }) => {
         'repair:expense-payee:create:error',
       );
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   };

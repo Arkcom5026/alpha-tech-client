@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ConfirmActionDialog } from '@/design-system/composites';
 import { FieldMessage, feedback } from '@/design-system/feedback';
 import { createBank, removeBank } from '../api/bank';
@@ -12,6 +12,7 @@ const FormBank = () => {
   const [saving, setSaving] = useState(false);
   const [pendingDelete, setPendingDelete] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const mutationRef = useRef(false);
 
   const banks = useBankStore((state) => state.banks);
   const fetchBanks = useBankStore((state) => state.fetchBanks);
@@ -23,22 +24,35 @@ const FormBank = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (mutating) return;
-    if (!name.trim()) {
+    if (mutating || mutationRef.current) return;
+
+    const nameSnapshot = name.trim();
+    const tokenSnapshot = token;
+    if (!nameSnapshot) {
       setNameError('กรุณาระบุชื่อธนาคาร');
       return;
     }
     setNameError('');
 
+    mutationRef.current = true;
     setSaving(true);
     try {
-      const res = await createBank(token, { name: name.trim() });
+      const res = await createBank(tokenSnapshot, { name: nameSnapshot });
       feedback.actionSuccess(
         `เพิ่มธนาคาร ${res.data.name} แล้ว`,
         `admin-bank:create:${res.data.id || res.data.name}:success`,
       );
       setName('');
-      await fetchBanks(token);
+
+      try {
+        await fetchBanks(tokenSnapshot);
+      } catch (refreshError) {
+        feedback.actionError(
+          refreshError,
+          'เพิ่มธนาคารสำเร็จแล้ว แต่รีเฟรชรายการธนาคารไม่สำเร็จ',
+          `admin-bank:create:${res.data.id || res.data.name}:refresh:error`,
+        );
+      }
     } catch (err) {
       feedback.actionError(
         err,
@@ -46,28 +60,43 @@ const FormBank = () => {
         'admin-bank:create:error',
       );
     } finally {
+      mutationRef.current = false;
       setSaving(false);
     }
   };
 
   const confirmRemove = async () => {
-    if (!pendingDelete?.id || mutating) return;
+    if (!pendingDelete?.id || mutating || mutationRef.current) return;
+
+    const target = { ...pendingDelete };
+    const tokenSnapshot = token;
+    mutationRef.current = true;
     setDeleting(true);
     try {
-      const res = await removeBank(token, pendingDelete.id);
+      const res = await removeBank(tokenSnapshot, target.id);
       feedback.actionSuccess(
-        `ลบ ${res.data.name || pendingDelete.name} แล้ว`,
-        `admin-bank:${pendingDelete.id}:delete:success`,
+        `ลบ ${res.data.name || target.name} แล้ว`,
+        `admin-bank:${target.id}:delete:success`,
       );
       setPendingDelete(null);
-      await fetchBanks(token);
+
+      try {
+        await fetchBanks(tokenSnapshot);
+      } catch (refreshError) {
+        feedback.actionError(
+          refreshError,
+          'ลบธนาคารสำเร็จแล้ว แต่รีเฟรชรายการธนาคารไม่สำเร็จ',
+          `admin-bank:${target.id}:delete:refresh:error`,
+        );
+      }
     } catch (err) {
       feedback.actionError(
         err,
         'ลบธนาคารไม่สำเร็จ',
-        `admin-bank:${pendingDelete.id}:delete:error`,
+        `admin-bank:${target.id}:delete:error`,
       );
     } finally {
+      mutationRef.current = false;
       setDeleting(false);
     }
   };
@@ -80,6 +109,7 @@ const FormBank = () => {
           <input
             value={name}
             onChange={(e) => {
+              if (mutationRef.current) return;
               setName(e.target.value);
               if (nameError) setNameError('');
             }}
@@ -105,7 +135,9 @@ const FormBank = () => {
                 type="button"
                 className="rounded bg-red-500 px-2 py-1 text-white hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-60"
                 disabled={mutating}
-                onClick={() => setPendingDelete(item)}
+                onClick={() => {
+                  if (!mutationRef.current) setPendingDelete(item);
+                }}
               >
                 Delete
               </button>
@@ -122,7 +154,7 @@ const FormBank = () => {
         intent="destructive"
         loading={deleting}
         loadingLabel="กำลังลบ..."
-        onClose={() => !deleting && setPendingDelete(null)}
+        onClose={() => !deleting && !mutationRef.current && setPendingDelete(null)}
         onConfirm={confirmRemove}
       />
     </>

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { CheckCircle2, RefreshCw, ShieldCheck } from 'lucide-react';
 import { feedback } from '@/design-system/feedback';
 import {
@@ -21,6 +21,7 @@ const TaxExpenseAssessmentPanel = ({ expenseId, onClose, onConfirmed }) => {
   const [note, setNote] = useState('');
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
 
   const load = useCallback(async () => {
     if (!expenseId) return;
@@ -53,7 +54,7 @@ const TaxExpenseAssessmentPanel = ({ expenseId, onClose, onConfirmed }) => {
   }), [decisions, items]);
 
   const updateDecision = (itemId, field, value) => {
-    if (loading || saving) return;
+    if (loading || saving || savingRef.current) return;
     setDecisions((current) => ({
       ...current,
       [itemId]: { ...current[itemId], [field]: value },
@@ -61,30 +62,45 @@ const TaxExpenseAssessmentPanel = ({ expenseId, onClose, onConfirmed }) => {
   };
 
   const confirm = async () => {
-    if (!complete || saving || loading) return;
+    if (!complete || saving || savingRef.current || loading || !expenseId) return;
+
+    const expenseIdSnapshot = expenseId;
+    const payload = {
+      decisions: items.map((item) => ({
+        taxExpenseItemId: item.taxExpenseItemId,
+        vatTreatment: decisions[item.taxExpenseItemId].vatTreatment,
+        citTreatment: decisions[item.taxExpenseItemId].citTreatment,
+      })),
+      note,
+    };
+
+    savingRef.current = true;
     setSaving(true);
     try {
-      const payload = {
-        decisions: items.map((item) => ({
-          taxExpenseItemId: item.taxExpenseItemId,
-          vatTreatment: decisions[item.taxExpenseItemId].vatTreatment,
-          citTreatment: decisions[item.taxExpenseItemId].citTreatment,
-        })),
-        note,
-      };
-      await confirmTaxExpenseAssessment(expenseId, payload);
-      feedback.actionSuccess('ยืนยันผลการประเมินภาษีแล้ว', `tax-expense:assessment:${expenseId}:success`);
-      await load();
-      onConfirmed?.();
+      await confirmTaxExpenseAssessment(expenseIdSnapshot, payload);
     } catch (error) {
-      feedback.actionError(error, 'ไม่สามารถยืนยันผลการประเมินภาษีได้', `tax-expense:assessment:${expenseId}:error`);
+      feedback.actionError(error, 'ไม่สามารถยืนยันผลการประเมินภาษีได้', `tax-expense:assessment:${expenseIdSnapshot}:error`);
+      return;
     } finally {
+      savingRef.current = false;
       setSaving(false);
+    }
+
+    feedback.actionSuccess('ยืนยันผลการประเมินภาษีแล้ว', `tax-expense:assessment:${expenseIdSnapshot}:success`);
+    await load();
+    try {
+      await onConfirmed?.();
+    } catch (error) {
+      feedback.actionError(
+        error,
+        'ยืนยันผลการประเมินสำเร็จแล้ว แต่รีเฟรชข้อมูลส่วนที่เกี่ยวข้องไม่สำเร็จ',
+        `tax-expense:assessment:${expenseIdSnapshot}:post-confirm:error`,
+      );
     }
   };
 
   const closePanel = () => {
-    if (!saving) onClose?.();
+    if (!saving && !savingRef.current) onClose?.();
   };
 
   if (!expenseId) return null;

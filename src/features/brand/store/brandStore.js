@@ -6,6 +6,8 @@ import { devtools } from 'zustand/middleware';
 
 import * as brandApi from '../api/brandApi';
 
+const BRAND_MUTATION_BUSY_ERROR = 'กำลังบันทึกข้อมูลแบรนด์อยู่ กรุณารอสักครู่';
+
 const normalizeErrorMessage = (err) => {
   if (!err) return null;
   if (typeof err === 'string') return err;
@@ -241,6 +243,7 @@ export const useBrandStore = create(
       },
 
       createBrandAction: async ({ name }) => {
+        if (get().saving) return { ok: false, error: BRAND_MUTATION_BUSY_ERROR };
         set({ saving: true, error: null });
         try {
           const created = await brandApi.createBrand({ name });
@@ -268,6 +271,7 @@ export const useBrandStore = create(
       },
 
       updateBrandAction: async ({ id, name }) => {
+        if (get().saving) return { ok: false, error: BRAND_MUTATION_BUSY_ERROR };
         set({ saving: true, error: null });
         try {
           const updated = await brandApi.updateBrand({ id, name });
@@ -284,6 +288,7 @@ export const useBrandStore = create(
       },
 
       toggleBrandActiveAction: async ({ id, isActive }) => {
+        if (get().saving) return { ok: false, error: BRAND_MUTATION_BUSY_ERROR };
         set({ saving: true, error: null });
         try {
           const updated = await brandApi.toggleBrandActive({ id, isActive });
@@ -326,6 +331,7 @@ export const useBrandStore = create(
       },
 
       attachBrandToProductTypeAction: async ({ productTypeId, brandId }) => {
+        if (get().saving) return { ok: false, error: BRAND_MUTATION_BUSY_ERROR };
         const ptId = normalizeId(productTypeId);
         const bId = normalizeId(brandId);
 
@@ -359,6 +365,7 @@ export const useBrandStore = create(
       },
 
       detachBrandFromProductTypeAction: async ({ id, productTypeId }) => {
+        if (get().saving) return { ok: false, error: BRAND_MUTATION_BUSY_ERROR };
         const linkId = normalizeId(id);
         const ptId = normalizeId(productTypeId);
 

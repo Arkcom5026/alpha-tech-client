@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ConfirmActionDialog } from '@/design-system/composites';
 import { feedback } from '@/design-system/feedback';
 import {
@@ -28,6 +28,10 @@ export default function PartnerStoreApplicationReviewPage() {
   const [actingId, setActingId] = useState(null);
   const [error, setError] = useState('');
   const [pendingAction, setPendingAction] = useState(null);
+  const mutationLockRef = useRef(false);
+  const pendingActionLockRef = useRef(false);
+
+  const interactionLocked = Boolean(actingId) || Boolean(pendingAction);
 
   const load = async () => {
     setLoading(true);
@@ -47,7 +51,8 @@ export default function PartnerStoreApplicationReviewPage() {
   useEffect(() => { load(); }, [status]);
 
   const run = async (item, action, successMessage, eventKey) => {
-    if (!item || actingId) return null;
+    if (!item || mutationLockRef.current) return null;
+    mutationLockRef.current = true;
     setActingId(item.id);
     setError('');
     try {
@@ -61,32 +66,54 @@ export default function PartnerStoreApplicationReviewPage() {
       feedback.actionError(requestError, `${successMessage.replace('เรียบร้อยแล้ว', '')}ไม่สำเร็จ`, `${eventKey}:error`);
       return null;
     } finally {
+      mutationLockRef.current = false;
       setActingId(null);
     }
   };
 
-  const startReview = (item) => run(
-    item,
-    () => startReviewPartnerStoreApplication(item.id, { note: notes[item.id] || undefined }),
-    'เริ่มตรวจสอบใบสมัครเรียบร้อยแล้ว',
-    'partner-store-review:start-review',
-  );
+  const startReview = (item) => {
+    if (mutationLockRef.current || pendingActionLockRef.current) return null;
+    return run(
+      item,
+      () => startReviewPartnerStoreApplication(item.id, { note: notes[item.id] || undefined }),
+      'เริ่มตรวจสอบใบสมัครเรียบร้อยแล้ว',
+      'partner-store-review:start-review',
+    );
+  };
 
-  const requestApprove = (item) => setPendingAction({ type: 'approve', item });
+  const requestApprove = (item) => {
+    if (mutationLockRef.current || pendingActionLockRef.current) return;
+    pendingActionLockRef.current = true;
+    setPendingAction({ type: 'approve', item });
+  };
+
   const requestReject = (item) => {
+    if (mutationLockRef.current || pendingActionLockRef.current) return;
     const reviewNote = String(notes[item.id] || '').trim();
     if (!reviewNote) {
       setError('ระบุเหตุผลก่อนปฏิเสธใบสมัคร');
       feedback.info('กรุณาระบุเหตุผลก่อนปฏิเสธใบสมัคร');
       return;
     }
+    pendingActionLockRef.current = true;
     setPendingAction({ type: 'reject', item });
   };
-  const requestProvision = (item) => setPendingAction({ type: 'provision', item });
+
+  const requestProvision = (item) => {
+    if (mutationLockRef.current || pendingActionLockRef.current) return;
+    pendingActionLockRef.current = true;
+    setPendingAction({ type: 'provision', item });
+  };
+
+  const closePendingAction = () => {
+    if (mutationLockRef.current || actingId) return;
+    pendingActionLockRef.current = false;
+    setPendingAction(null);
+  };
 
   const confirmPendingAction = async () => {
     const current = pendingAction;
-    if (!current || actingId) return;
+    if (!current || mutationLockRef.current) return;
     const { item, type } = current;
     let result = null;
 
@@ -113,10 +140,14 @@ export default function PartnerStoreApplicationReviewPage() {
       );
     }
 
-    if (result) setPendingAction(null);
+    if (result) {
+      pendingActionLockRef.current = false;
+      setPendingAction(null);
+    }
   };
 
   const issueActivation = async (item) => {
+    if (mutationLockRef.current || pendingActionLockRef.current) return;
     const response = await run(
       item,
       () => issuePartnerStoreActivationInvitation(item.id),
@@ -130,6 +161,7 @@ export default function PartnerStoreApplicationReviewPage() {
   };
 
   const copyActivationLink = async (itemId) => {
+    if (interactionLocked) return;
     const href = activationLinks[itemId];
     if (!href) return;
     try {
@@ -151,7 +183,7 @@ export default function PartnerStoreApplicationReviewPage() {
           <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-600">Partner governance</p>
           <h1 className="mt-2 text-2xl font-black text-slate-900">ใบสมัครร้านพาร์ตเนอร์</h1>
           <p className="mt-2 text-sm text-slate-500">Governance, Provisioning และ Owner Activation เป็นคนละขั้น ระบบจะสร้างบัญชีเจ้าของร้านเมื่อผู้สมัครเปิดลิงก์และตั้งรหัสผ่านสำเร็จเท่านั้น</p>
-          <select value={status} onChange={(event) => setStatus(event.target.value)} className="mt-5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold">
+          <select disabled={interactionLocked} value={status} onChange={(event) => setStatus(event.target.value)} className="mt-5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold disabled:opacity-60">
             {statuses.map((value) => <option key={value || 'ALL'} value={value}>{value || 'ทุกสถานะ'}</option>)}
           </select>
         </section>
@@ -197,10 +229,10 @@ export default function PartnerStoreApplicationReviewPage() {
 
               {(pending || underReview) && (
                 <div className={`mt-5 grid gap-3 border-t border-slate-100 pt-4 ${underReview ? 'md:grid-cols-[1fr_auto_auto]' : 'md:grid-cols-[1fr_auto]'}`}>
-                  <input value={notes[item.id] || ''} onChange={(event) => setNotes((current) => ({ ...current, [item.id]: event.target.value }))} placeholder={pending ? 'บันทึกเริ่มการพิจารณา (ถ้ามี)' : 'บันทึกการพิจารณา / เหตุผลปฏิเสธ'} className="rounded-xl border border-slate-200 px-3 py-2 text-sm" />
-                  {pending && <button disabled={acting} onClick={() => startReview(item)} className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-60">{acting ? 'กำลังดำเนินการ...' : 'เริ่มตรวจสอบ'}</button>}
-                  {underReview && <button disabled={acting} onClick={() => requestApprove(item)} className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-60">อนุมัติใบสมัคร</button>}
-                  {underReview && <button disabled={acting} onClick={() => requestReject(item)} className="rounded-xl bg-red-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-60">ปฏิเสธ</button>}
+                  <input disabled={interactionLocked} value={notes[item.id] || ''} onChange={(event) => setNotes((current) => ({ ...current, [item.id]: event.target.value }))} placeholder={pending ? 'บันทึกเริ่มการพิจารณา (ถ้ามี)' : 'บันทึกการพิจารณา / เหตุผลปฏิเสธ'} className="rounded-xl border border-slate-200 px-3 py-2 text-sm disabled:opacity-60" />
+                  {pending && <button disabled={interactionLocked} onClick={() => startReview(item)} className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-60">{acting ? 'กำลังดำเนินการ...' : 'เริ่มตรวจสอบ'}</button>}
+                  {underReview && <button disabled={interactionLocked} onClick={() => requestApprove(item)} className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-60">อนุมัติใบสมัคร</button>}
+                  {underReview && <button disabled={interactionLocked} onClick={() => requestReject(item)} className="rounded-xl bg-red-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-60">ปฏิเสธ</button>}
                 </div>
               )}
 
@@ -217,8 +249,8 @@ export default function PartnerStoreApplicationReviewPage() {
                           : 'Provisioning จะสร้าง Branch และ Capability เท่านั้น ไม่เปิดบัญชีเจ้าของร้าน'}
                     </p>
                     <div className="flex flex-wrap gap-2">
-                      {canProvision && <button disabled={acting} onClick={() => requestProvision(item)} className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-60">{provisioningStatus === 'FAILED' ? 'ลองสร้างร้านอีกครั้ง' : 'สร้างร้าน'}</button>}
-                      {canIssueActivation && <button disabled={acting} onClick={() => issueActivation(item)} className="rounded-xl bg-sky-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-60">{activationStatus === 'INVITED' ? 'ออกลิงก์ใหม่' : 'ออกลิงก์เปิดใช้งาน'}</button>}
+                      {canProvision && <button disabled={interactionLocked} onClick={() => requestProvision(item)} className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-60">{provisioningStatus === 'FAILED' ? 'ลองสร้างร้านอีกครั้ง' : 'สร้างร้าน'}</button>}
+                      {canIssueActivation && <button disabled={interactionLocked} onClick={() => issueActivation(item)} className="rounded-xl bg-sky-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-60">{activationStatus === 'INVITED' ? 'ออกลิงก์ใหม่' : 'ออกลิงก์เปิดใช้งาน'}</button>}
                     </div>
                   </div>
 
@@ -227,7 +259,7 @@ export default function PartnerStoreApplicationReviewPage() {
                       <p className="text-xs font-bold text-sky-800">ลิงก์นี้แสดงจากผลตอบกลับครั้งนี้เท่านั้น ลิงก์เก่าจะถูกยกเลิกเมื่อออกลิงก์ใหม่</p>
                       <div className="mt-2 flex gap-2">
                         <input readOnly value={activationLink} className="min-w-0 flex-1 rounded-lg border border-sky-200 bg-white px-3 py-2 text-xs" />
-                        <button type="button" onClick={() => copyActivationLink(item.id)} className="rounded-lg bg-sky-700 px-3 py-2 text-xs font-bold text-white">คัดลอก</button>
+                        <button type="button" disabled={interactionLocked} onClick={() => copyActivationLink(item.id)} className="rounded-lg bg-sky-700 px-3 py-2 text-xs font-bold text-white disabled:opacity-60">คัดลอก</button>
                       </div>
                     </div>
                   )}
@@ -246,7 +278,7 @@ export default function PartnerStoreApplicationReviewPage() {
         intent={pendingMeta?.intent || 'primary'}
         loading={Boolean(actingId)}
         loadingLabel="กำลังดำเนินการ..."
-        onClose={() => setPendingAction(null)}
+        onClose={closePendingAction}
         onConfirm={confirmPendingAction}
       />
     </>

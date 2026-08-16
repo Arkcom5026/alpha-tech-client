@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { feedback } from '@/design-system/feedback';
 import { getCustomerDisplayName } from '@/features/customer/utils/customerDisplayName';
@@ -20,6 +20,7 @@ const CustomerMoneyReceiveDetailPage = () => {
   const [cancelOpen, setCancelOpen] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
   const [cancelError, setCancelError] = useState('');
+  const cancellingRef = useRef(false);
 
   const loadRecord = async () => {
     const data = await getCustomerMoneyReceive(id);
@@ -36,14 +37,14 @@ const CustomerMoneyReceiveDetailPage = () => {
   }, [id]);
 
   const requestCancel = () => {
-    if (cancelling) return;
+    if (cancelling || cancellingRef.current) return;
     setCancelError('');
     setCancelReason('');
     setCancelOpen(true);
   };
 
   const closeCancel = () => {
-    if (cancelling) return;
+    if (cancelling || cancellingRef.current) return;
     setCancelOpen(false);
     setCancelReason('');
     setCancelError('');
@@ -56,21 +57,24 @@ const CustomerMoneyReceiveDetailPage = () => {
       feedback.info('กรุณาระบุเหตุผลการยกเลิกเอกสารรับเงิน');
       return;
     }
-    if (cancelling) return;
+    if (cancelling || cancellingRef.current || !id) return;
 
+    const recordId = id;
+    cancellingRef.current = true;
     setCancelling(true);
     setCancelError('');
     try {
-      await cancelCustomerMoneyReceive(id, reason);
+      await cancelCustomerMoneyReceive(recordId, reason);
       await loadRecord();
-      feedback.actionSuccess('ยกเลิกเอกสารรับเงินเรียบร้อยแล้ว', `customer-money-receive:cancel:${id}:success`);
+      feedback.actionSuccess('ยกเลิกเอกสารรับเงินเรียบร้อยแล้ว', `customer-money-receive:cancel:${recordId}:success`);
       setCancelOpen(false);
       setCancelReason('');
     } catch (err) {
       const message = err?.response?.data?.error?.message || err?.response?.data?.message || err?.message || 'ยกเลิกเอกสารรับเงินไม่สำเร็จ';
       setCancelError(message);
-      feedback.actionError(err, 'ยกเลิกเอกสารรับเงินไม่สำเร็จ', `customer-money-receive:cancel:${id}:error`);
+      feedback.actionError(err, 'ยกเลิกเอกสารรับเงินไม่สำเร็จ', `customer-money-receive:cancel:${recordId}:error`);
     } finally {
+      cancellingRef.current = false;
       setCancelling(false);
     }
   };
@@ -85,8 +89,8 @@ const CustomerMoneyReceiveDetailPage = () => {
   return (
     <div className="mx-auto max-w-3xl space-y-4 p-4 md:p-6">
       <div className="flex flex-wrap gap-2">
-        <button type="button" onClick={() => navigate('..')} className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold">กลับรายการรับเงิน</button>
-        <button type="button" onClick={() => navigate('./print')} className="rounded-xl bg-teal-700 px-4 py-2 text-sm font-semibold text-white">ออกใบรับเงิน / พิมพ์</button>
+        <button type="button" disabled={cancelling} onClick={() => navigate('..')} className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50">กลับรายการรับเงิน</button>
+        <button type="button" disabled={cancelling} onClick={() => navigate('./print')} className="rounded-xl bg-teal-700 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">ออกใบรับเงิน / พิมพ์</button>
         {canCancel && !cancelOpen && <button type="button" onClick={requestCancel} disabled={cancelling} className="rounded-xl border border-rose-300 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700 disabled:opacity-50">ยกเลิกเอกสารรับเงิน</button>}
       </div>
 

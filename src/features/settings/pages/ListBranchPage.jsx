@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { feedback } from '@/design-system/feedback';
@@ -24,6 +24,7 @@ const ListBranchPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedShop, setSelectedShop] = useState(null);
   const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
   const { register, handleSubmit, setValue, formState: { errors } } = useForm();
 
   useEffect(() => {
@@ -39,7 +40,7 @@ const ListBranchPage = () => {
   }), [rawBranches, shopSlug, isSuperAdmin]);
 
   const openEditModal = (shopData) => {
-    if (saving) return;
+    if (saving || savingRef.current) return;
     setSelectedShop(shopData);
     const defaults = projectBranchEditDefaults(shopData);
     setValue('name', defaults.name);
@@ -49,21 +50,26 @@ const ListBranchPage = () => {
   };
 
   const onSaveSubmit = async (data) => {
-    if (!selectedShop?.id || saving) return;
+    const branchId = Number(selectedShop?.id || 0);
+    if (!branchId || saving || savingRef.current) return;
 
+    const payload = {
+      name: data.name,
+      phone: data.phone,
+      address: data.address,
+    };
+
+    savingRef.current = true;
     setSaving(true);
     try {
-      await updateBranch(selectedShop.id, {
-        name: data.name,
-        phone: data.phone,
-        address: data.address,
-      });
+      await updateBranch(branchId, payload);
       feedback.actionSuccess('แก้ไขข้อมูลร้าน/บริษัทเรียบร้อยแล้ว', 'branch-settings-update-success');
       setIsModalOpen(false);
       setSelectedShop(null);
     } catch (error) {
       feedback.actionError(error, 'เกิดข้อผิดพลาดในการบันทึกข้อมูล', 'branch-settings-update-error');
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   };
@@ -80,7 +86,7 @@ const ListBranchPage = () => {
       onOpenEdit={openEditModal}
       onRefresh={() => fetchBranches?.()}
       onCloseModal={() => {
-        if (!saving) {
+        if (!saving && !savingRef.current) {
           setIsModalOpen(false);
           setSelectedShop(null);
         }

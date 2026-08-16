@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { BadgeCheck, RefreshCw, Save } from 'lucide-react';
 import { feedback } from '@/design-system/feedback';
 import {
@@ -19,6 +19,7 @@ const VatCarryForwardAuthorityPanel = ({ branchId, taxPeriodId, onConfirmed }) =
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const savingRef = useRef(false);
 
   const sourceType = context?.previousPeriod ? 'PRIOR_PERIOD' : 'HISTORICAL_OPENING';
   const immutable = String(context?.period?.status || '') === 'SUBMITTED';
@@ -55,27 +56,41 @@ const VatCarryForwardAuthorityPanel = ({ branchId, taxPeriodId, onConfirmed }) =
   }, [context]);
 
   const confirm = async () => {
-    if (!branchId || !taxPeriodId || immutable || saving || loading || !priorSettlementReady) return;
+    if (!branchId || !taxPeriodId || immutable || saving || savingRef.current || loading || !priorSettlementReady) return;
 
+    const payload = {
+      branchId,
+      taxPeriodId,
+      sourceType,
+      amount,
+      note,
+    };
+
+    savingRef.current = true;
     setSaving(true);
     setError('');
     try {
-      await confirmVatCarryForwardAuthority({
-        branchId,
-        taxPeriodId,
-        sourceType,
-        amount,
-        note,
-      });
-      feedback.actionSuccess('ยืนยันเครดิต VAT ยกมาแล้ว', 'tax-vat-carry-forward-confirm-success');
-      await load();
-      await onConfirmed?.();
+      await confirmVatCarryForwardAuthority(payload);
     } catch (requestError) {
       const message = getVatSettlementErrorMessage(requestError);
       setError(message);
       feedback.actionError(requestError, message, 'tax-vat-carry-forward-confirm-error');
+      return;
     } finally {
+      savingRef.current = false;
       setSaving(false);
+    }
+
+    feedback.actionSuccess('ยืนยันเครดิต VAT ยกมาแล้ว', 'tax-vat-carry-forward-confirm-success');
+    await load();
+    try {
+      await onConfirmed?.();
+    } catch (requestError) {
+      feedback.actionError(
+        requestError,
+        'ยืนยันเครดิต VAT ยกมาสำเร็จแล้ว แต่รีเฟรชข้อมูลส่วนที่เกี่ยวข้องไม่สำเร็จ',
+        'tax-vat-carry-forward-post-confirm-error',
+      );
     }
   };
 

@@ -8,6 +8,7 @@ import useCustomerDepositStore from '@/features/customerDeposit/store/customerDe
 import useCustomerStore from '@/features/customer/store/customerStore';
 import { useAddressStore } from '@/features/address/store/addressStore';
 import AddressForm from '@/features/address/components/AddressForm';
+import { feedback } from '@/design-system';
 import { User, Search, Phone, RefreshCw, ShieldCheck, Mail, MapPin } from 'lucide-react';
 import { getCustomerDisplayName } from '@/features/customer/utils/customerDisplayName';
 
@@ -43,6 +44,7 @@ const CustomerSection = ({ productSearchRef, clearTrigger, onSaleModeSelect }) =
   const [taxId, setTaxId] = useState('');
 
   const [customerLoading, setCustomerLoading] = useState(false);
+  const [customerMutationAction, setCustomerMutationAction] = useState(null);
   const [formError, setFormError] = useState('');
   const [formInfo, setFormInfo] = useState('');
   const [pendingPhone, setPendingPhone] = useState(false);
@@ -54,6 +56,8 @@ const CustomerSection = ({ productSearchRef, clearTrigger, onSaleModeSelect }) =
   const [isClearing, setIsClearing] = useState(false);
   const [_shouldShowDetails, _setShouldShowDetails] = useState(false);
   const phoneInputRef = useRef(null);
+  const customerMutationRef = useRef(false);
+  const customerMutationBusy = Boolean(customerMutationAction) || customerMutationRef.current;
 
   // ---- Address States (ส่งให้ AddressForm ควบคุม)
   const [addressDetail, setAddressDetail] = useState('');
@@ -90,6 +94,7 @@ const CustomerSection = ({ productSearchRef, clearTrigger, onSaleModeSelect }) =
   );
 
   const handleAddressChange = (next) => {
+    if (customerMutationRef.current) return;
     setAddressDetail(next && next.address ? String(next.address) : '');
     setProvinceCode(next && next.provinceCode ? String(next.provinceCode) : '');
     setDistrictCode(next && next.districtCode ? String(next.districtCode) : '');
@@ -240,6 +245,7 @@ const CustomerSection = ({ productSearchRef, clearTrigger, onSaleModeSelect }) =
   };
 
   const handleVerifyCustomer = async () => {
+    if (customerMutationRef.current) return;
     setFormError('');
     setFormInfo('');
     try {
@@ -311,6 +317,7 @@ const CustomerSection = ({ productSearchRef, clearTrigger, onSaleModeSelect }) =
   };
 
   const handleSelectCustomer = async (customer) => {
+    if (customerMutationRef.current) return;
     try {
       if (!(customer && customer.id)) return;
       setCustomerLoading(true);
@@ -334,32 +341,48 @@ const CustomerSection = ({ productSearchRef, clearTrigger, onSaleModeSelect }) =
   };
 
   const handleUpdateCustomer = async () => {
+    if (!(selectedCustomer && selectedCustomer.id) || customerMutationRef.current) return;
+
+    const customerIdSnapshot = selectedCustomer.id;
+    const payloadSnapshot = {
+      name,
+      email,
+      subdistrictCode: subdistrictCode || null,
+      postcode: postalCode || undefined,
+      addressDetail,
+      type: customerType,
+      companyName,
+      departmentName: customerType === 'INDIVIDUAL' ? '' : departmentName,
+      taxId,
+    };
+
+    customerMutationRef.current = true;
+    setCustomerMutationAction('update');
     try {
-      if (!(selectedCustomer && selectedCustomer.id)) return;
-      await updateCustomerProfilePosAction(
-        selectedCustomer.id,
-        {
-          name,
-          email,
-          subdistrictCode: subdistrictCode || null,
-          postcode: postalCode || undefined,
-          addressDetail,
-          type: customerType,
-          companyName,
-          departmentName: customerType === 'INDIVIDUAL' ? '' : departmentName,
-          taxId,
-        }
-      );
+      await updateCustomerProfilePosAction(customerIdSnapshot, payloadSnapshot);
       setIsModified(false);
       setFormError('');
       setFormInfo('อัปเดตข้อมูลลูกค้าสำเร็จ');
-    } catch {
+      feedback.actionSuccess(
+        'อัปเดตข้อมูลลูกค้าเรียบร้อยแล้ว',
+        `sales:customer:${customerIdSnapshot}:update:success`,
+      );
+    } catch (error) {
       setFormInfo('');
       setFormError('อัปเดตข้อมูลลูกค้าไม่สำเร็จ');
+      feedback.actionError(
+        error,
+        'อัปเดตข้อมูลลูกค้าไม่สำเร็จ',
+        `sales:customer:${customerIdSnapshot}:update:error`,
+      );
+    } finally {
+      customerMutationRef.current = false;
+      setCustomerMutationAction(null);
     }
   };
 
   const handleConfirmCreateCustomer = async () => {
+    if (customerMutationRef.current) return;
     setFormError('');
     setFormInfo('');
     if (!name.trim()) {
@@ -368,42 +391,62 @@ const CustomerSection = ({ productSearchRef, clearTrigger, onSaleModeSelect }) =
     }
 
     const cleanPhone = (rawPhone || phone || '').replace(/-/g, '');
+    const payloadSnapshot = {
+      name,
+      phone: cleanPhone,
+      email,
+      subdistrictCode: subdistrictCode || null,
+      postcode: postalCode || undefined,
+      addressDetail,
+      type: customerType,
+      companyName,
+      departmentName: customerType === 'INDIVIDUAL' ? '' : departmentName,
+      taxId,
+    };
 
+    customerMutationRef.current = true;
+    setCustomerMutationAction('create');
     try {
-      const newCustomer = await createCustomerAction({
-        name,
-        phone: cleanPhone,
-        email,
-        subdistrictCode: subdistrictCode || null,
-        postcode: postalCode || undefined,
-        addressDetail,
-        type: customerType,
-        companyName,
-        departmentName: customerType === 'INDIVIDUAL' ? '' : departmentName,
-        taxId,
-      });
+      const newCustomer = await createCustomerAction(payloadSnapshot);
 
-      if (newCustomer && newCustomer.id) {
-        setPendingPhone(false);
-
-        let hydratedCustomer = null;
-        if (searchCustomerByPhoneAndDepositAction && /^[0-9]{10}$/.test(cleanPhone)) {
-          try {
-            hydratedCustomer = await searchCustomerByPhoneAndDepositAction(cleanPhone);
-          } catch {
-            // noop
-          }
-        }
-
-        processSelectedCustomer(hydratedCustomer || newCustomer);
+      if (!newCustomer?.id) {
+        throw new Error('Server ไม่ได้ส่งรหัสลูกค้าที่สร้างกลับมา');
       }
-    } catch (err) {
+
+      setPendingPhone(false);
+
+      let hydratedCustomer = null;
+      if (searchCustomerByPhoneAndDepositAction && /^[0-9]{10}$/.test(cleanPhone)) {
+        try {
+          hydratedCustomer = await searchCustomerByPhoneAndDepositAction(cleanPhone);
+        } catch {
+          // noop
+        }
+      }
+
+      processSelectedCustomer(hydratedCustomer || newCustomer);
+      setFormError('');
+      setFormInfo('สร้างลูกค้าใหม่สำเร็จ');
+      feedback.actionSuccess(
+        'สร้างลูกค้าใหม่เรียบร้อยแล้ว',
+        `sales:customer:${newCustomer.id}:create:success`,
+      );
+    } catch (error) {
       setFormInfo('');
-      setFormError('สร้างลูกค้าไม่สำเร็จ: ' + (((err && err.message) || '') || 'เกิดข้อผิดพลาด'));
+      setFormError('สร้างลูกค้าไม่สำเร็จ: ' + (((error && error.message) || '') || 'เกิดข้อผิดพลาด'));
+      feedback.actionError(
+        error,
+        'สร้างลูกค้าใหม่ไม่สำเร็จ',
+        'sales:customer:create:error',
+      );
+    } finally {
+      customerMutationRef.current = false;
+      setCustomerMutationAction(null);
     }
   };
 
   const handleCancelCreateCustomer = () => {
+    if (customerMutationRef.current) return;
     setSelectedCustomer(null);
     setCustomerIdAction(null);
     setPhone(''); setRawPhone('');
@@ -430,11 +473,11 @@ const CustomerSection = ({ productSearchRef, clearTrigger, onSaleModeSelect }) =
 
       <div className="flex gap-4 mb-2 text-[10px] font-black text-slate-400">
         <label className="flex items-center gap-1 cursor-pointer hover:text-slate-700 transition-colors select-none">
-          <input type="radio" name="searchMode" checked={searchMode === 'name'} onChange={() => setSearchMode('name')} className="accent-slate-900 h-3 w-3" />
+          <input type="radio" name="searchMode" checked={searchMode === 'name'} disabled={customerMutationBusy} onChange={() => setSearchMode('name')} className="accent-slate-900 h-3 w-3" />
           <span className={searchMode === 'name' ? "text-slate-900 font-black" : ""}>ค้นจากรายชื่อ</span>
         </label>
         <label className="flex items-center gap-1 cursor-pointer hover:text-slate-700 transition-colors select-none">
-          <input type="radio" name="searchMode" checked={searchMode === 'phone'} onChange={() => setSearchMode('phone')} className="accent-slate-900 h-3 w-3" />
+          <input type="radio" name="searchMode" checked={searchMode === 'phone'} disabled={customerMutationBusy} onChange={() => setSearchMode('phone')} className="accent-slate-900 h-3 w-3" />
           <span className={searchMode === 'phone' ? "text-slate-900 font-black" : ""}>ค้นจากเบอร์โทร</span>
         </label>
       </div>
@@ -447,6 +490,7 @@ const CustomerSection = ({ productSearchRef, clearTrigger, onSaleModeSelect }) =
               key={clearKey}
               mask="099-999-9999"
               value={phone}
+              disabled={customerMutationBusy}
               onChange={(e) => {
                 setPhone(e.target.value);
                 setRawPhone(e.target.value.replace(/-/g, ''));
@@ -460,7 +504,7 @@ const CustomerSection = ({ productSearchRef, clearTrigger, onSaleModeSelect }) =
                   id="customer-phone-input"
                   type="tel"
                   placeholder="ป้อนเบอร์โทร 10 หลักแล้วกด Enter..."
-                  className="h-7 w-full pl-7 pr-8 font-mono font-black text-slate-900 bg-slate-50 focus:bg-white border border-slate-200 focus:border-slate-900 rounded-lg outline-none transition-all text-xs shadow-inner"
+                  className="h-7 w-full pl-7 pr-8 font-mono font-black text-slate-900 bg-slate-50 focus:bg-white border border-slate-200 focus:border-slate-900 rounded-lg outline-none transition-all text-xs shadow-inner disabled:opacity-60"
                 />
               )}
             </InputMask>
@@ -472,9 +516,10 @@ const CustomerSection = ({ productSearchRef, clearTrigger, onSaleModeSelect }) =
               type="text"
               placeholder="พิมพ์ชื่อลูกค้าแล้วกด Enter..."
               value={nameSearch}
+              disabled={customerMutationBusy}
               onChange={(e) => setNameSearch(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleVerifyCustomer()}
-              className="h-7 w-full pl-7 pr-8 font-bold text-slate-900 bg-slate-50 focus:bg-white border border-slate-200 focus:border-slate-900 rounded-lg outline-none transition-all text-xs shadow-inner"
+              className="h-7 w-full pl-7 pr-8 font-bold text-slate-900 bg-slate-50 focus:bg-white border border-slate-200 focus:border-slate-900 rounded-lg outline-none transition-all text-xs shadow-inner disabled:opacity-60"
             />
           </>
         )}
@@ -496,7 +541,7 @@ const CustomerSection = ({ productSearchRef, clearTrigger, onSaleModeSelect }) =
                 key={cust.id}
                 type="button"
                 onClick={() => handleSelectCustomer(cust)}
-                disabled={customerLoading}
+                disabled={customerLoading || customerMutationBusy}
                 className={`block w-full text-left px-4 py-2 border rounded-md transition-all text-[11px] font-bold ${selectedSearchCustomerId === cust.id ? 'border-slate-900 bg-slate-100 text-slate-900 font-black' : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-600'}`}
               >
                 <div className="truncate">{displayLabel}</div>
@@ -513,7 +558,7 @@ const CustomerSection = ({ productSearchRef, clearTrigger, onSaleModeSelect }) =
             {['INDIVIDUAL', 'ORGANIZATION', 'GOVERNMENT'].map((type) => (
               <label key={type} className="flex items-center gap-1 cursor-pointer hover:text-slate-700 transition-colors select-none">
                 <input type="radio" name="customerType" value={type} className="accent-slate-900"
-                  checked={customerType === type} onChange={() => { setCustomerType(type); if (type === 'INDIVIDUAL') setDepartmentName(''); setIsModified(true); }} />
+                  checked={customerType === type} disabled={customerMutationBusy} onChange={() => { setCustomerType(type); if (type === 'INDIVIDUAL') setDepartmentName(''); setIsModified(true); }} />
                 <span className={customerType === type ? "text-slate-900 font-black" : ""}>
                   {type === 'INDIVIDUAL' ? 'บุคคลทั่วไป' : type === 'ORGANIZATION' ? 'นิติบุคคล' : 'หน่วยงาน'}
                 </span>
@@ -524,19 +569,19 @@ const CustomerSection = ({ productSearchRef, clearTrigger, onSaleModeSelect }) =
           <div className="space-y-1.5">
             {(customerType === 'ORGANIZATION' || customerType === 'GOVERNMENT') && (
               <div className="space-y-1.5 animate-fadeIn">
-                <input type="text" placeholder="🏢 ระบุชื่อบริษัท / หน่วยงานสังกัด..." value={companyName} onChange={(e) => { setCompanyName(e.target.value); setIsModified(true); }} className="h-7 border border-slate-200 px-2 rounded-lg w-full text-slate-900 font-black outline-none focus:border-slate-900 text-xs shadow-sm" />
-                <input type="text" aria-label="แผนก / กอง / สำนัก" placeholder="แผนก / กอง / สำนัก (ถ้ามี)..." value={departmentName} onChange={(e) => { setDepartmentName(e.target.value); setIsModified(true); }} className="h-7 border border-slate-200 px-2 rounded-lg w-full text-slate-900 font-bold outline-none focus:border-slate-900 text-xs shadow-sm" />
-                <input type="text" placeholder="🧾 เลขผู้เสียภาษี (ถ้ามี)..." value={taxId} onChange={(e) => { setTaxId(e.target.value); setIsModified(true); }} className="h-7 border border-slate-200 px-2 rounded-lg w-full text-slate-900 font-mono font-bold outline-none focus:border-slate-900 text-xs shadow-sm" />
+                <input type="text" placeholder="🏢 ระบุชื่อบริษัท / หน่วยงานสังกัด..." value={companyName} disabled={customerMutationBusy} onChange={(e) => { setCompanyName(e.target.value); setIsModified(true); }} className="h-7 border border-slate-200 px-2 rounded-lg w-full text-slate-900 font-black outline-none focus:border-slate-900 text-xs shadow-sm disabled:opacity-60" />
+                <input type="text" aria-label="แผนก / กอง / สำนัก" placeholder="แผนก / กอง / สำนัก (ถ้ามี)..." value={departmentName} disabled={customerMutationBusy} onChange={(e) => { setDepartmentName(e.target.value); setIsModified(true); }} className="h-7 border border-slate-200 px-2 rounded-lg w-full text-slate-900 font-bold outline-none focus:border-slate-900 text-xs shadow-sm disabled:opacity-60" />
+                <input type="text" placeholder="🧾 เลขผู้เสียภาษี (ถ้ามี)..." value={taxId} disabled={customerMutationBusy} onChange={(e) => { setTaxId(e.target.value); setIsModified(true); }} className="h-7 border border-slate-200 px-2 rounded-lg w-full text-slate-900 font-mono font-bold outline-none focus:border-slate-900 text-xs shadow-sm disabled:opacity-60" />
               </div>
             )}
 
             <div className="relative">
-              <input type="text" id="customer-name-input" placeholder="ชื่อ-นามสกุล ผู้ซื้อ..." value={name} onChange={(e) => { setName(e.target.value); setIsModified(true); }} className="h-7 border border-slate-200 pl-2 pr-7 rounded-lg w-full text-slate-900 font-black outline-none focus:border-slate-900 text-xs shadow-sm font-medium" />
+              <input type="text" id="customer-name-input" placeholder="ชื่อ-นามสกุล ผู้ซื้อ..." value={name} disabled={customerMutationBusy} onChange={(e) => { setName(e.target.value); setIsModified(true); }} className="h-7 border border-slate-200 pl-2 pr-7 rounded-lg w-full text-slate-900 font-black outline-none focus:border-slate-900 text-xs shadow-sm font-medium disabled:opacity-60" />
               <User className="w-3.5 h-3.5 text-slate-300 absolute right-2.5 top-1.5" />
             </div>
 
             <div className="relative">
-              <input type="email" placeholder="อีเมลติดต่อส่งบิลดิจิทัล (ถ้ามี)..." value={email} onChange={(e) => { setEmail(e.target.value); setIsModified(true); }} className="h-7 border border-slate-200 pl-2 pr-7 rounded-lg w-full text-slate-900 font-bold outline-none focus:border-slate-900 text-xs shadow-sm" />
+              <input type="email" placeholder="อีเมลติดต่อส่งบิลดิจิทัล (ถ้ามี)..." value={email} disabled={customerMutationBusy} onChange={(e) => { setEmail(e.target.value); setIsModified(true); }} className="h-7 border border-slate-200 pl-2 pr-7 rounded-lg w-full text-slate-900 font-bold outline-none focus:border-slate-900 text-xs shadow-sm disabled:opacity-60" />
               <Mail className="w-3.5 h-3.5 text-slate-300 absolute right-2.5 top-1.5" />
             </div>
             
@@ -558,16 +603,16 @@ const CustomerSection = ({ productSearchRef, clearTrigger, onSaleModeSelect }) =
 
           <div className="flex gap-2 justify-end select-none pt-0.5">
             {selectedCustomer ? (
-              <button onClick={handleUpdateCustomer} disabled={!isModified} className={`h-6 px-3 text-white font-black text-[10px] rounded-md shadow-sm transition-all ${isModified ? 'bg-slate-900 hover:bg-slate-800 active:scale-95' : 'bg-slate-300 cursor-not-allowed shadow-none'}`}>
-                อัปเดตข้อมูลลูกค้า
+              <button onClick={handleUpdateCustomer} disabled={!isModified || customerMutationBusy} className={`h-6 px-3 text-white font-black text-[10px] rounded-md shadow-sm transition-all ${isModified && !customerMutationBusy ? 'bg-slate-900 hover:bg-slate-800 active:scale-95' : 'bg-slate-300 cursor-not-allowed shadow-none'}`}>
+                {customerMutationAction === 'update' ? 'กำลังอัปเดต...' : 'อัปเดตข้อมูลลูกค้า'}
               </button>
             ) : (
               !selectedCustomer && pendingPhone && (
                 <div className="flex gap-1.5">
-                  <button onClick={handleConfirmCreateCustomer} className="h-6 px-3 bg-slate-900 hover:bg-slate-800 text-white text-[10px] rounded-md shadow-sm font-black active:scale-95 transition-all">
-                    บันทึกลูกค้าใหม่
+                  <button onClick={handleConfirmCreateCustomer} disabled={customerMutationBusy} className="h-6 px-3 bg-slate-900 hover:bg-slate-800 text-white text-[10px] rounded-md shadow-sm font-black active:scale-95 transition-all disabled:cursor-not-allowed disabled:opacity-60">
+                    {customerMutationAction === 'create' ? 'กำลังบันทึก...' : 'บันทึกลูกค้าใหม่'}
                   </button>
-                  <button onClick={handleCancelCreateCustomer} className="h-6 px-3 bg-white border border-slate-200 text-slate-500 text-[10px] rounded-md shadow-sm font-bold hover:bg-slate-50 active:scale-95 transition-all">
+                  <button onClick={handleCancelCreateCustomer} disabled={customerMutationBusy} className="h-6 px-3 bg-white border border-slate-200 text-slate-500 text-[10px] rounded-md shadow-sm font-bold hover:bg-slate-50 active:scale-95 transition-all disabled:cursor-not-allowed disabled:opacity-60">
                     ยกเลิก
                   </button>
                 </div>

@@ -1,15 +1,57 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Navigate, useParams } from 'react-router-dom';
 import PosAdaptiveShell from '@/features/pos/layouts/PosAdaptiveShell';
+import { useAuthStore } from '@/features/auth/store/authStore';
 import { getPartnerStoreOnboarding } from '../api/partnerStoreOnboardingApi';
 import { getPartnerStoreOperationalReadiness } from '../api/partnerStoreOperationalReadinessApi';
 
+const NON_PARTNER_OWNER_CACHE_PREFIX = 'alpha-tech.partner-store.non-owner.v1';
+
+const buildNonPartnerOwnerCacheKey = (shopSlug, employeeId) => {
+  const slug = String(shopSlug || '').trim();
+  const id = Number(employeeId);
+  if (!slug || !Number.isInteger(id) || id <= 0) return '';
+  return `${NON_PARTNER_OWNER_CACHE_PREFIX}:${id}:${slug}`;
+};
+
+const hasNonPartnerOwnerCache = (cacheKey) => {
+  if (!cacheKey || typeof window === 'undefined') return false;
+  try {
+    return window.sessionStorage.getItem(cacheKey) === '1';
+  } catch {
+    return false;
+  }
+};
+
+const rememberNonPartnerOwner = (cacheKey) => {
+  if (!cacheKey || typeof window === 'undefined') return;
+  try {
+    window.sessionStorage.setItem(cacheKey, '1');
+  } catch {
+    // Storage is an optimization only. The authority check still works without it.
+  }
+};
+
 export default function PartnerStoreOnboardingGate() {
   const { shopSlug } = useParams();
+  const employeeId = useAuthStore((authState) => authState.employee?.id);
+  const cacheKey = useMemo(
+    () => buildNonPartnerOwnerCacheKey(shopSlug, employeeId),
+    [employeeId, shopSlug],
+  );
   const [state, setState] = useState({ loading: true, onboarding: null, readiness: null, error: '' });
 
   useEffect(() => {
     let active = true;
+
+    if (!cacheKey) return () => { active = false; };
+
+    if (hasNonPartnerOwnerCache(cacheKey)) {
+      setState({ loading: false, onboarding: null, readiness: null, error: '' });
+      return () => { active = false; };
+    }
+
+    setState({ loading: true, onboarding: null, readiness: null, error: '' });
 
     const load = async () => {
       try {
@@ -17,7 +59,13 @@ export default function PartnerStoreOnboardingGate() {
         if (!active) return;
         const onboarding = onboardingResponse.data?.data || null;
 
-        if (!onboarding?.isPartnerStoreOwner || onboarding?.requiresOnboarding) {
+        if (!onboarding?.isPartnerStoreOwner) {
+          rememberNonPartnerOwner(cacheKey);
+          setState({ loading: false, onboarding, readiness: null, error: '' });
+          return;
+        }
+
+        if (onboarding?.requiresOnboarding) {
           setState({ loading: false, onboarding, readiness: null, error: '' });
           return;
         }
@@ -43,7 +91,7 @@ export default function PartnerStoreOnboardingGate() {
 
     load();
     return () => { active = false; };
-  }, []);
+  }, [cacheKey]);
 
   if (state.loading) {
     return <div className="flex min-h-screen items-center justify-center bg-slate-50 text-sm font-bold text-slate-500">กำลังตรวจสอบสถานะร้าน…</div>;

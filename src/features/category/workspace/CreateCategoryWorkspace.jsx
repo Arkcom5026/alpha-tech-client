@@ -1,7 +1,7 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 
 import { feedback } from '@/design-system';
 import CategoryForm from '../components/CategoryForm';
@@ -13,6 +13,7 @@ const CreateCategoryPage = () => {
   const { shopSlug } = useParams();
   const { createAction, submitting, error } = useCategoryStore();
   const [info, setInfo] = useState('');
+  const submittingRef = useRef(false);
   const listPath = `/${shopSlug || 'advancetech'}/pos/stock/categories`;
 
   const form = useForm({
@@ -21,19 +22,27 @@ const CreateCategoryPage = () => {
   });
 
   const onSubmit = async (data) => {
-    if (submitting) return;
+    if (submitting || submittingRef.current) return;
+
+    const payload = { ...data, name: String(data?.name || '').trim() };
+    const listPathSnapshot = listPath;
+    if (!payload.name) return;
+
+    submittingRef.current = true;
     try {
-      const res = await createAction(data);
+      const res = await createAction(payload);
       if (res?.ok) {
-        feedback.actionSuccess('เพิ่มหมวดหมู่เรียบร้อยแล้ว', 'category:create:success');
-        navigate(listPath);
+        feedback.actionSuccess('เพิ่มหมวดหมู่เรียบร้อยแล้ว', `category:create:${payload.name}:success`);
+        navigate(listPathSnapshot);
       } else {
         const message = res?.message || 'เพิ่มหมวดหมู่ไม่สำเร็จ';
         setInfo(message);
-        feedback.error(message, { eventKey: 'category:create:error' });
+        feedback.error(message, { eventKey: `category:create:${payload.name}:error` });
       }
     } catch (err) {
-      feedback.actionError(err, 'เพิ่มหมวดหมู่ไม่สำเร็จ', 'category:create:error');
+      feedback.actionError(err, 'เพิ่มหมวดหมู่ไม่สำเร็จ', `category:create:${payload.name}:error`);
+    } finally {
+      submittingRef.current = false;
     }
   };
 
@@ -51,7 +60,7 @@ const CreateCategoryPage = () => {
         form={form}
         mode="create"
         onSubmit={onSubmit}
-        onCancel={() => !submitting && navigate(listPath)}
+        onCancel={() => !submitting && !submittingRef.current && navigate(listPath)}
         submitting={submitting}
       />
     </div>

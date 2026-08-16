@@ -26,4 +26,18 @@ describe('public-first auth boundary contract', () => {
     expect(guard).toContain("authBootstrapState === 'unauthenticated'");
     expect(guard).toContain('<Navigate to="/login" replace state={{ from: location }} />');
   });
+
+  it('authenticates before partner-store and superadmin authority gates', () => {
+    const router = read('src/routes/AppRouter.jsx');
+
+    expect(router).toContain('element: <ProtectedRoute><PartnerStoreOnboardingGate /></ProtectedRoute>');
+    expect(router).toContain('element: <ProtectedRoute><PartnerStoreOnboardingPage /></ProtectedRoute>');
+    expect(router).toContain('element: <ProtectedRoute><PartnerStoreOperationalReadinessPage /></ProtectedRoute>');
+    expect(router).toContain('element: <ProtectedRoute><SuperAdminAuthorityGuard /></ProtectedRoute>');
+
+    const marketplaceRoute = router.indexOf("{ path: '/', element: <MarketplacePortalPage /> }");
+    const protectedPosRoute = router.indexOf('element: <ProtectedRoute><PartnerStoreOnboardingGate /></ProtectedRoute>');
+    expect(marketplaceRoute).toBeGreaterThan(-1);
+    expect(protectedPosRoute).toBeGreaterThan(marketplaceRoute);
+  });
 });
